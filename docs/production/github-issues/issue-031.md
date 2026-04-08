@@ -2,30 +2,35 @@
 
 **Wave**: wave-2
 **Milestone**: M2 Core Loop Depth
-**Labels**: `design`, `store:sports`, `phase:m2`, `priority:high`
+**Labels**: `design`, `store:sports`, `phase:m2`, `priority:medium`
 **Dependencies**: None
 
-## Why This Matters
+## Status: DESIGN COMPLETE
 
-Sports store is the first playable. Its design must be locked before expanding systems.
+Design document exists at `docs/design/stores/SPORTS_MEMORABILIA.md` (~12KB), fully expanded to match peer store deep dives.
 
-## Scope
-
-Create authoritative design doc for sports memorabilia store. Full item taxonomy, authentication mechanic spec, season cycle spec, customer archetypes detail, per-store economy model, progression arc. This is a design doc, not code.
-
-## Deliverables
-
-- docs/design/stores/SPORTS_MEMORABILIA.md
-- Item taxonomy: cards (baseball/basketball/football), autographs, jerseys, equipment, sealed
-- Authentication mechanic specification
-- Season cycle specification
-- 4 customer archetypes with behavior details
-- Economy model: margins, turnover, appreciation curves
-- Progression arc: early/mid/late game
+### Sections Present
+- ✓ Store identity (name, size, budget, rent)
+- ✓ Atmosphere & visual design (materials, lighting, decorative props, color palette)
+- ✓ Audio design (ambient tracks, SFX triggers table)
+- ✓ Item categories (cards, memorabilia, sealed product)
+- ✓ Item distribution table with current counts and price ranges
+- ✓ Fixture detail cards (per-fixture description with dimensions, materials, interaction behavior)
+- ✓ Customer behavior narratives (paragraph-length shopping descriptions for all 4 types)
+- ✓ Unique mechanics (season cycle, authentication)
+- ✓ Shelf layout (6 fixtures, 31 slots)
+- ✓ Content cross-reference (items mapped to fixtures)
+- ✓ Pricing guidelines
+- ✓ Starter inventory (9 items with IDs and prices)
+- ✓ Progression milestones table (day/reputation/revenue/unlock gates)
+- ✓ Risk/reward analysis (beginner traps, optimal strategies)
+- ✓ M1 scope boundaries
 
 ## Acceptance Criteria
 
-- Doc covers all areas listed in deliverables
-- Item categories match STORE_TYPES.md
-- Mechanics integrate with core systems (not standalone)
-- Economy targets are specific enough to implement
+- ✓ Document exists at `docs/design/stores/SPORTS_MEMORABILIA.md`
+- ✓ Document includes all sections present in other store deep dives
+- ✓ Atmosphere section has specific prop list and material descriptions
+- ✓ Audio section has SFX triggers and ambient descriptions
+- ✓ Customer narratives describe shopping behavior in paragraph form
+- ✓ Document is ≥10KB, comparable to peer store deep dives

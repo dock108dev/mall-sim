@@ -5,20 +5,22 @@
 **Labels**: `design`, `store:video-games`, `phase:m3`, `priority:high`
 **Dependencies**: issue-032
 
-## Why This Matters
+## Status: DESIGN COMPLETE
 
-Second store type validates the modular architecture.
-
-## Scope
-
-Create docs/design/stores/RETRO_GAMES.md. Platform definitions, item taxonomy (cartridges/consoles/accessories/guides), testing station mechanic, refurbishment mechanic, customer archetypes, economy model.
+Design document created at `docs/design/stores/RETRO_GAMES.md`.
 
 ## Deliverables
 
-- docs/design/stores/RETRO_GAMES.md with full coverage
+- ✓ `docs/design/stores/RETRO_GAMES.md` — comprehensive store deep dive
+- ✓ 5 fictional platforms defined: SuperStation, MegaDrive 16, TriForce 64, DiscStation, PortaBoy
+- ✓ Testing station mechanic specified (floor space vs. conversion rate trade-off)
+- ✓ Refurbishment mechanic specified (time, cost, success chance, markup on repair)
+- ✓ Item taxonomy: cartridges (loose/CIB/NIB), consoles (working/for-parts/CIB), accessories, guides/magazines, imports
+- ✓ 4 customer archetypes with behavior details
+- ✓ Economy model with completeness premium and platform-specific demand
 
 ## Acceptance Criteria
 
-- 2-3 fictional platforms defined
-- Testing station and refurbishment mechanics are implementable
-- Item taxonomy supports 100+ items across platforms
+- ✓ 5 fictional platforms defined (exceeds 2-3 requirement)
+- ✓ Testing station and refurbishment mechanics are implementable
+- ✓ Item taxonomy supports 100+ items across platforms

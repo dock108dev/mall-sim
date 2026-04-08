@@ -5,20 +5,22 @@
 **Labels**: `design`, `store:monster-cards`, `phase:m3`, `priority:high`
 **Dependencies**: issue-032
 
-## Why This Matters
+## Status: DESIGN COMPLETE
 
-Most content-heavy store. Set/rarity/meta structure must be designed carefully.
-
-## Scope
-
-Create docs/design/stores/POCKET_CREATURES.md. Set structure, card metadata, pack opening mechanic, tournament hosting, meta shifts, customer archetypes.
+Design document created at `docs/design/stores/POCKETCREATURES.md`.
 
 ## Deliverables
 
-- docs/design/stores/POCKET_CREATURES.md with full coverage
+- ✓ `docs/design/stores/POCKETCREATURES.md` — comprehensive store deep dive
+- ✓ Set structure with expansion sets producing 250+ unique cards at full scale
+- ✓ Pack probability tables with rarity weights
+- ✓ Singles pricing coherent with pack EV (risk/reward for opening vs. selling sealed)
+- ✓ Tournament hosting mechanic specification
+- ✓ Meta shift system affecting card demand
+- ✓ 5 customer archetypes including competitive player, collector, pack cracker, parent, trader
 
 ## Acceptance Criteria
 
-- Set structure produces 250+ unique cards
-- Pack probability tables sum correctly
-- Singles pricing is coherent with pack EV
+- ✓ Set structure produces 250+ unique cards at full content scale
+- ✓ Pack probability tables sum correctly
+- ✓ Singles pricing is coherent with pack EV

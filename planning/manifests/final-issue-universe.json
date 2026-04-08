@@ -1,7 +1,8 @@
 {
-  "manifest_id": "final-issue-universe-001",
+  "manifest_id": "final-issue-universe-002",
   "created_at": "2026-04-08T04:00:00Z",
-  "total_issues": 85,
+  "updated_at": "2026-04-08T06:00:00Z",
+  "total_issues": 88,
   "issues": [
     {
       "id": "issue-001",
@@ -27,7 +28,9 @@
         "phase:m1",
         "priority:high"
       ],
-      "dependencies": [],
+      "dependencies": [
+        "issue-088"
+      ],
       "local_file": "docs/production/github-issues/issue-002.md"
     },
     {
@@ -57,7 +60,9 @@
         "phase:m1",
         "priority:high"
       ],
-      "dependencies": [],
+      "dependencies": [
+        "issue-088"
+      ],
       "local_file": "docs/production/github-issues/issue-004.md"
     },
     {
@@ -83,7 +88,6 @@
       "milestone": "M1 Foundation + First Playable",
       "labels": [
         "gameplay",
-        "ui",
         "phase:m1",
         "priority:high"
       ],
@@ -116,13 +120,14 @@
       "milestone": "M1 Foundation + First Playable",
       "labels": [
         "ui",
-        "gameplay",
         "phase:m1",
         "priority:high"
       ],
       "dependencies": [
         "issue-005",
-        "issue-007"
+        "issue-006",
+        "issue-007",
+        "issue-010"
       ],
       "local_file": "docs/production/github-issues/issue-008.md"
     },
@@ -132,12 +137,13 @@
       "wave": "wave-1",
       "milestone": "M1 Foundation + First Playable",
       "labels": [
-        "gameplay",
         "tech",
         "phase:m1",
         "priority:high"
       ],
-      "dependencies": [],
+      "dependencies": [
+        "issue-088"
+      ],
       "local_file": "docs/production/github-issues/issue-009.md"
     },
     {
@@ -146,14 +152,12 @@
       "wave": "wave-1",
       "milestone": "M1 Foundation + First Playable",
       "labels": [
-        "gameplay",
         "tech",
         "phase:m1",
         "priority:high"
       ],
       "dependencies": [
-        "issue-001",
-        "issue-009"
+        "issue-001"
       ],
       "local_file": "docs/production/github-issues/issue-010.md"
     },
@@ -164,10 +168,12 @@
       "milestone": "M1 Foundation + First Playable",
       "labels": [
         "gameplay",
+        "ai",
         "phase:m1",
         "priority:high"
       ],
       "dependencies": [
+        "issue-001",
         "issue-004",
         "issue-005",
         "issue-009",
@@ -186,8 +192,11 @@
         "priority:high"
       ],
       "dependencies": [
+        "issue-003",
+        "issue-005",
         "issue-010",
-        "issue-011"
+        "issue-011",
+        "issue-018"
       ],
       "local_file": "docs/production/github-issues/issue-012.md"
     },
@@ -202,6 +211,7 @@
         "priority:high"
       ],
       "dependencies": [
+        "issue-003",
         "issue-009",
         "issue-010"
       ],
@@ -214,14 +224,14 @@
       "milestone": "M1 Foundation + First Playable",
       "labels": [
         "ui",
-        "gameplay",
         "phase:m1",
         "priority:high"
       ],
       "dependencies": [
         "issue-009",
         "issue-010",
-        "issue-012"
+        "issue-012",
+        "issue-018"
       ],
       "local_file": "docs/production/github-issues/issue-014.md"
     },
@@ -233,13 +243,13 @@
       "labels": [
         "content",
         "store:sports",
-        "data",
         "phase:m1",
-        "priority:high"
+        "priority:medium"
       ],
       "dependencies": [
         "issue-001"
       ],
+      "status": "CONTENT COMPLETE",
       "local_file": "docs/production/github-issues/issue-015.md"
     },
     {
@@ -248,10 +258,10 @@
       "wave": "wave-1",
       "milestone": "M1 Foundation + First Playable",
       "labels": [
-        "tools",
-        "data",
+        "tech",
+        "tooling",
         "phase:m1",
-        "priority:high"
+        "priority:medium"
       ],
       "dependencies": [],
       "local_file": "docs/production/github-issues/issue-016.md"
@@ -262,8 +272,8 @@
       "wave": "wave-1",
       "milestone": "M1 Foundation + First Playable",
       "labels": [
-        "tools",
-        "production",
+        "tech",
+        "ci",
         "phase:m1",
         "priority:medium"
       ],
@@ -278,14 +288,12 @@
       "wave": "wave-1",
       "milestone": "M1 Foundation + First Playable",
       "labels": [
-        "gameplay",
         "tech",
         "phase:m1",
-        "priority:medium"
+        "priority:high"
       ],
       "dependencies": [
-        "issue-010",
-        "issue-012"
+        "issue-010"
       ],
       "local_file": "docs/production/github-issues/issue-018.md"
     },
@@ -296,7 +304,6 @@
       "milestone": "M1 Foundation + First Playable",
       "labels": [
         "content",
-        "data",
         "store:sports",
         "phase:m1",
         "priority:medium"
@@ -304,6 +311,7 @@
       "dependencies": [
         "issue-001"
       ],
+      "status": "CONTENT COMPLETE",
       "local_file": "docs/production/github-issues/issue-019.md"
     },
     {
@@ -313,7 +321,6 @@
       "milestone": "M1 Foundation + First Playable",
       "labels": [
         "content",
-        "data",
         "store:sports",
         "phase:m1",
         "priority:medium"
@@ -321,6 +328,7 @@
       "dependencies": [
         "issue-001"
       ],
+      "status": "CONTENT COMPLETE",
       "local_file": "docs/production/github-issues/issue-020.md"
     },
     {
@@ -330,8 +338,8 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "gameplay",
-        "phase:m2",
-        "priority:high"
+        "ai",
+        "phase:m2"
       ],
       "dependencies": [
         "issue-011",
@@ -346,9 +354,8 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "gameplay",
-        "tech",
-        "phase:m2",
-        "priority:high"
+        "ai",
+        "phase:m2"
       ],
       "dependencies": [
         "issue-011",
@@ -363,8 +370,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "gameplay",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-012"
@@ -377,10 +383,8 @@
       "wave": "wave-2",
       "milestone": "M2 Core Loop Depth",
       "labels": [
-        "gameplay",
-        "balance",
-        "phase:m2",
-        "priority:high"
+        "tech",
+        "phase:m2"
       ],
       "dependencies": [
         "issue-010"
@@ -394,9 +398,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "gameplay",
-        "ui",
-        "phase:m2",
-        "priority:high"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-005",
@@ -412,8 +414,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "tech",
-        "phase:m2",
-        "priority:high"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-005",
@@ -430,8 +431,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "ui",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [],
       "local_file": "docs/production/github-issues/issue-027.md"
@@ -443,8 +443,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "audio",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [],
       "local_file": "docs/production/github-issues/issue-028.md"
@@ -456,8 +455,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "ui",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-027"
@@ -471,9 +469,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "gameplay",
-        "balance",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-009",
@@ -489,10 +485,10 @@
       "labels": [
         "design",
         "store:sports",
-        "phase:m2",
-        "priority:high"
+        "phase:m2"
       ],
       "dependencies": [],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-031.md"
     },
     {
@@ -502,12 +498,10 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "design",
-        "data",
-        "content",
-        "phase:m2",
-        "priority:high"
+        "phase:m2"
       ],
       "dependencies": [],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-032.md"
     },
     {
@@ -517,13 +511,13 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "design",
-        "gameplay",
-        "phase:m2",
-        "priority:high"
+        "ai",
+        "phase:m2"
       ],
       "dependencies": [
         "issue-031"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-033.md"
     },
     {
@@ -533,13 +527,12 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "design",
-        "gameplay",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-031"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-034.md"
     },
     {
@@ -549,14 +542,13 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "design",
-        "balance",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-031",
         "issue-032"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-035.md"
     },
     {
@@ -566,14 +558,13 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "design",
-        "progression",
-        "phase:m2",
-        "priority:high"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-031",
         "issue-032"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-036.md"
     },
     {
@@ -584,13 +575,12 @@
       "labels": [
         "design",
         "ui",
-        "ux",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-031"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-037.md"
     },
     {
@@ -599,10 +589,9 @@
       "wave": "wave-2",
       "milestone": "M2 Core Loop Depth",
       "labels": [
-        "tools",
-        "testing",
-        "phase:m2",
-        "priority:medium"
+        "tech",
+        "debug",
+        "phase:m2"
       ],
       "dependencies": [
         "issue-005",
@@ -618,11 +607,9 @@
       "wave": "wave-2",
       "milestone": "M2 Core Loop Depth",
       "labels": [
-        "tools",
+        "tooling",
         "content",
-        "data",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-016",
@@ -637,9 +624,7 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "gameplay",
-        "progression",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [
         "issue-025",
@@ -655,12 +640,12 @@
       "labels": [
         "design",
         "store:video-games",
-        "phase:m3",
-        "priority:high"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-032"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-041.md"
     },
     {
@@ -671,12 +656,12 @@
       "labels": [
         "design",
         "store:rentals",
-        "phase:m3",
-        "priority:high"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-032"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-042.md"
     },
     {
@@ -687,12 +672,12 @@
       "labels": [
         "design",
         "store:monster-cards",
-        "phase:m3",
-        "priority:high"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-032"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-043.md"
     },
     {
@@ -703,12 +688,12 @@
       "labels": [
         "design",
         "store:electronics",
-        "phase:m3",
-        "priority:high"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-032"
       ],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-044.md"
     },
     {
@@ -719,13 +704,13 @@
       "labels": [
         "gameplay",
         "store:video-games",
-        "phase:m3",
-        "priority:high"
+        "phase:m3"
       ],
       "dependencies": [
-        "issue-041",
+        "issue-004",
         "issue-006",
-        "issue-011"
+        "issue-011",
+        "issue-041"
       ],
       "local_file": "docs/production/github-issues/issue-045.md"
     },
@@ -736,9 +721,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "gameplay",
-        "progression",
-        "phase:m3",
-        "priority:high"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-018",
@@ -753,8 +736,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "gameplay",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-004"
@@ -768,9 +750,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "gameplay",
-        "progression",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-047",
@@ -786,12 +766,13 @@
       "labels": [
         "gameplay",
         "art",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-002",
-        "issue-046"
+        "issue-046",
+        "issue-058",
+        "issue-060"
       ],
       "local_file": "docs/production/github-issues/issue-049.md"
     },
@@ -802,9 +783,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "gameplay",
-        "balance",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-024",
@@ -828,6 +807,7 @@
         "issue-041",
         "issue-016"
       ],
+      "status": "CONTENT COMPLETE",
       "local_file": "docs/production/github-issues/issue-051.md"
     },
     {
@@ -838,11 +818,13 @@
       "labels": [
         "gameplay",
         "store:rentals",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
-        "issue-042"
+        "issue-006",
+        "issue-011",
+        "issue-042",
+        "issue-045"
       ],
       "local_file": "docs/production/github-issues/issue-052.md"
     },
@@ -853,8 +835,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "gameplay",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-034",
@@ -869,9 +850,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "gameplay",
-        "progression",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-036",
@@ -886,8 +865,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "ui",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-005",
@@ -903,14 +881,13 @@
       "labels": [
         "content",
         "store:rentals",
-        "data",
-        "phase:m3",
-        "priority:medium"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-042",
         "issue-016"
       ],
+      "status": "CONTENT COMPLETE",
       "local_file": "docs/production/github-issues/issue-056.md"
     },
     {
@@ -920,9 +897,7 @@
       "milestone": "M3 Progression + Content Expansion",
       "labels": [
         "gameplay",
-        "progression",
-        "phase:m3",
-        "priority:low"
+        "phase:m3"
       ],
       "dependencies": [
         "issue-046",
@@ -942,6 +917,7 @@
         "priority:medium"
       ],
       "dependencies": [],
+      "status": "DESIGN COMPLETE",
       "local_file": "docs/production/github-issues/issue-058.md"
     },
     {
@@ -951,11 +927,11 @@
       "milestone": "M2 Core Loop Depth",
       "labels": [
         "ui",
-        "phase:m2",
-        "priority:high"
+        "phase:m2"
       ],
       "dependencies": [
-        "issue-026"
+        "issue-026",
+        "issue-060"
       ],
       "local_file": "docs/production/github-issues/issue-059.md"
     },
@@ -967,8 +943,7 @@
       "labels": [
         "tech",
         "ui",
-        "phase:m2",
-        "priority:medium"
+        "phase:m2"
       ],
       "dependencies": [],
       "local_file": "docs/production/github-issues/issue-060.md"
@@ -981,8 +956,7 @@
       "labels": [
         "gameplay",
         "store:monster-cards",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m4"
       ],
       "dependencies": [
         "issue-043"
@@ -997,8 +971,7 @@
       "labels": [
         "gameplay",
         "store:electronics",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m4"
       ],
       "dependencies": [
         "issue-044"
@@ -1012,8 +985,7 @@
       "milestone": "M4 Polish + Replayability",
       "labels": [
         "gameplay",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m4"
       ],
       "dependencies": [
         "issue-053",
@@ -1028,9 +1000,7 @@
       "milestone": "M4 Polish + Replayability",
       "labels": [
         "gameplay",
-        "progression",
-        "phase:m4plus",
-        "priority:low"
+        "phase:m4"
       ],
       "dependencies": [
         "issue-046"
@@ -1044,9 +1014,8 @@
       "milestone": "M4 Polish + Replayability",
       "labels": [
         "gameplay",
-        "ux",
-        "phase:m4plus",
-        "priority:medium"
+        "ui",
+        "phase:m4"
       ],
       "dependencies": [
         "issue-006",
@@ -1061,10 +1030,9 @@
       "wave": "wave-4",
       "milestone": "M4 Polish + Replayability",
       "labels": [
-        "ux",
         "ui",
-        "phase:m4plus",
-        "priority:medium"
+        "accessibility",
+        "phase:m4"
       ],
       "dependencies": [
         "issue-027"
@@ -1079,14 +1047,13 @@
       "labels": [
         "content",
         "store:monster-cards",
-        "data",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m4"
       ],
       "dependencies": [
         "issue-043",
         "issue-016"
       ],
+      "status": "CONTENT COMPLETE",
       "local_file": "docs/production/github-issues/issue-067.md"
     },
     {
@@ -1097,14 +1064,13 @@
       "labels": [
         "content",
         "store:electronics",
-        "data",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m4"
       ],
       "dependencies": [
         "issue-044",
         "issue-016"
       ],
+      "status": "CONTENT COMPLETE",
       "local_file": "docs/production/github-issues/issue-068.md"
     },
     {
@@ -1114,9 +1080,7 @@
       "milestone": "M4 Polish + Replayability",
       "labels": [
         "tech",
-        "production",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m4"
       ],
       "dependencies": [],
       "local_file": "docs/production/github-issues/issue-069.md"
@@ -1127,10 +1091,8 @@
       "wave": "wave-4",
       "milestone": "M4 Polish + Replayability",
       "labels": [
-        "production",
         "tech",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m4"
       ],
       "dependencies": [],
       "local_file": "docs/production/github-issues/issue-070.md"
@@ -1143,8 +1105,7 @@
       "labels": [
         "gameplay",
         "store:sports",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m5"
       ],
       "dependencies": [
         "issue-031"
@@ -1159,8 +1120,7 @@
       "labels": [
         "gameplay",
         "store:video-games",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m5"
       ],
       "dependencies": [
         "issue-041",
@@ -1176,8 +1136,7 @@
       "labels": [
         "gameplay",
         "store:monster-cards",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m5"
       ],
       "dependencies": [
         "issue-043",
@@ -1192,10 +1151,8 @@
       "milestone": "M5 Store Expansion",
       "labels": [
         "gameplay",
-        "balance",
         "store:electronics",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m5"
       ],
       "dependencies": [
         "issue-044",
@@ -1211,8 +1168,7 @@
       "labels": [
         "gameplay",
         "store:rentals",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m5"
       ],
       "dependencies": [
         "issue-042",
@@ -1227,9 +1183,7 @@
       "milestone": "M5 Store Expansion",
       "labels": [
         "gameplay",
-        "progression",
-        "phase:m4plus",
-        "priority:high"
+        "phase:m5"
       ],
       "dependencies": [
         "issue-036",
@@ -1241,13 +1195,11 @@
       "id": "issue-077",
       "title": "Implement visual and UI polish pass",
       "wave": "wave-5",
-      "milestone": "M6 Long-tail + Secret Thread",
+      "milestone": "M5 Store Expansion",
       "labels": [
         "art",
         "ui",
-        "production",
-        "phase:m4plus",
-        "priority:medium"
+        "phase:m5"
       ],
       "dependencies": [],
       "local_file": "docs/production/github-issues/issue-077.md"
@@ -1256,12 +1208,10 @@
       "id": "issue-078",
       "title": "Implement comprehensive QA and playtesting pass",
       "wave": "wave-5",
-      "milestone": "M6 Long-tail + Secret Thread",
+      "milestone": "M5 Store Expansion",
       "labels": [
-        "testing",
-        "production",
-        "phase:m4plus",
-        "priority:high"
+        "qa",
+        "phase:m5"
       ],
       "dependencies": [
         "issue-076"
@@ -1275,10 +1225,8 @@
       "milestone": "M6 Long-tail + Secret Thread",
       "labels": [
         "gameplay",
-        "tech",
-        "secret-thread",
-        "phase:m4plus",
-        "priority:low"
+        "secret",
+        "phase:m6"
       ],
       "dependencies": [
         "issue-026"
@@ -1292,10 +1240,8 @@
       "milestone": "M6 Long-tail + Secret Thread",
       "labels": [
         "content",
-        "secret-thread",
-        "data",
-        "phase:m4plus",
-        "priority:low"
+        "secret",
+        "phase:m6"
       ],
       "dependencies": [
         "issue-079"
@@ -1309,9 +1255,8 @@
       "milestone": "M6 Long-tail + Secret Thread",
       "labels": [
         "gameplay",
-        "secret-thread",
-        "phase:m4plus",
-        "priority:low"
+        "secret",
+        "phase:m6"
       ],
       "dependencies": [
         "issue-079",
@@ -1326,9 +1271,8 @@
       "milestone": "M6 Long-tail + Secret Thread",
       "labels": [
         "gameplay",
-        "secret-thread",
-        "phase:m4plus",
-        "priority:low"
+        "secret",
+        "phase:m6"
       ],
       "dependencies": [
         "issue-079",
@@ -1343,10 +1287,8 @@
       "milestone": "M6 Long-tail + Secret Thread",
       "labels": [
         "gameplay",
-        "secret-thread",
-        "progression",
-        "phase:m4plus",
-        "priority:low"
+        "secret",
+        "phase:m6"
       ],
       "dependencies": [
         "issue-076",
@@ -1360,10 +1302,9 @@
       "wave": "wave-6",
       "milestone": "M6 Long-tail + Secret Thread",
       "labels": [
-        "testing",
-        "secret-thread",
-        "phase:m4plus",
-        "priority:medium"
+        "qa",
+        "secret",
+        "phase:m6"
       ],
       "dependencies": [
         "issue-081",
@@ -1378,16 +1319,69 @@
       "wave": "wave-6",
       "milestone": "M6 Long-tail + Secret Thread",
       "labels": [
-        "ui",
         "art",
-        "secret-thread",
-        "phase:m4plus",
-        "priority:low"
+        "ui",
+        "secret",
+        "phase:m6"
       ],
       "dependencies": [
         "issue-083"
       ],
       "local_file": "docs/production/github-issues/issue-085.md"
+    },
+    {
+      "id": "issue-086",
+      "title": "Remove legacy single-item scaffold JSON files",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "cleanup",
+        "phase:m1",
+        "priority:low"
+      ],
+      "dependencies": [
+        "issue-001"
+      ],
+      "local_file": "docs/production/github-issues/issue-086.md"
+    },
+    {
+      "id": "issue-087",
+      "title": "Create GameWorld integration scene and day cycle orchestration",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "gameplay",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-001",
+        "issue-002",
+        "issue-004",
+        "issue-005",
+        "issue-009",
+        "issue-010",
+        "issue-011",
+        "issue-013",
+        "issue-014",
+        "issue-018"
+      ],
+      "local_file": "docs/production/github-issues/issue-087.md"
+    },
+    {
+      "id": "issue-088",
+      "title": "Register all wave-1 input map actions in project.godot",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "phase:m1",
+        "priority:medium"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-088.md"
     }
   ]
 }

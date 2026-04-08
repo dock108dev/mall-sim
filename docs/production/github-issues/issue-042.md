@@ -5,20 +5,21 @@
 **Labels**: `design`, `store:rentals`, `phase:m3`, `priority:high`
 **Dependencies**: issue-032
 
-## Why This Matters
+## Status: DESIGN COMPLETE
 
-Rental is fundamentally different from sales — needs its own economy design.
-
-## Scope
-
-Create docs/design/stores/VIDEO_RENTAL.md. Rental lifecycle, parody catalog design, recommendation mechanic, revenue model (rentals vs sales), VHS/DVD tiers, customer archetypes.
+Design document created at `docs/design/stores/VIDEO_RENTAL.md`.
 
 ## Deliverables
 
-- docs/design/stores/VIDEO_RENTAL.md with full coverage
+- ✓ `docs/design/stores/VIDEO_RENTAL.md` — comprehensive store deep dive
+- ✓ Rental lifecycle fully specified (rental periods, return flow, late fees, damage/wear)
+- ✓ Revenue model: rental fees vs. sales-based stores, copy economics, snack margins
+- ✓ Staff Picks / recommendation mechanic
+- ✓ Catalog structure supports 100+ parody titles across genres
+- ✓ 4 customer archetypes with rental-specific behaviors
 
 ## Acceptance Criteria
 
-- Rental lifecycle fully specified (periods, returns, late fees, damage)
-- Revenue model viable compared to sales-based stores
-- Catalog supports 100+ parody titles
+- ✓ Rental lifecycle fully specified (periods, returns, late fees, damage)
+- ✓ Revenue model viable compared to sales-based stores
+- ✓ Catalog supports 100+ parody titles

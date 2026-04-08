@@ -5,20 +5,22 @@
 **Labels**: `design`, `store:electronics`, `phase:m3`, `priority:high`
 **Dependencies**: issue-032
 
-## Why This Matters
+## Status: DESIGN COMPLETE
 
-Depreciation is the opposite of collector appreciation — needs its own design.
-
-## Scope
-
-Create docs/design/stores/ELECTRONICS.md. Product categories, depreciation mechanic, demo units, warranty upsell, customer archetypes, economy model.
+Design document created at `docs/design/stores/ELECTRONICS.md`.
 
 ## Deliverables
 
-- docs/design/stores/ELECTRONICS.md with full coverage
+- ✓ `docs/design/stores/ELECTRONICS.md` — comprehensive store deep dive
+- ✓ Depreciation curve specification (timing decisions are meaningful)
+- ✓ Product lifecycle model (new → current → discount → clearance → obsolete)
+- ✓ Demo unit mechanic (sacrifice inventory for sales boost)
+- ✓ Warranty upsell mechanic with claim probability
+- ✓ Accessory ecosystem creating cross-sell depth
+- ✓ 4 customer archetypes: early adopter, bargain hunter, gift buyer, tech enthusiast
 
 ## Acceptance Criteria
 
-- Depreciation curve makes timing decisions meaningful
-- Product lifecycle doesn't make old stock instantly worthless
-- Accessory ecosystem creates cross-sell depth
+- ✓ Depreciation curve makes timing decisions meaningful
+- ✓ Product lifecycle doesn't make old stock instantly worthless
+- ✓ Accessory ecosystem creates cross-sell depth

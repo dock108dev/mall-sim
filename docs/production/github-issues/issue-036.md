@@ -5,27 +5,27 @@
 **Labels**: `design`, `progression`, `phase:m2`, `priority:high`
 **Dependencies**: issue-031, issue-032
 
-## Why This Matters
+## Status: DESIGN COMPLETE
 
-Progression gives the game its long-term shape and prevents aimlessness.
-
-## Scope
-
-Create authoritative design doc for progression. Store unlock sequence. Supplier tiers. 30-hour core completion breakdown. 100% completion criteria. Anti-grind safeguards.
+Design document created at `docs/design/PROGRESSION.md`.
 
 ## Deliverables
 
-- docs/design/PROGRESSION.md
-- Unlock sequence: which stores, what triggers, what order
-- Supplier tier definitions and gate criteria
-- 30-hour breakdown by game phase
-- 100% completion criteria (all items, all stores, all milestones)
-- Mall-wide vs per-store progression
-- Anti-grind safeguards (cozy pillar compliance)
+- ✓ `docs/design/PROGRESSION.md` — comprehensive progression and completion system document
+- ✓ Store unlock sequence (5 stores, gated by mall-wide reputation + cumulative cash earned)
+- ✓ Supplier tier definitions and gate criteria (3 tiers, per-store reputation gated)
+- ✓ 30-hour breakdown by game phase (Learning → Mastery → Expansion → Empire → Completion)
+- ✓ 100% completion criteria (14 specific, measurable criteria)
+- ✓ Mall-wide vs per-store progression (reputation is per-store, unlock gates use mall-wide average)
+- ✓ Anti-grind safeguards (7 specific safeguards aligned with cozy pillar)
+- ✓ Store upgrade paths (6 universal + 10 store-specific upgrades)
+- ✓ Milestone and achievement system (revenue, collection, and store milestones)
+- ✓ Setup fees for new store slots
+- ✓ Reputation gain/loss rates and tier trajectory estimates
 
 ## Acceptance Criteria
 
-- All 5 stores reachable from new game
-- 30-hour target achievable by average player
-- No progression dead ends
-- 100% criteria is specific and measurable
+- ✓ All 5 stores reachable from new game (player chooses any store type first, remaining 4 unlock via progression)
+- ✓ 30-hour target achievable by average player (breakdown: 2h learning, 3h mastery, 7h expansion, 8h empire, 10h completion)
+- ✓ No progression dead ends (catch-up mechanics, reputation sticky at tier thresholds, cumulative cash never lost)
+- ✓ 100% criteria is specific and measurable (14 criteria, each worth ~7.1%, partial progress tracked)
