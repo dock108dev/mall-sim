@@ -13,14 +13,15 @@
   "condition_multipliers": {
     "mint": 2.0,
     "near_mint": 1.5,
-    "new": 1.0,
-    "used": 0.6,
-    "damaged": 0.2
+    "good": 1.0,
+    "fair": 0.5,
+    "poor": 0.25
   },
   "rarity_multipliers": {
-    "legendary": 10.0,
-    "rare": 3.0,
-    "uncommon": 1.5,
+    "legendary": 40.0,
+    "very_rare": 15.0,
+    "rare": 6.0,
+    "uncommon": 2.5,
     "common": 1.0
   },
   "daily_rent_per_size": {

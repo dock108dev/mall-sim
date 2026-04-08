@@ -43,7 +43,7 @@ After opening the project, check these settings under Project > Project Settings
 - V-Sync: Enabled
 
 ### Application
-- Main scene: `res://scenes/boot/boot.tscn`
+- Main scene: `res://game/scenes/bootstrap/boot.tscn`
 - Name: "mallcore-sim"
 
 ## Input Map
@@ -68,21 +68,16 @@ The following input actions should be defined in Project Settings > Input Map:
 
 ## Autoload List
 
-These singletons are registered under Project Settings > Autoload:
+These singletons are registered in `project.godot` under Project Settings > Autoload. **`project.godot` is the authoritative source for this list.**
 
 | Name | Script Path | Purpose |
 |------|------------|---------|
-| `EventBus` | `res://scripts/autoload/event_bus.gd` | Global signal broker |
-| `GameManager` | `res://scripts/autoload/game_manager.gd` | State machine, lifecycle |
-| `DataLoader` | `res://scripts/autoload/data_loader.gd` | JSON content registry |
-| `EconomySystem` | `res://scripts/autoload/economy_system.gd` | Money and market values |
-| `InventorySystem` | `res://scripts/autoload/inventory_system.gd` | Item tracking |
-| `TimeSystem` | `res://scripts/autoload/time_system.gd` | Day cycle and clock |
-| `ReputationSystem` | `res://scripts/autoload/reputation_system.gd` | Score and tier tracking |
-| `SaveManager` | `res://scripts/autoload/save_manager.gd` | Save/load persistence |
-| `TransitionManager` | `res://scripts/autoload/transition_manager.gd` | Scene transitions |
+| `GameManager` | `res://game/autoload/game_manager.gd` | State machine, lifecycle |
+| `AudioManager` | `res://game/autoload/audio_manager.gd` | SFX/music playback |
+| `Settings` | `res://game/autoload/settings.gd` | User preferences |
+| `EventBus` | `res://game/autoload/event_bus.gd` | Global signal broker |
 
-Order matters -- EventBus should be first, GameManager second, DataLoader third.
+Other systems (TimeSystem, EconomySystem, InventorySystem, CustomerSystem, ReputationSystem, DataLoader, SaveManager) are standalone class scripts in `game/scripts/`. They are instantiated by GameWorld or GameManager at runtime, not registered as autoloads. See `docs/architecture/SYSTEM_OVERVIEW.md` for full details.
 
 ## Running the Game
 
@@ -99,28 +94,29 @@ To run a specific scene for testing:
 ```
 mallcore-sim/
   +-- project.godot
-  +-- content/            # JSON data files (items, stores, economy)
-  +-- scenes/             # .tscn scene files
-  |    +-- boot/
-  |    +-- menu/
-  |    +-- game/
-  |    +-- stores/
-  |    +-- characters/
-  |    +-- ui/
-  |    +-- debug/
-  +-- scripts/            # .gd script files
-  |    +-- autoload/      # Singleton systems
-  |    +-- resources/     # Resource class definitions
-  |    +-- ui/            # UI-specific scripts
-  |    +-- store/         # Store-specific logic
-  |    +-- customer/      # Customer AI
-  +-- assets/             # Art, audio, fonts
-  |    +-- models/
-  |    +-- textures/
-  |    +-- icons/
-  |    +-- audio/
-  |    +-- fonts/
-  +-- docs/               # Design and technical documentation
+  +-- game/                 # Everything Godot loads at runtime
+  |    +-- autoload/        # Singleton scripts (GameManager, EventBus, etc.)
+  |    +-- content/         # JSON data files (items, stores, economy)
+  |    +-- resources/       # Custom Resource class definitions (.gd)
+  |    +-- scenes/          # .tscn scene files
+  |    |    +-- bootstrap/
+  |    |    +-- ui/
+  |    |    +-- world/
+  |    |    +-- player/
+  |    |    +-- stores/
+  |    |    +-- debug/
+  |    +-- scripts/         # GDScript files
+  |    |    +-- core/       # Constants, SaveManager, InputHelper, Interactable
+  |    |    +-- systems/    # EconomySystem, InventorySystem, TimeSystem, etc.
+  |    |    +-- data/       # DataLoader
+  |    |    +-- world/      # BuildMode
+  |    |    +-- debug/      # DebugCommands
+  |    +-- assets/          # Art, audio, fonts
+  |    +-- tests/
+  +-- docs/                 # Design and technical documentation
+  +-- planning/             # Planning orchestrator (not shipped with game)
+  +-- tools/                # Build scripts, data validators
+  +-- reference/            # Art references, design mockups
 ```
 
 ## Common Gotchas

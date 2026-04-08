@@ -3,9 +3,11 @@
   "name": "ZuneWave 128MB MP3 Player",
   "description": "Brushed aluminum MP3 player with a blue backlit LCD. Holds about 30 songs.",
   "category": "portable_audio",
+  "subcategory": "players",
   "store_type": "electronics",
   "base_price": 59.99,
   "rarity": "common",
-  "condition": "new",
-  "tags": ["audio", "portable", "2000s", "gadget"]
+  "condition_range": ["fair", "good", "near_mint", "mint"],
+  "tags": ["audio", "portable", "2000s", "gadget"],
+  "depreciates": true
 }

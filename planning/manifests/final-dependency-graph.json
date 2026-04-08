@@ -1,0 +1,558 @@
+{
+  "manifest_id": "final-dependency-graph-001",
+  "edges": [
+    {
+      "from": "issue-002",
+      "to": "issue-003"
+    },
+    {
+      "from": "issue-001",
+      "to": "issue-005"
+    },
+    {
+      "from": "issue-003",
+      "to": "issue-006"
+    },
+    {
+      "from": "issue-004",
+      "to": "issue-006"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-006"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-007"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-008"
+    },
+    {
+      "from": "issue-007",
+      "to": "issue-008"
+    },
+    {
+      "from": "issue-001",
+      "to": "issue-010"
+    },
+    {
+      "from": "issue-004",
+      "to": "issue-011"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-011"
+    },
+    {
+      "from": "issue-009",
+      "to": "issue-011"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-012"
+    },
+    {
+      "from": "issue-011",
+      "to": "issue-012"
+    },
+    {
+      "from": "issue-009",
+      "to": "issue-013"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-013"
+    },
+    {
+      "from": "issue-009",
+      "to": "issue-014"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-014"
+    },
+    {
+      "from": "issue-012",
+      "to": "issue-014"
+    },
+    {
+      "from": "issue-001",
+      "to": "issue-015"
+    },
+    {
+      "from": "issue-016",
+      "to": "issue-017"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-018"
+    },
+    {
+      "from": "issue-012",
+      "to": "issue-018"
+    },
+    {
+      "from": "issue-001",
+      "to": "issue-019"
+    },
+    {
+      "from": "issue-001",
+      "to": "issue-020"
+    },
+    {
+      "from": "issue-011",
+      "to": "issue-021"
+    },
+    {
+      "from": "issue-020",
+      "to": "issue-021"
+    },
+    {
+      "from": "issue-011",
+      "to": "issue-022"
+    },
+    {
+      "from": "issue-004",
+      "to": "issue-022"
+    },
+    {
+      "from": "issue-012",
+      "to": "issue-023"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-024"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-025"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-025"
+    },
+    {
+      "from": "issue-014",
+      "to": "issue-025"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-026"
+    },
+    {
+      "from": "issue-009",
+      "to": "issue-026"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-026"
+    },
+    {
+      "from": "issue-018",
+      "to": "issue-026"
+    },
+    {
+      "from": "issue-027",
+      "to": "issue-029"
+    },
+    {
+      "from": "issue-009",
+      "to": "issue-030"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-030"
+    },
+    {
+      "from": "issue-031",
+      "to": "issue-033"
+    },
+    {
+      "from": "issue-031",
+      "to": "issue-034"
+    },
+    {
+      "from": "issue-031",
+      "to": "issue-035"
+    },
+    {
+      "from": "issue-032",
+      "to": "issue-035"
+    },
+    {
+      "from": "issue-031",
+      "to": "issue-036"
+    },
+    {
+      "from": "issue-032",
+      "to": "issue-036"
+    },
+    {
+      "from": "issue-031",
+      "to": "issue-037"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-038"
+    },
+    {
+      "from": "issue-009",
+      "to": "issue-038"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-038"
+    },
+    {
+      "from": "issue-018",
+      "to": "issue-038"
+    },
+    {
+      "from": "issue-016",
+      "to": "issue-039"
+    },
+    {
+      "from": "issue-032",
+      "to": "issue-039"
+    },
+    {
+      "from": "issue-025",
+      "to": "issue-040"
+    },
+    {
+      "from": "issue-018",
+      "to": "issue-040"
+    },
+    {
+      "from": "issue-032",
+      "to": "issue-041"
+    },
+    {
+      "from": "issue-032",
+      "to": "issue-042"
+    },
+    {
+      "from": "issue-032",
+      "to": "issue-043"
+    },
+    {
+      "from": "issue-032",
+      "to": "issue-044"
+    },
+    {
+      "from": "issue-041",
+      "to": "issue-045"
+    },
+    {
+      "from": "issue-006",
+      "to": "issue-045"
+    },
+    {
+      "from": "issue-011",
+      "to": "issue-045"
+    },
+    {
+      "from": "issue-018",
+      "to": "issue-046"
+    },
+    {
+      "from": "issue-036",
+      "to": "issue-046"
+    },
+    {
+      "from": "issue-004",
+      "to": "issue-047"
+    },
+    {
+      "from": "issue-047",
+      "to": "issue-048"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-048"
+    },
+    {
+      "from": "issue-002",
+      "to": "issue-049"
+    },
+    {
+      "from": "issue-046",
+      "to": "issue-049"
+    },
+    {
+      "from": "issue-024",
+      "to": "issue-050"
+    },
+    {
+      "from": "issue-034",
+      "to": "issue-050"
+    },
+    {
+      "from": "issue-041",
+      "to": "issue-051"
+    },
+    {
+      "from": "issue-016",
+      "to": "issue-051"
+    },
+    {
+      "from": "issue-042",
+      "to": "issue-052"
+    },
+    {
+      "from": "issue-034",
+      "to": "issue-053"
+    },
+    {
+      "from": "issue-009",
+      "to": "issue-053"
+    },
+    {
+      "from": "issue-036",
+      "to": "issue-054"
+    },
+    {
+      "from": "issue-010",
+      "to": "issue-054"
+    },
+    {
+      "from": "issue-005",
+      "to": "issue-055"
+    },
+    {
+      "from": "issue-008",
+      "to": "issue-055"
+    },
+    {
+      "from": "issue-042",
+      "to": "issue-056"
+    },
+    {
+      "from": "issue-016",
+      "to": "issue-056"
+    },
+    {
+      "from": "issue-046",
+      "to": "issue-057"
+    },
+    {
+      "from": "issue-047",
+      "to": "issue-057"
+    },
+    {
+      "from": "issue-026",
+      "to": "issue-059"
+    },
+    {
+      "from": "issue-043",
+      "to": "issue-061"
+    },
+    {
+      "from": "issue-044",
+      "to": "issue-062"
+    },
+    {
+      "from": "issue-053",
+      "to": "issue-063"
+    },
+    {
+      "from": "issue-034",
+      "to": "issue-063"
+    },
+    {
+      "from": "issue-046",
+      "to": "issue-064"
+    },
+    {
+      "from": "issue-006",
+      "to": "issue-065"
+    },
+    {
+      "from": "issue-012",
+      "to": "issue-065"
+    },
+    {
+      "from": "issue-014",
+      "to": "issue-065"
+    },
+    {
+      "from": "issue-027",
+      "to": "issue-066"
+    },
+    {
+      "from": "issue-043",
+      "to": "issue-067"
+    },
+    {
+      "from": "issue-016",
+      "to": "issue-067"
+    },
+    {
+      "from": "issue-044",
+      "to": "issue-068"
+    },
+    {
+      "from": "issue-016",
+      "to": "issue-068"
+    },
+    {
+      "from": "issue-031",
+      "to": "issue-071"
+    },
+    {
+      "from": "issue-041",
+      "to": "issue-072"
+    },
+    {
+      "from": "issue-045",
+      "to": "issue-072"
+    },
+    {
+      "from": "issue-043",
+      "to": "issue-073"
+    },
+    {
+      "from": "issue-061",
+      "to": "issue-073"
+    },
+    {
+      "from": "issue-044",
+      "to": "issue-074"
+    },
+    {
+      "from": "issue-062",
+      "to": "issue-074"
+    },
+    {
+      "from": "issue-042",
+      "to": "issue-075"
+    },
+    {
+      "from": "issue-052",
+      "to": "issue-075"
+    },
+    {
+      "from": "issue-036",
+      "to": "issue-076"
+    },
+    {
+      "from": "issue-054",
+      "to": "issue-076"
+    },
+    {
+      "from": "issue-076",
+      "to": "issue-078"
+    },
+    {
+      "from": "issue-026",
+      "to": "issue-079"
+    },
+    {
+      "from": "issue-079",
+      "to": "issue-080"
+    },
+    {
+      "from": "issue-079",
+      "to": "issue-081"
+    },
+    {
+      "from": "issue-080",
+      "to": "issue-081"
+    },
+    {
+      "from": "issue-079",
+      "to": "issue-082"
+    },
+    {
+      "from": "issue-081",
+      "to": "issue-082"
+    },
+    {
+      "from": "issue-076",
+      "to": "issue-083"
+    },
+    {
+      "from": "issue-079",
+      "to": "issue-083"
+    },
+    {
+      "from": "issue-081",
+      "to": "issue-084"
+    },
+    {
+      "from": "issue-082",
+      "to": "issue-084"
+    },
+    {
+      "from": "issue-083",
+      "to": "issue-084"
+    },
+    {
+      "from": "issue-083",
+      "to": "issue-085"
+    }
+  ],
+  "roots": [
+    "issue-001",
+    "issue-002",
+    "issue-004",
+    "issue-009",
+    "issue-016",
+    "issue-027",
+    "issue-028",
+    "issue-031",
+    "issue-032",
+    "issue-058",
+    "issue-060",
+    "issue-069",
+    "issue-070",
+    "issue-077"
+  ],
+  "leaves": [
+    "issue-013",
+    "issue-015",
+    "issue-017",
+    "issue-019",
+    "issue-021",
+    "issue-022",
+    "issue-023",
+    "issue-028",
+    "issue-029",
+    "issue-030",
+    "issue-033",
+    "issue-035",
+    "issue-037",
+    "issue-038",
+    "issue-039",
+    "issue-040",
+    "issue-048",
+    "issue-049",
+    "issue-050",
+    "issue-051",
+    "issue-055",
+    "issue-056",
+    "issue-057",
+    "issue-058",
+    "issue-059",
+    "issue-060",
+    "issue-063",
+    "issue-064",
+    "issue-065",
+    "issue-066",
+    "issue-067",
+    "issue-068",
+    "issue-069",
+    "issue-070",
+    "issue-071",
+    "issue-072",
+    "issue-073",
+    "issue-074",
+    "issue-075",
+    "issue-077",
+    "issue-078",
+    "issue-084",
+    "issue-085"
+  ]
+}

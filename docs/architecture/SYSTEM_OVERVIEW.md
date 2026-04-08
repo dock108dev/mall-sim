@@ -25,6 +25,12 @@ EventBus (global signal broker, autoload)
 
 Systems emit signals to the EventBus. Other systems connect to the signals they care about. No direct coupling.
 
+### Autoloads vs Scene-Attached Systems
+
+Only 4 scripts are registered as autoloads in `project.godot`: GameManager, EventBus, AudioManager, Settings. These are globally available singletons.
+
+All gameplay systems (EconomySystem, InventorySystem, CustomerSystem, TimeSystem, ReputationSystem, DataLoader, SaveManager) are standalone class scripts in `game/scripts/`. They are instantiated as children of GameWorld or managed by GameManager at runtime. This keeps the autoload list small and avoids global state for systems that only matter during gameplay.
+
 ---
 
 ## GameManager
@@ -124,7 +130,7 @@ Systems emit signals to the EventBus. Other systems connect to the signals they 
 
 **Responsibility**: Loading and parsing all JSON content files at startup.
 
-- Reads item definitions, store definitions, customer types, economy config from `res://content/`
+- Reads item definitions, store definitions, customer types, economy config from `res://game/content/`
 - Converts JSON into typed Resource objects (ItemDefinition, StoreDefinition, etc.)
 - Provides a registry API: `get_item(id)`, `get_items_by_category(cat)`, `get_store_config(type)`
 - Validates content on load and reports errors

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Planning Task",
+  "description": "Schema for a single planning task in the orchestrator's task registry",
+  "type": "object",
+  "required": ["id", "title", "category", "status", "scope"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique task identifier"
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable task title"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["audit", "design", "architecture", "backlog", "issue_writing", "store_planning", "progression", "implementation", "validation", "cleanup"],
+      "description": "Task classification category"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in_progress", "complete", "blocked", "skipped", "needs_manual_review", "duplicate_skipped"],
+      "description": "Current task status"
+    },
+    "prompt_family": {
+      "type": ["string", "null"],
+      "description": "Which prompt template to use"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Task IDs that must complete before this task"
+    },
+    "milestone": {
+      "type": ["string", "null"],
+      "description": "Related milestone (M0-M7)"
+    },
+    "scope": {
+      "type": "string",
+      "description": "Brief description of task scope"
+    },
+    "outputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File paths of artifacts produced"
+    },
+    "blocked_reason": {
+      "type": ["string", "null"],
+      "description": "Why the task is blocked"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "validation_status": {
+      "type": ["string", "null"],
+      "enum": ["passed", "failed", "needs_review", null]
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Which run created or last modified this task"
+    }
+  }
+}

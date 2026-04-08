@@ -1,0 +1,21 @@
+{
+  "run_id": "mall_sim_planning_40h_20260408_051726",
+  "config_name": "mall_sim_planning_40h",
+  "status": "paused",
+  "phase": "planning",
+  "started_at": "2026-04-08T05:17:26.206404+00:00",
+  "last_updated": "2026-04-08T05:18:12.111633+00:00",
+  "elapsed_seconds": 0.0,
+  "budget_seconds": 144000,
+  "current_wave": "wave-1",
+  "current_issue_id": "issue-001",
+  "completed_issues": [],
+  "failed_issues": [],
+  "skipped_issues": [],
+  "created_artifacts": [],
+  "out_of_scope_findings": [],
+  "validation_results": [],
+  "checkpoint_count": 1,
+  "stop_reason": "User interrupt (Ctrl+C)",
+  "notes": ""
+}

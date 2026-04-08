@@ -1,0 +1,37 @@
+{
+  "id": "sports",
+  "name": "Sports Memorabilia",
+  "description": "A small sports card and memorabilia shop. Wood-paneled walls, glass display cases, and the sound of sports radio.",
+  "size_category": "small",
+  "shelf_capacity": 31,
+  "backroom_capacity": 100,
+  "starting_cash": 500.00,
+  "daily_rent": 50.00,
+  "starting_inventory": [
+    "sports_mcgwire_common",
+    "sports_pippen_common",
+    "sports_mantle_common",
+    "sports_sosa_uncommon",
+    "sports_iverson_uncommon",
+    "sports_griffey_rookie",
+    "sports_wax_pack_1993",
+    "sports_wax_pack_1993",
+    "sports_jersey_replica_bulls"
+  ],
+  "allowed_categories": ["trading_cards", "sealed_packs", "sealed_product", "memorabilia"],
+  "fixture_slots": 6,
+  "fixtures": [
+    { "id": "card_case_1", "type": "glass_case", "slots": 8, "label": "Card Display Case" },
+    { "id": "card_case_2", "type": "glass_case", "slots": 8, "label": "Card Display Case" },
+    { "id": "sealed_shelf", "type": "shelf", "slots": 6, "label": "Sealed Product Shelf" },
+    { "id": "memorabilia_shelf", "type": "shelf", "slots": 4, "label": "Memorabilia Shelf" },
+    { "id": "wall_display", "type": "wall_mount", "slots": 3, "label": "Wall Display" },
+    { "id": "checkout_counter", "type": "counter", "slots": 2, "label": "Checkout Counter" }
+  ],
+  "max_employees": 2,
+  "base_foot_traffic": 0.4,
+  "available_supplier_tiers": [1, 2, 3],
+  "unique_mechanics": ["authentication"],
+  "aesthetic_tags": ["wood_shelves", "glass_cases", "poster_walls", "sports_radio"],
+  "ambient_sound": "res://game/assets/audio/ambiance/sports_store.ogg"
+}

@@ -7,7 +7,7 @@ How mallcore-sim defines, loads, and uses game content. The goal is a data-drive
 ## Content Directory Structure
 
 ```
-res://content/
+res://game/content/
   +-- items/
   |    +-- sports_memorabilia.json
   |    +-- retro_games.json
@@ -19,7 +19,7 @@ res://content/
   +-- customers/
   |    +-- customer_types.json
   +-- economy/
-  |    +-- economy_config.json
+  |    +-- pricing_config.json
   |    +-- market_events.json
 ```
 
@@ -37,18 +37,18 @@ Every item in the game is defined in a JSON file grouped by store type.
   "category": "cartridge",
   "subcategory": "loose",
   "rarity": "common",
-  "base_value": 8.00,
+  "base_price": 8.00,
   "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
   "condition_value_multipliers": {
-    "poor": 0.3,
+    "poor": 0.25,
     "fair": 0.5,
-    "good": 0.8,
-    "near_mint": 1.0,
-    "mint": 1.5
+    "good": 1.0,
+    "near_mint": 1.5,
+    "mint": 2.0
   },
   "tags": ["platformer", "genesis", "classic"],
   "description": "16-bit platformer cartridge. Loose, no box or manual.",
-  "icon": "res://assets/icons/items/sonic2_cart.png"
+  "icon": "res://game/assets/icons/items/sonic2_cart.png"
 }
 ```
 
@@ -58,7 +58,7 @@ Every item in the game is defined in a JSON file grouped by store type.
 - `store_type`: Which store sells this item
 - `category`: Primary grouping (cartridge, card, vhs, etc.)
 - `rarity`: One of `common`, `uncommon`, `rare`, `very_rare`, `legendary`
-- `base_value`: Market value at "good" condition in dollars
+- `base_price`: Market value at "good" condition in dollars
 
 ### Optional Fields
 - `subcategory`: Secondary grouping (loose, cib, sealed)
@@ -77,14 +77,14 @@ Every item in the game is defined in a JSON file grouped by store type.
   "id": "retro_games",
   "name": "Retro Game Store",
   "description": "Buy, sell, and trade classic video games and consoles.",
-  "default_layout": "res://scenes/stores/retro_games.tscn",
+  "default_layout": "res://game/scenes/stores/retro_games.tscn",
   "shelf_capacity": 40,
   "backroom_capacity": 100,
   "starting_cash": 500.00,
   "starting_inventory": ["retro_sonic2_cart_loose", "retro_mario64_cart_loose", "retro_snes_console_used"],
   "available_supplier_tiers": [1, 2, 3],
   "unique_mechanics": ["testing_station", "refurbishment"],
-  "ambient_sound": "res://assets/audio/ambiance/retro_store.ogg"
+  "ambient_sound": "res://game/assets/audio/ambiance/retro_store.ogg"
 }
 ```
 
@@ -104,7 +104,7 @@ Every item in the game is defined in a JSON file grouped by store type.
   "browse_time_range": [30, 90],
   "purchase_probability_base": 0.6,
   "dialogue_pool": "nostalgic_adult",
-  "model": "res://assets/models/customers/casual_adult.glb"
+  "model": "res://game/assets/models/customers/casual_adult.glb"
 }
 ```
 
@@ -120,14 +120,14 @@ Every item in the game is defined in a JSON file grouped by store type.
     "destination_shop": { "min": 50, "customer_multiplier": 2.0 },
     "legendary": { "min": 80, "customer_multiplier": 3.0 }
   },
-  "condition_default_multipliers": {
+  "condition_multipliers": {
     "poor": 0.25,
     "fair": 0.5,
-    "good": 0.8,
-    "near_mint": 1.0,
-    "mint": 1.6
+    "good": 1.0,
+    "near_mint": 1.5,
+    "mint": 2.0
   },
-  "rarity_base_multipliers": {
+  "rarity_multipliers": {
     "common": 1.0,
     "uncommon": 2.5,
     "rare": 6.0,
@@ -151,7 +151,7 @@ class_name ItemDefinition extends Resource
 @export var store_type: String
 @export var category: String
 @export var rarity: String
-@export var base_value: float
+@export var base_price: float
 @export var tags: PackedStringArray
 @export var description: String
 @export var icon_path: String
@@ -179,7 +179,7 @@ Similar pattern -- Resource scripts with typed fields matching the JSON schema.
 
 Autoload singleton that runs at boot:
 
-1. Scans `res://content/` for all JSON files
+1. Scans `res://game/content/` for all JSON files
 2. Parses each file and validates required fields
 3. Creates Resource instances and stores them in dictionaries keyed by `id`
 4. Logs warnings for missing fields, duplicate IDs, or invalid references
@@ -203,14 +203,14 @@ Public API:
 ## Adding New Content
 
 To add a new item:
-1. Open the appropriate JSON file in `res://content/items/`
+1. Open the appropriate JSON file in `res://game/content/items/`
 2. Add a new object to the array following the schema above
 3. Run the game -- DataLoader picks it up automatically
-4. If the item has an icon, add it to `res://assets/icons/items/`
+4. If the item has an icon, add it to `res://game/assets/icons/items/`
 
 To add a new store type:
 1. Add a store definition to `store_definitions.json`
-2. Create a new items JSON file in `res://content/items/`
-3. Create the store interior scene in `res://scenes/stores/`
+2. Create a new items JSON file in `res://game/content/items/`
+3. Create the store interior scene in `res://game/scenes/stores/`
 4. Add customer types that reference the new store type
 5. Register the store scene path in the store definition

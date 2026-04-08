@@ -1,0 +1,29 @@
+{
+  "run_name": "mall_sim_planning_smoke",
+  "project_name": "mall-sim",
+  "run_type": "planning",
+  "duration_budget_hours": 0.1,
+  "checkpoint_interval_minutes": 1,
+  "dry_run": true,
+  "claude_cli_command": "claude",
+  "claude_model": "opus",
+  "claude_timeout_seconds": 60,
+  "retry_max_attempts": 0,
+  "retry_delay_seconds": 5,
+  "max_consecutive_failures": 1,
+  "universe_manifest": "planning/manifests/final-issue-universe.json",
+  "freeze_manifest": "planning/manifests/closed-universe-freeze.json",
+  "wave_manifest": "planning/manifests/final-wave-plan.json",
+  "milestone_manifest": "planning/manifests/final-milestone-plan.json",
+  "dependency_manifest": "planning/manifests/final-dependency-graph.json",
+  "start_wave": "wave-1",
+  "validation_at_checkpoints": true,
+  "generate_reports": true,
+  "stop_conditions": [
+    "budget_exhausted",
+    "all_issues_processed",
+    "max_consecutive_failures"
+  ],
+  "finalization_budget_percent": 10,
+  "notes": "Smoke test config. Dry-run mode, 6-minute budget. Validates framework structure without making real Claude calls."
+}

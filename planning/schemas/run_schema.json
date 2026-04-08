@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Orchestrator Run",
+  "description": "Schema for a single orchestrator run entry in run_history.json",
+  "type": "object",
+  "required": ["run_id", "started_at", "phase", "status"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique run identifier (timestamp-based)"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["setup", "audit", "design", "backlog", "normalize", "deep_dive", "vertical_slice", "implementation", "validation"],
+      "description": "Which workflow phase this run operated in"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "partial", "failed"],
+      "description": "Run outcome"
+    },
+    "tasks_attempted": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tasks_completed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tasks_blocked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tasks_failed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "artifacts_created": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File paths of artifacts created during this run"
+    },
+    "validation_issues": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Validation issues discovered during this run"
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

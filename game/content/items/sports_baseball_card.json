@@ -1,11 +1,13 @@
 {
-  "id": "sports_baseball_card_001",
-  "name": "1998 Ken Griffey Jr. Rookie Card",
-  "description": "A near-mint condition rookie card from the '98 season. Highly sought by collectors.",
-  "category": "trading_cards",
+  "id": "sports_topps_common_pack",
+  "name": "2001 Topps Baseball Pack",
+  "description": "A late-run pack from the 2001 season. Nothing flashy, but every pack's a lottery ticket.",
+  "category": "sealed_packs",
+  "subcategory": "sealed",
   "store_type": "sports",
-  "base_price": 45.00,
-  "rarity": "rare",
-  "condition": "near_mint",
-  "tags": ["baseball", "rookie", "90s", "collectible"]
+  "base_price": 3.00,
+  "rarity": "common",
+  "condition_range": ["good", "near_mint", "mint"],
+  "tags": ["baseball", "2000s", "sealed", "pack", "booster", "starter"],
+  "appreciates": true
 }

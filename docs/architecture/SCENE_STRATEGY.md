@@ -30,7 +30,7 @@ root
 
 ## Boot Scene
 
-The game always starts at `res://scenes/boot/boot.tscn`.
+The game always starts at `res://game/scenes/bootstrap/boot.tscn`.
 
 Responsibilities:
 - Load user settings from `user://settings.cfg`
@@ -42,7 +42,7 @@ This scene exists so the game has a consistent entry point regardless of how it'
 
 ## Main Menu
 
-`res://scenes/menu/main_menu.tscn`
+`res://game/scenes/ui/main_menu.tscn`
 
 - Mall exterior background (static 3D render or animated scene)
 - Options: New Game, Continue, Settings, Quit
@@ -53,18 +53,18 @@ This scene exists so the game has a consistent entry point regardless of how it'
 
 ## Game World
 
-`res://scenes/game/game_world.tscn`
+`res://game/scenes/world/game_world.tscn`
 
 This is the primary gameplay scene. It persists for the entire play session. Sub-scenes are loaded and unloaded within it.
 
 ### Store Interior Loading
 
 Each store type has its own interior scene:
-- `res://scenes/stores/sports_memorabilia.tscn`
-- `res://scenes/stores/retro_games.tscn`
-- `res://scenes/stores/video_rental.tscn`
-- `res://scenes/stores/pocket_creatures.tscn`
-- `res://scenes/stores/consumer_electronics.tscn`
+- `res://game/scenes/stores/sports_memorabilia.tscn`
+- `res://game/scenes/stores/retro_games.tscn`
+- `res://game/scenes/stores/video_rental.tscn`
+- `res://game/scenes/stores/pocket_creatures.tscn`
+- `res://game/scenes/stores/consumer_electronics.tscn`
 
 These are loaded as children of the `StoreInterior` node using `load()` and `add_child()`. When the player switches stores (future feature), the current interior is freed and the new one is instanced.
 
@@ -76,7 +76,7 @@ Each store scene contains:
 
 ### Player Controller
 
-`res://scenes/player/player_controller.tscn`
+`res://game/scenes/player/player.tscn`
 
 Not a walking character -- the player is a floating camera with point-and-click interaction.
 
@@ -87,7 +87,7 @@ Not a walking character -- the player is a floating camera with point-and-click 
 
 ### Customer Instances
 
-Customers are instanced from `res://scenes/characters/customer.tscn` by the CustomerSpawner.
+Customers are instanced from `res://game/scenes/characters/customer.tscn` by the CustomerSpawner (scene does not exist yet — will be created during M1).
 
 - Each customer is a simple 3D model with an AnimationPlayer (walk, browse, idle, leave)
 - Navigation uses Godot's NavigationAgent3D for pathfinding within the store
@@ -95,7 +95,7 @@ Customers are instanced from `res://scenes/characters/customer.tscn` by the Cust
 
 ## UI Overlay
 
-`res://scenes/ui/ui_layer.tscn`
+`res://game/scenes/ui/ui_layer.tscn` (not yet created — HUD exists at `res://game/scenes/ui/hud.tscn`)
 
 A CanvasLayer that sits above the 3D world. All 2D UI lives here.
 
@@ -109,7 +109,7 @@ A CanvasLayer that sits above the 3D world. All 2D UI lives here.
 
 ## Debug Overlay
 
-`res://scenes/debug/debug_overlay.tscn`
+`res://game/scenes/debug/debug_overlay.tscn`
 
 Only loaded in debug/dev builds (checked via `OS.is_debug_build()`).
 

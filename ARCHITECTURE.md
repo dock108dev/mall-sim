@@ -28,9 +28,8 @@ Registered in `project.godot`, always available via global name.
 | EventBus       | `game/autoload/event_bus.gd`      | Signal hub for decoupled system communication            |
 | AudioManager   | `game/autoload/audio_manager.gd`  | Play SFX/music, manage buses, volume settings            |
 | Settings       | `game/autoload/settings.gd`       | User preferences (volume, display, controls), save/load  |
-| DataLoader     | `game/autoload/data_loader.gd`    | Parse JSON content files into typed Resources on boot    |
-| TimeManager    | `game/autoload/time_manager.gd`   | In-game clock, day/night cycle, triggers timed events    |
-| EconomyManager | `game/autoload/economy_manager.gd`| Player funds, transactions, price calculations           |
+
+> **Note:** `project.godot` is authoritative for the autoload list. Systems like TimeSystem, EconomySystem, InventorySystem, CustomerSystem, ReputationSystem, and DataLoader exist as standalone class scripts in `game/scripts/` and are instantiated by GameWorld or GameManager at runtime — they are not autoloads. See `docs/architecture/SYSTEM_OVERVIEW.md` for the full system registry.
 
 **Rules for autoloads:**
 - No autoload directly calls methods on another autoload. Use EventBus signals.
@@ -104,7 +103,7 @@ game/content/
   "id": "sc_rookie_jordan",
   "name": "1986 Rookie Card - MJ",
   "category": "sports_cards",
-  "base_value": 450.00,
+  "base_price": 450.00,
   "rarity": "rare",
   "era": "1980s",
   "condition_range": ["poor", "mint"],
