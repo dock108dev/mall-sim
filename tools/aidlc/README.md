@@ -1,72 +1,130 @@
-# AIDLC — AI-Driven Lifecycle Controller
+# AIDLC — AI Development Life Cycle
 
-Planning and execution runner for the mall-sim project.
+Autonomous planning and implementation framework. Drop it into any repo, point it at your planning docs, and let it plan and build.
 
-## What This Is
+## How It Works
 
-AIDLC is a framework for running AI-driven planning sessions against the mall-sim project. It orchestrates Claude CLI calls to work through the project's issue backlog, enforces scope boundaries, manages state/checkpoints, and produces reports.
+```
+SCAN → PLAN → IMPLEMENT → DONE
+```
 
-**Current focus**: A 40-hour planning run against the closed issue universe (85 issues across 6 waves and 6 milestones).
+1. **SCAN** — Discovers all markdown docs, README, architecture files in your repo. Detects project type (Python, Node, Rust, Go, etc.) and test commands automatically.
+
+2. **PLAN** (time-constrained) — Reads your docs and creates a comprehensive set of issues with full specs, acceptance criteria, priorities, and dependency chains. Runs for a configurable time budget (default: 4 hours).
+
+3. **IMPLEMENT** (completion-constrained) — Picks up every issue created during planning and implements them one by one using Claude. Runs tests after each implementation. Retries failures. **Does not stop until everything is implemented and verified.**
+
+4. **REPORT** — Generates a full run report with stats, issue breakdown, and artifacts.
 
 ## Quick Start
 
 ```bash
-# Smoke test (dry run, no Claude CLI calls)
-./scripts/run_planning_session.sh --smoke
+# Install
+cd /path/to/aidlc
+pip install -e .
 
-# Full 40-hour planning run (foreground)
-./scripts/run_planning_session.sh
+# Initialize in your project
+cd /path/to/your-project
+aidlc init
 
-# Full run in background
-./scripts/run_planning_session.sh --background
+# Run the full lifecycle (4h planning budget)
+aidlc run
 
-# Resume an interrupted run
-./scripts/run_planning_session.sh --resume
+# Custom planning budget
+aidlc run --plan-budget 2h
+
+# Planning only (review before implementation)
+aidlc run --plan-only
+
+# Resume after interruption
+aidlc run --resume
+
+# Implement existing issues (skip planning)
+aidlc run --implement-only
+
+# Check status
+aidlc status
 ```
 
-## Structure
+## Configuration
 
-```
-tools/aidlc/
-  runner.py           # Main entry point and run loop
-  config.py           # Config loading and path resolution
-  models.py           # Data models (RunState, enums)
-  state_manager.py    # Save/load/checkpoint state
-  scope_guard.py      # Closed-universe enforcement
-  claude_cli.py       # Claude CLI integration
-  prompt_builder.py   # Dynamic prompt assembly
-  validators.py       # Validation hooks
-  reporting.py        # Report generation
-  logger.py           # Logging setup
-  configs/            # Run configs (JSON)
-  templates/          # Prompt templates
-  runs/               # Per-run state, logs, checkpoints
-  reports/            # Per-run reports
+After `aidlc init`, edit `.aidlc/config.json`:
+
+```json
+{
+  "plan_budget_hours": 4,
+  "checkpoint_interval_minutes": 15,
+  "claude_model": "opus",
+  "max_implementation_attempts": 3,
+  "run_tests_command": "npm test"
+}
 ```
 
-## Configs
+Key options:
 
-- `configs/mall_sim_planning_40h.json` — Full 40-hour planning run
-- `configs/mall_sim_planning_smoke.json` — Quick dry-run smoke test
+| Option | Default | Description |
+|--------|---------|-------------|
+| `plan_budget_hours` | 4 | Planning phase time budget |
+| `claude_model` | opus | Claude model to use |
+| `max_implementation_attempts` | 3 | Retries per issue |
+| `run_tests_command` | auto-detect | Test command (e.g., `npm test`, `pytest`) |
+| `checkpoint_interval_minutes` | 15 | State checkpoint frequency |
+| `finalization_budget_percent` | 10 | % of plan budget reserved for finalization |
+| `dry_run` | false | Simulate without Claude calls |
+| `doc_scan_patterns` | `["**/*.md"]` | Glob patterns for doc discovery |
+| `doc_scan_exclude` | `[node_modules, ...]` | Directories to skip |
 
-## Where Things Go
+## Project Structure
 
-| Artifact | Location |
-|---|---|
-| Run state | `tools/aidlc/runs/<run_id>/state.json` |
-| Run logs | `tools/aidlc/runs/<run_id>/<run_id>.log` |
-| Error logs | `tools/aidlc/runs/<run_id>/<run_id>.errors.log` |
-| Checkpoints | `tools/aidlc/runs/<run_id>/checkpoints/` |
-| Reports | `tools/aidlc/reports/<run_id>/` |
-| Config snapshot | `tools/aidlc/runs/<run_id>/config_snapshot.json` |
+```
+.aidlc/                    # Created in your project
+  config.json              # Your configuration
+  issues/                  # Generated issue specs (markdown)
+  runs/<run_id>/           # Per-run state, logs, checkpoints
+  reports/<run_id>/        # Per-run reports
+```
 
-## Integration
+## How Planning Works
 
-AIDLC reads from the existing planning system:
-- `planning/manifests/final-issue-universe.json`
-- `planning/manifests/closed-universe-freeze.json`
-- `planning/manifests/final-wave-plan.json`
-- `docs/production/github-issues/` (issue content)
-- `planning/state/` (planning state)
+The planner scans your repo's documentation and iteratively builds a set of issues:
 
-It does not duplicate or replace these artifacts.
+- Reads README, architecture docs, design docs, roadmaps
+- Creates issues with titles, descriptions, acceptance criteria, priorities
+- Defines dependency chains between issues
+- Creates supplementary design docs when needed
+- Enters finalization mode in the last 10% of budget to refine and close gaps
+
+## How Implementation Works
+
+The implementer picks up issues in dependency/priority order and:
+
+1. Builds a context-rich prompt with the issue spec + project context
+2. Calls Claude with file edit permissions to implement
+3. Runs the test suite to verify
+4. If tests fail, gives Claude a chance to fix
+5. Retries failed issues (up to `max_implementation_attempts`)
+6. Continues until every issue is implemented or exhausted
+7. Runs a final verification pass
+
+## Supported Project Types
+
+Auto-detects test commands for:
+- **Python**: `pytest`
+- **Node.js**: `npm test`
+- **Rust**: `cargo test`
+- **Go**: `go test ./...`
+- **Ruby**: `bundle exec rspec`
+- **Make**: `make test`
+
+Set `run_tests_command` in config to override.
+
+## Resume & Rerun
+
+- **Ctrl+C** during a run saves state. `aidlc run --resume` picks up where you left off.
+- **Rerun**: Delete `.aidlc/runs/` and run again, or just start a new run (previous runs are preserved).
+- **Plan then review**: Use `--plan-only`, review issues in `.aidlc/issues/`, then `--implement-only`.
+
+## Requirements
+
+- Python 3.11+
+- [Claude CLI](https://docs.anthropic.com/en/docs/claude-cli) installed and authenticated
