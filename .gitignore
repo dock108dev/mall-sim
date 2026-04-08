@@ -1,0 +1,41 @@
+# Godot 4.x
+.godot/
+*.translation
+
+# Godot export
+export_presets.cfg
+*.pck
+*.zip
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# Editors
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.vscode/
+.idea/
+*.code-workspace
+
+# Build artifacts
+/build/
+/export/
+
+# OS generated
+*.log

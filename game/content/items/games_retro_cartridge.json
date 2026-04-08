@@ -1,0 +1,11 @@
+{
+  "id": "games_retro_cart_001",
+  "name": "Super Plumber World (SNES)",
+  "description": "Classic 16-bit platformer. Cart only, tested and working.",
+  "category": "cartridges",
+  "store_type": "games",
+  "base_price": 25.00,
+  "rarity": "uncommon",
+  "condition": "used",
+  "tags": ["retro", "platformer", "16bit", "cartridge"]
+}

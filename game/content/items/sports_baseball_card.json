@@ -1,0 +1,11 @@
+{
+  "id": "sports_baseball_card_001",
+  "name": "1998 Ken Griffey Jr. Rookie Card",
+  "description": "A near-mint condition rookie card from the '98 season. Highly sought by collectors.",
+  "category": "trading_cards",
+  "store_type": "sports",
+  "base_price": 45.00,
+  "rarity": "rare",
+  "condition": "near_mint",
+  "tags": ["baseball", "rookie", "90s", "collectible"]
+}

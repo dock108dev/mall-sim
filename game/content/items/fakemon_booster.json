@@ -1,0 +1,11 @@
+{
+  "id": "fakemon_booster_001",
+  "name": "PocketCreatures Base Set Booster Pack",
+  "description": "Sealed booster pack from the original PocketCreatures base set. 11 cards inside.",
+  "category": "booster_packs",
+  "store_type": "fakemon",
+  "base_price": 8.99,
+  "rarity": "common",
+  "condition": "new",
+  "tags": ["tcg", "sealed", "base_set", "booster"]
+}

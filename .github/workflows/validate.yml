@@ -1,0 +1,39 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-docs:
+    name: Validate Markdown & Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          files=(
+            "project.godot"
+            "README.md"
+            "LICENSE"
+            "ARCHITECTURE.md"
+          )
+          for f in "${files[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: Required file missing: $f"
+              exit 1
+            fi
+          done
+          echo "All required files present."
+
+      - name: Check for common issues
+        run: |
+          # No .DS_Store committed
+          if find . -name ".DS_Store" | grep -q .; then
+            echo "ERROR: .DS_Store files found in repo"
+            exit 1
+          fi
+          echo "No common issues found."

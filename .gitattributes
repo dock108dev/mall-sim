@@ -1,0 +1,33 @@
+# Normalize line endings
+* text=auto
+
+# Godot files
+*.gd text diff
+*.tscn text diff
+*.tres text diff
+*.godot text diff
+*.cfg text diff
+*.import text diff
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.svg binary
+*.ico binary
+*.wav binary
+*.ogg binary
+*.mp3 binary
+*.glb binary
+*.gltf binary
+*.fbx binary
+*.obj binary
+*.blend binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+
+# Documents
+*.md text diff

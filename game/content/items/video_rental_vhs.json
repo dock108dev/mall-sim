@@ -1,0 +1,11 @@
+{
+  "id": "video_rental_vhs_001",
+  "name": "Cosmic Battles: Episode IV (VHS)",
+  "description": "Original theatrical cut on VHS. Rental sticker still attached.",
+  "category": "vhs_tapes",
+  "store_type": "video_rental",
+  "base_price": 3.50,
+  "rarity": "common",
+  "condition": "used",
+  "tags": ["scifi", "vhs", "classic", "rental"]
+}

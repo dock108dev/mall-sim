@@ -1,0 +1,31 @@
+{
+  "markup_ranges": {
+    "minimum": 1.05,
+    "default": 1.35,
+    "maximum": 5.00
+  },
+  "demand_modifiers": {
+    "high_demand": 1.5,
+    "normal": 1.0,
+    "low_demand": 0.6,
+    "clearance": 0.3
+  },
+  "condition_multipliers": {
+    "mint": 2.0,
+    "near_mint": 1.5,
+    "new": 1.0,
+    "used": 0.6,
+    "damaged": 0.2
+  },
+  "rarity_multipliers": {
+    "legendary": 10.0,
+    "rare": 3.0,
+    "uncommon": 1.5,
+    "common": 1.0
+  },
+  "daily_rent_per_size": {
+    "small": 50.0,
+    "medium": 120.0,
+    "large": 250.0
+  }
+}
