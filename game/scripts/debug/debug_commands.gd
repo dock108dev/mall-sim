@@ -3,16 +3,24 @@ class_name DebugCommands
 extends Node
 
 
+func _ready() -> void:
+	if not OS.is_debug_build():
+		queue_free()
+		return
+
+
 func add_cash(amount: float) -> void:
-	# Requires EconomySystem to be accessible — wire during integration.
-	print("[Debug] add_cash(%s) — not yet wired" % amount)
+	push_warning("[Debug] add_cash(%s) — not yet wired" % amount)
 
 
 func set_time(hour: int) -> void:
-	print("[Debug] set_time(%s) — not yet wired" % hour)
+	push_warning("[Debug] set_time(%s) — not yet wired" % hour)
 
 
 func list_items() -> void:
-	var items := DataLoader.load_all_json_in(Constants.ITEMS_PATH)
-	for item in items:
-		print("  %s — $%s" % [item.get("name", "?"), item.get("base_price", "?")])
+	if not GameManager.data_loader:
+		push_warning("[Debug] DataLoader not available")
+		return
+	var items: Array[ItemDefinition] = GameManager.data_loader.get_all_items()
+	for item: ItemDefinition in items:
+		push_warning("  %s — $%s" % [item.name, item.base_price])

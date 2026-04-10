@@ -1,0 +1,131 @@
+[gd_scene load_steps=2 format=3 uid="uid://invpanel01"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/inventory_panel.gd" id="1"]
+
+[node name="InventoryPanel" type="CanvasLayer"]
+layer = 5
+script = ExtResource("1")
+
+[node name="PanelRoot" type="PanelContainer" parent="."]
+anchors_preset = 0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 520.0
+offset_bottom = -20.0
+
+[node name="Margin" type="MarginContainer" parent="PanelRoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+size_flags_horizontal = 3
+text = "Backroom Inventory"
+
+[node name="CapacityLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="CloseButton" type="Button" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+custom_minimum_size = Vector2(30, 0)
+text = "X"
+
+[node name="Content" type="HSplitContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 240
+
+[node name="LeftSide" type="VBoxContainer" parent="PanelRoot/Margin/VBox/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="EmptyLabel" type="Label" parent="PanelRoot/Margin/VBox/Content/LeftSide"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+text = "No items in storage"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Scroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/Content/LeftSide"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Grid" type="GridContainer" parent="PanelRoot/Margin/VBox/Content/LeftSide/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 2
+
+[node name="DetailPanel" type="PanelContainer" parent="PanelRoot/Margin/VBox/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 0)
+
+[node name="DetailMargin" type="MarginContainer" parent="PanelRoot/Margin/VBox/Content/DetailPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="DetailVBox" type="VBoxContainer" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="DetailPlaceholder" type="Label" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Select an item to view details"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DetailName" type="Label" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+
+[node name="DetailCondition" type="Label" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+
+[node name="DetailRarity" type="Label" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+
+[node name="DetailBasePrice" type="Label" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+
+[node name="DetailValue" type="Label" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+
+[node name="DetailDescription" type="Label" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="RefurbishButton" type="Button" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
+text = "Refurbish"
+
+[node name="OpenPackButton" type="Button" parent="PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox"]
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
+text = "Open Pack"

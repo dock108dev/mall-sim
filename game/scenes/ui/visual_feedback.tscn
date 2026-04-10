@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://visual_feedback01"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/visual_feedback.gd" id="1"]
+
+[node name="VisualFeedback" type="CanvasLayer"]
+layer = 11
+script = ExtResource("1")

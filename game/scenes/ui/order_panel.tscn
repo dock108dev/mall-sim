@@ -1,0 +1,94 @@
+[gd_scene load_steps=2 format=3 uid="uid://orderpanel01"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/order_panel.gd" id="1"]
+
+[node name="OrderPanel" type="CanvasLayer"]
+layer = 5
+script = ExtResource("1")
+
+[node name="PanelRoot" type="PanelContainer" parent="."]
+anchors_preset = 0
+anchor_bottom = 1.0
+offset_left = 540.0
+offset_top = 60.0
+offset_right = 1140.0
+offset_bottom = -20.0
+
+[node name="Margin" type="MarginContainer" parent="PanelRoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+size_flags_horizontal = 3
+text = "Stock Orders (Tier 1)"
+
+[node name="BudgetLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+text = "Budget: $200.00"
+horizontal_alignment = 2
+
+[node name="CashLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Cash: $0.00"
+horizontal_alignment = 2
+
+[node name="CloseButton" type="Button" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+custom_minimum_size = Vector2(30, 0)
+text = "X"
+
+[node name="TierInfo" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="TierLabel" type="Label" parent="PanelRoot/Margin/VBox/TierInfo"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Supplier: Tier 1"
+
+[node name="NextTierLabel" type="Label" parent="PanelRoot/Margin/VBox/TierInfo"]
+layout_mode = 2
+text = "Next: Tier 2 (rep 25)"
+horizontal_alignment = 2
+
+[node name="Content" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EmptyLabel" type="Label" parent="PanelRoot/Margin/VBox/Content"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+text = "No items available for this store"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Scroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Grid" type="GridContainer" parent="PanelRoot/Margin/VBox/Content/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 1
+
+[node name="Footer" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="PendingLabel" type="Label" parent="PanelRoot/Margin/VBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "No pending orders"

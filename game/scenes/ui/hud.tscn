@@ -22,7 +22,70 @@ offset_top = 20.0
 offset_right = -20.0
 offset_bottom = 50.0
 grow_horizontal = 0
-text = "Day 1 — 9:00"
+text = "Day 1 — 9:00 AM"
+horizontal_alignment = 2
+
+[node name="DayPhaseLabel" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 55.0
+offset_right = -20.0
+offset_bottom = 85.0
+grow_horizontal = 0
+text = "Morning"
+horizontal_alignment = 2
+
+[node name="ReputationLabel" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 55.0
+offset_right = 300.0
+offset_bottom = 85.0
+text = "Rep: 0 — Unknown"
+
+[node name="StoreLabel" type="Label" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 20.0
+offset_right = 150.0
+offset_bottom = 50.0
+grow_horizontal = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 0
+
+[node name="MilestonesButton" type="Button" parent="."]
+offset_left = 20.0
+offset_top = 90.0
+offset_right = 160.0
+offset_bottom = 120.0
+text = "Milestones [M]"
+
+[node name="SpeedLabel" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 90.0
+offset_right = -20.0
+offset_bottom = 120.0
+grow_horizontal = 0
+text = ">"
+horizontal_alignment = 2
+
+[node name="SeasonalEventLabel" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 125.0
+offset_right = -20.0
+offset_bottom = 155.0
+grow_horizontal = 0
+text = ""
 horizontal_alignment = 2
 
 [node name="PromptLabel" type="Label" parent="."]

@@ -1,4 +1,37 @@
 {
+  "starting_cash": 500.00,
+  "condition_multipliers": {
+    "poor": 0.25,
+    "fair": 0.5,
+    "good": 1.0,
+    "near_mint": 1.5,
+    "mint": 2.0
+  },
+  "rarity_multipliers": {
+    "common": 1.0,
+    "uncommon": 2.5,
+    "rare": 6.0,
+    "very_rare": 15.0,
+    "legendary": 40.0
+  },
+  "reputation_tiers": {
+    "unknown": {
+      "min": 0,
+      "customer_multiplier": 1.0
+    },
+    "local_favorite": {
+      "min": 25,
+      "customer_multiplier": 1.5
+    },
+    "destination_shop": {
+      "min": 50,
+      "customer_multiplier": 2.0
+    },
+    "legendary": {
+      "min": 80,
+      "customer_multiplier": 3.0
+    }
+  },
   "markup_ranges": {
     "minimum": 1.05,
     "default": 1.35,
@@ -9,20 +42,6 @@
     "normal": 1.0,
     "low_demand": 0.6,
     "clearance": 0.3
-  },
-  "condition_multipliers": {
-    "mint": 2.0,
-    "near_mint": 1.5,
-    "good": 1.0,
-    "fair": 0.5,
-    "poor": 0.25
-  },
-  "rarity_multipliers": {
-    "legendary": 40.0,
-    "very_rare": 15.0,
-    "rare": 6.0,
-    "uncommon": 2.5,
-    "common": 1.0
   },
   "daily_rent_per_size": {
     "small": 50.0,

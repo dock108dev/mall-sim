@@ -1,0 +1,97 @@
+[
+  {
+    "id": "holiday_rush",
+    "name": "Holiday Rush",
+    "description": "The holiday season brings a surge of shoppers looking for gifts and collectibles.",
+    "frequency_days": 30,
+    "duration_days": 5,
+    "offset_days": 0,
+    "customer_traffic_multiplier": 1.75,
+    "spending_multiplier": 1.3,
+    "customer_type_weights": {
+      "gift_buyer": 2.0,
+      "casual_fan": 1.5
+    },
+    "announcement_text": "Holiday Rush approaching! Expect increased foot traffic tomorrow.",
+    "active_text": "Holiday Rush is underway! Shoppers are flooding the mall."
+  },
+  {
+    "id": "back_to_school",
+    "name": "Back to School",
+    "description": "Students and parents stock up on supplies and entertainment before the new term.",
+    "frequency_days": 30,
+    "duration_days": 5,
+    "offset_days": 15,
+    "customer_traffic_multiplier": 1.3,
+    "spending_multiplier": 1.1,
+    "customer_type_weights": {
+      "parent": 1.8,
+      "kid_with_allowance": 1.5
+    },
+    "target_categories": ["electronics", "accessories", "handheld"],
+    "announcement_text": "Back to School season starts tomorrow! Parents and students incoming.",
+    "active_text": "Back to School is in full swing. Families are shopping for the new term."
+  },
+  {
+    "id": "summer_slump",
+    "name": "Summer Slump",
+    "description": "The summer heat keeps shoppers away. Those who do visit are more price-conscious.",
+    "frequency_days": 45,
+    "duration_days": 7,
+    "offset_days": 8,
+    "customer_traffic_multiplier": 0.7,
+    "spending_multiplier": 0.8,
+    "customer_type_weights": {
+      "bargain_hunter": 1.5
+    },
+    "announcement_text": "Summer Slump expected tomorrow. Foot traffic may decrease.",
+    "active_text": "Summer Slump in effect. The mall is quieter than usual."
+  },
+  {
+    "id": "weekend_sale",
+    "name": "Weekend Sale",
+    "description": "Weekly weekend promotions draw extra customers to the mall.",
+    "frequency_days": 7,
+    "duration_days": 1,
+    "offset_days": 5,
+    "customer_traffic_multiplier": 1.2,
+    "spending_multiplier": 1.0,
+    "customer_type_weights": {},
+    "announcement_text": "Weekend Sale tomorrow! A small bump in traffic expected.",
+    "active_text": "Weekend Sale! Extra shoppers browsing the mall today."
+  },
+  {
+    "id": "collectors_convention",
+    "name": "Collectors Convention",
+    "description": "A nearby collectors convention sends enthusiasts to the mall seeking deals.",
+    "frequency_days": 20,
+    "duration_days": 3,
+    "offset_days": 10,
+    "customer_traffic_multiplier": 1.4,
+    "spending_multiplier": 1.2,
+    "customer_type_weights": {
+      "serious_collector": 2.0,
+      "set_collector": 1.8,
+      "nostalgic_adult": 1.5
+    },
+    "target_categories": ["trading_cards", "graded_cards", "cartridge", "sealed_product"],
+    "announcement_text": "Collectors Convention nearby tomorrow! Expect collector traffic.",
+    "active_text": "Collectors Convention traffic! Enthusiasts are hunting for deals."
+  },
+  {
+    "id": "new_year_clearance",
+    "name": "New Year Clearance",
+    "description": "Post-holiday clearance attracts bargain hunters looking for deals on leftover stock.",
+    "frequency_days": 30,
+    "duration_days": 4,
+    "offset_days": 6,
+    "customer_traffic_multiplier": 1.35,
+    "spending_multiplier": 0.85,
+    "customer_type_weights": {
+      "bargain_hunter": 2.0,
+      "reseller": 1.5
+    },
+    "announcement_text": "New Year Clearance starts tomorrow! Bargain hunters incoming.",
+    "active_text": "New Year Clearance! Shoppers are looking for deals on everything."
+  }
+]

@@ -1,6 +1,6 @@
 # Save System Plan
 
-Design document for the save/load system. Not yet implemented -- this describes the target architecture.
+Design and implementation reference for the save/load system. Implemented in `game/scripts/core/save_manager.gd`.
 
 ---
 

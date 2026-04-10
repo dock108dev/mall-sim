@@ -3,9 +3,5 @@ class_name InputHelper
 extends RefCounted
 
 
-static func get_movement_vector() -> Vector2:
-	return Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-
-
-static func is_interact_just_pressed() -> bool:
-	return Input.is_action_just_pressed("interact")
+static func get_orbit_direction() -> float:
+	return Input.get_axis("orbit_left", "orbit_right")

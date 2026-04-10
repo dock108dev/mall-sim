@@ -17,14 +17,15 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -150.0
-offset_top = -80.0
+offset_top = -120.0
 offset_right = 150.0
-offset_bottom = 80.0
+offset_bottom = 120.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
+theme_type_variation = &"TitleLabel"
 text = "MALLCORE SIM"
 horizontal_alignment = 1
 
@@ -32,13 +33,70 @@ horizontal_alignment = 1
 layout_mode = 2
 custom_minimum_size = Vector2(0, 20)
 
+[node name="ContinueButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Continue"
+
 [node name="PlayButton" type="Button" parent="VBox"]
 layout_mode = 2
-text = "Play"
+text = "New Game"
+
+[node name="LoadButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Load Game"
+
+[node name="SettingsButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Settings"
 
 [node name="QuitButton" type="Button" parent="VBox"]
 layout_mode = 2
 text = "Quit"
 
+[node name="LoadPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -160.0
+offset_right = 200.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="LoadPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="LoadPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="LoadPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="LoadPanel/Margin/VBox/Header"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+size_flags_horizontal = 3
+text = "Load Game"
+
+[node name="CloseButton" type="Button" parent="LoadPanel/Margin/VBox/Header"]
+layout_mode = 2
+custom_minimum_size = Vector2(30, 0)
+text = "X"
+
+[node name="SlotContainer" type="VBoxContainer" parent="LoadPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
 [connection signal="pressed" from="VBox/PlayButton" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="VBox/LoadButton" to="." method="_on_load_pressed"]
+[connection signal="pressed" from="VBox/SettingsButton" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="VBox/QuitButton" to="." method="_on_quit_pressed"]

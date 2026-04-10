@@ -1,0 +1,95 @@
+[gd_scene load_steps=2 format=3 uid="uid://pricepanel01"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/pricing_panel.gd" id="1"]
+
+[node name="PricingPanel" type="CanvasLayer"]
+layer = 5
+script = ExtResource("1")
+
+[node name="PanelRoot" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -160.0
+offset_right = 180.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="PanelRoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Set Price"
+horizontal_alignment = 1
+
+[node name="ItemNameLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+text = "Item Name"
+horizontal_alignment = 1
+
+[node name="ConditionLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+text = "Condition: Good"
+horizontal_alignment = 1
+
+[node name="MarketValueLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+text = "Market Value: $0.00"
+horizontal_alignment = 1
+
+[node name="SuggestedLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+text = "Suggested Price: $0.00"
+horizontal_alignment = 1
+
+[node name="PriceRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="PriceLabel" type="Label" parent="PanelRoot/Margin/VBox/PriceRow"]
+layout_mode = 2
+text = "Price: $"
+
+[node name="PriceSpinBox" type="SpinBox" parent="PanelRoot/Margin/VBox/PriceRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+min_value = 0.01
+max_value = 9999.0
+step = 0.25
+value = 1.0
+
+[node name="MarkupIndicator" type="Label" parent="PanelRoot/Margin/VBox/PriceRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 0)
+text = "+35%"
+horizontal_alignment = 1
+
+[node name="ButtonRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="ConfirmButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 36)
+text = "Confirm"
+
+[node name="CancelButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 36)
+text = "Cancel"

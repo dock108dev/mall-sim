@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Product Accessory"
+albedo_color = Color(0.8, 0.6, 0.2, 1)
+roughness = 0.85

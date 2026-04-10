@@ -1,0 +1,66 @@
+[
+	{
+		"id": "staff_eager_rookie",
+		"name": "Eager Rookie",
+		"daily_wage": 20,
+		"skill_level": 1,
+		"specialization": "stocking",
+		"description": "Fresh out of school and ready to work. Enthusiastic but makes frequent mistakes."
+	},
+	{
+		"id": "staff_bargain_betty",
+		"name": "Bargain Betty",
+		"daily_wage": 25,
+		"skill_level": 2,
+		"specialization": "pricing",
+		"description": "Has a decent eye for value but sometimes misjudges rare items."
+	},
+	{
+		"id": "staff_friendly_frank",
+		"name": "Friendly Frank",
+		"daily_wage": 30,
+		"skill_level": 2,
+		"specialization": "customer_service",
+		"description": "Customers love him, but he tends to give away too many discounts."
+	},
+	{
+		"id": "staff_steady_sam",
+		"name": "Steady Sam",
+		"daily_wage": 35,
+		"skill_level": 3,
+		"specialization": "stocking",
+		"description": "Reliable stocker who keeps shelves organized and prioritizes well."
+	},
+	{
+		"id": "staff_sharp_eye_sara",
+		"name": "Sharp-Eye Sara",
+		"daily_wage": 40,
+		"skill_level": 4,
+		"specialization": "pricing",
+		"description": "Former collector with a keen sense for item values and market trends."
+	},
+	{
+		"id": "staff_smooth_talker_mike",
+		"name": "Smooth Talker Mike",
+		"daily_wage": 40,
+		"skill_level": 4,
+		"specialization": "customer_service",
+		"description": "Experienced salesperson who knows how to close a deal at fair prices."
+	},
+	{
+		"id": "staff_veteran_val",
+		"name": "Veteran Val",
+		"daily_wage": 45,
+		"skill_level": 5,
+		"specialization": "stocking",
+		"description": "Twenty years in retail. Stocks fast, prioritizes rare items, never misses a beat."
+	},
+	{
+		"id": "staff_expert_elena",
+		"name": "Expert Elena",
+		"daily_wage": 50,
+		"skill_level": 5,
+		"specialization": "customer_service",
+		"description": "Master negotiator who maximizes sale prices while keeping customers happy."
+	}
+]

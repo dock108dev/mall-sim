@@ -2,70 +2,10 @@
 
 [ext_resource type="Script" path="res://game/scenes/world/game_world.gd" id="1"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(20, 0.1, 20)
-
-[sub_resource type="BoxMesh3D" id="BoxMesh3D_floor"]
-size = Vector3(20, 0.1, 20)
-
-[sub_resource type="StandardMaterial3D" id="mat_floor"]
-albedo_color = Color(0.6, 0.65, 0.7, 1)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_shelf"]
-size = Vector3(2, 1, 0.5)
-
-[sub_resource type="BoxMesh3D" id="BoxMesh3D_shelf"]
-size = Vector3(2, 1, 0.5)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_item"]
-size = Vector3(0.3, 0.3, 0.3)
-
-[sub_resource type="BoxMesh3D" id="BoxMesh3D_item"]
-size = Vector3(0.3, 0.3, 0.3)
-
-[sub_resource type="StandardMaterial3D" id="mat_item"]
-albedo_color = Color(0.9, 0.3, 0.2, 1)
-
-[sub_resource type="Environment" id="env"]
-background_mode = 1
-background_color = Color(0.4, 0.5, 0.6, 1)
-ambient_light_source = 2
-ambient_light_color = Color(0.8, 0.8, 0.85, 1)
-
 [node name="GameWorld" type="Node3D"]
 script = ExtResource("1")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("env")
+[node name="UILayer" type="CanvasLayer" parent="."]
+layer = 10
 
-[node name="DirectionalLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 10, 0)
-shadow_enabled = true
-
-[node name="Floor" type="StaticBody3D" parent="."]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
-shape = SubResource("BoxShape3D_floor")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
-mesh = SubResource("BoxMesh3D_floor")
-surface_material_override/0 = SubResource("mat_floor")
-
-[node name="SampleShelf" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -3)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SampleShelf"]
-shape = SubResource("BoxShape3D_shelf")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="SampleShelf"]
-mesh = SubResource("BoxMesh3D_shelf")
-
-[node name="SampleItem" type="Area3D" parent="SampleShelf" groups=["interactable"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SampleShelf/SampleItem"]
-shape = SubResource("BoxShape3D_item")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="SampleShelf/SampleItem"]
-mesh = SubResource("BoxMesh3D_item")
-surface_material_override/0 = SubResource("mat_item")
+[node name="StoreContainer" type="Node3D" parent="."]

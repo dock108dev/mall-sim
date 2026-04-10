@@ -8,7 +8,7 @@ const STORE_OPEN_HOUR := 9
 const STORE_CLOSE_HOUR := 21
 
 # Economy
-const STARTING_CASH := 5000.0
+const STARTING_CASH := 500.0
 const MIN_MARKUP := 0.05
 const MAX_MARKUP := 5.0
 
@@ -20,3 +20,9 @@ const ITEMS_PATH := "res://game/content/items/"
 const STORES_PATH := "res://game/content/stores/"
 const CUSTOMERS_PATH := "res://game/content/customers/"
 const ECONOMY_PATH := "res://game/content/economy/"
+const FIXTURES_PATH := "res://game/content/fixtures/"
+const MILESTONES_PATH := "res://game/content/milestones/"
+const EVENTS_PATH := "res://game/content/events/"
+const SEASONAL_EVENTS_PATH := "res://game/content/events/seasonal_events.json"
+const RANDOM_EVENTS_PATH := "res://game/content/events/random_events.json"
+const STAFF_PATH := "res://game/content/staff/"

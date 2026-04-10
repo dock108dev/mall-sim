@@ -2,8 +2,7 @@
 .godot/
 *.translation
 
-# Godot export
-export_presets.cfg
+# Godot export (export_presets.cfg tracked for shared build config)
 *.pck
 *.zip
 
@@ -36,6 +35,11 @@ Desktop.ini
 # Build artifacts
 /build/
 /export/
+/exports/
 
 # OS generated
 *.log
+
+# AIDLC working directory
+.aidlc/runs/
+.aidlc/reports/

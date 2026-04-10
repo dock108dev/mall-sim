@@ -1,0 +1,184 @@
+{
+  "milestones": [
+    {
+      "id": "first_sale",
+      "name": "First Sale",
+      "description": "Sell your very first item to a customer.",
+      "condition_type": "items_sold",
+      "threshold": 1,
+      "reward_type": "cash_bonus",
+      "reward_value": 50.0,
+      "reward_description": "Bonus: $50 cash"
+    },
+    {
+      "id": "getting_started",
+      "name": "Getting Started",
+      "description": "Survive your first 3 days in the mall.",
+      "condition_type": "days",
+      "threshold": 3,
+      "reward_type": "cash_bonus",
+      "reward_value": 100.0,
+      "reward_description": "Bonus: $100 cash"
+    },
+    {
+      "id": "steady_seller",
+      "name": "Steady Seller",
+      "description": "Sell 10 items total.",
+      "condition_type": "items_sold",
+      "threshold": 10,
+      "reward_type": "fixture_unlock",
+      "reward_value": "wall_display",
+      "reward_description": "Unlock: Wall Display fixture"
+    },
+    {
+      "id": "first_hundred",
+      "name": "First Hundred",
+      "description": "Earn $100 in total revenue.",
+      "condition_type": "revenue",
+      "threshold": 100.0,
+      "reward_type": "cash_bonus",
+      "reward_value": 25.0,
+      "reward_description": "Bonus: $25 cash"
+    },
+    {
+      "id": "week_one",
+      "name": "Week One",
+      "description": "Complete your first full week of business.",
+      "condition_type": "days",
+      "threshold": 7,
+      "reward_type": "supplier_tier",
+      "reward_value": 1,
+      "reward_description": "Unlock: Tier 1 Supplier access"
+    },
+    {
+      "id": "local_name",
+      "name": "Local Name",
+      "description": "Reach 10 reputation points.",
+      "condition_type": "reputation",
+      "threshold": 10.0,
+      "reward_type": "cash_bonus",
+      "reward_value": 75.0,
+      "reward_description": "Bonus: $75 cash"
+    },
+    {
+      "id": "hundred_club",
+      "name": "Hundred Club",
+      "description": "Earn $500 in total revenue.",
+      "condition_type": "revenue",
+      "threshold": 500.0,
+      "reward_type": "fixture_unlock",
+      "reward_value": "glass_case",
+      "reward_description": "Unlock: Glass Display Case fixture"
+    },
+    {
+      "id": "neighborhood_favorite",
+      "name": "Neighborhood Favorite",
+      "description": "Reach Local Favorite reputation tier (25 rep).",
+      "condition_type": "reputation",
+      "threshold": 25.0,
+      "reward_type": "supplier_tier",
+      "reward_value": 2,
+      "reward_description": "Unlock: Tier 2 Supplier access"
+    },
+    {
+      "id": "sales_machine",
+      "name": "Sales Machine",
+      "description": "Sell 50 items total.",
+      "condition_type": "items_sold",
+      "threshold": 50,
+      "reward_type": "cash_bonus",
+      "reward_value": 200.0,
+      "reward_description": "Bonus: $200 cash"
+    },
+    {
+      "id": "two_weeks_in",
+      "name": "Two Weeks In",
+      "description": "Operate for 14 days.",
+      "condition_type": "days",
+      "threshold": 14,
+      "reward_type": "fixture_unlock",
+      "reward_value": "counter_large",
+      "reward_description": "Unlock: Large Counter fixture"
+    },
+    {
+      "id": "big_earner",
+      "name": "Big Earner",
+      "description": "Earn $1000 in total revenue.",
+      "condition_type": "revenue",
+      "threshold": 1000.0,
+      "reward_type": "store_slot",
+      "reward_value": 1,
+      "reward_description": "Unlock: Second store slot"
+    },
+    {
+      "id": "destination_bound",
+      "name": "Destination Bound",
+      "description": "Reach Destination Shop reputation tier (50 rep).",
+      "condition_type": "reputation",
+      "threshold": 50.0,
+      "reward_type": "supplier_tier",
+      "reward_value": 3,
+      "reward_description": "Unlock: Tier 3 Supplier access"
+    },
+    {
+      "id": "month_strong",
+      "name": "Month Strong",
+      "description": "Operate for 30 days straight.",
+      "condition_type": "days",
+      "threshold": 30,
+      "reward_type": "store_slot",
+      "reward_value": 2,
+      "reward_description": "Unlock: Third store slot"
+    },
+    {
+      "id": "century_seller",
+      "name": "Century Seller",
+      "description": "Sell 100 items total.",
+      "condition_type": "items_sold",
+      "threshold": 100,
+      "reward_type": "fixture_unlock",
+      "reward_value": "spotlight_shelf",
+      "reward_description": "Unlock: Spotlight Shelf fixture"
+    },
+    {
+      "id": "five_grand",
+      "name": "Five Grand",
+      "description": "Earn $5000 in total revenue.",
+      "condition_type": "revenue",
+      "threshold": 5000.0,
+      "reward_type": "cash_bonus",
+      "reward_value": 500.0,
+      "reward_description": "Bonus: $500 cash"
+    },
+    {
+      "id": "legendary_status",
+      "name": "Legendary Status",
+      "description": "Reach Legendary reputation tier (80 rep).",
+      "condition_type": "reputation",
+      "threshold": 80.0,
+      "reward_type": "store_slot",
+      "reward_value": 3,
+      "reward_description": "Unlock: Fourth store slot"
+    },
+    {
+      "id": "mall_mogul",
+      "name": "Mall Mogul",
+      "description": "Earn $10000 in total revenue.",
+      "condition_type": "revenue",
+      "threshold": 10000.0,
+      "reward_type": "cash_bonus",
+      "reward_value": 1000.0,
+      "reward_description": "Bonus: $1000 cash"
+    },
+    {
+      "id": "veteran",
+      "name": "Veteran",
+      "description": "Operate for 50 days.",
+      "condition_type": "days",
+      "threshold": 50,
+      "reward_type": "fixture_unlock",
+      "reward_value": "premium_shelf",
+      "reward_description": "Unlock: Premium Shelf fixture"
+    }
+  ]
+}

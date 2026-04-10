@@ -1,0 +1,156 @@
+[
+  {
+    "id": "shelf_basic",
+    "name": "Basic Shelf",
+    "category": "universal",
+    "price": 30.0,
+    "grid_size": [4, 1],
+    "slot_count": 6,
+    "unlock_condition": {},
+    "store_types": [],
+    "description": "A simple wooden shelf for displaying merchandise."
+  },
+  {
+    "id": "glass_case_small",
+    "name": "Small Glass Case",
+    "category": "universal",
+    "price": 80.0,
+    "grid_size": [2, 2],
+    "slot_count": 8,
+    "unlock_condition": {},
+    "store_types": [],
+    "description": "A compact glass display case for valuable items."
+  },
+  {
+    "id": "wall_mount",
+    "name": "Wall Mount Display",
+    "category": "universal",
+    "price": 40.0,
+    "grid_size": [2, 1],
+    "slot_count": 4,
+    "unlock_condition": {},
+    "store_types": [],
+    "description": "A wall-mounted rack for hanging merchandise."
+  },
+  {
+    "id": "counter_basic",
+    "name": "Checkout Counter",
+    "category": "universal",
+    "price": 120.0,
+    "grid_size": [3, 2],
+    "slot_count": 2,
+    "unlock_condition": {},
+    "store_types": [],
+    "description": "Standard checkout counter with register space."
+  },
+  {
+    "id": "shelf_wide",
+    "name": "Wide Shelf Unit",
+    "category": "universal",
+    "price": 60.0,
+    "grid_size": [6, 1],
+    "slot_count": 10,
+    "unlock_condition": { "reputation": 10 },
+    "store_types": [],
+    "description": "An extended shelf unit with extra display space."
+  },
+  {
+    "id": "glass_case_large",
+    "name": "Large Glass Case",
+    "category": "universal",
+    "price": 150.0,
+    "grid_size": [3, 2],
+    "slot_count": 12,
+    "unlock_condition": { "reputation": 25 },
+    "store_types": [],
+    "description": "A premium glass display for high-value merchandise."
+  },
+  {
+    "id": "bargain_bin",
+    "name": "Bargain Bin",
+    "category": "universal",
+    "price": 35.0,
+    "grid_size": [2, 2],
+    "slot_count": 15,
+    "unlock_condition": {},
+    "store_types": [],
+    "description": "A discount bin for clearance items. High capacity, low prestige."
+  },
+  {
+    "id": "card_binder_rack",
+    "name": "Card Binder Rack",
+    "category": "store_specific",
+    "price": 70.0,
+    "grid_size": [3, 1],
+    "slot_count": 10,
+    "unlock_condition": {},
+    "store_types": ["sports_memorabilia"],
+    "description": "A specialized rack for displaying card binders and singles."
+  },
+  {
+    "id": "memorabilia_shelf",
+    "name": "Memorabilia Shelf",
+    "category": "store_specific",
+    "price": 90.0,
+    "grid_size": [4, 1],
+    "slot_count": 6,
+    "unlock_condition": { "reputation": 15 },
+    "store_types": ["sports_memorabilia"],
+    "description": "A padded display shelf for autographs and signed equipment."
+  },
+  {
+    "id": "sealed_product_case",
+    "name": "Sealed Product Case",
+    "category": "store_specific",
+    "price": 110.0,
+    "grid_size": [2, 2],
+    "slot_count": 8,
+    "unlock_condition": { "day": 5 },
+    "store_types": ["sports_memorabilia"],
+    "description": "A locked case for sealed boxes and packs."
+  },
+  {
+    "id": "jersey_wall_display",
+    "name": "Jersey Wall Display",
+    "category": "store_specific",
+    "price": 250.0,
+    "grid_size": [4, 1],
+    "slot_count": 3,
+    "unlock_condition": { "reputation": 50 },
+    "store_types": ["sports_memorabilia"],
+    "description": "A premium wall-mounted frame for jerseys and signed memorabilia."
+  },
+  {
+    "id": "testing_station",
+    "name": "Testing Station",
+    "category": "store_specific",
+    "price": 95.0,
+    "grid_size": [2, 2],
+    "slot_count": 1,
+    "unlock_condition": {},
+    "store_types": ["retro_games"],
+    "description": "A table with a CRT monitor for testing retro games and consoles."
+  },
+  {
+    "id": "tournament_table",
+    "name": "Tournament Table",
+    "category": "store_specific",
+    "price": 100.0,
+    "grid_size": [3, 2],
+    "slot_count": 0,
+    "unlock_condition": { "reputation": 10 },
+    "store_types": ["pocket_creatures"],
+    "description": "A large table for hosting PocketCreatures card tournaments."
+  },
+  {
+    "id": "demo_station",
+    "name": "Demo Station",
+    "category": "store_specific",
+    "price": 85.0,
+    "grid_size": [2, 2],
+    "slot_count": 1,
+    "unlock_condition": {},
+    "store_types": ["consumer_electronics"],
+    "description": "A display table with a product stand for demoing electronics to customers."
+  }
+]

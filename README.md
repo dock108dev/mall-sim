@@ -1,61 +1,58 @@
 # mallcore-sim
 
-A 3D retail simulator inspired by 2000s mall culture, built with Godot 4.x.
+A 3D retail simulator set in a 2000s-era shopping mall, built with Godot 4.3+ and GDScript.
 
-Run your own stores in a sprawling mall — stock shelves, haggle with customers, chase trends, and expand your retail empire across sports cards, retro games, video rentals, fake monster cards, and electronics.
-
-## Platform Targets
-
-- **macOS** — primary development and testing platform
-- **Windows** — near-term export target, tested regularly
-- Linux and web are stretch goals, not actively targeted yet
+Run specialty stores in a sprawling mall — stock shelves, set prices, haggle with customers, chase trends, and expand your retail empire. Five store types with unique mechanics: sports memorabilia, retro games, video rentals, collectible card shop, and consumer electronics.
 
 ## Current Status
 
-**Scaffolding complete, ready for implementation.**
+All core systems are implemented and functional. Five store types are playable with unique mechanics (authentication, refurbishment, rental lifecycle, pack opening, product depreciation). The game has a working economy, customer AI, build mode, progression milestones, event systems, save/load, and a tutorial. Primary remaining work: final 3D art, audio polish, balance tuning, and export preparation.
 
-The project structure, autoload singletons, resource definitions, content pipeline, and scene hierarchy are all in place. No gameplay systems are wired up yet — the next step is building the core player controller and interaction loop inside a single test store.
-
-## Opening the Project
+## Running the Game
 
 1. Install [Godot 4.3+](https://godotengine.org/download) (standard build, not .NET)
 2. Clone this repo
-3. Open Godot, click **Import**, navigate to the repo root, select `project.godot`
-4. The project will import assets on first open — this may take a moment
-5. Press F5 or click Play to run the default scene
+3. Open Godot > Import > select `project.godot`
+4. Press F5 to run
 
-## Directory Overview
+See [docs/setup.md](docs/setup.md) for detailed setup, input map, build targets, and troubleshooting.
+
+## Project Structure
 
 ```
-project.godot              # Godot project config (root level)
-game/                      # All game code and assets
-  scenes/                  # .tscn scene files organized by feature
-  scripts/                 # GDScript files (.gd)
-  autoload/                # Singleton scripts (GameManager, EventBus, etc.)
-  content/                 # JSON data files (items, stores, customers)
-  resources/               # Custom Resource definitions (.tres, .gd)
-docs/                      # Design documents, system specs
-tools/                     # Editor plugins, build scripts, data validators
-reference/                 # Art references, audio specs, design mockups
-.github/                   # CI workflows, issue/PR templates
+project.godot              Godot project config
+CLAUDE.md                  AI development instructions
+game/                      Everything Godot loads at runtime
+  autoload/                4 singletons (GameManager, EventBus, AudioManager, Settings)
+  content/                 23 JSON data files (items, stores, customers, economy, events)
+  resources/               Resource class definitions (ItemDefinition, StoreDefinition, etc.)
+  scenes/                  39 scene files (.tscn)
+  scripts/                 77 GDScript files (~23K LOC)
+    systems/               35 gameplay systems
+    stores/                5 store controllers + store-specific scripts
+  assets/                  Audio, materials (3D models and textures pending)
+docs/                      All project documentation
 ```
 
-The `game/` subfolder contains everything Godot loads at runtime. Docs, tools, and reference material live outside it to keep the game directory clean.
+## Documentation
 
-## Contribution Expectations
+| Document | Contents |
+|---|---|
+| [Architecture](docs/architecture.md) | System design, autoloads, data pipeline, scene structure |
+| [Setup](docs/setup.md) | Local development, project settings, build targets, tech stack |
+| [Roadmap](docs/roadmap.md) | Milestone progress and remaining work |
+| [Contributing](docs/contributing.md) | Code conventions, branch naming, PR process |
+| [Design: Game Pillars](docs/design/GAME_PILLARS.md) | Core design principles |
+| [Design: Core Loop](docs/design/CORE_LOOP.md) | Daily gameplay loop |
+| [Design: Store Types](docs/design/STORE_TYPES.md) | Five store types overview |
+| [Design: Store Details](docs/design/stores/) | Deep dives per store type |
+| [Art Direction](docs/art/ART_DIRECTION.md) | Visual style, color palette, lighting |
+| [Asset Pipeline](docs/art/ASSET_PIPELINE.md) | Modeling, texturing, and import standards |
+| [Save System](docs/tech/SAVE_SYSTEM_PLAN.md) | Save/load architecture |
+| [Production Risks](docs/production/RISKS.md) | Known risks and mitigations |
 
-- Read `CONTRIBUTING.md` before submitting code
-- One feature or fix per branch and PR
-- All scripts follow GDScript conventions: `snake_case` files, `PascalCase` classes
-- No dead code or placeholder scaffolding — if it does not work yet, it should not exist in the tree
-- See `ARCHITECTURE.md` for system design and `TASKLIST.md` for what to work on next
+## Platforms
 
-## Immediate Next Steps
-
-1. Player controller — basic 3D movement and camera in the mall environment
-2. Interaction system — raycasting to detect and interact with objects
-3. First playable store — a single sports card shop with shelves, register, stock
-4. Inventory UI — grid-based display of store stock and player inventory
-5. Customer spawning — basic NPCs that enter, browse, and purchase
-
-See `ROADMAP.md` for the full phased plan and `TASKLIST.md` for granular tasks.
+- **macOS** — primary development and testing platform
+- **Windows** — near-term export target
+- Linux and web are stretch goals

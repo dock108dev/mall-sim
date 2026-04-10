@@ -1,0 +1,71 @@
+[gd_scene load_steps=2 format=3 uid="uid://ctutoverlay01"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/tutorial_overlay.gd" id="1"]
+
+[node name="TutorialOverlay" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -120.0
+offset_right = 220.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="StepLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Step 1 of 7"
+horizontal_alignment = 1
+
+[node name="PromptLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Welcome to your store!"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="SkipButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 30)
+size_flags_horizontal = 4
+text = "Skip Tutorial"
+
+[node name="TipPanel" type="PanelContainer" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -320.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 70.0
+grow_horizontal = 0
+
+[node name="TipMargin" type="MarginContainer" parent="TipPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="TipLabel" type="Label" parent="TipPanel/TipMargin"]
+layout_mode = 2
+text = "Tip text here"
+horizontal_alignment = 1
+autowrap_mode = 2

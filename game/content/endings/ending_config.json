@@ -1,0 +1,41 @@
+{
+  "endings": {
+    "normal": {
+      "id": "normal",
+      "title": "Mall Empire Complete!",
+      "subtitle": "You did it.",
+      "body": "From a single cramped storefront to a thriving retail empire, you built something special in this mall. The fluorescent lights hum overhead as shoppers stream through the corridors you helped fill. Every shelf stocked, every customer served, every deal closed — it all led here. Congratulations, Mall Mogul.",
+      "background_color": "#1a3a5c",
+      "accent_color": "#f5c842",
+      "mood": "celebratory"
+    },
+    "questioned": {
+      "id": "questioned",
+      "title": "Mall Empire Complete!",
+      "subtitle": "...right?",
+      "body": "You built a retail empire. The numbers add up. The customers are happy. Everything is exactly as it should be. And yet, as you lock up for the night, you notice a figure standing at the far end of the corridor. They're watching. They've been watching for a while now, haven't they? You turn away. The fluorescent lights flicker, just once. Tell me — did you ever wonder where the money really goes?",
+      "background_color": "#2a2a3d",
+      "accent_color": "#8b7daa",
+      "mood": "unsettling"
+    },
+    "takedown": {
+      "id": "takedown",
+      "title": "Mall Empire Comp—",
+      "subtitle": "ATTENTION. MALL SECURITY.",
+      "body": "You were about to celebrate. The confetti was ready. The spreadsheets were immaculate. Then the doors burst open — not customers this time, but a surprisingly well-organized group of mall cops, a man in a too-tight suit waving a clipboard, and someone who appears to be an actual accountant. 'We have questions about your inventory records,' the clipboard man announces. 'All of them.' The fluorescent lights have never buzzed louder.",
+      "background_color": "#3d1a1a",
+      "accent_color": "#e84545",
+      "mood": "raid"
+    }
+  },
+  "thresholds": {
+    "takedown": {
+      "min_awareness": 40,
+      "min_participation": 30
+    },
+    "questioned": {
+      "min_awareness": 20,
+      "min_participation": 0
+    }
+  }
+}

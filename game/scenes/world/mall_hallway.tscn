@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://mall_hallway001"]
+
+[ext_resource type="Script" path="res://game/scripts/world/mall_hallway.gd" id="1"]
+
+[node name="MallHallway" type="Node3D"]
+script = ExtResource("1")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+layer = 10
