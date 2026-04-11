@@ -123,6 +123,21 @@ func _spawn_storefronts() -> void:
 			_on_storefront_door_interacted
 		)
 		_storefronts.append(storefront)
+		_add_storefront_accent_light(storefront.position)
+
+
+func _add_storefront_accent_light(at_pos: Vector3) -> void:
+	var accent_light := SpotLight3D.new()
+	accent_light.name = "StorefrontAccent_%d" % int(round(at_pos.x * 10.0))
+	accent_light.position = at_pos + Vector3(0.0, 3.25, 2.8)
+	accent_light.rotation_degrees = Vector3(-88.0, 0.0, 0.0)
+	accent_light.light_color = Color(1.0, 0.9, 0.75, 1.0)
+	accent_light.light_energy = 0.42
+	accent_light.spot_range = 5.2
+	accent_light.spot_angle = 34.0
+	accent_light.spot_attenuation = 1.0
+	accent_light.shadow_enabled = false
+	_hallway_geometry.add_child(accent_light)
 
 
 func _setup_camera() -> void:

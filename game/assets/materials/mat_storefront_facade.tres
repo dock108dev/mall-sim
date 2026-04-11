@@ -2,5 +2,5 @@
 
 [resource]
 resource_name = "Storefront Facade"
-albedo_color = Color(0.85, 0.82, 0.75, 1)
-roughness = 0.9
+albedo_color = Color(0.72, 0.69, 0.64, 1)
+roughness = 0.78

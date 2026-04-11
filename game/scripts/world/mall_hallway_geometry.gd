@@ -7,13 +7,13 @@ const HALLWAY_WIDTH: float = 8.0
 const HALLWAY_HEIGHT: float = 4.0
 
 static var _floor_mat: StandardMaterial3D = preload(
-	"res://game/assets/materials/mat_hallway_floor.tres"
+	"res://game/assets/materials/mat_floor_tile_textured.tres"
 )
 static var _wall_mat: StandardMaterial3D = preload(
-	"res://game/assets/materials/mat_hallway_wall.tres"
+	"res://game/assets/materials/mat_wall_surface_textured.tres"
 )
 static var _ceiling_mat: StandardMaterial3D = preload(
-	"res://game/assets/materials/mat_ceiling_warm.tres"
+	"res://game/assets/materials/mat_wall_warm_white.tres"
 )
 static var _bench_mat: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_wood_medium.tres"
@@ -96,18 +96,7 @@ static func _build_common_area(parent: Node3D) -> void:
 
 
 static func _build_lighting(parent: Node3D) -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.3, 0.28, 0.25)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.95, 0.88, 0.72)
-	env.ambient_light_energy = 0.4
-	var world_env := WorldEnvironment.new()
-	world_env.name = "WorldEnvironment"
-	world_env.environment = env
-	parent.add_child(world_env)
-
-	var panel_count: int = 7
+	var panel_count: int = 5
 	var spacing: float = HALLWAY_LENGTH / float(panel_count)
 	var start_x: float = -HALLWAY_LENGTH * 0.5 + spacing * 0.5
 	var center_z: float = HALLWAY_WIDTH * 0.5
@@ -139,11 +128,11 @@ static func _add_omni_light(
 ) -> void:
 	var light := OmniLight3D.new()
 	light.name = "FluorescentLight_%d" % index
-	light.light_color = Color(1.0, 0.93, 0.78)
-	light.light_energy = 1.2
-	light.omni_range = 6.0
-	light.omni_attenuation = 1.5
-	light.shadow_enabled = index % 2 == 0
+	light.light_color = Color(1.0, 0.94, 0.84)
+	light.light_energy = 0.45
+	light.omni_range = 4.0
+	light.omni_attenuation = 2.4
+	light.shadow_enabled = false
 	light.position = Vector3(
 		x_pos, HALLWAY_HEIGHT - 0.3, z_pos
 	)
@@ -180,7 +169,7 @@ static func _add_neon_sign(
 	var sign_mat := StandardMaterial3D.new()
 	sign_mat.emission_enabled = true
 	sign_mat.emission = color
-	sign_mat.emission_energy_multiplier = 3.0
+	sign_mat.emission_energy_multiplier = 1.2
 	sign_mat.albedo_color = color
 	var sign_mesh := MeshInstance3D.new()
 	sign_mesh.name = "NeonSign_%d" % index
@@ -192,8 +181,8 @@ static func _add_neon_sign(
 	var glow := OmniLight3D.new()
 	glow.name = "NeonGlow_%d" % index
 	glow.light_color = color
-	glow.light_energy = 0.6
-	glow.omni_range = 3.0
+	glow.light_energy = 0.2
+	glow.omni_range = 2.2
 	glow.omni_attenuation = 2.0
 	glow.position = Vector3(pos.x, pos.y - 0.3, pos.z)
 	parent.add_child(glow)

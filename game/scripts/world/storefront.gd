@@ -4,8 +4,8 @@ extends Node3D
 
 signal door_interacted(storefront: Storefront)
 
-const SIGN_OFFSET := Vector3(0.0, 3.2, -0.1)
-const DOOR_SIZE := Vector3(1.6, 2.4, 0.3)
+const SIGN_OFFSET := Vector3(0.0, 3.2, 0.16)
+const DOOR_SIZE := Vector3(1.5, 2.35, 0.16)
 const WINDOW_SIZE := Vector3(2.5, 2.0, 0.1)
 
 static var _facade_mat: StandardMaterial3D = preload(
@@ -16,6 +16,15 @@ static var _door_mat: StandardMaterial3D = preload(
 )
 static var _glass_mat: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_storefront_glass.tres"
+)
+static var _frame_mat: StandardMaterial3D = preload(
+	"res://game/assets/materials/mat_metal_dark.tres"
+)
+static var _sign_backing_mat: StandardMaterial3D = preload(
+	"res://game/assets/materials/mat_sign_backing.tres"
+)
+static var _threshold_mat: StandardMaterial3D = preload(
+	"res://game/assets/materials/mat_floor_tile_cream.tres"
 )
 
 @export var slot_index: int = 0
@@ -71,6 +80,7 @@ func set_available(p_daily_rent: float) -> void:
 
 func _build_visual() -> void:
 	_build_facade()
+	_build_entry_architecture()
 	_build_door()
 	_build_windows()
 	_build_sign()
@@ -99,21 +109,62 @@ func _build_facade() -> void:
 	add_child(header_mesh)
 
 
+func _build_entry_architecture() -> void:
+	var left_jamb := MeshInstance3D.new()
+	left_jamb.mesh = BoxMesh.new()
+	(left_jamb.mesh as BoxMesh).size = Vector3(0.22, 2.45, 0.32)
+	left_jamb.position = Vector3(-0.88, 1.23, 0.12)
+	left_jamb.set_surface_override_material(0, _frame_mat)
+	add_child(left_jamb)
+
+	var right_jamb := MeshInstance3D.new()
+	right_jamb.mesh = BoxMesh.new()
+	(right_jamb.mesh as BoxMesh).size = Vector3(0.22, 2.45, 0.32)
+	right_jamb.position = Vector3(0.88, 1.23, 0.12)
+	right_jamb.set_surface_override_material(0, _frame_mat)
+	add_child(right_jamb)
+
+	var lintel := MeshInstance3D.new()
+	lintel.mesh = BoxMesh.new()
+	(lintel.mesh as BoxMesh).size = Vector3(1.98, 0.22, 0.32)
+	lintel.position = Vector3(0.0, 2.45, 0.12)
+	lintel.set_surface_override_material(0, _frame_mat)
+	add_child(lintel)
+
+	var recess := MeshInstance3D.new()
+	recess.mesh = BoxMesh.new()
+	(recess.mesh as BoxMesh).size = Vector3(1.66, 2.15, 0.26)
+	recess.position = Vector3(0.0, 1.15, -0.05)
+	recess.set_surface_override_material(0, _sign_backing_mat)
+	add_child(recess)
+
+	var threshold := MeshInstance3D.new()
+	threshold.mesh = BoxMesh.new()
+	(threshold.mesh as BoxMesh).size = Vector3(1.75, 0.08, 0.45)
+	threshold.position = Vector3(0.0, 0.04, 0.22)
+	threshold.set_surface_override_material(0, _threshold_mat)
+	add_child(threshold)
+
+	var sign_backing := MeshInstance3D.new()
+	sign_backing.mesh = BoxMesh.new()
+	(sign_backing.mesh as BoxMesh).size = Vector3(2.8, 0.48, 0.18)
+	sign_backing.position = Vector3(0.0, 3.2, 0.03)
+	sign_backing.set_surface_override_material(0, _sign_backing_mat)
+	add_child(sign_backing)
+
+
 func _build_door() -> void:
 	var door_body := StaticBody3D.new()
 	door_body.name = "DoorBody"
-	door_body.position = Vector3(0.0, 1.2, 0.15)
+	door_body.position = Vector3(0.0, 1.18, 0.16)
 	add_child(door_body)
-
-	var door_mesh := _create_door_mesh()
-	door_body.add_child(door_mesh)
 
 	var door_col := CollisionShape3D.new()
 	door_col.shape = BoxShape3D.new()
 	(door_col.shape as BoxShape3D).size = DOOR_SIZE
 	door_body.add_child(door_col)
 
-	_door_interactable = _create_door_interactable(door_mesh)
+	_door_interactable = _create_door_interactable()
 	door_body.add_child(_door_interactable)
 
 
@@ -126,9 +177,7 @@ func _create_door_mesh() -> MeshInstance3D:
 	return door_mesh
 
 
-func _create_door_interactable(
-	door_mesh: MeshInstance3D
-) -> Interactable:
+func _create_door_interactable() -> Interactable:
 	var interactable := Interactable.new()
 	interactable.name = "DoorInteractable"
 	interactable.interaction_type = (
@@ -142,7 +191,7 @@ func _create_door_interactable(
 	col.shape = BoxShape3D.new()
 	(col.shape as BoxShape3D).size = Vector3(2.0, 2.8, 1.0)
 	interactable.add_child(col)
-	interactable.add_child(door_mesh.duplicate())
+	interactable.add_child(_create_door_mesh())
 	return interactable
 
 
@@ -160,6 +209,20 @@ func _build_windows() -> void:
 	right_win.position = Vector3(1.7, 1.5, 0.05)
 	right_win.set_surface_override_material(0, _glass_mat)
 	add_child(right_win)
+
+	var left_mullion := MeshInstance3D.new()
+	left_mullion.mesh = BoxMesh.new()
+	(left_mullion.mesh as BoxMesh).size = Vector3(0.08, 2.0, 0.14)
+	left_mullion.position = Vector3(-1.7, 1.5, 0.09)
+	left_mullion.set_surface_override_material(0, _frame_mat)
+	add_child(left_mullion)
+
+	var right_mullion := MeshInstance3D.new()
+	right_mullion.mesh = BoxMesh.new()
+	(right_mullion.mesh as BoxMesh).size = Vector3(0.08, 2.0, 0.14)
+	right_mullion.position = Vector3(1.7, 1.5, 0.09)
+	right_mullion.set_surface_override_material(0, _frame_mat)
+	add_child(right_mullion)
 
 
 func _build_sign() -> void:

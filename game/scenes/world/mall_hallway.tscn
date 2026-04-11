@@ -4,10 +4,10 @@
 
 [sub_resource type="Environment" id="hallway_env"]
 background_mode = 1
-background_color = Color(0.12, 0.1, 0.08, 1)
+background_color = Color(0.09, 0.09, 0.12, 1)
 ambient_light_source = 2
-ambient_light_color = Color(1.0, 0.92, 0.75, 1)
-ambient_light_energy = 0.4
+ambient_light_color = Color(0.93, 0.9, 0.84, 1)
+ambient_light_energy = 0.2
 
 [node name="MallHallway" type="Node3D"]
 script = ExtResource("1")
@@ -22,46 +22,46 @@ environment = SubResource("hallway_env")
 [node name="OverheadLight_Center" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 4.0)
 light_color = Color(1.0, 0.93, 0.78, 1)
-light_energy = 0.9
+light_energy = 0.35
 omni_range = 12.0
 
 [node name="OverheadLight_Left" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.0, 3.5, 4.0)
 light_color = Color(1.0, 0.93, 0.78, 1)
-light_energy = 0.8
+light_energy = 0.28
 omni_range = 10.0
 
 [node name="OverheadLight_Right" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.0, 3.5, 4.0)
 light_color = Color(1.0, 0.93, 0.78, 1)
-light_energy = 0.8
+light_energy = 0.28
 omni_range = 10.0
 
 [node name="NeonSign_Teal" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.0, 3.2, 7.5)
 light_color = Color(0.2, 0.85, 0.8, 1)
-light_energy = 0.4
+light_energy = 0.15
 omni_range = 3.0
 
 [node name="NeonSign_Coral" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.0, 3.2, 7.5)
 light_color = Color(1.0, 0.45, 0.4, 1)
-light_energy = 0.4
+light_energy = 0.15
 omni_range = 3.0
 
 [node name="NeonSign_Pink" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0.3)
 light_color = Color(0.95, 0.3, 0.65, 1)
-light_energy = 0.35
+light_energy = 0.12
 omni_range = 2.5
 
 [node name="DisplaySpot_Entrance" type="SpotLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 3.8, 4.0)
 light_color = Color(1.0, 0.9, 0.7, 1)
-light_energy = 1.0
+light_energy = 0.45
 shadow_enabled = true
-spot_range = 5.0
-spot_angle = 40.0
+spot_range = 4.0
+spot_angle = 33.0
 
 [node name="UILayer" type="CanvasLayer" parent="."]
 layer = 10

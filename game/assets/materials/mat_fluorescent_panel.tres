@@ -5,4 +5,4 @@ resource_name = "Fluorescent Panel"
 albedo_color = Color(1.0, 0.97, 0.9, 1)
 emission_enabled = true
 emission = Color(1.0, 0.95, 0.8, 1)
-emission_energy_multiplier = 2.0
+emission_energy_multiplier = 0.75
