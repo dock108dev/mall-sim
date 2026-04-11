@@ -18,6 +18,8 @@ extends Node3D
 @export var pitch_max_deg: float = 80.0
 ## Pan speed in world units per pixel of mouse drag.
 @export var pan_speed: float = 0.02
+## Movement speed in world units per second for WASD locomotion.
+@export var move_speed: float = 6.0
 ## Interpolation weight per second for smooth camera movement.
 @export var lerp_speed: float = 12.0
 ## Store boundary min corner for pivot clamping.
@@ -70,6 +72,8 @@ func _process(delta: float) -> void:
 	if _build_mode_active:
 		return
 
+	_apply_keyboard_movement(delta)
+
 	var weight: float = clampf(lerp_speed * delta, 0.0, 1.0)
 	_yaw = lerp_angle(_yaw, _target_yaw, weight)
 	_pitch = lerpf(_pitch, _target_pitch, weight)
@@ -83,6 +87,38 @@ func set_build_mode(active: bool) -> void:
 	_build_mode_active = active
 	_is_orbiting = false
 	_is_panning = false
+
+
+## Exposes the controlled camera for interaction ray and build mode wiring.
+func get_camera() -> Camera3D:
+	if _camera:
+		return _camera
+	return get_node_or_null("Camera3D") as Camera3D
+
+
+## Teleports camera pivot and smoothing target to the same position.
+func set_pivot(position: Vector3) -> void:
+	_target_pivot = position.clamp(store_bounds_min, store_bounds_max)
+	_pivot = _target_pivot
+	_update_camera_transform()
+
+
+## Sets yaw and pitch in degrees for startup camera framing.
+func set_camera_angles(yaw_deg: float, pitch_deg: float) -> void:
+	_target_yaw = deg_to_rad(yaw_deg)
+	_target_pitch = deg_to_rad(
+		clampf(pitch_deg, pitch_min_deg, pitch_max_deg)
+	)
+	_yaw = _target_yaw
+	_pitch = _target_pitch
+	_update_camera_transform()
+
+
+## Sets zoom immediately and clamps to camera limits.
+func set_zoom_distance(zoom_distance: float) -> void:
+	_target_zoom = clampf(zoom_distance, zoom_min, zoom_max)
+	_zoom = _target_zoom
+	_update_camera_transform()
 
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
@@ -110,6 +146,30 @@ func _handle_pan(motion: InputEventMouseMotion) -> void:
 		+ forward * motion.relative.y * pan_speed
 	)
 	_target_pivot += pan_offset
+	_target_pivot = _target_pivot.clamp(store_bounds_min, store_bounds_max)
+
+
+func _apply_keyboard_movement(delta: float) -> void:
+	var movement_input: Vector2 = Input.get_vector(
+		"move_left",
+		"move_right",
+		"move_forward",
+		"move_back",
+	)
+	if movement_input.is_zero_approx():
+		return
+
+	var forward: Vector3 = Vector3(
+		-sin(_target_yaw),
+		0.0,
+		-cos(_target_yaw)
+	).normalized()
+	var right: Vector3 = forward.cross(Vector3.UP).normalized()
+	var movement_dir: Vector3 = (
+		right * movement_input.x
+		+ forward * -movement_input.y
+	).normalized()
+	_target_pivot += movement_dir * move_speed * delta
 	_target_pivot = _target_pivot.clamp(store_bounds_min, store_bounds_max)
 
 

@@ -36,7 +36,7 @@ const _PlayerControllerScene: PackedScene = preload(
 )
 
 var _storefronts: Array[Storefront] = []
-var _camera_controller: MallCameraController
+var _camera_controller: PlayerController
 var _interaction_ray: Node
 var _lease_dialog: StoreLeaseDialog
 var _hallway_geometry: Node3D
@@ -93,7 +93,7 @@ func set_systems(
 
 
 ## Returns the mall camera controller.
-func get_camera_controller() -> MallCameraController:
+func get_camera_controller() -> PlayerController:
 	return _camera_controller
 
 
@@ -126,12 +126,16 @@ func _spawn_storefronts() -> void:
 
 
 func _setup_camera() -> void:
-	_camera_controller = MallCameraController.new()
+	_camera_controller = (
+		_PlayerControllerScene.instantiate() as PlayerController
+	)
 	_camera_controller.name = "MallCameraController"
-
-	var cam := Camera3D.new()
-	cam.name = "Camera3D"
-	_camera_controller.add_child(cam)
+	_camera_controller.store_bounds_min = Vector3(-18.0, 0.0, -2.0)
+	_camera_controller.store_bounds_max = Vector3(18.0, 0.0, 8.0)
+	_camera_controller.move_speed = 8.0
+	_camera_controller.set_pivot(Vector3(0.0, 0.0, 0.0))
+	_camera_controller.set_camera_angles(0.0, 24.0)
+	_camera_controller.set_zoom_distance(8.0)
 	add_child(_camera_controller)
 
 	var InteractionRayScript: GDScript = preload(
@@ -141,7 +145,10 @@ func _setup_camera() -> void:
 	_interaction_ray.name = "InteractionRay"
 	_interaction_ray.set_script(InteractionRayScript)
 	add_child(_interaction_ray)
-	_interaction_ray.call("initialize", cam)
+	_interaction_ray.call(
+		"initialize",
+		_camera_controller.get_camera()
+	)
 
 
 func _setup_lease_dialog() -> void:
@@ -258,6 +265,11 @@ func _enter_store(storefront: Storefront) -> void:
 	)
 	_store_camera.name = "StoreCamera"
 	_store_container.add_child(_store_camera)
+	if _interaction_ray and _interaction_ray.has_method("set_camera"):
+		_interaction_ray.call(
+			"set_camera",
+			_store_camera.get_camera()
+		)
 
 	_inside_store = true
 	EventBus.storefront_entered.emit(
@@ -398,6 +410,11 @@ func _exit_store_with_fade() -> void:
 	_hallway_geometry.visible = true
 	_camera_controller.set_process(true)
 	_camera_controller.set_process_unhandled_input(true)
+	if _interaction_ray and _interaction_ray.has_method("set_camera"):
+		_interaction_ray.call(
+			"set_camera",
+			_camera_controller.get_camera()
+		)
 	_inside_store = false
 
 	await _fade_out()

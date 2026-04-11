@@ -9,16 +9,26 @@ extends Node
 var _camera: Camera3D = null
 var _hovered_target: Interactable = null
 var _inventory_system: InventorySystem = null
+var _open_panel_count: int = 0
 
 
 func _ready() -> void:
 	set_process(false)
+	EventBus.panel_opened.connect(_on_panel_opened)
+	EventBus.panel_closed.connect(_on_panel_closed)
 
 
 ## Call after the camera is available to begin raycasting.
 func initialize(camera: Camera3D) -> void:
+	set_camera(camera)
+	set_process(camera != null)
+
+
+## Updates the active camera source used for world raycasts.
+func set_camera(camera: Camera3D) -> void:
+	if _hovered_target:
+		_set_hovered_target(null)
 	_camera = camera
-	set_process(true)
 
 
 ## Sets the InventorySystem reference for shelf item tooltip lookups.
@@ -27,11 +37,27 @@ func set_inventory_system(inv: InventorySystem) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _open_panel_count > 0:
+		if _hovered_target:
+			_set_hovered_target(null)
+		return
 	_update_raycast()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _open_panel_count > 0:
+		return
+	if event.is_action_pressed("interact"):
+		if _is_keyboard_captured_by_ui():
+			return
+		if _hovered_target:
+			_hovered_target.interact()
+			EventBus.player_interacted.emit(_hovered_target)
+		return
+
 	if not event is InputEventMouseButton:
+		return
+	if _is_pointer_over_blocking_ui():
 		return
 	var mb_event := event as InputEventMouseButton
 	if not mb_event.pressed:
@@ -73,6 +99,8 @@ func _update_raycast() -> void:
 			ray_origin, ray_end, interaction_mask
 		)
 	)
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
 	var result: Dictionary = space_state.intersect_ray(query)
 
 	var new_target: Interactable = null
@@ -119,3 +147,33 @@ func _emit_tooltip_for_target(target: Interactable) -> void:
 		EventBus.item_tooltip_requested.emit(item)
 	else:
 		EventBus.item_tooltip_hidden.emit()
+
+
+func _on_panel_opened(_panel_name: String) -> void:
+	_open_panel_count += 1
+
+
+func _on_panel_closed(_panel_name: String) -> void:
+	_open_panel_count = maxi(_open_panel_count - 1, 0)
+
+
+func _is_keyboard_captured_by_ui() -> bool:
+	var viewport: Viewport = get_viewport()
+	if not viewport:
+		return false
+	return viewport.gui_get_focus_owner() != null
+
+
+func _is_pointer_over_blocking_ui() -> bool:
+	var viewport: Viewport = get_viewport()
+	if not viewport:
+		return false
+	var hovered: Control = viewport.gui_get_hovered_control()
+	if hovered == null:
+		return false
+	var node: Control = hovered
+	while node != null:
+		if node.mouse_filter == Control.MOUSE_FILTER_STOP:
+			return true
+		node = node.get_parent_control()
+	return false

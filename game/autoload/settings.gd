@@ -15,6 +15,11 @@ const COMMON_RESOLUTIONS: Array[Vector2i] = [
 
 ## Actions that can be rebound by the player.
 const REBINDABLE_ACTIONS: Array[String] = [
+	"move_forward",
+	"move_back",
+	"move_left",
+	"move_right",
+	"interact",
 	"time_toggle_pause",
 	"time_speed_1",
 	"time_speed_2",
