@@ -1,5 +1,12 @@
 {
   "starting_cash": 500.00,
+  "daily_rent": 50.00,
+  "reputation_tiers": {
+    "unknown": { "min": 0, "customer_multiplier": 1.0, "label": "Unknown" },
+    "local_favorite": { "min": 25, "customer_multiplier": 1.5, "label": "Local Favorite" },
+    "destination_shop": { "min": 50, "customer_multiplier": 2.0, "label": "Destination Shop" },
+    "legendary": { "min": 80, "customer_multiplier": 3.0, "label": "Legendary" }
+  },
   "condition_multipliers": {
     "poor": 0.25,
     "fair": 0.5,
@@ -14,38 +21,48 @@
     "very_rare": 15.0,
     "legendary": 40.0
   },
-  "reputation_tiers": {
-    "unknown": {
-      "min": 0,
-      "customer_multiplier": 1.0
+  "supplier_tiers": [
+    {
+      "tier": 1,
+      "name": "Local Distributor",
+      "reputation_threshold": 0,
+      "revenue_threshold": 0,
+      "rarity_access": ["common", "uncommon"],
+      "wholesale_discount": 0.60,
+      "description": "Your local card shop distributor. Basic stock, reasonable prices."
     },
-    "local_favorite": {
-      "min": 25,
-      "customer_multiplier": 1.5
+    {
+      "tier": 2,
+      "name": "Regional Supplier",
+      "reputation_threshold": 25,
+      "revenue_threshold": 2000,
+      "rarity_access": ["common", "uncommon", "rare"],
+      "wholesale_discount": 0.55,
+      "description": "A regional wholesaler with access to rarer product lines."
     },
-    "destination_shop": {
-      "min": 50,
-      "customer_multiplier": 2.0
-    },
-    "legendary": {
-      "min": 80,
-      "customer_multiplier": 3.0
+    {
+      "tier": 3,
+      "name": "Premium Wholesaler",
+      "reputation_threshold": 50,
+      "revenue_threshold": 10000,
+      "rarity_access": ["common", "uncommon", "rare", "very_rare", "legendary"],
+      "wholesale_discount": 0.50,
+      "description": "Top-tier supplier with access to the rarest items in the hobby."
     }
+  ],
+  "price_ratio_reputation_deltas": {
+    "deep_discount": { "max_ratio": 0.6, "delta": 2.0, "description": "Priced well below market — customers love a deal" },
+    "fair_deal": { "min_ratio": 0.6, "max_ratio": 0.9, "delta": 1.0, "description": "Below market — good value" },
+    "market_rate": { "min_ratio": 0.9, "max_ratio": 1.1, "delta": 0.5, "description": "At market — fair and expected" },
+    "slight_markup": { "min_ratio": 1.1, "max_ratio": 1.5, "delta": 0.0, "description": "Slight markup — no reputation effect" },
+    "overpriced": { "min_ratio": 1.5, "max_ratio": 2.0, "delta": -0.5, "description": "Overpriced — customers notice" },
+    "gouging": { "min_ratio": 2.0, "delta": -1.5, "description": "Price gouging — reputation takes a hit" }
   },
-  "markup_ranges": {
-    "minimum": 1.05,
-    "default": 1.35,
-    "maximum": 5.00
-  },
-  "demand_modifiers": {
-    "high_demand": 1.5,
-    "normal": 1.0,
-    "low_demand": 0.6,
-    "clearance": 0.3
-  },
-  "daily_rent_per_size": {
-    "small": 50.0,
-    "medium": 120.0,
-    "large": 250.0
+  "reputation_decay": {
+    "well_stocked_threshold": 0.5,
+    "well_stocked_bonus": 0.5,
+    "understocked_threshold": 0.2,
+    "understocked_penalty": -1.0,
+    "empty_penalty": -2.0
   }
 }

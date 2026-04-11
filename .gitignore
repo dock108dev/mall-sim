@@ -1,10 +1,69 @@
-# Godot 4.x
+# Godot (4.x + legacy compatibility)
 .godot/
+.import/
 *.translation
 
-# Godot export (export_presets.cfg tracked for shared build config)
+# Godot exports and build output
+export_presets.cfg
+/build/
+/export/
+/exports/
 *.pck
+*.apk
+*.aab
+*.ipa
 *.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dylib
+*.egg
+*.egg-info/
+dist/
+site/
+pip-wheel-metadata/
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# JavaScript / Node
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+
+# Logs and runtime files
+*.log
+*.out
+*.err
+*.pid
+*.pid.lock
+
+# Editor and IDE files
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.idea/
+.vscode/
+*.code-workspace
 
 # macOS
 .DS_Store
@@ -21,24 +80,4 @@ ehthumbs.db
 Desktop.ini
 
 # Linux
-*~
-
-# Editors
-*.swp
-*.swo
-*.sublime-workspace
-*.sublime-project
-.vscode/
-.idea/
-*.code-workspace
-
-# Build artifacts
-/build/
-/export/
-/exports/
-
-# OS generated
-*.log
-
-# AIDLC working directory
-.aidlc
+.Trash-*/

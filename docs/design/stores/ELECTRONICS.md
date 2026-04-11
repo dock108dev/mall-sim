@@ -1,249 +1,290 @@
 # Consumer Electronics Store — Deep Dive
 
-The store that plays by opposite rules. While every other store type rewards hoarding rare items, electronics punishes it. Stock depreciates. New models obsolete old ones. The game here is velocity: buy at launch, sell fast, clear old stock before it's worthless. Chrome shelving, product boxes stacked high, demo units chained to tables.
+The fifth store type in mallcore-sim. Chrome shelving, white displays, product boxes stacked high, demo units chained to tables. Best Buy meets Sharper Image meets your local mall's gadget kiosk.
 
 ---
 
 ## Store Identity
 
-**Name options** (player chooses): Digital Dreams, The Gadget Shack, Circuit Town, TechZone
-**Size**: Medium (8 fixture slots, 100 backroom capacity)
+**Name options** (player chooses): Gadget Galaxy, Circuit Shack, The Digital Den, ByteSize
+**Size**: Medium (8 fixture slots, 120 backroom capacity)
 **Starting budget**: $800
-**Daily rent**: $70
-**Ambient audio**: Electronic beeping, demo unit music, plastic packaging rustling, ceiling fan hum
-**Visual tone**: Bright white lighting, chrome/glass shelving, product boxes with bold graphics, demo stations
+**Daily rent**: $65
+**Ambient audio**: Electronic demo music, button beeps, headphone bass leaking, receipt printer
+**Visual tone**: Bright white/chrome, clean displays, product boxes in neat rows, demo stations with cables
 
-## Core Mechanic: Depreciation
+## Core Difference: Depreciation Model
 
-Electronics lose value over time. Every item has a `product_lifecycle` field:
+Unlike collectible stores where items can appreciate, electronics **always depreciate**. The product lifecycle is the central strategic challenge:
 
-| Phase | Duration | Value Modifier | Notes |
-|---|---|---|---|
-| **Launch** | Days 1-5 after introduction | 1.2x-1.5x base | Early adopters pay premium |
-| **Peak** | Days 6-15 | 1.0x base | Standard pricing, highest sales volume |
-| **Mature** | Days 16-30 | 0.7x-0.9x base | Sales slow, bargain hunters appear |
-| **Clearance** | Days 31+ | 0.3x-0.5x base | Must discount aggressively to move |
-| **Obsolete** | When successor launches | 0.1x-0.2x base | Essentially unsellable. Cut losses. |
+- New products launch at full price with high demand
+- Over time (15-25 in-game days), demand drops and market value decreases
+- Eventually, products become "last-gen" and must be clearance-priced to move
+- The player must time purchases and sales to maximize margin before depreciation eats profit
+- Clearance items still sell — bargain hunters specifically seek them out
 
-When a new model of a product category launches (every 15-20 days), existing stock in that category enters accelerated depreciation. This creates urgency that no other store type has.
+This creates the **opposite** strategy from collectible stores: buy the newest thing, sell it fast, don't hold inventory.
 
-## Fictional Brands & Products
+## Fictional Products
 
-All brands are fictional:
+All products are fictional analogs of real 2000s tech:
 
-| Brand | Archetype | Product Focus |
+| Fictional Brand | Inspired By | Category |
 |---|---|---|
-| **ZuneWave** | Apple/Creative | MP3 players, portable audio |
-| **PixelSnap** | Canon/Sony | Digital cameras |
-| **NovaTech** | Dell/Gateway | PDAs, USB gadgets |
-| **SoundForge** | Sony/Bose | Headphones, speakers |
-| **GamePocket** | Game Boy/PSP | Handheld gaming consoles |
-| **OmniCharge** | Energizer/Belkin | Cables, chargers, accessories |
+| **ZuneWave** | Zune/Creative | MP3 players |
+| **PodPlay** | iPod | MP3 players (premium) |
+| **PortaStation** | PSP/Game Boy Advance | Handheld gaming |
+| **PixelSnap** | Early digital cameras | Digital cameras |
+| **BuzzPhone** | Early flip phones | Mobile accessories |
+| **SonicBoom** | JBL/Sony | Audio equipment |
+| **TechShield** | Belkin/generic | Cases and accessories |
+| **DataVault** | SanDisk/Kingston | Storage devices |
 
 ## Item Categories
 
 ### Portable Music Players (Flagship category)
-- MP3 players: Various storage capacities (64MB to 1GB), form factors
-- CD players: Budget option, anti-skip feature is a selling point
-- MiniDisc players: Niche but has dedicated fans
-- Differentiated by: storage, battery life, screen type, brand
+- **Budget MP3 players**: 64-256MB storage. $30-60. Entry-level, high volume.
+- **Premium MP3 players**: 1-20GB storage. $100-250. Status items, lower volume.
+- **CD players**: Discman-style. $25-40. Cheap, being phased out. Clearance regulars.
+- **MiniDisc players**: Niche. $60-100. Small but dedicated audience.
+- MP3 players are the flagship — new models release periodically, older ones depreciate.
 
-### Digital Cameras
-- Point-and-shoot: 1-4 megapixel range (it's the 2000s)
-- Video cameras: Early digital camcorders
-- Differentiated by: megapixels, zoom, memory card type
-
-### Portable Gaming
-- Handheld consoles: Multiple generations (8-bit, 16-bit, early 3D)
-- Game cartridges: Handheld-specific games
-- Accessories: Cases, link cables, screen lights
+### Handheld Gaming
+- **Handhelds**: PortaStation models. $80-150. Console launches are big events.
+- **Handheld games**: Cartridges for PortaStation. $20-40. Steady sellers.
+- **Accessories**: Cases, screen protectors, link cables. $5-20. High margin.
 
 ### Audio Equipment
-- Headphones: Earbuds to over-ear. Wide price range.
-- Portable speakers: Small, battery-powered.
-- Clock radios: Cheap, steady seller. The "bread" of the store.
+- **Headphones**: Over-ear, on-ear, earbuds. $10-80. Wide price range.
+- **Portable speakers**: Small battery-powered. $20-50. Gift item.
+- **Clock radios**: $15-30. Steady, unsexy sellers. Good margin.
 
-### Gadgets & Novelty
-- PDAs: Palm-style organizers
-- USB flash drives: 16MB to 256MB, novelty form factors
-- Novelty tech: Laser pointers, digital photo keychains, electronic pets
+### Gadgets & Tech
+- **Digital cameras**: Early consumer digital. $80-200. Depreciate fast.
+- **USB flash drives**: 16MB-1GB. $10-40. Commodity item, steady demand.
+- **PDAs**: Palm-style organizers. $100-200. Niche, professional customers.
+- **Novelty tech**: Laser pointers, digital photo frames, electronic dictionaries. $10-30.
 
-### Accessories (High margin, low excitement)
-- Cases and covers
-- Chargers and cables
-- Screen protectors
-- Memory cards (CF, SD, Memory Stick)
-- Batteries
-
-## Item Distribution Target
-
-### M4 Launch Set (20-25 items)
-
-| Category | Count | Notes |
-|---|---|---|
-| MP3 players | 4-5 | Range from budget 64MB to premium 512MB |
-| Digital cameras | 3-4 | Point-and-shoot variety |
-| Handheld gaming | 3 | 1 console + 2 games |
-| Headphones/audio | 3-4 | Earbuds to over-ear |
-| Gadgets | 3-4 | PDA, USB drives, novelty items |
-| Accessories | 5-6 | Cases, cables, memory cards, batteries |
-
-Price range: $3 (USB cable) to $200 (top-end MP3 player). Average ~$35.
+### Accessories (Margin driver)
+- **Cases and covers**: Phone cases, player cases. $5-15. High margin, no depreciation.
+- **Chargers and cables**: USB, power adapters. $5-15. Always needed.
+- **Screen protectors**: $3-8. Impulse buy. Massive margin.
+- **Batteries**: AA, AAA, rechargeable packs. $5-15. Consumable, repeat purchase.
+- Accessories don't depreciate and have the highest percentage margin in the store.
 
 ## Unique Mechanics
 
 ### Demo Units (wave-4, issue-062)
 
-Working product displays that customers can try.
+Setting up working demo units on the floor increases sales for that product category.
 
-**Design**:
-- Takes 1 fixture slot (demo table with security cables)
-- Player places 1-3 products from inventory onto the demo station
-- Demo items are removed from saleable inventory (display cost)
-- Products in the same category as demo items get +20% purchase probability
-- Demo units attract browsing — customers spend longer at demo stations
-- Demo items degrade: after 10 in-game days, demo unit condition drops to "fair" and must be replaced or sold at discount
-- Trade-off: sacrifice inventory for increased category sales
+**Flow**:
+1. Player takes one unit of a product from inventory
+2. Places it in a "demo station" fixture slot
+3. Demo unit is no longer sellable (consumed as display)
+4. All items in that product's category get +25% purchase conversion
+5. Demo units can be swapped when new products launch
 
-**Implementation notes**:
-- Demo station is a fixture type in store definition
-- Items on demo have location "demo:station_id"
-- Signal: `demo_unit_expired(item_id)` when condition degrades
-- Customer AI checks for active demos when evaluating product categories
+**Trade-off**: One unit off the shelf (lost sale) vs. increased conversion for the category. For expensive items, this is a real cost. For cheap accessories, it's almost always worth it.
+
+**Demo station capacity**: 2-4 stations depending on store upgrades.
 
 ### Product Lifecycle / Depreciation (wave-5, issue-074)
 
-The core distinguishing mechanic.
+Every electronics product follows a depreciation curve:
 
-**Design**:
-- Each item definition has `generation: int` and `category_group: String`
-- New product generations launch every 15-20 in-game days ("product announcement" event)
-- When gen N+1 launches, gen N enters accelerated depreciation
-- The announcement is telegraphed 3 days in advance ("Rumors of new ZuneWave model")
-- Smart players clear old stock before the announcement
-- Some customers specifically want older/cheaper models (bargain hunters)
-- Clearance rack fixture: dedicated display for marked-down items, attracts bargain hunters
+**Lifecycle phases**:
+| Phase | Days Since Stocking | Market Value | Demand |
+|---|---|---|---|
+| **Launch** | 0-5 | 100% | High (early adopters) |
+| **Peak** | 5-15 | 90-100% | Highest (mainstream) |
+| **Decline** | 15-25 | 60-80% | Moderate (late buyers) |
+| **Clearance** | 25-40 | 30-50% | Low (bargain hunters only) |
+| **Obsolete** | 40+ | 10-20% | Very low |
 
-**Depreciation curve**:
-- Day of successor launch: value drops to 60% immediately
-- Each subsequent day: additional 3% drop
-- Floor: 10% of original base_price ("e-waste" value)
-- Player can choose to sell at a loss or hold and hope for "retro" value (never happens for electronics — that's the lesson)
+**Player impact**:
+- Buy new products at wholesale (70-80% of launch retail)
+- Sell quickly during Launch/Peak for maximum margin
+- Hold too long and the product depreciates below cost
+- Clearance pricing attracts bargain hunters but at a loss
+- Product announcements create anticipation (next-gen announcement causes current-gen demand to drop)
 
-### Warranty Upsell (wave-4, issue-062)
+**Category exceptions**: Accessories and cables don't depreciate. Only "tech" items (players, cameras, handhelds, gadgets) follow the depreciation curve.
 
-Offer extended warranties at the register.
+### Warranty Upsell (wave-5, issue-074)
 
-**Design**:
-- At checkout, player can offer warranty for 15-25% of item price
-- Customer acceptance rate: ~40% for expensive items ($50+), ~15% for cheap items
-- Warranty is pure profit UNLESS the customer returns with a claim
-- Claim rate: ~10% within the warranty period (30 in-game days)
-- Valid claim: player pays replacement cost (new unit at wholesale)
-- Trade-off: consistent bonus margin vs. occasional expensive claim
-- Tracking: warranty log shows active warranties and claim history
+The player can offer extended warranties at the register.
 
-## Customer Types
+**Flow**:
+1. Customer brings item to register
+2. Player sees option: "Offer warranty? ($X)"
+3. If offered, customer accepts or declines based on personality and item price
+4. Warranty fee is pure margin (added to sale price)
+5. Occasionally (5-10% chance per warranted item), customer returns with a warranty claim
+6. Player must replace the item from inventory (or refund if out of stock)
+
+**Warranty pricing**: Typically 10-20% of item price
+- $30 player → $5 warranty
+- $150 handheld → $20 warranty
+- $200 camera → $30 warranty
+
+**Customer acceptance rate**: ~40% for expensive items, ~15% for cheap items. Tech-unsavvy customers (gift buyers, parents) accept more often.
+
+**Economics**: Warranties are profitable on average (revenue from all warranties > cost of claims), but individual claims can sting if you're out of stock.
+
+## Item Distribution Target (M4: 25-35 items)
+
+| Category | Count | Notes |
+|---|---|---|
+| MP3 players | 4-5 | Range from budget to premium |
+| Handheld consoles + games | 3-4 | Console + a few game titles |
+| Headphones/audio | 4-5 | Earbuds to over-ear, speakers |
+| Digital cameras | 2-3 | Budget and mid-range |
+| Gadgets (USB drives, PDAs, novelty) | 4-5 | Mixed tech items |
+| Accessories (cases, cables, batteries) | 6-8 | High margin filler |
+| CD/MiniDisc players | 2 | Budget/clearance items |
+
+Price range: $3 (screen protector) to $250 (premium MP3 player). Average item ~$40.
+
+## Customer Types (M4: 4 types)
 
 ### Early Adopter
 - **Budget**: $80-250
 - **Patience**: Low (0.3)
-- **Price sensitivity**: Low (0.2) — will pay launch premium
-- **Behavior**: Wants the newest model in every category. Shows up within days of a product launch. Buys without much deliberation. Often buys accessories too.
-- **Preferred tags**: "new", "latest", "premium"
-- **Condition preference**: mint only ("I want a fresh box")
-- **Visit frequency**: Low (spikes at product launches)
+- **Price sensitivity**: Very low (0.2)
+- **Behavior**: Wants the newest thing. Doesn't compare prices. Buys on launch day. Will pay full retail without blinking. Only interested in current-gen products. Leaves if nothing is new.
+- **Preferred categories**: mp3_players, handhelds, cameras, gadgets
+- **Preferred tags**: ["new", "premium", "latest", "flagship"]
+- **Condition preference**: mint (new in box only)
+- **Visit frequency**: Low (spikes on product launches)
+- **Mood tags**: ["excited", "decisive", "impatient"]
 
 ### Bargain Hunter
-- **Budget**: $20-60
-- **Patience**: High (0.8)
-- **Price sensitivity**: Very high (0.9)
-- **Behavior**: Specifically seeks clearance and last-gen items. Happy with "mature" and "clearance" phase products. Checks the clearance rack first. Won't touch launch-price items.
-- **Preferred tags**: "clearance", "last_gen", "budget"
-- **Condition preference**: good (functional is fine)
-- **Visit frequency**: Medium
+- **Budget**: $15-60
+- **Patience**: High (0.9)
+- **Price sensitivity**: Very high (0.95)
+- **Behavior**: Only buys clearance and last-gen products. Waits for price drops. Compares everything. Will buy multiple cheap items if the deal is right. The reason clearance stock moves at all.
+- **Preferred categories**: mp3_players, headphones, gadgets
+- **Preferred tags**: ["clearance", "last_gen", "budget", "deal"]
+- **Condition preference**: good (open box is fine)
+- **Visit frequency**: High
+- **Mood tags**: ["patient", "comparing", "calculating"]
 
 ### Gift Buyer
 - **Budget**: $30-120
-- **Patience**: Medium (0.5)
+- **Patience**: Medium (0.6)
 - **Price sensitivity**: Medium (0.5)
-- **Behavior**: Seasonal spikes (holidays, birthdays). Needs recommendations. Buys gift-friendly items (MP3 players, cameras, headphones). Likely to accept warranty upsell.
-- **Preferred tags**: "popular", "gift", any flagship category
-- **Condition preference**: near_mint or mint ("It's a gift")
-- **Visit frequency**: Low (seasonal)
+- **Behavior**: Seasonal spikes (holidays, birthdays). Needs recommendations. "What would a teenager want?" Buys accessories with the main item. Accepts warranties readily (30%+ acceptance). Mid-range budget.
+- **Preferred categories**: mp3_players, handhelds, headphones
+- **Preferred tags**: ["popular", "gift", "bundle"]
+- **Condition preference**: mint (must be giftable)
+- **Visit frequency**: Low (seasonal spikes)
+- **Mood tags**: ["uncertain", "asking", "grateful"]
 
 ### Tech Enthusiast
 - **Budget**: $40-150
 - **Patience**: Medium (0.5)
-- **Price sensitivity**: Medium (0.5)
-- **Behavior**: Compares specs. Knows market prices. Buys accessories in bulk. Interested in demo units. May ask technical questions. Appreciates knowledgeable recommendations.
-- **Preferred tags**: "specs", specific brand tags, "premium"
+- **Price sensitivity**: Medium (0.6)
+- **Behavior**: Knowledgeable about specs. Compares products carefully. Buys accessories and peripherals alongside main items. Not swayed by marketing — evaluates on features. Appreciates demo units. Good source of repeat business.
+- **Preferred categories**: mp3_players, handhelds, cameras, gadgets, accessories
+- **Preferred tags**: ["specs", "storage", "quality", "premium"]
 - **Condition preference**: near_mint
 - **Visit frequency**: Medium
+- **Mood tags**: ["analytical", "knowledgeable", "comparing"]
 
-## Shelf Layout (Default)
+## Shelf Layout (M4)
 
-8 fixture slots:
-1. **Featured products display** (glass-front, lit) — 4 slots for flagship items
-2. **MP3/Audio shelf** — 6 slots
-3. **Camera/Gadgets shelf** — 6 slots
-4. **Gaming shelf** — 6 slots (handhelds + games)
-5. **Headphones wall** — 8 slots (pegboard display)
-6. **Accessories rack** — 10 small-item slots
-7. **Clearance bin** — 6 slots for marked-down items (attracts bargain hunters)
-8. **Checkout counter** — register + warranty info card + 2 impulse slots (batteries, cables)
+Default electronics store layout with 8 fixture slots:
+1. **MP3 player display** — 6 slots, products in clear acrylic stands
+2. **Handheld gaming shelf** — 4 console slots + 6 game slots
+3. **Audio wall** — 8 slots for headphones on hooks, speakers on shelf
+4. **Camera/gadget case** (glass) — 6 slots for higher-value tech items
+5. **Accessory pegboard** — 12 slots for cases, cables, batteries, screen protectors
+6. **Demo station 1** — 1 demo unit slot (MP3 player or handheld)
+7. **Demo station 2** — 1 demo unit slot
+8. **Checkout counter** — register + 4 impulse-buy slots (batteries, screen protectors)
 
-Total display capacity: ~48 items on floor, 100 in backroom.
+Total display capacity: ~48 items on floor, 120 in backroom.
 
-Optional expansion slot: **Demo station** — 3 powered demo units.
+Optional fixture upgrades:
+- **Demo station 3 & 4**: Additional demo slots
+- **Clearance bin**: Dedicated fixture for discounted last-gen items (+15% sell-through)
+- **Headphone listening station**: Customers can test headphones, +20% audio category conversion
 
 ## Pricing Guidelines
 
-Base prices represent "launch phase, mint condition":
+Base prices represent launch retail ("new in box, at market"):
 
-- Budget MP3 player (64-128MB): $30-50
-- Mid-range MP3 player (256MB): $60-100
-- Premium MP3 player (512MB-1GB): $120-200
-- Digital camera (1-2MP): $50-80
-- Digital camera (3-4MP): $100-160
-- Handheld console: $60-100
-- Handheld game: $20-35
-- Headphones (earbuds): $8-20
-- Headphones (over-ear): $30-80
-- PDA: $80-150
-- USB drive: $10-30 (by capacity)
-- Cables/chargers: $3-10
-- Memory cards: $10-40 (by capacity)
-- Batteries: $3-8
+- Budget MP3 player: $30-60
+- Premium MP3 player: $120-250
+- CD player: $25-40
+- MiniDisc player: $60-100
+- Handheld console: $80-150
+- Handheld game: $20-40
+- Over-ear headphones: $30-80
+- Earbuds: $10-25
+- Portable speaker: $20-50
+- Digital camera: $80-200
+- USB flash drive: $10-40 (price per MB is the era metric)
+- PDA: $100-200
+- Cases/covers: $5-15
+- Cables/chargers: $5-15
+- Screen protectors: $3-8
+- Batteries: $5-15
 
 ## Starter Inventory (Day 1)
 
-- 2x budget MP3 players
-- 1x mid-range MP3 player
-- 1x digital camera (2MP)
-- 1x pair of headphones
-- 3x assorted accessories (cable, memory card, case)
-- 2x battery packs
+Player begins with ~$800 cash and a starter crate:
+- 2x budget MP3 players (different brands)
+- 1x PortaStation handheld console
+- 2x handheld games
+- 2x headphones (1 budget earbuds, 1 mid-range over-ear)
+- 1x digital camera (budget)
+- 3x accessories (case, cable, screen protector)
+- 2x USB flash drives
 
-Total starter value: ~$150-200. Higher starting value than other stores, but depreciation clock starts immediately.
+Total starter value: ~$180-220. Enough to fill the main displays.
 
 ## Progression Path
 
-1. **Days 1-3**: Sell starter stock fast. Learn that electronics don't wait.
-2. **Days 4-7**: First product announcement. Old stock drops in value. Lesson learned.
-3. **Days 8-15**: Demo station unlocks. Warranty upsell introduced. Revenue diversifies.
-4. **Days 15-30**: Multiple product categories cycling. Clearance management becomes critical.
-5. **Day 30+**: Full catalog. Mastery = predicting launches, pre-clearing stock, timing purchases.
+1. **Days 1-5**: Sell starter inventory. Learn that tech items sell fast when new, slow when old.
+2. **Days 5-10**: First restock. New product launch event — stock up and sell during demand spike.
+3. **Days 10-20**: Set up demo stations. Clearance first batch of aging inventory. Accessories become steady margin.
+4. **Days 20-30**: Premium products available from Tier 2 supplier. Warranty upsells become meaningful revenue.
+5. **Day 30+**: Master the depreciation cycle. Time purchases with product launches. "Destination Shop" status.
 
-## Key Design Differences from Collectible Stores
+## Unique Economic Model
 
-| Aspect | Collectible Stores | Electronics |
+The electronics store has fundamentally different economics from collectible stores:
+
+| Factor | Collectible Stores | Electronics |
 |---|---|---|
-| Value over time | Appreciates (sealed, rare) | Depreciates (always) |
-| Optimal strategy | Buy and hold rare items | Buy and sell fast |
-| Inventory risk | Low (value stable or rising) | High (value dropping daily) |
-| Restocking | Replace sold items | Replace obsoleted items |
-| Customer urgency | Collectors are patient | Early adopters are impatient |
-| Key skill | Knowing what's rare | Knowing when to clearance |
+| Item value over time | Appreciates (rare/sealed) | Depreciates (always) |
+| Optimal strategy | Buy and hold, sell to right buyer | Buy new, sell fast |
+| Inventory risk | Tying up cash | Holding depreciating assets |
+| Margin source | Rarity/condition premium | Launch markup + accessories |
+| Customer timing | Collectors browse slowly | Early adopters buy immediately |
+| Clearance | Rarely needed | Essential (move old stock) |
 
-This inversion is intentional: a player who mastered the sports card store will find electronics initially frustrating, then enlightening. The same business instincts apply, but the timing pressure is reversed.
+This means the electronics store has:
+- **Higher turnover** — items should sell within 10-15 days or they're losing value
+- **More frequent restocking** — constant new product flow
+- **Accessory dependency** — accessories are the real profit center (no depreciation, high margin)
+- **Launch event excitement** — product launches are the equivalent of "rare item found" in other stores
+
+## M4 Scope Boundaries
+
+For wave-4 implementation, include:
+- [ ] 25-35 item definitions with depreciation flags
+- [ ] 4 customer type definitions
+- [ ] Store definition with fixture layout
+- [ ] Demo unit mechanic (basic version)
+- [ ] Product lifecycle phases (value changes over time)
+- [ ] Clearance pricing support
+
+Explicitly NOT in M4:
+- Warranty upsell mechanic (wave-5, issue-074)
+- Product launch event system
+- Customer comparison shopping animation
+- Return/exchange flow
+- Repair service (electronics don't get refurbished like retro games)

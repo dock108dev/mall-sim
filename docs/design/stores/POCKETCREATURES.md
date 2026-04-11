@@ -1,259 +1,292 @@
 # PocketCreatures Card Shop — Deep Dive
 
-The collector culture pillar at maximum intensity. A bright, noisy shop with tournament tables in the back, binder pages in glass cases, and booster box towers behind the counter. Kids trade on the floor. The fictional TCG "PocketCreatures" is this store's entire world.
+The fourth store type in mallcore-sim. Bright colors, tournament tables in the back, binders in glass cases, booster box towers, kids trading on the floor. A fictional TCG inspired by early-2000s card game culture.
 
 ---
 
 ## Store Identity
 
-**Name options** (player chooses): The Creature Den, Booster Box, Pocket Arena, Rare Candy Games
+**Name options** (player chooses): Creature Corner, The Evolution Shop, Pocket Arena, Battle Binder
 **Size**: Medium (8 fixture slots, 130 backroom capacity)
 **Starting budget**: $650
-**Daily rent**: $60
-**Ambient audio**: Card shuffling, kids chattering, tournament announcer faintly, booster pack tearing
-**Visual tone**: Bright overhead fluorescents, colorful posters, tournament banners, glass cases with single cards on risers
+**Daily rent**: $55
+**Ambient audio**: Kids chattering, card shuffling, foil pack crinkling, tournament announcer faintly
+**Visual tone**: Bright primary colors, display cases with binder pages, booster box towers, tournament banners
 
 ## The PocketCreatures TCG
 
-A fictional trading card game inspired by early-2000s TCG culture (Pokémon, Yu-Gi-Oh, Magic). The game has:
+A fictional trading card game (TCG) with its own set structure, rarity system, and metagame. Designed to evoke the feel of early Pokémon/Yu-Gi-Oh without direct reference.
 
-### Sets
-| Set Name | Code | Era | Theme | Notes |
-|---|---|---|---|---|
-| **Base Set** | BS | Launch | Core creatures | The original. Base set cards are iconic. |
-| **Jungle Expansion** | JE | Year 1 | Nature creatures | First expansion. Added evolution mechanic. |
-| **Fossil Legends** | FL | Year 1 | Ancient creatures | Introduced rare holographic variants. |
-| **Neo Genesis** | NG | Year 2 | Baby creatures | Popular with collectors for cute art. |
-| **Gym Heroes** | GH | Year 2 | Trainer-themed | Trainer cards are the chase cards here. |
-| **Crystal Storm** | CS | Year 3 | Elemental power | Latest set. Current meta-defining. |
+### Set Structure
+PocketCreatures releases sets on a cycle. For mallcore-sim, the relevant sets are:
 
-### Rarity System
-- **Common** (circle symbol): 6-7 per pack. Bulk. Worth pennies individually.
-- **Uncommon** (diamond symbol): 3 per pack. Some playable, most bulk.
-- **Rare** (star symbol): 1 per pack guaranteed. The baseline chase.
-- **Holographic Rare** (star + foil): ~1 in 3 packs. The real prize.
-- **Secret Rare** (gold star): ~1 in 36 packs (1 per box). Chase card. High value.
-- **First Edition**: Print run marker. First Edition cards are 2x-5x unlimited.
+| Set Name | Theme | Release Era | Status |
+|---|---|---|---|
+| **Base Set** | Original 150 creatures | Launch | Classic, high collector value |
+| **Jungle Expansion** | Nature/beast creatures | Year 1 | Popular, moderate value |
+| **Fossil Expansion** | Ancient/prehistoric creatures | Year 1 | Niche, some chase cards |
+| **Team Rocket Edition** | Villain-themed variants | Year 2 | Cult favorite, dark art |
+| **Neo Genesis** | Second generation creatures | Year 2 | Current meta-relevant |
+| **Legendary Collection** | Reprint set, reverse holos | Year 3 | Budget-friendly, unique foils |
 
-### Card Types
-- **Creature cards**: The monsters. Rarity + playability + art determine value.
-- **Trainer cards**: Support cards. Some are meta staples worth more than most creatures.
-- **Energy cards**: Basic resource cards. Worthless individually, necessary for play.
+### Card Rarity System
+| Rarity | Symbol | Pull Rate (per pack) | Typical Value |
+|---|---|---|---|
+| Common | Circle | 6 per pack | $0.10-0.50 |
+| Uncommon | Diamond | 3 per pack | $0.50-2.00 |
+| Rare (non-holo) | Star | 1 per pack | $1.00-5.00 |
+| Rare Holo | Star (foil) | ~1 in 3 packs | $3.00-30.00 |
+| Ultra Rare | Gold star | ~1 in 36 packs (1 per box) | $20.00-100.00 |
+| Secret Rare | Gold star + number > set size | ~1 in 72 packs | $50.00-300.00 |
+| 1st Edition | Stamp overlay on any rarity | Only in early print runs | 2-5x base value |
+
+### Playability vs. Collectibility
+Cards have two value axes:
+- **Collector value**: Rarity, condition, 1st edition status, art popularity
+- **Play value**: Meta relevance, competitive demand. Changes with meta shifts.
+
+Some cards are high-collector but low-play (pretty art, bad stats). Others are low-collector but high-play (ugly common that's meta-defining). The best are both.
 
 ## Item Categories
 
-### Booster Packs (The gambling-adjacent thrill)
-- 11 cards per pack: 6 common, 3 uncommon, 1 rare, 1 energy
-- ~33% chance the rare is holographic
-- ~3% chance of a secret rare replacing the rare
-- Player can sell sealed (guaranteed margin) or open to sell as singles (higher EV but variable)
-- Sealed packs from older sets appreciate over time
+### Booster Packs (The core product)
+- **Standard packs**: 10 cards per pack. Fixed rarity distribution (6C/3U/1R). $3.99 retail.
+- **Premium packs**: 5 cards per pack, guaranteed holo or better. $6.99 retail.
+- The player can sell packs sealed (guaranteed margin) OR open them to sell as singles (higher expected value but variable). This is the central decision.
 
-### Singles (Individual cards from binders)
-- Priced by rarity, playability, condition, and set
-- Displayed in binder pages inside glass cases
-- High-value singles ($20+) in locked case behind counter
-- The bread-and-butter of a mature card shop
+### Singles (The margin driver)
+- **Commons/Uncommons**: Sold from bulk bins or sorted binders. $0.10-2.00 each. Volume sales.
+- **Rares and Holos**: Displayed in glass cases or binder pages. $3-30 each.
+- **Ultra/Secret Rares**: Top-loader protected, glass case. $20-300+ each.
+- **1st Editions**: Premium on any rarity tier. The chase items.
+- Singles are priced by the player. Knowledge of meta and collector demand is rewarded.
 
-### Sealed Boxes & Cases
-- **Booster box**: 36 packs. Guaranteed at least 1 secret rare (statistically).
-- **Booster case**: 6 boxes. Whale product for investors.
-- Sealed product appreciates if the set becomes desirable
-- High capital investment, slow turnover, but strong returns
+### Sealed Product (Investment tier)
+- **Booster boxes**: 36 packs per box. $89.99 retail. Can sell sealed (appreciates) or open for singles.
+- **Theme decks**: Pre-built playable decks. $12.99. Reliable seller to new players.
+- **Collector tins**: Sealed tin with packs + promo card. $19.99. Gift item.
+- Sealed product appreciates over time. Older sealed boxes are worth multiples of retail.
 
-### Accessories
-- Card sleeves (packs of 50)
-- Binder pages
-- Deck boxes
-- Playmats
-- Dice/counters
-- Steady margin, pairs with every card purchase
+### Accessories (Steady margin)
+- **Card sleeves**: Packs of 50. $3-5. Every player needs them.
+- **Binders and pages**: $8-15. For collection organization.
+- **Playmats**: $15-25. Tournament players buy these.
+- **Deck boxes**: $5-10. Functional, some are collectible.
+- Accessories have slim but consistent margins and drive foot traffic.
 
-### Starter Decks
-- Pre-built 60-card decks for new players
-- Entry point product — low margin but drives new customer acquisition
-- 3 variants per set (one per element type)
-
-## Item Distribution Target
-
-### M4 Launch Set (30-40 cards + accessories)
-
-| Category | Count | Notes |
-|---|---|---|
-| Base Set singles | 10-12 | 4 common, 3 uncommon, 2 rare, 2 holo rare, 1 secret rare |
-| Jungle Expansion singles | 5-6 | 2 common, 2 uncommon, 1 rare, 1 holo |
-| Crystal Storm singles | 4-5 | 1 uncommon, 2 rare, 1 holo, 1 secret rare |
-| Booster packs (various sets) | 4 | 1 per available set |
-| Sealed boxes | 2 | 1 Base Set, 1 Crystal Storm |
-| Accessories | 5 | Sleeves, binder, deck box, playmat, dice |
-| Starter decks | 3 | One per element type |
-
-Singles price range: $0.10 (common bulk) to $150 (1st Ed Secret Rare from Base Set).
+### Starter/Theme Decks
+- **Starter set**: Includes two 30-card decks, rules, playmat, damage counters. $14.99.
+- **Theme deck**: One 60-card pre-built deck. $12.99.
+- Entry-level products that bring new players into the hobby.
 
 ## Unique Mechanics
 
-### Pack Opening (wave-5, issue-073)
+### Pack Opening (wave-4, issue-061)
 
-The central risk/reward mechanic of the card shop.
+The central risk/reward mechanic of the PocketCreatures shop.
 
-**Design**:
-- Player buys sealed packs from suppliers at wholesale ($2.50-4.00 per pack)
-- Choice: sell sealed at retail ($4-6 per pack) OR open and sell contents as singles
-- Opening a pack uses the set's pull rate table to generate cards
-- Expected singles value per pack: $3-8 (variable). Some packs contain $50+ cards.
-- "The pull" moment should feel exciting: cards revealed one at a time with rarity fanfare
-- Opened cards go to backroom inventory, player prices and shelves them
-- Tracking: game records best/worst pack openings for the player's stats
+**Flow**:
+1. Player has sealed packs in inventory
+2. Player can choose: "Sell Sealed" (list on shelf at retail price) or "Open Pack"
+3. Opening triggers a pack-opening animation (cards revealed one by one)
+4. Cards are added to inventory as individual singles
+5. Player prices and shelves the singles
 
-**Pull rate table (per pack)**:
-| Slot | Rarity | Probability |
+**Economics**:
+- Pack cost (wholesale): ~$2.50 per pack
+- Pack retail (sealed): $3.99 → guaranteed $1.49 profit
+- Average singles value from one pack: ~$3.00-6.00 (but highly variable)
+- Expected value favors opening... but variance is high
+- A bad pack (all commons, non-holo rare): ~$1.50 in singles = loss
+- A great pack (ultra rare pull): $20-100+ in one card = huge win
+
+**Pack opening probability table** (per standard 10-card pack):
+| Outcome | Probability | Singles Value |
 |---|---|---|
-| 1-6 | Common | 100% |
-| 7-9 | Uncommon | 100% |
-| 10 | Rare | 64% |
-| 10 | Holo Rare | 33% |
-| 10 | Secret Rare | 3% |
-| 11 | Energy | 100% |
+| No holo (common rare) | 67% | $1.50-3.00 |
+| Holo rare | 25% | $5.00-15.00 |
+| Ultra rare | 7% | $20.00-60.00 |
+| Secret rare | 1% | $50.00-300.00 |
 
-**Risk/reward math**:
-- Wholesale pack cost: $3.00
-- Sealed retail price: $5.00 (guaranteed $2 margin)
-- Average singles value per pack: ~$4.50 (expected $1.50 margin, but high variance)
-- 1 in ~36 packs contains a $30+ card (jackpot moment)
-- Decision: safe margin vs. slot machine excitement
+**Player decision**: Open packs for potentially higher value (but risk duds), or sell sealed for safe margin? The right answer depends on current singles demand, inventory needs, and risk tolerance.
 
 ### Tournament Hosting (wave-4, issue-061)
 
-Spend resources to host events that attract competitive players.
+**Flow**:
+1. Player spends $30-50 to host a tournament (entry fee covers some cost)
+2. Tournament runs for 2-3 in-game hours (during store hours)
+3. 8-16 NPC players attend (based on reputation)
+4. Tournament players buy singles, sleeves, and snacks before/during event
+5. Winner receives prize packs (from store inventory — player provides prizes)
+6. Hosting builds reputation significantly (+5-10 per event)
 
-**Design**:
-- Costs $30-50 per tournament (prize pool + supplies)
-- Requires tournament tables fixture (1 slot, holds no retail items)
-- Tournaments happen on specific days (player schedules them)
-- Attracts 6-12 competitive player customers that day
-- Tournament players buy singles and accessories before/after events
-- Reputation boost: +3-5 rep per successful tournament
-- Tournament frequency limit: 1 per 3 in-game days (players need time to prepare)
-- Bad tournaments (too few players, no prize support) give no rep bonus
+**Economics**:
+- Cost: $30-50 in venue setup + prize packs from inventory
+- Revenue: Entry fees ($5 x players) + impulse purchases during event
+- Net: Usually break-even or small profit, but the reputation gain drives future traffic
+- At high reputation, tournaments attract competitive players with big budgets
+
+**Frequency**: Can host one tournament per week (in-game time). Cooldown prevents spam.
 
 ### Meta Shifts (wave-4, issue-061)
 
-The PocketCreatures competitive metagame shifts over time, changing card demand.
+The PocketCreatures competitive metagame shifts over time, changing which cards are in demand.
 
-**Design**:
-- Every 7-10 in-game days, a "meta shift" event occurs
-- 2-3 cards become "meta" (demand multiplier 2x-3x)
-- 2-3 previously meta cards become "off-meta" (demand drops to 0.5x)
-- Shift is announced 2 days in advance via in-game news ticker
-- Savvy players stock up on soon-to-be-meta cards before the shift
-- Creates a speculation mini-game layered on top of retail
-- Meta shifts affect competitive player and collector customer behavior
+**How it works**:
+- Every 7-10 in-game days, the meta shifts
+- 2-3 cards get "meta-hot" status: +50-100% demand multiplier on play-value cards
+- 2-3 cards get "meta-cold" status: -30-50% demand on previously popular cards
+- Savvy players stock up on cards before they become meta-relevant
+- Meta shifts are partially predictable (new set releases boost those cards) and partially random
 
-## Customer Types
+**Player reward**: Learning the meta cycle lets you buy low and sell high on competitive singles.
+
+## Item Distribution Target (M4: 30-45 items)
+
+| Category | Count | Notes |
+|---|---|---|
+| Booster packs (by set) | 4-6 | One per set, different price points |
+| Singles — common/uncommon | 8-10 | Bulk inventory, cheap |
+| Singles — rare/holo | 6-8 | Mid-range, glass case items |
+| Singles — ultra/secret rare | 3-4 | Chase cards, highest value |
+| Sealed boxes/tins | 3-4 | Investment items, appreciate |
+| Theme/starter decks | 2-3 | New player products |
+| Accessories | 4-6 | Sleeves, binders, playmats, deck boxes |
+
+Price range: $0.10 (common single) to $300 (1st edition secret rare). Average item ~$8.
+
+## Customer Types (M4: 5 types)
 
 ### Competitive Player
 - **Budget**: $20-80
-- **Patience**: Low (0.3)
-- **Price sensitivity**: Medium (0.5) — will pay for meta staples
-- **Behavior**: Buys specific singles needed for decks. Checks for meta cards. Attends tournaments. Also buys sleeves, deck boxes. Knowledgeable about prices.
+- **Patience**: Medium (0.5)
+- **Price sensitivity**: Medium (0.5) on meta singles, high (0.8) on non-meta
+- **Behavior**: Buys specific singles for deck building. Knows what's meta. Buys sleeves and accessories. Attends tournaments. Won't buy packs (inefficient). Wants exact cards.
 - **Preferred categories**: singles, accessories
-- **Preferred tags**: "meta", "staple", set-specific tags
-- **Condition preference**: near_mint (tournament legal)
-- **Visit frequency**: High
+- **Preferred tags**: ["meta", "holo", "ultra_rare", "competitive"]
+- **Condition preference**: near_mint (needs playable condition)
+- **Visit frequency**: High (especially tournament days)
+- **Mood tags**: ["focused", "specific", "knowledgeable"]
 
-### Set Collector
+### Collector
 - **Budget**: $30-150
 - **Patience**: High (0.8)
-- **Price sensitivity**: Medium (0.4)
-- **Behavior**: Wants to complete sets. Buys cards they're missing regardless of playability. Interested in first editions and holographics. Browses binder pages carefully.
-- **Preferred categories**: singles
-- **Preferred tags**: specific set codes, "holo", "first_edition", "secret_rare"
-- **Condition preference**: near_mint or better
+- **Price sensitivity**: Low (0.4) on chase cards, high on commons
+- **Behavior**: Wants complete sets, 1st editions, perfect condition. Doesn't care about playability. Browses binders page by page. Will pay premium for condition and rarity. Slow, thorough shopper.
+- **Preferred categories**: singles, sealed_product
+- **Preferred tags**: ["1st_edition", "holo", "secret_rare", "base_set", "mint"]
+- **Condition preference**: mint
 - **Visit frequency**: Medium
+- **Mood tags**: ["patient", "meticulous", "excited"]
 
 ### Pack Cracker
 - **Budget**: $15-60
 - **Patience**: Low (0.3)
-- **Price sensitivity**: Low (0.3) — buying the experience, not the cards
-- **Behavior**: Buys packs in quantity (3-10 at a time). Doesn't care which set. The opening is the point. May also buy a starter deck. Not interested in singles.
-- **Preferred categories**: booster_packs, starter_decks
-- **Preferred tags**: "sealed", "booster"
+- **Price sensitivity**: Low (0.4)
+- **Behavior**: Just wants to open packs. Buys 5-15 packs at a time. Doesn't care about singles value — it's the thrill of the pull. Will buy any set. Quick transaction, high volume.
+- **Preferred categories**: booster_packs, sealed_product
+- **Preferred tags**: ["pack", "booster", "sealed"]
+- **Condition preference**: any (sealed product)
 - **Visit frequency**: High
+- **Mood tags**: ["excited", "impulsive", "eager"]
 
 ### Parent Buying for Kid
-- **Budget**: $10-35
-- **Patience**: Medium (0.6)
+- **Budget**: $10-30
+- **Patience**: High (0.8)
 - **Price sensitivity**: High (0.7)
-- **Behavior**: Needs guidance. "Which one should I get for a birthday?" Buys starter decks, a few packs, maybe a binder. Appreciates a recommendation. Gift-wrapping would be a nice touch.
+- **Behavior**: Needs guidance. "My kid likes the fire creature." Buys starter decks, a few packs, maybe a binder. Birthday/holiday traffic spikes. Appreciates helpful service.
 - **Preferred categories**: starter_decks, booster_packs, accessories
-- **Preferred tags**: "starter", "beginner"
+- **Preferred tags**: ["starter", "theme_deck", "beginner"]
+- **Condition preference**: any
 - **Visit frequency**: Low (seasonal spikes)
+- **Mood tags**: ["uncertain", "asking", "grateful"]
 
 ### Trader
-- **Budget**: $5-20 (cash-poor, card-rich)
-- **Patience**: High (0.7)
+- **Budget**: $5-20 (prefers trades over purchases)
+- **Patience**: Medium (0.5)
 - **Price sensitivity**: Very high (0.9)
-- **Behavior**: Wants to trade cards rather than buy. Offers cards from their collection in exchange for store singles. Player evaluates the trade. Good trades = cheap inventory acquisition. Bad trades = wasted time.
+- **Behavior**: Wants to trade cards rather than buy. Offers cards from their collection in exchange for store singles. Occasionally gets a good deal for both sides. Low cash spending but can provide cards the store needs.
 - **Preferred categories**: singles
-- **Preferred tags**: any
+- **Preferred tags**: ["trade", "holo", "rare"]
+- **Condition preference**: good
 - **Visit frequency**: Medium
-- **Special**: Triggers trade interaction instead of standard purchase flow
+- **Mood tags**: ["negotiating", "social", "eager"]
 
-## Shelf Layout (Default)
+**Trade mechanic note**: The Trader customer type introduces a barter element. The player evaluates offered cards against their value and current inventory needs. This is a wave-4+ feature — for initial implementation, Traders can just be low-budget buyers.
 
-8 fixture slots:
-1. **Booster pack display** (peg wall) — 8 pack slots, organized by set
-2. **Singles binder case** (glass top) — 10 card slots (commons/uncommons)
-3. **Premium singles case** (locked glass) — 6 card slots (rares, holos, secrets)
-4. **Sealed product shelf** — 4 slots for boxes and cases
-5. **Accessories rack** — 8 small-item slots (sleeves, deck boxes, binders)
-6. **Starter deck display** — 4 slots
-7. **Staff Picks / Featured cards** — 3 showcase slots with price cards
-8. **Checkout counter** — register + 2 impulse slots (cheap packs, dice)
+## Shelf Layout (M4)
 
-Total display capacity: ~45 items on floor, 130 in backroom.
+Default PocketCreatures shop layout with 8 fixture slots:
+1. **Booster pack wall** — 8 slots for sealed packs (by set, cover art visible)
+2. **Singles binder case** (glass top) — 12 slots for rare/holo singles in binder pages
+3. **Bulk bins** — 2 bins with 20 common/uncommon singles each (browse-and-pick)
+4. **Sealed product shelf** — 4 large slots for booster boxes, tins, collector items
+5. **Starter deck rack** — 4 slots for theme/starter decks
+6. **Accessories wall** — 8 slots for sleeves, binders, playmats, deck boxes
+7. **Ultra rare showcase** (glass case) — 3 slots for highest-value cards (top-loaded)
+8. **Checkout counter** — register + 2 impulse slots (pack + accessory)
 
-Optional expansion slot: **Tournament tables** — no retail items, enables tournament hosting.
+Total display capacity: ~63 item slots on floor, 130 in backroom.
+
+Optional fixture upgrades:
+- **Tournament tables** (back of store): Enables tournament hosting, seats 8-16
+- **Trade counter**: Dedicated area for evaluating and executing trades
+- **Display case lighting**: +10% purchase probability on showcase items
 
 ## Pricing Guidelines
 
-### Singles
-- Common: $0.10-0.50
-- Uncommon: $0.50-2.00
-- Rare: $2.00-10.00
-- Holo Rare: $5.00-40.00
-- Secret Rare: $15.00-80.00
-- 1st Edition multiplier: 2x-5x
-- Base Set premium: +50% over equivalent rarity from later sets
+Base prices for content authoring:
 
-### Sealed Product
-- Booster pack (current set): $4.00-5.00 retail
-- Booster pack (out of print set): $6.00-15.00 retail (appreciates)
-- Booster box (current): $90-110
-- Booster box (out of print): $120-300+
-- Starter deck: $10-15
-
-### Accessories
-- Card sleeves (50-pack): $4-6
-- Deck box: $8-12
-- Binder: $10-15
-- Playmat: $15-25
-- Dice/counters: $3-5
+- Common single: $0.10-0.50
+- Uncommon single: $0.50-2.00
+- Rare (non-holo): $1.00-5.00
+- Rare holo: $3.00-30.00
+- Ultra rare: $20.00-100.00
+- Secret rare: $50.00-300.00
+- 1st edition multiplier: 2-5x base
+- Booster pack: $3.99 (standard), $6.99 (premium)
+- Booster box: $89.99 (standard)
+- Theme deck: $12.99
+- Starter set: $14.99
+- Card sleeves (50-pack): $3.00-5.00
+- Binder: $8.00-15.00
+- Playmat: $15.00-25.00
 
 ## Starter Inventory (Day 1)
 
-- 8x Base Set booster packs
-- 2x Crystal Storm booster packs
-- 1x Base Set starter deck
-- 10x assorted Base Set singles (5 common, 3 uncommon, 2 rare)
+Player begins with ~$650 cash and a starter crate:
+- 10x Base Set booster packs (player chooses: open or sell sealed)
+- 1x Base Set theme deck
+- 2x rare holo singles (mid-value, glass case stock)
+- 5x uncommon singles (binder stock)
+- 10x common singles (bulk bin stock)
 - 2x packs of card sleeves
+- 1x starter set
 
-Total starter value: ~$80-100. First decision: open some packs or sell sealed?
+Total starter value: ~$90-110. Enough to stock the booster wall and binder case.
 
 ## Progression Path
 
-1. **Days 1-3**: Sell starter stock, open first packs (tutorial moment). Learn singles pricing.
-2. **Days 4-7**: First bulk order. Decide ratio of sealed vs. singles inventory.
-3. **Days 8-15**: Tournament tables unlock. First meta shift occurs. Competitive players appear.
-4. **Days 15-30**: Full set catalog available. Trading mechanic introduced. Set completion tracking begins.
-5. **Day 30+**: Multiple active sets. Meta shifts are a regular strategic consideration.
+1. **Days 1-5**: Sell sealed packs and starter products. Learn the pack-open-or-sell decision.
+2. **Days 5-10**: Build singles inventory through selective pack opening. Price singles based on demand.
+3. **Days 10-20**: Collectors start appearing. Curate the binder and showcase. Meta shifts start mattering.
+4. **Days 20-30**: Unlock tournament tables. First tournament event. Competitive players become regulars.
+5. **Day 30+**: Trade counter available. Sealed product from early sets begins appreciating. "Destination Shop" tier.
+
+## M4 Scope Boundaries
+
+For wave-4 implementation, include:
+- [ ] 30-45 item definitions across all categories and sets
+- [ ] 5 customer type definitions
+- [ ] Store definition with fixture layout
+- [ ] Pack opening mechanic with animation and probability tables
+- [ ] Singles pricing from opened packs
+- [ ] Meta shift system (basic version: periodic demand changes)
+- [ ] Tournament hosting (basic version: spend money, gain reputation)
+
+Explicitly NOT in M4:
+- Trade mechanic with NPCs
+- Set completion tracking (wave-5)
+- 1st edition detection/identification minigame
+- Competitive tournament brackets with results
+- Custom deck building for NPCs
