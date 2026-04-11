@@ -1,0 +1,1387 @@
+{
+  "manifest_id": "final-issue-universe-002",
+  "created_at": "2026-04-08T04:00:00Z",
+  "updated_at": "2026-04-08T06:00:00Z",
+  "total_issues": 88,
+  "issues": [
+    {
+      "id": "issue-001",
+      "title": "Wire DataLoader to parse all content JSON on boot",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "data",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-001.md"
+    },
+    {
+      "id": "issue-002",
+      "title": "Implement player controller with WASD movement and mouse look",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "gameplay",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-088"
+      ],
+      "local_file": "docs/production/github-issues/issue-002.md"
+    },
+    {
+      "id": "issue-003",
+      "title": "Implement interaction raycast and context-sensitive prompt",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "gameplay",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-002"
+      ],
+      "local_file": "docs/production/github-issues/issue-003.md"
+    },
+    {
+      "id": "issue-004",
+      "title": "Create sports store interior scene with placeholder geometry",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "gameplay",
+        "art",
+        "store:sports",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-088"
+      ],
+      "local_file": "docs/production/github-issues/issue-004.md"
+    },
+    {
+      "id": "issue-005",
+      "title": "Implement inventory system with ItemInstance tracking",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "gameplay",
+        "tech",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-001"
+      ],
+      "local_file": "docs/production/github-issues/issue-005.md"
+    },
+    {
+      "id": "issue-006",
+      "title": "Implement shelf interaction and item placement flow",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "gameplay",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-003",
+        "issue-004",
+        "issue-005"
+      ],
+      "local_file": "docs/production/github-issues/issue-006.md"
+    },
+    {
+      "id": "issue-007",
+      "title": "Implement basic inventory UI panel",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "ui",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-005"
+      ],
+      "local_file": "docs/production/github-issues/issue-007.md"
+    },
+    {
+      "id": "issue-008",
+      "title": "Implement price setting UI",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "ui",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-005",
+        "issue-006",
+        "issue-007",
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-008.md"
+    },
+    {
+      "id": "issue-009",
+      "title": "Implement TimeSystem day cycle with hour and day signals",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-088"
+      ],
+      "local_file": "docs/production/github-issues/issue-009.md"
+    },
+    {
+      "id": "issue-010",
+      "title": "Implement EconomySystem with cash tracking and transactions",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-001"
+      ],
+      "local_file": "docs/production/github-issues/issue-010.md"
+    },
+    {
+      "id": "issue-011",
+      "title": "Implement one customer with browse-evaluate-purchase state machine",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "gameplay",
+        "ai",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-001",
+        "issue-004",
+        "issue-005",
+        "issue-009",
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-011.md"
+    },
+    {
+      "id": "issue-012",
+      "title": "Implement purchase flow at register",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "gameplay",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-003",
+        "issue-005",
+        "issue-010",
+        "issue-011",
+        "issue-018"
+      ],
+      "local_file": "docs/production/github-issues/issue-012.md"
+    },
+    {
+      "id": "issue-013",
+      "title": "Implement HUD with cash, time, and day display",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "ui",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-003",
+        "issue-009",
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-013.md"
+    },
+    {
+      "id": "issue-014",
+      "title": "Implement end-of-day summary screen",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "ui",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-009",
+        "issue-010",
+        "issue-012",
+        "issue-018"
+      ],
+      "local_file": "docs/production/github-issues/issue-014.md"
+    },
+    {
+      "id": "issue-015",
+      "title": "Create starter sports card content set (15-20 items)",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "content",
+        "store:sports",
+        "phase:m1",
+        "priority:medium"
+      ],
+      "dependencies": [
+        "issue-001"
+      ],
+      "status": "CONTENT COMPLETE",
+      "local_file": "docs/production/github-issues/issue-015.md"
+    },
+    {
+      "id": "issue-016",
+      "title": "Build JSON schema validation script for content pipeline",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "tooling",
+        "phase:m1",
+        "priority:medium"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-016.md"
+    },
+    {
+      "id": "issue-017",
+      "title": "Add content validation to CI workflow",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "ci",
+        "phase:m1",
+        "priority:medium"
+      ],
+      "dependencies": [
+        "issue-016"
+      ],
+      "local_file": "docs/production/github-issues/issue-017.md"
+    },
+    {
+      "id": "issue-018",
+      "title": "Implement ReputationSystem with score tracking and tier calculation",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-018.md"
+    },
+    {
+      "id": "issue-019",
+      "title": "Create store definition JSON for sports store",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "content",
+        "store:sports",
+        "phase:m1",
+        "priority:medium"
+      ],
+      "dependencies": [
+        "issue-001"
+      ],
+      "status": "CONTENT COMPLETE",
+      "local_file": "docs/production/github-issues/issue-019.md"
+    },
+    {
+      "id": "issue-020",
+      "title": "Create customer type definitions for sports store (3-4 types)",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "content",
+        "store:sports",
+        "phase:m1",
+        "priority:medium"
+      ],
+      "dependencies": [
+        "issue-001"
+      ],
+      "status": "CONTENT COMPLETE",
+      "local_file": "docs/production/github-issues/issue-020.md"
+    },
+    {
+      "id": "issue-021",
+      "title": "Implement multiple customer profiles with distinct behaviors",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "gameplay",
+        "ai",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-011",
+        "issue-020"
+      ],
+      "local_file": "docs/production/github-issues/issue-021.md"
+    },
+    {
+      "id": "issue-022",
+      "title": "Implement customer pathfinding with NavigationServer3D",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "gameplay",
+        "ai",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-011",
+        "issue-004"
+      ],
+      "local_file": "docs/production/github-issues/issue-022.md"
+    },
+    {
+      "id": "issue-023",
+      "title": "Implement haggling mechanic",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "gameplay",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-012"
+      ],
+      "local_file": "docs/production/github-issues/issue-023.md"
+    },
+    {
+      "id": "issue-024",
+      "title": "Implement dynamic pricing with demand modifiers",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "tech",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-024.md"
+    },
+    {
+      "id": "issue-025",
+      "title": "Implement stock ordering system",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "gameplay",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-005",
+        "issue-010",
+        "issue-014"
+      ],
+      "local_file": "docs/production/github-issues/issue-025.md"
+    },
+    {
+      "id": "issue-026",
+      "title": "Implement save/load system",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "tech",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-005",
+        "issue-009",
+        "issue-010",
+        "issue-018"
+      ],
+      "local_file": "docs/production/github-issues/issue-026.md"
+    },
+    {
+      "id": "issue-027",
+      "title": "Implement settings menu with audio and display options",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "ui",
+        "phase:m2"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-027.md"
+    },
+    {
+      "id": "issue-028",
+      "title": "Implement basic audio system with SFX and ambient",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "audio",
+        "phase:m2"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-028.md"
+    },
+    {
+      "id": "issue-029",
+      "title": "Implement pause menu",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "ui",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-027"
+      ],
+      "local_file": "docs/production/github-issues/issue-029.md"
+    },
+    {
+      "id": "issue-030",
+      "title": "Implement daily operating costs and expense tracking",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "gameplay",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-009",
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-030.md"
+    },
+    {
+      "id": "issue-031",
+      "title": "Design and document sports store deep dive",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "design",
+        "store:sports",
+        "phase:m2"
+      ],
+      "dependencies": [],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-031.md"
+    },
+    {
+      "id": "issue-032",
+      "title": "Design and document content scale specification",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "design",
+        "phase:m2"
+      ],
+      "dependencies": [],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-032.md"
+    },
+    {
+      "id": "issue-033",
+      "title": "Design and document customer AI specification",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "design",
+        "ai",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-031"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-033.md"
+    },
+    {
+      "id": "issue-034",
+      "title": "Design and document event and trend system",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "design",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-031"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-034.md"
+    },
+    {
+      "id": "issue-035",
+      "title": "Design and document economy balancing framework",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "design",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-031",
+        "issue-032"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-035.md"
+    },
+    {
+      "id": "issue-036",
+      "title": "Design and document progression and completion system",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "design",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-031",
+        "issue-032"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-036.md"
+    },
+    {
+      "id": "issue-037",
+      "title": "Design and document UI/UX specification",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "design",
+        "ui",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-031"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-037.md"
+    },
+    {
+      "id": "issue-038",
+      "title": "Implement debug console with cheat commands",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "tech",
+        "debug",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-005",
+        "issue-009",
+        "issue-010",
+        "issue-018"
+      ],
+      "local_file": "docs/production/github-issues/issue-038.md"
+    },
+    {
+      "id": "issue-039",
+      "title": "Create content generation templates for each store type",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "tooling",
+        "content",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-016",
+        "issue-032"
+      ],
+      "local_file": "docs/production/github-issues/issue-039.md"
+    },
+    {
+      "id": "issue-040",
+      "title": "Implement stock delivery and supplier tier system",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "gameplay",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-025",
+        "issue-018"
+      ],
+      "local_file": "docs/production/github-issues/issue-040.md"
+    },
+    {
+      "id": "issue-041",
+      "title": "Design and document retro game store deep dive",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "design",
+        "store:video-games",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-032"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-041.md"
+    },
+    {
+      "id": "issue-042",
+      "title": "Design and document video rental store deep dive",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "design",
+        "store:rentals",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-032"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-042.md"
+    },
+    {
+      "id": "issue-043",
+      "title": "Design and document PocketCreatures card shop deep dive",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "design",
+        "store:monster-cards",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-032"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-043.md"
+    },
+    {
+      "id": "issue-044",
+      "title": "Design and document consumer electronics store deep dive",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "design",
+        "store:electronics",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-032"
+      ],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-044.md"
+    },
+    {
+      "id": "issue-045",
+      "title": "Implement second store type: retro game store",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "store:video-games",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-004",
+        "issue-006",
+        "issue-011",
+        "issue-041"
+      ],
+      "local_file": "docs/production/github-issues/issue-045.md"
+    },
+    {
+      "id": "issue-046",
+      "title": "Implement store unlock system",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-018",
+        "issue-036"
+      ],
+      "local_file": "docs/production/github-issues/issue-046.md"
+    },
+    {
+      "id": "issue-047",
+      "title": "Implement build mode prototype",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-004"
+      ],
+      "local_file": "docs/production/github-issues/issue-047.md"
+    },
+    {
+      "id": "issue-048",
+      "title": "Implement upgrade system for store fixtures",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-047",
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-048.md"
+    },
+    {
+      "id": "issue-049",
+      "title": "Implement mall hallway and navigation between stores",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "art",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-002",
+        "issue-046",
+        "issue-058",
+        "issue-060"
+      ],
+      "local_file": "docs/production/github-issues/issue-049.md"
+    },
+    {
+      "id": "issue-050",
+      "title": "Implement trend system with hot/cold item categories",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-024",
+        "issue-034"
+      ],
+      "local_file": "docs/production/github-issues/issue-050.md"
+    },
+    {
+      "id": "issue-051",
+      "title": "Create retro game content set (20-30 items)",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "content",
+        "store:video-games",
+        "data",
+        "phase:m3",
+        "priority:medium"
+      ],
+      "dependencies": [
+        "issue-041",
+        "issue-016"
+      ],
+      "status": "CONTENT COMPLETE",
+      "local_file": "docs/production/github-issues/issue-051.md"
+    },
+    {
+      "id": "issue-052",
+      "title": "Implement third store type: video rental",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "store:rentals",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-006",
+        "issue-011",
+        "issue-042",
+        "issue-045"
+      ],
+      "local_file": "docs/production/github-issues/issue-052.md"
+    },
+    {
+      "id": "issue-053",
+      "title": "Implement random daily events",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-034",
+        "issue-009"
+      ],
+      "local_file": "docs/production/github-issues/issue-053.md"
+    },
+    {
+      "id": "issue-054",
+      "title": "Implement milestone and achievement tracking",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-036",
+        "issue-010"
+      ],
+      "local_file": "docs/production/github-issues/issue-054.md"
+    },
+    {
+      "id": "issue-055",
+      "title": "Implement item tooltip with detailed information",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "ui",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-005",
+        "issue-008"
+      ],
+      "local_file": "docs/production/github-issues/issue-055.md"
+    },
+    {
+      "id": "issue-056",
+      "title": "Create video rental content set (20-30 parody titles)",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "content",
+        "store:rentals",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-042",
+        "issue-016"
+      ],
+      "status": "CONTENT COMPLETE",
+      "local_file": "docs/production/github-issues/issue-056.md"
+    },
+    {
+      "id": "issue-057",
+      "title": "Implement store expansion mechanic",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m3"
+      ],
+      "dependencies": [
+        "issue-046",
+        "issue-047"
+      ],
+      "local_file": "docs/production/github-issues/issue-057.md"
+    },
+    {
+      "id": "issue-058",
+      "title": "Design and document mall environment layout",
+      "wave": "wave-3",
+      "milestone": "M3 Progression + Content Expansion",
+      "labels": [
+        "design",
+        "art",
+        "phase:m3",
+        "priority:medium"
+      ],
+      "dependencies": [],
+      "status": "DESIGN COMPLETE",
+      "local_file": "docs/production/github-issues/issue-058.md"
+    },
+    {
+      "id": "issue-059",
+      "title": "Implement main menu with new game, continue, and settings",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "ui",
+        "phase:m2"
+      ],
+      "dependencies": [
+        "issue-026",
+        "issue-060"
+      ],
+      "local_file": "docs/production/github-issues/issue-059.md"
+    },
+    {
+      "id": "issue-060",
+      "title": "Implement scene transition manager with fade effects",
+      "wave": "wave-2",
+      "milestone": "M2 Core Loop Depth",
+      "labels": [
+        "tech",
+        "ui",
+        "phase:m2"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-060.md"
+    },
+    {
+      "id": "issue-061",
+      "title": "Implement PocketCreatures card shop store type",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "gameplay",
+        "store:monster-cards",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-043"
+      ],
+      "local_file": "docs/production/github-issues/issue-061.md"
+    },
+    {
+      "id": "issue-062",
+      "title": "Implement consumer electronics store type",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "gameplay",
+        "store:electronics",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-044"
+      ],
+      "local_file": "docs/production/github-issues/issue-062.md"
+    },
+    {
+      "id": "issue-063",
+      "title": "Implement seasonal events system",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "gameplay",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-053",
+        "issue-034"
+      ],
+      "local_file": "docs/production/github-issues/issue-063.md"
+    },
+    {
+      "id": "issue-064",
+      "title": "Implement staff hiring system",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "gameplay",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-046"
+      ],
+      "local_file": "docs/production/github-issues/issue-064.md"
+    },
+    {
+      "id": "issue-065",
+      "title": "Implement tutorial and onboarding flow",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "gameplay",
+        "ui",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-006",
+        "issue-012",
+        "issue-014"
+      ],
+      "local_file": "docs/production/github-issues/issue-065.md"
+    },
+    {
+      "id": "issue-066",
+      "title": "Implement accessibility features",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "ui",
+        "accessibility",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-027"
+      ],
+      "local_file": "docs/production/github-issues/issue-066.md"
+    },
+    {
+      "id": "issue-067",
+      "title": "Create PocketCreatures content set (30-40 cards)",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "content",
+        "store:monster-cards",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-043",
+        "issue-016"
+      ],
+      "status": "CONTENT COMPLETE",
+      "local_file": "docs/production/github-issues/issue-067.md"
+    },
+    {
+      "id": "issue-068",
+      "title": "Create electronics content set (20-25 items)",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "content",
+        "store:electronics",
+        "phase:m4"
+      ],
+      "dependencies": [
+        "issue-044",
+        "issue-016"
+      ],
+      "status": "CONTENT COMPLETE",
+      "local_file": "docs/production/github-issues/issue-068.md"
+    },
+    {
+      "id": "issue-069",
+      "title": "Implement performance profiling and optimization pass",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "tech",
+        "phase:m4"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-069.md"
+    },
+    {
+      "id": "issue-070",
+      "title": "Implement export builds for macOS and Windows",
+      "wave": "wave-4",
+      "milestone": "M4 Polish + Replayability",
+      "labels": [
+        "tech",
+        "phase:m4"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-070.md"
+    },
+    {
+      "id": "issue-071",
+      "title": "Implement authentication mechanic for sports store",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "gameplay",
+        "store:sports",
+        "phase:m5"
+      ],
+      "dependencies": [
+        "issue-031"
+      ],
+      "local_file": "docs/production/github-issues/issue-071.md"
+    },
+    {
+      "id": "issue-072",
+      "title": "Implement refurbishment mechanic for retro game store",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "gameplay",
+        "store:video-games",
+        "phase:m5"
+      ],
+      "dependencies": [
+        "issue-041",
+        "issue-045"
+      ],
+      "local_file": "docs/production/github-issues/issue-072.md"
+    },
+    {
+      "id": "issue-073",
+      "title": "Implement pack opening mechanic for PocketCreatures store",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "gameplay",
+        "store:monster-cards",
+        "phase:m5"
+      ],
+      "dependencies": [
+        "issue-043",
+        "issue-061"
+      ],
+      "local_file": "docs/production/github-issues/issue-073.md"
+    },
+    {
+      "id": "issue-074",
+      "title": "Implement depreciation system for electronics",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "gameplay",
+        "store:electronics",
+        "phase:m5"
+      ],
+      "dependencies": [
+        "issue-044",
+        "issue-062"
+      ],
+      "local_file": "docs/production/github-issues/issue-074.md"
+    },
+    {
+      "id": "issue-075",
+      "title": "Implement rental lifecycle for video rental store",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "gameplay",
+        "store:rentals",
+        "phase:m5"
+      ],
+      "dependencies": [
+        "issue-042",
+        "issue-052"
+      ],
+      "local_file": "docs/production/github-issues/issue-075.md"
+    },
+    {
+      "id": "issue-076",
+      "title": "Implement 30-hour core completion and 100% tracking",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "gameplay",
+        "phase:m5"
+      ],
+      "dependencies": [
+        "issue-036",
+        "issue-054"
+      ],
+      "local_file": "docs/production/github-issues/issue-076.md"
+    },
+    {
+      "id": "issue-077",
+      "title": "Implement visual and UI polish pass",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "art",
+        "ui",
+        "phase:m5"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-077.md"
+    },
+    {
+      "id": "issue-078",
+      "title": "Implement comprehensive QA and playtesting pass",
+      "wave": "wave-5",
+      "milestone": "M5 Store Expansion",
+      "labels": [
+        "qa",
+        "phase:m5"
+      ],
+      "dependencies": [
+        "issue-076"
+      ],
+      "local_file": "docs/production/github-issues/issue-078.md"
+    },
+    {
+      "id": "issue-079",
+      "title": "Implement hidden state tracking system for secret thread",
+      "wave": "wave-6",
+      "milestone": "M6 Long-tail + Secret Thread",
+      "labels": [
+        "gameplay",
+        "secret",
+        "phase:m6"
+      ],
+      "dependencies": [
+        "issue-026"
+      ],
+      "local_file": "docs/production/github-issues/issue-079.md"
+    },
+    {
+      "id": "issue-080",
+      "title": "Create secret thread clue content definitions (15-25 clues)",
+      "wave": "wave-6",
+      "milestone": "M6 Long-tail + Secret Thread",
+      "labels": [
+        "content",
+        "secret",
+        "phase:m6"
+      ],
+      "dependencies": [
+        "issue-079"
+      ],
+      "local_file": "docs/production/github-issues/issue-080.md"
+    },
+    {
+      "id": "issue-081",
+      "title": "Implement clue delivery hooks in existing systems",
+      "wave": "wave-6",
+      "milestone": "M6 Long-tail + Secret Thread",
+      "labels": [
+        "gameplay",
+        "secret",
+        "phase:m6"
+      ],
+      "dependencies": [
+        "issue-079",
+        "issue-080"
+      ],
+      "local_file": "docs/production/github-issues/issue-081.md"
+    },
+    {
+      "id": "issue-082",
+      "title": "Implement thread phase escalation logic",
+      "wave": "wave-6",
+      "milestone": "M6 Long-tail + Secret Thread",
+      "labels": [
+        "gameplay",
+        "secret",
+        "phase:m6"
+      ],
+      "dependencies": [
+        "issue-079",
+        "issue-081"
+      ],
+      "local_file": "docs/production/github-issues/issue-082.md"
+    },
+    {
+      "id": "issue-083",
+      "title": "Implement branching ending selection at 100% completion",
+      "wave": "wave-6",
+      "milestone": "M6 Long-tail + Secret Thread",
+      "labels": [
+        "gameplay",
+        "secret",
+        "phase:m6"
+      ],
+      "dependencies": [
+        "issue-076",
+        "issue-079"
+      ],
+      "local_file": "docs/production/github-issues/issue-083.md"
+    },
+    {
+      "id": "issue-084",
+      "title": "Validate secret thread non-interference with core game",
+      "wave": "wave-6",
+      "milestone": "M6 Long-tail + Secret Thread",
+      "labels": [
+        "qa",
+        "secret",
+        "phase:m6"
+      ],
+      "dependencies": [
+        "issue-081",
+        "issue-082",
+        "issue-083"
+      ],
+      "local_file": "docs/production/github-issues/issue-084.md"
+    },
+    {
+      "id": "issue-085",
+      "title": "Implement ending cinematics and screens for all 3 outcomes",
+      "wave": "wave-6",
+      "milestone": "M6 Long-tail + Secret Thread",
+      "labels": [
+        "art",
+        "ui",
+        "secret",
+        "phase:m6"
+      ],
+      "dependencies": [
+        "issue-083"
+      ],
+      "local_file": "docs/production/github-issues/issue-085.md"
+    },
+    {
+      "id": "issue-086",
+      "title": "Remove legacy single-item scaffold JSON files",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "cleanup",
+        "phase:m1",
+        "priority:low"
+      ],
+      "dependencies": [
+        "issue-001"
+      ],
+      "local_file": "docs/production/github-issues/issue-086.md"
+    },
+    {
+      "id": "issue-087",
+      "title": "Create GameWorld integration scene and day cycle orchestration",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "gameplay",
+        "phase:m1",
+        "priority:high"
+      ],
+      "dependencies": [
+        "issue-001",
+        "issue-002",
+        "issue-004",
+        "issue-005",
+        "issue-009",
+        "issue-010",
+        "issue-011",
+        "issue-013",
+        "issue-014",
+        "issue-018"
+      ],
+      "local_file": "docs/production/github-issues/issue-087.md"
+    },
+    {
+      "id": "issue-088",
+      "title": "Register all wave-1 input map actions in project.godot",
+      "wave": "wave-1",
+      "milestone": "M1 Foundation + First Playable",
+      "labels": [
+        "tech",
+        "phase:m1",
+        "priority:medium"
+      ],
+      "dependencies": [],
+      "local_file": "docs/production/github-issues/issue-088.md"
+    }
+  ]
+}
