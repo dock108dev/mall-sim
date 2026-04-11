@@ -80,4 +80,5 @@ ehthumbs.db
 Desktop.ini
 
 # Linux
-.Trash-*/
+.Trash-*
+.aidlc/
