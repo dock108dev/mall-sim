@@ -3,6 +3,8 @@ class_name FixtureCatalog
 extends CanvasLayer
 
 const PANEL_NAME: String = "fixture_catalog"
+const PLACEMENT_PUNCH_SCALE: float = 1.08
+const PLACEMENT_PUNCH_DURATION: float = 0.2
 
 var data_loader: DataLoader
 var economy_system: EconomySystem
@@ -13,6 +15,9 @@ var current_day: int = 1
 
 var _is_open: bool = false
 var _selected_fixture_id: String = ""
+var _anim_tween: Tween
+var _feedback_tween: Tween
+var _rest_x: float = 0.0
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _close_button: Button = (
@@ -34,11 +39,16 @@ var _selected_fixture_id: String = ""
 
 func _ready() -> void:
 	_panel.visible = false
+	_rest_x = _panel.position.x
 	_close_button.pressed.connect(close)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.build_mode_entered.connect(_on_build_mode_entered)
 	EventBus.build_mode_exited.connect(_on_build_mode_exited)
+	EventBus.fixture_placed.connect(_on_fixture_placed)
+	EventBus.fixture_placement_invalid.connect(
+		_on_fixture_placement_invalid
+	)
 
 
 func open() -> void:
@@ -52,16 +62,26 @@ func open() -> void:
 	_update_cash_display()
 	_refresh_catalog()
 	_update_info_label()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.slide_open(
+		_panel, _rest_x, false
+	)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
-func close() -> void:
+func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
 	_is_open = false
 	_selected_fixture_id = ""
-	_panel.visible = false
+	PanelAnimator.kill_tween(_anim_tween)
+	if immediate:
+		_panel.visible = false
+		_panel.position.x = _rest_x
+	else:
+		_anim_tween = PanelAnimator.slide_close(
+			_panel, _rest_x, false
+		)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -99,7 +119,7 @@ func _create_fixture_button(
 	var cash: float = _get_current_cash()
 	var is_unaffordable: bool = fixture.price > cash
 
-	var label_text: String = "%s\n$%.0f  |  %dx%d  |  %d slots" % [
+	var label_text: String = tr("FIXTURE_INFO") % [
 		fixture.name,
 		fixture.price,
 		fixture.grid_size.x,
@@ -112,7 +132,7 @@ func _create_fixture_button(
 		btn.disabled = true
 		btn.modulate = Color(0.5, 0.5, 0.5, 0.7)
 	elif is_unaffordable:
-		label_text += "\n[Insufficient funds]"
+		label_text += "\n" + tr("FIXTURE_INSUFFICIENT_FUNDS")
 		btn.disabled = true
 		btn.modulate = Color(0.8, 0.4, 0.4, 0.9)
 
@@ -141,18 +161,18 @@ func _get_unlock_text(fixture: FixtureDefinition) -> String:
 	var parts: PackedStringArray = []
 	if fixture.unlock_condition.has("reputation"):
 		parts.append(
-			"Rep %d required" % int(
+			tr("FIXTURE_UNLOCK_REP") % int(
 				fixture.unlock_condition["reputation"]
 			)
 		)
 	if fixture.unlock_condition.has("day"):
 		parts.append(
-			"Day %d required" % int(
+			tr("FIXTURE_UNLOCK_DAY") % int(
 				fixture.unlock_condition["day"]
 			)
 		)
 	if parts.is_empty():
-		return "[Locked]"
+		return tr("FIXTURE_LOCKED")
 	return "[%s]" % ", ".join(parts)
 
 
@@ -180,17 +200,15 @@ func _highlight_selected(active_btn: Button) -> void:
 
 func _update_info_label() -> void:
 	if _selected_fixture_id.is_empty():
-		_info_label.text = (
-			"Select a fixture, then click the grid to place it"
-		)
+		_info_label.text = tr("FIXTURE_SELECT_HINT")
 		return
 	var def: FixtureDefinition = data_loader.get_fixture(
 		_selected_fixture_id
 	)
 	if def:
-		_info_label.text = "Placing: %s — left-click grid, R to rotate" % def.name
+		_info_label.text = tr("FIXTURE_PLACING") % def.name
 	else:
-		_info_label.text = "Select a fixture to place"
+		_info_label.text = tr("FIXTURE_SELECT_FALLBACK")
 
 
 func _get_current_cash() -> float:
@@ -200,26 +218,52 @@ func _get_current_cash() -> float:
 
 
 func _update_cash_display() -> void:
-	_cash_label.text = "Cash: $%.2f" % _get_current_cash()
+	_cash_label.text = tr("ORDER_CASH") % _get_current_cash()
 
 
 func _on_money_changed(
 	_old_amount: float, new_amount: float
 ) -> void:
 	if _is_open:
-		_cash_label.text = "Cash: $%.2f" % new_amount
+		_cash_label.text = tr("ORDER_CASH") % new_amount
 		_refresh_catalog()
 
 
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
-		close()
+		close(true)
 
 
 func _on_build_mode_entered() -> void:
 	current_day = GameManager.current_day
-	open()
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = create_tween()
+	_anim_tween.tween_interval(0.1)
+	_anim_tween.tween_callback(open)
 
 
 func _on_build_mode_exited() -> void:
+	PanelAnimator.kill_tween(_anim_tween)
 	close()
+
+
+func _on_fixture_placed(
+	_fixture_id: String, _grid_pos: Vector2i
+) -> void:
+	if not _is_open:
+		return
+	PanelAnimator.kill_tween(_feedback_tween)
+	_feedback_tween = PanelAnimator.pulse_scale(
+		_panel, PLACEMENT_PUNCH_SCALE, PLACEMENT_PUNCH_DURATION
+	)
+
+
+func _on_fixture_placement_invalid(_reason: String) -> void:
+	if not _is_open:
+		return
+	PanelAnimator.kill_tween(_feedback_tween)
+	PanelAnimator.shake(_panel)
+	_feedback_tween = PanelAnimator.flash_color(
+		_panel, UIThemeConstants.get_negative_color(),
+		PanelAnimator.FEEDBACK_SHAKE_DURATION
+	)

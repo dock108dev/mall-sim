@@ -15,6 +15,7 @@ signal load_requested(slot: int)
 var save_manager: SaveManager
 var _mode: Mode = Mode.SAVE
 var _is_open: bool = false
+var _anim_tween: Tween
 var _pending_overwrite_slot: int = -1
 
 @onready var _panel: PanelContainer = $PanelRoot
@@ -65,13 +66,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func open_save() -> void:
 	_mode = Mode.SAVE
-	_title_label.text = "Save Game"
+	_title_label.text = tr("SAVE_TITLE_SAVE")
 	_open()
 
 
 func open_load() -> void:
 	_mode = Mode.LOAD
-	_title_label.text = "Load Game"
+	_title_label.text = tr("SAVE_TITLE_LOAD")
 	_open()
 
 
@@ -81,8 +82,12 @@ func close() -> void:
 	_is_open = false
 	_confirm_dialog.visible = false
 	_pending_overwrite_slot = -1
-	_panel.visible = false
-	EventBus.panel_closed.emit(PANEL_NAME)
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_close(_panel)
+	_anim_tween.finished.connect(
+		func() -> void: EventBus.panel_closed.emit(PANEL_NAME),
+		CONNECT_ONE_SHOT,
+	)
 
 
 func is_open() -> bool:
@@ -95,7 +100,8 @@ func _open() -> void:
 		return
 	_is_open = true
 	_refresh_slots()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_open(_panel)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
@@ -147,7 +153,7 @@ func _create_slot_row(slot: int) -> void:
 	if exists:
 		detail_label.text = _format_metadata(metadata)
 	else:
-		detail_label.text = "Empty"
+		detail_label.text = tr("MENU_EMPTY")
 		detail_label.modulate = Color(0.5, 0.5, 0.5)
 	info_box.add_child(detail_label)
 
@@ -159,12 +165,12 @@ func _create_slot_row(slot: int) -> void:
 	if _mode == Mode.SAVE:
 		if slot == AUTO_SLOT:
 			return
-		action_button.text = "Save"
+		action_button.text = tr("SAVE_BUTTON_SAVE")
 		action_button.pressed.connect(
 			_on_slot_save_pressed.bind(slot, exists)
 		)
 	else:
-		action_button.text = "Load"
+		action_button.text = tr("MENU_LOAD")
 		if not exists:
 			action_button.disabled = true
 			row.modulate = Color(0.5, 0.5, 0.5)
@@ -179,10 +185,10 @@ func _create_slot_row(slot: int) -> void:
 
 func _get_slot_label(slot: int, exists: bool) -> String:
 	if slot == AUTO_SLOT:
-		return "Auto Save"
+		return tr("MENU_AUTO_SAVE")
 	if exists:
-		return "Slot %d" % slot
-	return "Slot %d — Empty" % slot
+		return tr("MENU_SLOT") % slot
+	return tr("SAVE_SLOT_EMPTY") % slot
 
 
 func _format_metadata(metadata: Dictionary) -> String:
@@ -192,14 +198,14 @@ func _format_metadata(metadata: Dictionary) -> String:
 
 	var parts: Array[String] = []
 	if day > 0:
-		parts.append("Day %d" % day)
+		parts.append(tr("MENU_DAY") % day)
 	if not store.is_empty():
 		parts.append(store.capitalize())
 	if not timestamp.is_empty():
 		parts.append(_format_timestamp(timestamp))
 
 	if parts.is_empty():
-		return "Saved game"
+		return tr("MENU_SAVED_GAME")
 	return " | ".join(parts)
 
 
@@ -216,7 +222,7 @@ func _on_slot_save_pressed(
 	if occupied:
 		_pending_overwrite_slot = slot
 		_confirm_label.text = (
-			"Overwrite Slot %d?" % slot
+			tr("SAVE_OVERWRITE") % slot
 		)
 		_confirm_dialog.visible = true
 		return

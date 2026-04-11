@@ -15,6 +15,8 @@ var economy_system: EconomySystem
 var reputation_system: ReputationSystem
 
 var _is_open: bool = false
+var _anim_tween: Tween
+var _rest_x: float = 0.0
 var _current_store_id: String = ""
 
 @onready var _panel: PanelContainer = $PanelRoot
@@ -55,6 +57,7 @@ var _current_store_id: String = ""
 
 func _ready() -> void:
 	_panel.visible = false
+	_rest_x = _panel.position.x
 	_close_button.pressed.connect(close)
 	_min_slider.value_changed.connect(_on_min_slider_changed)
 	_max_slider.value_changed.connect(_on_max_slider_changed)
@@ -88,15 +91,23 @@ func open() -> void:
 		return
 	_is_open = true
 	_refresh_all()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.slide_open(_panel, _rest_x, false)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
-func close() -> void:
+func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
 	_is_open = false
-	_panel.visible = false
+	PanelAnimator.kill_tween(_anim_tween)
+	if immediate:
+		_panel.visible = false
+		_panel.position.x = _rest_x
+	else:
+		_anim_tween = PanelAnimator.slide_close(
+			_panel, _rest_x, false
+		)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -118,22 +129,22 @@ func _refresh_all() -> void:
 
 func _update_status() -> void:
 	if not reputation_system:
-		_status_label.text = "Reputation: --"
+		_status_label.text = tr("STAFF_REP_NONE")
 		return
 	var rep: float = reputation_system.get_reputation()
 	if rep < StaffSystem.MIN_REPUTATION_TO_HIRE:
 		_status_label.text = (
-			"Reputation: %.0f (need %.0f to hire)"
+			tr("STAFF_REP_NEED")
 			% [rep, StaffSystem.MIN_REPUTATION_TO_HIRE]
 		)
 	else:
-		_status_label.text = "Reputation: %.0f" % rep
+		_status_label.text = tr("STAFF_REP_CURRENT") % rep
 
 
 func _update_cash_label() -> void:
 	if economy_system:
 		_cash_label.text = (
-			"Cash: $%.2f" % economy_system.get_cash()
+			tr("ORDER_CASH") % economy_system.get_cash()
 		)
 
 
@@ -146,11 +157,11 @@ func _refresh_hired_list() -> void:
 	)
 	var max_staff: int = StaffSystem.MAX_STAFF_PER_STORE
 	_hired_title.text = (
-		"Current Staff (%d/%d)" % [staff.size(), max_staff]
+		tr("STAFF_CURRENT") % [staff.size(), max_staff]
 	)
 	if staff.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = "No staff hired"
+		empty_label.text = tr("STAFF_NO_HIRED")
 		empty_label.horizontal_alignment = (
 			HORIZONTAL_ALIGNMENT_CENTER
 		)
@@ -187,18 +198,18 @@ func _create_hired_row(staff_data: Dictionary) -> void:
 	row.add_child(spec_label)
 
 	var skill_label := Label.new()
-	skill_label.text = "Skill %d" % def.skill_level
+	skill_label.text = tr("STAFF_SKILL") % def.skill_level
 	skill_label.custom_minimum_size = Vector2(50, 0)
 	row.add_child(skill_label)
 
 	var wage_label := Label.new()
-	wage_label.text = "$%.0f/day" % def.daily_wage
+	wage_label.text = tr("STAFF_WAGE") % def.daily_wage
 	wage_label.custom_minimum_size = Vector2(60, 0)
 	wage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(wage_label)
 
 	var fire_btn := Button.new()
-	fire_btn.text = "Fire"
+	fire_btn.text = tr("STAFF_FIRE")
 	fire_btn.custom_minimum_size = Vector2(60, 0)
 	var inst_id: String = staff_data.get("instance_id", "")
 	fire_btn.pressed.connect(
@@ -263,24 +274,24 @@ func _create_available_row(
 	row.add_child(spec_label)
 
 	var skill_label := Label.new()
-	skill_label.text = "Skill %d" % def.skill_level
+	skill_label.text = tr("STAFF_SKILL") % def.skill_level
 	skill_label.custom_minimum_size = Vector2(50, 0)
 	row.add_child(skill_label)
 
 	var wage_label := Label.new()
-	wage_label.text = "$%.0f/day" % def.daily_wage
+	wage_label.text = tr("STAFF_WAGE") % def.daily_wage
 	wage_label.custom_minimum_size = Vector2(60, 0)
 	wage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(wage_label)
 
 	var hire_btn := Button.new()
-	hire_btn.text = "Hire"
+	hire_btn.text = tr("STAFF_HIRE")
 	hire_btn.custom_minimum_size = Vector2(60, 0)
 	hire_btn.disabled = not can_hire or at_max
 	if not can_hire:
-		hire_btn.tooltip_text = "Need reputation >= 20"
+		hire_btn.tooltip_text = tr("STAFF_NEED_REP")
 	elif at_max:
-		hire_btn.tooltip_text = "Maximum staff reached"
+		hire_btn.tooltip_text = tr("STAFF_MAX_REACHED")
 	hire_btn.pressed.connect(
 		_on_hire_pressed.bind(def.id)
 	)
@@ -291,12 +302,12 @@ func _create_available_row(
 
 func _update_wages_label() -> void:
 	if not staff_system:
-		_wages_label.text = "Daily wages: $0"
+		_wages_label.text = tr("STAFF_DAILY_WAGES_ZERO")
 		return
 	var wages: float = staff_system.get_store_daily_wages(
 		_current_store_id
 	)
-	_wages_label.text = "Daily wages: $%.0f" % wages
+	_wages_label.text = tr("STAFF_DAILY_WAGES") % wages
 
 
 func _load_policy_sliders() -> void:
@@ -353,7 +364,7 @@ func _on_max_slider_changed(value: float) -> void:
 
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
-		close()
+		close(true)
 
 
 func _on_money_changed(

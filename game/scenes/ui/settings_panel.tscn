@@ -241,6 +241,18 @@ text = "Colorblind Mode"
 [node name="Check" type="CheckButton" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox/ColorblindRow"]
 layout_mode = 2
 
+[node name="LanguageRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox/LanguageRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Language"
+
+[node name="Option" type="OptionButton" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox/LanguageRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(160, 0)
+
 [node name="Controls" type="MarginContainer" parent="PanelRoot/Margin/VBox/TabContainer"]
 visible = false
 layout_mode = 2

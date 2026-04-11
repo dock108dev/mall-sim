@@ -20,6 +20,9 @@ const RARITY_MULTIPLIERS: Dictionary = {
 	"common": 1.0,
 }
 
+## Low-price items get full rarity scaling; expensive items get diminishing returns.
+const RARITY_REFERENCE_PRICE: float = 5.0
+
 static var _next_id: int = 0
 
 var definition: ItemDefinition
@@ -61,12 +64,30 @@ static func create(
 	return inst
 
 
-## Returns base_price * condition_multiplier * rarity_multiplier.
+## Diminishing returns on rarity for expensive items.
+## Cheap items (at or below reference_price) get the full rarity multiplier.
+## Expensive items converge toward 1.0 as base_price grows.
+static func calculate_effective_rarity(
+	base_price: float, rarity: String
+) -> float:
+	var raw_mult: float = RARITY_MULTIPLIERS.get(rarity, 1.0)
+	if raw_mult <= 1.0:
+		return raw_mult
+	var ref: float = RARITY_REFERENCE_PRICE
+	var effective: float = 1.0 + (raw_mult - 1.0) * (
+		ref / maxf(base_price, ref)
+	)
+	return effective
+
+
+## Returns base_price * condition_multiplier * effective_rarity_multiplier.
 func get_current_value() -> float:
 	if not definition:
 		return 0.0
 	var cond_mult: float = CONDITION_MULTIPLIERS.get(condition, 1.0)
-	var rarity_mult: float = RARITY_MULTIPLIERS.get(definition.rarity, 1.0)
+	var rarity_mult: float = calculate_effective_rarity(
+		definition.base_price, definition.rarity
+	)
 	return definition.base_price * cond_mult * rarity_mult
 
 

@@ -7,6 +7,8 @@ const PANEL_NAME: String = "milestones"
 
 var progression_system: ProgressionSystem
 var _is_open: bool = false
+var _anim_tween: Tween
+var _rest_x: float = 0.0
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _grid: VBoxContainer = (
@@ -19,6 +21,7 @@ var _is_open: bool = false
 
 func _ready() -> void:
 	_panel.visible = false
+	_rest_x = _panel.position.x
 	_close_button.pressed.connect(close)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.milestone_completed.connect(_on_milestone_completed)
@@ -44,15 +47,23 @@ func open() -> void:
 		return
 	_is_open = true
 	_refresh_list()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.slide_open(_panel, _rest_x, false)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
-func close() -> void:
+func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
 	_is_open = false
-	_panel.visible = false
+	PanelAnimator.kill_tween(_anim_tween)
+	if immediate:
+		_panel.visible = false
+		_panel.position.x = _rest_x
+	else:
+		_anim_tween = PanelAnimator.slide_close(
+			_panel, _rest_x, false
+		)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -99,9 +110,9 @@ func _create_milestone_row(milestone: Dictionary) -> void:
 	var status_label := Label.new()
 	status_label.custom_minimum_size = Vector2(30, 0)
 	if is_done:
-		status_label.text = "[x]"
+		status_label.text = tr("MILESTONE_CHECK_DONE")
 	else:
-		status_label.text = "[ ]"
+		status_label.text = tr("MILESTONE_CHECK_UNDONE")
 	row.add_child(status_label)
 
 	var info_box := VBoxContainer.new()
@@ -128,7 +139,7 @@ func _create_milestone_row(milestone: Dictionary) -> void:
 
 	if is_done:
 		var done_label := Label.new()
-		done_label.text = "Completed"
+		done_label.text = tr("MILESTONE_COMPLETED")
 		done_label.add_theme_color_override(
 			"font_color", Color(0.3, 0.9, 0.3)
 		)
@@ -136,7 +147,7 @@ func _create_milestone_row(milestone: Dictionary) -> void:
 	else:
 		var progress_label := Label.new()
 		var pct: int = int(progress * 100.0)
-		progress_label.text = "Progress: %d%%" % pct
+		progress_label.text = tr("MILESTONE_PROGRESS") % pct
 		right_box.add_child(progress_label)
 
 	row.add_child(right_box)
@@ -149,7 +160,7 @@ func _create_milestone_row(milestone: Dictionary) -> void:
 
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
-		close()
+		close(true)
 
 
 func _on_milestone_completed(

@@ -52,8 +52,8 @@ func show_checkout(
 	show_warranty: bool = false,
 ) -> void:
 	_item_name_label.text = item_name
-	_condition_label.text = "Condition: %s" % item_condition
-	_offer_label.text = "Offer: $%.2f" % offer_price
+	_condition_label.text = tr("CHECKOUT_CONDITION") % item_condition
+	_offer_label.text = tr("CHECKOUT_OFFER") % offer_price
 	_current_offer = offer_price
 	_warranty_offered = false
 	_warranty_toggle.button_pressed = false
@@ -126,7 +126,7 @@ func _update_warranty_fee_display() -> void:
 	var fee: float = WarrantyManager.calculate_fee(
 		_current_offer, _warranty_percent
 	)
-	_warranty_fee_label.text = "Warranty Fee: $%.2f" % fee
+	_warranty_fee_label.text = tr("CHECKOUT_WARRANTY_FEE") % fee
 
 
 func _on_panel_opened(panel_name: String) -> void:

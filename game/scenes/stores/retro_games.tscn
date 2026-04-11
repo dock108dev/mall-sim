@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=37 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_game_store_controller.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -14,6 +14,8 @@
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_slot_marker.tres" id="12"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_door_wood.tres" id="13"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_metal_dark.tres" id="14"]
+[ext_resource type="PackedScene" path="res://game/assets/models/fixtures/placeholder_fixture_shelf_standard.tscn" id="15"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_wood_grain_textured.tres" id="16"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(7, 0.1, 5)
@@ -80,8 +82,8 @@ size = Vector3(2.75, 3, 0.1)
 background_mode = 1
 background_color = Color(0.08, 0.05, 0.12, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.6, 0.5, 0.8, 1)
-ambient_light_energy = 0.3
+ambient_light_color = Color(0.95, 0.88, 0.7, 1)
+ambient_light_energy = 0.35
 
 ; ============================================================
 ; Root
@@ -98,7 +100,7 @@ script = ExtResource("1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 
 ; ============================================================
-; Environment & Lighting (neon-tinted for retro aesthetic)
+; Environment & Lighting (warm base with neon accent splashes)
 ; ============================================================
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -106,31 +108,31 @@ environment = SubResource("env")
 
 [node name="AmbientLight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
-light_color = Color(0.7, 0.6, 0.9, 1)
-light_energy = 0.6
+light_color = Color(1.0, 0.92, 0.75, 1)
+light_energy = 0.7
 omni_range = 8.0
 
 [node name="NeonAccentLeft" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.4, 2.2, -1.5)
 light_color = Color(0.9, 0.2, 0.6, 1)
-light_energy = 0.5
-omni_range = 3.0
+light_energy = 0.35
+omni_range = 2.5
 
 [node name="NeonAccentRight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.4, 2.2, -1.5)
 light_color = Color(0.2, 0.4, 0.95, 1)
-light_energy = 0.5
-omni_range = 3.0
+light_energy = 0.35
+omni_range = 2.5
 
 [node name="NeonFront" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 2.0)
 light_color = Color(0.3, 0.9, 0.5, 1)
-light_energy = 0.4
-omni_range = 3.5
+light_energy = 0.3
+omni_range = 3.0
 
 [node name="DisplaySpot_GlassCase" type="SpotLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2.8, 0.5)
-light_color = Color(0.8, 0.7, 1.0, 1)
+light_color = Color(1.0, 0.92, 0.78, 1)
 light_energy = 1.0
 shadow_enabled = true
 spot_range = 3.5
@@ -138,8 +140,8 @@ spot_angle = 30.0
 
 [node name="DisplaySpot_ConsoleShelf" type="SpotLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 2.5, 2.8, -0.5)
-light_color = Color(0.6, 0.4, 1.0, 1)
-light_energy = 0.8
+light_color = Color(1.0, 0.9, 0.75, 1)
+light_energy = 0.9
 shadow_enabled = true
 spot_range = 3.5
 spot_angle = 35.0
@@ -155,7 +157,7 @@ shape = SubResource("floor_shape")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
 mesh = SubResource("floor_mesh")
-surface_material_override/0 = ExtResource("4")
+surface_material_override/0 = ExtResource("16")
 
 [node name="BackWall" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -2.55)
@@ -859,6 +861,16 @@ surface_material_override/0 = ExtResource("12")
 
 [node name="CustomerWaitPosition" type="Marker3D" parent="Checkout/Register"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.15, 1.2)
+
+; ============================================================
+; Fixture 7: Extra Display Shelf (placeholder fixture model)
+; Position: right wall, near back
+; ============================================================
+
+[node name="ExtraShelf" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.3, 0, -1.5)
+
+[node name="ShelfModel" parent="ExtraShelf" instance=ExtResource("15")]
 
 ; ============================================================
 ; Backroom Access Point

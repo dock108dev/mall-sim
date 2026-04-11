@@ -56,6 +56,11 @@ signal seasonal_event_announced(event_id: String)
 signal seasonal_event_started(event_id: String)
 signal seasonal_event_ended(event_id: String)
 
+# Market Events
+signal market_event_announced(event_id: String)
+signal market_event_started(event_id: String)
+signal market_event_ended(event_id: String)
+
 # Season Cycle (Sports Memorabilia)
 signal season_cycle_shifted(new_hot_league: String, old_hot_league: String)
 signal season_cycle_announced(next_hot_league: String, days_until: int)
@@ -67,6 +72,8 @@ signal trend_changed(trending: Array, cold: Array)
 signal order_placed(order_data: Dictionary)
 signal order_delivered(order_data: Dictionary)
 signal supplier_tier_changed(old_tier: int, new_tier: int)
+signal order_cash_check(amount: float, result: Array)
+signal order_cash_deduct(amount: float, reason: String, result: Array)
 
 # Pack Opening
 signal pack_opened(pack_id: String, cards: Array[String])
@@ -163,6 +170,9 @@ signal item_tooltip_hidden()
 
 # Accessibility
 signal colorblind_mode_changed(enabled: bool)
+
+# Localization
+signal locale_changed(new_locale: String)
 
 # Endings
 signal all_milestones_completed()

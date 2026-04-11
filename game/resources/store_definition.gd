@@ -20,4 +20,13 @@ extends Resource
 @export var base_foot_traffic: float = 0.0
 @export var unique_mechanics: PackedStringArray = []
 @export var aesthetic_tags: PackedStringArray = []
+@export var recommended_markup_optimal_min: float = 0.0
+@export var recommended_markup_optimal_max: float = 0.0
+@export var recommended_markup_max_viable: float = 0.0
 @export var ambient_sound: String = ""
+@export var music: String = ""
+
+
+## Returns true if this store has recommended markup ranges defined.
+func has_recommended_markup() -> bool:
+	return recommended_markup_max_viable > 0.0

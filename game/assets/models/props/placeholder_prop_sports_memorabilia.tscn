@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="BoxMesh" id="base_mesh"]
+size = Vector3(0.18, 0.03, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="base_mat"]
+resource_name = "Memorabilia Base"
+albedo_color = Color(0.35, 0.2, 0.1, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="plaque_mesh"]
+size = Vector3(0.14, 0.2, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="plaque_mat"]
+resource_name = "Memorabilia Plaque"
+albedo_color = Color(0.9, 0.5, 0.1, 1)
+roughness = 0.88
+
+[node name="PlaceholderPropSportsMemorabilia" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, 0)
+mesh = SubResource("base_mesh")
+surface_material_override/0 = SubResource("base_mat")
+
+[node name="Plaque" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.13, -0.04)
+mesh = SubResource("plaque_mesh")
+surface_material_override/0 = SubResource("plaque_mat")

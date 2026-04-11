@@ -13,6 +13,10 @@ const AMBIENT_CROSSFADE_DURATION: float = 0.5
 const MALL_AMBIENT_PATH: String = (
 	"res://game/assets/audio/ambiance/mall_hallway.wav"
 )
+const MALL_MUSIC_PATH: String = (
+	"res://game/assets/audio/music/mall_hallway_music.wav"
+)
+const MUSIC_VOLUME_DB: float = -6.0
 
 var _sfx_streams: Dictionary = {}
 var _sfx_players: Array[AudioStreamPlayer] = []
@@ -109,7 +113,7 @@ func _create_sfx_pool() -> void:
 func _create_music_players() -> void:
 	_music_player_a = AudioStreamPlayer.new()
 	_music_player_a.bus = MUSIC_BUS
-	_music_player_a.volume_db = 0.0
+	_music_player_a.volume_db = MUSIC_VOLUME_DB
 	_music_player_a.finished.connect(_on_music_finished.bind(_music_player_a))
 	add_child(_music_player_a)
 
@@ -161,6 +165,16 @@ func _preload_sfx() -> void:
 		"ui_click": "ui_click.wav",
 		"day_end_chime": "day_end_chime.wav",
 		"notification_ping": "notification_ping.wav",
+		"haggle_accept": "haggle_accept.wav",
+		"haggle_reject": "haggle_reject.wav",
+		"build_place": "build_place.wav",
+		"build_error": "build_error.wav",
+		"pack_opening": "pack_opening.wav",
+		"refurbish_start": "refurbish_start.wav",
+		"refurbish_complete": "refurbish_complete.wav",
+		"tape_insert": "tape_insert.wav",
+		"auth_reveal": "auth_reveal.wav",
+		"demo_activate": "demo_activate.wav",
 	}
 
 	for key: String in sfx_files:
@@ -175,6 +189,7 @@ func _preload_music() -> void:
 	var music_files: Dictionary = {
 		"menu_music": "menu_music.wav",
 		"day_summary_music": "day_summary_music.wav",
+		"mall_hallway_music": "mall_hallway_music.wav",
 	}
 
 	for key: String in music_files:
@@ -191,7 +206,7 @@ func _resolve_music_stream(track_name: String) -> AudioStream:
 	if _music_streams.has(track_name):
 		return _music_streams[track_name] as AudioStream
 
-	# Treat as a resource path (for store ambient_sound fields)
+	# Treat as a resource path (for store music fields)
 	if ResourceLoader.exists(track_name):
 		var stream: AudioStream = load(track_name) as AudioStream
 		if stream != null:
@@ -207,25 +222,24 @@ func _crossfade_to(stream: AudioStream, track_name: String) -> void:
 
 	var outgoing: AudioStreamPlayer = _active_music_player
 	var incoming: AudioStreamPlayer = _get_inactive_player()
+	var music_linear: float = db_to_linear(MUSIC_VOLUME_DB)
 
 	incoming.stream = stream
-	incoming.volume_db = linear_to_db(0.0)
+	incoming.volume_db = linear_to_db(0.001)
 	incoming.play()
 
 	_crossfade_tween = create_tween()
 	_crossfade_tween.set_parallel(true)
 
-	# Fade in the incoming player
 	_crossfade_tween.tween_method(
 		_set_player_volume.bind(incoming),
-		0.0, 1.0, CROSSFADE_DURATION
+		0.0, music_linear, CROSSFADE_DURATION
 	)
 
-	# Fade out the outgoing player (only if it's playing)
 	if outgoing.playing:
 		_crossfade_tween.tween_method(
 			_set_player_volume.bind(outgoing),
-			1.0, 0.0, CROSSFADE_DURATION
+			music_linear, 0.0, CROSSFADE_DURATION
 		)
 
 	_crossfade_tween.chain().tween_callback(_on_crossfade_complete.bind(
@@ -244,10 +258,11 @@ func _fade_out_active() -> void:
 	if not outgoing.playing:
 		return
 
+	var music_linear: float = db_to_linear(MUSIC_VOLUME_DB)
 	_crossfade_tween = create_tween()
 	_crossfade_tween.tween_method(
 		_set_player_volume.bind(outgoing),
-		1.0, 0.0, CROSSFADE_DURATION
+		music_linear, 0.0, CROSSFADE_DURATION
 	)
 	_crossfade_tween.tween_callback(outgoing.stop)
 
@@ -380,6 +395,16 @@ func _connect_event_signals() -> void:
 	EventBus.game_state_changed.connect(_on_game_state_changed)
 	EventBus.storefront_entered.connect(_on_storefront_entered)
 	EventBus.storefront_exited.connect(_on_storefront_exited)
+	EventBus.haggle_completed.connect(_on_haggle_completed)
+	EventBus.haggle_failed.connect(_on_haggle_failed)
+	EventBus.fixture_placed.connect(_on_fixture_placed)
+	EventBus.fixture_placement_invalid.connect(_on_fixture_placement_invalid)
+	EventBus.pack_opened.connect(_on_pack_opened)
+	EventBus.refurbishment_started.connect(_on_refurbishment_started)
+	EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
+	EventBus.item_rented.connect(_on_item_rented)
+	EventBus.authentication_completed.connect(_on_authentication_completed)
+	EventBus.demo_item_placed.connect(_on_demo_item_placed)
 
 
 func _on_item_sold(_id: String, _p: float, _c: String) -> void:
@@ -401,6 +426,45 @@ func _on_reputation_changed(_old: float, _new: float) -> void:
 	play_sfx("notification_ping")
 
 
+func _on_haggle_completed(_item_id: String, _final_price: float) -> void:
+	play_sfx("haggle_accept")
+
+func _on_haggle_failed(_item_id: String, _customer_id: int) -> void:
+	play_sfx("haggle_reject")
+
+func _on_fixture_placed(_fid: String, _pos: Vector2i) -> void:
+	play_sfx("build_place")
+
+func _on_fixture_placement_invalid(_reason: String) -> void:
+	play_sfx("build_error")
+
+func _on_pack_opened(_pack_id: String, _cards: Array[String]) -> void:
+	play_sfx("pack_opening")
+
+func _on_refurbishment_started(
+	_item_id: String, _cost: float, _duration: int
+) -> void:
+	play_sfx("refurbish_start")
+
+func _on_refurbishment_completed(
+	_item_id: String, _success: bool, _condition: String
+) -> void:
+	play_sfx("refurbish_complete")
+
+func _on_item_rented(
+	_item_id: String, _fee: float, _tier: String
+) -> void:
+	play_sfx("tape_insert")
+
+func _on_authentication_completed(
+	_item_id: String, _is_genuine: bool
+) -> void:
+	play_sfx("auth_reveal")
+
+func _on_demo_item_placed(_item_id: String) -> void:
+	play_sfx("demo_activate")
+
+
 func _on_game_state_changed(_old: int, new_state: int) -> void:
 	match new_state:
 		GameManager.GameState.MENU:
@@ -419,13 +483,14 @@ func _on_storefront_entered(_slot: int, store_id: String) -> void:
 
 
 func _on_storefront_exited() -> void:
-	play_music("menu_music")
+	play_music("mall_hallway_music")
 	play_ambient("mall_hallway")
 
 
 func _play_store_music() -> void:
 	var store_id: String = GameManager.current_store_id
 	if store_id.is_empty():
+		play_music("mall_hallway_music")
 		return
 	_play_store_music_for(store_id)
 
@@ -438,13 +503,15 @@ func _play_store_music_for(store_id: String) -> void:
 		store_id
 	)
 	if store_def == null:
+		play_music("mall_hallway_music")
 		return
 
-	var ambient_path: String = store_def.ambient_sound
-	if ambient_path.is_empty():
+	var music_path: String = store_def.music
+	if music_path.is_empty():
+		play_music("mall_hallway_music")
 		return
 
-	play_music(ambient_path)
+	play_music(music_path)
 
 
 func _play_store_ambient() -> void:

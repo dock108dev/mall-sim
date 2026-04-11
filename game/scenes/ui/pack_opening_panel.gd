@@ -7,6 +7,7 @@ const REVEAL_DELAY: float = 0.35
 var _cards: Array[ItemInstance] = []
 var _reveal_index: int = 0
 var _is_open: bool = false
+var _anim_tween: Tween
 var _reveal_timer: float = 0.0
 var _revealing: bool = false
 
@@ -56,12 +57,13 @@ func open(cards: Array[ItemInstance], pack_name: String) -> void:
 	_revealing = true
 	_reveal_timer = 0.0
 	_is_open = true
-	_title_label.text = "Opening: %s" % pack_name
+	_title_label.text = tr("PACK_OPENING_TITLE") % pack_name
 	_total_value_label.text = ""
 	_close_button.disabled = true
 	_clear_grid()
 	_create_card_placeholders()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_open(_panel)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
@@ -71,8 +73,12 @@ func close() -> void:
 	_is_open = false
 	_revealing = false
 	_cards = []
-	_panel.visible = false
-	EventBus.panel_closed.emit(PANEL_NAME)
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_close(_panel)
+	_anim_tween.finished.connect(
+		func() -> void: EventBus.panel_closed.emit(PANEL_NAME),
+		CONNECT_ONE_SHOT,
+	)
 
 
 func is_open() -> bool:
@@ -164,4 +170,4 @@ func _update_total_value() -> void:
 	var total: float = 0.0
 	for card: ItemInstance in _cards:
 		total += card.get_current_value()
-	_total_value_label.text = "Total Value: $%.2f" % total
+	_total_value_label.text = tr("PACK_TOTAL_VALUE") % total

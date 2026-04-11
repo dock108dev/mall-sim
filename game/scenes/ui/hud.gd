@@ -1,11 +1,11 @@
 ## In-game HUD — shows cash, time, day phase, reputation, store name, and prompts.
 extends CanvasLayer
 
-const _PHASE_NAMES: Dictionary = {
-	TimeSystem.DayPhase.MORNING: "Morning",
-	TimeSystem.DayPhase.MIDDAY: "Midday",
-	TimeSystem.DayPhase.AFTERNOON: "Afternoon",
-	TimeSystem.DayPhase.EVENING: "Evening",
+const _PHASE_KEYS: Dictionary = {
+	TimeSystem.DayPhase.MORNING: "HUD_PHASE_MORNING",
+	TimeSystem.DayPhase.MIDDAY: "HUD_PHASE_MIDDAY",
+	TimeSystem.DayPhase.AFTERNOON: "HUD_PHASE_AFTERNOON",
+	TimeSystem.DayPhase.EVENING: "HUD_PHASE_EVENING",
 }
 
 const _PHASE_COLORS: Dictionary = {
@@ -16,17 +16,19 @@ const _PHASE_COLORS: Dictionary = {
 }
 
 const _SPEED_LABELS: Dictionary = {
-	0.0: "|| PAUSED",
+	0.0: "HUD_SPEED_PAUSED",
 	1.0: ">",
 	2.0: ">>",
 	4.0: ">>>",
 }
 
-const _CASH_PULSE_DURATION: float = 0.4
-const _REP_FLASH_DURATION: float = 0.6
-const _REP_FLASH_COUNT: int = 3
+const _CASH_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
+const _CASH_INCOME_SCALE: float = 1.15
+const _CASH_EXPENSE_SCALE: float = 1.1
+const _REP_COLOR_FLASH: float = 0.1
+const _REP_HOLD_DURATION: float = 1.0
+const _REP_FADE_BACK: float = 0.4
 
-const _TIER_THRESHOLDS: Array[float] = [0.0, 25.0, 50.0, 80.0]
 
 @onready var cash_label: Label = $CashLabel
 @onready var time_label: Label = $TimeLabel
@@ -41,8 +43,10 @@ const _TIER_THRESHOLDS: Array[float] = [0.0, 25.0, 50.0, 80.0]
 var _current_day: int = 1
 var _current_hour: int = Constants.STORE_OPEN_HOUR
 var _current_phase: int = TimeSystem.DayPhase.MORNING
-var _cash_tween: Tween
+var _cash_scale_tween: Tween
+var _cash_color_tween: Tween
 var _rep_tween: Tween
+var _dim_tween: Tween
 
 
 func _ready() -> void:
@@ -65,6 +69,9 @@ func _ready() -> void:
 		_on_seasonal_event_ended
 	)
 	_milestones_button.pressed.connect(_on_milestones_pressed)
+	EventBus.locale_changed.connect(_on_locale_changed)
+	EventBus.build_mode_entered.connect(_on_build_mode_entered)
+	EventBus.build_mode_exited.connect(_on_build_mode_exited)
 	_update_reputation_display(0.0)
 	_update_speed_display(1.0)
 	_initialize_from_systems.call_deferred()
@@ -82,6 +89,20 @@ func _initialize_from_systems() -> void:
 		update_cash(econ_sys.get_cash())
 	_refresh_time_display()
 	_refresh_phase_display()
+
+
+func _on_locale_changed(_new_locale: String) -> void:
+	_refresh_time_display()
+	_refresh_phase_display()
+	var econ_sys: EconomySystem = _find_economy_system()
+	if econ_sys:
+		update_cash(econ_sys.get_cash())
+	var rep_sys: Node = _find_reputation_system()
+	if rep_sys and rep_sys.has_method("get_score"):
+		_update_reputation_display(rep_sys.get_score())
+	var time_sys: TimeSystem = _find_time_system()
+	if time_sys:
+		_update_speed_display(time_sys.time_scale)
 
 
 func update_cash(amount: float) -> void:
@@ -127,13 +148,14 @@ func _on_money_changed(
 
 func _refresh_time_display() -> void:
 	var formatted: String = _format_hour_12(_current_hour)
-	time_label.text = "Day %d — %s" % [_current_day, formatted]
+	time_label.text = tr("HUD_DAY_FORMAT") % [_current_day, formatted]
 
 
 func _refresh_phase_display() -> void:
-	var phase_name: String = _PHASE_NAMES.get(
-		_current_phase, "Morning"
+	var phase_key: String = _PHASE_KEYS.get(
+		_current_phase, "HUD_PHASE_MORNING"
 	)
+	var phase_name: String = tr(phase_key)
 	var phase_color: Color = _PHASE_COLORS.get(
 		_current_phase, Color.WHITE
 	)
@@ -142,7 +164,7 @@ func _refresh_phase_display() -> void:
 
 
 func _format_hour_12(hour: int) -> String:
-	var period: String = "AM" if hour < 12 else "PM"
+	var period: String = tr("HUD_AM") if hour < 12 else tr("HUD_PM")
 	var display_hour: int = hour % 12
 	if display_hour == 0:
 		display_hour = 12
@@ -160,23 +182,26 @@ func _on_reputation_changed(
 	old_value: float, new_value: float
 ) -> void:
 	_update_reputation_display(new_value)
-	if _get_tier_index(old_value) != _get_tier_index(new_value):
-		_flash_reputation_label()
+	_flash_reputation_label(old_value, new_value)
 
 
 func _update_reputation_display(score: float) -> void:
+	reputation_label.text = _format_reputation(score)
+
+
+func _format_reputation(score: float) -> String:
 	var tier_name: String = _get_tier_name(score)
-	reputation_label.text = "Rep: %.0f — %s" % [score, tier_name]
+	return tr("HUD_REP_FORMAT") % [score, tier_name]
 
 
 func _get_tier_name(score: float) -> String:
 	if score >= 80.0:
-		return "Legendary"
+		return tr("HUD_TIER_LEGENDARY")
 	elif score >= 50.0:
-		return "Destination Shop"
+		return tr("HUD_TIER_DESTINATION")
 	elif score >= 25.0:
-		return "Local Favorite"
-	return "Unknown"
+		return tr("HUD_TIER_LOCAL_FAV")
+	return tr("HUD_TIER_UNKNOWN")
 
 
 func _on_store_opened(store_id: String) -> void:
@@ -294,7 +319,8 @@ func _on_speed_changed(new_speed: float) -> void:
 
 
 func _update_speed_display(speed: float) -> void:
-	speed_label.text = _SPEED_LABELS.get(speed, ">")
+	var label_key: String = _SPEED_LABELS.get(speed, ">")
+	speed_label.text = tr(label_key) if label_key == "HUD_SPEED_PAUSED" else label_key
 	if speed <= 0.0:
 		speed_label.modulate = Color(1.0, 0.4, 0.4)
 	else:
@@ -309,6 +335,13 @@ func _find_time_system() -> TimeSystem:
 	return sys as TimeSystem if sys is TimeSystem else null
 
 
+func _find_reputation_system() -> Node:
+	var game_world: Node = get_tree().current_scene
+	if not game_world:
+		return null
+	return game_world.find_child("ReputationSystem", false)
+
+
 func _find_economy_system() -> EconomySystem:
 	var game_world: Node = get_tree().current_scene
 	if not game_world:
@@ -320,40 +353,72 @@ func _find_economy_system() -> EconomySystem:
 func _pulse_cash_label(delta: float) -> void:
 	if is_zero_approx(delta):
 		return
-	if _cash_tween and _cash_tween.is_valid():
-		_cash_tween.kill()
-	var pulse_color: Color
-	if delta > 0.0:
-		pulse_color = UIThemeConstants.get_positive_color()
-	else:
-		pulse_color = UIThemeConstants.get_negative_color()
-	cash_label.modulate = pulse_color
-	_cash_tween = create_tween()
-	_cash_tween.tween_property(
-		cash_label, "modulate", Color.WHITE,
-		_CASH_PULSE_DURATION
-	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	PanelAnimator.kill_tween(_cash_scale_tween)
+	PanelAnimator.kill_tween(_cash_color_tween)
+	var is_income: bool = delta > 0.0
+	var target_scale: float = (
+		_CASH_INCOME_SCALE if is_income else _CASH_EXPENSE_SCALE
+	)
+	var pulse_color: Color = (
+		UIThemeConstants.get_positive_color() if is_income
+		else UIThemeConstants.get_negative_color()
+	)
+	_cash_scale_tween = PanelAnimator.pulse_scale(
+		cash_label, target_scale, _CASH_PULSE_DURATION
+	)
+	_cash_color_tween = PanelAnimator.flash_color(
+		cash_label, pulse_color, _CASH_PULSE_DURATION
+	)
 
 
-func _flash_reputation_label() -> void:
-	if _rep_tween and _rep_tween.is_valid():
-		_rep_tween.kill()
-	var flash_color: Color = UIThemeConstants.get_warning_color()
-	_rep_tween = create_tween()
-	for i: int in range(_REP_FLASH_COUNT):
-		_rep_tween.tween_property(
-			reputation_label, "modulate", flash_color,
-			_REP_FLASH_DURATION / (_REP_FLASH_COUNT * 2.0)
-		)
-		_rep_tween.tween_property(
-			reputation_label, "modulate", Color.WHITE,
-			_REP_FLASH_DURATION / (_REP_FLASH_COUNT * 2.0)
-		)
+func _flash_reputation_label(
+	old_value: float, new_value: float
+) -> void:
+	if is_equal_approx(old_value, new_value):
+		return
+	PanelAnimator.kill_tween(_rep_tween)
+	var increased: bool = new_value > old_value
+	var color: Color = (
+		UIThemeConstants.get_positive_color() if increased
+		else UIThemeConstants.get_negative_color()
+	)
+	var arrow: String = " \u25B2" if increased else " \u25BC"
+	reputation_label.text = _format_reputation(new_value) + arrow
+	_rep_tween = reputation_label.create_tween()
+	_rep_tween.tween_property(
+		reputation_label,
+		"theme_override_colors/font_color", color,
+		_REP_COLOR_FLASH,
+	)
+	_rep_tween.tween_interval(_REP_HOLD_DURATION)
+	_rep_tween.tween_callback(func() -> void:
+		reputation_label.text = _format_reputation(new_value)
+	)
+	_rep_tween.tween_property(
+		reputation_label,
+		"theme_override_colors/font_color",
+		UIThemeConstants.BODY_FONT_COLOR,
+		_REP_FADE_BACK,
+	)
 
 
-func _get_tier_index(score: float) -> int:
-	var tier_idx: int = 0
-	for i: int in range(_TIER_THRESHOLDS.size()):
-		if score >= _TIER_THRESHOLDS[i]:
-			tier_idx = i
-	return tier_idx
+
+func _on_build_mode_entered() -> void:
+	_tween_children_alpha(0.5)
+
+
+func _on_build_mode_exited() -> void:
+	_tween_children_alpha(1.0)
+
+
+func _tween_children_alpha(target: float) -> void:
+	PanelAnimator.kill_tween(_dim_tween)
+	_dim_tween = create_tween()
+	for child: Node in get_children():
+		if child is CanvasItem:
+			_dim_tween.parallel().tween_property(
+				child, "modulate:a", target,
+				PanelAnimator.BUILD_MODE_TRANSITION
+			).set_ease(Tween.EASE_OUT).set_trans(
+				Tween.TRANS_CUBIC
+			)

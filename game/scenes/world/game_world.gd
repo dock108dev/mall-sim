@@ -70,6 +70,7 @@ const _DebugOverlayScene: PackedScene = preload(
 
 var time_system: TimeSystem
 var economy_system: EconomySystem
+var ordering_system: OrderingSystem
 var inventory_system: InventorySystem
 var customer_system: CustomerSystem
 var mall_customer_spawner: MallCustomerSpawner
@@ -84,6 +85,7 @@ var progression_system: ProgressionSystem
 var trend_system: TrendSystem
 var tournament_system: TournamentSystem
 var meta_shift_system: MetaShiftSystem
+var market_event_system: MarketEventSystem
 var seasonal_event_system: SeasonalEventSystem
 var random_event_system: RandomEventSystem
 var staff_system: StaffSystem
@@ -105,6 +107,8 @@ var _staff_panel: StaffPanel
 var _tutorial_overlay: TutorialOverlay
 var _item_tooltip: ItemTooltip
 var _ending_screen: EndingScreen
+var _deferred_panels_loaded: bool = false
+var _startup_time_ms: float = 0.0
 
 @onready var _ui_layer: CanvasLayer = $UILayer
 @onready var _store_container: Node3D = $StoreContainer
@@ -115,8 +119,6 @@ func _ready() -> void:
 	_setup_systems()
 	_setup_ui()
 	_setup_build_mode()
-	if _fixture_catalog:
-		_fixture_catalog.placement_system = fixture_placement
 	if _mall_hallway:
 		_mall_hallway.set_systems(
 			economy_system, reputation_system, inventory_system
@@ -154,11 +156,21 @@ func _setup_systems() -> void:
 
 	economy_system.set_inventory_system(inventory_system)
 
+	ordering_system = OrderingSystem.new()
+	ordering_system.name = "OrderingSystem"
+	add_child(ordering_system)
+
 	trend_system = TrendSystem.new()
 	trend_system.name = "TrendSystem"
 	add_child(trend_system)
 	trend_system.initialize(GameManager.data_loader)
 	economy_system.set_trend_system(trend_system)
+
+	market_event_system = MarketEventSystem.new()
+	market_event_system.name = "MarketEventSystem"
+	add_child(market_event_system)
+	market_event_system.initialize()
+	economy_system.set_market_event_system(market_event_system)
 
 	customer_system = CustomerSystem.new()
 	customer_system.name = "CustomerSystem"
@@ -175,6 +187,8 @@ func _setup_systems() -> void:
 	add_child(reputation_system)
 	reputation_system.initialize()
 
+	customer_system.set_reputation_system(reputation_system)
+
 	mall_customer_spawner = MallCustomerSpawner.new()
 	mall_customer_spawner.name = "MallCustomerSpawner"
 	add_child(mall_customer_spawner)
@@ -182,7 +196,7 @@ func _setup_systems() -> void:
 		customer_system, reputation_system, trend_system
 	)
 
-	economy_system.set_reputation_system(reputation_system)
+	ordering_system.initialize(inventory_system, reputation_system)
 
 	haggle_system = HaggleSystem.new()
 	haggle_system.name = "HaggleSystem"
@@ -268,6 +282,7 @@ func _setup_systems() -> void:
 	performance_manager.name = "PerformanceManager"
 	add_child(performance_manager)
 	performance_manager.initialize(economy_system)
+	customer_system.set_performance_manager(performance_manager)
 
 	secret_thread_manager = SecretThreadManager.new()
 	secret_thread_manager.name = "SecretThreadManager"
@@ -296,9 +311,11 @@ func _setup_systems() -> void:
 		time_system,
 		reputation_system,
 	)
+	save_manager.set_ordering_system(ordering_system)
 	save_manager.set_store_state_manager(store_state_manager)
 	save_manager.set_progression_system(progression_system)
 	save_manager.set_trend_system(trend_system)
+	save_manager.set_market_event_system(market_event_system)
 	save_manager.set_tournament_system(tournament_system)
 	save_manager.set_meta_shift_system(meta_shift_system)
 	save_manager.set_seasonal_event_system(seasonal_event_system)
@@ -317,6 +334,8 @@ func _setup_systems() -> void:
 
 
 func _setup_ui() -> void:
+	var start_usec: int = Time.get_ticks_usec()
+
 	var hud: CanvasLayer = _HudScene.instantiate()
 	_ui_layer.add_child(hud)
 
@@ -346,6 +365,37 @@ func _setup_ui() -> void:
 	_ui_layer.add_child(haggle_panel)
 	checkout_system.set_haggle_panel(haggle_panel)
 
+	_item_tooltip = (
+		_ItemTooltipScene.instantiate() as ItemTooltip
+	)
+	_item_tooltip.economy_system = economy_system
+	_item_tooltip.inventory_system = inventory_system
+	_ui_layer.add_child(_item_tooltip)
+
+	var visual_feedback: VisualFeedback = (
+		_VisualFeedbackScene.instantiate() as VisualFeedback
+	)
+	_ui_layer.add_child(visual_feedback)
+
+	_tutorial_overlay = (
+		_TutorialOverlayScene.instantiate() as TutorialOverlay
+	)
+	_tutorial_overlay.tutorial_system = tutorial_system
+	_ui_layer.add_child(_tutorial_overlay)
+
+	var essential_ms: float = (
+		float(Time.get_ticks_usec() - start_usec) / 1000.0
+	)
+	_startup_time_ms = essential_ms
+
+	_setup_deferred_panels.call_deferred()
+
+
+func _setup_deferred_panels() -> void:
+	if _deferred_panels_loaded:
+		return
+	var start_usec: int = Time.get_ticks_usec()
+
 	_day_summary = _DaySummaryScene.instantiate() as DaySummary
 	_ui_layer.add_child(_day_summary)
 	_day_summary.continue_pressed.connect(_on_day_summary_continue)
@@ -357,16 +407,13 @@ func _setup_ui() -> void:
 	_fixture_catalog.economy_system = economy_system
 	_fixture_catalog.store_type = GameManager.DEFAULT_STARTING_STORE
 	_ui_layer.add_child(_fixture_catalog)
+	if fixture_placement:
+		_fixture_catalog.placement_system = fixture_placement
 
 	var milestone_popup: MilestonePopup = (
 		_MilestonePopupScene.instantiate() as MilestonePopup
 	)
 	_ui_layer.add_child(milestone_popup)
-
-	var visual_feedback: VisualFeedback = (
-		_VisualFeedbackScene.instantiate() as VisualFeedback
-	)
-	_ui_layer.add_child(visual_feedback)
 
 	var milestones_panel: MilestonesPanel = (
 		_MilestonesPanelScene.instantiate() as MilestonesPanel
@@ -377,6 +424,7 @@ func _setup_ui() -> void:
 	var order_panel: OrderPanel = (
 		_OrderPanelScene.instantiate() as OrderPanel
 	)
+	order_panel.ordering_system = ordering_system
 	order_panel.economy_system = economy_system
 	order_panel.store_type = GameManager.DEFAULT_STARTING_STORE
 	_ui_layer.add_child(order_panel)
@@ -423,19 +471,6 @@ func _setup_ui() -> void:
 	_staff_panel.reputation_system = reputation_system
 	_ui_layer.add_child(_staff_panel)
 
-	_tutorial_overlay = (
-		_TutorialOverlayScene.instantiate() as TutorialOverlay
-	)
-	_tutorial_overlay.tutorial_system = tutorial_system
-	_ui_layer.add_child(_tutorial_overlay)
-
-	_item_tooltip = (
-		_ItemTooltipScene.instantiate() as ItemTooltip
-	)
-	_item_tooltip.economy_system = economy_system
-	_item_tooltip.inventory_system = inventory_system
-	_ui_layer.add_child(_item_tooltip)
-
 	_ending_screen = (
 		_EndingScreenScene.instantiate() as EndingScreen
 	)
@@ -447,6 +482,34 @@ func _setup_ui() -> void:
 		_wire_pack_system(initial_ctrl)
 
 	_setup_debug_overlay()
+
+	_deferred_panels_loaded = true
+	var deferred_ms: float = (
+		float(Time.get_ticks_usec() - start_usec) / 1000.0
+	)
+	_startup_time_ms += deferred_ms
+	_log_panel_profile(deferred_ms)
+
+
+## Forces deferred panels to load if not yet initialized.
+func _ensure_deferred_panels() -> void:
+	if not _deferred_panels_loaded:
+		_setup_deferred_panels()
+
+
+func _log_panel_profile(deferred_ms: float) -> void:
+	var all_panels: Array[Node] = []
+	for child: Node in _ui_layer.get_children():
+		all_panels.append(child)
+	var profile: Dictionary = (
+		PerformanceManager.estimate_panel_memory(all_panels)
+	)
+	push_warning(
+		"UI Panel Profile: %d panels, ~%.1f KB estimated, "
+		% [profile.get("panel_count", 0), profile.get("total_kb", 0.0)]
+		+ "deferred batch: %.1fms, total startup: %.1fms"
+		% [deferred_ms, _startup_time_ms]
+	)
 
 
 func _setup_debug_overlay() -> void:
@@ -501,6 +564,10 @@ func _setup_build_mode() -> void:
 	var nav_region: NavigationRegion3D = _find_nav_region()
 	if nav_region:
 		build_mode.set_nav_region(nav_region)
+
+	var build_transition := BuildModeTransition.new()
+	build_transition.name = "BuildModeTransition"
+	add_child(build_transition)
 
 	_register_initial_fixtures()
 
@@ -568,6 +635,7 @@ func _on_day_ended(day: int) -> void:
 	var discrepancy: float = 0.0
 	if ambient_moments_system:
 		discrepancy = ambient_moments_system.get_active_discrepancy()
+	_ensure_deferred_panels()
 	_day_summary.show_summary(
 		day,
 		summary.get("total_revenue", 0.0),
@@ -668,6 +736,9 @@ func _on_storefront_entered(
 	if not _mall_hallway:
 		return
 
+	if performance_manager:
+		performance_manager.begin_store_switch()
+
 	var old_store: String = GameManager.current_store_id
 	if not old_store.is_empty() and store_state_manager:
 		store_state_manager.save_store_state(old_store)
@@ -688,6 +759,11 @@ func _on_storefront_entered(
 		_wire_pack_system(store_ctrl)
 		_wire_electronics_system(store_ctrl)
 		_wire_sports_memorabilia_system(store_ctrl)
+
+	_ensure_deferred_panels()
+
+	if performance_manager:
+		performance_manager.end_store_switch()
 
 
 ## Wires up a VideoRentalStoreController with system references if applicable.
@@ -775,6 +851,7 @@ func _on_storefront_exited() -> void:
 func _set_systems_paused(paused: bool) -> void:
 	time_system.set_process(!paused)
 	economy_system.set_process(!paused)
+	ordering_system.set_process(!paused)
 	inventory_system.set_process(!paused)
 	customer_system.set_process(!paused)
 	mall_customer_spawner.set_process(!paused)
@@ -784,6 +861,7 @@ func _set_systems_paused(paused: bool) -> void:
 	store_state_manager.set_process(!paused)
 	progression_system.set_process(!paused)
 	trend_system.set_process(!paused)
+	market_event_system.set_process(!paused)
 	tournament_system.set_process(!paused)
 	meta_shift_system.set_process(!paused)
 	seasonal_event_system.set_process(!paused)
@@ -803,10 +881,12 @@ func _apply_pending_load() -> void:
 
 
 func _on_pause_save_pressed() -> void:
+	_ensure_deferred_panels()
 	_save_load_panel.open_save()
 
 
 func _on_pause_settings_pressed() -> void:
+	_ensure_deferred_panels()
 	_settings_panel.open()
 
 
@@ -823,6 +903,7 @@ func _on_load_slot_requested(slot: int) -> void:
 
 
 func _on_all_milestones_completed() -> void:
+	_ensure_deferred_panels()
 	if ending_evaluator.has_ending_been_shown():
 		return
 	var ending_type: String = ending_evaluator.evaluate_ending()

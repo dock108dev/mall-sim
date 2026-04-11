@@ -7,6 +7,8 @@ signal offer_declined
 signal counter_submitted(price: float)
 
 var _is_open: bool = false
+var _anim_tween: Tween
+var _feedback_tween: Tween
 
 @onready var _item_name_label: Label = (
 	$Margin/VBox/ItemNameLabel
@@ -54,16 +56,17 @@ func show_negotiation(
 	max_rounds: int,
 ) -> void:
 	_item_name_label.text = item_name
-	_condition_label.text = "Condition: %s" % item_condition
-	_sticker_label.text = "Sticker: $%.2f" % sticker_price
-	_offer_label.text = "Customer offers: $%.2f" % customer_offer
-	_round_label.text = "Round 1 / %d" % max_rounds
+	_condition_label.text = tr("HAGGLE_CONDITION") % item_condition
+	_sticker_label.text = tr("HAGGLE_STICKER") % sticker_price
+	_offer_label.text = tr("HAGGLE_CUSTOMER_OFFERS") % customer_offer
+	_round_label.text = tr("HAGGLE_ROUND") % [1, max_rounds]
 	_counter_input.value = snappedf(customer_offer, 0.01)
 	_counter_input.min_value = 0.01
 	_counter_input.max_value = 99999.0
 	_counter_input.step = 0.50
 	_is_open = true
-	visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_open(self)
 
 
 ## Updates the panel when the customer makes a counter-offer.
@@ -71,10 +74,10 @@ func show_customer_counter(
 	new_offer: float, round_number: int, max_rounds: int
 ) -> void:
 	_offer_label.text = (
-		"Customer offers: $%.2f" % new_offer
+		tr("HAGGLE_CUSTOMER_OFFERS") % new_offer
 	)
 	_round_label.text = (
-		"Round %d / %d" % [round_number, max_rounds]
+		tr("HAGGLE_ROUND") % [round_number, max_rounds]
 	)
 	_counter_input.value = snappedf(new_offer, 0.01)
 
@@ -82,7 +85,8 @@ func show_customer_counter(
 ## Closes the haggle panel.
 func hide_negotiation() -> void:
 	_is_open = false
-	visible = false
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_close(self)
 
 
 ## Returns whether the panel is currently visible.
@@ -91,6 +95,7 @@ func is_open() -> bool:
 
 
 func _on_accept_pressed() -> void:
+	_flash_result(UIThemeConstants.get_positive_color())
 	offer_accepted.emit()
 
 
@@ -100,7 +105,16 @@ func _on_counter_pressed() -> void:
 
 
 func _on_decline_pressed() -> void:
+	_flash_result(UIThemeConstants.get_negative_color())
+	PanelAnimator.shake(self)
 	offer_declined.emit()
+
+
+func _flash_result(color: Color) -> void:
+	PanelAnimator.kill_tween(_feedback_tween)
+	_feedback_tween = PanelAnimator.flash_color(
+		self, color, PanelAnimator.FEEDBACK_SHAKE_DURATION
+	)
 
 
 func _on_panel_opened(panel_name: String) -> void:

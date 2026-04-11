@@ -205,7 +205,7 @@ func _create_item_cell(item: ItemInstance) -> void:
 	var label := Label.new()
 	var condition_text: String = item.condition.capitalize()
 	if _is_unrentable_item(item):
-		condition_text += " - Unrentable"
+		condition_text += " - " + tr("INVENTORY_UNRENTABLE")
 	var shape: String = UIThemeConstants.get_rarity_shape(rarity_key)
 	label.text = "%s %s\n[%s]" % [
 		shape,
@@ -268,17 +268,17 @@ func _show_item_detail(item: ItemInstance) -> void:
 	_detail_name.text = item.definition.name
 	var detail_cond_text: String = item.condition.capitalize()
 	if _is_unrentable_item(item):
-		detail_cond_text += "  [Unrentable]"
+		detail_cond_text += "  [%s]" % tr("INVENTORY_UNRENTABLE")
 		_detail_condition.add_theme_color_override(
 			"font_color", UIThemeConstants.get_negative_color()
 		)
 	else:
 		_detail_condition.remove_theme_color_override("font_color")
-	_detail_condition.text = "Condition: %s" % detail_cond_text
+	_detail_condition.text = tr("INVENTORY_CONDITION") % detail_cond_text
 	var rarity_display: String = UIThemeConstants.get_rarity_display(
 		item.definition.rarity
 	)
-	_detail_rarity.text = "Rarity: %s" % rarity_display
+	_detail_rarity.text = tr("INVENTORY_RARITY") % rarity_display
 	var rarity_color: Color = UIThemeConstants.get_rarity_color(
 		item.definition.rarity
 	)
@@ -286,14 +286,14 @@ func _show_item_detail(item: ItemInstance) -> void:
 		"font_color", rarity_color
 	)
 	_detail_base_price.text = (
-		"Base Price: $%.2f" % item.definition.base_price
+		tr("INVENTORY_BASE_PRICE") % item.definition.base_price
 	)
 	_detail_value.text = (
-		"Est. Value: $%.2f" % item.get_current_value()
+		tr("INVENTORY_EST_VALUE") % item.get_current_value()
 	)
 	var desc: String = item.definition.description
 	if desc.is_empty():
-		desc = "No description available."
+		desc = tr("INVENTORY_NO_DESC")
 	_detail_description.text = desc
 	_update_refurbish_button(item)
 	_update_open_pack_button(item)
@@ -320,13 +320,13 @@ func _update_capacity_label() -> void:
 	)
 	var count: int = items.size()
 	if _source_location == SOURCE_RETURNS_BIN:
-		_capacity_label.text = "Returns Bin: %d items" % count
+		_capacity_label.text = tr("INVENTORY_RETURNS_BIN") % count
 		return
 	var capacity: int = _get_backroom_capacity()
 	if capacity > 0:
-		_capacity_label.text = "%d / %d items" % [count, capacity]
+		_capacity_label.text = tr("INVENTORY_CAPACITY") % [count, capacity]
 	else:
-		_capacity_label.text = "%d items" % count
+		_capacity_label.text = tr("INVENTORY_COUNT") % count
 
 
 func _get_backroom_capacity() -> int:
@@ -384,11 +384,11 @@ func _place_selected_item(slot: ShelfSlot) -> void:
 	if not _selected_item or not inventory_system:
 		return
 	if slot.is_occupied():
-		EventBus.notification_requested.emit("Slot occupied")
+		EventBus.notification_requested.emit(tr("INVENTORY_SLOT_OCCUPIED"))
 		return
 	if _selected_item.current_location != _source_location:
 		EventBus.notification_requested.emit(
-			"Item is not in %s" % _source_location.replace("_", " ")
+			tr("INVENTORY_NOT_IN_LOCATION") % _source_location.replace("_", " ")
 		)
 		return
 	inventory_system.move_item(
@@ -413,7 +413,7 @@ func _remove_item_from_shelf(slot: ShelfSlot) -> void:
 	slot.remove_item()
 	inventory_system.move_item(item_id, "backroom")
 	EventBus.item_removed_from_shelf.emit(item_id, slot.slot_id)
-	EventBus.notification_requested.emit("Item returned to backroom")
+	EventBus.notification_requested.emit(tr("INVENTORY_RETURNED"))
 
 
 func _enter_placement_mode() -> void:
@@ -469,11 +469,11 @@ func _update_refurbish_button(item: ItemInstance) -> void:
 	if is_for_parts and not can_refurb:
 		var active: int = refurbishment_system.get_active_count()
 		if active >= RefurbishmentSystem.MAX_CONCURRENT:
-			_refurbish_button.text = "Refurbish (queue full)"
+			_refurbish_button.text = tr("INVENTORY_REFURBISH_FULL")
 		else:
-			_refurbish_button.text = "Refurbish"
+			_refurbish_button.text = tr("INVENTORY_REFURBISH")
 	else:
-		_refurbish_button.text = "Refurbish"
+		_refurbish_button.text = tr("INVENTORY_REFURBISH")
 
 
 ## Returns true if the item is a rental category at poor condition.
@@ -497,7 +497,7 @@ func _update_open_pack_button(item: ItemInstance) -> void:
 		return
 	var is_pack: bool = pack_controller.is_openable_pack(item)
 	_open_pack_button.visible = is_pack
-	_open_pack_button.text = "Open Pack"
+	_open_pack_button.text = tr("INVENTORY_OPEN_PACK")
 
 
 func _on_open_pack_pressed() -> void:
@@ -512,7 +512,7 @@ func _on_open_pack_pressed() -> void:
 	)
 	if cards.is_empty():
 		EventBus.notification_requested.emit(
-			"Failed to open pack"
+			tr("INVENTORY_PACK_FAILED")
 		)
 		return
 	_selected_item = null

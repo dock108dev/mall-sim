@@ -7,6 +7,7 @@ const PANEL_NAME: String = "refurbishment"
 var _refurbishment_system: RefurbishmentSystem = null
 var _current_item: ItemInstance = null
 var _is_open: bool = false
+var _anim_tween: Tween
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _title_label: Label = $PanelRoot/Margin/VBox/TitleLabel
@@ -63,13 +64,14 @@ func open(item: ItemInstance) -> void:
 		return
 	if not _refurbishment_system.can_refurbish(item):
 		EventBus.notification_requested.emit(
-			"This item cannot be refurbished"
+			tr("REFURBISH_CANNOT")
 		)
 		return
 	_current_item = item
 	_populate(item)
 	_is_open = true
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_open(_panel)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
@@ -78,8 +80,12 @@ func close() -> void:
 		return
 	_is_open = false
 	_current_item = null
-	_panel.visible = false
-	EventBus.panel_closed.emit(PANEL_NAME)
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_close(_panel)
+	_anim_tween.finished.connect(
+		func() -> void: EventBus.panel_closed.emit(PANEL_NAME),
+		CONNECT_ONE_SHOT,
+	)
 
 
 func is_open() -> bool:
@@ -87,23 +93,23 @@ func is_open() -> bool:
 
 
 func _populate(item: ItemInstance) -> void:
-	_title_label.text = "Refurbish Item"
+	_title_label.text = tr("REFURBISH_TITLE")
 	_item_name_label.text = item.definition.name
 	_condition_label.text = (
-		"Current Condition: %s" % item.condition.capitalize()
+		tr("REFURBISH_CONDITION") % item.condition.capitalize()
 	)
 	var cost: float = _refurbishment_system.get_parts_cost(item)
-	_cost_label.text = "Parts Cost: $%.2f" % cost
+	_cost_label.text = tr("REFURBISH_COST") % cost
 	var duration: int = _refurbishment_system.get_duration(item)
-	_duration_label.text = "Duration: %d day%s" % [
+	_duration_label.text = tr("REFURBISH_DURATION") % [
 		duration, "" if duration == 1 else "s"
 	]
 	var chance: float = _refurbishment_system.get_success_chance(item)
-	_chance_label.text = "Success Chance: %d%%" % int(chance * 100.0)
-	_outcome_label.text = "Success: condition upgrades to Good or Near Mint"
-	_warning_label.text = "Failure: item is destroyed permanently"
+	_chance_label.text = tr("REFURBISH_CHANCE") % int(chance * 100.0)
+	_outcome_label.text = tr("REFURBISH_SUCCESS")
+	_warning_label.text = tr("REFURBISH_FAILURE")
 	var active: int = _refurbishment_system.get_active_count()
-	_confirm_button.text = "Refurbish (%d/%d slots)" % [
+	_confirm_button.text = tr("REFURBISH_SLOTS") % [
 		active, RefurbishmentSystem.MAX_CONCURRENT
 	]
 

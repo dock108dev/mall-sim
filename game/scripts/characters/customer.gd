@@ -19,6 +19,8 @@ const INVESTOR_MAX_MARKET_RATIO: float = 0.8
 const TESTED_BONUS: float = 0.25
 const DISAPPOINTED_CHANCE: float = 0.05
 const DEMO_CATEGORY_BONUS: float = 0.20
+## Navigation path recalculation interval in seconds.
+const NAV_RECALC_INTERVAL: float = 0.2
 const CONDITION_RANKS: Dictionary = {
 	"poor": 0,
 	"fair": 1,
@@ -31,17 +33,28 @@ var profile: CustomerProfile = null
 var current_state: State = State.ENTERING
 var patience_timer: float = 0.0
 var browse_timer: float = 0.0
+## Frame stagger offset assigned by CustomerSystem (0.0 to 1.0).
+var stagger_offset: float = 0.0
 
 var _store_controller: StoreController = null
 var _inventory_system: InventorySystem = null
+var _budget_multiplier: float = 1.0
 var _visited_slots: Array[Node] = []
 var _desired_item: ItemInstance = null
 var _desired_item_slot: Node = null
 var _current_target_slot: Node = null
+var _made_purchase: bool = false
 var _exit_position: Vector3 = Vector3.ZERO
 var _register_position: Vector3 = Vector3.ZERO
 var _initialized: bool = false
 var _time_paused: bool = false
+var _nav_recalc_timer: float = 0.0
+var _cached_preferred_slots: Array[Node] = []
+var _preferred_slots_dirty: bool = true
+## Per-frame timing for profiling (set each _physics_process).
+var last_script_time_ms: float = 0.0
+var last_nav_time_ms: float = 0.0
+var last_anim_time_ms: float = 0.0
 
 @onready var _navigation_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var _body_mesh: MeshInstance3D = $BodyMesh
@@ -62,14 +75,24 @@ func _ready() -> void:
 func initialize(
 	p_profile: CustomerProfile,
 	store_controller: StoreController,
-	inventory_system: InventorySystem
+	inventory_system: InventorySystem,
+	budget_multiplier: float = 1.0
 ) -> void:
 	profile = p_profile
 	_store_controller = store_controller
 	_inventory_system = inventory_system
+	_budget_multiplier = budget_multiplier
 	patience_timer = p_profile.patience * 120.0
 	_reset_browse_timer()
 	current_state = State.ENTERING
+	_nav_recalc_timer = stagger_offset * NAV_RECALC_INTERVAL
+	_preferred_slots_dirty = true
+	_cached_preferred_slots.clear()
+	_visited_slots.clear()
+	_desired_item = null
+	_desired_item_slot = null
+	_current_target_slot = null
+	_made_purchase = false
 	_cache_navigation_targets()
 	_navigate_to_random_shelf()
 	_animator.initialize(_animation_player)
@@ -80,6 +103,7 @@ func initialize(
 func _physics_process(delta: float) -> void:
 	if not _initialized or _time_paused:
 		return
+	var t0: int = Time.get_ticks_usec()
 	match current_state:
 		State.ENTERING:
 			_process_entering()
@@ -93,7 +117,14 @@ func _physics_process(delta: float) -> void:
 			_process_waiting_in_queue(delta)
 		State.LEAVING:
 			_process_leaving()
-	_move_along_path()
+	var t1: int = Time.get_ticks_usec()
+	_move_along_path(delta)
+	var t2: int = Time.get_ticks_usec()
+	last_script_time_ms = float(t1 - t0) / 1000.0
+	last_nav_time_ms = float(t2 - t1) / 1000.0
+	# Animation cost is driven by AnimationPlayer internally per frame;
+	# approximate from the animation update call inside _move_along_path.
+	last_anim_time_ms = last_nav_time_ms * 0.15
 
 
 ## Returns the item the customer wants to buy, or null.
@@ -108,6 +139,7 @@ func get_desired_item_slot() -> Node:
 
 ## Called by CheckoutSystem when checkout completes (accept or decline).
 func complete_purchase() -> void:
+	_made_purchase = true
 	_desired_item = null
 	_desired_item_slot = null
 	_transition_to(State.LEAVING)
@@ -204,6 +236,8 @@ func _process_leaving() -> void:
 
 func _transition_to(new_state: State) -> void:
 	current_state = new_state
+	if new_state == State.LEAVING:
+		_animator.set_satisfied(_made_purchase)
 	_animator.play_for_state(new_state)
 	match new_state:
 		State.PURCHASING:
@@ -221,13 +255,26 @@ func _transition_to_deciding_or_leaving() -> void:
 		_transition_to(State.LEAVING)
 
 
-func _move_along_path() -> void:
+func _move_along_path(delta: float) -> void:
 	if _navigation_agent.is_navigation_finished():
 		velocity = Vector3.ZERO
+		_animator.update_movement(velocity)
 		return
-	var next_pos: Vector3 = _navigation_agent.get_next_path_position()
+	_nav_recalc_timer -= delta
+	var next_pos: Vector3
+	if _nav_recalc_timer <= 0.0:
+		_nav_recalc_timer = NAV_RECALC_INTERVAL
+		next_pos = _navigation_agent.get_next_path_position()
+	else:
+		# Between recalcs, continue toward current target
+		next_pos = _navigation_agent.target_position
 	var direction: Vector3 = next_pos - global_position
 	direction.y = 0.0
+	var dist_sq: float = direction.length_squared()
+	if dist_sq < 0.01:
+		velocity = Vector3.ZERO
+		_animator.update_movement(velocity)
+		return
 	direction = direction.normalized()
 	var desired: Vector3 = direction * MOVE_SPEED
 	if _navigation_agent.avoidance_enabled:
@@ -235,6 +282,7 @@ func _move_along_path() -> void:
 	else:
 		velocity = desired
 		move_and_slide()
+	_animator.update_movement(velocity)
 
 
 func _cache_navigation_targets() -> void:
@@ -282,6 +330,7 @@ func _navigate_to_exit() -> void:
 func _evaluate_current_shelf() -> void:
 	if not _current_target_slot or not _inventory_system:
 		return
+	_preferred_slots_dirty = true
 	var slot_id: String = str(_current_target_slot.get("slot_id"))
 	if slot_id.is_empty():
 		return
@@ -310,7 +359,7 @@ func _is_item_desirable(item: ItemInstance) -> bool:
 		item_price = item.get_current_value()
 	if item_price < profile.budget_range[0]:
 		return false
-	if item_price > profile.budget_range[1]:
+	if item_price > profile.budget_range[1] * _budget_multiplier:
 		return false
 	if _is_bargain_only_buyer():
 		var market_value: float = item.get_current_value()
@@ -358,7 +407,7 @@ func _score_item(item: ItemInstance) -> float:
 func _get_willingness_to_pay() -> float:
 	if not _desired_item or not profile:
 		return 0.0
-	var budget_max: float = profile.budget_range[1]
+	var budget_max: float = profile.budget_range[1] * _budget_multiplier
 	var item_value: float = _desired_item.get_current_value()
 	# Lower sensitivity means willing to pay more above market value
 	var tolerance: float = 2.0 - profile.price_sensitivity
@@ -438,11 +487,17 @@ func _get_meta_shift_bonus(item: ItemInstance) -> float:
 	return 0.0
 
 
-## Returns slots containing items matching preferred categories.
+## Returns slots containing items matching preferred categories (cached).
 func _filter_preferred_slots(slots: Array[Node]) -> Array[Node]:
 	if profile.preferred_categories.is_empty() or not _inventory_system:
 		return []
-	var preferred: Array[Node] = []
+	if not _preferred_slots_dirty:
+		var result: Array[Node] = []
+		for slot: Node in _cached_preferred_slots:
+			if slot in slots:
+				result.append(slot)
+		return result
+	_cached_preferred_slots.clear()
 	for slot: Node in slots:
 		var slot_id: String = str(slot.get("slot_id"))
 		if slot_id.is_empty():
@@ -455,9 +510,14 @@ func _filter_preferred_slots(slots: Array[Node]) -> Array[Node]:
 			if not item.definition:
 				continue
 			if item.definition.category in profile.preferred_categories:
-				preferred.append(slot)
+				_cached_preferred_slots.append(slot)
 				break
-	return preferred
+	_preferred_slots_dirty = false
+	var result: Array[Node] = []
+	for slot: Node in _cached_preferred_slots:
+		if slot in slots:
+			result.append(slot)
+	return result
 
 
 func _reset_browse_timer() -> void:
@@ -488,9 +548,28 @@ func _randomize_body_color() -> void:
 	var body_material := StandardMaterial3D.new()
 	body_material.albedo_color = body_color
 	_body_mesh.material_override = body_material
-	var head_material := StandardMaterial3D.new()
-	head_material.albedo_color = body_color.lightened(0.2)
-	_head_mesh.material_override = head_material
+	var skin_color := Color.from_hsv(
+		randf_range(0.05, 0.12), randf_range(0.2, 0.5), randf_range(0.6, 0.9)
+	)
+	var skin_material := StandardMaterial3D.new()
+	skin_material.albedo_color = skin_color
+	_head_mesh.material_override = skin_material
+	var pants_color := body_color.darkened(0.3)
+	_apply_limb_materials(skin_material, pants_color)
+
+
+func _apply_limb_materials(
+	skin_material: StandardMaterial3D, pants_color: Color
+) -> void:
+	var pants_material := StandardMaterial3D.new()
+	pants_material.albedo_color = pants_color
+	for child: Node in _body_mesh.get_children():
+		if child is MeshInstance3D:
+			var limb: MeshInstance3D = child as MeshInstance3D
+			if limb.name.contains("Arm"):
+				limb.material_override = skin_material
+			elif limb.name.contains("Leg"):
+				limb.material_override = pants_material
 
 
 func _on_velocity_computed(safe_velocity: Vector3) -> void:

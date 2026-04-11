@@ -110,9 +110,9 @@ func _create_load_slot_row(slot: int) -> void:
 
 	var name_label := Label.new()
 	if slot == 0:
-		name_label.text = "Auto Save"
+		name_label.text = tr("MENU_AUTO_SAVE")
 	else:
-		name_label.text = "Slot %d" % slot
+		name_label.text = tr("MENU_SLOT") % slot
 	info_box.add_child(name_label)
 
 	var detail_label := Label.new()
@@ -120,14 +120,14 @@ func _create_load_slot_row(slot: int) -> void:
 	if exists:
 		detail_label.text = _format_metadata(metadata)
 	else:
-		detail_label.text = "Empty"
+		detail_label.text = tr("MENU_EMPTY")
 		detail_label.modulate = Color(0.5, 0.5, 0.5)
 	info_box.add_child(detail_label)
 
 	row.add_child(info_box)
 
 	var load_button := Button.new()
-	load_button.text = "Load"
+	load_button.text = tr("MENU_LOAD")
 	load_button.custom_minimum_size = Vector2(80, 0)
 	if not exists:
 		load_button.disabled = true
@@ -206,12 +206,12 @@ func _format_metadata(metadata: Dictionary) -> String:
 
 	var parts: Array[String] = []
 	if day > 0:
-		parts.append("Day %d" % day)
+		parts.append(tr("MENU_DAY") % day)
 	if not store.is_empty():
 		parts.append(store.capitalize())
 	if not timestamp.is_empty():
 		parts.append(timestamp.left(10))
 
 	if parts.is_empty():
-		return "Saved game"
+		return tr("MENU_SAVED_GAME")
 	return " | ".join(parts)

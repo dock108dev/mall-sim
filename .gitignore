@@ -41,5 +41,4 @@ Desktop.ini
 *.log
 
 # AIDLC working directory
-.aidlc/runs/
-.aidlc/reports/
+.aidlc

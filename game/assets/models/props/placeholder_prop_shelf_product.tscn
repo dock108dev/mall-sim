@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="BoxMesh" id="body_mesh"]
+size = Vector3(0.15, 0.18, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="body_mat"]
+resource_name = "Placeholder Shelf Product"
+albedo_color = Color(0.9, 0.9, 0.9, 1)
+roughness = 0.85
+
+[node name="PlaceholderPropShelfProduct" type="Node3D"]
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09, 0)
+mesh = SubResource("body_mesh")
+surface_material_override/0 = SubResource("body_mat")

@@ -9,6 +9,8 @@ var data_loader: DataLoader
 var economy_system: EconomySystem
 
 var _is_open: bool = false
+var _anim_tween: Tween
+var _rest_x: float = 0.0
 var _selected_fixture_id: String = ""
 
 var _panel: PanelContainer
@@ -25,6 +27,7 @@ var _close_button: Button
 func _ready() -> void:
 	_build_ui()
 	_panel.visible = false
+	_rest_x = _panel.position.x
 	EventBus.fixture_selected.connect(_on_fixture_selected)
 	EventBus.build_mode_exited.connect(close)
 	EventBus.panel_opened.connect(_on_panel_opened)
@@ -43,16 +46,24 @@ func open(fixture_id: String) -> void:
 	_selected_fixture_id = fixture_id
 	_is_open = true
 	_refresh_display()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.slide_open(_panel, _rest_x, false)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
-func close() -> void:
+func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
 	_is_open = false
 	_selected_fixture_id = ""
-	_panel.visible = false
+	PanelAnimator.kill_tween(_anim_tween)
+	if immediate:
+		_panel.visible = false
+		_panel.position.x = _rest_x
+	else:
+		_anim_tween = PanelAnimator.slide_close(
+			_panel, _rest_x, false
+		)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -79,17 +90,17 @@ func _refresh_display() -> void:
 
 	var tier_name: String = FixtureDefinition.get_tier_name(tier)
 	_title_label.text = def.name
-	_tier_label.text = "Current Tier: %s" % tier_name
+	_tier_label.text = tr("UPGRADE_CURRENT_TIER") % tier_name
 
 	var current_slots: int = def.get_slots_for_tier(tier)
 	var current_bonus: float = def.get_purchase_prob_bonus(tier)
-	_slots_label.text = "Slots: %d" % current_slots
-	_bonus_label.text = "Purchase Bonus: +%d%%" % roundi(
+	_slots_label.text = tr("UPGRADE_SLOTS") % current_slots
+	_bonus_label.text = tr("UPGRADE_BONUS") % roundi(
 		current_bonus * 100.0
 	)
 
 	if tier >= FixtureDefinition.TierLevel.PREMIUM:
-		_cost_label.text = "Maximum tier reached"
+		_cost_label.text = tr("UPGRADE_MAX_TIER")
 		_requirement_label.text = ""
 		_upgrade_button.visible = false
 		return
@@ -104,7 +115,7 @@ func _refresh_display() -> void:
 	var next_bonus: float = def.get_purchase_prob_bonus(next_tier)
 
 	_cost_label.text = (
-		"Upgrade to %s: $%.0f (+%d slots, +%d%% bonus)"
+		tr("UPGRADE_COST")
 		% [
 			next_name,
 			cost,
@@ -150,7 +161,7 @@ func _on_fixture_upgraded(
 
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
-		close()
+		close(true)
 
 
 func _build_ui() -> void:
@@ -206,7 +217,7 @@ func _build_ui() -> void:
 	vbox.add_child(_requirement_label)
 
 	_upgrade_button = Button.new()
-	_upgrade_button.text = "Upgrade"
+	_upgrade_button.text = tr("UPGRADE_BUTTON")
 	_upgrade_button.custom_minimum_size = Vector2(0, 36)
 	_upgrade_button.pressed.connect(_on_upgrade_pressed)
 	vbox.add_child(_upgrade_button)

@@ -50,7 +50,7 @@ func show_step(step_id: String, prompt_text: String) -> void:
 	var total_steps: int = (
 		TutorialSystem.TutorialStep.FINISHED
 	)
-	_step_label.text = "Step %d of %d" % [
+	_step_label.text = tr("TUTORIAL_STEP") % [
 		step_number, total_steps
 	]
 	_prompt_label.text = prompt_text

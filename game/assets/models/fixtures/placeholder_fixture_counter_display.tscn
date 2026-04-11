@@ -1,0 +1,63 @@
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="BoxMesh" id="base_mesh"]
+size = Vector3(1.8, 0.8, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="base_mat"]
+resource_name = "Display Base"
+albedo_color = Color(0.35, 0.3, 0.25, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="glass_top_mesh"]
+size = Vector3(1.76, 0.04, 0.56)
+
+[sub_resource type="StandardMaterial3D" id="glass_mat"]
+resource_name = "Display Glass"
+albedo_color = Color(0.7, 0.85, 0.9, 0.35)
+roughness = 0.1
+metallic = 0.2
+
+[sub_resource type="BoxMesh" id="frame_top_mesh"]
+size = Vector3(1.8, 0.06, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="frame_mat"]
+resource_name = "Display Frame"
+albedo_color = Color(0.3, 0.28, 0.26, 1)
+roughness = 0.7
+metallic = 0.15
+
+[sub_resource type="BoxMesh" id="trim_mesh"]
+size = Vector3(1.82, 0.04, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="trim_mat"]
+resource_name = "Display Trim"
+albedo_color = Color(0.6, 0.55, 0.45, 1)
+roughness = 0.5
+metallic = 0.3
+
+[node name="PlaceholderFixtureCounterDisplay" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("base_mesh")
+surface_material_override/0 = SubResource("base_mat")
+
+[node name="GlassTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.82, 0)
+mesh = SubResource("glass_top_mesh")
+surface_material_override/0 = SubResource("glass_mat")
+
+[node name="FrameTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.87, 0)
+mesh = SubResource("frame_top_mesh")
+surface_material_override/0 = SubResource("frame_mat")
+
+[node name="TrimFront" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42, 0.31)
+mesh = SubResource("trim_mesh")
+surface_material_override/0 = SubResource("trim_mat")
+
+[node name="TrimBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42, -0.31)
+mesh = SubResource("trim_mesh")
+surface_material_override/0 = SubResource("trim_mat")

@@ -24,23 +24,23 @@ const STEP_IDS: Dictionary = {
 	TutorialStep.FINISHED: "finished",
 }
 
-const STEP_TEXT: Dictionary = {
-	TutorialStep.WELCOME: "Welcome to your new store! Look around with the camera to get familiar.",
-	TutorialStep.VIEW_BACKROOM: "Click the backroom door to view your starting inventory.",
-	TutorialStep.PLACE_ITEM: "Select an item, then click an empty shelf slot to place it.",
-	TutorialStep.SET_PRICE: "Click a stocked shelf item to set its price.",
-	TutorialStep.WAIT_FOR_CUSTOMER: "Customers will arrive soon. Watch them browse your shelves.",
-	TutorialStep.COMPLETE_SALE: "A customer is ready to buy! Click the register to complete the sale.",
-	TutorialStep.VIEW_DAY_SUMMARY: "The day is ending. Review your daily summary.",
+const STEP_TEXT_KEYS: Dictionary = {
+	TutorialStep.WELCOME: "TUTORIAL_WELCOME",
+	TutorialStep.VIEW_BACKROOM: "TUTORIAL_VIEW_BACKROOM",
+	TutorialStep.PLACE_ITEM: "TUTORIAL_PLACE_ITEM",
+	TutorialStep.SET_PRICE: "TUTORIAL_SET_PRICE",
+	TutorialStep.WAIT_FOR_CUSTOMER: "TUTORIAL_WAIT_CUSTOMER",
+	TutorialStep.COMPLETE_SALE: "TUTORIAL_COMPLETE_SALE",
+	TutorialStep.VIEW_DAY_SUMMARY: "TUTORIAL_VIEW_SUMMARY",
 	TutorialStep.FINISHED: "",
 }
 
 const CONTEXTUAL_TIP_DAYS: int = 3
 
-const CONTEXTUAL_TIPS: Dictionary = {
-	"ordering": "Tip: Press O to open the order panel and restock your store.",
-	"build_mode": "Tip: Press B to enter build mode and rearrange your fixtures.",
-	"reputation": "Tip: Fair prices and good stock build your reputation over time.",
+const CONTEXTUAL_TIP_KEYS: Dictionary = {
+	"ordering": "TIP_ORDERING",
+	"build_mode": "TIP_BUILD_MODE",
+	"reputation": "TIP_REPUTATION",
 }
 
 var tutorial_completed: bool = false
@@ -223,21 +223,22 @@ func _show_contextual_tip_for_day(day: int) -> void:
 		return
 
 	_tips_shown[tip_key] = true
-	var tip_text: String = CONTEXTUAL_TIPS.get(tip_key, "")
-	if not tip_text.is_empty():
-		EventBus.contextual_tip_requested.emit(tip_text)
+	var tip_key_str: String = CONTEXTUAL_TIP_KEYS.get(tip_key, "")
+	if not tip_key_str.is_empty():
+		EventBus.contextual_tip_requested.emit(tr(tip_key_str))
 
 	# Show build mode tip on day 2 as well, slightly delayed
 	if day == 2 and not _tips_shown.get("build_mode", false):
 		_tips_shown["build_mode"] = true
-		var build_tip: String = CONTEXTUAL_TIPS.get(
+		var build_tip_key: String = CONTEXTUAL_TIP_KEYS.get(
 			"build_mode", ""
 		)
-		if not build_tip.is_empty():
+		if not build_tip_key.is_empty():
+			var resolved_tip: String = tr(build_tip_key)
 			get_tree().create_timer(30.0).timeout.connect(
 				func() -> void:
 					EventBus.contextual_tip_requested.emit(
-						build_tip
+						resolved_tip
 					)
 			)
 
@@ -248,7 +249,10 @@ func _ensure_day_started_connected() -> void:
 
 
 func get_current_step_text() -> String:
-	return STEP_TEXT.get(current_step, "")
+	var key: String = STEP_TEXT_KEYS.get(current_step, "")
+	if key.is_empty():
+		return ""
+	return tr(key)
 
 
 func get_save_data() -> Dictionary:

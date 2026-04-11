@@ -7,6 +7,12 @@ const MODAL_DURATION: float = 0.15
 const TOOLTIP_FADE_DURATION: float = 0.15
 const TOOLTIP_HOVER_DELAY: float = 0.3
 const MODAL_SCALE_START: float = 0.95
+const FEEDBACK_FLOAT_DURATION: float = 0.8
+const FEEDBACK_PULSE_DURATION: float = 0.3
+const FEEDBACK_SHAKE_DURATION: float = 0.2
+const BANNER_SLIDE_DURATION: float = 0.3
+const BANNER_HOLD_DURATION: float = 3.0
+const BUILD_MODE_TRANSITION: float = 0.25
 
 
 static func kill_tween(tween: Tween) -> void:
@@ -112,4 +118,93 @@ static func fade_in(
 	tween.tween_property(
 		panel, "modulate", Color.WHITE, duration
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	return tween
+
+
+static func fade_out(
+	panel: Control,
+	duration: float = TOOLTIP_FADE_DURATION,
+) -> Tween:
+	var tween: Tween = panel.create_tween()
+	tween.tween_property(
+		panel, "modulate",
+		Color(1.0, 1.0, 1.0, 0.0), duration
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_callback(
+		func() -> void:
+			panel.visible = false
+			panel.modulate = Color.WHITE
+	)
+	return tween
+
+
+static func shake(
+	node: Control,
+	duration: float = FEEDBACK_SHAKE_DURATION,
+	magnitude: float = 6.0,
+) -> Tween:
+	var original_x: float = node.position.x
+	var tween: Tween = node.create_tween()
+	var step: float = duration / 7.0
+	for i: int in range(3):
+		tween.tween_property(
+			node, "position:x", original_x + magnitude, step
+		)
+		tween.tween_property(
+			node, "position:x", original_x - magnitude, step
+		)
+	tween.tween_property(node, "position:x", original_x, step)
+	return tween
+
+
+static func pulse_scale(
+	node: Control,
+	target_scale: float = 1.15,
+	duration: float = FEEDBACK_PULSE_DURATION,
+) -> Tween:
+	node.pivot_offset = node.size / 2.0
+	var tween: Tween = node.create_tween()
+	tween.tween_property(
+		node, "scale",
+		Vector2(target_scale, target_scale),
+		duration * 0.4,
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(
+		node, "scale", Vector2.ONE, duration * 0.6
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	return tween
+
+
+static func flash_color(
+	node: Control,
+	color: Color,
+	duration: float = FEEDBACK_PULSE_DURATION,
+) -> Tween:
+	var tween: Tween = node.create_tween()
+	tween.tween_property(
+		node, "modulate", color, duration * 0.3
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(
+		node, "modulate", Color.WHITE, duration * 0.7
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	return tween
+
+
+static func stagger_fade_in(
+	nodes: Array[Control],
+	per_delay: float = 0.05,
+	fade_duration: float = 0.15,
+) -> Tween:
+	if nodes.is_empty():
+		return null
+	for node: Control in nodes:
+		node.modulate = Color.TRANSPARENT
+	var tween: Tween = nodes[0].create_tween()
+	for i: int in range(nodes.size()):
+		var node: Control = nodes[i]
+		if i > 0:
+			tween.tween_interval(per_delay)
+		tween.tween_property(
+			node, "modulate", Color.WHITE, fade_duration
+		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween

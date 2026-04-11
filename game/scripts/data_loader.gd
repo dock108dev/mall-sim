@@ -404,6 +404,7 @@ func _parse_store(data: Dictionary) -> StoreDefinition:
 	store.daily_rent = float(data.get("daily_rent", 0.0))
 	store.base_foot_traffic = float(data.get("base_foot_traffic", 0.0))
 	store.ambient_sound = str(data.get("ambient_sound", ""))
+	store.music = str(data.get("music", ""))
 	if data.has("allowed_categories"):
 		store.allowed_categories = PackedStringArray(data["allowed_categories"])
 	if data.has("starting_inventory"):
@@ -418,6 +419,18 @@ func _parse_store(data: Dictionary) -> StoreDefinition:
 		store.unique_mechanics = PackedStringArray(data["unique_mechanics"])
 	if data.has("aesthetic_tags"):
 		store.aesthetic_tags = PackedStringArray(data["aesthetic_tags"])
+	if data.has("recommended_markup"):
+		var markup: Variant = data["recommended_markup"]
+		if markup is Dictionary:
+			store.recommended_markup_optimal_min = float(
+				markup.get("optimal_min", 0.0)
+			)
+			store.recommended_markup_optimal_max = float(
+				markup.get("optimal_max", 0.0)
+			)
+			store.recommended_markup_max_viable = float(
+				markup.get("max_viable", 0.0)
+			)
 	return store
 
 

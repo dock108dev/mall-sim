@@ -1,0 +1,68 @@
+[gd_scene load_steps=8 format=3]
+
+[sub_resource type="BoxMesh" id="torso_mesh"]
+size = Vector3(0.45, 0.55, 0.25)
+
+[sub_resource type="SphereMesh" id="head_sphere"]
+radius = 0.25
+height = 0.5
+
+[sub_resource type="CapsuleMesh" id="arm_mesh"]
+radius = 0.07
+height = 0.45
+
+[sub_resource type="CapsuleMesh" id="leg_mesh"]
+radius = 0.09
+height = 0.5
+
+[sub_resource type="StandardMaterial3D" id="body_mat"]
+resource_name = "Placeholder Body"
+albedo_color = Color(0.6, 0.6, 0.6, 1.0)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="skin_mat"]
+resource_name = "Placeholder Skin"
+albedo_color = Color(0.76, 0.65, 0.55, 1.0)
+roughness = 0.75
+
+[sub_resource type="StandardMaterial3D" id="pants_mat"]
+resource_name = "Placeholder Pants"
+albedo_color = Color(0.35, 0.35, 0.42, 1.0)
+roughness = 0.85
+
+[node name="PlaceholderCharacterCustomer" type="Node3D"]
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+mesh = SubResource("torso_mesh")
+surface_material_override/0 = SubResource("body_mat")
+
+[node name="LeftArm" type="MeshInstance3D" parent="BodyMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.29, 0.15, 0)
+mesh = SubResource("arm_mesh")
+surface_material_override/0 = SubResource("skin_mat")
+
+[node name="RightArm" type="MeshInstance3D" parent="BodyMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29, 0.15, 0)
+mesh = SubResource("arm_mesh")
+surface_material_override/0 = SubResource("skin_mat")
+
+[node name="LeftLeg" type="MeshInstance3D" parent="BodyMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, -0.5, 0)
+mesh = SubResource("leg_mesh")
+surface_material_override/0 = SubResource("pants_mat")
+
+[node name="RightLeg" type="MeshInstance3D" parent="BodyMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, -0.5, 0)
+mesh = SubResource("leg_mesh")
+surface_material_override/0 = SubResource("pants_mat")
+
+[node name="ShirtTintPoint" type="Marker3D" parent="BodyMesh"]
+
+[node name="HeadMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+mesh = SubResource("head_sphere")
+surface_material_override/0 = SubResource("skin_mat")
+
+[node name="HatAttachment" type="Marker3D" parent="HeadMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)

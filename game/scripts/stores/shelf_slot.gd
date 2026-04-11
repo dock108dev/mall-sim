@@ -4,83 +4,62 @@ extends Interactable
 
 signal slot_changed(slot: ShelfSlot)
 
-const CATEGORY_MATERIALS: Dictionary = {
+const CATEGORY_SCENES: Dictionary = {
 	"trading_cards": preload(
-		"res://game/assets/materials/mat_product_trading_cards.tres"
+		"res://game/assets/models/props/placeholder_prop_card_pack.tscn"
 	),
 	"sealed_packs": preload(
-		"res://game/assets/materials/mat_product_sealed_packs.tres"
+		"res://game/assets/models/props/placeholder_prop_card_pack.tscn"
 	),
 	"sealed_product": preload(
-		"res://game/assets/materials/mat_product_sealed_product.tres"
+		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
 	),
 	"memorabilia": preload(
-		"res://game/assets/materials/mat_product_memorabilia.tres"
+		"res://game/assets/models/props/placeholder_prop_sports_memorabilia.tscn"
 	),
 	"cartridge": preload(
-		"res://game/assets/materials/mat_product_cartridge.tres"
+		"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
 	),
 	"console": preload(
-		"res://game/assets/materials/mat_product_console.tres"
+		"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
 	),
 	"accessory": preload(
-		"res://game/assets/materials/mat_product_accessory.tres"
+		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
 	),
 	"guide": preload(
-		"res://game/assets/materials/mat_product_guide.tres"
+		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
 	),
 	"vhs_tapes": preload(
-		"res://game/assets/materials/mat_product_vhs_tapes.tres"
+		"res://game/assets/models/props/placeholder_prop_vhs_tape.tscn"
 	),
 	"dvd_titles": preload(
-		"res://game/assets/materials/mat_product_dvd_titles.tres"
+		"res://game/assets/models/props/placeholder_prop_vhs_tape.tscn"
 	),
 	"snacks": preload(
-		"res://game/assets/materials/mat_product_snacks.tres"
+		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
 	),
 	"merchandise": preload(
-		"res://game/assets/materials/mat_product_merchandise.tres"
+		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
 	),
 	"portable_audio": preload(
-		"res://game/assets/materials/mat_product_portable_audio.tres"
+		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
 	),
 	"digital_camera": preload(
-		"res://game/assets/materials/mat_product_digital_camera.tres"
+		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
 	),
 	"gadget": preload(
-		"res://game/assets/materials/mat_product_gadget.tres"
+		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
 	),
 	"audio_equipment": preload(
-		"res://game/assets/materials/mat_product_audio_equipment.tres"
+		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
 	),
 	"portable_gaming": preload(
-		"res://game/assets/materials/mat_product_portable_gaming.tres"
+		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
 	),
 }
-const DEFAULT_ITEM_MATERIAL: StandardMaterial3D = preload(
-	"res://game/assets/materials/mat_product_default.tres"
+const DEFAULT_ITEM_SCENE: PackedScene = preload(
+	"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
 )
-
-const CATEGORY_SIZES: Dictionary = {
-	"trading_cards": Vector3(0.15, 0.2, 0.08),
-	"sealed_packs": Vector3(0.12, 0.18, 0.1),
-	"sealed_product": Vector3(0.18, 0.22, 0.14),
-	"memorabilia": Vector3(0.2, 0.22, 0.15),
-	"cartridge": Vector3(0.12, 0.16, 0.08),
-	"console": Vector3(0.25, 0.18, 0.2),
-	"accessory": Vector3(0.14, 0.12, 0.1),
-	"guide": Vector3(0.16, 0.22, 0.04),
-	"vhs_tapes": Vector3(0.14, 0.2, 0.08),
-	"dvd_titles": Vector3(0.14, 0.19, 0.02),
-	"snacks": Vector3(0.1, 0.14, 0.1),
-	"merchandise": Vector3(0.2, 0.25, 0.05),
-	"portable_audio": Vector3(0.1, 0.14, 0.06),
-	"digital_camera": Vector3(0.12, 0.1, 0.08),
-	"gadget": Vector3(0.1, 0.15, 0.06),
-	"audio_equipment": Vector3(0.16, 0.14, 0.12),
-	"portable_gaming": Vector3(0.14, 0.08, 0.06),
-}
-const DEFAULT_ITEM_SIZE: Vector3 = Vector3(0.15, 0.18, 0.1)
 
 const HIGHLIGHT_EMPTY := Color(0.2, 0.8, 0.2)
 const HIGHLIGHT_OCCUPIED := Color(0.9, 0.2, 0.2)
@@ -91,7 +70,7 @@ const HIGHLIGHT_OCCUPIED := Color(0.9, 0.2, 0.2)
 
 var _occupied: bool = false
 var _held_item_id: String = ""
-var _item_mesh: MeshInstance3D = null
+var _item_node: Node3D = null
 var _placement_active: bool = false
 
 @onready var _empty_mesh: MeshInstance3D = $PlaceholderMesh
@@ -152,29 +131,22 @@ func _update_empty_indicator() -> void:
 	_empty_mesh.visible = not _occupied
 
 
-## Spawns a colored BoxMesh representing the placed item.
+## Spawns a placeholder scene representing the placed item.
 func _spawn_item_mesh(category: String) -> void:
 	_free_item_mesh()
-	var mesh_size: Vector3 = CATEGORY_SIZES.get(
-		category, DEFAULT_ITEM_SIZE
+	var scene: PackedScene = CATEGORY_SCENES.get(
+		category, DEFAULT_ITEM_SCENE
 	)
-	var mat: StandardMaterial3D = CATEGORY_MATERIALS.get(
-		category, DEFAULT_ITEM_MATERIAL
-	)
-	var box: BoxMesh = BoxMesh.new()
-	box.size = mesh_size
-	_item_mesh = MeshInstance3D.new()
-	_item_mesh.mesh = box
-	_item_mesh.set_surface_override_material(0, mat)
-	_item_mesh.position.y = mesh_size.y * 0.5
-	add_child(_item_mesh)
+	var instance: Node3D = scene.instantiate()
+	_item_node = instance
+	add_child(instance)
 
 
-## Frees the item mesh if it exists.
+## Frees the item node if it exists.
 func _free_item_mesh() -> void:
-	if _item_mesh and is_instance_valid(_item_mesh):
-		_item_mesh.queue_free()
-		_item_mesh = null
+	if _item_node and is_instance_valid(_item_node):
+		_item_node.queue_free()
+		_item_node = null
 
 
 ## Overrides base highlight to use green/red during placement mode.

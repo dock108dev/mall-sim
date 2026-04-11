@@ -3,7 +3,6 @@ class_name RandomEventEffects
 extends RefCounted
 
 
-const VIRAL_TREND_DEMAND_MULTIPLIER: float = 5.0
 const HEALTH_INSPECTION_STOCK_THRESHOLD: float = 0.5
 const HEALTH_INSPECTION_PASS_REP: float = 5.0
 const HEALTH_INSPECTION_FAIL_REP: float = -10.0

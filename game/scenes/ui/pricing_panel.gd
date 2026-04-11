@@ -3,8 +3,6 @@ class_name PricingPanel
 extends CanvasLayer
 
 const PANEL_NAME: String = "pricing"
-const MARKUP_GREEN_MAX: float = 1.5
-const MARKUP_YELLOW_MAX: float = 2.0
 
 var inventory_system: InventorySystem
 var economy_system: EconomySystem
@@ -16,6 +14,9 @@ var _market_value: float = 0.0
 var _default_markup: float = 1.35
 var _min_markup: float = 1.05
 var _max_markup: float = 5.0
+var _optimal_min: float = 0.0
+var _optimal_max: float = 0.0
+var _max_viable: float = 0.0
 var _anim_tween: Tween
 var _rest_x: float = 0.0
 
@@ -81,6 +82,7 @@ func open(item: ItemInstance, slot: ShelfSlot) -> void:
 	PanelAnimator.kill_tween(_anim_tween)
 	_current_item = item
 	_current_slot = slot
+	_load_store_markup_ranges()
 	if economy_system:
 		_market_value = economy_system.calculate_market_value(item)
 	else:
@@ -91,13 +93,13 @@ func open(item: ItemInstance, slot: ShelfSlot) -> void:
 
 	_item_name_label.text = item.definition.name
 	_condition_label.text = (
-		"Condition: %s" % item.condition.capitalize()
+		tr("PRICING_CONDITION") % item.condition.capitalize()
 	)
 	_market_value_label.text = (
-		"Market Value: $%.2f" % _market_value
+		tr("PRICING_MARKET_VALUE") % _market_value
 	)
 	_suggested_label.text = (
-		"Suggested Price: $%.2f" % suggested
+		tr("PRICING_SUGGESTED") % suggested
 	)
 
 	_price_spin.min_value = snappedf(min_price, 0.01)
@@ -164,10 +166,10 @@ func _update_markup_indicator(price: float) -> void:
 		return
 	var ratio: float = price / _market_value
 	var percent: int = roundi((ratio - 1.0) * 100.0)
-	var label: String = UIThemeConstants.get_markup_label(ratio)
-	_markup_indicator.text = "+%d%% (%s)" % [percent, label]
+	var label: String = _get_store_markup_label(ratio)
+	_markup_indicator.text = tr("PRICING_MARKUP") % [percent, label]
 	_markup_indicator.add_theme_color_override(
-		"font_color", UIThemeConstants.get_markup_color(ratio)
+		"font_color", _get_store_markup_color(ratio)
 	)
 
 
@@ -199,6 +201,43 @@ func _on_interactable_interacted(
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
 		close(true)
+
+
+func _load_store_markup_ranges() -> void:
+	_optimal_min = 0.0
+	_optimal_max = 0.0
+	_max_viable = 0.0
+	var store_id: String = GameManager.current_store_id
+	if store_id.is_empty() or not GameManager.data_loader:
+		return
+	var store_def: StoreDefinition = (
+		GameManager.data_loader.get_store(store_id)
+	)
+	if not store_def or not store_def.has_recommended_markup():
+		return
+	_optimal_min = store_def.recommended_markup_optimal_min
+	_optimal_max = store_def.recommended_markup_optimal_max
+	_max_viable = store_def.recommended_markup_max_viable
+
+
+func _get_store_markup_label(ratio: float) -> String:
+	if _max_viable <= 0.0:
+		return UIThemeConstants.get_markup_label(ratio)
+	if ratio <= _optimal_max:
+		return "Fair"
+	if ratio <= _max_viable:
+		return "High"
+	return "Very High"
+
+
+func _get_store_markup_color(ratio: float) -> Color:
+	if _max_viable <= 0.0:
+		return UIThemeConstants.get_markup_color(ratio)
+	if ratio <= _optimal_max:
+		return UIThemeConstants.get_positive_color()
+	if ratio <= _max_viable:
+		return UIThemeConstants.get_warning_color()
+	return UIThemeConstants.get_negative_color()
 
 
 func _load_pricing_config() -> void:

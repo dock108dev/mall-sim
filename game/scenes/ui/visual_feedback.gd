@@ -3,8 +3,8 @@ class_name VisualFeedback
 extends CanvasLayer
 
 
-const FLOAT_DURATION: float = 1.5
-const FLOAT_DISTANCE: float = 60.0
+const FLOAT_DURATION: float = PanelAnimator.FEEDBACK_FLOAT_DURATION
+const FLOAT_DISTANCE: float = 40.0
 const FONT_SIZE: int = 22
 const EXPENSE_DISPLAY_DURATION: float = 2.0
 
@@ -67,15 +67,18 @@ func _spawn_floating_text(
 	add_child(label)
 
 	var tween: Tween = create_tween()
-	tween.set_parallel(true)
 	tween.tween_property(
 		label, "position:y",
 		origin.y - FLOAT_DISTANCE, FLOAT_DURATION
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	## Hold full opacity for 60% of duration, then fade in final 40%.
+	var fade_delay: float = FLOAT_DURATION * 0.6
+	var fade_time: float = FLOAT_DURATION * 0.4
+	tween.parallel().tween_interval(fade_delay)
 	tween.tween_property(
-		label, "modulate:a", 0.0, FLOAT_DURATION
+		label, "modulate:a", 0.0, fade_time
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	tween.chain().tween_callback(label.queue_free)
+	tween.tween_callback(label.queue_free)
 
 
 func _show_expense_notification(delta: float) -> void:

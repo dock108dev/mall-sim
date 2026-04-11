@@ -4,10 +4,13 @@ extends CanvasLayer
 
 const PANEL_NAME: String = "orders"
 
+var ordering_system: OrderingSystem
 var economy_system: EconomySystem
 var store_type: String = ""
 
 var _is_open: bool = false
+var _anim_tween: Tween
+var _rest_x: float = 0.0
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _grid: GridContainer = (
@@ -41,6 +44,7 @@ var _is_open: bool = false
 
 func _ready() -> void:
 	_panel.visible = false
+	_rest_x = _panel.position.x
 	_close_button.pressed.connect(close)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.money_changed.connect(_on_money_changed)
@@ -65,23 +69,31 @@ func _unhandled_input(event: InputEvent) -> void:
 func open() -> void:
 	if _is_open:
 		return
-	if not economy_system:
-		push_warning("OrderPanel: no economy_system assigned")
+	if not ordering_system:
+		push_warning("OrderPanel: no ordering_system assigned")
 		return
 	_is_open = true
 	_refresh_grid()
 	_update_header_labels()
 	_update_tier_labels()
 	_update_pending_label()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.slide_open(_panel, _rest_x, true)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
-func close() -> void:
+func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
 	_is_open = false
-	_panel.visible = false
+	PanelAnimator.kill_tween(_anim_tween)
+	if immediate:
+		_panel.visible = false
+		_panel.position.x = _rest_x
+	else:
+		_anim_tween = PanelAnimator.slide_close(
+			_panel, _rest_x, true
+		)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -102,7 +114,7 @@ func _refresh_grid() -> void:
 		_empty_label.visible = true
 		_scroll.visible = false
 		return
-	if not economy_system:
+	if not ordering_system:
 		_empty_label.visible = true
 		_scroll.visible = false
 		return
@@ -111,7 +123,7 @@ func _refresh_grid() -> void:
 	)
 	var items: Array[ItemDefinition] = []
 	for item_def: ItemDefinition in all_items:
-		if economy_system.is_item_available_at_tier(item_def):
+		if ordering_system.is_item_available_at_tier(item_def):
 			items.append(item_def)
 	var has_items: bool = items.size() > 0
 	_empty_label.visible = not has_items
@@ -127,9 +139,9 @@ func _clear_grid() -> void:
 
 
 func _create_item_row(item_def: ItemDefinition) -> void:
-	if not economy_system:
+	if not ordering_system:
 		return
-	var wholesale: float = economy_system.get_wholesale_price(
+	var wholesale: float = ordering_system.get_wholesale_price(
 		item_def
 	)
 
@@ -173,7 +185,7 @@ func _create_item_row(item_def: ItemDefinition) -> void:
 	hbox.add_child(price_label)
 
 	var order_btn := Button.new()
-	order_btn.text = "Order"
+	order_btn.text = tr("ORDER_BUTTON")
 	order_btn.custom_minimum_size = Vector2(70, 0)
 	order_btn.pressed.connect(_on_order_pressed.bind(item_def))
 	hbox.add_child(order_btn)
@@ -183,47 +195,48 @@ func _create_item_row(item_def: ItemDefinition) -> void:
 
 
 func _on_order_pressed(item_def: ItemDefinition) -> void:
-	if not economy_system:
+	if not ordering_system:
 		return
-	economy_system.place_order(item_def)
+	ordering_system.place_order(item_def)
 
 
 func _update_header_labels() -> void:
-	if not economy_system:
+	if not ordering_system:
 		return
-	var budget: float = economy_system.get_remaining_order_budget()
-	_budget_label.text = "Budget: $%.2f" % budget
-	_cash_label.text = "Cash: $%.2f" % economy_system.get_cash()
+	var budget: float = ordering_system.get_remaining_order_budget()
+	_budget_label.text = tr("ORDER_BUDGET") % budget
+	if economy_system:
+		_cash_label.text = tr("ORDER_CASH") % economy_system.get_cash()
 
 
 func _update_pending_label() -> void:
-	if not economy_system:
+	if not ordering_system:
 		return
-	var count: int = economy_system.get_pending_order_count()
+	var count: int = ordering_system.get_pending_order_count()
 	if count <= 0:
-		_pending_label.text = "No pending orders"
+		_pending_label.text = tr("ORDER_NO_PENDING")
 		return
-	var config: Dictionary = economy_system.get_supplier_tier_config()
+	var config: Dictionary = ordering_system.get_supplier_tier_config()
 	var days: int = config["delivery_days"]
-	var day_text: String = "tomorrow"
+	var day_text: String = tr("ORDER_TOMORROW")
 	if days > 1:
-		day_text = "in %d days" % days
+		day_text = tr("ORDER_IN_DAYS") % days
 	_pending_label.text = (
-		"%d order(s) pending — delivered %s" % [count, day_text]
+		tr("ORDER_PENDING") % [count, day_text]
 	)
 
 
 func _update_tier_labels() -> void:
-	if not economy_system:
+	if not ordering_system:
 		return
-	var config: Dictionary = economy_system.get_supplier_tier_config()
-	_tier_label.text = "Supplier: %s" % config["name"]
-	var next_info: Dictionary = economy_system.get_next_tier_info()
+	var config: Dictionary = ordering_system.get_supplier_tier_config()
+	_tier_label.text = tr("ORDER_SUPPLIER") % config["name"]
+	var next_info: Dictionary = ordering_system.get_next_tier_info()
 	if next_info.is_empty():
-		_next_tier_label.text = "Max tier reached"
+		_next_tier_label.text = tr("ORDER_MAX_TIER")
 	else:
 		_next_tier_label.text = (
-			"Next: %s (rep %.0f)"
+			tr("ORDER_NEXT_TIER")
 			% [next_info["name"], next_info["rep_required"]]
 		)
 
@@ -240,7 +253,7 @@ func _on_supplier_tier_changed(
 
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
-		close()
+		close(true)
 
 
 func _on_money_changed(

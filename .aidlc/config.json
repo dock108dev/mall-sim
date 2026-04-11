@@ -1,11 +1,16 @@
 {
-  "plan_budget_hours": 5,
+  "plan_budget_hours": 4,
   "checkpoint_interval_minutes": 15,
   "claude_model": "opus",
+  "claude_model_planning": "sonnet",
+  "claude_model_research": "sonnet",
+  "claude_model_implementation": "opus",
+  "claude_model_finalization": "sonnet",
+  "claude_long_run_warn_seconds": 300,
   "max_implementation_attempts": 3,
-  "run_tests_command": "godot --headless --script res://addons/gut/gut_cmdln.gd",
-  "e2e_test_command": "godot --headless --script res://tests/run_tests.gd",
+  "run_tests_command": "bash tests/run_tests.sh",
+  "e2e_test_command": "bash tests/run_tests.sh",
   "build_validation_command": "godot --headless --export-release",
-  "claude_timeout_seconds": 900,
-  "max_implementation_context_chars": 40000
+  "max_implementation_context_chars": 40000,
+  "claude_timeout_seconds": 900
 }

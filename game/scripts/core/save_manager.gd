@@ -9,6 +9,7 @@ const MAX_MANUAL_SLOTS: int = 3
 const AUTO_SAVE_SLOT: int = 0
 
 var _economy_system: EconomySystem
+var _ordering_system: OrderingSystem
 var _inventory_system: InventorySystem
 var _time_system: TimeSystem
 var _reputation_system: ReputationSystem
@@ -17,6 +18,7 @@ var _progression_system: ProgressionSystem
 var _refurbishment_system: RefurbishmentSystem
 var _rental_system: VideoRentalStoreController
 var _trend_system: TrendSystem
+var _market_event_system: MarketEventSystem
 var _fixture_placement_system: FixturePlacementSystem
 var _tournament_system: TournamentSystem
 var _meta_shift_system: MetaShiftSystem
@@ -42,6 +44,11 @@ func initialize(
 	_reputation_system = reputation
 
 
+## Sets the OrderingSystem reference for save/load.
+func set_ordering_system(system: OrderingSystem) -> void:
+	_ordering_system = system
+
+
 ## Sets the StoreStateManager reference for multi-store save/load.
 func set_store_state_manager(manager: StoreStateManager) -> void:
 	_store_state_manager = manager
@@ -64,6 +71,13 @@ func set_refurbishment_system(
 ## Sets the TrendSystem reference for save/load.
 func set_trend_system(system: TrendSystem) -> void:
 	_trend_system = system
+
+
+## Sets the MarketEventSystem reference for save/load.
+func set_market_event_system(
+	system: MarketEventSystem
+) -> void:
+	_market_event_system = system
 
 
 ## Sets the FixturePlacementSystem reference for save/load.
@@ -277,6 +291,9 @@ func _collect_save_data() -> Dictionary:
 		"owned_stores": GameManager.owned_stores.duplicate(),
 	}
 
+	if _ordering_system:
+		data["ordering"] = _ordering_system.get_save_data()
+
 	if _store_state_manager:
 		data["store_states"] = _store_state_manager.get_save_data()
 
@@ -291,6 +308,9 @@ func _collect_save_data() -> Dictionary:
 
 	if _trend_system:
 		data["trends"] = _trend_system.get_save_data()
+
+	if _market_event_system:
+		data["market_events"] = _market_event_system.get_save_data()
 
 	if _fixture_placement_system:
 		data["fixtures"] = _fixture_placement_system.get_save_data()
@@ -359,6 +379,13 @@ func _distribute_save_data(data: Dictionary) -> void:
 	if reputation_data is Dictionary:
 		_reputation_system.load_save_data(reputation_data as Dictionary)
 
+	if _ordering_system:
+		var ordering_data: Variant = data.get("ordering", {})
+		if ordering_data is Dictionary:
+			_ordering_system.load_save_data(
+				ordering_data as Dictionary
+			)
+
 	var saved_stores: Variant = data.get("owned_stores", [])
 	if saved_stores is Array:
 		GameManager.owned_stores = []
@@ -400,6 +427,15 @@ func _distribute_save_data(data: Dictionary) -> void:
 		if trend_data is Dictionary:
 			_trend_system.load_save_data(
 				trend_data as Dictionary
+			)
+
+	if _market_event_system:
+		var market_event_data: Variant = data.get(
+			"market_events", {}
+		)
+		if market_event_data is Dictionary:
+			_market_event_system.load_save_data(
+				market_event_data as Dictionary
 			)
 
 	if _fixture_placement_system:

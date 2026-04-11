@@ -150,3 +150,46 @@ docs/
 | Wrong-paradigm docs (HTTP/Python) | 3 | 0 |
 | Duplicate content across files | Significant | Eliminated |
 | Outdated "not yet implemented" claims | 3+ | 0 |
+
+---
+
+# Documentation Consolidation Audit — Pass 2 — 2026-04-10
+
+## Summary
+
+Follow-up pass to complete cleanup deferred from the first consolidation. Four root-level files that the first pass intended to delete were still present. Two new documentation files added during M7 work were not linked from README.md. The JSON content file count in README.md was inaccurate.
+
+---
+
+## Files Deleted
+
+| File | Reason |
+|---|---|
+| `TASKLIST.md` (root) | Legacy pre-implementation task scaffold with all items unchecked. Never reflected codebase state. Superseded by `.aidlc/issues/` for active tracking. |
+| `TECH_STACK.md` (root) | Content (engine rationale, GDScript rationale, build targets, data format) fully covered by `docs/setup.md` "Tech Stack" section. First consolidation pass listed it for deletion but it remained. |
+| `AIDLC_FUTURES.md` (root) | Auto-generated AIDLC tooling artifact summarizing the last run. Not project documentation. Contains no durable content beyond run statistics. |
+| `ROADMAP.md` (root) | Duplicate of `docs/roadmap.md`. First consolidation pass listed it for deletion but it remained. README.md already links to `docs/roadmap.md`; the root file was unreferenced and diverging. |
+
+## Files Updated
+
+### README.md
+
+- Fixed JSON content file count: 23 → 25 (the actual count of files in `game/content/`)
+- Added `docs/distribution.md` to documentation table (macOS notarization and Windows code signing guide — created during M7 work, was not linked)
+- Added `docs/tech/npc_performance_profile.md` to documentation table (NPC profiling results and navigation optimizations — created during M7 work, was not linked)
+
+## Files NOT Changed
+
+- `docs/roadmap.md` — Accurate. MarketEventSystem and custom shaders correctly marked complete.
+- `docs/architecture.md` — Accurate.
+- `docs/setup.md` — Accurate, includes full Tech Stack content previously in TECH_STACK.md.
+- All other docs from first pass — Retained as-is.
+
+## Metrics (Cumulative)
+
+| Metric | Start | After Pass 1 | After Pass 2 |
+|---|---|---|---|
+| Total doc files | 54 | 28 | 30 (28 retained + 2 new: distribution.md, npc_performance_profile.md) |
+| Root-level docs | 7 | 5 (not 2 — first pass incomplete) | 2 (README.md, CLAUDE.md) |
+| README.md doc links | 12 | 12 | 14 |
+| Stale/duplicate root files | 4 | 4 (deferred) | 0 |

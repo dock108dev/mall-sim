@@ -7,6 +7,7 @@ const PANEL_NAME: String = "authentication"
 var _authentication_system: AuthenticationSystem = null
 var _current_item: ItemInstance = null
 var _is_open: bool = false
+var _anim_tween: Tween
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _title_label: Label = $PanelRoot/Margin/VBox/TitleLabel
@@ -60,13 +61,14 @@ func open(item: ItemInstance) -> void:
 		return
 	if not _authentication_system.can_authenticate(item):
 		EventBus.notification_requested.emit(
-			"This item cannot be authenticated"
+			tr("AUTH_CANNOT")
 		)
 		return
 	_current_item = item
 	_populate(item)
 	_is_open = true
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_open(_panel)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
@@ -75,8 +77,12 @@ func close() -> void:
 		return
 	_is_open = false
 	_current_item = null
-	_panel.visible = false
-	EventBus.panel_closed.emit(PANEL_NAME)
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_close(_panel)
+	_anim_tween.finished.connect(
+		func() -> void: EventBus.panel_closed.emit(PANEL_NAME),
+		CONNECT_ONE_SHOT,
+	)
 
 
 func is_open() -> bool:
@@ -84,22 +90,18 @@ func is_open() -> bool:
 
 
 func _populate(item: ItemInstance) -> void:
-	_title_label.text = "Authenticate Autograph"
+	_title_label.text = tr("AUTH_TITLE")
 	_item_name_label.text = item.definition.name
 	var cost: float = _authentication_system.get_cost(item)
-	_cost_label.text = "Authentication Cost: $%.2f" % cost
-	_duration_label.text = "Duration: 1 day"
+	_cost_label.text = tr("AUTH_COST") % cost
+	_duration_label.text = tr("AUTH_DURATION")
 	var chance: int = int(
 		AuthenticationSystem.GENUINE_CHANCE * 100.0
 	)
-	_chance_label.text = "Genuine Chance: %d%%" % chance
-	_genuine_label.text = (
-		"If genuine: value doubles (2x multiplier)"
-	)
-	_fake_label.text = (
-		"If fake: item becomes near worthless ($0.50)"
-	)
-	_confirm_button.text = "Authenticate ($%.2f)" % cost
+	_chance_label.text = tr("AUTH_CHANCE") % chance
+	_genuine_label.text = tr("AUTH_GENUINE")
+	_fake_label.text = tr("AUTH_FAKE")
+	_confirm_button.text = tr("AUTH_CONFIRM") % cost
 
 
 func _on_confirm() -> void:

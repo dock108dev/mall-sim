@@ -1,0 +1,72 @@
+[gd_scene load_steps=11 format=3]
+
+[sub_resource type="BoxMesh" id="counter_mesh"]
+size = Vector3(2.0, 1.0, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="counter_mat"]
+resource_name = "Checkout Counter"
+albedo_color = Color(0.5, 0.42, 0.32, 1)
+roughness = 0.75
+
+[sub_resource type="BoxMesh" id="countertop_mesh"]
+size = Vector3(2.04, 0.04, 0.64)
+
+[sub_resource type="StandardMaterial3D" id="countertop_mat"]
+resource_name = "Checkout Surface"
+albedo_color = Color(0.6, 0.55, 0.48, 1)
+roughness = 0.6
+metallic = 0.05
+
+[sub_resource type="BoxMesh" id="register_body_mesh"]
+size = Vector3(0.35, 0.2, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="register_mat"]
+resource_name = "Cash Register"
+albedo_color = Color(0.2, 0.2, 0.22, 1)
+roughness = 0.7
+metallic = 0.15
+
+[sub_resource type="BoxMesh" id="register_screen_mesh"]
+size = Vector3(0.2, 0.15, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="screen_mat"]
+resource_name = "Register Screen"
+albedo_color = Color(0.15, 0.35, 0.2, 1)
+roughness = 0.3
+metallic = 0.1
+
+[sub_resource type="BoxMesh" id="drawer_mesh"]
+size = Vector3(0.3, 0.06, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="drawer_mat"]
+resource_name = "Cash Drawer"
+albedo_color = Color(0.25, 0.25, 0.27, 1)
+roughness = 0.65
+metallic = 0.2
+
+[node name="PlaceholderFixtureCounterCheckout" type="Node3D"]
+
+[node name="CounterBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("counter_mesh")
+surface_material_override/0 = SubResource("counter_mat")
+
+[node name="Countertop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.02, 0)
+mesh = SubResource("countertop_mesh")
+surface_material_override/0 = SubResource("countertop_mat")
+
+[node name="RegisterBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.14, -0.05)
+mesh = SubResource("register_body_mesh")
+surface_material_override/0 = SubResource("register_mat")
+
+[node name="RegisterScreen" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.98, 0, 0, 0, 0.94, 0.34, 0, -0.34, 0.94, 0.4, 1.32, -0.1)
+mesh = SubResource("register_screen_mesh")
+surface_material_override/0 = SubResource("screen_mat")
+
+[node name="CashDrawer" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.85, 0.18)
+mesh = SubResource("drawer_mesh")
+surface_material_override/0 = SubResource("drawer_mat")

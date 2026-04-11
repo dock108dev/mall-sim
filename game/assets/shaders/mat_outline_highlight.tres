@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://game/assets/shaders/outline_highlight.gdshader" id="1"]
+
+[resource]
+resource_local_to_scene = true
+shader = ExtResource("1")
+shader_parameter/outline_color = Color(0, 0.737, 0.725, 1)
+shader_parameter/outline_width = 0.012
+shader_parameter/pulse_speed = 1.5
+shader_parameter/pulse_intensity = 0.15

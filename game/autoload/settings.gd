@@ -33,8 +33,9 @@ const REBINDABLE_ACTIONS: Array[String] = [
 enum FontSize { SMALL, MEDIUM, LARGE, EXTRA_LARGE }
 
 const FONT_SIZE_VALUES: Array[int] = [12, 14, 18, 22]
-const FONT_SIZE_LABELS: Array[String] = [
-	"Small", "Medium", "Large", "Extra Large",
+const FONT_SIZE_LABEL_KEYS: Array[String] = [
+	"SETTINGS_FONT_SMALL", "SETTINGS_FONT_MEDIUM",
+	"SETTINGS_FONT_LARGE", "SETTINGS_FONT_EXTRA_LARGE",
 ]
 
 const UI_SCALE_MIN: float = 0.75
@@ -51,6 +52,13 @@ var resolution: Vector2i = Vector2i(1920, 1080)
 var ui_scale: float = 1.0
 var font_size: int = FontSize.MEDIUM
 var colorblind_mode: bool = false
+var locale: String = "en"
+
+## Supported locales — add entries here when new CSV columns are added.
+const SUPPORTED_LOCALES: Array[Dictionary] = [
+	{"code": "en", "name": "English"},
+	{"code": "es", "name": "Español"},
+]
 
 ## Default bindings captured from InputMap at startup.
 var _default_bindings: Dictionary = {}
@@ -82,6 +90,7 @@ func save_settings() -> void:
 	config.set_value("display", "ui_scale", ui_scale)
 	config.set_value("display", "font_size", font_size)
 	config.set_value("display", "colorblind_mode", colorblind_mode)
+	config.set_value("locale", "language", locale)
 	_save_keybindings(config)
 	var save_err: Error = config.save(SETTINGS_PATH)
 	if save_err != OK:
@@ -94,6 +103,10 @@ func save_settings() -> void:
 func load_settings() -> void:
 	var config := ConfigFile.new()
 	if config.load(SETTINGS_PATH) != OK:
+		if FileAccess.file_exists(SETTINGS_PATH):
+			push_warning(
+				"Settings: failed to parse '%s' — using defaults" % SETTINGS_PATH
+			)
 		return
 	master_volume = config.get_value("audio", "master_volume", 1.0)
 	music_volume = config.get_value("audio", "music_volume", 0.8)
@@ -115,6 +128,7 @@ func load_settings() -> void:
 	colorblind_mode = config.get_value(
 		"display", "colorblind_mode", false
 	)
+	locale = config.get_value("locale", "language", "en")
 	_load_keybindings(config)
 	apply_settings()
 
@@ -124,6 +138,7 @@ func apply_settings() -> void:
 	_apply_display()
 	_apply_ui_scale()
 	_apply_font_size()
+	_apply_locale()
 
 
 ## Rebind a single action to a new key event in InputMap.
@@ -226,6 +241,13 @@ func _apply_font_size() -> void:
 	theme.set_font_size(
 		"font_size", "TitleLabel", int(28.0 * ratio)
 	)
+
+
+func _apply_locale() -> void:
+	var old_locale: String = TranslationServer.get_locale()
+	TranslationServer.set_locale(locale)
+	if old_locale != locale:
+		EventBus.locale_changed.emit(locale)
 
 
 func _apply_audio() -> void:

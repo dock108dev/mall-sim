@@ -19,6 +19,8 @@ var grid_size: Vector2i = Vector2i.ZERO
 var grid_origin: Vector3 = Vector3.ZERO
 
 var _mesh_instance: MeshInstance3D = null
+var _material: StandardMaterial3D = null
+var _fade_tween: Tween
 var _is_visible: bool = false
 
 
@@ -86,13 +88,39 @@ func get_world_center() -> Vector3:
 
 
 func show_grid() -> void:
-	if _mesh_instance:
+	_kill_fade_tween()
+	if _mesh_instance and _material:
+		_material.albedo_color = Color(
+			GRID_LINE_COLOR.r, GRID_LINE_COLOR.g,
+			GRID_LINE_COLOR.b, 0.0
+		)
+		_mesh_instance.visible = true
+		_fade_tween = create_tween()
+		_fade_tween.tween_property(
+			_material, "albedo_color", GRID_LINE_COLOR,
+			PanelAnimator.BUILD_MODE_TRANSITION
+		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	elif _mesh_instance:
 		_mesh_instance.visible = true
 	_is_visible = true
 
 
 func hide_grid() -> void:
-	if _mesh_instance:
+	_kill_fade_tween()
+	if _mesh_instance and _material:
+		var fade_target := Color(
+			GRID_LINE_COLOR.r, GRID_LINE_COLOR.g,
+			GRID_LINE_COLOR.b, 0.0
+		)
+		_fade_tween = create_tween()
+		_fade_tween.tween_property(
+			_material, "albedo_color", fade_target,
+			PanelAnimator.BUILD_MODE_TRANSITION
+		).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		_fade_tween.tween_callback(
+			func() -> void: _mesh_instance.visible = false
+		)
+	elif _mesh_instance:
 		_mesh_instance.visible = false
 	_is_visible = false
 
@@ -103,6 +131,7 @@ func _build_grid_mesh() -> void:
 
 	var im := ImmediateMesh.new()
 	var mat := StandardMaterial3D.new()
+	_material = mat
 	mat.albedo_color = GRID_LINE_COLOR
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -134,3 +163,8 @@ func _build_grid_mesh() -> void:
 	_mesh_instance.mesh = im
 	_mesh_instance.visible = _is_visible
 	add_child(_mesh_instance)
+
+
+func _kill_fade_tween() -> void:
+	if _fade_tween and _fade_tween.is_valid():
+		_fade_tween.kill()

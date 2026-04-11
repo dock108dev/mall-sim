@@ -59,15 +59,17 @@ All gameplay systems are standalone class scripts in `game/scripts/systems/`. Th
 | System | Script | Responsibility |
 |---|---|---|
 | **ProgressionSystem** | `progression_system.gd` | Milestone evaluation and reward granting |
-| **SupplierTierSystem** | `supplier_tier_system.gd` | Reputation-based supplier access (Tiers 1-3) |
 | **TutorialSystem** | `tutorial_system.gd` | First-day walkthrough and contextual tips |
 | **StaffSystem** | `staff_system.gd` | Hiring, firing, wage management, auto-restocking |
+| **OrderingSystem** | `ordering_system.gd` | Stock ordering, delivery queues, supplier tier filtering |
+
+> `SupplierTierSystem` (`supplier_tier_system.gd`) is a static utility class (no Node instance). `OrderingSystem` delegates tier lookups to it via static method calls.
 
 ### Economy & Market Systems
 
 | System | Script | Responsibility |
 |---|---|---|
-| **PricingSystem** | `pricing_system.gd` | Price formula application |
+| **MarketEventSystem** | `market_event_system.gd` | Market boom/bust/spike/shift events (15% daily chance) |
 | **TrendSystem** | `trend_system.gd` | Category/tag demand cycles (0.6-1.5x multipliers) |
 | **SeasonalEventSystem** | `seasonal_event_system.gd` | Recurring events (holiday shopping, Black Friday) |
 | **RandomEventSystem** | `random_event_system.gd` | Operational challenges (supply shortage, customer surge) |
@@ -130,7 +132,7 @@ EventBus contains 80+ typed signals organized by domain:
 
 - **Game State:** `game_state_changed`
 - **Time:** `day_started`, `day_ended`, `hour_changed`, `day_phase_changed`, `speed_changed`
-- **Economy:** `item_sold`, `item_purchased`, `money_changed`
+- **Economy:** `item_sold`, `money_changed`
 - **Inventory:** `item_stocked`, `item_removed_from_shelf`, `inventory_changed`
 - **Customer:** `customer_entered`, `customer_left`, `customer_ready_to_purchase`
 - **Reputation:** `reputation_changed`

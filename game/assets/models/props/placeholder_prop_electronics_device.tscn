@@ -1,0 +1,31 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="BoxMesh" id="body_mesh"]
+size = Vector3(0.12, 0.08, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="body_mat"]
+resource_name = "Electronics Body"
+albedo_color = Color(0.25, 0.25, 0.28, 1)
+roughness = 0.6
+metallic = 0.15
+
+[sub_resource type="BoxMesh" id="screen_mesh"]
+size = Vector3(0.09, 0.055, 0.002)
+
+[sub_resource type="StandardMaterial3D" id="screen_mat"]
+resource_name = "Electronics Screen"
+albedo_color = Color(0.15, 0.3, 0.45, 1)
+roughness = 0.2
+metallic = 0.05
+
+[node name="PlaceholderPropElectronicsDevice" type="Node3D"]
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+mesh = SubResource("body_mesh")
+surface_material_override/0 = SubResource("body_mat")
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.045, 0.012)
+mesh = SubResource("screen_mesh")
+surface_material_override/0 = SubResource("screen_mat")

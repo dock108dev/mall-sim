@@ -24,7 +24,7 @@ project.godot              Godot project config
 CLAUDE.md                  AI development instructions
 game/                      Everything Godot loads at runtime
   autoload/                4 singletons (GameManager, EventBus, AudioManager, Settings)
-  content/                 23 JSON data files (items, stores, customers, economy, events)
+  content/                 25 JSON data files (items, stores, customers, economy, events)
   resources/               Resource class definitions (ItemDefinition, StoreDefinition, etc.)
   scenes/                  39 scene files (.tscn)
   scripts/                 77 GDScript files (~23K LOC)
@@ -49,6 +49,8 @@ docs/                      All project documentation
 | [Art Direction](docs/art/ART_DIRECTION.md) | Visual style, color palette, lighting |
 | [Asset Pipeline](docs/art/ASSET_PIPELINE.md) | Modeling, texturing, and import standards |
 | [Save System](docs/tech/SAVE_SYSTEM_PLAN.md) | Save/load architecture |
+| [NPC Performance](docs/tech/npc_performance_profile.md) | NPC profiling results and navigation optimizations |
+| [Distribution](docs/distribution.md) | macOS notarization and Windows code signing guide |
 | [Production Risks](docs/production/RISKS.md) | Known risks and mitigations |
 
 ## Platforms

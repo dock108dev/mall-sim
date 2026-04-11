@@ -10,6 +10,8 @@ const ANNOUNCED_COLOR := Color(0.7, 0.7, 0.5)
 
 var trend_system: TrendSystem
 var _is_open: bool = false
+var _anim_tween: Tween
+var _rest_x: float = 0.0
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _grid: VBoxContainer = (
@@ -22,6 +24,7 @@ var _is_open: bool = false
 
 func _ready() -> void:
 	_panel.visible = false
+	_rest_x = _panel.position.x
 	_close_button.pressed.connect(close)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.trend_changed.connect(_on_trend_changed)
@@ -46,15 +49,23 @@ func open() -> void:
 		return
 	_is_open = true
 	_refresh_list()
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.slide_open(_panel, _rest_x, false)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
-func close() -> void:
+func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
 	_is_open = false
-	_panel.visible = false
+	PanelAnimator.kill_tween(_anim_tween)
+	if immediate:
+		_panel.visible = false
+		_panel.position.x = _rest_x
+	else:
+		_anim_tween = PanelAnimator.slide_close(
+			_panel, _rest_x, false
+		)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -89,7 +100,7 @@ func _clear_list() -> void:
 
 func _add_empty_label() -> void:
 	var label := Label.new()
-	label.text = "No active trends."
+	label.text = tr("TRENDS_NO_ACTIVE")
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_grid.add_child(label)
 
@@ -160,19 +171,19 @@ func _get_status_text(
 	fade_end: int,
 ) -> String:
 	if current_day < active_day:
-		return "Announced — active in %d day(s)" % (
+		return tr("TRENDS_ANNOUNCED") % (
 			active_day - current_day
 		)
 	if current_day < end_day:
-		return "Active — %d day(s) remaining" % (end_day - current_day)
+		return tr("TRENDS_ACTIVE") % (end_day - current_day)
 	if current_day < fade_end:
-		return "Fading — %d day(s) left" % (fade_end - current_day)
-	return "Expiring"
+		return tr("TRENDS_FADING") % (fade_end - current_day)
+	return tr("TRENDS_EXPIRING")
 
 
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
-		close()
+		close(true)
 
 
 func _on_trend_changed(

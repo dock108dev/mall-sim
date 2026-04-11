@@ -8,6 +8,7 @@ const PANEL_NAME: String = "settings_panel"
 signal closed
 
 var _is_open: bool = false
+var _anim_tween: Tween
 var _saved_master: float = 1.0
 var _saved_music: float = 0.8
 var _saved_sfx: float = 1.0
@@ -18,6 +19,7 @@ var _saved_resolution: Vector2i = Vector2i(1920, 1080)
 var _saved_ui_scale: float = 1.0
 var _saved_font_size: int = Settings.FontSize.MEDIUM
 var _saved_colorblind: bool = false
+var _saved_locale: String = "en"
 
 ## Action currently awaiting a keypress, empty when not listening.
 var _listening_action: String = ""
@@ -75,6 +77,9 @@ var _saved_bindings: Dictionary = {}
 @onready var _colorblind_check: CheckButton = (
 	$PanelRoot/Margin/VBox/TabContainer/Display/VBox/ColorblindRow/Check
 )
+@onready var _locale_option: OptionButton = (
+	$PanelRoot/Margin/VBox/TabContainer/Display/VBox/LanguageRow/Option
+)
 @onready var _controls_list: VBoxContainer = (
 	$PanelRoot/Margin/VBox/TabContainer/Controls/Outer/ScrollContainer/VBox
 )
@@ -106,9 +111,12 @@ func _ready() -> void:
 	_ui_scale_slider.value_changed.connect(_on_ui_scale_changed)
 	_font_size_option.item_selected.connect(_on_font_size_selected)
 	_colorblind_check.toggled.connect(_on_colorblind_toggled)
+	_locale_option.item_selected.connect(_on_locale_selected)
 	EventBus.panel_opened.connect(_on_panel_opened)
+	EventBus.locale_changed.connect(_on_locale_changed)
 	_populate_resolutions()
 	_populate_font_sizes()
+	_populate_locales()
 	_populate_controls()
 
 
@@ -120,7 +128,8 @@ func open() -> void:
 	_load_from_settings()
 	_refresh_controls()
 	_tab_container.current_tab = 0
-	_panel.visible = true
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_open(_panel)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
@@ -129,9 +138,14 @@ func close() -> void:
 		return
 	_cancel_listen_mode()
 	_is_open = false
-	_panel.visible = false
-	EventBus.panel_closed.emit(PANEL_NAME)
-	closed.emit()
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_close(_panel)
+	_anim_tween.finished.connect(
+		func() -> void:
+			EventBus.panel_closed.emit(PANEL_NAME)
+			closed.emit(),
+		CONNECT_ONE_SHOT,
+	)
 
 
 func is_open() -> bool:
@@ -172,6 +186,7 @@ func _snapshot_current() -> void:
 	_saved_ui_scale = Settings.ui_scale
 	_saved_font_size = Settings.font_size
 	_saved_colorblind = Settings.colorblind_mode
+	_saved_locale = Settings.locale
 	_snapshot_bindings()
 
 
@@ -205,6 +220,7 @@ func _load_from_settings() -> void:
 	_ui_scale_label.text = "%d%%" % int(Settings.ui_scale * 100.0)
 	_font_size_option.selected = Settings.font_size
 	_colorblind_check.button_pressed = Settings.colorblind_mode
+	_select_locale(Settings.locale)
 
 
 func _populate_resolutions() -> void:
@@ -215,12 +231,26 @@ func _populate_resolutions() -> void:
 
 func _populate_font_sizes() -> void:
 	_font_size_option.clear()
-	for i: int in range(Settings.FONT_SIZE_LABELS.size()):
+	for i: int in range(Settings.FONT_SIZE_LABEL_KEYS.size()):
 		var label: String = "%s (%dpx)" % [
-			Settings.FONT_SIZE_LABELS[i],
+			tr(Settings.FONT_SIZE_LABEL_KEYS[i]),
 			Settings.FONT_SIZE_VALUES[i],
 		]
 		_font_size_option.add_item(label)
+
+
+func _populate_locales() -> void:
+	_locale_option.clear()
+	for entry: Dictionary in Settings.SUPPORTED_LOCALES:
+		_locale_option.add_item(entry["name"])
+
+
+func _select_locale(locale_code: String) -> void:
+	for i: int in range(Settings.SUPPORTED_LOCALES.size()):
+		if Settings.SUPPORTED_LOCALES[i]["code"] == locale_code:
+			_locale_option.selected = i
+			return
+	_locale_option.selected = 0
 
 
 func _select_resolution(res: Vector2i) -> void:
@@ -268,7 +298,7 @@ func _on_rebind_pressed(action: String) -> void:
 	_cancel_listen_mode()
 	_listening_action = action
 	var btn: Button = _rebind_buttons[action] as Button
-	btn.text = "Press a key..."
+	btn.text = tr("SETTINGS_PRESS_KEY")
 
 
 func _handle_rebind_input(key_event: InputEventKey) -> void:
@@ -305,7 +335,7 @@ func _show_conflict_dialog(
 		)
 	)
 	_conflict_dialog.dialog_text = (
-		"'%s' is already bound to '%s'.\nOverride and unbind '%s'?"
+		tr("SETTINGS_KEY_CONFLICT")
 		% [
 			key_name,
 			_format_action_name(conflict),
@@ -367,7 +397,7 @@ func _format_action_name(action: String) -> String:
 func _get_action_binding(action: String) -> String:
 	var events: Array[InputEvent] = InputMap.action_get_events(action)
 	if events.is_empty():
-		return "Unbound"
+		return tr("SETTINGS_UNBOUND")
 	var event: InputEvent = events[0]
 	if event is InputEventKey:
 		return (event as InputEventKey).as_text()
@@ -375,17 +405,17 @@ func _get_action_binding(action: String) -> String:
 		var btn: InputEventMouseButton = event as InputEventMouseButton
 		match btn.button_index:
 			MOUSE_BUTTON_LEFT:
-				return "Left Mouse"
+				return tr("SETTINGS_LEFT_MOUSE")
 			MOUSE_BUTTON_RIGHT:
-				return "Right Mouse"
+				return tr("SETTINGS_RIGHT_MOUSE")
 			MOUSE_BUTTON_MIDDLE:
-				return "Middle Mouse"
+				return tr("SETTINGS_MIDDLE_MOUSE")
 			MOUSE_BUTTON_WHEEL_UP:
-				return "Scroll Up"
+				return tr("SETTINGS_SCROLL_UP")
 			MOUSE_BUTTON_WHEEL_DOWN:
-				return "Scroll Down"
+				return tr("SETTINGS_SCROLL_DOWN")
 			_:
-				return "Mouse %d" % btn.button_index
+				return tr("SETTINGS_MOUSE_BUTTON") % btn.button_index
 	return event.as_text()
 
 
@@ -429,6 +459,13 @@ func _on_colorblind_toggled(pressed: bool) -> void:
 	EventBus.colorblind_mode_changed.emit(pressed)
 
 
+func _on_locale_selected(index: int) -> void:
+	if index < 0 or index >= Settings.SUPPORTED_LOCALES.size():
+		return
+	Settings.locale = Settings.SUPPORTED_LOCALES[index]["code"]
+	Settings.apply_settings()
+
+
 func _on_apply_pressed() -> void:
 	_cancel_listen_mode()
 	_apply_ui_to_settings()
@@ -458,6 +495,9 @@ func _apply_ui_to_settings() -> void:
 	Settings.ui_scale = _ui_scale_slider.value / 100.0
 	Settings.font_size = _font_size_option.selected
 	Settings.colorblind_mode = _colorblind_check.button_pressed
+	var locale_idx: int = _locale_option.selected
+	if locale_idx >= 0 and locale_idx < Settings.SUPPORTED_LOCALES.size():
+		Settings.locale = Settings.SUPPORTED_LOCALES[locale_idx]["code"]
 
 
 func _restore_snapshot() -> void:
@@ -471,6 +511,12 @@ func _restore_snapshot() -> void:
 	Settings.ui_scale = _saved_ui_scale
 	Settings.font_size = _saved_font_size
 	Settings.colorblind_mode = _saved_colorblind
+	Settings.locale = _saved_locale
+
+
+func _on_locale_changed(_new_locale: String) -> void:
+	_populate_font_sizes()
+	_font_size_option.selected = Settings.font_size
 
 
 func _on_panel_opened(panel_name: String) -> void:

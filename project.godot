@@ -121,6 +121,10 @@ toggle_staff={
 ]
 }
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://game/assets/localization/translations.en.csv", "res://game/assets/localization/translations.es.csv")
+
 [rendering]
 
 lights_and_shadows/directional_shadow/size=2048

@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="BoxMesh" id="wrapper_mesh"]
+size = Vector3(0.08, 0.12, 0.025)
+
+[sub_resource type="StandardMaterial3D" id="wrapper_mat"]
+resource_name = "Card Pack Wrapper"
+albedo_color = Color(0.2, 0.4, 0.9, 1)
+roughness = 0.5
+metallic = 0.3
+
+[sub_resource type="BoxMesh" id="flap_mesh"]
+size = Vector3(0.075, 0.015, 0.028)
+
+[sub_resource type="StandardMaterial3D" id="flap_mat"]
+resource_name = "Card Pack Flap"
+albedo_color = Color(0.9, 0.75, 0.1, 1)
+roughness = 0.6
+
+[node name="PlaceholderPropCardPack" type="Node3D"]
+
+[node name="Wrapper" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+mesh = SubResource("wrapper_mesh")
+surface_material_override/0 = SubResource("wrapper_mat")
+
+[node name="Flap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1275, 0)
+mesh = SubResource("flap_mesh")
+surface_material_override/0 = SubResource("flap_mat")

@@ -4,12 +4,15 @@ extends CanvasLayer
 
 
 const PANEL_NAME: String = "pause_menu"
+const FADE_DURATION: float = 0.15
 
 signal save_pressed
 signal settings_pressed
 signal return_to_menu_pressed
 
 var _is_open: bool = false
+var _overlay_tween: Tween
+var _panel_tween: Tween
 
 @onready var _overlay: ColorRect = $Overlay
 @onready var _panel: PanelContainer = $PanelRoot
@@ -63,8 +66,11 @@ func open() -> void:
 		return
 	_is_open = true
 	GameManager.change_state(GameManager.GameState.PAUSED)
+	_kill_tweens()
+	_overlay.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	_overlay.visible = true
-	_panel.visible = true
+	_overlay_tween = PanelAnimator.fade_in(_overlay, FADE_DURATION)
+	_panel_tween = PanelAnimator.fade_in(_panel, FADE_DURATION)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	EventBus.panel_opened.emit(PANEL_NAME)
 
@@ -73,8 +79,9 @@ func close() -> void:
 	if not _is_open:
 		return
 	_is_open = false
-	_overlay.visible = false
-	_panel.visible = false
+	_kill_tweens()
+	_overlay_tween = PanelAnimator.fade_out(_overlay, FADE_DURATION)
+	_panel_tween = PanelAnimator.fade_out(_panel, FADE_DURATION)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -86,6 +93,11 @@ func _can_open() -> bool:
 	return (
 		GameManager.current_state == GameManager.GameState.PLAYING
 	)
+
+
+func _kill_tweens() -> void:
+	PanelAnimator.kill_tween(_overlay_tween)
+	PanelAnimator.kill_tween(_panel_tween)
 
 
 func _resume() -> void:

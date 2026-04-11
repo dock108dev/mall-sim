@@ -23,19 +23,42 @@ const TIER_MULTIPLIERS: Dictionary = {
 	Tier.LEGENDARY: 3.0,
 }
 
+const BUDGET_MULTIPLIERS: Dictionary = {
+	Tier.UNKNOWN: 1.0,
+	Tier.LOCAL_FAVORITE: 1.2,
+	Tier.DESTINATION_SHOP: 1.5,
+	Tier.LEGENDARY: 2.0,
+}
+
+## Tier-scaled customer caps for small stores (map Tier -> max count).
+const MAX_CUSTOMERS_BY_TIER_SMALL: Dictionary = {
+	Tier.UNKNOWN: 5,
+	Tier.LOCAL_FAVORITE: 6,
+	Tier.DESTINATION_SHOP: 8,
+	Tier.LEGENDARY: 10,
+}
+
+## Tier-scaled customer caps for medium/large stores (map Tier -> max count).
+const MAX_CUSTOMERS_BY_TIER_MEDIUM: Dictionary = {
+	Tier.UNKNOWN: 8,
+	Tier.LOCAL_FAVORITE: 10,
+	Tier.DESTINATION_SHOP: 12,
+	Tier.LEGENDARY: 15,
+}
+
 const MAX_REPUTATION: float = 100.0
 const MIN_REPUTATION: float = 0.0
-const DAILY_DECAY: float = 0.5
+const DAILY_DECAY: float = 0.3
 
 const REP_SALE_MIN: float = 1.0
 const REP_SALE_MAX: float = 3.0
-const REP_FAIR_SALE: float = 2.0
-const REP_NO_PURCHASE: float = -1.0
-const REP_PATIENCE_EXPIRED: float = -2.0
+const REP_FAIR_SALE: float = 2.5
+const REP_NO_PURCHASE: float = -0.5
+const REP_PATIENCE_EXPIRED: float = -1.5
 const REP_OVERPRICED_REJECTED: float = -1.0
 
-## How close to market value counts as "fair" (within 20%).
-const FAIR_PRICE_THRESHOLD: float = 0.2
+## How close to market value counts as "fair" (within 25%).
+const FAIR_PRICE_THRESHOLD: float = 0.25
 
 var _score: float = 0.0
 var _current_tier: Tier = Tier.UNKNOWN
@@ -68,6 +91,18 @@ func get_tier() -> Tier:
 ## Returns the customer spawn multiplier for the current tier.
 func get_customer_multiplier() -> float:
 	return TIER_MULTIPLIERS.get(_current_tier, 1.0)
+
+
+## Returns the budget multiplier for the current reputation tier.
+func get_budget_multiplier() -> float:
+	return BUDGET_MULTIPLIERS.get(_current_tier, 1.0)
+
+
+## Returns the max customer count for the current tier and store size.
+func get_max_customers(size_category: String) -> int:
+	if size_category == "medium" or size_category == "large":
+		return MAX_CUSTOMERS_BY_TIER_MEDIUM.get(_current_tier, 8) as int
+	return MAX_CUSTOMERS_BY_TIER_SMALL.get(_current_tier, 5) as int
 
 
 ## Returns a human-readable tier name.

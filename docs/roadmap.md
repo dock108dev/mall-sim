@@ -47,7 +47,7 @@ No core system changes were needed for additional store types (modularity valida
 - Seasonal events (holiday shopping, Black Friday, back-to-school)
 - Random events (supply shortage, customer surge, quality issues)
 - Trend system with category/tag demand cycles
-- Market event system (boom/bust cycles — implemented but not yet wired to GameWorld)
+- Market event system (boom/bust cycles with phased lifecycle, wired to GameWorld and EconomySystem)
 - Tutorial system with first-day walkthrough and contextual tips
 - Secret narrative thread with ambient moments and ending evaluator
 
@@ -58,9 +58,9 @@ Remaining work:
 - [ ] Replace placeholder 3D models with final art (models/ directory empty)
 - [ ] Replace placeholder textures (textures/ directory empty)
 - [ ] Customer animation polish
-- [ ] Custom shaders (shaders/ directory empty)
+- [x] Custom shaders (outline highlight shader for interactable objects)
 - [ ] Localization support (localization/ directory empty)
-- [ ] Wire MarketEventSystem into GameWorld (system implemented but disconnected)
+- [x] Wire MarketEventSystem into GameWorld
 - [ ] macOS notarization for distribution
 - [ ] Windows code signing
 - [ ] Performance profiling on min-spec hardware

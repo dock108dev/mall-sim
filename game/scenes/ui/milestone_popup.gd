@@ -58,7 +58,7 @@ func _on_milestone_completed(
 
 
 func _show_popup(entry: Dictionary) -> void:
-	_title_label.text = "Milestone Complete!"
+	_title_label.text = tr("MILESTONE_COMPLETE")
 	_name_label.text = entry.get("name", "")
 	_reward_label.text = entry.get("reward", "")
 	_timer = DISPLAY_DURATION

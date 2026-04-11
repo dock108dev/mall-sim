@@ -93,8 +93,8 @@ size = Vector3(3.25, 3, 0.1)
 background_mode = 1
 background_color = Color(0.2, 0.2, 0.3, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.9, 0.92, 1.0, 1)
-ambient_light_energy = 0.5
+ambient_light_color = Color(1.0, 0.93, 0.78, 1)
+ambient_light_energy = 0.45
 
 ; ============================================================
 ; Root
@@ -111,7 +111,7 @@ script = ExtResource("1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 
 ; ============================================================
-; Environment & Lighting (fluorescent feel)
+; Environment & Lighting (warm fluorescent panels)
 ; ============================================================
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -119,19 +119,19 @@ environment = SubResource("env")
 
 [node name="AmbientLight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
-light_color = Color(0.95, 0.95, 1.0, 1)
-light_energy = 0.9
+light_color = Color(1.0, 0.94, 0.8, 1)
+light_energy = 0.85
 omni_range = 10.0
 
 [node name="FluorescentFill" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
-light_color = Color(0.92, 0.95, 1.0, 1)
+light_color = Color(1.0, 0.92, 0.78, 1)
 light_energy = 0.5
 omni_range = 7.0
 
 [node name="DisplaySpot_NewReleases" type="SpotLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2.8, -2.5)
-light_color = Color(0.95, 0.95, 1.0, 1)
+light_color = Color(1.0, 0.9, 0.7, 1)
 light_energy = 1.2
 shadow_enabled = true
 spot_range = 3.5
@@ -139,7 +139,7 @@ spot_angle = 40.0
 
 [node name="DisplaySpot_StaffPicks" type="SpotLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 3.5, 2.8, 1.0)
-light_color = Color(0.9, 0.92, 1.0, 1)
+light_color = Color(1.0, 0.92, 0.78, 1)
 light_energy = 1.0
 shadow_enabled = true
 spot_range = 3.5

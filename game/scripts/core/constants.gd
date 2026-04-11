@@ -8,7 +8,7 @@ const STORE_OPEN_HOUR := 9
 const STORE_CLOSE_HOUR := 21
 
 # Economy
-const STARTING_CASH := 500.0
+const STARTING_CASH := 750.0
 const MIN_MARKUP := 0.05
 const MAX_MARKUP := 5.0
 

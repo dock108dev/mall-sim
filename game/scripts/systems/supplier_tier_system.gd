@@ -7,24 +7,24 @@ extends RefCounted
 
 const TIERS: Dictionary = {
 	1: {
-		"wholesale": 0.70,
-		"daily_limit": 200.0,
+		"wholesale": 0.75,
+		"daily_limit": 250.0,
 		"rarities": ["common", "uncommon"],
 		"delivery_days": 1,
 		"rep_threshold": 0.0,
 		"name": "Tier 1",
 	},
 	2: {
-		"wholesale": 0.75,
-		"daily_limit": 500.0,
+		"wholesale": 0.65,
+		"daily_limit": 600.0,
 		"rarities": ["common", "uncommon", "rare"],
 		"delivery_days": 1,
 		"rep_threshold": 25.0,
 		"name": "Tier 2",
 	},
 	3: {
-		"wholesale": 0.80,
-		"daily_limit": 1000.0,
+		"wholesale": 0.55,
+		"daily_limit": 1500.0,
 		"rarities": ["uncommon", "rare", "very_rare"],
 		"delivery_days": 2,
 		"rep_threshold": 50.0,
