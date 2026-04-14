@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 env:
   GODOT_VERSION: "4.3"
 
@@ -12,6 +15,8 @@ jobs:
   export-windows:
     name: Export Windows Build (Signed)
     runs-on: windows-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -116,6 +121,8 @@ jobs:
   export-macos:
     name: Export macOS Build (Signed & Notarized)
     runs-on: macos-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -250,6 +257,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
 
     steps:
       - name: Download macOS artifact
