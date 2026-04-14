@@ -41,8 +41,8 @@ jobs:
 
       - name: Import project assets
         shell: bash
-        run: godot --headless --import 2>&1 || true
-        timeout-minutes: 5
+        run: bash scripts/godot_import.sh
+        timeout-minutes: 10
 
       - name: Export Windows
         shell: bash
@@ -142,8 +142,8 @@ jobs:
         run: mkdir -p build/macos
 
       - name: Import project assets
-        run: godot --headless --import 2>&1 || true
-        timeout-minutes: 5
+        run: bash scripts/godot_import.sh
+        timeout-minutes: 10
 
       - name: Export macOS
         run: |

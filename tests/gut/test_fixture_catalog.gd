@@ -22,7 +22,7 @@ func test_universal_fixture_count() -> void:
 	for f: FixtureDefinition in all:
 		if f.category == "universal":
 			universal_count += 1
-	assert_ge(
+	assert_gte(
 		universal_count, 3,
 		"Should have at least 3 universal fixtures"
 	)
@@ -34,7 +34,7 @@ func test_store_specific_fixture_count() -> void:
 	for f: FixtureDefinition in all:
 		if f.category == "store_specific":
 			specific_count += 1
-	assert_ge(
+	assert_gte(
 		specific_count, 5,
 		"Should have at least 5 store-specific fixtures"
 	)
@@ -207,11 +207,11 @@ func test_all_visual_categories_represented() -> void:
 func test_item_capacity_range() -> void:
 	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
 	for f: FixtureDefinition in all:
-		assert_ge(
+		assert_gte(
 			f.slot_count, 2,
 			"%s item_capacity should be >= 2" % f.id
 		)
-		assert_le(
+		assert_lte(
 			f.slot_count, 12,
 			"%s item_capacity should be <= 12" % f.id
 		)
@@ -220,11 +220,11 @@ func test_item_capacity_range() -> void:
 func test_purchase_cost_range() -> void:
 	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
 	for f: FixtureDefinition in all:
-		assert_ge(
+		assert_gte(
 			f.cost, 25.0,
 			"%s purchase_cost should be >= $25" % f.id
 		)
-		assert_le(
+		assert_lte(
 			f.cost, 150.0,
 			"%s purchase_cost should be <= $150" % f.id
 		)

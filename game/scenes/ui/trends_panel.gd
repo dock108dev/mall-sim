@@ -1,5 +1,4 @@
 ## Panel displaying active market trends (hot and cold categories/tags).
-class_name TrendsPanel
 extends CanvasLayer
 
 

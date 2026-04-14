@@ -72,7 +72,7 @@ func before_each() -> void:
 	_market_value = MarketValueSystem.new()
 	add_child_autofree(_market_value)
 	_market_value.initialize(
-		_inventory, _trend, _market_event, _seasonal_event
+		_inventory, _market_event, _seasonal_event
 	)
 	EventBus.item_sold.connect(_on_item_sold)
 

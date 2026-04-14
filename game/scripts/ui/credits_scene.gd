@@ -13,9 +13,9 @@ var _scrolling: bool = false
 var _fade_tween: Tween
 var _scroll_bar: VScrollBar
 
-@onready var _background: ColorRect = $Background
-@onready var _scroll_container: ScrollContainer = $Layout/ScrollContainer
-@onready var _back_button: Button = $Layout/BottomBar/BackToMenuButton
+@onready var _overlay: Control = $Overlay
+@onready var _scroll_container: ScrollContainer = $Overlay/Layout/ScrollContainer
+@onready var _back_button: Button = $Overlay/Layout/BottomBar/BackToMenuButton
 
 
 func _ready() -> void:
@@ -73,13 +73,13 @@ func _return_to_menu() -> void:
 
 
 func _animate_in() -> void:
-	modulate = Color(1, 1, 1, 0)
+	_overlay.modulate = Color(1, 1, 1, 0)
 	visible = true
 	if _fade_tween and _fade_tween.is_valid():
 		_fade_tween.kill()
 	_fade_tween = create_tween()
 	_fade_tween.tween_property(
-		self, "modulate:a", 1.0, FADE_DURATION
+		_overlay, "modulate:a", 1.0, FADE_DURATION
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
@@ -88,12 +88,12 @@ func _fade_out_and(callback: Callable) -> void:
 		_fade_tween.kill()
 	_fade_tween = create_tween()
 	_fade_tween.tween_property(
-		self, "modulate:a", 0.0, FADE_DURATION
+		_overlay, "modulate:a", 0.0, FADE_DURATION
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	_fade_tween.tween_callback(
 		func() -> void:
 			visible = false
-			modulate = Color.WHITE
+			_overlay.modulate = Color.WHITE
 			callback.call()
 	)
 

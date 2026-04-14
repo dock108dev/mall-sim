@@ -73,7 +73,7 @@ func before_each() -> void:
 	_system = MarketValueSystem.new()
 	add_child_autofree(_system)
 	_system.initialize(
-		_inventory, _trend, _market_event, _seasonal_event
+		_inventory, _market_event, _seasonal_event
 	)
 
 

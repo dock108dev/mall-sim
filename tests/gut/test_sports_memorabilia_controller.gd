@@ -106,7 +106,7 @@ func test_store_exited_ignores_other_stores() -> void:
 
 func test_authentication_eligible_without_inventory() -> void:
 	var result: bool = _controller._is_authentication_eligible(
-		&"some_item"
+		&"some_item", 100.0
 	)
 	assert_false(
 		result,

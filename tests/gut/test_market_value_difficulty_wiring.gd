@@ -35,7 +35,7 @@ func before_each() -> void:
 
 	_system = MarketValueSystem.new()
 	add_child_autofree(_system)
-	_system.initialize(_inventory, _trend, null, null)
+	_system.initialize(_inventory, null, null)
 
 
 func after_each() -> void:

@@ -120,7 +120,7 @@ func test_purchase_intent_triggers_seek_saleable() -> void:
 		intent_without_demo, threshold,
 		"Base intent below threshold must not trigger purchase without demo"
 	)
-	assert_ge(
+	assert_gte(
 		intent_with_demo, threshold,
 		"Base intent + demo bonus must meet or exceed purchase_intent_threshold"
 	)

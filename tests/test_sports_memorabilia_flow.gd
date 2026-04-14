@@ -282,7 +282,7 @@ func test_a8_final_negotiated_price_at_or_above_floor_ratio() -> void:
 	)
 	_haggle.begin_negotiation(customer, item)
 	_haggle.player_counter(floor_price)
-	assert_ge(
+	assert_gte(
 		final_price, floor_price - 0.01,
 		"Final negotiated price $%.2f must be >= floor_ratio × auth_price $%.2f"
 		% [final_price, floor_price]

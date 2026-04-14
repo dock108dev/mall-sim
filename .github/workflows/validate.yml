@@ -45,6 +45,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache Godot import cache
+        uses: actions/cache@v4
+        with:
+          path: .godot
+          key: godot-import-${{ runner.os }}-4.3-${{ hashFiles('project.godot', '**/*.import') }}
+          restore-keys: |
+            godot-import-${{ runner.os }}-4.3-
+
       - name: Install Godot
         run: |
           GODOT_VERSION="4.3-stable"
@@ -56,12 +64,10 @@ jobs:
           godot --version
 
       - name: Import project
-        run: |
-          godot --headless --import 2>&1 || true
-          godot --headless --import 2>&1 || true
+        run: bash scripts/godot_import.sh
 
       - name: Run GUT tests
-        run: godot --headless -s addons/gut/gut_cmdln.gd
+        run: godot --path "$GITHUB_WORKSPACE" --headless -s addons/gut/gut_cmdln.gd
 
   lint-gdscript:
     name: GDScript Lint

@@ -75,7 +75,7 @@ func test_depreciation_reduces_price_over_days() -> void:
 		price_at_launch,
 		"Price should decrease after leaving launch phase"
 	)
-	assert_ge(
+	assert_gte(
 		price_after_ten_days,
 		floor_price,
 		"Price must remain at or above floor_price after 10 days"
