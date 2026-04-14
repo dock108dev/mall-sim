@@ -19,6 +19,7 @@ func before_each() -> void:
 	_economy.initialize(1000.0)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 
 	_data_loader = DataLoader.new()
@@ -49,7 +50,7 @@ func after_each() -> void:
 func _register_test_fixture() -> void:
 	var def := FixtureDefinition.new()
 	def.id = FIXTURE_TYPE
-	def.name = FIXTURE_TYPE
+	def.item_name = FIXTURE_TYPE
 	def.cost = FIXTURE_COST
 	_data_loader._fixtures[FIXTURE_TYPE] = def
 

@@ -33,6 +33,7 @@ func before_each() -> void:
 	_inventory.initialize(null)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 
 	_store_state_manager = StoreStateManager.new()

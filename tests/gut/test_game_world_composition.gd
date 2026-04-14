@@ -85,7 +85,7 @@ func test_systems_ordered_by_tier() -> void:
 	for i: int in range(scene_state.get_node_count()):
 		node_names.append(scene_state.get_node_name(i))
 
-	var last_index: Array = [-1]
+	var last_index: int = -1
 	for tier_idx: int in range(_all_tiers.size()):
 		for system_name: StringName in _all_tiers[tier_idx]:
 			var idx: int = node_names.find(system_name)
@@ -97,9 +97,9 @@ func test_systems_ordered_by_tier() -> void:
 				"Tier %d system '%s' (index %d) must come after "
 				% [tier_idx + 1, system_name, idx]
 				+ "previous tier systems (last index %d)"
-				% last_index[0]
+				% last_index
 			)
-			last_index[0] = idx
+			last_index = idx
 
 
 func test_all_system_nodes_have_scripts() -> void:

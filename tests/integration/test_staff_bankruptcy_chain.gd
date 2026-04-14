@@ -38,6 +38,7 @@ func before_each() -> void:
 	_economy.initialize(STARTING_CASH_BELOW_WAGE)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 	_reputation.initialize_store(STORE_ID)
 	_reputation.add_reputation(STORE_ID, 50.0)

@@ -5,12 +5,23 @@ extends GutTest
 var _ds: Node
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+	DifficultySystemSingleton.set_tier(&"normal")
+
+
 func before_each() -> void:
+	DifficultySystemSingleton.set_tier(&"normal")
 	_ds = Node.new()
 	_ds.set_script(
 		preload("res://game/autoload/difficulty_system.gd")
 	)
 	add_child_autofree(_ds)
+
+
+func after_each() -> void:
+	DifficultySystemSingleton.set_tier(&"normal")
 
 
 func test_default_tier_is_normal() -> void:

@@ -120,7 +120,7 @@ func _run_trials(trial_count: int) -> int:
 		var succeeded: bool = _checkout.process_transaction(customer)
 		if succeeded:
 			success_count[0] += 1
-	return success_count
+	return success_count[0]
 
 
 func _inject_test_tier(modifier_value: float) -> void:

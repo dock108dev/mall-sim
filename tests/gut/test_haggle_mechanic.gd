@@ -11,9 +11,34 @@ var _item: ItemInstance
 var _customer_scene: PackedScene
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
+func after_each() -> void:
+	GameManager.current_store_id = &""
+
+
 func before_each() -> void:
+	GameManager.current_store_id = &"test_store"
+
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
+	_reputation.initialize_store("test_store")
+	if EventBus.haggle_completed.is_connected(
+		_reputation._on_haggle_completed
+	):
+		EventBus.haggle_completed.disconnect(
+			_reputation._on_haggle_completed
+		)
+	if EventBus.haggle_failed.is_connected(
+		_reputation._on_haggle_failed
+	):
+		EventBus.haggle_failed.disconnect(
+			_reputation._on_haggle_failed
+		)
 
 	_haggle = HaggleSystem.new()
 	add_child_autofree(_haggle)
@@ -442,15 +467,35 @@ func test_insult_counter_gives_max_penalty() -> void:
 	var initial_rep: float = _reputation.get_reputation()
 	_profile.patience = 0.9
 	_profile.price_sensitivity = 0.9
+	var saved_tier: StringName = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton._tiers[&"__insult_test_tier__"] = {
+		"id": "__insult_test_tier__",
+		"display_name": "Insult Test",
+		"modifiers": DifficultySystemSingleton._tiers.get(
+			saved_tier, {}
+		).get("modifiers", {}).duplicate(),
+		"flags": {},
+	}
+	DifficultySystemSingleton._tiers[&"__insult_test_tier__"][
+		"modifiers"
+	]["haggle_acceptance_base_rate"] = 0.0
+	DifficultySystemSingleton._tier_order.append(&"__insult_test_tier__")
+	DifficultySystemSingleton.set_tier(&"__insult_test_tier__")
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var perceived: float = _haggle._perceived_value
 	var first_offer: float = perceived * 1.5
 	_haggle.player_counter(first_offer)
 	if not _haggle.is_active():
+		DifficultySystemSingleton.set_tier(saved_tier)
+		DifficultySystemSingleton._tiers.erase(&"__insult_test_tier__")
+		DifficultySystemSingleton._tier_order.erase(&"__insult_test_tier__")
 		return
 	var barely_moved: float = first_offer * 1.001
 	_haggle.player_counter(barely_moved)
+	DifficultySystemSingleton.set_tier(saved_tier)
+	DifficultySystemSingleton._tiers.erase(&"__insult_test_tier__")
+	DifficultySystemSingleton._tier_order.erase(&"__insult_test_tier__")
 	if not _haggle.is_active():
 		var new_rep: float = _reputation.get_reputation()
 		var delta: float = new_rep - initial_rep

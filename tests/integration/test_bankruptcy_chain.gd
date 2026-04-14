@@ -220,7 +220,7 @@ func test_bankruptcy_ending_id_matches_catalog() -> void:
 
 	EventBus.ending_triggered.disconnect(on_triggered)
 
-	var ending_data: Dictionary = _ending_evaluator.get_ending_data(captured_id)
+	var ending_data: Dictionary = _ending_evaluator.get_ending_data(captured_id[0])
 	assert_false(
 		ending_data.is_empty(),
 		"Emitted ending_id '%s' must exist as a defined entry in ending_config.json" % captured_id[0]

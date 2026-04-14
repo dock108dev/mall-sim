@@ -9,6 +9,7 @@ var _rep: ReputationSystem
 
 func before_each() -> void:
 	_rep = ReputationSystem.new()
+	_rep.auto_connect_bus = false
 	add_child_autofree(_rep)
 	_rep.initialize_store(STORE_ID)
 

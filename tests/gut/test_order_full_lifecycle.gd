@@ -33,6 +33,7 @@ func before_each() -> void:
 	_order_failed_reason = ""
 	_order_delivered_count = 0
 
+	ContentRegistry.clear_for_testing()
 	_saved_data_loader = GameManager.data_loader
 	_data_loader = DataLoader.new()
 	add_child_autofree(_data_loader)
@@ -73,6 +74,9 @@ func after_each() -> void:
 	if EventBus.order_failed.is_connected(_on_order_failed):
 		EventBus.order_failed.disconnect(_on_order_failed)
 	GameManager.data_loader = _saved_data_loader
+	ContentRegistry.clear_for_testing()
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
 
 
 func _on_order_delivered(store_id: StringName, items: Array) -> void:

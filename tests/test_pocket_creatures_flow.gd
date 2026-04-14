@@ -289,7 +289,7 @@ func _make_tournament_def(
 ) -> TournamentEventDefinition:
 	var def := TournamentEventDefinition.new()
 	def.id = id
-	def.name = id
+	def.item_name = id
 	def.card_category = card_category
 	def.start_day = start_day
 	def.duration_days = duration_days

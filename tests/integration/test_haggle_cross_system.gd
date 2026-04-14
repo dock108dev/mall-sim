@@ -27,6 +27,7 @@ func before_each() -> void:
 	_economy.initialize(STARTING_CASH)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 	_reputation.initialize_store(TEST_STORE_ID)
 

@@ -67,6 +67,35 @@ func _ready() -> void:
 	pass
 
 
+## Resets all internal state so load_all_content() can re-register to ContentRegistry.
+func clear_for_testing() -> void:
+	_items.clear()
+	_stores.clear()
+	_customers.clear()
+	_fixtures.clear()
+	_market_events.clear()
+	_seasonal_events.clear()
+	_random_events.clear()
+	_staff_definitions.clear()
+	_milestones.clear()
+	_upgrades.clear()
+	_suppliers.clear()
+	_unlocks.clear()
+	_sports_seasons.clear()
+	_tournament_events.clear()
+	_ambient_moments.clear()
+	_secret_threads.clear()
+	_economy_config = null
+	_difficulty_config = {}
+	_seasonal_config = []
+	_retro_games_config = {}
+	_electronics_config = {}
+	_video_rental_config = {}
+	_named_seasons = {}
+	_load_errors = []
+	_loaded = false
+
+
 ## Public entry point called by boot sequence.
 func load_all() -> void:
 	load_all_content()
@@ -96,6 +125,7 @@ func load_all_content() -> void:
 	else:
 		EventBus.content_loaded.emit()
 	GameManager.data_loader = self
+	GameManager.mark_boot_completed()
 	_loaded = true
 
 

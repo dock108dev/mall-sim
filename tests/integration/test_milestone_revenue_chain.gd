@@ -109,7 +109,7 @@ func test_revenue_milestone_fires_once_at_threshold() -> void:
 	EventBus.milestone_unlocked.connect(_on_unlock)
 
 	var total: Array = [0.0]
-	while total < threshold + step:
+	while total[0] < threshold + step:
 		EventBus.transaction_completed.emit(step, true, "sale")
 		total[0] += step
 

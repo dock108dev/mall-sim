@@ -100,7 +100,7 @@ func test_early_bankruptcy_triggers_lights_out() -> void:
 	EventBus.ending_triggered.disconnect(on_ending)
 
 	_verify_final_stats_contains_stat_summary_keys(
-		triggered_id, triggered_stats
+		triggered_id[0], triggered_stats
 	)
 	_verify_trigger_type_bankruptcy_in_stats(triggered_stats)
 
@@ -142,7 +142,7 @@ func test_late_bankruptcy_triggers_going_going_gone() -> void:
 	EventBus.ending_triggered.disconnect(on_ending)
 
 	_verify_final_stats_contains_stat_summary_keys(
-		triggered_id, triggered_stats
+		triggered_id[0], triggered_stats
 	)
 	_verify_trigger_type_bankruptcy_in_stats(triggered_stats)
 
@@ -180,7 +180,7 @@ func test_mid_bankruptcy_triggers_foreclosure() -> void:
 	EventBus.ending_triggered.disconnect(on_ending)
 
 	_verify_final_stats_contains_stat_summary_keys(
-		triggered_id, triggered_stats
+		triggered_id[0], triggered_stats
 	)
 	_verify_trigger_type_bankruptcy_in_stats(triggered_stats)
 

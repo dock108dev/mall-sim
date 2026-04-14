@@ -76,7 +76,13 @@ func _populate_and_show() -> void:
 	else:
 		_revenue_label.text = "Revenue: $0.00"
 		_expenses_label.text = "Expenses: $0.00"
-		_wages_label.text = "Wages: $0.00"
+		if _wages_this_day > 0.0:
+			_wages_label.text = "Wages: -$%.2f" % _wages_this_day
+			_wages_label.add_theme_color_override(
+				"font_color", NET_NEGATIVE_COLOR
+			)
+		else:
+			_wages_label.text = "Wages: $0.00"
 		_net_label.text = "Net: $0.00"
 		_set_net_color(0.0)
 		_clear_reputation()

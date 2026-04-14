@@ -32,6 +32,8 @@ func resolve(raw: String) -> StringName:
 		return normalized
 	if _aliases.has(normalized):
 		return _aliases[normalized]
+	if _resources.has(normalized):
+		return normalized
 	push_error(
 		"ContentRegistry: unknown ID '%s' (normalized: '%s')"
 		% [raw, normalized]
@@ -47,6 +49,7 @@ func exists(raw: String) -> bool:
 	return (
 		_entries.has(normalized)
 		or _aliases.has(normalized)
+		or _resources.has(normalized)
 	)
 
 
@@ -83,7 +86,7 @@ func clear_for_testing() -> void:
 	_types.clear()
 	_resources.clear()
 	_ready_flag = false
-	DataLoaderSingleton._loaded = false
+	DataLoaderSingleton.clear_for_testing()
 
 
 ## Returns all canonical IDs of a given content type.

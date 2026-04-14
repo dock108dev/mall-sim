@@ -10,6 +10,8 @@ var _nav_agent: NavigationAgent3D = null
 
 
 func before_all() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
 	_store = STORE_SCENE.instantiate()
 	add_child(_store)
 	_nav_agent = NavigationAgent3D.new()
@@ -28,6 +30,9 @@ func after_all() -> void:
 
 
 func test_entry_to_register() -> void:
+	if DisplayServer.get_name() == "headless":
+		pending("Navigation tests require a display server")
+		return
 	var entry_pos: Vector3 = _get_entry_position()
 	var register_pos: Vector3 = _get_register_position()
 	var has_path: bool = _can_navigate(entry_pos, register_pos)
@@ -35,6 +40,9 @@ func test_entry_to_register() -> void:
 
 
 func test_entry_to_slots() -> void:
+	if DisplayServer.get_name() == "headless":
+		pending("Navigation tests require a display server")
+		return
 	var entry_pos: Vector3 = _get_entry_position()
 	var slots: Array[Dictionary] = _get_all_slot_positions()
 	for slot_data: Dictionary in slots:
@@ -48,6 +56,9 @@ func test_entry_to_slots() -> void:
 
 
 func test_slots_to_register() -> void:
+	if DisplayServer.get_name() == "headless":
+		pending("Navigation tests require a display server")
+		return
 	var register_pos: Vector3 = _get_register_position()
 	var slots: Array[Dictionary] = _get_all_slot_positions()
 	for slot_data: Dictionary in slots:

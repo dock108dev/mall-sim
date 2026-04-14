@@ -281,7 +281,7 @@ func test_catalog_validation() -> void:
 	)
 
 	var ending_data: Dictionary = (
-		_ending_evaluator.get_ending_data(triggered_id)
+		_ending_evaluator.get_ending_data(triggered_id[0])
 	)
 	assert_false(
 		ending_data.is_empty(),
@@ -309,7 +309,7 @@ func test_catalog_validation() -> void:
 
 	assert_eq(
 		ending_data.get("id", ""),
-		String(triggered_id),
+		String(triggered_id[0]),
 		"Catalog entry id must match triggered ending_id"
 	)
 

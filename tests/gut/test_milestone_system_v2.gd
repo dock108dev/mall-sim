@@ -354,7 +354,7 @@ func test_milestone_emits_toast_on_unlock() -> void:
 	_ms._on_transaction_completed(100.0, true, "sale")
 
 	assert_string_contains(
-		toast_message, "Milestone reached:",
+		toast_message[0], "Milestone reached:",
 		"toast should contain milestone prefix"
 	)
 	assert_gt(

@@ -11,8 +11,14 @@ var _item: ItemInstance
 var _customer_scene: PackedScene
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
 func before_each() -> void:
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 
 	_haggle = HaggleSystem.new()

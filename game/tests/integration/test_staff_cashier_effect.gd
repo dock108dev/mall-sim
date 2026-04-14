@@ -8,7 +8,7 @@ var _checkout: PlayerCheckout
 
 
 func before_each() -> void:
-	GameManager.current_store_id = &STORE_ID
+	GameManager.current_store_id = StringName(STORE_ID)
 	_checkout = PlayerCheckout.new()
 	add_child_autofree(_checkout)
 	_checkout.initialize(null, null, null, null)

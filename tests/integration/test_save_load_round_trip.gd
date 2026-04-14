@@ -63,6 +63,7 @@ func before_each() -> void:
 	_time.current_day = PRE_SAVE_DAY
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 	_reputation.initialize_store(String(STORE_ID))
 	_reputation._scores[String(STORE_ID)] = PRE_SAVE_REPUTATION
@@ -313,7 +314,7 @@ func _count_items_by_def(
 	for item: ItemInstance in items:
 		if item.definition and item.definition.id == def_id:
 			count[0] += 1
-	return count
+	return count[0]
 
 
 func _register_test_data() -> void:

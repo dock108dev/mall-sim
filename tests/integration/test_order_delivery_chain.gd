@@ -86,7 +86,7 @@ func _count_stock_by_def(store_id: StringName, def_id: StringName) -> int:
 	for item: ItemInstance in all_stock:
 		if item.definition and item.definition.id == String(def_id):
 			count[0] += 1
-	return count
+	return count[0]
 
 
 ## Returns the expected total order cost from TIER_CONFIG and item base price.

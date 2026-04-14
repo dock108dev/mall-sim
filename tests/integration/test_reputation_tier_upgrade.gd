@@ -10,6 +10,7 @@ var _mock_customer: Node
 
 func before_each() -> void:
 	_rep = ReputationSystem.new()
+	_rep.auto_connect_bus = false
 	add_child_autofree(_rep)
 	_rep.initialize_store(STORE_ID)
 	GameManager.current_store_id = &"test_store"

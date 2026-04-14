@@ -22,6 +22,7 @@ func before_each() -> void:
 	_economy.initialize(1000.0)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 	_reputation.initialize_store(STORE_ID)
 	_reputation.add_reputation(STORE_ID, 50.0)
@@ -38,7 +39,7 @@ func before_each() -> void:
 	add_child_autofree(_staff)
 	_staff.initialize(_economy, _reputation, _inventory, _data_loader)
 
-	GameManager.current_store_id = &STORE_ID
+	GameManager.current_store_id = StringName(STORE_ID)
 
 
 func after_each() -> void:

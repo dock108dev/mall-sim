@@ -36,7 +36,7 @@ func _make_item(
 ) -> ItemInstance:
 	var def := ItemDefinition.new()
 	def.id = "test_pricing_item"
-	def.name = "Test Pricing Item"
+	def.item_name = "Test Pricing Item"
 	def.base_price = base_price
 	def.rarity = "common"
 	def.category = category

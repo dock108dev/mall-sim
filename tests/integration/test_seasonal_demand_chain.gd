@@ -43,7 +43,7 @@ func after_each() -> void:
 func _create_event_def() -> SeasonalEventDefinition:
 	var def := SeasonalEventDefinition.new()
 	def.id = "sports_season_kickoff"
-	def.name = "Sports Season Kickoff"
+	def.item_name = "Sports Season Kickoff"
 	def.frequency_days = 90
 	def.duration_days = EVENT_DURATION
 	def.offset_days = 20

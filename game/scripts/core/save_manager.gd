@@ -419,6 +419,10 @@ func _collect_save_data() -> Dictionary:
 		"cash": _economy_system.get_cash(),
 		"owned_stores": owned_store_list,
 		"saved_at": Time.get_datetime_string_from_system(true),
+		"timestamp": Time.get_datetime_string_from_system(true),
+		"store_type": str(GameManager.current_store_id),
+		"play_time": _time_system.get_play_time_seconds(),
+		"used_difficulty_downgrade": false,
 	}
 
 	var data: Dictionary = {

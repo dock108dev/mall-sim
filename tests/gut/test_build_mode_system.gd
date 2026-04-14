@@ -111,7 +111,10 @@ func test_fixture_placed_signal_has_rotation() -> void:
 	var handler := func(
 		fid: String, pos: Vector2i, rot: int
 	) -> void:
-		placed_args = [fid, pos, rot]
+		placed_args.clear()
+		placed_args.append(fid)
+		placed_args.append(pos)
+		placed_args.append(rot)
 	EventBus.fixture_placed.connect(handler)
 	EventBus.fixture_placed.emit("test_fixture", Vector2i(3, 4), 2)
 	assert_eq(placed_args.size(), 3)

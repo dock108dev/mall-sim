@@ -11,7 +11,7 @@ var _seasonal_event: SeasonalEventSystem
 func _create_item_def(overrides: Dictionary = {}) -> ItemDefinition:
 	var def := ItemDefinition.new()
 	def.id = overrides.get("id", "test_item")
-	def.name = overrides.get("name", "Test Item")
+	def.item_name = overrides.get("name", "Test Item")
 	def.base_price = overrides.get("base_price", 10.0)
 	def.rarity = overrides.get("rarity", "common")
 	def.category = overrides.get("category", "trading_cards")

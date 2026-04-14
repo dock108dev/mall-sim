@@ -247,11 +247,11 @@ func test_rarity_weight_distribution_skews_toward_common() -> void:
 					rare_count[0] += 1
 
 	assert_gt(
-		common_count[0], uncommon_count,
+		common_count[0], uncommon_count[0],
 		"Commons should outnumber uncommons over 200 packs"
 	)
 	assert_gt(
-		uncommon_count[0], rare_count,
+		uncommon_count[0], rare_count[0],
 		"Uncommons should outnumber rares over 200 packs"
 	)
 	assert_true(

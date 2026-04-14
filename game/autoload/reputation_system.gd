@@ -69,9 +69,13 @@ const OVERPRICED_THRESHOLD: float = 1.8
 var _scores: Dictionary = {}
 var _tiers: Dictionary = {}
 var _pending_buyer_exits: Dictionary = {}
+## Set to false before add_child() in tests to prevent EventBus auto-connections.
+var auto_connect_bus: bool = true
 
 
 func _ready() -> void:
+	if not auto_connect_bus:
+		return
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.customer_left.connect(_on_customer_left)
 	EventBus.day_ended.connect(_on_day_ended)

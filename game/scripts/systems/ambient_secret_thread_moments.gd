@@ -139,7 +139,7 @@ func try_extra_delivery(day: int) -> void:
 func _create_mystery_item(day: int) -> void:
 	var mystery_def := ItemDefinition.new()
 	mystery_def.id = MYSTERY_ITEM_ID
-	mystery_def.name = "Unmarked Package"
+	mystery_def.item_name = "Unmarked Package"
 	mystery_def.description = (
 		"A small, tightly wrapped parcel with no return "
 		+ "address. The label is smudged. It wasn't on "

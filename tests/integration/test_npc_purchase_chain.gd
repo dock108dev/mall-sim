@@ -37,6 +37,7 @@ func before_each() -> void:
 	_queue.setup_queue_positions(Vector3.ZERO, Vector3(0.0, 0.0, 5.0))
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 	_reputation.initialize_store(TEST_STORE_ID)
 	_reputation._scores[TEST_STORE_ID] = STARTING_REPUTATION

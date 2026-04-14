@@ -359,7 +359,7 @@ func _populate_inventory(count: int) -> void:
 func _create_test_definition(item_id: String) -> ItemDefinition:
 	var def := ItemDefinition.new()
 	def.id = item_id
-	def.name = "Test Item %s" % item_id
+	def.item_name = "Test Item %s" % item_id
 	def.store_type = "sports"
 	def.base_price = 10.0
 	def.rarity = "common"

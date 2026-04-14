@@ -27,6 +27,7 @@ func before_each() -> void:
 	add_child_autofree(_inventory)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 
 	_customer_system = CustomerSystem.new()

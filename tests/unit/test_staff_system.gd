@@ -14,6 +14,7 @@ func before_each() -> void:
 	_economy.initialize(1000.0)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 
 	_data_loader = DataLoader.new()

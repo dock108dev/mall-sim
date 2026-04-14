@@ -307,12 +307,12 @@ func test_a9_economy_cash_increases_by_negotiated_price() -> void:
 	EventBus.customer_purchased.emit(
 		&"sports",
 		StringName(item.instance_id),
-		final_price,
+		final_price[0],
 		&"test_customer",
 	)
 	var cash_after: float = _economy.get_cash()
 	assert_almost_eq(
-		cash_after - cash_before, final_price, 0.01,
+		cash_after - cash_before, final_price[0], 0.01,
 		"Economy cash should increase by final negotiated price $%.2f"
 		% final_price[0]
 	)
@@ -345,7 +345,7 @@ func test_a10_item_sold_signal_carries_correct_params() -> void:
 		"item_sold should carry correct item_id"
 	)
 	assert_almost_eq(
-		_item_sold_signals[0]["price"], final_price, 0.01,
+		_item_sold_signals[0]["price"], final_price[0], 0.01,
 		"item_sold should carry correct final_price"
 	)
 	assert_eq(

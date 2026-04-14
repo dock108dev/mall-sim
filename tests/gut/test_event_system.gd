@@ -432,7 +432,7 @@ func test_random_cooldown_prevents_reactivation() -> void:
 	var def: RandomEventDefinition = _random_def({"cooldown_days": 5})
 	_set_random_definitions(def)
 	_random._cooldowns["test_random"] = 3
-	assert_eq(_random._get_eligible().size(), 0)
+	assert_eq(_random._get_eligible_daily().size(), 0)
 
 func test_random_cooldown_ticks_down() -> void:
 	_random._cooldowns["evt_a"] = 3
@@ -449,7 +449,7 @@ func test_random_eligible_filters_cooldowns() -> void:
 	var c: RandomEventDefinition = _random_def({"id": "c"})
 	_set_random_definitions_three(a, b, c)
 	_random._cooldowns["b"] = 5
-	var eligible: Array[RandomEventDefinition] = _random._get_eligible()
+	var eligible: Array[RandomEventDefinition] = _random._get_eligible_daily()
 	assert_eq(eligible.size(), 2)
 	var ids: PackedStringArray = []
 	for d: RandomEventDefinition in eligible:

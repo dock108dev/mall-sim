@@ -22,6 +22,7 @@ func before_each() -> void:
 	_economy.initialize(5000.0)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
 	_reputation.initialize_store("test_store")
 	_reputation.add_reputation("test_store", 50.0)
@@ -49,6 +50,7 @@ func after_each() -> void:
 	GameManager.current_store_id = &""
 	ContentRegistry.clear_for_testing()
 	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
 
 
 func test_timer_starts_on_stocker_hire() -> void:

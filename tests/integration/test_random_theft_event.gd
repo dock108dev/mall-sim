@@ -80,6 +80,7 @@ func before_each() -> void:
 	_economy_system.initialize(STARTING_CASH)
 
 	_reputation_system = ReputationSystem.new()
+	_reputation_system.auto_connect_bus = false
 	add_child_autofree(_reputation_system)
 	_reputation_system.initialize_store("retro_games")
 

@@ -267,4 +267,4 @@ func _count_staff_npcs(parent: Node) -> int:
 	for child: Node in parent.get_children():
 		if child is StaffNPC:
 			count[0] += 1
-	return count
+	return count[0]

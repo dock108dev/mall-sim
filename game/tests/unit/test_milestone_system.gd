@@ -294,7 +294,7 @@ func test_cash_reward_emits_transaction_completed() -> void:
 	EventBus.transaction_completed.connect(cb)
 	_ms._on_customer_purchased(&"s", &"i", 10.0, &"c")
 	assert_almost_eq(reward_amount[0], 10.0, 0.01)
-	assert_string_contains(reward_msg, "first_sale")
+	assert_string_contains(reward_msg[0], "first_sale")
 	EventBus.transaction_completed.disconnect(cb)
 
 
@@ -393,7 +393,7 @@ func test_get_completion_percent_after_one_visible() -> void:
 	for m: MilestoneDefinition in _ms._milestones:
 		if m.is_visible:
 			visible_total[0] += 1
-	var expected: float = 1.0 / float(visible_total)
+	var expected: float = 1.0 / float(visible_total[0])
 	assert_almost_eq(_ms.get_completion_percent(), expected, 0.01)
 
 

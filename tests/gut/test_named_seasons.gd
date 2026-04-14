@@ -13,10 +13,13 @@ func before_each() -> void:
 	_seasonal._season_table = _build_test_seasons()
 	_seasonal._season_cycle_length = 70
 	_seasonal._apply_state({})
+	EventBus.day_started.connect(_seasonal._on_day_started)
 	EventBus.seasonal_event_started.connect(_record_started)
 
 
 func after_each() -> void:
+	if EventBus.day_started.is_connected(_seasonal._on_day_started):
+		EventBus.day_started.disconnect(_seasonal._on_day_started)
 	if EventBus.seasonal_event_started.is_connected(
 		_record_started
 	):

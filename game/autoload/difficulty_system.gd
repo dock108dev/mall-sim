@@ -148,6 +148,8 @@ func _load_config() -> void:
 	if config.is_empty():
 		push_error("DifficultySystem: difficulty_config is empty")
 		return
+	_tiers.clear()
+	_tier_order.clear()
 	var tiers_array: Array = config.get("tiers", [])
 	for tier_data: Variant in tiers_array:
 		var tier_dict: Dictionary = tier_data as Dictionary
