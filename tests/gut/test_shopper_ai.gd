@@ -331,11 +331,11 @@ func test_score_action_visit_store_uses_shop_weight() -> void:
 	var scores: Array[float] = []
 	for i: int in range(20):
 		scores.append(_shopper._score_action("visit_store"))
-	var avg: float = 0.0
+	var avg: Array = [0.0]
 	for s: float in scores:
-		avg += s
-	avg /= scores.size()
-	assert_gt(avg, 1.5, "High shop_weight should produce high scores")
+		avg[0] += s
+	avg[0] /= scores.size()
+	assert_gt(avg[0], 1.5, "High shop_weight should produce high scores")
 
 
 func test_score_action_leave_high_when_shopping_depleted() -> void:
@@ -343,12 +343,12 @@ func test_score_action_leave_high_when_shopping_depleted() -> void:
 	var scores: Array[float] = []
 	for i: int in range(20):
 		scores.append(_shopper._score_action("leave"))
-	var avg: float = 0.0
+	var avg: Array = [0.0]
 	for s: float in scores:
-		avg += s
-	avg /= scores.size()
+		avg[0] += s
+	avg[0] /= scores.size()
 	assert_gt(
-		avg, 0.5,
+		avg[0], 0.5,
 		"Leave score should be high when shopping need is depleted"
 	)
 

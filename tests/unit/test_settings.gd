@@ -239,37 +239,37 @@ func test_reset_to_defaults_restores_all_simultaneously() -> void:
 # -- EventBus preference_changed emission (ISSUE-428) ---------------------
 
 func test_set_preference_emits_eventbus_preference_changed() -> void:
-	var received_key: String = ""
-	var received_value: Variant = null
+	var received_key: Array = [""]
+	var received_value: Array = [null]
 	var handler: Callable = func(k: String, v: Variant) -> void:
-		received_key = k
-		received_value = v
+		received_key[0] = k
+		received_value[0] = v
 	EventBus.preference_changed.connect(handler)
 	_settings.set_preference(&"master_volume", 0.5)
 	EventBus.preference_changed.disconnect(handler)
-	assert_eq(received_key, "master_volume", "EventBus.preference_changed key should be 'master_volume'")
-	assert_almost_eq(received_value as float, 0.5, 0.001, "EventBus.preference_changed value should be 0.5")
+	assert_eq(received_key[0], "master_volume", "EventBus.preference_changed key should be 'master_volume'")
+	assert_almost_eq(received_value[0] as float, 0.5, 0.001, "EventBus.preference_changed value should be 0.5")
 
 
 func test_set_preference_emits_eventbus_for_sfx_volume() -> void:
-	var received_key: String = ""
+	var received_key: Array = [""]
 	var handler: Callable = func(k: String, _v: Variant) -> void:
-		received_key = k
+		received_key[0] = k
 	EventBus.preference_changed.connect(handler)
 	_settings.set_preference(&"sfx_volume", 0.3)
 	EventBus.preference_changed.disconnect(handler)
-	assert_eq(received_key, "sfx_volume", "EventBus.preference_changed key should be 'sfx_volume'")
+	assert_eq(received_key[0], "sfx_volume", "EventBus.preference_changed key should be 'sfx_volume'")
 
 
 func test_set_preference_idempotent_does_not_emit_eventbus() -> void:
 	_settings.set_preference(&"master_volume", 0.7)
-	var signal_count: int = 0
+	var signal_count: Array = [0]
 	var handler: Callable = func(_k: String, _v: Variant) -> void:
-		signal_count += 1
+		signal_count[0] += 1
 	EventBus.preference_changed.connect(handler)
 	_settings.set_preference(&"master_volume", 0.7)
 	EventBus.preference_changed.disconnect(handler)
-	assert_eq(signal_count, 0, "Idempotent set_preference should not emit EventBus.preference_changed")
+	assert_eq(signal_count[0], 0, "Idempotent set_preference should not emit EventBus.preference_changed")
 
 
 # -- Helpers --------------------------------------------------------------

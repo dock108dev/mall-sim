@@ -57,15 +57,15 @@ func test_activate_no_announcement_emits_started() -> void:
 	var def: MarketEventDefinition = _create_event_def({
 		"announcement_days": 0,
 	})
-	var fired: bool = false
-	var got_id: String = ""
+	var fired: Array = [false]
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		fired = true
-		got_id = id
+		fired[0] = true
+		got_id[0] = id
 	EventBus.market_event_started.connect(cb)
 	_system._activate_event(def, 1)
-	assert_true(fired, "market_event_started should fire for no-announcement event")
-	assert_eq(got_id, "test_boom")
+	assert_true(fired[0], "market_event_started should fire for no-announcement event")
+	assert_eq(got_id[0], "test_boom")
 	assert_eq(_system._active_events.size(), 1)
 	var evt: Dictionary = _system._active_events[0]
 	assert_eq(
@@ -80,23 +80,23 @@ func test_activate_with_announcement_emits_announced_then_started() -> void:
 		"announcement_days": 2,
 		"ramp_up_days": 1,
 	})
-	var announced: bool = false
-	var started: bool = false
+	var announced: Array = [false]
+	var started: Array = [false]
 	var announced_cb: Callable = func(id: String) -> void:
-		announced = true
+		announced[0] = true
 	var started_cb: Callable = func(id: String) -> void:
-		started = true
+		started[0] = true
 	EventBus.market_event_announced.connect(announced_cb)
 	EventBus.market_event_started.connect(started_cb)
 	_system._activate_event(def, 1)
-	assert_true(announced, "market_event_announced should fire")
-	assert_false(started, "market_event_started should not fire yet")
+	assert_true(announced[0], "market_event_announced should fire")
+	assert_false(started[0], "market_event_started should not fire yet")
 	assert_eq(
 		_system._active_events[0].get("phase", -1),
 		MarketEventSystem.Phase.ANNOUNCEMENT,
 	)
 	_system._advance_event_lifecycles(3)
-	assert_true(started, "market_event_started should fire after announcement ends")
+	assert_true(started[0], "market_event_started should fire after announcement ends")
 	EventBus.market_event_announced.disconnect(announced_cb)
 	EventBus.market_event_started.disconnect(started_cb)
 
@@ -148,18 +148,18 @@ func test_advancing_past_duration_emits_ended() -> void:
 		"ramp_down_days": 0,
 	})
 	_system._activate_event(def, 1)
-	var ended: bool = false
-	var ended_id: String = ""
+	var ended: Array = [false]
+	var ended_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		ended = true
-		ended_id = id
+		ended[0] = true
+		ended_id[0] = id
 	EventBus.market_event_ended.connect(cb)
 	_system._advance_event_lifecycles(3)
-	assert_false(ended, "Should not expire on day 3 (end_day = 1+0+3 = 4)")
+	assert_false(ended[0], "Should not expire on day 3 (end_day = 1+0+3 = 4)")
 	assert_eq(_system._active_events.size(), 1)
 	_system._advance_event_lifecycles(4)
-	assert_true(ended, "market_event_ended should fire when day >= end_day")
-	assert_eq(ended_id, "test_boom")
+	assert_true(ended[0], "market_event_ended should fire when day >= end_day")
+	assert_eq(ended_id[0], "test_boom")
 	assert_eq(_system._active_events.size(), 0, "Event should be removed")
 	EventBus.market_event_ended.disconnect(cb)
 
@@ -324,12 +324,12 @@ func test_full_lifecycle_via_day_started() -> void:
 		"cooldown_days": 5,
 	})
 	_system._activate_event(def, 1)
-	var started: bool = false
-	var ended: bool = false
+	var started: Array = [false]
+	var ended: Array = [false]
 	var start_cb: Callable = func(id: String) -> void:
-		started = true
+		started[0] = true
 	var end_cb: Callable = func(id: String) -> void:
-		ended = true
+		ended[0] = true
 	EventBus.market_event_started.connect(start_cb)
 	EventBus.market_event_ended.connect(end_cb)
 	assert_eq(
@@ -338,14 +338,14 @@ func test_full_lifecycle_via_day_started() -> void:
 	)
 	GameManager.current_day = 2
 	_system._on_day_started(2)
-	assert_true(started, "Should transition to RAMP_UP on day 2")
-	assert_false(ended, "Should not end on day 2")
+	assert_true(started[0], "Should transition to RAMP_UP on day 2")
+	assert_false(ended[0], "Should not end on day 2")
 	GameManager.current_day = 4
 	_system._on_day_started(4)
-	assert_false(ended, "Should not end on day 4 (end_day = 1+1+3 = 5)")
+	assert_false(ended[0], "Should not end on day 4 (end_day = 1+1+3 = 5)")
 	GameManager.current_day = 5
 	_system._on_day_started(5)
-	assert_true(ended, "Should expire on day 5 (end_day = 5)")
+	assert_true(ended[0], "Should expire on day 5 (end_day = 5)")
 	assert_eq(_system._active_events.size(), 0, "Event should be removed")
 	assert_true(
 		_system._cooldowns.has("test_boom"),

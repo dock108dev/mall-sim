@@ -82,22 +82,22 @@ func test_customer_purchased_plays_purchase_ding() -> void:
 
 func test_day_started_plays_mall_open_music_with_fade() -> void:
 	EventBus.day_started.emit(1)
-	var found: bool = false
+	var found: Array = [false]
 	for call: Dictionary in _mock.bgm_calls:
 		if call["track"] == "mall_open_music" and absf(call["fade"] - 0.5) < 0.001:
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "day_started should play mall_open_music with 0.5 fade")
+	assert_true(found[0], "day_started should play mall_open_music with 0.5 fade")
 
 
 func test_day_ended_plays_mall_close_music_with_fade() -> void:
 	EventBus.day_ended.emit(1)
-	var found: bool = false
+	var found: Array = [false]
 	for call: Dictionary in _mock.bgm_calls:
 		if call["track"] == "mall_close_music" and absf(call["fade"] - 1.0) < 0.001:
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "day_ended should play mall_close_music with 1.0 fade")
+	assert_true(found[0], "day_ended should play mall_close_music with 1.0 fade")
 
 
 func test_day_ended_also_plays_day_end_chime_sfx() -> void:
@@ -133,22 +133,22 @@ func test_build_mode_entered_plays_sfx() -> void:
 
 func test_build_mode_entered_plays_bgm_with_short_fade() -> void:
 	EventBus.build_mode_entered.emit()
-	var found: bool = false
+	var found: Array = [false]
 	for call: Dictionary in _mock.bgm_calls:
 		if call["track"] == "build_mode_music" and absf(call["fade"] - 0.3) < 0.001:
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "build_mode_entered should play build_mode_music with 0.3 fade")
+	assert_true(found[0], "build_mode_entered should play build_mode_music with 0.3 fade")
 
 
 func test_build_mode_exited_restores_mall_open_music() -> void:
 	EventBus.build_mode_exited.emit()
-	var found: bool = false
+	var found: Array = [false]
 	for call: Dictionary in _mock.bgm_calls:
 		if call["track"] == "mall_open_music" and absf(call["fade"] - 0.3) < 0.001:
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "build_mode_exited should restore mall_open_music with 0.3 fade")
+	assert_true(found[0], "build_mode_exited should restore mall_open_music with 0.3 fade")
 
 
 func test_no_direct_autoload_references_in_handler() -> void:

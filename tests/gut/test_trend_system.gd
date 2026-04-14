@@ -239,12 +239,12 @@ func test_save_load_roundtrip_preserves_trends() -> void:
 		fresh._active_trends.size(), 2,
 		"Loaded system should have same number of trends"
 	)
-	var electronics_found: bool = false
+	var electronics_found: Array = [false]
 	for trend: Dictionary in fresh._active_trends:
 		if trend.get("target") == "electronics":
 			assert_almost_eq(
 				float(trend.get("multiplier", 0.0)), 1.75, 0.001,
 				"Loaded electronics multiplier should match saved value"
 			)
-			electronics_found = true
-	assert_true(electronics_found, "Electronics trend should be present after load")
+			electronics_found[0] = true
+	assert_true(electronics_found[0], "Electronics trend should be present after load")

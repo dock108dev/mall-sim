@@ -18,24 +18,24 @@ func test_fixture_count() -> void:
 
 func test_universal_fixture_count() -> void:
 	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var universal_count: int = 0
+	var universal_count: Array = [0]
 	for f: FixtureDefinition in all:
 		if f.category == "universal":
-			universal_count += 1
+			universal_count[0] += 1
 	assert_gte(
-		universal_count, 3,
+		universal_count[0], 3,
 		"Should have at least 3 universal fixtures"
 	)
 
 
 func test_store_specific_fixture_count() -> void:
 	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var specific_count: int = 0
+	var specific_count: Array = [0]
 	for f: FixtureDefinition in all:
 		if f.category == "store_specific":
-			specific_count += 1
+			specific_count[0] += 1
 	assert_gte(
-		specific_count, 5,
+		specific_count[0], 5,
 		"Should have at least 5 store-specific fixtures"
 	)
 
@@ -82,20 +82,20 @@ func test_fixtures_for_store_filtering() -> void:
 	var retro: Array[FixtureDefinition] = (
 		_data_loader.get_fixtures_for_store("retro_games")
 	)
-	var has_testing: bool = false
-	var has_repair: bool = false
-	var has_auth: bool = false
+	var has_testing: Array = [false]
+	var has_repair: Array = [false]
+	var has_auth: Array = [false]
 	for f: FixtureDefinition in retro:
 		if f.id == "testing_station":
-			has_testing = true
+			has_testing[0] = true
 		if f.id == "repair_workbench":
-			has_repair = true
+			has_repair[0] = true
 		if f.id == "authentication_station":
-			has_auth = true
-	assert_true(has_testing, "retro_games should include testing_station")
-	assert_true(has_repair, "retro_games should include repair_workbench")
+			has_auth[0] = true
+	assert_true(has_testing[0], "retro_games should include testing_station")
+	assert_true(has_repair[0], "retro_games should include repair_workbench")
 	assert_false(
-		has_auth,
+		has_auth[0],
 		"retro_games should NOT include authentication_station"
 	)
 
@@ -232,19 +232,19 @@ func test_purchase_cost_range() -> void:
 
 func test_grid_size_variants_present() -> void:
 	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var has_1x1: bool = false
-	var has_2x1: bool = false
-	var has_1x2: bool = false
+	var has_1x1: Array = [false]
+	var has_2x1: Array = [false]
+	var has_1x2: Array = [false]
 	for f: FixtureDefinition in all:
 		if f.grid_size == Vector2i(1, 1):
-			has_1x1 = true
+			has_1x1[0] = true
 		if f.grid_size == Vector2i(2, 1):
-			has_2x1 = true
+			has_2x1[0] = true
 		if f.grid_size == Vector2i(1, 2):
-			has_1x2 = true
-	assert_true(has_1x1, "Should have at least one 1x1 fixture")
-	assert_true(has_2x1, "Should have at least one 2x1 fixture")
-	assert_true(has_1x2, "Should have at least one 1x2 fixture")
+			has_1x2[0] = true
+	assert_true(has_1x1[0], "Should have at least one 1x1 fixture")
+	assert_true(has_2x1[0], "Should have at least one 2x1 fixture")
+	assert_true(has_1x2[0], "Should have at least one 1x2 fixture")
 
 
 func test_scene_paths_set() -> void:

@@ -211,9 +211,9 @@ func test_double_fire_guard() -> void:
 
 ## The ending_id carried by ending_triggered exists as a defined entry in ending_config.json.
 func test_bankruptcy_ending_id_matches_catalog() -> void:
-	var captured_id: StringName = &""
+	var captured_id: Array = [&""]
 	var on_triggered: Callable = func(id: StringName, _stats: Dictionary) -> void:
-		captured_id = id
+		captured_id[0] = id
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.bankruptcy_declared.emit()
@@ -223,5 +223,5 @@ func test_bankruptcy_ending_id_matches_catalog() -> void:
 	var ending_data: Dictionary = _ending_evaluator.get_ending_data(captured_id)
 	assert_false(
 		ending_data.is_empty(),
-		"Emitted ending_id '%s' must exist as a defined entry in ending_config.json" % captured_id
+		"Emitted ending_id '%s' must exist as a defined entry in ending_config.json" % captured_id[0]
 	)

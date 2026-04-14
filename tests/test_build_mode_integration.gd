@@ -212,13 +212,13 @@ func test_build_mode_session_with_save_load_persistence() -> void:
 	)
 
 	var fixtures_after: Array[Dictionary] = fresh_placement.get_placed_fixtures()
-	var found_type: String = ""
+	var found_type: Array = [""]
 	for f: Dictionary in fixtures_after:
 		if f.get("fixture_id", "") == _placed_fixture_id:
-			found_type = f.get("fixture_type", "") as String
+			found_type[0] = f.get("fixture_type", "") as String
 			break
 
 	assert_eq(
-		found_type, FIXTURE_TYPE,
+		found_type[0], FIXTURE_TYPE,
 		"Loaded fixture should preserve its fixture_type"
 	)

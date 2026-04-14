@@ -100,9 +100,9 @@ func test_despawn_fires_customer_left() -> void:
 	EventBus.customer_spawned.emit(dummy)
 	assert_eq(_spawner.get_active_count(), 1, "Sanity: NPC active before despawn")
 
-	var left_received: bool = false
+	var left_received: Array = [false]
 	var cb: Callable = func(_data: Dictionary) -> void:
-		left_received = true
+		left_received[0] = true
 	EventBus.customer_left.connect(cb)
 
 	# Simulates what CustomerSystem.despawn_customer() does: emit customer_left.
@@ -111,7 +111,7 @@ func test_despawn_fires_customer_left() -> void:
 	EventBus.customer_left.disconnect(cb)
 
 	assert_true(
-		left_received,
+		left_received[0],
 		"customer_left signal must fire when a customer is despawned"
 	)
 	assert_eq(

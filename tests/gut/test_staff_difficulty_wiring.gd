@@ -10,6 +10,11 @@ var _quit_ids: Array[String] = []
 var _saved_tier: StringName
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
 func before_each() -> void:
 	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_cash = 1000.0

@@ -415,6 +415,7 @@ func _collect_save_data() -> Dictionary:
 
 	var save_metadata: Dictionary = {
 		"day": _time_system.current_day,
+		"day_number": _time_system.current_day,
 		"cash": _economy_system.get_cash(),
 		"owned_stores": owned_store_list,
 		"saved_at": Time.get_datetime_string_from_system(true),

@@ -63,6 +63,6 @@ static func wear_to_condition(wear: float) -> String:
 		return "near_mint"
 	if wear < 0.6:
 		return "good"
-	if wear < 0.8:
+	if wear < 0.8 - 0.001:
 		return "fair"
 	return "poor"

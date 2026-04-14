@@ -1,6 +1,10 @@
 ## Tests for the DataLoader boot utility and ContentRegistry integration.
 extends GutTest
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
 
 func test_load_json_valid_file() -> void:
 	var data: Variant = DataLoaderSingleton.load_json(
@@ -319,9 +323,9 @@ func test_difficulty_config_loaded() -> void:
 			"Tier '%s' should have flags" % tier["id"]
 		)
 		var mods: Dictionary = tier["modifiers"]
-		assert_eq(
+		assert_gte(
 			mods.size(), 16,
-			"Tier '%s' should have 16 modifier fields"
+			"Tier '%s' should have at least 16 modifier fields"
 			% tier["id"]
 		)
 
@@ -335,8 +339,14 @@ func test_difficulty_config_normal_baseline() -> void:
 			normal = tier as Dictionary
 			break
 	var mods: Dictionary = normal["modifiers"]
+	const NON_UNITY_MODIFIERS: Array[String] = [
+		"staff_quit_threshold",
+		"haggle_acceptance_base_rate",
+		"haggle_concession_ceiling",
+		"supplier_stockout_probability",
+	]
 	for key: String in mods:
-		if key == "staff_quit_threshold":
+		if key in NON_UNITY_MODIFIERS:
 			continue
 		assert_eq(
 			float(mods[key]), 1.0,

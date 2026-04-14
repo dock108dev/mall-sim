@@ -44,15 +44,15 @@ func test_tournament_announced_day_before_start() -> void:
 		"start_day": 10,
 	})
 	_seasonal._tournament_definitions = [def]
-	var fired: bool = false
-	var got_id: String = ""
+	var fired: Array = [false]
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		fired = true
-		got_id = id
+		fired[0] = true
+		got_id[0] = id
 	EventBus.tournament_event_announced.connect(cb)
 	_seasonal._on_day_started(9)
-	assert_true(fired, "Announced signal should fire on day 9")
-	assert_eq(got_id, "test_tournament")
+	assert_true(fired[0], "Announced signal should fire on day 9")
+	assert_eq(got_id[0], "test_tournament")
 	assert_eq(_seasonal._announced_tournaments.size(), 1)
 	assert_eq(_seasonal._active_tournaments.size(), 0)
 	EventBus.tournament_event_announced.disconnect(cb)
@@ -74,13 +74,13 @@ func test_tournament_activates_on_start_day() -> void:
 		"start_day": 10, "duration_days": 3,
 	})
 	_seasonal._tournament_definitions = [def]
-	var got_id: String = ""
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		got_id = id
+		got_id[0] = id
 	EventBus.tournament_event_started.connect(cb)
 	_seasonal._on_day_started(9)
 	_seasonal._on_day_started(10)
-	assert_eq(got_id, "test_tournament")
+	assert_eq(got_id[0], "test_tournament")
 	assert_eq(_seasonal._active_tournaments.size(), 1)
 	assert_eq(_seasonal._announced_tournaments.size(), 0)
 	EventBus.tournament_event_started.disconnect(cb)
@@ -95,9 +95,9 @@ func test_tournament_expires_after_duration() -> void:
 	_seasonal._active_tournaments.append({
 		"definition": def, "start_day": 10,
 	})
-	var got_id: String = ""
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		got_id = id
+		got_id[0] = id
 	EventBus.tournament_event_ended.connect(cb)
 	_seasonal._on_day_started(12)
 	assert_eq(
@@ -109,7 +109,7 @@ func test_tournament_expires_after_duration() -> void:
 		_seasonal._active_tournaments.size(), 0,
 		"Expired on day 13"
 	)
-	assert_eq(got_id, "test_tournament")
+	assert_eq(got_id[0], "test_tournament")
 	EventBus.tournament_event_ended.disconnect(cb)
 
 
@@ -326,13 +326,13 @@ func test_tournament_announcement_sends_notification() -> void:
 		"announce": "Tournament incoming: singles cards in demand tomorrow",
 	})
 	_seasonal._tournament_definitions = [def]
-	var got_msg: String = ""
+	var got_msg: Array = [""]
 	var cb: Callable = func(msg: String) -> void:
-		got_msg = msg
+		got_msg[0] = msg
 	EventBus.notification_requested.connect(cb)
 	_seasonal._on_day_started(9)
 	assert_eq(
-		got_msg,
+		got_msg[0],
 		"Tournament incoming: singles cards in demand tomorrow"
 	)
 	EventBus.notification_requested.disconnect(cb)
@@ -345,10 +345,10 @@ func test_tournament_active_sends_notification() -> void:
 	})
 	_seasonal._tournament_definitions = [def]
 	_seasonal._on_day_started(9)
-	var got_msg: String = ""
+	var got_msg: Array = [""]
 	var cb: Callable = func(msg: String) -> void:
-		got_msg = msg
+		got_msg[0] = msg
 	EventBus.notification_requested.connect(cb)
 	_seasonal._on_day_started(10)
-	assert_eq(got_msg, "Tournament is live!")
+	assert_eq(got_msg[0], "Tournament is live!")
 	EventBus.notification_requested.disconnect(cb)

@@ -15,7 +15,12 @@
     "depreciation_rate": 0.02,
     "min_value_ratio": 0.15,
     "launch_demand_multiplier": 1.3,
-    "launch_spike_days": 5
+    "launch_spike_days": 5,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.05,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_zunewave_256",
@@ -33,7 +38,12 @@
     "depreciation_rate": 0.02,
     "min_value_ratio": 0.15,
     "launch_demand_multiplier": 1.3,
-    "launch_spike_days": 5
+    "launch_spike_days": 5,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.05,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_podplay_5gb",
@@ -51,7 +61,12 @@
     "depreciation_rate": 0.015,
     "min_value_ratio": 0.2,
     "launch_demand_multiplier": 1.5,
-    "launch_spike_days": 7
+    "launch_spike_days": 7,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 2.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_podplay_20gb",
@@ -69,7 +84,12 @@
     "depreciation_rate": 0.012,
     "min_value_ratio": 0.2,
     "launch_demand_multiplier": 1.5,
-    "launch_spike_days": 7
+    "launch_spike_days": 7,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 2.5,
+    "supplier_tier": 3
   },
   {
     "id": "elec_discman_cd",
@@ -87,7 +107,12 @@
     "depreciation_rate": 0.03,
     "min_value_ratio": 0.1,
     "launch_demand_multiplier": 1.0,
-    "launch_spike_days": 0
+    "launch_spike_days": 0,
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.06,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_minidisc_player",
@@ -105,7 +130,12 @@
     "depreciation_rate": 0.025,
     "min_value_ratio": 0.15,
     "launch_demand_multiplier": 1.2,
-    "launch_spike_days": 3
+    "launch_spike_days": 3,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_portastation_console",
@@ -123,7 +153,12 @@
     "depreciation_rate": 0.015,
     "min_value_ratio": 0.2,
     "launch_demand_multiplier": 1.5,
-    "launch_spike_days": 7
+    "launch_spike_days": 7,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 2.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_portastation_racer",
@@ -141,7 +176,12 @@
     "depreciation_rate": 0.02,
     "min_value_ratio": 0.15,
     "launch_demand_multiplier": 1.3,
-    "launch_spike_days": 5
+    "launch_spike_days": 5,
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_portastation_quest",
@@ -159,7 +199,12 @@
     "depreciation_rate": 0.02,
     "min_value_ratio": 0.15,
     "launch_demand_multiplier": 1.4,
-    "launch_spike_days": 5
+    "launch_spike_days": 5,
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_headphones_budget_earbuds",
@@ -168,10 +213,15 @@
     "category": "audio",
     "subcategory": "earbuds",
     "store_type": "electronics",
-    "base_price": 9.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["audio", "earbuds", "budget", "starter"]
+    "tags": ["audio", "earbuds", "budget", "starter"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.02,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_headphones_onear",
@@ -183,7 +233,12 @@
     "base_price": 34.99,
     "rarity": "common",
     "condition_range": ["good", "near_mint", "mint"],
-    "tags": ["audio", "headphones", "popular", "gift"]
+    "tags": ["audio", "headphones", "popular", "gift"],
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_headphones_overear_pro",
@@ -195,7 +250,12 @@
     "base_price": 69.99,
     "rarity": "uncommon",
     "condition_range": ["good", "near_mint", "mint"],
-    "tags": ["audio", "headphones", "premium", "quality", "specs"]
+    "tags": ["audio", "headphones", "premium", "quality", "specs"],
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_speaker_portable",
@@ -207,7 +267,12 @@
     "base_price": 24.99,
     "rarity": "common",
     "condition_range": ["good", "near_mint", "mint"],
-    "tags": ["audio", "speaker", "portable", "gift"]
+    "tags": ["audio", "speaker", "portable", "gift"],
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_clock_radio",
@@ -216,10 +281,15 @@
     "category": "audio",
     "subcategory": "clock_radios",
     "store_type": "electronics",
-    "base_price": 19.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["good", "near_mint", "mint"],
-    "tags": ["audio", "clock", "radio", "budget", "steady"]
+    "tags": ["audio", "clock", "radio", "budget", "steady"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_camera_pixelsnap_budget",
@@ -237,7 +307,12 @@
     "depreciation_rate": 0.025,
     "min_value_ratio": 0.15,
     "launch_demand_multiplier": 1.2,
-    "launch_spike_days": 5
+    "launch_spike_days": 5,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.05,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_camera_pixelsnap_pro",
@@ -255,7 +330,12 @@
     "depreciation_rate": 0.018,
     "min_value_ratio": 0.2,
     "launch_demand_multiplier": 1.4,
-    "launch_spike_days": 7
+    "launch_spike_days": 7,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 2.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_usb_drive_64mb",
@@ -264,10 +344,15 @@
     "category": "gadgets",
     "subcategory": "storage",
     "store_type": "electronics",
-    "base_price": 14.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["storage", "usb", "budget", "gadget"]
+    "tags": ["storage", "usb", "budget", "gadget"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.02,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_usb_drive_512mb",
@@ -279,7 +364,12 @@
     "base_price": 34.99,
     "rarity": "uncommon",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["storage", "usb", "gadget", "popular"]
+    "tags": ["storage", "usb", "gadget", "popular"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.02,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_pda_organizer",
@@ -297,19 +387,29 @@
     "depreciation_rate": 0.02,
     "min_value_ratio": 0.15,
     "launch_demand_multiplier": 1.3,
-    "launch_spike_days": 5
+    "launch_spike_days": 5,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.05,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
   },
   {
     "id": "elec_laser_pointer",
     "item_name": "Red Laser Pointer Keychain",
-    "description": "Battery-powered red laser. Entertain cats. Annoy movie theaters. Fun for $8.",
+    "description": "Battery-powered red laser. Entertain cats. Annoy movie theaters. Fun for the price.",
     "category": "gadgets",
     "subcategory": "novelty",
     "store_type": "electronics",
-    "base_price": 7.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["novelty", "gadget", "impulse", "budget"]
+    "tags": ["novelty", "gadget", "impulse", "budget"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_digital_photo_frame",
@@ -327,7 +427,12 @@
     "depreciation_rate": 0.025,
     "min_value_ratio": 0.1,
     "launch_demand_multiplier": 1.2,
-    "launch_spike_days": 3
+    "launch_spike_days": 3,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_case_mp3_player",
@@ -336,10 +441,15 @@
     "category": "accessories",
     "subcategory": "cases",
     "store_type": "electronics",
-    "base_price": 8.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["accessory", "case", "protection"]
+    "tags": ["accessory", "case", "protection"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_case_portastation",
@@ -348,10 +458,15 @@
     "category": "accessories",
     "subcategory": "cases",
     "store_type": "electronics",
-    "base_price": 14.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["accessory", "case", "gaming", "protection"]
+    "tags": ["accessory", "case", "gaming", "protection"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_cable_usb",
@@ -360,10 +475,15 @@
     "category": "accessories",
     "subcategory": "cables",
     "store_type": "electronics",
-    "base_price": 5.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["mint"],
-    "tags": ["accessory", "cable", "essential"]
+    "tags": ["accessory", "cable", "essential"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_charger_universal",
@@ -372,10 +492,15 @@
     "category": "accessories",
     "subcategory": "chargers",
     "store_type": "electronics",
-    "base_price": 12.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["accessory", "charger", "essential"]
+    "tags": ["accessory", "charger", "essential"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_screen_protector",
@@ -384,10 +509,15 @@
     "category": "accessories",
     "subcategory": "protection",
     "store_type": "electronics",
-    "base_price": 4.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["mint"],
-    "tags": ["accessory", "screen_protector", "impulse"]
+    "tags": ["accessory", "screen_protector", "impulse"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_batteries_aa",
@@ -396,10 +526,15 @@
     "category": "accessories",
     "subcategory": "batteries",
     "store_type": "electronics",
-    "base_price": 6.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["mint"],
-    "tags": ["accessory", "batteries", "essential", "consumable"]
+    "tags": ["accessory", "batteries", "essential", "consumable"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   },
   {
     "id": "elec_batteries_rechargeable",
@@ -408,9 +543,14 @@
     "category": "accessories",
     "subcategory": "batteries",
     "store_type": "electronics",
-    "base_price": 14.99,
+    "base_price": 20.00,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
-    "tags": ["accessory", "batteries", "rechargeable", "quality"]
+    "tags": ["accessory", "batteries", "rechargeable", "quality"],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
   }
 ]

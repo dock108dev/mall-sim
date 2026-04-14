@@ -115,7 +115,7 @@ func test_double_open_returns_empty() -> void:
 
 
 func test_50_packs_yield_at_least_one_ultra_rare() -> void:
-	var holo_or_better_found: bool = false
+	var holo_or_better_found: Array = [false]
 	for _i: int in range(FIFTY_PACK_COUNT):
 		var pack: ItemInstance = _make_pack_instance()
 		_inventory.register_item(pack)
@@ -125,12 +125,12 @@ func test_50_packs_yield_at_least_one_ultra_rare() -> void:
 		for card: ItemInstance in cards:
 			var sub: String = card.definition.subcategory
 			if sub == "rare_holo" or sub == "secret_rare":
-				holo_or_better_found = true
+				holo_or_better_found[0] = true
 				break
 		if holo_or_better_found:
 			break
 	assert_true(
-		holo_or_better_found,
+		holo_or_better_found[0],
 		"50 pack openings should yield at least one holo rare or better"
 	)
 
@@ -143,14 +143,14 @@ func test_tournament_announced_one_day_before_start() -> void:
 		"test_tournament_a", "singles", 10, 3, 1.5
 	)
 	_seasonal._tournament_definitions = [def]
-	var announced_id: String = ""
+	var announced_id: Array = [""]
 	var cb: Callable = func(event_id: String) -> void:
-		announced_id = event_id
+		announced_id[0] = event_id
 	EventBus.tournament_event_announced.connect(cb)
 	EventBus.day_started.emit(9)
 	EventBus.tournament_event_announced.disconnect(cb)
 	assert_eq(
-		announced_id, "test_tournament_a",
+		announced_id[0], "test_tournament_a",
 		"tournament_event_announced should fire with the event id on start_day - 1"
 	)
 

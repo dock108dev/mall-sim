@@ -153,13 +153,13 @@ func test_double_authenticate_no_op() -> void:
 	var first: bool = _auth.authenticate(item.instance_id)
 	assert_true(first, "First authentication should succeed")
 
-	var completed_count: int = 0
+	var completed_count: Array = [0]
 	var capture: Callable = func(
 		_id: String, success: bool, _msg: String
 	) -> void:
-		completed_count += 1
+		completed_count[0] += 1
 		if not success:
-			completed_count += 10
+			completed_count[0] += 10
 	EventBus.authentication_completed.connect(capture)
 
 	var second: bool = _auth.authenticate(item.instance_id)

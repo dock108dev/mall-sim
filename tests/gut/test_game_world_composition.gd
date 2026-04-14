@@ -85,7 +85,7 @@ func test_systems_ordered_by_tier() -> void:
 	for i: int in range(scene_state.get_node_count()):
 		node_names.append(scene_state.get_node_name(i))
 
-	var last_index: int = -1
+	var last_index: Array = [-1]
 	for tier_idx: int in range(_all_tiers.size()):
 		for system_name: StringName in _all_tiers[tier_idx]:
 			var idx: int = node_names.find(system_name)
@@ -97,9 +97,9 @@ func test_systems_ordered_by_tier() -> void:
 				"Tier %d system '%s' (index %d) must come after "
 				% [tier_idx + 1, system_name, idx]
 				+ "previous tier systems (last index %d)"
-				% last_index
+				% last_index[0]
 			)
-			last_index = idx
+			last_index[0] = idx
 
 
 func test_all_system_nodes_have_scripts() -> void:
@@ -131,7 +131,7 @@ func test_all_system_nodes_have_scripts() -> void:
 
 func test_game_world_has_initialize_systems_method() -> void:
 	var scene_state: SceneState = GAME_WORLD_SCENE.get_state()
-	var script_path: String = ""
+	var script_path: Array = [""]
 	for prop_idx: int in range(
 		scene_state.get_node_property_count(0)
 	):
@@ -142,32 +142,32 @@ func test_game_world_has_initialize_systems_method() -> void:
 				0, prop_idx
 			)
 			if res:
-				script_path = res.resource_path
+				script_path[0] = res.resource_path
 			break
 
-	assert_ne(script_path, "", "GameWorld root must have a script")
-	var gd_script: GDScript = load(script_path) as GDScript
+	assert_ne(script_path[0], "", "GameWorld root must have a script")
+	var gd_script: GDScript = load(script_path[0]) as GDScript
 	assert_not_null(gd_script, "GameWorld script must be loadable")
 	var methods: Array[Dictionary] = gd_script.get_script_method_list()
-	var has_init: bool = false
+	var has_init: Array = [false]
 	for m: Dictionary in methods:
 		if m.get("name", "") == "initialize_systems":
-			has_init = true
+			has_init[0] = true
 			break
 	assert_true(
-		has_init,
+		has_init[0],
 		"GameWorld must expose initialize_systems() method"
 	)
 
 
 func test_total_system_count() -> void:
-	var total: int = 0
+	var total: Array = [0]
 	for tier: Array in _all_tiers:
-		total += tier.size()
+		total[0] += tier.size()
 	assert_gte(
-		total,
+		total[0],
 		32,
-		"Expected at least 32 systems across all tiers, got %d" % total
+		"Expected at least 32 systems across all tiers, got %d" % total[0]
 	)
 
 

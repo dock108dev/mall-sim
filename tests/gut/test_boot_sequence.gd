@@ -1,6 +1,10 @@
 ## Tests for the boot sequence — verifies DataLoader, ContentRegistry, and Settings init order.
 extends GutTest
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
 
 func test_content_registry_is_ready_after_load() -> void:
 	assert_true(

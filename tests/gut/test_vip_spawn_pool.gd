@@ -9,6 +9,7 @@ func before_each() -> void:
 	UnlockSystemSingleton.initialize()
 	_system = CustomerSystem.new()
 	add_child_autofree(_system)
+	_system._connect_signals()
 
 
 func after_each() -> void:
@@ -45,12 +46,12 @@ func test_vip_in_pool_after_unlock() -> void:
 	UnlockSystemSingleton.grant_unlock(&"vip_customer_events")
 	_system._spawn_pool_dirty = true
 	var pool: Array[CustomerTypeDefinition] = _system.get_spawn_pool()
-	var found: bool = false
+	var found: Array = [false]
 	for profile: CustomerTypeDefinition in pool:
 		if profile.id == "vip_customer":
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "VIP should appear in pool after vip_customer_events is granted")
+	assert_true(found[0], "VIP should appear in pool after vip_customer_events is granted")
 
 
 func test_vip_not_in_pool_when_vip_type_invalid() -> void:

@@ -189,13 +189,13 @@ func test_lifecycle_delivered_items_match_ordered_definition() -> void:
 	_order_system.place_order(STORE_ID, BASIC_TIER, StringName(item.id), ORDER_QTY)
 	for _i: int in range(BASIC_DELIVERY_DAYS):
 		_time_system.advance_to_next_day()
-	var matched: int = 0
+	var matched: Array = [0]
 	for inst_id: Variant in _delivered_items:
 		var inst: ItemInstance = _inventory_system.get_item(str(inst_id))
 		if inst and inst.definition and inst.definition.id == item.id:
-			matched += 1
+			matched[0] += 1
 	assert_eq(
-		matched,
+		matched[0],
 		ORDER_QTY,
 		"All items in order_delivered resolve to the ordered item definition"
 	)

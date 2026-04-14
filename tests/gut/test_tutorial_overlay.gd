@@ -54,15 +54,15 @@ func test_prompt_updates_on_step_changed() -> void:
 
 func test_skip_button_emits_signal() -> void:
 	_tutorial.initialize(true)
-	var skip_fired: bool = false
+	var skip_fired: Array = [false]
 	var on_skip: Callable = func() -> void:
-		skip_fired = true
+		skip_fired[0] = true
 	EventBus.skip_tutorial_requested.connect(on_skip)
 
 	_overlay._on_skip_pressed()
 
 	assert_true(
-		skip_fired,
+		skip_fired[0],
 		"skip_tutorial_requested should fire on skip press"
 	)
 	EventBus.skip_tutorial_requested.disconnect(on_skip)

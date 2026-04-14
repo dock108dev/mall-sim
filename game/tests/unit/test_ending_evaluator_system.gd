@@ -356,15 +356,15 @@ func test_fallback_just_getting_by_when_no_criteria_match() -> void:
 
 
 func test_ending_triggered_emits_exactly_once_across_two_trigger_calls() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(_id: StringName, _s: Dictionary) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.ending_requested.emit("voluntary")
 	EventBus.ending_requested.emit("voluntary")
 
-	assert_eq(fire_count, 1, "ending_triggered must emit exactly once")
+	assert_eq(fire_count[0], 1, "ending_triggered must emit exactly once")
 	EventBus.ending_triggered.disconnect(on_ending)
 
 
@@ -462,9 +462,9 @@ func test_save_load_round_trip_preserves_accumulated_stats() -> void:
 
 
 func test_load_state_does_not_emit_signals() -> void:
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	var on_ending: Callable = func(_id: StringName, _s: Dictionary) -> void:
-		signal_fired = true
+		signal_fired[0] = true
 	EventBus.ending_triggered.connect(on_ending)
 
 	_system.load_state({
@@ -473,5 +473,5 @@ func test_load_state_does_not_emit_signals() -> void:
 		"resolved_ending_id": "broke_even",
 	})
 
-	assert_false(signal_fired, "load_state must not emit ending_triggered")
+	assert_false(signal_fired[0], "load_state must not emit ending_triggered")
 	EventBus.ending_triggered.disconnect(on_ending)

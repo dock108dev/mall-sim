@@ -159,10 +159,7 @@ func credit(amount: float, source: StringName) -> void:
 
 ## Returns total daily revenue minus daily expenses for the current day.
 func get_daily_profit() -> float:
-	var total_revenue: float = 0.0
-	for store_id: String in _store_daily_revenue:
-		total_revenue += _store_daily_revenue[store_id] as float
-	return total_revenue - _daily_expenses
+	return _daily_revenue - _daily_expenses
 
 
 ## Zeroes daily revenue, expenses, and transaction log for a new day.

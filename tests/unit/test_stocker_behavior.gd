@@ -11,6 +11,12 @@ var _stocker_behavior: StockerBehavior
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
+	ContentRegistry.register_entry(
+		{"id": "test_store", "name": "Test Store", "store_type": "test_store"},
+		"store"
+	)
+
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize(5000.0)
@@ -41,6 +47,8 @@ func before_each() -> void:
 
 func after_each() -> void:
 	GameManager.current_store_id = &""
+	ContentRegistry.clear_for_testing()
+	DataLoaderSingleton.load_all_content()
 
 
 func test_timer_starts_on_stocker_hire() -> void:

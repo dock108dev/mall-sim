@@ -6,6 +6,11 @@ var _order_system: OrderSystem
 var _saved_tier: StringName
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
 func before_each() -> void:
 	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_order_system = OrderSystem.new()

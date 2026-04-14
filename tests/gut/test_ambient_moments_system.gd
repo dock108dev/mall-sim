@@ -348,21 +348,21 @@ func test_empty_eligible_pool_no_signal_emission() -> void:
 	_sys._cooldowns["only_one"] = 5
 	_sys._state = AmbientMomentsSystem.State.MONITORING
 
-	var fired: bool = false
+	var fired: Array = [false]
 	var cb_q: Callable = func(_id: StringName) -> void:
-		fired = true
+		fired[0] = true
 	var cb_d: Callable = func(
 		_id: StringName, _dt: StringName,
 		_ft: String, _ac: StringName,
 	) -> void:
-		fired = true
+		fired[0] = true
 	EventBus.ambient_moment_queued.connect(cb_q)
 	EventBus.ambient_moment_delivered.connect(cb_d)
 
 	_sys._evaluate_moments(9)
 
 	assert_false(
-		fired,
+		fired[0],
 		"No signal when all moments are on cooldown"
 	)
 	EventBus.ambient_moment_queued.disconnect(cb_q)

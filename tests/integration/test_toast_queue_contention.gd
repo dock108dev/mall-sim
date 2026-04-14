@@ -128,12 +128,12 @@ func test_scenario_b_no_two_panels_active_simultaneously() -> void:
 	EventBus.toast_requested.emit("Toast 2", &"system", 2.0)
 	EventBus.toast_requested.emit("Toast 3", &"system", 2.0)
 	EventBus.toast_requested.emit("Toast 4", &"system", 2.0)
-	var visible_panels: int = 0
+	var visible_panels: Array = [0]
 	for child: Node in _ui.get_children():
 		if child is PanelContainer and (child as Control).visible:
-			visible_panels += 1
+			visible_panels[0] += 1
 	assert_lte(
-		visible_panels, 1,
+		visible_panels[0], 1,
 		"At most one PanelContainer must be visible at any tick"
 	)
 

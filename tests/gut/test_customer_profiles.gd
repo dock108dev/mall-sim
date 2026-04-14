@@ -1,6 +1,10 @@
 ## Validates customer_profiles.json — 8 NPC archetypes with correct data.
 extends GutTest
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
 
 const ARCHETYPE_IDS: Array[String] = [
 	"power_shopper",

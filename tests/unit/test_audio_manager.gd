@@ -35,12 +35,12 @@ func test_play_sfx_known_resource_completes_without_error() -> void:
 func test_play_sfx_known_resource_assigns_stream_to_pool_player() -> void:
 	var stream: AudioStreamWAV = _inject_sfx_stream("purchase_ding")
 	_audio.play_sfx("purchase_ding")
-	var found: bool = false
+	var found: Array = [false]
 	for player: AudioStreamPlayer in _audio._sfx_players:
 		if player.stream == stream:
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "A pool player should have the injected stream assigned after play_sfx")
+	assert_true(found[0], "A pool player should have the injected stream assigned after play_sfx")
 
 
 # --- play_sfx: missing resource ---
@@ -55,13 +55,13 @@ func test_play_sfx_missing_resource_does_not_crash() -> void:
 
 func test_play_sfx_missing_resource_starts_no_pool_player() -> void:
 	_audio.play_sfx("nonexistent_sfx")
-	var any_assigned: bool = false
+	var any_assigned: Array = [false]
 	for player: AudioStreamPlayer in _audio._sfx_players:
 		if player.stream != null:
-			any_assigned = true
+			any_assigned[0] = true
 			break
 	assert_false(
-		any_assigned,
+		any_assigned[0],
 		"No SFX pool player should have a stream assigned after a missing-resource call"
 	)
 
@@ -302,15 +302,15 @@ func test_concurrent_sfx_assign_to_separate_pool_players() -> void:
 	var stream_b: AudioStreamWAV = _inject_sfx_stream("ui_click")
 	_audio.play_sfx("purchase_ding")
 	_audio.play_sfx("ui_click")
-	var has_a: bool = false
-	var has_b: bool = false
+	var has_a: Array = [false]
+	var has_b: Array = [false]
 	for player: AudioStreamPlayer in _audio._sfx_players:
 		if player.stream == stream_a:
-			has_a = true
+			has_a[0] = true
 		if player.stream == stream_b:
-			has_b = true
-	assert_true(has_a, "A pool player should have stream_a assigned (purchase_ding)")
-	assert_true(has_b, "A different pool player should have stream_b assigned (ui_click)")
+			has_b[0] = true
+	assert_true(has_a[0], "A pool player should have stream_a assigned (purchase_ding)")
+	assert_true(has_b[0], "A different pool player should have stream_b assigned (ui_click)")
 
 
 # --- EventBus.preference_changed → bus volume (ISSUE-428) ---

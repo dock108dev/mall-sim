@@ -172,18 +172,18 @@ func test_refurb_sets_item_unavailable() -> void:
 		item.current_location, "refurbishing",
 		"Item location should be 'refurbishing' (refurb_in_progress) after initiation"
 	)
-	var in_backroom: bool = false
+	var in_backroom: Array = [false]
 	for bi: ItemInstance in _inventory.get_backroom_items():
 		if bi.instance_id == item.instance_id:
-			in_backroom = true
+			in_backroom[0] = true
 			break
-	assert_false(in_backroom, "Item should not appear in backroom after refurb initiated")
-	var on_shelf: bool = false
+	assert_false(in_backroom[0], "Item should not appear in backroom after refurb initiated")
+	var on_shelf: Array = [false]
 	for si: ItemInstance in _inventory.get_shelf_items():
 		if si.instance_id == item.instance_id:
-			on_shelf = true
+			on_shelf[0] = true
 			break
-	assert_false(on_shelf, "Item should not appear on shelves after refurb initiated")
+	assert_false(on_shelf[0], "Item should not appear on shelves after refurb initiated")
 
 
 func test_refurb_queue_capacity_enforced() -> void:

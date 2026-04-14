@@ -20,6 +20,7 @@ func before_each() -> void:
 	add_child_autofree(_seasonal)
 	_seasonal._seasonal_config = _build_test_config()
 	_seasonal._apply_state({})
+	EventBus.day_started.connect(_seasonal._on_day_started)
 
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
@@ -42,6 +43,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if EventBus.day_started.is_connected(_seasonal._on_day_started):
+		EventBus.day_started.disconnect(_seasonal._on_day_started)
 	if EventBus.season_changed.is_connected(_record_season_changed):
 		EventBus.season_changed.disconnect(_record_season_changed)
 	if EventBus.seasonal_multipliers_updated.is_connected(

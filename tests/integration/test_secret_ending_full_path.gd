@@ -75,18 +75,18 @@ func test_thread_completed_grants_unlock() -> void:
 func test_thread_completed_signal_fires_with_correct_args() -> void:
 	_setup_ghost_thread()
 
-	var received_thread_id: StringName = &""
-	var received_unlock_id: StringName = &""
+	var received_thread_id: Array = [&""]
+	var received_unlock_id: Array = [&""]
 	EventBus.secret_thread_completed.connect(
 		func(tid: StringName, uid: StringName) -> void:
-			received_thread_id = tid
-			received_unlock_id = uid
+			received_thread_id[0] = tid
+			received_unlock_id[0] = uid
 	)
 
 	_drive_thread_to_resolved()
 
-	assert_eq(received_thread_id, GHOST_THREAD_ID)
-	assert_eq(received_unlock_id, GHOST_UNLOCK_ID)
+	assert_eq(received_thread_id[0], GHOST_THREAD_ID)
+	assert_eq(received_unlock_id[0], GHOST_UNLOCK_ID)
 
 
 func test_ending_evaluator_tracks_ghost_thread_stat() -> void:
@@ -139,19 +139,19 @@ func test_full_chain_ending_triggered_fires_with_secret_id() -> void:
 	stats["owned_store_count_final"] = 5.0
 	_ending_evaluator.load_state({"stats": stats})
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var triggered_stats: Dictionary = {}
 	var on_triggered: Callable = func(
 		id: StringName, fstats: Dictionary
 	) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 		triggered_stats = fstats.duplicate()
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 
 	assert_eq(
-		triggered_id, GHOST_ENDING_ID,
+		triggered_id[0], GHOST_ENDING_ID,
 		"ending_triggered must fire with the_ghost_between_the_walls"
 	)
 
@@ -218,18 +218,18 @@ func test_only_one_ending_triggered_fires() -> void:
 	stats["owned_store_count_final"] = 5.0
 	_ending_evaluator.load_state({"stats": stats})
 
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_triggered: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 	EventBus.completion_reached.emit("all_criteria")
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"ending_triggered must fire exactly once per run"
 	)
 

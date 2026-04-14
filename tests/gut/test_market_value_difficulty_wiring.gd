@@ -8,6 +8,11 @@ var _trend: TrendSystem
 var _saved_tier: StringName
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
 func _create_item(
 	overrides: Dictionary = {}, condition: String = "mint"
 ) -> ItemInstance:

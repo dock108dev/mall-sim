@@ -102,15 +102,15 @@ func test_hour_changed_signal_emits_once() -> void:
 
 
 func test_hour_changed_not_duplicated() -> void:
-	var count: int = 0
+	var count: Array = [0]
 	EventBus.hour_changed.connect(
-		func(_h: int) -> void: count += 1
+		func(_h: int) -> void: count[0] += 1
 	)
 	_ts.game_time_minutes = 539.0
 	_ts._last_emitted_hour = 8
 	_ts._process(0.5)
 	_ts._process(0.5)
-	assert_eq(count, 1, "Hour 9 should only emit once across frames")
+	assert_eq(count[0], 1, "Hour 9 should only emit once across frames")
 
 
 func test_day_started_emitted() -> void:

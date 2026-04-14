@@ -28,6 +28,11 @@ func _create_item(
 	return ItemInstance.create_from_definition(def, condition)
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
 func before_each() -> void:
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)

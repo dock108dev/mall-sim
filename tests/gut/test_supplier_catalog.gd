@@ -2,6 +2,10 @@
 extends GutTest
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+
+
 func test_suppliers_loaded() -> void:
 	assert_gt(
 		DataLoaderSingleton.get_supplier_count(), 0,

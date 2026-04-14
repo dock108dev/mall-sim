@@ -184,6 +184,8 @@ func _detect_type(path: String, data: Variant) -> String:
 		if file_name.begins_with("random"):
 			return "random_event"
 		return "market_event"
+	if dir_name == "items":
+		return "item"
 	var file_base := path.get_file().get_basename()
 	if file_base == "retro_games":
 		return "retro_games_config"
@@ -213,12 +215,17 @@ func _extract_entries(data: Variant) -> Array[Dictionary]:
 			if item is Dictionary:
 				entries.append(item)
 	elif data is Dictionary:
+		var parent_store_type: String = str(data.get("store_type", ""))
 		for key: String in data:
 			var val: Variant = data[key]
 			if val is Array:
 				for item: Variant in val:
 					if item is Dictionary:
-						entries.append(item)
+						var entry: Dictionary = item.duplicate()
+						if not parent_store_type.is_empty():
+							if str(entry.get("store_type", "")).is_empty():
+								entry["store_type"] = parent_store_type
+						entries.append(entry)
 				return entries
 		entries.append(data)
 	return entries
@@ -244,7 +251,7 @@ func _build_and_register(
 	ContentRegistry.register(
 		StringName(id), resource, content_type
 	)
-	if content_type in ["store", "fixture", "ending"]:
+	if content_type in ["store", "fixture", "ending", "customer"]:
 		var reg_entry: Dictionary = entry.duplicate()
 		if not reg_entry.has("name") and reg_entry.has("display_name"):
 			reg_entry["name"] = reg_entry["display_name"]

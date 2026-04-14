@@ -75,15 +75,15 @@ func test_assisted_badge_shown_when_flag_is_true() -> void:
 	_panel.open_load()
 
 	var slot_container: VBoxContainer = _panel._slot_container
-	var assisted_found: bool = false
+	var assisted_found: Array = [false]
 	for row: Node in slot_container.get_children():
 		var label: Label = _find_assisted_label_in_slot_row(row)
 		if label:
-			assisted_found = true
+			assisted_found[0] = true
 			break
 
 	assert_true(
-		assisted_found,
+		assisted_found[0],
 		"Assisted badge should appear in slot row when used_difficulty_downgrade is true"
 	)
 
@@ -94,15 +94,15 @@ func test_assisted_badge_absent_when_flag_is_false() -> void:
 	_panel.open_load()
 
 	var slot_container: VBoxContainer = _panel._slot_container
-	var assisted_found: bool = false
+	var assisted_found: Array = [false]
 	for row: Node in slot_container.get_children():
 		var label: Label = _find_assisted_label_in_slot_row(row)
 		if label:
-			assisted_found = true
+			assisted_found[0] = true
 			break
 
 	assert_false(
-		assisted_found,
+		assisted_found[0],
 		"Assisted badge should not appear when used_difficulty_downgrade is false"
 	)
 

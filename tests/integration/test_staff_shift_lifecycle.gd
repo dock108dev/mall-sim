@@ -70,14 +70,14 @@ func test_scenario_a_active_npcs_size_is_two_after_day_started() -> void:
 func test_scenario_a_cashier_role_is_present() -> void:
 	EventBus.day_started.emit(1)
 
-	var found: bool = false
+	var found: Array = [false]
 	for npc: Node in StaffManager._active_npcs.values():
 		var typed: StaffNPC = npc as StaffNPC
 		if typed and typed._role == StaffDefinition.StaffRole.CASHIER:
-			found = true
+			found[0] = true
 			break
 	assert_true(
-		found,
+		found[0],
 		"One active StaffNPC should have role CASHIER after day_started"
 	)
 
@@ -85,14 +85,14 @@ func test_scenario_a_cashier_role_is_present() -> void:
 func test_scenario_a_greeter_role_is_present() -> void:
 	EventBus.day_started.emit(1)
 
-	var found: bool = false
+	var found: Array = [false]
 	for npc: Node in StaffManager._active_npcs.values():
 		var typed: StaffNPC = npc as StaffNPC
 		if typed and typed._role == StaffDefinition.StaffRole.GREETER:
-			found = true
+			found[0] = true
 			break
 	assert_true(
-		found,
+		found[0],
 		"One active StaffNPC should have role GREETER after day_started"
 	)
 
@@ -263,8 +263,8 @@ func _make_staff(
 func _count_staff_npcs(parent: Node) -> int:
 	if not parent or not is_instance_valid(parent):
 		return 0
-	var count: int = 0
+	var count: Array = [0]
 	for child: Node in parent.get_children():
 		if child is StaffNPC:
-			count += 1
+			count[0] += 1
 	return count

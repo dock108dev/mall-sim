@@ -67,24 +67,24 @@ func _get_stat_summary_keys(ending_id: StringName) -> Array:
 func test_early_bankruptcy_triggers_lights_out() -> void:
 	_set_days_survived(5.0)
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var triggered_stats: Dictionary = {}
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(id: StringName, stats: Dictionary) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 		triggered_stats = stats
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		EARLY_BANKRUPTCY_ENDING,
 		"days_survived = 5 should select lights_out (days_survived <= 7)"
 	)
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"ending_triggered must fire exactly once per bankruptcy_declared"
 	)
 	assert_eq(
@@ -109,24 +109,24 @@ func test_early_bankruptcy_triggers_lights_out() -> void:
 func test_late_bankruptcy_triggers_going_going_gone() -> void:
 	_set_days_survived(20.0)
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var triggered_stats: Dictionary = {}
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(id: StringName, stats: Dictionary) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 		triggered_stats = stats
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		LATE_BANKRUPTCY_ENDING,
 		"days_survived = 20 should select going_going_gone (days_survived >= 15)"
 	)
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"ending_triggered must fire exactly once per bankruptcy_declared"
 	)
 	assert_eq(
@@ -151,24 +151,24 @@ func test_late_bankruptcy_triggers_going_going_gone() -> void:
 func test_mid_bankruptcy_triggers_foreclosure() -> void:
 	_set_days_survived(10.0)
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var triggered_stats: Dictionary = {}
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(id: StringName, stats: Dictionary) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 		triggered_stats = stats
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		MID_BANKRUPTCY_ENDING,
 		"days_survived = 10 should select foreclosure (days_survived 8–14)"
 	)
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"ending_triggered must fire exactly once per bankruptcy_declared"
 	)
 	assert_eq(
@@ -198,24 +198,24 @@ func test_bankruptcy_does_not_emit_success_or_survival_ending() -> void:
 	save_data["stats"] = stats
 	_ending_evaluator.load_state(save_data)
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var on_ending: Callable = func(id: StringName, _stats: Dictionary) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 
 	assert_false(
 		triggered_id in SUCCESS_ENDINGS,
-		"No SUCCESS ending should fire on bankruptcy; got: %s" % triggered_id
+		"No SUCCESS ending should fire on bankruptcy; got: %s" % triggered_id[0]
 	)
 	assert_false(
 		triggered_id in SURVIVAL_ENDINGS,
-		"No SURVIVAL ending should fire on bankruptcy; got: %s" % triggered_id
+		"No SURVIVAL ending should fire on bankruptcy; got: %s" % triggered_id[0]
 	)
 	assert_true(
 		triggered_id in BANKRUPTCY_ENDINGS,
-		"Only a BANKRUPTCY ending should fire; got: %s" % triggered_id
+		"Only a BANKRUPTCY ending should fire; got: %s" % triggered_id[0]
 	)
 
 	EventBus.ending_triggered.disconnect(on_ending)
@@ -226,16 +226,16 @@ func test_bankruptcy_does_not_emit_success_or_survival_ending() -> void:
 func test_duplicate_bankruptcy_declared_does_not_double_fire() -> void:
 	_set_days_survived(5.0)
 
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(_id: StringName, _stats: Dictionary) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 	EventBus.bankruptcy_declared.emit()
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"ending_triggered must fire exactly once despite two bankruptcy_declared emissions"
 	)
 

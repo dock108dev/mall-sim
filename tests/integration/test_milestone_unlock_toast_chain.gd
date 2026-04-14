@@ -169,33 +169,33 @@ func test_milestone_unlocked_fires_only_once() -> void:
 	_trigger_milestone()
 	_trigger_milestone()
 
-	var count: int = 0
+	var count: Array = [0]
 	for entry: String in _signal_order:
 		if entry == "milestone_unlocked":
-			count += 1
-	assert_eq(count, 1, "milestone_unlocked must not fire again after milestone is complete")
+			count[0] += 1
+	assert_eq(count[0], 1, "milestone_unlocked must not fire again after milestone is complete")
 
 
 func test_unlock_granted_fires_only_once() -> void:
 	_trigger_milestone()
 	_trigger_milestone()
 
-	var count: int = 0
+	var count: Array = [0]
 	for entry: String in _signal_order:
 		if entry == "unlock_granted":
-			count += 1
-	assert_eq(count, 1, "unlock_granted must fire exactly once even when threshold crossed twice")
+			count[0] += 1
+	assert_eq(count[0], 1, "unlock_granted must fire exactly once even when threshold crossed twice")
 
 
 func test_toast_unlock_fires_only_once() -> void:
 	_trigger_milestone()
 	_trigger_milestone()
 
-	var count: int = 0
+	var count: Array = [0]
 	for entry: String in _signal_order:
 		if entry == "toast_requested:unlock":
-			count += 1
-	assert_eq(count, 1, "Unlock toast must fire exactly once even when threshold crossed twice")
+			count[0] += 1
+	assert_eq(count[0], 1, "Unlock toast must fire exactly once even when threshold crossed twice")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

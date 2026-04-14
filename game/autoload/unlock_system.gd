@@ -32,7 +32,10 @@ func _on_milestone_unlocked(
 	var reward_type: String = str(reward.get("reward_type", ""))
 	if reward_type != "unlock" and reward_type != "fixture_unlock":
 		return
-	var unlock_id: StringName = StringName(str(reward.get("unlock_id", "")))
+	var raw_id: String = str(reward.get("unlock_id", ""))
+	if raw_id.is_empty():
+		raw_id = str(reward.get("reward_value", ""))
+	var unlock_id: StringName = StringName(raw_id)
 	if unlock_id.is_empty():
 		push_error("UnlockSystem: empty unlock_id in milestone reward")
 		return

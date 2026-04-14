@@ -70,14 +70,14 @@ func _inject_trend(
 
 
 func test_trend_changed_fires_when_trend_injected() -> void:
-	var fired: bool = false
+	var fired: Array = [false]
 	var cb: Callable = func(_hot: Array, _cold: Array) -> void:
-		fired = true
+		fired[0] = true
 	EventBus.trend_changed.connect(cb)
 
 	_inject_trend(TREND_CATEGORY, TREND_MULTIPLIER, ACTIVE_DAY, END_DAY, FADE_END_DAY)
 
-	assert_true(fired, "trend_changed should fire when a trend is injected")
+	assert_true(fired[0], "trend_changed should fire when a trend is injected")
 	EventBus.trend_changed.disconnect(cb)
 
 

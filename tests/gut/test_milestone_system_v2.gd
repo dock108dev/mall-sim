@@ -164,35 +164,35 @@ func test_pricing_streak_resets_out_of_range() -> void:
 
 
 func test_milestone_unlocked_fires_at_threshold() -> void:
-	var fired_id: StringName = &""
+	var fired_id: Array = [&""]
 	var on_unlocked: Callable = func(
 		id: StringName, _reward: Dictionary
 	) -> void:
-		fired_id = id
+		fired_id[0] = id
 	EventBus.milestone_unlocked.connect(on_unlocked)
 
 	_ms._on_transaction_completed(100.0, true, "sale")
 
 	assert_eq(
-		fired_id, &"test_revenue",
+		fired_id[0], &"test_revenue",
 		"milestone_unlocked should fire for test_revenue"
 	)
 	EventBus.milestone_unlocked.disconnect(on_unlocked)
 
 
 func test_milestone_fires_exactly_once() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_unlocked: Callable = func(
 		_id: StringName, _reward: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.milestone_unlocked.connect(on_unlocked)
 
 	_ms._on_transaction_completed(100.0, true, "sale")
 	_ms._on_transaction_completed(100.0, true, "sale2")
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"milestone_unlocked should fire exactly once"
 	)
 	EventBus.milestone_unlocked.disconnect(on_unlocked)
@@ -268,17 +268,17 @@ func test_load_state_no_refire() -> void:
 	add_child_autofree(ms2)
 	ms2._milestones = _build_test_milestones()
 
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_unlocked: Callable = func(
 		_id: StringName, _reward: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.milestone_unlocked.connect(on_unlocked)
 
 	ms2.load_state(save_data)
 
 	assert_eq(
-		fire_count, 0,
+		fire_count[0], 0,
 		"load_state should not re-fire milestone_unlocked"
 	)
 	EventBus.milestone_unlocked.disconnect(on_unlocked)
@@ -301,12 +301,12 @@ func test_save_load_preserves_unique_stores() -> void:
 
 
 func test_haggle_milestone_fires() -> void:
-	var fired: bool = false
+	var fired: Array = [false]
 	var on_unlocked: Callable = func(
 		id: StringName, _reward: Dictionary
 	) -> void:
 		if id == &"test_haggle":
-			fired = true
+			fired[0] = true
 	EventBus.milestone_unlocked.connect(on_unlocked)
 
 	_ms._on_haggle_completed(
@@ -314,19 +314,19 @@ func test_haggle_milestone_fires() -> void:
 	)
 
 	assert_true(
-		fired,
+		fired[0],
 		"test_haggle should fire when ratio >= 1.5"
 	)
 	EventBus.milestone_unlocked.disconnect(on_unlocked)
 
 
 func test_pricing_streak_milestone_fires() -> void:
-	var fired: bool = false
+	var fired: Array = [false]
 	var on_unlocked: Callable = func(
 		id: StringName, _reward: Dictionary
 	) -> void:
 		if id == &"test_streak":
-			fired = true
+			fired[0] = true
 	EventBus.milestone_unlocked.connect(on_unlocked)
 
 	_ms._on_item_price_set(&"s", &"a", 12.0, 1.3)
@@ -334,20 +334,20 @@ func test_pricing_streak_milestone_fires() -> void:
 	_ms._on_item_price_set(&"s", &"c", 15.0, 1.5)
 
 	assert_true(
-		fired,
+		fired[0],
 		"test_streak should fire after 3 in-range prices"
 	)
 	EventBus.milestone_unlocked.disconnect(on_unlocked)
 
 
 func test_milestone_emits_toast_on_unlock() -> void:
-	var toast_message: String = ""
-	var toast_duration: float = 0.0
+	var toast_message: Array = [""]
+	var toast_duration: Array = [0.0]
 	var on_toast: Callable = func(
 		message: String, _category: StringName, duration: float
 	) -> void:
-		toast_message = message
-		toast_duration = duration
+		toast_message[0] = message
+		toast_duration[0] = duration
 	EventBus.toast_requested.connect(on_toast)
 	_ms._connect_signals()
 
@@ -358,7 +358,7 @@ func test_milestone_emits_toast_on_unlock() -> void:
 		"toast should contain milestone prefix"
 	)
 	assert_gt(
-		toast_duration, 0.0,
+		toast_duration[0], 0.0,
 		"toast duration should be positive"
 	)
 	EventBus.toast_requested.disconnect(on_toast)

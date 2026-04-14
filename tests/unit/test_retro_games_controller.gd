@@ -136,12 +136,12 @@ func test_refurbishment_ineligible_item_rejected() -> void:
 		"Queue must remain empty after rejecting an ineligible item"
 	)
 	var queue: Array[Dictionary] = _refurb.get_queue()
-	var found: bool = false
+	var found: Array = [false]
 	for entry: Dictionary in queue:
 		if entry.get("instance_id", "") == item.instance_id:
-			found = true
+			found[0] = true
 			break
-	assert_false(found, "Rejected item must not appear in the refurbishment queue")
+	assert_false(found[0], "Rejected item must not appear in the refurbishment queue")
 
 
 func test_console_type_demand_routes_correctly() -> void:

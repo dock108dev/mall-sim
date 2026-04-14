@@ -87,9 +87,9 @@ func _activate_event() -> void:
 
 
 func test_seasonal_event_started_fires_on_promotion() -> void:
-	var started_id: String = ""
+	var started_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		started_id = id
+		started_id[0] = id
 	EventBus.seasonal_event_started.connect(cb)
 
 	_seasonal_event._announced_events.append({
@@ -99,7 +99,7 @@ func test_seasonal_event_started_fires_on_promotion() -> void:
 	_seasonal_event._on_day_started(ACTIVE_DAY)
 
 	assert_eq(
-		started_id,
+		started_id[0],
 		_event_def.id,
 		"seasonal_event_started should fire with correct event id"
 	)
@@ -139,15 +139,15 @@ func test_price_equals_baseline_times_spending_multiplier() -> void:
 
 
 func test_seasonal_multipliers_updated_fires_on_day_started() -> void:
-	var fired: bool = false
+	var fired: Array = [false]
 	var cb: Callable = func(_m: Dictionary) -> void:
-		fired = true
+		fired[0] = true
 	EventBus.seasonal_multipliers_updated.connect(cb)
 
 	_seasonal_event._on_day_started(ACTIVE_DAY)
 
 	assert_true(
-		fired,
+		fired[0],
 		"seasonal_multipliers_updated should fire on day_started"
 	)
 	EventBus.seasonal_multipliers_updated.disconnect(cb)
@@ -157,16 +157,16 @@ func test_seasonal_multipliers_updated_fires_on_day_started() -> void:
 
 
 func test_seasonal_event_ended_fires_after_duration() -> void:
-	var ended_id: String = ""
+	var ended_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		ended_id = id
+		ended_id[0] = id
 	EventBus.seasonal_event_ended.connect(cb)
 
 	_activate_event()
 	_seasonal_event._on_day_started(EXPIRE_DAY)
 
 	assert_eq(
-		ended_id,
+		ended_id[0],
 		_event_def.id,
 		"seasonal_event_ended should fire with correct event id"
 	)

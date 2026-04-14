@@ -182,17 +182,17 @@ func test_charge_exact_balance() -> void:
 
 
 func test_daily_financials_snapshot_emitted_on_day_ended() -> void:
-	var snapshot_revenue: float = -1.0
-	var snapshot_expenses: float = -1.0
-	var snapshot_net: float = -1.0
-	var received: bool = false
+	var snapshot_revenue: Array = [-1.0]
+	var snapshot_expenses: Array = [-1.0]
+	var snapshot_net: Array = [-1.0]
+	var received: Array = [false]
 	var capture: Callable = func(
 		rev: float, exp: float, net: float
 	) -> void:
-		snapshot_revenue = rev
-		snapshot_expenses = exp
-		snapshot_net = net
-		received = true
+		snapshot_revenue[0] = rev
+		snapshot_expenses[0] = exp
+		snapshot_net[0] = net
+		received[0] = true
 	EventBus.daily_financials_snapshot.connect(capture)
 
 	EventBus.day_started.emit(1)
@@ -201,24 +201,24 @@ func test_daily_financials_snapshot_emitted_on_day_ended() -> void:
 	EventBus.day_ended.emit(1)
 
 	EventBus.daily_financials_snapshot.disconnect(capture)
-	assert_true(received, "daily_financials_snapshot should be emitted")
-	assert_almost_eq(snapshot_revenue, 200.0, 0.01)
-	assert_almost_eq(snapshot_expenses, 50.0, 0.01)
-	assert_almost_eq(snapshot_net, 150.0, 0.01)
+	assert_true(received[0], "daily_financials_snapshot should be emitted")
+	assert_almost_eq(snapshot_revenue[0], 200.0, 0.01)
+	assert_almost_eq(snapshot_expenses[0], 50.0, 0.01)
+	assert_almost_eq(snapshot_net[0], 150.0, 0.01)
 
 
 func test_daily_revenue_resets_on_day_started() -> void:
 	_economy.credit(500.0, &"sales")
 	EventBus.day_started.emit(2)
-	var snapshot_revenue: float = -1.0
+	var snapshot_revenue: Array = [-1.0]
 	var capture: Callable = func(
 		rev: float, _exp: float, _net: float
 	) -> void:
-		snapshot_revenue = rev
+		snapshot_revenue[0] = rev
 	EventBus.daily_financials_snapshot.connect(capture)
 	EventBus.day_ended.emit(2)
 	EventBus.daily_financials_snapshot.disconnect(capture)
 	assert_almost_eq(
-		snapshot_revenue, 0.0, 0.01,
+		snapshot_revenue[0], 0.0, 0.01,
 		"daily revenue should reset to 0 on day_started"
 	)

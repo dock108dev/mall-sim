@@ -231,27 +231,27 @@ func test_random_event_non_crash_ignored() -> void:
 
 
 func test_first_sale_fires_after_first_purchase() -> void:
-	var fired_id: StringName = &""
+	var fired_id: Array = [&""]
 	var cb: Callable = func(
 		id: StringName, _r: Dictionary
 	) -> void:
-		fired_id = id
+		fired_id[0] = id
 	EventBus.milestone_unlocked.connect(cb)
 	_ms._on_customer_purchased(&"s", &"i", 10.0, &"c")
-	assert_eq(fired_id, &"first_sale")
+	assert_eq(fired_id[0], &"first_sale")
 	EventBus.milestone_unlocked.disconnect(cb)
 
 
 func test_milestone_unlocked_fires_exactly_once() -> void:
-	var count: int = 0
+	var count: Array = [0]
 	var cb: Callable = func(
 		_id: StringName, _r: Dictionary
 	) -> void:
-		count += 1
+		count[0] += 1
 	EventBus.milestone_unlocked.connect(cb)
 	_ms._on_customer_purchased(&"s", &"i1", 10.0, &"c")
 	_ms._on_customer_purchased(&"s", &"i2", 10.0, &"c")
-	assert_eq(count, 1, "Must fire exactly once per milestone")
+	assert_eq(count[0], 1, "Must fire exactly once per milestone")
 	EventBus.milestone_unlocked.disconnect(cb)
 
 
@@ -264,50 +264,50 @@ func test_milestone_not_refired_on_second_threshold_cross() -> void:
 	EventBus.milestone_unlocked.connect(cb)
 	_ms._on_transaction_completed(200.0, true, "s1")
 	_ms._on_transaction_completed(200.0, true, "s2")
-	var big_count: int = 0
+	var big_count: Array = [0]
 	for fid: StringName in ids:
 		if fid == &"big_earner":
-			big_count += 1
-	assert_eq(big_count, 1, "Must not re-fire after completion")
+			big_count[0] += 1
+	assert_eq(big_count[0], 1, "Must not re-fire after completion")
 	EventBus.milestone_unlocked.disconnect(cb)
 
 
 func test_week_one_survivor_emits_unlock_granted() -> void:
-	var granted_id: StringName = &""
+	var granted_id: Array = [&""]
 	var cb: Callable = func(uid: StringName) -> void:
-		granted_id = uid
+		granted_id[0] = uid
 	EventBus.milestone_unlock_granted.connect(cb)
 	_ms._on_day_ended(7)
-	assert_eq(granted_id, &"order_catalog_expansion_1")
+	assert_eq(granted_id[0], &"order_catalog_expansion_1")
 	EventBus.milestone_unlock_granted.disconnect(cb)
 
 
 func test_cash_reward_emits_transaction_completed() -> void:
-	var reward_amount: float = 0.0
-	var reward_msg: String = ""
+	var reward_amount: Array = [0.0]
+	var reward_msg: Array = [""]
 	var cb: Callable = func(
 		amount: float, success: bool, message: String
 	) -> void:
 		if "Milestone" in message:
-			reward_amount = amount
-			reward_msg = message
+			reward_amount[0] = amount
+			reward_msg[0] = message
 	EventBus.transaction_completed.connect(cb)
 	_ms._on_customer_purchased(&"s", &"i", 10.0, &"c")
-	assert_almost_eq(reward_amount, 10.0, 0.01)
+	assert_almost_eq(reward_amount[0], 10.0, 0.01)
 	assert_string_contains(reward_msg, "first_sale")
 	EventBus.transaction_completed.disconnect(cb)
 
 
 func test_hidden_milestone_fires_when_met() -> void:
-	var fired: bool = false
+	var fired: Array = [false]
 	var cb: Callable = func(
 		id: StringName, _r: Dictionary
 	) -> void:
 		if id == &"hidden_crash":
-			fired = true
+			fired[0] = true
 	EventBus.milestone_unlocked.connect(cb)
 	_ms._on_random_event_resolved(&"market_crash", &"survived")
-	assert_true(fired)
+	assert_true(fired[0])
 	EventBus.milestone_unlocked.disconnect(cb)
 
 
@@ -356,14 +356,14 @@ func test_load_state_does_not_refire_milestone_unlocked() -> void:
 	add_child_autofree(ms2)
 	ms2._milestones = _build_test_milestones()
 
-	var count: int = 0
+	var count: Array = [0]
 	var cb: Callable = func(
 		_id: StringName, _r: Dictionary
 	) -> void:
-		count += 1
+		count[0] += 1
 	EventBus.milestone_unlocked.connect(cb)
 	ms2.load_state(save_data)
-	assert_eq(count, 0, "load_state must not re-fire signals")
+	assert_eq(count[0], 0, "load_state must not re-fire signals")
 	EventBus.milestone_unlocked.disconnect(cb)
 
 
@@ -389,10 +389,10 @@ func test_get_completion_percent_zero_initially() -> void:
 
 func test_get_completion_percent_after_one_visible() -> void:
 	_ms._on_customer_purchased(&"s", &"i", 10.0, &"c")
-	var visible_total: int = 0
+	var visible_total: Array = [0]
 	for m: MilestoneDefinition in _ms._milestones:
 		if m.is_visible:
-			visible_total += 1
+			visible_total[0] += 1
 	var expected: float = 1.0 / float(visible_total)
 	assert_almost_eq(_ms.get_completion_percent(), expected, 0.01)
 

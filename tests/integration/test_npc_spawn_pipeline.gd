@@ -90,15 +90,15 @@ func test_scenario_a_spawned_npc_enters_browsing_state() -> void:
 		"Precondition: at least one active NPC must exist"
 	)
 
-	var found_browsing: bool = false
+	var found_browsing: Array = [false]
 	for npc: Node in _npc_spawner._active_customer_npcs.keys():
 		var typed: CustomerNPC = npc as CustomerNPC
 		if typed and is_instance_valid(typed):
 			if typed.get_visit_state() == CustomerNPC.CustomerVisitState.BROWSING:
-				found_browsing = true
+				found_browsing[0] = true
 				break
 	assert_true(
-		found_browsing,
+		found_browsing[0],
 		"At least one active NPC should be in BROWSING state after spawn"
 	)
 

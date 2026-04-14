@@ -64,11 +64,11 @@ func test_ending_requested_voluntary_triggers() -> void:
 
 
 func test_second_trigger_is_noop() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.ending_requested.emit("voluntary")
@@ -76,25 +76,25 @@ func test_second_trigger_is_noop() -> void:
 	EventBus.bankruptcy_declared.emit()
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"Only the first trigger should emit ending_triggered"
 	)
 	EventBus.ending_triggered.disconnect(on_ending)
 
 
 func test_mixed_trigger_paths_emit_once() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 	EventBus.ending_requested.emit("voluntary")
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"Mixing trigger paths should still emit exactly once"
 	)
 	EventBus.ending_triggered.disconnect(on_ending)
@@ -145,17 +145,17 @@ func test_force_ending_emits_signals() -> void:
 
 
 func test_force_ending_blocked_after_first() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	_system.force_ending(&"the_local_legend")
 	_system.force_ending(&"broke_even")
 
-	assert_eq(fire_count, 1, "Second force_ending should be blocked")
+	assert_eq(fire_count[0], 1, "Second force_ending should be blocked")
 	assert_eq(
 		_system.get_resolved_ending_id(), &"the_local_legend",
 		"Resolved ending should remain first forced one"
@@ -194,17 +194,17 @@ func test_load_triggered_prevents_new_triggers() -> void:
 		"resolved_ending_id": "the_local_legend",
 	})
 
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.ending_requested.emit("voluntary")
 
 	assert_eq(
-		fire_count, 0,
+		fire_count[0], 0,
 		"Loaded ending_triggered=true should prevent new triggers"
 	)
 	assert_true(
@@ -246,11 +246,11 @@ func test_save_load_round_trip() -> void:
 
 
 func test_load_state_does_not_emit_signals() -> void:
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		signal_fired = true
+		signal_fired[0] = true
 	EventBus.ending_triggered.connect(on_ending)
 
 	_system.load_state({
@@ -260,7 +260,7 @@ func test_load_state_does_not_emit_signals() -> void:
 	})
 
 	assert_false(
-		signal_fired, "load_state must not emit ending_triggered"
+		signal_fired[0], "load_state must not emit ending_triggered"
 	)
 	EventBus.ending_triggered.disconnect(on_ending)
 

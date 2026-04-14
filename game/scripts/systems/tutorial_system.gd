@@ -208,6 +208,9 @@ func _emit_current_step() -> void:
 
 
 func _track_movement(delta: float) -> void:
+	if _movement_accumulated >= MOVEMENT_THRESHOLD:
+		_advance_step()
+		return
 	var input: Vector2 = Input.get_vector(
 		"move_left", "move_right",
 		"move_forward", "move_back",

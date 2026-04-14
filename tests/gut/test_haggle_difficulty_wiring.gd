@@ -12,6 +12,11 @@ var _customer_scene: PackedScene
 var _original_tier: StringName
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
 func before_each() -> void:
 	_original_tier = DifficultySystemSingleton.get_current_tier_id()
 
@@ -123,15 +128,15 @@ func test_hard_tier_rejects_below_ceiling() -> void:
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var below_ceiling: float = _item.player_set_price * 0.91
-	var accepted_count: int = 0
+	var accepted_count: Array = [0]
 	var trials: int = 200
 	for i: int in range(trials):
 		_haggle._sticker_price = _item.player_set_price
 		var result: bool = _haggle._evaluate_offer(below_ceiling)
 		if result:
-			accepted_count += 1
+			accepted_count[0] += 1
 	assert_eq(
-		accepted_count, 0,
+		accepted_count[0], 0,
 		"Hard tier: offer at 91%% (below 92%% ceiling) must always reject"
 	)
 
@@ -141,14 +146,14 @@ func test_hard_tier_allows_above_ceiling() -> void:
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var above_ceiling: float = _item.player_set_price * 0.93
-	var accepted_count: int = 0
+	var accepted_count: Array = [0]
 	var trials: int = 500
 	for i: int in range(trials):
 		var result: bool = _haggle._evaluate_offer(above_ceiling)
 		if result:
-			accepted_count += 1
+			accepted_count[0] += 1
 	assert_gt(
-		accepted_count, 0,
+		accepted_count[0], 0,
 		"Hard tier: offer at 93%% (above 92%% ceiling) should sometimes accept"
 	)
 
@@ -162,13 +167,13 @@ func test_normal_tier_acceptance_probability() -> void:
 	_haggle.begin_negotiation(customer, _item)
 	var offer_price: float = _item.player_set_price * 0.867
 	var expected_prob: float = 0.45 * 0.867
-	var accepted_count: int = 0
+	var accepted_count: Array = [0]
 	var trials: int = 5000
 	for i: int in range(trials):
 		var result: bool = _haggle._evaluate_offer(offer_price)
 		if result:
-			accepted_count += 1
-	var actual_rate: float = float(accepted_count) / float(trials)
+			accepted_count[0] += 1
+	var actual_rate: float = float(accepted_count[0]) / float(trials)
 	assert_almost_eq(
 		actual_rate, expected_prob, 0.05,
 		"Normal tier 86.7%% offer should accept ~%.1f%% of the time"
@@ -186,13 +191,13 @@ func test_easy_tier_acceptance_probability() -> void:
 	var offer_price: float = _item.player_set_price * 0.867
 	# base_rate=0.60, offer_ratio=0.867, success_rate_mult=1.30
 	var expected_prob: float = 0.60 * 0.867 * 1.30
-	var accepted_count: int = 0
+	var accepted_count: Array = [0]
 	var trials: int = 5000
 	for i: int in range(trials):
 		var result: bool = _haggle._evaluate_offer(offer_price)
 		if result:
-			accepted_count += 1
-	var actual_rate: float = float(accepted_count) / float(trials)
+			accepted_count[0] += 1
+	var actual_rate: float = float(accepted_count[0]) / float(trials)
 	assert_almost_eq(
 		actual_rate, expected_prob, 0.05,
 		"Easy tier 86.7%% offer should accept ~%.1f%% of the time"
@@ -235,13 +240,13 @@ func test_hard_tier_acceptance_probability() -> void:
 	# above hard ceiling (1 - 0.08 = 0.92), offer_ratio=0.95
 	# base_rate=0.30, success_rate_mult=0.65
 	var expected_prob: float = 0.30 * 0.95 * 0.65
-	var accepted_count: int = 0
+	var accepted_count: Array = [0]
 	var trials: int = 5000
 	for i: int in range(trials):
 		var result: bool = _haggle._evaluate_offer(offer_price)
 		if result:
-			accepted_count += 1
-	var actual_rate: float = float(accepted_count) / float(trials)
+			accepted_count[0] += 1
+	var actual_rate: float = float(accepted_count[0]) / float(trials)
 	assert_almost_eq(
 		actual_rate, expected_prob, 0.05,
 		"Hard tier 95%% offer should accept ~%.1f%% of the time"

@@ -14,6 +14,10 @@ const MIN_LAUNCH_SPIKE_COUNT: int = 4
 const LAUNCH_SPIKE_MULTIPLIER_THRESHOLD: float = 1.5
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+
+
 func _get_electronics_items() -> Array[ItemDefinition]:
 	return DataLoaderSingleton.get_items_by_store("electronics")
 
@@ -94,12 +98,12 @@ func test_at_least_three_distinct_categories() -> void:
 
 func test_demo_unit_minimum_count() -> void:
 	var items: Array[ItemDefinition] = _get_electronics_items()
-	var count: int = 0
+	var count: Array = [0]
 	for item: ItemDefinition in items:
 		if item.extra.get("can_be_demo_unit", false):
-			count += 1
+			count[0] += 1
 	assert_gte(
-		count,
+		count[0],
 		MIN_DEMO_UNIT_COUNT,
 		"Need >= %d demo-unit items, got %d" % [MIN_DEMO_UNIT_COUNT, count]
 	)
@@ -107,14 +111,14 @@ func test_demo_unit_minimum_count() -> void:
 
 func test_launch_spike_minimum_count() -> void:
 	var items: Array[ItemDefinition] = _get_electronics_items()
-	var count: int = 0
+	var count: Array = [0]
 	for item: ItemDefinition in items:
 		var eligible: bool = item.extra.get("launch_spike_eligible", false)
 		var multiplier: float = float(item.extra.get("launch_spike_multiplier", 1.0))
 		if eligible and multiplier > LAUNCH_SPIKE_MULTIPLIER_THRESHOLD:
-			count += 1
+			count[0] += 1
 	assert_gte(
-		count,
+		count[0],
 		MIN_LAUNCH_SPIKE_COUNT,
 		"Need >= %d items with launch_spike_eligible and multiplier > %.1f, got %d"
 		% [MIN_LAUNCH_SPIKE_COUNT, LAUNCH_SPIKE_MULTIPLIER_THRESHOLD, count]

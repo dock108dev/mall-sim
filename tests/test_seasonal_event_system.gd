@@ -65,14 +65,14 @@ func after_each() -> void:
 func test_season_activates_on_start_day() -> void:
 	_sys._season_table = [_make_season_entry("summer", 5, 15, {"electronics": 1.5})]
 	_sys._season_cycle_length = 30
-	var received_id: String = ""
+	var received_id: Array = [""]
 	var cb: Callable = func(season_id: String) -> void:
-		received_id = season_id
+		received_id[0] = season_id
 	EventBus.seasonal_event_started.connect(cb)
 	EventBus.day_started.emit(5)
 	EventBus.seasonal_event_started.disconnect(cb)
 	assert_eq(
-		received_id, "summer",
+		received_id[0], "summer",
 		"seasonal_event_started should fire with the correct season id on start day"
 	)
 
@@ -106,16 +106,16 @@ func test_season_deactivates_on_end_day() -> void:
 	# Announced day 4, promoted on day 5 (start_day=5), expires day 7 (>=5+2).
 	var def: SeasonalEventDefinition = _make_recurring_def("spring_boost", 4, 0, 2, 1.5)
 	_sys._event_definitions = [def]
-	var ended_id: String = ""
+	var ended_id: Array = [""]
 	var cb: Callable = func(event_id: String) -> void:
-		ended_id = event_id
+		ended_id[0] = event_id
 	EventBus.seasonal_event_ended.connect(cb)
 	EventBus.day_started.emit(4)
 	EventBus.day_started.emit(5)
 	EventBus.day_started.emit(7)
 	EventBus.seasonal_event_ended.disconnect(cb)
 	assert_eq(
-		ended_id, "spring_boost",
+		ended_id[0], "spring_boost",
 		"seasonal_event_ended should fire with the correct event id on expiry day"
 	)
 	assert_almost_eq(

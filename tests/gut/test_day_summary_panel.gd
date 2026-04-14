@@ -155,12 +155,12 @@ func test_day_summary_emits_next_day_confirmed() -> void:
 	).instantiate() as DaySummary
 	add_child_autofree(summary)
 
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	EventBus.next_day_confirmed.connect(
-		func() -> void: signal_fired = true
+		func() -> void: signal_fired[0] = true
 	)
 	summary._on_continue_pressed()
-	assert_true(signal_fired, "next_day_confirmed should fire")
+	assert_true(signal_fired[0], "next_day_confirmed should fire")
 
 
 func test_net_profit_positive_shows_green() -> void:
@@ -222,12 +222,12 @@ func test_day_summary_review_inventory_signal() -> void:
 	).instantiate() as DaySummary
 	add_child_autofree(summary)
 
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	summary.review_inventory_requested.connect(
-		func() -> void: signal_fired = true
+		func() -> void: signal_fired[0] = true
 	)
 	summary._on_review_inventory_pressed()
 	assert_true(
-		signal_fired,
+		signal_fired[0],
 		"review_inventory_requested should fire"
 	)

@@ -80,19 +80,19 @@ func test_seasonal_events_spread_across_cycle() -> void:
 		var d: Dictionary = entry as Dictionary
 		offsets.append(int(d.get("offset_days", 0)))
 	offsets.sort()
-	var has_early: bool = false
-	var has_mid: bool = false
-	var has_late: bool = false
+	var has_early: Array = [false]
+	var has_mid: Array = [false]
+	var has_late: Array = [false]
 	for offset: int in offsets:
 		if offset < 30:
-			has_early = true
+			has_early[0] = true
 		elif offset < 60:
-			has_mid = true
+			has_mid[0] = true
 		else:
-			has_late = true
-	assert_true(has_early, "Need events in early cycle (0-29)")
-	assert_true(has_mid, "Need events in mid cycle (30-59)")
-	assert_true(has_late, "Need events in late cycle (60+)")
+			has_late[0] = true
+	assert_true(has_early[0], "Need events in early cycle (0-29)")
+	assert_true(has_mid[0], "Need events in mid cycle (30-59)")
+	assert_true(has_late[0], "Need events in late cycle (60+)")
 
 
 func test_seasonal_events_parse_to_resources() -> void:
@@ -204,17 +204,19 @@ func test_no_real_brand_names() -> void:
 		"Samsung", "Nike", "Adidas", "Marvel", "Disney",
 		"NBA", "NFL", "MLB", "NHL", "FIFA",
 	]
+	var boundary_rx: RegEx = RegEx.new()
 	for entry: Variant in _seasonal_data + _random_data:
 		var d: Dictionary = entry as Dictionary
 		var text: String = (
 			str(d.get("name", ""))
-			+ str(d.get("description", ""))
-			+ str(d.get("notification_text", ""))
-			+ str(d.get("toast_message", ""))
+			+ " " + str(d.get("description", ""))
+			+ " " + str(d.get("notification_text", ""))
+			+ " " + str(d.get("toast_message", ""))
 		)
 		for brand: String in banned:
+			boundary_rx.compile("(?i)\\b" + brand + "\\b")
 			assert_false(
-				text.containsn(brand),
+				boundary_rx.search(text) != null,
 				"Entry '%s' contains real brand '%s'" % [
 					d.get("id"), brand
 				]

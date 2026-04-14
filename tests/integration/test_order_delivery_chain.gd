@@ -82,10 +82,10 @@ func _on_order_failed(reason: String) -> void:
 ## Returns the number of items in inventory matching a specific definition ID.
 func _count_stock_by_def(store_id: StringName, def_id: StringName) -> int:
 	var all_stock: Array[ItemInstance] = _inventory_system.get_stock(store_id)
-	var count: int = 0
+	var count: Array = [0]
 	for item: ItemInstance in all_stock:
 		if item.definition and item.definition.id == String(def_id):
-			count += 1
+			count[0] += 1
 	return count
 
 

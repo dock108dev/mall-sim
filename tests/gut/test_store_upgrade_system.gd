@@ -38,12 +38,12 @@ func test_universal_upgrade_count() -> void:
 	var all: Array[UpgradeDefinition] = (
 		_data_loader.get_all_upgrades()
 	)
-	var universal_count: int = 0
+	var universal_count: Array = [0]
 	for u: UpgradeDefinition in all:
 		if u.is_universal():
-			universal_count += 1
+			universal_count[0] += 1
 	assert_eq(
-		universal_count, 6,
+		universal_count[0], 6,
 		"Should have 6 universal upgrades"
 	)
 
@@ -52,12 +52,12 @@ func test_store_specific_upgrade_count() -> void:
 	var all: Array[UpgradeDefinition] = (
 		_data_loader.get_all_upgrades()
 	)
-	var specific_count: int = 0
+	var specific_count: Array = [0]
 	for u: UpgradeDefinition in all:
 		if not u.is_universal():
-			specific_count += 1
+			specific_count[0] += 1
 	assert_eq(
-		specific_count, 10,
+		specific_count[0], 10,
 		"Should have 10 store-specific upgrades"
 	)
 
@@ -88,26 +88,26 @@ func test_upgrades_for_store_filtering() -> void:
 	var sports: Array[UpgradeDefinition] = (
 		_data_loader.get_upgrades_for_store("sports")
 	)
-	var has_shelving: bool = false
-	var has_trophy: bool = false
-	var has_crt: bool = false
+	var has_shelving: Array = [false]
+	var has_trophy: Array = [false]
+	var has_crt: Array = [false]
 	for u: UpgradeDefinition in sports:
 		if u.id == "better_shelving":
-			has_shelving = true
+			has_shelving[0] = true
 		if u.id == "sports_trophy_wall":
-			has_trophy = true
+			has_trophy[0] = true
 		if u.id == "retro_crt_lounge":
-			has_crt = true
+			has_crt[0] = true
 	assert_true(
-		has_shelving,
+		has_shelving[0],
 		"sports should include universal better_shelving"
 	)
 	assert_true(
-		has_trophy,
+		has_trophy[0],
 		"sports should include sports_trophy_wall"
 	)
 	assert_false(
-		has_crt,
+		has_crt[0],
 		"sports should NOT include retro_crt_lounge"
 	)
 

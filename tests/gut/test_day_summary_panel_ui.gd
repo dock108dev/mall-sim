@@ -110,13 +110,13 @@ func test_acknowledge_button_disabled_initially() -> void:
 func test_acknowledge_emits_day_acknowledged() -> void:
 	EventBus.day_ended.emit(1)
 	_panel._acknowledge_button.disabled = false
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	EventBus.day_acknowledged.connect(
-		func() -> void: signal_fired = true
+		func() -> void: signal_fired[0] = true
 	)
 	_panel._on_acknowledge_pressed()
 	assert_true(
-		signal_fired,
+		signal_fired[0],
 		"day_acknowledged should fire on acknowledge press"
 	)
 

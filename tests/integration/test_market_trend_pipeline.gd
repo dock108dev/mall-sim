@@ -57,12 +57,12 @@ func test_day_ended_triggers_trend_update() -> void:
 		"MarketTrendSystemSingleton._current_day must increment after day_ended"
 	)
 	var after: Dictionary = _trend_system.get_all_trend_levels()
-	var changed_count: int = 0
+	var changed_count: Array = [0]
 	for key: Variant in before:
 		if not is_equal_approx(float(before[key]), float(after[key])):
-			changed_count += 1
+			changed_count[0] += 1
 	assert_eq(
-		changed_count,
+		changed_count[0],
 		before.size(),
 		"day_ended must trigger a level shift for all %d tracked categories" % before.size()
 	)

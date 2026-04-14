@@ -142,8 +142,8 @@ func test_open_pack_returns_correct_card_count() -> void:
 
 
 func test_rarity_distribution_weighted() -> void:
-	var common_count: int = 0
-	var rare_count: int = 0
+	var common_count: Array = [0]
+	var rare_count: Array = [0]
 	var packs_to_open: int = 100
 
 	for i: int in range(packs_to_open):
@@ -156,19 +156,19 @@ func test_rarity_distribution_weighted() -> void:
 				continue
 			match card.definition.subcategory:
 				"common":
-					common_count += 1
+					common_count[0] += 1
 				"rare", "rare_holo", "secret_rare":
-					rare_count += 1
+					rare_count[0] += 1
 
 	assert_gt(
-		common_count, 0,
+		common_count[0], 0,
 		"Should have generated at least one common card"
 	)
 	assert_gt(
-		rare_count, 0,
+		rare_count[0], 0,
 		"Should have generated at least one rare card"
 	)
-	var ratio: float = float(common_count) / float(rare_count)
+	var ratio: float = float(common_count[0]) / float(rare_count[0])
 	assert_gt(
 		ratio, 5.0,
 		"Commons should appear at least 5x more than rares (ratio: %.1f)"

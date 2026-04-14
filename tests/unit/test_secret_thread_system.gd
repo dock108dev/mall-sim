@@ -188,18 +188,18 @@ func test_secret_thread_completed_signal_emitted() -> void:
 
 func test_completed_thread_ignores_further_triggers() -> void:
 	_setup_with_defs([_simple_def])
-	var emit_count: int = 0
+	var emit_count: Array = [0]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, _unlock_id: StringName) -> void:
-			emit_count += 1
+			emit_count[0] += 1
 	)
 	for day: int in range(1, 6):
 		_system._on_day_started(day)
-	assert_eq(emit_count, 1, "Should emit once during lifecycle")
+	assert_eq(emit_count[0], 1, "Should emit once during lifecycle")
 	for day: int in range(6, 20):
 		_system._on_day_started(day)
 	assert_eq(
-		emit_count, 1,
+		emit_count[0], 1,
 		"Should not re-emit after RESOLVED"
 	)
 
@@ -284,16 +284,16 @@ func test_load_state_restores_step_index() -> void:
 
 func test_load_state_does_not_emit_signals() -> void:
 	_setup_with_defs([_simple_def])
-	var emitted: bool = false
+	var emitted: Array = [false]
 	EventBus.secret_thread_state_changed.connect(
 		func(
 			_tid: StringName, _old: StringName, _new: StringName
 		) -> void:
-			emitted = true
+			emitted[0] = true
 	)
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, _uid: StringName) -> void:
-			emitted = true
+			emitted[0] = true
 	)
 	var save_data: Dictionary = {
 		"thread_states": {
@@ -310,7 +310,7 @@ func test_load_state_does_not_emit_signals() -> void:
 	}
 	_system.load_state(save_data)
 	assert_false(
-		emitted,
+		emitted[0],
 		"load_state should not emit any signals"
 	)
 
@@ -320,15 +320,15 @@ func test_load_state_does_not_emit_signals() -> void:
 
 func test_completion_emits_reward_unlock_id() -> void:
 	_setup_with_defs([_unlock_def])
-	var received_unlock: StringName = &""
+	var received_unlock: Array = [&""]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, unlock_id: StringName) -> void:
-			received_unlock = unlock_id
+			received_unlock[0] = unlock_id
 	)
 	for day: int in range(1, 5):
 		_system._on_day_started(day)
 	assert_eq(
-		received_unlock, &"test_unlock_reward",
+		received_unlock[0], &"test_unlock_reward",
 		"Should emit reward_unlock_id from thread definition"
 	)
 

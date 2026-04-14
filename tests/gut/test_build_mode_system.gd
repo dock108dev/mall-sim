@@ -122,12 +122,12 @@ func test_fixture_placed_signal_has_rotation() -> void:
 
 
 func test_fixture_placement_invalid_signal() -> void:
-	var reason_received: String = ""
+	var reason_received: Array = [""]
 	var handler := func(reason: String) -> void:
-		reason_received = reason
+		reason_received[0] = reason
 	EventBus.fixture_placement_invalid.connect(handler)
 	EventBus.fixture_placement_invalid.emit("Test rejection")
-	assert_eq(reason_received, "Test rejection")
+	assert_eq(reason_received[0], "Test rejection")
 	EventBus.fixture_placement_invalid.disconnect(handler)
 
 

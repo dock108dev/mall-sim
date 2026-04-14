@@ -65,26 +65,26 @@ func test_all_six_animations_created() -> void:
 func test_walk_has_arm_swing_tracks() -> void:
 	var lib: AnimationLibrary = _anim_player.get_animation_library("")
 	var walk: Animation = lib.get_animation("walk")
-	var left_found: bool = false
-	var right_found: bool = false
+	var left_found: Array = [false]
+	var right_found: Array = [false]
 	for i: int in range(walk.get_track_count()):
 		var path: String = str(walk.track_get_path(i))
 		if path == "BodyMesh/LeftArm":
-			left_found = true
+			left_found[0] = true
 			assert_eq(
 				walk.track_get_type(i),
 				Animation.TYPE_ROTATION_3D,
 				"LeftArm track is rotation"
 			)
 		elif path == "BodyMesh/RightArm":
-			right_found = true
+			right_found[0] = true
 			assert_eq(
 				walk.track_get_type(i),
 				Animation.TYPE_ROTATION_3D,
 				"RightArm track is rotation"
 			)
-	assert_true(left_found, "Walk has LeftArm rotation track")
-	assert_true(right_found, "Walk has RightArm rotation track")
+	assert_true(left_found[0], "Walk has LeftArm rotation track")
+	assert_true(right_found[0], "Walk has RightArm rotation track")
 
 
 # --- Browse body shift ---

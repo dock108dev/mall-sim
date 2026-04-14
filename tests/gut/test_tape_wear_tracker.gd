@@ -192,20 +192,20 @@ func test_vhs_reaches_poor_after_exactly_10_rentals() -> void:
 	var expected_rentals: int = ceili(0.8 / TapeWearTracker.VHS_DEGRADATION_RATE)
 	assert_eq(expected_rentals, 10, "VHS should need exactly 10 rentals to reach poor")
 
-	var condition: String = "mint"
-	var rentals: int = 0
+	var condition: Array = ["mint"]
+	var rentals: Array = [0]
 	for i: int in range(expected_rentals - 1):
-		condition = _tracker.apply_degradation("vhs_retire", "vhs_titles")
-		rentals += 1
+		condition[0] = _tracker.apply_degradation("vhs_retire", "vhs_titles")
+		rentals[0] += 1
 	assert_ne(
-		condition, "poor",
+		condition[0], "poor",
 		"VHS should not be poor before %d rentals (was at %d)" % [expected_rentals, rentals]
 	)
 
-	condition = _tracker.apply_degradation("vhs_retire", "vhs_titles")
-	rentals += 1
+	condition[0] = _tracker.apply_degradation("vhs_retire", "vhs_titles")
+	rentals[0] += 1
 	assert_eq(
-		condition, "poor",
+		condition[0], "poor",
 		"VHS should reach poor after exactly %d rentals" % expected_rentals
 	)
 
@@ -215,20 +215,20 @@ func test_dvd_reaches_poor_after_exactly_20_rentals() -> void:
 	var expected_rentals: int = ceili(0.8 / TapeWearTracker.DVD_DEGRADATION_RATE)
 	assert_eq(expected_rentals, 20, "DVD should need exactly 20 rentals to reach poor")
 
-	var condition: String = "mint"
-	var rentals: int = 0
+	var condition: Array = ["mint"]
+	var rentals: Array = [0]
 	for i: int in range(expected_rentals - 1):
-		condition = _tracker.apply_degradation("dvd_retire", "dvd_titles")
-		rentals += 1
+		condition[0] = _tracker.apply_degradation("dvd_retire", "dvd_titles")
+		rentals[0] += 1
 	assert_ne(
-		condition, "poor",
+		condition[0], "poor",
 		"DVD should not be poor before %d rentals (was at %d)" % [expected_rentals, rentals]
 	)
 
-	condition = _tracker.apply_degradation("dvd_retire", "dvd_titles")
-	rentals += 1
+	condition[0] = _tracker.apply_degradation("dvd_retire", "dvd_titles")
+	rentals[0] += 1
 	assert_eq(
-		condition, "poor",
+		condition[0], "poor",
 		"DVD should reach poor after exactly %d rentals" % expected_rentals
 	)
 

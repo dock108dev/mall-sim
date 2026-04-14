@@ -12,12 +12,12 @@ func test_scene_has_storefront_slots_container() -> void:
 	)
 	assert_not_null(scene, "Mall hallway scene should load")
 	var state: SceneState = scene.get_state()
-	var found: bool = false
+	var found: Array = [false]
 	for i: int in range(state.get_node_count()):
 		if state.get_node_name(i) == &"StorefrontSlots":
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "Scene should have StorefrontSlots node")
+	assert_true(found[0], "Scene should have StorefrontSlots node")
 
 
 func test_scene_has_five_storefront_slots() -> void:
@@ -25,13 +25,13 @@ func test_scene_has_five_storefront_slots() -> void:
 		"res://game/scenes/world/mall_hallway.tscn"
 	)
 	var state: SceneState = scene.get_state()
-	var slot_count: int = 0
+	var slot_count: Array = [0]
 	for i: int in range(state.get_node_count()):
 		var name: StringName = state.get_node_name(i)
 		if name.begins_with("Slot_"):
-			slot_count += 1
+			slot_count[0] += 1
 	assert_eq(
-		slot_count, EXPECTED_SLOT_COUNT,
+		slot_count[0], EXPECTED_SLOT_COUNT,
 		"Scene should have exactly 5 storefront slots"
 	)
 
@@ -41,12 +41,12 @@ func test_scene_has_player_spawn() -> void:
 		"res://game/scenes/world/mall_hallway.tscn"
 	)
 	var state: SceneState = scene.get_state()
-	var found: bool = false
+	var found: Array = [false]
 	for i: int in range(state.get_node_count()):
 		if state.get_node_name(i) == &"PlayerSpawn":
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "Scene should have PlayerSpawn Marker3D")
+	assert_true(found[0], "Scene should have PlayerSpawn Marker3D")
 
 
 func test_scene_has_navigation_region() -> void:
@@ -54,13 +54,13 @@ func test_scene_has_navigation_region() -> void:
 		"res://game/scenes/world/mall_hallway.tscn"
 	)
 	var state: SceneState = scene.get_state()
-	var found: bool = false
+	var found: Array = [false]
 	for i: int in range(state.get_node_count()):
 		if state.get_node_name(i) == &"NavigationRegion3D":
-			found = true
+			found[0] = true
 			break
 	assert_true(
-		found, "Scene should have NavigationRegion3D"
+		found[0], "Scene should have NavigationRegion3D"
 	)
 
 
@@ -69,12 +69,12 @@ func test_scene_has_waypoint_graph() -> void:
 		"res://game/scenes/world/mall_hallway.tscn"
 	)
 	var state: SceneState = scene.get_state()
-	var found: bool = false
+	var found: Array = [false]
 	for i: int in range(state.get_node_count()):
 		if state.get_node_name(i) == &"WaypointGraph":
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "Scene should have WaypointGraph node")
+	assert_true(found[0], "Scene should have WaypointGraph node")
 
 
 func test_scene_has_lighting_nodes() -> void:
@@ -82,20 +82,20 @@ func test_scene_has_lighting_nodes() -> void:
 		"res://game/scenes/world/mall_hallway.tscn"
 	)
 	var state: SceneState = scene.get_state()
-	var found_key: bool = false
-	var found_fill: bool = false
-	var found_accent: bool = false
+	var found_key: Array = [false]
+	var found_fill: Array = [false]
+	var found_accent: Array = [false]
 	for i: int in range(state.get_node_count()):
 		var name: StringName = state.get_node_name(i)
 		if name == &"KeyLight":
-			found_key = true
+			found_key[0] = true
 		elif name == &"FillOmniBank":
-			found_fill = true
+			found_fill[0] = true
 		elif name == &"AccentNeonStrip":
-			found_accent = true
-	assert_true(found_key, "Should have KeyLight")
-	assert_true(found_fill, "Should have FillOmniBank")
-	assert_true(found_accent, "Should have AccentNeonStrip")
+			found_accent[0] = true
+	assert_true(found_key[0], "Should have KeyLight")
+	assert_true(found_fill[0], "Should have FillOmniBank")
+	assert_true(found_accent[0], "Should have AccentNeonStrip")
 
 
 func test_scene_has_no_world_environment() -> void:
@@ -143,12 +143,12 @@ func test_waypoint_graph_has_minimum_nodes() -> void:
 	var graph: Node3D = MallWaypointGraphBuilder.build(
 		parent, store_ids
 	)
-	var wp_count: int = 0
+	var wp_count: Array = [0]
 	for child: Node in graph.get_children():
 		if child is MallWaypoint:
-			wp_count += 1
+			wp_count[0] += 1
 	assert_true(
-		wp_count >= 6,
+		wp_count[0] >= 6,
 		"WaypointGraph should have at least 6 waypoints, got %d"
-		% wp_count
+		% wp_count[0]
 	)

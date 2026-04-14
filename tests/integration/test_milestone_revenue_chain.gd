@@ -100,21 +100,21 @@ func test_first_sale_reward_increases_cumulative_revenue() -> void:
 func test_revenue_milestone_fires_once_at_threshold() -> void:
 	var threshold: float = _mall_mogul_def.trigger_threshold
 	var step: float = 500.0
-	var emitted_count: int = 0
+	var emitted_count: Array = [0]
 	var _on_unlock := func(
 		mid: StringName, _reward: Dictionary
 	) -> void:
 		if mid == &"mall_mogul":
-			emitted_count += 1
+			emitted_count[0] += 1
 	EventBus.milestone_unlocked.connect(_on_unlock)
 
-	var total: float = 0.0
+	var total: Array = [0.0]
 	while total < threshold + step:
 		EventBus.transaction_completed.emit(step, true, "sale")
-		total += step
+		total[0] += step
 
 	assert_eq(
-		emitted_count, 1,
+		emitted_count[0], 1,
 		"mall_mogul should fire exactly once when crossing threshold"
 	)
 	EventBus.milestone_unlocked.disconnect(_on_unlock)
@@ -132,18 +132,18 @@ func test_no_duplicate_milestone_after_crossing_threshold() -> void:
 		"mall_mogul should be complete after crossing threshold"
 	)
 
-	var duplicate_count: int = 0
+	var duplicate_count: Array = [0]
 	var _on_unlock := func(
 		mid: StringName, _reward: Dictionary
 	) -> void:
 		if mid == &"mall_mogul":
-			duplicate_count += 1
+			duplicate_count[0] += 1
 	EventBus.milestone_unlocked.connect(_on_unlock)
 
 	EventBus.transaction_completed.emit(1000.0, true, "extra_sale")
 
 	assert_eq(
-		duplicate_count, 0,
+		duplicate_count[0], 0,
 		"mall_mogul should not emit a second time after already completed"
 	)
 	EventBus.milestone_unlocked.disconnect(_on_unlock)

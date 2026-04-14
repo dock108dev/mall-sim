@@ -75,31 +75,31 @@ func test_day_ended_signal_fires_at_end_of_day() -> void:
 	_time.current_hour = 20
 	_time.current_day = 3
 
-	var ended_day: int = -1
+	var ended_day: Array = [-1]
 	var cb: Callable = func(day: int) -> void:
-		ended_day = day
+		ended_day[0] = day
 	EventBus.day_ended.connect(cb)
 
 	_time.game_time_minutes = 1261.0
 	_time._process(0.0)
 
 	EventBus.day_ended.disconnect(cb)
-	assert_eq(ended_day, 3, "day_ended should fire with the current day number")
+	assert_eq(ended_day[0], 3, "day_ended should fire with the current day number")
 
 
 func test_day_started_signal_fires_on_advance_to_next_day() -> void:
 	_time.current_day = 5
 
-	var started_day: int = -1
+	var started_day: Array = [-1]
 	var cb: Callable = func(day: int) -> void:
-		started_day = day
+		started_day[0] = day
 	EventBus.day_started.connect(cb)
 
 	_time.advance_to_next_day()
 
 	EventBus.day_started.disconnect(cb)
 	assert_eq(
-		started_day, 6,
+		started_day[0], 6,
 		"day_started should fire with the new day number"
 	)
 
@@ -110,9 +110,9 @@ func test_day_phase_changed_signal_fires_on_phase_boundary() -> void:
 	_time.current_hour = 8
 	_time.current_phase = TimeSystem.DayPhase.PRE_OPEN
 
-	var new_phase: int = -1
+	var new_phase: Array = [-1]
 	var cb: Callable = func(phase: int) -> void:
-		new_phase = phase
+		new_phase[0] = phase
 	EventBus.day_phase_changed.connect(cb)
 
 	_time.game_time_minutes = 545.0
@@ -120,7 +120,7 @@ func test_day_phase_changed_signal_fires_on_phase_boundary() -> void:
 
 	EventBus.day_phase_changed.disconnect(cb)
 	assert_eq(
-		new_phase, TimeSystem.DayPhase.MORNING_RAMP,
+		new_phase[0], TimeSystem.DayPhase.MORNING_RAMP,
 		"day_phase_changed should fire when crossing into MORNING_RAMP (540)"
 	)
 
@@ -152,16 +152,16 @@ func test_set_speed_changes_multiplier() -> void:
 func test_set_speed_emits_speed_changed_signal() -> void:
 	_time.speed_multiplier = 1.0
 
-	var emitted_speed: float = -1.0
+	var emitted_speed: Array = [-1.0]
 	var cb: Callable = func(new_speed: float) -> void:
-		emitted_speed = new_speed
+		emitted_speed[0] = new_speed
 	EventBus.speed_changed.connect(cb)
 
 	_time.set_speed(TimeSystem.SpeedTier.ULTRA)
 
 	EventBus.speed_changed.disconnect(cb)
 	assert_almost_eq(
-		emitted_speed, 6.0, 0.01,
+		emitted_speed[0], 6.0, 0.01,
 		"speed_changed should emit with the new speed value (6.0 for ULTRA)"
 	)
 

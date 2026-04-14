@@ -224,10 +224,10 @@ func test_no_double_open() -> void:
 
 func test_rarity_weight_distribution_skews_toward_common() -> void:
 	seed(12345)
-	var common_count: int = 0
-	var uncommon_count: int = 0
-	var rare_count: int = 0
-	var ultra_rare_found: bool = false
+	var common_count: Array = [0]
+	var uncommon_count: Array = [0]
+	var rare_count: Array = [0]
+	var ultra_rare_found: Array = [false]
 
 	for _i: int in range(200):
 		var pack: ItemInstance = _make_pack_instance()
@@ -237,25 +237,25 @@ func test_rarity_weight_distribution_skews_toward_common() -> void:
 				continue
 			match card.definition.subcategory:
 				"common", "energy":
-					common_count += 1
+					common_count[0] += 1
 				"uncommon":
-					uncommon_count += 1
+					uncommon_count[0] += 1
 				"rare", "rare_holo":
-					rare_count += 1
+					rare_count[0] += 1
 				"secret_rare":
-					ultra_rare_found = true
-					rare_count += 1
+					ultra_rare_found[0] = true
+					rare_count[0] += 1
 
 	assert_gt(
-		common_count, uncommon_count,
+		common_count[0], uncommon_count,
 		"Commons should outnumber uncommons over 200 packs"
 	)
 	assert_gt(
-		uncommon_count, rare_count,
+		uncommon_count[0], rare_count,
 		"Uncommons should outnumber rares over 200 packs"
 	)
 	assert_true(
-		ultra_rare_found,
+		ultra_rare_found[0],
 		"At least one secret_rare (ultra_rare) should appear in 200 packs"
 	)
 

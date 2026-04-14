@@ -257,33 +257,33 @@ func test_set_preference_clamps_volume() -> void:
 
 
 func test_set_preference_emits_signal() -> void:
-	var received_key: StringName = &""
-	var received_value: float = -1.0
+	var received_key: Array = [&""]
+	var received_value: Array = [-1.0]
 	_settings.preference_changed.connect(
 		func(key: StringName, value: Variant) -> void:
-			received_key = key
-			received_value = value as float
+			received_key[0] = key
+			received_value[0] = value as float
 	)
 	_settings.set_preference(&"sfx_volume", 0.42)
 	assert_eq(
-		received_key, &"sfx_volume",
+		received_key[0], &"sfx_volume",
 		"preference_changed should emit with correct key"
 	)
 	assert_almost_eq(
-		received_value, 0.42, 0.001,
+		received_value[0], 0.42, 0.001,
 		"preference_changed should emit with correct value"
 	)
 
 
 func test_set_preference_unknown_key_no_signal() -> void:
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	_settings.preference_changed.connect(
 		func(_key: StringName, _value: Variant) -> void:
-			signal_fired = true
+			signal_fired[0] = true
 	)
 	_settings.set_preference(&"unknown_key", 1.0)
 	assert_false(
-		signal_fired,
+		signal_fired[0],
 		"Unknown key should not emit preference_changed"
 	)
 
@@ -369,20 +369,20 @@ func test_get_preference_language_returns_locale() -> void:
 
 
 func test_set_preference_language_emits_signal() -> void:
-	var received_key: StringName = &""
-	var received_value: String = ""
+	var received_key: Array = [&""]
+	var received_value: Array = [""]
 	_settings.preference_changed.connect(
 		func(key: StringName, value: Variant) -> void:
-			received_key = key
-			received_value = value as String
+			received_key[0] = key
+			received_value[0] = value as String
 	)
 	_settings.set_preference(&"language", "es")
 	assert_eq(
-		received_key, &"language",
+		received_key[0], &"language",
 		"preference_changed should emit with 'language' key"
 	)
 	assert_eq(
-		received_value, "es",
+		received_value[0], "es",
 		"preference_changed should emit with locale value"
 	)
 	_settings.set_preference(&"language", "en")

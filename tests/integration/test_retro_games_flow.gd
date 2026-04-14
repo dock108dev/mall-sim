@@ -103,16 +103,16 @@ func test_full_retro_games_flow() -> void:
 	assert_gt(sale_price, 0.0, "Post-refurbishment sale price is positive")
 
 	var cash_before_sale: float = _economy.get_cash()
-	var sold_signal_fired: bool = false
-	var sold_price: float = 0.0
-	var sold_category: String = ""
+	var sold_signal_fired: Array = [false]
+	var sold_price: Array = [0.0]
+	var sold_category: Array = [""]
 
 	var on_sold := func(
 		_id: String, price: float, category: String
 	) -> void:
-		sold_signal_fired = true
-		sold_price = price
-		sold_category = category
+		sold_signal_fired[0] = true
+		sold_price[0] = price
+		sold_category[0] = category
 
 	EventBus.item_sold.connect(on_sold)
 
@@ -124,13 +124,13 @@ func test_full_retro_games_flow() -> void:
 		sale_price, &"test_customer"
 	)
 
-	assert_true(sold_signal_fired, "item_sold signal fired")
+	assert_true(sold_signal_fired[0], "item_sold signal fired")
 	assert_almost_eq(
-		sold_price, sale_price, 0.01,
+		sold_price[0], sale_price, 0.01,
 		"item_sold carries post-refurbishment price"
 	)
 	assert_eq(
-		sold_category, "cartridges",
+		sold_category[0], "cartridges",
 		"item_sold carries correct category"
 	)
 

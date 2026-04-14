@@ -139,15 +139,15 @@ func test_seasonal_announced_on_trigger_day() -> void:
 		"frequency_days": 10, "offset_days": 0,
 	})
 	_set_seasonal_definitions(def)
-	var fired: bool = false
-	var got_id: String = ""
+	var fired: Array = [false]
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		fired = true
-		got_id = id
+		fired[0] = true
+		got_id[0] = id
 	EventBus.seasonal_event_announced.connect(cb)
 	_seasonal._on_day_started(10)
-	assert_true(fired, "Announced signal should fire")
-	assert_eq(got_id, "test_seasonal")
+	assert_true(fired[0], "Announced signal should fire")
+	assert_eq(got_id[0], "test_seasonal")
 	assert_eq(_seasonal._announced_events.size(), 1)
 	assert_eq(_seasonal._active_events.size(), 0)
 	EventBus.seasonal_event_announced.disconnect(cb)
@@ -157,13 +157,13 @@ func test_seasonal_activates_after_announcement() -> void:
 		"frequency_days": 10, "offset_days": 0, "duration_days": 5,
 	})
 	_set_seasonal_definitions(def)
-	var got_id: String = ""
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		got_id = id
+		got_id[0] = id
 	EventBus.seasonal_event_started.connect(cb)
 	_seasonal._on_day_started(10)
 	_seasonal._on_day_started(10 + SeasonalEventSystem.ANNOUNCEMENT_DAYS)
-	assert_eq(got_id, "test_seasonal")
+	assert_eq(got_id[0], "test_seasonal")
 	assert_eq(_seasonal._active_events.size(), 1)
 	assert_eq(_seasonal._announced_events.size(), 0)
 	EventBus.seasonal_event_started.disconnect(cb)
@@ -171,15 +171,15 @@ func test_seasonal_activates_after_announcement() -> void:
 func test_seasonal_expires_after_duration() -> void:
 	var def: SeasonalEventDefinition = _seasonal_def({"duration_days": 3})
 	_seasonal._active_events.append({"definition": def, "start_day": 10})
-	var got_id: String = ""
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		got_id = id
+		got_id[0] = id
 	EventBus.seasonal_event_ended.connect(cb)
 	_seasonal._on_day_started(12)
 	assert_eq(_seasonal._active_events.size(), 1, "Still active day 12")
 	_seasonal._on_day_started(13)
 	assert_eq(_seasonal._active_events.size(), 0, "Expired day 13")
-	assert_eq(got_id, "test_seasonal")
+	assert_eq(got_id[0], "test_seasonal")
 	EventBus.seasonal_event_ended.disconnect(cb)
 
 func test_seasonal_no_duplicate_activation() -> void:
@@ -392,15 +392,15 @@ func test_random_expires_after_duration() -> void:
 		"definition": def, "start_day": 10,
 		"target_category": "", "target_item_id": "",
 	}
-	var got_id: String = ""
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		got_id = id
+		got_id[0] = id
 	EventBus.random_event_ended.connect(cb)
 	_random._check_active_event_expiry(11)
 	assert_true(_random.has_active_event(), "Still active day 11")
 	_random._check_active_event_expiry(12)
 	assert_false(_random.has_active_event(), "Expired day 12")
-	assert_eq(got_id, "test_random")
+	assert_eq(got_id[0], "test_random")
 	EventBus.random_event_ended.disconnect(cb)
 
 func test_random_effects_cleared_on_expiry() -> void:

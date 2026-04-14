@@ -255,15 +255,15 @@ func test_a7_counter_at_floor_ratio_times_auth_price_accepted() -> void:
 	var counter_price: float = _get_floor_ratio() * auth_price
 	assert_gt(auth_price, 0.0, "Authenticated market value must be positive")
 
-	var accepted: bool = false
+	var accepted: Array = [false]
 	var customer: Customer = _make_customer()
 	_haggle.negotiation_accepted.connect(
-		func(_price: float) -> void: accepted = true
+		func(_price: float) -> void: accepted[0] = true
 	)
 	_haggle.begin_negotiation(customer, item)
 	_haggle.player_counter(counter_price)
 	assert_true(
-		accepted,
+		accepted[0],
 		"Counter at floor_ratio × auth_price ($%.2f) should be accepted"
 		% counter_price
 	)
@@ -275,15 +275,15 @@ func test_a8_final_negotiated_price_at_or_above_floor_ratio() -> void:
 	var auth_price: float = _get_auth_market_value(item)
 	var floor_price: float = _get_floor_ratio() * auth_price
 
-	var final_price: float = 0.0
+	var final_price: Array = [0.0]
 	var customer: Customer = _make_customer()
 	_haggle.negotiation_accepted.connect(
-		func(price: float) -> void: final_price = price
+		func(price: float) -> void: final_price[0] = price
 	)
 	_haggle.begin_negotiation(customer, item)
 	_haggle.player_counter(floor_price)
 	assert_gte(
-		final_price, floor_price - 0.01,
+		final_price[0], floor_price - 0.01,
 		"Final negotiated price $%.2f must be >= floor_ratio × auth_price $%.2f"
 		% [final_price, floor_price]
 	)
@@ -295,10 +295,10 @@ func test_a9_economy_cash_increases_by_negotiated_price() -> void:
 	var auth_price: float = _get_auth_market_value(item)
 	var floor_price: float = _get_floor_ratio() * auth_price
 
-	var final_price: float = 0.0
+	var final_price: Array = [0.0]
 	var customer: Customer = _make_customer()
 	_haggle.negotiation_accepted.connect(
-		func(price: float) -> void: final_price = price
+		func(price: float) -> void: final_price[0] = price
 	)
 	_haggle.begin_negotiation(customer, item)
 	_haggle.player_counter(floor_price)
@@ -314,7 +314,7 @@ func test_a9_economy_cash_increases_by_negotiated_price() -> void:
 	assert_almost_eq(
 		cash_after - cash_before, final_price, 0.01,
 		"Economy cash should increase by final negotiated price $%.2f"
-		% final_price
+		% final_price[0]
 	)
 
 
@@ -324,17 +324,17 @@ func test_a10_item_sold_signal_carries_correct_params() -> void:
 	var auth_price: float = _get_auth_market_value(item)
 	var floor_price: float = _get_floor_ratio() * auth_price
 
-	var final_price: float = 0.0
+	var final_price: Array = [0.0]
 	var customer: Customer = _make_customer()
 	_haggle.negotiation_accepted.connect(
-		func(price: float) -> void: final_price = price
+		func(price: float) -> void: final_price[0] = price
 	)
 	_haggle.begin_negotiation(customer, item)
 	_haggle.player_counter(floor_price)
 
 	var item_id: String = item.instance_id
 	var category: String = item.definition.category
-	EventBus.item_sold.emit(item_id, final_price, category)
+	EventBus.item_sold.emit(item_id, final_price[0], category)
 
 	assert_eq(
 		_item_sold_signals.size(), 1,

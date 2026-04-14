@@ -147,10 +147,10 @@ func test_pack_open_emits_pull_result() -> void:
 
 
 func test_rarity_draw_within_spec() -> void:
-	var common_count: int = 0
-	var rare_count: int = 0
-	var secret_rare_count: int = 0
-	var total_count: int = 0
+	var common_count: Array = [0]
+	var rare_count: Array = [0]
+	var secret_rare_count: Array = [0]
+	var total_count: Array = [0]
 	const PACKS_TO_OPEN: int = 100
 
 	for _i: int in range(PACKS_TO_OPEN):
@@ -161,33 +161,33 @@ func test_rarity_draw_within_spec() -> void:
 		for card: ItemInstance in cards:
 			if not card.definition:
 				continue
-			total_count += 1
+			total_count[0] += 1
 			match card.definition.subcategory:
 				"common":
-					common_count += 1
+					common_count[0] += 1
 				"rare", "rare_holo":
-					rare_count += 1
+					rare_count[0] += 1
 				"secret_rare":
-					secret_rare_count += 1
+					secret_rare_count[0] += 1
 
 	assert_gt(
-		common_count, 0,
+		common_count[0], 0,
 		"Should draw at least one common card over %d packs" % PACKS_TO_OPEN
 	)
 	assert_gt(
-		rare_count, 0,
+		rare_count[0], 0,
 		"Should draw at least one rare card over %d packs" % PACKS_TO_OPEN
 	)
-	assert_gt(total_count, 0, "Total card count must be positive")
+	assert_gt(total_count[0], 0, "Total card count must be positive")
 
-	var common_to_rare: float = float(common_count) / float(rare_count)
+	var common_to_rare: float = float(common_count[0]) / float(rare_count[0])
 	assert_gte(
 		common_to_rare, 3.0,
 		"Commons should appear at least 3x more than rares (ratio: %.2f)"
 		% common_to_rare
 	)
 
-	var ultra_rare_ratio: float = float(secret_rare_count) / float(total_count)
+	var ultra_rare_ratio: float = float(secret_rare_count[0]) / float(total_count[0])
 	assert_lte(
 		ultra_rare_ratio, 0.10,
 		"Ultra-rare cards should appear in <=10%% of total draws (got %.1f%%)"

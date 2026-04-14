@@ -1,74 +1,81 @@
-[
-  {
-    "id": "hint_welcome",
-    "trigger": "game_started",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "Welcome to the mall — lease a storefront to begin.",
-    "position_hint": "center",
-    "display_duration_sec": 6.0,
-    "day_1_only": true
-  },
-  {
-    "id": "hint_lease_store",
-    "trigger": "store_leased",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "Store leased. Now stock it with inventory from the Order tab.",
-    "position_hint": "bottom_right",
-    "display_duration_sec": 5.0,
-    "day_1_only": true
-  },
-  {
-    "id": "hint_first_order",
-    "trigger": "order_submitted",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "Order placed — check back next day for delivery.",
-    "position_hint": "bottom_right",
-    "display_duration_sec": 5.0,
-    "day_1_only": true
-  },
-  {
-    "id": "hint_build_mode",
-    "trigger": "build_mode_entered",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "Drag fixtures to arrange your store layout.",
-    "position_hint": "top_center",
-    "display_duration_sec": 5.0,
-    "day_1_only": true
-  },
-  {
-    "id": "hint_first_customer",
-    "trigger": "customer_entered",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "A customer! They'll browse and buy if they like what they see.",
-    "position_hint": "bottom_left",
-    "display_duration_sec": 5.0,
-    "day_1_only": true
-  },
-  {
-    "id": "hint_first_sale",
-    "trigger": "transaction_completed",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "Your first sale — revenue appears in your Economy panel.",
-    "position_hint": "bottom_right",
-    "display_duration_sec": 5.0,
-    "day_1_only": true
-  },
-  {
-    "id": "hint_day_end",
-    "trigger": "day_ending",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "End of day — review your summary and plan tomorrow.",
-    "position_hint": "top_center",
-    "display_duration_sec": 5.0,
-    "day_1_only": true
-  },
-  {
-    "id": "hint_second_store",
-    "trigger": "second_store_available",
-    "trigger_condition": { "first_occurrence": true },
-    "message": "You can now lease a second storefront — diversify your income.",
-    "position_hint": "center",
-    "display_duration_sec": 6.0,
-    "day_1_only": false
-  }
-]
+{
+  "hints": [
+    {
+      "id": "hint_day_start",
+      "trigger": "day_start",
+      "message": "A new day begins — check your orders and prepare for customers.",
+      "position_hint": "bottom_left",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_store_entered",
+      "trigger": "store_entered",
+      "message": "You've entered your store. Arrange fixtures and stock shelves here.",
+      "position_hint": "top_center",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_first_customer_spawned",
+      "trigger": "first_customer_spawned",
+      "message": "A customer just walked in — they'll browse and buy if they find what they want.",
+      "position_hint": "bottom_left",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_first_sale",
+      "trigger": "first_sale",
+      "message": "You made your first sale! Revenue is tracked in the Economy panel.",
+      "position_hint": "bottom_right",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_inventory_low",
+      "trigger": "inventory_low",
+      "message": "Your inventory is running low — place a restocking order soon.",
+      "position_hint": "bottom_right",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_day_ending_soon",
+      "trigger": "day_ending_soon",
+      "message": "The mall is closing soon — wrap up any active transactions.",
+      "position_hint": "top_center",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_first_order_placed",
+      "trigger": "first_order_placed",
+      "message": "Order placed! Items will arrive at the start of the next business day.",
+      "position_hint": "bottom_right",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_staff_hired",
+      "trigger": "staff_hired",
+      "message": "Staff member hired. Assign them a role in the Staff panel.",
+      "position_hint": "top_center",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_reputation_changed",
+      "trigger": "reputation_changed",
+      "message": "Your reputation score has changed — it affects customer traffic and unlock thresholds.",
+      "position_hint": "top_center",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_checkout_queue_formed",
+      "trigger": "checkout_queue_formed",
+      "message": "Customers are queueing at checkout. Make sure you have enough cashiers!",
+      "position_hint": "bottom_left",
+      "display_duration_sec": 5.0
+    },
+    {
+      "id": "hint_browse_timer_started",
+      "trigger": "browse_timer_started",
+      "message": "A customer is browsing. Keep shelves stocked to improve their chances of buying.",
+      "position_hint": "bottom_left",
+      "display_duration_sec": 5.0
+    }
+  ]
+}

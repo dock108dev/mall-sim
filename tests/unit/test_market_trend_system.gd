@@ -121,12 +121,12 @@ func test_daily_shift_changes_at_least_one_level_over_ten_iterations() -> void:
 	for i: int in range(10):
 		_system._on_day_ended(i + 1)
 	var final_levels: Dictionary = _system.get_all_trend_levels()
-	var any_changed: bool = false
+	var any_changed: Array = [false]
 	for key: Variant in initial_levels:
 		if not is_equal_approx(float(initial_levels[key]), float(final_levels[key])):
-			any_changed = true
+			any_changed[0] = true
 			break
-	assert_true(any_changed, "At least one level must shift over 10 _on_day_ended calls")
+	assert_true(any_changed[0], "At least one level must shift over 10 _on_day_ended calls")
 
 
 func test_daily_shift_delta_does_not_exceed_category_volatility() -> void:

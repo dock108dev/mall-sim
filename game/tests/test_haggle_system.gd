@@ -64,43 +64,43 @@ func _make_customer() -> Customer:
 
 func test_haggle_started_fires_with_correct_item_id() -> void:
 	var customer: Customer = _make_customer()
-	var received_item_id: String = ""
-	var received_cust_id: int = 0
+	var received_item_id: Array = [""]
+	var received_cust_id: Array = [0]
 	EventBus.haggle_started.connect(
 		func(item_id: String, cust_id: int) -> void:
-			received_item_id = item_id
-			received_cust_id = cust_id
+			received_item_id[0] = item_id
+			received_cust_id[0] = cust_id
 	)
 	_haggle.begin_negotiation(customer, _item)
 	assert_eq(
-		received_item_id, _item.instance_id,
+		received_item_id[0], _item.instance_id,
 		"haggle_started should emit matching item_id"
 	)
 	assert_eq(
-		received_cust_id, customer.get_instance_id(),
+		received_cust_id[0], customer.get_instance_id(),
 		"haggle_started should emit matching customer_id"
 	)
 
 
 func test_negotiation_started_fires_with_ask_price() -> void:
 	var customer: Customer = _make_customer()
-	var received_sticker: float = 0.0
-	var received_offer: float = 0.0
+	var received_sticker: Array = [0.0]
+	var received_offer: Array = [0.0]
 	_haggle.negotiation_started.connect(
 		func(
 			_name: String, _cond: String, sticker: float,
 			offer: float, _rounds: int
 		) -> void:
-			received_sticker = sticker
-			received_offer = offer
+			received_sticker[0] = sticker
+			received_offer[0] = offer
 	)
 	_haggle.begin_negotiation(customer, _item)
 	assert_eq(
-		received_sticker, _item.player_set_price,
+		received_sticker[0], _item.player_set_price,
 		"negotiation_started should emit sticker price as ask_price"
 	)
 	assert_true(
-		received_offer > 0.0,
+		received_offer[0] > 0.0,
 		"negotiation_started should emit a positive customer offer"
 	)
 
@@ -114,13 +114,13 @@ func test_counter_below_floor_is_declined() -> void:
 	_haggle.begin_negotiation(customer, _item)
 	var perceived: float = _haggle._perceived_value
 	var above_walkaway: float = perceived * 3.0
-	var failed: bool = false
+	var failed: Array = [false]
 	_haggle.negotiation_failed.connect(
-		func() -> void: failed = true
+		func() -> void: failed[0] = true
 	)
 	_haggle.player_counter(above_walkaway)
 	assert_true(
-		failed,
+		failed[0],
 		"Offer far above perceived value should be auto-declined"
 	)
 	assert_false(
@@ -133,15 +133,15 @@ func test_below_floor_fires_haggle_failed() -> void:
 	_profile.patience = 0.1
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
-	var received_item_id: String = ""
+	var received_item_id: Array = [""]
 	EventBus.haggle_failed.connect(
 		func(item_id: String, _cust_id: int) -> void:
-			received_item_id = item_id
+			received_item_id[0] = item_id
 	)
 	var extreme_price: float = _item.get_current_value() * 5.0
 	_haggle.player_counter(extreme_price)
 	assert_eq(
-		received_item_id, _item.instance_id,
+		received_item_id[0], _item.instance_id,
 		"haggle_failed should fire with correct item_id on decline"
 	)
 
@@ -154,20 +154,20 @@ func test_counter_at_or_above_floor_is_accepted() -> void:
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var market_value: float = _item.get_current_value()
-	var accepted: bool = false
-	var final: float = 0.0
+	var accepted: Array = [false]
+	var final: Array = [0.0]
 	_haggle.negotiation_accepted.connect(
 		func(price: float) -> void:
-			accepted = true
-			final = price
+			accepted[0] = true
+			final[0] = price
 	)
 	_haggle.player_counter(market_value)
 	assert_true(
-		accepted,
+		accepted[0],
 		"Counter at market value should be accepted (low sensitivity)"
 	)
 	assert_almost_eq(
-		final, market_value, 0.01,
+		final[0], market_value, 0.01,
 		"Final price should equal the accepted counter-offer"
 	)
 
@@ -176,25 +176,25 @@ func test_above_floor_fires_haggle_completed() -> void:
 	_profile.price_sensitivity = 0.3
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
-	var received_item_id: String = ""
-	var received_price: float = 0.0
+	var received_item_id: Array = [""]
+	var received_price: Array = [0.0]
 	EventBus.haggle_completed.connect(
 		func(
 			_sid: StringName, iid: StringName,
 			price: float, _ask: float,
 			_acc: bool, _cnt: int
 		) -> void:
-			received_item_id = iid
-			received_price = price
+			received_item_id[0] = iid
+			received_price[0] = price
 	)
 	var market_value: float = _item.get_current_value()
 	_haggle.player_counter(market_value)
 	assert_eq(
-		received_item_id, _item.instance_id,
+		received_item_id[0], _item.instance_id,
 		"haggle_completed should fire with correct item_id"
 	)
 	assert_almost_eq(
-		received_price, market_value, 0.01,
+		received_price[0], market_value, 0.01,
 		"haggle_completed should fire with correct final_price"
 	)
 
@@ -209,18 +209,18 @@ func test_max_rounds_declines_further_offers() -> void:
 	_haggle.begin_negotiation(customer, _item)
 	var perceived: float = _haggle._perceived_value
 	var moderate_price: float = perceived * 1.3
-	var round_count: int = 0
-	var failed: bool = false
+	var round_count: Array = [0]
+	var failed: Array = [false]
 	_haggle.negotiation_failed.connect(
-		func() -> void: failed = true
+		func() -> void: failed[0] = true
 	)
 	for i: int in range(HaggleSystem.MAX_ROUNDS + 2):
 		if not _haggle.is_active():
 			break
-		round_count += 1
+		round_count[0] += 1
 		_haggle.player_counter(moderate_price)
 	assert_true(
-		failed,
+		failed[0],
 		"Haggle should fail after max rounds exceeded"
 	)
 	assert_false(
@@ -258,24 +258,24 @@ func test_accepted_haggle_fires_completed_signal() -> void:
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var expected_price: float = _haggle._current_customer_offer
-	var received_item_id: String = ""
-	var received_price: float = 0.0
+	var received_item_id: Array = [""]
+	var received_price: Array = [0.0]
 	EventBus.haggle_completed.connect(
 		func(
 			_sid: StringName, iid: StringName,
 			price: float, _ask: float,
 			_acc: bool, _cnt: int
 		) -> void:
-			received_item_id = iid
-			received_price = price
+			received_item_id[0] = iid
+			received_price[0] = price
 	)
 	_haggle.accept_offer()
 	assert_eq(
-		received_item_id, _item.instance_id,
+		received_item_id[0], _item.instance_id,
 		"haggle_completed should fire on accept"
 	)
 	assert_almost_eq(
-		received_price, expected_price, 0.01,
+		received_price[0], expected_price, 0.01,
 		"haggle_completed price should match customer offer"
 	)
 
@@ -283,20 +283,20 @@ func test_accepted_haggle_fires_completed_signal() -> void:
 func test_declined_haggle_fires_failed_signal() -> void:
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
-	var received_item_id: String = ""
-	var received_cust_id: int = 0
+	var received_item_id: Array = [""]
+	var received_cust_id: Array = [0]
 	EventBus.haggle_failed.connect(
 		func(item_id: String, cust_id: int) -> void:
-			received_item_id = item_id
-			received_cust_id = cust_id
+			received_item_id[0] = item_id
+			received_cust_id[0] = cust_id
 	)
 	_haggle.decline_offer()
 	assert_eq(
-		received_item_id, _item.instance_id,
+		received_item_id[0], _item.instance_id,
 		"haggle_failed should fire on decline"
 	)
 	assert_eq(
-		received_cust_id, customer.get_instance_id(),
+		received_cust_id[0], customer.get_instance_id(),
 		"haggle_failed should include correct customer_id"
 	)
 

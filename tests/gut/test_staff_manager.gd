@@ -157,11 +157,11 @@ func test_rotation_after_3_days() -> void:
 	var new_ids: Array[String] = []
 	for candidate: StaffDefinition in _manager.get_candidate_pool():
 		new_ids.append(candidate.staff_id)
-	var changed: int = 0
+	var changed: Array = [0]
 	for id: String in new_ids:
 		if not original_ids.has(id):
-			changed += 1
-	assert_eq(changed, 2, "2 new candidates after rotation")
+			changed[0] += 1
+	assert_eq(changed[0], 2, "2 new candidates after rotation")
 
 
 func test_no_rotation_before_3_days() -> void:

@@ -8,6 +8,11 @@ var _profile: CustomerTypeDefinition
 var _original_tier: StringName
 
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
+
 func before_each() -> void:
 	_original_tier = DifficultySystemSingleton.get_current_tier_id()
 

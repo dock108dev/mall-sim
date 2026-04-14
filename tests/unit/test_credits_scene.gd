@@ -91,7 +91,7 @@ func test_return_to_menu_emits_signal() -> void:
 
 func test_back_button_exists_in_scene() -> void:
 	var button: Button = _credits.get_node_or_null(
-		"Layout/BottomBar/BackToMenuButton"
+		"Overlay/Layout/BottomBar/BackToMenuButton"
 	) as Button
 	assert_not_null(button, "BackToMenuButton should exist in the scene tree")
 
@@ -99,7 +99,7 @@ func test_back_button_exists_in_scene() -> void:
 func test_back_button_always_visible() -> void:
 	_credits.initialize()
 	var bar: HBoxContainer = _credits.get_node_or_null(
-		"Layout/BottomBar"
+		"Overlay/Layout/BottomBar"
 	) as HBoxContainer
 	assert_not_null(bar, "BottomBar should exist")
 	assert_true(bar.visible, "BottomBar should always be visible")

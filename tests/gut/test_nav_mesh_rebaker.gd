@@ -138,27 +138,27 @@ func test_no_double_rebake_without_new_changes() -> void:
 
 
 func test_nav_mesh_baked_signal_exists() -> void:
-	var received: bool = false
+	var received: Array = [false]
 	var handler := func() -> void:
-		received = true
+		received[0] = true
 	EventBus.nav_mesh_baked.connect(handler)
 	EventBus.nav_mesh_baked.emit()
-	assert_true(received)
+	assert_true(received[0])
 	EventBus.nav_mesh_baked.disconnect(handler)
 
 
 func test_customer_spawning_signals_exist() -> void:
-	var disabled: bool = false
-	var enabled: bool = false
+	var disabled: Array = [false]
+	var enabled: Array = [false]
 	var d_handler := func() -> void:
-		disabled = true
+		disabled[0] = true
 	var e_handler := func() -> void:
-		enabled = true
+		enabled[0] = true
 	EventBus.customer_spawning_disabled.connect(d_handler)
 	EventBus.customer_spawning_enabled.connect(e_handler)
 	EventBus.customer_spawning_disabled.emit()
 	EventBus.customer_spawning_enabled.emit()
-	assert_true(disabled)
-	assert_true(enabled)
+	assert_true(disabled[0])
+	assert_true(enabled[0])
 	EventBus.customer_spawning_disabled.disconnect(d_handler)
 	EventBus.customer_spawning_enabled.disconnect(e_handler)

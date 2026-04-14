@@ -29,6 +29,7 @@ func before_each() -> void:
 	_customer_system = CustomerSystem.new()
 	add_child_autofree(_customer_system)
 	_customer_system.max_customers_in_mall = 30
+	_customer_system._connect_signals()
 
 	_market_event_system = MarketEventSystem.new()
 	add_child_autofree(_market_event_system)
@@ -255,17 +256,17 @@ func test_market_event_system_emits_active_on_immediate_start() -> void:
 	})
 	_market_event_system._event_definitions = [def]
 
-	var received_id: StringName = &""
+	var received_id: Array = [&""]
 	var received_modifier: Dictionary = {}
 	EventBus.market_event_active.connect(
 		func(eid: StringName, mod: Dictionary) -> void:
-			received_id = eid
+			received_id[0] = eid
 			received_modifier = mod
 	)
 
 	_market_event_system._activate_event(def, 1)
 
-	assert_eq(received_id, &"instant_event", "market_event_active should fire event_id")
+	assert_eq(received_id[0], &"instant_event", "market_event_active should fire event_id")
 	assert_true(
 		received_modifier.has("spawn_rate_multiplier"),
 		"Emitted modifier must include spawn_rate_multiplier"
@@ -283,13 +284,13 @@ func test_market_event_system_emits_expired_when_event_ends() -> void:
 	_market_event_system._event_definitions = [def]
 	_market_event_system._activate_event(def, 1)
 
-	var expired_id: StringName = &""
+	var expired_id: Array = [&""]
 	EventBus.market_event_expired.connect(
 		func(eid: StringName) -> void:
-			expired_id = eid
+			expired_id[0] = eid
 	)
 
 	# Advance past end_day = 1 + 0 + 3 = 4, so day 5 triggers removal
 	_market_event_system._advance_event_lifecycles(5)
 
-	assert_eq(expired_id, &"ending_event", "market_event_expired should fire when event ends")
+	assert_eq(expired_id[0], &"ending_event", "market_event_expired should fire when event ends")

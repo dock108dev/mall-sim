@@ -9,6 +9,19 @@ extends Node
 @export var break_point: Marker3D = null
 
 
+func _ready() -> void:
+	if not backroom_point:
+		backroom_point = get_node_or_null("BackroomPoint") as Marker3D
+	if not greeter_point:
+		greeter_point = get_node_or_null("GreeterPoint") as Marker3D
+	if not break_point:
+		break_point = get_node_or_null("StaffBreakPoint") as Marker3D
+	if register_points.is_empty():
+		var rp: Marker3D = get_node_or_null("RegisterPoint") as Marker3D
+		if rp:
+			register_points = [rp]
+
+
 ## Returns the first available register point, or null if none exist.
 func get_register_point() -> Marker3D:
 	if register_points.is_empty():

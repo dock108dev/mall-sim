@@ -318,11 +318,11 @@ func test_demo_slot_count_unchanged_after_sale() -> void:
 	var pair: Dictionary = _setup_demo_pair(def)
 	var demo: ItemInstance = pair["demo"] as ItemInstance
 	var sale: ItemInstance = pair["sale"] as ItemInstance
-	var count_before: int = 0
+	var count_before: Array = [0]
 	for item: ItemInstance in [demo, sale]:
 		if item.is_demo:
-			count_before += 1
+			count_before[0] += 1
 	_inventory.remove_item(sale.instance_id)
 	var remaining: ItemInstance = _inventory.get_item(demo.instance_id)
 	var count_after: int = 1 if remaining and remaining.is_demo else 0
-	assert_eq(count_before, count_after)
+	assert_eq(count_before[0], count_after)

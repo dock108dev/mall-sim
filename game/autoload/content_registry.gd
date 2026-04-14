@@ -74,6 +74,18 @@ func get_scene_path(id: StringName) -> String:
 	return _scene_map.get(canonical, "")
 
 
+## Clears all registry state. For use in tests only.
+func clear_for_testing() -> void:
+	_entries.clear()
+	_aliases.clear()
+	_scene_map.clear()
+	_display_names.clear()
+	_types.clear()
+	_resources.clear()
+	_ready_flag = false
+	DataLoaderSingleton._loaded = false
+
+
 ## Returns all canonical IDs of a given content type.
 func get_all_ids(content_type: String) -> Array[StringName]:
 	var result: Array[StringName] = []

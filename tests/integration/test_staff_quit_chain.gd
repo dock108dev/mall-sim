@@ -64,13 +64,13 @@ func test_roster_excludes_quit_staff_after_trigger() -> void:
 	StaffManager._check_quit_triggers()
 
 	var roster: Array[StaffDefinition] = StaffManager.get_staff_for_store(STORE_ID)
-	var still_present: bool = false
+	var still_present: Array = [false]
 	for member: StaffDefinition in roster:
 		if member.staff_id == STAFF_ID:
-			still_present = true
+			still_present[0] = true
 			break
 	assert_false(
-		still_present,
+		still_present[0],
 		"Quit staff member should not appear in get_staff_for_store after quitting"
 	)
 
@@ -130,13 +130,13 @@ func test_high_morale_staff_does_not_quit() -> void:
 	StaffManager._check_quit_triggers()
 
 	var roster: Array[StaffDefinition] = StaffManager.get_staff_for_store(STORE_ID)
-	var found: bool = false
+	var found: Array = [false]
 	for member: StaffDefinition in roster:
 		if member.staff_id == HIGH_MORALE_STAFF_ID:
-			found = true
+			found[0] = true
 			break
 	assert_true(
-		found,
+		found[0],
 		"A staff member with healthy morale should remain on the roster after the quit check"
 	)
 

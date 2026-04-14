@@ -275,7 +275,7 @@
     "description": "Gold-plated composite connectors, triple-shielded. The last AV cable you'll ever buy.",
     "category": "accessory",
     "store_type": "electronics",
-    "base_price": 19.99,
+    "base_price": 20.99,
     "rarity": "common",
     "condition_range": ["near_mint", "mint"],
     "can_be_demo_unit": false,

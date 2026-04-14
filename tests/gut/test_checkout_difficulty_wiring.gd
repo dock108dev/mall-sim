@@ -203,7 +203,7 @@ func test_modifier_read_at_transaction_time() -> void:
 func test_easy_modifier_increases_probability() -> void:
 	_set_difficulty_modifier(1.25)
 	_profile.purchase_probability_base = 0.5
-	var success_count: int = 0
+	var success_count: Array = [0]
 	var trials: int = 2000
 	for i: int in range(trials):
 		_purchased_signals = []
@@ -212,9 +212,9 @@ func test_easy_modifier_increases_probability() -> void:
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
 		if _purchased_signals.size() > 0:
-			success_count += 1
+			success_count[0] += 1
 
-	var actual_rate: float = float(success_count) / float(trials)
+	var actual_rate: float = float(success_count[0]) / float(trials)
 	var expected: float = 0.5 * 1.25
 	assert_almost_eq(
 		actual_rate, expected, 0.06,
@@ -229,7 +229,7 @@ func test_easy_modifier_increases_probability() -> void:
 func test_hard_modifier_decreases_probability() -> void:
 	_set_difficulty_modifier(0.75)
 	_profile.purchase_probability_base = 0.5
-	var success_count: int = 0
+	var success_count: Array = [0]
 	var trials: int = 2000
 	for i: int in range(trials):
 		_purchased_signals = []
@@ -238,9 +238,9 @@ func test_hard_modifier_decreases_probability() -> void:
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
 		if _purchased_signals.size() > 0:
-			success_count += 1
+			success_count[0] += 1
 
-	var actual_rate: float = float(success_count) / float(trials)
+	var actual_rate: float = float(success_count[0]) / float(trials)
 	var expected: float = 0.5 * 0.75
 	assert_almost_eq(
 		actual_rate, expected, 0.06,

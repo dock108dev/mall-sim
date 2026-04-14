@@ -1,6 +1,10 @@
 ## Integration test — boot sequence content loading and ContentRegistry population.
 extends GutTest
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
 
 const STORE_IDS: Array[String] = [
 	"sports_memorabilia",

@@ -35,9 +35,9 @@ func test_get_current_step_returns_first_step_on_fresh_init() -> void:
 
 func test_advance_step_moves_forward_and_emits_step_completed() -> void:
 	_tutorial.initialize(true)
-	var completed_id: String = ""
+	var completed_id: Array = [""]
 	var on_completed: Callable = func(id: String) -> void:
-		completed_id = id
+		completed_id[0] = id
 	EventBus.tutorial_step_completed.connect(on_completed)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -49,7 +49,7 @@ func test_advance_step_moves_forward_and_emits_step_completed() -> void:
 		"Step should advance from WELCOME to WALK_TO_STORE"
 	)
 	assert_eq(
-		completed_id, "welcome",
+		completed_id[0], "welcome",
 		"tutorial_step_completed should emit with welcome step_id"
 	)
 
@@ -58,9 +58,9 @@ func test_advance_step_moves_forward_and_emits_step_completed() -> void:
 
 func test_advance_on_final_step_emits_tutorial_completed() -> void:
 	_tutorial.initialize(true)
-	var tutorial_done: bool = false
+	var tutorial_done: Array = [false]
 	var on_done: Callable = func() -> void:
-		tutorial_done = true
+		tutorial_done[0] = true
 	EventBus.tutorial_completed.connect(on_done)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -84,7 +84,7 @@ func test_advance_on_final_step_emits_tutorial_completed() -> void:
 		"Should reach FINISHED step"
 	)
 	assert_true(
-		tutorial_done,
+		tutorial_done[0],
 		"tutorial_completed signal should fire on final step"
 	)
 	assert_true(
@@ -103,13 +103,13 @@ func test_advance_after_completion_is_noop() -> void:
 	_tutorial.tutorial_active = false
 	_tutorial.current_step = TutorialSystem.TutorialStep.FINISHED
 
-	var signals_fired: int = 0
+	var signals_fired: Array = [0]
 	var on_step: Callable = func(_id: String) -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 	var on_completed: Callable = func(_id: String) -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 	var on_done: Callable = func() -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 	EventBus.tutorial_step_changed.connect(on_step)
 	EventBus.tutorial_step_completed.connect(on_completed)
 	EventBus.tutorial_completed.connect(on_done)
@@ -120,7 +120,7 @@ func test_advance_after_completion_is_noop() -> void:
 	EventBus.day_ended.emit(1)
 
 	assert_eq(
-		signals_fired, 0,
+		signals_fired[0], 0,
 		"No tutorial signals should fire after completion"
 	)
 	assert_eq(

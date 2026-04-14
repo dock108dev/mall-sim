@@ -2,6 +2,10 @@
 ## correct wages, skill bonuses, and morale values.
 extends GutTest
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
 
 const EXPECTED_COUNT: int = 9
 

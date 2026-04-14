@@ -215,11 +215,11 @@ func test_save_load_preserves_stats() -> void:
 
 
 func test_load_state_does_not_emit_ending_triggered() -> void:
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		signal_fired = true
+		signal_fired[0] = true
 	EventBus.ending_triggered.connect(on_ending)
 
 	_system.load_state({
@@ -229,7 +229,7 @@ func test_load_state_does_not_emit_ending_triggered() -> void:
 	})
 
 	assert_false(
-		signal_fired,
+		signal_fired[0],
 		"load_state must not emit ending_triggered"
 	)
 
@@ -267,17 +267,17 @@ func test_ending_requested_emits_signals_in_order() -> void:
 
 
 func test_bankruptcy_declared_triggers_evaluate() -> void:
-	var ending_id: StringName = &""
+	var ending_id: Array = [&""]
 	var on_ending: Callable = func(
 		id: StringName, _stats: Dictionary
 	) -> void:
-		ending_id = id
+		ending_id[0] = id
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 
 	assert_ne(
-		ending_id, &"",
+		ending_id[0], &"",
 		"bankruptcy_declared should trigger ending evaluation"
 	)
 	assert_eq(
@@ -290,18 +290,18 @@ func test_bankruptcy_declared_triggers_evaluate() -> void:
 
 
 func test_bankruptcy_declared_double_emit_no_double_evaluate() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 	EventBus.bankruptcy_declared.emit()
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"Second bankruptcy_declared should not trigger another evaluate"
 	)
 
@@ -309,18 +309,18 @@ func test_bankruptcy_declared_double_emit_no_double_evaluate() -> void:
 
 
 func test_ending_triggered_fires_only_once() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.ending_requested.emit("voluntary")
 	EventBus.ending_requested.emit("voluntary")
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"ending_triggered should fire exactly once"
 	)
 

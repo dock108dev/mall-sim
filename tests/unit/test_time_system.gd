@@ -118,16 +118,16 @@ func test_pause_blocks_hour_signal() -> void:
 
 
 func test_no_double_day_ended_emit() -> void:
-	var ended_count: int = 0
+	var ended_count: Array = [0]
 	EventBus.day_ended.connect(
-		func(_d: int) -> void: ended_count += 1
+		func(_d: int) -> void: ended_count[0] += 1
 	)
 	_ts.game_time_minutes = 1259.0
 	_ts._last_emitted_hour = 20
 	_ts._process(2.0)
 	_ts._process(2.0)
 	assert_eq(
-		ended_count, 1,
+		ended_count[0], 1,
 		"day_ended should emit once even with multiple process calls"
 	)
 

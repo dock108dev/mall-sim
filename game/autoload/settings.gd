@@ -267,8 +267,8 @@ func set_preference(key: StringName, value: Variant) -> void:
 		&"display_mode": display_mode = value as int
 		&"control_scheme": control_scheme = value as int
 		&"language": locale = value as String
-	preference_changed.emit(key, value)
-	EventBus.preference_changed.emit(key, value)
+	preference_changed.emit(String(key), value)
+	EventBus.preference_changed.emit(String(key), value)
 
 
 func set_fullscreen(value: bool) -> void:

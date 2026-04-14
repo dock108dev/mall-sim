@@ -126,7 +126,7 @@
       "text": "Three storefronts. Three sets of keys, three gate codes, three morning routines that blurred into a single controlled orbit through the building. The other tenants started treating you differently — not with deference exactly, but with the cautious respect given to someone who clearly understood something about this place that they did not.",
       "tone": "positive",
       "music_cue": "ending_success",
-      "priority": 7,
+      "priority": 8,
       "category": "success",
       "required_all": [
         { "stat_key": "owned_store_count_final", "operator": "gte", "value": 3.0 },
@@ -143,7 +143,7 @@
       "text": "Every unit on the directory bore your name. The building manager stopped scheduling tenant meetings because there was only one tenant and you already knew what you thought. Twenty-five thousand in revenue and a corridor that belonged to you in every sense that mattered. The escalators carried people to your stores because there was nowhere else to go.",
       "tone": "positive",
       "music_cue": "ending_triumph",
-      "priority": 8,
+      "priority": 7,
       "category": "success",
       "required_all": [
         { "stat_key": "owned_store_count_final", "operator": "eq", "value": 5.0 },

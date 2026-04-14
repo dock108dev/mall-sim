@@ -34,9 +34,9 @@ func test_initialize_new_game_activates_tutorial() -> void:
 
 func test_step_progression_welcome_to_walk() -> void:
 	_tutorial.initialize(true)
-	var step_changed_id: String = ""
+	var step_changed_id: Array = [""]
 	var on_step: Callable = func(id: String) -> void:
-		step_changed_id = id
+		step_changed_id[0] = id
 	EventBus.tutorial_step_changed.connect(on_step)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -48,7 +48,7 @@ func test_step_progression_welcome_to_walk() -> void:
 		"Step should advance to WALK_TO_STORE after welcome timer"
 	)
 	assert_eq(
-		step_changed_id, "walk_to_store",
+		step_changed_id[0], "walk_to_store",
 		"tutorial_step_changed should emit with walk_to_store"
 	)
 	EventBus.tutorial_step_changed.disconnect(on_step)
@@ -106,9 +106,9 @@ func test_step_progression_through_three_steps() -> void:
 
 func test_full_step_progression_to_completion() -> void:
 	_tutorial.initialize(true)
-	var tutorial_completed_fired: bool = false
+	var tutorial_completed_fired: Array = [false]
 	var on_complete: Callable = func() -> void:
-		tutorial_completed_fired = true
+		tutorial_completed_fired[0] = true
 	EventBus.tutorial_completed.connect(on_complete)
 
 	# WELCOME -> WALK_TO_STORE
@@ -159,7 +159,7 @@ func test_full_step_progression_to_completion() -> void:
 		"Tutorial should be marked completed"
 	)
 	assert_true(
-		tutorial_completed_fired,
+		tutorial_completed_fired[0],
 		"tutorial_completed signal should have fired"
 	)
 
@@ -206,9 +206,9 @@ func test_skip_tutorial_prevents_further_progression() -> void:
 	_tutorial.initialize(true)
 	assert_true(_tutorial.tutorial_active, "Tutorial should be active before skip")
 
-	var skipped_fired: bool = false
+	var skipped_fired: Array = [false]
 	var on_skip: Callable = func() -> void:
-		skipped_fired = true
+		skipped_fired[0] = true
 	EventBus.tutorial_skipped.connect(on_skip)
 
 	_tutorial.skip_tutorial()
@@ -222,7 +222,7 @@ func test_skip_tutorial_prevents_further_progression() -> void:
 		"Tutorial should be marked completed after skip"
 	)
 	assert_true(
-		skipped_fired,
+		skipped_fired[0],
 		"tutorial_skipped signal should have fired"
 	)
 	assert_false(
@@ -235,9 +235,9 @@ func test_skip_tutorial_prevents_further_progression() -> void:
 
 func test_skip_flag_prevents_tutorial_from_starting() -> void:
 	_tutorial.tutorial_completed = true
-	var started_fired: bool = false
+	var started_fired: Array = [false]
 	var on_step: Callable = func(_id: String) -> void:
-		started_fired = true
+		started_fired[0] = true
 	EventBus.tutorial_step_changed.connect(on_step)
 
 	_tutorial.initialize(true)
@@ -251,9 +251,9 @@ func test_skip_flag_prevents_tutorial_from_starting() -> void:
 
 
 func test_initialize_not_new_game_no_cfg_does_not_start() -> void:
-	var started_fired: bool = false
+	var started_fired: Array = [false]
 	var on_step: Callable = func(_id: String) -> void:
-		started_fired = true
+		started_fired[0] = true
 	EventBus.tutorial_step_changed.connect(on_step)
 
 	_tutorial.initialize(false)
@@ -263,7 +263,7 @@ func test_initialize_not_new_game_no_cfg_does_not_start() -> void:
 		"Tutorial should not activate for non-new game without cfg"
 	)
 	assert_false(
-		started_fired,
+		started_fired[0],
 		"tutorial_step_changed should not fire for non-new game without cfg"
 	)
 
@@ -275,11 +275,11 @@ func test_system_silent_after_completion() -> void:
 	_tutorial.tutorial_active = false
 	_tutorial.current_step = TutorialSystem.TutorialStep.FINISHED
 
-	var signals_fired: int = 0
+	var signals_fired: Array = [0]
 	var on_step: Callable = func(_id: String) -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 	var on_completed: Callable = func() -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 	EventBus.tutorial_step_changed.connect(on_step)
 	EventBus.tutorial_completed.connect(on_completed)
 
@@ -288,7 +288,7 @@ func test_system_silent_after_completion() -> void:
 	EventBus.item_stocked.emit("item_1", "shelf_1")
 
 	assert_eq(
-		signals_fired, 0,
+		signals_fired[0], 0,
 		"No tutorial signals should fire after completion"
 	)
 

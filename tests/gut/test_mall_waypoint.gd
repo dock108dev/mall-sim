@@ -206,33 +206,33 @@ func test_graph_builder_creates_all_waypoints() -> void:
 		if child is MallWaypoint:
 			waypoints.append(child as MallWaypoint)
 
-	var exits: int = 0
-	var store_entrances: int = 0
-	var benches: int = 0
-	var food_seats: int = 0
-	var hallway_nodes: int = 0
+	var exits: Array = [0]
+	var store_entrances: Array = [0]
+	var benches: Array = [0]
+	var food_seats: Array = [0]
+	var hallway_nodes: Array = [0]
 
 	for wp: MallWaypoint in waypoints:
 		match wp.waypoint_type:
 			MallWaypoint.WaypointType.EXIT:
-				exits += 1
+				exits[0] += 1
 			MallWaypoint.WaypointType.STORE_ENTRANCE:
-				store_entrances += 1
+				store_entrances[0] += 1
 			MallWaypoint.WaypointType.BENCH:
-				benches += 1
+				benches[0] += 1
 			MallWaypoint.WaypointType.FOOD_COURT_SEAT:
-				food_seats += 1
+				food_seats[0] += 1
 			MallWaypoint.WaypointType.HALLWAY:
-				hallway_nodes += 1
+				hallway_nodes[0] += 1
 
-	assert_eq(exits, 2, "Should have 2 exit waypoints")
+	assert_eq(exits[0], 2, "Should have 2 exit waypoints")
 	assert_eq(
-		store_entrances, 5,
+		store_entrances[0], 5,
 		"Should have 5 store entrance waypoints"
 	)
-	assert_true(benches >= 2, "Should have at least 2 bench waypoints")
+	assert_true(benches[0] >= 2, "Should have at least 2 bench waypoints")
 	assert_true(
-		food_seats >= 3,
+		food_seats[0] >= 3,
 		"Should have at least 3 food court seats"
 	)
 

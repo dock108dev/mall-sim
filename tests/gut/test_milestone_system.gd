@@ -65,19 +65,19 @@ func test_increment_progress_increases_reputation_total() -> void:
 
 
 func test_milestone_completed_fires_at_threshold() -> void:
-	var signal_fired: bool = false
-	var received_id: String = ""
+	var signal_fired: Array = [false]
+	var received_id: Array = [""]
 	var on_milestone: Callable = func(
 		id: String, _mname: String, _desc: String
 	) -> void:
-		signal_fired = true
-		received_id = id
+		signal_fired[0] = true
+		received_id[0] = id
 	EventBus.milestone_completed.connect(on_milestone)
 
 	_progression.increment_progress("first_sale", 1.0)
 
-	assert_true(signal_fired, "milestone_completed should fire")
-	assert_eq(received_id, "first_sale", "ID should be first_sale")
+	assert_true(signal_fired[0], "milestone_completed should fire")
+	assert_eq(received_id[0], "first_sale", "ID should be first_sale")
 
 	EventBus.milestone_completed.disconnect(on_milestone)
 
@@ -101,18 +101,18 @@ func test_revenue_milestone_fires_at_threshold() -> void:
 
 
 func test_signal_via_item_sold_event() -> void:
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	var on_milestone: Callable = func(
 		id: String, _mname: String, _desc: String
 	) -> void:
 		if id == "first_sale":
-			signal_fired = true
+			signal_fired[0] = true
 	EventBus.milestone_completed.connect(on_milestone)
 
 	EventBus.item_sold.emit("test_item", 25.0, "sports")
 
 	assert_true(
-		signal_fired,
+		signal_fired[0],
 		"milestone_completed should fire via item_sold event"
 	)
 
@@ -161,20 +161,20 @@ func test_days_milestone_fires_on_day_ended() -> void:
 
 
 func test_milestone_fires_exactly_once() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_milestone: Callable = func(
 		id: String, _mname: String, _desc: String
 	) -> void:
 		if id == "first_sale":
-			fire_count += 1
+			fire_count[0] += 1
 	EventBus.milestone_completed.connect(on_milestone)
 
 	_progression.increment_progress("first_sale", 1.0)
-	assert_eq(fire_count, 1, "first_sale should fire exactly once")
+	assert_eq(fire_count[0], 1, "first_sale should fire exactly once")
 
 	_progression.increment_progress("first_sale", 1.0)
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"first_sale should not fire again on second increment"
 	)
 
@@ -182,19 +182,19 @@ func test_milestone_fires_exactly_once() -> void:
 
 
 func test_duplicate_via_events_does_not_refire() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_milestone: Callable = func(
 		id: String, _mname: String, _desc: String
 	) -> void:
 		if id == "first_sale":
-			fire_count += 1
+			fire_count[0] += 1
 	EventBus.milestone_completed.connect(on_milestone)
 
 	EventBus.item_sold.emit("item_a", 25.0, "sports")
 	EventBus.item_sold.emit("item_b", 25.0, "sports")
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"first_sale should not fire again on second sale"
 	)
 

@@ -185,26 +185,26 @@ func test_process_daily_claims_adds_to_daily_claim_costs() -> void:
 	var wholesale: float = 80.0
 	_manager.add_warranty("item_009", 120.0, 20.0, wholesale, 1)
 	seed(0)
-	var iterations: int = 0
-	var claimed: bool = false
-	while iterations < 10000 and not claimed:
+	var iterations: Array = [0]
+	var claimed: Array = [false]
+	while iterations[0] < 10000 and not claimed[0]:
 		_manager = WarrantyManager.new()
 		_manager.add_warranty("item_009", 120.0, 20.0, wholesale, 1)
 		var claims: Array[Dictionary] = _manager.process_daily_claims(15)
 		if not claims.is_empty():
-			claimed = true
+			claimed[0] = true
 			assert_almost_eq(
 				_manager.get_daily_claim_costs(),
 				wholesale,
 				0.001,
 				"Claim cost should equal wholesale_cost of claimed item"
 			)
-		iterations += 1
-	if not claimed:
+		iterations[0] += 1
+	if not claimed[0]:
 		push_warning(
 			"test_process_daily_claims_adds_to_daily_claim_costs: "
 			+ "no claim triggered in %d iterations (low probability event)"
-			% iterations
+			% iterations[0]
 		)
 
 
@@ -249,13 +249,13 @@ func test_base_acceptance_rate_constant() -> void:
 
 func test_acceptance_rate_over_1000_samples_near_base_rate() -> void:
 	seed(42)
-	var accepted: int = 0
+	var accepted: Array = [0]
 	var sample_count: int = 1000
 	var test_price: float = 75.0
 	for _i: int in range(sample_count):
 		if WarrantyManager.roll_acceptance(test_price):
-			accepted += 1
-	var rate: float = float(accepted) / float(sample_count)
+			accepted[0] += 1
+	var rate: float = float(accepted[0]) / float(sample_count)
 	var expected: float = WarrantyManager.BASE_ACCEPTANCE_RATE
 	assert_true(
 		abs(rate - expected) <= 0.05,

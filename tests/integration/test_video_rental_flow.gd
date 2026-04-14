@@ -75,24 +75,24 @@ func test_full_rental_overdue_return_flow() -> void:
 		"Rental fee added to cash"
 	)
 
-	var returned_signal_fired: bool = false
-	var returned_item_id: String = ""
-	var late_fee_signal_fired: bool = false
-	var late_fee_amount: float = 0.0
-	var late_fee_days: int = 0
+	var returned_signal_fired: Array = [false]
+	var returned_item_id: Array = [""]
+	var late_fee_signal_fired: Array = [false]
+	var late_fee_amount: Array = [0.0]
+	var late_fee_days: Array = [0]
 
 	var on_returned := func(
 		iid: String, degraded: bool
 	) -> void:
-		returned_signal_fired = true
-		returned_item_id = iid
+		returned_signal_fired[0] = true
+		returned_item_id[0] = iid
 
 	var on_late_fee := func(
 		iid: String, fee: float, days: int
 	) -> void:
-		late_fee_signal_fired = true
-		late_fee_amount = fee
-		late_fee_days = days
+		late_fee_signal_fired[0] = true
+		late_fee_amount[0] = fee
+		late_fee_days[0] = days
 
 	EventBus.rental_returned.connect(on_returned)
 	EventBus.rental_late_fee.connect(on_late_fee)
@@ -108,19 +108,19 @@ func test_full_rental_overdue_return_flow() -> void:
 		"Item removed from rental_records after return"
 	)
 
-	assert_true(returned_signal_fired, "rental_returned signal fired")
+	assert_true(returned_signal_fired[0], "rental_returned signal fired")
 	assert_eq(
-		returned_item_id, item.instance_id,
+		returned_item_id[0], item.instance_id,
 		"rental_returned carries correct item_id"
 	)
 
-	assert_true(late_fee_signal_fired, "rental_late_fee signal fired")
+	assert_true(late_fee_signal_fired[0], "rental_late_fee signal fired")
 	var expected_fee: float = BASE_LATE_FEE + (1.0 * PER_DAY_RATE)
 	assert_almost_eq(
-		late_fee_amount, expected_fee, 0.01,
+		late_fee_amount[0], expected_fee, 0.01,
 		"Late fee equals base + (overdue_days × per_day_rate)"
 	)
-	assert_eq(late_fee_days, 1, "Late fee reports 1 day overdue")
+	assert_eq(late_fee_days[0], 1, "Late fee reports 1 day overdue")
 
 	assert_almost_eq(
 		_economy.get_cash(),
@@ -188,11 +188,11 @@ func test_late_fee_calculation_standard_policy() -> void:
 		item.instance_id, "vhs_tapes", "overnight", TEST_RENTAL_FEE, 1
 	)
 
-	var late_fee_amount: float = 0.0
+	var late_fee_amount: Array = [0.0]
 	var on_late_fee := func(
 		_iid: String, fee: float, _days: int
 	) -> void:
-		late_fee_amount = fee
+		late_fee_amount[0] = fee
 
 	EventBus.rental_late_fee.connect(on_late_fee)
 
@@ -201,7 +201,7 @@ func test_late_fee_calculation_standard_policy() -> void:
 
 	var expected: float = BASE_LATE_FEE + (3.0 * PER_DAY_RATE)
 	assert_almost_eq(
-		late_fee_amount, expected, 0.01,
+		late_fee_amount[0], expected, 0.01,
 		"Late fee = base($1) + 3 days × $0.50 = $2.50"
 	)
 
@@ -257,21 +257,21 @@ func test_rental_returned_signal_fires() -> void:
 		item.instance_id, "vhs_tapes", "three_day", TEST_RENTAL_FEE, 1
 	)
 
-	var signal_fired: bool = false
-	var signal_item_id: String = ""
+	var signal_fired: Array = [false]
+	var signal_item_id: Array = [""]
 	var on_returned := func(
 		iid: String, _degraded: bool
 	) -> void:
-		signal_fired = true
-		signal_item_id = iid
+		signal_fired[0] = true
+		signal_item_id[0] = iid
 
 	EventBus.rental_returned.connect(on_returned)
 
 	_controller._on_day_started(4)
 
-	assert_true(signal_fired, "rental_returned signal fires on return")
+	assert_true(signal_fired[0], "rental_returned signal fires on return")
 	assert_eq(
-		signal_item_id, item.instance_id,
+		signal_item_id[0], item.instance_id,
 		"Signal carries correct item_id"
 	)
 
@@ -286,11 +286,11 @@ func test_no_late_fee_within_grace_period() -> void:
 		item.instance_id, "vhs_tapes", "overnight", TEST_RENTAL_FEE, 1
 	)
 
-	var late_fee_fired: bool = false
+	var late_fee_fired: Array = [false]
 	var on_late_fee := func(
 		_iid: String, _fee: float, _days: int
 	) -> void:
-		late_fee_fired = true
+		late_fee_fired[0] = true
 
 	EventBus.rental_late_fee.connect(on_late_fee)
 
@@ -298,7 +298,7 @@ func test_no_late_fee_within_grace_period() -> void:
 	_controller._on_day_started(3)
 
 	assert_false(
-		late_fee_fired,
+		late_fee_fired[0],
 		"No late fee within grace period"
 	)
 

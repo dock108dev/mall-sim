@@ -1,6 +1,10 @@
 ## Tests that pricing_config.json loads correctly into EconomyConfig.
 extends GutTest
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
 const PRICING_CONFIG_PATH := "res://game/content/economy/pricing_config.json"
 const CANONICAL_STORE_IDS: Array[String] = [
 	"sports_memorabilia",

@@ -160,7 +160,7 @@ func _load_config() -> void:
 
 func _restore_persisted_tier() -> void:
 	var config := ConfigFile.new()
-	if config.load(Settings.SETTINGS_PATH) != OK:
+	if config.load(Settings.settings_path) != OK:
 		_initialized = true
 		return
 	var saved_tier: String = config.get_value(
@@ -175,9 +175,9 @@ func _restore_persisted_tier() -> void:
 
 func _persist_tier() -> void:
 	var config := ConfigFile.new()
-	config.load(Settings.SETTINGS_PATH)
+	config.load(Settings.settings_path)
 	config.set_value(SETTINGS_SECTION, SETTINGS_KEY, String(_current_tier_id))
-	var err: Error = config.save(Settings.SETTINGS_PATH)
+	var err: Error = config.save(Settings.settings_path)
 	if err != OK:
 		push_warning(
 			"DifficultySystem: failed to persist tier — %s"

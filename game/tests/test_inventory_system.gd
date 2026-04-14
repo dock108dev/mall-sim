@@ -69,12 +69,12 @@ func test_add_item_retrievable_via_get_stock() -> void:
 	var store_id: StringName = ContentRegistry.resolve(def.store_type)
 	_inventory_system.add_item(store_id, item)
 	var stock: Array[ItemInstance] = _inventory_system.get_stock(store_id)
-	var found: bool = false
+	var found: Array = [false]
 	for s_item: ItemInstance in stock:
 		if s_item.instance_id == item.instance_id:
-			found = true
+			found[0] = true
 			break
-	assert_true(found, "Added item should appear in get_stock()")
+	assert_true(found[0], "Added item should appear in get_stock()")
 
 
 func test_remove_item_returns_false_if_missing() -> void:

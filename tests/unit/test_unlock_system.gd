@@ -158,15 +158,15 @@ func test_grant_unlock_toast_message_contains_unlock_id_as_fallback() -> void:
 
 
 func test_duplicate_grant_does_not_emit_toast() -> void:
-	var toast_count: int = 0
+	var toast_count: Array = [0]
 	var capture: Callable = func(_msg: String, _cat: StringName, _dur: float) -> void:
-		toast_count += 1
+		toast_count[0] += 1
 	EventBus.toast_requested.connect(capture)
 	_sys.grant_unlock(&"test_unlock_a")
 	_sys.grant_unlock(&"test_unlock_a")
 	EventBus.toast_requested.disconnect(capture)
 
-	assert_eq(toast_count, 1, "Duplicate grant must not emit a second toast")
+	assert_eq(toast_count[0], 1, "Duplicate grant must not emit a second toast")
 
 
 func test_grant_unlock_with_registry_entry_uses_display_name() -> void:

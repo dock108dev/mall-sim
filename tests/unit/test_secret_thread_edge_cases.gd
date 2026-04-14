@@ -167,24 +167,24 @@ func test_ghost_tenant_reaches_resolved_after_full_lifecycle() -> void:
 
 func test_ghost_tenant_completed_signal_carries_thread_id_and_unlock_id() -> void:
 	_setup_with_defs([_ghost_tenant_def])
-	var received_tid: StringName = &""
-	var received_unlock: StringName = &""
+	var received_tid: Array = [&""]
+	var received_unlock: Array = [&""]
 	EventBus.secret_thread_completed.connect(
 		func(tid: StringName, unlock_id: StringName) -> void:
-			received_tid = tid
-			received_unlock = unlock_id
+			received_tid[0] = tid
+			received_unlock[0] = unlock_id
 	)
 	for i: int in range(5):
 		_system._on_lease_completed(StringName("store_%d" % i), true, "")
 	for day: int in range(15, 18):
 		_system._on_day_started(day)
 	assert_eq(
-		received_tid,
+		received_tid[0],
 		&"the_ghost_tenant",
 		"secret_thread_completed should carry correct thread_id"
 	)
 	assert_eq(
-		received_unlock,
+		received_unlock[0],
 		&"ghost_tenant_unlock",
 		"secret_thread_completed should carry correct reward_unlock_id"
 	)
@@ -232,15 +232,15 @@ func test_slow_burn_completes_if_day_30_reached_without_haggle() -> void:
 
 func test_slow_burn_completion_emits_transaction_completed_with_300() -> void:
 	_setup_with_defs([_slow_burn_def])
-	var received_amount: float = 0.0
+	var received_amount: Array = [0.0]
 	EventBus.transaction_completed.connect(
 		func(amount: float, _success: bool, _msg: String) -> void:
-			received_amount = amount
+			received_amount[0] = amount
 	)
 	for day: int in range(1, 33):
 		_system._on_day_started(day)
 	assert_almost_eq(
-		received_amount,
+		received_amount[0],
 		300.0,
 		0.01,
 		"transaction_completed should carry cash reward of 300.0"
@@ -279,14 +279,14 @@ func test_thread_emits_failed_after_timeout_days_exceeded_in_active_state() -> v
 		"signal_counts": {"day_started": 1},
 		"owned_store_count": 0,
 	})
-	var failed_id: StringName = &""
+	var failed_id: Array = [&""]
 	EventBus.secret_thread_failed.connect(
 		func(tid: StringName) -> void:
-			failed_id = tid
+			failed_id[0] = tid
 	)
 	_system._on_day_started(7)
 	assert_eq(
-		failed_id,
+		failed_id[0],
 		&"test_timeout_thread",
 		"secret_thread_failed should emit with correct thread_id after timeout"
 	)
@@ -307,20 +307,20 @@ func test_timeout_emits_failed_not_completed() -> void:
 		"signal_counts": {"day_started": 1},
 		"owned_store_count": 0,
 	})
-	var completed: bool = false
-	var failed: bool = false
+	var completed: Array = [false]
+	var failed: Array = [false]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, _uid: StringName) -> void:
-			completed = true
+			completed[0] = true
 	)
 	EventBus.secret_thread_failed.connect(
 		func(_tid: StringName) -> void:
-			failed = true
+			failed[0] = true
 	)
 	_system._on_day_started(7)
-	assert_true(failed, "secret_thread_failed should be emitted on timeout")
+	assert_true(failed[0], "secret_thread_failed should be emitted on timeout")
 	assert_false(
-		completed,
+		completed[0],
 		"secret_thread_completed should NOT be emitted on timeout"
 	)
 

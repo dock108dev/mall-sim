@@ -474,7 +474,18 @@ func parse(cli_args=null):
 	parsed_args = cli_args
 
 	if(parsed_args == null):
-		parsed_args = OS.get_cmdline_args()
+		var engine_args: Array = OS.get_cmdline_args()
+		var filtered: Array = []
+		var skip_next: bool = false
+		for arg in engine_args:
+			if skip_next:
+				skip_next = false
+				continue
+			if arg in ["--script", "-s", "--headless", "--path", "--quit-after", "--import"]:
+				skip_next = (arg in ["--script", "-s", "--path"])
+				continue
+			filtered.append(arg)
+		parsed_args = filtered
 		parsed_args.append_array(OS.get_cmdline_user_args())
 
 	unused = _parse_command_line_arguments(parsed_args)

@@ -113,13 +113,13 @@ func _restock_item() -> void:
 
 
 func _run_trials(trial_count: int) -> int:
-	var success_count: int = 0
+	var success_count: Array = [0]
 	for _i: int in range(trial_count):
 		_restock_item()
 		var customer: Customer = _make_customer()
 		var succeeded: bool = _checkout.process_transaction(customer)
 		if succeeded:
-			success_count += 1
+			success_count[0] += 1
 	return success_count
 
 

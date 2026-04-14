@@ -96,26 +96,26 @@ func test_slot_ownership_registered() -> void:
 		ContentRegistry.get_all_ids("store")
 	)
 	var default_store: StringName = GameManager.DEFAULT_STARTING_STORE
-	var slot_index: int = -1
+	var slot_index: Array = [-1]
 	for i: int in range(store_ids.size()):
 		if store_ids[i] == default_store:
-			slot_index = i
+			slot_index[0] = i
 			break
 
 	assert_ne(
-		slot_index, -1,
+		slot_index[0], -1,
 		"Default store must exist in ContentRegistry store IDs"
 	)
 
 	_store_state_manager.register_slot_ownership(
-		slot_index, default_store
+		slot_index[0], default_store
 	)
 	assert_true(
-		_store_state_manager.owned_slots.has(slot_index),
+		_store_state_manager.owned_slots.has(slot_index[0]),
 		"Slot index should be registered in owned_slots"
 	)
 	assert_eq(
-		_store_state_manager.owned_slots[slot_index],
+		_store_state_manager.owned_slots[slot_index[0]],
 		default_store,
 		"Owned slot should map to default store ID"
 	)

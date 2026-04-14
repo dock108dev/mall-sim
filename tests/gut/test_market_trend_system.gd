@@ -70,14 +70,14 @@ func test_day_ended_shifts_levels() -> void:
 	seed(12345)
 	EventBus.day_ended.emit(1)
 	var after: Dictionary = _system.get_all_trend_levels()
-	var any_changed: bool = false
+	var any_changed: Array = [false]
 	for key: Variant in before:
 		if not is_equal_approx(
 			float(before[key]), float(after[key])
 		):
-			any_changed = true
+			any_changed[0] = true
 			break
-	assert_true(any_changed, "At least one level should shift after day_ended")
+	assert_true(any_changed[0], "At least one level should shift after day_ended")
 
 
 func test_levels_clamped_to_min() -> void:

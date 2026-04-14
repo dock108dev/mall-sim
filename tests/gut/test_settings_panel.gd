@@ -43,10 +43,10 @@ func test_double_close_is_idempotent() -> void:
 
 func test_settings_saved_signal_emitted_on_save() -> void:
 	_panel.open()
-	var fired: bool = false
-	_panel.settings_saved.connect(func() -> void: fired = true)
+	var fired: Array = [false]
+	_panel.settings_saved.connect(func() -> void: fired[0] = true)
 	_panel._on_apply_pressed()
-	assert_true(fired, "settings_saved signal should fire when Save is pressed")
+	assert_true(fired[0], "settings_saved signal should fire when Save is pressed")
 
 
 func test_save_closes_panel() -> void:
@@ -63,19 +63,19 @@ func test_cancel_closes_panel() -> void:
 
 func test_closed_signal_emitted_on_cancel() -> void:
 	_panel.open()
-	var fired: bool = false
-	_panel.closed.connect(func() -> void: fired = true, CONNECT_ONE_SHOT)
+	var fired: Array = [false]
+	_panel.closed.connect(func() -> void: fired[0] = true, CONNECT_ONE_SHOT)
 	_panel._on_cancel_pressed()
 	await get_tree().process_frame
-	assert_true(fired, "closed signal should fire after cancel")
+	assert_true(fired[0], "closed signal should fire after cancel")
 
 
 func test_settings_saved_not_emitted_on_cancel() -> void:
 	_panel.open()
-	var fired: bool = false
-	_panel.settings_saved.connect(func() -> void: fired = true)
+	var fired: Array = [false]
+	_panel.settings_saved.connect(func() -> void: fired[0] = true)
 	_panel._on_cancel_pressed()
-	assert_false(fired, "settings_saved should not fire on Cancel")
+	assert_false(fired[0], "settings_saved should not fire on Cancel")
 
 
 func test_snapshot_restores_master_volume_on_cancel() -> void:

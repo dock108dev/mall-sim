@@ -138,18 +138,18 @@ func test_normal_return_no_late_fee_on_return_day() -> void:
 		_item_def.rental_fee, checkout_day
 	)
 
-	var late_fee_fired: bool = false
+	var late_fee_fired: Array = [false]
 	var on_late_fee := func(
 		_iid: String, _fee: float, _days: int
 	) -> void:
-		late_fee_fired = true
+		late_fee_fired[0] = true
 
 	EventBus.rental_late_fee.connect(on_late_fee)
 
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	_controller._on_day_started(return_day)
 
-	assert_false(late_fee_fired, "No late fee on exact return_day")
+	assert_false(late_fee_fired[0], "No late fee on exact return_day")
 
 	EventBus.rental_late_fee.disconnect(on_late_fee)
 
@@ -167,13 +167,13 @@ func test_overdue_late_fee_formula() -> void:
 		_item_def.rental_fee, checkout_day
 	)
 
-	var late_fee_amount: float = 0.0
-	var late_fee_days: int = 0
+	var late_fee_amount: Array = [0.0]
+	var late_fee_days: Array = [0]
 	var on_late_fee := func(
 		_iid: String, fee: float, days: int
 	) -> void:
-		late_fee_amount = fee
-		late_fee_days = days
+		late_fee_amount[0] = fee
+		late_fee_days[0] = days
 
 	EventBus.rental_late_fee.connect(on_late_fee)
 
@@ -185,11 +185,11 @@ func test_overdue_late_fee_formula() -> void:
 		float(extra_days) * _cfg_per_day_rate
 	)
 	assert_almost_eq(
-		late_fee_amount, expected_fee, FLOAT_TOLERANCE,
+		late_fee_amount[0], expected_fee, FLOAT_TOLERANCE,
 		"Late fee = base_late_fee + (overdue_days × per_day_rate)"
 	)
 	assert_eq(
-		late_fee_days, extra_days,
+		late_fee_days[0], extra_days,
 		"Days overdue reported correctly"
 	)
 
@@ -221,14 +221,14 @@ func test_overdue_late_fee_added_to_economy_with_late_fee_reason() -> void:
 		"EconomySystem received late fee amount"
 	)
 
-	var found_late_fee_txn: bool = false
+	var found_late_fee_txn: Array = [false]
 	for txn: Dictionary in _economy._daily_transactions:
 		var reason: String = txn.get("reason", "")
 		if reason.begins_with("Late fee"):
-			found_late_fee_txn = true
+			found_late_fee_txn[0] = true
 			break
 	assert_true(
-		found_late_fee_txn,
+		found_late_fee_txn[0],
 		"Transaction with 'Late fee' reason recorded in EconomySystem"
 	)
 
@@ -267,11 +267,11 @@ func test_overdue_max_late_fee_cap_enforced() -> void:
 		_item_def.rental_fee, checkout_day
 	)
 
-	var late_fee_amount: float = 0.0
+	var late_fee_amount: Array = [0.0]
 	var on_late_fee := func(
 		_iid: String, fee: float, _days: int
 	) -> void:
-		late_fee_amount = fee
+		late_fee_amount[0] = fee
 
 	EventBus.rental_late_fee.connect(on_late_fee)
 
@@ -280,7 +280,7 @@ func test_overdue_max_late_fee_cap_enforced() -> void:
 	_controller._on_day_started(trigger_day)
 
 	assert_almost_eq(
-		late_fee_amount, _cfg_max_late_fee, FLOAT_TOLERANCE,
+		late_fee_amount[0], _cfg_max_late_fee, FLOAT_TOLERANCE,
 		"Late fee capped at max_late_fee when overdue by 100+ days"
 	)
 
@@ -302,11 +302,11 @@ func test_no_late_fee_within_grace_period() -> void:
 		_item_def.rental_fee, checkout_day
 	)
 
-	var late_fee_fired: bool = false
+	var late_fee_fired: Array = [false]
 	var on_late_fee := func(
 		_iid: String, _fee: float, _days: int
 	) -> void:
-		late_fee_fired = true
+		late_fee_fired[0] = true
 
 	EventBus.rental_late_fee.connect(on_late_fee)
 
@@ -315,7 +315,7 @@ func test_no_late_fee_within_grace_period() -> void:
 	_controller._on_day_started(grace_deadline)
 
 	assert_false(
-		late_fee_fired,
+		late_fee_fired[0],
 		"No late fee within grace period"
 	)
 

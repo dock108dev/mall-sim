@@ -176,7 +176,7 @@ func test_evaluate_frequency_over_simulated_days() -> void:
 		"notification_text": "Rainy!",
 	})
 	_system._event_definitions = [def]
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	for day: int in range(1, 101):
 		_system._daily_rolled = false
 		_system._active_event = {}
@@ -184,9 +184,9 @@ func test_evaluate_frequency_over_simulated_days() -> void:
 		var fired: Array[StringName] = _system.evaluate_daily_events(
 			day
 		)
-		fire_count += fired.size()
-	assert_gt(fire_count, 50)
-	assert_lt(fire_count, 101)
+		fire_count[0] += fired.size()
+	assert_gt(fire_count[0], 50)
+	assert_lt(fire_count[0], 101)
 
 
 func test_subscribes_to_day_started() -> void:

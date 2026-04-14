@@ -135,21 +135,21 @@ func test_revealed_to_resolved_next_day() -> void:
 
 func test_slow_burn_completes_full_lifecycle() -> void:
 	_setup_with_defs([_slow_burn_def])
-	var completed_thread: StringName = &""
-	var completed_unlock: StringName = &""
+	var completed_thread: Array = [&""]
+	var completed_unlock: Array = [&""]
 	EventBus.secret_thread_completed.connect(
 		func(tid: StringName, unlock_id: StringName) -> void:
-			completed_thread = tid
-			completed_unlock = unlock_id
+			completed_thread[0] = tid
+			completed_unlock[0] = unlock_id
 	)
 	for day: int in range(1, 34):
 		_system._on_day_started(day)
 	assert_eq(
-		completed_thread, &"the_slow_burn",
+		completed_thread[0], &"the_slow_burn",
 		"Completion signal should fire for the_slow_burn"
 	)
 	assert_eq(
-		completed_unlock, &"",
+		completed_unlock[0], &"",
 		"Thread with no reward_unlock_id should emit empty StringName"
 	)
 
@@ -197,10 +197,10 @@ func test_resettable_returns_to_dormant() -> void:
 
 func test_timeout_emits_failed() -> void:
 	_setup_with_defs([_resettable_def])
-	var failed_id: StringName = &""
+	var failed_id: Array = [&""]
 	EventBus.secret_thread_failed.connect(
 		func(tid: StringName) -> void:
-			failed_id = tid
+			failed_id[0] = tid
 	)
 	for i: int in range(3):
 		_system._on_item_sold("item_%d" % i, 10.0, "cards")
@@ -211,7 +211,7 @@ func test_timeout_emits_failed() -> void:
 	)
 	_system._on_day_started(6)
 	assert_eq(
-		failed_id, &"test_resettable",
+		failed_id[0], &"test_resettable",
 		"Timeout should emit secret_thread_failed"
 	)
 	assert_eq(
@@ -300,10 +300,10 @@ func test_load_restores_phase() -> void:
 
 func test_load_does_not_emit_completion() -> void:
 	_setup_with_defs([_slow_burn_def])
-	var completed: bool = false
+	var completed: Array = [false]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, _unlock_id: StringName) -> void:
-			completed = true
+			completed[0] = true
 	)
 	var save_data: Dictionary = {
 		"thread_states": {
@@ -320,7 +320,7 @@ func test_load_does_not_emit_completion() -> void:
 	}
 	_system.load_state(save_data)
 	assert_false(
-		completed,
+		completed[0],
 		"Load should not re-emit completion signals"
 	)
 
@@ -372,46 +372,46 @@ func test_unknown_thread_returns_dormant() -> void:
 
 func test_completed_thread_emits_reward_unlock_id() -> void:
 	_setup_with_defs([_unlock_reward_def])
-	var completed_unlock: StringName = &""
+	var completed_unlock: Array = [&""]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, unlock_id: StringName) -> void:
-			completed_unlock = unlock_id
+			completed_unlock[0] = unlock_id
 	)
 	for day: int in range(1, 8):
 		_system._on_day_started(day)
 	assert_eq(
-		completed_unlock, &"extended_hours_unlock",
+		completed_unlock[0], &"extended_hours_unlock",
 		"Should emit reward_unlock_id from thread def"
 	)
 
 
 func test_empty_reward_unlock_id_skips_grant() -> void:
 	_setup_with_defs([_slow_burn_def])
-	var completed_unlock: StringName = &"sentinel"
+	var completed_unlock: Array = [&"sentinel"]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, unlock_id: StringName) -> void:
-			completed_unlock = unlock_id
+			completed_unlock[0] = unlock_id
 	)
 	for day: int in range(1, 34):
 		_system._on_day_started(day)
 	assert_eq(
-		completed_unlock, &"",
+		completed_unlock[0], &"",
 		"Empty reward_unlock_id should emit empty StringName"
 	)
 
 
 func test_failed_thread_does_not_emit_completed() -> void:
 	_setup_with_defs([_resettable_def])
-	var completed: bool = false
+	var completed: Array = [false]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, _unlock_id: StringName) -> void:
-			completed = true
+			completed[0] = true
 	)
 	for i: int in range(3):
 		_system._on_item_sold("item_%d" % i, 10.0, "cards")
 	_system._on_day_started(1)
 	_system._on_day_started(6)
 	assert_false(
-		completed,
+		completed[0],
 		"Timed-out thread should not emit secret_thread_completed"
 	)

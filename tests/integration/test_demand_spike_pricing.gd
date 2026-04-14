@@ -70,21 +70,21 @@ func _create_item(
 
 
 func test_spike_activates_and_market_event_started_fires() -> void:
-	var started_fired: bool = false
-	var got_id: String = ""
+	var started_fired: Array = [false]
+	var got_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		started_fired = true
-		got_id = id
+		started_fired[0] = true
+		got_id[0] = id
 	EventBus.market_event_started.connect(cb)
 
 	var spike_def: MarketEventDefinition = _create_spike_def()
 	_market_event._activate_event(spike_def, 1)
 
 	assert_true(
-		started_fired,
+		started_fired[0],
 		"market_event_started should fire when no-announcement spike activates"
 	)
-	assert_eq(got_id, "test_spike", "Fired event id matches spike definition id")
+	assert_eq(got_id[0], "test_spike", "Fired event id matches spike definition id")
 	EventBus.market_event_started.disconnect(cb)
 
 
@@ -141,11 +141,11 @@ func test_spike_price_matches_expected_multiplier() -> void:
 
 
 func test_market_event_ended_fires_when_spike_expires() -> void:
-	var ended_fired: bool = false
-	var ended_id: String = ""
+	var ended_fired: Array = [false]
+	var ended_id: Array = [""]
 	var cb: Callable = func(id: String) -> void:
-		ended_fired = true
-		ended_id = id
+		ended_fired[0] = true
+		ended_id[0] = id
 	EventBus.market_event_ended.connect(cb)
 
 	var spike_def: MarketEventDefinition = _create_spike_def({
@@ -154,10 +154,10 @@ func test_market_event_ended_fires_when_spike_expires() -> void:
 	_market_event._activate_event(spike_def, 1)
 	# end_day = announced_day(1) + announcement_days(0) + duration_days(3) = 4
 	_market_event._advance_event_lifecycles(3)
-	assert_false(ended_fired, "Should not expire before end_day")
+	assert_false(ended_fired[0], "Should not expire before end_day")
 	_market_event._advance_event_lifecycles(4)
-	assert_true(ended_fired, "market_event_ended should fire when day >= end_day")
-	assert_eq(ended_id, "test_spike", "Ended event id matches spike definition id")
+	assert_true(ended_fired[0], "market_event_ended should fire when day >= end_day")
+	assert_eq(ended_id[0], "test_spike", "Ended event id matches spike definition id")
 	EventBus.market_event_ended.disconnect(cb)
 
 

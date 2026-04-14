@@ -151,10 +151,10 @@ func test_thread_transitions_to_revealed_on_next_day() -> void:
 
 
 func test_ambient_moment_queued_on_revealed_transition() -> void:
-	var queued_moment: StringName = &""
+	var queued_moment: Array = [&""]
 	EventBus.ambient_moment_queued.connect(
 		func(moment_id: StringName) -> void:
-			queued_moment = moment_id
+			queued_moment[0] = moment_id
 	)
 	for i: int in range(3):
 		EventBus.item_sold.emit("rare_item_%d" % i, 50.0, "collectibles")
@@ -164,7 +164,7 @@ func test_ambient_moment_queued_on_revealed_transition() -> void:
 		SecretThreadSystem.ThreadPhase.REVEALED
 	)
 	assert_eq(
-		queued_moment, &"ambient_familiar_face",
+		queued_moment[0], &"ambient_familiar_face",
 		"ambient_moment_queued must fire with reveal_moment id"
 	)
 
@@ -185,11 +185,11 @@ func test_thread_transitions_to_resolved_day_after_revealed() -> void:
 
 
 func test_secret_thread_completed_emitted_on_resolve() -> void:
-	var completed_thread: StringName = &""
+	var completed_thread: Array = [&""]
 	var completed_unlock: StringName = &"sentinel"
 	EventBus.secret_thread_completed.connect(
 		func(tid: StringName, unlock_id: StringName) -> void:
-			completed_thread = tid
+			completed_thread[0] = tid
 			completed_unlock = unlock_id
 	)
 	for i: int in range(3):
@@ -197,7 +197,7 @@ func test_secret_thread_completed_emitted_on_resolve() -> void:
 	EventBus.day_started.emit(1)
 	EventBus.day_started.emit(2)
 	assert_eq(
-		completed_thread, &"the_regular",
+		completed_thread[0], &"the_regular",
 		"secret_thread_completed must emit thread id 'the_regular'"
 	)
 	assert_eq(
@@ -286,10 +286,10 @@ func test_load_state_restores_active_phase_in_fresh_system() -> void:
 
 
 func test_load_state_does_not_emit_completion() -> void:
-	var completed: bool = false
+	var completed: Array = [false]
 	EventBus.secret_thread_completed.connect(
 		func(_tid: StringName, _uid: StringName) -> void:
-			completed = true
+			completed[0] = true
 	)
 	var save_data: Dictionary = {
 		"thread_states": {
@@ -306,7 +306,7 @@ func test_load_state_does_not_emit_completion() -> void:
 	}
 	_system.load_state(save_data)
 	assert_false(
-		completed,
+		completed[0],
 		"load_state must not re-emit secret_thread_completed"
 	)
 	assert_eq(
@@ -349,10 +349,10 @@ func test_load_preserves_watch_counters_and_step_progress() -> void:
 
 
 func test_timeout_emits_failed_and_keeps_resolved_when_non_resettable() -> void:
-	var failed_id: StringName = &""
+	var failed_id: Array = [&""]
 	EventBus.secret_thread_failed.connect(
 		func(tid: StringName) -> void:
-			failed_id = tid
+			failed_id[0] = tid
 	)
 	for i: int in range(3):
 		EventBus.item_sold.emit("rare_item_%d" % i, 50.0, "collectibles")
@@ -362,7 +362,7 @@ func test_timeout_emits_failed_and_keeps_resolved_when_non_resettable() -> void:
 	state["activated_day"] = 0
 	EventBus.day_started.emit(21)
 	assert_eq(
-		failed_id, &"the_regular",
+		failed_id[0], &"the_regular",
 		"secret_thread_failed must fire when timeout exceeded"
 	)
 	assert_eq(

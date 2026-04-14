@@ -88,7 +88,7 @@ func test_opened_cards_present_in_inventory() -> void:
 
 
 func test_rare_card_appears_across_100_opens() -> void:
-	var rare_found: bool = false
+	var rare_found: Array = [false]
 	var rare_subcategories: Array[String] = [
 		"rare", "rare_holo", "secret_rare",
 	]
@@ -102,13 +102,13 @@ func test_rare_card_appears_across_100_opens() -> void:
 			if not card.definition:
 				continue
 			if card.definition.subcategory in rare_subcategories:
-				rare_found = true
+				rare_found[0] = true
 				break
 		if rare_found:
 			break
 
 	assert_true(
-		rare_found,
+		rare_found[0],
 		"At least 1 rare+ card appears across 100 pack opens"
 	)
 
@@ -141,16 +141,16 @@ func test_tournament_completes_and_awards_prize() -> void:
 	)
 	assert_true(_tournament.is_active(), "Tournament is active")
 
-	var completed_fired: bool = false
-	var completed_participants: int = 0
-	var completed_revenue: float = 0.0
+	var completed_fired: Array = [false]
+	var completed_participants: Array = [0]
+	var completed_revenue: Array = [0.0]
 
 	var on_completed := func(
 		participants: int, revenue: float
 	) -> void:
-		completed_fired = true
-		completed_participants = participants
-		completed_revenue = revenue
+		completed_fired[0] = true
+		completed_participants[0] = participants
+		completed_revenue[0] = revenue
 
 	EventBus.tournament_completed.connect(on_completed)
 
@@ -161,13 +161,13 @@ func test_tournament_completes_and_awards_prize() -> void:
 
 	EventBus.day_phase_changed.emit(TimeSystem.DayPhase.EVENING)
 
-	assert_true(completed_fired, "tournament_completed signal fires")
+	assert_true(completed_fired[0], "tournament_completed signal fires")
 	assert_false(
 		_tournament.is_active(),
 		"Tournament is no longer active after completion"
 	)
 	assert_gt(
-		completed_participants, 0,
+		completed_participants[0], 0,
 		"Participant count is positive"
 	)
 

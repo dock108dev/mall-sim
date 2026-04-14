@@ -147,34 +147,34 @@ func test_cash_reward_not_re_delivered_on_second_crossing() -> void:
 
 
 func test_unlock_reward_granted_exactly_once() -> void:
-	var grant_count: int = 0
+	var grant_count: Array = [0]
 	var _on_granted := func(uid: StringName) -> void:
 		if uid == UNLOCK_ID:
-			grant_count += 1
+			grant_count[0] += 1
 	EventBus.unlock_granted.connect(_on_granted)
 
 	_emit_purchases(WEEK_ONE_THRESHOLD)
 	_emit_purchases(WEEK_ONE_THRESHOLD)
 
 	assert_eq(
-		grant_count, 1,
+		grant_count[0], 1,
 		"unlock_granted must fire exactly once even when threshold crossed twice"
 	)
 	EventBus.unlock_granted.disconnect(_on_granted)
 
 
 func test_milestone_unlocked_fires_once_at_threshold() -> void:
-	var unlock_count: int = 0
+	var unlock_count: Array = [0]
 	var _on_unlocked := func(mid: StringName, _reward: Dictionary) -> void:
 		if mid == &"week_one_survivor":
-			unlock_count += 1
+			unlock_count[0] += 1
 	EventBus.milestone_unlocked.connect(_on_unlocked)
 
 	_emit_purchases(WEEK_ONE_THRESHOLD)
 	_emit_purchases(WEEK_ONE_THRESHOLD)
 
 	assert_eq(
-		unlock_count, 1,
+		unlock_count[0], 1,
 		"milestone_unlocked must fire exactly once for week_one_survivor"
 	)
 	EventBus.milestone_unlocked.disconnect(_on_unlocked)

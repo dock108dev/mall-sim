@@ -46,11 +46,11 @@ func test_has_facade_static_body() -> void:
 	) as StaticBody3D
 	assert_not_null(facade, "FacadeBody StaticBody3D exists")
 
-	var col_count: int = 0
+	var col_count: Array = [0]
 	for child: Node in facade.get_children():
 		if child is CollisionShape3D:
-			col_count += 1
-	assert_gt(col_count, 0, "FacadeBody has CollisionShape3D children")
+			col_count[0] += 1
+	assert_gt(col_count[0], 0, "FacadeBody has CollisionShape3D children")
 
 
 func test_has_sign_label() -> void:
@@ -67,11 +67,11 @@ func test_has_entry_zone() -> void:
 	assert_not_null(zone, "EntryZone Area3D exists")
 	assert_true(zone.monitoring, "EntryZone is monitoring")
 
-	var has_col: bool = false
+	var has_col: Array = [false]
 	for child: Node in zone.get_children():
 		if child is CollisionShape3D:
-			has_col = true
-	assert_true(has_col, "EntryZone has a CollisionShape3D")
+			has_col[0] = true
+	assert_true(has_col[0], "EntryZone has a CollisionShape3D")
 
 
 func test_has_door_body() -> void:

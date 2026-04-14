@@ -61,10 +61,10 @@ func _inject_trend(
 func test_create_trend_emits_signal() -> void:
 	var trending_received: Array = []
 	var cold_received: Array = []
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 
 	var cb: Callable = func(trending: Array, cold: Array) -> void:
-		signal_fired = true
+		signal_fired[0] = true
 		trending_received = trending.duplicate()
 		cold_received = cold.duplicate()
 	EventBus.trend_changed.connect(cb)
@@ -74,7 +74,7 @@ func test_create_trend_emits_signal() -> void:
 
 	EventBus.trend_changed.disconnect(cb)
 
-	assert_true(signal_fired, "trend_changed should fire after injecting a trend")
+	assert_true(signal_fired[0], "trend_changed should fire after injecting a trend")
 	assert_true(
 		trending_received.has("collectibles"),
 		"trending list should contain the hot category"

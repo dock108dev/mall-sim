@@ -202,13 +202,13 @@ func test_full_retro_games_flow() -> void:
 func test_test_completed_signal_fires_on_begin_test() -> void:
 	_testing_system._working_chance = 1.0
 
-	var fired: bool = false
-	var received_result: String = ""
+	var fired: Array = [false]
+	var received_result: Array = [""]
 	var test_cb: Callable = func(
 		_id: String, result: String
 	) -> void:
-		fired = true
-		received_result = result
+		fired[0] = true
+		received_result[0] = result
 	EventBus.item_test_completed.connect(test_cb)
 
 	_testing_system.start_test(_item.instance_id)
@@ -216,9 +216,9 @@ func test_test_completed_signal_fires_on_begin_test() -> void:
 
 	EventBus.item_test_completed.disconnect(test_cb)
 
-	assert_true(fired, "item_test_completed signal fires after begin_test")
+	assert_true(fired[0], "item_test_completed signal fires after begin_test")
 	assert_eq(
-		received_result, "tested_working",
+		received_result[0], "tested_working",
 		"Test result is tested_working when working_chance is 1.0"
 	)
 

@@ -181,9 +181,9 @@ func test_game_manager_flag_cleared_after_completion() -> void:
 func test_tutorial_completed_signal_emitted_exactly_once() -> void:
 	_tutorial.initialize(true)
 
-	var completed_count: int = 0
+	var completed_count: Array = [0]
 	var on_complete: Callable = func() -> void:
-		completed_count += 1
+		completed_count[0] += 1
 	EventBus.tutorial_completed.connect(on_complete)
 
 	_drive_full_sequence()
@@ -197,7 +197,7 @@ func test_tutorial_completed_signal_emitted_exactly_once() -> void:
 	EventBus.day_ended.emit(2)
 
 	assert_eq(
-		completed_count, 1,
+		completed_count[0], 1,
 		"tutorial_completed signal should fire exactly once"
 	)
 
@@ -207,13 +207,13 @@ func test_tutorial_completed_signal_emitted_exactly_once() -> void:
 func test_no_tutorial_signals_after_completion() -> void:
 	_drive_to_completion()
 
-	var signals_fired: int = 0
+	var signals_fired: Array = [0]
 	var on_step_changed: Callable = func(_id: String) -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 	var on_step_completed: Callable = func(_id: String) -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 	var on_completed: Callable = func() -> void:
-		signals_fired += 1
+		signals_fired[0] += 1
 
 	EventBus.tutorial_step_changed.connect(on_step_changed)
 	EventBus.tutorial_step_completed.connect(on_step_completed)
@@ -227,7 +227,7 @@ func test_no_tutorial_signals_after_completion() -> void:
 	EventBus.day_ended.emit(2)
 
 	assert_eq(
-		signals_fired, 0,
+		signals_fired[0], 0,
 		"No tutorial signals should fire after tutorial_completed is true"
 	)
 

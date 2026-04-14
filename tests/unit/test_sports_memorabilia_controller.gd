@@ -78,7 +78,7 @@ func test_authentication_pass_marks_item_authentic() -> void:
 	)
 	assert_true(
 		params[1] as bool,
-		"authentication_completed should carry success=true"
+		"authentication_completed should carry success[0] = true"
 	)
 	assert_gt(
 		_controller.get_authentication_system().get_auth_multiplier(),
@@ -116,7 +116,7 @@ func test_authentication_fail_flags_suspicious() -> void:
 	)
 	assert_false(
 		params[1] as bool,
-		"authentication_completed should carry success=false for suspicious item"
+		"authentication_completed should carry success[0] = false for suspicious item"
 	)
 
 

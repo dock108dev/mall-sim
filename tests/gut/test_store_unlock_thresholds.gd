@@ -151,10 +151,10 @@ func test_slot_does_not_unlock_without_both_thresholds() -> void:
 
 
 func test_unlock_signal_fires_exactly_once() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_unlock: Callable = func(slot_index: int) -> void:
 		if slot_index == 1:
-			fire_count += 1
+			fire_count[0] += 1
 	EventBus.store_slot_unlocked.connect(on_unlock)
 
 	_progression._cumulative_cash_earned = 2000.0
@@ -163,7 +163,7 @@ func test_unlock_signal_fires_exactly_once() -> void:
 	EventBus.day_ended.emit(2)
 
 	assert_eq(
-		fire_count, 1,
+		fire_count[0], 1,
 		"store_slot_unlocked should fire exactly once per slot"
 	)
 

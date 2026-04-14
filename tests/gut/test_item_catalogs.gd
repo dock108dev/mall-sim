@@ -1,6 +1,10 @@
 ## Validates item catalog JSON files meet schema and content requirements.
 extends GutTest
 
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+
 const REQUIRED_STORES: Array[String] = [
 	"sports", "retro_games", "rentals",
 	"pocket_creatures", "electronics"
@@ -15,7 +19,8 @@ const MIN_COUNTS: Dictionary = {
 }
 
 const VALID_RARITIES: Array[String] = [
-	"common", "uncommon", "rare", "very_rare", "legendary"
+	"common", "uncommon", "rare", "very_rare", "legendary",
+	"ultra_rare", "secret_rare", "holographic", "rare_holo",
 ]
 
 

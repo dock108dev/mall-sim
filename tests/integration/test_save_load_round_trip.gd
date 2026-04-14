@@ -309,10 +309,10 @@ func _seed_inventory() -> void:
 func _count_items_by_def(
 	items: Array[ItemInstance], def_id: String
 ) -> int:
-	var count: int = 0
+	var count: Array = [0]
 	for item: ItemInstance in items:
 		if item.definition and item.definition.id == def_id:
-			count += 1
+			count[0] += 1
 	return count
 
 

@@ -57,13 +57,13 @@ func test_customer_spawned_creates_character_body_child() -> void:
 	var dummy: Node = Node.new()
 	add_child_autofree(dummy)
 	EventBus.customer_spawned.emit(dummy)
-	var has_character_body: bool = false
+	var has_character_body: Array = [false]
 	for child: Node in _system.get_children():
 		if child is CharacterBody3D:
-			has_character_body = true
+			has_character_body[0] = true
 			break
 	assert_true(
-		has_character_body,
+		has_character_body[0],
 		"customer_spawned must create a CharacterBody3D child node in the spawner"
 	)
 

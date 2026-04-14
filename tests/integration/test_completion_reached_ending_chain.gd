@@ -14,17 +14,17 @@ func before_each() -> void:
 ## Acceptance criterion 1 & 3: completion_reached('time_limit') causes
 ## EndingEvaluatorSystem to evaluate and emit ending_triggered.
 func test_time_limit_reason_triggers_ending_triggered() -> void:
-	var ending_id: StringName = &""
+	var ending_id: Array = [&""]
 	var on_triggered: Callable = func(
 		id: StringName, _stats: Dictionary
 	) -> void:
-		ending_id = id
+		ending_id[0] = id
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 
 	assert_ne(
-		ending_id,
+		ending_id[0],
 		&"",
 		"completion_reached('time_limit') must cause ending_triggered to fire"
 	)
@@ -141,17 +141,17 @@ func test_final_stats_matches_snapshot() -> void:
 ## Acceptance criterion 3: ending_id matches deterministic stub stats.
 ## Seed stats to hit a specific ending threshold (just_getting_by fallback here).
 func test_ending_id_matches_catalog_threshold() -> void:
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var on_triggered: Callable = func(
 		id: StringName, _stats: Dictionary
 	) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		&"just_getting_by",
 		"With zero stats, evaluate() must match the fallback just_getting_by ending"
 	)
@@ -167,17 +167,17 @@ func test_ending_id_matches_broke_even_threshold() -> void:
 	stats["cumulative_revenue"] = 500.0
 	_system.load_state({"stats": stats})
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var on_triggered: Callable = func(
 		id: StringName, _stats: Dictionary
 	) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		&"broke_even",
 		"Stats meeting broke_even criteria must resolve to broke_even"
 	)
@@ -187,17 +187,17 @@ func test_ending_id_matches_broke_even_threshold() -> void:
 
 ## Acceptance criterion 5: all_criteria reason also triggers evaluation chain.
 func test_all_criteria_reason_triggers_ending_triggered() -> void:
-	var ending_id: StringName = &""
+	var ending_id: Array = [&""]
 	var on_triggered: Callable = func(
 		id: StringName, _stats: Dictionary
 	) -> void:
-		ending_id = id
+		ending_id[0] = id
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("all_criteria")
 
 	assert_ne(
-		ending_id,
+		ending_id[0],
 		&"",
 		"completion_reached('all_criteria') must also trigger ending evaluation"
 	)
@@ -211,18 +211,18 @@ func test_all_criteria_reason_triggers_ending_triggered() -> void:
 
 ## Acceptance criterion 6: idempotency — second completion_reached does not re-trigger.
 func test_second_completion_reached_does_not_re_trigger() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_triggered: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 	EventBus.completion_reached.emit("time_limit")
 
 	assert_eq(
-		fire_count,
+		fire_count[0],
 		1,
 		"ending_triggered must fire exactly once regardless of duplicate completion_reached emissions"
 	)
@@ -232,18 +232,18 @@ func test_second_completion_reached_does_not_re_trigger() -> void:
 
 ## Idempotency also holds across different reasons.
 func test_different_reasons_still_idempotent() -> void:
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_triggered: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 	EventBus.completion_reached.emit("all_criteria")
 
 	assert_eq(
-		fire_count,
+		fire_count[0],
 		1,
 		"Switching reasons must not bypass the idempotency guard"
 	)

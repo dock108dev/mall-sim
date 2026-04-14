@@ -88,12 +88,12 @@ func test_bankruptcy_ending() -> void:
 		"final_cash": -1.0,
 	})
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var triggered_stats: Dictionary = {}
 	var on_ending: Callable = func(
 		id: StringName, stats: Dictionary
 	) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 		triggered_stats = stats
 	EventBus.ending_triggered.connect(on_ending)
 
@@ -102,10 +102,10 @@ func test_bankruptcy_ending() -> void:
 	assert_true(
 		triggered_id in BANKRUPTCY_ENDINGS,
 		"Day 30 bankruptcy should trigger a bankruptcy ending; got: %s"
-		% triggered_id
+		% triggered_id[0]
 	)
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		&"going_going_gone",
 		"days_survived=30 bankruptcy should select going_going_gone"
 	)
@@ -142,19 +142,19 @@ func test_survival_ending() -> void:
 		"trigger_type_bankruptcy": 0.0,
 	})
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var triggered_stats: Dictionary = {}
 	var on_ending: Callable = func(
 		id: StringName, stats: Dictionary
 	) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 		triggered_stats = stats
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.ending_requested.emit("completion")
 
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		&"broke_even",
 		"balance=500, rep=40, day 30 should trigger broke_even survival ending"
 	)
@@ -188,19 +188,19 @@ func test_prestige_ending() -> void:
 		"trigger_type_bankruptcy": 0.0,
 	})
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var triggered_stats: Dictionary = {}
 	var on_ending: Callable = func(
 		id: StringName, stats: Dictionary
 	) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 		triggered_stats = stats
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.ending_requested.emit("completion")
 
 	assert_eq(
-		triggered_id,
+		triggered_id[0],
 		&"the_local_legend",
 		"balance=1000, rep=80 (tier 4), day 30 should trigger the_local_legend"
 	)
@@ -233,17 +233,17 @@ func test_no_premature_trigger() -> void:
 		"satisfaction_ratio": 0.95,
 	})
 
-	var fire_count: int = 0
+	var fire_count: Array = [0]
 	var on_ending: Callable = func(
 		_id: StringName, _stats: Dictionary
 	) -> void:
-		fire_count += 1
+		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.day_ended.emit(15)
 
 	assert_eq(
-		fire_count, 0,
+		fire_count[0], 0,
 		"ending_triggered must NOT fire on day_ended alone"
 	)
 	assert_eq(
@@ -266,11 +266,11 @@ func test_catalog_validation() -> void:
 		"final_cash": -1.0,
 	})
 
-	var triggered_id: StringName = &""
+	var triggered_id: Array = [&""]
 	var on_ending: Callable = func(
 		id: StringName, _stats: Dictionary
 	) -> void:
-		triggered_id = id
+		triggered_id[0] = id
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
@@ -285,7 +285,7 @@ func test_catalog_validation() -> void:
 	)
 	assert_false(
 		ending_data.is_empty(),
-		"Ending data must exist in catalog for %s" % triggered_id
+		"Ending data must exist in catalog for %s" % triggered_id[0]
 	)
 	assert_true(
 		ending_data.has("title"),
@@ -300,11 +300,11 @@ func test_catalog_validation() -> void:
 	var text: String = str(ending_data.get("text", ""))
 	assert_false(
 		title.is_empty(),
-		"Ending title must not be empty for %s" % triggered_id
+		"Ending title must not be empty for %s" % triggered_id[0]
 	)
 	assert_false(
 		text.is_empty(),
-		"Ending flavor text must not be empty for %s" % triggered_id
+		"Ending flavor text must not be empty for %s" % triggered_id[0]
 	)
 
 	assert_eq(

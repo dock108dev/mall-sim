@@ -23,7 +23,13 @@ const REQUIRED_ITEM_FIELDS: Array[String] = [
 
 const VALID_RARITIES: Array[String] = [
 	"common", "uncommon", "rare", "very_rare", "legendary",
+	"ultra_rare", "secret_rare", "holographic", "rare_holo",
 ]
+
+
+func before_all() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
 
 
 func test_load_all_no_errors() -> void:

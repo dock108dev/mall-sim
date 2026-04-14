@@ -651,25 +651,25 @@ func test_slot_index_readable_without_full_load() -> void:
 
 func test_load_missing_file_emits_save_load_failed() -> void:
 	_save_manager.delete_save(_test_slot)
-	var signal_fired: bool = false
-	var captured_slot: int = -1
-	var captured_reason: String = ""
+	var signal_fired: Array = [false]
+	var captured_slot: Array = [-1]
+	var captured_reason: Array = [""]
 
 	var handler: Callable = func(
 		slot: int, reason: String
 	) -> void:
-		signal_fired = true
-		captured_slot = slot
-		captured_reason = reason
+		signal_fired[0] = true
+		captured_slot[0] = slot
+		captured_reason[0] = reason
 	EventBus.save_load_failed.connect(handler)
 
 	_save_manager.load_game(_test_slot)
 
 	EventBus.save_load_failed.disconnect(handler)
-	assert_true(signal_fired, "save_load_failed should fire on missing file")
-	assert_eq(captured_slot, _test_slot, "Slot should match")
+	assert_true(signal_fired[0], "save_load_failed should fire on missing file")
+	assert_eq(captured_slot[0], _test_slot, "Slot should match")
 	assert_true(
-		captured_reason.length() > 0,
+		captured_reason[0].length() > 0,
 		"Reason should not be empty"
 	)
 
@@ -684,11 +684,11 @@ func test_load_corrupt_file_emits_save_load_failed() -> void:
 	file.store_string("{{{corrupt json!!!")
 	file.close()
 
-	var signal_fired: bool = false
+	var signal_fired: Array = [false]
 	var handler: Callable = func(
 		_slot: int, _reason: String
 	) -> void:
-		signal_fired = true
+		signal_fired[0] = true
 	EventBus.save_load_failed.connect(handler)
 
 	var result: bool = _save_manager.load_game(_test_slot)
@@ -696,7 +696,7 @@ func test_load_corrupt_file_emits_save_load_failed() -> void:
 	EventBus.save_load_failed.disconnect(handler)
 	assert_false(result, "Load should fail on corrupt file")
 	assert_true(
-		signal_fired,
+		signal_fired[0],
 		"save_load_failed should fire on corrupt file"
 	)
 
