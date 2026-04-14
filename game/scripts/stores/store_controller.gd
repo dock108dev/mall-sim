@@ -3,8 +3,6 @@
 class_name StoreController
 extends Node
 
-const STORE_ID: StringName = &""
-
 var store_type: String = ""
 
 var _slots: Array[Node] = []
@@ -67,13 +65,13 @@ func get_active_customers() -> Array[Node]:
 	return result
 
 
-## Validates STORE_ID before emitting a signal on EventBus.
+## Validates store identity before emitting a signal on EventBus.
 func emit_store_signal(
 	signal_name: StringName, args: Array = []
 ) -> void:
-	if STORE_ID.is_empty() and store_type.is_empty():
+	if store_type.is_empty():
 		push_error(
-			"StoreController: cannot emit signal without STORE_ID"
+			"StoreController: cannot emit signal without store_type"
 		)
 		return
 	if not EventBus.has_signal(signal_name):
@@ -162,10 +160,7 @@ func _on_customer_entered(_customer_data: Dictionary) -> void:
 
 
 func _on_active_store_changed(store_id: StringName) -> void:
-	var my_id: StringName = (
-		STORE_ID if not STORE_ID.is_empty()
-		else StringName(store_type)
-	)
+	var my_id: StringName = StringName(store_type)
 	if store_id == my_id:
 		_is_active = true
 		_on_store_activated()
