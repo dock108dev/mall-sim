@@ -16,19 +16,9 @@ func _ready() -> void:
 	set_process(false)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.panel_closed.connect(_on_panel_closed)
-
-
-## Call after the camera is available to begin raycasting.
-func initialize(camera: Camera3D) -> void:
-	set_camera(camera)
-	set_process(camera != null)
-
-
-## Updates the active camera source used for world raycasts.
-func set_camera(camera: Camera3D) -> void:
-	if _hovered_target:
-		_set_hovered_target(null)
-	_camera = camera
+	EventBus.active_camera_changed.connect(_on_active_camera_changed)
+	if CameraManager.active_camera:
+		_apply_camera(CameraManager.active_camera)
 
 
 ## Sets the InventorySystem reference for shelf item tooltip lookups.
@@ -78,8 +68,21 @@ func get_hovered_target() -> Interactable:
 	return _hovered_target
 
 
+func _on_active_camera_changed(camera: Camera3D) -> void:
+	_apply_camera(camera)
+
+
+func _apply_camera(camera: Camera3D) -> void:
+	if _hovered_target:
+		_set_hovered_target(null)
+	_camera = camera
+	set_process(_camera != null)
+
+
 func _update_raycast() -> void:
-	if not _camera:
+	if not is_instance_valid(_camera):
+		_camera = null
+		set_process(false)
 		return
 
 	var viewport: Viewport = get_viewport()
@@ -107,7 +110,9 @@ func _update_raycast() -> void:
 	if result.size() > 0:
 		var collider: Node = result["collider"]
 		if collider is Interactable:
-			new_target = collider as Interactable
+			var candidate := collider as Interactable
+			if candidate.enabled:
+				new_target = candidate
 
 	if new_target != _hovered_target:
 		_set_hovered_target(new_target)
@@ -116,19 +121,25 @@ func _update_raycast() -> void:
 func _set_hovered_target(new_target: Interactable) -> void:
 	if _hovered_target:
 		_hovered_target.unhighlight()
+		_hovered_target.unfocused.emit()
 
 	_hovered_target = new_target
 
 	if _hovered_target:
 		_hovered_target.highlight()
-		var prompt: String = "Click to %s %s" % [
+		_hovered_target.focused.emit()
+		var action_label: String = "%s %s" % [
 			_hovered_target.interaction_prompt,
 			_hovered_target.display_name,
 		]
-		EventBus.notification_requested.emit(prompt)
+		EventBus.notification_requested.emit(
+			"Click to %s" % action_label
+		)
+		EventBus.interactable_focused.emit(action_label)
 		_emit_tooltip_for_target(_hovered_target)
 	else:
 		EventBus.notification_requested.emit("")
+		EventBus.interactable_unfocused.emit()
 		EventBus.item_tooltip_hidden.emit()
 
 

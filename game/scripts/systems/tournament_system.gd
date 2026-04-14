@@ -17,10 +17,10 @@ const STORE_TYPE: String = "pocket_creatures"
 
 ## Reputation tier thresholds that scale participant count.
 const TIER_PARTICIPANT_BONUS: Dictionary = {
-	ReputationSystem.Tier.UNKNOWN: 0,
-	ReputationSystem.Tier.LOCAL_FAVORITE: 2,
-	ReputationSystem.Tier.DESTINATION_SHOP: 4,
-	ReputationSystem.Tier.LEGENDARY: 6,
+	ReputationSystem.ReputationTier.NOTORIOUS: 0,
+	ReputationSystem.ReputationTier.UNREMARKABLE: 2,
+	ReputationSystem.ReputationTier.REPUTABLE: 4,
+	ReputationSystem.ReputationTier.LEGENDARY: 6,
 }
 
 var _economy_system: EconomySystem = null
@@ -48,6 +48,7 @@ func initialize(
 	_customer_system = customer
 	_fixture_placement_system = fixture_placement
 	_data_loader = data_loader
+	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.day_phase_changed.connect(_on_day_phase_changed)
 	EventBus.item_sold.connect(_on_item_sold)
@@ -171,7 +172,11 @@ func get_save_data() -> Dictionary:
 
 ## Restores tournament state from saved data.
 func load_save_data(data: Dictionary) -> void:
-	_is_active = data.get("is_active", false) as bool
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
+	_is_active = bool(data.get("is_active", false))
 	_cooldown_remaining = int(data.get("cooldown_remaining", 0))
 	_participant_count = int(data.get("participant_count", 0))
 	_tournament_revenue = float(
@@ -185,7 +190,7 @@ func load_save_data(data: Dictionary) -> void:
 func _calculate_participant_count() -> int:
 	var base: int = MIN_PARTICIPANTS
 	if _reputation_system:
-		var tier: ReputationSystem.Tier = _reputation_system.get_tier()
+		var tier: ReputationSystem.ReputationTier = _reputation_system.get_tier()
 		var bonus: int = TIER_PARTICIPANT_BONUS.get(tier, 0) as int
 		base += bonus
 	return mini(base, MAX_PARTICIPANTS)
@@ -194,14 +199,14 @@ func _calculate_participant_count() -> int:
 func _spawn_tournament_customers() -> void:
 	if not _customer_system or not _data_loader:
 		return
-	var profiles: Array[CustomerProfile] = (
+	var profiles: Array[CustomerTypeDefinition] = (
 		_data_loader.get_customer_types_for_store(STORE_TYPE)
 	)
 	if profiles.is_empty():
 		return
 
-	var competitive_profiles: Array[CustomerProfile] = []
-	for p: CustomerProfile in profiles:
+	var competitive_profiles: Array[CustomerTypeDefinition] = []
+	for p: CustomerTypeDefinition in profiles:
 		if p.id == "pc_competitive_player" or p.id == "pc_pack_cracker":
 			competitive_profiles.append(p)
 
@@ -209,7 +214,7 @@ func _spawn_tournament_customers() -> void:
 		competitive_profiles = profiles
 
 	for i: int in range(_participant_count):
-		var profile: CustomerProfile = (
+		var profile: CustomerTypeDefinition = (
 			competitive_profiles[i % competitive_profiles.size()]
 		)
 		_customer_system.spawn_customer(profile, STORE_TYPE)

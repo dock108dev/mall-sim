@@ -6,19 +6,23 @@ const STORE_TYPE: String = "retro_games"
 const MAX_CONCURRENT: int = 3
 const MIN_PARTS_COST: float = 5.0
 const MAX_PARTS_COST: float = 20.0
-const MIN_SUCCESS_CHANCE: float = 0.75
-const MAX_SUCCESS_CHANCE: float = 0.85
 const COST_THRESHOLD_LOW: float = 15.0
 const COST_THRESHOLD_HIGH: float = 50.0
 const MIN_DURATION: int = 1
 const MAX_DURATION: int = 2
 const DURATION_PRICE_THRESHOLD: float = 30.0
-const ELIGIBLE_SUBCATEGORY: String = "for_parts"
 const REFURBISHING_LOCATION: String = "refurbishing"
+const CONDITION_TIERS: PackedStringArray = [
+	"poor", "fair", "good", "near_mint", "mint",
+]
 
 var _queue: Array[Dictionary] = []
 var _inventory_system: InventorySystem = null
 var _economy_system: EconomySystem = null
+var _active_max_queue_size: int = MAX_CONCURRENT
+var _active_duration_days: int = MIN_DURATION
+var _active_condition_tiers: PackedStringArray = CONDITION_TIERS
+var _refurb_cost_by_tier: Dictionary = {}
 
 
 func initialize(
@@ -26,6 +30,8 @@ func initialize(
 ) -> void:
 	_inventory_system = inventory
 	_economy_system = economy
+	_load_config()
+	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
 
 
@@ -35,24 +41,35 @@ func can_refurbish(item: ItemInstance) -> bool:
 		return false
 	if item.definition.store_type != STORE_TYPE:
 		return false
-	if item.definition.subcategory != ELIGIBLE_SUBCATEGORY:
-		return false
 	if item.current_location == REFURBISHING_LOCATION:
 		return false
 	if item.current_location != "backroom":
 		return false
-	if _queue.size() >= MAX_CONCURRENT:
+	if _queue.size() >= _active_max_queue_size:
 		return false
 	for entry: Dictionary in _queue:
 		if entry.get("instance_id", "") == item.instance_id:
 			return false
+	var is_not_working: bool = (
+		item.tested and item.test_result == "tested_not_working"
+	)
+	var is_poor: bool = item.condition == "poor"
+	if not is_not_working and not is_poor:
+		return false
+	if _get_next_condition(item.condition) == "":
+		return false
 	return true
 
 
-## Calculates the parts cost based on item base price.
+## Calculates the parts cost based on condition tier or item base price.
 func get_parts_cost(item: ItemInstance) -> float:
 	if not item or not item.definition:
 		return MAX_PARTS_COST
+	if not _refurb_cost_by_tier.is_empty():
+		var tier_cost: Variant = _refurb_cost_by_tier.get(
+			item.condition, MAX_PARTS_COST
+		)
+		return float(tier_cost)
 	var base: float = item.definition.base_price
 	var t: float = clampf(
 		(base - COST_THRESHOLD_LOW)
@@ -62,23 +79,12 @@ func get_parts_cost(item: ItemInstance) -> float:
 	return lerpf(MIN_PARTS_COST, MAX_PARTS_COST, t)
 
 
-## Calculates success chance based on item base price.
-func get_success_chance(item: ItemInstance) -> float:
-	if not item or not item.definition:
-		return MIN_SUCCESS_CHANCE
-	var base: float = item.definition.base_price
-	var t: float = clampf(
-		(base - COST_THRESHOLD_LOW)
-		/ (COST_THRESHOLD_HIGH - COST_THRESHOLD_LOW),
-		0.0, 1.0
-	)
-	return lerpf(MAX_SUCCESS_CHANCE, MIN_SUCCESS_CHANCE, t)
-
-
-## Calculates the duration in days based on item base price.
+## Calculates the duration in days from config or item base price.
 func get_duration(item: ItemInstance) -> int:
 	if not item or not item.definition:
-		return MAX_DURATION
+		return _active_duration_days
+	if _active_duration_days != MIN_DURATION:
+		return _active_duration_days
 	if item.definition.base_price >= DURATION_PRICE_THRESHOLD:
 		return MAX_DURATION
 	return MIN_DURATION
@@ -98,19 +104,17 @@ func start_refurbishment(instance_id: String) -> bool:
 		return false
 	var cost: float = get_parts_cost(item)
 	if not _economy_system.deduct_cash(
-		cost, "Refurbishment parts: %s" % item.definition.name
+		cost, "Refurbishment parts: %s" % item.definition.item_name
 	):
 		EventBus.notification_requested.emit(
 			"Insufficient funds for refurbishment ($%.2f)" % cost
 		)
 		return false
 	var duration: int = get_duration(item)
-	var chance: float = get_success_chance(item)
 	var entry: Dictionary = {
 		"instance_id": instance_id,
 		"parts_cost": cost,
 		"days_remaining": duration,
-		"success_chance": chance,
 		"start_day": GameManager.current_day,
 	}
 	_queue.append(entry)
@@ -118,7 +122,7 @@ func start_refurbishment(instance_id: String) -> bool:
 	EventBus.refurbishment_started.emit(instance_id, cost, duration)
 	EventBus.notification_requested.emit(
 		"Refurbishment started: %s (%d day%s)"
-		% [item.definition.name, duration, "" if duration == 1 else "s"]
+		% [item.definition.item_name, duration, "" if duration == 1 else "s"]
 	)
 	return true
 
@@ -146,6 +150,28 @@ func get_save_data() -> Dictionary:
 
 ## Restores refurbishment state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _load_config() -> void:
+	var cfg: Dictionary = DataLoader.get_retro_games_config()
+	if cfg.is_empty():
+		return
+	_active_max_queue_size = int(
+		cfg.get("max_refurb_queue_size", MAX_CONCURRENT)
+	)
+	_active_duration_days = int(
+		cfg.get("refurb_duration_days", MIN_DURATION)
+	)
+	var cost_tiers: Variant = cfg.get("refurb_cost_by_tier", {})
+	if cost_tiers is Dictionary:
+		_refurb_cost_by_tier = cost_tiers as Dictionary
+	var cond_tiers: Variant = cfg.get("item_condition_tiers", [])
+	if cond_tiers is Array and not (cond_tiers as Array).is_empty():
+		_active_condition_tiers = PackedStringArray(cond_tiers as Array)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_queue.clear()
 	var saved_queue: Array = data.get("queue", [])
 	for entry: Variant in saved_queue:
@@ -177,7 +203,6 @@ func _process_queue() -> void:
 
 func _resolve_refurbishment(entry: Dictionary) -> void:
 	var instance_id: String = entry.get("instance_id", "")
-	var chance: float = entry.get("success_chance", MIN_SUCCESS_CHANCE)
 	if not _inventory_system:
 		return
 	var item: ItemInstance = _inventory_system.get_item(instance_id)
@@ -187,41 +212,30 @@ func _resolve_refurbishment(entry: Dictionary) -> void:
 			% instance_id
 		)
 		return
-	var roll: float = randf()
-	if roll <= chance:
-		_apply_success(item)
-	else:
-		_apply_failure(item)
-
-
-func _apply_success(item: ItemInstance) -> void:
 	var old_condition: String = item.condition
-	var new_condition: String = _pick_success_condition()
+	var new_condition: String = _get_next_condition(old_condition)
+	if new_condition.is_empty():
+		new_condition = old_condition
 	item.condition = new_condition
+	if item.tested and item.test_result == "tested_not_working":
+		item.test_result = "tested_working"
 	_inventory_system.move_item(item.instance_id, "backroom")
 	EventBus.refurbishment_completed.emit(
 		item.instance_id, true, new_condition
 	)
+	EventBus.inventory_changed.emit()
 	EventBus.notification_requested.emit(
-		"Refurbishment success! %s is now %s"
-		% [item.definition.name, new_condition.replace("_", " ")]
+		"Refurbishment complete! %s is now %s"
+		% [
+			item.definition.item_name,
+			new_condition.replace("_", " "),
+		]
 	)
 
 
-func _apply_failure(item: ItemInstance) -> void:
-	var item_name: String = item.definition.name if item.definition else ""
-	EventBus.refurbishment_completed.emit(item.instance_id, false, "")
-	EventBus.refurbishment_failed.emit(item.instance_id)
-	EventBus.item_lost.emit(
-		item.instance_id, "Refurbishment failed"
-	)
-	_inventory_system.remove_item(item.instance_id)
-	EventBus.notification_requested.emit(
-		"Refurbishment failed! %s was destroyed" % item_name
-	)
-
-
-func _pick_success_condition() -> String:
-	if randf() < 0.5:
-		return "near_mint"
-	return "good"
+## Returns the next condition tier, or empty string if already at max.
+func _get_next_condition(current: String) -> String:
+	for i: int in range(_active_condition_tiers.size() - 1):
+		if _active_condition_tiers[i] == current:
+			return _active_condition_tiers[i + 1]
+	return ""

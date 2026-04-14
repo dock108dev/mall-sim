@@ -1,0 +1,56 @@
+[
+  {
+    "id": "order_catalog_expansion_1",
+    "display_name": "Expanded Supplier Catalog",
+    "description": "Unlocks access to Tier 2 supplier catalogs, offering rarer and more valuable stock.",
+    "effect_type": "catalog_expansion",
+    "effect_target": "tier_2",
+    "effect_value": null,
+    "unlock_message": "Tier 2 suppliers now available! Check the order panel for new stock options."
+  },
+  {
+    "id": "extended_hours_unlock",
+    "display_name": "Extended Business Hours",
+    "description": "Extends the business day by one additional phase, giving more time for customer traffic.",
+    "effect_type": "time_extension",
+    "effect_target": null,
+    "effect_value": 1,
+    "unlock_message": "Business hours extended! Your store stays open one phase longer each day."
+  },
+  {
+    "id": "market_event_preview",
+    "display_name": "Market Insider",
+    "description": "Shows upcoming market events one day in advance on the HUD, letting you prepare stock and pricing.",
+    "effect_type": "info_reveal",
+    "effect_target": null,
+    "effect_value": null,
+    "unlock_message": "Market forecasts unlocked! Check the HUD for tomorrow's market events."
+  },
+  {
+    "id": "vip_customer_events",
+    "display_name": "VIP Customer Access",
+    "description": "Enables rare VIP customer spawns who carry larger budgets and seek premium merchandise.",
+    "effect_type": "vip_spawn",
+    "effect_target": null,
+    "effect_value": null,
+    "unlock_message": "VIP customers may now visit your store! Watch for high-budget shoppers."
+  },
+  {
+    "id": "prestige_nameplate",
+    "display_name": "Prestige Nameplate",
+    "description": "A distinguished nameplate displayed on your storefront, signaling your success to all who pass by.",
+    "effect_type": "cosmetic_nameplate",
+    "effect_target": null,
+    "effect_value": null,
+    "unlock_message": "Prestige nameplate unlocked! Your storefront now bears a mark of distinction."
+  },
+  {
+    "id": "prestige_bronze_badge",
+    "display_name": "Bronze Prestige Badge",
+    "description": "A bronze badge displayed on your save slot and end screen, commemorating your retail achievements.",
+    "effect_type": "cosmetic_badge",
+    "effect_target": null,
+    "effect_value": null,
+    "unlock_message": "Bronze badge earned! This badge appears on your save slot and end screen."
+  }
+]

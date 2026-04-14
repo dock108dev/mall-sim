@@ -7,18 +7,19 @@ layer = 5
 script = ExtResource("1")
 
 [node name="PanelRoot" type="PanelContainer" parent="."]
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 540.0
+offset_left = 40.0
 offset_top = 60.0
-offset_right = 1140.0
+offset_right = -40.0
 offset_bottom = -20.0
 
 [node name="Margin" type="MarginContainer" parent="PanelRoot"]
 layout_mode = 2
-theme_override_constants/margin_left = 10
+theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
+theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 10
 
 [node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
@@ -32,17 +33,17 @@ layout_mode = 2
 layout_mode = 2
 theme_type_variation = &"HeaderLabel"
 size_flags_horizontal = 3
-text = "Stock Orders (Tier 1)"
+text = "Stock Orders (Basic)"
 
 [node name="BudgetLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
 layout_mode = 2
-text = "Budget: $200.00"
+text = "Budget: $500"
 horizontal_alignment = 2
 
 [node name="CashLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
 layout_mode = 2
 custom_minimum_size = Vector2(120, 0)
-text = "Cash: $0.00"
+text = "Cash: $0"
 horizontal_alignment = 2
 
 [node name="CloseButton" type="Button" parent="PanelRoot/Margin/VBox/Header"]
@@ -50,45 +51,118 @@ layout_mode = 2
 custom_minimum_size = Vector2(30, 0)
 text = "X"
 
-[node name="TierInfo" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+[node name="TierTabs" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 4
 
-[node name="TierLabel" type="Label" parent="PanelRoot/Margin/VBox/TierInfo"]
+[node name="FilterRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SearchField" type="LineEdit" parent="PanelRoot/Margin/VBox/FilterRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Supplier: Tier 1"
+placeholder_text = "Search items..."
 
-[node name="NextTierLabel" type="Label" parent="PanelRoot/Margin/VBox/TierInfo"]
+[node name="RarityFilter" type="OptionButton" parent="PanelRoot/Margin/VBox/FilterRow"]
 layout_mode = 2
-text = "Next: Tier 2 (rep 25)"
-horizontal_alignment = 2
+custom_minimum_size = Vector2(140, 0)
 
-[node name="Content" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+[node name="Content" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 12
 
-[node name="EmptyLabel" type="Label" parent="PanelRoot/Margin/VBox/Content"]
+[node name="CatalogSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.5
+theme_override_constants/separation = 4
+
+[node name="CatalogHeader" type="Label" parent="PanelRoot/Margin/VBox/Content/CatalogSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Available Items"
+
+[node name="EmptyLabel" type="Label" parent="PanelRoot/Margin/VBox/Content/CatalogSection"]
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
-text = "No items available for this store"
+text = "No items available at this supplier tier"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Scroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/Content"]
+[node name="CatalogScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/Content/CatalogSection"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Grid" type="GridContainer" parent="PanelRoot/Margin/VBox/Content/Scroll"]
+[node name="CatalogGrid" type="VBoxContainer" parent="PanelRoot/Margin/VBox/Content/CatalogSection/CatalogScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-columns = 1
+theme_override_constants/separation = 2
 
-[node name="Footer" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
-layout_mode = 2
-
-[node name="PendingLabel" type="Label" parent="PanelRoot/Margin/VBox/Footer"]
+[node name="CartSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox/Content"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "No pending orders"
+size_flags_stretch_ratio = 1.0
+theme_override_constants/separation = 6
+
+[node name="CartHeader" type="Label" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Order Cart"
+
+[node name="CartEmptyLabel" type="Label" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+layout_mode = 2
+text = "Cart is empty"
+horizontal_alignment = 1
+
+[node name="CartScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CartGrid" type="VBoxContainer" parent="PanelRoot/Margin/VBox/Content/CartSection/CartScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="LimitBar" type="ProgressBar" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 18)
+max_value = 500.0
+show_percentage = false
+
+[node name="TotalLabel" type="Label" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+layout_mode = 2
+text = "Total: $0.00"
+horizontal_alignment = 2
+
+[node name="ErrorLabel" type="Label" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.3, 0.25, 1)
+text = ""
+autowrap_mode = 2
+
+[node name="SubmitButton" type="Button" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+layout_mode = 2
+disabled = true
+text = "Submit Order"
+
+[node name="DeliveriesHeader" type="Label" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Active Deliveries"
+
+[node name="DeliveriesScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/Content/CartSection"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+
+[node name="DeliveriesGrid" type="VBoxContainer" parent="PanelRoot/Margin/VBox/Content/CartSection/DeliveriesScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2

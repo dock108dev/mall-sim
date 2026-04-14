@@ -10,19 +10,27 @@ var _camera: Camera3D = null
 var _player_node: Node = null
 var _placement_system: FixturePlacementSystem = null
 var _nav_region: NavigationRegion3D = null
+var _visuals: BuildModeVisuals = null
 
 var _hovered_cell: Variant = null
 
 
+func _ready() -> void:
+	EventBus.active_camera_changed.connect(_on_active_camera_changed)
+	if CameraManager.active_camera:
+		_camera = CameraManager.active_camera
+
+
 ## Sets up build mode with required references.
 func initialize(
-	camera: Camera3D,
 	player_node: Node,
 	store_size: BuildModeGrid.StoreSize,
 	floor_center: Vector3
 ) -> void:
-	_camera = camera
 	_player_node = player_node
+
+	if CameraManager.active_camera:
+		_camera = CameraManager.active_camera
 
 	_grid = BuildModeGrid.new()
 	_grid.name = "BuildModeGrid"
@@ -32,19 +40,39 @@ func initialize(
 	_camera_controller = BuildModeCamera.new()
 	_camera_controller.name = "BuildModeCamera"
 	add_child(_camera_controller)
-	_camera_controller.initialize(camera, _grid.get_world_center())
+	_camera_controller.initialize(_grid.get_world_center())
 
 
-## Sets the placement system reference.
+## Sets the placement system reference and initializes visuals.
 func set_placement_system(
 	system: FixturePlacementSystem
 ) -> void:
 	_placement_system = system
+	_setup_visuals()
 
 
 ## Sets the NavigationRegion3D for rebaking on exit.
 func set_nav_region(region: NavigationRegion3D) -> void:
 	_nav_region = region
+
+
+## Returns the visuals sub-system for external access.
+func get_visuals() -> BuildModeVisuals:
+	return _visuals
+
+
+func _setup_visuals() -> void:
+	if not _grid or not _placement_system:
+		return
+	if _visuals:
+		_visuals.queue_free()
+
+	_visuals = BuildModeVisuals.new()
+	_visuals.name = "BuildModeVisuals"
+	add_child(_visuals)
+	_visuals.initialize(
+		_grid, _placement_system.get_validator(), _placement_system
+	)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -77,6 +105,12 @@ func get_grid() -> BuildModeGrid:
 	return _grid
 
 
+func _on_active_camera_changed(camera: Camera3D) -> void:
+	_camera = camera
+	if _camera_controller:
+		_camera_controller.update_camera(camera)
+
+
 func _toggle_build_mode() -> void:
 	if _camera_controller and _camera_controller.is_transitioning:
 		return
@@ -90,7 +124,7 @@ func _toggle_build_mode() -> void:
 func _try_enter_build_mode() -> void:
 	var state: int = GameManager.current_state
 	var can_enter: bool = (
-		state == GameManager.GameState.PLAYING
+		state == GameManager.GameState.GAMEPLAY
 		or state == GameManager.GameState.PAUSED
 	)
 	if not can_enter:
@@ -138,7 +172,7 @@ func exit_build_mode() -> void:
 	if _player_node and _player_node.has_method("set_build_mode"):
 		_player_node.set_build_mode(false)
 
-	GameManager.change_state(GameManager.GameState.PLAYING)
+	GameManager.change_state(GameManager.GameState.GAMEPLAY)
 	EventBus.build_mode_exited.emit()
 
 
@@ -190,13 +224,18 @@ func _handle_rotate() -> void:
 		return
 
 	_placement_system.rotate_fixture()
-	# Refresh preview with new rotation
 	if _hovered_cell != null:
 		_placement_system.update_preview(_hovered_cell)
+		if _visuals:
+			_visuals.update_ghost(
+				_hovered_cell,
+				_placement_system.get_selected_fixture_type(),
+				_placement_system.get_current_rotation()
+			)
 
 
 func _update_hovered_cell(event: InputEventMouseMotion) -> void:
-	if not _camera:
+	if not is_instance_valid(_camera):
 		return
 
 	var mouse_pos: Vector2 = event.position
@@ -217,3 +256,17 @@ func _update_hovered_cell(event: InputEventMouseMotion) -> void:
 
 	if _placement_system:
 		_placement_system.update_preview(_hovered_cell)
+
+	if _visuals:
+		var fixture_type: String = ""
+		var rotation: int = 0
+		if _placement_system:
+			fixture_type = _placement_system.get_selected_fixture_type()
+			rotation = _placement_system.get_current_rotation()
+		if not fixture_type.is_empty():
+			_visuals.update_ghost(
+				_hovered_cell, fixture_type, rotation
+			)
+		else:
+			_visuals.update_ghost(null, "", 0)
+			_visuals.update_highlight(_hovered_cell)

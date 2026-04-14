@@ -281,12 +281,20 @@ alignment = 2
 [node name="ResetButton" type="Button" parent="PanelRoot/Margin/VBox/TabContainer/Controls/Outer/ResetRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(140, 0)
-text = "Reset to Defaults"
+text = "Reset Keybindings"
 
 [node name="ButtonRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
-alignment = 2
 theme_override_constants/separation = 8
+
+[node name="ResetDefaultsButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(130, 0)
+text = "Reset to Defaults"
+
+[node name="Spacer" type="Control" parent="PanelRoot/Margin/VBox/ButtonRow"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="CancelButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
 layout_mode = 2
@@ -296,7 +304,7 @@ text = "Cancel"
 [node name="ApplyButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(90, 0)
-text = "Apply"
+text = "Save"
 
 [node name="ConflictDialog" type="ConfirmationDialog" parent="."]
 title = "Key Conflict"

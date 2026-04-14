@@ -29,10 +29,11 @@ var _current_day: int = 1
 
 ## Initializes the season cycle for a new game starting on the given day.
 func initialize(starting_day: int = 1) -> void:
-	_current_day = starting_day
-	_hot_index = randi() % LEAGUES.size()
-	_next_rotation_day = starting_day + _random_cycle_length()
-	_announced = false
+	_apply_state({
+		"current_day": starting_day,
+		"hot_index": randi() % LEAGUES.size(),
+		"next_rotation_day": starting_day + _random_cycle_length(),
+	})
 
 
 ## Called by the owning controller each day to advance the season cycle.
@@ -104,6 +105,10 @@ func get_save_data() -> Dictionary:
 
 ## Restores season cycle state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_hot_index = int(data.get("hot_index", 0))
 	_next_rotation_day = int(data.get("next_rotation_day", 1))
 	_announced = bool(data.get("announced", false))

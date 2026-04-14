@@ -38,6 +38,8 @@ const RARITY_LABELS: Dictionary = {
 	"legendary": "Legendary",
 }
 
+const CURRENCY_SYMBOL: String = "$"
+
 const BODY_FONT_COLOR := Color(0.96, 0.9, 0.82, 1.0)
 const HEADER_FONT_COLOR := Color(0.9, 0.75, 0.45, 1.0)
 const ACCENT_COLOR := Color(0.83, 0.63, 0.33, 1.0)

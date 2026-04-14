@@ -2,11 +2,10 @@
 class_name RetroGameStoreController
 extends StoreController
 
-const STORE_ID: String = "retro_games"
+const STORE_ID: StringName = &"retro_games"
 const TESTING_STATION_FIXTURE_ID: String = "testing_station"
 
 var _testing_station_slot: Node = null
-var _inventory_system: InventorySystem = null
 var _refurbishment_system: RefurbishmentSystem = null
 
 
@@ -15,11 +14,6 @@ func _ready() -> void:
 	super._ready()
 	_find_testing_station()
 	EventBus.item_stocked.connect(_on_item_stocked)
-
-
-## Provides the inventory system reference for testing station operations.
-func set_inventory_system(inv: InventorySystem) -> void:
-	_inventory_system = inv
 
 
 ## Sets the RefurbishmentSystem reference.

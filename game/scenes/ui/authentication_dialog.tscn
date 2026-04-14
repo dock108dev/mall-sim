@@ -13,9 +13,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -160.0
+offset_top = -120.0
 offset_right = 200.0
-offset_bottom = 160.0
+offset_bottom = 120.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -33,7 +33,7 @@ theme_override_constants/separation = 10
 [node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
 theme_type_variation = &"HeaderLabel"
-text = "Authenticate Autograph"
+text = "Authenticate Item"
 horizontal_alignment = 1
 
 [node name="InfoVBox" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
@@ -45,30 +45,21 @@ layout_mode = 2
 text = "Item Name"
 horizontal_alignment = 1
 
+[node name="ConditionLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = "Condition: Good"
+horizontal_alignment = 1
+
 [node name="CostLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
 layout_mode = 2
-text = "Authentication Cost: $0.00"
+text = "Authentication Fee: $0.00"
 horizontal_alignment = 1
 
-[node name="DurationLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+[node name="ErrorLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
 layout_mode = 2
-text = "Duration: 1 day"
+text = ""
 horizontal_alignment = 1
-
-[node name="ChanceLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
-layout_mode = 2
-text = "Genuine Chance: 80%"
-horizontal_alignment = 1
-
-[node name="GenuineLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
-layout_mode = 2
-text = "If genuine: value doubles (2x multiplier)"
-horizontal_alignment = 1
-
-[node name="FakeLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
-layout_mode = 2
-text = "If fake: item becomes near worthless ($0.50)"
-horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.9, 0.2, 0.2, 1)
 
 [node name="ButtonHBox" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2

@@ -79,6 +79,10 @@ func get_save_data() -> Dictionary:
 
 ## Restores state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_state = SecretThreadState.new()
 	if not data.is_empty():
 		_state.load_save_data(data)

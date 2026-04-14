@@ -4,9 +4,13 @@ extends Node3D
 
 signal door_interacted(storefront: Storefront)
 
+const FACADE_SIZE := Vector3(6.6, 3.5, 0.2)
 const SIGN_OFFSET := Vector3(0.0, 3.2, 0.16)
+const STATUS_SIGN_OFFSET := Vector3(0.0, 2.55, 0.16)
 const DOOR_SIZE := Vector3(1.5, 2.35, 0.16)
 const WINDOW_SIZE := Vector3(2.5, 2.0, 0.1)
+const ENTRY_ZONE_SIZE := Vector3(2.0, 2.0, 1.0)
+const ENTRY_ZONE_OFFSET := Vector3(0.0, 1.0, 0.7)
 
 static var _facade_mat: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_storefront_facade.tres"
@@ -28,29 +32,43 @@ static var _threshold_mat: StandardMaterial3D = preload(
 )
 
 @export var slot_index: int = 0
+@export var store_id: String = ""
+@export var store_name: String = "":
+	set(value):
+		store_name = value
+		_update_sign()
 
-var store_id: String = ""
 var store_type: String = ""
 var daily_rent: float = 0.0
 var is_owned: bool = false
+var is_locked: bool = false
 
 var _sign_label: Label3D
+var _status_label: Label3D
 var _door_interactable: Interactable
+var _entry_zone: Area3D
+var _is_store_open: bool = false
 
 
 func _ready() -> void:
 	_build_visual()
 	_update_sign()
+	_update_status_sign()
+	EventBus.store_opened.connect(_on_store_opened)
+	EventBus.store_closed.connect(_on_store_closed)
+	EventBus.hour_changed.connect(_on_hour_changed)
 
 
 ## Sets this storefront as owned with the given store info.
 func set_owned(p_store_id: String, p_store_type: String) -> void:
 	store_id = p_store_id
 	store_type = p_store_type
+	store_name = p_store_type
 	is_owned = true
 	_door_interactable.display_name = p_store_type
 	_door_interactable.interaction_prompt = "Enter"
 	_update_sign()
+	_update_status_sign()
 
 
 ## Sets this storefront as permanently under renovation.
@@ -58,6 +76,7 @@ func set_renovation() -> void:
 	is_owned = false
 	store_id = "renovation"
 	store_type = ""
+	store_name = "Under Renovation"
 	_door_interactable.display_name = "Under Renovation"
 	_door_interactable.interaction_prompt = "Investigate"
 	_door_interactable.interacted.disconnect(_on_door_interacted)
@@ -65,17 +84,43 @@ func set_renovation() -> void:
 		_on_renovation_interacted
 	)
 	_update_sign()
+	_update_status_sign()
+
+
+## Sets this storefront as locked (not yet eligible for lease).
+func set_locked() -> void:
+	is_locked = true
+	is_owned = false
+	store_id = ""
+	store_type = ""
+	store_name = ""
+	daily_rent = 0.0
+	_door_interactable.display_name = "Storefront"
+	_door_interactable.interaction_prompt = "Locked"
+	if _door_interactable.interacted.is_connected(_on_door_interacted):
+		_door_interactable.interacted.disconnect(_on_door_interacted)
+	if not _door_interactable.interacted.is_connected(_on_locked_interacted):
+		_door_interactable.interacted.connect(_on_locked_interacted)
+	_update_sign()
+	_update_status_sign()
 
 
 ## Sets this storefront as available for lease.
 func set_available(p_daily_rent: float) -> void:
 	daily_rent = p_daily_rent
 	is_owned = false
+	is_locked = false
 	store_id = ""
 	store_type = ""
+	store_name = ""
+	if _door_interactable.interacted.is_connected(_on_locked_interacted):
+		_door_interactable.interacted.disconnect(_on_locked_interacted)
+	if not _door_interactable.interacted.is_connected(_on_door_interacted):
+		_door_interactable.interacted.connect(_on_door_interacted)
 	_door_interactable.display_name = "Storefront"
 	_door_interactable.interaction_prompt = "Lease"
 	_update_sign()
+	_update_status_sign()
 
 
 func _build_visual() -> void:
@@ -84,29 +129,53 @@ func _build_visual() -> void:
 	_build_door()
 	_build_windows()
 	_build_sign()
+	_build_status_sign()
+	_build_entry_zone()
 
 
 func _build_facade() -> void:
+	var facade_body := StaticBody3D.new()
+	facade_body.name = "FacadeBody"
+	add_child(facade_body)
+
 	var left_mesh := MeshInstance3D.new()
 	left_mesh.mesh = BoxMesh.new()
 	(left_mesh.mesh as BoxMesh).size = Vector3(1.0, 3.5, 0.2)
 	left_mesh.position = Vector3(-2.8, 1.75, 0.0)
 	left_mesh.set_surface_override_material(0, _facade_mat)
-	add_child(left_mesh)
+	facade_body.add_child(left_mesh)
+
+	var left_col := CollisionShape3D.new()
+	left_col.shape = BoxShape3D.new()
+	(left_col.shape as BoxShape3D).size = Vector3(1.0, 3.5, 0.2)
+	left_col.position = Vector3(-2.8, 1.75, 0.0)
+	facade_body.add_child(left_col)
 
 	var right_mesh := MeshInstance3D.new()
 	right_mesh.mesh = BoxMesh.new()
 	(right_mesh.mesh as BoxMesh).size = Vector3(1.0, 3.5, 0.2)
 	right_mesh.position = Vector3(2.8, 1.75, 0.0)
 	right_mesh.set_surface_override_material(0, _facade_mat)
-	add_child(right_mesh)
+	facade_body.add_child(right_mesh)
+
+	var right_col := CollisionShape3D.new()
+	right_col.shape = BoxShape3D.new()
+	(right_col.shape as BoxShape3D).size = Vector3(1.0, 3.5, 0.2)
+	right_col.position = Vector3(2.8, 1.75, 0.0)
+	facade_body.add_child(right_col)
 
 	var header_mesh := MeshInstance3D.new()
 	header_mesh.mesh = BoxMesh.new()
 	(header_mesh.mesh as BoxMesh).size = Vector3(6.6, 0.8, 0.2)
 	header_mesh.position = Vector3(0.0, 3.1, 0.0)
 	header_mesh.set_surface_override_material(0, _facade_mat)
-	add_child(header_mesh)
+	facade_body.add_child(header_mesh)
+
+	var header_col := CollisionShape3D.new()
+	header_col.shape = BoxShape3D.new()
+	(header_col.shape as BoxShape3D).size = Vector3(6.6, 0.8, 0.2)
+	header_col.position = Vector3(0.0, 3.1, 0.0)
+	facade_body.add_child(header_col)
 
 
 func _build_entry_architecture() -> void:
@@ -232,27 +301,141 @@ func _build_sign() -> void:
 	_sign_label.pixel_size = 0.01
 	_sign_label.font_size = 32
 	_sign_label.outline_size = 4
-	_sign_label.modulate = Color(1.0, 0.95, 0.8)
 	_sign_label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
 	add_child(_sign_label)
+
+
+func _build_status_sign() -> void:
+	_status_label = Label3D.new()
+	_status_label.name = "StatusSign"
+	_status_label.position = STATUS_SIGN_OFFSET
+	_status_label.pixel_size = 0.008
+	_status_label.font_size = 24
+	_status_label.outline_size = 3
+	_status_label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	add_child(_status_label)
+
+
+func _build_entry_zone() -> void:
+	_entry_zone = Area3D.new()
+	_entry_zone.name = "EntryZone"
+	_entry_zone.position = ENTRY_ZONE_OFFSET
+	# Collision layer 0 (default) so it doesn't interfere with interactables
+	_entry_zone.collision_layer = 0
+	_entry_zone.collision_mask = 1
+	_entry_zone.monitoring = true
+	_entry_zone.monitorable = false
+	add_child(_entry_zone)
+
+	var col := CollisionShape3D.new()
+	col.shape = BoxShape3D.new()
+	(col.shape as BoxShape3D).size = ENTRY_ZONE_SIZE
+	_entry_zone.add_child(col)
+
+	_entry_zone.body_entered.connect(_on_entry_zone_body_entered)
+	_entry_zone.body_exited.connect(_on_entry_zone_body_exited)
 
 
 func _update_sign() -> void:
 	if not _sign_label:
 		return
+
 	if store_id == "renovation":
 		_sign_label.text = "Under Renovation"
 		_sign_label.modulate = Color(0.9, 0.6, 0.2)
 	elif is_owned:
-		_sign_label.text = store_type
+		_sign_label.text = store_name if store_name != "" else store_type
 		_sign_label.modulate = Color(1.0, 0.95, 0.8)
+		_sign_label.outline_modulate = Color(0.2, 0.15, 0.05)
+	elif is_locked:
+		_sign_label.text = "Coming Soon"
+		_sign_label.modulate = Color(0.35, 0.35, 0.35)
+		_sign_label.outline_modulate = Color(0.1, 0.1, 0.1)
 	else:
 		_sign_label.text = "For Lease — $%d/day" % int(daily_rent)
-		_sign_label.modulate = Color(0.8, 0.8, 0.7)
+		_sign_label.modulate = Color(0.5, 0.5, 0.45)
+		_sign_label.outline_modulate = Color(0.15, 0.15, 0.1)
+
+
+func _update_status_sign() -> void:
+	if not _status_label:
+		return
+
+	if store_id == "renovation" or is_locked:
+		_status_label.visible = false
+		return
+
+	_status_label.visible = true
+
+	if not is_owned:
+		_status_label.text = "FOR LEASE"
+		_status_label.modulate = Color(0.9, 0.85, 0.2)
+		_status_label.outline_modulate = Color(0.3, 0.28, 0.05)
+		return
+
+	if _is_store_open:
+		_status_label.text = "OPEN"
+		_status_label.modulate = Color(0.2, 0.9, 0.3)
+		_status_label.outline_modulate = Color(0.05, 0.3, 0.08)
+	else:
+		_status_label.text = "CLOSED"
+		_status_label.modulate = Color(0.9, 0.2, 0.2)
+		_status_label.outline_modulate = Color(0.3, 0.05, 0.05)
+
+
+func _on_store_opened(opened_store_id: String) -> void:
+	if opened_store_id != store_id:
+		return
+	_is_store_open = true
+	_update_status_sign()
+
+
+func _on_store_closed(closed_store_id: String) -> void:
+	if closed_store_id != store_id:
+		return
+	_is_store_open = false
+	_update_status_sign()
+
+
+func _on_hour_changed(hour: int) -> void:
+	if not is_owned:
+		return
+	var was_open: bool = _is_store_open
+	_is_store_open = (
+		hour >= Constants.STORE_OPEN_HOUR
+		and hour < Constants.STORE_CLOSE_HOUR
+	)
+	if _is_store_open != was_open:
+		_update_status_sign()
+
+
+func _on_entry_zone_body_entered(body: Node3D) -> void:
+	if not body.is_in_group("player"):
+		return
+	if store_id.is_empty():
+		return
+	EventBus.storefront_zone_entered.emit(store_id)
+
+
+func _on_entry_zone_body_exited(body: Node3D) -> void:
+	if not body.is_in_group("player"):
+		return
+	if store_id.is_empty():
+		return
+	EventBus.storefront_zone_exited.emit(store_id)
 
 
 func _on_door_interacted(_interactable: Interactable) -> void:
 	door_interacted.emit(self)
+
+
+func _on_locked_interacted(
+	_interactable: Interactable,
+) -> void:
+	EventBus.notification_requested.emit(
+		"This storefront is not yet available. "
+		+ "Build your reputation and earnings to unlock it."
+	)
 
 
 func _on_renovation_interacted(

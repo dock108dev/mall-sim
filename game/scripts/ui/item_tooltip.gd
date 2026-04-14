@@ -113,8 +113,8 @@ func _update_market_value(item: ItemInstance) -> void:
 
 
 func _update_set_price(item: ItemInstance) -> void:
-	if item.set_price > 0.0 and item.current_location.begins_with("shelf"):
-		_price_label.text = "Your Price: $%.2f" % item.set_price
+	if item.player_set_price > 0.0 and item.current_location.begins_with("shelf"):
+		_price_label.text = "Your Price: $%.2f" % item.player_set_price
 		_price_label.visible = true
 	else:
 		_price_label.visible = false

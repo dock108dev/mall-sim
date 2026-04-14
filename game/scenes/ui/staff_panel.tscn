@@ -34,10 +34,10 @@ theme_type_variation = &"HeaderLabel"
 size_flags_horizontal = 3
 text = "Staff Management"
 
-[node name="CashLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+[node name="CapacityLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
 layout_mode = 2
-custom_minimum_size = Vector2(120, 0)
-text = "Cash: $0.00"
+custom_minimum_size = Vector2(100, 0)
+text = "Staff: 0 / 2"
 horizontal_alignment = 2
 
 [node name="CloseButton" type="Button" parent="PanelRoot/Margin/VBox/Header"]
@@ -45,90 +45,62 @@ layout_mode = 2
 custom_minimum_size = Vector2(30, 0)
 text = "X"
 
-[node name="StatusLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+[node name="TabContainer" type="TabContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
-text = "Reputation: 0 (need 20 to hire)"
+size_flags_vertical = 3
 
-[node name="HiredSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+[node name="CurrentStaff" type="MarginContainer" parent="PanelRoot/Margin/VBox/TabContainer"]
 layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
 
-[node name="HiredTitle" type="Label" parent="PanelRoot/Margin/VBox/HiredSection"]
+[node name="StaffScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/TabContainer/CurrentStaff"]
 layout_mode = 2
-theme_type_variation = &"HeaderLabel"
-text = "Current Staff (0/2)"
+size_flags_vertical = 3
 
-[node name="HiredList" type="VBoxContainer" parent="PanelRoot/Margin/VBox/HiredSection"]
+[node name="StaffList" type="VBoxContainer" parent="PanelRoot/Margin/VBox/TabContainer/CurrentStaff/StaffScroll"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
 
-[node name="EmptyHiredLabel" type="Label" parent="PanelRoot/Margin/VBox/HiredSection/HiredList"]
+[node name="Hire" type="MarginContainer" parent="PanelRoot/Margin/VBox/TabContainer"]
 layout_mode = 2
-text = "No staff hired"
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="HireScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/TabContainer/Hire"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HireList" type="VBoxContainer" parent="PanelRoot/Margin/VBox/TabContainer/Hire/HireScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="ConfirmDialog" type="ConfirmationDialog" parent="."]
+title = "Confirm Fire"
+initial_position = 1
+size = Vector2i(300, 120)
+ok_button_text = "Fire"
+cancel_button_text = "Cancel"
+
+[node name="ToastPanel" type="PanelContainer" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 20.0
+offset_right = 150.0
+offset_bottom = 50.0
+
+[node name="ToastLabel" type="Label" parent="ToastPanel"]
+layout_mode = 2
 horizontal_alignment = 1
-
-[node name="PolicySection" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
-layout_mode = 2
-
-[node name="PolicyLabel" type="Label" parent="PanelRoot/Margin/VBox/PolicySection"]
-layout_mode = 2
-text = "Price Policy:"
-
-[node name="MinLabel" type="Label" parent="PanelRoot/Margin/VBox/PolicySection"]
-layout_mode = 2
-text = "Min:"
-
-[node name="MinSlider" type="HSlider" parent="PanelRoot/Margin/VBox/PolicySection"]
-layout_mode = 2
-size_flags_horizontal = 3
-custom_minimum_size = Vector2(100, 0)
-min_value = 0.1
-max_value = 2.0
-step = 0.1
-value = 0.5
-
-[node name="MinValue" type="Label" parent="PanelRoot/Margin/VBox/PolicySection"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 0)
-text = "50%"
-
-[node name="MaxLabel" type="Label" parent="PanelRoot/Margin/VBox/PolicySection"]
-layout_mode = 2
-text = "Max:"
-
-[node name="MaxSlider" type="HSlider" parent="PanelRoot/Margin/VBox/PolicySection"]
-layout_mode = 2
-size_flags_horizontal = 3
-custom_minimum_size = Vector2(100, 0)
-min_value = 0.5
-max_value = 5.0
-step = 0.1
-value = 2.0
-
-[node name="MaxValue" type="Label" parent="PanelRoot/Margin/VBox/PolicySection"]
-layout_mode = 2
-custom_minimum_size = Vector2(40, 0)
-text = "200%"
-
-[node name="HSeparator" type="HSeparator" parent="PanelRoot/Margin/VBox"]
-layout_mode = 2
-
-[node name="AvailableTitle" type="Label" parent="PanelRoot/Margin/VBox"]
-layout_mode = 2
-theme_type_variation = &"HeaderLabel"
-text = "Available for Hire"
-
-[node name="AvailableScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="AvailableList" type="VBoxContainer" parent="PanelRoot/Margin/VBox/AvailableScroll"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="Footer" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
-layout_mode = 2
-
-[node name="WagesLabel" type="Label" parent="PanelRoot/Margin/VBox/Footer"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Daily wages: $0"
+vertical_alignment = 1
+text = ""

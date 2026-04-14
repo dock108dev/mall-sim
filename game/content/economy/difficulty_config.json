@@ -1,0 +1,96 @@
+{
+  "type": "difficulty_config",
+  "tiers": [
+    {
+      "id": "easy",
+      "display_name": "Chill Mode",
+      "tagline": "A forgiving mall life.",
+      "modifiers": {
+        "starting_cash_multiplier": 1.50,
+        "daily_rent_multiplier": 0.70,
+        "wholesale_cost_multiplier": 0.85,
+        "foot_traffic_multiplier": 1.30,
+        "purchase_probability_multiplier": 1.25,
+        "customer_budget_multiplier": 1.20,
+        "haggle_success_rate_multiplier": 1.30,
+        "haggle_acceptance_base_rate": 0.60,
+        "haggle_concession_ceiling": 0.20,
+        "price_modifier": 1.10,
+        "market_floor_multiplier": 1.10,
+        "rarity_scale_multiplier": 0.90,
+        "trend_duration_multiplier": 1.40,
+        "staff_wage_multiplier": 0.85,
+        "morale_decay_multiplier": 0.70,
+        "staff_quit_threshold": 0.15,
+        "supplier_lead_time_multiplier": 0.80,
+        "daily_order_limit_multiplier": 1.25,
+        "stockout_probability_multiplier": 0.60,
+        "supplier_stockout_probability": 0.00
+      },
+      "flags": {
+        "emergency_cash_injection_enabled": true
+      }
+    },
+    {
+      "id": "normal",
+      "display_name": "Mall Life",
+      "tagline": "The authentic mall experience.",
+      "modifiers": {
+        "starting_cash_multiplier": 1.00,
+        "daily_rent_multiplier": 1.00,
+        "wholesale_cost_multiplier": 1.00,
+        "foot_traffic_multiplier": 1.00,
+        "purchase_probability_multiplier": 1.00,
+        "customer_budget_multiplier": 1.00,
+        "haggle_success_rate_multiplier": 1.00,
+        "haggle_acceptance_base_rate": 0.45,
+        "haggle_concession_ceiling": 0.15,
+        "price_modifier": 1.00,
+        "market_floor_multiplier": 1.00,
+        "rarity_scale_multiplier": 1.00,
+        "trend_duration_multiplier": 1.00,
+        "staff_wage_multiplier": 1.00,
+        "morale_decay_multiplier": 1.00,
+        "staff_quit_threshold": 0.25,
+        "supplier_lead_time_multiplier": 1.00,
+        "daily_order_limit_multiplier": 1.00,
+        "stockout_probability_multiplier": 1.00,
+        "supplier_stockout_probability": 0.05
+      },
+      "flags": {
+        "emergency_cash_injection_enabled": false
+      }
+    },
+    {
+      "id": "hard",
+      "display_name": "Going Out of Business",
+      "tagline": "Every day is a fight.",
+      "modifiers": {
+        "starting_cash_multiplier": 0.70,
+        "daily_rent_multiplier": 1.35,
+        "wholesale_cost_multiplier": 1.15,
+        "foot_traffic_multiplier": 0.75,
+        "purchase_probability_multiplier": 0.70,
+        "customer_budget_multiplier": 0.80,
+        "haggle_success_rate_multiplier": 0.65,
+        "haggle_acceptance_base_rate": 0.30,
+        "haggle_concession_ceiling": 0.08,
+        "price_modifier": 0.80,
+        "market_floor_multiplier": 0.85,
+        "rarity_scale_multiplier": 1.20,
+        "trend_duration_multiplier": 0.70,
+        "staff_wage_multiplier": 1.20,
+        "morale_decay_multiplier": 1.40,
+        "staff_quit_threshold": 0.35,
+        "supplier_lead_time_multiplier": 1.30,
+        "daily_order_limit_multiplier": 0.75,
+        "stockout_probability_multiplier": 1.50,
+        "supplier_stockout_probability": 0.15
+      },
+      "flags": {
+        "emergency_cash_injection_enabled": false
+      }
+    }
+  ],
+  "default_tier": "normal"
+}

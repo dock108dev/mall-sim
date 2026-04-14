@@ -1,40 +1,52 @@
-## Manages the first-day tutorial sequence and contextual tip scheduling.
+## Manages the first-play tutorial sequence and contextual tip scheduling.
 class_name TutorialSystem
 extends Node
 
 enum TutorialStep {
 	WELCOME,
-	VIEW_BACKROOM,
+	WALK_TO_STORE,
+	ENTER_STORE,
+	OPEN_INVENTORY,
 	PLACE_ITEM,
+	OPEN_PRICING,
 	SET_PRICE,
 	WAIT_FOR_CUSTOMER,
-	COMPLETE_SALE,
-	VIEW_DAY_SUMMARY,
+	SALE_COMPLETED,
+	END_OF_DAY,
 	FINISHED,
 }
 
 const STEP_IDS: Dictionary = {
 	TutorialStep.WELCOME: "welcome",
-	TutorialStep.VIEW_BACKROOM: "view_backroom",
+	TutorialStep.WALK_TO_STORE: "walk_to_store",
+	TutorialStep.ENTER_STORE: "enter_store",
+	TutorialStep.OPEN_INVENTORY: "open_inventory",
 	TutorialStep.PLACE_ITEM: "place_item",
+	TutorialStep.OPEN_PRICING: "open_pricing",
 	TutorialStep.SET_PRICE: "set_price",
 	TutorialStep.WAIT_FOR_CUSTOMER: "wait_for_customer",
-	TutorialStep.COMPLETE_SALE: "complete_sale",
-	TutorialStep.VIEW_DAY_SUMMARY: "view_day_summary",
+	TutorialStep.SALE_COMPLETED: "sale_completed",
+	TutorialStep.END_OF_DAY: "end_of_day",
 	TutorialStep.FINISHED: "finished",
 }
 
 const STEP_TEXT_KEYS: Dictionary = {
 	TutorialStep.WELCOME: "TUTORIAL_WELCOME",
-	TutorialStep.VIEW_BACKROOM: "TUTORIAL_VIEW_BACKROOM",
+	TutorialStep.WALK_TO_STORE: "TUTORIAL_WALK_TO_STORE",
+	TutorialStep.ENTER_STORE: "TUTORIAL_ENTER_STORE",
+	TutorialStep.OPEN_INVENTORY: "TUTORIAL_OPEN_INVENTORY",
 	TutorialStep.PLACE_ITEM: "TUTORIAL_PLACE_ITEM",
+	TutorialStep.OPEN_PRICING: "TUTORIAL_OPEN_PRICING",
 	TutorialStep.SET_PRICE: "TUTORIAL_SET_PRICE",
 	TutorialStep.WAIT_FOR_CUSTOMER: "TUTORIAL_WAIT_CUSTOMER",
-	TutorialStep.COMPLETE_SALE: "TUTORIAL_COMPLETE_SALE",
-	TutorialStep.VIEW_DAY_SUMMARY: "TUTORIAL_VIEW_SUMMARY",
+	TutorialStep.SALE_COMPLETED: "TUTORIAL_SALE_COMPLETED",
+	TutorialStep.END_OF_DAY: "TUTORIAL_END_OF_DAY",
 	TutorialStep.FINISHED: "",
 }
 
+const PROGRESS_PATH: String = "user://tutorial_progress.cfg"
+const WELCOME_DURATION: float = 5.0
+const MOVEMENT_THRESHOLD: float = 5.0
 const CONTEXTUAL_TIP_DAYS: int = 3
 
 const CONTEXTUAL_TIP_KEYS: Dictionary = {
@@ -48,55 +60,73 @@ var tutorial_active: bool = false
 var current_step: TutorialStep = TutorialStep.WELCOME
 var _tips_shown: Dictionary = {}
 var _welcome_timer: float = 0.0
-var _welcome_duration: float = 5.0
+var _movement_accumulated: float = 0.0
 
 
 func initialize(is_new_game: bool) -> void:
+	if is_new_game:
+		_apply_state({
+			"tutorial_completed": false,
+			"current_step": TutorialStep.WELCOME,
+		})
+		_save_progress()
+		return
+	_load_progress()
 	if tutorial_completed:
-		return
-	if not is_new_game:
-		return
-	tutorial_active = true
-	current_step = TutorialStep.WELCOME
-	GameManager.is_tutorial_active = true
-	_connect_signals()
-	_emit_current_step()
+		_ensure_day_started_connected()
 
 
 func _connect_signals() -> void:
-	EventBus.panel_opened.connect(_on_panel_opened)
-	EventBus.item_stocked.connect(_on_item_stocked)
-	EventBus.price_set.connect(_on_price_set)
-	EventBus.customer_entered.connect(_on_customer_entered)
-	EventBus.item_sold.connect(_on_item_sold)
-	EventBus.game_state_changed.connect(
-		_on_game_state_changed
-	)
-	EventBus.day_started.connect(_on_day_started)
+	if not EventBus.skip_tutorial_requested.is_connected(
+		skip_tutorial
+	):
+		EventBus.skip_tutorial_requested.connect(skip_tutorial)
+	if not EventBus.store_entered.is_connected(_on_store_entered):
+		EventBus.store_entered.connect(_on_store_entered)
+	if not EventBus.panel_opened.is_connected(_on_panel_opened):
+		EventBus.panel_opened.connect(_on_panel_opened)
+	if not EventBus.item_stocked.is_connected(_on_item_stocked):
+		EventBus.item_stocked.connect(_on_item_stocked)
+	if not EventBus.price_set.is_connected(_on_price_set):
+		EventBus.price_set.connect(_on_price_set)
+	if not EventBus.customer_spawned.is_connected(
+		_on_customer_spawned
+	):
+		EventBus.customer_spawned.connect(_on_customer_spawned)
+	if not EventBus.customer_purchased.is_connected(
+		_on_customer_purchased
+	):
+		EventBus.customer_purchased.connect(_on_customer_purchased)
+	if not EventBus.day_ended.is_connected(_on_day_ended):
+		EventBus.day_ended.connect(_on_day_ended)
+	_ensure_day_started_connected()
 
 
-## Disconnects step-tracking signals but keeps day_started for contextual tips.
 func _disconnect_step_signals() -> void:
+	if EventBus.skip_tutorial_requested.is_connected(
+		skip_tutorial
+	):
+		EventBus.skip_tutorial_requested.disconnect(skip_tutorial)
+	if EventBus.store_entered.is_connected(_on_store_entered):
+		EventBus.store_entered.disconnect(_on_store_entered)
 	if EventBus.panel_opened.is_connected(_on_panel_opened):
 		EventBus.panel_opened.disconnect(_on_panel_opened)
 	if EventBus.item_stocked.is_connected(_on_item_stocked):
 		EventBus.item_stocked.disconnect(_on_item_stocked)
 	if EventBus.price_set.is_connected(_on_price_set):
 		EventBus.price_set.disconnect(_on_price_set)
-	if EventBus.customer_entered.is_connected(
-		_on_customer_entered
+	if EventBus.customer_spawned.is_connected(
+		_on_customer_spawned
 	):
-		EventBus.customer_entered.disconnect(
-			_on_customer_entered
-		)
-	if EventBus.item_sold.is_connected(_on_item_sold):
-		EventBus.item_sold.disconnect(_on_item_sold)
-	if EventBus.game_state_changed.is_connected(
-		_on_game_state_changed
+		EventBus.customer_spawned.disconnect(_on_customer_spawned)
+	if EventBus.customer_purchased.is_connected(
+		_on_customer_purchased
 	):
-		EventBus.game_state_changed.disconnect(
-			_on_game_state_changed
+		EventBus.customer_purchased.disconnect(
+			_on_customer_purchased
 		)
+	if EventBus.day_ended.is_connected(_on_day_ended):
+		EventBus.day_ended.disconnect(_on_day_ended)
 
 
 func _process(delta: float) -> void:
@@ -104,8 +134,10 @@ func _process(delta: float) -> void:
 		return
 	if current_step == TutorialStep.WELCOME:
 		_welcome_timer += delta
-		if _welcome_timer >= _welcome_duration:
+		if _welcome_timer >= WELCOME_DURATION:
 			_advance_step()
+	elif current_step == TutorialStep.WALK_TO_STORE:
+		_track_movement(delta)
 
 
 func skip_tutorial() -> void:
@@ -115,7 +147,32 @@ func skip_tutorial() -> void:
 	tutorial_completed = true
 	GameManager.is_tutorial_active = false
 	_disconnect_step_signals()
+	_save_progress()
 	EventBus.tutorial_skipped.emit()
+
+
+func get_current_step_text() -> String:
+	var key: String = STEP_TEXT_KEYS.get(current_step, "")
+	if key.is_empty():
+		return ""
+	return tr(key)
+
+
+func get_save_data() -> Dictionary:
+	var tips_data: Dictionary = {}
+	for key: String in _tips_shown:
+		tips_data[key] = _tips_shown[key]
+	return {
+		"tutorial_completed": tutorial_completed,
+		"tutorial_active": tutorial_active,
+		"current_step": current_step,
+		"tips_shown": tips_data,
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+	_save_progress()
 
 
 func _advance_step() -> void:
@@ -130,6 +187,8 @@ func _advance_step() -> void:
 		return
 
 	current_step = next_value as TutorialStep
+	_movement_accumulated = 0.0
+	_save_progress()
 	_emit_current_step()
 
 
@@ -139,6 +198,7 @@ func _complete_tutorial() -> void:
 	tutorial_completed = true
 	GameManager.is_tutorial_active = false
 	_disconnect_step_signals()
+	_save_progress()
 	EventBus.tutorial_completed.emit()
 
 
@@ -147,12 +207,36 @@ func _emit_current_step() -> void:
 	EventBus.tutorial_step_changed.emit(step_id)
 
 
+func _track_movement(delta: float) -> void:
+	var input: Vector2 = Input.get_vector(
+		"move_left", "move_right",
+		"move_forward", "move_back",
+	)
+	if input.is_zero_approx():
+		return
+	_movement_accumulated += input.length() * delta * 6.0
+	if _movement_accumulated >= MOVEMENT_THRESHOLD:
+		_advance_step()
+
+
+func _on_store_entered(_store_id: StringName) -> void:
+	if not tutorial_active:
+		return
+	if current_step == TutorialStep.ENTER_STORE:
+		_advance_step()
+
+
 func _on_panel_opened(panel_name: String) -> void:
 	if not tutorial_active:
 		return
 	if (
-		current_step == TutorialStep.VIEW_BACKROOM
+		current_step == TutorialStep.OPEN_INVENTORY
 		and panel_name == "inventory"
+	):
+		_advance_step()
+	elif (
+		current_step == TutorialStep.OPEN_PRICING
+		and panel_name == "pricing"
 	):
 		_advance_step()
 
@@ -175,33 +259,27 @@ func _on_price_set(
 		_advance_step()
 
 
-func _on_customer_entered(
-	_customer_data: Dictionary
-) -> void:
+func _on_customer_spawned(_customer: Node) -> void:
 	if not tutorial_active:
 		return
 	if current_step == TutorialStep.WAIT_FOR_CUSTOMER:
 		_advance_step()
 
 
-func _on_item_sold(
-	_item_id: String, _price: float, _category: String
+func _on_customer_purchased(
+	_store_id: StringName, _item_id: StringName,
+	_price: float, _customer_id: StringName
 ) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.COMPLETE_SALE:
+	if current_step == TutorialStep.SALE_COMPLETED:
 		_advance_step()
 
 
-func _on_game_state_changed(
-	_old_state: int, new_state: int
-) -> void:
+func _on_day_ended(_day: int) -> void:
 	if not tutorial_active:
 		return
-	if (
-		current_step == TutorialStep.VIEW_DAY_SUMMARY
-		and new_state == GameManager.GameState.DAY_SUMMARY
-	):
+	if current_step == TutorialStep.END_OF_DAY:
 		_advance_step()
 
 
@@ -227,7 +305,6 @@ func _show_contextual_tip_for_day(day: int) -> void:
 	if not tip_key_str.is_empty():
 		EventBus.contextual_tip_requested.emit(tr(tip_key_str))
 
-	# Show build mode tip on day 2 as well, slightly delayed
 	if day == 2 and not _tips_shown.get("build_mode", false):
 		_tips_shown["build_mode"] = true
 		var build_tip_key: String = CONTEXTUAL_TIP_KEYS.get(
@@ -248,38 +325,69 @@ func _ensure_day_started_connected() -> void:
 		EventBus.day_started.connect(_on_day_started)
 
 
-func get_current_step_text() -> String:
-	var key: String = STEP_TEXT_KEYS.get(current_step, "")
-	if key.is_empty():
-		return ""
-	return tr(key)
-
-
-func get_save_data() -> Dictionary:
+func _save_progress() -> void:
+	var config := ConfigFile.new()
+	config.set_value("tutorial", "completed", tutorial_completed)
+	config.set_value("tutorial", "current_step", current_step)
+	config.set_value("tutorial", "active", tutorial_active)
 	var tips_data: Dictionary = {}
 	for key: String in _tips_shown:
 		tips_data[key] = _tips_shown[key]
-	return {
-		"tutorial_completed": tutorial_completed,
-		"current_step": current_step,
-		"tips_shown": tips_data,
+	config.set_value("tutorial", "tips_shown", tips_data)
+	var err: Error = config.save(PROGRESS_PATH)
+	if err != OK:
+		push_error(
+			"Failed to save tutorial progress: %s" % error_string(err)
+		)
+
+
+func _load_progress() -> void:
+	var config := ConfigFile.new()
+	var err: Error = config.load(PROGRESS_PATH)
+	if err != OK:
+		return
+	var data: Dictionary = {
+		"tutorial_completed": config.get_value(
+			"tutorial", "completed", false
+		),
+		"current_step": config.get_value(
+			"tutorial", "current_step", TutorialStep.WELCOME
+		),
+		"tutorial_active": config.get_value(
+			"tutorial", "active", false
+		),
+		"tips_shown": config.get_value(
+			"tutorial", "tips_shown", {}
+		),
 	}
+	_apply_state(data)
 
 
-func load_save_data(data: Dictionary) -> void:
-	tutorial_completed = data.get(
-		"tutorial_completed", false
-	) as bool
+func _apply_state(data: Dictionary) -> void:
+	tutorial_completed = bool(
+		data.get("tutorial_completed", false)
+	)
 	current_step = int(
 		data.get("current_step", TutorialStep.WELCOME)
 	) as TutorialStep
-	var tips_data: Variant = data.get("tips_shown", {})
+
 	_tips_shown.clear()
+	var tips_data: Variant = data.get("tips_shown", {})
 	if tips_data is Dictionary:
 		var tips_dict: Dictionary = tips_data as Dictionary
 		for key: Variant in tips_dict:
 			_tips_shown[str(key)] = bool(tips_dict[key])
-	if tutorial_completed:
+
+	_welcome_timer = 0.0
+	_movement_accumulated = 0.0
+
+	if tutorial_completed or current_step == TutorialStep.FINISHED:
 		tutorial_active = false
 		GameManager.is_tutorial_active = false
-	_ensure_day_started_connected()
+		_disconnect_step_signals()
+		_ensure_day_started_connected()
+	else:
+		tutorial_active = true
+		GameManager.is_tutorial_active = true
+		_connect_signals()
+		_emit_current_step()

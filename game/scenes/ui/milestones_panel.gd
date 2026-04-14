@@ -96,9 +96,9 @@ func _clear_list() -> void:
 
 func _create_milestone_row(milestone: Dictionary) -> void:
 	var mid: String = milestone.get("id", "")
-	var mname: String = milestone.get("name", mid)
+	var mname: String = milestone.get("display_name", mid)
 	var desc: String = milestone.get("description", "")
-	var reward: String = milestone.get("reward_description", "")
+	var reward: String = milestone.get("reward_type", "")
 	var is_done: bool = progression_system.is_milestone_completed(mid)
 	var progress: float = (
 		progression_system.get_milestone_progress(milestone)

@@ -78,7 +78,7 @@ func _load_all_profiles() -> void:
 		)
 		return
 	for store_id: String in GameManager.owned_stores:
-		var profiles: Array[CustomerProfile] = (
+		var profiles: Array[CustomerTypeDefinition] = (
 			GameManager.data_loader.get_customer_types_for_store(
 				store_id
 			)
@@ -143,7 +143,7 @@ func _spawn_for_store(store_id: String) -> void:
 	if profiles.is_empty():
 		return
 
-	var profile: CustomerProfile = profiles.pick_random()
+	var profile: CustomerTypeDefinition = profiles.pick_random()
 	var is_active: bool = (
 		store_id == GameManager.current_store_id
 	)
@@ -160,12 +160,12 @@ func _spawn_for_store(store_id: String) -> void:
 
 
 func _spawn_background_customer(
-	store_id: String, profile: CustomerProfile
+	store_id: String, profile: CustomerTypeDefinition
 ) -> void:
 	var customer_data: Dictionary = {
 		"customer_id": randi(),
 		"profile_id": profile.id,
-		"profile_name": profile.name,
+		"profile_name": profile.customer_name,
 		"store_id": store_id,
 		"is_background": true,
 	}

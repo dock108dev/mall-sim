@@ -70,6 +70,13 @@ func is_full() -> bool:
 	return _queue.size() >= MAX_QUEUE_SIZE
 
 
+## Returns the customer at the given index, or null if out of range.
+func get_at(index: int) -> Customer:
+	if index < 0 or index >= _queue.size():
+		return null
+	return _queue[index]
+
+
 ## Returns true if the given customer is in the queue.
 func has_customer(customer: Customer) -> bool:
 	return _queue.has(customer)

@@ -1,0 +1,83 @@
+[gd_scene load_steps=2 format=3 uid="uid://provenancepanel01"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/provenance_panel.gd" id="1"]
+
+[node name="ProvenancePanel" type="CanvasLayer"]
+layer = 5
+script = ExtResource("1")
+
+[node name="PanelRoot" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -140.0
+offset_right = 220.0
+offset_bottom = 140.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="PanelRoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Provenance Verification"
+horizontal_alignment = 1
+
+[node name="InfoVBox" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ItemNameLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = "Item Name"
+horizontal_alignment = 1
+
+[node name="AskingPriceLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = "Asking Price: $0.00"
+horizontal_alignment = 1
+
+[node name="AuthValueLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = "Authenticated Value: $0.00"
+horizontal_alignment = 1
+
+[node name="SuspiciousLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = "Suspicious Provenance"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.9, 0.6, 0.1, 1)
+
+[node name="ErrorLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="ButtonHBox" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="AcceptButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonHBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 36)
+text = "Accept"
+
+[node name="RejectButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonHBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 36)
+text = "Reject"

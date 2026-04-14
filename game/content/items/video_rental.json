@@ -1,7 +1,7 @@
 [
   {
     "id": "rental_cosmic_battles_4_vhs",
-    "name": "Cosmic Battles Episode IV: A Fresh Hope",
+    "item_name": "Cosmic Battles Episode IV: A Fresh Hope",
     "description": "A farm boy, a smuggler, a princess, and a space wizard walk into a Death Sphere. VHS, pan-and-scan.",
     "category": "vhs_classic",
     "subcategory": "sci_fi",
@@ -16,7 +16,7 @@
   },
   {
     "id": "rental_velociraptor_gardens_vhs",
-    "name": "Velociraptor Gardens",
+    "item_name": "Velociraptor Gardens",
     "description": "Life, uh, finds a way. Dinosaurs escape, chaos ensues, Jeff Goldbloom sweats.",
     "category": "vhs_classic",
     "subcategory": "sci_fi",
@@ -31,7 +31,7 @@
   },
   {
     "id": "rental_ghostcatchers_vhs",
-    "name": "Ghostcatchers",
+    "item_name": "Ghostcatchers",
     "description": "Who ya gonna phone? Four scientists with proton packs save New York from the paranormal.",
     "category": "vhs_classic",
     "subcategory": "comedy",
@@ -46,7 +46,7 @@
   },
   {
     "id": "rental_the_grid_vhs",
-    "name": "The Grid",
+    "item_name": "The Grid",
     "description": "Red pill or blue pill? Mind-bending action in a simulated reality. Please be kind, rewind.",
     "category": "vhs_new_release",
     "subcategory": "action",
@@ -61,7 +61,7 @@
   },
   {
     "id": "rental_wizard_academy_vhs",
-    "name": "Wizard Academy and the Enchanted Rock",
+    "item_name": "Wizard Academy and the Enchanted Rock",
     "description": "A boy discovers he's a wizard and attends a magical boarding school. Franchise starter.",
     "category": "vhs_new_release",
     "subcategory": "fantasy",
@@ -76,7 +76,7 @@
   },
   {
     "id": "rental_speed_racer_turbo_vhs",
-    "name": "Speed Racer: Turbo",
+    "item_name": "Speed Racer: Turbo",
     "description": "I live my life a quarter mile at a time. Street racing, family, and impossibly shiny cars.",
     "category": "vhs_new_release",
     "subcategory": "action",
@@ -91,7 +91,7 @@
   },
   {
     "id": "rental_pixel_story_vhs",
-    "name": "Pixel Story",
+    "item_name": "Pixel Story",
     "description": "What if your toys had feelings? Turns out they do, and they have abandonment issues.",
     "category": "vhs_classic",
     "subcategory": "animation",
@@ -106,7 +106,7 @@
   },
   {
     "id": "rental_karate_pupil_vhs",
-    "name": "The Karate Pupil",
+    "item_name": "The Karate Pupil",
     "description": "Wax on, wax off. Crane kick. That's the whole movie and it's perfect.",
     "category": "vhs_classic",
     "subcategory": "drama",
@@ -121,7 +121,7 @@
   },
   {
     "id": "rental_frightmare_oak_street_vhs",
-    "name": "Frightmare on Oak Street",
+    "item_name": "Frightmare on Oak Street",
     "description": "One, two, he's coming for you. Sleep is no longer safe. Striped sweater, razor glove.",
     "category": "vhs_classic",
     "subcategory": "horror",
@@ -136,7 +136,7 @@
   },
   {
     "id": "rental_notebook_of_secrets_vhs",
-    "name": "The Notebook of Secrets",
+    "item_name": "The Notebook of Secrets",
     "description": "Summer love, lost letters, rain-soaked reunions. Bring tissues.",
     "category": "vhs_classic",
     "subcategory": "romance",
@@ -151,7 +151,7 @@
   },
   {
     "id": "rental_space_cowboy_bebop_vhs",
-    "name": "Space Cowboy: The Movie",
+    "item_name": "Space Cowboy: The Movie",
     "description": "A bounty hunter, a dog, and a jazz soundtrack drift through space. See you later.",
     "category": "vhs_cult",
     "subcategory": "anime",
@@ -166,7 +166,7 @@
   },
   {
     "id": "rental_big_lebonski_vhs",
-    "name": "The Big Lebonski",
+    "item_name": "The Big Lebonski",
     "description": "The Dude abides. A bowling comedy-noir about mistaken identity and a rug that really tied the room together.",
     "category": "vhs_cult",
     "subcategory": "comedy",
@@ -181,7 +181,7 @@
   },
   {
     "id": "rental_chainsaw_ballet_vhs",
-    "name": "Chainsaw Ballet",
+    "item_name": "Chainsaw Ballet",
     "description": "Art-house horror. Beautiful cinematography of terrible things. Not for the faint-hearted.",
     "category": "vhs_cult",
     "subcategory": "horror",
@@ -196,7 +196,7 @@
   },
   {
     "id": "rental_foreign_cinema_collection_vhs",
-    "name": "The Postman Always Cries Twice (Foreign)",
+    "item_name": "The Postman Always Cries Twice (Foreign)",
     "description": "Subtitled Italian drama about love, loss, and postal delivery. A festival darling.",
     "category": "vhs_cult",
     "subcategory": "foreign",
@@ -211,7 +211,7 @@
   },
   {
     "id": "rental_the_grid_dvd",
-    "name": "The Grid (DVD)",
+    "item_name": "The Grid (DVD)",
     "description": "DVD edition with behind-the-scenes featurette. Widescreen. No rewinding required.",
     "category": "dvd_new_release",
     "subcategory": "action",
@@ -226,7 +226,7 @@
   },
   {
     "id": "rental_wizard_academy_dvd",
-    "name": "Wizard Academy and the Enchanted Rock (DVD)",
+    "item_name": "Wizard Academy and the Enchanted Rock (DVD)",
     "description": "DVD with deleted scenes and director commentary. The definitive version.",
     "category": "dvd_new_release",
     "subcategory": "fantasy",
@@ -241,7 +241,7 @@
   },
   {
     "id": "rental_velociraptor_gardens_dvd",
-    "name": "Velociraptor Gardens (DVD)",
+    "item_name": "Velociraptor Gardens (DVD)",
     "description": "Widescreen DVD with making-of documentary. The T-Rex scene is even scarier in digital.",
     "category": "dvd_classic",
     "subcategory": "sci_fi",
@@ -256,7 +256,7 @@
   },
   {
     "id": "rental_snack_microwave_popcorn",
-    "name": "Pop-O-Matic Microwave Popcorn",
+    "item_name": "Pop-O-Matic Microwave Popcorn",
     "description": "Movie night essential. Extra butter. The bag always puffs up more than you expect.",
     "category": "snacks",
     "subcategory": "popcorn",
@@ -268,7 +268,7 @@
   },
   {
     "id": "rental_snack_gummy_worms",
-    "name": "Sour Gummy Worms",
+    "item_name": "Sour Gummy Worms",
     "description": "Sour on the outside, sweet on the inside. Fingers will be sticky.",
     "category": "snacks",
     "subcategory": "candy",
@@ -280,7 +280,7 @@
   },
   {
     "id": "rental_snack_chocolate_bar",
-    "name": "ChocoBurst Bar",
+    "item_name": "ChocoBurst Bar",
     "description": "Milk chocolate with caramel and peanuts. The checkout counter classic.",
     "category": "snacks",
     "subcategory": "candy",
@@ -292,7 +292,7 @@
   },
   {
     "id": "rental_snack_cola",
-    "name": "Fizz-Pop Cola (20oz)",
+    "item_name": "Fizz-Pop Cola (20oz)",
     "description": "Ice cold from the mini fridge. The perfect movie companion.",
     "category": "snacks",
     "subcategory": "drinks",
@@ -304,7 +304,7 @@
   },
   {
     "id": "rental_snack_licorice",
-    "name": "Red Rope Licorice",
+    "item_name": "Red Rope Licorice",
     "description": "Pull-apart ropes of cherry-flavored nostalgia. A full bag lasts exactly one movie.",
     "category": "snacks",
     "subcategory": "candy",
@@ -316,7 +316,7 @@
   },
   {
     "id": "rental_poster_cosmic_battles",
-    "name": "Cosmic Battles Original Trilogy Poster",
+    "item_name": "Cosmic Battles Original Trilogy Poster",
     "description": "The classic painted poster. Three heroes, two droids, one Death Sphere. For sale, not rental.",
     "category": "merchandise",
     "subcategory": "posters",
@@ -328,7 +328,7 @@
   },
   {
     "id": "rental_poster_frightmare",
-    "name": "Frightmare on Oak Street Poster",
+    "item_name": "Frightmare on Oak Street Poster",
     "description": "The iconic striped-sweater silhouette poster. Glows under blacklight.",
     "category": "merchandise",
     "subcategory": "posters",
@@ -340,7 +340,7 @@
   },
   {
     "id": "rental_standee_wizard_academy",
-    "name": "Wizard Academy Cardboard Standee",
+    "item_name": "Wizard Academy Cardboard Standee",
     "description": "Life-size promotional standee. The kid with the glasses and the lightning scar. Slightly bent.",
     "category": "merchandise",
     "subcategory": "standees",
@@ -352,7 +352,7 @@
   },
   {
     "id": "rental_promo_keychain_velociraptor",
-    "name": "Velociraptor Gardens Keychain",
+    "item_name": "Velociraptor Gardens Keychain",
     "description": "Rubber dinosaur keychain from the original theatrical release. Promotional item.",
     "category": "merchandise",
     "subcategory": "promo",
@@ -364,7 +364,7 @@
   },
   {
     "id": "rental_cosmic_battles_5_vhs",
-    "name": "Cosmic Battles Episode V: The Empire Hits Back",
+    "item_name": "Cosmic Battles Episode V: The Empire Hits Back",
     "description": "I am your father. The darkest chapter. The best chapter. VHS, letterboxed.",
     "category": "vhs_classic",
     "subcategory": "sci_fi",
@@ -379,7 +379,7 @@
   },
   {
     "id": "rental_bug_life_vhs",
-    "name": "A Bug's Afternoon",
+    "item_name": "A Bug's Afternoon",
     "description": "An ant stands up to grasshopper bullies with the help of circus performers. Heartwarming.",
     "category": "vhs_classic",
     "subcategory": "animation",
@@ -394,7 +394,7 @@
   },
   {
     "id": "rental_gladiator_maximus_vhs",
-    "name": "Gladiator Maximus",
+    "item_name": "Gladiator Maximus",
     "description": "Are you not entertained? A general becomes a slave becomes a gladiator becomes a legend.",
     "category": "vhs_new_release",
     "subcategory": "action",
@@ -409,7 +409,7 @@
   },
   {
     "id": "rental_sixth_feeling_vhs",
-    "name": "The Sixth Feeling",
+    "item_name": "The Sixth Feeling",
     "description": "I see deceased people. The twist ending that everyone spoiled for everyone else.",
     "category": "vhs_new_release",
     "subcategory": "thriller",

@@ -28,6 +28,7 @@ func _ready() -> void:
 	_close_button.pressed.connect(close)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.trend_changed.connect(_on_trend_changed)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -179,6 +180,14 @@ func _get_status_text(
 	if current_day < fade_end:
 		return tr("TRENDS_FADING") % (fade_end - current_day)
 	return tr("TRENDS_EXPIRING")
+
+
+func _on_active_store_changed(new_store_id: StringName) -> void:
+	if _is_open:
+		if new_store_id.is_empty():
+			close(true)
+		else:
+			_refresh_list()
 
 
 func _on_panel_opened(panel_name: String) -> void:

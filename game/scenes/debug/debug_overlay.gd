@@ -87,7 +87,7 @@ func _build_display_text() -> String:
 	var hour_text: String = "N/A"
 	if time_system:
 		phase_text = TimeSystem.DayPhase.keys()[time_system.current_phase]
-		speed_text = "%.0fx" % time_system.time_scale
+		speed_text = "%.0fx" % time_system.speed_multiplier
 		day_text = str(time_system.current_day)
 		hour_text = str(time_system.current_hour) + ":00"
 

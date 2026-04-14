@@ -1,0 +1,80 @@
+[gd_scene load_steps=2 format=3 uid="uid://daysumpanel01"]
+
+[ext_resource type="Script" path="res://game/scripts/ui/day_summary_panel.gd" id="1"]
+
+[node name="DaySummaryPanel" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1")
+
+[node name="Overlay" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0)
+mouse_filter = 1
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Day 1 Summary"
+horizontal_alignment = 1
+
+[node name="RevenueRow" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Revenue: $0.00"
+horizontal_alignment = 1
+
+[node name="ExpensesRow" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Expenses: -$0.00"
+horizontal_alignment = 1
+
+[node name="WagesRow" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Wages: -$0.00"
+horizontal_alignment = 1
+
+[node name="NetRow" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Net: $0.00"
+horizontal_alignment = 1
+
+[node name="ReputationContainer" type="VBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="MilestoneBanner" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="AcknowledgeButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+size_flags_horizontal = 4
+text = "Begin Day 2"

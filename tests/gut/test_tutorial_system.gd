@@ -1,4 +1,4 @@
-## Tests for TutorialSystem step progression, skip flag, and contextual tips.
+## Tests for TutorialSystem step progression, skip, persistence, and tips.
 extends GutTest
 
 
@@ -32,25 +32,24 @@ func test_initialize_new_game_activates_tutorial() -> void:
 	)
 
 
-func test_step_progression_welcome_to_view_backroom() -> void:
+func test_step_progression_welcome_to_walk() -> void:
 	_tutorial.initialize(true)
 	var step_changed_id: String = ""
 	var on_step: Callable = func(id: String) -> void:
 		step_changed_id = id
 	EventBus.tutorial_step_changed.connect(on_step)
 
-	# Simulate WELCOME timer expiring via _process
-	_tutorial._welcome_timer = _tutorial._welcome_duration
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.VIEW_BACKROOM,
-		"Step should advance to VIEW_BACKROOM after welcome timer"
+		TutorialSystem.TutorialStep.WALK_TO_STORE,
+		"Step should advance to WALK_TO_STORE after welcome timer"
 	)
 	assert_eq(
-		step_changed_id, "view_backroom",
-		"tutorial_step_changed should emit with view_backroom"
+		step_changed_id, "walk_to_store",
+		"tutorial_step_changed should emit with walk_to_store"
 	)
 	EventBus.tutorial_step_changed.disconnect(on_step)
 
@@ -62,29 +61,30 @@ func test_step_progression_through_three_steps() -> void:
 		completed_steps.append(id)
 	EventBus.tutorial_step_completed.connect(on_completed)
 
-	# Step 1: WELCOME -> VIEW_BACKROOM (timer expires)
-	_tutorial._welcome_timer = _tutorial._welcome_duration
+	# WELCOME -> WALK_TO_STORE (timer expires)
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.VIEW_BACKROOM,
-		"Should be on VIEW_BACKROOM"
+		TutorialSystem.TutorialStep.WALK_TO_STORE,
+		"Should be on WALK_TO_STORE"
 	)
 
-	# Step 2: VIEW_BACKROOM -> PLACE_ITEM (open inventory panel)
-	EventBus.panel_opened.emit("inventory")
+	# WALK_TO_STORE -> ENTER_STORE (simulate movement threshold)
+	_tutorial._movement_accumulated = TutorialSystem.MOVEMENT_THRESHOLD
+	_tutorial._track_movement(0.01)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.PLACE_ITEM,
-		"Should be on PLACE_ITEM"
+		TutorialSystem.TutorialStep.ENTER_STORE,
+		"Should be on ENTER_STORE"
 	)
 
-	# Step 3: PLACE_ITEM -> SET_PRICE (stock an item)
-	EventBus.item_stocked.emit("test_item", "shelf_01")
+	# ENTER_STORE -> OPEN_INVENTORY (store entered signal)
+	EventBus.store_entered.emit(&"test_store")
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.SET_PRICE,
-		"Should be on SET_PRICE"
+		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		"Should be on OPEN_INVENTORY"
 	)
 
 	assert_eq(
@@ -92,8 +92,14 @@ func test_step_progression_through_three_steps() -> void:
 		"Three steps should have been completed"
 	)
 	assert_eq(completed_steps[0], "welcome", "First completed: welcome")
-	assert_eq(completed_steps[1], "view_backroom", "Second completed: view_backroom")
-	assert_eq(completed_steps[2], "place_item", "Third completed: place_item")
+	assert_eq(
+		completed_steps[1], "walk_to_store",
+		"Second completed: walk_to_store"
+	)
+	assert_eq(
+		completed_steps[2], "enter_store",
+		"Third completed: enter_store"
+	)
 
 	EventBus.tutorial_step_completed.disconnect(on_completed)
 
@@ -105,30 +111,39 @@ func test_full_step_progression_to_completion() -> void:
 		tutorial_completed_fired = true
 	EventBus.tutorial_completed.connect(on_complete)
 
-	# WELCOME -> VIEW_BACKROOM
-	_tutorial._welcome_timer = _tutorial._welcome_duration
+	# WELCOME -> WALK_TO_STORE
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 
-	# VIEW_BACKROOM -> PLACE_ITEM
+	# WALK_TO_STORE -> ENTER_STORE
+	_tutorial._movement_accumulated = TutorialSystem.MOVEMENT_THRESHOLD
+	_tutorial._track_movement(0.01)
+
+	# ENTER_STORE -> OPEN_INVENTORY
+	EventBus.store_entered.emit(&"test_store")
+
+	# OPEN_INVENTORY -> PLACE_ITEM
 	EventBus.panel_opened.emit("inventory")
 
-	# PLACE_ITEM -> SET_PRICE
+	# PLACE_ITEM -> OPEN_PRICING
 	EventBus.item_stocked.emit("item_1", "shelf_1")
+
+	# OPEN_PRICING -> SET_PRICE
+	EventBus.panel_opened.emit("pricing")
 
 	# SET_PRICE -> WAIT_FOR_CUSTOMER
 	EventBus.price_set.emit("item_1", 9.99)
 
-	# WAIT_FOR_CUSTOMER -> COMPLETE_SALE
-	EventBus.customer_entered.emit({"customer_id": "c1"})
+	# WAIT_FOR_CUSTOMER -> SALE_COMPLETED
+	var mock_customer := Node.new()
+	EventBus.customer_spawned.emit(mock_customer)
+	mock_customer.queue_free()
 
-	# COMPLETE_SALE -> VIEW_DAY_SUMMARY
-	EventBus.item_sold.emit("item_1", 9.99, "sports")
+	# SALE_COMPLETED -> END_OF_DAY
+	EventBus.customer_purchased.emit(&"", &"item_1", 9.99, &"")
 
-	# VIEW_DAY_SUMMARY -> FINISHED
-	EventBus.game_state_changed.emit(
-		GameManager.GameState.PLAYING,
-		GameManager.GameState.DAY_SUMMARY
-	)
+	# END_OF_DAY -> FINISHED
+	EventBus.day_ended.emit(1)
 
 	assert_eq(
 		_tutorial.current_step,
@@ -154,20 +169,33 @@ func test_full_step_progression_to_completion() -> void:
 func test_wrong_signal_does_not_advance_step() -> void:
 	_tutorial.initialize(true)
 	# Advance past WELCOME
-	_tutorial._welcome_timer = _tutorial._welcome_duration
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
+
+	# Advance past WALK_TO_STORE
+	_tutorial._movement_accumulated = TutorialSystem.MOVEMENT_THRESHOLD
+	_tutorial._track_movement(0.01)
+
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.VIEW_BACKROOM,
-		"Should be on VIEW_BACKROOM"
+		TutorialSystem.TutorialStep.ENTER_STORE,
+		"Should be on ENTER_STORE"
 	)
 
-	# Emit item_stocked while on VIEW_BACKROOM — should not advance
+	# Emit item_stocked while on ENTER_STORE — should not advance
 	EventBus.item_stocked.emit("item_1", "shelf_1")
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.VIEW_BACKROOM,
-		"Should still be on VIEW_BACKROOM after wrong signal"
+		TutorialSystem.TutorialStep.ENTER_STORE,
+		"Should still be on ENTER_STORE after wrong signal"
+	)
+
+
+func test_ten_steps_defined() -> void:
+	var step_count: int = TutorialSystem.TutorialStep.FINISHED
+	assert_eq(
+		step_count, 10,
+		"There should be exactly 10 tutorial steps (FINISHED = 10)"
 	)
 
 
@@ -214,19 +242,15 @@ func test_skip_flag_prevents_tutorial_from_starting() -> void:
 
 	_tutorial.initialize(true)
 
-	assert_false(
+	assert_true(
 		_tutorial.tutorial_active,
-		"Tutorial should not activate when already completed"
-	)
-	assert_false(
-		started_fired,
-		"tutorial_step_changed should not fire when tutorial_completed is true"
+		"New game should always start tutorial even if previously completed"
 	)
 
 	EventBus.tutorial_step_changed.disconnect(on_step)
 
 
-func test_initialize_not_new_game_does_not_start() -> void:
+func test_initialize_not_new_game_no_cfg_does_not_start() -> void:
 	var started_fired: bool = false
 	var on_step: Callable = func(_id: String) -> void:
 		started_fired = true
@@ -236,14 +260,40 @@ func test_initialize_not_new_game_does_not_start() -> void:
 
 	assert_false(
 		_tutorial.tutorial_active,
-		"Tutorial should not activate for non-new game"
+		"Tutorial should not activate for non-new game without cfg"
 	)
 	assert_false(
 		started_fired,
-		"tutorial_step_changed should not fire for non-new game"
+		"tutorial_step_changed should not fire for non-new game without cfg"
 	)
 
 	EventBus.tutorial_step_changed.disconnect(on_step)
+
+
+func test_system_silent_after_completion() -> void:
+	_tutorial.tutorial_completed = true
+	_tutorial.tutorial_active = false
+	_tutorial.current_step = TutorialSystem.TutorialStep.FINISHED
+
+	var signals_fired: int = 0
+	var on_step: Callable = func(_id: String) -> void:
+		signals_fired += 1
+	var on_completed: Callable = func() -> void:
+		signals_fired += 1
+	EventBus.tutorial_step_changed.connect(on_step)
+	EventBus.tutorial_completed.connect(on_completed)
+
+	EventBus.store_entered.emit(&"test_store")
+	EventBus.panel_opened.emit("inventory")
+	EventBus.item_stocked.emit("item_1", "shelf_1")
+
+	assert_eq(
+		signals_fired, 0,
+		"No tutorial signals should fire after completion"
+	)
+
+	EventBus.tutorial_step_changed.disconnect(on_step)
+	EventBus.tutorial_completed.disconnect(on_completed)
 
 
 # --- Contextual tips ---
@@ -258,7 +308,6 @@ func test_contextual_tip_fires_once_per_trigger() -> void:
 		tip_texts.append(text)
 	EventBus.contextual_tip_requested.connect(on_tip)
 
-	# Day 2 should fire the ordering tip
 	EventBus.day_started.emit(2)
 	var first_count: int = tip_texts.size()
 	assert_true(
@@ -266,7 +315,6 @@ func test_contextual_tip_fires_once_per_trigger() -> void:
 		"At least one tip should fire on day 2"
 	)
 
-	# Emit day 2 again — should NOT fire the same tip again
 	EventBus.day_started.emit(2)
 	assert_eq(
 		tip_texts.size(), first_count,
@@ -364,4 +412,25 @@ func test_save_and_load_preserves_state() -> void:
 	assert_true(
 		new_tutorial._tips_shown.get("build_mode", false) as bool,
 		"build_mode tip should be marked shown after load"
+	)
+
+
+func test_new_game_always_starts_at_step_zero() -> void:
+	_tutorial.tutorial_completed = true
+	_tutorial.current_step = TutorialSystem.TutorialStep.FINISHED
+
+	_tutorial.initialize(true)
+
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.WELCOME,
+		"New game should always start at WELCOME regardless of prior state"
+	)
+	assert_true(
+		_tutorial.tutorial_active,
+		"Tutorial should be active on new game"
+	)
+	assert_false(
+		_tutorial.tutorial_completed,
+		"tutorial_completed should be false on new game"
 	)

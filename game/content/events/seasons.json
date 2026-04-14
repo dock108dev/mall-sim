@@ -1,0 +1,92 @@
+{
+  "cycle_length": 70,
+  "seasons": [
+    {
+      "id": "back_to_school",
+      "name": "Back to School",
+      "description": "Electronics and supplies demand up",
+      "start_day": 1,
+      "end_day": 7,
+      "category_multipliers": {
+        "electronics": 1.4,
+        "handheld": 1.3,
+        "accessories": 1.2
+      },
+      "price_sensitivity_modifier": 1.0
+    },
+    {
+      "id": "fall_sports",
+      "name": "Fall Sports",
+      "description": "Sports memorabilia demand up",
+      "start_day": 8,
+      "end_day": 21,
+      "category_multipliers": {
+        "sports_cards": 1.5,
+        "autographs": 1.4,
+        "memorabilia": 1.3
+      },
+      "price_sensitivity_modifier": 1.0
+    },
+    {
+      "id": "pre_holiday",
+      "name": "Pre-Holiday",
+      "description": "All category demand up; price sensitivity down",
+      "start_day": 22,
+      "end_day": 35,
+      "category_multipliers": {
+        "electronics": 1.3,
+        "handheld": 1.3,
+        "sports_cards": 1.2,
+        "autographs": 1.2,
+        "memorabilia": 1.2,
+        "cartridge": 1.3,
+        "console": 1.2,
+        "trading_cards": 1.3,
+        "booster_pack": 1.4,
+        "vhs": 1.2,
+        "dvd": 1.2
+      },
+      "price_sensitivity_modifier": 0.8
+    },
+    {
+      "id": "post_holiday",
+      "name": "Post-Holiday",
+      "description": "Demand down; return/trade-in activity up",
+      "start_day": 36,
+      "end_day": 42,
+      "category_multipliers": {
+        "electronics": 0.7,
+        "handheld": 0.7,
+        "sports_cards": 0.8,
+        "cartridge": 0.8,
+        "trading_cards": 0.8,
+        "vhs": 0.9,
+        "dvd": 0.9
+      },
+      "price_sensitivity_modifier": 1.3
+    },
+    {
+      "id": "spring_gaming",
+      "name": "Spring Gaming",
+      "description": "Retro games and cards demand up",
+      "start_day": 43,
+      "end_day": 56,
+      "category_multipliers": {
+        "cartridge": 1.4,
+        "console": 1.3,
+        "trading_cards": 1.3,
+        "booster_pack": 1.3
+      },
+      "price_sensitivity_modifier": 1.0
+    },
+    {
+      "id": "summer_lull",
+      "name": "Summer Lull",
+      "description": "Baseline — no modifiers",
+      "start_day": 57,
+      "end_day": 70,
+      "category_multipliers": {},
+      "price_sensitivity_modifier": 1.0
+    }
+  ]
+}

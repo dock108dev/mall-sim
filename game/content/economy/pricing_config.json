@@ -1,25 +1,40 @@
 {
-  "starting_cash": 500.00,
-  "daily_rent": 50.00,
+  "type": "economy_config",
+  "starting_cash": 500.0,
+  "daily_rent_base": 30.0,
+  "rarity_multipliers": [1.0, 1.5, 3.0, 8.0, 20.0],
+  "condition_multipliers": [0.3, 0.6, 1.0, 1.3, 2.0],
+  "daily_rent_multipliers": {
+    "sports_memorabilia": 1.0,
+    "retro_games": 0.9,
+    "video_rental": 1.1,
+    "pocket_creatures": 1.0,
+    "consumer_electronics": 1.2
+  },
+  "haggle_floor_ratio": 0.5,
+  "haggle_max_rounds": 3,
+  "authentication_price_bonus": 0.25,
+  "late_fee_per_day": 2.0,
   "reputation_tiers": {
     "unknown": { "min": 0, "customer_multiplier": 1.0, "label": "Unknown" },
     "local_favorite": { "min": 25, "customer_multiplier": 1.5, "label": "Local Favorite" },
     "destination_shop": { "min": 50, "customer_multiplier": 2.0, "label": "Destination Shop" },
     "legendary": { "min": 80, "customer_multiplier": 3.0, "label": "Legendary" }
   },
-  "condition_multipliers": {
-    "poor": 0.25,
-    "fair": 0.5,
-    "good": 1.0,
-    "near_mint": 1.5,
-    "mint": 2.0
+  "price_ratio_reputation_deltas": {
+    "deep_discount": { "max_ratio": 0.6, "delta": 2.0 },
+    "fair_deal": { "min_ratio": 0.6, "max_ratio": 0.9, "delta": 1.0 },
+    "market_rate": { "min_ratio": 0.9, "max_ratio": 1.1, "delta": 0.5 },
+    "slight_markup": { "min_ratio": 1.1, "max_ratio": 1.5, "delta": 0.0 },
+    "overpriced": { "min_ratio": 1.5, "max_ratio": 2.0, "delta": -0.5 },
+    "gouging": { "min_ratio": 2.0, "delta": -1.5 }
   },
-  "rarity_multipliers": {
-    "common": 1.0,
-    "uncommon": 2.5,
-    "rare": 6.0,
-    "very_rare": 15.0,
-    "legendary": 40.0
+  "reputation_decay": {
+    "well_stocked_threshold": 0.5,
+    "well_stocked_bonus": 0.5,
+    "understocked_threshold": 0.2,
+    "understocked_penalty": -1.0,
+    "empty_penalty": -2.0
   },
   "supplier_tiers": [
     {
@@ -28,8 +43,7 @@
       "reputation_threshold": 0,
       "revenue_threshold": 0,
       "rarity_access": ["common", "uncommon"],
-      "wholesale_discount": 0.60,
-      "description": "Your local card shop distributor. Basic stock, reasonable prices."
+      "wholesale_discount": 0.60
     },
     {
       "tier": 2,
@@ -37,8 +51,7 @@
       "reputation_threshold": 25,
       "revenue_threshold": 2000,
       "rarity_access": ["common", "uncommon", "rare"],
-      "wholesale_discount": 0.55,
-      "description": "A regional wholesaler with access to rarer product lines."
+      "wholesale_discount": 0.55
     },
     {
       "tier": 3,
@@ -46,23 +59,7 @@
       "reputation_threshold": 50,
       "revenue_threshold": 10000,
       "rarity_access": ["common", "uncommon", "rare", "very_rare", "legendary"],
-      "wholesale_discount": 0.50,
-      "description": "Top-tier supplier with access to the rarest items in the hobby."
+      "wholesale_discount": 0.50
     }
-  ],
-  "price_ratio_reputation_deltas": {
-    "deep_discount": { "max_ratio": 0.6, "delta": 2.0, "description": "Priced well below market — customers love a deal" },
-    "fair_deal": { "min_ratio": 0.6, "max_ratio": 0.9, "delta": 1.0, "description": "Below market — good value" },
-    "market_rate": { "min_ratio": 0.9, "max_ratio": 1.1, "delta": 0.5, "description": "At market — fair and expected" },
-    "slight_markup": { "min_ratio": 1.1, "max_ratio": 1.5, "delta": 0.0, "description": "Slight markup — no reputation effect" },
-    "overpriced": { "min_ratio": 1.5, "max_ratio": 2.0, "delta": -0.5, "description": "Overpriced — customers notice" },
-    "gouging": { "min_ratio": 2.0, "delta": -1.5, "description": "Price gouging — reputation takes a hit" }
-  },
-  "reputation_decay": {
-    "well_stocked_threshold": 0.5,
-    "well_stocked_bonus": 0.5,
-    "understocked_threshold": 0.2,
-    "understocked_penalty": -1.0,
-    "empty_penalty": -2.0
-  }
+  ]
 }

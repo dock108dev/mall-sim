@@ -1,0 +1,127 @@
+[gd_scene load_steps=2 format=3 uid="uid://creditsscene01"]
+
+[ext_resource type="Script" path="res://game/scripts/ui/credits_scene.gd" id="1"]
+
+[node name="CreditsScene" type="CanvasLayer"]
+layer = 101
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.08, 0.12, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="Content" type="MarginContainer" parent="Layout/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 200
+theme_override_constants/margin_top = 80
+theme_override_constants/margin_right = 200
+theme_override_constants/margin_bottom = 80
+
+[node name="VBox" type="VBoxContainer" parent="Layout/ScrollContainer/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 24
+
+[node name="TitleLabel" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "mallcore-sim"
+horizontal_alignment = 1
+
+[node name="TitleSeparator" type="HSeparator" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="DesignHeader" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Design"
+horizontal_alignment = 1
+
+[node name="DesignCredit" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+text = "Lead Designer"
+horizontal_alignment = 1
+
+[node name="ProgrammingSeparator" type="HSeparator" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="ProgrammingHeader" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Programming"
+horizontal_alignment = 1
+
+[node name="ProgrammingCredit" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+text = "Developer"
+horizontal_alignment = 1
+
+[node name="ArtSeparator" type="HSeparator" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="ArtAudioHeader" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Art & Audio"
+horizontal_alignment = 1
+
+[node name="ArtAudioCredit" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+text = "Asset Credits"
+horizontal_alignment = 1
+
+[node name="EngineSeparator" type="HSeparator" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="EngineLabel" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+text = "Built with Godot Engine 4.3"
+horizontal_alignment = 1
+
+[node name="ClosingSeparator" type="HSeparator" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="ClosingLabel" type="Label" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Thanks for shopping.\nThe mall always closes eventually."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="ClosingPadding" type="Control" parent="Layout/ScrollContainer/Content/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 80)
+
+[node name="BottomBar" type="HBoxContainer" parent="Layout"]
+layout_mode = 2
+alignment = 1
+custom_minimum_size = Vector2(0, 72)
+theme_override_constants/separation = 0
+
+[node name="BackToMenuButton" type="Button" parent="Layout/BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(250, 48)
+text = "Back to Menu"

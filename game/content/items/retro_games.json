@@ -1,7 +1,7 @@
 [
   {
     "id": "retro_plumber_world_ss_loose",
-    "name": "Super Plumber World",
+    "item_name": "Super Plumber World",
     "description": "The defining platformer of the SuperStation era. Tight controls, secret exits, and a cape that makes you feel invincible.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -13,7 +13,7 @@
   },
   {
     "id": "retro_hedgehog_rush_md_loose",
-    "name": "Hedgehog Rush 2",
+    "item_name": "Hedgehog Rush 2",
     "description": "Blast processing at its finest. The spin dash changed everything.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -25,7 +25,7 @@
   },
   {
     "id": "retro_elf_quest_64_loose",
-    "name": "Elf Quest: Realm of Time",
+    "item_name": "Elf Quest: Realm of Time",
     "description": "The adventure that defined 3D gaming. That opening field still gives chills.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -37,7 +37,7 @@
   },
   {
     "id": "retro_galaxy_kart_64_loose",
-    "name": "Galaxy Kart 64",
+    "item_name": "Galaxy Kart 64",
     "description": "Four controllers, one couch, infinite friendships ruined. The blue shell is not fair.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -49,7 +49,7 @@
   },
   {
     "id": "retro_final_saga_7_ds_loose",
-    "name": "Final Saga VII",
+    "item_name": "Final Saga VII",
     "description": "Three discs of emotional devastation. You know the scene.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -61,7 +61,7 @@
   },
   {
     "id": "retro_plumber_land_pb_loose",
-    "name": "Plumber Land",
+    "item_name": "Plumber Land",
     "description": "Handheld platforming perfection. Six golden coins to collect.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -73,7 +73,7 @@
   },
   {
     "id": "retro_creature_catcher_pb_loose",
-    "name": "Creature Catcher Red",
+    "item_name": "Creature Catcher Red",
     "description": "Gotta catch 'em... wait, wrong franchise. 150 creatures to collect on the go.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -85,7 +85,7 @@
   },
   {
     "id": "retro_street_brawler_2_md_loose",
-    "name": "Street Brawler II: Turbo",
+    "item_name": "Street Brawler II: Turbo",
     "description": "Quarter-circle forward, fierce punch. You know the drill.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -97,7 +97,7 @@
   },
   {
     "id": "retro_star_pilot_64_loose",
-    "name": "Star Pilot 64",
+    "item_name": "Star Pilot 64",
     "description": "Do a barrel roll! On-rails space shooting that never gets old.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -109,7 +109,7 @@
   },
   {
     "id": "retro_phantom_thief_ds_loose",
-    "name": "Phantom Thief: Solid",
+    "item_name": "Phantom Thief: Solid",
     "description": "Tactical espionage action. The cardboard box is the ultimate weapon.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -121,7 +121,7 @@
   },
   {
     "id": "retro_dungeon_quest_ss_rare",
-    "name": "Dungeon Quest: Chrono",
+    "item_name": "Dungeon Quest: Chrono",
     "description": "Time-traveling RPG with multiple endings. A masterpiece hidden in a gray cartridge.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -133,7 +133,7 @@
   },
   {
     "id": "retro_earth_kids_ss_rare",
-    "name": "Earth Kids",
+    "item_name": "Earth Kids",
     "description": "Quirky RPG about kids saving the world with baseball bats and psychic powers. The cult classic.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -145,7 +145,7 @@
   },
   {
     "id": "retro_ninja_shadow_md_legendary",
-    "name": "Ninja Shadow: Final Mission",
+    "item_name": "Ninja Shadow: Final Mission",
     "description": "Late-run MegaDrive exclusive. Fewer than 5,000 copies made. The holy grail of 16-bit action.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -158,7 +158,7 @@
   },
   {
     "id": "retro_elf_quest_64_cib",
-    "name": "Elf Quest: Realm of Time (CIB)",
+    "item_name": "Elf Quest: Realm of Time (CIB)",
     "description": "Complete with box, manual, and map insert. Box corners show light wear.",
     "category": "cartridges",
     "subcategory": "CIB",
@@ -170,7 +170,7 @@
   },
   {
     "id": "retro_plumber_world_ss_cib",
-    "name": "Super Plumber World (CIB)",
+    "item_name": "Super Plumber World (CIB)",
     "description": "Complete in box with manual. The cardboard is worth almost as much as the cart.",
     "category": "cartridges",
     "subcategory": "CIB",
@@ -182,7 +182,7 @@
   },
   {
     "id": "retro_final_saga_7_ds_nib",
-    "name": "Final Saga VII (Sealed)",
+    "item_name": "Final Saga VII (Sealed)",
     "description": "Factory sealed, black label. An investment piece. Do not open.",
     "category": "cartridges",
     "subcategory": "NIB",
@@ -195,7 +195,7 @@
   },
   {
     "id": "retro_superstation_console",
-    "name": "SuperStation Console (Working)",
+    "item_name": "SuperStation Console (Working)",
     "description": "Tested and working. Includes AV cable and one controller. The workhorse of 16-bit gaming.",
     "category": "consoles",
     "subcategory": "working",
@@ -207,7 +207,7 @@
   },
   {
     "id": "retro_triforce64_console",
-    "name": "TriForce 64 Console (Working)",
+    "item_name": "TriForce 64 Console (Working)",
     "description": "Tested with expansion pak installed. Four controller ports. Party machine.",
     "category": "consoles",
     "subcategory": "working",
@@ -219,7 +219,7 @@
   },
   {
     "id": "retro_megadrive16_forparts",
-    "name": "MegaDrive 16 Console (For Parts)",
+    "item_name": "MegaDrive 16 Console (For Parts)",
     "description": "Powers on but no video output. Could be a simple capacitor fix... or not.",
     "category": "consoles",
     "subcategory": "for_parts",
@@ -231,7 +231,7 @@
   },
   {
     "id": "retro_triforce64_cib_console",
-    "name": "TriForce 64 Console (CIB)",
+    "item_name": "TriForce 64 Console (CIB)",
     "description": "Complete in original box with foam inserts, manuals, and all cables. A collector's dream.",
     "category": "consoles",
     "subcategory": "CIB",
@@ -243,7 +243,7 @@
   },
   {
     "id": "retro_ss_controller",
-    "name": "SuperStation Controller (First-Party)",
+    "item_name": "SuperStation Controller (First-Party)",
     "description": "Original controller in good shape. D-pad still clicks nicely.",
     "category": "accessories",
     "subcategory": "controllers",
@@ -255,7 +255,7 @@
   },
   {
     "id": "retro_t64_controller",
-    "name": "TriForce 64 Controller (First-Party)",
+    "item_name": "TriForce 64 Controller (First-Party)",
     "description": "Original three-pronged controller. Joystick still has life in it.",
     "category": "accessories",
     "subcategory": "controllers",
@@ -267,7 +267,7 @@
   },
   {
     "id": "retro_ds_memory_card",
-    "name": "DiscStation Memory Card (1MB)",
+    "item_name": "DiscStation Memory Card (1MB)",
     "description": "15 blocks of save data. One for each RPG you'll never finish.",
     "category": "accessories",
     "subcategory": "memory_cards",
@@ -279,7 +279,7 @@
   },
   {
     "id": "retro_portaboy_link_cable",
-    "name": "PortaBoy Link Cable",
+    "item_name": "PortaBoy Link Cable",
     "description": "For trading creatures and settling disputes. Requires a friend.",
     "category": "accessories",
     "subcategory": "cables",
@@ -291,7 +291,7 @@
   },
   {
     "id": "retro_elf_quest_guide",
-    "name": "Official Elf Quest Strategy Guide",
+    "item_name": "Official Elf Quest Strategy Guide",
     "description": "All heart pieces, gold skulltulas, and the water temple walkthrough. Well-thumbed.",
     "category": "guides",
     "subcategory": "strategy_guides",
@@ -303,7 +303,7 @@
   },
   {
     "id": "retro_power_magazine_vol12",
-    "name": "Console Power Magazine Vol. 12",
+    "item_name": "Console Power Magazine Vol. 12",
     "description": "The issue with the Elf Quest 64 preview. Poster still included.",
     "category": "guides",
     "subcategory": "magazines",
@@ -315,7 +315,7 @@
   },
   {
     "id": "retro_cosmic_warrior_jp_import",
-    "name": "Cosmic Warrior Z (Japanese Import)",
+    "item_name": "Cosmic Warrior Z (Japanese Import)",
     "description": "Never released outside Japan. Anime-style action RPG with incredible sprite work.",
     "category": "cartridges",
     "subcategory": "loose",
@@ -327,7 +327,7 @@
   },
   {
     "id": "retro_puzzle_drop_pb_jp",
-    "name": "Puzzle Drop DX (Japanese Import)",
+    "item_name": "Puzzle Drop DX (Japanese Import)",
     "description": "Japan-only puzzle game for PortaBoy. Addictive block-dropping action with a killer soundtrack.",
     "category": "cartridges",
     "subcategory": "loose",

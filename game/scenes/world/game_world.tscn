@@ -1,6 +1,42 @@
-[gd_scene load_steps=2 format=3 uid="uid://world001"]
+[gd_scene load_steps=38 format=3 uid="uid://world001"]
 
 [ext_resource type="Script" path="res://game/scenes/world/game_world.gd" id="1"]
+[ext_resource type="Script" path="res://game/scripts/systems/time_system.gd" id="sys_time"]
+[ext_resource type="Script" path="res://game/scripts/systems/economy_system.gd" id="sys_economy"]
+[ext_resource type="Script" path="res://game/scripts/systems/store_state_manager.gd" id="sys_store_state"]
+[ext_resource type="Script" path="res://game/scripts/systems/inventory_system.gd" id="sys_inventory"]
+[ext_resource type="Script" path="res://game/scripts/systems/trend_system.gd" id="sys_trend"]
+[ext_resource type="Script" path="res://game/scripts/systems/market_event_system.gd" id="sys_market_event"]
+[ext_resource type="Script" path="res://game/scripts/systems/seasonal_event_system.gd" id="sys_seasonal"]
+[ext_resource type="Script" path="res://game/scripts/systems/market_value_system.gd" id="sys_market_value"]
+[ext_resource type="Script" path="res://game/scripts/systems/customer_system.gd" id="sys_customer"]
+[ext_resource type="Script" path="res://game/scripts/systems/mall_customer_spawner.gd" id="sys_mall_spawner"]
+[ext_resource type="Script" path="res://game/scripts/systems/npc_spawner_system.gd" id="sys_npc_spawner"]
+[ext_resource type="Script" path="res://game/scripts/systems/haggle_system.gd" id="sys_haggle"]
+[ext_resource type="Script" path="res://game/scripts/systems/checkout_system.gd" id="sys_checkout"]
+[ext_resource type="Script" path="res://game/scripts/systems/queue_system.gd" id="sys_queue"]
+[ext_resource type="Script" path="res://game/scripts/systems/order_system.gd" id="sys_order"]
+[ext_resource type="Script" path="res://game/scripts/systems/staff_system.gd" id="sys_staff"]
+[ext_resource type="Script" path="res://game/scripts/systems/progression_system.gd" id="sys_progression"]
+[ext_resource type="Script" path="res://game/scripts/systems/milestone_system.gd" id="sys_milestone"]
+[ext_resource type="Script" path="res://game/scripts/systems/store_selector_system.gd" id="sys_store_selector"]
+[ext_resource type="Script" path="res://game/scripts/systems/build_mode_system.gd" id="sys_build_mode"]
+[ext_resource type="Script" path="res://game/scripts/world/fixture_placement_system.gd" id="sys_fixture"]
+[ext_resource type="Script" path="res://game/scripts/systems/tournament_system.gd" id="sys_tournament"]
+[ext_resource type="Script" path="res://game/scripts/systems/meta_shift_system.gd" id="sys_meta_shift"]
+[ext_resource type="Script" path="res://game/scripts/systems/tutorial_system.gd" id="sys_tutorial"]
+[ext_resource type="Script" path="res://game/scripts/systems/performance_manager.gd" id="sys_perf_mgr"]
+[ext_resource type="Script" path="res://game/scripts/systems/performance_report_system.gd" id="sys_perf_report"]
+[ext_resource type="Script" path="res://game/scripts/systems/random_event_system.gd" id="sys_random_event"]
+[ext_resource type="Script" path="res://game/scripts/systems/secret_thread_manager.gd" id="sys_secret_mgr"]
+[ext_resource type="Script" path="res://game/scripts/systems/secret_thread_system.gd" id="sys_secret_thread"]
+[ext_resource type="Script" path="res://game/scripts/systems/ambient_moments_system.gd" id="sys_ambient"]
+[ext_resource type="Script" path="res://game/scripts/systems/ending_evaluator.gd" id="sys_ending"]
+[ext_resource type="Script" path="res://game/scripts/systems/store_upgrade_system.gd" id="sys_upgrade"]
+[ext_resource type="Script" path="res://game/scripts/systems/completion_tracker.gd" id="sys_completion"]
+[ext_resource type="Script" path="res://game/scripts/core/save_manager.gd" id="sys_save"]
+[ext_resource type="Script" path="res://game/scripts/systems/day_cycle_controller.gd" id="sys_day_cycle"]
+[ext_resource type="Script" path="res://game/scripts/world/day_phase_lighting.gd" id="sys_day_phase_lighting"]
 
 [node name="GameWorld" type="Node3D"]
 script = ExtResource("1")
@@ -9,3 +45,118 @@ script = ExtResource("1")
 layer = 10
 
 [node name="StoreContainer" type="Node3D" parent="."]
+
+[node name="TimeSystem" type="Node" parent="."]
+script = ExtResource("sys_time")
+
+[node name="EconomySystem" type="Node" parent="."]
+script = ExtResource("sys_economy")
+
+[node name="InventorySystem" type="Node" parent="."]
+script = ExtResource("sys_inventory")
+
+[node name="StoreStateManager" type="Node" parent="."]
+script = ExtResource("sys_store_state")
+
+[node name="TrendSystem" type="Node" parent="."]
+script = ExtResource("sys_trend")
+
+[node name="MarketEventSystem" type="Node" parent="."]
+script = ExtResource("sys_market_event")
+
+[node name="SeasonalEventSystem" type="Node" parent="."]
+script = ExtResource("sys_seasonal")
+
+[node name="MarketValueSystem" type="Node" parent="."]
+script = ExtResource("sys_market_value")
+
+[node name="CustomerSystem" type="Node" parent="."]
+script = ExtResource("sys_customer")
+
+[node name="MallCustomerSpawner" type="Node" parent="."]
+script = ExtResource("sys_mall_spawner")
+
+[node name="NPCSpawnerSystem" type="Node" parent="."]
+script = ExtResource("sys_npc_spawner")
+
+[node name="HaggleSystem" type="Node" parent="."]
+script = ExtResource("sys_haggle")
+
+[node name="CheckoutSystem" type="Node" parent="."]
+script = ExtResource("sys_checkout")
+
+[node name="QueueSystem" type="Node" parent="."]
+script = ExtResource("sys_queue")
+
+[node name="ProgressionSystem" type="Node" parent="."]
+script = ExtResource("sys_progression")
+
+[node name="MilestoneSystem" type="Node" parent="."]
+script = ExtResource("sys_milestone")
+
+[node name="OrderSystem" type="Node" parent="."]
+script = ExtResource("sys_order")
+
+[node name="StaffSystem" type="Node" parent="."]
+script = ExtResource("sys_staff")
+
+[node name="StoreSelectorSystem" type="Node" parent="."]
+script = ExtResource("sys_store_selector")
+
+[node name="BuildModeSystem" type="Node" parent="."]
+script = ExtResource("sys_build_mode")
+
+[node name="FixturePlacementSystem" type="Node" parent="."]
+script = ExtResource("sys_fixture")
+
+[node name="TournamentSystem" type="Node" parent="."]
+script = ExtResource("sys_tournament")
+
+[node name="MetaShiftSystem" type="Node" parent="."]
+script = ExtResource("sys_meta_shift")
+
+[node name="TutorialSystem" type="Node" parent="."]
+script = ExtResource("sys_tutorial")
+
+[node name="PerformanceManager" type="Node" parent="."]
+script = ExtResource("sys_perf_mgr")
+
+[node name="PerformanceReportSystem" type="Node" parent="."]
+script = ExtResource("sys_perf_report")
+
+[node name="RandomEventSystem" type="Node" parent="."]
+script = ExtResource("sys_random_event")
+
+[node name="SecretThreadManager" type="Node" parent="."]
+script = ExtResource("sys_secret_mgr")
+
+[node name="SecretThreadSystem" type="Node" parent="."]
+script = ExtResource("sys_secret_thread")
+
+[node name="AmbientMomentsSystem" type="Node" parent="."]
+script = ExtResource("sys_ambient")
+
+[node name="EndingEvaluatorSystem" type="Node" parent="."]
+script = ExtResource("sys_ending")
+
+[node name="StoreUpgradeSystem" type="Node" parent="."]
+script = ExtResource("sys_upgrade")
+
+[node name="CompletionTracker" type="Node" parent="."]
+script = ExtResource("sys_completion")
+
+[node name="DayCycleController" type="Node" parent="."]
+script = ExtResource("sys_day_cycle")
+
+[node name="SaveManager" type="Node" parent="."]
+script = ExtResource("sys_save")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 10, 0)
+light_color = Color(0.9, 0.7, 0.5, 1)
+light_energy = 0.6
+shadow_enabled = true
+
+[node name="DayPhaseLighting" type="Node" parent="."]
+script = ExtResource("sys_day_phase_lighting")
+directional_light = NodePath("../SunLight")

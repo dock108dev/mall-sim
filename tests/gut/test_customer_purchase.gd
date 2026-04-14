@@ -3,15 +3,15 @@
 extends GutTest
 
 
-var _profile: CustomerProfile
+var _profile: CustomerTypeDefinition
 var _definition: ItemDefinition
 var _item: ItemInstance
 
 
 func before_each() -> void:
-	_profile = CustomerProfile.new()
+	_profile = CustomerTypeDefinition.new()
 	_profile.id = "test_customer"
-	_profile.name = "Test Customer"
+	_profile.customer_name = "Test Customer"
 	_profile.budget_range = [5.0, 100.0]
 	_profile.patience = 0.5
 	_profile.price_sensitivity = 0.5
@@ -25,7 +25,7 @@ func before_each() -> void:
 
 	_definition = ItemDefinition.new()
 	_definition.id = "test_item"
-	_definition.name = "Test Item"
+	_definition.item_name = "Test Item"
 	_definition.category = "cards"
 	_definition.base_price = 10.0
 	_definition.rarity = "common"
@@ -41,35 +41,37 @@ func before_each() -> void:
 
 
 func test_customer_within_budget_can_purchase() -> void:
-	_item.set_price = 20.0
+	## Willingness = min(budget_max, item_value * (2 - sensitivity)); at $10 value
+	## and sensitivity 0.5, max acceptable is $15 — price must be at or below that.
+	_item.player_set_price = 14.0
 	var item_value: float = _item.get_current_value()
 	var budget_max: float = _profile.budget_range[1]
 	var tolerance: float = 2.0 - _profile.price_sensitivity
 	var max_acceptable: float = item_value * tolerance
 	var willing_to_pay: float = minf(budget_max, max_acceptable)
 	assert_true(
-		_item.set_price <= willing_to_pay,
+		_item.player_set_price <= willing_to_pay,
 		"Item price $%.2f should be within willingness to pay $%.2f"
-		% [_item.set_price, willing_to_pay]
+		% [_item.player_set_price, willing_to_pay]
 	)
 
 
 func test_customer_over_budget_cannot_purchase() -> void:
-	_item.set_price = 200.0
+	_item.player_set_price = 200.0
 	var budget_max: float = _profile.budget_range[1]
 	assert_true(
-		_item.set_price > budget_max,
+		_item.player_set_price > budget_max,
 		"Item price $%.2f should exceed budget max $%.2f"
-		% [_item.set_price, budget_max]
+		% [_item.player_set_price, budget_max]
 	)
 
 
 func test_customer_below_min_budget_not_desirable() -> void:
-	_item.set_price = 1.0
+	_item.player_set_price = 1.0
 	assert_true(
-		_item.set_price < _profile.budget_range[0],
+		_item.player_set_price < _profile.budget_range[0],
 		"Item price $%.2f should be below min budget $%.2f"
-		% [_item.set_price, _profile.budget_range[0]]
+		% [_item.player_set_price, _profile.budget_range[0]]
 	)
 
 
@@ -101,13 +103,13 @@ func test_price_within_fair_threshold_is_acceptable() -> void:
 	var market_value: float = _item.get_current_value()
 	var threshold: float = ReputationSystem.FAIR_PRICE_THRESHOLD
 	var fair_price: float = market_value * (1.0 + threshold)
-	_item.set_price = fair_price
+	_item.player_set_price = fair_price
 	var tolerance: float = 2.0 - _profile.price_sensitivity
 	var max_acceptable: float = market_value * tolerance
 	assert_true(
-		_item.set_price <= max_acceptable,
+		_item.player_set_price <= max_acceptable,
 		"Price at fair threshold $%.2f should be <= max acceptable $%.2f"
-		% [_item.set_price, max_acceptable]
+		% [_item.player_set_price, max_acceptable]
 	)
 
 
@@ -116,11 +118,11 @@ func test_price_well_above_fair_threshold_rejected_by_sensitive_buyer() -> void:
 	_profile.price_sensitivity = 0.95
 	var tolerance: float = 2.0 - _profile.price_sensitivity
 	var max_acceptable: float = market_value * tolerance
-	_item.set_price = market_value * 1.5
+	_item.player_set_price = market_value * 1.5
 	assert_true(
-		_item.set_price > max_acceptable,
+		_item.player_set_price > max_acceptable,
 		"Price $%.2f should exceed sensitive buyer max $%.2f"
-		% [_item.set_price, max_acceptable]
+		% [_item.player_set_price, max_acceptable]
 	)
 
 
@@ -199,9 +201,9 @@ func test_investor_rejects_overpriced_items() -> void:
 	var market_value: float = _item.get_current_value()
 	var ratio: float = Customer.INVESTOR_MAX_MARKET_RATIO
 	var max_price: float = market_value * ratio
-	_item.set_price = market_value * 1.5
+	_item.player_set_price = market_value * 1.5
 	assert_true(
-		_item.set_price > max_price,
+		_item.player_set_price > max_price,
 		"Investor should reject price $%.2f above %.0f%% of market value"
-		% [_item.set_price, ratio * 100.0]
+		% [_item.player_set_price, ratio * 100.0]
 	)

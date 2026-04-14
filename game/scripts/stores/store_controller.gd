@@ -1,0 +1,207 @@
+## Base controller for all store types. Provides shared lifecycle, signal
+## wiring, inventory interface, and slot/fixture management.
+class_name StoreController
+extends Node
+
+const STORE_ID: StringName = &""
+
+var store_type: String = ""
+
+var _slots: Array[Node] = []
+var _fixtures: Array[Node] = []
+var _register_area: Area3D = null
+var _entry_area: Area3D = null
+var _is_active: bool = false
+var _inventory_system: InventorySystem = null
+var _customer_system: CustomerSystem = null
+
+
+func _ready() -> void:
+	_collect_fixtures()
+	_collect_slots()
+	_collect_areas()
+	_build_decorations()
+	EventBus.active_store_changed.connect(_on_active_store_changed)
+	EventBus.day_started.connect(_on_day_started)
+	EventBus.customer_entered.connect(_on_customer_entered)
+
+
+## Sets the InventorySystem reference for inventory queries.
+func set_inventory_system(inv: InventorySystem) -> void:
+	_inventory_system = inv
+
+
+## Sets the CustomerSystem reference for active customer queries.
+func set_customer_system(sys: CustomerSystem) -> void:
+	_customer_system = sys
+
+
+## Returns all items belonging to this store from InventorySystem.
+func get_inventory() -> Array[Dictionary]:
+	if not _inventory_system:
+		return []
+	var items: Array[ItemInstance] = (
+		_inventory_system.get_items_for_store(store_type)
+	)
+	var result: Array[Dictionary] = []
+	for item: ItemInstance in items:
+		result.append({
+			"instance_id": item.instance_id,
+			"definition": item.definition,
+			"condition": item.condition,
+			"location": item.current_location,
+		})
+	return result
+
+
+## Returns all active customers from CustomerSystem.
+func get_active_customers() -> Array[Node]:
+	if not _customer_system:
+		return []
+	var customers: Array[Customer] = (
+		_customer_system.get_active_customers()
+	)
+	var result: Array[Node] = []
+	for customer: Customer in customers:
+		result.append(customer as Node)
+	return result
+
+
+## Validates STORE_ID before emitting a signal on EventBus.
+func emit_store_signal(
+	signal_name: StringName, args: Array = []
+) -> void:
+	if STORE_ID.is_empty() and store_type.is_empty():
+		push_error(
+			"StoreController: cannot emit signal without STORE_ID"
+		)
+		return
+	if not EventBus.has_signal(signal_name):
+		push_error(
+			"StoreController: EventBus has no signal '%s'" % signal_name
+		)
+		return
+	var sig: Signal = Signal(EventBus, signal_name)
+	sig.emit(args)
+
+
+## Returns all ShelfSlot children across all fixtures.
+func get_all_slots() -> Array[Node]:
+	return _slots
+
+
+## Returns slots that currently hold an item.
+func get_occupied_slots() -> Array[Node]:
+	var occupied: Array[Node] = []
+	for slot: Node in _slots:
+		if slot.has_method("is_occupied") and slot.is_occupied():
+			occupied.append(slot)
+	return occupied
+
+
+## Returns slots that are currently empty.
+func get_empty_slots() -> Array[Node]:
+	var empty: Array[Node] = []
+	for slot: Node in _slots:
+		if not slot.has_method("is_occupied") or not slot.is_occupied():
+			empty.append(slot)
+	return empty
+
+
+## Finds a slot by its slot_id property, or null if not found.
+func get_slot_by_id(slot_id: String) -> Node:
+	for slot: Node in _slots:
+		if slot.get("slot_id") == slot_id:
+			return slot
+	return null
+
+
+## Returns the register interaction zone, or null if none found.
+func get_register_area() -> Area3D:
+	return _register_area
+
+
+## Returns the store entrance zone, or null if none found.
+func get_entry_area() -> Area3D:
+	return _entry_area
+
+
+## Returns null by default; subclasses override to provide management UI.
+func get_management_ui() -> Control:
+	return null
+
+
+## Returns the number of fixture parent nodes in this store.
+func get_fixture_count() -> int:
+	return _fixtures.size()
+
+
+## Returns true if this controller's store is currently active.
+func is_active() -> bool:
+	return _is_active
+
+
+## Virtual method called when this store becomes the active store.
+func _on_store_activated() -> void:
+	pass
+
+
+## Virtual method called when this store is no longer the active store.
+func _on_store_deactivated() -> void:
+	pass
+
+
+## Virtual method called at the start of each day.
+func _on_day_started(_day: int) -> void:
+	pass
+
+
+## Virtual method called when a customer enters a store.
+func _on_customer_entered(_customer_data: Dictionary) -> void:
+	pass
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	var my_id: StringName = (
+		STORE_ID if not STORE_ID.is_empty()
+		else StringName(store_type)
+	)
+	if store_id == my_id:
+		_is_active = true
+		_on_store_activated()
+	else:
+		if _is_active:
+			_is_active = false
+			_on_store_deactivated()
+
+
+func _collect_fixtures() -> void:
+	_fixtures.clear()
+	for child: Node in get_children():
+		if child.is_in_group("fixture"):
+			_fixtures.append(child)
+
+
+func _collect_slots() -> void:
+	_slots.clear()
+	for fixture: Node in _fixtures:
+		for child: Node in fixture.get_children():
+			if child.is_in_group("shelf_slot") or child.get("slot_id") != null:
+				_slots.append(child)
+
+
+func _collect_areas() -> void:
+	for child: Node in get_children():
+		if child is Area3D:
+			if child.is_in_group("register_area"):
+				_register_area = child as Area3D
+			elif child.is_in_group("entry_area"):
+				_entry_area = child as Area3D
+
+
+func _build_decorations() -> void:
+	if store_type.is_empty():
+		return
+	var node_ref: Variant = self
+	if node_ref is Node3D:
+		StoreDecorationBuilder.build(node_ref as Node3D, store_type)

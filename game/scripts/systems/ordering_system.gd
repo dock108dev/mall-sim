@@ -16,8 +16,7 @@ func initialize(
 ) -> void:
 	_inventory_system = inventory
 	_reputation_system = reputation
-	_pending_orders = []
-	_daily_order_spending = 0.0
+	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.reputation_changed.connect(_on_reputation_changed)
 
@@ -138,6 +137,10 @@ func get_save_data() -> Dictionary:
 
 ## Restores ordering state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_daily_order_spending = float(
 		data.get("daily_order_spending", 0.0)
 	)
@@ -188,7 +191,7 @@ func _deliver_pending_orders() -> void:
 
 
 func _on_reputation_changed(
-	_old_value: float, _new_value: float
+	_store_id: String, _new_value: float
 ) -> void:
 	_check_tier_change()
 

@@ -162,6 +162,24 @@
     "active_text": "Card show weekend! Foot traffic is up and cards are moving."
   },
   {
+    "id": "spm_sports_win",
+    "name": "Big Game Victory",
+    "description": "The home team just won a major game. Memorabilia and autograph demand surges.",
+    "event_type": "sports_win",
+    "target_tags": [],
+    "target_categories": ["memorabilia", "autograph"],
+    "target_store_types": ["sports_memorabilia"],
+    "magnitude": 1.5,
+    "duration_days": 5,
+    "announcement_days": 0,
+    "ramp_up_days": 1,
+    "ramp_down_days": 1,
+    "cooldown_days": 20,
+    "weight": 1.0,
+    "announcement_text": "",
+    "active_text": "The home team won big! Memorabilia and autograph demand is surging!"
+  },
+  {
     "id": "spm_offseason_doldrums",
     "name": "Offseason Doldrums",
     "description": "Between seasons, casual fans lose interest. Foot traffic is down.",

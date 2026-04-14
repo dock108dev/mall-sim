@@ -43,6 +43,8 @@ var _current_time_minutes: int = 0
 var _items_sold_today: int = 0
 var _daily_rent: float = 50.0
 var _daily_rent_total: float = 0.0
+var _daily_revenue: float = 0.0
+var _daily_expenses: float = 0.0
 
 var _inventory_system: InventorySystem = null
 var _trend_system: TrendSystem = null
@@ -60,17 +62,17 @@ var _store_daily_revenue: Dictionary = {}
 ## Per item def id, random walk with mean reversion.
 var _drift_factors: Dictionary = {}
 var _trades_today: int = 0
+var _bankruptcy_declared: bool = false
+var _last_injection_day: int = -1
 
 
 func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
-	_current_cash = starting_cash
-	_daily_transactions = []
-	_items_sold_today = 0
-	_daily_rent_total = 0.0
-	_sales_history = []
-	_today_sales = {}
-	_trades_today = 0
-	_drift_factors = {}
+	var cash_mult: float = DifficultySystem.get_modifier(
+		&"starting_cash_multiplier"
+	)
+	_bankruptcy_declared = false
+	_last_injection_day = -1
+	_apply_state({"current_cash": starting_cash * cash_mult})
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.hour_changed.connect(_on_hour_changed)
 	EventBus.day_ended.connect(_on_day_ended)
@@ -78,6 +80,14 @@ func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
 	EventBus.trade_accepted.connect(_on_trade_accepted)
 	EventBus.order_cash_check.connect(_on_order_cash_check)
 	EventBus.order_cash_deduct.connect(_on_order_cash_deduct)
+	EventBus.order_refund_issued.connect(_on_order_refund_issued)
+	EventBus.payroll_cash_check.connect(_on_payroll_cash_check)
+	EventBus.payroll_cash_deduct.connect(_on_payroll_cash_deduct)
+	EventBus.customer_purchased.connect(_on_customer_purchased)
+	EventBus.emergency_cash_injected.connect(
+		_on_emergency_cash_injected
+	)
+	EventBus.milestone_unlocked.connect(_on_milestone_unlocked)
 
 
 func set_inventory_system(inv: InventorySystem) -> void:
@@ -104,6 +114,78 @@ func get_items_sold_today() -> int:
 
 func set_daily_rent(amount: float) -> void:
 	_daily_rent = amount
+
+
+## Deducts amount from player cash. Returns false if insufficient funds.
+func charge(amount: float, reason: String) -> bool:
+	if amount <= 0.0:
+		push_warning(
+			"EconomySystem: charge called with non-positive amount: %s"
+			% amount
+		)
+		return false
+	if _current_cash < amount:
+		EventBus.transaction_completed.emit(
+			amount, false, "Insufficient funds"
+		)
+		return false
+	var old_cash: float = _current_cash
+	_current_cash -= amount
+	_daily_expenses += amount
+	_record_transaction(amount, reason, TransactionType.EXPENSE)
+	EventBus.money_changed.emit(old_cash, _current_cash)
+	EventBus.transaction_completed.emit(amount, true, reason)
+	return true
+
+
+## Adds amount to player cash and records revenue for the active store.
+func credit(amount: float, source: StringName) -> void:
+	if amount <= 0.0:
+		push_warning(
+			"EconomySystem: credit called with non-positive amount: %s"
+			% amount
+		)
+		return
+	var old_cash: float = _current_cash
+	_current_cash += amount
+	_daily_revenue += amount
+	var active_store: String = GameManager.current_store_id
+	if not active_store.is_empty():
+		record_store_revenue(active_store, amount)
+	_record_transaction(amount, String(source), TransactionType.REVENUE)
+	EventBus.money_changed.emit(old_cash, _current_cash)
+	EventBus.transaction_completed.emit(amount, true, String(source))
+
+
+## Returns total daily revenue minus daily expenses for the current day.
+func get_daily_profit() -> float:
+	var total_revenue: float = 0.0
+	for store_id: String in _store_daily_revenue:
+		total_revenue += _store_daily_revenue[store_id] as float
+	return total_revenue - _daily_expenses
+
+
+## Zeroes daily revenue, expenses, and transaction log for a new day.
+func reset_daily_totals() -> void:
+	_daily_transactions = []
+	_current_time_minutes = 0
+	_items_sold_today = 0
+	_trades_today = 0
+	_daily_rent_total = 0.0
+	_daily_revenue = 0.0
+	_daily_expenses = 0.0
+	_today_sales = {}
+	_store_daily_revenue = {}
+
+
+## Returns a serializable snapshot of all economy state.
+func serialize() -> Dictionary:
+	return get_save_data()
+
+
+## Restores economy state from a previously serialized dictionary.
+func deserialize(data: Dictionary) -> void:
+	load_save_data(data)
 
 
 ## Calculates full market value with diminishing rarity returns and a hard cap.
@@ -152,8 +234,18 @@ func _get_meta_shift_multiplier(item: ItemInstance) -> float:
 
 func _get_authentication_multiplier(item: ItemInstance) -> float:
 	if item.authentication_status == "authenticated":
-		return 2.0
+		return _get_auth_multiplier_from_config()
 	return 1.0
+
+
+func _get_auth_multiplier_from_config() -> float:
+	var entry: Dictionary = ContentRegistry.get_entry(&"sports")
+	if entry.is_empty():
+		return 2.0
+	var config: Variant = entry.get("authentication_config", {})
+	if config is not Dictionary:
+		return 2.0
+	return float((config as Dictionary).get("auth_multiplier", 2.0))
 
 func _get_season_multiplier(item: ItemInstance) -> float:
 	if not _season_cycle_system:
@@ -192,8 +284,10 @@ func add_cash(amount: float, reason: String) -> void:
 
 	var old_cash: float = _current_cash
 	_current_cash += amount
+	_daily_revenue += amount
 	_record_transaction(amount, reason, TransactionType.REVENUE)
 	EventBus.money_changed.emit(old_cash, _current_cash)
+	EventBus.transaction_completed.emit(amount, true, reason)
 
 
 ## Returns false if insufficient funds.
@@ -206,12 +300,17 @@ func deduct_cash(amount: float, reason: String) -> bool:
 		return false
 
 	if _current_cash < amount:
+		EventBus.transaction_completed.emit(
+			amount, false, "Insufficient funds"
+		)
 		return false
 
 	var old_cash: float = _current_cash
 	_current_cash -= amount
+	_daily_expenses += amount
 	_record_transaction(amount, reason, TransactionType.EXPENSE)
 	EventBus.money_changed.emit(old_cash, _current_cash)
+	EventBus.transaction_completed.emit(amount, true, reason)
 	return true
 
 
@@ -225,8 +324,10 @@ func force_deduct_cash(amount: float, reason: String) -> void:
 		return
 	var old_cash: float = _current_cash
 	_current_cash -= amount
+	_daily_expenses += amount
 	_record_transaction(amount, reason, TransactionType.EXPENSE)
 	EventBus.money_changed.emit(old_cash, _current_cash)
+	EventBus.transaction_completed.emit(amount, true, reason)
 	if _current_cash < 0.0:
 		push_warning(
 			"EconomySystem: cash is negative ($%.2f) after: %s"
@@ -235,6 +336,7 @@ func force_deduct_cash(amount: float, reason: String) -> void:
 		EventBus.notification_requested.emit(
 			"Warning: You are in debt! Cash: $%.2f" % _current_cash
 		)
+	_check_bankruptcy()
 
 
 func get_daily_summary() -> Dictionary:
@@ -276,22 +378,39 @@ func get_save_data() -> Dictionary:
 		"items_sold_today": _items_sold_today,
 		"daily_rent": _daily_rent,
 		"daily_rent_total": _daily_rent_total,
+		"daily_revenue": _daily_revenue,
+		"daily_expenses": _daily_expenses,
 		"sales_history": serialized_history,
 		"today_sales": _today_sales.duplicate(),
 		"demand_modifiers": _demand_modifiers.duplicate(),
 		"store_daily_revenue": _store_daily_revenue.duplicate(),
 		"trades_today": _trades_today,
 		"drift_factors": _drift_factors.duplicate(),
+		"last_injection_day": _last_injection_day,
 	}
 
 
 func load_save_data(data: Dictionary) -> void:
-	_current_cash = data.get("current_cash", Constants.STARTING_CASH)
-	_current_time_minutes = data.get("current_time_minutes", 0)
-	_items_sold_today = data.get("items_sold_today", 0)
-	_daily_rent = data.get("daily_rent", 50.0)
-	_daily_transactions = []
+	_bankruptcy_declared = false
+	_apply_state(data)
 
+
+func _apply_state(data: Dictionary) -> void:
+	_current_cash = float(
+		data.get("current_cash", Constants.STARTING_CASH)
+	)
+	_current_time_minutes = int(
+		data.get("current_time_minutes", 0)
+	)
+	_items_sold_today = int(data.get("items_sold_today", 0))
+	_daily_rent = float(data.get("daily_rent", 50.0))
+	_daily_rent_total = float(data.get("daily_rent_total", 0.0))
+	_daily_revenue = float(data.get("daily_revenue", 0.0))
+	_daily_expenses = float(data.get("daily_expenses", 0.0))
+	_trades_today = int(data.get("trades_today", 0))
+	_last_injection_day = int(data.get("last_injection_day", -1))
+
+	_daily_transactions = []
 	var saved_txns: Array = data.get("daily_transactions", [])
 	for txn: Variant in saved_txns:
 		if txn is Dictionary:
@@ -305,9 +424,9 @@ func load_save_data(data: Dictionary) -> void:
 
 	_today_sales = _restore_dict(data, "today_sales")
 	_demand_modifiers = _restore_dict(data, "demand_modifiers")
-	_store_daily_revenue = _restore_dict(data, "store_daily_revenue")
-	_daily_rent_total = float(data.get("daily_rent_total", 0.0))
-	_trades_today = int(data.get("trades_today", 0))
+	_store_daily_revenue = _restore_dict(
+		data, "store_daily_revenue"
+	)
 	_drift_factors = _restore_dict(data, "drift_factors")
 
 
@@ -332,20 +451,16 @@ func _on_day_started(_day: int) -> void:
 			"EconomySystem: day-start calculations took %dms"
 			% elapsed
 		)
-	_daily_transactions = []
-	_current_time_minutes = 0
-	_items_sold_today = 0
-	_trades_today = 0
-	_daily_rent_total = 0.0
-	_today_sales = {}
-	_store_daily_revenue = {}
+	reset_daily_totals()
 
 
-func _on_day_ended(_day: int) -> void:
+func _on_day_ended(day: int) -> void:
 	var start_ticks: int = Time.get_ticks_msec()
 	_commit_daily_sales()
 	_update_demand_modifiers()
 	_deduct_all_store_rents()
+	_check_emergency_injection(day)
+	_emit_daily_financials_snapshot()
 	var elapsed: int = Time.get_ticks_msec() - start_ticks
 	if elapsed > 100:
 		push_warning(
@@ -354,8 +469,18 @@ func _on_day_ended(_day: int) -> void:
 		)
 
 
+func _emit_daily_financials_snapshot() -> void:
+	var net: float = _daily_revenue - _daily_expenses
+	EventBus.daily_financials_snapshot.emit(
+		_daily_revenue, _daily_expenses, net
+	)
+
+
 func _deduct_all_store_rents() -> void:
 	_daily_rent_total = 0.0
+	var rent_mult: float = DifficultySystem.get_modifier(
+		&"daily_rent_multiplier"
+	)
 	for store_id: String in GameManager.owned_stores:
 		var rent: float = _daily_rent
 		if GameManager.data_loader:
@@ -364,6 +489,7 @@ func _deduct_all_store_rents() -> void:
 			)
 			if store_def:
 				rent = store_def.daily_rent
+		rent *= rent_mult
 		_daily_rent_total += rent
 		force_deduct_cash(rent, "Rent: %s" % store_id)
 
@@ -393,9 +519,6 @@ func _on_item_sold(
 	_item_id: String, _price: float, category: String
 ) -> void:
 	_items_sold_today += 1
-	var active_store: String = GameManager.current_store_id
-	if not active_store.is_empty():
-		record_store_revenue(active_store, _price)
 	if category.is_empty():
 		return
 	var current: int = _today_sales.get(category, 0) as int
@@ -474,10 +597,33 @@ func _restore_dict(data: Dictionary, key: String) -> Dictionary:
 
 
 func _on_order_cash_check(amount: float, result: Array) -> void:
-	result.append(_current_cash >= amount)
+	var adjusted: float = amount * DifficultySystem.get_modifier(
+		&"wholesale_cost_multiplier"
+	)
+	result.append(_current_cash >= adjusted)
 
 
 func _on_order_cash_deduct(
+	amount: float, reason: String, result: Array
+) -> void:
+	var adjusted: float = amount * DifficultySystem.get_modifier(
+		&"wholesale_cost_multiplier"
+	)
+	result.append(deduct_cash(adjusted, reason))
+
+
+func _on_order_refund_issued(amount: float, reason: String) -> void:
+	var adjusted: float = amount * DifficultySystem.get_modifier(
+		&"wholesale_cost_multiplier"
+	)
+	add_cash(adjusted, reason)
+
+
+func _on_payroll_cash_check(amount: float, result: Array) -> void:
+	result.append(_current_cash >= amount)
+
+
+func _on_payroll_cash_deduct(
 	amount: float, reason: String, result: Array
 ) -> void:
 	result.append(deduct_cash(amount, reason))
@@ -497,3 +643,67 @@ func _count_shelf_supply_by_category() -> Dictionary:
 		var current: int = counts.get(cat, 0) as int
 		counts[cat] = current + 1
 	return counts
+
+
+func _check_bankruptcy() -> void:
+	if _current_cash <= 0.0 and not _bankruptcy_declared:
+		_bankruptcy_declared = true
+		EventBus.bankruptcy_declared.emit()
+
+
+func _check_emergency_injection(day: int) -> void:
+	if not DifficultySystem.get_flag(&"emergency_cash_injection_enabled"):
+		return
+	var threshold: float = _daily_rent * 2.0
+	if _current_cash >= threshold:
+		return
+	if not _can_inject_this_week(day):
+		return
+	_perform_cash_injection(threshold, day)
+
+
+func _can_inject_this_week(current_day: int) -> bool:
+	if _last_injection_day < 0:
+		return true
+	return (current_day - _last_injection_day) >= 7
+
+
+func _perform_cash_injection(threshold: float, day: int) -> void:
+	var amount: float = threshold * 3.0
+	_last_injection_day = day
+	add_cash(amount, "Emergency cash injection")
+	EventBus.emergency_cash_injected.emit(
+		amount, "A loyal customer paid their tab early."
+	)
+
+
+func _on_customer_purchased(
+	store_id: StringName,
+	item_id: StringName,
+	price: float,
+	_customer_id: StringName
+) -> void:
+	if price <= 0.0:
+		return
+	add_cash(price, "Sale: %s at %s" % [item_id, store_id])
+	if not String(store_id).is_empty():
+		record_store_revenue(String(store_id), price)
+
+
+func _on_emergency_cash_injected(
+	amount: float, _reason: String
+) -> void:
+	if amount > 0.0 and _current_cash > 0.0 and _bankruptcy_declared:
+		_bankruptcy_declared = false
+
+
+func _on_milestone_unlocked(
+	milestone_id: StringName, reward: Dictionary
+) -> void:
+	var reward_type: String = str(reward.get("reward_type", ""))
+	if reward_type != "cash" and reward_type != "cash_bonus":
+		return
+	var amount: float = float(reward.get("reward_value", 0.0))
+	if amount <= 0.0:
+		return
+	add_cash(amount, "Milestone reward: %s" % milestone_id)

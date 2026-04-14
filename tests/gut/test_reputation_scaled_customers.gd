@@ -2,49 +2,53 @@
 extends GutTest
 
 
+const TEST_STORE: String = "test_store"
 var _rep: ReputationSystem
 
 
 func before_each() -> void:
 	_rep = ReputationSystem.new()
 	add_child_autofree(_rep)
+	_rep.initialize_store(TEST_STORE)
 
 
 # --- Budget multiplier values ---
 
 
-func test_budget_multiplier_unknown_is_1_0() -> void:
+func test_budget_multiplier_notorious() -> void:
 	assert_eq(
-		ReputationSystem.BUDGET_MULTIPLIERS[ReputationSystem.Tier.UNKNOWN],
+		ReputationSystem.BUDGET_MULTIPLIERS[
+			ReputationSystem.ReputationTier.NOTORIOUS
+		],
+		0.8,
+		"Notorious tier budget multiplier should be 0.8"
+	)
+
+
+func test_budget_multiplier_unremarkable() -> void:
+	assert_eq(
+		ReputationSystem.BUDGET_MULTIPLIERS[
+			ReputationSystem.ReputationTier.UNREMARKABLE
+		],
 		1.0,
-		"Unknown tier budget multiplier should be 1.0"
+		"Unremarkable tier budget multiplier should be 1.0"
 	)
 
 
-func test_budget_multiplier_local_favorite_is_1_2() -> void:
+func test_budget_multiplier_reputable() -> void:
 	assert_eq(
 		ReputationSystem.BUDGET_MULTIPLIERS[
-			ReputationSystem.Tier.LOCAL_FAVORITE
+			ReputationSystem.ReputationTier.REPUTABLE
 		],
-		1.2,
-		"Local Favorite tier budget multiplier should be 1.2"
+		1.3,
+		"Reputable tier budget multiplier should be 1.3"
 	)
 
 
-func test_budget_multiplier_destination_shop_is_1_5() -> void:
+func test_budget_multiplier_legendary() -> void:
 	assert_eq(
 		ReputationSystem.BUDGET_MULTIPLIERS[
-			ReputationSystem.Tier.DESTINATION_SHOP
-		],
-		1.5,
-		"Destination Shop tier budget multiplier should be 1.5"
-	)
-
-
-func test_budget_multiplier_legendary_is_2_0() -> void:
-	assert_eq(
-		ReputationSystem.BUDGET_MULTIPLIERS[
-			ReputationSystem.Tier.LEGENDARY
+			ReputationSystem.ReputationTier.LEGENDARY
 		],
 		2.0,
 		"Legendary tier budget multiplier should be 2.0"
@@ -54,40 +58,40 @@ func test_budget_multiplier_legendary_is_2_0() -> void:
 # --- Max customers small store ---
 
 
-func test_max_customers_small_unknown_is_5() -> void:
+func test_max_customers_small_notorious() -> void:
 	assert_eq(
 		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.Tier.UNKNOWN
+			ReputationSystem.ReputationTier.NOTORIOUS
+		],
+		3,
+		"Notorious tier small store max should be 3"
+	)
+
+
+func test_max_customers_small_unremarkable() -> void:
+	assert_eq(
+		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
+			ReputationSystem.ReputationTier.UNREMARKABLE
 		],
 		5,
-		"Unknown tier small store max should be 5"
+		"Unremarkable tier small store max should be 5"
 	)
 
 
-func test_max_customers_small_local_favorite_is_6() -> void:
+func test_max_customers_small_reputable() -> void:
 	assert_eq(
 		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.Tier.LOCAL_FAVORITE
+			ReputationSystem.ReputationTier.REPUTABLE
 		],
-		6,
-		"Local Favorite tier small store max should be 6"
+		7,
+		"Reputable tier small store max should be 7"
 	)
 
 
-func test_max_customers_small_destination_shop_is_8() -> void:
+func test_max_customers_small_legendary() -> void:
 	assert_eq(
 		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.Tier.DESTINATION_SHOP
-		],
-		8,
-		"Destination Shop tier small store max should be 8"
-	)
-
-
-func test_max_customers_small_legendary_is_10() -> void:
-	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.Tier.LEGENDARY
+			ReputationSystem.ReputationTier.LEGENDARY
 		],
 		10,
 		"Legendary tier small store max should be 10"
@@ -97,40 +101,40 @@ func test_max_customers_small_legendary_is_10() -> void:
 # --- Max customers medium store ---
 
 
-func test_max_customers_medium_unknown_is_8() -> void:
+func test_max_customers_medium_notorious() -> void:
 	assert_eq(
 		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.Tier.UNKNOWN
+			ReputationSystem.ReputationTier.NOTORIOUS
+		],
+		5,
+		"Notorious tier medium store max should be 5"
+	)
+
+
+func test_max_customers_medium_unremarkable() -> void:
+	assert_eq(
+		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
+			ReputationSystem.ReputationTier.UNREMARKABLE
 		],
 		8,
-		"Unknown tier medium store max should be 8"
+		"Unremarkable tier medium store max should be 8"
 	)
 
 
-func test_max_customers_medium_local_favorite_is_10() -> void:
+func test_max_customers_medium_reputable() -> void:
 	assert_eq(
 		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.Tier.LOCAL_FAVORITE
+			ReputationSystem.ReputationTier.REPUTABLE
 		],
-		10,
-		"Local Favorite tier medium store max should be 10"
+		11,
+		"Reputable tier medium store max should be 11"
 	)
 
 
-func test_max_customers_medium_destination_shop_is_12() -> void:
+func test_max_customers_medium_legendary() -> void:
 	assert_eq(
 		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.Tier.DESTINATION_SHOP
-		],
-		12,
-		"Destination Shop tier medium store max should be 12"
-	)
-
-
-func test_max_customers_medium_legendary_is_15() -> void:
-	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.Tier.LEGENDARY
+			ReputationSystem.ReputationTier.LEGENDARY
 		],
 		15,
 		"Legendary tier medium store max should be 15"
@@ -140,19 +144,17 @@ func test_max_customers_medium_legendary_is_15() -> void:
 # --- get_budget_multiplier() follows tier ---
 
 
-func test_get_budget_multiplier_at_unknown() -> void:
-	_rep.initialize()
+func test_get_budget_multiplier_at_default() -> void:
 	assert_eq(
-		_rep.get_budget_multiplier(), 1.0,
-		"Budget multiplier at Unknown should be 1.0"
+		_rep.get_budget_multiplier(TEST_STORE), 1.0,
+		"Budget multiplier at default (50.0) should be 1.0 (Unremarkable)"
 	)
 
 
 func test_get_budget_multiplier_at_legendary() -> void:
-	_rep.initialize()
-	_rep.modify_reputation("", 85.0)
+	_rep.add_reputation(TEST_STORE, 35.0)
 	assert_eq(
-		_rep.get_budget_multiplier(), 2.0,
+		_rep.get_budget_multiplier(TEST_STORE), 2.0,
 		"Budget multiplier at Legendary should be 2.0"
 	)
 
@@ -160,89 +162,79 @@ func test_get_budget_multiplier_at_legendary() -> void:
 # --- get_max_customers() follows tier and size ---
 
 
-func test_get_max_customers_small_at_unknown() -> void:
-	_rep.initialize()
+func test_get_max_customers_small_at_default() -> void:
 	assert_eq(
-		_rep.get_max_customers("small"), 5,
-		"Unknown small store should allow 5 customers"
+		_rep.get_max_customers("small", TEST_STORE), 5,
+		"Unremarkable small store should allow 5 customers"
 	)
 
 
 func test_get_max_customers_medium_at_legendary() -> void:
-	_rep.initialize()
-	_rep.modify_reputation("", 85.0)
+	_rep.add_reputation(TEST_STORE, 35.0)
 	assert_eq(
-		_rep.get_max_customers("medium"), 15,
+		_rep.get_max_customers("medium", TEST_STORE), 15,
 		"Legendary medium store should allow 15 customers"
 	)
 
 
 func test_get_max_customers_large_uses_medium_table() -> void:
-	_rep.initialize()
-	_rep.modify_reputation("", 50.0)
 	assert_eq(
-		_rep.get_max_customers("large"),
-		_rep.get_max_customers("medium"),
+		_rep.get_max_customers("large", TEST_STORE),
+		_rep.get_max_customers("medium", TEST_STORE),
 		"Large stores should use the medium customer table"
 	)
 
 
-# --- Legendary is 2x Unknown for both budgets and traffic ---
+# --- Budget multipliers increase monotonically ---
 
 
-func test_legendary_budget_is_2x_unknown() -> void:
-	var unknown_mult: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.Tier.UNKNOWN
+func test_budget_multipliers_increase_with_tier() -> void:
+	var notorious: float = ReputationSystem.BUDGET_MULTIPLIERS[
+		ReputationSystem.ReputationTier.NOTORIOUS
 	]
-	var legendary_mult: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.Tier.LEGENDARY
+	var unremarkable: float = ReputationSystem.BUDGET_MULTIPLIERS[
+		ReputationSystem.ReputationTier.UNREMARKABLE
 	]
-	assert_eq(
-		legendary_mult / unknown_mult, 2.0,
-		"Legendary budget should be 2x Unknown budget"
-	)
-
-
-func test_legendary_small_customers_is_2x_unknown() -> void:
-	var unknown_max: int = ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-		ReputationSystem.Tier.UNKNOWN
+	var reputable: float = ReputationSystem.BUDGET_MULTIPLIERS[
+		ReputationSystem.ReputationTier.REPUTABLE
 	]
-	var legendary_max: int = ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-		ReputationSystem.Tier.LEGENDARY
+	var legendary: float = ReputationSystem.BUDGET_MULTIPLIERS[
+		ReputationSystem.ReputationTier.LEGENDARY
 	]
-	assert_eq(
-		legendary_max, unknown_max * 2,
-		"Legendary small store max should be 2x Unknown"
-	)
+	assert_lt(notorious, unremarkable, "Notorious < Unremarkable budget mult")
+	assert_lt(unremarkable, reputable, "Unremarkable < Reputable")
+	assert_lt(reputable, legendary, "Reputable < Legendary")
 
 
-# --- Tier boundaries match existing thresholds ---
+# --- Tier boundaries match spec ---
 
 
 func test_tier_boundaries_match() -> void:
 	assert_eq(
-		ReputationSystem.TIER_THRESHOLDS[ReputationSystem.Tier.UNKNOWN],
+		ReputationSystem.TIER_THRESHOLDS[
+			ReputationSystem.ReputationTier.NOTORIOUS
+		],
 		0.0,
-		"Unknown threshold should be 0"
+		"Notorious threshold should be 0"
 	)
 	assert_eq(
 		ReputationSystem.TIER_THRESHOLDS[
-			ReputationSystem.Tier.LOCAL_FAVORITE
+			ReputationSystem.ReputationTier.UNREMARKABLE
 		],
-		25.0,
-		"Local Favorite threshold should be 25"
+		26.0,
+		"Unremarkable threshold should be 26"
 	)
 	assert_eq(
 		ReputationSystem.TIER_THRESHOLDS[
-			ReputationSystem.Tier.DESTINATION_SHOP
+			ReputationSystem.ReputationTier.REPUTABLE
 		],
-		50.0,
-		"Destination Shop threshold should be 50"
+		51.0,
+		"Reputable threshold should be 51"
 	)
 	assert_eq(
 		ReputationSystem.TIER_THRESHOLDS[
-			ReputationSystem.Tier.LEGENDARY
+			ReputationSystem.ReputationTier.LEGENDARY
 		],
-		80.0,
-		"Legendary threshold should be 80"
+		76.0,
+		"Legendary threshold should be 76"
 	)

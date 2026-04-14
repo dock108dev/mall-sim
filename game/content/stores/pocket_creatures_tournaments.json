@@ -1,0 +1,41 @@
+[
+  {
+    "id": "pc_tournament_crystal_storm_invitational",
+    "display_name": "Crystal Storm Invitational",
+    "description": "An invite-only tournament celebrating the Crystal Storm expansion's rarest pulls.",
+    "card_category": "singles",
+    "day": 22,
+    "start_day": 22,
+    "duration_days": 2,
+    "demand_multiplier": 1.6,
+    "notification_day": 21,
+    "announcement_text": "Crystal Storm Invitational announced — singles demand rising",
+    "active_text": "Crystal Storm Invitational underway — singles cards flying off shelves!"
+  },
+  {
+    "id": "pc_tournament_fossil_league_open",
+    "display_name": "Fossil League Open",
+    "description": "Open-entry tournament featuring Fossil set cards. Anybody can enter with the right deck.",
+    "card_category": "singles",
+    "day": 37,
+    "start_day": 37,
+    "duration_days": 3,
+    "demand_multiplier": 1.45,
+    "notification_day": 36,
+    "announcement_text": "Fossil League Open incoming — stock up on singles now",
+    "active_text": "Fossil League Open in progress — singles demand surging!"
+  },
+  {
+    "id": "pc_tournament_dark_masters_cup",
+    "display_name": "Dark Masters Cup",
+    "description": "High-stakes competitive event dominated by Team Rocket and dark-type decks.",
+    "card_category": "singles",
+    "day": 62,
+    "start_day": 62,
+    "duration_days": 3,
+    "demand_multiplier": 1.9,
+    "notification_day": 61,
+    "announcement_text": "Dark Masters Cup announced — competitive singles in high demand",
+    "active_text": "Dark Masters Cup active — tournament players clearing your singles shelf!"
+  }
+]

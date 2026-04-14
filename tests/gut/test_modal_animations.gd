@@ -1,18 +1,21 @@
 ## Tests that modal animation panels use PanelAnimator correctly:
 ## _anim_tween variable exists, kill_tween called before animations,
-## and modal_open/modal_close are wired up.
+## and slide/modal open/close are wired up.
 extends GutTest
 
+
+const HAGGLE_PANEL_SCENE := preload("res://game/scenes/ui/haggle_panel.tscn")
+const TRADE_PANEL_SCENE := preload("res://game/scenes/ui/trade_panel.tscn")
 
 var _haggle: HagglePanel
 var _trade: TradePanel
 
 
 func before_each() -> void:
-	_haggle = HagglePanel.new()
+	_haggle = HAGGLE_PANEL_SCENE.instantiate() as HagglePanel
 	add_child_autofree(_haggle)
 
-	_trade = TradePanel.new()
+	_trade = TRADE_PANEL_SCENE.instantiate() as TradePanel
 	add_child_autofree(_trade)
 
 
@@ -103,10 +106,10 @@ func test_haggle_accept_emits_signal() -> void:
 func test_haggle_decline_emits_signal() -> void:
 	_haggle.show_negotiation("Test Item", "good", 10.0, 8.0, 3)
 	watch_signals(_haggle)
-	_haggle._on_decline_pressed()
+	_haggle._on_reject_pressed()
 	assert_signal_emitted(
 		_haggle, "offer_declined",
-		"Decline should emit offer_declined signal"
+		"Reject should emit offer_declined signal"
 	)
 
 

@@ -1,20 +1,53 @@
-## Boot scene — loads settings and game content, then transitions to main menu.
+## Boot scene — executes startup sequence then hands off to GameManager.
 extends Node
+
+@onready var _title_label: Label = $TitleLabel
+@onready var _error_panel: PanelContainer = $ErrorPanel
+@onready var _error_label: RichTextLabel = $ErrorPanel/MarginContainer/ErrorLabel
 
 
 func _ready() -> void:
+	_error_panel.visible = false
+	if GameManager.is_boot_completed():
+		push_error("Boot: boot scene entered after boot already completed")
+		GameManager.transition_to_menu()
+		return
+	call_deferred("initialize")
+
+
+func initialize() -> void:
+	DataLoader.load_all_content()
+
+	var load_errors: Array[String] = DataLoader.get_load_errors()
+	if not load_errors.is_empty():
+		var msg: String = "Content loading failed:\n"
+		for err: String in load_errors:
+			msg += "  - %s\n" % err
+		_show_error(msg)
+		return
+
+	if not ContentRegistry.is_ready():
+		_show_error("ContentRegistry failed to initialize — no content loaded.")
+		push_error("Boot: ContentRegistry.is_ready() returned false after load_all_content()")
+		return
+
+	var store_ids: Array[StringName] = ContentRegistry.get_all_ids("store")
+	if store_ids.size() < 5:
+		_show_error(
+			"Expected at least 5 store IDs, found %d." % store_ids.size()
+		)
+		push_error("Boot: only %d store IDs registered" % store_ids.size())
+		return
+
 	Settings.load_settings()
-	_load_content()
-	_transition_after_delay()
+	Settings.apply_settings()
+	AudioManager.initialize()
 
-
-func _transition_after_delay() -> void:
-	await get_tree().create_timer(0.2).timeout
+	GameManager.mark_boot_completed()
 	GameManager.transition_to_menu()
 
 
-func _load_content() -> void:
-	var loader := DataLoader.new()
-	loader.load_all_content()
-	GameManager.data_loader = loader
-	EventBus.content_loaded.emit()
+func _show_error(message: String) -> void:
+	_title_label.visible = false
+	_error_panel.visible = true
+	_error_label.text = "[b]Boot Error[/b]\n\n%s\n\nCheck the console for details." % message

@@ -2,7 +2,9 @@
 extends Node
 
 
-const SETTINGS_PATH := "user://settings.cfg"
+signal preference_changed(key: StringName, value: Variant)
+
+var settings_path: String = "user://settings.cfg"
 
 const COMMON_RESOLUTIONS: Array[Vector2i] = [
 	Vector2i(1280, 720),
@@ -58,6 +60,8 @@ var ui_scale: float = 1.0
 var font_size: int = FontSize.MEDIUM
 var colorblind_mode: bool = false
 var locale: String = "en"
+var display_mode: int = 1
+var control_scheme: int = 0
 
 ## Supported locales — add entries here when new CSV columns are added.
 const SUPPORTED_LOCALES: Array[Dictionary] = [
@@ -65,12 +69,32 @@ const SUPPORTED_LOCALES: Array[Dictionary] = [
 	{"code": "es", "name": "Español"},
 ]
 
+const VOLUME_BUS_MAP: Dictionary = {
+	&"master_volume": &"Master",
+	&"music_volume": &"Music",
+	&"sfx_volume": &"SFX",
+}
+
+const PREFERENCE_DEFAULTS: Dictionary = {
+	&"master_volume": 1.0,
+	&"music_volume": 0.8,
+	&"sfx_volume": 1.0,
+	&"ambient_volume": 0.8,
+	&"display_mode": 1,
+	&"control_scheme": 0,
+	&"language": "en",
+}
+
 ## Default bindings captured from InputMap at startup.
 var _default_bindings: Dictionary = {}
 
 
 func _ready() -> void:
 	_capture_default_bindings()
+	load_settings()
+	apply_settings()
+	_apply_locale_preference()
+	preference_changed.connect(_on_preference_changed)
 
 
 func _capture_default_bindings() -> void:
@@ -96,21 +120,23 @@ func save_settings() -> void:
 	config.set_value("display", "font_size", font_size)
 	config.set_value("display", "colorblind_mode", colorblind_mode)
 	config.set_value("locale", "language", locale)
+	config.set_value("preferences", "display_mode", display_mode)
+	config.set_value("preferences", "control_scheme", control_scheme)
 	_save_keybindings(config)
-	var save_err: Error = config.save(SETTINGS_PATH)
+	var save_err: Error = config.save(settings_path)
 	if save_err != OK:
 		push_warning(
 			"Settings: failed to save '%s' — %s"
-			% [SETTINGS_PATH, error_string(save_err)]
+			% [settings_path, error_string(save_err)]
 		)
 
 
 func load_settings() -> void:
 	var config := ConfigFile.new()
-	if config.load(SETTINGS_PATH) != OK:
-		if FileAccess.file_exists(SETTINGS_PATH):
+	if config.load(settings_path) != OK:
+		if FileAccess.file_exists(settings_path):
 			push_warning(
-				"Settings: failed to parse '%s' — using defaults" % SETTINGS_PATH
+				"Settings: failed to parse '%s' — using defaults" % settings_path
 			)
 		return
 	master_volume = config.get_value("audio", "master_volume", 1.0)
@@ -134,6 +160,8 @@ func load_settings() -> void:
 		"display", "colorblind_mode", false
 	)
 	locale = config.get_value("locale", "language", "en")
+	display_mode = config.get_value("preferences", "display_mode", 1)
+	control_scheme = config.get_value("preferences", "control_scheme", 0)
 	_load_keybindings(config)
 	apply_settings()
 
@@ -144,6 +172,115 @@ func apply_settings() -> void:
 	_apply_ui_scale()
 	_apply_font_size()
 	_apply_locale()
+
+
+func reset_to_defaults() -> void:
+	master_volume = 1.0
+	music_volume = 0.8
+	sfx_volume = 1.0
+	ambient_volume = 0.8
+	fullscreen = true
+	vsync = true
+	resolution = Vector2i(1920, 1080)
+	ui_scale = 1.0
+	font_size = FontSize.MEDIUM
+	colorblind_mode = false
+	locale = "en"
+	display_mode = 1
+	control_scheme = 0
+	reset_keybindings_to_defaults()
+	apply_settings()
+
+
+func set_master_volume(value: float) -> void:
+	master_volume = clampf(value, 0.0, 1.0)
+	var idx: int = AudioServer.get_bus_index("Master")
+	if idx >= 0:
+		AudioServer.set_bus_volume_db(idx, linear_to_db(master_volume))
+
+
+func set_music_volume(value: float) -> void:
+	music_volume = clampf(value, 0.0, 1.0)
+	var idx: int = AudioServer.get_bus_index("Music")
+	if idx >= 0:
+		AudioServer.set_bus_volume_db(idx, linear_to_db(music_volume))
+
+
+func set_sfx_volume(value: float) -> void:
+	sfx_volume = clampf(value, 0.0, 1.0)
+	var idx: int = AudioServer.get_bus_index("SFX")
+	if idx >= 0:
+		AudioServer.set_bus_volume_db(idx, linear_to_db(sfx_volume))
+
+
+## Returns the current value for a named preference key.
+func get_preference(key: StringName) -> Variant:
+	match key:
+		&"master_volume": return master_volume
+		&"music_volume": return music_volume
+		&"sfx_volume": return sfx_volume
+		&"ambient_volume": return ambient_volume
+		&"display_mode": return display_mode
+		&"control_scheme": return control_scheme
+		&"language": return locale
+		_:
+			push_warning(
+				"Settings: unknown preference key '%s'" % key
+			)
+			return null
+
+
+## Sets a named preference with type validation and idempotency guard.
+func set_preference(key: StringName, value: Variant) -> void:
+	if value == null:
+		push_error(
+			"Settings: null value for preference '%s'" % key
+		)
+		return
+	if not PREFERENCE_DEFAULTS.has(key):
+		push_warning(
+			"Settings: unknown preference key '%s'" % key
+		)
+		return
+	var expected_type: int = typeof(PREFERENCE_DEFAULTS[key])
+	var actual_type: int = typeof(value)
+	if expected_type == TYPE_FLOAT and actual_type == TYPE_INT:
+		value = float(value)
+		actual_type = TYPE_FLOAT
+	if actual_type != expected_type:
+		push_error(
+			"Settings: type mismatch for '%s' — expected %s, got %s"
+			% [key, type_string(expected_type),
+				type_string(actual_type)]
+		)
+		return
+	if expected_type == TYPE_FLOAT:
+		value = clampf(value as float, 0.0, 1.0)
+	var old_value: Variant = get_preference(key)
+	if old_value == value:
+		return
+	match key:
+		&"master_volume": master_volume = value as float
+		&"music_volume": music_volume = value as float
+		&"sfx_volume": sfx_volume = value as float
+		&"ambient_volume": ambient_volume = value as float
+		&"display_mode": display_mode = value as int
+		&"control_scheme": control_scheme = value as int
+		&"language": locale = value as String
+	preference_changed.emit(key, value)
+	EventBus.preference_changed.emit(key, value)
+
+
+func set_fullscreen(value: bool) -> void:
+	fullscreen = value
+	var window: Window = get_window()
+	if window == null:
+		return
+	if fullscreen:
+		window.mode = Window.MODE_FULLSCREEN
+	else:
+		window.mode = Window.MODE_WINDOWED
+		window.size = resolution
 
 
 ## Rebind a single action to a new key event in InputMap.
@@ -249,10 +386,23 @@ func _apply_font_size() -> void:
 
 
 func _apply_locale() -> void:
+	_apply_locale_preference()
+
+
+func _apply_locale_preference() -> void:
+	var resolved: String = locale
+	if resolved.is_empty():
+		resolved = "en"
+		locale = resolved
 	var old_locale: String = TranslationServer.get_locale()
-	TranslationServer.set_locale(locale)
-	if old_locale != locale:
-		EventBus.locale_changed.emit(locale)
+	TranslationServer.set_locale(resolved)
+	if old_locale != resolved:
+		EventBus.locale_changed.emit(resolved)
+
+
+func _on_preference_changed(key: StringName, _value: Variant) -> void:
+	if key == &"language":
+		_apply_locale_preference()
 
 
 func _apply_audio() -> void:

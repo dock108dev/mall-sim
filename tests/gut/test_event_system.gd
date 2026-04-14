@@ -41,13 +41,64 @@ func before_each() -> void:
 	_random = RandomEventSystem.new()
 	add_child_autofree(_random)
 
+
+func _set_seasonal_definitions(def: SeasonalEventDefinition) -> void:
+	var arr: Array[SeasonalEventDefinition] = []
+	arr.append(def)
+	_seasonal._event_definitions = arr
+
+
+func _clear_seasonal_definitions() -> void:
+	var empty: Array[SeasonalEventDefinition] = []
+	_seasonal._event_definitions = empty
+
+
+func _set_seasonal_definitions_on(
+	sys: SeasonalEventSystem, def: SeasonalEventDefinition
+) -> void:
+	var arr: Array[SeasonalEventDefinition] = []
+	arr.append(def)
+	sys._event_definitions = arr
+
+
+func _set_random_definitions(def: RandomEventDefinition) -> void:
+	var arr: Array[RandomEventDefinition] = []
+	arr.append(def)
+	_random._event_definitions = arr
+
+
+func _set_random_definitions_three(
+	a: RandomEventDefinition,
+	b: RandomEventDefinition,
+	c: RandomEventDefinition,
+) -> void:
+	var arr: Array[RandomEventDefinition] = []
+	arr.append(a)
+	arr.append(b)
+	arr.append(c)
+	_random._event_definitions = arr
+
+
+func _clear_random_definitions() -> void:
+	var empty: Array[RandomEventDefinition] = []
+	_random._event_definitions = empty
+
+
+func _set_random_definitions_on(
+	sys: RandomEventSystem, def: RandomEventDefinition
+) -> void:
+	var arr: Array[RandomEventDefinition] = []
+	arr.append(def)
+	sys._event_definitions = arr
+
+
 # --- Seasonal: triggering within configured day range ---
 
 func test_seasonal_triggers_on_correct_day() -> void:
 	var def: SeasonalEventDefinition = _seasonal_def({
 		"frequency_days": 10, "offset_days": 0,
 	})
-	_seasonal._event_definitions = [def]
+	_set_seasonal_definitions(def)
 	assert_true(_seasonal._should_trigger(10, def))
 
 func test_seasonal_triggers_on_frequency_multiple() -> void:
@@ -87,7 +138,7 @@ func test_seasonal_announced_on_trigger_day() -> void:
 	var def: SeasonalEventDefinition = _seasonal_def({
 		"frequency_days": 10, "offset_days": 0,
 	})
-	_seasonal._event_definitions = [def]
+	_set_seasonal_definitions(def)
 	var fired: bool = false
 	var got_id: String = ""
 	var cb: Callable = func(id: String) -> void:
@@ -105,7 +156,7 @@ func test_seasonal_activates_after_announcement() -> void:
 	var def: SeasonalEventDefinition = _seasonal_def({
 		"frequency_days": 10, "offset_days": 0, "duration_days": 5,
 	})
-	_seasonal._event_definitions = [def]
+	_set_seasonal_definitions(def)
 	var got_id: String = ""
 	var cb: Callable = func(id: String) -> void:
 		got_id = id
@@ -135,7 +186,7 @@ func test_seasonal_no_duplicate_activation() -> void:
 	var def: SeasonalEventDefinition = _seasonal_def({
 		"frequency_days": 10, "offset_days": 0,
 	})
-	_seasonal._event_definitions = [def]
+	_set_seasonal_definitions(def)
 	_seasonal._active_events.append({"definition": def, "start_day": 5})
 	_seasonal._on_day_started(10)
 	assert_eq(_seasonal._announced_events.size(), 0)
@@ -182,7 +233,7 @@ func test_seasonal_effects_during_active() -> void:
 		"frequency_days": 5, "offset_days": 0, "duration_days": 3,
 		"traffic": 1.75, "spending": 0.8,
 	})
-	_seasonal._event_definitions = [def]
+	_set_seasonal_definitions(def)
 	_seasonal._on_day_started(5)
 	_seasonal._on_day_started(5 + SeasonalEventSystem.ANNOUNCEMENT_DAYS)
 	assert_eq(_seasonal.get_traffic_multiplier(), 1.75)
@@ -193,7 +244,7 @@ func test_seasonal_effects_removed_after_expiry() -> void:
 		"frequency_days": 5, "offset_days": 0, "duration_days": 2,
 		"traffic": 1.75, "spending": 0.8,
 	})
-	_seasonal._event_definitions = [def]
+	_set_seasonal_definitions(def)
 	_seasonal._on_day_started(5)
 	var act: int = 5 + SeasonalEventSystem.ANNOUNCEMENT_DAYS
 	_seasonal._on_day_started(act)
@@ -206,7 +257,7 @@ func test_seasonal_effects_removed_after_expiry() -> void:
 
 func test_seasonal_save_load_roundtrip() -> void:
 	var def: SeasonalEventDefinition = _seasonal_def({"id": "holiday"})
-	_seasonal._event_definitions = [def]
+	_set_seasonal_definitions(def)
 	_seasonal._active_events.append({"definition": def, "start_day": 15})
 	_seasonal._announced_events.append({
 		"definition": def, "announced_day": 20,
@@ -214,7 +265,7 @@ func test_seasonal_save_load_roundtrip() -> void:
 	var save: Dictionary = _seasonal.get_save_data()
 	var rest: SeasonalEventSystem = SeasonalEventSystem.new()
 	add_child_autofree(rest)
-	rest._event_definitions = [def]
+	_set_seasonal_definitions_on(rest, def)
 	rest.load_save_data(save)
 	assert_eq(rest._active_events.size(), 1)
 	assert_eq(rest._announced_events.size(), 1)
@@ -225,7 +276,7 @@ func test_seasonal_save_load_roundtrip() -> void:
 	assert_eq(rd.id, "holiday")
 
 func test_seasonal_load_skips_unknown() -> void:
-	_seasonal._event_definitions = []
+	_clear_seasonal_definitions()
 	_seasonal.load_save_data({
 		"active_events": [
 			{"definition_id": "nonexistent", "start_day": 1},
@@ -379,7 +430,7 @@ func test_random_cooldown_set_after_expiry() -> void:
 
 func test_random_cooldown_prevents_reactivation() -> void:
 	var def: RandomEventDefinition = _random_def({"cooldown_days": 5})
-	_random._event_definitions = [def]
+	_set_random_definitions(def)
 	_random._cooldowns["test_random"] = 3
 	assert_eq(_random._get_eligible().size(), 0)
 
@@ -396,7 +447,7 @@ func test_random_eligible_filters_cooldowns() -> void:
 	var a: RandomEventDefinition = _random_def({"id": "a"})
 	var b: RandomEventDefinition = _random_def({"id": "b"})
 	var c: RandomEventDefinition = _random_def({"id": "c"})
-	_random._event_definitions = [a, b, c]
+	_set_random_definitions_three(a, b, c)
 	_random._cooldowns["b"] = 5
 	var eligible: Array[RandomEventDefinition] = _random._get_eligible()
 	assert_eq(eligible.size(), 2)
@@ -410,7 +461,10 @@ func test_random_uniform_selection_over_eligible() -> void:
 	var a: RandomEventDefinition = _random_def({"id": "a"})
 	var b: RandomEventDefinition = _random_def({"id": "b"})
 	var c: RandomEventDefinition = _random_def({"id": "c"})
-	var defs: Array[RandomEventDefinition] = [a, b, c]
+	var defs: Array[RandomEventDefinition] = []
+	defs.append(a)
+	defs.append(b)
+	defs.append(c)
 	var counts: Dictionary = {"a": 0, "b": 0, "c": 0}
 	for i: int in range(3000):
 		var chosen: RandomEventDefinition = defs[randi() % defs.size()]
@@ -427,7 +481,7 @@ func test_random_save_load_roundtrip() -> void:
 	var def: RandomEventDefinition = _random_def({
 		"id": "supply_evt", "effect_type": "supply_shortage",
 	})
-	_random._event_definitions = [def]
+	_set_random_definitions(def)
 	_random._active_event = {
 		"definition": def, "start_day": 8,
 		"target_category": "electronics", "target_item_id": "",
@@ -436,7 +490,7 @@ func test_random_save_load_roundtrip() -> void:
 	var save: Dictionary = _random.get_save_data()
 	var rest: RandomEventSystem = RandomEventSystem.new()
 	add_child_autofree(rest)
-	rest._event_definitions = [def]
+	_set_random_definitions_on(rest, def)
 	rest.load_save_data(save)
 	assert_true(rest.has_active_event())
 	var active: Dictionary = rest.get_active_event()
@@ -447,7 +501,7 @@ func test_random_save_load_roundtrip() -> void:
 	assert_eq(rest._cooldowns.get("old_evt", 0), 3)
 
 func test_random_load_skips_unknown() -> void:
-	_random._event_definitions = []
+	_clear_random_definitions()
 	_random.load_save_data({
 		"active_event": {"definition_id": "x", "start_day": 1},
 		"cooldowns": {},

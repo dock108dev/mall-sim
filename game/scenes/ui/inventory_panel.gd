@@ -1,85 +1,86 @@
-## Inventory management panel displaying backroom or returns bin items.
+## Left-dock inventory panel with stock tabs, search/filter, and context menu.
 class_name InventoryPanel
 extends CanvasLayer
 
 const PANEL_NAME: String = "inventory"
 const SOURCE_BACKROOM: String = "backroom"
-const SOURCE_RETURNS_BIN: String = "returns_bin"
+const SOURCE_SHELVES: String = "shelves"
+const SOURCE_ALL: String = "all"
+
+enum Tab { BACKROOM, SHELVES, ALL }
 
 var inventory_system: InventorySystem
 var store_id: String = ""
 var refurbishment_dialog: RefurbishmentDialog = null
 var refurbishment_system: RefurbishmentSystem = null
+var testing_system: TestingSystem = null
 var rental_controller: VideoRentalStoreController = null
 var pack_controller: PocketCreaturesStoreController = null
 var pack_opening_panel: PackOpeningPanel = null
+var electronics_controller: ElectronicsStoreController = null
 
 var _selected_item: ItemInstance = null
 var _is_open: bool = false
 var _cell_map: Dictionary = {}
-var _placement_mode: bool = false
-var _source_location: String = SOURCE_BACKROOM
+var _active_tab: Tab = Tab.BACKROOM
 var _anim_tween: Tween
 var _rest_x: float = 0.0
+var _shelf_actions := InventoryShelfActions.new()
 
 @onready var _panel: PanelContainer = $PanelRoot
-@onready var _grid: GridContainer = (
-	$PanelRoot/Margin/VBox/Content/LeftSide/Scroll/Grid
+@onready var _backroom_tab: Button = (
+	$PanelRoot/Margin/VBox/TabBar/BackroomTab
+)
+@onready var _shelves_tab: Button = (
+	$PanelRoot/Margin/VBox/TabBar/ShelvesTab
+)
+@onready var _all_tab: Button = (
+	$PanelRoot/Margin/VBox/TabBar/AllTab
+)
+@onready var _search_field: LineEdit = (
+	$PanelRoot/Margin/VBox/SearchField
+)
+@onready var _condition_filter: OptionButton = (
+	$PanelRoot/Margin/VBox/FilterRow/ConditionFilter
+)
+@onready var _rarity_filter: OptionButton = (
+	$PanelRoot/Margin/VBox/FilterRow/RarityFilter
+)
+@onready var _scroll: ScrollContainer = (
+	$PanelRoot/Margin/VBox/ItemList/Scroll
+)
+@onready var _grid: VBoxContainer = (
+	$PanelRoot/Margin/VBox/ItemList/Scroll/ItemGrid
+)
+@onready var _empty_label: Label = (
+	$PanelRoot/Margin/VBox/ItemList/EmptyLabel
+)
+@onready var _context_menu: PopupMenu = $ContextMenu
+@onready var _footer_count: Label = (
+	$PanelRoot/Margin/VBox/Footer/CountLabel
+)
+@onready var _footer_value: Label = (
+	$PanelRoot/Margin/VBox/Footer/ValueLabel
 )
 @onready var _close_button: Button = (
 	$PanelRoot/Margin/VBox/Header/CloseButton
-)
-@onready var _capacity_label: Label = (
-	$PanelRoot/Margin/VBox/Header/CapacityLabel
-)
-@onready var _empty_label: Label = (
-	$PanelRoot/Margin/VBox/Content/LeftSide/EmptyLabel
-)
-@onready var _scroll: ScrollContainer = (
-	$PanelRoot/Margin/VBox/Content/LeftSide/Scroll
-)
-@onready var _detail_panel: PanelContainer = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel
-)
-@onready var _detail_name: Label = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/DetailName
-)
-@onready var _detail_condition: Label = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/DetailCondition
-)
-@onready var _detail_rarity: Label = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/DetailRarity
-)
-@onready var _detail_base_price: Label = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/DetailBasePrice
-)
-@onready var _detail_value: Label = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/DetailValue
-)
-@onready var _detail_description: Label = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/DetailDescription
-)
-@onready var _detail_placeholder: Label = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/DetailPlaceholder
-)
-@onready var _refurbish_button: Button = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/RefurbishButton
-)
-@onready var _open_pack_button: Button = (
-	$PanelRoot/Margin/VBox/Content/DetailPanel/DetailMargin/DetailVBox/OpenPackButton
 )
 
 
 func _ready() -> void:
 	_panel.visible = false
 	_rest_x = _panel.position.x
-	_detail_panel.visible = true
-	_refurbish_button.visible = false
-	_refurbish_button.pressed.connect(_on_refurbish_pressed)
-	_open_pack_button.visible = false
-	_open_pack_button.pressed.connect(_on_open_pack_pressed)
-	_show_detail_placeholder()
 	_close_button.pressed.connect(close)
+	_backroom_tab.pressed.connect(_on_tab_pressed.bind(Tab.BACKROOM))
+	_shelves_tab.pressed.connect(_on_tab_pressed.bind(Tab.SHELVES))
+	_all_tab.pressed.connect(_on_tab_pressed.bind(Tab.ALL))
+	_search_field.text_changed.connect(_on_search_changed)
+	_condition_filter.item_selected.connect(_on_filter_changed)
+	_rarity_filter.item_selected.connect(_on_filter_changed)
+	_context_menu.id_pressed.connect(_on_context_action)
+	InventoryFilter.populate_condition_options(_condition_filter)
+	InventoryFilter.populate_rarity_options(_rarity_filter)
+	_update_tab_visuals()
 	EventBus.interactable_interacted.connect(
 		_on_interactable_interacted
 	)
@@ -88,29 +89,28 @@ func _ready() -> void:
 	)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			if _placement_mode:
-				_exit_placement_mode()
+			if _shelf_actions.is_placement_mode:
+				_shelf_actions.exit_placement_mode()
 				get_viewport().set_input_as_handled()
 				return
-
 	if not event is InputEventKey:
 		return
 	var key_event := event as InputEventKey
 	if not key_event.pressed or key_event.echo:
 		return
-
 	if key_event.is_action_pressed("toggle_inventory"):
 		_toggle()
 		get_viewport().set_input_as_handled()
 	elif key_event.is_action_pressed("ui_cancel"):
-		if _placement_mode:
-			_exit_placement_mode()
+		if _shelf_actions.is_placement_mode:
+			_shelf_actions.exit_placement_mode()
 			get_viewport().set_input_as_handled()
 		elif _is_open:
 			close(true)
@@ -124,12 +124,19 @@ func open(source: String = SOURCE_BACKROOM) -> void:
 		push_warning("InventoryPanel: no inventory_system assigned")
 		return
 	PanelAnimator.kill_tween(_anim_tween)
-	_source_location = source
+	_shelf_actions.inventory_system = inventory_system
+	match source:
+		SOURCE_SHELVES:
+			_active_tab = Tab.SHELVES
+		SOURCE_ALL:
+			_active_tab = Tab.ALL
+		_:
+			_active_tab = Tab.BACKROOM
 	_is_open = true
 	_selected_item = null
-	_show_detail_placeholder()
+	_search_field.text = ""
+	_update_tab_visuals()
 	_refresh_grid()
-	_update_capacity_label()
 	_anim_tween = PanelAnimator.slide_open(
 		_panel, _rest_x, true
 	)
@@ -140,8 +147,7 @@ func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
 	PanelAnimator.kill_tween(_anim_tween)
-	if _placement_mode:
-		_exit_placement_mode()
+	_shelf_actions.exit_placement_mode()
 	_is_open = false
 	_selected_item = null
 	if immediate:
@@ -166,18 +172,72 @@ func _toggle() -> void:
 		open()
 
 
+func _on_tab_pressed(tab: Tab) -> void:
+	if _active_tab == tab:
+		return
+	_active_tab = tab
+	_selected_item = null
+	_update_tab_visuals()
+	_refresh_grid()
+
+
+func _update_tab_visuals() -> void:
+	var active := Color(0.7, 1.0, 0.7)
+	_backroom_tab.modulate = (
+		active if _active_tab == Tab.BACKROOM else Color.WHITE
+	)
+	_shelves_tab.modulate = (
+		active if _active_tab == Tab.SHELVES else Color.WHITE
+	)
+	_all_tab.modulate = (
+		active if _active_tab == Tab.ALL else Color.WHITE
+	)
+
+
+func _on_search_changed(_new_text: String) -> void:
+	_refresh_grid()
+
+
+func _on_filter_changed(_index: int) -> void:
+	_refresh_grid()
+
+
+func _get_filtered_items() -> Array[ItemInstance]:
+	if not inventory_system:
+		return []
+	var items: Array[ItemInstance] = []
+	match _active_tab:
+		Tab.BACKROOM:
+			items = inventory_system.get_backroom_items_for_store(
+				store_id
+			)
+		Tab.SHELVES:
+			items = inventory_system.get_shelf_items_for_store(
+				store_id
+			)
+		Tab.ALL:
+			items = inventory_system.get_items_for_store(store_id)
+	return InventoryFilter.apply(
+		items,
+		_search_field.text,
+		InventoryFilter.condition_at_index(
+			_condition_filter.selected
+		),
+		InventoryFilter.rarity_at_index(_rarity_filter.selected),
+	)
+
+
 func _refresh_grid() -> void:
 	_clear_grid()
-	if not inventory_system:
-		return
-	var items: Array[ItemInstance] = (
-		inventory_system.get_items_at_location(_source_location)
-	)
-	var has_items: bool = items.size() > 0
-	_empty_label.visible = not has_items
-	_scroll.visible = has_items
+	var items: Array[ItemInstance] = _get_filtered_items()
+	_empty_label.visible = items.is_empty()
+	_scroll.visible = not items.is_empty()
 	for item: ItemInstance in items:
-		_create_item_cell(item)
+		_add_item_row(item)
+	_footer_count.text = _build_count_label(items.size())
+	_footer_value.text = (
+		"Value: $%.2f" % InventoryFilter.total_value(items)
+	)
 
 
 func _clear_grid() -> void:
@@ -186,161 +246,89 @@ func _clear_grid() -> void:
 		child.queue_free()
 
 
-func _create_item_cell(item: ItemInstance) -> void:
-	var cell := PanelContainer.new()
-	cell.custom_minimum_size = Vector2(170, 60)
-
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 6)
-
-	var rarity_rect := ColorRect.new()
-	rarity_rect.custom_minimum_size = Vector2(6, 0)
-	rarity_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var rarity_key: String = ""
-	if item.definition:
-		rarity_key = item.definition.rarity
-	rarity_rect.color = UIThemeConstants.get_rarity_color(rarity_key)
-	hbox.add_child(rarity_rect)
-
-	var label := Label.new()
-	var condition_text: String = item.condition.capitalize()
-	if _is_unrentable_item(item):
-		condition_text += " - " + tr("INVENTORY_UNRENTABLE")
-	var shape: String = UIThemeConstants.get_rarity_shape(rarity_key)
-	label.text = "%s %s\n[%s]" % [
-		shape,
-		_truncate_name(item.definition.name, 16),
-		condition_text,
-	]
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(label)
-
-	cell.add_child(hbox)
-
-	var btn := Button.new()
-	btn.flat = true
-	btn.anchors_preset = Control.PRESET_FULL_RECT
-	btn.pressed.connect(_on_item_clicked.bind(item, cell))
-	btn.mouse_entered.connect(
-		_on_cell_mouse_entered.bind(item)
+func _add_item_row(item: ItemInstance) -> void:
+	var row: PanelContainer = InventoryRowBuilder.build(item)
+	InventoryRowBuilder.add_overlay_button(
+		row,
+		_on_item_clicked.bind(item, row),
+		_on_cell_mouse_entered.bind(item),
+		_on_cell_mouse_exited,
 	)
-	btn.mouse_exited.connect(_on_cell_mouse_exited)
-	cell.add_child(btn)
-
-	_grid.add_child(cell)
-	_cell_map[cell] = item
-
-
-func _truncate_name(text: String, max_len: int) -> String:
-	if text.length() <= max_len:
-		return text
-	return text.substr(0, max_len - 1) + "..."
+	_grid.add_child(row)
+	_cell_map[row] = item
 
 
 func _on_item_clicked(
-	item: ItemInstance, cell: PanelContainer
+	item: ItemInstance, row: PanelContainer
 ) -> void:
 	_selected_item = item
-	_highlight_selected_cell(cell)
-	_show_item_detail(item)
-	_enter_placement_mode()
+	_highlight_selected(row)
+	_show_context_menu(item)
 
 
-func _highlight_selected_cell(
-	active_cell: PanelContainer
-) -> void:
+func _highlight_selected(active: PanelContainer) -> void:
 	for child: Node in _grid.get_children():
 		if child is PanelContainer:
 			(child as PanelContainer).modulate = Color.WHITE
-	active_cell.modulate = Color(0.7, 1.0, 0.7)
+	active.modulate = Color(0.7, 1.0, 0.7)
 
 
-func _show_item_detail(item: ItemInstance) -> void:
-	_detail_placeholder.visible = false
-	_detail_name.visible = true
-	_detail_condition.visible = true
-	_detail_rarity.visible = true
-	_detail_base_price.visible = true
-	_detail_value.visible = true
-	_detail_description.visible = true
-
-	_detail_name.text = item.definition.name
-	var detail_cond_text: String = item.condition.capitalize()
-	if _is_unrentable_item(item):
-		detail_cond_text += "  [%s]" % tr("INVENTORY_UNRENTABLE")
-		_detail_condition.add_theme_color_override(
-			"font_color", UIThemeConstants.get_negative_color()
-		)
-	else:
-		_detail_condition.remove_theme_color_override("font_color")
-	_detail_condition.text = tr("INVENTORY_CONDITION") % detail_cond_text
-	var rarity_display: String = UIThemeConstants.get_rarity_display(
-		item.definition.rarity
-	)
-	_detail_rarity.text = tr("INVENTORY_RARITY") % rarity_display
-	var rarity_color: Color = UIThemeConstants.get_rarity_color(
-		item.definition.rarity
-	)
-	_detail_rarity.add_theme_color_override(
-		"font_color", rarity_color
-	)
-	_detail_base_price.text = (
-		tr("INVENTORY_BASE_PRICE") % item.definition.base_price
-	)
-	_detail_value.text = (
-		tr("INVENTORY_EST_VALUE") % item.get_current_value()
-	)
-	var desc: String = item.definition.description
-	if desc.is_empty():
-		desc = tr("INVENTORY_NO_DESC")
-	_detail_description.text = desc
-	_update_refurbish_button(item)
-	_update_open_pack_button(item)
+func _show_context_menu(item: ItemInstance) -> void:
+	_context_menu.clear()
+	_context_menu.add_item("Set Price", 0)
+	if item.current_location == "backroom":
+		_context_menu.add_item("Move to Shelf", 1)
+	elif item.current_location.begins_with("shelf:"):
+		_context_menu.add_item("Move to Backroom", 2)
+	_context_menu.add_item("Order More", 3)
+	if testing_system and testing_system.can_test(item):
+		_context_menu.add_item("Test Item", 4)
+	if refurbishment_system and refurbishment_system.can_refurbish(item):
+		_context_menu.add_item("Refurbish", 5)
+	if _can_open_pack(item):
+		_context_menu.add_item("Open Pack", 6)
+	if _can_set_as_demo(item):
+		_context_menu.add_item("Set as Demo", 7)
+	if _can_remove_from_demo(item):
+		_context_menu.add_item("Remove from Demo", 8)
+	if _can_retire_tape(item):
+		_context_menu.add_item("Retire (Sell)", 9)
+		_context_menu.add_item("Write Off", 10)
+	_context_menu.reset_size()
+	var pos: Vector2 = _panel.get_global_mouse_position()
+	_context_menu.position = Vector2i(int(pos.x), int(pos.y))
+	_context_menu.popup()
 
 
-func _show_detail_placeholder() -> void:
-	_detail_placeholder.visible = true
-	_detail_name.visible = false
-	_detail_condition.visible = false
-	_detail_rarity.visible = false
-	_detail_base_price.visible = false
-	_detail_value.visible = false
-	_detail_description.visible = false
-	_refurbish_button.visible = false
-	_open_pack_button.visible = false
-
-
-func _update_capacity_label() -> void:
-	if not inventory_system:
-		_capacity_label.text = ""
+func _on_context_action(id: int) -> void:
+	if not _selected_item:
 		return
-	var items: Array[ItemInstance] = (
-		inventory_system.get_items_at_location(_source_location)
-	)
-	var count: int = items.size()
-	if _source_location == SOURCE_RETURNS_BIN:
-		_capacity_label.text = tr("INVENTORY_RETURNS_BIN") % count
-		return
-	var capacity: int = _get_backroom_capacity()
-	if capacity > 0:
-		_capacity_label.text = tr("INVENTORY_CAPACITY") % [count, capacity]
-	else:
-		_capacity_label.text = tr("INVENTORY_COUNT") % count
-
-
-func _get_backroom_capacity() -> int:
-	if not inventory_system or store_id.is_empty():
-		return 0
-	if not GameManager.data_loader:
-		return 0
-	var stores: Array[StoreDefinition] = (
-		GameManager.data_loader.get_all_stores()
-	)
-	for store: StoreDefinition in stores:
-		if store.store_type == store_id or store.id == store_id:
-			return store.backroom_capacity
-	return 0
+	match id:
+		0:
+			EventBus.panel_opened.emit("pricing")
+		1:
+			_shelf_actions.enter_placement_mode()
+		2:
+			_shelf_actions.move_to_backroom(_selected_item)
+			_selected_item = null
+		3:
+			EventBus.panel_opened.emit("orders")
+		4:
+			if testing_system:
+				testing_system.start_test(_selected_item.instance_id)
+		5:
+			if refurbishment_dialog and _selected_item:
+				refurbishment_dialog.open(_selected_item)
+		6:
+			_open_selected_pack()
+		7:
+			_set_selected_as_demo()
+		8:
+			_remove_selected_from_demo()
+		9:
+			_retire_selected_tape(true)
+		10:
+			_retire_selected_tape(false)
 
 
 func _on_interactable_interacted(
@@ -350,15 +338,20 @@ func _on_interactable_interacted(
 		if not _is_open:
 			open(SOURCE_BACKROOM)
 		return
-
 	if type == Interactable.InteractionType.RETURNS_BIN:
 		if not _is_open:
-			open(SOURCE_RETURNS_BIN)
+			open(SOURCE_BACKROOM)
 		return
-
 	if type == Interactable.InteractionType.SHELF_SLOT:
-		if _placement_mode and _selected_item and target is ShelfSlot:
-			_place_selected_item(target as ShelfSlot)
+		if (
+			_shelf_actions.is_placement_mode
+			and _selected_item
+			and target is ShelfSlot
+		):
+			if _shelf_actions.place_item(
+				_selected_item, target as ShelfSlot
+			):
+				_selected_item = null
 		elif not _is_open and target is ShelfSlot:
 			var slot := target as ShelfSlot
 			if not slot.is_occupied():
@@ -370,66 +363,14 @@ func _on_interactable_right_clicked(
 ) -> void:
 	if type != Interactable.InteractionType.SHELF_SLOT:
 		return
-	if _placement_mode:
-		_exit_placement_mode()
+	if _shelf_actions.is_placement_mode:
+		_shelf_actions.exit_placement_mode()
 		return
 	if not target is ShelfSlot:
 		return
 	var slot := target as ShelfSlot
 	if slot.is_occupied():
-		_remove_item_from_shelf(slot)
-
-
-func _place_selected_item(slot: ShelfSlot) -> void:
-	if not _selected_item or not inventory_system:
-		return
-	if slot.is_occupied():
-		EventBus.notification_requested.emit(tr("INVENTORY_SLOT_OCCUPIED"))
-		return
-	if _selected_item.current_location != _source_location:
-		EventBus.notification_requested.emit(
-			tr("INVENTORY_NOT_IN_LOCATION") % _source_location.replace("_", " ")
-		)
-		return
-	inventory_system.move_item(
-		_selected_item.instance_id,
-		"shelf:%s" % slot.slot_id
-	)
-	var category: String = ""
-	if _selected_item.definition:
-		category = _selected_item.definition.category
-	slot.place_item(_selected_item.instance_id, category)
-	_exit_placement_mode()
-	_selected_item = null
-	_show_detail_placeholder()
-
-
-func _remove_item_from_shelf(slot: ShelfSlot) -> void:
-	if not inventory_system:
-		return
-	var item_id: String = slot.get_item_instance_id()
-	if item_id.is_empty():
-		return
-	slot.remove_item()
-	inventory_system.move_item(item_id, "backroom")
-	EventBus.item_removed_from_shelf.emit(item_id, slot.slot_id)
-	EventBus.notification_requested.emit(tr("INVENTORY_RETURNED"))
-
-
-func _enter_placement_mode() -> void:
-	if _placement_mode:
-		return
-	_placement_mode = true
-	Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-	EventBus.placement_mode_entered.emit()
-
-
-func _exit_placement_mode() -> void:
-	if not _placement_mode:
-		return
-	_placement_mode = false
-	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
-	EventBus.placement_mode_exited.emit()
+		_shelf_actions.remove_item_from_shelf(slot)
 
 
 func _on_panel_opened(panel_name: String) -> void:
@@ -441,84 +382,21 @@ func _on_inventory_changed() -> void:
 	if not _is_open:
 		return
 	if _selected_item:
-		var still_exists: bool = inventory_system.get_item(
+		if not inventory_system.get_item(
 			_selected_item.instance_id
-		) != null
-		var still_in_source: bool = still_exists and (
-			_selected_item.current_location == _source_location
-		)
-		if not still_in_source:
+		):
 			_selected_item = null
-			_show_detail_placeholder()
 	_refresh_grid()
-	_update_capacity_label()
 
 
-func _update_refurbish_button(item: ItemInstance) -> void:
-	if not refurbishment_system:
-		_refurbish_button.visible = false
-		return
-	var can_refurb: bool = refurbishment_system.can_refurbish(item)
-	var is_for_parts: bool = (
-		item.definition
-		and item.definition.subcategory
-		== RefurbishmentSystem.ELIGIBLE_SUBCATEGORY
-	)
-	_refurbish_button.visible = is_for_parts
-	_refurbish_button.disabled = not can_refurb
-	if is_for_parts and not can_refurb:
-		var active: int = refurbishment_system.get_active_count()
-		if active >= RefurbishmentSystem.MAX_CONCURRENT:
-			_refurbish_button.text = tr("INVENTORY_REFURBISH_FULL")
+func _on_active_store_changed(new_store_id: StringName) -> void:
+	store_id = String(new_store_id)
+	if _is_open:
+		if new_store_id.is_empty():
+			close(true)
 		else:
-			_refurbish_button.text = tr("INVENTORY_REFURBISH")
-	else:
-		_refurbish_button.text = tr("INVENTORY_REFURBISH")
-
-
-## Returns true if the item is a rental category at poor condition.
-func _is_unrentable_item(item: ItemInstance) -> bool:
-	if not rental_controller or not item.definition:
-		return false
-	if not rental_controller.is_rental_item(item.definition.category):
-		return false
-	return not rental_controller.is_rentable(item)
-
-
-func _on_refurbish_pressed() -> void:
-	if not _selected_item or not refurbishment_dialog:
-		return
-	refurbishment_dialog.open(_selected_item)
-
-
-func _update_open_pack_button(item: ItemInstance) -> void:
-	if not pack_controller:
-		_open_pack_button.visible = false
-		return
-	var is_pack: bool = pack_controller.is_openable_pack(item)
-	_open_pack_button.visible = is_pack
-	_open_pack_button.text = tr("INVENTORY_OPEN_PACK")
-
-
-func _on_open_pack_pressed() -> void:
-	if not _selected_item or not pack_controller:
-		return
-	if not pack_controller.is_openable_pack(_selected_item):
-		return
-	var pack_name: String = _selected_item.definition.name
-	var pack_id: String = _selected_item.instance_id
-	var cards: Array[ItemInstance] = pack_controller.open_pack(
-		pack_id
-	)
-	if cards.is_empty():
-		EventBus.notification_requested.emit(
-			tr("INVENTORY_PACK_FAILED")
-		)
-		return
-	_selected_item = null
-	_show_detail_placeholder()
-	if pack_opening_panel:
-		pack_opening_panel.open(cards, pack_name)
+			_selected_item = null
+			_refresh_grid()
 
 
 func _on_cell_mouse_entered(item: ItemInstance) -> void:
@@ -527,3 +405,104 @@ func _on_cell_mouse_entered(item: ItemInstance) -> void:
 
 func _on_cell_mouse_exited() -> void:
 	EventBus.item_tooltip_hidden.emit()
+
+
+func _build_count_label(visible_count: int) -> String:
+	if not rental_controller:
+		return "%d items" % visible_count
+	var available: int = rental_controller.get_available_count()
+	var rented: int = rental_controller.get_rented_count()
+	return "%d available / %d rented" % [available, rented]
+
+
+func _can_open_pack(item: ItemInstance) -> bool:
+	if not pack_controller or not pack_opening_panel:
+		return false
+	return pack_controller.is_openable_pack(item)
+
+
+func _open_selected_pack() -> void:
+	if not _selected_item or not pack_controller:
+		return
+	if not pack_controller.is_openable_pack(_selected_item):
+		return
+	if not pack_controller.can_afford_pack(_selected_item):
+		EventBus.transaction_completed.emit(
+			0.0, false, "Insufficient funds to open pack."
+		)
+		return
+	var instance_id: String = _selected_item.instance_id
+	var pack_name: String = ""
+	if _selected_item.definition:
+		pack_name = _selected_item.definition.item_name
+	_selected_item = null
+	var cards: Array[ItemInstance] = (
+		pack_controller.open_pack_with_cards(
+			StringName(instance_id)
+		)
+	)
+	if cards.is_empty():
+		return
+	var card_dicts: Array[Dictionary] = []
+	for card: ItemInstance in cards:
+		var entry: Dictionary = {
+			"id": card.instance_id,
+			"name": card.definition.item_name if card.definition else "Unknown",
+			"rarity": card.definition.rarity if card.definition else "common",
+			"value": card.get_current_value(),
+		}
+		card_dicts.append(entry)
+	EventBus.pack_opening_started.emit(instance_id, card_dicts)
+
+
+func _can_set_as_demo(item: ItemInstance) -> bool:
+	if not electronics_controller:
+		return false
+	return electronics_controller.can_demo_item(item)
+
+
+func _can_remove_from_demo(item: ItemInstance) -> bool:
+	if not electronics_controller:
+		return false
+	return item.is_demo \
+		and electronics_controller.is_demo_unit(item.instance_id)
+
+
+func _set_selected_as_demo() -> void:
+	if not _selected_item or not electronics_controller:
+		return
+	var success: bool = electronics_controller.place_demo_item(
+		_selected_item.instance_id
+	)
+	if success:
+		_selected_item = null
+		_refresh_grid()
+
+
+func _remove_selected_from_demo() -> void:
+	if not _selected_item or not electronics_controller:
+		return
+	var success: bool = electronics_controller.remove_demo_item(
+		_selected_item.instance_id
+	)
+	if success:
+		_selected_item = null
+		_refresh_grid()
+
+
+func _can_retire_tape(item: ItemInstance) -> bool:
+	if not rental_controller:
+		return false
+	return rental_controller.is_worn_out(item)
+
+
+func _retire_selected_tape(sell: bool) -> void:
+	if not _selected_item or not rental_controller:
+		return
+	var instance_id: String = _selected_item.instance_id
+	var success: bool = rental_controller.retire_tape(
+		instance_id, sell
+	)
+	if success:
+		_selected_item = null
+		_refresh_grid()

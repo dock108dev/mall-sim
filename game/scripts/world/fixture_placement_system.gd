@@ -3,17 +3,23 @@ class_name FixturePlacementSystem
 extends Node
 
 const FIXTURE_SIZES: Dictionary = {
-	"glass_case": Vector2i(2, 2),
-	"shelf": Vector2i(4, 1),
-	"wall_mount": Vector2i(2, 1),
-	"counter": Vector2i(3, 2),
+	"wall_shelf": Vector2i(2, 1),
+	"glass_case": Vector2i(2, 1),
+	"floor_rack": Vector2i(1, 1),
+	"counter": Vector2i(3, 1),
+	"register": Vector2i(1, 1),
+	"endcap": Vector2i(1, 2),
+	"storage_unit": Vector2i(1, 2),
 }
 
 const FIXTURE_PRICES: Dictionary = {
+	"wall_shelf": 30.0,
 	"glass_case": 80.0,
-	"shelf": 50.0,
-	"wall_mount": 30.0,
+	"floor_rack": 50.0,
 	"counter": 120.0,
+	"register": 90.0,
+	"endcap": 60.0,
+	"storage_unit": 40.0,
 }
 
 const SELLBACK_RATE: float = 0.5
@@ -62,19 +68,41 @@ func get_fixture_price(fixture_type: String) -> float:
 	return FIXTURE_PRICES.get(fixture_type, 0.0) as float
 
 
+## Returns whether a fixture type requires wall placement.
+func is_wall_required(fixture_type: String) -> bool:
+	if _data_loader:
+		var def: FixtureDefinition = (
+			_data_loader.get_fixture(fixture_type)
+		)
+		if def:
+			return def.requires_wall
+	return fixture_type.contains("shelf") or fixture_type.contains("wall")
+
+
+## Returns the number of placed fixtures (excluding register).
+func get_fixture_count() -> int:
+	var count: int = 0
+	for fixture_id: String in _placed_fixtures:
+		var data: Dictionary = _placed_fixtures[fixture_id]
+		if not data.get("is_register", false):
+			count += 1
+	return count
+
+
 ## Sets up the system with required references.
 func initialize(
 	grid: BuildModeGrid,
 	inventory_system: InventorySystem,
 	economy_system: EconomySystem,
-	entry_edge_y: int
+	entry_edge_y: int,
+	store_size: BuildModeGrid.StoreSize = BuildModeGrid.StoreSize.SMALL
 ) -> void:
 	_grid = grid
 	_inventory_system = inventory_system
 	_economy_system = economy_system
 
 	_validator = FixturePlacementValidator.new()
-	_validator.setup(grid.grid_size, entry_edge_y)
+	_validator.setup(grid.grid_size, entry_edge_y, store_size)
 
 	_overlay = FixturePlacementOverlay.new()
 	_overlay.name = "FixturePlacementOverlay"
@@ -141,9 +169,14 @@ func deselect_fixture() -> void:
 	_overlay.clear()
 
 
-## Rotates the selected fixture 90° clockwise.
+## Rotates the selected fixture 90 degrees clockwise.
 func rotate_fixture() -> void:
 	_current_rotation = (_current_rotation + 1) % 4
+
+
+## Returns the validator for external read-only queries.
+func get_validator() -> FixturePlacementValidator:
+	return _validator
 
 
 ## Returns the currently selected fixture type.
@@ -170,8 +203,29 @@ func update_preview(hovered_cell: Variant) -> void:
 	var cells: Array[Vector2i] = _get_fixture_cells(
 		_selected_fixture_type, cell, _current_rotation
 	)
-	var is_valid: bool = _validate_placement(cells)
-	_overlay.show_cells(cells, is_valid)
+	var result: PlacementResult = validate_placement(
+		cells, _selected_fixture_type
+	)
+	_overlay.show_cells(cells, result.valid)
+
+
+## Validates placement of cells for a given fixture type, returning a PlacementResult.
+func validate_placement(
+	cells: Array[Vector2i],
+	fixture_type: String
+) -> PlacementResult:
+	return _validator.validate_placement(
+		cells,
+		_occupied_cells,
+		_register_cells,
+		get_fixture_count(),
+		is_wall_required(fixture_type),
+	)
+
+
+## Checks whether a register exists for build mode exit validation.
+func validate_register_exists() -> PlacementResult:
+	return _validator.has_register(_register_fixture_id)
 
 
 ## Attempts to place the selected fixture at the given cell.
@@ -179,11 +233,21 @@ func try_place(grid_pos: Vector2i) -> bool:
 	if _selected_fixture_type.is_empty():
 		return false
 
+	if _data_loader:
+		var def: FixtureDefinition = _data_loader.get_fixture(_selected_fixture_type)
+		if not def and not FIXTURE_SIZES.has(_selected_fixture_type):
+			push_error("Unknown fixture type: %s" % _selected_fixture_type)
+			return false
+
 	var cells: Array[Vector2i] = _get_fixture_cells(
 		_selected_fixture_type, grid_pos, _current_rotation
 	)
 
-	if not _validate_placement(cells, true):
+	var result: PlacementResult = validate_placement(
+		cells, _selected_fixture_type
+	)
+	if not result.valid:
+		EventBus.fixture_placement_invalid.emit(result.reason)
 		return false
 
 	var price: float = get_fixture_price(_selected_fixture_type)
@@ -208,7 +272,7 @@ func try_place(grid_pos: Vector2i) -> bool:
 	)
 
 	needs_nav_rebake = true
-	EventBus.fixture_placed.emit(fixture_id, grid_pos)
+	EventBus.fixture_placed.emit(fixture_id, grid_pos, _current_rotation)
 	return true
 
 
@@ -253,7 +317,6 @@ func try_remove(grid_pos: Vector2i) -> bool:
 		_occupied_cells.erase(cell)
 	_placed_fixtures.erase(fixture_id)
 
-	# Refund 50% of total investment (base + upgrades)
 	var total_invested: float = data.get("total_spent", 0.0)
 	var refund: float = total_invested * SELLBACK_RATE
 	if refund > 0.0 and _economy_system:
@@ -279,6 +342,14 @@ func get_fixture_data(fixture_id: String) -> Dictionary:
 ## Returns all occupied cell positions.
 func get_all_occupied_cells() -> Dictionary:
 	return _occupied_cells
+
+
+## Returns all placed fixtures as an Array[Dictionary] for external queries.
+func get_placed_fixtures() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for fixture_id: String in _placed_fixtures:
+		result.append(_placed_fixtures[fixture_id])
+	return result
 
 
 # -- Upgrade delegation --
@@ -365,6 +436,10 @@ func get_save_data() -> Dictionary:
 
 ## Restores placed fixture state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_placed_fixtures.clear()
 	_occupied_cells.clear()
 	_register_cells.clear()
@@ -417,43 +492,6 @@ func _get_fixture_cells(
 				Vector2i(grid_pos.x + dx, grid_pos.y + dy)
 			)
 	return cells
-
-
-func _validate_placement(
-	cells: Array[Vector2i], notify: bool = false
-) -> bool:
-	for cell: Vector2i in cells:
-		if not _grid.is_valid_cell(cell):
-			return false
-
-	if not _validator.is_outside_entry_zone(cells):
-		if notify:
-			EventBus.fixture_placement_invalid.emit(
-				"Entry zone is reserved"
-			)
-		return false
-
-	if not _validator.has_valid_aisles(cells, _occupied_cells):
-		if notify:
-			EventBus.fixture_placement_invalid.emit(
-				"Aisle too narrow"
-			)
-		return false
-
-	var test_occupied: Dictionary = _occupied_cells.duplicate()
-	for cell: Vector2i in cells:
-		test_occupied[cell] = "pending"
-
-	if not _validator.is_layout_connected(
-		test_occupied, _register_cells
-	):
-		if notify:
-			EventBus.fixture_placement_invalid.emit(
-				"Placement blocks path to fixtures"
-			)
-		return false
-
-	return true
 
 
 func _move_fixture_items_to_backroom(

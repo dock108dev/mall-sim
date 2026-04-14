@@ -4,3 +4,6 @@
 
 [node name="Storefront" type="Node3D"]
 script = ExtResource("1")
+slot_index = 0
+store_id = ""
+store_name = ""

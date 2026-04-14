@@ -5,15 +5,23 @@ extends Node
 
 const MILESTONES_PATH := "res://game/content/milestones/milestone_definitions.json"
 
-const CONDITION_REVENUE := "revenue"
-const CONDITION_REPUTATION := "reputation"
-const CONDITION_DAYS := "days"
-const CONDITION_ITEMS_SOLD := "items_sold"
+const CONDITION_REVENUE := "cumulative_revenue"
+const CONDITION_REPUTATION := "max_reputation_score"
+const CONDITION_DAYS := "current_day"
+const CONDITION_ITEMS_SOLD := "customer_purchased_count"
 
-const REWARD_CASH_BONUS := "cash_bonus"
+const REWARD_CASH_BONUS := "cash"
 const REWARD_STORE_SLOT := "store_slot"
 const REWARD_FIXTURE_UNLOCK := "fixture_unlock"
 const REWARD_SUPPLIER_TIER := "supplier_tier"
+
+const STORE_UNLOCK_THRESHOLDS: Array[Dictionary] = [
+	{},
+	{"reputation": 25, "cash": 2000},
+	{"reputation": 40, "cash": 6000},
+	{"reputation": 55, "cash": 15000},
+	{"reputation": 70, "cash": 35000},
+]
 
 var _milestones: Array[Dictionary] = []
 var _completed_ids: Dictionary = {}
@@ -26,6 +34,9 @@ var _reputation_system: ReputationSystem
 var _unlocked_fixtures: PackedStringArray = []
 var _unlocked_store_slots: int = 1
 var _unlocked_supplier_tier: int = 0
+var _cumulative_cash_earned: float = 0.0
+var _mall_reputation: float = 0.0
+var _unlocked_slot_indices: Dictionary = {}
 
 
 func initialize(
@@ -35,10 +46,22 @@ func initialize(
 	_economy_system = economy
 	_reputation_system = reputation
 	_load_milestone_definitions()
+	_apply_state({})
 	EventBus.day_ended.connect(_on_day_ended)
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.reputation_changed.connect(_on_reputation_changed)
 	EventBus.day_started.connect(_on_day_started)
+
+
+## Re-evaluates milestones after the day summary is acknowledged.
+## Called by DayCycleController to ensure milestone checks run
+## after all day-end processing is complete.
+func evaluate_day_end() -> void:
+	_recalculate_mall_reputation()
+	if _reputation_system:
+		_current_reputation = _reputation_system.get_reputation()
+	_check_store_unlock_thresholds()
+	_evaluate_milestones()
 
 
 func get_milestones() -> Array[Dictionary]:
@@ -73,10 +96,68 @@ func is_fixture_unlocked(fixture_id: String) -> bool:
 	return fixture_id in _unlocked_fixtures
 
 
+func get_cumulative_cash_earned() -> float:
+	return _cumulative_cash_earned
+
+
+func get_mall_reputation() -> float:
+	return _mall_reputation
+
+
+func is_slot_unlocked(slot_index: int) -> bool:
+	if slot_index == 0:
+		return true
+	return _unlocked_slot_indices.has(slot_index)
+
+
+## Increments the running total for the given milestone's condition type.
+func increment_progress(milestone_id: String, amount: float) -> void:
+	var milestone: Dictionary = _find_milestone(milestone_id)
+	if milestone.is_empty():
+		push_error(
+			"ProgressionSystem: unknown milestone_id '%s'" % milestone_id
+		)
+		return
+
+	var condition: String = str(
+		milestone.get("trigger_stat_key", milestone.get("condition_type", ""))
+	)
+	match condition:
+		CONDITION_REVENUE:
+			_total_revenue += amount
+			_cumulative_cash_earned += amount
+		CONDITION_ITEMS_SOLD:
+			_total_items_sold += int(amount)
+		CONDITION_DAYS:
+			_current_day += int(amount)
+		CONDITION_REPUTATION:
+			_current_reputation += amount
+	_evaluate_milestones()
+
+
+## Returns the raw running total for a milestone's condition type.
+func get_progress(milestone_id: String) -> float:
+	var milestone: Dictionary = _find_milestone(milestone_id)
+	if milestone.is_empty():
+		push_error(
+			"ProgressionSystem: unknown milestone_id '%s'" % milestone_id
+		)
+		return 0.0
+
+	var condition: String = str(
+		milestone.get("trigger_stat_key", milestone.get("condition_type", ""))
+	)
+	return _get_current_value_for(condition)
+
+
 ## Returns progress toward a milestone as a float from 0.0 to 1.0.
 func get_milestone_progress(milestone: Dictionary) -> float:
-	var condition: String = milestone.get("condition_type", "")
-	var threshold: float = float(milestone.get("threshold", 1))
+	var condition: String = milestone.get(
+		"trigger_stat_key", ""
+	)
+	var threshold: float = float(
+		milestone.get("trigger_threshold", 1)
+	)
 	if threshold <= 0.0:
 		return 1.0
 
@@ -89,6 +170,10 @@ func get_save_data() -> Dictionary:
 	for key: String in _completed_ids:
 		completed_list.append(key)
 
+	var unlocked_slots_list: Array[int] = []
+	for key: Variant in _unlocked_slot_indices:
+		unlocked_slots_list.append(int(key))
+
 	return {
 		"completed_ids": completed_list,
 		"total_revenue": _total_revenue,
@@ -96,10 +181,19 @@ func get_save_data() -> Dictionary:
 		"unlocked_fixtures": Array(_unlocked_fixtures),
 		"unlocked_store_slots": _unlocked_store_slots,
 		"unlocked_supplier_tier": _unlocked_supplier_tier,
+		"current_day": _current_day,
+		"current_reputation": _current_reputation,
+		"cumulative_cash_earned": _cumulative_cash_earned,
+		"mall_reputation": _mall_reputation,
+		"unlocked_slot_indices": unlocked_slots_list,
 	}
 
 
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_completed_ids = {}
 	var saved_ids: Variant = data.get("completed_ids", [])
 	if saved_ids is Array:
@@ -114,12 +208,28 @@ func load_save_data(data: Dictionary) -> void:
 	_unlocked_supplier_tier = int(
 		data.get("unlocked_supplier_tier", 0)
 	)
+	_current_day = int(data.get("current_day", 0))
+	_current_reputation = float(
+		data.get("current_reputation", 0.0)
+	)
+	_cumulative_cash_earned = float(
+		data.get("cumulative_cash_earned", 0.0)
+	)
+	_mall_reputation = float(
+		data.get("mall_reputation", 0.0)
+	)
 
 	_unlocked_fixtures = PackedStringArray()
 	var saved_fixtures: Variant = data.get("unlocked_fixtures", [])
 	if saved_fixtures is Array:
 		for entry: Variant in saved_fixtures:
 			_unlocked_fixtures.append(str(entry))
+
+	_unlocked_slot_indices = {}
+	var saved_slots: Variant = data.get("unlocked_slot_indices", [])
+	if saved_slots is Array:
+		for entry: Variant in saved_slots:
+			_unlocked_slot_indices[int(entry)] = true
 
 
 func _load_milestone_definitions() -> void:
@@ -167,6 +277,13 @@ func _load_milestone_definitions() -> void:
 			_milestones.append(entry as Dictionary)
 
 
+func _find_milestone(milestone_id: String) -> Dictionary:
+	for milestone: Dictionary in _milestones:
+		if milestone.get("id", "") == milestone_id:
+			return milestone
+	return {}
+
+
 func _get_current_value_for(condition_type: String) -> float:
 	match condition_type:
 		CONDITION_REVENUE:
@@ -186,8 +303,12 @@ func _evaluate_milestones() -> void:
 		if mid.is_empty() or _completed_ids.has(mid):
 			continue
 
-		var condition: String = milestone.get("condition_type", "")
-		var threshold: float = float(milestone.get("threshold", 0))
+		var condition: String = milestone.get(
+			"trigger_stat_key", ""
+		)
+		var threshold: float = float(
+			milestone.get("trigger_threshold", 0)
+		)
 		var current: float = _get_current_value_for(condition)
 
 		if current >= threshold:
@@ -200,11 +321,11 @@ func _complete_milestone(milestone: Dictionary) -> void:
 
 	_grant_reward(milestone)
 
-	var mname: String = milestone.get("name", mid)
-	var reward_desc: String = milestone.get(
-		"reward_description", ""
+	var mname: String = milestone.get(
+		"display_name", mid
 	)
-	EventBus.milestone_completed.emit(mid, mname, reward_desc)
+	var mdesc: String = str(milestone.get("description", ""))
+	EventBus.milestone_completed.emit(mid, mname, mdesc)
 
 
 func _grant_reward(milestone: Dictionary) -> void:
@@ -240,10 +361,35 @@ func _grant_supplier_tier(tier: int) -> void:
 	_unlocked_supplier_tier = maxi(_unlocked_supplier_tier, tier)
 
 
+func _recalculate_mall_reputation() -> void:
+	if not _reputation_system:
+		return
+	_mall_reputation = _reputation_system.get_reputation()
+
+
+func _check_store_unlock_thresholds() -> void:
+	for slot_index: int in range(1, STORE_UNLOCK_THRESHOLDS.size()):
+		if _unlocked_slot_indices.has(slot_index):
+			continue
+
+		var req: Dictionary = STORE_UNLOCK_THRESHOLDS[slot_index]
+		var req_rep: float = float(req.get("reputation", 0))
+		var req_cash: float = float(req.get("cash", 0))
+
+		if _mall_reputation >= req_rep and _cumulative_cash_earned >= req_cash:
+			_unlocked_slot_indices[slot_index] = true
+			_unlocked_store_slots = maxi(
+				_unlocked_store_slots, slot_index + 1
+			)
+			EventBus.store_slot_unlocked.emit(slot_index)
+
+
 func _on_day_ended(day: int) -> void:
 	_current_day = day
+	_recalculate_mall_reputation()
 	if _reputation_system:
 		_current_reputation = _reputation_system.get_reputation()
+	_check_store_unlock_thresholds()
 	_evaluate_milestones()
 
 
@@ -256,11 +402,12 @@ func _on_item_sold(
 ) -> void:
 	_total_items_sold += 1
 	_total_revenue += price
+	_cumulative_cash_earned += price
 	_evaluate_milestones()
 
 
 func _on_reputation_changed(
-	_old_value: float, new_value: float
+	_store_id: String, new_value: float
 ) -> void:
 	_current_reputation = new_value
 	_evaluate_milestones()

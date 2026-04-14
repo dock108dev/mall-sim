@@ -153,9 +153,20 @@ func _create_slot_row(slot: int) -> void:
 	if exists:
 		detail_label.text = _format_metadata(metadata)
 	else:
-		detail_label.text = tr("MENU_EMPTY")
+		detail_label.text = "Empty Slot"
 		detail_label.modulate = Color(0.5, 0.5, 0.5)
 	info_box.add_child(detail_label)
+
+	if exists and bool(metadata.get("used_difficulty_downgrade", false)):
+		var assisted_label := Label.new()
+		assisted_label.text = "Assisted"
+		assisted_label.add_theme_font_size_override("font_size", 11)
+		assisted_label.modulate = Color(0.65, 0.65, 0.7)
+		assisted_label.tooltip_text = (
+			"Difficulty was reduced at least once during this playthrough"
+		)
+		assisted_label.mouse_filter = Control.MOUSE_FILTER_PASS
+		info_box.add_child(assisted_label)
 
 	hbox.add_child(info_box)
 
@@ -192,6 +203,22 @@ func _get_slot_label(slot: int, exists: bool) -> String:
 
 
 func _format_metadata(metadata: Dictionary) -> String:
+	if metadata.has("day") and metadata.has("cash"):
+		return _format_preview_metadata(metadata)
+	return _format_legacy_metadata(metadata)
+
+
+func _format_preview_metadata(metadata: Dictionary) -> String:
+	var day: int = int(metadata.get("day", 0))
+	var cash: float = float(metadata.get("cash", 0.0))
+	var stores: Variant = metadata.get("owned_stores", [])
+	var store_count: int = 0
+	if stores is Array:
+		store_count = (stores as Array).size()
+	return "Day %d — $%.0f — %d stores" % [day, cash, store_count]
+
+
+func _format_legacy_metadata(metadata: Dictionary) -> String:
 	var day: int = int(metadata.get("day_number", 0))
 	var timestamp: String = str(metadata.get("timestamp", ""))
 	var store: String = str(metadata.get("store_type", ""))

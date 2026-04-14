@@ -1,25 +1,54 @@
-## Manages recurring seasonal events that affect customer traffic and spending.
+## Manages recurring seasonal events and scheduled tournament events.
 class_name SeasonalEventSystem
 extends Node
 
 
 const ANNOUNCEMENT_DAYS: int = 1
+const STORE_TYPE_POCKET_CREATURES: String = "pocket_creatures"
+const DAYS_PER_SEASON: int = 30
+const SEASONS_PER_YEAR: int = 4
 
 var _event_definitions: Array[SeasonalEventDefinition] = []
 var _active_events: Array[Dictionary] = []
 var _announced_events: Array[Dictionary] = []
+var _sports_seasons: Array[SportsSeasonDefinition] = []
+var _current_day: int = 1
+var _active_sport_multipliers: Dictionary = {}
+var _current_season: int = 0
+var _seasonal_config: Array[Dictionary] = []
+var _current_multipliers: Dictionary = {}
+
+var _tournament_definitions: Array[TournamentEventDefinition] = []
+var _active_tournaments: Array[Dictionary] = []
+var _announced_tournaments: Array[Dictionary] = []
+
+var _season_table: Array[Dictionary] = []
+var _season_cycle_length: int = 70
+var _current_named_season: StringName = &""
 
 
 func initialize(data_loader: DataLoader) -> void:
 	_event_definitions = []
-	_active_events = []
-	_announced_events = []
+	_sports_seasons = []
+	_tournament_definitions = []
+	_seasonal_config = []
+	_season_table = []
 	if data_loader:
 		_event_definitions = data_loader.get_all_seasonal_events()
+		_sports_seasons = data_loader.get_all_sports_seasons()
+		_tournament_definitions = (
+			data_loader.get_all_tournament_events()
+		)
+		_seasonal_config = data_loader.get_seasonal_config()
+		_season_table = data_loader.get_named_seasons()
+		_season_cycle_length = (
+			data_loader.get_named_season_cycle_length()
+		)
+		_validate_tournament_schedule()
+	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
 
 
-## Returns the combined customer traffic multiplier from all active events.
 func get_traffic_multiplier() -> float:
 	var combined: float = 1.0
 	for evt: Dictionary in _active_events:
@@ -31,7 +60,6 @@ func get_traffic_multiplier() -> float:
 	return combined
 
 
-## Returns the combined spending multiplier from all active events.
 func get_spending_multiplier() -> float:
 	var combined: float = 1.0
 	for evt: Dictionary in _active_events:
@@ -43,7 +71,6 @@ func get_spending_multiplier() -> float:
 	return combined
 
 
-## Returns merged customer type weight overrides from all active events.
 func get_customer_type_weights() -> Dictionary:
 	var merged: Dictionary = {}
 	for evt: Dictionary in _active_events:
@@ -53,7 +80,9 @@ func get_customer_type_weights() -> Dictionary:
 		if not def:
 			continue
 		for type_id: String in def.customer_type_weights:
-			var weight: float = float(def.customer_type_weights[type_id])
+			var weight: float = float(
+				def.customer_type_weights[type_id]
+			)
 			if merged.has(type_id):
 				merged[type_id] = (merged[type_id] as float) * weight
 			else:
@@ -61,7 +90,6 @@ func get_customer_type_weights() -> Dictionary:
 	return merged
 
 
-## Returns all currently active seasonal events for UI display.
 func get_active_events() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for evt: Dictionary in _active_events:
@@ -69,7 +97,6 @@ func get_active_events() -> Array[Dictionary]:
 	return result
 
 
-## Returns all announced (upcoming) seasonal events for UI display.
 func get_announced_events() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for evt: Dictionary in _announced_events:
@@ -77,7 +104,57 @@ func get_announced_events() -> Array[Dictionary]:
 	return result
 
 
-## Returns a display string summarizing active seasonal event impacts.
+func get_sport_season_multiplier(item: ItemInstance) -> float:
+	if not item or not item.definition:
+		return 1.0
+	if item.definition.store_type != "sports":
+		return 1.0
+	var tags: PackedStringArray = item.definition.tags
+	var combined: float = 1.0
+	var matched: bool = false
+	for season: SportsSeasonDefinition in _sports_seasons:
+		if tags.has(season.sport_tag):
+			combined *= season.get_multiplier(_current_day)
+			matched = true
+	if not matched:
+		return 1.0
+	return combined
+
+
+func get_active_sport_multipliers() -> Dictionary:
+	return _active_sport_multipliers.duplicate()
+
+
+## Returns the tournament demand multiplier for an item.
+func get_tournament_demand_multiplier(item: ItemInstance) -> float:
+	if not item or not item.definition:
+		return 1.0
+	if item.definition.store_type != STORE_TYPE_POCKET_CREATURES:
+		return 1.0
+	var combined: float = 1.0
+	for evt: Dictionary in _active_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if def and item.definition.category == def.card_category:
+			combined *= def.demand_multiplier
+	return combined
+
+
+func get_active_tournaments() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for evt: Dictionary in _active_tournaments:
+		result.append(evt.duplicate())
+	return result
+
+
+func get_announced_tournaments() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for evt: Dictionary in _announced_tournaments:
+		result.append(evt.duplicate())
+	return result
+
+
 func get_impact_summary() -> String:
 	if _active_events.is_empty():
 		return ""
@@ -108,81 +185,235 @@ func get_impact_summary() -> String:
 	return "\n".join(lines)
 
 
-## Serializes state for saving.
+static func compute_season(day: int) -> int:
+	return ((day - 1) / DAYS_PER_SEASON) % SEASONS_PER_YEAR
+
+
+func get_current_season() -> StringName:
+	return _current_named_season
+
+
+func get_calendar_season_index() -> int:
+	return _current_season
+
+
+func get_demand_multiplier(category: StringName) -> float:
+	var season: Dictionary = _find_named_season(
+		_current_named_season
+	)
+	if season.is_empty():
+		return 1.0
+	var mults: Variant = season.get("category_multipliers", {})
+	if mults is not Dictionary:
+		return 1.0
+	return float((mults as Dictionary).get(String(category), 1.0))
+
+
+func get_price_sensitivity_modifier() -> float:
+	var season: Dictionary = _find_named_season(
+		_current_named_season
+	)
+	if season.is_empty():
+		return 1.0
+	return float(season.get("price_sensitivity_modifier", 1.0))
+
+
+func get_current_multipliers() -> Dictionary:
+	return _current_multipliers.duplicate()
+
+
+func get_store_seasonal_multiplier(store_id: String) -> float:
+	return float(_current_multipliers.get(store_id, 1.0))
+
+
+func _update_calendar_season(day: int) -> void:
+	var new_season: int = compute_season(day)
+	if new_season != _current_season:
+		var old_season: int = _current_season
+		_current_season = new_season
+		EventBus.season_changed.emit(new_season, old_season)
+	_current_multipliers = _build_multipliers(_current_season)
+	EventBus.seasonal_multipliers_updated.emit(
+		_current_multipliers.duplicate()
+	)
+
+
+func _build_multipliers(season_index: int) -> Dictionary:
+	for entry: Dictionary in _seasonal_config:
+		if int(entry.get("index", -1)) == season_index:
+			var mults: Variant = entry.get("store_multipliers", {})
+			if mults is Dictionary:
+				return mults as Dictionary
+	return {}
+
+
 func get_save_data() -> Dictionary:
-	var active_save: Array[Dictionary] = []
-	for evt: Dictionary in _active_events:
-		var save_evt: Dictionary = {
-			"definition_id": "",
-			"start_day": evt.get("start_day", 0),
-		}
-		var def: SeasonalEventDefinition = evt.get(
-			"definition", null
-		) as SeasonalEventDefinition
-		if def:
-			save_evt["definition_id"] = def.id
-		active_save.append(save_evt)
-	var announced_save: Array[Dictionary] = []
-	for evt: Dictionary in _announced_events:
-		var save_evt: Dictionary = {
-			"definition_id": "",
-			"announced_day": evt.get("announced_day", 0),
-		}
-		var def: SeasonalEventDefinition = evt.get(
-			"definition", null
-		) as SeasonalEventDefinition
-		if def:
-			save_evt["definition_id"] = def.id
-		announced_save.append(save_evt)
 	return {
-		"active_events": active_save,
-		"announced_events": announced_save,
+		"active_events": _serialize_list(
+			_active_events, "start_day"
+		),
+		"announced_events": _serialize_list(
+			_announced_events, "announced_day"
+		),
+		"active_tournaments": _serialize_list(
+			_active_tournaments, "start_day"
+		),
+		"announced_tournaments": _serialize_list(
+			_announced_tournaments, "announced_day"
+		),
+		"current_day": _current_day,
+		"current_season": _current_season,
 	}
 
 
-## Restores state from saved data.
 func load_save_data(data: Dictionary) -> void:
-	_active_events = []
-	_announced_events = []
-	var saved_active: Array = data.get("active_events", [])
-	for entry: Variant in saved_active:
+	_apply_state(data)
+
+
+func _serialize_list(
+	events: Array[Dictionary], day_key: String
+) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for evt: Dictionary in events:
+		var def_id: String = ""
+		var def: Variant = evt.get("definition")
+		if def and def is Resource:
+			def_id = str(def.get("id"))
+		result.append({
+			"definition_id": def_id,
+			day_key: evt.get(day_key, 0),
+		})
+	return result
+
+
+func _apply_state(data: Dictionary) -> void:
+	_current_day = int(data.get("current_day", 1))
+	_current_season = int(
+		data.get("current_season", compute_season(_current_day))
+	)
+	_current_multipliers = _build_multipliers(_current_season)
+	_init_named_season(_current_day)
+	_active_events = _restore_seasonal_list(
+		data.get("active_events", []), "start_day"
+	)
+	_announced_events = _restore_seasonal_list(
+		data.get("announced_events", []), "announced_day"
+	)
+	_active_tournaments = _restore_tournament_list(
+		data.get("active_tournaments", []), "start_day"
+	)
+	_announced_tournaments = _restore_tournament_list(
+		data.get("announced_tournaments", []), "announced_day"
+	)
+	_recalculate_sport_seasons()
+
+
+func _restore_seasonal_list(
+	saved: Array, day_key: String
+) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for entry: Variant in saved:
 		if entry is not Dictionary:
 			continue
 		var evt: Dictionary = entry as Dictionary
 		var def_id: String = evt.get("definition_id", "")
 		var def: SeasonalEventDefinition = _find_definition(def_id)
 		if not def:
-			push_warning(
-				"SeasonalEventSystem: saved event '%s' not found"
-				% def_id
-			)
+			if not def_id.is_empty():
+				push_warning(
+					"SeasonalEventSystem: saved event '%s' not found"
+					% def_id
+				)
 			continue
-		_active_events.append({
+		result.append({
 			"definition": def,
-			"start_day": int(evt.get("start_day", 0)),
+			day_key: int(evt.get(day_key, 0)),
 		})
-	var saved_announced: Array = data.get("announced_events", [])
-	for entry: Variant in saved_announced:
+	return result
+
+
+func _restore_tournament_list(
+	saved: Array, day_key: String
+) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for entry: Variant in saved:
 		if entry is not Dictionary:
 			continue
 		var evt: Dictionary = entry as Dictionary
 		var def_id: String = evt.get("definition_id", "")
-		var def: SeasonalEventDefinition = _find_definition(def_id)
+		var def: TournamentEventDefinition = (
+			_find_tournament_definition(def_id)
+		)
 		if not def:
 			continue
-		_announced_events.append({
+		result.append({
 			"definition": def,
-			"announced_day": int(evt.get("announced_day", 0)),
+			day_key: int(evt.get(day_key, 0)),
 		})
+	return result
 
 
 func _on_day_started(day: int) -> void:
+	_current_day = day
+	_update_calendar_season(day)
+	_update_named_season(day)
+	_recalculate_sport_seasons()
 	_expire_active_events(day)
 	_promote_announced_events(day)
 	_check_for_new_events(day)
+	_expire_active_tournaments(day)
+	_promote_announced_tournaments(day)
+	_check_for_new_tournaments(day)
 
 
-## Removes active events whose duration has elapsed.
+func _init_named_season(day: int) -> void:
+	if _season_table.is_empty():
+		_current_named_season = &""
+		return
+	var cycle_day: int = _day_in_cycle(day)
+	for entry: Dictionary in _season_table:
+		var start: int = int(entry.get("start_day", 0))
+		var end: int = int(entry.get("end_day", 0))
+		if cycle_day >= start and cycle_day <= end:
+			_current_named_season = StringName(
+				str(entry.get("id", ""))
+			)
+			return
+	_current_named_season = &""
+
+
+func _update_named_season(day: int) -> void:
+	if _season_table.is_empty():
+		return
+	var cycle_day: int = _day_in_cycle(day)
+	var new_season: StringName = &""
+	for entry: Dictionary in _season_table:
+		var start: int = int(entry.get("start_day", 0))
+		var end: int = int(entry.get("end_day", 0))
+		if cycle_day >= start and cycle_day <= end:
+			new_season = StringName(str(entry.get("id", "")))
+			break
+	if new_season != _current_named_season:
+		_current_named_season = new_season
+		if not new_season.is_empty():
+			EventBus.seasonal_event_started.emit(
+				String(new_season)
+			)
+
+
+func _day_in_cycle(day: int) -> int:
+	if _season_cycle_length <= 0:
+		return day
+	return ((day - 1) % _season_cycle_length) + 1
+
+
+func _find_named_season(season_id: StringName) -> Dictionary:
+	for entry: Dictionary in _season_table:
+		if StringName(str(entry.get("id", ""))) == season_id:
+			return entry
+	return {}
+
+
 func _expire_active_events(day: int) -> void:
 	var remaining: Array[Dictionary] = []
 	for evt: Dictionary in _active_events:
@@ -199,7 +430,6 @@ func _expire_active_events(day: int) -> void:
 	_active_events = remaining
 
 
-## Promotes announced events to active if their start day has arrived.
 func _promote_announced_events(day: int) -> void:
 	var remaining: Array[Dictionary] = []
 	for evt: Dictionary in _announced_events:
@@ -212,8 +442,7 @@ func _promote_announced_events(day: int) -> void:
 		var start_day: int = announced_day + ANNOUNCEMENT_DAYS
 		if day >= start_day:
 			_active_events.append({
-				"definition": def,
-				"start_day": start_day,
+				"definition": def, "start_day": start_day,
 			})
 			EventBus.seasonal_event_started.emit(def.id)
 			if not def.active_text.is_empty():
@@ -223,7 +452,6 @@ func _promote_announced_events(day: int) -> void:
 	_announced_events = remaining
 
 
-## Checks if any seasonal events should trigger based on day modulo.
 func _check_for_new_events(day: int) -> void:
 	for def: SeasonalEventDefinition in _event_definitions:
 		if _is_event_active_or_announced(def.id):
@@ -233,7 +461,6 @@ func _check_for_new_events(day: int) -> void:
 		_announce_event(def, day)
 
 
-## Returns true if the event should trigger on this day.
 func _should_trigger(
 	day: int, def: SeasonalEventDefinition
 ) -> bool:
@@ -243,7 +470,6 @@ func _should_trigger(
 	return adjusted % def.frequency_days == 0
 
 
-## Returns true if the given event is already active or announced.
 func _is_event_active_or_announced(event_id: String) -> bool:
 	for evt: Dictionary in _active_events:
 		var def: SeasonalEventDefinition = evt.get(
@@ -260,23 +486,133 @@ func _is_event_active_or_announced(event_id: String) -> bool:
 	return false
 
 
-## Announces an upcoming seasonal event.
 func _announce_event(
 	def: SeasonalEventDefinition, day: int
 ) -> void:
 	_announced_events.append({
-		"definition": def,
-		"announced_day": day,
+		"definition": def, "announced_day": day,
 	})
 	EventBus.seasonal_event_announced.emit(def.id)
 	if not def.announcement_text.is_empty():
 		EventBus.notification_requested.emit(def.announcement_text)
 
 
-func _find_definition(
-	id: String
-) -> SeasonalEventDefinition:
+func _recalculate_sport_seasons() -> void:
+	_active_sport_multipliers.clear()
+	for season: SportsSeasonDefinition in _sports_seasons:
+		_active_sport_multipliers[season.sport_tag] = (
+			season.get_multiplier(_current_day)
+		)
+
+
+func _find_definition(id: String) -> SeasonalEventDefinition:
 	for def: SeasonalEventDefinition in _event_definitions:
+		if def.id == id:
+			return def
+	return null
+
+
+# ── Tournament Event Management ──────────────────────────────────────
+
+
+func _validate_tournament_schedule() -> void:
+	for i: int in range(_tournament_definitions.size()):
+		var a: TournamentEventDefinition = _tournament_definitions[i]
+		var a_end: int = a.start_day + a.duration_days
+		for j: int in range(i + 1, _tournament_definitions.size()):
+			var b: TournamentEventDefinition = (
+				_tournament_definitions[j]
+			)
+			if a.card_category != b.card_category:
+				continue
+			var b_end: int = b.start_day + b.duration_days
+			if a.start_day < b_end and b.start_day < a_end:
+				push_error(
+					"Tournament overlap on '%s': '%s' [%d-%d) "
+					% [a.card_category, a.id, a.start_day, a_end]
+					+ "and '%s' [%d-%d)"
+					% [b.id, b.start_day, b_end]
+				)
+
+
+func _expire_active_tournaments(day: int) -> void:
+	var remaining: Array[Dictionary] = []
+	for evt: Dictionary in _active_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if not def:
+			continue
+		var start_day: int = evt.get("start_day", 0) as int
+		if day < start_day + def.duration_days:
+			remaining.append(evt)
+		else:
+			EventBus.tournament_event_ended.emit(def.id)
+	_active_tournaments = remaining
+
+
+func _promote_announced_tournaments(day: int) -> void:
+	var remaining: Array[Dictionary] = []
+	for evt: Dictionary in _announced_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if not def:
+			continue
+		if day >= def.start_day:
+			_active_tournaments.append({
+				"definition": def, "start_day": def.start_day,
+			})
+			EventBus.tournament_event_started.emit(def.id)
+			if not def.active_text.is_empty():
+				EventBus.notification_requested.emit(def.active_text)
+		else:
+			remaining.append(evt)
+	_announced_tournaments = remaining
+
+
+func _check_for_new_tournaments(day: int) -> void:
+	for def: TournamentEventDefinition in _tournament_definitions:
+		if _is_tournament_active_or_announced(def.id):
+			continue
+		if day != def.start_day - 1:
+			continue
+		_announce_tournament(def, day)
+
+
+func _is_tournament_active_or_announced(
+	event_id: String
+) -> bool:
+	for evt: Dictionary in _active_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if def and def.id == event_id:
+			return true
+	for evt: Dictionary in _announced_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if def and def.id == event_id:
+			return true
+	return false
+
+
+func _announce_tournament(
+	def: TournamentEventDefinition, day: int
+) -> void:
+	_announced_tournaments.append({
+		"definition": def, "announced_day": day,
+	})
+	EventBus.tournament_event_announced.emit(def.id)
+	if not def.announcement_text.is_empty():
+		EventBus.notification_requested.emit(def.announcement_text)
+
+
+func _find_tournament_definition(
+	id: String
+) -> TournamentEventDefinition:
+	for def: TournamentEventDefinition in _tournament_definitions:
 		if def.id == id:
 			return def
 	return null

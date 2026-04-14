@@ -40,7 +40,7 @@ alignment = 1
 [node name="DayLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
-text = "Day 1 Summary"
+text = "Day 1 Complete"
 horizontal_alignment = 1
 
 [node name="RevenueLabel" type="Label" parent="Panel/Margin/VBox"]
@@ -68,6 +68,21 @@ layout_mode = 2
 text = "Items Sold: 0"
 horizontal_alignment = 1
 
+[node name="TopItemLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="HaggleLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Haggling: 0 won / 0 lost"
+horizontal_alignment = 1
+
+[node name="LateFeeLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
 [node name="WarrantyRevenueLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 text = "Warranty Revenue: $0.00"
@@ -78,13 +93,52 @@ layout_mode = 2
 text = "Warranty Claims: -$0.00"
 horizontal_alignment = 1
 
+[node name="CustomersServedLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Customers Served: 0"
+horizontal_alignment = 1
+
+[node name="SatisfactionLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Satisfaction: 0%"
+horizontal_alignment = 1
+
+[node name="ReputationDeltaLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Reputation: +0.0"
+horizontal_alignment = 1
+
+[node name="TierChangeLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="StaffWagesLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Staff Wages: -$0.00"
+horizontal_alignment = 1
+
 [node name="SeasonalEventLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 text = ""
 horizontal_alignment = 1
 
-[node name="ContinueButton" type="Button" parent="Panel/Margin/VBox"]
+[node name="MilestoneContainer" type="VBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ButtonRow" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="ReviewInventoryButton" type="Button" parent="Panel/Margin/VBox/ButtonRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(200, 48)
-size_flags_horizontal = 4
-text = "Continue to Next Day"
+text = "Review Inventory"
+
+[node name="ContinueButton" type="Button" parent="Panel/Margin/VBox/ButtonRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+text = "Next Day"

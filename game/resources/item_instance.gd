@@ -1,6 +1,5 @@
 ## A specific item the player owns, with individual state.
 ## ItemDefinition is the template; ItemInstance is the concrete copy.
-## See docs/architecture/DATA_MODEL.md for the canonical schema.
 class_name ItemInstance
 extends RefCounted
 
@@ -30,12 +29,14 @@ var condition: String = "good"
 var acquired_day: int = 0
 var acquired_price: float = 0.0
 var current_location: String = "backroom"
-var set_price: float = 0.0
+var player_set_price: float = 0.0
 var instance_id: String = ""
 var tested: bool = false
+var test_result: String = ""
 var is_demo: bool = false
 var demo_placed_day: int = 0
 var authentication_status: String = "none"
+var rental_due_day: int = -1
 
 
 ## Creates an ItemInstance from an ItemDefinition with a specific condition.
@@ -65,8 +66,6 @@ static func create(
 
 
 ## Diminishing returns on rarity for expensive items.
-## Cheap items (at or below reference_price) get the full rarity multiplier.
-## Expensive items converge toward 1.0 as base_price grows.
 static func calculate_effective_rarity(
 	base_price: float, rarity: String
 ) -> float:

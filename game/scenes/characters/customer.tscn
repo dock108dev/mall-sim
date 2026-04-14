@@ -1,7 +1,8 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://game/scripts/characters/customer.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/characters/customer_animator.gd" id="2"]
+[ext_resource type="PackedScene" path="res://game/scenes/characters/customer_state_indicator.tscn" id="3"]
 
 [sub_resource type="CapsuleShape3D" id="collision_shape"]
 radius = 0.4
@@ -93,3 +94,6 @@ max_speed = 2.0
 
 [node name="CustomerAnimator" type="Node" parent="."]
 script = ExtResource("2")
+
+[node name="CustomerStateIndicator" parent="." instance=ExtResource("3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)

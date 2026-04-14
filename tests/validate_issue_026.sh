@@ -4,7 +4,7 @@ set -euo pipefail
 
 FIXTURE_CATALOG="game/scenes/ui/fixture_catalog.gd"
 HAGGLE_PANEL="game/scenes/ui/haggle_panel.gd"
-TRADE_PANEL="game/scenes/ui/trade_panel.gd"
+TRADE_PANEL="game/scripts/ui/trade_panel.gd"
 EXIT_CODE=0
 
 echo "=== ISSUE-026: Placement & Haggle/Trade Feedback Animations ==="

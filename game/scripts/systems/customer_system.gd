@@ -1,4 +1,4 @@
-## Manages active customer NPCs within the currently viewed store.
+## Manages active customer NPCs within stores and mall-wide ShopperAI spawning.
 class_name CustomerSystem
 extends Node
 
@@ -7,20 +7,75 @@ const MAX_CUSTOMERS_MEDIUM: int = 8
 const CUSTOMER_SCENE_PATH: String = (
 	"res://game/scenes/characters/customer.tscn"
 )
+const SHOPPER_SCENE_PATH: String = (
+	"res://game/scenes/characters/shopper_ai.tscn"
+)
 const POOL_SIZE: int = 12
-## Maximum active customers used for stagger offset distribution.
 const STAGGER_SLOTS: int = 8
+const SPAWN_CHECK_INTERVAL: float = 2.0
+const LOD_UPDATE_INTERVAL: float = 1.0
+## Base entry conversion probability applied only when a greeter is assigned.
+const BASE_ENTRY_CONVERSION: float = 0.85
+const GREETER_ENTRY_BONUS: float = 0.2
+const GREETER_BROWSE_BONUS: float = 0.15
+const VIP_CUSTOMER_ID: StringName = &"vip_customer"
+const VIP_UNLOCK_ID: StringName = &"vip_customer_events"
+
+const HOUR_DENSITY: Dictionary = {
+	9: 0.1,
+	10: 0.25,
+	11: 0.55,
+	12: 0.85,
+	13: 0.75,
+	14: 0.4,
+	15: 0.35,
+	16: 0.5,
+	17: 0.8,
+	18: 0.7,
+	19: 0.45,
+	20: 0.2,
+	21: 0.0,
+}
+
+const DAY_OF_WEEK_MODIFIERS: Array[float] = [
+	0.7, 0.75, 0.8, 0.85, 1.1, 1.3, 1.0,
+]
+
+@export var max_customers_in_mall: int = 30
 
 var _active_customers: Array[Customer] = []
 var _customer_pool: Array[Customer] = []
+var _spawn_pool_cache: Array[CustomerTypeDefinition] = []
+var _spawn_pool_dirty: bool = true
+var _vip_type_valid: bool = false
 var _customer_scene: PackedScene = null
+var _shopper_scene: PackedScene = null
 var _store_controller: StoreController = null
 var _inventory_system: InventorySystem = null
 var _reputation_system: ReputationSystem = null
 var _performance_manager: PerformanceManager = null
 var _store_id: String = ""
+var _market_event_system: MarketEventSystem = null
+var _cached_greeter: StaffDefinition = null
 var _max_customers: int = MAX_CUSTOMERS_SMALL
 var _next_stagger_index: int = 0
+
+var _active_mall_shopper_count: int = 0
+var _in_mall_hallway: bool = true
+var _current_hour: int = Constants.STORE_OPEN_HOUR
+var _hour_elapsed: float = 0.0
+var _time_scale: float = 1.0
+var _spawn_check_timer: float = 0.0
+var _lod_timer: float = 0.0
+var _current_day_of_week: int = 0
+var _seasonal_density_modifier: float = 1.0
+var _current_archetype_weights: Dictionary = (
+	ShopperArchetypeConfig.WEIGHTS_MORNING
+)
+var _active_event_spawn_modifier: float = 1.0
+var _active_event_intent_modifier: float = 1.0
+## Tracks per-event modifiers so multiple concurrent events compose correctly.
+var _active_event_modifiers: Dictionary = {}
 
 
 func initialize(
@@ -40,17 +95,34 @@ func initialize(
 		push_error("CustomerSystem: failed to load customer scene")
 		return
 
-	if not EventBus.day_ended.is_connected(_on_day_ended):
-		EventBus.day_ended.connect(_on_day_ended)
-	if not EventBus.reputation_changed.is_connected(
-		_on_reputation_changed
-	):
-		EventBus.reputation_changed.connect(_on_reputation_changed)
+	_shopper_scene = load(SHOPPER_SCENE_PATH) as PackedScene
+	if not _shopper_scene:
+		push_error("CustomerSystem: failed to load shopper scene")
+
+	_connect_signals()
+	_spawn_pool_cache = []
+	_spawn_pool_dirty = true
+	_vip_type_valid = false
+	_validate_vip_type()
 
 
-## Sets the performance manager reference for NPC profiling.
 func set_performance_manager(manager: PerformanceManager) -> void:
 	_performance_manager = manager
+
+
+func _process(delta: float) -> void:
+	if _time_scale <= 0.0:
+		return
+	var scaled_delta: float = delta * _time_scale
+	_hour_elapsed += scaled_delta
+	_spawn_check_timer += scaled_delta
+	if _spawn_check_timer >= SPAWN_CHECK_INTERVAL:
+		_spawn_check_timer -= SPAWN_CHECK_INTERVAL
+		_update_mall_shoppers()
+	_lod_timer += delta
+	if _lod_timer >= LOD_UPDATE_INTERVAL:
+		_lod_timer -= LOD_UPDATE_INTERVAL
+		_update_shopper_lod()
 
 
 func _physics_process(_delta: float) -> void:
@@ -69,15 +141,29 @@ func _physics_process(_delta: float) -> void:
 	)
 
 
-## Spawns a customer with the given profile for the specified store.
 func spawn_customer(
-	profile: CustomerProfile, store_id: String = ""
+	profile: CustomerTypeDefinition, store_id: String = ""
 ) -> void:
 	if _active_customers.size() >= _max_customers:
 		push_warning(
 			"CustomerSystem: max customers reached, ignoring spawn"
 		)
 		return
+
+	var used_store_id: String = store_id
+	if used_store_id.is_empty():
+		used_store_id = _store_id
+
+	var greeter: StaffDefinition = _get_greeter_for_store(used_store_id)
+	if greeter:
+		var conversion: float = minf(
+			1.0,
+			BASE_ENTRY_CONVERSION * (
+				1.0 + GREETER_ENTRY_BONUS * greeter.performance_multiplier()
+			)
+		)
+		if randf() > conversion:
+			return
 
 	var customer: Customer = _acquire_customer()
 	if not customer:
@@ -102,26 +188,31 @@ func spawn_customer(
 	var budget_mult: float = 1.0
 	if _reputation_system:
 		budget_mult = _reputation_system.get_budget_multiplier()
+	budget_mult *= DifficultySystem.get_modifier(&"customer_budget_multiplier")
+	var browse_mult: float = 1.0
+	if greeter:
+		browse_mult = 1.0 + GREETER_BROWSE_BONUS * greeter.performance_multiplier()
 	customer.initialize(
-		profile, _store_controller, _inventory_system, budget_mult
+		profile, _store_controller, _inventory_system,
+		budget_mult, browse_mult
 	)
 	customer.despawn_requested.connect(_on_customer_despawn_requested)
 	_active_customers.append(customer)
 
-	var used_store_id: String = store_id
-	if used_store_id.is_empty():
-		used_store_id = _store_id
-
 	var customer_data: Dictionary = {
 		"customer_id": customer.get_instance_id(),
 		"profile_id": profile.id,
-		"profile_name": profile.name,
+		"profile_name": profile.customer_name,
 		"store_id": used_store_id,
 	}
 	EventBus.customer_entered.emit(customer_data)
+	if greeter:
+		EventBus.customer_greeted.emit(
+			StringName(str(customer.get_instance_id())),
+			StringName(used_store_id)
+		)
 
 
-## Removes a customer from active duty and returns it to the pool.
 func despawn_customer(customer_node: Node) -> void:
 	if not customer_node:
 		push_warning("CustomerSystem: tried to despawn null customer")
@@ -136,9 +227,10 @@ func despawn_customer(customer_node: Node) -> void:
 		"customer_id": customer.get_instance_id(),
 		"profile_id": customer.profile.id if customer.profile else "",
 		"profile_name": (
-			customer.profile.name if customer.profile else ""
+			customer.profile.customer_name if customer.profile else ""
 		),
 		"store_id": _store_id,
+		"satisfied": customer._made_purchase,
 	}
 
 	if customer.despawn_requested.is_connected(
@@ -152,39 +244,287 @@ func despawn_customer(customer_node: Node) -> void:
 	EventBus.customer_left.emit(customer_data)
 
 
-## Returns the list of currently active customers.
 func get_active_customers() -> Array[Customer]:
 	return _active_customers
 
 
-## Returns the number of currently active customers.
 func get_active_customer_count() -> int:
 	return _active_customers.size()
 
 
-## Sets the store controller reference for customer navigation.
+func get_active_mall_shopper_count() -> int:
+	return _active_mall_shopper_count
+
+
 func set_store_controller(controller: StoreController) -> void:
 	_store_controller = controller
 
 
-## Sets the inventory system reference for customer item evaluation.
 func set_inventory_system(system: InventorySystem) -> void:
 	_inventory_system = system
 
 
-## Sets the reputation system reference for tier-based scaling.
 func set_reputation_system(system: ReputationSystem) -> void:
 	_reputation_system = system
 	_update_max_customers()
 
 
-## Sets the current store id and adjusts per-store customer cap.
+func set_market_event_system(system: MarketEventSystem) -> void:
+	_market_event_system = system
+
+
+## Returns the current pool of spawnable customer profiles.
+## VIP_CUSTOMER is included only when vip_customer_events is unlocked.
+func get_spawn_pool() -> Array[CustomerTypeDefinition]:
+	if _spawn_pool_dirty:
+		_rebuild_spawn_pool()
+	return _spawn_pool_cache
+
+
+## Returns purchase intent for a category, incorporating market event bonuses
+## and the current difficulty purchase_probability_multiplier.
+func get_purchase_intent_for_category(
+	p_profile: CustomerTypeDefinition,
+	category: StringName,
+) -> float:
+	var base_intent: float = p_profile.purchase_probability_base
+	if _market_event_system:
+		var demand_mult: float = (
+			_market_event_system.get_category_demand_multiplier(category)
+		)
+		if demand_mult > 1.0:
+			base_intent += (demand_mult - 1.0) * base_intent
+	var purchase_mult: float = DifficultySystem.get_modifier(
+		&"purchase_probability_multiplier"
+	)
+	return clampf(
+		base_intent * purchase_mult * _active_event_intent_modifier, 0.0, 1.0
+	)
+
+
 func set_store_id(store_id: String) -> void:
 	_store_id = store_id
 	_update_max_customers()
+	_refresh_cached_greeter()
 
 
-## Sets the per-store customer cap based on store size and reputation tier.
+func get_spawn_target() -> int:
+	var fractional_hour: float = _get_fractional_hour()
+	var density: float = _interpolate_density(fractional_hour)
+	var dow_modifier: float = DAY_OF_WEEK_MODIFIERS[
+		_current_day_of_week
+	]
+	var traffic_mult: float = DifficultySystem.get_modifier(
+		&"foot_traffic_multiplier"
+	)
+	var raw_target: float = (
+		density * float(max_customers_in_mall)
+		* dow_modifier * _seasonal_density_modifier
+		* traffic_mult * _active_event_spawn_modifier
+	)
+	return mini(roundi(raw_target), max_customers_in_mall)
+
+
+func clear_pool() -> void:
+	for customer: Customer in _customer_pool:
+		if is_instance_valid(customer):
+			customer.queue_free()
+	_customer_pool.clear()
+
+
+func _connect_signals() -> void:
+	if not EventBus.day_ended.is_connected(_on_day_ended):
+		EventBus.day_ended.connect(_on_day_ended)
+	if not EventBus.reputation_changed.is_connected(
+		_on_reputation_changed
+	):
+		EventBus.reputation_changed.connect(_on_reputation_changed)
+	if not EventBus.hour_changed.is_connected(_on_hour_changed):
+		EventBus.hour_changed.connect(_on_hour_changed)
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.store_opened.is_connected(_on_store_opened):
+		EventBus.store_opened.connect(_on_store_opened)
+	if not EventBus.store_closed.is_connected(_on_store_closed):
+		EventBus.store_closed.connect(_on_store_closed)
+	if not EventBus.customer_left_mall.is_connected(
+		_on_customer_left_mall
+	):
+		EventBus.customer_left_mall.connect(_on_customer_left_mall)
+	if not EventBus.speed_changed.is_connected(_on_speed_changed):
+		EventBus.speed_changed.connect(_on_speed_changed)
+	if not EventBus.day_phase_changed.is_connected(
+		_on_day_phase_changed
+	):
+		EventBus.day_phase_changed.connect(_on_day_phase_changed)
+	if not EventBus.staff_hired.is_connected(_on_staff_roster_changed):
+		EventBus.staff_hired.connect(_on_staff_roster_changed)
+	if not EventBus.staff_fired.is_connected(_on_staff_roster_changed):
+		EventBus.staff_fired.connect(_on_staff_roster_changed)
+	if not EventBus.staff_quit.is_connected(_on_staff_quit):
+		EventBus.staff_quit.connect(_on_staff_quit)
+	if not EventBus.staff_morale_changed.is_connected(
+		_on_staff_morale_changed
+	):
+		EventBus.staff_morale_changed.connect(_on_staff_morale_changed)
+	if not EventBus.seasonal_multipliers_updated.is_connected(
+		_on_seasonal_multipliers_updated
+	):
+		EventBus.seasonal_multipliers_updated.connect(
+			_on_seasonal_multipliers_updated
+		)
+	if not EventBus.unlock_granted.is_connected(_on_unlock_granted):
+		EventBus.unlock_granted.connect(_on_unlock_granted)
+	if not EventBus.market_event_active.is_connected(_on_market_event_active):
+		EventBus.market_event_active.connect(_on_market_event_active)
+	if not EventBus.market_event_expired.is_connected(_on_market_event_expired):
+		EventBus.market_event_expired.connect(_on_market_event_expired)
+
+
+func _update_shopper_lod() -> void:
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if not camera:
+		return
+	var cam_pos: Vector3 = camera.global_position
+	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
+		"shoppers"
+	)
+	for node: Node in shoppers:
+		var shopper: ShopperAI = node as ShopperAI
+		if not shopper or not is_instance_valid(shopper):
+			continue
+		var dist: float = cam_pos.distance_to(
+			shopper.global_position
+		)
+		var new_detail: ShopperAI.AIDetail
+		if dist < ShopperAI.FULL_AI_RADIUS:
+			new_detail = ShopperAI.AIDetail.FULL
+		elif dist < ShopperAI.SIMPLE_AI_RADIUS:
+			new_detail = ShopperAI.AIDetail.SIMPLE
+		else:
+			new_detail = ShopperAI.AIDetail.MINIMAL
+		shopper.ai_detail = new_detail
+
+
+func _update_mall_shoppers() -> void:
+	if not _in_mall_hallway:
+		return
+	var target: int = get_spawn_target()
+	if _active_mall_shopper_count < target:
+		_try_spawn_mall_shopper()
+	elif _active_mall_shopper_count > target:
+		_request_one_shopper_leave()
+
+
+func _try_spawn_mall_shopper() -> void:
+	if _active_mall_shopper_count >= max_customers_in_mall:
+		return
+	if not _shopper_scene:
+		return
+	var spawn_pos: Vector3 = _find_exit_waypoint_position()
+	if spawn_pos == Vector3.ZERO:
+		return
+	var weights: Dictionary = _current_archetype_weights
+	var archetype: PersonalityData.PersonalityType = (
+		ShopperArchetypeConfig.weighted_random_select(weights)
+	)
+	if ShopperArchetypeConfig.is_group_archetype(archetype):
+		_spawn_shopper_group(archetype, spawn_pos)
+	else:
+		_spawn_solo_shopper(archetype, spawn_pos)
+
+
+func _spawn_solo_shopper(
+	archetype: PersonalityData.PersonalityType,
+	spawn_pos: Vector3,
+) -> void:
+	var shopper: ShopperAI = _shopper_scene.instantiate() as ShopperAI
+	if not shopper:
+		push_error("CustomerSystem: failed to instantiate ShopperAI")
+		return
+	shopper.personality = (
+		ShopperArchetypeConfig.create_personality(archetype)
+	)
+	add_child(shopper)
+	shopper.initialize(spawn_pos)
+	_active_mall_shopper_count += 1
+
+
+func _spawn_shopper_group(
+	archetype: PersonalityData.PersonalityType,
+	spawn_pos: Vector3,
+) -> void:
+	var size_range: Vector2i = (
+		ShopperArchetypeConfig.get_group_size_range(archetype)
+	)
+	var group_size: int = randi_range(size_range.x, size_range.y)
+	var remaining_capacity: int = (
+		max_customers_in_mall - _active_mall_shopper_count
+	)
+	group_size = mini(group_size, remaining_capacity)
+	if group_size < 2:
+		_spawn_solo_shopper(archetype, spawn_pos)
+		return
+	var group: ShopperGroup = ShopperGroup.new()
+	for i: int in range(group_size):
+		var shopper: ShopperAI = (
+			_shopper_scene.instantiate() as ShopperAI
+		)
+		if not shopper:
+			push_error(
+				"CustomerSystem: failed to instantiate group member"
+			)
+			continue
+		shopper.personality = (
+			ShopperArchetypeConfig.create_personality(archetype)
+		)
+		var offset: Vector3 = Vector3(
+			randf_range(-0.5, 0.5), 0.0, randf_range(-0.5, 0.5)
+		)
+		add_child(shopper)
+		group.add_member(shopper)
+		shopper.shopper_group = group
+		shopper.initialize(spawn_pos + offset)
+		_active_mall_shopper_count += 1
+	group.assign_leader()
+
+
+func _find_exit_waypoint_position() -> Vector3:
+	var waypoints: Array[Node] = get_tree().get_nodes_in_group(
+		"mall_waypoints"
+	)
+	var exits: Array[MallWaypoint] = []
+	for node: Node in waypoints:
+		var wp: MallWaypoint = node as MallWaypoint
+		if wp and wp.waypoint_type == MallWaypoint.WaypointType.EXIT:
+			exits.append(wp)
+	if exits.is_empty():
+		push_warning(
+			"CustomerSystem: No EXIT waypoints found for spawning"
+		)
+		return Vector3.ZERO
+	return exits.pick_random().global_position
+
+
+func _get_fractional_hour() -> float:
+	var seconds_per_hour: float = (
+		Constants.SECONDS_PER_GAME_MINUTE * Constants.MINUTES_PER_HOUR
+	)
+	var fraction: float = 0.0
+	if seconds_per_hour > 0.0:
+		fraction = clampf(_hour_elapsed / seconds_per_hour, 0.0, 1.0)
+	return float(_current_hour) + fraction
+
+
+func _interpolate_density(fractional_hour: float) -> float:
+	var lower_hour: int = int(fractional_hour)
+	var upper_hour: int = lower_hour + 1
+	var t: float = fractional_hour - float(lower_hour)
+	var lower_density: float = HOUR_DENSITY.get(lower_hour, 0.0)
+	var upper_density: float = HOUR_DENSITY.get(upper_hour, 0.0)
+	return lerpf(lower_density, upper_density, t)
+
+
 func _update_max_customers() -> void:
 	if not GameManager.data_loader or _store_id.is_empty():
 		_max_customers = MAX_CUSTOMERS_SMALL
@@ -218,23 +558,229 @@ func _on_customer_despawn_requested(customer: Customer) -> void:
 
 
 func _on_reputation_changed(
-	_old_value: float, _new_value: float
+	_store_id: String, _new_value: float
 ) -> void:
 	_update_max_customers()
 
 
 func _on_day_ended(_day: int) -> void:
 	_despawn_all_customers()
+	_despawn_all_mall_shoppers()
+	_active_mall_shopper_count = 0
+	_spawn_check_timer = 0.0
+	_lod_timer = 0.0
+	_hour_elapsed = 0.0
 
 
-## Removes all active customers at once (e.g. end of day).
+func _on_day_started(day: int) -> void:
+	_active_mall_shopper_count = 0
+	_current_hour = Constants.STORE_OPEN_HOUR
+	_hour_elapsed = 0.0
+	_spawn_check_timer = 0.0
+	_lod_timer = 0.0
+	_current_day_of_week = (day - 1) % 7
+	_current_archetype_weights = (
+		ShopperArchetypeConfig.WEIGHTS_MORNING
+	)
+
+
+func _on_hour_changed(hour: int) -> void:
+	_current_hour = hour
+	_hour_elapsed = 0.0
+	if hour >= Constants.STORE_CLOSE_HOUR:
+		_request_all_shoppers_leave()
+
+
+func _on_store_opened(_store_id: String) -> void:
+	_in_mall_hallway = false
+
+
+func _on_store_closed(_store_id: String) -> void:
+	_in_mall_hallway = true
+
+
+func _on_customer_left_mall(
+	_customer: Node, _satisfied: bool
+) -> void:
+	_active_mall_shopper_count = maxi(
+		_active_mall_shopper_count - 1, 0
+	)
+
+
+func _on_seasonal_multipliers_updated(
+	multipliers: Dictionary
+) -> void:
+	if multipliers.is_empty():
+		_seasonal_density_modifier = 1.0
+		return
+	var total: float = 0.0
+	var count: int = 0
+	for store_id: String in multipliers:
+		total += float(multipliers[store_id])
+		count += 1
+	if count > 0:
+		_seasonal_density_modifier = total / float(count)
+	else:
+		_seasonal_density_modifier = 1.0
+
+
+func _on_speed_changed(new_speed: float) -> void:
+	_time_scale = new_speed
+
+
+func _on_day_phase_changed(new_phase: int) -> void:
+	_current_archetype_weights = (
+		ShopperArchetypeConfig.get_weights_for_phase(new_phase)
+	)
+
+
+func _request_one_shopper_leave() -> void:
+	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
+		"shoppers"
+	)
+	for node: Node in shoppers:
+		var shopper: ShopperAI = node as ShopperAI
+		if not shopper or not is_instance_valid(shopper):
+			continue
+		if shopper.current_state == ShopperAI.ShopperState.LEAVING:
+			continue
+		shopper.request_leave()
+		return
+
+
+func _request_all_shoppers_leave() -> void:
+	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
+		"shoppers"
+	)
+	for node: Node in shoppers:
+		var shopper: ShopperAI = node as ShopperAI
+		if not shopper or not is_instance_valid(shopper):
+			continue
+		if shopper.current_state == ShopperAI.ShopperState.LEAVING:
+			continue
+		shopper.request_leave()
+
+
 func _despawn_all_customers() -> void:
 	var to_remove: Array[Customer] = _active_customers.duplicate()
 	for customer: Customer in to_remove:
 		despawn_customer(customer)
 
 
-## Acquires a customer node from the pool or creates a new one.
+func _despawn_all_mall_shoppers() -> void:
+	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
+		"shoppers"
+	)
+	for node: Node in shoppers:
+		if is_instance_valid(node):
+			node.queue_free()
+
+
+func _refresh_cached_greeter() -> void:
+	if _store_id.is_empty():
+		_cached_greeter = null
+		return
+	_cached_greeter = null
+	var staff: Array[StaffDefinition] = (
+		StaffManager.get_staff_for_store(_store_id)
+	)
+	for s: StaffDefinition in staff:
+		if s.role == StaffDefinition.StaffRole.GREETER:
+			_cached_greeter = s
+			return
+
+
+func _get_greeter_for_store(
+	store_id: String
+) -> StaffDefinition:
+	if store_id == _store_id:
+		return _cached_greeter
+	var staff: Array[StaffDefinition] = (
+		StaffManager.get_staff_for_store(store_id)
+	)
+	for s: StaffDefinition in staff:
+		if s.role == StaffDefinition.StaffRole.GREETER:
+			return s
+	return null
+
+
+func _on_staff_roster_changed(
+	_staff_id: String, store_id: String
+) -> void:
+	if store_id == _store_id:
+		_refresh_cached_greeter()
+
+
+func _on_staff_quit(_staff_id: String) -> void:
+	_refresh_cached_greeter()
+
+
+func _on_staff_morale_changed(
+	staff_id: String, _new_morale: float
+) -> void:
+	if _cached_greeter and _cached_greeter.staff_id == staff_id:
+		_refresh_cached_greeter()
+
+
+func _on_market_event_active(event_id: StringName, modifier: Dictionary) -> void:
+	_active_event_modifiers[event_id] = modifier
+	_recalculate_event_modifiers()
+
+
+func _on_market_event_expired(event_id: StringName) -> void:
+	_active_event_modifiers.erase(event_id)
+	_recalculate_event_modifiers()
+
+
+func _recalculate_event_modifiers() -> void:
+	var spawn_mult: float = 1.0
+	var intent_mult: float = 1.0
+	for mod: Dictionary in _active_event_modifiers.values():
+		spawn_mult *= mod.get("spawn_rate_multiplier", 1.0) as float
+		intent_mult *= mod.get("purchase_intent_multiplier", 1.0) as float
+	_active_event_spawn_modifier = spawn_mult
+	_active_event_intent_modifier = intent_mult
+
+
+func _rebuild_spawn_pool() -> void:
+	_spawn_pool_cache = []
+	if not GameManager.data_loader:
+		_spawn_pool_dirty = false
+		return
+	var vip_included: bool = (
+		_vip_type_valid and UnlockSystem.is_unlocked(VIP_UNLOCK_ID)
+	)
+	for profile: CustomerTypeDefinition in (
+		GameManager.data_loader.get_all_customers()
+	):
+		if StringName(profile.id) == VIP_CUSTOMER_ID:
+			if vip_included:
+				_spawn_pool_cache.append(profile)
+		else:
+			_spawn_pool_cache.append(profile)
+	_spawn_pool_dirty = false
+
+
+func _validate_vip_type() -> void:
+	if not GameManager.data_loader:
+		return
+	for profile: CustomerTypeDefinition in (
+		GameManager.data_loader.get_all_customers()
+	):
+		if StringName(profile.id) == VIP_CUSTOMER_ID:
+			_vip_type_valid = true
+			return
+	push_error(
+		"CustomerSystem: VIP customer type '%s' not found in registry"
+		% VIP_CUSTOMER_ID
+	)
+
+
+func _on_unlock_granted(unlock_id: StringName) -> void:
+	if unlock_id == VIP_UNLOCK_ID:
+		_spawn_pool_dirty = true
+
+
 func _acquire_customer() -> Customer:
 	if not _customer_pool.is_empty():
 		return _customer_pool.pop_back()
@@ -243,15 +789,6 @@ func _acquire_customer() -> Customer:
 	return _customer_scene.instantiate() as Customer
 
 
-## Frees all pooled customer nodes and clears the pool array.
-func clear_pool() -> void:
-	for customer: Customer in _customer_pool:
-		if is_instance_valid(customer):
-			customer.queue_free()
-	_customer_pool.clear()
-
-
-## Returns a customer node to the pool for reuse.
 func _release_customer(customer: Customer) -> void:
 	customer.visible = false
 	customer.set_physics_process(false)

@@ -1,25 +1,36 @@
-## UI panel that reveals cards from an opened booster pack one by one.
+## Fullscreen overlay that reveals booster pack cards one by one on click.
 class_name PackOpeningPanel
 extends CanvasLayer
 
 const PANEL_NAME: String = "pack_opening"
-const REVEAL_DELAY: float = 0.35
-var _cards: Array[ItemInstance] = []
-var _reveal_index: int = 0
-var _is_open: bool = false
-var _anim_tween: Tween
-var _reveal_timer: float = 0.0
-var _revealing: bool = false
+const CARDS_PER_PACK: int = 5
+const FLIP_DURATION: float = 0.3
+const RARE_HOLD_DURATION: float = 1.5
+const GLOW_FLASH_DURATION: float = 0.4
+const CARD_SIZE: Vector2 = Vector2(120, 170)
+const RARE_RARITIES: Array[String] = [
+	"rare", "very_rare", "legendary",
+]
 
+var _cards: Array[Dictionary] = []
+var _revealed_count: int = 0
+var _is_open: bool = false
+var _is_flipping: bool = false
+var _anim_tween: Tween
+var _flip_tween: Tween
+var _glow_tween: Tween
+var _pack_id: String = ""
+
+@onready var _background: ColorRect = $Background
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _title_label: Label = (
 	$PanelRoot/Margin/VBox/TitleLabel
 )
-@onready var _card_grid: GridContainer = (
-	$PanelRoot/Margin/VBox/ScrollContainer/CardGrid
+@onready var _card_row: HBoxContainer = (
+	$PanelRoot/Margin/VBox/CardRow
 )
-@onready var _close_button: Button = (
-	$PanelRoot/Margin/VBox/ButtonHBox/CloseButton
+@onready var _add_button: Button = (
+	$PanelRoot/Margin/VBox/ButtonHBox/AddToInventoryButton
 )
 @onready var _total_value_label: Label = (
 	$PanelRoot/Margin/VBox/TotalValueLabel
@@ -28,40 +39,45 @@ var _revealing: bool = false
 
 func _ready() -> void:
 	_panel.visible = false
-	_close_button.pressed.connect(close)
-	_close_button.disabled = true
+	_background.visible = false
+	_add_button.visible = false
+	_add_button.pressed.connect(_on_add_to_inventory)
+	EventBus.pack_opening_started.connect(_on_pack_opening_started)
 
 
-func _process(delta: float) -> void:
-	if not _revealing:
+func _unhandled_input(event: InputEvent) -> void:
+	if not _is_open:
 		return
-	_reveal_timer -= delta
-	if _reveal_timer > 0.0:
+	var key_event: InputEventKey = event as InputEventKey
+	if not key_event:
 		return
-	if _reveal_index >= _cards.size():
-		_revealing = false
-		_close_button.disabled = false
-		_update_total_value()
-		return
-	_show_card_at_index(_reveal_index)
-	_reveal_index += 1
-	_reveal_timer = REVEAL_DELAY
+	if key_event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
 
 
-## Opens the panel and begins card reveal sequence.
-func open(cards: Array[ItemInstance], pack_name: String) -> void:
+func _on_pack_opening_started(
+	pack_id: String, card_results: Array[Dictionary],
+) -> void:
+	open(pack_id, card_results)
+
+
+## Opens the panel with face-down cards for the player to flip.
+func open(
+	pack_id: String, card_results: Array[Dictionary],
+) -> void:
 	if _is_open:
 		return
-	_cards = cards
-	_reveal_index = 0
-	_revealing = true
-	_reveal_timer = 0.0
+	_pack_id = pack_id
+	_cards = card_results
+	_revealed_count = 0
 	_is_open = true
-	_title_label.text = tr("PACK_OPENING_TITLE") % pack_name
+	_is_flipping = false
+	_title_label.text = "Click a card to reveal it!"
 	_total_value_label.text = ""
-	_close_button.disabled = true
-	_clear_grid()
-	_create_card_placeholders()
+	_add_button.visible = false
+	_clear_card_row()
+	_create_face_down_cards()
+	_background.visible = true
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.modal_open(_panel)
 	EventBus.panel_opened.emit(PANEL_NAME)
@@ -71,8 +87,10 @@ func close() -> void:
 	if not _is_open:
 		return
 	_is_open = false
-	_revealing = false
+	_is_flipping = false
 	_cards = []
+	_kill_tweens()
+	_background.visible = false
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.modal_close(_panel)
 	_anim_tween.finished.connect(
@@ -85,89 +103,208 @@ func is_open() -> bool:
 	return _is_open
 
 
-func _clear_grid() -> void:
-	for child: Node in _card_grid.get_children():
+func _kill_tweens() -> void:
+	PanelAnimator.kill_tween(_flip_tween)
+	PanelAnimator.kill_tween(_glow_tween)
+	_flip_tween = null
+	_glow_tween = null
+
+
+func _clear_card_row() -> void:
+	for child: Node in _card_row.get_children():
 		child.queue_free()
 
 
-func _create_card_placeholders() -> void:
-	for i: int in range(_cards.size()):
-		var cell := PanelContainer.new()
-		cell.custom_minimum_size = Vector2(140, 80)
-		cell.modulate = Color(0.3, 0.3, 0.3, 0.5)
-
-		var vbox := VBoxContainer.new()
-		vbox.add_theme_constant_override("separation", 2)
-
-		var name_label := Label.new()
-		name_label.name = "NameLabel"
-		name_label.text = "???"
-		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_label.add_theme_font_size_override("font_size", 12)
-		vbox.add_child(name_label)
-
-		var rarity_label := Label.new()
-		rarity_label.name = "RarityLabel"
-		rarity_label.text = ""
-		rarity_label.horizontal_alignment = (
-			HORIZONTAL_ALIGNMENT_CENTER
-		)
-		rarity_label.add_theme_font_size_override("font_size", 10)
-		vbox.add_child(rarity_label)
-
-		var value_label := Label.new()
-		value_label.name = "ValueLabel"
-		value_label.text = ""
-		value_label.horizontal_alignment = (
-			HORIZONTAL_ALIGNMENT_CENTER
-		)
-		value_label.add_theme_font_size_override("font_size", 10)
-		vbox.add_child(value_label)
-
-		cell.add_child(vbox)
-		_card_grid.add_child(cell)
+func _create_face_down_cards() -> void:
+	var count: int = mini(_cards.size(), CARDS_PER_PACK)
+	for i: int in range(count):
+		var card_button: Button = _build_card_back(i)
+		_card_row.add_child(card_button)
 
 
-func _show_card_at_index(index: int) -> void:
+func _build_card_back(index: int) -> Button:
+	var btn := Button.new()
+	btn.custom_minimum_size = CARD_SIZE
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.clip_text = true
+	btn.set_meta("card_index", index)
+	btn.set_meta("revealed", false)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "CardContent"
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 4)
+
+	var art_rect := ColorRect.new()
+	art_rect.name = "ArtPlaceholder"
+	art_rect.custom_minimum_size = Vector2(80, 60)
+	art_rect.color = Color(0.25, 0.25, 0.35, 1.0)
+	art_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vbox.add_child(art_rect)
+
+	var name_label := Label.new()
+	name_label.name = "NameLabel"
+	name_label.text = "?"
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(name_label)
+
+	var rarity_label := Label.new()
+	rarity_label.name = "RarityLabel"
+	rarity_label.text = ""
+	rarity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rarity_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(rarity_label)
+
+	var value_label := Label.new()
+	value_label.name = "ValueLabel"
+	value_label.text = ""
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	value_label.add_theme_font_size_override("font_size", 10)
+	vbox.add_child(value_label)
+
+	btn.add_child(vbox)
+	btn.pressed.connect(_on_card_clicked.bind(btn))
+	return btn
+
+
+func _on_card_clicked(btn: Button) -> void:
+	if _is_flipping:
+		return
+	if not _is_open:
+		return
+	var revealed: bool = btn.get_meta("revealed", false)
+	if revealed:
+		return
+	var index: int = btn.get_meta("card_index", -1)
 	if index < 0 or index >= _cards.size():
 		return
-	var card: ItemInstance = _cards[index]
-	var cell: PanelContainer = (
-		_card_grid.get_child(index) as PanelContainer
-	)
-	if not cell:
-		return
+	btn.set_meta("revealed", true)
+	_is_flipping = true
+	_flip_card(btn, index)
 
-	cell.modulate = Color.WHITE
-	var vbox: VBoxContainer = cell.get_child(0) as VBoxContainer
+
+func _flip_card(btn: Button, index: int) -> void:
+	var card_data: Dictionary = _cards[index]
+	var half: float = FLIP_DURATION * 0.5
+
+	btn.pivot_offset = btn.size / 2.0
+	PanelAnimator.kill_tween(_flip_tween)
+	_flip_tween = btn.create_tween()
+
+	_flip_tween.tween_property(
+		btn, "scale:x", 0.0, half
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+
+	_flip_tween.tween_callback(
+		_populate_card_face.bind(btn, card_data)
+	)
+
+	_flip_tween.tween_property(
+		btn, "scale:x", 1.0, half
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+	var rarity: String = card_data.get("rarity", "common")
+	if rarity in RARE_RARITIES:
+		_flip_tween.tween_callback(
+			_play_rare_fanfare.bind(btn, rarity)
+		)
+		_flip_tween.tween_interval(RARE_HOLD_DURATION)
+
+	_flip_tween.tween_callback(_on_flip_complete)
+
+
+func _populate_card_face(
+	btn: Button, card_data: Dictionary,
+) -> void:
+	var vbox: VBoxContainer = (
+		btn.get_node("CardContent") as VBoxContainer
+	)
 	if not vbox:
 		return
 
+	var art: ColorRect = (
+		vbox.get_node("ArtPlaceholder") as ColorRect
+	)
+	var rarity: String = card_data.get("rarity", "common")
+	if art:
+		art.color = UIThemeConstants.get_rarity_color(rarity)
+
 	var name_label: Label = vbox.get_node("NameLabel") as Label
+	if name_label:
+		name_label.text = card_data.get("name", "Unknown")
+
 	var rarity_label: Label = (
 		vbox.get_node("RarityLabel") as Label
 	)
-	var value_label: Label = (
-		vbox.get_node("ValueLabel") as Label
-	)
+	if rarity_label:
+		rarity_label.text = UIThemeConstants.get_rarity_display(
+			rarity
+		)
+		rarity_label.add_theme_color_override(
+			"font_color",
+			UIThemeConstants.get_rarity_color(rarity),
+		)
 
-	if name_label and card.definition:
-		name_label.text = card.definition.name
-	if rarity_label and card.definition:
-		var rarity_display: String = UIThemeConstants.get_rarity_display(
-			card.definition.rarity
-		)
-		rarity_label.text = "[%s]" % rarity_display
-		var color: Color = UIThemeConstants.get_rarity_color(
-			card.definition.rarity
-		)
-		rarity_label.add_theme_color_override("font_color", color)
+	var value_label: Label = vbox.get_node("ValueLabel") as Label
 	if value_label:
-		value_label.text = "$%.2f" % card.get_current_value()
+		var value: float = card_data.get("value", 0.0)
+		value_label.text = "$%.2f" % value
+
+
+func _play_rare_fanfare(btn: Button, rarity: String) -> void:
+	var glow_color: Color = UIThemeConstants.get_rarity_color(
+		rarity
+	)
+	var flash_color := Color(
+		glow_color.r, glow_color.g, glow_color.b, 0.6
+	)
+	PanelAnimator.kill_tween(_glow_tween)
+	_glow_tween = btn.create_tween()
+	_glow_tween.tween_property(
+		btn, "modulate", flash_color, GLOW_FLASH_DURATION * 0.3
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_glow_tween.tween_property(
+		btn, "modulate", Color.WHITE, GLOW_FLASH_DURATION * 0.7
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	PanelAnimator.pulse_scale(btn, 1.2, GLOW_FLASH_DURATION)
+
+
+func _on_flip_complete() -> void:
+	_is_flipping = false
+	_revealed_count += 1
+	if _revealed_count >= mini(_cards.size(), CARDS_PER_PACK):
+		_show_add_button()
+
+
+func _show_add_button() -> void:
+	_title_label.text = "All cards revealed!"
+	_update_total_value()
+	_add_button.visible = true
+	_add_button.disabled = false
+	PanelAnimator.pulse_scale(_add_button, 1.1, 0.25)
 
 
 func _update_total_value() -> void:
 	var total: float = 0.0
-	for card: ItemInstance in _cards:
-		total += card.get_current_value()
-	_total_value_label.text = tr("PACK_TOTAL_VALUE") % total
+	for card: Dictionary in _cards:
+		total += card.get("value", 0.0)
+	_total_value_label.text = "Total Value: $%.2f" % total
+
+
+func _on_add_to_inventory() -> void:
+	if not _is_open:
+		return
+	_add_button.disabled = true
+	EventBus.pack_opened.emit(_pack_id, _get_card_ids())
+	close()
+
+
+func _get_card_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for card: Dictionary in _cards:
+		var card_id: String = card.get("id", "")
+		if not card_id.is_empty():
+			ids.append(card_id)
+	return ids

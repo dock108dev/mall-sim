@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3 uid="uid://pocket_creatures_001"]
+[gd_scene load_steps=49 format=3 uid="uid://pocket_creatures_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/pocket_creatures_store_controller.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -14,6 +14,9 @@
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_slot_marker.tres" id="12"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_door_wood.tres" id="13"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_metal_dark.tres" id="14"]
+[ext_resource type="Script" path="res://game/scripts/stores/store_staff_config.gd" id="15"]
+[ext_resource type="Script" path="res://game/scripts/world/customer_nav_config.gd" id="16"]
+[ext_resource type="Script" path="res://game/scripts/audio/store_bleed_audio.gd" id="17"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(9, 0.1, 6)
@@ -38,12 +41,6 @@ size = Vector3(2.5, 1.4, 0.5)
 
 [sub_resource type="BoxMesh" id="wall_display_mesh"]
 size = Vector3(3.0, 1.2, 0.15)
-
-[sub_resource type="BoxMesh" id="binder_rack_mesh"]
-size = Vector3(2.0, 1.6, 0.4)
-
-[sub_resource type="BoxMesh" id="endcap_mesh"]
-size = Vector3(0.8, 1.2, 0.5)
 
 [sub_resource type="BoxMesh" id="counter_mesh"]
 size = Vector3(2.5, 1.0, 0.7)
@@ -79,12 +76,48 @@ size = Vector3(3.0, 2.0, 2.0)
 [sub_resource type="BoxMesh" id="front_wall_segment_mesh"]
 size = Vector3(3.25, 3, 0.1)
 
-[sub_resource type="Environment" id="env"]
-background_mode = 1
-background_color = Color(0.4, 0.5, 0.7, 1)
-ambient_light_source = 2
-ambient_light_color = Color(1.0, 0.98, 0.95, 1)
-ambient_light_energy = 0.6
+[sub_resource type="BoxMesh" id="threshold_mesh"]
+size = Vector3(2.5, 0.05, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="threshold_mat"]
+albedo_color = Color(0.75, 0.65, 0.4, 1)
+metallic = 0.85
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="pilaster_mesh"]
+size = Vector3(0.12, 3.0, 0.12)
+
+[sub_resource type="BoxMesh" id="header_mesh"]
+size = Vector3(2.22, 0.25, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="frame_mat"]
+albedo_color = Color(0.25, 0.18, 0.12, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="sign_backing_mesh"]
+size = Vector3(2.0, 0.5, 0.03)
+
+[sub_resource type="StandardMaterial3D" id="sign_backing_mat"]
+albedo_color = Color(0.2, 0.18, 0.08, 1)
+emission_enabled = true
+emission = Color(1.0, 0.85, 0.3, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="BoxMesh" id="tournament_table_mesh"]
+size = Vector3(2.0, 0.75, 1.0)
+
+[sub_resource type="BoxMesh" id="binder_lectern_mesh"]
+size = Vector3(0.5, 1.1, 0.4)
+
+[sub_resource type="BoxShape3D" id="pack_opening_shape"]
+size = Vector3(1.5, 2.0, 1.5)
+
+[sub_resource type="BoxMesh" id="pegboard_shelf_mesh"]
+size = Vector3(0.4, 1.4, 2.5)
+
+[sub_resource type="StandardMaterial3D" id="lectern_mat"]
+albedo_color = Color(0.35, 0.28, 0.18, 1)
+roughness = 0.6
 
 ; ============================================================
 ; Root
@@ -101,39 +134,78 @@ script = ExtResource("1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 
 ; ============================================================
-; Environment & Lighting (bright, colorful card shop)
+; Lighting Rig — 6 fluorescent overheads + 4 display spotlights
 ; ============================================================
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("env")
+[node name="LightingRig" type="Node3D" parent="."]
 
-[node name="AmbientLight" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
-light_color = Color(1.0, 0.98, 0.95, 1)
-light_energy = 1.0
-omni_range = 10.0
+[node name="FluorescentOverhead_A" type="OmniLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 2.9, 1.5)
+light_color = Color(0.95, 0.98, 1.0, 1)
+light_energy = 0.7
+omni_range = 5.0
 
-[node name="BrightFill" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
-light_color = Color(1.0, 0.95, 0.9, 1)
-light_energy = 0.5
-omni_range = 7.0
+[node name="FluorescentOverhead_B" type="OmniLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 2.9, 1.5)
+light_color = Color(0.95, 0.98, 1.0, 1)
+light_energy = 0.7
+omni_range = 5.0
 
-[node name="DisplaySpot_SinglesCase" type="SpotLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -3.5, 2.8, -1.5)
-light_color = Color(1.0, 0.9, 0.5, 1)
-light_energy = 1.0
+[node name="FluorescentOverhead_C" type="OmniLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 2.9, 1.5)
+light_color = Color(0.95, 0.98, 1.0, 1)
+light_energy = 0.7
+omni_range = 5.0
+
+[node name="FluorescentOverhead_D" type="OmniLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 2.9, -1.5)
+light_color = Color(0.95, 0.98, 1.0, 1)
+light_energy = 0.7
+omni_range = 5.0
+
+[node name="FluorescentOverhead_E" type="OmniLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 2.9, -1.5)
+light_color = Color(0.95, 0.98, 1.0, 1)
+light_energy = 0.7
+omni_range = 5.0
+
+[node name="FluorescentOverhead_F" type="OmniLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 2.9, -1.5)
+light_color = Color(0.95, 0.98, 1.0, 1)
+light_energy = 0.7
+omni_range = 5.0
+
+[node name="DisplaySpotlight_A" type="SpotLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -2.5, 2.8, 0.8)
+light_color = Color(1.0, 0.95, 0.85, 1)
+light_energy = 1.2
 shadow_enabled = true
 spot_range = 3.5
 spot_angle = 35.0
 
-[node name="DisplaySpot_WallDisplay" type="SpotLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2.8, -2.8)
-light_color = Color(0.9, 0.7, 1.0, 1)
-light_energy = 1.0
+[node name="DisplaySpotlight_B" type="SpotLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -0.5, 2.8, 0.8)
+light_color = Color(1.0, 0.95, 0.85, 1)
+light_energy = 1.2
 shadow_enabled = true
 spot_range = 3.5
-spot_angle = 40.0
+spot_angle = 35.0
+
+[node name="DisplaySpotlight_C" type="SpotLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 1.5, 2.8, 0.8)
+light_color = Color(1.0, 0.95, 0.85, 1)
+light_energy = 1.2
+shadow_enabled = true
+spot_range = 3.5
+spot_angle = 35.0
+
+[node name="DisplaySpotlight_D" type="SpotLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 3.5, 2.8, 0.8)
+light_color = Color(1.0, 0.95, 0.85, 1)
+light_energy = 1.2
+shadow_enabled = true
+spot_range = 3.5
+spot_angle = 35.0
 
 ; ============================================================
 ; Structure: Floor, Walls, Ceiling
@@ -179,736 +251,639 @@ mesh = SubResource("front_wall_segment_mesh")
 surface_material_override/0 = ExtResource("5")
 
 ; ============================================================
-; Fixture 1: Singles Display Case Left (8 slots)
-; High-value singles under glass
+; Storefront — threshold, door frame, signage
 ; ============================================================
 
-[node name="SinglesCaseLeft" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -1.5)
+[node name="Storefront" type="Node3D" parent="."]
 
-[node name="CaseMesh" type="MeshInstance3D" parent="SinglesCaseLeft"]
+[node name="ThresholdStrip" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 3.25)
+mesh = SubResource("threshold_mesh")
+surface_material_override/0 = SubResource("threshold_mat")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, 1.5, 3.05)
+mesh = SubResource("pilaster_mesh")
+surface_material_override/0 = SubResource("frame_mat")
+
+[node name="FrameRight" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, 1.5, 3.05)
+mesh = SubResource("pilaster_mesh")
+surface_material_override/0 = SubResource("frame_mat")
+
+[node name="FrameHeader" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.88, 3.05)
+mesh = SubResource("header_mesh")
+surface_material_override/0 = SubResource("frame_mat")
+
+[node name="SignBacking" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 3.11)
+mesh = SubResource("sign_backing_mesh")
+surface_material_override/0 = SubResource("sign_backing_mat")
+
+[node name="SignName" type="Label3D" parent="Storefront"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.5, 3.13)
+pixel_size = 0.01
+font_size = 48
+text = "PocketCreatures"
+outline_size = 0
+
+[node name="SignTagline" type="Label3D" parent="Storefront"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.2, 3.13)
+pixel_size = 0.01
+font_size = 28
+text = "Cards & Collectibles"
+modulate = Color(1.0, 0.95, 0.8, 1)
+outline_size = 0
+
+[node name="SignLight" type="OmniLight3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 3.3)
+light_color = Color(1.0, 0.85, 0.3, 1)
+light_energy = 0.4
+omni_range = 2.5
+
+; ============================================================
+; Display Cases — 4 locked glass cases in front row
+; ============================================================
+
+[node name="DisplayCase_A" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0.8)
+
+[node name="CaseMesh" type="MeshInstance3D" parent="DisplayCase_A"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 mesh = SubResource("glass_case_mesh")
 surface_material_override/0 = ExtResource("7")
 
-[node name="Slot1" type="Area3D" parent="SinglesCaseLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.05, -0.15)
+[node name="Slot1" type="Area3D" parent="DisplayCase_A"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_left_1"
-display_name = "Singles Slot"
+slot_id = "display_a_1"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot1"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_A/Slot1"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot1"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_A/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot2" type="Area3D" parent="SinglesCaseLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.05, -0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_left_2"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot2"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot2"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot3" type="Area3D" parent="SinglesCaseLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.05, -0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_left_3"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot3"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot3"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot4" type="Area3D" parent="SinglesCaseLeft"]
+[node name="Slot2" type="Area3D" parent="DisplayCase_A"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_left_4"
-display_name = "Singles Slot"
+slot_id = "display_a_2"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot4"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_A/Slot2"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot4"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_A/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot5" type="Area3D" parent="SinglesCaseLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.05, 0.15)
+[node name="Slot3" type="Area3D" parent="DisplayCase_A"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, 0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_left_5"
-display_name = "Singles Slot"
+slot_id = "display_a_3"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot5"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_A/Slot3"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot5"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_A/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot6" type="Area3D" parent="SinglesCaseLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.05, 0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_left_6"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot6"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot6"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot7" type="Area3D" parent="SinglesCaseLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.05, 0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_left_7"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot7"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot7"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot8" type="Area3D" parent="SinglesCaseLeft"]
+[node name="Slot4" type="Area3D" parent="DisplayCase_A"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, 0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_left_8"
-display_name = "Singles Slot"
+slot_id = "display_a_4"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseLeft/Slot8"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_A/Slot4"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseLeft/Slot8"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_A/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-; ============================================================
-; Fixture 2: Singles Display Case Right (8 slots)
-; More singles on the right side
-; ============================================================
+[node name="DisplayCase_B" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0.8)
 
-[node name="SinglesCaseRight" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, 0.5)
-
-[node name="CaseMesh" type="MeshInstance3D" parent="SinglesCaseRight"]
+[node name="CaseMesh" type="MeshInstance3D" parent="DisplayCase_B"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 mesh = SubResource("glass_case_mesh")
 surface_material_override/0 = ExtResource("7")
 
-[node name="Slot1" type="Area3D" parent="SinglesCaseRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.05, -0.15)
+[node name="Slot1" type="Area3D" parent="DisplayCase_B"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_right_1"
-display_name = "Singles Slot"
+slot_id = "display_b_1"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot1"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_B/Slot1"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot1"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_B/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot2" type="Area3D" parent="SinglesCaseRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.05, -0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_right_2"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot2"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot2"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot3" type="Area3D" parent="SinglesCaseRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.05, -0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_right_3"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot3"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot3"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot4" type="Area3D" parent="SinglesCaseRight"]
+[node name="Slot2" type="Area3D" parent="DisplayCase_B"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_right_4"
-display_name = "Singles Slot"
+slot_id = "display_b_2"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot4"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_B/Slot2"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot4"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_B/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot5" type="Area3D" parent="SinglesCaseRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.05, 0.15)
+[node name="Slot3" type="Area3D" parent="DisplayCase_B"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, 0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_right_5"
-display_name = "Singles Slot"
+slot_id = "display_b_3"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot5"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_B/Slot3"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot5"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_B/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot6" type="Area3D" parent="SinglesCaseRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.05, 0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_right_6"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot6"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot6"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot7" type="Area3D" parent="SinglesCaseRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.05, 0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "singles_right_7"
-display_name = "Singles Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot7"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot7"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot8" type="Area3D" parent="SinglesCaseRight"]
+[node name="Slot4" type="Area3D" parent="DisplayCase_B"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, 0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "singles_right_8"
-display_name = "Singles Slot"
+slot_id = "display_b_4"
+display_name = "Display Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SinglesCaseRight/Slot8"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_B/Slot4"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SinglesCaseRight/Slot8"]
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_B/Slot4"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="DisplayCase_C" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0.8)
+
+[node name="CaseMesh" type="MeshInstance3D" parent="DisplayCase_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("glass_case_mesh")
+surface_material_override/0 = ExtResource("7")
+
+[node name="Slot1" type="Area3D" parent="DisplayCase_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, -0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_c_1"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_C/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_C/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot2" type="Area3D" parent="DisplayCase_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, -0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_c_2"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_C/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_C/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot3" type="Area3D" parent="DisplayCase_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, 0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_c_3"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_C/Slot3"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_C/Slot3"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot4" type="Area3D" parent="DisplayCase_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, 0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_c_4"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_C/Slot4"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_C/Slot4"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="DisplayCase_D" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, 0.8)
+
+[node name="CaseMesh" type="MeshInstance3D" parent="DisplayCase_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("glass_case_mesh")
+surface_material_override/0 = ExtResource("7")
+
+[node name="Slot1" type="Area3D" parent="DisplayCase_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, -0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_d_1"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_D/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_D/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot2" type="Area3D" parent="DisplayCase_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, -0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_d_2"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_D/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_D/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot3" type="Area3D" parent="DisplayCase_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, 0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_d_3"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_D/Slot3"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_D/Slot3"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot4" type="Area3D" parent="DisplayCase_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, 0.15)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "display_d_4"
+display_name = "Display Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DisplayCase_D/Slot4"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="DisplayCase_D/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
 ; ============================================================
-; Fixture 3: Sealed Product Shelf (6 slots)
-; Booster packs, theme decks, starter decks
+; Binder Stations — 4 standing lecterns in the middle zone
 ; ============================================================
 
-[node name="SealedShelf" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 0, -2.5)
+[node name="BinderStation_A" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, -0.5)
 
-[node name="ShelfMesh" type="MeshInstance3D" parent="SealedShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
-mesh = SubResource("shelf_mesh")
+[node name="LecternMesh" type="MeshInstance3D" parent="BinderStation_A"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+mesh = SubResource("binder_lectern_mesh")
+surface_material_override/0 = SubResource("lectern_mat")
+
+[node name="Slot1" type="Area3D" parent="BinderStation_A"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_a_1"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_A/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_A/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot2" type="Area3D" parent="BinderStation_A"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_a_2"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_A/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_A/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="BinderStation_B" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, -0.5)
+
+[node name="LecternMesh" type="MeshInstance3D" parent="BinderStation_B"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+mesh = SubResource("binder_lectern_mesh")
+surface_material_override/0 = SubResource("lectern_mat")
+
+[node name="Slot1" type="Area3D" parent="BinderStation_B"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_b_1"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_B/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_B/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot2" type="Area3D" parent="BinderStation_B"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_b_2"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_B/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_B/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="BinderStation_C" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -0.5)
+
+[node name="LecternMesh" type="MeshInstance3D" parent="BinderStation_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+mesh = SubResource("binder_lectern_mesh")
+surface_material_override/0 = SubResource("lectern_mat")
+
+[node name="Slot1" type="Area3D" parent="BinderStation_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_c_1"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_C/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_C/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot2" type="Area3D" parent="BinderStation_C"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_c_2"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_C/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_C/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="BinderStation_D" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, -0.5)
+
+[node name="LecternMesh" type="MeshInstance3D" parent="BinderStation_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+mesh = SubResource("binder_lectern_mesh")
+surface_material_override/0 = SubResource("lectern_mat")
+
+[node name="Slot1" type="Area3D" parent="BinderStation_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_d_1"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_D/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_D/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+[node name="Slot2" type="Area3D" parent="BinderStation_D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.15, 0)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "binder_d_2"
+display_name = "Binder Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderStation_D/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="Marker" type="MeshInstance3D" parent="BinderStation_D/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+
+; ============================================================
+; Sealed Product Wall — pegboard shelves with booster packs (right side)
+; ============================================================
+
+[node name="SealedProductWall" type="Node3D" parent="."]
+
+[node name="PegboardShelf_Upper" type="Node3D" parent="SealedProductWall" groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 0.8, -0.5)
+
+[node name="ShelfMesh" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Upper"]
+mesh = SubResource("pegboard_shelf_mesh")
 surface_material_override/0 = ExtResource("8")
 
-[node name="Slot1" type="Area3D" parent="SealedShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0)
+[node name="Slot1" type="Area3D" parent="SealedProductWall/PegboardShelf_Upper"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, -0.8)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "sealed_1"
-display_name = "Sealed Product"
+slot_id = "sealed_upper_1"
+display_name = "Sealed Product Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedShelf/Slot1"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedProductWall/PegboardShelf_Upper/Slot1"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SealedShelf/Slot1"]
+[node name="Marker" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Upper/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot2" type="Area3D" parent="SealedShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0)
+[node name="Slot2" type="Area3D" parent="SealedProductWall/PegboardShelf_Upper"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.0)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "sealed_2"
-display_name = "Sealed Product"
+slot_id = "sealed_upper_2"
+display_name = "Sealed Product Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedShelf/Slot2"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedProductWall/PegboardShelf_Upper/Slot2"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SealedShelf/Slot2"]
+[node name="Marker" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Upper/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot3" type="Area3D" parent="SealedShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 1.45, 0)
+[node name="Slot3" type="Area3D" parent="SealedProductWall/PegboardShelf_Upper"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.8)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "sealed_3"
-display_name = "Sealed Product"
+slot_id = "sealed_upper_3"
+display_name = "Sealed Product Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedShelf/Slot3"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedProductWall/PegboardShelf_Upper/Slot3"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="SealedShelf/Slot3"]
+[node name="Marker" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Upper/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot4" type="Area3D" parent="SealedShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "sealed_4"
-display_name = "Sealed Product"
+[node name="PegboardShelf_Lower" type="Node3D" parent="SealedProductWall" groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 0, -0.5)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedShelf/Slot4"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SealedShelf/Slot4"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot5" type="Area3D" parent="SealedShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "sealed_5"
-display_name = "Sealed Product"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedShelf/Slot5"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SealedShelf/Slot5"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot6" type="Area3D" parent="SealedShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.85, 0)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "sealed_6"
-display_name = "Sealed Product"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedShelf/Slot6"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="SealedShelf/Slot6"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-; ============================================================
-; Fixture 4: Booster Box Shelf (5 slots)
-; Large sealed products and booster boxes
-; ============================================================
-
-[node name="BoosterBoxShelf" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, -2.5)
-
-[node name="ShelfMesh" type="MeshInstance3D" parent="BoosterBoxShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
-mesh = SubResource("shelf_mesh")
+[node name="ShelfMesh" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Lower"]
+mesh = SubResource("pegboard_shelf_mesh")
 surface_material_override/0 = ExtResource("8")
 
-[node name="Slot1" type="Area3D" parent="BoosterBoxShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0)
+[node name="Slot1" type="Area3D" parent="SealedProductWall/PegboardShelf_Lower"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, -0.8)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "box_1"
-display_name = "Box Slot"
+slot_id = "sealed_lower_1"
+display_name = "Sealed Product Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BoosterBoxShelf/Slot1"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedProductWall/PegboardShelf_Lower/Slot1"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="BoosterBoxShelf/Slot1"]
+[node name="Marker" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Lower/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot2" type="Area3D" parent="BoosterBoxShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0)
+[node name="Slot2" type="Area3D" parent="SealedProductWall/PegboardShelf_Lower"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.0)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "box_2"
-display_name = "Box Slot"
+slot_id = "sealed_lower_2"
+display_name = "Sealed Product Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BoosterBoxShelf/Slot2"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedProductWall/PegboardShelf_Lower/Slot2"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="BoosterBoxShelf/Slot2"]
+[node name="Marker" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Lower/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot3" type="Area3D" parent="BoosterBoxShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 1.45, 0)
+[node name="Slot3" type="Area3D" parent="SealedProductWall/PegboardShelf_Lower"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.8)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
-slot_id = "box_3"
-display_name = "Box Slot"
+slot_id = "sealed_lower_3"
+display_name = "Sealed Product Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BoosterBoxShelf/Slot3"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SealedProductWall/PegboardShelf_Lower/Slot3"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="BoosterBoxShelf/Slot3"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot4" type="Area3D" parent="BoosterBoxShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "box_4"
-display_name = "Box Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BoosterBoxShelf/Slot4"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BoosterBoxShelf/Slot4"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot5" type="Area3D" parent="BoosterBoxShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "box_5"
-display_name = "Box Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BoosterBoxShelf/Slot5"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BoosterBoxShelf/Slot5"]
+[node name="Marker" type="MeshInstance3D" parent="SealedProductWall/PegboardShelf_Lower/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
 ; ============================================================
-; Fixture 5: Wall Poster Display (6 slots)
-; Posters and wall-mounted promotional items
+; Tournament Area — 2 folding tables in the back zone
 ; ============================================================
 
-[node name="WallDisplay" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.9)
+[node name="TournamentArea" type="Node3D" parent="."]
 
-[node name="DisplayMesh" type="MeshInstance3D" parent="WallDisplay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
-mesh = SubResource("wall_display_mesh")
-surface_material_override/0 = ExtResource("9")
-
-[node name="Slot1" type="Area3D" parent="WallDisplay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 1.8, 0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "wall_1"
-display_name = "Wall Display"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallDisplay/Slot1"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="WallDisplay/Slot1"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot2" type="Area3D" parent="WallDisplay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.8, 0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "wall_2"
-display_name = "Wall Display"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallDisplay/Slot2"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="WallDisplay/Slot2"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot3" type="Area3D" parent="WallDisplay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.8, 0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "wall_3"
-display_name = "Wall Display"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallDisplay/Slot3"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="WallDisplay/Slot3"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot4" type="Area3D" parent="WallDisplay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.8, 0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "wall_4"
-display_name = "Wall Display"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallDisplay/Slot4"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="WallDisplay/Slot4"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-; ============================================================
-; Fixture 6: Binder Rack (6 slots)
-; Card binders and bulk singles browsing area
-; ============================================================
-
-[node name="BinderRack" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0.5)
-
-[node name="RackMesh" type="MeshInstance3D" parent="BinderRack"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
-mesh = SubResource("binder_rack_mesh")
+[node name="TournamentTable_A" type="MeshInstance3D" parent="TournamentArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0.375, -2.2)
+mesh = SubResource("tournament_table_mesh")
 surface_material_override/0 = ExtResource("10")
 
-[node name="Slot1" type="Area3D" parent="BinderRack"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.65, -0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "binder_1"
-display_name = "Binder Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderRack/Slot1"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BinderRack/Slot1"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot2" type="Area3D" parent="BinderRack"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.65, -0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "binder_2"
-display_name = "Binder Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderRack/Slot2"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BinderRack/Slot2"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot3" type="Area3D" parent="BinderRack"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.65, -0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "binder_3"
-display_name = "Binder Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderRack/Slot3"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BinderRack/Slot3"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot4" type="Area3D" parent="BinderRack"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.65, -0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "binder_4"
-display_name = "Binder Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderRack/Slot4"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BinderRack/Slot4"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot5" type="Area3D" parent="BinderRack"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, -0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "binder_5"
-display_name = "Binder Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderRack/Slot5"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BinderRack/Slot5"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot6" type="Area3D" parent="BinderRack"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, -0.1)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "binder_6"
-display_name = "Binder Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="BinderRack/Slot6"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="BinderRack/Slot6"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-; ============================================================
-; Fixture 7: Accessories Endcap (4 slots)
-; Sleeves, deck boxes, playmats, dice
-; ============================================================
-
-[node name="AccessoriesEndcap" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, 0.0)
-
-[node name="EndcapMesh" type="MeshInstance3D" parent="AccessoriesEndcap"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-mesh = SubResource("endcap_mesh")
+[node name="TournamentTable_B" type="MeshInstance3D" parent="TournamentArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.375, -2.2)
+mesh = SubResource("tournament_table_mesh")
 surface_material_override/0 = ExtResource("10")
 
-[node name="Slot1" type="Area3D" parent="AccessoriesEndcap"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.25, -0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "acc_1"
-display_name = "Accessory Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AccessoriesEndcap/Slot1"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="AccessoriesEndcap/Slot1"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot2" type="Area3D" parent="AccessoriesEndcap"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.25, -0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "acc_2"
-display_name = "Accessory Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AccessoriesEndcap/Slot2"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="AccessoriesEndcap/Slot2"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot3" type="Area3D" parent="AccessoriesEndcap"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.25, 0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "acc_3"
-display_name = "Accessory Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AccessoriesEndcap/Slot3"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="AccessoriesEndcap/Slot3"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
-[node name="Slot4" type="Area3D" parent="AccessoriesEndcap"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.25, 0.15)
-collision_layer = 2
-collision_mask = 0
-script = ExtResource("2")
-slot_id = "acc_4"
-display_name = "Accessory Slot"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AccessoriesEndcap/Slot4"]
-shape = SubResource("slot_collision")
-
-[node name="Marker" type="MeshInstance3D" parent="AccessoriesEndcap/Slot4"]
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = ExtResource("12")
-
 ; ============================================================
-; Fixture 8: Checkout Counter (7 slots)
-; Register area with impulse buy slots
+; Service Counter — register and pack opening activation point
 ; ============================================================
 
-[node name="CheckoutCounter" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 0, 2.0)
+[node name="ServiceCounter" type="Node3D" parent="." groups=["fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, 2.0)
 
-[node name="CounterMesh" type="MeshInstance3D" parent="CheckoutCounter"]
+[node name="CounterMesh" type="MeshInstance3D" parent="ServiceCounter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 mesh = SubResource("counter_mesh")
 surface_material_override/0 = ExtResource("11")
 
-[node name="RegisterMesh" type="MeshInstance3D" parent="CheckoutCounter"]
+[node name="RegisterMesh" type="MeshInstance3D" parent="ServiceCounter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.15, 0)
 mesh = SubResource("register_mesh")
 surface_material_override/0 = ExtResource("14")
 
-[node name="RegisterCollision" type="StaticBody3D" parent="CheckoutCounter"]
+[node name="RegisterCollision" type="StaticBody3D" parent="ServiceCounter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.15, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CheckoutCounter/RegisterCollision"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ServiceCounter/RegisterCollision"]
 shape = SubResource("register_collision")
 
-[node name="Slot1" type="Area3D" parent="CheckoutCounter"]
+[node name="Slot1" type="Area3D" parent="ServiceCounter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 1.05, -0.2)
 collision_layer = 2
 collision_mask = 0
@@ -916,14 +891,14 @@ script = ExtResource("2")
 slot_id = "counter_1"
 display_name = "Counter Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CheckoutCounter/Slot1"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ServiceCounter/Slot1"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="CheckoutCounter/Slot1"]
+[node name="Marker" type="MeshInstance3D" parent="ServiceCounter/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot2" type="Area3D" parent="CheckoutCounter"]
+[node name="Slot2" type="Area3D" parent="ServiceCounter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, -0.2)
 collision_layer = 2
 collision_mask = 0
@@ -931,14 +906,14 @@ script = ExtResource("2")
 slot_id = "counter_2"
 display_name = "Counter Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CheckoutCounter/Slot2"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ServiceCounter/Slot2"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="CheckoutCounter/Slot2"]
+[node name="Marker" type="MeshInstance3D" parent="ServiceCounter/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot3" type="Area3D" parent="CheckoutCounter"]
+[node name="Slot3" type="Area3D" parent="ServiceCounter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.05, -0.2)
 collision_layer = 2
 collision_mask = 0
@@ -946,14 +921,14 @@ script = ExtResource("2")
 slot_id = "counter_3"
 display_name = "Counter Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CheckoutCounter/Slot3"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ServiceCounter/Slot3"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="CheckoutCounter/Slot3"]
+[node name="Marker" type="MeshInstance3D" parent="ServiceCounter/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="Slot4" type="Area3D" parent="CheckoutCounter"]
+[node name="Slot4" type="Area3D" parent="ServiceCounter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 1.05, 0.2)
 collision_layer = 2
 collision_mask = 0
@@ -961,10 +936,10 @@ script = ExtResource("2")
 slot_id = "counter_4"
 display_name = "Counter Slot"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CheckoutCounter/Slot4"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ServiceCounter/Slot4"]
 shape = SubResource("slot_collision")
 
-[node name="Marker" type="MeshInstance3D" parent="CheckoutCounter/Slot4"]
+[node name="Marker" type="MeshInstance3D" parent="ServiceCounter/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
 
@@ -1002,7 +977,7 @@ collision_mask = 0
 shape = SubResource("entry_shape")
 
 [node name="RegisterArea" type="Area3D" parent="." groups=["register"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 1.0, 2.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 1.0, 2.0)
 collision_layer = 4
 collision_mask = 0
 script = ExtResource("3")
@@ -1010,3 +985,91 @@ interaction_name = "Checkout"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="RegisterArea"]
 shape = SubResource("register_area_shape")
+
+[node name="PackOpeningArea" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 1.0, 1.5)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("3")
+interaction_name = "Pack Opening"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PackOpeningArea"]
+shape = SubResource("pack_opening_shape")
+
+; ============================================================
+; Player Entry Spawn
+; ============================================================
+
+[node name="PlayerEntrySpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 2.8)
+
+; ============================================================
+; Staff Configuration
+; ============================================================
+
+[node name="StoreStaffConfig" type="Node" parent="."]
+script = ExtResource("15")
+max_staff = 2
+register_points = [NodePath("RegisterPoint")]
+backroom_point = NodePath("BackroomPoint")
+greeter_point = NodePath("GreeterPoint")
+break_point = NodePath("StaffBreakPoint")
+
+[node name="RegisterPoint" type="Marker3D" parent="StoreStaffConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, 1.0)
+
+[node name="BackroomPoint" type="Marker3D" parent="StoreStaffConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.0, 0, -2.5)
+
+[node name="GreeterPoint" type="Marker3D" parent="StoreStaffConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.0)
+
+[node name="StaffBreakPoint" type="Marker3D" parent="StoreStaffConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -2.0)
+
+; ============================================================
+; Customer Navigation Configuration
+; ============================================================
+
+[node name="CustomerNavConfig" type="Node" parent="."]
+script = ExtResource("16")
+entry_point = NodePath("EntryPoint")
+browse_waypoints = [NodePath("BrowseWaypoint01"), NodePath("BrowseWaypoint02"), NodePath("BrowseWaypoint03"), NodePath("BrowseWaypoint04")]
+checkout_approach = NodePath("CheckoutApproach")
+exit_point = NodePath("ExitPoint")
+max_concurrent_customers = 4
+
+[node name="EntryPoint" type="Marker3D" parent="CustomerNavConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.8)
+
+[node name="BrowseWaypoint01" type="Marker3D" parent="CustomerNavConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0.0)
+
+[node name="BrowseWaypoint02" type="Marker3D" parent="CustomerNavConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0.0)
+
+[node name="BrowseWaypoint03" type="Marker3D" parent="CustomerNavConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -0.5)
+
+[node name="BrowseWaypoint04" type="Marker3D" parent="CustomerNavConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.0)
+
+[node name="CheckoutApproach" type="Marker3D" parent="CustomerNavConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, 0.8)
+
+[node name="ExitPoint" type="Marker3D" parent="CustomerNavConfig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.3)
+
+; ============================================================
+; Store bleed audio — anime J-pop / eurobeat bleeds into hallway
+; ============================================================
+
+[node name="StoreBleedAudio" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 3.0)
+script = ExtResource("17")
+max_db = 75.0
+unit_size = 5.0
+music_path = "res://game/assets/audio/music/card_shop_music.wav"
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="StoreBleedAudio"]
+bus = &"Music"

@@ -1,10 +1,14 @@
-## Manages per-store state snapshots and background simulation for unvisited stores.
+## Canonical owner of active store identity, slot ownership map, and storefront state.
 class_name StoreStateManager
 extends Node
 
 const BACKGROUND_SALE_BASE_CHANCE: float = 0.15
 const BACKGROUND_SALE_INTERVAL: float = 60.0
 
+var active_store_id: StringName = &""
+var owned_slots: Dictionary = {}
+var store_types: Dictionary = {}
+var store_names: Dictionary = {}
 var _store_states: Dictionary = {}
 var _store_revenue: Dictionary = {}
 var _inventory_system: InventorySystem
@@ -12,19 +16,115 @@ var _economy_system: EconomySystem
 var _background_timer: float = 0.0
 
 
-## Sets up references and connects to time signals.
+## Sets up references and connects to EventBus signals.
 func initialize(
 	inventory: InventorySystem,
 	economy: EconomySystem
 ) -> void:
 	_inventory_system = inventory
 	_economy_system = economy
+	_apply_state({})
 	EventBus.hour_changed.connect(_on_hour_changed)
 	EventBus.day_started.connect(_on_day_started)
+	EventBus.store_leased.connect(_on_store_leased)
+
+
+## Registers slot ownership. Returns false if slot is already owned.
+func lease_store(
+	slot_index: int,
+	store_id: StringName,
+	store_type: StringName = &""
+) -> bool:
+	if owned_slots.has(slot_index):
+		EventBus.lease_completed.emit(
+			store_id, false, "Slot %d is already owned." % slot_index
+		)
+		return false
+	owned_slots[slot_index] = store_id
+	if not store_type.is_empty():
+		store_types[store_id] = store_type
+	EventBus.lease_completed.emit(store_id, true, "")
+	return true
+
+
+## Updates the active store and emits active_store_changed.
+func set_active_store(store_id: StringName) -> void:
+	var previous: StringName = active_store_id
+	active_store_id = store_id
+	EventBus.active_store_changed.emit(store_id)
+	if not store_id.is_empty():
+		EventBus.store_entered.emit(store_id)
+	if not previous.is_empty() and previous != store_id:
+		EventBus.store_exited.emit(previous)
+
+
+## Returns true if the given slot index has a registered owner.
+func is_owned(slot_index: int) -> bool:
+	return owned_slots.has(slot_index)
+
+
+## Returns the store type for a given store_id, or empty if unknown.
+func get_store_type(store_id: StringName) -> StringName:
+	return store_types.get(store_id, &"") as StringName
+
+
+## Stores a custom name for a store.
+func set_store_name(
+	store_id: StringName, custom_name: String
+) -> void:
+	store_names[String(store_id)] = custom_name
+
+
+## Returns the custom name for a store, or the registry display name.
+func get_store_name(store_id: StringName) -> String:
+	if store_names.has(String(store_id)):
+		return store_names[String(store_id)]
+	return ContentRegistry.get_display_name(store_id)
+
+
+## Restores owned_slots from saved data and syncs GameManager.
+func restore_owned_slots(slots: Dictionary) -> void:
+	owned_slots = {}
+	GameManager.owned_stores = []
+	for key: Variant in slots:
+		var idx: int = int(key)
+		var raw_id: String = str(slots[key])
+		var canonical: StringName = ContentRegistry.resolve(raw_id)
+		if canonical.is_empty():
+			push_error(
+				"StoreStateManager: unknown store_id '%s' in slot %d"
+				% [raw_id, idx]
+			)
+			continue
+		owned_slots[idx] = canonical
+		if canonical not in GameManager.owned_stores:
+			GameManager.owned_stores.append(canonical)
+	if GameManager.owned_stores.is_empty():
+		GameManager.owned_stores = [GameManager.DEFAULT_STARTING_STORE]
+	EventBus.owned_slots_restored.emit(owned_slots)
+
+
+## Backward-compatible alias used by existing callers.
+func register_slot_ownership(
+	slot_index: int, store_id: StringName
+) -> void:
+	if owned_slots.has(slot_index):
+		owned_slots[slot_index] = store_id
+		return
+	owned_slots[slot_index] = store_id
+
+
+func _on_store_leased(
+	slot_index: int, store_type: String
+) -> void:
+	var canonical: StringName = ContentRegistry.resolve(store_type)
+	if not canonical.is_empty():
+		register_slot_ownership(slot_index, canonical)
 
 
 ## Saves the current store's shelf slot state for later restoration.
 func save_store_state(store_id: String) -> void:
+	store_id = String(ContentRegistry.resolve(store_id))
 	if store_id.is_empty():
 		return
 	if not _inventory_system:
@@ -51,6 +151,7 @@ func save_store_state(store_id: String) -> void:
 func restore_store_state(
 	store_id: String, store_controller: StoreController
 ) -> void:
+	store_id = String(ContentRegistry.resolve(store_id))
 	if store_id.is_empty() or not store_controller:
 		return
 	if not _store_states.has(store_id):
@@ -103,26 +204,73 @@ func simulate_background(delta: float) -> void:
 		return
 	_background_timer -= BACKGROUND_SALE_INTERVAL
 
-	var active_store: String = GameManager.current_store_id
 	for store_id: String in GameManager.owned_stores:
-		if store_id == active_store:
+		if store_id == String(active_store_id):
 			continue
 		_simulate_store_sales(store_id)
 
 
-## Serializes all per-store state for saving.
+## Serializes ownership and store type state for saving.
+func serialize() -> Dictionary:
+	var slots_data: Dictionary = {}
+	for key: Variant in owned_slots:
+		slots_data[key] = String(owned_slots[key])
+	var types_data: Dictionary = {}
+	for key: Variant in store_types:
+		types_data[String(key)] = String(store_types[key])
+	return {
+		"owned_slots": slots_data,
+		"store_types": types_data,
+	}
+
+
+## Restores ownership and store type state from saved data.
+func deserialize(data: Dictionary) -> void:
+	owned_slots = {}
+	var saved_slots: Variant = data.get("owned_slots", {})
+	if saved_slots is Dictionary:
+		for key: Variant in saved_slots:
+			var idx: int = int(key)
+			var raw_id: String = str((saved_slots as Dictionary)[key])
+			var canonical: StringName = ContentRegistry.resolve(raw_id)
+			if canonical.is_empty():
+				canonical = StringName(raw_id)
+				push_warning(
+					"StoreStateManager: unresolved store_id '%s' "
+					+ "in slot %d, using raw value" % [raw_id, idx]
+				)
+			owned_slots[idx] = canonical
+
+	store_types = {}
+	var saved_types: Variant = data.get("store_types", {})
+	if saved_types is Dictionary:
+		for key: Variant in saved_types:
+			var sid: StringName = StringName(str(key))
+			var stype: StringName = StringName(
+				str((saved_types as Dictionary)[key])
+			)
+			store_types[sid] = stype
+
+
+## Serializes all per-store runtime state for saving.
 func get_save_data() -> Dictionary:
 	var states_copy: Dictionary = {}
 	for store_id: String in _store_states:
 		states_copy[store_id] = _store_states[store_id].duplicate(true)
-	return {
-		"store_states": states_copy,
-		"store_revenue": _store_revenue.duplicate(),
-	}
+	var base: Dictionary = serialize()
+	base["store_states"] = states_copy
+	base["store_revenue"] = _store_revenue.duplicate()
+	base["store_names"] = store_names.duplicate()
+	return base
 
 
-## Restores per-store state from saved data.
+## Restores all per-store runtime state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	deserialize(data)
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_store_states = {}
 	var saved_states: Variant = data.get("store_states", {})
 	if saved_states is Dictionary:
@@ -138,6 +286,15 @@ func load_save_data(data: Dictionary) -> void:
 			_store_revenue[key] = float(
 				(saved_revenue as Dictionary)[key]
 			)
+
+	store_names = {}
+	var saved_names: Variant = data.get("store_names", {})
+	if saved_names is Dictionary:
+		for key: String in saved_names:
+			store_names[key] = str(
+				(saved_names as Dictionary)[key]
+			)
+	_background_timer = 0.0
 
 
 func _simulate_store_sales(store_id: String) -> void:
@@ -155,7 +312,7 @@ func _simulate_store_sales(store_id: String) -> void:
 		return
 
 	var item: ItemInstance = shelf_items.pick_random()
-	var sale_price: float = item.set_price
+	var sale_price: float = item.player_set_price
 	if sale_price <= 0.0:
 		sale_price = _economy_system.calculate_market_value(item)
 

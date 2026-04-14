@@ -1,66 +1,110 @@
 [
 	{
-		"id": "staff_eager_rookie",
-		"name": "Eager Rookie",
-		"daily_wage": 20,
+		"id": "cashier_skill_1",
+		"name": "Mall Checkout Trainee",
+		"role": "cashier",
 		"skill_level": 1,
-		"specialization": "stocking",
-		"description": "Fresh out of school and ready to work. Enthusiastic but makes frequent mistakes."
+		"hire_cost": 15.0,
+		"daily_wage": 20.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 1.0,
+		"description": "Freshly hired from the Pretzel Hut next door. Scans items at a pace best described as 'contemplative.'"
 	},
 	{
-		"id": "staff_bargain_betty",
-		"name": "Bargain Betty",
-		"daily_wage": 25,
+		"id": "cashier_skill_2",
+		"name": "Register Wrangler",
+		"role": "cashier",
 		"skill_level": 2,
-		"specialization": "pricing",
-		"description": "Has a decent eye for value but sometimes misjudges rare items."
+		"hire_cost": 30.0,
+		"daily_wage": 35.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 1.2,
+		"description": "Survived two holiday rushes at MegaMart. Can work a register without looking at the keys."
 	},
 	{
-		"id": "staff_friendly_frank",
-		"name": "Friendly Frank",
-		"daily_wage": 30,
-		"skill_level": 2,
-		"specialization": "customer_service",
-		"description": "Customers love him, but he tends to give away too many discounts."
-	},
-	{
-		"id": "staff_steady_sam",
-		"name": "Steady Sam",
-		"daily_wage": 35,
+		"id": "cashier_skill_3",
+		"name": "Speed-Scan Savant",
+		"role": "cashier",
 		"skill_level": 3,
-		"specialization": "stocking",
-		"description": "Reliable stocker who keeps shelves organized and prioritizes well."
+		"hire_cost": 60.0,
+		"daily_wage": 55.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 1.5,
+		"description": "Legend has it they once rang up forty-seven items in under a minute at the old ValueVerse. Fingers like lightning."
 	},
 	{
-		"id": "staff_sharp_eye_sara",
-		"name": "Sharp-Eye Sara",
-		"daily_wage": 40,
-		"skill_level": 4,
-		"specialization": "pricing",
-		"description": "Former collector with a keen sense for item values and market trends."
+		"id": "stocker_skill_1",
+		"name": "Shelf Stacker Newbie",
+		"role": "stocker",
+		"skill_level": 1,
+		"hire_cost": 10.0,
+		"daily_wage": 18.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 1.0,
+		"description": "Knows which end of the box cutter to hold. Still figuring out the inventory system."
 	},
 	{
-		"id": "staff_smooth_talker_mike",
-		"name": "Smooth Talker Mike",
-		"daily_wage": 40,
-		"skill_level": 4,
-		"specialization": "customer_service",
-		"description": "Experienced salesperson who knows how to close a deal at fair prices."
+		"id": "stocker_skill_2",
+		"name": "Backroom Specialist",
+		"role": "stocker",
+		"skill_level": 2,
+		"hire_cost": 25.0,
+		"daily_wage": 30.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 2.0,
+		"description": "Former overnight crew at BulkZone. Can unpack a pallet blindfolded and shelve by category in their sleep."
 	},
 	{
-		"id": "staff_veteran_val",
-		"name": "Veteran Val",
-		"daily_wage": 45,
-		"skill_level": 5,
-		"specialization": "stocking",
-		"description": "Twenty years in retail. Stocks fast, prioritizes rare items, never misses a beat."
+		"id": "stocker_skill_3",
+		"name": "Inventory Overlord",
+		"role": "stocker",
+		"skill_level": 3,
+		"hire_cost": 50.0,
+		"daily_wage": 48.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 3.0,
+		"description": "Ran the stockroom at three different SuperSaver locations simultaneously. Shelves fear this person."
 	},
 	{
-		"id": "staff_expert_elena",
-		"name": "Expert Elena",
-		"daily_wage": 50,
-		"skill_level": 5,
-		"specialization": "customer_service",
-		"description": "Master negotiator who maximizes sale prices while keeping customers happy."
+		"id": "greeter_skill_1",
+		"name": "Awkward Welcomer",
+		"role": "greeter",
+		"skill_level": 1,
+		"hire_cost": 20.0,
+		"daily_wage": 22.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 0.0,
+		"description": "Waves at customers from across the store. Sometimes customers wave back. Conversion rate: hopeful."
+	},
+	{
+		"id": "greeter_skill_2",
+		"name": "Friendly Floor Guide",
+		"role": "greeter",
+		"skill_level": 2,
+		"hire_cost": 35.0,
+		"daily_wage": 38.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 0.05,
+		"description": "Worked the welcome desk at FunZone Family Center. Knows how to turn a browser into a buyer with a smile."
+	},
+	{
+		"id": "greeter_skill_3",
+		"name": "Charisma Engine",
+		"role": "greeter",
+		"skill_level": 3,
+		"hire_cost": 65.0,
+		"daily_wage": 58.0,
+		"morale_start": 0.65,
+		"morale_decay_per_day": 0.02,
+		"skill_bonus": 0.12,
+		"description": "Could sell ice to penguins. Former face of the GloboMall grand opening. Customers feel personally invited."
 	}
 ]

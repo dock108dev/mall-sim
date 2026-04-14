@@ -1,0 +1,15 @@
+{
+  "testing_duration_seconds": 2.0,
+  "tested_working_multiplier": 1.25,
+  "tested_not_working_multiplier": 0.4,
+  "refurb_cost_by_tier": {
+    "poor": 15.0,
+    "fair": 10.0,
+    "good": 7.0,
+    "near_mint": 5.0
+  },
+  "refurb_duration_days": 1,
+  "max_refurb_queue_size": 3,
+  "item_condition_tiers": ["poor", "fair", "good", "near_mint", "mint"],
+  "untested_badge_label": "Untested"
+}

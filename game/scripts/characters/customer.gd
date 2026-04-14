@@ -18,7 +18,6 @@ const MOVE_TO_NEXT_SHELF_CHANCE: float = 0.5
 const INVESTOR_MAX_MARKET_RATIO: float = 0.8
 const TESTED_BONUS: float = 0.25
 const DISAPPOINTED_CHANCE: float = 0.05
-const DEMO_CATEGORY_BONUS: float = 0.20
 ## Navigation path recalculation interval in seconds.
 const NAV_RECALC_INTERVAL: float = 0.2
 const CONDITION_RANKS: Dictionary = {
@@ -29,7 +28,7 @@ const CONDITION_RANKS: Dictionary = {
 	"mint": 4,
 }
 
-var profile: CustomerProfile = null
+var profile: CustomerTypeDefinition = null
 var current_state: State = State.ENTERING
 var patience_timer: float = 0.0
 var browse_timer: float = 0.0
@@ -39,6 +38,7 @@ var stagger_offset: float = 0.0
 var _store_controller: StoreController = null
 var _inventory_system: InventorySystem = null
 var _budget_multiplier: float = 1.0
+var _browse_min_multiplier: float = 1.0
 var _visited_slots: Array[Node] = []
 var _desired_item: ItemInstance = null
 var _desired_item_slot: Node = null
@@ -61,6 +61,7 @@ var last_anim_time_ms: float = 0.0
 @onready var _head_mesh: MeshInstance3D = $HeadMesh
 @onready var _animation_player: AnimationPlayer = $AnimationPlayer
 @onready var _animator: CustomerAnimator = $CustomerAnimator
+@onready var _state_indicator: Node3D = $CustomerStateIndicator
 
 
 func _ready() -> void:
@@ -73,18 +74,21 @@ func _ready() -> void:
 
 ## Sets up the customer with a profile, store, and inventory references.
 func initialize(
-	p_profile: CustomerProfile,
+	p_profile: CustomerTypeDefinition,
 	store_controller: StoreController,
 	inventory_system: InventorySystem,
-	budget_multiplier: float = 1.0
+	budget_multiplier: float = 1.0,
+	browse_min_multiplier: float = 1.0,
 ) -> void:
 	profile = p_profile
 	_store_controller = store_controller
 	_inventory_system = inventory_system
 	_budget_multiplier = budget_multiplier
+	_browse_min_multiplier = browse_min_multiplier
 	patience_timer = p_profile.patience * 120.0
 	_reset_browse_timer()
 	current_state = State.ENTERING
+	EventBus.customer_state_changed.emit(self, State.ENTERING)
 	_nav_recalc_timer = stagger_offset * NAV_RECALC_INTERVAL
 	_preferred_slots_dirty = true
 	_cached_preferred_slots.clear()
@@ -97,6 +101,8 @@ func initialize(
 	_navigate_to_random_shelf()
 	_animator.initialize(_animation_player)
 	_animator.play_for_state(State.ENTERING)
+	if _state_indicator:
+		_state_indicator.initialize(self)
 	_initialized = true
 
 
@@ -148,6 +154,7 @@ func complete_purchase() -> void:
 ## Called by RegisterQueue to place this customer in a queue position.
 func enter_queue(queue_position: Vector3) -> void:
 	current_state = State.WAITING_IN_QUEUE
+	EventBus.customer_state_changed.emit(self, State.WAITING_IN_QUEUE)
 	_animator.play_for_state(State.WAITING_IN_QUEUE)
 	_navigation_agent.target_position = queue_position
 
@@ -155,6 +162,7 @@ func enter_queue(queue_position: Vector3) -> void:
 ## Called by RegisterQueue when this customer advances to register.
 func advance_to_register() -> void:
 	current_state = State.PURCHASING
+	EventBus.customer_state_changed.emit(self, State.PURCHASING)
 	_animator.play_for_state(State.PURCHASING)
 	_navigation_agent.target_position = _register_position
 
@@ -196,7 +204,7 @@ func _process_deciding() -> void:
 		_transition_to(State.LEAVING)
 		return
 	var willing_to_pay: float = _get_willingness_to_pay()
-	var item_price: float = _desired_item.set_price
+	var item_price: float = _desired_item.player_set_price
 	if item_price <= 0.0:
 		item_price = _desired_item.get_current_value()
 	if item_price > willing_to_pay:
@@ -236,6 +244,7 @@ func _process_leaving() -> void:
 
 func _transition_to(new_state: State) -> void:
 	current_state = new_state
+	EventBus.customer_state_changed.emit(self, new_state)
 	if new_state == State.LEAVING:
 		_animator.set_satisfied(_made_purchase)
 	_animator.play_for_state(new_state)
@@ -354,7 +363,7 @@ func _is_item_desirable(item: ItemInstance) -> bool:
 		return false
 	if item.is_demo:
 		return false
-	var item_price: float = item.set_price
+	var item_price: float = item.player_set_price
 	if item_price <= 0.0:
 		item_price = item.get_current_value()
 	if item_price < profile.budget_range[0]:
@@ -453,7 +462,6 @@ func _calculate_match_quality(item: ItemInstance) -> float:
 
 
 ## Returns the demo station purchase probability multiplier.
-## Items in the same category as an active demo unit get +20%.
 func _get_demo_bonus(item: ItemInstance) -> float:
 	if not item.definition or not _store_controller:
 		return 1.0
@@ -463,7 +471,7 @@ func _get_demo_bonus(item: ItemInstance) -> float:
 		_store_controller as ElectronicsStoreController
 	)
 	if elec_ctrl.has_active_demo_for_category(item.definition.category):
-		return 1.0 + DEMO_CATEGORY_BONUS
+		return 1.0 + elec_ctrl.get_demo_interest_bonus()
 	return 1.0
 
 
@@ -522,7 +530,7 @@ func _filter_preferred_slots(slots: Array[Node]) -> Array[Node]:
 
 func _reset_browse_timer() -> void:
 	browse_timer = randf_range(
-		profile.browse_time_range[0],
+		profile.browse_time_range[0] * _browse_min_multiplier,
 		profile.browse_time_range[1]
 	)
 
@@ -531,7 +539,7 @@ func _build_customer_data() -> Dictionary:
 	return {
 		"customer_id": get_instance_id(),
 		"profile_id": profile.id if profile else "",
-		"profile_name": profile.name if profile else "",
+		"profile_name": profile.customer_name if profile else "",
 		"desired_item_id": (
 			_desired_item.instance_id if _desired_item else ""
 		),

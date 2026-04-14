@@ -3,6 +3,8 @@ class_name Interactable
 extends Area3D
 
 signal interacted(interactable: Interactable)
+signal focused()
+signal unfocused()
 
 enum InteractionType {
 	SHELF_SLOT,   ## 0
@@ -36,6 +38,7 @@ const _OUTLINE_MATERIAL: ShaderMaterial = preload(
 @export var interaction_type: InteractionType = InteractionType.ITEM
 @export var display_name: String = "Item"
 @export var interaction_prompt: String = ""
+@export var enabled: bool = true
 
 var _original_materials: Array[Material] = []
 var _highlight_active: bool = false
@@ -94,6 +97,8 @@ func unhighlight() -> void:
 
 ## Triggers the interaction, emitting both local and global signals.
 func interact() -> void:
+	if not enabled:
+		return
 	interacted.emit(self)
 	EventBus.interactable_interacted.emit(self, interaction_type)
 

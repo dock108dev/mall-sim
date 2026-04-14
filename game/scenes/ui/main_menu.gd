@@ -1,4 +1,4 @@
-## Main menu — entry point after boot with new game, continue, load, and quit.
+## Main menu — entry point with new game, continue, load, settings, and quit.
 extends Control
 
 
@@ -15,6 +15,7 @@ const _SettingsPanelScene: PackedScene = preload(
 
 var _load_panel_visible: bool = false
 var _settings_panel: SettingsPanel = null
+var _any_saves_exist: bool = false
 
 @onready var _continue_button: Button = $VBox/ContinueButton
 @onready var _play_button: Button = $VBox/PlayButton
@@ -27,12 +28,27 @@ var _settings_panel: SettingsPanel = null
 @onready var _load_close_button: Button = (
 	$LoadPanel/Margin/VBox/Header/CloseButton
 )
+@onready var _version_label: Label = $VersionLabel
+@onready var _new_game_dialog: ConfirmationDialog = (
+	$NewGameConfirmDialog
+)
+@onready var _quit_dialog: ConfirmationDialog = $QuitConfirmDialog
 
 
 func _ready() -> void:
-	GameManager.change_state(GameManager.GameState.MENU)
+	Settings.load_settings()
+	GameManager.change_state(GameManager.GameState.MAIN_MENU)
 	_load_container.visible = false
 	_load_close_button.pressed.connect(_close_load_panel)
+
+	_version_label.text = "v%s" % ProjectSettings.get_setting(
+		"application/config/version", "0.1.0"
+	)
+
+	_new_game_dialog.confirmed.connect(_on_new_game_confirmed)
+	_quit_dialog.confirmed.connect(_on_quit_confirmed)
+
+	_any_saves_exist = _has_any_saves()
 
 	var most_recent: int = _find_most_recent_slot()
 	_continue_button.visible = most_recent >= 0
@@ -53,6 +69,17 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_play_pressed() -> void:
+	if _any_saves_exist:
+		_new_game_dialog.popup_centered()
+		return
+	_start_new_game()
+
+
+func _on_new_game_confirmed() -> void:
+	_start_new_game()
+
+
+func _start_new_game() -> void:
 	_start_game_session(-1)
 
 
@@ -75,6 +102,10 @@ func _on_settings_pressed() -> void:
 
 
 func _on_quit_pressed() -> void:
+	_quit_dialog.popup_centered()
+
+
+func _on_quit_confirmed() -> void:
 	GameManager.quit_game()
 
 
@@ -98,9 +129,9 @@ func _refresh_load_slots() -> void:
 func _create_load_slot_row(slot: int) -> void:
 	var path: String = SLOT_PATHS.get(slot, "")
 	var exists: bool = FileAccess.file_exists(path)
-	var metadata: Dictionary = {}
+	var save_info: Dictionary = {}
 	if exists:
-		metadata = _read_slot_metadata(path)
+		save_info = _read_slot_info(path)
 
 	var row := HBoxContainer.new()
 	row.custom_minimum_size = Vector2(0, 50)
@@ -117,8 +148,8 @@ func _create_load_slot_row(slot: int) -> void:
 
 	var detail_label := Label.new()
 	detail_label.add_theme_font_size_override("font_size", 12)
-	if exists:
-		detail_label.text = _format_metadata(metadata)
+	if exists and not save_info.is_empty():
+		detail_label.text = _format_slot_info(save_info)
 	else:
 		detail_label.text = tr("MENU_EMPTY")
 		detail_label.modulate = Color(0.5, 0.5, 0.5)
@@ -156,6 +187,14 @@ func _start_game_session(slot: int) -> void:
 	)
 
 
+func _has_any_saves() -> bool:
+	for slot: int in [0, 1, 2, 3]:
+		var path: String = SLOT_PATHS.get(slot, "")
+		if FileAccess.file_exists(path):
+			return true
+	return false
+
+
 func _find_most_recent_slot() -> int:
 	var best_slot: int = -1
 	var best_time: String = ""
@@ -164,7 +203,8 @@ func _find_most_recent_slot() -> int:
 		var path: String = SLOT_PATHS.get(slot, "")
 		if not FileAccess.file_exists(path):
 			continue
-		var meta: Dictionary = _read_slot_metadata(path)
+		var info: Dictionary = _read_slot_info(path)
+		var meta: Dictionary = info.get("metadata", {}) as Dictionary
 		var ts: String = str(meta.get("timestamp", ""))
 		if ts.is_empty():
 			continue
@@ -175,7 +215,7 @@ func _find_most_recent_slot() -> int:
 	return best_slot
 
 
-func _read_slot_metadata(path: String) -> Dictionary:
+func _read_slot_info(path: String) -> Dictionary:
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if not file:
 		push_warning(
@@ -196,22 +236,49 @@ func _read_slot_metadata(path: String) -> Dictionary:
 	var data: Variant = json.data
 	if data is not Dictionary:
 		return {}
-	return (data as Dictionary).get("metadata", {}) as Dictionary
+	return data as Dictionary
 
 
-func _format_metadata(metadata: Dictionary) -> String:
+func _format_slot_info(save_data: Dictionary) -> String:
+	var metadata: Dictionary = (
+		save_data.get("metadata", {}) as Dictionary
+	)
 	var day: int = int(metadata.get("day_number", 0))
 	var timestamp: String = str(metadata.get("timestamp", ""))
-	var store: String = str(metadata.get("store_type", ""))
+	var store_raw: String = str(metadata.get("store_type", ""))
+
+	var store_name: String = ""
+	if not store_raw.is_empty():
+		var canonical: StringName = ContentRegistry.resolve(store_raw)
+		if not canonical.is_empty():
+			store_name = ContentRegistry.get_display_name(canonical)
+		else:
+			store_name = store_raw.capitalize()
+
+	var economy: Dictionary = (
+		save_data.get("economy", {}) as Dictionary
+	)
+	var cash: float = float(economy.get("player_cash", 0.0))
 
 	var parts: Array[String] = []
 	if day > 0:
 		parts.append(tr("MENU_DAY") % day)
-	if not store.is_empty():
-		parts.append(store.capitalize())
+	if not store_name.is_empty():
+		parts.append(store_name)
+	if cash > 0.0:
+		parts.append("$%s" % _format_cash(cash))
 	if not timestamp.is_empty():
 		parts.append(timestamp.left(10))
 
 	if parts.is_empty():
 		return tr("MENU_SAVED_GAME")
 	return " | ".join(parts)
+
+
+func _format_cash(amount: float) -> String:
+	if amount >= 1000.0:
+		return "%s,%03d" % [
+			str(int(amount / 1000.0)),
+			int(fmod(amount, 1000.0)),
+		]
+	return str(int(amount))

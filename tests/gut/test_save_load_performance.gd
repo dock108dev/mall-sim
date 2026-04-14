@@ -14,8 +14,8 @@ var _inventory: InventorySystem
 var _time_system: TimeSystem
 var _reputation: ReputationSystem
 var _test_slot: int = 1
-var _saved_owned_stores: Array[String] = []
-var _saved_store_id: String = ""
+var _saved_owned_stores: Array[StringName] = []
+var _saved_store_id: StringName = &""
 
 
 func before_each() -> void:
@@ -36,11 +36,11 @@ func before_each() -> void:
 
 	_reputation = ReputationSystem.new()
 	add_child_autofree(_reputation)
-	_reputation.initialize()
 
 	_save_manager.initialize(
-		_economy, _inventory, _time_system, _reputation
+		_economy, _inventory, _time_system
 	)
+	_save_manager.set_reputation_system(_reputation)
 
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	_saved_store_id = GameManager.current_store_id
@@ -63,8 +63,8 @@ func test_save_with_large_inventory_under_one_second() -> void:
 		"Should have at least 200 items for performance test"
 	)
 
-	GameManager.owned_stores = ["sports_memorabilia"]
-	GameManager.current_store_id = "sports_memorabilia"
+	GameManager.owned_stores = ["sports"]
+	GameManager.current_store_id = "sports"
 
 	var start_ms: int = Time.get_ticks_msec()
 	var result: bool = _save_manager.save_game(_test_slot)
@@ -87,8 +87,8 @@ func test_save_with_large_inventory_under_one_second() -> void:
 
 func test_load_with_large_inventory_under_one_second() -> void:
 	_populate_inventory(LARGE_INVENTORY_COUNT)
-	GameManager.owned_stores = ["sports_memorabilia"]
-	GameManager.current_store_id = "sports_memorabilia"
+	GameManager.owned_stores = ["sports"]
+	GameManager.current_store_id = "sports"
 
 	var saved: bool = _save_manager.save_game(_test_slot)
 	assert_true(saved, "Save should succeed before load test")
@@ -121,8 +121,8 @@ func test_load_with_large_inventory_under_one_second() -> void:
 func test_large_inventory_round_trip_preserves_items() -> void:
 	_populate_inventory(LARGE_INVENTORY_COUNT)
 	var original_count: int = _inventory.get_item_count()
-	GameManager.owned_stores = ["sports_memorabilia"]
-	GameManager.current_store_id = "sports_memorabilia"
+	GameManager.owned_stores = ["sports"]
+	GameManager.current_store_id = "sports"
 
 	_save_manager.save_game(_test_slot)
 	_inventory.initialize(null)
@@ -139,8 +139,8 @@ func test_large_inventory_round_trip_preserves_items() -> void:
 
 func test_save_file_size_reasonable() -> void:
 	_populate_inventory(LARGE_INVENTORY_COUNT)
-	GameManager.owned_stores = ["sports_memorabilia"]
-	GameManager.current_store_id = "sports_memorabilia"
+	GameManager.owned_stores = ["sports"]
+	GameManager.current_store_id = "sports"
 	_save_manager.save_game(_test_slot)
 
 	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % _test_slot
@@ -165,8 +165,8 @@ func test_save_file_size_reasonable() -> void:
 
 func test_memory_stable_over_30_day_simulation() -> void:
 	_populate_inventory(50)
-	GameManager.owned_stores = ["sports_memorabilia"]
-	GameManager.current_store_id = "sports_memorabilia"
+	GameManager.owned_stores = ["sports"]
+	GameManager.current_store_id = "sports"
 	_economy._current_cash = 5000.0
 
 	var memory_snapshots: Dictionary = {}
@@ -215,8 +215,8 @@ func test_memory_stable_over_30_day_simulation() -> void:
 
 func test_economy_collections_bounded_over_session() -> void:
 	_populate_inventory(20)
-	GameManager.owned_stores = ["sports_memorabilia"]
-	GameManager.current_store_id = "sports_memorabilia"
+	GameManager.owned_stores = ["sports"]
+	GameManager.current_store_id = "sports"
 
 	for day: int in range(1, SIMULATED_DAYS + 1):
 		_time_system.current_day = day
@@ -246,7 +246,7 @@ func test_economy_collections_bounded_over_session() -> void:
 func test_performance_cache_cleared_on_day_start() -> void:
 	var perf: PerformanceManager = PerformanceManager.new()
 	add_child_autofree(perf)
-	perf.initialize(_economy)
+	perf.initialize()
 
 	var test_def: ItemDefinition = _create_test_definition("cache_test")
 	var test_item: ItemInstance = ItemInstance.create(
@@ -290,8 +290,8 @@ func test_customer_pool_cleared_on_reinitialize() -> void:
 
 func test_repeated_save_load_no_growth() -> void:
 	_populate_inventory(100)
-	GameManager.owned_stores = ["sports_memorabilia"]
-	GameManager.current_store_id = "sports_memorabilia"
+	GameManager.owned_stores = ["sports"]
+	GameManager.current_store_id = "sports"
 
 	var mem_before: int = _get_static_memory_usage()
 
@@ -348,7 +348,7 @@ func _populate_inventory(count: int) -> void:
 			item.current_location = "shelf:slot_%d" % i
 		else:
 			item.current_location = "backroom"
-		item.set_price = def.base_price * 1.5
+		item.player_set_price = def.base_price * 1.5
 		item.tested = i % 4 == 0
 		item.authentication_status = (
 			"authenticated" if i % 10 == 0 else "none"
@@ -360,7 +360,7 @@ func _create_test_definition(item_id: String) -> ItemDefinition:
 	var def := ItemDefinition.new()
 	def.id = item_id
 	def.name = "Test Item %s" % item_id
-	def.store_type = "sports_memorabilia"
+	def.store_type = "sports"
 	def.base_price = 10.0
 	def.rarity = "common"
 	def.category = "sports_cards"

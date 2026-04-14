@@ -1,0 +1,74 @@
+[
+  {
+    "id": "hint_welcome",
+    "trigger": "game_started",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "Welcome to the mall — lease a storefront to begin.",
+    "position_hint": "center",
+    "display_duration_sec": 6.0,
+    "day_1_only": true
+  },
+  {
+    "id": "hint_lease_store",
+    "trigger": "store_leased",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "Store leased. Now stock it with inventory from the Order tab.",
+    "position_hint": "bottom_right",
+    "display_duration_sec": 5.0,
+    "day_1_only": true
+  },
+  {
+    "id": "hint_first_order",
+    "trigger": "order_submitted",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "Order placed — check back next day for delivery.",
+    "position_hint": "bottom_right",
+    "display_duration_sec": 5.0,
+    "day_1_only": true
+  },
+  {
+    "id": "hint_build_mode",
+    "trigger": "build_mode_entered",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "Drag fixtures to arrange your store layout.",
+    "position_hint": "top_center",
+    "display_duration_sec": 5.0,
+    "day_1_only": true
+  },
+  {
+    "id": "hint_first_customer",
+    "trigger": "customer_entered",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "A customer! They'll browse and buy if they like what they see.",
+    "position_hint": "bottom_left",
+    "display_duration_sec": 5.0,
+    "day_1_only": true
+  },
+  {
+    "id": "hint_first_sale",
+    "trigger": "transaction_completed",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "Your first sale — revenue appears in your Economy panel.",
+    "position_hint": "bottom_right",
+    "display_duration_sec": 5.0,
+    "day_1_only": true
+  },
+  {
+    "id": "hint_day_end",
+    "trigger": "day_ending",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "End of day — review your summary and plan tomorrow.",
+    "position_hint": "top_center",
+    "display_duration_sec": 5.0,
+    "day_1_only": true
+  },
+  {
+    "id": "hint_second_store",
+    "trigger": "second_store_available",
+    "trigger_condition": { "first_occurrence": true },
+    "message": "You can now lease a second storefront — diversify your income.",
+    "position_hint": "center",
+    "display_duration_sec": 6.0,
+    "day_1_only": false
+  }
+]

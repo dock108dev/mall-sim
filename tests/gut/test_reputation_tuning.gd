@@ -2,14 +2,6 @@
 extends GutTest
 
 
-var _rep: ReputationSystem
-
-
-func before_each() -> void:
-	_rep = ReputationSystem.new()
-	add_child_autofree(_rep)
-
-
 # --- Constant value acceptance criteria ---
 
 
@@ -48,12 +40,9 @@ func test_fair_price_threshold_is_0_25() -> void:
 	)
 
 
-# --- Daily decay erodes less than 10% of Tier 2 threshold ---
-
-
 func test_daily_decay_under_10_percent_of_tier_2() -> void:
 	var tier_2_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.Tier.LOCAL_FAVORITE
+		ReputationSystem.ReputationTier.UNREMARKABLE
 	]
 	var ten_percent: float = tier_2_threshold * 0.1
 	assert_lt(

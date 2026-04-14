@@ -1,56 +1,222 @@
-## Manages in-game time progression, day phases, and scheduling.
+## Manages in-game time progression, day phases, and speed controls.
 class_name TimeSystem
 extends Node
 
 
-enum DayPhase { MORNING, MIDDAY, AFTERNOON, EVENING }
+enum DayPhase { PRE_OPEN, MORNING_RAMP, MIDDAY_RUSH, AFTERNOON, EVENING, LATE_EVENING }
 
-const VALID_SPEEDS: Array[float] = [0.0, 1.0, 2.0, 4.0]
+enum SpeedTier { PAUSED = 0, NORMAL = 1, FAST = 3, ULTRA = 6 }
 
-## Hour boundaries for each day phase (store hours 9-21).
-const _PHASE_BOUNDARIES: Dictionary = {
-	DayPhase.MORNING: 9,
-	DayPhase.MIDDAY: 11,
-	DayPhase.AFTERNOON: 14,
-	DayPhase.EVENING: 18,
+const GAME_MINUTES_PER_REAL_SECOND_NORMAL: float = 1.0
+const MALL_OPEN_HOUR: int = 9
+const MALL_CLOSE_HOUR: int = 21
+const DAYS_PER_MONTH: int = 30
+
+const _PHASE_BOUNDARIES_MINUTES: Dictionary = {
+	DayPhase.PRE_OPEN: 420,
+	DayPhase.MORNING_RAMP: 540,
+	DayPhase.MIDDAY_RUSH: 690,
+	DayPhase.AFTERNOON: 840,
+	DayPhase.EVENING: 1080,
+	DayPhase.LATE_EVENING: 1260,
 }
 
+const _DAY_START_MINUTES: float = 420.0
+const _DAY_END_MINUTES: float = 1260.0
+const _LATE_EVENING_END_MINUTES: float = 1440.0
+
+const _VALID_SPEED_VALUES: Array[int] = [
+	SpeedTier.PAUSED, SpeedTier.NORMAL, SpeedTier.FAST, SpeedTier.ULTRA,
+]
+
 var current_day: int = 1
-var current_hour: int = Constants.STORE_OPEN_HOUR
-var current_phase: DayPhase = DayPhase.MORNING
-var time_scale: float = 1.0
-var _elapsed: float = 0.0
+var current_hour: int = 7
+var current_phase: DayPhase = DayPhase.PRE_OPEN
+var game_time_minutes: float = _DAY_START_MINUTES
+var speed_multiplier: float = 1.0
+
+var _last_emitted_hour: int = 7
 var _total_play_time: float = 0.0
-var _speed_before_pause: float = 1.0
+var _speed_before_slow: float = 1.0
+var _auto_slow_stack: Array[String] = []
+var _requested_speed: SpeedTier = SpeedTier.NORMAL
+var _late_evening_enabled: bool = false
+
+
+func _ready() -> void:
+	var unlock_system := get_node("/root/UnlockSystem") as UnlockSystem
+	if unlock_system != null:
+		_late_evening_enabled = unlock_system.is_unlocked(&"extended_hours_unlock")
+	EventBus.unlock_granted.connect(_on_unlock_granted)
 
 
 func initialize() -> void:
-	current_day = 1
-	current_hour = Constants.STORE_OPEN_HOUR
-	current_phase = DayPhase.MORNING
-	time_scale = 1.0
-	_elapsed = 0.0
-	_total_play_time = 0.0
-	_speed_before_pause = 1.0
+	EventBus.time_speed_requested.connect(_on_time_speed_requested)
+	_apply_state({})
+
+
+func _apply_state(data: Dictionary) -> void:
+	current_day = int(data.get("current_day", 1))
+	game_time_minutes = float(
+		data.get("game_time_minutes", _DAY_START_MINUTES)
+	)
+	_total_play_time = float(data.get("total_play_time", 0.0))
+	_last_emitted_hour = int(
+		data.get("last_emitted_hour", int(game_time_minutes / 60.0))
+	)
+	current_hour = _last_emitted_hour
+	current_phase = _get_phase_for_minutes(game_time_minutes)
+
+	var saved_speed: int = int(data.get("speed_multiplier", SpeedTier.NORMAL))
+	if saved_speed in _VALID_SPEED_VALUES:
+		_requested_speed = saved_speed as SpeedTier
+	else:
+		_requested_speed = SpeedTier.NORMAL
+
+	var saved_stack: Array = data.get("auto_slow_stack", [])
+	_auto_slow_stack.clear()
+	for entry: Variant in saved_stack:
+		_auto_slow_stack.append(str(entry))
+
+	_recalculate_effective_speed()
 
 
 func _process(delta: float) -> void:
-	if time_scale <= 0.0:
+	if speed_multiplier <= 0.0:
 		return
-	var scaled_delta: float = delta * time_scale
-	_total_play_time += scaled_delta
-	_elapsed += scaled_delta
-	if _elapsed >= Constants.SECONDS_PER_GAME_MINUTE * Constants.MINUTES_PER_HOUR:
-		_elapsed = 0.0
-		_advance_hour()
 
+	var advance: float = (
+		delta * GAME_MINUTES_PER_REAL_SECOND_NORMAL * speed_multiplier
+	)
+	game_time_minutes += advance
+	_total_play_time += delta
 
-func _advance_hour() -> void:
-	current_hour += 1
-	EventBus.hour_changed.emit(current_hour)
+	var new_hour: int = int(game_time_minutes / 60.0)
+	while _last_emitted_hour < new_hour:
+		_last_emitted_hour += 1
+		current_hour = _last_emitted_hour
+		EventBus.hour_changed.emit(_last_emitted_hour)
+
 	_check_phase_transition()
-	if current_hour >= Constants.STORE_CLOSE_HOUR:
+
+	if game_time_minutes >= _get_day_end_minutes():
 		_end_day()
+
+
+func set_speed(tier: SpeedTier) -> void:
+	if int(tier) not in _VALID_SPEED_VALUES:
+		push_warning("TimeSystem: Invalid speed tier %d" % tier)
+		return
+	_requested_speed = tier
+	_recalculate_effective_speed()
+
+
+func get_current_phase() -> DayPhase:
+	return current_phase
+
+
+func get_active_phases() -> Array[DayPhase]:
+	var phases: Array[DayPhase] = [
+		DayPhase.PRE_OPEN,
+		DayPhase.MORNING_RAMP,
+		DayPhase.MIDDAY_RUSH,
+		DayPhase.AFTERNOON,
+		DayPhase.EVENING,
+	]
+	if _late_evening_enabled:
+		phases.append(DayPhase.LATE_EVENING)
+	return phases
+
+
+func get_current_month() -> int:
+	var month_index: int = ((current_day - 1) / DAYS_PER_MONTH) % 12
+	return month_index + 1
+
+
+func push_auto_slow(reason: String) -> void:
+	if reason.is_empty():
+		push_warning("TimeSystem: empty auto-slow reason")
+		return
+	_auto_slow_stack.append(reason)
+	if _auto_slow_stack.size() == 1:
+		_speed_before_slow = speed_multiplier
+	_recalculate_effective_speed()
+	EventBus.speed_reduced_by_event.emit(reason)
+
+
+func pop_auto_slow(reason: String) -> void:
+	var idx: int = _auto_slow_stack.rfind(reason)
+	if idx == -1:
+		push_warning(
+			"TimeSystem: auto-slow reason not found: %s" % reason
+		)
+		return
+	_auto_slow_stack.remove_at(idx)
+	_recalculate_effective_speed()
+
+
+func is_auto_slowed() -> bool:
+	return not _auto_slow_stack.is_empty()
+
+
+func toggle_pause() -> void:
+	if _requested_speed == SpeedTier.PAUSED:
+		set_speed(SpeedTier.NORMAL)
+	else:
+		set_speed(SpeedTier.PAUSED)
+
+
+func is_paused() -> bool:
+	return speed_multiplier <= 0.0
+
+
+func get_play_time_seconds() -> float:
+	return _total_play_time
+
+
+func advance_to_next_day() -> void:
+	current_day += 1
+	game_time_minutes = _DAY_START_MINUTES
+	_last_emitted_hour = int(_DAY_START_MINUTES / 60.0)
+	current_hour = _last_emitted_hour
+	current_phase = DayPhase.PRE_OPEN
+	_auto_slow_stack.clear()
+	set_process(true)
+	EventBus.day_phase_changed.emit(current_phase)
+	EventBus.day_started.emit(current_day)
+
+
+func get_save_data() -> Dictionary:
+	return {
+		"current_day": current_day,
+		"game_time_minutes": game_time_minutes,
+		"total_play_time": _total_play_time,
+		"speed_multiplier": int(_requested_speed),
+		"last_emitted_hour": _last_emitted_hour,
+		"auto_slow_stack": _auto_slow_stack.duplicate(),
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _on_unlock_granted(unlock_id: StringName) -> void:
+	if unlock_id == &"extended_hours_unlock":
+		_late_evening_enabled = true
+
+
+func _get_day_end_minutes() -> float:
+	if _late_evening_enabled:
+		return _LATE_EVENING_END_MINUTES
+	return _DAY_END_MINUTES
+
+
+func _on_time_speed_requested(speed_tier: int) -> void:
+	if speed_tier not in _VALID_SPEED_VALUES:
+		push_warning("TimeSystem: Invalid requested speed tier %d" % speed_tier)
+		return
+	set_speed(speed_tier as SpeedTier)
 
 
 func _end_day() -> void:
@@ -58,85 +224,32 @@ func _end_day() -> void:
 	EventBus.day_ended.emit(current_day)
 
 
-## Called by day summary to advance to the next day.
-func advance_to_next_day() -> void:
-	current_day += 1
-	current_hour = Constants.STORE_OPEN_HOUR
-	current_phase = DayPhase.MORNING
-	_elapsed = 0.0
-	set_process(true)
-	EventBus.day_phase_changed.emit(current_phase)
-	EventBus.day_started.emit(current_day)
-
-
 func _check_phase_transition() -> void:
-	var new_phase: DayPhase = _get_phase_for_hour(current_hour)
+	var new_phase: DayPhase = _get_phase_for_minutes(game_time_minutes)
 	if new_phase != current_phase:
 		current_phase = new_phase
 		EventBus.day_phase_changed.emit(current_phase)
 
 
-func _get_phase_for_hour(hour: int) -> DayPhase:
-	if hour >= _PHASE_BOUNDARIES[DayPhase.EVENING]:
+func _get_phase_for_minutes(minutes: float) -> DayPhase:
+	if _late_evening_enabled and minutes >= _PHASE_BOUNDARIES_MINUTES[DayPhase.LATE_EVENING]:
+		return DayPhase.LATE_EVENING
+	if minutes >= _PHASE_BOUNDARIES_MINUTES[DayPhase.EVENING]:
 		return DayPhase.EVENING
-	if hour >= _PHASE_BOUNDARIES[DayPhase.AFTERNOON]:
+	if minutes >= _PHASE_BOUNDARIES_MINUTES[DayPhase.AFTERNOON]:
 		return DayPhase.AFTERNOON
-	if hour >= _PHASE_BOUNDARIES[DayPhase.MIDDAY]:
-		return DayPhase.MIDDAY
-	return DayPhase.MORNING
+	if minutes >= _PHASE_BOUNDARIES_MINUTES[DayPhase.MIDDAY_RUSH]:
+		return DayPhase.MIDDAY_RUSH
+	if minutes >= _PHASE_BOUNDARIES_MINUTES[DayPhase.MORNING_RAMP]:
+		return DayPhase.MORNING_RAMP
+	return DayPhase.PRE_OPEN
 
 
-## Sets the time scale. Valid values: 0.0 (pause), 1.0, 2.0, 4.0.
-func set_time_scale(scale: float) -> void:
-	if scale not in VALID_SPEEDS:
-		push_warning("TimeSystem: Invalid time scale %.1f" % scale)
-		return
-	var old_scale: float = time_scale
-	time_scale = scale
-	if scale > 0.0:
-		_speed_before_pause = scale
-	if old_scale != scale:
-		EventBus.speed_changed.emit(scale)
-
-
-## Toggles between paused and the previous speed.
-func toggle_pause() -> void:
-	if time_scale > 0.0:
-		set_time_scale(0.0)
+func _recalculate_effective_speed() -> void:
+	var old_speed: float = speed_multiplier
+	if not _auto_slow_stack.is_empty():
+		speed_multiplier = float(SpeedTier.NORMAL)
 	else:
-		set_time_scale(_speed_before_pause)
-
-
-func is_paused() -> bool:
-	return time_scale <= 0.0
-
-
-func get_play_time_seconds() -> float:
-	return _total_play_time
-
-
-## Serializes time state for saving.
-func get_save_data() -> Dictionary:
-	return {
-		"current_day": current_day,
-		"current_hour": current_hour,
-		"current_phase": current_phase,
-		"elapsed": _elapsed,
-		"total_play_time": _total_play_time,
-		"time_scale": time_scale,
-	}
-
-
-## Restores time state from saved data.
-func load_save_data(data: Dictionary) -> void:
-	current_day = int(data.get("current_day", 1))
-	current_hour = int(
-		data.get("current_hour", Constants.STORE_OPEN_HOUR)
-	)
-	current_phase = int(
-		data.get("current_phase", DayPhase.MORNING)
-	) as DayPhase
-	_elapsed = float(data.get("elapsed", 0.0))
-	_total_play_time = float(data.get("total_play_time", 0.0))
-	var saved_scale: float = float(data.get("time_scale", 1.0))
-	set_time_scale(saved_scale)
+		speed_multiplier = float(_requested_speed)
+	if not is_equal_approx(old_speed, speed_multiplier):
+		EventBus.speed_changed.emit(speed_multiplier)

@@ -7,16 +7,16 @@ layer = 5
 script = ExtResource("1")
 
 [node name="PanelRoot" type="PanelContainer" parent="."]
-anchors_preset = 8
-anchor_left = 0.5
+anchors_preset = 6
+anchor_left = 1.0
 anchor_top = 0.5
-anchor_right = 0.5
+anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = -180.0
-offset_top = -160.0
-offset_right = 180.0
-offset_bottom = 160.0
-grow_horizontal = 2
+offset_left = -340.0
+offset_top = -240.0
+offset_right = 0.0
+offset_bottom = 240.0
+grow_horizontal = 0
 grow_vertical = 2
 
 [node name="Margin" type="MarginContainer" parent="PanelRoot"]
@@ -28,7 +28,7 @@ theme_override_constants/margin_bottom = 12
 
 [node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
@@ -36,30 +36,85 @@ theme_type_variation = &"HeaderLabel"
 text = "Set Price"
 horizontal_alignment = 1
 
-[node name="ItemNameLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+[node name="HSeparator1" type="HSeparator" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="ItemHeader" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ItemIcon" type="TextureRect" parent="PanelRoot/Margin/VBox/ItemHeader"]
+layout_mode = 2
+custom_minimum_size = Vector2(48, 48)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ItemInfo" type="VBoxContainer" parent="PanelRoot/Margin/VBox/ItemHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="ItemNameLabel" type="Label" parent="PanelRoot/Margin/VBox/ItemHeader/ItemInfo"]
 layout_mode = 2
 text = "Item Name"
-horizontal_alignment = 1
 
-[node name="ConditionLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+[node name="ConditionBadge" type="Label" parent="PanelRoot/Margin/VBox/ItemHeader/ItemInfo"]
 layout_mode = 2
-text = "Condition: Good"
-horizontal_alignment = 1
+text = "Good"
 
-[node name="MarketValueLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+[node name="HSeparator2" type="HSeparator" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="MarketSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="MarketHeader" type="Label" parent="PanelRoot/Margin/VBox/MarketSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Market Value Breakdown"
+
+[node name="BasePriceLabel" type="Label" parent="PanelRoot/Margin/VBox/MarketSection"]
+layout_mode = 2
+text = "Base Price: $0.00"
+
+[node name="ConditionMultLabel" type="Label" parent="PanelRoot/Margin/VBox/MarketSection"]
+layout_mode = 2
+text = "Condition (Good): ×1.00"
+
+[node name="EffectiveBaseLabel" type="Label" parent="PanelRoot/Margin/VBox/MarketSection"]
 layout_mode = 2
 text = "Market Value: $0.00"
+
+[node name="HSeparator3" type="HSeparator" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="SliderSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SliderLabel" type="Label" parent="PanelRoot/Margin/VBox/SliderSection"]
+layout_mode = 2
+text = "Markup (0.5× – 3.0×)"
 horizontal_alignment = 1
 
-[node name="SuggestedLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+[node name="MarkupSlider" type="HSlider" parent="PanelRoot/Margin/VBox/SliderSection"]
 layout_mode = 2
-text = "Suggested Price: $0.00"
-horizontal_alignment = 1
+custom_minimum_size = Vector2(0, 24)
+min_value = 0.5
+max_value = 3.0
+step = 0.01
+value = 1.0
+
+[node name="ColorBar" type="ColorRect" parent="PanelRoot/Margin/VBox/SliderSection"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+color = Color(0.3, 0.5, 0.9, 1)
 
 [node name="PriceRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
 alignment = 1
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="PriceLabel" type="Label" parent="PanelRoot/Margin/VBox/PriceRow"]
 layout_mode = 2
@@ -67,29 +122,39 @@ text = "Price: $"
 
 [node name="PriceSpinBox" type="SpinBox" parent="PanelRoot/Margin/VBox/PriceRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(120, 0)
+custom_minimum_size = Vector2(100, 0)
 min_value = 0.01
 max_value = 9999.0
 step = 0.25
 value = 1.0
 
-[node name="MarkupIndicator" type="Label" parent="PanelRoot/Margin/VBox/PriceRow"]
+[node name="MarkupRatioLabel" type="Label" parent="PanelRoot/Margin/VBox/PriceRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(60, 0)
-text = "+35%"
+custom_minimum_size = Vector2(80, 0)
+text = "+0%"
 horizontal_alignment = 1
+
+[node name="FeedbackLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator4" type="HSeparator" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
 
 [node name="ButtonRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
 alignment = 1
-theme_override_constants/separation = 20
+theme_override_constants/separation = 12
 
-[node name="ConfirmButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+[node name="ApplyButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(100, 36)
-text = "Confirm"
+text = "Apply"
 
-[node name="CancelButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+[node name="ApplyAllButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(100, 36)
-text = "Cancel"
+custom_minimum_size = Vector2(140, 36)
+text = "Apply to All Similar"

@@ -6,20 +6,17 @@ extends CanvasLayer
 const PANEL_NAME: String = "settings_panel"
 
 signal closed
+signal settings_saved
+
+const _SNAPSHOT_KEYS: Array[String] = [
+	"master_volume", "music_volume", "sfx_volume",
+	"ambient_volume", "fullscreen", "vsync", "resolution",
+	"ui_scale", "font_size", "colorblind_mode", "locale",
+]
 
 var _is_open: bool = false
 var _anim_tween: Tween
-var _saved_master: float = 1.0
-var _saved_music: float = 0.8
-var _saved_sfx: float = 1.0
-var _saved_ambient: float = 0.8
-var _saved_fullscreen: bool = true
-var _saved_vsync: bool = true
-var _saved_resolution: Vector2i = Vector2i(1920, 1080)
-var _saved_ui_scale: float = 1.0
-var _saved_font_size: int = Settings.FontSize.MEDIUM
-var _saved_colorblind: bool = false
-var _saved_locale: String = "en"
+var _snapshot: Dictionary = {}
 
 ## Action currently awaiting a keypress, empty when not listening.
 var _listening_action: String = ""
@@ -83,8 +80,11 @@ var _saved_bindings: Dictionary = {}
 @onready var _controls_list: VBoxContainer = (
 	$PanelRoot/Margin/VBox/TabContainer/Controls/Outer/ScrollContainer/VBox
 )
-@onready var _reset_defaults_button: Button = (
+@onready var _controls_reset_button: Button = (
 	$PanelRoot/Margin/VBox/TabContainer/Controls/Outer/ResetRow/ResetButton
+)
+@onready var _reset_defaults_button: Button = (
+	$PanelRoot/Margin/VBox/ButtonRow/ResetDefaultsButton
 )
 @onready var _conflict_dialog: ConfirmationDialog = $ConflictDialog
 @onready var _apply_button: Button = (
@@ -107,6 +107,7 @@ func _ready() -> void:
 	_apply_button.pressed.connect(_on_apply_pressed)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	_close_button.pressed.connect(_on_cancel_pressed)
+	_controls_reset_button.pressed.connect(_on_reset_keybindings_pressed)
 	_reset_defaults_button.pressed.connect(_on_reset_defaults_pressed)
 	_ui_scale_slider.value_changed.connect(_on_ui_scale_changed)
 	_font_size_option.item_selected.connect(_on_font_size_selected)
@@ -176,17 +177,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _snapshot_current() -> void:
-	_saved_master = Settings.master_volume
-	_saved_music = Settings.music_volume
-	_saved_sfx = Settings.sfx_volume
-	_saved_ambient = Settings.ambient_volume
-	_saved_fullscreen = Settings.fullscreen
-	_saved_vsync = Settings.vsync
-	_saved_resolution = Settings.resolution
-	_saved_ui_scale = Settings.ui_scale
-	_saved_font_size = Settings.font_size
-	_saved_colorblind = Settings.colorblind_mode
-	_saved_locale = Settings.locale
+	_snapshot.clear()
+	for key: String in _SNAPSHOT_KEYS:
+		_snapshot[key] = Settings.get(key)
 	_snapshot_bindings()
 
 
@@ -232,11 +225,10 @@ func _populate_resolutions() -> void:
 func _populate_font_sizes() -> void:
 	_font_size_option.clear()
 	for i: int in range(Settings.FONT_SIZE_LABEL_KEYS.size()):
-		var label: String = "%s (%dpx)" % [
+		_font_size_option.add_item("%s (%dpx)" % [
 			tr(Settings.FONT_SIZE_LABEL_KEYS[i]),
 			Settings.FONT_SIZE_VALUES[i],
-		]
-		_font_size_option.add_item(label)
+		])
 
 
 func _populate_locales() -> void:
@@ -245,16 +237,16 @@ func _populate_locales() -> void:
 		_locale_option.add_item(entry["name"])
 
 
-func _select_locale(locale_code: String) -> void:
-	for i: int in range(Settings.SUPPORTED_LOCALES.size()):
-		if Settings.SUPPORTED_LOCALES[i]["code"] == locale_code:
+func _select_locale(code: String) -> void:
+	for i: int in Settings.SUPPORTED_LOCALES.size():
+		if Settings.SUPPORTED_LOCALES[i]["code"] == code:
 			_locale_option.selected = i
 			return
 	_locale_option.selected = 0
 
 
 func _select_resolution(res: Vector2i) -> void:
-	for i: int in range(Settings.COMMON_RESOLUTIONS.size()):
+	for i: int in Settings.COMMON_RESOLUTIONS.size():
 		if Settings.COMMON_RESOLUTIONS[i] == res:
 			_resolution_option.selected = i
 			return
@@ -384,10 +376,19 @@ func _cancel_listen_mode() -> void:
 	_refresh_controls()
 
 
-func _on_reset_defaults_pressed() -> void:
+func _on_reset_keybindings_pressed() -> void:
 	_cancel_listen_mode()
 	Settings.reset_keybindings_to_defaults()
 	_refresh_controls()
+
+
+func _on_reset_defaults_pressed() -> void:
+	_cancel_listen_mode()
+	Settings.reset_to_defaults()
+	Settings.save_settings()
+	_load_from_settings()
+	_refresh_controls()
+	_snapshot_current()
 
 
 func _format_action_name(action: String) -> String:
@@ -420,26 +421,26 @@ func _get_action_binding(action: String) -> String:
 
 
 func _on_master_changed(value: float) -> void:
-	_master_label.text = "%d" % int(value)
-	Settings.master_volume = value / 100.0
-	Settings.apply_settings()
+	_apply_volume_slider("master", _master_label, value)
 
 
 func _on_music_changed(value: float) -> void:
-	_music_label.text = "%d" % int(value)
-	Settings.music_volume = value / 100.0
-	Settings.apply_settings()
+	_apply_volume_slider("music", _music_label, value)
 
 
 func _on_sfx_changed(value: float) -> void:
-	_sfx_label.text = "%d" % int(value)
-	Settings.sfx_volume = value / 100.0
-	Settings.apply_settings()
+	_apply_volume_slider("sfx", _sfx_label, value)
 
 
 func _on_ambient_changed(value: float) -> void:
-	_ambient_label.text = "%d" % int(value)
-	Settings.ambient_volume = value / 100.0
+	_apply_volume_slider("ambient", _ambient_label, value)
+
+
+func _apply_volume_slider(
+	channel: String, label: Label, value: float,
+) -> void:
+	label.text = "%d" % int(value)
+	Settings.set(channel + "_volume", value / 100.0)
 	Settings.apply_settings()
 
 
@@ -471,7 +472,8 @@ func _on_apply_pressed() -> void:
 	_apply_ui_to_settings()
 	Settings.apply_settings()
 	Settings.save_settings()
-	_snapshot_current()
+	settings_saved.emit()
+	close()
 
 
 func _on_cancel_pressed() -> void:
@@ -501,17 +503,9 @@ func _apply_ui_to_settings() -> void:
 
 
 func _restore_snapshot() -> void:
-	Settings.master_volume = _saved_master
-	Settings.music_volume = _saved_music
-	Settings.sfx_volume = _saved_sfx
-	Settings.ambient_volume = _saved_ambient
-	Settings.fullscreen = _saved_fullscreen
-	Settings.vsync = _saved_vsync
-	Settings.resolution = _saved_resolution
-	Settings.ui_scale = _saved_ui_scale
-	Settings.font_size = _saved_font_size
-	Settings.colorblind_mode = _saved_colorblind
-	Settings.locale = _saved_locale
+	for key: String in _SNAPSHOT_KEYS:
+		if _snapshot.has(key):
+			Settings.set(key, _snapshot[key])
 
 
 func _on_locale_changed(_new_locale: String) -> void:

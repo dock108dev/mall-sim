@@ -1,64 +1,108 @@
-[gd_scene load_steps=3 format=3 uid="uid://mall_hallway001"]
+[gd_scene load_steps=4 format=3 uid="uid://mall_hallway001"]
 
 [ext_resource type="Script" path="res://game/scripts/world/mall_hallway.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://storefront001" path="res://game/scenes/world/storefront.tscn" id="2"]
 
-[sub_resource type="Environment" id="hallway_env"]
-background_mode = 1
-background_color = Color(0.09, 0.09, 0.12, 1)
-ambient_light_source = 2
-ambient_light_color = Color(0.93, 0.9, 0.84, 1)
-ambient_light_energy = 0.2
+[sub_resource type="NavigationMesh" id="NavigationMesh_navmesh"]
+agent_radius = 0.4
+agent_height = 1.8
+agent_max_climb = 0.25
+agent_max_slope = 45.0
 
 [node name="MallHallway" type="Node3D"]
 script = ExtResource("1")
 
-; ============================================================
-; Environment & Lighting (warm overhead with neon accent splashes)
-; ============================================================
+[node name="HallwayGeometry" type="Node3D" parent="."]
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("hallway_env")
+[node name="StorefrontSlots" type="Node3D" parent="."]
 
-[node name="OverheadLight_Center" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 4.0)
-light_color = Color(1.0, 0.93, 0.78, 1)
-light_energy = 0.35
+[node name="Slot_0" parent="StorefrontSlots" instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.0, 0.0, 0.1)
+slot_index = 0
+
+[node name="Slot_1" parent="StorefrontSlots" instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0, 0.0, 0.1)
+slot_index = 1
+
+[node name="Slot_2" parent="StorefrontSlots" instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.0, 0.1)
+slot_index = 2
+
+[node name="Slot_3" parent="StorefrontSlots" instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.0, 0.0, 0.1)
+slot_index = 3
+
+[node name="Slot_4" parent="StorefrontSlots" instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.0, 0.0, 0.1)
+slot_index = 4
+
+[node name="PlayerSpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.0, 4.0)
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_navmesh")
+
+[node name="WaypointGraph" type="Node3D" parent="."]
+
+[node name="LightingNodes" type="Node3D" parent="."]
+
+[node name="KeyLight" type="OmniLight3D" parent="LightingNodes"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0, 3.8, 4.5)
+light_color = Color(1.0, 0.92, 0.76, 1)
+light_energy = 0.55
+omni_range = 15.0
+shadow_enabled = true
+
+[node name="FillOmniBank" type="Node3D" parent="LightingNodes"]
+
+[node name="FillLight_Left" type="OmniLight3D" parent="LightingNodes/FillOmniBank"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.0, 3.2, 3.0)
+light_color = Color(1.0, 0.95, 0.85, 1)
+light_energy = 0.15
 omni_range = 12.0
 
-[node name="OverheadLight_Left" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.0, 3.5, 4.0)
-light_color = Color(1.0, 0.93, 0.78, 1)
-light_energy = 0.28
-omni_range = 10.0
-
-[node name="OverheadLight_Right" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.0, 3.5, 4.0)
-light_color = Color(1.0, 0.93, 0.78, 1)
-light_energy = 0.28
-omni_range = 10.0
-
-[node name="NeonSign_Teal" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.0, 3.2, 7.5)
-light_color = Color(0.2, 0.85, 0.8, 1)
+[node name="FillLight_Right" type="OmniLight3D" parent="LightingNodes/FillOmniBank"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.0, 3.2, 3.0)
+light_color = Color(1.0, 0.95, 0.85, 1)
 light_energy = 0.15
+omni_range = 12.0
+
+[node name="AccentNeonStrip" type="Node3D" parent="LightingNodes"]
+
+[node name="NeonAccent_Slot0" type="OmniLight3D" parent="LightingNodes/AccentNeonStrip"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.0, 3.0, 7.2)
+light_color = Color(1.0, 0.75, 0.3, 1)
+light_energy = 0.18
 omni_range = 3.0
 
-[node name="NeonSign_Coral" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.0, 3.2, 7.5)
-light_color = Color(1.0, 0.45, 0.4, 1)
-light_energy = 0.15
+[node name="NeonAccent_Slot1" type="OmniLight3D" parent="LightingNodes/AccentNeonStrip"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0, 3.0, 7.2)
+light_color = Color(1.0, 0.45, 0.35, 1)
+light_energy = 0.16
 omni_range = 3.0
 
-[node name="NeonSign_Pink" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0.3)
-light_color = Color(0.95, 0.3, 0.65, 1)
-light_energy = 0.12
-omni_range = 2.5
+[node name="NeonAccent_Slot2" type="OmniLight3D" parent="LightingNodes/AccentNeonStrip"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 3.0, 7.2)
+light_color = Color(0.95, 0.35, 0.65, 1)
+light_energy = 0.14
+omni_range = 2.8
 
-[node name="DisplaySpot_Entrance" type="SpotLight3D" parent="."]
+[node name="NeonAccent_Slot3" type="OmniLight3D" parent="LightingNodes/AccentNeonStrip"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.0, 3.0, 7.2)
+light_color = Color(0.2, 0.85, 0.75, 1)
+light_energy = 0.16
+omni_range = 3.0
+
+[node name="NeonAccent_Slot4" type="OmniLight3D" parent="LightingNodes/AccentNeonStrip"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.0, 3.0, 7.2)
+light_color = Color(0.4, 0.35, 0.9, 1)
+light_energy = 0.18
+omni_range = 3.0
+
+[node name="DisplaySpot_Entrance" type="SpotLight3D" parent="LightingNodes"]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 3.8, 4.0)
 light_color = Color(1.0, 0.9, 0.7, 1)
-light_energy = 0.45
+light_energy = 0.35
 shadow_enabled = true
 spot_range = 4.0
 spot_angle = 33.0

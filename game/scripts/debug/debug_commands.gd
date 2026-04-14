@@ -23,4 +23,4 @@ func list_items() -> void:
 		return
 	var items: Array[ItemDefinition] = GameManager.data_loader.get_all_items()
 	for item: ItemDefinition in items:
-		push_warning("  %s — $%s" % [item.name, item.base_price])
+		push_warning("  %s — $%s" % [item.item_name, item.base_price])

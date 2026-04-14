@@ -5,4 +5,4 @@
 [resource]
 resource_name = "Wood Grain Textured"
 albedo_texture = ExtResource("1")
-roughness = 0.85
+roughness = 0.6

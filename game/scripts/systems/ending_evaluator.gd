@@ -1,144 +1,365 @@
-## Evaluates ending variant based on milestone completion and secret thread state.
-class_name EndingEvaluator
+## Tracks 22 game statistics and evaluates ending eligibility via priority-ordered scan.
+class_name EndingEvaluatorSystem
 extends Node
 
 
 const CONFIG_PATH := "res://game/content/endings/ending_config.json"
+const NEAR_BANKRUPTCY_THRESHOLD := 100.0
 
-const ENDING_NORMAL := "normal"
-const ENDING_QUESTIONED := "questioned"
-const ENDING_TAKEDOWN := "takedown"
-
-var _config: Dictionary = {}
-var _thresholds: Dictionary = {}
-var _endings: Dictionary = {}
-var _progression_system: ProgressionSystem
-var _secret_thread_manager: SecretThreadManager
-var _ending_shown: bool = false
-var _recorded_ending: String = ""
+var _ending_definitions: Array[Dictionary] = []
+var _stats: Dictionary = {}
+var _ending_triggered: bool = false
+var _resolved_ending_id: StringName = &""
+var _owned_store_ids: Dictionary = {}
+var _is_restoring: bool = false
 
 
-func initialize(
-	progression: ProgressionSystem,
-	secret_thread: SecretThreadManager,
-) -> void:
-	_progression_system = progression
-	_secret_thread_manager = secret_thread
+func initialize() -> void:
 	_load_config()
-	EventBus.milestone_completed.connect(_on_milestone_completed)
+	_reset_stats()
+	_connect_signals()
 
 
-## Returns the ending type based on current secret thread scores.
-func evaluate_ending() -> String:
-	if not _secret_thread_manager:
-		return ENDING_NORMAL
+func evaluate() -> StringName:
+	_update_computed_stats()
+	for ending: Dictionary in _ending_definitions:
+		if _matches_criteria(ending):
+			return StringName(str(ending.get("id", "")))
+	return &"just_getting_by"
 
-	var awareness: int = _secret_thread_manager.get_awareness_score()
-	var participation: int = (
-		_secret_thread_manager.get_participation_score()
+
+func get_tracked_stat(stat_key: StringName) -> float:
+	return float(_stats.get(stat_key, 0.0))
+
+
+func get_all_tracked_stats() -> Dictionary:
+	_update_computed_stats()
+	return _stats.duplicate()
+
+
+func get_resolved_ending_id() -> StringName:
+	return _resolved_ending_id
+
+
+func force_ending(ending_id: StringName) -> void:
+	if _ending_triggered:
+		return
+	_resolved_ending_id = ending_id
+	_ending_triggered = true
+	_update_computed_stats()
+	var all_stats: Dictionary = _stats.duplicate()
+	all_stats["used_difficulty_downgrade"] = (
+		DifficultySystem.used_difficulty_downgrade
 	)
-
-	var takedown_cfg: Dictionary = _thresholds.get(
-		ENDING_TAKEDOWN, {}
-	)
-	var takedown_awareness: int = int(
-		takedown_cfg.get("min_awareness", 40)
-	)
-	var takedown_participation: int = int(
-		takedown_cfg.get("min_participation", 30)
-	)
-
-	if (
-		awareness >= takedown_awareness
-		and participation >= takedown_participation
-	):
-		return ENDING_TAKEDOWN
-
-	var questioned_cfg: Dictionary = _thresholds.get(
-		ENDING_QUESTIONED, {}
-	)
-	var questioned_awareness: int = int(
-		questioned_cfg.get("min_awareness", 20)
-	)
-	var questioned_participation: int = int(
-		questioned_cfg.get("min_participation", 0)
-	)
-
-	if (
-		awareness >= questioned_awareness
-		and participation >= questioned_participation
-	):
-		return ENDING_QUESTIONED
-
-	return ENDING_NORMAL
+	EventBus.ending_stats_snapshot_ready.emit(all_stats)
+	EventBus.ending_triggered.emit(ending_id, all_stats)
 
 
-## Returns the full ending data dict for the given ending type.
-func get_ending_data(ending_type: String) -> Dictionary:
-	return _endings.get(ending_type, {})
-
-
-## Returns whether an ending has already been shown this session.
 func has_ending_been_shown() -> bool:
-	return _ending_shown
+	return _ending_triggered
 
 
-## Marks the ending as shown and records the type.
-func record_ending(ending_type: String) -> void:
-	_ending_shown = true
-	_recorded_ending = ending_type
-	EventBus.ending_triggered.emit(ending_type)
-
-
-## Returns the recorded ending type, or empty if none.
-func get_recorded_ending() -> String:
-	return _recorded_ending
+func get_ending_data(ending_id: StringName) -> Dictionary:
+	for ending: Dictionary in _ending_definitions:
+		if StringName(str(ending.get("id", ""))) == ending_id:
+			return ending
+	return {}
 
 
 func get_save_data() -> Dictionary:
-	if _recorded_ending.is_empty():
-		return {}
 	return {
-		"ending_type": _recorded_ending,
-		"ending_shown": _ending_shown,
+		"stats": _stats.duplicate(),
+		"ending_triggered": _ending_triggered,
+		"resolved_ending_id": String(_resolved_ending_id),
+		"owned_store_ids": _owned_store_ids.duplicate(),
 	}
 
 
-func load_save_data(data: Dictionary) -> void:
-	_recorded_ending = str(data.get("ending_type", ""))
-	_ending_shown = bool(data.get("ending_shown", false))
+func load_state(data: Dictionary) -> void:
+	_is_restoring = true
+	var saved_stats: Variant = data.get("stats", {})
+	if saved_stats is Dictionary:
+		_stats = (saved_stats as Dictionary).duplicate()
+	_ending_triggered = bool(data.get("ending_triggered", false))
+	var saved_id: String = str(data.get("resolved_ending_id", ""))
+	_resolved_ending_id = StringName(saved_id) if not saved_id.is_empty() else &""
+	var saved_stores: Variant = data.get("owned_store_ids", {})
+	if saved_stores is Dictionary:
+		_owned_store_ids = (saved_stores as Dictionary).duplicate()
+	_is_restoring = false
 
 
-func _check_all_milestones_completed() -> bool:
-	if not _progression_system:
-		return false
-	var milestones: Array[Dictionary] = (
-		_progression_system.get_milestones()
+func _reset_stats() -> void:
+	_stats = {
+		"cumulative_revenue": 0.0,
+		"cumulative_expenses": 0.0,
+		"peak_cash": 0.0,
+		"final_cash": 0.0,
+		"days_survived": 0.0,
+		"owned_store_count_peak": 0.0,
+		"owned_store_count_final": 0.0,
+		"total_sales_count": 0.0,
+		"satisfied_customer_count": 0.0,
+		"unsatisfied_customer_count": 0.0,
+		"satisfaction_ratio": 0.0,
+		"max_reputation_tier": 0.0,
+		"final_reputation_tier": 0.0,
+		"secret_threads_completed": 0.0,
+		"haggle_attempts": 0.0,
+		"haggle_never_used": 1.0,
+		"days_near_bankruptcy": 0.0,
+		"rare_items_sold": 0.0,
+		"market_events_survived": 0.0,
+		"unique_store_types_owned": 0.0,
+		"trigger_type_bankruptcy": 0.0,
+		"ghost_tenant_thread_completed": 0.0,
+	}
+
+
+func _connect_signals() -> void:
+	EventBus.customer_purchased.connect(_on_customer_purchased)
+	EventBus.customer_left.connect(_on_customer_left)
+	EventBus.day_started.connect(_on_day_started)
+	EventBus.day_ended.connect(_on_day_ended)
+	EventBus.store_leased.connect(_on_store_leased)
+	EventBus.money_changed.connect(_on_money_changed)
+	EventBus.reputation_changed.connect(_on_reputation_changed)
+	EventBus.haggle_completed.connect(_on_haggle_completed)
+	EventBus.secret_thread_completed.connect(
+		_on_secret_thread_completed
 	)
-	if milestones.is_empty():
-		return false
-	for milestone: Dictionary in milestones:
-		var mid: String = milestone.get("id", "")
-		if not _progression_system.is_milestone_completed(mid):
-			return false
+	EventBus.random_event_ended.connect(_on_random_event_ended)
+	EventBus.ending_requested.connect(_on_ending_requested)
+	EventBus.bankruptcy_declared.connect(_on_bankruptcy_declared)
+	EventBus.completion_reached.connect(_on_completion_reached)
+
+
+func _on_customer_purchased(
+	_store_id: StringName, _item_id: StringName,
+	price: float, _customer_id: StringName
+) -> void:
+	_stats["total_sales_count"] = (
+		float(_stats.get("total_sales_count", 0.0)) + 1.0
+	)
+	_stats["cumulative_revenue"] = (
+		float(_stats.get("cumulative_revenue", 0.0)) + price
+	)
+
+
+func _on_customer_left(customer_data: Dictionary) -> void:
+	var satisfied: bool = bool(
+		customer_data.get("satisfied", false)
+	)
+	if satisfied:
+		_stats["satisfied_customer_count"] = (
+			float(_stats.get("satisfied_customer_count", 0.0)) + 1.0
+		)
+	else:
+		_stats["unsatisfied_customer_count"] = (
+			float(_stats.get("unsatisfied_customer_count", 0.0))
+			+ 1.0
+		)
+
+
+func _on_day_started(_day: int) -> void:
+	_stats["days_survived"] = (
+		float(_stats.get("days_survived", 0.0)) + 1.0
+	)
+
+
+func _on_day_ended(_day: int) -> void:
+	var current_cash: float = float(
+		_stats.get("final_cash", 0.0)
+	)
+	if current_cash < NEAR_BANKRUPTCY_THRESHOLD:
+		_stats["days_near_bankruptcy"] = (
+			float(_stats.get("days_near_bankruptcy", 0.0)) + 1.0
+		)
+
+
+func _on_store_leased(
+	_slot_index: int, store_type: String
+) -> void:
+	_owned_store_ids[store_type] = true
+	var owned_count: float = float(_owned_store_ids.size())
+	_stats["owned_store_count_final"] = owned_count
+	_stats["unique_store_types_owned"] = owned_count
+	var peak: float = float(
+		_stats.get("owned_store_count_peak", 0.0)
+	)
+	if owned_count > peak:
+		_stats["owned_store_count_peak"] = owned_count
+
+
+func _on_money_changed(
+	old_amount: float, new_amount: float
+) -> void:
+	_stats["final_cash"] = new_amount
+	var peak: float = float(_stats.get("peak_cash", 0.0))
+	if new_amount > peak:
+		_stats["peak_cash"] = new_amount
+	if new_amount < old_amount:
+		var loss: float = old_amount - new_amount
+		_stats["cumulative_expenses"] = (
+			float(_stats.get("cumulative_expenses", 0.0)) + loss
+		)
+
+
+func _on_reputation_changed(
+	_store_id: String, new_value: float
+) -> void:
+	var tier: float = _reputation_to_tier(new_value)
+	_stats["final_reputation_tier"] = tier
+	var max_tier: float = float(
+		_stats.get("max_reputation_tier", 0.0)
+	)
+	if tier > max_tier:
+		_stats["max_reputation_tier"] = tier
+
+
+func _on_haggle_completed(
+	_store_id: StringName, _item_id: StringName,
+	_final_price: float, _asking_price: float,
+	_accepted: bool, _offer_count: int
+) -> void:
+	_stats["haggle_attempts"] = (
+		float(_stats.get("haggle_attempts", 0.0)) + 1.0
+	)
+	_stats["haggle_never_used"] = 0.0
+
+
+func _on_secret_thread_completed(
+	thread_id: StringName, _reward_unlock_id: StringName
+) -> void:
+	_stats["secret_threads_completed"] = (
+		float(_stats.get("secret_threads_completed", 0.0)) + 1.0
+	)
+	if thread_id == &"the_ghost_tenant":
+		_stats["ghost_tenant_thread_completed"] = 1.0
+
+
+func _on_random_event_ended(event_id: String) -> void:
+	_stats["market_events_survived"] = (
+		float(_stats.get("market_events_survived", 0.0)) + 1.0
+	)
+
+
+func _on_bankruptcy_declared() -> void:
+	_on_ending_requested("bankruptcy")
+
+
+func _on_completion_reached(reason: String) -> void:
+	_on_ending_requested(reason)
+
+
+func _on_ending_requested(trigger_type: String) -> void:
+	if _ending_triggered:
+		return
+	if trigger_type == "bankruptcy":
+		_stats["trigger_type_bankruptcy"] = 1.0
+	else:
+		_stats["trigger_type_bankruptcy"] = 0.0
+
+	_update_computed_stats()
+
+	var all_stats: Dictionary = _stats.duplicate()
+	all_stats["used_difficulty_downgrade"] = (
+		DifficultySystem.used_difficulty_downgrade
+	)
+	EventBus.ending_stats_snapshot_ready.emit(all_stats)
+
+	var ending_id: StringName = evaluate()
+	_resolved_ending_id = ending_id
+	_ending_triggered = true
+	EventBus.ending_triggered.emit(ending_id, all_stats)
+
+
+func _update_computed_stats() -> void:
+	var satisfied: float = float(
+		_stats.get("satisfied_customer_count", 0.0)
+	)
+	var unsatisfied: float = float(
+		_stats.get("unsatisfied_customer_count", 0.0)
+	)
+	var total: float = satisfied + unsatisfied
+	if total > 0.0:
+		_stats["satisfaction_ratio"] = satisfied / total
+	else:
+		_stats["satisfaction_ratio"] = 0.0
+
+
+func _matches_criteria(ending: Dictionary) -> bool:
+	var required_all: Variant = ending.get("required_all", [])
+	if required_all is Array:
+		for criterion: Variant in required_all:
+			if criterion is Dictionary:
+				if not _eval_criterion(criterion as Dictionary):
+					return false
+
+	var required_any: Variant = ending.get("required_any", [])
+	if required_any is Array:
+		var any_list: Array = required_any as Array
+		if not any_list.is_empty():
+			var any_passed: bool = false
+			for criterion: Variant in any_list:
+				if criterion is Dictionary:
+					if _eval_criterion(criterion as Dictionary):
+						any_passed = true
+						break
+			if not any_passed:
+				return false
+
+	var forbidden_all: Variant = ending.get("forbidden_all", [])
+	if forbidden_all is Array:
+		for criterion: Variant in forbidden_all:
+			if criterion is Dictionary:
+				if _eval_criterion(criterion as Dictionary):
+					return false
+
 	return true
 
 
-func _on_milestone_completed(
-	_milestone_id: String,
-	_milestone_name: String,
-	_reward_description: String,
-) -> void:
-	if _ending_shown:
-		return
-	if _check_all_milestones_completed():
-		EventBus.all_milestones_completed.emit()
+func _eval_criterion(criterion: Dictionary) -> bool:
+	var stat_key: String = str(criterion.get("stat_key", ""))
+	var op: String = str(criterion.get("operator", ""))
+	var target: float = float(criterion.get("value", 0.0))
+	var val: float = float(_stats.get(stat_key, 0.0))
+
+	match op:
+		"gte":
+			return val >= target
+		"lte":
+			return val <= target
+		"gt":
+			return val > target
+		"lt":
+			return val < target
+		"eq":
+			return is_equal_approx(val, target)
+		_:
+			push_error(
+				"EndingEvaluatorSystem: unknown operator '%s'"
+				% op
+			)
+			return false
+
+
+func _reputation_to_tier(reputation_value: float) -> float:
+	if reputation_value >= 80.0:
+		return 4.0
+	if reputation_value >= 60.0:
+		return 3.0
+	if reputation_value >= 40.0:
+		return 2.0
+	if reputation_value >= 20.0:
+		return 1.0
+	return 0.0
 
 
 func _load_config() -> void:
 	if not FileAccess.file_exists(CONFIG_PATH):
-		push_warning(
-			"EndingEvaluator: config not found at %s"
+		push_error(
+			"EndingEvaluatorSystem: config not found at %s"
 			% CONFIG_PATH
 		)
 		return
@@ -147,8 +368,9 @@ func _load_config() -> void:
 		CONFIG_PATH, FileAccess.READ
 	)
 	if not file:
-		push_warning(
-			"EndingEvaluator: failed to open %s" % CONFIG_PATH
+		push_error(
+			"EndingEvaluatorSystem: failed to open %s"
+			% CONFIG_PATH
 		)
 		return
 
@@ -157,22 +379,36 @@ func _load_config() -> void:
 	file.close()
 
 	if err != OK:
-		push_warning(
-			"EndingEvaluator: JSON parse error — %s"
+		push_error(
+			"EndingEvaluatorSystem: JSON parse error — %s"
 			% json.get_error_message()
 		)
 		return
 
 	var root: Variant = json.data
 	if root is not Dictionary:
-		push_warning("EndingEvaluator: root is not a Dictionary")
+		push_error(
+			"EndingEvaluatorSystem: root is not a Dictionary"
+		)
 		return
 
-	_config = root as Dictionary
-	var endings_raw: Variant = _config.get("endings", {})
-	if endings_raw is Dictionary:
-		_endings = endings_raw as Dictionary
+	var config: Dictionary = root as Dictionary
+	var endings_raw: Variant = config.get("endings", [])
+	if endings_raw is not Array:
+		push_error(
+			"EndingEvaluatorSystem: 'endings' is not an Array"
+		)
+		return
 
-	var thresholds_raw: Variant = _config.get("thresholds", {})
-	if thresholds_raw is Dictionary:
-		_thresholds = thresholds_raw as Dictionary
+	_ending_definitions = []
+	for entry: Variant in endings_raw:
+		if entry is Dictionary:
+			_ending_definitions.append(entry as Dictionary)
+
+	_ending_definitions.sort_custom(_sort_by_priority)
+
+
+func _sort_by_priority(a: Dictionary, b: Dictionary) -> bool:
+	var pa: int = int(a.get("priority", 99))
+	var pb: int = int(b.get("priority", 99))
+	return pa < pb

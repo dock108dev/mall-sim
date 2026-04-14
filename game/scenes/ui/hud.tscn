@@ -1,57 +1,57 @@
-[gd_scene load_steps=2 format=3 uid="uid://hud00001"]
+[gd_scene load_steps=4 format=3 uid="uid://hud00001"]
 
 [ext_resource type="Script" path="res://game/scenes/ui/hud.gd" id="1"]
+[ext_resource type="PackedScene" path="res://game/ui/hud/toast_notification_ui.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://game/scenes/ui/interaction_prompt.tscn" id="3"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
 script = ExtResource("1")
 
-[node name="CashLabel" type="Label" parent="."]
-offset_left = 20.0
-offset_top = 20.0
-offset_right = 200.0
-offset_bottom = 50.0
-text = "$5000.00"
-
-[node name="TimeLabel" type="Label" parent="."]
-anchors_preset = 1
-anchor_left = 1.0
+[node name="TopBar" type="HBoxContainer" parent="."]
+anchors_preset = 10
 anchor_right = 1.0
-offset_left = -200.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = 50.0
-grow_horizontal = 0
+offset_top = 8.0
+offset_bottom = 48.0
+grow_horizontal = 2
+theme_override_constants/separation = 24
+
+[node name="CashLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 2
+text = "$0.00"
+horizontal_alignment = 0
+
+[node name="TimeLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 6
 text = "Day 1 — 9:00 AM"
-horizontal_alignment = 2
+horizontal_alignment = 1
 
-[node name="DayPhaseLabel" type="Label" parent="."]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -200.0
-offset_top = 55.0
-offset_right = -20.0
-offset_bottom = 85.0
-grow_horizontal = 0
-text = "Morning"
-horizontal_alignment = 2
+[node name="SpeedButton" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Normal"
+flat = true
 
-[node name="ReputationLabel" type="Label" parent="."]
-offset_left = 20.0
-offset_top = 55.0
-offset_right = 300.0
-offset_bottom = 85.0
-text = "Rep: 0 — Unknown"
+[node name="ReputationLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+text = "Unknown"
+horizontal_alignment = 2
 
 [node name="StoreLabel" type="Label" parent="."]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -150.0
-offset_top = 20.0
+offset_top = 52.0
 offset_right = 150.0
-offset_bottom = 50.0
+offset_bottom = 82.0
 grow_horizontal = 2
 text = ""
 horizontal_alignment = 1
@@ -59,31 +59,19 @@ vertical_alignment = 0
 
 [node name="MilestonesButton" type="Button" parent="."]
 offset_left = 20.0
-offset_top = 90.0
+offset_top = 56.0
 offset_right = 160.0
-offset_bottom = 120.0
+offset_bottom = 86.0
 text = "Milestones [M]"
-
-[node name="SpeedLabel" type="Label" parent="."]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -200.0
-offset_top = 90.0
-offset_right = -20.0
-offset_bottom = 120.0
-grow_horizontal = 0
-text = ">"
-horizontal_alignment = 2
 
 [node name="SeasonalEventLabel" type="Label" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -300.0
-offset_top = 125.0
+offset_top = 52.0
 offset_right = -20.0
-offset_bottom = 155.0
+offset_bottom = 82.0
 grow_horizontal = 0
 text = ""
 horizontal_alignment = 2
@@ -103,6 +91,10 @@ grow_vertical = 0
 text = "Click to Interact"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="ToastNotificationUI" parent="." instance=ExtResource("2")]
+
+[node name="InteractionPrompt" parent="." instance=ExtResource("3")]
 
 [node name="ControlHintLabel" type="Label" parent="."]
 offset_left = 20.0

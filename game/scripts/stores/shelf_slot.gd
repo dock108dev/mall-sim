@@ -92,11 +92,31 @@ func is_occupied() -> bool:
 	return _occupied
 
 
+## Returns true if this slot can accept an item.
+func is_available() -> bool:
+	return not _occupied
+
+
 ## Returns the instance ID of the placed item, or empty string if empty.
 func get_item_instance_id() -> String:
 	if _occupied:
 		return _held_item_id
 	return ""
+
+
+## Returns the instance ID of the held item, or empty StringName if empty.
+func get_item_id() -> StringName:
+	return StringName(get_item_instance_id())
+
+
+## Returns the maximum number of items this slot can hold.
+func get_capacity() -> int:
+	return 1
+
+
+## Returns the number of items currently occupying this slot (0 or 1).
+func get_occupied() -> int:
+	return 1 if _occupied else 0
 
 
 ## Places an item into this slot, returning true on success.
@@ -111,6 +131,11 @@ func place_item(instance_id: String, category: String = "") -> bool:
 	return true
 
 
+## Assigns an item to this slot by canonical instance ID, returning true on success.
+func assign_item(id: StringName) -> bool:
+	return place_item(String(id))
+
+
 ## Removes the item from this slot and returns its instance ID.
 func remove_item() -> String:
 	if not _occupied:
@@ -122,6 +147,11 @@ func remove_item() -> String:
 	_update_empty_indicator()
 	slot_changed.emit(self)
 	return item_id
+
+
+## Removes the held item and restores availability.
+func deassign() -> void:
+	remove_item()
 
 
 ## Shows or hides the translucent empty-slot indicator.

@@ -1,7 +1,9 @@
 [
   {
     "id": "sports",
+    "aliases": ["sports_memorabilia"],
     "name": "Sports Memorabilia",
+    "store_type": "sports",
     "description": "A small sports card and memorabilia shop. Wood-paneled walls, glass display cases, and the sound of sports radio.",
     "scene_path": "res://game/scenes/stores/sports_memorabilia.tscn",
     "size_category": "small",
@@ -10,15 +12,15 @@
     "starting_cash": 500.00,
     "daily_rent": 50.00,
     "starting_inventory": [
-      "sports_pippen_hoops",
-      "sports_shaq_classic",
-      "sports_thomas_leaf",
-      "sports_favre_topps",
-      "sports_ichiro_topps",
-      "sports_griffey_rookie",
-      "sports_wax_pack_93",
-      "sports_wax_pack_93",
-      "sports_display_bat"
+      "sports_duvall_hr_common",
+      "sports_okoro_hoops_common",
+      "sports_esperanza_base_common",
+      "sports_duvall_refractor_uncommon",
+      "sports_simmons_chrome_uncommon",
+      "sports_sledge_rookie_rare",
+      "sports_pinnacle_pack_1993",
+      "sports_vanguard_pack_2001",
+      "sports_signed_baseball_sledge"
     ],
     "allowed_categories": ["trading_cards", "sealed_packs", "sealed_product", "memorabilia"],
     "fixture_slots": 6,
@@ -34,12 +36,19 @@
     "base_foot_traffic": 0.4,
     "available_supplier_tiers": [1, 2, 3],
     "unique_mechanics": ["authentication"],
+    "season_boost": 1.5,
+    "authentication_config": {
+      "value_threshold": 100.0,
+      "auth_fee": 25.0,
+      "auth_multiplier": 2.0
+    },
     "aesthetic_tags": ["wood_shelves", "glass_cases", "poster_walls", "sports_radio"],
     "ambient_sound": "res://game/assets/audio/ambiance/sports_store.ogg"
   },
   {
     "id": "retro_games",
     "name": "Retro Game Store",
+    "store_type": "retro_games",
     "description": "Buy, sell, and trade classic video games and consoles. CRT glow, cartridge clacking, and posters for games that never existed.",
     "scene_path": "res://game/scenes/stores/retro_games.tscn",
     "size_category": "small",
@@ -73,19 +82,27 @@
     "base_foot_traffic": 0.35,
     "available_supplier_tiers": [1, 2, 3],
     "unique_mechanics": ["testing_station", "refurbishment"],
+    "testing_config": {
+      "testing_duration": 2.0,
+      "working_chance": 0.8,
+      "tested_working_multiplier": 1.25,
+      "tested_not_working_multiplier": 0.4
+    },
     "aesthetic_tags": ["neon_lights", "crt_glow", "cluttered_shelves", "poster_walls"],
     "ambient_sound": "res://game/assets/audio/ambiance/retro_store.ogg"
   },
   {
     "id": "rentals",
+    "aliases": ["video_rental"],
     "name": "Video Rental",
-    "description": "Rent VHS and DVD movies. Blue carpet, fluorescent lights, and a NEW RELEASES wall. Pure Blockbuster energy.",
+    "store_type": "rentals",
+    "description": "Rent VHS and DVD movies. Blue carpet, fluorescent lights, and a NEW RELEASES wall that never stops calling your name.",
     "scene_path": "res://game/scenes/stores/video_rental.tscn",
     "size_category": "medium",
     "shelf_capacity": 50,
     "backroom_capacity": 150,
     "starting_cash": 550.00,
-    "daily_rent": 60.00,
+    "daily_rent": 55.00,
     "starting_inventory": [
       "rental_cosmic_battles_4_vhs",
       "rental_cosmic_battles_5_vhs",
@@ -114,19 +131,26 @@
     "base_foot_traffic": 0.5,
     "available_supplier_tiers": [1, 2, 3],
     "unique_mechanics": ["rental_system", "late_fees", "recommendation_engine"],
+    "late_fee_config": {
+      "base_late_fee": 1.00,
+      "per_day_rate": 0.50,
+      "max_late_fee": 15.00,
+      "grace_period_days": 1
+    },
     "aesthetic_tags": ["blue_carpet", "fluorescent_lights", "plastic_cases", "candy_counter"],
     "ambient_sound": "res://game/assets/audio/ambiance/video_rental.ogg"
   },
   {
     "id": "pocket_creatures",
     "name": "PocketCreatures Card Shop",
+    "store_type": "pocket_creatures",
     "description": "Booster packs, singles binders, and tournament tables. Bright colors, card shuffling, and the thrill of the pull.",
     "scene_path": "res://game/scenes/stores/pocket_creatures.tscn",
     "size_category": "medium",
     "shelf_capacity": 63,
     "backroom_capacity": 130,
     "starting_cash": 650.00,
-    "daily_rent": 55.00,
+    "daily_rent": 50.00,
     "starting_inventory": [
       "pc_booster_base_set",
       "pc_booster_base_set",
@@ -173,14 +197,16 @@
   },
   {
     "id": "electronics",
+    "aliases": ["consumer_electronics"],
     "name": "Consumer Electronics",
+    "store_type": "electronics",
     "description": "MP3 players, handheld consoles, gadgets, and accessories. Chrome shelving, demo stations, and the smell of new plastic.",
     "scene_path": "res://game/scenes/stores/consumer_electronics.tscn",
     "size_category": "medium",
     "shelf_capacity": 48,
     "backroom_capacity": 120,
     "starting_cash": 800.00,
-    "daily_rent": 65.00,
+    "daily_rent": 60.00,
     "starting_inventory": [
       "elec_zunewave_128",
       "elec_zunewave_256",
@@ -211,6 +237,8 @@
     "max_employees": 2,
     "base_foot_traffic": 0.4,
     "available_supplier_tiers": [1, 2, 3],
+    "max_demo_units": 2,
+    "demo_interest_bonus": 0.20,
     "unique_mechanics": ["demo_units", "product_lifecycle", "warranty_upsell"],
     "aesthetic_tags": ["chrome_shelving", "white_displays", "demo_stations", "product_boxes"],
     "ambient_sound": "res://game/assets/audio/ambiance/electronics_store.ogg"

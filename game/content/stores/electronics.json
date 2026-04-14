@@ -1,0 +1,96 @@
+{
+  "max_demo_units": 2,
+  "demo_interest_bonus": 0.20,
+  "purchase_intent_threshold": 0.55,
+  "launch_spike_days": 7,
+  "products": [
+    {
+      "id": "elec_zunewave_128",
+      "display_name": "ZuneWave 128MB MP3 Player",
+      "category": "portable_audio",
+      "launch_day": 1,
+      "launch_demand_multiplier": 1.3,
+      "depreciation_rate": 0.013,
+      "min_value_ratio": 0.15,
+      "base_price": 39.99,
+      "warranty_eligible": false
+    },
+    {
+      "id": "elec_zunewave_256",
+      "display_name": "ZuneWave 256MB MP3 Player",
+      "category": "portable_audio",
+      "launch_day": 1,
+      "launch_demand_multiplier": 1.3,
+      "depreciation_rate": 0.013,
+      "min_value_ratio": 0.15,
+      "base_price": 59.99,
+      "warranty_eligible": false
+    },
+    {
+      "id": "elec_podplay_5gb",
+      "display_name": "PodPlay 5GB",
+      "category": "portable_audio",
+      "launch_day": 5,
+      "launch_demand_multiplier": 1.5,
+      "depreciation_rate": 0.012,
+      "min_value_ratio": 0.20,
+      "base_price": 149.99,
+      "warranty_eligible": true
+    },
+    {
+      "id": "elec_podplay_20gb",
+      "display_name": "PodPlay 20GB",
+      "category": "portable_audio",
+      "launch_day": 10,
+      "launch_demand_multiplier": 1.5,
+      "depreciation_rate": 0.011,
+      "min_value_ratio": 0.20,
+      "base_price": 249.99,
+      "warranty_eligible": true
+    },
+    {
+      "id": "elec_portastation_console",
+      "display_name": "PortaStation Handheld Console",
+      "category": "handheld_gaming",
+      "launch_day": 3,
+      "launch_demand_multiplier": 1.5,
+      "depreciation_rate": 0.012,
+      "min_value_ratio": 0.20,
+      "base_price": 129.99,
+      "warranty_eligible": true
+    },
+    {
+      "id": "elec_camera_pixelsnap_budget",
+      "display_name": "PixelSnap 2.0 Megapixel Camera",
+      "category": "gadgets",
+      "launch_day": 1,
+      "launch_demand_multiplier": 1.2,
+      "depreciation_rate": 0.013,
+      "min_value_ratio": 0.15,
+      "base_price": 89.99,
+      "warranty_eligible": false
+    },
+    {
+      "id": "elec_camera_pixelsnap_pro",
+      "display_name": "PixelSnap 5.0 Megapixel Pro",
+      "category": "gadgets",
+      "launch_day": 12,
+      "launch_demand_multiplier": 1.4,
+      "depreciation_rate": 0.011,
+      "min_value_ratio": 0.20,
+      "base_price": 179.99,
+      "warranty_eligible": true
+    },
+    {
+      "id": "elec_pda_organizer",
+      "display_name": "DataVault Palm Organizer",
+      "category": "gadgets",
+      "launch_day": 1,
+      "launch_demand_multiplier": 1.3,
+      "depreciation_rate": 0.012,
+      "min_value_ratio": 0.15,
+      "base_price": 149.99,
+      "warranty_eligible": true
+    }
+  ]
+}

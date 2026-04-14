@@ -4,12 +4,14 @@ extends StoreController
 
 enum LateFeePolicy { STRICT, STANDARD, LENIENT }
 
-const STORE_ID: String = "video_rental"
+const STORE_ID: StringName = &"rentals"
 const SOLD_CATEGORIES: PackedStringArray = ["snacks", "merchandise"]
 const RENTAL_CATEGORIES: PackedStringArray = ["vhs_tapes", "dvd_titles"]
 const MAX_STAFF_PICKS: int = 3
 const STAFF_PICK_BOOST: float = 1.3
 const RETURNS_BIN_LOCATION: String = "returns_bin"
+const BACKROOM_LOCATION: String = "backroom"
+const RENTED_LOCATION: String = "rented"
 const LOST_ITEM_CHANCE: float = 0.02
 const RENTAL_REP_GAIN: float = 1.5
 
@@ -27,26 +29,26 @@ const POLICY_REP_MULTIPLIERS: Dictionary = {
 	LateFeePolicy.LENIENT: 1.5,
 }
 
-var _active_rentals: Array[Dictionary] = []
+var rental_records: Dictionary = {}
 var _staff_picks: Array[String] = []
 var _late_fee_policy: LateFeePolicy = LateFeePolicy.STANDARD
 var _rental_history: Array[Dictionary] = []
 var _wear_tracker: TapeWearTracker = TapeWearTracker.new()
+var _daily_late_fee_total: float = 0.0
 
-var _inventory_system: InventorySystem = null
 var _economy_system: EconomySystem = null
 var _reputation_system: ReputationSystem = null
+
+var _base_late_fee: float = 1.0
+var _per_day_rate: float = 0.5
+var _max_late_fee: float = 15.0
+var _grace_period_days: int = 1
 
 
 func _ready() -> void:
 	store_type = STORE_ID
+	_load_late_fee_config()
 	super._ready()
-	EventBus.day_started.connect(_on_day_started)
-
-
-## Sets the InventorySystem reference for item location management.
-func set_inventory_system(inv: InventorySystem) -> void:
-	_inventory_system = inv
 
 
 ## Sets the EconomySystem reference for fee collection.
@@ -95,46 +97,98 @@ func process_rental(
 	rental_tier: String,
 	rental_fee: float,
 	current_day: int,
+	customer_id: String = "",
 ) -> Dictionary:
 	var duration: int = RENTAL_DURATIONS.get(rental_tier, 3)
 	var return_day: int = current_day + duration
 	var rental_record: Dictionary = {
 		"instance_id": item_instance_id,
+		"customer_id": customer_id,
 		"category": item_category,
 		"rental_fee": rental_fee,
 		"rental_tier": rental_tier,
 		"checkout_day": current_day,
 		"return_day": return_day,
-		"returned": false,
 	}
-	_active_rentals.append(rental_record)
+	rental_records[item_instance_id] = rental_record
 	if _inventory_system:
-		var item: ItemInstance = _inventory_system.get_item(item_instance_id)
+		var item: ItemInstance = _inventory_system.get_item(
+			item_instance_id
+		)
 		if item:
-			_wear_tracker.initialize_item(item_instance_id, item.condition)
-	EventBus.item_rented.emit(item_instance_id, rental_fee, rental_tier)
+			item.rental_due_day = return_day
+			_wear_tracker.initialize_item(
+				item_instance_id, item.condition
+			)
+			_inventory_system.move_item(
+				item_instance_id, RENTED_LOCATION
+			)
+	if _economy_system and rental_fee > 0.0:
+		_economy_system.add_cash(
+			rental_fee,
+			"Rental: %s (%s)" % [item_instance_id, rental_tier]
+		)
+	EventBus.item_rented.emit(
+		item_instance_id, rental_fee, rental_tier
+	)
 	return rental_record
 
 
 ## Returns all currently active (unreturned) rental records.
 func get_active_rentals() -> Array[Dictionary]:
-	return _active_rentals
+	var result: Array[Dictionary] = []
+	for record: Dictionary in rental_records.values():
+		result.append(record)
+	return result
 
 
 ## Returns rental records that are overdue as of the given day.
 func get_overdue_rentals(current_day: int) -> Array[Dictionary]:
 	var overdue: Array[Dictionary] = []
-	for rental: Dictionary in _active_rentals:
-		if not rental["returned"] and current_day > rental["return_day"]:
-			overdue.append(rental)
+	for record: Dictionary in rental_records.values():
+		var deadline: int = int(record["return_day"]) + _grace_period_days
+		if current_day > deadline:
+			overdue.append(record)
 	return overdue
+
+## Returns the total late fees collected today.
+func get_daily_late_fee_total() -> float:
+	return _daily_late_fee_total
 
 
 ## Returns items currently in the returns bin.
 func get_returns_bin_items() -> Array[ItemInstance]:
 	if not _inventory_system:
 		return []
-	return _inventory_system.get_items_at_location(RETURNS_BIN_LOCATION)
+	return _inventory_system.get_items_at_location(
+		RETURNS_BIN_LOCATION
+	)
+
+
+## Returns the number of currently rented copies.
+func get_rented_count() -> int:
+	return rental_records.size()
+
+
+## Returns items currently rented out.
+func get_rented_items() -> Array[ItemInstance]:
+	if not _inventory_system:
+		return []
+	return _inventory_system.get_items_at_location(RENTED_LOCATION)
+
+
+## Returns count of items available (not rented).
+func get_available_count() -> int:
+	if not _inventory_system:
+		return 0
+	var all_items: Array[ItemInstance] = (
+		_inventory_system.get_items_for_store(String(STORE_ID))
+	)
+	var available: int = 0
+	for item: ItemInstance in all_items:
+		if item.current_location != RENTED_LOCATION:
+			available += 1
+	return available
 
 
 ## Returns the current tape wear for an item.
@@ -173,8 +227,11 @@ func is_staff_pick(item_definition_id: String) -> bool:
 
 ## Serializes rental state for saving.
 func get_save_data() -> Dictionary:
+	var records_array: Array[Dictionary] = []
+	for record: Dictionary in rental_records.values():
+		records_array.append(record.duplicate())
 	return {
-		"active_rentals": _active_rentals.duplicate(true),
+		"rental_records": records_array,
 		"staff_picks": _staff_picks.duplicate(),
 		"tape_wear": _wear_tracker.get_save_data(),
 		"late_fee_policy": _late_fee_policy,
@@ -184,11 +241,27 @@ func get_save_data() -> Dictionary:
 
 ## Restores rental state from save data.
 func load_save_data(data: Dictionary) -> void:
-	_active_rentals.clear()
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
+	rental_records = {}
+	if data.has("rental_records"):
+		for entry: Variant in data["rental_records"]:
+			if entry is Dictionary:
+				var record: Dictionary = entry as Dictionary
+				var iid: String = str(record.get("instance_id", ""))
+				if not iid.is_empty():
+					rental_records[iid] = record
 	if data.has("active_rentals"):
 		for entry: Variant in data["active_rentals"]:
 			if entry is Dictionary:
-				_active_rentals.append(entry)
+				var record: Dictionary = entry as Dictionary
+				if record.get("returned", false):
+					continue
+				var iid: String = str(record.get("instance_id", ""))
+				if not iid.is_empty() and not rental_records.has(iid):
+					rental_records[iid] = record
 	_staff_picks.clear()
 	if data.has("staff_picks"):
 		for pick: Variant in data["staff_picks"]:
@@ -209,23 +282,31 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _on_day_started(day: int) -> void:
+	_daily_late_fee_total = 0.0
 	_process_returns(day)
+	_collect_overdue_late_fees(day)
 	_update_returns_bin_count()
+	if _daily_late_fee_total > 0.0:
+		EventBus.toast_requested.emit(
+			"+$%.2f late fees collected" % _daily_late_fee_total,
+			&"system",
+			3.0,
+		)
 
 
-## Checks all active rentals and processes items due for return.
+## Checks all rental records and processes items due for return.
 func _process_returns(current_day: int) -> void:
-	var still_active: Array[Dictionary] = []
-	for rental: Dictionary in _active_rentals:
-		if rental["returned"]:
-			continue
-		if current_day >= rental["return_day"]:
-			rental["returned"] = true
-			var late_days: int = current_day - rental["return_day"]
-			_handle_return(rental, late_days)
-		else:
-			still_active.append(rental)
-	_active_rentals = still_active
+	var to_return: Array[String] = []
+	for instance_id: String in rental_records:
+		var record: Dictionary = rental_records[instance_id]
+		if current_day >= int(record["return_day"]):
+			to_return.append(instance_id)
+	for instance_id: String in to_return:
+		var record: Dictionary = rental_records[instance_id]
+		var deadline: int = int(record["return_day"]) + _grace_period_days
+		var days_overdue: int = maxi(0, current_day - deadline)
+		rental_records.erase(instance_id)
+		_handle_return(record, days_overdue)
 
 
 ## Handles a single item return: degradation, late fees, lost item check.
@@ -237,8 +318,21 @@ func _handle_return(rental: Dictionary, late_days: int) -> void:
 	_apply_degradation(rental)
 	if late_days > 0:
 		_collect_late_fee(rental, late_days)
+	var worn_out: bool = false
 	if _inventory_system:
-		_inventory_system.move_item(instance_id, RETURNS_BIN_LOCATION)
+		var item: ItemInstance = _inventory_system.get_item(instance_id)
+		if item:
+			item.rental_due_day = -1
+			worn_out = not is_rentable(item)
+		if worn_out:
+			_inventory_system.move_item(
+				instance_id, BACKROOM_LOCATION
+			)
+			_emit_worn_out_notification(instance_id)
+		else:
+			_inventory_system.move_item(
+				instance_id, RETURNS_BIN_LOCATION
+			)
 	_apply_rental_reputation()
 	_rental_history.append({
 		"instance_id": instance_id,
@@ -246,12 +340,7 @@ func _handle_return(rental: Dictionary, late_days: int) -> void:
 		"late_days": late_days,
 		"lost": false,
 	})
-	var degraded: bool = false
-	if _inventory_system:
-		var item: ItemInstance = _inventory_system.get_item(instance_id)
-		if item:
-			degraded = item.condition == "poor"
-	EventBus.rental_returned.emit(instance_id, degraded)
+	EventBus.rental_returned.emit(instance_id, worn_out)
 
 
 ## Applies guaranteed wear degradation to a returned item.
@@ -266,20 +355,19 @@ func _apply_degradation(rental: Dictionary) -> void:
 			item.condition = new_condition
 
 
-## Collects late fees based on the current policy.
-func _collect_late_fee(rental: Dictionary, late_days: int) -> void:
-	var daily_rate: float = rental["rental_fee"]
-	var multiplier: float = LATE_FEE_MULTIPLIERS.get(
-		_late_fee_policy, 1.0
-	)
-	var late_fee: float = daily_rate * multiplier * float(late_days)
+## Collects late fees using formula: base + (days × per_day_rate), capped.
+func _collect_late_fee(rental: Dictionary, days_overdue: int) -> void:
+	var raw_fee: float = _base_late_fee + (float(days_overdue) * _per_day_rate)
+	var late_fee: float = minf(raw_fee, _max_late_fee)
 	if _economy_system and late_fee > 0.0:
 		_economy_system.add_cash(
 			late_fee,
-			"Late fee: %s (%dd)" % [rental["instance_id"], late_days]
+			"Late fee: %s (%dd)" % [rental["instance_id"], days_overdue]
 		)
+		_economy_system.record_store_revenue(String(STORE_ID), late_fee)
+	_daily_late_fee_total += late_fee
 	EventBus.rental_late_fee.emit(
-		rental["instance_id"], late_fee, late_days
+		rental["instance_id"], late_fee, days_overdue
 	)
 
 
@@ -318,6 +406,30 @@ func _apply_rental_reputation() -> void:
 	)
 
 
+## Collects daily late fees for rentals still out past the grace period.
+func _collect_overdue_late_fees(current_day: int) -> void:
+	for record: Dictionary in rental_records.values():
+		var deadline: int = int(record["return_day"]) + _grace_period_days
+		var days_overdue: int = current_day - deadline
+		if days_overdue > 0:
+			_collect_late_fee(record, days_overdue)
+
+
+## Loads late fee formula constants from video_rental_config.json via DataLoader.
+func _load_late_fee_config() -> void:
+	if not GameManager or not GameManager.data_loader:
+		push_warning("VideoRentalStoreController: DataLoader not available, config not loaded")
+		return
+	var cfg: Dictionary = GameManager.data_loader.get_video_rental_config()
+	if cfg.is_empty():
+		push_warning("VideoRentalStoreController: video_rental_config.json not loaded")
+		return
+	_base_late_fee = float(cfg.get("base_late_fee", _base_late_fee))
+	_per_day_rate = float(cfg.get("per_day_late_rate", _per_day_rate))
+	_max_late_fee = float(cfg.get("max_late_fee", _max_late_fee))
+	_grace_period_days = int(cfg.get("grace_period_days", _grace_period_days))
+
+
 ## Updates the ReturnsBin node count display if one exists in the scene.
 func _update_returns_bin_count() -> void:
 	var bin_items: Array[ItemInstance] = get_returns_bin_items()
@@ -325,3 +437,48 @@ func _update_returns_bin_count() -> void:
 	for bin_node: Node in bins:
 		if bin_node.has_method("set_item_count"):
 			bin_node.set_item_count(bin_items.size())
+
+
+## Returns true if a tape is worn out and eligible for retirement.
+func is_worn_out(item: ItemInstance) -> bool:
+	if not item:
+		return false
+	return item.condition == "poor"
+
+
+## Retires a worn-out tape by selling at poor-condition price or writing off.
+func retire_tape(instance_id: String, sell: bool) -> bool:
+	if not _inventory_system:
+		push_error("VideoRental: no inventory_system for retire_tape")
+		return false
+	var item: ItemInstance = _inventory_system.get_item(instance_id)
+	if not item:
+		push_error("VideoRental: item not found: %s" % instance_id)
+		return false
+	if not is_worn_out(item):
+		push_error("VideoRental: item not worn out: %s" % instance_id)
+		return false
+	if sell and _economy_system:
+		var sale_value: float = item.get_current_value()
+		_economy_system.add_cash(
+			sale_value,
+			"Tape retired (sold): %s" % instance_id
+		)
+		_economy_system.record_store_revenue(
+			String(STORE_ID), sale_value
+		)
+	_wear_tracker.erase_item(instance_id)
+	_inventory_system.remove_item(instance_id)
+	EventBus.inventory_changed.emit()
+	return true
+
+
+func _emit_worn_out_notification(instance_id: String) -> void:
+	var tape_name: String = instance_id
+	if _inventory_system:
+		var item: ItemInstance = _inventory_system.get_item(instance_id)
+		if item and item.definition:
+			tape_name = item.definition.item_name
+	EventBus.notification_requested.emit(
+		"'%s' is worn out — consider retiring it" % tape_name
+	)

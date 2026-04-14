@@ -1,0 +1,55 @@
+[gd_scene load_steps=2 format=3 uid="uid://diffselect01"]
+
+[ext_resource type="Script" path="res://game/scripts/ui/difficulty_selection_panel.gd" id="1"]
+
+[node name="DifficultySelectionPanel" type="CanvasLayer"]
+layer = 20
+script = ExtResource("1")
+
+[node name="Overlay" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.7)
+mouse_filter = 0
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -420.0
+offset_top = -270.0
+offset_right = 420.0
+offset_bottom = 270.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Choose Difficulty"
+horizontal_alignment = 1
+
+[node name="CardsRow" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="AssistedWarningDialog" type="ConfirmationDialog" parent="."]
+title = "Switch to Easier Difficulty?"
+size = Vector2i(400, 148)
+dialog_text = "Switching to an easier difficulty after Day 1 will permanently mark this run as Assisted. This cannot be undone. Continue?"
+ok_button_text = "Confirm"

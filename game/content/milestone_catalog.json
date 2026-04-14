@@ -1,0 +1,363 @@
+{
+  "milestones": [
+    {
+      "id": "first_sale",
+      "display_name": "Open for Business",
+      "description": "You rang up your first customer. The ancient register beeped. It worked.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "items_sold",
+        "threshold": 1
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": false
+    },
+    {
+      "id": "first_hundred",
+      "display_name": "Fifty Bucks and Counting",
+      "description": "Fifty dollars in total sales. Daily rent is $50. These numbers are related.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "revenue",
+        "threshold": 50.0
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": false
+    },
+    {
+      "id": "steady_seller",
+      "display_name": "Mall Traffic",
+      "description": "Ten sales processed. The pretzel stand across the hall is either impressed or jealous.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "items_sold",
+        "threshold": 10
+      },
+      "reward_type": "supplier_tier_unlock",
+      "reward_payload": {
+        "tier": 1
+      },
+      "is_secret": false
+    },
+    {
+      "id": "survived_day_one",
+      "display_name": "Still Standing",
+      "description": "Day 1 is in the books. The fluorescents didn't flicker out. You didn't quit.",
+      "category": "store",
+      "unlock_condition": {
+        "type": "days",
+        "threshold": 2
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": false
+    },
+    {
+      "id": "week_one",
+      "display_name": "One Week In",
+      "description": "Seven days under the fluorescent hum. You know which parking spots stay shaded after noon.",
+      "category": "store",
+      "unlock_condition": {
+        "type": "days",
+        "threshold": 7
+      },
+      "reward_type": "supplier_tier_unlock",
+      "reward_payload": {
+        "tier": 1
+      },
+      "is_secret": false
+    },
+    {
+      "id": "local_name",
+      "display_name": "Word Gets Around",
+      "description": "Customers are mentioning your store to each other. Assume it's good. For now.",
+      "category": "reputation",
+      "unlock_condition": {
+        "type": "reputation",
+        "threshold": 10.0
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": false
+    },
+    {
+      "id": "hundred_club",
+      "display_name": "Half a Grand",
+      "description": "Five hundred dollars in total sales. You're either breaking even or learning what that costs.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "revenue",
+        "threshold": 500.0
+      },
+      "reward_type": "supplier_tier_unlock",
+      "reward_payload": {
+        "tier": 2
+      },
+      "is_secret": false
+    },
+    {
+      "id": "neighborhood_favorite",
+      "display_name": "Neighborhood Favorite",
+      "description": "Local Favorite reputation tier reached. The food court pretzel stand respects you now.",
+      "category": "reputation",
+      "unlock_condition": {
+        "type": "reputation",
+        "threshold": 25.0
+      },
+      "reward_type": "supplier_tier_unlock",
+      "reward_payload": {
+        "tier": 2
+      },
+      "is_secret": false
+    },
+    {
+      "id": "sales_machine",
+      "display_name": "Frequent Shopper Energy",
+      "description": "Fifty transactions processed. Your register has developed a personality at this point.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "items_sold",
+        "threshold": 50
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": false
+    },
+    {
+      "id": "two_weeks_in",
+      "display_name": "Fortnight",
+      "description": "Fourteen days. You have the mall PA schedule memorized. You no longer flinch at the jingle.",
+      "category": "store",
+      "unlock_condition": {
+        "type": "days",
+        "threshold": 14
+      },
+      "reward_type": "store_slot_unlock",
+      "reward_payload": {
+        "slot_count": 2
+      },
+      "is_secret": false
+    },
+    {
+      "id": "big_earner",
+      "display_name": "Four Digits",
+      "description": "One thousand dollars lifetime revenue. The food court respects you now. It doesn't show, but it's there.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "revenue",
+        "threshold": 1000.0
+      },
+      "reward_type": "store_slot_unlock",
+      "reward_payload": {
+        "slot_count": 2
+      },
+      "is_secret": false
+    },
+    {
+      "id": "destination_bound",
+      "display_name": "Talking Point",
+      "description": "Your store has become a destination. Customers are seeking you out specifically.",
+      "category": "reputation",
+      "unlock_condition": {
+        "type": "reputation",
+        "threshold": 50.0
+      },
+      "reward_type": "supplier_tier_unlock",
+      "reward_payload": {
+        "tier": 3
+      },
+      "is_secret": false
+    },
+    {
+      "id": "month_strong",
+      "display_name": "Month Strong",
+      "description": "Thirty days straight. You are part of the mall now. The mall is part of you.",
+      "category": "store",
+      "unlock_condition": {
+        "type": "days",
+        "threshold": 30
+      },
+      "reward_type": "store_slot_unlock",
+      "reward_payload": {
+        "slot_count": 3
+      },
+      "is_secret": false
+    },
+    {
+      "id": "century_seller",
+      "display_name": "Century",
+      "description": "One hundred transactions. One hundred individual stories and moments where the receipt printer made that sound.",
+      "category": "customer",
+      "unlock_condition": {
+        "type": "items_sold",
+        "threshold": 100
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": false
+    },
+    {
+      "id": "five_grand",
+      "display_name": "Five Grand",
+      "description": "Five thousand dollars in total lifetime sales. The mall directory has your store listed. You imagine it in bold.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "revenue",
+        "threshold": 5000.0
+      },
+      "reward_type": "supplier_tier_unlock",
+      "reward_payload": {
+        "tier": 3
+      },
+      "is_secret": false
+    },
+    {
+      "id": "legendary_status",
+      "display_name": "Destination Store",
+      "description": "Legendary reputation tier. Customers come to Cormorant Ridge Mall specifically for your store.",
+      "category": "reputation",
+      "unlock_condition": {
+        "type": "reputation",
+        "threshold": 80.0
+      },
+      "reward_type": "store_slot_unlock",
+      "reward_payload": {
+        "slot_count": 4
+      },
+      "is_secret": false
+    },
+    {
+      "id": "mall_mogul",
+      "display_name": "Five Figures",
+      "description": "Ten thousand dollars. You could buy a mediocre used sedan. You won't. You're reinvesting.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "revenue",
+        "threshold": 10000.0
+      },
+      "reward_type": "cosmetic",
+      "reward_payload": {
+        "cosmetic_id": "gold_nameplate"
+      },
+      "is_secret": false
+    },
+    {
+      "id": "veteran",
+      "display_name": "Old Timer",
+      "description": "Fifty days of operation. You've seen seasons change through the skylight. You are permanent.",
+      "category": "store",
+      "unlock_condition": {
+        "type": "days",
+        "threshold": 50
+      },
+      "reward_type": "cosmetic",
+      "reward_payload": {
+        "cosmetic_id": "veteran_badge"
+      },
+      "is_secret": false
+    },
+    {
+      "id": "five_hundred_sales",
+      "display_name": "Transaction History",
+      "description": "Five hundred sales. The receipt tape alone could wallpaper a studio apartment.",
+      "category": "customer",
+      "unlock_condition": {
+        "type": "items_sold",
+        "threshold": 500
+      },
+      "reward_type": "cosmetic",
+      "reward_payload": {
+        "cosmetic_id": "receipt_wallpaper"
+      },
+      "is_secret": false
+    },
+    {
+      "id": "mall_tycoon",
+      "display_name": "Mall Tycoon",
+      "description": "Twenty-five thousand dollars. You arrived with a dream and a spreadsheet. The spreadsheet was right.",
+      "category": "economy",
+      "unlock_condition": {
+        "type": "revenue",
+        "threshold": 25000.0
+      },
+      "reward_type": "cosmetic",
+      "reward_payload": {
+        "cosmetic_id": "prestige_nameplate"
+      },
+      "is_secret": false
+    },
+    {
+      "id": "silent_grinder",
+      "display_name": "The Quiet Accumulator",
+      "description": "Earned $2000 without anyone noticing. Stealth wealth. The mall janitor nods at you differently now.",
+      "category": "special",
+      "unlock_condition": {
+        "type": "revenue",
+        "threshold": 2000.0
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": true
+    },
+    {
+      "id": "patience_pays",
+      "display_name": "Patience Pays",
+      "description": "Survived 21 days without fanfare. No milestones, no celebration. Just showing up. Until now.",
+      "category": "special",
+      "unlock_condition": {
+        "type": "days",
+        "threshold": 21
+      },
+      "reward_type": "store_slot_unlock",
+      "reward_payload": {
+        "slot_count": 3
+      },
+      "is_secret": true
+    },
+    {
+      "id": "quiet_reputation",
+      "display_name": "Under the Radar",
+      "description": "Hit 40 reputation without ever checking. They talk about you. You don't need to listen.",
+      "category": "special",
+      "unlock_condition": {
+        "type": "reputation",
+        "threshold": 40.0
+      },
+      "reward_type": "supplier_tier_unlock",
+      "reward_payload": {
+        "tier": 2
+      },
+      "is_secret": true
+    },
+    {
+      "id": "community_pillar",
+      "display_name": "Community Institution",
+      "description": "Two hundred items sold. You have regulars. You know their vibe. You are woven into this mall's life.",
+      "category": "customer",
+      "unlock_condition": {
+        "type": "items_sold",
+        "threshold": 200
+      },
+      "reward_type": "none",
+      "reward_payload": {},
+      "is_secret": false
+    },
+    {
+      "id": "reputation_climber",
+      "display_name": "Climbing the Ranks",
+      "description": "Sixty reputation points. Mall management is making notes about you. Positive notes, probably.",
+      "category": "reputation",
+      "unlock_condition": {
+        "type": "reputation",
+        "threshold": 60.0
+      },
+      "reward_type": "cosmetic",
+      "reward_payload": {
+        "cosmetic_id": "silver_star"
+      },
+      "is_secret": false
+    }
+  ]
+}

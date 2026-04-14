@@ -1,28 +1,60 @@
-## Dialog for leasing an available storefront with store type selection.
+## Multi-step dialog for leasing a storefront: type selection, naming, confirmation.
 class_name StoreLeaseDialog
 extends PanelContainer
+
+enum Step { TYPE_SELECTION, NAMING, CONFIRMATION }
 
 const UNLOCK_REQUIREMENTS: Array[Dictionary] = [
 	{},
 	{"reputation": 25, "cost": 500},
-	{"reputation": 50, "cost": 1000},
-	{"reputation": 75, "cost": 2000},
-	{"reputation": 90, "cost": 5000},
+	{"reputation": 40, "cost": 1500},
+	{"reputation": 55, "cost": 4000},
+	{"reputation": 70, "cost": 10000},
 ]
+const MAX_STORE_NAME_LENGTH: int = 24
+const STARTER_ITEM_COUNT_MIN: int = 6
+const STARTER_ITEM_COUNT_MAX: int = 10
 
 var _current_slot_index: int = -1
 var _selected_store_type: String = ""
+var _store_name: String = ""
 var _current_cash: float = 0.0
 var _current_reputation: float = 0.0
-var _owned_stores: Array[String] = []
+var _owned_stores: Array[StringName] = []
 var _store_buttons: Dictionary = {}
+var _is_pending: bool = false
+var _current_step: Step = Step.TYPE_SELECTION
+var _selected_store_def: StoreDefinition
 
 @onready var _title_label: Label = $Margin/VBox/TitleLabel
-@onready var _req_label: Label = $Margin/VBox/ReqLabel
-@onready var _store_list: VBoxContainer = (
-	$Margin/VBox/StoreScroll/StoreList
+@onready var _type_page: VBoxContainer = $Margin/VBox/TypeSelectionPage
+@onready var _req_label: Label = (
+	$Margin/VBox/TypeSelectionPage/ReqLabel
 )
-@onready var _desc_label: Label = $Margin/VBox/DescLabel
+@onready var _store_list: VBoxContainer = (
+	$Margin/VBox/TypeSelectionPage/StoreScroll/StoreList
+)
+@onready var _desc_label: Label = (
+	$Margin/VBox/TypeSelectionPage/DescLabel
+)
+@onready var _naming_page: VBoxContainer = $Margin/VBox/NamingPage
+@onready var _name_input: LineEdit = (
+	$Margin/VBox/NamingPage/NameInput
+)
+@onready var _char_count_label: Label = (
+	$Margin/VBox/NamingPage/CharCountLabel
+)
+@onready var _confirm_page: VBoxContainer = (
+	$Margin/VBox/ConfirmationPage
+)
+@onready var _summary_label: Label = (
+	$Margin/VBox/ConfirmationPage/SummaryLabel
+)
+@onready var _error_label: Label = $Margin/VBox/ErrorLabel
+@onready var _status_label: Label = $Margin/VBox/StatusLabel
+@onready var _back_button: Button = (
+	$Margin/VBox/ButtonRow/BackButton
+)
 @onready var _confirm_button: Button = (
 	$Margin/VBox/ButtonRow/ConfirmButton
 )
@@ -35,13 +67,16 @@ func _ready() -> void:
 	visible = false
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
+	_back_button.pressed.connect(_on_back_pressed)
+	_name_input.text_changed.connect(_on_name_text_changed)
+	EventBus.lease_completed.connect(_on_lease_completed)
 
 
 ## Shows the dialog for a specific storefront slot with full context.
 func show_for_slot(
 	slot_index: int,
 	store_defs: Array[StoreDefinition],
-	owned_stores: Array[String],
+	owned_stores: Array[StringName],
 	current_cash: float,
 	current_reputation: float
 ) -> void:
@@ -50,12 +85,15 @@ func show_for_slot(
 	_current_reputation = current_reputation
 	_owned_stores = owned_stores
 	_selected_store_type = ""
+	_store_name = ""
+	_selected_store_def = null
+	_is_pending = false
 
-	_title_label.text = "Lease Storefront #%d" % (slot_index + 1)
-	_update_requirements_label()
 	_populate_store_list(store_defs)
-	_desc_label.text = "Select a store type to view details."
-	_update_confirm_button()
+	_error_label.text = ""
+	_status_label.text = ""
+	_cancel_button.disabled = false
+	_go_to_step(Step.TYPE_SELECTION)
 
 	visible = true
 	EventBus.panel_opened.emit("store_lease_dialog")
@@ -63,9 +101,13 @@ func show_for_slot(
 
 ## Hides the dialog and resets state.
 func close_dialog() -> void:
+	if _is_pending:
+		return
 	visible = false
 	_current_slot_index = -1
 	_selected_store_type = ""
+	_store_name = ""
+	_is_pending = false
 	EventBus.panel_closed.emit("store_lease_dialog")
 
 
@@ -93,6 +135,43 @@ func _has_reputation() -> bool:
 	return _current_reputation >= get_unlock_reputation()
 
 
+func _go_to_step(step: Step) -> void:
+	_current_step = step
+	_type_page.visible = (step == Step.TYPE_SELECTION)
+	_naming_page.visible = (step == Step.NAMING)
+	_confirm_page.visible = (step == Step.CONFIRMATION)
+	_back_button.visible = (step != Step.TYPE_SELECTION)
+	_error_label.text = ""
+
+	match step:
+		Step.TYPE_SELECTION:
+			_title_label.text = (
+				"Lease Storefront #%d" % (_current_slot_index + 1)
+			)
+			_confirm_button.text = "Next"
+			_update_requirements_label()
+		Step.NAMING:
+			_title_label.text = "Name Your Store"
+			_confirm_button.text = "Next"
+			var default_name: String = _generate_default_name()
+			_name_input.text = default_name
+			_store_name = default_name
+			_name_input.max_length = MAX_STORE_NAME_LENGTH
+			_update_char_count()
+		Step.CONFIRMATION:
+			_title_label.text = "Confirm Lease"
+			_confirm_button.text = "Confirm"
+			_update_summary()
+
+	_update_confirm_button()
+
+
+func _generate_default_name() -> String:
+	if _selected_store_def:
+		return "My %s" % _selected_store_def.store_name
+	return "My Store"
+
+
 func _update_requirements_label() -> void:
 	var store_num: int = _owned_stores.size() + 1
 	var index: int = _owned_stores.size()
@@ -109,8 +188,40 @@ func _update_requirements_label() -> void:
 		"Store #%d Requirements:\n" % store_num
 		+ "[%s] Reputation: %.0f / %.0f\n"
 		% [rep_ok, _current_reputation, req_rep]
-		+ "[%s] Lease Fee: $%d / $%d"
+		+ "[%s] Setup Fee: $%d / $%d"
 		% [cost_ok, int(_current_cash), int(req_cost)]
+	)
+
+
+func _update_char_count() -> void:
+	var current_len: int = _name_input.text.length()
+	_char_count_label.text = "%d / %d" % [
+		current_len, MAX_STORE_NAME_LENGTH
+	]
+
+
+func _update_summary() -> void:
+	var fee: float = get_unlock_cost()
+	var cash_after: float = _current_cash - fee
+	var type_name: String = ""
+	if _selected_store_def:
+		type_name = _selected_store_def.store_name
+	else:
+		type_name = _selected_store_type
+
+	_summary_label.text = (
+		"Store Type: %s\n" % type_name
+		+ "Store Name: %s\n" % _store_name
+		+ "Daily Rent: $%d/day\n" % int(
+			_selected_store_def.daily_rent if _selected_store_def
+			else 0
+		)
+		+ "\nSetup Fee: $%d\n" % int(fee)
+		+ "Cash After Fee: $%d\n" % int(cash_after)
+		+ "\nStarter Inventory: %d-%d common items" % [
+			STARTER_ITEM_COUNT_MIN, STARTER_ITEM_COUNT_MAX
+		]
+		+ "\nStore opens next morning."
 	)
 
 
@@ -122,20 +233,23 @@ func _populate_store_list(
 	_store_buttons = {}
 
 	for store_def: StoreDefinition in store_defs:
+		var resolved_id: StringName = ContentRegistry.resolve(
+			store_def.id
+		)
 		var btn := Button.new()
-		btn.name = "Btn_%s" % store_def.id
+		btn.name = "Btn_%s" % resolved_id
 		btn.custom_minimum_size = Vector2(0, 36)
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 
-		var is_owned: bool = store_def.id in _owned_stores
+		var is_owned: bool = resolved_id in _owned_stores
 		if is_owned:
 			btn.text = "%s - $%d/day [OWNED]" % [
-				store_def.name, int(store_def.daily_rent)
+				store_def.store_name, int(store_def.daily_rent)
 			]
 			btn.disabled = true
 		else:
 			btn.text = "%s - $%d/day" % [
-				store_def.name, int(store_def.daily_rent)
+				store_def.store_name, int(store_def.daily_rent)
 			]
 			btn.pressed.connect(
 				_on_store_selected.bind(store_def)
@@ -148,13 +262,21 @@ func _populate_store_list(
 func _on_store_selected(
 	store_def: StoreDefinition
 ) -> void:
-	_selected_store_type = store_def.id
+	if _is_pending:
+		return
+	var canonical: StringName = ContentRegistry.resolve(store_def.id)
+	_selected_store_type = (
+		String(canonical) if not canonical.is_empty()
+		else store_def.id
+	)
+	_selected_store_def = store_def
 	_desc_label.text = "%s\nSize: %s | Shelves: %d | Backroom: %d" % [
 		store_def.description,
 		store_def.size_category,
 		store_def.shelf_capacity,
 		store_def.backroom_capacity,
 	]
+	_error_label.text = ""
 	_highlight_selected()
 	_update_confirm_button()
 
@@ -168,26 +290,128 @@ func _highlight_selected() -> void:
 
 
 func _update_confirm_button() -> void:
-	var can_unlock: bool = (
-		not _selected_store_type.is_empty()
-		and _can_afford()
-		and _has_reputation()
-	)
-	_confirm_button.disabled = not can_unlock
+	if _is_pending:
+		_confirm_button.disabled = true
+		return
+
+	match _current_step:
+		Step.TYPE_SELECTION:
+			var can_proceed: bool = (
+				not _selected_store_type.is_empty()
+				and _can_afford()
+				and _has_reputation()
+			)
+			_confirm_button.disabled = not can_proceed
+		Step.NAMING:
+			var name_text: String = _name_input.text.strip_edges()
+			_confirm_button.disabled = name_text.is_empty()
+		Step.CONFIRMATION:
+			_confirm_button.disabled = false
+
+
+func _set_pending(pending: bool) -> void:
+	_is_pending = pending
+	_confirm_button.disabled = pending
+	_cancel_button.disabled = pending
+	_back_button.disabled = pending
+	if pending:
+		_status_label.text = "Processing lease..."
+		_error_label.text = ""
+	else:
+		_status_label.text = ""
+
+
+func _on_name_text_changed(_new_text: String) -> void:
+	_update_char_count()
+	_update_confirm_button()
+
+
+func _on_back_pressed() -> void:
+	if _is_pending:
+		return
+	match _current_step:
+		Step.NAMING:
+			_go_to_step(Step.TYPE_SELECTION)
+		Step.CONFIRMATION:
+			_go_to_step(Step.NAMING)
 
 
 func _on_confirm_pressed() -> void:
+	if _is_pending:
+		return
 	if _current_slot_index < 0:
 		return
-	if _selected_store_type.is_empty():
-		return
-	if not _can_afford() or not _has_reputation():
-		return
-	EventBus.store_leased.emit(
-		_current_slot_index, _selected_store_type
+
+	match _current_step:
+		Step.TYPE_SELECTION:
+			if _selected_store_type.is_empty():
+				return
+			if not _can_afford() or not _has_reputation():
+				return
+			_go_to_step(Step.NAMING)
+		Step.NAMING:
+			var name_text: String = _name_input.text.strip_edges()
+			if name_text.is_empty():
+				_error_label.text = "Please enter a store name."
+				return
+			_store_name = name_text
+			_go_to_step(Step.CONFIRMATION)
+		Step.CONFIRMATION:
+			_submit_lease()
+
+
+func _submit_lease() -> void:
+	_set_pending(true)
+	var canonical: StringName = ContentRegistry.resolve(
+		_selected_store_type
 	)
-	close_dialog()
+	if canonical.is_empty():
+		canonical = StringName(_selected_store_type)
+	EventBus.lease_requested.emit(
+		canonical, _current_slot_index, _store_name
+	)
+
+
+func _on_lease_completed(
+	store_id: StringName,
+	success: bool,
+	message: String
+) -> void:
+	if not _is_pending:
+		return
+	var requested_id: StringName = ContentRegistry.resolve(
+		_selected_store_type
+	)
+	if requested_id.is_empty():
+		requested_id = StringName(_selected_store_type)
+	if store_id != requested_id:
+		return
+
+	_set_pending(false)
+	if success:
+		visible = false
+		_current_slot_index = -1
+		_selected_store_type = ""
+		_store_name = ""
+		EventBus.panel_closed.emit("store_lease_dialog")
+	else:
+		_error_label.text = message
+		_update_confirm_button()
 
 
 func _on_cancel_pressed() -> void:
+	if _is_pending:
+		return
 	close_dialog()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if _is_pending:
+		if event.is_action_pressed("ui_cancel"):
+			get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_cancel"):
+		close_dialog()
+		get_viewport().set_input_as_handled()

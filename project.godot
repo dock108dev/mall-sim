@@ -16,16 +16,29 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Mallcore Sim"
 config/description="A retail simulator inspired by 2000s mall and store culture."
+config/version="0.1.0"
 run/main_scene="res://game/scenes/bootstrap/boot.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
+ContentRegistry="*res://game/autoload/content_registry.gd"
 GameManager="*res://game/autoload/game_manager.gd"
 AudioManager="*res://game/autoload/audio_manager.gd"
 Settings="*res://game/autoload/settings.gd"
 EventBus="*res://game/autoload/event_bus.gd"
+DataLoader="*res://game/autoload/data_loader.gd"
+EnvironmentManager="*res://game/autoload/environment_manager.gd"
+CameraManager="*res://game/autoload/camera_manager.gd"
+StaffManager="*res://game/autoload/staff_manager.gd"
+ReputationSystem="*res://game/autoload/reputation_system.gd"
+DifficultySystem="*res://game/autoload/difficulty_system.gd"
+UnlockSystem="*res://game/autoload/unlock_system.gd"
+CheckoutSystem="*res://game/autoload/checkout_system.gd"
+OnboardingSystem="*res://game/autoload/onboarding_system.gd"
+MarketTrendSystem="*res://game/autoload/market_trend_system.gd"
+TooltipManager="*res://game/autoload/tooltip_manager.gd"
 
 [display]
 
@@ -145,6 +158,11 @@ toggle_staff={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":72,"key_label":0,"unicode":104,"location":0,"echo":false,"script":null)
 ]
 }
+toggle_pricing={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":80,"key_label":0,"unicode":112,"location":0,"echo":false,"script":null)
+]
+}
 
 [internationalization]
 
@@ -162,3 +180,7 @@ anti_aliasing/quality/msaa_3d=1
 environment/glow/upscale_mode=0
 environment/defaults/default_clear_color=Color(0.1, 0.1, 0.12, 1)
 environment/ssr/roughness_quality=0
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")

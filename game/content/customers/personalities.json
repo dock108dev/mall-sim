@@ -1,0 +1,108 @@
+{
+	"personalities": [
+		{
+			"personality_type": "POWER_SHOPPER",
+			"shop_weight": 1.5,
+			"impulse_factor": 0.3,
+			"hunger_rate_mult": 0.5,
+			"energy_drain_mult": 0.667,
+			"social_need_baseline": 0.1,
+			"browse_duration_mult": 1.2,
+			"min_budget": 80.0,
+			"max_budget": 300.0,
+			"avg_visit_minutes_min": 45.0,
+			"avg_visit_minutes_max": 90.0
+		},
+		{
+			"personality_type": "WINDOW_BROWSER",
+			"shop_weight": 0.8,
+			"impulse_factor": 0.1,
+			"hunger_rate_mult": 1.0,
+			"energy_drain_mult": 0.333,
+			"social_need_baseline": 0.3,
+			"browse_duration_mult": 1.5,
+			"min_budget": 15.0,
+			"max_budget": 60.0,
+			"avg_visit_minutes_min": 30.0,
+			"avg_visit_minutes_max": 60.0
+		},
+		{
+			"personality_type": "FOOD_COURT_CAMPER",
+			"shop_weight": 0.3,
+			"impulse_factor": 0.2,
+			"hunger_rate_mult": 2.0,
+			"energy_drain_mult": 0.167,
+			"social_need_baseline": 0.7,
+			"browse_duration_mult": 0.6,
+			"min_budget": 10.0,
+			"max_budget": 40.0,
+			"avg_visit_minutes_min": 60.0,
+			"avg_visit_minutes_max": 120.0
+		},
+		{
+			"personality_type": "SOCIAL_BUTTERFLY",
+			"shop_weight": 0.6,
+			"impulse_factor": 0.5,
+			"hunger_rate_mult": 1.0,
+			"energy_drain_mult": 0.333,
+			"social_need_baseline": 0.9,
+			"browse_duration_mult": 1.0,
+			"min_budget": 30.0,
+			"max_budget": 120.0,
+			"avg_visit_minutes_min": 40.0,
+			"avg_visit_minutes_max": 80.0
+		},
+		{
+			"personality_type": "RELUCTANT_COMPANION",
+			"shop_weight": 0.2,
+			"impulse_factor": 0.1,
+			"hunger_rate_mult": 1.5,
+			"energy_drain_mult": 1.0,
+			"social_need_baseline": 0.2,
+			"browse_duration_mult": 0.7,
+			"min_budget": 10.0,
+			"max_budget": 35.0,
+			"avg_visit_minutes_min": 20.0,
+			"avg_visit_minutes_max": 50.0
+		},
+		{
+			"personality_type": "IMPULSE_BUYER",
+			"shop_weight": 1.2,
+			"impulse_factor": 0.9,
+			"hunger_rate_mult": 1.0,
+			"energy_drain_mult": 0.667,
+			"social_need_baseline": 0.4,
+			"browse_duration_mult": 0.8,
+			"min_budget": 50.0,
+			"max_budget": 200.0,
+			"avg_visit_minutes_min": 30.0,
+			"avg_visit_minutes_max": 60.0
+		},
+		{
+			"personality_type": "SPEED_RUNNER",
+			"shop_weight": 1.0,
+			"impulse_factor": 0.1,
+			"hunger_rate_mult": 0.5,
+			"energy_drain_mult": 0.333,
+			"social_need_baseline": 0.0,
+			"browse_duration_mult": 0.4,
+			"min_budget": 40.0,
+			"max_budget": 150.0,
+			"avg_visit_minutes_min": 10.0,
+			"avg_visit_minutes_max": 20.0
+		},
+		{
+			"personality_type": "TEEN_PACK_MEMBER",
+			"shop_weight": 0.5,
+			"impulse_factor": 0.7,
+			"hunger_rate_mult": 1.5,
+			"energy_drain_mult": 0.167,
+			"social_need_baseline": 0.95,
+			"browse_duration_mult": 1.0,
+			"min_budget": 5.0,
+			"max_budget": 30.0,
+			"avg_visit_minutes_min": 60.0,
+			"avg_visit_minutes_max": 180.0
+		}
+	]
+}

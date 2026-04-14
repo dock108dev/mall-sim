@@ -87,3 +87,36 @@ If more context is needed, add a blank line then a body paragraph.
 - **No `print()` statements in committed code.** Use `push_warning()` or `push_error()` for diagnostics.
 - **No hardcoded magic numbers.** Use constants or config values.
 - **No direct file system paths.** Use `res://` and `user://` prefixes for all file access within Godot.
+
+## Release Builds
+
+Export presets for Windows Desktop, macOS, and Linux/X11 are configured in `export_presets.cfg` at the project root. Each preset embeds the PCK into the executable (single-file mode) and excludes development-only paths (`.aidlc/`, `docs/`, `tests/`, `*.md`, `*.txt`, `.gitignore`, `.gutconfig.json`).
+
+### Prerequisites
+
+1. Install [Godot 4.3+](https://godotengine.org/download) standard build (not .NET).
+2. Download export templates via **Editor → Manage Export Templates** and install the matching version.
+3. For signed macOS builds: provide a Developer ID certificate in Keychain and set `codesign/identity` in the macOS preset. For unsigned local testing, leave the identity blank.
+4. For signed Windows builds: provide an authenticode certificate and set `codesign/identity` in the Windows preset. For unsigned builds, set `codesign/enable=false`.
+
+### Export Steps
+
+1. Open the project in the Godot editor.
+2. Go to **Project → Export**.
+3. Select the target preset (Windows Desktop, macOS, or Linux/X11).
+4. Click **Export Project** (not **Export PCK/ZIP**).
+5. Choose the output path matching the preset default (`exports/<platform>/`) or a custom path.
+6. Confirm the export completes with no errors in the output panel.
+
+### Validation on a Clean Machine
+
+After exporting, validate the binary on a machine with no Godot editor installed:
+
+1. Copy only the exported binary (`.exe`, `.app` bundle, or `.x86_64`) to the clean machine — no project files.
+2. Run the binary.
+3. Confirm the game launches to `boot.tscn` without missing resource errors in the OS console.
+4. Advance past the boot screen to verify autoloads initialize correctly.
+
+### Version String
+
+The application version is sourced from **ProjectSettings → application/config/version** (`project.godot`). Update this value before tagging a release. The version propagates automatically to all three export presets via the `application/version` and `application/file_version` preset options.

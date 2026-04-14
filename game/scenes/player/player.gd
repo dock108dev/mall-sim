@@ -31,7 +31,6 @@ var _build_mode_active: bool = false
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_update_camera_transform()
-	_interaction_ray.initialize(_camera)
 
 
 func _unhandled_input(event: InputEvent) -> void:

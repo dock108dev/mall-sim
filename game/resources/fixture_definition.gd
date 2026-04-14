@@ -32,16 +32,33 @@ const TIER_REP_REQUIREMENTS: Dictionary = {
 	TierLevel.PREMIUM: 40.0,
 }
 
+const SELLBACK_RATE: float = 0.5
+
 @export var id: String = ""
 @export var name: String = ""
+@export var display_name: String = ""
 @export var category: String = "universal"
 @export var price: float = 0.0
+@export var cost: float = 0.0
 @export var grid_size: Vector2i = Vector2i(1, 1)
+@export var footprint_cells: Array[Vector2i] = []
 @export var slot_count: int = 0
+@export var rotation_support: bool = false
+@export var store_type_restriction: String = ""
+@export var unlock_rep: float = 0.0
+@export var unlock_day: int = 0
 @export var unlock_condition: Dictionary = {}
 @export var store_types: PackedStringArray = []
+@export var requires_wall: bool = false
 @export var description: String = ""
+@export var visual_category: String = ""
+@export var scene_path: String = ""
 @export var tier_data: Dictionary = {}
+
+
+## Returns the sell-back value (50% of purchase cost).
+func get_sellback_price() -> float:
+	return cost * SELLBACK_RATE
 
 
 ## Returns the slot count for a given tier level.
@@ -57,7 +74,7 @@ func get_purchase_prob_bonus(tier: int) -> float:
 ## Returns the upgrade cost to reach the given tier.
 func get_upgrade_cost(tier: int) -> float:
 	var multiplier: float = UPGRADE_COST_MULTIPLIERS.get(tier, 0.0)
-	return price * multiplier
+	return cost * multiplier
 
 
 ## Returns the reputation required for a given tier.

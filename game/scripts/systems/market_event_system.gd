@@ -35,11 +35,9 @@ var _days_since_last_event: int = 0
 
 func initialize() -> void:
 	_event_definitions = []
-	_active_events = []
-	_cooldowns = {}
-	_days_since_last_event = 0
 	if GameManager.data_loader:
 		_event_definitions = GameManager.data_loader.get_all_market_events()
+	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
 
 
@@ -70,6 +68,27 @@ func get_active_events() -> Array[Dictionary]:
 	for evt: Dictionary in _active_events:
 		result.append(evt.duplicate())
 	return result
+
+
+## Returns the combined demand multiplier for a category from active events.
+func get_category_demand_multiplier(category: StringName) -> float:
+	if category.is_empty():
+		return 1.0
+	var combined: float = 1.0
+	for event_data: Dictionary in _active_events:
+		var phase: int = event_data.get("phase", Phase.NONE) as int
+		if phase == Phase.ANNOUNCEMENT or phase == Phase.COOLDOWN:
+			continue
+		var def: MarketEventDefinition = event_data.get(
+			"definition", null
+		) as MarketEventDefinition
+		if not def:
+			continue
+		if not _category_matches_event(category, def):
+			continue
+		var mult: float = _calc_phase_multiplier(event_data)
+		combined *= mult
+	return clampf(combined, TREND_MULT_MIN, TREND_MULT_MAX)
 
 
 ## Returns the number of events that are past announcement phase.
@@ -103,6 +122,10 @@ func get_save_data() -> Dictionary:
 
 ## Restores state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_days_since_last_event = int(
 		data.get("days_since_last_event", 0)
 	)
@@ -159,6 +182,7 @@ func _advance_event_lifecycles(day: int) -> void:
 			to_remove.append(i)
 			_cooldowns[def.id] = def.cooldown_days
 			EventBus.market_event_ended.emit(def.id)
+			EventBus.market_event_expired.emit(StringName(def.id))
 	for i: int in range(to_remove.size() - 1, -1, -1):
 		_active_events.remove_at(to_remove[i])
 
@@ -191,6 +215,9 @@ func _handle_phase_transition(
 		_days_since_last_event = 0
 		if not def.active_text.is_empty():
 			EventBus.notification_requested.emit(def.active_text)
+		EventBus.market_event_active.emit(
+			StringName(def.id), _build_event_modifier(def)
+		)
 
 
 func _calc_phase_multiplier(event_data: Dictionary) -> float:
@@ -336,6 +363,9 @@ func _activate_event(
 		_days_since_last_event = 0
 		if not def.active_text.is_empty():
 			EventBus.notification_requested.emit(def.active_text)
+		EventBus.market_event_active.emit(
+			StringName(def.id), _build_event_modifier(def)
+		)
 
 
 ## Checks whether an item definition matches an event's targeting filters.
@@ -359,8 +389,26 @@ func _item_matches_event(
 	return true
 
 
+## Checks whether a category matches an event's targeting filters.
+func _category_matches_event(
+	category: StringName,
+	event_def: MarketEventDefinition,
+) -> bool:
+	if event_def.target_categories.is_empty():
+		return true
+	return String(category) in event_def.target_categories
+
+
 func _find_definition(id: String) -> MarketEventDefinition:
 	for def: MarketEventDefinition in _event_definitions:
 		if def.id == id:
 			return def
 	return null
+
+
+## Builds the modifier dictionary emitted with market_event_active.
+func _build_event_modifier(def: MarketEventDefinition) -> Dictionary:
+	return {
+		"spawn_rate_multiplier": def.magnitude,
+		"purchase_intent_multiplier": def.magnitude,
+	}

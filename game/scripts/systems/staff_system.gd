@@ -26,6 +26,7 @@ var _price_policies: Dictionary = {}
 
 ## Auto-incrementing staff instance id counter.
 var _next_staff_id: int = 0
+var _stocker_behavior: StockerBehavior = null
 
 
 func initialize(
@@ -38,8 +39,12 @@ func initialize(
 	_reputation_system = reputation
 	_inventory_system = inventory
 	_data_loader = data_loader
+	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.day_ended.connect(_on_day_ended)
+	_stocker_behavior = StockerBehavior.new()
+	add_child(_stocker_behavior)
+	_stocker_behavior.initialize(inventory, self, data_loader)
 
 
 ## Returns true if the player meets the reputation requirement to hire.
@@ -65,6 +70,27 @@ func get_staff_for_store(
 ## Returns the count of hired staff at a store.
 func get_staff_count(store_id: String) -> int:
 	return get_staff_for_store(store_id).size()
+
+
+## Returns the StaffDefinition for the first hired staff matching the given
+## definition id, searching all stores. Returns null if not found.
+func get_staff(definition_id: StringName) -> StaffDefinition:
+	var target: String = String(definition_id)
+	for store_id: String in _hired_staff:
+		for entry: Variant in _hired_staff[store_id]:
+			if entry is Dictionary:
+				if (entry as Dictionary).get("definition_id", "") == target:
+					return _get_staff_definition(target)
+	return null
+
+
+## Returns all store IDs that currently have hired staff.
+func get_staffed_store_ids() -> Array[String]:
+	var result: Array[String] = []
+	for store_id: String in _hired_staff:
+		if not (_hired_staff[store_id] as Array).is_empty():
+			result.append(store_id)
+	return result
 
 
 ## Hires a staff member for a store. Returns the staff instance dict
@@ -182,16 +208,22 @@ func _on_day_started(_day: int) -> void:
 
 
 func _on_day_ended(_day: int) -> void:
-	_deduct_staff_wages()
+	pass
 
 
 ## Deducts wages for all hired staff across all owned stores.
+## Called by DayCycleController after the player dismisses the day summary.
+func process_daily_wages() -> void:
+	_deduct_staff_wages()
+
+
 func _deduct_staff_wages() -> void:
 	if not _economy_system:
 		return
+	var wage_mult: float = DifficultySystem.get_modifier(&"staff_wage_multiplier")
 	var total_wages: float = 0.0
 	for store_id: String in _hired_staff:
-		var store_wages: float = get_store_daily_wages(store_id)
+		var store_wages: float = get_store_daily_wages(store_id) * wage_mult
 		if store_wages > 0.0:
 			total_wages += store_wages
 	if total_wages > 0.0:
@@ -302,7 +334,7 @@ func _price_store_items(store_id: String, skill: int) -> void:
 	var min_ratio: float = policy.get("min_ratio", 0.5)
 	var max_ratio: float = policy.get("max_ratio", 2.0)
 	for item: ItemInstance in shelf_items:
-		if item.set_price > 0.0:
+		if item.player_set_price > 0.0:
 			continue
 		var market_val: float = _economy_system.calculate_market_value(
 			item
@@ -316,7 +348,7 @@ func _price_store_items(store_id: String, skill: int) -> void:
 		var max_price: float = market_val * max_ratio
 		staff_price = clampf(staff_price, min_price, max_price)
 		staff_price = maxf(staff_price, 0.01)
-		item.set_price = staff_price
+		item.player_set_price = staff_price
 		EventBus.price_set.emit(item.instance_id, staff_price)
 
 
@@ -379,6 +411,12 @@ func get_save_data() -> Dictionary:
 
 ## Restores staff state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+	if _stocker_behavior:
+		_stocker_behavior.refresh_all_stores()
+
+
+func _apply_state(data: Dictionary) -> void:
 	_hired_staff = {}
 	_price_policies = {}
 	_next_staff_id = int(data.get("next_staff_id", 0))

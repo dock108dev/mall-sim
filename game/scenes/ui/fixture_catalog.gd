@@ -49,6 +49,7 @@ func _ready() -> void:
 	EventBus.fixture_placement_invalid.connect(
 		_on_fixture_placement_invalid
 	)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
 
 
 func open() -> void:
@@ -117,22 +118,26 @@ func _create_fixture_button(
 
 	var is_locked: bool = _is_fixture_locked(fixture)
 	var cash: float = _get_current_cash()
-	var is_unaffordable: bool = fixture.price > cash
+	var is_unaffordable: bool = fixture.cost > cash
+	var sellback: float = fixture.get_sellback_price()
 
-	var label_text: String = tr("FIXTURE_INFO") % [
-		fixture.name,
-		fixture.price,
-		fixture.grid_size.x,
-		fixture.grid_size.y,
-		fixture.slot_count,
-	]
+	var label_text: String = (
+		"%s  $%.0f\n%dx%d  %d slots  Sell: $%.0f" % [
+			fixture.display_name,
+			fixture.cost,
+			fixture.grid_size.x,
+			fixture.grid_size.y,
+			fixture.slot_count,
+			sellback,
+		]
+	)
 
 	if is_locked:
 		label_text += "\n%s" % _get_unlock_text(fixture)
 		btn.disabled = true
 		btn.modulate = Color(0.5, 0.5, 0.5, 0.7)
 	elif is_unaffordable:
-		label_text += "\n" + tr("FIXTURE_INSUFFICIENT_FUNDS")
+		label_text += "\n[Insufficient funds]"
 		btn.disabled = true
 		btn.modulate = Color(0.8, 0.4, 0.4, 0.9)
 
@@ -144,35 +149,21 @@ func _create_fixture_button(
 
 
 func _is_fixture_locked(fixture: FixtureDefinition) -> bool:
-	if fixture.unlock_condition.is_empty():
-		return false
-	if fixture.unlock_condition.has("reputation"):
-		var req: float = float(fixture.unlock_condition["reputation"])
-		if current_reputation < req:
-			return true
-	if fixture.unlock_condition.has("day"):
-		var req_day: int = int(fixture.unlock_condition["day"])
-		if current_day < req_day:
-			return true
+	if fixture.unlock_rep > 0 and current_reputation < fixture.unlock_rep:
+		return true
+	if fixture.unlock_day > 0 and current_day < fixture.unlock_day:
+		return true
 	return false
 
 
 func _get_unlock_text(fixture: FixtureDefinition) -> String:
 	var parts: PackedStringArray = []
-	if fixture.unlock_condition.has("reputation"):
-		parts.append(
-			tr("FIXTURE_UNLOCK_REP") % int(
-				fixture.unlock_condition["reputation"]
-			)
-		)
-	if fixture.unlock_condition.has("day"):
-		parts.append(
-			tr("FIXTURE_UNLOCK_DAY") % int(
-				fixture.unlock_condition["day"]
-			)
-		)
+	if fixture.unlock_rep > 0:
+		parts.append("Rep %d needed" % int(fixture.unlock_rep))
+	if fixture.unlock_day > 0:
+		parts.append("Day %d needed" % fixture.unlock_day)
 	if parts.is_empty():
-		return tr("FIXTURE_LOCKED")
+		return "[Locked]"
 	return "[%s]" % ", ".join(parts)
 
 
@@ -200,15 +191,15 @@ func _highlight_selected(active_btn: Button) -> void:
 
 func _update_info_label() -> void:
 	if _selected_fixture_id.is_empty():
-		_info_label.text = tr("FIXTURE_SELECT_HINT")
+		_info_label.text = "Select a fixture to place"
 		return
 	var def: FixtureDefinition = data_loader.get_fixture(
 		_selected_fixture_id
 	)
 	if def:
-		_info_label.text = tr("FIXTURE_PLACING") % def.name
+		_info_label.text = "Placing: %s" % def.display_name
 	else:
-		_info_label.text = tr("FIXTURE_SELECT_FALLBACK")
+		_info_label.text = "Select a fixture to place"
 
 
 func _get_current_cash() -> float:
@@ -218,20 +209,29 @@ func _get_current_cash() -> float:
 
 
 func _update_cash_display() -> void:
-	_cash_label.text = tr("ORDER_CASH") % _get_current_cash()
+	_cash_label.text = "Cash: $%.0f" % _get_current_cash()
 
 
 func _on_money_changed(
 	_old_amount: float, new_amount: float
 ) -> void:
 	if _is_open:
-		_cash_label.text = tr("ORDER_CASH") % new_amount
+		_cash_label.text = "Cash: $%.0f" % new_amount
 		_refresh_catalog()
 
 
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
 		close(true)
+
+
+func _on_active_store_changed(new_store_id: StringName) -> void:
+	store_type = String(new_store_id)
+	if _is_open:
+		if new_store_id.is_empty():
+			close(true)
+		else:
+			_refresh_catalog()
 
 
 func _on_build_mode_entered() -> void:
@@ -248,7 +248,7 @@ func _on_build_mode_exited() -> void:
 
 
 func _on_fixture_placed(
-	_fixture_id: String, _grid_pos: Vector2i
+	_fixture_id: String, _grid_pos: Vector2i, _rotation: int
 ) -> void:
 	if not _is_open:
 		return

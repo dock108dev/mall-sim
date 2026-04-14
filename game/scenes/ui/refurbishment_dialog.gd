@@ -23,14 +23,8 @@ var _anim_tween: Tween
 @onready var _duration_label: Label = (
 	$PanelRoot/Margin/VBox/InfoVBox/DurationLabel
 )
-@onready var _chance_label: Label = (
-	$PanelRoot/Margin/VBox/InfoVBox/ChanceLabel
-)
 @onready var _outcome_label: Label = (
 	$PanelRoot/Margin/VBox/InfoVBox/OutcomeLabel
-)
-@onready var _warning_label: Label = (
-	$PanelRoot/Margin/VBox/InfoVBox/WarningLabel
 )
 @onready var _confirm_button: Button = (
 	$PanelRoot/Margin/VBox/ButtonHBox/ConfirmButton
@@ -94,7 +88,7 @@ func is_open() -> bool:
 
 func _populate(item: ItemInstance) -> void:
 	_title_label.text = tr("REFURBISH_TITLE")
-	_item_name_label.text = item.definition.name
+	_item_name_label.text = item.definition.item_name
 	_condition_label.text = (
 		tr("REFURBISH_CONDITION") % item.condition.capitalize()
 	)
@@ -104,14 +98,24 @@ func _populate(item: ItemInstance) -> void:
 	_duration_label.text = tr("REFURBISH_DURATION") % [
 		duration, "" if duration == 1 else "s"
 	]
-	var chance: float = _refurbishment_system.get_success_chance(item)
-	_chance_label.text = tr("REFURBISH_CHANCE") % int(chance * 100.0)
-	_outcome_label.text = tr("REFURBISH_SUCCESS")
-	_warning_label.text = tr("REFURBISH_FAILURE")
+	var next_cond: String = _get_next_condition_display(item.condition)
+	_outcome_label.text = "Result: condition upgrades to %s" % next_cond
 	var active: int = _refurbishment_system.get_active_count()
 	_confirm_button.text = tr("REFURBISH_SLOTS") % [
 		active, RefurbishmentSystem.MAX_CONCURRENT
 	]
+
+
+func _get_next_condition_display(current: String) -> String:
+	for i: int in range(
+		RefurbishmentSystem.CONDITION_TIERS.size() - 1
+	):
+		if RefurbishmentSystem.CONDITION_TIERS[i] == current:
+			return (
+				RefurbishmentSystem.CONDITION_TIERS[i + 1]
+				.replace("_", " ").capitalize()
+			)
+	return current.replace("_", " ").capitalize()
 
 
 func _on_confirm() -> void:

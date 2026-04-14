@@ -9,7 +9,7 @@ echo "=== ISSUE-024: Modal Animations on 7 Dialog Panels ==="
 
 PANELS=(
     "game/scenes/ui/haggle_panel.gd"
-    "game/scenes/ui/trade_panel.gd"
+    "game/scripts/ui/trade_panel.gd"
     "game/scenes/ui/save_load_panel.gd"
     "game/scenes/ui/settings_panel.gd"
     "game/scenes/ui/authentication_dialog.gd"

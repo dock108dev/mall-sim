@@ -1,12 +1,14 @@
-## Modal dialog for confirming autograph authentication.
+## Modal dialog for confirming item authentication before high-value listing.
 class_name AuthenticationDialog
 extends CanvasLayer
 
 const PANEL_NAME: String = "authentication"
 
 var _authentication_system: AuthenticationSystem = null
+var _inventory_system: InventorySystem = null
 var _current_item: ItemInstance = null
 var _is_open: bool = false
+var _is_pending: bool = false
 var _anim_tween: Tween
 
 @onready var _panel: PanelContainer = $PanelRoot
@@ -14,20 +16,14 @@ var _anim_tween: Tween
 @onready var _item_name_label: Label = (
 	$PanelRoot/Margin/VBox/InfoVBox/ItemNameLabel
 )
+@onready var _condition_label: Label = (
+	$PanelRoot/Margin/VBox/InfoVBox/ConditionLabel
+)
 @onready var _cost_label: Label = (
 	$PanelRoot/Margin/VBox/InfoVBox/CostLabel
 )
-@onready var _duration_label: Label = (
-	$PanelRoot/Margin/VBox/InfoVBox/DurationLabel
-)
-@onready var _chance_label: Label = (
-	$PanelRoot/Margin/VBox/InfoVBox/ChanceLabel
-)
-@onready var _genuine_label: Label = (
-	$PanelRoot/Margin/VBox/InfoVBox/GenuineLabel
-)
-@onready var _fake_label: Label = (
-	$PanelRoot/Margin/VBox/InfoVBox/FakeLabel
+@onready var _error_label: Label = (
+	$PanelRoot/Margin/VBox/InfoVBox/ErrorLabel
 )
 @onready var _confirm_button: Button = (
 	$PanelRoot/Margin/VBox/ButtonHBox/ConfirmButton
@@ -39,8 +35,15 @@ var _anim_tween: Tween
 
 func _ready() -> void:
 	_panel.visible = false
+	_error_label.visible = false
 	_confirm_button.pressed.connect(_on_confirm)
-	_cancel_button.pressed.connect(close)
+	_cancel_button.pressed.connect(_on_cancel)
+	EventBus.authentication_completed.connect(
+		_on_authentication_completed
+	)
+	EventBus.authentication_dialog_requested.connect(
+		_on_dialog_requested
+	)
 
 
 ## Sets the AuthenticationSystem reference.
@@ -50,7 +53,12 @@ func set_authentication_system(
 	_authentication_system = system
 
 
-## Opens the dialog for the given autograph item.
+## Sets the InventorySystem reference for item lookups.
+func set_inventory_system(inventory: InventorySystem) -> void:
+	_inventory_system = inventory
+
+
+## Opens the dialog for the given item.
 func open(item: ItemInstance) -> void:
 	if _is_open:
 		return
@@ -61,11 +69,14 @@ func open(item: ItemInstance) -> void:
 		return
 	if not _authentication_system.can_authenticate(item):
 		EventBus.notification_requested.emit(
-			tr("AUTH_CANNOT")
+			"This item cannot be authenticated"
 		)
 		return
 	_current_item = item
+	_is_pending = false
+	_error_label.visible = false
 	_populate(item)
+	_set_inputs_enabled(true)
 	_is_open = true
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.modal_open(_panel)
@@ -76,6 +87,7 @@ func close() -> void:
 	if not _is_open:
 		return
 	_is_open = false
+	_is_pending = false
 	_current_item = null
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.modal_close(_panel)
@@ -90,26 +102,56 @@ func is_open() -> bool:
 
 
 func _populate(item: ItemInstance) -> void:
-	_title_label.text = tr("AUTH_TITLE")
-	_item_name_label.text = item.definition.name
-	var cost: float = _authentication_system.get_cost(item)
-	_cost_label.text = tr("AUTH_COST") % cost
-	_duration_label.text = tr("AUTH_DURATION")
-	var chance: int = int(
-		AuthenticationSystem.GENUINE_CHANCE * 100.0
-	)
-	_chance_label.text = tr("AUTH_CHANCE") % chance
-	_genuine_label.text = tr("AUTH_GENUINE")
-	_fake_label.text = tr("AUTH_FAKE")
-	_confirm_button.text = tr("AUTH_CONFIRM") % cost
+	_title_label.text = "Authenticate Item"
+	_item_name_label.text = item.definition.item_name
+	_condition_label.text = "Condition: %s" % item.condition.capitalize()
+	var fee: float = _authentication_system.get_auth_fee()
+	_cost_label.text = "Authentication Fee: $%.2f" % fee
+	_confirm_button.text = "Authenticate ($%.2f)" % fee
 
 
 func _on_confirm() -> void:
 	if not _current_item or not _authentication_system:
 		return
-	var success: bool = _authentication_system.start_authentication(
-		_current_item.instance_id
-	)
-	if not success:
+	if _is_pending:
+		return
+	_is_pending = true
+	_error_label.visible = false
+	_set_inputs_enabled(false)
+	_authentication_system.authenticate(_current_item.instance_id)
+
+
+func _on_cancel() -> void:
+	if _is_pending:
 		return
 	close()
+
+
+func _on_authentication_completed(
+	item_id: String, success: bool, message: String
+) -> void:
+	if not _is_open or not _current_item:
+		return
+	if item_id != _current_item.instance_id:
+		return
+	_is_pending = false
+	if success:
+		close()
+	else:
+		_error_label.text = message
+		_error_label.visible = true
+		_set_inputs_enabled(true)
+
+
+func _set_inputs_enabled(enabled: bool) -> void:
+	_confirm_button.disabled = not enabled
+	_cancel_button.disabled = not enabled
+
+
+func _on_dialog_requested(item_id: String) -> void:
+	if not _inventory_system:
+		return
+	var item: ItemInstance = _inventory_system.get_item(item_id)
+	if not item:
+		return
+	open(item)

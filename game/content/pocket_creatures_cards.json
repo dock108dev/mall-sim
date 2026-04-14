@@ -1,0 +1,32 @@
+{
+  "pack_formula": {
+    "commons": 6,
+    "uncommons": 3,
+    "rare_slot": 1,
+    "energy": 1,
+    "total_cards": 11
+  },
+  "rarity_weights": {
+    "rare": 0.64,
+    "holo_rare": 0.33,
+    "secret_rare": 0.03
+  },
+  "rarity_price_table": {
+    "common": 0.25,
+    "uncommon": 1.00,
+    "rare": 3.50,
+    "holo_rare": 15.00,
+    "secret_rare": 75.00,
+    "ultra_rare": 35.00,
+    "energy": 0.10
+  },
+  "pack_conditions": ["good", "near_mint", "mint"],
+  "set_tags": [
+    "base_set",
+    "jungle",
+    "fossil",
+    "team_rocket",
+    "neo_genesis",
+    "crystal_storm"
+  ]
+}

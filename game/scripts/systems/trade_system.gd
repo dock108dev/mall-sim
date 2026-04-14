@@ -114,12 +114,12 @@ func _show_trade_panel() -> void:
 	if not _trade_panel:
 		push_warning("TradeSystem: no trade panel assigned")
 		return
-	var wanted_name: String = _wanted_item.definition.name
+	var wanted_name: String = _wanted_item.definition.item_name
 	var wanted_cond: String = _wanted_item.condition.capitalize()
 	var wanted_val: float = _economy_system.calculate_market_value(
 		_wanted_item
 	)
-	var offered_name: String = _offered_item.definition.name
+	var offered_name: String = _offered_item.definition.item_name
 	var offered_cond: String = _offered_item.condition.capitalize()
 	var offered_val: float = _economy_system.calculate_market_value(
 		_offered_item
@@ -168,7 +168,7 @@ func _process_trade() -> void:
 		_offered_item.instance_id,
 	)
 	EventBus.notification_requested.emit(
-		"Trade completed! Received %s" % _offered_item.definition.name
+		"Trade completed! Received %s" % _offered_item.definition.item_name
 	)
 
 

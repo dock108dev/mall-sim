@@ -1,0 +1,88 @@
+[gd_scene load_steps=2 format=3 uid="uid://upgradepanel01"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/upgrade_panel.gd" id="1"]
+
+[node name="UpgradePanel" type="CanvasLayer"]
+layer = 6
+script = ExtResource("1")
+
+[node name="PanelRoot" type="PanelContainer" parent="."]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 780.0
+offset_top = 60.0
+offset_right = -20.0
+offset_bottom = -20.0
+
+[node name="Margin" type="MarginContainer" parent="PanelRoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+size_flags_horizontal = 3
+text = "Store Upgrades"
+
+[node name="CashLabel" type="Label" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+text = "Cash: $0"
+
+[node name="CloseButton" type="Button" parent="PanelRoot/Margin/VBox/Header"]
+layout_mode = 2
+custom_minimum_size = Vector2(30, 0)
+text = "X"
+
+[node name="UniversalSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="UniversalLabel" type="Label" parent="PanelRoot/Margin/VBox/UniversalSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Universal Upgrades"
+
+[node name="UniversalScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/UniversalSection"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 160)
+
+[node name="UniversalGrid" type="GridContainer" parent="PanelRoot/Margin/VBox/UniversalSection/UniversalScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 1
+
+[node name="SpecificSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="SpecificLabel" type="Label" parent="PanelRoot/Margin/VBox/SpecificSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Store-Specific Upgrades"
+
+[node name="SpecificScroll" type="ScrollContainer" parent="PanelRoot/Margin/VBox/SpecificSection"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 160)
+
+[node name="SpecificGrid" type="GridContainer" parent="PanelRoot/Margin/VBox/SpecificSection/SpecificScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 1
+
+[node name="InfoLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+text = "Purchase upgrades to improve your store"
+autowrap_mode = 2

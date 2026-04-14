@@ -45,14 +45,7 @@ var _data_loader: DataLoader = null
 
 func initialize(data_loader: DataLoader) -> void:
 	_data_loader = data_loader
-	_rising_cards = []
-	_falling_cards = []
-	_active_day = 0
-	_announced_day = 0
-	_shift_active = false
-	_days_until_next_announcement = randi_range(
-		MIN_SHIFT_INTERVAL, MAX_SHIFT_INTERVAL
-	)
+	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
 
 
@@ -131,6 +124,10 @@ func get_save_data() -> Dictionary:
 
 ## Restores meta shift state from saved data.
 func load_save_data(data: Dictionary) -> void:
+	_apply_state(data)
+
+
+func _apply_state(data: Dictionary) -> void:
 	_rising_cards = []
 	var saved_rising: Array = data.get("rising_cards", [])
 	for entry: Variant in saved_rising:

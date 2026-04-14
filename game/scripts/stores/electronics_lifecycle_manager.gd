@@ -28,6 +28,10 @@ const CLEARANCE_FADE_DAYS: int = 20
 const OBSOLETE_MULT_MAX: float = 0.2
 const OBSOLETE_MULT_MIN: float = 0.1
 
+const CONDITION_ORDER: Array[String] = [
+	"mint", "near_mint", "good", "fair", "poor",
+]
+
 ## product_line -> highest generation that has launched so far.
 var _active_generations: Dictionary = {}
 
@@ -168,6 +172,16 @@ func check_phase_transitions(
 			EventBus.electronics_phase_changed.emit(
 				item.id, last_phase, current_phase_name
 			)
+
+
+## Degrades a demo unit's condition by one tier. Returns the new condition.
+func degrade_demo_unit(item: ItemInstance) -> String:
+	var idx: int = CONDITION_ORDER.find(item.condition)
+	if idx < 0 or idx >= CONDITION_ORDER.size() - 1:
+		return item.condition
+	var new_condition: String = CONDITION_ORDER[idx + 1]
+	item.condition = new_condition
+	return new_condition
 
 
 ## Serializes lifecycle state for saving.

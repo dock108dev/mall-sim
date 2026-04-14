@@ -1,7 +1,7 @@
 [
   {
     "id": "elec_zunewave_128",
-    "name": "ZuneWave 128MB MP3 Player",
+    "item_name": "ZuneWave 128MB MP3 Player",
     "description": "Brushed aluminum body, blue backlit LCD. Holds about 30 songs. The entry-level dream.",
     "category": "portable_audio",
     "subcategory": "mp3_players",
@@ -10,11 +10,16 @@
     "rarity": "common",
     "condition_range": ["fair", "good", "near_mint", "mint"],
     "tags": ["audio", "portable", "budget", "mp3"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.3,
+    "launch_spike_days": 5
   },
   {
     "id": "elec_zunewave_256",
-    "name": "ZuneWave 256MB MP3 Player",
+    "item_name": "ZuneWave 256MB MP3 Player",
     "description": "Silver body with FM radio tuner. Double the storage, double the playlist.",
     "category": "portable_audio",
     "subcategory": "mp3_players",
@@ -23,11 +28,16 @@
     "rarity": "common",
     "condition_range": ["fair", "good", "near_mint", "mint"],
     "tags": ["audio", "portable", "budget", "mp3"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.3,
+    "launch_spike_days": 5
   },
   {
     "id": "elec_podplay_5gb",
-    "name": "PodPlay 5GB",
+    "item_name": "PodPlay 5GB",
     "description": "Click wheel, white earbuds, 1,000 songs in your pocket. The one everyone wants.",
     "category": "portable_audio",
     "subcategory": "mp3_players",
@@ -36,11 +46,16 @@
     "rarity": "uncommon",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["audio", "portable", "premium", "mp3", "flagship", "popular"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 5,
+    "depreciation_rate": 0.015,
+    "min_value_ratio": 0.2,
+    "launch_demand_multiplier": 1.5,
+    "launch_spike_days": 7
   },
   {
     "id": "elec_podplay_20gb",
-    "name": "PodPlay 20GB",
+    "item_name": "PodPlay 20GB",
     "description": "Hard drive-based. Your entire CD collection, digitized. The premium tier.",
     "category": "portable_audio",
     "subcategory": "mp3_players",
@@ -49,11 +64,16 @@
     "rarity": "rare",
     "condition_range": ["near_mint", "mint"],
     "tags": ["audio", "portable", "premium", "mp3", "flagship", "latest", "storage"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 10,
+    "depreciation_rate": 0.012,
+    "min_value_ratio": 0.2,
+    "launch_demand_multiplier": 1.5,
+    "launch_spike_days": 7
   },
   {
     "id": "elec_discman_cd",
-    "name": "SonicBoom CD Discman",
+    "item_name": "SonicBoom CD Discman",
     "description": "Anti-skip technology (mostly works). 40-second buffer. Being replaced by MP3 but still kicking.",
     "category": "portable_audio",
     "subcategory": "cd_players",
@@ -62,11 +82,16 @@
     "rarity": "common",
     "condition_range": ["fair", "good", "near_mint", "mint"],
     "tags": ["audio", "portable", "budget", "cd", "clearance", "last_gen"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.03,
+    "min_value_ratio": 0.1,
+    "launch_demand_multiplier": 1.0,
+    "launch_spike_days": 0
   },
   {
     "id": "elec_minidisc_player",
-    "name": "SonicBoom MiniDisc Recorder",
+    "item_name": "SonicBoom MiniDisc Recorder",
     "description": "Record your own mix discs. The format that should have won. Niche but beloved.",
     "category": "portable_audio",
     "subcategory": "minidisc",
@@ -75,11 +100,16 @@
     "rarity": "uncommon",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["audio", "portable", "niche", "minidisc", "quality"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.025,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.2,
+    "launch_spike_days": 3
   },
   {
     "id": "elec_portastation_console",
-    "name": "PortaStation Handheld Console",
+    "item_name": "PortaStation Handheld Console",
     "description": "Backlit screen, analog nub, multimedia capable. Gaming on the go never looked this good.",
     "category": "handheld_gaming",
     "subcategory": "consoles",
@@ -88,11 +118,16 @@
     "rarity": "uncommon",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["gaming", "portable", "premium", "flagship", "popular"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 3,
+    "depreciation_rate": 0.015,
+    "min_value_ratio": 0.2,
+    "launch_demand_multiplier": 1.5,
+    "launch_spike_days": 7
   },
   {
     "id": "elec_portastation_racer",
-    "name": "Turbo Kart Racer (PortaStation)",
+    "item_name": "Turbo Kart Racer (PortaStation)",
     "description": "Handheld racing with analog controls. The pack-in game everyone keeps playing.",
     "category": "handheld_gaming",
     "subcategory": "games",
@@ -101,11 +136,16 @@
     "rarity": "common",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["gaming", "portable", "racing"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 3,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.3,
+    "launch_spike_days": 5
   },
   {
     "id": "elec_portastation_quest",
-    "name": "Dragon Quest Portable (PortaStation)",
+    "item_name": "Dragon Quest Portable (PortaStation)",
     "description": "40-hour RPG in your pocket. The reason people miss their bus stop.",
     "category": "handheld_gaming",
     "subcategory": "games",
@@ -114,11 +154,16 @@
     "rarity": "common",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["gaming", "portable", "rpg", "popular"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 8,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.4,
+    "launch_spike_days": 5
   },
   {
     "id": "elec_headphones_budget_earbuds",
-    "name": "SonicBoom Basic Earbuds",
+    "item_name": "SonicBoom Basic Earbuds",
     "description": "Foam-tipped earbuds. They come in a blister pack and they get the job done.",
     "category": "audio",
     "subcategory": "earbuds",
@@ -130,7 +175,7 @@
   },
   {
     "id": "elec_headphones_onear",
-    "name": "SonicBoom DJ-Style On-Ear Headphones",
+    "item_name": "SonicBoom DJ-Style On-Ear Headphones",
     "description": "Padded cups, foldable headband. Punchy bass. The mid-range sweet spot.",
     "category": "audio",
     "subcategory": "headphones",
@@ -142,7 +187,7 @@
   },
   {
     "id": "elec_headphones_overear_pro",
-    "name": "SonicBoom Studio Pro Over-Ear",
+    "item_name": "SonicBoom Studio Pro Over-Ear",
     "description": "Closed-back, noise-isolating, velour pads. For people who actually care about sound.",
     "category": "audio",
     "subcategory": "headphones",
@@ -154,7 +199,7 @@
   },
   {
     "id": "elec_speaker_portable",
-    "name": "SonicBoom Mini Speaker",
+    "item_name": "SonicBoom Mini Speaker",
     "description": "Battery-powered portable speaker. Surprisingly loud for its size. Great gift.",
     "category": "audio",
     "subcategory": "speakers",
@@ -166,7 +211,7 @@
   },
   {
     "id": "elec_clock_radio",
-    "name": "SonicBoom Alarm Clock Radio",
+    "item_name": "SonicBoom Alarm Clock Radio",
     "description": "Red LED display, FM/AM radio, dual alarm. The bedside staple that never goes out of style.",
     "category": "audio",
     "subcategory": "clock_radios",
@@ -178,7 +223,7 @@
   },
   {
     "id": "elec_camera_pixelsnap_budget",
-    "name": "PixelSnap 2.0 Megapixel Camera",
+    "item_name": "PixelSnap 2.0 Megapixel Camera",
     "description": "Point and shoot digital. Takes SD cards. 2 megapixels feels like the future.",
     "category": "gadgets",
     "subcategory": "cameras",
@@ -187,11 +232,16 @@
     "rarity": "common",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["camera", "digital", "budget", "gadget"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.025,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.2,
+    "launch_spike_days": 5
   },
   {
     "id": "elec_camera_pixelsnap_pro",
-    "name": "PixelSnap 5.0 Megapixel Pro",
+    "item_name": "PixelSnap 5.0 Megapixel Pro",
     "description": "Optical zoom, video mode, large LCD screen. Semi-professional pretensions.",
     "category": "gadgets",
     "subcategory": "cameras",
@@ -200,11 +250,16 @@
     "rarity": "uncommon",
     "condition_range": ["near_mint", "mint"],
     "tags": ["camera", "digital", "premium", "gadget", "specs", "latest"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 12,
+    "depreciation_rate": 0.018,
+    "min_value_ratio": 0.2,
+    "launch_demand_multiplier": 1.4,
+    "launch_spike_days": 7
   },
   {
     "id": "elec_usb_drive_64mb",
-    "name": "DataVault 64MB USB Flash Drive",
+    "item_name": "DataVault 64MB USB Flash Drive",
     "description": "Thumb-sized storage. Holds a whole PowerPoint presentation. The floppy disk killer.",
     "category": "gadgets",
     "subcategory": "storage",
@@ -216,7 +271,7 @@
   },
   {
     "id": "elec_usb_drive_512mb",
-    "name": "DataVault 512MB USB Flash Drive",
+    "item_name": "DataVault 512MB USB Flash Drive",
     "description": "Half a gig on a keychain. Enough for hundreds of MP3s or one very large spreadsheet.",
     "category": "gadgets",
     "subcategory": "storage",
@@ -228,7 +283,7 @@
   },
   {
     "id": "elec_pda_organizer",
-    "name": "DataVault Palm Organizer",
+    "item_name": "DataVault Palm Organizer",
     "description": "Touchscreen PDA with stylus. Calendar, contacts, memos. The businessman's companion.",
     "category": "gadgets",
     "subcategory": "pdas",
@@ -237,11 +292,16 @@
     "rarity": "uncommon",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["pda", "gadget", "niche", "premium", "specs"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.3,
+    "launch_spike_days": 5
   },
   {
     "id": "elec_laser_pointer",
-    "name": "Red Laser Pointer Keychain",
+    "item_name": "Red Laser Pointer Keychain",
     "description": "Battery-powered red laser. Entertain cats. Annoy movie theaters. Fun for $8.",
     "category": "gadgets",
     "subcategory": "novelty",
@@ -253,7 +313,7 @@
   },
   {
     "id": "elec_digital_photo_frame",
-    "name": "PixelSnap Digital Photo Frame",
+    "item_name": "PixelSnap Digital Photo Frame",
     "description": "5-inch LCD frame that cycles through photos from an SD card. Grandma loves it.",
     "category": "gadgets",
     "subcategory": "novelty",
@@ -262,11 +322,16 @@
     "rarity": "common",
     "condition_range": ["good", "near_mint", "mint"],
     "tags": ["novelty", "gadget", "gift", "photo"],
-    "depreciates": true
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.025,
+    "min_value_ratio": 0.1,
+    "launch_demand_multiplier": 1.2,
+    "launch_spike_days": 3
   },
   {
     "id": "elec_case_mp3_player",
-    "name": "TechShield MP3 Player Case",
+    "item_name": "TechShield MP3 Player Case",
     "description": "Neoprene case with belt clip. Fits most players. Protects your investment.",
     "category": "accessories",
     "subcategory": "cases",
@@ -278,7 +343,7 @@
   },
   {
     "id": "elec_case_portastation",
-    "name": "TechShield PortaStation Carry Case",
+    "item_name": "TechShield PortaStation Carry Case",
     "description": "Hard-shell case with game cartridge slots. Travel essential.",
     "category": "accessories",
     "subcategory": "cases",
@@ -290,7 +355,7 @@
   },
   {
     "id": "elec_cable_usb",
-    "name": "Universal USB Cable (A to Mini-B)",
+    "item_name": "Universal USB Cable (A to Mini-B)",
     "description": "Connects nearly everything to your PC. You can never have too many.",
     "category": "accessories",
     "subcategory": "cables",
@@ -302,7 +367,7 @@
   },
   {
     "id": "elec_charger_universal",
-    "name": "TechShield Universal AC Adapter",
+    "item_name": "TechShield Universal AC Adapter",
     "description": "Multi-tip AC adapter. When you lose the original, this saves the day.",
     "category": "accessories",
     "subcategory": "chargers",
@@ -314,7 +379,7 @@
   },
   {
     "id": "elec_screen_protector",
-    "name": "TechShield Screen Protector (3-pack)",
+    "item_name": "TechShield Screen Protector (3-pack)",
     "description": "Thin plastic film. Prevents scratches. Impossible to apply without bubbles.",
     "category": "accessories",
     "subcategory": "protection",
@@ -326,7 +391,7 @@
   },
   {
     "id": "elec_batteries_aa",
-    "name": "DataVault AA Batteries (8-pack)",
+    "item_name": "DataVault AA Batteries (8-pack)",
     "description": "Alkaline AA batteries. Everything eats these. Steady seller.",
     "category": "accessories",
     "subcategory": "batteries",
@@ -338,7 +403,7 @@
   },
   {
     "id": "elec_batteries_rechargeable",
-    "name": "DataVault Rechargeable AA Kit (4-pack + Charger)",
+    "item_name": "DataVault Rechargeable AA Kit (4-pack + Charger)",
     "description": "Four NiMH batteries and a wall charger. Pays for itself in a month.",
     "category": "accessories",
     "subcategory": "batteries",

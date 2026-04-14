@@ -1,4 +1,4 @@
-# SSOT Cleanup Audit — 2026-04-10 (Updated 2026-04-10)
+# SSOT Cleanup Audit — 2026-04-10 (Updated 2026-04-14)
 
 ## Diff-Driven Deletion Summary
 
@@ -107,3 +107,73 @@ Active system references verified correct:
 
 No `print()` calls in `game/` (only in `addons/gut/` third-party) ✓
 No `TODO`/`FIXME` comments in `game/` ✓
+
+---
+
+## Pass 2 — 2026-04-14: Post-Diff Destructive Cleanup
+
+Performed after a large batch of git modifications that deleted item files and the `customer_profile.gd` resource class.
+
+### Deleted Resource Files (already in git diff)
+
+| File | Consequence |
+|---|---|
+| `game/resources/customer_profile.gd` | Class removed. Canonical replacement is `CustomerTypeDefinition`. All extant code already used `CustomerTypeDefinition`. |
+| `game/content/items/electronics_mp3_player.json` | Item definition removed. No GDScript code references this ID — only docs/planning files. No code cleanup needed. |
+| `game/content/items/fakemon_booster.json` | Same as above. |
+| `game/content/items/games_retro_cartridge.json` | Same as above. |
+| `game/content/items/sports_memorabilia_cards.json` | Same as above. |
+
+### Code Deletions Made in This Pass
+
+#### `event_bus.gd` — `signal cash_changed` removed
+
+`cash_changed(new_balance: float)` was emitted only in `EconomySystem.add_cash()` and nowhere else. It was never emitted by `deduct_cash()` or `force_deduct_cash()`, making it an incomplete and misleading signal. No production code subscribed to it. The canonical signal is `money_changed(old_amount, new_amount)`, which is emitted by all five cash-mutating paths in `EconomySystem`.
+
+#### `economy_system.gd` — orphaned `cash_changed` emit removed
+
+Removed the sole `EventBus.cash_changed.emit(_current_cash)` call from `add_cash()`.
+
+#### `audio_manager.gd` — `play_music`/`stop_music` legacy aliases removed
+
+Both were explicitly annotated "Legacy aliases" and existed only for backward compatibility. No production code called them. Callers should use `play_bgm()` and `stop_bgm()` directly.
+
+#### `data_loader.gd` — dead `"customer_profile"` type key removed
+
+`_TYPE_KEY_MAP` contained `"customer_profile": "customer"` to translate old JSON `"type"` field values. No JSON file in `game/content/` uses `"type": "customer_profile"` — the directory-based dispatch (`"customers"` → `"customer"`) handles all customer files. With `customer_profile.gd` deleted, this key could never produce a valid resource.
+
+#### Tests validating removed behavior — cleaned up
+
+| Test file | What was removed |
+|---|---|
+| `tests/gut/test_economy_customer_purchased.gd` | `_cash_changed_value` field, `cash_changed` connect/disconnect, and `test_customer_purchased_emits_cash_changed()` |
+| `tests/gut/test_audio_manager.gd` | `test_play_music_delegates_to_play_bgm()`, `test_stop_music_delegates_to_stop_bgm()` |
+| `tests/test_audio_manager.gd` | `test_play_music_updates_current_track()`, `test_play_music_invalid_id_pushes_error()` |
+
+### SSOT Verification (Pass 2)
+
+| Domain | Authoritative Source | Notes |
+|---|---|---|
+| Player cash | `EconomySystem._current_cash` | Emits `money_changed(old, new)`. `cash_changed` deleted. |
+| Current day | `TimeSystem.current_day` | `GameManager._current_day` is a read-only getter-only proxy. No setter. |
+| Active store | `StoreStateSystem.active_store_id` | `GameManager.current_store_id` updated by store transition signals only. |
+| World environment | `EnvironmentManager` | No `WorldEnvironment` nodes found embedded in store interior scenes. |
+| Customer archetypes | `CustomerTypeDefinition` | `CustomerProfile` class deleted; all code already migrated. |
+
+### Risk Log (Pass 2)
+
+**`inventory_updated(store_id)` alongside `inventory_changed()`** — Both emitted by `InventorySystem`. `inventory_changed()` has production subscribers; `inventory_updated` has test-only subscribers. Retained as-is; flagged for future unification.
+
+**`casual_browser.json` minimal schema** — Missing many `CustomerTypeDefinition` fields. Default values apply. Not a code bug — content gap for the content team.
+
+### Pass 2 Sanity Check
+
+| Symbol | Status |
+|---|---|
+| `cash_changed` signal | Deleted from `event_bus.gd`, emit removed from `economy_system.gd`, tests updated ✓ |
+| `play_music` / `stop_music` | Deleted from `audio_manager.gd`, tests updated ✓ |
+| `_TYPE_KEY_MAP["customer_profile"]` | Deleted from `data_loader.gd` ✓ |
+| `customer_profile.gd` path references | None found in any `.gd`, `.tscn`, or `.tres` file ✓ |
+| Deleted item IDs in `.gd` code | None found — only in docs/planning files ✓ |
+| `WorldEnvironment` nodes in store scenes | None found ✓ |
+| Deprecated signals (`secret_thread_unlocked`, `ambient_moment_triggered`, `ending_selected`, `game_ending_triggered`) | Not present in `event_bus.gd` ✓ |

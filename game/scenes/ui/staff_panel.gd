@@ -1,71 +1,66 @@
-## Staff hiring and management panel for viewing, hiring, and firing staff.
+## Staff hiring and management panel with candidate list and per-store overview.
 class_name StaffPanel
 extends CanvasLayer
 
 const PANEL_NAME: String = "staff"
+const MAX_SKILL: int = 3
 
-const SPEC_COLORS: Dictionary = {
-	"stocking": Color(0.4, 0.7, 0.3),
-	"pricing": Color(0.3, 0.5, 0.9),
-	"customer_service": Color(0.9, 0.6, 0.2),
+const ROLE_ICONS: Dictionary = {
+	StaffDefinition.StaffRole.CASHIER: "💵",
+	StaffDefinition.StaffRole.STOCKER: "📦",
+	StaffDefinition.StaffRole.GREETER: "👋",
 }
 
-var staff_system: StaffSystem
-var economy_system: EconomySystem
-var reputation_system: ReputationSystem
+const MORALE_GREEN_THRESHOLD: float = 0.65
+const MORALE_YELLOW_THRESHOLD: float = 0.30
+const MORALE_COLOR_GREEN: Color = Color(0.3, 0.8, 0.3)
+const MORALE_COLOR_YELLOW: Color = Color(0.9, 0.8, 0.2)
+const MORALE_COLOR_RED: Color = Color(0.9, 0.2, 0.2)
+const MORALE_BG_COLOR: Color = Color(0.2, 0.2, 0.2)
+const MORALE_BAR_WIDTH: float = 80.0
+const MORALE_BAR_HEIGHT: float = 14.0
+
+const TOAST_DURATION: float = 2.5
 
 var _is_open: bool = false
 var _anim_tween: Tween
 var _rest_x: float = 0.0
 var _current_store_id: String = ""
+var _pending_fire_id: String = ""
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _close_button: Button = (
 	$PanelRoot/Margin/VBox/Header/CloseButton
 )
-@onready var _cash_label: Label = (
-	$PanelRoot/Margin/VBox/Header/CashLabel
+@onready var _capacity_label: Label = (
+	$PanelRoot/Margin/VBox/Header/CapacityLabel
 )
-@onready var _status_label: Label = (
-	$PanelRoot/Margin/VBox/StatusLabel
+@onready var _tab_container: TabContainer = (
+	$PanelRoot/Margin/VBox/TabContainer
 )
-@onready var _hired_title: Label = (
-	$PanelRoot/Margin/VBox/HiredSection/HiredTitle
+@onready var _current_staff_list: VBoxContainer = (
+	$PanelRoot/Margin/VBox/TabContainer/CurrentStaff/StaffScroll/StaffList
 )
-@onready var _hired_list: VBoxContainer = (
-	$PanelRoot/Margin/VBox/HiredSection/HiredList
+@onready var _hire_list: VBoxContainer = (
+	$PanelRoot/Margin/VBox/TabContainer/Hire/HireScroll/HireList
 )
-@onready var _available_list: VBoxContainer = (
-	$PanelRoot/Margin/VBox/AvailableScroll/AvailableList
-)
-@onready var _wages_label: Label = (
-	$PanelRoot/Margin/VBox/Footer/WagesLabel
-)
-@onready var _min_slider: HSlider = (
-	$PanelRoot/Margin/VBox/PolicySection/MinSlider
-)
-@onready var _max_slider: HSlider = (
-	$PanelRoot/Margin/VBox/PolicySection/MaxSlider
-)
-@onready var _min_value_label: Label = (
-	$PanelRoot/Margin/VBox/PolicySection/MinValue
-)
-@onready var _max_value_label: Label = (
-	$PanelRoot/Margin/VBox/PolicySection/MaxValue
-)
+@onready var _confirm_dialog: ConfirmationDialog = $ConfirmDialog
+@onready var _toast_panel: PanelContainer = $ToastPanel
+@onready var _toast_label: Label = $ToastPanel/ToastLabel
 
 
 func _ready() -> void:
 	_panel.visible = false
 	_rest_x = _panel.position.x
+	_toast_panel.visible = false
 	_close_button.pressed.connect(close)
-	_min_slider.value_changed.connect(_on_min_slider_changed)
-	_max_slider.value_changed.connect(_on_max_slider_changed)
+	_confirm_dialog.confirmed.connect(_on_fire_confirmed)
 	EventBus.panel_opened.connect(_on_panel_opened)
-	EventBus.money_changed.connect(_on_money_changed)
-	EventBus.reputation_changed.connect(_on_reputation_changed)
 	EventBus.toggle_staff_panel.connect(_toggle)
-	EventBus.store_opened.connect(_on_store_opened)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
+	EventBus.staff_hired.connect(_on_staff_changed)
+	EventBus.staff_fired.connect(_on_staff_changed)
+	EventBus.staff_quit.connect(_on_staff_quit)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -119,247 +114,197 @@ func _toggle() -> void:
 
 
 func _refresh_all() -> void:
-	_update_status()
-	_update_cash_label()
-	_refresh_hired_list()
-	_refresh_available_list()
-	_update_wages_label()
-	_load_policy_sliders()
+	_update_capacity_label()
+	_refresh_current_staff()
+	_refresh_hire_list()
 
 
-func _update_status() -> void:
-	if not reputation_system:
-		_status_label.text = tr("STAFF_REP_NONE")
-		return
-	var rep: float = reputation_system.get_reputation()
-	if rep < StaffSystem.MIN_REPUTATION_TO_HIRE:
-		_status_label.text = (
-			tr("STAFF_REP_NEED")
-			% [rep, StaffSystem.MIN_REPUTATION_TO_HIRE]
-		)
-	else:
-		_status_label.text = tr("STAFF_REP_CURRENT") % rep
-
-
-func _update_cash_label() -> void:
-	if economy_system:
-		_cash_label.text = (
-			tr("ORDER_CASH") % economy_system.get_cash()
-		)
-
-
-func _refresh_hired_list() -> void:
-	_clear_container(_hired_list)
-	if not staff_system:
-		return
-	var staff: Array[Dictionary] = (
-		staff_system.get_staff_for_store(_current_store_id)
+func _update_capacity_label() -> void:
+	var count: int = StaffManager.get_staff_count_for_store(
+		_current_store_id
 	)
-	var max_staff: int = StaffSystem.MAX_STAFF_PER_STORE
-	_hired_title.text = (
-		tr("STAFF_CURRENT") % [staff.size(), max_staff]
+	var max_count: int = StaffManager.get_max_staff_for_store(
+		_current_store_id
+	)
+	_capacity_label.text = "Staff: %d / %d" % [count, max_count]
+
+
+func _refresh_current_staff() -> void:
+	_clear_container(_current_staff_list)
+	var staff: Array[StaffDefinition] = (
+		StaffManager.get_staff_for_store(_current_store_id)
 	)
 	if staff.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = tr("STAFF_NO_HIRED")
+		empty_label.text = "No staff hired yet"
 		empty_label.horizontal_alignment = (
 			HORIZONTAL_ALIGNMENT_CENTER
 		)
-		_hired_list.add_child(empty_label)
+		_current_staff_list.add_child(empty_label)
 		return
-	for entry: Dictionary in staff:
-		_create_hired_row(entry)
+	for member: StaffDefinition in staff:
+		_create_staff_row(member)
 
 
-func _create_hired_row(staff_data: Dictionary) -> void:
-	var def_id: String = staff_data.get("definition_id", "")
-	var def: StaffDefinition = _get_definition(def_id)
-	if not def:
-		return
+func _create_staff_row(staff: StaffDefinition) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 
-	var spec_rect := ColorRect.new()
-	spec_rect.custom_minimum_size = Vector2(6, 0)
-	spec_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	spec_rect.color = SPEC_COLORS.get(
-		def.specialization, Color.GRAY
-	)
-	row.add_child(spec_rect)
-
 	var name_label := Label.new()
-	name_label.text = def.name
+	name_label.text = staff.display_name
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name_label)
 
-	var spec_label := Label.new()
-	spec_label.text = _format_specialization(def.specialization)
-	spec_label.custom_minimum_size = Vector2(100, 0)
-	row.add_child(spec_label)
+	var role_label := Label.new()
+	role_label.text = ROLE_ICONS.get(staff.role, "?")
+	role_label.custom_minimum_size = Vector2(30, 0)
+	role_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	row.add_child(role_label)
 
-	var skill_label := Label.new()
-	skill_label.text = tr("STAFF_SKILL") % def.skill_level
-	skill_label.custom_minimum_size = Vector2(50, 0)
-	row.add_child(skill_label)
+	var stars_label := Label.new()
+	stars_label.text = _format_skill_stars(staff.skill_level)
+	stars_label.custom_minimum_size = Vector2(50, 0)
+	row.add_child(stars_label)
 
-	var wage_label := Label.new()
-	wage_label.text = tr("STAFF_WAGE") % def.daily_wage
-	wage_label.custom_minimum_size = Vector2(60, 0)
-	wage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	row.add_child(wage_label)
+	var morale_bar := _create_morale_bar(staff.morale)
+	row.add_child(morale_bar)
 
 	var fire_btn := Button.new()
-	fire_btn.text = tr("STAFF_FIRE")
+	fire_btn.text = "Fire"
 	fire_btn.custom_minimum_size = Vector2(60, 0)
-	var inst_id: String = staff_data.get("instance_id", "")
 	fire_btn.pressed.connect(
-		_on_fire_pressed.bind(inst_id, _current_store_id)
+		_on_fire_pressed.bind(staff.staff_id, staff.display_name)
 	)
 	row.add_child(fire_btn)
 
-	_hired_list.add_child(row)
+	_current_staff_list.add_child(row)
 
 
-func _refresh_available_list() -> void:
-	_clear_container(_available_list)
-	if not GameManager.data_loader:
+func _refresh_hire_list() -> void:
+	_clear_container(_hire_list)
+	var candidates: Array[StaffDefinition] = (
+		StaffManager.get_candidate_pool()
+	)
+	var at_capacity: bool = (
+		StaffManager.get_staff_count_for_store(_current_store_id)
+		>= StaffManager.get_max_staff_for_store(_current_store_id)
+	)
+	if candidates.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "No candidates available"
+		empty_label.horizontal_alignment = (
+			HORIZONTAL_ALIGNMENT_CENTER
+		)
+		_hire_list.add_child(empty_label)
 		return
-	var can_hire: bool = staff_system != null and staff_system.can_hire()
-	var at_max: bool = (
-		staff_system != null
-		and staff_system.get_staff_count(_current_store_id)
-		>= StaffSystem.MAX_STAFF_PER_STORE
-	)
-	var defs: Array[StaffDefinition] = (
-		GameManager.data_loader.get_all_staff_definitions()
-	)
-	defs.sort_custom(_sort_by_wage)
-	for def: StaffDefinition in defs:
-		_create_available_row(def, can_hire, at_max)
+	for candidate: StaffDefinition in candidates:
+		_create_hire_row(candidate, at_capacity)
 
 
-func _create_available_row(
-	def: StaffDefinition,
-	can_hire: bool,
-	at_max: bool
+func _create_hire_row(
+	candidate: StaffDefinition, at_capacity: bool
 ) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 
-	var spec_rect := ColorRect.new()
-	spec_rect.custom_minimum_size = Vector2(6, 0)
-	spec_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	spec_rect.color = SPEC_COLORS.get(
-		def.specialization, Color.GRAY
-	)
-	row.add_child(spec_rect)
-
-	var info_vbox := VBoxContainer.new()
-	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
 	var name_label := Label.new()
-	name_label.text = def.name
-	info_vbox.add_child(name_label)
+	name_label.text = candidate.display_name
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name_label)
 
-	var desc_label := Label.new()
-	desc_label.text = def.description
-	desc_label.add_theme_font_size_override("font_size", 12)
-	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info_vbox.add_child(desc_label)
-	row.add_child(info_vbox)
+	var role_label := Label.new()
+	role_label.text = _get_role_name(candidate.role)
+	role_label.custom_minimum_size = Vector2(80, 0)
+	row.add_child(role_label)
 
-	var spec_label := Label.new()
-	spec_label.text = _format_specialization(def.specialization)
-	spec_label.custom_minimum_size = Vector2(100, 0)
-	row.add_child(spec_label)
-
-	var skill_label := Label.new()
-	skill_label.text = tr("STAFF_SKILL") % def.skill_level
-	skill_label.custom_minimum_size = Vector2(50, 0)
-	row.add_child(skill_label)
+	var stars_label := Label.new()
+	stars_label.text = _format_skill_stars(candidate.skill_level)
+	stars_label.custom_minimum_size = Vector2(50, 0)
+	row.add_child(stars_label)
 
 	var wage_label := Label.new()
-	wage_label.text = tr("STAFF_WAGE") % def.daily_wage
-	wage_label.custom_minimum_size = Vector2(60, 0)
+	wage_label.text = "$%d/day" % int(candidate.daily_wage)
+	wage_label.custom_minimum_size = Vector2(70, 0)
 	wage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(wage_label)
 
 	var hire_btn := Button.new()
-	hire_btn.text = tr("STAFF_HIRE")
+	hire_btn.text = "Hire"
 	hire_btn.custom_minimum_size = Vector2(60, 0)
-	hire_btn.disabled = not can_hire or at_max
-	if not can_hire:
-		hire_btn.tooltip_text = tr("STAFF_NEED_REP")
-	elif at_max:
-		hire_btn.tooltip_text = tr("STAFF_MAX_REACHED")
+	hire_btn.disabled = at_capacity
+	if at_capacity:
+		hire_btn.tooltip_text = "Store at capacity"
 	hire_btn.pressed.connect(
-		_on_hire_pressed.bind(def.id)
+		_on_hire_pressed.bind(candidate.staff_id)
 	)
 	row.add_child(hire_btn)
 
-	_available_list.add_child(row)
+	_hire_list.add_child(row)
 
 
-func _update_wages_label() -> void:
-	if not staff_system:
-		_wages_label.text = tr("STAFF_DAILY_WAGES_ZERO")
-		return
-	var wages: float = staff_system.get_store_daily_wages(
-		_current_store_id
-	)
-	_wages_label.text = tr("STAFF_DAILY_WAGES") % wages
-
-
-func _load_policy_sliders() -> void:
-	if not staff_system:
-		return
-	var policy: Dictionary = staff_system.get_price_policy(
-		_current_store_id
-	)
-	_min_slider.set_value_no_signal(
-		policy.get("min_ratio", 0.5)
-	)
-	_max_slider.set_value_no_signal(
-		policy.get("max_ratio", 2.0)
-	)
-	_min_value_label.text = "%d%%" % int(
-		_min_slider.value * 100.0
-	)
-	_max_value_label.text = "%d%%" % int(
-		_max_slider.value * 100.0
+func _create_morale_bar(morale: float) -> Control:
+	var container := Control.new()
+	container.custom_minimum_size = Vector2(
+		MORALE_BAR_WIDTH, MORALE_BAR_HEIGHT
 	)
 
+	var bg := ColorRect.new()
+	bg.color = MORALE_BG_COLOR
+	bg.position = Vector2.ZERO
+	bg.size = Vector2(MORALE_BAR_WIDTH, MORALE_BAR_HEIGHT)
+	container.add_child(bg)
 
-func _on_hire_pressed(definition_id: String) -> void:
-	if not staff_system:
-		return
-	staff_system.hire_staff(definition_id, _current_store_id)
-	_refresh_all()
+	var fill := ColorRect.new()
+	fill.color = _get_morale_color(morale)
+	fill.position = Vector2.ZERO
+	fill.size = Vector2(
+		MORALE_BAR_WIDTH * morale, MORALE_BAR_HEIGHT
+	)
+	container.add_child(fill)
+
+	return container
+
+
+func _on_hire_pressed(candidate_id: String) -> void:
+	var success: bool = StaffManager.hire_candidate(
+		candidate_id, _current_store_id
+	)
+	if not success:
+		_show_toast("Store at capacity")
 
 
 func _on_fire_pressed(
-	instance_id: String, store_id: String
+	staff_id: String, staff_name: String
 ) -> void:
-	if not staff_system:
+	_pending_fire_id = staff_id
+	_confirm_dialog.dialog_text = (
+		"Fire %s? This cannot be undone." % staff_name
+	)
+	_confirm_dialog.popup_centered()
+
+
+func _on_fire_confirmed() -> void:
+	if _pending_fire_id.is_empty():
 		return
-	staff_system.fire_staff(instance_id, store_id)
-	_refresh_all()
+	StaffManager.fire_staff(_pending_fire_id)
+	_pending_fire_id = ""
 
 
-func _on_min_slider_changed(value: float) -> void:
-	_min_value_label.text = "%d%%" % int(value * 100.0)
-	if staff_system:
-		staff_system.set_price_policy(
-			_current_store_id, value, _max_slider.value
-		)
-
-
-func _on_max_slider_changed(value: float) -> void:
-	_max_value_label.text = "%d%%" % int(value * 100.0)
-	if staff_system:
-		staff_system.set_price_policy(
-			_current_store_id, _min_slider.value, value
-		)
+func _show_toast(message: String) -> void:
+	_toast_label.text = message
+	_toast_panel.visible = true
+	_toast_panel.modulate = Color.WHITE
+	var tween: Tween = create_tween()
+	tween.tween_interval(TOAST_DURATION)
+	tween.tween_property(
+		_toast_panel, "modulate",
+		Color(1.0, 1.0, 1.0, 0.0), 0.3
+	)
+	tween.tween_callback(
+		func() -> void:
+			_toast_panel.visible = false
+			_toast_panel.modulate = Color.WHITE
+	)
 
 
 func _on_panel_opened(panel_name: String) -> void:
@@ -367,33 +312,25 @@ func _on_panel_opened(panel_name: String) -> void:
 		close(true)
 
 
-func _on_money_changed(
-	_old_amount: float, _new_amount: float
+func _on_active_store_changed(new_store_id: StringName) -> void:
+	_current_store_id = String(new_store_id)
+	if _is_open:
+		if new_store_id.is_empty():
+			close(true)
+		else:
+			_refresh_all()
+
+
+func _on_staff_changed(
+	_staff_id: String, _store_id: String
 ) -> void:
-	if not _is_open:
-		return
-	_update_cash_label()
-
-
-func _on_reputation_changed(
-	_old_value: float, _new_value: float
-) -> void:
-	if not _is_open:
-		return
-	_update_status()
-	_refresh_available_list()
-
-
-func _on_store_opened(store_id: String) -> void:
-	_current_store_id = store_id
 	if _is_open:
 		_refresh_all()
 
 
-func _get_definition(def_id: String) -> StaffDefinition:
-	if GameManager.data_loader:
-		return GameManager.data_loader.get_staff_definition(def_id)
-	return null
+func _on_staff_quit(_staff_id: String) -> void:
+	if _is_open:
+		_refresh_all()
 
 
 func _clear_container(container: VBoxContainer) -> void:
@@ -401,11 +338,26 @@ func _clear_container(container: VBoxContainer) -> void:
 		child.queue_free()
 
 
-static func _format_specialization(spec: String) -> String:
-	return spec.replace("_", " ").capitalize()
+static func _format_skill_stars(level: int) -> String:
+	var filled: String = "★".repeat(level)
+	var empty: String = "☆".repeat(MAX_SKILL - level)
+	return filled + empty
 
 
-static func _sort_by_wage(
-	a: StaffDefinition, b: StaffDefinition
-) -> bool:
-	return a.daily_wage < b.daily_wage
+static func _get_morale_color(morale: float) -> Color:
+	if morale >= MORALE_GREEN_THRESHOLD:
+		return MORALE_COLOR_GREEN
+	if morale >= MORALE_YELLOW_THRESHOLD:
+		return MORALE_COLOR_YELLOW
+	return MORALE_COLOR_RED
+
+
+static func _get_role_name(role: StaffDefinition.StaffRole) -> String:
+	match role:
+		StaffDefinition.StaffRole.CASHIER:
+			return "Cashier"
+		StaffDefinition.StaffRole.STOCKER:
+			return "Stocker"
+		StaffDefinition.StaffRole.GREETER:
+			return "Greeter"
+	return "Unknown"

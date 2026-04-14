@@ -1,0 +1,38 @@
+[
+  {
+    "id": "hockey_season",
+    "sport_tag": "hockey",
+    "display_name": "XHL Winter Classic Season",
+    "start_day": 5,
+    "end_day": 38,
+    "in_season_multiplier": 1.45,
+    "off_season_multiplier": 0.65
+  },
+  {
+    "id": "baseball_season",
+    "sport_tag": "baseball",
+    "display_name": "CBF Spring Campaign",
+    "start_day": 28,
+    "end_day": 62,
+    "in_season_multiplier": 1.4,
+    "off_season_multiplier": 0.7
+  },
+  {
+    "id": "basketball_season",
+    "sport_tag": "basketball",
+    "display_name": "NHA Finals Run",
+    "start_day": 48,
+    "end_day": 78,
+    "in_season_multiplier": 1.5,
+    "off_season_multiplier": 0.6
+  },
+  {
+    "id": "football_season",
+    "sport_tag": "football",
+    "display_name": "GPL Kickoff Campaign",
+    "start_day": 68,
+    "end_day": 90,
+    "in_season_multiplier": 1.6,
+    "off_season_multiplier": 0.55
+  }
+]
