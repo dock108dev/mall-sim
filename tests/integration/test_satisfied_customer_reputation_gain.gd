@@ -1,4 +1,4 @@
-## Integration test — satisfied customer departure raises store reputation via ReputationSystem.
+## Integration test — satisfied customer departure raises store reputation via ReputationSystemSingleton.
 extends GutTest
 
 const STORE_ID: String = "sports_memorabilia"
@@ -28,7 +28,7 @@ func test_satisfied_customer_increases_score_by_satisfaction_gain() -> void:
 	EventBus.customer_left_mall.emit(_mock_customer, true)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		score_before + ReputationSystem.SATISFACTION_GAIN, 0.01,
+		score_before + ReputationSystemSingleton.SATISFACTION_GAIN, 0.01,
 		"Satisfied customer should increase score by exactly SATISFACTION_GAIN"
 	)
 
@@ -59,7 +59,7 @@ func test_reputation_changed_carries_updated_score() -> void:
 	var params: Array = get_signal_parameters(EventBus, "reputation_changed")
 	assert_almost_eq(
 		params[1] as float,
-		score_before + ReputationSystem.SATISFACTION_GAIN, 0.01,
+		score_before + ReputationSystemSingleton.SATISFACTION_GAIN, 0.01,
 		"reputation_changed second parameter must equal the updated score"
 	)
 
@@ -67,16 +67,16 @@ func test_reputation_changed_carries_updated_score() -> void:
 # ── Tier boundary crossing ─────────────────────────────────────────────────────
 
 func test_tier_crossing_score_matches_expected_new_tier() -> void:
-	var tier_reputable: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var tier_reputable: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	# Place score just below REPUTABLE so one satisfaction gain crosses the boundary.
-	_rep._scores[STORE_ID] = tier_reputable - (ReputationSystem.SATISFACTION_GAIN - 0.01)
+	_rep._scores[STORE_ID] = tier_reputable - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
 
-	var old_tier: ReputationSystem.ReputationTier = _rep.get_tier(STORE_ID)
+	var old_tier: ReputationSystemSingleton.ReputationTier = _rep.get_tier(STORE_ID)
 	assert_eq(
 		old_tier,
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Store must start at UNREMARKABLE for this tier-crossing test"
 	)
 
@@ -84,16 +84,16 @@ func test_tier_crossing_score_matches_expected_new_tier() -> void:
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Tier must advance to REPUTABLE after score crosses the threshold"
 	)
 
 
 func test_tier_crossing_emits_reputation_changed() -> void:
-	var tier_reputable: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var tier_reputable: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
-	_rep._scores[STORE_ID] = tier_reputable - (ReputationSystem.SATISFACTION_GAIN - 0.01)
+	_rep._scores[STORE_ID] = tier_reputable - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
 
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, true)
@@ -105,10 +105,10 @@ func test_tier_crossing_emits_reputation_changed() -> void:
 
 
 func test_tier_crossing_emits_toast_requested_with_reputation_up_category() -> void:
-	var tier_reputable: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var tier_reputable: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
-	_rep._scores[STORE_ID] = tier_reputable - (ReputationSystem.SATISFACTION_GAIN - 0.01)
+	_rep._scores[STORE_ID] = tier_reputable - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
 
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, true)
@@ -138,17 +138,17 @@ func test_no_tier_change_does_not_emit_toast() -> void:
 # ── MAX_REPUTATION ceiling clamping ───────────────────────────────────────────
 
 func test_score_at_max_reputation_remains_clamped() -> void:
-	_rep._scores[STORE_ID] = ReputationSystem.MAX_REPUTATION
+	_rep._scores[STORE_ID] = ReputationSystemSingleton.MAX_REPUTATION
 	EventBus.customer_left_mall.emit(_mock_customer, true)
 	assert_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.MAX_REPUTATION,
+		ReputationSystemSingleton.MAX_REPUTATION,
 		"Score must not exceed MAX_REPUTATION when already at ceiling"
 	)
 
 
 func test_score_at_max_reputation_does_not_emit_reputation_changed() -> void:
-	_rep._scores[STORE_ID] = ReputationSystem.MAX_REPUTATION
+	_rep._scores[STORE_ID] = ReputationSystemSingleton.MAX_REPUTATION
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, true)
 	assert_signal_not_emitted(
@@ -164,6 +164,6 @@ func test_valid_active_store_processes_satisfaction_without_crash() -> void:
 	EventBus.customer_left_mall.emit(_mock_customer, true)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		score_before + ReputationSystem.SATISFACTION_GAIN, 0.01,
+		score_before + ReputationSystemSingleton.SATISFACTION_GAIN, 0.01,
 		"A valid active store_id must process satisfaction gain cleanly"
 	)

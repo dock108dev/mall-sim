@@ -22,7 +22,7 @@ const VALID_RARITIES: Array[String] = [
 func test_minimum_item_counts_per_store() -> void:
 	for store_id: String in REQUIRED_STORES:
 		var items: Array[ItemDefinition] = (
-			DataLoader.get_items_by_store(store_id)
+			DataLoaderSingleton.get_items_by_store(store_id)
 		)
 		var minimum: int = MIN_COUNTS[store_id]
 		assert_gte(
@@ -33,7 +33,7 @@ func test_minimum_item_counts_per_store() -> void:
 
 
 func test_all_items_have_required_fields() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	for item: ItemDefinition in items:
 		assert_ne(item.id, "", "Item should have id")
 		assert_ne(
@@ -63,7 +63,7 @@ func test_all_items_have_required_fields() -> void:
 
 
 func test_all_item_ids_unique() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	var seen: Dictionary = {}
 	for item: ItemDefinition in items:
 		assert_false(
@@ -74,7 +74,7 @@ func test_all_item_ids_unique() -> void:
 
 
 func test_store_types_match_canonical_ids() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	var store_ids: Array[StringName] = (
 		ContentRegistry.get_all_ids("store")
 	)
@@ -91,7 +91,7 @@ func test_store_types_match_canonical_ids() -> void:
 
 func test_no_real_brand_names_in_sports() -> void:
 	var items: Array[ItemDefinition] = (
-		DataLoader.get_items_by_store("sports")
+		DataLoaderSingleton.get_items_by_store("sports")
 	)
 	var banned: Array[String] = [
 		"Nike", "Adidas", "Topps", "Upper Deck", "Fleer",
@@ -114,11 +114,11 @@ func test_no_real_brand_names_in_sports() -> void:
 
 func test_starting_inventory_references_valid() -> void:
 	var stores: Array[StoreDefinition] = (
-		DataLoader.get_all_stores()
+		DataLoaderSingleton.get_all_stores()
 	)
 	for store: StoreDefinition in stores:
 		for item_id: String in store.starting_inventory:
-			var item: ItemDefinition = DataLoader.get_item(item_id)
+			var item: ItemDefinition = DataLoaderSingleton.get_item(item_id)
 			assert_not_null(
 				item,
 				"Store '%s' starter item '%s' should exist"

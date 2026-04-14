@@ -511,9 +511,9 @@ func _apply_sale_reputation(market_value: float) -> void:
 	var ratio: float = _active_offer / market_value
 	if ratio > FAIR_THRESHOLD_HIGH:
 		return
-	var rep_delta: float = ReputationSystem.REP_FAIR_SALE
+	var rep_delta: float = ReputationSystemSingleton.REP_FAIR_SALE
 	if ratio < GENEROUS_THRESHOLD:
-		rep_delta = ReputationSystem.REP_FAIR_SALE * 1.5
+		rep_delta = ReputationSystemSingleton.REP_FAIR_SALE * 1.5
 	_reputation_system.modify_reputation("", rep_delta)
 
 

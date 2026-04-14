@@ -33,7 +33,7 @@ var _difficulty_signals: Array[Dictionary] = []
 func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_data_loader = GameManager.data_loader
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_difficulty_signals = []
 
 	_data_loader = DataLoader.new()
@@ -62,13 +62,13 @@ func before_each() -> void:
 	_order_system.initialize(_inventory_system, null, null)
 
 	## Start each test at Normal difficulty without emitting difficulty_changed.
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 
 
 func after_each() -> void:
 	if EventBus.difficulty_changed.is_connected(_on_difficulty_changed):
 		EventBus.difficulty_changed.disconnect(_on_difficulty_changed)
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 	GameManager.current_store_id = _saved_store_id
 	GameManager.data_loader = _saved_data_loader
 
@@ -99,7 +99,7 @@ func test_scenario_a_initial_delivery_at_normal() -> void:
 
 func test_scenario_a_hard_upgrade_extends_delivery_to_three_days() -> void:
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
-	DifficultySystem.apply_difficulty_change(&"hard")
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
 	assert_eq(
 		_get_first_order_delivery_day(),
 		GameManager.current_day + SPECIALTY_HARD_DAYS,
@@ -109,7 +109,7 @@ func test_scenario_a_hard_upgrade_extends_delivery_to_three_days() -> void:
 
 func test_scenario_a_pending_order_count_preserved_after_upgrade() -> void:
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
-	DifficultySystem.apply_difficulty_change(&"hard")
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
 	assert_eq(
 		_order_system.get_pending_order_count(), 1,
 		"Recalculation must not add or remove pending orders"
@@ -123,7 +123,7 @@ func test_scenario_a_pending_order_count_preserved_after_upgrade() -> void:
 
 func test_scenario_b_easy_downgrade_delivery_never_below_one_day() -> void:
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
-	DifficultySystem.apply_difficulty_change(&"easy")
+	DifficultySystemSingleton.apply_difficulty_change(&"easy")
 	assert_gte(
 		_get_first_order_delivery_day(),
 		GameManager.current_day + 1,
@@ -133,7 +133,7 @@ func test_scenario_b_easy_downgrade_delivery_never_below_one_day() -> void:
 
 func test_scenario_b_easy_downgrade_delivery_day_value() -> void:
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
-	DifficultySystem.apply_difficulty_change(&"easy")
+	DifficultySystemSingleton.apply_difficulty_change(&"easy")
 	assert_eq(
 		_get_first_order_delivery_day(),
 		GameManager.current_day + SPECIALTY_EASY_DAYS,
@@ -143,7 +143,7 @@ func test_scenario_b_easy_downgrade_delivery_day_value() -> void:
 
 func test_scenario_b_easy_downgrade_preserves_pending_order_count() -> void:
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
-	DifficultySystem.apply_difficulty_change(&"easy")
+	DifficultySystemSingleton.apply_difficulty_change(&"easy")
 	assert_eq(
 		_order_system.get_pending_order_count(), 1,
 		"Easy downgrade must not remove pending orders"
@@ -156,7 +156,7 @@ func test_scenario_b_easy_downgrade_preserves_pending_order_count() -> void:
 
 func test_scenario_c_signal_emitted_exactly_once_on_upgrade() -> void:
 	EventBus.difficulty_changed.connect(_on_difficulty_changed)
-	DifficultySystem.apply_difficulty_change(&"hard")
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
 	assert_eq(
 		_difficulty_signals.size(), 1,
 		"difficulty_changed must be emitted exactly once on Normal→Hard"
@@ -165,7 +165,7 @@ func test_scenario_c_signal_emitted_exactly_once_on_upgrade() -> void:
 
 func test_scenario_c_signal_old_tier_is_normal_index() -> void:
 	EventBus.difficulty_changed.connect(_on_difficulty_changed)
-	DifficultySystem.apply_difficulty_change(&"hard")
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
 	assert_eq(
 		_difficulty_signals.size(), 1,
 		"Signal must be emitted before checking payload"
@@ -178,7 +178,7 @@ func test_scenario_c_signal_old_tier_is_normal_index() -> void:
 
 func test_scenario_c_signal_new_tier_is_hard_index() -> void:
 	EventBus.difficulty_changed.connect(_on_difficulty_changed)
-	DifficultySystem.apply_difficulty_change(&"hard")
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
 	assert_eq(
 		_difficulty_signals.size(), 1,
 		"Signal must be emitted before checking payload"
@@ -191,7 +191,7 @@ func test_scenario_c_signal_new_tier_is_hard_index() -> void:
 
 func test_scenario_c_signal_not_emitted_when_tier_unchanged() -> void:
 	EventBus.difficulty_changed.connect(_on_difficulty_changed)
-	DifficultySystem.apply_difficulty_change(&"normal")
+	DifficultySystemSingleton.apply_difficulty_change(&"normal")
 	assert_eq(
 		_difficulty_signals.size(), 0,
 		"difficulty_changed must not emit when tier does not change"
@@ -202,7 +202,7 @@ func test_scenario_c_signal_not_emitted_when_tier_unchanged() -> void:
 
 
 func test_scenario_d_new_order_after_hard_uses_hard_delivery_days() -> void:
-	DifficultySystem.apply_difficulty_change(&"hard")
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
 	assert_eq(
 		_get_first_order_delivery_day(),
@@ -212,7 +212,7 @@ func test_scenario_d_new_order_after_hard_uses_hard_delivery_days() -> void:
 
 
 func test_scenario_d_new_order_after_easy_uses_easy_delivery_days() -> void:
-	DifficultySystem.apply_difficulty_change(&"easy")
+	DifficultySystemSingleton.apply_difficulty_change(&"easy")
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
 	assert_eq(
 		_get_first_order_delivery_day(),
@@ -222,7 +222,7 @@ func test_scenario_d_new_order_after_easy_uses_easy_delivery_days() -> void:
 
 
 func test_scenario_d_new_order_after_hard_not_using_normal_days() -> void:
-	DifficultySystem.apply_difficulty_change(&"hard")
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
 	_order_system.place_order(STORE_ID, SPECIALTY_TIER, ITEM_ID, 1)
 	assert_ne(
 		_get_first_order_delivery_day(),

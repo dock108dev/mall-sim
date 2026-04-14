@@ -1,5 +1,5 @@
 ## Integration test — SecretThreadSystem RESOLVED completion chain:
-## thread_completed → UnlockSystem.grant_unlock → unlock_granted signal.
+## thread_completed → UnlockSystemSingleton.grant_unlock → unlock_granted signal.
 class_name TestSecretThreadCompletionChain
 extends GutTest
 

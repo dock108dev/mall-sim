@@ -11,7 +11,7 @@ var _saved_tier: StringName
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_cash = 1000.0
 	_wages_paid_total = 0.0
 	_not_paid_ids = []
@@ -34,7 +34,7 @@ func after_each() -> void:
 	if _manager:
 		_manager.free()
 		_manager = null
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 func _mock_cash_check(amount: float, result: Array) -> void:
@@ -73,7 +73,7 @@ func _hire_test_staff(store_id: String) -> StaffDefinition:
 ## Wage multiplier — Easy (0.85)
 
 func test_easy_wage_multiplier_applied_to_deduction() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	var base_wage: float = staff.daily_wage
 	_manager._run_payroll()
@@ -85,7 +85,7 @@ func test_easy_wage_multiplier_applied_to_deduction() -> void:
 
 
 func test_easy_wages_paid_signal_uses_multiplied_wage() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	var base_wage: float = staff.daily_wage
 	_manager._run_payroll()
@@ -98,7 +98,7 @@ func test_easy_wages_paid_signal_uses_multiplied_wage() -> void:
 ## Wage multiplier — Hard (1.20)
 
 func test_hard_wage_multiplier_applied_to_deduction() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	var base_wage: float = staff.daily_wage
 	_manager._run_payroll()
@@ -110,7 +110,7 @@ func test_hard_wage_multiplier_applied_to_deduction() -> void:
 
 
 func test_hard_wages_paid_signal_uses_multiplied_wage() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	var base_wage: float = staff.daily_wage
 	_manager._run_payroll()
@@ -123,7 +123,7 @@ func test_hard_wages_paid_signal_uses_multiplied_wage() -> void:
 ## Wage multiplier — Normal (1.0, unchanged)
 
 func test_normal_wage_multiplier_is_one() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	var base_wage: float = staff.daily_wage
 	_manager._run_payroll()
@@ -136,7 +136,7 @@ func test_normal_wage_multiplier_is_one() -> void:
 ## Morale decay multiplier — Easy (0.70)
 
 func test_easy_morale_decay_scaled_down() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	staff.morale = 0.50
 	_manager._run_payroll()
@@ -158,7 +158,7 @@ func test_easy_morale_decay_scaled_down() -> void:
 
 
 func test_hard_morale_decay_scaled_up() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	staff.morale = 0.80
 	_manager._run_payroll()
@@ -175,7 +175,7 @@ func test_hard_morale_decay_scaled_up() -> void:
 
 
 func test_normal_morale_decay_unscaled() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	staff.morale = 0.50
 	_manager._run_payroll()
@@ -191,7 +191,7 @@ func test_normal_morale_decay_unscaled() -> void:
 
 
 func test_positive_morale_delta_not_affected_by_decay_multiplier() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	staff.morale = 0.50
 	_manager._run_payroll()
@@ -208,7 +208,7 @@ func test_positive_morale_delta_not_affected_by_decay_multiplier() -> void:
 ## Quit threshold — Easy (0.15)
 
 func test_easy_quit_threshold_is_0_15() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	# Morale above Easy threshold (0.15) → no quit
 	staff.morale = 0.20
@@ -219,7 +219,7 @@ func test_easy_quit_threshold_is_0_15() -> void:
 
 
 func test_easy_staff_quits_below_0_15() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	staff.morale = 0.10
 	staff.consecutive_low_morale_days = 1
@@ -230,7 +230,7 @@ func test_easy_staff_quits_below_0_15() -> void:
 ## Quit threshold — Hard (0.35)
 
 func test_hard_quit_threshold_is_0_35() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	# Morale above Hard threshold (0.35) → no quit
 	staff.morale = 0.40
@@ -241,7 +241,7 @@ func test_hard_quit_threshold_is_0_35() -> void:
 
 
 func test_hard_staff_quits_below_0_35() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	staff.morale = 0.30
 	staff.consecutive_low_morale_days = 1
@@ -252,7 +252,7 @@ func test_hard_staff_quits_below_0_35() -> void:
 ## Modifiers read per cycle, not cached
 
 func test_wage_modifier_read_per_cycle_not_cached() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var staff: StaffDefinition = _hire_test_staff("store_a")
 	var base_wage: float = staff.daily_wage
 	_manager._run_payroll()
@@ -260,7 +260,7 @@ func test_wage_modifier_read_per_cycle_not_cached() -> void:
 
 	# Switch difficulty and run payroll again with topped-up cash
 	_cash = 1000.0
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_manager._run_payroll()
 	var hard_deduction: float = 1000.0 - _cash
 

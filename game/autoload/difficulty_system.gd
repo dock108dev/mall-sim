@@ -144,7 +144,7 @@ func _on_hour_changed(hour: int) -> void:
 
 
 func _load_config() -> void:
-	var config: Dictionary = DataLoader.get_difficulty_config()
+	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
 	if config.is_empty():
 		push_error("DifficultySystem: difficulty_config is empty")
 		return

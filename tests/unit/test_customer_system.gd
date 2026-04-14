@@ -10,12 +10,12 @@ func before_each() -> void:
 	_system = CustomerSystem.new()
 	add_child_autofree(_system)
 	_system.max_customers_in_mall = 30
-	_original_tier = DifficultySystem.get_current_tier_id()
-	DifficultySystem.set_tier(&"normal")
+	_original_tier = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton.set_tier(&"normal")
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(_original_tier)
+	DifficultySystemSingleton.set_tier(_original_tier)
 
 
 # --- Density curve: off-hours ---
@@ -204,9 +204,9 @@ func test_hard_difficulty_reduces_spawn_target_versus_normal_at_peak_hour() -> v
 	_system._current_hour = 13
 	_system._hour_elapsed = 0.0
 	_system._current_day_of_week = 5
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_count: int = _system.get_spawn_target()
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var hard_count: int = _system.get_spawn_target()
 	assert_true(
 		hard_count < normal_count,

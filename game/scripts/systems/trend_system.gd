@@ -372,7 +372,7 @@ func _item_matches_trend(
 	return false
 
 
-## Builds a pool of targetable categories and tags from the DataLoader.
+## Builds a pool of targetable categories and tags from the DataLoaderSingleton.
 func _build_target_pool(
 	categories: Array[String], tags: Array[String]
 ) -> Array[Dictionary]:

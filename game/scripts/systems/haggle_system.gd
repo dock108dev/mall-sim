@@ -246,16 +246,16 @@ func _calculate_walkaway_threshold(
 func _evaluate_offer(player_price: float) -> bool:
 	if _sticker_price <= 0.0:
 		return false
-	var ceiling: float = DifficultySystem.get_modifier(
+	var ceiling: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_concession_ceiling"
 	)
 	var offer_ratio: float = player_price / _sticker_price
 	if offer_ratio < (1.0 - ceiling):
 		return false
-	var base_rate: float = DifficultySystem.get_modifier(
+	var base_rate: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_acceptance_base_rate"
 	)
-	var success_rate_mult: float = DifficultySystem.get_modifier(
+	var success_rate_mult: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_success_rate_multiplier"
 	)
 	var accept_prob: float = base_rate * offer_ratio * success_rate_mult

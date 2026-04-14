@@ -87,8 +87,8 @@ func test_levels_clamped_to_min() -> void:
 	for key: Variant in _system.get_all_trend_levels():
 		var level: float = _system.get_trend_modifier(key as StringName)
 		assert_true(
-			level >= MarketTrendSystem.MIN_LEVEL,
-			"Level for %s should be >= %f" % [key, MarketTrendSystem.MIN_LEVEL]
+			level >= MarketTrendSystemSingleton.MIN_LEVEL,
+			"Level for %s should be >= %f" % [key, MarketTrendSystemSingleton.MIN_LEVEL]
 		)
 
 
@@ -99,8 +99,8 @@ func test_levels_clamped_to_max() -> void:
 	for key: Variant in _system.get_all_trend_levels():
 		var level: float = _system.get_trend_modifier(key as StringName)
 		assert_true(
-			level <= MarketTrendSystem.MAX_LEVEL,
-			"Level for %s should be <= %f" % [key, MarketTrendSystem.MAX_LEVEL]
+			level <= MarketTrendSystemSingleton.MAX_LEVEL,
+			"Level for %s should be <= %f" % [key, MarketTrendSystemSingleton.MAX_LEVEL]
 		)
 
 
@@ -169,10 +169,10 @@ func test_load_clamps_values() -> void:
 	}
 	_system.load_save_data(save_data)
 	assert_true(
-		_system.get_trend_modifier(&"fashion") <= MarketTrendSystem.MAX_LEVEL,
+		_system.get_trend_modifier(&"fashion") <= MarketTrendSystemSingleton.MAX_LEVEL,
 		"Loaded value should be clamped to max"
 	)
 	assert_true(
-		_system.get_trend_modifier(&"food") >= MarketTrendSystem.MIN_LEVEL,
+		_system.get_trend_modifier(&"food") >= MarketTrendSystemSingleton.MIN_LEVEL,
 		"Loaded value should be clamped to min"
 	)

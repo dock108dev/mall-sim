@@ -17,8 +17,8 @@ func before_each() -> void:
 
 func test_budget_multiplier_notorious() -> void:
 	assert_eq(
-		ReputationSystem.BUDGET_MULTIPLIERS[
-			ReputationSystem.ReputationTier.NOTORIOUS
+		ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+			ReputationSystemSingleton.ReputationTier.NOTORIOUS
 		],
 		0.8,
 		"Notorious tier budget multiplier should be 0.8"
@@ -27,8 +27,8 @@ func test_budget_multiplier_notorious() -> void:
 
 func test_budget_multiplier_unremarkable() -> void:
 	assert_eq(
-		ReputationSystem.BUDGET_MULTIPLIERS[
-			ReputationSystem.ReputationTier.UNREMARKABLE
+		ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
 		1.0,
 		"Unremarkable tier budget multiplier should be 1.0"
@@ -37,8 +37,8 @@ func test_budget_multiplier_unremarkable() -> void:
 
 func test_budget_multiplier_reputable() -> void:
 	assert_eq(
-		ReputationSystem.BUDGET_MULTIPLIERS[
-			ReputationSystem.ReputationTier.REPUTABLE
+		ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
 		1.3,
 		"Reputable tier budget multiplier should be 1.3"
@@ -47,8 +47,8 @@ func test_budget_multiplier_reputable() -> void:
 
 func test_budget_multiplier_legendary() -> void:
 	assert_eq(
-		ReputationSystem.BUDGET_MULTIPLIERS[
-			ReputationSystem.ReputationTier.LEGENDARY
+		ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+			ReputationSystemSingleton.ReputationTier.LEGENDARY
 		],
 		2.0,
 		"Legendary tier budget multiplier should be 2.0"
@@ -60,8 +60,8 @@ func test_budget_multiplier_legendary() -> void:
 
 func test_max_customers_small_notorious() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.ReputationTier.NOTORIOUS
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_SMALL[
+			ReputationSystemSingleton.ReputationTier.NOTORIOUS
 		],
 		3,
 		"Notorious tier small store max should be 3"
@@ -70,8 +70,8 @@ func test_max_customers_small_notorious() -> void:
 
 func test_max_customers_small_unremarkable() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.ReputationTier.UNREMARKABLE
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_SMALL[
+			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
 		5,
 		"Unremarkable tier small store max should be 5"
@@ -80,8 +80,8 @@ func test_max_customers_small_unremarkable() -> void:
 
 func test_max_customers_small_reputable() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.ReputationTier.REPUTABLE
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_SMALL[
+			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
 		7,
 		"Reputable tier small store max should be 7"
@@ -90,8 +90,8 @@ func test_max_customers_small_reputable() -> void:
 
 func test_max_customers_small_legendary() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_SMALL[
-			ReputationSystem.ReputationTier.LEGENDARY
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_SMALL[
+			ReputationSystemSingleton.ReputationTier.LEGENDARY
 		],
 		10,
 		"Legendary tier small store max should be 10"
@@ -103,8 +103,8 @@ func test_max_customers_small_legendary() -> void:
 
 func test_max_customers_medium_notorious() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.ReputationTier.NOTORIOUS
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_MEDIUM[
+			ReputationSystemSingleton.ReputationTier.NOTORIOUS
 		],
 		5,
 		"Notorious tier medium store max should be 5"
@@ -113,8 +113,8 @@ func test_max_customers_medium_notorious() -> void:
 
 func test_max_customers_medium_unremarkable() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.ReputationTier.UNREMARKABLE
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_MEDIUM[
+			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
 		8,
 		"Unremarkable tier medium store max should be 8"
@@ -123,8 +123,8 @@ func test_max_customers_medium_unremarkable() -> void:
 
 func test_max_customers_medium_reputable() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.ReputationTier.REPUTABLE
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_MEDIUM[
+			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
 		11,
 		"Reputable tier medium store max should be 11"
@@ -133,8 +133,8 @@ func test_max_customers_medium_reputable() -> void:
 
 func test_max_customers_medium_legendary() -> void:
 	assert_eq(
-		ReputationSystem.MAX_CUSTOMERS_BY_TIER_MEDIUM[
-			ReputationSystem.ReputationTier.LEGENDARY
+		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_MEDIUM[
+			ReputationSystemSingleton.ReputationTier.LEGENDARY
 		],
 		15,
 		"Legendary tier medium store max should be 15"
@@ -189,17 +189,17 @@ func test_get_max_customers_large_uses_medium_table() -> void:
 
 
 func test_budget_multipliers_increase_with_tier() -> void:
-	var notorious: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.NOTORIOUS
+	var notorious: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS
 	]
-	var unremarkable: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.UNREMARKABLE
+	var unremarkable: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 	]
-	var reputable: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
-	var legendary: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.LEGENDARY
+	var legendary: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.LEGENDARY
 	]
 	assert_lt(notorious, unremarkable, "Notorious < Unremarkable budget mult")
 	assert_lt(unremarkable, reputable, "Unremarkable < Reputable")
@@ -211,29 +211,29 @@ func test_budget_multipliers_increase_with_tier() -> void:
 
 func test_tier_boundaries_match() -> void:
 	assert_eq(
-		ReputationSystem.TIER_THRESHOLDS[
-			ReputationSystem.ReputationTier.NOTORIOUS
+		ReputationSystemSingleton.TIER_THRESHOLDS[
+			ReputationSystemSingleton.ReputationTier.NOTORIOUS
 		],
 		0.0,
 		"Notorious threshold should be 0"
 	)
 	assert_eq(
-		ReputationSystem.TIER_THRESHOLDS[
-			ReputationSystem.ReputationTier.UNREMARKABLE
+		ReputationSystemSingleton.TIER_THRESHOLDS[
+			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
 		26.0,
 		"Unremarkable threshold should be 26"
 	)
 	assert_eq(
-		ReputationSystem.TIER_THRESHOLDS[
-			ReputationSystem.ReputationTier.REPUTABLE
+		ReputationSystemSingleton.TIER_THRESHOLDS[
+			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
 		51.0,
 		"Reputable threshold should be 51"
 	)
 	assert_eq(
-		ReputationSystem.TIER_THRESHOLDS[
-			ReputationSystem.ReputationTier.LEGENDARY
+		ReputationSystemSingleton.TIER_THRESHOLDS[
+			ReputationSystemSingleton.ReputationTier.LEGENDARY
 		],
 		76.0,
 		"Legendary threshold should be 76"

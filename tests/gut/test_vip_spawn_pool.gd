@@ -1,4 +1,4 @@
-## Tests VIP customer spawn pool gating via UnlockSystem.
+## Tests VIP customer spawn pool gating via UnlockSystemSingleton.
 extends GutTest
 
 
@@ -6,13 +6,13 @@ var _system: CustomerSystem
 
 
 func before_each() -> void:
-	UnlockSystem.initialize()
+	UnlockSystemSingleton.initialize()
 	_system = CustomerSystem.new()
 	add_child_autofree(_system)
 
 
 func after_each() -> void:
-	UnlockSystem.initialize()
+	UnlockSystemSingleton.initialize()
 
 
 # --- VIP not in pool before unlock ---
@@ -42,7 +42,7 @@ func test_standard_types_present_before_unlock() -> void:
 func test_vip_in_pool_after_unlock() -> void:
 	_system._vip_type_valid = true
 	_system._spawn_pool_dirty = true
-	UnlockSystem.grant_unlock(&"vip_customer_events")
+	UnlockSystemSingleton.grant_unlock(&"vip_customer_events")
 	_system._spawn_pool_dirty = true
 	var pool: Array[CustomerTypeDefinition] = _system.get_spawn_pool()
 	var found: bool = false
@@ -56,7 +56,7 @@ func test_vip_in_pool_after_unlock() -> void:
 func test_vip_not_in_pool_when_vip_type_invalid() -> void:
 	_system._vip_type_valid = false
 	_system._spawn_pool_dirty = true
-	UnlockSystem.grant_unlock(&"vip_customer_events")
+	UnlockSystemSingleton.grant_unlock(&"vip_customer_events")
 	_system._spawn_pool_dirty = true
 	var pool: Array[CustomerTypeDefinition] = _system.get_spawn_pool()
 	for profile: CustomerTypeDefinition in pool:
@@ -93,7 +93,7 @@ func test_pool_rebuilt_without_scene_reload() -> void:
 	var pool_before: Array[CustomerTypeDefinition] = _system.get_spawn_pool()
 	var size_before: int = pool_before.size()
 
-	UnlockSystem.grant_unlock(&"vip_customer_events")
+	UnlockSystemSingleton.grant_unlock(&"vip_customer_events")
 	assert_true(
 		_system._spawn_pool_dirty,
 		"Pool should be marked dirty after unlock_granted signal"
@@ -178,7 +178,7 @@ func test_standard_pool_size_unchanged_before_unlock() -> void:
 	var pool_locked: Array[CustomerTypeDefinition] = _system.get_spawn_pool()
 	var locked_size: int = pool_locked.size()
 
-	UnlockSystem.grant_unlock(&"vip_customer_events")
+	UnlockSystemSingleton.grant_unlock(&"vip_customer_events")
 	_system._spawn_pool_dirty = true
 	var pool_unlocked: Array[CustomerTypeDefinition] = _system.get_spawn_pool()
 

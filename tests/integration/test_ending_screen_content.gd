@@ -244,7 +244,7 @@ func test_single_ending_triggered_emission_updates_screen_exactly_once() -> void
 
 func _load_catalog_entries() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var data: Variant = DataLoader.load_json(CATALOG_PATH)
+	var data: Variant = DataLoaderSingleton.load_json(CATALOG_PATH)
 	if data is not Dictionary:
 		push_error(
 			"test_ending_screen_content: failed to load catalog at %s" % CATALOG_PATH

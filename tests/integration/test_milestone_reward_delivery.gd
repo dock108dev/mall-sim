@@ -1,5 +1,5 @@
 ## Integration test: MilestoneSystem reward delivery — threshold crossed →
-## cash reward credited to EconomySystem and unlock granted to UnlockSystem.
+## cash reward credited to EconomySystem and unlock granted to UnlockSystemSingleton.
 extends GutTest
 
 var _data_loader: DataLoader

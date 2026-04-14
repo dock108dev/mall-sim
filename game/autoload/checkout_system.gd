@@ -100,7 +100,7 @@ func _roll_purchase_probability(npc: Customer) -> bool:
 		base = npc.profile.purchase_probability_base
 	var diff: DifficultySystem = _difficulty_system
 	if not diff:
-		diff = DifficultySystem
+		diff = DifficultySystemSingleton
 	var modifier: float = diff.get_modifier(
 		&"purchase_probability_multiplier"
 	)

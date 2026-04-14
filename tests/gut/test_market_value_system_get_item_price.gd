@@ -22,11 +22,11 @@ func before_each() -> void:
 	_system.initialize(_inventory, null, null)
 	_system.register_store_price_cap(STORE_ID, STORE_CAP)
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 
 
 func _make_item(
@@ -67,7 +67,7 @@ func test_trend_multiplier_applied() -> void:
 
 ## AC3: Difficulty modifier 0.8 (hard tier) returns base_price * 0.8.
 func test_difficulty_modifier_applied() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var item: ItemInstance = _make_item(BASE_PRICE)
 	_inventory.register_item(item)
 	var id: StringName = StringName(item.instance_id)
@@ -77,7 +77,7 @@ func test_difficulty_modifier_applied() -> void:
 
 ## AC4: Trend 1.3 + difficulty 0.8 = base_price * 1.04 (multiplicative).
 func test_combined_multipliers_are_multiplicative() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var item: ItemInstance = _make_item(BASE_PRICE)
 	_inventory.register_item(item)
 	var id: StringName = StringName(item.instance_id)

@@ -188,7 +188,7 @@ func spawn_customer(
 	var budget_mult: float = 1.0
 	if _reputation_system:
 		budget_mult = _reputation_system.get_budget_multiplier()
-	budget_mult *= DifficultySystem.get_modifier(&"customer_budget_multiplier")
+	budget_mult *= DifficultySystemSingleton.get_modifier(&"customer_budget_multiplier")
 	var browse_mult: float = 1.0
 	if greeter:
 		browse_mult = 1.0 + GREETER_BROWSE_BONUS * greeter.performance_multiplier()
@@ -294,7 +294,7 @@ func get_purchase_intent_for_category(
 		)
 		if demand_mult > 1.0:
 			base_intent += (demand_mult - 1.0) * base_intent
-	var purchase_mult: float = DifficultySystem.get_modifier(
+	var purchase_mult: float = DifficultySystemSingleton.get_modifier(
 		&"purchase_probability_multiplier"
 	)
 	return clampf(
@@ -314,7 +314,7 @@ func get_spawn_target() -> int:
 	var dow_modifier: float = DAY_OF_WEEK_MODIFIERS[
 		_current_day_of_week
 	]
-	var traffic_mult: float = DifficultySystem.get_modifier(
+	var traffic_mult: float = DifficultySystemSingleton.get_modifier(
 		&"foot_traffic_multiplier"
 	)
 	var raw_target: float = (
@@ -748,7 +748,7 @@ func _rebuild_spawn_pool() -> void:
 		_spawn_pool_dirty = false
 		return
 	var vip_included: bool = (
-		_vip_type_valid and UnlockSystem.is_unlocked(VIP_UNLOCK_ID)
+		_vip_type_valid and UnlockSystemSingleton.is_unlocked(VIP_UNLOCK_ID)
 	)
 	for profile: CustomerTypeDefinition in (
 		GameManager.data_loader.get_all_customers()

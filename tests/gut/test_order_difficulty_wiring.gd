@@ -7,20 +7,20 @@ var _saved_tier: StringName
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_order_system = OrderSystem.new()
 	add_child_autofree(_order_system)
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 # --- Supplier lead time ---
 
 
 func test_easy_lead_time_reduces_delivery_days() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	# LIQUIDATOR base = 3 days; 3 × 0.80 = 2.4 → rounds to 2
 	var days: int = _order_system.get_effective_delivery_days(
 		OrderSystem.SupplierTier.LIQUIDATOR
@@ -29,7 +29,7 @@ func test_easy_lead_time_reduces_delivery_days() -> void:
 
 
 func test_hard_lead_time_increases_delivery_days() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	# LIQUIDATOR base = 3 days; 3 × 1.30 = 3.9 → rounds to 4
 	var days: int = _order_system.get_effective_delivery_days(
 		OrderSystem.SupplierTier.LIQUIDATOR
@@ -38,7 +38,7 @@ func test_hard_lead_time_increases_delivery_days() -> void:
 
 
 func test_normal_lead_time_unchanged() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	# LIQUIDATOR base = 3 days; 3 × 1.0 = 3
 	var days: int = _order_system.get_effective_delivery_days(
 		OrderSystem.SupplierTier.LIQUIDATOR
@@ -47,7 +47,7 @@ func test_normal_lead_time_unchanged() -> void:
 
 
 func test_easy_basic_lead_time_at_least_one() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	# BASIC base = 1 day; 1 × 0.80 = 0.8 → rounds to 1, clamped to >= 1
 	var days: int = _order_system.get_effective_delivery_days(
 		OrderSystem.SupplierTier.BASIC
@@ -56,7 +56,7 @@ func test_easy_basic_lead_time_at_least_one() -> void:
 
 
 func test_specialty_hard_lead_time_rounds_correctly() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	# SPECIALTY base = 2 days; 2 × 1.30 = 2.6 → rounds to 3
 	var days: int = _order_system.get_effective_delivery_days(
 		OrderSystem.SupplierTier.SPECIALTY
@@ -68,7 +68,7 @@ func test_specialty_hard_lead_time_rounds_correctly() -> void:
 
 
 func test_easy_daily_limit_increased() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	# BASIC base = 500; 500 × 1.25 = 625
 	var limit: float = _order_system.get_daily_limit(
 		OrderSystem.SupplierTier.BASIC
@@ -79,7 +79,7 @@ func test_easy_daily_limit_increased() -> void:
 
 
 func test_hard_daily_limit_decreased() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	# BASIC base = 500; 500 × 0.75 = 375
 	var limit: float = _order_system.get_daily_limit(
 		OrderSystem.SupplierTier.BASIC
@@ -90,7 +90,7 @@ func test_hard_daily_limit_decreased() -> void:
 
 
 func test_normal_daily_limit_unchanged() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	# BASIC base = 500; 500 × 1.0 = 500
 	var limit: float = _order_system.get_daily_limit(
 		OrderSystem.SupplierTier.BASIC
@@ -101,7 +101,7 @@ func test_normal_daily_limit_unchanged() -> void:
 
 
 func test_daily_limit_never_below_one() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	for tier_key: int in OrderSystem.TIER_CONFIG:
 		var limit: float = _order_system.get_daily_limit(
 			tier_key as OrderSystem.SupplierTier
@@ -115,7 +115,7 @@ func test_daily_limit_never_below_one() -> void:
 
 
 func test_easy_stockout_probability() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var prob: float = _order_system.get_stockout_probability()
 	assert_almost_eq(
 		prob, 0.00, 0.0001,
@@ -124,7 +124,7 @@ func test_easy_stockout_probability() -> void:
 
 
 func test_hard_stockout_probability() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var prob: float = _order_system.get_stockout_probability()
 	assert_almost_eq(
 		prob, 0.15, 0.0001,
@@ -133,7 +133,7 @@ func test_hard_stockout_probability() -> void:
 
 
 func test_normal_stockout_probability() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var prob: float = _order_system.get_stockout_probability()
 	assert_almost_eq(
 		prob, 0.05, 0.0001,
@@ -143,7 +143,7 @@ func test_normal_stockout_probability() -> void:
 
 func test_stockout_probability_non_negative() -> void:
 	for tier_id: StringName in [&"easy", &"normal", &"hard"]:
-		DifficultySystem.set_tier(tier_id)
+		DifficultySystemSingleton.set_tier(tier_id)
 		var prob: float = _order_system.get_stockout_probability()
 		assert_gte(prob, 0.0,
 			"Stockout probability should be non-negative on %s" % tier_id

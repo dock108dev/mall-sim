@@ -21,8 +21,8 @@ var _saved_tier: StringName
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
-	DifficultySystem.set_tier(&"easy")
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton.set_tier(&"easy")
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize(100.0)
@@ -38,7 +38,7 @@ func after_each() -> void:
 		EventBus.emergency_cash_injected.disconnect(
 			_on_emergency_cash_injected
 		)
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 func _on_emergency_cash_injected(amount: float, _reason: String) -> void:
@@ -118,7 +118,7 @@ func test_injection_fires_again_after_cooldown_expires() -> void:
 
 
 func test_normal_tier_never_triggers_injection() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_economy: EconomySystem = EconomySystem.new()
 	add_child_autofree(normal_economy)
 	normal_economy.initialize(100.0)

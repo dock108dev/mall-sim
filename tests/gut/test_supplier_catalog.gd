@@ -4,21 +4,21 @@ extends GutTest
 
 func test_suppliers_loaded() -> void:
 	assert_gt(
-		DataLoader.get_supplier_count(), 0,
+		DataLoaderSingleton.get_supplier_count(), 0,
 		"Should load at least one supplier"
 	)
 
 
 func test_supplier_count_is_fifteen() -> void:
 	assert_eq(
-		DataLoader.get_supplier_count(), 15,
+		DataLoaderSingleton.get_supplier_count(), 15,
 		"Should have exactly 15 suppliers (3 tiers x 5 stores)"
 	)
 
 
 func test_all_suppliers_have_required_fields() -> void:
 	var suppliers: Array[SupplierDefinition] = (
-		DataLoader.get_all_suppliers()
+		DataLoaderSingleton.get_all_suppliers()
 	)
 	for s: SupplierDefinition in suppliers:
 		assert_ne(s.id, "", "Supplier should have id")
@@ -64,7 +64,7 @@ func test_all_suppliers_have_required_fields() -> void:
 
 func test_all_ids_unique_snake_case() -> void:
 	var suppliers: Array[SupplierDefinition] = (
-		DataLoader.get_all_suppliers()
+		DataLoaderSingleton.get_all_suppliers()
 	)
 	var seen: Dictionary = {}
 	var pattern := RegEx.new()
@@ -88,7 +88,7 @@ func test_all_five_stores_have_tier_one_and_two() -> void:
 	]
 	for store_type: String in required_stores:
 		var t1: Array[SupplierDefinition] = (
-			DataLoader.get_suppliers_by_tier(store_type, 1)
+			DataLoaderSingleton.get_suppliers_by_tier(store_type, 1)
 		)
 		assert_gt(
 			t1.size(), 0,
@@ -96,7 +96,7 @@ func test_all_five_stores_have_tier_one_and_two() -> void:
 			% store_type
 		)
 		var t2: Array[SupplierDefinition] = (
-			DataLoader.get_suppliers_by_tier(store_type, 2)
+			DataLoaderSingleton.get_suppliers_by_tier(store_type, 2)
 		)
 		assert_gt(
 			t2.size(), 0,
@@ -107,14 +107,14 @@ func test_all_five_stores_have_tier_one_and_two() -> void:
 
 func test_electronics_and_pocket_creatures_have_tier_three() -> void:
 	var elec_t3: Array[SupplierDefinition] = (
-		DataLoader.get_suppliers_by_tier("electronics", 3)
+		DataLoaderSingleton.get_suppliers_by_tier("electronics", 3)
 	)
 	assert_gt(
 		elec_t3.size(), 0,
 		"Electronics should have a Tier 3 supplier"
 	)
 	var pc_t3: Array[SupplierDefinition] = (
-		DataLoader.get_suppliers_by_tier("pocket_creatures", 3)
+		DataLoaderSingleton.get_suppliers_by_tier("pocket_creatures", 3)
 	)
 	assert_gt(
 		pc_t3.size(), 0,
@@ -124,7 +124,7 @@ func test_electronics_and_pocket_creatures_have_tier_three() -> void:
 
 func test_tier_unlock_conditions() -> void:
 	var suppliers: Array[SupplierDefinition] = (
-		DataLoader.get_all_suppliers()
+		DataLoaderSingleton.get_all_suppliers()
 	)
 	for s: SupplierDefinition in suppliers:
 		var cond: Dictionary = s.unlock_condition
@@ -181,7 +181,7 @@ func test_tier_unlock_conditions() -> void:
 
 func test_catalog_item_ids_exist_in_items() -> void:
 	var suppliers: Array[SupplierDefinition] = (
-		DataLoader.get_all_suppliers()
+		DataLoaderSingleton.get_all_suppliers()
 	)
 	for s: SupplierDefinition in suppliers:
 		for entry: Dictionary in s.catalog:
@@ -191,7 +191,7 @@ func test_catalog_item_ids_exist_in_items() -> void:
 				"Catalog entry in '%s' should have item_id"
 				% s.id
 			)
-			var item: ItemDefinition = DataLoader.get_item(item_id)
+			var item: ItemDefinition = DataLoaderSingleton.get_item(item_id)
 			assert_not_null(
 				item,
 				"Item '%s' in supplier '%s' should exist"
@@ -201,7 +201,7 @@ func test_catalog_item_ids_exist_in_items() -> void:
 
 func test_catalog_entries_have_valid_pricing() -> void:
 	var suppliers: Array[SupplierDefinition] = (
-		DataLoader.get_all_suppliers()
+		DataLoaderSingleton.get_all_suppliers()
 	)
 	for s: SupplierDefinition in suppliers:
 		for entry: Dictionary in s.catalog:
@@ -228,13 +228,13 @@ func test_catalog_entries_have_valid_pricing() -> void:
 
 func test_catalog_cost_below_base_price() -> void:
 	var suppliers: Array[SupplierDefinition] = (
-		DataLoader.get_all_suppliers()
+		DataLoaderSingleton.get_all_suppliers()
 	)
 	for s: SupplierDefinition in suppliers:
 		for entry: Dictionary in s.catalog:
 			var item_id: String = str(entry.get("item_id", ""))
 			var cost: float = float(entry.get("cost_per_unit", 0))
-			var item: ItemDefinition = DataLoader.get_item(item_id)
+			var item: ItemDefinition = DataLoaderSingleton.get_item(item_id)
 			if item == null:
 				continue
 			assert_lt(
@@ -248,7 +248,7 @@ func test_catalog_cost_below_base_price() -> void:
 
 func test_supplier_display_names_are_original() -> void:
 	var suppliers: Array[SupplierDefinition] = (
-		DataLoader.get_all_suppliers()
+		DataLoaderSingleton.get_all_suppliers()
 	)
 	var seen_names: Dictionary = {}
 	for s: SupplierDefinition in suppliers:
@@ -262,7 +262,7 @@ func test_supplier_display_names_are_original() -> void:
 
 func test_get_suppliers_for_store() -> void:
 	var sports: Array[SupplierDefinition] = (
-		DataLoader.get_suppliers_for_store("sports")
+		DataLoaderSingleton.get_suppliers_for_store("sports")
 	)
 	assert_eq(
 		sports.size(), 3,

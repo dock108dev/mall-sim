@@ -8,7 +8,7 @@ var _injections: Array[Dictionary] = []
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_injections = []
@@ -16,7 +16,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 	if EventBus.emergency_cash_injected.is_connected(_on_injected):
 		EventBus.emergency_cash_injected.disconnect(_on_injected)
 
@@ -29,7 +29,7 @@ func _on_injected(amount: float, reason: String) -> void:
 func _setup_easy_below_threshold(
 	rent: float, starting_cash: float
 ) -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	# On easy, initialize multiplies cash by 1.5 — pass raw amount so final
 	# cash equals starting_cash.
 	_economy.initialize(starting_cash / 1.5)
@@ -65,7 +65,7 @@ func test_injection_amount_equals_threshold_times_three() -> void:
 
 
 func test_injection_does_not_fire_when_cash_at_threshold() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	_economy.initialize(200.0 / 1.5)  # exactly at threshold after mult
 	_economy.set_daily_rent(100.0)
 	_economy._check_emergency_injection(1)
@@ -73,7 +73,7 @@ func test_injection_does_not_fire_when_cash_at_threshold() -> void:
 
 
 func test_injection_does_not_fire_on_normal() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_economy.initialize(10.0)
 	_economy.set_daily_rent(100.0)
 	_economy._check_emergency_injection(1)
@@ -81,7 +81,7 @@ func test_injection_does_not_fire_on_normal() -> void:
 
 
 func test_injection_does_not_fire_on_hard() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_economy.initialize(10.0)
 	_economy.set_daily_rent(100.0)
 	_economy._check_emergency_injection(1)

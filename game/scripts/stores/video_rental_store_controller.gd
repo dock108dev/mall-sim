@@ -415,7 +415,7 @@ func _collect_overdue_late_fees(current_day: int) -> void:
 			_collect_late_fee(record, days_overdue)
 
 
-## Loads late fee formula constants from video_rental_config.json via DataLoader.
+## Loads late fee formula constants from video_rental_config.json via DataLoaderSingleton.
 func _load_late_fee_config() -> void:
 	if not GameManager or not GameManager.data_loader:
 		push_warning("VideoRentalStoreController: DataLoader not available, config not loaded")

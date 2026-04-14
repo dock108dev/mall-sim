@@ -36,13 +36,13 @@ const MARKET_TREND_IDS: Array[String] = [
 
 func test_all_five_item_catalogs_load() -> void:
 	for path: String in ITEM_CATALOG_PATHS:
-		var data: Variant = DataLoader.load_json(path)
+		var data: Variant = DataLoaderSingleton.load_json(path)
 		assert_not_null(data, "Item catalog should load: %s" % path)
 
 
 func test_item_catalog_entries_have_id_field() -> void:
 	for path: String in ITEM_CATALOG_PATHS:
-		var data: Variant = DataLoader.load_json(path)
+		var data: Variant = DataLoaderSingleton.load_json(path)
 		if data == null:
 			continue
 		var entries: Array[Dictionary] = _extract_entries(data)
@@ -58,13 +58,13 @@ func test_item_catalog_entries_have_id_field() -> void:
 
 func test_all_non_item_catalogs_load() -> void:
 	for path: String in NON_ITEM_CATALOG_PATHS:
-		var data: Variant = DataLoader.load_json(path)
+		var data: Variant = DataLoaderSingleton.load_json(path)
 		assert_not_null(data, "Catalog should load: %s" % path)
 
 
 func test_all_non_item_catalog_entries_have_id_field() -> void:
 	for path: String in NON_ITEM_CATALOG_PATHS:
-		var data: Variant = DataLoader.load_json(path)
+		var data: Variant = DataLoaderSingleton.load_json(path)
 		if data == null:
 			continue
 		var entries: Array[Dictionary] = _extract_entries(data)
@@ -79,7 +79,7 @@ func test_all_non_item_catalog_entries_have_id_field() -> void:
 # --- Endings-specific ---
 
 func test_endings_catalog_meets_minimum_count() -> void:
-	var data: Variant = DataLoader.load_json(ENDINGS_PATH)
+	var data: Variant = DataLoaderSingleton.load_json(ENDINGS_PATH)
 	if data == null:
 		fail_test("Endings catalog did not load")
 		return
@@ -93,7 +93,7 @@ func test_endings_catalog_meets_minimum_count() -> void:
 # --- Market trends: all 5 categories present ---
 
 func test_market_trends_has_all_five_categories() -> void:
-	var data: Variant = DataLoader.load_json(MARKET_TRENDS_PATH)
+	var data: Variant = DataLoaderSingleton.load_json(MARKET_TRENDS_PATH)
 	if data == null:
 		fail_test("Market trends catalog did not load")
 		return
@@ -118,7 +118,7 @@ func test_print_catalog_summary() -> void:
 	print("\n=== Content Catalog Completeness Audit ===")
 	var total_entries := 0
 	for path: String in all_paths:
-		var data: Variant = DataLoader.load_json(path)
+		var data: Variant = DataLoaderSingleton.load_json(path)
 		if data == null:
 			print("  [MISSING] %s" % path.get_file())
 			assert_not_null(data, "Required catalog missing: %s" % path)

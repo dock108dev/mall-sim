@@ -528,7 +528,7 @@ func _collect_save_data() -> Dictionary:
 	if _onboarding_system:
 		data["onboarding_progress"] = _onboarding_system.get_save_data()
 
-	data["difficulty"] = DifficultySystem.get_save_data()
+	data["difficulty"] = DifficultySystemSingleton.get_save_data()
 
 	return data
 
@@ -763,7 +763,7 @@ func _distribute_save_data(data: Dictionary) -> void:
 
 	var difficulty_data: Variant = data.get("difficulty", {})
 	if difficulty_data is Dictionary:
-		DifficultySystem.load_save_data(
+		DifficultySystemSingleton.load_save_data(
 			difficulty_data as Dictionary
 		)
 
@@ -843,7 +843,7 @@ func _systems_ready() -> bool:
 func _get_reputation_system() -> ReputationSystem:
 	if _reputation_ref:
 		return _reputation_ref
-	return ReputationSystem
+	return ReputationSystemSingleton
 
 
 ## Returns metadata for all slots from the index without loading saves.

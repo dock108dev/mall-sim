@@ -318,12 +318,12 @@ func _populate_criteria_list() -> void:
 
 
 func _update_difficulty_display() -> void:
-	var current_id: StringName = DifficultySystem.get_current_tier_id()
-	var display: String = DifficultySystem.get_display_name_for_tier(
+	var current_id: StringName = DifficultySystemSingleton.get_current_tier_id()
+	var display: String = DifficultySystemSingleton.get_display_name_for_tier(
 		current_id
 	)
 	_difficulty_label.text = display
-	var tier_ids: Array[StringName] = DifficultySystem.get_tier_ids()
+	var tier_ids: Array[StringName] = DifficultySystemSingleton.get_tier_ids()
 	var idx: int = tier_ids.find(current_id)
 	_difficulty_left.disabled = idx <= 0
 	_difficulty_right.disabled = idx >= tier_ids.size() - 1
@@ -338,14 +338,14 @@ func _on_difficulty_right_pressed() -> void:
 
 
 func _cycle_difficulty(direction: int) -> void:
-	var tier_ids: Array[StringName] = DifficultySystem.get_tier_ids()
-	var current_id: StringName = DifficultySystem.get_current_tier_id()
+	var tier_ids: Array[StringName] = DifficultySystemSingleton.get_tier_ids()
+	var current_id: StringName = DifficultySystemSingleton.get_current_tier_id()
 	var idx: int = tier_ids.find(current_id)
 	var new_idx: int = idx + direction
 	if new_idx < 0 or new_idx >= tier_ids.size():
 		return
 	var new_tier_id: StringName = tier_ids[new_idx]
-	if DifficultySystem.is_downgrade(new_tier_id):
+	if DifficultySystemSingleton.is_downgrade(new_tier_id):
 		_pending_difficulty_tier = new_tier_id
 		_difficulty_confirm_dialog.popup_centered()
 		return
@@ -355,7 +355,7 @@ func _cycle_difficulty(direction: int) -> void:
 func _on_difficulty_downgrade_confirmed() -> void:
 	if _pending_difficulty_tier.is_empty():
 		return
-	DifficultySystem.used_difficulty_downgrade = true
+	DifficultySystemSingleton.used_difficulty_downgrade = true
 	_apply_difficulty(_pending_difficulty_tier)
 	_pending_difficulty_tier = &""
 
@@ -365,5 +365,5 @@ func _on_difficulty_downgrade_canceled() -> void:
 
 
 func _apply_difficulty(tier_id: StringName) -> void:
-	DifficultySystem.apply_difficulty_change(tier_id)
+	DifficultySystemSingleton.apply_difficulty_change(tier_id)
 	_update_difficulty_display()

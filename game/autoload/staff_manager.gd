@@ -217,7 +217,7 @@ func _run_payroll() -> void:
 	_unpaid_staff_today = {}
 	var sorted_staff: Array[StaffDefinition] = _get_staff_sorted_by_seniority()
 	var total_paid: float = 0.0
-	var wage_mult: float = DifficultySystem.get_modifier(&"staff_wage_multiplier")
+	var wage_mult: float = DifficultySystemSingleton.get_modifier(&"staff_wage_multiplier")
 	for staff: StaffDefinition in sorted_staff:
 		var wage: float = staff.daily_wage * wage_mult
 		if wage <= 0.0:
@@ -234,7 +234,7 @@ func _run_payroll() -> void:
 
 
 func _run_morale_ticks() -> void:
-	var decay_mult: float = DifficultySystem.get_modifier(&"morale_decay_multiplier")
+	var decay_mult: float = DifficultySystemSingleton.get_modifier(&"morale_decay_multiplier")
 	for staff: StaffDefinition in _staff_registry.values():
 		var delta: float = 0.0
 		if not _was_not_paid(staff.staff_id):
@@ -254,7 +254,7 @@ func _run_morale_ticks() -> void:
 
 
 func _check_quit_triggers() -> void:
-	var quit_threshold: float = DifficultySystem.get_modifier(&"staff_quit_threshold")
+	var quit_threshold: float = DifficultySystemSingleton.get_modifier(&"staff_quit_threshold")
 	var quitters: Array[String] = []
 	for staff: StaffDefinition in _staff_registry.values():
 		if staff.morale < quit_threshold:

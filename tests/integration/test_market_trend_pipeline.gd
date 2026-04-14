@@ -54,7 +54,7 @@ func test_day_ended_triggers_trend_update() -> void:
 	assert_eq(
 		_trend_system._current_day,
 		day_before + 1,
-		"MarketTrendSystem._current_day must increment after day_ended"
+		"MarketTrendSystemSingleton._current_day must increment after day_ended"
 	)
 	var after: Dictionary = _trend_system.get_all_trend_levels()
 	var changed_count: int = 0
@@ -182,10 +182,10 @@ func test_clamping_respected() -> void:
 	for key: Variant in _trend_system.get_all_trend_levels():
 		var level: float = _trend_system.get_trend_modifier(key as StringName)
 		assert_true(
-			level >= MarketTrendSystem.MIN_LEVEL,
-			"Level for %s must be >= MIN_LEVEL (%.1f)" % [key, MarketTrendSystem.MIN_LEVEL]
+			level >= MarketTrendSystemSingleton.MIN_LEVEL,
+			"Level for %s must be >= MIN_LEVEL (%.1f)" % [key, MarketTrendSystemSingleton.MIN_LEVEL]
 		)
 		assert_true(
-			level <= MarketTrendSystem.MAX_LEVEL,
-			"Level for %s must be <= MAX_LEVEL (%.1f)" % [key, MarketTrendSystem.MAX_LEVEL]
+			level <= MarketTrendSystemSingleton.MAX_LEVEL,
+			"Level for %s must be <= MAX_LEVEL (%.1f)" % [key, MarketTrendSystemSingleton.MAX_LEVEL]
 		)

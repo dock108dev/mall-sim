@@ -15,7 +15,7 @@ const LAUNCH_SPIKE_MULTIPLIER_THRESHOLD: float = 1.5
 
 
 func _get_electronics_items() -> Array[ItemDefinition]:
-	return DataLoader.get_items_by_store("electronics")
+	return DataLoaderSingleton.get_items_by_store("electronics")
 
 
 func test_minimum_item_count() -> void:
@@ -165,7 +165,7 @@ func test_supplier_tiers_valid() -> void:
 
 
 func test_all_item_ids_unique() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	var seen: Dictionary = {}
 	for item: ItemDefinition in items:
 		assert_false(

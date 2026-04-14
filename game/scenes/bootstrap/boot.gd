@@ -16,9 +16,9 @@ func _ready() -> void:
 
 
 func initialize() -> void:
-	DataLoader.load_all_content()
+	DataLoaderSingleton.load_all_content()
 
-	var load_errors: Array[String] = DataLoader.get_load_errors()
+	var load_errors: Array[String] = DataLoaderSingleton.get_load_errors()
 	if not load_errors.is_empty():
 		var msg: String = "Content loading failed:\n"
 		for err: String in load_errors:

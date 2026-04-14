@@ -79,7 +79,7 @@ func test_tier_at_rep_0_is_notorious() -> void:
 	_rep.add_reputation(TEST_STORE, -50.0)
 	assert_eq(
 		_rep.get_tier(TEST_STORE),
-		ReputationSystem.ReputationTier.NOTORIOUS,
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS,
 		"Rep 0 should be Notorious tier"
 	)
 
@@ -88,7 +88,7 @@ func test_tier_at_rep_26_is_unremarkable() -> void:
 	_rep.add_reputation(TEST_STORE, -24.0)
 	assert_eq(
 		_rep.get_tier(TEST_STORE),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Rep 26 should be Unremarkable tier"
 	)
 
@@ -97,7 +97,7 @@ func test_tier_at_rep_51_is_reputable() -> void:
 	_rep.add_reputation(TEST_STORE, 1.0)
 	assert_eq(
 		_rep.get_tier(TEST_STORE),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Rep 51 should be Reputable tier"
 	)
 
@@ -106,7 +106,7 @@ func test_tier_at_rep_76_is_legendary() -> void:
 	_rep.add_reputation(TEST_STORE, 26.0)
 	assert_eq(
 		_rep.get_tier(TEST_STORE),
-		ReputationSystem.ReputationTier.LEGENDARY,
+		ReputationSystemSingleton.ReputationTier.LEGENDARY,
 		"Rep 76 should be Legendary tier"
 	)
 
@@ -115,17 +115,17 @@ func test_tier_at_rep_76_is_legendary() -> void:
 
 
 func test_budget_multipliers_increase_with_tier() -> void:
-	var notorious: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.NOTORIOUS
+	var notorious: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS
 	]
-	var unremarkable: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.UNREMARKABLE
+	var unremarkable: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 	]
-	var reputable: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
-	var legendary: float = ReputationSystem.BUDGET_MULTIPLIERS[
-		ReputationSystem.ReputationTier.LEGENDARY
+	var legendary: float = ReputationSystemSingleton.BUDGET_MULTIPLIERS[
+		ReputationSystemSingleton.ReputationTier.LEGENDARY
 	]
 	assert_lt(notorious, unremarkable, "Notorious < Unremarkable budget mult")
 	assert_lt(unremarkable, reputable, "Unremarkable < Reputable")

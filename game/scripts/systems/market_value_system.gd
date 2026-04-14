@@ -92,7 +92,7 @@ func get_item_price(store_id: StringName, item_id: StringName) -> float:
 	var base: float = item.definition.base_price
 	var category: StringName = StringName(item.definition.category)
 	var trend: float = _trend_multipliers.get(category, 1.0) as float
-	var difficulty: float = DifficultySystem.get_modifier(&"price_modifier")
+	var difficulty: float = DifficultySystemSingleton.get_modifier(&"price_modifier")
 	var result: float = maxf(base * trend * difficulty, MINIMUM_ITEM_PRICE)
 	if not _store_price_caps.has(store_id):
 		push_warning(
@@ -116,7 +116,7 @@ func calculate_item_value(item: ItemInstance) -> float:
 		return 0.0
 
 	var base: float = item.definition.base_price
-	var rarity_scale: float = DifficultySystem.get_modifier(
+	var rarity_scale: float = DifficultySystemSingleton.get_modifier(
 		&"rarity_scale_multiplier"
 	)
 	var rarity_mult: float = RARITY_MULTIPLIERS.get(
@@ -143,7 +143,7 @@ func calculate_item_value(item: ItemInstance) -> float:
 		* sport_season_mult * tournament_mult * test_mult
 		* time_mod
 	)
-	var floor_mult: float = DifficultySystem.get_modifier(
+	var floor_mult: float = DifficultySystemSingleton.get_modifier(
 		&"market_floor_multiplier"
 	)
 	return maxf(result, base * 0.5 * floor_mult)

@@ -11,7 +11,7 @@ var _panel: DifficultySelectionPanel
 func before_each() -> void:
 	_panel = _SCENE.instantiate() as DifficultySelectionPanel
 	add_child_autofree(_panel)
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_panel.open()
 
 
@@ -54,7 +54,7 @@ func test_select_easy_emits_difficulty_confirmed() -> void:
 func test_select_calls_difficulty_system_set_tier() -> void:
 	_panel._on_select_pressed(&"hard")
 	assert_eq(
-		DifficultySystem.get_current_tier_id(),
+		DifficultySystemSingleton.get_current_tier_id(),
 		&"hard",
 		"DifficultySystem tier should update to selected tier"
 	)
@@ -66,7 +66,7 @@ func test_select_hides_panel_after_confirm() -> void:
 
 
 func test_is_lower_tier_returns_true_for_easier_selection() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_panel.open()
 	assert_true(
 		_panel._is_lower_tier(&"easy"),
@@ -79,7 +79,7 @@ func test_is_lower_tier_returns_true_for_easier_selection() -> void:
 
 
 func test_is_lower_tier_returns_false_for_same_or_harder() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_panel.open()
 	assert_false(
 		_panel._is_lower_tier(&"normal"),
@@ -92,7 +92,7 @@ func test_is_lower_tier_returns_false_for_same_or_harder() -> void:
 
 
 func test_no_assisted_warning_when_not_from_pause() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_panel.open(false)
 	var dialog: ConfirmationDialog = _panel.get_node("AssistedWarningDialog")
 	_panel._on_select_pressed(&"easy")
@@ -104,7 +104,7 @@ func test_no_assisted_warning_when_not_from_pause() -> void:
 
 func test_assisted_warning_requires_day_greater_than_one() -> void:
 	# When day == 1 and from_pause == true, no warning should appear.
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_panel._from_pause = true
 	var dialog: ConfirmationDialog = _panel.get_node("AssistedWarningDialog")
 	# GameManager.current_day defaults to 1 on a fresh session.
@@ -117,7 +117,7 @@ func test_assisted_warning_requires_day_greater_than_one() -> void:
 
 
 func test_assisted_canceled_reverts_highlight() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_panel.open(true)
 	_panel._pending_tier_id = &"easy"
 	_panel._on_assisted_canceled()
@@ -136,12 +136,12 @@ func test_assisted_canceled_reverts_highlight() -> void:
 
 
 func test_difficulty_not_changed_when_assisted_dialog_canceled() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_panel.open(true)
 	_panel._pending_tier_id = &"easy"
 	_panel._on_assisted_canceled()
 	assert_eq(
-		DifficultySystem.get_current_tier_id(),
+		DifficultySystemSingleton.get_current_tier_id(),
 		&"hard",
 		"Difficulty should remain unchanged after canceling the assisted dialog"
 	)

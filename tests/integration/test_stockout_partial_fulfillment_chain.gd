@@ -1,4 +1,4 @@
-## Integration test: Hard mode stockout chain — DifficultySystem.get_modifier →
+## Integration test: Hard mode stockout chain — DifficultySystemSingleton.get_modifier →
 ## OrderSystem partial delivery → InventorySystem stock → order_stockout signal.
 extends GutTest
 
@@ -29,7 +29,7 @@ var _refund_amounts: Array[float] = []
 func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_data_loader = GameManager.data_loader
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 
 	_stockout_item_ids = []
 	_stockout_requested = []
@@ -73,7 +73,7 @@ func after_each() -> void:
 	if EventBus.order_refund_issued.is_connected(_on_order_refund_issued):
 		EventBus.order_refund_issued.disconnect(_on_order_refund_issued)
 
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 	GameManager.current_store_id = _saved_store_id
 	GameManager.data_loader = _saved_data_loader
 
@@ -115,8 +115,8 @@ func _place_order_and_force_stockout() -> void:
 
 
 func test_hard_mode_stockout_probability_is_positive() -> void:
-	DifficultySystem.set_tier(&"hard")
-	var prob: float = DifficultySystem.get_modifier(&"supplier_stockout_probability")
+	DifficultySystemSingleton.set_tier(&"hard")
+	var prob: float = DifficultySystemSingleton.get_modifier(&"supplier_stockout_probability")
 	assert_gt(
 		prob, 0.0,
 		"Hard difficulty must have a stockout probability greater than 0.0"
@@ -124,7 +124,7 @@ func test_hard_mode_stockout_probability_is_positive() -> void:
 
 
 func test_hard_mode_stockout_signal_fires() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	assert_eq(
 		_stockout_item_ids.size(), 1,
@@ -133,7 +133,7 @@ func test_hard_mode_stockout_signal_fires() -> void:
 
 
 func test_hard_mode_stockout_signal_carries_correct_item_id() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	if _stockout_item_ids.is_empty():
 		pending("Stockout signal not emitted — stockout may not have fired")
@@ -145,7 +145,7 @@ func test_hard_mode_stockout_signal_carries_correct_item_id() -> void:
 
 
 func test_hard_mode_stockout_requested_equals_ordered_quantity() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	if _stockout_requested.is_empty():
 		pending("Stockout signal not emitted")
@@ -157,7 +157,7 @@ func test_hard_mode_stockout_requested_equals_ordered_quantity() -> void:
 
 
 func test_hard_mode_stockout_fulfilled_less_than_requested() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	if _stockout_fulfilled.is_empty():
 		pending("Stockout signal not emitted")
@@ -169,7 +169,7 @@ func test_hard_mode_stockout_fulfilled_less_than_requested() -> void:
 
 
 func test_hard_mode_stockout_fulfilled_within_40_to_75_percent() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	if _stockout_fulfilled.is_empty():
 		pending("Stockout signal not emitted")
@@ -188,7 +188,7 @@ func test_hard_mode_stockout_fulfilled_within_40_to_75_percent() -> void:
 
 
 func test_hard_mode_order_delivered_fires_after_stockout() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	assert_eq(
 		_delivered_signals.size(), 1,
@@ -197,7 +197,7 @@ func test_hard_mode_order_delivered_fires_after_stockout() -> void:
 
 
 func test_hard_mode_delivery_items_count_matches_fulfilled_quantity() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	if _stockout_fulfilled.is_empty() or _delivered_signals.is_empty():
 		pending("Stockout or delivery signal not emitted")
@@ -210,7 +210,7 @@ func test_hard_mode_delivery_items_count_matches_fulfilled_quantity() -> void:
 
 
 func test_hard_mode_inventory_stock_matches_fulfilled_quantity() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	if _stockout_fulfilled.is_empty():
 		pending("Stockout signal not emitted")
@@ -223,7 +223,7 @@ func test_hard_mode_inventory_stock_matches_fulfilled_quantity() -> void:
 
 
 func test_hard_mode_inventory_stock_less_than_ordered() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	var stock_count: int = _count_stock_by_def(STORE_ID, ITEM_ID)
 	assert_lt(
@@ -233,7 +233,7 @@ func test_hard_mode_inventory_stock_less_than_ordered() -> void:
 
 
 func test_hard_mode_refund_issued_for_undelivered_units() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	assert_eq(
 		_refund_amounts.size(), 1,
@@ -246,7 +246,7 @@ func test_hard_mode_refund_issued_for_undelivered_units() -> void:
 
 
 func test_hard_mode_pending_orders_cleared_after_stockout_delivery() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_place_order_and_force_stockout()
 	assert_eq(
 		_order_system.get_pending_order_count(), 0,
@@ -258,8 +258,8 @@ func test_hard_mode_pending_orders_cleared_after_stockout_delivery() -> void:
 
 
 func test_normal_mode_stockout_probability_is_low() -> void:
-	DifficultySystem.set_tier(&"normal")
-	var prob: float = DifficultySystem.get_modifier(&"supplier_stockout_probability")
+	DifficultySystemSingleton.set_tier(&"normal")
+	var prob: float = DifficultySystemSingleton.get_modifier(&"supplier_stockout_probability")
 	assert_almost_eq(
 		prob, 0.05, 0.0001,
 		"Normal difficulty stockout probability should be 0.05"
@@ -267,7 +267,7 @@ func test_normal_mode_stockout_probability_is_low() -> void:
 
 
 func test_normal_mode_zero_stockout_flag_produces_full_delivery() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	# _force_stockout_for_test is false — delivery is full
 	_order_system.place_order(STORE_ID, BASIC_TIER, ITEM_ID, ORDER_QUANTITY)
 	for _i: int in range(BASIC_DELIVERY_DAYS):
@@ -279,7 +279,7 @@ func test_normal_mode_zero_stockout_flag_produces_full_delivery() -> void:
 
 
 func test_normal_mode_full_delivery_stock_matches_order() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_order_system.place_order(STORE_ID, BASIC_TIER, ITEM_ID, ORDER_QUANTITY)
 	for _i: int in range(BASIC_DELIVERY_DAYS):
 		_time_system.advance_to_next_day()
@@ -290,7 +290,7 @@ func test_normal_mode_full_delivery_stock_matches_order() -> void:
 
 
 func test_normal_mode_no_refund_on_full_delivery() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_order_system.place_order(STORE_ID, BASIC_TIER, ITEM_ID, ORDER_QUANTITY)
 	for _i: int in range(BASIC_DELIVERY_DAYS):
 		_time_system.advance_to_next_day()
@@ -301,7 +301,7 @@ func test_normal_mode_no_refund_on_full_delivery() -> void:
 
 
 func test_normal_mode_order_delivered_carries_full_item_count() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_order_system.place_order(STORE_ID, BASIC_TIER, ITEM_ID, ORDER_QUANTITY)
 	for _i: int in range(BASIC_DELIVERY_DAYS):
 		_time_system.advance_to_next_day()

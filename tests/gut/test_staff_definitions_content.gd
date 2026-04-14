@@ -50,7 +50,7 @@ const EXPECTED_SKILL_BONUS: Dictionary = {
 
 func test_exactly_nine_staff_definitions_loaded() -> void:
 	var all: Array[StaffDefinition] = (
-		DataLoader.get_all_staff_definitions()
+		DataLoaderSingleton.get_all_staff_definitions()
 	)
 	assert_eq(
 		all.size(), EXPECTED_COUNT,
@@ -61,7 +61,7 @@ func test_exactly_nine_staff_definitions_loaded() -> void:
 func test_all_expected_ids_present() -> void:
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		assert_not_null(
 			def,
@@ -88,7 +88,7 @@ func test_three_roles_with_three_skill_levels_each() -> void:
 	}
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if def:
 			counts[def.role] += 1
@@ -103,7 +103,7 @@ func test_three_roles_with_three_skill_levels_each() -> void:
 func test_hire_cost_and_daily_wage_values() -> void:
 	for staff_id: String in EXPECTED_WAGES:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			fail_test("Missing staff '%s'" % staff_id)
@@ -126,7 +126,7 @@ func test_hire_cost_and_daily_wage_values() -> void:
 func test_skill_bonus_values() -> void:
 	for staff_id: String in EXPECTED_SKILL_BONUS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			fail_test("Missing staff '%s'" % staff_id)
@@ -142,7 +142,7 @@ func test_skill_bonus_values() -> void:
 func test_morale_start_is_065_on_all() -> void:
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			continue
@@ -155,7 +155,7 @@ func test_morale_start_is_065_on_all() -> void:
 func test_morale_decay_is_002_on_all() -> void:
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			continue
@@ -168,7 +168,7 @@ func test_morale_decay_is_002_on_all() -> void:
 func test_all_entries_have_display_name() -> void:
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			continue
@@ -181,7 +181,7 @@ func test_all_entries_have_display_name() -> void:
 func test_all_entries_have_description() -> void:
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			continue
@@ -194,7 +194,7 @@ func test_all_entries_have_description() -> void:
 func test_skill_levels_match_id_pattern() -> void:
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			continue
@@ -215,7 +215,7 @@ func test_no_real_brand_names_in_descriptions() -> void:
 	]
 	for staff_id: String in EXPECTED_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		if not def:
 			continue

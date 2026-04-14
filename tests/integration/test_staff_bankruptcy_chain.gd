@@ -22,9 +22,9 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	_saved_difficulty = DifficultySystem.get_current_tier_id()
+	_saved_difficulty = DifficultySystemSingleton.get_current_tier_id()
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	GameManager.current_state = GameManager.GameState.GAMEPLAY
 	GameManager.current_store_id = &"test_store"
 	GameManager.owned_stores = []
@@ -55,7 +55,7 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
-	DifficultySystem.set_tier(_saved_difficulty)
+	DifficultySystemSingleton.set_tier(_saved_difficulty)
 
 
 ## Wages exceed cash — bankruptcy_declared emitted and GameManager enters GAME_OVER.
@@ -117,7 +117,7 @@ func test_bankruptcy_declared_emitted_exactly_once() -> void:
 
 ## Easy mode injection restores cash above wages before deduction — bankruptcy_declared not emitted.
 func test_easy_mode_injection_prevents_bankruptcy() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	_economy.load_save_data({
 		"current_cash": STARTING_CASH_BELOW_WAGE,
 		"daily_rent": 50.0,

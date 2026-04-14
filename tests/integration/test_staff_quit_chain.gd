@@ -13,9 +13,9 @@ var _saved_difficulty: StringName = &""
 
 func before_each() -> void:
 	_original_store_id = GameManager.current_store_id
-	_saved_difficulty = DifficultySystem.get_current_tier_id()
+	_saved_difficulty = DifficultySystemSingleton.get_current_tier_id()
 	GameManager.current_store_id = STORE_ID
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 
 	_staff_def = _make_pre_quit_staff(STAFF_ID, STORE_ID)
 	StaffManager._staff_registry[STAFF_ID] = _staff_def
@@ -27,7 +27,7 @@ func after_each() -> void:
 	if StaffManager._staff_registry.has(HIGH_MORALE_STAFF_ID):
 		StaffManager._staff_registry.erase(HIGH_MORALE_STAFF_ID)
 	GameManager.current_store_id = _original_store_id
-	DifficultySystem.set_tier(_saved_difficulty)
+	DifficultySystemSingleton.set_tier(_saved_difficulty)
 
 
 # ── Scenario A — staff_quit signal fires with the correct staff_id ────────────

@@ -65,7 +65,7 @@ var _current_phase: int = TimeSystem.DayPhase.PRE_OPEN
 var _displayed_cash: float = 0.0
 var _target_cash: float = 0.0
 var _current_speed: float = 1.0
-var _last_reputation: float = ReputationSystem.DEFAULT_REPUTATION
+var _last_reputation: float = ReputationSystemSingleton.DEFAULT_REPUTATION
 
 var _open_panel_count: int = 0
 var _cash_count_tween: Tween

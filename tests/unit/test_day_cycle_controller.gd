@@ -123,7 +123,7 @@ func test_day_ended_signal_transitions_to_day_summary() -> void:
 # ── Test 2: wages called before advance_day ──────────────────────────────────
 
 func test_wages_before_advance_day() -> void:
-	_staff.initialize(_economy, ReputationSystem, null, null)
+	_staff.initialize(_economy, ReputationSystemSingleton, null, null)
 	_controller._on_day_ended(1)
 	var day_before: int = _time.current_day
 
@@ -143,7 +143,7 @@ func test_wages_before_advance_day() -> void:
 
 func test_bankruptcy_when_cash_negative_after_wages() -> void:
 	_economy.initialize(5.0)
-	_staff.initialize(_economy, ReputationSystem, null, null)
+	_staff.initialize(_economy, ReputationSystemSingleton, null, null)
 	_controller._on_day_ended(1)
 
 	_economy.force_deduct_cash(100.0, "Pre-wage overdraft")
@@ -167,7 +167,7 @@ func test_bankruptcy_when_cash_negative_after_wages() -> void:
 
 func test_bankruptcy_emits_ending_requested() -> void:
 	_economy.initialize(5.0)
-	_staff.initialize(_economy, ReputationSystem, null, null)
+	_staff.initialize(_economy, ReputationSystemSingleton, null, null)
 	_controller._on_day_ended(1)
 	_economy.force_deduct_cash(100.0, "Overdraft")
 
@@ -181,7 +181,7 @@ func test_bankruptcy_emits_ending_requested() -> void:
 
 func test_bankruptcy_prevents_advance() -> void:
 	_economy.initialize(5.0)
-	_staff.initialize(_economy, ReputationSystem, null, null)
+	_staff.initialize(_economy, ReputationSystemSingleton, null, null)
 	_controller._on_day_ended(1)
 	_economy.force_deduct_cash(100.0, "Overdraft")
 	var day_before: int = _time.current_day

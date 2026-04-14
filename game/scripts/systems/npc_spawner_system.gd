@@ -122,7 +122,7 @@ func _setup_spawn_timer() -> void:
 func _update_timer_interval() -> void:
 	if not _spawn_timer:
 		return
-	if DifficultySystem.is_peak_hours():
+	if DifficultySystemSingleton.is_peak_hours():
 		_spawn_timer.wait_time = PEAK_SPAWN_INTERVAL
 	else:
 		_spawn_timer.wait_time = OFF_PEAK_SPAWN_INTERVAL

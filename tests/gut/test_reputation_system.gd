@@ -83,7 +83,7 @@ func test_tier_notorious_below_26() -> void:
 	_rep.add_reputation(STORE_A, -50.0)
 	assert_eq(
 		_rep.get_tier(STORE_A),
-		ReputationSystem.ReputationTier.NOTORIOUS,
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS,
 		"Score 0 should be Notorious"
 	)
 
@@ -92,7 +92,7 @@ func test_tier_unremarkable_at_26() -> void:
 	_rep.add_reputation(STORE_A, -24.0)
 	assert_eq(
 		_rep.get_tier(STORE_A),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Score 26 should be Unremarkable"
 	)
 
@@ -101,7 +101,7 @@ func test_tier_reputable_at_51() -> void:
 	_rep.add_reputation(STORE_A, 1.0)
 	assert_eq(
 		_rep.get_tier(STORE_A),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Score 51 should be Reputable"
 	)
 
@@ -110,7 +110,7 @@ func test_tier_legendary_at_76() -> void:
 	_rep.add_reputation(STORE_A, 26.0)
 	assert_eq(
 		_rep.get_tier(STORE_A),
-		ReputationSystem.ReputationTier.LEGENDARY,
+		ReputationSystemSingleton.ReputationTier.LEGENDARY,
 		"Score 76 should be Legendary"
 	)
 
@@ -230,7 +230,7 @@ func test_satisfied_customer_adds_reputation() -> void:
 	_rep._on_customer_left_mall(null, true)
 	assert_eq(
 		_rep.get_reputation(STORE_A),
-		before + ReputationSystem.SATISFACTION_GAIN,
+		before + ReputationSystemSingleton.SATISFACTION_GAIN,
 		"Satisfied customer should add SATISFACTION_GAIN"
 	)
 	GameManager.current_store_id = &""
@@ -242,7 +242,7 @@ func test_dissatisfied_customer_removes_reputation() -> void:
 	_rep._on_customer_left_mall(null, false)
 	assert_eq(
 		_rep.get_reputation(STORE_A),
-		before + ReputationSystem.DISSATISFACTION_LOSS,
+		before + ReputationSystemSingleton.DISSATISFACTION_LOSS,
 		"Dissatisfied customer should subtract DISSATISFACTION_LOSS"
 	)
 	GameManager.current_store_id = &""

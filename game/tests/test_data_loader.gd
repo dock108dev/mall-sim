@@ -27,7 +27,7 @@ const VALID_RARITIES: Array[String] = [
 
 
 func test_load_all_no_errors() -> void:
-	var errors: Array[String] = DataLoader.get_load_errors()
+	var errors: Array[String] = DataLoaderSingleton.get_load_errors()
 	assert_eq(
 		errors.size(), 0,
 		"load_all() should produce no errors: %s" % [errors]
@@ -37,7 +37,7 @@ func test_load_all_no_errors() -> void:
 func test_all_five_item_catalogs_parse() -> void:
 	for store_id: String in CATALOG_STORES:
 		var items: Array[ItemDefinition] = (
-			DataLoader.get_items_by_store(store_id)
+			DataLoaderSingleton.get_items_by_store(store_id)
 		)
 		var minimum: int = MIN_ITEMS_PER_STORE[store_id]
 		assert_gte(
@@ -48,7 +48,7 @@ func test_all_five_item_catalogs_parse() -> void:
 
 
 func test_all_items_have_required_fields() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	assert_gt(items.size(), 0, "Should have loaded items")
 	for item: ItemDefinition in items:
 		assert_ne(
@@ -79,7 +79,7 @@ func test_all_items_have_required_fields() -> void:
 
 
 func test_all_item_ids_unique_across_catalogs() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	var seen: Dictionary = {}
 	for item: ItemDefinition in items:
 		assert_false(
@@ -104,7 +104,7 @@ func test_store_definitions_produce_five_canonical_ids() -> void:
 
 func test_staff_definitions_parse() -> void:
 	var staff: Array[StaffDefinition] = (
-		DataLoader.get_all_staff_definitions()
+		DataLoaderSingleton.get_all_staff_definitions()
 	)
 	assert_gt(
 		staff.size(), 0,
@@ -115,7 +115,7 @@ func test_staff_definitions_parse() -> void:
 
 
 func test_economy_config_has_valid_starting_cash() -> void:
-	var config: EconomyConfig = DataLoader.get_economy_config()
+	var config: EconomyConfig = DataLoaderSingleton.get_economy_config()
 	assert_not_null(config, "Should load economy config")
 	assert_gt(
 		config.starting_cash, 0.0,

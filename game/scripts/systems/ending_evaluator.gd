@@ -49,7 +49,7 @@ func force_ending(ending_id: StringName) -> void:
 	_update_computed_stats()
 	var all_stats: Dictionary = _stats.duplicate()
 	all_stats["used_difficulty_downgrade"] = (
-		DifficultySystem.used_difficulty_downgrade
+		DifficultySystemSingleton.used_difficulty_downgrade
 	)
 	EventBus.ending_stats_snapshot_ready.emit(all_stats)
 	EventBus.ending_triggered.emit(ending_id, all_stats)
@@ -264,7 +264,7 @@ func _on_ending_requested(trigger_type: String) -> void:
 
 	var all_stats: Dictionary = _stats.duplicate()
 	all_stats["used_difficulty_downgrade"] = (
-		DifficultySystem.used_difficulty_downgrade
+		DifficultySystemSingleton.used_difficulty_downgrade
 	)
 	EventBus.ending_stats_snapshot_ready.emit(all_stats)
 

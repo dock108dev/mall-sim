@@ -409,7 +409,7 @@ func test_generous_sale_rep_bonus() -> void:
 		"Price ratio %.2f should be below generous threshold"
 		% ratio
 	)
-	var expected_rep: float = ReputationSystem.REP_FAIR_SALE * 1.5
+	var expected_rep: float = ReputationSystemSingleton.REP_FAIR_SALE * 1.5
 	assert_eq(
 		expected_rep, 3.75,
 		"Generous sale should give 1.5x fair sale rep"

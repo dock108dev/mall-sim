@@ -7,17 +7,17 @@ var _saved_tier: StringName
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 func test_easy_starting_cash_multiplied_by_1_50() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	_economy.initialize(1000.0)
 	assert_almost_eq(
 		_economy.get_cash(), 1500.0, 0.01,
@@ -26,7 +26,7 @@ func test_easy_starting_cash_multiplied_by_1_50() -> void:
 
 
 func test_hard_starting_cash_multiplied_by_0_70() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_economy.initialize(1000.0)
 	assert_almost_eq(
 		_economy.get_cash(), 700.0, 0.01,
@@ -35,7 +35,7 @@ func test_hard_starting_cash_multiplied_by_0_70() -> void:
 
 
 func test_normal_starting_cash_unchanged() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_economy.initialize(1000.0)
 	assert_almost_eq(
 		_economy.get_cash(), 1000.0, 0.01,
@@ -44,7 +44,7 @@ func test_normal_starting_cash_unchanged() -> void:
 
 
 func test_easy_wholesale_cost_reduced() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	_economy.initialize(1000.0)
 	var result: Array = []
 	_economy._on_order_cash_deduct(100.0, "test order", result)
@@ -56,7 +56,7 @@ func test_easy_wholesale_cost_reduced() -> void:
 
 
 func test_hard_wholesale_cost_increased() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_economy.initialize(2000.0)
 	var result: Array = []
 	_economy._on_order_cash_deduct(100.0, "test order", result)
@@ -69,7 +69,7 @@ func test_hard_wholesale_cost_increased() -> void:
 
 
 func test_easy_order_cash_check_uses_adjusted_cost() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	_economy.initialize(100.0)
 	var result: Array = []
 	_economy._on_order_cash_check(160.0, result)
@@ -80,7 +80,7 @@ func test_easy_order_cash_check_uses_adjusted_cost() -> void:
 
 
 func test_hard_order_cash_check_uses_adjusted_cost() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_economy.initialize(100.0)
 	var result: Array = []
 	_economy._on_order_cash_check(65.0, result)

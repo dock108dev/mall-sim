@@ -29,7 +29,7 @@ func _on_trend_shifted(category_id: StringName, new_level: float) -> void:
 # --- Volatility clamping ---
 
 func test_volatility_clamp_lower() -> void:
-	var clamped: float = MarketTrendSystem._clamp_volatility(-0.5)
+	var clamped: float = MarketTrendSystemSingleton._clamp_volatility(-0.5)
 	assert_almost_eq(
 		clamped, 0.0, 0.001,
 		"raw_volatility of -0.5 must clamp to 0.0"
@@ -37,7 +37,7 @@ func test_volatility_clamp_lower() -> void:
 
 
 func test_volatility_clamp_upper() -> void:
-	var clamped: float = MarketTrendSystem._clamp_volatility(2.5)
+	var clamped: float = MarketTrendSystemSingleton._clamp_volatility(2.5)
 	assert_almost_eq(
 		clamped, 2.0, 0.001,
 		"raw_volatility of 2.5 must clamp to 2.0"
@@ -153,7 +153,7 @@ func test_clamp_floor_prevents_level_below_min() -> void:
 	for key: Variant in _system.get_all_trend_levels():
 		var level: float = _system.get_trend_modifier(key as StringName)
 		assert_true(
-			level >= MarketTrendSystem.MIN_LEVEL,
+			level >= MarketTrendSystemSingleton.MIN_LEVEL,
 			"Level for '%s' must be >= MIN_LEVEL (0.2) after shift from 0.0" % key
 		)
 
@@ -165,7 +165,7 @@ func test_clamp_ceiling_prevents_level_above_max() -> void:
 	for key: Variant in _system.get_all_trend_levels():
 		var level: float = _system.get_trend_modifier(key as StringName)
 		assert_true(
-			level <= MarketTrendSystem.MAX_LEVEL,
+			level <= MarketTrendSystemSingleton.MAX_LEVEL,
 			"Level for '%s' must be <= MAX_LEVEL (2.0) after shift from 3.0" % key
 		)
 
@@ -211,7 +211,7 @@ func test_trend_shifted_emitted_with_correct_params_when_delta_exceeds_threshold
 func test_get_trend_modifier_returns_float_in_valid_range() -> void:
 	var mod: float = _system.get_trend_modifier(&"fashion")
 	assert_true(
-		mod >= MarketTrendSystem.MIN_LEVEL and mod <= MarketTrendSystem.MAX_LEVEL,
+		mod >= MarketTrendSystemSingleton.MIN_LEVEL and mod <= MarketTrendSystemSingleton.MAX_LEVEL,
 		"Modifier for 'fashion' must be in [MIN_LEVEL (0.2), MAX_LEVEL (2.0)]"
 	)
 

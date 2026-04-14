@@ -1,5 +1,5 @@
 ## Integration test — secret ending full path: thread_completed →
-## UnlockSystem.grant_unlock → EndingEvaluatorSystem selects SECRET ending.
+## UnlockSystemSingleton.grant_unlock → EndingEvaluatorSystem selects SECRET ending.
 class_name TestSecretEndingFullPath
 extends GutTest
 

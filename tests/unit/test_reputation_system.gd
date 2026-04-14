@@ -16,7 +16,7 @@ func test_initial_reputation_is_default() -> void:
 	_rep.initialize_store(STORE_ID)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.DEFAULT_REPUTATION, 0.01,
+		ReputationSystemSingleton.DEFAULT_REPUTATION, 0.01,
 		"Fresh store should start at DEFAULT_REPUTATION (50.0)"
 	)
 
@@ -45,14 +45,14 @@ func test_reputation_tier_upgrades_at_threshold() -> void:
 	_rep._scores[STORE_ID] = 0.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.NOTORIOUS,
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS,
 		"Score 0 should be NOTORIOUS tier"
 	)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_ID, 26.0)
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Score 26 should reach UNREMARKABLE tier"
 	)
 	assert_signal_emitted(
@@ -65,28 +65,28 @@ func test_tier_thresholds_are_correct() -> void:
 	_rep._scores[STORE_ID] = 0.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.NOTORIOUS,
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS,
 		"Score 0 should be NOTORIOUS"
 	)
 
 	_rep._scores[STORE_ID] = 26.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Score 26 should be UNREMARKABLE"
 	)
 
 	_rep._scores[STORE_ID] = 51.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Score 51 should be REPUTABLE"
 	)
 
 	_rep._scores[STORE_ID] = 76.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.LEGENDARY,
+		ReputationSystemSingleton.ReputationTier.LEGENDARY,
 		"Score 76 should be LEGENDARY"
 	)
 
@@ -95,21 +95,21 @@ func test_tier_stays_below_threshold() -> void:
 	_rep._scores[STORE_ID] = 25.9
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.NOTORIOUS,
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS,
 		"Score 25.9 should remain NOTORIOUS (below 26 threshold)"
 	)
 
 	_rep._scores[STORE_ID] = 50.9
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Score 50.9 should remain UNREMARKABLE (below 51 threshold)"
 	)
 
 	_rep._scores[STORE_ID] = 75.9
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Score 75.9 should remain REPUTABLE (below 76 threshold)"
 	)
 
@@ -118,13 +118,13 @@ func test_negative_event_can_downgrade_tier() -> void:
 	_rep._scores[STORE_ID] = 52.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Score 52 should be REPUTABLE"
 	)
 	_rep.add_reputation(STORE_ID, -5.0)
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Score dropping below 51 should downgrade to UNREMARKABLE"
 	)
 
@@ -140,11 +140,11 @@ func test_daily_decay_reduces_score_above_floor() -> void:
 
 
 func test_daily_decay_does_not_reduce_score_at_floor() -> void:
-	_rep._scores[STORE_ID] = ReputationSystem.DECAY_FLOOR
+	_rep._scores[STORE_ID] = ReputationSystemSingleton.DECAY_FLOOR
 	_rep._on_day_ended(1)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.DECAY_FLOOR, 0.01,
+		ReputationSystemSingleton.DECAY_FLOOR, 0.01,
 		"Score at DECAY_FLOOR should not decay further"
 	)
 
@@ -163,7 +163,7 @@ func test_score_clamped_at_max() -> void:
 	_rep.add_reputation(STORE_ID, 50.0)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.MAX_REPUTATION, 0.01,
+		ReputationSystemSingleton.MAX_REPUTATION, 0.01,
 		"Score should never exceed MAX_REPUTATION (100)"
 	)
 
@@ -173,7 +173,7 @@ func test_score_clamped_at_min() -> void:
 	_rep.add_reputation(STORE_ID, -50.0)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.MIN_REPUTATION, 0.01,
+		ReputationSystemSingleton.MIN_REPUTATION, 0.01,
 		"Score should never go below MIN_REPUTATION (0)"
 	)
 
@@ -182,14 +182,14 @@ func test_max_tier_is_legendary() -> void:
 	_rep._scores[STORE_ID] = 100.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.LEGENDARY,
+		ReputationSystemSingleton.ReputationTier.LEGENDARY,
 		"Max score should yield LEGENDARY tier"
 	)
 
 	_rep._scores[STORE_ID] = 9999.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.LEGENDARY,
+		ReputationSystemSingleton.ReputationTier.LEGENDARY,
 		"Extremely high score should still yield LEGENDARY"
 	)
 
@@ -211,7 +211,7 @@ func test_serialize_deserialize_preserves_score() -> void:
 
 func test_serialize_deserialize_preserves_tier() -> void:
 	_rep._scores[STORE_ID] = 60.0
-	var original_tier: ReputationSystem.ReputationTier = _rep.get_tier(
+	var original_tier: ReputationSystemSingleton.ReputationTier = _rep.get_tier(
 		STORE_ID
 	)
 	var save_data: Dictionary = _rep.get_save_data()
@@ -282,12 +282,12 @@ func test_reset_clears_all_scores() -> void:
 	_rep.reset()
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.DEFAULT_REPUTATION, 0.01,
+		ReputationSystemSingleton.DEFAULT_REPUTATION, 0.01,
 		"Score should return to default after reset"
 	)
 	assert_almost_eq(
 		_rep.get_reputation("other_store"),
-		ReputationSystem.DEFAULT_REPUTATION, 0.01,
+		ReputationSystemSingleton.DEFAULT_REPUTATION, 0.01,
 		"All store scores should reset"
 	)
 
@@ -330,7 +330,7 @@ func test_adjust_negative_2_0_decreases_score_exactly() -> void:
 
 func test_tier_downgrade_emits_reputation_changed_signal() -> void:
 	_rep._scores[STORE_ID] = 52.0
-	_rep._tiers[STORE_ID] = ReputationSystem.ReputationTier.REPUTABLE
+	_rep._tiers[STORE_ID] = ReputationSystemSingleton.ReputationTier.REPUTABLE
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_ID, -5.0)
 	assert_signal_emitted(
@@ -339,7 +339,7 @@ func test_tier_downgrade_emits_reputation_changed_signal() -> void:
 	)
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Tier should downgrade to UNREMARKABLE after score drops below 51"
 	)
 
@@ -349,16 +349,16 @@ func test_floor_clamp_at_zero_with_negative_delta() -> void:
 	_rep.add_reputation(STORE_ID, -5.0)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.MIN_REPUTATION, 0.01,
+		ReputationSystemSingleton.MIN_REPUTATION, 0.01,
 		"Score at 0.0 with -5.0 delta should remain at MIN_REPUTATION (0.0)"
 	)
 
 
 func test_ceiling_clamp_at_max_with_positive_delta() -> void:
-	_rep._scores[STORE_ID] = ReputationSystem.MAX_REPUTATION
+	_rep._scores[STORE_ID] = ReputationSystemSingleton.MAX_REPUTATION
 	_rep.add_reputation(STORE_ID, 5.0)
 	assert_almost_eq(
 		_rep.get_reputation(STORE_ID),
-		ReputationSystem.MAX_REPUTATION, 0.01,
+		ReputationSystemSingleton.MAX_REPUTATION, 0.01,
 		"Score at MAX_REPUTATION with +5.0 delta should remain at MAX_REPUTATION (100.0)"
 	)

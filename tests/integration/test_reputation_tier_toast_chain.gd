@@ -25,15 +25,15 @@ func after_each() -> void:
 # ── Test 1: Tier up (UNREMARKABLE → REPUTABLE) triggers toast ────────────────
 
 func test_tier_up_emits_reputation_changed() -> void:
-	var reputable_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable_threshold: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	# Place score so a single satisfied customer crosses the REPUTABLE threshold.
-	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystem.SATISFACTION_GAIN - 0.01)
+	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Store should start at UNREMARKABLE before the tier-up signal"
 	)
 
@@ -46,16 +46,16 @@ func test_tier_up_emits_reputation_changed() -> void:
 	)
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Tier should be REPUTABLE after threshold crossing"
 	)
 
 
 func test_tier_up_emits_toast_with_reputation_up_category() -> void:
-	var reputable_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable_threshold: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
-	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystem.SATISFACTION_GAIN - 0.01)
+	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
 
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, true)
@@ -73,10 +73,10 @@ func test_tier_up_emits_toast_with_reputation_up_category() -> void:
 
 
 func test_tier_up_toast_message_contains_new_tier_name() -> void:
-	var reputable_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable_threshold: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
-	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystem.SATISFACTION_GAIN - 0.01)
+	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
 
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, true)
@@ -92,15 +92,15 @@ func test_tier_up_toast_message_contains_new_tier_name() -> void:
 # ── Test 2: Tier down (REPUTABLE → UNREMARKABLE) triggers toast ───────────────
 
 func test_tier_down_emits_reputation_changed() -> void:
-	var reputable_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable_threshold: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	# Place score just above REPUTABLE so one dissatisfied customer drops it below.
 	_rep._scores[STORE_ID] = reputable_threshold + 0.1
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Store should start at REPUTABLE before the tier-down signal"
 	)
 
@@ -113,14 +113,14 @@ func test_tier_down_emits_reputation_changed() -> void:
 	)
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Tier should be UNREMARKABLE after score falls below REPUTABLE threshold"
 	)
 
 
 func test_tier_down_emits_toast_with_reputation_down_category() -> void:
-	var reputable_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable_threshold: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	_rep._scores[STORE_ID] = reputable_threshold + 0.1
 
@@ -142,24 +142,24 @@ func test_tier_down_emits_toast_with_reputation_down_category() -> void:
 # ── Test 3: Score change within tier does NOT emit toast ──────────────────────
 
 func test_within_tier_score_change_does_not_emit_toast() -> void:
-	var unremarkable_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.UNREMARKABLE
+	var unremarkable_threshold: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 	]
-	var reputable_threshold: float = ReputationSystem.TIER_THRESHOLDS[
-		ReputationSystem.ReputationTier.REPUTABLE
+	var reputable_threshold: float = ReputationSystemSingleton.TIER_THRESHOLDS[
+		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	# Start at 30 — within UNREMARKABLE (26.0–51.0).
 	_rep._scores[STORE_ID] = 30.0
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Store should start at UNREMARKABLE"
 	)
 
 	# Emit 13 satisfied customers: 30 + 13 * 1.5 = 49.5, still below REPUTABLE.
 	var emissions: int = ceili(
-		(reputable_threshold - 1.0 - 30.0) / ReputationSystem.SATISFACTION_GAIN
+		(reputable_threshold - 1.0 - 30.0) / ReputationSystemSingleton.SATISFACTION_GAIN
 	)
 
 	watch_signals(EventBus)
@@ -168,7 +168,7 @@ func test_within_tier_score_change_does_not_emit_toast() -> void:
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Tier should remain UNREMARKABLE — threshold must not be crossed"
 	)
 	assert_true(
@@ -193,7 +193,7 @@ func test_skip_tier_fires_exactly_one_toast() -> void:
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.NOTORIOUS,
+		ReputationSystemSingleton.ReputationTier.NOTORIOUS,
 		"Store should start at NOTORIOUS before the jump"
 	)
 
@@ -203,7 +203,7 @@ func test_skip_tier_fires_exactly_one_toast() -> void:
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystem.ReputationTier.REPUTABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Tier should be REPUTABLE after a 52-point jump from NOTORIOUS"
 	)
 	assert_signal_emit_count(

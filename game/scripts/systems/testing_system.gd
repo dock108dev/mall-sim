@@ -94,7 +94,7 @@ func _setup_timer() -> void:
 
 
 func _load_config() -> void:
-	var retro_cfg: Dictionary = DataLoader.get_retro_games_config()
+	var retro_cfg: Dictionary = DataLoaderSingleton.get_retro_games_config()
 	if not retro_cfg.is_empty():
 		_apply_retro_config(retro_cfg)
 		return

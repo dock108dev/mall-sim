@@ -44,7 +44,7 @@ var _late_evening_enabled: bool = false
 
 
 func _ready() -> void:
-	var unlock_system := get_node("/root/UnlockSystem") as UnlockSystem
+	var unlock_system := get_node("/root/UnlockSystemSingleton") as UnlockSystem
 	if unlock_system != null:
 		_late_evening_enabled = unlock_system.is_unlocked(&"extended_hours_unlock")
 	EventBus.unlock_granted.connect(_on_unlock_granted)

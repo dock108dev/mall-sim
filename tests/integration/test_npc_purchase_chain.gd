@@ -207,7 +207,7 @@ func test_reputation_increases_after_satisfied_customer_leaves() -> void:
 
 	assert_almost_eq(
 		_reputation.get_reputation(TEST_STORE_ID),
-		rep_before + ReputationSystem.SATISFACTION_GAIN,
+		rep_before + ReputationSystemSingleton.SATISFACTION_GAIN,
 		0.01,
 		"Reputation must increase by SATISFACTION_GAIN for satisfied customer"
 	)

@@ -304,7 +304,7 @@ func _do_resolve(
 	)
 	if not reward_unlock_id.is_empty():
 		var unlock_sys: Node = get_node_or_null(
-			"/root/UnlockSystem"
+			"/root/UnlockSystemSingleton"
 		)
 		if unlock_sys and unlock_sys.has_method("is_unlocked"):
 			if not unlock_sys.is_unlocked(reward_unlock_id):

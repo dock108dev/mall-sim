@@ -203,7 +203,7 @@ func test_reputation_increased_by_satisfaction_gain_after_satisfied_exit() -> vo
 
 	assert_almost_eq(
 		_reputation.get_reputation(TEST_STORE_ID),
-		rep_before + ReputationSystem.SATISFACTION_GAIN,
+		rep_before + ReputationSystemSingleton.SATISFACTION_GAIN,
 		0.01,
 		"Reputation must increase by SATISFACTION_GAIN when satisfied customer leaves"
 	)
@@ -305,7 +305,7 @@ func test_unhappy_reputation_decremented_by_dissatisfaction_loss() -> void:
 
 	assert_almost_eq(
 		_reputation.get_reputation(TEST_STORE_ID),
-		rep_before + ReputationSystem.DISSATISFACTION_LOSS,
+		rep_before + ReputationSystemSingleton.DISSATISFACTION_LOSS,
 		0.01,
 		"Reputation must decrease by DISSATISFACTION_LOSS when dissatisfied customer leaves"
 	)

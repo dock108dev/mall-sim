@@ -5,21 +5,21 @@ extends GutTest
 func test_content_registry_is_ready_after_load() -> void:
 	assert_true(
 		ContentRegistry.is_ready(),
-		"ContentRegistry should be ready after DataLoader.load_all_content()"
+		"ContentRegistry should be ready after DataLoaderSingleton.load_all_content()"
 	)
 
 
 func test_dataloader_load_all_content_is_idempotent() -> void:
-	var count_before: int = DataLoader.get_item_count()
-	DataLoader.load_all_content()
+	var count_before: int = DataLoaderSingleton.get_item_count()
+	DataLoaderSingleton.load_all_content()
 	assert_eq(
-		DataLoader.get_item_count(), count_before,
+		DataLoaderSingleton.get_item_count(), count_before,
 		"Calling load_all_content() twice should not duplicate entries"
 	)
 
 
 func test_dataloader_has_no_load_errors() -> void:
-	var errors: Array[String] = DataLoader.get_load_errors()
+	var errors: Array[String] = DataLoaderSingleton.get_load_errors()
 	assert_eq(
 		errors.size(), 0,
 		"DataLoader should have no load errors: %s" % [errors]

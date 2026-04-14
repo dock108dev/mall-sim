@@ -37,7 +37,7 @@ const STAFF_IDS: Array[String] = [
 
 
 func test_load_all_content_no_errors() -> void:
-	var errors: Array[String] = DataLoader.get_load_errors()
+	var errors: Array[String] = DataLoaderSingleton.get_load_errors()
 	assert_eq(
 		errors.size(), 0,
 		"DataLoader should have no load errors: %s" % [errors]
@@ -88,7 +88,7 @@ func test_store_scene_paths_non_empty() -> void:
 
 
 func test_at_least_ten_items_registered() -> void:
-	var count: int = DataLoader.get_item_count()
+	var count: int = DataLoaderSingleton.get_item_count()
 	assert_gte(
 		count, 10,
 		"Should have at least 10 items registered, found %d" % count
@@ -97,7 +97,7 @@ func test_at_least_ten_items_registered() -> void:
 
 func test_sample_item_ids_accessible() -> void:
 	for item_id: String in SAMPLE_ITEM_IDS:
-		var item: ItemDefinition = DataLoader.get_item(item_id)
+		var item: ItemDefinition = DataLoaderSingleton.get_item(item_id)
 		assert_not_null(
 			item,
 			"Item '%s' should be loadable via DataLoader" % item_id
@@ -115,7 +115,7 @@ func test_item_ids_in_registry() -> void:
 
 func test_customer_profiles_registered() -> void:
 	var customers: Array[CustomerTypeDefinition] = (
-		DataLoader.get_all_customers()
+		DataLoaderSingleton.get_all_customers()
 	)
 	assert_gt(
 		customers.size(), 0,
@@ -131,7 +131,7 @@ func test_customer_profiles_registered() -> void:
 
 func test_staff_definitions_registered() -> void:
 	var staff: Array[StaffDefinition] = (
-		DataLoader.get_all_staff_definitions()
+		DataLoaderSingleton.get_all_staff_definitions()
 	)
 	assert_eq(
 		staff.size(), STAFF_IDS.size(),
@@ -143,7 +143,7 @@ func test_staff_definitions_registered() -> void:
 func test_staff_ids_accessible() -> void:
 	for staff_id: String in STAFF_IDS:
 		var def: StaffDefinition = (
-			DataLoader.get_staff_definition(staff_id)
+			DataLoaderSingleton.get_staff_definition(staff_id)
 		)
 		assert_not_null(
 			def,

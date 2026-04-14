@@ -35,13 +35,13 @@ func _ready() -> void:
 ## Opens the panel. Pass from_pause=true when invoked from the pause menu.
 func open(from_pause: bool = false) -> void:
 	_from_pause = from_pause
-	_selected_tier_id = DifficultySystem.get_current_tier_id()
+	_selected_tier_id = DifficultySystemSingleton.get_current_tier_id()
 	_highlight_card(_selected_tier_id)
 	show()
 
 
 func _load_tiers() -> void:
-	var config: Dictionary = DataLoader.get_difficulty_config()
+	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
 	var tiers_array: Array = config.get("tiers", [])
 	for tier_data: Variant in tiers_array:
 		var tier: Dictionary = tier_data as Dictionary
@@ -178,19 +178,19 @@ func _on_assisted_confirmed() -> void:
 
 
 func _on_assisted_canceled() -> void:
-	_selected_tier_id = DifficultySystem.get_current_tier_id()
+	_selected_tier_id = DifficultySystemSingleton.get_current_tier_id()
 	_highlight_card(_selected_tier_id)
 	_pending_tier_id = &""
 
 
 func _confirm_selection(tier_id: StringName) -> void:
-	DifficultySystem.set_tier(tier_id)
+	DifficultySystemSingleton.set_tier(tier_id)
 	difficulty_confirmed.emit(tier_id)
 	hide()
 
 
 func _is_lower_tier(new_id: StringName) -> bool:
-	var current_idx: int = _tier_ids.find(DifficultySystem.get_current_tier_id())
+	var current_idx: int = _tier_ids.find(DifficultySystemSingleton.get_current_tier_id())
 	var new_idx: int = _tier_ids.find(new_id)
 	if current_idx < 0 or new_idx < 0:
 		return false

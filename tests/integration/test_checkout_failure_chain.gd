@@ -182,7 +182,7 @@ func test_reputation_decreased_by_dissatisfaction_loss_constant() -> void:
 
 	assert_almost_eq(
 		_reputation.get_reputation(TEST_STORE_ID),
-		rep_before + ReputationSystem.DISSATISFACTION_LOSS,
+		rep_before + ReputationSystemSingleton.DISSATISFACTION_LOSS,
 		0.01,
 		"Reputation must decrease by exactly DISSATISFACTION_LOSS on checkout failure"
 	)

@@ -138,7 +138,7 @@ func test_acknowledgement_advances_day() -> void:
 func test_bankruptcy_emitted_when_cash_negative() -> void:
 	_economy.initialize(5.0)
 	_staff.initialize(
-		_economy, ReputationSystem, null, null
+		_economy, ReputationSystemSingleton, null, null
 	)
 	GameManager.current_state = GameManager.GameState.GAMEPLAY
 	_controller._on_day_ended(1)

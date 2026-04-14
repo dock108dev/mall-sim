@@ -175,7 +175,7 @@ func _evaluate_purchase_intent() -> bool:
 	var store_key: String = String(_store_id)
 	if store_key.is_empty():
 		store_key = GameManager.current_store_id
-	var tier: int = ReputationSystem.get_tier(store_key) as int
+	var tier: int = ReputationSystemSingleton.get_tier(store_key) as int
 	if tier > REPUTATION_TIER_BONUS_THRESHOLD:
 		final_chance += REPUTATION_PURCHASE_BONUS
 	return randf() < final_chance

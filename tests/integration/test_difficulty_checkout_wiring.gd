@@ -29,7 +29,7 @@ var _left_mall_signals: Array[Dictionary] = []
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_register_test_store()
 
 	_inventory = InventorySystem.new()
@@ -72,7 +72,7 @@ func after_each() -> void:
 	_safe_disconnect(EventBus.customer_purchased, _on_customer_purchased)
 	_safe_disconnect(EventBus.customer_left_mall, _on_customer_left_mall)
 	_remove_test_tier()
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 	_unregister_test_store()
 
 
@@ -124,7 +124,7 @@ func _run_trials(trial_count: int) -> int:
 
 
 func _inject_test_tier(modifier_value: float) -> void:
-	DifficultySystem._tiers[TEST_TIER_ID] = {
+	DifficultySystemSingleton._tiers[TEST_TIER_ID] = {
 		"id": String(TEST_TIER_ID),
 		"display_name": "Diff Checkout Wiring Tier",
 		"modifiers": {
@@ -132,17 +132,17 @@ func _inject_test_tier(modifier_value: float) -> void:
 		},
 		"flags": {},
 	}
-	if not DifficultySystem._tier_order.has(TEST_TIER_ID):
-		DifficultySystem._tier_order.append(TEST_TIER_ID)
-	DifficultySystem._current_tier_id = TEST_TIER_ID
+	if not DifficultySystemSingleton._tier_order.has(TEST_TIER_ID):
+		DifficultySystemSingleton._tier_order.append(TEST_TIER_ID)
+	DifficultySystemSingleton._current_tier_id = TEST_TIER_ID
 
 
 func _remove_test_tier() -> void:
-	if DifficultySystem._tiers.has(TEST_TIER_ID):
-		DifficultySystem._tiers.erase(TEST_TIER_ID)
-	var idx: int = DifficultySystem._tier_order.find(TEST_TIER_ID)
+	if DifficultySystemSingleton._tiers.has(TEST_TIER_ID):
+		DifficultySystemSingleton._tiers.erase(TEST_TIER_ID)
+	var idx: int = DifficultySystemSingleton._tier_order.find(TEST_TIER_ID)
 	if idx >= 0:
-		DifficultySystem._tier_order.remove_at(idx)
+		DifficultySystemSingleton._tier_order.remove_at(idx)
 
 
 # ── Group 1: Modifier read at transaction time ───────────────────────────────
@@ -194,11 +194,11 @@ func test_modifier_0_0_with_base_1_0_fails() -> void:
 
 
 func test_easy_vs_hard_distribution_gap_at_least_10_percent() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	seed(RNG_SEED)
 	var easy_successes: int = _run_trials(TRIAL_COUNT)
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	seed(RNG_SEED)
 	var hard_successes: int = _run_trials(TRIAL_COUNT)
 
@@ -214,11 +214,11 @@ func test_easy_vs_hard_distribution_gap_at_least_10_percent() -> void:
 
 
 func test_hard_success_count_lower_than_easy() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	seed(RNG_SEED)
 	var easy_successes: int = _run_trials(TRIAL_COUNT)
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	seed(RNG_SEED)
 	var hard_successes: int = _run_trials(TRIAL_COUNT)
 
@@ -334,13 +334,13 @@ func test_runtime_change_from_zero_to_full_takes_effect_next_call() -> void:
 
 
 func test_apply_difficulty_change_easy_to_hard_updates_modifier_immediately() -> void:
-	DifficultySystem.set_tier(&"easy")
-	var easy_modifier: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"easy")
+	var easy_modifier: float = DifficultySystemSingleton.get_modifier(
 		&"purchase_probability_multiplier"
 	)
 
-	DifficultySystem.apply_difficulty_change(&"hard")
-	var hard_modifier: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.apply_difficulty_change(&"hard")
+	var hard_modifier: float = DifficultySystemSingleton.get_modifier(
 		&"purchase_probability_multiplier"
 	)
 
@@ -360,7 +360,7 @@ func test_runtime_easy_to_hard_via_apply_next_checkout_uses_hard_modifier() -> v
 	# With base=1.0 and easy modifier (clamped to 1.0), easy always succeeds.
 	# After switching to hard (modifier=0.70), boundary injection of 0.0 confirms
 	# the system reads the current tier on each call.
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	_restock_item()
 	var customer1: Customer = _make_customer()
 	var first: bool = _checkout.process_transaction(customer1)

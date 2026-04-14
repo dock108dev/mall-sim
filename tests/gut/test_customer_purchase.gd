@@ -94,14 +94,14 @@ func test_willingness_to_pay_respects_sensitivity() -> void:
 
 func test_fair_price_threshold_constant() -> void:
 	assert_eq(
-		ReputationSystem.FAIR_PRICE_THRESHOLD, 0.25,
+		ReputationSystemSingleton.FAIR_PRICE_THRESHOLD, 0.25,
 		"FAIR_PRICE_THRESHOLD should be 0.25 (within 25%% of market value)"
 	)
 
 
 func test_price_within_fair_threshold_is_acceptable() -> void:
 	var market_value: float = _item.get_current_value()
-	var threshold: float = ReputationSystem.FAIR_PRICE_THRESHOLD
+	var threshold: float = ReputationSystemSingleton.FAIR_PRICE_THRESHOLD
 	var fair_price: float = market_value * (1.0 + threshold)
 	_item.player_set_price = fair_price
 	var tolerance: float = 2.0 - _profile.price_sensitivity

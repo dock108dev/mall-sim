@@ -25,7 +25,7 @@ const VALID_STORE_IDS: Array[String] = [
 func test_eight_archetypes_loaded() -> void:
 	for archetype_id: String in ARCHETYPE_IDS:
 		var customers: Array[CustomerTypeDefinition] = (
-			DataLoader.get_all_customers()
+			DataLoaderSingleton.get_all_customers()
 		)
 		var found: bool = false
 		for c: CustomerTypeDefinition in customers:
@@ -50,7 +50,7 @@ func test_archetypes_resolve_in_registry() -> void:
 
 func test_archetype_fields_valid() -> void:
 	var customers: Array[CustomerTypeDefinition] = (
-		DataLoader.get_all_customers()
+		DataLoaderSingleton.get_all_customers()
 	)
 	for c: CustomerTypeDefinition in customers:
 		if c.id not in ARCHETYPE_IDS:
@@ -81,7 +81,7 @@ func test_archetype_fields_valid() -> void:
 
 func test_archetype_store_types_valid() -> void:
 	var customers: Array[CustomerTypeDefinition] = (
-		DataLoader.get_all_customers()
+		DataLoaderSingleton.get_all_customers()
 	)
 	for c: CustomerTypeDefinition in customers:
 		if c.id not in ARCHETYPE_IDS:

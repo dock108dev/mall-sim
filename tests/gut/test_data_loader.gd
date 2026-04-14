@@ -3,7 +3,7 @@ extends GutTest
 
 
 func test_load_json_valid_file() -> void:
-	var data: Variant = DataLoader.load_json(
+	var data: Variant = DataLoaderSingleton.load_json(
 		"res://game/content/stores/store_definitions.json"
 	)
 	assert_not_null(data, "Should parse valid JSON")
@@ -11,7 +11,7 @@ func test_load_json_valid_file() -> void:
 
 
 func test_load_json_missing_file_returns_null() -> void:
-	var data: Variant = DataLoader.load_json(
+	var data: Variant = DataLoaderSingleton.load_json(
 		"res://nonexistent_file.json"
 	)
 	assert_null(data, "Missing file should return null")
@@ -19,34 +19,34 @@ func test_load_json_missing_file_returns_null() -> void:
 
 func test_items_loaded() -> void:
 	assert_gt(
-		DataLoader.get_item_count(), 0,
+		DataLoaderSingleton.get_item_count(), 0,
 		"Should load at least one item"
 	)
 
 
 func test_stores_loaded() -> void:
 	assert_gt(
-		DataLoader.get_store_count(), 0,
+		DataLoaderSingleton.get_store_count(), 0,
 		"Should load at least one store"
 	)
 
 
 func test_customers_loaded() -> void:
 	assert_gt(
-		DataLoader.get_customer_count(), 0,
+		DataLoaderSingleton.get_customer_count(), 0,
 		"Should load at least one customer"
 	)
 
 
 func test_fixtures_loaded() -> void:
 	assert_gt(
-		DataLoader.get_fixture_count(), 0,
+		DataLoaderSingleton.get_fixture_count(), 0,
 		"Should load at least one fixture"
 	)
 
 
 func test_economy_config_loaded() -> void:
-	var config: EconomyConfig = DataLoader.get_economy_config()
+	var config: EconomyConfig = DataLoaderSingleton.get_economy_config()
 	assert_not_null(config, "Should load economy config")
 	assert_gt(
 		config.starting_cash, 0.0,
@@ -56,14 +56,14 @@ func test_economy_config_loaded() -> void:
 
 func test_milestones_loaded() -> void:
 	var milestones: Array[MilestoneDefinition] = (
-		DataLoader.get_all_milestones()
+		DataLoaderSingleton.get_all_milestones()
 	)
 	assert_gt(milestones.size(), 0, "Should load milestones")
 
 
 func test_milestone_has_required_fields() -> void:
 	var milestones: Array[MilestoneDefinition] = (
-		DataLoader.get_all_milestones()
+		DataLoaderSingleton.get_all_milestones()
 	)
 	for m: MilestoneDefinition in milestones:
 		assert_ne(m.id, "", "Milestone should have id")
@@ -79,7 +79,7 @@ func test_milestone_has_required_fields() -> void:
 
 
 func test_item_has_required_fields() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	for item: ItemDefinition in items:
 		assert_ne(item.id, "", "Item should have id")
 		assert_gt(
@@ -90,7 +90,7 @@ func test_item_has_required_fields() -> void:
 
 func test_store_has_required_fields() -> void:
 	var stores: Array[StoreDefinition] = (
-		DataLoader.get_all_stores()
+		DataLoaderSingleton.get_all_stores()
 	)
 	for store: StoreDefinition in stores:
 		assert_ne(store.id, "", "Store should have id")
@@ -99,13 +99,13 @@ func test_store_has_required_fields() -> void:
 
 func test_items_by_store_filter() -> void:
 	var stores: Array[StoreDefinition] = (
-		DataLoader.get_all_stores()
+		DataLoaderSingleton.get_all_stores()
 	)
 	if stores.is_empty():
 		return
 	var store_id: String = stores[0].id
 	var items: Array[ItemDefinition] = (
-		DataLoader.get_items_by_store(store_id)
+		DataLoaderSingleton.get_items_by_store(store_id)
 	)
 	for item: ItemDefinition in items:
 		assert_eq(
@@ -154,13 +154,13 @@ func test_content_registry_resolve_alias() -> void:
 
 func test_create_starting_inventory() -> void:
 	var stores: Array[StoreDefinition] = (
-		DataLoader.get_all_stores()
+		DataLoaderSingleton.get_all_stores()
 	)
 	for store: StoreDefinition in stores:
 		if store.starting_inventory.is_empty():
 			continue
 		var inv: Array[ItemInstance] = (
-			DataLoader.create_starting_inventory(store.id)
+			DataLoaderSingleton.create_starting_inventory(store.id)
 		)
 		assert_gt(
 			inv.size(), 0,
@@ -172,12 +172,12 @@ func test_create_starting_inventory() -> void:
 
 func test_generate_starter_inventory() -> void:
 	var stores: Array[StoreDefinition] = (
-		DataLoader.get_all_stores()
+		DataLoaderSingleton.get_all_stores()
 	)
 	if stores.is_empty():
 		return
 	var inv: Array[ItemInstance] = (
-		DataLoader.generate_starter_inventory(stores[0].id)
+		DataLoaderSingleton.generate_starter_inventory(stores[0].id)
 	)
 	assert_gt(
 		inv.size(), 0,
@@ -187,42 +187,42 @@ func test_generate_starter_inventory() -> void:
 
 func test_upgrades_loaded() -> void:
 	assert_gt(
-		DataLoader.get_upgrade_count(), 0,
+		DataLoaderSingleton.get_upgrade_count(), 0,
 		"Should load at least one upgrade"
 	)
 
 
 func test_market_events_loaded() -> void:
 	var events: Array[MarketEventDefinition] = (
-		DataLoader.get_all_market_events()
+		DataLoaderSingleton.get_all_market_events()
 	)
 	assert_gt(events.size(), 0, "Should load market events")
 
 
 func test_seasonal_events_loaded() -> void:
 	var events: Array[SeasonalEventDefinition] = (
-		DataLoader.get_all_seasonal_events()
+		DataLoaderSingleton.get_all_seasonal_events()
 	)
 	assert_gt(events.size(), 0, "Should load seasonal events")
 
 
 func test_random_events_loaded() -> void:
 	var events: Array[RandomEventDefinition] = (
-		DataLoader.get_all_random_events()
+		DataLoaderSingleton.get_all_random_events()
 	)
 	assert_gt(events.size(), 0, "Should load random events")
 
 
 func test_staff_definitions_loaded() -> void:
 	var staff: Array[StaffDefinition] = (
-		DataLoader.get_all_staff_definitions()
+		DataLoaderSingleton.get_all_staff_definitions()
 	)
 	assert_gt(staff.size(), 0, "Should load staff definitions")
 
 
 func test_secret_threads_loaded() -> void:
 	var threads: Array[Dictionary] = (
-		DataLoader.get_all_secret_threads()
+		DataLoaderSingleton.get_all_secret_threads()
 	)
 	assert_gt(threads.size(), 0, "Should load secret threads")
 
@@ -238,7 +238,7 @@ func test_validate_all_references_clean() -> void:
 
 
 func test_item_schema_alignment_all_fields_populated() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	assert_gt(items.size(), 0, "Should have loaded items")
 	var store_types_seen: Dictionary = {}
 	for item: ItemDefinition in items:
@@ -280,7 +280,7 @@ func test_item_schema_alignment_all_fields_populated() -> void:
 
 
 func test_difficulty_config_loaded() -> void:
-	var config: Dictionary = DataLoader.get_difficulty_config()
+	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
 	assert_true(
 		config.has("tiers"),
 		"Difficulty config should have tiers"
@@ -327,7 +327,7 @@ func test_difficulty_config_loaded() -> void:
 
 
 func test_difficulty_config_normal_baseline() -> void:
-	var config: Dictionary = DataLoader.get_difficulty_config()
+	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
 	var tiers: Array = config["tiers"]
 	var normal: Dictionary = {}
 	for tier: Variant in tiers:
@@ -345,7 +345,7 @@ func test_difficulty_config_normal_baseline() -> void:
 
 
 func test_difficulty_config_easy_values() -> void:
-	var config: Dictionary = DataLoader.get_difficulty_config()
+	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
 	var tiers: Array = config["tiers"]
 	var easy: Dictionary = {}
 	for tier: Variant in tiers:
@@ -364,7 +364,7 @@ func test_difficulty_config_easy_values() -> void:
 
 
 func test_difficulty_config_hard_values() -> void:
-	var config: Dictionary = DataLoader.get_difficulty_config()
+	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
 	var tiers: Array = config["tiers"]
 	var hard: Dictionary = {}
 	for tier: Variant in tiers:
@@ -391,7 +391,7 @@ func test_item_json_uses_item_name_not_name() -> void:
 		"res://game/content/items/video_rental.json",
 	]
 	for path: String in catalog_paths:
-		var data: Variant = DataLoader.load_json(path)
+		var data: Variant = DataLoaderSingleton.load_json(path)
 		assert_not_null(data, "Should parse %s" % path)
 		if data is not Array:
 			continue
@@ -413,14 +413,14 @@ func test_item_json_uses_item_name_not_name() -> void:
 
 func test_unlocks_loaded() -> void:
 	assert_eq(
-		DataLoader.get_unlock_count(), 6,
+		DataLoaderSingleton.get_unlock_count(), 6,
 		"Should load exactly 6 unlock definitions"
 	)
 
 
 func test_unlock_has_required_fields() -> void:
 	var unlocks: Array[UnlockDefinition] = (
-		DataLoader.get_all_unlocks()
+		DataLoaderSingleton.get_all_unlocks()
 	)
 	for u: UnlockDefinition in unlocks:
 		assert_ne(u.id, "", "Unlock should have id")
@@ -448,7 +448,7 @@ func test_unlock_has_required_fields() -> void:
 
 func test_unlock_ids_are_unique() -> void:
 	var unlocks: Array[UnlockDefinition] = (
-		DataLoader.get_all_unlocks()
+		DataLoaderSingleton.get_all_unlocks()
 	)
 	var seen: Dictionary = {}
 	for u: UnlockDefinition in unlocks:
@@ -460,7 +460,7 @@ func test_unlock_ids_are_unique() -> void:
 
 
 func test_unlock_get_by_id() -> void:
-	var u: UnlockDefinition = DataLoader.get_unlock(
+	var u: UnlockDefinition = DataLoaderSingleton.get_unlock(
 		"order_catalog_expansion_1"
 	)
 	assert_not_null(u, "Should find unlock by id")

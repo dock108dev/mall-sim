@@ -16,7 +16,7 @@ func after_each() -> void:
 # --- Scenario A: valid content files pass validation ---
 
 func test_real_content_loads_without_errors() -> void:
-	var errors: Array[String] = DataLoader.get_load_errors()
+	var errors: Array[String] = DataLoaderSingleton.get_load_errors()
 	assert_eq(
 		errors.size(), 0,
 		"DataLoader should report zero load errors on real content"
@@ -40,13 +40,13 @@ func test_all_five_store_ids_resolve_via_content_registry() -> void:
 
 
 func test_all_item_ids_accessible_in_data_loader() -> void:
-	var items: Array[ItemDefinition] = DataLoader.get_all_items()
+	var items: Array[ItemDefinition] = DataLoaderSingleton.get_all_items()
 	assert_gt(items.size(), 0, "DataLoader should have items loaded")
 	for item: ItemDefinition in items:
-		var found: ItemDefinition = DataLoader.get_item(item.id)
+		var found: ItemDefinition = DataLoaderSingleton.get_item(item.id)
 		assert_not_null(
 			found,
-			"Item '%s' should be retrievable via DataLoader.get_item()" % item.id
+			"Item '%s' should be retrievable via DataLoaderSingleton.get_item()" % item.id
 		)
 
 

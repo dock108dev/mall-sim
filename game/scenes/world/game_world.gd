@@ -82,7 +82,7 @@ const _DebugOverlayScene: PackedScene = preload(
 
 var reputation_system: ReputationSystem:
 	get:
-		return ReputationSystem
+		return ReputationSystemSingleton
 
 @onready var time_system: TimeSystem = $TimeSystem
 @onready var economy_system: EconomySystem = $EconomySystem
@@ -171,7 +171,7 @@ func _ready() -> void:
 	_setup_ui()
 	if _mall_hallway:
 		_mall_hallway.set_systems(
-			economy_system, ReputationSystem,
+			economy_system, ReputationSystemSingleton,
 			inventory_system, progression_system
 		)
 		_mall_hallway.set_ambient_systems(
@@ -235,12 +235,12 @@ func _initialize_tier_2_state() -> void:
 func _initialize_tier_3_operational() -> void:
 	var store_ctrl: StoreController = _find_store_controller()
 
-	ReputationSystem.initialize_store(
+	ReputationSystemSingleton.initialize_store(
 		String(GameManager.current_store_id)
 	)
 
 	customer_system.initialize(
-		store_ctrl, inventory_system, ReputationSystem
+		store_ctrl, inventory_system, ReputationSystemSingleton
 	)
 	if store_ctrl:
 		customer_system.set_store_id(
@@ -248,7 +248,7 @@ func _initialize_tier_3_operational() -> void:
 		)
 
 	mall_customer_spawner.initialize(
-		customer_system, ReputationSystem, trend_system
+		customer_system, ReputationSystemSingleton, trend_system
 	)
 	mall_customer_spawner.set_seasonal_event_system(
 		seasonal_event_system
@@ -256,13 +256,13 @@ func _initialize_tier_3_operational() -> void:
 
 	npc_spawner_system.initialize(inventory_system)
 
-	haggle_system.initialize(ReputationSystem)
+	haggle_system.initialize(ReputationSystemSingleton)
 
 	checkout_system.initialize(
 		economy_system,
 		inventory_system,
 		customer_system,
-		ReputationSystem
+		ReputationSystemSingleton
 	)
 	checkout_system.set_haggle_system(haggle_system)
 	checkout_system.set_market_value_system(market_value_system)
@@ -279,17 +279,17 @@ func _initialize_tier_3_operational() -> void:
 
 	queue_system.initialize()
 
-	progression_system.initialize(economy_system, ReputationSystem)
+	progression_system.initialize(economy_system, ReputationSystemSingleton)
 
 	milestone_system.initialize()
 
 	order_system.initialize(
-		inventory_system, ReputationSystem, progression_system
+		inventory_system, ReputationSystemSingleton, progression_system
 	)
 
 	staff_system.initialize(
 		economy_system,
-		ReputationSystem,
+		ReputationSystemSingleton,
 		inventory_system,
 		GameManager.data_loader,
 	)
@@ -309,7 +309,7 @@ func _initialize_tier_4_world() -> void:
 
 	tournament_system.initialize(
 		economy_system,
-		ReputationSystem,
+		ReputationSystemSingleton,
 		customer_system,
 		fixture_placement,
 		GameManager.data_loader
@@ -330,7 +330,7 @@ func _initialize_tier_5_meta() -> void:
 	random_event_system.initialize(
 		GameManager.data_loader,
 		inventory_system,
-		ReputationSystem,
+		ReputationSystemSingleton,
 		economy_system
 	)
 
@@ -345,7 +345,7 @@ func _initialize_tier_5_meta() -> void:
 	store_upgrade_system.initialize(
 		GameManager.data_loader,
 		economy_system,
-		ReputationSystem,
+		ReputationSystemSingleton,
 	)
 
 	completion_tracker.initialize(GameManager.data_loader)
@@ -397,12 +397,12 @@ func _wire_save_manager() -> void:
 		performance_report_system
 	)
 	var unlock_system: UnlockSystem = get_node_or_null(
-		"/root/UnlockSystem"
+		"/root/UnlockSystemSingleton"
 	)
 	if unlock_system:
 		save_manager.set_unlock_system(unlock_system)
 	var onboarding_system: OnboardingSystem = get_node_or_null(
-		"/root/OnboardingSystem"
+		"/root/OnboardingSystemSingleton"
 	)
 	if onboarding_system:
 		save_manager.set_onboarding_system(onboarding_system)
@@ -565,7 +565,7 @@ func _setup_deferred_panels() -> void:
 	)
 	upgrade_panel.upgrade_system = store_upgrade_system
 	upgrade_panel.economy_system = economy_system
-	upgrade_panel.reputation_system = ReputationSystem
+	upgrade_panel.reputation_system = ReputationSystemSingleton
 	upgrade_panel.data_loader = GameManager.data_loader
 	upgrade_panel.store_type = GameManager.DEFAULT_STARTING_STORE
 	_ui_layer.add_child(upgrade_panel)
@@ -824,7 +824,7 @@ func _wire_rental_system(store_ctrl: StoreController) -> void:
 		)
 		rental.set_inventory_system(inventory_system)
 		rental.set_economy_system(economy_system)
-		rental.set_reputation_system(ReputationSystem)
+		rental.set_reputation_system(ReputationSystemSingleton)
 		save_manager.set_rental_system(rental)
 		if _inventory_panel:
 			_inventory_panel.rental_controller = rental

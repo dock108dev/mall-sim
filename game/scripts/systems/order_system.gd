@@ -218,20 +218,20 @@ func get_daily_spending(tier: SupplierTier) -> float:
 ## Returns the daily order limit for a given supplier tier after applying the difficulty modifier.
 func get_daily_limit(tier: SupplierTier) -> float:
 	var base_limit: float = TIER_CONFIG[tier]["daily_limit"]
-	var mult: float = DifficultySystem.get_modifier(&"daily_order_limit_multiplier")
+	var mult: float = DifficultySystemSingleton.get_modifier(&"daily_order_limit_multiplier")
 	return maxf(1.0, base_limit * mult)
 
 
 ## Returns the effective delivery days for a tier after applying the difficulty modifier.
 func get_effective_delivery_days(tier: SupplierTier) -> int:
 	var base_days: int = TIER_CONFIG[tier]["delivery_days"]
-	var mult: float = DifficultySystem.get_modifier(&"supplier_lead_time_multiplier")
+	var mult: float = DifficultySystemSingleton.get_modifier(&"supplier_lead_time_multiplier")
 	return maxi(1, roundi(float(base_days) * mult))
 
 
 ## Returns the per-order stockout probability for the current difficulty tier.
 func get_stockout_probability() -> float:
-	return DifficultySystem.get_modifier(&"supplier_stockout_probability")
+	return DifficultySystemSingleton.get_modifier(&"supplier_stockout_probability")
 
 
 ## Recalculates delivery days for all pending orders using current difficulty.

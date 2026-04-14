@@ -30,9 +30,9 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	_saved_difficulty = DifficultySystem.get_current_tier_id()
+	_saved_difficulty = DifficultySystemSingleton.get_current_tier_id()
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	GameManager.current_state = GameManager.GameState.GAMEPLAY
 	GameManager.current_store_id = &"wage_test_store"
 	GameManager.owned_stores = []
@@ -82,7 +82,7 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
-	DifficultySystem.set_tier(_saved_difficulty)
+	DifficultySystemSingleton.set_tier(_saved_difficulty)
 	_safe_disconnect(EventBus.bankruptcy_declared, _on_bankruptcy_declared)
 	_safe_disconnect(EventBus.day_started, _on_day_started)
 

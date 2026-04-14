@@ -258,7 +258,7 @@ func _get_current_reputation() -> float:
 	if store_id.is_empty():
 		return 0.0
 	var rep_sys: Node = get_node_or_null(
-		"/root/ReputationSystem"
+		"/root/ReputationSystemSingleton"
 	)
 	if rep_sys and rep_sys.has_method("get_reputation"):
 		var score: Variant = rep_sys.get_reputation(store_id)

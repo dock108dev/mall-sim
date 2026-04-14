@@ -63,8 +63,12 @@ func hide_tooltip() -> void:
 
 
 func _display_tooltip(text: String) -> void:
+	_label.custom_minimum_size = Vector2.ZERO
 	_label.text = text
 	_panel.reset_size()
+	if _panel.size.x > float(MAX_WIDTH):
+		_label.custom_minimum_size = Vector2(float(MAX_WIDTH), 0.0)
+		_panel.reset_size()
 	PanelAnimator.kill_tween(_fade_tween)
 	_fade_tween = PanelAnimator.fade_in(_panel, FADE_DURATION)
 	_is_visible = true
@@ -127,6 +131,5 @@ func _build_panel() -> void:
 
 	_panel.add_child(_label)
 	_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	_panel.custom_maximum_size = Vector2(MAX_WIDTH, 0)
 
 	canvas.add_child(_panel)

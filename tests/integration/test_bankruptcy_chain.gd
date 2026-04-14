@@ -21,9 +21,9 @@ var _saved_difficulty: StringName
 func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_ending_id = GameManager.get_ending_id()
-	_saved_difficulty = DifficultySystem.get_current_tier_id()
+	_saved_difficulty = DifficultySystemSingleton.get_current_tier_id()
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	GameManager.current_state = GameManager.GameState.GAMEPLAY
 	GameManager._ending_id = &""
 
@@ -43,7 +43,7 @@ func before_each() -> void:
 func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager._ending_id = _saved_ending_id
-	DifficultySystem.set_tier(_saved_difficulty)
+	DifficultySystemSingleton.set_tier(_saved_difficulty)
 
 
 ## Full chain: deduction past zero → bankruptcy_declared (once) → ending_triggered → GAME_OVER.

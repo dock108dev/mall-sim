@@ -164,7 +164,7 @@ func test_reputation_decays_each_day() -> void:
 		"Reputation should decrease after 5 days of decay"
 	)
 
-	var expected_decay: float = ReputationSystem.DAILY_DECAY * NUM_DAYS
+	var expected_decay: float = ReputationSystemSingleton.DAILY_DECAY * NUM_DAYS
 	assert_almost_eq(
 		score_after,
 		score_before - expected_decay,

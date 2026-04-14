@@ -27,7 +27,7 @@ var _left_mall_signals: Array[Dictionary] = []
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
 	_register_test_store()
 
 	_inventory = InventorySystem.new()
@@ -70,7 +70,7 @@ func after_each() -> void:
 	_safe_disconnect(EventBus.customer_purchased, _on_customer_purchased)
 	_safe_disconnect(EventBus.customer_left_mall, _on_customer_left_mall)
 	_remove_test_tier()
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 	_unregister_test_store()
 
 
@@ -122,7 +122,7 @@ func _run_trials(trial_count: int) -> int:
 
 
 func _inject_test_tier(modifier_value: float) -> void:
-	DifficultySystem._tiers[&"diff_test_tier"] = {
+	DifficultySystemSingleton._tiers[&"diff_test_tier"] = {
 		"id": "diff_test_tier",
 		"display_name": "Test Tier",
 		"modifiers": {
@@ -130,26 +130,26 @@ func _inject_test_tier(modifier_value: float) -> void:
 		},
 		"flags": {},
 	}
-	if not DifficultySystem._tier_order.has(&"diff_test_tier"):
-		DifficultySystem._tier_order.append(&"diff_test_tier")
-	DifficultySystem._current_tier_id = &"diff_test_tier"
+	if not DifficultySystemSingleton._tier_order.has(&"diff_test_tier"):
+		DifficultySystemSingleton._tier_order.append(&"diff_test_tier")
+	DifficultySystemSingleton._current_tier_id = &"diff_test_tier"
 
 
 func _remove_test_tier() -> void:
-	if DifficultySystem._tiers.has(&"diff_test_tier"):
-		DifficultySystem._tiers.erase(&"diff_test_tier")
-	var idx: int = DifficultySystem._tier_order.find(&"diff_test_tier")
+	if DifficultySystemSingleton._tiers.has(&"diff_test_tier"):
+		DifficultySystemSingleton._tiers.erase(&"diff_test_tier")
+	var idx: int = DifficultySystemSingleton._tier_order.find(&"diff_test_tier")
 	if idx >= 0:
-		DifficultySystem._tier_order.remove_at(idx)
+		DifficultySystemSingleton._tier_order.remove_at(idx)
 
 
 # ── Structural: modifier values ──────────────────────────────────────────────
 
 
 func test_normal_tier_purchase_probability_modifier_is_one() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	assert_almost_eq(
-		DifficultySystem.get_modifier(&"purchase_probability_multiplier"),
+		DifficultySystemSingleton.get_modifier(&"purchase_probability_multiplier"),
 		1.0,
 		0.001,
 		"Normal tier purchase_probability_multiplier must be 1.0"
@@ -157,9 +157,9 @@ func test_normal_tier_purchase_probability_modifier_is_one() -> void:
 
 
 func test_hard_tier_purchase_probability_modifier_is_less_than_one() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	assert_true(
-		DifficultySystem.get_modifier(&"purchase_probability_multiplier") < 1.0,
+		DifficultySystemSingleton.get_modifier(&"purchase_probability_multiplier") < 1.0,
 		"Hard tier purchase_probability_multiplier must be < 1.0"
 	)
 
@@ -168,7 +168,7 @@ func test_hard_tier_purchase_probability_modifier_is_less_than_one() -> void:
 
 
 func test_normal_mode_at_least_95_of_100_transactions_succeed() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	seed(RNG_SEED)
 	var successes: int = _run_trials(TRIAL_COUNT)
 	assert_gte(
@@ -183,7 +183,7 @@ func test_normal_mode_at_least_95_of_100_transactions_succeed() -> void:
 
 
 func test_hard_mode_fewer_than_95_of_100_transactions_succeed() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	seed(RNG_SEED)
 	var successes: int = _run_trials(TRIAL_COUNT)
 	assert_lt(
@@ -195,11 +195,11 @@ func test_hard_mode_fewer_than_95_of_100_transactions_succeed() -> void:
 
 
 func test_hard_mode_success_count_lower_than_normal_mode() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	seed(RNG_SEED)
 	var normal_successes: int = _run_trials(TRIAL_COUNT)
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	seed(RNG_SEED)
 	var hard_successes: int = _run_trials(TRIAL_COUNT)
 
@@ -249,7 +249,7 @@ func test_failed_transaction_does_not_emit_customer_purchased() -> void:
 
 
 func test_mid_run_switch_normal_to_zero_fails_immediately() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_restock_item()
 	var customer1: Customer = _make_customer()
 	var succeeded1: bool = _checkout.process_transaction(customer1)
@@ -289,7 +289,7 @@ func test_mid_run_switch_zero_to_full_succeeds_immediately() -> void:
 
 
 func test_modifier_not_cached_reads_per_transaction() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_restock_item()
 	var customer1: Customer = _make_customer()
 	var succeeded1: bool = _checkout.process_transaction(customer1)

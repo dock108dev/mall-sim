@@ -17,10 +17,10 @@ const STORE_TYPE: String = "pocket_creatures"
 
 ## Reputation tier thresholds that scale participant count.
 const TIER_PARTICIPANT_BONUS: Dictionary = {
-	ReputationSystem.ReputationTier.NOTORIOUS: 0,
-	ReputationSystem.ReputationTier.UNREMARKABLE: 2,
-	ReputationSystem.ReputationTier.REPUTABLE: 4,
-	ReputationSystem.ReputationTier.LEGENDARY: 6,
+	ReputationSystemSingleton.ReputationTier.NOTORIOUS: 0,
+	ReputationSystemSingleton.ReputationTier.UNREMARKABLE: 2,
+	ReputationSystemSingleton.ReputationTier.REPUTABLE: 4,
+	ReputationSystemSingleton.ReputationTier.LEGENDARY: 6,
 }
 
 var _economy_system: EconomySystem = null
@@ -190,7 +190,7 @@ func _apply_state(data: Dictionary) -> void:
 func _calculate_participant_count() -> int:
 	var base: int = MIN_PARTICIPANTS
 	if _reputation_system:
-		var tier: ReputationSystem.ReputationTier = _reputation_system.get_tier()
+		var tier: ReputationSystemSingleton.ReputationTier = _reputation_system.get_tier()
 		var bonus: int = TIER_PARTICIPANT_BONUS.get(tier, 0) as int
 		base += bonus
 	return mini(base, MAX_PARTICIPANTS)

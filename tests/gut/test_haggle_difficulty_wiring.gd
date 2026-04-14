@@ -13,7 +13,7 @@ var _original_tier: StringName
 
 
 func before_each() -> void:
-	_original_tier = DifficultySystem.get_current_tier_id()
+	_original_tier = DifficultySystemSingleton.get_current_tier_id()
 
 	_reputation = ReputationSystem.new()
 	add_child_autofree(_reputation)
@@ -56,7 +56,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(_original_tier)
+	DifficultySystemSingleton.set_tier(_original_tier)
 
 
 func _make_customer() -> Customer:
@@ -70,8 +70,8 @@ func _make_customer() -> Customer:
 
 
 func test_evaluate_offer_reads_acceptance_base_rate() -> void:
-	DifficultySystem.set_tier(&"normal")
-	var rate: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"normal")
+	var rate: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_acceptance_base_rate"
 	)
 	assert_almost_eq(
@@ -81,8 +81,8 @@ func test_evaluate_offer_reads_acceptance_base_rate() -> void:
 
 
 func test_evaluate_offer_reads_concession_ceiling() -> void:
-	DifficultySystem.set_tier(&"normal")
-	var ceiling: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"normal")
+	var ceiling: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_concession_ceiling"
 	)
 	assert_almost_eq(
@@ -92,11 +92,11 @@ func test_evaluate_offer_reads_concession_ceiling() -> void:
 
 
 func test_easy_tier_modifiers() -> void:
-	DifficultySystem.set_tier(&"easy")
-	var rate: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"easy")
+	var rate: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_acceptance_base_rate"
 	)
-	var ceiling: float = DifficultySystem.get_modifier(
+	var ceiling: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_concession_ceiling"
 	)
 	assert_almost_eq(rate, 0.60, 0.001, "Easy base rate = 0.60")
@@ -104,11 +104,11 @@ func test_easy_tier_modifiers() -> void:
 
 
 func test_hard_tier_modifiers() -> void:
-	DifficultySystem.set_tier(&"hard")
-	var rate: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"hard")
+	var rate: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_acceptance_base_rate"
 	)
-	var ceiling: float = DifficultySystem.get_modifier(
+	var ceiling: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_concession_ceiling"
 	)
 	assert_almost_eq(rate, 0.30, 0.001, "Hard base rate = 0.30")
@@ -119,7 +119,7 @@ func test_hard_tier_modifiers() -> void:
 
 
 func test_hard_tier_rejects_below_ceiling() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var below_ceiling: float = _item.player_set_price * 0.91
@@ -137,7 +137,7 @@ func test_hard_tier_rejects_below_ceiling() -> void:
 
 
 func test_hard_tier_allows_above_ceiling() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var above_ceiling: float = _item.player_set_price * 0.93
@@ -157,7 +157,7 @@ func test_hard_tier_allows_above_ceiling() -> void:
 
 
 func test_normal_tier_acceptance_probability() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var offer_price: float = _item.player_set_price * 0.867
@@ -180,7 +180,7 @@ func test_normal_tier_acceptance_probability() -> void:
 
 
 func test_easy_tier_acceptance_probability() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var offer_price: float = _item.player_set_price * 0.867
@@ -204,31 +204,31 @@ func test_easy_tier_acceptance_probability() -> void:
 
 
 func test_easy_success_rate_multiplier_is_1_30() -> void:
-	DifficultySystem.set_tier(&"easy")
-	var mult: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"easy")
+	var mult: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_success_rate_multiplier"
 	)
 	assert_almost_eq(mult, 1.30, 0.001, "Easy haggle_success_rate_multiplier should be 1.30")
 
 
 func test_hard_success_rate_multiplier_is_0_65() -> void:
-	DifficultySystem.set_tier(&"hard")
-	var mult: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"hard")
+	var mult: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_success_rate_multiplier"
 	)
 	assert_almost_eq(mult, 0.65, 0.001, "Hard haggle_success_rate_multiplier should be 0.65")
 
 
 func test_normal_success_rate_multiplier_is_1_00() -> void:
-	DifficultySystem.set_tier(&"normal")
-	var mult: float = DifficultySystem.get_modifier(
+	DifficultySystemSingleton.set_tier(&"normal")
+	var mult: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_success_rate_multiplier"
 	)
 	assert_almost_eq(mult, 1.00, 0.001, "Normal haggle_success_rate_multiplier should be 1.00")
 
 
 func test_hard_tier_acceptance_probability() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)
 	var offer_price: float = _item.player_set_price * 0.95

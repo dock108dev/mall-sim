@@ -23,8 +23,8 @@ func _create_item(
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystem.get_current_tier_id()
-	DifficultySystem.set_tier(&"normal")
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton.set_tier(&"normal")
 
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
@@ -39,7 +39,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 # --- market_floor_multiplier ---
@@ -52,7 +52,7 @@ func test_normal_floor_does_not_alter_healthy_price() -> void:
 
 
 func test_easy_floor_raises_collapsed_price() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	# damaged common: 10.0 * (1.0 * 0.90) * 0.15 = 1.35; floor = 10.0 * 0.5 * 1.10 = 5.5
 	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "damaged")
 	var value: float = _system.calculate_item_value(item)
@@ -63,7 +63,7 @@ func test_easy_floor_raises_collapsed_price() -> void:
 
 
 func test_hard_floor_raises_collapsed_price_less_than_easy() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	# damaged common: 10.0 * (1.0 * 1.20) * 0.15 = 1.80; floor = 10.0 * 0.5 * 0.85 = 4.25
 	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "damaged")
 	var value: float = _system.calculate_item_value(item)
@@ -75,9 +75,9 @@ func test_hard_floor_raises_collapsed_price_less_than_easy() -> void:
 
 func test_easy_floor_higher_than_hard_floor() -> void:
 	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "damaged")
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var easy_value: float = _system.calculate_item_value(item)
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var hard_value: float = _system.calculate_item_value(item)
 	assert_true(
 		easy_value > hard_value,
@@ -94,7 +94,7 @@ func test_normal_rarity_scale_unchanged() -> void:
 
 
 func test_easy_rarity_scale_is_0_90() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "rare"}, "mint")
 	var value: float = _system.calculate_item_value(item)
 	# floor = 10.0 * 0.5 * 1.10 = 5.5; computed = 10.0 * (1.8 * 0.90) * 1.0 = 16.2
@@ -105,7 +105,7 @@ func test_easy_rarity_scale_is_0_90() -> void:
 
 
 func test_hard_rarity_scale_is_1_20() -> void:
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "rare"}, "mint")
 	var value: float = _system.calculate_item_value(item)
 	# floor = 10.0 * 0.5 * 0.85 = 4.25; computed = 10.0 * (1.8 * 1.20) * 1.0 = 21.6
@@ -117,18 +117,18 @@ func test_hard_rarity_scale_is_1_20() -> void:
 
 func test_hard_rare_more_expensive_than_normal() -> void:
 	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "rare"}, "mint")
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_value: float = _system.calculate_item_value(item)
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var hard_value: float = _system.calculate_item_value(item)
 	assert_true(hard_value > normal_value, "Hard rare more expensive due to rarity_scale=1.20")
 
 
 func test_easy_rare_cheaper_than_normal() -> void:
 	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "rare"}, "mint")
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_value: float = _system.calculate_item_value(item)
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var easy_value: float = _system.calculate_item_value(item)
 	assert_true(easy_value < normal_value, "Easy rare cheaper due to rarity_scale=0.90")
 
@@ -176,14 +176,14 @@ func test_hard_trend_fades_earlier_than_normal() -> void:
 		"fade_end_day": 8,
 	}
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_trend._active_trends = [trend.duplicate()]
 	var item: ItemInstance = _create_item(
 		{"base_price": 10.0, "rarity": "common", "category": "trading_cards"}, "mint"
 	)
 	var normal_value: float = _system.calculate_item_value(item)
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	_trend._active_trends = [trend.duplicate()]
 	var hard_value: float = _system.calculate_item_value(item)
 
@@ -212,14 +212,14 @@ func test_easy_trend_still_active_past_base_end() -> void:
 		"fade_end_day": 8,
 	}
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	_trend._active_trends = [trend.duplicate()]
 	var item: ItemInstance = _create_item(
 		{"base_price": 10.0, "rarity": "common", "category": "trading_cards"}, "mint"
 	)
 	var normal_value: float = _system.calculate_item_value(item)
 
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	_trend._active_trends = [trend.duplicate()]
 	var easy_value: float = _system.calculate_item_value(item)
 

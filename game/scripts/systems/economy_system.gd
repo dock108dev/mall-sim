@@ -67,7 +67,7 @@ var _last_injection_day: int = -1
 
 
 func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
-	var cash_mult: float = DifficultySystem.get_modifier(
+	var cash_mult: float = DifficultySystemSingleton.get_modifier(
 		&"starting_cash_multiplier"
 	)
 	_bankruptcy_declared = false
@@ -478,7 +478,7 @@ func _emit_daily_financials_snapshot() -> void:
 
 func _deduct_all_store_rents() -> void:
 	_daily_rent_total = 0.0
-	var rent_mult: float = DifficultySystem.get_modifier(
+	var rent_mult: float = DifficultySystemSingleton.get_modifier(
 		&"daily_rent_multiplier"
 	)
 	for store_id: String in GameManager.owned_stores:
@@ -597,7 +597,7 @@ func _restore_dict(data: Dictionary, key: String) -> Dictionary:
 
 
 func _on_order_cash_check(amount: float, result: Array) -> void:
-	var adjusted: float = amount * DifficultySystem.get_modifier(
+	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(
 		&"wholesale_cost_multiplier"
 	)
 	result.append(_current_cash >= adjusted)
@@ -606,14 +606,14 @@ func _on_order_cash_check(amount: float, result: Array) -> void:
 func _on_order_cash_deduct(
 	amount: float, reason: String, result: Array
 ) -> void:
-	var adjusted: float = amount * DifficultySystem.get_modifier(
+	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(
 		&"wholesale_cost_multiplier"
 	)
 	result.append(deduct_cash(adjusted, reason))
 
 
 func _on_order_refund_issued(amount: float, reason: String) -> void:
-	var adjusted: float = amount * DifficultySystem.get_modifier(
+	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(
 		&"wholesale_cost_multiplier"
 	)
 	add_cash(adjusted, reason)
@@ -652,7 +652,7 @@ func _check_bankruptcy() -> void:
 
 
 func _check_emergency_injection(day: int) -> void:
-	if not DifficultySystem.get_flag(&"emergency_cash_injection_enabled"):
+	if not DifficultySystemSingleton.get_flag(&"emergency_cash_injection_enabled"):
 		return
 	var threshold: float = _daily_rent * 2.0
 	if _current_cash >= threshold:

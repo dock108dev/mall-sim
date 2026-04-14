@@ -154,7 +154,7 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _load_config() -> void:
-	var cfg: Dictionary = DataLoader.get_retro_games_config()
+	var cfg: Dictionary = DataLoaderSingleton.get_retro_games_config()
 	if cfg.is_empty():
 		return
 	_active_max_queue_size = int(

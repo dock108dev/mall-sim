@@ -193,7 +193,7 @@ func get_store_daily_wages(store_id: String) -> float:
 	return total
 
 
-## Returns the StaffDefinition for a given id from the DataLoader.
+## Returns the StaffDefinition for a given id from the DataLoaderSingleton.
 func _get_staff_definition(
 	definition_id: String
 ) -> StaffDefinition:
@@ -220,7 +220,7 @@ func process_daily_wages() -> void:
 func _deduct_staff_wages() -> void:
 	if not _economy_system:
 		return
-	var wage_mult: float = DifficultySystem.get_modifier(&"staff_wage_multiplier")
+	var wage_mult: float = DifficultySystemSingleton.get_modifier(&"staff_wage_multiplier")
 	var total_wages: float = 0.0
 	for store_id: String in _hired_staff:
 		var store_wages: float = get_store_daily_wages(store_id) * wage_mult

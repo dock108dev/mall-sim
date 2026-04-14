@@ -9,7 +9,7 @@ var _original_tier: StringName
 
 
 func before_each() -> void:
-	_original_tier = DifficultySystem.get_current_tier_id()
+	_original_tier = DifficultySystemSingleton.get_current_tier_id()
 
 	_system = CustomerSystem.new()
 	add_child_autofree(_system)
@@ -31,7 +31,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	DifficultySystem.set_tier(_original_tier)
+	DifficultySystemSingleton.set_tier(_original_tier)
 
 
 # --- foot_traffic_multiplier ---
@@ -41,10 +41,10 @@ func test_easy_foot_traffic_is_1_30x_normal() -> void:
 	_system._current_hour = 12
 	_system._current_day_of_week = 0
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_target: int = _system.get_spawn_target()
 
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var easy_target: int = _system.get_spawn_target()
 
 	assert_gt(normal_target, 0, "Normal spawn target must be positive")
@@ -56,10 +56,10 @@ func test_hard_foot_traffic_is_0_75x_normal() -> void:
 	_system._current_hour = 12
 	_system._current_day_of_week = 0
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_target: int = _system.get_spawn_target()
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var hard_target: int = _system.get_spawn_target()
 
 	assert_gt(normal_target, 0, "Normal spawn target must be positive")
@@ -71,7 +71,7 @@ func test_normal_foot_traffic_matches_baseline() -> void:
 	_system._current_hour = 12
 	_system._current_day_of_week = 0
 
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var first: int = _system.get_spawn_target()
 	var second: int = _system.get_spawn_target()
 	assert_eq(first, second, "Normal repeated calls must return the same target")
@@ -81,12 +81,12 @@ func test_normal_foot_traffic_matches_baseline() -> void:
 
 
 func test_easy_purchase_intent_is_1_25x_normal() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
 
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var easy_intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
@@ -98,12 +98,12 @@ func test_easy_purchase_intent_is_1_25x_normal() -> void:
 
 
 func test_hard_purchase_intent_is_0_70x_normal() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var normal_intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var hard_intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
@@ -116,7 +116,7 @@ func test_hard_purchase_intent_is_0_70x_normal() -> void:
 
 func test_purchase_intent_clamped_to_1() -> void:
 	_profile.purchase_probability_base = 0.9
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
@@ -127,7 +127,7 @@ func test_purchase_intent_clamped_to_1() -> void:
 
 
 func test_normal_purchase_intent_matches_baseline() -> void:
-	DifficultySystem.set_tier(&"normal")
+	DifficultySystemSingleton.set_tier(&"normal")
 	var intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
@@ -141,20 +141,20 @@ func test_normal_purchase_intent_matches_baseline() -> void:
 
 
 func test_easy_budget_modifier_is_1_20() -> void:
-	DifficultySystem.set_tier(&"easy")
-	var mult: float = DifficultySystem.get_modifier(&"customer_budget_multiplier")
+	DifficultySystemSingleton.set_tier(&"easy")
+	var mult: float = DifficultySystemSingleton.get_modifier(&"customer_budget_multiplier")
 	assert_almost_eq(mult, 1.20, 0.001, "Easy customer_budget_multiplier should be 1.20")
 
 
 func test_hard_budget_modifier_is_0_80() -> void:
-	DifficultySystem.set_tier(&"hard")
-	var mult: float = DifficultySystem.get_modifier(&"customer_budget_multiplier")
+	DifficultySystemSingleton.set_tier(&"hard")
+	var mult: float = DifficultySystemSingleton.get_modifier(&"customer_budget_multiplier")
 	assert_almost_eq(mult, 0.80, 0.001, "Hard customer_budget_multiplier should be 0.80")
 
 
 func test_normal_budget_modifier_is_1_00() -> void:
-	DifficultySystem.set_tier(&"normal")
-	var mult: float = DifficultySystem.get_modifier(&"customer_budget_multiplier")
+	DifficultySystemSingleton.set_tier(&"normal")
+	var mult: float = DifficultySystemSingleton.get_modifier(&"customer_budget_multiplier")
 	assert_almost_eq(mult, 1.00, 0.001, "Normal customer_budget_multiplier should be 1.00")
 
 
@@ -165,10 +165,10 @@ func test_foot_traffic_reflects_mid_playthrough_change() -> void:
 	_system._current_hour = 12
 	_system._current_day_of_week = 0
 
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var easy_target: int = _system.get_spawn_target()
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var hard_target: int = _system.get_spawn_target()
 
 	assert_lt(
@@ -178,12 +178,12 @@ func test_foot_traffic_reflects_mid_playthrough_change() -> void:
 
 
 func test_purchase_intent_reflects_mid_playthrough_change() -> void:
-	DifficultySystem.set_tier(&"easy")
+	DifficultySystemSingleton.set_tier(&"easy")
 	var easy_intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
 
-	DifficultySystem.set_tier(&"hard")
+	DifficultySystemSingleton.set_tier(&"hard")
 	var hard_intent: float = _system.get_purchase_intent_for_category(
 		_profile, &"cards"
 	)
