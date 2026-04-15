@@ -17,6 +17,10 @@ var _purchased_signals: Array[Dictionary] = []
 var _queue_signals: Array[int] = []
 
 
+func before_all() -> void:
+	DifficultySystemSingleton._load_config()
+
+
 func before_each() -> void:
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)

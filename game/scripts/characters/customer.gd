@@ -67,9 +67,10 @@ var last_anim_time_ms: float = 0.0
 func _ready() -> void:
 	_randomize_body_color()
 	EventBus.speed_changed.connect(_on_speed_changed)
-	_navigation_agent.velocity_computed.connect(
-		_on_velocity_computed
-	)
+	if _navigation_agent != null:
+		_navigation_agent.velocity_computed.connect(
+			_on_velocity_computed
+		)
 
 
 ## Sets up the customer with a profile, store, and inventory references.
@@ -245,9 +246,10 @@ func _process_leaving() -> void:
 func _transition_to(new_state: State) -> void:
 	current_state = new_state
 	EventBus.customer_state_changed.emit(self, new_state)
-	if new_state == State.LEAVING:
+	if new_state == State.LEAVING and _animator != null:
 		_animator.set_satisfied(_made_purchase)
-	_animator.play_for_state(new_state)
+	if _animator != null:
+		_animator.play_for_state(new_state)
 	match new_state:
 		State.PURCHASING:
 			_navigate_to_register()
