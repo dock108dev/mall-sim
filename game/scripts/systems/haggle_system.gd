@@ -258,7 +258,14 @@ func _evaluate_offer(player_price: float) -> bool:
 	var success_rate_mult: float = DifficultySystemSingleton.get_modifier(
 		&"haggle_success_rate_multiplier"
 	)
-	var accept_prob: float = base_rate * offer_ratio * success_rate_mult
+	# Scale probability down as gap_ratio approaches 2x the acceptance threshold.
+	# At exactly acceptance_threshold: full probability. At 2x threshold: zero.
+	var gap_ratio: float = _calculate_gap_ratio(player_price)
+	var prob_scale: float = clampf(
+		1.0 - (gap_ratio - _acceptance_threshold) / maxf(_acceptance_threshold, 0.001),
+		0.0, 1.0
+	)
+	var accept_prob: float = base_rate * offer_ratio * success_rate_mult * prob_scale
 	return randf() < accept_prob
 
 

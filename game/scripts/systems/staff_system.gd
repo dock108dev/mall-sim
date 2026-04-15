@@ -428,9 +428,14 @@ func _apply_state(data: Dictionary) -> void:
 			if raw is Array:
 				for entry: Variant in raw:
 					if entry is Dictionary:
-						entries.append(
-							(entry as Dictionary).duplicate()
-						)
+						var e: Dictionary = entry as Dictionary
+						# Reconstruct with canonical key order and restore int types.
+						entries.append({
+							"instance_id": str(e.get("instance_id", "")),
+							"definition_id": str(e.get("definition_id", "")),
+							"store_id": str(e.get("store_id", "")),
+							"hired_day": int(e.get("hired_day", 0)),
+						})
 			_hired_staff[store_id] = entries
 	var saved_policies: Variant = data.get("price_policies", {})
 	if saved_policies is Dictionary:

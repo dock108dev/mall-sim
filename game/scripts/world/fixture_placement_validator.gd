@@ -162,12 +162,6 @@ func _get_narrow_aisle_cells(
 			elif dy == 0 and dx > 0 and dx <= MIN_AISLE_GAP:
 				if new_cell not in narrow:
 					narrow.append(new_cell)
-			elif (
-				dx > 0 and dy > 0
-				and dx <= MIN_AISLE_GAP and dy <= MIN_AISLE_GAP
-			):
-				if new_cell not in narrow:
-					narrow.append(new_cell)
 	return narrow
 
 

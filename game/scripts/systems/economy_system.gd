@@ -1,16 +1,21 @@
 ## Manages player cash, transactions, and market value calculations.
 ## Value calculation helpers are in EconomyValueCalculator.
-## Demand/drift/multiplier constants are defined in EconomyValueCalculator.
 class_name EconomySystem
 extends Node
 
-
-enum TransactionType {
-	REVENUE,
-	EXPENSE,
-}
+enum TransactionType { REVENUE, EXPENSE }
 
 const MAX_MARKET_VALUE: float = EconomyValueCalculator.MAX_MARKET_VALUE
+## Constant pass-throughs for backwards compatibility with tests and external code.
+const DEFAULT_DEMAND: float = EconomyValueCalculator.DEFAULT_DEMAND
+const DEMAND_CAP: float = EconomyValueCalculator.DEMAND_CAP
+const DEMAND_FLOOR: float = EconomyValueCalculator.DEMAND_FLOOR
+const SALES_HISTORY_DAYS: int = EconomyValueCalculator.SALES_HISTORY_DAYS
+const DRIFT_DEFAULT: float = EconomyValueCalculator.DRIFT_DEFAULT
+const DRIFT_MIN: float = EconomyValueCalculator.DRIFT_MIN
+const DRIFT_MAX: float = EconomyValueCalculator.DRIFT_MAX
+const DRIFT_MEAN_REVERSION: float = EconomyValueCalculator.DRIFT_MEAN_REVERSION
+const DRIFT_VOLATILITY: Dictionary = EconomyValueCalculator.DRIFT_VOLATILITY
 
 var _current_cash: float = 0.0
 var _daily_transactions: Array[Dictionary] = []
@@ -64,31 +69,15 @@ func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
 	)
 	EventBus.milestone_unlocked.connect(_on_milestone_unlocked)
 
+func set_inventory_system(inv: InventorySystem) -> void: _inventory_system = inv
+func set_trend_system(ts: TrendSystem) -> void: _trend_system = ts
+func set_meta_shift_system(mss: MetaShiftSystem) -> void: _meta_shift_system = mss
+func set_market_event_system(mes: MarketEventSystem) -> void: _market_event_system = mes
+func set_season_cycle_system(scs: SeasonCycleSystem) -> void: _season_cycle_system = scs
 
-func set_inventory_system(inv: InventorySystem) -> void:
-	_inventory_system = inv
-
-func set_trend_system(ts: TrendSystem) -> void:
-	_trend_system = ts
-
-func set_meta_shift_system(mss: MetaShiftSystem) -> void:
-	_meta_shift_system = mss
-
-func set_market_event_system(mes: MarketEventSystem) -> void:
-	_market_event_system = mes
-
-func set_season_cycle_system(scs: SeasonCycleSystem) -> void:
-	_season_cycle_system = scs
-
-
-func get_cash() -> float:
-	return _current_cash
-
-func get_items_sold_today() -> int:
-	return _items_sold_today
-
-func set_daily_rent(amount: float) -> void:
-	_daily_rent = amount
+func get_cash() -> float: return _current_cash
+func get_items_sold_today() -> int: return _items_sold_today
+func set_daily_rent(amount: float) -> void: _daily_rent = amount
 
 
 ## Deducts amount from player cash. Returns false if insufficient funds.
@@ -149,8 +138,7 @@ func reset_daily_totals() -> void:
 	_store_daily_revenue = {}
 
 ## Returns a serializable snapshot of all economy state.
-func serialize() -> Dictionary:
-	return get_save_data()
+func serialize() -> Dictionary: return get_save_data()
 func deserialize(data: Dictionary) -> void: load_save_data(data)
 ## Formula: base * demand * drift * time * trend * market_event * meta * season
 func calculate_market_value(item: ItemInstance) -> float:
@@ -167,6 +155,7 @@ func _get_market_event_multiplier(item: ItemInstance) -> float:
 	return EconomyValueCalculator.get_market_event_multiplier(item, _market_event_system)
 func get_demand_modifier(category: String) -> float:
 	return _demand_modifiers.get(category, EconomyValueCalculator.DEFAULT_DEMAND)
+func get_drift_factor(item_id: String) -> float:
 	return _drift_factors.get(item_id, EconomyValueCalculator.DRIFT_DEFAULT)
 
 
@@ -310,7 +299,15 @@ func _apply_state(data: Dictionary) -> void:
 	var saved_txns: Array = data.get("daily_transactions", [])
 	for txn: Variant in saved_txns:
 		if txn is Dictionary:
-			_daily_transactions.append(txn as Dictionary)
+			var t: Dictionary = txn as Dictionary
+			# Reconstruct with canonical key order (matches _record_transaction)
+			# and restore int types lost during JSON round-trip.
+			_daily_transactions.append({
+				"amount": float(t.get("amount", 0.0)),
+				"reason": str(t.get("reason", "")),
+				"type": int(t.get("type", 0)),
+				"timestamp": int(t.get("timestamp", 0)),
+			})
 
 	_sales_history = []
 	var saved_history: Array = data.get("sales_history", [])
@@ -482,8 +479,7 @@ func _on_emergency_cash_injected(amount: float, _reason: String) -> void:
 		_bankruptcy_declared = false
 
 func _on_milestone_unlocked(milestone_id: StringName, reward: Dictionary) -> void:
-	var reward_type: String = str(reward.get("reward_type", ""))
-	if reward_type != "cash" and reward_type != "cash_bonus":
+	if str(reward.get("reward_type", "")) not in ["cash", "cash_bonus"]:
 		return
 	var amount: float = float(reward.get("reward_value", 0.0))
 	if amount > 0.0:
