@@ -223,7 +223,7 @@ static func fade_out(
 
 static func shake(
 	node: Control,
-	intensity: float = 6.0,
+	magnitude: float = 6.0,
 	duration: float = FEEDBACK_SHAKE_DURATION,
 ) -> Tween:
 	var original_x: float = node.position.x
@@ -231,10 +231,10 @@ static func shake(
 	var step: float = duration / 7.0
 	for i: int in range(3):
 		tween.tween_property(
-			node, "position:x", original_x + intensity, step
+			node, "position:x", original_x + magnitude, step
 		)
 		tween.tween_property(
-			node, "position:x", original_x - intensity, step
+			node, "position:x", original_x - magnitude, step
 		)
 	tween.tween_property(node, "position:x", original_x, step)
 	return tween

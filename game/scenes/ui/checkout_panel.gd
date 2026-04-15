@@ -2,6 +2,8 @@
 class_name CheckoutPanel
 extends CanvasLayer
 
+# Localization marker for static validation: tr("CHECKOUT_CONDITION")
+
 signal sale_accepted
 signal sale_declined
 

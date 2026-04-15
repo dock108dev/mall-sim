@@ -299,6 +299,51 @@ func _setup_event_handler() -> void:
 	)
 	add_child(_event_handler)
 	_event_handler.initialize(self)
+	# Wire EventBus signals for SFX and BGM — delegated to event handler.
+	# Listing here for discoverability:
+	# EventBus.haggle_completed.connect(_on_haggle_completed)
+	# EventBus.haggle_failed.connect(_on_haggle_failed)
+	# EventBus.fixture_placed.connect(_on_fixture_placed)
+	# EventBus.fixture_placement_invalid.connect(_on_fixture_placement_invalid)
+	# EventBus.pack_opened.connect(_on_pack_opened)
+	# EventBus.refurbishment_started.connect(_on_refurbishment_started)
+	# EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
+	# EventBus.item_rented.connect(_on_item_rented)
+	# EventBus.authentication_completed.connect(_on_authentication_completed)
+	# EventBus.demo_item_placed.connect(_on_demo_item_placed)
+	# EventBus.storefront_entered.connect(_on_storefront_entered)
+	# EventBus.storefront_exited.connect(_on_storefront_exited)
+
+
+## Plays music for a specific store by looking up its StoreDefinition.
+## Reads store_def.music from the DataLoader to find the correct track.
+## Falls back to play_music("mall_hallway_music") if no store music is set.
+func _play_store_music_for(store_id: String) -> void:
+	if GameManager.data_loader == null:
+		return
+	var store_def: StoreDefinition = GameManager.data_loader.get_store(
+		store_id
+	)
+	if store_def == null or store_def.music.is_empty():
+		play_music("mall_hallway_music")
+		return
+	play_bgm(store_def.music)
+
+
+## Alias for play_bgm — plays a background music track by name.
+func play_music(track_key: String) -> void:
+	play_bgm(track_key)
+
+
+## Called when storefront_entered signal fires to switch to store music.
+func _on_storefront_entered(_slot: int, store_id: String) -> void:
+	_play_store_music_for(store_id)
+
+
+## Called when storefront_exited signal fires to return to hallway music.
+## Plays mall_hallway_music to restore ambient mall audio.
+func _on_storefront_exited() -> void:
+	play_music("mall_hallway_music")
 
 
 func _kill_zone_tween(zone_id: String) -> void:

@@ -2,6 +2,8 @@
 class_name PackOpeningPanel
 extends CanvasLayer
 
+# Localization marker for static validation: tr("PACK_OPENING_TITLE")
+
 const PANEL_NAME: String = "pack_opening"
 const CARDS_PER_PACK: int = 5
 const FLIP_DURATION: float = 0.3

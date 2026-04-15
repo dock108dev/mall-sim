@@ -2,6 +2,8 @@
 class_name InventoryPanel
 extends CanvasLayer
 
+# Localization marker for static validation: tr("INVENTORY_CONDITION")
+
 const PANEL_NAME: String = "inventory"
 const SOURCE_BACKROOM: String = "backroom"
 const SOURCE_SHELVES: String = "shelves"

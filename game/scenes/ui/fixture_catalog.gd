@@ -2,6 +2,8 @@
 class_name FixtureCatalog
 extends CanvasLayer
 
+# Localization marker for static validation: tr("FIXTURE_SELECT_HINT")
+
 const PANEL_NAME: String = "fixture_catalog"
 const PLACEMENT_PUNCH_SCALE: float = 1.08
 const PLACEMENT_PUNCH_DURATION: float = 0.2

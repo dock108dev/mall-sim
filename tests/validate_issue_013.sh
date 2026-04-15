@@ -37,7 +37,7 @@ import json
 with open('$STORE_FILE') as f:
     stores = json.load(f)
 for s in stores:
-    if s['id'] == '$store_id':
+    if s['id'] == '$store_id' or '$store_id' in s.get('aliases', []):
         print(s['starting_cash'])
         break
 " 2>/dev/null || echo "0")

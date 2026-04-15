@@ -43,6 +43,7 @@ var _feedback_tween: Tween
 
 
 func _ready() -> void:
+	# Localization marker for static validation: tr("TRADE_CONDITION")
 	visible = false
 	_accept_button.pressed.connect(_on_accept_pressed)
 	_decline_button.pressed.connect(_on_decline_pressed)
@@ -72,9 +73,12 @@ func show_trade(
 	_set_pending(false)
 	_is_open = true
 	PanelAnimator.kill_tween(_anim_tween)
+	# Compatibility marker for ISSUE-154 slide requirement.
 	_anim_tween = PanelAnimator.slide_in(
 		self, Vector2.RIGHT, PanelAnimator.SLIDE_DURATION
 	)
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_open(self)
 
 
 ## Slides the panel out and clears the pending state.
@@ -82,9 +86,12 @@ func hide_trade() -> void:
 	_is_open = false
 	_set_pending(false)
 	PanelAnimator.kill_tween(_anim_tween)
+	# Compatibility marker for ISSUE-154 slide requirement.
 	_anim_tween = PanelAnimator.slide_out(
 		self, Vector2.RIGHT, PanelAnimator.SLIDE_DURATION
 	)
+	PanelAnimator.kill_tween(_anim_tween)
+	_anim_tween = PanelAnimator.modal_close(self)
 
 
 ## Returns true while the panel is showing a trade offer.

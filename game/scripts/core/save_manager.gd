@@ -11,6 +11,7 @@ const AUTO_SAVE_SLOT: int = 0
 
 var _economy_system: EconomySystem
 var _order_system: OrderSystem
+var _ordering_system: OrderingSystem
 var _inventory_system: InventorySystem
 var _time_system: TimeSystem
 var _reputation_ref: ReputationSystem
@@ -60,6 +61,11 @@ func set_reputation_system(system: ReputationSystem) -> void:
 ## Sets the OrderSystem reference for save/load.
 func set_order_system(system: OrderSystem) -> void:
 	_order_system = system
+
+
+## Sets the OrderingSystem reference for save/load.
+func set_ordering_system(system: OrderingSystem) -> void:
+	_ordering_system = system
 
 
 ## Sets the StoreStateManager reference for multi-store save/load.
@@ -439,6 +445,9 @@ func _collect_save_data() -> Dictionary:
 	if _order_system:
 		data["ordering"] = _order_system.get_save_data()
 
+	if _ordering_system:
+		data["ordering_system"] = _ordering_system.get_save_data()
+
 	if _store_state_manager:
 		data["store_states"] = _store_state_manager.get_save_data()
 
@@ -560,6 +569,13 @@ func _distribute_save_data(data: Dictionary) -> void:
 		if ordering_data is Dictionary:
 			_order_system.load_save_data(
 				ordering_data as Dictionary
+			)
+
+	if _ordering_system:
+		var ordering_system_data: Variant = data.get("ordering_system", {})
+		if ordering_system_data is Dictionary:
+			_ordering_system.load_save_data(
+				ordering_system_data as Dictionary
 			)
 
 	if _store_state_manager:

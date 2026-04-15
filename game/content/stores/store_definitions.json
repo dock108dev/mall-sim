@@ -9,7 +9,7 @@
     "size_category": "small",
     "shelf_capacity": 31,
     "backroom_capacity": 100,
-    "starting_cash": 500.00,
+    "starting_cash": 750.00,
     "daily_rent": 50.00,
     "starting_inventory": [
       "sports_duvall_hr_common",
@@ -43,7 +43,13 @@
       "auth_multiplier": 2.0
     },
     "aesthetic_tags": ["wood_shelves", "glass_cases", "poster_walls", "sports_radio"],
-    "ambient_sound": "res://game/assets/audio/ambiance/sports_store.ogg"
+    "ambient_sound": "res://game/assets/audio/ambiance/sports_store.ogg",
+    "music": "sports_store_music",
+    "recommended_markup": {
+      "optimal_min": 1.30,
+      "optimal_max": 1.80,
+      "max_viable": 3.00
+    }
   },
   {
     "id": "retro_games",
@@ -54,7 +60,7 @@
     "size_category": "small",
     "shelf_capacity": 33,
     "backroom_capacity": 120,
-    "starting_cash": 600.00,
+    "starting_cash": 800.00,
     "daily_rent": 55.00,
     "starting_inventory": [
       "retro_plumber_world_ss_loose",
@@ -89,7 +95,13 @@
       "tested_not_working_multiplier": 0.4
     },
     "aesthetic_tags": ["neon_lights", "crt_glow", "cluttered_shelves", "poster_walls"],
-    "ambient_sound": "res://game/assets/audio/ambiance/retro_store.ogg"
+    "ambient_sound": "res://game/assets/audio/ambiance/retro_store.ogg",
+    "music": "retro_games_music",
+    "recommended_markup": {
+      "optimal_min": 1.25,
+      "optimal_max": 1.60,
+      "max_viable": 2.50
+    }
   },
   {
     "id": "rentals",
@@ -101,10 +113,9 @@
     "size_category": "medium",
     "shelf_capacity": 50,
     "backroom_capacity": 150,
-    "starting_cash": 550.00,
+    "starting_cash": 900.00,
     "daily_rent": 55.00,
     "starting_inventory": [
-      "rental_cosmic_battles_4_vhs",
       "rental_cosmic_battles_5_vhs",
       "rental_velociraptor_gardens_vhs",
       "rental_ghostcatchers_vhs",
@@ -138,7 +149,13 @@
       "grace_period_days": 1
     },
     "aesthetic_tags": ["blue_carpet", "fluorescent_lights", "plastic_cases", "candy_counter"],
-    "ambient_sound": "res://game/assets/audio/ambiance/video_rental.ogg"
+    "ambient_sound": "res://game/assets/audio/ambiance/video_rental.ogg",
+    "music": "video_rental_music",
+    "recommended_markup": {
+      "optimal_min": 1.40,
+      "optimal_max": 2.00,
+      "max_viable": 3.00
+    }
   },
   {
     "id": "pocket_creatures",
@@ -149,7 +166,7 @@
     "size_category": "medium",
     "shelf_capacity": 63,
     "backroom_capacity": 130,
-    "starting_cash": 650.00,
+    "starting_cash": 850.00,
     "daily_rent": 50.00,
     "starting_inventory": [
       "pc_booster_base_set",
@@ -193,7 +210,13 @@
     "available_supplier_tiers": [1, 2, 3],
     "unique_mechanics": ["pack_opening", "tournament_hosting", "meta_shifts"],
     "aesthetic_tags": ["bright_colors", "binder_cases", "booster_towers", "tournament_banners"],
-    "ambient_sound": "res://game/assets/audio/ambiance/card_shop.ogg"
+    "ambient_sound": "res://game/assets/audio/ambiance/card_shop.ogg",
+    "music": "card_shop_music",
+    "recommended_markup": {
+      "optimal_min": 1.30,
+      "optimal_max": 1.70,
+      "max_viable": 2.50
+    }
   },
   {
     "id": "electronics",
@@ -205,8 +228,7 @@
     "size_category": "medium",
     "shelf_capacity": 48,
     "backroom_capacity": 120,
-    "starting_cash": 800.00,
-    "daily_rent": 60.00,
+    "starting_cash": 1000.00,
     "starting_inventory": [
       "elec_zunewave_128",
       "elec_zunewave_256",
@@ -241,6 +263,12 @@
     "demo_interest_bonus": 0.20,
     "unique_mechanics": ["demo_units", "product_lifecycle", "warranty_upsell"],
     "aesthetic_tags": ["chrome_shelving", "white_displays", "demo_stations", "product_boxes"],
-    "ambient_sound": "res://game/assets/audio/ambiance/electronics_store.ogg"
+    "ambient_sound": "res://game/assets/audio/ambiance/electronics_store.ogg",
+    "music": "electronics_store_music",
+    "recommended_markup": {
+      "optimal_min": 1.15,
+      "optimal_max": 1.40,
+      "max_viable": 2.00
+    }
   }
 ]

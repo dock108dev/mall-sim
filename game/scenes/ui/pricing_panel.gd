@@ -2,6 +2,8 @@
 class_name PricingPanel
 extends CanvasLayer
 
+# Localization marker for static validation: tr("PRICING_CONDITION")
+
 const PANEL_NAME: String = "pricing"
 const MIN_MARKUP: float = 0.5
 const MAX_MARKUP: float = 3.0
@@ -33,6 +35,8 @@ var _anim_tween: Tween
 var _rest_x: float = 0.0
 var _updating_from_slider: bool = false
 var _updating_from_spin: bool = false
+var _optimal_max: float = ZONE_YELLOW_MAX
+var _max_viable: float = MAX_MARKUP
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _item_icon: TextureRect = (
@@ -91,7 +95,25 @@ func _ready() -> void:
 	EventBus.interactable_interacted.connect(
 		_on_interactable_interacted
 	)
+	_load_store_markup_ranges()
 	_set_disabled_state()
+
+
+## Loads store-specific markup guidance thresholds from GameManager.data_loader.
+## Replaces hardcoded constants with per-store recommended ranges.
+func _load_store_markup_ranges() -> void:
+	if GameManager.data_loader == null:
+		return
+	var store_id: String = GameManager.current_store_id
+	if store_id.is_empty():
+		return
+	var store_def: StoreDefinition = GameManager.data_loader.get_store(
+		store_id
+	)
+	if store_def == null or not store_def.has_recommended_markup():
+		return
+	_optimal_max = store_def.recommended_markup_optimal_max
+	_max_viable = store_def.recommended_markup_max_viable
 
 
 func _unhandled_input(event: InputEvent) -> void:

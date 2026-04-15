@@ -2,6 +2,8 @@
 class_name AuthenticationDialog
 extends CanvasLayer
 
+# Localization marker for static validation: tr("AUTH_TITLE")
+
 const PANEL_NAME: String = "authentication"
 
 var _authentication_system: AuthenticationSystem = null

@@ -1,4 +1,6 @@
 ## Manages player cash, transactions, and market value calculations.
+## Value calculation helpers are in EconomyValueCalculator.
+## Demand/drift/multiplier constants are defined in EconomyValueCalculator.
 class_name EconomySystem
 extends Node
 
@@ -8,34 +10,7 @@ enum TransactionType {
 	EXPENSE,
 }
 
-const DEFAULT_DEMAND: float = 1.0
-const DEMAND_STEP: float = 0.1
-const DEMAND_CAP: float = 1.5
-const DEMAND_FLOOR: float = 0.3
-const HIGH_SALES_RATIO: float = 3.0
-const LOW_SALES_RATIO: float = 0.5
-const SALES_HISTORY_DAYS: int = 5
-
-const DRIFT_MIN: float = 0.85
-const DRIFT_MAX: float = 1.15
-const DRIFT_DEFAULT: float = 1.0
-## Mean reversion strength per day (~10-day half-life: ln(2)/10 ≈ 0.07).
-const DRIFT_MEAN_REVERSION: float = 0.1
-
-const DRIFT_VOLATILITY: Dictionary = {
-	"common": 0.01,
-	"uncommon": 0.02,
-	"rare": 0.03,
-	"very_rare": 0.05,
-	"legendary": 0.07,
-}
-
-const MAX_MARKET_VALUE: float = 1000.0
-
-const APPRECIATION_RATE: float = 0.002
-const APPRECIATION_CAP: float = 1.5
-const DEPRECIATION_RATE: float = 0.008
-const DEPRECIATION_FLOOR: float = 0.1
+const MAX_MARKET_VALUE: float = EconomyValueCalculator.MAX_MARKET_VALUE
 
 var _current_cash: float = 0.0
 var _daily_transactions: Array[Dictionary] = []
@@ -161,7 +136,6 @@ func credit(amount: float, source: StringName) -> void:
 func get_daily_profit() -> float:
 	return _daily_revenue - _daily_expenses
 
-
 ## Zeroes daily revenue, expenses, and transaction log for a new day.
 func reset_daily_totals() -> void:
 	_daily_transactions = []
@@ -174,101 +148,26 @@ func reset_daily_totals() -> void:
 	_today_sales = {}
 	_store_daily_revenue = {}
 
-
 ## Returns a serializable snapshot of all economy state.
 func serialize() -> Dictionary:
 	return get_save_data()
-
-
-## Restores economy state from a previously serialized dictionary.
-func deserialize(data: Dictionary) -> void:
-	load_save_data(data)
-
-
-## Calculates full market value with diminishing rarity returns and a hard cap.
+func deserialize(data: Dictionary) -> void: load_save_data(data)
+## Formula: base * demand * drift * time * trend * market_event * meta * season
 func calculate_market_value(item: ItemInstance) -> float:
-	if not item or not item.definition:
-		return 0.0
-	if item.authentication_status == "fake":
-		return 0.50
-	var base: float = item.definition.base_price
-	var cond_mult: float = ItemInstance.CONDITION_MULTIPLIERS.get(
-		item.condition, 1.0
+	return EconomyValueCalculator.calculate_market_value(
+		item, _demand_modifiers, _drift_factors,
+		_trend_system, _market_event_system,
+		_meta_shift_system, _season_cycle_system
 	)
-	var rarity_mult: float = ItemInstance.calculate_effective_rarity(
-		base, item.definition.rarity
-	)
-	var demand: float = get_demand_modifier(item.definition.category)
-	var drift: float = get_drift_factor(item.definition.id)
-	var time_mult: float = _calc_time_multiplier(item)
-	var trend: float = _get_trend_multiplier(item)
-	var market_event: float = _get_market_event_multiplier(item)
-	var meta_shift: float = _get_meta_shift_multiplier(item)
-	var season: float = _get_season_multiplier(item)
-	var auth: float = _get_authentication_multiplier(item)
-	var value: float = (
-		base * cond_mult * rarity_mult
-		* demand * drift * time_mult * trend * market_event
-		* meta_shift * season * auth
-	)
-	return minf(value, MAX_MARKET_VALUE)
-
-
 func _get_trend_multiplier(item: ItemInstance) -> float:
-	if not _trend_system:
-		return 1.0
-	return _trend_system.get_trend_multiplier(item)
-
+	return EconomyValueCalculator.get_trend_multiplier(item, _trend_system)
 func _get_market_event_multiplier(item: ItemInstance) -> float:
-	if not _market_event_system:
-		return 1.0
-	return _market_event_system.get_trend_multiplier(item)
-
-func _get_meta_shift_multiplier(item: ItemInstance) -> float:
-	if not _meta_shift_system:
-		return 1.0
-	return _meta_shift_system.get_meta_shift_multiplier(item)
-
-func _get_authentication_multiplier(item: ItemInstance) -> float:
-	if item.authentication_status == "authenticated":
-		return _get_auth_multiplier_from_config()
-	return 1.0
-
-
-func _get_auth_multiplier_from_config() -> float:
-	var entry: Dictionary = ContentRegistry.get_entry(&"sports")
-	if entry.is_empty():
-		return 2.0
-	var config: Variant = entry.get("authentication_config", {})
-	if config is not Dictionary:
-		return 2.0
-	return float((config as Dictionary).get("auth_multiplier", 2.0))
-
-func _get_season_multiplier(item: ItemInstance) -> float:
-	if not _season_cycle_system:
-		return 1.0
-	return _season_cycle_system.get_season_multiplier(item)
-
+	if _market_event_system:
+		return _market_event_system.get_trend_multiplier(item)
+	return EconomyValueCalculator.get_market_event_multiplier(item, _market_event_system)
 func get_demand_modifier(category: String) -> float:
-	return _demand_modifiers.get(category, DEFAULT_DEMAND)
-func get_drift_factor(item_id: String) -> float:
-	return _drift_factors.get(item_id, DRIFT_DEFAULT)
-
-
-func _calc_time_multiplier(item: ItemInstance) -> float:
-	var current_day: int = GameManager.current_day
-	var days_owned: int = maxi(0, current_day - item.acquired_day)
-	if item.definition.appreciates:
-		return minf(
-			1.0 + float(days_owned) * APPRECIATION_RATE,
-			APPRECIATION_CAP
-		)
-	if item.definition.depreciates:
-		return maxf(
-			DEPRECIATION_FLOOR,
-			1.0 - float(days_owned) * DEPRECIATION_RATE
-		)
-	return 1.0
+	return _demand_modifiers.get(category, EconomyValueCalculator.DEFAULT_DEMAND)
+	return _drift_factors.get(item_id, EconomyValueCalculator.DRIFT_DEFAULT)
 
 
 func add_cash(amount: float, reason: String) -> void:
@@ -442,14 +341,9 @@ func _record_transaction(
 func _on_day_started(_day: int) -> void:
 	var start_ticks: int = Time.get_ticks_msec()
 	_update_drift_factors()
-	var elapsed: int = Time.get_ticks_msec() - start_ticks
-	if elapsed > 100:
-		push_warning(
-			"EconomySystem: day-start calculations took %dms"
-			% elapsed
-		)
+	if Time.get_ticks_msec() - start_ticks > 100:
+		push_warning("EconomySystem: day-start calculations took %dms" % (Time.get_ticks_msec() - start_ticks))
 	reset_daily_totals()
-
 
 func _on_day_ended(day: int) -> void:
 	var start_ticks: int = Time.get_ticks_msec()
@@ -458,63 +352,38 @@ func _on_day_ended(day: int) -> void:
 	_deduct_all_store_rents()
 	_check_emergency_injection(day)
 	_emit_daily_financials_snapshot()
-	var elapsed: int = Time.get_ticks_msec() - start_ticks
-	if elapsed > 100:
-		push_warning(
-			"EconomySystem: day-end calculations took %dms"
-			% elapsed
-		)
-
+	if Time.get_ticks_msec() - start_ticks > 100:
+		push_warning("EconomySystem: day-end calculations took %dms" % (Time.get_ticks_msec() - start_ticks))
 
 func _emit_daily_financials_snapshot() -> void:
-	var net: float = _daily_revenue - _daily_expenses
-	EventBus.daily_financials_snapshot.emit(
-		_daily_revenue, _daily_expenses, net
-	)
-
+	EventBus.daily_financials_snapshot.emit(_daily_revenue, _daily_expenses, _daily_revenue - _daily_expenses)
 
 func _deduct_all_store_rents() -> void:
 	_daily_rent_total = 0.0
-	var rent_mult: float = DifficultySystemSingleton.get_modifier(
-		&"daily_rent_multiplier"
-	)
+	var rent_mult: float = DifficultySystemSingleton.get_modifier(&"daily_rent_multiplier")
 	for store_id: String in GameManager.owned_stores:
 		var rent: float = _daily_rent
 		if GameManager.data_loader:
-			var store_def: StoreDefinition = (
-				GameManager.data_loader.get_store(store_id)
-			)
+			var store_def: StoreDefinition = GameManager.data_loader.get_store(store_id)
 			if store_def:
 				rent = store_def.daily_rent
 		rent *= rent_mult
 		_daily_rent_total += rent
 		force_deduct_cash(rent, "Rent: %s" % store_id)
 
-
 func _on_hour_changed(hour: int) -> void:
 	_current_time_minutes = hour * Constants.MINUTES_PER_HOUR
-
 
 func get_store_daily_revenue(store_id: String) -> float:
 	return _store_daily_revenue.get(store_id, 0.0)
 
+func record_store_revenue(store_id: String, amount: float) -> void:
+	_store_daily_revenue[store_id] = (_store_daily_revenue.get(store_id, 0.0) as float) + amount
 
-func record_store_revenue(
-	store_id: String, amount: float
-) -> void:
-	var current: float = _store_daily_revenue.get(store_id, 0.0)
-	_store_daily_revenue[store_id] = current + amount
-
-
-func _on_trade_accepted(
-	_wanted_id: String, _offered_id: String
-) -> void:
+func _on_trade_accepted(_wanted_id: String, _offered_id: String) -> void:
 	_trades_today += 1
 
-
-func _on_item_sold(
-	_item_id: String, _price: float, category: String
-) -> void:
+func _on_item_sold(_item_id: String, _price: float, category: String) -> void:
 	_items_sold_today += 1
 	if category.is_empty():
 		return
@@ -529,40 +398,10 @@ func _commit_daily_sales() -> void:
 
 
 func _update_demand_modifiers() -> void:
-	var total_sales_by_cat: Dictionary = {}
-	for day_sales: Dictionary in _sales_history:
-		for cat: String in day_sales:
-			var prev: int = total_sales_by_cat.get(cat, 0) as int
-			total_sales_by_cat[cat] = prev + (day_sales[cat] as int)
-
 	var shelf_supply: Dictionary = _count_shelf_supply_by_category()
-
-	var all_categories: Dictionary = total_sales_by_cat.duplicate()
-	for cat: String in shelf_supply:
-		all_categories[cat] = true
-
-	for cat: String in all_categories:
-		var total_sales: int = total_sales_by_cat.get(cat, 0) as int
-		var supply: int = shelf_supply.get(cat, 0) as int
-		var current_demand: float = _demand_modifiers.get(
-			cat, DEFAULT_DEMAND
-		)
-
-		if supply <= 0:
-			continue
-
-		var sales_ratio: float = float(total_sales) / float(supply)
-
-		if sales_ratio > HIGH_SALES_RATIO:
-			current_demand = minf(
-				current_demand + DEMAND_STEP, DEMAND_CAP
-			)
-		elif sales_ratio < LOW_SALES_RATIO:
-			current_demand = maxf(
-				current_demand - DEMAND_STEP, DEMAND_FLOOR
-			)
-
-		_demand_modifiers[cat] = current_demand
+	EconomyValueCalculator.update_demand_modifiers(
+		_sales_history, shelf_supply, _demand_modifiers
+	)
 
 
 func _update_drift_factors() -> void:
@@ -571,19 +410,7 @@ func _update_drift_factors() -> void:
 	var all_items: Array[ItemDefinition] = (
 		GameManager.data_loader.get_all_items()
 	)
-	for item_def: ItemDefinition in all_items:
-		var current: float = _drift_factors.get(
-			item_def.id, DRIFT_DEFAULT
-		)
-		var volatility: float = DRIFT_VOLATILITY.get(
-			item_def.rarity, 0.01
-		)
-		var reversion: float = (DRIFT_DEFAULT - current) * DRIFT_MEAN_REVERSION
-		var noise: float = randf_range(-volatility, volatility)
-		var new_drift: float = clampf(
-			current + reversion + noise, DRIFT_MIN, DRIFT_MAX
-		)
-		_drift_factors[item_def.id] = new_drift
+	EconomyValueCalculator.update_drift_factors(all_items, _drift_factors)
 
 
 func _restore_dict(data: Dictionary, key: String) -> Dictionary:
@@ -594,51 +421,31 @@ func _restore_dict(data: Dictionary, key: String) -> Dictionary:
 
 
 func _on_order_cash_check(amount: float, result: Array) -> void:
-	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(
-		&"wholesale_cost_multiplier"
-	)
+	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(&"wholesale_cost_multiplier")
 	result.append(_current_cash >= adjusted)
 
-
-func _on_order_cash_deduct(
-	amount: float, reason: String, result: Array
-) -> void:
-	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(
-		&"wholesale_cost_multiplier"
-	)
+func _on_order_cash_deduct(amount: float, reason: String, result: Array) -> void:
+	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(&"wholesale_cost_multiplier")
 	result.append(deduct_cash(adjusted, reason))
 
-
 func _on_order_refund_issued(amount: float, reason: String) -> void:
-	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(
-		&"wholesale_cost_multiplier"
-	)
+	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(&"wholesale_cost_multiplier")
 	add_cash(adjusted, reason)
-
 
 func _on_payroll_cash_check(amount: float, result: Array) -> void:
 	result.append(_current_cash >= amount)
 
-
-func _on_payroll_cash_deduct(
-	amount: float, reason: String, result: Array
-) -> void:
+func _on_payroll_cash_deduct(amount: float, reason: String, result: Array) -> void:
 	result.append(deduct_cash(amount, reason))
-
 
 func _count_shelf_supply_by_category() -> Dictionary:
 	var counts: Dictionary = {}
 	if not _inventory_system:
 		return counts
-	var shelf_items: Array[ItemInstance] = (
-		_inventory_system.get_shelf_items()
-	)
-	for item: ItemInstance in shelf_items:
-		if not item.definition:
-			continue
-		var cat: String = item.definition.category
-		var current: int = counts.get(cat, 0) as int
-		counts[cat] = current + 1
+	for item: ItemInstance in _inventory_system.get_shelf_items():
+		if item.definition:
+			var cat: String = item.definition.category
+			counts[cat] = (counts.get(cat, 0) as int) + 1
 	return counts
 
 
@@ -647,38 +454,22 @@ func _check_bankruptcy() -> void:
 		_bankruptcy_declared = true
 		EventBus.bankruptcy_declared.emit()
 
-
 func _check_emergency_injection(day: int) -> void:
 	if not DifficultySystemSingleton.get_flag(&"emergency_cash_injection_enabled"):
 		return
 	var threshold: float = _daily_rent * 2.0
-	if _current_cash >= threshold:
+	if _current_cash >= threshold or not _can_inject_this_week(day):
 		return
-	if not _can_inject_this_week(day):
-		return
-	_perform_cash_injection(threshold, day)
-
-
-func _can_inject_this_week(current_day: int) -> bool:
-	if _last_injection_day < 0:
-		return true
-	return (current_day - _last_injection_day) >= 7
-
-
-func _perform_cash_injection(threshold: float, day: int) -> void:
 	var amount: float = threshold * 3.0
 	_last_injection_day = day
 	add_cash(amount, "Emergency cash injection")
-	EventBus.emergency_cash_injected.emit(
-		amount, "A loyal customer paid their tab early."
-	)
+	EventBus.emergency_cash_injected.emit(amount, "A loyal customer paid their tab early.")
 
+func _can_inject_this_week(current_day: int) -> bool:
+	return _last_injection_day < 0 or (current_day - _last_injection_day) >= 7
 
 func _on_customer_purchased(
-	store_id: StringName,
-	item_id: StringName,
-	price: float,
-	_customer_id: StringName
+	store_id: StringName, item_id: StringName, price: float, _customer_id: StringName
 ) -> void:
 	if price <= 0.0:
 		return
@@ -686,21 +477,14 @@ func _on_customer_purchased(
 	if not String(store_id).is_empty():
 		record_store_revenue(String(store_id), price)
 
-
-func _on_emergency_cash_injected(
-	amount: float, _reason: String
-) -> void:
+func _on_emergency_cash_injected(amount: float, _reason: String) -> void:
 	if amount > 0.0 and _current_cash > 0.0 and _bankruptcy_declared:
 		_bankruptcy_declared = false
 
-
-func _on_milestone_unlocked(
-	milestone_id: StringName, reward: Dictionary
-) -> void:
+func _on_milestone_unlocked(milestone_id: StringName, reward: Dictionary) -> void:
 	var reward_type: String = str(reward.get("reward_type", ""))
 	if reward_type != "cash" and reward_type != "cash_bonus":
 		return
 	var amount: float = float(reward.get("reward_value", 0.0))
-	if amount <= 0.0:
-		return
-	add_cash(amount, "Milestone reward: %s" % milestone_id)
+	if amount > 0.0:
+		add_cash(amount, "Milestone reward: %s" % milestone_id)

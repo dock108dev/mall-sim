@@ -212,6 +212,11 @@ func _initialize_tier_1_data() -> void:
 
 
 func _initialize_tier_2_state() -> void:
+	# Ensure market_event_system is available — instantiate if not in scene.
+	if market_event_system == null:
+		market_event_system = MarketEventSystem.new()
+		add_child(market_event_system)
+
 	inventory_system.initialize(GameManager.data_loader)
 	economy_system.set_inventory_system(inventory_system)
 
@@ -286,6 +291,11 @@ func _initialize_tier_3_operational() -> void:
 	order_system.initialize(
 		inventory_system, ReputationSystemSingleton, progression_system
 	)
+	# Also wire OrderingSystem (separate class for supplier tier logic).
+	if not has_node("OrderingSystem"):
+		var ordering_system: OrderingSystem = OrderingSystem.new()
+		add_child(ordering_system)
+		ordering_system.initialize(inventory_system, ReputationSystemSingleton)
 
 	staff_system.initialize(
 		economy_system,
@@ -376,6 +386,8 @@ func _wire_save_manager() -> void:
 		time_system,
 	)
 	save_manager.set_order_system(order_system)
+	if has_node("OrderingSystem"):
+		save_manager.set_ordering_system(get_node("OrderingSystem") as OrderingSystem)
 	save_manager.set_store_state_manager(store_state_manager)
 	save_manager.set_progression_system(progression_system)
 	save_manager.set_milestone_system(milestone_system)

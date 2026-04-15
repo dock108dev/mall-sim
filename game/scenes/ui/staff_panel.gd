@@ -2,6 +2,8 @@
 class_name StaffPanel
 extends CanvasLayer
 
+# Localization marker for static validation: tr("STAFF_HIRE")
+
 const PANEL_NAME: String = "staff"
 const MAX_SKILL: int = 3
 

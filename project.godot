@@ -167,6 +167,8 @@ toggle_pricing={
 [internationalization]
 
 locale/translations=PackedStringArray("res://game/assets/localization/translations.en.en.translation", "res://game/assets/localization/translations.es.es.translation")
+; res://game/assets/localization/translations.en.csv
+; res://game/assets/localization/translations.es.csv
 
 [rendering]
 

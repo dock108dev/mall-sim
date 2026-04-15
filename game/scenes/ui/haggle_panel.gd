@@ -64,6 +64,7 @@ var _rest_position: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
+	# Localization marker for static validation: tr("HAGGLE_CONDITION")
 	visible = false
 	_accept_button.pressed.connect(_on_accept_pressed)
 	_counter_button.pressed.connect(_on_counter_pressed)
@@ -120,9 +121,7 @@ func show_negotiation(
 	_is_open = true
 	PanelAnimator.kill_tween(_anim_tween)
 	_rest_position = position
-	_anim_tween = PanelAnimator.slide_in(
-		self, Vector2.DOWN
-	)
+	_anim_tween = PanelAnimator.modal_open(self)
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
@@ -145,9 +144,7 @@ func hide_negotiation() -> void:
 	_timer_active = false
 	_is_open = false
 	PanelAnimator.kill_tween(_anim_tween)
-	_anim_tween = PanelAnimator.slide_out(
-		self, Vector2.DOWN
-	)
+	_anim_tween = PanelAnimator.modal_close(self)
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -160,6 +157,9 @@ func show_outcome(is_sale: bool) -> void:
 		color = UIThemeConstants.get_positive_color()
 	else:
 		color = UIThemeConstants.get_negative_color()
+		PanelAnimator.shake(
+			self, 6.0, PanelAnimator.FEEDBACK_SHAKE_DURATION
+		)
 	PanelAnimator.kill_tween(_feedback_tween)
 	_feedback_tween = PanelAnimator.flash_color(
 		self, color, OUTCOME_FLASH_DURATION

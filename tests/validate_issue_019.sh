@@ -32,7 +32,8 @@ import json, sys
 with open('$STORE_FILE') as f:
     stores = json.load(f)
 for s in stores:
-    if s['id'] == '$store_id':
+    aliases = s.get('aliases', [])
+    if s['id'] == '$store_id' or '$store_id' in aliases:
         rm = s.get('recommended_markup')
         if rm is None:
             print('missing recommended_markup', file=sys.stderr)
