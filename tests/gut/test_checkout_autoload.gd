@@ -7,11 +7,10 @@ var _inventory: InventorySystem
 var _market: MarketValueSystem
 var _definition: ItemDefinition
 var _item: ItemInstance
-var _customer_scene: PackedScene
-var _profile: CustomerTypeDefinition
-
 var _purchased_signals: Array[Dictionary] = []
 var _left_signals: Array[Dictionary] = []
+
+var _profile: CustomerTypeDefinition
 
 
 func before_each() -> void:
@@ -52,10 +51,6 @@ func before_each() -> void:
 	_profile.purchase_probability_base = 1.0
 	_profile.impulse_buy_chance = 0.0
 	_profile.max_price_to_market_ratio = 1.5
-
-	_customer_scene = preload(
-		"res://game/scenes/characters/customer.tscn"
-	)
 
 	_purchased_signals = []
 	_left_signals = []
@@ -98,7 +93,7 @@ func _on_left_mall(customer: Node, satisfied: bool) -> void:
 
 
 func _make_customer_with_item() -> Customer:
-	var customer: Customer = _customer_scene.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 	customer._desired_item = _item
@@ -215,7 +210,7 @@ func test_null_customer_returns_false() -> void:
 
 
 func test_customer_without_desired_item_returns_false() -> void:
-	var customer: Customer = _customer_scene.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 

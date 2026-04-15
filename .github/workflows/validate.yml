@@ -59,13 +59,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .godot
-          key: godot-import-${{ runner.os }}-4.3-${{ hashFiles('project.godot', '**/*.import') }}
+          key: godot-import-${{ runner.os }}-4.6.2-${{ hashFiles('project.godot', '**/*.import') }}
           restore-keys: |
-            godot-import-${{ runner.os }}-4.3-
+            godot-import-${{ runner.os }}-4.6.2-
 
       - name: Install Godot
         run: |
-          GODOT_VERSION="4.3-stable"
+          GODOT_VERSION="4.6.2-stable"
           GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           wget -q "$GODOT_URL" -O /tmp/godot.zip
           unzip -q /tmp/godot.zip -d /tmp/godot
@@ -77,7 +77,10 @@ jobs:
         run: bash scripts/godot_import.sh
 
       - name: Run GUT tests
-        run: godot --path "$GITHUB_WORKSPACE" --headless -s addons/gut/gut_cmdln.gd
+        run: |
+          godot --path "$GITHUB_WORKSPACE" --headless \
+            --script res://addons/gut/gut_cmdln.gd -- \
+            -gconfig=res://game/tests/.gutconfig.json -gexit
 
   lint-gdscript:
     name: GDScript Lint

@@ -61,18 +61,17 @@ func show_trade(
 	offered_cond: String,
 	offered_val: float,
 ) -> void:
-	if _wanted_name_label == null:
-		return
-	_wanted_name_label.text = wanted_name
-	_wanted_condition_label.text = "Condition: %s" % wanted_cond
-	_wanted_value_label.text = "Value: %s%.2f" % [
-		UIThemeConstants.CURRENCY_SYMBOL, wanted_val
-	]
-	_offered_name_label.text = offered_name
-	_offered_condition_label.text = "Condition: %s" % offered_cond
-	_offered_value_label.text = "Value: %s%.2f" % [
-		UIThemeConstants.CURRENCY_SYMBOL, offered_val
-	]
+	if _wanted_name_label != null:
+		_wanted_name_label.text = wanted_name
+		_wanted_condition_label.text = "Condition: %s" % wanted_cond
+		_wanted_value_label.text = "Value: %s%.2f" % [
+			UIThemeConstants.CURRENCY_SYMBOL, wanted_val
+		]
+		_offered_name_label.text = offered_name
+		_offered_condition_label.text = "Condition: %s" % offered_cond
+		_offered_value_label.text = "Value: %s%.2f" % [
+			UIThemeConstants.CURRENCY_SYMBOL, offered_val
+		]
 	_update_fair_trade_indicator(wanted_val, offered_val)
 	_set_pending(false)
 	_is_open = true

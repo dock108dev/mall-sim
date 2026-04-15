@@ -9,7 +9,6 @@ var _reputation: ReputationSystem
 var _data_loader: DataLoader
 var _panel: TradePanel
 
-var _customer_scene: PackedScene
 var _profile: CustomerTypeDefinition
 var _definition: ItemDefinition
 var _offered_def: ItemDefinition
@@ -61,10 +60,6 @@ func before_each() -> void:
 	_profile.purchase_probability_base = 0.9
 	_profile.impulse_buy_chance = 0.1
 	_profile.mood_tags = PackedStringArray([])
-
-	_customer_scene = preload(
-		"res://game/scenes/characters/customer.tscn"
-	)
 
 	_trade_offered_signals = []
 	_trade_accepted_signals = []
@@ -125,7 +120,7 @@ func _make_item_def(
 
 
 func _make_customer() -> Customer:
-	var customer: Customer = _customer_scene.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 	return customer

@@ -10,7 +10,6 @@ var _reputation: ReputationSystem
 var _customer_system: CustomerSystem
 var _definition: ItemDefinition
 var _item: ItemInstance
-var _customer_scene: PackedScene
 var _profile: CustomerTypeDefinition
 
 var _sold_signals: Array[Dictionary] = []
@@ -69,10 +68,6 @@ func before_each() -> void:
 	_item.player_set_price = 100.0
 	_inventory._items[_item.instance_id] = _item
 
-	_customer_scene = preload(
-		"res://game/scenes/characters/customer.tscn"
-	)
-
 	_sold_signals = []
 	_purchased_signals = []
 	_queue_signals = []
@@ -96,7 +91,7 @@ func _safe_disconnect(sig: Signal, callable: Callable) -> void:
 
 
 func _make_customer() -> Customer:
-	var customer: Customer = _customer_scene.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 	return customer

@@ -118,9 +118,6 @@ func test_duplicate_add_rejected() -> void:
 
 
 func _create_mock_customer() -> Customer:
-	var scene: PackedScene = load(
-		"res://game/scenes/characters/customer.tscn"
-	) as PackedScene
-	var customer: Customer = scene.instantiate() as Customer
+	var customer: Customer = Customer.new()
 	add_child(customer)
 	return customer

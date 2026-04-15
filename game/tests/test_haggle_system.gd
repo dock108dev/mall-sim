@@ -8,7 +8,6 @@ var _reputation: ReputationSystem
 var _profile: CustomerTypeDefinition
 var _definition: ItemDefinition
 var _item: ItemInstance
-var _customer_scene: PackedScene
 
 
 func before_all() -> void:
@@ -53,13 +52,9 @@ func before_each() -> void:
 	_item = ItemInstance.create_from_definition(_definition, "good")
 	_item.player_set_price = 65.0
 
-	_customer_scene = preload(
-		"res://game/scenes/characters/customer.tscn"
-	)
-
 
 func _make_customer() -> Customer:
-	var customer: Customer = _customer_scene.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 	return customer

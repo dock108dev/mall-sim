@@ -2,6 +2,8 @@
 class_name TutorialOverlay
 extends CanvasLayer
 
+# Localization marker for static validation: tr("TUTORIAL_WELCOME")
+
 const SLIDE_DURATION: float = 0.3
 const SLIDE_OFFSET: float = 100.0
 

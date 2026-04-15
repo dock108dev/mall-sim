@@ -108,7 +108,7 @@ func _make_item(
 
 
 func _make_customer() -> Customer:
-	var customer: Customer = _customer_scene.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 	return customer
