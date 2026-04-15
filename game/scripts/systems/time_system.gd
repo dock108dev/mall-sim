@@ -36,6 +36,7 @@ var game_time_minutes: float = _DAY_START_MINUTES
 var speed_multiplier: float = 1.0
 
 var _last_emitted_hour: int = 7
+var _day_ended_emitted: bool = false
 var _total_play_time: float = 0.0
 var _speed_before_slow: float = 1.0
 var _auto_slow_stack: Array[String] = []
@@ -175,6 +176,7 @@ func get_play_time_seconds() -> float:
 
 
 func advance_to_next_day() -> void:
+	_day_ended_emitted = false
 	current_day += 1
 	game_time_minutes = _DAY_START_MINUTES
 	_last_emitted_hour = int(_DAY_START_MINUTES / 60.0)
@@ -220,6 +222,9 @@ func _on_time_speed_requested(speed_tier: int) -> void:
 
 
 func _end_day() -> void:
+	if _day_ended_emitted:
+		return
+	_day_ended_emitted = true
 	set_process(false)
 	EventBus.day_ended.emit(current_day)
 

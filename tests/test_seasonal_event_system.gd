@@ -31,7 +31,7 @@ func _make_recurring_def(
 ) -> SeasonalEventDefinition:
 	var def: SeasonalEventDefinition = SeasonalEventDefinition.new()
 	def.id = id
-	def.item_name = id
+	def.name = id
 	def.frequency_days = frequency_days
 	def.offset_days = offset_days
 	def.duration_days = duration_days

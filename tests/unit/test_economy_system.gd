@@ -202,7 +202,7 @@ func test_serialize_deserialize_preserves_transactions() -> void:
 
 func test_daily_profit_calculation() -> void:
 	_economy._current_cash = 1000.0
-	_economy.record_store_revenue("store_a", 200.0)
+	_economy.add_cash(200.0, "store_a revenue")
 	_economy.deduct_cash(80.0, "expense")
 	var profit: float = _economy.get_daily_profit()
 	assert_almost_eq(

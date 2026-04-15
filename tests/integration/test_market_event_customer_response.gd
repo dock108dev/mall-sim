@@ -28,7 +28,7 @@ func after_each() -> void:
 func _create_spike_def(overrides: Dictionary = {}) -> MarketEventDefinition:
 	var def := MarketEventDefinition.new()
 	def.id = overrides.get("id", "test_demand_spike")
-	def.item_name = overrides.get("name", "Test Demand Spike")
+		def.name = overrides.get("name", "Test Demand Spike")
 	def.event_type = "spike"
 	def.target_tags = overrides.get(
 		"target_tags", PackedStringArray([])

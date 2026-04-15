@@ -10,6 +10,8 @@ var _data_loader: DataLoader
 
 var _def_a: ItemDefinition
 var _def_b: ItemDefinition
+var _def_c: ItemDefinition
+var _def_d: ItemDefinition
 var _profile: CustomerTypeDefinition
 
 
@@ -31,8 +33,13 @@ func before_each() -> void:
 
 	_def_a = _make_definition("pc_card_alpha", "Alpha Card", 10.0, "common")
 	_def_b = _make_definition("pc_card_beta", "Beta Card", 10.0, "common")
+	# Candidates cover all random conditions: fair→10 (base 20), near_mint→10.5 (base 7).
+	_def_c = _make_definition("pc_card_gamma", "Gamma Card", 20.0, "common")
+	_def_d = _make_definition("pc_card_delta", "Delta Card", 7.0, "common")
 	_data_loader._items["pc_card_alpha"] = _def_a
 	_data_loader._items["pc_card_beta"] = _def_b
+	_data_loader._items["pc_card_gamma"] = _def_c
+	_data_loader._items["pc_card_delta"] = _def_d
 
 	_trade = TradeSystem.new()
 	_trade.initialize(_data_loader, _inventory, _economy, _reputation)

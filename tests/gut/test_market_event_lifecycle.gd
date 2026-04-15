@@ -9,7 +9,7 @@ var _saved_day: int
 func _create_event_def(overrides: Dictionary = {}) -> MarketEventDefinition:
 	var def := MarketEventDefinition.new()
 	def.id = overrides.get("id", "test_boom")
-	def.item_name = overrides.get("name", "Test Boom")
+	def.name = overrides.get("name", "Test Boom")
 	def.event_type = overrides.get("event_type", "boom")
 	def.target_tags = overrides.get("target_tags", PackedStringArray(["rookie"]))
 	def.target_categories = overrides.get(
