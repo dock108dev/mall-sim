@@ -102,8 +102,9 @@ func load_all() -> void:
 
 
 func load_all_content() -> void:
-	if _loaded:
+	if _loaded and ContentRegistry.is_ready():
 		return
+	_prepare_for_load()
 	var files := _discover_json_files(CONTENT_ROOT)
 	var economy_data: Dictionary = {}
 	for path: String in files:
@@ -127,6 +128,18 @@ func load_all_content() -> void:
 	GameManager.data_loader = self
 	GameManager.mark_boot_completed()
 	_loaded = true
+
+
+func _prepare_for_load() -> void:
+	# Tests often clear only one half of the content pipeline. If the loader and
+	# registry disagree about whether content is already loaded, reset both sides
+	# to a clean slate before registering again.
+	if _loaded and not ContentRegistry.is_ready():
+		clear_for_testing()
+	if not _loaded and ContentRegistry.is_ready():
+		ContentRegistry.clear_for_testing()
+	elif not _loaded:
+		clear_for_testing()
 
 
 func _discover_json_files(root: String) -> Array[String]:

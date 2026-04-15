@@ -32,6 +32,7 @@ var _ambient_streams: Dictionary = {}
 
 var _zone_players: Dictionary = {}
 var _zone_tweens: Dictionary = {}
+var _warned_messages: Dictionary = {}
 
 var _event_handler: Node = null
 
@@ -92,7 +93,8 @@ func play_bgm(
 
 	var stream: AudioStream = _resolve_music_stream(track_key)
 	if stream == null:
-		push_warning(
+		_warn_once(
+			"music_track:%s" % track_key,
 			"AudioManager: Music track not found '%s'" % track_key
 		)
 		return
@@ -438,7 +440,17 @@ func _load_audio_dir(
 		if ResourceLoader.exists(path):
 			target[key] = load(path)
 		else:
-			push_warning("AudioManager: audio not found: %s" % path)
+			_warn_once(
+				"audio_path:%s" % path,
+				"AudioManager: audio not found: %s" % path
+			)
+
+
+func _warn_once(key: String, message: String) -> void:
+	if _warned_messages.has(key):
+		return
+	_warned_messages[key] = true
+	push_warning(message)
 
 
 func _resolve_music_stream(track_name: String) -> AudioStream:

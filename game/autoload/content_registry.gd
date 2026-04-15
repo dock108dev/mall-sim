@@ -9,6 +9,7 @@ var _scene_map: Dictionary = {}
 var _display_names: Dictionary = {}
 var _types: Dictionary = {}
 var _resources: Dictionary = {}
+var _warned_missing_scenes: Dictionary = {}
 var _id_regex: RegEx
 var _ready_flag: bool = false
 
@@ -130,11 +131,18 @@ func validate_all_references() -> Array[String]:
 	for scene_id: StringName in _scene_map:
 		var path: String = _scene_map[scene_id]
 		if not ResourceLoader.exists(path):
-			push_warning(
-				"ContentRegistry: scene '%s' for ID '%s' not found"
-				% [path, scene_id]
-			)
+			_warn_missing_scene_once(path, scene_id)
 	return errors
+
+
+func _warn_missing_scene_once(path: String, scene_id: StringName) -> void:
+	if _warned_missing_scenes.has(path):
+		return
+	_warned_missing_scenes[path] = true
+	push_warning(
+		"ContentRegistry: scene '%s' for ID '%s' not found"
+		% [path, scene_id]
+	)
 
 
 func _validate_item(
