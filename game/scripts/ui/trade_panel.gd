@@ -14,31 +14,31 @@ var _anim_tween: Tween
 var _feedback_tween: Tween
 
 @onready var _wanted_name_label: Label = (
-	$Margin/VBox/WantedSection/WantedNameLabel
+	get_node_or_null("Margin/VBox/WantedSection/WantedNameLabel") as Label
 )
 @onready var _wanted_condition_label: Label = (
-	$Margin/VBox/WantedSection/WantedConditionLabel
+	get_node_or_null("Margin/VBox/WantedSection/WantedConditionLabel") as Label
 )
 @onready var _wanted_value_label: Label = (
-	$Margin/VBox/WantedSection/WantedValueLabel
+	get_node_or_null("Margin/VBox/WantedSection/WantedValueLabel") as Label
 )
 @onready var _offered_name_label: Label = (
-	$Margin/VBox/OfferedSection/OfferedNameLabel
+	get_node_or_null("Margin/VBox/OfferedSection/OfferedNameLabel") as Label
 )
 @onready var _offered_condition_label: Label = (
-	$Margin/VBox/OfferedSection/OfferedConditionLabel
+	get_node_or_null("Margin/VBox/OfferedSection/OfferedConditionLabel") as Label
 )
 @onready var _offered_value_label: Label = (
-	$Margin/VBox/OfferedSection/OfferedValueLabel
+	get_node_or_null("Margin/VBox/OfferedSection/OfferedValueLabel") as Label
 )
 @onready var _fair_trade_label: Label = (
-	$Margin/VBox/FairTradeIndicator
+	get_node_or_null("Margin/VBox/FairTradeIndicator") as Label
 )
 @onready var _accept_button: Button = (
-	$Margin/VBox/ButtonRow/AcceptButton
+	get_node_or_null("Margin/VBox/ButtonRow/AcceptButton") as Button
 )
 @onready var _decline_button: Button = (
-	$Margin/VBox/ButtonRow/DeclineButton
+	get_node_or_null("Margin/VBox/ButtonRow/DeclineButton") as Button
 )
 
 
@@ -63,12 +63,17 @@ func show_trade(
 ) -> void:
 	if _wanted_name_label != null:
 		_wanted_name_label.text = wanted_name
+	if _wanted_condition_label != null:
 		_wanted_condition_label.text = "Condition: %s" % wanted_cond
+	if _wanted_value_label != null:
 		_wanted_value_label.text = "Value: %s%.2f" % [
 			UIThemeConstants.CURRENCY_SYMBOL, wanted_val
 		]
+	if _offered_name_label != null:
 		_offered_name_label.text = offered_name
+	if _offered_condition_label != null:
 		_offered_condition_label.text = "Condition: %s" % offered_cond
+	if _offered_value_label != null:
 		_offered_value_label.text = "Value: %s%.2f" % [
 			UIThemeConstants.CURRENCY_SYMBOL, offered_val
 		]

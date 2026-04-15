@@ -10,7 +10,6 @@ var _data_loader: DataLoader
 
 var _def_a: ItemDefinition
 var _def_b: ItemDefinition
-var _customer_scene: PackedScene
 var _profile: CustomerTypeDefinition
 
 
@@ -51,10 +50,6 @@ func before_each() -> void:
 	_profile.purchase_probability_base = 0.9
 	_profile.impulse_buy_chance = 0.1
 	_profile.mood_tags = PackedStringArray([])
-
-	_customer_scene = preload(
-		"res://game/scenes/characters/customer.tscn"
-	)
 
 
 func after_each() -> void:
@@ -240,7 +235,7 @@ func _make_definition(
 
 
 func _make_customer() -> Customer:
-	var customer: Customer = _customer_scene.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 	return customer

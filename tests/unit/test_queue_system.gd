@@ -1,8 +1,6 @@
 ## Unit tests for QueueSystem — enqueue/dequeue FIFO, overflow guard, empty guard, and signals.
 extends GutTest
 
-const _CUSTOMER_SCENE := preload("res://game/scenes/characters/customer.tscn")
-
 const MAX_QUEUE_SIZE: int = 3
 
 var _queue_system: QueueSystem
@@ -44,7 +42,7 @@ func _on_queue_changed(queue_size: int) -> void:
 
 
 func _make_customer() -> Customer:
-	var customer: Customer = _CUSTOMER_SCENE.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	customer.profile = _profile
 	return customer

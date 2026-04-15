@@ -2,8 +2,6 @@
 extends GutTest
 
 const _CHECKOUT_SCRIPT := preload("res://game/autoload/checkout_system.gd")
-const _CUSTOMER_SCENE := preload("res://game/scenes/characters/customer.tscn")
-
 var _checkout: Node
 var _inv: InventorySystem
 var _market: MarketValueSystem
@@ -58,7 +56,7 @@ func after_each() -> void:
 
 
 func _make_customer(budget: float = 200.0) -> Customer:
-	var customer: Customer = _CUSTOMER_SCENE.instantiate()
+	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
 	var profile := CustomerTypeDefinition.new()
 	profile.id = "test_buyer"
