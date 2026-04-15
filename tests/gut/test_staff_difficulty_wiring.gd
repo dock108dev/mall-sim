@@ -8,6 +8,8 @@ var _wages_paid_total: float = 0.0
 var _not_paid_ids: Array[String] = []
 var _quit_ids: Array[String] = []
 var _saved_tier: StringName
+var _had_economy_payroll_cash_check: bool = false
+var _had_economy_payroll_cash_deduct: bool = false
 
 
 func before_all() -> void:
@@ -21,6 +23,20 @@ func before_each() -> void:
 	_wages_paid_total = 0.0
 	_not_paid_ids = []
 	_quit_ids = []
+	_had_economy_payroll_cash_check = EventBus.payroll_cash_check.is_connected(
+		EconomySystemSingleton._on_payroll_cash_check
+	)
+	_had_economy_payroll_cash_deduct = EventBus.payroll_cash_deduct.is_connected(
+		EconomySystemSingleton._on_payroll_cash_deduct
+	)
+	if _had_economy_payroll_cash_check:
+		EventBus.payroll_cash_check.disconnect(
+			EconomySystemSingleton._on_payroll_cash_check
+		)
+	if _had_economy_payroll_cash_deduct:
+		EventBus.payroll_cash_deduct.disconnect(
+			EconomySystemSingleton._on_payroll_cash_deduct
+		)
 	_manager = preload("res://game/autoload/staff_manager.gd").new()
 	_manager._generate_initial_pool()
 	EventBus.payroll_cash_check.connect(_mock_cash_check)
@@ -39,6 +55,14 @@ func after_each() -> void:
 	if _manager:
 		_manager.free()
 		_manager = null
+	if _had_economy_payroll_cash_check:
+		EventBus.payroll_cash_check.connect(
+			EconomySystemSingleton._on_payroll_cash_check
+		)
+	if _had_economy_payroll_cash_deduct:
+		EventBus.payroll_cash_deduct.connect(
+			EconomySystemSingleton._on_payroll_cash_deduct
+		)
 	DifficultySystemSingleton.set_tier(_saved_tier)
 
 

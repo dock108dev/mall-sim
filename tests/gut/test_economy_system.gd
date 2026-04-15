@@ -6,9 +6,18 @@ var _economy: EconomySystem
 var _last_txn_amount: float = 0.0
 var _last_txn_success: bool = false
 var _last_txn_message: String = ""
+var _saved_tier: StringName = &"normal"
+var _saved_owned_stores: Array = []
+var _saved_current_store_id: StringName = &""
 
 
 func before_each() -> void:
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	_saved_current_store_id = GameManager.current_store_id
+	DifficultySystemSingleton.set_tier(&"normal")
+	GameManager.owned_stores = []
+	GameManager.current_store_id = &""
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize(1000.0)
@@ -25,6 +34,9 @@ func after_each() -> void:
 		EventBus.transaction_completed.disconnect(
 			_on_transaction_completed
 		)
+	GameManager.owned_stores = _saved_owned_stores.duplicate()
+	GameManager.current_store_id = _saved_current_store_id
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 func _on_transaction_completed(

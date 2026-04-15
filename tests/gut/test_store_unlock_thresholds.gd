@@ -5,19 +5,27 @@ extends GutTest
 var _progression: ProgressionSystem
 var _economy: EconomySystem
 var _reputation: ReputationSystem
+var _saved_current_store_id: StringName = &""
 
 
 func before_each() -> void:
+	_saved_current_store_id = GameManager.current_store_id
+	GameManager.current_store_id = &"test_store"
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize()
 
 	_reputation = ReputationSystem.new()
 	add_child_autofree(_reputation)
+	_reputation.initialize_store("test_store")
 
 	_progression = ProgressionSystem.new()
 	add_child_autofree(_progression)
 	_progression.initialize(_economy, _reputation)
+
+
+func after_each() -> void:
+	GameManager.current_store_id = _saved_current_store_id
 
 
 # --- Cumulative cash tracking ---

@@ -6,9 +6,18 @@ extends GutTest
 
 var _system: PerformanceReportSystem
 var _economy: EconomySystem
+var _saved_tier: StringName = &"normal"
+var _saved_owned_stores: Array = []
+var _saved_current_store_id: StringName = &""
 
 
 func before_each() -> void:
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	_saved_current_store_id = GameManager.current_store_id
+	DifficultySystemSingleton.set_tier(&"normal")
+	GameManager.owned_stores = []
+	GameManager.current_store_id = &""
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize()
@@ -16,6 +25,12 @@ func before_each() -> void:
 	_system = PerformanceReportSystem.new()
 	add_child_autofree(_system)
 	_system.initialize()
+
+
+func after_each() -> void:
+	GameManager.owned_stores = _saved_owned_stores.duplicate()
+	GameManager.current_store_id = _saved_current_store_id
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 func test_report_contains_required_fields() -> void:

@@ -8,9 +8,18 @@ const PANEL_SCENE := preload("res://game/scenes/ui/day_summary_panel.tscn")
 var _economy: EconomySystem
 var _perf_report: PerformanceReportSystem
 var _panel: DaySummaryPanel
+var _saved_tier: StringName = &"normal"
+var _saved_owned_stores: Array = []
+var _saved_current_store_id: StringName = &""
 
 
 func before_each() -> void:
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	_saved_current_store_id = GameManager.current_store_id
+	DifficultySystemSingleton.set_tier(&"normal")
+	GameManager.owned_stores = []
+	GameManager.current_store_id = &""
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize(10000.0)
@@ -21,6 +30,12 @@ func before_each() -> void:
 
 	_panel = PANEL_SCENE.instantiate() as DaySummaryPanel
 	add_child_autofree(_panel)
+
+
+func after_each() -> void:
+	GameManager.owned_stores = _saved_owned_stores.duplicate()
+	GameManager.current_store_id = _saved_current_store_id
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 func test_revenue_label_shows_sum_of_customer_purchases() -> void:
@@ -65,7 +80,10 @@ func test_net_label_positive_with_green_color() -> void:
 		"Net label must show positive sign when revenue > expenses"
 	)
 	var color: Color = _panel._net_label.get_theme_color("font_color")
-	assert_eq(color, Color(0.2, 0.8, 0.2), "Positive net must use green color")
+	assert_eq(
+		color, DaySummaryPanel.NET_POSITIVE_COLOR,
+		"Positive net must use green color"
+	)
 
 
 func test_net_label_negative_with_red_color() -> void:
@@ -78,7 +96,10 @@ func test_net_label_negative_with_red_color() -> void:
 		"Net label must show negative sign when expenses > revenue"
 	)
 	var color: Color = _panel._net_label.get_theme_color("font_color")
-	assert_eq(color, Color(0.9, 0.2, 0.2), "Negative net must use red color")
+	assert_eq(
+		color, DaySummaryPanel.NET_NEGATIVE_COLOR,
+		"Negative net must use red color"
+	)
 
 
 func test_acknowledge_emits_day_acknowledged_and_hides_panel() -> void:
