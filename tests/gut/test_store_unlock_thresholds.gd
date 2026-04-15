@@ -6,11 +6,15 @@ var _progression: ProgressionSystem
 var _economy: EconomySystem
 var _reputation: ReputationSystem
 var _saved_current_store_id: StringName = &""
+var _saved_day_started_connections: Array[Callable] = []
+var _saved_day_ended_connections: Array[Callable] = []
 
 
 func before_each() -> void:
 	_saved_current_store_id = GameManager.current_store_id
 	GameManager.current_store_id = &"test_store"
+	_saved_day_started_connections = _disconnect_signal(EventBus.day_started)
+	_saved_day_ended_connections = _disconnect_signal(EventBus.day_ended)
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize()
@@ -25,7 +29,34 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if _progression != null:
+		_progression.free()
+		_progression = null
+	if _reputation != null:
+		_reputation.free()
+		_reputation = null
+	if _economy != null:
+		_economy.free()
+		_economy = null
+	_restore_signal(EventBus.day_started, _saved_day_started_connections)
+	_restore_signal(EventBus.day_ended, _saved_day_ended_connections)
 	GameManager.current_store_id = _saved_current_store_id
+
+
+func _disconnect_signal(signal_ref: Signal) -> Array[Callable]:
+	var callables: Array[Callable] = []
+	for connection: Dictionary in signal_ref.get_connections():
+		var callable: Callable = connection.get("callable", Callable()) as Callable
+		if callable.is_valid():
+			callables.append(callable)
+			signal_ref.disconnect(callable)
+	return callables
+
+
+func _restore_signal(signal_ref: Signal, callables: Array[Callable]) -> void:
+	for callable: Callable in callables:
+		if callable.is_valid() and not signal_ref.is_connected(callable):
+			signal_ref.connect(callable)
 
 
 # --- Cumulative cash tracking ---

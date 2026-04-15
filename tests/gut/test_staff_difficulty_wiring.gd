@@ -8,8 +8,8 @@ var _wages_paid_total: float = 0.0
 var _not_paid_ids: Array[String] = []
 var _quit_ids: Array[String] = []
 var _saved_tier: StringName
-var _had_economy_payroll_cash_check: bool = false
-var _had_economy_payroll_cash_deduct: bool = false
+var _saved_payroll_cash_check_connections: Array[Callable] = []
+var _saved_payroll_cash_deduct_connections: Array[Callable] = []
 
 
 func before_all() -> void:
@@ -23,20 +23,12 @@ func before_each() -> void:
 	_wages_paid_total = 0.0
 	_not_paid_ids = []
 	_quit_ids = []
-	_had_economy_payroll_cash_check = EventBus.payroll_cash_check.is_connected(
-		EconomySystemSingleton._on_payroll_cash_check
+	_saved_payroll_cash_check_connections = _disconnect_signal(
+		EventBus.payroll_cash_check
 	)
-	_had_economy_payroll_cash_deduct = EventBus.payroll_cash_deduct.is_connected(
-		EconomySystemSingleton._on_payroll_cash_deduct
+	_saved_payroll_cash_deduct_connections = _disconnect_signal(
+		EventBus.payroll_cash_deduct
 	)
-	if _had_economy_payroll_cash_check:
-		EventBus.payroll_cash_check.disconnect(
-			EconomySystemSingleton._on_payroll_cash_check
-		)
-	if _had_economy_payroll_cash_deduct:
-		EventBus.payroll_cash_deduct.disconnect(
-			EconomySystemSingleton._on_payroll_cash_deduct
-		)
 	_manager = preload("res://game/autoload/staff_manager.gd").new()
 	_manager._generate_initial_pool()
 	EventBus.payroll_cash_check.connect(_mock_cash_check)
@@ -55,15 +47,31 @@ func after_each() -> void:
 	if _manager:
 		_manager.free()
 		_manager = null
-	if _had_economy_payroll_cash_check:
-		EventBus.payroll_cash_check.connect(
-			EconomySystemSingleton._on_payroll_cash_check
-		)
-	if _had_economy_payroll_cash_deduct:
-		EventBus.payroll_cash_deduct.connect(
-			EconomySystemSingleton._on_payroll_cash_deduct
-		)
+	_restore_signal(
+		EventBus.payroll_cash_check,
+		_saved_payroll_cash_check_connections
+	)
+	_restore_signal(
+		EventBus.payroll_cash_deduct,
+		_saved_payroll_cash_deduct_connections
+	)
 	DifficultySystemSingleton.set_tier(_saved_tier)
+
+
+func _disconnect_signal(signal_ref: Signal) -> Array[Callable]:
+	var callables: Array[Callable] = []
+	for connection: Dictionary in signal_ref.get_connections():
+		var callable: Callable = connection.get("callable", Callable()) as Callable
+		if callable.is_valid():
+			callables.append(callable)
+			signal_ref.disconnect(callable)
+	return callables
+
+
+func _restore_signal(signal_ref: Signal, callables: Array[Callable]) -> void:
+	for callable: Callable in callables:
+		if callable.is_valid() and not signal_ref.is_connected(callable):
+			signal_ref.connect(callable)
 
 
 func _mock_cash_check(amount: float, result: Array) -> void:

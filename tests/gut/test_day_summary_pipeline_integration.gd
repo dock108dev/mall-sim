@@ -11,6 +11,8 @@ var _panel: DaySummaryPanel
 var _saved_tier: StringName = &"normal"
 var _saved_owned_stores: Array = []
 var _saved_current_store_id: StringName = &""
+var _saved_day_started_connections: Array[Callable] = []
+var _saved_day_ended_connections: Array[Callable] = []
 
 
 func before_each() -> void:
@@ -20,6 +22,8 @@ func before_each() -> void:
 	DifficultySystemSingleton.set_tier(&"normal")
 	GameManager.owned_stores = []
 	GameManager.current_store_id = &""
+	_saved_day_started_connections = _disconnect_signal(EventBus.day_started)
+	_saved_day_ended_connections = _disconnect_signal(EventBus.day_ended)
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize(10000.0)
@@ -33,9 +37,36 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if _panel != null:
+		_panel.free()
+		_panel = null
+	if _perf_report != null:
+		_perf_report.free()
+		_perf_report = null
+	if _economy != null:
+		_economy.free()
+		_economy = null
+	_restore_signal(EventBus.day_started, _saved_day_started_connections)
+	_restore_signal(EventBus.day_ended, _saved_day_ended_connections)
 	GameManager.owned_stores = _saved_owned_stores.duplicate()
 	GameManager.current_store_id = _saved_current_store_id
 	DifficultySystemSingleton.set_tier(_saved_tier)
+
+
+func _disconnect_signal(signal_ref: Signal) -> Array[Callable]:
+	var callables: Array[Callable] = []
+	for connection: Dictionary in signal_ref.get_connections():
+		var callable: Callable = connection.get("callable", Callable()) as Callable
+		if callable.is_valid():
+			callables.append(callable)
+			signal_ref.disconnect(callable)
+	return callables
+
+
+func _restore_signal(signal_ref: Signal, callables: Array[Callable]) -> void:
+	for callable: Callable in callables:
+		if callable.is_valid() and not signal_ref.is_connected(callable):
+			signal_ref.connect(callable)
 
 
 func test_revenue_label_shows_sum_of_customer_purchases() -> void:

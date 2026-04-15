@@ -8,8 +8,8 @@ var _wages_paid_total: float = 0.0
 var _not_paid_ids: Array[String] = []
 var _morale_changes: Array[Dictionary] = []
 var _quit_ids: Array[String] = []
-var _had_economy_payroll_cash_check: bool = false
-var _had_economy_payroll_cash_deduct: bool = false
+var _saved_payroll_cash_check_connections: Array[Callable] = []
+var _saved_payroll_cash_deduct_connections: Array[Callable] = []
 
 
 func before_each() -> void:
@@ -18,20 +18,12 @@ func before_each() -> void:
 	_not_paid_ids = []
 	_morale_changes = []
 	_quit_ids = []
-	_had_economy_payroll_cash_check = EventBus.payroll_cash_check.is_connected(
-		EconomySystemSingleton._on_payroll_cash_check
+	_saved_payroll_cash_check_connections = _disconnect_signal(
+		EventBus.payroll_cash_check
 	)
-	_had_economy_payroll_cash_deduct = EventBus.payroll_cash_deduct.is_connected(
-		EconomySystemSingleton._on_payroll_cash_deduct
+	_saved_payroll_cash_deduct_connections = _disconnect_signal(
+		EventBus.payroll_cash_deduct
 	)
-	if _had_economy_payroll_cash_check:
-		EventBus.payroll_cash_check.disconnect(
-			EconomySystemSingleton._on_payroll_cash_check
-		)
-	if _had_economy_payroll_cash_deduct:
-		EventBus.payroll_cash_deduct.disconnect(
-			EconomySystemSingleton._on_payroll_cash_deduct
-		)
 	_manager = preload(
 		"res://game/autoload/staff_manager.gd"
 	).new()
@@ -51,17 +43,33 @@ func after_each() -> void:
 	EventBus.staff_not_paid.disconnect(_on_not_paid)
 	EventBus.staff_morale_changed.disconnect(_on_morale_changed)
 	EventBus.staff_quit.disconnect(_on_quit)
-	if _had_economy_payroll_cash_check:
-		EventBus.payroll_cash_check.connect(
-			EconomySystemSingleton._on_payroll_cash_check
-		)
-	if _had_economy_payroll_cash_deduct:
-		EventBus.payroll_cash_deduct.connect(
-			EconomySystemSingleton._on_payroll_cash_deduct
-		)
+	_restore_signal(
+		EventBus.payroll_cash_check,
+		_saved_payroll_cash_check_connections
+	)
+	_restore_signal(
+		EventBus.payroll_cash_deduct,
+		_saved_payroll_cash_deduct_connections
+	)
 	if _manager:
 		_manager.free()
 		_manager = null
+
+
+func _disconnect_signal(signal_ref: Signal) -> Array[Callable]:
+	var callables: Array[Callable] = []
+	for connection: Dictionary in signal_ref.get_connections():
+		var callable: Callable = connection.get("callable", Callable()) as Callable
+		if callable.is_valid():
+			callables.append(callable)
+			signal_ref.disconnect(callable)
+	return callables
+
+
+func _restore_signal(signal_ref: Signal, callables: Array[Callable]) -> void:
+	for callable: Callable in callables:
+		if callable.is_valid() and not signal_ref.is_connected(callable):
+			signal_ref.connect(callable)
 
 
 func _mock_cash_check(amount: float, result: Array) -> void:
