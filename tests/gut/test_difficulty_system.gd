@@ -3,6 +3,8 @@ extends GutTest
 
 
 var _ds: Node
+var _saved_settings_path: String = ""
+var _temp_settings_path: String = ""
 
 
 func before_all() -> void:
@@ -12,6 +14,9 @@ func before_all() -> void:
 
 
 func before_each() -> void:
+	_saved_settings_path = Settings.settings_path
+	_temp_settings_path = "user://gut_difficulty_system_%d.cfg" % Time.get_ticks_usec()
+	Settings.settings_path = _temp_settings_path
 	DifficultySystemSingleton.set_tier(&"normal")
 	_ds = Node.new()
 	_ds.set_script(
@@ -22,6 +27,9 @@ func before_each() -> void:
 
 func after_each() -> void:
 	DifficultySystemSingleton.set_tier(&"normal")
+	Settings.settings_path = _saved_settings_path
+	if FileAccess.file_exists(_temp_settings_path):
+		DirAccess.remove_absolute(_temp_settings_path)
 
 
 func test_default_tier_is_normal() -> void:

@@ -3,12 +3,24 @@ extends GutTest
 
 
 var _ds: Node
+var _saved_settings_path: String = ""
+var _temp_settings_path: String = ""
 
 
 func before_each() -> void:
+	DataLoaderSingleton.load_all_content()
+	_saved_settings_path = Settings.settings_path
+	_temp_settings_path = "user://test_difficulty_system_%d.cfg" % Time.get_ticks_usec()
+	Settings.settings_path = _temp_settings_path
 	_ds = Node.new()
 	_ds.set_script(preload("res://game/autoload/difficulty_system.gd"))
 	add_child_autofree(_ds)
+
+
+func after_each() -> void:
+	Settings.settings_path = _saved_settings_path
+	if FileAccess.file_exists(_temp_settings_path):
+		DirAccess.remove_absolute(_temp_settings_path)
 
 
 # --- Default tier ---

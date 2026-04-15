@@ -56,12 +56,24 @@ var last_script_time_ms: float = 0.0
 var last_nav_time_ms: float = 0.0
 var last_anim_time_ms: float = 0.0
 
-@onready var _navigation_agent: NavigationAgent3D = $NavigationAgent3D
-@onready var _body_mesh: MeshInstance3D = $BodyMesh
-@onready var _head_mesh: MeshInstance3D = $HeadMesh
-@onready var _animation_player: AnimationPlayer = $AnimationPlayer
-@onready var _animator: CustomerAnimator = $CustomerAnimator
-@onready var _state_indicator: Node3D = $CustomerStateIndicator
+@onready var _navigation_agent: NavigationAgent3D = (
+	get_node_or_null("NavigationAgent3D") as NavigationAgent3D
+)
+@onready var _body_mesh: MeshInstance3D = (
+	get_node_or_null("BodyMesh") as MeshInstance3D
+)
+@onready var _head_mesh: MeshInstance3D = (
+	get_node_or_null("HeadMesh") as MeshInstance3D
+)
+@onready var _animation_player: AnimationPlayer = (
+	get_node_or_null("AnimationPlayer") as AnimationPlayer
+)
+@onready var _animator: CustomerAnimator = (
+	get_node_or_null("CustomerAnimator") as CustomerAnimator
+)
+@onready var _state_indicator: Node3D = (
+	get_node_or_null("CustomerStateIndicator") as Node3D
+)
 
 
 func _ready() -> void:
@@ -100,8 +112,9 @@ func initialize(
 	_made_purchase = false
 	_cache_navigation_targets()
 	_navigate_to_random_shelf()
-	_animator.initialize(_animation_player)
-	_animator.play_for_state(State.ENTERING)
+	if _animator != null:
+		_animator.initialize(_animation_player)
+		_animator.play_for_state(State.ENTERING)
 	if _state_indicator:
 		_state_indicator.initialize(self)
 	_initialized = true
@@ -156,16 +169,18 @@ func complete_purchase() -> void:
 func enter_queue(queue_position: Vector3) -> void:
 	current_state = State.WAITING_IN_QUEUE
 	EventBus.customer_state_changed.emit(self, State.WAITING_IN_QUEUE)
-	_animator.play_for_state(State.WAITING_IN_QUEUE)
-	_navigation_agent.target_position = queue_position
+	if _animator != null:
+		_animator.play_for_state(State.WAITING_IN_QUEUE)
+	_set_navigation_target(queue_position)
 
 
 ## Called by RegisterQueue when this customer advances to register.
 func advance_to_register() -> void:
 	current_state = State.PURCHASING
 	EventBus.customer_state_changed.emit(self, State.PURCHASING)
-	_animator.play_for_state(State.PURCHASING)
-	_navigation_agent.target_position = _register_position
+	if _animator != null:
+		_animator.play_for_state(State.PURCHASING)
+	_set_navigation_target(_register_position)
 
 
 ## Called by CheckoutSystem when the queue is full.
@@ -174,7 +189,7 @@ func reject_from_queue() -> void:
 
 
 func _process_entering() -> void:
-	if _navigation_agent.is_navigation_finished():
+	if _is_navigation_finished():
 		_transition_to(State.BROWSING)
 
 
@@ -183,7 +198,7 @@ func _process_browsing(delta: float) -> void:
 	if patience_timer <= 0.0:
 		_transition_to_deciding_or_leaving()
 		return
-	if not _navigation_agent.is_navigation_finished():
+	if not _is_navigation_finished():
 		return
 	browse_timer -= delta
 	if browse_timer > 0.0:
@@ -226,7 +241,7 @@ func _process_deciding() -> void:
 
 
 func _process_purchasing(delta: float) -> void:
-	if _navigation_agent.is_navigation_finished():
+	if _is_navigation_finished():
 		patience_timer -= delta
 		if patience_timer <= 0.0:
 			_transition_to(State.LEAVING)
@@ -239,7 +254,7 @@ func _process_waiting_in_queue(delta: float) -> void:
 
 
 func _process_leaving() -> void:
-	if _navigation_agent.is_navigation_finished():
+	if _is_navigation_finished():
 		despawn_requested.emit(self)
 
 
@@ -267,9 +282,9 @@ func _transition_to_deciding_or_leaving() -> void:
 
 
 func _move_along_path(delta: float) -> void:
-	if _navigation_agent.is_navigation_finished():
+	if _navigation_agent == null or _is_navigation_finished():
 		velocity = Vector3.ZERO
-		_animator.update_movement(velocity)
+		_update_animator_movement(velocity)
 		return
 	_nav_recalc_timer -= delta
 	var next_pos: Vector3
@@ -284,7 +299,7 @@ func _move_along_path(delta: float) -> void:
 	var dist_sq: float = direction.length_squared()
 	if dist_sq < 0.01:
 		velocity = Vector3.ZERO
-		_animator.update_movement(velocity)
+		_update_animator_movement(velocity)
 		return
 	direction = direction.normalized()
 	var desired: Vector3 = direction * MOVE_SPEED
@@ -293,7 +308,7 @@ func _move_along_path(delta: float) -> void:
 	else:
 		velocity = desired
 		move_and_slide()
-	_animator.update_movement(velocity)
+	_update_animator_movement(velocity)
 
 
 func _cache_navigation_targets() -> void:
@@ -326,16 +341,16 @@ func _navigate_to_random_shelf() -> bool:
 	_visited_slots.append(target)
 	var target_3d: Node3D = target as Node3D
 	if target_3d:
-		_navigation_agent.target_position = target_3d.global_position
+		_set_navigation_target(target_3d.global_position)
 	return true
 
 
 func _navigate_to_register() -> void:
-	_navigation_agent.target_position = _register_position
+	_set_navigation_target(_register_position)
 
 
 func _navigate_to_exit() -> void:
-	_navigation_agent.target_position = _exit_position
+	_set_navigation_target(_exit_position)
 
 
 func _evaluate_current_shelf() -> void:
@@ -549,7 +564,7 @@ func _build_customer_data() -> Dictionary:
 
 
 func _randomize_body_color() -> void:
-	if not _body_mesh:
+	if not _body_mesh or not _head_mesh:
 		return
 	var base_hue: float = randf()
 	var saturation: float = randf_range(0.3, 0.7)
@@ -571,6 +586,8 @@ func _randomize_body_color() -> void:
 func _apply_limb_materials(
 	skin_material: StandardMaterial3D, pants_color: Color
 ) -> void:
+	if _body_mesh == null:
+		return
 	var pants_material := StandardMaterial3D.new()
 	pants_material.albedo_color = pants_color
 	for child: Node in _body_mesh.get_children():
@@ -585,6 +602,24 @@ func _apply_limb_materials(
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	velocity = safe_velocity
 	move_and_slide()
+
+
+func _is_navigation_finished() -> bool:
+	if _navigation_agent == null:
+		return true
+	return _navigation_agent.is_navigation_finished()
+
+
+func _set_navigation_target(target_position: Vector3) -> void:
+	if _navigation_agent == null:
+		return
+	_navigation_agent.target_position = target_position
+
+
+func _update_animator_movement(current_velocity: Vector3) -> void:
+	if _animator == null:
+		return
+	_animator.update_movement(current_velocity)
 
 
 func _on_speed_changed(new_speed: float) -> void:
