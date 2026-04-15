@@ -215,7 +215,7 @@ func test_net_profit_positive_shows_green() -> void:
 	var profit_label: Label = summary._profit_label
 	assert_eq(profit_label.text, "NET PROFIT: +$50.00")
 	var color: Color = profit_label.get_theme_color("font_color")
-	assert_eq(color, DaySummary.NET_PROFIT_POSITIVE_COLOR)
+	assert_eq(color, UIThemeConstants.get_positive_color())
 
 
 func test_net_profit_negative_shows_red() -> void:
@@ -256,7 +256,7 @@ func test_net_profit_updates_on_new_report() -> void:
 	var color: Color = summary._profit_label.get_theme_color(
 		"font_color"
 	)
-	assert_eq(color, DaySummary.NET_PROFIT_POSITIVE_COLOR)
+	assert_eq(color, UIThemeConstants.get_positive_color())
 
 
 func test_day_summary_review_inventory_signal() -> void:

@@ -112,7 +112,7 @@ func test_net_label_positive_with_green_color() -> void:
 	)
 	var color: Color = _panel._net_label.get_theme_color("font_color")
 	assert_eq(
-		color, DaySummaryPanel.NET_POSITIVE_COLOR,
+		color, UIThemeConstants.get_positive_color(),
 		"Positive net must use green color"
 	)
 
