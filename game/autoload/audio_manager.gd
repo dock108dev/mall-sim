@@ -396,7 +396,8 @@ func _preload_ambient() -> void:
 func _preload_sfx() -> void:
 	_load_audio_dir({
 		&"purchase_chime": "purchase_chime.wav",
-		&"purchase_ding": "purchase_ding.wav",
+		# purchase_ding.wav not yet produced — alias to purchase_chime
+		&"purchase_ding": "purchase_chime.wav",
 		&"door_bell": "door_bell.wav",
 		&"cash_register": "cash_register.wav",
 		&"item_placement": "item_placement.wav",
@@ -407,7 +408,8 @@ func _preload_sfx() -> void:
 		&"haggle_reject": "haggle_reject.wav",
 		&"build_place": "build_place.wav",
 		&"build_error": "build_error.wav",
-		&"build_mode_enter": "build_mode_enter.wav",
+		# build_mode_enter.wav not yet produced — alias to build_place
+		&"build_mode_enter": "build_place.wav",
 		&"pack_opening": "pack_opening.wav",
 		&"refurbish_start": "refurbish_start.wav",
 		&"refurbish_complete": "refurbish_complete.wav",

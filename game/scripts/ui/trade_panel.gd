@@ -45,8 +45,10 @@ var _feedback_tween: Tween
 func _ready() -> void:
 	# Localization marker for static validation: tr("TRADE_CONDITION")
 	visible = false
-	_accept_button.pressed.connect(_on_accept_pressed)
-	_decline_button.pressed.connect(_on_decline_pressed)
+	if _accept_button != null:
+		_accept_button.pressed.connect(_on_accept_pressed)
+	if _decline_button != null:
+		_decline_button.pressed.connect(_on_decline_pressed)
 	EventBus.panel_opened.connect(_on_panel_opened)
 
 
@@ -59,6 +61,8 @@ func show_trade(
 	offered_cond: String,
 	offered_val: float,
 ) -> void:
+	if _wanted_name_label == null:
+		return
 	_wanted_name_label.text = wanted_name
 	_wanted_condition_label.text = "Condition: %s" % wanted_cond
 	_wanted_value_label.text = "Value: %s%.2f" % [
@@ -118,13 +122,17 @@ func _on_decline_pressed() -> void:
 
 func _set_pending(pending: bool) -> void:
 	_is_pending = pending
-	_accept_button.disabled = pending
-	_decline_button.disabled = pending
+	if _accept_button != null:
+		_accept_button.disabled = pending
+	if _decline_button != null:
+		_decline_button.disabled = pending
 
 
 func _update_fair_trade_indicator(
 	wanted_val: float, offered_val: float
 ) -> void:
+	if _fair_trade_label == null:
+		return
 	if wanted_val <= 0.0:
 		_fair_trade_label.text = ""
 		return
