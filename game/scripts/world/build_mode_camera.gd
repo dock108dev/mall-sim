@@ -26,11 +26,17 @@ var is_transitioning: bool = false
 var _is_top_down: bool = false
 
 
+func _ready() -> void:
+	EventBus.active_camera_changed.connect(_on_active_camera_changed)
+	if is_instance_valid(CameraManager.active_camera):
+		update_camera(CameraManager.active_camera)
+
+
 ## Stores the look target; camera is obtained from CameraManager.
 func initialize(look_target: Vector3) -> void:
 	_target_center = look_target
-	if CameraManager.active_camera:
-		_camera = CameraManager.active_camera
+	if is_instance_valid(CameraManager.active_camera):
+		update_camera(CameraManager.active_camera)
 
 
 ## Sets the store floor bounds for pan clamping.
@@ -43,7 +49,9 @@ func set_store_bounds(
 
 ## Updates the camera reference when the active camera changes.
 func update_camera(camera: Camera3D) -> void:
-	if is_transitioning:
+	if camera != null and not is_instance_valid(camera):
+		camera = null
+	if is_transitioning and is_instance_valid(_camera):
 		return
 	_camera = camera
 
@@ -159,6 +167,9 @@ func transition_to_orbit() -> void:
 
 
 func _apply_orthographic() -> void:
+	if not is_instance_valid(_camera):
+		is_transitioning = false
+		return
 	_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	_camera.size = ORTHO_SIZE
 
@@ -176,3 +187,7 @@ func _kill_tween() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
 	_tween = null
+
+
+func _on_active_camera_changed(camera: Camera3D) -> void:
+	update_camera(camera)

@@ -9,11 +9,14 @@ const _STORE_ID: StringName = &"retro_games"
 var _manager: Node
 var _received_cameras: Array[Camera3D] = []
 var _signal_count: int = 0
+var _autoload_store_entered_connected: bool = false
+var _autoload_store_exited_connected: bool = false
 
 
 func before_each() -> void:
 	_received_cameras.clear()
 	_signal_count = 0
+	_disconnect_autoload_store_handlers()
 	_manager = Node.new()
 	_manager.set_script(CameraManagerScript)
 	add_child_autofree(_manager)
@@ -24,11 +27,36 @@ func after_each() -> void:
 	_safe_disconnect(EventBus.active_camera_changed, _on_camera_changed)
 	_safe_disconnect(EventBus.store_entered, _manager._on_store_entered)
 	_safe_disconnect(EventBus.store_exited, _manager._on_store_exited)
+	_reconnect_autoload_store_handlers()
 
 
 func _safe_disconnect(sig: Signal, callable: Callable) -> void:
 	if sig.is_connected(callable):
 		sig.disconnect(callable)
+
+
+func _disconnect_autoload_store_handlers() -> void:
+	_autoload_store_entered_connected = EventBus.store_entered.is_connected(
+		CameraManager._on_store_entered
+	)
+	_autoload_store_exited_connected = EventBus.store_exited.is_connected(
+		CameraManager._on_store_exited
+	)
+	_safe_disconnect(EventBus.store_entered, CameraManager._on_store_entered)
+	_safe_disconnect(EventBus.store_exited, CameraManager._on_store_exited)
+
+
+func _reconnect_autoload_store_handlers() -> void:
+	if _autoload_store_entered_connected:
+		if not EventBus.store_entered.is_connected(
+			CameraManager._on_store_entered
+		):
+			EventBus.store_entered.connect(CameraManager._on_store_entered)
+	if _autoload_store_exited_connected:
+		if not EventBus.store_exited.is_connected(
+			CameraManager._on_store_exited
+		):
+			EventBus.store_exited.connect(CameraManager._on_store_exited)
 
 
 func _on_camera_changed(camera: Camera3D) -> void:

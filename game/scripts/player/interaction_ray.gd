@@ -75,7 +75,7 @@ func _on_active_camera_changed(camera: Camera3D) -> void:
 func _apply_camera(camera: Camera3D) -> void:
 	if _hovered_target:
 		_set_hovered_target(null)
-	_camera = camera
+	_camera = camera if is_instance_valid(camera) else null
 	set_process(_camera != null)
 
 
@@ -88,15 +88,16 @@ func _update_raycast() -> void:
 	var viewport: Viewport = get_viewport()
 	if not viewport:
 		return
+	var world: World3D = viewport.find_world_3d()
+	if not world:
+		return
 
 	var mouse_pos: Vector2 = viewport.get_mouse_position()
 	var ray_origin: Vector3 = _camera.project_ray_origin(mouse_pos)
 	var ray_dir: Vector3 = _camera.project_ray_normal(mouse_pos)
 	var ray_end: Vector3 = ray_origin + ray_dir * ray_distance
 
-	var space_state: PhysicsDirectSpaceState3D = (
-		viewport.find_world_3d().direct_space_state
-	)
+	var space_state: PhysicsDirectSpaceState3D = world.direct_space_state
 	var query: PhysicsRayQueryParameters3D = (
 		PhysicsRayQueryParameters3D.create(
 			ray_origin, ray_end, interaction_mask

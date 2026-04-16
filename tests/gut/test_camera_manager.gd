@@ -93,3 +93,14 @@ func test_detects_camera_switch() -> void:
 		_signal_count, 2,
 		"Should emit signal for each camera change"
 	)
+
+
+func test_node_added_refreshes_active_camera() -> void:
+	var cam := Camera3D.new()
+	cam.current = true
+	add_child_autofree(cam)
+	await get_tree().process_frame
+	assert_eq(
+		_manager.active_camera, cam,
+		"Should refresh active camera after a Camera3D enters the tree"
+	)

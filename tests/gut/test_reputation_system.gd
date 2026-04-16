@@ -188,6 +188,63 @@ func test_save_load_round_trip() -> void:
 	)
 
 
+# --- EventBus integration helpers ---
+
+
+func test_item_price_set_then_customer_purchase_applies_fair_sale_delta() -> void:
+	_rep._on_item_price_set(&"sports_memorabilia", &"item_a", 12.0, 1.2)
+	_rep._on_customer_purchased(
+		&"sports_memorabilia", &"item_a", 12.0, &"customer_a"
+	)
+	assert_almost_eq(
+		_rep.get_reputation(STORE_A),
+		50.0 + ReputationSystemSingleton.REP_FAIR_SALE,
+		0.01,
+		"Fair sale markup should add REP_FAIR_SALE"
+	)
+
+
+func test_overpriced_customer_purchase_applies_overpriced_delta() -> void:
+	_rep._on_item_price_set(&"sports_memorabilia", &"item_b", 19.0, 1.9)
+	_rep._on_customer_purchased(
+		&"sports_memorabilia", &"item_b", 19.0, &"customer_b"
+	)
+	assert_almost_eq(
+		_rep.get_reputation(STORE_A),
+		50.0 + ReputationSystemSingleton.REP_OVERPRICED_SALE,
+		0.01,
+		"Overpriced sale markup should add REP_OVERPRICED_SALE"
+	)
+
+
+func test_haggle_completed_uses_signal_store_id() -> void:
+	_rep._on_haggle_completed(
+		&"retro_games", &"item_c", 15.0, 20.0, true, 1
+	)
+	assert_almost_eq(
+		_rep.get_reputation(STORE_B),
+		50.0 + ReputationSystemSingleton.REP_HAGGLE_ACCEPTED,
+		0.01,
+		"Accepted haggle should apply to the emitted store_id"
+	)
+	assert_eq(
+		_rep.get_reputation(STORE_A),
+		50.0,
+		"Accepted haggle should not affect another store"
+	)
+
+
+func test_global_reputation_uses_owned_store_ids_when_present() -> void:
+	_rep._on_lease_completed(&"sports_memorabilia", true, "")
+	_rep.add_reputation(STORE_A, 10.0)
+	_rep.add_reputation(STORE_B, -10.0)
+	assert_eq(
+		_rep.get_global_reputation(),
+		60.0,
+		"Global reputation should average owned stores when ownership is known"
+	)
+
+
 # --- modify_reputation alias ---
 
 
@@ -286,6 +343,7 @@ func test_tier_down_emits_toast_requested() -> void:
 
 
 func test_same_tier_score_change_does_not_emit_toast() -> void:
+	_rep.add_reputation(STORE_A, 1.0)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_A, 5.0)
 	assert_signal_not_emitted(

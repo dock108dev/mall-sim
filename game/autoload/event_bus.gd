@@ -108,6 +108,8 @@ signal bonus_sale_completed(item_id: StringName, bonus_amount: float)
 # ── Reputation ────────────────────────────────────────────────────────────────
 ## Emitted by ReputationSystem when a store's reputation score changes.
 signal reputation_changed(store_id: String, new_score: float)
+## Emitted by ReputationSystem when an event raises a store into a new tier.
+signal reputation_tier_changed(store_id: String, old_tier: int, new_tier: int)
 
 # ── Staff ─────────────────────────────────────────────────────────────────────
 signal staff_hired(staff_id: String, store_id: String)

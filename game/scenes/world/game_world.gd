@@ -1013,7 +1013,6 @@ func _apply_pending_load() -> void:
 	GameManager.pending_load_slot = -1
 	if slot >= 0:
 		save_manager.load_game(slot)
-		GameManager.notify_day_loaded(time_system.current_day)
 		_validate_loaded_game_state()
 	else:
 		_initialize_new_game()

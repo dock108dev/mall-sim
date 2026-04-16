@@ -114,7 +114,7 @@ func _create_trend_row(trend: Dictionary) -> void:
 	var active_day: int = trend.get("active_day", 0) as int
 	var end_day: int = trend.get("end_day", 0) as int
 	var fade_end: int = trend.get("fade_end_day", 0) as int
-	var current_day: int = GameManager.current_day
+	var current_day: int = _get_current_day()
 
 	var row := HBoxContainer.new()
 	row.custom_minimum_size = Vector2(0, 40)
@@ -199,3 +199,10 @@ func _on_trend_changed(
 ) -> void:
 	if _is_open:
 		_refresh_list()
+
+
+func _get_current_day() -> int:
+	var time_system: TimeSystem = GameManager.get_time_system()
+	if time_system == null:
+		return 1
+	return time_system.current_day

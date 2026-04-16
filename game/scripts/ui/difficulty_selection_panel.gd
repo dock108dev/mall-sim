@@ -164,7 +164,7 @@ func _on_select_pressed(tier_id: StringName) -> void:
 	_selected_tier_id = tier_id
 	_highlight_card(tier_id)
 
-	if _from_pause and GameManager.current_day > 1 and _is_lower_tier(tier_id):
+	if _from_pause and _get_current_day() > 1 and _is_lower_tier(tier_id):
 		_pending_tier_id = tier_id
 		_assisted_dialog.popup_centered()
 		return
@@ -195,3 +195,10 @@ func _is_lower_tier(new_id: StringName) -> bool:
 	if current_idx < 0 or new_idx < 0:
 		return false
 	return new_idx < current_idx
+
+
+func _get_current_day() -> int:
+	var time_system: TimeSystem = GameManager.get_time_system()
+	if time_system == null:
+		return 1
+	return time_system.current_day

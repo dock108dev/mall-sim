@@ -11,7 +11,7 @@ func before_each() -> void:
 	_time_system.initialize()
 
 
-func test_game_manager_syncs_via_day_started() -> void:
+func test_game_manager_proxy_tracks_time_system_advances() -> void:
 	_time_system.advance_to_next_day()
 	assert_eq(
 		GameManager.current_day, 2,
@@ -32,7 +32,7 @@ func test_game_manager_syncs_via_day_started() -> void:
 
 
 func test_game_manager_matches_time_system_after_three_advances() -> void:
-	for i: int in range(3):
+	for _i: int in range(3):
 		_time_system.advance_to_next_day()
 
 	assert_eq(
@@ -42,25 +42,27 @@ func test_game_manager_matches_time_system_after_three_advances() -> void:
 
 
 func test_game_manager_current_day_is_read_only_proxy() -> void:
+	_time_system.current_day = 12
 	EventBus.day_started.emit(42)
 	assert_eq(
-		GameManager.current_day, 42,
-		"GameManager.current_day should reflect signal payload"
+		GameManager.current_day, 12,
+		"GameManager.current_day must ignore signal payloads and read TimeSystem directly"
 	)
 
 
-func test_notify_day_loaded_syncs_without_signal() -> void:
-	GameManager.notify_day_loaded(15)
+func test_notify_day_loaded_does_not_override_time_system() -> void:
+	_time_system.current_day = 15
+	GameManager.notify_day_loaded(2)
 	assert_eq(
 		GameManager.current_day, 15,
-		"notify_day_loaded should update the proxy directly"
+		"notify_day_loaded should not diverge from TimeSystem-owned day"
 	)
 
 
-func test_start_new_game_resets_day_to_one() -> void:
-	EventBus.day_started.emit(99)
+func test_start_new_game_keeps_time_system_as_day_owner() -> void:
+	_time_system.current_day = 99
 	GameManager.start_new_game()
 	assert_eq(
-		GameManager.current_day, 1,
-		"start_new_game should reset current_day to 1"
+		GameManager.current_day, 99,
+		"start_new_game should not shadow TimeSystem.current_day"
 	)

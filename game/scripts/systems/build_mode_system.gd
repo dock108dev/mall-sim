@@ -24,7 +24,7 @@ var _confirmation_timer: float = 0.0
 
 func _ready() -> void:
 	EventBus.active_camera_changed.connect(_on_active_camera_changed)
-	if CameraManager.active_camera:
+	if is_instance_valid(CameraManager.active_camera):
 		_camera = CameraManager.active_camera
 
 
@@ -36,7 +36,7 @@ func initialize(
 ) -> void:
 	_player_node = player_node
 
-	if CameraManager.active_camera:
+	if is_instance_valid(CameraManager.active_camera):
 		_camera = CameraManager.active_camera
 
 	_grid = BuildModeGrid.new()

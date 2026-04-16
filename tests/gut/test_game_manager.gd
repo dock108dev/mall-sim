@@ -18,7 +18,9 @@ func before_each() -> void:
 
 func after_each() -> void:
 	GameManager.current_state = _original_state
-	GameManager.notify_day_loaded(_original_day)
+	var time_system: TimeSystem = GameManager.get_time_system()
+	if time_system != null:
+		time_system.current_day = _original_day
 	GameManager.owned_stores = _original_stores
 	GameManager._ending_id = _original_ending_id
 
@@ -138,11 +140,15 @@ func test_state_change_emits_signal() -> void:
 	)
 
 
-func test_day_started_syncs_current_day() -> void:
-	EventBus.day_started.emit(7)
+func test_current_day_reads_from_time_system() -> void:
+	var time_system := TimeSystem.new()
+	add_child_autofree(time_system)
+	time_system.initialize()
+	time_system.current_day = 6
+	time_system.advance_to_next_day()
 	assert_eq(
 		GameManager.current_day, 7,
-		"current_day should sync via day_started signal"
+		"current_day should be read from TimeSystem"
 	)
 
 
@@ -235,11 +241,15 @@ func test_gameplay_ready_signal_emits_after_initialize() -> void:
 	EventBus.gameplay_ready.disconnect(conn)
 
 
-func test_current_day_shadow_updated_via_signal() -> void:
-	EventBus.day_started.emit(5)
+func test_current_day_proxy_updates_after_multiple_advances() -> void:
+	var time_system := TimeSystem.new()
+	add_child_autofree(time_system)
+	time_system.initialize()
+	for _i: int in range(4):
+		time_system.advance_to_next_day()
 	assert_eq(
 		GameManager.current_day, 5,
-		"current_day should equal 5 after day_started(5)"
+		"current_day should equal TimeSystem day after advances"
 	)
 
 
@@ -247,29 +257,13 @@ func test_current_day_not_set_directly() -> void:
 	var source: String = FileAccess.get_file_as_string(
 		"res://game/autoload/game_manager.gd"
 	)
-	var lines: PackedStringArray = source.split("\n")
-	var direct_assignments: Array[String] = []
-	for line: String in lines:
-		var stripped: String = line.strip_edges()
-		if stripped.begins_with("#") or stripped.begins_with("##"):
-			continue
-		if stripped.begins_with("func _on_day_started"):
-			continue
-		if stripped.begins_with("func notify_day_loaded"):
-			continue
-		if "_current_day" in stripped and "=" in stripped:
-			if "==" in stripped or "!=" in stripped:
-				continue
-			if "var _current_day" in stripped:
-				continue
-			if stripped == "_current_day = day":
-				continue
-			direct_assignments.append(stripped)
-	var allowed_count: int = 1  # start_new_game resets to 1
 	assert_true(
-		direct_assignments.size() <= allowed_count,
-		"_current_day should only be assigned in start_new_game " +
-		"and signal handlers. Found: %s" % str(direct_assignments)
+		not source.contains("_current_day"),
+		"GameManager should not define a writable _current_day shadow field"
+	)
+	assert_true(
+		source.contains("return get_current_day()"),
+		"current_day getter should delegate to TimeSystem-backed get_current_day()"
 	)
 
 

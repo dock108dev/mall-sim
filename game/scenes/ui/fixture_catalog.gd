@@ -13,7 +13,7 @@ var economy_system: EconomySystem
 var placement_system: FixturePlacementSystem
 var store_type: String = "sports_memorabilia"
 var current_reputation: float = 0.0
-var current_day: int = 1
+var _current_day_snapshot: int = 1
 
 var _is_open: bool = false
 var _selected_fixture_id: String = ""
@@ -153,7 +153,7 @@ func _create_fixture_button(
 func _is_fixture_locked(fixture: FixtureDefinition) -> bool:
 	if fixture.unlock_rep > 0 and current_reputation < fixture.unlock_rep:
 		return true
-	if fixture.unlock_day > 0 and current_day < fixture.unlock_day:
+	if fixture.unlock_day > 0 and _current_day_snapshot < fixture.unlock_day:
 		return true
 	return false
 
@@ -237,7 +237,11 @@ func _on_active_store_changed(new_store_id: StringName) -> void:
 
 
 func _on_build_mode_entered() -> void:
-	current_day = GameManager.current_day
+	var time_system: TimeSystem = GameManager.get_time_system()
+	if time_system != null:
+		_current_day_snapshot = time_system.current_day
+	else:
+		_current_day_snapshot = 1
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = create_tween()
 	_anim_tween.tween_interval(0.1)

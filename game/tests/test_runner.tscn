@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://game/tests/gut_runner.gd" id="1_runner"]
+[ext_resource type="PackedScene" path="res://addons/gut/gui/GutRunner.tscn" id="1_runner_scene"]
+[ext_resource type="Script" path="res://game/tests/gut_scene_runner.gd" id="2_runner_script"]
 
-[node name="TestRunner" type="Node2D"]
-script = ExtResource("1_runner")
+[node name="GutScene" instance=ExtResource("1_runner_scene")]
+script = ExtResource("2_runner_script")

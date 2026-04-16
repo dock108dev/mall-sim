@@ -33,7 +33,7 @@ const _VALID_TRANSITIONS: Dictionary = {
 var current_state: GameState = GameState.MAIN_MENU
 var current_day: int:
 	get:
-		return _current_day
+		return get_current_day()
 var current_store_id: StringName = &""
 var is_tutorial_active: bool = false
 var data_loader: DataLoader
@@ -41,7 +41,7 @@ var owned_stores: Array[StringName] = []
 ## Set by main menu before transitioning; GameWorld consumes and resets it.
 var pending_load_slot: int = -1
 var _scene_transition: SceneTransition
-var _current_day: int = 1
+var _time_system_ref: WeakRef
 var _boot_completed: bool = false
 var _ending_id: StringName = &""
 var _content_load_errors: Array[String] = []
@@ -51,7 +51,6 @@ func _ready() -> void:
 	_scene_transition = SceneTransition.new()
 	add_child(_scene_transition)
 	EventBus.content_load_failed.connect(_on_content_load_failed)
-	EventBus.day_started.connect(_on_day_started)
 	EventBus.game_over_triggered.connect(trigger_game_over)
 	EventBus.ending_triggered.connect(_on_ending_triggered)
 	EventBus.player_bankrupt.connect(_on_player_bankrupt)
@@ -79,7 +78,6 @@ func change_state(new_state: GameState) -> bool:
 
 
 func start_new_game() -> void:
-	_current_day = 1
 	current_store_id = ""
 	is_tutorial_active = false
 	_ending_id = &""
@@ -211,18 +209,42 @@ func get_content_load_errors() -> Array[String]:
 	return _content_load_errors.duplicate()
 
 
+## Returns the active TimeSystem-owned current day, or day 1 when absent.
+func get_current_day() -> int:
+	var time_system: TimeSystem = get_time_system()
+	if time_system == null:
+		return 1
+	return time_system.current_day
+
+
+## Returns the active TimeSystem from the current scene tree when available.
+func get_time_system() -> TimeSystem:
+	if _time_system_ref != null:
+		var cached: TimeSystem = _time_system_ref.get_ref() as TimeSystem
+		if cached != null and cached.is_inside_tree():
+			return cached
+	if not is_inside_tree():
+		return null
+	var root: Window = get_tree().root
+	if root == null:
+		return null
+	var matches: Array[Node] = root.find_children(
+		"*", "TimeSystem", true, false
+	)
+	if matches.is_empty():
+		return null
+	var time_system: TimeSystem = matches[0] as TimeSystem
+	_time_system_ref = weakref(time_system)
+	return time_system
+
+
 func quit_game() -> void:
 	get_tree().quit()
 
 
-## Syncs current_day after a save file is loaded. TimeSystem owns the day;
-## this keeps the read-only proxy accurate without emitting day_started.
-func notify_day_loaded(day: int) -> void:
-	_current_day = day
-
-
-func _on_day_started(day: int) -> void:
-	_current_day = day
+## Legacy no-op kept for compatibility. TimeSystem is the day source of truth.
+func notify_day_loaded(_day: int) -> void:
+	return
 
 
 func _on_content_load_failed(errors: Array[String]) -> void:

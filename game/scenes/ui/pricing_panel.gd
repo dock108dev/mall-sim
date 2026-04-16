@@ -350,6 +350,7 @@ func _on_apply() -> void:
 	var price: float = snappedf(_price_spin.value, 0.01)
 	_current_item.player_set_price = price
 	EventBus.price_set.emit(_current_item.instance_id, price)
+	_emit_item_price_set(_current_item, price)
 	PanelAnimator.pulse_scale(_apply_button)
 
 
@@ -381,8 +382,31 @@ func _on_apply_all() -> void:
 		var new_price: float = snappedf(item_market * ratio, 0.01)
 		item.player_set_price = new_price
 		EventBus.price_set.emit(item.instance_id, new_price)
+		_emit_item_price_set(item, new_price)
 		count += 1
 	PanelAnimator.pulse_scale(_apply_all_button)
+
+
+func _emit_item_price_set(item: ItemInstance, price: float) -> void:
+	if not item or not item.definition:
+		return
+	var market_value: float = _market_value
+	if economy_system:
+		market_value = economy_system.calculate_market_value(item)
+	elif item != _current_item:
+		market_value = item.get_current_value()
+	if market_value <= 0.0:
+		return
+	var ratio: float = price / market_value
+	var store_id: StringName = StringName(item.definition.store_type)
+	if ContentRegistry.exists(item.definition.store_type):
+		store_id = ContentRegistry.resolve(item.definition.store_type)
+	EventBus.item_price_set.emit(
+		store_id,
+		StringName(item.instance_id),
+		price,
+		ratio,
+	)
 
 
 func _on_interactable_interacted(

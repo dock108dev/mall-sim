@@ -64,7 +64,7 @@ func _create_trend_entry(trend: Dictionary) -> HBoxContainer:
 	var target: String = trend.get("target", "unknown")
 	var multiplier: float = trend.get("multiplier", 1.0) as float
 	var end_day: int = trend.get("end_day", 0) as int
-	var days_left: int = end_day - GameManager.current_day
+	var days_left: int = end_day - _get_current_day()
 
 	var row := HBoxContainer.new()
 	row.custom_minimum_size = Vector2(0, 32)
@@ -117,3 +117,10 @@ func _build_category_badge(category: String) -> PanelContainer:
 func _on_trend_changed(_trending: Array, _cold: Array) -> void:
 	if _is_open:
 		_refresh_trend_list()
+
+
+func _get_current_day() -> int:
+	var time_system: TimeSystem = GameManager.get_time_system()
+	if time_system == null:
+		return 1
+	return time_system.current_day

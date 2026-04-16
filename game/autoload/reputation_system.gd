@@ -65,10 +65,15 @@ const FAIR_PRICE_THRESHOLD: float = 0.25
 const FAIR_MARKUP_MIN: float = 1.2
 const FAIR_MARKUP_MAX: float = 1.5
 const OVERPRICED_THRESHOLD: float = 1.8
+const DEFAULT_EVENT_STORE_ID: String = "default"
 
 var _scores: Dictionary = {}
 var _tiers: Dictionary = {}
+var _tier_locks: Dictionary = {}
 var _pending_buyer_exits: Dictionary = {}
+var _price_ratios_by_item: Dictionary = {}
+var _sale_reputation_applied_items: Dictionary = {}
+var _owned_store_ids: Array[String] = []
 ## Set to false before add_child() in tests to prevent EventBus auto-connections.
 var auto_connect_bus: bool = true
 
@@ -76,12 +81,7 @@ var auto_connect_bus: bool = true
 func _ready() -> void:
 	if not auto_connect_bus:
 		return
-	EventBus.item_sold.connect(_on_item_sold)
-	EventBus.customer_left.connect(_on_customer_left)
-	EventBus.day_ended.connect(_on_day_ended)
-	EventBus.haggle_completed.connect(_on_haggle_completed)
-	EventBus.haggle_failed.connect(_on_haggle_failed)
-	EventBus.customer_left_mall.connect(_on_customer_left_mall)
+	_connect_bus_signals()
 
 
 func get_reputation(store_id: String = "") -> float:
@@ -103,20 +103,55 @@ func add_reputation(store_id: String, delta: float) -> void:
 	_scores[sid] = new_score
 	var new_tier: ReputationTier = _score_to_tier(new_score)
 	_tiers[sid] = new_tier
+	_tier_locks.erase(sid)
 	if not is_equal_approx(old_score, new_score):
 		EventBus.reputation_changed.emit(sid, new_score)
 	if new_tier != old_tier:
 		_emit_tier_change_toast(sid, old_tier, new_tier)
 
 
+## Applies an event magnitude to reputation using deferred downgrade semantics.
+func add_reputation_event(
+	_event_id: String, magnitude: float, store_id: String = ""
+) -> void:
+	var sid: String = _resolve_event_store_id(store_id)
+	var old_score: float = _scores.get(sid, 0.0) as float
+	var old_tier: ReputationTier = _tier_locks.get(
+		sid, _score_to_tier(old_score)
+	)
+	var new_score: float = clampf(
+		old_score + magnitude, MIN_REPUTATION, MAX_REPUTATION
+	)
+	_scores[sid] = new_score
+	var score_tier: ReputationTier = _score_to_tier(new_score)
+	if score_tier > old_tier:
+		_tiers[sid] = score_tier
+		_tier_locks[sid] = score_tier
+		EventBus.reputation_tier_changed.emit(
+			sid, int(old_tier), int(score_tier)
+		)
+	elif sid not in _tiers:
+		_tiers[sid] = old_tier
+	if not is_equal_approx(old_score, new_score):
+		EventBus.reputation_changed.emit(sid, new_score)
+
+
 func get_tier(store_id: String = "") -> ReputationTier:
 	var score: float = get_reputation(store_id)
-	return _score_to_tier(score)
+	var sid: String = _resolve_event_store_id(store_id)
+	var score_tier: ReputationTier = _score_to_tier(score)
+	if sid in _tier_locks:
+		var locked_tier: ReputationTier = _tier_locks[sid] as ReputationTier
+		if locked_tier > score_tier:
+			return locked_tier
+	return score_tier
 
 
 func get_global_reputation() -> float:
 	if _scores.is_empty():
 		return DEFAULT_REPUTATION
+	if not _owned_store_ids.is_empty():
+		return _get_owned_store_average()
 	var total: float = 0.0
 	var count: int = 0
 	for sid: String in _scores:
@@ -167,13 +202,18 @@ func initialize_store(store_id: String) -> void:
 func get_save_data() -> Dictionary:
 	return {
 		"scores": _scores.duplicate(),
+		"tiers": _tiers.duplicate(),
+		"tier_locks": _tier_locks.duplicate(),
 	}
 
 
 func load_save_data(data: Dictionary) -> void:
 	_scores.clear()
 	_tiers.clear()
+	_tier_locks.clear()
 	_pending_buyer_exits.clear()
+	_price_ratios_by_item.clear()
+	_sale_reputation_applied_items.clear()
 	var scores_data: Variant = data.get("scores", {})
 	if scores_data is Dictionary:
 		for key: Variant in scores_data:
@@ -191,12 +231,54 @@ func load_save_data(data: Dictionary) -> void:
 		)
 	for sid: String in _scores:
 		_tiers[sid] = _score_to_tier(_scores[sid] as float)
+	var tier_locks_data: Variant = data.get("tier_locks", {})
+	if tier_locks_data is Dictionary:
+		for key: Variant in tier_locks_data:
+			var sid: String = str(key)
+			if sid not in _scores:
+				continue
+			var score_tier: ReputationTier = _score_to_tier(
+				_scores[sid] as float
+			)
+			var saved_tier: int = int(tier_locks_data[key])
+			var score_tier_value: int = int(score_tier)
+			_tier_locks[sid] = (
+				saved_tier if saved_tier > score_tier_value
+				else score_tier_value
+			)
+
+
+## Restores saved reputation data; alias for save/load API consistency.
+func load_state(data: Dictionary) -> void:
+	load_save_data(data)
 
 
 func reset() -> void:
 	_scores.clear()
 	_tiers.clear()
+	_tier_locks.clear()
 	_pending_buyer_exits.clear()
+	_price_ratios_by_item.clear()
+	_sale_reputation_applied_items.clear()
+	_owned_store_ids.clear()
+
+
+func _connect_bus_signals() -> void:
+	_connect_signal(EventBus.item_sold, _on_item_sold)
+	_connect_signal(EventBus.item_price_set, _on_item_price_set)
+	_connect_signal(EventBus.customer_purchased, _on_customer_purchased)
+	_connect_signal(EventBus.customer_left, _on_customer_left)
+	_connect_signal(EventBus.customer_left_mall, _on_customer_left_mall)
+	_connect_signal(EventBus.day_ended, _on_day_ended)
+	_connect_signal(EventBus.haggle_completed, _on_haggle_completed)
+	_connect_signal(EventBus.haggle_failed, _on_haggle_failed)
+	_connect_signal(EventBus.lease_completed, _on_lease_completed)
+	_connect_signal(EventBus.owned_slots_restored, _on_owned_slots_restored)
+
+
+func _connect_signal(signal_ref: Signal, callable: Callable) -> void:
+	if not signal_ref.is_connected(callable):
+		signal_ref.connect(callable)
 
 
 func _emit_tier_change_toast(
@@ -218,6 +300,8 @@ func _emit_tier_change_toast(
 
 
 func _get_store_display_name(store_id: String) -> String:
+	if not ContentRegistry.exists(store_id):
+		return store_id
 	var canonical: StringName = ContentRegistry.resolve(store_id)
 	if canonical.is_empty():
 		return store_id
@@ -239,11 +323,22 @@ func _tier_to_name(tier: ReputationTier) -> String:
 
 func _resolve_store_id(store_id: String) -> String:
 	if not store_id.is_empty():
+		if ContentRegistry.exists(store_id):
+			var canonical: StringName = ContentRegistry.resolve(store_id)
+			if not canonical.is_empty():
+				return String(canonical)
 		return store_id
 	var active: StringName = GameManager.current_store_id
 	if not active.is_empty():
 		return String(active)
 	return ""
+
+
+func _resolve_event_store_id(store_id: String) -> String:
+	var sid: String = _resolve_store_id(store_id)
+	if sid.is_empty():
+		return DEFAULT_EVENT_STORE_ID
+	return sid
 
 
 func _score_to_tier(score: float) -> ReputationTier:
@@ -256,15 +351,83 @@ func _score_to_tier(score: float) -> ReputationTier:
 	return ReputationTier.NOTORIOUS
 
 
+func _get_owned_store_average() -> float:
+	var total: float = 0.0
+	var count: int = 0
+	for sid: String in _owned_store_ids:
+		total += _scores.get(sid, DEFAULT_REPUTATION) as float
+		count += 1
+	if count == 0:
+		return DEFAULT_REPUTATION
+	return total / float(count)
+
+
+func _remember_owned_store(store_id: String) -> void:
+	var sid: String = _resolve_store_id(store_id)
+	if sid.is_empty():
+		return
+	initialize_store(sid)
+	if sid not in _owned_store_ids:
+		_owned_store_ids.append(sid)
+
+
+func _mark_purchase_for_exit(store_id: String) -> void:
+	var count: int = _pending_buyer_exits.get(store_id, 0) as int
+	_pending_buyer_exits[store_id] = count + 1
+
+
+func _get_sale_reputation_delta(item_id: String) -> float:
+	var ratio: float = _price_ratios_by_item.get(item_id, 0.0) as float
+	if ratio <= 0.0:
+		return REP_FAIR_SALE
+	if ratio >= FAIR_MARKUP_MIN and ratio <= FAIR_MARKUP_MAX:
+		return REP_FAIR_SALE
+	if ratio > OVERPRICED_THRESHOLD:
+		return REP_OVERPRICED_SALE
+	return 0.0
+
+
+func _apply_sale_reputation(
+	store_id: String, item_id: String
+) -> void:
+	if item_id in _sale_reputation_applied_items:
+		return
+	_sale_reputation_applied_items[item_id] = true
+	_mark_purchase_for_exit(store_id)
+	var delta: float = _get_sale_reputation_delta(item_id)
+	if is_zero_approx(delta):
+		return
+	add_reputation(store_id, delta)
+
+
+func _on_item_price_set(
+	store_id: StringName, item_id: StringName, _price: float, ratio: float
+) -> void:
+	if String(item_id).is_empty() or ratio <= 0.0:
+		return
+	_price_ratios_by_item[String(item_id)] = ratio
+	if not String(store_id).is_empty():
+		_remember_owned_store(String(store_id))
+
+
 func _on_item_sold(
 	_item_id: String, _price: float, _category: String
 ) -> void:
 	var sid: String = _resolve_store_id("")
 	if sid.is_empty():
 		return
-	var count: int = _pending_buyer_exits.get(sid, 0) as int
-	_pending_buyer_exits[sid] = count + 1
-	add_reputation(sid, REP_FAIR_SALE)
+	_apply_sale_reputation(sid, _item_id)
+
+
+func _on_customer_purchased(
+	store_id: StringName, item_id: StringName,
+	_price: float, _customer_id: StringName
+) -> void:
+	var sid: String = _resolve_store_id(String(store_id))
+	if sid.is_empty():
+		return
+	_remember_owned_store(sid)
+	_apply_sale_reputation(sid, String(item_id))
 
 
 func _on_customer_left(customer_data: Dictionary) -> void:
@@ -296,17 +459,19 @@ func _on_day_ended(_day: int) -> void:
 		if score > DECAY_FLOOR:
 			add_reputation(sid, -DAILY_DECAY)
 	_pending_buyer_exits.clear()
+	_sale_reputation_applied_items.clear()
 
 
 func _on_haggle_completed(
-	_store_id: StringName, _item_id: StringName,
+	store_id: StringName, _item_id: StringName,
 	_final_price: float, _asking_price: float,
-	_accepted: bool, _offer_count: int
+	accepted: bool, _offer_count: int
 ) -> void:
-	var sid: String = _resolve_store_id("")
+	var sid: String = _resolve_store_id(String(store_id))
 	if sid.is_empty():
 		return
-	add_reputation(sid, REP_HAGGLE_ACCEPTED)
+	var delta: float = REP_HAGGLE_ACCEPTED if accepted else REP_HAGGLE_REJECTED
+	add_reputation(sid, delta)
 
 
 func _on_haggle_failed(
@@ -316,3 +481,17 @@ func _on_haggle_failed(
 	if sid.is_empty():
 		return
 	add_reputation(sid, REP_HAGGLE_REJECTED)
+
+
+func _on_lease_completed(
+	store_id: StringName, success: bool, _message: String
+) -> void:
+	if not success:
+		return
+	_remember_owned_store(String(store_id))
+
+
+func _on_owned_slots_restored(slots: Dictionary) -> void:
+	_owned_store_ids.clear()
+	for key: Variant in slots:
+		_remember_owned_store(str(slots[key]))
