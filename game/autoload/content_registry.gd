@@ -86,6 +86,7 @@ func clear_for_testing() -> void:
 	_display_names.clear()
 	_types.clear()
 	_resources.clear()
+	_warned_missing_scenes.clear()
 	_ready_flag = false
 	DataLoaderSingleton.clear_for_testing()
 
@@ -99,10 +100,28 @@ func get_all_ids(content_type: String) -> Array[StringName]:
 	return result
 
 
+## Returns canonical store IDs registered in the content catalog.
+func get_all_store_ids() -> Array[StringName]:
+	return get_all_ids("store")
+
+
 ## Stores a typed resource by canonical ID.
 func register(
 	id: StringName, resource: Resource, content_type: String
 ) -> void:
+	var raw_id: String = String(id)
+	if not _id_regex:
+		_id_regex = RegEx.new()
+		_id_regex.compile(ID_PATTERN)
+	if not _id_regex.search(raw_id):
+		push_error(
+			"ContentRegistry: ID '%s' does not match format %s"
+			% [raw_id, ID_PATTERN]
+		)
+		return
+	if _resources.has(id):
+		push_error("ContentRegistry: duplicate ID '%s'" % raw_id)
+		return
 	_resources[id] = resource
 	if not _types.has(id):
 		_types[id] = content_type
@@ -131,15 +150,19 @@ func validate_all_references() -> Array[String]:
 	for scene_id: StringName in _scene_map:
 		var path: String = _scene_map[scene_id]
 		if not ResourceLoader.exists(path):
-			_warn_missing_scene_once(path, scene_id)
+			_report_missing_scene_once(path, scene_id)
+			errors.append(
+				"ID '%s' references missing scene '%s'"
+				% [scene_id, path]
+			)
 	return errors
 
 
-func _warn_missing_scene_once(path: String, scene_id: StringName) -> void:
+func _report_missing_scene_once(path: String, scene_id: StringName) -> void:
 	if _warned_missing_scenes.has(path):
 		return
 	_warned_missing_scenes[path] = true
-	push_warning(
+	push_error(
 		"ContentRegistry: scene '%s' for ID '%s' not found"
 		% [path, scene_id]
 	)
@@ -197,6 +220,9 @@ func _normalize(raw: String) -> StringName:
 func _register_entry(
 	entry: Dictionary, content_type: String
 ) -> void:
+	if not _id_regex:
+		_id_regex = RegEx.new()
+		_id_regex.compile(ID_PATTERN)
 	if not entry.has("id"):
 		push_error("ContentRegistry: entry missing 'id' field")
 		return

@@ -403,10 +403,15 @@ func delete_save(slot: int) -> bool:
 
 
 func _collect_save_data() -> Dictionary:
+	var active_store_id: StringName = ContentRegistry.resolve(
+		String(GameManager.current_store_id)
+	)
+	if active_store_id.is_empty():
+		active_store_id = GameManager.DEFAULT_STARTING_STORE
 	var metadata: Dictionary = {
 		"timestamp": Time.get_datetime_string_from_system(true),
 		"day_number": _time_system.current_day,
-		"store_type": GameManager.current_store_id,
+		"store_type": String(active_store_id),
 		"play_time": _time_system.get_play_time_seconds(),
 	}
 
@@ -415,9 +420,17 @@ func _collect_save_data() -> Dictionary:
 	if _store_state_manager:
 		var slots: Dictionary = _store_state_manager.owned_slots
 		for idx: int in slots:
-			var store_id: String = String(slots[idx])
-			owned_slots_data[str(idx)] = store_id
-			owned_store_list.append(store_id)
+			var canonical: StringName = ContentRegistry.resolve(
+				String(slots[idx])
+			)
+			if canonical.is_empty():
+				push_warning(
+					"SaveManager: skipping unresolved owned store_id '%s'"
+					% slots[idx]
+				)
+				continue
+			owned_slots_data[str(idx)] = String(canonical)
+			owned_store_list.append(String(canonical))
 
 	var save_metadata: Dictionary = {
 		"day": _time_system.current_day,
@@ -426,7 +439,7 @@ func _collect_save_data() -> Dictionary:
 		"owned_stores": owned_store_list,
 		"saved_at": Time.get_datetime_string_from_system(true),
 		"timestamp": Time.get_datetime_string_from_system(true),
-		"store_type": str(GameManager.current_store_id),
+		"store_type": String(active_store_id),
 		"play_time": _time_system.get_play_time_seconds(),
 		"used_difficulty_downgrade": false,
 	}

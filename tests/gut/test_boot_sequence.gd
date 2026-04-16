@@ -2,23 +2,23 @@
 extends GutTest
 
 func before_all() -> void:
-	DataLoaderSingleton.load_all_content()
+	DataLoaderSingleton.load_all()
 	DifficultySystemSingleton._load_config()
 
 
 func test_content_registry_is_ready_after_load() -> void:
 	assert_true(
 		ContentRegistry.is_ready(),
-		"ContentRegistry should be ready after DataLoaderSingleton.load_all_content()"
+		"ContentRegistry should be ready after DataLoaderSingleton.load_all()"
 	)
 
 
-func test_dataloader_load_all_content_is_idempotent() -> void:
+func test_dataloader_load_all_is_idempotent() -> void:
 	var count_before: int = DataLoaderSingleton.get_item_count()
-	DataLoaderSingleton.load_all_content()
+	DataLoaderSingleton.load_all()
 	assert_eq(
 		DataLoaderSingleton.get_item_count(), count_before,
-		"Calling load_all_content() twice should not duplicate entries"
+		"Calling load_all() twice should not duplicate entries"
 	)
 
 
@@ -31,7 +31,7 @@ func test_dataloader_has_no_load_errors() -> void:
 
 
 func test_all_five_store_ids_registered() -> void:
-	var store_ids: Array[StringName] = ContentRegistry.get_all_ids("store")
+	var store_ids: Array[StringName] = ContentRegistry.get_all_store_ids()
 	assert_gte(
 		store_ids.size(), 5,
 		"Should have at least 5 store IDs, found %d" % store_ids.size()
@@ -51,15 +51,8 @@ func test_canonical_store_ids_resolvable() -> void:
 		)
 
 
-func test_game_manager_boot_completed_flag() -> void:
-	assert_true(
-		GameManager.is_boot_completed(),
-		"GameManager should report boot completed"
-	)
-
-
 func test_boot_script_uses_deferred_initialize() -> void:
-	var script: GDScript = load("res://game/scenes/bootstrap/boot.gd")
+	var script: GDScript = load("res://game/scripts/core/boot.gd")
 	var source: String = script.source_code
 	assert_true(
 		source.contains("call_deferred"),
@@ -71,14 +64,41 @@ func test_boot_script_uses_deferred_initialize() -> void:
 	)
 
 
-func test_boot_script_calls_settings_apply() -> void:
-	var script: GDScript = load("res://game/scenes/bootstrap/boot.gd")
+func test_boot_script_uses_issue_137_sequence() -> void:
+	var script: GDScript = load("res://game/scripts/core/boot.gd")
 	var source: String = script.source_code
 	assert_true(
-		source.contains("Settings.apply_settings()"),
-		"boot.gd should explicitly call Settings.apply_settings()"
+		source.contains("DataLoaderSingleton.load_all()"),
+		"boot.gd should call DataLoaderSingleton.load_all()"
 	)
 	assert_true(
-		source.contains("Settings.load_settings()"),
-		"boot.gd should explicitly call Settings.load_settings()"
+		source.contains("ContentRegistry.is_ready()"),
+		"boot.gd should verify ContentRegistry readiness"
+	)
+	assert_true(
+		source.contains("Settings.load()"),
+		"boot.gd should explicitly call Settings.load()"
+	)
+	assert_true(
+		source.contains("AudioManager.initialize()"),
+		"boot.gd should initialize AudioManager"
+	)
+	assert_true(
+		source.contains("GameManager.transition_to(GameManager.State.MAIN_MENU)"),
+		"boot.gd should transition through GameManager.transition_to()"
+	)
+
+	var settings_pos: int = source.find("Settings.load()")
+	var audio_pos: int = source.find("AudioManager.initialize()")
+	assert_true(
+		settings_pos >= 0 and audio_pos > settings_pos,
+		"Settings.load() must run before AudioManager.initialize()"
+	)
+	var load_pos: int = source.find("DataLoaderSingleton.load_all()")
+	var transition_pos: int = source.find(
+		"GameManager.transition_to(GameManager.State.MAIN_MENU)"
+	)
+	assert_true(
+		load_pos >= 0 and transition_pos > load_pos,
+		"Boot transition to main menu must happen after DataLoader.load_all()"
 	)

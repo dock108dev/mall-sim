@@ -189,6 +189,28 @@ func test_generate_starter_inventory() -> void:
 	)
 
 
+func test_create_starting_inventory_accepts_alias_store_id() -> void:
+	var inv: Array[ItemInstance] = (
+		DataLoaderSingleton.create_starting_inventory("video_rental")
+	)
+	assert_gt(
+		inv.size(), 0,
+		"Alias store ID should resolve for create_starting_inventory()"
+	)
+
+
+func test_generate_starter_inventory_accepts_alias_store_id() -> void:
+	var inv: Array[ItemInstance] = (
+		DataLoaderSingleton.generate_starter_inventory(
+			"sports_memorabilia"
+		)
+	)
+	assert_gt(
+		inv.size(), 0,
+		"Alias store ID should resolve for generate_starter_inventory()"
+	)
+
+
 func test_upgrades_loaded() -> void:
 	assert_gt(
 		DataLoaderSingleton.get_upgrade_count(), 0,

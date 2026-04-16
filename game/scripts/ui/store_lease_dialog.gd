@@ -84,6 +84,14 @@ func show_for_slot(
 	_current_cash = current_cash
 	_current_reputation = current_reputation
 	_owned_stores = owned_stores
+	var canonical_owned: Array[StringName] = []
+	for owned_id: StringName in _owned_stores:
+		var canonical: StringName = ContentRegistry.resolve(String(owned_id))
+		if canonical.is_empty():
+			canonical_owned.append(owned_id)
+		else:
+			canonical_owned.append(canonical)
+	_owned_stores = canonical_owned
 	_selected_store_type = ""
 	_store_name = ""
 	_selected_store_def = null
@@ -256,7 +264,7 @@ func _populate_store_list(
 			)
 
 		_store_list.add_child(btn)
-		_store_buttons[store_def.id] = btn
+		_store_buttons[String(resolved_id)] = btn
 
 
 func _on_store_selected(

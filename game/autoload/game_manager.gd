@@ -6,6 +6,11 @@ enum GameState {
 	LOADING, DAY_SUMMARY, BUILD,
 }
 
+enum State {
+	MAIN_MENU, GAMEPLAY, PAUSED, GAME_OVER,
+	LOADING, DAY_SUMMARY, BUILD,
+}
+
 const DEFAULT_STARTING_STORE: StringName = &"sports"
 
 const _VALID_TRANSITIONS: Dictionary = {
@@ -39,11 +44,13 @@ var _scene_transition: SceneTransition
 var _current_day: int = 1
 var _boot_completed: bool = false
 var _ending_id: StringName = &""
+var _content_load_errors: Array[String] = []
 
 
 func _ready() -> void:
 	_scene_transition = SceneTransition.new()
 	add_child(_scene_transition)
+	EventBus.content_load_failed.connect(_on_content_load_failed)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.game_over_triggered.connect(trigger_game_over)
 	EventBus.ending_triggered.connect(_on_ending_triggered)
@@ -172,6 +179,18 @@ func transition_to_game() -> void:
 	await change_scene("res://game/scenes/world/game_world.tscn")
 
 
+## Public state transition entry point used by boot sequence and UI flows.
+func transition_to(state: State) -> void:
+	var target: GameState = state as int
+	match target:
+		GameState.MAIN_MENU:
+			transition_to_menu()
+		GameState.GAMEPLAY:
+			transition_to_game()
+		_:
+			change_state(target)
+
+
 func transition_to_menu() -> void:
 	change_state(GameState.MAIN_MENU)
 	await change_scene("res://game/scenes/ui/main_menu.tscn")
@@ -187,6 +206,11 @@ func mark_boot_completed() -> void:
 	_boot_completed = true
 
 
+## Returns the most recent content loading errors captured during boot.
+func get_content_load_errors() -> Array[String]:
+	return _content_load_errors.duplicate()
+
+
 func quit_game() -> void:
 	get_tree().quit()
 
@@ -199,3 +223,7 @@ func notify_day_loaded(day: int) -> void:
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
+
+
+func _on_content_load_failed(errors: Array[String]) -> void:
+	_content_load_errors = errors.duplicate()

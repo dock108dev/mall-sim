@@ -35,26 +35,50 @@ func lease_store(
 	store_id: StringName,
 	store_type: StringName = &""
 ) -> bool:
-	if owned_slots.has(slot_index):
+	var canonical_store_id: StringName = ContentRegistry.resolve(
+		String(store_id)
+	)
+	if canonical_store_id.is_empty():
+		push_error(
+			"StoreStateManager: invalid store_id '%s' for lease_store()"
+			% store_id
+		)
 		EventBus.lease_completed.emit(
-			store_id, false, "Slot %d is already owned." % slot_index
+			store_id, false, "Invalid store ID."
 		)
 		return false
-	owned_slots[slot_index] = store_id
+	if owned_slots.has(slot_index):
+		EventBus.lease_completed.emit(
+			canonical_store_id, false, "Slot %d is already owned." % slot_index
+		)
+		return false
+	owned_slots[slot_index] = canonical_store_id
 	if not store_type.is_empty():
-		store_types[store_id] = store_type
-	EventBus.lease_completed.emit(store_id, true, "")
+		var canonical_type: StringName = ContentRegistry.resolve(
+			String(store_type)
+		)
+		if canonical_type.is_empty():
+			canonical_type = store_type
+		store_types[canonical_store_id] = canonical_type
+	EventBus.lease_completed.emit(canonical_store_id, true, "")
 	return true
 
 
 ## Updates the active store and emits active_store_changed.
 func set_active_store(store_id: StringName) -> void:
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if not store_id.is_empty() and canonical.is_empty():
+		push_error(
+			"StoreStateManager: invalid store_id '%s' for set_active_store()"
+			% store_id
+		)
+		return
 	var previous: StringName = active_store_id
-	active_store_id = store_id
-	EventBus.active_store_changed.emit(store_id)
-	if not store_id.is_empty():
-		EventBus.store_entered.emit(store_id)
-	if not previous.is_empty() and previous != store_id:
+	active_store_id = canonical
+	EventBus.active_store_changed.emit(canonical)
+	if not canonical.is_empty():
+		EventBus.store_entered.emit(canonical)
+	if not previous.is_empty() and previous != canonical:
 		EventBus.store_exited.emit(previous)
 
 
@@ -65,21 +89,34 @@ func is_owned(slot_index: int) -> bool:
 
 ## Returns the store type for a given store_id, or empty if unknown.
 func get_store_type(store_id: StringName) -> StringName:
-	return store_types.get(store_id, &"") as StringName
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		return &""
+	return store_types.get(canonical, &"") as StringName
 
 
 ## Stores a custom name for a store.
 func set_store_name(
 	store_id: StringName, custom_name: String
 ) -> void:
-	store_names[String(store_id)] = custom_name
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		push_error(
+			"StoreStateManager: invalid store_id '%s' for set_store_name()"
+			% store_id
+		)
+		return
+	store_names[String(canonical)] = custom_name
 
 
 ## Returns the custom name for a store, or the registry display name.
 func get_store_name(store_id: StringName) -> String:
-	if store_names.has(String(store_id)):
-		return store_names[String(store_id)]
-	return ContentRegistry.get_display_name(store_id)
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		return String(store_id)
+	if store_names.has(String(canonical)):
+		return store_names[String(canonical)]
+	return ContentRegistry.get_display_name(canonical)
 
 
 ## Restores owned_slots from saved data and syncs GameManager.
@@ -108,10 +145,17 @@ func restore_owned_slots(slots: Dictionary) -> void:
 func register_slot_ownership(
 	slot_index: int, store_id: StringName
 ) -> void:
-	if owned_slots.has(slot_index):
-		owned_slots[slot_index] = store_id
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		push_error(
+			"StoreStateManager: invalid store_id '%s' for register_slot_ownership()"
+			% store_id
+		)
 		return
-	owned_slots[slot_index] = store_id
+	if owned_slots.has(slot_index):
+		owned_slots[slot_index] = canonical
+		return
+	owned_slots[slot_index] = canonical
 
 
 func _on_store_leased(
@@ -183,7 +227,10 @@ func restore_store_state(
 
 ## Returns the total daily revenue for a specific store.
 func get_store_revenue(store_id: String) -> float:
-	return _store_revenue.get(store_id, 0.0)
+	var canonical: StringName = ContentRegistry.resolve(store_id)
+	if canonical.is_empty():
+		return 0.0
+	return _store_revenue.get(String(canonical), 0.0)
 
 
 ## Resets daily revenue tracking for all stores.
@@ -193,8 +240,16 @@ func reset_daily_revenue() -> void:
 
 ## Records revenue for a specific store.
 func record_store_revenue(store_id: String, amount: float) -> void:
-	var current: float = _store_revenue.get(store_id, 0.0)
-	_store_revenue[store_id] = current + amount
+	var canonical: StringName = ContentRegistry.resolve(store_id)
+	if canonical.is_empty():
+		push_warning(
+			"StoreStateManager: cannot record revenue for unresolved store_id '%s'"
+			% store_id
+		)
+		return
+	var key: String = String(canonical)
+	var current: float = _store_revenue.get(key, 0.0)
+	_store_revenue[key] = current + amount
 
 
 ## Runs simplified background sales for unvisited owned stores.
@@ -234,11 +289,11 @@ func deserialize(data: Dictionary) -> void:
 			var raw_id: String = str((saved_slots as Dictionary)[key])
 			var canonical: StringName = ContentRegistry.resolve(raw_id)
 			if canonical.is_empty():
-				canonical = StringName(raw_id)
 				push_warning(
 					"StoreStateManager: unresolved store_id '%s' "
-					+ "in slot %d, using raw value" % [raw_id, idx]
+					+ "in slot %d, skipping entry" % [raw_id, idx]
 				)
+				continue
 			owned_slots[idx] = canonical
 
 	store_types = {}
@@ -246,10 +301,18 @@ func deserialize(data: Dictionary) -> void:
 	if saved_types is Dictionary:
 		for key: Variant in saved_types:
 			var sid: StringName = StringName(str(key))
-			var stype: StringName = StringName(
-				str((saved_types as Dictionary)[key])
-			)
-			store_types[sid] = stype
+			var canonical_sid: StringName = ContentRegistry.resolve(String(sid))
+			if canonical_sid.is_empty():
+				push_warning(
+					"StoreStateManager: unresolved store_id key '%s' in store_types"
+					% sid
+				)
+				continue
+			var raw_type: String = str((saved_types as Dictionary)[key])
+			var canonical_type: StringName = ContentRegistry.resolve(raw_type)
+			if canonical_type.is_empty():
+				canonical_type = StringName(raw_type)
+			store_types[canonical_sid] = canonical_type
 
 
 ## Serializes all per-store runtime state for saving.
@@ -275,7 +338,14 @@ func _apply_state(data: Dictionary) -> void:
 	var saved_states: Variant = data.get("store_states", {})
 	if saved_states is Dictionary:
 		for key: String in saved_states:
-			_store_states[key] = (
+			var canonical: StringName = ContentRegistry.resolve(key)
+			if canonical.is_empty():
+				push_warning(
+					"StoreStateManager: unresolved store_id '%s' in store_states"
+					% key
+				)
+				continue
+			_store_states[String(canonical)] = (
 				(saved_states as Dictionary)[key] as Dictionary
 			).duplicate(true)
 
@@ -283,7 +353,14 @@ func _apply_state(data: Dictionary) -> void:
 	var saved_revenue: Variant = data.get("store_revenue", {})
 	if saved_revenue is Dictionary:
 		for key: String in saved_revenue:
-			_store_revenue[key] = float(
+			var canonical: StringName = ContentRegistry.resolve(key)
+			if canonical.is_empty():
+				push_warning(
+					"StoreStateManager: unresolved store_id '%s' in store_revenue"
+					% key
+				)
+				continue
+			_store_revenue[String(canonical)] = float(
 				(saved_revenue as Dictionary)[key]
 			)
 
@@ -291,7 +368,14 @@ func _apply_state(data: Dictionary) -> void:
 	var saved_names: Variant = data.get("store_names", {})
 	if saved_names is Dictionary:
 		for key: String in saved_names:
-			store_names[key] = str(
+			var canonical: StringName = ContentRegistry.resolve(key)
+			if canonical.is_empty():
+				push_warning(
+					"StoreStateManager: unresolved store_id '%s' in store_names"
+					% key
+				)
+				continue
+			store_names[String(canonical)] = str(
 				(saved_names as Dictionary)[key]
 			)
 	_background_timer = 0.0

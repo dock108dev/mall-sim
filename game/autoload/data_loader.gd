@@ -4,6 +4,17 @@ extends Node
 
 const CONTENT_ROOT := "res://game/content/"
 
+const _ROOT_TYPE_MAP: Dictionary = {
+	"item_definition": "item",
+	"store_definition": "store",
+	"customer_profile": "customer",
+	"milestone_definition": "milestone",
+	"staff_definition": "staff",
+	"fixture_definition": "fixture",
+	"unlock_definition": "unlock",
+	"economy_config": "economy",
+}
+
 const _DIR_TYPE_MAP: Dictionary = {
 	"items": "item",
 	"stores": "store",
@@ -64,7 +75,7 @@ func get_load_errors() -> Array[String]:
 
 
 func _ready() -> void:
-	pass
+	GameManager.data_loader = self
 
 
 ## Resets all internal state so load_all_content() can re-register to ContentRegistry.
@@ -102,13 +113,20 @@ func load_all() -> void:
 
 
 func load_all_content() -> void:
+	load_all_content_from_root(CONTENT_ROOT)
+
+
+## Loads and registers content from a specific root directory.
+func load_all_content_from_root(root: String) -> void:
 	if _loaded and ContentRegistry.is_ready():
+		GameManager.data_loader = self
 		return
 	_prepare_for_load()
-	var files := _discover_json_files(CONTENT_ROOT)
+	_load_errors = []
+	var files: Array[String] = _discover_json_files(root)
 	var economy_data: Dictionary = {}
 	for path: String in files:
-		_process_file(path, economy_data)
+		_process_file(path, economy_data, root)
 	if not economy_data.is_empty():
 		_economy_config = ContentParser.parse_economy_config(
 			economy_data
@@ -117,17 +135,15 @@ func load_all_content() -> void:
 			&"economy_config", _economy_config, "economy"
 		)
 	_normalize_store_types()
-	var errors := ContentRegistry.validate_all_references()
-	_load_errors = errors
-	if not errors.is_empty():
-		for err: String in errors:
-			push_error("DataLoader: %s" % err)
-		EventBus.content_load_failed.emit(errors)
+	var validation_errors: Array[String] = ContentRegistry.validate_all_references()
+	for err: String in validation_errors:
+		_record_load_error(err)
+	if not _load_errors.is_empty():
+		EventBus.content_load_failed.emit(_load_errors.duplicate())
 	else:
 		EventBus.content_loaded.emit()
 	GameManager.data_loader = self
-	GameManager.mark_boot_completed()
-	_loaded = true
+	_loaded = _load_errors.is_empty()
 
 
 func _prepare_for_load() -> void:
@@ -145,13 +161,14 @@ func _prepare_for_load() -> void:
 func _discover_json_files(root: String) -> Array[String]:
 	var files: Array[String] = []
 	_scan_dir(root, files)
+	files.sort()
 	return files
 
 
 func _scan_dir(path: String, files: Array[String]) -> void:
 	var dir := DirAccess.open(path)
 	if not dir:
-		push_error("DataLoader: cannot open directory: %s" % path)
+		_record_load_error("cannot open directory: %s" % path)
 		return
 	dir.list_dir_begin()
 	var file_name := dir.get_next()
@@ -165,12 +182,12 @@ func _scan_dir(path: String, files: Array[String]) -> void:
 
 
 func _process_file(
-	path: String, economy_data: Dictionary
+	path: String, economy_data: Dictionary, root: String
 ) -> void:
-	var data: Variant = load_json(path)
+	var data: Variant = _load_json_with_error(path)
 	if data == null:
 		return
-	var content_type := _detect_type(path, data)
+	var content_type: String = _detect_type(path, data, root)
 	if content_type == "economy":
 		if data is Dictionary:
 			economy_data.merge(data, true)
@@ -205,18 +222,25 @@ func _process_file(
 		if data is Dictionary:
 			_video_rental_config = data as Dictionary
 		return
+	if content_type == "personality_data":
+		return
 	if content_type.is_empty():
 		return
 	var entries: Array[Dictionary] = _extract_entries(data)
 	for entry: Dictionary in entries:
-		_build_and_register(content_type, entry)
+		_build_and_register(content_type, entry, path)
 
 
-func _detect_type(path: String, data: Variant) -> String:
+func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> String:
 	if data is Dictionary and data.has("type"):
 		var raw_type: String = str(data["type"])
-		return _TYPE_KEY_MAP.get(raw_type, raw_type)
-	var rel := path.replace(CONTENT_ROOT, "")
+		if raw_type == "event_config":
+			return _detect_event_config_type(path, data, root)
+		return _ROOT_TYPE_MAP.get(
+			raw_type,
+			_TYPE_KEY_MAP.get(raw_type, raw_type)
+		)
+	var rel: String = path.replace(root, "")
 	var dir_name := rel.get_slice("/", 0)
 	if dir_name == "events":
 		var file_name := path.get_file()
@@ -240,15 +264,42 @@ func _detect_type(path: String, data: Variant) -> String:
 		return "item"
 	if file_base == "pocket_creatures_tournaments":
 		return "tournament_event"
+	if file_base == "sports_seasons":
+		return "sports_season"
+	if file_base == "personalities":
+		return "personality_data"
 	if _DIR_TYPE_MAP.has(dir_name):
 		return _DIR_TYPE_MAP[dir_name]
 	if file_base == "seasonal_config":
 		return "seasonal_config"
 	if file_base == "secret_threads":
 		return "secret_thread"
-	if file_base == "sports_seasons":
-		return "sports_season"
 	return ""
+
+
+func _detect_event_config_type(
+	path: String, data: Dictionary, root: String
+) -> String:
+	var file_name: String = path.get_file().to_lower()
+	if file_name.begins_with("seasonal"):
+		return "seasonal_event"
+	if file_name.begins_with("random"):
+		return "random_event"
+	var entries: Array[Dictionary] = _extract_entries(data)
+	if not entries.is_empty():
+		var sample: Dictionary = entries[0]
+		if sample.has("effect_type"):
+			return "random_event"
+		if sample.has("frequency_days") or sample.has("customer_traffic_multiplier"):
+			return "seasonal_event"
+		if sample.has("event_type"):
+			return "market_event"
+	var rel: String = path.replace(root, "")
+	if rel.begins_with("/events/random_"):
+		return "random_event"
+	if rel.begins_with("/events/seasonal_"):
+		return "seasonal_event"
+	return "market_event"
 
 
 func _extract_entries(data: Variant) -> Array[Dictionary]:
@@ -259,6 +310,20 @@ func _extract_entries(data: Variant) -> Array[Dictionary]:
 				entries.append(item)
 	elif data is Dictionary:
 		var parent_store_type: String = str(data.get("store_type", ""))
+		for preferred_key: String in ["entries", "items", "definitions"]:
+			if not data.has(preferred_key):
+				continue
+			var preferred_entries: Variant = data[preferred_key]
+			if preferred_entries is not Array:
+				continue
+			for item: Variant in preferred_entries:
+				if item is Dictionary:
+					var preferred_entry: Dictionary = item.duplicate()
+					if not parent_store_type.is_empty():
+						if str(preferred_entry.get("store_type", "")).is_empty():
+							preferred_entry["store_type"] = parent_store_type
+					entries.append(preferred_entry)
+			return entries
 		for key: String in data:
 			var val: Variant = data[key]
 			if val is Array:
@@ -275,30 +340,60 @@ func _extract_entries(data: Variant) -> Array[Dictionary]:
 
 
 func _build_and_register(
-	content_type: String, entry: Dictionary
+	content_type: String, entry: Dictionary, source_path: String = ""
 ) -> void:
 	if not entry.has("id"):
-		push_error(
-			"DataLoader: %s entry missing 'id': %s"
-			% [content_type, entry]
+		_record_load_error(
+			"%s entry missing 'id' in %s: %s"
+			% [content_type, source_path, entry]
 		)
 		return
 	var id: String = str(entry["id"])
-	var resource: Resource = ContentParser.build_resource(
-		content_type, entry
+	var resource: Resource = _build_resource(
+		content_type, entry, source_path
 	)
 	if resource == null:
+		_record_load_error(
+			"failed to parse %s '%s' from %s"
+			% [content_type, id, source_path]
+		)
 		return
 	if not _store_in_dict(content_type, id, resource):
 		return
 	ContentRegistry.register(
 		StringName(id), resource, content_type
 	)
-	if content_type in ["store", "fixture", "ending", "customer"]:
-		var reg_entry: Dictionary = entry.duplicate()
-		if not reg_entry.has("name") and reg_entry.has("display_name"):
-			reg_entry["name"] = reg_entry["display_name"]
-		ContentRegistry.register_entry(reg_entry, content_type)
+	var reg_entry: Dictionary = entry.duplicate()
+	if not reg_entry.has("name") and reg_entry.has("display_name"):
+		reg_entry["name"] = reg_entry["display_name"]
+	ContentRegistry.register_entry(reg_entry, content_type)
+
+
+func _build_resource(
+	content_type: String, data: Dictionary, source_path: String = ""
+) -> Resource:
+	match content_type:
+		"item", "item_definition":
+			return ContentParser.parse_item(data)
+		"store", "store_definition":
+			return ContentParser.parse_store(data)
+		"customer", "customer_profile":
+			return ContentParser.parse_customer(data)
+		"milestone", "milestone_definition":
+			return ContentParser.parse_milestone(data)
+		"staff", "staff_definition":
+			return ContentParser.parse_staff(data)
+		"fixture", "fixture_definition":
+			return ContentParser.parse_fixture(data)
+		"event_config":
+			var event_type: String = _detect_event_config_type(
+				source_path,
+				{"entries": [data]},
+				source_path.get_base_dir().get_base_dir(),
+			)
+			return _build_resource(event_type, data, source_path)
+		_:
+			return ContentParser.build_resource(content_type, data)
 
 
 func _store_in_dict(
@@ -343,7 +438,7 @@ func _store_in_dict(
 			return _try_register(
 				id, _ambient_moments, resource
 			)
-	push_error("DataLoader: unknown type '%s'" % content_type)
+	_record_load_error("unknown type '%s' for id '%s'" % [content_type, id])
 	return false
 
 
@@ -351,7 +446,7 @@ func _try_register(
 	id: String, registry: Dictionary, resource: Resource
 ) -> bool:
 	if registry.has(id):
-		push_error("DataLoader: duplicate id '%s'" % id)
+		_record_load_error("duplicate id '%s'" % id)
 		return false
 	registry[id] = resource
 	return true
@@ -458,6 +553,32 @@ static func load_json(path: String) -> Variant:
 	return json.data
 
 
+func _load_json_with_error(path: String) -> Variant:
+	if not FileAccess.file_exists(path):
+		_record_load_error("file not found: %s" % path)
+		return null
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		_record_load_error(
+			"failed to open '%s' — %s"
+			% [path, error_string(FileAccess.get_open_error())]
+		)
+		return null
+	var json: JSON = JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		_record_load_error(
+			"parse error in %s: %s"
+			% [path, json.get_error_message()]
+		)
+		return null
+	return json.data
+
+
+func _record_load_error(message: String) -> void:
+	_load_errors.append(message)
+	push_error("DataLoader: %s" % message)
+
+
 # --- Public getters (backward-compatible API) ---
 
 
@@ -474,9 +595,14 @@ func get_all_items() -> Array[ItemDefinition]:
 func get_items_by_store(
 	store_type: String
 ) -> Array[ItemDefinition]:
+	if not ContentRegistry.exists(store_type):
+		return []
+	var canonical: StringName = ContentRegistry.resolve(store_type)
+	if canonical.is_empty():
+		return []
 	var r: Array[ItemDefinition] = []
 	for item: ItemDefinition in _items.values():
-		if item.store_type == store_type:
+		if item.store_type == String(canonical):
 			r.append(item)
 	return r
 
@@ -496,7 +622,12 @@ func get_item_count() -> int:
 
 
 func get_store(id: String) -> StoreDefinition:
-	return _stores.get(id) as StoreDefinition
+	if not ContentRegistry.exists(id):
+		return null
+	var canonical: StringName = ContentRegistry.resolve(id)
+	if canonical.is_empty():
+		return null
+	return _stores.get(String(canonical)) as StoreDefinition
 
 
 func get_all_stores() -> Array[StoreDefinition]:
@@ -724,7 +855,12 @@ func get_all_secret_threads() -> Array[Dictionary]:
 func create_starting_inventory(
 	store_id: String
 ) -> Array[ItemInstance]:
-	var store: StoreDefinition = get_store(store_id)
+	if not ContentRegistry.exists(store_id):
+		return []
+	var canonical: StringName = ContentRegistry.resolve(store_id)
+	if canonical.is_empty():
+		return []
+	var store: StoreDefinition = get_store(String(canonical))
 	if not store:
 		return []
 	var instances: Array[ItemInstance] = []
@@ -740,9 +876,14 @@ func create_starting_inventory(
 func generate_starter_inventory(
 	store_type: String
 ) -> Array[ItemInstance]:
+	if not ContentRegistry.exists(store_type):
+		return []
+	var canonical: StringName = ContentRegistry.resolve(store_type)
+	if canonical.is_empty():
+		return []
 	var common: Array[ItemDefinition] = []
 	for item: ItemDefinition in _items.values():
-		if item.store_type == store_type and item.rarity == "common":
+		if item.store_type == String(canonical) and item.rarity == "common":
 			common.append(item)
 	if common.is_empty():
 		return []

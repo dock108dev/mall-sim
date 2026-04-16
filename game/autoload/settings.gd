@@ -131,6 +131,11 @@ func save_settings() -> void:
 		)
 
 
+## Compatibility wrapper used by boot sequence.
+func load() -> void:
+	load_settings()
+
+
 func load_settings() -> void:
 	var config := ConfigFile.new()
 	if config.load(settings_path) != OK:

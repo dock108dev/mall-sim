@@ -23,12 +23,12 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+DataLoaderSingleton="*res://game/autoload/data_loader.gd"
 ContentRegistry="*res://game/autoload/content_registry.gd"
+EventBus="*res://game/autoload/event_bus.gd"
 GameManager="*res://game/autoload/game_manager.gd"
 AudioManager="*res://game/autoload/audio_manager.gd"
 Settings="*res://game/autoload/settings.gd"
-EventBus="*res://game/autoload/event_bus.gd"
-DataLoaderSingleton="*res://game/autoload/data_loader.gd"
 EnvironmentManager="*res://game/autoload/environment_manager.gd"
 CameraManager="*res://game/autoload/camera_manager.gd"
 StaffManager="*res://game/autoload/staff_manager.gd"

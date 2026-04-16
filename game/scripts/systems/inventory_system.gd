@@ -140,8 +140,12 @@ func queue_restock(
 ) -> void:
 	if quantity <= 0:
 		return
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		push_error("InventorySystem: invalid store_id '%s'" % store_id)
+		return
 	_restock_queue.append({
-		"store_id": String(store_id),
+		"store_id": String(canonical),
 		"item_id": String(item_id),
 		"quantity": quantity,
 	})
@@ -429,16 +433,48 @@ func _apply_state(data: Dictionary) -> void:
 		_items[item.instance_id] = item
 	var saved_shelves: Variant = data.get("shelf_assignments", {})
 	if saved_shelves is Dictionary:
-		_shelf_assignments = (saved_shelves as Dictionary).duplicate(true)
+		var raw_shelves: Dictionary = saved_shelves as Dictionary
+		for store_key: Variant in raw_shelves:
+			var canonical: StringName = ContentRegistry.resolve(
+				str(store_key)
+			)
+			if canonical.is_empty():
+				push_warning(
+					"InventorySystem: unresolved shelf store_id '%s' during load"
+					% store_key
+				)
+				continue
+			var shelves: Variant = raw_shelves[store_key]
+			if shelves is Dictionary:
+				_shelf_assignments[String(canonical)] = (
+					shelves as Dictionary
+				).duplicate(true)
 	var saved_queue: Variant = data.get("restock_queue", [])
 	if saved_queue is Array:
 		for q_entry: Variant in saved_queue:
-			if q_entry is Dictionary:
-				_restock_queue.append(q_entry as Dictionary)
+			if q_entry is not Dictionary:
+				continue
+			var queue_entry: Dictionary = (
+				q_entry as Dictionary
+			).duplicate(true)
+			var canonical: StringName = ContentRegistry.resolve(
+				str(queue_entry.get("store_id", ""))
+			)
+			if canonical.is_empty():
+				push_warning(
+					"InventorySystem: unresolved restock store_id '%s' during load"
+					% queue_entry.get("store_id", "")
+				)
+				continue
+			queue_entry["store_id"] = String(canonical)
+			_restock_queue.append(queue_entry)
 
 
 func _get_reorder_key(store_id: StringName, def_id: StringName) -> String:
-	return "%s::%s" % [String(store_id), String(def_id)]
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		canonical = store_id
+	return "%s::%s" % [String(canonical), String(def_id)]
 
 
 func _check_restock_threshold(
