@@ -45,7 +45,9 @@ var _late_evening_enabled: bool = false
 
 
 func _ready() -> void:
-	var unlock_system := get_node("/root/UnlockSystemSingleton") as UnlockSystem
+	var unlock_system := (
+		get_node_or_null("/root/UnlockSystemSingleton") as UnlockSystem
+	)
 	if unlock_system != null:
 		_late_evening_enabled = unlock_system.is_unlocked(&"extended_hours_unlock")
 	EventBus.unlock_granted.connect(_on_unlock_granted)
@@ -86,6 +88,15 @@ func _process(delta: float) -> void:
 	if speed_multiplier <= 0.0:
 		return
 
+	if is_zero_approx(delta):
+		var current_frame_hour: int = int(game_time_minutes / 60.0)
+		_emit_hour_changes(current_frame_hour)
+		_check_phase_transition()
+		if game_time_minutes >= _get_day_end_minutes():
+			_end_day()
+		return
+
+	var previous_minutes: float = game_time_minutes
 	var advance: float = (
 		delta * GAME_MINUTES_PER_REAL_SECOND_NORMAL * speed_multiplier
 	)
@@ -93,12 +104,8 @@ func _process(delta: float) -> void:
 	_total_play_time += delta
 
 	var new_hour: int = int(game_time_minutes / 60.0)
-	while _last_emitted_hour < new_hour:
-		_last_emitted_hour += 1
-		current_hour = _last_emitted_hour
-		EventBus.hour_changed.emit(_last_emitted_hour)
-
-	_check_phase_transition()
+	_emit_hour_changes(new_hour)
+	_check_phase_transitions_between(previous_minutes, game_time_minutes)
 
 	if game_time_minutes >= _get_day_end_minutes():
 		_end_day()
@@ -234,6 +241,27 @@ func _check_phase_transition() -> void:
 	if new_phase != current_phase:
 		current_phase = new_phase
 		EventBus.day_phase_changed.emit(current_phase)
+
+
+func _check_phase_transitions_between(
+	previous_minutes: float, new_minutes: float
+) -> void:
+	var phases: Array[DayPhase] = get_active_phases()
+	for phase: DayPhase in phases:
+		var boundary: float = float(_PHASE_BOUNDARIES_MINUTES[phase])
+		if boundary <= previous_minutes or boundary > new_minutes:
+			continue
+		if phase == current_phase:
+			continue
+		current_phase = phase
+		EventBus.day_phase_changed.emit(current_phase)
+
+
+func _emit_hour_changes(new_hour: int) -> void:
+	while _last_emitted_hour < new_hour:
+		_last_emitted_hour += 1
+		current_hour = _last_emitted_hour
+		EventBus.hour_changed.emit(_last_emitted_hour)
 
 
 func _get_phase_for_minutes(minutes: float) -> DayPhase:

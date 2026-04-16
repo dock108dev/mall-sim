@@ -39,6 +39,19 @@ func test_kill_tween_stops_valid_tween() -> void:
 	assert_false(tween.is_valid())
 
 
+func test_panel_animator_can_attach_to_control_node() -> void:
+	var animator: PanelAnimator = PanelAnimator.new()
+	add_child_autofree(animator)
+	assert_true(animator is Control)
+
+
+func test_new_animation_kills_previous_panel_tween() -> void:
+	var tween_a: Tween = PanelAnimator.fullscreen_fade_in(_panel)
+	var tween_b: Tween = PanelAnimator.fullscreen_fade_out(_panel)
+	assert_false(tween_a.is_valid())
+	assert_true(tween_b.is_valid())
+
+
 func test_slide_in_returns_tween() -> void:
 	var tween: Tween = PanelAnimator.slide_in(
 		_panel, Vector2.LEFT

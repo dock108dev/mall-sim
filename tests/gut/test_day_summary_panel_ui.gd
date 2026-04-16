@@ -25,7 +25,7 @@ func test_panel_shows_on_day_ended() -> void:
 
 func test_title_shows_day_number() -> void:
 	EventBus.day_ended.emit(3)
-	assert_eq(_panel._title_label.text, "Day 3 Summary")
+	assert_eq(_panel._title_label.text, "Day 3 Complete")
 
 
 func test_revenue_displayed_from_report() -> void:
@@ -54,7 +54,7 @@ func test_net_positive_green() -> void:
 	EventBus.day_ended.emit(1)
 	assert_eq(_panel._net_label.text, "Net: +$150.00")
 	var color: Color = _panel._net_label.get_theme_color("font_color")
-	assert_eq(color, Color(0.2, 0.8, 0.2))
+	assert_eq(color, DaySummaryPanel.NET_POSITIVE_COLOR)
 
 
 func test_net_negative_red() -> void:
@@ -99,6 +99,37 @@ func test_milestone_shown_when_present() -> void:
 	)
 
 
+func test_record_high_revenue_row_tracked() -> void:
+	var report := _make_report(100.0, 50.0, 50.0)
+	report.record_flags = {"best_day_revenue": true}
+	EventBus.performance_report_ready.emit(report)
+	EventBus.day_ended.emit(1)
+	assert_true(
+		_panel._record_high_rows.has(_panel._revenue_label),
+		"Revenue row should be tracked as record high"
+	)
+
+
+func test_record_low_revenue_row_tracked() -> void:
+	var report := _make_report(10.0, 50.0, -40.0)
+	report.record_flags = {"worst_day_revenue": true}
+	EventBus.performance_report_ready.emit(report)
+	EventBus.day_ended.emit(2)
+	assert_true(
+		_panel._record_low_rows.has(_panel._revenue_label),
+		"Revenue row should be tracked as record low"
+	)
+
+
+func test_flash_record_rows_runs_without_error() -> void:
+	var report := _make_report(100.0, 50.0, 50.0)
+	report.record_flags = {"best_day_revenue": true}
+	EventBus.performance_report_ready.emit(report)
+	EventBus.day_ended.emit(1)
+	_panel._flash_record_rows()
+	assert_true(true, "Record row flash should execute")
+
+
 func test_acknowledge_button_disabled_initially() -> void:
 	EventBus.day_ended.emit(1)
 	assert_true(
@@ -107,17 +138,17 @@ func test_acknowledge_button_disabled_initially() -> void:
 	)
 
 
-func test_acknowledge_emits_day_acknowledged() -> void:
+func test_next_day_emits_next_day_confirmed() -> void:
 	EventBus.day_ended.emit(1)
 	_panel._acknowledge_button.disabled = false
 	var signal_fired: Array = [false]
-	EventBus.day_acknowledged.connect(
+	EventBus.next_day_confirmed.connect(
 		func() -> void: signal_fired[0] = true
 	)
 	_panel._on_acknowledge_pressed()
 	assert_true(
 		signal_fired[0],
-		"day_acknowledged should fire on acknowledge press"
+		"next_day_confirmed should fire on next day press"
 	)
 
 
@@ -137,6 +168,42 @@ func test_day_acknowledged_signal_exists() -> void:
 		EventBus.has_signal("day_acknowledged"),
 		"EventBus must have day_acknowledged signal"
 	)
+
+
+func test_show_summary_dictionary_populates_sales_fields() -> void:
+	_panel.show_summary({
+		"day": 4,
+		"revenue": 250.0,
+		"expenses": 75.0,
+		"net_profit": 175.0,
+		"total_items_sold": 9,
+		"bestseller": {"item_name": "Foil Starter", "quantity": 3},
+		"bestseller_quantity": 3,
+		"haggle_wins": 2,
+		"haggle_losses": 1,
+	})
+	assert_eq(_panel._title_label.text, "Day 4 Complete")
+	assert_eq(_panel._revenue_label.text, "Revenue: $250.00")
+	assert_eq(_panel._net_label.text, "Net: +$175.00")
+	assert_eq(_panel._report_detail_labels[0].text, "Items Sold: 9")
+	assert_eq(
+		_panel._report_detail_labels[5].text,
+		"Top Seller: Foil Starter (x3)"
+	)
+	assert_eq(
+		_panel._report_detail_labels[6].text,
+		"Haggling: 2 won / 1 lost"
+	)
+
+
+func test_review_inventory_closes_and_emits_request() -> void:
+	EventBus.day_ended.emit(1)
+	var signal_fired: Array = [false]
+	_panel.review_inventory_requested.connect(
+		func() -> void: signal_fired[0] = true
+	)
+	_panel._on_review_inventory_pressed()
+	assert_true(signal_fired[0], "review inventory request should emit")
 
 
 func test_reputation_shows_indicator() -> void:

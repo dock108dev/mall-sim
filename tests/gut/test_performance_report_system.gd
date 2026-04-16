@@ -178,17 +178,36 @@ func test_top_item_sold_tracks_highest_revenue() -> void:
 	assert_eq(report.top_item_sold, "expensive_item")
 
 
+func test_top_item_sold_uses_highest_single_unit_revenue() -> void:
+	EventBus.day_started.emit(1)
+	EventBus.item_sold.emit("steady_item", 40.0, "misc")
+	EventBus.item_sold.emit("steady_item", 40.0, "misc")
+	EventBus.item_sold.emit("premium_item", 60.0, "misc")
+	EventBus.day_ended.emit(1)
+	var report: PerformanceReport = _system.get_history()[0]
+	assert_eq(report.top_item_sold, "premium_item")
+
+
 func test_customer_satisfaction_rate() -> void:
 	EventBus.day_started.emit(1)
-	EventBus.customer_purchased.emit(&"store", &"item_a", 10.0, &"c1")
-	EventBus.customer_purchased.emit(&"store", &"item_b", 20.0, &"c2")
-	EventBus.customer_purchased.emit(&"store", &"item_c", 30.0, &"c3")
-	EventBus.customer_left.emit({"satisfied": false})
+	EventBus.customer_left.emit({"customer_id": 1, "satisfied": true})
+	EventBus.customer_left.emit({"customer_id": 2, "satisfied": true})
+	EventBus.customer_left.emit({"customer_id": 3, "satisfied": false})
 	EventBus.day_ended.emit(1)
 	var report: PerformanceReport = _system.get_history()[0]
 	assert_eq(report.customers_served, 3)
 	assert_eq(report.walkouts, 1)
-	assert_almost_eq(report.satisfaction_rate, 0.5, 0.01)
+	assert_almost_eq(report.satisfaction_rate, 0.667, 0.01)
+
+
+func test_purchase_and_matching_leave_do_not_double_count_customer() -> void:
+	EventBus.day_started.emit(1)
+	EventBus.customer_purchased.emit(&"store", &"item_a", 10.0, &"42")
+	EventBus.customer_left.emit({"customer_id": 42, "satisfied": true})
+	EventBus.day_ended.emit(1)
+	var report: PerformanceReport = _system.get_history()[0]
+	assert_eq(report.customers_served, 1)
+	assert_almost_eq(report.satisfaction_rate, 1.0, 0.01)
 
 
 func test_satisfaction_rate_zero_when_no_customers() -> void:
@@ -227,7 +246,7 @@ func test_reputation_delta_tracked() -> void:
 	EventBus.reputation_changed.emit("test_store", 60.0)
 	EventBus.day_ended.emit(1)
 	var report: PerformanceReport = _system.get_history()[0]
-	assert_almost_eq(report.reputation_delta, 10.0, 0.01)
+	assert_almost_eq(report.reputation_delta, 5.0, 0.01)
 
 
 func test_record_flags_best_day() -> void:
@@ -241,6 +260,7 @@ func test_record_flags_best_day() -> void:
 
 	var history: Array[PerformanceReport] = _system.get_history()
 	assert_true(history[1].record_flags.get("best_day_revenue", false))
+	assert_false(history[1].record_flags.get("worst_day_revenue", true))
 
 
 func test_record_flags_worst_day() -> void:
@@ -254,6 +274,7 @@ func test_record_flags_worst_day() -> void:
 
 	var history: Array[PerformanceReport] = _system.get_history()
 	assert_true(history[1].record_flags.get("worst_day_revenue", false))
+	assert_false(history[1].record_flags.get("best_day_revenue", true))
 
 
 func test_rolling_history_capped_at_30() -> void:

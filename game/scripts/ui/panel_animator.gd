@@ -1,6 +1,6 @@
 ## Tween-based animation utilities for UI panel transitions.
 class_name PanelAnimator
-
+extends Control
 
 const SLIDE_DURATION: float = 0.2
 const MODAL_DURATION: float = 0.15
@@ -15,11 +15,24 @@ const BANNER_SLIDE_DURATION: float = 0.3
 const BANNER_HOLD_DURATION: float = 3.0
 const BUILD_MODE_TRANSITION: float = 0.25
 
+const _ACTIVE_TWEEN_META: StringName = &"panel_animator_active_tween"
 
 static func kill_tween(tween: Tween) -> void:
 	if tween and tween.is_valid():
 		tween.kill()
 
+static func _kill_active_tween(panel: Control) -> void:
+	if not panel.has_meta(_ACTIVE_TWEEN_META):
+		return
+	var tween: Tween = panel.get_meta(_ACTIVE_TWEEN_META, null) as Tween
+	kill_tween(tween)
+	panel.remove_meta(_ACTIVE_TWEEN_META)
+
+static func _create_panel_tween(panel: Control) -> Tween:
+	_kill_active_tween(panel)
+	var tween: Tween = panel.create_tween()
+	panel.set_meta(_ACTIVE_TWEEN_META, tween)
+	return tween
 
 static func slide_in(
 	panel: Control,
@@ -38,12 +51,11 @@ static func slide_in(
 		panel.position.y = viewport_size.y
 	panel.visible = true
 	panel.modulate = Color.WHITE
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "position", target_pos, duration
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween
-
 
 static func slide_out(
 	panel: Control,
@@ -61,7 +73,7 @@ static func slide_out(
 	elif direction == Vector2.DOWN:
 		target_pos.y = viewport_size.y
 	var rest_pos: Vector2 = panel.position
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "position", target_pos, duration
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
@@ -71,7 +83,6 @@ static func slide_out(
 			panel.position = rest_pos
 	)
 	return tween
-
 
 static func slide_open(
 	panel: Control,
@@ -86,12 +97,11 @@ static func slide_open(
 		panel.position.x = rest_x + offset
 	panel.modulate = Color.WHITE
 	panel.visible = true
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "position:x", rest_x, duration
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween
-
 
 static func slide_close(
 	panel: Control,
@@ -105,7 +115,7 @@ static func slide_close(
 		target_x -= offset
 	else:
 		target_x += offset
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "position:x", target_x, duration
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
@@ -115,7 +125,6 @@ static func slide_close(
 			panel.position.x = rest_x
 	)
 	return tween
-
 
 static func modal_open(
 	panel: Control,
@@ -127,7 +136,7 @@ static func modal_open(
 		MODAL_SCALE_START, MODAL_SCALE_START
 	)
 	panel.visible = true
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "modulate", Color.WHITE, duration
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
@@ -136,13 +145,12 @@ static func modal_open(
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween
 
-
 static func modal_close(
 	panel: Control,
 	duration: float = MODAL_DURATION,
 ) -> Tween:
 	panel.pivot_offset = panel.size / 2.0
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "modulate",
 		Color(1.0, 1.0, 1.0, 0.0), duration
@@ -160,25 +168,23 @@ static func modal_close(
 	)
 	return tween
 
-
 static func fullscreen_fade_in(
 	panel: Control,
 	duration: float = FULLSCREEN_FADE_DURATION,
 ) -> Tween:
 	panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	panel.visible = true
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "modulate", Color.WHITE, duration
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween
 
-
 static func fullscreen_fade_out(
 	panel: Control,
 	duration: float = FULLSCREEN_FADE_DURATION,
 ) -> Tween:
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "modulate",
 		Color(1.0, 1.0, 1.0, 0.0), duration
@@ -189,7 +195,6 @@ static func fullscreen_fade_out(
 			panel.modulate = Color.WHITE
 	)
 	return tween
-
 
 static func fade_in(
 	panel: Control,
@@ -197,18 +202,17 @@ static func fade_in(
 ) -> Tween:
 	panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	panel.visible = true
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "modulate", Color.WHITE, duration
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween
 
-
 static func fade_out(
 	panel: Control,
 	duration: float = TOOLTIP_FADE_DURATION,
 ) -> Tween:
-	var tween: Tween = panel.create_tween()
+	var tween: Tween = _create_panel_tween(panel)
 	tween.tween_property(
 		panel, "modulate",
 		Color(1.0, 1.0, 1.0, 0.0), duration
@@ -220,14 +224,13 @@ static func fade_out(
 	)
 	return tween
 
-
 static func shake(
 	node: Control,
 	magnitude: float = 6.0,
 	duration: float = FEEDBACK_SHAKE_DURATION,
 ) -> Tween:
 	var original_x: float = node.position.x
-	var tween: Tween = node.create_tween()
+	var tween: Tween = _create_panel_tween(node)
 	var step: float = duration / 7.0
 	for i: int in range(3):
 		tween.tween_property(
@@ -239,14 +242,13 @@ static func shake(
 	tween.tween_property(node, "position:x", original_x, step)
 	return tween
 
-
 static func pulse_scale(
 	node: Control,
 	peak: float = 1.15,
 	duration: float = FEEDBACK_PULSE_DURATION,
 ) -> Tween:
 	node.pivot_offset = node.size / 2.0
-	var tween: Tween = node.create_tween()
+	var tween: Tween = _create_panel_tween(node)
 	tween.tween_property(
 		node, "scale",
 		Vector2(peak, peak),
@@ -257,13 +259,12 @@ static func pulse_scale(
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween
 
-
 static func flash_color(
 	node: Control,
 	color: Color,
 	duration: float = FEEDBACK_PULSE_DURATION,
 ) -> Tween:
-	var tween: Tween = node.create_tween()
+	var tween: Tween = _create_panel_tween(node)
 	tween.tween_property(
 		node, "modulate", color, duration * 0.3
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
@@ -271,7 +272,6 @@ static func flash_color(
 		node, "modulate", Color.WHITE, duration * 0.7
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	return tween
-
 
 static func stagger_fade_in(
 	nodes: Array[Control],
@@ -281,8 +281,11 @@ static func stagger_fade_in(
 	if nodes.is_empty():
 		return null
 	for node: Control in nodes:
+		_kill_active_tween(node)
 		node.modulate = Color.TRANSPARENT
 	var tween: Tween = nodes[0].create_tween()
+	for node: Control in nodes:
+		node.set_meta(_ACTIVE_TWEEN_META, tween)
 	for i: int in range(nodes.size()):
 		var node: Control = nodes[i]
 		if i > 0:

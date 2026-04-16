@@ -321,7 +321,7 @@ func _set_net_profit_display(net_profit: float) -> void:
 	if net_profit > 0.0:
 		_profit_label.text = "NET PROFIT: +$%.2f" % net_profit
 		_profit_label.add_theme_color_override(
-			"font_color", NET_PROFIT_POSITIVE_COLOR
+			"font_color", UIThemeConstants.get_positive_color()
 		)
 	elif net_profit < 0.0:
 		_profit_label.text = "NET LOSS: -$%.2f" % absf(net_profit)

@@ -133,20 +133,20 @@ func test_net_label_negative_with_red_color() -> void:
 	)
 
 
-func test_acknowledge_emits_day_acknowledged_and_hides_panel() -> void:
+func test_next_day_emits_next_day_confirmed_and_hides_panel() -> void:
 	EventBus.day_started.emit(1)
 	EventBus.day_ended.emit(1)
 	_panel._acknowledge_button.disabled = false
 
 	var signal_fired: Array = [false]
-	EventBus.day_acknowledged.connect(
+	EventBus.next_day_confirmed.connect(
 		func() -> void: signal_fired[0] = true
 	)
 	_panel._on_acknowledge_pressed()
 
 	assert_true(
 		signal_fired[0],
-		"day_acknowledged must emit when acknowledge is pressed"
+		"next_day_confirmed must emit when next day is pressed"
 	)
 	await get_tree().create_timer(0.5).timeout
 	assert_false(

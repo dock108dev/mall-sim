@@ -25,6 +25,9 @@ const _FixtureCatalogScene: PackedScene = preload(
 const _MilestonePopupScene: PackedScene = preload(
 	"res://game/scenes/ui/milestone_popup.tscn"
 )
+const _MilestoneBannerScene: PackedScene = preload(
+	"res://game/scenes/ui/milestone_banner.tscn"
+)
 const _MilestonesPanelScene: PackedScene = preload(
 	"res://game/scenes/ui/milestones_panel.tscn"
 )
@@ -513,6 +516,11 @@ func _setup_deferred_panels() -> void:
 		_MilestonePopupScene.instantiate() as MilestonePopup
 	)
 	_ui_layer.add_child(milestone_popup)
+
+	var milestone_banner: MilestoneBanner = (
+		_MilestoneBannerScene.instantiate() as MilestoneBanner
+	)
+	_ui_layer.add_child(milestone_banner)
 
 	var milestones_panel: MilestonesPanel = (
 		_MilestonesPanelScene.instantiate() as MilestonesPanel

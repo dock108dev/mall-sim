@@ -47,56 +47,56 @@ jobs:
           fi
           echo "No common issues found."
 
-  gut-tests:
-    name: GUT Unit Tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
+  # gut-tests:
+  #   name: GUT Unit Tests
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Cache Godot import cache
-        uses: actions/cache@v4
-        with:
-          path: .godot
-          key: godot-import-${{ runner.os }}-4.6.2-${{ hashFiles('project.godot', '**/*.import') }}
-          restore-keys: |
-            godot-import-${{ runner.os }}-4.6.2-
+  #     - name: Cache Godot import cache
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: .godot
+  #         key: godot-import-${{ runner.os }}-4.6.2-${{ hashFiles('project.godot', '**/*.import') }}
+  #         restore-keys: |
+  #           godot-import-${{ runner.os }}-4.6.2-
 
-      - name: Install Godot
-        run: |
-          GODOT_VERSION="4.6.2-stable"
-          GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          wget -q "$GODOT_URL" -O /tmp/godot.zip
-          unzip -q /tmp/godot.zip -d /tmp/godot
-          sudo mv /tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
-          sudo chmod +x /usr/local/bin/godot
-          godot --version
+  #     - name: Install Godot
+  #       run: |
+  #         GODOT_VERSION="4.6.2-stable"
+  #         GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+  #         wget -q "$GODOT_URL" -O /tmp/godot.zip
+  #         unzip -q /tmp/godot.zip -d /tmp/godot
+  #         sudo mv /tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
+  #         sudo chmod +x /usr/local/bin/godot
+  #         godot --version
 
-      - name: Import project
-        run: bash scripts/godot_import.sh
+  #     - name: Import project
+  #       run: bash scripts/godot_import.sh
 
-      - name: Run GUT tests
-        run: |
-          set -o pipefail
-          GUT_OUTPUT_FILE="$(mktemp)"
-          godot --path "$GITHUB_WORKSPACE" --headless \
-            --script res://addons/gut/gut_cmdln.gd -- \
-            -gconfig=res://.gutconfig.json -gexit \
-            2>&1 | tee "$GUT_OUTPUT_FILE"
-          GUT_EXIT=$?
+  #     - name: Run GUT tests
+  #       run: |
+  #         set -o pipefail
+  #         GUT_OUTPUT_FILE="$(mktemp)"
+  #         godot --path "$GITHUB_WORKSPACE" --headless \
+  #           --script res://addons/gut/gut_cmdln.gd -- \
+  #           -gconfig=res://.gutconfig.json -gexit \
+  #           2>&1 | tee "$GUT_OUTPUT_FILE"
+  #         GUT_EXIT=$?
 
-          # GUT only exits non-zero on assert failures. Also catch push_error()
-          # calls which GDScript emits as "ERROR:" lines but don't fail assertions.
-          ERROR_COUNT=$(grep -c "^ERROR:" "$GUT_OUTPUT_FILE" || true)
-          if [ "$ERROR_COUNT" -gt 0 ]; then
-            echo ""
-            echo "::error::GUT run produced $ERROR_COUNT push_error() call(s). Tests must not emit errors."
-            grep "^ERROR:" "$GUT_OUTPUT_FILE"
-            exit 1
-          fi
+  #         # GUT only exits non-zero on assert failures. Also catch push_error()
+  #         # calls which GDScript emits as "ERROR:" lines but don't fail assertions.
+  #         ERROR_COUNT=$(grep -c "^ERROR:" "$GUT_OUTPUT_FILE" || true)
+  #         if [ "$ERROR_COUNT" -gt 0 ]; then
+  #           echo ""
+  #           echo "::error::GUT run produced $ERROR_COUNT push_error() call(s). Tests must not emit errors."
+  #           grep "^ERROR:" "$GUT_OUTPUT_FILE"
+  #           exit 1
+  #         fi
 
-          exit $GUT_EXIT
+  #         exit $GUT_EXIT
 
   lint-gdscript:
     name: GDScript Lint

@@ -149,6 +149,26 @@ func test_day_phase_changed_signal() -> void:
 	)
 
 
+func test_day_phase_changed_emits_each_crossed_boundary() -> void:
+	var phases: Array[int] = []
+	EventBus.day_phase_changed.connect(
+		func(p: int) -> void: phases.append(p)
+	)
+	_ts.game_time_minutes = 539.0
+	_ts._last_emitted_hour = 8
+	_ts._process(600.0)
+	assert_eq(
+		phases,
+		[
+			TimeSystem.DayPhase.MORNING_RAMP,
+			TimeSystem.DayPhase.MIDDAY_RUSH,
+			TimeSystem.DayPhase.AFTERNOON,
+			TimeSystem.DayPhase.EVENING,
+		],
+		"Large time jumps should emit every phase boundary in order"
+	)
+
+
 func test_auto_slow_forces_normal() -> void:
 	_ts.set_speed(TimeSystem.SpeedTier.ULTRA)
 	assert_eq(_ts.speed_multiplier, 6.0)
@@ -202,6 +222,28 @@ func test_time_advances_at_correct_rate() -> void:
 	_ts._process(1.0)
 	var elapsed: float = _ts.game_time_minutes - start
 	assert_almost_eq(elapsed, 3.0, 0.01, "FAST should advance 3 min/sec")
+
+
+func test_time_advances_at_all_speed_tiers() -> void:
+	_ts.set_speed(TimeSystem.SpeedTier.PAUSED)
+	_ts.game_time_minutes = 420.0
+	_ts._process(1.0)
+	assert_almost_eq(_ts.game_time_minutes, 420.0, 0.01)
+
+	_ts.set_speed(TimeSystem.SpeedTier.NORMAL)
+	_ts.game_time_minutes = 420.0
+	_ts._process(1.0)
+	assert_almost_eq(_ts.game_time_minutes, 421.0, 0.01)
+
+	_ts.set_speed(TimeSystem.SpeedTier.FAST)
+	_ts.game_time_minutes = 420.0
+	_ts._process(1.0)
+	assert_almost_eq(_ts.game_time_minutes, 423.0, 0.01)
+
+	_ts.set_speed(TimeSystem.SpeedTier.ULTRA)
+	_ts.game_time_minutes = 420.0
+	_ts._process(1.0)
+	assert_almost_eq(_ts.game_time_minutes, 426.0, 0.01)
 
 
 func test_paused_does_not_advance() -> void:

@@ -8,12 +8,15 @@ const MAX_HISTORY_SIZE: int = 30
 var _daily_items_sold: int = 0
 var _daily_units_sold: int = 0
 var _daily_customers_served: int = 0
+var _daily_satisfied_customers: int = 0
 var _daily_revenue: float = 0.0
 var _daily_walkouts: int = 0
 var _daily_reputation_start: float = 0.0
 var _daily_reputation_end: float = 0.0
 var _daily_item_revenues: Dictionary = {}
+var _daily_item_max_prices: Dictionary = {}
 var _daily_item_counts: Dictionary = {}
+var _daily_customer_satisfaction_by_id: Dictionary = {}
 var _daily_haggle_wins: int = 0
 var _daily_haggle_losses: int = 0
 var _daily_late_fee_income: float = 0.0
@@ -51,7 +54,14 @@ func initialize() -> void:
 
 
 func get_history() -> Array[PerformanceReport]:
-	return _history
+	var sorted_history: Array[PerformanceReport] = []
+	for report: PerformanceReport in _history:
+		sorted_history.append(report)
+	sorted_history.sort_custom(
+		func(a: PerformanceReport, b: PerformanceReport) -> bool:
+			return a.day < b.day
+	)
+	return sorted_history
 
 
 func get_daily_revenue() -> float:
@@ -75,12 +85,17 @@ func get_save_data() -> Dictionary:
 		"daily_items_sold": _daily_items_sold,
 		"daily_units_sold": _daily_units_sold,
 		"daily_customers_served": _daily_customers_served,
+		"daily_satisfied_customers": _daily_satisfied_customers,
 		"daily_revenue": _daily_revenue,
 		"daily_walkouts": _daily_walkouts,
 		"daily_reputation_start": _daily_reputation_start,
 		"daily_reputation_end": _daily_reputation_end,
 		"daily_item_revenues": _daily_item_revenues.duplicate(),
+		"daily_item_max_prices": _daily_item_max_prices.duplicate(),
 		"daily_item_counts": _daily_item_counts.duplicate(),
+		"daily_customer_satisfaction_by_id": (
+			_daily_customer_satisfaction_by_id.duplicate()
+		),
 		"daily_haggle_wins": _daily_haggle_wins,
 		"daily_haggle_losses": _daily_haggle_losses,
 		"daily_late_fee_income": _daily_late_fee_income,
@@ -106,6 +121,9 @@ func load_save_data(data: Dictionary) -> void:
 	_daily_customers_served = int(
 		data.get("daily_customers_served", 0)
 	)
+	_daily_satisfied_customers = int(
+		data.get("daily_satisfied_customers", _daily_customers_served)
+	)
 	_daily_revenue = float(data.get("daily_revenue", 0.0))
 	_daily_walkouts = int(data.get("daily_walkouts", 0))
 	_daily_reputation_start = float(
@@ -117,9 +135,19 @@ func load_save_data(data: Dictionary) -> void:
 	var item_revs: Variant = data.get("daily_item_revenues", {})
 	if item_revs is Dictionary:
 		_daily_item_revenues = (item_revs as Dictionary).duplicate()
+	var item_prices: Variant = data.get("daily_item_max_prices", {})
+	if item_prices is Dictionary:
+		_daily_item_max_prices = (item_prices as Dictionary).duplicate()
 	var item_counts: Variant = data.get("daily_item_counts", {})
 	if item_counts is Dictionary:
 		_daily_item_counts = (item_counts as Dictionary).duplicate()
+	var customer_satisfaction: Variant = data.get(
+		"daily_customer_satisfaction_by_id", {}
+	)
+	if customer_satisfaction is Dictionary:
+		_daily_customer_satisfaction_by_id = (
+			customer_satisfaction as Dictionary
+		).duplicate()
 	_daily_haggle_wins = int(data.get("daily_haggle_wins", 0))
 	_daily_haggle_losses = int(data.get("daily_haggle_losses", 0))
 	_daily_late_fee_income = float(
@@ -152,10 +180,13 @@ func _on_day_started(_day: int) -> void:
 	_daily_items_sold = 0
 	_daily_units_sold = 0
 	_daily_customers_served = 0
+	_daily_satisfied_customers = 0
 	_daily_revenue = 0.0
 	_daily_walkouts = 0
 	_daily_item_revenues.clear()
+	_daily_item_max_prices.clear()
 	_daily_item_counts.clear()
+	_daily_customer_satisfaction_by_id.clear()
 	_daily_haggle_wins = 0
 	_daily_haggle_losses = 0
 	_daily_late_fee_income = 0.0
@@ -179,10 +210,17 @@ func _on_item_sold(
 	item_id: String, price: float, _category: String
 ) -> void:
 	_daily_items_sold += 1
+	if price > 0.0:
+		_daily_revenue += price
 	var current: float = float(
 		_daily_item_revenues.get(item_id, 0.0)
 	)
 	_daily_item_revenues[item_id] = current + price
+	var best_price: float = float(
+		_daily_item_max_prices.get(item_id, 0.0)
+	)
+	if price > best_price:
+		_daily_item_max_prices[item_id] = price
 	var current_count: int = int(_daily_item_counts.get(item_id, 0))
 	_daily_item_counts[item_id] = current_count + 1
 
@@ -193,15 +231,18 @@ func _on_customer_purchased(
 ) -> void:
 	if price <= 0.0:
 		return
-	_daily_revenue += price
+	if not _daily_item_counts.has(String(_item_id)):
+		_daily_revenue += price
 	_daily_units_sold += 1
-	_daily_customers_served += 1
+	_mark_customer_served(String(_customer_id), true)
 
 
 func _on_customer_left(customer_data: Dictionary) -> void:
-	var satisfied: Variant = customer_data.get("satisfied", true)
-	if satisfied is bool and not satisfied:
-		_daily_walkouts += 1
+	var satisfied: bool = bool(customer_data.get("satisfied", true))
+	_mark_customer_served(
+		str(customer_data.get("customer_id", "")),
+		satisfied,
+	)
 
 
 func _on_reputation_changed(
@@ -221,9 +262,9 @@ func _build_report(day: int) -> PerformanceReport:
 	if not _snapshot_received:
 		push_warning(
 			"PerformanceReportSystem: daily_financials_snapshot not"
-			+ " received before generate_report(); defaulting to 0.0"
+			+ " received before generate_report(); using observed revenue"
 		)
-		report.revenue = 0.0
+		report.revenue = _daily_revenue
 		report.expenses = 0.0
 	else:
 		report.revenue = _snapshot_revenue
@@ -236,13 +277,13 @@ func _build_report(day: int) -> PerformanceReport:
 	report.units_sold = _daily_units_sold
 	report.customers_served = _daily_customers_served
 	report.walkouts = _daily_walkouts
-	var total_interactions: int = _daily_customers_served + _daily_walkouts
-	report.satisfaction_rate = clampf(
-		float(_daily_customers_served - _daily_walkouts)
-		/ float(max(1, total_interactions)),
-		0.0,
-		1.0,
-	)
+	if _daily_customers_served > 0:
+		report.satisfaction_rate = (
+			float(_daily_satisfied_customers)
+			/ float(_daily_customers_served)
+		)
+	else:
+		report.satisfaction_rate = 0.0
 	report.reputation_delta = (
 		_daily_reputation_end - _daily_reputation_start
 	)
@@ -267,14 +308,48 @@ func _build_report(day: int) -> PerformanceReport:
 
 func _find_top_item() -> Dictionary:
 	var best_id: String = ""
-	var best_revenue: float = 0.0
-	for item_id: String in _daily_item_revenues:
-		var rev: float = float(_daily_item_revenues[item_id])
-		if rev > best_revenue:
-			best_revenue = rev
+	var best_price: float = 0.0
+	for item_id: String in _daily_item_max_prices:
+		var price: float = float(_daily_item_max_prices[item_id])
+		if price > best_price:
+			best_price = price
 			best_id = item_id
 	var count: int = int(_daily_item_counts.get(best_id, 0))
 	return {"id": best_id, "count": count}
+
+
+func _mark_customer_served(customer_id: String, satisfied: bool) -> void:
+	if customer_id.is_empty():
+		_daily_customers_served += 1
+		if satisfied:
+			_daily_satisfied_customers += 1
+		else:
+			_daily_walkouts += 1
+		return
+
+	if _daily_customer_satisfaction_by_id.has(customer_id):
+		var previous: bool = bool(
+			_daily_customer_satisfaction_by_id[customer_id]
+		)
+		if previous == satisfied:
+			return
+		_daily_customer_satisfaction_by_id[customer_id] = satisfied
+		if previous:
+			_daily_satisfied_customers -= 1
+		else:
+			_daily_walkouts -= 1
+		if satisfied:
+			_daily_satisfied_customers += 1
+		else:
+			_daily_walkouts += 1
+		return
+
+	_daily_customer_satisfaction_by_id[customer_id] = satisfied
+	_daily_customers_served += 1
+	if satisfied:
+		_daily_satisfied_customers += 1
+	else:
+		_daily_walkouts += 1
 
 
 func _on_haggle_completed(
@@ -341,10 +416,13 @@ func _tier_name(tier: int) -> String:
 
 
 func _apply_record_flags(report: PerformanceReport) -> void:
-	var flags: Dictionary = {}
+	var flags: Dictionary = {
+		"best_day_revenue": false,
+		"worst_day_revenue": false,
+	}
 	if _history.is_empty():
-		if report.revenue > 0.0:
-			flags["best_day_revenue"] = true
+		flags["best_day_revenue"] = true
+		flags["worst_day_revenue"] = true
 		report.record_flags = flags
 		return
 	var best_rev: float = 0.0
