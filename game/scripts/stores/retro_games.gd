@@ -17,8 +17,6 @@ func _ready() -> void:
 	store_type = STORE_ID
 	super._ready()
 	_find_testing_station()
-	EventBus.store_entered.connect(_on_store_entered)
-	EventBus.store_exited.connect(_on_store_exited)
 	EventBus.customer_purchased.connect(_on_customer_purchased)
 	EventBus.inventory_item_added.connect(_on_inventory_item_added)
 	EventBus.item_stocked.connect(_on_item_stocked)

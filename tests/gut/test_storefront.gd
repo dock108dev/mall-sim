@@ -227,6 +227,13 @@ func test_status_sign_exists() -> void:
 	assert_not_null(label, "StatusSign Label3D exists")
 
 
+func test_lease_marker_exists() -> void:
+	var marker: MeshInstance3D = _storefront.find_child(
+		"LeaseMarker", true, false
+	) as MeshInstance3D
+	assert_not_null(marker, "LeaseMarker MeshInstance3D exists")
+
+
 func test_status_sign_shows_for_lease_when_available() -> void:
 	_storefront.set_available(100.0)
 	var label: Label3D = _storefront.find_child(
@@ -234,6 +241,32 @@ func test_status_sign_shows_for_lease_when_available() -> void:
 	) as Label3D
 	assert_eq(label.text, "FOR LEASE")
 	assert_true(label.visible, "FOR LEASE label is visible")
+
+
+func test_locked_lease_marker_uses_locked_material() -> void:
+	_storefront.set_locked()
+	assert_eq(
+		_storefront.get_lease_marker_state(),
+		&"locked",
+		"Locked storefront should use the locked lease marker material"
+	)
+
+
+func test_available_lease_marker_uses_available_material() -> void:
+	_storefront.set_available(100.0)
+	assert_eq(
+		_storefront.get_lease_marker_state(),
+		&"available",
+		"Available storefront should use the available lease marker material"
+	)
+
+
+func test_owned_storefront_hides_lease_marker() -> void:
+	_storefront.set_owned("retro_games", "Retro Games")
+	var marker: MeshInstance3D = _storefront.find_child(
+		"LeaseMarker", true, false
+	) as MeshInstance3D
+	assert_false(marker.visible, "Owned storefront should hide the lease marker")
 
 
 func test_status_sign_yellow_when_for_lease() -> void:

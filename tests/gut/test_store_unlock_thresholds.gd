@@ -20,8 +20,8 @@ func before_each() -> void:
 	_economy.initialize()
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
-	_reputation.initialize_store("test_store")
 
 	_progression = ProgressionSystem.new()
 	add_child_autofree(_progression)
@@ -88,12 +88,15 @@ func test_cumulative_cash_never_decreases() -> void:
 
 
 func test_mall_reputation_updates_on_day_ended() -> void:
-	_reputation.modify_reputation("", 30.0)
+	_set_owned_store_scores({
+		"sports": 20.0,
+		"retro_games": 40.0,
+	})
 	EventBus.day_ended.emit(1)
 
 	assert_almost_eq(
 		_progression.get_mall_reputation(), 30.0, 0.01,
-		"Mall reputation should reflect reputation system score"
+		"Mall reputation should average owned store reputation scores"
 	)
 
 
@@ -121,7 +124,7 @@ func test_slot_1_unlocks_at_threshold() -> void:
 	EventBus.store_slot_unlocked.connect(on_unlock)
 
 	_progression._cumulative_cash_earned = 2000.0
-	_reputation.modify_reputation("", 25.0)
+	_set_owned_store_scores({"test_store": 25.0})
 	EventBus.day_ended.emit(1)
 
 	assert_true(
@@ -138,7 +141,7 @@ func test_slot_1_unlocks_at_threshold() -> void:
 
 func test_slot_2_unlocks_at_threshold() -> void:
 	_progression._cumulative_cash_earned = 6000.0
-	_reputation.modify_reputation("", 40.0)
+	_set_owned_store_scores({"test_store": 40.0})
 	EventBus.day_ended.emit(1)
 
 	assert_true(
@@ -149,7 +152,7 @@ func test_slot_2_unlocks_at_threshold() -> void:
 
 func test_slot_3_unlocks_at_threshold() -> void:
 	_progression._cumulative_cash_earned = 15000.0
-	_reputation.modify_reputation("", 55.0)
+	_set_owned_store_scores({"test_store": 55.0})
 	EventBus.day_ended.emit(1)
 
 	assert_true(
@@ -160,7 +163,7 @@ func test_slot_3_unlocks_at_threshold() -> void:
 
 func test_slot_4_unlocks_at_threshold() -> void:
 	_progression._cumulative_cash_earned = 35000.0
-	_reputation.modify_reputation("", 70.0)
+	_set_owned_store_scores({"test_store": 70.0})
 	EventBus.day_ended.emit(1)
 
 	assert_true(
@@ -171,7 +174,7 @@ func test_slot_4_unlocks_at_threshold() -> void:
 
 func test_slot_does_not_unlock_without_both_thresholds() -> void:
 	_progression._cumulative_cash_earned = 2000.0
-	_reputation.modify_reputation("", 10.0)
+	_set_owned_store_scores({"test_store": 10.0})
 	EventBus.day_ended.emit(1)
 
 	assert_false(
@@ -180,7 +183,7 @@ func test_slot_does_not_unlock_without_both_thresholds() -> void:
 	)
 
 	_progression._cumulative_cash_earned = 0.0
-	_reputation.modify_reputation("", 25.0)
+	_set_owned_store_scores({"test_store": 25.0})
 	EventBus.day_ended.emit(2)
 
 	assert_false(
@@ -197,7 +200,7 @@ func test_unlock_signal_fires_exactly_once() -> void:
 	EventBus.store_slot_unlocked.connect(on_unlock)
 
 	_progression._cumulative_cash_earned = 2000.0
-	_reputation.modify_reputation("", 25.0)
+	_set_owned_store_scores({"test_store": 25.0})
 	EventBus.day_ended.emit(1)
 	EventBus.day_ended.emit(2)
 
@@ -216,7 +219,7 @@ func test_multiple_slots_can_unlock_at_once() -> void:
 	EventBus.store_slot_unlocked.connect(on_unlock)
 
 	_progression._cumulative_cash_earned = 6000.0
-	_reputation.modify_reputation("", 40.0)
+	_set_owned_store_scores({"test_store": 40.0})
 	EventBus.day_ended.emit(1)
 
 	assert_true(
@@ -251,7 +254,7 @@ func test_save_load_preserves_cumulative_cash() -> void:
 
 func test_save_load_preserves_unlocked_slots() -> void:
 	_progression._cumulative_cash_earned = 2000.0
-	_reputation.modify_reputation("", 25.0)
+	_set_owned_store_scores({"test_store": 25.0})
 	EventBus.day_ended.emit(1)
 
 	assert_true(_progression.is_slot_unlocked(1))
@@ -282,3 +285,18 @@ func test_save_load_preserves_mall_reputation() -> void:
 		new_prog.get_mall_reputation(), 45.0, 0.01,
 		"Mall reputation should persist across save/load"
 	)
+
+
+func _set_owned_store_scores(scores: Dictionary) -> void:
+	var owned_slots: Dictionary = {}
+	var slot_index: int = 0
+	for store_id_value: Variant in scores:
+		var store_id: String = str(store_id_value)
+		_reputation.initialize_store(store_id)
+		var current_score: float = _reputation.get_reputation(store_id)
+		_reputation.add_reputation(
+			store_id, float(scores[store_id]) - current_score
+		)
+		owned_slots[slot_index] = StringName(store_id)
+		slot_index += 1
+	EventBus.owned_slots_restored.emit(owned_slots)

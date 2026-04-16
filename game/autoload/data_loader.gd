@@ -112,6 +112,11 @@ func load_all() -> void:
 	load_all_content()
 
 
+## Public session boot entry point used by GameManager.
+func run() -> void:
+	load_all()
+
+
 func load_all_content() -> void:
 	load_all_content_from_root(CONTENT_ROOT)
 
@@ -882,9 +887,18 @@ func generate_starter_inventory(
 	if canonical.is_empty():
 		return []
 	var common: Array[ItemDefinition] = []
-	for item: ItemDefinition in _items.values():
-		if item.store_type == String(canonical) and item.rarity == "common":
-			common.append(item)
+	for item_id: StringName in ContentRegistry.get_all_ids("item"):
+		var def: ItemDefinition = get_item(String(item_id))
+		if def == null:
+			continue
+		if def.rarity != "common":
+			continue
+		if not ContentRegistry.exists(def.store_type):
+			continue
+		var item_store_id: StringName = ContentRegistry.resolve(def.store_type)
+		if item_store_id != canonical:
+			continue
+		common.append(def)
 	if common.is_empty():
 		return []
 	var count: int = mini(randi_range(6, 10), common.size())

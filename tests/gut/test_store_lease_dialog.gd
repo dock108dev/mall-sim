@@ -6,11 +6,16 @@ extends GutTest
 var _dialog: StoreLeaseDialog
 var _lease_requested_calls: Array[Dictionary] = []
 var _panel_closed_calls: Array[String] = []
+var _store_defs: Array[StoreDefinition] = []
 
 
 func before_each() -> void:
 	_lease_requested_calls = []
 	_panel_closed_calls = []
+	_store_defs = []
+	ContentRegistry.clear_for_testing()
+	_register_store_catalog()
+	_store_defs = _build_store_defs()
 
 	var scene: PackedScene = preload(
 		"res://game/scenes/ui/store_lease_dialog.tscn"
@@ -31,6 +36,7 @@ func after_each() -> void:
 		)
 	if EventBus.panel_closed.is_connected(_capture_panel_closed):
 		EventBus.panel_closed.disconnect(_capture_panel_closed)
+	ContentRegistry.clear_for_testing()
 
 
 func _capture_lease_requested(
@@ -212,6 +218,10 @@ func test_pending_state_disables_all_buttons() -> void:
 		_dialog._back_button.disabled,
 		"Back button should be disabled while pending"
 	)
+	assert_true(
+		_dialog._pending_spinner.visible,
+		"Pending spinner should be visible while pending"
+	)
 
 
 func test_lease_completed_success_closes_dialog() -> void:
@@ -344,6 +354,10 @@ func test_status_label_cleared_after_completion() -> void:
 		_dialog._status_label.text, "",
 		"Status label should be cleared after completion"
 	)
+	assert_false(
+		_dialog._pending_spinner.visible,
+		"Pending spinner should hide after completion"
+	)
 
 
 func test_cancel_at_any_step_closes_without_side_effects() -> void:
@@ -363,14 +377,42 @@ func test_cancel_at_any_step_closes_without_side_effects() -> void:
 	)
 
 
-func test_owned_stores_grayed_out() -> void:
-	var store_defs: Array[StoreDefinition] = []
-	if GameManager.data_loader:
-		store_defs = GameManager.data_loader.get_all_stores()
+func test_escape_is_ignored_while_pending() -> void:
+	_open_dialog_with_funds(1000.0, 50.0)
+	_select_store_type("sports")
+	_dialog._on_confirm_pressed()
+	_dialog._name_input.text = "Test"
+	_dialog._on_confirm_pressed()
+	_dialog._on_confirm_pressed()
 
+	var escape_event := InputEventAction.new()
+	escape_event.action = "ui_cancel"
+	escape_event.pressed = true
+	_dialog._unhandled_input(escape_event)
+
+	assert_true(
+		_dialog.visible,
+		"Escape should not close the dialog while pending"
+	)
+
+
+func test_dialog_uses_modal_overlay_to_block_background_clicks() -> void:
+	assert_eq(
+		_dialog.mouse_filter,
+		Control.MOUSE_FILTER_STOP,
+		"Dialog root should block background clicks"
+	)
+	assert_eq(
+		_dialog._overlay.mouse_filter,
+		Control.MOUSE_FILTER_STOP,
+		"Overlay should block pointer input behind the dialog"
+	)
+
+
+func test_owned_stores_grayed_out() -> void:
 	var canonical: StringName = ContentRegistry.resolve("sports")
 	var owned: Array[StringName] = [canonical]
-	_dialog.show_for_slot(1, store_defs, owned, 1000.0, 50.0)
+	_dialog.show_for_slot(1, _store_defs, owned, 1000.0, 50.0)
 
 	var sports_btn: Button = _dialog._store_buttons.get(
 		"sports", null
@@ -397,11 +439,8 @@ func test_name_max_length_enforced() -> void:
 func _open_dialog_with_funds(
 	cash: float, reputation: float
 ) -> void:
-	var store_defs: Array[StoreDefinition] = []
-	if GameManager.data_loader:
-		store_defs = GameManager.data_loader.get_all_stores()
 	_dialog.show_for_slot(
-		0, store_defs, [], cash, reputation
+		0, _store_defs, [], cash, reputation
 	)
 
 
@@ -413,8 +452,71 @@ func _select_store_type(store_type: String) -> void:
 		String(canonical) if not canonical.is_empty()
 		else store_type
 	)
-	if GameManager.data_loader:
-		_dialog._selected_store_def = (
-			GameManager.data_loader.get_store(store_type)
-		)
+	_dialog._selected_store_def = _get_store_def(store_type)
 	_dialog._update_confirm_button()
+
+
+func _get_store_def(store_type: String) -> StoreDefinition:
+	for store_def: StoreDefinition in _store_defs:
+		var canonical: StringName = ContentRegistry.resolve(store_def.id)
+		if canonical == ContentRegistry.resolve(store_type):
+			return store_def
+	return null
+
+
+func _build_store_defs() -> Array[StoreDefinition]:
+	return [
+		_make_store_def(
+			"sports",
+			"Sports Memorabilia",
+			"Authentic jerseys and rare collectibles.",
+			120.0,
+			8,
+			4
+		),
+		_make_store_def(
+			"retro_games",
+			"Retro Games",
+			"Classic consoles, carts, and repairs.",
+			140.0,
+			10,
+			5
+		),
+	]
+
+
+func _make_store_def(
+	store_id: String,
+	store_name: String,
+	description: String,
+	daily_rent: float,
+	shelf_capacity: int,
+	backroom_capacity: int
+) -> StoreDefinition:
+	var store_def := StoreDefinition.new()
+	store_def.id = store_id
+	store_def.store_name = store_name
+	store_def.description = description
+	store_def.size_category = "small"
+	store_def.daily_rent = daily_rent
+	store_def.shelf_capacity = shelf_capacity
+	store_def.backroom_capacity = backroom_capacity
+	return store_def
+
+
+func _register_store_catalog() -> void:
+	ContentRegistry.register_entry(
+		{
+			"id": "sports",
+			"aliases": ["sports_memorabilia"],
+			"name": "Sports Memorabilia",
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{
+			"id": "retro_games",
+			"name": "Retro Games",
+		},
+		"store"
+	)

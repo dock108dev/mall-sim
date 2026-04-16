@@ -7,10 +7,14 @@ signal door_interacted(storefront: Storefront)
 const FACADE_SIZE := Vector3(6.6, 3.5, 0.2)
 const SIGN_OFFSET := Vector3(0.0, 3.2, 0.16)
 const STATUS_SIGN_OFFSET := Vector3(0.0, 2.55, 0.16)
+const LEASE_MARKER_OFFSET := Vector3(0.0, 2.55, 0.08)
+const LEASE_MARKER_SIZE := Vector3(2.0, 0.42, 0.04)
 const DOOR_SIZE := Vector3(1.5, 2.35, 0.16)
 const WINDOW_SIZE := Vector3(2.5, 2.0, 0.1)
 const ENTRY_ZONE_SIZE := Vector3(2.0, 2.0, 1.0)
 const ENTRY_ZONE_OFFSET := Vector3(0.0, 1.0, 0.7)
+const LEASE_MARKER_STATE_LOCKED: StringName = &"locked"
+const LEASE_MARKER_STATE_AVAILABLE: StringName = &"available"
 
 static var _facade_mat: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_storefront_facade.tres"
@@ -47,7 +51,9 @@ var _sign_label: Label3D
 var _status_label: Label3D
 var _door_interactable: Interactable
 var _entry_zone: Area3D
+var _lease_marker_mesh: MeshInstance3D
 var _is_store_open: bool = false
+static var _lease_marker_materials: Dictionary = {}
 
 
 func _ready() -> void:
@@ -65,6 +71,7 @@ func set_owned(p_store_id: String, p_store_type: String) -> void:
 	store_type = p_store_type
 	store_name = p_store_type
 	is_owned = true
+	is_locked = false
 	_door_interactable.display_name = p_store_type
 	_door_interactable.interaction_prompt = "Enter"
 	_update_sign()
@@ -74,6 +81,7 @@ func set_owned(p_store_id: String, p_store_type: String) -> void:
 ## Sets this storefront as permanently under renovation.
 func set_renovation() -> void:
 	is_owned = false
+	is_locked = false
 	store_id = "renovation"
 	store_type = ""
 	store_name = "Under Renovation"
@@ -123,12 +131,23 @@ func set_available(p_daily_rent: float) -> void:
 	_update_status_sign()
 
 
+## Returns the lease marker material state for tests and hallway unlock checks.
+func get_lease_marker_state() -> StringName:
+	if _lease_marker_mesh == null:
+		return &""
+	var material: Material = _lease_marker_mesh.get_surface_override_material(0)
+	if material == null:
+		return &""
+	return StringName(material.resource_name)
+
+
 func _build_visual() -> void:
 	_build_facade()
 	_build_entry_architecture()
 	_build_door()
 	_build_windows()
 	_build_sign()
+	_build_lease_marker()
 	_build_status_sign()
 	_build_entry_zone()
 
@@ -305,6 +324,20 @@ func _build_sign() -> void:
 	add_child(_sign_label)
 
 
+func _build_lease_marker() -> void:
+	_lease_marker_mesh = MeshInstance3D.new()
+	_lease_marker_mesh.name = "LeaseMarker"
+	_lease_marker_mesh.mesh = BoxMesh.new()
+	(_lease_marker_mesh.mesh as BoxMesh).size = LEASE_MARKER_SIZE
+	_lease_marker_mesh.position = LEASE_MARKER_OFFSET
+	_lease_marker_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_lease_marker_mesh.set_surface_override_material(
+		0,
+		_get_lease_marker_material(LEASE_MARKER_STATE_LOCKED)
+	)
+	add_child(_lease_marker_mesh)
+
+
 func _build_status_sign() -> void:
 	_status_label = Label3D.new()
 	_status_label.name = "StatusSign"
@@ -358,10 +391,29 @@ func _update_sign() -> void:
 
 
 func _update_status_sign() -> void:
-	if not _status_label:
+	if not _status_label or _lease_marker_mesh == null:
 		return
 
-	if store_id == "renovation" or is_locked:
+	if store_id == "renovation":
+		_lease_marker_mesh.visible = false
+		_status_label.visible = false
+		return
+
+	if is_owned:
+		_lease_marker_mesh.visible = false
+	else:
+		_lease_marker_mesh.visible = true
+		var marker_state: StringName = (
+			LEASE_MARKER_STATE_LOCKED
+			if is_locked
+			else LEASE_MARKER_STATE_AVAILABLE
+		)
+		_lease_marker_mesh.set_surface_override_material(
+			0,
+			_get_lease_marker_material(marker_state)
+		)
+
+	if is_locked:
 		_status_label.visible = false
 		return
 
@@ -447,3 +499,27 @@ func _on_renovation_interacted(
 		+ "'Renovations in Progress.' You hear a "
 		+ "faint hum from inside."
 	)
+
+
+static func _get_lease_marker_material(
+	state: StringName
+) -> StandardMaterial3D:
+	if _lease_marker_materials.has(state):
+		return _lease_marker_materials[state] as StandardMaterial3D
+
+	var material := StandardMaterial3D.new()
+	material.resource_name = String(state)
+	material.metallic = 0.0
+	material.roughness = 0.85
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+	match state:
+		LEASE_MARKER_STATE_AVAILABLE:
+			material.albedo_color = Color(0.95, 0.83, 0.22, 1.0)
+			material.emission_enabled = true
+			material.emission = Color(0.42, 0.31, 0.04, 1.0)
+			material.emission_energy_multiplier = 0.2
+		_:
+			material.albedo_color = Color(0.22, 0.22, 0.24, 1.0)
+			material.emission_enabled = false
+	_lease_marker_materials[state] = material
+	return material

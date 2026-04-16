@@ -17,7 +17,14 @@ var _active_store_scene: Node3D
 var _store_camera: PlayerController
 var _is_transitioning: bool = false
 var _inside_store: bool = false
+var _active_store_id: StringName = &""
 var _preloaded_scenes: Dictionary = {}
+
+
+func _ready() -> void:
+	_active_store_id = _resolve_store_id(GameManager.current_store_id)
+	if not EventBus.active_store_changed.is_connected(_on_active_store_changed):
+		EventBus.active_store_changed.connect(_on_active_store_changed)
 
 
 ## Injects runtime references. Must be called after construction, not in _ready.
@@ -35,8 +42,11 @@ func initialize(
 	_ui_layer = ui_layer
 	_setup_fade_rect()
 	_preload_store_scenes()
+	_active_store_id = _resolve_store_id(GameManager.current_store_id)
 	EventBus.enter_store_requested.connect(_on_enter_store_requested)
 	EventBus.exit_store_requested.connect(_on_exit_store_requested)
+	if not EventBus.active_store_changed.is_connected(_on_active_store_changed):
+		EventBus.active_store_changed.connect(_on_active_store_changed)
 
 
 ## Returns true when a store interior is currently loaded.
@@ -63,7 +73,7 @@ func select_store(store_id: StringName) -> void:
 		)
 		return
 
-	if _store_state_manager and _store_state_manager.active_store_id == store_id:
+	if _active_store_id == store_id:
 		return
 
 	if _store_state_manager:
@@ -137,7 +147,7 @@ func _on_exit_store_requested() -> void:
 	if _is_transitioning or not _inside_store:
 		return
 
-	var leaving_id: StringName = _store_state_manager.active_store_id
+	var leaving_id: StringName = _active_store_id
 	_is_transitioning = true
 
 	if not leaving_id.is_empty() and _store_state_manager:
@@ -212,6 +222,20 @@ func _get_store_scene(store_id: StringName) -> PackedScene:
 	if path.is_empty():
 		return null
 	return load(path) as PackedScene
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	_active_store_id = store_id
+
+
+func _resolve_store_id(raw_store_id: Variant) -> StringName:
+	var raw_id: String = str(raw_store_id)
+	if raw_id.is_empty():
+		return &""
+	var canonical: StringName = ContentRegistry.resolve(raw_id)
+	if canonical.is_empty():
+		return StringName(raw_id)
+	return canonical
 
 
 func _setup_fade_rect() -> void:

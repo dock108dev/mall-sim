@@ -10,9 +10,20 @@ const STORE_SLOT_A: int = 0
 var _system: StoreSelectorSystem
 var _state_manager: StoreStateManager
 var _store_changed: Array[StringName] = []
+var _saved_current_store_id: StringName = &""
 
 
 func before_each() -> void:
+	_saved_current_store_id = GameManager.current_store_id
+	GameManager.current_store_id = &""
+	ContentRegistry.clear_for_testing()
+	ContentRegistry.register_entry(
+		{
+			"id": "sports",
+			"name": "Sports",
+		},
+		"store"
+	)
 	_state_manager = StoreStateManager.new()
 	add_child_autofree(_state_manager)
 	_system = StoreSelectorSystem.new()
@@ -25,6 +36,8 @@ func before_each() -> void:
 func after_each() -> void:
 	if EventBus.active_store_changed.is_connected(_on_active_store_changed):
 		EventBus.active_store_changed.disconnect(_on_active_store_changed)
+	GameManager.current_store_id = _saved_current_store_id
+	ContentRegistry.clear_for_testing()
 
 
 ## Owned store: active_store_changed fires with the correct store StringName.

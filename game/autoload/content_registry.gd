@@ -212,8 +212,10 @@ func _normalize(raw: String) -> StringName:
 	result = result.to_snake_case()
 	result = result.replace("-", "_")
 	result = result.replace(" ", "_")
+	result = result.replace("/", "_")
 	while result.contains("__"):
 		result = result.replace("__", "_")
+	result = result.trim_prefix("_").trim_suffix("_")
 	return StringName(result)
 
 
@@ -240,21 +242,25 @@ func _register_entry(
 	_entries[id] = entry
 	_types[id] = content_type
 	_ready_flag = true
-	var display_name: String = str(entry.get("name", raw_id))
+	var display_name: String = _get_display_name(entry, raw_id)
 	_display_names[id] = display_name
-	if entry.has("scene_path"):
-		_scene_map[id] = str(entry["scene_path"])
-	_register_alias(_normalize(display_name), id)
+	var scene_path: String = _get_scene_path(entry)
+	if not scene_path.is_empty():
+		_scene_map[id] = scene_path
+	_register_optional_alias(display_name, id)
+	_register_optional_alias(scene_path.get_file().get_basename(), id)
 	if entry.has("aliases"):
 		var aliases: Array = entry["aliases"]
 		for alias: Variant in aliases:
-			_register_alias(_normalize(str(alias)), id)
+			_register_optional_alias(str(alias), id)
 
 
 func _register_alias(
 	alias: StringName, canonical: StringName
 ) -> void:
 	if alias == canonical:
+		return
+	if alias.is_empty():
 		return
 	if _entries.has(alias):
 		push_error(
@@ -269,3 +275,25 @@ func _register_alias(
 		)
 		return
 	_aliases[alias] = canonical
+
+
+func _get_display_name(entry: Dictionary, raw_id: String) -> String:
+	if entry.has("display_name"):
+		return str(entry["display_name"])
+	return str(entry.get("name", raw_id))
+
+
+func _get_scene_path(entry: Dictionary) -> String:
+	if entry.has("scene_path"):
+		return str(entry["scene_path"])
+	if entry.has("scene"):
+		return str(entry["scene"])
+	return ""
+
+
+func _register_optional_alias(
+	raw_alias: String, canonical: StringName
+) -> void:
+	if raw_alias.strip_edges().is_empty():
+		return
+	_register_alias(_normalize(raw_alias), canonical)

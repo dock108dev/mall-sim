@@ -4,9 +4,12 @@ extends RefCounted
 
 const HALLWAY_Z: float = 4.0
 const STORE_ENTRANCE_Z: float = 1.5
+const REGISTER_Z: float = 0.2
 const FOOD_COURT_Z: float = 6.5
 const STOREFRONT_SPACING: float = 8.0
 const STOREFRONT_COUNT: int = 5
+const EXIT_OFFSET: float = 8.0
+const ENTRANCE_OFFSET: float = 4.0
 
 
 ## Builds the complete waypoint graph and adds it under parent.
@@ -17,76 +20,107 @@ static func build(
 	var start_x: float = (
 		-float(STOREFRONT_COUNT - 1) * 0.5 * STOREFRONT_SPACING
 	)
+	var hallway_left_x: float = start_x + 0.5 * STOREFRONT_SPACING
+	var hallway_right_x: float = start_x + 3.5 * STOREFRONT_SPACING
 
 	var exit_a: MallWaypoint = _create_waypoint(
 		parent, "Exit_A",
-		Vector3(-21.0, 0.0, HALLWAY_Z),
+		Vector3(start_x - EXIT_OFFSET, 0.0, HALLWAY_Z),
 		MallWaypoint.WaypointType.EXIT
+	)
+	var entrance_a: MallWaypoint = _create_waypoint(
+		parent, "Entrance_A",
+		Vector3(start_x - ENTRANCE_OFFSET, 0.0, HALLWAY_Z),
+		MallWaypoint.WaypointType.HALLWAY
 	)
 	var exit_b: MallWaypoint = _create_waypoint(
 		parent, "Exit_B",
-		Vector3(21.0, 0.0, HALLWAY_Z),
+		Vector3(-start_x + EXIT_OFFSET, 0.0, HALLWAY_Z),
 		MallWaypoint.WaypointType.EXIT
 	)
-
-	var hallway_nodes: Array[MallWaypoint] = []
-	for i: int in range(STOREFRONT_COUNT):
-		var x: float = start_x + float(i) * STOREFRONT_SPACING
-		var wp: MallWaypoint = _create_waypoint(
-			parent, "Hallway_%d" % i,
-			Vector3(x, 0.0, HALLWAY_Z),
-			MallWaypoint.WaypointType.HALLWAY
-		)
-		hallway_nodes.append(wp)
-
-	_connect_bidirectional(exit_a, hallway_nodes[0])
-	for i: int in range(hallway_nodes.size() - 1):
-		_connect_bidirectional(hallway_nodes[i], hallway_nodes[i + 1])
-	_connect_bidirectional(
-		hallway_nodes[hallway_nodes.size() - 1], exit_b
+	var entrance_b: MallWaypoint = _create_waypoint(
+		parent, "Entrance_B",
+		Vector3(-start_x + ENTRANCE_OFFSET, 0.0, HALLWAY_Z),
+		MallWaypoint.WaypointType.HALLWAY
 	)
 
-	var store_entrances: Array[MallWaypoint] = []
+	var junction_west: MallWaypoint = _create_waypoint(
+		parent, "Junction_West",
+		Vector3(hallway_left_x, 0.0, HALLWAY_Z),
+		MallWaypoint.WaypointType.HALLWAY
+	)
+	var junction_center: MallWaypoint = _create_waypoint(
+		parent, "Junction_Center",
+		Vector3(0.0, 0.0, HALLWAY_Z),
+		MallWaypoint.WaypointType.HALLWAY
+	)
+	var junction_east: MallWaypoint = _create_waypoint(
+		parent, "Junction_East",
+		Vector3(hallway_right_x, 0.0, HALLWAY_Z),
+		MallWaypoint.WaypointType.HALLWAY
+	)
+
+	_connect_bidirectional(exit_a, entrance_a)
+	_connect_bidirectional(entrance_a, junction_west)
+	_connect_bidirectional(junction_west, junction_center)
+	_connect_bidirectional(junction_center, junction_east)
+	_connect_bidirectional(junction_east, entrance_b)
+	_connect_bidirectional(entrance_b, exit_b)
+
+	var entrance_junctions: Array[MallWaypoint] = [
+		junction_west,
+		junction_west,
+		junction_center,
+		junction_east,
+		junction_east,
+	]
 	for i: int in range(STOREFRONT_COUNT):
 		var x: float = start_x + float(i) * STOREFRONT_SPACING
 		var sid: StringName = &""
 		if i < store_ids.size():
 			sid = store_ids[i]
-		var wp: MallWaypoint = _create_waypoint(
+		var entrance: MallWaypoint = _create_waypoint(
 			parent, "StoreEntrance_%d" % i,
 			Vector3(x, 0.0, STORE_ENTRANCE_Z),
 			MallWaypoint.WaypointType.STORE_ENTRANCE,
 			sid
 		)
-		store_entrances.append(wp)
-		_connect_bidirectional(hallway_nodes[i], wp)
+		var register: MallWaypoint = _create_waypoint(
+			parent, "Register_%d" % i,
+			Vector3(x, 0.0, REGISTER_Z),
+			MallWaypoint.WaypointType.REGISTER,
+			sid
+		)
+		_connect_bidirectional(entrance_junctions[i], entrance)
+		_connect_bidirectional(entrance, register)
 
 	var bench_left: MallWaypoint = _create_waypoint(
-		parent, "Bench_Left",
-		Vector3(-2.5, 0.0, HALLWAY_Z),
+		parent, "Bench_Row_Left",
+		Vector3(-2.5, 0.0, 5.2),
 		MallWaypoint.WaypointType.BENCH
 	)
 	var bench_right: MallWaypoint = _create_waypoint(
-		parent, "Bench_Right",
-		Vector3(2.5, 0.0, HALLWAY_Z),
+		parent, "Bench_Row_Right",
+		Vector3(2.5, 0.0, 5.2),
 		MallWaypoint.WaypointType.BENCH
 	)
-	_connect_bidirectional(hallway_nodes[1], bench_left)
-	_connect_bidirectional(bench_left, hallway_nodes[2])
-	_connect_bidirectional(hallway_nodes[2], bench_right)
-	_connect_bidirectional(bench_right, hallway_nodes[3])
+	_connect_bidirectional(junction_west, bench_left)
+	_connect_bidirectional(bench_left, junction_center)
+	_connect_bidirectional(junction_center, bench_right)
+	_connect_bidirectional(bench_right, junction_east)
 
 	var food_hub: MallWaypoint = _create_waypoint(
 		parent, "FoodCourt_Hub",
-		Vector3(0.0, 0.0, 5.5),
+		Vector3(0.0, 0.0, 5.8),
 		MallWaypoint.WaypointType.HALLWAY
 	)
-	_connect_bidirectional(hallway_nodes[2], food_hub)
+	_connect_bidirectional(junction_center, food_hub)
 
 	var seat_positions: Array[Vector3] = [
-		Vector3(-2.0, 0.0, FOOD_COURT_Z),
-		Vector3(0.0, 0.0, FOOD_COURT_Z),
-		Vector3(2.0, 0.0, FOOD_COURT_Z),
+		Vector3(-2.4, 0.0, FOOD_COURT_Z),
+		Vector3(-0.8, 0.0, FOOD_COURT_Z + 0.4),
+		Vector3(0.8, 0.0, FOOD_COURT_Z + 0.4),
+		Vector3(2.4, 0.0, FOOD_COURT_Z),
 	]
 	for i: int in range(seat_positions.size()):
 		var seat: MallWaypoint = _create_waypoint(

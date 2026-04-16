@@ -21,6 +21,9 @@ var _refund_amounts: Array[float] = []
 
 
 func before_each() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+	GameManager.data_loader = DataLoaderSingleton
 	_order_placed_count = 0
 	_order_failed_reason = ""
 	_delivered_stores = []
@@ -35,26 +38,26 @@ func before_each() -> void:
 
 	_economy_system = EconomySystem.new()
 	_economy_system.name = "EconomySystem"
-	add_child(_economy_system)
+	add_child_autofree(_economy_system)
 	_economy_system.initialize()
 
 	_inventory_system = InventorySystem.new()
 	_inventory_system.name = "InventorySystem"
-	add_child(_inventory_system)
+	add_child_autofree(_inventory_system)
 	_inventory_system.initialize(GameManager.data_loader)
 
 	_reputation_system = ReputationSystem.new()
 	_reputation_system.name = "ReputationSystem"
-	add_child(_reputation_system)
+	add_child_autofree(_reputation_system)
 
 	_progression_system = ProgressionSystem.new()
 	_progression_system.name = "ProgressionSystem"
-	add_child(_progression_system)
+	add_child_autofree(_progression_system)
 	_progression_system.initialize(_economy_system, _reputation_system)
 
 	_order_system = OrderSystem.new()
 	_order_system.name = "OrderSystem"
-	add_child(_order_system)
+	add_child_autofree(_order_system)
 	_order_system.initialize(
 		_inventory_system, _reputation_system, _progression_system
 	)
@@ -80,12 +83,6 @@ func after_each() -> void:
 		EventBus.order_stockout.disconnect(_on_order_stockout)
 	if EventBus.order_refund_issued.is_connected(_on_order_refund_issued):
 		EventBus.order_refund_issued.disconnect(_on_order_refund_issued)
-
-	_order_system.queue_free()
-	_progression_system.queue_free()
-	_reputation_system.queue_free()
-	_inventory_system.queue_free()
-	_economy_system.queue_free()
 
 
 func _on_order_placed(
@@ -126,6 +123,20 @@ func _on_order_stockout(
 
 func _on_order_refund_issued(amount: float, _reason: String) -> void:
 	_refund_amounts.append(amount)
+
+
+func _get_store_item(
+	store_id: String, rarities: PackedStringArray = PackedStringArray()
+) -> ItemDefinition:
+	if not GameManager.data_loader:
+		return null
+	var items: Array[ItemDefinition] = (
+		GameManager.data_loader.get_items_by_store(store_id)
+	)
+	for item: ItemDefinition in items:
+		if rarities.is_empty() or item.rarity in rarities:
+			return item
+	return null
 
 
 # --- SupplierTier enum ---
@@ -186,6 +197,41 @@ func test_premium_tier_locked_at_low_rep() -> void:
 			OrderSystem.SupplierTier.PREMIUM
 		),
 		"PREMIUM should be locked at low reputation"
+	)
+
+
+func test_specialty_tier_unlocks_at_reputable_tier() -> void:
+	_reputation_system.initialize_store("retro_games")
+	_reputation_system.add_reputation("retro_games", 5.0)
+	assert_true(
+		_order_system.is_tier_unlocked(
+			OrderSystem.SupplierTier.SPECIALTY,
+			&"retro_games"
+		),
+		"SPECIALTY should unlock once store reputation reaches tier 2"
+	)
+
+
+func test_liquidator_tier_unlocks_at_store_level_three() -> void:
+	_progression_system._unlocked_store_slots = 3
+	assert_true(
+		_order_system.is_tier_unlocked(
+			OrderSystem.SupplierTier.LIQUIDATOR,
+			&"retro_games"
+		),
+		"LIQUIDATOR should unlock once store level reaches 3"
+	)
+
+
+func test_premium_tier_unlocks_at_legendary_tier() -> void:
+	_reputation_system.initialize_store("retro_games")
+	_reputation_system.add_reputation("retro_games", 30.0)
+	assert_true(
+		_order_system.is_tier_unlocked(
+			OrderSystem.SupplierTier.PREMIUM,
+			&"retro_games"
+		),
+		"PREMIUM should unlock at the highest reputation tier"
 	)
 
 
@@ -319,16 +365,12 @@ func test_place_order_fails_with_zero_quantity() -> void:
 
 
 func test_place_order_fails_with_insufficient_cash() -> void:
-	if not GameManager.data_loader:
-		pending("DataLoader not available in test environment")
-		return
-	var items: Array[ItemDefinition] = (
-		GameManager.data_loader.get_items_by_store("retro_games")
+	var item: ItemDefinition = _get_store_item(
+		"retro_games", PackedStringArray(["common", "uncommon"])
 	)
-	if items.is_empty():
-		pending("No retro_games items available for testing")
+	if not item:
+		pending("No BASIC-tier retro_games item available for testing")
 		return
-	var item: ItemDefinition = items[0]
 	_economy_system.load_save_data({"cash": 0.0})
 	var result: bool = _order_system.place_order(
 		&"retro_games",
@@ -343,6 +385,27 @@ func test_place_order_fails_with_insufficient_cash() -> void:
 	)
 
 
+func test_place_order_fails_when_item_not_in_store_catalog() -> void:
+	var wrong_item: ItemDefinition = _get_store_item(
+		"video_rental", PackedStringArray(["common", "uncommon"])
+	)
+	if not wrong_item:
+		pending("Need a BASIC-tier video_rental item for testing")
+		return
+	var result: bool = _order_system.place_order(
+		&"retro_games",
+		OrderSystem.SupplierTier.BASIC,
+		StringName(wrong_item.id),
+		1,
+	)
+	assert_false(result, "Should fail when item is not in the store catalog")
+	assert_string_contains(
+		_order_failed_reason,
+		"not available for",
+		"Should emit order_failed with item-not-in-catalog reason"
+	)
+
+
 # --- Save/load ---
 
 
@@ -354,7 +417,7 @@ func test_save_load_preserves_pending_orders() -> void:
 	)
 	var new_system: OrderSystem = OrderSystem.new()
 	new_system.name = "OrderSystem2"
-	add_child(new_system)
+	add_child_autofree(new_system)
 	new_system.initialize(
 		_inventory_system, _reputation_system, _progression_system
 	)
@@ -364,7 +427,6 @@ func test_save_load_preserves_pending_orders() -> void:
 		_order_system.get_pending_order_count(),
 		"Loaded system should have same pending order count"
 	)
-	new_system.queue_free()
 
 
 func test_save_data_round_trip_with_orders() -> void:
@@ -485,7 +547,7 @@ func test_daily_spending_saved_and_restored() -> void:
 	)
 	var new_system: OrderSystem = OrderSystem.new()
 	new_system.name = "OrderSystem2"
-	add_child(new_system)
+	add_child_autofree(new_system)
 	new_system.initialize(
 		_inventory_system, _reputation_system, _progression_system
 	)
@@ -499,7 +561,6 @@ func test_daily_spending_saved_and_restored() -> void:
 		),
 		"Daily spending should be preserved after load"
 	)
-	new_system.queue_free()
 
 
 # --- Toast notification on delivery ---

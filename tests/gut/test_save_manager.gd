@@ -186,7 +186,7 @@ func test_load_corrupt_file_returns_false() -> void:
 	GameManager.current_store_id = "sports"
 	_save_manager.save_game(_test_slot)
 
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % _test_slot
+	var path: String = _save_manager._get_slot_path(_test_slot)
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	assert_not_null(file, "Should be able to open save file for corruption")
 	file.store_string("{{{not valid json at all!!!")
@@ -238,7 +238,7 @@ func test_slot_metadata_contains_timestamp_and_store() -> void:
 
 func test_slot_metadata_includes_used_difficulty_downgrade_true() -> void:
 	var slot: int = 3
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % slot
+	var path: String = _save_manager._get_slot_path(slot)
 	var mock_data: Dictionary = {
 		"save_version": SaveManager.CURRENT_SAVE_VERSION,
 		"save_metadata": {
@@ -273,7 +273,7 @@ func test_slot_metadata_includes_used_difficulty_downgrade_true() -> void:
 
 func test_slot_metadata_includes_used_difficulty_downgrade_false() -> void:
 	var slot: int = 3
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % slot
+	var path: String = _save_manager._get_slot_path(slot)
 	var mock_data: Dictionary = {
 		"save_version": SaveManager.CURRENT_SAVE_VERSION,
 		"save_metadata": {
@@ -308,7 +308,7 @@ func test_slot_metadata_includes_used_difficulty_downgrade_false() -> void:
 
 func test_slot_metadata_used_difficulty_downgrade_defaults_false_when_key_absent() -> void:
 	var slot: int = 3
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % slot
+	var path: String = _save_manager._get_slot_path(slot)
 	var mock_data: Dictionary = {
 		"save_version": SaveManager.CURRENT_SAVE_VERSION,
 		"save_metadata": {
@@ -359,17 +359,17 @@ func test_auto_save_not_on_day_ended_alone() -> void:
 	)
 
 
-func test_auto_save_triggers_after_next_day_confirmed() -> void:
+func test_auto_save_triggers_after_day_acknowledged() -> void:
 	GameManager.owned_stores = ["sports"]
 	GameManager.current_store_id = "sports"
 	_time_system.current_day = 3
 
 	EventBus.day_ended.emit(3)
-	EventBus.next_day_confirmed.emit()
+	EventBus.day_acknowledged.emit()
 
 	assert_true(
 		_save_manager.slot_exists(SaveManager.AUTO_SAVE_SLOT),
-		"Auto-save slot should exist after next_day_confirmed"
+		"Auto-save slot should exist after day_acknowledged"
 	)
 	var metadata: Dictionary = _save_manager.get_slot_metadata(
 		SaveManager.AUTO_SAVE_SLOT
@@ -401,7 +401,7 @@ func test_load_non_dict_root_returns_false() -> void:
 	GameManager.current_store_id = "sports"
 	_save_manager.save_game(_test_slot)
 
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % _test_slot
+	var path: String = _save_manager._get_slot_path(_test_slot)
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	file.store_string("[1, 2, 3]")
 	file.close()
@@ -455,12 +455,40 @@ func test_owned_slots_round_trip() -> void:
 	)
 
 
-func test_v1_save_migration_converts_array_to_slots() -> void:
+func test_save_serializes_owned_slots_as_dictionary() -> void:
+	_store_state_manager.register_slot_ownership(0, &"retro_games")
+	_store_state_manager.register_slot_ownership(2, &"electronics")
+	GameManager.owned_stores = [&"retro_games", &"electronics"]
+	GameManager.current_store_id = &"retro_games"
+
+	var saved: bool = _save_manager.save_game(_test_slot)
+	assert_true(saved, "Save should succeed")
+
+	var raw: Dictionary = _read_save_file_raw(_test_slot)
+	var owned_slots: Variant = raw.get("owned_slots", {})
+	assert_true(
+		owned_slots is Dictionary,
+		"owned_slots should serialize as a Dictionary"
+	)
+	if owned_slots is Dictionary:
+		assert_eq(
+			(owned_slots as Dictionary).get("0", ""),
+			"retro_games",
+			"Slot 0 should serialize to retro_games"
+		)
+		assert_eq(
+			(owned_slots as Dictionary).get("2", ""),
+			"electronics",
+			"Slot 2 should serialize to electronics"
+		)
+
+
+func test_v0_save_migration_converts_array_to_slots() -> void:
 	GameManager.owned_stores = [&"retro_games", &"sports"]
 	GameManager.current_store_id = &"retro_games"
 
-	var v1_data: Dictionary = {
-		"save_version": 1,
+	var v0_data: Dictionary = {
+		"save_version": 0,
 		"metadata": {
 			"timestamp": "2026-01-01T00:00:00",
 			"day_number": 1,
@@ -474,8 +502,8 @@ func test_v1_save_migration_converts_array_to_slots() -> void:
 		"owned_stores": ["retro_games", "sports"],
 	}
 
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % _test_slot
-	var json_string: String = JSON.stringify(v1_data, "\t")
+	var path: String = _save_manager._get_slot_path(_test_slot)
+	var json_string: String = JSON.stringify(v0_data, "\t")
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	file.store_string(json_string)
 	file.close()
@@ -484,19 +512,71 @@ func test_v1_save_migration_converts_array_to_slots() -> void:
 	GameManager.owned_stores = []
 
 	var loaded: bool = _save_manager.load_game(_test_slot)
-	assert_true(loaded, "Loading v1 save should succeed")
+	assert_true(loaded, "Loading v0 save should succeed")
 
 	assert_true(
 		_store_state_manager.owned_slots.size() > 0,
-		"owned_slots should be populated after v1 migration"
+		"owned_slots should be populated after v0 migration"
 	)
 	assert_has(
 		GameManager.owned_stores, &"retro_games",
-		"retro_games should survive v1 migration"
+		"retro_games should survive v0 migration"
 	)
 	assert_has(
 		GameManager.owned_stores, &"sports",
-		"sports should survive v1 migration"
+		"sports should survive v0 migration"
+	)
+
+
+func test_load_migrates_legacy_owned_slots_array() -> void:
+	var store_ids: Array[StringName] = ContentRegistry.get_all_ids("store")
+	var expected_retro_slot: int = store_ids.find(&"retro_games")
+	var expected_sports_slot: int = store_ids.find(&"sports")
+	assert_ne(expected_retro_slot, -1, "retro_games should map to a slot")
+	assert_ne(expected_sports_slot, -1, "sports should map to a slot")
+
+	var legacy_data: Dictionary = {
+		"save_version": SaveManager.CURRENT_SAVE_VERSION,
+		"metadata": {
+			"timestamp": "2026-01-01T00:00:00",
+			"day_number": 1,
+			"store_type": "retro_games",
+			"play_time": 0.0,
+		},
+		"save_metadata": {
+			"day": 1,
+			"cash": 1000.0,
+			"owned_stores": ["retro_games", "sports"],
+			"saved_at": "2026-01-01T00:00:00",
+			"store_type": "retro_games",
+		},
+		"time": _time_system.get_save_data(),
+		"economy": _economy.get_save_data(),
+		"inventory": _inventory.get_save_data(),
+		"reputation": _reputation.get_save_data(),
+		"owned_slots": ["retro_games", "sports"],
+	}
+
+	var path: String = _save_manager._get_slot_path(_test_slot)
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	assert_not_null(file, "Should be able to write legacy save file")
+	file.store_string(JSON.stringify(legacy_data, "\t"))
+	file.close()
+
+	_store_state_manager.owned_slots = {}
+	GameManager.owned_stores = []
+
+	var loaded: bool = _save_manager.load_game(_test_slot)
+	assert_true(loaded, "Loading legacy owned_slots array should succeed")
+	assert_eq(
+		_store_state_manager.owned_slots.get(expected_retro_slot, &""),
+		&"retro_games",
+		"retro_games should migrate to its canonical slot"
+	)
+	assert_eq(
+		_store_state_manager.owned_slots.get(expected_sports_slot, &""),
+		&"sports",
+		"sports should migrate to its canonical slot"
 	)
 
 
@@ -679,7 +759,7 @@ func test_load_corrupt_file_emits_save_load_failed() -> void:
 	GameManager.current_store_id = "sports"
 	_save_manager.save_game(_test_slot)
 
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % _test_slot
+	var path: String = _save_manager._get_slot_path(_test_slot)
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	file.store_string("{{{corrupt json!!!")
 	file.close()
@@ -833,7 +913,7 @@ func _assert_dict_match(
 
 
 func _read_save_file_raw(slot: int) -> Dictionary:
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % slot
+	var path: String = _save_manager._get_slot_path(slot)
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if not file:
 		return {}

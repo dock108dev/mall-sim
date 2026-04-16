@@ -54,7 +54,7 @@ func _ready() -> void:
 
 
 func initialize() -> void:
-	EventBus.time_speed_requested.connect(_on_time_speed_requested)
+	_connect_runtime_signals()
 	_apply_state({})
 
 
@@ -208,6 +208,13 @@ func get_save_data() -> Dictionary:
 
 func load_save_data(data: Dictionary) -> void:
 	_apply_state(data)
+
+
+func _connect_runtime_signals() -> void:
+	if not EventBus.time_speed_requested.is_connected(
+		_on_time_speed_requested
+	):
+		EventBus.time_speed_requested.connect(_on_time_speed_requested)
 
 
 func _on_unlock_granted(unlock_id: StringName) -> void:

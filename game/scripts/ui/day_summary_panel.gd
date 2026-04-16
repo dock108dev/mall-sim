@@ -3,6 +3,7 @@ class_name DaySummaryPanel
 extends CanvasLayer
 
 signal review_inventory_requested
+signal dismissed
 
 const ACKNOWLEDGE_DELAY: float = 1.0
 const OVERLAY_FADE_DURATION: float = 0.2
@@ -29,6 +30,7 @@ var _report_detail_labels: Array[Label] = []
 var _record_high_rows: Array[Control] = []
 var _record_low_rows: Array[Control] = []
 var _pending_summary: Dictionary = {}
+var _emit_day_acknowledged_on_close: bool = false
 
 @onready var _overlay: ColorRect = $Overlay
 @onready var _panel: PanelContainer = $Panel
@@ -424,8 +426,8 @@ func _enable_acknowledge() -> void:
 
 
 func _on_acknowledge_pressed() -> void:
+	_emit_day_acknowledged_on_close = true
 	EventBus.next_day_confirmed.emit()
-	EventBus.day_acknowledged.emit()
 	_close()
 
 
@@ -449,6 +451,10 @@ func _close() -> void:
 		_pending_report = null
 		_pending_summary.clear()
 		_wages_this_day = 0.0
+		dismissed.emit()
+		if _emit_day_acknowledged_on_close:
+			_emit_day_acknowledged_on_close = false
+			EventBus.day_acknowledged.emit()
 	)
 
 

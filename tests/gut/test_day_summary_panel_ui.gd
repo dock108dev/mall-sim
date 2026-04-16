@@ -163,6 +163,30 @@ func test_acknowledge_closes_panel() -> void:
 	)
 
 
+func test_day_acknowledged_emits_after_panel_dismisses() -> void:
+	EventBus.day_ended.emit(1)
+	_panel._acknowledge_button.disabled = false
+	var signal_fired: Array = [false]
+	var dismissed_fired: Array = [false]
+	EventBus.day_acknowledged.connect(
+		func() -> void: signal_fired[0] = true
+	)
+	_panel.dismissed.connect(
+		func() -> void: dismissed_fired[0] = true
+	)
+	_panel._on_acknowledge_pressed()
+	assert_false(
+		signal_fired[0],
+		"day_acknowledged should wait until the panel is dismissed"
+	)
+	await get_tree().create_timer(0.5).timeout
+	assert_true(dismissed_fired[0], "dismissed should fire after the panel closes")
+	assert_true(
+		signal_fired[0],
+		"day_acknowledged should fire after the panel closes"
+	)
+
+
 func test_day_acknowledged_signal_exists() -> void:
 	assert_true(
 		EventBus.has_signal("day_acknowledged"),

@@ -363,8 +363,9 @@ func _grant_supplier_tier(tier: int) -> void:
 
 func _recalculate_mall_reputation() -> void:
 	if not _reputation_system:
+		_mall_reputation = 0.0
 		return
-	_mall_reputation = _reputation_system.get_reputation()
+	_mall_reputation = _reputation_system.get_global_reputation()
 
 
 func _check_store_unlock_thresholds() -> void:

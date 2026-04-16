@@ -19,6 +19,8 @@ func _ready() -> void:
 	_collect_slots()
 	_collect_areas()
 	_build_decorations()
+	EventBus.store_entered.connect(_defer_store_entered)
+	EventBus.store_exited.connect(_on_store_exited)
 	EventBus.active_store_changed.connect(_on_active_store_changed)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.customer_entered.connect(_on_customer_entered)
@@ -149,6 +151,16 @@ func _on_store_deactivated() -> void:
 	pass
 
 
+## Virtual method called after GameWorld has wired dependencies for store entry.
+func _on_store_entered(_store_id: StringName) -> void:
+	pass
+
+
+## Virtual method called when the player exits this store.
+func _on_store_exited(_store_id: StringName) -> void:
+	pass
+
+
 ## Virtual method called at the start of each day.
 func _on_day_started(_day: int) -> void:
 	pass
@@ -200,3 +212,7 @@ func _build_decorations() -> void:
 	var node_ref: Variant = self
 	if node_ref is Node3D:
 		StoreDecorationBuilder.build(node_ref as Node3D, store_type)
+
+
+func _defer_store_entered(store_id: StringName) -> void:
+	call_deferred("_on_store_entered", store_id)

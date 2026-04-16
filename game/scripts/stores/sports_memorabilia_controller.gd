@@ -18,8 +18,6 @@ func _ready() -> void:
 	store_type = STORE_ID
 	super._ready()
 	_load_season_boost()
-	EventBus.store_entered.connect(_on_store_entered)
-	EventBus.store_exited.connect(_on_store_exited)
 	EventBus.customer_purchased.connect(_on_customer_purchased)
 	EventBus.market_event_triggered.connect(_on_market_event)
 	EventBus.provenance_accepted.connect(_on_provenance_accepted)

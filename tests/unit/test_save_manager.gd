@@ -59,26 +59,26 @@ func after_each() -> void:
 func test_get_save_slot_path_returns_correct_path() -> void:
 	var path_0: String = _save_manager._get_slot_path(0)
 	assert_eq(
-		path_0, SaveManager.SAVE_DIR + "auto_save.json",
-		"Slot 0 (auto-save) should return auto_save.json path"
+		path_0, SaveManager.SAVE_DIR + "save_slot_0.json",
+		"Slot 0 (auto-save) should return save_slot_0.json path"
 	)
 
 	var path_1: String = _save_manager._get_slot_path(1)
 	assert_eq(
-		path_1, SaveManager.SAVE_DIR + "slot_1.json",
-		"Slot 1 should return slot_1.json path"
+		path_1, SaveManager.SAVE_DIR + "save_slot_1.json",
+		"Slot 1 should return save_slot_1.json path"
 	)
 
 	var path_2: String = _save_manager._get_slot_path(2)
 	assert_eq(
-		path_2, SaveManager.SAVE_DIR + "slot_2.json",
-		"Slot 2 should return slot_2.json path"
+		path_2, SaveManager.SAVE_DIR + "save_slot_2.json",
+		"Slot 2 should return save_slot_2.json path"
 	)
 
 	var path_3: String = _save_manager._get_slot_path(3)
 	assert_eq(
-		path_3, SaveManager.SAVE_DIR + "slot_3.json",
-		"Slot 3 should return slot_3.json path"
+		path_3, SaveManager.SAVE_DIR + "save_slot_3.json",
+		"Slot 3 should return save_slot_3.json path"
 	)
 
 
@@ -224,12 +224,12 @@ func test_save_version_field_is_written() -> void:
 # --- Old version migration ---
 
 
-func test_load_old_version_save_emits_migration_warning() -> void:
+func test_load_version_0_save_migrates_without_rewriting_disk() -> void:
 	GameManager.owned_stores = [&"sports"]
 	GameManager.current_store_id = &"sports"
 
-	var v1_data: Dictionary = {
-		"save_version": 1,
+	var v0_data: Dictionary = {
+		"save_version": 0,
 		"metadata": {
 			"timestamp": "2026-01-01T00:00:00",
 			"day_number": 1,
@@ -243,9 +243,9 @@ func test_load_old_version_save_emits_migration_warning() -> void:
 		"owned_stores": ["sports"],
 	}
 
-	var path: String = SaveManager.SAVE_DIR + "slot_1.json"
+	var path: String = SaveManager.SAVE_DIR + "save_slot_1.json"
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	file.store_string(JSON.stringify(v1_data, "\t"))
+	file.store_string(JSON.stringify(v0_data, "\t"))
 	file.close()
 
 	var loaded: bool = _save_manager.load_game(1)
@@ -256,8 +256,8 @@ func test_load_old_version_save_emits_migration_warning() -> void:
 
 	var reloaded: Dictionary = _read_save_file_raw(1)
 	assert_eq(
-		int(reloaded.get("save_version", -1)), 1,
-		"Original file retains v1 version on disk"
+		int(reloaded.get("save_version", -1)), 0,
+		"Original file should retain version 0 on disk"
 	)
 
 

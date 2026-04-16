@@ -1,16 +1,12 @@
 ## Multi-step dialog for leasing a storefront: type selection, naming, confirmation.
 class_name StoreLeaseDialog
-extends PanelContainer
+extends Control
 
 enum Step { TYPE_SELECTION, NAMING, CONFIRMATION }
 
-const UNLOCK_REQUIREMENTS: Array[Dictionary] = [
-	{},
-	{"reputation": 25, "cost": 500},
-	{"reputation": 40, "cost": 1500},
-	{"reputation": 55, "cost": 4000},
-	{"reputation": 70, "cost": 10000},
-]
+const UNLOCK_REQUIREMENTS: Array[Dictionary] = (
+	StoreStateManager.LEASE_UNLOCK_REQUIREMENTS
+)
 const MAX_STORE_NAME_LENGTH: int = 24
 const STARTER_ITEM_COUNT_MIN: int = 6
 const STARTER_ITEM_COUNT_MAX: int = 10
@@ -26,45 +22,53 @@ var _is_pending: bool = false
 var _current_step: Step = Step.TYPE_SELECTION
 var _selected_store_def: StoreDefinition
 
-@onready var _title_label: Label = $Margin/VBox/TitleLabel
-@onready var _type_page: VBoxContainer = $Margin/VBox/TypeSelectionPage
+@onready var _overlay: ColorRect = $Overlay
+@onready var _dialog_panel: PanelContainer = $DialogPanel
+@onready var _title_label: Label = $DialogPanel/Margin/VBox/TitleLabel
+@onready var _type_page: VBoxContainer = $DialogPanel/Margin/VBox/TypeSelectionPage
 @onready var _req_label: Label = (
-	$Margin/VBox/TypeSelectionPage/ReqLabel
+	$DialogPanel/Margin/VBox/TypeSelectionPage/ReqLabel
 )
 @onready var _store_list: VBoxContainer = (
-	$Margin/VBox/TypeSelectionPage/StoreScroll/StoreList
+	$DialogPanel/Margin/VBox/TypeSelectionPage/StoreScroll/StoreList
 )
 @onready var _desc_label: Label = (
-	$Margin/VBox/TypeSelectionPage/DescLabel
+	$DialogPanel/Margin/VBox/TypeSelectionPage/DescLabel
 )
-@onready var _naming_page: VBoxContainer = $Margin/VBox/NamingPage
+@onready var _naming_page: VBoxContainer = $DialogPanel/Margin/VBox/NamingPage
 @onready var _name_input: LineEdit = (
-	$Margin/VBox/NamingPage/NameInput
+	$DialogPanel/Margin/VBox/NamingPage/NameInput
 )
 @onready var _char_count_label: Label = (
-	$Margin/VBox/NamingPage/CharCountLabel
+	$DialogPanel/Margin/VBox/NamingPage/CharCountLabel
 )
 @onready var _confirm_page: VBoxContainer = (
-	$Margin/VBox/ConfirmationPage
+	$DialogPanel/Margin/VBox/ConfirmationPage
 )
 @onready var _summary_label: Label = (
-	$Margin/VBox/ConfirmationPage/SummaryLabel
+	$DialogPanel/Margin/VBox/ConfirmationPage/SummaryLabel
 )
-@onready var _error_label: Label = $Margin/VBox/ErrorLabel
-@onready var _status_label: Label = $Margin/VBox/StatusLabel
+@onready var _error_label: Label = $DialogPanel/Margin/VBox/ErrorLabel
+@onready var _pending_spinner: ProgressBar = (
+	$DialogPanel/Margin/VBox/PendingRow/PendingSpinner
+)
+@onready var _status_label: Label = $DialogPanel/Margin/VBox/PendingRow/StatusLabel
 @onready var _back_button: Button = (
-	$Margin/VBox/ButtonRow/BackButton
+	$DialogPanel/Margin/VBox/ButtonRow/BackButton
 )
 @onready var _confirm_button: Button = (
-	$Margin/VBox/ButtonRow/ConfirmButton
+	$DialogPanel/Margin/VBox/ButtonRow/ConfirmButton
 )
 @onready var _cancel_button: Button = (
-	$Margin/VBox/ButtonRow/CancelButton
+	$DialogPanel/Margin/VBox/ButtonRow/CancelButton
 )
 
 
 func _ready() -> void:
 	visible = false
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dialog_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	_back_button.pressed.connect(_on_back_pressed)
@@ -99,8 +103,7 @@ func show_for_slot(
 
 	_populate_store_list(store_defs)
 	_error_label.text = ""
-	_status_label.text = ""
-	_cancel_button.disabled = false
+	_set_pending(false)
 	_go_to_step(Step.TYPE_SELECTION)
 
 	visible = true
@@ -115,6 +118,7 @@ func close_dialog() -> void:
 	_current_slot_index = -1
 	_selected_store_type = ""
 	_store_name = ""
+	_selected_store_def = null
 	_is_pending = false
 	EventBus.panel_closed.emit("store_lease_dialog")
 
@@ -322,6 +326,7 @@ func _set_pending(pending: bool) -> void:
 	_confirm_button.disabled = pending
 	_cancel_button.disabled = pending
 	_back_button.disabled = pending
+	_pending_spinner.visible = pending
 	if pending:
 		_status_label.text = "Processing lease..."
 		_error_label.text = ""
@@ -397,11 +402,7 @@ func _on_lease_completed(
 
 	_set_pending(false)
 	if success:
-		visible = false
-		_current_slot_index = -1
-		_selected_store_type = ""
-		_store_name = ""
-		EventBus.panel_closed.emit("store_lease_dialog")
+		close_dialog()
 	else:
 		_error_label.text = message
 		_update_confirm_button()

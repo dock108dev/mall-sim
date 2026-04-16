@@ -1,5 +1,5 @@
 ## Tests MallWaypoint, MallWaypointAgent BFS pathfinding, and
-## MallWaypointGraphBuilder bidirectional connections.
+## mall waypoint graph coverage.
 extends GutTest
 
 
@@ -208,6 +208,7 @@ func test_graph_builder_creates_all_waypoints() -> void:
 
 	var exits: Array = [0]
 	var store_entrances: Array = [0]
+	var registers: Array = [0]
 	var benches: Array = [0]
 	var food_seats: Array = [0]
 	var hallway_nodes: Array = [0]
@@ -218,6 +219,8 @@ func test_graph_builder_creates_all_waypoints() -> void:
 				exits[0] += 1
 			MallWaypoint.WaypointType.STORE_ENTRANCE:
 				store_entrances[0] += 1
+			MallWaypoint.WaypointType.REGISTER:
+				registers[0] += 1
 			MallWaypoint.WaypointType.BENCH:
 				benches[0] += 1
 			MallWaypoint.WaypointType.FOOD_COURT_SEAT:
@@ -230,10 +233,15 @@ func test_graph_builder_creates_all_waypoints() -> void:
 		store_entrances[0], 5,
 		"Should have 5 store entrance waypoints"
 	)
+	assert_eq(registers[0], 5, "Should have 5 register waypoints")
 	assert_true(benches[0] >= 2, "Should have at least 2 bench waypoints")
 	assert_true(
 		food_seats[0] >= 3,
 		"Should have at least 3 food court seats"
+	)
+	assert_true(
+		hallway_nodes[0] >= 6,
+		"Should have hallway junctions, entrances, and food hub"
 	)
 
 
@@ -260,7 +268,7 @@ func test_graph_builder_bidirectional_connections() -> void:
 			)
 
 
-func test_graph_builder_store_entrance_ids() -> void:
+func test_graph_builder_store_waypoints_have_ids() -> void:
 	var parent := Node3D.new()
 	add_child_autofree(parent)
 	var store_ids: Array[StringName] = [
@@ -274,11 +282,14 @@ func test_graph_builder_store_entrance_ids() -> void:
 		if not child is MallWaypoint:
 			continue
 		var wp: MallWaypoint = child as MallWaypoint
-		if wp.waypoint_type != MallWaypoint.WaypointType.STORE_ENTRANCE:
+		if wp.waypoint_type not in [
+			MallWaypoint.WaypointType.STORE_ENTRANCE,
+			MallWaypoint.WaypointType.REGISTER,
+		]:
 			continue
 		assert_ne(
 			wp.associated_store_id, &"",
-			"Store entrance %s should have a store ID" % wp.name
+			"Store waypoint %s should have a store ID" % wp.name
 		)
 
 

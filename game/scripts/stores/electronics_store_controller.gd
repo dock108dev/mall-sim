@@ -30,7 +30,6 @@ func _ready() -> void:
 	_find_demo_stations()
 	_load_demo_config()
 	EventBus.item_stocked.connect(_on_item_stocked)
-	EventBus.store_exited.connect(_on_store_exited)
 
 
 ## Provides the economy system reference for warranty claim costs.

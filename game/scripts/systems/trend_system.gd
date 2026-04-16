@@ -144,9 +144,19 @@ func _apply_state(data: Dictionary) -> void:
 	var saved_trends: Array = data.get("active_trends", [])
 	for entry: Variant in saved_trends:
 		if entry is Dictionary:
-			_active_trends.append(
-				(entry as Dictionary).duplicate()
-			)
+			var trend_data: Dictionary = entry as Dictionary
+			_active_trends.append({
+				"target_type": str(trend_data.get("target_type", "")),
+				"target": str(trend_data.get("target", "")),
+				"trend_type": int(
+					trend_data.get("trend_type", TrendType.HOT)
+				),
+				"multiplier": float(trend_data.get("multiplier", 1.0)),
+				"announced_day": int(trend_data.get("announced_day", 0)),
+				"active_day": int(trend_data.get("active_day", 0)),
+				"end_day": int(trend_data.get("end_day", 0)),
+				"fade_end_day": int(trend_data.get("fade_end_day", 0)),
+			})
 	_sales_since_shift = {}
 	var saved_sales: Variant = data.get("sales_since_shift", {})
 	if saved_sales is Dictionary:

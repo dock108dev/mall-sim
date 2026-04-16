@@ -7,7 +7,7 @@ const _SCENE: PackedScene = preload(
 )
 
 const _TEST_SLOT: int = 3
-const _SAVE_DIR: String = "user://saves/"
+const _SAVE_DIR: String = "user://"
 
 var _panel: SaveLoadPanel
 var _save_manager: SaveManager
@@ -24,14 +24,14 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	var path: String = _SAVE_DIR + "slot_%d.json" % _TEST_SLOT
+	var path: String = _SAVE_DIR + "save_slot_%d.json" % _TEST_SLOT
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(path)
 
 
 func _write_mock_save(used_downgrade: bool) -> void:
 	DirAccess.make_dir_recursive_absolute(_SAVE_DIR)
-	var path: String = _SAVE_DIR + "slot_%d.json" % _TEST_SLOT
+	var path: String = _SAVE_DIR + "save_slot_%d.json" % _TEST_SLOT
 	var mock_data: Dictionary = {
 		"save_version": SaveManager.CURRENT_SAVE_VERSION,
 		"save_metadata": {

@@ -20,6 +20,22 @@ func test_charge_insufficient_funds_returns_false() -> void:
 	)
 
 
+func test_charge_insufficient_funds_emits_failure_signal() -> void:
+	watch_signals(EventBus)
+	var result: bool = _eco.charge(600.0, "too expensive")
+	assert_false(result, "charge should fail when funds are insufficient")
+	assert_signal_emitted(
+		EventBus, "transaction_completed",
+		"charge failures must emit transaction_completed"
+	)
+	var params: Array = get_signal_parameters(
+		EventBus, "transaction_completed"
+	)
+	assert_eq(params[0], 600.0)
+	assert_false(params[1] as bool)
+	assert_eq(params[2], "Insufficient funds")
+
+
 func test_charge_sufficient_funds_deducts() -> void:
 	var result: bool = _eco.charge(200.0, "stock purchase")
 	assert_true(result, "charge should return true when cash >= amount")
@@ -100,6 +116,17 @@ func test_reset_daily_totals() -> void:
 	)
 
 
+func test_day_started_signal_resets_daily_totals() -> void:
+	_eco.initialize(500.0)
+	GameManager.current_store_id = &"retro_games"
+	_eco.credit(200.0, &"revenue")
+	_eco.charge(50.0, "expense")
+	EventBus.day_started.emit(2)
+	assert_eq(_eco.get_daily_profit(), 0.0)
+	assert_eq(_eco.get_store_daily_revenue("retro_games"), 0.0)
+	assert_eq(_eco.daily_expenses, 0.0)
+
+
 func test_demand_modifier_stays_within_bounds() -> void:
 	_eco._demand_modifiers["electronics"] = EconomySystem.DEFAULT_DEMAND
 	_eco._sales_history = []
@@ -174,6 +201,17 @@ func test_serialize_deserialize_round_trip() -> void:
 	assert_eq(
 		eco2.get_store_daily_revenue("retro_games"), 250.0,
 		"Store revenue should survive round-trip"
+	)
+	assert_eq(saved.get("player_cash"), _eco.get_cash())
+	assert_eq(
+		float((saved.get("daily_revenue", {}) as Dictionary).get("retro_games", 0.0)),
+		250.0
+	)
+	assert_eq(saved.get("daily_expenses"), 0.0)
+	assert_true(saved.has("transaction_history"))
+	assert_gt(
+		(saved.get("transaction_history", []) as Array).size(), 0,
+		"transaction_history should include completed transactions"
 	)
 
 

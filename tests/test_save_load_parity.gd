@@ -24,6 +24,7 @@ var _saved_data_loader: DataLoader
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	_saved_store_id = GameManager.current_store_id
 	_saved_data_loader = GameManager.data_loader
@@ -67,6 +68,7 @@ func after_each() -> void:
 	GameManager.owned_stores = _saved_owned_stores
 	GameManager.current_store_id = _saved_store_id
 	GameManager.data_loader = _saved_data_loader
+	ContentRegistry.clear_for_testing()
 
 
 ## Returns the canonical store_id for the first available item definition.
@@ -105,7 +107,7 @@ func _apply_pre_save_state(store_id: StringName) -> Array[String]:
 	_time_system.current_day = PRE_SAVE_DAY
 	_store_state.register_slot_ownership(OWNED_SLOT_INDEX, store_id)
 	GameManager.owned_stores = [store_id]
-	GameManager.current_store_id = store_id
+	_store_state.set_active_store(store_id)
 	return _populate_inventory(store_id, ITEM_COUNT)
 
 

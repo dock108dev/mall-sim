@@ -390,7 +390,9 @@ func _apply_state(data: Dictionary) -> void:
 	_restock_pending = {}
 	_invalidate_caches()
 	if not _data_loader:
-		push_warning("InventorySystem: DataLoader not set for load")
+		var has_saved_items: bool = not (data.get("items", []) as Array).is_empty()
+		if has_saved_items:
+			push_warning("InventorySystem: DataLoader not set for load")
 		return
 	if data.has("next_id"):
 		ItemInstance._next_id = int(data["next_id"])

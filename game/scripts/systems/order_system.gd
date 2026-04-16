@@ -48,6 +48,7 @@ var _reputation_system: ReputationSystem = null
 var _progression_system: ProgressionSystem = null
 var _pending_orders: Array[Dictionary] = []
 var _daily_spending: Dictionary = {}
+var _signals_connected: bool = false
 ## When true, forces every delivery to be a partial stockout (for testing only).
 var _force_stockout_for_test: bool = false
 
@@ -61,22 +62,30 @@ func initialize(
 	_reputation_system = reputation
 	_progression_system = progression
 	_apply_state({})
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.order_delivered.connect(_on_order_delivered)
-	EventBus.difficulty_changed.connect(_on_difficulty_changed)
-	EventBus.restock_requested.connect(_on_restock_requested)
+	_connect_runtime_signals()
+
+
+func _exit_tree() -> void:
+	_disconnect_runtime_signals()
 
 
 ## Returns true if the given supplier tier is currently unlocked.
-func is_tier_unlocked(tier: SupplierTier) -> bool:
+func is_tier_unlocked(
+	tier: SupplierTier, store_id: StringName = &""
+) -> bool:
 	var config: Dictionary = TIER_CONFIG[tier]
 	var req_rep: int = config["required_reputation_tier"]
 	var req_level: int = config["required_store_level"]
-	if req_rep > 0 and _reputation_system:
-		if int(_reputation_system.get_tier()) < req_rep:
+	var canonical_store_id: StringName = _resolve_store_id(store_id)
+	if req_rep > 0:
+		if not _reputation_system:
 			return false
-	if req_level > 0 and _progression_system:
-		if _progression_system.get_unlocked_store_slots() < req_level:
+		if _get_supplier_reputation_level(canonical_store_id) < req_rep:
+			return false
+	if req_level > 0:
+		if not _progression_system:
+			return false
+		if _get_store_level(canonical_store_id) < req_level:
 			return false
 	return true
 
@@ -124,26 +133,46 @@ func place_order(
 	item_id: StringName,
 	quantity: int,
 ) -> bool:
+	var canonical_store_id: StringName = _resolve_store_id(store_id)
+	var canonical_item_id: StringName = _resolve_item_id(item_id)
+	if canonical_store_id.is_empty():
+		push_error("OrderSystem: invalid store_id '%s'" % store_id)
+		EventBus.order_failed.emit("Invalid store")
+		return false
 	if quantity <= 0:
 		EventBus.order_failed.emit("Invalid quantity")
 		return false
-	if not is_tier_unlocked(supplier_tier):
+	if not is_tier_unlocked(supplier_tier, canonical_store_id):
 		EventBus.order_failed.emit("Supplier tier locked")
 		return false
-	var item_def: ItemDefinition = _resolve_item(item_id)
+	var item_def: ItemDefinition = _resolve_item(canonical_item_id)
 	if not item_def:
 		EventBus.order_failed.emit(
-			"Item '%s' not found" % item_id
+			"Item '%s' not found" % canonical_item_id
 		)
 		return false
 	if not is_item_in_tier_catalog(item_def, supplier_tier):
 		EventBus.order_failed.emit(
 			"'%s' not available at %s tier"
-			% [item_def.name, TIER_CONFIG[supplier_tier]["name"]]
+			% [
+				_get_item_display_name(item_def),
+				TIER_CONFIG[supplier_tier]["name"],
+			]
 		)
 		return false
-	if _has_pending_order(store_id, item_id):
-		EventBus.order_failed.emit("Order for '%s' already pending" % item_id)
+	if not _can_store_order_item(canonical_store_id, item_def):
+		EventBus.order_failed.emit(
+			"'%s' not available for %s"
+			% [
+				_get_item_display_name(item_def),
+				ContentRegistry.get_display_name(canonical_store_id),
+			]
+		)
+		return false
+	if _has_pending_order(canonical_store_id, canonical_item_id):
+		EventBus.order_failed.emit(
+			"Order for '%s' already pending" % canonical_item_id
+		)
 		return false
 	var unit_cost: float = get_order_cost(item_def, supplier_tier)
 	var total_cost: float = unit_cost * quantity
@@ -162,7 +191,7 @@ func place_order(
 	var deduct_result: Array = []
 	EventBus.order_cash_deduct.emit(
 		total_cost,
-		"Order: %dx %s" % [quantity, item_def.name],
+		"Order: %dx %s" % [quantity, _get_item_display_name(item_def)],
 		deduct_result,
 	)
 	if deduct_result.is_empty() or not deduct_result[0]:
@@ -173,16 +202,16 @@ func place_order(
 		GameManager.current_day + get_effective_delivery_days(supplier_tier)
 	)
 	var order: Dictionary = {
-		"store_id": String(store_id),
+		"store_id": String(canonical_store_id),
 		"supplier_tier": supplier_tier,
-		"item_id": String(item_id),
+		"item_id": String(canonical_item_id),
 		"quantity": quantity,
 		"unit_cost": unit_cost,
 		"delivery_day": delivery_day,
 	}
 	_pending_orders.append(order)
 	EventBus.order_placed.emit(
-		store_id, item_id, quantity, delivery_day
+		canonical_store_id, canonical_item_id, quantity, delivery_day
 	)
 	return true
 
@@ -277,7 +306,19 @@ func _apply_state(data: Dictionary) -> void:
 	var saved: Array = data.get("pending_orders", [])
 	for entry: Variant in saved:
 		if entry is Dictionary:
-			_pending_orders.append(entry as Dictionary)
+			var restored: Dictionary = (entry as Dictionary).duplicate()
+			var store_id: StringName = _resolve_store_id(
+				StringName(str(restored.get("store_id", "")))
+			)
+			var item_id: StringName = _resolve_item_id(
+				StringName(str(restored.get("item_id", "")))
+			)
+			restored["store_id"] = String(store_id)
+			restored["item_id"] = String(item_id)
+			restored["quantity"] = maxi(0, int(restored.get("quantity", 0)))
+			restored["unit_cost"] = maxf(0.0, float(restored.get("unit_cost", 0.0)))
+			restored["delivery_day"] = int(restored.get("delivery_day", 0))
+			_pending_orders.append(restored)
 	var saved_spending: Variant = data.get("daily_spending", {})
 	if saved_spending is Dictionary:
 		_daily_spending = (saved_spending as Dictionary).duplicate()
@@ -403,7 +444,7 @@ func _build_delivery_message(
 			var def_id: String = item.definition.id
 			if not unique_ids.has(def_id):
 				unique_ids[def_id] = {
-					"name": item.definition.name, "count": 0,
+					"name": _get_item_display_name(item.definition), "count": 0,
 				}
 			unique_ids[def_id]["count"] += 1
 	if unique_ids.size() == 1:
@@ -441,6 +482,15 @@ func _resolve_item(item_id: StringName) -> ItemDefinition:
 	return GameManager.data_loader.get_item(String(item_id))
 
 
+func _resolve_item_id(item_id: StringName) -> StringName:
+	if not GameManager.data_loader:
+		return item_id
+	var canonical: StringName = ContentRegistry.resolve(String(item_id))
+	if canonical.is_empty():
+		return item_id
+	return canonical
+
+
 func _get_tier_spending(tier: SupplierTier) -> float:
 	var key: String = str(tier)
 	if _daily_spending.has(key):
@@ -464,3 +514,72 @@ func _has_pending_order(store_id: StringName, item_id: StringName) -> bool:
 				and existing.get("item_id", "") == iid):
 			return true
 	return false
+
+
+func _connect_runtime_signals() -> void:
+	if _signals_connected:
+		return
+	EventBus.day_started.connect(_on_day_started)
+	EventBus.order_delivered.connect(_on_order_delivered)
+	EventBus.difficulty_changed.connect(_on_difficulty_changed)
+	EventBus.restock_requested.connect(_on_restock_requested)
+	_signals_connected = true
+
+
+func _disconnect_runtime_signals() -> void:
+	if not _signals_connected:
+		return
+	if EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.disconnect(_on_day_started)
+	if EventBus.order_delivered.is_connected(_on_order_delivered):
+		EventBus.order_delivered.disconnect(_on_order_delivered)
+	if EventBus.difficulty_changed.is_connected(_on_difficulty_changed):
+		EventBus.difficulty_changed.disconnect(_on_difficulty_changed)
+	if EventBus.restock_requested.is_connected(_on_restock_requested):
+		EventBus.restock_requested.disconnect(_on_restock_requested)
+	_signals_connected = false
+
+
+func _resolve_store_id(store_id: StringName) -> StringName:
+	if store_id.is_empty():
+		if not GameManager.current_store_id.is_empty():
+			return GameManager.current_store_id
+		return &""
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		return store_id
+	return canonical
+
+
+func _get_supplier_reputation_level(store_id: StringName) -> int:
+	var tier: int = int(_reputation_system.get_tier(String(store_id)))
+	match tier:
+		ReputationSystem.ReputationTier.LEGENDARY:
+			return 4
+		ReputationSystem.ReputationTier.REPUTABLE:
+			return 2
+		ReputationSystem.ReputationTier.UNREMARKABLE:
+			return 1
+		_:
+			return 0
+
+
+func _get_store_level(_store_id: StringName) -> int:
+	return maxi(1, _progression_system.get_unlocked_store_slots())
+
+
+func _can_store_order_item(
+	store_id: StringName, item_def: ItemDefinition
+) -> bool:
+	if not item_def:
+		return false
+	var item_store_id: StringName = ContentRegistry.resolve(item_def.store_type)
+	return item_store_id == store_id
+
+
+func _get_item_display_name(item_def: ItemDefinition) -> String:
+	if not item_def:
+		return "Unknown Item"
+	if not item_def.item_name.is_empty():
+		return item_def.item_name
+	return item_def.id

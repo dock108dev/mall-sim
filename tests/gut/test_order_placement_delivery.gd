@@ -18,6 +18,9 @@ var _last_placed_delivery_day: int = 0
 
 
 func before_each() -> void:
+	DataLoaderSingleton.load_all_content()
+	DifficultySystemSingleton._load_config()
+	GameManager.data_loader = DataLoaderSingleton
 	_order_placed_count = 0
 	_order_failed_reason = ""
 	_delivered_stores = []
@@ -29,26 +32,26 @@ func before_each() -> void:
 
 	_economy_system = EconomySystem.new()
 	_economy_system.name = "EconomySystem"
-	add_child(_economy_system)
+	add_child_autofree(_economy_system)
 	_economy_system.initialize()
 
 	_inventory_system = InventorySystem.new()
 	_inventory_system.name = "InventorySystem"
-	add_child(_inventory_system)
+	add_child_autofree(_inventory_system)
 	_inventory_system.initialize(GameManager.data_loader)
 
 	_reputation_system = ReputationSystem.new()
 	_reputation_system.name = "ReputationSystem"
-	add_child(_reputation_system)
+	add_child_autofree(_reputation_system)
 
 	_progression_system = ProgressionSystem.new()
 	_progression_system.name = "ProgressionSystem"
-	add_child(_progression_system)
+	add_child_autofree(_progression_system)
 	_progression_system.initialize(_economy_system, _reputation_system)
 
 	_order_system = OrderSystem.new()
 	_order_system.name = "OrderSystem"
-	add_child(_order_system)
+	add_child_autofree(_order_system)
 	_order_system.initialize(
 		_inventory_system, _reputation_system, _progression_system
 	)
@@ -65,13 +68,6 @@ func after_each() -> void:
 		EventBus.order_failed.disconnect(_on_order_failed)
 	if EventBus.order_delivered.is_connected(_on_order_delivered):
 		EventBus.order_delivered.disconnect(_on_order_delivered)
-
-	_order_system.queue_free()
-	_progression_system.queue_free()
-	_reputation_system.queue_free()
-	_inventory_system.queue_free()
-	_economy_system.queue_free()
-
 
 func _on_order_placed(
 	store_id: StringName,
@@ -98,15 +94,55 @@ func _on_order_delivered(
 
 
 func _get_basic_tier_item() -> ItemDefinition:
+	return _get_basic_item_for_store("retro_games")
+
+
+func _get_basic_item_for_store(store_id: String) -> ItemDefinition:
 	if not GameManager.data_loader:
 		return null
 	var items: Array[ItemDefinition] = (
-		GameManager.data_loader.get_items_by_store("retro_games")
+		GameManager.data_loader.get_items_by_store(store_id)
 	)
 	for item: ItemDefinition in items:
 		if item.rarity in ["common", "uncommon"]:
 			return item
 	return null
+
+
+func _get_second_basic_item_for_store(store_id: String) -> ItemDefinition:
+	if not GameManager.data_loader:
+		return null
+	var items: Array[ItemDefinition] = (
+		GameManager.data_loader.get_items_by_store(store_id)
+	)
+	var matched: int = 0
+	for item: ItemDefinition in items:
+		if item.rarity not in ["common", "uncommon"]:
+			continue
+		if matched == 1:
+			return item
+		matched += 1
+	return null
+
+
+func _load_pending_order(
+	item: ItemDefinition,
+	delivery_day: int,
+	store_id: StringName = &"retro_games",
+	quantity: int = 1,
+) -> void:
+	_order_system.load_save_data({
+		"pending_orders": [
+			{
+				"store_id": String(store_id),
+				"supplier_tier": OrderSystem.SupplierTier.BASIC,
+				"item_id": item.id,
+				"quantity": quantity,
+				"unit_cost": 5.0,
+				"delivery_day": delivery_day,
+			},
+		],
+	})
 
 
 # --- Successful order placement ---
@@ -232,18 +268,11 @@ func test_place_order_insufficient_funds_no_pending_order() -> void:
 
 
 func test_day_started_delivers_due_orders() -> void:
-	_order_system.load_save_data({
-		"pending_orders": [
-			{
-				"store_id": "retro_games",
-				"supplier_tier": 0,
-				"item_id": "test_item",
-				"quantity": 2,
-				"unit_cost": 5.0,
-				"delivery_day": 3,
-			},
-		],
-	})
+	var item: ItemDefinition = _get_basic_tier_item()
+	if not item:
+		pending("DataLoader or basic-tier items not available")
+		return
+	_load_pending_order(item, 3, &"retro_games", 2)
 	assert_eq(
 		_order_system.get_pending_order_count(), 1,
 		"Should start with 1 pending order"
@@ -256,18 +285,11 @@ func test_day_started_delivers_due_orders() -> void:
 
 
 func test_day_started_emits_order_delivered() -> void:
-	_order_system.load_save_data({
-		"pending_orders": [
-			{
-				"store_id": "retro_games",
-				"supplier_tier": 0,
-				"item_id": "test_item",
-				"quantity": 1,
-				"unit_cost": 5.0,
-				"delivery_day": 5,
-			},
-		],
-	})
+	var item: ItemDefinition = _get_basic_tier_item()
+	if not item:
+		pending("DataLoader or basic-tier items not available")
+		return
+	_load_pending_order(item, 5)
 	EventBus.day_started.emit(5)
 	assert_eq(
 		_delivered_stores.size(), 1,
@@ -280,18 +302,11 @@ func test_day_started_emits_order_delivered() -> void:
 
 
 func test_day_started_does_not_deliver_future_orders() -> void:
-	_order_system.load_save_data({
-		"pending_orders": [
-			{
-				"store_id": "retro_games",
-				"supplier_tier": 0,
-				"item_id": "test_item",
-				"quantity": 1,
-				"unit_cost": 5.0,
-				"delivery_day": 10,
-			},
-		],
-	})
+	var item: ItemDefinition = _get_basic_tier_item()
+	if not item:
+		pending("DataLoader or basic-tier items not available")
+		return
+	_load_pending_order(item, 10)
 	EventBus.day_started.emit(8)
 	assert_eq(
 		_order_system.get_pending_order_count(), 1,
@@ -304,12 +319,17 @@ func test_day_started_does_not_deliver_future_orders() -> void:
 
 
 func test_fulfilled_order_removed_from_pending() -> void:
+	var item_a: ItemDefinition = _get_basic_tier_item()
+	var item_b: ItemDefinition = _get_second_basic_item_for_store("retro_games")
+	if not item_a or not item_b:
+		pending("Need basic-tier items available")
+		return
 	_order_system.load_save_data({
 		"pending_orders": [
 			{
 				"store_id": "retro_games",
 				"supplier_tier": 0,
-				"item_id": "item_a",
+				"item_id": item_a.id,
 				"quantity": 1,
 				"unit_cost": 5.0,
 				"delivery_day": 4,
@@ -317,7 +337,7 @@ func test_fulfilled_order_removed_from_pending() -> void:
 			{
 				"store_id": "retro_games",
 				"supplier_tier": 0,
-				"item_id": "item_b",
+				"item_id": item_b.id,
 				"quantity": 1,
 				"unit_cost": 5.0,
 				"delivery_day": 6,
@@ -333,24 +353,17 @@ func test_fulfilled_order_removed_from_pending() -> void:
 		_order_system.get_pending_orders()
 	)
 	assert_eq(
-		remaining[0]["item_id"], "item_b",
+		remaining[0]["item_id"], item_b.id,
 		"Remaining order should be the future one"
 	)
 
 
 func test_overdue_orders_also_delivered() -> void:
-	_order_system.load_save_data({
-		"pending_orders": [
-			{
-				"store_id": "retro_games",
-				"supplier_tier": 0,
-				"item_id": "overdue_item",
-				"quantity": 1,
-				"unit_cost": 5.0,
-				"delivery_day": 2,
-			},
-		],
-	})
+	var item: ItemDefinition = _get_basic_tier_item()
+	if not item:
+		pending("DataLoader or basic-tier items not available")
+		return
+	_load_pending_order(item, 2)
 	EventBus.day_started.emit(5)
 	assert_eq(
 		_order_system.get_pending_order_count(), 0,
@@ -366,12 +379,18 @@ func test_overdue_orders_also_delivered() -> void:
 
 
 func test_multiple_orders_track_independently() -> void:
+	var retro_item: ItemDefinition = _get_basic_tier_item()
+	var pocket_item: ItemDefinition = _get_basic_item_for_store("pocket_creatures")
+	var rental_item: ItemDefinition = _get_basic_item_for_store("video_rental")
+	if not retro_item or not pocket_item or not rental_item:
+		pending("Need basic-tier items for retro, pocket_creatures, and video_rental")
+		return
 	_order_system.load_save_data({
 		"pending_orders": [
 			{
 				"store_id": "retro_games",
 				"supplier_tier": 0,
-				"item_id": "item_day3",
+				"item_id": retro_item.id,
 				"quantity": 1,
 				"unit_cost": 5.0,
 				"delivery_day": 3,
@@ -379,7 +398,7 @@ func test_multiple_orders_track_independently() -> void:
 			{
 				"store_id": "pocket_creatures",
 				"supplier_tier": 0,
-				"item_id": "item_day5",
+				"item_id": pocket_item.id,
 				"quantity": 2,
 				"unit_cost": 10.0,
 				"delivery_day": 5,
@@ -387,7 +406,7 @@ func test_multiple_orders_track_independently() -> void:
 			{
 				"store_id": "video_rental",
 				"supplier_tier": 0,
-				"item_id": "item_day7",
+				"item_id": rental_item.id,
 				"quantity": 3,
 				"unit_cost": 8.0,
 				"delivery_day": 7,

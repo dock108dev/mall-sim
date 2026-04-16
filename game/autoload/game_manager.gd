@@ -12,6 +12,8 @@ enum State {
 }
 
 const DEFAULT_STARTING_STORE: StringName = &"sports"
+const MAIN_MENU_SCENE_PATH := "res://game/scenes/ui/main_menu.tscn"
+const GAMEPLAY_SCENE_PATH := "res://game/scenes/world/game_world.tscn"
 
 const _VALID_TRANSITIONS: Dictionary = {
 	GameState.MAIN_MENU: [GameState.LOADING],
@@ -45,12 +47,14 @@ var _time_system_ref: WeakRef
 var _boot_completed: bool = false
 var _ending_id: StringName = &""
 var _content_load_errors: Array[String] = []
+var _current_day_shadow: int = 1
 
 
 func _ready() -> void:
 	_scene_transition = SceneTransition.new()
 	add_child(_scene_transition)
 	EventBus.content_load_failed.connect(_on_content_load_failed)
+	EventBus.day_started.connect(_on_day_started)
 	EventBus.game_over_triggered.connect(trigger_game_over)
 	EventBus.ending_triggered.connect(_on_ending_triggered)
 	EventBus.player_bankrupt.connect(_on_player_bankrupt)
@@ -78,19 +82,24 @@ func change_state(new_state: GameState) -> bool:
 
 
 func start_new_game() -> void:
-	current_store_id = ""
-	is_tutorial_active = false
-	_ending_id = &""
-	owned_stores = [DEFAULT_STARTING_STORE]
+	if not _run_data_loader():
+		return
+	pending_load_slot = -1
+	_reset_session_state()
 	change_state(GameState.LOADING)
 	change_state(GameState.GAMEPLAY)
+	change_scene(GAMEPLAY_SCENE_PATH)
 
 
 ## Loads a save slot and transitions to gameplay.
 func load_game(slot: int) -> void:
+	if not _run_data_loader():
+		return
 	pending_load_slot = slot
-	start_new_game()
-	change_scene("res://game/scenes/world/game_world.tscn")
+	_reset_session_state()
+	change_state(GameState.LOADING)
+	change_state(GameState.GAMEPLAY)
+	change_scene(GAMEPLAY_SCENE_PATH)
 
 
 ## Toggles current_state to PAUSED from GAMEPLAY.
@@ -105,6 +114,7 @@ func resume_game() -> void:
 
 ## Unloads the GameWorld scene and loads the main menu scene.
 func go_to_main_menu() -> void:
+	pending_load_slot = -1
 	transition_to_menu()
 
 
@@ -155,11 +165,11 @@ func own_store(store_id: String) -> void:
 
 
 func change_scene(scene_path: String) -> void:
-	await _scene_transition.transition_to_scene(scene_path)
+	_scene_transition.transition_to_scene(scene_path)
 
 
 func change_scene_packed(scene: PackedScene) -> void:
-	await _scene_transition.transition_to_packed(scene)
+	_scene_transition.transition_to_packed(scene)
 
 
 ## Orchestrates tiered system initialization after DataLoader completes.
@@ -168,13 +178,25 @@ func initialize_game_systems(game_world: Node) -> void:
 	if not game_world.has_method("initialize_systems"):
 		push_error("GameManager: game_world missing initialize_systems()")
 		return
-	game_world.initialize_systems()
+	if pending_load_slot >= 0:
+		game_world.initialize_systems()
+	else:
+		_start_new_game(game_world)
+
+
+## Applies pending new-game or load-game session state once GameWorld UI is ready.
+func finalize_gameplay_start(game_world: Node) -> void:
+	if not game_world.has_method("apply_pending_session_state"):
+		push_error(
+			"GameManager: game_world missing apply_pending_session_state()"
+		)
+		return
+	game_world.apply_pending_session_state()
 	EventBus.gameplay_ready.emit()
 
 
 func transition_to_game() -> void:
 	start_new_game()
-	await change_scene("res://game/scenes/world/game_world.tscn")
 
 
 ## Public state transition entry point used by boot sequence and UI flows.
@@ -191,7 +213,7 @@ func transition_to(state: State) -> void:
 
 func transition_to_menu() -> void:
 	change_state(GameState.MAIN_MENU)
-	await change_scene("res://game/scenes/ui/main_menu.tscn")
+	change_scene(MAIN_MENU_SCENE_PATH)
 
 
 ## Returns true after the boot sequence has completed successfully.
@@ -213,7 +235,7 @@ func get_content_load_errors() -> Array[String]:
 func get_current_day() -> int:
 	var time_system: TimeSystem = get_time_system()
 	if time_system == null:
-		return 1
+		return _current_day_shadow
 	return time_system.current_day
 
 
@@ -249,3 +271,49 @@ func notify_day_loaded(_day: int) -> void:
 
 func _on_content_load_failed(errors: Array[String]) -> void:
 	_content_load_errors = errors.duplicate()
+
+
+func _on_day_started(day: int) -> void:
+	_current_day_shadow = max(day, 1)
+
+
+## Boots a new session in the required dependency order:
+## 1. ContentRegistry/DataLoader must already be ready from boot.
+## 2. GameWorld initializes runtime systems (TimeSystem before EconomySystem,
+##    then InventorySystem/StoreStateManager and their dependents).
+## 3. The default store lease is registered and starter inventory is populated.
+## 4. Validation runs before the player is left in the hallway for first entry.
+func _start_new_game(game_world: Node) -> void:
+	if data_loader == null:
+		push_error("GameManager: cannot start new game without DataLoader")
+		return
+	if not game_world.has_method("bootstrap_new_game_state"):
+		push_error("GameManager: game_world missing bootstrap_new_game_state()")
+		return
+	current_store_id = &""
+	owned_stores = []
+	game_world.initialize_systems()
+	game_world.bootstrap_new_game_state(DEFAULT_STARTING_STORE)
+
+
+func _run_data_loader() -> bool:
+	if data_loader == null:
+		push_error("GameManager: cannot start session without DataLoader")
+		return false
+	_content_load_errors = []
+	data_loader.run()
+	_content_load_errors = data_loader.get_load_errors()
+	if not _content_load_errors.is_empty():
+		push_error(
+			"GameManager: content load failed with %d errors"
+			% _content_load_errors.size()
+		)
+		return false
+	return true
+
+
+func _reset_session_state() -> void:
+	current_store_id = &""
+	is_tutorial_active = false
+	_ending_id = &""
+	owned_stores = []

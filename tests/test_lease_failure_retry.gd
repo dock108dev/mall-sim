@@ -11,6 +11,7 @@ const LEASE_COST: float = 500.0
 var _dialog: StoreLeaseDialog
 var _economy: EconomySystem
 var _store_state: StoreStateManager
+var _saved_owned_stores: Array[StringName] = []
 var _lease_requested_calls: Array[Dictionary] = []
 var _lease_completed_calls: Array[Dictionary] = []
 
@@ -18,6 +19,10 @@ var _lease_completed_calls: Array[Dictionary] = []
 func before_each() -> void:
 	_lease_requested_calls = []
 	_lease_completed_calls = []
+	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	GameManager.owned_stores = [&"retro_games"]
+	ContentRegistry.clear_for_testing()
+	_register_store_catalog()
 
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
@@ -33,40 +38,29 @@ func before_each() -> void:
 	_dialog = scene.instantiate() as StoreLeaseDialog
 	add_child_autofree(_dialog)
 
-	EventBus.lease_requested.connect(_on_lease_requested)
+	EventBus.lease_requested.connect(_capture_lease_requested)
 	EventBus.lease_completed.connect(_capture_lease_completed)
 
 
 func after_each() -> void:
-	if EventBus.lease_requested.is_connected(_on_lease_requested):
-		EventBus.lease_requested.disconnect(_on_lease_requested)
+	if EventBus.lease_requested.is_connected(_capture_lease_requested):
+		EventBus.lease_requested.disconnect(_capture_lease_requested)
 	if EventBus.lease_completed.is_connected(_capture_lease_completed):
 		EventBus.lease_completed.disconnect(_capture_lease_completed)
+	GameManager.owned_stores = _saved_owned_stores
+	ContentRegistry.clear_for_testing()
 
 
-func _on_lease_requested(
+func _capture_lease_requested(
 	store_id: StringName,
 	slot_index: int,
-	_store_name: String
+	store_name: String
 ) -> void:
 	_lease_requested_calls.append({
 		"store_id": store_id,
 		"slot_index": slot_index,
+		"store_name": store_name,
 	})
-	if _economy.get_cash() < LEASE_COST:
-		EventBus.lease_completed.emit(
-			store_id, false, "Insufficient funds."
-		)
-		return
-	var success: bool = _economy.deduct_cash(
-		LEASE_COST, "Store setup fee: %s" % store_id
-	)
-	if not success:
-		EventBus.lease_completed.emit(
-			store_id, false, "Insufficient funds."
-		)
-		return
-	_store_state.lease_store(slot_index, store_id)
 
 
 func _capture_lease_completed(
@@ -223,3 +217,20 @@ func _advance_to_confirmation() -> void:
 	_dialog._update_confirm_button()
 	_dialog._on_confirm_pressed()
 	_dialog._on_confirm_pressed()
+
+
+func _register_store_catalog() -> void:
+	ContentRegistry.register_entry(
+		{
+			"id": "sports",
+			"name": "Sports",
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{
+			"id": "retro_games",
+			"name": "Retro Games",
+		},
+		"store"
+	)

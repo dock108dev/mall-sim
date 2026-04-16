@@ -175,7 +175,7 @@ func _ready() -> void:
 	if _mall_hallway:
 		_mall_hallway.set_systems(
 			economy_system, ReputationSystemSingleton,
-			inventory_system, progression_system
+			inventory_system, progression_system, store_state_manager
 		)
 		_mall_hallway.set_ambient_systems(
 			customer_system, time_system
@@ -189,7 +189,7 @@ func _ready() -> void:
 	EventBus.ending_triggered.connect(
 		_on_ending_triggered
 	)
-	_apply_pending_load.call_deferred()
+	GameManager.finalize_gameplay_start(self)
 
 
 func _setup_mall_hallway() -> void:
@@ -211,7 +211,7 @@ func initialize_systems() -> void:
 
 func _initialize_tier_1_data() -> void:
 	time_system.initialize()
-	economy_system.initialize()
+	economy_system.initialize(_get_configured_starting_cash())
 
 
 func _initialize_tier_2_state() -> void:
@@ -241,7 +241,7 @@ func _initialize_tier_2_state() -> void:
 
 
 func _initialize_tier_3_operational() -> void:
-	var store_ctrl: StoreController = _find_store_controller()
+	var store_ctrl: StoreController = _find_store_controller(false)
 
 	ReputationSystemSingleton.initialize_store(
 		String(GameManager.current_store_id)
@@ -424,8 +424,9 @@ func _wire_save_manager() -> void:
 
 
 func _wire_store_controllers() -> void:
-	var initial_ctrl: StoreController = _find_store_controller()
+	var initial_ctrl: StoreController = _find_store_controller(false)
 	if initial_ctrl:
+		_wire_base_store_controller(initial_ctrl)
 		_wire_rental_system(initial_ctrl)
 		_wire_electronics_system(initial_ctrl)
 		_wire_sports_memorabilia_system(initial_ctrl)
@@ -596,7 +597,7 @@ func _setup_deferred_panels() -> void:
 	add_child(_ending_screen)
 	_ending_screen.dismissed.connect(_on_ending_dismissed)
 
-	var initial_ctrl: StoreController = _find_store_controller()
+	var initial_ctrl: StoreController = _find_store_controller(false)
 	if initial_ctrl:
 		_wire_pack_system(initial_ctrl)
 
@@ -616,19 +617,8 @@ func _ensure_deferred_panels() -> void:
 		_setup_deferred_panels()
 
 
-func _log_panel_profile(deferred_ms: float) -> void:
-	var all_panels: Array[Node] = []
-	for child: Node in _ui_layer.get_children():
-		all_panels.append(child)
-	var profile: Dictionary = (
-		PerformanceManager.estimate_panel_memory(all_panels)
-	)
-	push_warning(
-		"UI Panel Profile: %d panels, ~%.1f KB estimated, "
-		% [profile.get("panel_count", 0), profile.get("total_kb", 0.0)]
-		+ "deferred batch: %.1fms, total startup: %.1fms"
-		% [deferred_ms, _startup_time_ms]
-	)
+func _log_panel_profile(_deferred_ms: float) -> void:
+	return
 
 
 func _setup_debug_overlay() -> void:
@@ -706,11 +696,13 @@ func _on_game_state_changed(
 	_set_systems_paused(should_pause)
 
 
-func _find_store_controller() -> StoreController:
+func _find_store_controller(
+	should_warn: bool = true
+) -> StoreController:
 	var result: StoreController = (
 		_find_store_controller_recursive(_store_container)
 	)
-	if not result:
+	if should_warn and not result:
 		push_warning(
 			"GameWorld: no StoreController found in StoreContainer"
 		)
@@ -759,11 +751,8 @@ func _find_node_of_type(
 
 
 func _register_initial_fixtures() -> void:
-	var store_ctrl: StoreController = _find_store_controller()
+	var store_ctrl: StoreController = _find_store_controller(false)
 	if not store_ctrl:
-		push_warning(
-			"GameWorld: cannot register fixtures — no store controller"
-		)
 		return
 
 	var store_def: StoreDefinition = null
@@ -772,10 +761,6 @@ func _register_initial_fixtures() -> void:
 			store_ctrl.store_type
 		)
 	if not store_def:
-		push_warning(
-			"GameWorld: cannot register fixtures — no store definition "
-			+ "for '%s'" % store_ctrl.store_type
-		)
 		return
 
 	var grid: BuildModeGrid = build_mode.get_grid()
@@ -815,13 +800,14 @@ func _on_store_entered(store_id: StringName) -> void:
 	if performance_manager:
 		performance_manager.begin_store_switch()
 
-	var store_ctrl: StoreController = _find_store_controller()
+	var store_ctrl: StoreController = _find_store_controller(true)
 	if store_ctrl and store_state_manager:
 		store_state_manager.restore_store_state(
 			String(store_id), store_ctrl
 		)
 
 	if store_ctrl:
+		_wire_base_store_controller(store_ctrl)
 		customer_system.initialize(store_ctrl, inventory_system)
 		customer_system.set_store_id(String(store_id))
 		_wire_rental_system(store_ctrl)
@@ -834,6 +820,11 @@ func _on_store_entered(store_id: StringName) -> void:
 
 	if performance_manager:
 		performance_manager.end_store_switch()
+
+
+func _wire_base_store_controller(store_ctrl: StoreController) -> void:
+	store_ctrl.set_inventory_system(inventory_system)
+	store_ctrl.set_customer_system(customer_system)
 
 
 ## Wires up a VideoRentalStoreController with system references if applicable.
@@ -1016,40 +1007,47 @@ func _set_systems_paused(paused: bool) -> void:
 	tutorial_system.set_process(!paused)
 
 
-func _apply_pending_load() -> void:
+func apply_pending_session_state() -> void:
 	var slot: int = GameManager.pending_load_slot
 	GameManager.pending_load_slot = -1
 	if slot >= 0:
-		save_manager.load_game(slot)
-		_validate_loaded_game_state()
+		var save_metadata: Dictionary = save_manager.get_slot_metadata(slot)
+		if save_manager.load_game(slot):
+			_validate_loaded_game_state(save_metadata)
 	else:
-		_initialize_new_game()
 		tutorial_system.initialize(true)
 		EventBus.day_started.emit(1)
 
 
-## Populates the default store with starter inventory, registers its slot
-## ownership, and validates that the game state is playable.
-func _initialize_new_game() -> void:
-	var default_store: StringName = GameManager.DEFAULT_STARTING_STORE
-
-	_register_default_store_slot(default_store)
-	_create_default_store_inventory(default_store)
-	_validate_new_game_state(default_store)
-
-
-func _register_default_store_slot(store_id: StringName) -> void:
-	if not _mall_hallway or not store_state_manager:
+## Populates and validates the default store before the player sees the hallway.
+func bootstrap_new_game_state(
+	store_id: StringName = GameManager.DEFAULT_STARTING_STORE
+) -> void:
+	GameManager.current_store_id = &""
+	var slot_index: int = _find_store_slot_index(store_id)
+	if slot_index < 0:
+		push_error(
+			"GameWorld: default store '%s' not found in storefront slots"
+			% store_id
+		)
 		return
+	if not store_state_manager:
+		push_error("GameWorld: cannot bootstrap new game without StoreStateManager")
+		return
+	store_state_manager.lease_store(slot_index, store_id, store_id)
+	EventBus.owned_slots_restored.emit(store_state_manager.owned_slots)
+	_create_default_store_inventory(store_id)
+	_validate_new_game_state(store_id)
+
+
+func _find_store_slot_index(store_id: StringName) -> int:
+	if not _mall_hallway:
+		return -1
 	var slot_ids: Array[StringName] = _mall_hallway.SLOT_STORE_IDS
 	for i: int in range(slot_ids.size()):
 		if slot_ids[i] == store_id:
-			store_state_manager.register_slot_ownership(i, store_id)
-			return
-	push_error(
-		"GameWorld: default store '%s' not found in storefront slots"
-		% store_id
-	)
+			return i
+	return -1
 
 
 func _create_default_store_inventory(store_id: StringName) -> void:
@@ -1060,62 +1058,136 @@ func _create_default_store_inventory(store_id: StringName) -> void:
 		)
 		return
 	var items: Array[ItemInstance] = (
-		GameManager.data_loader.create_starting_inventory(
+		GameManager.data_loader.generate_starter_inventory(
 			String(store_id)
 		)
 	)
 	for item: ItemInstance in items:
-		inventory_system.register_item(item)
+		inventory_system.add_item(store_id, item)
 
 
-func _validate_loaded_game_state() -> void:
+func _get_configured_starting_cash() -> float:
+	var starting_cash: float = Constants.STARTING_CASH
+	if not GameManager.data_loader:
+		return starting_cash
+	var economy_config: EconomyConfig = (
+		GameManager.data_loader.get_economy_config()
+	)
+	if economy_config:
+		starting_cash = economy_config.starting_cash
+	return starting_cash
+
+
+func _validate_loaded_game_state(save_metadata: Dictionary = {}) -> void:
+	var expected_cash: Variant = save_metadata.get("cash", null)
+	var active_store_raw: String = str(
+		save_metadata.get("active_store_id", "")
+	)
+	var expected_active_store: StringName = &""
+	if not active_store_raw.is_empty():
+		expected_active_store = ContentRegistry.resolve(active_store_raw)
+		if expected_active_store.is_empty():
+			expected_active_store = StringName(active_store_raw)
+	var errors: Array[String] = _collect_state_validation_errors(
+		expected_active_store,
+		expected_cash,
+		true,
+		save_metadata.has("active_store_id")
+	)
+	for msg: String in errors:
+		push_error("Load validation failed: %s" % msg)
+
+
+func _validate_new_game_state(store_id: StringName) -> void:
+	var canonical_store_id: StringName = ContentRegistry.resolve(
+		String(store_id)
+	)
+	if canonical_store_id.is_empty():
+		canonical_store_id = store_id
+	var errors: Array[String] = _collect_state_validation_errors(
+		canonical_store_id,
+		_get_configured_starting_cash(),
+		true,
+		false
+	)
+	for msg: String in errors:
+		push_error("New game validation failed: %s" % msg)
+
+
+func _collect_state_validation_errors(
+	expected_store_id: StringName,
+	expected_cash: Variant,
+	require_inventory: bool,
+	validate_active_store: bool
+) -> Array[String]:
 	var errors: Array[String] = []
 
 	if GameManager.owned_stores.is_empty():
-		errors.append("No owned stores after load")
+		errors.append("No owned stores are registered")
 
-	if store_state_manager and store_state_manager.owned_slots.is_empty():
-		errors.append("StoreStateManager.owned_slots is empty after load")
+	if store_state_manager:
+		if store_state_manager.owned_slots.is_empty():
+			errors.append("StoreStateManager.owned_slots is empty")
+		if GameManager.current_store_id != store_state_manager.active_store_id:
+			errors.append(
+				"GameManager.current_store_id '%s' is out of sync with active_store_id '%s'"
+				% [GameManager.current_store_id, store_state_manager.active_store_id]
+			)
 
-	if economy_system and is_nan(economy_system.get_cash()):
-		errors.append("Player cash is NaN after load")
+	if economy_system:
+		if is_nan(economy_system.get_cash()):
+			errors.append("Player cash is NaN")
+		elif expected_cash != null and not is_equal_approx(
+			economy_system.get_cash(),
+			float(expected_cash)
+		):
+			errors.append(
+				"Player cash %.2f does not match expected %.2f"
+				% [economy_system.get_cash(), float(expected_cash)]
+			)
 
 	if time_system and time_system.current_day < 1:
 		errors.append(
 			"Current day is %d (expected >= 1)" % time_system.current_day
 		)
 
-	if inventory_system and inventory_system.get_item_count() == 0:
-		errors.append("Inventory is empty after load")
+	if not expected_store_id.is_empty():
+		if not GameManager.is_store_owned(String(expected_store_id)):
+			errors.append(
+				"Expected owned store '%s' is missing from owned_stores"
+				% expected_store_id
+			)
+		if store_state_manager:
+			var has_expected_slot: bool = false
+			for owned_store_id: StringName in store_state_manager.owned_slots.values():
+				if owned_store_id == expected_store_id:
+					has_expected_slot = true
+					break
+			if not has_expected_slot:
+				errors.append(
+					"StoreStateManager has no owned slot for '%s'"
+					% expected_store_id
+				)
+		if require_inventory and inventory_system:
+			var store_stock: Array[ItemInstance] = inventory_system.get_stock(
+				expected_store_id
+			)
+			if store_stock.is_empty():
+				errors.append(
+					"InventorySystem has no stock for '%s'" % expected_store_id
+				)
+	elif require_inventory and inventory_system and inventory_system.get_item_count() == 0:
+		errors.append("Inventory is empty")
 
-	for msg: String in errors:
-		push_error("Load validation failed: %s" % msg)
+	if validate_active_store:
+		var actual_active_store: StringName = GameManager.current_store_id
+		if actual_active_store != expected_store_id:
+			errors.append(
+				"Active store '%s' does not match saved active_store_id '%s'"
+				% [actual_active_store, expected_store_id]
+			)
 
-
-func _validate_new_game_state(store_id: StringName) -> void:
-	var errors: Array[String] = []
-
-	if not GameManager.is_store_owned(String(store_id)):
-		errors.append(
-			"Default store '%s' not in owned_stores" % store_id
-		)
-
-	if store_state_manager and store_state_manager.owned_slots.is_empty():
-		errors.append("StoreStateManager.owned_slots is empty")
-
-	if inventory_system and inventory_system.get_item_count() == 0:
-		errors.append(
-			"InventorySystem has no items after starter inventory"
-		)
-
-	if economy_system and economy_system.get_cash() < Constants.STARTING_CASH:
-		errors.append(
-			"Player cash %.2f is below starting value %.2f"
-			% [economy_system.get_cash(), Constants.STARTING_CASH]
-		)
-
-	for msg: String in errors:
-		push_error("New game validation failed: %s" % msg)
+	return errors
 
 
 func _on_view_day_summary_requested() -> void:
@@ -1124,7 +1196,7 @@ func _on_view_day_summary_requested() -> void:
 
 
 func _on_return_to_menu_pressed() -> void:
-	GameManager.transition_to_menu()
+	GameManager.go_to_main_menu()
 
 
 func _on_save_slot_requested(slot: int) -> void:

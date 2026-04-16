@@ -27,6 +27,7 @@ var _economy_system: EconomySystem
 var _reputation_system: ReputationSystem
 var _inventory_system: InventorySystem
 var _progression_system: ProgressionSystem
+var _store_state_manager: StoreStateManager
 var _pending_starter_inventory: Array[ItemInstance] = []
 var _ambient_zones: HallwayAmbientZones = null
 
@@ -54,12 +55,9 @@ func _ready() -> void:
 	_apply_owned_stores()
 	_spawn_renovation_storefront()
 	_setup_navigation()
+	_initialize_waypoint_graph()
 
-	MallWaypointGraphBuilder.build(
-		_waypoint_graph, SLOT_STORE_IDS
-	)
-
-	EventBus.lease_requested.connect(_on_lease_requested)
+	EventBus.store_leased.connect(_on_store_leased)
 	EventBus.owned_slots_restored.connect(_on_owned_slots_restored)
 	EventBus.store_slot_unlocked.connect(_on_store_slot_unlocked)
 	EventBus.day_started.connect(_on_day_started_deliver_inventory)
@@ -70,12 +68,14 @@ func set_systems(
 	economy: EconomySystem,
 	reputation: ReputationSystem,
 	inventory: InventorySystem,
-	progression: ProgressionSystem = null
+	progression: ProgressionSystem = null,
+	store_state_manager: StoreStateManager = null
 ) -> void:
 	_economy_system = economy
 	_reputation_system = reputation
 	_inventory_system = inventory
 	_progression_system = progression
+	_store_state_manager = store_state_manager
 	if _interaction_ray and _interaction_ray.has_method("set_inventory_system"):
 		_interaction_ray.call("set_inventory_system", _inventory_system)
 
@@ -190,18 +190,40 @@ func _setup_navigation() -> void:
 	_navigation_region.navigation_mesh = nav_mesh
 
 
+func _initialize_waypoint_graph() -> void:
+	if _waypoint_graph.get_child_count() == 0:
+		MallWaypointGraphBuilder.build(_waypoint_graph, SLOT_STORE_IDS)
+	for i: int in range(SLOT_STORE_IDS.size()):
+		var store_id: StringName = SLOT_STORE_IDS[i]
+		_assign_waypoint_store_id("StoreEntrance_%d" % i, store_id)
+		_assign_waypoint_store_id("Register_%d" % i, store_id)
+
+
+func _assign_waypoint_store_id(
+	node_name: String, store_id: StringName
+) -> void:
+	var waypoint: MallWaypoint = _waypoint_graph.get_node_or_null(
+		node_name
+	) as MallWaypoint
+	if waypoint == null:
+		push_error(
+			"MallHallway: missing %s in WaypointGraph" % node_name
+		)
+		return
+	waypoint.associated_store_id = store_id
+
+
 ## Marks storefronts as owned based on GameManager.owned_stores.
 func _apply_owned_stores() -> void:
+	var owned_slots: Dictionary = {}
 	for i: int in range(_storefronts.size()):
 		if i >= SLOT_STORE_IDS.size():
 			break
 		var store_id: StringName = SLOT_STORE_IDS[i]
 		if not GameManager.is_store_owned(String(store_id)):
 			continue
-		var store_name: String = ContentRegistry.get_display_name(
-			store_id
-		)
-		_storefronts[i].set_owned(String(store_id), store_name)
+		owned_slots[i] = store_id
+	_apply_owned_slot_visuals(owned_slots)
 
 
 ## Applies unlock state from the progression system to storefronts.
@@ -217,12 +239,18 @@ func apply_unlock_state(progression: ProgressionSystem) -> void:
 
 ## Restores storefront visuals from the saved slot -> store_id mapping.
 func _on_owned_slots_restored(slots: Dictionary) -> void:
+	_apply_owned_slot_visuals(slots)
+
+
+func _apply_owned_slot_visuals(slots: Dictionary) -> void:
 	for i: int in range(_storefronts.size()):
 		if slots.has(i):
 			var store_id: StringName = slots[i]
-			var store_name: String = (
-				ContentRegistry.get_display_name(store_id)
+			var store_name: String = ContentRegistry.get_display_name(
+				store_id
 			)
+			if _store_state_manager:
+				store_name = _store_state_manager.get_store_name(store_id)
 			_storefronts[i].set_owned(String(store_id), store_name)
 		elif _progression_system and _progression_system.is_slot_unlocked(i):
 			_storefronts[i].set_available(_get_rent_for_slot(i))
@@ -313,6 +341,30 @@ func _show_lease_dialog(storefront: Storefront) -> void:
 	)
 
 
+## Backward-compatible bridge for tests and older callers.
+func _on_lease_requested(
+	store_id: StringName,
+	slot_index: int,
+	store_name: String
+) -> void:
+	if (
+		_progression_system != null
+		and slot_index > 0
+		and not _progression_system.is_slot_unlocked(slot_index)
+	):
+		EventBus.lease_completed.emit(
+			store_id, false, "This storefront is not yet available."
+		)
+		return
+	if _store_state_manager == null:
+		push_error("MallHallway: missing StoreStateManager for lease flow")
+		EventBus.lease_completed.emit(
+			store_id, false, "Lease system unavailable."
+		)
+		return
+	EventBus.lease_requested.emit(store_id, slot_index, store_name)
+
+
 ## Returns the hallway geometry node for show/hide during transitions.
 func get_hallway_geometry() -> Node3D:
 	return _hallway_geometry
@@ -323,72 +375,18 @@ func get_store_container() -> Node3D:
 	return _store_container
 
 
-func _on_lease_requested(
-	store_id: StringName,
-	slot_index: int,
-	store_name: String
-) -> void:
-	var canonical: StringName = ContentRegistry.resolve(
-		String(store_id)
-	)
-	if canonical.is_empty():
-		push_error(
-			"MallHallway: unknown store type '%s'" % store_id
-		)
-		EventBus.lease_completed.emit(
-			store_id, false, "Unknown store type."
-		)
-		return
-
+func _on_store_leased(slot_index: int, store_type: String) -> void:
 	var storefront: Storefront = get_storefront(slot_index)
 	if not storefront:
-		push_error(
-			"MallHallway: invalid slot index %d" % slot_index
-		)
-		EventBus.lease_completed.emit(
-			canonical, false, "Invalid storefront slot."
-		)
 		return
-
-	if storefront.is_owned:
-		EventBus.lease_completed.emit(
-			canonical, false, "This storefront is already leased."
-		)
-		return
-
-	var lease_cost: float = _get_lease_cost_for_next_store()
-	if _economy_system and lease_cost > 0.0:
-		var success: bool = _economy_system.deduct_cash(
-			lease_cost, "Store setup fee: %s" % canonical
-		)
-		if not success:
-			EventBus.lease_completed.emit(
-				canonical, false, "Insufficient funds."
-			)
-			return
-
-	GameManager.own_store(String(canonical))
-	_queue_starter_inventory(String(canonical))
-
-	var display_name: String = store_name
-	if display_name.strip_edges().is_empty():
-		display_name = ContentRegistry.get_display_name(canonical)
+	var canonical: StringName = ContentRegistry.resolve(store_type)
+	if canonical.is_empty():
+		canonical = StringName(store_type)
+	var display_name: String = ContentRegistry.get_display_name(canonical)
+	if _store_state_manager:
+		display_name = _store_state_manager.get_store_name(canonical)
 	storefront.set_owned(String(canonical), display_name)
-	EventBus.store_leased.emit(slot_index, String(canonical))
-	EventBus.store_unlocked.emit(String(canonical), lease_cost)
-	EventBus.lease_completed.emit(canonical, true, "")
-
-
-func _get_lease_cost_for_next_store() -> float:
-	var index: int = GameManager.owned_stores.size()
-	if index <= 0:
-		return 0.0
-	if index >= StoreLeaseDialog.UNLOCK_REQUIREMENTS.size():
-		return 0.0
-	var req: Dictionary = (
-		StoreLeaseDialog.UNLOCK_REQUIREMENTS[index]
-	)
-	return float(req.get("cost", 0))
+	_queue_starter_inventory(String(canonical))
 
 
 ## Generates starter inventory and queues it for next day_started.

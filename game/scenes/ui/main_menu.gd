@@ -2,12 +2,12 @@
 extends Control
 
 
-const SAVE_DIR := "user://saves/"
+const SAVE_DIR := "user://"
 const SLOT_PATHS: Dictionary = {
-	0: "user://saves/auto_save.json",
-	1: "user://saves/slot_1.json",
-	2: "user://saves/slot_2.json",
-	3: "user://saves/slot_3.json",
+	0: "user://save_slot_0.json",
+	1: "user://save_slot_1.json",
+	2: "user://save_slot_2.json",
+	3: "user://save_slot_3.json",
 }
 const _SettingsPanelScene: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
@@ -180,11 +180,10 @@ func _load_slot(slot: int) -> void:
 
 
 func _start_game_session(slot: int) -> void:
-	GameManager.pending_load_slot = slot
+	if slot >= 0:
+		GameManager.load_game(slot)
+		return
 	GameManager.start_new_game()
-	GameManager.change_scene(
-		"res://game/scenes/world/game_world.tscn"
-	)
 
 
 func _has_any_saves() -> bool:
@@ -258,7 +257,9 @@ func _format_slot_info(save_data: Dictionary) -> String:
 	var economy: Dictionary = (
 		save_data.get("economy", {}) as Dictionary
 	)
-	var cash: float = float(economy.get("player_cash", 0.0))
+	var cash: float = float(
+		economy.get("player_cash", economy.get("current_cash", 0.0))
+	)
 
 	var parts: Array[String] = []
 	if day > 0:

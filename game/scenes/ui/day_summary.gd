@@ -4,6 +4,7 @@ extends Control
 
 
 signal continue_pressed
+signal dismissed
 signal review_inventory_requested
 
 const OVERLAY_FADE_DURATION: float = 0.2
@@ -32,6 +33,7 @@ var _record_low_labels: Array[Label] = []
 var _milestone_labels: Array[Label] = []
 var _last_net_profit: float = 0.0
 var _last_summary_args: Dictionary = {}
+var _emit_day_acknowledged_on_hide: bool = false
 
 @onready var _overlay: ColorRect = $Overlay
 @onready var _panel: PanelContainer = $Panel
@@ -169,6 +171,10 @@ func hide_summary() -> void:
 	_overlay_tween.tween_callback(func() -> void:
 		visible = false
 		_overlay.visible = false
+		dismissed.emit()
+		if _emit_day_acknowledged_on_hide:
+			_emit_day_acknowledged_on_hide = false
+			EventBus.day_acknowledged.emit()
 	)
 
 
@@ -503,6 +509,7 @@ func _on_performance_report_ready(
 
 
 func _on_continue_pressed() -> void:
+	_emit_day_acknowledged_on_hide = true
 	hide_summary()
 	EventBus.next_day_confirmed.emit()
 	continue_pressed.emit()

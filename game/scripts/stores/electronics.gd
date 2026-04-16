@@ -17,8 +17,6 @@ var _initialized: bool = false
 func _ready() -> void:
 	store_type = STORE_ID
 	super._ready()
-	EventBus.store_entered.connect(_on_store_entered)
-	EventBus.store_exited.connect(_on_store_exited)
 	_load_demo_config()
 
 

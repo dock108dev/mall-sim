@@ -6,6 +6,7 @@ extends Node
 enum TransactionType { REVENUE, EXPENSE }
 
 const MAX_MARKET_VALUE: float = EconomyValueCalculator.MAX_MARKET_VALUE
+const TRANSACTION_HISTORY_LIMIT: int = 100
 ## Constant pass-throughs for backwards compatibility with tests and external code.
 const DEFAULT_DEMAND: float = EconomyValueCalculator.DEFAULT_DEMAND
 const DEMAND_CAP: float = EconomyValueCalculator.DEMAND_CAP
@@ -17,8 +18,22 @@ const DRIFT_MAX: float = EconomyValueCalculator.DRIFT_MAX
 const DRIFT_MEAN_REVERSION: float = EconomyValueCalculator.DRIFT_MEAN_REVERSION
 const DRIFT_VOLATILITY: Dictionary = EconomyValueCalculator.DRIFT_VOLATILITY
 
+var player_cash: float:
+	get:
+		return _current_cash
+var daily_revenue: Dictionary:
+	get:
+		return _store_daily_revenue.duplicate()
+var daily_expenses: float:
+	get:
+		return _daily_expenses
+var transaction_history: Array[Dictionary]:
+	get:
+		return _duplicate_transactions(_transaction_history)
+
 var _current_cash: float = 0.0
 var _daily_transactions: Array[Dictionary] = []
+var _transaction_history: Array[Dictionary] = []
 var _current_time_minutes: int = 0
 var _items_sold_today: int = 0
 var _daily_rent: float = 50.0
@@ -44,6 +59,7 @@ var _drift_factors: Dictionary = {}
 var _trades_today: int = 0
 var _bankruptcy_declared: bool = false
 var _last_injection_day: int = -1
+var _active_store_id: StringName = &""
 
 
 func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
@@ -52,22 +68,9 @@ func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
 	)
 	_bankruptcy_declared = false
 	_last_injection_day = -1
-	_apply_state({"current_cash": starting_cash * cash_mult})
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.hour_changed.connect(_on_hour_changed)
-	EventBus.day_ended.connect(_on_day_ended)
-	EventBus.item_sold.connect(_on_item_sold)
-	EventBus.trade_accepted.connect(_on_trade_accepted)
-	EventBus.order_cash_check.connect(_on_order_cash_check)
-	EventBus.order_cash_deduct.connect(_on_order_cash_deduct)
-	EventBus.order_refund_issued.connect(_on_order_refund_issued)
-	EventBus.payroll_cash_check.connect(_on_payroll_cash_check)
-	EventBus.payroll_cash_deduct.connect(_on_payroll_cash_deduct)
-	EventBus.customer_purchased.connect(_on_customer_purchased)
-	EventBus.emergency_cash_injected.connect(
-		_on_emergency_cash_injected
-	)
-	EventBus.milestone_unlocked.connect(_on_milestone_unlocked)
+	_active_store_id = _resolve_store_id(GameManager.current_store_id)
+	_apply_state({"player_cash": starting_cash * cash_mult})
+	_connect_runtime_signals()
 
 func set_inventory_system(inv: InventorySystem) -> void: _inventory_system = inv
 func set_trend_system(ts: TrendSystem) -> void: _trend_system = ts
@@ -88,18 +91,7 @@ func charge(amount: float, reason: String) -> bool:
 			% amount
 		)
 		return false
-	if _current_cash < amount:
-		EventBus.transaction_completed.emit(
-			amount, false, "Insufficient funds"
-		)
-		return false
-	var old_cash: float = _current_cash
-	_current_cash -= amount
-	_daily_expenses += amount
-	_record_transaction(amount, reason, TransactionType.EXPENSE)
-	EventBus.money_changed.emit(old_cash, _current_cash)
-	EventBus.transaction_completed.emit(amount, true, reason)
-	return true
+	return _apply_charge(amount, reason, false)
 
 
 ## Adds amount to player cash and records revenue for the active store.
@@ -110,20 +102,12 @@ func credit(amount: float, source: StringName) -> void:
 			% amount
 		)
 		return
-	var old_cash: float = _current_cash
-	_current_cash += amount
-	_daily_revenue += amount
-	var active_store: String = GameManager.current_store_id
-	if not active_store.is_empty():
-		record_store_revenue(active_store, amount)
-	_record_transaction(amount, String(source), TransactionType.REVENUE)
-	EventBus.money_changed.emit(old_cash, _current_cash)
-	EventBus.transaction_completed.emit(amount, true, String(source))
+	_apply_credit(amount, String(source), _get_active_store_id())
 
 
 ## Returns total daily revenue minus daily expenses for the current day.
 func get_daily_profit() -> float:
-	return _daily_revenue - _daily_expenses
+	return _get_daily_revenue_total() - _daily_expenses
 
 ## Zeroes daily revenue, expenses, and transaction log for a new day.
 func reset_daily_totals() -> void:
@@ -166,13 +150,7 @@ func add_cash(amount: float, reason: String) -> void:
 			% amount
 		)
 		return
-
-	var old_cash: float = _current_cash
-	_current_cash += amount
-	_daily_revenue += amount
-	_record_transaction(amount, reason, TransactionType.REVENUE)
-	EventBus.money_changed.emit(old_cash, _current_cash)
-	EventBus.transaction_completed.emit(amount, true, reason)
+	_apply_credit(amount, reason)
 
 
 ## Returns false if insufficient funds.
@@ -183,20 +161,7 @@ func deduct_cash(amount: float, reason: String) -> bool:
 			% amount
 		)
 		return false
-
-	if _current_cash < amount:
-		EventBus.transaction_completed.emit(
-			amount, false, "Insufficient funds"
-		)
-		return false
-
-	var old_cash: float = _current_cash
-	_current_cash -= amount
-	_daily_expenses += amount
-	_record_transaction(amount, reason, TransactionType.EXPENSE)
-	EventBus.money_changed.emit(old_cash, _current_cash)
-	EventBus.transaction_completed.emit(amount, true, reason)
-	return true
+	return _apply_charge(amount, reason, false)
 
 
 ## Allows negative balance (used for mandatory deductions like rent).
@@ -207,21 +172,7 @@ func force_deduct_cash(amount: float, reason: String) -> void:
 			% amount
 		)
 		return
-	var old_cash: float = _current_cash
-	_current_cash -= amount
-	_daily_expenses += amount
-	_record_transaction(amount, reason, TransactionType.EXPENSE)
-	EventBus.money_changed.emit(old_cash, _current_cash)
-	EventBus.transaction_completed.emit(amount, true, reason)
-	if _current_cash < 0.0:
-		push_warning(
-			"EconomySystem: cash is negative ($%.2f) after: %s"
-			% [_current_cash, reason]
-		)
-		EventBus.notification_requested.emit(
-			"Warning: You are in debt! Cash: $%.2f" % _current_cash
-		)
-	_check_bankruptcy()
+	_apply_charge(amount, reason, true)
 
 
 func get_daily_summary() -> Dictionary:
@@ -248,23 +199,26 @@ func get_daily_summary() -> Dictionary:
 
 
 func get_save_data() -> Dictionary:
-	var serialized_transactions: Array[Dictionary] = []
-	for txn: Dictionary in _daily_transactions:
-		serialized_transactions.append(txn.duplicate())
-
 	var serialized_history: Array[Dictionary] = []
 	for day_sales: Dictionary in _sales_history:
 		serialized_history.append(day_sales.duplicate())
 
 	return {
+		"player_cash": _current_cash,
+		"daily_revenue": _store_daily_revenue.duplicate(true),
+		"daily_revenue_total": _daily_revenue,
+		"daily_expenses": _daily_expenses,
+		"transaction_history": _duplicate_transactions(
+			_transaction_history
+		),
 		"current_cash": _current_cash,
-		"daily_transactions": serialized_transactions,
+		"daily_transactions": _duplicate_transactions(
+			_daily_transactions
+		),
 		"current_time_minutes": _current_time_minutes,
 		"items_sold_today": _items_sold_today,
 		"daily_rent": _daily_rent,
 		"daily_rent_total": _daily_rent_total,
-		"daily_revenue": _daily_revenue,
-		"daily_expenses": _daily_expenses,
 		"sales_history": serialized_history,
 		"today_sales": _today_sales.duplicate(),
 		"demand_modifiers": _demand_modifiers.duplicate(),
@@ -282,7 +236,7 @@ func load_save_data(data: Dictionary) -> void:
 
 func _apply_state(data: Dictionary) -> void:
 	_current_cash = float(
-		data.get("current_cash", Constants.STARTING_CASH)
+		data.get("player_cash", data.get("current_cash", Constants.STARTING_CASH))
 	)
 	_current_time_minutes = int(
 		data.get("current_time_minutes", 0)
@@ -290,24 +244,21 @@ func _apply_state(data: Dictionary) -> void:
 	_items_sold_today = int(data.get("items_sold_today", 0))
 	_daily_rent = float(data.get("daily_rent", 50.0))
 	_daily_rent_total = float(data.get("daily_rent_total", 0.0))
-	_daily_revenue = float(data.get("daily_revenue", 0.0))
 	_daily_expenses = float(data.get("daily_expenses", 0.0))
 	_trades_today = int(data.get("trades_today", 0))
 	_last_injection_day = int(data.get("last_injection_day", -1))
+	_active_store_id = _resolve_store_id(GameManager.current_store_id)
 
-	_daily_transactions = []
-	var saved_txns: Array = data.get("daily_transactions", [])
-	for txn: Variant in saved_txns:
-		if txn is Dictionary:
-			var t: Dictionary = txn as Dictionary
-			# Reconstruct with canonical key order (matches _record_transaction)
-			# and restore int types lost during JSON round-trip.
-			_daily_transactions.append({
-				"amount": float(t.get("amount", 0.0)),
-				"reason": str(t.get("reason", "")),
-				"type": int(t.get("type", 0)),
-				"timestamp": int(t.get("timestamp", 0)),
-			})
+	_daily_transactions = _restore_transactions(
+		data.get("daily_transactions", [])
+	)
+	_transaction_history = _restore_transactions(
+		data.get("transaction_history", [])
+	)
+	if _transaction_history.is_empty() and not _daily_transactions.is_empty():
+		_transaction_history = _duplicate_transactions(
+			_daily_transactions
+		)
 
 	_sales_history = []
 	var saved_history: Array = data.get("sales_history", [])
@@ -317,10 +268,34 @@ func _apply_state(data: Dictionary) -> void:
 
 	_today_sales = _restore_dict(data, "today_sales")
 	_demand_modifiers = _restore_dict(data, "demand_modifiers")
-	_store_daily_revenue = _restore_dict(
-		data, "store_daily_revenue"
-	)
+	_store_daily_revenue = _restore_daily_revenue(data)
+	_daily_revenue = _restore_daily_revenue_total(data)
 	_drift_factors = _restore_dict(data, "drift_factors")
+
+
+func _connect_runtime_signals() -> void:
+	_connect_signal(EventBus.day_started, _on_day_started)
+	_connect_signal(EventBus.hour_changed, _on_hour_changed)
+	_connect_signal(EventBus.day_ended, _on_day_ended)
+	_connect_signal(EventBus.item_sold, _on_item_sold)
+	_connect_signal(EventBus.trade_accepted, _on_trade_accepted)
+	_connect_signal(EventBus.order_cash_check, _on_order_cash_check)
+	_connect_signal(EventBus.order_cash_deduct, _on_order_cash_deduct)
+	_connect_signal(EventBus.order_refund_issued, _on_order_refund_issued)
+	_connect_signal(EventBus.payroll_cash_check, _on_payroll_cash_check)
+	_connect_signal(EventBus.payroll_cash_deduct, _on_payroll_cash_deduct)
+	_connect_signal(EventBus.customer_purchased, _on_customer_purchased)
+	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
+	_connect_signal(
+		EventBus.emergency_cash_injected,
+		_on_emergency_cash_injected
+	)
+	_connect_signal(EventBus.milestone_unlocked, _on_milestone_unlocked)
+
+
+func _connect_signal(signal_ref: Signal, callable: Callable) -> void:
+	if not signal_ref.is_connected(callable):
+		signal_ref.connect(callable)
 
 
 func _record_transaction(
@@ -333,6 +308,9 @@ func _record_transaction(
 		"timestamp": _current_time_minutes,
 	}
 	_daily_transactions.append(transaction)
+	_transaction_history.append(transaction.duplicate())
+	while _transaction_history.size() > TRANSACTION_HISTORY_LIMIT:
+		_transaction_history.pop_front()
 
 
 func _on_day_started(_day: int) -> void:
@@ -353,7 +331,10 @@ func _on_day_ended(day: int) -> void:
 		push_warning("EconomySystem: day-end calculations took %dms" % (Time.get_ticks_msec() - start_ticks))
 
 func _emit_daily_financials_snapshot() -> void:
-	EventBus.daily_financials_snapshot.emit(_daily_revenue, _daily_expenses, _daily_revenue - _daily_expenses)
+	var total_revenue: float = _get_daily_revenue_total()
+	EventBus.daily_financials_snapshot.emit(
+		total_revenue, _daily_expenses, total_revenue - _daily_expenses
+	)
 
 func _deduct_all_store_rents() -> void:
 	_daily_rent_total = 0.0
@@ -372,10 +353,19 @@ func _on_hour_changed(hour: int) -> void:
 	_current_time_minutes = hour * Constants.MINUTES_PER_HOUR
 
 func get_store_daily_revenue(store_id: String) -> float:
-	return _store_daily_revenue.get(store_id, 0.0)
+	var canonical: StringName = _resolve_store_id(store_id)
+	if canonical.is_empty():
+		return _store_daily_revenue.get(store_id, 0.0)
+	return _store_daily_revenue.get(String(canonical), 0.0)
 
 func record_store_revenue(store_id: String, amount: float) -> void:
-	_store_daily_revenue[store_id] = (_store_daily_revenue.get(store_id, 0.0) as float) + amount
+	if amount <= 0.0:
+		return
+	var canonical: StringName = _resolve_store_id(store_id)
+	var key: String = store_id if canonical.is_empty() else String(canonical)
+	_store_daily_revenue[key] = (
+		_store_daily_revenue.get(key, 0.0) as float
+	) + amount
 
 func _on_trade_accepted(_wanted_id: String, _offered_id: String) -> void:
 	_trades_today += 1
@@ -417,6 +407,125 @@ func _restore_dict(data: Dictionary, key: String) -> Dictionary:
 	return {}
 
 
+func _restore_transactions(saved_txns: Variant) -> Array[Dictionary]:
+	var restored: Array[Dictionary] = []
+	if saved_txns is not Array:
+		return restored
+	for txn: Variant in saved_txns:
+		if txn is Dictionary:
+			var t: Dictionary = txn as Dictionary
+			restored.append({
+				"amount": float(t.get("amount", 0.0)),
+				"reason": str(t.get("reason", "")),
+				"type": int(t.get("type", 0)),
+				"timestamp": int(t.get("timestamp", 0)),
+			})
+	return restored
+
+
+func _restore_daily_revenue(data: Dictionary) -> Dictionary:
+	var saved_daily_revenue: Variant = data.get(
+		"daily_revenue", data.get("store_daily_revenue", {})
+	)
+	var restored: Dictionary = {}
+	if saved_daily_revenue is not Dictionary:
+		return restored
+	for raw_store_id: Variant in saved_daily_revenue:
+		var resolved: StringName = _resolve_store_id(raw_store_id)
+		var key: String = str(raw_store_id)
+		if not resolved.is_empty():
+			key = String(resolved)
+		restored[key] = float(
+			(saved_daily_revenue as Dictionary).get(raw_store_id, 0.0)
+		)
+	return restored
+
+
+func _restore_daily_revenue_total(data: Dictionary) -> float:
+	if data.has("daily_revenue_total"):
+		return float(data.get("daily_revenue_total", 0.0))
+	var saved_daily_revenue: Variant = data.get("daily_revenue", null)
+	if saved_daily_revenue is Dictionary:
+		return _sum_revenue(saved_daily_revenue as Dictionary)
+	if saved_daily_revenue != null:
+		return float(saved_daily_revenue)
+	return float(data.get("daily_revenue", 0.0))
+
+
+func _duplicate_transactions(
+	transactions: Array[Dictionary]
+) -> Array[Dictionary]:
+	var duplicated: Array[Dictionary] = []
+	for txn: Dictionary in transactions:
+		duplicated.append(txn.duplicate())
+	return duplicated
+
+
+func _sum_revenue(revenue_by_store: Dictionary) -> float:
+	var total: float = 0.0
+	for store_id: Variant in revenue_by_store:
+		total += float(revenue_by_store.get(store_id, 0.0))
+	return total
+
+
+func _get_daily_revenue_total() -> float:
+	return _daily_revenue
+
+
+func _get_active_store_id() -> StringName:
+	if not _active_store_id.is_empty():
+		return _active_store_id
+	return _resolve_store_id(GameManager.current_store_id)
+
+
+func _resolve_store_id(raw_store_id: Variant) -> StringName:
+	var store_id: String = str(raw_store_id)
+	if store_id.is_empty():
+		return &""
+	if ContentRegistry.exists(store_id):
+		return ContentRegistry.resolve(store_id)
+	return StringName(store_id)
+
+
+func _apply_credit(
+	amount: float, reason: String, revenue_store_id: StringName = &""
+) -> void:
+	var old_cash: float = _current_cash
+	_current_cash += amount
+	_daily_revenue += amount
+	if not revenue_store_id.is_empty():
+		record_store_revenue(String(revenue_store_id), amount)
+	_record_transaction(amount, reason, TransactionType.REVENUE)
+	EventBus.money_changed.emit(old_cash, _current_cash)
+	EventBus.transaction_completed.emit(amount, true, reason)
+
+
+func _apply_charge(
+	amount: float, reason: String, allow_negative: bool
+) -> bool:
+	if not allow_negative and _current_cash < amount:
+		EventBus.transaction_completed.emit(
+			amount, false, "Insufficient funds"
+		)
+		return false
+	var old_cash: float = _current_cash
+	_current_cash -= amount
+	_daily_expenses += amount
+	_record_transaction(amount, reason, TransactionType.EXPENSE)
+	EventBus.money_changed.emit(old_cash, _current_cash)
+	EventBus.transaction_completed.emit(amount, true, reason)
+	if allow_negative and _current_cash < 0.0:
+		push_warning(
+			"EconomySystem: cash is negative ($%.2f) after: %s"
+			% [_current_cash, reason]
+		)
+		EventBus.notification_requested.emit(
+			"Warning: You are in debt! Cash: $%.2f" % _current_cash
+		)
+	_check_bankruptcy()
+	return true
+
+
 func _on_order_cash_check(amount: float, result: Array) -> void:
 	var adjusted: float = amount * DifficultySystemSingleton.get_modifier(&"wholesale_cost_multiplier")
 	result.append(_current_cash >= adjusted)
@@ -434,6 +543,10 @@ func _on_payroll_cash_check(amount: float, result: Array) -> void:
 
 func _on_payroll_cash_deduct(amount: float, reason: String, result: Array) -> void:
 	result.append(deduct_cash(amount, reason))
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	_active_store_id = _resolve_store_id(store_id)
 
 func _count_shelf_supply_by_category() -> Dictionary:
 	var counts: Dictionary = {}

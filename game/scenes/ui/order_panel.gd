@@ -169,7 +169,9 @@ func _build_tier_tabs() -> void:
 		)
 		var config: Dictionary = OrderSystem.TIER_CONFIG[tier]
 		var btn := Button.new()
-		var unlocked: bool = order_system.is_tier_unlocked(tier)
+		var unlocked: bool = order_system.is_tier_unlocked(
+			tier, StringName(store_type)
+		)
 		btn.text = config["name"]
 		if not unlocked:
 			btn.disabled = true
@@ -190,7 +192,7 @@ func _get_lock_tooltip(config: Dictionary) -> String:
 	if req_rep > 0:
 		parts.append("Reputation tier %d required" % req_rep)
 	if req_level > 0:
-		parts.append("%d store slots required" % req_level)
+		parts.append("Store level %d required" % req_level)
 	if parts.is_empty():
 		return "Locked"
 	return " | ".join(parts)

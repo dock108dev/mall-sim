@@ -64,3 +64,18 @@ func test_format_slot_info_with_metadata() -> void:
 	}
 	var result: String = _menu._format_slot_info(data)
 	assert_true(result.contains("$2,500"))
+
+
+func test_format_slot_info_falls_back_to_legacy_current_cash() -> void:
+	var data: Dictionary = {
+		"metadata": {
+			"day_number": 5,
+			"timestamp": "2026-04-12T10:00:00",
+			"store_type": "",
+		},
+		"economy": {
+			"current_cash": 1750.0,
+		},
+	}
+	var result: String = _menu._format_slot_info(data)
+	assert_true(result.contains("$1,750"))

@@ -10,7 +10,7 @@ Goal: Engine infrastructure, autoloads, content pipeline, and GUT test harness a
 
 - [ ] Install GUT addon and test runner scene (ISSUE-179)
 - [ ] Implement ContentRegistry autoload (ISSUE-040)
-- [ ] Implement DataLoader boot utility (ISSUE-111)
+- [x] DataLoader boot utility already ships; keep ISSUE-111 scoped to loader hygiene and follow-up validation/authoring work
 - [ ] Implement GameManager autoload (ISSUE-143)
 - [ ] Implement EventBus autoload with full signal catalog
 - [ ] Implement Settings autoload (ISSUE-153)

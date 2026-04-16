@@ -11,12 +11,15 @@ var _store_state_manager: StoreStateManager
 var _trend_system: TrendSystem
 var _progression_system: ProgressionSystem
 var _staff_system: StaffSystem
+var _order_system: OrderSystem
 var _test_slot: int = 3
 var _saved_owned_stores: Array[StringName] = []
 var _saved_store_id: StringName = &""
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
+	_register_store_catalog()
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	_saved_store_id = GameManager.current_store_id
 
@@ -39,6 +42,8 @@ func before_each() -> void:
 	_store_state_manager = StoreStateManager.new()
 	add_child_autofree(_store_state_manager)
 	_store_state_manager.initialize(_inventory, _economy)
+	_store_state_manager.register_slot_ownership(0, &"sports")
+	_store_state_manager.set_active_store(&"sports")
 
 	_trend_system = TrendSystem.new()
 	add_child_autofree(_trend_system)
@@ -48,6 +53,10 @@ func before_each() -> void:
 	add_child_autofree(_progression_system)
 	_progression_system.initialize(_economy, _reputation)
 
+	_order_system = OrderSystem.new()
+	add_child_autofree(_order_system)
+	_order_system.initialize(_inventory, _reputation, _progression_system)
+
 	_staff_system = StaffSystem.new()
 	add_child_autofree(_staff_system)
 	_staff_system.initialize(_economy, _reputation, _inventory, null)
@@ -56,6 +65,7 @@ func before_each() -> void:
 	add_child_autofree(_save_manager)
 	_save_manager.initialize(_economy, _inventory, _time_system)
 	_save_manager.set_reputation_system(_reputation)
+	_save_manager.set_order_system(_order_system)
 	_save_manager.set_store_state_manager(_store_state_manager)
 	_save_manager.set_trend_system(_trend_system)
 	_save_manager.set_progression_system(_progression_system)
@@ -231,6 +241,11 @@ func test_progression_round_trip() -> void:
 	_progression_system._unlocked_store_slots = 3
 	_progression_system._unlocked_supplier_tier = 2
 	_progression_system._cumulative_cash_earned = 8000.0
+	_progression_system._mall_reputation = 37.5
+	_progression_system._unlocked_slot_indices = {
+		1: true,
+		2: true,
+	}
 
 	var pre_save: Dictionary = _progression_system.get_save_data()
 
@@ -264,6 +279,91 @@ func test_progression_round_trip() -> void:
 		float(post_load.get("cumulative_cash_earned", 0.0)),
 		8000.0, 0.01,
 		"Cumulative cash earned should match pre-save value"
+	)
+	assert_almost_eq(
+		float(post_load.get("mall_reputation", 0.0)),
+		37.5, 0.01,
+		"Mall reputation should match pre-save value"
+	)
+	var unlocked_slots: Array = post_load.get("unlocked_slot_indices", [])
+	unlocked_slots.sort()
+	assert_eq(
+		unlocked_slots,
+		[1, 2],
+		"Unlocked slot indices should match pre-save value"
+	)
+
+
+func test_load_restores_progression_before_owned_slot_refresh() -> void:
+	_progression_system._unlocked_slot_indices = {1: true}
+	_progression_system._unlocked_store_slots = 2
+
+	var unlock_visible_during_restore: Array[bool] = []
+	var on_restore: Callable = func(_slots: Dictionary) -> void:
+		unlock_visible_during_restore.append(
+			_progression_system.is_slot_unlocked(1)
+		)
+	EventBus.owned_slots_restored.connect(on_restore)
+
+	var saved: bool = _save_manager.save_game(_test_slot)
+	assert_true(saved, "Save should succeed")
+
+	_progression_system.load_save_data({})
+	_store_state_manager.owned_slots = {}
+
+	var loaded: bool = _save_manager.load_game(_test_slot)
+	assert_true(loaded, "Load should succeed")
+	assert_eq(
+		unlock_visible_during_restore,
+		[true],
+		"Progression unlocks should be restored before owned slot visuals refresh"
+	)
+
+	EventBus.owned_slots_restored.disconnect(on_restore)
+
+
+# --- OrderSystem round-trip ---
+
+
+func test_order_system_pending_orders_round_trip() -> void:
+	_order_system.load_save_data({
+		"pending_orders": [
+			{
+				"store_id": "sports",
+				"supplier_tier": OrderSystem.SupplierTier.BASIC,
+				"item_id": "sports_test_item",
+				"quantity": 3,
+				"unit_cost": 12.5,
+				"delivery_day": 9,
+			},
+		],
+		"daily_spending": {"0": 37.5},
+	})
+
+	var saved: bool = _save_manager.save_game(_test_slot)
+	assert_true(saved, "Save should succeed")
+
+	_order_system.load_save_data({})
+
+	var loaded: bool = _save_manager.load_game(_test_slot)
+	assert_true(loaded, "Load should succeed")
+
+	var post_load: Dictionary = _order_system.get_save_data()
+	var orders: Array = post_load.get("pending_orders", [])
+	assert_eq(orders.size(), 1, "Pending orders should survive round-trip")
+	assert_eq(
+		orders[0].get("store_id", ""), "sports",
+		"Saved pending order should keep the store_id"
+	)
+	assert_eq(
+		int(orders[0].get("delivery_day", 0)), 9,
+		"Saved pending order should keep the delivery_day"
+	)
+	assert_almost_eq(
+		float((post_load.get("daily_spending", {}) as Dictionary).get("0", 0.0)),
+		37.5,
+		0.01,
+		"Daily spending should survive round-trip"
 	)
 
 
@@ -320,6 +420,82 @@ func test_staff_system_round_trip() -> void:
 			"cashier_basic",
 			"Staff definition_id should survive round-trip"
 		)
+
+
+func test_load_game_canonicalizes_legacy_store_ids() -> void:
+	var legacy_save: Dictionary = {
+		"save_version": SaveManager.CURRENT_SAVE_VERSION,
+		"metadata": {
+			"store_type": "consumer_electronics",
+		},
+		"save_metadata": {
+			"store_type": "video_rental",
+		},
+		"time": _time_system.get_save_data(),
+		"economy": _economy.get_save_data(),
+		"inventory": _inventory.get_save_data(),
+		"reputation": _reputation.get_save_data(),
+		"owned_slots": {
+			"0": "sports_memorabilia",
+			"1": "video_rental",
+			"2": "consumer_electronics",
+		},
+		"store_states": {
+			"owned_slots": {
+				"0": "sports_memorabilia",
+				"1": "video_rental",
+				"2": "consumer_electronics",
+			},
+			"store_types": {
+				"sports_memorabilia": "sports_memorabilia",
+				"video_rental": "video_rental",
+				"consumer_electronics": "consumer_electronics",
+			},
+			"store_states": {
+				"video_rental": {
+					"shelf_state": {},
+				},
+			},
+			"store_revenue": {
+				"video_rental": 123.0,
+			},
+			"store_names": {
+				"consumer_electronics": "Electronica",
+			},
+		},
+	}
+	_write_save_file(_test_slot, legacy_save)
+
+	var loaded: bool = _save_manager.load_game(_test_slot)
+	assert_true(loaded, "Load should succeed for legacy store IDs")
+	assert_eq(
+		GameManager.current_store_id, &"rentals",
+		"Active store should resolve to the canonical rentals ID"
+	)
+	assert_eq(_store_state_manager.owned_slots[0], &"sports")
+	assert_eq(_store_state_manager.owned_slots[1], &"rentals")
+	assert_eq(_store_state_manager.owned_slots[2], &"electronics")
+	assert_eq(
+		_store_state_manager.get_store_type(&"sports_memorabilia"),
+		&"sports",
+		"Legacy store_type keys should load as canonical IDs"
+	)
+	assert_eq(
+		_store_state_manager.get_store_type(&"video_rental"),
+		&"rentals",
+		"Legacy rental IDs should load as canonical IDs"
+	)
+	assert_almost_eq(
+		_store_state_manager.get_store_revenue("video_rental"),
+		123.0,
+		0.01,
+		"Legacy revenue keys should load as canonical IDs"
+	)
+	assert_eq(
+		_store_state_manager.get_store_name(&"consumer_electronics"),
+		"Electronica",
+		"Legacy store_names should load as canonical IDs"
+	)
 
 
 # --- Full session round-trip ---
@@ -401,6 +577,107 @@ func test_full_session_round_trip() -> void:
 	)
 
 
+func test_save_dict_round_trip_preserves_runtime_shape() -> void:
+	_store_state_manager.register_slot_ownership(1, &"rentals")
+	_store_state_manager.set_active_store(&"rentals")
+	_economy._current_cash = 2750.5
+	_time_system.current_day = 7
+	_time_system.game_time_minutes = 810.0
+	_trend_system._active_trends = [
+		{
+			"target_type": "category",
+			"target": "sports",
+			"trend_type": TrendSystem.TrendType.HOT,
+			"multiplier": 1.7,
+			"announced_day": 6,
+			"active_day": 7,
+			"end_day": 10,
+			"fade_end_day": 12,
+		},
+	]
+	_trend_system._days_until_next_shift = 4
+	_trend_system._sales_since_shift = {"sports": 3.0}
+	_staff_system._hired_staff = {
+		"sports": [
+			{
+				"instance_id": "staff_1",
+				"definition_id": "cashier_basic",
+				"store_id": "sports",
+				"hired_day": 2,
+			},
+		],
+		"rentals": [
+			{
+				"instance_id": "staff_2",
+				"definition_id": "cashier_basic",
+				"store_id": "rentals",
+				"hired_day": 4,
+			},
+		],
+	}
+	_staff_system._next_staff_id = 2
+	_reputation.initialize_store("rentals")
+	_reputation.add_reputation("rentals", 8.0)
+
+	var pre_save: Dictionary = _sanitize_save_dict(
+		_save_manager._collect_save_data()
+	)
+
+	assert_true(_save_manager.save_game(_test_slot), "Precondition: save must succeed")
+
+	_economy.load_save_data({})
+	_inventory.load_save_data({})
+	_time_system.load_save_data({})
+	_reputation.load_save_data({})
+	_store_state_manager.load_save_data({})
+	_trend_system.load_save_data({})
+	_progression_system.load_save_data({})
+	_staff_system.load_save_data({})
+
+	assert_true(_save_manager.load_game(_test_slot), "Precondition: load must succeed")
+
+	var post_load: Dictionary = _sanitize_save_dict(
+		_save_manager._collect_save_data()
+	)
+	_assert_dict_match(pre_save, post_load, "save_dict")
+	assert_eq(
+		GameManager.current_store_id,
+		&"rentals",
+		"GameManager current_store_id should restore the saved active store"
+	)
+	assert_eq(
+		_store_state_manager.active_store_id,
+		&"rentals",
+		"StoreStateManager active_store_id should restore the saved active store"
+	)
+
+
+func test_load_game_restores_empty_active_store() -> void:
+	_store_state_manager.set_active_store(&"")
+
+	assert_true(_save_manager.save_game(_test_slot), "Precondition: save must succeed")
+
+	_store_state_manager.set_active_store(&"sports")
+
+	watch_signals(EventBus)
+	assert_true(_save_manager.load_game(_test_slot), "Precondition: load must succeed")
+	assert_eq(
+		GameManager.current_store_id,
+		&"",
+		"Loading a hallway save should keep the active store empty"
+	)
+	assert_eq(
+		_store_state_manager.active_store_id,
+		&"",
+		"StoreStateManager should restore an empty active store for hallway saves"
+	)
+	assert_signal_emitted(
+		EventBus,
+		"active_store_changed",
+		"Loading should emit active_store_changed so UI panels refresh"
+	)
+
+
 # --- Helpers ---
 
 
@@ -415,9 +692,91 @@ func _assert_dict_match(
 			"%s: missing key '%s' after load" % [label, key]
 		)
 		if actual.has(key):
-			var expected_str: String = str(expected[key])
-			var actual_str: String = str(actual[key])
+			var expected_str: String = _canonical_string(expected[key])
+			var actual_str: String = _canonical_string(actual[key])
 			assert_eq(
 				actual_str, expected_str,
 				"%s.%s mismatch" % [label, key]
 			)
+
+
+func _sanitize_save_dict(data: Dictionary) -> Dictionary:
+	var sanitized: Dictionary = data.duplicate(true)
+	var metadata: Variant = sanitized.get("metadata", {})
+	if metadata is Dictionary:
+		(metadata as Dictionary).erase("timestamp")
+		(metadata as Dictionary).erase("play_time")
+	var save_metadata: Variant = sanitized.get("save_metadata", {})
+	if save_metadata is Dictionary:
+		(save_metadata as Dictionary).erase("saved_at")
+		(save_metadata as Dictionary).erase("timestamp")
+		(save_metadata as Dictionary).erase("play_time")
+	return sanitized
+
+
+func _canonical_string(value: Variant) -> String:
+	return JSON.stringify(_canonicalize_variant(value))
+
+
+func _canonicalize_variant(value: Variant) -> Variant:
+	if value is Dictionary:
+		var normalized: Dictionary = {}
+		var keys: Array[String] = []
+		for key: Variant in value:
+			keys.append(str(key))
+		keys.sort()
+		for key: String in keys:
+			normalized[key] = _canonicalize_variant(
+				(value as Dictionary).get(key)
+			)
+		return normalized
+	if value is Array:
+		var normalized_array: Array = []
+		for entry: Variant in value:
+			normalized_array.append(_canonicalize_variant(entry))
+		return normalized_array
+	return value
+
+
+func _write_save_file(slot: int, save_data: Dictionary) -> void:
+	var file: FileAccess = FileAccess.open(
+		_save_manager._get_slot_path(slot), FileAccess.WRITE
+	)
+	assert_not_null(file, "Failed to open save file for test setup")
+	if file:
+		file.store_string(JSON.stringify(save_data, "\t"))
+		file.close()
+
+
+func _register_store_catalog() -> void:
+	ContentRegistry.register_entry(
+		{
+			"id": "sports",
+			"aliases": ["sports_memorabilia"],
+			"name": "Sports Memorabilia",
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{
+			"id": "retro_games",
+			"name": "Retro Game Store",
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{
+			"id": "rentals",
+			"aliases": ["video_rental"],
+			"name": "Video Rental",
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{
+			"id": "electronics",
+			"aliases": ["consumer_electronics"],
+			"name": "Consumer Electronics",
+		},
+		"store"
+	)
