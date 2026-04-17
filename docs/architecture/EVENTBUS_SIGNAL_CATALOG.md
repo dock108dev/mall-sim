@@ -365,7 +365,7 @@ onboarding_disabled()
 ```gdscript
 secret_thread_state_changed(thread_id: StringName, old_phase: StringName, new_phase: StringName)
 secret_thread_revealed(thread_id: StringName)
-secret_thread_completed(thread_id: StringName, reward_unlock_id: StringName)
+secret_thread_completed(thread_id: StringName, reward_data: Dictionary)
 secret_thread_failed(thread_id: StringName)
 ```
 

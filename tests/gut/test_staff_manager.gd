@@ -59,6 +59,7 @@ func test_candidates_have_default_morale() -> void:
 
 
 func test_hire_candidate_success() -> void:
+	watch_signals(EventBus)
 	var pool: Array = _manager.get_candidate_pool()
 	var candidate_id: String = (pool[0] as StaffDefinition).staff_id
 	var result: bool = _manager.hire_candidate(
@@ -67,6 +68,10 @@ func test_hire_candidate_success() -> void:
 	assert_true(result)
 	assert_eq(_manager.get_candidate_pool().size(), 7)
 	assert_true(_manager.get_staff_registry().has(candidate_id))
+	assert_signal_emitted(EventBus, "staff_hired")
+	var params: Array = get_signal_parameters(EventBus, "staff_hired")
+	assert_eq(params[0], candidate_id)
+	assert_eq(params[1], "test_store")
 
 
 func test_hire_candidate_assigns_store() -> void:
@@ -103,20 +108,29 @@ func test_hire_at_capacity_returns_false() -> void:
 
 
 func test_fire_staff_removes_from_registry() -> void:
+	watch_signals(EventBus)
 	var pool: Array = _manager.get_candidate_pool()
 	var candidate_id: String = (pool[0] as StaffDefinition).staff_id
 	_manager.hire_candidate(candidate_id, "test_store")
 	_manager.fire_staff(candidate_id)
 	assert_false(_manager.get_staff_registry().has(candidate_id))
 	assert_eq(_manager.get_staff_for_store("test_store").size(), 0)
+	assert_signal_emitted(EventBus, "staff_fired")
+	var params: Array = get_signal_parameters(EventBus, "staff_fired")
+	assert_eq(params[0], candidate_id)
+	assert_eq(params[1], "test_store")
 
 
 func test_quit_staff_removes_from_registry() -> void:
+	watch_signals(EventBus)
 	var pool: Array = _manager.get_candidate_pool()
 	var candidate_id: String = (pool[0] as StaffDefinition).staff_id
 	_manager.hire_candidate(candidate_id, "test_store")
 	_manager.quit_staff(candidate_id)
 	assert_false(_manager.get_staff_registry().has(candidate_id))
+	assert_signal_emitted(EventBus, "staff_quit")
+	var params: Array = get_signal_parameters(EventBus, "staff_quit")
+	assert_eq(params[0], candidate_id)
 
 
 func test_get_staff_for_store_filters_by_store() -> void:
@@ -201,5 +215,6 @@ func test_save_and_load_round_trip() -> void:
 	)
 	assert_eq(loaded_staff.assigned_store_id, "test_store")
 	assert_eq(loaded_staff.seniority_days, 1)
+	assert_almost_eq(loaded_staff.daily_wage, 30.0, 0.01)
 	assert_eq(new_manager.get_candidate_pool().size(), 7)
 	new_manager.free()

@@ -131,12 +131,12 @@ func test_haggle_never_used_does_not_revert_to_true() -> void:
 
 
 func test_ghost_thread_sets_flag_other_threads_do_not() -> void:
-	EventBus.secret_thread_completed.emit(&"some_other_thread", &"")
+	EventBus.secret_thread_completed.emit(&"some_other_thread", {})
 	assert_eq(
 		_system.get_tracked_stat(&"ghost_tenant_thread_completed"), 0.0,
 		"Non-ghost threads must not set ghost_tenant_thread_completed"
 	)
-	EventBus.secret_thread_completed.emit(&"the_ghost_tenant", &"")
+	EventBus.secret_thread_completed.emit(&"the_ghost_tenant", {})
 	assert_eq(
 		_system.get_tracked_stat(&"ghost_tenant_thread_completed"), 1.0,
 		"ghost_tenant_thread_completed should be 1.0 after ghost thread"
@@ -434,7 +434,7 @@ func test_save_load_round_trip_preserves_accumulated_stats() -> void:
 	EventBus.day_started.emit(1)
 	EventBus.day_started.emit(2)
 	EventBus.haggle_completed.emit(&"store", &"item", 15.0, 20.0, true, 1)
-	EventBus.secret_thread_completed.emit(&"the_ghost_tenant", &"")
+	EventBus.secret_thread_completed.emit(&"the_ghost_tenant", {})
 	EventBus.customer_left.emit({"satisfied": true})
 	EventBus.customer_left.emit({"satisfied": false})
 

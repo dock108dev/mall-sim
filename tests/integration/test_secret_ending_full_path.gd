@@ -78,9 +78,11 @@ func test_thread_completed_signal_fires_with_correct_args() -> void:
 	var received_thread_id: Array = [&""]
 	var received_unlock_id: Array = [&""]
 	EventBus.secret_thread_completed.connect(
-		func(tid: StringName, uid: StringName) -> void:
+		func(tid: StringName, reward_data: Dictionary) -> void:
 			received_thread_id[0] = tid
-			received_unlock_id[0] = uid
+			received_unlock_id[0] = StringName(
+				str(reward_data.get("unlock_id", ""))
+			)
 	)
 
 	_drive_thread_to_resolved()

@@ -51,21 +51,29 @@ var _unpaid_staff_today: Dictionary = {}
 
 func _ready() -> void:
 	_generate_initial_pool()
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.day_ended.connect(_on_day_ended)
-	EventBus.item_sold.connect(_on_item_sold)
-	EventBus.staff_fired.connect(_on_staff_fired_tracked)
-	EventBus.active_store_changed.connect(_on_active_store_changed)
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.day_ended.is_connected(_on_day_ended):
+		EventBus.day_ended.connect(_on_day_ended)
+	if not EventBus.item_sold.is_connected(_on_item_sold):
+		EventBus.item_sold.connect(_on_item_sold)
+	if not EventBus.staff_fired.is_connected(_on_staff_fired_tracked):
+		EventBus.staff_fired.connect(_on_staff_fired_tracked)
+	if not EventBus.active_store_changed.is_connected(_on_active_store_changed):
+		EventBus.active_store_changed.connect(_on_active_store_changed)
 
 
+## Returns the current hireable candidate pool.
 func get_candidate_pool() -> Array[StaffDefinition]:
 	return _candidate_pool
 
 
+## Returns the hired staff registry keyed by staff_id.
 func get_staff_registry() -> Dictionary:
 	return _staff_registry
 
 
+## Returns hired staff assigned to the provided store.
 func get_staff_for_store(store_id: String) -> Array[StaffDefinition]:
 	var result: Array[StaffDefinition] = []
 	for staff: StaffDefinition in _staff_registry.values():
@@ -74,10 +82,12 @@ func get_staff_for_store(store_id: String) -> Array[StaffDefinition]:
 	return result
 
 
+## Returns the number of hired staff assigned to the provided store.
 func get_staff_count_for_store(store_id: String) -> int:
 	return get_staff_for_store(store_id).size()
 
 
+## Hires a candidate into a store when capacity allows.
 func hire_candidate(
 	candidate_id: String, store_id: String
 ) -> bool:
@@ -99,6 +109,7 @@ func hire_candidate(
 	return true
 
 
+## Removes a hired staff member and broadcasts the firing.
 func fire_staff(staff_id: String) -> void:
 	if not _staff_registry.has(staff_id):
 		push_error(
@@ -112,6 +123,7 @@ func fire_staff(staff_id: String) -> void:
 	EventBus.staff_fired.emit(staff_id, store_id)
 
 
+## Removes a hired staff member after morale-driven or scripted quitting.
 func quit_staff(staff_id: String) -> void:
 	if not _staff_registry.has(staff_id):
 		push_error(
@@ -121,6 +133,7 @@ func quit_staff(staff_id: String) -> void:
 	var staff: StaffDefinition = _staff_registry[staff_id]
 	var staff_name: String = staff.display_name
 	var store_id: String = staff.assigned_store_id
+	_despawn_npc_immediate(staff_id)
 	_staff_registry.erase(staff_id)
 	EventBus.staff_quit.emit(staff_id)
 	var store_name: String = _get_store_display_name(store_id)
@@ -130,11 +143,13 @@ func quit_staff(staff_id: String) -> void:
 	EventBus.toast_requested.emit(toast_msg, &"staff", 4.0)
 
 
+## Returns the maximum staff capacity for the provided store.
 func get_max_staff_for_store(store_id: String) -> int:
 	var size: String = _get_store_size(store_id)
 	return STORE_CAPACITY.get(size, 2) as int
 
 
+## Serializes candidate pool and hired staff state for saves.
 func get_save_data() -> Dictionary:
 	var pool_data: Array[Dictionary] = []
 	for candidate: StaffDefinition in _candidate_pool:
@@ -151,6 +166,7 @@ func get_save_data() -> Dictionary:
 	}
 
 
+## Restores candidate pool and hired staff state from a save payload.
 func load_save_data(data: Dictionary) -> void:
 	_candidate_pool.clear()
 	_staff_registry.clear()
@@ -174,6 +190,7 @@ func load_save_data(data: Dictionary) -> void:
 				_staff_registry[staff.staff_id] = staff
 
 
+## Returns today's tracked sale count for a store.
 func get_daily_sales_for_store(store_id: String) -> int:
 	return _daily_sales_per_store.get(store_id, 0) as int
 
@@ -455,7 +472,9 @@ func _is_store_at_capacity(store_id: String) -> bool:
 
 
 func _get_store_size(store_id: String) -> String:
-	if not ContentRegistry:
+	if store_id.is_empty() or not ContentRegistry:
+		return "small"
+	if not ContentRegistry.exists(store_id):
 		return "small"
 	var entry: Dictionary = ContentRegistry.get_entry(
 		ContentRegistry.resolve(store_id)
@@ -468,7 +487,7 @@ func _get_store_size(store_id: String) -> String:
 func _get_store_display_name(store_id: String) -> String:
 	if store_id.is_empty():
 		return "Unknown Store"
-	if not ContentRegistry:
+	if not ContentRegistry or not ContentRegistry.exists(store_id):
 		return store_id.capitalize()
 	var canonical: StringName = ContentRegistry.resolve(store_id)
 	if canonical.is_empty():
@@ -500,6 +519,9 @@ func _deserialize_staff(data: Dictionary) -> StaffDefinition:
 	staff.display_name = data.get("display_name", "") as String
 	staff.role = int(data.get("role", 0)) as StaffDefinition.StaffRole
 	staff.skill_level = int(data.get("skill_level", 1))
+	staff.daily_wage = float(
+		data.get("daily_wage", staff.daily_wage)
+	)
 	staff.morale = float(data.get("morale", StaffDefinition.DEFAULT_MORALE))
 	staff.seniority_days = int(data.get("seniority_days", 0))
 	staff.consecutive_low_morale_days = int(

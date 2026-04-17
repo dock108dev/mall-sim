@@ -136,11 +136,11 @@ func test_revealed_to_resolved_next_day() -> void:
 func test_slow_burn_completes_full_lifecycle() -> void:
 	_setup_with_defs([_slow_burn_def])
 	var completed_thread: Array = [&""]
-	var completed_unlock: Array = [&""]
+	var completed_reward: Array = [{}]
 	EventBus.secret_thread_completed.connect(
-		func(tid: StringName, unlock_id: StringName) -> void:
+		func(tid: StringName, reward_data: Dictionary) -> void:
 			completed_thread[0] = tid
-			completed_unlock[0] = unlock_id
+			completed_reward[0] = reward_data
 	)
 	for day: int in range(1, 34):
 		_system._on_day_started(day)
@@ -149,8 +149,26 @@ func test_slow_burn_completes_full_lifecycle() -> void:
 		"Completion signal should fire for the_slow_burn"
 	)
 	assert_eq(
-		completed_unlock[0], &"",
-		"Thread with no reward_unlock_id should emit empty StringName"
+		str((completed_reward[0] as Dictionary).get("unlock_id", "")), "",
+		"Thread with no reward_unlock_id should omit unlock_id"
+	)
+
+
+func test_json_slow_burn_completes_when_day_31_and_no_haggles() -> void:
+	var defs: Array[Dictionary] = _all_json_defs()
+	var slow_burn: Dictionary = {}
+	for def: Dictionary in defs:
+		if str(def.get("id", "")) == "the_slow_burn":
+			slow_burn = def
+			break
+	assert_false(slow_burn.is_empty(), "secret_threads.json must define the_slow_burn")
+	_setup_with_defs([slow_burn])
+	for day: int in range(1, 32):
+		_system._on_day_started(day)
+	assert_eq(
+		_system.get_thread_phase("the_slow_burn"),
+		SecretThreadSystem.ThreadPhase.ACTIVE,
+		"the_slow_burn should activate at day >= 31 when haggle count is 0"
 	)
 
 
@@ -302,7 +320,7 @@ func test_load_does_not_emit_completion() -> void:
 	_setup_with_defs([_slow_burn_def])
 	var completed: Array = [false]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, _unlock_id: StringName) -> void:
+		func(_tid: StringName, _reward_data: Dictionary) -> void:
 			completed[0] = true
 	)
 	var save_data: Dictionary = {
@@ -374,8 +392,10 @@ func test_completed_thread_emits_reward_unlock_id() -> void:
 	_setup_with_defs([_unlock_reward_def])
 	var completed_unlock: Array = [&""]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, unlock_id: StringName) -> void:
-			completed_unlock[0] = unlock_id
+		func(_tid: StringName, reward_data: Dictionary) -> void:
+			completed_unlock[0] = StringName(
+				str(reward_data.get("unlock_id", ""))
+			)
 	)
 	for day: int in range(1, 8):
 		_system._on_day_started(day)
@@ -389,8 +409,10 @@ func test_empty_reward_unlock_id_skips_grant() -> void:
 	_setup_with_defs([_slow_burn_def])
 	var completed_unlock: Array = [&"sentinel"]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, unlock_id: StringName) -> void:
-			completed_unlock[0] = unlock_id
+		func(_tid: StringName, reward_data: Dictionary) -> void:
+			completed_unlock[0] = StringName(
+				str(reward_data.get("unlock_id", ""))
+			)
 	)
 	for day: int in range(1, 34):
 		_system._on_day_started(day)
@@ -404,7 +426,7 @@ func test_failed_thread_does_not_emit_completed() -> void:
 	_setup_with_defs([_resettable_def])
 	var completed: Array = [false]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, _unlock_id: StringName) -> void:
+		func(_tid: StringName, _reward_data: Dictionary) -> void:
 			completed[0] = true
 	)
 	for i: int in range(3):

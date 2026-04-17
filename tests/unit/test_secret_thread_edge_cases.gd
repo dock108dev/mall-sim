@@ -170,9 +170,11 @@ func test_ghost_tenant_completed_signal_carries_thread_id_and_unlock_id() -> voi
 	var received_tid: Array = [&""]
 	var received_unlock: Array = [&""]
 	EventBus.secret_thread_completed.connect(
-		func(tid: StringName, unlock_id: StringName) -> void:
+		func(tid: StringName, reward_data: Dictionary) -> void:
 			received_tid[0] = tid
-			received_unlock[0] = unlock_id
+			received_unlock[0] = StringName(
+				str(reward_data.get("unlock_id", ""))
+			)
 	)
 	for i: int in range(5):
 		_system._on_lease_completed(StringName("store_%d" % i), true, "")
@@ -310,7 +312,7 @@ func test_timeout_emits_failed_not_completed() -> void:
 	var completed: Array = [false]
 	var failed: Array = [false]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, _uid: StringName) -> void:
+		func(_tid: StringName, _reward_data: Dictionary) -> void:
 			completed[0] = true
 	)
 	EventBus.secret_thread_failed.connect(

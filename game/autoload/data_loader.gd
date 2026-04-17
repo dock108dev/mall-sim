@@ -477,6 +477,7 @@ func _load_secret_threads(data: Variant) -> void:
 			var dict: Dictionary = entry as Dictionary
 			if dict.has("id"):
 				_secret_threads.append(dict)
+				ContentRegistry.register_entry(dict, "secret_thread")
 
 
 func _parse_seasonal_config(data: Dictionary) -> Array[Dictionary]:

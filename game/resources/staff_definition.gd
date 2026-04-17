@@ -16,6 +16,11 @@ const MIN_MORALE: float = 0.0
 const MAX_MORALE: float = 1.0
 const PERFORMANCE_BASE: float = 0.6
 const PERFORMANCE_MORALE_WEIGHT: float = 0.4
+const DAILY_WAGE_BY_SKILL: Dictionary = {
+	1: 30.0,
+	2: 60.0,
+	3: 110.0,
+}
 
 @export var staff_id: String = ""
 @export var display_name: String = ""
@@ -23,12 +28,13 @@ const PERFORMANCE_MORALE_WEIGHT: float = 0.4
 @export var skill_level: int = 1:
 	set(value):
 		skill_level = clampi(value, 1, 3)
+		daily_wage = wage_for_skill(skill_level)
 @export var hire_cost: float = 0.0
 @export var morale: float = DEFAULT_MORALE:
 	set(value):
 		morale = clampf(value, MIN_MORALE, MAX_MORALE)
 @export var morale_decay_per_day: float = DEFAULT_MORALE_DECAY
-@export var daily_wage: float = 20.0
+@export var daily_wage: float = 30.0
 @export var skill_bonus: float = 0.0
 @export var description: String = ""
 @export var seniority_days: int = 0
@@ -44,7 +50,12 @@ var name: String:
 		return display_name
 
 
-## Returns performance multiplier: 0.6 + (morale * 0.4), clamped [0.6, 1.0].
+## Centralizes default wage derivation while allowing loaded content to override daily_wage.
+static func wage_for_skill(skill: int) -> float:
+	return DAILY_WAGE_BY_SKILL.get(clampi(skill, 1, 3), 30.0) as float
+
+
+## Used by role-effect systems to scale staff impact from current morale.
 func performance_multiplier() -> float:
 	return clampf(
 		PERFORMANCE_BASE + (morale * PERFORMANCE_MORALE_WEIGHT),

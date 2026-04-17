@@ -289,8 +289,8 @@ func test_haggle_never_used_cannot_revert() -> void:
 
 
 func test_secret_thread_increments_counter() -> void:
-	EventBus.secret_thread_completed.emit(&"thread_a", &"")
-	EventBus.secret_thread_completed.emit(&"thread_b", &"")
+	EventBus.secret_thread_completed.emit(&"thread_a", {})
+	EventBus.secret_thread_completed.emit(&"thread_b", {})
 	assert_eq(
 		_system.get_tracked_stat(&"secret_threads_completed"),
 		2.0, "Two secret threads should yield count of 2"

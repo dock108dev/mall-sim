@@ -88,10 +88,12 @@ func test_completed_emits_secret_thread_completed_once_with_correct_args() -> vo
 	var received_thread_id: Array = [&""]
 	var received_unlock_id: Array = [&""]
 	EventBus.secret_thread_completed.connect(
-		func(tid: StringName, uid: StringName) -> void:
+		func(tid: StringName, reward_data: Dictionary) -> void:
 			emit_count[0] += 1
 			received_thread_id[0] = tid
-			received_unlock_id[0] = uid
+			received_unlock_id[0] = StringName(
+				str(reward_data.get("unlock_id", ""))
+			)
 	)
 	_drive_complete_thread()
 	assert_eq(emit_count[0], 1, "secret_thread_completed should emit exactly once")
@@ -178,10 +180,12 @@ func test_empty_reward_unlock_id_emits_completed_without_unlock_granted() -> voi
 	var completed_unlock_id: StringName = &"SENTINEL"
 	var unlock_granted_emitted: Array = [false]
 	EventBus.secret_thread_completed.connect(
-		func(tid: StringName, uid: StringName) -> void:
+		func(tid: StringName, reward_data: Dictionary) -> void:
 			if tid == NO_REWARD_THREAD_ID:
 				completed_emitted[0] = true
-				completed_unlock_id = uid
+				completed_unlock_id = StringName(
+					str(reward_data.get("unlock_id", ""))
+				)
 	)
 	EventBus.unlock_granted.connect(
 		func(_uid: StringName) -> void:

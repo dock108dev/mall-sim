@@ -229,7 +229,7 @@ func _on_haggle_completed(
 
 
 func _on_secret_thread_completed(
-	thread_id: StringName, _reward_unlock_id: StringName
+	thread_id: StringName, _reward_data: Dictionary
 ) -> void:
 	_stats["secret_threads_completed"] = (
 		float(_stats.get("secret_threads_completed", 0.0)) + 1.0

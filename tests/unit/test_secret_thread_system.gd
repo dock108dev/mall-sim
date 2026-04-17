@@ -175,7 +175,7 @@ func test_secret_thread_completed_signal_emitted() -> void:
 	_setup_with_defs([_simple_def])
 	var completed_ids: Array[StringName] = []
 	EventBus.secret_thread_completed.connect(
-		func(tid: StringName, _unlock_id: StringName) -> void:
+		func(tid: StringName, _reward_data: Dictionary) -> void:
 			completed_ids.append(tid)
 	)
 	for day: int in range(1, 6):
@@ -190,7 +190,7 @@ func test_completed_thread_ignores_further_triggers() -> void:
 	_setup_with_defs([_simple_def])
 	var emit_count: Array = [0]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, _unlock_id: StringName) -> void:
+		func(_tid: StringName, _reward_data: Dictionary) -> void:
 			emit_count[0] += 1
 	)
 	for day: int in range(1, 6):
@@ -292,7 +292,7 @@ func test_load_state_does_not_emit_signals() -> void:
 			emitted[0] = true
 	)
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, _uid: StringName) -> void:
+		func(_tid: StringName, _reward_data: Dictionary) -> void:
 			emitted[0] = true
 	)
 	var save_data: Dictionary = {
@@ -322,8 +322,10 @@ func test_completion_emits_reward_unlock_id() -> void:
 	_setup_with_defs([_unlock_def])
 	var received_unlock: Array = [&""]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, unlock_id: StringName) -> void:
-			received_unlock[0] = unlock_id
+		func(_tid: StringName, reward_data: Dictionary) -> void:
+			received_unlock[0] = StringName(
+				str(reward_data.get("unlock_id", ""))
+			)
 	)
 	for day: int in range(1, 5):
 		_system._on_day_started(day)

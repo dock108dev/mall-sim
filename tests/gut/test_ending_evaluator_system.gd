@@ -134,7 +134,7 @@ func test_haggle_completed_sets_never_used_false() -> void:
 
 func test_secret_thread_ghost_tenant_tracked() -> void:
 	EventBus.secret_thread_completed.emit(
-		&"the_ghost_tenant", &""
+		&"the_ghost_tenant", {}
 	)
 
 	assert_eq(

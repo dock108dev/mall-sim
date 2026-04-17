@@ -186,11 +186,11 @@ func test_thread_transitions_to_resolved_day_after_revealed() -> void:
 
 func test_secret_thread_completed_emitted_on_resolve() -> void:
 	var completed_thread: Array = [&""]
-	var completed_unlock: StringName = &"sentinel"
+	var completed_reward: Dictionary = {"unlock_id": "sentinel"}
 	EventBus.secret_thread_completed.connect(
-		func(tid: StringName, unlock_id: StringName) -> void:
+		func(tid: StringName, reward_data: Dictionary) -> void:
 			completed_thread[0] = tid
-			completed_unlock = unlock_id
+			completed_reward = reward_data
 	)
 	for i: int in range(3):
 		EventBus.item_sold.emit("rare_item_%d" % i, 50.0, "collectibles")
@@ -201,8 +201,8 @@ func test_secret_thread_completed_emitted_on_resolve() -> void:
 		"secret_thread_completed must emit thread id 'the_regular'"
 	)
 	assert_eq(
-		completed_unlock, &"",
-		"Thread with no reward_unlock_id must emit empty StringName"
+		str(completed_reward.get("unlock_id", "")), "",
+		"Thread with no reward_unlock_id must omit unlock_id"
 	)
 
 
@@ -288,7 +288,7 @@ func test_load_state_restores_active_phase_in_fresh_system() -> void:
 func test_load_state_does_not_emit_completion() -> void:
 	var completed: Array = [false]
 	EventBus.secret_thread_completed.connect(
-		func(_tid: StringName, _uid: StringName) -> void:
+		func(_tid: StringName, _reward_data: Dictionary) -> void:
 			completed[0] = true
 	)
 	var save_data: Dictionary = {

@@ -269,7 +269,7 @@ signal onboarding_disabled()
 
 # ── Secret Threads ────────────────────────────────────────────────────────────
 signal secret_thread_state_changed(thread_id: StringName, old_phase: StringName, new_phase: StringName)
-signal secret_thread_completed(thread_id: StringName, reward_unlock_id: StringName)
+signal secret_thread_completed(thread_id: StringName, reward_data: Dictionary)
 signal secret_thread_revealed(thread_id: StringName)
 signal secret_thread_failed(thread_id: StringName)
 
