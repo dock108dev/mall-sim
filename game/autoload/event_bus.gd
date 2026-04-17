@@ -182,9 +182,10 @@ signal season_cycle_shifted(new_hot_league: String, old_hot_league: String)
 signal season_cycle_announced(next_hot_league: String, days_until: int)
 
 # ── Authentication (Sports Memorabilia) ───────────────────────────────────────
-signal authentication_started(item_id: String, cost: float)
-signal authentication_completed(item_id: String, success: bool, message: String)
-signal authentication_dialog_requested(item_id: String)
+signal authentication_started(item_id, cost: float)
+signal authentication_completed(item_id, success: bool, result)
+signal authentication_dialog_requested(item_id)
+signal authentication_rejected(item_id: StringName)
 
 # ── Provenance Verification (Sports Memorabilia) ─────────────────────────────
 signal provenance_requested(item_id: String, customer: Node)

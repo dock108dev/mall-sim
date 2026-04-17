@@ -6,12 +6,14 @@ const STORE_TYPE: String = "sports"
 const DEFAULT_THRESHOLD: float = 100.0
 const DEFAULT_FEE: float = 25.0
 const DEFAULT_MULTIPLIER: float = 2.0
+const SUSPICIOUS_PRICE_MULTIPLIER: float = 0.5
 
 var _inventory_system: InventorySystem = null
 var _economy_system: EconomySystem = null
 var _value_threshold: float = DEFAULT_THRESHOLD
 var _auth_fee: float = DEFAULT_FEE
 var _auth_multiplier: float = DEFAULT_MULTIPLIER
+var _authenticated_canonical_ids: Dictionary = {}
 
 
 ## Initializes system references and loads config from ContentRegistry.
@@ -60,6 +62,39 @@ func needs_authentication(
 		return false
 	if listing_price <= _value_threshold:
 		return false
+	return true
+
+
+## Authenticates a canonical content item and emits the adjusted sale price.
+func request_authentication(item_id: Variant) -> bool:
+	var canonical: StringName = _resolve_canonical_item_id(item_id)
+	if canonical.is_empty():
+		return false
+	if _authenticated_canonical_ids.has(canonical):
+		return false
+
+	var entry: Dictionary = ContentRegistry.get_entry(canonical)
+	if entry.is_empty():
+		return false
+
+	var base_price: float = float(entry.get("base_price", 0.0))
+	var final_price: float = base_price
+	if _is_suspicious_entry(entry):
+		final_price *= SUSPICIOUS_PRICE_MULTIPLIER
+
+	_authenticated_canonical_ids[canonical] = true
+	EventBus.authentication_completed.emit(
+		canonical, true, final_price
+	)
+	return true
+
+
+## Rejects a canonical content item and emits the rejection signal.
+func reject_authentication(item_id: Variant) -> bool:
+	var canonical: StringName = _resolve_canonical_item_id(item_id)
+	if canonical.is_empty():
+		return false
+	EventBus.authentication_rejected.emit(canonical)
 	return true
 
 
@@ -134,3 +169,21 @@ func _on_price_set(item_id: String, price: float) -> void:
 		return
 	if needs_authentication(item, price):
 		EventBus.authentication_dialog_requested.emit(item_id)
+
+
+func _resolve_canonical_item_id(item_id: Variant) -> StringName:
+	var raw_id: String = String(item_id)
+	if raw_id.is_empty():
+		return &""
+	var canonical: StringName = ContentRegistry.resolve(raw_id)
+	if canonical.is_empty():
+		return &""
+	return canonical
+
+
+func _is_suspicious_entry(entry: Dictionary) -> bool:
+	if bool(entry.get("suspicious", false)):
+		return true
+	if bool(entry.get("is_suspicious", false)):
+		return true
+	return float(entry.get("suspicious_chance", 0.0)) >= 1.0

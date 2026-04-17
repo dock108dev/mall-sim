@@ -3,6 +3,8 @@ class_name DataLoader
 extends Node
 
 const CONTENT_ROOT := "res://game/content/"
+const _LEGACY_MILESTONE_PATH := "res://game/content/milestones/milestone_definitions.json"
+const _PROGRESSION_MILESTONE_PATH := "res://game/content/progression/milestone_definitions.json"
 
 const _ROOT_TYPE_MAP: Dictionary = {
 	"item_definition": "item",
@@ -131,6 +133,8 @@ func load_all_content_from_root(root: String) -> void:
 	var files: Array[String] = _discover_json_files(root)
 	var economy_data: Dictionary = {}
 	for path: String in files:
+		if _should_skip_file(path):
+			continue
 		_process_file(path, economy_data, root)
 	if not economy_data.is_empty():
 		_economy_config = ContentParser.parse_economy_config(
@@ -184,6 +188,12 @@ func _scan_dir(path: String, files: Array[String]) -> void:
 		elif file_name.ends_with(".json"):
 			files.append(full_path)
 		file_name = dir.get_next()
+
+
+func _should_skip_file(path: String) -> bool:
+	if path == _LEGACY_MILESTONE_PATH and FileAccess.file_exists(_PROGRESSION_MILESTONE_PATH):
+		return true
+	return false
 
 
 func _process_file(

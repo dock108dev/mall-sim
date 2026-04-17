@@ -51,6 +51,16 @@ func exists(raw: String) -> bool:
 	)
 
 
+## Returns true if the ID resolves and, when provided, matches the expected type.
+func is_valid_id(raw: StringName, expected_type: String = "") -> bool:
+	var canonical: StringName = _resolve_internal(raw)
+	if canonical.is_empty():
+		return false
+	if expected_type.is_empty():
+		return true
+	return str(_types.get(canonical, "")) == expected_type
+
+
 ## Returns the full entry dictionary for a canonical or alias ID.
 func get_entry(id: StringName) -> Dictionary:
 	var canonical: StringName = _resolve_internal(id)
