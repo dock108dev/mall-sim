@@ -52,7 +52,7 @@ static func build(parent: Node3D, store_type: String) -> Node3D:
 			_build_video(decorations)
 		"pocket_creatures":
 			_build_pocket(decorations)
-		"consumer_electronics":
+		"electronics", "consumer_electronics":
 			_build_electronics(decorations)
 		_:
 			push_warning(

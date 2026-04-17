@@ -13,13 +13,18 @@ const RELUCTANT_ENERGY_THRESHOLD: float = 0.3
 var leader: ShopperAI = null
 var followers: Array[ShopperAI] = []
 var group_mood: float = 0.5
+var _member_exit_handlers: Dictionary = {}
 
 
 func add_member(shopper: ShopperAI) -> void:
+	if shopper == null or not is_instance_valid(shopper):
+		push_warning("ShopperGroup: attempted to add an invalid shopper.")
+		return
 	if shopper == leader:
 		return
 	if followers.has(shopper):
 		return
+	_register_member_exit_handler(shopper)
 	if leader == null and followers.is_empty():
 		leader = shopper
 	else:
@@ -27,6 +32,10 @@ func add_member(shopper: ShopperAI) -> void:
 
 
 func assign_leader() -> void:
+	_assign_leader()
+
+
+func _assign_leader() -> void:
 	var all: Array[ShopperAI] = get_all_members()
 	if all.is_empty():
 		leader = null
@@ -118,6 +127,11 @@ func has_reluctant_companion_override() -> bool:
 
 
 func remove_member(shopper: ShopperAI) -> void:
+	if shopper == null:
+		return
+	_unregister_member_exit_handler(shopper)
+	if shopper.shopper_group == self:
+		shopper.shopper_group = null
 	if shopper == leader:
 		leader = null
 		followers.erase(shopper)
@@ -154,6 +168,34 @@ func _promote_next_leader() -> void:
 func _get_social_need(shopper: ShopperAI) -> float:
 	if not shopper or not is_instance_valid(shopper):
 		return 0.0
+	if shopper.needs:
+		return shopper.needs.social
 	if not shopper.personality:
 		return 0.0
 	return shopper.personality.social_need_baseline
+
+
+func _register_member_exit_handler(shopper: ShopperAI) -> void:
+	var shopper_id: int = shopper.get_instance_id()
+	if _member_exit_handlers.has(shopper_id):
+		return
+	var exit_handler: Callable = _on_member_tree_exiting.bind(shopper)
+	_member_exit_handlers[shopper_id] = exit_handler
+	if not shopper.tree_exiting.is_connected(exit_handler):
+		shopper.tree_exiting.connect(exit_handler, CONNECT_ONE_SHOT)
+
+
+func _unregister_member_exit_handler(shopper: ShopperAI) -> void:
+	if not is_instance_valid(shopper):
+		return
+	var shopper_id: int = shopper.get_instance_id()
+	if not _member_exit_handlers.has(shopper_id):
+		return
+	var exit_handler: Callable = _member_exit_handlers[shopper_id]
+	if shopper.tree_exiting.is_connected(exit_handler):
+		shopper.tree_exiting.disconnect(exit_handler)
+	_member_exit_handlers.erase(shopper_id)
+
+
+func _on_member_tree_exiting(shopper: ShopperAI) -> void:
+	remove_member(shopper)

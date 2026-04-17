@@ -11,15 +11,27 @@ var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
 var _testing_system: TestingSystem = null
 var _testing_available: bool = false
+var _store_definition: Dictionary = {}
+var _initialized: bool = false
 
 
 func _ready() -> void:
-	store_type = STORE_ID
+	initialize()
 	super._ready()
 	_find_testing_station()
-	EventBus.customer_purchased.connect(_on_customer_purchased)
-	EventBus.inventory_item_added.connect(_on_inventory_item_added)
-	EventBus.item_stocked.connect(_on_item_stocked)
+
+
+## Initializes Retro Games lifecycle state and EventBus wiring.
+func initialize() -> void:
+	if _initialized:
+		return
+	store_type = String(STORE_ID)
+	_connect_lifecycle_signals()
+	_store_definition = ContentRegistry.get_entry(STORE_ID)
+	_connect_store_signal(EventBus.customer_purchased, _on_customer_purchased)
+	_connect_store_signal(EventBus.inventory_item_added, _on_inventory_item_added)
+	_connect_store_signal(EventBus.item_stocked, _on_item_stocked)
+	_initialized = true
 
 
 ## Sets the RefurbishmentSystem reference.
@@ -40,6 +52,11 @@ func get_testing_system() -> TestingSystem:
 ## Returns the RefurbishmentSystem, or null if not set.
 func get_refurbishment_system() -> RefurbishmentSystem:
 	return _refurbishment_system
+
+
+## Returns the loaded store definition data from ContentRegistry.
+func get_store_definition() -> Dictionary:
+	return _store_definition.duplicate(true)
 
 
 ## Returns the testing station slot node, or null if not placed.
@@ -152,6 +169,11 @@ func _try_auto_test(item_id: String) -> void:
 	_testing_system.start_test(item_id)
 
 
+func _connect_store_signal(sig: Signal, callable: Callable) -> void:
+	if not sig.is_connected(callable):
+		sig.connect(callable)
+
+
 func _seed_starter_inventory() -> void:
 	if not _inventory_system:
 		return
@@ -160,7 +182,10 @@ func _seed_starter_inventory() -> void:
 	)
 	if not existing.is_empty():
 		return
-	var entry: Dictionary = ContentRegistry.get_entry(STORE_ID)
+	var entry: Dictionary = _store_definition
+	if entry.is_empty():
+		entry = ContentRegistry.get_entry(STORE_ID)
+		_store_definition = entry
 	if entry.is_empty():
 		push_error(
 			"RetroGames: no ContentRegistry entry for %s" % STORE_ID

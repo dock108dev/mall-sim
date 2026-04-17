@@ -25,6 +25,9 @@ var _set_tags: Array[String] = [
 	"team_rocket", "neo_genesis", "crystal_storm",
 ]
 var _opening_ids: Dictionary = {}
+var _pending_pack_id: String = ""
+var _pending_pack_cards: Array[ItemInstance] = []
+var _pending_preview_ids: Array[String] = []
 
 
 ## Initializes with required system references.
@@ -66,6 +69,88 @@ func can_afford_pack(item: ItemInstance) -> bool:
 ## Opens a booster pack, charging the player and creating card instances.
 ## Returns the generated card instances, or an empty array on failure.
 func open_pack(
+	pack_instance_id: String,
+) -> Array[ItemInstance]:
+	if has_pending_pack_results():
+		push_warning(
+			"PackOpeningSystem: pending pack '%s' must be committed first"
+			% _pending_pack_id
+		)
+		return []
+	var cards: Array[ItemInstance] = _prepare_pack_cards(pack_instance_id)
+	if cards.is_empty():
+		return []
+	if not _register_cards(cards):
+		return []
+	EventBus.pack_opened.emit(pack_instance_id, _collect_card_ids(cards))
+	return cards
+
+
+## Generates card results for the reveal UI and defers inventory commit.
+func open_pack_preview(
+	pack_instance_id: String,
+) -> Array[ItemInstance]:
+	if has_pending_pack_results():
+		push_warning(
+			"PackOpeningSystem: pending pack '%s' must be committed first"
+			% _pending_pack_id
+		)
+		return []
+	var cards: Array[ItemInstance] = _prepare_pack_cards(pack_instance_id)
+	if cards.is_empty():
+		return []
+	_pending_pack_id = pack_instance_id
+	_pending_pack_cards = cards
+	_pending_preview_ids = _collect_card_ids(cards)
+	return cards
+
+
+## Commits the currently revealed pack results into inventory and emits pack_opened.
+func commit_pack_results(revealed_cards: Array[Dictionary]) -> bool:
+	if not has_pending_pack_results():
+		push_warning("PackOpeningSystem: no pending pack results to commit")
+		return false
+	if not _revealed_cards_match_pending(revealed_cards):
+		push_error(
+			"PackOpeningSystem: revealed card payload does not match pending pack '%s'"
+			% _pending_pack_id
+		)
+		return false
+	if not _register_cards(_pending_pack_cards):
+		return false
+	EventBus.pack_opened.emit(
+		_pending_pack_id,
+		_collect_card_ids(_pending_pack_cards),
+	)
+	_clear_pending_pack_results()
+	return true
+
+
+## Returns true when a pack preview is waiting for UI confirmation.
+func has_pending_pack_results() -> bool:
+	return not _pending_pack_id.is_empty() \
+		and not _pending_pack_cards.is_empty()
+
+
+## Returns a four-tier rarity label suited for preview UI cards.
+func get_preview_rarity(card: ItemInstance) -> String:
+	if not card or not card.definition:
+		return "common"
+	var rarity_key: String = card.definition.rarity
+	if rarity_key == "common":
+		rarity_key = card.definition.subcategory
+	match rarity_key:
+		"uncommon":
+			return "uncommon"
+		"rare":
+			return "rare"
+		"rare_holo", "secret_rare", "very_rare", "legendary", "ultra_rare":
+			return "ultra_rare"
+		_:
+			return "common"
+
+
+func _prepare_pack_cards(
 	pack_instance_id: String,
 ) -> Array[ItemInstance]:
 	if not _data_loader or not _inventory_system:
@@ -128,14 +213,7 @@ func open_pack(
 		return []
 
 	_inventory_system.remove_item(pack_instance_id)
-
-	var card_ids: Array[String] = []
-	for card: ItemInstance in cards:
-		_inventory_system.register_item(card)
-		card_ids.append(card.instance_id)
-
 	_opening_ids.erase(pack_instance_id)
-	EventBus.pack_opened.emit(pack_instance_id, card_ids)
 	return cards
 
 
@@ -379,3 +457,41 @@ func _apply_config(config: Dictionary) -> void:
 		for tag: Variant in tags:
 			if tag is String:
 				_set_tags.append(tag as String)
+
+
+func _register_cards(cards: Array[ItemInstance]) -> bool:
+	for card: ItemInstance in cards:
+		if not _inventory_system.register_item(card):
+			push_error(
+				"PackOpeningSystem: failed to register card '%s'"
+				% card.instance_id
+			)
+			return false
+	return true
+
+
+func _collect_card_ids(cards: Array[ItemInstance]) -> Array[String]:
+	var card_ids: Array[String] = []
+	for card: ItemInstance in cards:
+		card_ids.append(String(card.instance_id))
+	return card_ids
+
+
+func _revealed_cards_match_pending(
+	revealed_cards: Array[Dictionary],
+) -> bool:
+	if revealed_cards.is_empty():
+		return false
+	for revealed_card: Dictionary in revealed_cards:
+		var card_id: String = str(revealed_card.get("id", ""))
+		if card_id.is_empty():
+			return false
+		if not _pending_preview_ids.has(card_id):
+			return false
+	return true
+
+
+func _clear_pending_pack_results() -> void:
+	_pending_pack_id = ""
+	_pending_pack_cards.clear()
+	_pending_preview_ids.clear()

@@ -156,6 +156,53 @@ func test_inventory_load_save_resolves_legacy_shelf_and_queue_store_ids() -> voi
 	)
 
 
+func test_add_item_uses_store_id_as_authoritative_stock_owner() -> void:
+	var sports_def: ItemDefinition = _data_loader.get_item("sports_item_common")
+	assert_not_null(sports_def, "Fixture sports item definition should exist")
+	if not sports_def:
+		return
+	var item: ItemInstance = ItemInstance.create(
+		sports_def, "good", 0, sports_def.base_price
+	)
+	item.current_location = "backroom"
+
+	_inventory_system.add_item(&"retro_games", item)
+
+	var retro_stock: Array[ItemInstance] = _inventory_system.get_stock(&"retro_games")
+	var sports_stock: Array[ItemInstance] = _inventory_system.get_stock(&"sports")
+	assert_eq(
+		retro_stock.size(), 1,
+		"get_stock should use the provided store_id, not the definition store_type"
+	)
+	assert_eq(
+		sports_stock.size(), 0,
+		"Items added to a different store_id must not leak into the definition's home store"
+	)
+	assert_false(
+		_inventory_system.assign_to_shelf(&"sports", item.instance_id, &"slot_01"),
+		"Shelf assignment should reject the definition store when stock belongs to another store"
+	)
+	assert_true(
+		_inventory_system.assign_to_shelf(&"retro_games", item.instance_id, &"slot_01"),
+		"Shelf assignment should succeed for the authoritative owning store"
+	)
+
+	var saved: Dictionary = _inventory_system.serialize()
+	var restored: InventorySystem = InventorySystem.new()
+	add_child_autofree(restored)
+	restored.initialize(_data_loader)
+	restored.deserialize(saved)
+
+	assert_eq(
+		restored.get_stock(&"retro_games").size(), 1,
+		"Serialized inventory should preserve authoritative store ownership"
+	)
+	assert_eq(
+		restored.get_stock(&"sports").size(), 0,
+		"Round-trip load should not remap stock back to the definition store"
+	)
+
+
 func _register_fixture_catalog() -> void:
 	for store_entry: Dictionary in STORE_FIXTURES:
 		_data_loader._build_and_register("store", store_entry)

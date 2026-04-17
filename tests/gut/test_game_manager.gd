@@ -32,6 +32,24 @@ class FakeGameWorld:
 
 	var calls: Array[String] = []
 
+	func initialize_tier_1_data() -> void:
+		calls.append("initialize_tier_1_data")
+
+	func initialize_tier_2_state() -> void:
+		calls.append("initialize_tier_2_state")
+
+	func initialize_tier_3_operational() -> void:
+		calls.append("initialize_tier_3_operational")
+
+	func initialize_tier_4_world() -> void:
+		calls.append("initialize_tier_4_world")
+
+	func initialize_tier_5_meta() -> void:
+		calls.append("initialize_tier_5_meta")
+
+	func finalize_system_wiring() -> void:
+		calls.append("finalize_system_wiring")
+
 	func initialize_systems() -> void:
 		calls.append("initialize_systems")
 
@@ -193,8 +211,16 @@ func test_initialize_game_systems_bootstraps_new_game_before_ready_signal() -> v
 	EventBus.gameplay_ready.disconnect(conn)
 	assert_eq(
 		world.calls,
-		["initialize_systems", "bootstrap_new_game_state:sports"],
-		"New game flow should initialize systems before bootstrapping default state"
+		[
+			"initialize_tier_1_data",
+			"initialize_tier_2_state",
+			"initialize_tier_3_operational",
+			"initialize_tier_4_world",
+			"initialize_tier_5_meta",
+			"finalize_system_wiring",
+			"bootstrap_new_game_state:sports",
+		],
+		"New game flow should initialize GameWorld tiers before bootstrapping default state"
 	)
 	assert_eq(ready_count, 0, "gameplay_ready should wait for session-state application")
 
@@ -223,6 +249,13 @@ func test_initialize_game_systems_load_path_skips_new_game_bootstrap() -> void:
 
 	assert_eq(
 		world.calls,
-		["initialize_systems"],
+		[
+			"initialize_tier_1_data",
+			"initialize_tier_2_state",
+			"initialize_tier_3_operational",
+			"initialize_tier_4_world",
+			"initialize_tier_5_meta",
+			"finalize_system_wiring",
+		],
 		"Load path should reuse tier initialization without seeding a new game state"
 	)

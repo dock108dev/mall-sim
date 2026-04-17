@@ -175,13 +175,11 @@ func change_scene_packed(scene: PackedScene) -> void:
 ## Orchestrates tiered system initialization after DataLoader completes.
 ## Called by GameWorld._ready() once all system nodes are in the tree.
 func initialize_game_systems(game_world: Node) -> void:
-	if not game_world.has_method("initialize_systems"):
-		push_error("GameManager: game_world missing initialize_systems()")
+	if not _initialize_game_world_tiers(game_world):
 		return
 	if pending_load_slot >= 0:
-		game_world.initialize_systems()
-	else:
-		_start_new_game(game_world)
+		return
+	_start_new_game(game_world)
 
 
 ## Applies pending new-game or load-game session state once GameWorld UI is ready.
@@ -277,12 +275,24 @@ func _on_day_started(day: int) -> void:
 	_current_day_shadow = max(day, 1)
 
 
-## Boots a new session in the required dependency order:
-## 1. ContentRegistry/DataLoader must already be ready from boot.
-## 2. GameWorld initializes runtime systems (TimeSystem before EconomySystem,
-##    then InventorySystem/StoreStateManager and their dependents).
-## 3. The default store lease is registered and starter inventory is populated.
-## 4. Validation runs before the player is left in the hallway for first entry.
+## Initializes GameWorld tiers in dependency order once content is ready.
+func _initialize_game_world_tiers(game_world: Node) -> bool:
+	if game_world.has_method("initialize_tier_1_data"):
+		game_world.initialize_tier_1_data()
+		game_world.initialize_tier_2_state()
+		game_world.initialize_tier_3_operational()
+		game_world.initialize_tier_4_world()
+		game_world.initialize_tier_5_meta()
+		game_world.finalize_system_wiring()
+		return true
+	if game_world.has_method("initialize_systems"):
+		game_world.initialize_systems()
+		return true
+	push_error("GameManager: game_world missing tier initialization methods")
+	return false
+
+
+## Boots a new session after GameWorld has completed tier initialization.
 func _start_new_game(game_world: Node) -> void:
 	if data_loader == null:
 		push_error("GameManager: cannot start new game without DataLoader")
@@ -292,7 +302,6 @@ func _start_new_game(game_world: Node) -> void:
 		return
 	current_store_id = &""
 	owned_stores = []
-	game_world.initialize_systems()
 	game_world.bootstrap_new_game_state(DEFAULT_STARTING_STORE)
 
 

@@ -3,6 +3,8 @@ class_name InventorySystem
 extends Node
 
 var _items: Dictionary = {}
+var _stock: Dictionary = {}
+var _item_store_ids: Dictionary = {}
 var _data_loader: DataLoader = null
 var _shelf_assignments: Dictionary = {}
 ## Maps store_id -> {slot_id: definition_id} for emptied shelf slots awaiting refill.
@@ -38,7 +40,7 @@ func add_item(store_id: StringName, item: ItemInstance) -> void:
 	if canonical.is_empty():
 		push_error("InventorySystem: invalid store_id '%s'" % store_id)
 		return
-	_items[item.instance_id] = item
+	_store_item_without_signals(canonical, item)
 	_invalidate_caches()
 	EventBus.inventory_changed.emit()
 	EventBus.inventory_updated.emit(canonical)
@@ -69,6 +71,12 @@ func remove_item(instance_id: String) -> bool:
 		)
 	item.current_location = "sold"
 	_items.erase(instance_id)
+	_item_store_ids.erase(instance_id)
+	if not sid.is_empty() and _stock.has(String(sid)):
+		var store_stock: Dictionary = _stock[String(sid)]
+		store_stock.erase(instance_id)
+		if store_stock.is_empty():
+			_stock.erase(String(sid))
 	_invalidate_caches()
 	EventBus.inventory_changed.emit()
 	if not sid.is_empty():
@@ -84,15 +92,14 @@ func deduct_stock(_store_id: StringName, instance_id: String) -> bool:
 
 ## Returns all ItemInstances for the given store; empty if none.
 func get_stock(store_id: StringName) -> Array[ItemInstance]:
-	var canonical: String = String(
-		ContentRegistry.resolve(String(store_id))
-	)
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if canonical.is_empty():
 		return []
+	if not _stock.has(String(canonical)):
+		return []
 	var result: Array[ItemInstance] = []
-	for item: ItemInstance in _items.values():
-		if item.definition and item.definition.store_type == canonical:
-			result.append(item)
+	for item: ItemInstance in (_stock[String(canonical)] as Dictionary).values():
+		result.append(item)
 	return result
 
 
@@ -113,8 +120,16 @@ func assign_to_shelf(
 	if canonical.is_empty():
 		push_error("InventorySystem: invalid store_id '%s'" % store_id)
 		return false
+	if not _stock.has(canonical) or not (
+		(_stock[canonical] as Dictionary).has(String(item_id))
+	):
+		push_warning(
+			"InventorySystem: item '%s' not in store '%s'" % [item_id, canonical]
+		)
+		return false
 	if not _shelf_assignments.has(canonical):
 		_shelf_assignments[canonical] = {}
+	_remove_shelf_assignment_for_item(String(item_id))
 	var shelves: Dictionary = _shelf_assignments[canonical]
 	shelves[String(shelf_slot_id)] = String(item_id)
 	_clear_empty_shelf_target(
@@ -256,12 +271,13 @@ func create_item(
 		def, condition, 0, acquired_price
 	)
 	item.current_location = "backroom"
-	_items[item.instance_id] = item
-	_invalidate_caches()
-	EventBus.inventory_changed.emit()
 	var canonical: StringName = ContentRegistry.resolve(def.store_type)
-	if not canonical.is_empty():
-		EventBus.inventory_updated.emit(canonical)
+	if canonical.is_empty():
+		push_warning(
+			"InventorySystem: unresolved store_type '%s'" % def.store_type
+		)
+		return null
+	add_item(canonical, item)
 	return item
 
 
@@ -278,12 +294,13 @@ func register_item(item: ItemInstance) -> bool:
 				% item.definition.store_type
 			)
 			return false
-	_items[item.instance_id] = item
-	_invalidate_caches()
-	EventBus.inventory_changed.emit()
 	var sid: StringName = _get_store_id_for_item(item)
-	if not sid.is_empty():
-		EventBus.inventory_updated.emit(sid)
+	if sid.is_empty() and item.definition:
+		sid = ContentRegistry.resolve(item.definition.store_type)
+	if sid.is_empty():
+		push_warning("InventorySystem: cannot register item without store_id")
+		return false
+	add_item(sid, item)
 	return true
 
 
@@ -307,11 +324,7 @@ func move_item(instance_id: String, new_location: String) -> void:
 	item.current_location = new_location
 	if new_location.begins_with("shelf:"):
 		var shelf_id: String = new_location.substr(6)
-		var store_type: String = ""
-		if item.definition:
-			store_type = String(
-				ContentRegistry.resolve(item.definition.store_type)
-			)
+		var store_type: String = String(_get_store_id_for_item(item))
 		if not store_type.is_empty():
 			if not _shelf_assignments.has(store_type):
 				_shelf_assignments[store_type] = {}
@@ -359,36 +372,33 @@ func get_shelf_items() -> Array[ItemInstance]:
 func get_backroom_items_for_store(
 	store_type: String
 ) -> Array[ItemInstance]:
-	var canonical: String = String(ContentRegistry.resolve(store_type))
+	var canonical: StringName = ContentRegistry.resolve(store_type)
+	if canonical.is_empty():
+		return []
 	var result: Array[ItemInstance] = []
-	for item: ItemInstance in _items.values():
+	for item: ItemInstance in get_stock(canonical):
 		if item.current_location != "backroom":
 			continue
-		if item.definition and item.definition.store_type == canonical:
-			result.append(item)
+		result.append(item)
 	return result
 
 
 func get_shelf_items_for_store(
 	store_type: String
 ) -> Array[ItemInstance]:
-	var canonical: String = String(ContentRegistry.resolve(store_type))
+	var canonical: StringName = ContentRegistry.resolve(store_type)
+	if canonical.is_empty():
+		return []
 	var result: Array[ItemInstance] = []
-	for item: ItemInstance in _items.values():
+	for item: ItemInstance in get_stock(canonical):
 		if not item.current_location.begins_with("shelf:"):
 			continue
-		if item.definition and item.definition.store_type == canonical:
-			result.append(item)
+		result.append(item)
 	return result
 
 
 func get_items_for_store(store_type: String) -> Array[ItemInstance]:
-	var canonical: String = String(ContentRegistry.resolve(store_type))
-	var result: Array[ItemInstance] = []
-	for item: ItemInstance in _items.values():
-		if item.definition and item.definition.store_type == canonical:
-			result.append(item)
-	return result
+	return get_stock(ContentRegistry.resolve(store_type))
 
 
 ## Returns display-ready inventory rows for the requested store.
@@ -446,6 +456,7 @@ func get_save_data() -> Dictionary:
 	for item: ItemInstance in _items.values():
 		items_data.append({
 			"instance_id": item.instance_id,
+			"store_id": String(_get_store_id_for_item(item)),
 			"definition_id": item.definition.id if item.definition else "",
 			"condition": item.condition,
 			"acquired_day": item.acquired_day,
@@ -474,6 +485,8 @@ func load_save_data(data: Dictionary) -> void:
 
 func _apply_state(data: Dictionary) -> void:
 	_items = {}
+	_stock = {}
+	_item_store_ids = {}
 	_shelf_assignments = {}
 	_empty_shelf_targets = {}
 	_restock_queue = []
@@ -522,7 +535,18 @@ func _apply_state(data: Dictionary) -> void:
 				"InventorySystem: skipping item with empty instance_id"
 			)
 			continue
-		_items[item.instance_id] = item
+		var stored_store_id: StringName = ContentRegistry.resolve(
+			str(d.get("store_id", ""))
+		)
+		if stored_store_id.is_empty():
+			stored_store_id = _get_store_id_for_definition(item.definition)
+		if stored_store_id.is_empty():
+			push_warning(
+				"InventorySystem: unresolved store_id for item '%s' during load"
+				% item.instance_id
+			)
+			continue
+		_store_item_without_signals(stored_store_id, item)
 	var saved_shelves: Variant = data.get("shelf_assignments", {})
 	if saved_shelves is Dictionary:
 		var raw_shelves: Dictionary = saved_shelves as Dictionary
@@ -623,28 +647,29 @@ func _invalidate_caches() -> void:
 
 
 func _is_backroom_full(store_type: String) -> bool:
-	var canonical: String = String(ContentRegistry.resolve(store_type))
+	var canonical: StringName = ContentRegistry.resolve(store_type)
 	if canonical.is_empty():
 		return false
 	var entry: Dictionary = ContentRegistry.get_entry(
-		StringName(canonical)
+		canonical
 	)
 	var capacity: int = int(entry.get("backroom_capacity", 0))
 	if capacity <= 0:
 		return false
 	var count: int = 0
-	for item: ItemInstance in _items.values():
+	for item: ItemInstance in get_stock(canonical):
 		if item.current_location != "backroom":
 			continue
-		if item.definition and item.definition.store_type == canonical:
-			count += 1
+		count += 1
 	return count >= capacity
 
 
 func _get_store_id_for_item(item: ItemInstance) -> StringName:
-	if not item or not item.definition:
+	if not item:
 		return &""
-	return ContentRegistry.resolve(item.definition.store_type)
+	if _item_store_ids.has(item.instance_id):
+		return StringName(_item_store_ids[item.instance_id])
+	return _get_store_id_for_definition(item.definition)
 
 
 func _remove_shelf_assignment_for_item(instance_id: String) -> void:
@@ -697,13 +722,10 @@ func _find_backroom_item_for_definition(
 	store_id: StringName,
 	definition_id: String
 ) -> ItemInstance:
-	var canonical: String = String(store_id)
-	for item: ItemInstance in _items.values():
+	for item: ItemInstance in get_stock(store_id):
 		if item.current_location != "backroom":
 			continue
 		if not item.definition:
-			continue
-		if item.definition.store_type != canonical:
 			continue
 		if item.definition.id != definition_id:
 			continue
@@ -738,17 +760,11 @@ func _on_customer_purchased(
 func _count_definition_stock(
 	store_id: StringName, definition_id: String
 ) -> int:
-	var canonical: String = String(
-		ContentRegistry.resolve(String(store_id))
-	)
-	if canonical.is_empty():
-		return 0
 	var count: int = 0
-	for item: ItemInstance in _items.values():
+	for item: ItemInstance in get_stock(store_id):
 		if not item.definition:
 			continue
-		if item.definition.id == definition_id \
-				and item.definition.store_type == canonical:
+		if item.definition.id == definition_id:
 			count += 1
 	return count
 
@@ -759,7 +775,44 @@ func _on_order_delivered(
 	for item: Variant in items:
 		if item is ItemInstance:
 			add_item(store_id, item as ItemInstance)
+			continue
+		var instance_id: String = str(item)
+		if instance_id.is_empty() or not _items.has(instance_id):
+			continue
+		if _item_store_ids.has(instance_id):
+			continue
+		_store_item_without_signals(store_id, _items[instance_id])
 
 
 func _on_hour_changed(_hour: int) -> void:
 	process_restock_queue()
+
+
+func _store_item_without_signals(
+	store_id: StringName, item: ItemInstance
+) -> void:
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		canonical = store_id
+	if canonical.is_empty():
+		return
+	var store_key: String = String(canonical)
+	var previous_store_key: String = str(_item_store_ids.get(item.instance_id, ""))
+	if not previous_store_key.is_empty() and previous_store_key != store_key:
+		if _stock.has(previous_store_key):
+			var previous_store: Dictionary = _stock[previous_store_key]
+			previous_store.erase(item.instance_id)
+			if previous_store.is_empty():
+				_stock.erase(previous_store_key)
+	_items[item.instance_id] = item
+	if not _stock.has(store_key):
+		_stock[store_key] = {}
+	var store_stock: Dictionary = _stock[store_key]
+	store_stock[item.instance_id] = item
+	_item_store_ids[item.instance_id] = store_key
+
+
+func _get_store_id_for_definition(definition: ItemDefinition) -> StringName:
+	if not definition:
+		return &""
+	return ContentRegistry.resolve(definition.store_type)

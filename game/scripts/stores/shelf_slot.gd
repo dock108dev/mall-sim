@@ -73,7 +73,7 @@ var _held_item_id: String = ""
 var _item_node: Node3D = null
 var _placement_active: bool = false
 
-@onready var _empty_mesh: MeshInstance3D = $PlaceholderMesh
+@onready var _empty_mesh: MeshInstance3D = _resolve_empty_mesh()
 
 
 func _ready() -> void:
@@ -177,6 +177,15 @@ func _free_item_mesh() -> void:
 	if _item_node and is_instance_valid(_item_node):
 		_item_node.queue_free()
 		_item_node = null
+
+
+func _resolve_empty_mesh() -> MeshInstance3D:
+	var placeholder: MeshInstance3D = get_node_or_null(
+		"PlaceholderMesh"
+	) as MeshInstance3D
+	if placeholder:
+		return placeholder
+	return get_node_or_null("Marker") as MeshInstance3D
 
 
 ## Overrides base highlight to use green/red during placement mode.

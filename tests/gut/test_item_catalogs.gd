@@ -22,6 +22,9 @@ const VALID_RARITIES: Array[String] = [
 	"common", "uncommon", "rare", "very_rare", "legendary",
 	"ultra_rare", "secret_rare", "holographic", "rare_holo",
 ]
+const ISSUE_139_RARITIES: Array[String] = [
+	"common", "uncommon", "rare", "ultra_rare",
+]
 
 
 func test_minimum_item_counts_per_store() -> void:
@@ -65,6 +68,73 @@ func test_all_items_have_required_fields() -> void:
 			item.condition_range.size(), 0,
 			"Item '%s' should have condition_range" % item.id
 		)
+
+
+func test_catalog_json_entries_match_issue_139_schema() -> void:
+	var catalog_paths: Array[String] = [
+		"res://game/content/items/sports_memorabilia.json",
+		"res://game/content/items/retro_games.json",
+		"res://game/content/items/video_rental.json",
+		"res://game/content/items/pocket_creatures.json",
+		"res://game/content/items/consumer_electronics.json",
+	]
+	for path: String in catalog_paths:
+		var data: Variant = DataLoaderSingleton.load_json(path)
+		assert_true(data is Array, "Catalog should be an array: %s" % path)
+		if data is not Array:
+			continue
+		for raw_entry: Variant in data:
+			assert_true(raw_entry is Dictionary, "Entry should be object in %s" % path)
+			if raw_entry is not Dictionary:
+				continue
+			var entry: Dictionary = raw_entry as Dictionary
+			for key: String in [
+				"id",
+				"display_name",
+				"store_type",
+				"category",
+				"base_value",
+				"rarity",
+				"condition_variants",
+				"description",
+			]:
+				assert_true(
+					entry.has(key),
+					"Entry '%s' in %s missing '%s'"
+					% [entry.get("id", "?"), path, key]
+				)
+			assert_true(
+				str(entry.get("rarity", "")) in ISSUE_139_RARITIES,
+				"Entry '%s' in %s uses unsupported ISSUE-139 rarity '%s'"
+				% [entry.get("id", "?"), path, entry.get("rarity", "")]
+			)
+
+
+func test_issue_139_catalog_ids_unique_across_target_files() -> void:
+	var catalog_paths: Array[String] = [
+		"res://game/content/items/sports_memorabilia.json",
+		"res://game/content/items/retro_games.json",
+		"res://game/content/items/video_rental.json",
+		"res://game/content/items/pocket_creatures.json",
+		"res://game/content/items/consumer_electronics.json",
+	]
+	var seen_ids: Dictionary = {}
+	for path: String in catalog_paths:
+		var data: Variant = DataLoaderSingleton.load_json(path)
+		assert_true(data is Array, "Catalog should be an array: %s" % path)
+		if data is not Array:
+			continue
+		for raw_entry: Variant in data:
+			if raw_entry is not Dictionary:
+				continue
+			var entry: Dictionary = raw_entry as Dictionary
+			var item_id: String = str(entry.get("id", ""))
+			assert_false(
+				seen_ids.has(item_id),
+				"Duplicate ISSUE-139 item ID '%s' found in %s and %s"
+				% [item_id, seen_ids.get(item_id, "?"), path]
+			)
+			seen_ids[item_id] = path
 
 
 func test_all_item_ids_unique() -> void:

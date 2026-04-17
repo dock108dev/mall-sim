@@ -201,26 +201,27 @@ func _setup_mall_hallway() -> void:
 ## Initializes all gameplay systems in dependency-tier order.
 ## Called by GameManager after DataLoader completes content loading.
 func initialize_systems() -> void:
-	_initialize_tier_1_data()
-	_initialize_tier_2_state()
-	_initialize_tier_3_operational()
-	_initialize_tier_4_world()
-	_initialize_tier_5_meta()
-	_wire_save_manager()
-	_wire_store_controllers()
+	initialize_tier_1_data()
+	initialize_tier_2_state()
+	initialize_tier_3_operational()
+	initialize_tier_4_world()
+	initialize_tier_5_meta()
+	finalize_system_wiring()
 
 
-func _initialize_tier_1_data() -> void:
+## Initializes Tier 1 data systems with no runtime system dependencies.
+func initialize_tier_1_data() -> void:
 	time_system.initialize()
 	economy_system.initialize(_get_configured_starting_cash())
 
 
-func _initialize_tier_2_state() -> void:
-	# Ensure market_event_system is available — instantiate if not in scene.
+## Initializes Tier 2 state systems that depend on the data tier.
+func initialize_tier_2_state() -> void:
 	if market_event_system == null:
-		market_event_system = MarketEventSystem.new()
-		add_child(market_event_system)
-
+		push_error(
+			"GameWorld: cannot initialize Tier 2 without MarketEventSystem"
+		)
+		return
 	inventory_system.initialize(GameManager.data_loader)
 	economy_system.set_inventory_system(inventory_system)
 
@@ -241,7 +242,8 @@ func _initialize_tier_2_state() -> void:
 	)
 
 
-func _initialize_tier_3_operational() -> void:
+## Initializes Tier 3 operational systems after state systems are ready.
+func initialize_tier_3_operational() -> void:
 	var store_ctrl: StoreController = _find_store_controller(false)
 
 	ReputationSystemSingleton.initialize_store(
@@ -308,8 +310,12 @@ func _initialize_tier_3_operational() -> void:
 		GameManager.data_loader,
 	)
 
+	meta_shift_system.initialize(GameManager.data_loader)
+	economy_system.set_meta_shift_system(meta_shift_system)
 
-func _initialize_tier_4_world() -> void:
+
+## Initializes Tier 4 world systems once the scene tree is fully available.
+func initialize_tier_4_world() -> void:
 	if _mall_hallway:
 		store_selector_system.initialize(
 			store_state_manager,
@@ -329,13 +335,11 @@ func _initialize_tier_4_world() -> void:
 		GameManager.data_loader
 	)
 
-	meta_shift_system.initialize(GameManager.data_loader)
-	economy_system.set_meta_shift_system(meta_shift_system)
-
 	day_phase_lighting.initialize()
 
 
-func _initialize_tier_5_meta() -> void:
+## Initializes Tier 5 meta systems after core gameplay systems are live.
+func initialize_tier_5_meta() -> void:
 	performance_manager.initialize(economy_system)
 	customer_system.set_performance_manager(performance_manager)
 
@@ -381,6 +385,12 @@ func _initialize_tier_5_meta() -> void:
 	day_cycle_controller.set_ensure_panels_callback(
 		_ensure_deferred_panels
 	)
+
+
+## Wires systems that require all initialization tiers to be complete first.
+func finalize_system_wiring() -> void:
+	_wire_save_manager()
+	_wire_store_controllers()
 
 
 func _wire_save_manager() -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=49 format=3 uid="uid://video_rental_001"]
+[gd_scene load_steps=50 format=3 uid="uid://video_rental_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/video_rental.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -39,6 +39,9 @@ size = Vector3(3.0, 1.2, 0.15)
 
 [sub_resource type="BoxMesh" id="genre_shelf_mesh"]
 size = Vector3(2.0, 1.4, 0.5)
+
+[sub_resource type="BoxMesh" id="zone_footprint_mesh"]
+size = Vector3(1, 0.04, 1)
 
 [sub_resource type="BoxMesh" id="counter_mesh"]
 size = Vector3(2.5, 1.0, 0.7)
@@ -132,7 +135,7 @@ roughness = 0.82
 ; Root
 ; ============================================================
 
-[node name="VideoRentalStore" type="Node3D"]
+[node name="VideoRental" type="Node3D"]
 script = ExtResource("1")
 
 ; ============================================================
@@ -155,25 +158,27 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.8)
 
 [node name="LightingRig" type="Node3D" parent="."]
 
-[node name="OverheadHalogen1" type="OmniLight3D" parent="LightingRig"]
+[node name="OverheadHalogens" type="Node3D" parent="LightingRig"]
+
+[node name="OverheadHalogen1" type="OmniLight3D" parent="LightingRig/OverheadHalogens"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.8, -1.5)
 light_color = Color(1.0, 0.92, 0.75, 1)
 light_energy = 0.6
 omni_range = 5.0
 
-[node name="OverheadHalogen2" type="OmniLight3D" parent="LightingRig"]
+[node name="OverheadHalogen2" type="OmniLight3D" parent="LightingRig/OverheadHalogens"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2.8, -1.5)
 light_color = Color(1.0, 0.92, 0.75, 1)
 light_energy = 0.6
 omni_range = 5.0
 
-[node name="OverheadHalogen3" type="OmniLight3D" parent="LightingRig"]
+[node name="OverheadHalogen3" type="OmniLight3D" parent="LightingRig/OverheadHalogens"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.8, 1.5)
 light_color = Color(1.0, 0.92, 0.75, 1)
 light_energy = 0.6
 omni_range = 5.0
 
-[node name="OverheadHalogen4" type="OmniLight3D" parent="LightingRig"]
+[node name="OverheadHalogen4" type="OmniLight3D" parent="LightingRig/OverheadHalogens"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2.8, 1.5)
 light_color = Color(1.0, 0.92, 0.75, 1)
 light_energy = 0.6
@@ -227,6 +232,47 @@ surface_material_override/0 = ExtResource("6")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.875, 1.5, 3.05)
 mesh = SubResource("front_wall_segment_mesh")
 surface_material_override/0 = ExtResource("6")
+
+; ============================================================
+; Geometry — low floor markers make each layout zone readable
+; ============================================================
+
+[node name="Geometry" type="Node3D" parent="."]
+
+[node name="NewReleasesZoneBox" type="MeshInstance3D" parent="Geometry"]
+transform = Transform3D(3.2, 0, 0, 0, 1, 0, 0, 0, 0.45, 0, 0.04, -2.45)
+mesh = SubResource("zone_footprint_mesh")
+surface_material_override/0 = ExtResource("13")
+
+[node name="ActionZoneBox" type="MeshInstance3D" parent="Geometry"]
+transform = Transform3D(2.0, 0, 0, 0, 1, 0, 0, 0, 0.55, -3.5, 0.04, -1.0)
+mesh = SubResource("zone_footprint_mesh")
+surface_material_override/0 = ExtResource("13")
+
+[node name="ComedyZoneBox" type="MeshInstance3D" parent="Geometry"]
+transform = Transform3D(2.0, 0, 0, 0, 1, 0, 0, 0, 0.55, -1.2, 0.04, -1.0)
+mesh = SubResource("zone_footprint_mesh")
+surface_material_override/0 = ExtResource("13")
+
+[node name="HorrorZoneBox" type="MeshInstance3D" parent="Geometry"]
+transform = Transform3D(2.0, 0, 0, 0, 1, 0, 0, 0, 0.55, 1.2, 0.04, -1.0)
+mesh = SubResource("zone_footprint_mesh")
+surface_material_override/0 = ExtResource("13")
+
+[node name="DramaZoneBox" type="MeshInstance3D" parent="Geometry"]
+transform = Transform3D(2.0, 0, 0, 0, 1, 0, 0, 0, 0.55, 3.5, 0.04, -1.0)
+mesh = SubResource("zone_footprint_mesh")
+surface_material_override/0 = ExtResource("13")
+
+[node name="SciFiZoneBox" type="MeshInstance3D" parent="Geometry"]
+transform = Transform3D(2.0, 0, 0, 0, 1, 0, 0, 0, 0.55, -3.5, 0.04, 0.8)
+mesh = SubResource("zone_footprint_mesh")
+surface_material_override/0 = ExtResource("13")
+
+[node name="ReturnDeskZoneBox" type="MeshInstance3D" parent="Geometry"]
+transform = Transform3D(2.2, 0, 0, 0, 1, 0, 0, 0, 0.8, -2.5, 0.04, 2.2)
+mesh = SubResource("zone_footprint_mesh")
+surface_material_override/0 = ExtResource("13")
 
 ; ============================================================
 ; Storefront — threshold, door frame, signage
@@ -288,7 +334,7 @@ shaded = false
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.2, 3.13)
 pixel_size = 0.01
 font_size = 24
-text = "Movies, Games & Snacks"
+text = "NOW RENTING"
 modulate = Color(1, 0.95, 0.92, 1)
 outline_size = 4
 outline_modulate = Color(0.12, 0.03, 0.07, 1)
@@ -967,16 +1013,16 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 mesh = SubResource("return_desk_mesh")
 surface_material_override/0 = ExtResource("12")
 
-[node name="ReturnsBinInteractable" type="Area3D" parent="ReturnDesk"]
+[node name="Interactable" type="Area3D" parent="ReturnDesk"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.75, 0)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("4")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ReturnDesk/ReturnsBinInteractable"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ReturnDesk/Interactable"]
 shape = SubResource("returns_bin_collision")
 
-[node name="BinMesh" type="MeshInstance3D" parent="ReturnDesk/ReturnsBinInteractable"]
+[node name="BinMesh" type="MeshInstance3D" parent="ReturnDesk/Interactable"]
 mesh = SubResource("returns_bin_mesh")
 surface_material_override/0 = ExtResource("11")
 
@@ -1006,6 +1052,33 @@ surface_material_override/0 = ExtResource("15")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.85, -0.45)
 mesh = SubResource("crt_mesh")
 surface_material_override/0 = SubResource("crt_screen_mat")
+
+; ============================================================
+; Interaction Points — designer-facing anchors for player prompts
+; ============================================================
+
+[node name="InteractionPoints" type="Node3D" parent="."]
+
+[node name="NewReleasesPoint" type="Marker3D" parent="InteractionPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.2)
+
+[node name="ActionPoint" type="Marker3D" parent="InteractionPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 1.1, -0.4)
+
+[node name="ComedyPoint" type="Marker3D" parent="InteractionPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 1.1, -0.4)
+
+[node name="HorrorPoint" type="Marker3D" parent="InteractionPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 1.1, -0.4)
+
+[node name="DramaPoint" type="Marker3D" parent="InteractionPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 1.1, -0.4)
+
+[node name="SciFiPoint" type="Marker3D" parent="InteractionPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 1.1, 1.4)
+
+[node name="ReturnDeskPoint" type="Marker3D" parent="InteractionPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1.1, 2.2)
 
 ; ============================================================
 ; Checkout Counter (register + 4 impulse slots)

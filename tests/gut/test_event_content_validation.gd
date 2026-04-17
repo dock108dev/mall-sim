@@ -160,7 +160,7 @@ func test_random_events_probability_weights_positive() -> void:
 func test_random_events_valid_effect_types() -> void:
 	var valid_types: Array[String] = [
 		"supply_shortage", "viral_trend", "health_inspection",
-		"shoplifting", "water_leak", "celebrity_visit",
+		"shoplifting", "theft", "water_leak", "celebrity_visit",
 		"power_outage", "collector_convention", "bulk_order",
 		"competitor_sale", "rainy_day", "estate_sale",
 	]

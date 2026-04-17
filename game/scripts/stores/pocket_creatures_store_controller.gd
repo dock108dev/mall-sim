@@ -1,5 +1,4 @@
-## Controller for the PocketCreatures card shop — lifecycle, pack opening
-## hooks, and tournament event wiring.
+## Controller for the PocketCreatures card shop lifecycle and hooks.
 class_name PocketCreaturesStoreController
 extends StoreController
 
@@ -17,16 +16,19 @@ var _initialized: bool = false
 
 
 func _ready() -> void:
-	store_type = STORE_ID
+	initialize()
 	super._ready()
-	EventBus.seasonal_event_started.connect(_on_seasonal_event_started)
 
 
 ## Initializes pack tracking and connects inventory signals.
 func initialize() -> void:
 	if _initialized:
 		return
+	initialize_store(STORE_ID, STORE_TYPE)
 	_pack_inventory_count = 0
+	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
+	_connect_signal(EventBus.inventory_item_added, _on_inventory_item_added)
+	_connect_signal(EventBus.seasonal_event_started, _on_seasonal_event_started)
 	_initialized = true
 
 
@@ -79,9 +81,7 @@ func set_trade_panel(panel: TradePanel) -> void:
 ## Opens a booster pack and returns card IDs.
 func open_pack(item_id: StringName) -> Array[StringName]:
 	if not pack_opening_system:
-		push_warning(
-			"PocketCreaturesStoreController: pack system not set"
-		)
+		push_warning("PocketCreaturesStoreController: pack system not set")
 		return []
 	var pack_result: Array[ItemInstance] = (
 		pack_opening_system.open_pack(String(item_id))
@@ -97,11 +97,9 @@ func open_pack_with_cards(
 	item_id: StringName,
 ) -> Array[ItemInstance]:
 	if not pack_opening_system:
-		push_warning(
-			"PocketCreaturesStoreController: pack system not set"
-		)
+		push_warning("PocketCreaturesStoreController: pack system not set")
 		return []
-	return pack_opening_system.open_pack(String(item_id))
+	return pack_opening_system.open_pack_preview(String(item_id))
 
 
 ## Returns true if the player can afford to open the given pack.
@@ -210,6 +208,20 @@ func _on_tournament_started(_event_id: StringName) -> void:
 	pass
 
 
+func _on_inventory_item_added(
+	store_id: StringName, item_id: StringName
+) -> void:
+	if store_id != STORE_ID:
+		return
+	var entry: Dictionary = ContentRegistry.get_entry(item_id)
+	if entry.is_empty() and _inventory_system:
+		var item: ItemInstance = _inventory_system.get_item(String(item_id))
+		if item and item.definition:
+			entry = ContentRegistry.get_entry(StringName(item.definition.id))
+	if _is_sealed_pack(entry):
+		_pack_inventory_count += 1
+
+
 func _seed_starter_inventory() -> void:
 	if not _inventory_system:
 		return
@@ -223,10 +235,7 @@ func _seed_starter_inventory() -> void:
 		return
 	var entry: Dictionary = ContentRegistry.get_entry(resolved)
 	if entry.is_empty():
-		push_error(
-			"PocketCreaturesStoreController: no ContentRegistry "
-			+ "entry for %s" % STORE_ID
-		)
+		push_error("PocketCreaturesStoreController: no entry for %s" % STORE_ID)
 		return
 	var starter_items: Variant = entry.get("starting_inventory", [])
 	if starter_items is Array:
@@ -240,10 +249,7 @@ func _add_starter_item(raw_id: String) -> void:
 		return
 	var canonical: StringName = ContentRegistry.resolve(raw_id)
 	if canonical.is_empty():
-		push_error(
-			"PocketCreaturesStoreController: unknown item_id '%s'"
-			% raw_id
-		)
+		push_error("PocketCreaturesStoreController: unknown item_id '%s'" % raw_id)
 		return
 	var entry: Dictionary = ContentRegistry.get_entry(canonical)
 	if entry.is_empty():

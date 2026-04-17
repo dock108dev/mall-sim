@@ -6,6 +6,7 @@ extends RefCounted
 const HEALTH_INSPECTION_STOCK_THRESHOLD: float = 0.5
 const HEALTH_INSPECTION_PASS_REP: float = 5.0
 const HEALTH_INSPECTION_FAIL_REP: float = -10.0
+const SHOPLIFTING_REPUTATION_PENALTY: float = -2.0
 const COMPETITOR_SALE_DEMAND_MODIFIER: float = -0.1
 const RAINY_DAY_TRAFFIC_MODIFIER: float = 0.7
 
@@ -136,6 +137,10 @@ func apply_shoplifting(
 	)
 	EventBus.item_lost.emit(stolen.instance_id, "shoplifting")
 	_inventory_system.remove_item(stolen.instance_id)
+	if _reputation_system:
+		_reputation_system.modify_reputation(
+			String(store_id), SHOPLIFTING_REPUTATION_PENALTY
+		)
 	return item_name
 
 

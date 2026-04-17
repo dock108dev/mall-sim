@@ -159,45 +159,17 @@ func test_seasonal_event_does_not_activate_outside_configured_day_range() -> voi
 	)
 
 
-func test_random_event_probability_weighting_favors_higher_weight_over_1000_rolls() -> void:
-	seed(424242)
-	var heavy_event: RandomEventDefinition = (
+func test_random_event_probability_uses_definition_weight() -> void:
+	var event: RandomEventDefinition = (
 		_make_random_event_definition({
-			"id": "heavy_event",
-			"probability_weight": 9.0,
+			"id": "eight_percent_event",
+			"probability_weight": 0.08,
 		})
 	)
-	var light_event: RandomEventDefinition = (
-		_make_random_event_definition({
-			"id": "light_event",
-			"probability_weight": 1.0,
-		})
-	)
-	var candidates: Array[RandomEventDefinition] = [
-		heavy_event,
-		light_event,
-	]
-	var heavy_count: int = 0
-	var light_count: int = 0
-
-	for _roll_index: int in range(1000):
-		var chosen: RandomEventDefinition = (
-			_random_system._weighted_pick(candidates)
-		)
-		if chosen.id == "heavy_event":
-			heavy_count += 1
-		elif chosen.id == "light_event":
-			light_count += 1
-
-	assert_gt(
-		heavy_count,
-		light_count,
-		"Higher-weight events should be selected more often."
-	)
-	assert_gt(
-		heavy_count,
-		800,
-		"Heavier event should dominate the 1000 weighted picks."
+	assert_almost_eq(
+		RandomEventProbability.event_probability(event, []),
+		0.08,
+		0.001
 	)
 
 

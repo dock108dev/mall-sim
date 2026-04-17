@@ -31,6 +31,32 @@ func test_store_type_set_in_ready() -> void:
 	)
 
 
+func test_initialize_sets_store_type() -> void:
+	var controller: RetroGames = RetroGames.new()
+	controller.initialize()
+	assert_eq(
+		controller.store_type, "retro_games",
+		"initialize should set store_type"
+	)
+	controller.free()
+
+
+func test_initialize_is_idempotent() -> void:
+	_controller.initialize()
+	_controller.initialize()
+	var opened_ids: Array[String] = []
+	var capture: Callable = func(sid: String) -> void:
+		opened_ids.append(sid)
+	EventBus.store_opened.connect(capture)
+	EventBus.store_entered.emit(&"retro_games")
+	await get_tree().process_frame
+	EventBus.store_opened.disconnect(capture)
+	assert_eq(
+		opened_ids.size(), 1,
+		"initialize should not duplicate EventBus connections"
+	)
+
+
 func test_activates_on_matching_store_change() -> void:
 	EventBus.active_store_changed.emit(&"retro_games")
 	assert_true(
@@ -53,6 +79,7 @@ func test_store_entered_emits_store_opened() -> void:
 		opened_ids.append(sid)
 	EventBus.store_opened.connect(capture)
 	EventBus.store_entered.emit(&"retro_games")
+	await get_tree().process_frame
 	EventBus.store_opened.disconnect(capture)
 	assert_eq(
 		opened_ids.size(), 1,
@@ -70,6 +97,7 @@ func test_store_entered_ignores_other_stores() -> void:
 		opened_ids.append(sid)
 	EventBus.store_opened.connect(capture)
 	EventBus.store_entered.emit(&"sports")
+	await get_tree().process_frame
 	EventBus.store_opened.disconnect(capture)
 	assert_eq(
 		opened_ids.size(), 0,

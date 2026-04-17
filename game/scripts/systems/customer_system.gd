@@ -423,13 +423,20 @@ func _update_mall_shoppers() -> void:
 		return
 	var target: int = get_spawn_target()
 	if _active_mall_shopper_count < target:
-		_try_spawn_mall_shopper()
+		_try_spawn_mall_shopper(target - _active_mall_shopper_count)
 	elif _active_mall_shopper_count > target:
-		_request_one_shopper_leave()
+		if not _despawn_one_leaving_shopper():
+			_request_one_shopper_leave()
 
 
-func _try_spawn_mall_shopper() -> void:
-	if _active_mall_shopper_count >= max_customers_in_mall:
+func _try_spawn_mall_shopper(spawn_capacity: int = -1) -> void:
+	var tracked_count: int = maxi(
+		_active_mall_shopper_count, _get_live_mall_shopper_count()
+	)
+	var remaining_capacity: int = max_customers_in_mall - tracked_count
+	if spawn_capacity >= 0:
+		remaining_capacity = mini(remaining_capacity, spawn_capacity)
+	if remaining_capacity <= 0:
 		return
 	if not _shopper_scene:
 		return
@@ -441,7 +448,7 @@ func _try_spawn_mall_shopper() -> void:
 		ShopperArchetypeConfig.weighted_random_select(weights)
 	)
 	if ShopperArchetypeConfig.is_group_archetype(archetype):
-		_spawn_shopper_group(archetype, spawn_pos)
+		_spawn_shopper_group(archetype, spawn_pos, remaining_capacity)
 	else:
 		_spawn_solo_shopper(archetype, spawn_pos)
 
@@ -465,6 +472,7 @@ func _spawn_solo_shopper(
 func _spawn_shopper_group(
 	archetype: PersonalityData.PersonalityType,
 	spawn_pos: Vector3,
+	spawn_capacity: int,
 ) -> void:
 	var size_range: Vector2i = (
 		ShopperArchetypeConfig.get_group_size_range(archetype)
@@ -473,9 +481,9 @@ func _spawn_shopper_group(
 	var remaining_capacity: int = (
 		max_customers_in_mall - _active_mall_shopper_count
 	)
+	remaining_capacity = mini(remaining_capacity, spawn_capacity)
 	group_size = mini(group_size, remaining_capacity)
 	if group_size < 2:
-		_spawn_solo_shopper(archetype, spawn_pos)
 		return
 	var group: ShopperGroup = ShopperGroup.new()
 	for i: int in range(group_size):
@@ -516,6 +524,16 @@ func _find_exit_waypoint_position() -> Vector3:
 		)
 		return Vector3.ZERO
 	return exits.pick_random().global_position
+
+
+func _get_live_mall_shopper_count() -> int:
+	if not is_inside_tree():
+		return 0
+	var count: int = 0
+	for node: Node in get_tree().get_nodes_in_group("shoppers"):
+		if is_instance_valid(node):
+			count += 1
+	return count
 
 
 func _get_fractional_hour() -> float:
@@ -663,10 +681,9 @@ func _on_speed_changed(new_speed: float) -> void:
 
 
 func _on_day_phase_changed(new_phase: int) -> void:
-	if new_phase == TimeSystem.DayPhase.PRE_OPEN:
-		_current_archetype_weights = ShopperArchetypeConfig.WEIGHTS_MORNING
-		return
-	_refresh_current_archetype_weights()
+	_current_archetype_weights = (
+		ShopperArchetypeConfig.get_weights_for_phase(new_phase)
+	)
 
 
 func _request_one_shopper_leave() -> void:
@@ -681,6 +698,22 @@ func _request_one_shopper_leave() -> void:
 			continue
 		shopper.request_leave()
 		return
+
+
+func _despawn_one_leaving_shopper() -> bool:
+	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
+		"shoppers"
+	)
+	for node: Node in shoppers:
+		var shopper: ShopperAI = node as ShopperAI
+		if not shopper or not is_instance_valid(shopper):
+			continue
+		if shopper.current_state != ShopperAI.ShopperState.LEAVING:
+			continue
+		shopper.queue_free()
+		_decrement_active_mall_shopper_count()
+		return true
+	return false
 
 
 func _request_all_shoppers_leave() -> void:

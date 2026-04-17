@@ -1006,55 +1006,71 @@ shape = SubResource("slot_collision")
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("11")
 
+[node name="Interactable" type="Area3D" parent="ServiceCounter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1.0, -0.35)
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 1
+display_name = "Checkout"
+prompt_text = "Checkout"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ServiceCounter/Interactable"]
+shape = SubResource("register_area_shape")
+
 ; ============================================================
 ; LightingRig — fluorescent overheads + kiosk screen glow
 ; ============================================================
 
 [node name="LightingRig" type="Node3D" parent="."]
 
-[node name="FluorescentOverhead1" type="OmniLight3D" parent="LightingRig"]
+[node name="FluorescentOverheads" type="Node3D" parent="LightingRig"]
+
+[node name="FluorescentOverhead1" type="OmniLight3D" parent="LightingRig/FluorescentOverheads"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.9, -1.5)
-light_color = Color(1.0, 0.93, 0.8, 1)
+light_color = Color(0.86, 0.94, 1.0, 1)
 light_energy = 0.7
 omni_range = 5.0
 
-[node name="FluorescentOverhead2" type="OmniLight3D" parent="LightingRig"]
+[node name="FluorescentOverhead2" type="OmniLight3D" parent="LightingRig/FluorescentOverheads"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2.9, -1.5)
-light_color = Color(1.0, 0.93, 0.8, 1)
+light_color = Color(0.86, 0.94, 1.0, 1)
 light_energy = 0.7
 omni_range = 5.0
 
-[node name="FluorescentOverhead3" type="OmniLight3D" parent="LightingRig"]
+[node name="FluorescentOverhead3" type="OmniLight3D" parent="LightingRig/FluorescentOverheads"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 0)
-light_color = Color(1.0, 0.93, 0.8, 1)
+light_color = Color(0.86, 0.94, 1.0, 1)
 light_energy = 0.8
 omni_range = 6.0
 
-[node name="FluorescentOverhead4" type="OmniLight3D" parent="LightingRig"]
+[node name="FluorescentOverhead4" type="OmniLight3D" parent="LightingRig/FluorescentOverheads"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.9, 1.5)
-light_color = Color(1.0, 0.93, 0.8, 1)
+light_color = Color(0.86, 0.94, 1.0, 1)
 light_energy = 0.7
 omni_range = 5.0
 
-[node name="FluorescentOverhead5" type="OmniLight3D" parent="LightingRig"]
+[node name="FluorescentOverhead5" type="OmniLight3D" parent="LightingRig/FluorescentOverheads"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2.9, 1.5)
-light_color = Color(1.0, 0.93, 0.8, 1)
+light_color = Color(0.86, 0.94, 1.0, 1)
 light_energy = 0.7
 omni_range = 5.0
 
-[node name="KioskScreenGlow_A" type="OmniLight3D" parent="LightingRig"]
+[node name="KioskScreenGlow" type="Node3D" parent="LightingRig"]
+
+[node name="KioskScreenGlow_A" type="OmniLight3D" parent="LightingRig/KioskScreenGlow"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1.4, 1.0)
 light_color = Color(0.3, 0.5, 1.0, 1)
 light_energy = 0.4
 omni_range = 1.5
 
-[node name="KioskScreenGlow_B" type="OmniLight3D" parent="LightingRig"]
+[node name="KioskScreenGlow_B" type="OmniLight3D" parent="LightingRig/KioskScreenGlow"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 1.0)
 light_color = Color(0.3, 0.5, 1.0, 1)
 light_energy = 0.4
 omni_range = 1.5
 
-[node name="KioskScreenGlow_C" type="OmniLight3D" parent="LightingRig"]
+[node name="KioskScreenGlow_C" type="OmniLight3D" parent="LightingRig/KioskScreenGlow"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.4, 1.0)
 light_color = Color(0.3, 0.5, 1.0, 1)
 light_energy = 0.4
@@ -1143,10 +1159,6 @@ navigation_mesh = SubResource("nav_mesh")
 [node name="StoreStaffConfig" type="Node" parent="."]
 script = ExtResource("13")
 max_staff = 2
-register_points = [NodePath("RegisterPoint")]
-backroom_point = NodePath("BackroomPoint")
-greeter_point = NodePath("GreeterPoint")
-break_point = NodePath("StaffBreakPoint")
 
 [node name="RegisterPoint" type="Marker3D" parent="StoreStaffConfig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 0, 1.0)
@@ -1166,10 +1178,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, 2.0)
 
 [node name="CustomerNavConfig" type="Node" parent="."]
 script = ExtResource("14")
-entry_point = NodePath("EntryPoint")
-browse_waypoints = [NodePath("BrowseWaypoint01"), NodePath("BrowseWaypoint02"), NodePath("BrowseWaypoint03"), NodePath("BrowseWaypoint04")]
-checkout_approach = NodePath("CheckoutApproach")
-exit_point = NodePath("ExitPoint")
 max_concurrent_customers = 4
 
 [node name="EntryPoint" type="Marker3D" parent="CustomerNavConfig"]

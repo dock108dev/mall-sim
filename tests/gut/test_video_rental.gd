@@ -3,6 +3,8 @@ extends GutTest
 
 
 var _controller: VideoRental
+var _registered_store_entry: bool = false
+var _registered_item_entries: Array[StringName] = []
 
 
 func before_each() -> void:
@@ -36,6 +38,24 @@ func test_initialize_creates_empty_rentals() -> void:
 	assert_eq(
 		_controller._active_rentals.size(), 0,
 		"_active_rentals should be empty after initialize"
+	)
+
+
+func test_initialize_connects_rental_lifecycle_signals() -> void:
+	_controller.initialize()
+	assert_true(
+		EventBus.active_store_changed.is_connected(
+			_controller._on_active_store_changed
+		),
+		"initialize should connect active_store_changed"
+	)
+	assert_true(
+		EventBus.hour_changed.is_connected(_controller._on_hour_changed),
+		"initialize should connect hour_changed"
+	)
+	assert_true(
+		EventBus.day_started.is_connected(_controller._on_day_started),
+		"initialize should connect day_started"
 	)
 
 
@@ -115,7 +135,103 @@ func test_activation_on_store_change() -> void:
 	)
 
 
+func test_activation_on_canonical_store_change() -> void:
+	_register_test_store_entry()
+	EventBus.active_store_changed.emit(&"rentals")
+	assert_true(
+		_controller.is_active(),
+		"Controller should activate on canonical rentals alias"
+	)
+
+
 func test_no_null_errors_without_inventory() -> void:
 	_controller.initialize()
 	EventBus.store_entered.emit(&"video_rental")
 	assert_true(true, "Store entry without inventory should not crash")
+
+
+func test_store_entered_seeds_inventory_and_emits_store_opened() -> void:
+	_register_test_store_entry()
+	var inventory: InventorySystem = InventorySystem.new()
+	add_child_autofree(inventory)
+	_controller.set_inventory_system(inventory)
+	var opened_ids: Array[String] = []
+	var capture: Callable = func(store_id: String) -> void:
+		opened_ids.append(store_id)
+	EventBus.store_opened.connect(capture)
+
+	EventBus.store_entered.emit(&"video_rental")
+	await get_tree().process_frame
+
+	EventBus.store_opened.disconnect(capture)
+	var items: Array[ItemInstance] = inventory.get_items_for_store("video_rental")
+	assert_eq(items.size(), 2, "Starter inventory should seed when the store is empty")
+	assert_eq(opened_ids.size(), 1, "store_opened should emit once for Video Rental")
+	assert_eq(opened_ids[0], "video_rental", "store_opened should use STORE_ID")
+
+
+func after_each() -> void:
+	for item_id: StringName in _registered_item_entries:
+		_unregister_test_entry(item_id)
+	_registered_item_entries.clear()
+	if _registered_store_entry:
+		_unregister_test_entry(&"rentals")
+		_registered_store_entry = false
+
+
+func _register_test_store_entry() -> void:
+	if not ContentRegistry.exists("rentals"):
+		ContentRegistry.register_entry(
+			{
+				"id": "rentals",
+				"aliases": ["video_rental"],
+				"name": "Video Rental",
+				"store_type": "rentals",
+				"starting_inventory": [
+					"test_video_rental_item_a",
+					"test_video_rental_item_b",
+				],
+			},
+			"store"
+		)
+		_registered_store_entry = true
+	_register_test_item_entry(
+		&"test_video_rental_item_a",
+		"Starter Tape A"
+	)
+	_register_test_item_entry(
+		&"test_video_rental_item_b",
+		"Starter Tape B"
+	)
+
+
+func _register_test_item_entry(item_id: StringName, item_name: String) -> void:
+	if ContentRegistry.exists(String(item_id)):
+		return
+	ContentRegistry.register_entry(
+		{
+			"id": String(item_id),
+			"item_name": item_name,
+			"base_price": 2.5,
+			"category": "vhs_classic",
+			"rarity": "common",
+			"store_type": "rentals",
+		},
+		"item"
+	)
+	_registered_item_entries.append(item_id)
+
+
+func _unregister_test_entry(entry_id: StringName) -> void:
+	var entries: Dictionary = ContentRegistry._entries
+	var aliases: Dictionary = ContentRegistry._aliases
+	var types: Dictionary = ContentRegistry._types
+	var display_names: Dictionary = ContentRegistry._display_names
+	var scene_map: Dictionary = ContentRegistry._scene_map
+	entries.erase(entry_id)
+	types.erase(entry_id)
+	display_names.erase(entry_id)
+	scene_map.erase(entry_id)
+	for alias: StringName in aliases.keys():
+		if aliases[alias] == entry_id:
+			aliases.erase(alias)

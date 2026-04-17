@@ -1,288 +1,134 @@
-## Tests NPCSpawnerSystem customer NPC spawning, despawning, and queue logic.
+## Tests NPCSpawnerSystem pooled ShopperAI spawning and active-store integration.
 extends GutTest
 
 
 var _system: NPCSpawnerSystem
-var _nav_config: CustomerNavConfig
 var _store_root: Node3D
-var _spawned_signals: Array[Node] = []
+var _store_definition: StoreDefinition
 
 
 func before_each() -> void:
-	_spawned_signals.clear()
-
+	ContentRegistry.clear_for_testing()
 	_store_root = Node3D.new()
 	_store_root.name = "test_store"
 	add_child_autofree(_store_root)
+	var container := Node3D.new()
+	container.name = "npc_container"
+	_store_root.add_child(container)
 
-	_nav_config = CustomerNavConfig.new()
-	_nav_config.name = "CustomerNavConfig"
-	_nav_config.max_concurrent_customers = 2
-	_store_root.add_child(_nav_config)
-
-	var entry := Marker3D.new()
-	entry.position = Vector3(0.0, 0.0, 0.0)
-	_nav_config.add_child(entry)
-	_nav_config.entry_point = entry
-
-	var wp1 := Marker3D.new()
-	wp1.position = Vector3(1.0, 0.0, 0.0)
-	_nav_config.add_child(wp1)
-	_nav_config.browse_waypoints = [wp1]
-
-	var checkout := Marker3D.new()
-	checkout.position = Vector3(3.0, 0.0, 0.0)
-	_nav_config.add_child(checkout)
-	_nav_config.checkout_approach = checkout
-
-	var exit_marker := Marker3D.new()
-	exit_marker.position = Vector3(0.0, 0.0, 5.0)
-	_nav_config.add_child(exit_marker)
-	_nav_config.exit_point = exit_marker
+	_store_definition = StoreDefinition.new()
+	_store_definition.id = "test_store"
+	_store_definition.size_category = "small"
+	ContentRegistry.register(&"test_store", _store_definition, "store")
+	ContentRegistry.register_entry(
+		{
+			"id": "test_store",
+			"display_name": "Test Store",
+			"scene_path": "res://game/scenes/stores/test_store.tscn",
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{
+			"id": "power_shopper",
+			"personality_type": "POWER_SHOPPER",
+			"shop_weight": 1.5,
+			"impulse_factor": 0.3,
+			"min_budget": 80.0,
+			"max_budget": 300.0,
+		},
+		"personality_data"
+	)
 
 	_system = NPCSpawnerSystem.new()
 	add_child_autofree(_system)
 	_system.initialize()
-	_system._current_store_root = _store_root
-	_system._current_nav_config = _nav_config
+	EventBus.active_store_changed.emit(&"test_store")
 
 
 func after_each() -> void:
-	_spawned_signals.clear()
+	ContentRegistry.clear_for_testing()
 
 
-func test_spawn_creates_valid_node_reference() -> void:
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
+func test_ready_prewarms_default_pool_size() -> void:
+	assert_eq(_system.get_pooled_count(), NPCSpawnerSystem.DEFAULT_POOL_SIZE)
+
+
+func test_spawn_places_configured_shopper_in_active_store_container() -> void:
+	var entry_position := Vector3(2.0, 0.0, 4.0)
+	var npc: ShopperAI = (
+		_system.spawn_npc(&"power_shopper", entry_position) as ShopperAI
+	)
+	var npc_container: Node3D = _store_root.get_node("npc_container") as Node3D
+	assert_not_null(npc)
+	assert_eq(npc.get_parent(), npc_container)
+	assert_eq(npc.global_position, entry_position)
+	assert_eq(npc.archetype_id, &"power_shopper")
+	assert_not_null(npc.personality)
 	assert_eq(
-		_system.get_active_count(), 1,
-		"Should have 1 active NPC after spawn signal"
-	)
-	var npcs: Array = _system._active_customer_npcs.keys()
-	assert_eq(npcs.size(), 1, "Should track exactly one NPC")
-	assert_true(
-		is_instance_valid(npcs[0]),
-		"Tracked NPC should be a valid node reference"
+		npc.personality.personality_type,
+		PersonalityData.PersonalityType.POWER_SHOPPER
 	)
 
 
-func test_active_npcs_tracked_in_dictionary() -> void:
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
+func test_spawn_request_signal_emits_customer_spawned_after_successful_spawn() -> void:
+	var emitted: Array[Node] = []
+	var capture := func(customer: Node) -> void:
+		if customer is ShopperAI:
+			emitted.append(customer)
+	EventBus.customer_spawned.connect(capture)
+	EventBus.spawn_npc_requested.emit(&"power_shopper", Vector3.ONE)
+	EventBus.customer_spawned.disconnect(capture)
+	assert_eq(emitted.size(), 1)
+	assert_true(emitted[0] is ShopperAI)
+
+
+func test_despawn_returns_npc_to_pool_without_freeing() -> void:
+	var npc: ShopperAI = (
+		_system.spawn_npc(&"power_shopper", Vector3.ZERO) as ShopperAI
+	)
+	var pool_before: int = _system.get_pooled_count()
+	_system.despawn_npc(npc)
+	assert_true(is_instance_valid(npc))
+	assert_eq(_system.get_active_count(), 0)
+	assert_eq(_system.get_pooled_count(), pool_before + 1)
+	assert_eq(npc.get_parent(), _system)
+	assert_false(npc.visible)
+
+
+func test_active_store_change_despawns_all_active_npcs_and_clears_bindings() -> void:
+	_system.spawn_npc(&"power_shopper", Vector3.ZERO)
+	_system.spawn_npc(&"power_shopper", Vector3.ONE)
+	EventBus.active_store_changed.emit(&"other_store")
+	assert_eq(_system.get_active_count(), 0)
+	assert_eq(_system._active_store_scene, null)
+	assert_eq(_system._active_npc_container, null)
+
+
+func test_spawn_returns_null_when_store_capacity_reached() -> void:
+	for _i: int in range(NPCSpawnerSystem.DEFAULT_STORE_CAPACITY):
+		_system.spawn_npc(&"power_shopper", Vector3.ZERO)
+	var overflow: Node = _system.spawn_npc(&"power_shopper", Vector3.ONE)
+	assert_null(overflow)
 	assert_eq(
-		_system.get_active_count(), 1,
-		"Active NPC should be tracked in dictionary"
+		_system.get_active_count(),
+		NPCSpawnerSystem.DEFAULT_STORE_CAPACITY
 	)
 
 
-func test_max_concurrent_spawn_is_noop() -> void:
-	var d1 := Node.new()
-	var d2 := Node.new()
-	var d3 := Node.new()
-	add_child_autofree(d1)
-	add_child_autofree(d2)
-	add_child_autofree(d3)
-	EventBus.customer_spawned.emit(d1)
-	EventBus.customer_spawned.emit(d2)
-	EventBus.customer_spawned.emit(d3)
-	assert_eq(
-		_system.get_active_count(), 2,
-		"Should not exceed max_concurrent_customers"
-	)
-	assert_eq(
-		_system.get_queue_count(), 1,
-		"Excess spawn should be queued, not spawned"
-	)
-
-
-func test_store_exited_frees_all_and_resets_count() -> void:
-	var d1 := Node.new()
-	var d2 := Node.new()
-	add_child_autofree(d1)
-	add_child_autofree(d2)
-	EventBus.customer_spawned.emit(d1)
-	EventBus.customer_spawned.emit(d2)
+func test_pool_exhaustion_still_allows_second_spawn() -> void:
+	_system = NPCSpawnerSystem.new()
+	add_child_autofree(_system)
+	for pooled: ShopperAI in _system._pool:
+		if is_instance_valid(pooled):
+			pooled.queue_free()
+	_system._pool.clear()
+	_system.pool_size = 1
+	_system.initialize()
+	EventBus.active_store_changed.emit(&"test_store")
+	var first: Node = _system.spawn_npc(&"power_shopper", Vector3.ZERO)
+	var second: Node = _system.spawn_npc(&"power_shopper", Vector3.ONE)
+	assert_not_null(first)
+	assert_not_null(second)
 	assert_eq(_system.get_active_count(), 2)
-	EventBus.store_exited.emit(&"test_store")
-	assert_eq(
-		_system.get_active_count(), 0,
-		"All NPCs should be cleared on store_exited"
-	)
-
-
-func test_store_exited_clears_queue() -> void:
-	var d1 := Node.new()
-	var d2 := Node.new()
-	var d3 := Node.new()
-	add_child_autofree(d1)
-	add_child_autofree(d2)
-	add_child_autofree(d3)
-	EventBus.customer_spawned.emit(d1)
-	EventBus.customer_spawned.emit(d2)
-	EventBus.customer_spawned.emit(d3)
-	EventBus.store_exited.emit(&"test_store")
-	assert_eq(
-		_system.get_queue_count(), 0,
-		"Queue should be cleared on store_exited"
-	)
-
-
-func test_store_exited_resets_store_state() -> void:
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
-	EventBus.store_exited.emit(&"test_store")
-	assert_null(
-		_system._current_nav_config,
-		"Nav config should be null after store exit"
-	)
-	assert_null(
-		_system._current_store_root,
-		"Store root should be null after store exit"
-	)
-	assert_eq(
-		_system._current_store_id, &"",
-		"Store ID should be empty after store exit"
-	)
-
-
-func test_spawn_config_from_nav_config_not_hardcoded() -> void:
-	var alt_store := Node3D.new()
-	alt_store.name = "alt_store"
-	add_child_autofree(alt_store)
-
-	var alt_nav := CustomerNavConfig.new()
-	alt_nav.max_concurrent_customers = 5
-	alt_store.add_child(alt_nav)
-
-	var alt_entry := Marker3D.new()
-	alt_nav.add_child(alt_entry)
-	alt_nav.entry_point = alt_entry
-
-	_system._current_store_root = alt_store
-	_system._current_nav_config = alt_nav
-
-	for i: int in range(6):
-		var d := Node.new()
-		add_child_autofree(d)
-		EventBus.customer_spawned.emit(d)
-
-	assert_eq(
-		_system.get_active_count(), 5,
-		"Max should be 5 from alt store nav config"
-	)
-	assert_eq(
-		_system.get_queue_count(), 1,
-		"6th spawn should be queued with max=5"
-	)
-
-
-func test_get_nav_config_returns_config() -> void:
-	var config: CustomerNavConfig = _system.get_nav_config(_store_root)
-	assert_not_null(config, "Should find CustomerNavConfig in store root")
-	assert_eq(
-		config.max_concurrent_customers, 2,
-		"Should return the correct nav config"
-	)
-
-
-func test_get_nav_config_missing_returns_null() -> void:
-	var empty_root := Node3D.new()
-	empty_root.name = "empty_store"
-	add_child_autofree(empty_root)
-	var config: CustomerNavConfig = _system.get_nav_config(empty_root)
-	assert_null(
-		config,
-		"Should return null when no CustomerNavConfig found"
-	)
-
-
-func test_spawn_without_nav_config_still_works() -> void:
-	_system._current_nav_config = null
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
-	assert_eq(
-		_system.get_active_count(), 1,
-		"Should spawn NPC even without nav config"
-	)
-
-
-func test_spawn_without_store_root_uses_self_as_parent() -> void:
-	_system._current_store_root = null
-	_system._current_nav_config = null
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
-	assert_eq(
-		_system.get_active_count(), 1,
-		"Should spawn NPC using self as parent when no store root"
-	)
-
-
-func test_queued_spawn_processes_after_leave() -> void:
-	var d1 := Node.new()
-	var d2 := Node.new()
-	var d3 := Node.new()
-	add_child_autofree(d1)
-	add_child_autofree(d2)
-	add_child_autofree(d3)
-	EventBus.customer_spawned.emit(d1)
-	EventBus.customer_spawned.emit(d2)
-	EventBus.customer_spawned.emit(d3)
-	assert_eq(_system.get_active_count(), 2)
-	assert_eq(_system.get_queue_count(), 1)
-	EventBus.customer_left.emit({})
-	assert_eq(
-		_system.get_queue_count(), 0,
-		"Queue should drain after a customer leaves"
-	)
-
-
-func test_checkout_handoff_triggers_leave() -> void:
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
-	var npcs: Array = _system._active_customer_npcs.keys()
-	assert_eq(npcs.size(), 1)
-	var npc: Node = npcs[0]
-	EventBus.customer_reached_checkout.emit(npc)
-	assert_true(
-		_system._checkout_pending.has(npc),
-		"NPC should be in checkout pending"
-	)
-	EventBus.transaction_completed.emit(10.0, true, "")
-	assert_false(
-		_system._checkout_pending.has(npc),
-		"NPC should be removed from checkout pending after transaction"
-	)
-
-
-func test_spawning_disabled_queues_instead() -> void:
-	EventBus.customer_spawning_disabled.emit()
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
-	assert_eq(
-		_system.get_active_count(), 0,
-		"Should not spawn when spawning is disabled"
-	)
-	assert_eq(
-		_system.get_queue_count(), 1,
-		"Should queue when spawning is disabled"
-	)
-
-
-func test_spawning_enabled_drains_queue() -> void:
-	EventBus.customer_spawning_disabled.emit()
-	var dummy := Node.new()
-	add_child_autofree(dummy)
-	EventBus.customer_spawned.emit(dummy)
-	assert_eq(_system.get_queue_count(), 1)
-	EventBus.customer_spawning_enabled.emit()
-	assert_eq(
-		_system.get_queue_count(), 0,
-		"Queue should drain when spawning is re-enabled"
-	)
+	assert_eq(_system.get_pooled_count(), 0)

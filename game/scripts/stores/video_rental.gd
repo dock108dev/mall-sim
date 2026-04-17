@@ -5,12 +5,12 @@ extends StoreController
 const STORE_ID: StringName = &"video_rental"
 const STORE_TYPE: StringName = &"video_rental"
 
-var _active_rentals: Dictionary = {}
+var _active_rentals: Dictionary
 var _initialized: bool = false
 
 
 func _ready() -> void:
-	store_type = STORE_ID
+	initialize()
 	super._ready()
 
 
@@ -18,8 +18,11 @@ func _ready() -> void:
 func initialize() -> void:
 	if _initialized:
 		return
+	initialize_store(STORE_ID, STORE_TYPE)
 	_active_rentals = {}
-	EventBus.hour_changed.connect(_on_hour_changed)
+	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
+	_connect_signal(EventBus.hour_changed, _on_hour_changed)
+	_connect_signal(EventBus.day_started, _on_day_started)
 	_initialized = true
 
 
@@ -44,6 +47,7 @@ func get_save_data() -> Dictionary:
 
 ## Restores rental state from save data.
 func load_save_data(data: Dictionary) -> void:
+	initialize()
 	_active_rentals.clear()
 	var saved: Variant = data.get("active_rentals", {})
 	if saved is Dictionary:
@@ -51,16 +55,26 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _on_store_entered(store_id: StringName) -> void:
-	if store_id != STORE_ID and store_id != &"rentals":
+	if not _matches_store_id(store_id):
 		return
 	_seed_starter_inventory()
 	EventBus.store_opened.emit(String(STORE_ID))
 
 
 func _on_store_exited(store_id: StringName) -> void:
-	if store_id != STORE_ID and store_id != &"rentals":
+	if not _matches_store_id(store_id):
 		return
 	EventBus.store_closed.emit(String(STORE_ID))
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	var is_matching_store: bool = _matches_store_id(store_id)
+	if is_matching_store:
+		_is_active = true
+		_on_store_activated()
+	elif _is_active:
+		_is_active = false
+		_on_store_deactivated()
 
 
 func _on_hour_changed(_hour: int) -> void:
@@ -79,6 +93,19 @@ func _check_overdue_rentals() -> void:
 ## Processes daily returns. Stub for ISSUE-057 return flow.
 func _process_daily_returns() -> void:
 	pass
+
+
+func _matches_store_id(store_id: StringName) -> bool:
+	if store_id == STORE_ID:
+		return true
+	if not ContentRegistry.exists(String(STORE_ID)):
+		return store_id == &"rentals"
+	if not ContentRegistry.exists(String(store_id)):
+		return false
+	return (
+		ContentRegistry.resolve(String(store_id))
+		== ContentRegistry.resolve(String(STORE_ID))
+	)
 
 
 func _seed_starter_inventory() -> void:

@@ -56,6 +56,7 @@ var current_state: ShopperState = ShopperState.ENTERING
 var ai_detail: AIDetail = AIDetail.FULL
 var target_waypoint: MallWaypoint = null
 var personality: PersonalityData = null
+var archetype_id: StringName = &""
 var shopper_budget: float = 0.0
 var needs: ShopperNeeds = ShopperNeeds.new()
 var shopper_group: ShopperGroup = null
@@ -74,6 +75,7 @@ var _time_paused: bool = false
 var _lane_side: float = 0.0
 var _animation_player: AnimationPlayer = null
 var _is_despawning: bool = false
+var _emit_spawn_signal_on_ready: bool = true
 
 
 func _ready() -> void:
@@ -89,7 +91,8 @@ func _ready() -> void:
 	if customer_id.is_empty():
 		customer_id = StringName(str(get_instance_id()))
 	needs.initialize_from_personality(personality)
-	EventBus.customer_spawned.emit(self)
+	if _emit_spawn_signal_on_ready:
+		EventBus.customer_spawned.emit(self)
 	_play_animation_for_state(current_state)
 
 
@@ -114,6 +117,78 @@ func initialize(spawn_position: Vector3) -> void:
 	_sync_target()
 	_transition_to(ShopperState.ENTERING)
 	_initialized = true
+
+
+## Configures this shopper for pooled store spawning without emitting spawn events.
+func configure_for_store_spawn(
+	spawn_position: Vector3,
+	new_archetype_id: StringName,
+	new_personality: PersonalityData
+) -> void:
+	archetype_id = new_archetype_id
+	personality = new_personality
+	global_position = spawn_position
+	visible = true
+	set_process(true)
+	set_physics_process(true)
+	velocity = Vector3.ZERO
+	current_state = ShopperState.ENTERING
+	target_waypoint = null
+	shopper_budget = 0.0
+	needs = ShopperNeeds.new()
+	needs.initialize_from_personality(personality)
+	shopper_group = null
+	purchase_item_id = &"unknown_item"
+	purchase_price = 0.0
+	purchase_store_id = &""
+	customer_id = StringName(str(get_instance_id()))
+	_state_timer = 0.0
+	_look_timer = 0.0
+	_utility_timer = 0.0
+	_made_purchase = false
+	_initialized = false
+	_time_paused = false
+	_lane_side = 0.0
+	_is_despawning = false
+	_nav = ShopperNavigation.new()
+	if _waypoint_agent:
+		_waypoint_agent.set_path([])
+	if get_tree() and not get_tree().get_nodes_in_group("mall_waypoints").is_empty():
+		initialize(spawn_position)
+
+
+## Resets the shopper to an inert pooled state for reuse by NPCSpawnerSystem.
+func reset_for_pool() -> void:
+	archetype_id = &""
+	personality = null
+	shopper_budget = 0.0
+	needs = ShopperNeeds.new()
+	shopper_group = null
+	purchase_item_id = &"unknown_item"
+	purchase_price = 0.0
+	purchase_store_id = &""
+	velocity = Vector3.ZERO
+	current_state = ShopperState.ENTERING
+	target_waypoint = null
+	customer_id = StringName(str(get_instance_id()))
+	_state_timer = 0.0
+	_look_timer = 0.0
+	_utility_timer = 0.0
+	_made_purchase = false
+	_initialized = false
+	_time_paused = false
+	_lane_side = 0.0
+	_is_despawning = false
+	_nav = ShopperNavigation.new()
+	if _waypoint_agent:
+		_waypoint_agent.set_path([])
+	visible = false
+	set_process(false)
+	set_physics_process(false)
+
+
+func set_emit_spawn_signal_on_ready(enabled: bool) -> void:
+	_emit_spawn_signal_on_ready = enabled
 
 
 func _physics_process(delta: float) -> void:

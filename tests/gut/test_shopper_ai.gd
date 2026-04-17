@@ -469,6 +469,88 @@ func test_evaluate_skips_while_timer_active() -> void:
 	)
 
 
+func test_group_leader_routes_to_bench_for_low_energy_reluctant_companion() -> void:
+	var _hallway: MallWaypoint = _make_waypoint(
+		"H1", Vector3.ZERO, MallWaypoint.WaypointType.HALLWAY
+	)
+	var bench: MallWaypoint = _make_waypoint(
+		"Bench", Vector3(4.0, 0.0, 0.0), MallWaypoint.WaypointType.BENCH
+	)
+	_connect_bi(_hallway, bench)
+	_shopper.personality = _make_personality(
+		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY
+	)
+	_shopper.initialize(Vector3.ZERO)
+	_shopper.current_state = ShopperAI.ShopperState.WALKING
+	_shopper._state_timer = 0.0
+
+	var reluctant := ShopperAI.new()
+	var agent := MallWaypointAgent.new()
+	agent.name = "MallWaypointAgent"
+	reluctant.add_child(agent)
+	reluctant.personality = _make_personality(
+		PersonalityData.PersonalityType.RELUCTANT_COMPANION
+	)
+	add_child_autofree(reluctant)
+	reluctant.initialize(Vector3(1.0, 0.0, 0.0))
+	reluctant.needs.energy = 0.2
+
+	var group := ShopperGroup.new()
+	group.add_member(_shopper)
+	group.add_member(reluctant)
+	group.assign_leader()
+	_shopper.shopper_group = group
+	reluctant.shopper_group = group
+
+	_shopper._evaluate_next_action()
+
+	var bench_path: Array[MallWaypoint] = _shopper._waypoint_agent._current_path
+	assert_eq(
+		bench_path[bench_path.size() - 1],
+		bench,
+		"Low-energy reluctant companions should route the group toward a bench"
+	)
+	assert_eq(_shopper.current_state, ShopperAI.ShopperState.WALKING)
+
+
+func test_follower_catchup_uses_group_speed_multiplier() -> void:
+	var leader := ShopperAI.new()
+	var leader_agent := MallWaypointAgent.new()
+	leader_agent.name = "MallWaypointAgent"
+	leader.add_child(leader_agent)
+	leader.personality = _make_personality(
+		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY
+	)
+	add_child_autofree(leader)
+
+	var follower := ShopperAI.new()
+	var follower_agent := MallWaypointAgent.new()
+	follower_agent.name = "MallWaypointAgent"
+	follower.add_child(follower_agent)
+	follower.personality = _make_personality(
+		PersonalityData.PersonalityType.TEEN_PACK_MEMBER
+	)
+	add_child_autofree(follower)
+
+	var group := ShopperGroup.new()
+	group.add_member(leader)
+	group.add_member(follower)
+	group.assign_leader()
+	leader.shopper_group = group
+	follower.shopper_group = group
+	leader.global_position = Vector3.ZERO
+	follower.global_position = Vector3(10.0, 0.0, 10.0)
+
+	follower._process_follower_movement(0.1)
+
+	assert_almost_eq(
+		follower.velocity.length(),
+		ShopperNavigation.BASE_WALK_SPEED * ShopperGroup.CATCHUP_SPEED_MULT,
+		0.001,
+		"Followers outside regroup distance should use the catch-up speed multiplier"
+	)
+
+
 func test_browse_duration_mult_affects_timer() -> void:
 	var pd: PersonalityData = _make_personality()
 	pd.browse_duration_mult = 2.0

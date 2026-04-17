@@ -40,6 +40,29 @@ func test_hour_density_covers_all_operating_hours() -> void:
 		)
 
 
+func test_hour_density_matches_research_curve() -> void:
+	var expected: Dictionary = {
+		9: 0.1,
+		10: 0.25,
+		11: 0.55,
+		12: 0.85,
+		13: 0.75,
+		14: 0.4,
+		15: 0.35,
+		16: 0.5,
+		17: 0.8,
+		18: 0.7,
+		19: 0.45,
+		20: 0.2,
+		21: 0.0,
+	}
+	assert_eq(
+		CustomerSystem.HOUR_DENSITY,
+		expected,
+		"HOUR_DENSITY should match the research two-peak curve exactly"
+	)
+
+
 func test_hour_density_values_in_range() -> void:
 	for hour: int in CustomerSystem.HOUR_DENSITY:
 		var density: float = CustomerSystem.HOUR_DENSITY[hour]
@@ -376,8 +399,17 @@ func test_day_phase_changed_updates_archetype_weights() -> void:
 	_system._on_day_phase_changed(TimeSystem.DayPhase.EVENING)
 	assert_eq(
 		_system._current_archetype_weights,
-		ShopperArchetypeConfig.WEIGHTS_MORNING,
-		"Phase change should preserve hour-based weights until hour_changed fires"
+		ShopperArchetypeConfig.WEIGHTS_EVENING,
+		"day_phase_changed should switch the active archetype weights immediately"
+	)
+
+
+func test_day_phase_changed_midday_rush_uses_afternoon_weights() -> void:
+	_system._on_day_phase_changed(TimeSystem.DayPhase.MIDDAY_RUSH)
+	assert_eq(
+		_system._current_archetype_weights,
+		ShopperArchetypeConfig.WEIGHTS_AFTERNOON,
+		"MIDDAY_RUSH starts the 11:30 afternoon bucket"
 	)
 
 
@@ -397,7 +429,7 @@ func test_day_started_resets_archetype_weights() -> void:
 
 
 func test_spawn_target_zero_at_close_hour() -> void:
-	_system._current_hour = Constants.STORE_CLOSE_HOUR
+	_system._current_hour = TimeSystem.MALL_CLOSE_HOUR
 	_system._hour_elapsed = 0.0
 	_system._current_day_of_week = 5
 	var target: int = _system.get_spawn_target()
@@ -454,7 +486,9 @@ func test_try_spawn_mall_shopper_emits_customer_spawned() -> void:
 	_system.max_customers_in_mall = 1
 	_system._active_mall_shopper_count = 0
 	_system._current_hour = 12
-	_system._current_archetype_weights = ShopperArchetypeConfig.WEIGHTS_AFTERNOON
+	_system._current_archetype_weights = {
+		PersonalityData.PersonalityType.POWER_SHOPPER: 100,
+	}
 
 	_system._try_spawn_mall_shopper()
 
@@ -485,6 +519,131 @@ func test_spawn_target_cap_prevents_extra_shoppers() -> void:
 		0,
 		"MAX_CUSTOMERS_IN_MALL should act as a hard cap for active ShopperAI nodes"
 	)
+
+
+func test_live_shopper_nodes_enforce_hard_cap_when_count_stale() -> void:
+	_setup_spawnable_mall_waypoints()
+	_system._shopper_scene = preload(
+		"res://game/scenes/characters/shopper_ai.tscn"
+	)
+	_system.max_customers_in_mall = 1
+	_system._active_mall_shopper_count = 0
+	var existing_shopper: Node3D = Node3D.new()
+	add_child_autofree(existing_shopper)
+	existing_shopper.add_to_group("shoppers")
+
+	_system._try_spawn_mall_shopper()
+
+	assert_eq(
+		_spawned_shoppers.size(),
+		0,
+		"Live ShopperAI nodes should enforce the hard cap even if tracking drifts"
+	)
+
+
+func test_over_target_removes_one_leaving_shopper() -> void:
+	_system.max_customers_in_mall = 30
+	_system._active_mall_shopper_count = 1
+	_system._current_hour = TimeSystem.MALL_CLOSE_HOUR
+	_system._current_day_of_week = 0
+	var shopper: ShopperAI = preload(
+		"res://game/scenes/characters/shopper_ai.tscn"
+	).instantiate() as ShopperAI
+	add_child_autofree(shopper)
+	shopper.current_state = ShopperAI.ShopperState.LEAVING
+
+	_system._update_mall_shoppers()
+
+	assert_eq(
+		_system._active_mall_shopper_count,
+		0,
+		"Over-target updates should despawn one shopper already in LEAVING"
+	)
+	assert_true(shopper.is_queued_for_deletion())
+
+
+func test_close_hour_requests_all_shoppers_leave() -> void:
+	_setup_spawnable_mall_waypoints()
+	_system._shopper_scene = preload(
+		"res://game/scenes/characters/shopper_ai.tscn"
+	)
+	_system.max_customers_in_mall = 1
+	_system._current_archetype_weights = {
+		PersonalityData.PersonalityType.POWER_SHOPPER: 100,
+	}
+	_system._try_spawn_mall_shopper()
+	assert_eq(_spawned_shoppers.size(), 1)
+	var shopper: ShopperAI = _spawned_shoppers[0] as ShopperAI
+	assert_not_null(shopper)
+
+	_system._on_hour_changed(TimeSystem.MALL_CLOSE_HOUR)
+
+	assert_eq(
+		shopper.current_state,
+		ShopperAI.ShopperState.LEAVING,
+		"At MALL_CLOSE_HOUR existing shoppers should transition to LEAVING"
+	)
+
+
+func test_group_spawn_skips_when_capacity_below_minimum_group_size() -> void:
+	_setup_spawnable_mall_waypoints()
+	_system._shopper_scene = preload(
+		"res://game/scenes/characters/shopper_ai.tscn"
+	)
+	_system.max_customers_in_mall = 30
+	_system._active_mall_shopper_count = 0
+
+	_system._spawn_shopper_group(
+		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY,
+		Vector3.ZERO,
+		1
+	)
+
+	assert_eq(
+		_system._active_mall_shopper_count,
+		0,
+		"Group archetypes should not degrade into solo spawns when only one slot remains"
+	)
+	assert_eq(
+		_spawned_shoppers.size(),
+		0,
+		"Group archetypes should skip spawning when there is not enough capacity for a group"
+	)
+
+
+func test_group_spawn_members_share_one_shopper_group() -> void:
+	_setup_spawnable_mall_waypoints()
+	_system._shopper_scene = preload(
+		"res://game/scenes/characters/shopper_ai.tscn"
+	)
+	_system.max_customers_in_mall = 30
+	_system._active_mall_shopper_count = 0
+
+	var archetype: PersonalityData.PersonalityType = (
+		PersonalityData.PersonalityType.TEEN_PACK_MEMBER
+	)
+	_system._spawn_shopper_group(archetype, Vector3.ZERO, 8)
+
+	var size_range: Vector2i = ShopperArchetypeConfig.get_group_size_range(
+		archetype
+	)
+	assert_true(
+		_spawned_shoppers.size() >= size_range.x
+		and _spawned_shoppers.size() <= size_range.y,
+		"Spawned group size should stay within the configured range"
+	)
+	var first_shopper: ShopperAI = _spawned_shoppers[0] as ShopperAI
+	assert_not_null(first_shopper)
+	assert_not_null(first_shopper.shopper_group)
+	var group: ShopperGroup = first_shopper.shopper_group
+	assert_eq(group.get_member_count(), _spawned_shoppers.size())
+	for node: Node in _spawned_shoppers:
+		var shopper: ShopperAI = node as ShopperAI
+		assert_eq(
+			shopper.shopper_group,
+			group,
+			"All spawned members should share the same ShopperGroup instance"
+		)
 
 
 # --- Helpers ---

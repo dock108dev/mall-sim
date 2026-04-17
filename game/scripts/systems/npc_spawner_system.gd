@@ -1,303 +1,251 @@
-## Spawns and manages CustomerNPC instances within the active store.
+## Spawns and pools ShopperAI instances for the active store interior.
 class_name NPCSpawnerSystem
 extends Node
 
-const CUSTOMER_NPC_SCENE: PackedScene = preload(
-	"res://game/scenes/characters/customer_npc.tscn"
+const SHOPPER_AI_SCENE: PackedScene = preload(
+	"res://game/scenes/characters/shopper_ai.tscn"
 )
-const MAX_CUSTOMERS: int = 20
-const PEAK_SPAWN_INTERVAL: float = 3.0
-const OFF_PEAK_SPAWN_INTERVAL: float = 6.0
+const DEFAULT_POOL_SIZE: int = 10
+const DEFAULT_STORE_CAPACITY: int = 8
+const MEDIUM_STORE_CAPACITY: int = 12
+const LARGE_STORE_CAPACITY: int = 16
+const NPC_CONTAINER_NAME: StringName = &"npc_container"
+
+@export var pool_size: int = DEFAULT_POOL_SIZE
 
 var npc_factory: Callable
-var _active_customer_npcs: Dictionary = {}
-var _spawn_queue: Array[Dictionary] = []
-var _current_nav_config: CustomerNavConfig = null
-var _current_store_root: Node = null
-var _checkout_pending: Dictionary = {}
 var _inventory_system: InventorySystem = null
-var _current_store_id: StringName = &""
-var _spawning_disabled: bool = false
-var _spawn_timer: Timer = null
+var _pool: Array[ShopperAI] = []
+var _active_npcs: Array[ShopperAI] = []
+var _active_store_id: StringName = &""
+var _active_store_scene: Node3D = null
+var _active_npc_container: Node3D = null
+var _signals_connected: bool = false
 
 
 func initialize(inventory_system: InventorySystem = null) -> void:
 	_inventory_system = inventory_system
 	if not npc_factory.is_valid():
 		npc_factory = _default_npc_factory
+	_prewarm_pool()
 	_connect_signals()
-	_setup_spawn_timer()
 
 
 func get_active_count() -> int:
-	return _active_customer_npcs.size()
+	return _active_npcs.size()
 
 
-func get_queue_count() -> int:
-	return _spawn_queue.size()
+func get_pooled_count() -> int:
+	return _pool.size()
 
 
-func get_nav_config(store_root: Node) -> CustomerNavConfig:
-	for child: Node in store_root.get_children():
-		if child is CustomerNavConfig:
-			return child as CustomerNavConfig
-	push_warning(
-		"NPCSpawnerSystem: No CustomerNavConfig in store '%s'"
-		% store_root.name
-	)
-	return null
+func _ready() -> void:
+	if not npc_factory.is_valid():
+		npc_factory = _default_npc_factory
+	_prewarm_pool()
 
 
 func _connect_signals() -> void:
-	EventBus.customer_spawned.connect(_on_customer_spawned)
-	EventBus.customer_left.connect(_on_customer_left)
-	EventBus.store_exited.connect(_on_store_exited)
-	EventBus.customer_reached_checkout.connect(
-		_on_customer_reached_checkout
-	)
-	EventBus.transaction_completed.connect(_on_transaction_completed)
-	EventBus.store_entered.connect(_on_store_entered)
-	EventBus.customer_spawning_disabled.connect(_on_spawning_disabled)
-	EventBus.customer_spawning_enabled.connect(_on_spawning_enabled)
-	EventBus.hour_changed.connect(_on_hour_changed)
-
-
-func _on_store_entered(store_id: StringName) -> void:
-	_current_store_id = store_id
-	var store_root: Node = _find_store_root(store_id)
-	if not store_root:
-		push_warning(
-			"NPCSpawnerSystem: Could not find store root for '%s'"
-			% store_id
-		)
-		_current_store_root = null
-		_current_nav_config = null
+	if _signals_connected:
 		return
-	_current_store_root = store_root
-	_current_nav_config = get_nav_config(store_root)
+	_safe_connect(EventBus.spawn_npc_requested, _on_spawn_npc_requested)
+	_safe_connect(EventBus.customer_spawned, _on_customer_spawned)
+	_safe_connect(EventBus.active_store_changed, _on_active_store_changed)
+	_signals_connected = true
 
 
-func _on_spawning_disabled() -> void:
-	_spawning_disabled = true
-
-
-func _on_spawning_enabled() -> void:
-	_spawning_disabled = false
-	_try_spawn_from_queue()
-
-
-func _on_hour_changed(_hour: int) -> void:
-	_update_timer_interval()
-
-
-## Attempts one spawn from the queue, enforcing the MAX_CUSTOMERS hard cap.
-func _try_spawn() -> void:
-	if _spawning_disabled:
-		return
-	if _active_customer_npcs.size() >= MAX_CUSTOMERS:
-		return
-	_try_spawn_from_queue()
-
-
-## Removes npc from the active pool and emits npc_despawned with the NPC's instance id.
-func _despawn_npc(npc: CustomerNPC) -> void:
-	if not _active_customer_npcs.has(npc):
-		return
-	var npc_id: StringName = StringName(str(npc.get_instance_id()))
-	_active_customer_npcs.erase(npc)
-	EventBus.npc_despawned.emit(npc_id)
-	if is_instance_valid(npc):
-		npc.queue_free()
-
-
-func _setup_spawn_timer() -> void:
-	_spawn_timer = Timer.new()
-	_spawn_timer.autostart = false
-	_spawn_timer.one_shot = false
-	add_child(_spawn_timer)
-	_update_timer_interval()
-	_spawn_timer.timeout.connect(_on_spawn_timer_timeout)
-
-
-func _update_timer_interval() -> void:
-	if not _spawn_timer:
-		return
-	if DifficultySystemSingleton.is_peak_hours():
-		_spawn_timer.wait_time = PEAK_SPAWN_INTERVAL
-	else:
-		_spawn_timer.wait_time = OFF_PEAK_SPAWN_INTERVAL
-
-
-func _on_spawn_timer_timeout() -> void:
-	_try_spawn()
-	_update_timer_interval()
-
-
-func _on_customer_spawned(customer: Node) -> void:
-	if _spawning_disabled:
-		var customer_def: Dictionary = {}
-		if customer.has_method("get_customer_data"):
-			customer_def = customer.get_customer_data()
-		_spawn_queue.append(customer_def)
-		return
-
-	var customer_def: Dictionary = {}
-	if customer.has_method("get_customer_data"):
-		customer_def = customer.get_customer_data()
-
-	if _current_nav_config:
-		var max_customers: int = (
-			_current_nav_config.max_concurrent_customers
-		)
-		if _active_customer_npcs.size() >= max_customers:
-			_spawn_queue.append(customer_def)
-			return
-
-	var npc: CustomerNPC = _spawn_customer_npc(customer_def)
-	if npc:
-		_active_customer_npcs[npc] = customer_def
-
-
-func _on_customer_left(customer_data: Dictionary) -> void:
-	var npc_to_remove: CustomerNPC = null
-	for npc: Node in _active_customer_npcs.keys():
-		if not is_instance_valid(npc):
-			npc_to_remove = npc as CustomerNPC
-			break
-		var typed_npc: CustomerNPC = npc as CustomerNPC
-		if not typed_npc:
-			continue
-		var state: CustomerNPC.CustomerVisitState = (
-			typed_npc.get_visit_state()
-		)
-		if state == CustomerNPC.CustomerVisitState.BROWSING:
-			npc_to_remove = typed_npc
-			break
-
-	if npc_to_remove:
-		if is_instance_valid(npc_to_remove):
-			npc_to_remove.begin_leave()
-		_active_customer_npcs.erase(npc_to_remove)
-		_try_spawn_from_queue()
-
-
-func _on_store_exited(_store_id: StringName) -> void:
-	_despawn_all_immediate()
-	_spawn_queue.clear()
-	_checkout_pending.clear()
-	_current_nav_config = null
-	_current_store_root = null
-	_current_store_id = &""
-
-
-func _on_customer_reached_checkout(customer_node: Node) -> void:
-	if not _active_customer_npcs.has(customer_node):
-		return
-	_checkout_pending[customer_node] = true
-
-
-func _on_transaction_completed(
-	_amount: float, _success: bool, _message: String
-) -> void:
-	var nodes_to_leave: Array[Node] = []
-	for npc: Node in _checkout_pending.keys():
-		nodes_to_leave.append(npc)
-	_checkout_pending.clear()
-
-	for npc: Node in nodes_to_leave:
-		if not is_instance_valid(npc):
-			_active_customer_npcs.erase(npc)
-			_try_spawn_from_queue()
-			continue
-		var typed_npc: CustomerNPC = npc as CustomerNPC
-		if typed_npc:
-			typed_npc.begin_leave()
-		_active_customer_npcs.erase(npc)
-		_try_spawn_from_queue()
-
-
-func _spawn_customer_npc(customer_def: Dictionary) -> CustomerNPC:
-	var npc: CustomerNPC
-	if npc_factory.is_valid():
-		npc = npc_factory.call(customer_def) as CustomerNPC
-	else:
-		npc = CUSTOMER_NPC_SCENE.instantiate() as CustomerNPC
-	if not npc:
-		push_error("NPCSpawnerSystem: Failed to instantiate CustomerNPC")
+func spawn_npc(archetype_id: StringName, entry_position: Vector3) -> Node:
+	_refresh_store_bindings()
+	if _active_npc_container == null:
+		push_warning("NPCSpawnerSystem: no active npc_container for store spawn")
 		return null
-
-	var parent: Node = _current_store_root if _current_store_root else self
-	parent.add_child(npc)
-
-	if _current_nav_config:
-		npc.global_position = _current_nav_config.get_entry_position()
-		npc.initialize(
-			customer_def, _current_nav_config,
-			_inventory_system, _current_store_id
+	if _active_npcs.size() >= _get_store_capacity():
+		push_warning(
+			"NPCSpawnerSystem: store '%s' is at NPC capacity" % _active_store_id
 		)
-	else:
-		npc.global_position = Vector3.ZERO
-		npc.initialize(
-			customer_def, null,
-			_inventory_system, _current_store_id
-		)
-
-	npc.begin_visit()
+		return null
+	var npc: ShopperAI = _acquire_npc()
+	if npc == null:
+		push_error("NPCSpawnerSystem: failed to acquire ShopperAI")
+		return null
+	var personality: PersonalityData = _build_personality(archetype_id)
+	npc.configure_for_store_spawn(entry_position, archetype_id, personality)
+	if npc.get_parent() != _active_npc_container:
+		if npc.get_parent():
+			npc.get_parent().remove_child(npc)
+		_active_npc_container.add_child(npc)
+	_active_npcs.append(npc)
 	return npc
 
 
-func _despawn_all_immediate() -> void:
-	for npc: Node in _active_customer_npcs.keys():
-		if is_instance_valid(npc):
-			npc.queue_free()
-	_active_customer_npcs.clear()
+func despawn_npc(npc: Node) -> void:
+	var shopper: ShopperAI = npc as ShopperAI
+	if shopper == null:
+		push_warning("NPCSpawnerSystem: despawn_npc expects a ShopperAI")
+		return
+	var active_index: int = _active_npcs.find(shopper)
+	if active_index == -1:
+		return
+	_active_npcs.remove_at(active_index)
+	shopper.reset_for_pool()
+	if shopper.get_parent():
+		shopper.get_parent().remove_child(shopper)
+	add_child(shopper)
+	_pool.append(shopper)
+	EventBus.npc_despawned.emit(StringName(str(shopper.get_instance_id())))
 
 
-func _try_spawn_from_queue() -> void:
-	if _spawning_disabled:
+func _on_spawn_npc_requested(
+	archetype_id: StringName,
+	entry_position: Vector3
+) -> void:
+	var npc: Node = spawn_npc(archetype_id, entry_position)
+	if npc != null:
+		EventBus.customer_spawned.emit(npc)
+
+
+func _on_customer_spawned(customer: Node) -> void:
+	if customer is ShopperAI:
 		return
-	if _spawn_queue.is_empty():
-		return
-	if _current_nav_config:
-		var max_customers: int = (
-			_current_nav_config.max_concurrent_customers
+	var archetype_id: StringName = &"window_browser"
+	if customer and customer.has_method("get_customer_data"):
+		var customer_data: Dictionary = customer.get_customer_data()
+		archetype_id = StringName(
+			str(customer_data.get("archetype_id", archetype_id))
 		)
-		if _active_customer_npcs.size() >= max_customers:
+	var npc: Node = spawn_npc(archetype_id, Vector3.ZERO)
+	if npc != null:
+		EventBus.customer_spawned.emit(npc)
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	_despawn_all_active()
+	_clear_store_bindings()
+	_active_store_id = store_id
+	if not store_id.is_empty():
+		_refresh_store_bindings()
+
+
+func _prewarm_pool() -> void:
+	while _pool.size() < maxi(pool_size, 0):
+		var shopper: ShopperAI = _instantiate_npc()
+		if shopper == null:
 			return
-	var customer_def: Dictionary = _spawn_queue.pop_front()
-	var npc: CustomerNPC = _spawn_customer_npc(customer_def)
-	if npc:
-		_active_customer_npcs[npc] = customer_def
+		shopper.reset_for_pool()
+		_pool.append(shopper)
 
 
-func _default_npc_factory(_customer_def: Dictionary) -> CustomerNPC:
-	return CUSTOMER_NPC_SCENE.instantiate() as CustomerNPC
+func _instantiate_npc() -> ShopperAI:
+	var shopper: ShopperAI = null
+	if npc_factory.is_valid():
+		shopper = npc_factory.call() as ShopperAI
+	if shopper == null:
+		shopper = SHOPPER_AI_SCENE.instantiate() as ShopperAI
+	if shopper == null:
+		return null
+	shopper.set_emit_spawn_signal_on_ready(false)
+	add_child(shopper)
+	return shopper
 
 
-func _find_store_root(store_id: StringName) -> Node:
+func _acquire_npc() -> ShopperAI:
+	if not _pool.is_empty():
+		return _pool.pop_back()
+	return _instantiate_npc()
+
+
+func _build_personality(archetype_id: StringName) -> PersonalityData:
+	var entry: Dictionary = {}
+	var raw_id: String = String(archetype_id)
+	if not raw_id.is_empty() and ContentRegistry.exists(raw_id):
+		var canonical: StringName = ContentRegistry.resolve(raw_id)
+		entry = ContentRegistry.get_entry(canonical).duplicate(true)
+	if entry.is_empty():
+		entry = {
+			"id": raw_id,
+			"personality_type": raw_id.to_upper(),
+		}
+	elif not entry.has("personality_type"):
+		entry["personality_type"] = raw_id.to_upper()
+	return PersonalityData.from_dictionary(entry)
+
+
+func _get_store_capacity() -> int:
+	if _active_store_id.is_empty():
+		return DEFAULT_STORE_CAPACITY
+	var store_def: StoreDefinition = ContentRegistry.get_store_definition(
+		_active_store_id
+	)
+	if store_def == null:
+		return DEFAULT_STORE_CAPACITY
+	match store_def.size_category:
+		"large":
+			return LARGE_STORE_CAPACITY
+		"medium":
+			return MEDIUM_STORE_CAPACITY
+		_:
+			return DEFAULT_STORE_CAPACITY
+
+
+func _refresh_store_bindings() -> void:
+	if _active_store_id.is_empty():
+		return
+	if _active_store_scene and is_instance_valid(_active_store_scene):
+		if _active_npc_container and is_instance_valid(_active_npc_container):
+			return
+	_active_store_scene = _find_store_scene(_active_store_id)
+	_active_npc_container = _ensure_npc_container(_active_store_scene)
+
+
+func _clear_store_bindings() -> void:
+	_active_store_scene = null
+	_active_npc_container = null
+
+
+func _ensure_npc_container(store_scene: Node3D) -> Node3D:
+	if store_scene == null:
+		return null
+	var container: Node3D = store_scene.find_child(
+		String(NPC_CONTAINER_NAME), true, false
+	) as Node3D
+	if container != null:
+		return container
+	container = Node3D.new()
+	container.name = String(NPC_CONTAINER_NAME)
+	store_scene.add_child(container)
+	return container
+
+
+func _find_store_scene(store_id: StringName) -> Node3D:
 	var tree: SceneTree = get_tree()
-	if not tree:
+	if tree == null:
 		return null
-	var root: Node = tree.current_scene
-	if not root:
-		return null
-	var nodes: Array[Node] = root.get_children()
-	for node: Node in nodes:
-		if node.name.to_snake_case() == String(store_id):
-			return node
-		var found: Node = _search_for_store(node, store_id)
-		if found:
-			return found
-	return null
+	return _search_for_store(tree.root, store_id)
 
 
-func _search_for_store(
-	node: Node, store_id: StringName
-) -> Node:
+func _search_for_store(node: Node, store_id: StringName) -> Node3D:
+	if node is Node3D and node.name.to_snake_case() == String(store_id):
+		return node as Node3D
 	for child: Node in node.get_children():
-		if child.name.to_snake_case() == String(store_id):
-			return child
-		var found: Node = _search_for_store(child, store_id)
-		if found:
+		var found: Node3D = _search_for_store(child, store_id)
+		if found != null:
 			return found
 	return null
+
+
+func _despawn_all_active() -> void:
+	var active_copy: Array[ShopperAI] = _active_npcs.duplicate()
+	for npc: ShopperAI in active_copy:
+		if is_instance_valid(npc):
+			despawn_npc(npc)
+		else:
+			_active_npcs.erase(npc)
+
+
+func _default_npc_factory() -> ShopperAI:
+	return SHOPPER_AI_SCENE.instantiate() as ShopperAI
+
+
+func _safe_connect(signal_ref: Signal, callable: Callable) -> void:
+	if not signal_ref.is_connected(callable):
+		signal_ref.connect(callable)

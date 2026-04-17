@@ -25,7 +25,7 @@ func initialize_item(instance_id: String, condition: String) -> void:
 ## Applies one rental's worth of degradation and returns the new condition.
 func apply_degradation(instance_id: String, category: String) -> String:
 	var rate: float = VHS_DEGRADATION_RATE
-	if category == "dvd_titles":
+	if category == "dvd_titles" or category.begins_with("dvd_"):
 		rate = DVD_DEGRADATION_RATE
 	var current: float = _wear.get(instance_id, 0.0)
 	current += rate

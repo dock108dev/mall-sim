@@ -102,7 +102,7 @@ func _load_array_entries(path: String) -> Array[Dictionary]:
 func _build_item_definition(entry: Dictionary) -> ItemDefinition:
 	var item_def := ItemDefinition.new()
 	item_def.id = str(entry.get("id", ""))
-	item_def.base_price = float(entry.get("base_price", 0.0))
+	item_def.base_price = float(entry.get("base_value", entry.get("base_price", 0.0)))
 	item_def.rarity = str(entry.get("rarity", "common"))
 	item_def.category = str(entry.get("category", ""))
 	item_def.tags = _string_name_array(entry.get("tags", []))

@@ -41,10 +41,11 @@ static func build_resource(
 
 
 static func parse_item(data: Dictionary) -> ItemDefinition:
-	if not data.has("id") or not data.has("base_price"):
+	var has_price: bool = data.has("base_price") or data.has("base_value")
+	if not data.has("id") or not has_price:
 		push_error("ContentParser: item missing required fields: %s" % [data])
 		return null
-	var price_val: float = float(data["base_price"])
+	var price_val: float = float(data.get("base_price", data.get("base_value", 0.0)))
 	if price_val < 0.0:
 		push_error(
 			"ContentParser: item '%s' has out-of-range base_price %s (must be >= 0)"
@@ -84,21 +85,24 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	item.platform = str(data.get("platform", ""))
 	item.region = str(data.get("region", ""))
 	if data.has("condition_range"):
-		item.condition_range = PackedStringArray(data["condition_range"])
+		item.condition_range = _normalize_condition_labels(data["condition_range"])
+	elif data.has("condition_variants"):
+		item.condition_range = _normalize_condition_labels(data["condition_variants"])
 	if data.has("condition_value_multipliers"):
 		item.condition_value_multipliers = data["condition_value_multipliers"]
 	if data.has("tags"):
-		item.tags = data["tags"]
+		item.tags = ItemDefinition._normalize_string_name_array(data["tags"])
 	var extra: Dictionary = {}
 	var known_keys: PackedStringArray = [
 		"id", "item_name", "display_name", "description", "category",
-		"subcategory", "store_type", "base_price", "rarity", "icon_path",
+		"subcategory", "store_type", "base_price", "base_value", "rarity", "icon_path",
 		"set_name", "depreciates", "appreciates", "rental_tier",
 		"rental_fee", "rental_period_days", "brand", "product_line",
 		"generation", "lifecycle_phase", "launch_day",
 		"depreciation_rate", "min_value_ratio",
 		"launch_demand_multiplier", "launch_spike_days", "platform",
-		"region", "condition_range", "condition_value_multipliers",
+		"region", "condition_range", "condition_variants",
+		"condition_value_multipliers",
 		"tags",
 	]
 	for key: String in data:
@@ -107,6 +111,21 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	if not extra.is_empty():
 		item.extra = extra
 	return item
+
+
+static func _normalize_condition_labels(values: Variant) -> PackedStringArray:
+	var incoming: Array[String] = []
+	if values is PackedStringArray:
+		for value: String in values:
+			incoming.append(value)
+	elif values is Array:
+		for value: Variant in values:
+			incoming.append(str(value))
+	var normalized: PackedStringArray = PackedStringArray()
+	for label: String in ItemDefinition.CONDITION_ORDER:
+		if label in incoming:
+			normalized.append(label)
+	return normalized
 
 
 static func parse_store(data: Dictionary) -> StoreDefinition:

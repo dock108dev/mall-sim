@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://endingscreen01"]
 
-[ext_resource type="Script" path="res://game/scenes/ui/ending_screen.gd" id="1"]
+[ext_resource type="Script" path="res://game/scripts/ui/ending_screen.gd" id="1"]
 
 [node name="EndingScreen" type="CanvasLayer"]
 layer = 100

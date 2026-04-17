@@ -14,16 +14,22 @@ var _inventory_system: InventorySystem = null
 var _customer_system: CustomerSystem = null
 
 
+## Initializes shared store identity before ready-time lifecycle wiring.
+func initialize_store(
+	store_id: StringName, store_kind: StringName = &""
+) -> void:
+	var resolved_type: StringName = store_kind
+	if resolved_type.is_empty():
+		resolved_type = store_id
+	store_type = String(resolved_type)
+
+
 func _ready() -> void:
 	_collect_fixtures()
 	_collect_slots()
 	_collect_areas()
 	_build_decorations()
-	EventBus.store_entered.connect(_defer_store_entered)
-	EventBus.store_exited.connect(_on_store_exited)
-	EventBus.active_store_changed.connect(_on_active_store_changed)
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.customer_entered.connect(_on_customer_entered)
+	_connect_lifecycle_signals()
 
 
 ## Sets the InventorySystem reference for inventory queries.
@@ -212,6 +218,19 @@ func _build_decorations() -> void:
 	var node_ref: Variant = self
 	if node_ref is Node3D:
 		StoreDecorationBuilder.build(node_ref as Node3D, store_type)
+
+
+func _connect_lifecycle_signals() -> void:
+	_connect_signal(EventBus.store_entered, _defer_store_entered)
+	_connect_signal(EventBus.store_exited, _on_store_exited)
+	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
+	_connect_signal(EventBus.day_started, _on_day_started)
+	_connect_signal(EventBus.customer_entered, _on_customer_entered)
+
+
+func _connect_signal(sig: Signal, callable: Callable) -> void:
+	if not sig.is_connected(callable):
+		sig.connect(callable)
 
 
 func _defer_store_entered(store_id: StringName) -> void:

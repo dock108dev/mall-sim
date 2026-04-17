@@ -317,21 +317,14 @@ func test_hourly_event_excluded_from_daily_roll() -> void:
 	assert_eq(eligible.size(), 0)
 
 
-func test_weighted_pick_respects_weights() -> void:
-	var heavy: RandomEventDefinition = _make_def({
-		"id": "heavy", "probability_weight": 1000.0,
+func test_event_probability_clamps_weights_above_one() -> void:
+	var def: RandomEventDefinition = _make_def({
+		"id": "always", "probability_weight": 1000.0,
 	})
-	var light: RandomEventDefinition = _make_def({
-		"id": "light", "probability_weight": 0.001,
-	})
-	var picks: Dictionary = {"heavy": 0, "light": 0}
-	for i: int in range(100):
-		var pick: RandomEventDefinition = _system._weighted_pick(
-			[heavy, light] as Array[RandomEventDefinition]
-		)
-		if pick:
-			picks[pick.id] += 1
-	assert_gt(picks["heavy"], 90)
+	var probability: float = RandomEventProbability.event_probability(
+		def, []
+	)
+	assert_almost_eq(probability, 1.0, 0.001)
 
 
 func test_cooldown_prevents_reactivation() -> void:
@@ -476,35 +469,69 @@ func test_seeded_rng_single_event_always_selected() -> void:
 		assert_eq(fired[0], &"always_pick")
 
 
-func test_equal_weight_distribution_within_tolerance() -> void:
-	seed(99999)
+func test_independent_daily_rolls_can_fire_multiple_events() -> void:
 	var event_a: RandomEventDefinition = _make_def({
 		"id": "event_a",
-		"effect_type": "rainy_day",
+		"effect_type": "health_inspection",
 		"probability_weight": 1.0,
 		"notification_text": "A!",
 	})
 	var event_b: RandomEventDefinition = _make_def({
 		"id": "event_b",
-		"effect_type": "rainy_day",
+		"effect_type": "health_inspection",
 		"probability_weight": 1.0,
 		"notification_text": "B!",
 	})
 	_system._event_definitions = [event_a, event_b]
-	var counts: Dictionary = {"event_a": 0, "event_b": 0}
-	for i: int in range(100):
+	_system._active_event = {}
+	_system._cooldowns = {}
+	_system._last_fired = {}
+	var fired: Array[StringName] = _system.evaluate_daily_events(1)
+	assert_eq(fired, [&"event_a", &"event_b"])
+
+
+func test_low_probability_event_frequency_over_100_days() -> void:
+	seed(151)
+	var def: RandomEventDefinition = _make_def({
+		"id": "low_probability",
+		"effect_type": "health_inspection",
+		"probability_weight": 0.08,
+		"cooldown_days": 0,
+		"notification_text": "Inspection!",
+	})
+	_system._event_definitions = [def]
+	var fire_count: int = 0
+	for day: int in range(1, 101):
 		_system._active_event = {}
 		_system._cooldowns = {}
+		_system._last_fired = {}
 		_system._daily_rolled = false
-		var fired: Array[StringName] = _system.evaluate_daily_events(
-			i + 1
-		)
-		if fired.size() > 0:
-			counts[String(fired[0])] += 1
-	assert_gt(counts["event_a"], 35)
-	assert_lt(counts["event_a"], 65)
-	assert_gt(counts["event_b"], 35)
-	assert_lt(counts["event_b"], 65)
+		fire_count += _system.evaluate_daily_events(day).size()
+	assert_gt(fire_count, 1)
+	assert_lt(fire_count, 18)
+
+
+func test_last_fired_cooldown_excludes_event() -> void:
+	var def: RandomEventDefinition = _make_def({
+		"id": "last_fired_cd",
+		"effect_type": "health_inspection",
+		"probability_weight": 1.0,
+		"cooldown_days": 5,
+	})
+	_system._event_definitions = [def]
+	_system._last_fired = {"last_fired_cd": 10}
+	_system._cooldowns = {}
+	_system._current_day = 14
+	assert_eq(_system.evaluate_daily_events(14).size(), 0)
+	assert_eq(_system.evaluate_daily_events(15).size(), 1)
+
+
+func test_serialize_deserialize_preserves_last_fired() -> void:
+	_system._last_fired = {"event_a": 12}
+	var saved: Dictionary = _system.serialize()
+	_system._last_fired = {}
+	_system.deserialize(saved)
+	assert_eq(int(_system._last_fired["event_a"]), 12)
 
 
 func test_empty_pool_no_signal_no_error() -> void:

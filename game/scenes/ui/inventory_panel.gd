@@ -462,9 +462,6 @@ func _open_selected_pack() -> void:
 		)
 		return
 	var instance_id: String = _selected_item.instance_id
-	var pack_name: String = ""
-	if _selected_item.definition:
-		pack_name = _selected_item.definition.item_name
 	_selected_item = null
 	var cards: Array[ItemInstance] = (
 		pack_controller.open_pack_with_cards(
@@ -473,12 +470,24 @@ func _open_selected_pack() -> void:
 	)
 	if cards.is_empty():
 		return
+	pack_opening_panel.pack_opening_system = (
+		pack_controller.pack_opening_system
+	)
 	var card_dicts: Array[Dictionary] = []
-	for card: ItemInstance in cards:
+	var preview_count: int = mini(
+		cards.size(),
+		PackOpeningPanel.CARDS_PER_PACK
+	)
+	for i: int in range(preview_count):
+		var card: ItemInstance = cards[i]
 		var entry: Dictionary = {
 			"id": card.instance_id,
 			"name": card.definition.item_name if card.definition else "Unknown",
-			"rarity": card.definition.rarity if card.definition else "common",
+			"rarity": (
+				pack_controller.pack_opening_system.get_preview_rarity(card)
+				if pack_controller.pack_opening_system
+				else "common"
+			),
 			"value": card.get_current_value(),
 		}
 		card_dicts.append(entry)

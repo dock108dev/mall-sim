@@ -6,7 +6,15 @@ enum LateFeePolicy { STRICT, STANDARD, LENIENT }
 
 const STORE_ID: StringName = &"rentals"
 const SOLD_CATEGORIES: PackedStringArray = ["snacks", "merchandise"]
-const RENTAL_CATEGORIES: PackedStringArray = ["vhs_tapes", "dvd_titles"]
+const RENTAL_CATEGORIES: PackedStringArray = [
+	"vhs_tapes",
+	"dvd_titles",
+	"vhs_classic",
+	"vhs_new_release",
+	"vhs_cult",
+	"dvd_new_release",
+	"dvd_classic",
+]
 const MAX_STAFF_PICKS: int = 3
 const STAFF_PICK_BOOST: float = 1.3
 const RETURNS_BIN_LOCATION: String = "returns_bin"

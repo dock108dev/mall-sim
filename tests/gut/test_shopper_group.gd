@@ -257,6 +257,33 @@ func test_remove_leader_promotes_next() -> void:
 	assert_true(_group.followers.has(s2))
 
 
+func test_queue_free_leader_promotes_next() -> void:
+	var s1 := _make_shopper(
+		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY, 0.9
+	)
+	var s2 := _make_shopper(
+		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY, 0.7
+	)
+	var s3 := _make_shopper(
+		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY, 0.8
+	)
+	_group.add_member(s1)
+	_group.add_member(s2)
+	_group.add_member(s3)
+	_group.assign_leader()
+	assert_eq(_group.leader, s1)
+
+	s1.queue_free()
+	await get_tree().process_frame
+
+	assert_eq(
+		_group.leader, s3,
+		"queue_free should promote the remaining highest-social follower"
+	)
+	assert_eq(_group.followers.size(), 1)
+	assert_true(_group.followers.has(s2))
+
+
 func test_remove_follower_keeps_leader() -> void:
 	var s1 := _make_shopper(
 		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY, 0.9

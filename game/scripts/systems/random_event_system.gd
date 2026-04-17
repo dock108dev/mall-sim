@@ -10,13 +10,16 @@ const RAINY_DAY_TRAFFIC_MULTIPLIER: float = 0.7
 const VIRAL_TREND_DEMAND_MULTIPLIER: float = 5.0
 const COMPETITOR_SALE_DEMAND_MODIFIER: float = 0.9
 
+var _event_pool: Array[Dictionary] = []
 var _event_definitions: Array[RandomEventDefinition] = []
 var _active_event: Dictionary = {}
 var _cooldowns: Dictionary = {}
+var _last_fired: Dictionary = {}
 var _disabled_fixture_id: String = ""
 var _effects: RandomEventEffects
 var _daily_rolled: bool = false
 var _hourly_rolled_events: Dictionary = {}
+var _current_day: int = 1
 
 
 func initialize(
@@ -32,6 +35,7 @@ func initialize(
 	)
 	if data_loader:
 		_event_definitions = data_loader.get_all_random_events()
+		_rebuild_event_pool()
 	_apply_state({})
 	if not EventBus.day_started.is_connected(_on_day_started):
 		EventBus.day_started.connect(_on_day_started)
@@ -40,18 +44,34 @@ func initialize(
 
 
 ## Evaluates all eligible daily events and returns IDs of those that fire.
-func evaluate_daily_events(day: int) -> Array[StringName]:
+func evaluate_daily_events(day: int = -1) -> Array[StringName]:
 	_daily_rolled = true
+	var roll_day: int = day if day > 0 else _get_current_day()
+	_current_day = roll_day
 	var fired: Array[StringName] = []
 	var eligible: Array[RandomEventDefinition] = _get_eligible_daily()
 	if eligible.is_empty():
 		return fired
-	var chosen: RandomEventDefinition = _weighted_pick(eligible)
-	if not chosen:
-		return fired
-	_activate_event(chosen, day)
-	fired.append(StringName(chosen.id))
+	for def: RandomEventDefinition in eligible:
+		if not _roll_event(def):
+			continue
+		_activate_event(def, roll_day)
+		fired.append(StringName(def.id))
+		if not _active_event.is_empty():
+			break
 	return fired
+
+
+func _get_current_day() -> int:
+	if _current_day > 0:
+		return _current_day
+	return max(GameManager.current_day, 1)
+
+
+func _roll_event(def: RandomEventDefinition) -> bool:
+	return randf() <= RandomEventProbability.event_probability(
+		def, _event_pool
+	)
 
 
 ## Returns the config dictionary for a given event ID, or empty dict.
@@ -64,31 +84,26 @@ func get_event_config(event_id: StringName) -> Dictionary:
 			"RandomEventSystem: unknown event_id '%s'" % event_id
 		)
 		return {}
-	return {
-		"id": def.id,
-		"name": def.name,
-		"description": def.description,
-		"effect_type": def.effect_type,
-		"duration_days": def.duration_days,
-		"severity": def.severity,
-		"cooldown_days": def.cooldown_days,
-		"probability_weight": def.probability_weight,
-		"target_category": def.target_category,
-		"target_item_id": def.target_item_id,
-		"notification_text": def.notification_text,
-		"resolution_text": def.resolution_text,
-		"toast_message": def.toast_message,
-		"time_window_start": def.time_window_start,
-		"time_window_end": def.time_window_end,
-	}
+	var config: Dictionary = RandomEventProbability.event_pool_config(
+		def.id, _event_pool
+	)
+	if not config.is_empty():
+		return config.duplicate()
+	return RandomEventProbability.definition_to_config(def)
 
 
-## Serializes state for save system compatibility.
+func _rebuild_event_pool() -> void:
+	_event_pool = []
+	for def: RandomEventDefinition in _event_definitions:
+		_event_pool.append(
+			RandomEventProbability.definition_to_config(def)
+		)
+
+
 func serialize() -> Dictionary:
 	return get_save_data()
 
 
-## Restores state from serialized data.
 func deserialize(data: Dictionary) -> void:
 	load_save_data(data)
 
@@ -146,19 +161,16 @@ func get_blocked_category() -> String:
 	return _active_event.get("target_category", "")
 
 
-## Returns the fixture id disabled by water leak, or empty.
 func get_disabled_fixture_id() -> String:
 	return _disabled_fixture_id
 
 
-## Returns the currently active event for UI display, or empty dict.
 func get_active_event() -> Dictionary:
 	if _active_event.is_empty():
 		return {}
 	return _active_event.duplicate()
 
 
-## Returns true if any random event is currently active.
 func has_active_event() -> bool:
 	return not _active_event.is_empty()
 
@@ -184,13 +196,16 @@ func get_save_data() -> Dictionary:
 	var cooldown_save: Dictionary = {}
 	for event_id: String in _cooldowns:
 		cooldown_save[event_id] = _cooldowns[event_id]
+	var last_fired_save: Dictionary = {}
+	for event_id: String in _last_fired:
+		last_fired_save[event_id] = _last_fired[event_id]
 	return {
 		"active_event": active_save,
 		"cooldowns": cooldown_save,
+		"last_fired": last_fired_save,
 	}
 
 
-## Restores state from saved data.
 func load_save_data(data: Dictionary) -> void:
 	_apply_state(data)
 
@@ -198,6 +213,7 @@ func load_save_data(data: Dictionary) -> void:
 func _apply_state(data: Dictionary) -> void:
 	_active_event = {}
 	_cooldowns = {}
+	_last_fired = {}
 	_disabled_fixture_id = ""
 	_daily_rolled = false
 	_hourly_rolled_events = {}
@@ -209,6 +225,12 @@ func _apply_state(data: Dictionary) -> void:
 		for key: String in (cooldown_data as Dictionary):
 			_cooldowns[key] = int(
 				(cooldown_data as Dictionary)[key]
+			)
+	var last_fired_data: Variant = data.get("last_fired", {})
+	if last_fired_data is Dictionary:
+		for key: String in (last_fired_data as Dictionary):
+			_last_fired[key] = int(
+				(last_fired_data as Dictionary)[key]
 			)
 
 
@@ -240,6 +262,7 @@ func _load_active_event(active: Dictionary) -> void:
 
 
 func _on_day_started(day: int) -> void:
+	_current_day = day
 	_daily_rolled = false
 	_hourly_rolled_events = {}
 	_tick_cooldowns()
@@ -254,7 +277,6 @@ func _on_hour_changed(hour: int) -> void:
 	_try_trigger_hourly_event(hour)
 
 
-## Decrements all cooldown counters by 1 day.
 func _tick_cooldowns() -> void:
 	var to_remove: PackedStringArray = []
 	for event_id: String in _cooldowns:
@@ -265,7 +287,6 @@ func _tick_cooldowns() -> void:
 		_cooldowns.erase(event_id)
 
 
-## Expires the active event if its duration has elapsed.
 func _check_active_event_expiry(day: int) -> void:
 	if _active_event.is_empty():
 		return
@@ -280,7 +301,6 @@ func _check_active_event_expiry(day: int) -> void:
 		_end_active_event(def)
 
 
-## Ends the currently active event and applies resolution effects.
 func _end_active_event(def: RandomEventDefinition) -> void:
 	_disabled_fixture_id = ""
 	if not def.resolution_text.is_empty():
@@ -291,22 +311,17 @@ func _end_active_event(def: RandomEventDefinition) -> void:
 	_active_event = {}
 
 
-## Rolls for daily events using probability weights from definitions.
 func _try_trigger_daily_event(day: int) -> void:
 	if _daily_rolled:
 		return
 	evaluate_daily_events(day)
 
 
-## Rolls for intra-day events in their time windows.
 func _try_trigger_hourly_event(hour: int) -> void:
 	var eligible: Array[RandomEventDefinition] = (
 		_get_eligible_hourly(hour)
 	)
 	if eligible.is_empty():
-		return
-	var chosen: RandomEventDefinition = _weighted_pick(eligible)
-	if not chosen:
 		return
 	var current_day: int = 1
 	if is_inside_tree():
@@ -315,13 +330,16 @@ func _try_trigger_hourly_event(hour: int) -> void:
 		)
 		if time_system and time_system.has_method("get_current_day"):
 			current_day = time_system.get_current_day()
-	_activate_event(chosen, current_day)
+	for def: RandomEventDefinition in eligible:
+		if _roll_event(def):
+			_activate_event(def, current_day)
+			return
 
 
 func _get_eligible_daily() -> Array[RandomEventDefinition]:
 	var eligible: Array[RandomEventDefinition] = []
 	for def: RandomEventDefinition in _event_definitions:
-		if _cooldowns.has(def.id):
+		if _is_on_cooldown(def, _current_day):
 			continue
 		if def.time_window_start >= 0:
 			continue
@@ -334,7 +352,7 @@ func _get_eligible_hourly(
 ) -> Array[RandomEventDefinition]:
 	var eligible: Array[RandomEventDefinition] = []
 	for def: RandomEventDefinition in _event_definitions:
-		if _cooldowns.has(def.id):
+		if _is_on_cooldown(def, _get_current_day()):
 			continue
 		if _hourly_rolled_events.has(def.id):
 			continue
@@ -346,28 +364,19 @@ func _get_eligible_hourly(
 	return eligible
 
 
-## Selects an event using probability weights. Returns null if roll fails.
-func _weighted_pick(
-	candidates: Array[RandomEventDefinition]
-) -> RandomEventDefinition:
-	var total_weight: float = 0.0
-	for def: RandomEventDefinition in candidates:
-		total_weight += def.probability_weight
-	if total_weight <= 0.0:
-		return null
-	var roll: float = randf() * total_weight
-	var cumulative: float = 0.0
-	for def: RandomEventDefinition in candidates:
-		cumulative += def.probability_weight
-		if roll <= cumulative:
-			return def
-	return candidates[candidates.size() - 1]
+func _is_on_cooldown(def: RandomEventDefinition, day: int) -> bool:
+	if _cooldowns.has(def.id):
+		return true
+	if not _last_fired.has(def.id):
+		return false
+	var last_day: int = int(_last_fired[def.id])
+	return day - last_day < def.cooldown_days
 
 
-## Activates a specific random event and applies its immediate effects.
 func _activate_event(
 	def: RandomEventDefinition, day: int
 ) -> void:
+	_last_fired[def.id] = day
 	_active_event = {
 		"definition": def,
 		"start_day": day,
@@ -408,7 +417,7 @@ func _apply_effect(def: RandomEventDefinition) -> Dictionary:
 				passed = _effects.apply_health_inspection(def)
 			effect["passed"] = passed
 			_finish_instant_event(def)
-		"shoplifting":
+		"theft", "shoplifting":
 			var stolen_name: String = ""
 			if _effects:
 				stolen_name = _effects.apply_shoplifting(def)
@@ -477,7 +486,6 @@ func _emit_event_modifier_expired(def: RandomEventDefinition) -> void:
 			EventBus.market_event_expired.emit(StringName(def.id))
 
 
-## Clears the active event for instant-resolution events.
 func _finish_instant_event(def: RandomEventDefinition) -> void:
 	_active_event = {}
 	_cooldowns[def.id] = def.cooldown_days
