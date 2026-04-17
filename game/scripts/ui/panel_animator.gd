@@ -21,6 +21,11 @@ static func kill_tween(tween: Tween) -> void:
 	if tween and tween.is_valid():
 		tween.kill()
 
+static func kill_control_tween(panel: Control) -> void:
+	if panel == null:
+		return
+	_kill_active_tween(panel)
+
 static func _kill_active_tween(panel: Control) -> void:
 	if not panel.has_meta(_ACTIVE_TWEEN_META):
 		return

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dxxteyec6bq6c"
 path.s3tc="res://.godot/imported/tex_floor_concrete_albedo.png-199b6671c1c75e634b001fc6ab03528f.s3tc.ctex"
+path.etc2="res://.godot/imported/tex_floor_concrete_albedo.png-199b6671c1c75e634b001fc6ab03528f.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://game/assets/textures/tex_floor_concrete_albedo.png"
-dest_files=["res://.godot/imported/tex_floor_concrete_albedo.png-199b6671c1c75e634b001fc6ab03528f.s3tc.ctex"]
+dest_files=["res://.godot/imported/tex_floor_concrete_albedo.png-199b6671c1c75e634b001fc6ab03528f.s3tc.ctex", "res://.godot/imported/tex_floor_concrete_albedo.png-199b6671c1c75e634b001fc6ab03528f.etc2.ctex"]
 
 [params]
 

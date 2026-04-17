@@ -201,7 +201,6 @@ func enter_build_mode() -> void:
 
 	is_active = true
 	current_state = State.IDLE
-	_grid.show_grid()
 	_camera_controller.transition_to_top_down()
 
 	if _player_node and _player_node.has_method("set_build_mode"):
@@ -228,7 +227,6 @@ func exit_build_mode() -> void:
 	_hovered_cell = null
 	_selected_fixture_id = ""
 	current_state = State.IDLE
-	_grid.hide_grid()
 	_camera_controller.transition_to_orbit()
 
 	if _placement_system:

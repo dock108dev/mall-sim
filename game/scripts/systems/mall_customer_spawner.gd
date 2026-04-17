@@ -15,6 +15,7 @@ const TIME_MULTIPLIERS: Dictionary = {
 }
 
 var _customer_system: CustomerSystem = null
+var _reputation_system: ReputationSystem = null
 var _seasonal_event_system: SeasonalEventSystem = null
 var _store_selector: StoreSelector = null
 var _spawn_accumulator: float = 0.0
@@ -33,6 +34,7 @@ func initialize(
 	trend_system: TrendSystem = null
 ) -> void:
 	_customer_system = customer_system
+	_reputation_system = reputation_system
 	_store_selector = StoreSelector.new()
 	_store_selector.initialize(reputation_system, trend_system)
 	_current_time_multiplier = _get_time_multiplier(
@@ -105,6 +107,7 @@ func set_seasonal_event_system(
 
 func _get_spawn_interval() -> float:
 	var time_mult: float = _current_time_multiplier
+	time_mult *= _get_reputation_spawn_multiplier()
 	if _seasonal_event_system:
 		time_mult *= _seasonal_event_system.get_traffic_multiplier()
 	if time_mult <= 0.0:
@@ -125,6 +128,12 @@ func _get_phase_for_hour(hour: int) -> String:
 func _get_time_multiplier(hour: int) -> float:
 	var phase: String = _get_phase_for_hour(hour)
 	return TIME_MULTIPLIERS.get(phase, 1.0) as float
+
+
+func _get_reputation_spawn_multiplier() -> float:
+	if not _reputation_system or GameManager.owned_stores.is_empty():
+		return 1.0
+	return _reputation_system.get_global_customer_multiplier()
 
 
 func _try_spawn_customer() -> void:

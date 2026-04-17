@@ -29,6 +29,7 @@ func _random_def(o: Dictionary = {}) -> RandomEventDefinition:
 	d.duration_days = o.get("duration_days", 2)
 	d.severity = o.get("severity", "medium")
 	d.cooldown_days = o.get("cooldown_days", 10)
+	d.probability_weight = o.get("probability_weight", 1.0)
 	d.target_category = o.get("target_category", "")
 	d.target_item_id = o.get("target_item_id", "")
 	d.notification_text = o.get("notif", "Something happened!")
@@ -184,10 +185,10 @@ func test_seasonal_expires_after_duration() -> void:
 
 func test_seasonal_no_duplicate_activation() -> void:
 	var def: SeasonalEventDefinition = _seasonal_def({
-		"frequency_days": 10, "offset_days": 0,
+		"frequency_days": 10, "offset_days": 0, "duration_days": 10,
 	})
 	_set_seasonal_definitions(def)
-	_seasonal._active_events.append({"definition": def, "start_day": 5})
+	_seasonal._active_events.append({"definition": def, "start_day": 9})
 	_seasonal._on_day_started(10)
 	assert_eq(_seasonal._announced_events.size(), 0)
 
@@ -456,6 +457,33 @@ func test_random_eligible_filters_cooldowns() -> void:
 		ids.append(d.id)
 	assert_true("a" in ids and "c" in ids)
 	assert_false("b" in ids)
+
+
+func test_random_weighted_selection_favors_higher_weight() -> void:
+	seed(424242)
+	var heavy: RandomEventDefinition = _random_def({
+		"id": "heavy", "probability_weight": 9.0,
+	})
+	var light: RandomEventDefinition = _random_def({
+		"id": "light", "probability_weight": 1.0,
+	})
+	var counts: Dictionary = {"heavy": 0, "light": 0}
+	var candidates: Array[RandomEventDefinition] = [heavy, light]
+	for _i: int in range(1000):
+		var chosen: RandomEventDefinition = _random._weighted_pick(
+			candidates
+		)
+		counts[chosen.id] = int(counts[chosen.id]) + 1
+	assert_gt(
+		int(counts["heavy"]),
+		int(counts["light"]),
+		"Higher-weight events should be selected more often"
+	)
+	assert_gt(
+		int(counts["heavy"]), 850,
+		"Heavy event should dominate over 1000 weighted picks"
+	)
+
 
 func test_random_uniform_selection_over_eligible() -> void:
 	var a: RandomEventDefinition = _random_def({"id": "a"})

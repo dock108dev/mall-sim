@@ -139,3 +139,16 @@ func test_confirmation_duration_positive() -> void:
 		BuildModeSystem.CONFIRMATION_DURATION, 0.0,
 		"Confirmation duration should be positive"
 	)
+
+
+func test_build_mode_system_relies_on_eventbus_for_grid_transitions() -> void:
+	var script: GDScript = _system.get_script()
+	var source: String = script.source_code
+	assert_false(
+		source.contains("_grid.show_grid()"),
+		"Grid visuals should react to EventBus, not direct show_grid calls"
+	)
+	assert_false(
+		source.contains("_grid.hide_grid()"),
+		"Grid visuals should react to EventBus, not direct hide_grid calls"
+	)

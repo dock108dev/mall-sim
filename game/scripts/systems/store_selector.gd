@@ -63,7 +63,7 @@ func _weighted_pick(weights: Dictionary) -> String:
 
 func _get_store_weight(store_id: String) -> float:
 	var base_traffic: float = _get_base_foot_traffic(store_id)
-	var rep_mult: float = _get_reputation_multiplier()
+	var rep_mult: float = _get_reputation_multiplier(store_id)
 	var trend_mult: float = _get_trend_multiplier(store_id)
 	return base_traffic * rep_mult * trend_mult
 
@@ -79,10 +79,10 @@ func _get_base_foot_traffic(store_id: String) -> float:
 	return 0.5
 
 
-func _get_reputation_multiplier() -> float:
+func _get_reputation_multiplier(store_id: String) -> float:
 	if not _reputation_system:
 		return 1.0
-	return _reputation_system.get_customer_multiplier()
+	return _reputation_system.get_customer_multiplier(store_id)
 
 
 func _get_trend_multiplier(store_id: String) -> float:

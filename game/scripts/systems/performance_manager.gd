@@ -48,10 +48,7 @@ func initialize(economy_system: EconomySystem = null) -> void:
 	_npc_animation_times.fill(0.0)
 	_npc_count_samples.resize(NPC_SAMPLE_WINDOW)
 	_npc_count_samples.fill(0)
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.hour_changed.connect(_on_hour_changed)
-	EventBus.item_sold.connect(_on_item_sold)
-	EventBus.inventory_changed.connect(_on_inventory_changed)
+	_connect_runtime_signals()
 
 
 func set_economy_system(system: EconomySystem) -> void:
@@ -279,6 +276,17 @@ func _check_performance() -> void:
 			% [avg_fps, worst_ms]
 		)
 		performance_warning.emit(avg_fps, worst_ms)
+
+
+func _connect_runtime_signals() -> void:
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.hour_changed.is_connected(_on_hour_changed):
+		EventBus.hour_changed.connect(_on_hour_changed)
+	if not EventBus.item_sold.is_connected(_on_item_sold):
+		EventBus.item_sold.connect(_on_item_sold)
+	if not EventBus.inventory_changed.is_connected(_on_inventory_changed):
+		EventBus.inventory_changed.connect(_on_inventory_changed)
 
 
 func _on_day_started(day: int) -> void:

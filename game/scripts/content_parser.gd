@@ -475,10 +475,17 @@ static func parse_upgrade(data: Dictionary) -> UpgradeDefinition:
 	u.display_name = str(data["display_name"])
 	u.description = str(data.get("description", ""))
 	u.cost = float(data.get("cost", 0.0))
-	u.rep_required = float(data.get("rep_required", 0.0))
-	u.store_type = str(data.get("store_type", ""))
+	u.rep_required = float(
+		data.get(
+			"rep_required",
+			data.get("reputation_requirement", 0.0)
+		)
+	)
+	var raw_store_type: Variant = data.get("store_type", "")
+	u.store_type = "" if raw_store_type == null else str(raw_store_type)
 	u.effect_type = str(data.get("effect_type", ""))
 	u.effect_value = float(data.get("effect_value", 0.0))
+	u.one_time = bool(data.get("one_time", true))
 	return u
 
 

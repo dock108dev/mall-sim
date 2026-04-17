@@ -988,31 +988,31 @@ surface_material_override/0 = ExtResource("11")
 
 [node name="FluorescentOverhead1" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.9, -1.5)
-light_color = Color(0.95, 0.97, 1.0, 1)
+light_color = Color(1.0, 0.93, 0.8, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead2" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2.9, -1.5)
-light_color = Color(0.95, 0.97, 1.0, 1)
+light_color = Color(1.0, 0.93, 0.8, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead3" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 0)
-light_color = Color(0.95, 0.97, 1.0, 1)
+light_color = Color(1.0, 0.93, 0.8, 1)
 light_energy = 0.8
 omni_range = 6.0
 
 [node name="FluorescentOverhead4" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.9, 1.5)
-light_color = Color(0.95, 0.97, 1.0, 1)
+light_color = Color(1.0, 0.93, 0.8, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead5" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2.9, 1.5)
-light_color = Color(0.95, 0.97, 1.0, 1)
+light_color = Color(1.0, 0.93, 0.8, 1)
 light_energy = 0.7
 omni_range = 5.0
 
@@ -1033,6 +1033,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.4, 1.0)
 light_color = Color(0.3, 0.5, 1.0, 1)
 light_energy = 0.4
 omni_range = 1.5
+
+[node name="DemoCounterSpotlight" type="SpotLight3D" parent="LightingRig"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2.8, 1.2)
+light_color = Color(1.0, 0.86, 0.66, 1)
+light_energy = 1.15
+shadow_enabled = true
+spot_range = 3.4
+spot_angle = 34.0
 
 ; ============================================================
 ; Storage access door — back-right

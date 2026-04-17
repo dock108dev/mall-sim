@@ -7,6 +7,7 @@ extends CanvasLayer
 const PANEL_NAME: String = "fixture_catalog"
 const PLACEMENT_PUNCH_SCALE: float = 1.08
 const PLACEMENT_PUNCH_DURATION: float = 0.2
+const BUILD_MODE_OPEN_DELAY: float = 0.1
 
 var data_loader: DataLoader
 var economy_system: EconomySystem
@@ -244,13 +245,19 @@ func _on_build_mode_entered() -> void:
 		_current_day_snapshot = 1
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = create_tween()
-	_anim_tween.tween_interval(0.1)
+	_anim_tween.tween_interval(BUILD_MODE_OPEN_DELAY)
 	_anim_tween.tween_callback(open)
 
 
 func _on_build_mode_exited() -> void:
 	PanelAnimator.kill_tween(_anim_tween)
-	close()
+	if _is_open:
+		close()
+		return
+	_selected_fixture_id = ""
+	_update_info_label()
+	_panel.visible = false
+	_panel.position.x = _rest_x
 
 
 func _on_fixture_placed(

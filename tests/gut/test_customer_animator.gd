@@ -20,9 +20,17 @@ func before_each() -> void:
 	left_arm.name = "LeftArm"
 	body.add_child(left_arm)
 
+	var left_hand := MeshInstance3D.new()
+	left_hand.name = "LeftHand"
+	left_arm.add_child(left_hand)
+
 	var right_arm := MeshInstance3D.new()
 	right_arm.name = "RightArm"
 	body.add_child(right_arm)
+
+	var right_hand := MeshInstance3D.new()
+	right_hand.name = "RightHand"
+	right_arm.add_child(right_hand)
 
 	var head := MeshInstance3D.new()
 	head.name = "HeadMesh"
@@ -52,10 +60,10 @@ func test_all_six_animations_created() -> void:
 	assert_true(lib.has_animation("idle"), "idle animation exists")
 	assert_true(lib.has_animation("purchase"), "purchase animation exists")
 	assert_true(
-		lib.has_animation("leave_happy"), "leave_happy animation exists"
+		lib.has_animation("leaving_happy"), "leaving_happy animation exists"
 	)
 	assert_true(
-		lib.has_animation("leave_upset"), "leave_upset animation exists"
+		lib.has_animation("leaving_upset"), "leaving_upset animation exists"
 	)
 
 
@@ -67,6 +75,8 @@ func test_walk_has_arm_swing_tracks() -> void:
 	var walk: Animation = lib.get_animation("walk")
 	var left_found: Array = [false]
 	var right_found: Array = [false]
+	var left_hand_found: Array = [false]
+	var right_hand_found: Array = [false]
 	for i: int in range(walk.get_track_count()):
 		var path: String = str(walk.track_get_path(i))
 		if path == "BodyMesh/LeftArm":
@@ -83,8 +93,14 @@ func test_walk_has_arm_swing_tracks() -> void:
 				Animation.TYPE_ROTATION_3D,
 				"RightArm track is rotation"
 			)
+		elif path == "BodyMesh/LeftArm/LeftHand":
+			left_hand_found[0] = true
+		elif path == "BodyMesh/RightArm/RightHand":
+			right_hand_found[0] = true
 	assert_true(left_found[0], "Walk has LeftArm rotation track")
 	assert_true(right_found[0], "Walk has RightArm rotation track")
+	assert_true(left_hand_found[0], "Walk has LeftHand rotation track")
+	assert_true(right_hand_found[0], "Walk has RightHand rotation track")
 
 
 # --- Browse body shift ---
@@ -191,8 +207,8 @@ func test_leaving_unsatisfied_plays_upset() -> void:
 	_animator.set_satisfied(false)
 	_animator.play_for_state(Customer.State.LEAVING)
 	assert_eq(
-		_anim_player.current_animation, "leave_upset",
-		"Unsatisfied customer plays leave_upset"
+		_anim_player.current_animation, "leaving_upset",
+		"Unsatisfied customer plays leaving_upset"
 	)
 
 
@@ -200,16 +216,16 @@ func test_leaving_satisfied_plays_happy() -> void:
 	_animator.set_satisfied(true)
 	_animator.play_for_state(Customer.State.LEAVING)
 	assert_eq(
-		_anim_player.current_animation, "leave_happy",
-		"Satisfied customer plays leave_happy"
+		_anim_player.current_animation, "leaving_happy",
+		"Satisfied customer plays leaving_happy"
 	)
 
 
 func test_default_satisfaction_is_false() -> void:
 	_animator.play_for_state(Customer.State.LEAVING)
 	assert_eq(
-		_anim_player.current_animation, "leave_upset",
-		"Default leaving animation is leave_upset (not satisfied)"
+		_anim_player.current_animation, "leaving_upset",
+		"Default leaving animation is leaving_upset (not satisfied)"
 	)
 
 
@@ -218,7 +234,7 @@ func test_default_satisfaction_is_false() -> void:
 
 func test_leave_happy_has_vertical_bob() -> void:
 	var lib: AnimationLibrary = _anim_player.get_animation_library("")
-	var happy: Animation = lib.get_animation("leave_happy")
+	var happy: Animation = lib.get_animation("leaving_happy")
 	for i: int in range(happy.get_track_count()):
 		var path: String = str(happy.track_get_path(i))
 		if path != "BodyMesh":
@@ -238,7 +254,7 @@ func test_leave_happy_has_vertical_bob() -> void:
 
 func test_leave_upset_has_no_bob() -> void:
 	var lib: AnimationLibrary = _anim_player.get_animation_library("")
-	var upset: Animation = lib.get_animation("leave_upset")
+	var upset: Animation = lib.get_animation("leaving_upset")
 	for i: int in range(upset.get_track_count()):
 		var path: String = str(upset.track_get_path(i))
 		if path != "BodyMesh":

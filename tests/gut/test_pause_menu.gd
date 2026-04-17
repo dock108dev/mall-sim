@@ -47,12 +47,33 @@ func test_open_sets_paused_state() -> void:
 	)
 
 
+func test_open_starts_overlay_and_panel_fade_in() -> void:
+	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	_pause_menu.open()
+	assert_true(_pause_menu._overlay.visible)
+	assert_true(_pause_menu._panel.visible)
+	assert_eq(_pause_menu._overlay.modulate.a, 0.0)
+	assert_eq(_pause_menu._panel.modulate.a, 0.0)
+
+
 func test_close_unpauses_tree() -> void:
 	GameManager.current_state = GameManager.GameState.GAMEPLAY
 	_pause_menu.open()
 	_pause_menu.close()
 	assert_false(get_tree().paused)
 	assert_false(_pause_menu.is_open())
+
+
+func test_rapid_reopen_keeps_pause_menu_visible() -> void:
+	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	_pause_menu.open()
+	_pause_menu.close()
+	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	_pause_menu.open()
+	assert_true(_pause_menu.is_open())
+	assert_true(_pause_menu._overlay.visible)
+	assert_true(_pause_menu._panel.visible)
+	assert_true(get_tree().paused)
 
 
 func test_resume_restores_gameplay_state() -> void:

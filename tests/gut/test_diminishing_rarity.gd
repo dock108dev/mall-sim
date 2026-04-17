@@ -5,6 +5,10 @@ extends GutTest
 var _economy: EconomySystem
 
 
+func before_all() -> void:
+	_seed_difficulty_config()
+
+
 func before_each() -> void:
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
@@ -19,8 +23,19 @@ func _create_item(
 	item_def.base_price = base_price
 	item_def.rarity = rarity
 	item_def.category = category
-	item_def.tags = PackedStringArray()
+	item_def.tags = []
 	return ItemInstance.create_from_definition(item_def, "good")
+
+
+func _seed_difficulty_config() -> void:
+	DifficultySystemSingleton._current_tier_id = &"normal"
+	DifficultySystemSingleton._tiers = {
+		&"normal": {
+			"modifiers": {
+				"starting_cash_multiplier": 1.0,
+			},
+		},
+	}
 
 
 # --- calculate_effective_rarity tests ---

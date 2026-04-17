@@ -253,6 +253,12 @@ signal unlock_granted(unlock_id: StringName)
 
 # ── Store Upgrades ────────────────────────────────────────────────────────────
 signal upgrade_purchased(store_id: StringName, upgrade_id: String)
+signal store_upgrade_effect_applied(
+	store_id: StringName,
+	upgrade_id: String,
+	effect_type: String,
+	effect_value: float,
+)
 signal toggle_upgrade_panel()
 
 # ── Tutorial ──────────────────────────────────────────────────────────────────

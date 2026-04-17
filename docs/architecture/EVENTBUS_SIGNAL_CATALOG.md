@@ -335,6 +335,7 @@ unlock_granted(unlock_id: StringName)
 
 ```gdscript
 upgrade_purchased(store_id: StringName, upgrade_id: String)
+store_upgrade_effect_applied(store_id: StringName, upgrade_id: String, effect_type: String, effect_value: float)
 toggle_upgrade_panel()
 ```
 

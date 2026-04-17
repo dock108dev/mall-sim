@@ -18,7 +18,6 @@ func _ready() -> void:
 
 func _on_build_mode_entered() -> void:
 	PanelAnimator.kill_tween(_tint_tween)
-	_tint_rect.color = Color.WHITE
 	_tint_rect.visible = true
 	_tint_tween = _tint_rect.create_tween()
 	_tint_tween.tween_property(

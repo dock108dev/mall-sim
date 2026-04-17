@@ -20,8 +20,8 @@ func test_budget_multiplier_notorious() -> void:
 		ReputationSystemSingleton.BUDGET_MULTIPLIERS[
 			ReputationSystemSingleton.ReputationTier.NOTORIOUS
 		],
-		0.8,
-		"Notorious tier budget multiplier should be 0.8"
+		1.0,
+		"Unknown tier budget multiplier should be 1.0"
 	)
 
 
@@ -30,8 +30,8 @@ func test_budget_multiplier_unremarkable() -> void:
 		ReputationSystemSingleton.BUDGET_MULTIPLIERS[
 			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
-		1.0,
-		"Unremarkable tier budget multiplier should be 1.0"
+		1.2,
+		"Local Favorite tier budget multiplier should be 1.2"
 	)
 
 
@@ -40,8 +40,8 @@ func test_budget_multiplier_reputable() -> void:
 		ReputationSystemSingleton.BUDGET_MULTIPLIERS[
 			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
-		1.3,
-		"Reputable tier budget multiplier should be 1.3"
+		1.5,
+		"Destination Shop tier budget multiplier should be 1.5"
 	)
 
 
@@ -63,8 +63,8 @@ func test_max_customers_small_notorious() -> void:
 		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_SMALL[
 			ReputationSystemSingleton.ReputationTier.NOTORIOUS
 		],
-		3,
-		"Notorious tier small store max should be 3"
+		5,
+		"Unknown tier small store max should be 5"
 	)
 
 
@@ -73,8 +73,8 @@ func test_max_customers_small_unremarkable() -> void:
 		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_SMALL[
 			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
-		5,
-		"Unremarkable tier small store max should be 5"
+		6,
+		"Local Favorite tier small store max should be 6"
 	)
 
 
@@ -83,8 +83,8 @@ func test_max_customers_small_reputable() -> void:
 		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_SMALL[
 			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
-		7,
-		"Reputable tier small store max should be 7"
+		8,
+		"Destination Shop tier small store max should be 8"
 	)
 
 
@@ -106,8 +106,8 @@ func test_max_customers_medium_notorious() -> void:
 		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_MEDIUM[
 			ReputationSystemSingleton.ReputationTier.NOTORIOUS
 		],
-		5,
-		"Notorious tier medium store max should be 5"
+		8,
+		"Unknown tier medium store max should be 8"
 	)
 
 
@@ -116,8 +116,8 @@ func test_max_customers_medium_unremarkable() -> void:
 		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_MEDIUM[
 			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
-		8,
-		"Unremarkable tier medium store max should be 8"
+		10,
+		"Local Favorite tier medium store max should be 10"
 	)
 
 
@@ -126,8 +126,8 @@ func test_max_customers_medium_reputable() -> void:
 		ReputationSystemSingleton.MAX_CUSTOMERS_BY_TIER_MEDIUM[
 			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
-		11,
-		"Reputable tier medium store max should be 11"
+		12,
+		"Destination Shop tier medium store max should be 12"
 	)
 
 
@@ -146,8 +146,8 @@ func test_max_customers_medium_legendary() -> void:
 
 func test_get_budget_multiplier_at_default() -> void:
 	assert_eq(
-		_rep.get_budget_multiplier(TEST_STORE), 1.0,
-		"Budget multiplier at default (50.0) should be 1.0 (Unremarkable)"
+		_rep.get_budget_multiplier(TEST_STORE), 1.5,
+		"Budget multiplier at default (50.0) should be 1.5 (Destination Shop)"
 	)
 
 
@@ -164,8 +164,8 @@ func test_get_budget_multiplier_at_legendary() -> void:
 
 func test_get_max_customers_small_at_default() -> void:
 	assert_eq(
-		_rep.get_max_customers("small", TEST_STORE), 5,
-		"Unremarkable small store should allow 5 customers"
+		_rep.get_max_customers("small", TEST_STORE), 8,
+		"Destination Shop small store should allow 8 customers"
 	)
 
 
@@ -221,20 +221,20 @@ func test_tier_boundaries_match() -> void:
 		ReputationSystemSingleton.TIER_THRESHOLDS[
 			ReputationSystemSingleton.ReputationTier.UNREMARKABLE
 		],
-		26.0,
-		"Unremarkable threshold should be 26"
+		25.0,
+		"Local Favorite threshold should be 25"
 	)
 	assert_eq(
 		ReputationSystemSingleton.TIER_THRESHOLDS[
 			ReputationSystemSingleton.ReputationTier.REPUTABLE
 		],
-		51.0,
-		"Reputable threshold should be 51"
+		50.0,
+		"Destination Shop threshold should be 50"
 	)
 	assert_eq(
 		ReputationSystemSingleton.TIER_THRESHOLDS[
 			ReputationSystemSingleton.ReputationTier.LEGENDARY
 		],
-		76.0,
-		"Legendary threshold should be 76"
+		80.0,
+		"Legendary threshold should be 80"
 	)

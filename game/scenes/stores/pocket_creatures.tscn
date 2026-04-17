@@ -141,37 +141,37 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 
 [node name="FluorescentOverhead_A" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 2.9, 1.5)
-light_color = Color(0.95, 0.98, 1.0, 1)
+light_color = Color(1.0, 0.94, 0.82, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead_B" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 2.9, 1.5)
-light_color = Color(0.95, 0.98, 1.0, 1)
+light_color = Color(1.0, 0.94, 0.82, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead_C" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 2.9, 1.5)
-light_color = Color(0.95, 0.98, 1.0, 1)
+light_color = Color(1.0, 0.94, 0.82, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead_D" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 2.9, -1.5)
-light_color = Color(0.95, 0.98, 1.0, 1)
+light_color = Color(1.0, 0.94, 0.82, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead_E" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 2.9, -1.5)
-light_color = Color(0.95, 0.98, 1.0, 1)
+light_color = Color(1.0, 0.94, 0.82, 1)
 light_energy = 0.7
 omni_range = 5.0
 
 [node name="FluorescentOverhead_F" type="OmniLight3D" parent="LightingRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 2.9, -1.5)
-light_color = Color(0.95, 0.98, 1.0, 1)
+light_color = Color(1.0, 0.94, 0.82, 1)
 light_energy = 0.7
 omni_range = 5.0
 

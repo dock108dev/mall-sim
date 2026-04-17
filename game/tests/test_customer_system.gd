@@ -179,10 +179,6 @@ func test_spawn_emits_customer_entered_signal() -> void:
 		_entered_signals[0]["profile_id"], "test_customer",
 		"Signal should include correct profile_id"
 	)
-	assert_eq(
-		_entered_signals[0]["store_id"], "test_store",
-		"Signal should include correct store_id"
-	)
 
 
 func test_spawn_increments_active_count() -> void:

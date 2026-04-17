@@ -34,6 +34,29 @@ func test_upgrade_count() -> void:
 	assert_eq(all.size(), 16, "Should load exactly 16 upgrades")
 
 
+func test_upgrades_registered_in_content_registry() -> void:
+	var ids: Array[StringName] = ContentRegistry.get_all_ids("upgrade")
+	assert_eq(ids.size(), 16, "Should register 16 upgrade IDs")
+	assert_not_null(
+		ContentRegistry.get_upgrade_definition(&"better_shelving"),
+		"better_shelving should be available from ContentRegistry"
+	)
+
+
+func test_system_reads_catalog_from_content_registry() -> void:
+	var registry_system := StoreUpgradeSystem.new()
+	add_child_autofree(registry_system)
+	registry_system.initialize(null, _economy, _reputation)
+	var upgrades: Array[UpgradeDefinition] = (
+		registry_system.get_upgrades_for_store(TEST_STORE)
+	)
+	assert_gt(
+		upgrades.size(),
+		0,
+		"StoreUpgradeSystem should read upgrades from ContentRegistry"
+	)
+
+
 func test_universal_upgrade_count() -> void:
 	var all: Array[UpgradeDefinition] = (
 		_data_loader.get_all_upgrades()
@@ -82,6 +105,17 @@ func test_store_specific_upgrade_restriction() -> void:
 	assert_not_null(u, "sports_trophy_wall should exist")
 	assert_eq(u.store_type, "sports")
 	assert_false(u.is_universal())
+
+
+func test_store_specific_upgrade_cannot_be_purchased_for_other_store() -> void:
+	_reputation.modify_reputation("retro_games", 50.0)
+	var result: bool = _system.purchase_upgrade(
+		"retro_games", "sports_trophy_wall"
+	)
+	assert_false(
+		result,
+		"sports-only upgrade should not be purchasable for retro_games"
+	)
 
 
 func test_upgrades_for_store_filtering() -> void:
@@ -145,6 +179,28 @@ func test_purchase_deducts_cash() -> void:
 	)
 
 
+func test_purchase_emits_effect_application_signal() -> void:
+	watch_signals(EventBus)
+	_reputation.modify_reputation(TEST_STORE, 20.0)
+	var result: bool = _system.purchase_upgrade(
+		TEST_STORE, "better_shelving"
+	)
+	assert_true(result, "Purchase should succeed")
+	assert_signal_emitted(
+		EventBus,
+		"store_upgrade_effect_applied",
+		"Effect application signal should be emitted"
+	)
+	var params: Array = get_signal_parameters(
+		EventBus,
+		"store_upgrade_effect_applied"
+	)
+	assert_eq(params[0], StringName(TEST_STORE))
+	assert_eq(params[1], "better_shelving")
+	assert_eq(params[2], "slot_bonus")
+	assert_eq(params[3], 2.0)
+
+
 func test_purchase_marks_installed() -> void:
 	_reputation.modify_reputation(TEST_STORE, 20.0)
 	_system.purchase_upgrade(TEST_STORE, "better_shelving")
@@ -176,6 +232,7 @@ func test_insufficient_cash_blocks_purchase() -> void:
 
 
 func test_insufficient_rep_blocks_purchase() -> void:
+	_reputation.modify_reputation(TEST_STORE, -50.0)
 	var result: bool = _system.purchase_upgrade(
 		TEST_STORE, "better_shelving"
 	)
@@ -217,6 +274,33 @@ func test_traffic_multiplier_effect() -> void:
 	assert_almost_eq(
 		_system.get_traffic_multiplier(TEST_STORE), 1.15,
 		0.001, "Traffic multiplier should be 1.15"
+	)
+
+
+func test_capacity_bonus_effect() -> void:
+	_reputation.modify_reputation(TEST_STORE, 30.0)
+	_system.purchase_upgrade(TEST_STORE, "backroom_expansion")
+	assert_eq(
+		_system.get_capacity_bonus(TEST_STORE), 20,
+		"Capacity bonus should be 20 after purchase"
+	)
+
+
+func test_decay_reduction_effect() -> void:
+	_reputation.modify_reputation(TEST_STORE, 35.0)
+	_system.purchase_upgrade(TEST_STORE, "climate_control")
+	assert_almost_eq(
+		_system.get_decay_multiplier(TEST_STORE), 0.5,
+		0.001, "Decay multiplier should be 0.5"
+	)
+
+
+func test_floor_size_increase_effect() -> void:
+	_reputation.modify_reputation(TEST_STORE, 40.0)
+	_system.purchase_upgrade(TEST_STORE, "store_expansion")
+	assert_eq(
+		_system.get_floor_size_bonus(TEST_STORE), 4,
+		"Floor size bonus should be 4 after purchase"
 	)
 
 

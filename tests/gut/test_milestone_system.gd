@@ -1,451 +1,367 @@
-## GUT tests for MilestoneSystem — progress tracking, signals, idempotency, save/load.
+## GUT tests for MilestoneSystem — counters, signals, save/load, rewards.
 extends GutTest
 
 
-var _progression: ProgressionSystem
-var _economy: EconomySystem
-var _reputation: ReputationSystem
+var _ms: MilestoneSystem
 
 
 func before_each() -> void:
-	_economy = EconomySystem.new()
-	add_child_autofree(_economy)
-	_economy.initialize()
-
-	_reputation = ReputationSystem.new()
-	add_child_autofree(_reputation)
-
-	_progression = ProgressionSystem.new()
-	add_child_autofree(_progression)
-	_progression.initialize(_economy, _reputation)
+	_ms = MilestoneSystem.new()
+	add_child_autofree(_ms)
+	_ms._init_counters()
+	_ms._milestones = _build_test_milestones()
 
 
-# --- increment_progress increases running total ---
+func _build_test_milestones() -> Array[MilestoneDefinition]:
+	var result: Array[MilestoneDefinition] = []
+
+	var m1 := MilestoneDefinition.new()
+	m1.id = "test_revenue"
+	m1.display_name = "Revenue Test"
+	m1.trigger_stat_key = "cumulative_revenue"
+	m1.trigger_threshold = 100.0
+	m1.reward_type = "cash"
+	m1.reward_value = 25.0
+	result.append(m1)
+
+	var m2 := MilestoneDefinition.new()
+	m2.id = "test_sales"
+	m2.display_name = "Sales Test"
+	m2.trigger_stat_key = "customer_purchased_count"
+	m2.trigger_threshold = 5
+	m2.reward_type = "cash"
+	m2.reward_value = 10.0
+	result.append(m2)
+
+	var m3 := MilestoneDefinition.new()
+	m3.id = "test_haggle"
+	m3.display_name = "Haggle Test"
+	m3.trigger_stat_key = "haggle_max_price_ratio"
+	m3.trigger_threshold = 1.5
+	m3.reward_type = "cash"
+	m3.reward_value = 50.0
+	result.append(m3)
+
+	var m4 := MilestoneDefinition.new()
+	m4.id = "test_streak"
+	m4.display_name = "Streak Test"
+	m4.trigger_stat_key = "pricing_streak_in_range"
+	m4.trigger_threshold = 3
+	m4.reward_type = "cash"
+	m4.reward_value = 15.0
+	result.append(m4)
+
+	return result
 
 
-func test_increment_progress_increases_revenue_total() -> void:
-	_progression.increment_progress("first_hundred", 40.0)
+func test_counters_initialized_to_zero() -> void:
 	assert_almost_eq(
-		_progression.get_progress("first_hundred"), 40.0, 0.01,
-		"Revenue should be 40 after incrementing by 40"
+		float(_ms._counters["cumulative_revenue"]), 0.0, 0.01
 	)
-
-	_progression.increment_progress("first_hundred", 30.0)
+	assert_eq(int(_ms._counters["customer_purchased_count"]), 0)
+	assert_eq(int(_ms._counters["satisfied_customer_count"]), 0)
+	assert_eq(int(_ms._counters["owned_store_count"]), 0)
+	assert_eq(int(_ms._counters["unique_store_types_entered"]), 0)
+	assert_eq(int(_ms._counters["max_reputation_tier_seen"]), 0)
 	assert_almost_eq(
-		_progression.get_progress("first_hundred"), 70.0, 0.01,
-		"Revenue should be 70 after incrementing by 30 more"
+		float(_ms._counters["single_day_revenue"]), 0.0, 0.01
 	)
-
-
-func test_increment_progress_increases_items_sold_total() -> void:
-	_progression.increment_progress("steady_seller", 3.0)
 	assert_almost_eq(
-		_progression.get_progress("steady_seller"), 3.0, 0.01,
-		"Items sold should be 3 after incrementing by 3"
+		float(_ms._counters["haggle_max_price_ratio"]), 0.0, 0.01
 	)
+	assert_eq(int(_ms._counters["rare_items_sold"]), 0)
+	assert_eq(int(_ms._counters["pricing_streak_in_range"]), 0)
+	assert_eq(int(_ms._counters["market_crash_survived"]), 0)
 
 
-func test_increment_progress_increases_days_total() -> void:
-	_progression.increment_progress("getting_started", 2.0)
+func test_single_day_revenue_resets_on_day_started() -> void:
+	_ms._counters["single_day_revenue"] = 500.0
+	_ms._on_day_started(2)
 	assert_almost_eq(
-		_progression.get_progress("getting_started"), 2.0, 0.01,
-		"Days should be 2 after incrementing by 2"
+		float(_ms._counters["single_day_revenue"]), 0.0, 0.01,
+		"single_day_revenue should reset on day_started"
 	)
 
 
-func test_increment_progress_increases_reputation_total() -> void:
-	_progression.increment_progress("local_name", 5.0)
+func test_transaction_increments_revenue() -> void:
+	_ms._on_transaction_completed(50.0, true, "sale")
 	assert_almost_eq(
-		_progression.get_progress("local_name"), 5.0, 0.01,
-		"Reputation should be 5 after incrementing by 5"
+		float(_ms._counters["cumulative_revenue"]), 50.0, 0.01
+	)
+	assert_almost_eq(
+		float(_ms._counters["single_day_revenue"]), 50.0, 0.01
 	)
 
 
-# --- milestone_completed fires when threshold crossed ---
-
-
-func test_milestone_completed_fires_at_threshold() -> void:
-	var signal_fired: Array = [false]
-	var received_id: Array = [""]
-	var on_milestone: Callable = func(
-		id: String, _mname: String, _desc: String
-	) -> void:
-		signal_fired[0] = true
-		received_id[0] = id
-	EventBus.milestone_completed.connect(on_milestone)
-
-	_progression.increment_progress("first_sale", 1.0)
-
-	assert_true(signal_fired[0], "milestone_completed should fire")
-	assert_eq(received_id[0], "first_sale", "ID should be first_sale")
-
-	EventBus.milestone_completed.disconnect(on_milestone)
-
-
-func test_revenue_milestone_fires_at_threshold() -> void:
-	var completed_ids: Array[String] = []
-	var on_milestone: Callable = func(
-		id: String, _mname: String, _desc: String
-	) -> void:
-		completed_ids.append(id)
-	EventBus.milestone_completed.connect(on_milestone)
-
-	_progression.increment_progress("first_hundred", 110.0)
-
-	assert_true(
-		completed_ids.has("first_hundred"),
-		"first_hundred should fire when revenue >= 100"
+func test_transaction_ignores_failures() -> void:
+	_ms._on_transaction_completed(50.0, false, "failed")
+	assert_almost_eq(
+		float(_ms._counters["cumulative_revenue"]), 0.0, 0.01
 	)
 
-	EventBus.milestone_completed.disconnect(on_milestone)
+
+func test_customer_purchased_increments_count() -> void:
+	_ms._on_customer_purchased(
+		&"test_store", &"item_1", 25.0, &"cust_1"
+	)
+	assert_eq(int(_ms._counters["customer_purchased_count"]), 1)
 
 
-func test_signal_via_item_sold_event() -> void:
-	var signal_fired: Array = [false]
-	var on_milestone: Callable = func(
-		id: String, _mname: String, _desc: String
-	) -> void:
-		if id == "first_sale":
-			signal_fired[0] = true
-	EventBus.milestone_completed.connect(on_milestone)
+func test_customer_left_satisfied_increments() -> void:
+	_ms._on_customer_left({"satisfied": true})
+	assert_eq(int(_ms._counters["satisfied_customer_count"]), 1)
 
-	EventBus.item_sold.emit("test_item", 25.0, "sports")
 
-	assert_true(
-		signal_fired[0],
-		"milestone_completed should fire via item_sold event"
+func test_customer_left_unsatisfied_no_change() -> void:
+	_ms._on_customer_left({"satisfied": false})
+	assert_eq(int(_ms._counters["satisfied_customer_count"]), 0)
+
+
+func test_store_leased_increments_count() -> void:
+	_ms._on_store_leased(0, "retro_games")
+	assert_eq(int(_ms._counters["owned_store_count"]), 1)
+
+
+func test_store_entered_tracks_unique() -> void:
+	_ms._on_store_entered(&"retro_games")
+	_ms._on_store_entered(&"retro_games")
+	_ms._on_store_entered(&"video_rental")
+	assert_eq(int(_ms._counters["unique_store_types_entered"]), 2)
+
+
+func test_haggle_completed_updates_ratio() -> void:
+	_ms._on_haggle_completed(
+		&"store", &"item", 30.0, 20.0, true, 2
+	)
+	assert_almost_eq(
+		float(_ms._counters["haggle_max_price_ratio"]),
+		1.5, 0.01
 	)
 
-	EventBus.milestone_completed.disconnect(on_milestone)
 
-
-func test_reputation_milestone_fires_on_change() -> void:
-	var completed_ids: Array[String] = []
-	var on_milestone: Callable = func(
-		id: String, _mname: String, _desc: String
-	) -> void:
-		completed_ids.append(id)
-	EventBus.milestone_completed.connect(on_milestone)
-
-	EventBus.reputation_changed.emit("test_store", 15.0)
-
-	assert_true(
-		completed_ids.has("local_name"),
-		"local_name should fire when reputation >= 10"
+func test_haggle_rejected_no_update() -> void:
+	_ms._on_haggle_completed(
+		&"store", &"item", 30.0, 20.0, false, 2
+	)
+	assert_almost_eq(
+		float(_ms._counters["haggle_max_price_ratio"]),
+		0.0, 0.01
 	)
 
-	EventBus.milestone_completed.disconnect(on_milestone)
+
+func test_pricing_streak_increments_in_range() -> void:
+	_ms._on_item_price_set(&"store", &"item_a", 12.0, 1.3)
+	_ms._on_item_price_set(&"store", &"item_b", 14.0, 1.4)
+	_ms._on_item_price_set(&"store", &"item_c", 15.0, 1.5)
+	assert_eq(int(_ms._counters["pricing_streak_in_range"]), 3)
 
 
-func test_days_milestone_fires_on_day_ended() -> void:
-	var completed_ids: Array[String] = []
-	var on_milestone: Callable = func(
-		id: String, _mname: String, _desc: String
+func test_pricing_streak_resets_out_of_range() -> void:
+	_ms._on_item_price_set(&"store", &"item_a", 12.0, 1.3)
+	_ms._on_item_price_set(&"store", &"item_b", 14.0, 1.4)
+	_ms._on_item_price_set(&"store", &"item_c", 20.0, 2.0)
+	assert_eq(int(_ms._counters["pricing_streak_in_range"]), 0)
+
+
+func test_milestone_unlocked_fires_at_threshold() -> void:
+	var fired_id: Array = [&""]
+	var on_unlocked: Callable = func(
+		id: StringName, _reward: Dictionary
 	) -> void:
-		completed_ids.append(id)
-	EventBus.milestone_completed.connect(on_milestone)
+		fired_id[0] = id
+	EventBus.milestone_unlocked.connect(on_unlocked)
 
-	EventBus.day_started.emit(3)
-	_reputation.reset()
-	EventBus.day_ended.emit(3)
+	_ms._on_transaction_completed(100.0, true, "sale")
 
-	assert_true(
-		completed_ids.has("getting_started"),
-		"getting_started should fire at day 3"
+	assert_eq(
+		fired_id[0], &"test_revenue",
+		"milestone_unlocked should fire for test_revenue"
 	)
-
-	EventBus.milestone_completed.disconnect(on_milestone)
-
-
-# --- milestone_completed fires exactly once ---
+	EventBus.milestone_unlocked.disconnect(on_unlocked)
 
 
 func test_milestone_fires_exactly_once() -> void:
 	var fire_count: Array = [0]
-	var on_milestone: Callable = func(
-		id: String, _mname: String, _desc: String
+	var on_unlocked: Callable = func(
+		_id: StringName, _reward: Dictionary
 	) -> void:
-		if id == "first_sale":
-			fire_count[0] += 1
-	EventBus.milestone_completed.connect(on_milestone)
+		fire_count[0] += 1
+	EventBus.milestone_unlocked.connect(on_unlocked)
 
-	_progression.increment_progress("first_sale", 1.0)
-	assert_eq(fire_count[0], 1, "first_sale should fire exactly once")
-
-	_progression.increment_progress("first_sale", 1.0)
-	assert_eq(
-		fire_count[0], 1,
-		"first_sale should not fire again on second increment"
-	)
-
-	EventBus.milestone_completed.disconnect(on_milestone)
-
-
-func test_duplicate_via_events_does_not_refire() -> void:
-	var fire_count: Array = [0]
-	var on_milestone: Callable = func(
-		id: String, _mname: String, _desc: String
-	) -> void:
-		if id == "first_sale":
-			fire_count[0] += 1
-	EventBus.milestone_completed.connect(on_milestone)
-
-	EventBus.item_sold.emit("item_a", 25.0, "sports")
-	EventBus.item_sold.emit("item_b", 25.0, "sports")
+	_ms._on_transaction_completed(100.0, true, "sale")
+	_ms._on_transaction_completed(100.0, true, "sale2")
 
 	assert_eq(
 		fire_count[0], 1,
-		"first_sale should not fire again on second sale"
+		"milestone_unlocked should fire exactly once"
 	)
-
-	EventBus.milestone_completed.disconnect(on_milestone)
-
-
-# --- get_progress returns running total ---
+	EventBus.milestone_unlocked.disconnect(on_unlocked)
 
 
-func test_get_progress_returns_zero_initially() -> void:
+func test_is_complete_after_threshold() -> void:
+	_ms._on_transaction_completed(100.0, true, "sale")
+	assert_true(_ms.is_complete(&"test_revenue"))
+
+
+func test_is_complete_before_threshold() -> void:
+	assert_false(_ms.is_complete(&"test_revenue"))
+
+
+func test_get_completed_ids() -> void:
+	_ms._on_transaction_completed(100.0, true, "sale")
+	var ids: Array[StringName] = _ms.get_completed_ids()
+	assert_true(ids.has(&"test_revenue"))
+
+
+func test_get_completion_percent_zero() -> void:
 	assert_almost_eq(
-		_progression.get_progress("first_sale"), 0.0, 0.01,
-		"Progress should start at 0"
+		_ms.get_completion_percent(), 0.0, 0.01
 	)
 
 
-func test_get_progress_returns_accumulated_value() -> void:
-	_progression.increment_progress("first_hundred", 25.0)
-	_progression.increment_progress("first_hundred", 35.0)
+func test_save_load_preserves_completed() -> void:
+	_ms._on_transaction_completed(100.0, true, "sale")
+	assert_true(_ms.is_complete(&"test_revenue"))
 
-	assert_almost_eq(
-		_progression.get_progress("first_hundred"), 60.0, 0.01,
-		"Progress should reflect accumulated increments"
-	)
+	var save_data: Dictionary = _ms.get_save_data()
 
-
-func test_get_progress_via_events() -> void:
-	EventBus.item_sold.emit("item_a", 50.0, "sports")
-	EventBus.item_sold.emit("item_b", 30.0, "sports")
-
-	assert_almost_eq(
-		_progression.get_progress("first_hundred"), 80.0, 0.01,
-		"Revenue progress should reflect item_sold events"
-	)
-	assert_almost_eq(
-		_progression.get_progress("first_sale"), 2.0, 0.01,
-		"Items sold progress should reflect item_sold events"
-	)
-
-
-# --- is_completed returns true after threshold crossed ---
-
-
-func test_is_completed_false_before_threshold() -> void:
-	assert_false(
-		_progression.is_milestone_completed("first_sale"),
-		"first_sale should not be completed initially"
-	)
-
-
-func test_is_completed_true_after_threshold() -> void:
-	_progression.increment_progress("first_sale", 1.0)
+	var ms2 := MilestoneSystem.new()
+	add_child_autofree(ms2)
+	ms2._milestones = _build_test_milestones()
+	ms2.load_state(save_data)
 
 	assert_true(
-		_progression.is_milestone_completed("first_sale"),
-		"first_sale should be completed after threshold crossed"
-	)
-
-
-func test_is_completed_stays_true() -> void:
-	_progression.increment_progress("first_sale", 1.0)
-	_progression.increment_progress("first_sale", 5.0)
-
-	assert_true(
-		_progression.is_milestone_completed("first_sale"),
-		"first_sale should remain completed"
-	)
-
-
-# --- serialize/deserialize round-trip ---
-
-
-func test_save_load_preserves_completed_state() -> void:
-	_progression.increment_progress("first_sale", 1.0)
-	assert_true(_progression.is_milestone_completed("first_sale"))
-
-	var save_data: Dictionary = _progression.get_save_data()
-
-	var new_prog: ProgressionSystem = ProgressionSystem.new()
-	add_child_autofree(new_prog)
-	new_prog.initialize(_economy, _reputation)
-	new_prog.load_save_data(save_data)
-
-	assert_true(
-		new_prog.is_milestone_completed("first_sale"),
+		ms2.is_complete(&"test_revenue"),
 		"Completed state should survive round-trip"
 	)
 
 
-func test_save_load_preserves_running_totals() -> void:
-	_progression.increment_progress("first_hundred", 75.0)
-	_progression.increment_progress("steady_seller", 5.0)
+func test_save_load_preserves_counters() -> void:
+	_ms._on_transaction_completed(75.0, true, "sale")
+	for i: int in range(3):
+		_ms._on_customer_purchased(
+			&"store", StringName("item_%d" % i), 10.0, &"cust"
+		)
 
-	var save_data: Dictionary = _progression.get_save_data()
+	var save_data: Dictionary = _ms.get_save_data()
 
-	var new_prog: ProgressionSystem = ProgressionSystem.new()
-	add_child_autofree(new_prog)
-	new_prog.initialize(_economy, _reputation)
-	new_prog.load_save_data(save_data)
+	var ms2 := MilestoneSystem.new()
+	add_child_autofree(ms2)
+	ms2._milestones = _build_test_milestones()
+	ms2.load_state(save_data)
 
 	assert_almost_eq(
-		new_prog.get_progress("first_hundred"), 75.0, 0.01,
-		"Revenue total should survive round-trip"
+		float(ms2._counters["cumulative_revenue"]), 75.0, 0.01,
+		"Revenue counter should survive round-trip"
 	)
-	assert_almost_eq(
-		new_prog.get_progress("steady_seller"), 5.0, 0.01,
-		"Items sold total should survive round-trip"
-	)
-
-
-func test_save_load_preserves_unlocked_fixtures() -> void:
-	for i: int in range(10):
-		EventBus.item_sold.emit("item_%d" % i, 5.0, "sports")
-
-	assert_true(_progression.is_fixture_unlocked("wall_display"))
-
-	var save_data: Dictionary = _progression.get_save_data()
-
-	var new_prog: ProgressionSystem = ProgressionSystem.new()
-	add_child_autofree(new_prog)
-	new_prog.initialize(_economy, _reputation)
-	new_prog.load_save_data(save_data)
-
-	assert_true(
-		new_prog.is_fixture_unlocked("wall_display"),
-		"Fixture unlock should survive round-trip"
+	assert_eq(
+		int(ms2._counters["customer_purchased_count"]), 3,
+		"Purchase counter should survive round-trip"
 	)
 
 
-func test_save_load_preserves_supplier_tier() -> void:
-	EventBus.day_started.emit(7)
-	_reputation.reset()
-	EventBus.day_ended.emit(7)
+func test_load_state_no_refire() -> void:
+	_ms._on_transaction_completed(100.0, true, "sale")
+	var save_data: Dictionary = _ms.get_save_data()
 
-	var save_data: Dictionary = _progression.get_save_data()
+	var ms2 := MilestoneSystem.new()
+	add_child_autofree(ms2)
+	ms2._milestones = _build_test_milestones()
 
-	var new_prog: ProgressionSystem = ProgressionSystem.new()
-	add_child_autofree(new_prog)
-	new_prog.initialize(_economy, _reputation)
-	new_prog.load_save_data(save_data)
+	var fire_count: Array = [0]
+	var on_unlocked: Callable = func(
+		_id: StringName, _reward: Dictionary
+	) -> void:
+		fire_count[0] += 1
+	EventBus.milestone_unlocked.connect(on_unlocked)
+
+	ms2.load_state(save_data)
 
 	assert_eq(
-		new_prog.get_unlocked_supplier_tier(),
-		_progression.get_unlocked_supplier_tier(),
-		"Supplier tier should survive round-trip"
+		fire_count[0], 0,
+		"load_state should not re-fire milestone_unlocked"
+	)
+	EventBus.milestone_unlocked.disconnect(on_unlocked)
+
+
+func test_save_load_preserves_unique_stores() -> void:
+	_ms._on_store_entered(&"retro_games")
+	_ms._on_store_entered(&"video_rental")
+
+	var save_data: Dictionary = _ms.get_save_data()
+
+	var ms2 := MilestoneSystem.new()
+	add_child_autofree(ms2)
+	ms2.load_state(save_data)
+
+	assert_eq(
+		int(ms2._counters["unique_store_types_entered"]), 2,
+		"Unique stores should survive round-trip"
 	)
 
 
-# --- Unknown milestone_id triggers push_error ---
+func test_haggle_milestone_fires() -> void:
+	var fired: Array = [false]
+	var on_unlocked: Callable = func(
+		id: StringName, _reward: Dictionary
+	) -> void:
+		if id == &"test_haggle":
+			fired[0] = true
+	EventBus.milestone_unlocked.connect(on_unlocked)
 
-
-func test_increment_progress_unknown_id_is_noop() -> void:
-	var items_before: float = _progression.get_progress("first_sale")
-
-	_progression.increment_progress("nonexistent_milestone", 10.0)
-
-	assert_almost_eq(
-		_progression.get_progress("first_sale"), items_before, 0.01,
-		"Unknown ID should not change any counters"
+	_ms._on_haggle_completed(
+		&"store", &"item", 30.0, 20.0, true, 3
 	)
-
-
-func test_get_progress_unknown_id_returns_zero() -> void:
-	var result: float = _progression.get_progress("nonexistent_milestone")
-
-	assert_almost_eq(
-		result, 0.0, 0.01,
-		"Unknown ID should return 0.0"
-	)
-
-
-# --- Reward application ---
-
-
-func test_cash_reward_adds_to_player_funds() -> void:
-	var starting_cash: float = _economy._current_cash
-
-	_progression.increment_progress("first_sale", 1.0)
-
-	var expected_cash: float = starting_cash + 50.0
-	assert_almost_eq(
-		_economy._current_cash, expected_cash, 0.01,
-		"Cash should include $50 first_sale milestone bonus"
-	)
-
-
-func test_fixture_unlock_reward_grants_fixture() -> void:
-	assert_false(_progression.is_fixture_unlocked("wall_display"))
-
-	for i: int in range(10):
-		_progression.increment_progress("steady_seller", 1.0)
 
 	assert_true(
-		_progression.is_fixture_unlocked("wall_display"),
-		"wall_display should be unlocked after steady_seller"
+		fired[0],
+		"test_haggle should fire when ratio >= 1.5"
 	)
+	EventBus.milestone_unlocked.disconnect(on_unlocked)
 
 
-func test_duplicate_reward_not_granted_twice() -> void:
-	var starting_cash: float = _economy._current_cash
+func test_pricing_streak_milestone_fires() -> void:
+	var fired: Array = [false]
+	var on_unlocked: Callable = func(
+		id: StringName, _reward: Dictionary
+	) -> void:
+		if id == &"test_streak":
+			fired[0] = true
+	EventBus.milestone_unlocked.connect(on_unlocked)
 
-	_progression.increment_progress("first_sale", 1.0)
-	var cash_after_first: float = _economy._current_cash
+	_ms._on_item_price_set(&"s", &"a", 12.0, 1.3)
+	_ms._on_item_price_set(&"s", &"b", 14.0, 1.4)
+	_ms._on_item_price_set(&"s", &"c", 15.0, 1.5)
 
-	_progression.increment_progress("first_sale", 1.0)
-	var cash_after_second: float = _economy._current_cash
-
-	assert_almost_eq(
-		cash_after_first - starting_cash, 50.0, 0.01,
-		"First completion should grant $50 bonus"
+	assert_true(
+		fired[0],
+		"test_streak should fire after 3 in-range prices"
 	)
-	assert_almost_eq(
-		cash_after_second, cash_after_first, 0.01,
-		"Second increment should not re-grant bonus"
+	EventBus.milestone_unlocked.disconnect(on_unlocked)
+
+
+func test_milestone_emits_toast_on_unlock() -> void:
+	var toast_message: Array = [""]
+	var toast_duration: Array = [0.0]
+	var on_toast: Callable = func(
+		message: String, _category: StringName, duration: float
+	) -> void:
+		toast_message[0] = message
+		toast_duration[0] = duration
+	EventBus.toast_requested.connect(on_toast)
+	_ms._connect_signals()
+
+	_ms._on_transaction_completed(100.0, true, "sale")
+
+	assert_string_contains(
+		toast_message[0], "Milestone reached:",
+		"toast should contain milestone prefix"
 	)
-
-
-# --- Progress fraction helper ---
-
-
-func test_milestone_progress_fraction() -> void:
-	_progression._total_items_sold = 5
-	var milestones: Array[Dictionary] = _progression.get_milestones()
-	var steady_seller: Dictionary = {}
-	for m: Dictionary in milestones:
-		if m.get("id", "") == "steady_seller":
-			steady_seller = m
-			break
-
-	var progress: float = _progression.get_milestone_progress(
-		steady_seller
+	assert_gt(
+		toast_duration[0], 0.0,
+		"toast duration should be positive"
 	)
-	assert_almost_eq(
-		progress, 0.5, 0.01,
-		"Progress should be 0.5 when 5/10 items sold"
-	)
-
-
-func test_milestone_progress_clamps_to_one() -> void:
-	_progression._total_items_sold = 20
-	var milestones: Array[Dictionary] = _progression.get_milestones()
-	var steady_seller: Dictionary = {}
-	for m: Dictionary in milestones:
-		if m.get("id", "") == "steady_seller":
-			steady_seller = m
-			break
-
-	var progress: float = _progression.get_milestone_progress(
-		steady_seller
-	)
-	assert_almost_eq(
-		progress, 1.0, 0.01,
-		"Progress should clamp to 1.0 when threshold exceeded"
+	EventBus.toast_requested.disconnect(on_toast)
+	EventBus.milestone_unlocked.disconnect(
+		_ms._on_milestone_unlocked
 	)

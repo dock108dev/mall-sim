@@ -89,29 +89,28 @@ func test_tier_notorious_below_26() -> void:
 
 
 func test_tier_unremarkable_at_26() -> void:
-	_rep.add_reputation(STORE_A, -24.0)
+	_rep.add_reputation(STORE_A, -25.0)
 	assert_eq(
 		_rep.get_tier(STORE_A),
 		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
-		"Score 26 should be Unremarkable"
+		"Score 25 should be Local Favorite"
 	)
 
 
 func test_tier_reputable_at_51() -> void:
-	_rep.add_reputation(STORE_A, 1.0)
 	assert_eq(
 		_rep.get_tier(STORE_A),
 		ReputationSystemSingleton.ReputationTier.REPUTABLE,
-		"Score 51 should be Reputable"
+		"Score 50 should be Destination Shop"
 	)
 
 
 func test_tier_legendary_at_76() -> void:
-	_rep.add_reputation(STORE_A, 26.0)
+	_rep.add_reputation(STORE_A, 30.0)
 	assert_eq(
 		_rep.get_tier(STORE_A),
 		ReputationSystemSingleton.ReputationTier.LEGENDARY,
-		"Score 76 should be Legendary"
+		"Score 80 should be Legendary"
 	)
 
 
@@ -261,16 +260,16 @@ func test_modify_reputation_works_as_alias() -> void:
 
 func test_tier_name_notorious() -> void:
 	_rep.add_reputation(STORE_A, -50.0)
-	assert_eq(_rep.get_tier_name(STORE_A), "Notorious")
+	assert_eq(_rep.get_tier_name(STORE_A), "Unknown")
 
 
 func test_tier_name_unremarkable() -> void:
-	assert_eq(_rep.get_tier_name(STORE_A), "Unremarkable")
+	_rep.add_reputation(STORE_A, -25.0)
+	assert_eq(_rep.get_tier_name(STORE_A), "Local Favorite")
 
 
 func test_tier_name_reputable() -> void:
-	_rep.add_reputation(STORE_A, 10.0)
-	assert_eq(_rep.get_tier_name(STORE_A), "Reputable")
+	assert_eq(_rep.get_tier_name(STORE_A), "Destination Shop")
 
 
 func test_tier_name_legendary() -> void:
@@ -324,21 +323,21 @@ func test_customer_left_mall_skips_when_no_active_store() -> void:
 
 
 func test_tier_up_emits_toast_requested() -> void:
+	_rep.add_reputation(STORE_A, -1.0)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_A, 1.0)
 	assert_signal_emitted(
 		EventBus, "toast_requested",
-		"Crossing from Unremarkable to Reputable should emit toast"
+		"Crossing from Local Favorite to Destination Shop should emit toast"
 	)
 
 
 func test_tier_down_emits_toast_requested() -> void:
-	_rep.add_reputation(STORE_A, -24.0)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_A, -1.0)
 	assert_signal_emitted(
 		EventBus, "toast_requested",
-		"Crossing from Unremarkable to Notorious should emit toast"
+		"Crossing from Destination Shop to Local Favorite should emit toast"
 	)
 
 
@@ -353,6 +352,7 @@ func test_same_tier_score_change_does_not_emit_toast() -> void:
 
 
 func test_tier_up_toast_has_4s_duration() -> void:
+	_rep.add_reputation(STORE_A, -1.0)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_A, 1.0)
 	var params: Array = get_signal_parameters(
@@ -365,7 +365,6 @@ func test_tier_up_toast_has_4s_duration() -> void:
 
 
 func test_tier_down_toast_has_5s_duration() -> void:
-	_rep.add_reputation(STORE_A, -24.0)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_A, -1.0)
 	var params: Array = get_signal_parameters(
@@ -378,6 +377,7 @@ func test_tier_down_toast_has_5s_duration() -> void:
 
 
 func test_tier_up_toast_category_is_reputation_up() -> void:
+	_rep.add_reputation(STORE_A, -1.0)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_A, 1.0)
 	var params: Array = get_signal_parameters(
@@ -390,7 +390,6 @@ func test_tier_up_toast_category_is_reputation_up() -> void:
 
 
 func test_tier_down_toast_category_is_reputation_down() -> void:
-	_rep.add_reputation(STORE_A, -24.0)
 	watch_signals(EventBus)
 	_rep.add_reputation(STORE_A, -1.0)
 	var params: Array = get_signal_parameters(

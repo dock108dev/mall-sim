@@ -11,36 +11,36 @@ enum ReputationTier {
 
 const TIER_THRESHOLDS: Dictionary = {
 	ReputationTier.NOTORIOUS: 0.0,
-	ReputationTier.UNREMARKABLE: 26.0,
-	ReputationTier.REPUTABLE: 51.0,
-	ReputationTier.LEGENDARY: 76.0,
+	ReputationTier.UNREMARKABLE: 25.0,
+	ReputationTier.REPUTABLE: 50.0,
+	ReputationTier.LEGENDARY: 80.0,
 }
 
 const BUDGET_MULTIPLIERS: Dictionary = {
-	ReputationTier.NOTORIOUS: 0.8,
-	ReputationTier.UNREMARKABLE: 1.0,
-	ReputationTier.REPUTABLE: 1.3,
+	ReputationTier.NOTORIOUS: 1.0,
+	ReputationTier.UNREMARKABLE: 1.2,
+	ReputationTier.REPUTABLE: 1.5,
 	ReputationTier.LEGENDARY: 2.0,
 }
 
 const CUSTOMER_MULTIPLIERS: Dictionary = {
-	ReputationTier.NOTORIOUS: 0.7,
-	ReputationTier.UNREMARKABLE: 1.0,
+	ReputationTier.NOTORIOUS: 1.0,
+	ReputationTier.UNREMARKABLE: 1.2,
 	ReputationTier.REPUTABLE: 1.5,
-	ReputationTier.LEGENDARY: 2.5,
+	ReputationTier.LEGENDARY: 2.0,
 }
 
 const MAX_CUSTOMERS_BY_TIER_SMALL: Dictionary = {
-	ReputationTier.NOTORIOUS: 3,
-	ReputationTier.UNREMARKABLE: 5,
-	ReputationTier.REPUTABLE: 7,
+	ReputationTier.NOTORIOUS: 5,
+	ReputationTier.UNREMARKABLE: 6,
+	ReputationTier.REPUTABLE: 8,
 	ReputationTier.LEGENDARY: 10,
 }
 
 const MAX_CUSTOMERS_BY_TIER_MEDIUM: Dictionary = {
-	ReputationTier.NOTORIOUS: 5,
-	ReputationTier.UNREMARKABLE: 8,
-	ReputationTier.REPUTABLE: 11,
+	ReputationTier.NOTORIOUS: 8,
+	ReputationTier.UNREMARKABLE: 10,
+	ReputationTier.REPUTABLE: 12,
 	ReputationTier.LEGENDARY: 15,
 }
 
@@ -152,6 +152,11 @@ func get_global_reputation() -> float:
 		return DEFAULT_REPUTATION
 	if not _owned_store_ids.is_empty():
 		return _get_owned_store_average()
+	if not GameManager.owned_stores.is_empty():
+		var owned_store_ids: Array[String] = []
+		for store_id: StringName in GameManager.owned_stores:
+			owned_store_ids.append(String(store_id))
+		return _get_store_average(owned_store_ids)
 	var total: float = 0.0
 	var count: int = 0
 	for sid: String in _scores:
@@ -174,6 +179,11 @@ func get_budget_multiplier(store_id: String = "") -> float:
 func get_customer_multiplier(store_id: String = "") -> float:
 	var tier: ReputationTier = get_tier(store_id)
 	return CUSTOMER_MULTIPLIERS.get(tier, 1.0) as float
+
+
+func get_global_customer_multiplier() -> float:
+	var global_tier: ReputationTier = _score_to_tier(get_global_reputation())
+	return CUSTOMER_MULTIPLIERS.get(global_tier, 1.0) as float
 
 
 func get_max_customers(
@@ -311,14 +321,14 @@ func _get_store_display_name(store_id: String) -> String:
 func _tier_to_name(tier: ReputationTier) -> String:
 	match tier:
 		ReputationTier.NOTORIOUS:
-			return "Notorious"
+			return "Unknown"
 		ReputationTier.UNREMARKABLE:
-			return "Unremarkable"
+			return "Local Favorite"
 		ReputationTier.REPUTABLE:
-			return "Reputable"
+			return "Destination Shop"
 		ReputationTier.LEGENDARY:
 			return "Legendary"
-	return "Unremarkable"
+	return "Unknown"
 
 
 func _resolve_store_id(store_id: String) -> String:
@@ -352,9 +362,13 @@ func _score_to_tier(score: float) -> ReputationTier:
 
 
 func _get_owned_store_average() -> float:
+	return _get_store_average(_owned_store_ids)
+
+
+func _get_store_average(store_ids: Array[String]) -> float:
 	var total: float = 0.0
 	var count: int = 0
-	for sid: String in _owned_store_ids:
+	for sid: String in store_ids:
 		total += _scores.get(sid, DEFAULT_REPUTATION) as float
 		count += 1
 	if count == 0:

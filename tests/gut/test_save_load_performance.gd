@@ -7,15 +7,24 @@ const LARGE_INVENTORY_COUNT: int = 250
 const PERFORMANCE_TARGET_MS: float = 1000.0
 const SIMULATED_DAYS: int = 30
 const MEMORY_GROWTH_THRESHOLD: float = 0.10
+const STORE_IDS: Array[StringName] = [
+	&"sports",
+	&"retro_games",
+	&"video_rental",
+	&"pocket_creatures",
+	&"electronics",
+]
 
 var _save_manager: SaveManager
 var _economy: EconomySystem
 var _inventory: InventorySystem
 var _time_system: TimeSystem
 var _reputation: ReputationSystem
+var _data_loader: DataLoader
 var _test_slot: int = 1
 var _saved_owned_stores: Array[StringName] = []
 var _saved_store_id: StringName = &""
+var _registered_test_store_ids: Array[StringName] = []
 
 
 func before_each() -> void:
@@ -30,9 +39,13 @@ func before_each() -> void:
 	add_child_autofree(_time_system)
 	_time_system.initialize()
 
+	_data_loader = DataLoader.new()
+	add_child_autofree(_data_loader)
+	_register_test_stores()
+
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
-	_inventory.initialize(null)
+	_inventory.initialize(_data_loader)
 
 	_reputation = ReputationSystem.new()
 	add_child_autofree(_reputation)
@@ -51,6 +64,7 @@ func after_each() -> void:
 	_save_manager.delete_save(SaveManager.AUTO_SAVE_SLOT)
 	GameManager.owned_stores = _saved_owned_stores
 	GameManager.current_store_id = _saved_store_id
+	_unregister_test_stores()
 
 
 # --- Save performance with 200+ items ---
@@ -63,8 +77,7 @@ func test_save_with_large_inventory_under_one_second() -> void:
 		"Should have at least 200 items for performance test"
 	)
 
-	GameManager.owned_stores = ["sports"]
-	GameManager.current_store_id = "sports"
+	_apply_test_store_state()
 
 	var start_ms: int = Time.get_ticks_msec()
 	var result: bool = _save_manager.save_game(_test_slot)
@@ -87,13 +100,12 @@ func test_save_with_large_inventory_under_one_second() -> void:
 
 func test_load_with_large_inventory_under_one_second() -> void:
 	_populate_inventory(LARGE_INVENTORY_COUNT)
-	GameManager.owned_stores = ["sports"]
-	GameManager.current_store_id = "sports"
+	_apply_test_store_state()
 
 	var saved: bool = _save_manager.save_game(_test_slot)
 	assert_true(saved, "Save should succeed before load test")
 
-	_inventory.initialize(null)
+	_inventory.initialize(_data_loader)
 	assert_eq(
 		_inventory.get_item_count(), 0,
 		"Inventory should be empty after re-init"
@@ -121,11 +133,10 @@ func test_load_with_large_inventory_under_one_second() -> void:
 func test_large_inventory_round_trip_preserves_items() -> void:
 	_populate_inventory(LARGE_INVENTORY_COUNT)
 	var original_count: int = _inventory.get_item_count()
-	GameManager.owned_stores = ["sports"]
-	GameManager.current_store_id = "sports"
+	_apply_test_store_state()
 
 	_save_manager.save_game(_test_slot)
-	_inventory.initialize(null)
+	_inventory.initialize(_data_loader)
 	_save_manager.load_game(_test_slot)
 
 	assert_eq(
@@ -139,11 +150,10 @@ func test_large_inventory_round_trip_preserves_items() -> void:
 
 func test_save_file_size_reasonable() -> void:
 	_populate_inventory(LARGE_INVENTORY_COUNT)
-	GameManager.owned_stores = ["sports"]
-	GameManager.current_store_id = "sports"
+	_apply_test_store_state()
 	_save_manager.save_game(_test_slot)
 
-	var path: String = SaveManager.SAVE_DIR + "slot_%d.json" % _test_slot
+	var path: String = SaveManager.SAVE_DIR + "save_slot_%d.json" % _test_slot
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	assert_not_null(file, "Save file should exist")
 	var size_bytes: int = file.get_length()
@@ -165,8 +175,7 @@ func test_save_file_size_reasonable() -> void:
 
 func test_memory_stable_over_30_day_simulation() -> void:
 	_populate_inventory(50)
-	GameManager.owned_stores = ["sports"]
-	GameManager.current_store_id = "sports"
+	_apply_test_store_state()
 	_economy._current_cash = 5000.0
 
 	var memory_snapshots: Dictionary = {}
@@ -215,8 +224,7 @@ func test_memory_stable_over_30_day_simulation() -> void:
 
 func test_economy_collections_bounded_over_session() -> void:
 	_populate_inventory(20)
-	GameManager.owned_stores = ["sports"]
-	GameManager.current_store_id = "sports"
+	_apply_test_store_state()
 
 	for day: int in range(1, SIMULATED_DAYS + 1):
 		_time_system.current_day = day
@@ -246,7 +254,7 @@ func test_economy_collections_bounded_over_session() -> void:
 func test_performance_cache_cleared_on_day_start() -> void:
 	var perf: PerformanceManager = PerformanceManager.new()
 	add_child_autofree(perf)
-	perf.initialize()
+	perf.initialize(_economy)
 
 	var test_def: ItemDefinition = _create_test_definition("cache_test")
 	var test_item: ItemInstance = ItemInstance.create(
@@ -266,6 +274,29 @@ func test_performance_cache_cleared_on_day_start() -> void:
 	assert_eq(
 		stats_after.get("entries", -1) as int, 0,
 		"Cache should be empty after day_started"
+	)
+
+
+func test_performance_manager_initialize_does_not_duplicate_signals() -> void:
+	var perf: PerformanceManager = PerformanceManager.new()
+	add_child_autofree(perf)
+
+	perf.initialize()
+	perf.initialize()
+
+	assert_eq(
+		_count_signal_connections(
+			EventBus.day_started, perf, "_on_day_started"
+		),
+		1,
+		"PerformanceManager should connect day_started once"
+	)
+	assert_eq(
+		_count_signal_connections(
+			EventBus.inventory_changed, perf, "_on_inventory_changed"
+		),
+		1,
+		"PerformanceManager should connect inventory_changed once"
 	)
 
 
@@ -290,14 +321,13 @@ func test_customer_pool_cleared_on_reinitialize() -> void:
 
 func test_repeated_save_load_no_growth() -> void:
 	_populate_inventory(100)
-	GameManager.owned_stores = ["sports"]
-	GameManager.current_store_id = "sports"
+	_apply_test_store_state()
 
 	var mem_before: int = _get_static_memory_usage()
 
 	for i: int in range(10):
 		_save_manager.save_game(_test_slot)
-		_inventory.initialize(null)
+		_inventory.initialize(_data_loader)
 		_save_manager.load_game(_test_slot)
 
 	var mem_after: int = _get_static_memory_usage()
@@ -333,12 +363,15 @@ func _populate_inventory(count: int) -> void:
 	]
 
 	for i: int in range(count):
+		var store_id: StringName = STORE_IDS[i % STORE_IDS.size()]
 		var def: ItemDefinition = _create_test_definition(
-			"perf_item_%d" % i
+			"perf_item_%d" % i,
+			store_id
 		)
 		def.base_price = 5.0 + float(i % 50) * 2.0
 		def.rarity = rarities[i % rarities.size()]
 		def.category = categories[i % categories.size()]
+		_data_loader._items[def.id] = def
 
 		var cond: String = conditions[i % conditions.size()]
 		var item: ItemInstance = ItemInstance.create(
@@ -356,11 +389,14 @@ func _populate_inventory(count: int) -> void:
 		_inventory._items[item.instance_id] = item
 
 
-func _create_test_definition(item_id: String) -> ItemDefinition:
+func _create_test_definition(
+	item_id: String,
+	store_id: StringName = &"sports"
+) -> ItemDefinition:
 	var def := ItemDefinition.new()
 	def.id = item_id
 	def.item_name = "Test Item %s" % item_id
-	def.store_type = "sports"
+	def.store_type = store_id
 	def.base_price = 10.0
 	def.rarity = "common"
 	def.category = "sports_cards"
@@ -397,3 +433,51 @@ func _get_static_memory_usage() -> int:
 	return Performance.get_monitor(
 		Performance.MEMORY_STATIC
 	) as int
+
+
+func _count_signal_connections(
+	signal_ref: Signal,
+	target: Object,
+	method_name: String
+) -> int:
+	var count: int = 0
+	for connection: Dictionary in signal_ref.get_connections():
+		var callable: Callable = connection.get("callable") as Callable
+		if callable.get_object() == target and (
+			callable.get_method() == method_name
+		):
+			count += 1
+	return count
+
+
+func _apply_test_store_state() -> void:
+	GameManager.owned_stores = STORE_IDS.duplicate()
+	GameManager.current_store_id = STORE_IDS[0]
+
+
+func _register_test_stores() -> void:
+	for store_id: StringName in STORE_IDS:
+		if ContentRegistry.exists(String(store_id)):
+			continue
+		ContentRegistry.register_entry(
+			{
+				"id": String(store_id),
+				"name": "Performance Test %s" % String(store_id),
+				"scene_path": "",
+				"backroom_capacity": LARGE_INVENTORY_COUNT,
+			},
+			"store"
+		)
+		_registered_test_store_ids.append(store_id)
+
+
+func _unregister_test_stores() -> void:
+	for store_id: StringName in _registered_test_store_ids:
+		ContentRegistry._entries.erase(store_id)
+		ContentRegistry._types.erase(store_id)
+		ContentRegistry._display_names.erase(store_id)
+		ContentRegistry._scene_map.erase(store_id)
+		for alias_key: StringName in ContentRegistry._aliases.keys():
+			if ContentRegistry._aliases[alias_key] == store_id:
+				ContentRegistry._aliases.erase(alias_key)
+	_registered_test_store_ids.clear()

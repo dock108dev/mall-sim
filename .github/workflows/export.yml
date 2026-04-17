@@ -13,8 +13,91 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  validate-export-config:
+    name: Validate Export Config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate export presets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f "export_presets.cfg" ]; then
+            echo "::error::export_presets.cfg not found"
+            exit 1
+          fi
+
+          if [ ! -f "project.godot" ]; then
+            echo "::error::project.godot not found"
+            exit 1
+          fi
+
+          for preset in 'name="Windows Desktop"' 'name="macOS"'; do
+            if ! grep -q "$preset" export_presets.cfg; then
+              echo "::error::Missing required preset: $preset"
+              exit 1
+            fi
+          done
+
+          ICON_COUNT="$(grep -c '^application/icon="res://icon.svg"$' export_presets.cfg || true)"
+          if [ "$ICON_COUNT" -lt 2 ]; then
+            echo "::error::Windows and macOS presets must both use res://icon.svg"
+            exit 1
+          fi
+
+          if ! grep -q '^codesign/enable=false$' export_presets.cfg; then
+            echo "::error::Windows preset must not enable built-in code signing"
+            exit 1
+          fi
+
+          if ! grep -q '^codesign/codesign=0$' export_presets.cfg; then
+            echo "::error::macOS preset must not enable built-in code signing"
+            exit 1
+          fi
+
+          if ! grep -q '^binary_format/architecture="x86_64"$' export_presets.cfg; then
+            echo "::error::Windows preset must target x86_64 for Godot 4.3 templates"
+            exit 1
+          fi
+
+          if grep -Eq 'export_path="([A-Za-z]:|/|~)' export_presets.cfg; then
+            echo "::error::export_presets.cfg contains an absolute export_path"
+            exit 1
+          fi
+
+          if grep -q '/Users/' export_presets.cfg; then
+            echo "::error::export_presets.cfg contains a local macOS path"
+            exit 1
+          fi
+
+          if grep -Eq '^codesign/identity="[^"]+"' export_presets.cfg; then
+            echo "::error::export_presets.cfg contains a hardcoded code signing identity"
+            exit 1
+          fi
+
+          if grep -Eq '^codesign/password="[^"]+"' export_presets.cfg; then
+            echo "::error::export_presets.cfg contains a hardcoded code signing password"
+            exit 1
+          fi
+
+          if grep -Eqi '(secret|token|apikey|api_key)' export_presets.cfg; then
+            echo "::error::export_presets.cfg appears to contain secret material"
+            exit 1
+          fi
+
+          if ! grep -q '^textures/vram_compression/import_etc2_astc=true$' project.godot; then
+            echo "::error::Universal macOS export requires ETC2 ASTC import support in project.godot"
+            exit 1
+          fi
+
   export-windows:
-    name: Export Windows Build (Signed)
+    name: Export Windows Build
+    needs: validate-export-config
     runs-on: windows-latest
     permissions:
       contents: read
@@ -22,24 +105,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate export presets exist
-        shell: bash
-        run: |
-          if [ ! -f "export_presets.cfg" ]; then
-            echo "::error::export_presets.cfg not found"
-            exit 1
-          fi
-          if ! grep -q 'name="Windows"' export_presets.cfg; then
-            echo "::error::Export preset 'Windows' not found in export_presets.cfg"
-            exit 1
-          fi
-
       - name: Install Godot
         uses: chickensoft-games/setup-godot@v2
         with:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
           include-templates: true
+
+      - name: Install rcedit
+        shell: powershell
+        run: |
+          npm install --global rcedit
+          $npmPrefix = npm prefix -g
+          $npmBin = Join-Path $npmPrefix "node_modules\\.bin"
+          $npmPrefix | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $npmBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          where.exe rcedit
 
       - name: Create output directory
         shell: bash
@@ -53,91 +134,45 @@ jobs:
       - name: Export Windows
         shell: bash
         run: |
+          set -euo pipefail
           godot --headless --export-release \
-            "Windows" \
+            "Windows Desktop" \
             "build/windows/MallcoreSim.exe"
         timeout-minutes: 10
 
       - name: Verify export output
         shell: bash
         run: |
+          set -euo pipefail
           if [ ! -f "build/windows/MallcoreSim.exe" ]; then
             echo "::error::Export failed — MallcoreSim.exe not produced"
             exit 1
           fi
           echo "Export artifact size: $(du -h build/windows/MallcoreSim.exe | cut -f1)"
 
-      - name: Import code signing certificate
-        if: ${{ env.WINDOWS_CERT != '' }}
-        env:
-          WINDOWS_CERT: ${{ secrets.WINDOWS_CERT }}
-          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      - name: Package Windows artifact
         shell: powershell
         run: |
-          $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERT)
-          $certPath = "$env:RUNNER_TEMP\certificate.pfx"
-          [IO.File]::WriteAllBytes($certPath, $certBytes)
-          $securePassword = ConvertTo-SecureString $env:WINDOWS_CERT_PASSWORD -AsPlainText -Force
-          Import-PfxCertificate -FilePath $certPath `
-            -CertStoreLocation Cert:\CurrentUser\My `
-            -Password $securePassword
-          Remove-Item $certPath -Force
-          echo "Certificate imported successfully."
-
-      - name: Sign Windows executable
-        if: ${{ env.WINDOWS_CERT != '' }}
-        env:
-          WINDOWS_CERT: ${{ secrets.WINDOWS_CERT }}
-          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
-        shell: powershell
-        run: |
-          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" `
-            -Recurse -Filter "signtool.exe" -ErrorAction SilentlyContinue |
-            Sort-Object FullName -Descending | Select-Object -First 1
-          if (-not $signtool) {
-            echo "::error::signtool.exe not found on runner"
-            exit 1
-          }
-          $exe = "build\windows\MallcoreSim.exe"
-          & $signtool.FullName sign /fd sha256 /tr http://timestamp.digicert.com `
-            /td sha256 /a "$exe"
-          if ($LASTEXITCODE -ne 0) {
-            echo "::error::Code signing failed"
-            exit 1
-          }
-          & $signtool.FullName verify /pa "$exe"
-          if ($LASTEXITCODE -ne 0) {
-            echo "::error::Signature verification failed"
-            exit 1
-          }
-          echo "Windows code signing complete."
+          Compress-Archive -Path "build\windows\MallcoreSim.exe" `
+            -DestinationPath "build\windows\mallcore-sim-windows.zip" -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-build
-          path: build/windows/
+          name: windows-build
+          path: build/windows/mallcore-sim-windows.zip
+          if-no-files-found: error
           retention-days: 5
 
   export-macos:
-    name: Export macOS Build (Signed & Notarized)
+    name: Export macOS Build
+    needs: validate-export-config
     runs-on: macos-latest
     permissions:
       contents: read
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate export presets exist
-        run: |
-          if [ ! -f "export_presets.cfg" ]; then
-            echo "::error::export_presets.cfg not found"
-            exit 1
-          fi
-          if ! grep -q 'name="macOS"' export_presets.cfg; then
-            echo "::error::Export preset 'macOS' not found in export_presets.cfg"
-            exit 1
-          fi
 
       - name: Install Godot
         uses: chickensoft-games/setup-godot@v2
@@ -155,101 +190,27 @@ jobs:
 
       - name: Export macOS
         run: |
+          set -euo pipefail
           godot --headless --export-release \
             "macOS" \
-            "build/macos/MallcoreSim.zip"
+            "build/macos/mallcore-sim-macos.zip"
         timeout-minutes: 10
 
       - name: Verify export output
         run: |
-          if [ ! -f "build/macos/MallcoreSim.zip" ]; then
-            echo "::error::Export failed — MallcoreSim.zip not produced"
+          set -euo pipefail
+          if [ ! -f "build/macos/mallcore-sim-macos.zip" ]; then
+            echo "::error::Export failed — mallcore-sim-macos.zip not produced"
             exit 1
           fi
-          echo "Export artifact size: $(du -h build/macos/MallcoreSim.zip | cut -f1)"
-
-      - name: Unzip app bundle for signing
-        run: |
-          cd build/macos
-          unzip -q MallcoreSim.zip
-          rm MallcoreSim.zip
-
-      - name: Import signing certificate
-        if: ${{ env.MACOS_CERTIFICATE != '' }}
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-        run: |
-          echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
-          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
-          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import certificate.p12 -P "$MACOS_CERTIFICATE_PASSWORD" \
-            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: \
-            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-          rm certificate.p12
-
-      - name: Codesign app bundle
-        if: ${{ env.APPLE_TEAM_ID != '' }}
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          APP_PATH="build/macos/MallcoreSim.app"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "::error::MallcoreSim.app not found after unzip"
-            exit 1
-          fi
-          codesign --deep --force --options runtime \
-            --sign "Developer ID Application: ($APPLE_TEAM_ID)" \
-            "$APP_PATH"
-          codesign --verify --verbose "$APP_PATH"
-          echo "Code signing complete."
-
-      - name: Notarize app bundle
-        if: ${{ env.APPLE_ID != '' && env.APPLE_PASSWORD != '' && env.APPLE_TEAM_ID != '' }}
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          APP_PATH="build/macos/MallcoreSim.app"
-          ZIP_PATH="build/macos/MallcoreSim-notarize.zip"
-          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
-          xcrun notarytool submit "$ZIP_PATH" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait --timeout 30m
-          rm "$ZIP_PATH"
-          echo "Notarization complete."
-
-      - name: Staple notarization ticket
-        if: ${{ env.APPLE_ID != '' && env.APPLE_PASSWORD != '' && env.APPLE_TEAM_ID != '' }}
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          APP_PATH="build/macos/MallcoreSim.app"
-          xcrun stapler staple "$APP_PATH"
-          xcrun stapler validate "$APP_PATH"
-          echo "Stapling complete."
-
-      - name: Re-zip app bundle for upload
-        run: |
-          cd build/macos
-          zip -r -q MallcoreSim.zip MallcoreSim.app
-          rm -rf MallcoreSim.app
+          echo "Export artifact size: $(du -h build/macos/mallcore-sim-macos.zip | cut -f1)"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macOS-build
-          path: build/macos/
+          name: macos-build
+          path: build/macos/mallcore-sim-macos.zip
+          if-no-files-found: error
           retention-days: 5
 
   release:
@@ -264,24 +225,21 @@ jobs:
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
-          name: macOS-build
+          name: macos-build
           path: artifacts/macos
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: Windows-build
+          name: windows-build
           path: artifacts/windows
-
-      - name: Prepare release assets
-        run: |
-          mv artifacts/macos/MallcoreSim.zip artifacts/mallcore-sim-macos.zip
-          cd artifacts/windows && zip ../mallcore-sim-windows.zip MallcoreSim.exe && cd ../..
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            artifacts/mallcore-sim-macos.zip
-            artifacts/mallcore-sim-windows.zip
+            artifacts/macos/mallcore-sim-macos.zip
+            artifacts/windows/mallcore-sim-windows.zip

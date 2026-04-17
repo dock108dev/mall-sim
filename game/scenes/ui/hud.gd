@@ -32,7 +32,7 @@ const _SPEED_CYCLE: Array[int] = [
 	TimeSystem.SpeedTier.ULTRA,
 ]
 
-const _TIER_THRESHOLDS: Array[float] = [76.0, 51.0, 26.0, 0.0]
+const _TIER_THRESHOLDS: Array[float] = [80.0, 50.0, 25.0, 0.0]
 const _TIER_COLORS: Array[Color] = [
 	Color(1.0, 0.84, 0.0),
 	Color(0.3, 0.69, 0.31),
@@ -45,8 +45,9 @@ const _CASH_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
 const _CASH_INCOME_SCALE: float = 1.15
 const _CASH_EXPENSE_SCALE: float = 1.1
 const _REP_ARROW_FADE_IN: float = 0.1
-const _REP_ARROW_HOLD: float = 0.7
-const _REP_ARROW_FADE_OUT: float = 0.2
+const _REP_ARROW_HOLD: float = 1.0
+const _REP_ARROW_FADE_OUT: float = 0.4
+const _BUILD_MODE_DIM_ALPHA: float = 0.5
 
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
@@ -289,21 +290,25 @@ func _get_next_speed_tier() -> int:
 
 
 func _update_reputation_display(score: float) -> void:
-	var tier_name: String = _get_tier_name(score)
-	_reputation_label.text = tr("HUD_REP_FORMAT") % [score, tier_name]
+	_reputation_label.text = _format_reputation(score)
 	_reputation_label.add_theme_color_override(
 		"font_color", _get_tier_color(score)
 	)
 
 
+func _format_reputation(score: float) -> String:
+	var tier_name: String = _get_tier_name(score)
+	return tr("HUD_REP_FORMAT") % [score, tier_name]
+
+
 func _get_tier_name(score: float) -> String:
-	if score >= 76.0:
+	if score >= 80.0:
 		return tr("HUD_TIER_LEGENDARY")
-	elif score >= 51.0:
-		return tr("HUD_TIER_REPUTABLE")
-	elif score >= 26.0:
-		return tr("HUD_TIER_UNREMARKABLE")
-	return tr("HUD_TIER_NOTORIOUS")
+	elif score >= 50.0:
+		return tr("HUD_TIER_DESTINATION")
+	elif score >= 25.0:
+		return tr("HUD_TIER_LOCAL_FAV")
+	return tr("HUD_TIER_UNKNOWN")
 
 
 func _get_tier_color(score: float) -> Color:
@@ -325,10 +330,8 @@ func _flash_reputation_label(
 		else UIThemeConstants.get_negative_color()
 	)
 	var arrow: String = " \u25B2" if increased else " \u25BC"
-	var tier_name: String = _get_tier_name(new_value)
-	_reputation_label.text = (
-		tr("HUD_REP_FORMAT") % [new_value, tier_name] + arrow
-	)
+	var label_text: String = _format_reputation(new_value)
+	_reputation_label.text = label_text + arrow
 	_rep_arrow_tween = _reputation_label.create_tween()
 	_rep_arrow_tween.tween_property(
 		_reputation_label,
@@ -336,15 +339,15 @@ func _flash_reputation_label(
 		_REP_ARROW_FADE_IN,
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	_rep_arrow_tween.tween_interval(_REP_ARROW_HOLD)
+	_rep_arrow_tween.tween_callback(func() -> void:
+		_reputation_label.text = label_text
+	)
 	_rep_arrow_tween.tween_property(
 		_reputation_label,
 		"theme_override_colors/font_color",
-		_get_tier_color(new_value),
+		UIThemeConstants.BODY_FONT_COLOR,
 		_REP_ARROW_FADE_OUT,
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_rep_arrow_tween.tween_callback(func() -> void:
-		_update_reputation_display(new_value)
-	)
 
 
 func _on_notification_requested(message: String) -> void:
@@ -463,14 +466,14 @@ func _on_locale_changed(_new_locale: String) -> void:
 
 
 func _on_build_mode_entered() -> void:
-	_tween_children_alpha(0.5)
+	_tween_children_alpha(_BUILD_MODE_DIM_ALPHA, Tween.EASE_OUT)
 
 
 func _on_build_mode_exited() -> void:
-	_tween_children_alpha(1.0)
+	_tween_children_alpha(1.0, Tween.EASE_IN)
 
 
-func _tween_children_alpha(target: float) -> void:
+func _tween_children_alpha(target: float, ease: int) -> void:
 	PanelAnimator.kill_tween(_dim_tween)
 	_dim_tween = create_tween()
 	for child: Node in get_children():
@@ -478,6 +481,6 @@ func _tween_children_alpha(target: float) -> void:
 			_dim_tween.parallel().tween_property(
 				child, "modulate:a", target,
 				PanelAnimator.BUILD_MODE_TRANSITION
-			).set_ease(Tween.EASE_OUT).set_trans(
+			).set_ease(ease).set_trans(
 				Tween.TRANS_CUBIC
 			)

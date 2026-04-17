@@ -24,6 +24,11 @@ var _fade_tween: Tween
 var _is_visible: bool = false
 
 
+func _ready() -> void:
+	EventBus.build_mode_entered.connect(_on_build_mode_entered)
+	EventBus.build_mode_exited.connect(_on_build_mode_exited)
+
+
 ## Sets up the grid for the given store size and floor center position.
 func initialize(store_size: StoreSize, floor_center: Vector3) -> void:
 	grid_size = GRID_DIMENSIONS.get(store_size, Vector2i(14, 10))
@@ -90,14 +95,14 @@ func get_world_center() -> Vector3:
 func show_grid() -> void:
 	_kill_fade_tween()
 	if _mesh_instance and _material:
-		_material.albedo_color = Color(
-			GRID_LINE_COLOR.r, GRID_LINE_COLOR.g,
-			GRID_LINE_COLOR.b, 0.0
-		)
+		var current_alpha: float = _material.albedo_color.a
+		if not _mesh_instance.visible:
+			current_alpha = 0.0
+		_material.albedo_color = _grid_line_color(current_alpha)
 		_mesh_instance.visible = true
 		_fade_tween = create_tween()
 		_fade_tween.tween_property(
-			_material, "albedo_color", GRID_LINE_COLOR,
+			_material, "albedo_color", _grid_line_color(1.0),
 			PanelAnimator.BUILD_MODE_TRANSITION
 		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	elif _mesh_instance:
@@ -108,10 +113,7 @@ func show_grid() -> void:
 func hide_grid() -> void:
 	_kill_fade_tween()
 	if _mesh_instance and _material:
-		var fade_target := Color(
-			GRID_LINE_COLOR.r, GRID_LINE_COLOR.g,
-			GRID_LINE_COLOR.b, 0.0
-		)
+		var fade_target: Color = _grid_line_color(0.0)
 		_fade_tween = create_tween()
 		_fade_tween.tween_property(
 			_material, "albedo_color", fade_target,
@@ -163,6 +165,23 @@ func _build_grid_mesh() -> void:
 	_mesh_instance.mesh = im
 	_mesh_instance.visible = _is_visible
 	add_child(_mesh_instance)
+
+
+func _on_build_mode_entered() -> void:
+	show_grid()
+
+
+func _on_build_mode_exited() -> void:
+	hide_grid()
+
+
+func _grid_line_color(alpha: float) -> Color:
+	return Color(
+		GRID_LINE_COLOR.r,
+		GRID_LINE_COLOR.g,
+		GRID_LINE_COLOR.b,
+		alpha,
+	)
 
 
 func _kill_fade_tween() -> void:

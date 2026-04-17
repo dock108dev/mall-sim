@@ -1,83 +1,60 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_wood_grain_textured.tres" id="1"]
 
 [sub_resource type="BoxMesh" id="side_panel_mesh"]
 size = Vector3(0.04, 1.8, 0.4)
 
-[sub_resource type="StandardMaterial3D" id="frame_mat"]
-resource_name = "Shelf Frame"
-albedo_color = Color(0.45, 0.35, 0.25, 1)
-roughness = 0.85
-
 [sub_resource type="BoxMesh" id="back_panel_mesh"]
 size = Vector3(1.5, 1.8, 0.03)
-
-[sub_resource type="StandardMaterial3D" id="back_mat"]
-resource_name = "Shelf Back"
-albedo_color = Color(0.55, 0.45, 0.35, 1)
-roughness = 0.9
 
 [sub_resource type="BoxMesh" id="shelf_board_mesh"]
 size = Vector3(1.42, 0.03, 0.37)
 
-[sub_resource type="StandardMaterial3D" id="shelf_mat"]
-resource_name = "Shelf Board"
-albedo_color = Color(0.5, 0.4, 0.3, 1)
-roughness = 0.8
-
 [sub_resource type="BoxMesh" id="base_mesh"]
 size = Vector3(1.5, 0.06, 0.42)
 
-[sub_resource type="StandardMaterial3D" id="base_mat"]
-resource_name = "Shelf Base"
-albedo_color = Color(0.4, 0.3, 0.22, 1)
-roughness = 0.85
-
 [sub_resource type="BoxMesh" id="top_cap_mesh"]
 size = Vector3(1.5, 0.03, 0.4)
-
-[sub_resource type="StandardMaterial3D" id="top_mat"]
-resource_name = "Shelf Top"
-albedo_color = Color(0.4, 0.3, 0.22, 1)
-roughness = 0.85
 
 [node name="PlaceholderFixtureShelfStandard" type="Node3D"]
 
 [node name="LeftPanel" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.73, 0.9, 0)
 mesh = SubResource("side_panel_mesh")
-surface_material_override/0 = SubResource("frame_mat")
+surface_material_override/0 = ExtResource("1")
 
 [node name="RightPanel" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.73, 0.9, 0)
 mesh = SubResource("side_panel_mesh")
-surface_material_override/0 = SubResource("frame_mat")
+surface_material_override/0 = ExtResource("1")
 
 [node name="BackPanel" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.185)
 mesh = SubResource("back_panel_mesh")
-surface_material_override/0 = SubResource("back_mat")
+surface_material_override/0 = ExtResource("1")
 
 [node name="Base" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
 mesh = SubResource("base_mesh")
-surface_material_override/0 = SubResource("base_mat")
+surface_material_override/0 = ExtResource("1")
 
 [node name="ShelfBoard1" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
 mesh = SubResource("shelf_board_mesh")
-surface_material_override/0 = SubResource("shelf_mat")
+surface_material_override/0 = ExtResource("1")
 
 [node name="ShelfBoard2" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("shelf_board_mesh")
-surface_material_override/0 = SubResource("shelf_mat")
+surface_material_override/0 = ExtResource("1")
 
 [node name="ShelfBoard3" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
 mesh = SubResource("shelf_board_mesh")
-surface_material_override/0 = SubResource("shelf_mat")
+surface_material_override/0 = ExtResource("1")
 
 [node name="TopCap" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.785, 0)
 mesh = SubResource("top_cap_mesh")
-surface_material_override/0 = SubResource("top_mat")
+surface_material_override/0 = ExtResource("1")

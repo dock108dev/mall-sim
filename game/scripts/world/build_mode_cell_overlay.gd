@@ -18,6 +18,13 @@ var _placement_system: FixturePlacementSystem = null
 var _cells_container: Node3D = null
 var _cell_meshes: Array[MeshInstance3D] = []
 var _fade_tween: Tween = null
+var _overlay_alpha: float = 0.0
+var overlay_alpha: float = 0.0:
+	set(value):
+		_overlay_alpha = clampf(value, 0.0, 1.0)
+		_apply_overlay_alpha()
+	get:
+		return _overlay_alpha
 
 var _highlight_meshes: Array[MeshInstance3D] = []
 var _hovered_fixture_id: String = ""
@@ -62,6 +69,7 @@ func build_overlay() -> void:
 			)
 			_cells_container.add_child(mesh_inst)
 			_cell_meshes.append(mesh_inst)
+	_apply_overlay_alpha()
 
 
 ## Fades the cell overlay in (0.25s ease-out) or out (0.25s ease-in).
@@ -69,19 +77,20 @@ func fade(fade_in: bool) -> void:
 	_kill_tween()
 
 	if fade_in:
+		var current_alpha: float = overlay_alpha
+		if not _cells_container.visible:
+			current_alpha = 0.0
 		_cells_container.visible = true
-		_cells_container.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		overlay_alpha = current_alpha
 		_fade_tween = create_tween()
 		_fade_tween.tween_property(
-			_cells_container, "modulate",
-			Color(1.0, 1.0, 1.0, 1.0),
+			self, "overlay_alpha", 1.0,
 			PanelAnimator.BUILD_MODE_TRANSITION
 		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	else:
 		_fade_tween = create_tween()
 		_fade_tween.tween_property(
-			_cells_container, "modulate",
-			Color(1.0, 1.0, 1.0, 0.0),
+			self, "overlay_alpha", 0.0,
 			PanelAnimator.BUILD_MODE_TRANSITION
 		).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 		_fade_tween.tween_callback(
@@ -199,12 +208,29 @@ func _create_quad(
 	var inst: MeshInstance3D = MeshInstance3D.new()
 	inst.mesh = quad
 	inst.set_surface_override_material(0, mat)
+	inst.set_meta(&"base_color", color)
 	inst.position = Vector3(
 		_grid.grid_origin.x + (cell.x + 0.5) * BuildModeGrid.CELL_SIZE,
 		_grid.grid_origin.y + y_offset,
 		_grid.grid_origin.z + (cell.y + 0.5) * BuildModeGrid.CELL_SIZE
 	)
 	return inst
+
+
+func _apply_overlay_alpha() -> void:
+	for mesh: MeshInstance3D in _cell_meshes:
+		if not is_instance_valid(mesh):
+			continue
+		var material := mesh.get_active_material(0) as StandardMaterial3D
+		if material == null:
+			continue
+		var base_color: Color = mesh.get_meta(&"base_color", Color.WHITE) as Color
+		material.albedo_color = Color(
+			base_color.r,
+			base_color.g,
+			base_color.b,
+			base_color.a * overlay_alpha,
+		)
 
 
 func _kill_tween() -> void:

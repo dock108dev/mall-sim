@@ -273,6 +273,8 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 		return "sports_season"
 	if file_base == "personalities":
 		return "personality_data"
+	if file_base == "upgrades":
+		return "upgrade"
 	if _DIR_TYPE_MAP.has(dir_name):
 		return _DIR_TYPE_MAP[dir_name]
 	if file_base == "seasonal_config":

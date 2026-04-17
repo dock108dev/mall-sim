@@ -10,6 +10,7 @@ extends Resource
 @export var store_type: String = ""
 @export var effect_type: String = ""
 @export var effect_value: float = 0.0
+@export var one_time: bool = true
 
 
 ## Returns true if this upgrade is universal (available for all store types).

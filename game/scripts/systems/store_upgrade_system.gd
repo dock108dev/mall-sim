@@ -6,6 +6,7 @@ extends Node
 var _data_loader: DataLoader
 var _economy_system: EconomySystem
 var _reputation_system: ReputationSystem
+var _catalog: Dictionary = {}
 
 ## store_id -> Array[String] of purchased upgrade ids.
 var _purchased_upgrades: Dictionary = {}
@@ -19,26 +20,36 @@ func initialize(
 	_data_loader = data_loader
 	_economy_system = economy
 	_reputation_system = reputation
+	_load_catalog_from_registry()
 
 
 ## Returns all upgrades available for a given store type.
 func get_upgrades_for_store(
 	store_type: String
 ) -> Array[UpgradeDefinition]:
-	if not _data_loader:
-		return []
-	return _data_loader.get_upgrades_for_store(store_type)
+	if _catalog.is_empty():
+		_load_catalog_from_registry()
+	var normalized_store_type: String = _normalize_store_id(store_type)
+	var result: Array[UpgradeDefinition] = []
+	for upgrade: UpgradeDefinition in _catalog.values():
+		if upgrade.is_universal():
+			result.append(upgrade)
+			continue
+		if _normalize_store_id(upgrade.store_type) == normalized_store_type:
+			result.append(upgrade)
+	return result
 
 
 ## Returns true if the given upgrade has been purchased for the store.
 func is_purchased(store_id: String, upgrade_id: String) -> bool:
-	var purchased: Array = _purchased_upgrades.get(store_id, [])
+	var sid: String = _normalize_store_id(store_id)
+	var purchased: Array = _purchased_upgrades.get(sid, [])
 	return upgrade_id in purchased
 
 
 ## Returns all purchased upgrade ids for a store.
 func get_purchased_ids(store_id: String) -> Array:
-	return _purchased_upgrades.get(store_id, [])
+	return _purchased_upgrades.get(_normalize_store_id(store_id), [])
 
 
 ## Returns true if the player can afford the upgrade and meets rep.
@@ -49,6 +60,8 @@ func can_purchase(
 		return false
 	var upgrade: UpgradeDefinition = _get_upgrade(upgrade_id)
 	if not upgrade:
+		return false
+	if not _upgrade_applies_to_store(upgrade, store_id):
 		return false
 	if not _economy_system:
 		return false
@@ -73,11 +86,18 @@ func purchase_upgrade(
 	var reason: String = "Upgrade: %s" % upgrade.display_name
 	if not _economy_system.deduct_cash(upgrade.cost, reason):
 		return false
-	if not _purchased_upgrades.has(store_id):
-		_purchased_upgrades[store_id] = []
-	(_purchased_upgrades[store_id] as Array).append(upgrade_id)
+	var sid: String = _normalize_store_id(store_id)
+	if not _purchased_upgrades.has(sid):
+		_purchased_upgrades[sid] = []
+	(_purchased_upgrades[sid] as Array).append(upgrade_id)
 	EventBus.upgrade_purchased.emit(
-		StringName(store_id), upgrade_id
+		StringName(sid), upgrade_id
+	)
+	EventBus.store_upgrade_effect_applied.emit(
+		StringName(sid),
+		upgrade_id,
+		upgrade.effect_type,
+		upgrade.effect_value
 	)
 	return true
 
@@ -86,7 +106,8 @@ func purchase_upgrade(
 func get_effect_value(
 	store_id: String, effect_type: String
 ) -> float:
-	var purchased: Array = _purchased_upgrades.get(store_id, [])
+	var sid: String = _normalize_store_id(store_id)
+	var purchased: Array = _purchased_upgrades.get(sid, [])
 	var total: float = _get_effect_default(effect_type)
 	for uid: Variant in purchased:
 		var upgrade: UpgradeDefinition = _get_upgrade(str(uid))
@@ -155,14 +176,57 @@ func _apply_state(data: Dictionary) -> void:
 		var restored: Array = []
 		for uid: Variant in ids:
 			restored.append(str(uid))
-		_purchased_upgrades[store_id] = restored
+		_purchased_upgrades[_normalize_store_id(store_id)] = restored
 
 
 func _get_upgrade(upgrade_id: String) -> UpgradeDefinition:
-	if not _data_loader:
-		push_error("StoreUpgradeSystem: no data_loader assigned")
-		return null
-	return _data_loader.get_upgrade(upgrade_id)
+	if _catalog.is_empty():
+		_load_catalog_from_registry()
+	var canonical: String = upgrade_id
+	if ContentRegistry.exists(upgrade_id):
+		canonical = String(ContentRegistry.resolve(upgrade_id))
+	var upgrade: UpgradeDefinition = (
+		_catalog.get(canonical) as UpgradeDefinition
+	)
+	if upgrade:
+		return upgrade
+	if _data_loader:
+		return _data_loader.get_upgrade(canonical)
+	push_error("StoreUpgradeSystem: upgrade not found: %s" % upgrade_id)
+	return null
+
+
+func _load_catalog_from_registry() -> void:
+	_catalog.clear()
+	for id: StringName in ContentRegistry.get_all_ids("upgrade"):
+		var upgrade: UpgradeDefinition = (
+			ContentRegistry.get_upgrade_definition(id)
+		)
+		if upgrade:
+			_catalog[String(id)] = upgrade
+	if _catalog.is_empty() and _data_loader:
+		for upgrade: UpgradeDefinition in _data_loader.get_all_upgrades():
+			_catalog[upgrade.id] = upgrade
+
+
+func _upgrade_applies_to_store(
+	upgrade: UpgradeDefinition,
+	store_id: String
+) -> bool:
+	if upgrade.is_universal():
+		return true
+	return (
+		_normalize_store_id(upgrade.store_type)
+		== _normalize_store_id(store_id)
+	)
+
+
+func _normalize_store_id(raw_store_id: String) -> String:
+	if raw_store_id.is_empty():
+		return ""
+	if ContentRegistry.exists(raw_store_id):
+		return String(ContentRegistry.resolve(raw_store_id))
+	return raw_store_id
 
 
 func _get_effect_default(effect_type: String) -> float:

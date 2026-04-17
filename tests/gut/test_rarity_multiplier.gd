@@ -5,6 +5,10 @@ extends GutTest
 var _economy: EconomySystem
 
 
+func before_all() -> void:
+	_seed_difficulty_config()
+
+
 func before_each() -> void:
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
@@ -19,7 +23,7 @@ func _create_item(
 	item_def.base_price = base_price
 	item_def.rarity = rarity
 	item_def.category = category
-	item_def.tags = PackedStringArray()
+	item_def.tags = []
 	return ItemInstance.create_from_definition(item_def, "good")
 
 
@@ -185,7 +189,7 @@ func test_cap_enforced_for_mint_legendary() -> void:
 	item_def.base_price = 500.0
 	item_def.rarity = "legendary"
 	item_def.category = "trading_cards"
-	item_def.tags = PackedStringArray()
+	item_def.tags = []
 	var item: ItemInstance = ItemInstance.create_from_definition(
 		item_def, "mint"
 	)
@@ -204,3 +208,14 @@ func test_moderate_item_below_cap() -> void:
 		"$10 rare should be well below cap"
 	)
 	assert_gt(value, 0.0, "Value should be positive")
+
+
+func _seed_difficulty_config() -> void:
+	DifficultySystemSingleton._current_tier_id = &"normal"
+	DifficultySystemSingleton._tiers = {
+		&"normal": {
+			"modifiers": {
+				"starting_cash_multiplier": 1.0,
+			},
+		},
+	}

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cm1dt3eb3dfgd"
 path.s3tc="res://.godot/imported/tex_wall_surface_albedo.png-b2a8d5b4c6ff0de993219a5e7b952eb7.s3tc.ctex"
+path.etc2="res://.godot/imported/tex_wall_surface_albedo.png-b2a8d5b4c6ff0de993219a5e7b952eb7.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://game/assets/textures/tex_wall_surface_albedo.png"
-dest_files=["res://.godot/imported/tex_wall_surface_albedo.png-b2a8d5b4c6ff0de993219a5e7b952eb7.s3tc.ctex"]
+dest_files=["res://.godot/imported/tex_wall_surface_albedo.png-b2a8d5b4c6ff0de993219a5e7b952eb7.s3tc.ctex", "res://.godot/imported/tex_wall_surface_albedo.png-b2a8d5b4c6ff0de993219a5e7b952eb7.etc2.ctex"]
 
 [params]
 

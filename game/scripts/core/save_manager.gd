@@ -380,11 +380,15 @@ func _collect_save_data() -> Dictionary:
 	var preview_store_id: StringName = active_store_id
 	if preview_store_id.is_empty():
 		preview_store_id = _get_primary_owned_store_id()
+	var preview_store_name: String = _get_preview_store_name(
+		preview_store_id
+	)
 	var difficulty_data: Dictionary = DifficultySystemSingleton.get_save_data()
 	var metadata: Dictionary = {
 		"timestamp": Time.get_datetime_string_from_system(true),
 		"day_number": _time_system.current_day,
 		"store_type": String(preview_store_id),
+		"store_name": preview_store_name,
 		"active_store_id": String(active_store_id),
 		"play_time": _time_system.get_play_time_seconds(),
 	}
@@ -415,6 +419,7 @@ func _collect_save_data() -> Dictionary:
 		"last_saved_at": Time.get_datetime_string_from_system(true),
 		"timestamp": Time.get_datetime_string_from_system(true),
 		"store_type": String(preview_store_id),
+		"store_name": preview_store_name,
 		"active_store_id": String(active_store_id),
 		"play_time": _time_system.get_play_time_seconds(),
 		"used_difficulty_downgrade": bool(
@@ -978,6 +983,16 @@ func _get_active_store_id_for_save() -> StringName:
 	return canonical
 
 
+func _get_preview_store_name(store_id: StringName) -> String:
+	if store_id.is_empty():
+		return ""
+	if _store_state_manager:
+		return _store_state_manager.get_store_name(store_id)
+	if ContentRegistry.exists(String(store_id)):
+		return ContentRegistry.get_display_name(store_id)
+	return String(store_id)
+
+
 func _get_primary_owned_store_id() -> StringName:
 	if _store_state_manager and not _store_state_manager.owned_slots.is_empty():
 		var slot_indices: Array[int] = []
@@ -1112,6 +1127,20 @@ func _build_slot_index_metadata(save_data: Dictionary) -> Dictionary:
 					"used_difficulty_downgrade", false
 				)
 			)
+	if not metadata.has("store_name"):
+		var raw_store_id: String = str(
+			metadata.get("store_type", "")
+		)
+		if not raw_store_id.is_empty():
+			if ContentRegistry.exists(raw_store_id):
+				var canonical: StringName = ContentRegistry.resolve(
+					raw_store_id
+				)
+				metadata["store_name"] = ContentRegistry.get_display_name(
+					canonical
+				)
+			else:
+				metadata["store_name"] = raw_store_id
 	return metadata
 
 

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c7xajkg1erlr6"
 path.s3tc="res://.godot/imported/tex_product_retro_games_albedo.png-4daf6e6054bd08695b5eb8bbffea44ae.s3tc.ctex"
+path.etc2="res://.godot/imported/tex_product_retro_games_albedo.png-4daf6e6054bd08695b5eb8bbffea44ae.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://game/assets/textures/tex_product_retro_games_albedo.png"
-dest_files=["res://.godot/imported/tex_product_retro_games_albedo.png-4daf6e6054bd08695b5eb8bbffea44ae.s3tc.ctex"]
+dest_files=["res://.godot/imported/tex_product_retro_games_albedo.png-4daf6e6054bd08695b5eb8bbffea44ae.s3tc.ctex", "res://.godot/imported/tex_product_retro_games_albedo.png-4daf6e6054bd08695b5eb8bbffea44ae.etc2.ctex"]
 
 [params]
 

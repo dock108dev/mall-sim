@@ -7,6 +7,7 @@ var _interacted_count: int = 0
 var _focused_count: int = 0
 var _unfocused_count: int = 0
 var _bus_interacted_count: int = 0
+const _OUTLINE_MATERIAL_PATH := "res://game/assets/shaders/mat_outline_highlight.tres"
 
 
 func before_each() -> void:
@@ -148,6 +149,71 @@ func test_highlight_unhighlight_without_mesh() -> void:
 	assert_false(
 		_interactable._highlight_active,
 		"unhighlight() should clear flag"
+	)
+
+
+func test_outline_shader_material_configured_with_default_pulse() -> void:
+	var material := load(_OUTLINE_MATERIAL_PATH) as ShaderMaterial
+	assert_not_null(material, "Outline highlight material should load")
+	assert_not_null(material.shader, "Outline highlight material should reference a shader")
+	assert_eq(
+		material.shader.resource_path,
+		"res://game/assets/shaders/outline_highlight.gdshader",
+		"Outline material should use the committed outline shader"
+	)
+	assert_eq(
+		material.get_shader_parameter("outline_width"),
+		0.012,
+		"Default outline_width should remain visible without being oversized"
+	)
+	assert_eq(
+		material.get_shader_parameter("pulse_speed"),
+		1.5,
+		"Default pulse_speed should provide a noticeable hover pulse"
+	)
+	assert_eq(
+		material.get_shader_parameter("pulse_intensity"),
+		0.15,
+		"Default pulse_intensity should keep the outline subtle"
+	)
+
+
+func test_highlight_applies_outline_next_pass_to_mesh_surface() -> void:
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = BoxMesh.new()
+	var base_material := StandardMaterial3D.new()
+	mesh.set_surface_override_material(0, base_material)
+	_interactable.add_child(mesh)
+
+	_interactable.highlight()
+
+	var highlighted := mesh.get_surface_override_material(0)
+	assert_not_null(highlighted, "Highlight should preserve a surface material")
+	assert_not_same(
+		highlighted,
+		base_material,
+		"Highlight should duplicate the base material before adding next_pass"
+	)
+	assert_not_null(
+		highlighted.next_pass,
+		"Highlight should attach the outline material as next_pass"
+	)
+	assert_true(
+		highlighted.next_pass is ShaderMaterial,
+		"Highlight next_pass should be a shader material"
+	)
+	assert_eq(
+		(highlighted.next_pass as ShaderMaterial).shader.resource_path,
+		"res://game/assets/shaders/outline_highlight.gdshader",
+		"Highlight should use the outline shader"
+	)
+
+	_interactable.unhighlight()
+
+	assert_same(
+		mesh.get_surface_override_material(0),
+		base_material,
+		"Unhighlight should restore the original surface material"
 	)
 
 

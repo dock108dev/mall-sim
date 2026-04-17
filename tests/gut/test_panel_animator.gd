@@ -39,6 +39,13 @@ func test_kill_tween_stops_valid_tween() -> void:
 	assert_false(tween.is_valid())
 
 
+func test_kill_control_tween_stops_active_panel_tween() -> void:
+	var tween: Tween = PanelAnimator.fade_in(_panel)
+	assert_true(tween.is_valid())
+	PanelAnimator.kill_control_tween(_panel)
+	assert_false(tween.is_valid())
+
+
 func test_panel_animator_can_attach_to_control_node() -> void:
 	var animator: PanelAnimator = PanelAnimator.new()
 	add_child_autofree(animator)

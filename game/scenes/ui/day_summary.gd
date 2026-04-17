@@ -12,9 +12,8 @@ const OVERLAY_TARGET_ALPHA: float = 0.6
 const PANEL_DELAY: float = 0.05
 const STAT_STAGGER_DELAY: float = 0.05
 const CONTINUE_FADE_DELAY: float = 0.2
+const CONTINUE_FADE_DURATION: float = 0.15
 const RECORD_PULSE_SCALE: float = 1.05
-const RECORD_HIGH_FLASH_COLOR := Color(1.0, 0.84, 0.0)
-const RECORD_LOW_FLASH_COLOR := Color(0.3, 0.6, 1.0)
 const MILESTONE_BANNER_COLOR := Color(1.0, 0.84, 0.0)
 const NET_PROFIT_POSITIVE_COLOR := Color(0.2, 0.8, 0.2)
 const NET_PROFIT_NEGATIVE_COLOR := Color(0.9, 0.2, 0.2)
@@ -23,6 +22,7 @@ const NET_PROFIT_ZERO_COLOR := Color(1.0, 1.0, 1.0)
 var _anim_tween: Tween
 var _overlay_tween: Tween
 var _stagger_tween: Tween
+var _continue_tween: Tween
 var _current_day: int = 0
 var _discrepancy_label: Label
 var _record_high_revenue: float = 0.0
@@ -169,6 +169,7 @@ func hide_summary() -> void:
 		_overlay, "color:a", 0.0, PanelAnimator.MODAL_DURATION
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	_overlay_tween.tween_callback(func() -> void:
+		_reset_animated_controls()
 		visible = false
 		_overlay.visible = false
 		dismissed.emit()
@@ -181,6 +182,7 @@ func hide_summary() -> void:
 func _animate_open() -> void:
 	_kill_all_tweens()
 	visible = true
+	_reset_animated_controls()
 
 	_overlay.color = Color(0.0, 0.0, 0.0, 0.0)
 	_overlay.visible = true
@@ -189,41 +191,46 @@ func _animate_open() -> void:
 		_overlay, "color:a", OVERLAY_TARGET_ALPHA, OVERLAY_FADE_DURATION
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
-	_panel.pivot_offset = _panel.size / 2.0
-	_panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
-	_panel.scale = Vector2(
-		PanelAnimator.MODAL_SCALE_START,
-		PanelAnimator.MODAL_SCALE_START,
-	)
-	_panel.visible = true
+	_panel.visible = false
+	_button_row.modulate = Color.TRANSPARENT
 
 	_anim_tween = _panel.create_tween()
 	_anim_tween.tween_interval(PANEL_DELAY)
-	_anim_tween.tween_property(
-		_panel, "modulate", Color.WHITE, PanelAnimator.MODAL_DURATION
-	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	_anim_tween.parallel().tween_property(
-		_panel, "scale", Vector2.ONE, PanelAnimator.MODAL_DURATION
-	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_anim_tween.tween_callback(_start_panel_open)
 
+
+func _start_panel_open() -> void:
+	_anim_tween = PanelAnimator.modal_open(_panel)
+	_anim_tween.finished.connect(
+		_on_panel_open_finished, CONNECT_ONE_SHOT
+	)
+
+
+func _on_panel_open_finished() -> void:
 	var stat_rows: Array[Control] = _get_visible_stat_rows()
-	_button_row.modulate = Color.TRANSPARENT
 	_stagger_tween = PanelAnimator.stagger_fade_in(
 		stat_rows, STAT_STAGGER_DELAY
 	)
-
 	if _stagger_tween:
-		_stagger_tween.tween_callback(_flash_record_labels)
-
-	if _stagger_tween:
-		_stagger_tween.tween_interval(CONTINUE_FADE_DELAY)
-		_stagger_tween.tween_property(
-			_button_row, "modulate", Color.WHITE, 0.15
-		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		_stagger_tween.finished.connect(
+			_on_stat_rows_finished, CONNECT_ONE_SHOT
+		)
+		return
+	_on_stat_rows_finished()
 
 
 func _get_visible_stat_rows() -> Array[Control]:
 	var rows: Array[Control] = []
+	for label: Control in _get_stat_row_candidates():
+		if label.visible:
+			rows.append(label)
+	for child: Node in _milestone_container.get_children():
+		if child is Label and child.visible:
+			rows.append(child as Control)
+	return rows
+
+
+func _get_stat_row_candidates() -> Array[Control]:
 	var stat_labels: Array[Control] = [
 		_day_label, _revenue_label, _rent_label,
 		_expenses_label, _profit_label, _items_sold_label,
@@ -236,13 +243,25 @@ func _get_visible_stat_rows() -> Array[Control]:
 	]
 	if _discrepancy_label:
 		stat_labels.append(_discrepancy_label)
-	for label: Control in stat_labels:
-		if label.visible:
-			rows.append(label)
+	return stat_labels
+
+
+func _on_stat_rows_finished() -> void:
+	_animate_record_labels()
+	_continue_tween = _button_row.create_tween()
+	_continue_tween.tween_interval(CONTINUE_FADE_DELAY)
+	_continue_tween.tween_property(
+		_button_row, "modulate", Color.WHITE, CONTINUE_FADE_DURATION
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+
+func _get_animated_controls() -> Array[Control]:
+	var controls: Array[Control] = _get_stat_row_candidates()
 	for child: Node in _milestone_container.get_children():
 		if child is Label and child.visible:
-			rows.append(child as Control)
-	return rows
+			controls.append(child as Control)
+	controls.append(_button_row)
+	return controls
 
 
 func _apply_record_highlights(
@@ -274,7 +293,6 @@ func _highlight_record_high(label: Label) -> void:
 	label.add_theme_color_override(
 		"font_color", UIThemeConstants.get_positive_color()
 	)
-	PanelAnimator.pulse_scale(label, RECORD_PULSE_SCALE)
 	_record_high_labels.append(label)
 
 
@@ -285,11 +303,9 @@ func _highlight_record_low(label: Label) -> void:
 	_record_low_labels.append(label)
 
 
-func _flash_record_labels() -> void:
+func _animate_record_labels() -> void:
 	for label: Label in _record_high_labels:
-		PanelAnimator.flash_color(label, RECORD_HIGH_FLASH_COLOR)
-	for label: Label in _record_low_labels:
-		PanelAnimator.flash_color(label, RECORD_LOW_FLASH_COLOR)
+		PanelAnimator.pulse_scale(label, RECORD_PULSE_SCALE)
 
 
 func _reset_stat_colors() -> void:
@@ -320,6 +336,15 @@ func _kill_all_tweens() -> void:
 	PanelAnimator.kill_tween(_anim_tween)
 	PanelAnimator.kill_tween(_overlay_tween)
 	PanelAnimator.kill_tween(_stagger_tween)
+	PanelAnimator.kill_tween(_continue_tween)
+	for control: Control in _get_animated_controls():
+		PanelAnimator.kill_control_tween(control)
+
+
+func _reset_animated_controls() -> void:
+	for control: Control in _get_animated_controls():
+		control.modulate = Color.WHITE
+		control.scale = Vector2.ONE
 
 
 func _set_net_profit_display(net_profit: float) -> void:

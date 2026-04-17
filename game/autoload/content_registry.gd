@@ -93,6 +93,11 @@ func get_customer_type_definition(id: StringName) -> CustomerTypeDefinition:
 	return _get_typed_resource(id, "customer") as CustomerTypeDefinition
 
 
+## Returns a typed upgrade definition resource for a canonical or alias ID.
+func get_upgrade_definition(id: StringName) -> UpgradeDefinition:
+	return _get_typed_resource(id, "upgrade") as UpgradeDefinition
+
+
 ## Returns the registered economy config resource when available.
 func get_economy_config() -> EconomyConfig:
 	return _get_typed_resource(&"economy_config", "economy") as EconomyConfig

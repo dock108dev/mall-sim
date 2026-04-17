@@ -30,6 +30,7 @@ func test_tier_up_emits_reputation_changed() -> void:
 	]
 	# Place score so a single satisfied customer crosses the REPUTABLE threshold.
 	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
+	_rep._tiers[STORE_ID] = _rep._score_to_tier(_rep._scores[STORE_ID] as float)
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
@@ -56,6 +57,7 @@ func test_tier_up_emits_toast_with_reputation_up_category() -> void:
 		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
+	_rep._tiers[STORE_ID] = _rep._score_to_tier(_rep._scores[STORE_ID] as float)
 
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, true)
@@ -77,6 +79,7 @@ func test_tier_up_toast_message_contains_new_tier_name() -> void:
 		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	_rep._scores[STORE_ID] = reputable_threshold - (ReputationSystemSingleton.SATISFACTION_GAIN - 0.01)
+	_rep._tiers[STORE_ID] = _rep._score_to_tier(_rep._scores[STORE_ID] as float)
 
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, true)
@@ -84,8 +87,8 @@ func test_tier_up_toast_message_contains_new_tier_name() -> void:
 	var params: Array = get_signal_parameters(EventBus, "toast_requested", 0)
 	var message: String = params[0] as String
 	assert_true(
-		message.contains("Reputable"),
-		"Toast message should contain the new tier name 'Reputable'"
+		message.contains("Destination Shop"),
+		"Toast message should contain the new tier name 'Destination Shop'"
 	)
 
 
@@ -97,6 +100,7 @@ func test_tier_down_emits_reputation_changed() -> void:
 	]
 	# Place score just above REPUTABLE so one dissatisfied customer drops it below.
 	_rep._scores[STORE_ID] = reputable_threshold + 0.1
+	_rep._tiers[STORE_ID] = _rep._score_to_tier(_rep._scores[STORE_ID] as float)
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
@@ -123,6 +127,7 @@ func test_tier_down_emits_toast_with_reputation_down_category() -> void:
 		ReputationSystemSingleton.ReputationTier.REPUTABLE
 	]
 	_rep._scores[STORE_ID] = reputable_threshold + 0.1
+	_rep._tiers[STORE_ID] = _rep._score_to_tier(_rep._scores[STORE_ID] as float)
 
 	watch_signals(EventBus)
 	EventBus.customer_left_mall.emit(_mock_customer, false)
@@ -150,6 +155,7 @@ func test_within_tier_score_change_does_not_emit_toast() -> void:
 	]
 	# Start at 30 — within UNREMARKABLE (26.0–51.0).
 	_rep._scores[STORE_ID] = 30.0
+	_rep._tiers[STORE_ID] = _rep._score_to_tier(_rep._scores[STORE_ID] as float)
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),
@@ -190,6 +196,7 @@ func test_within_tier_score_change_does_not_emit_toast() -> void:
 func test_skip_tier_fires_exactly_one_toast() -> void:
 	# Start at NOTORIOUS (score 10, below UNREMARKABLE threshold of 26).
 	_rep._scores[STORE_ID] = 10.0
+	_rep._tiers[STORE_ID] = _rep._score_to_tier(_rep._scores[STORE_ID] as float)
 
 	assert_eq(
 		_rep.get_tier(STORE_ID),

@@ -15,7 +15,7 @@ func before_each() -> void:
 
 func test_cash_updates_on_money_changed() -> void:
 	EventBus.money_changed.emit(0.0, 1234.56)
-	await get_tree().process_frame
+	await get_tree().create_timer(_hud._CASH_COUNT_DURATION + 0.05).timeout
 	var label: Label = _hud.get_node("TopBar/CashLabel")
 	assert_string_contains(label.text, "1,234.56")
 
@@ -102,10 +102,9 @@ func test_reputation_updates_on_signal() -> void:
 	assert_eq(_hud._last_reputation, 80.0)
 
 
-func test_reputation_tier_color_applied() -> void:
-	EventBus.reputation_changed.emit("test_store", 80.0)
-	await get_tree().process_frame
+func test_reputation_tier_color_applied_by_display_update() -> void:
 	var label: Label = _hud.get_node("TopBar/ReputationLabel")
+	_hud._update_reputation_display(80.0)
 	var expected: Color = Color(1.0, 0.84, 0.0)
 	assert_true(
 		label.has_theme_color_override("font_color"),
@@ -167,10 +166,14 @@ func test_cash_pulse_scale_expense() -> void:
 	)
 
 
-func test_expense_scale_shrinks() -> void:
-	assert_lt(
+func test_expense_scale_is_smaller_than_income_scale() -> void:
+	assert_gt(
 		_hud._CASH_EXPENSE_SCALE, 1.0,
-		"Expense scale should shrink below 1.0"
+		"Expense scale should still pulse above 1.0"
+	)
+	assert_lt(
+		_hud._CASH_EXPENSE_SCALE, _hud._CASH_INCOME_SCALE,
+		"Expense pulse should be smaller than income pulse"
 	)
 
 
@@ -218,6 +221,66 @@ func test_reputation_arrow_down_text() -> void:
 	assert_string_contains(
 		label.text, "\u25BC",
 		"Should show down arrow on decrease"
+	)
+
+
+func test_reputation_flash_uses_issue_025_timing() -> void:
+	assert_eq(_hud._REP_ARROW_FADE_IN, 0.1)
+	assert_eq(_hud._REP_ARROW_HOLD, 1.0)
+	assert_eq(_hud._REP_ARROW_FADE_OUT, 0.4)
+
+
+func test_reputation_increase_flashes_positive_color() -> void:
+	_hud._last_reputation = 50.0
+	EventBus.reputation_changed.emit("test_store", 60.0)
+	await get_tree().create_timer(_hud._REP_ARROW_FADE_IN + 0.05).timeout
+	var label: Label = _hud.get_node("TopBar/ReputationLabel")
+	assert_eq(
+		label.get_theme_color("font_color"),
+		UIThemeConstants.get_positive_color(),
+		"Increase should flash positive color"
+	)
+
+
+func test_reputation_decrease_flashes_negative_color() -> void:
+	_hud._last_reputation = 60.0
+	EventBus.reputation_changed.emit("test_store", 50.0)
+	await get_tree().create_timer(_hud._REP_ARROW_FADE_IN + 0.05).timeout
+	var label: Label = _hud.get_node("TopBar/ReputationLabel")
+	assert_eq(
+		label.get_theme_color("font_color"),
+		UIThemeConstants.get_negative_color(),
+		"Decrease should flash negative color"
+	)
+
+
+func test_reputation_arrow_removed_after_hold() -> void:
+	_hud._last_reputation = 50.0
+	EventBus.reputation_changed.emit("test_store", 60.0)
+	await get_tree().create_timer(
+		_hud._REP_ARROW_FADE_IN + _hud._REP_ARROW_HOLD + 0.05
+	).timeout
+	var label: Label = _hud.get_node("TopBar/ReputationLabel")
+	assert_false(
+		label.text.contains("\u25B2") or label.text.contains("\u25BC"),
+		"Arrow should be removed after the hold"
+	)
+
+
+func test_reputation_color_fades_to_body_font_color() -> void:
+	_hud._last_reputation = 50.0
+	EventBus.reputation_changed.emit("test_store", 60.0)
+	await get_tree().create_timer(
+		_hud._REP_ARROW_FADE_IN
+		+ _hud._REP_ARROW_HOLD
+		+ _hud._REP_ARROW_FADE_OUT
+		+ 0.05
+	).timeout
+	var label: Label = _hud.get_node("TopBar/ReputationLabel")
+	assert_eq(
+		label.get_theme_color("font_color"),
+		UIThemeConstants.BODY_FONT_COLOR,
+		"Reputation label should fade back to body font color"
 	)
 
 

@@ -150,7 +150,7 @@
     "category": "cartridges",
     "subcategory": "loose",
     "store_type": "retro_games",
-    "base_price": 350.00,
+    "base_price": 200.00,
     "rarity": "legendary",
     "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
     "tags": ["action", "MegaDrive16", "legendary", "limited_run", "16bit"],

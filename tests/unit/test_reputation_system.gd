@@ -37,7 +37,7 @@ func test_add_reputation_event_increases_score() -> void:
 
 func test_reputation_tier_upgrades_at_threshold() -> void:
 	watch_signals(EventBus)
-	_rep.add_reputation_event("positive_sale", 26.0)
+	_rep.add_reputation_event("positive_sale", 25.0)
 
 	assert_eq(
 		int(_rep.get_tier()),

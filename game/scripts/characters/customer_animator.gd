@@ -4,9 +4,11 @@ extends Node
 
 const CROSSFADE_DURATION: float = 0.3
 const WALK_BOB_HEIGHT: float = 0.06
+const WALK_BOB_VARIATION: float = 0.02
 const WALK_BOB_SPEED: float = 0.4
 const WALK_LEAN_ANGLE: float = 5.0
 const ARM_SWING_ANGLE: float = 15.0
+const HAND_SWING_ANGLE: float = 8.0
 const IDLE_SWAY_ANGLE: float = 3.0
 const IDLE_SWAY_SPEED: float = 1.2
 const IDLE_LOOK_ANGLE: float = 25.0
@@ -22,6 +24,12 @@ const LEAVE_HAPPY_SPEED: float = 0.35
 const LEAVE_UPSET_SPEED: float = 0.25
 const LEAVE_UPSET_LEAN: float = 8.0
 const MOVE_THRESHOLD: float = 0.1
+const ARM_PATHS: Array = [
+	"BodyMesh/LeftArm",
+	"BodyMesh/RightArm",
+	"BodyMesh/LeftArm/LeftHand",
+	"BodyMesh/RightArm/RightHand",
+]
 
 var _animation_player: AnimationPlayer = null
 var _current_animation: String = ""
@@ -77,7 +85,7 @@ func _play_animation(anim_name: String) -> void:
 
 func _get_walk_animation() -> String:
 	if _current_state == Customer.State.LEAVING:
-		return "leave_happy" if _is_satisfied else "leave_upset"
+		return "leaving_happy" if _is_satisfied else "leaving_upset"
 	return "walk"
 
 
@@ -94,7 +102,7 @@ func _get_animation_for_state(state: Customer.State) -> String:
 		Customer.State.WAITING_IN_QUEUE:
 			return "idle"
 		Customer.State.LEAVING:
-			return "leave_happy" if _is_satisfied else "leave_upset"
+			return "leaving_happy" if _is_satisfied else "leaving_upset"
 	return "idle"
 
 
@@ -117,8 +125,8 @@ func _create_animations() -> void:
 	_create_browse_animation()
 	_create_idle_animation()
 	_create_purchase_animation()
-	_create_leave_happy_animation()
-	_create_leave_upset_animation()
+	_create_leaving_happy_animation()
+	_create_leaving_upset_animation()
 
 
 func _create_walk_animation() -> void:
@@ -127,13 +135,14 @@ func _create_walk_animation() -> void:
 	anim.length = WALK_BOB_SPEED
 	var body_y: float = 0.7
 	var head_y: float = 1.6
+	var bob_height: float = WALK_BOB_HEIGHT + WALK_BOB_VARIATION
 
 	var body_track: int = anim.add_track(Animation.TYPE_POSITION_3D)
 	anim.track_set_path(body_track, "BodyMesh")
 	anim.track_insert_key(body_track, 0.0, Vector3(0.0, body_y, 0.0))
 	anim.track_insert_key(
 		body_track, WALK_BOB_SPEED * 0.5,
-		Vector3(0.0, body_y + WALK_BOB_HEIGHT, 0.0)
+		Vector3(0.0, body_y + bob_height, 0.0)
 	)
 	anim.track_insert_key(
 		body_track, WALK_BOB_SPEED, Vector3(0.0, body_y, 0.0)
@@ -144,7 +153,7 @@ func _create_walk_animation() -> void:
 	anim.track_insert_key(head_track, 0.0, Vector3(0.0, head_y, 0.0))
 	anim.track_insert_key(
 		head_track, WALK_BOB_SPEED * 0.5,
-		Vector3(0.0, head_y + WALK_BOB_HEIGHT, 0.0)
+		Vector3(0.0, head_y + bob_height, 0.0)
 	)
 	anim.track_insert_key(
 		head_track, WALK_BOB_SPEED, Vector3(0.0, head_y, 0.0)
@@ -155,7 +164,7 @@ func _create_walk_animation() -> void:
 	anim.track_insert_key(col_track, 0.0, Vector3(0.0, body_y, 0.0))
 	anim.track_insert_key(
 		col_track, WALK_BOB_SPEED * 0.5,
-		Vector3(0.0, body_y + WALK_BOB_HEIGHT, 0.0)
+		Vector3(0.0, body_y + bob_height, 0.0)
 	)
 	anim.track_insert_key(
 		col_track, WALK_BOB_SPEED, Vector3(0.0, body_y, 0.0)
@@ -171,8 +180,14 @@ func _create_walk_animation() -> void:
 
 	_add_arm_swing(anim, "BodyMesh/LeftArm", ARM_SWING_ANGLE, true)
 	_add_arm_swing(anim, "BodyMesh/RightArm", ARM_SWING_ANGLE, false)
+	_add_arm_swing(anim, "BodyMesh/LeftArm/LeftHand", HAND_SWING_ANGLE, true)
+	_add_arm_swing(
+		anim, "BodyMesh/RightArm/RightHand", HAND_SWING_ANGLE, false
+	)
 
 	var lib: AnimationLibrary = _get_or_create_library()
+	if lib.has_animation("walk"):
+		lib.remove_animation("walk")
 	lib.add_animation("walk", anim)
 
 
@@ -224,8 +239,11 @@ func _create_browse_animation() -> void:
 	anim.track_insert_key(body_rot, cycle * 1.5, lean)
 	anim.track_insert_key(body_rot, cycle * 1.75, lean_right)
 	anim.track_insert_key(body_rot, cycle * 2.0, lean)
+	_add_neutral_rotation_tracks(anim, ARM_PATHS)
 
 	var lib: AnimationLibrary = _get_or_create_library()
+	if lib.has_animation("browse"):
+		lib.remove_animation("browse")
 	lib.add_animation("browse", anim)
 
 
@@ -277,8 +295,11 @@ func _create_idle_animation() -> void:
 	anim.track_insert_key(head_rot, cycle * 1.5, neutral)
 	anim.track_insert_key(head_rot, cycle * 1.75, look_right)
 	anim.track_insert_key(head_rot, cycle * 2.0, neutral)
+	_add_neutral_rotation_tracks(anim, ARM_PATHS)
 
 	var lib: AnimationLibrary = _get_or_create_library()
+	if lib.has_animation("idle"):
+		lib.remove_animation("idle")
 	lib.add_animation("idle", anim)
 
 
@@ -299,6 +320,21 @@ func _create_purchase_animation() -> void:
 	anim.track_insert_key(arm_rot, l * 0.3, raised)
 	anim.track_insert_key(arm_rot, l * 0.5, neutral)
 	anim.track_insert_key(arm_rot, l, neutral)
+
+	var hand_rot: int = anim.add_track(Animation.TYPE_ROTATION_3D)
+	anim.track_set_path(hand_rot, "BodyMesh/RightArm/RightHand")
+	var hand_raised := Quaternion.from_euler(
+		Vector3(deg_to_rad(-PURCHASE_RAISE_ANGLE * 0.35), 0.0, 0.0)
+	)
+	anim.track_insert_key(hand_rot, 0.0, neutral)
+	anim.track_insert_key(hand_rot, l * 0.1, hand_raised)
+	anim.track_insert_key(hand_rot, l * 0.3, hand_raised)
+	anim.track_insert_key(hand_rot, l * 0.5, neutral)
+	anim.track_insert_key(hand_rot, l, neutral)
+	_add_neutral_rotation_tracks(anim, [
+		"BodyMesh/LeftArm",
+		"BodyMesh/LeftArm/LeftHand",
+	])
 
 	var head_rot: int = anim.add_track(Animation.TYPE_ROTATION_3D)
 	anim.track_set_path(head_rot, "HeadMesh")
@@ -321,10 +357,12 @@ func _create_purchase_animation() -> void:
 	anim.track_insert_key(body_scale, l, normal_s)
 
 	var lib: AnimationLibrary = _get_or_create_library()
+	if lib.has_animation("purchase"):
+		lib.remove_animation("purchase")
 	lib.add_animation("purchase", anim)
 
 
-func _create_leave_happy_animation() -> void:
+func _create_leaving_happy_animation() -> void:
 	var anim := Animation.new()
 	anim.loop_mode = Animation.LOOP_LINEAR
 	anim.length = LEAVE_HAPPY_SPEED
@@ -374,12 +412,17 @@ func _create_leave_happy_animation() -> void:
 
 	_add_arm_swing(anim, "BodyMesh/LeftArm", ARM_SWING_ANGLE, true)
 	_add_arm_swing(anim, "BodyMesh/RightArm", ARM_SWING_ANGLE, false)
+	_add_arm_swing(anim, "BodyMesh/LeftArm/LeftHand", HAND_SWING_ANGLE, true)
+	_add_arm_swing(
+		anim, "BodyMesh/RightArm/RightHand", HAND_SWING_ANGLE, false
+	)
 
 	var lib: AnimationLibrary = _get_or_create_library()
-	lib.add_animation("leave_happy", anim)
+	_set_library_animation(lib, "leaving_happy", anim)
+	_set_library_animation(lib, "leave_happy", anim.duplicate())
 
 
-func _create_leave_upset_animation() -> void:
+func _create_leaving_upset_animation() -> void:
 	var anim := Animation.new()
 	anim.loop_mode = Animation.LOOP_LINEAR
 	anim.length = LEAVE_UPSET_SPEED
@@ -411,9 +454,16 @@ func _create_leave_upset_animation() -> void:
 	var half_swing: float = ARM_SWING_ANGLE * 0.5
 	_add_arm_swing(anim, "BodyMesh/LeftArm", half_swing, true)
 	_add_arm_swing(anim, "BodyMesh/RightArm", half_swing, false)
+	_add_arm_swing(
+		anim, "BodyMesh/LeftArm/LeftHand", HAND_SWING_ANGLE * 0.5, true
+	)
+	_add_arm_swing(
+		anim, "BodyMesh/RightArm/RightHand", HAND_SWING_ANGLE * 0.5, false
+	)
 
 	var lib: AnimationLibrary = _get_or_create_library()
-	lib.add_animation("leave_upset", anim)
+	_set_library_animation(lib, "leaving_upset", anim)
+	_set_library_animation(lib, "leave_upset", anim.duplicate())
 
 
 ## Adds alternating arm rotation keyframes to an animation track.
@@ -436,6 +486,15 @@ func _add_arm_swing(
 	anim.track_insert_key(track, l * 0.25, neutral)
 	anim.track_insert_key(track, l * 0.5, second)
 	anim.track_insert_key(track, l * 0.75, neutral)
+	anim.track_insert_key(track, l, first)
+
+
+func _add_neutral_rotation_tracks(anim: Animation, paths: Array) -> void:
+	for path: String in paths:
+		var track: int = anim.add_track(Animation.TYPE_ROTATION_3D)
+		anim.track_set_path(track, path)
+		anim.track_insert_key(track, 0.0, Quaternion.IDENTITY)
+		anim.track_insert_key(track, anim.length, Quaternion.IDENTITY)
 
 
 func _get_or_create_library() -> AnimationLibrary:
@@ -444,3 +503,11 @@ func _get_or_create_library() -> AnimationLibrary:
 	var lib := AnimationLibrary.new()
 	_animation_player.add_animation_library("", lib)
 	return lib
+
+
+func _set_library_animation(
+	lib: AnimationLibrary, anim_name: String, anim: Animation
+) -> void:
+	if lib.has_animation(anim_name):
+		lib.remove_animation(anim_name)
+	lib.add_animation(anim_name, anim)

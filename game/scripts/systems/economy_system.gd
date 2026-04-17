@@ -303,6 +303,7 @@ func _record_transaction(
 ) -> void:
 	var transaction: Dictionary = {
 		"amount": amount,
+		"day": GameManager.get_current_day(),
 		"reason": reason,
 		"type": type,
 		"timestamp": _current_time_minutes,
@@ -416,6 +417,7 @@ func _restore_transactions(saved_txns: Variant) -> Array[Dictionary]:
 			var t: Dictionary = txn as Dictionary
 			restored.append({
 				"amount": float(t.get("amount", 0.0)),
+				"day": int(t.get("day", 1)),
 				"reason": str(t.get("reason", "")),
 				"type": int(t.get("type", 0)),
 				"timestamp": int(t.get("timestamp", 0)),

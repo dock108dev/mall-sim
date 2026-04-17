@@ -187,7 +187,7 @@ func spawn_customer(
 	)
 	var budget_mult: float = 1.0
 	if _reputation_system:
-		budget_mult = _reputation_system.get_budget_multiplier()
+		budget_mult = _reputation_system.get_budget_multiplier(used_store_id)
 	budget_mult *= DifficultySystemSingleton.get_modifier(&"customer_budget_multiplier")
 	var browse_mult: float = 1.0
 	if greeter:
@@ -537,7 +537,9 @@ func _update_max_customers() -> void:
 		return
 	var size_cat: String = store_def.size_category
 	if _reputation_system:
-		_max_customers = _reputation_system.get_max_customers(size_cat)
+		_max_customers = _reputation_system.get_max_customers(
+			size_cat, _store_id
+		)
 	elif size_cat == "medium" or size_cat == "large":
 		_max_customers = MAX_CUSTOMERS_MEDIUM
 	else:
