@@ -50,23 +50,23 @@ func test_all_required_fields_present() -> void:
 			"Item '%s' rarity '%s' invalid" % [item.id, item.rarity]
 		)
 		assert_true(
-			item.extra.has("can_be_demo_unit"),
+			item.can_be_demo_unit is bool,
 			"Item '%s' missing can_be_demo_unit" % item.id
 		)
 		assert_true(
-			item.extra.has("monthly_depreciation_rate"),
+			item.monthly_depreciation_rate >= 0.0,
 			"Item '%s' missing monthly_depreciation_rate" % item.id
 		)
 		assert_true(
-			item.extra.has("launch_spike_eligible"),
+			item.launch_spike_eligible is bool,
 			"Item '%s' missing launch_spike_eligible" % item.id
 		)
 		assert_true(
-			item.extra.has("launch_spike_multiplier"),
+			item.launch_spike_multiplier >= 1.0,
 			"Item '%s' missing launch_spike_multiplier" % item.id
 		)
 		assert_true(
-			item.extra.has("supplier_tier"),
+			item.supplier_tier > 0,
 			"Item '%s' missing supplier_tier" % item.id
 		)
 
@@ -100,12 +100,12 @@ func test_demo_unit_minimum_count() -> void:
 	var items: Array[ItemDefinition] = _get_electronics_items()
 	var count: Array = [0]
 	for item: ItemDefinition in items:
-		if item.extra.get("can_be_demo_unit", false):
+		if item.can_be_demo_unit:
 			count[0] += 1
 	assert_gte(
 		count[0],
 		MIN_DEMO_UNIT_COUNT,
-		"Need >= %d demo-unit items, got %d" % [MIN_DEMO_UNIT_COUNT, count]
+		"Need >= %d demo-unit items, got %d" % [MIN_DEMO_UNIT_COUNT, count[0]]
 	)
 
 
@@ -113,15 +113,15 @@ func test_launch_spike_minimum_count() -> void:
 	var items: Array[ItemDefinition] = _get_electronics_items()
 	var count: Array = [0]
 	for item: ItemDefinition in items:
-		var eligible: bool = item.extra.get("launch_spike_eligible", false)
-		var multiplier: float = float(item.extra.get("launch_spike_multiplier", 1.0))
+		var eligible: bool = item.launch_spike_eligible
+		var multiplier: float = item.launch_spike_multiplier
 		if eligible and multiplier > LAUNCH_SPIKE_MULTIPLIER_THRESHOLD:
 			count[0] += 1
 	assert_gte(
 		count[0],
 		MIN_LAUNCH_SPIKE_COUNT,
 		"Need >= %d items with launch_spike_eligible and multiplier > %.1f, got %d"
-		% [MIN_LAUNCH_SPIKE_COUNT, LAUNCH_SPIKE_MULTIPLIER_THRESHOLD, count]
+		% [MIN_LAUNCH_SPIKE_COUNT, LAUNCH_SPIKE_MULTIPLIER_THRESHOLD, count[0]]
 	)
 
 
@@ -143,7 +143,7 @@ func test_base_prices_in_valid_range() -> void:
 func test_depreciation_rates_in_valid_range() -> void:
 	var items: Array[ItemDefinition] = _get_electronics_items()
 	for item: ItemDefinition in items:
-		var rate: float = float(item.extra.get("monthly_depreciation_rate", 0.0))
+		var rate: float = item.monthly_depreciation_rate
 		assert_gte(
 			rate, 0.0,
 			"Item '%s' monthly_depreciation_rate %.3f below 0.0" % [item.id, rate]
@@ -157,7 +157,7 @@ func test_depreciation_rates_in_valid_range() -> void:
 func test_supplier_tiers_valid() -> void:
 	var items: Array[ItemDefinition] = _get_electronics_items()
 	for item: ItemDefinition in items:
-		var tier: int = int(item.extra.get("supplier_tier", 0))
+		var tier: int = item.supplier_tier
 		assert_gte(
 			tier, 1,
 			"Item '%s' supplier_tier %d below minimum 1" % [item.id, tier]

@@ -4,6 +4,16 @@ extends GutTest
 const IndicatorScene: PackedScene = preload(
 	"res://game/scenes/characters/customer_state_indicator.tscn"
 )
+const CustomerScene: PackedScene = preload(
+	"res://game/scenes/characters/customer.tscn"
+)
+
+const STATE_BROWSING: int = 1
+const STATE_INTERESTED: int = 2
+const STATE_READY_TO_BUY: int = 3
+const STATE_LEAVING: int = 5
+const STATE_HAGGLING: int = 6
+const STATE_DISSATISFIED: int = 7
 
 var _indicator: Node3D
 var _mock_customer: Node3D
@@ -77,3 +87,45 @@ func test_purchasing_state_shows_green() -> void:
 	assert_almost_eq(sprite.modulate.r, 0.2, 0.01)
 	assert_almost_eq(sprite.modulate.g, 0.8, 0.01)
 	assert_almost_eq(sprite.modulate.b, 0.2, 0.01)
+
+
+func test_issue_states_have_distinct_indicator_colors() -> void:
+	var colors: Array[Color] = []
+	for state: int in [
+		STATE_BROWSING,
+		STATE_INTERESTED,
+		STATE_READY_TO_BUY,
+		STATE_HAGGLING,
+		STATE_DISSATISFIED,
+		STATE_LEAVING,
+	]:
+		EventBus.customer_state_changed.emit(_mock_customer, state)
+		colors.append(_indicator.get_node("Sprite3D").modulate)
+
+	for i: int in colors.size():
+		for j: int in range(i + 1, colors.size()):
+			assert_false(
+				_colors_match_rgb(colors[i], colors[j]),
+				"indicator states should use distinct placeholder visuals"
+			)
+
+
+func test_customer_scene_contains_indicator_component() -> void:
+	var customer: Node = CustomerScene.instantiate()
+	add_child_autofree(customer)
+	var indicator: Node = customer.get_node_or_null("CustomerStateIndicator")
+	assert_not_null(indicator)
+	assert_not_null(indicator.get_node_or_null("Sprite3D"))
+
+
+func test_indicator_sprite_uses_billboard_mode() -> void:
+	var sprite: Sprite3D = _indicator.get_node("Sprite3D")
+	assert_eq(sprite.billboard, BaseMaterial3D.BILLBOARD_ENABLED)
+
+
+func _colors_match_rgb(left: Color, right: Color) -> bool:
+	return (
+		is_equal_approx(left.r, right.r)
+		and is_equal_approx(left.g, right.g)
+		and is_equal_approx(left.b, right.b)
+	)

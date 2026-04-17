@@ -42,7 +42,10 @@ func maybe_show_hint(trigger: StringName) -> void:
 
 
 func disable() -> void:
+	if not _active:
+		return
 	_active = false
+	EventBus.onboarding_disabled.emit()
 
 
 func is_active() -> bool:

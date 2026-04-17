@@ -15,6 +15,8 @@ const ENTRY_ZONE_SIZE := Vector3(2.0, 2.0, 1.0)
 const ENTRY_ZONE_OFFSET := Vector3(0.0, 1.0, 0.7)
 const LEASE_MARKER_STATE_LOCKED: StringName = &"locked"
 const LEASE_MARKER_STATE_AVAILABLE: StringName = &"available"
+const SIGN_MATERIAL_LIT: StringName = &"lit_sign"
+const SIGN_MATERIAL_DIM: StringName = &"dim_sign"
 const STOREFRONT_HIGHLIGHT_COLOR := Color(1.0, 0.45, 0.3, 1.0)
 const STOREFRONT_HIGHLIGHT_WIDTH := 0.02
 
@@ -56,6 +58,7 @@ var _entry_zone: Area3D
 var _lease_marker_mesh: MeshInstance3D
 var _is_store_open: bool = false
 static var _lease_marker_materials: Dictionary = {}
+static var _sign_materials: Dictionary = {}
 
 
 func _ready() -> void:
@@ -155,7 +158,11 @@ func _build_visual() -> void:
 
 
 func _build_facade() -> void:
-	var facade_body := StaticBody3D.new()
+	var facade_body := get_node_or_null("FacadeBody") as StaticBody3D
+	if facade_body != null:
+		return
+
+	facade_body = StaticBody3D.new()
 	facade_body.name = "FacadeBody"
 	add_child(facade_body)
 
@@ -318,6 +325,10 @@ func _build_windows() -> void:
 
 
 func _build_sign() -> void:
+	_sign_label = get_node_or_null("SignLabel") as Label3D
+	if _sign_label != null:
+		return
+
 	_sign_label = Label3D.new()
 	_sign_label.name = "SignLabel"
 	_sign_label.position = SIGN_OFFSET
@@ -354,23 +365,38 @@ func _build_status_sign() -> void:
 
 
 func _build_entry_zone() -> void:
-	_entry_zone = Area3D.new()
-	_entry_zone.name = "EntryZone"
-	_entry_zone.position = ENTRY_ZONE_OFFSET
-	# Collision layer 0 (default) so it doesn't interfere with interactables
+	_entry_zone = get_node_or_null("EntryZone") as Area3D
+	if _entry_zone == null:
+		_entry_zone = Area3D.new()
+		_entry_zone.name = "EntryZone"
+		_entry_zone.position = ENTRY_ZONE_OFFSET
+		add_child(_entry_zone)
+
 	_entry_zone.collision_layer = 0
 	_entry_zone.collision_mask = 1
 	_entry_zone.monitoring = true
 	_entry_zone.monitorable = false
-	add_child(_entry_zone)
 
-	var col := CollisionShape3D.new()
-	col.shape = BoxShape3D.new()
-	(col.shape as BoxShape3D).size = ENTRY_ZONE_SIZE
-	_entry_zone.add_child(col)
+	var col := _entry_zone.get_node_or_null(
+		"EntryZoneCollision"
+	) as CollisionShape3D
+	if col == null:
+		col = CollisionShape3D.new()
+		col.name = "EntryZoneCollision"
+		_entry_zone.add_child(col)
+	if col.shape == null:
+		col.shape = BoxShape3D.new()
+	if col.shape is BoxShape3D:
+		(col.shape as BoxShape3D).size = ENTRY_ZONE_SIZE
 
-	_entry_zone.body_entered.connect(_on_entry_zone_body_entered)
-	_entry_zone.body_exited.connect(_on_entry_zone_body_exited)
+	if not _entry_zone.body_entered.is_connected(
+		_on_entry_zone_body_entered
+	):
+		_entry_zone.body_entered.connect(_on_entry_zone_body_entered)
+	if not _entry_zone.body_exited.is_connected(
+		_on_entry_zone_body_exited
+	):
+		_entry_zone.body_exited.connect(_on_entry_zone_body_exited)
 
 
 func _update_sign() -> void:
@@ -380,18 +406,22 @@ func _update_sign() -> void:
 	if store_id == "renovation":
 		_sign_label.text = "Under Renovation"
 		_sign_label.modulate = Color(0.9, 0.6, 0.2)
+		_sign_label.material_override = _get_sign_material(SIGN_MATERIAL_DIM)
 	elif is_owned:
 		_sign_label.text = store_name if store_name != "" else store_type
 		_sign_label.modulate = Color(1.0, 0.95, 0.8)
 		_sign_label.outline_modulate = Color(0.2, 0.15, 0.05)
+		_sign_label.material_override = _get_sign_material(SIGN_MATERIAL_LIT)
 	elif is_locked:
 		_sign_label.text = "Coming Soon"
 		_sign_label.modulate = Color(0.35, 0.35, 0.35)
 		_sign_label.outline_modulate = Color(0.1, 0.1, 0.1)
+		_sign_label.material_override = _get_sign_material(SIGN_MATERIAL_DIM)
 	else:
 		_sign_label.text = "For Lease — $%d/day" % int(daily_rent)
 		_sign_label.modulate = Color(0.5, 0.5, 0.45)
 		_sign_label.outline_modulate = Color(0.15, 0.15, 0.1)
+		_sign_label.material_override = _get_sign_material(SIGN_MATERIAL_DIM)
 
 
 func _update_status_sign() -> void:
@@ -471,6 +501,7 @@ func _on_entry_zone_body_entered(body: Node3D) -> void:
 	if store_id.is_empty():
 		return
 	EventBus.storefront_zone_entered.emit(store_id)
+	EventBus.storefront_entered.emit(slot_index, store_id)
 
 
 func _on_entry_zone_body_exited(body: Node3D) -> void:
@@ -479,6 +510,7 @@ func _on_entry_zone_body_exited(body: Node3D) -> void:
 	if store_id.is_empty():
 		return
 	EventBus.storefront_zone_exited.emit(store_id)
+	EventBus.storefront_exited.emit()
 
 
 func _on_door_interacted() -> void:
@@ -522,4 +554,19 @@ static func _get_lease_marker_material(
 			material.albedo_color = Color(0.22, 0.22, 0.24, 1.0)
 			material.emission_enabled = false
 	_lease_marker_materials[state] = material
+	return material
+
+
+static func _get_sign_material(state: StringName) -> StandardMaterial3D:
+	if _sign_materials.has(state):
+		return _sign_materials[state] as StandardMaterial3D
+
+	var material := StandardMaterial3D.new()
+	material.resource_name = String(state)
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+	material.albedo_color = Color(1.0, 0.92, 0.64, 1.0)
+	material.emission_enabled = state == SIGN_MATERIAL_LIT
+	material.emission = Color(1.0, 0.72, 0.28, 1.0)
+	material.emission_energy_multiplier = 0.65 if state == SIGN_MATERIAL_LIT else 0.0
+	_sign_materials[state] = material
 	return material

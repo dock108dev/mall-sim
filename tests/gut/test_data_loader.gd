@@ -432,18 +432,18 @@ func test_item_json_uses_item_name_not_name() -> void:
 				continue
 			var d: Dictionary = entry as Dictionary
 			assert_true(
-				d.has("display_name"),
-				"Entry '%s' in %s should use 'display_name'"
+				d.has("item_name"),
+				"Entry '%s' in %s should use 'item_name'"
 				% [d.get("id", "?"), path]
 			)
 			assert_true(
-				d.has("base_value"),
-				"Entry '%s' in %s should use 'base_value'"
+				d.has("base_price"),
+				"Entry '%s' in %s should use 'base_price'"
 				% [d.get("id", "?"), path]
 			)
 			assert_true(
-				d.has("condition_variants"),
-				"Entry '%s' in %s should use 'condition_variants'"
+				d.has("condition_range"),
+				"Entry '%s' in %s should use 'condition_range'"
 				% [d.get("id", "?"), path]
 			)
 			assert_false(
@@ -452,18 +452,18 @@ func test_item_json_uses_item_name_not_name() -> void:
 				% [d.get("id", "?"), path]
 			)
 			assert_false(
-				d.has("item_name"),
-				"Entry '%s' in %s should not use 'item_name'"
+				d.has("display_name"),
+				"Entry '%s' in %s should not use 'display_name'"
 				% [d.get("id", "?"), path]
 			)
 			assert_false(
-				d.has("base_price"),
-				"Entry '%s' in %s should not use 'base_price'"
+				d.has("base_value"),
+				"Entry '%s' in %s should not use 'base_value'"
 				% [d.get("id", "?"), path]
 			)
 			assert_false(
-				d.has("condition_range"),
-				"Entry '%s' in %s should not use 'condition_range'"
+				d.has("condition_variants"),
+				"Entry '%s' in %s should not use 'condition_variants'"
 				% [d.get("id", "?"), path]
 			)
 

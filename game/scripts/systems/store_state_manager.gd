@@ -118,6 +118,8 @@ func set_active_store(
 	var previous: StringName = active_store_id
 	active_store_id = canonical
 	GameManager.current_store_id = canonical
+	if previous != canonical:
+		EventBus.store_switched.emit(String(previous), String(canonical))
 	EventBus.active_store_changed.emit(canonical)
 	if emit_transition_events and not canonical.is_empty():
 		EventBus.store_entered.emit(canonical)

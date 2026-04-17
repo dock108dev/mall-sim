@@ -27,6 +27,24 @@ var _next_staff_id: int = 0
 var _stocker_behavior: StockerBehavior = null
 
 
+## Creates a hired staff record with a caller-provided staff_id.
+## Returns false when the id is already on the active roster or hire
+## validation fails.
+func hire_staff_by_id(
+	staff_id: String, definition_id: String, store_id: String
+) -> bool:
+	if staff_id.is_empty() or _has_staff_id(staff_id):
+		return false
+	var staff_data: Dictionary = _create_staff_record(
+		staff_id, definition_id, store_id
+	)
+	if staff_data.is_empty():
+		return false
+	_add_staff_to_roster(staff_data, store_id)
+	EventBus.staff_hired.emit(staff_id, store_id)
+	return true
+
+
 func initialize(
 	economy: EconomySystem,
 	reputation: ReputationSystem,
@@ -96,37 +114,18 @@ func get_staffed_store_ids() -> Array[String]:
 func hire_staff(
 	definition_id: String, store_id: String
 ) -> Dictionary:
-	if not can_hire():
-		EventBus.notification_requested.emit(
-			"Reputation too low to hire staff (need %.0f)"
-			% MIN_REPUTATION_TO_HIRE
-		)
-		return {}
-	if get_staff_count(store_id) >= MAX_STAFF_PER_STORE:
-		EventBus.notification_requested.emit(
-			"Store already has maximum staff (%d)"
-			% MAX_STAFF_PER_STORE
-		)
-		return {}
-	var def: StaffDefinition = _get_staff_definition(definition_id)
-	if not def:
-		push_warning(
-			"StaffSystem: definition '%s' not found" % definition_id
-		)
-		return {}
 	_next_staff_id += 1
-	var staff_data: Dictionary = {
-		"instance_id": "staff_%d" % _next_staff_id,
-		"definition_id": definition_id,
-		"store_id": store_id,
-		"hired_day": GameManager.current_day,
-	}
-	if not _hired_staff.has(store_id):
-		_hired_staff[store_id] = []
-	(_hired_staff[store_id] as Array).append(staff_data)
+	var staff_data: Dictionary = _create_staff_record(
+		"staff_%d" % _next_staff_id, definition_id, store_id
+	)
+	if staff_data.is_empty():
+		_next_staff_id -= 1
+		return {}
+	_add_staff_to_roster(staff_data, store_id)
 	EventBus.staff_hired.emit(
 		staff_data["instance_id"], store_id
 	)
+	var def: StaffDefinition = _get_staff_definition(definition_id)
 	EventBus.notification_requested.emit(
 		"Hired %s for $%.0f/day" % [def.name, def.daily_wage]
 	)
@@ -152,6 +151,30 @@ func fire_staff(instance_id: String, store_id: String) -> bool:
 			)
 			return true
 	return false
+
+
+## Returns the current morale for an active staff member, or -1.0 when
+## the staff_id is not hired.
+func get_staff_morale(staff_id: String) -> float:
+	var entry: Dictionary = _find_staff_entry(staff_id)
+	if entry.is_empty():
+		return -1.0
+	return float(entry.get("morale", StaffDefinition.DEFAULT_MORALE))
+
+
+## Updates morale for an active staff member and emits staff_morale_changed.
+func set_staff_morale(staff_id: String, new_morale: float) -> bool:
+	var entry: Dictionary = _find_staff_entry(staff_id)
+	if entry.is_empty():
+		return false
+	var clamped_morale: float = clampf(
+		new_morale,
+		StaffDefinition.MIN_MORALE,
+		StaffDefinition.MAX_MORALE
+	)
+	entry["morale"] = clamped_morale
+	EventBus.staff_morale_changed.emit(staff_id, clamped_morale)
+	return true
 
 
 ## Sets the price policy for a store (min/max ratio of market value).
@@ -373,6 +396,14 @@ func _apply_state(data: Dictionary) -> void:
 							"definition_id": str(e.get("definition_id", "")),
 							"store_id": str(e.get("store_id", "")),
 							"hired_day": int(e.get("hired_day", 0)),
+							"morale": clampf(
+								float(e.get(
+									"morale",
+									StaffDefinition.DEFAULT_MORALE
+								)),
+								StaffDefinition.MIN_MORALE,
+								StaffDefinition.MAX_MORALE
+							),
 						})
 			_hired_staff[store_id] = entries
 	var saved_policies: Variant = data.get("price_policies", {})
@@ -385,3 +416,55 @@ func _apply_state(data: Dictionary) -> void:
 				_price_policies[store_id] = (
 					raw as Dictionary
 				).duplicate()
+
+
+func _create_staff_record(
+	instance_id: String, definition_id: String, store_id: String
+) -> Dictionary:
+	if not can_hire():
+		EventBus.notification_requested.emit(
+			"Reputation too low to hire staff (need %.0f)"
+			% MIN_REPUTATION_TO_HIRE
+		)
+		return {}
+	if get_staff_count(store_id) >= MAX_STAFF_PER_STORE:
+		EventBus.notification_requested.emit(
+			"Store already has maximum staff (%d)"
+			% MAX_STAFF_PER_STORE
+		)
+		return {}
+	var def: StaffDefinition = _get_staff_definition(definition_id)
+	if not def:
+		push_warning(
+			"StaffSystem: definition '%s' not found" % definition_id
+		)
+		return {}
+	return {
+		"instance_id": instance_id,
+		"definition_id": definition_id,
+		"store_id": store_id,
+		"hired_day": GameManager.current_day,
+		"morale": StaffDefinition.DEFAULT_MORALE,
+	}
+
+
+func _add_staff_to_roster(
+	staff_data: Dictionary, store_id: String
+) -> void:
+	if not _hired_staff.has(store_id):
+		_hired_staff[store_id] = []
+	(_hired_staff[store_id] as Array).append(staff_data)
+
+
+func _has_staff_id(staff_id: String) -> bool:
+	return not _find_staff_entry(staff_id).is_empty()
+
+
+func _find_staff_entry(staff_id: String) -> Dictionary:
+	for store_id: String in _hired_staff:
+		for entry: Variant in _hired_staff[store_id]:
+			if entry is Dictionary:
+				var staff_entry: Dictionary = entry as Dictionary
+				if staff_entry.get("instance_id", "") == staff_id:
+					return staff_entry
+	return {}

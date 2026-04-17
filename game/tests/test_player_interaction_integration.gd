@@ -1,70 +1,148 @@
-## Integration test: player interaction ray triggers interactable and store entry signals.
+## Integration test: player camera ray triggers interactions and store entry.
 extends GutTest
 
-const STORE_ID: StringName = &"test_store"
+const PLAYER_SCENE: PackedScene = preload(
+	"res://game/scenes/player/player_controller.tscn"
+)
+const INTERACTION_RAY_SCRIPT: Script = preload(
+	"res://game/scripts/player/interaction_ray.gd"
+)
+const STORE_ID: StringName = &"sports"
+const VIEWPORT_SIZE := Vector2i(320, 240)
 
+
+class MockInteractable extends Interactable:
+	var interact_calls: int = 0
+
+	func interact() -> void:
+		interact_calls += 1
+		super()
+
+
+var _viewport: SubViewport
+var _player: PlayerController
 var _interaction_ray: Node
-var _interacted_count: int = 0
 var _store_entered_ids: Array[StringName] = []
-var _bridge_connected: bool = false
-var _unfocused_count: int = 0
 
 
 func before_each() -> void:
-	_interacted_count = 0
 	_store_entered_ids.clear()
-	_bridge_connected = false
-	_unfocused_count = 0
+	_viewport = SubViewport.new()
+	_viewport.size = VIEWPORT_SIZE
+	_viewport.own_world_3d = true
+	_viewport.disable_3d = false
+	add_child_autofree(_viewport)
 
-	_interaction_ray = load(
-		"res://game/scripts/player/interaction_ray.gd"
-	).new()
-	add_child_autofree(_interaction_ray)
+	_player = PLAYER_SCENE.instantiate() as PlayerController
+	_viewport.add_child(_player)
+	_player.set_pivot(Vector3.ZERO)
+	_player.set_camera_angles(0.0, 40.0)
+	_player.set_zoom_distance(8.0)
+	_player.get_camera().current = true
+
+	_interaction_ray = INTERACTION_RAY_SCRIPT.new()
+	_viewport.add_child(_interaction_ray)
 
 	EventBus.store_entered.connect(_on_store_entered)
-	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
+
+	await get_tree().process_frame
+	_interaction_ray._apply_camera(_player.get_camera())
+	await get_tree().physics_frame
 
 
 func after_each() -> void:
 	if EventBus.store_entered.is_connected(_on_store_entered):
 		EventBus.store_entered.disconnect(_on_store_entered)
-	if EventBus.interactable_unfocused.is_connected(
-		_on_interactable_unfocused
-	):
-		EventBus.interactable_unfocused.disconnect(
-			_on_interactable_unfocused
-		)
-	if _bridge_connected and EventBus.interactable_interacted.is_connected(
-		_on_storefront_interacted_bridge
-	):
-		EventBus.interactable_interacted.disconnect(_on_storefront_interacted_bridge)
 
 
-# ── Signal handlers ────────────────────────────────────────────────────────────
+func test_interactable_within_range_calls_interact_after_input() -> void:
+	var interactable := _add_mock_interactable(_point_on_camera_ray(8.0))
 
-func _on_interacted() -> void:
-	_interacted_count += 1
+	await _refresh_interaction_ray(20.0)
+	assert_same(
+		_interaction_ray.get_hovered_target(),
+		interactable,
+		"InteractionRay should detect the interactable under the player camera"
+	)
 
+	_interaction_ray._unhandled_input(_make_interact_event())
 
-func _on_store_entered(store_id: StringName) -> void:
-	_store_entered_ids.append(store_id)
-
-
-func _on_interactable_unfocused() -> void:
-	_unfocused_count += 1
-
-
-## Bridges interactable_interacted(STOREFRONT) → store_entered to simulate
-## the minimal wiring done by Storefront + MallHallway + StoreSelectorSystem
-## without requiring those full scene nodes in the test.
-func _on_storefront_interacted_bridge(
-	_target: Interactable, interaction_type: int
-) -> void:
-	if interaction_type == Interactable.InteractionType.STOREFRONT:
-		EventBus.store_entered.emit(STORE_ID)
+	assert_eq(
+		interactable.interact_calls,
+		1,
+		"Interact input should call interact() on the hovered target"
+	)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+func test_interactable_out_of_range_does_not_call_interact() -> void:
+	var interactable := _add_mock_interactable(_point_on_camera_ray(8.0))
+
+	await _refresh_interaction_ray(3.0)
+	assert_null(
+		_interaction_ray.get_hovered_target(),
+		"InteractionRay should not hover a target beyond ray range"
+	)
+
+	_interaction_ray._unhandled_input(_make_interact_event())
+
+	assert_eq(
+		interactable.interact_calls,
+		0,
+		"Interact input should not call interact() when the target is out of range"
+	)
+
+
+func test_storefront_interaction_emits_store_entered_with_store_id() -> void:
+	var storefront := _add_storefront(_point_on_camera_ray(8.0))
+	storefront.door_interacted.connect(_on_storefront_door_interacted)
+
+	await _refresh_interaction_ray(20.0)
+	var hovered: Interactable = _interaction_ray.get_hovered_target()
+	assert_not_null(hovered, "InteractionRay should detect the storefront door")
+	if hovered == null:
+		return
+	assert_eq(
+		hovered.interaction_type,
+		Interactable.InteractionType.STOREFRONT,
+		"Storefront door should be detected as a storefront interactable"
+	)
+
+	_interaction_ray._unhandled_input(_make_interact_event())
+
+	assert_eq(
+		_store_entered_ids,
+		[STORE_ID],
+		"Storefront interaction should emit store_entered with the correct store_id"
+	)
+
+
+func _add_mock_interactable(position: Vector3) -> MockInteractable:
+	var interactable := MockInteractable.new()
+	interactable.name = "MockInteractable"
+	interactable.interaction_type = Interactable.InteractionType.ITEM
+	interactable.display_name = "Mock Item"
+	interactable.position = position
+	interactable.add_child(_make_collision_shape(Vector3(1.0, 1.0, 1.0)))
+	_viewport.add_child(interactable)
+	return interactable
+
+
+func _add_storefront(position: Vector3) -> Storefront:
+	var storefront := Storefront.new()
+	storefront.name = "MockStorefront"
+	storefront.position = position
+	_viewport.add_child(storefront)
+	storefront.set_owned(String(STORE_ID), "Test Store")
+	return storefront
+
+
+func _make_collision_shape(size: Vector3) -> CollisionShape3D:
+	var shape := BoxShape3D.new()
+	shape.size = size
+	var collision_shape := CollisionShape3D.new()
+	collision_shape.shape = shape
+	return collision_shape
+
 
 func _make_interact_event() -> InputEventAction:
 	var event := InputEventAction.new()
@@ -73,98 +151,25 @@ func _make_interact_event() -> InputEventAction:
 	return event
 
 
-func _make_interactable(
-	type: Interactable.InteractionType, label: String
-) -> Interactable:
-	var interactable := Interactable.new()
-	interactable.interaction_type = type
-	interactable.display_name = label
-	add_child_autofree(interactable)
-	return interactable
-
-
-# ── Tests ─────────────────────────────────────────────────────────────────────
-
-func test_interact_input_calls_interact_on_hovered_target() -> void:
-	var interactable: Interactable = _make_interactable(
-		Interactable.InteractionType.ITEM, "Test Item"
-	)
-	interactable.interacted.connect(_on_interacted)
-
-	_interaction_ray._hovered_target = interactable
-	_interaction_ray._unhandled_input(_make_interact_event())
-
-	assert_eq(
-		_interacted_count, 1,
-		"interact() must be called on the hovered target when interact is pressed"
-	)
-
-
-func test_interact_input_out_of_range_does_not_call_interact() -> void:
-	var interactable: Interactable = _make_interactable(
-		Interactable.InteractionType.ITEM, "Out of Range Item"
-	)
-	interactable.interacted.connect(_on_interacted)
-
-	# _hovered_target remains null — simulates interactable outside ray range
-	_interaction_ray._unhandled_input(_make_interact_event())
-
-	assert_eq(
-		_interacted_count, 0,
-		"interact() must NOT be called when no interactable is within ray range"
-	)
-
-
-func test_storefront_interaction_emits_store_entered() -> void:
-	EventBus.interactable_interacted.connect(_on_storefront_interacted_bridge)
-	_bridge_connected = true
-
-	var storefront: Interactable = _make_interactable(
-		Interactable.InteractionType.STOREFRONT, "Test Store"
-	)
-
-	_interaction_ray._hovered_target = storefront
-	_interaction_ray._unhandled_input(_make_interact_event())
-
-	assert_eq(
-		_store_entered_ids.size(), 1,
-		"store_entered must fire exactly once on storefront interaction"
-	)
-	assert_eq(
-		_store_entered_ids[0], STORE_ID,
-		"store_entered must carry the correct store_id"
-	)
-
-
-func test_resolve_interactable_from_child_area() -> void:
-	var interactable: Interactable = _make_interactable(
-		Interactable.InteractionType.ITEM, "Area Target"
-	)
-
-	var resolved: Interactable = _interaction_ray._resolve_interactable(
-		interactable.get_interaction_area()
-	)
-
-	assert_same(
-		resolved, interactable,
-		"Ray hits on the child Area3D should resolve back to the Interactable"
-	)
-
-
-func test_hovered_target_clears_when_interactable_exits_tree() -> void:
-	var interactable: Interactable = _make_interactable(
-		Interactable.InteractionType.ITEM, "Transient Target"
-	)
-
-	_interaction_ray._set_hovered_target(interactable)
-	interactable.queue_free()
+func _refresh_interaction_ray(ray_distance: float) -> void:
+	_interaction_ray.ray_distance = ray_distance
 	await get_tree().process_frame
+	await get_tree().physics_frame
+	_interaction_ray._update_raycast()
 
-	assert_null(
-		_interaction_ray.get_hovered_target(),
-		"Hovered target should clear when an interactable leaves the scene tree"
+
+func _point_on_camera_ray(distance: float) -> Vector3:
+	var camera := _player.get_camera()
+	var mouse_position := _viewport.get_mouse_position()
+	return (
+		camera.project_ray_origin(mouse_position)
+		+ camera.project_ray_normal(mouse_position) * distance
 	)
-	assert_eq(
-		_unfocused_count, 1,
-		"Store transitions should clear the prompt when the focused interactable exits"
-	)
+
+
+func _on_storefront_door_interacted(storefront: Storefront) -> void:
+	EventBus.store_entered.emit(StringName(storefront.store_id))
+
+
+func _on_store_entered(store_id: StringName) -> void:
+	_store_entered_ids.append(store_id)

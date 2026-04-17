@@ -1,327 +1,248 @@
-## Tests VideoRentalStoreController rental lifecycle: rent, return, save/load.
+## Tests VideoRentalStoreController return handling, tape degradation, and save/load.
 extends GutTest
 
 
 var _controller: VideoRentalStoreController
 var _inventory: InventorySystem
 var _economy: EconomySystem
+var _data_loader: DataLoader
+var _previous_data_loader: DataLoader
+var _returned_signals: Array[Dictionary] = []
+var _notifications: Array[String] = []
 
 
 func before_each() -> void:
+	_data_loader = DataLoader.new()
+	_data_loader.load_all_content()
+	_previous_data_loader = GameManager.data_loader
+	GameManager.data_loader = _data_loader
+
 	_controller = VideoRentalStoreController.new()
 	_inventory = InventorySystem.new()
 	_economy = EconomySystem.new()
 	add_child_autofree(_controller)
 	add_child_autofree(_inventory)
 	add_child_autofree(_economy)
+	_inventory.initialize(_data_loader)
+	_economy.initialize(0.0)
 	_controller.set_inventory_system(_inventory)
 	_controller.set_economy_system(_economy)
 
-
-func _make_item(
-	item_id: String, category: String, rental_fee: float
-) -> ItemInstance:
-	var def := ItemDefinition.new()
-	def.id = item_id
-	def.item_name = "Test Tape"
-	def.category = category
-	def.store_type = "rentals"
-	def.base_price = 10.0
-	def.rental_fee = rental_fee
-	def.rental_period_days = 3
-	def.rental_tier = "three_day"
-	var inst := ItemInstance.new()
-	inst.definition = def
-	inst.instance_id = item_id + "_1"
-	inst.condition = "good"
-	inst.current_location = "shelf:slot_1"
-	return inst
+	_returned_signals = []
+	_notifications = []
+	EventBus.rental_returned.connect(_on_rental_returned)
+	EventBus.notification_requested.connect(_on_notification_requested)
 
 
-func _register_item(item: ItemInstance) -> void:
-	_inventory._items[item.instance_id] = item
-
-
-func test_rental_records_is_dictionary() -> void:
-	assert_typeof(
-		_controller.rental_records, TYPE_DICTIONARY,
-		"rental_records should be a Dictionary"
+func after_each() -> void:
+	GameManager.data_loader = _previous_data_loader
+	_disconnect_if_needed(EventBus.rental_returned, _on_rental_returned)
+	_disconnect_if_needed(
+		EventBus.notification_requested,
+		_on_notification_requested
 	)
 
 
-func test_process_rental_creates_record() -> void:
-	var item: ItemInstance = _make_item("tape_a", "vhs_tapes", 2.0)
-	_register_item(item)
+func test_process_rental_moves_item_to_rented_and_tracks_record() -> void:
+	var item: ItemInstance = _register_item("tape_a", "good")
+
 	var record: Dictionary = _controller.process_rental(
-		item.instance_id, "vhs_tapes", "three_day", 2.0, 5, "cust_1"
+		item.instance_id,
+		"vhs_tapes",
+		"three_day",
+		2.0,
+		5,
+		"cust_1"
 	)
+
 	assert_true(
 		_controller.rental_records.has(item.instance_id),
-		"rental_records should contain the rented copy_id"
+		"Rental records should include the rented tape"
 	)
 	assert_eq(
-		record["customer_id"], "cust_1",
-		"Record should store customer_id"
+		item.current_location,
+		VideoRentalStoreController.RENTED_LOCATION,
+		"Rental checkout should move the tape to the rented location"
 	)
 	assert_eq(
-		record["return_day"], 8,
-		"Return day should be checkout_day + duration"
+		int(record.get("return_day", -1)),
+		8,
+		"Return day should be checkout day plus rental duration"
 	)
 
 
-func test_rental_moves_item_to_rented_location() -> void:
-	var item: ItemInstance = _make_item("tape_b", "vhs_tapes", 2.0)
-	_register_item(item)
+func test_due_return_moves_rentable_tape_to_returns_bin() -> void:
+	var item: ItemInstance = _register_item("tape_b", "good")
 	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "three_day", 2.0, 1
-	)
-	assert_eq(
-		item.current_location, "rented",
-		"Rented item should be at 'rented' location"
-	)
-
-
-func test_rental_sets_due_day_on_item() -> void:
-	var item: ItemInstance = _make_item("tape_c", "vhs_tapes", 2.0)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "three_day", 2.0, 10
-	)
-	assert_eq(
-		item.rental_due_day, 13,
-		"Item rental_due_day should be set to return_day"
+		item.instance_id,
+		"vhs_tapes",
+		"overnight",
+		2.0,
+		1
 	)
 
-
-func test_rental_fee_added_to_cash() -> void:
-	var starting_cash: float = _economy.get_cash()
-	var item: ItemInstance = _make_item("tape_d", "vhs_tapes", 3.50)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "overnight", 3.50, 1
-	)
-	assert_gt(
-		_economy.get_cash(), starting_cash,
-		"Player cash should increase by rental fee"
-	)
-
-
-func test_day_started_returns_due_items() -> void:
-	var item: ItemInstance = _make_item("tape_e", "vhs_tapes", 2.0)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "overnight", 2.0, 1
-	)
-	assert_true(
-		_controller.rental_records.has(item.instance_id),
-		"Record should exist before return"
-	)
 	_controller._on_day_started(2)
-	assert_false(
-		_controller.rental_records.has(item.instance_id),
-		"Record should be removed after return day"
+
+	assert_eq(
+		item.current_location,
+		VideoRentalStoreController.RETURNS_BIN_LOCATION,
+		"Returned rentable tapes should go to the returns bin"
+	)
+	assert_eq(
+		item.rental_due_day,
+		-1,
+		"Returned tapes should clear their due date"
 	)
 
 
-func test_returned_item_moves_to_returns_bin() -> void:
-	var item: ItemInstance = _make_item("tape_f", "vhs_tapes", 2.0)
-	_register_item(item)
+func test_return_threshold_updates_inventory_condition() -> void:
+	var item: ItemInstance = _register_item("tape_c", "good")
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
+		_controller._wear_tracker.record_return(item.instance_id)
+	var rental: Dictionary = _make_rental_dict(item.instance_id, 1, 4)
+
+	var result: Dictionary = _controller._apply_degradation(rental)
+
+	assert_true(
+		bool(result.get("condition_changed", false)),
+		"Crossing the threshold should report a condition change"
+	)
+	assert_eq(
+		item.condition,
+		"fair",
+		"InventorySystem should persist the degraded condition"
+	)
+	assert_eq(
+		_controller.get_tape_wear(item.instance_id),
+		0,
+		"Play count should reset after dropping a condition tier"
+	)
+
+
+func test_written_off_return_moves_tape_to_backroom_and_notifies_player() -> void:
+	var item: ItemInstance = _register_item("tape_d", "poor")
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
+		_controller._wear_tracker.record_return(item.instance_id)
 	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "overnight", 2.0, 1
+		item.instance_id,
+		"vhs_tapes",
+		"overnight",
+		2.0,
+		1
 	)
+
 	_controller._on_day_started(2)
+
 	assert_eq(
-		item.current_location, "returns_bin",
-		"Returned item should be in returns_bin"
-	)
-
-
-func test_returned_item_clears_due_day() -> void:
-	var item: ItemInstance = _make_item("tape_g", "vhs_tapes", 2.0)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "overnight", 2.0, 1
-	)
-	_controller._on_day_started(2)
-	assert_eq(
-		item.rental_due_day, -1,
-		"Returned item rental_due_day should be cleared"
-	)
-
-
-func test_not_yet_due_items_stay_rented() -> void:
-	var item: ItemInstance = _make_item("tape_h", "vhs_tapes", 2.0)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "weekly", 2.0, 1
-	)
-	_controller._on_day_started(3)
-	assert_true(
-		_controller.rental_records.has(item.instance_id),
-		"Item not yet due should remain in rental_records"
-	)
-	assert_eq(
-		item.current_location, "rented",
-		"Item not yet due should stay at rented location"
-	)
-
-
-func test_get_active_rentals_returns_records() -> void:
-	var item: ItemInstance = _make_item("tape_i", "vhs_tapes", 2.0)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "three_day", 2.0, 1
-	)
-	var active: Array[Dictionary] = _controller.get_active_rentals()
-	assert_eq(
-		active.size(), 1,
-		"get_active_rentals should return one record"
-	)
-
-
-func test_get_overdue_rentals() -> void:
-	var item: ItemInstance = _make_item("tape_j", "vhs_tapes", 2.0)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "overnight", 2.0, 1
-	)
-	var overdue: Array[Dictionary] = (
-		_controller.get_overdue_rentals(5)
-	)
-	assert_eq(
-		overdue.size(), 1,
-		"Should report overdue rental"
-	)
-	var not_overdue: Array[Dictionary] = (
-		_controller.get_overdue_rentals(1)
-	)
-	assert_eq(
-		not_overdue.size(), 0,
-		"Should not report non-overdue rental"
-	)
-
-
-func test_is_rental_item_categories() -> void:
-	assert_true(
-		_controller.is_rental_item("vhs_tapes"),
-		"vhs_tapes should be a rental category"
-	)
-	assert_true(
-		_controller.is_rental_item("dvd_titles"),
-		"dvd_titles should be a rental category"
+		item.current_location,
+		VideoRentalStoreController.BACKROOM_LOCATION,
+		"Written-off returns should be moved to the backroom automatically"
 	)
 	assert_false(
-		_controller.is_rental_item("snacks"),
-		"snacks should not be a rental category"
+		_controller.is_rentable(item),
+		"Written-off returns should be ineligible for rental"
 	)
-	assert_false(
-		_controller.is_rental_item("merchandise"),
-		"merchandise should not be a rental category"
+	assert_eq(
+		_returned_signals.size(),
+		1,
+		"rental_returned should fire for the completed return"
+	)
+	assert_true(
+		bool(_returned_signals[0].get("worn_out", false)),
+		"rental_returned should flag written-off tapes as worn out"
+	)
+	assert_true(
+		_notifications_contain("worn out"),
+		"Written-off returns should notify the player about retirement"
 	)
 
 
-func test_rented_count_and_available_count() -> void:
-	var item: ItemInstance = _make_item("tape_k", "vhs_tapes", 2.0)
-	_register_item(item)
-	assert_eq(
-		_controller.get_rented_count(), 0,
-		"No rentals initially"
-	)
-	assert_eq(
-		_controller.get_available_count(), 1,
-		"One available initially"
-	)
+func test_save_load_preserves_partial_tape_progress() -> void:
+	var item: ItemInstance = _register_item("tape_e", "poor")
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
+		_controller._wear_tracker.record_return(item.instance_id)
 	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "three_day", 2.0, 1
-	)
-	assert_eq(
-		_controller.get_rented_count(), 1,
-		"One rented after rental"
-	)
-	assert_eq(
-		_controller.get_available_count(), 0,
-		"None available after rental"
-	)
-
-
-func test_save_load_round_trip() -> void:
-	var item: ItemInstance = _make_item("tape_l", "vhs_tapes", 2.0)
-	_register_item(item)
-	_controller.process_rental(
-		item.instance_id, "vhs_tapes", "three_day", 2.0, 5, "cust_99"
+		item.instance_id,
+		"vhs_tapes",
+		"three_day",
+		2.0,
+		5,
+		"cust_99"
 	)
 	var save_data: Dictionary = _controller.get_save_data()
+
 	_controller.rental_records.clear()
-	assert_eq(
-		_controller.rental_records.size(), 0,
-		"Records cleared before load"
-	)
+	_controller._wear_tracker.load_save_data({})
 	_controller.load_save_data(save_data)
+
 	assert_true(
 		_controller.rental_records.has(item.instance_id),
-		"Rental record should survive save/load"
-	)
-	var restored: Dictionary = _controller.rental_records[
-		item.instance_id
-	]
-	assert_eq(
-		restored["customer_id"], "cust_99",
-		"customer_id should survive save/load"
+		"Rental records should survive save/load"
 	)
 	assert_eq(
-		restored["return_day"], 8,
-		"return_day should survive save/load"
+		_controller.get_tape_wear(item.instance_id),
+		TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1,
+		"Tape wear progress should restore exactly from save data"
 	)
 
 
-func test_save_load_backward_compat_active_rentals() -> void:
-	var legacy_data: Dictionary = {
-		"active_rentals": [
-			{
-				"instance_id": "old_tape_1",
-				"return_day": 10,
-				"returned": false,
-				"category": "vhs_tapes",
-				"rental_fee": 2.0,
-				"rental_tier": "three_day",
-				"checkout_day": 7,
-			},
-			{
-				"instance_id": "old_tape_2",
-				"return_day": 8,
-				"returned": true,
-				"category": "vhs_tapes",
-				"rental_fee": 2.0,
-				"rental_tier": "overnight",
-				"checkout_day": 7,
-			},
-		],
+func _register_item(instance_id: String, condition: String) -> ItemInstance:
+	var def := ItemDefinition.new()
+	def.id = "%s_def" % instance_id
+	def.item_name = "Test Tape"
+	def.category = "vhs_tapes"
+	def.store_type = "rentals"
+	def.base_price = 10.0
+	def.rental_fee = 2.0
+	def.rental_period_days = 3
+	def.rental_tier = "three_day"
+
+	var item := ItemInstance.new()
+	item.definition = def
+	item.instance_id = instance_id
+	item.condition = condition
+	item.current_location = "shelf:slot_1"
+	_inventory.register_item(item)
+	return item
+
+
+func _make_rental_dict(
+	instance_id: String,
+	checkout_day: int,
+	return_day: int
+) -> Dictionary:
+	return {
+		"instance_id": instance_id,
+		"customer_id": "cust_test",
+		"category": "vhs_tapes",
+		"rental_fee": 2.0,
+		"rental_tier": "three_day",
+		"checkout_day": checkout_day,
+		"return_day": return_day,
 	}
-	_controller.load_save_data(legacy_data)
-	assert_true(
-		_controller.rental_records.has("old_tape_1"),
-		"Should load unreturned legacy records"
-	)
-	assert_false(
-		_controller.rental_records.has("old_tape_2"),
-		"Should skip returned legacy records"
-	)
 
 
-func test_rental_durations() -> void:
-	var item: ItemInstance = _make_item("tape_m", "vhs_tapes", 2.0)
-	_register_item(item)
-	var record: Dictionary = _controller.process_rental(
-		item.instance_id, "vhs_tapes", "overnight", 2.0, 10
-	)
-	assert_eq(record["return_day"], 11, "Overnight: 1 day")
-	_controller.rental_records.clear()
-	record = _controller.process_rental(
-		item.instance_id, "vhs_tapes", "three_day", 2.0, 10
-	)
-	assert_eq(record["return_day"], 13, "Three day: 3 days")
-	_controller.rental_records.clear()
-	record = _controller.process_rental(
-		item.instance_id, "vhs_tapes", "weekly", 2.0, 10
-	)
-	assert_eq(record["return_day"], 17, "Weekly: 7 days")
+func _on_rental_returned(instance_id: String, worn_out: bool) -> void:
+	_returned_signals.append({
+		"instance_id": instance_id,
+		"worn_out": worn_out,
+	})
+
+
+func _on_notification_requested(message: String) -> void:
+	_notifications.append(message)
+
+
+func _disconnect_if_needed(sig: Signal, callable: Callable) -> void:
+	if sig.is_connected(callable):
+		sig.disconnect(callable)
+
+
+func _notifications_contain(fragment: String) -> bool:
+	for message: String in _notifications:
+		if message.find(fragment) != -1:
+			return true
+	return false

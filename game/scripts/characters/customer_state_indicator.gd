@@ -4,13 +4,26 @@ extends Node3D
 const VISIBLE_DISTANCE: float = 8.0
 const FADE_DISTANCE: float = 10.0
 
+enum IndicatorState {
+	ENTERING = 0,
+	BROWSING = 1,
+	INTERESTED = 2,
+	READY_TO_BUY = 3,
+	WAITING_TO_BUY = 4,
+	LEAVING = 5,
+	HAGGLING = 6,
+	DISSATISFIED = 7,
+}
+
 const STATE_COLORS: Dictionary = {
-	0: Color(0.6, 0.6, 0.6, 1.0),
-	1: Color(0.6, 0.6, 0.6, 1.0),
-	2: Color(1.0, 0.85, 0.0, 1.0),
-	3: Color(0.2, 0.8, 0.2, 1.0),
-	4: Color(0.2, 0.8, 0.2, 1.0),
-	5: Color(0.7, 0.7, 0.7, 1.0),
+	IndicatorState.ENTERING: Color(0.55, 0.55, 0.55, 1.0),
+	IndicatorState.BROWSING: Color(0.6, 0.6, 0.6, 1.0),
+	IndicatorState.INTERESTED: Color(1.0, 0.85, 0.0, 1.0),
+	IndicatorState.READY_TO_BUY: Color(0.2, 0.8, 0.2, 1.0),
+	IndicatorState.WAITING_TO_BUY: Color(0.1, 0.65, 0.95, 1.0),
+	IndicatorState.LEAVING: Color(0.4, 0.45, 0.5, 1.0),
+	IndicatorState.HAGGLING: Color(0.65, 0.45, 1.0, 1.0),
+	IndicatorState.DISSATISFIED: Color(1.0, 0.15, 0.1, 1.0),
 }
 
 var _customer: Node = null

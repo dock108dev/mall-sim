@@ -17,7 +17,7 @@ extends Resource
 
 # Required fields (DataLoader should warn if missing)
 @export var id: String
-@export var item_name: String                # JSON key: "name"
+@export var item_name: String
 @export var store_type: String               # Must match a store ID
 @export var category: String                 # Must be in store's allowed_categories
 @export var rarity: String                   # common|uncommon|rare|very_rare|legendary
@@ -33,6 +33,11 @@ extends Resource
 @export var set_name: String = ""            # For set completion tracking (pocket_creatures, sports)
 @export var depreciates: bool = false        # Electronics: value drops over time
 @export var appreciates: bool = false        # Sealed/rare collectibles: value rises
+@export var can_be_demo_unit: bool = false   # Electronics demo-floor eligibility
+@export var monthly_depreciation_rate: float = 0.0
+@export var launch_spike_eligible: bool = false
+@export var launch_spike_multiplier: float = 1.0
+@export var supplier_tier: int = 0
 @export var rental_period_days: int = 0      # Video rental: default rental duration
 @export var platform: String = ""            # Retro games: console platform
 @export var region: String = ""              # Retro games: NTSC/PAL/JP
@@ -42,9 +47,11 @@ extends Resource
 
 | JSON key | Resource field | Notes |
 |---|---|---|
-| `name` | `item_name` | Renamed to avoid Godot's built-in `name` property |
-| `icon` | `icon_path` | Some JSONs use `icon`, others omit |
-| `set` | `set_name` | Used in pocket_creatures and sports items |
+| `item_name` | `item_name` | Canonical item display name |
+| `base_price` | `base_price` | Canonical base value key |
+| `condition_range` | `condition_range` | Canonical ordered condition labels |
+| `icon` | `icon_path` | Legacy alias still accepted by the parser |
+| `set` | `set_name` | Legacy alias still accepted by the parser |
 | All other keys | Same name | Direct 1:1 mapping |
 
 ### Store-Specific Optional Fields
@@ -54,7 +61,7 @@ These appear only in certain store types' items:
 - **Retro Games**: `platform`, `region`, `completeness` (loose/cib/nib)
 - **Video Rental**: `genre`, `rental_period_days`, `format` (vhs/dvd)
 - **PocketCreatures**: `set_name`, `card_number`, `element_type`, `hp`, `is_holo`
-- **Electronics**: `depreciates`, `brand`, `storage_capacity`, `lifecycle_tier`
+- **Electronics**: `depreciates`, `can_be_demo_unit`, `monthly_depreciation_rate`, `launch_spike_eligible`, `launch_spike_multiplier`, `supplier_tier`
 
 The implementer should store unrecognized keys in an `extra: Dictionary` field rather than ignoring them, to preserve store-specific data without needing a subclass per store type.
 

@@ -146,13 +146,9 @@ func _set_hovered_target(new_target: Interactable) -> void:
 		_hovered_target.highlight()
 		_hovered_target.focused.emit()
 		var action_label: String = _build_action_label(_hovered_target)
-		EventBus.notification_requested.emit(
-			"Click to %s" % action_label
-		)
 		EventBus.interactable_focused.emit(action_label)
 		_emit_tooltip_for_target(_hovered_target)
 	else:
-		EventBus.notification_requested.emit("")
 		EventBus.interactable_unfocused.emit()
 		EventBus.item_tooltip_hidden.emit()
 
@@ -172,7 +168,6 @@ func _on_hovered_target_tree_exiting() -> void:
 			)
 		exiting_target.unfocused.emit()
 	_hovered_target = null
-	EventBus.notification_requested.emit("")
 	EventBus.interactable_unfocused.emit()
 	EventBus.item_tooltip_hidden.emit()
 

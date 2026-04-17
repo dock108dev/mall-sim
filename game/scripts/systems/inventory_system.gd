@@ -341,6 +341,31 @@ func move_item(instance_id: String, new_location: String) -> void:
 		EventBus.inventory_updated.emit(sid)
 
 
+## Persists a condition change for an owned item and emits inventory updates.
+func update_item_condition(
+	instance_id: String, new_condition: String
+) -> bool:
+	if not _items.has(instance_id):
+		push_warning("InventorySystem: item '%s' not found" % instance_id)
+		return false
+	if not ItemDefinition.CONDITION_ORDER.has(new_condition):
+		push_error(
+			"InventorySystem: invalid condition '%s' for '%s'"
+			% [new_condition, instance_id]
+		)
+		return false
+	var item: ItemInstance = _items[instance_id]
+	if item.condition == new_condition:
+		return true
+	item.condition = new_condition
+	_invalidate_caches()
+	EventBus.inventory_changed.emit()
+	var sid: StringName = _get_store_id_for_item(item)
+	if not sid.is_empty():
+		EventBus.inventory_updated.emit(sid)
+	return true
+
+
 func get_items_at_location(location: String) -> Array[ItemInstance]:
 	var result: Array[ItemInstance] = []
 	for item: ItemInstance in _items.values():

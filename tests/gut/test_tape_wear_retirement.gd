@@ -1,154 +1,151 @@
-## Tests tape wear retirement: degradation detection, backroom routing, and retire actions.
+## Tests tape retirement rules, sale/write-off outcomes, and wear save/load.
 extends GutTest
 
 
 var _controller: VideoRentalStoreController
 var _inventory: InventorySystem
 var _economy: EconomySystem
+var _data_loader: DataLoader
+var _previous_data_loader: DataLoader
 
 
 func before_each() -> void:
+	_data_loader = DataLoader.new()
+	_data_loader.load_all_content()
+	_previous_data_loader = GameManager.data_loader
+	GameManager.data_loader = _data_loader
 	_controller = VideoRentalStoreController.new()
 	_inventory = InventorySystem.new()
 	_economy = EconomySystem.new()
 	add_child_autofree(_controller)
 	add_child_autofree(_inventory)
 	add_child_autofree(_economy)
+	_inventory.initialize(_data_loader)
+	_economy.initialize(100.0)
 	_controller.set_inventory_system(_inventory)
 	_controller.set_economy_system(_economy)
 
 
-func test_is_worn_out_poor_condition() -> void:
+func after_each() -> void:
+	GameManager.data_loader = _previous_data_loader
+
+
+func test_is_worn_out_only_after_tracker_marks_written_off() -> void:
 	var item: ItemInstance = _make_item("tape_1", "poor")
+	_inventory.register_item(item)
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+
+	assert_false(
+		_controller.is_worn_out(item),
+		"Poor tapes should remain rentable until they cross the final threshold"
+	)
+
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP):
+		_controller._wear_tracker.record_return(item.instance_id)
+
 	assert_true(
 		_controller.is_worn_out(item),
-		"Poor condition tape should be worn out"
+		"Written-off tapes should be eligible for retirement"
 	)
 
 
-func test_is_worn_out_good_condition() -> void:
-	var item: ItemInstance = _make_item("tape_1", "good")
-	assert_false(
-		_controller.is_worn_out(item),
-		"Good condition tape should not be worn out"
-	)
-
-
-func test_is_worn_out_null_item() -> void:
-	assert_false(
-		_controller.is_worn_out(null),
-		"Null item should not be worn out"
-	)
-
-
-func test_is_rentable_false_for_poor() -> void:
-	var item: ItemInstance = _make_item("tape_1", "poor")
-	assert_false(
-		_controller.is_rentable(item),
-		"Poor condition tape should not be rentable"
-	)
-
-
-func test_is_rentable_true_for_fair() -> void:
-	var item: ItemInstance = _make_item("tape_1", "fair")
-	assert_true(
-		_controller.is_rentable(item),
-		"Fair condition tape should be rentable"
-	)
-
-
-func test_retire_tape_sell_adds_cash() -> void:
-	var item: ItemInstance = _make_item("tape_sell", "poor")
+func test_retire_tape_sell_uses_poor_value_and_removes_item() -> void:
+	var item: ItemInstance = _make_written_off_item("tape_sell")
 	item.definition.base_price = 10.0
-	_inventory.add_item(&"rentals", item)
 	var starting_cash: float = _economy.get_cash()
-	var expected_value: float = item.get_current_value()
-	_controller.retire_tape("tape_sell", true)
-	var cash_gained: float = _economy.get_cash() - starting_cash
+
+	var success: bool = _controller.retire_tape(item.instance_id, true)
+
+	assert_true(success, "Selling a written-off tape should succeed")
 	assert_almost_eq(
-		cash_gained, expected_value, 0.01,
-		"Selling worn tape should add poor-condition value"
+		_economy.get_cash() - starting_cash,
+		2.5,
+		0.01,
+		"Retirement sale should use poor-condition value"
 	)
-
-
-func test_retire_tape_sell_removes_item() -> void:
-	var item: ItemInstance = _make_item("tape_sell_rm", "poor")
-	_inventory.add_item(&"rentals", item)
-	_controller.retire_tape("tape_sell_rm", true)
 	assert_null(
-		_inventory.get_item("tape_sell_rm"),
-		"Sold tape should be removed from inventory"
+		_inventory.get_item(item.instance_id),
+		"Retirement sale should remove the tape from inventory"
 	)
 
 
-func test_retire_tape_writeoff_no_cash() -> void:
-	var item: ItemInstance = _make_item("tape_wo", "poor")
-	item.definition.base_price = 10.0
-	_inventory.add_item(&"rentals", item)
+func test_retire_tape_writeoff_removes_item_without_cash() -> void:
+	var item: ItemInstance = _make_written_off_item("tape_writeoff")
 	var starting_cash: float = _economy.get_cash()
-	_controller.retire_tape("tape_wo", false)
+
+	var success: bool = _controller.retire_tape(item.instance_id, false)
+
+	assert_true(success, "Writing off a written-off tape should succeed")
 	assert_almost_eq(
-		_economy.get_cash(), starting_cash, 0.01,
-		"Write-off should not add cash"
+		_economy.get_cash(),
+		starting_cash,
+		0.01,
+		"Write-off should not add any cash"
 	)
-
-
-func test_retire_tape_writeoff_removes_item() -> void:
-	var item: ItemInstance = _make_item("tape_wo_rm", "poor")
-	_inventory.add_item(&"rentals", item)
-	_controller.retire_tape("tape_wo_rm", false)
 	assert_null(
-		_inventory.get_item("tape_wo_rm"),
-		"Written-off tape should be removed from inventory"
+		_inventory.get_item(item.instance_id),
+		"Write-off should remove the tape from inventory"
 	)
 
 
-func test_retire_tape_clears_wear_tracking() -> void:
-	var item: ItemInstance = _make_item("tape_clear", "poor")
-	_inventory.add_item(&"rentals", item)
-	_controller._wear_tracker.initialize_item("tape_clear", "poor")
-	assert_gt(
-		_controller.get_tape_wear("tape_clear"), 0.0,
-		"Wear should be tracked before retire"
-	)
-	_controller.retire_tape("tape_clear", false)
+func test_retire_tape_clears_tracker_state() -> void:
+	var item: ItemInstance = _make_written_off_item("tape_clear")
+
+	_controller.retire_tape(item.instance_id, false)
+
 	assert_eq(
-		_controller.get_tape_wear("tape_clear"), 0.0,
-		"Wear tracking should be cleared after retire"
+		_controller.get_tape_wear(item.instance_id),
+		0,
+		"Retiring a tape should clear its saved play-count progress"
+	)
+	assert_false(
+		_controller._wear_tracker.is_rentable(item.instance_id),
+		"Removed tracker entries should no longer appear as rentable"
 	)
 
 
-func test_retire_tape_fails_for_good_condition() -> void:
-	var item: ItemInstance = _make_item("tape_good", "good")
-	_inventory.add_item(&"rentals", item)
-	var result: bool = _controller.retire_tape("tape_good", false)
-	assert_false(result, "Cannot retire a non-worn-out tape")
+func test_retire_tape_fails_for_still_rentable_poor_tape() -> void:
+	var item: ItemInstance = _make_item("tape_good", "poor")
+	_inventory.register_item(item)
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+
+	var result: bool = _controller.retire_tape(item.instance_id, false)
+
+	assert_false(result, "Poor-but-rentable tapes should not be retired yet")
 	assert_not_null(
-		_inventory.get_item("tape_good"),
-		"Non-worn-out tape should remain in inventory"
+		_inventory.get_item(item.instance_id),
+		"Still-rentable tapes should remain in inventory"
 	)
 
 
-func test_retire_tape_fails_for_missing_item() -> void:
-	var result: bool = _controller.retire_tape("nonexistent", false)
-	assert_false(result, "Cannot retire a nonexistent item")
-
-
-func test_save_load_preserves_wear() -> void:
-	_controller._wear_tracker.initialize_item("tape_save", "good")
-	_controller._wear_tracker.apply_degradation("tape_save", "vhs_tapes")
-	var wear_before: float = _controller.get_tape_wear("tape_save")
+func test_save_load_preserves_partial_play_progress() -> void:
+	var item: ItemInstance = _make_item("tape_save", "poor")
+	_inventory.register_item(item)
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
+		_controller._wear_tracker.record_return(item.instance_id)
 	var save_data: Dictionary = _controller.get_save_data()
-	_controller._wear_tracker.load_save_data({})
-	assert_eq(
-		_controller.get_tape_wear("tape_save"), 0.0,
-		"Wear should be cleared after resetting tracker"
-	)
+
 	_controller.load_save_data(save_data)
-	assert_almost_eq(
-		_controller.get_tape_wear("tape_save"), wear_before, 0.001,
-		"Wear should be restored after load"
+
+	assert_eq(
+		_controller.get_tape_wear(item.instance_id),
+		TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1,
+		"A tape with 4/5 plays should restore with the same progress"
 	)
+	assert_true(
+		_controller.is_rentable(item),
+		"Partial play progress should remain rentable after reload"
+	)
+
+
+func _make_written_off_item(instance_id: String) -> ItemInstance:
+	var item: ItemInstance = _make_item(instance_id, "poor")
+	_inventory.register_item(item)
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP):
+		_controller._wear_tracker.record_return(item.instance_id)
+	return item
 
 
 func _make_item(

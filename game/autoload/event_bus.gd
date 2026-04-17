@@ -2,6 +2,12 @@
 @warning_ignore("unused_signal")
 extends Node
 
+var _latest_day_end_summary: Dictionary = {}
+
+
+func _ready() -> void:
+	day_started.connect(_on_day_started)
+
 # ── Content Pipeline ──────────────────────────────────────────────────────────
 signal content_loaded()
 signal content_load_failed(errors: Array[String])
@@ -211,8 +217,10 @@ signal tournament_event_ended(event_id: String)
 
 # ── Trade (PocketCreatures) ───────────────────────────────────────────────────
 signal trade_offered(customer_id: int, wanted_item_id: String, offered_item_id: String)
+signal trade_offer_received(offer: Dictionary)
 signal trade_accepted(wanted_item_id: String, offered_item_id: String)
 signal trade_declined(customer_id: int)
+signal trade_resolved(offer: Dictionary, accepted: bool)
 
 # ── Meta Shift (PocketCreatures) ─────────────────────────────────────────────
 signal meta_shift_announced(rising: Array[String], falling: Array[String])
@@ -341,3 +349,23 @@ signal locale_changed(new_locale: String)
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 signal preference_changed(key: String, value: Variant)
+
+
+## Publishes the latest end-of-day summary for listeners that need more than
+## the legacy day_ended(day) payload.
+func publish_day_end_summary(summary: Dictionary) -> void:
+	_latest_day_end_summary = summary.duplicate(true)
+
+
+## Returns a defensive copy of the latest end-of-day summary.
+func get_day_end_summary() -> Dictionary:
+	return _latest_day_end_summary.duplicate(true)
+
+
+## Clears any cached end-of-day summary once the next day begins.
+func clear_day_end_summary() -> void:
+	_latest_day_end_summary.clear()
+
+
+func _on_day_started(_day: int) -> void:
+	clear_day_end_summary()

@@ -108,6 +108,7 @@ var reputation_system: ReputationSystem:
 @onready var progression_system: ProgressionSystem = $ProgressionSystem
 @onready var milestone_system: MilestoneSystem = $MilestoneSystem
 @onready var order_system: OrderSystem = $OrderSystem
+@onready var ordering_system: OrderingSystem = $OrderingSystem
 @onready var staff_system: StaffSystem = $StaffSystem
 @onready var store_selector_system: StoreSelectorSystem = (
 	$StoreSelectorSystem
@@ -213,6 +214,9 @@ func initialize_systems() -> void:
 func initialize_tier_1_data() -> void:
 	time_system.initialize()
 	economy_system.initialize(_get_configured_starting_cash())
+	time_system.set_day_end_summary_provider(
+		Callable(economy_system, "get_day_end_summary")
+	)
 
 
 ## Initializes Tier 2 state systems that depend on the data tier.
@@ -297,11 +301,7 @@ func initialize_tier_3_operational() -> void:
 	order_system.initialize(
 		inventory_system, ReputationSystemSingleton, progression_system
 	)
-	# Also wire OrderingSystem (separate class for supplier tier logic).
-	if not has_node("OrderingSystem"):
-		var ordering_system: OrderingSystem = OrderingSystem.new()
-		add_child(ordering_system)
-		ordering_system.initialize(inventory_system, ReputationSystemSingleton)
+	ordering_system.initialize(inventory_system, ReputationSystemSingleton)
 
 	staff_system.initialize(
 		economy_system,
@@ -400,8 +400,7 @@ func _wire_save_manager() -> void:
 		time_system,
 	)
 	save_manager.set_order_system(order_system)
-	if has_node("OrderingSystem"):
-		save_manager.set_ordering_system(get_node("OrderingSystem") as OrderingSystem)
+	save_manager.set_ordering_system(ordering_system)
 	save_manager.set_store_state_manager(store_state_manager)
 	save_manager.set_progression_system(progression_system)
 	save_manager.set_milestone_system(milestone_system)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3 uid="uid://world001"]
+[gd_scene load_steps=39 format=3 uid="uid://world001"]
 
 [ext_resource type="Script" path="res://game/scenes/world/game_world.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/systems/time_system.gd" id="sys_time"]
@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://game/scripts/systems/checkout_system.gd" id="sys_checkout"]
 [ext_resource type="Script" path="res://game/scripts/systems/queue_system.gd" id="sys_queue"]
 [ext_resource type="Script" path="res://game/scripts/systems/order_system.gd" id="sys_order"]
+[ext_resource type="Script" path="res://game/scripts/systems/ordering_system.gd" id="sys_ordering"]
 [ext_resource type="Script" path="res://game/scripts/systems/staff_system.gd" id="sys_staff"]
 [ext_resource type="Script" path="res://game/scripts/systems/progression_system.gd" id="sys_progression"]
 [ext_resource type="Script" path="res://game/scripts/systems/milestone_system.gd" id="sys_milestone"]
@@ -96,6 +97,9 @@ script = ExtResource("sys_milestone")
 
 [node name="OrderSystem" type="Node" parent="."]
 script = ExtResource("sys_order")
+
+[node name="OrderingSystem" type="Node" parent="."]
+script = ExtResource("sys_ordering")
 
 [node name="StaffSystem" type="Node" parent="."]
 script = ExtResource("sys_staff")

@@ -26,6 +26,7 @@ func before_each() -> void:
 	_reputation = ReputationSystem.new()
 	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
+	_register_store_in_content_registry()
 	_reputation.initialize_store("pocket_creatures")
 
 	_data_loader = DataLoader.new()
@@ -60,7 +61,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	_safe_disconnect(EventBus.day_started, _trade._on_day_started)
+	if _trade != null:
+		_safe_disconnect(EventBus.day_started, _trade._on_day_started)
 
 
 func test_generate_offer_produces_valid_trade() -> void:
@@ -76,6 +78,9 @@ func test_generate_offer_produces_valid_trade() -> void:
 
 	var started: bool = _trade.begin_trade(customer)
 	assert_true(started, "begin_trade should return true with valid offer")
+	if not started:
+		_cleanup_customer(customer)
+		return
 	assert_not_null(
 		_trade._offered_item,
 		"Offered item should be set after begin_trade"
@@ -181,44 +186,92 @@ func test_trade_rejected_signal_fires() -> void:
 	)
 
 
-func test_unfair_trade_has_value_within_tolerance() -> void:
+func test_evaluate_offer_common_for_rare_is_unfair() -> void:
 	var expensive_def: ItemDefinition = _make_definition(
-		"pc_card_rare", "Rare Card", 50.0, "rare"
+		"pc_card_rare", "Rare Card", 10.0, "rare"
 	)
 	_data_loader._items["pc_card_rare"] = expensive_def
 
 	var cheap_def: ItemDefinition = _make_definition(
-		"pc_card_cheap", "Cheap Card", 5.0, "common"
+		"pc_card_cheap", "Cheap Card", 10.0, "common"
 	)
 	_data_loader._items["pc_card_cheap"] = cheap_def
 
+	var offer: Dictionary = {
+		"npc_id": 1,
+		"offered_cards": [
+			ItemInstance.create(cheap_def, "good", 0, cheap_def.base_price),
+		],
+		"target_card": ItemInstance.create(
+			expensive_def, "good", 0, expensive_def.base_price
+		),
+	}
+	assert_eq(
+		_trade.evaluate_offer(offer),
+		TradeSystem.UNFAIR_CLASSIFICATION,
+		"Common-for-rare offers should be classified as unfair"
+	)
+
+
+func test_accept_trade_fails_when_item_removed_from_inventory() -> void:
+	var wanted: ItemInstance = _setup_active_trade()
+
+	watch_signals(EventBus)
+	assert_true(
+		_inventory.remove_item(wanted.instance_id),
+		"Setup should remove the target card from inventory"
+	)
+	var accepted: bool = _trade.accept_trade()
+
+	assert_false(accepted, "Trade should fail when target card is missing")
+	assert_signal_not_emitted(
+		EventBus, "trade_accepted",
+		"trade_accepted should not fire on failed accept"
+	)
+	assert_signal_emitted(
+		EventBus, "trade_resolved",
+		"trade_resolved should fire on failed accept"
+	)
+	var params: Array = get_signal_parameters(EventBus, "trade_resolved")
+	if params.size() < 2:
+		return
+	assert_false(
+		params[1] as bool,
+		"trade_resolved accepted flag should be false on failed accept"
+	)
+
+
+func test_begin_trade_emits_trade_offer_received() -> void:
 	var wanted: ItemInstance = ItemInstance.create(
-		expensive_def, "near_mint", 0, expensive_def.base_price
+		_def_a, "good", 0, _def_a.base_price
 	)
 	wanted.current_location = "shelf:slot_0"
 	_inventory._items[wanted.instance_id] = wanted
 
-	var wanted_value: float = _economy.calculate_market_value(wanted)
-	assert_gt(
-		wanted_value, 0.0,
-		"Wanted item should have positive market value"
-	)
+	var customer: Customer = _make_customer()
+	customer._desired_item = wanted
+	customer._desired_item_slot = null
 
-	var offer: ItemInstance = _trade._generate_offer(wanted)
-	if offer:
-		var offer_value: float = _economy.calculate_market_value(offer)
-		var min_val: float = wanted_value * (1.0 - TradeSystem.VALUE_TOLERANCE)
-		var max_val: float = wanted_value * (1.0 + TradeSystem.VALUE_TOLERANCE)
-		assert_gte(
-			offer_value, min_val,
-			"Offer value should be >= wanted value minus tolerance"
-		)
-		assert_lte(
-			offer_value, max_val,
-			"Offer value should be <= wanted value plus tolerance"
-		)
-	else:
-		pass_test("No matching offer found — tolerance enforced by exclusion")
+	watch_signals(EventBus)
+	var started: bool = _trade.begin_trade(customer)
+
+	assert_true(started, "begin_trade should return true with valid offer")
+	if not started:
+		_cleanup_customer(customer)
+		return
+	assert_signal_emitted(
+		EventBus, "trade_offer_received",
+		"trade_offer_received should fire when trade begins"
+	)
+	var params: Array = get_signal_parameters(EventBus, "trade_offer_received")
+	if params.is_empty():
+		_cleanup_customer(customer)
+		return
+	var offer: Dictionary = params[0] as Dictionary
+	assert_true(offer.has("offered_cards"), "Offer should include offered_cards")
+	assert_true(offer.has("target_card"), "Offer should include target_card")
+	assert_true(offer.has("npc_id"), "Offer should include npc_id")
+	_cleanup_customer(customer)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -234,7 +287,7 @@ func _make_definition(
 	def.base_price = price
 	def.rarity = rarity
 	def.store_type = "pocket_creatures"
-	def.tags = PackedStringArray([])
+	def.tags = []
 	def.condition_range = PackedStringArray(
 		["fair", "good", "near_mint"]
 	)
@@ -266,6 +319,11 @@ func _setup_active_trade() -> ItemInstance:
 	_trade._wanted_item = wanted
 	_trade._wanted_item_slot = null
 	_trade._offered_item = offered
+	_trade._active_offer = {
+		"npc_id": customer.get_instance_id(),
+		"offered_cards": [offered],
+		"target_card": wanted,
+	}
 	return wanted
 
 
@@ -277,3 +335,17 @@ func _cleanup_customer(customer: Customer) -> void:
 func _safe_disconnect(sig: Signal, callable: Callable) -> void:
 	if sig.is_connected(callable):
 		sig.disconnect(callable)
+
+
+func _register_store_in_content_registry() -> void:
+	if ContentRegistry.exists("pocket_creatures"):
+		return
+	ContentRegistry.register_entry(
+		{
+			"id": "pocket_creatures",
+			"name": "Pocket Creatures",
+			"scene_path": "",
+			"backroom_capacity": 150,
+		},
+		"store"
+	)

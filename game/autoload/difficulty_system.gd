@@ -10,6 +10,7 @@ const SETTINGS_SECTION: String = "difficulty"
 const SETTINGS_KEY: String = "tier"
 const PEAK_HOURS_START: int = 11
 const PEAK_HOURS_END: int = 20
+const DIFFICULTY_CONFIG_PATH: String = "res://game/content/economy/difficulty_config.json"
 
 var _current_tier_id: StringName = DEFAULT_TIER
 var _current_hour: int = 0
@@ -145,6 +146,10 @@ func _on_hour_changed(hour: int) -> void:
 
 func _load_config() -> void:
 	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
+	if config.is_empty():
+		var loaded: Variant = DataLoader.load_json(DIFFICULTY_CONFIG_PATH)
+		if loaded is Dictionary:
+			config = loaded as Dictionary
 	if config.is_empty():
 		push_error("DifficultySystem: difficulty_config is empty")
 		return

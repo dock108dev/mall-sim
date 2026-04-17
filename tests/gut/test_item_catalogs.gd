@@ -90,12 +90,12 @@ func test_catalog_json_entries_match_issue_139_schema() -> void:
 			var entry: Dictionary = raw_entry as Dictionary
 			for key: String in [
 				"id",
-				"display_name",
+				"item_name",
 				"store_type",
 				"category",
-				"base_value",
+				"base_price",
 				"rarity",
-				"condition_variants",
+				"condition_range",
 				"description",
 			]:
 				assert_true(

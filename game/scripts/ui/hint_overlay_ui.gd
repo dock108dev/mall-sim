@@ -19,6 +19,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_setup_timer()
 	EventBus.onboarding_hint_shown.connect(_on_hint_shown)
+	EventBus.onboarding_disabled.connect(_on_onboarding_disabled)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -71,6 +72,10 @@ func _dismiss() -> void:
 func _on_dismiss_finished() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _on_onboarding_disabled() -> void:
+	_dismiss()
 
 
 func _apply_position(hint: String) -> void:

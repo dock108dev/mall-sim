@@ -274,8 +274,10 @@ tournament_completed(participant_count: int, revenue: float)
 
 ```gdscript
 trade_offered(customer_id: int, wanted_item_id: String, offered_item_id: String)
+trade_offer_received(offer: Dictionary)
 trade_accepted(wanted_item_id: String, offered_item_id: String)
 trade_declined(customer_id: int)
+trade_resolved(offer: Dictionary, accepted: bool)
 ```
 
 ## Meta Shift (PocketCreatures)

@@ -1,54 +1,34 @@
-## UI panel for PocketCreatures card trade offers.
+## Root coordinator for PocketCreatures card trade offers.
 class_name TradePanel
 extends PanelContainer
 
-const PANEL_NAME: StringName = &"trade"
-const FAIR_TRADE_THRESHOLD: float = 0.20
-
 signal trade_accepted
 signal trade_declined
+
+const PANEL_NAME: StringName = &"trade"
+
+@onready var _offer_display: Node = (
+	get_node_or_null("Margin/VBox/OfferDisplay") as Node
+)
+@onready var _valuation_display: Node = (
+	get_node_or_null("Margin/VBox/FairTradeIndicator") as Node
+)
+@onready var _flow_controller: Node = (
+	get_node_or_null("Margin/VBox/ButtonRow") as Node
+)
 
 var _is_open: bool = false
 var _is_pending: bool = false
 var _anim_tween: Tween
 var _feedback_tween: Tween
 
-@onready var _wanted_name_label: Label = (
-	get_node_or_null("Margin/VBox/WantedSection/WantedNameLabel") as Label
-)
-@onready var _wanted_condition_label: Label = (
-	get_node_or_null("Margin/VBox/WantedSection/WantedConditionLabel") as Label
-)
-@onready var _wanted_value_label: Label = (
-	get_node_or_null("Margin/VBox/WantedSection/WantedValueLabel") as Label
-)
-@onready var _offered_name_label: Label = (
-	get_node_or_null("Margin/VBox/OfferedSection/OfferedNameLabel") as Label
-)
-@onready var _offered_condition_label: Label = (
-	get_node_or_null("Margin/VBox/OfferedSection/OfferedConditionLabel") as Label
-)
-@onready var _offered_value_label: Label = (
-	get_node_or_null("Margin/VBox/OfferedSection/OfferedValueLabel") as Label
-)
-@onready var _fair_trade_label: Label = (
-	get_node_or_null("Margin/VBox/FairTradeIndicator") as Label
-)
-@onready var _accept_button: Button = (
-	get_node_or_null("Margin/VBox/ButtonRow/AcceptButton") as Button
-)
-@onready var _decline_button: Button = (
-	get_node_or_null("Margin/VBox/ButtonRow/DeclineButton") as Button
-)
-
 
 func _ready() -> void:
 	# Localization marker for static validation: tr("TRADE_CONDITION")
 	visible = false
-	if _accept_button != null:
-		_accept_button.pressed.connect(_on_accept_pressed)
-	if _decline_button != null:
-		_decline_button.pressed.connect(_on_decline_pressed)
+	if _flow_controller != null:
+		_flow_controller.connect("accept_requested", _on_accept_pressed)
+		_flow_controller.connect("decline_requested", _on_decline_pressed)
 	EventBus.panel_opened.connect(_on_panel_opened)
 
 
@@ -61,23 +41,18 @@ func show_trade(
 	offered_cond: String,
 	offered_val: float,
 ) -> void:
-	if _wanted_name_label != null:
-		_wanted_name_label.text = wanted_name
-	if _wanted_condition_label != null:
-		_wanted_condition_label.text = "Condition: %s" % wanted_cond
-	if _wanted_value_label != null:
-		_wanted_value_label.text = "Value: %s%.2f" % [
-			UIThemeConstants.CURRENCY_SYMBOL, wanted_val
-		]
-	if _offered_name_label != null:
-		_offered_name_label.text = offered_name
-	if _offered_condition_label != null:
-		_offered_condition_label.text = "Condition: %s" % offered_cond
-	if _offered_value_label != null:
-		_offered_value_label.text = "Value: %s%.2f" % [
-			UIThemeConstants.CURRENCY_SYMBOL, offered_val
-		]
-	_update_fair_trade_indicator(wanted_val, offered_val)
+	if _offer_display != null:
+		_offer_display.call(
+			"show_trade_offer",
+			wanted_name,
+			wanted_cond,
+			wanted_val,
+			offered_name,
+			offered_cond,
+			offered_val
+		)
+	if _valuation_display != null:
+		_valuation_display.call("show_trade_ratio", wanted_val, offered_val)
 	_set_pending(false)
 	_is_open = true
 	PanelAnimator.kill_tween(_anim_tween)
@@ -126,31 +101,8 @@ func _on_decline_pressed() -> void:
 
 func _set_pending(pending: bool) -> void:
 	_is_pending = pending
-	if _accept_button != null:
-		_accept_button.disabled = pending
-	if _decline_button != null:
-		_decline_button.disabled = pending
-
-
-func _update_fair_trade_indicator(
-	wanted_val: float, offered_val: float
-) -> void:
-	if _fair_trade_label == null:
-		return
-	if wanted_val <= 0.0:
-		_fair_trade_label.text = ""
-		return
-	var ratio: float = absf(wanted_val - offered_val) / wanted_val
-	if ratio <= FAIR_TRADE_THRESHOLD:
-		_fair_trade_label.text = "Fair Trade"
-		_fair_trade_label.add_theme_color_override(
-			"font_color", UIThemeConstants.get_positive_color()
-		)
-	else:
-		_fair_trade_label.text = "Uneven Trade"
-		_fair_trade_label.add_theme_color_override(
-			"font_color", UIThemeConstants.get_warning_color()
-		)
+	if _flow_controller != null:
+		_flow_controller.call("set_pending", pending)
 
 
 func _flash_result(color: Color) -> void:

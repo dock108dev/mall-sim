@@ -42,6 +42,7 @@ var _speed_before_slow: float = 1.0
 var _auto_slow_stack: Array[String] = []
 var _requested_speed: SpeedTier = SpeedTier.NORMAL
 var _late_evening_enabled: bool = false
+var _day_end_summary_provider: Callable = Callable()
 
 
 func _ready() -> void:
@@ -191,8 +192,15 @@ func advance_to_next_day() -> void:
 	current_phase = DayPhase.PRE_OPEN
 	_auto_slow_stack.clear()
 	set_process(true)
+	EventBus.clear_day_end_summary()
 	EventBus.day_phase_changed.emit(current_phase)
 	EventBus.day_started.emit(current_day)
+
+
+## Registers a callable that returns the summary snapshot to publish when the
+## current day ends. The callable receives the ending day number.
+func set_day_end_summary_provider(provider: Callable) -> void:
+	_day_end_summary_provider = provider
 
 
 func get_save_data() -> Dictionary:
@@ -240,6 +248,7 @@ func _end_day() -> void:
 		return
 	_day_ended_emitted = true
 	set_process(false)
+	EventBus.publish_day_end_summary(_build_day_end_summary())
 	EventBus.day_ended.emit(current_day)
 
 
@@ -248,6 +257,16 @@ func _check_phase_transition() -> void:
 	if new_phase != current_phase:
 		current_phase = new_phase
 		EventBus.day_phase_changed.emit(current_phase)
+
+
+func _build_day_end_summary() -> Dictionary:
+	if not _day_end_summary_provider.is_valid():
+		return {}
+	var summary_value: Variant = _day_end_summary_provider.call(current_day)
+	if summary_value is Dictionary:
+		return (summary_value as Dictionary).duplicate(true)
+	push_warning("TimeSystem: day-end summary provider returned non-Dictionary")
+	return {}
 
 
 func _check_phase_transitions_between(

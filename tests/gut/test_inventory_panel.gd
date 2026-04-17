@@ -2,16 +2,30 @@
 ## context menu action gating.
 extends GutTest
 
+const _INVENTORY_PANEL_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/inventory_panel.tscn"
+)
+
 
 var _data_loader: DataLoader
 var _inventory_system: InventorySystem
+var _previous_data_loader: DataLoader
+var _previous_store_id: StringName
 
 
 func before_each() -> void:
 	_data_loader = DataLoader.new()
 	_data_loader.load_all_content()
+	_previous_data_loader = GameManager.data_loader
+	_previous_store_id = GameManager.current_store_id
+	GameManager.data_loader = _data_loader
 	_inventory_system = InventorySystem.new()
 	_inventory_system.initialize(_data_loader)
+
+
+func after_each() -> void:
+	GameManager.data_loader = _previous_data_loader
+	GameManager.current_store_id = _previous_store_id
 
 
 func _create_test_item(
@@ -237,3 +251,97 @@ func test_inventory_row_includes_icon_slot() -> void:
 		hbox.get_child(1) is TextureRect,
 		"Inventory row should include an icon TextureRect"
 	)
+
+
+func test_context_menu_shows_retire_actions_for_written_off_tape() -> void:
+	GameManager.current_store_id = &"rentals"
+	var item: ItemInstance = _create_manual_rental_item(
+		"written_off_tape",
+		"poor",
+		"backroom"
+	)
+	var controller: VideoRentalStoreController = (
+		VideoRentalStoreController.new()
+	)
+	add_child_autofree(controller)
+	controller.set_inventory_system(_inventory_system)
+	controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP):
+		controller._wear_tracker.record_return(item.instance_id)
+
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	panel.rental_controller = controller
+	add_child_autofree(panel)
+	panel._show_context_menu(item)
+
+	assert_true(
+		_popup_menu_has_text(panel._context_menu, "Retire (Sell)"),
+		"Written-off tapes should expose the retirement sale action"
+	)
+	assert_true(
+		_popup_menu_has_text(panel._context_menu, "Write Off"),
+		"Written-off tapes should expose the write-off action"
+	)
+
+
+func test_context_menu_hides_retire_actions_for_still_rentable_poor_tape() -> void:
+	GameManager.current_store_id = &"rentals"
+	var item: ItemInstance = _create_manual_rental_item(
+		"poor_but_rentable_tape",
+		"poor",
+		"backroom"
+	)
+	var controller: VideoRentalStoreController = (
+		VideoRentalStoreController.new()
+	)
+	add_child_autofree(controller)
+	controller.set_inventory_system(_inventory_system)
+	controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	panel.rental_controller = controller
+	add_child_autofree(panel)
+	panel._show_context_menu(item)
+
+	assert_false(
+		_popup_menu_has_text(panel._context_menu, "Retire (Sell)"),
+		"Poor tapes should not show retirement actions before they are written off"
+	)
+	assert_false(
+		_popup_menu_has_text(panel._context_menu, "Write Off"),
+		"Poor tapes should not show write-off until the tracker marks them unrentable"
+	)
+
+
+func _create_manual_rental_item(
+	instance_id: String,
+	condition: String,
+	location: String
+) -> ItemInstance:
+	var def := ItemDefinition.new()
+	def.id = "%s_def" % instance_id
+	def.item_name = "Tape %s" % instance_id
+	def.category = "vhs_tapes"
+	def.store_type = "rentals"
+	def.base_price = 10.0
+	def.rarity = "common"
+	var item := ItemInstance.new()
+	item.definition = def
+	item.instance_id = instance_id
+	item.condition = condition
+	item.current_location = location
+	_inventory_system.register_item(item)
+	return item
+
+
+func _popup_menu_has_text(menu: PopupMenu, text: String) -> bool:
+	for index: int in range(menu.get_item_count()):
+		if menu.get_item_text(index) == text:
+			return true
+	return false

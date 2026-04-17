@@ -1,9 +1,46 @@
-[gd_scene load_steps=2 format=3 uid="uid://storefront001"]
+[gd_scene load_steps=6 format=3 uid="uid://storefront001"]
 
 [ext_resource type="Script" path="res://game/scripts/world/storefront.gd" id="1"]
+[ext_resource type="Material" path="res://game/assets/materials/mat_storefront_facade.tres" id="2"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_facade"]
+size = Vector3(4.0, 3.0, 0.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_facade"]
+size = Vector3(4.0, 3.0, 0.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_entry_zone"]
+size = Vector3(2.0, 2.0, 1.0)
 
 [node name="Storefront" type="Node3D"]
 script = ExtResource("1")
 slot_index = 0
 store_id = ""
 store_name = ""
+
+[node name="FacadeBody" type="StaticBody3D" parent="."]
+
+[node name="FacadeMesh" type="MeshInstance3D" parent="FacadeBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("BoxMesh_facade")
+surface_material_override/0 = ExtResource("2")
+
+[node name="FacadeCollision" type="CollisionShape3D" parent="FacadeBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("BoxShape3D_facade")
+
+[node name="SignLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0.16)
+pixel_size = 0.01
+font_size = 32
+outline_size = 4
+billboard = 0
+
+[node name="EntryZone" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.7)
+collision_layer = 0
+collision_mask = 1
+monitorable = false
+
+[node name="EntryZoneCollision" type="CollisionShape3D" parent="EntryZone"]
+shape = SubResource("BoxShape3D_entry_zone")

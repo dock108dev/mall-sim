@@ -5,12 +5,16 @@ extends GutTest
 var _storefront: Storefront
 var _zone_entered_ids: Array[String] = []
 var _zone_exited_ids: Array[String] = []
+var _storefront_entered_calls: Array[Dictionary] = []
+var _storefront_exited_count: int = 0
 var _door_interacted_count: int = 0
 
 
 func before_each() -> void:
 	_zone_entered_ids.clear()
 	_zone_exited_ids.clear()
+	_storefront_entered_calls.clear()
+	_storefront_exited_count = 0
 	_door_interacted_count = 0
 
 	_storefront = Storefront.new()
@@ -18,6 +22,8 @@ func before_each() -> void:
 	_storefront.door_interacted.connect(_on_door_interacted)
 	EventBus.storefront_zone_entered.connect(_on_zone_entered)
 	EventBus.storefront_zone_exited.connect(_on_zone_exited)
+	EventBus.storefront_entered.connect(_on_storefront_entered)
+	EventBus.storefront_exited.connect(_on_storefront_exited)
 	add_child_autofree(_storefront)
 
 
@@ -26,6 +32,10 @@ func after_each() -> void:
 		EventBus.storefront_zone_entered.disconnect(_on_zone_entered)
 	if EventBus.storefront_zone_exited.is_connected(_on_zone_exited):
 		EventBus.storefront_zone_exited.disconnect(_on_zone_exited)
+	if EventBus.storefront_entered.is_connected(_on_storefront_entered):
+		EventBus.storefront_entered.disconnect(_on_storefront_entered)
+	if EventBus.storefront_exited.is_connected(_on_storefront_exited):
+		EventBus.storefront_exited.disconnect(_on_storefront_exited)
 
 
 func _on_zone_entered(sid: String) -> void:
@@ -34,6 +44,17 @@ func _on_zone_entered(sid: String) -> void:
 
 func _on_zone_exited(sid: String) -> void:
 	_zone_exited_ids.append(sid)
+
+
+func _on_storefront_entered(slot_index: int, sid: String) -> void:
+	_storefront_entered_calls.append({
+		"slot_index": slot_index,
+		"store_id": sid,
+	})
+
+
+func _on_storefront_exited() -> void:
+	_storefront_exited_count += 1
 
 
 func _on_door_interacted(_sf: Storefront) -> void:
@@ -51,6 +72,43 @@ func test_has_facade_static_body() -> void:
 		if child is CollisionShape3D:
 			col_count[0] += 1
 	assert_gt(col_count[0], 0, "FacadeBody has CollisionShape3D children")
+
+
+func test_storefront_scene_authors_required_geometry() -> void:
+	var scene: PackedScene = load(
+		"res://game/scenes/world/storefront.tscn"
+	)
+	var instance := scene.instantiate() as Storefront
+	add_child_autofree(instance)
+
+	var facade := instance.get_node_or_null(
+		"FacadeBody"
+	) as StaticBody3D
+	var facade_mesh := instance.get_node_or_null(
+		"FacadeBody/FacadeMesh"
+	) as MeshInstance3D
+	var facade_collision := instance.get_node_or_null(
+		"FacadeBody/FacadeCollision"
+	) as CollisionShape3D
+	var entry_collision := instance.get_node_or_null(
+		"EntryZone/EntryZoneCollision"
+	) as CollisionShape3D
+
+	assert_not_null(facade, "Scene includes FacadeBody")
+	assert_true(facade_mesh.mesh is BoxMesh, "Facade uses a BoxMesh")
+	assert_eq((facade_mesh.mesh as BoxMesh).size, Vector3(4.0, 3.0, 0.2))
+	assert_true(
+		facade_collision.shape is BoxShape3D,
+		"Facade collision uses a BoxShape3D"
+	)
+	assert_true(
+		entry_collision.shape is BoxShape3D,
+		"EntryZone collision uses a BoxShape3D"
+	)
+	assert_eq(
+		(entry_collision.shape as BoxShape3D).size,
+		Vector3(2.0, 2.0, 1.0)
+	)
 
 
 func test_has_sign_label() -> void:
@@ -150,6 +208,27 @@ func test_owned_sign_brighter_than_unowned() -> void:
 	)
 
 
+func test_owned_sign_uses_lit_material_and_unowned_uses_dim() -> void:
+	_storefront.set_available(50.0)
+	var label: Label3D = _storefront.find_child(
+		"SignLabel", true, false
+	) as Label3D
+	var unowned_material := label.material_override
+
+	_storefront.set_owned("test_store", "Test Store")
+	var owned_material := label.material_override
+
+	assert_not_null(unowned_material, "Unowned sign should use a material")
+	assert_not_null(owned_material, "Owned sign should use a material")
+	assert_ne(
+		owned_material.resource_name,
+		unowned_material.resource_name,
+		"Owned and unowned signs should use visually distinct materials"
+	)
+	assert_eq(owned_material.resource_name, "lit_sign")
+	assert_eq(unowned_material.resource_name, "dim_sign")
+
+
 func test_locked_sign_dimmer_than_available() -> void:
 	_storefront.set_available(50.0)
 	var label: Label3D = _storefront.find_child(
@@ -213,10 +292,14 @@ func test_entry_zone_emits_for_player() -> void:
 	_storefront._on_entry_zone_body_entered(body)
 	assert_eq(_zone_entered_ids.size(), 1)
 	assert_eq(_zone_entered_ids[0], "retro_games")
+	assert_eq(_storefront_entered_calls.size(), 1)
+	assert_eq(_storefront_entered_calls[0]["slot_index"], 0)
+	assert_eq(_storefront_entered_calls[0]["store_id"], "retro_games")
 
 	_storefront._on_entry_zone_body_exited(body)
 	assert_eq(_zone_exited_ids.size(), 1)
 	assert_eq(_zone_exited_ids[0], "retro_games")
+	assert_eq(_storefront_exited_count, 1)
 
 
 func test_multiple_instances_no_conflicts() -> void:

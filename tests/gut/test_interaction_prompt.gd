@@ -33,6 +33,18 @@ func test_shows_on_interactable_focused() -> void:
 	)
 
 
+func test_focus_fade_reaches_full_alpha() -> void:
+	EventBus.interactable_focused.emit("Enter Store")
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	await get_tree().create_timer(0.2).timeout
+	assert_almost_eq(
+		panel.modulate.a,
+		1.0,
+		0.05,
+		"Panel alpha should tween to fully visible on focus"
+	)
+
+
 func test_label_text_driven_by_action_label() -> void:
 	EventBus.interactable_focused.emit("Examine Item")
 	var label: Label = _prompt.get_node("PanelContainer/Label")
@@ -57,6 +69,12 @@ func test_hides_after_unfocused_tween_completes() -> void:
 	EventBus.interactable_unfocused.emit()
 	var panel: PanelContainer = _prompt.get_node("PanelContainer")
 	await get_tree().create_timer(0.2).timeout
+	assert_almost_eq(
+		panel.modulate.a,
+		0.0,
+		0.05,
+		"Panel alpha should tween back to zero on unfocus"
+	)
 	assert_false(
 		panel.visible,
 		"Panel should be hidden after unfocused fade completes"

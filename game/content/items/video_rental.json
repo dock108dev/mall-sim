@@ -1,30 +1,656 @@
 [
-  {"id":"rental_cosmic_battles_4_vhs","display_name":"Star Patrol IV: New Dawn","store_type":"rentals","category":"vhs_classic","base_value":8.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A farm kid, a pilot, and a rebel princess collide with destiny in the galaxy's most rented tape.","subcategory":"sci_fi","tags":["sci_fi","classic","family","blockbuster"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_velociraptor_gardens_vhs","display_name":"Raptor Reserve","store_type":"rentals","category":"vhs_classic","base_value":10.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A luxury creature park proves that high fences and corporate optimism are a terrible pairing.","subcategory":"sci_fi","tags":["sci_fi","thriller","classic","blockbuster"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_ghostcatchers_vhs","display_name":"Phantom Sweepers","store_type":"rentals","category":"vhs_classic","base_value":7.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A team of deadpan specialists turns spectral chaos into a business opportunity.","subcategory":"comedy","tags":["comedy","sci_fi","classic","family"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_the_grid_vhs","display_name":"Neon Lattice","store_type":"rentals","category":"vhs_new_release","base_value":14.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A hacker wakes up inside a glowing conspiracy where every hallway looks expensive.","subcategory":"action","tags":["action","sci_fi","new_release","blockbuster"],"rental_fee":3.5,"rental_period_days":1},
-  {"id":"rental_wizard_academy_vhs","display_name":"Spellbound Hall","store_type":"rentals","category":"vhs_new_release","base_value":15.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A nervous first-year discovers that enchanted school is mostly homework and giant problems.","subcategory":"fantasy","tags":["fantasy","family","new_release","blockbuster"],"rental_fee":3.5,"rental_period_days":1},
-  {"id":"rental_speed_racer_turbo_vhs","display_name":"Nitro Alley","store_type":"rentals","category":"vhs_new_release","base_value":13.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A chrome-heavy street-racing drama where every argument is resolved at highway speed.","subcategory":"action","tags":["action","cars","new_release"],"rental_fee":3.5,"rental_period_days":1},
-  {"id":"rental_pixel_story_vhs","display_name":"Toytown Tales","store_type":"rentals","category":"vhs_classic","base_value":10.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A heartfelt animated adventure about tiny plastic heroes and very large feelings.","subcategory":"animation","tags":["animation","family","comedy","classic"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_karate_pupil_vhs","display_name":"The Dojo Apprentice","store_type":"rentals","category":"vhs_classic","base_value":6.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A scrappy underdog learns balance, discipline, and how to make a crane pose look dramatic.","subcategory":"drama","tags":["drama","action","classic","80s"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_frightmare_oak_street_vhs","display_name":"Night Terrors on Alder Street","store_type":"rentals","category":"vhs_classic","base_value":7.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A whispery dream-stalker turns bedtime into the worst part of the week.","subcategory":"horror","tags":["horror","classic","cult","80s"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_notebook_of_secrets_vhs","display_name":"Letters in the Rain","store_type":"rentals","category":"vhs_classic","base_value":8.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A bittersweet romance built around lost mail, summer storms, and impossible timing.","subcategory":"romance","tags":["romance","drama","classic"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_space_cowboy_bebop_vhs","display_name":"Drifters of Orion","store_type":"rentals","category":"vhs_cult","base_value":9.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A jazzy sci-fi road movie about bounty hunters who are all cooler than their finances suggest.","subcategory":"anime","tags":["anime","sci_fi","cult","action"],"rental_fee":2.0,"rental_period_days":5},
-  {"id":"rental_big_lebonski_vhs","display_name":"The Big Rollers","store_type":"rentals","category":"vhs_cult","base_value":8.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A laid-back bowling mystery proves that one missing rug can spiral into absurdity fast.","subcategory":"comedy","tags":["comedy","cult","indie","classic"],"rental_fee":2.0,"rental_period_days":5},
-  {"id":"rental_chainsaw_ballet_vhs","display_name":"Steel-Toe Waltz","store_type":"rentals","category":"vhs_cult","base_value":6.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A stylish midnight horror pick where every frame looks rehearsed and every decision goes badly.","subcategory":"horror","tags":["horror","cult","indie","director"],"rental_fee":2.0,"rental_period_days":5},
-  {"id":"rental_foreign_cinema_collection_vhs","display_name":"Midnight Postcard","store_type":"rentals","category":"vhs_cult","base_value":5.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A festival favorite about distance, longing, and a mail route that becomes a confession booth.","subcategory":"foreign","tags":["foreign","drama","cult","indie"],"rental_fee":2.0,"rental_period_days":5},
-  {"id":"rental_the_grid_dvd","display_name":"Neon Lattice (DVD)","store_type":"rentals","category":"dvd_new_release","base_value":16.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"The widescreen disc edition adds bonus footage and removes all rewinding labor from the equation.","subcategory":"action","tags":["action","sci_fi","dvd","premium","new_release"],"rental_fee":4.5,"rental_period_days":1},
-  {"id":"rental_wizard_academy_dvd","display_name":"Spellbound Hall (DVD)","store_type":"rentals","category":"dvd_new_release","base_value":18.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"The cleaner disc transfer makes every candlelit corridor look like a potential franchise.","subcategory":"fantasy","tags":["fantasy","family","dvd","premium","new_release"],"rental_fee":4.5,"rental_period_days":1},
-  {"id":"rental_velociraptor_gardens_dvd","display_name":"Raptor Reserve (DVD)","store_type":"rentals","category":"dvd_classic","base_value":12.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"The digital edition is sharper, louder, and still unable to save the park's risk management team.","subcategory":"sci_fi","tags":["sci_fi","classic","dvd","blockbuster"],"rental_fee":3.0,"rental_period_days":3},
-  {"id":"rental_snack_microwave_popcorn","display_name":"Butter Burst Microwave Popcorn","store_type":"rentals","category":"snacks","base_value":1.5,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A movie-night staple whose fake-butter aroma somehow fills the whole apartment instantly.","subcategory":"popcorn","tags":["snack","impulse","movie_night"]},
-  {"id":"rental_snack_gummy_worms","display_name":"Tangy Loop Worms","store_type":"rentals","category":"snacks","base_value":1.25,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A sticky, sour sugar rope bag that disappears before the previews finish.","subcategory":"candy","tags":["snack","candy","impulse"]},
-  {"id":"rental_snack_cola","display_name":"Fizz Flick Cola","store_type":"rentals","category":"snacks","base_value":1.25,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A cold off-brand cola that feels like an automatic add-on at the counter.","subcategory":"drinks","tags":["snack","drink","impulse"]},
-  {"id":"rental_poster_cosmic_battles","display_name":"Star Patrol Saga Poster","store_type":"rentals","category":"merchandise","base_value":8.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A painted space-opera poster with enough heroic posing to fill an entire bedroom wall.","subcategory":"posters","tags":["poster","sci_fi","collectible","decor"]},
-  {"id":"rental_poster_frightmare","display_name":"Alder Street Midnight Poster","store_type":"rentals","category":"merchandise","base_value":6.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A shadowy one-sheet that does most of its frightening work with silhouette and color.","subcategory":"posters","tags":["poster","horror","collectible","decor"]},
-  {"id":"rental_standee_wizard_academy","display_name":"Spellbound Hall Cardboard Standee","store_type":"rentals","category":"merchandise","base_value":12.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A nearly life-size promo standee with a crease that somehow adds to the rental-store charm.","subcategory":"standees","tags":["standee","promo","collectible","fantasy"]},
-  {"id":"rental_promo_keychain_velociraptor","display_name":"Raptor Reserve Keychain","store_type":"rentals","category":"merchandise","base_value":3.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A rubber creature keychain that feels like the exact sort of thing a manager forgot to lock up.","subcategory":"promo","tags":["promo","collectible","impulse"]},
-  {"id":"rental_cosmic_battles_5_vhs","display_name":"Star Patrol V: Empire Eclipse","store_type":"rentals","category":"vhs_classic","base_value":8.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"The darker middle chapter turns wisecracks into setbacks and still rents out every weekend.","subcategory":"sci_fi","tags":["sci_fi","classic","family","blockbuster"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_bug_life_vhs","display_name":"Garden Brigade","store_type":"rentals","category":"vhs_classic","base_value":9.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"An ant-sized rebellion plays like a family comedy until the grasshoppers show up.","subcategory":"animation","tags":["animation","family","comedy","classic"],"rental_fee":2.0,"rental_period_days":3},
-  {"id":"rental_gladiator_maximus_vhs","display_name":"Arena of Ash","store_type":"rentals","category":"vhs_new_release","base_value":13.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A fallen commander fights up the arena ladder while every speech tries to become a quote.","subcategory":"action","tags":["action","drama","new_release","blockbuster"],"rental_fee":3.5,"rental_period_days":1},
-  {"id":"rental_sixth_feeling_vhs","display_name":"The Seventh Sense","store_type":"rentals","category":"vhs_new_release","base_value":12.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A slow-burn supernatural mystery built almost entirely to make people gasp in the parking lot.","subcategory":"thriller","tags":["thriller","horror","new_release","twist"],"rental_fee":3.5,"rental_period_days":1}
+  {
+    "id": "rental_cosmic_battles_4_vhs",
+    "item_name": "Star Patrol IV: New Dawn",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 8.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A farm kid, a pilot, and a rebel princess collide with destiny in the galaxy's most rented tape.",
+    "subcategory": "sci_fi",
+    "tags": [
+      "sci_fi",
+      "classic",
+      "family",
+      "blockbuster"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_velociraptor_gardens_vhs",
+    "item_name": "Raptor Reserve",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 10.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A luxury creature park proves that high fences and corporate optimism are a terrible pairing.",
+    "subcategory": "sci_fi",
+    "tags": [
+      "sci_fi",
+      "thriller",
+      "classic",
+      "blockbuster"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_ghostcatchers_vhs",
+    "item_name": "Phantom Sweepers",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 7.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A team of deadpan specialists turns spectral chaos into a business opportunity.",
+    "subcategory": "comedy",
+    "tags": [
+      "comedy",
+      "sci_fi",
+      "classic",
+      "family"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_the_grid_vhs",
+    "item_name": "Neon Lattice",
+    "store_type": "rentals",
+    "category": "vhs_new_release",
+    "base_price": 14.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A hacker wakes up inside a glowing conspiracy where every hallway looks expensive.",
+    "subcategory": "action",
+    "tags": [
+      "action",
+      "sci_fi",
+      "new_release",
+      "blockbuster"
+    ],
+    "rental_fee": 3.5,
+    "rental_period_days": 1
+  },
+  {
+    "id": "rental_wizard_academy_vhs",
+    "item_name": "Spellbound Hall",
+    "store_type": "rentals",
+    "category": "vhs_new_release",
+    "base_price": 15.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A nervous first-year discovers that enchanted school is mostly homework and giant problems.",
+    "subcategory": "fantasy",
+    "tags": [
+      "fantasy",
+      "family",
+      "new_release",
+      "blockbuster"
+    ],
+    "rental_fee": 3.5,
+    "rental_period_days": 1
+  },
+  {
+    "id": "rental_speed_racer_turbo_vhs",
+    "item_name": "Nitro Alley",
+    "store_type": "rentals",
+    "category": "vhs_new_release",
+    "base_price": 13.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A chrome-heavy street-racing drama where every argument is resolved at highway speed.",
+    "subcategory": "action",
+    "tags": [
+      "action",
+      "cars",
+      "new_release"
+    ],
+    "rental_fee": 3.5,
+    "rental_period_days": 1
+  },
+  {
+    "id": "rental_pixel_story_vhs",
+    "item_name": "Toytown Tales",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 10.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A heartfelt animated adventure about tiny plastic heroes and very large feelings.",
+    "subcategory": "animation",
+    "tags": [
+      "animation",
+      "family",
+      "comedy",
+      "classic"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_karate_pupil_vhs",
+    "item_name": "The Dojo Apprentice",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 6.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A scrappy underdog learns balance, discipline, and how to make a crane pose look dramatic.",
+    "subcategory": "drama",
+    "tags": [
+      "drama",
+      "action",
+      "classic",
+      "80s"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_frightmare_oak_street_vhs",
+    "item_name": "Night Terrors on Alder Street",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 7.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A whispery dream-stalker turns bedtime into the worst part of the week.",
+    "subcategory": "horror",
+    "tags": [
+      "horror",
+      "classic",
+      "cult",
+      "80s"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_notebook_of_secrets_vhs",
+    "item_name": "Letters in the Rain",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 8.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A bittersweet romance built around lost mail, summer storms, and impossible timing.",
+    "subcategory": "romance",
+    "tags": [
+      "romance",
+      "drama",
+      "classic"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_space_cowboy_bebop_vhs",
+    "item_name": "Drifters of Orion",
+    "store_type": "rentals",
+    "category": "vhs_cult",
+    "base_price": 9.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A jazzy sci-fi road movie about bounty hunters who are all cooler than their finances suggest.",
+    "subcategory": "anime",
+    "tags": [
+      "anime",
+      "sci_fi",
+      "cult",
+      "action"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 5
+  },
+  {
+    "id": "rental_big_lebonski_vhs",
+    "item_name": "The Big Rollers",
+    "store_type": "rentals",
+    "category": "vhs_cult",
+    "base_price": 8.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A laid-back bowling mystery proves that one missing rug can spiral into absurdity fast.",
+    "subcategory": "comedy",
+    "tags": [
+      "comedy",
+      "cult",
+      "indie",
+      "classic"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 5
+  },
+  {
+    "id": "rental_chainsaw_ballet_vhs",
+    "item_name": "Steel-Toe Waltz",
+    "store_type": "rentals",
+    "category": "vhs_cult",
+    "base_price": 6.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A stylish midnight horror pick where every frame looks rehearsed and every decision goes badly.",
+    "subcategory": "horror",
+    "tags": [
+      "horror",
+      "cult",
+      "indie",
+      "director"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 5
+  },
+  {
+    "id": "rental_foreign_cinema_collection_vhs",
+    "item_name": "Midnight Postcard",
+    "store_type": "rentals",
+    "category": "vhs_cult",
+    "base_price": 5.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A festival favorite about distance, longing, and a mail route that becomes a confession booth.",
+    "subcategory": "foreign",
+    "tags": [
+      "foreign",
+      "drama",
+      "cult",
+      "indie"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 5
+  },
+  {
+    "id": "rental_the_grid_dvd",
+    "item_name": "Neon Lattice (DVD)",
+    "store_type": "rentals",
+    "category": "dvd_new_release",
+    "base_price": 16.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "The widescreen disc edition adds bonus footage and removes all rewinding labor from the equation.",
+    "subcategory": "action",
+    "tags": [
+      "action",
+      "sci_fi",
+      "dvd",
+      "premium",
+      "new_release"
+    ],
+    "rental_fee": 4.5,
+    "rental_period_days": 1
+  },
+  {
+    "id": "rental_wizard_academy_dvd",
+    "item_name": "Spellbound Hall (DVD)",
+    "store_type": "rentals",
+    "category": "dvd_new_release",
+    "base_price": 18.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "The cleaner disc transfer makes every candlelit corridor look like a potential franchise.",
+    "subcategory": "fantasy",
+    "tags": [
+      "fantasy",
+      "family",
+      "dvd",
+      "premium",
+      "new_release"
+    ],
+    "rental_fee": 4.5,
+    "rental_period_days": 1
+  },
+  {
+    "id": "rental_velociraptor_gardens_dvd",
+    "item_name": "Raptor Reserve (DVD)",
+    "store_type": "rentals",
+    "category": "dvd_classic",
+    "base_price": 12.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "The digital edition is sharper, louder, and still unable to save the park's risk management team.",
+    "subcategory": "sci_fi",
+    "tags": [
+      "sci_fi",
+      "classic",
+      "dvd",
+      "blockbuster"
+    ],
+    "rental_fee": 3.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_snack_microwave_popcorn",
+    "item_name": "Butter Burst Microwave Popcorn",
+    "store_type": "rentals",
+    "category": "snacks",
+    "base_price": 1.5,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A movie-night staple whose fake-butter aroma somehow fills the whole apartment instantly.",
+    "subcategory": "popcorn",
+    "tags": [
+      "snack",
+      "impulse",
+      "movie_night"
+    ]
+  },
+  {
+    "id": "rental_snack_gummy_worms",
+    "item_name": "Tangy Loop Worms",
+    "store_type": "rentals",
+    "category": "snacks",
+    "base_price": 1.25,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A sticky, sour sugar rope bag that disappears before the previews finish.",
+    "subcategory": "candy",
+    "tags": [
+      "snack",
+      "candy",
+      "impulse"
+    ]
+  },
+  {
+    "id": "rental_snack_cola",
+    "item_name": "Fizz Flick Cola",
+    "store_type": "rentals",
+    "category": "snacks",
+    "base_price": 1.25,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A cold off-brand cola that feels like an automatic add-on at the counter.",
+    "subcategory": "drinks",
+    "tags": [
+      "snack",
+      "drink",
+      "impulse"
+    ]
+  },
+  {
+    "id": "rental_poster_cosmic_battles",
+    "item_name": "Star Patrol Saga Poster",
+    "store_type": "rentals",
+    "category": "merchandise",
+    "base_price": 8.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A painted space-opera poster with enough heroic posing to fill an entire bedroom wall.",
+    "subcategory": "posters",
+    "tags": [
+      "poster",
+      "sci_fi",
+      "collectible",
+      "decor"
+    ]
+  },
+  {
+    "id": "rental_poster_frightmare",
+    "item_name": "Alder Street Midnight Poster",
+    "store_type": "rentals",
+    "category": "merchandise",
+    "base_price": 6.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A shadowy one-sheet that does most of its frightening work with silhouette and color.",
+    "subcategory": "posters",
+    "tags": [
+      "poster",
+      "horror",
+      "collectible",
+      "decor"
+    ]
+  },
+  {
+    "id": "rental_standee_wizard_academy",
+    "item_name": "Spellbound Hall Cardboard Standee",
+    "store_type": "rentals",
+    "category": "merchandise",
+    "base_price": 12.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A nearly life-size promo standee with a crease that somehow adds to the rental-store charm.",
+    "subcategory": "standees",
+    "tags": [
+      "standee",
+      "promo",
+      "collectible",
+      "fantasy"
+    ]
+  },
+  {
+    "id": "rental_promo_keychain_velociraptor",
+    "item_name": "Raptor Reserve Keychain",
+    "store_type": "rentals",
+    "category": "merchandise",
+    "base_price": 3.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A rubber creature keychain that feels like the exact sort of thing a manager forgot to lock up.",
+    "subcategory": "promo",
+    "tags": [
+      "promo",
+      "collectible",
+      "impulse"
+    ]
+  },
+  {
+    "id": "rental_cosmic_battles_5_vhs",
+    "item_name": "Star Patrol V: Empire Eclipse",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 8.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "The darker middle chapter turns wisecracks into setbacks and still rents out every weekend.",
+    "subcategory": "sci_fi",
+    "tags": [
+      "sci_fi",
+      "classic",
+      "family",
+      "blockbuster"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_bug_life_vhs",
+    "item_name": "Garden Brigade",
+    "store_type": "rentals",
+    "category": "vhs_classic",
+    "base_price": 9.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "An ant-sized rebellion plays like a family comedy until the grasshoppers show up.",
+    "subcategory": "animation",
+    "tags": [
+      "animation",
+      "family",
+      "comedy",
+      "classic"
+    ],
+    "rental_fee": 2.0,
+    "rental_period_days": 3
+  },
+  {
+    "id": "rental_gladiator_maximus_vhs",
+    "item_name": "Arena of Ash",
+    "store_type": "rentals",
+    "category": "vhs_new_release",
+    "base_price": 13.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A fallen commander fights up the arena ladder while every speech tries to become a quote.",
+    "subcategory": "action",
+    "tags": [
+      "action",
+      "drama",
+      "new_release",
+      "blockbuster"
+    ],
+    "rental_fee": 3.5,
+    "rental_period_days": 1
+  },
+  {
+    "id": "rental_sixth_feeling_vhs",
+    "item_name": "The Seventh Sense",
+    "store_type": "rentals",
+    "category": "vhs_new_release",
+    "base_price": 12.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A slow-burn supernatural mystery built almost entirely to make people gasp in the parking lot.",
+    "subcategory": "thriller",
+    "tags": [
+      "thriller",
+      "horror",
+      "new_release",
+      "twist"
+    ],
+    "rental_fee": 3.5,
+    "rental_period_days": 1
+  }
 ]

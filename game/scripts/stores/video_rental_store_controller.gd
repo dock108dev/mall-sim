@@ -74,11 +74,12 @@ func is_rental_item(category: String) -> bool:
 	return category in RENTAL_CATEGORIES
 
 
-## Returns true if the item can be rented (not at or below poor condition).
+## Returns true if the item can still be rented.
 func is_rentable(item: ItemInstance) -> bool:
 	if not item:
 		return false
-	return item.condition != "poor"
+	_wear_tracker.initialize_item(item.instance_id, item.condition)
+	return _wear_tracker.is_rentable(item.instance_id)
 
 
 ## Returns the rental probability boost (1.3x for staff picks, 1.0 otherwise).
@@ -125,9 +126,7 @@ func process_rental(
 		)
 		if item:
 			item.rental_due_day = return_day
-			_wear_tracker.initialize_item(
-				item_instance_id, item.condition
-			)
+			_wear_tracker.initialize_item(item_instance_id, item.condition)
 			_inventory_system.move_item(
 				item_instance_id, RENTED_LOCATION
 			)
@@ -194,14 +193,14 @@ func get_available_count() -> int:
 	)
 	var available: int = 0
 	for item: ItemInstance in all_items:
-		if item.current_location != RENTED_LOCATION:
+		if item.current_location != RENTED_LOCATION and is_rentable(item):
 			available += 1
 	return available
 
 
-## Returns the current tape wear for an item.
-func get_tape_wear(instance_id: String) -> float:
-	return _wear_tracker.get_wear(instance_id)
+## Returns the current play-count progress for an item.
+func get_tape_wear(instance_id: String) -> int:
+	return _wear_tracker.get_play_count(instance_id)
 
 
 ## Sets a title as a staff pick (max 3). Returns true on success.
@@ -278,6 +277,7 @@ func _apply_state(data: Dictionary) -> void:
 	var saved_wear: Variant = data.get("tape_wear", {})
 	if saved_wear is Dictionary:
 		_wear_tracker.load_save_data(saved_wear as Dictionary)
+	_sync_wear_tracker()
 	var saved_policy: Variant = data.get(
 		"late_fee_policy", LateFeePolicy.STANDARD
 	)
@@ -287,6 +287,12 @@ func _apply_state(data: Dictionary) -> void:
 		for entry: Variant in data["rental_history"]:
 			if entry is Dictionary:
 				_rental_history.append(entry)
+
+
+func _on_store_entered(store_id: StringName) -> void:
+	if not _matches_store_id(store_id):
+		return
+	_sync_wear_tracker()
 
 
 func _on_day_started(day: int) -> void:
@@ -323,15 +329,17 @@ func _handle_return(rental: Dictionary, late_days: int) -> void:
 	if randf() < LOST_ITEM_CHANCE:
 		_handle_lost_item(rental)
 		return
-	_apply_degradation(rental)
+	var degradation_result: Dictionary = _apply_degradation(rental)
 	if late_days > 0:
 		_collect_late_fee(rental, late_days)
-	var worn_out: bool = false
+	var worn_out: bool = bool(
+		degradation_result.get("became_unrentable", false)
+	)
 	if _inventory_system:
 		var item: ItemInstance = _inventory_system.get_item(instance_id)
 		if item:
 			item.rental_due_day = -1
-			worn_out = not is_rentable(item)
+			worn_out = worn_out or not is_rentable(item)
 		if worn_out:
 			_inventory_system.move_item(
 				instance_id, BACKROOM_LOCATION
@@ -352,15 +360,20 @@ func _handle_return(rental: Dictionary, late_days: int) -> void:
 
 
 ## Applies guaranteed wear degradation to a returned item.
-func _apply_degradation(rental: Dictionary) -> void:
+func _apply_degradation(rental: Dictionary) -> Dictionary:
 	var instance_id: String = rental["instance_id"]
-	var new_condition: String = _wear_tracker.apply_degradation(
-		instance_id, rental["category"]
-	)
+	var item: ItemInstance = null
 	if _inventory_system:
-		var item: ItemInstance = _inventory_system.get_item(instance_id)
-		if item:
-			item.condition = new_condition
+		item = _inventory_system.get_item(instance_id)
+	if item:
+		_wear_tracker.sync_condition(instance_id, item.condition)
+	else:
+		_wear_tracker.initialize_item(instance_id, "good")
+	var result: Dictionary = _wear_tracker.record_return(instance_id)
+	if bool(result.get("condition_changed", false)) and _inventory_system:
+		var new_condition: String = str(result.get("new_condition", "good"))
+		_inventory_system.update_item_condition(instance_id, new_condition)
+	return result
 
 
 ## Collects late fees using formula: base + (days × per_day_rate), capped.
@@ -451,7 +464,8 @@ func _update_returns_bin_count() -> void:
 func is_worn_out(item: ItemInstance) -> bool:
 	if not item:
 		return false
-	return item.condition == "poor"
+	_wear_tracker.initialize_item(item.instance_id, item.condition)
+	return not _wear_tracker.is_rentable(item.instance_id)
 
 
 ## Retires a worn-out tape by selling at poor-condition price or writing off.
@@ -466,18 +480,18 @@ func retire_tape(instance_id: String, sell: bool) -> bool:
 	if not is_worn_out(item):
 		push_error("VideoRental: item not worn out: %s" % instance_id)
 		return false
-	if sell and _economy_system:
-		var sale_value: float = item.get_current_value()
-		_economy_system.add_cash(
-			sale_value,
-			"Tape retired (sold): %s" % instance_id
+	if sell:
+		var sale_value: float = _get_retirement_sale_value(item)
+		var category: String = ""
+		if item.definition:
+			category = item.definition.category
+		EventBus.item_sold.emit(instance_id, sale_value, category)
+		EventBus.customer_purchased.emit(
+			STORE_ID, StringName(instance_id), sale_value, &""
 		)
-		_economy_system.record_store_revenue(
-			String(STORE_ID), sale_value
-		)
+	else:
+		_inventory_system.remove_item(instance_id)
 	_wear_tracker.erase_item(instance_id)
-	_inventory_system.remove_item(instance_id)
-	EventBus.inventory_changed.emit()
 	return true
 
 
@@ -490,3 +504,33 @@ func _emit_worn_out_notification(instance_id: String) -> void:
 	EventBus.notification_requested.emit(
 		"'%s' is worn out — consider retiring it" % tape_name
 	)
+
+
+func _sync_wear_tracker() -> void:
+	if not _inventory_system:
+		return
+	var items: Array[ItemInstance] = _inventory_system.get_items_for_store(
+		String(STORE_ID)
+	)
+	_wear_tracker.initialize(items)
+
+
+func _matches_store_id(store_id: StringName) -> bool:
+	if store_id == STORE_ID:
+		return true
+	if not ContentRegistry.exists(String(STORE_ID)):
+		return store_id == STORE_ID
+	if not ContentRegistry.exists(String(store_id)):
+		return false
+	return (
+		ContentRegistry.resolve(String(store_id))
+		== ContentRegistry.resolve(String(STORE_ID))
+	)
+
+
+func _get_retirement_sale_value(item: ItemInstance) -> float:
+	var original_condition: String = item.condition
+	item.condition = "poor"
+	var sale_value: float = item.get_current_value()
+	item.condition = original_condition
+	return sale_value

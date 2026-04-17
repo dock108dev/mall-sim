@@ -101,6 +101,7 @@ func start_refurbishment(instance_id: String) -> bool:
 			"RefurbishmentSystem: item '%s' not eligible"
 			% instance_id
 		)
+		EventBus.refurbishment_failed.emit(instance_id)
 		return false
 	var cost: float = get_parts_cost(item)
 	if not _economy_system.deduct_cash(
@@ -109,6 +110,7 @@ func start_refurbishment(instance_id: String) -> bool:
 		EventBus.notification_requested.emit(
 			"Insufficient funds for refurbishment ($%.2f)" % cost
 		)
+		EventBus.refurbishment_failed.emit(instance_id)
 		return false
 	var duration: int = get_duration(item)
 	var entry: Dictionary = {
@@ -211,6 +213,7 @@ func _resolve_refurbishment(entry: Dictionary) -> void:
 			"RefurbishmentSystem: item '%s' missing at resolution"
 			% instance_id
 		)
+		EventBus.refurbishment_failed.emit(instance_id)
 		return
 	var old_condition: String = item.condition
 	var new_condition: String = _get_next_condition(old_condition)

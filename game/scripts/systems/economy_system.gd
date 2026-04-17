@@ -121,6 +121,15 @@ func reset_daily_totals() -> void:
 	_today_sales = {}
 	_store_daily_revenue = {}
 
+
+## Returns the end-of-day snapshot used by day-cycle listeners and tests.
+func get_day_end_summary(day: int) -> Dictionary:
+	var summary: Dictionary = get_daily_summary()
+	summary["day"] = day
+	summary["transactions"] = _duplicate_transactions(_daily_transactions)
+	summary["store_daily_revenue"] = _store_daily_revenue.duplicate(true)
+	return summary
+
 ## Returns a serializable snapshot of all economy state.
 func serialize() -> Dictionary: return get_save_data()
 func deserialize(data: Dictionary) -> void: load_save_data(data)

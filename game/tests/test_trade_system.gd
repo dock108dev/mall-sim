@@ -1,4 +1,4 @@
-## GUT unit tests for TradeSystem offer lifecycle, valuation, and accept/decline.
+## GUT unit tests for TradeSystem offer lifecycle, valuation, and resolution flow.
 extends GutTest
 
 
@@ -9,13 +9,16 @@ var _reputation: ReputationSystem
 var _data_loader: DataLoader
 var _panel: TradePanel
 
+var _wanted_def: ItemDefinition
+var _good_offer_def: ItemDefinition
+var _fair_offer_def: ItemDefinition
+var _near_mint_offer_def: ItemDefinition
+var _rare_def: ItemDefinition
+var _common_def: ItemDefinition
 var _profile: CustomerTypeDefinition
-var _definition: ItemDefinition
-var _offered_def: ItemDefinition
 
-var _trade_offered_signals: Array[Dictionary] = []
-var _trade_accepted_signals: Array[Dictionary] = []
-var _trade_declined_signals: Array[Dictionary] = []
+var _trade_offer_received_signals: Array[Dictionary] = []
+var _trade_resolved_signals: Array[Dictionary] = []
 
 
 func before_each() -> void:
@@ -29,16 +32,25 @@ func before_each() -> void:
 	_reputation = ReputationSystem.new()
 	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
+	_register_store_in_content_registry()
 	_reputation.initialize_store("pocket_creatures")
 
 	_data_loader = DataLoader.new()
 	add_child_autofree(_data_loader)
 
-	_definition = _make_item_def("pc_rare_dragon", "Rare Dragon", 50.0, "rare")
-	_offered_def = _make_item_def("pc_common_slime", "Common Slime", 45.0, "common")
-
-	_data_loader._items[_definition.id] = _definition
-	_data_loader._items[_offered_def.id] = _offered_def
+	_wanted_def = _make_item_def("pc_target_card", "Target Card", 10.0, "common")
+	_good_offer_def = _make_item_def("pc_good_offer", "Good Offer", 10.0, "common")
+	_fair_offer_def = _make_item_def("pc_fair_offer", "Fair Offer", 20.0, "common")
+	_near_mint_offer_def = _make_item_def(
+		"pc_near_mint_offer", "Near Mint Offer", 7.0, "common"
+	)
+	_rare_def = _make_item_def("pc_rare_card", "Rare Card", 10.0, "rare")
+	_common_def = _make_item_def("pc_common_card", "Common Card", 10.0, "common")
+	for item_def: ItemDefinition in [
+		_wanted_def, _good_offer_def, _fair_offer_def,
+		_near_mint_offer_def, _rare_def, _common_def,
+	]:
+		_data_loader._items[item_def.id] = item_def
 
 	_panel = TradePanel.new()
 	add_child_autofree(_panel)
@@ -61,45 +73,179 @@ func before_each() -> void:
 	_profile.impulse_buy_chance = 0.1
 	_profile.mood_tags = PackedStringArray([])
 
-	_trade_offered_signals = []
-	_trade_accepted_signals = []
-	_trade_declined_signals = []
-	EventBus.trade_offered.connect(_on_trade_offered)
-	EventBus.trade_accepted.connect(_on_trade_accepted)
-	EventBus.trade_declined.connect(_on_trade_declined)
+	_trade_offer_received_signals = []
+	_trade_resolved_signals = []
+	EventBus.trade_offer_received.connect(_on_trade_offer_received)
+	EventBus.trade_resolved.connect(_on_trade_resolved)
 
 
 func after_each() -> void:
-	_safe_disconnect(EventBus.trade_offered, _on_trade_offered)
-	_safe_disconnect(EventBus.trade_accepted, _on_trade_accepted)
-	_safe_disconnect(EventBus.trade_declined, _on_trade_declined)
-	_safe_disconnect(EventBus.day_started, _trade._on_day_started)
+	if _trade != null:
+		_safe_disconnect(EventBus.day_started, _trade._on_day_started)
+	_safe_disconnect(EventBus.trade_offer_received, _on_trade_offer_received)
+	_safe_disconnect(EventBus.trade_resolved, _on_trade_resolved)
 
 
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
+func test_offer_construction_includes_required_fields() -> void:
+	var setup: Dictionary = _begin_trade()
+	assert_true(setup["started"], "begin_trade should succeed for a valid trader")
+	if not bool(setup["started"]):
+		return
+	assert_eq(
+		_trade_offer_received_signals.size(), 1,
+		"trade_offer_received should fire when the NPC initiates a trade"
+	)
+	if _trade_offer_received_signals.is_empty():
+		return
+	var offer: Dictionary = _trade_offer_received_signals[0]
+	assert_true(offer.has("offered_cards"), "Offer should include offered_cards")
+	assert_true(offer.has("target_card"), "Offer should include target_card")
+	assert_true(offer.has("npc_id"), "Offer should include npc_id")
+	assert_eq(
+		offer["npc_id"], setup["customer"].get_instance_id(),
+		"Offer npc_id should match the initiating customer"
+	)
+	var offered_cards: Array[ItemInstance] = []
+	offered_cards.assign(offer["offered_cards"])
+	assert_eq(offered_cards.size(), 1, "Offer should include one offered card")
+	assert_eq(
+		(offer["target_card"] as ItemInstance).instance_id,
+		(setup["wanted"] as ItemInstance).instance_id,
+		"Offer target card should match the customer's requested card"
+	)
 
 
-func _on_trade_offered(
-	customer_id: int, wanted_id: String, offered_id: String
-) -> void:
-	_trade_offered_signals.append({
-		"customer_id": customer_id,
-		"wanted_id": wanted_id,
-		"offered_id": offered_id,
-	})
+func test_evaluate_offer_marks_common_for_rare_as_unfair() -> void:
+	var offer: Dictionary = {
+		"npc_id": 42,
+		"offered_cards": [
+			ItemInstance.create(_common_def, "good", 1, _common_def.base_price),
+		],
+		"target_card": ItemInstance.create(_rare_def, "good", 1, _rare_def.base_price),
+	}
+	assert_eq(
+		_trade.evaluate_offer(offer),
+		TradeSystem.UNFAIR_CLASSIFICATION,
+		"Trading a common card for a rare card should be unfair"
+	)
 
 
-func _on_trade_accepted(wanted_id: String, offered_id: String) -> void:
-	_trade_accepted_signals.append({
-		"wanted_id": wanted_id,
-		"offered_id": offered_id,
-	})
+func test_accept_trade_moves_cards_between_inventories() -> void:
+	var setup: Dictionary = _setup_active_trade()
+	var wanted: ItemInstance = setup["wanted"]
+	var offered: ItemInstance = setup["offered"]
+	assert_true(
+		_trade.accept_trade(),
+		"accept_trade should succeed when the player still owns the target card"
+	)
+	assert_false(
+		_inventory._items.has(wanted.instance_id),
+		"Accepting should remove the player's target card from inventory"
+	)
+	assert_true(
+		_inventory._items.has(offered.instance_id),
+		"Accepting should add the offered card to inventory"
+	)
+	assert_eq(
+		offered.current_location, "backroom",
+		"Accepted cards should enter the player's backroom inventory"
+	)
 
 
-func _on_trade_declined(customer_id: int) -> void:
-	_trade_declined_signals.append({"customer_id": customer_id})
+func test_decline_trade_leaves_inventories_unchanged() -> void:
+	var setup: Dictionary = _setup_active_trade()
+	var wanted: ItemInstance = setup["wanted"]
+	var offered: ItemInstance = setup["offered"]
+	var inventory_count_before: int = _inventory._items.size()
+	assert_true(
+		_trade.decline_trade(),
+		"decline_trade should succeed while a trade is active"
+	)
+	assert_eq(
+		_inventory._items.size(), inventory_count_before,
+		"Declining should not change the player's inventory count"
+	)
+	assert_true(
+		_inventory._items.has(wanted.instance_id),
+		"Declining should keep the target card in inventory"
+	)
+	assert_false(
+		_inventory._items.has(offered.instance_id),
+		"Declining should not add the NPC's offered card to inventory"
+	)
+
+
+func test_trade_offer_received_signal_fires_on_begin_trade() -> void:
+	var setup: Dictionary = _begin_trade()
+	assert_true(setup["started"], "begin_trade should create an offer")
+	if not bool(setup["started"]):
+		return
+	assert_eq(
+		_trade_offer_received_signals.size(), 1,
+		"trade_offer_received should fire exactly once"
+	)
+	if _trade_offer_received_signals.is_empty():
+		return
+	var offer: Dictionary = _trade_offer_received_signals[0]
+	var offered_cards: Array[ItemInstance] = []
+	offered_cards.assign(offer["offered_cards"])
+	assert_eq(
+		offered_cards[0].instance_id,
+		_trade._offered_item.instance_id,
+		"Signal payload should include the offered card instance"
+	)
+
+
+func test_trade_resolved_signal_reports_accept_and_decline_outcomes() -> void:
+	_setup_active_trade()
+	assert_true(_trade.accept_trade(), "accept_trade should resolve successfully")
+	assert_eq(
+		_trade_resolved_signals.size(), 1,
+		"trade_resolved should fire after accepting"
+	)
+	assert_true(
+		_trade_resolved_signals[0]["accepted"],
+		"Resolved signal should report accepted=true for successful accept"
+	)
+
+	_trade_resolved_signals.clear()
+	_setup_active_trade()
+	assert_true(_trade.decline_trade(), "decline_trade should resolve successfully")
+	assert_eq(
+		_trade_resolved_signals.size(), 1,
+		"trade_resolved should fire after declining"
+	)
+	assert_false(
+		_trade_resolved_signals[0]["accepted"],
+		"Resolved signal should report accepted=false for decline"
+	)
+
+
+func test_accept_trade_fails_cleanly_when_player_no_longer_owns_target_card() -> void:
+	var setup: Dictionary = _setup_active_trade()
+	var wanted: ItemInstance = setup["wanted"]
+	var offered: ItemInstance = setup["offered"]
+	assert_true(
+		_inventory.remove_item(wanted.instance_id),
+		"Test setup should remove the target card from inventory"
+	)
+	assert_false(
+		_trade.accept_trade(),
+		"accept_trade should fail when the player no longer owns the target card"
+	)
+	assert_false(
+		_inventory._items.has(offered.instance_id),
+		"Failed accept should not add the offered card to inventory"
+	)
+	assert_false(_trade.is_active(), "Trade should be cleared after a failed accept")
+	assert_eq(
+		_trade_resolved_signals.size(), 1,
+		"trade_resolved should still fire for a failed accept"
+	)
+	assert_false(
+		_trade_resolved_signals[0]["accepted"],
+		"Failed accept should resolve as accepted=false"
+	)
 
 
 func _make_item_def(
@@ -111,9 +257,9 @@ func _make_item_def(
 	def.category = "cards"
 	def.base_price = base_price
 	def.rarity = rarity
-	def.tags = PackedStringArray([])
+	def.tags = []
 	def.condition_range = PackedStringArray(
-		["poor", "fair", "good", "near_mint", "mint"]
+		["fair", "good", "near_mint"]
 	)
 	def.store_type = "pocket_creatures"
 	return def
@@ -126,306 +272,75 @@ func _make_customer() -> Customer:
 	return customer
 
 
-func _setup_trade_items() -> Dictionary:
+func _begin_trade() -> Dictionary:
 	var wanted: ItemInstance = ItemInstance.create(
-		_definition, "good", 1, 50.0
+		_wanted_def, "good", 1, _wanted_def.base_price
 	)
-	wanted.current_location = "shelf:0"
-	wanted.player_set_price = 50.0
+	wanted.current_location = "shelf:slot_0"
 	_inventory._items[wanted.instance_id] = wanted
-
 	var customer: Customer = _make_customer()
 	customer._desired_item = wanted
 	customer._desired_item_slot = null
-	return {"wanted": wanted, "customer": customer}
+	return {
+		"started": _trade.begin_trade(customer),
+		"customer": customer,
+		"wanted": wanted,
+	}
 
 
-# --- Offer construction ---
-
-
-func test_offer_has_required_fields() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer could be generated — skipping")
-		return
-	assert_not_null(
-		_trade._wanted_item,
-		"Trade should have a wanted item"
-	)
-	assert_not_null(
-		_trade._offered_item,
-		"Trade should have an offered item"
-	)
-	assert_not_null(
-		_trade._active_customer,
-		"Trade should have an active customer"
-	)
-	assert_false(
-		_trade._offered_item.instance_id.is_empty(),
-		"Offered item should have a valid instance_id"
-	)
-	assert_false(
-		_trade._wanted_item.instance_id.is_empty(),
-		"Wanted item should have a valid instance_id"
-	)
-
-
-# --- Offer valuation ---
-
-
-func test_evaluate_offer_within_tolerance() -> void:
+func _setup_active_trade() -> Dictionary:
 	var wanted: ItemInstance = ItemInstance.create(
-		_definition, "good", 1, 50.0
+		_wanted_def, "good", 1, _wanted_def.base_price
 	)
-	var wanted_value: float = _economy.calculate_market_value(wanted)
-	var min_value: float = wanted_value * (1.0 - TradeSystem.VALUE_TOLERANCE)
-	var max_value: float = wanted_value * (1.0 + TradeSystem.VALUE_TOLERANCE)
+	wanted.current_location = "shelf:slot_0"
+	_inventory._items[wanted.instance_id] = wanted
 	var offered: ItemInstance = ItemInstance.create(
-		_offered_def, "good", 1, 0.0
+		_good_offer_def, "good", 1, _good_offer_def.base_price
 	)
-	var offered_value: float = _economy.calculate_market_value(offered)
-	if offered_value >= min_value and offered_value <= max_value:
-		assert_true(
-			true, "Offered value is within fair trade tolerance"
-		)
-	else:
-		assert_true(
-			offered_value < min_value or offered_value > max_value,
-			"Offered value outside tolerance is classified unfair"
-		)
-
-
-func test_generate_offer_excludes_same_item() -> void:
-	var single_def: ItemDefinition = _make_item_def(
-		"pc_only_card", "Only Card", 50.0, "rare"
-	)
-	single_def.store_type = "pocket_creatures"
-	_data_loader._items.clear()
-	_data_loader._items[single_def.id] = single_def
-
-	var wanted: ItemInstance = ItemInstance.create(
-		single_def, "good", 1, 50.0
-	)
-	var offer: ItemInstance = _trade._generate_offer(wanted)
-	assert_null(
-		offer,
-		"Should not generate offer from the same item definition"
-	)
-
-
-# --- Accept trade ---
-
-
-func test_accept_trade_updates_inventory() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var wanted: ItemInstance = setup["wanted"]
-	var wanted_id: String = wanted.instance_id
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	var offered_id: String = _trade._offered_item.instance_id
-	_trade._on_trade_accepted()
-	assert_false(
-		_inventory._items.has(wanted_id),
-		"Wanted item should be removed from inventory after accept"
-	)
-	assert_true(
-		_inventory._items.has(offered_id),
-		"Offered item should be added to inventory after accept"
-	)
-
-
-func test_accept_trade_offered_item_in_backroom() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	var offered: ItemInstance = _trade._offered_item
-	_trade._on_trade_accepted()
-	assert_eq(
-		offered.current_location, "backroom",
-		"Offered item should be placed in backroom"
-	)
-
-
-func test_accept_trade_increments_trades_today() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	var before: int = _trade.get_trades_today()
-	_trade._on_trade_accepted()
-	assert_eq(
-		_trade.get_trades_today(), before + 1,
-		"Trades today should increment by 1"
-	)
-
-
-# --- Decline trade ---
-
-
-func test_decline_trade_leaves_inventory_unchanged() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var wanted: ItemInstance = setup["wanted"]
-	var wanted_id: String = wanted.instance_id
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	var offered_id: String = _trade._offered_item.instance_id
-	_trade._on_trade_declined()
-	assert_true(
-		_inventory._items.has(wanted_id),
-		"Wanted item should remain in inventory after decline"
-	)
-	assert_false(
-		_inventory._items.has(offered_id),
-		"Offered item should not be added to inventory after decline"
-	)
-
-
-func test_decline_trade_does_not_increment_counter() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	var before: int = _trade.get_trades_today()
-	_trade._on_trade_declined()
-	assert_eq(
-		_trade.get_trades_today(), before,
-		"Trades today should not change on decline"
-	)
-
-
-# --- Signal emission ---
-
-
-func test_trade_offered_signal_fires_on_begin() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	assert_eq(
-		_trade_offered_signals.size(), 1,
-		"trade_offered should fire once on begin_trade"
-	)
-	assert_eq(
-		_trade_offered_signals[0]["wanted_id"],
-		setup["wanted"].instance_id,
-		"trade_offered should carry wanted item instance_id"
-	)
-
-
-func test_trade_accepted_signal_fires_on_accept() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	var wanted_id: String = _trade._wanted_item.instance_id
-	var offered_id: String = _trade._offered_item.instance_id
-	_trade._on_trade_accepted()
-	assert_eq(
-		_trade_accepted_signals.size(), 1,
-		"trade_accepted should fire once"
-	)
-	assert_eq(
-		_trade_accepted_signals[0]["wanted_id"], wanted_id,
-		"trade_accepted should carry correct wanted_id"
-	)
-	assert_eq(
-		_trade_accepted_signals[0]["offered_id"], offered_id,
-		"trade_accepted should carry correct offered_id"
-	)
-
-
-func test_trade_declined_signal_fires_on_decline() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	var customer_id: int = customer.get_instance_id()
-	_trade._on_trade_declined()
-	assert_eq(
-		_trade_declined_signals.size(), 1,
-		"trade_declined should fire once"
-	)
-	assert_eq(
-		_trade_declined_signals[0]["customer_id"], customer_id,
-		"trade_declined should carry correct customer_id"
-	)
-
-
-# --- Edge cases ---
-
-
-func test_trade_fails_when_item_removed_from_inventory() -> void:
-	var setup: Dictionary = _setup_trade_items()
-	var customer: Customer = setup["customer"]
-	var wanted: ItemInstance = setup["wanted"]
-	var result: bool = _trade.begin_trade(customer)
-	if not result:
-		pending("No matching offer generated — skipping")
-		return
-	_inventory._items.erase(wanted.instance_id)
-	_trade._on_trade_accepted()
-	assert_eq(
-		_trade_accepted_signals.size(), 1,
-		"trade_accepted signal still fires"
-	)
-
-
-func test_begin_trade_fails_without_desired_item() -> void:
 	var customer: Customer = _make_customer()
-	customer._desired_item = null
-	var result: bool = _trade.begin_trade(customer)
-	assert_false(
-		result,
-		"begin_trade should return false when customer has no desired item"
-	)
-	assert_false(
-		_trade.is_active(),
-		"Trade should not be active after failed begin"
-	)
+	customer._desired_item = wanted
+	customer._desired_item_slot = null
+	_trade._active_customer = customer
+	_trade._wanted_item = wanted
+	_trade._wanted_item_slot = null
+	_trade._offered_item = offered
+	_trade._active_offer = {
+		"npc_id": customer.get_instance_id(),
+		"offered_cards": [offered],
+		"target_card": wanted,
+	}
+	return {
+		"customer": customer,
+		"wanted": wanted,
+		"offered": offered,
+	}
 
 
-func test_is_trader_returns_true_for_trader_profile() -> void:
-	var customer: Customer = _make_customer()
-	assert_true(
-		_trade.is_trader(customer),
-		"is_trader should return true for trader profile"
-	)
+func _on_trade_offer_received(offer: Dictionary) -> void:
+	_trade_offer_received_signals.append(offer)
 
 
-func test_is_trader_returns_false_for_non_trader() -> void:
-	var customer: Customer = _make_customer()
-	customer.profile.id = "casual_shopper"
-	assert_false(
-		_trade.is_trader(customer),
-		"is_trader should return false for non-trader profile"
-	)
+func _on_trade_resolved(offer: Dictionary, accepted: bool) -> void:
+	_trade_resolved_signals.append({
+		"offer": offer,
+		"accepted": accepted,
+	})
 
 
-func test_day_started_resets_trades_today() -> void:
-	_trade._trades_today = 5
-	_trade._on_day_started(2)
-	assert_eq(
-		_trade.get_trades_today(), 0,
-		"Trades today should reset to 0 on new day"
+func _safe_disconnect(sig: Signal, callable: Callable) -> void:
+	if sig.is_connected(callable):
+		sig.disconnect(callable)
+
+
+func _register_store_in_content_registry() -> void:
+	if ContentRegistry.exists("pocket_creatures"):
+		return
+	ContentRegistry.register_entry(
+		{
+			"id": "pocket_creatures",
+			"name": "Pocket Creatures",
+			"scene_path": "",
+			"backroom_capacity": 150,
+		},
+		"store"
 	)

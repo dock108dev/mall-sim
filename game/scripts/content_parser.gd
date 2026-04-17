@@ -1,6 +1,29 @@
 ## Static utility for constructing typed Resources from JSON content dictionaries.
 class_name ContentParser
 
+const _ITEM_FIELD_ALIASES: Dictionary = {
+	"item_name": ["item_name", "display_name", "name"],
+	"base_price": ["base_price", "base_value"],
+	"condition_range": [
+		"condition_range", "condition_variants",
+	],
+	"icon_path": ["icon_path", "icon"],
+	"set_name": ["set_name", "set"],
+}
+
+const _ITEM_KNOWN_KEYS: Array[String] = [
+	"id", "item_name", "description", "category", "subcategory",
+	"store_type", "base_price", "rarity", "condition_range",
+	"condition_value_multipliers", "icon_path", "tags", "set_name",
+	"depreciates", "appreciates", "rental_tier", "rental_fee",
+	"rental_period_days", "brand", "product_line", "generation",
+	"lifecycle_phase", "launch_day", "depreciation_rate",
+	"min_value_ratio", "launch_demand_multiplier", "launch_spike_days",
+	"can_be_demo_unit", "monthly_depreciation_rate",
+	"launch_spike_eligible", "launch_spike_multiplier", "supplier_tier",
+	"platform", "region",
+]
+
 
 static func build_resource(
 	content_type: String, data: Dictionary
@@ -41,76 +64,96 @@ static func build_resource(
 
 
 static func parse_item(data: Dictionary) -> ItemDefinition:
-	var has_price: bool = data.has("base_price") or data.has("base_value")
-	if not data.has("id") or not has_price:
+	var normalized: Dictionary = _normalize_item_data(data)
+	if not normalized.has("id") or not normalized.has("base_price"):
 		push_error("ContentParser: item missing required fields: %s" % [data])
 		return null
-	var price_val: float = float(data.get("base_price", data.get("base_value", 0.0)))
+	var price_val: float = float(normalized.get("base_price", 0.0))
 	if price_val < 0.0:
 		push_error(
 			"ContentParser: item '%s' has out-of-range base_price %s (must be >= 0)"
-			% [str(data.get("id", "unknown")), price_val]
+			% [str(normalized.get("id", "unknown")), price_val]
 		)
 		return null
 	var item := ItemDefinition.new()
-	item.id = str(data["id"])
-	var item_name_raw: String = str(data.get(
-		"item_name", data.get("display_name", data.get("name", ""))
-	))
+	item.id = str(normalized["id"])
+	var item_name_raw: String = str(normalized.get("item_name", ""))
 	item.item_name = item_name_raw
-	item.description = str(data.get("description", ""))
-	item.category = StringName(str(data.get("category", "")))
-	item.subcategory = str(data.get("subcategory", ""))
-	item.store_type = StringName(str(data.get("store_type", "")))
+	item.description = str(normalized.get("description", ""))
+	item.category = StringName(str(normalized.get("category", "")))
+	item.subcategory = str(normalized.get("subcategory", ""))
+	item.store_type = StringName(str(normalized.get("store_type", "")))
 	item.base_price = price_val
-	item.rarity = str(data.get("rarity", "common"))
-	item.icon_path = str(data.get("icon_path", data.get("icon", "")))
-	item.set_name = str(data.get("set_name", data.get("set", "")))
-	item.depreciates = bool(data.get("depreciates", false))
-	item.appreciates = bool(data.get("appreciates", false))
-	item.rental_tier = str(data.get("rental_tier", ""))
-	item.rental_fee = float(data.get("rental_fee", 0.0))
-	item.rental_period_days = int(data.get("rental_period_days", 0))
-	item.brand = str(data.get("brand", ""))
-	item.product_line = str(data.get("product_line", ""))
-	item.generation = int(data.get("generation", 0))
-	item.lifecycle_phase = str(data.get("lifecycle_phase", ""))
-	item.launch_day = int(data.get("launch_day", 0))
-	item.depreciation_rate = float(data.get("depreciation_rate", 0.0))
-	item.min_value_ratio = float(data.get("min_value_ratio", 0.1))
+	item.rarity = str(normalized.get("rarity", "common"))
+	item.icon_path = str(normalized.get("icon_path", ""))
+	item.set_name = str(normalized.get("set_name", ""))
+	item.depreciates = bool(normalized.get("depreciates", false))
+	item.appreciates = bool(normalized.get("appreciates", false))
+	item.rental_tier = str(normalized.get("rental_tier", ""))
+	item.rental_fee = float(normalized.get("rental_fee", 0.0))
+	item.rental_period_days = int(normalized.get("rental_period_days", 0))
+	item.brand = str(normalized.get("brand", ""))
+	item.product_line = str(normalized.get("product_line", ""))
+	item.generation = int(normalized.get("generation", 0))
+	item.lifecycle_phase = str(normalized.get("lifecycle_phase", ""))
+	item.launch_day = int(normalized.get("launch_day", 0))
+	item.depreciation_rate = float(normalized.get("depreciation_rate", 0.0))
+	item.min_value_ratio = float(normalized.get("min_value_ratio", 0.1))
 	item.launch_demand_multiplier = float(
-		data.get("launch_demand_multiplier", 1.0)
+		normalized.get("launch_demand_multiplier", 1.0)
 	)
-	item.launch_spike_days = int(data.get("launch_spike_days", 0))
-	item.platform = str(data.get("platform", ""))
-	item.region = str(data.get("region", ""))
-	if data.has("condition_range"):
-		item.condition_range = _normalize_condition_labels(data["condition_range"])
-	elif data.has("condition_variants"):
-		item.condition_range = _normalize_condition_labels(data["condition_variants"])
-	if data.has("condition_value_multipliers"):
-		item.condition_value_multipliers = data["condition_value_multipliers"]
-	if data.has("tags"):
-		item.tags = ItemDefinition._normalize_string_name_array(data["tags"])
+	item.launch_spike_days = int(normalized.get("launch_spike_days", 0))
+	item.can_be_demo_unit = bool(normalized.get("can_be_demo_unit", false))
+	item.monthly_depreciation_rate = float(
+		normalized.get("monthly_depreciation_rate", 0.0)
+	)
+	item.launch_spike_eligible = bool(
+		normalized.get("launch_spike_eligible", false)
+	)
+	item.launch_spike_multiplier = float(
+		normalized.get("launch_spike_multiplier", 1.0)
+	)
+	item.supplier_tier = int(normalized.get("supplier_tier", 0))
+	item.platform = str(normalized.get("platform", ""))
+	item.region = str(normalized.get("region", ""))
+	if normalized.has("condition_range"):
+		item.condition_range = _normalize_condition_labels(
+			normalized["condition_range"]
+		)
+	if normalized.has("condition_value_multipliers"):
+		item.condition_value_multipliers = (
+			normalized["condition_value_multipliers"]
+		)
+	if normalized.has("tags"):
+		item.tags = ItemDefinition._normalize_string_name_array(
+			normalized["tags"]
+		)
 	var extra: Dictionary = {}
-	var known_keys: PackedStringArray = [
-		"id", "item_name", "display_name", "description", "category",
-		"subcategory", "store_type", "base_price", "base_value", "rarity", "icon_path",
-		"set_name", "depreciates", "appreciates", "rental_tier",
-		"rental_fee", "rental_period_days", "brand", "product_line",
-		"generation", "lifecycle_phase", "launch_day",
-		"depreciation_rate", "min_value_ratio",
-		"launch_demand_multiplier", "launch_spike_days", "platform",
-		"region", "condition_range", "condition_variants",
-		"condition_value_multipliers",
-		"tags",
-	]
-	for key: String in data:
-		if key not in known_keys:
-			extra[key] = data[key]
+	for key: String in normalized:
+		if key not in _ITEM_KNOWN_KEYS:
+			extra[key] = normalized[key]
 	if not extra.is_empty():
 		item.extra = extra
 	return item
+
+
+static func _normalize_item_data(data: Dictionary) -> Dictionary:
+	var normalized: Dictionary = data.duplicate(true)
+	for canonical_key: String in _ITEM_FIELD_ALIASES:
+		if normalized.has(canonical_key):
+			continue
+		var aliases: Array = _ITEM_FIELD_ALIASES[canonical_key]
+		for alias_key: String in aliases:
+			if normalized.has(alias_key):
+				normalized[canonical_key] = normalized[alias_key]
+				break
+	for canonical_key: String in _ITEM_FIELD_ALIASES:
+		var aliases: Array = _ITEM_FIELD_ALIASES[canonical_key]
+		for alias_key: String in aliases:
+			if alias_key == canonical_key:
+				continue
+			normalized.erase(alias_key)
+	return normalized
 
 
 static func _normalize_condition_labels(values: Variant) -> PackedStringArray:

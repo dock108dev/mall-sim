@@ -1,22 +1,460 @@
 [
-  {"id":"sports_duvall_hr_common","display_name":"1998 Ricky Duvall Home Run Chase Card","store_type":"sports","category":"trading_cards","base_value":2.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A chase-era base card that casual fans still dig out of shoeboxes.","subcategory":"singles","tags":["baseball","90s","home_run","cbf","starter"]},
-  {"id":"sports_okoro_hoops_common","display_name":"1992 Nina Okoro Cornerstone Card","store_type":"sports","category":"trading_cards","base_value":1.5,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A dependable role-player card that still moves whenever Wolves nostalgia is in the air.","subcategory":"singles","tags":["basketball","90s","wolves","nha","starter"]},
-  {"id":"sports_sledge_reprint_common","display_name":"1996 Marcus Sledge Commemorative Reprint","store_type":"sports","category":"trading_cards","base_value":3.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A glossy anniversary reprint that looks sharp in a budget display case.","subcategory":"singles","tags":["baseball","reprint","vintage_style","cbf"]},
-  {"id":"sports_esperanza_base_common","display_name":"2001 Tomas Esperanza Vanguard Base","store_type":"sports","category":"trading_cards","base_value":2.5,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A plentiful rookie-year base card for a hitter everyone thinks might become a legend.","subcategory":"singles","tags":["baseball","2000s","rookie","cbf","starter"]},
-  {"id":"sports_duvall_refractor_uncommon","display_name":"1999 Ricky Duvall All-Star Select Refractor","store_type":"sports","category":"trading_cards","base_value":12.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A bright foil parallel that catches light from halfway across the counter.","subcategory":"singles","tags":["baseball","90s","refractor","parallel","cbf"]},
-  {"id":"sports_simmons_chrome_uncommon","display_name":"1996 Jayla Simmons Summit Chrome Rookie","store_type":"sports","category":"trading_cards","base_value":18.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A mirror-finish rookie that serious hoops collectors always flip to first.","subcategory":"singles","tags":["basketball","rookie","chrome","nha"]},
-  {"id":"sports_vance_finest_uncommon","display_name":"1995 Leo Vance All-Star Select Rookie","store_type":"sports","category":"trading_cards","base_value":15.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A high-hype debut card from the season Vance skipped college and shocked everyone.","subcategory":"singles","tags":["basketball","rookie","90s","nha"]},
-  {"id":"sports_sledge_rookie_rare","display_name":"1989 Marcus Sledge Pinnacle Press Rookie","store_type":"sports","category":"trading_cards","base_value":55.0,"rarity":"rare","condition_variants":["mint","good","fair","poor"],"description":"The cornerstone rookie from the Sledge era and the first thing collectors ask to see.","subcategory":"singles","tags":["baseball","rookie","iconic","cbf","hof"]},
-  {"id":"sports_esperanza_prospect_rare","display_name":"1993 Tomas Esperanza Short-Print Prospect","store_type":"sports","category":"trading_cards","base_value":60.0,"rarity":"rare","condition_variants":["mint","good","fair","poor"],"description":"A notoriously tough short print that rewards anyone patient enough to hunt a clean copy.","subcategory":"singles","tags":["baseball","short_print","prospect","cbf"]},
-  {"id":"sports_ashford_diamond_very_rare","display_name":"1986 Deion Ashford Diamond Line Rookie","store_type":"sports","category":"trading_cards","base_value":90.0,"rarity":"rare","condition_variants":["mint","good","fair","poor"],"description":"A trophy-case hoops rookie whose sharp corners make collectors lean in for a closer look.","subcategory":"singles","tags":["basketball","rookie","iconic","nha","hof"],"appreciates":true},
-  {"id":"sports_pinnacle_pack_1993","display_name":"1993 Pinnacle Press Baseball Wax Pack","store_type":"sports","category":"sealed_packs","base_value":4.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A fifteen-card wax pack that turns every checkout into a tiny gamble.","subcategory":"sealed","tags":["baseball","sealed","pack","booster","cbf"],"appreciates":true},
-  {"id":"sports_vanguard_pack_2001","display_name":"2001 Vanguard Baseball Pack","store_type":"sports","category":"sealed_packs","base_value":3.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A late-run pack that still sells to kids chasing one lucky pull.","subcategory":"sealed","tags":["baseball","sealed","pack","starter","cbf"],"appreciates":true},
-  {"id":"sports_summit_chrome_pack_1996","display_name":"1996 Summit Chrome Basketball Pack","store_type":"sports","category":"sealed_packs","base_value":6.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A foil-heavy pack famous for flashy rookies and fingerprints on the wrapper.","subcategory":"sealed","tags":["basketball","sealed","pack","chrome","nha"],"appreciates":true},
-  {"id":"sports_pinnacle_factory_set_1995","display_name":"1995 Pinnacle Press Baseball Factory Set","store_type":"sports","category":"sealed_product","base_value":28.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A full-season boxed set that feels like opening a time capsule from summer league radio.","subcategory":"sealed","tags":["baseball","sealed","factory_set","complete","cbf"],"appreciates":true},
-  {"id":"sports_vanguard_hobby_box_1998","display_name":"1998 Vanguard Baseball Hobby Box","store_type":"sports","category":"sealed_product","base_value":80.0,"rarity":"rare","condition_variants":["mint","good","fair","poor"],"description":"A premium hobby box with enough sealed intrigue to stop traffic near the glass case.","subcategory":"sealed","tags":["baseball","sealed","hobby_box","investment","cbf"],"appreciates":true},
-  {"id":"sports_signed_photo_briggs","display_name":"Signed 8x10 Photo - Carter Briggs","store_type":"sports","category":"memorabilia","base_value":65.0,"rarity":"rare","condition_variants":["mint","good","fair","poor"],"description":"A glossy championship-era photo with a bold autograph and a dealer card tucked behind it.","subcategory":"autographs","tags":["football","autograph","gpl","hof"]},
-  {"id":"sports_signed_baseball_sledge","display_name":"Signed Baseball - Marcus Sledge","store_type":"sports","category":"memorabilia","base_value":95.0,"rarity":"rare","condition_variants":["mint","good","fair","poor"],"description":"A display-ball signature piece that feels like the sort of item people brag about owning.","subcategory":"autographs","tags":["baseball","autograph","cbf","iconic"]},
-  {"id":"sports_jersey_replica_monarchs","display_name":"Crestfall Monarchs Replica Jersey","store_type":"sports","category":"memorabilia","base_value":35.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A purple-and-gold replica that sells equally well to loyalists and gift buyers.","subcategory":"apparel","tags":["basketball","jersey","monarchs","nha","starter"]},
-  {"id":"sports_bat_display","display_name":"Ironport Anvils Mini Display Bat","store_type":"sports","category":"memorabilia","base_value":12.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A logo-stamped desk bat that fills a shelf nicely when the cards get too expensive.","subcategory":"equipment","tags":["baseball","display","cbf","starter"]},
-  {"id":"sports_helmet_display_titans","display_name":"Thornwall Titans Mini Helmet","store_type":"sports","category":"memorabilia","base_value":22.0,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A sharp little replica helmet that regulars buy for office desks and rec-room shelves.","subcategory":"equipment","tags":["football","display","helmet","gpl"]}
+  {
+    "id": "sports_duvall_hr_common",
+    "item_name": "1998 Ricky Duvall Home Run Chase Card",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 2.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A chase-era base card that casual fans still dig out of shoeboxes.",
+    "subcategory": "singles",
+    "tags": [
+      "baseball",
+      "90s",
+      "home_run",
+      "cbf",
+      "starter"
+    ]
+  },
+  {
+    "id": "sports_okoro_hoops_common",
+    "item_name": "1992 Nina Okoro Cornerstone Card",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 1.5,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A dependable role-player card that still moves whenever Wolves nostalgia is in the air.",
+    "subcategory": "singles",
+    "tags": [
+      "basketball",
+      "90s",
+      "wolves",
+      "nha",
+      "starter"
+    ]
+  },
+  {
+    "id": "sports_sledge_reprint_common",
+    "item_name": "1996 Marcus Sledge Commemorative Reprint",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 3.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A glossy anniversary reprint that looks sharp in a budget display case.",
+    "subcategory": "singles",
+    "tags": [
+      "baseball",
+      "reprint",
+      "vintage_style",
+      "cbf"
+    ]
+  },
+  {
+    "id": "sports_esperanza_base_common",
+    "item_name": "2001 Tomas Esperanza Vanguard Base",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 2.5,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A plentiful rookie-year base card for a hitter everyone thinks might become a legend.",
+    "subcategory": "singles",
+    "tags": [
+      "baseball",
+      "2000s",
+      "rookie",
+      "cbf",
+      "starter"
+    ]
+  },
+  {
+    "id": "sports_duvall_refractor_uncommon",
+    "item_name": "1999 Ricky Duvall All-Star Select Refractor",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 12.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A bright foil parallel that catches light from halfway across the counter.",
+    "subcategory": "singles",
+    "tags": [
+      "baseball",
+      "90s",
+      "refractor",
+      "parallel",
+      "cbf"
+    ]
+  },
+  {
+    "id": "sports_simmons_chrome_uncommon",
+    "item_name": "1996 Jayla Simmons Summit Chrome Rookie",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 18.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A mirror-finish rookie that serious hoops collectors always flip to first.",
+    "subcategory": "singles",
+    "tags": [
+      "basketball",
+      "rookie",
+      "chrome",
+      "nha"
+    ]
+  },
+  {
+    "id": "sports_vance_finest_uncommon",
+    "item_name": "1995 Leo Vance All-Star Select Rookie",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 15.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A high-hype debut card from the season Vance skipped college and shocked everyone.",
+    "subcategory": "singles",
+    "tags": [
+      "basketball",
+      "rookie",
+      "90s",
+      "nha"
+    ]
+  },
+  {
+    "id": "sports_sledge_rookie_rare",
+    "item_name": "1989 Marcus Sledge Pinnacle Press Rookie",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 55.0,
+    "rarity": "rare",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "The cornerstone rookie from the Sledge era and the first thing collectors ask to see.",
+    "subcategory": "singles",
+    "tags": [
+      "baseball",
+      "rookie",
+      "iconic",
+      "cbf",
+      "hof"
+    ]
+  },
+  {
+    "id": "sports_esperanza_prospect_rare",
+    "item_name": "1993 Tomas Esperanza Short-Print Prospect",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 60.0,
+    "rarity": "rare",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A notoriously tough short print that rewards anyone patient enough to hunt a clean copy.",
+    "subcategory": "singles",
+    "tags": [
+      "baseball",
+      "short_print",
+      "prospect",
+      "cbf"
+    ]
+  },
+  {
+    "id": "sports_ashford_diamond_very_rare",
+    "item_name": "1986 Deion Ashford Diamond Line Rookie",
+    "store_type": "sports",
+    "category": "trading_cards",
+    "base_price": 90.0,
+    "rarity": "rare",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A trophy-case hoops rookie whose sharp corners make collectors lean in for a closer look.",
+    "subcategory": "singles",
+    "tags": [
+      "basketball",
+      "rookie",
+      "iconic",
+      "nha",
+      "hof"
+    ],
+    "appreciates": true
+  },
+  {
+    "id": "sports_pinnacle_pack_1993",
+    "item_name": "1993 Pinnacle Press Baseball Wax Pack",
+    "store_type": "sports",
+    "category": "sealed_packs",
+    "base_price": 4.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A fifteen-card wax pack that turns every checkout into a tiny gamble.",
+    "subcategory": "sealed",
+    "tags": [
+      "baseball",
+      "sealed",
+      "pack",
+      "booster",
+      "cbf"
+    ],
+    "appreciates": true
+  },
+  {
+    "id": "sports_vanguard_pack_2001",
+    "item_name": "2001 Vanguard Baseball Pack",
+    "store_type": "sports",
+    "category": "sealed_packs",
+    "base_price": 3.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A late-run pack that still sells to kids chasing one lucky pull.",
+    "subcategory": "sealed",
+    "tags": [
+      "baseball",
+      "sealed",
+      "pack",
+      "starter",
+      "cbf"
+    ],
+    "appreciates": true
+  },
+  {
+    "id": "sports_summit_chrome_pack_1996",
+    "item_name": "1996 Summit Chrome Basketball Pack",
+    "store_type": "sports",
+    "category": "sealed_packs",
+    "base_price": 6.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A foil-heavy pack famous for flashy rookies and fingerprints on the wrapper.",
+    "subcategory": "sealed",
+    "tags": [
+      "basketball",
+      "sealed",
+      "pack",
+      "chrome",
+      "nha"
+    ],
+    "appreciates": true
+  },
+  {
+    "id": "sports_pinnacle_factory_set_1995",
+    "item_name": "1995 Pinnacle Press Baseball Factory Set",
+    "store_type": "sports",
+    "category": "sealed_product",
+    "base_price": 28.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A full-season boxed set that feels like opening a time capsule from summer league radio.",
+    "subcategory": "sealed",
+    "tags": [
+      "baseball",
+      "sealed",
+      "factory_set",
+      "complete",
+      "cbf"
+    ],
+    "appreciates": true
+  },
+  {
+    "id": "sports_vanguard_hobby_box_1998",
+    "item_name": "1998 Vanguard Baseball Hobby Box",
+    "store_type": "sports",
+    "category": "sealed_product",
+    "base_price": 80.0,
+    "rarity": "rare",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A premium hobby box with enough sealed intrigue to stop traffic near the glass case.",
+    "subcategory": "sealed",
+    "tags": [
+      "baseball",
+      "sealed",
+      "hobby_box",
+      "investment",
+      "cbf"
+    ],
+    "appreciates": true
+  },
+  {
+    "id": "sports_signed_photo_briggs",
+    "item_name": "Signed 8x10 Photo - Carter Briggs",
+    "store_type": "sports",
+    "category": "memorabilia",
+    "base_price": 65.0,
+    "rarity": "rare",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A glossy championship-era photo with a bold autograph and a dealer card tucked behind it.",
+    "subcategory": "autographs",
+    "tags": [
+      "football",
+      "autograph",
+      "gpl",
+      "hof"
+    ]
+  },
+  {
+    "id": "sports_signed_baseball_sledge",
+    "item_name": "Signed Baseball - Marcus Sledge",
+    "store_type": "sports",
+    "category": "memorabilia",
+    "base_price": 95.0,
+    "rarity": "rare",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A display-ball signature piece that feels like the sort of item people brag about owning.",
+    "subcategory": "autographs",
+    "tags": [
+      "baseball",
+      "autograph",
+      "cbf",
+      "iconic"
+    ]
+  },
+  {
+    "id": "sports_jersey_replica_monarchs",
+    "item_name": "Crestfall Monarchs Replica Jersey",
+    "store_type": "sports",
+    "category": "memorabilia",
+    "base_price": 35.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A purple-and-gold replica that sells equally well to loyalists and gift buyers.",
+    "subcategory": "apparel",
+    "tags": [
+      "basketball",
+      "jersey",
+      "monarchs",
+      "nha",
+      "starter"
+    ]
+  },
+  {
+    "id": "sports_bat_display",
+    "item_name": "Ironport Anvils Mini Display Bat",
+    "store_type": "sports",
+    "category": "memorabilia",
+    "base_price": 12.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A logo-stamped desk bat that fills a shelf nicely when the cards get too expensive.",
+    "subcategory": "equipment",
+    "tags": [
+      "baseball",
+      "display",
+      "cbf",
+      "starter"
+    ]
+  },
+  {
+    "id": "sports_helmet_display_titans",
+    "item_name": "Thornwall Titans Mini Helmet",
+    "store_type": "sports",
+    "category": "memorabilia",
+    "base_price": 22.0,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A sharp little replica helmet that regulars buy for office desks and rec-room shelves.",
+    "subcategory": "equipment",
+    "tags": [
+      "football",
+      "display",
+      "helmet",
+      "gpl"
+    ]
+  }
 ]

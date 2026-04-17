@@ -5,6 +5,8 @@ extends GutTest
 var _controller: VideoRentalStoreController
 var _inventory: InventorySystem
 var _economy: EconomySystem
+var _data_loader: DataLoader
+var _previous_data_loader: DataLoader
 
 # Use base_late_fee=0.0 so fee equals exactly per_day_rate × overdue_days,
 # making assertions straightforward without an additive base term.
@@ -17,8 +19,13 @@ var _late_fee_signals: Array[Dictionary] = []
 
 
 func before_each() -> void:
+	_data_loader = DataLoader.new()
+	_data_loader.load_all_content()
+	_previous_data_loader = GameManager.data_loader
+	GameManager.data_loader = _data_loader
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
+	_inventory.initialize(_data_loader)
 
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
@@ -38,6 +45,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	GameManager.data_loader = _previous_data_loader
 	_safe_disconnect(EventBus.rental_late_fee, _on_rental_late_fee)
 
 
@@ -69,7 +77,7 @@ func _make_item(instance_id: String, condition: String = "good") -> ItemInstance
 	inst.instance_id = instance_id
 	inst.condition = condition
 	inst.current_location = "shelf:slot_0"
-	_inventory._items[instance_id] = inst
+	_inventory.register_item(inst)
 	return inst
 
 
@@ -181,13 +189,13 @@ func test_late_fee_signal_emitted_with_correct_amount() -> void:
 
 func test_condition_degrades_after_return() -> void:
 	var item: ItemInstance = _make_item("tape_105", "good")
-	# Set wear to 0.52 so one VHS degradation (0.08) brings it to 0.60,
-	# crossing the good→fair boundary (wear_to_condition returns "fair" for wear >= 0.6).
-	_controller._wear_tracker._wear["tape_105"] = 0.52
+	_controller._wear_tracker.initialize_item(item.instance_id, item.condition)
+	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
+		_controller._wear_tracker.record_return(item.instance_id)
 	var rental: Dictionary = _make_rental_dict("tape_105", 1, 4)
 	_controller._apply_degradation(rental)
 	assert_eq(
 		item.condition,
 		"fair",
-		"Item condition must degrade to fair after wear crosses the good→fair threshold"
+		"Item condition must degrade after enough returns are recorded"
 	)

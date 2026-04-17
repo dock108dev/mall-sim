@@ -1,22 +1,605 @@
 [
-  {"id":"elec_zunewave_128","display_name":"ZuneWave 128MB Music Player","store_type":"electronics","category":"portable_audio","base_value":39.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A brushed-metal pocket player that feels futuristic right up until someone fills it with thirty songs.","subcategory":"mp3_players","tags":["audio","portable","budget","mp3"],"depreciates":true,"launch_day":1,"depreciation_rate":0.02,"min_value_ratio":0.15,"launch_demand_multiplier":1.3,"launch_spike_days":5,"can_be_demo_unit":true,"monthly_depreciation_rate":0.05,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_zunewave_256","display_name":"ZuneWave 256MB Music Player","store_type":"electronics","category":"portable_audio","base_value":59.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A mid-range upgrade with enough storage to make playlists feel like personal curation.","subcategory":"mp3_players","tags":["audio","portable","popular","mp3"],"depreciates":true,"launch_day":1,"depreciation_rate":0.02,"min_value_ratio":0.15,"launch_demand_multiplier":1.35,"launch_spike_days":5,"can_be_demo_unit":true,"monthly_depreciation_rate":0.05,"launch_spike_eligible":true,"launch_spike_multiplier":1.8,"supplier_tier":1},
-  {"id":"elec_podplay_5gb","display_name":"PodPlay 5GB","store_type":"electronics","category":"portable_audio","base_value":99.99,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A flagship click-wheel player that turns a commuter's pocket into a tiny jukebox.","subcategory":"mp3_players","tags":["audio","portable","premium","mp3","flagship"],"depreciates":true,"launch_day":5,"depreciation_rate":0.015,"min_value_ratio":0.2,"launch_demand_multiplier":1.5,"launch_spike_days":7,"can_be_demo_unit":true,"monthly_depreciation_rate":0.04,"launch_spike_eligible":true,"launch_spike_multiplier":2.0,"supplier_tier":2},
-  {"id":"elec_discman_cd","display_name":"SonicBoom Portable CD Player","store_type":"electronics","category":"portable_audio","base_value":29.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"An anti-skip disc player that still wins over anyone not ready to leave their CD wallet behind.","subcategory":"cd_players","tags":["audio","portable","budget","cd","last_gen"],"depreciates":true,"launch_day":1,"depreciation_rate":0.03,"min_value_ratio":0.1,"launch_demand_multiplier":1.0,"launch_spike_days":0,"can_be_demo_unit":false,"monthly_depreciation_rate":0.06,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_minidisc_player","display_name":"SonicBoom MiniDisc Recorder","store_type":"electronics","category":"portable_audio","base_value":69.99,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A cult-format recorder for shoppers who like their gadgets to start conversations immediately.","subcategory":"minidisc","tags":["audio","portable","niche","minidisc"],"depreciates":true,"launch_day":1,"depreciation_rate":0.025,"min_value_ratio":0.15,"launch_demand_multiplier":1.2,"launch_spike_days":3,"can_be_demo_unit":true,"monthly_depreciation_rate":0.04,"launch_spike_eligible":true,"launch_spike_multiplier":1.6,"supplier_tier":2},
-  {"id":"elec_portastation_console","display_name":"PortaStation Handheld Console","store_type":"electronics","category":"handheld_gaming","base_value":99.99,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A glossy handheld with a backlit screen that makes even menu music feel premium.","subcategory":"consoles","tags":["gaming","portable","premium","flagship","popular"],"depreciates":true,"launch_day":3,"depreciation_rate":0.015,"min_value_ratio":0.2,"launch_demand_multiplier":1.5,"launch_spike_days":7,"can_be_demo_unit":true,"monthly_depreciation_rate":0.04,"launch_spike_eligible":true,"launch_spike_multiplier":2.0,"supplier_tier":2},
-  {"id":"elec_portastation_racer","display_name":"Turbo Circuit Racer","store_type":"electronics","category":"handheld_gaming","base_value":29.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A speedy handheld racer that sells because everyone wants to test the analog stick immediately.","subcategory":"games","tags":["gaming","portable","racing"],"depreciates":true,"launch_day":3,"depreciation_rate":0.02,"min_value_ratio":0.15,"launch_demand_multiplier":1.3,"launch_spike_days":5,"can_be_demo_unit":false,"monthly_depreciation_rate":0.03,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":2},
-  {"id":"elec_portastation_quest","display_name":"Dragon Road Portable","store_type":"electronics","category":"handheld_gaming","base_value":34.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A long-form portable role-playing game with enough side quests to miss a bus stop for.","subcategory":"games","tags":["gaming","portable","rpg","popular"],"depreciates":true,"launch_day":8,"depreciation_rate":0.02,"min_value_ratio":0.15,"launch_demand_multiplier":1.4,"launch_spike_days":5,"can_be_demo_unit":false,"monthly_depreciation_rate":0.03,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":2},
-  {"id":"elec_headphones_budget_earbuds","display_name":"SonicBoom Basic Earbuds","store_type":"electronics","category":"audio","base_value":20.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A blister-pack earbud set that gets the job done and disappears from the pegboard constantly.","subcategory":"earbuds","tags":["audio","earbuds","budget","starter"],"can_be_demo_unit":false,"monthly_depreciation_rate":0.02,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_headphones_onear","display_name":"SonicBoom On-Ear Headphones","store_type":"electronics","category":"audio","base_value":34.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A foldable everyday headphone with a bass-heavy sound and giftable packaging.","subcategory":"headphones","tags":["audio","headphones","popular","gift"],"can_be_demo_unit":true,"monthly_depreciation_rate":0.03,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_headphones_overear_pro","display_name":"SonicBoom Studio Pro Over-Ear","store_type":"electronics","category":"audio","base_value":59.99,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A plush over-ear set for shoppers who read spec cards before they read price tags.","subcategory":"headphones","tags":["audio","headphones","premium","quality","specs"],"can_be_demo_unit":true,"monthly_depreciation_rate":0.03,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":2},
-  {"id":"elec_speaker_portable","display_name":"SonicBoom Mini Speaker","store_type":"electronics","category":"audio","base_value":24.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A tiny battery speaker whose volume impresses people more than its tone ever could.","subcategory":"speakers","tags":["audio","speaker","portable","gift"],"can_be_demo_unit":true,"monthly_depreciation_rate":0.03,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_clock_radio","display_name":"SonicBoom Alarm Clock Radio","store_type":"electronics","category":"audio","base_value":20.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A dependable bedside radio that sells because dependable bedside radios always do.","subcategory":"clock_radios","tags":["audio","clock","radio","budget","steady"],"can_be_demo_unit":false,"monthly_depreciation_rate":0.03,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_camera_pixelsnap_budget","display_name":"PixelSnap 2.0MP Camera","store_type":"electronics","category":"gadgets","base_value":79.99,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A simple point-and-shoot digital camera that makes every family event feel officially documented.","subcategory":"cameras","tags":["camera","digital","budget","gadget"],"depreciates":true,"launch_day":1,"depreciation_rate":0.025,"min_value_ratio":0.15,"launch_demand_multiplier":1.2,"launch_spike_days":5,"can_be_demo_unit":true,"monthly_depreciation_rate":0.05,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_camera_pixelsnap_pro","display_name":"PixelSnap 5.0MP Pro","store_type":"electronics","category":"gadgets","base_value":89.99,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A zoom-heavy camera pitched to hobbyists who want every new spec to sound life changing.","subcategory":"cameras","tags":["camera","digital","premium","gadget","specs","latest"],"depreciates":true,"launch_day":12,"depreciation_rate":0.018,"min_value_ratio":0.2,"launch_demand_multiplier":1.4,"launch_spike_days":7,"can_be_demo_unit":true,"monthly_depreciation_rate":0.04,"launch_spike_eligible":true,"launch_spike_multiplier":2.0,"supplier_tier":2},
-  {"id":"elec_usb_drive_64mb","display_name":"DataVault 64MB USB Flash Drive","store_type":"electronics","category":"gadgets","base_value":20.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A thumb-drive novelty that turns a whole presentation into something you can lose in a pocket.","subcategory":"storage","tags":["storage","usb","budget","gadget"],"can_be_demo_unit":false,"monthly_depreciation_rate":0.02,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_usb_drive_512mb","display_name":"DataVault 512MB USB Flash Drive","store_type":"electronics","category":"gadgets","base_value":34.99,"rarity":"uncommon","condition_variants":["mint","good","fair","poor"],"description":"A half-gig flash drive that makes office workers talk like they have entered the future.","subcategory":"storage","tags":["storage","usb","gadget","popular"],"can_be_demo_unit":false,"monthly_depreciation_rate":0.02,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":2},
-  {"id":"elec_case_mp3_player","display_name":"TechShield Music Player Case","store_type":"electronics","category":"accessories","base_value":20.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A neoprene case that mostly sells by reminding shoppers how easy plastic screens scratch.","subcategory":"cases","tags":["accessory","case","protection"],"can_be_demo_unit":false,"monthly_depreciation_rate":0.0,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_cable_usb","display_name":"Universal USB Cable","store_type":"electronics","category":"accessories","base_value":20.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A spare cable that somehow feels unnecessary until the exact second it becomes urgent.","subcategory":"cables","tags":["accessory","cable","essential"],"can_be_demo_unit":false,"monthly_depreciation_rate":0.0,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1},
-  {"id":"elec_screen_protector","display_name":"TechShield Screen Protector (3-pack)","store_type":"electronics","category":"accessories","base_value":20.0,"rarity":"common","condition_variants":["mint","good","fair","poor"],"description":"A protective film pack famous for saving screens and causing tiny installation arguments.","subcategory":"protection","tags":["accessory","screen_protector","impulse"],"can_be_demo_unit":false,"monthly_depreciation_rate":0.0,"launch_spike_eligible":false,"launch_spike_multiplier":1.0,"supplier_tier":1}
+  {
+    "id": "elec_zunewave_128",
+    "item_name": "ZuneWave 128MB Music Player",
+    "store_type": "electronics",
+    "category": "portable_audio",
+    "base_price": 39.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A brushed-metal pocket player that feels futuristic right up until someone fills it with thirty songs.",
+    "subcategory": "mp3_players",
+    "tags": [
+      "audio",
+      "portable",
+      "budget",
+      "mp3"
+    ],
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.3,
+    "launch_spike_days": 5,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.05,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_zunewave_256",
+    "item_name": "ZuneWave 256MB Music Player",
+    "store_type": "electronics",
+    "category": "portable_audio",
+    "base_price": 59.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A mid-range upgrade with enough storage to make playlists feel like personal curation.",
+    "subcategory": "mp3_players",
+    "tags": [
+      "audio",
+      "portable",
+      "popular",
+      "mp3"
+    ],
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.35,
+    "launch_spike_days": 5,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.05,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 1.8,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_podplay_5gb",
+    "item_name": "PodPlay 5GB",
+    "store_type": "electronics",
+    "category": "portable_audio",
+    "base_price": 99.99,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A flagship click-wheel player that turns a commuter's pocket into a tiny jukebox.",
+    "subcategory": "mp3_players",
+    "tags": [
+      "audio",
+      "portable",
+      "premium",
+      "mp3",
+      "flagship"
+    ],
+    "depreciates": true,
+    "launch_day": 5,
+    "depreciation_rate": 0.015,
+    "min_value_ratio": 0.2,
+    "launch_demand_multiplier": 1.5,
+    "launch_spike_days": 7,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 2.0,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_discman_cd",
+    "item_name": "SonicBoom Portable CD Player",
+    "store_type": "electronics",
+    "category": "portable_audio",
+    "base_price": 29.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "An anti-skip disc player that still wins over anyone not ready to leave their CD wallet behind.",
+    "subcategory": "cd_players",
+    "tags": [
+      "audio",
+      "portable",
+      "budget",
+      "cd",
+      "last_gen"
+    ],
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.03,
+    "min_value_ratio": 0.1,
+    "launch_demand_multiplier": 1.0,
+    "launch_spike_days": 0,
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.06,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_minidisc_player",
+    "item_name": "SonicBoom MiniDisc Recorder",
+    "store_type": "electronics",
+    "category": "portable_audio",
+    "base_price": 69.99,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A cult-format recorder for shoppers who like their gadgets to start conversations immediately.",
+    "subcategory": "minidisc",
+    "tags": [
+      "audio",
+      "portable",
+      "niche",
+      "minidisc"
+    ],
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.025,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.2,
+    "launch_spike_days": 3,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 1.6,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_portastation_console",
+    "item_name": "PortaStation Handheld Console",
+    "store_type": "electronics",
+    "category": "handheld_gaming",
+    "base_price": 99.99,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A glossy handheld with a backlit screen that makes even menu music feel premium.",
+    "subcategory": "consoles",
+    "tags": [
+      "gaming",
+      "portable",
+      "premium",
+      "flagship",
+      "popular"
+    ],
+    "depreciates": true,
+    "launch_day": 3,
+    "depreciation_rate": 0.015,
+    "min_value_ratio": 0.2,
+    "launch_demand_multiplier": 1.5,
+    "launch_spike_days": 7,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 2.0,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_portastation_racer",
+    "item_name": "Turbo Circuit Racer",
+    "store_type": "electronics",
+    "category": "handheld_gaming",
+    "base_price": 29.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A speedy handheld racer that sells because everyone wants to test the analog stick immediately.",
+    "subcategory": "games",
+    "tags": [
+      "gaming",
+      "portable",
+      "racing"
+    ],
+    "depreciates": true,
+    "launch_day": 3,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.3,
+    "launch_spike_days": 5,
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_portastation_quest",
+    "item_name": "Dragon Road Portable",
+    "store_type": "electronics",
+    "category": "handheld_gaming",
+    "base_price": 34.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A long-form portable role-playing game with enough side quests to miss a bus stop for.",
+    "subcategory": "games",
+    "tags": [
+      "gaming",
+      "portable",
+      "rpg",
+      "popular"
+    ],
+    "depreciates": true,
+    "launch_day": 8,
+    "depreciation_rate": 0.02,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.4,
+    "launch_spike_days": 5,
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_headphones_budget_earbuds",
+    "item_name": "SonicBoom Basic Earbuds",
+    "store_type": "electronics",
+    "category": "audio",
+    "base_price": 20.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A blister-pack earbud set that gets the job done and disappears from the pegboard constantly.",
+    "subcategory": "earbuds",
+    "tags": [
+      "audio",
+      "earbuds",
+      "budget",
+      "starter"
+    ],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.02,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_headphones_onear",
+    "item_name": "SonicBoom On-Ear Headphones",
+    "store_type": "electronics",
+    "category": "audio",
+    "base_price": 34.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A foldable everyday headphone with a bass-heavy sound and giftable packaging.",
+    "subcategory": "headphones",
+    "tags": [
+      "audio",
+      "headphones",
+      "popular",
+      "gift"
+    ],
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_headphones_overear_pro",
+    "item_name": "SonicBoom Studio Pro Over-Ear",
+    "store_type": "electronics",
+    "category": "audio",
+    "base_price": 59.99,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A plush over-ear set for shoppers who read spec cards before they read price tags.",
+    "subcategory": "headphones",
+    "tags": [
+      "audio",
+      "headphones",
+      "premium",
+      "quality",
+      "specs"
+    ],
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_speaker_portable",
+    "item_name": "SonicBoom Mini Speaker",
+    "store_type": "electronics",
+    "category": "audio",
+    "base_price": 24.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A tiny battery speaker whose volume impresses people more than its tone ever could.",
+    "subcategory": "speakers",
+    "tags": [
+      "audio",
+      "speaker",
+      "portable",
+      "gift"
+    ],
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_clock_radio",
+    "item_name": "SonicBoom Alarm Clock Radio",
+    "store_type": "electronics",
+    "category": "audio",
+    "base_price": 20.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A dependable bedside radio that sells because dependable bedside radios always do.",
+    "subcategory": "clock_radios",
+    "tags": [
+      "audio",
+      "clock",
+      "radio",
+      "budget",
+      "steady"
+    ],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.03,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_camera_pixelsnap_budget",
+    "item_name": "PixelSnap 2.0MP Camera",
+    "store_type": "electronics",
+    "category": "gadgets",
+    "base_price": 79.99,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A simple point-and-shoot digital camera that makes every family event feel officially documented.",
+    "subcategory": "cameras",
+    "tags": [
+      "camera",
+      "digital",
+      "budget",
+      "gadget"
+    ],
+    "depreciates": true,
+    "launch_day": 1,
+    "depreciation_rate": 0.025,
+    "min_value_ratio": 0.15,
+    "launch_demand_multiplier": 1.2,
+    "launch_spike_days": 5,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.05,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_camera_pixelsnap_pro",
+    "item_name": "PixelSnap 5.0MP Pro",
+    "store_type": "electronics",
+    "category": "gadgets",
+    "base_price": 89.99,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A zoom-heavy camera pitched to hobbyists who want every new spec to sound life changing.",
+    "subcategory": "cameras",
+    "tags": [
+      "camera",
+      "digital",
+      "premium",
+      "gadget",
+      "specs",
+      "latest"
+    ],
+    "depreciates": true,
+    "launch_day": 12,
+    "depreciation_rate": 0.018,
+    "min_value_ratio": 0.2,
+    "launch_demand_multiplier": 1.4,
+    "launch_spike_days": 7,
+    "can_be_demo_unit": true,
+    "monthly_depreciation_rate": 0.04,
+    "launch_spike_eligible": true,
+    "launch_spike_multiplier": 2.0,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_usb_drive_64mb",
+    "item_name": "DataVault 64MB USB Flash Drive",
+    "store_type": "electronics",
+    "category": "gadgets",
+    "base_price": 20.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A thumb-drive novelty that turns a whole presentation into something you can lose in a pocket.",
+    "subcategory": "storage",
+    "tags": [
+      "storage",
+      "usb",
+      "budget",
+      "gadget"
+    ],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.02,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_usb_drive_512mb",
+    "item_name": "DataVault 512MB USB Flash Drive",
+    "store_type": "electronics",
+    "category": "gadgets",
+    "base_price": 34.99,
+    "rarity": "uncommon",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A half-gig flash drive that makes office workers talk like they have entered the future.",
+    "subcategory": "storage",
+    "tags": [
+      "storage",
+      "usb",
+      "gadget",
+      "popular"
+    ],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.02,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 2
+  },
+  {
+    "id": "elec_case_mp3_player",
+    "item_name": "TechShield Music Player Case",
+    "store_type": "electronics",
+    "category": "accessories",
+    "base_price": 20.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A neoprene case that mostly sells by reminding shoppers how easy plastic screens scratch.",
+    "subcategory": "cases",
+    "tags": [
+      "accessory",
+      "case",
+      "protection"
+    ],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_cable_usb",
+    "item_name": "Universal USB Cable",
+    "store_type": "electronics",
+    "category": "accessories",
+    "base_price": 20.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A spare cable that somehow feels unnecessary until the exact second it becomes urgent.",
+    "subcategory": "cables",
+    "tags": [
+      "accessory",
+      "cable",
+      "essential"
+    ],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  },
+  {
+    "id": "elec_screen_protector",
+    "item_name": "TechShield Screen Protector (3-pack)",
+    "store_type": "electronics",
+    "category": "accessories",
+    "base_price": 20.0,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A protective film pack famous for saving screens and causing tiny installation arguments.",
+    "subcategory": "protection",
+    "tags": [
+      "accessory",
+      "screen_protector",
+      "impulse"
+    ],
+    "can_be_demo_unit": false,
+    "monthly_depreciation_rate": 0.0,
+    "launch_spike_eligible": false,
+    "launch_spike_multiplier": 1.0,
+    "supplier_tier": 1
+  }
 ]
