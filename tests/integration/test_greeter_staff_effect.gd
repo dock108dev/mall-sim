@@ -2,6 +2,7 @@
 extends GutTest
 
 const STORE_ID: String = "test_greeter_store"
+const OTHER_STORE_ID: String = "test_greeter_other_store"
 const FLOAT_EPSILON: float = 0.001
 
 var _customer_system: CustomerSystem
@@ -172,6 +173,66 @@ func test_scenario_c_browse_min_multiplier_returns_to_baseline_after_greeter_fir
 		1.0,
 		FLOAT_EPSILON,
 		"browse_min_multiplier should return to 1.0 when no GREETER is assigned"
+	)
+
+
+# --- Scenario D: greeter effects are store-scoped and refresh on staff events ---
+
+
+func test_scenario_d_greeter_bonus_does_not_apply_to_other_store() -> void:
+	watch_signals(EventBus)
+	StaffManager.hire_candidate("test_greeter_001", STORE_ID)
+
+	_customer_system.spawn_customer(_test_profile, OTHER_STORE_ID)
+
+	var active: Array[Customer] = _customer_system.get_active_customers()
+	assert_eq(
+		active.size(),
+		1,
+		"Exactly one customer should spawn for an ungreeted store"
+	)
+	assert_almost_eq(
+		active[0]._browse_min_multiplier,
+		1.0,
+		FLOAT_EPSILON,
+		"browse_min_multiplier should stay baseline for stores without a GREETER"
+	)
+	assert_signal_not_emitted(
+		EventBus,
+		"customer_greeted",
+		"customer_greeted must not fire for stores without an assigned GREETER"
+	)
+
+
+func test_scenario_d_staff_morale_changed_refreshes_cached_greeter() -> void:
+	StaffManager.hire_candidate("test_greeter_001", STORE_ID)
+	_customer_system._cached_greeter = null
+
+	EventBus.staff_morale_changed.emit("test_greeter_001", 0.5)
+
+	assert_not_null(
+		_customer_system._cached_greeter,
+		"staff_morale_changed should refresh the cached GREETER reference"
+	)
+	assert_eq(
+		_customer_system._cached_greeter.staff_id,
+		"test_greeter_001",
+		"Refreshed greeter should match the assigned GREETER"
+	)
+
+
+func test_scenario_d_staff_quit_clears_cached_greeter() -> void:
+	StaffManager.hire_candidate("test_greeter_001", STORE_ID)
+	assert_not_null(
+		_customer_system._cached_greeter,
+		"Precondition: greeter must be cached before quitting"
+	)
+
+	StaffManager.quit_staff("test_greeter_001")
+
+	assert_null(
+		_customer_system._cached_greeter,
+		"staff_quit should clear the cached GREETER reference"
 	)
 
 

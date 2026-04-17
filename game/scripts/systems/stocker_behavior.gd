@@ -147,33 +147,14 @@ func _on_timer_fire(store_id: String) -> void:
 
 
 func _restock_one_item(store_id: String, staff_id: String) -> void:
-	if not _inventory_system or not _data_loader:
+	if not _inventory_system:
 		return
-	var store_def: StoreDefinition = _data_loader.get_store(store_id)
-	if not store_def:
+	var restocked: Dictionary = _inventory_system.restock_one_empty_shelf_slot(
+		StringName(store_id)
+	)
+	if restocked.is_empty():
 		return
-	var store_type: String = store_def.store_type
-	var shelf_items: Array[ItemInstance] = (
-		_inventory_system.get_shelf_items_for_store(store_type)
-	)
-	var capacity: int = store_def.shelf_capacity
-	if capacity <= 0:
-		capacity = 50
-	if shelf_items.size() >= capacity:
-		return
-	var backroom: Array[ItemInstance] = (
-		_inventory_system.get_backroom_items_for_store(store_type)
-	)
-	if backroom.is_empty():
-		return
-	var item: ItemInstance = backroom[0]
-	var slot_id: String = "stocker_slot_%d" % shelf_items.size()
-	_inventory_system.move_item(
-		item.instance_id, "shelf:%s" % slot_id
-	)
-	var item_def_id: String = (
-		item.definition.id if item.definition else ""
-	)
+	var item_def_id: String = str(restocked.get("item_id", ""))
 	EventBus.staff_restocked_shelf.emit(staff_id, item_def_id)
 
 

@@ -9,6 +9,25 @@ extends Node
 @export var max_concurrent_customers: int = 4
 
 
+func _ready() -> void:
+	if entry_point == null:
+		entry_point = get_node_or_null("EntryPoint") as Marker3D
+	if browse_waypoints.is_empty():
+		for child_name: String in [
+			"BrowseWaypoint01",
+			"BrowseWaypoint02",
+			"BrowseWaypoint03",
+			"BrowseWaypoint04",
+		]:
+			var waypoint: Marker3D = get_node_or_null(child_name) as Marker3D
+			if waypoint:
+				browse_waypoints.append(waypoint)
+	if checkout_approach == null:
+		checkout_approach = get_node_or_null("CheckoutApproach") as Marker3D
+	if exit_point == null:
+		exit_point = get_node_or_null("ExitPoint") as Marker3D
+
+
 func get_entry_position() -> Vector3:
 	if not entry_point:
 		push_warning("CustomerNavConfig: entry_point not assigned")

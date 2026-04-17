@@ -764,6 +764,7 @@ static func parse_ambient_moment(
 	var m := AmbientMomentDefinition.new()
 	m.id = str(data["id"])
 	m.name = str(data.get("name", ""))
+	m.category = str(data.get("category", "any"))
 	m.trigger_category = str(data.get("trigger_category", ""))
 	m.trigger_value = str(data.get("trigger_value", ""))
 	m.display_type = StringName(

@@ -10,6 +10,23 @@ var _store_exited: Array[StringName] = []
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
+	ContentRegistry.register_entry(
+		{
+			"id": "sports_memorabilia",
+			"name": "Sports Memorabilia",
+			"environment_id": "sports_memorabilia",
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{"id": "retro_games", "name": "Retro Games", "environment_id": "retro_games"},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{"id": "video_rental", "name": "Video Rental", "environment_id": "video_rental"},
+		"store"
+	)
 	_manager = StoreStateManager.new()
 	add_child_autofree(_manager)
 	_lease_results.clear()
@@ -31,6 +48,7 @@ func after_each() -> void:
 		EventBus.store_entered.disconnect(_on_store_entered)
 	if EventBus.store_exited.is_connected(_on_store_exited):
 		EventBus.store_exited.disconnect(_on_store_exited)
+	ContentRegistry.clear_for_testing()
 
 
 # ── 1. Initial state ────────────────────────────────────────────────────────

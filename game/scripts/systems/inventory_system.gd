@@ -5,6 +5,8 @@ extends Node
 var _items: Dictionary = {}
 var _data_loader: DataLoader = null
 var _shelf_assignments: Dictionary = {}
+## Maps store_id -> {slot_id: definition_id} for emptied shelf slots awaiting refill.
+var _empty_shelf_targets: Dictionary = {}
 var _restock_queue: Array[Dictionary] = []
 var _shelf_cache: Array[ItemInstance] = []
 var _shelf_cache_dirty: bool = true
@@ -56,7 +58,15 @@ func remove_item(instance_id: String) -> bool:
 	var def_id: StringName = StringName(
 		item.definition.id if item.definition else ""
 	)
+	var previous_slot_id: String = _extract_shelf_slot_id(
+		item.current_location
+	)
 	_remove_shelf_assignment_for_item(instance_id)
+	if not sid.is_empty() and not def_id.is_empty() \
+			and not previous_slot_id.is_empty():
+		_remember_empty_shelf_target(
+			sid, previous_slot_id, def_id
+		)
 	item.current_location = "sold"
 	_items.erase(instance_id)
 	_invalidate_caches()
@@ -107,6 +117,9 @@ func assign_to_shelf(
 		_shelf_assignments[canonical] = {}
 	var shelves: Dictionary = _shelf_assignments[canonical]
 	shelves[String(shelf_slot_id)] = String(item_id)
+	_clear_empty_shelf_target(
+		StringName(canonical), String(shelf_slot_id)
+	)
 	var item: ItemInstance = _items[String(item_id)]
 	item.current_location = "shelf:%s" % String(shelf_slot_id)
 	_invalidate_caches()
@@ -132,6 +145,36 @@ func get_shelf_item(
 	if not shelves.has(slot_key):
 		return null
 	return get_item(shelves[slot_key])
+
+
+## Refills one remembered empty shelf slot from matching backroom stock.
+func restock_one_empty_shelf_slot(store_id: StringName) -> Dictionary:
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		push_error("InventorySystem: invalid store_id '%s'" % store_id)
+		return {}
+	var empty_slots: Dictionary = _empty_shelf_targets.get(
+		String(canonical), {}
+	)
+	for slot_id_variant: Variant in empty_slots.keys():
+		var slot_id: String = str(slot_id_variant)
+		var definition_id: String = str(
+			empty_slots.get(slot_id_variant, "")
+		)
+		if definition_id.is_empty():
+			continue
+		var item: ItemInstance = _find_backroom_item_for_definition(
+			canonical, definition_id
+		)
+		if not item:
+			continue
+		move_item(item.instance_id, "shelf:%s" % slot_id)
+		return {
+			"slot_id": slot_id,
+			"item_id": definition_id,
+			"instance_id": item.instance_id,
+		}
+	return {}
 
 
 ## Queues a restock operation for later processing.
@@ -249,8 +292,18 @@ func move_item(instance_id: String, new_location: String) -> void:
 		push_warning("InventorySystem: item '%s' not found" % instance_id)
 		return
 	var item: ItemInstance = _items[instance_id]
-	if item.current_location.begins_with("shelf:"):
+	var previous_slot_id: String = _extract_shelf_slot_id(
+		item.current_location
+	)
+	if not previous_slot_id.is_empty():
+		var previous_store_id: StringName = _get_store_id_for_item(item)
 		_remove_shelf_assignment_for_item(instance_id)
+		if not previous_store_id.is_empty() and item.definition:
+			_remember_empty_shelf_target(
+				previous_store_id,
+				previous_slot_id,
+				StringName(item.definition.id)
+			)
 	item.current_location = new_location
 	if new_location.begins_with("shelf:"):
 		var shelf_id: String = new_location.substr(6)
@@ -264,6 +317,9 @@ func move_item(instance_id: String, new_location: String) -> void:
 				_shelf_assignments[store_type] = {}
 			var shelves: Dictionary = _shelf_assignments[store_type]
 			shelves[shelf_id] = instance_id
+			_clear_empty_shelf_target(
+				StringName(store_type), shelf_id
+			)
 		EventBus.item_stocked.emit(instance_id, shelf_id)
 	_invalidate_caches()
 	EventBus.inventory_changed.emit()
@@ -335,6 +391,38 @@ func get_items_for_store(store_type: String) -> Array[ItemInstance]:
 	return result
 
 
+## Returns display-ready inventory rows for the requested store.
+func get_store_inventory(store_id: StringName) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for item: ItemInstance in get_items_for_store(String(store_id)):
+		var definition_id: StringName = &""
+		var display_name: String = "Unknown"
+		var rarity: String = ""
+		var icon_path: String = ""
+		if item.definition:
+			definition_id = StringName(item.definition.id)
+			display_name = item.definition.item_name
+			rarity = item.definition.rarity
+			icon_path = item.definition.icon_path
+		var price: float = (
+			item.player_set_price if item.player_set_price > 0.0
+			else item.get_current_value()
+		)
+		rows.append({
+			"instance_id": StringName(item.instance_id),
+			"definition_id": definition_id,
+			"display_name": display_name,
+			"condition": item.condition,
+			"rarity": rarity,
+			"current_price": price,
+			"estimated_value": item.get_current_value(),
+			"location": item.current_location,
+			"icon_path": icon_path,
+			"item": item,
+		})
+	return rows
+
+
 func get_item(instance_id: String) -> ItemInstance:
 	if not _items.has(instance_id):
 		return null
@@ -374,6 +462,7 @@ func get_save_data() -> Dictionary:
 	return {
 		"items": items_data,
 		"next_id": ItemInstance._next_id,
+		"empty_shelf_targets": _empty_shelf_targets.duplicate(true),
 		"shelf_assignments": _shelf_assignments.duplicate(true),
 		"restock_queue": _restock_queue.duplicate(true),
 	}
@@ -386,6 +475,7 @@ func load_save_data(data: Dictionary) -> void:
 func _apply_state(data: Dictionary) -> void:
 	_items = {}
 	_shelf_assignments = {}
+	_empty_shelf_targets = {}
 	_restock_queue = []
 	_restock_pending = {}
 	_invalidate_caches()
@@ -450,6 +540,24 @@ func _apply_state(data: Dictionary) -> void:
 			if shelves is Dictionary:
 				_shelf_assignments[String(canonical)] = (
 					shelves as Dictionary
+				).duplicate(true)
+	var saved_empty_targets: Variant = data.get("empty_shelf_targets", {})
+	if saved_empty_targets is Dictionary:
+		var raw_targets: Dictionary = saved_empty_targets as Dictionary
+		for store_key: Variant in raw_targets:
+			var canonical: StringName = ContentRegistry.resolve(
+				str(store_key)
+			)
+			if canonical.is_empty():
+				push_warning(
+					"InventorySystem: unresolved empty shelf store_id '%s' during load"
+					% store_key
+				)
+				continue
+			var targets: Variant = raw_targets[store_key]
+			if targets is Dictionary:
+				_empty_shelf_targets[String(canonical)] = (
+					targets as Dictionary
 				).duplicate(true)
 	var saved_queue: Variant = data.get("restock_queue", [])
 	if saved_queue is Array:
@@ -549,6 +657,58 @@ func _remove_shelf_assignment_for_item(instance_id: String) -> void:
 					instance_id, slot_id
 				)
 				return
+
+
+func _remember_empty_shelf_target(
+	store_id: StringName,
+	slot_id: String,
+	def_id: StringName
+) -> void:
+	if slot_id.is_empty() or def_id.is_empty():
+		return
+	var store_key: String = String(store_id)
+	if store_key.is_empty():
+		return
+	if not _empty_shelf_targets.has(store_key):
+		_empty_shelf_targets[store_key] = {}
+	var targets: Dictionary = _empty_shelf_targets[store_key]
+	targets[slot_id] = String(def_id)
+
+
+func _clear_empty_shelf_target(store_id: StringName, slot_id: String) -> void:
+	var store_key: String = String(store_id)
+	if store_key.is_empty() or slot_id.is_empty():
+		return
+	if not _empty_shelf_targets.has(store_key):
+		return
+	var targets: Dictionary = _empty_shelf_targets[store_key]
+	targets.erase(slot_id)
+	if targets.is_empty():
+		_empty_shelf_targets.erase(store_key)
+
+
+func _extract_shelf_slot_id(location: String) -> String:
+	if not location.begins_with("shelf:"):
+		return ""
+	return location.substr(6)
+
+
+func _find_backroom_item_for_definition(
+	store_id: StringName,
+	definition_id: String
+) -> ItemInstance:
+	var canonical: String = String(store_id)
+	for item: ItemInstance in _items.values():
+		if item.current_location != "backroom":
+			continue
+		if not item.definition:
+			continue
+		if item.definition.store_type != canonical:
+			continue
+		if item.definition.id != definition_id:
+			continue
+		return item
+	return null
 
 
 func _on_customer_purchased(

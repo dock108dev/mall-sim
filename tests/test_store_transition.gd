@@ -15,6 +15,16 @@ var _store_changed_ids: Array[StringName] = []
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
+	ContentRegistry.register_entry(
+		{
+			"id": "retro_games",
+			"name": "Retro Games",
+			"scene_path": "res://game/scenes/stores/retro_games.tscn",
+			"environment_id": "retro_games",
+		},
+		"store"
+	)
 	_env_manager = _EnvironmentManagerScript.new()
 	add_child_autofree(_env_manager)
 	_store_state_manager = StoreStateManager.new()
@@ -26,6 +36,7 @@ func before_each() -> void:
 func after_each() -> void:
 	if EventBus.active_store_changed.is_connected(_on_active_store_changed):
 		EventBus.active_store_changed.disconnect(_on_active_store_changed)
+	ContentRegistry.clear_for_testing()
 
 
 # ── 1. Initial hallway state ──────────────────────────────────────────────────

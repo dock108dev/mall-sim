@@ -7,7 +7,9 @@ const AMBIANCE_DIR: String = "res://game/assets/audio/ambiance/"
 const SFX_POOL_SIZE: int = 8
 const SFX_BUS: String = "SFX"
 const MUSIC_BUS: String = "Music"
-const AMBIENT_BUS: String = "Ambient"
+const AMBIENCE_BUS: String = "Ambience"
+const AMBIENT_BUS: String = AMBIENCE_BUS
+const LEGACY_AMBIENT_BUS: String = "Ambient"
 const DEFAULT_CROSSFADE: float = 0.5
 const AMBIENT_CROSSFADE_DURATION: float = 0.5
 const MUSIC_VOLUME_DB: float = -6.0
@@ -31,6 +33,7 @@ var _ambient_crossfade_tween: Tween = null
 var _ambient_streams: Dictionary = {}
 
 var _zone_players: Dictionary = {}
+var _zone_target_linear: Dictionary = {}
 var _zone_tweens: Dictionary = {}
 var _warned_messages: Dictionary = {}
 
@@ -43,7 +46,9 @@ func _ready() -> void:
 	_preload_music()
 	_preload_ambient()
 	_setup_event_handler()
-	EventBus.preference_changed.connect(_on_preference_changed)
+	if not EventBus.preference_changed.is_connected(_on_preference_changed):
+		EventBus.preference_changed.connect(_on_preference_changed)
+	_apply_settings_volumes()
 
 
 ## Applies bus volumes from current Settings values. Called by boot sequence
@@ -52,8 +57,16 @@ func initialize() -> void:
 	_apply_settings_volumes()
 
 
-## Plays a one-shot SFX by preloaded name key.
-func play_sfx(sound_name: String) -> void:
+## Plays a one-shot SFX from either a preloaded name key or an AudioStream.
+func play_sfx(sound: Variant, volume_db: float = 0.0) -> void:
+	if sound is AudioStream:
+		_play_sfx_stream(sound as AudioStream, volume_db)
+		return
+	if not (sound is String or sound is StringName):
+		push_warning("AudioManager: unsupported SFX value '%s'" % str(sound))
+		return
+
+	var sound_name: String = String(sound)
 	if not _sfx_streams.has(sound_name):
 		push_warning("AudioManager: Unknown SFX '%s'" % sound_name)
 		return
@@ -63,12 +76,18 @@ func play_sfx(sound_name: String) -> void:
 		return
 
 	player.stream = _sfx_streams[sound_name]
-	player.volume_db = 0.0
+	player.volume_db = volume_db
 	player.play()
 
 
-## Plays a one-shot SFX from an AudioStream on the SFX bus.
+## Compatibility wrapper for stream-based one-shot SFX playback.
 func play_sfx_stream(
+	stream: AudioStream, volume_db: float = 0.0
+) -> void:
+	_play_sfx_stream(stream, volume_db)
+
+
+func _play_sfx_stream(
 	stream: AudioStream, volume_db: float = 0.0
 ) -> void:
 	if stream == null:
@@ -130,6 +149,7 @@ func unregister_zone(zone_id: String) -> void:
 		return
 	_kill_zone_tween(zone_id)
 	_zone_players.erase(zone_id)
+	_zone_target_linear.erase(zone_id)
 
 
 ## Returns the current Music bus volume in linear scale (0.0 to 1.0).
@@ -150,7 +170,7 @@ func get_sfx_volume() -> float:
 
 ## Sets the Music bus volume in linear scale (0.0 to 1.0).
 func set_music_volume(linear: float) -> void:
-	var idx: int = AudioServer.get_bus_index(MUSIC_BUS)
+	var idx: int = _get_bus_index(MUSIC_BUS)
 	if idx < 0:
 		push_error("AudioManager: Music bus not found")
 		return
@@ -161,9 +181,9 @@ func set_music_volume(linear: float) -> void:
 
 ## Sets the Ambience bus volume in linear scale (0.0 to 1.0).
 func set_ambience_volume(linear: float) -> void:
-	var idx: int = AudioServer.get_bus_index(AMBIENT_BUS)
+	var idx: int = _get_ambience_bus_index()
 	if idx < 0:
-		push_error("AudioManager: Ambient bus not found")
+		push_error("AudioManager: Ambience bus not found")
 		return
 	AudioServer.set_bus_volume_db(
 		idx, linear_to_db(clampf(linear, 0.0, 1.0))
@@ -172,7 +192,7 @@ func set_ambience_volume(linear: float) -> void:
 
 ## Sets volume for a named audio bus in linear scale (0.0 to 1.0).
 func set_bus_volume(bus_name: StringName, linear_volume: float) -> void:
-	var idx: int = AudioServer.get_bus_index(String(bus_name))
+	var idx: int = _get_bus_index(String(bus_name))
 	if idx < 0:
 		push_error("AudioManager: bus '%s' not found" % bus_name)
 		return
@@ -183,7 +203,7 @@ func set_bus_volume(bus_name: StringName, linear_volume: float) -> void:
 
 ## Sets the SFX bus volume in linear scale (0.0 to 1.0).
 func set_sfx_volume(linear: float) -> void:
-	var idx: int = AudioServer.get_bus_index(SFX_BUS)
+	var idx: int = _get_bus_index(SFX_BUS)
 	if idx < 0:
 		push_error("AudioManager: SFX bus not found")
 		return
@@ -192,9 +212,9 @@ func set_sfx_volume(linear: float) -> void:
 	)
 
 
-## Registers a zone's ambient AudioStreamPlayer for enter/exit control.
+## Registers a zone player for enter/exit control.
 func register_zone(
-	zone_id: String, player: AudioStreamPlayer
+	zone_id: String, player: Node
 ) -> void:
 	if zone_id.is_empty():
 		push_error("AudioManager: empty zone_id in register_zone")
@@ -204,7 +224,23 @@ func register_zone(
 			"AudioManager: null player for zone '%s'" % zone_id
 		)
 		return
+	if not _is_zone_audio_player(player):
+		push_error(
+			"AudioManager: unsupported zone player for '%s'" % zone_id
+		)
+		return
 	_zone_players[zone_id] = player
+	_zone_target_linear[zone_id] = _get_zone_linear_volume(player)
+
+
+## Updates the target dB level for a registered zone.
+func set_zone_volume_db(zone_id: String, volume_db: float) -> void:
+	if not _zone_players.has(zone_id):
+		push_warning("AudioManager: unregistered zone '%s'" % zone_id)
+		return
+	var player: Node = _zone_players[zone_id] as Node
+	_zone_target_linear[zone_id] = db_to_linear(volume_db)
+	_set_zone_player_volume_db(player, volume_db)
 
 
 ## Fades in the ambient player for a registered zone.
@@ -215,17 +251,20 @@ func enter_zone(zone_id: String) -> void:
 		)
 		return
 
-	var player: AudioStreamPlayer = _zone_players[zone_id]
+	var player: Node = _zone_players[zone_id] as Node
 	_kill_zone_tween(zone_id)
+	var target_linear: float = _zone_target_linear.get(
+		zone_id, _get_zone_linear_volume(player)
+	)
 
-	if not player.playing:
-		player.volume_db = linear_to_db(0.001)
-		player.play()
+	if not _is_zone_player_playing(player):
+		_set_zone_player_volume_db(player, linear_to_db(0.001))
+		_play_zone_player(player)
 
 	var tween: Tween = create_tween()
 	tween.tween_method(
 		_set_player_volume.bind(player),
-		0.0, 1.0, AMBIENT_CROSSFADE_DURATION
+		0.0, target_linear, AMBIENT_CROSSFADE_DURATION
 	)
 	_zone_tweens[zone_id] = tween
 
@@ -238,8 +277,8 @@ func exit_zone(zone_id: String) -> void:
 		)
 		return
 
-	var player: AudioStreamPlayer = _zone_players[zone_id]
-	if not player.playing:
+	var player: Node = _zone_players[zone_id] as Node
+	if not _is_zone_player_playing(player):
 		return
 
 	_kill_zone_tween(zone_id)
@@ -247,10 +286,10 @@ func exit_zone(zone_id: String) -> void:
 	var tween: Tween = create_tween()
 	tween.tween_method(
 		_set_player_volume.bind(player),
-		db_to_linear(player.volume_db), 0.0,
+		_get_zone_linear_volume(player), 0.0,
 		AMBIENT_CROSSFADE_DURATION
 	)
-	tween.tween_callback(player.stop)
+	tween.tween_callback(_stop_zone_player.bind(player))
 	_zone_tweens[zone_id] = tween
 
 
@@ -292,6 +331,19 @@ func _on_preference_changed(key: String, value: Variant) -> void:
 			set_sfx_volume(value as float)
 		&"ambient_volume":
 			set_ambience_volume(value as float)
+
+
+func _get_bus_index(bus_name: String) -> int:
+	if bus_name == LEGACY_AMBIENT_BUS or bus_name == AMBIENCE_BUS:
+		return _get_ambience_bus_index()
+	return AudioServer.get_bus_index(bus_name)
+
+
+func _get_ambience_bus_index() -> int:
+	var idx: int = AudioServer.get_bus_index(AMBIENCE_BUS)
+	if idx >= 0:
+		return idx
+	return AudioServer.get_bus_index(LEGACY_AMBIENT_BUS)
 
 
 func _setup_event_handler() -> void:
@@ -354,6 +406,47 @@ func _kill_zone_tween(zone_id: String) -> void:
 		if existing != null and existing.is_valid():
 			existing.kill()
 		_zone_tweens.erase(zone_id)
+
+
+func _is_zone_audio_player(player: Node) -> bool:
+	return player is AudioStreamPlayer or player is AudioStreamPlayer3D
+
+
+func _play_zone_player(player: Node) -> void:
+	if player is AudioStreamPlayer:
+		(player as AudioStreamPlayer).play()
+	elif player is AudioStreamPlayer3D:
+		(player as AudioStreamPlayer3D).play()
+
+
+func _stop_zone_player(player: Node) -> void:
+	if player is AudioStreamPlayer:
+		(player as AudioStreamPlayer).stop()
+	elif player is AudioStreamPlayer3D:
+		(player as AudioStreamPlayer3D).stop()
+
+
+func _is_zone_player_playing(player: Node) -> bool:
+	if player is AudioStreamPlayer:
+		return (player as AudioStreamPlayer).playing
+	if player is AudioStreamPlayer3D:
+		return (player as AudioStreamPlayer3D).playing
+	return false
+
+
+func _get_zone_linear_volume(player: Node) -> float:
+	if player is AudioStreamPlayer:
+		return db_to_linear((player as AudioStreamPlayer).volume_db)
+	if player is AudioStreamPlayer3D:
+		return db_to_linear((player as AudioStreamPlayer3D).volume_db)
+	return 0.001
+
+
+func _set_zone_player_volume_db(player: Node, volume_db: float) -> void:
+	if player is AudioStreamPlayer:
+		(player as AudioStreamPlayer).volume_db = volume_db
+	elif player is AudioStreamPlayer3D:
+		(player as AudioStreamPlayer3D).volume_db = volume_db
 
 
 func _create_players() -> void:
@@ -511,9 +604,11 @@ func _fade_out_active(duration: float = DEFAULT_CROSSFADE) -> void:
 
 
 func _set_player_volume(
-	value: float, player: AudioStreamPlayer
+	value: float, player: Node
 ) -> void:
-	player.volume_db = linear_to_db(clampf(value, 0.001, 1.0))
+	_set_zone_player_volume_db(
+		player, linear_to_db(clampf(value, 0.001, 1.0))
+	)
 
 
 func _on_crossfade_complete(old_player: AudioStreamPlayer) -> void:

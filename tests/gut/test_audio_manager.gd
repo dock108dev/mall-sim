@@ -63,16 +63,16 @@ func test_set_music_volume_updates_bus() -> void:
 
 
 func test_set_ambience_volume_updates_bus() -> void:
-	var idx: int = AudioServer.get_bus_index("Ambient")
+	var idx: int = AudioServer.get_bus_index("Ambience")
 	if idx < 0:
-		pending("Ambient bus not available in test runner")
+		pending("Ambience bus not available in test runner")
 		return
 	_manager.set_ambience_volume(0.7)
 	var actual_db: float = AudioServer.get_bus_volume_db(idx)
 	var expected_db: float = linear_to_db(0.7)
 	assert_almost_eq(
 		actual_db, expected_db, 0.01,
-		"set_ambience_volume should set Ambient bus volume"
+		"set_ambience_volume should set Ambience bus volume"
 	)
 
 
@@ -173,12 +173,12 @@ func test_music_players_use_music_bus() -> void:
 
 func test_ambient_players_use_ambient_bus() -> void:
 	assert_eq(
-		_manager._ambient_player_a.bus, "Ambient",
-		"Ambient player A should use Ambient bus"
+		_manager._ambient_player_a.bus, "Ambience",
+		"Ambient player A should use Ambience bus"
 	)
 	assert_eq(
-		_manager._ambient_player_b.bus, "Ambient",
-		"Ambient player B should use Ambient bus"
+		_manager._ambient_player_b.bus, "Ambience",
+		"Ambient player B should use Ambience bus"
 	)
 
 
@@ -198,6 +198,20 @@ func test_play_sfx_unknown_name_warns() -> void:
 func test_play_sfx_stream_null_warns() -> void:
 	_manager.play_sfx_stream(null)
 	assert_true(true, "Null stream should warn but not crash")
+
+
+func test_play_sfx_stream_api_assigns_stream() -> void:
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	_manager.play_sfx(stream, -3.0)
+	var found: bool = false
+	for player: AudioStreamPlayer in _manager._sfx_players:
+		if player.stream == stream and is_equal_approx(player.volume_db, -3.0):
+			found = true
+			break
+	assert_true(
+		found,
+		"play_sfx(AudioStream, volume_db) should play one-shot streams on the SFX pool"
+	)
 
 
 func test_set_bus_volume_updates_bus() -> void:

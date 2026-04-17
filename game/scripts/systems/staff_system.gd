@@ -7,8 +7,6 @@ const MAX_STAFF_PER_STORE: int = 2
 const MIN_REPUTATION_TO_HIRE: float = 20.0
 const PRICING_ERROR_SKILL_1: float = 0.30
 const PRICING_ERROR_SKILL_5: float = 0.05
-const RESTOCK_BASE_ITEMS: int = 2
-const RESTOCK_PER_SKILL: int = 1
 const HAGGLE_SKILL_PENALTY_BASE: float = 0.30
 const HAGGLE_SKILL_PENALTY_PER_LEVEL: float = 0.06
 
@@ -203,7 +201,6 @@ func _get_staff_definition(
 
 
 func _on_day_started(_day: int) -> void:
-	_run_staff_restock()
 	_run_staff_pricing()
 
 
@@ -231,65 +228,6 @@ func _deduct_staff_wages() -> void:
 			total_wages, "Staff wages"
 		)
 		EventBus.staff_wages_paid.emit(total_wages)
-
-
-## Staff auto-restock shelves from backroom based on skill level.
-func _run_staff_restock() -> void:
-	if not _inventory_system:
-		return
-	for store_id: String in _hired_staff:
-		var restock_budget: int = _calc_store_restock_budget(store_id)
-		if restock_budget <= 0:
-			continue
-		_restock_store(store_id, restock_budget)
-
-
-## Calculates how many items staff can restock for a store.
-func _calc_store_restock_budget(store_id: String) -> int:
-	var budget: int = 0
-	for entry: Dictionary in get_staff_for_store(store_id):
-		var def: StaffDefinition = _get_staff_definition(
-			entry.get("definition_id", "")
-		)
-		if not def:
-			continue
-		if def.specialization == "stocking":
-			budget += RESTOCK_BASE_ITEMS + (
-				def.skill_level * RESTOCK_PER_SKILL
-			)
-		else:
-			budget += RESTOCK_BASE_ITEMS
-	return budget
-
-
-## Moves backroom items to empty shelf slots for a store.
-func _restock_store(store_id: String, max_items: int) -> void:
-	var store_def: StoreDefinition = null
-	if _data_loader:
-		store_def = _data_loader.get_store(store_id)
-	if not store_def:
-		return
-	var store_type: String = store_def.store_type
-	var backroom: Array[ItemInstance] = (
-		_inventory_system.get_backroom_items_for_store(store_type)
-	)
-	if backroom.is_empty():
-		return
-	var shelf_items: Array[ItemInstance] = (
-		_inventory_system.get_shelf_items_for_store(store_type)
-	)
-	var shelf_count: int = shelf_items.size()
-	var capacity: int = store_def.shelf_capacity
-	if capacity <= 0:
-		capacity = 50
-	var available_slots: int = capacity - shelf_count
-	var to_stock: int = mini(mini(max_items, available_slots), backroom.size())
-	for i: int in range(to_stock):
-		var item: ItemInstance = backroom[i]
-		var slot_id: String = "staff_slot_%d" % i
-		_inventory_system.move_item(
-			item.instance_id, "shelf:%s" % slot_id
-		)
 
 
 ## Staff set prices on unpriced shelf items based on skill level.

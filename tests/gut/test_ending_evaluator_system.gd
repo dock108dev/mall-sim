@@ -11,6 +11,14 @@ func before_each() -> void:
 	_system.initialize()
 
 
+func test_initialize_loads_13_endings_from_content_registry() -> void:
+	assert_eq(
+		_system._ending_definitions.size(),
+		13,
+		"EndingEvaluatorSystem should load 13 endings from ContentRegistry"
+	)
+
+
 func test_customer_purchased_increments_total_sales_count() -> void:
 	EventBus.customer_purchased.emit(&"", &"item_a", 10.0, &"")
 	EventBus.customer_purchased.emit(&"", &"item_b", 20.0, &"")
@@ -31,6 +39,26 @@ func test_customer_purchased_accumulates_revenue() -> void:
 		_system.get_tracked_stat(&"cumulative_revenue"),
 		35.5,
 		"Revenue should sum purchase prices"
+	)
+
+
+func test_customer_purchased_tracks_rare_items_sold() -> void:
+	if not ContentRegistry.exists("test_rare_item"):
+		ContentRegistry.register_entry(
+			{
+				"id": "test_rare_item",
+				"name": "Test Rare Item",
+				"rarity": "legendary",
+			},
+			"item"
+		)
+	EventBus.customer_purchased.emit(
+		&"", &"test_rare_item", 150.0, &""
+	)
+	assert_eq(
+		_system.get_tracked_stat(&"rare_items_sold"),
+		1.0,
+		"Rare or legendary item sales should increment rare_items_sold"
 	)
 
 
@@ -161,12 +189,23 @@ func test_days_near_bankruptcy_tracked() -> void:
 	)
 
 
-func test_evaluate_returns_fallback_just_getting_by() -> void:
+func test_random_event_resolved_tracks_survived_only() -> void:
+	EventBus.random_event_resolved.emit(&"market_crash", &"survived")
+	EventBus.random_event_resolved.emit(&"market_crash", &"failed")
+
+	assert_eq(
+		_system.get_tracked_stat(&"market_events_survived"),
+		1.0,
+		"Only survived random events should increment market_events_survived"
+	)
+
+
+func test_evaluate_returns_fallback_broke_even() -> void:
 	var result: StringName = _system.evaluate()
 	assert_eq(
 		result,
-		&"just_getting_by",
-		"With no stats, fallback ending should be just_getting_by"
+		&"broke_even",
+		"With no matching criteria, fallback ending should be broke_even"
 	)
 
 
@@ -225,7 +264,7 @@ func test_load_state_does_not_emit_ending_triggered() -> void:
 	_system.load_state({
 		"stats": {"total_sales_count": 5.0},
 		"ending_triggered": true,
-		"resolved_ending_id": "just_getting_by",
+		"resolved_ending_id": "broke_even",
 	})
 
 	assert_false(
@@ -286,6 +325,23 @@ func test_bankruptcy_declared_triggers_evaluate() -> void:
 		"trigger_type_bankruptcy stat should be set to 1.0"
 	)
 
+	EventBus.ending_triggered.disconnect(on_ending)
+
+
+func test_player_quit_to_end_triggers_evaluate() -> void:
+	var ending_id: Array = [&""]
+	var on_ending: Callable = func(
+		id: StringName, _stats: Dictionary
+	) -> void:
+		ending_id[0] = id
+	EventBus.ending_triggered.connect(on_ending)
+
+	EventBus.player_quit_to_end.emit()
+
+	assert_ne(
+		ending_id[0], &"",
+		"player_quit_to_end should trigger ending evaluation"
+	)
 	EventBus.ending_triggered.disconnect(on_ending)
 
 

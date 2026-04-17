@@ -5,6 +5,7 @@ extends Resource
 
 var id: String = ""
 var name: String = ""
+var category: String = "any"
 var trigger_category: String = ""
 var trigger_value: String = ""
 var display_type: StringName = &"toast"

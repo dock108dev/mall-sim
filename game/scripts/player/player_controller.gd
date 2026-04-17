@@ -43,7 +43,7 @@ var _build_mode_active: bool = false
 
 
 func _ready() -> void:
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	InputHelper.unlock_cursor()
 	_update_camera_transform()
 
 

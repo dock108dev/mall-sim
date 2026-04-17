@@ -2,19 +2,18 @@
 extends Node
 
 
-const HOVER_DELAY: float = PanelAnimator.TOOLTIP_HOVER_DELAY
-const FADE_DURATION: float = PanelAnimator.TOOLTIP_FADE_DURATION
-const MAX_WIDTH: int = 240
+const TOOLTIP_FADE_DURATION: float = PanelAnimator.TOOLTIP_FADE_DURATION
+const MAX_WIDTH: float = 240.0
 const SCREEN_MARGIN: int = 12
 const TOOLTIP_OFFSET := Vector2(16, 16)
 const BG_COLOR := Color(0.08, 0.08, 0.1, 0.9)
+const PANEL_HORIZONTAL_PADDING: float = 16.0
 
 var _panel: PanelContainer
 var _label: Label
-var _delay_timer: float = -1.0
-var _pending_text: String = ""
 var _fade_tween: Tween
 var _is_visible: bool = false
+var _last_position: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -23,72 +22,78 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_visible or _delay_timer >= 0.0:
-		if event is InputEventKey and event.pressed:
-			if (event as InputEventKey).keycode == KEY_ESCAPE:
-				hide_tooltip()
-				get_viewport().set_input_as_handled()
-				return
-		if event is InputEventMouseButton and event.pressed:
+	if not _is_visible:
+		return
+	if event is InputEventKey and event.pressed:
+		if (event as InputEventKey).keycode == KEY_ESCAPE:
 			hide_tooltip()
+			get_viewport().set_input_as_handled()
+			return
+	if event is InputEventMouseButton and event.pressed:
+		hide_tooltip()
 
 
 func _process(delta: float) -> void:
-	if _delay_timer >= 0.0:
-		_delay_timer -= delta
-		if _delay_timer < 0.0 and not _pending_text.is_empty():
-			_display_tooltip(_pending_text)
-			_pending_text = ""
 	if _is_visible:
 		_follow_mouse()
 
 
-## Shows a text tooltip after the standard hover delay.
-func show_tooltip(text: String, _position: Vector2) -> void:
+## Shows a text tooltip at the supplied cursor position.
+func show_tooltip(text: String, position: Vector2) -> void:
 	if text.is_empty():
 		hide_tooltip()
 		return
-	_pending_text = text
-	_delay_timer = HOVER_DELAY
+	_display_tooltip(text, position)
 
 
-## Immediately hides the tooltip and cancels any pending delay.
+## Immediately hides the tooltip.
 func hide_tooltip() -> void:
 	PanelAnimator.kill_tween(_fade_tween)
-	_delay_timer = -1.0
-	_pending_text = ""
 	_is_visible = false
 	_panel.visible = false
 	_panel.modulate = Color.WHITE
 
 
-func _display_tooltip(text: String) -> void:
+func _display_tooltip(text: String, position: Vector2) -> void:
+	_last_position = position
 	_label.custom_minimum_size = Vector2.ZERO
+	_label.size = Vector2.ZERO
 	_label.text = text
 	_panel.reset_size()
-	if _panel.size.x > float(MAX_WIDTH):
-		_label.custom_minimum_size = Vector2(float(MAX_WIDTH), 0.0)
+	if _panel.size.x > MAX_WIDTH:
+		_label.custom_minimum_size = Vector2(
+			MAX_WIDTH - PANEL_HORIZONTAL_PADDING, 0.0
+		)
 		_panel.reset_size()
 	PanelAnimator.kill_tween(_fade_tween)
-	_fade_tween = PanelAnimator.fade_in(_panel, FADE_DURATION)
+	_fade_tween = PanelAnimator.fade_in(
+		_panel, TOOLTIP_FADE_DURATION
+	)
 	_is_visible = true
-	_follow_mouse()
+	_position_tooltip(_last_position)
 
 
 func _follow_mouse() -> void:
 	var viewport: Viewport = get_viewport()
 	if not viewport:
 		return
-	var mouse_pos: Vector2 = viewport.get_mouse_position()
+	_last_position = viewport.get_mouse_position()
+	_position_tooltip(_last_position)
+
+
+func _position_tooltip(cursor_position: Vector2) -> void:
+	var viewport: Viewport = get_viewport()
+	if not viewport:
+		return
 	var screen_size: Vector2 = viewport.get_visible_rect().size
 	var tooltip_size: Vector2 = _panel.size
 
-	var pos: Vector2 = mouse_pos + TOOLTIP_OFFSET
+	var pos: Vector2 = cursor_position + TOOLTIP_OFFSET
 
 	if pos.x + tooltip_size.x > screen_size.x - SCREEN_MARGIN:
-		pos.x = mouse_pos.x - tooltip_size.x - TOOLTIP_OFFSET.x
+		pos.x = cursor_position.x - tooltip_size.x - TOOLTIP_OFFSET.x
 	if pos.y + tooltip_size.y > screen_size.y - SCREEN_MARGIN:
-		pos.y = mouse_pos.y - tooltip_size.y - TOOLTIP_OFFSET.y
+		pos.y = cursor_position.y - tooltip_size.y - TOOLTIP_OFFSET.y
 
 	pos.x = maxf(SCREEN_MARGIN, pos.x)
 	pos.y = maxf(SCREEN_MARGIN, pos.y)

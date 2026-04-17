@@ -5,6 +5,8 @@ extends GutTest
 var _system: RandomEventSystem
 var _triggered_events: Array[Dictionary] = []
 var _toast_messages: Array[Dictionary] = []
+var _active_modifiers: Array[Dictionary] = []
+var _expired_modifiers: Array[StringName] = []
 
 
 func _make_def(overrides: Dictionary = {}) -> RandomEventDefinition:
@@ -32,8 +34,12 @@ func before_each() -> void:
 	add_child_autofree(_system)
 	_triggered_events = []
 	_toast_messages = []
+	_active_modifiers = []
+	_expired_modifiers = []
 	EventBus.random_event_triggered.connect(_on_triggered)
 	EventBus.toast_requested.connect(_on_toast)
+	EventBus.market_event_active.connect(_on_market_event_active)
+	EventBus.market_event_expired.connect(_on_market_event_expired)
 
 
 func after_each() -> void:
@@ -41,6 +47,10 @@ func after_each() -> void:
 		EventBus.random_event_triggered.disconnect(_on_triggered)
 	if EventBus.toast_requested.is_connected(_on_toast):
 		EventBus.toast_requested.disconnect(_on_toast)
+	if EventBus.market_event_active.is_connected(_on_market_event_active):
+		EventBus.market_event_active.disconnect(_on_market_event_active)
+	if EventBus.market_event_expired.is_connected(_on_market_event_expired):
+		EventBus.market_event_expired.disconnect(_on_market_event_expired)
 
 
 func _on_triggered(
@@ -65,6 +75,19 @@ func _on_toast(
 		"category": category,
 		"duration": duration,
 	})
+
+
+func _on_market_event_active(
+	event_id: StringName, modifier: Dictionary
+) -> void:
+	_active_modifiers.append({
+		"event_id": event_id,
+		"modifier": modifier,
+	})
+
+
+func _on_market_event_expired(event_id: StringName) -> void:
+	_expired_modifiers.append(event_id)
 
 
 func test_evaluate_daily_events_returns_fired_ids() -> void:
@@ -339,6 +362,45 @@ func test_rainy_day_traffic_multiplier() -> void:
 	assert_almost_eq(
 		_system.get_traffic_multiplier(), 0.7, 0.01
 	)
+
+
+func test_rainy_day_emits_customer_spawn_modifier() -> void:
+	var def: RandomEventDefinition = _make_def({
+		"id": "rainy_day",
+		"effect_type": "rainy_day",
+		"probability_weight": 100.0,
+		"notification_text": "Rainy day!",
+	})
+	_system._event_definitions = [def]
+	_system._daily_rolled = false
+	_system._active_event = {}
+	_system._cooldowns = {}
+	_system._try_trigger_daily_event(1)
+	assert_eq(_active_modifiers.size(), 1)
+	assert_eq(_active_modifiers[0]["event_id"], &"rainy_day")
+	var modifier: Dictionary = _active_modifiers[0]["modifier"]
+	assert_almost_eq(
+		float(modifier["spawn_rate_multiplier"]), 0.7, 0.01
+	)
+
+
+func test_rainy_day_spawn_modifier_expires_next_day() -> void:
+	var def: RandomEventDefinition = _make_def({
+		"id": "rainy_day",
+		"effect_type": "rainy_day",
+		"probability_weight": 100.0,
+		"notification_text": "Rainy day!",
+		"duration_days": 1,
+	})
+	_system._active_event = {
+		"definition": def,
+		"start_day": 1,
+		"target_category": "",
+		"target_item_id": "",
+	}
+	_system._check_active_event_expiry(2)
+	assert_eq(_expired_modifiers.size(), 1)
+	assert_eq(_expired_modifiers[0], &"rainy_day")
 
 
 func test_competitor_sale_demand_modifier() -> void:

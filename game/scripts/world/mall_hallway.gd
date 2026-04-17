@@ -85,10 +85,17 @@ func set_ambient_systems(
 	customer_system: CustomerSystem,
 	time_system: TimeSystem
 ) -> void:
+	if _ambient_zones != null:
+		_ambient_zones.configure_runtime_dependencies(
+			customer_system, time_system
+		)
+		return
 	_ambient_zones = HallwayAmbientZones.new()
 	_ambient_zones.name = "AmbientZones"
+	_ambient_zones.configure_runtime_dependencies(
+		customer_system, time_system
+	)
 	add_child(_ambient_zones)
-	_ambient_zones.initialize(customer_system, time_system)
 
 
 ## Returns the mall camera controller.
@@ -392,18 +399,31 @@ func _on_store_leased(slot_index: int, store_type: String) -> void:
 
 ## Generates starter inventory and queues it for next day_started.
 func _queue_starter_inventory(store_type: String) -> void:
+	var canonical: StringName = ContentRegistry.resolve(store_type)
+	if canonical.is_empty():
+		push_warning(
+			"MallHallway: cannot create inventory for unknown store '%s'"
+			% store_type
+		)
+		return
+	var items: Array[ItemInstance] = _generate_starter_inventory(canonical)
+	_pending_starter_inventory.append_array(items)
+
+
+func _generate_starter_inventory(
+	store_type: StringName
+) -> Array[ItemInstance]:
 	if not GameManager.data_loader:
 		push_warning(
 			"MallHallway: cannot create inventory, "
 			+ "missing data loader"
 		)
-		return
-	var items: Array[ItemInstance] = (
+		return []
+	return (
 		GameManager.data_loader.generate_starter_inventory(
-			store_type
+			String(store_type)
 		)
 	)
-	_pending_starter_inventory.append_array(items)
 
 
 ## Delivers any pending starter inventory on the next morning.

@@ -481,22 +481,18 @@ func _on_entry_zone_body_exited(body: Node3D) -> void:
 	EventBus.storefront_zone_exited.emit(store_id)
 
 
-func _on_door_interacted(_interactable: Interactable) -> void:
+func _on_door_interacted() -> void:
 	door_interacted.emit(self)
 
 
-func _on_locked_interacted(
-	_interactable: Interactable,
-) -> void:
+func _on_locked_interacted() -> void:
 	EventBus.notification_requested.emit(
 		"This storefront is not yet available. "
 		+ "Build your reputation and earnings to unlock it."
 	)
 
 
-func _on_renovation_interacted(
-	_interactable: Interactable,
-) -> void:
+func _on_renovation_interacted() -> void:
 	EventBus.renovation_sounds_heard.emit()
 	EventBus.notification_requested.emit(
 		"The door is locked. A faded sign reads "

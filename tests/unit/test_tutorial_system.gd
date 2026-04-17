@@ -173,6 +173,11 @@ func test_save_state_serializes_step_and_completion() -> void:
 		data["tutorial_completed"] as bool,
 		"tutorial_completed should be false mid-tutorial"
 	)
+	var completed_steps: Dictionary = data.get("completed_steps", {})
+	assert_true(
+		completed_steps.get("welcome", false) as bool,
+		"Serialized state should include completed welcome step"
+	)
 
 
 func test_load_state_restores_step_and_completion() -> void:
@@ -180,6 +185,7 @@ func test_load_state_restores_step_and_completion() -> void:
 		"tutorial_completed": true,
 		"tutorial_active": false,
 		"current_step": TutorialSystem.TutorialStep.FINISHED,
+		"completed_steps": {"welcome": true},
 		"tips_shown": {"ordering": true, "build_mode": true},
 	}
 
@@ -198,6 +204,10 @@ func test_load_state_restores_step_and_completion() -> void:
 		_tutorial.tutorial_active,
 		"Tutorial should not be active after loading completed state"
 	)
+	assert_true(
+		_tutorial._completed_steps.get("welcome", false) as bool,
+		"Completed step IDs should be restored"
+	)
 
 
 func test_load_state_restores_mid_tutorial() -> void:
@@ -205,6 +215,11 @@ func test_load_state_restores_mid_tutorial() -> void:
 		"tutorial_completed": false,
 		"tutorial_active": true,
 		"current_step": TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		"completed_steps": {
+			"welcome": true,
+			"walk_to_store": true,
+			"enter_store": true,
+		},
 		"tips_shown": {},
 	}
 
@@ -222,6 +237,32 @@ func test_load_state_restores_mid_tutorial() -> void:
 	assert_true(
 		_tutorial.tutorial_active,
 		"Tutorial should be active for mid-tutorial state"
+	)
+	assert_true(
+		_tutorial._completed_steps.get("enter_store", false) as bool,
+		"Mid-tutorial completed step IDs should be restored"
+	)
+
+
+func test_load_state_resumes_last_incomplete_step() -> void:
+	var save_data: Dictionary = {
+		"tutorial_completed": false,
+		"tutorial_active": true,
+		"current_step": TutorialSystem.TutorialStep.WELCOME,
+		"completed_steps": {
+			"welcome": true,
+			"walk_to_store": true,
+			"enter_store": true,
+		},
+		"tips_shown": {},
+	}
+
+	_tutorial.load_save_data(save_data)
+
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		"Loaded progress should resume at the first incomplete step"
 	)
 
 

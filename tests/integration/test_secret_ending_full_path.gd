@@ -6,7 +6,7 @@ extends GutTest
 
 const GHOST_THREAD_ID: StringName = &"the_ghost_tenant"
 const GHOST_UNLOCK_ID: StringName = &"ghost_tenant_resolved"
-const GHOST_ENDING_ID: StringName = &"the_ghost_between_the_walls"
+const GHOST_ENDING_ID: StringName = &"the_mall_between_the_walls"
 
 var _thread_system: SecretThreadSystem
 var _unlock_system: UnlockSystem
@@ -24,10 +24,18 @@ var _ghost_thread_def: Dictionary = {
 
 
 func before_each() -> void:
-	_unlock_system = UnlockSystem.new()
-	_unlock_system.name = "UnlockSystem"
-	get_tree().root.add_child(_unlock_system)
+	_unlock_system = UnlockSystemSingleton
+	_unlock_system._granted.clear()
+	_unlock_system._valid_ids.clear()
 	_unlock_system._valid_ids[GHOST_UNLOCK_ID] = true
+	if not ContentRegistry.exists(String(GHOST_UNLOCK_ID)):
+		ContentRegistry.register_entry(
+			{
+				"id": String(GHOST_UNLOCK_ID),
+				"name": "Ghost Tenant Resolved",
+			},
+			"unlock"
+		)
 
 	_thread_system = SecretThreadSystem.new()
 	add_child_autofree(_thread_system)
@@ -38,9 +46,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	if is_instance_valid(_unlock_system):
-		_unlock_system.get_parent().remove_child(_unlock_system)
-		_unlock_system.queue_free()
+	_unlock_system._granted.clear()
+	_unlock_system._valid_ids.clear()
 
 
 func _setup_ghost_thread() -> void:
@@ -110,7 +117,7 @@ func test_secret_ending_selected_when_conditions_met() -> void:
 	var selected: StringName = _ending_evaluator.evaluate()
 	assert_eq(
 		selected, GHOST_ENDING_ID,
-		"evaluate() must select the_ghost_between_the_walls when stats match"
+		"evaluate() must select the_mall_between_the_walls when stats match"
 	)
 
 
@@ -142,19 +149,19 @@ func test_full_chain_ending_triggered_fires_with_secret_id() -> void:
 	_ending_evaluator.load_state({"stats": stats})
 
 	var triggered_id: Array = [&""]
-	var triggered_stats: Dictionary = {}
+	var triggered_stats: Array[Dictionary] = [{}]
 	var on_triggered: Callable = func(
 		id: StringName, fstats: Dictionary
 	) -> void:
 		triggered_id[0] = id
-		triggered_stats = fstats.duplicate()
+		triggered_stats[0] = fstats.duplicate()
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 
 	assert_eq(
 		triggered_id[0], GHOST_ENDING_ID,
-		"ending_triggered must fire with the_ghost_between_the_walls"
+		"ending_triggered must fire with the_mall_between_the_walls"
 	)
 
 	var ending_data: Dictionary = _ending_evaluator.get_ending_data(
@@ -176,11 +183,11 @@ func test_full_chain_final_stats_contain_required_keys() -> void:
 	stats["owned_store_count_final"] = 5.0
 	_ending_evaluator.load_state({"stats": stats})
 
-	var triggered_stats: Dictionary = {}
+	var triggered_stats: Array[Dictionary] = [{}]
 	var on_triggered: Callable = func(
 		_id: StringName, fstats: Dictionary
 	) -> void:
-		triggered_stats = fstats.duplicate()
+		triggered_stats[0] = fstats.duplicate()
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
@@ -192,7 +199,7 @@ func test_full_chain_final_stats_contain_required_keys() -> void:
 	if summary_keys is Array:
 		for key: Variant in summary_keys:
 			assert_true(
-				triggered_stats.has(str(key)),
+				triggered_stats[0].has(str(key)),
 				"final_stats must contain stat_summary_key: %s" % key
 			)
 
@@ -205,7 +212,7 @@ func test_full_chain_final_stats_contain_required_keys() -> void:
 	]
 	for key: String in core_keys:
 		assert_true(
-			triggered_stats.has(key),
+			triggered_stats[0].has(key),
 			"final_stats must contain tracked stat: %s" % key
 		)
 
@@ -267,11 +274,11 @@ func test_ending_uses_real_config_with_secret_category() -> void:
 	)
 	assert_false(
 		ghost_data.is_empty(),
-		"the_ghost_between_the_walls must exist in endings_catalog"
+		"the_mall_between_the_walls must exist in endings_catalog"
 	)
 	assert_eq(
 		str(ghost_data.get("category", "")), "secret",
-		"the_ghost_between_the_walls must have category 'secret'"
+		"the_mall_between_the_walls must have category 'secret'"
 	)
 
 	var legend_data: Dictionary = _ending_evaluator.get_ending_data(

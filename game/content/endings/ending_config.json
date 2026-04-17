@@ -1,16 +1,15 @@
 {
   "endings": [
     {
-      "id": "the_ghost_between_the_walls",
-      "title": "The Ghost Between the Walls",
-      "text": "They found ledgers in the utility closet that predated the mall's construction. Receipts for transactions in stores that never existed, signed by managers who never clocked in. You owned every unit on the directory and still couldn't explain the one that wasn't listed. The fluorescent lights in that corridor never needed replacing.",
+      "id": "the_mall_between_the_walls",
+      "title": "The Mall Between the Walls",
+      "text": "You followed the last loose thread and found a corridor the blueprints had never admitted to. Behind the drywall and maintenance doors, the mall kept a second version of itself: quieter, older, and still somehow open. When you left, you were no longer certain which set of halls had been the real one.",
       "tone": "bittersweet",
       "music_cue": "ending_ghost",
       "priority": 0,
       "category": "secret",
       "required_all": [
-        { "stat_key": "ghost_tenant_thread_completed", "operator": "eq", "value": 1.0 },
-        { "stat_key": "owned_store_count_final", "operator": "eq", "value": 5.0 }
+        { "stat_key": "ghost_tenant_thread_completed", "operator": "eq", "value": 1.0 }
       ],
       "required_any": [],
       "forbidden_all": []
@@ -18,7 +17,7 @@
     {
       "id": "the_mall_legend_redux",
       "title": "The Mall Legend Redux",
-      "text": "The custodial staff started leaving notes in your suggestion box — not complaints, but coordinates. Each one led to something the mall had buried: a walled-off arcade, a fountain that ran backward, a directory listing for a store that sold only static. You followed every thread and the mall revealed itself completely. Revenue was incidental. You became the thing the building remembered.",
+      "text": "The custodial staff started leaving notes in your suggestion box that read more like coordinates than complaints. Each one led to something the building had hidden from ordinary tenants, and you followed every thread until the mall began to feel less like a property and more like a witness. Revenue was only the part of the story that fit on a ledger.",
       "tone": "positive",
       "music_cue": "ending_legend",
       "priority": 1,
@@ -33,7 +32,7 @@
     {
       "id": "lights_out",
       "title": "Lights Out",
-      "text": "The register never warmed up. Seven days of unlocking the gate, flipping the sign, and watching the corridor stay empty. The mall custodian collected your keys with the efficiency of someone who keeps a spare set ready. Your name was off the directory before lunch.",
+      "text": "The register never warmed up. Seven days of unlocking the gate, straightening the shelves, and watching the corridor stay empty was all it took for management to decide the space had better uses. Your name was gone from the directory before lunch.",
       "tone": "negative",
       "music_cue": "ending_bankruptcy",
       "priority": 2,
@@ -48,7 +47,7 @@
     {
       "id": "foreclosure",
       "title": "Foreclosure",
-      "text": "Two weeks of diminishing returns and expanding silence. The regulars stopped coming first, then the walk-ins thinned, then the corridor outside your unit started feeling longer than it used to. Management slid the eviction notice under the gate at 6 AM on a Tuesday. The envelope was warm from the copier. They had been ready for days.",
+      "text": "Two weeks of diminishing returns turned the storefront into a long goodbye. The regulars stopped coming, then the casual shoppers thinned, then even the hallway outside felt like it was avoiding you. The eviction notice arrived warm from the copier.",
       "tone": "negative",
       "music_cue": "ending_bankruptcy",
       "priority": 3,
@@ -64,7 +63,7 @@
     {
       "id": "going_going_gone",
       "title": "Going, Going, Gone",
-      "text": "You held on past the point where holding on made financial sense and into the territory where it became a philosophical position. Fifteen days of watching the numbers contract. The last customer bought a clearance item out of what felt like pity. When you finally locked the gate for good, the click echoed further than it should have.",
+      "text": "You stayed open past the point where optimism became a kind of stubborn theater. The numbers shrank slowly enough to be insulting, and the final sale felt less like commerce than sympathy. When the gate locked for the last time, the sound echoed further than it should have.",
       "tone": "bittersweet",
       "music_cue": "ending_bankruptcy",
       "priority": 4,
@@ -79,7 +78,7 @@
     {
       "id": "prestige_champion",
       "title": "The Prestige Champion",
-      "text": "Fifty thousand in revenue, a reputation that preceded you into every conversation, and a customer base whose satisfaction rate would embarrass a five-star hotel. The mall hadn't seen numbers like yours since the building's peak decade. Other tenants framed your monthly figures and used them as aspirational targets. The corporate office sent a representative who took notes and didn't say much. You had built something that the space itself seemed reluctant to let end.",
+      "text": "Fifty thousand in revenue and a reputation that arrived in conversations before you did made your store the one every other tenant measured themselves against. Customers left satisfied, management stopped pretending not to notice, and the mall treated your unit like proof it could still produce legends. Even the stale air around the escalators felt impressed.",
       "tone": "positive",
       "music_cue": "ending_triumph",
       "priority": 5,
@@ -105,7 +104,7 @@
     {
       "id": "the_local_legend",
       "title": "The Local Legend",
-      "text": "The food court regulars knew your name. The parking lot attendants waved when you pulled in. One store, run well enough and long enough that it stopped being a business and started being a landmark. People gave directions using your storefront as a reference point. That kind of reputation doesn't show up on a balance sheet, but it outlasts everything that does.",
+      "text": "One store, run well enough and long enough that it stopped being a business and started being a landmark. The food court regulars used your sign as a landmark, the parking attendants recognized your car, and people gave directions with your storefront as a reference point. That kind of reputation outlasts a lease.",
       "tone": "positive",
       "music_cue": "ending_success",
       "priority": 6,
@@ -121,26 +120,9 @@
       ]
     },
     {
-      "id": "the_mini_empire",
-      "title": "The Mini Empire",
-      "text": "Three storefronts. Three sets of keys, three gate codes, three morning routines that blurred into a single controlled orbit through the building. The other tenants started treating you differently — not with deference exactly, but with the cautious respect given to someone who clearly understood something about this place that they did not.",
-      "tone": "positive",
-      "music_cue": "ending_success",
-      "priority": 8,
-      "category": "success",
-      "required_all": [
-        { "stat_key": "owned_store_count_final", "operator": "gte", "value": 3.0 },
-        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 10000.0 }
-      ],
-      "required_any": [],
-      "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
-      ]
-    },
-    {
       "id": "the_mall_tycoon",
       "title": "The Mall Tycoon",
-      "text": "Every unit on the directory bore your name. The building manager stopped scheduling tenant meetings because there was only one tenant and you already knew what you thought. Twenty-five thousand in revenue and a corridor that belonged to you in every sense that mattered. The escalators carried people to your stores because there was nowhere else to go.",
+      "text": "Every occupied unit on the directory bore your name. Tenant meetings became a formality, the corridor became an empire, and the escalators ferried people toward your stores because there was nowhere else to go. At some point the mall stopped renting space to you and started orbiting you instead.",
       "tone": "positive",
       "music_cue": "ending_triumph",
       "priority": 7,
@@ -155,9 +137,26 @@
       ]
     },
     {
+      "id": "the_mini_empire",
+      "title": "The Mini Empire",
+      "text": "Three storefronts meant three gate codes, three sets of keys, and a daily route through the building that felt like a private transit line. The other tenants learned to watch you the way people watch weather systems: cautiously, respectfully, and with the understanding that you operated at a larger scale than they did. Control had become its own form of atmosphere.",
+      "tone": "positive",
+      "music_cue": "ending_success",
+      "priority": 8,
+      "category": "success",
+      "required_all": [
+        { "stat_key": "owned_store_count_final", "operator": "gte", "value": 3.0 },
+        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 10000.0 }
+      ],
+      "required_any": [],
+      "forbidden_all": [
+        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+      ]
+    },
+    {
       "id": "the_fair_dealer",
       "title": "The Fair Dealer",
-      "text": "Two hundred customers walked out satisfied, and not a single one was haggled down or pressured up. The posted price was the price. People talked about it — in a retail ecosystem built on negotiation and margin games, you ran a fixed-price operation and made it work. The regulars trusted your tags the way they trusted the scale at the deli counter.",
+      "text": "Two hundred satisfied customers walked out having paid exactly what the tag said. In a mall full of markup tricks, pressure tactics, and soft negotiations, you made fixed prices feel almost radical. People trusted your shelves the way they trusted a scale at the deli counter.",
       "tone": "positive",
       "music_cue": "ending_success",
       "priority": 9,
@@ -173,29 +172,12 @@
       ]
     },
     {
-      "id": "the_collector",
-      "title": "The Collector",
-      "text": "Ten rare pieces moved through your inventory and into the hands of people who understood what they were holding. Each transaction felt less like a sale and more like a custody transfer. The collectors knew your store by reputation before they knew it by name. Your shelves told a rotating story of scarcity and provenance that the other tenants couldn't replicate.",
-      "tone": "positive",
-      "music_cue": "ending_success",
-      "priority": 10,
-      "category": "success",
-      "required_all": [
-        { "stat_key": "rare_items_sold", "operator": "gte", "value": 10.0 },
-        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 5000.0 }
-      ],
-      "required_any": [],
-      "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
-      ]
-    },
-    {
       "id": "broke_even",
       "title": "Broke Even",
-      "text": "Thirty days and the ledger balanced to a number that was technically positive and spiritually neutral. You covered rent, paid the lights, moved enough product to justify the shelf space, and emerged on the other side with your deposit intact. The mall directory still listed you. That was the whole achievement, and it was enough.",
+      "text": "Thirty days later, the ledger balanced to a number that was technically positive and emotionally neutral. You covered the lights, paid the rent, kept the gate rolling up in the morning, and ended with enough left to call it survival. The directory still listed your store, which was the whole point of the exercise.",
       "tone": "neutral",
       "music_cue": "ending_survival",
-      "priority": 11,
+      "priority": 10,
       "category": "survival",
       "required_all": [
         { "stat_key": "days_survived", "operator": "gte", "value": 30.0 },
@@ -210,10 +192,10 @@
     {
       "id": "the_comfortable_middle",
       "title": "The Comfortable Middle",
-      "text": "Not the top tenant, not the bottom. Somewhere in the middle of the directory where the font size was the same as everyone else's. Revenue cleared the threshold where management stopped checking in and fell short of the threshold where they started paying attention. You occupied the zone of comfortable anonymity, and the rent checks cleared every month without drama.",
+      "text": "You found the revenue band where management stopped checking in but never started paying special attention. The rent cleared, the shelves turned over, and your store occupied the calm middle of the directory with admirable anonymity. Nothing dramatic happened, which over thirty days counted as its own kind of triumph.",
       "tone": "neutral",
       "music_cue": "ending_survival",
-      "priority": 12,
+      "priority": 11,
       "category": "survival",
       "required_all": [
         { "stat_key": "days_survived", "operator": "gte", "value": 30.0 },
@@ -228,10 +210,10 @@
     {
       "id": "crisis_operator",
       "title": "Crisis Operator",
-      "text": "Ten days below the bankruptcy line and you never crossed it. The register balance dipped into the red zone with the regularity of a tide table, and each time you pulled it back with a sale that arrived exactly when the math said it shouldn't. Thirty days of operating on the edge taught you something about retail that comfortable margins never could. You survived on timing and nerve.",
+      "text": "Ten days below the bankruptcy line taught you more about timing than comfort ever could. The balance dipped, recovered, dipped again, and each rescue came at the last plausible second until nerve itself became part of the business model. By day thirty you had not escaped the edge so much as learned how to live on it.",
       "tone": "bittersweet",
       "music_cue": "ending_survival",
-      "priority": 13,
+      "priority": 12,
       "category": "survival",
       "required_all": [
         { "stat_key": "days_near_bankruptcy", "operator": "gte", "value": 10.0 },

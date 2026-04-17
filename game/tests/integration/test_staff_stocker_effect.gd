@@ -106,6 +106,7 @@ func test_scenario_c_skill3_stocker_timer_interval_is_45s() -> void:
 
 func test_scenario_d_restock_emits_staff_restocked_shelf() -> void:
 	watch_signals(EventBus)
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	var result: Dictionary = _staff.hire_staff("test_stocker_sk1", STORE_ID)
 	assert_false(result.is_empty(), "Precondition: hire must succeed")
@@ -121,6 +122,7 @@ func test_scenario_d_restock_emits_staff_restocked_shelf() -> void:
 
 func test_scenario_d_restock_signal_carries_correct_staff_id() -> void:
 	watch_signals(EventBus)
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	var result: Dictionary = _staff.hire_staff("test_stocker_sk1", STORE_ID)
 	var expected_id: String = result.get("instance_id", "")
@@ -137,6 +139,7 @@ func test_scenario_d_restock_signal_carries_correct_staff_id() -> void:
 
 func test_scenario_d_restock_signal_carries_valid_item_id() -> void:
 	watch_signals(EventBus)
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	_staff.hire_staff("test_stocker_sk1", STORE_ID)
 
@@ -163,6 +166,7 @@ func test_scenario_e_no_stocker_assigned_no_timer_running() -> void:
 
 func test_scenario_e_no_signal_when_no_stocker_assigned() -> void:
 	watch_signals(EventBus)
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 
 	_fire_restock_timer()
@@ -194,6 +198,7 @@ func test_scenario_f_fire_stocker_timer_removed() -> void:
 
 
 func test_scenario_f_no_restock_signal_after_stocker_fired() -> void:
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	_staff.hire_staff("test_stocker_sk1", STORE_ID)
 
@@ -221,6 +226,20 @@ func _seed_backroom_with_item() -> ItemInstance:
 	item.current_location = "backroom"
 	_inventory.register_item(item)
 	return item
+
+
+func _prepare_empty_shelf_slot(slot_id: String) -> void:
+	var shelf_item: ItemInstance = ItemInstance.create(
+		_item_def, "good", 0, 5.0
+	)
+	shelf_item.current_location = "backroom"
+	_inventory.register_item(shelf_item)
+	_inventory.assign_to_shelf(
+		StringName(STORE_ID),
+		StringName(shelf_item.instance_id),
+		StringName(slot_id)
+	)
+	_inventory.remove_item(shelf_item.instance_id)
 
 
 func _fire_restock_timer() -> void:

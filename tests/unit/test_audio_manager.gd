@@ -202,6 +202,30 @@ func test_register_zone_appears_in_active_zones() -> void:
 	)
 
 
+func test_register_zone_accepts_audio_stream_player_3d() -> void:
+	var player: AudioStreamPlayer3D = AudioStreamPlayer3D.new()
+	add_child_autofree(player)
+	_audio.register_zone("hallway_crowd", player)
+	assert_eq(
+		_audio._zone_players["hallway_crowd"],
+		player,
+		"register_zone should accept AudioStreamPlayer3D zone players"
+	)
+
+
+func test_set_zone_volume_db_updates_registered_audio_stream_player_3d() -> void:
+	var player: AudioStreamPlayer3D = AudioStreamPlayer3D.new()
+	add_child_autofree(player)
+	_audio.register_zone("hallway_crowd", player)
+	_audio.set_zone_volume_db("hallway_crowd", -11.5)
+	assert_almost_eq(
+		player.volume_db,
+		-11.5,
+		0.01,
+		"set_zone_volume_db should update registered 3D zone player volume"
+	)
+
+
 func test_enter_zone_completes_without_error() -> void:
 	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	add_child_autofree(player)

@@ -6,6 +6,8 @@ extends RefCounted
 static func build_catalog_row(
 	item_def: ItemDefinition,
 	cost: float,
+	remaining_stock: int,
+	can_add: bool,
 	add_callback: Callable,
 ) -> PanelContainer:
 	var cell := PanelContainer.new()
@@ -21,8 +23,10 @@ static func build_catalog_row(
 	)
 	hbox.add_child(rarity_bar)
 
+	hbox.add_child(_build_icon(item_def))
+
 	var name_label := Label.new()
-	name_label.text = item_def.name
+	name_label.text = item_def.item_name
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.clip_text = true
 	hbox.add_child(name_label)
@@ -51,10 +55,23 @@ static func build_catalog_row(
 	price_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hbox.add_child(price_label)
 
+	var stock_label := Label.new()
+	stock_label.text = "%d left" % max(remaining_stock, 0)
+	stock_label.custom_minimum_size = Vector2(70, 0)
+	stock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	stock_label.tooltip_text = (
+		"Units remaining before the supplier daily limit is reached"
+	)
+	hbox.add_child(stock_label)
+
 	var add_btn := Button.new()
 	add_btn.text = "Add"
 	add_btn.custom_minimum_size = Vector2(60, 0)
-	add_btn.pressed.connect(add_callback)
+	add_btn.disabled = not can_add
+	if can_add:
+		add_btn.pressed.connect(add_callback)
+	else:
+		add_btn.tooltip_text = "Daily supplier limit reached"
 	hbox.add_child(add_btn)
 
 	cell.add_child(hbox)
@@ -65,6 +82,7 @@ static func build_cart_row(
 	item_def: ItemDefinition,
 	qty: int,
 	line_total: float,
+	can_increase: bool,
 	minus_callback: Callable,
 	plus_callback: Callable,
 	remove_callback: Callable,
@@ -73,7 +91,7 @@ static func build_cart_row(
 	hbox.add_theme_constant_override("separation", 6)
 
 	var name_label := Label.new()
-	name_label.text = item_def.name
+	name_label.text = item_def.item_name
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.clip_text = true
 	hbox.add_child(name_label)
@@ -93,7 +111,11 @@ static func build_cart_row(
 	var plus_btn := Button.new()
 	plus_btn.text = "+"
 	plus_btn.custom_minimum_size = Vector2(30, 0)
-	plus_btn.pressed.connect(plus_callback)
+	plus_btn.disabled = not can_increase
+	if can_increase:
+		plus_btn.pressed.connect(plus_callback)
+	else:
+		plus_btn.tooltip_text = "Daily supplier limit reached"
 	hbox.add_child(plus_btn)
 
 	var cost_label := Label.new()
@@ -121,6 +143,19 @@ static func build_delivery_row(
 		count, supplier_name, delivery_day,
 	]
 	return label
+
+
+static func _build_icon(item_def: ItemDefinition) -> TextureRect:
+	var icon := TextureRect.new()
+	icon.custom_minimum_size = Vector2(32, 32)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	if item_def == null or item_def.icon_path.is_empty():
+		return icon
+	var tex: Texture2D = load(item_def.icon_path) as Texture2D
+	if tex:
+		icon.texture = tex
+	return icon
 
 
 static func _format_condition_range(

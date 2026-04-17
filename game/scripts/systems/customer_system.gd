@@ -751,10 +751,9 @@ func _on_staff_quit(_staff_id: String) -> void:
 
 
 func _on_staff_morale_changed(
-	staff_id: String, _new_morale: float
+	_staff_id: String, _new_morale: float
 ) -> void:
-	if _cached_greeter and _cached_greeter.staff_id == staff_id:
-		_refresh_cached_greeter()
+	_refresh_cached_greeter()
 
 
 func _on_market_event_active(event_id: StringName, modifier: Dictionary) -> void:

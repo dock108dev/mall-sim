@@ -14,7 +14,7 @@ var _camera_controller: BuildModeCamera = null
 var _camera: Camera3D = null
 var _player_node: Node = null
 var _placement_system: FixturePlacementSystem = null
-var _nav_region: NavigationRegion3D = null
+var _visuals: BuildModeVisuals = null
 
 var _hovered_cell: Variant = null
 var _selected_fixture_id: String = ""
@@ -78,6 +78,7 @@ func initialize(
 ## Sets the placement system reference.
 func set_placement_system(system: FixturePlacementSystem) -> void:
 	_placement_system = system
+	_setup_visuals()
 	if _grid_state.is_empty():
 		_sync_grid_state_from_placement()
 		return
@@ -85,12 +86,6 @@ func set_placement_system(system: FixturePlacementSystem) -> void:
 		_placement_system.load_save_data({
 			"placed_fixtures": _duplicate_grid_state(_grid_state)
 		})
-
-
-## Sets the NavigationRegion3D for rebaking on exit.
-func set_nav_region(region: NavigationRegion3D) -> void:
-	_nav_region = region
-
 
 ## Returns the currently hovered grid cell, or null if none.
 func get_hovered_cell() -> Variant:
@@ -105,6 +100,11 @@ func get_grid() -> BuildModeGrid:
 ## Returns the build mode camera controller.
 func get_camera_controller() -> BuildModeCamera:
 	return _camera_controller
+
+
+## Returns the build mode visual feedback layer.
+func get_visuals() -> BuildModeVisuals:
+	return _visuals
 
 
 ## Returns the current build state.
@@ -134,6 +134,7 @@ func select_fixture_for_placement(fixture_type: String) -> void:
 	_placement_system.select_fixture(fixture_type)
 	_selected_fixture_id = fixture_type
 	_transition_to(State.PLACEMENT)
+	_update_visual_feedback()
 
 
 ## Deselects the current fixture type.
@@ -142,6 +143,7 @@ func deselect_fixture() -> void:
 		_placement_system.deselect_fixture()
 	_selected_fixture_id = ""
 	_transition_to(State.IDLE)
+	_update_visual_feedback()
 
 
 ## Rotates the selected fixture clockwise and moves into ROTATING state.
@@ -362,6 +364,7 @@ func _handle_rotate() -> void:
 	_placement_system.rotate_fixture()
 	if _hovered_cell != null:
 		_placement_system.update_preview(_hovered_cell)
+	_update_visual_feedback()
 
 
 func _try_select_fixture(cell: Vector2i) -> void:
@@ -370,11 +373,13 @@ func _try_select_fixture(cell: Vector2i) -> void:
 		if current_state == State.SELECTED:
 			_selected_fixture_id = ""
 			_transition_to(State.IDLE)
+			_update_visual_feedback()
 		return
 
 	_selected_fixture_id = fixture_id
 	_transition_to(State.SELECTED)
 	EventBus.fixture_selected.emit(fixture_id)
+	_update_visual_feedback()
 
 
 func _try_place_fixture(cell: Vector2i) -> bool:
@@ -403,6 +408,7 @@ func _cancel_move() -> void:
 	_move_fixture_data = {}
 	_placement_system.deselect_fixture()
 	_transition_to(State.IDLE)
+	_update_visual_feedback()
 
 
 func _transition_to(new_state: State) -> void:
@@ -431,6 +437,7 @@ func _update_hovered_cell(event: InputEventMouseMotion) -> void:
 
 	if _placement_system:
 		_placement_system.update_preview(_hovered_cell)
+	_update_visual_feedback()
 
 
 func _is_middle_mouse_held(event: InputEvent) -> bool:
@@ -464,12 +471,44 @@ func _on_fixture_placed(
 
 func _on_fixture_removed(_fixture_id: String, _grid_pos: Vector2i) -> void:
 	_sync_grid_state_from_placement()
+	_update_visual_feedback()
 
 
 func _on_fixture_catalog_requested(fixture_id: String) -> void:
 	if fixture_id.is_empty():
 		return
 	select_fixture_for_placement(fixture_id)
+
+
+func _setup_visuals() -> void:
+	if not _grid or not _placement_system:
+		return
+	if is_instance_valid(_visuals):
+		_visuals.queue_free()
+
+	_visuals = BuildModeVisuals.new()
+	_visuals.name = "BuildModeVisuals"
+	add_child(_visuals)
+	_visuals.initialize(
+		_grid, _placement_system.get_validator(), _placement_system
+	)
+
+
+func _update_visual_feedback() -> void:
+	if not _visuals or not _placement_system:
+		return
+
+	var fixture_type: String = _placement_system.get_selected_fixture_type()
+	if not fixture_type.is_empty():
+		_visuals.update_ghost(
+			_hovered_cell,
+			fixture_type,
+			_placement_system.get_current_rotation()
+		)
+		return
+
+	_visuals.hide_ghost()
+	_visuals.update_highlight(_hovered_cell)
 
 
 func _sync_grid_state_from_placement() -> void:

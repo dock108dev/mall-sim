@@ -269,10 +269,10 @@ func test_load_restores_resolved_ending_id() -> void:
 	_system.load_state({
 		"stats": _build_stats({}),
 		"ending_triggered": true,
-		"resolved_ending_id": "the_collector",
+		"resolved_ending_id": "the_mall_tycoon",
 	})
 	assert_eq(
-		_system.get_resolved_ending_id(), &"the_collector",
+		_system.get_resolved_ending_id(), &"the_mall_tycoon",
 		"Resolved ending ID should be restored from save"
 	)
 

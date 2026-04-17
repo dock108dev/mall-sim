@@ -1,4 +1,4 @@
-[gd_scene load_steps=53 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=60 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -69,8 +69,10 @@ size = Vector3(0.4, 0.3, 0.3)
 size = Vector3(0.4, 0.3, 0.3)
 
 [sub_resource type="NavigationMesh" id="nav_mesh"]
-vertices = PackedVector3Array(-3.5, 0.05, -0.55, 1.7, 0.05, -0.55, 1.7, 0.05, -0.1, -3.5, 0.05, -0.1, 3.5, 0.05, -0.1, 3.5, 0.05, 1.6, 1.4, 0.05, 1.6, -3.5, 0.05, 1.6, 1.4, 0.05, 2.5, -3.5, 0.05, 2.5)
-polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(3, 2, 4, 5, 6, 7), PackedInt32Array(7, 6, 8, 9)]
+cell_size = 0.25
+geometry_parsed_geometry_type = 2
+vertices = PackedVector3Array(-3.5, 0.05, -2.35, 3.5, 0.05, -2.35, 3.5, 0.05, 2.35, -3.5, 0.05, 2.35)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
 
 [sub_resource type="BoxShape3D" id="entry_shape"]
 size = Vector3(2.0, 2.5, 0.5)
@@ -130,6 +132,36 @@ emission_energy_multiplier = 1.5
 albedo_color = Color(0.14, 0.11, 0.32, 1)
 roughness = 0.82
 
+[sub_resource type="BoxMesh" id="crt_body_mesh"]
+size = Vector3(0.8, 0.6, 0.5)
+
+[sub_resource type="BoxMesh" id="crt_screen_mesh"]
+size = Vector3(0.5, 0.34, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="crt_screen_mat"]
+albedo_color = Color(0.06, 0.12, 0.1, 1)
+emission_enabled = true
+emission = Color(0.35, 0.95, 0.58, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="BoxMesh" id="neon_panel_mesh"]
+size = Vector3(1.2, 0.35, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="warm_neon_panel_mat"]
+albedo_color = Color(0.22, 0.1, 0.06, 1)
+emission_enabled = true
+emission = Color(1.0, 0.58, 0.3, 1)
+emission_energy_multiplier = 1.7
+
+[sub_resource type="StandardMaterial3D" id="green_neon_panel_mat"]
+albedo_color = Color(0.06, 0.18, 0.11, 1)
+emission_enabled = true
+emission = Color(0.32, 1.0, 0.62, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="BoxMesh" id="partition_mesh"]
+size = Vector3(1.8, 2.4, 0.08)
+
 ; ============================================================
 ; Root
 ; ============================================================
@@ -145,34 +177,34 @@ script = ExtResource("1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 
 ; ============================================================
-; Lighting (warm base with neon accent splashes)
+; Lighting (fluorescent key light with warm + green neon accent fill)
 ; ============================================================
 
-[node name="AmbientLight" type="OmniLight3D" parent="."]
+[node name="FluorescentKeyLight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
-light_color = Color(1.0, 0.92, 0.75, 1)
-light_energy = 0.7
-omni_range = 8.0
+light_color = Color(0.98, 0.99, 1.0, 1)
+light_energy = 0.85
+omni_range = 8.5
 
-[node name="NeonAccentLeft" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.4, 2.2, -1.5)
-light_color = Color(0.9, 0.2, 0.6, 1)
-light_energy = 0.35
-omni_range = 2.5
+[node name="WarmNeonFill" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9, 2.1, -1.8)
+light_color = Color(1.0, 0.58, 0.34, 1)
+light_energy = 0.34
+omni_range = 3.0
 
-[node name="NeonAccentRight" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.4, 2.2, -1.5)
-light_color = Color(0.2, 0.4, 0.95, 1)
-light_energy = 0.35
-omni_range = 2.5
+[node name="GreenNeonFill" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.9, 2.1, -1.8)
+light_color = Color(0.32, 1.0, 0.62, 1)
+light_energy = 0.36
+omni_range = 3.0
 
-[node name="CartridgeWallSpotlight" type="SpotLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -2.6, 2.7, -0.7)
-light_color = Color(1.0, 0.82, 0.62, 1)
+[node name="CRTDemoSpotlight" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 2.6, 2.7, -1.8)
+light_color = Color(0.98, 0.88, 0.72, 1)
 light_energy = 1.0
 shadow_enabled = true
-spot_range = 3.0
-spot_angle = 34.0
+spot_range = 3.2
+spot_angle = 36.0
 
 ; ============================================================
 ; Structure: Floor, Walls, Ceiling
@@ -283,16 +315,38 @@ outline_size = 4
 outline_modulate = Color(0.05, 0.07, 0.16, 1)
 shaded = false
 
-[node name="SignLight" type="OmniLight3D" parent="Storefront"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 2.8)
-light_color = Color(0.3, 1.0, 0.5, 1)
-light_energy = 0.55
-omni_range = 2.8
-
 ; ============================================================
 ; Fixture 1: Cartridge Rack Left (10 slots)
 ; Position: left side of store, against wall
 ; ============================================================
+
+[node name="crt_demo_area" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.55, 0, -2.0)
+
+[node name="DemoStand" type="MeshInstance3D" parent="crt_demo_area"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("testing_station_mesh")
+surface_material_override/0 = ExtResource("9")
+
+[node name="CRTBody" type="MeshInstance3D" parent="crt_demo_area"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, -0.02)
+mesh = SubResource("crt_body_mesh")
+surface_material_override/0 = ExtResource("14")
+
+[node name="CRTScreen" type="MeshInstance3D" parent="crt_demo_area"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0.24)
+mesh = SubResource("crt_screen_mesh")
+surface_material_override/0 = SubResource("crt_screen_mat")
+
+[node name="WarmNeonPanel" type="MeshInstance3D" parent="crt_demo_area"]
+transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.9, -0.18)
+mesh = SubResource("neon_panel_mesh")
+surface_material_override/0 = SubResource("warm_neon_panel_mat")
+
+[node name="GreenNeonPanel" type="MeshInstance3D" parent="crt_demo_area"]
+transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.9, -0.18)
+mesh = SubResource("neon_panel_mesh")
+surface_material_override/0 = SubResource("green_neon_panel_mat")
 
 [node name="CartRackLeft" type="Node3D" parent="." groups=["fixture"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8, 0, -1.2)
@@ -977,6 +1031,11 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.3, 0, -1.5)
 ; Position: back-left corner
 ; ============================================================
 
+[node name="BackroomDivider" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.95, 1.2, -1.95)
+mesh = SubResource("partition_mesh")
+surface_material_override/0 = ExtResource("14")
+
 [node name="BackroomDoor" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -2.5)
 
@@ -1034,10 +1093,6 @@ shape = SubResource("register_area_shape")
 [node name="StoreStaffConfig" type="Node" parent="."]
 script = ExtResource("17")
 max_staff = 2
-register_points = [NodePath("RegisterPoint")]
-backroom_point = NodePath("BackroomPoint")
-greeter_point = NodePath("GreeterPoint")
-break_point = NodePath("StaffBreakPoint")
 
 [node name="RegisterPoint" type="Marker3D" parent="StoreStaffConfig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 1.0)
@@ -1057,10 +1112,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 1.5)
 
 [node name="CustomerNavConfig" type="Node" parent="."]
 script = ExtResource("18")
-entry_point = NodePath("EntryPoint")
-browse_waypoints = [NodePath("BrowseWaypoint01"), NodePath("BrowseWaypoint02"), NodePath("BrowseWaypoint03"), NodePath("BrowseWaypoint04")]
-checkout_approach = NodePath("CheckoutApproach")
-exit_point = NodePath("ExitPoint")
 max_concurrent_customers = 4
 
 [node name="EntryPoint" type="Marker3D" parent="CustomerNavConfig"]
@@ -1122,6 +1173,7 @@ collision_mask = 0
 script = ExtResource("3")
 interaction_type = 1
 display_name = "Checkout Counter"
+prompt_text = "Checkout"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="checkout_counter/Interactable"]
 shape = SubResource("checkout_counter_shape")
@@ -1131,7 +1183,7 @@ shape = SubResource("checkout_counter_shape")
 ; ============================================================
 
 [node name="testing_station" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 0, -1.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -1.0)
 
 [node name="BenchMesh" type="MeshInstance3D" parent="testing_station"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
@@ -1145,6 +1197,7 @@ collision_mask = 0
 script = ExtResource("3")
 interaction_type = 2
 display_name = "Testing Station"
+prompt_text = "Test Console"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="testing_station/Interactable"]
 shape = SubResource("testing_station_shape")
@@ -1154,7 +1207,7 @@ shape = SubResource("testing_station_shape")
 ; ============================================================
 
 [node name="refurb_bench" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -2.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -1.75)
 
 [node name="BenchMesh" type="MeshInstance3D" parent="refurb_bench"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
@@ -1168,6 +1221,7 @@ collision_mask = 0
 script = ExtResource("3")
 interaction_type = 3
 display_name = "Refurbishment Bench"
+prompt_text = "Refurbish Gear"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="refurb_bench/Interactable"]
 shape = SubResource("refurb_bench_shape")
@@ -1177,22 +1231,28 @@ shape = SubResource("refurb_bench_shape")
 ; ============================================================
 
 [node name="FixtureZone1" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8, 0, -1.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -1.0)
+metadata/zone_index = 1
 
 [node name="FixtureZone2" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, -1.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 0, -1.0)
+metadata/zone_index = 2
 
 [node name="FixtureZone3" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0, -1.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 0, -1.0)
+metadata/zone_index = 3
 
 [node name="FixtureZone4" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8, 0, 0.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, 1.0)
+metadata/zone_index = 4
 
 [node name="FixtureZone5" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, 0.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 0, 1.0)
+metadata/zone_index = 5
 
 [node name="FixtureZone6" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0, 0.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 0, 1.0)
+metadata/zone_index = 6
 
 ; ============================================================
 ; Entrance Marker — player spawn position on store entry

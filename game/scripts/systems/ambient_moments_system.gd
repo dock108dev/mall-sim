@@ -9,10 +9,21 @@ const MAX_QUEUE_SIZE: int = 3
 
 var _state: int = State.IDLE
 var _moment_definitions: Array[AmbientMomentDefinition] = []
+var _definition_cache: Dictionary = {}
 var _cooldowns: Dictionary = {}
 var _delivery_queue: Array[StringName] = []
+var _delivery_history: Dictionary = {}
+var _recent_item_categories: Dictionary = {}
+var _recent_store_entries: Dictionary = {}
+var _active_store_id: StringName = &""
+var _current_hour_context: int = 0
 var _suspend_count: int = 0
 var _secret_moments: AmbientSecretThreadMoments
+
+
+func _ready() -> void:
+	_load_definitions()
+	_active_store_id = GameManager.current_store_id
 
 
 ## Sets up the system with required references and loads definitions.
@@ -32,37 +43,81 @@ func initialize(
 
 
 func _load_definitions() -> void:
-	if not GameManager.data_loader:
-		return
-	_moment_definitions = (
-		GameManager.data_loader.get_all_ambient_moments()
-	)
+	var loaded: Array[AmbientMomentDefinition] = []
+	if ContentRegistry.is_ready():
+		for moment_id: StringName in ContentRegistry.get_all_ids(
+			"ambient_moment"
+		):
+			var entry: Dictionary = ContentRegistry.get_entry(moment_id)
+			if entry.is_empty():
+				continue
+			var def: AmbientMomentDefinition = (
+				ContentParser.parse_ambient_moment(entry)
+			)
+			if def:
+				loaded.append(def)
+	if loaded.is_empty() and GameManager.data_loader:
+		loaded = GameManager.data_loader.get_all_ambient_moments()
+	_moment_definitions = loaded
+	_rebuild_definition_cache()
 
 
 func _connect_signals() -> void:
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.day_ended.connect(_on_day_ended)
-	EventBus.hour_changed.connect(_on_hour_changed)
-	EventBus.haggle_started.connect(_on_haggle_started)
-	EventBus.haggle_completed.connect(_on_haggle_completed)
-	EventBus.build_mode_entered.connect(_on_build_mode_entered)
-	EventBus.build_mode_exited.connect(_on_build_mode_exited)
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.day_ended.is_connected(_on_day_ended):
+		EventBus.day_ended.connect(_on_day_ended)
+	if not EventBus.hour_changed.is_connected(_on_hour_changed):
+		EventBus.hour_changed.connect(_on_hour_changed)
+	if not EventBus.haggle_started.is_connected(_on_haggle_started):
+		EventBus.haggle_started.connect(_on_haggle_started)
+	if not EventBus.haggle_completed.is_connected(_on_haggle_completed):
+		EventBus.haggle_completed.connect(_on_haggle_completed)
+	if not EventBus.build_mode_entered.is_connected(
+		_on_build_mode_entered
+	):
+		EventBus.build_mode_entered.connect(_on_build_mode_entered)
+	if not EventBus.build_mode_exited.is_connected(_on_build_mode_exited):
+		EventBus.build_mode_exited.connect(_on_build_mode_exited)
+	if not EventBus.item_sold.is_connected(_on_item_sold):
+		EventBus.item_sold.connect(_on_item_sold)
+	if not EventBus.store_entered.is_connected(_on_store_entered):
+		EventBus.store_entered.connect(_on_store_entered)
+	if not EventBus.active_store_changed.is_connected(
+		_on_active_store_changed
+	):
+		EventBus.active_store_changed.connect(_on_active_store_changed)
 	if _secret_moments:
-		EventBus.mystery_item_inspected.connect(
+		if not EventBus.mystery_item_inspected.is_connected(
 			_secret_moments.on_mystery_item_inspected
-		)
-		EventBus.odd_notification_read.connect(
+		):
+			EventBus.mystery_item_inspected.connect(
+				_secret_moments.on_mystery_item_inspected
+			)
+		if not EventBus.odd_notification_read.is_connected(
 			_secret_moments.on_odd_notification_read
-		)
-		EventBus.discrepancy_noticed.connect(
+		):
+			EventBus.odd_notification_read.connect(
+				_secret_moments.on_odd_notification_read
+			)
+		if not EventBus.discrepancy_noticed.is_connected(
 			_secret_moments.on_discrepancy_noticed
-		)
-		EventBus.wrong_name_customer_interacted.connect(
+		):
+			EventBus.discrepancy_noticed.connect(
+				_secret_moments.on_discrepancy_noticed
+			)
+		if not EventBus.wrong_name_customer_interacted.is_connected(
 			_secret_moments.on_wrong_name_customer_interacted
-		)
-		EventBus.renovation_sounds_heard.connect(
+		):
+			EventBus.wrong_name_customer_interacted.connect(
+				_secret_moments.on_wrong_name_customer_interacted
+			)
+		if not EventBus.renovation_sounds_heard.is_connected(
 			_secret_moments.on_renovation_sounds_heard
-		)
+		):
+			EventBus.renovation_sounds_heard.connect(
+				_secret_moments.on_renovation_sounds_heard
+			)
 
 
 func _process(delta: float) -> void:
@@ -73,6 +128,16 @@ func _process(delta: float) -> void:
 ## Returns the current scheduler state.
 func get_state() -> int:
 	return _state
+
+
+## Returns the current queued moment count.
+func get_queue_size() -> int:
+	return _delivery_queue.size()
+
+
+## Returns the queued moment IDs in delivery order.
+func get_queued_moment_ids() -> Array[StringName]:
+	return _delivery_queue.duplicate()
 
 
 ## Returns the discrepancy amount if active, else 0.0.
@@ -94,7 +159,7 @@ func enqueue_by_id(moment_id: StringName) -> void:
 	if moment_id.is_empty():
 		push_error("AmbientMomentsSystem: empty moment_id")
 		return
-	if _cooldowns.has(String(moment_id)):
+	if is_moment_on_cooldown(moment_id):
 		EventBus.ambient_moment_cancelled.emit(moment_id, &"cooldown")
 		return
 	if _delivery_queue.size() >= MAX_QUEUE_SIZE:
@@ -121,9 +186,12 @@ func _on_day_ended(day: int) -> void:
 
 
 func _on_hour_changed(hour: int) -> void:
+	_current_hour_context = hour
 	if _state != State.MONITORING:
+		_clear_transient_triggers()
 		return
 	_evaluate_moments(hour)
+	_clear_transient_triggers()
 
 
 func _on_haggle_started(
@@ -148,6 +216,25 @@ func _on_build_mode_exited() -> void:
 	_resume()
 
 
+func _on_item_sold(
+	_item_id: String, _price: float, category: String
+) -> void:
+	if category.is_empty():
+		return
+	_recent_item_categories[category] = true
+
+
+func _on_store_entered(store_id: StringName) -> void:
+	if store_id.is_empty():
+		return
+	_active_store_id = store_id
+	_recent_store_entries[String(store_id)] = true
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	_active_store_id = store_id
+
+
 func _suspend() -> void:
 	_suspend_count += 1
 	if _state == State.MONITORING:
@@ -159,6 +246,7 @@ func _resume() -> void:
 	_suspend_count = maxi(_suspend_count - 1, 0)
 	if _suspend_count == 0 and _state == State.SUSPENDED:
 		_state = State.MONITORING
+		_dispatch_next()
 
 
 func _cancel_queued_moments(reason: StringName) -> void:
@@ -182,7 +270,6 @@ func _evaluate_moments(hour: int) -> void:
 		return
 	var moment_sn: StringName = StringName(chosen.id)
 	_delivery_queue.append(moment_sn)
-	_cooldowns[chosen.id] = chosen.cooldown_days
 	EventBus.ambient_moment_queued.emit(moment_sn)
 	_dispatch_next()
 
@@ -192,7 +279,7 @@ func _get_eligible_moments(
 ) -> Array[AmbientMomentDefinition]:
 	var eligible: Array[AmbientMomentDefinition] = []
 	for def: AmbientMomentDefinition in _moment_definitions:
-		if _cooldowns.has(def.id):
+		if _is_definition_auto_scheduler_blocked(def):
 			continue
 		if _delivery_queue.size() >= MAX_QUEUE_SIZE:
 			break
@@ -221,12 +308,16 @@ func _check_trigger(
 func _check_time_trigger(
 	def: AmbientMomentDefinition, hour: int
 ) -> bool:
+	if not _matches_location_category(def):
+		return false
 	return hour == int(def.trigger_value)
 
 
 func _check_reputation_trigger(
 	def: AmbientMomentDefinition,
 ) -> bool:
+	if not _matches_location_category(def):
+		return false
 	var required_tier: int = int(def.trigger_value)
 	var current_score: float = _get_current_reputation()
 	return int(current_score / 25.0) >= required_tier
@@ -235,21 +326,32 @@ func _check_reputation_trigger(
 func _check_item_type_trigger(
 	def: AmbientMomentDefinition,
 ) -> bool:
-	var store_id: String = GameManager.current_store_id
-	if store_id.is_empty():
+	if not _matches_location_category(def):
 		return false
-	return not def.trigger_value.is_empty()
+	if def.trigger_value.is_empty():
+		return false
+	return _recent_item_categories.has(def.trigger_value)
 
 
 func _check_store_type_trigger(
 	def: AmbientMomentDefinition,
 ) -> bool:
-	return GameManager.current_store_id == def.trigger_value
+	if not _matches_location_category(def):
+		return false
+	var store_id: StringName = StringName(def.trigger_value)
+	if _recent_store_entries.has(String(store_id)):
+		return true
+	return (
+		_active_store_id == store_id
+		and not _has_been_delivered(StringName(def.id))
+	)
 
 
 func _check_random_trigger(
 	def: AmbientMomentDefinition,
 ) -> bool:
+	if not _matches_location_category(def):
+		return false
 	return randf() < float(def.trigger_value)
 
 
@@ -293,6 +395,7 @@ func _dispatch_next() -> void:
 		String(moment_id)
 	)
 	if def:
+		_apply_delivery_tracking(def)
 		EventBus.ambient_moment_delivered.emit(
 			moment_id, def.display_type,
 			def.flavor_text, def.audio_cue_id
@@ -306,8 +409,11 @@ func _dispatch_next() -> void:
 func _find_definition(
 	id: String,
 ) -> AmbientMomentDefinition:
+	if _definition_cache.has(id):
+		return _definition_cache[id] as AmbientMomentDefinition
 	for def: AmbientMomentDefinition in _moment_definitions:
 		if def.id == id:
+			_definition_cache[id] = def
 			return def
 	return null
 
@@ -330,10 +436,16 @@ func get_save_data() -> Dictionary:
 	var cooldown_save: Dictionary = {}
 	for key: String in _cooldowns:
 		cooldown_save[key] = _cooldowns[key]
+	var history_save: Dictionary = {}
+	for moment_id: String in _delivery_history:
+		var raw_history: Variant = _delivery_history[moment_id]
+		if raw_history is Dictionary:
+			history_save[moment_id] = (raw_history as Dictionary).duplicate()
 	var data: Dictionary = {
 		"state": _state,
 		"cooldowns": cooldown_save,
 		"delivery_queue": _delivery_queue.duplicate(),
+		"delivery_history": history_save,
 	}
 	if _secret_moments:
 		data.merge(_secret_moments.get_save_data())
@@ -345,10 +457,18 @@ func load_save_data(data: Dictionary) -> void:
 	_apply_state(data)
 
 
+## Restores moment state from saved data.
+func load_state(data: Dictionary) -> void:
+	load_save_data(data)
+
+
 func _apply_state(data: Dictionary) -> void:
 	_state = int(data.get("state", State.IDLE))
+	_active_store_id = GameManager.current_store_id
 	_suspend_count = 0
 	_delivery_queue = []
+	_recent_item_categories.clear()
+	_recent_store_entries.clear()
 	var queue_data: Variant = data.get("delivery_queue", [])
 	if queue_data is Array:
 		for entry: Variant in queue_data:
@@ -360,5 +480,131 @@ func _apply_state(data: Dictionary) -> void:
 			_cooldowns[key] = int(
 				(cooldown_data as Dictionary)[key]
 			)
+	_delivery_history = {}
+	var history_data: Variant = data.get("delivery_history", {})
+	if history_data is Dictionary:
+		for key: String in (history_data as Dictionary):
+			var raw_history: Variant = (
+				history_data as Dictionary
+			)[key]
+			if raw_history is not Dictionary:
+				continue
+			var history_entry: Dictionary = raw_history as Dictionary
+			_delivery_history[key] = {
+				"last_delivered_day": int(
+					history_entry.get("last_delivered_day", 0)
+				),
+				"last_delivered_hour": int(
+					history_entry.get("last_delivered_hour", -1)
+				),
+				"total_deliveries": int(
+					history_entry.get("total_deliveries", 0)
+				),
+			}
 	if _secret_moments:
 		_secret_moments.apply_state(data)
+
+
+## Returns true when the moment is blocked by an active cooldown or one-shot history.
+func is_moment_on_cooldown(moment_id: StringName) -> bool:
+	var def: AmbientMomentDefinition = _find_definition(String(moment_id))
+	if def == null:
+		return _cooldowns.has(String(moment_id))
+	return _is_definition_on_cooldown(def)
+
+
+## Returns the last day on which the moment was delivered.
+func get_last_delivered_day(moment_id: StringName) -> int:
+	var history: Dictionary = _delivery_history.get(
+		String(moment_id), {}
+	) as Dictionary
+	return int(history.get("last_delivered_day", 0))
+
+
+## Returns the total number of times the moment has been delivered.
+func get_total_deliveries(moment_id: StringName) -> int:
+	var history: Dictionary = _delivery_history.get(
+		String(moment_id), {}
+	) as Dictionary
+	return int(history.get("total_deliveries", 0))
+
+
+## Returns the eligible moment count for the current in-game hour.
+func get_eligible_moment_count() -> int:
+	return _get_eligible_moments(_get_current_hour()).size()
+
+
+func _rebuild_definition_cache() -> void:
+	_definition_cache.clear()
+	for def: AmbientMomentDefinition in _moment_definitions:
+		_definition_cache[def.id] = def
+
+
+func _clear_transient_triggers() -> void:
+	_recent_item_categories.clear()
+	_recent_store_entries.clear()
+
+
+func _matches_location_category(
+	def: AmbientMomentDefinition
+) -> bool:
+	match def.category:
+		"", "any":
+			return true
+		"hallway":
+			return _active_store_id.is_empty()
+		"store":
+			return not _active_store_id.is_empty()
+		"secret_thread":
+			return false
+	return false
+
+
+func _apply_delivery_tracking(
+	def: AmbientMomentDefinition
+) -> void:
+	_mark_delivered(def.id)
+	if def.cooldown_days > 0:
+		_cooldowns[def.id] = def.cooldown_days
+	else:
+		_cooldowns.erase(def.id)
+
+
+func _mark_delivered(moment_id: String) -> void:
+	var history: Dictionary = _delivery_history.get(
+		moment_id, {}
+	) as Dictionary
+	history["last_delivered_day"] = _get_current_day()
+	history["last_delivered_hour"] = _get_current_hour()
+	history["total_deliveries"] = int(
+		history.get("total_deliveries", 0)
+	) + 1
+	_delivery_history[moment_id] = history
+
+
+func _is_definition_auto_scheduler_blocked(
+	def: AmbientMomentDefinition
+) -> bool:
+	if def.category == "secret_thread":
+		return true
+	return _is_definition_on_cooldown(def)
+
+
+func _is_definition_on_cooldown(
+	def: AmbientMomentDefinition
+) -> bool:
+	if def.cooldown_days <= 0:
+		return _has_been_delivered(StringName(def.id))
+	return _cooldowns.has(def.id)
+
+
+func _has_been_delivered(moment_id: StringName) -> bool:
+	return _delivery_history.has(String(moment_id))
+
+
+func _get_current_day() -> int:
+	return GameManager.current_day
+
+
+func _get_current_hour() -> int:
+	return _current_hour_context

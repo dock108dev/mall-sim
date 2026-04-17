@@ -8,6 +8,7 @@ var _sys: AmbientMomentsSystem
 func _make_def(overrides: Dictionary = {}) -> AmbientMomentDefinition:
 	var d := AmbientMomentDefinition.new()
 	d.id = overrides.get("id", "test_moment")
+	d.category = overrides.get("category", "any")
 	d.trigger_category = overrides.get("trigger_category", "time_of_day")
 	d.trigger_value = overrides.get("trigger_value", "9")
 	d.display_type = StringName(overrides.get("display_type", "toast"))
@@ -36,6 +37,7 @@ func after_each() -> void:
 func test_time_of_day_trigger_fires_at_correct_hour() -> void:
 	var def := _make_def({
 		"id": "hour_14",
+		"category": "hallway",
 		"trigger_category": "time_of_day",
 		"trigger_value": "14",
 	})
@@ -55,6 +57,7 @@ func test_time_of_day_trigger_fires_at_correct_hour() -> void:
 func test_time_of_day_trigger_does_not_fire_at_wrong_hour() -> void:
 	var def := _make_def({
 		"id": "hour_14",
+		"category": "hallway",
 		"trigger_category": "time_of_day",
 		"trigger_value": "14",
 	})
@@ -78,6 +81,7 @@ func test_reputation_tier_trigger_fires_on_tier_reached() -> void:
 	# tier=0 passes because int(0.0 / 25.0) = 0 >= 0.
 	var def := _make_def({
 		"id": "rep_tier_0",
+		"category": "hallway",
 		"trigger_category": "reputation_tier",
 		"trigger_value": "0",
 	})
@@ -91,6 +95,7 @@ func test_reputation_tier_trigger_does_not_fire_on_lower_tier() -> void:
 	# With no reputation system, score is 0.0, which is below tier=2 threshold (score >= 50).
 	var def := _make_def({
 		"id": "rep_tier_2",
+		"category": "hallway",
 		"trigger_category": "reputation_tier",
 		"trigger_value": "2",
 	})
@@ -104,11 +109,12 @@ func test_reputation_tier_trigger_does_not_fire_on_lower_tier() -> void:
 
 
 func test_item_type_trigger_fires_on_matching_sale() -> void:
-	# _check_item_type_trigger returns true when trigger_value is non-empty
-	# and there is an active store.
 	GameManager.current_store_id = &"sports_memorabilia"
+	_sys._on_active_store_changed(&"sports_memorabilia")
+	_sys._on_item_sold("item_a", 10.0, "sports_card")
 	var def := _make_def({
 		"id": "sports_card_moment",
+		"category": "store",
 		"trigger_category": "item_type",
 		"trigger_value": "sports_card",
 	})
@@ -122,6 +128,7 @@ func test_item_type_trigger_does_not_fire_without_active_store() -> void:
 	GameManager.current_store_id = &""
 	var def := _make_def({
 		"id": "sports_card_moment",
+		"category": "store",
 		"trigger_category": "item_type",
 		"trigger_value": "sports_card",
 	})
@@ -135,14 +142,14 @@ func test_item_type_trigger_does_not_fire_without_active_store() -> void:
 
 
 func test_store_type_trigger_fires_on_first_entry_only() -> void:
-	# The store_type trigger fires when current_store_id matches.
-	# Cooldown prevents it from firing again on the same day.
 	GameManager.current_store_id = &"retro_games"
+	_sys._on_store_entered(&"retro_games")
 	var def := _make_def({
 		"id": "retro_entry",
+		"category": "store",
 		"trigger_category": "store_type",
 		"trigger_value": "retro_games",
-		"cooldown_days": 3,
+		"cooldown_days": 0,
 	})
 	_sys._moment_definitions = [def]
 
@@ -154,10 +161,11 @@ func test_store_type_trigger_fires_on_first_entry_only() -> void:
 	_sys._evaluate_moments(10)
 	assert_eq(delivered.size(), 1, "Should deliver on first store entry")
 
+	_sys._on_day_started(2)
 	_sys._evaluate_moments(11)
 	assert_eq(
 		delivered.size(), 1,
-		"Should not deliver again while cooldown is active"
+		"Should not deliver again after one-shot store entry fires"
 	)
 
 	EventBus.ambient_moment_delivered.disconnect(cb)
@@ -169,6 +177,7 @@ func test_store_type_trigger_fires_on_first_entry_only() -> void:
 func test_cooldown_prevents_repeat_trigger() -> void:
 	var def := _make_def({
 		"id": "cd_moment",
+		"category": "hallway",
 		"trigger_category": "time_of_day",
 		"trigger_value": "9",
 		"cooldown_days": 3,
@@ -206,6 +215,7 @@ func test_cooldown_prevents_repeat_trigger() -> void:
 func test_random_chance_trigger_never_fires_at_zero() -> void:
 	var def := _make_def({
 		"id": "chance_zero",
+		"category": "hallway",
 		"trigger_category": "random_chance",
 		"trigger_value": "0.0",
 	})
@@ -219,6 +229,7 @@ func test_random_chance_trigger_never_fires_at_zero() -> void:
 func test_random_chance_trigger_always_fires_at_one() -> void:
 	var def := _make_def({
 		"id": "chance_one",
+		"category": "hallway",
 		"trigger_category": "random_chance",
 		"trigger_value": "1.0",
 	})
@@ -232,6 +243,7 @@ func test_random_chance_trigger_always_fires_at_one() -> void:
 func test_random_chance_evaluates_full_pipeline_at_probability_one() -> void:
 	var def := _make_def({
 		"id": "chance_full",
+		"category": "hallway",
 		"trigger_category": "random_chance",
 		"trigger_value": "1.0",
 	})
@@ -306,6 +318,7 @@ func test_day_started_ticks_cooldowns() -> void:
 func test_deduplication_guard_blocks_second_delivery_for_same_moment() -> void:
 	var def := _make_def({
 		"id": "first_sale",
+		"category": "hallway",
 		"trigger_category": "time_of_day",
 		"trigger_value": "10",
 		"cooldown_days": 3,
@@ -349,12 +362,14 @@ func test_enqueue_by_id_cancelled_when_moment_on_cooldown() -> void:
 func test_pool_exhaustion_no_delivery_when_all_moments_on_cooldown() -> void:
 	var def_a := _make_def({
 		"id": "moment_alpha",
+		"category": "hallway",
 		"trigger_category": "time_of_day",
 		"trigger_value": "12",
 		"cooldown_days": 5,
 	})
 	var def_b := _make_def({
 		"id": "moment_beta",
+		"category": "hallway",
 		"trigger_category": "time_of_day",
 		"trigger_value": "12",
 		"cooldown_days": 5,
@@ -405,6 +420,11 @@ func test_weighted_pick_same_result_with_same_seed() -> void:
 func test_save_load_roundtrip_preserves_cooldowns() -> void:
 	_sys._cooldowns["first_sale"] = 3
 	_sys._cooldowns["week_moment"] = 2
+	_sys._delivery_history["first_sale"] = {
+		"last_delivered_day": 4,
+		"last_delivered_hour": 9,
+		"total_deliveries": 1,
+	}
 
 	var saved: Dictionary = _sys.get_save_data()
 
@@ -422,6 +442,11 @@ func test_save_load_roundtrip_preserves_cooldowns() -> void:
 		int(fresh._cooldowns.get("week_moment", 0)),
 		2,
 		"load_save_data should restore week_moment cooldown value"
+	)
+	assert_eq(
+		fresh.get_last_delivered_day(&"first_sale"),
+		4,
+		"load_save_data should restore delivery history"
 	)
 
 

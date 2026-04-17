@@ -29,7 +29,7 @@ var _build_mode_active: bool = false
 
 
 func _ready() -> void:
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	InputHelper.unlock_cursor()
 	_update_camera_transform()
 
 
@@ -57,7 +57,9 @@ func _process(delta: float) -> void:
 	if _build_mode_active:
 		return
 
-	var orbit_dir: float = Input.get_axis("orbit_left", "orbit_right")
+	var orbit_dir: float = InputHelper.get_axis_strength(
+		&"orbit_left", &"orbit_right"
+	)
 	if orbit_dir != 0.0:
 		_yaw -= orbit_dir * keyboard_orbit_speed * delta
 		_update_camera_transform()

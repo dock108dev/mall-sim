@@ -33,8 +33,10 @@ func initialize(
 	if data_loader:
 		_event_definitions = data_loader.get_all_random_events()
 	_apply_state({})
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.hour_changed.connect(_on_hour_changed)
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.hour_changed.is_connected(_on_hour_changed):
+		EventBus.hour_changed.connect(_on_hour_changed)
 
 
 ## Evaluates all eligible daily events and returns IDs of those that fire.
@@ -283,6 +285,7 @@ func _end_active_event(def: RandomEventDefinition) -> void:
 	_disabled_fixture_id = ""
 	if not def.resolution_text.is_empty():
 		EventBus.notification_requested.emit(def.resolution_text)
+	_emit_event_modifier_expired(def)
 	EventBus.random_event_ended.emit(def.id)
 	_cooldowns[def.id] = def.cooldown_days
 	_active_event = {}
@@ -388,21 +391,27 @@ func _apply_effect(def: RandomEventDefinition) -> Dictionary:
 	var effect: Dictionary = {"type": def.effect_type}
 	match def.effect_type:
 		"supply_shortage":
-			_effects.apply_supply_shortage(def, _active_event)
+			if _effects:
+				_effects.apply_supply_shortage(def, _active_event)
 			effect["target_category"] = _active_event.get(
 				"target_category", ""
 			)
 		"viral_trend":
-			_effects.apply_viral_trend(def, _active_event)
+			if _effects:
+				_effects.apply_viral_trend(def, _active_event)
 			effect["target_item_id"] = _active_event.get(
 				"target_item_id", ""
 			)
 		"health_inspection":
-			var passed: bool = _effects.apply_health_inspection(def)
+			var passed: bool = false
+			if _effects:
+				passed = _effects.apply_health_inspection(def)
 			effect["passed"] = passed
 			_finish_instant_event(def)
 		"shoplifting":
-			var stolen_name: String = _effects.apply_shoplifting(def)
+			var stolen_name: String = ""
+			if _effects:
+				stolen_name = _effects.apply_shoplifting(def)
 			effect["stolen_item"] = stolen_name
 			_finish_instant_event(def)
 		"water_leak":
@@ -415,17 +424,33 @@ func _apply_effect(def: RandomEventDefinition) -> Dictionary:
 				def.notification_text
 			)
 		"bulk_order":
-			var amount: float = _effects.apply_bulk_order(def)
+			var amount: float = 0.0
+			if _effects:
+				amount = _effects.apply_bulk_order(def)
 			effect["cash_amount"] = amount
 			_finish_instant_event(def)
 		"competitor_sale":
-			_effects.apply_competitor_sale(def)
+			if _effects:
+				_effects.apply_competitor_sale(def)
+			else:
+				EventBus.notification_requested.emit(def.notification_text)
 			effect["demand_modifier"] = -0.1
+			_emit_event_modifier_active(def, {
+				"purchase_intent_multiplier": COMPETITOR_SALE_DEMAND_MODIFIER,
+			})
 		"rainy_day":
-			_effects.apply_rainy_day(def)
-			effect["traffic_modifier"] = 0.7
+			if _effects:
+				_effects.apply_rainy_day(def)
+			else:
+				EventBus.notification_requested.emit(def.notification_text)
+			effect["traffic_modifier"] = RAINY_DAY_TRAFFIC_MULTIPLIER
+			_emit_event_modifier_active(def, {
+				"spawn_rate_multiplier": RAINY_DAY_TRAFFIC_MULTIPLIER,
+			})
 		"estate_sale":
-			var item_name: String = _effects.apply_estate_sale(def)
+			var item_name: String = ""
+			if _effects:
+				item_name = _effects.apply_estate_sale(def)
 			effect["item_name"] = item_name
 			_finish_instant_event(def)
 	return effect
@@ -438,6 +463,18 @@ func _emit_toast(def: RandomEventDefinition) -> void:
 	EventBus.toast_requested.emit(
 		message, &"random_event", 4.0
 	)
+
+
+func _emit_event_modifier_active(
+	def: RandomEventDefinition, modifier: Dictionary
+) -> void:
+	EventBus.market_event_active.emit(StringName(def.id), modifier)
+
+
+func _emit_event_modifier_expired(def: RandomEventDefinition) -> void:
+	match def.effect_type:
+		"competitor_sale", "rainy_day":
+			EventBus.market_event_expired.emit(StringName(def.id))
 
 
 ## Clears the active event for instant-resolution events.

@@ -214,6 +214,7 @@ func test_time_trigger_matches_hour() -> void:
 
 func test_random_chance_trigger() -> void:
 	var def := AmbientMomentDefinition.new()
+	def.category = "hallway"
 	def.trigger_category = "random_chance"
 	def.trigger_value = "1.0"
 	assert_true(
@@ -290,7 +291,7 @@ func test_save_load_round_trip_delivery_queue() -> void:
 	var save_data: Dictionary = _sys.get_save_data()
 	var sys2 := AmbientMomentsSystem.new()
 	add_child_autofree(sys2)
-	sys2.load_save_data(save_data)
+	sys2.load_state(save_data)
 	assert_eq(
 		sys2._delivery_queue.size(), 2,
 		"Delivery queue should survive save/load"
@@ -376,6 +377,7 @@ func test_triggered_moment_not_eligible_until_cooldown_expires() -> void:
 	var def: AmbientMomentDefinition = _make_def({
 		"id": "cd_full", "trigger_value": "9", "cooldown_days": 2,
 	})
+	def.category = "hallway"
 	_sys._moment_definitions = [def]
 	_sys._state = AmbientMomentsSystem.State.MONITORING
 
@@ -469,6 +471,7 @@ func test_evaluate_emits_queued_and_delivered() -> void:
 	var def: AmbientMomentDefinition = _make_def({
 		"id": "morning_pa", "trigger_value": "9",
 	})
+	def.category = "hallway"
 	_sys._moment_definitions = [def]
 	_sys._state = AmbientMomentsSystem.State.MONITORING
 
@@ -494,3 +497,41 @@ func test_evaluate_emits_queued_and_delivered() -> void:
 
 	EventBus.ambient_moment_queued.disconnect(cb_q)
 	EventBus.ambient_moment_delivered.disconnect(cb_d)
+
+
+func test_load_definitions_uses_content_registry() -> void:
+	ContentRegistry.clear_for_testing()
+	ContentRegistry.register_entry({
+		"id": "registry_moment",
+		"category": "any",
+		"display_type": "toast",
+		"trigger_category": "time_of_day",
+		"trigger_value": "9",
+		"scheduling_weight": 1.0,
+		"flavor_text": "Registry-backed moment",
+		"audio_cue_id": "",
+		"cooldown_days": 1,
+	}, "ambient_moment")
+
+	_sys._load_definitions()
+
+	assert_eq(_sys._moment_definitions.size(), 1)
+	assert_eq(_sys._moment_definitions[0].id, "registry_moment")
+	assert_eq(_sys._moment_definitions[0].category, "any")
+
+
+func test_secret_thread_category_is_not_auto_scheduled() -> void:
+	var def: AmbientMomentDefinition = _make_def({
+		"id": "secret_only",
+		"trigger_category": "random_chance",
+		"trigger_value": "1.0",
+	})
+	def.category = "secret_thread"
+	_sys._moment_definitions = [def]
+	_sys._state = AmbientMomentsSystem.State.MONITORING
+	watch_signals(EventBus)
+
+	_sys._evaluate_moments(9)
+
+	assert_signal_not_emitted(EventBus, "ambient_moment_queued")
+	assert_signal_not_emitted(EventBus, "ambient_moment_delivered")

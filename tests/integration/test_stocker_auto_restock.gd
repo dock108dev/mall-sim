@@ -49,8 +49,6 @@ func after_each() -> void:
 
 
 func test_scenario_a_timer_starts_after_stocker_hired() -> void:
-	_seed_backroom_with_item()
-
 	var result: Dictionary = _staff.hire_staff("test_stocker_001", STORE_ID)
 	assert_false(result.is_empty(), "hire_staff must return non-empty dict for a valid STOCKER")
 
@@ -64,6 +62,7 @@ func test_scenario_a_timer_starts_after_stocker_hired() -> void:
 
 func test_scenario_a_restock_emits_staff_restocked_shelf() -> void:
 	watch_signals(EventBus)
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	var result: Dictionary = _staff.hire_staff("test_stocker_001", STORE_ID)
 	assert_false(result.is_empty(), "Precondition: hire must succeed")
@@ -79,6 +78,7 @@ func test_scenario_a_restock_emits_staff_restocked_shelf() -> void:
 
 func test_scenario_a_restock_signal_carries_correct_staff_id() -> void:
 	watch_signals(EventBus)
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	var result: Dictionary = _staff.hire_staff("test_stocker_001", STORE_ID)
 	var expected_staff_id: String = result.get("instance_id", "")
@@ -95,6 +95,7 @@ func test_scenario_a_restock_signal_carries_correct_staff_id() -> void:
 
 func test_scenario_a_restock_signal_carries_correct_item_id() -> void:
 	watch_signals(EventBus)
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	_staff.hire_staff("test_stocker_001", STORE_ID)
 
@@ -109,6 +110,7 @@ func test_scenario_a_restock_signal_carries_correct_item_id() -> void:
 
 
 func test_scenario_a_shelf_slot_populated_after_restock() -> void:
+	_prepare_empty_shelf_slot("front_1")
 	var item: ItemInstance = _seed_backroom_with_item()
 	_staff.hire_staff("test_stocker_001", STORE_ID)
 
@@ -124,6 +126,7 @@ func test_scenario_a_shelf_slot_populated_after_restock() -> void:
 
 
 func test_scenario_a_backroom_count_decremented_after_restock() -> void:
+	_prepare_empty_shelf_slot("front_1")
 	_seed_backroom_with_item()
 	_staff.hire_staff("test_stocker_001", STORE_ID)
 
@@ -141,6 +144,7 @@ func test_scenario_a_backroom_count_decremented_after_restock() -> void:
 
 
 func test_scenario_b_no_signal_when_backroom_empty() -> void:
+	_prepare_empty_shelf_slot("front_1")
 	_staff.hire_staff("test_stocker_001", STORE_ID)
 	watch_signals(EventBus)
 
@@ -154,6 +158,7 @@ func test_scenario_b_no_signal_when_backroom_empty() -> void:
 
 
 func test_scenario_b_shelf_remains_empty_when_backroom_empty() -> void:
+	_prepare_empty_shelf_slot("front_1")
 	_staff.hire_staff("test_stocker_001", STORE_ID)
 
 	_fire_restock_timer()
@@ -196,6 +201,20 @@ func _seed_backroom_with_item() -> ItemInstance:
 	item.current_location = "backroom"
 	_inventory.register_item(item)
 	return item
+
+
+func _prepare_empty_shelf_slot(slot_id: String) -> void:
+	var shelf_item: ItemInstance = ItemInstance.create(
+		_item_def, "good", 0, 5.0
+	)
+	shelf_item.current_location = "backroom"
+	_inventory.register_item(shelf_item)
+	_inventory.assign_to_shelf(
+		StringName(STORE_ID),
+		StringName(shelf_item.instance_id),
+		StringName(slot_id)
+	)
+	_inventory.remove_item(shelf_item.instance_id)
 
 
 func _fire_restock_timer() -> void:

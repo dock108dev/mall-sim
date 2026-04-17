@@ -144,6 +144,7 @@ func test_skill_3_base_interval() -> void:
 func test_restock_moves_one_backroom_item_to_shelf() -> void:
 	watch_signals(EventBus)
 	_staff.hire_staff("test_stocker", "test_store")
+	_prepare_empty_shelf_slot("test_store", "test_item", "slot_1")
 	_add_backroom_item("test_store", "test_item")
 	var backroom_before: int = (
 		_inventory.get_backroom_items_for_store("test_store").size()
@@ -179,6 +180,7 @@ func test_restock_emits_correct_signal_params() -> void:
 	var hired: Dictionary = _staff.hire_staff(
 		"test_stocker", "test_store"
 	)
+	_prepare_empty_shelf_slot("test_store", "test_item", "slot_1")
 	_add_backroom_item("test_store", "test_item")
 	_stocker_behavior._restock_one_item(
 		"test_store", hired["instance_id"]
@@ -199,6 +201,7 @@ func test_restock_emits_correct_signal_params() -> void:
 func test_no_restock_when_backroom_empty() -> void:
 	watch_signals(EventBus)
 	_staff.hire_staff("test_stocker", "test_store")
+	_prepare_empty_shelf_slot("test_store", "test_item", "slot_1")
 	_stocker_behavior._restock_one_item(
 		"test_store",
 		_stocker_behavior._active_stockers["test_store"]
@@ -210,15 +213,11 @@ func test_no_restock_when_backroom_empty() -> void:
 	)
 
 
-func test_no_restock_when_shelf_at_capacity() -> void:
+func test_no_restock_when_backroom_has_no_matching_item() -> void:
 	watch_signals(EventBus)
 	_staff.hire_staff("test_stocker", "test_store")
-	var store_def: StoreDefinition = _data_loader.get_store(
-		"test_store"
-	)
-	for i: int in range(store_def.shelf_capacity):
-		_add_shelf_item("test_store", "test_item", "slot_%d" % i)
-	_add_backroom_item("test_store", "test_item")
+	_prepare_empty_shelf_slot("test_store", "test_item", "slot_1")
+	_add_backroom_item("test_store", "other_item")
 	_stocker_behavior._restock_one_item(
 		"test_store",
 		_stocker_behavior._active_stockers["test_store"]
@@ -226,13 +225,15 @@ func test_no_restock_when_shelf_at_capacity() -> void:
 	)
 	assert_signal_not_emitted(
 		EventBus, "staff_restocked_shelf",
-		"No restock signal when shelf is full"
+		"No restock signal when no matching backroom item exists"
 	)
 
 
 func test_restock_only_one_item_per_fire() -> void:
 	watch_signals(EventBus)
 	_staff.hire_staff("test_stocker", "test_store")
+	_prepare_empty_shelf_slot("test_store", "test_item", "slot_1")
+	_prepare_empty_shelf_slot("test_store", "test_item", "slot_2")
 	_add_backroom_item("test_store", "test_item")
 	_add_backroom_item("test_store", "test_item")
 	_stocker_behavior._restock_one_item(
@@ -270,6 +271,35 @@ func test_refresh_after_load_rebuilds_timers() -> void:
 	assert_true(
 		fresh_behavior._active_stockers.has("test_store"),
 		"Active stocker should be tracked after load"
+	)
+
+
+func test_empty_shelf_targets_survive_inventory_round_trip() -> void:
+	_staff.hire_staff("test_stocker", "test_store")
+	_prepare_empty_shelf_slot("test_store", "test_item", "slot_1")
+	_add_backroom_item("test_store", "test_item")
+	var inventory_save: Dictionary = _inventory.get_save_data()
+	var staff_save: Dictionary = _staff.get_save_data()
+	var fresh_inventory: InventorySystem = InventorySystem.new()
+	add_child_autofree(fresh_inventory)
+	fresh_inventory.initialize(_data_loader)
+	fresh_inventory.load_save_data(inventory_save)
+	var fresh_staff: StaffSystem = StaffSystem.new()
+	add_child_autofree(fresh_staff)
+	fresh_staff.initialize(
+		_economy, _reputation, fresh_inventory, _data_loader
+	)
+	fresh_staff.load_save_data(staff_save)
+	var fresh_behavior: StockerBehavior = fresh_staff._stocker_behavior
+	fresh_behavior._restock_one_item(
+		"test_store",
+		fresh_behavior._active_stockers["test_store"]
+			.get("instance_id", "")
+	)
+	assert_eq(
+		fresh_inventory.get_shelf_items_for_store("test_store").size(),
+		1,
+		"Saved empty shelf targets should still allow one-slot restock after load"
 	)
 
 
@@ -321,6 +351,13 @@ func _register_test_data() -> void:
 	item.base_price = 10.0
 	_data_loader._items["test_item"] = item
 
+	var other_item := ItemDefinition.new()
+	other_item.id = "other_item"
+	other_item.item_name = "Other Item"
+	other_item.store_type = "test_store"
+	other_item.base_price = 12.0
+	_data_loader._items["other_item"] = other_item
+
 
 func _add_backroom_item(
 	store_id: String, definition_id: String
@@ -334,13 +371,15 @@ func _add_backroom_item(
 	return item
 
 
-func _add_shelf_item(
+func _prepare_empty_shelf_slot(
 	store_id: String, definition_id: String, slot_id: String
-) -> ItemInstance:
-	var def: ItemDefinition = _data_loader.get_item(definition_id)
-	var item: ItemInstance = ItemInstance.create(
-		def, "good", 0, def.base_price
+) -> void:
+	var shelf_item: ItemInstance = _add_backroom_item(
+		store_id, definition_id
 	)
-	item.current_location = "shelf:%s" % slot_id
-	_inventory.add_item(StringName(store_id), item)
-	return item
+	_inventory.assign_to_shelf(
+		StringName(store_id),
+		StringName(shelf_item.instance_id),
+		StringName(slot_id)
+	)
+	_inventory.remove_item(shelf_item.instance_id)

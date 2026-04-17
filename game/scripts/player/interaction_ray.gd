@@ -27,6 +27,8 @@ func set_inventory_system(inv: InventorySystem) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _hovered_target and not is_instance_valid(_hovered_target):
+		_set_hovered_target(null)
 	if _open_panel_count > 0:
 		if _hovered_target:
 			_set_hovered_target(null)
@@ -110,29 +112,40 @@ func _update_raycast() -> void:
 	var new_target: Interactable = null
 	if result.size() > 0:
 		var collider: Node = result["collider"]
-		if collider is Interactable:
-			var candidate := collider as Interactable
-			if candidate.enabled:
-				new_target = candidate
+		var candidate: Interactable = _resolve_interactable(collider)
+		if candidate and candidate.enabled:
+			new_target = candidate
 
 	if new_target != _hovered_target:
 		_set_hovered_target(new_target)
 
 
 func _set_hovered_target(new_target: Interactable) -> void:
-	if _hovered_target:
+	if _hovered_target == new_target:
+		return
+
+	if _hovered_target and is_instance_valid(_hovered_target):
+		if _hovered_target.tree_exiting.is_connected(
+			_on_hovered_target_tree_exiting
+		):
+			_hovered_target.tree_exiting.disconnect(
+				_on_hovered_target_tree_exiting
+			)
 		_hovered_target.unhighlight()
 		_hovered_target.unfocused.emit()
 
-	_hovered_target = new_target
+	_hovered_target = new_target if is_instance_valid(new_target) else null
 
 	if _hovered_target:
+		if not _hovered_target.tree_exiting.is_connected(
+			_on_hovered_target_tree_exiting
+		):
+			_hovered_target.tree_exiting.connect(
+				_on_hovered_target_tree_exiting
+			)
 		_hovered_target.highlight()
 		_hovered_target.focused.emit()
-		var action_label: String = "%s %s" % [
-			_hovered_target.interaction_prompt,
-			_hovered_target.display_name,
-		]
+		var action_label: String = _build_action_label(_hovered_target)
 		EventBus.notification_requested.emit(
 			"Click to %s" % action_label
 		)
@@ -142,6 +155,36 @@ func _set_hovered_target(new_target: Interactable) -> void:
 		EventBus.notification_requested.emit("")
 		EventBus.interactable_unfocused.emit()
 		EventBus.item_tooltip_hidden.emit()
+
+
+func _resolve_interactable(collider: Node) -> Interactable:
+	return Interactable.from_collider(collider)
+
+
+func _on_hovered_target_tree_exiting() -> void:
+	var exiting_target: Interactable = _hovered_target
+	if exiting_target and is_instance_valid(exiting_target):
+		if exiting_target.tree_exiting.is_connected(
+			_on_hovered_target_tree_exiting
+		):
+			exiting_target.tree_exiting.disconnect(
+				_on_hovered_target_tree_exiting
+			)
+		exiting_target.unfocused.emit()
+	_hovered_target = null
+	EventBus.notification_requested.emit("")
+	EventBus.interactable_unfocused.emit()
+	EventBus.item_tooltip_hidden.emit()
+
+
+func _build_action_label(target: Interactable) -> String:
+	var verb: String = target.prompt_text.strip_edges()
+	var target_name: String = target.display_name.strip_edges()
+	if verb.is_empty():
+		return target_name
+	if target_name.is_empty():
+		return verb
+	return "%s %s" % [verb, target_name]
 
 
 func _emit_tooltip_for_target(target: Interactable) -> void:

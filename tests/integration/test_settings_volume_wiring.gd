@@ -25,7 +25,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	for bus_name: String in ["Master", "Music", "SFX", "Ambient"]:
+	for bus_name: String in ["Master", "Music", "SFX", "Ambience"]:
 		var idx: int = AudioServer.get_bus_index(bus_name)
 		if idx >= 0:
 			AudioServer.set_bus_volume_db(idx, 0.0)
@@ -40,21 +40,24 @@ func test_boot_persisted_volumes_applied_to_buses() -> void:
 	var master_idx: int = AudioServer.get_bus_index("Master")
 	var music_idx: int = AudioServer.get_bus_index("Music")
 	var sfx_idx: int = AudioServer.get_bus_index("SFX")
-	if master_idx < 0 or music_idx < 0 or sfx_idx < 0:
+	var ambience_idx: int = AudioServer.get_bus_index("Ambience")
+	if master_idx < 0 or music_idx < 0 or sfx_idx < 0 or ambience_idx < 0:
 		pending("Required audio buses not available in test runner")
 		return
 
-	var boot_path: String = "user://settings_volume_wiring_boot_test.cfg"
+	var boot_path: String = "/tmp/settings_volume_wiring_boot_test.cfg"
 	var config := ConfigFile.new()
 	config.set_value("audio", "master_volume", 0.5)
 	config.set_value("audio", "music_volume", 0.3)
 	config.set_value("audio", "sfx_volume", 0.8)
+	config.set_value("audio", "ambient_volume", 0.4)
 	config.save(boot_path)
 
 	var settings: Node = Node.new()
 	settings.set_script(preload("res://game/autoload/settings.gd"))
 	settings.settings_path = boot_path
 	add_child_autofree(settings)
+	settings.load_settings()
 
 	assert_almost_eq(
 		AudioServer.get_bus_volume_db(master_idx),
@@ -74,8 +77,14 @@ func test_boot_persisted_volumes_applied_to_buses() -> void:
 		DB_TOLERANCE,
 		"SFX bus volume_db must match linear_to_db(0.8) after Settings._ready() with persisted sfx_volume=0.8"
 	)
+	assert_almost_eq(
+		AudioServer.get_bus_volume_db(ambience_idx),
+		linear_to_db(0.4),
+		DB_TOLERANCE,
+		"Ambience bus volume_db must match linear_to_db(0.4) after Settings._ready() with persisted ambient_volume=0.4"
+	)
 
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(boot_path))
+	DirAccess.remove_absolute(boot_path)
 
 
 func test_boot_missing_volume_keys_applies_default_master_volume() -> void:
@@ -84,7 +93,7 @@ func test_boot_missing_volume_keys_applies_default_master_volume() -> void:
 		pending("Master bus not available in test runner")
 		return
 
-	var boot_path: String = "user://settings_volume_wiring_nomatch_test.cfg"
+	var boot_path: String = "/tmp/settings_volume_wiring_nomatch_test.cfg"
 	var config := ConfigFile.new()
 	config.set_value("display", "fullscreen", false)
 	config.save(boot_path)
@@ -101,7 +110,7 @@ func test_boot_missing_volume_keys_applies_default_master_volume() -> void:
 		"Master bus should be at 0 dB (DEFAULT_MASTER_VOLUME=1.0) when no volume keys are in the config"
 	)
 
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(boot_path))
+	DirAccess.remove_absolute(boot_path)
 
 
 # ── Runtime update per key ────────────────────────────────────────────────────

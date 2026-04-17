@@ -73,6 +73,7 @@ const VOLUME_BUS_MAP: Dictionary = {
 	&"master_volume": &"Master",
 	&"music_volume": &"Music",
 	&"sfx_volume": &"SFX",
+	&"ambient_volume": &"Ambience",
 }
 
 const PREFERENCE_DEFAULTS: Dictionary = {
@@ -426,7 +427,9 @@ func _apply_audio() -> void:
 		AudioServer.set_bus_volume_db(
 			sfx_idx, linear_to_db(sfx_volume)
 		)
-	var ambient_idx: int = AudioServer.get_bus_index("Ambient")
+	var ambient_idx: int = AudioServer.get_bus_index("Ambience")
+	if ambient_idx < 0:
+		ambient_idx = AudioServer.get_bus_index("Ambient")
 	if ambient_idx >= 0:
 		AudioServer.set_bus_volume_db(
 			ambient_idx, linear_to_db(ambient_volume)

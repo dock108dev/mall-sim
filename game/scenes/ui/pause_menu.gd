@@ -134,7 +134,7 @@ func open() -> void:
 	_overlay.visible = true
 	_overlay_tween = PanelAnimator.fade_in(_overlay, FADE_DURATION)
 	_panel_tween = PanelAnimator.fade_in(_panel, FADE_DURATION)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	InputHelper.unlock_cursor()
 	_save_toast.visible = false
 	_update_completion_label()
 	_update_difficulty_display()

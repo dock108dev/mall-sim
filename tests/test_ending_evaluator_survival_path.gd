@@ -1,5 +1,5 @@
 ## Integration test — EndingEvaluatorSystem SURVIVAL path: 30-day survival with
-## marginal profit triggers broke_even; neutral profit triggers just_getting_by fallback.
+## marginal or neutral outcomes both resolve to the broke_even fallback.
 extends GutTest
 
 
@@ -9,7 +9,6 @@ const SUCCESS_ENDINGS: Array[StringName] = [
 	&"the_mini_empire",
 	&"the_mall_tycoon",
 	&"the_fair_dealer",
-	&"the_collector",
 ]
 
 var _evaluator: EndingEvaluatorSystem
@@ -127,10 +126,10 @@ func test_marginal_profit_game_manager_transitions_to_game_over() -> void:
 	)
 
 
-# ── Scenario B — 30-day survival with neutral profit → just_getting_by ───────
+# ── Scenario B — 30-day survival with neutral profit → broke_even fallback ───
 
 
-func test_neutral_profit_30_days_triggers_just_getting_by() -> void:
+func test_neutral_profit_30_days_triggers_broke_even_fallback() -> void:
 	_set_survival_neutral_stats()
 
 	EventBus.completion_reached.emit("time_limit")
@@ -138,12 +137,12 @@ func test_neutral_profit_30_days_triggers_just_getting_by() -> void:
 	assert_eq(_triggered_endings.size(), 1, "Exactly one ending must fire")
 	assert_eq(
 		_triggered_endings[0]["id"],
-		&"just_getting_by",
-		"30-day survival with neutral profit (cash == 0) must fall back to just_getting_by"
+		&"broke_even",
+		"30-day survival with neutral profit must fall back to broke_even"
 	)
 
 
-func test_just_getting_by_not_a_success_ending() -> void:
+func test_broke_even_fallback_not_a_success_ending() -> void:
 	_set_survival_neutral_stats()
 
 	EventBus.completion_reached.emit("time_limit")

@@ -20,10 +20,13 @@ var rental_controller: VideoRentalStoreController = null
 var pack_controller: PocketCreaturesStoreController = null
 var pack_opening_panel: PackOpeningPanel = null
 var electronics_controller: ElectronicsStoreController = null
+var pricing_panel: PricingPanel = null
+var order_panel: OrderPanel = null
 
 var _selected_item: ItemInstance = null
 var _is_open: bool = false
 var _cell_map: Dictionary = {}
+var _store_inventory: Array[Dictionary] = []
 var _active_tab: Tab = Tab.BACKROOM
 var _anim_tween: Tween
 var _rest_x: float = 0.0
@@ -103,6 +106,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				_shelf_actions.exit_placement_mode()
 				get_viewport().set_input_as_handled()
 				return
+		if (
+			mb.button_index == MOUSE_BUTTON_LEFT
+			and mb.pressed
+			and _is_open
+			and not _panel.get_global_rect().has_point(mb.position)
+			and not _context_menu.visible
+		):
+			close()
+			get_viewport().set_input_as_handled()
+			return
 	if not event is InputEventKey:
 		return
 	var key_event := event as InputEventKey
@@ -187,6 +200,9 @@ func _on_tab_pressed(tab: Tab) -> void:
 
 func _update_tab_visuals() -> void:
 	var active := Color(0.7, 1.0, 0.7)
+	_backroom_tab.button_pressed = _active_tab == Tab.BACKROOM
+	_shelves_tab.button_pressed = _active_tab == Tab.SHELVES
+	_all_tab.button_pressed = _active_tab == Tab.ALL
 	_backroom_tab.modulate = (
 		active if _active_tab == Tab.BACKROOM else Color.WHITE
 	)
@@ -210,17 +226,19 @@ func _get_filtered_items() -> Array[ItemInstance]:
 	if not inventory_system:
 		return []
 	var items: Array[ItemInstance] = []
-	match _active_tab:
-		Tab.BACKROOM:
-			items = inventory_system.get_backroom_items_for_store(
-				store_id
-			)
-		Tab.SHELVES:
-			items = inventory_system.get_shelf_items_for_store(
-				store_id
-			)
-		Tab.ALL:
-			items = inventory_system.get_items_for_store(store_id)
+	_store_inventory = inventory_system.get_store_inventory(
+		StringName(store_id)
+	)
+	for entry: Dictionary in _store_inventory:
+		var item: ItemInstance = entry.get("item", null) as ItemInstance
+		if not item:
+			continue
+		var location: String = str(entry.get("location", ""))
+		if _active_tab == Tab.BACKROOM and location != "backroom":
+			continue
+		if _active_tab == Tab.SHELVES and not location.begins_with("shelf:"):
+			continue
+		items.append(item)
 	return InventoryFilter.apply(
 		items,
 		_search_field.text,
@@ -317,14 +335,14 @@ func _on_context_action(id: int) -> void:
 		return
 	match id:
 		0:
-			EventBus.panel_opened.emit("pricing")
+			_open_pricing_for_selected_item()
 		1:
 			_shelf_actions.enter_placement_mode()
 		2:
 			_shelf_actions.move_to_backroom(_selected_item)
 			_selected_item = null
 		3:
-			EventBus.panel_opened.emit("orders")
+			_open_orders_for_selected_item()
 		4:
 			if testing_system:
 				testing_system.start_test(_selected_item.instance_id)
@@ -522,3 +540,21 @@ func _retire_selected_tape(sell: bool) -> void:
 
 func _sync_active_store() -> void:
 	store_id = String(GameManager.current_store_id)
+
+
+func _open_pricing_for_selected_item() -> void:
+	if not _selected_item:
+		return
+	if pricing_panel:
+		pricing_panel.open_for_item(_selected_item)
+		return
+	EventBus.panel_opened.emit("pricing")
+
+
+func _open_orders_for_selected_item() -> void:
+	if not _selected_item:
+		return
+	if order_panel and _selected_item.definition:
+		order_panel.open_for_item_type(StringName(_selected_item.definition.id))
+		return
+	EventBus.panel_opened.emit("orders")

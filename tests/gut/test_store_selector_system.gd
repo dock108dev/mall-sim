@@ -1,6 +1,9 @@
 ## Tests for StoreSelectorSystem scene transition orchestration.
 extends GutTest
 
+const _PlayerControllerScene: PackedScene = preload(
+	"res://game/scenes/player/player_controller.tscn"
+)
 
 var _system: StoreSelectorSystem
 var _store_state_manager: StoreStateManager
@@ -14,16 +17,18 @@ var _active_store_changed_ids: Array[StringName] = []
 var _storefront_entered_calls: Array[Dictionary] = []
 var _storefront_exited_count: int = 0
 
-const TEST_STORE_ID: StringName = &"test_store"
+const TEST_STORE_ID: StringName = &"retro_games"
 const TEST_SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 const TEST_STORE_ENTRY: Dictionary = {
-	"id": "test_store",
-	"name": "Test Store",
+	"id": "retro_games",
+	"name": "Retro Games",
 	"scene_path": "res://game/scenes/stores/retro_games.tscn",
 }
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
+	ContentRegistry.register_entry(TEST_STORE_ENTRY, "store")
 	_entered_stores.clear()
 	_exited_stores.clear()
 	_active_store_changed_ids.clear()
@@ -41,7 +46,7 @@ func before_each() -> void:
 	_store_container.name = "StoreContainer"
 	add_child_autofree(_store_container)
 
-	_hallway_camera = PlayerController.new()
+	_hallway_camera = _PlayerControllerScene.instantiate() as PlayerController
 	_hallway_camera.name = "HallwayCamera"
 	add_child_autofree(_hallway_camera)
 
@@ -52,6 +57,9 @@ func before_each() -> void:
 	_system = StoreSelectorSystem.new()
 	_system.name = "StoreSelectorSystem"
 	add_child_autofree(_system)
+
+	CameraManager._store_cameras.clear()
+	CameraManager.register_hallway_camera(_hallway_camera.get_camera())
 
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.store_exited.connect(_on_store_exited)
@@ -81,6 +89,7 @@ func after_each() -> void:
 		_on_storefront_exited
 	):
 		EventBus.storefront_exited.disconnect(_on_storefront_exited)
+	ContentRegistry.clear_for_testing()
 
 
 func test_is_inside_store_initially_false() -> void:
@@ -197,13 +206,11 @@ func test_store_exited_clears_active_store_identity() -> void:
 
 
 func test_scene_path_matches_content_registry() -> void:
-	ContentRegistry.register_entry(TEST_STORE_ENTRY, "store")
 	var path: String = ContentRegistry.get_scene_path(TEST_STORE_ID)
 	assert_eq(
 		path, TEST_SCENE_PATH,
 		"Scene path from ContentRegistry should match definition"
 	)
-	_cleanup_test_registry_entry()
 
 
 func test_scene_path_empty_for_unknown_id() -> void:
@@ -247,13 +254,3 @@ func _on_storefront_entered(
 func _on_storefront_exited() -> void:
 	_storefront_exited_count += 1
 
-
-func _cleanup_test_registry_entry() -> void:
-	if ContentRegistry._entries.has(TEST_STORE_ID):
-		ContentRegistry._entries.erase(TEST_STORE_ID)
-	if ContentRegistry._types.has(TEST_STORE_ID):
-		ContentRegistry._types.erase(TEST_STORE_ID)
-	if ContentRegistry._scene_map.has(TEST_STORE_ID):
-		ContentRegistry._scene_map.erase(TEST_STORE_ID)
-	if ContentRegistry._display_names.has(TEST_STORE_ID):
-		ContentRegistry._display_names.erase(TEST_STORE_ID)

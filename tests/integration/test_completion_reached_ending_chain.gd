@@ -94,16 +94,16 @@ func test_snapshot_contains_required_stat_keys() -> void:
 		&"ghost_tenant_thread_completed",
 	]
 
-	var snapshot: Dictionary = {}
+	var snapshot: Array[Dictionary] = [{}]
 	var on_snapshot: Callable = func(stats: Dictionary) -> void:
-		snapshot = stats.duplicate()
+		snapshot[0] = stats.duplicate()
 	EventBus.ending_stats_snapshot_ready.connect(on_snapshot)
 
 	EventBus.completion_reached.emit("time_limit")
 
 	for key: StringName in required_keys:
 		assert_true(
-			snapshot.has(String(key)),
+			snapshot[0].has(String(key)),
 			"Snapshot must include stat key: %s" % key
 		)
 
@@ -112,25 +112,25 @@ func test_snapshot_contains_required_stat_keys() -> void:
 
 ## Acceptance criterion 4: final_stats in ending_triggered matches the snapshot.
 func test_final_stats_matches_snapshot() -> void:
-	var snapshot: Dictionary = {}
-	var final_stats: Dictionary = {}
+	var snapshot: Array[Dictionary] = [{}]
+	var final_stats: Array[Dictionary] = [{}]
 
 	var on_snapshot: Callable = func(stats: Dictionary) -> void:
-		snapshot = stats.duplicate()
+		snapshot[0] = stats.duplicate()
 	var on_triggered: Callable = func(
 		_id: StringName, stats: Dictionary
 	) -> void:
-		final_stats = stats.duplicate()
+		final_stats[0] = stats.duplicate()
 
 	EventBus.ending_stats_snapshot_ready.connect(on_snapshot)
 	EventBus.ending_triggered.connect(on_triggered)
 
 	EventBus.completion_reached.emit("time_limit")
 
-	assert_false(snapshot.is_empty(), "Snapshot must not be empty")
+	assert_false(snapshot[0].is_empty(), "Snapshot must not be empty")
 	assert_eq(
-		final_stats,
-		snapshot,
+		final_stats[0],
+		snapshot[0],
 		"final_stats in ending_triggered must equal the emitted snapshot"
 	)
 
@@ -139,7 +139,7 @@ func test_final_stats_matches_snapshot() -> void:
 
 
 ## Acceptance criterion 3: ending_id matches deterministic stub stats.
-## Seed stats to hit a specific ending threshold (just_getting_by fallback here).
+## Seed no stats so the evaluator resolves to the broke_even fallback.
 func test_ending_id_matches_catalog_threshold() -> void:
 	var triggered_id: Array = [&""]
 	var on_triggered: Callable = func(
@@ -152,8 +152,8 @@ func test_ending_id_matches_catalog_threshold() -> void:
 
 	assert_eq(
 		triggered_id[0],
-		&"just_getting_by",
-		"With zero stats, evaluate() must match the fallback just_getting_by ending"
+		&"broke_even",
+		"With zero stats, evaluate() must match the fallback broke_even ending"
 	)
 
 	EventBus.ending_triggered.disconnect(on_triggered)

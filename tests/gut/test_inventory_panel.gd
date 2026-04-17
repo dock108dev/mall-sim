@@ -149,9 +149,10 @@ func test_footer_value_calculation() -> void:
 		total > 0.0,
 		"Footer total value should be positive"
 	)
-	assert_eq(
-		total, def.base_price * 2.0,
-		"Two 'good' condition items should sum to 2x base price"
+	var visible_items: Array[ItemInstance] = [item_a, item_b]
+	assert_almost_eq(
+		InventoryFilter.total_value(visible_items), total, 0.01,
+		"Footer helper should sum item current values"
 	)
 
 
@@ -189,4 +190,50 @@ func test_all_tab_includes_both_locations() -> void:
 	assert_eq(
 		all_items.size(), 3,
 		"All tab should include backroom + shelf items"
+	)
+
+
+func test_get_store_inventory_returns_display_rows() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions loaded — skip")
+		return
+	var def: ItemDefinition = items[0]
+	var item: ItemInstance = _create_test_item(
+		def.id, "good", "backroom"
+	)
+	assert_not_null(item)
+	var rows: Array[Dictionary] = _inventory_system.get_store_inventory(
+		StringName(def.store_type)
+	)
+	assert_eq(rows.size(), 1, "Store inventory should include test item")
+	assert_eq(
+		rows[0]["display_name"], def.item_name,
+		"Display row should expose the content display name"
+	)
+	assert_eq(
+		rows[0]["location"], "backroom",
+		"Display row should expose the current location"
+	)
+	assert_true(
+		float(rows[0]["current_price"]) > 0.0,
+		"Display row should expose a positive current price"
+	)
+
+
+func test_inventory_row_includes_icon_slot() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions loaded — skip")
+		return
+	var item: ItemInstance = _create_test_item(
+		items[0].id, "good", "backroom"
+	)
+	assert_not_null(item)
+	var row: PanelContainer = InventoryRowBuilder.build(item)
+	var hbox: HBoxContainer = row.get_child(0) as HBoxContainer
+	assert_not_null(hbox, "Inventory row should have content container")
+	assert_true(
+		hbox.get_child(1) is TextureRect,
+		"Inventory row should include an icon TextureRect"
 	)

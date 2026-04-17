@@ -126,6 +126,20 @@ func get_unlocked_tiers() -> Array[int]:
 	return result
 
 
+## Submits a cart of items as a single atomic order transaction.
+func submit_order(
+	store_id: StringName,
+	supplier_tier: SupplierTier,
+	cart_items: Array[Dictionary],
+) -> bool:
+	var submission: Dictionary = _prepare_submission(
+		store_id, supplier_tier, cart_items
+	)
+	if submission.is_empty():
+		return false
+	return _commit_submission(submission)
+
+
 ## Places a stock order. Returns true on success, false on failure.
 func place_order(
 	store_id: StringName,
@@ -133,87 +147,10 @@ func place_order(
 	item_id: StringName,
 	quantity: int,
 ) -> bool:
-	var canonical_store_id: StringName = _resolve_store_id(store_id)
-	var canonical_item_id: StringName = _resolve_item_id(item_id)
-	if canonical_store_id.is_empty():
-		push_error("OrderSystem: invalid store_id '%s'" % store_id)
-		EventBus.order_failed.emit("Invalid store")
-		return false
-	if quantity <= 0:
-		EventBus.order_failed.emit("Invalid quantity")
-		return false
-	if not is_tier_unlocked(supplier_tier, canonical_store_id):
-		EventBus.order_failed.emit("Supplier tier locked")
-		return false
-	var item_def: ItemDefinition = _resolve_item(canonical_item_id)
-	if not item_def:
-		EventBus.order_failed.emit(
-			"Item '%s' not found" % canonical_item_id
-		)
-		return false
-	if not is_item_in_tier_catalog(item_def, supplier_tier):
-		EventBus.order_failed.emit(
-			"'%s' not available at %s tier"
-			% [
-				_get_item_display_name(item_def),
-				TIER_CONFIG[supplier_tier]["name"],
-			]
-		)
-		return false
-	if not _can_store_order_item(canonical_store_id, item_def):
-		EventBus.order_failed.emit(
-			"'%s' not available for %s"
-			% [
-				_get_item_display_name(item_def),
-				ContentRegistry.get_display_name(canonical_store_id),
-			]
-		)
-		return false
-	if _has_pending_order(canonical_store_id, canonical_item_id):
-		EventBus.order_failed.emit(
-			"Order for '%s' already pending" % canonical_item_id
-		)
-		return false
-	var unit_cost: float = get_order_cost(item_def, supplier_tier)
-	var total_cost: float = unit_cost * quantity
-	var daily_limit: float = get_daily_limit(supplier_tier)
-	var spent: float = _get_tier_spending(supplier_tier)
-	if spent + total_cost > daily_limit:
-		EventBus.order_failed.emit(
-			"Daily order limit ($%.0f) exceeded" % daily_limit
-		)
-		return false
-	var check_result: Array = []
-	EventBus.order_cash_check.emit(total_cost, check_result)
-	if check_result.is_empty() or not check_result[0]:
-		EventBus.order_failed.emit("Insufficient funds")
-		return false
-	var deduct_result: Array = []
-	EventBus.order_cash_deduct.emit(
-		total_cost,
-		"Order: %dx %s" % [quantity, _get_item_display_name(item_def)],
-		deduct_result,
-	)
-	if deduct_result.is_empty() or not deduct_result[0]:
-		EventBus.order_failed.emit("Payment failed")
-		return false
-	_add_tier_spending(supplier_tier, total_cost)
-	var delivery_day: int = (
-		GameManager.current_day + get_effective_delivery_days(supplier_tier)
-	)
-	var order: Dictionary = {
-		"store_id": String(canonical_store_id),
-		"supplier_tier": supplier_tier,
-		"item_id": String(canonical_item_id),
-		"quantity": quantity,
-		"unit_cost": unit_cost,
-		"delivery_day": delivery_day,
-	}
-	_pending_orders.append(order)
-	EventBus.order_placed.emit(
-		canonical_store_id, canonical_item_id, quantity, delivery_day
-	)
-	return true
+	var cart_items: Array[Dictionary] = [
+		{"item_id": String(item_id), "quantity": quantity},
+	]
+	return submit_order(store_id, supplier_tier, cart_items)
 
 
 ## Returns the number of pending orders.
@@ -489,6 +426,175 @@ func _resolve_item_id(item_id: StringName) -> StringName:
 	if canonical.is_empty():
 		return item_id
 	return canonical
+
+
+func _prepare_submission(
+	store_id: StringName,
+	supplier_tier: SupplierTier,
+	cart_items: Array[Dictionary],
+) -> Dictionary:
+	var canonical_store_id: StringName = _resolve_store_id(store_id)
+	if canonical_store_id.is_empty():
+		push_error("OrderSystem: invalid store_id '%s'" % store_id)
+		return _emit_order_failed("Invalid store")
+	if cart_items.is_empty():
+		return _emit_order_failed("Cart is empty")
+	if not is_tier_unlocked(supplier_tier, canonical_store_id):
+		return _emit_order_failed("Supplier tier locked")
+	var normalized_items: Array[Dictionary] = _normalize_cart_items(cart_items)
+	if normalized_items.is_empty():
+		return {}
+	var prepared_orders: Array[Dictionary] = []
+	var total_cost: float = 0.0
+	for entry: Dictionary in normalized_items:
+		var canonical_item_id: StringName = entry["item_id"] as StringName
+		var quantity: int = int(entry["quantity"])
+		var item_def: ItemDefinition = _resolve_item(canonical_item_id)
+		if not item_def:
+			return _emit_order_failed(
+				"Item '%s' not found" % canonical_item_id
+			)
+		if not is_item_in_tier_catalog(item_def, supplier_tier):
+			return _emit_order_failed(
+				"'%s' not available at %s tier"
+				% [
+					_get_item_display_name(item_def),
+					TIER_CONFIG[supplier_tier]["name"],
+				]
+			)
+		if not _can_store_order_item(canonical_store_id, item_def):
+			return _emit_order_failed(
+				"'%s' not available for %s"
+				% [
+					_get_item_display_name(item_def),
+					ContentRegistry.get_display_name(canonical_store_id),
+				]
+			)
+		if _has_pending_order(canonical_store_id, canonical_item_id):
+			return _emit_order_failed(
+				"Order for '%s' already pending" % canonical_item_id
+			)
+		var unit_cost: float = get_order_cost(item_def, supplier_tier)
+		var line_total: float = unit_cost * quantity
+		total_cost += line_total
+		prepared_orders.append({
+			"item_id": canonical_item_id,
+			"quantity": quantity,
+			"unit_cost": unit_cost,
+			"item_name": _get_item_display_name(item_def),
+		})
+	var daily_limit: float = get_daily_limit(supplier_tier)
+	var spent: float = _get_tier_spending(supplier_tier)
+	if spent + total_cost > daily_limit:
+		return _emit_order_failed(
+			"Daily order limit ($%.0f) exceeded" % daily_limit
+		)
+	var check_result: Array = []
+	EventBus.order_cash_check.emit(total_cost, check_result)
+	if check_result.is_empty() or not check_result[0]:
+		return _emit_order_failed("Insufficient funds")
+	return {
+		"store_id": canonical_store_id,
+		"supplier_tier": supplier_tier,
+		"orders": prepared_orders,
+		"total_cost": total_cost,
+	}
+
+
+func _commit_submission(submission: Dictionary) -> bool:
+	var total_cost: float = float(submission.get("total_cost", 0.0))
+	var deduct_result: Array = []
+	EventBus.order_cash_deduct.emit(
+		total_cost,
+		_build_submission_reason(submission),
+		deduct_result,
+	)
+	if deduct_result.is_empty() or not deduct_result[0]:
+		_emit_order_failed("Payment failed")
+		return false
+	var store_id: StringName = submission["store_id"] as StringName
+	var supplier_tier: SupplierTier = (
+		int(submission["supplier_tier"]) as SupplierTier
+	)
+	var delivery_day: int = (
+		GameManager.current_day + get_effective_delivery_days(supplier_tier)
+	)
+	_add_tier_spending(supplier_tier, total_cost)
+	var prepared_orders: Array = submission.get("orders", [])
+	for entry_value: Variant in prepared_orders:
+		if not entry_value is Dictionary:
+			continue
+		var entry: Dictionary = entry_value as Dictionary
+		var item_id: StringName = entry["item_id"] as StringName
+		var quantity: int = int(entry["quantity"])
+		var order: Dictionary = {
+			"store_id": String(store_id),
+			"supplier_tier": supplier_tier,
+			"item_id": String(item_id),
+			"quantity": quantity,
+			"unit_cost": float(entry["unit_cost"]),
+			"delivery_day": delivery_day,
+		}
+		_pending_orders.append(order)
+		EventBus.order_placed.emit(
+			store_id, item_id, quantity, delivery_day
+		)
+	return true
+
+
+func _normalize_cart_items(
+	cart_items: Array[Dictionary],
+) -> Array[Dictionary]:
+	var ordered_item_ids: Array[StringName] = []
+	var item_quantities: Dictionary = {}
+	for entry: Dictionary in cart_items:
+		var item_id: StringName = _extract_cart_item_id(entry)
+		if item_id.is_empty():
+			_emit_order_failed("Invalid item")
+			return []
+		var quantity: int = int(entry.get("quantity", 0))
+		if quantity <= 0:
+			_emit_order_failed("Invalid quantity")
+			return []
+		if not item_quantities.has(item_id):
+			item_quantities[item_id] = 0
+			ordered_item_ids.append(item_id)
+		item_quantities[item_id] = int(item_quantities[item_id]) + quantity
+	var normalized: Array[Dictionary] = []
+	for item_id: StringName in ordered_item_ids:
+		normalized.append({
+			"item_id": item_id,
+			"quantity": int(item_quantities[item_id]),
+		})
+	return normalized
+
+
+func _extract_cart_item_id(entry: Dictionary) -> StringName:
+	if entry.has("item_id"):
+		return _resolve_item_id(
+			StringName(str(entry.get("item_id", "")))
+		)
+	var item_def: ItemDefinition = entry.get("item_def", null) as ItemDefinition
+	if item_def:
+		return _resolve_item_id(StringName(item_def.id))
+	return &""
+
+
+func _build_submission_reason(submission: Dictionary) -> String:
+	var prepared_orders: Array = submission.get("orders", [])
+	if prepared_orders.size() == 1:
+		var only_entry: Dictionary = prepared_orders[0] as Dictionary
+		return "Order: %dx %s" % [
+			int(only_entry.get("quantity", 0)),
+			str(only_entry.get("item_name", "Unknown Item")),
+		]
+	var tier: SupplierTier = int(submission.get("supplier_tier", 0)) as SupplierTier
+	return "Stock order (%s)" % TIER_CONFIG[tier]["name"]
+
+
+func _emit_order_failed(reason: String) -> Dictionary:
+	EventBus.order_failed.emit(reason)
+	return {}
 
 
 func _get_tier_spending(tier: SupplierTier) -> float:

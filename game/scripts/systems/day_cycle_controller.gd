@@ -154,7 +154,7 @@ func _evaluate_endings() -> void:
 	if _ending_evaluator.has_ending_been_shown():
 		return
 	var ending_id: StringName = _ending_evaluator.evaluate()
-	if ending_id != &"just_getting_by":
+	if ending_id != EndingEvaluatorSystem.FALLBACK_ENDING_ID:
 		_ending_evaluator.force_ending(ending_id)
 
 

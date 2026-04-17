@@ -97,6 +97,14 @@ func test_skip_tutorial_persists_completion_and_prevents_restart() -> void:
 		GameManager.is_tutorial_active,
 		"Skipping should clear GameManager tutorial activity"
 	)
+	for step_index: int in range(TutorialSystem.STEP_COUNT):
+		var step_id: String = TutorialSystem.STEP_IDS.get(
+			step_index, ""
+		)
+		assert_true(
+			_tutorial._completed_steps.get(step_id, false) as bool,
+			"Skipping should mark %s complete" % step_id
+		)
 
 	var reloaded_tutorial: TutorialSystem = TutorialSystem.new()
 	add_child_autofree(reloaded_tutorial)
@@ -123,6 +131,36 @@ func test_skip_tutorial_persists_completion_and_prevents_restart() -> void:
 	)
 
 	EventBus.tutorial_step_changed.disconnect(on_restart_step)
+
+
+func test_gameplay_ready_completes_welcome_step() -> void:
+	_tutorial.initialize(true)
+
+	EventBus.gameplay_ready.emit()
+
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.WALK_TO_STORE,
+		"gameplay_ready should complete the welcome step"
+	)
+	assert_true(
+		_tutorial._completed_steps.get("welcome", false) as bool,
+		"Welcome should be tracked as completed"
+	)
+
+
+func test_load_progress_without_file_starts_first_step() -> void:
+	_tutorial.initialize(false)
+
+	assert_true(
+		_tutorial.tutorial_active,
+		"Missing persisted progress should begin tutorial"
+	)
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.WELCOME,
+		"Missing persisted progress should start at WELCOME"
+	)
 
 
 func test_contextual_tips_emit_once_per_trigger_id() -> void:

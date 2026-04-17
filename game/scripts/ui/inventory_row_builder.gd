@@ -13,6 +13,7 @@ static func build(item: ItemInstance) -> PanelContainer:
 
 	var rarity_key: String = _get_rarity(item)
 	hbox.add_child(_build_rarity_stripe(rarity_key))
+	hbox.add_child(_build_icon(item))
 	hbox.add_child(_build_info_column(item, rarity_key))
 	hbox.add_child(_build_price_column(item))
 	row.add_child(hbox)
@@ -47,6 +48,19 @@ static func _build_rarity_stripe(rarity_key: String) -> ColorRect:
 	rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	rect.color = UIThemeConstants.get_rarity_color(rarity_key)
 	return rect
+
+
+static func _build_icon(item: ItemInstance) -> TextureRect:
+	var icon := TextureRect.new()
+	icon.custom_minimum_size = Vector2(32, 32)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	if not item.definition or item.definition.icon_path.is_empty():
+		return icon
+	var tex: Texture2D = load(item.definition.icon_path) as Texture2D
+	if tex:
+		icon.texture = tex
+	return icon
 
 
 static func _build_info_column(

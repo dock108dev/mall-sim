@@ -1,18 +1,21 @@
-## Manages the load/unload cycle for store interior scenes during transitions.
+## Manages additive hallway/store scene transitions and related runtime signals.
 class_name StoreSelectorSystem
 extends Node
 
-const FADE_DURATION: float = 0.3
 const _PlayerControllerScene: PackedScene = preload(
 	"res://game/scenes/player/player_controller.tscn"
 )
+const _STORE_ENTRY_MARKER_NAMES: Array[StringName] = [
+	&"PlayerEntrySpawn",
+	&"EntryPoint",
+	&"OrbitPivot",
+]
 
 var _store_state_manager: StoreStateManager
 var _hallway_node: Node3D
 var _store_container: Node3D
 var _hallway_camera: PlayerController
 var _ui_layer: CanvasLayer
-var _fade_rect: ColorRect
 var _active_store_scene: Node3D
 var _store_camera: PlayerController
 var _is_transitioning: bool = false
@@ -23,8 +26,7 @@ var _preloaded_scenes: Dictionary = {}
 
 func _ready() -> void:
 	_active_store_id = _resolve_store_id(GameManager.current_store_id)
-	if not EventBus.active_store_changed.is_connected(_on_active_store_changed):
-		EventBus.active_store_changed.connect(_on_active_store_changed)
+	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
 
 
 ## Injects runtime references. Must be called after construction, not in _ready.
@@ -40,13 +42,12 @@ func initialize(
 	_store_container = store_container
 	_hallway_camera = hallway_camera
 	_ui_layer = ui_layer
-	_setup_fade_rect()
 	_preload_store_scenes()
+	_register_hallway_camera()
 	_active_store_id = _resolve_store_id(GameManager.current_store_id)
-	EventBus.enter_store_requested.connect(_on_enter_store_requested)
-	EventBus.exit_store_requested.connect(_on_exit_store_requested)
-	if not EventBus.active_store_changed.is_connected(_on_active_store_changed):
-		EventBus.active_store_changed.connect(_on_active_store_changed)
+	_connect_signal(EventBus.enter_store_requested, _on_enter_store_requested)
+	_connect_signal(EventBus.exit_store_requested, _on_exit_store_requested)
+	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
 
 
 ## Returns true when a store interior is currently loaded.
@@ -80,6 +81,101 @@ func select_store(store_id: StringName) -> void:
 		_store_state_manager.set_active_store(store_id)
 
 
+## Enters the requested store interior and returns whether the transition ran.
+func enter_store(store_id: StringName) -> bool:
+	if _is_transitioning or _inside_store:
+		return false
+
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		push_error(
+			"StoreSelectorSystem: unknown store_id '%s'" % store_id
+		)
+		return false
+
+	var slot_index: int = _find_slot_for_store(canonical)
+
+	var store_scene: PackedScene = _get_store_scene(canonical)
+	if store_scene == null:
+		push_error(
+			"StoreSelectorSystem: failed to load scene for '%s'"
+			% canonical
+		)
+		return false
+
+	var loaded_scene: Node3D = store_scene.instantiate() as Node3D
+	if loaded_scene == null:
+		push_error(
+			"StoreSelectorSystem: scene for '%s' did not instantiate as Node3D"
+			% canonical
+		)
+		return false
+
+	var loaded_camera: PlayerController = (
+		_PlayerControllerScene.instantiate() as PlayerController
+	)
+	if loaded_camera == null:
+		loaded_scene.queue_free()
+		push_error(
+			"StoreSelectorSystem: failed to instantiate store camera for '%s'"
+			% canonical
+		)
+		return false
+
+	_is_transitioning = true
+	_store_container.add_child(loaded_scene)
+	loaded_camera.name = "StoreCamera"
+	_store_container.add_child(loaded_camera)
+	_move_store_camera_to_spawn(loaded_scene, loaded_camera)
+	_register_store_camera(canonical, loaded_camera)
+
+	_active_store_scene = loaded_scene
+	_store_camera = loaded_camera
+	_inside_store = true
+
+	_set_active_store_for_transition(canonical)
+	EventBus.store_entered.emit(canonical)
+	EventBus.store_opened.emit(String(canonical))
+	if slot_index >= 0:
+		EventBus.storefront_entered.emit(slot_index, String(canonical))
+
+	_hallway_node.visible = false
+	_set_hallway_camera_enabled(false)
+	_is_transitioning = false
+	return true
+
+
+## Exits the current store interior and returns whether the transition ran.
+func exit_store() -> bool:
+	if _is_transitioning or not _inside_store:
+		return false
+
+	var leaving_id: StringName = _active_store_id
+	_is_transitioning = true
+
+	if not leaving_id.is_empty() and _store_state_manager:
+		_store_state_manager.save_store_state(String(leaving_id))
+
+	EventBus.store_exited.emit(leaving_id)
+	_hallway_node.visible = true
+	_set_hallway_camera_enabled(true)
+	_move_hallway_camera_to_storefront(leaving_id)
+	_set_active_store_for_transition(&"")
+	EventBus.store_closed.emit(String(leaving_id))
+	EventBus.storefront_exited.emit()
+
+	if _store_camera:
+		_store_camera.queue_free()
+		_store_camera = null
+	if _active_store_scene:
+		_active_store_scene.queue_free()
+		_active_store_scene = null
+
+	_inside_store = false
+	_is_transitioning = false
+	return true
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not _inside_store:
 		return
@@ -89,112 +185,85 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_enter_store_requested(store_id: StringName) -> void:
-	if _is_transitioning:
-		return
-
-	var canonical: StringName = ContentRegistry.resolve(String(store_id))
-	if canonical.is_empty():
-		push_error(
-			"StoreSelectorSystem: unknown store_id '%s'" % store_id
-		)
-		return
-
-	var store_scene: PackedScene = _get_store_scene(canonical)
-	if not store_scene:
-		push_error(
-			"StoreSelectorSystem: failed to load scene for '%s'"
-			% canonical
-		)
-		return
-
-	_is_transitioning = true
-	var old_store: String = GameManager.current_store_id
-	if not old_store.is_empty() and _store_state_manager:
-		_store_state_manager.save_store_state(old_store)
-
-	await _fade_in()
-
-	_active_store_scene = store_scene.instantiate()
-	_store_container.add_child(_active_store_scene)
-
-	_hallway_node.visible = false
-	_hallway_camera.set_process(false)
-	_hallway_camera.set_process_unhandled_input(false)
-
-	_store_camera = (
-		_PlayerControllerScene.instantiate() as PlayerController
-	)
-	_store_camera.name = "StoreCamera"
-	_store_container.add_child(_store_camera)
-
-	_move_camera_to_spawn()
-
-	_inside_store = true
-	GameManager.current_store_id = String(canonical)
-	_store_state_manager.set_active_store(canonical)
-	EventBus.store_opened.emit(String(canonical))
-
-	var slot_index: int = _find_slot_for_store(canonical)
-	EventBus.storefront_entered.emit(slot_index, String(canonical))
-	if not old_store.is_empty():
-		EventBus.store_switched.emit(old_store, String(canonical))
-
-	await _fade_out()
-	_is_transitioning = false
+	enter_store(store_id)
 
 
 func _on_exit_store_requested() -> void:
-	if _is_transitioning or not _inside_store:
+	exit_store()
+
+
+func _move_store_camera_to_spawn(
+	store_scene: Node3D,
+	store_camera: PlayerController
+) -> void:
+	var spawn: Node3D = _find_store_entry_spawn(store_scene)
+	if spawn == null:
+		return
+	store_camera.set_pivot(spawn.global_position)
+
+
+func _move_hallway_camera_to_storefront(store_id: StringName) -> void:
+	if _hallway_camera == null:
+		return
+	var slot_index: int = _find_slot_for_store(store_id)
+	if slot_index < 0:
+		return
+	var marker: Marker3D = _find_hallway_storefront_marker(slot_index)
+	if marker == null:
+		return
+	_hallway_camera.set_pivot(marker.global_position)
+
+
+func _find_store_entry_spawn(store_scene: Node3D) -> Node3D:
+	for marker_name: StringName in _STORE_ENTRY_MARKER_NAMES:
+		var marker: Node = store_scene.find_child(
+			String(marker_name), true, false
+		)
+		if marker is Node3D:
+			return marker as Node3D
+	return null
+
+
+func _find_hallway_storefront_marker(slot_index: int) -> Marker3D:
+	var hallway_root: Node = _get_hallway_root()
+	if hallway_root == null:
+		return null
+	return hallway_root.get_node_or_null(
+		"WaypointGraph/StoreEntrance_%d" % slot_index
+	) as Marker3D
+
+
+func _get_hallway_root() -> Node:
+	if _hallway_node and _hallway_node.get_parent() != null:
+		return _hallway_node.get_parent()
+	if _hallway_camera and _hallway_camera.get_parent() != null:
+		return _hallway_camera.get_parent()
+	return null
+
+
+func _set_active_store_for_transition(store_id: StringName) -> void:
+	if _store_state_manager:
+		_store_state_manager.set_active_store(store_id, false)
 		return
 
-	var leaving_id: StringName = _active_store_id
-	_is_transitioning = true
-
-	if not leaving_id.is_empty() and _store_state_manager:
-		_store_state_manager.save_store_state(String(leaving_id))
-
-	await _fade_in()
-
-	if _store_camera:
-		_store_container.remove_child(_store_camera)
-		_store_camera.queue_free()
-		_store_camera = null
-
-	if _active_store_scene:
-		_store_container.remove_child(_active_store_scene)
-		_active_store_scene.queue_free()
-		_active_store_scene = null
-
-	_hallway_node.visible = true
-	_hallway_camera.set_process(true)
-	_hallway_camera.set_process_unhandled_input(true)
-	_inside_store = false
-
-	GameManager.current_store_id = ""
-	EventBus.store_closed.emit(String(leaving_id))
-	_store_state_manager.set_active_store(&"")
-	EventBus.storefront_exited.emit()
-
-	await _fade_out()
-	_is_transitioning = false
+	var canonical: StringName = _resolve_store_id(store_id)
+	GameManager.current_store_id = canonical
+	EventBus.active_store_changed.emit(canonical)
 
 
-func _move_camera_to_spawn() -> void:
-	if not _active_store_scene:
+func _set_hallway_camera_enabled(enabled: bool) -> void:
+	if _hallway_camera == null:
 		return
-	var orbit_pivot: Node3D = (
-		_active_store_scene.find_child("OrbitPivot", true, false)
-	)
-	if orbit_pivot and _store_camera:
-		_store_camera.set_pivot(orbit_pivot.global_position)
+	_hallway_camera.set_process(enabled)
+	_hallway_camera.set_process_unhandled_input(enabled)
 
 
 func _find_slot_for_store(store_id: StringName) -> int:
 	if not _store_state_manager:
 		return -1
-	for slot: Variant in _store_state_manager.owned_slots:
+	for slot: int in _store_state_manager.owned_slots:
 		if _store_state_manager.owned_slots[slot] == store_id:
-			return int(slot)
+			return slot
 	return -1
 
 
@@ -205,6 +274,11 @@ func _preload_store_scenes() -> void:
 	for store_id: StringName in store_ids:
 		var path: String = ContentRegistry.get_scene_path(store_id)
 		if path.is_empty():
+			continue
+		if not ResourceLoader.exists(path):
+			push_warning(
+				"StoreSelectorSystem: failed to preload '%s'" % path
+			)
 			continue
 		var scene: PackedScene = load(path) as PackedScene
 		if scene:
@@ -219,9 +293,30 @@ func _get_store_scene(store_id: StringName) -> PackedScene:
 	if _preloaded_scenes.has(store_id):
 		return _preloaded_scenes[store_id]
 	var path: String = ContentRegistry.get_scene_path(store_id)
-	if path.is_empty():
+	if path.is_empty() or not ResourceLoader.exists(path):
 		return null
 	return load(path) as PackedScene
+
+
+func _register_hallway_camera() -> void:
+	if _hallway_camera == null:
+		return
+	var hallway_view: Camera3D = _hallway_camera.get_camera()
+	if hallway_view == null:
+		return
+	CameraManager.register_hallway_camera(hallway_view)
+
+
+func _register_store_camera(
+	store_id: StringName,
+	store_camera: PlayerController
+) -> void:
+	if store_camera == null:
+		return
+	var store_view: Camera3D = store_camera.get_camera()
+	if store_view == null:
+		return
+	CameraManager.register_store_camera(store_id, store_view)
 
 
 func _on_active_store_changed(store_id: StringName) -> void:
@@ -238,28 +333,6 @@ func _resolve_store_id(raw_store_id: Variant) -> StringName:
 	return canonical
 
 
-func _setup_fade_rect() -> void:
-	_fade_rect = ColorRect.new()
-	_fade_rect.name = "StoreSelectorFadeRect"
-	_fade_rect.color = Color(0.0, 0.0, 0.0, 0.0)
-	_fade_rect.anchors_preset = Control.PRESET_FULL_RECT
-	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_layer.add_child(_fade_rect)
-
-
-func _fade_in() -> void:
-	if not _fade_rect:
-		return
-	_fade_rect.mouse_filter = Control.MOUSE_FILTER_STOP
-	var tween: Tween = create_tween()
-	tween.tween_property(_fade_rect, "color:a", 1.0, FADE_DURATION)
-	await tween.finished
-
-
-func _fade_out() -> void:
-	if not _fade_rect:
-		return
-	var tween: Tween = create_tween()
-	tween.tween_property(_fade_rect, "color:a", 0.0, FADE_DURATION)
-	await tween.finished
-	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+func _connect_signal(signal_ref: Signal, callable: Callable) -> void:
+	if not signal_ref.is_connected(callable):
+		signal_ref.connect(callable)

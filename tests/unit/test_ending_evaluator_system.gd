@@ -49,7 +49,7 @@ func test_secret_ending_priority_over_success() -> void:
 		"days_survived": 30.0,
 	})
 	assert_eq(
-		_system.evaluate(), &"the_ghost_between_the_walls",
+		_system.evaluate(), &"the_mall_between_the_walls",
 		"Secret ending should take priority over success endings"
 	)
 
@@ -171,17 +171,6 @@ func test_the_fair_dealer_blocked_by_haggle() -> void:
 	)
 
 
-func test_the_collector() -> void:
-	_load_stats({
-		"rare_items_sold": 10.0,
-		"cumulative_revenue": 5000.0, "days_survived": 30.0,
-	})
-	assert_eq(
-		_system.evaluate(), &"the_collector",
-		"10 rare items + 5000 revenue = the_collector"
-	)
-
-
 func test_broke_even_low_revenue() -> void:
 	_load_stats({
 		"days_survived": 30.0, "final_cash": 100.0,
@@ -228,21 +217,21 @@ func test_forbidden_all_blocks_success_endings() -> void:
 	)
 
 
-func test_fallback_just_getting_by() -> void:
+func test_fallback_broke_even() -> void:
 	_load_stats({
 		"days_survived": 30.0,
 		"cumulative_revenue": 500.0,
 	})
 	assert_eq(
-		_system.evaluate(), &"just_getting_by",
-		"Low revenue with no matching criteria = just_getting_by"
+		_system.evaluate(), &"broke_even",
+		"No-match runs should fall back to broke_even"
 	)
 
 
 func test_default_fallback_zero_stats() -> void:
 	assert_eq(
-		_system.evaluate(), &"just_getting_by",
-		"Zero stats should return fallback just_getting_by"
+		_system.evaluate(), &"broke_even",
+		"Zero stats should return fallback broke_even"
 	)
 
 

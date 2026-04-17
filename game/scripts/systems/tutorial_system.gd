@@ -48,6 +48,7 @@ const PROGRESS_PATH: String = "user://tutorial_progress.cfg"
 const WELCOME_DURATION: float = 5.0
 const MOVEMENT_THRESHOLD: float = 5.0
 const CONTEXTUAL_TIP_DAYS: int = 3
+const STEP_COUNT: int = TutorialStep.FINISHED
 
 const CONTEXTUAL_TIP_KEYS: Dictionary = {
 	"ordering": "TIP_ORDERING",
@@ -59,15 +60,18 @@ var tutorial_completed: bool = false
 var tutorial_active: bool = false
 var current_step: TutorialStep = TutorialStep.WELCOME
 var _tips_shown: Dictionary = {}
+var _completed_steps: Dictionary = {}
 var _welcome_timer: float = 0.0
 var _movement_accumulated: float = 0.0
 
 
+## Starts a new tutorial session or resumes persisted first-play progress.
 func initialize(is_new_game: bool) -> void:
 	if is_new_game:
 		_apply_state({
 			"tutorial_completed": false,
 			"current_step": TutorialStep.WELCOME,
+			"completed_steps": {},
 		})
 		_save_progress()
 		return
@@ -77,6 +81,8 @@ func initialize(is_new_game: bool) -> void:
 
 
 func _connect_signals() -> void:
+	if not EventBus.gameplay_ready.is_connected(_on_gameplay_ready):
+		EventBus.gameplay_ready.connect(_on_gameplay_ready)
 	if not EventBus.skip_tutorial_requested.is_connected(
 		skip_tutorial
 	):
@@ -103,6 +109,8 @@ func _connect_signals() -> void:
 
 
 func _disconnect_step_signals() -> void:
+	if EventBus.gameplay_ready.is_connected(_on_gameplay_ready):
+		EventBus.gameplay_ready.disconnect(_on_gameplay_ready)
 	if EventBus.skip_tutorial_requested.is_connected(
 		skip_tutorial
 	):
@@ -140,17 +148,17 @@ func _process(delta: float) -> void:
 		_track_movement(delta)
 
 
+## Marks every tutorial step complete and permanently disables prompts.
 func skip_tutorial() -> void:
 	if not tutorial_active:
 		return
-	tutorial_active = false
-	tutorial_completed = true
-	GameManager.is_tutorial_active = false
-	_disconnect_step_signals()
-	_save_progress()
+	_mark_all_steps_complete(true)
+	current_step = TutorialStep.FINISHED
 	EventBus.tutorial_skipped.emit()
+	_complete_tutorial()
 
 
+## Returns the localized prompt for the active step, or an empty string.
 func get_current_step_text() -> String:
 	var key: String = STEP_TEXT_KEYS.get(current_step, "")
 	if key.is_empty():
@@ -158,27 +166,36 @@ func get_current_step_text() -> String:
 	return tr(key)
 
 
+## Serializes tutorial progress for the save-game payload.
 func get_save_data() -> Dictionary:
 	var tips_data: Dictionary = {}
 	for key: String in _tips_shown:
 		tips_data[key] = _tips_shown[key]
+	var completed_data: Dictionary = {}
+	for key: String in _completed_steps:
+		completed_data[key] = _completed_steps[key]
 	return {
 		"tutorial_completed": tutorial_completed,
 		"tutorial_active": tutorial_active,
 		"current_step": current_step,
+		"completed_steps": completed_data,
 		"tips_shown": tips_data,
 	}
 
 
+## Restores tutorial progress from save-game data.
 func load_save_data(data: Dictionary) -> void:
 	_apply_state(data)
 	_save_progress()
 
 
 func _advance_step() -> void:
+	if not tutorial_active or tutorial_completed:
+		return
 	var old_step_id: String = STEP_IDS.get(
 		current_step, "unknown"
 	)
+	_completed_steps[old_step_id] = true
 	EventBus.tutorial_step_completed.emit(old_step_id)
 
 	var next_value: int = current_step + 1
@@ -192,17 +209,23 @@ func _advance_step() -> void:
 	_emit_current_step()
 
 
-func _complete_tutorial() -> void:
+func _complete_tutorial(should_save: bool = true) -> void:
+	if tutorial_completed and not tutorial_active:
+		return
 	current_step = TutorialStep.FINISHED
 	tutorial_active = false
 	tutorial_completed = true
 	GameManager.is_tutorial_active = false
 	_disconnect_step_signals()
-	_save_progress()
+	if should_save:
+		_mark_all_steps_complete(false)
+		_save_progress()
 	EventBus.tutorial_completed.emit()
 
 
 func _emit_current_step() -> void:
+	if not tutorial_active or tutorial_completed:
+		return
 	var step_id: String = STEP_IDS.get(current_step, "unknown")
 	EventBus.tutorial_step_changed.emit(step_id)
 
@@ -219,6 +242,13 @@ func _track_movement(delta: float) -> void:
 		return
 	_movement_accumulated += input.length() * delta * 6.0
 	if _movement_accumulated >= MOVEMENT_THRESHOLD:
+		_advance_step()
+
+
+func _on_gameplay_ready() -> void:
+	if not tutorial_active:
+		return
+	if current_step == TutorialStep.WELCOME:
 		_advance_step()
 
 
@@ -333,6 +363,10 @@ func _save_progress() -> void:
 	config.set_value("tutorial", "completed", tutorial_completed)
 	config.set_value("tutorial", "current_step", current_step)
 	config.set_value("tutorial", "active", tutorial_active)
+	var completed_data: Dictionary = {}
+	for key: String in _completed_steps:
+		completed_data[key] = _completed_steps[key]
+	config.set_value("tutorial", "completed_steps", completed_data)
 	var tips_data: Dictionary = {}
 	for key: String in _tips_shown:
 		tips_data[key] = _tips_shown[key]
@@ -348,6 +382,11 @@ func _load_progress() -> void:
 	var config := ConfigFile.new()
 	var err: Error = config.load(PROGRESS_PATH)
 	if err != OK:
+		_apply_state({
+			"tutorial_completed": false,
+			"current_step": TutorialStep.WELCOME,
+			"completed_steps": {},
+		})
 		return
 	var data: Dictionary = {
 		"tutorial_completed": config.get_value(
@@ -358,6 +397,9 @@ func _load_progress() -> void:
 		),
 		"tutorial_active": config.get_value(
 			"tutorial", "active", false
+		),
+		"completed_steps": config.get_value(
+			"tutorial", "completed_steps", {}
 		),
 		"tips_shown": config.get_value(
 			"tutorial", "tips_shown", {}
@@ -373,6 +415,19 @@ func _apply_state(data: Dictionary) -> void:
 	current_step = int(
 		data.get("current_step", TutorialStep.WELCOME)
 	) as TutorialStep
+
+	_completed_steps.clear()
+	var completed_data: Variant = data.get("completed_steps", {})
+	if completed_data is Dictionary:
+		var completed_dict: Dictionary = completed_data as Dictionary
+		for key: Variant in completed_dict:
+			if bool(completed_dict[key]):
+				_completed_steps[str(key)] = true
+	if tutorial_completed:
+		current_step = TutorialStep.FINISHED
+	else:
+		current_step = _resolve_resume_step(current_step)
+		tutorial_completed = current_step == TutorialStep.FINISHED
 
 	_tips_shown.clear()
 	var tips_data: Variant = data.get("tips_shown", {})
@@ -394,3 +449,23 @@ func _apply_state(data: Dictionary) -> void:
 		GameManager.is_tutorial_active = true
 		_connect_signals()
 		_emit_current_step()
+
+
+func _resolve_resume_step(saved_step: TutorialStep) -> TutorialStep:
+	if saved_step == TutorialStep.FINISHED:
+		return saved_step
+	for step_index: int in range(STEP_COUNT):
+		var step_id: String = STEP_IDS.get(step_index, "")
+		if not _completed_steps.get(step_id, false):
+			return step_index as TutorialStep
+	return TutorialStep.FINISHED
+
+
+func _mark_all_steps_complete(emit_missing: bool) -> void:
+	for step_index: int in range(STEP_COUNT):
+		var step_id: String = STEP_IDS.get(step_index, "")
+		if step_id.is_empty() or _completed_steps.get(step_id, false):
+			continue
+		_completed_steps[step_id] = true
+		if emit_missing:
+			EventBus.tutorial_step_completed.emit(step_id)

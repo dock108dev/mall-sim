@@ -125,18 +125,16 @@ func close_dialog() -> void:
 
 ## Returns the lease cost for the next store unlock.
 func get_unlock_cost() -> float:
-	var index: int = _owned_stores.size()
-	if index <= 0 or index >= UNLOCK_REQUIREMENTS.size():
-		return 0.0
-	return float(UNLOCK_REQUIREMENTS[index].get("cost", 0))
+	return StoreStateManager.get_setup_fee_for_slot_index(
+		_current_slot_index
+	)
 
 
 ## Returns the reputation required for the next store unlock.
 func get_unlock_reputation() -> float:
-	var index: int = _owned_stores.size()
-	if index <= 0 or index >= UNLOCK_REQUIREMENTS.size():
-		return 0.0
-	return float(UNLOCK_REQUIREMENTS[index].get("reputation", 0))
+	return StoreStateManager.get_reputation_requirement_for_slot_index(
+		_current_slot_index
+	)
 
 
 func _can_afford() -> bool:
@@ -185,9 +183,11 @@ func _generate_default_name() -> String:
 
 
 func _update_requirements_label() -> void:
-	var store_num: int = _owned_stores.size() + 1
-	var index: int = _owned_stores.size()
-	if index <= 0 or index >= UNLOCK_REQUIREMENTS.size():
+	var store_num: int = _current_slot_index + 1
+	if (
+		_current_slot_index < 0
+		or _current_slot_index >= UNLOCK_REQUIREMENTS.size()
+	):
 		_req_label.text = "No additional stores available."
 		return
 

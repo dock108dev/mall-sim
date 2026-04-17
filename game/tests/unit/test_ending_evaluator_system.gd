@@ -83,6 +83,16 @@ func test_customer_purchased_accumulates_revenue_and_sales() -> void:
 	)
 
 
+func test_total_sales_count_reaches_three_after_three_purchases() -> void:
+	EventBus.customer_purchased.emit(&"store", &"item_a", 10.0, &"cust")
+	EventBus.customer_purchased.emit(&"store", &"item_b", 20.0, &"cust")
+	EventBus.customer_purchased.emit(&"store", &"item_c", 30.0, &"cust")
+	assert_eq(
+		_system.get_tracked_stat(&"total_sales_count"), 3.0,
+		"3 customer_purchased signals should yield total_sales_count == 3"
+	)
+
+
 func test_customer_left_increments_correct_counter() -> void:
 	EventBus.customer_left.emit({"satisfied": true})
 	EventBus.customer_left.emit({"satisfied": true})
@@ -147,11 +157,12 @@ func test_ghost_thread_sets_flag_other_threads_do_not() -> void:
 	)
 
 
-func test_random_event_ended_increments_market_events_survived() -> void:
-	EventBus.random_event_ended.emit("market_crash")
+func test_random_event_resolved_tracks_survived_only() -> void:
+	EventBus.random_event_resolved.emit(&"market_crash", &"survived")
+	EventBus.random_event_resolved.emit(&"market_crash", &"failed")
 	assert_eq(
 		_system.get_tracked_stat(&"market_events_survived"), 1.0,
-		"random_event_ended should increment market_events_survived"
+		"Only survived random events should increment market_events_survived"
 	)
 
 
@@ -209,11 +220,11 @@ func test_reputation_changed_updates_max_tier_and_never_decreases() -> void:
 # ── 3. evaluate() — one test per ending condition ──
 
 
-func test_ending_the_ghost_between_the_walls() -> void:
+func test_ending_the_mall_between_the_walls() -> void:
 	_load_stats({
 		"ghost_tenant_thread_completed": 1.0, "owned_store_count_final": 5.0,
 	})
-	assert_eq(_system.evaluate(), &"the_ghost_between_the_walls")
+	assert_eq(_system.evaluate(), &"the_mall_between_the_walls")
 
 
 func test_ending_the_mall_legend_redux() -> void:
@@ -291,13 +302,6 @@ func test_ending_the_fair_dealer_blocked_when_haggle_never_used_false() -> void:
 	)
 
 
-func test_ending_the_collector() -> void:
-	_load_stats({
-		"rare_items_sold": 10.0, "cumulative_revenue": 5000.0,
-	})
-	assert_eq(_system.evaluate(), &"the_collector")
-
-
 func test_ending_broke_even() -> void:
 	_load_stats({
 		"days_survived": 30.0, "final_cash": 100.0,
@@ -329,7 +333,7 @@ func test_secret_ending_priority_over_overlapping_success_endings() -> void:
 		"max_reputation_tier": 4.0,
 	})
 	assert_eq(
-		_system.evaluate(), &"the_ghost_between_the_walls",
+		_system.evaluate(), &"the_mall_between_the_walls",
 		"Secret ending must beat success endings when criteria overlap"
 	)
 
@@ -346,9 +350,9 @@ func test_forbidden_all_blocks_success_ending_on_bankruptcy() -> void:
 	)
 
 
-func test_fallback_just_getting_by_when_no_criteria_match() -> void:
-	assert_eq(_system.evaluate(), &"just_getting_by",
-		"Zero stats with no matching criteria returns just_getting_by"
+func test_fallback_broke_even_when_no_criteria_match() -> void:
+	assert_eq(_system.evaluate(), &"broke_even",
+		"Zero stats with no matching criteria returns broke_even"
 	)
 
 
@@ -385,6 +389,14 @@ func test_ending_requested_path_triggers_evaluation() -> void:
 	EventBus.ending_requested.emit("player_quit")
 	assert_signal_emitted(EventBus, "ending_triggered",
 		"ending_requested signal should invoke ending evaluation"
+	)
+
+
+func test_player_quit_to_end_path_triggers_evaluation() -> void:
+	watch_signals(EventBus)
+	EventBus.player_quit_to_end.emit()
+	assert_signal_emitted(EventBus, "ending_triggered",
+		"player_quit_to_end should invoke ending evaluation"
 	)
 
 

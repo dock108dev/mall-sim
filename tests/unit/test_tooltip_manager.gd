@@ -1,4 +1,4 @@
-## Unit tests for TooltipManager: delay behavior, show/hide, and dismiss rules.
+## Unit tests for TooltipManager show/hide, layout, and dismiss rules.
 extends GutTest
 
 
@@ -18,69 +18,85 @@ func test_initial_state_panel_hidden() -> void:
 	assert_false(_manager._panel.visible, "Panel should start invisible")
 
 
-func test_show_tooltip_sets_pending_state() -> void:
+func test_show_tooltip_shows_panel_immediately() -> void:
 	_manager.show_tooltip("Test text", Vector2(100, 100))
-	assert_false(
-		_manager._is_visible,
-		"Tooltip should not be visible before delay elapses"
-	)
-	assert_eq(_manager._pending_text, "Test text")
-	assert_true(
-		_manager._delay_timer > 0.0,
-		"Delay timer should be running"
-	)
+	assert_true(_manager._is_visible, "Tooltip should become visible immediately")
+	assert_true(_manager._panel.visible, "Tooltip panel should be visible after show")
+	assert_eq(_manager._label.text, "Test text")
 
 
-func test_hide_tooltip_cancels_pending() -> void:
+func test_hide_tooltip_hides_panel() -> void:
 	_manager.show_tooltip("Test", Vector2.ZERO)
 	_manager.hide_tooltip()
-	assert_eq(_manager._pending_text, "")
-	assert_true(
-		_manager._delay_timer < 0.0,
-		"Delay timer should be cancelled"
-	)
 	assert_false(_manager._is_visible)
+	assert_false(_manager._panel.visible)
 
 
 func test_show_empty_text_calls_hide() -> void:
 	_manager.show_tooltip("Hello", Vector2.ZERO)
 	_manager.show_tooltip("", Vector2.ZERO)
-	assert_eq(_manager._pending_text, "")
-	assert_true(_manager._delay_timer < 0.0)
+	assert_false(_manager._is_visible)
+	assert_false(_manager._panel.visible)
 
 
-func test_tooltip_appears_after_delay() -> void:
-	_manager.show_tooltip("Delayed text", Vector2(50, 50))
-	var steps: int = ceili(
-		PanelAnimator.TOOLTIP_HOVER_DELAY / 0.05
-	) + 1
-	for i: int in range(steps):
-		_manager._process(0.05)
-	assert_true(
-		_manager._is_visible,
-		"Tooltip should be visible after delay"
+func test_show_tooltip_applies_max_width_and_wrap() -> void:
+	var long_text: String = (
+		"This is a long tooltip sentence that should wrap before the panel "
+		+ "grows wider than the specified cap."
 	)
-	assert_eq(_manager._label.text, "Delayed text")
+	_manager.show_tooltip(long_text, Vector2.ZERO)
+	await get_tree().process_frame
+	assert_true(
+		_manager._panel.size.x <= TooltipManager.MAX_WIDTH,
+		"Tooltip panel width should not exceed the maximum width"
+	)
+	assert_eq(
+		_manager._label.autowrap_mode,
+		TextServer.AUTOWRAP_WORD_SMART,
+		"Tooltip label should wrap long text"
+	)
 
 
-func test_hide_during_delay_prevents_display() -> void:
-	_manager.show_tooltip("Should not appear", Vector2.ZERO)
-	_manager._process(0.1)
-	_manager.hide_tooltip()
-	_manager._process(0.3)
-	assert_false(
-		_manager._is_visible,
-		"Tooltip should not appear after hide during delay"
+func test_show_tooltip_clamps_to_viewport_bounds() -> void:
+	var viewport_size: Vector2 = _manager.get_viewport().get_visible_rect().size
+	var edge_position: Vector2 = viewport_size - Vector2(1.0, 1.0)
+	_manager.show_tooltip("Edge", edge_position)
+	await get_tree().process_frame
+	assert_true(
+		_manager._panel.global_position.x + _manager._panel.size.x
+			<= viewport_size.x - TooltipManager.SCREEN_MARGIN,
+		"Tooltip should remain within the viewport on the x axis"
+	)
+	assert_true(
+		_manager._panel.global_position.y + _manager._panel.size.y
+			<= viewport_size.y - TooltipManager.SCREEN_MARGIN,
+		"Tooltip should remain within the viewport on the y axis"
 	)
 
 
 func test_panel_opened_dismisses_tooltip() -> void:
 	_manager.show_tooltip("Will dismiss", Vector2.ZERO)
-	for i: int in range(10):
-		_manager._process(0.05)
 	assert_true(_manager._is_visible)
 	EventBus.panel_opened.emit("some_panel")
 	assert_false(
 		_manager._is_visible,
 		"Panel open should dismiss tooltip"
 	)
+
+
+func test_escape_dismisses_tooltip() -> void:
+	var event: InputEventKey = InputEventKey.new()
+	event.pressed = true
+	event.keycode = KEY_ESCAPE
+	_manager.show_tooltip("Dismiss me", Vector2.ZERO)
+	_manager._unhandled_input(event)
+	assert_false(_manager._is_visible, "Escape should dismiss the tooltip")
+
+
+func test_click_dismisses_tooltip() -> void:
+	var event: InputEventMouseButton = InputEventMouseButton.new()
+	event.pressed = true
+	event.button_index = MOUSE_BUTTON_LEFT
+	_manager.show_tooltip("Dismiss me", Vector2.ZERO)
+	_manager._unhandled_input(event)
+	assert_false(_manager._is_visible, "Click should dismiss the tooltip")

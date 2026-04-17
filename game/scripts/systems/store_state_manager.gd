@@ -78,21 +78,36 @@ func lease_store(
 	return true
 
 
-## Returns the setup fee for the next store based on current ownership count.
+## Backward-compatible wrapper for callers that pass the next slot index.
 static func get_setup_fee_for_owned_store_count(
 	owned_store_count: int
 ) -> float:
-	if owned_store_count <= 0:
+	return get_setup_fee_for_slot_index(owned_store_count)
+
+
+## Returns the setup fee for a storefront slot index.
+static func get_setup_fee_for_slot_index(slot_index: int) -> float:
+	if slot_index < 0 or slot_index >= LEASE_UNLOCK_REQUIREMENTS.size():
 		return 0.0
-	if owned_store_count >= LEASE_UNLOCK_REQUIREMENTS.size():
+	return float(LEASE_UNLOCK_REQUIREMENTS[slot_index].get("cost", 0.0))
+
+
+## Returns the mall reputation required for a storefront slot index.
+static func get_reputation_requirement_for_slot_index(
+	slot_index: int
+) -> float:
+	if slot_index < 0 or slot_index >= LEASE_UNLOCK_REQUIREMENTS.size():
 		return 0.0
 	return float(
-		LEASE_UNLOCK_REQUIREMENTS[owned_store_count].get("cost", 0.0)
+		LEASE_UNLOCK_REQUIREMENTS[slot_index].get("reputation", 0.0)
 	)
 
 
-## Updates the active store and emits active_store_changed.
-func set_active_store(store_id: StringName) -> void:
+## Updates the active store and optionally emits store transition signals.
+func set_active_store(
+	store_id: StringName,
+	emit_transition_events: bool = true
+) -> void:
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if not store_id.is_empty() and canonical.is_empty():
 		push_error(
@@ -104,9 +119,9 @@ func set_active_store(store_id: StringName) -> void:
 	active_store_id = canonical
 	GameManager.current_store_id = canonical
 	EventBus.active_store_changed.emit(canonical)
-	if not canonical.is_empty():
+	if emit_transition_events and not canonical.is_empty():
 		EventBus.store_entered.emit(canonical)
-	if not previous.is_empty() and previous != canonical:
+	if emit_transition_events and not previous.is_empty() and previous != canonical:
 		EventBus.store_exited.emit(previous)
 
 
@@ -440,9 +455,7 @@ func _on_lease_requested(
 		)
 		return
 
-	var lease_cost: float = get_setup_fee_for_owned_store_count(
-		GameManager.owned_stores.size()
-	)
+	var lease_cost: float = get_setup_fee_for_slot_index(slot_index)
 	var charged: bool = false
 	if _economy_system and lease_cost > 0.0:
 		charged = _economy_system.deduct_cash(

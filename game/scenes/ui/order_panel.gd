@@ -130,6 +130,19 @@ func open() -> void:
 	EventBus.panel_opened.emit(PANEL_NAME)
 
 
+func open_for_item_type(item_id: StringName) -> void:
+	open()
+	if item_id.is_empty():
+		return
+	var item_def: ItemDefinition = null
+	if GameManager.data_loader:
+		item_def = GameManager.data_loader.get_item(String(item_id))
+	_search_field.text = (
+		item_def.item_name if item_def else String(item_id)
+	)
+	_refresh_catalog()
+
+
 func close(immediate: bool = false) -> void:
 	if not _is_open:
 		return
@@ -175,7 +188,11 @@ func _build_tier_tabs() -> void:
 		var unlocked: bool = order_system.is_tier_unlocked(
 			tier, StringName(store_type)
 		)
-		btn.text = config["name"]
+		btn.text = (
+			config["name"]
+			if unlocked
+			else "%s [Locked]" % config["name"]
+		)
 		if not unlocked:
 			btn.disabled = true
 			btn.tooltip_text = _get_lock_tooltip(config)
@@ -255,8 +272,15 @@ func _refresh_catalog() -> void:
 		var cost: float = order_system.get_order_cost(
 			item_def, _selected_tier
 		)
+		var remaining_stock: int = _get_remaining_additional_quantity(
+			item_def
+		)
 		var row: PanelContainer = OrderRowBuilder.build_catalog_row(
-			item_def, cost, _on_add_to_cart.bind(item_def)
+			item_def,
+			cost,
+			remaining_stock,
+			remaining_stock > 0,
+			_on_add_to_cart.bind(item_def),
 		)
 		_catalog_grid.add_child(row)
 
@@ -289,13 +313,17 @@ func _filter_catalog(
 
 func _on_add_to_cart(item_def: ItemDefinition) -> void:
 	_error_label.visible = false
+	if not _can_add_item_to_cart(item_def):
+		return
 	for entry: Dictionary in _cart:
 		if (entry["item_def"] as ItemDefinition).id == item_def.id:
 			entry["quantity"] = int(entry["quantity"]) + 1
 			_refresh_cart_display()
+			_refresh_catalog()
 			return
 	_cart.append({"item_def": item_def, "quantity": 1})
 	_refresh_cart_display()
+	_refresh_catalog()
 
 
 func _refresh_cart_display() -> void:
@@ -322,6 +350,7 @@ func _create_cart_row(index: int) -> void:
 		item_def,
 		qty,
 		unit_cost * qty,
+		_get_remaining_additional_quantity(item_def) > 0,
 		_on_cart_quantity.bind(index, -1),
 		_on_cart_quantity.bind(index, 1),
 		_on_cart_remove.bind(index),
@@ -333,12 +362,16 @@ func _on_cart_quantity(index: int, delta: int) -> void:
 	if index < 0 or index >= _cart.size():
 		return
 	_error_label.visible = false
+	var item_def: ItemDefinition = _cart[index]["item_def"] as ItemDefinition
+	if delta > 0 and not _can_add_item_to_cart(item_def):
+		return
 	var new_qty: int = int(_cart[index]["quantity"]) + delta
 	if new_qty <= 0:
 		_cart.remove_at(index)
 	else:
 		_cart[index]["quantity"] = new_qty
 	_refresh_cart_display()
+	_refresh_catalog()
 
 
 func _on_cart_remove(index: int) -> void:
@@ -347,6 +380,7 @@ func _on_cart_remove(index: int) -> void:
 	_error_label.visible = false
 	_cart.remove_at(index)
 	_refresh_cart_display()
+	_refresh_catalog()
 
 
 func _update_cart_totals() -> void:
@@ -391,30 +425,23 @@ func _on_submit_pressed() -> void:
 		return
 	_error_label.visible = false
 	var sid: StringName = StringName(store_type)
-	var failed_items: PackedStringArray = []
-	var placed_indices: Array[int] = []
-	for i: int in range(_cart.size()):
-		var entry: Dictionary = _cart[i]
-		var item_def: ItemDefinition = (
-			entry["item_def"] as ItemDefinition
-		)
-		var qty: int = int(entry["quantity"])
-		var success: bool = order_system.place_order(
-			sid, _selected_tier, StringName(item_def.id), qty
-		)
-		if success:
-			placed_indices.append(i)
-		else:
-			failed_items.append(item_def.name)
-	placed_indices.reverse()
-	for idx: int in placed_indices:
-		_cart.remove_at(idx)
-	if not failed_items.is_empty():
-		_error_label.text = "Failed: %s" % ", ".join(failed_items)
-		_error_label.visible = true
+	var cart_items: Array[Dictionary] = []
+	for entry: Dictionary in _cart:
+		var item_def: ItemDefinition = entry["item_def"] as ItemDefinition
+		cart_items.append({
+			"item_id": item_def.id,
+			"quantity": int(entry["quantity"]),
+		})
+	_submit_button.disabled = true
+	var success: bool = order_system.submit_order(
+		sid, _selected_tier, cart_items
+	)
+	if success:
+		_cart.clear()
 	_refresh_cart_display()
 	_refresh_deliveries()
 	_update_header()
+	_refresh_catalog()
 
 
 # --- Deliveries ---
@@ -488,7 +515,8 @@ func _update_header() -> void:
 	var remaining: float = order_system.get_remaining_daily_budget(
 		_selected_tier
 	)
-	_budget_label.text = "Budget: $%.0f" % remaining
+	var limit: float = order_system.get_daily_limit(_selected_tier)
+	_budget_label.text = "Budget: $%.0f / $%.0f" % [remaining, limit]
 	if economy_system:
 		_cash_label.text = "Cash: $%.0f" % economy_system.get_cash()
 
@@ -545,8 +573,7 @@ func _on_order_placed(
 func _on_order_failed(reason: String) -> void:
 	if not _is_open:
 		return
-	_error_label.text = reason
-	_error_label.visible = true
+	_show_inline_error(reason)
 
 
 func _on_active_store_changed(new_store_id: StringName) -> void:
@@ -604,3 +631,38 @@ func _ensure_valid_selected_tier() -> void:
 			_selected_tier = tier
 			return
 	_selected_tier = OrderSystem.SupplierTier.BASIC
+
+
+func _can_add_item_to_cart(item_def: ItemDefinition) -> bool:
+	if not order_system or not item_def:
+		return false
+	var remaining_quantity: int = _get_remaining_additional_quantity(
+		item_def
+	)
+	if remaining_quantity > 0:
+		return true
+	_show_inline_error(
+		"Daily order limit ($%.0f) exceeded"
+		% order_system.get_daily_limit(_selected_tier)
+	)
+	return false
+
+
+func _get_remaining_additional_quantity(item_def: ItemDefinition) -> int:
+	if not order_system or not item_def:
+		return 0
+	var unit_cost: float = order_system.get_order_cost(
+		item_def, _selected_tier
+	)
+	if unit_cost <= 0.0:
+		return 0
+	var remaining_budget: float = (
+		order_system.get_remaining_daily_budget(_selected_tier)
+		- _get_cart_total()
+	)
+	return maxi(0, floori(remaining_budget / unit_cost))
+
+
+func _show_inline_error(reason: String) -> void:
+	_error_label.text = reason
+	_error_label.visible = true

@@ -181,6 +181,17 @@ func test_state_machine_advances_from_placement_to_rotating_to_confirmed() -> vo
 	assert_eq(_system.get_state(), BuildModeSystem.State.CONFIRMED)
 
 
+func test_set_placement_system_creates_visual_feedback_layer() -> void:
+	_system.initialize(null, BuildModeGrid.StoreSize.SMALL, Vector3.ZERO)
+	var placement: FixturePlacementSystem = _create_placement_system()
+	_system.set_placement_system(placement)
+
+	var visuals: BuildModeVisuals = _system.get_visuals()
+	assert_not_null(visuals)
+	assert_not_null(visuals.get_node("GhostPreview"))
+	assert_not_null(visuals.get_node("CellOverlay"))
+
+
 func test_confirm_selected_fixture_emits_invalid_reason_for_rejected_cells() -> void:
 	_system.initialize(null, BuildModeGrid.StoreSize.SMALL, Vector3.ZERO)
 	var placement: FixturePlacementSystem = _create_placement_system()

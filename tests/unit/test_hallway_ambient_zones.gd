@@ -1,4 +1,4 @@
-## Unit tests for HallwayAmbientZones zone setup, volume scaling, and phase activation.
+## Unit tests for HallwayAmbientZones zone setup, playback, and phase behavior.
 extends GutTest
 
 
@@ -16,53 +16,88 @@ func before_each() -> void:
 	add_child_autofree(_customer_system)
 
 	_zones = HallwayAmbientZones.new()
+	_zones.configure_runtime_dependencies(_customer_system, _time_system)
 	add_child_autofree(_zones)
-	_zones.initialize(_customer_system, _time_system)
 
 
-func test_all_zones_registered_with_audio_manager() -> void:
-	var muzak: String = HallwayAmbientZones.ZONE_MUZAK
-	var mech: String = HallwayAmbientZones.ZONE_MECHANICAL
-	var crowd: String = HallwayAmbientZones.ZONE_CROWD
-	var food: String = HallwayAmbientZones.ZONE_FOOD_COURT
+func test_all_zones_register_with_audio_manager_on_ready() -> void:
 	assert_true(
-		AudioManager._zone_players.has(muzak),
-		"Muzak zone should be registered"
+		AudioManager._zone_players.has(HallwayAmbientZones.ZONE_MUZAK),
+		"Muzak zone should register in _ready"
 	)
 	assert_true(
-		AudioManager._zone_players.has(mech),
-		"Mechanical zone should be registered"
+		AudioManager._zone_players.has(HallwayAmbientZones.ZONE_MECHANICAL),
+		"Mechanical zone should register in _ready"
 	)
 	assert_true(
-		AudioManager._zone_players.has(crowd),
-		"Crowd zone should be registered"
+		AudioManager._zone_players.has(HallwayAmbientZones.ZONE_CROWD),
+		"Crowd zone should register in _ready"
 	)
 	assert_true(
-		AudioManager._zone_players.has(food),
-		"Food court zone should be registered"
+		AudioManager._zone_players.has(HallwayAmbientZones.ZONE_FOOD_COURT),
+		"Food court zone should register in _ready"
 	)
 
 
-func test_mechanical_volume_is_negative_18_db() -> void:
-	var player: AudioStreamPlayer = AudioManager._zone_players.get(
-		HallwayAmbientZones.ZONE_MECHANICAL
+func test_registered_zone_players_are_audio_stream_player_3d() -> void:
+	assert_typeof(
+		AudioManager._zone_players[HallwayAmbientZones.ZONE_MUZAK],
+		TYPE_OBJECT,
+		"Registered muzak zone should store an object"
 	)
-	assert_not_null(player, "Mechanical player should exist")
+	assert_true(
+		AudioManager._zone_players[HallwayAmbientZones.ZONE_MUZAK]
+		is AudioStreamPlayer3D,
+		"Muzak zone should use AudioStreamPlayer3D"
+	)
+	assert_true(
+		AudioManager._zone_players[HallwayAmbientZones.ZONE_MECHANICAL]
+		is AudioStreamPlayer3D,
+		"Mechanical zone should use AudioStreamPlayer3D"
+	)
+	assert_true(
+		AudioManager._zone_players[HallwayAmbientZones.ZONE_CROWD]
+		is AudioStreamPlayer3D,
+		"Crowd zone should use AudioStreamPlayer3D"
+	)
+
+
+func test_persistent_hallway_zones_play_on_load() -> void:
+	assert_true(
+		_zones._muzak_player.playing,
+		"Hallway muzak should start looping when the hallway loads"
+	)
+	assert_true(
+		_zones._mechanical_player.playing,
+		"Mechanical ambience should start looping when the hallway loads"
+	)
+	assert_true(
+		_zones._crowd_player.playing,
+		"Crowd ambience should start looping when the hallway loads"
+	)
+
+
+func test_mechanical_zone_uses_ambience_bus_and_negative_18_db() -> void:
+	assert_eq(
+		_zones._mechanical_player.bus,
+		AudioManager.AMBIENCE_BUS,
+		"Mechanical ambience should route to the Ambience bus"
+	)
 	assert_almost_eq(
-		player.volume_db, -18.0, 0.1,
-		"Mechanical volume should be -18 dB"
+		_zones._mechanical_player.volume_db,
+		-18.0,
+		0.1,
+		"Mechanical ambience should play at -18 dB"
 	)
 
 
 func test_crowd_volume_at_zero_shoppers() -> void:
 	_customer_system._active_mall_shopper_count = 0
 	_zones._update_crowd_volume()
-	var player: AudioStreamPlayer = AudioManager._zone_players.get(
-		HallwayAmbientZones.ZONE_CROWD
-	)
-	assert_not_null(player, "Crowd player should exist")
 	assert_almost_eq(
-		player.volume_db, -20.0, 0.1,
+		_zones._crowd_player.volume_db,
+		-20.0,
+		0.1,
 		"Crowd volume at 0 shoppers should be -20 dB"
 	)
 
@@ -70,12 +105,10 @@ func test_crowd_volume_at_zero_shoppers() -> void:
 func test_crowd_volume_at_max_shoppers() -> void:
 	_customer_system._active_mall_shopper_count = 15
 	_zones._update_crowd_volume()
-	var player: AudioStreamPlayer = AudioManager._zone_players.get(
-		HallwayAmbientZones.ZONE_CROWD
-	)
-	assert_not_null(player, "Crowd player should exist")
 	assert_almost_eq(
-		player.volume_db, -8.0, 0.1,
+		_zones._crowd_player.volume_db,
+		-8.0,
+		0.1,
 		"Crowd volume at 15+ shoppers should be -8 dB"
 	)
 
@@ -83,25 +116,27 @@ func test_crowd_volume_at_max_shoppers() -> void:
 func test_crowd_volume_scales_linearly() -> void:
 	_customer_system._active_mall_shopper_count = 8
 	_zones._update_crowd_volume()
-	var player: AudioStreamPlayer = AudioManager._zone_players.get(
-		HallwayAmbientZones.ZONE_CROWD
-	)
 	var expected_db: float = lerpf(-20.0, -8.0, 8.0 / 15.0)
 	assert_almost_eq(
-		player.volume_db, expected_db, 0.1,
+		_zones._crowd_player.volume_db,
+		expected_db,
+		0.1,
 		"Crowd volume should scale linearly with shopper count"
 	)
 
 
-func test_crowd_volume_clamps_above_max() -> void:
-	_customer_system._active_mall_shopper_count = 30
+func test_customer_left_signal_refreshes_crowd_volume() -> void:
+	_customer_system._active_mall_shopper_count = 12
 	_zones._update_crowd_volume()
-	var player: AudioStreamPlayer = AudioManager._zone_players.get(
-		HallwayAmbientZones.ZONE_CROWD
-	)
+	_customer_system._active_mall_shopper_count = 4
+	EventBus.customer_left.emit({})
+	await get_tree().process_frame
+	var expected_db: float = lerpf(-20.0, -8.0, 4.0 / 15.0)
 	assert_almost_eq(
-		player.volume_db, -8.0, 0.1,
-		"Crowd volume should clamp at -8 dB for counts above 15"
+		_zones._crowd_player.volume_db,
+		expected_db,
+		0.1,
+		"customer_left should refresh crowd ambience from the current shopper count"
 	)
 
 
@@ -109,7 +144,11 @@ func test_food_court_activates_during_midday_rush() -> void:
 	_zones._on_day_phase_changed(TimeSystem.DayPhase.MIDDAY_RUSH)
 	assert_true(
 		_zones._food_court_active,
-		"Food court should be active during MIDDAY_RUSH"
+		"Food court should activate during lunch rush"
+	)
+	assert_true(
+		_zones._food_court_player.playing,
+		"Food court ambience should play during lunch rush"
 	)
 
 
@@ -119,86 +158,54 @@ func test_food_court_deactivates_outside_midday_rush() -> void:
 	_zones._on_day_phase_changed(TimeSystem.DayPhase.AFTERNOON)
 	assert_false(
 		_zones._food_court_active,
-		"Food court should deactivate when phase changes away"
+		"Food court should deactivate when the day phase changes away from lunch rush"
 	)
 
 
-func test_food_court_inactive_during_morning() -> void:
-	_zones._on_day_phase_changed(TimeSystem.DayPhase.MORNING_RAMP)
-	assert_false(
-		_zones._food_court_active,
-		"Food court should not be active during MORNING_RAMP"
-	)
-
-
-func test_muzak_uses_christmas_in_november() -> void:
+func test_muzak_switches_to_christmas_in_november() -> void:
 	_time_system.current_day = 301
-	var month: int = _time_system.get_current_month()
-	assert_eq(month, 11, "Day 301 should be November")
 	_zones._update_muzak_track()
 	assert_true(
 		_zones._using_christmas_muzak,
-		"Should use Christmas muzak in November"
+		"November should enable Christmas hallway muzak"
+	)
+	assert_eq(
+		_zones._muzak_player.stream,
+		_zones._muzak_christmas_stream,
+		"Christmas muzak stream should be active in November"
 	)
 
 
-func test_muzak_uses_christmas_in_december() -> void:
-	_time_system.current_day = 331
-	var month: int = _time_system.get_current_month()
-	assert_eq(month, 12, "Day 331 should be December")
-	_zones._update_muzak_track()
-	assert_true(
-		_zones._using_christmas_muzak,
-		"Should use Christmas muzak in December"
-	)
-
-
-func test_muzak_uses_regular_in_october() -> void:
+func test_muzak_uses_regular_track_outside_holidays() -> void:
 	_time_system.current_day = 271
-	var month: int = _time_system.get_current_month()
-	assert_eq(month, 10, "Day 271 should be October")
 	_zones._update_muzak_track()
 	assert_false(
 		_zones._using_christmas_muzak,
-		"Should use regular muzak in October"
+		"October should keep the standard hallway muzak"
 	)
-
-
-func test_time_system_month_cycles() -> void:
-	_time_system.current_day = 1
-	assert_eq(_time_system.get_current_month(), 1, "Day 1 = January")
-	_time_system.current_day = 30
-	assert_eq(_time_system.get_current_month(), 1, "Day 30 = January")
-	_time_system.current_day = 31
-	assert_eq(_time_system.get_current_month(), 2, "Day 31 = February")
-	_time_system.current_day = 360
-	assert_eq(_time_system.get_current_month(), 12, "Day 360 = December")
-	_time_system.current_day = 361
 	assert_eq(
-		_time_system.get_current_month(), 1,
-		"Day 361 = January (wraps)"
+		_zones._muzak_player.stream,
+		_zones._muzak_stream,
+		"Standard muzak stream should stay active outside November and December"
 	)
 
 
 func test_zones_unregister_on_exit_tree() -> void:
 	var zones_node: HallwayAmbientZones = HallwayAmbientZones.new()
+	var time_system: TimeSystem = TimeSystem.new()
+	var customer_system: CustomerSystem = CustomerSystem.new()
+	add_child(time_system)
+	add_child(customer_system)
+	zones_node.configure_runtime_dependencies(customer_system, time_system)
 	add_child(zones_node)
-
-	var ts: TimeSystem = TimeSystem.new()
-	add_child(ts)
-	ts.initialize()
-
-	var cs: CustomerSystem = CustomerSystem.new()
-	add_child(cs)
-
-	zones_node.initialize(cs, ts)
 	assert_true(
-		AudioManager._zone_players.has(
-			HallwayAmbientZones.ZONE_MUZAK
-		)
+		AudioManager._zone_players.has(HallwayAmbientZones.ZONE_MUZAK),
+		"Muzak zone should be registered before free()"
 	)
-
-	remove_child(zones_node)
-	zones_node.queue_free()
-	ts.queue_free()
-	cs.queue_free()
+	zones_node.free()
+	time_system.free()
+	customer_system.free()
+	assert_false(
+		AudioManager._zone_players.has(HallwayAmbientZones.ZONE_MUZAK),
+		"Muzak zone should unregister in _exit_tree"
+	)

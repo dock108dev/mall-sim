@@ -33,7 +33,7 @@ func after_each() -> void:
 		EventBus.interactable_interacted.disconnect(_on_bus_interacted)
 
 
-func _on_interacted(_target: Interactable) -> void:
+func _on_interacted() -> void:
 	_interacted_count += 1
 
 
@@ -49,17 +49,35 @@ func _on_bus_interacted(_target: Interactable, _type: int) -> void:
 	_bus_interacted_count += 1
 
 
-func test_collision_layer_set_to_interaction_layer() -> void:
+func test_interaction_area_created_on_interaction_layer() -> void:
+	var area: Area3D = _interactable.get_interaction_area()
+	assert_not_null(
+		area,
+		"Should create an Area3D child for interaction hits"
+	)
 	assert_eq(
-		_interactable.collision_layer, Interactable.INTERACTABLE_LAYER,
-		"Should set collision_layer to INTERACTABLE_LAYER"
+		area.collision_layer, Interactable.INTERACTABLE_LAYER,
+		"InteractionArea should use INTERACTABLE_LAYER"
+	)
+	assert_true(
+		area.is_in_group("interaction_area"),
+		"InteractionArea should register in the interaction_area group"
+	)
+	assert_same(
+		area.get_meta("interactable_owner"),
+		_interactable,
+		"InteractionArea should point back to its owning Interactable"
 	)
 
 
-func test_collision_mask_is_zero() -> void:
+func test_root_collision_disabled_after_child_area_registration() -> void:
 	assert_eq(
 		_interactable.collision_mask, 0,
-		"Should set collision_mask to 0"
+		"Root Interactable should not participate in interaction ray hits"
+	)
+	assert_eq(
+		_interactable.collision_layer, 0,
+		"Root Interactable should move interaction collisions to its child area"
 	)
 
 
@@ -72,7 +90,7 @@ func test_added_to_interactable_group() -> void:
 
 func test_default_prompt_from_interaction_type() -> void:
 	assert_eq(
-		_interactable.interaction_prompt, "Examine",
+		_interactable.prompt_text, "Examine",
 		"Should default to PROMPT_VERBS for ITEM type"
 	)
 
@@ -82,8 +100,31 @@ func test_custom_prompt_preserved() -> void:
 	custom.interaction_prompt = "Custom Action"
 	add_child_autofree(custom)
 	assert_eq(
-		custom.interaction_prompt, "Custom Action",
+		custom.prompt_text, "Custom Action",
 		"Should preserve a non-empty custom prompt"
+	)
+
+
+func test_interaction_area_has_collision_shape() -> void:
+	var area: Area3D = _interactable.get_interaction_area()
+	var has_shape: bool = false
+	for child: Node in area.get_children():
+		if child is CollisionShape3D:
+			has_shape = true
+			break
+	assert_true(
+		has_shape,
+		"InteractionArea should expose a CollisionShape3D child"
+	)
+
+
+func test_interaction_name_alias_updates_display_name() -> void:
+	var custom: Interactable = Interactable.new()
+	custom.interaction_name = "Checkout"
+	add_child_autofree(custom)
+	assert_eq(
+		custom.display_name, "Checkout",
+		"interaction_name should remain compatible with older scene data"
 	)
 
 

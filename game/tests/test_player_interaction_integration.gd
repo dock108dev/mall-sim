@@ -7,12 +7,14 @@ var _interaction_ray: Node
 var _interacted_count: int = 0
 var _store_entered_ids: Array[StringName] = []
 var _bridge_connected: bool = false
+var _unfocused_count: int = 0
 
 
 func before_each() -> void:
 	_interacted_count = 0
 	_store_entered_ids.clear()
 	_bridge_connected = false
+	_unfocused_count = 0
 
 	_interaction_ray = load(
 		"res://game/scripts/player/interaction_ray.gd"
@@ -20,11 +22,18 @@ func before_each() -> void:
 	add_child_autofree(_interaction_ray)
 
 	EventBus.store_entered.connect(_on_store_entered)
+	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
 
 
 func after_each() -> void:
 	if EventBus.store_entered.is_connected(_on_store_entered):
 		EventBus.store_entered.disconnect(_on_store_entered)
+	if EventBus.interactable_unfocused.is_connected(
+		_on_interactable_unfocused
+	):
+		EventBus.interactable_unfocused.disconnect(
+			_on_interactable_unfocused
+		)
 	if _bridge_connected and EventBus.interactable_interacted.is_connected(
 		_on_storefront_interacted_bridge
 	):
@@ -33,12 +42,16 @@ func after_each() -> void:
 
 # ── Signal handlers ────────────────────────────────────────────────────────────
 
-func _on_interacted(_target: Interactable) -> void:
+func _on_interacted() -> void:
 	_interacted_count += 1
 
 
 func _on_store_entered(store_id: StringName) -> void:
 	_store_entered_ids.append(store_id)
+
+
+func _on_interactable_unfocused() -> void:
+	_unfocused_count += 1
 
 
 ## Bridges interactable_interacted(STOREFRONT) → store_entered to simulate
@@ -120,4 +133,38 @@ func test_storefront_interaction_emits_store_entered() -> void:
 	assert_eq(
 		_store_entered_ids[0], STORE_ID,
 		"store_entered must carry the correct store_id"
+	)
+
+
+func test_resolve_interactable_from_child_area() -> void:
+	var interactable: Interactable = _make_interactable(
+		Interactable.InteractionType.ITEM, "Area Target"
+	)
+
+	var resolved: Interactable = _interaction_ray._resolve_interactable(
+		interactable.get_interaction_area()
+	)
+
+	assert_same(
+		resolved, interactable,
+		"Ray hits on the child Area3D should resolve back to the Interactable"
+	)
+
+
+func test_hovered_target_clears_when_interactable_exits_tree() -> void:
+	var interactable: Interactable = _make_interactable(
+		Interactable.InteractionType.ITEM, "Transient Target"
+	)
+
+	_interaction_ray._set_hovered_target(interactable)
+	interactable.queue_free()
+	await get_tree().process_frame
+
+	assert_null(
+		_interaction_ray.get_hovered_target(),
+		"Hovered target should clear when an interactable leaves the scene tree"
+	)
+	assert_eq(
+		_unfocused_count, 1,
+		"Store transitions should clear the prompt when the focused interactable exits"
 	)

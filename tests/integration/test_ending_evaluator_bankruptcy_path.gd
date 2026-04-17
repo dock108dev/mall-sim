@@ -14,8 +14,8 @@ const BANKRUPTCY_ENDINGS: Array[StringName] = [
 
 const SUCCESS_ENDINGS: Array[StringName] = [
 	&"prestige_champion", &"the_local_legend", &"the_mini_empire",
-	&"the_mall_tycoon", &"the_fair_dealer", &"the_collector",
-	&"the_mall_legend_redux", &"the_ghost_between_the_walls",
+	&"the_mall_tycoon", &"the_fair_dealer",
+	&"the_mall_legend_redux", &"the_mall_between_the_walls",
 ]
 
 const SURVIVAL_ENDINGS: Array[StringName] = [
@@ -68,11 +68,11 @@ func test_early_bankruptcy_triggers_lights_out() -> void:
 	_set_days_survived(5.0)
 
 	var triggered_id: Array = [&""]
-	var triggered_stats: Dictionary = {}
+	var triggered_stats: Array[Dictionary] = [{}]
 	var fire_count: Array = [0]
 	var on_ending: Callable = func(id: StringName, stats: Dictionary) -> void:
 		triggered_id[0] = id
-		triggered_stats = stats
+		triggered_stats[0] = stats.duplicate()
 		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
@@ -100,9 +100,9 @@ func test_early_bankruptcy_triggers_lights_out() -> void:
 	EventBus.ending_triggered.disconnect(on_ending)
 
 	_verify_final_stats_contains_stat_summary_keys(
-		triggered_id[0], triggered_stats
+		triggered_id[0], triggered_stats[0]
 	)
-	_verify_trigger_type_bankruptcy_in_stats(triggered_stats)
+	_verify_trigger_type_bankruptcy_in_stats(triggered_stats[0])
 
 
 ## Case B: days_survived = 20 (>= 15) — bankruptcy_declared triggers going_going_gone ending.
@@ -110,11 +110,11 @@ func test_late_bankruptcy_triggers_going_going_gone() -> void:
 	_set_days_survived(20.0)
 
 	var triggered_id: Array = [&""]
-	var triggered_stats: Dictionary = {}
+	var triggered_stats: Array[Dictionary] = [{}]
 	var fire_count: Array = [0]
 	var on_ending: Callable = func(id: StringName, stats: Dictionary) -> void:
 		triggered_id[0] = id
-		triggered_stats = stats
+		triggered_stats[0] = stats.duplicate()
 		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
@@ -142,9 +142,9 @@ func test_late_bankruptcy_triggers_going_going_gone() -> void:
 	EventBus.ending_triggered.disconnect(on_ending)
 
 	_verify_final_stats_contains_stat_summary_keys(
-		triggered_id[0], triggered_stats
+		triggered_id[0], triggered_stats[0]
 	)
-	_verify_trigger_type_bankruptcy_in_stats(triggered_stats)
+	_verify_trigger_type_bankruptcy_in_stats(triggered_stats[0])
 
 
 ## Case C: days_survived = 10 (8–14) — bankruptcy_declared triggers foreclosure ending.
@@ -152,11 +152,11 @@ func test_mid_bankruptcy_triggers_foreclosure() -> void:
 	_set_days_survived(10.0)
 
 	var triggered_id: Array = [&""]
-	var triggered_stats: Dictionary = {}
+	var triggered_stats: Array[Dictionary] = [{}]
 	var fire_count: Array = [0]
 	var on_ending: Callable = func(id: StringName, stats: Dictionary) -> void:
 		triggered_id[0] = id
-		triggered_stats = stats
+		triggered_stats[0] = stats.duplicate()
 		fire_count[0] += 1
 	EventBus.ending_triggered.connect(on_ending)
 
@@ -180,9 +180,9 @@ func test_mid_bankruptcy_triggers_foreclosure() -> void:
 	EventBus.ending_triggered.disconnect(on_ending)
 
 	_verify_final_stats_contains_stat_summary_keys(
-		triggered_id[0], triggered_stats
+		triggered_id[0], triggered_stats[0]
 	)
-	_verify_trigger_type_bankruptcy_in_stats(triggered_stats)
+	_verify_trigger_type_bankruptcy_in_stats(triggered_stats[0])
 
 
 ## No SUCCESS or SURVIVAL ending fires on bankruptcy_declared, even when success criteria
@@ -206,15 +206,15 @@ func test_bankruptcy_does_not_emit_success_or_survival_ending() -> void:
 	EventBus.bankruptcy_declared.emit()
 
 	assert_false(
-		triggered_id in SUCCESS_ENDINGS,
+		triggered_id[0] in SUCCESS_ENDINGS,
 		"No SUCCESS ending should fire on bankruptcy; got: %s" % triggered_id[0]
 	)
 	assert_false(
-		triggered_id in SURVIVAL_ENDINGS,
+		triggered_id[0] in SURVIVAL_ENDINGS,
 		"No SURVIVAL ending should fire on bankruptcy; got: %s" % triggered_id[0]
 	)
 	assert_true(
-		triggered_id in BANKRUPTCY_ENDINGS,
+		triggered_id[0] in BANKRUPTCY_ENDINGS,
 		"Only a BANKRUPTCY ending should fire; got: %s" % triggered_id[0]
 	)
 
@@ -247,32 +247,32 @@ func test_duplicate_bankruptcy_declared_does_not_double_fire() -> void:
 func test_final_stats_contains_bankruptcy_flag_and_days_survived() -> void:
 	_set_days_survived(20.0)
 
-	var captured_stats: Dictionary = {}
+	var captured_stats: Array[Dictionary] = [{}]
 	var on_ending: Callable = func(_id: StringName, stats: Dictionary) -> void:
-		captured_stats = stats
+		captured_stats[0] = stats.duplicate()
 	EventBus.ending_triggered.connect(on_ending)
 
 	EventBus.bankruptcy_declared.emit()
 
 	assert_false(
-		captured_stats.is_empty(),
+		captured_stats[0].is_empty(),
 		"final_stats must not be empty"
 	)
 	assert_true(
-		captured_stats.has("trigger_type_bankruptcy"),
+		captured_stats[0].has("trigger_type_bankruptcy"),
 		"final_stats must include trigger_type_bankruptcy key"
 	)
 	assert_eq(
-		captured_stats.get("trigger_type_bankruptcy", 0.0),
+		captured_stats[0].get("trigger_type_bankruptcy", 0.0),
 		1.0,
 		"trigger_type_bankruptcy must be 1.0 in final_stats"
 	)
 	assert_true(
-		captured_stats.has("days_survived"),
+		captured_stats[0].has("days_survived"),
 		"final_stats must include days_survived key"
 	)
 	assert_eq(
-		captured_stats.get("days_survived", 0.0),
+		captured_stats[0].get("days_survived", 0.0),
 		20.0,
 		"days_survived in final_stats must reflect the pre-bankruptcy value"
 	)

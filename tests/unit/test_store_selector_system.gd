@@ -1,9 +1,10 @@
-## GUT unit tests for StoreSelectorSystem — state transitions, guard conditions,
-## and signal emissions during store enter and exit flows.
+## GUT tests for StoreSelectorSystem transition sequencing and rollback safety.
 extends GutTest
 
 const _STORE_ID: StringName = &"retro_games"
 const _STORE_SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
+const _BROKEN_STORE_ID: StringName = &"broken_store"
+const _BROKEN_SCENE_PATH: String = "res://game/scenes/stores/missing_store.tscn"
 const _PlayerControllerScene: PackedScene = preload(
 	"res://game/scenes/player/player_controller.tscn"
 )
@@ -14,396 +15,193 @@ var _hallway_node: Node3D
 var _store_container: Node3D
 var _hallway_camera: PlayerController
 var _ui_layer: CanvasLayer
+var _waypoint_graph: Node3D
+var _storefront_marker: Marker3D
 
-var _store_opened: Array[String] = []
-var _store_closed: Array[String] = []
-var _active_store_changed: Array[StringName] = []
-var _store_entered: Array[StringName] = []
-var _store_exited: Array[StringName] = []
-var _cameras_changed: Array[Camera3D] = []
-
-var _saved_game_store_id: StringName
+var _store_entered_ids: Array[StringName] = []
+var _store_exited_ids: Array[StringName] = []
+var _active_store_ids: Array[StringName] = []
+var _active_cameras: Array[Camera3D] = []
+var _hallway_visible_during_enter: bool = false
+var _store_scene_loaded_during_enter: bool = false
+var _saved_game_store_id: StringName = &""
 
 
 func before_each() -> void:
 	_saved_game_store_id = GameManager.current_store_id
 	GameManager.current_store_id = &""
+	ContentRegistry.clear_for_testing()
+	ContentRegistry.register_entry(
+		{
+			"id": String(_STORE_ID),
+			"name": "Retro Games",
+			"scene_path": _STORE_SCENE_PATH,
+		},
+		"store"
+	)
+	ContentRegistry.register_entry(
+		{
+			"id": String(_BROKEN_STORE_ID),
+			"name": "Broken Store",
+			"scene_path": _BROKEN_SCENE_PATH,
+		},
+		"store"
+	)
+
+	_store_state = StoreStateManager.new()
+	add_child_autofree(_store_state)
+	_store_state.lease_store(0, _STORE_ID, _STORE_ID)
+	_store_state.lease_store(1, _BROKEN_STORE_ID, _BROKEN_STORE_ID)
+
+	_hallway_node = Node3D.new()
+	_hallway_node.name = "HallwayGeometry"
+	add_child_autofree(_hallway_node)
+
+	_store_container = Node3D.new()
+	_store_container.name = "StoreContainer"
+	add_child_autofree(_store_container)
+
+	_hallway_camera = _PlayerControllerScene.instantiate() as PlayerController
+	_hallway_camera.name = "HallwayCamera"
+	add_child_autofree(_hallway_camera)
+
+	_ui_layer = CanvasLayer.new()
+	add_child_autofree(_ui_layer)
+
+	_waypoint_graph = Node3D.new()
+	_waypoint_graph.name = "WaypointGraph"
+	add_child_autofree(_waypoint_graph)
+
+	_storefront_marker = Marker3D.new()
+	_storefront_marker.name = "StoreEntrance_0"
+	_storefront_marker.position = Vector3(4.0, 0.0, 2.5)
+	_waypoint_graph.add_child(_storefront_marker)
 
 	_system = StoreSelectorSystem.new()
 	add_child_autofree(_system)
+	_system.initialize(
+		_store_state, _hallway_node, _store_container, _hallway_camera, _ui_layer
+	)
 
-	_store_opened.clear()
-	_store_closed.clear()
-	_active_store_changed.clear()
-	_store_entered.clear()
-	_store_exited.clear()
-	_cameras_changed.clear()
+	_store_entered_ids.clear()
+	_store_exited_ids.clear()
+	_active_store_ids.clear()
+	_active_cameras.clear()
+	_hallway_visible_during_enter = false
+	_store_scene_loaded_during_enter = false
 
-	EventBus.store_opened.connect(_on_store_opened)
-	EventBus.store_closed.connect(_on_store_closed)
-	EventBus.active_store_changed.connect(_on_active_store_changed)
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.store_exited.connect(_on_store_exited)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
 	EventBus.active_camera_changed.connect(_on_active_camera_changed)
 
 
 func after_each() -> void:
-	GameManager.current_store_id = _saved_game_store_id
-	_safe_disconnect(EventBus.store_opened, _on_store_opened)
-	_safe_disconnect(EventBus.store_closed, _on_store_closed)
-	_safe_disconnect(EventBus.active_store_changed, _on_active_store_changed)
 	_safe_disconnect(EventBus.store_entered, _on_store_entered)
 	_safe_disconnect(EventBus.store_exited, _on_store_exited)
+	_safe_disconnect(EventBus.active_store_changed, _on_active_store_changed)
 	_safe_disconnect(EventBus.active_camera_changed, _on_active_camera_changed)
+	GameManager.current_store_id = _saved_game_store_id
+	ContentRegistry.clear_for_testing()
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+func test_initial_state_is_hallway_only() -> void:
+	assert_false(_system.is_inside_store())
+	assert_null(_system.get_active_store_scene())
+	assert_true(_hallway_node.visible)
 
 
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
-
-
-func _init_system() -> void:
-	_store_state = StoreStateManager.new()
-	add_child_autofree(_store_state)
-	_hallway_node = Node3D.new()
-	add_child_autofree(_hallway_node)
-	_store_container = Node3D.new()
-	add_child_autofree(_store_container)
-	_hallway_camera = _PlayerControllerScene.instantiate() as PlayerController
-	add_child_autofree(_hallway_camera)
-	_ui_layer = CanvasLayer.new()
-	add_child_autofree(_ui_layer)
-	_system.initialize(
-		_store_state, _hallway_node, _store_container, _hallway_camera, _ui_layer
-	)
-	# Nullify the fade rect so fade helpers return immediately without tween
-	# delays, making enter/exit transitions synchronous in tests.
-	_system._fade_rect = null
-
-
-func _ensure_store_registered() -> void:
-	if not ContentRegistry.exists(String(_STORE_ID)):
-		ContentRegistry.register_entry(
-			{"id": String(_STORE_ID), "name": "Retro Games",
-			"scene_path": _STORE_SCENE_PATH},
-			"store"
-		)
-
-
-# ── 1. Initial state ──────────────────────────────────────────────────────────
-
-
-func test_is_inside_store_returns_false_before_any_transition() -> void:
-	assert_false(
-		_system.is_inside_store(),
-		"is_inside_store() must return false before any store is entered"
-	)
-
-
-func test_get_active_store_scene_returns_null_before_any_transition() -> void:
-	assert_null(
-		_system.get_active_store_scene(),
-		"get_active_store_scene() must return null before any store is entered"
-	)
-
-
-# ── 2. enter_store — unknown store_id ────────────────────────────────────────
-
-
-func test_enter_unknown_store_does_not_change_inside_state() -> void:
-	_init_system()
-	EventBus.enter_store_requested.emit(&"bad_store")
-	assert_false(
-		_system.is_inside_store(),
-		"Unknown store_id must not set inside state to true"
-	)
-
-
-func test_enter_unknown_store_does_not_emit_store_entered() -> void:
-	_init_system()
-	EventBus.enter_store_requested.emit(&"bad_store")
-	assert_eq(
-		_store_entered.size(), 0,
-		"store_entered must not be emitted for unknown store_id"
-	)
-
-
-func test_enter_unknown_store_does_not_emit_active_store_changed() -> void:
-	_init_system()
-	EventBus.enter_store_requested.emit(&"bad_store")
-	assert_eq(
-		_active_store_changed.size(), 0,
-		"active_store_changed must not be emitted for unknown store_id"
-	)
-
-
-# ── 3. Transitioning guard ────────────────────────────────────────────────────
-
-
-func test_enter_while_transitioning_does_not_emit_store_entered() -> void:
-	_init_system()
-	_system._is_transitioning = true
+func test_enter_store_requested_loads_scene_before_hiding_hallway() -> void:
 	EventBus.enter_store_requested.emit(_STORE_ID)
-	assert_eq(
-		_store_entered.size(), 0,
-		"enter_store_requested must be ignored while _is_transitioning is true"
-	)
-	_system._is_transitioning = false
 
-
-func test_enter_while_transitioning_does_not_change_inside_state() -> void:
-	_init_system()
-	_system._is_transitioning = true
-	EventBus.enter_store_requested.emit(_STORE_ID)
-	assert_false(
-		_system.is_inside_store(),
-		"_inside_store must remain false when transition guard blocks entry"
-	)
-	_system._is_transitioning = false
-
-
-# ── 4. exit_store — not inside guard ─────────────────────────────────────────
-
-
-func test_exit_when_not_inside_store_does_not_emit_store_closed() -> void:
-	_init_system()
-	EventBus.exit_store_requested.emit()
-	assert_eq(
-		_store_closed.size(), 0,
-		"exit_store_requested while not inside must not emit store_closed"
-	)
-
-
-func test_exit_when_not_inside_store_leaves_inside_state_false() -> void:
-	_init_system()
-	EventBus.exit_store_requested.emit()
-	assert_false(
-		_system.is_inside_store(),
-		"_inside_store must remain false after exit while not inside"
-	)
-
-
-# ── 5. exit_store — transitioning guard ──────────────────────────────────────
-
-
-func test_exit_while_transitioning_leaves_inside_state_unchanged() -> void:
-	_init_system()
-	_system._inside_store = true
-	_system._is_transitioning = true
-	EventBus.exit_store_requested.emit()
+	assert_true(_system.is_inside_store())
+	assert_not_null(_system.get_active_store_scene())
+	assert_eq(_store_state.active_store_id, _STORE_ID)
+	assert_eq(_store_entered_ids, [_STORE_ID])
+	assert_eq(_active_store_ids, [_STORE_ID])
 	assert_true(
-		_system.is_inside_store(),
-		"exit_store_requested while transitioning must not clear inside state"
+		_store_scene_loaded_during_enter,
+		"store_entered should fire only after the interior scene is loaded"
 	)
-	_system._inside_store = false
-	_system._is_transitioning = false
+	assert_true(
+		_hallway_visible_during_enter,
+		"hallway should remain visible while store_entered listeners run"
+	)
+	assert_false(_hallway_node.visible)
 
 
-func test_exit_while_transitioning_does_not_emit_store_closed() -> void:
-	_init_system()
-	_system._inside_store = true
-	_system._is_transitioning = true
+func test_enter_store_moves_camera_to_store_entry_and_rebinds_camera_users() -> void:
+	EventBus.enter_store_requested.emit(_STORE_ID)
+
+	var entry_marker: Node3D = _system.get_active_store_scene().find_child(
+		"EntryPoint", true, false
+	) as Node3D
+	assert_not_null(entry_marker)
+	assert_eq(
+		_system._store_camera.global_position,
+		entry_marker.global_position,
+		"store camera should move to the interior entry spawn"
+	)
+	assert_true(
+		_active_cameras.has(_system._store_camera.get_camera()),
+		"entering should notify camera listeners about the store camera"
+	)
+
+
+func test_exit_store_requested_restores_hallway_and_clears_active_store() -> void:
+	EventBus.enter_store_requested.emit(_STORE_ID)
+	_store_exited_ids.clear()
+	_active_store_ids.clear()
+	_active_cameras.clear()
+
 	EventBus.exit_store_requested.emit()
+
+	assert_false(_system.is_inside_store())
+	assert_null(_system.get_active_store_scene())
+	assert_true(_hallway_node.visible)
+	assert_eq(_store_exited_ids, [_STORE_ID])
+	assert_eq(_active_store_ids, [&""])
+	assert_eq(_store_state.active_store_id, &"")
 	assert_eq(
-		_store_closed.size(), 0,
-		"exit_store_requested while transitioning must not emit store_closed"
+		_hallway_camera.global_position,
+		_storefront_marker.global_position,
+		"exiting should return the hallway camera to the storefront exit marker"
 	)
-	_system._inside_store = false
-	_system._is_transitioning = false
-
-
-# ── 6. select_store — ownership and guard validation ─────────────────────────
-
-
-func test_select_store_empty_id_is_noop() -> void:
-	_init_system()
-	_system.select_store(&"")
-	assert_eq(
-		_active_store_changed.size(), 0,
-		"select_store with empty id must not emit active_store_changed"
-	)
-
-
-func test_select_store_unowned_store_is_noop() -> void:
-	_init_system()
-	_system.select_store(_STORE_ID)
-	assert_eq(
-		_active_store_changed.size(), 0,
-		"select_store for unowned store must not emit active_store_changed"
-	)
-
-
-func test_select_owned_store_emits_active_store_changed() -> void:
-	_init_system()
-	_store_state.lease_store(0, _STORE_ID, _STORE_ID)
-	_active_store_changed.clear()
-	_system.select_store(_STORE_ID)
-	assert_eq(
-		_active_store_changed.size(), 1,
-		"select_store must emit active_store_changed once for an owned store"
-	)
-	assert_eq(
-		_active_store_changed[0], _STORE_ID,
-		"active_store_changed must carry the selected store_id"
-	)
-
-
-func test_select_same_owned_store_twice_does_not_re_emit() -> void:
-	_init_system()
-	_store_state.lease_store(0, _STORE_ID, _STORE_ID)
-	_system.select_store(_STORE_ID)
-	_active_store_changed.clear()
-	_system.select_store(_STORE_ID)
-	assert_eq(
-		_active_store_changed.size(), 0,
-		"Selecting the already-active store must not re-emit active_store_changed"
-	)
-
-
-# ── 7. Full enter transition (requires ContentRegistry) ───────────────────────
-
-
-func test_enter_valid_store_sets_inside_state() -> void:
-	_ensure_store_registered()
-	_init_system()
-	EventBus.enter_store_requested.emit(_STORE_ID)
-	# Two frames: one for each await (_fade_in, _fade_out) in the coroutine.
-	await get_tree().process_frame
-	await get_tree().process_frame
 	assert_true(
-		_system.is_inside_store(),
-		"is_inside_store() must return true after a successful enter transition"
+		_active_cameras.has(_hallway_camera.get_camera()),
+		"exiting should notify camera listeners about the hallway camera"
 	)
 
 
-func test_enter_valid_store_emits_store_entered() -> void:
-	_ensure_store_registered()
-	_init_system()
-	EventBus.enter_store_requested.emit(_STORE_ID)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_true(
-		_store_entered.size() > 0,
-		"store_entered must be emitted after a successful enter transition"
-	)
-	if _store_entered.size() > 0:
-		assert_eq(
-			_store_entered[0], _STORE_ID,
-			"store_entered must carry the entered store_id"
-		)
+func test_enter_store_aborts_cleanly_when_scene_load_fails() -> void:
+	EventBus.enter_store_requested.emit(_BROKEN_STORE_ID)
+
+	assert_false(_system.is_inside_store())
+	assert_null(_system.get_active_store_scene())
+	assert_true(_hallway_node.visible)
+	assert_eq(_store_entered_ids.size(), 0)
+	assert_eq(_active_store_ids.size(), 0)
+	assert_eq(_store_state.active_store_id, &"")
 
 
-func test_enter_valid_store_emits_active_store_changed() -> void:
-	_ensure_store_registered()
-	_init_system()
-	EventBus.enter_store_requested.emit(_STORE_ID)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_true(
-		_active_store_changed.size() > 0,
-		"active_store_changed must be emitted after a successful enter transition"
-	)
-	if _active_store_changed.size() > 0:
-		assert_eq(
-			_active_store_changed[0], _STORE_ID,
-			"active_store_changed must carry the entered store_id"
-		)
-
-
-# ── 8. Full exit transition (requires ContentRegistry) ────────────────────────
-
-
-func test_exit_after_enter_clears_inside_state() -> void:
-	_ensure_store_registered()
-	_init_system()
-	EventBus.enter_store_requested.emit(_STORE_ID)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if not _system.is_inside_store():
-		pending("Enter transition did not complete — skipping exit test")
-		return
-	EventBus.exit_store_requested.emit()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_false(
-		_system.is_inside_store(),
-		"is_inside_store() must return false after exiting a store"
-	)
-
-
-func test_exit_after_enter_emits_store_closed() -> void:
-	_ensure_store_registered()
-	_init_system()
-	EventBus.enter_store_requested.emit(_STORE_ID)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if not _system.is_inside_store():
-		pending("Enter transition did not complete — skipping exit test")
-		return
-	_store_closed.clear()
-	EventBus.exit_store_requested.emit()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_true(
-		_store_closed.size() > 0,
-		"store_closed must be emitted after exiting a store"
-	)
-	if _store_closed.size() > 0:
-		assert_eq(
-			_store_closed[0], String(_STORE_ID),
-			"store_closed must carry the exited store_id"
-		)
-
-
-func test_exit_after_enter_emits_active_store_changed_empty() -> void:
-	_ensure_store_registered()
-	_init_system()
-	EventBus.enter_store_requested.emit(_STORE_ID)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if not _system.is_inside_store():
-		pending("Enter transition did not complete — skipping exit test")
-		return
-	_active_store_changed.clear()
-	EventBus.exit_store_requested.emit()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_true(
-		_active_store_changed.size() > 0,
-		"active_store_changed must be emitted after exiting a store"
-	)
-	if _active_store_changed.size() > 0:
-		assert_eq(
-			_active_store_changed[0], &"",
-			"active_store_changed must carry empty StringName after store exit"
-		)
-
-
-# ── Signal callbacks ──────────────────────────────────────────────────────────
-
-
-func _on_store_opened(store_id: String) -> void:
-	_store_opened.append(store_id)
-
-
-func _on_store_closed(store_id: String) -> void:
-	_store_closed.append(store_id)
-
-
-func _on_active_store_changed(store_id: StringName) -> void:
-	_active_store_changed.append(store_id)
+func _safe_disconnect(signal_ref: Signal, callable: Callable) -> void:
+	if signal_ref.is_connected(callable):
+		signal_ref.disconnect(callable)
 
 
 func _on_store_entered(store_id: StringName) -> void:
-	_store_entered.append(store_id)
+	_store_entered_ids.append(store_id)
+	_hallway_visible_during_enter = _hallway_node.visible
+	_store_scene_loaded_during_enter = _system.get_active_store_scene() != null
 
 
 func _on_store_exited(store_id: StringName) -> void:
-	_store_exited.append(store_id)
+	_store_exited_ids.append(store_id)
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	_active_store_ids.append(store_id)
 
 
 func _on_active_camera_changed(camera: Camera3D) -> void:
-	_cameras_changed.append(camera)
+	_active_cameras.append(camera)

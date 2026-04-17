@@ -101,6 +101,28 @@ func test_update_ghost_shows_for_valid_input() -> void:
 	assert_true(ghost.visible)
 
 
+func test_update_ghost_snaps_to_grid_cell_center() -> void:
+	_placement.select_fixture("floor_rack")
+	_visuals.update_ghost(Vector2i(5, 5), "floor_rack", 0)
+	var ghost: Node3D = _visuals.get_node("GhostPreview")
+	var expected: Vector3 = _grid.grid_to_world(Vector2i(5, 5))
+	assert_almost_eq(ghost.position.x, expected.x, 0.001)
+	assert_almost_eq(
+		ghost.position.y,
+		expected.y + BuildModeGhost.Y_OFFSET,
+		0.001
+	)
+	assert_almost_eq(ghost.position.z, expected.z, 0.001)
+
+
+func test_update_ghost_marks_invalid_when_validator_rejects() -> void:
+	_placement.select_fixture("floor_rack")
+	_visuals.update_ghost(Vector2i(5, 0), "floor_rack", 0)
+	var ghost: BuildModeGhost = _visuals.get_node("GhostPreview")
+	assert_true(ghost.visible)
+	assert_false(ghost.is_valid)
+
+
 func test_ghost_creates_mesh_children() -> void:
 	_placement.select_fixture("floor_rack")
 	_visuals.update_ghost(Vector2i(5, 5), "floor_rack", 0)

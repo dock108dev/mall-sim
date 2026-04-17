@@ -7,11 +7,13 @@ const EXPECTED_SPACING: float = 8.0
 
 var _lease_results: Array[Dictionary] = []
 var _saved_owned_stores: Array[StringName] = []
+var _saved_data_loader: DataLoader = null
 
 
 func before_each() -> void:
 	_lease_results.clear()
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	_saved_data_loader = GameManager.data_loader
 	GameManager.owned_stores = []
 	if not EventBus.lease_completed.is_connected(_on_lease_completed):
 		EventBus.lease_completed.connect(_on_lease_completed)
@@ -21,6 +23,7 @@ func after_each() -> void:
 	if EventBus.lease_completed.is_connected(_on_lease_completed):
 		EventBus.lease_completed.disconnect(_on_lease_completed)
 	GameManager.owned_stores = _saved_owned_stores
+	GameManager.data_loader = _saved_data_loader
 	ContentRegistry.clear_for_testing()
 
 
@@ -447,6 +450,58 @@ func test_lease_request_success_updates_cash_and_ownership_atomically() -> void:
 	)
 
 
+func test_lease_request_uses_slot_index_setup_fee() -> void:
+	_register_store_catalog_for_restore()
+	GameManager.owned_stores = [&"unknown_store"]
+
+	var hallway: MallHallway = _instantiate_hallway()
+	var economy := EconomySystem.new()
+	add_child_autofree(economy)
+	economy.load_save_data({"player_cash": 2000.0})
+	var store_state := StoreStateManager.new()
+	add_child_autofree(store_state)
+	store_state.initialize(null, economy)
+
+	hallway.set_systems(economy, null, null, null, store_state)
+	hallway._on_lease_requested(&"retro_games", 2, "Retro Replay")
+
+	assert_eq(
+		economy.get_cash(), 500.0,
+		"Slot 2 should charge the Store 3 setup fee"
+	)
+	assert_eq(store_state.owned_slots.get(2, &""), &"retro_games")
+
+
+func test_starter_inventory_delivered_on_next_day_started() -> void:
+	ContentRegistry.clear_for_testing()
+	var data_loader := DataLoader.new()
+	_register_starter_inventory_catalog(data_loader)
+	GameManager.data_loader = data_loader
+
+	var inventory := InventorySystem.new()
+	add_child_autofree(inventory)
+	inventory.initialize(data_loader)
+	var hallway := MallHallway.new()
+	hallway.set_systems(null, null, inventory)
+
+	hallway._queue_starter_inventory("retro_games")
+	assert_eq(
+		inventory.get_stock(&"retro_games").size(), 0,
+		"Starter inventory should wait until the next morning"
+	)
+
+	hallway._on_day_started_deliver_inventory(2)
+	var stock: Array[ItemInstance] = inventory.get_stock(&"retro_games")
+	assert_true(
+		stock.size() >= 6 and stock.size() <= 10,
+		"Starter inventory should deliver 6-10 common items"
+	)
+	for item: ItemInstance in stock:
+		assert_eq(item.definition.store_type, "retro_games")
+		assert_eq(item.definition.rarity, "common")
+	hallway.free()
+
+
 func _on_lease_completed(
 	store_id: StringName,
 	success: bool,
@@ -519,6 +574,33 @@ func _register_store_catalog_for_restore() -> void:
 		},
 		"store"
 	)
+
+
+func _register_starter_inventory_catalog(data_loader: DataLoader) -> void:
+	data_loader._build_and_register(
+		"store",
+		{
+			"id": "retro_games",
+			"name": "Retro Games",
+			"store_name": "Retro Games",
+			"description": "Classic consoles, carts, and repairs.",
+			"daily_rent": 140.0,
+			"shelf_capacity": 10,
+			"backroom_capacity": 20,
+		}
+	)
+	for i: int in range(10):
+		data_loader._build_and_register(
+			"item",
+			{
+				"id": "retro_common_%02d" % i,
+				"item_name": "Retro Common %02d" % i,
+				"category": "games",
+				"store_type": "retro_games",
+				"base_price": 10.0 + i,
+				"rarity": "common",
+			}
+		)
 
 
 func _get_scene_color_property(

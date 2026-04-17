@@ -163,6 +163,7 @@ var _refurbishment_dialog: RefurbishmentDialog = null
 var _refurb_queue_panel: RefurbQueuePanel = null
 var _deferred_panels_loaded: bool = false
 var _startup_time_ms: float = 0.0
+var _nav_mesh_rebaker: NavMeshRebaker = null
 
 @onready var _ui_layer: CanvasLayer = $UILayer
 @onready var _store_container: Node3D = $StoreContainer
@@ -452,6 +453,7 @@ func _setup_ui() -> void:
 	pricing_panel.inventory_system = inventory_system
 	pricing_panel.economy_system = economy_system
 	_ui_layer.add_child(pricing_panel)
+	_inventory_panel.pricing_panel = pricing_panel
 
 	var checkout_panel: CheckoutPanel = (
 		_CheckoutPanelScene.instantiate() as CheckoutPanel
@@ -534,6 +536,8 @@ func _setup_deferred_panels() -> void:
 	order_panel.economy_system = economy_system
 	order_panel.store_type = String(GameManager.current_store_id)
 	_ui_layer.add_child(order_panel)
+	if _inventory_panel:
+		_inventory_panel.order_panel = order_panel
 
 	var trends_panel: TrendsPanel = (
 		_TrendsPanelScene.instantiate() as TrendsPanel
@@ -662,11 +666,11 @@ func _initialize_build_mode() -> void:
 
 	var nav_region: NavigationRegion3D = _find_nav_region()
 	if nav_region:
-		build_mode.set_nav_region(nav_region)
-		var nav_rebaker := NavMeshRebaker.new()
-		nav_rebaker.name = "NavMeshRebaker"
-		add_child(nav_rebaker)
-		nav_rebaker.set_nav_region(nav_region)
+		if not is_instance_valid(_nav_mesh_rebaker):
+			_nav_mesh_rebaker = NavMeshRebaker.new()
+			_nav_mesh_rebaker.name = "NavMeshRebaker"
+			add_child(_nav_mesh_rebaker)
+		_nav_mesh_rebaker.set_nav_region(nav_region)
 
 	var build_transition := BuildModeTransition.new()
 	build_transition.name = "BuildModeTransition"

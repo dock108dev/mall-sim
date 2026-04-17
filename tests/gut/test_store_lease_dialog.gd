@@ -436,6 +436,23 @@ func test_name_max_length_enforced() -> void:
 	)
 
 
+func test_confirmation_uses_slot_index_setup_fee() -> void:
+	_dialog.show_for_slot(2, _store_defs, [], 2000.0, 100.0)
+	_select_store_type("sports")
+	_dialog._on_confirm_pressed()
+	_dialog._name_input.text = "Slot Three"
+	_dialog._on_confirm_pressed()
+
+	assert_string_contains(
+		_dialog._summary_label.text,
+		"Setup Fee: $1500"
+	)
+	assert_string_contains(
+		_dialog._summary_label.text,
+		"Cash After Fee: $500"
+	)
+
+
 func _open_dialog_with_funds(
 	cash: float, reputation: float
 ) -> void:

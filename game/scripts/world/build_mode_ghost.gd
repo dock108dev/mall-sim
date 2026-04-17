@@ -13,6 +13,8 @@ const PULSE_MAX_ALPHA: float = 0.5
 const SHAKE_OSCILLATIONS: int = 3
 const SHAKE_DURATION: float = 0.2
 const SHAKE_MAGNITUDE: float = 0.03
+const SCALE_PUNCH_PEAK: float = 1.08
+const SCALE_PUNCH_DURATION: float = 0.2
 
 var is_valid: bool = false
 
@@ -21,6 +23,8 @@ var _material: StandardMaterial3D = null
 var _pulse_time: float = 0.0
 var _is_pulsing: bool = false
 var _grid: BuildModeGrid = null
+var _shake_tween: Tween = null
+var _scale_tween: Tween = null
 
 
 func _ready() -> void:
@@ -48,6 +52,9 @@ func _process(delta: float) -> void:
 func show_at_cells(
 	cells: Array[Vector2i], valid: bool
 ) -> void:
+	if cells.is_empty():
+		hide_ghost()
+		return
 	is_valid = valid
 	_update_color(valid)
 	_rebuild_meshes(cells)
@@ -59,6 +66,10 @@ func hide_ghost() -> void:
 	visible = false
 	_is_pulsing = false
 	_pulse_time = 0.0
+	_kill_tween(_shake_tween)
+	_kill_tween(_scale_tween)
+	position = Vector3.ZERO
+	scale = Vector3.ONE
 
 
 ## Plays horizontal shake animation on invalid placement.
@@ -66,8 +77,9 @@ func play_shake() -> void:
 	if not visible:
 		return
 
+	_kill_tween(_shake_tween)
 	var original_pos: Vector3 = position
-	var tween: Tween = create_tween()
+	_shake_tween = create_tween()
 	var step_time: float = SHAKE_DURATION / (SHAKE_OSCILLATIONS * 2.0)
 
 	for i: int in range(SHAKE_OSCILLATIONS):
@@ -75,20 +87,39 @@ func play_shake() -> void:
 		var offset: Vector3 = Vector3(
 			SHAKE_MAGNITUDE * direction, 0.0, 0.0
 		)
-		tween.tween_property(
+		_shake_tween.tween_property(
 			self, "position",
 			original_pos + offset,
 			step_time
 		).set_trans(Tween.TRANS_SINE)
-		tween.tween_property(
+		_shake_tween.tween_property(
 			self, "position",
 			original_pos - offset,
 			step_time
 		).set_trans(Tween.TRANS_SINE)
 
-	tween.tween_property(
+	_shake_tween.tween_property(
 		self, "position", original_pos, step_time * 0.5
 	).set_trans(Tween.TRANS_SINE)
+
+
+## Plays a quick placement confirmation scale punch on the ghost footprint.
+func play_scale_punch() -> void:
+	if not visible:
+		return
+
+	_kill_tween(_scale_tween)
+	scale = Vector3.ONE
+	_scale_tween = create_tween()
+	_scale_tween.tween_property(
+		self,
+		"scale",
+		Vector3(SCALE_PUNCH_PEAK, SCALE_PUNCH_PEAK, SCALE_PUNCH_PEAK),
+		SCALE_PUNCH_DURATION * 0.5
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_scale_tween.tween_property(
+		self, "scale", Vector3.ONE, SCALE_PUNCH_DURATION * 0.5
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 
 
 func _update_color(valid: bool) -> void:
@@ -104,16 +135,20 @@ func _update_color(valid: bool) -> void:
 func _rebuild_meshes(cells: Array[Vector2i]) -> void:
 	for mesh: MeshInstance3D in _meshes:
 		if is_instance_valid(mesh):
-			mesh.queue_free()
+			remove_child(mesh)
+			mesh.free()
 	_meshes.clear()
 
+	var anchor: Vector3 = _get_cells_center(cells)
+	position = anchor
+
 	for cell: Vector2i in cells:
-		var inst: MeshInstance3D = _create_cell_quad(cell)
+		var inst: MeshInstance3D = _create_cell_quad(cell, anchor)
 		add_child(inst)
 		_meshes.append(inst)
 
 
-func _create_cell_quad(cell: Vector2i) -> MeshInstance3D:
+func _create_cell_quad(cell: Vector2i, anchor: Vector3) -> MeshInstance3D:
 	var quad: PlaneMesh = PlaneMesh.new()
 	quad.size = Vector2(
 		BuildModeGrid.CELL_SIZE * 0.95,
@@ -123,11 +158,12 @@ func _create_cell_quad(cell: Vector2i) -> MeshInstance3D:
 	var inst: MeshInstance3D = MeshInstance3D.new()
 	inst.mesh = quad
 	inst.set_surface_override_material(0, _material)
-	inst.position = Vector3(
+	var world_pos := Vector3(
 		_grid.grid_origin.x + (cell.x + 0.5) * BuildModeGrid.CELL_SIZE,
 		_grid.grid_origin.y + Y_OFFSET,
 		_grid.grid_origin.z + (cell.y + 0.5) * BuildModeGrid.CELL_SIZE
 	)
+	inst.position = world_pos - anchor
 	return inst
 
 
@@ -138,3 +174,19 @@ func _create_material(color: Color) -> StandardMaterial3D:
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.no_depth_test = true
 	return mat
+
+
+func _get_cells_center(cells: Array[Vector2i]) -> Vector3:
+	var sum := Vector3.ZERO
+	for cell: Vector2i in cells:
+		sum += Vector3(
+			_grid.grid_origin.x + (cell.x + 0.5) * BuildModeGrid.CELL_SIZE,
+			_grid.grid_origin.y + Y_OFFSET,
+			_grid.grid_origin.z + (cell.y + 0.5) * BuildModeGrid.CELL_SIZE
+		)
+	return sum / float(cells.size())
+
+
+func _kill_tween(tween: Tween) -> void:
+	if tween and tween.is_valid():
+		tween.kill()

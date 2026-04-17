@@ -286,16 +286,16 @@ func test_trophy_hidden_when_no_path() -> void:
 
 func test_all_13_ending_ids_render() -> void:
 	var ending_ids: Array[String] = [
-		"the_ghost_between_the_walls",
+		"the_mall_between_the_walls",
 		"the_mall_legend_redux",
 		"lights_out",
 		"foreclosure",
 		"going_going_gone",
+		"prestige_champion",
 		"the_local_legend",
 		"the_mini_empire",
 		"the_mall_tycoon",
 		"the_fair_dealer",
-		"the_collector",
 		"broke_even",
 		"the_comfortable_middle",
 		"crisis_operator",
