@@ -1,7 +1,6 @@
-## A specific item the player owns, with individual state.
-## ItemDefinition is the template; ItemInstance is the concrete copy.
+## A specific item the player owns, with per-copy runtime state.
 class_name ItemInstance
-extends RefCounted
+extends Resource
 
 const CONDITION_MULTIPLIERS: Dictionary = {
 	"mint": 2.0,
@@ -24,19 +23,76 @@ const RARITY_REFERENCE_PRICE: float = 5.0
 
 static var _next_id: int = 0
 
-var definition: ItemDefinition
+var definition: ItemDefinition = null:
+	set(value):
+		_definition = value
+		definition_id = value.item_id if value else &""
+	get:
+		return _definition
+var definition_id: StringName = &""
 var condition: String = "good"
+var condition_tier: int:
+	get:
+		return ItemDefinition.condition_to_tier(condition)
+	set(value):
+		condition = ItemDefinition.tier_to_condition(value)
 var acquired_day: int = 0
 var acquired_price: float = 0.0
-var current_location: String = "backroom"
-var player_set_price: float = 0.0
-var instance_id: String = ""
+var current_location: String = "backroom":
+	set(value):
+		_current_location = value
+		_location = StringName(value)
+	get:
+		return _current_location
+var location: StringName = &"":
+	set(value):
+		_location = value
+		_current_location = String(value)
+	get:
+		return _location
+var player_set_price: float = 0.0:
+	set(value):
+		_player_set_price = value
+		_player_price = value
+	get:
+		return _player_set_price
+var player_price: float = 0.0:
+	set(value):
+		_player_price = value
+		_player_set_price = value
+	get:
+		return _player_price
+var instance_id: StringName = &""
 var tested: bool = false
 var test_result: String = ""
 var is_demo: bool = false
 var demo_placed_day: int = 0
-var authentication_status: String = "none"
+var authentication_status: String = "none":
+	set(value):
+		_authentication_status = value
+		_is_authenticated = _authentication_status == "authenticated"
+	get:
+		return _authentication_status
+var is_authenticated: bool = false:
+	set(value):
+		_is_authenticated = value
+		if value:
+			_authentication_status = "authenticated"
+		elif _authentication_status == "authenticated":
+			_authentication_status = "none"
+	get:
+		return _is_authenticated
 var rental_due_day: int = -1
+var is_graded: bool = false
+var grade_value: int = 0
+
+var _definition: ItemDefinition = null
+var _current_location: String = "backroom"
+var _location: StringName = &"backroom"
+var _player_set_price: float = 0.0
+var _player_price: float = 0.0
+var _authentication_status: String = "none"
+var _is_authenticated: bool = false
 
 
 ## Creates an ItemInstance from an ItemDefinition with a specific condition.
@@ -49,6 +105,8 @@ static func create_from_definition(
 	inst.acquired_day = 0
 	inst.acquired_price = def.base_price
 	inst.instance_id = _generate_id(def.id)
+	inst.player_price = 0.0
+	inst.location = &"backroom"
 	return inst
 
 
@@ -62,6 +120,8 @@ static func create(
 	inst.acquired_day = day
 	inst.acquired_price = price
 	inst.instance_id = _generate_id(def.id)
+	inst.player_price = 0.0
+	inst.location = &"backroom"
 	return inst
 
 
@@ -90,9 +150,9 @@ func get_current_value() -> float:
 	return definition.base_price * cond_mult * rarity_mult
 
 
-static func _generate_id(base: String) -> String:
+static func _generate_id(base: String) -> StringName:
 	_next_id += 1
-	return "%s_%d" % [base, _next_id]
+	return StringName("%s_%d" % [base, _next_id])
 
 
 static func _resolve_condition(def: ItemDefinition, cond: String) -> String:

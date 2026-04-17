@@ -1,4 +1,4 @@
-## Data resource for global economy configuration.
+## Data resource for global economy multipliers and starting values.
 class_name EconomyConfig
 extends Resource
 

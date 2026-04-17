@@ -78,6 +78,26 @@ func get_scene_path(id: StringName) -> String:
 	return _scene_map.get(canonical, "")
 
 
+## Returns a typed item definition resource for a canonical or alias ID.
+func get_item_definition(id: StringName) -> ItemDefinition:
+	return _get_typed_resource(id, "item") as ItemDefinition
+
+
+## Returns a typed store definition resource for a canonical or alias ID.
+func get_store_definition(id: StringName) -> StoreDefinition:
+	return _get_typed_resource(id, "store") as StoreDefinition
+
+
+## Returns a typed customer definition resource for a canonical or alias ID.
+func get_customer_type_definition(id: StringName) -> CustomerTypeDefinition:
+	return _get_typed_resource(id, "customer") as CustomerTypeDefinition
+
+
+## Returns the registered economy config resource when available.
+func get_economy_config() -> EconomyConfig:
+	return _get_typed_resource(&"economy_config", "economy") as EconomyConfig
+
+
 ## Clears all registry state. For use in tests only.
 func clear_for_testing() -> void:
 	_entries.clear()
@@ -297,3 +317,32 @@ func _register_optional_alias(
 	if raw_alias.strip_edges().is_empty():
 		return
 	_register_alias(_normalize(raw_alias), canonical)
+
+
+func _get_typed_resource(
+	id: StringName, expected_type: String
+) -> Resource:
+	var canonical: StringName = _resolve_resource_id(id)
+	if canonical.is_empty():
+		return null
+	if not expected_type.is_empty():
+		var actual_type: String = str(_types.get(canonical, ""))
+		if actual_type != expected_type:
+			return null
+	return _resources.get(canonical) as Resource
+
+
+func _resolve_resource_id(id: StringName) -> StringName:
+	if _resources.has(id):
+		return id
+	var resolved: StringName = _resolve_internal(id)
+	if not resolved.is_empty() and _resources.has(resolved):
+		return resolved
+	var normalized: StringName = _normalize(String(id))
+	if _resources.has(normalized):
+		return normalized
+	if _aliases.has(normalized):
+		var alias_target: StringName = _aliases[normalized]
+		if _resources.has(alias_target):
+			return alias_target
+	return &""

@@ -54,17 +54,17 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	var item := ItemDefinition.new()
 	item.id = str(data["id"])
 	var item_name_raw: String = str(data.get(
-		"item_name", data.get("display_name", "")
+		"item_name", data.get("display_name", data.get("name", ""))
 	))
 	item.item_name = item_name_raw
 	item.description = str(data.get("description", ""))
-	item.category = str(data.get("category", ""))
+	item.category = StringName(str(data.get("category", "")))
 	item.subcategory = str(data.get("subcategory", ""))
-	item.store_type = str(data.get("store_type", ""))
+	item.store_type = StringName(str(data.get("store_type", "")))
 	item.base_price = price_val
 	item.rarity = str(data.get("rarity", "common"))
-	item.icon_path = str(data.get("icon_path", ""))
-	item.set_name = str(data.get("set_name", ""))
+	item.icon_path = str(data.get("icon_path", data.get("icon", "")))
+	item.set_name = str(data.get("set_name", data.get("set", "")))
 	item.depreciates = bool(data.get("depreciates", false))
 	item.appreciates = bool(data.get("appreciates", false))
 	item.rental_tier = str(data.get("rental_tier", ""))
@@ -88,7 +88,7 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	if data.has("condition_value_multipliers"):
 		item.condition_value_multipliers = data["condition_value_multipliers"]
 	if data.has("tags"):
-		item.tags = PackedStringArray(data["tags"])
+		item.tags = data["tags"]
 	var extra: Dictionary = {}
 	var known_keys: PackedStringArray = [
 		"id", "item_name", "display_name", "description", "category",
@@ -118,7 +118,7 @@ static func parse_store(data: Dictionary) -> StoreDefinition:
 	var store := StoreDefinition.new()
 	store.id = str(data["id"])
 	store.store_name = str(data["name"])
-	store.store_type = str(data.get("store_type", ""))
+	store.store_type = StringName(str(data.get("store_type", "")))
 	store.description = str(data.get("description", ""))
 	store.scene_path = str(data.get("scene_path", ""))
 	store.size_category = str(data.get("size_category", "small"))
@@ -140,6 +140,12 @@ static func parse_store(data: Dictionary) -> StoreDefinition:
 		store.starting_inventory = PackedStringArray(
 			data["starting_inventory"]
 		)
+	if data.has("starter_inventory"):
+		var starter_entries: Array[Dictionary] = []
+		for entry: Variant in data["starter_inventory"]:
+			if entry is Dictionary:
+				starter_entries.append((entry as Dictionary).duplicate(true))
+		store.starter_inventory = starter_entries
 	if data.has("fixtures"):
 		var arr: Array[Dictionary] = []
 		for f: Variant in data["fixtures"]:
@@ -157,6 +163,11 @@ static func parse_store(data: Dictionary) -> StoreDefinition:
 		)
 	if data.has("aesthetic_tags"):
 		store.aesthetic_tags = PackedStringArray(data["aesthetic_tags"])
+	if data.has("upgrade_ids"):
+		var upgrade_ids: Array[StringName] = []
+		for raw_upgrade_id: Variant in data["upgrade_ids"]:
+			upgrade_ids.append(StringName(str(raw_upgrade_id)))
+		store.upgrade_ids = upgrade_ids
 	if data.has("recommended_markup"):
 		var m: Variant = data["recommended_markup"]
 		if m is Dictionary:
@@ -208,6 +219,11 @@ static func parse_customer(
 	p.model_path = str(data.get("model", data.get("model_path", "")))
 	if data.has("store_types"):
 		p.store_types = PackedStringArray(data["store_types"])
+	if data.has("store_affinity"):
+		var affinity: Array[StringName] = []
+		for raw_store_id: Variant in data["store_affinity"]:
+			affinity.append(StringName(str(raw_store_id)))
+		p.store_affinity = affinity
 	if data.has("preferred_categories"):
 		p.preferred_categories = PackedStringArray(
 			data["preferred_categories"]
@@ -228,6 +244,9 @@ static func parse_customer(
 		for val: Variant in data["typical_rental_count"]:
 			arr.append(int(val))
 		p.typical_rental_count = arr
+	p.spawn_weight = float(
+		data.get("spawn_weight", _derive_spawn_weight(data))
+	)
 	return p
 
 
@@ -599,6 +618,18 @@ static func _parse_float_array(
 	for val: Variant in data[key]:
 		arr.append(float(val))
 	return arr
+
+
+static func _derive_spawn_weight(data: Dictionary) -> float:
+	if not data.has("spawn_weight_by_hour"):
+		return 1.0
+	var raw_weights: Variant = data["spawn_weight_by_hour"]
+	if raw_weights is not Dictionary:
+		return 1.0
+	var total_weight: float = 0.0
+	for raw_value: Variant in (raw_weights as Dictionary).values():
+		total_weight += float(raw_value)
+	return maxf(total_weight, 1.0)
 
 
 static func _parse_fixture_unlock(

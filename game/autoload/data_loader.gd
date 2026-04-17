@@ -592,6 +592,10 @@ func get_item(id: String) -> ItemDefinition:
 	return _items.get(id) as ItemDefinition
 
 
+func get_item_definition(id: String) -> ItemDefinition:
+	return get_item(id)
+
+
 func get_all_items() -> Array[ItemDefinition]:
 	var r: Array[ItemDefinition] = []
 	r.assign(_items.values())
@@ -636,6 +640,10 @@ func get_store(id: String) -> StoreDefinition:
 	return _stores.get(String(canonical)) as StoreDefinition
 
 
+func get_store_definition(id: String) -> StoreDefinition:
+	return get_store(id)
+
+
 func get_all_stores() -> Array[StoreDefinition]:
 	var r: Array[StoreDefinition] = []
 	r.assign(_stores.values())
@@ -654,6 +662,10 @@ func get_customer_types_for_store(
 		if store_type in p.store_types:
 			r.append(p)
 	return r
+
+
+func get_customer_type_definition(id: String) -> CustomerTypeDefinition:
+	return _customers.get(id) as CustomerTypeDefinition
 
 
 func get_all_customers() -> Array[CustomerTypeDefinition]:
