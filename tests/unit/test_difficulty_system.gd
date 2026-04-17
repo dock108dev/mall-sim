@@ -42,6 +42,33 @@ func test_set_tier_hard_changes_current_tier_id() -> void:
 	)
 
 
+func test_set_tier_does_not_overwrite_corrupt_settings_file() -> void:
+	var corrupt_contents: String = "[display\nfullscreen=true"
+	var file: FileAccess = FileAccess.open(
+		_temp_settings_path, FileAccess.WRITE
+	)
+	assert_not_null(file, "Precondition: temp settings file should be writable")
+	file.store_string(corrupt_contents)
+	file.close()
+
+	_ds.set_tier(&"hard")
+
+	var verify_file: FileAccess = FileAccess.open(
+		_temp_settings_path, FileAccess.READ
+	)
+	assert_not_null(
+		verify_file,
+		"Corrupt settings file should remain readable after persistence failure"
+	)
+	var persisted_contents: String = verify_file.get_as_text()
+	verify_file.close()
+	assert_eq(
+		persisted_contents,
+		corrupt_contents,
+		"Difficulty persistence should not overwrite a corrupt settings file"
+	)
+
+
 # --- Signal emission ---
 
 func test_set_tier_emits_difficulty_selected_with_tier_id() -> void:

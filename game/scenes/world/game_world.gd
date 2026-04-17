@@ -108,7 +108,6 @@ var reputation_system: ReputationSystem:
 @onready var progression_system: ProgressionSystem = $ProgressionSystem
 @onready var milestone_system: MilestoneSystem = $MilestoneSystem
 @onready var order_system: OrderSystem = $OrderSystem
-@onready var ordering_system: OrderingSystem = $OrderingSystem
 @onready var staff_system: StaffSystem = $StaffSystem
 @onready var store_selector_system: StoreSelectorSystem = (
 	$StoreSelectorSystem
@@ -301,7 +300,6 @@ func initialize_tier_3_operational() -> void:
 	order_system.initialize(
 		inventory_system, ReputationSystemSingleton, progression_system
 	)
-	ordering_system.initialize(inventory_system, ReputationSystemSingleton)
 
 	staff_system.initialize(
 		economy_system,
@@ -400,7 +398,6 @@ func _wire_save_manager() -> void:
 		time_system,
 	)
 	save_manager.set_order_system(order_system)
-	save_manager.set_ordering_system(ordering_system)
 	save_manager.set_store_state_manager(store_state_manager)
 	save_manager.set_progression_system(progression_system)
 	save_manager.set_milestone_system(milestone_system)

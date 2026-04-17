@@ -61,9 +61,9 @@ All gameplay systems are standalone class scripts in `game/scripts/systems/`. Th
 | **ProgressionSystem** | `progression_system.gd` | Milestone evaluation and reward granting |
 | **TutorialSystem** | `tutorial_system.gd` | First-day walkthrough and contextual tips |
 | **StaffSystem** | `staff_system.gd` | Hiring, firing, wage management, auto-restocking |
-| **OrderingSystem** | `ordering_system.gd` | Stock ordering, delivery queues, supplier tier filtering |
+| **OrderSystem** | `order_system.gd` | Stock ordering, delivery queues, supplier unlock gates |
 
-> `SupplierTierSystem` (`supplier_tier_system.gd`) is a static utility class (no Node instance). `OrderingSystem` delegates tier lookups to it via static method calls.
+> `SupplierTierSystem` (`supplier_tier_system.gd`) is a static utility class. Runtime ordering now lives in `OrderSystem`.
 
 ### Economy & Market Systems
 

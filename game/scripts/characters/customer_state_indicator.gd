@@ -26,6 +26,8 @@ const STATE_COLORS: Dictionary = {
 	IndicatorState.DISSATISFIED: Color(1.0, 0.15, 0.1, 1.0),
 }
 
+@export var customer_id: String = ""
+
 var _customer: Node = null
 var _active_camera: Camera3D = null
 
@@ -42,6 +44,8 @@ func _ready() -> void:
 
 func initialize(customer: Node) -> void:
 	_customer = customer
+	if customer_id.is_empty() and customer != null:
+		customer_id = str(customer.get_instance_id())
 
 
 func _process(_delta: float) -> void:
@@ -65,7 +69,7 @@ func _process(_delta: float) -> void:
 func _on_customer_state_changed(
 	customer: Node, new_state: int
 ) -> void:
-	if customer != _customer:
+	if not _matches_customer(customer):
 		return
 	if STATE_COLORS.has(new_state):
 		_sprite.modulate = Color(
@@ -78,3 +82,11 @@ func _on_customer_state_changed(
 
 func _on_active_camera_changed(camera: Camera3D) -> void:
 	_active_camera = camera
+
+
+func _matches_customer(customer: Node) -> bool:
+	if customer == _customer:
+		return true
+	if customer == null or customer_id.is_empty():
+		return false
+	return str(customer.get_instance_id()) == customer_id

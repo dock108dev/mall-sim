@@ -31,7 +31,6 @@ const TIER_3_SYSTEMS: Array[StringName] = [
 	&"ProgressionSystem",
 	&"MilestoneSystem",
 	&"OrderSystem",
-	&"OrderingSystem",
 	&"StaffSystem",
 ]
 
@@ -85,7 +84,6 @@ func before_all() -> void:
 		&"ProgressionSystem": "res://game/scripts/systems/progression_system.gd",
 		&"MilestoneSystem": "res://game/scripts/systems/milestone_system.gd",
 		&"OrderSystem": "res://game/scripts/systems/order_system.gd",
-		&"OrderingSystem": "res://game/scripts/systems/ordering_system.gd",
 		&"StaffSystem": "res://game/scripts/systems/staff_system.gd",
 		&"StoreSelectorSystem": "res://game/scripts/systems/store_selector_system.gd",
 		&"BuildModeSystem": "res://game/scripts/systems/build_mode_system.gd",

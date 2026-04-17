@@ -1,108 +1,85 @@
-# Code Quality Cleanup Report
+# Cleanup report
 
-Date: 2026-04-10 (updated 2026-04-10)
+This cleanup pass stayed intentionally narrow because the worktree already
+contained unrelated in-progress edits across several large runtime systems. The
+changes below were limited to untouched files so the pass could improve
+maintainability without colliding with ongoing feature work.
 
-## Summary
+## Dead code removed
 
-Audited 117 GDScript files (~23,800 LOC), 39 scenes, 51 resources, and 21 JSON content files. Removed dead code, fixed naming collisions, fixed an inconsistency in starting cash, and consolidated duplicate constants.
+| File | Cleanup |
+| --- | --- |
+| `game/autoload/audio_manager.gd` | Removed a stale commented-out EventBus wiring block and replaced it with a short intent comment pointing to `AudioEventHandler`. |
+| `game/scenes/ui/haggle_panel.gd` | Removed a duplicate legacy marker line (`PanelAnimator.kill_tween(_anim_tween)`) from the scene-path compatibility wrapper. |
 
----
+## Files refactored
 
-## Dead Code Removed
+| File | Refactor |
+| --- | --- |
+| `game/autoload/audio_manager.gd` | Replaced code-like comments with a concise explanation of why event wiring lives in the delegated handler. |
+| `game/scenes/ui/haggle_panel.gd` | Added a top-level doc comment so the wrapper matches the scene-wrapper pattern already used by `boot.gd` and `upgrade_panel.gd`. |
 
-### `game/resources/product_definition.gd` (deleted)
+## Consistency changes made
 
-`ProductDefinition` class was never referenced by any script, scene, or JSON file. The item system uses `ItemDefinition` (template) and `ItemInstance` (runtime) exclusively.
+1. Normalized the `haggle_panel.gd` wrapper so it uses the same "backward-compatible wrapper" framing as other scene-path shims.
+2. Replaced commented pseudo-code in `audio_manager.gd` with a short "why" comment, which matches the repo guidance to prefer intent over restating implementation.
 
-### `RARITY_COLORS_FALLBACK` constant (3 files)
+## Files still over 500 LOC
 
-Identical 7-line dictionary defined in `inventory_panel.gd`, `order_panel.gd`, and `pack_opening_panel.gd`. None of the three files ever referenced the constant — all call `UIThemeConstants.get_rarity_color()` instead. Removed from all three.
+These files were inventoried during the pass and are flagged for follow-up.
+None were split in this pass because the safest extraction points either live in
+active in-progress files or in high-risk orchestration code.
 
-### `GameManager.STARTING_CASH` constant
+### Runtime scripts
 
-Defined as `500.0` in `game_manager.gd` but never referenced anywhere. The economy system uses `Constants.STARTING_CASH` exclusively. Removed.
+| LOC | File | Follow-up note |
+| ---: | --- | --- |
+| 1242 | `game/scripts/core/save_manager.gd` | High-value extraction target, but already modified in the current worktree; defer until save/load changes settle. |
+| 1232 | `game/scenes/world/game_world.gd` | Central bootstrap/orchestration root; split by initialization tier only after active scene wiring work lands. |
+| 977 | `game/autoload/data_loader.gd` | Candidate to keep shrinking into parser/helpers, but still a core content bootstrap path that needs dedicated follow-up. |
+| 870 | `game/scripts/systems/customer_system.gd` | Good extraction target for spawn scheduling and satisfaction helpers; currently modified in the worktree. |
+| 857 | `game/scripts/content_parser.gd` | Large by design because it owns content-shape parsing; follow-up should split by content domain. |
+| 843 | `game/scripts/systems/inventory_system.gd` | Candidate for stock movement / persistence helper extraction. |
+| 721 | `game/scripts/systems/order_system.gd` | Candidate for cart, supplier, and delivery sub-components; currently modified in the worktree. |
+| 715 | `game/autoload/audio_manager.gd` | Still oversized, but much of the remaining size is catalog/config surface area rather than dead code. |
+| 707 | `game/scripts/characters/shopper_ai.gd` | Candidate for state transition and pathing helper extraction. |
+| 679 | `game/scripts/world/storefront.gd` | Candidate for interaction/UI split; currently modified in the worktree. |
+| 655 | `game/scripts/systems/checkout_system.gd` | Candidate for transaction receipt / queue helper extraction. |
+| 642 | `game/scripts/systems/ambient_moments_system.gd` | Candidate for trigger evaluation extraction; currently modified in the worktree. |
+| 638 | `game/scripts/systems/secret_thread_system.gd` | Candidate for watcher/counter helpers if secret-thread work resumes. |
+| 628 | `game/scripts/characters/customer.gd` | Candidate for movement/intent helpers once NPC flow is stable. |
+| 618 | `game/scripts/systems/seasonal_event_system.gd` | Candidate for tournament/event split. |
+| 610 | `game/scripts/systems/economy_system.gd` | Candidate for report-generation and transaction-history helpers. |
+| 569 | `game/scenes/ui/inventory_panel.gd` | Candidate for filter and row-action extraction. |
+| 564 | `game/scripts/systems/store_state_manager.gd` | Candidate for persistence/registration helpers; currently modified in the worktree. |
+| 559 | `game/scripts/systems/build_mode_system.gd` | Candidate for placement-preview helper extraction. |
+| 545 | `game/scenes/ui/day_summary.gd` | Candidate for view-model/presentation split. |
+| 536 | `game/scripts/stores/video_rental_store_controller.gd` | Candidate for rental lifecycle helper extraction. |
+| 533 | `game/autoload/staff_manager.gd` | Candidate for staffing registry vs. runtime coordination split. |
+| 531 | `game/scripts/systems/fixture_placement_system.gd` | Candidate for validation/save-load helper extraction. |
+| 518 | `game/scenes/ui/settings_panel.gd` | Candidate for input-rebinding helper extraction. |
+| 513 | `game/scripts/characters/customer_animator.gd` | Candidate for animation-state helper extraction. |
+| 511 | `game/autoload/reputation_system.gd` | Candidate for persistence/reporting helper extraction. |
+| 505 | `game/scripts/ui/day_summary_panel.gd` | Candidate for section rendering helpers. |
 
-### `EventBus.item_purchased` signal
+### Tests
 
-Declared in `event_bus.gd` but never emitted or connected to by any script. Removed.
+| LOC | File | Follow-up note |
+| ---: | --- | --- |
+| 782 | `game/tests/test_save_load_integration.gd` | Large integration matrix; consider splitting by subsystem round-trip. |
+| 776 | `tests/gut/test_shopper_ai.gd` | Split by movement, decisions, and state-machine coverage. |
+| 697 | `tests/gut/test_customer_spawn_scheduling.gd` | Split by spawn cadence, caps, and difficulty modifiers. |
+| 672 | `tests/gut/test_order_system.gd` | Split by supplier tiers, cart flow, and delivery lifecycle. |
+| 625 | `tests/gut/test_mall_hallway_scene.gd` | Split by scene composition vs. interaction coverage. |
+| 582 | `tests/gut/test_random_event_system.gd` | Split by event selection vs. effect application. |
+| 562 | `tests/gut/test_eventbus_signal_compat.gd` | Split by signal domain to reduce fixture churn. |
+| 560 | `tests/gut/test_checkout_system.gd` | Split by happy path, failure path, and queue behavior. |
+| 541 | `tests/gut/test_data_loader.gd` | Split by content type or parser responsibility. |
+| 539 | `tests/gut/test_store_lease_dialog.gd` | Split by submission state vs. failure/success UI. |
+| 537 | `tests/gut/test_ambient_moments_system.gd` | Split by trigger type or ambient moment family. |
 
-### `DataLoader.load_all_json_in()` static method
+## Follow-up recommendations
 
-Static method labeled "preserved for backward compatibility" but only called by `debug_commands.gd`. Functionally duplicated by the private `_load_entries_from_dir()` instance method. Removed the static method and the misleading section comment. Updated `debug_commands.gd` to use `GameManager.data_loader.get_all_items()` instead.
-
-### `RandomEventEffects.VIRAL_TREND_DEMAND_MULTIPLIER` constant
-
-Defined in `random_event_effects.gd:6` but never referenced anywhere in that file. The constant exists (and is correctly used) in `random_event_system.gd`, which owns the public `get_demand_multiplier()` API. Removed the unused copy from `random_event_effects.gd`.
-
----
-
-## Consistency Fixes
-
-### `Constants.STARTING_CASH`: 5000 -> 500
-
-`Constants.STARTING_CASH` was set to `5000.0` which contradicted the project brief ($500 starting cash), the store definitions JSON, and the now-removed `GameManager.STARTING_CASH` (which was `500.0`). Corrected to `500.0`.
-
-### `debug_commands.gd`: use typed DataLoader API
-
-Replaced raw `DataLoader.load_all_json_in()` call with `GameManager.data_loader.get_all_items()`, using the typed `ItemDefinition` API consistent with the rest of the codebase.
-
-### `ReputationSystem.MAX_CUSTOMERS_SMALL/MEDIUM` renamed to `MAX_CUSTOMERS_BY_TIER_SMALL/MEDIUM`
-
-`ReputationSystem` defined `MAX_CUSTOMERS_SMALL: Dictionary` and `MAX_CUSTOMERS_MEDIUM: Dictionary` — tier-keyed lookup tables mapping `Tier -> int`. Both `CustomerSystem` and `StoreSelector` independently define identically-named `MAX_CUSTOMERS_SMALL: int = 5` and `MAX_CUSTOMERS_MEDIUM: int = 8` — flat integer defaults for the base (Unknown tier) cap. The shared name across incompatible types (Dictionary vs. int) creates confusion when reading code. Renamed the Dictionary constants in `reputation_system.gd` to `MAX_CUSTOMERS_BY_TIER_SMALL` and `MAX_CUSTOMERS_BY_TIER_MEDIUM` and updated the two internal call sites (`get_max_customers()`). No external callers were affected — `get_max_customers()` is the public API.
-
----
-
-## Files Over 300 LOC (CLAUDE.md Limit)
-
-The project standard is max 300 lines per script. The following files exceed this:
-
-| File | Lines | Assessment |
-|------|-------|------------|
-| `game_world.gd` | 923 | System orchestrator — instantiates ~25 systems and ~20 UI panels. Splitting would create indirection without reducing complexity. Candidate for extraction of `_setup_systems()` and `_setup_ui()` into helper scripts in a future refactor. |
-| `data_loader.gd` | 721 | JSON parsing for 9 content types. Each parser is independent. Could split per content type but adds file management overhead with no logic benefit. |
-| `economy_system.gd` | 499 | Core economy logic: market value calculation, demand tracking, orders, drift, save/load. Cohesive single-responsibility. Could split save/load and ordering into sub-systems. |
-| `customer.gd` | 583 | AI state machine with 6 states, navigation, item evaluation. Cohesive. |
-| `save_manager.gd` | 569 | Collect/distribute pattern across 20 systems. Length is proportional to system count. |
-| `audio_manager.gd` | 541 | SFX pool, music crossfade, ambient crossfade, event handlers. |
-| `inventory_panel.gd` | 529 | UI panel with grid, detail view, placement mode, refurbish/pack buttons. UI panels tend to be long due to node wiring. |
-| `settings_panel.gd` | 524 | 3-tab settings UI (audio/display/controls) with keybinding. |
-| `fixture_placement_system.gd` | 492 | Grid placement, validation, upgrade delegation, save/load. |
-| `customer_animator.gd` | 446 | Procedural animation state machine driving 5 animation states. |
-| `mall_hallway.gd` | 428 | Mall environment, storefront management, store transitions. |
-| `hud.gd` | 424 | HUD with cash, reputation, time, event banners — wide signal surface area. |
-| `staff_panel.gd` | 411 | Staff management UI. |
-| `trend_system.gd` | 409 | Trend generation, weighted selection, fade math, save/load. |
-| `staff_system.gd` | 406 | Hiring, wages, auto-restock, auto-pricing, save/load. |
-| `ambient_moments_system.gd` | 398 | Secret thread ambient event system. |
-| `checkout_system.gd` | 392 | Purchase flow, haggling integration, warranty. |
-
-**Recommendation:** `game_world.gd` and `economy_system.gd` are the strongest candidates for future decomposition. The others are within reasonable bounds for their responsibilities.
-
----
-
-## Files NOT Changed
-
-- No `print()` statements found (good adherence to CLAUDE.md).
-- No `TODO`/`FIXME`/`HACK` comments found.
-- No commented-out code blocks found.
-- Naming conventions are consistent throughout.
-- All scripts use static typing.
-- `@onready` and `preload()` patterns are used consistently.
-- No `get_node()` calls with long paths — all use `@onready`/`@export`.
-
----
-
-## Intentional Patterns Left As-Is
-
-**Same-named constants across independent systems** — several pairs of constants share a name and value across unrelated systems (e.g., `TREND_MULT_MIN/MAX` in both `trend_system.gd` and `market_event_system.gd`; `ANNOUNCEMENT_DAYS` in `trend_system.gd` and `seasonal_event_system.gd`; `CARD_CATEGORY` and `SET_TAGS` in `meta_shift_system.gd` and `pack_opening_system.gd`; `FADE_DURATION` in `scene_transition.gd` and `mall_hallway.gd`). These are all same-type (float/int/String/Array) local constants with no cross-system dependency. Centralizing them into `Constants` would add coupling between unrelated systems for no runtime benefit. Left as-is. The `MAX_CUSTOMERS_SMALL/MEDIUM` case was different — those were same-named constants with incompatible types (int vs. Dictionary), which was confusing; those were renamed.
-
----
-
-## What Was Not Done
-
-- No behavioral changes were made.
-- No features were added.
-- No files were split — flagged above for follow-up only.
-- The `player_interacted` signal in EventBus is emitted by `interaction_ray.gd` and has one consumer, so it was kept despite light usage.
-- The `content_loaded` signal is emitted by `boot.gd` — kept.
-- The `item_lost` signal is emitted by two systems — kept.
+1. Revisit the oversized files that are already dirty in the current worktree before doing structural extraction there.
+2. Tackle large orchestration files (`game_world.gd`, `save_manager.gd`, `data_loader.gd`) in dedicated refactor-only changes so behavior review stays tractable.
+3. Split the biggest integration test files by scenario family first; they offer the safest LOC reduction with the lowest runtime risk.

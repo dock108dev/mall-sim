@@ -258,20 +258,52 @@ func _cancel_queued_moments(reason: StringName) -> void:
 
 
 func _evaluate_moments(hour: int) -> void:
+	trigger_moment(hour)
+
+
+## Selects and dispatches one eligible ambient moment for the given hour.
+func trigger_moment(hour: int = -1) -> StringName:
 	if _delivery_queue.size() >= MAX_QUEUE_SIZE:
-		return
+		return &""
+	var target_hour: int = hour
+	if target_hour < 0:
+		target_hour = _get_current_hour()
 	var eligible: Array[AmbientMomentDefinition] = (
-		_get_eligible_moments(hour)
+		_get_eligible_moments(target_hour)
 	)
 	if eligible.is_empty():
-		return
+		return &""
 	var chosen: AmbientMomentDefinition = _weighted_pick(eligible)
 	if not chosen:
-		return
+		return &""
 	var moment_sn: StringName = StringName(chosen.id)
 	_delivery_queue.append(moment_sn)
 	EventBus.ambient_moment_queued.emit(moment_sn)
 	_dispatch_next()
+	return moment_sn
+
+
+## Advances ambient moment cooldown counters by scheduler ticks.
+func advance_time(seconds: float) -> void:
+	var ticks: int = maxi(int(seconds), 0)
+	for i: int in range(ticks):
+		_tick_cooldowns()
+
+
+## Returns eligible moment definitions for the given or current hour.
+func get_eligible_moments(
+	hour: int = -1,
+) -> Array[AmbientMomentDefinition]:
+	var target_hour: int = hour
+	if target_hour < 0:
+		target_hour = _get_current_hour()
+	return _get_eligible_moments(target_hour)
+
+
+## Replaces the active ambient moment definitions.
+func set_moment_pool(pool: Array[AmbientMomentDefinition]) -> void:
+	_moment_definitions = pool.duplicate()
+	_rebuild_definition_cache()
 
 
 func _get_eligible_moments(

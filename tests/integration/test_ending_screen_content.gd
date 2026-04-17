@@ -5,7 +5,6 @@ extends GutTest
 const CATALOG_PATH := "res://game/content/endings/ending_config.json"
 const SCENE_PATH := "res://game/scenes/ui/ending_screen.tscn"
 const _SAVE_PATH: String = "user://save_slot_0.json"
-const _INDEX_PATH: String = SaveManager.SLOT_INDEX_PATH
 
 const BANKRUPTCY_ENDING_ID: StringName = &"lights_out"
 const SURVIVAL_ENDING_ID: StringName = &"broke_even"
@@ -14,8 +13,6 @@ var _screen: EndingScreen
 var _catalog_entries: Array[Dictionary] = []
 var _save_backup_exists: bool = false
 var _save_backup_text: String = ""
-var _index_backup_exists: bool = false
-var _index_backup_text: String = ""
 
 
 func before_all() -> void:
@@ -25,7 +22,6 @@ func before_all() -> void:
 
 func before_each() -> void:
 	_backup_user_file(_SAVE_PATH, "_save_backup_exists", "_save_backup_text")
-	_backup_user_file(_INDEX_PATH, "_index_backup_exists", "_index_backup_text")
 	var packed: PackedScene = load(SCENE_PATH) as PackedScene
 	_screen = packed.instantiate() as EndingScreen
 	add_child_autofree(_screen)
@@ -33,7 +29,6 @@ func before_each() -> void:
 
 func after_each() -> void:
 	_restore_user_file(_SAVE_PATH, _save_backup_exists, _save_backup_text)
-	_restore_user_file(_INDEX_PATH, _index_backup_exists, _index_backup_text)
 
 
 func test_all_endings_title_matches_catalog_title_field() -> void:
@@ -161,13 +156,21 @@ func _write_current_slot_metadata(used_downgrade: bool) -> void:
 	DirAccess.make_dir_recursive_absolute("user://")
 	var file: FileAccess = FileAccess.open(_SAVE_PATH, FileAccess.WRITE)
 	if file:
-		file.store_string("{\"save_version\":1}")
+		file.store_string(
+			JSON.stringify(
+				{
+					"save_version": 1,
+					"save_metadata": {
+						"day": 1,
+						"cash": 0.0,
+						"owned_stores": [],
+						"saved_at": "2026-01-01T00:00:00",
+						"used_difficulty_downgrade": used_downgrade,
+					},
+				}
+			)
+		)
 		file.close()
-
-	var config := ConfigFile.new()
-	config.load(_INDEX_PATH)
-	config.set_value("slot_0", "used_difficulty_downgrade", used_downgrade)
-	config.save(_INDEX_PATH)
 
 
 func _backup_user_file(

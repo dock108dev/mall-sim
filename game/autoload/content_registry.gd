@@ -35,10 +35,7 @@ func resolve(raw: String) -> StringName:
 		return _aliases[normalized]
 	if _resources.has(normalized):
 		return normalized
-	push_error(
-		"ContentRegistry: unknown ID '%s' (normalized: '%s')"
-		% [raw, normalized]
-	)
+	_report_unknown_id(raw, normalized)
 	return &""
 
 
@@ -58,6 +55,7 @@ func exists(raw: String) -> bool:
 func get_entry(id: StringName) -> Dictionary:
 	var canonical: StringName = _resolve_internal(id)
 	if canonical.is_empty():
+		_report_unknown_id(String(id), _normalize(String(id)))
 		return {}
 	return _entries.get(canonical, {})
 
@@ -139,13 +137,13 @@ func register(
 		_id_regex = RegEx.new()
 		_id_regex.compile(ID_PATTERN)
 	if not _id_regex.search(raw_id):
-		push_error(
+		_emit_error(
 			"ContentRegistry: ID '%s' does not match format %s"
 			% [raw_id, ID_PATTERN]
 		)
 		return
 	if _resources.has(id):
-		push_error("ContentRegistry: duplicate ID '%s'" % raw_id)
+		_emit_error("ContentRegistry: duplicate ID '%s'" % raw_id)
 		return
 	_resources[id] = resource
 	if not _types.has(id):
@@ -187,7 +185,7 @@ func _report_missing_scene_once(path: String, scene_id: StringName) -> void:
 	if _warned_missing_scenes.has(path):
 		return
 	_warned_missing_scenes[path] = true
-	push_error(
+	_emit_error(
 		"ContentRegistry: scene '%s' for ID '%s' not found"
 		% [path, scene_id]
 	)
@@ -251,18 +249,18 @@ func _register_entry(
 		_id_regex = RegEx.new()
 		_id_regex.compile(ID_PATTERN)
 	if not entry.has("id"):
-		push_error("ContentRegistry: entry missing 'id' field")
+		_emit_error("ContentRegistry: entry missing 'id' field")
 		return
 	var raw_id: String = str(entry["id"])
 	var id: StringName = StringName(raw_id)
 	if not _id_regex.search(raw_id):
-		push_error(
+		_emit_error(
 			"ContentRegistry: ID '%s' does not match format %s"
 			% [raw_id, ID_PATTERN]
 		)
 		return
 	if _entries.has(id):
-		push_error("ContentRegistry: duplicate ID '%s'" % raw_id)
+		_emit_error("ContentRegistry: duplicate ID '%s'" % raw_id)
 		return
 	_entries[id] = entry
 	_types[id] = content_type
@@ -288,18 +286,29 @@ func _register_alias(
 	if alias.is_empty():
 		return
 	if _entries.has(alias):
-		push_error(
+		_emit_error(
 			"ContentRegistry: alias '%s' collides with existing ID"
 			% alias
 		)
 		return
 	if _aliases.has(alias) and _aliases[alias] != canonical:
-		push_error(
+		_emit_error(
 			"ContentRegistry: alias '%s' maps to both '%s' and '%s'"
 			% [alias, _aliases[alias], canonical]
 		)
 		return
 	_aliases[alias] = canonical
+
+
+func _report_unknown_id(raw: String, normalized: StringName) -> void:
+	_emit_error(
+		"ContentRegistry: unknown ID '%s' (normalized: '%s')"
+		% [raw, normalized]
+	)
+
+
+func _emit_error(message: String) -> void:
+	push_error(message)
 
 
 func _get_display_name(entry: Dictionary, raw_id: String) -> String:
@@ -333,6 +342,10 @@ func _get_typed_resource(
 	if not expected_type.is_empty():
 		var actual_type: String = str(_types.get(canonical, ""))
 		if actual_type != expected_type:
+			_emit_error(
+				"ContentRegistry: type mismatch for '%s' — expected '%s', got '%s'"
+				% [canonical, expected_type, actual_type]
+			)
 			return null
 	return _resources.get(canonical) as Resource
 

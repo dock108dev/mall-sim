@@ -177,8 +177,6 @@ func _build_tier_tabs() -> void:
 	_tier_buttons.clear()
 	if not order_system or store_type.is_empty():
 		return
-	# Static-validation compatibility marker:
-	# ordering_system.get_supplier_tier_config()
 	for tier_val: int in _all_tier_values():
 		var tier: OrderSystem.SupplierTier = (
 			tier_val as OrderSystem.SupplierTier

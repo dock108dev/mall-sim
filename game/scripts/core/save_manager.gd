@@ -11,7 +11,6 @@ const AUTO_SAVE_SLOT: int = 0
 
 var _economy_system: EconomySystem
 var _order_system: OrderSystem
-var _ordering_system: OrderingSystem
 var _inventory_system: InventorySystem
 var _time_system: TimeSystem
 var _reputation_ref: ReputationSystem
@@ -61,11 +60,6 @@ func set_reputation_system(system: ReputationSystem) -> void:
 ## Sets the OrderSystem reference for save/load.
 func set_order_system(system: OrderSystem) -> void:
 	_order_system = system
-
-
-## Sets the OrderingSystem reference for save/load.
-func set_ordering_system(system: OrderingSystem) -> void:
-	_ordering_system = system
 
 
 ## Sets the StoreStateManager reference for multi-store save/load.
@@ -231,27 +225,48 @@ func mark_run_complete(ending_id: StringName) -> void:
 		return
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if not file:
+		push_warning(
+			"SaveManager: failed to open auto-save '%s' while recording ending — %s"
+			% [path, error_string(FileAccess.get_open_error())]
+		)
 		return
 	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
+	var parse_error: Error = json.parse(file.get_as_text())
+	if parse_error != OK:
 		file.close()
+		push_warning(
+			"SaveManager: failed to parse auto-save '%s' while recording ending — %s"
+			% [path, json.get_error_message()]
+		)
 		return
 	file.close()
 	var data: Variant = json.data
 	if data is not Dictionary:
+		push_warning(
+			"SaveManager: auto-save '%s' did not contain a dictionary while recording ending"
+			% path
+		)
 		return
 	var save_data: Dictionary = data as Dictionary
 	var metadata: Dictionary = save_data.get("metadata", {}) as Dictionary
+	var save_metadata: Dictionary = (
+		save_data.get("save_metadata", {}) as Dictionary
+	)
 	metadata["run_complete"] = true
 	metadata["ending_id"] = String(ending_id)
+	save_metadata["run_complete"] = true
+	save_metadata["ending_id"] = String(ending_id)
 	save_data["metadata"] = metadata
-	var out_file: FileAccess = FileAccess.open(
-		path, FileAccess.WRITE
+	save_data["save_metadata"] = save_metadata
+	var write_error: Error = _write_save_file_atomic(
+		path, JSON.stringify(save_data, "\t")
 	)
-	if not out_file:
+	if write_error != OK:
+		push_warning(
+			"SaveManager: failed to update auto-save '%s' with ending metadata — %s"
+			% [path, error_string(write_error)]
+		)
 		return
-	out_file.store_string(JSON.stringify(save_data, "\t"))
-	out_file.close()
 	_update_slot_index(AUTO_SAVE_SLOT, _build_slot_index_metadata(save_data))
 
 
@@ -267,16 +282,13 @@ func save_game(slot: int) -> bool:
 	var path: String = _get_slot_path(slot)
 
 	var json_string: String = JSON.stringify(save_data, "\t")
-	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	if not file:
+	var write_error: Error = _write_save_file_atomic(path, json_string)
+	if write_error != OK:
 		push_warning(
-			"SaveManager: failed to open '%s' for writing — %s"
-			% [path, error_string(FileAccess.get_open_error())]
+			"SaveManager: failed to write '%s' — %s"
+			% [path, error_string(write_error)]
 		)
 		return false
-
-	file.store_string(json_string)
-	file.close()
 
 	_update_slot_index(slot, _build_slot_index_metadata(save_data))
 	EventBus.notification_requested.emit("Game saved.")
@@ -349,12 +361,12 @@ func slot_exists(slot: int) -> bool:
 	return FileAccess.file_exists(_get_slot_path(slot))
 
 
+## Returns preview metadata from a save slot without loading runtime state.
 func get_slot_metadata(slot: int) -> Dictionary:
-	if not slot_exists(slot):
+	if not _validate_slot(slot):
 		return {}
-	var all_metadata: Dictionary = get_all_slot_metadata()
-	if all_metadata.has(slot):
-		return (all_metadata[slot] as Dictionary).duplicate(true)
+	if not FileAccess.file_exists(_get_slot_path(slot)):
+		return {}
 	return _read_slot_metadata_from_save(slot)
 
 
@@ -384,15 +396,6 @@ func _collect_save_data() -> Dictionary:
 		preview_store_id
 	)
 	var difficulty_data: Dictionary = DifficultySystemSingleton.get_save_data()
-	var metadata: Dictionary = {
-		"timestamp": Time.get_datetime_string_from_system(true),
-		"day_number": _time_system.current_day,
-		"store_type": String(preview_store_id),
-		"store_name": preview_store_name,
-		"active_store_id": String(active_store_id),
-		"play_time": _time_system.get_play_time_seconds(),
-	}
-
 	var owned_slots_data: Dictionary = {}
 	var owned_store_list: Array[String] = []
 	if _store_state_manager:
@@ -429,7 +432,6 @@ func _collect_save_data() -> Dictionary:
 
 	var data: Dictionary = {
 		"save_version": CURRENT_SAVE_VERSION,
-		"metadata": metadata,
 		"save_metadata": save_metadata,
 		"time": _time_system.get_save_data(),
 		"economy": _economy_system.get_save_data(),
@@ -440,9 +442,6 @@ func _collect_save_data() -> Dictionary:
 
 	if _order_system:
 		data["ordering"] = _order_system.get_save_data()
-
-	if _ordering_system:
-		data["ordering_system"] = _ordering_system.get_save_data()
 
 	if _store_state_manager:
 		data["store_states"] = _store_state_manager.get_save_data()
@@ -565,13 +564,6 @@ func _distribute_save_data(data: Dictionary) -> void:
 		if ordering_data is Dictionary:
 			_order_system.load_save_data(
 				ordering_data as Dictionary
-			)
-
-	if _ordering_system:
-		var ordering_system_data: Variant = data.get("ordering_system", {})
-		if ordering_system_data is Dictionary:
-			_ordering_system.load_save_data(
-				ordering_system_data as Dictionary
 			)
 
 	if _progression_system:
@@ -1052,7 +1044,13 @@ func _get_reputation_system() -> ReputationSystem:
 ## Returns metadata for all slots from the index without loading saves.
 func get_all_slot_metadata() -> Dictionary:
 	var config := ConfigFile.new()
-	if config.load(SLOT_INDEX_PATH) != OK:
+	var load_err: Error = config.load(SLOT_INDEX_PATH)
+	if load_err != OK:
+		if FileAccess.file_exists(SLOT_INDEX_PATH):
+			push_warning(
+				"SaveManager: failed to load slot index '%s' — %s"
+				% [SLOT_INDEX_PATH, error_string(load_err)]
+			)
 		return {}
 	var result: Dictionary = {}
 	for section: String in config.get_sections():
@@ -1068,23 +1066,45 @@ func get_all_slot_metadata() -> Dictionary:
 
 func _update_slot_index(slot: int, metadata: Dictionary) -> void:
 	var config := ConfigFile.new()
-	config.load(SLOT_INDEX_PATH)
+	var load_err: Error = config.load(SLOT_INDEX_PATH)
+	if load_err != OK and FileAccess.file_exists(SLOT_INDEX_PATH):
+		push_warning(
+			"SaveManager: failed to load slot index '%s' for update — keeping index unchanged"
+			% SLOT_INDEX_PATH
+		)
+		return
 	var section: String = "slot_%d" % slot
 	if config.has_section(section):
 		config.erase_section(section)
 	for key: String in metadata:
 		config.set_value(section, key, metadata[key])
-	config.save(SLOT_INDEX_PATH)
+	var save_err: Error = config.save(SLOT_INDEX_PATH)
+	if save_err != OK:
+		push_warning(
+			"SaveManager: failed to write slot index '%s' — %s"
+			% [SLOT_INDEX_PATH, error_string(save_err)]
+		)
 
 
 func _remove_slot_from_index(slot: int) -> void:
 	var config := ConfigFile.new()
-	if config.load(SLOT_INDEX_PATH) != OK:
+	var load_err: Error = config.load(SLOT_INDEX_PATH)
+	if load_err != OK:
+		if FileAccess.file_exists(SLOT_INDEX_PATH):
+			push_warning(
+				"SaveManager: failed to load slot index '%s' for removal — keeping index unchanged"
+				% SLOT_INDEX_PATH
+			)
 		return
 	var section: String = "slot_%d" % slot
 	if config.has_section(section):
 		config.erase_section(section)
-		config.save(SLOT_INDEX_PATH)
+		var save_err: Error = config.save(SLOT_INDEX_PATH)
+		if save_err != OK:
+			push_warning(
+				"SaveManager: failed to write slot index '%s' — %s"
+				% [SLOT_INDEX_PATH, error_string(save_err)]
+			)
 
 
 func _ensure_save_dir() -> void:
@@ -1098,6 +1118,26 @@ func _ensure_save_dir() -> void:
 			"SaveManager: failed to create '%s' — %s"
 			% [SAVE_DIR, error_string(err)]
 		)
+
+
+func _write_save_file_atomic(path: String, contents: String) -> Error:
+	var temp_path: String = "%s.tmp" % path
+	if FileAccess.file_exists(temp_path):
+		var cleanup_error: Error = DirAccess.remove_absolute(temp_path)
+		if cleanup_error != OK:
+			return cleanup_error
+
+	var file: FileAccess = FileAccess.open(temp_path, FileAccess.WRITE)
+	if not file:
+		return FileAccess.get_open_error()
+	file.store_string(contents)
+	file.flush()
+	file.close()
+
+	var rename_error: Error = DirAccess.rename_absolute(temp_path, path)
+	if rename_error != OK:
+		DirAccess.remove_absolute(temp_path)
+	return rename_error
 
 
 func _build_slot_index_metadata(save_data: Dictionary) -> Dictionary:
@@ -1148,13 +1188,34 @@ func _read_slot_metadata_from_save(slot: int) -> Dictionary:
 	var path: String = _get_slot_path(slot)
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if not file:
+		push_warning(
+			"SaveManager: failed to open save slot '%s' for metadata — %s"
+			% [path, error_string(FileAccess.get_open_error())]
+		)
 		return {}
 	var json := JSON.new()
 	var parse_result: Error = json.parse(file.get_as_text())
 	file.close()
-	if parse_result != OK or json.data is not Dictionary:
+	if parse_result != OK:
+		push_warning(
+			"SaveManager: failed to parse save slot '%s' for metadata — %s"
+			% [path, json.get_error_message()]
+		)
 		return {}
-	return _build_slot_index_metadata(json.data as Dictionary)
+	if json.data is not Dictionary:
+		push_warning(
+			"SaveManager: save slot '%s' did not contain a dictionary for metadata"
+			% path
+		)
+		return {}
+	var save_data: Dictionary = json.data as Dictionary
+	var save_metadata: Variant = save_data.get("save_metadata", {})
+	if save_metadata is Dictionary:
+		return _build_slot_index_metadata(save_data)
+	var legacy_metadata: Variant = save_data.get("metadata", {})
+	if legacy_metadata is Dictionary:
+		return _build_slot_index_metadata(save_data)
+	return {}
 
 
 func _restore_owned_slots_with_fallback(saved_slots: Dictionary) -> void:

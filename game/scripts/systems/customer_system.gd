@@ -409,8 +409,6 @@ func _update_shopper_lod() -> void:
 func _get_shopper_lod_origin() -> Node3D:
 	var active_camera: Camera3D = CameraManager.get_active_camera()
 	if active_camera == null:
-		active_camera = get_viewport().get_camera_3d()
-	if active_camera == null:
 		return null
 	var camera_parent: Node = active_camera.get_parent()
 	if camera_parent is Node3D:

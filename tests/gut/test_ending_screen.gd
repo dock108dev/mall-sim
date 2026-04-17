@@ -3,7 +3,6 @@ extends GutTest
 
 
 const _SAVE_PATH: String = "user://save_slot_0.json"
-const _INDEX_PATH: String = SaveManager.SLOT_INDEX_PATH
 
 const _ENDING_IDS: Array[String] = [
 	"render_test_01",
@@ -24,13 +23,10 @@ const _ENDING_IDS: Array[String] = [
 var _screen: EndingScreen
 var _save_backup_exists: bool = false
 var _save_backup_text: String = ""
-var _index_backup_exists: bool = false
-var _index_backup_text: String = ""
 
 
 func before_each() -> void:
 	_backup_user_file(_SAVE_PATH, "_save_backup_exists", "_save_backup_text")
-	_backup_user_file(_INDEX_PATH, "_index_backup_exists", "_index_backup_text")
 
 	_screen = preload(
 		"res://game/scenes/ui/ending_screen.tscn"
@@ -40,7 +36,6 @@ func before_each() -> void:
 
 func after_each() -> void:
 	_restore_user_file(_SAVE_PATH, _save_backup_exists, _save_backup_text)
-	_restore_user_file(_INDEX_PATH, _index_backup_exists, _index_backup_text)
 
 
 func _make_test_stats() -> Dictionary:
@@ -77,13 +72,21 @@ func _write_current_slot_metadata(used_downgrade: bool) -> void:
 	DirAccess.make_dir_recursive_absolute("user://")
 	var file: FileAccess = FileAccess.open(_SAVE_PATH, FileAccess.WRITE)
 	if file:
-		file.store_string("{\"save_version\":1}")
+		file.store_string(
+			JSON.stringify(
+				{
+					"save_version": 1,
+					"save_metadata": {
+						"day": 1,
+						"cash": 0.0,
+						"owned_stores": [],
+						"saved_at": "2026-01-01T00:00:00",
+						"used_difficulty_downgrade": used_downgrade,
+					},
+				}
+			)
+		)
 		file.close()
-
-	var config := ConfigFile.new()
-	config.load(_INDEX_PATH)
-	config.set_value("slot_0", "used_difficulty_downgrade", used_downgrade)
-	config.save(_INDEX_PATH)
 
 
 func _backup_user_file(

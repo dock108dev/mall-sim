@@ -9,6 +9,8 @@ const SIGN_OFFSET := Vector3(0.0, 3.2, 0.16)
 const STATUS_SIGN_OFFSET := Vector3(0.0, 2.55, 0.16)
 const LEASE_MARKER_OFFSET := Vector3(0.0, 2.55, 0.08)
 const LEASE_MARKER_SIZE := Vector3(2.0, 0.42, 0.04)
+const STATUS_VISIBLE_DISTANCE: float = 8.0
+const STATUS_FADE_DISTANCE: float = 10.0
 const DOOR_SIZE := Vector3(1.5, 2.35, 0.16)
 const WINDOW_SIZE := Vector3(2.5, 2.0, 0.1)
 const ENTRY_ZONE_SIZE := Vector3(2.0, 2.0, 1.0)
@@ -57,17 +59,25 @@ var _door_interactable: Interactable
 var _entry_zone: Area3D
 var _lease_marker_mesh: MeshInstance3D
 var _is_store_open: bool = false
+var _active_camera: Camera3D = null
+var _status_base_modulate: Color = Color.WHITE
+var _status_outline_modulate: Color = Color.BLACK
 static var _lease_marker_materials: Dictionary = {}
 static var _sign_materials: Dictionary = {}
 
 
 func _ready() -> void:
 	_build_visual()
-	_update_sign()
-	_update_status_sign()
+	_sync_initial_owned_state()
 	EventBus.store_opened.connect(_on_store_opened)
 	EventBus.store_closed.connect(_on_store_closed)
 	EventBus.hour_changed.connect(_on_hour_changed)
+	EventBus.active_camera_changed.connect(_on_active_camera_changed)
+	var viewport: Viewport = get_viewport()
+	if viewport != null:
+		_active_camera = viewport.get_camera_3d()
+	_update_sign()
+	_update_status_sign()
 
 
 ## Sets this storefront as owned with the given store info.
@@ -354,14 +364,18 @@ func _build_lease_marker() -> void:
 
 
 func _build_status_sign() -> void:
-	_status_label = Label3D.new()
-	_status_label.name = "StatusSign"
+	_status_label = get_node_or_null("status_sign") as Label3D
+	if _status_label == null:
+		_status_label = get_node_or_null("StatusSign") as Label3D
+	if _status_label == null:
+		_status_label = Label3D.new()
+		_status_label.name = "status_sign"
+		add_child(_status_label)
 	_status_label.position = STATUS_SIGN_OFFSET
 	_status_label.pixel_size = 0.008
 	_status_label.font_size = 24
 	_status_label.outline_size = 3
 	_status_label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-	add_child(_status_label)
 
 
 func _build_entry_zone() -> void:
@@ -450,23 +464,30 @@ func _update_status_sign() -> void:
 	if is_locked:
 		_status_label.visible = false
 		return
-
-	_status_label.visible = true
-
 	if not is_owned:
-		_status_label.text = "FOR LEASE"
-		_status_label.modulate = Color(0.9, 0.85, 0.2)
-		_status_label.outline_modulate = Color(0.3, 0.28, 0.05)
+		_set_status_sign_style(
+			"FOR LEASE",
+			Color(0.9, 0.85, 0.2, 1.0),
+			Color(0.3, 0.28, 0.05, 1.0)
+		)
 		return
 
 	if _is_store_open:
-		_status_label.text = "OPEN"
-		_status_label.modulate = Color(0.2, 0.9, 0.3)
-		_status_label.outline_modulate = Color(0.05, 0.3, 0.08)
+		_set_status_sign_style(
+			"OPEN",
+			Color(0.2, 0.9, 0.3, 1.0),
+			Color(0.05, 0.3, 0.08, 1.0)
+		)
 	else:
-		_status_label.text = "CLOSED"
-		_status_label.modulate = Color(0.9, 0.2, 0.2)
-		_status_label.outline_modulate = Color(0.3, 0.05, 0.05)
+		_set_status_sign_style(
+			"CLOSED",
+			Color(0.9, 0.2, 0.2, 1.0),
+			Color(0.3, 0.05, 0.05, 1.0)
+		)
+
+
+func _process(_delta: float) -> void:
+	_update_status_sign_fade()
 
 
 func _on_store_opened(opened_store_id: String) -> void:
@@ -493,6 +514,11 @@ func _on_hour_changed(hour: int) -> void:
 	)
 	if _is_store_open != was_open:
 		_update_status_sign()
+
+
+func _on_active_camera_changed(camera: Camera3D) -> void:
+	_active_camera = camera
+	_update_status_sign_fade()
 
 
 func _on_entry_zone_body_entered(body: Node3D) -> void:
@@ -530,6 +556,87 @@ func _on_renovation_interacted() -> void:
 		"The door is locked. A faded sign reads "
 		+ "'Renovations in Progress.' You hear a "
 		+ "faint hum from inside."
+	)
+
+
+func _sync_initial_owned_state() -> void:
+	if is_owned or is_locked or store_id.is_empty():
+		return
+	var canonical: StringName = &""
+	if ContentRegistry.exists(store_id):
+		canonical = ContentRegistry.resolve(store_id)
+	if canonical.is_empty():
+		canonical = StringName(store_id)
+	var is_initially_owned: bool = (
+		not canonical.is_empty()
+		and (
+			canonical in GameManager.owned_stores
+			or GameManager.is_store_owned(String(canonical))
+		)
+	)
+	if not is_initially_owned:
+		return
+	set_owned(String(canonical), _get_initial_store_name(canonical))
+
+
+func _get_initial_store_name(canonical: StringName) -> String:
+	if not store_name.is_empty():
+		return store_name
+	var display_name: String = ContentRegistry.get_display_name(canonical)
+	if not display_name.is_empty():
+		return display_name
+	return String(canonical).replace("_", " ").capitalize()
+
+
+func _set_status_sign_style(
+	text_value: String,
+	fill_color: Color,
+	outline_color: Color
+) -> void:
+	_status_label.text = text_value
+	_status_label.visible = true
+	_status_base_modulate = fill_color
+	_status_outline_modulate = outline_color
+	_update_status_sign_fade()
+
+
+func _update_status_sign_fade() -> void:
+	if _status_label == null:
+		return
+	var alpha: float = _get_status_sign_alpha()
+	_status_label.modulate = Color(
+		_status_base_modulate.r,
+		_status_base_modulate.g,
+		_status_base_modulate.b,
+		alpha
+	)
+	_status_label.outline_modulate = Color(
+		_status_outline_modulate.r,
+		_status_outline_modulate.g,
+		_status_outline_modulate.b,
+		alpha
+	)
+
+
+func _get_status_sign_alpha() -> float:
+	var camera: Camera3D = _active_camera
+	if camera == null or not is_instance_valid(camera):
+		var viewport: Viewport = get_viewport()
+		if viewport != null:
+			camera = viewport.get_camera_3d()
+			_active_camera = camera
+	if camera == null or not is_instance_valid(camera):
+		return 1.0
+	var distance_to_camera: float = _status_label.global_position.distance_to(
+		camera.global_position
+	)
+	if distance_to_camera <= STATUS_VISIBLE_DISTANCE:
+		return 1.0
+	if distance_to_camera >= STATUS_FADE_DISTANCE:
+		return 0.0
+	return 1.0 - (
+		(distance_to_camera - STATUS_VISIBLE_DISTANCE)
+		/ (STATUS_FADE_DISTANCE - STATUS_VISIBLE_DISTANCE)
 	)
 
 

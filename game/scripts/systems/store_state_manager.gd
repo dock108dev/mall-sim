@@ -77,14 +77,6 @@ func lease_store(
 	_emit_lease_result(canonical_store_id, true, "", emit_result)
 	return true
 
-
-## Backward-compatible wrapper for callers that pass the next slot index.
-static func get_setup_fee_for_owned_store_count(
-	owned_store_count: int
-) -> float:
-	return get_setup_fee_for_slot_index(owned_store_count)
-
-
 ## Returns the setup fee for a storefront slot index.
 static func get_setup_fee_for_slot_index(slot_index: int) -> float:
 	if slot_index < 0 or slot_index >= LEASE_UNLOCK_REQUIREMENTS.size():

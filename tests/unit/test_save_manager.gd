@@ -185,11 +185,25 @@ func test_get_slot_metadata_returns_day_and_cash() -> void:
 	_save_manager.save_game(1)
 	var metadata: Dictionary = _save_manager.get_slot_metadata(1)
 
-	assert_has(metadata, "day_number", "Metadata should have day_number")
+	assert_has(metadata, "day", "Metadata should have day")
 	assert_eq(
-		int(metadata["day_number"]), 5,
-		"day_number should be 5"
+		int(metadata["day"]), 5,
+		"day should be 5"
 	)
+	assert_has(metadata, "cash", "Metadata should have cash")
+	assert_almost_eq(
+		float(metadata["cash"]), 250.0, 0.01,
+		"cash should reflect the saved EconomySystem cash"
+	)
+	assert_has(
+		metadata, "owned_stores",
+		"Metadata should have owned_stores"
+	)
+	assert_eq(
+		(metadata["owned_stores"] as Array).size(), 1,
+		"owned_stores should include the saved store"
+	)
+	assert_has(metadata, "saved_at", "Metadata should have saved_at")
 	assert_has(
 		metadata, "store_type",
 		"Metadata should have store_type"
@@ -201,6 +215,94 @@ func test_get_slot_metadata_returns_day_and_cash() -> void:
 	assert_has(
 		metadata, "play_time",
 		"Metadata should have play_time"
+	)
+
+
+func test_save_file_contains_top_level_save_metadata() -> void:
+	_economy._current_cash = 800.0
+	_time_system.current_day = 9
+	GameManager.owned_stores = [&"sports"]
+	GameManager.current_store_id = &"sports"
+
+	assert_true(_save_manager.save_game(1), "Save should succeed")
+
+	var data: Dictionary = _read_save_file_raw(1)
+	assert_has(data, "save_metadata", "Save must contain save_metadata")
+	var metadata: Dictionary = data["save_metadata"] as Dictionary
+	assert_eq(int(metadata.get("day", 0)), 9, "day should be saved")
+	assert_almost_eq(
+		float(metadata.get("cash", 0.0)), 800.0, 0.01,
+		"cash should be saved"
+	)
+	assert_eq(
+		(metadata.get("owned_stores", []) as Array).size(), 1,
+		"owned_stores should be saved"
+	)
+	assert_false(
+		str(metadata.get("saved_at", "")).is_empty(),
+		"saved_at should be saved"
+	)
+
+
+func test_get_slot_metadata_ignores_stale_slot_index() -> void:
+	_economy._current_cash = 250.0
+	_time_system.current_day = 5
+	GameManager.owned_stores = [&"sports"]
+	GameManager.current_store_id = &"sports"
+
+	assert_true(_save_manager.save_game(1), "Save should succeed")
+
+	var config := ConfigFile.new()
+	config.load(SaveManager.SLOT_INDEX_PATH)
+	config.set_value("slot_1", "day", 99)
+	config.set_value("slot_1", "cash", 1.0)
+	config.set_value("slot_1", "owned_stores", [])
+	config.save(SaveManager.SLOT_INDEX_PATH)
+
+	var metadata: Dictionary = _save_manager.get_slot_metadata(1)
+	assert_eq(
+		int(metadata.get("day", 0)), 5,
+		"Slot metadata should come from save_metadata in the save file"
+	)
+	assert_almost_eq(
+		float(metadata.get("cash", 0.0)), 250.0, 0.01,
+		"Slot metadata should not use stale index cash"
+	)
+
+
+func test_save_game_does_not_overwrite_corrupt_slot_index() -> void:
+	_economy._current_cash = 125.0
+	_time_system.current_day = 4
+	GameManager.owned_stores = [&"sports"]
+	GameManager.current_store_id = &"sports"
+
+	assert_true(
+		_save_manager.save_game(1),
+		"Precondition: initial save should succeed"
+	)
+	var corrupt_index: String = "[slot_1\nbroken=true"
+	var index_file: FileAccess = FileAccess.open(
+		SaveManager.SLOT_INDEX_PATH, FileAccess.WRITE
+	)
+	assert_not_null(index_file, "Precondition: slot index should be writable")
+	index_file.store_string(corrupt_index)
+	index_file.close()
+
+	assert_true(
+		_save_manager.save_game(2),
+		"Save should still succeed when only the slot index is corrupt"
+	)
+
+	var verify_index: FileAccess = FileAccess.open(
+		SaveManager.SLOT_INDEX_PATH, FileAccess.READ
+	)
+	assert_not_null(verify_index, "Corrupt slot index should remain readable")
+	var index_contents: String = verify_index.get_as_text()
+	verify_index.close()
+	assert_eq(
+		index_contents,
+		corrupt_index,
+		"SaveManager should not overwrite a corrupt slot index with partial data"
 	)
 
 

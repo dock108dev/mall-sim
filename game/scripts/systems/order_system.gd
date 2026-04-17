@@ -48,6 +48,7 @@ var _reputation_system: ReputationSystem = null
 var _progression_system: ProgressionSystem = null
 var _pending_orders: Array[Dictionary] = []
 var _daily_spending: Dictionary = {}
+var _active_store_id: StringName = &""
 var _signals_connected: bool = false
 ## When true, forces every delivery to be a partial stockout (for testing only).
 var _force_stockout_for_test: bool = false
@@ -61,6 +62,7 @@ func initialize(
 	_inventory_system = inventory
 	_reputation_system = reputation
 	_progression_system = progression
+	_active_store_id = _get_store_state_active_store_id()
 	_apply_state({})
 	_connect_runtime_signals()
 
@@ -629,6 +631,7 @@ func _connect_runtime_signals() -> void:
 	EventBus.order_delivered.connect(_on_order_delivered)
 	EventBus.difficulty_changed.connect(_on_difficulty_changed)
 	EventBus.restock_requested.connect(_on_restock_requested)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
 	_signals_connected = true
 
 
@@ -643,18 +646,45 @@ func _disconnect_runtime_signals() -> void:
 		EventBus.difficulty_changed.disconnect(_on_difficulty_changed)
 	if EventBus.restock_requested.is_connected(_on_restock_requested):
 		EventBus.restock_requested.disconnect(_on_restock_requested)
+	if EventBus.active_store_changed.is_connected(_on_active_store_changed):
+		EventBus.active_store_changed.disconnect(_on_active_store_changed)
 	_signals_connected = false
 
 
 func _resolve_store_id(store_id: StringName) -> StringName:
 	if store_id.is_empty():
-		if not GameManager.current_store_id.is_empty():
-			return GameManager.current_store_id
+		if _active_store_id.is_empty():
+			_active_store_id = _get_store_state_active_store_id()
+		if not _active_store_id.is_empty():
+			return _active_store_id
 		return &""
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if canonical.is_empty():
 		return store_id
 	return canonical
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	_active_store_id = store_id
+
+
+func _get_store_state_active_store_id() -> StringName:
+	if not is_inside_tree():
+		return &""
+	var root: Window = get_tree().root
+	if root == null:
+		return &""
+	var matches: Array[Node] = root.find_children(
+		"*", "StoreStateManager", true, false
+	)
+	if matches.is_empty():
+		return &""
+	var store_state_manager: StoreStateManager = (
+		matches[0] as StoreStateManager
+	)
+	if store_state_manager == null:
+		return &""
+	return store_state_manager.active_store_id
 
 
 func _get_supplier_reputation_level(store_id: StringName) -> int:

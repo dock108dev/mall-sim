@@ -36,6 +36,13 @@ font_size = 32
 outline_size = 4
 billboard = 0
 
+[node name="status_sign" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, 0.16)
+pixel_size = 0.008
+font_size = 24
+outline_size = 3
+billboard = 0
+
 [node name="EntryZone" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.7)
 collision_layer = 0

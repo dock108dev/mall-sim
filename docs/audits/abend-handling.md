@@ -1,159 +1,136 @@
-# Error Handling Audit — mallcore-sim
+# Abend / Error-Handling Audit
 
-**Audited:** 2026-04-10
-**Scope:** All `.gd` files in `game/` (44 files with error handling, 117 total)
-**Auditor:** Claude Sonnet 4.6
+**Audited:** 2026-04-17  
+**Scope:** Runtime GDScript under `game/` with focused validation in `tests/unit/`  
+**Auditor:** GitHub Copilot CLI
 
----
+## Executive summary
 
-## Executive Summary
+The codebase is generally deliberate about error handling: file I/O and JSON parsing are usually checked, player-facing failures often return explicit `false` results or emit signals, and most quiet paths are guard clauses or identity/default fallbacks rather than hidden exception swallowing.
 
-The codebase demonstrates **strong error handling discipline overall** (8/10). There are 150+ `push_warning()` calls across 44 files, comprehensive JSON parse error reporting with line numbers, and safe file I/O with `error_string()` details. All `FileAccess.open()` calls null-check their return value. All `JSON.parse()` calls extract and log error messages. The project follows a consistent "fail gracefully, log loudly" design principle.
+The main risks were not crashes but **blind degradation**:
+1. **Silent persistence corruption paths** in `SaveManager` and `DifficultySystem` could overwrite or ignore broken metadata/config files without telling anyone.
+2. **A silent typed-lookup mismatch** in `ContentRegistry` returned `null` with no log.
+3. **Boot content loading is intentionally log-and-continue**, so malformed entries can be skipped and the game can start in a degraded state.
 
-**Key strengths:**
-- DataLoader validates all required fields (including market event required fields) and logs skipped entries
-- SaveManager has excellent error paths with descriptive `error_string()` messages
-- Type validation (`is Dictionary`, `is Array`) precedes all unsafe casts
-- `preload()` used for compile-time safety; `load()` always null-checked
-- `config.save()` return value is checked and logged on failure
-- `game_world.gd` fixture registration logs on missing store controller or definition
-- Main menu save slot errors are now observable (file open and JSON parse failures logged)
+This audit tightened the first two areas in code. No security-critical suppression patterns were found. There are also no Python-style `try/except` or broad exception catches to audit in production GDScript.
 
-**Remaining weaknesses:**
-- ~15 silent guard clauses return without logging (all Low severity; intentional state deduplication)
-- `push_warning()` used uniformly for all diagnostics — no `push_error()` differentiation in production code (CustomerSystem excepted)
-- `settings.gd` `config.load()` failure is distinguished for corrupt file but not logged at info level for first-run
+## Detailed findings
 
-**No critical vulnerabilities found.** No data corruption paths. No security issues from error handling gaps.
+| ID | Classification | File | Pattern | Severity | Reliability | Data integrity | Security | Observability | Status |
+|---|---|---|---|---|---|---|---|---|---|
+| F1 | Log and continue | `game/autoload/data_loader.gd:462-500`, `504-520` | Invalid ending/season entries are logged with `push_error()` and skipped via `continue` | **Medium** | Medium | Low | Low | Medium | Open |
+| F2 | Silent mismatch | `game/autoload/content_registry.gd:336-350` | Typed lookup mismatch used to return `null` silently | **High** | Medium | Low | Low | High | **Fixed** |
+| F3 | Silent fallback | `game/autoload/content_registry.gd:64-76` | Unknown IDs in `get_display_name()` / `get_scene_path()` fall back to raw ID or empty path | **Low** | Low | Low | Low | Medium | Open |
+| F4 | Silent default | `game/autoload/settings.gd:140-147` | Missing `settings.cfg` defaults silently; corrupt file warns and falls back to defaults | **Note** | Low | Low | Low | Low | Acceptable |
+| F5 | Quiet persistence fallback | `game/autoload/difficulty_system.gd:168-178` | Restoring difficulty tier previously treated corrupt settings the same as first run | **Medium** | Medium | Low | Low | Medium | **Fixed** |
+| F6 | Corrupt-file overwrite risk | `game/autoload/difficulty_system.gd:189-204` | Tier persistence previously ignored `ConfigFile.load()` failure and could overwrite a corrupt settings file | **High** | Medium | **High** | Low | High | **Fixed** |
+| F7 | Downgraded save errors | `game/scripts/core/save_manager.gd:256-317` | Save/load failures are explicit but mostly logged as warnings, not errors | **Medium** | High | High | Low | Medium | Open |
+| F8 | Silent metadata update failure | `game/scripts/core/save_manager.gd:219-270` | `mark_run_complete()` used to fail quietly if auto-save metadata could not be reopened, parsed, or rewritten | **Medium** | Medium | Medium | Low | High | **Fixed** |
+| F9 | Corrupt index preservation gap | `game/scripts/core/save_manager.gd:1045-1107`, `1188-1218` | Slot index and metadata reads used to return `{}` or overwrite corrupt files without any warning | **High** | Medium | **High** | Low | High | **Fixed** |
+| F10 | Silent empty/default getters | `game/scripts/systems/inventory_system.gd:94-99`, `153-161`, `400-416`, `461-463` | Unknown store/item lookups return `[]`/`null` without logging | **Low** | Medium | Low | Low | Medium | Open |
+| F11 | Intentional no-op behavior | `game/autoload/audio_manager.gd:296-312` | Duplicate ambient requests and stop-with-nothing-playing return silently | **Note** | Low | None | Low | Low | Acceptable |
+| F12 | Quieter production behavior | `game/scenes/world/game_world.gd:632-635` | Debug overlay setup is skipped outside debug builds | **Note** | None | None | Low | Low | Acceptable |
 
----
+## Notes on the most important findings
 
-## Detailed Findings
+### F1 — DataLoader intentionally logs and continues
 
-### Severity Guide
+`DataLoader` skips malformed content entries instead of aborting startup. That is a conscious resilience choice, but it means a build can boot with missing endings, seasonal entries, or named-season definitions as long as someone notices the console output.
 
-| Rating | Meaning |
-|--------|---------|
-| **Note** | Acceptable as-is; intentional graceful degradation |
-| **Low** | Missing observability; no gameplay impact |
-| **Medium** | Silent failure could mask bugs during development |
-| **High** | Could cause confusing player-facing behavior or data loss |
-| **Critical** | Data corruption, crash, or security risk |
+This is acceptable for development iteration, but risky for shipped content because the failure mode is **partial gameplay degradation**, not a hard stop.
 
----
+### F2 — ContentRegistry typed mismatch was a real blind spot
 
-### 1. JSON Parsing & File I/O
+`_get_typed_resource()` now emits:
 
-| # | File | Line | Pattern | Severity | Status |
-|---|------|------|---------|----------|--------|
-| 1 | `data_loader.gd` | 259–261 | JSON parse error logged with message and path | **Note** | ✅ Good |
-| 2 | `data_loader.gd` | 249–251 | File-not-found logged before returning null | **Note** | ✅ Good |
-| 3 | `data_loader.gd` | 253–257 | `FileAccess.open()` failure after `file_exists()` passes — logged with `error_string()` | **Note** | ✅ Fixed |
-| 4 | `save_manager.gd` | 172–177 | File write failure logged with `error_string()` | **Note** | ✅ Good |
-| 5 | `save_manager.gd` | 199–204 | File read failure logged with `error_string()` | **Note** | ✅ Good |
-| 6 | `save_manager.gd` | 210–217 | JSON parse error logged with line number | **Note** | ✅ Good |
-| 7 | `save_manager.gd` | ~241–248 | `get_slot_metadata()` — file open and JSON parse failure returns `{}` silently | **Low** | Open — non-critical metadata display; slot shows "Empty" |
-| 8 | `main_menu.gd` | 179–195 | Save slot file open and JSON parse failures now logged with `push_warning` | **Note** | ✅ Fixed |
-| 9 | `settings.gd` | 95–100 | `config.save()` return value checked; failure logged with `error_string()` | **Note** | ✅ Fixed |
-| 10 | `settings.gd` | 103–109 | `config.load()` failure: now distinguishes corrupt file (logged) from first-run (silent) | **Note** | ✅ Fixed |
+```gdscript
+_emit_error(
+	"ContentRegistry: type mismatch for '%s' — expected '%s', got '%s'"
+	% [canonical, expected_type, actual_type]
+)
+```
 
-### 2. Silent Guard Clauses (Return Without Logging)
+Before this change, a caller asking for an `ItemDefinition` and getting a registered `store` resource would only see `null`, with no explanation.
 
-| # | File | Line | Pattern | Severity | Risk |
-|---|------|------|---------|----------|------|
-| 11 | `game_world.gd` | 682–686 | `_register_initial_fixtures()`: no store controller → logged warning | **Note** | ✅ Fixed |
-| 12 | `game_world.gd` | 693–698 | `_register_initial_fixtures()`: no store definition → logged warning | **Note** | ✅ Fixed |
-| 13 | `audio_manager.gd` | ~98–99 | `stop_ambient()`: empty ambient name → silent early exit | **Note** | Intentional deduplication guard |
-| 14 | `audio_manager.gd` | ~64–65 | `play_music()`: same track already playing → silent dedup return | **Note** | Intentional deduplication guard |
-| 15 | `audio_manager.gd` | ~84–85 | `play_ambient()`: same ambient already playing → silent dedup return | **Note** | Intentional deduplication guard |
-| 16 | `inventory_panel.gd` | 333–336 | `_get_backroom_capacity()`: missing loader/system → returns 0 | **Low** | Capacity display shows 0; cosmetic only |
-| 17 | `inventory_panel.gd` | 383–385 | `_place_selected_item()`: no inventory_system → silent return | **Low** | Placement fails silently during active interaction |
-| 18 | `inventory_panel.gd` | 408–409 | `_remove_item_from_shelf()`: no inventory_system → silent return | **Low** | Removal fails silently during active interaction |
-| 19 | `item_instance.gd` | ~66–67 | `get_current_value()`: no definition → returns 0.0 | **Note** | Defensive; callers handle 0.0 |
-| 20 | `interactable.gd` | ~61–62 | Missing mesh node → silent return (highlight skipped) | **Note** | Visual-only; not a game logic path |
-| 21 | `customer.gd` | ~419–420 | `_evaluate_item()`: no profile → returns false (skip item) | **Note** | Safe fallback; customer moves on |
+### F6 / F9 — Corrupt metadata files were the highest-value fixes
 
-### 3. Error Severity Downgrading
+Two persistence paths were too quiet:
 
-| # | File | Line | Pattern | Severity | Risk |
-|---|------|------|---------|----------|------|
-| 22 | All files | — | `push_warning()` used for ALL diagnostics including initialization failures | **Medium** | Critical failures (missing scene, corrupt save) logged at same level as minor issues (duplicate ID) |
-| 23 | `customer_system.gd` | 40, 84 | Only production file using `push_error()` — for scene load failure | **Note** | Good use of `push_error` for critical path |
-| 24 | `data_loader.gd` | 608–620 | `_parse_market_event()`: missing required fields now warned before skipping | **Note** | ✅ Fixed |
+1. `DifficultySystem` could try to persist back into a corrupt `settings.cfg`, effectively "repairing" it by overwriting unrelated settings.
+2. `SaveManager` could overwrite or ignore a corrupt slot index / metadata read path without surfacing why save-slot listings looked empty.
 
-### 4. Intentional Graceful Degradation (Acceptable)
+Both now preserve the corrupt file and log what happened instead of silently bulldozing it.
 
-| # | File | Line | Pattern | Assessment |
-|---|------|------|---------|------------|
-| 25 | `audio_manager.gd` | ~185 | Missing audio files logged, playback skipped | **Note** — correct for missing assets |
-| 26 | `data_loader.gd` | 328–330 | `DirAccess.open()` failure returns empty array with warning | **Note** — ✅ Fixed |
-| 27 | `settings.gd` | 103–109 | Missing settings file uses defaults silently; corrupt file now warns | **Note** — ✅ Fixed |
-| 28 | `save_manager.gd` | ~280–340 | Optional systems (`if _system:`) conditionally serialize | **Note** — proper progressive enhancement |
-| 29 | `mall_hallway.gd` | ~203–213 | Missing data_loader falls back to DEFAULT_RENT | **Note** — safe fallback value |
-| 30 | `fixture_placement_validator.gd` | all | Returns false for invalid placement | **Note** — pure validation, not error suppression |
-| 31 | `scene_transition.gd` | 31, 50 | Rejects concurrent transitions with warning | **Note** — proper guard |
-| 32 | `economy_system.gd` | throughout | `.get()` with defaults for multiplier lookups | **Note** — safe dictionary access pattern |
+## Categorization
 
-### 5. Unchecked Return Values
+### Acceptable
 
-| # | File | Line | Pattern | Severity | Status |
-|---|------|------|---------|----------|--------|
-| 33 | `settings.gd` | 95 | `config.save(SETTINGS_PATH)` — return value now checked | **Note** | ✅ Fixed |
-| 34 | All files | — | `.connect()` return value never checked | **Note** | Acceptable — Godot 4.x compile-time safe |
+| Finding | Reason |
+|---|---|
+| F4 | First-run defaults are reasonable, and corrupt settings now warn explicitly |
+| F11 | Audio dedup/no-op guards are intentional and harmless |
+| F12 | Release builds intentionally omit debug-only tooling |
 
-**Signal connection assessment:** Godot 4.x signal connections are safe by design — connecting to a non-existent signal is a compile error, and duplicate connections are a warning. No action needed.
+### Needs telemetry
 
----
+| Finding | Why |
+|---|---|
+| F3 | Unknown display/scene lookups still degrade quietly enough to hide bad IDs |
+| F10 | Empty/null inventory getters can make UI failures look like empty state instead of wiring issues |
 
-## Categorization Summary
+### Should tighten
 
-### Acceptable (No Action) — 20 findings
-Findings #1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 19, 20, 21, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34
+| Finding | Why |
+|---|---|
+| F1 | Boot should have a stricter mode for malformed content in CI/release validation |
+| F7 | Save and load failures are explicit but still downgraded to warnings instead of stronger error signaling |
 
-### Needs Telemetry (Add Logging) — 3 findings
-Findings #7 (save_manager slot metadata), #17 (inventory place silent), #18 (inventory remove silent)
+### High risk
 
-### Should Tighten — 1 finding
-Finding #22 (error severity classification — reserve `push_error()` for critical failures)
+| Finding | Why |
+|---|---|
+| F2 | Silent type mismatch hid contract violations in the content layer |
+| F6 | Corrupt settings file could be overwritten during persistence |
+| F9 | Corrupt slot index / metadata paths could be silently flattened into empty UI state |
 
----
+## Fixes applied in-place
 
-## Open Items
+### `game/autoload/content_registry.gd`
 
-### Low Priority — Add observability (no gameplay impact)
+- Added explicit error logging for typed resource mismatches before returning `null`.
 
-**Finding #7 — `save_manager.gd` `get_slot_metadata()`**
-File open and JSON parse failures return `{}` silently. The slot UI shows "Empty" rather than revealing the corrupt/missing file. Not harmful; only affects save slot display in menus.
+### `game/autoload/difficulty_system.gd`
 
-**Findings #17, #18 — `inventory_panel.gd` `_place_selected_item()` / `_remove_item_from_shelf()`**
-Both return silently when `inventory_system` is null. These fire during active player interaction, so a missing system would cause invisible button failure. In practice, `inventory_system` is set by `game_world.gd` before the panel is reachable, so the null case cannot occur during gameplay. However, a warning would aid debugging if the wiring ever breaks.
+- `_restore_persisted_tier()` now distinguishes **missing settings** from **corrupt/unreadable settings**.
+- `_persist_tier()` now refuses to overwrite an existing corrupt settings file and logs the failure instead.
 
-### Medium Priority — Improve error severity classification
+### `game/scripts/core/save_manager.gd`
 
-**Finding #22 — Uniform use of `push_warning()`**
-`push_warning()` is currently used for all diagnostic output, including failures that are actually errors (e.g., corrupt save file, scene load failure). `push_error()` should be reserved for:
-- System initialization failures
-- Corrupt save data that falls back to a default
-- Missing required content files
-- Failed file I/O after validation passed
+- `mark_run_complete()` now logs reopen/parse/non-dictionary/write failures for the auto-save metadata update path.
+- `get_all_slot_metadata()` now warns when the slot index exists but cannot be loaded.
+- `_update_slot_index()` now preserves a corrupt slot index instead of overwriting it blindly.
+- `_remove_slot_from_index()` now warns and preserves the existing index if it cannot be read.
+- `_read_slot_metadata_from_save()` now logs open/parse/shape failures instead of silently returning `{}`.
 
-This is a codebase-wide convention change. Track as a separate task.
+### Added focused tests
 
----
+- `tests/unit/test_content_registry.gd`
+- `tests/unit/test_difficulty_system.gd`
+- `tests/unit/test_save_manager.gd`
 
-## Fixes Applied This Audit
+These cover the newly tightened mismatch and corrupt-file-preservation paths.
 
-All nine in-place fixes were applied across two passes:
+## Recommended remediation plan
 
-**Pass 1 (prior round):**
-1. `data_loader.gd` — Added `push_warning` for `FileAccess.open()` failure after `file_exists()` passes
-2. `data_loader.gd` — Added `push_warning` for `DirAccess.open()` failure in `_load_entries_from_dir()`
-3. `data_loader.gd` — Added `push_warning` for market event missing required `id`/`name`/`event_type` fields
-4. `settings.gd` — Added return value check on `config.save()` with `error_string()` logging
-5. `game_world.gd` — Added `push_warning` for missing store controller in `_register_initial_fixtures()`
-6. `game_world.gd` — Added `push_warning` for missing store definition in `_register_initial_fixtures()`
-7. `main_menu.gd` — Added `push_warning` for save file open failure in `_read_slot_metadata()`
-8. `main_menu.gd` — Added `push_warning` for save JSON parse failure in `_read_slot_metadata()`
+1. **Add a strict boot/content-validation mode.** Make CI fail if `DataLoader` accumulates load errors instead of allowing partial content registration in test/release validation runs.
+2. **Elevate save-path severity.** Treat save write failures and unrecoverable load failures as `push_error()` cases, not just `push_warning()`.
+3. **Add caller-context telemetry to fallback getters.** For `ContentRegistry` and `InventorySystem`, log once per unknown ID/store to avoid spam while still surfacing broken wiring.
+4. **Separate menu metadata from critical saves more clearly.** Continue preserving corrupt slot index files rather than rewriting them; consider rebuilding them only from successfully parsed save files.
+5. **Keep production quiet only where behavior is idempotent.** Current audio/debug no-op behavior is fine; any path that affects persistence, content completeness, or player-visible state should log at least once.
 
-**Pass 2 (this audit):**
-9. `settings.gd` — `load_settings()` now distinguishes corrupt settings file (warns) from first-run missing file (silent); previously both cases were silent
+## Validation notes
+
+- `res://tests/unit/test_content_registry.gd` passed after the changes.
+- `res://tests/unit/test_difficulty_system.gd` passed after the changes.
+- Broader save-manager-focused GUT runs are currently blocked by a **pre-existing parse error** in `game/scripts/systems/random_event_system.gd` (`RandomEventProbability` undeclared), which also prevented the initial baseline run for that slice.

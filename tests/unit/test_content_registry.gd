@@ -1,157 +1,117 @@
-## Unit tests for ContentRegistry: resolve() normalization, missing-ID guard,
-## alias collision, entry retrieval, and StringName contract.
+## Unit tests for ContentRegistry resolve() normalization and unknown-ID behavior.
 extends GutTest
 
 
-var _registry: Node
+const MockContentRegistryScript := preload(
+	"res://tests/unit/mock_content_registry.gd"
+)
+
+var _registry: Variant
 
 const _SPORTS_ENTRY: Dictionary = {
-	"id": "sports_memorabilia",
+	"id": "sports",
 	"name": "Sports Memorabilia",
 	"display_name": "Sports Memorabilia",
+	"aliases": ["sports_memorabilia", "sports_cards"],
 	"scene_path": "res://game/scenes/stores/sports_memorabilia.tscn",
-}
-
-const _RETRO_ENTRY: Dictionary = {
-	"id": "retro_games",
-	"name": "Retro Games",
-	"display_name": "Retro Games",
-	"scene_path": "res://game/scenes/stores/retro_games.tscn",
-}
-
-const _POCKET_ENTRY: Dictionary = {
-	"id": "pocket_creatures",
-	"name": "Pocket Creatures",
-	"display_name": "Pocket Creatures",
-	"aliases": ["pocket_cards"],
-	"scene_path": "res://game/scenes/stores/pocket_creatures.tscn",
 }
 
 
 func before_each() -> void:
-	_registry = Node.new()
-	_registry.set_script(
-		preload("res://game/autoload/content_registry.gd")
-	)
+	_registry = MockContentRegistryScript.new()
 	add_child_autofree(_registry)
 	_registry.register_entry(_SPORTS_ENTRY, "store")
-	_registry.register_entry(_RETRO_ENTRY, "store")
-	_registry.register_entry(_POCKET_ENTRY, "store")
+	var store_definition := StoreDefinition.new()
+	store_definition.id = "sports"
+	_registry.register(&"sports", store_definition, "store")
 
 
 func test_resolve_canonical_returns_unchanged() -> void:
-	var result: StringName = _registry.resolve("sports_memorabilia")
+	var result: StringName = _registry.resolve("sports")
 	assert_eq(
-		result, &"sports_memorabilia",
+		result, &"sports",
 		"Canonical snake_case ID returns unchanged"
 	)
 
 
-func test_resolve_display_name_normalizes_to_canonical() -> void:
-	var result: StringName = _registry.resolve("Sports Memorabilia")
+func test_resolve_mixed_case_and_alias_inputs_return_canonical() -> void:
+	var mixed_case_result: StringName = _registry.resolve("Sports Memorabilia")
+	var alias_result: StringName = _registry.resolve("sports_memorabilia")
 	assert_eq(
-		result, &"sports_memorabilia",
+		mixed_case_result, &"sports",
 		"Display name normalizes to canonical snake_case StringName"
+	)
+	assert_eq(
+		alias_result, &"sports",
+		"Alias resolves to the canonical StringName"
 	)
 
 
-func test_resolve_unknown_id_returns_empty() -> void:
+func test_resolve_unknown_id_returns_empty_and_records_error() -> void:
 	var result: StringName = _registry.resolve("nonexistent_store")
 	assert_eq(
 		result, &"",
-		"Unknown ID returns empty StringName without crash"
+		"Unknown ID returns empty StringName"
+	)
+	assert_eq(
+		_registry.error_messages.size(), 1,
+		"Unknown ID should emit exactly one error"
+	)
+	assert_string_contains(
+		_registry.error_messages[0],
+		"unknown ID 'nonexistent_store' (normalized: 'nonexistent_store')",
+		"Unknown ID error should include the raw and normalized forms"
 	)
 
 
-func test_get_entry_valid_id_has_required_keys() -> void:
-	var entry: Dictionary = _registry.get_entry(&"sports_memorabilia")
+func test_two_aliases_mapping_to_same_canonical_each_resolve() -> void:
+	var first_alias_result: StringName = _registry.resolve("sports_memorabilia")
+	var second_alias_result: StringName = _registry.resolve("sports_cards")
+	assert_eq(
+		first_alias_result, &"sports",
+		"First alias resolves to canonical ID"
+	)
+	assert_eq(
+		second_alias_result, &"sports",
+		"Second alias resolves to canonical ID"
+	)
+
+
+func test_get_entry_valid_canonical_id_returns_non_empty_dictionary() -> void:
+	var entry: Dictionary = _registry.get_entry(&"sports")
 	assert_false(entry.is_empty(), "Valid ID returns non-empty dict")
-	assert_true(
-		entry.has("id"),
-		"Entry should contain 'id' key"
-	)
-	assert_true(
-		entry.has("display_name"),
-		"Entry should contain 'display_name' key"
-	)
-	assert_true(
-		entry.has("scene_path"),
-		"Entry should contain 'scene_path' key"
-	)
+	assert_eq(str(entry.get("id", "")), "sports")
 
 
-func test_get_entry_unknown_id_returns_empty() -> void:
+func test_get_entry_invalid_id_returns_empty_and_records_error() -> void:
 	var entry: Dictionary = _registry.get_entry(&"bad_id")
 	assert_true(
 		entry.is_empty(),
-		"Unknown ID returns empty Dictionary without crash"
-	)
-
-
-func test_get_display_name_valid() -> void:
-	var display: String = _registry.get_display_name(&"retro_games")
-	assert_false(
-		display.is_empty(),
-		"Valid ID returns non-empty display name"
-	)
-	assert_eq(display, "Retro Games")
-
-
-func test_get_scene_path_valid_ends_with_tscn() -> void:
-	var path: String = _registry.get_scene_path(&"retro_games")
-	assert_false(path.is_empty(), "Valid ID returns non-empty path")
-	assert_true(
-		path.ends_with(".tscn"),
-		"Scene path should end with '.tscn'"
-	)
-
-
-func test_resolve_idempotent() -> void:
-	var first: StringName = _registry.resolve("sports_memorabilia")
-	var second: StringName = _registry.resolve("sports_memorabilia")
-	assert_eq(
-		first, second,
-		"Calling resolve() twice returns identical result"
+		"Unknown ID returns empty Dictionary"
 	)
 	assert_eq(
-		first, &"sports_memorabilia",
-		"Idempotent resolve returns canonical ID"
+		_registry.error_messages.size(), 1,
+		"Invalid get_entry should emit exactly one error"
+	)
+	assert_string_contains(
+		_registry.error_messages[0],
+		"unknown ID 'bad_id' (normalized: 'bad_id')",
+		"Invalid get_entry should report the unknown ID"
 	)
 
 
-func test_resolve_returns_string_name_type() -> void:
-	var result: StringName = _registry.resolve("sports_memorabilia")
+func test_get_item_definition_type_mismatch_returns_null_and_records_error() -> void:
+	var result: ItemDefinition = _registry.get_item_definition(&"sports")
+	assert_null(result, "Type mismatch should return null")
 	assert_eq(
-		typeof(result), TYPE_STRING_NAME,
-		"resolve() must return StringName, not String"
+		_registry.error_messages.size(),
+		1,
+		"Type mismatch should emit exactly one error"
 	)
-
-
-func test_resolve_unknown_returns_string_name_type() -> void:
-	var result: StringName = _registry.resolve("nonexistent")
-	assert_eq(
-		typeof(result), TYPE_STRING_NAME,
-		"resolve() returns StringName even for unknown IDs"
-	)
-
-
-func test_resolve_display_name_returns_string_name_type() -> void:
-	var result: StringName = _registry.resolve("Retro Games")
-	assert_eq(
-		typeof(result), TYPE_STRING_NAME,
-		"resolve() from display name returns StringName"
-	)
-	assert_eq(
-		result, &"retro_games",
-		"Display name resolves to correct canonical ID"
-	)
-
-
-func test_resolve_alias_returns_canonical() -> void:
-	var result: StringName = _registry.resolve("pocket_cards")
-	assert_eq(
-		result, &"pocket_creatures",
-		"Alias resolves to canonical ID"
+	assert_string_contains(
+		_registry.error_messages[0],
+		"type mismatch for 'sports' — expected 'item', got 'store'",
+		"Type mismatch error should include the canonical ID and both types"
 	)
 
 

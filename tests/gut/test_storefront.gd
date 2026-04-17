@@ -8,6 +8,7 @@ var _zone_exited_ids: Array[String] = []
 var _storefront_entered_calls: Array[Dictionary] = []
 var _storefront_exited_count: int = 0
 var _door_interacted_count: int = 0
+var _saved_owned_stores: Array[StringName] = []
 
 
 func before_each() -> void:
@@ -16,6 +17,8 @@ func before_each() -> void:
 	_storefront_entered_calls.clear()
 	_storefront_exited_count = 0
 	_door_interacted_count = 0
+	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	GameManager.owned_stores = []
 
 	_storefront = Storefront.new()
 	_storefront.slot_index = 0
@@ -28,6 +31,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	GameManager.owned_stores = _saved_owned_stores
 	if EventBus.storefront_zone_entered.is_connected(_on_zone_entered):
 		EventBus.storefront_zone_entered.disconnect(_on_zone_entered)
 	if EventBus.storefront_zone_exited.is_connected(_on_zone_exited):
@@ -90,6 +94,7 @@ func test_storefront_scene_authors_required_geometry() -> void:
 	var facade_collision := instance.get_node_or_null(
 		"FacadeBody/FacadeCollision"
 	) as CollisionShape3D
+	var status_sign := instance.get_node_or_null("status_sign") as Label3D
 	var entry_collision := instance.get_node_or_null(
 		"EntryZone/EntryZoneCollision"
 	) as CollisionShape3D
@@ -100,6 +105,10 @@ func test_storefront_scene_authors_required_geometry() -> void:
 	assert_true(
 		facade_collision.shape is BoxShape3D,
 		"Facade collision uses a BoxShape3D"
+	)
+	assert_not_null(
+		status_sign,
+		"Scene should author the status_sign node directly"
 	)
 	assert_true(
 		entry_collision.shape is BoxShape3D,
@@ -324,10 +333,8 @@ func test_multiple_instances_no_conflicts() -> void:
 # ── Status Sign Tests ────────────────────────────────────────────────────────
 
 func test_status_sign_exists() -> void:
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
-	assert_not_null(label, "StatusSign Label3D exists")
+	var label: Label3D = _get_status_sign()
+	assert_not_null(label, "status_sign Label3D exists")
 
 
 func test_lease_marker_exists() -> void:
@@ -339,9 +346,7 @@ func test_lease_marker_exists() -> void:
 
 func test_status_sign_shows_for_lease_when_available() -> void:
 	_storefront.set_available(100.0)
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_eq(label.text, "FOR LEASE")
 	assert_true(label.visible, "FOR LEASE label is visible")
 
@@ -374,9 +379,7 @@ func test_owned_storefront_hides_lease_marker() -> void:
 
 func test_status_sign_yellow_when_for_lease() -> void:
 	_storefront.set_available(100.0)
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_gt(label.modulate.r, 0.5, "FOR LEASE has yellow-ish red channel")
 	assert_gt(label.modulate.g, 0.5, "FOR LEASE has yellow-ish green channel")
 	assert_lt(label.modulate.b, 0.5, "FOR LEASE has low blue channel")
@@ -384,17 +387,13 @@ func test_status_sign_yellow_when_for_lease() -> void:
 
 func test_status_sign_closed_when_owned_default() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_eq(label.text, "CLOSED")
 
 
 func test_status_sign_red_when_closed() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_gt(label.modulate.r, 0.5, "CLOSED has high red")
 	assert_lt(label.modulate.g, 0.5, "CLOSED has low green")
 
@@ -402,18 +401,14 @@ func test_status_sign_red_when_closed() -> void:
 func test_status_sign_open_on_store_opened_signal() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
 	EventBus.store_opened.emit("retro_games")
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_eq(label.text, "OPEN")
 
 
 func test_status_sign_green_when_open() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
 	EventBus.store_opened.emit("retro_games")
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_gt(label.modulate.g, 0.5, "OPEN has high green")
 	assert_lt(label.modulate.r, 0.5, "OPEN has low red")
 
@@ -422,44 +417,71 @@ func test_status_sign_closed_on_store_closed_signal() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
 	EventBus.store_opened.emit("retro_games")
 	EventBus.store_closed.emit("retro_games")
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_eq(label.text, "CLOSED")
 
 
 func test_status_sign_ignores_other_store_signals() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
 	EventBus.store_opened.emit("video_rental")
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_eq(label.text, "CLOSED")
 
 
 func test_status_sign_hidden_when_locked() -> void:
 	_storefront.set_locked()
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_false(label.visible, "Status sign hidden for locked storefront")
 
 
 func test_status_sign_hidden_when_renovation() -> void:
 	_storefront.set_renovation()
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_false(label.visible, "Status sign hidden for renovation")
 
 
 func test_status_sign_updates_on_hour_changed() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
 	EventBus.hour_changed.emit(Constants.STORE_OPEN_HOUR)
-	var label: Label3D = _storefront.find_child(
-		"StatusSign", true, false
-	) as Label3D
+	var label: Label3D = _get_status_sign()
 	assert_eq(label.text, "OPEN")
 
 	EventBus.hour_changed.emit(Constants.STORE_CLOSE_HOUR)
 	assert_eq(label.text, "CLOSED")
+
+
+func test_ready_uses_owned_store_state_for_preconfigured_storefront() -> void:
+	var scene: PackedScene = load("res://game/scenes/world/storefront.tscn")
+	var instance := scene.instantiate() as Storefront
+	instance.store_id = "retro_games"
+	GameManager.owned_stores = [&"retro_games"]
+	add_child_autofree(instance)
+
+	var label: Label3D = instance.get_node("status_sign") as Label3D
+	assert_true(instance.is_owned, "Owned store_id should mark the storefront owned on ready")
+	assert_eq(label.text, "CLOSED", "Owned storefront should initialize closed before live events")
+
+
+func test_status_sign_fades_like_customer_indicators() -> void:
+	_storefront.set_owned("retro_games", "Retro Games")
+	var camera := Camera3D.new()
+	camera.current = true
+	add_child_autofree(camera)
+	EventBus.active_camera_changed.emit(camera)
+
+	var label: Label3D = _get_status_sign()
+	camera.global_position = label.global_position + Vector3(0.0, 0.0, 8.0)
+	_storefront._process(0.0)
+	assert_almost_eq(label.modulate.a, 1.0, 0.01)
+
+	camera.global_position = label.global_position + Vector3(0.0, 0.0, 10.0)
+	_storefront._process(0.0)
+	assert_almost_eq(label.modulate.a, 0.0, 0.01)
+
+	camera.global_position = label.global_position + Vector3(0.0, 0.0, 9.0)
+	_storefront._process(0.0)
+	assert_almost_eq(label.modulate.a, 0.5, 0.01)
+
+
+func _get_status_sign() -> Label3D:
+	return _storefront.find_child("status_sign", true, false) as Label3D

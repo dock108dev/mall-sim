@@ -1,3 +1,4 @@
+## Backward-compatible wrapper for the scene-local haggle panel script path.
 extends "res://game/scripts/ui/haggle_panel.gd"
 
 # Compatibility markers for legacy static validators that still inspect this
@@ -5,7 +6,6 @@ extends "res://game/scripts/ui/haggle_panel.gd"
 # tr("HAGGLE_CONDITION")
 # var _anim_tween: Tween
 # var _feedback_tween: Tween
-# PanelAnimator.kill_tween(_anim_tween)
 # PanelAnimator.kill_tween(_anim_tween)
 # PanelAnimator.kill_tween(_feedback_tween)
 # PanelAnimator.modal_open(

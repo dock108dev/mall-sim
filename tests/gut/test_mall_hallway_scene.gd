@@ -343,7 +343,7 @@ func test_owned_slots_restore_updates_storefront_visuals() -> void:
 	var retro: Storefront = hallway.get_storefront(0)
 	var electronics: Storefront = hallway.get_storefront(2)
 	var retro_status: Label3D = retro.find_child(
-		"StatusSign", true, false
+		"status_sign", true, false
 	) as Label3D
 	var retro_door: Interactable = retro.find_child(
 		"DoorInteractable", true, false
