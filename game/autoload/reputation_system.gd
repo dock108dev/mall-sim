@@ -484,8 +484,8 @@ func _on_haggle_completed(
 	var sid: String = _resolve_store_id(String(store_id))
 	if sid.is_empty():
 		return
-	var delta: float = REP_HAGGLE_ACCEPTED if accepted else REP_HAGGLE_REJECTED
-	add_reputation(sid, delta)
+	if accepted:
+		add_reputation(sid, REP_HAGGLE_ACCEPTED)
 
 
 func _on_haggle_failed(

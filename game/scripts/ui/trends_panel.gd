@@ -18,6 +18,7 @@ var trend_system: TrendSystem
 var _is_open: bool = false
 var _rest_x: float = 0.0
 var _anim_tween: Tween
+var _active_store_id: StringName = &""
 
 @onready var _trend_list: VBoxContainer = $VBoxContainer/ScrollContainer/TrendList
 @onready var _empty_state: Label = $VBoxContainer/EmptyState
@@ -26,7 +27,9 @@ var _anim_tween: Tween
 func _ready() -> void:
 	visible = false
 	_rest_x = position.x
+	_active_store_id = _get_active_store_id()
 	EventBus.trend_changed.connect(_on_trend_changed)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
 
 
 ## Shows the panel and refreshes the trend list.
@@ -51,10 +54,10 @@ func close_panel() -> void:
 func _refresh_trend_list() -> void:
 	for child: Node in _trend_list.get_children():
 		child.queue_free()
-	if not trend_system:
+	if not trend_system or _active_store_id.is_empty():
 		_empty_state.visible = true
 		return
-	var trends: Array[Dictionary] = trend_system.get_active_trends()
+	var trends: Array[Dictionary] = _get_visible_trends()
 	_empty_state.visible = trends.is_empty()
 	for trend: Dictionary in trends:
 		_trend_list.add_child(_create_trend_entry(trend))
@@ -119,8 +122,47 @@ func _on_trend_changed(_trending: Array, _cold: Array) -> void:
 		_refresh_trend_list()
 
 
+func _on_active_store_changed(new_store_id: StringName) -> void:
+	_active_store_id = new_store_id
+	if _is_open:
+		_refresh_trend_list()
+
+
 func _get_current_day() -> int:
 	var time_system: TimeSystem = GameManager.get_time_system()
 	if time_system == null:
 		return 1
 	return time_system.current_day
+
+
+func _get_visible_trends() -> Array[Dictionary]:
+	var visible: Array[Dictionary] = []
+	for trend: Dictionary in trend_system.get_active_trends():
+		if _trend_matches_active_store(trend):
+			visible.append(trend)
+	return visible
+
+
+func _trend_matches_active_store(trend: Dictionary) -> bool:
+	if not GameManager.data_loader or _active_store_id.is_empty():
+		return false
+	var store_def: StoreDefinition = GameManager.data_loader.get_store(
+		String(_active_store_id)
+	)
+	if store_def == null:
+		return false
+	var target_type: String = str(trend.get("target_type", ""))
+	var target: String = str(trend.get("target", ""))
+	if target_type == "category":
+		return target in store_def.allowed_categories
+	if target_type == "tag":
+		for item_def: ItemDefinition in GameManager.data_loader.get_items_by_store(
+			String(_active_store_id)
+		):
+			if target in item_def.tags:
+				return true
+	return false
+
+
+func _get_active_store_id() -> StringName:
+	return GameManager.current_store_id

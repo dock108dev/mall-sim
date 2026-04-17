@@ -15,6 +15,8 @@ const ENTRY_ZONE_SIZE := Vector3(2.0, 2.0, 1.0)
 const ENTRY_ZONE_OFFSET := Vector3(0.0, 1.0, 0.7)
 const LEASE_MARKER_STATE_LOCKED: StringName = &"locked"
 const LEASE_MARKER_STATE_AVAILABLE: StringName = &"available"
+const STOREFRONT_HIGHLIGHT_COLOR := Color(1.0, 0.45, 0.3, 1.0)
+const STOREFRONT_HIGHLIGHT_WIDTH := 0.02
 
 static var _facade_mat: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_storefront_facade.tres"
@@ -273,6 +275,8 @@ func _create_door_interactable() -> Interactable:
 	)
 	interactable.display_name = "Storefront"
 	interactable.interaction_prompt = "Lease"
+	interactable.highlight_color = STOREFRONT_HIGHLIGHT_COLOR
+	interactable.highlight_outline_width = STOREFRONT_HIGHLIGHT_WIDTH
 	interactable.interacted.connect(_on_door_interacted)
 
 	var col := CollisionShape3D.new()

@@ -127,6 +127,7 @@ signal staff_restocked_shelf(staff_id: String, item_id: String)
 # ── Build Mode ────────────────────────────────────────────────────────────────
 signal build_mode_entered()
 signal build_mode_exited()
+signal fixture_catalog_requested(fixture_id: String)
 signal fixture_placed(fixture_id: String, grid_pos: Vector2i, rotation: int)
 signal fixture_removed(fixture_id: String, grid_pos: Vector2i)
 signal fixture_selected(fixture_id: String)

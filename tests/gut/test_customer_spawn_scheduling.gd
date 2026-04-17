@@ -3,12 +3,30 @@ extends GutTest
 
 
 var _system: CustomerSystem
+var _mall_root: Node3D
+var _spawned_shoppers: Array[Node] = []
+var _original_tier: StringName
+
+
+func before_all() -> void:
+	DifficultySystemSingleton._load_config()
 
 
 func before_each() -> void:
+	_original_tier = DifficultySystemSingleton.get_current_tier_id()
 	_system = CustomerSystem.new()
 	add_child_autofree(_system)
 	_system.max_customers_in_mall = 30
+	_spawned_shoppers = []
+	_mall_root = null
+	_safe_disconnect(EventBus.customer_spawned, _on_customer_spawned)
+	EventBus.customer_spawned.connect(_on_customer_spawned)
+	DifficultySystemSingleton.set_tier(&"normal")
+
+
+func after_each() -> void:
+	_safe_disconnect(EventBus.customer_spawned, _on_customer_spawned)
+	DifficultySystemSingleton.set_tier(_original_tier)
 
 
 # --- HOUR_DENSITY table completeness ---
@@ -206,20 +224,20 @@ func test_in_mall_hallway_default_true() -> void:
 	)
 
 
-func test_store_opened_disables_hallway() -> void:
-	_system._on_store_opened("sports")
+func test_store_entered_disables_hallway() -> void:
+	_system._on_store_entered(&"sports")
 	assert_false(
 		_system._in_mall_hallway,
-		"Should be false after store opened"
+		"Should be false after store_entered"
 	)
 
 
-func test_store_closed_enables_hallway() -> void:
-	_system._on_store_opened("sports")
-	_system._on_store_closed("sports")
+func test_active_store_changed_empty_enables_hallway() -> void:
+	_system._on_store_entered(&"sports")
+	_system._on_active_store_changed(&"")
 	assert_true(
 		_system._in_mall_hallway,
-		"Should be true after store closed"
+		"Should be true after returning to the hallway"
 	)
 
 
@@ -251,21 +269,36 @@ func test_day_started_wraps_week() -> void:
 	)
 
 
-# --- customer_left_mall decrements ---
+# --- customer_left decrements ---
 
 
-func test_customer_left_mall_decrements_count() -> void:
+func test_customer_left_decrements_count_for_shopper_ai() -> void:
 	_system._active_mall_shopper_count = 5
-	_system._on_customer_left_mall(null, true)
+	var shopper: Node = Node.new()
+	add_child_autofree(shopper)
+	shopper.add_to_group("shoppers")
+	_system._on_customer_left({"customer": shopper, "satisfied": true})
 	assert_eq(
 		_system._active_mall_shopper_count, 4,
 		"Should decrement by 1"
 	)
 
 
-func test_customer_left_mall_floors_at_zero() -> void:
+func test_customer_left_ignores_non_shopper_payloads() -> void:
+	_system._active_mall_shopper_count = 5
+	_system._on_customer_left({"satisfied": false})
+	assert_eq(
+		_system._active_mall_shopper_count, 5,
+		"Payloads without a ShopperAI should not change the mall count"
+	)
+
+
+func test_customer_left_floors_at_zero() -> void:
 	_system._active_mall_shopper_count = 0
-	_system._on_customer_left_mall(null, false)
+	var shopper: Node = Node.new()
+	add_child_autofree(shopper)
+	shopper.add_to_group("shoppers")
+	_system._on_customer_left({"customer": shopper, "satisfied": false})
 	assert_eq(
 		_system._active_mall_shopper_count, 0,
 		"Should not go below 0"
@@ -343,8 +376,8 @@ func test_day_phase_changed_updates_archetype_weights() -> void:
 	_system._on_day_phase_changed(TimeSystem.DayPhase.EVENING)
 	assert_eq(
 		_system._current_archetype_weights,
-		ShopperArchetypeConfig.WEIGHTS_EVENING,
-		"Phase change to EVENING should cache evening weights"
+		ShopperArchetypeConfig.WEIGHTS_MORNING,
+		"Phase change should preserve hour-based weights until hour_changed fires"
 	)
 
 
@@ -389,6 +422,71 @@ func test_lull_at_15() -> void:
 	)
 
 
+# --- Minute cadence and spawn events ---
+
+
+func test_process_updates_toward_target_once_per_game_minute() -> void:
+	_system._in_mall_hallway = false
+	_system._spawn_check_timer = 0.0
+
+	_system._process(Constants.SECONDS_PER_GAME_MINUTE * 0.5)
+	assert_almost_eq(
+		_system._spawn_check_timer,
+		Constants.SECONDS_PER_GAME_MINUTE * 0.5,
+		0.001,
+		"Half a game-minute should not trigger a mall spawn update"
+	)
+
+	_system._process(Constants.SECONDS_PER_GAME_MINUTE * 0.5)
+	assert_almost_eq(
+		_system._spawn_check_timer,
+		0.0,
+		0.001,
+		"A full game-minute should consume the mall spawn update interval"
+	)
+
+
+func test_try_spawn_mall_shopper_emits_customer_spawned() -> void:
+	_setup_spawnable_mall_waypoints()
+	_system._shopper_scene = preload(
+		"res://game/scenes/characters/shopper_ai.tscn"
+	)
+	_system.max_customers_in_mall = 1
+	_system._active_mall_shopper_count = 0
+	_system._current_hour = 12
+	_system._current_archetype_weights = ShopperArchetypeConfig.WEIGHTS_AFTERNOON
+
+	_system._try_spawn_mall_shopper()
+
+	assert_eq(
+		_spawned_shoppers.size(),
+		1,
+		"Spawning a mall shopper should emit EventBus.customer_spawned once"
+	)
+	assert_eq(
+		_system._active_mall_shopper_count,
+		1,
+		"Active mall shopper count should increment after a successful spawn"
+	)
+
+
+func test_spawn_target_cap_prevents_extra_shoppers() -> void:
+	_setup_spawnable_mall_waypoints()
+	_system._shopper_scene = preload(
+		"res://game/scenes/characters/shopper_ai.tscn"
+	)
+	_system.max_customers_in_mall = 1
+	_system._active_mall_shopper_count = 1
+
+	_system._try_spawn_mall_shopper()
+
+	assert_eq(
+		_spawned_shoppers.size(),
+		0,
+		"MAX_CUSTOMERS_IN_MALL should act as a hard cap for active ShopperAI nodes"
+	)
+
+
 # --- Helpers ---
 
 
@@ -408,3 +506,33 @@ func _sum_weights(weights: Dictionary) -> int:
 	for w: int in weights.values():
 		total += w
 	return total
+
+
+func _setup_spawnable_mall_waypoints() -> void:
+	_mall_root = Node3D.new()
+	_mall_root.name = "MallWaypointRoot"
+	add_child_autofree(_mall_root)
+
+	var hallway: MallWaypoint = MallWaypoint.new()
+	hallway.name = "Hallway"
+	hallway.position = Vector3.ZERO
+	hallway.waypoint_type = MallWaypoint.WaypointType.HALLWAY
+	_mall_root.add_child(hallway)
+
+	var exit: MallWaypoint = MallWaypoint.new()
+	exit.name = "Exit"
+	exit.position = Vector3(2.0, 0.0, 0.0)
+	exit.waypoint_type = MallWaypoint.WaypointType.EXIT
+	_mall_root.add_child(exit)
+
+	hallway.connected_waypoints = [exit]
+	exit.connected_waypoints = [hallway]
+
+
+func _on_customer_spawned(customer: Node) -> void:
+	_spawned_shoppers.append(customer)
+
+
+func _safe_disconnect(sig: Signal, callable: Callable) -> void:
+	if sig.is_connected(callable):
+		sig.disconnect(callable)

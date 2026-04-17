@@ -148,7 +148,7 @@ var reputation_system: ReputationSystem:
 
 var _inventory_panel: InventoryPanel
 var _day_summary: DaySummary
-var _fixture_catalog: FixtureCatalog
+var _fixture_catalog
 var _mall_hallway: MallHallway
 var _pause_menu: PauseMenu
 var _save_load_panel: SaveLoadPanel
@@ -443,7 +443,7 @@ func _setup_ui() -> void:
 		_InventoryPanelScene.instantiate() as InventoryPanel
 	)
 	_inventory_panel.inventory_system = inventory_system
-	_inventory_panel.store_id = GameManager.DEFAULT_STARTING_STORE
+	_inventory_panel.store_id = String(GameManager.current_store_id)
 	_ui_layer.add_child(_inventory_panel)
 
 	var pricing_panel: PricingPanel = (
@@ -504,14 +504,12 @@ func _setup_deferred_panels() -> void:
 	day_cycle_controller.set_day_summary(_day_summary)
 
 	_fixture_catalog = (
-		_FixtureCatalogScene.instantiate() as FixtureCatalog
+		_FixtureCatalogScene.instantiate()
 	)
 	_fixture_catalog.data_loader = GameManager.data_loader
 	_fixture_catalog.economy_system = economy_system
 	_fixture_catalog.store_type = GameManager.DEFAULT_STARTING_STORE
 	_ui_layer.add_child(_fixture_catalog)
-	if fixture_placement:
-		_fixture_catalog.placement_system = fixture_placement
 
 	var milestone_popup: MilestonePopup = (
 		_MilestonePopupScene.instantiate() as MilestonePopup
@@ -534,7 +532,7 @@ func _setup_deferred_panels() -> void:
 	)
 	order_panel.order_system = order_system
 	order_panel.economy_system = economy_system
-	order_panel.store_type = GameManager.DEFAULT_STARTING_STORE
+	order_panel.store_type = String(GameManager.current_store_id)
 	_ui_layer.add_child(order_panel)
 
 	var trends_panel: TrendsPanel = (

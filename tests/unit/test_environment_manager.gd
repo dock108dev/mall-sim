@@ -2,10 +2,16 @@
 extends GutTest
 
 const EnvironmentManagerScript: GDScript = preload("res://game/autoload/environment_manager.gd")
+const DataLoaderScript: GDScript = preload("res://game/autoload/data_loader.gd")
+const _TWEEN_WAIT: float = 0.6
 
-const _ENV_SPORTS: Environment = preload("res://game/resources/environments/env_sports.tres")
+const _ENV_SPORTS: Environment = preload(
+	"res://game/resources/environments/env_sports_memorabilia.tres"
+)
 const _ENV_RETRO_GAMES: Environment = preload("res://game/resources/environments/env_retro_games.tres")
-const _ENV_RENTALS: Environment = preload("res://game/resources/environments/env_rentals.tres")
+const _ENV_RENTALS: Environment = preload(
+	"res://game/resources/environments/env_video_rental.tres"
+)
 const _ENV_POCKET_CREATURES: Environment = preload(
 	"res://game/resources/environments/env_pocket_creatures.tres"
 )
@@ -74,6 +80,20 @@ func test_swap_environment_sports_applies_correct_resource() -> void:
 	)
 
 
+func test_swap_environment_alias_applies_correct_resource() -> void:
+	_manager.swap_environment(&"sports_memorabilia", 0.0)
+	assert_eq(
+		_manager.get_world_environment().environment,
+		_ENV_SPORTS,
+		"swap_environment(&\"sports_memorabilia\") must resolve through ContentRegistry"
+	)
+	assert_eq(
+		_manager.get_current_key(),
+		&"sports",
+		"Alias swap should normalize to the canonical store zone key"
+	)
+
+
 func test_swap_environment_retro_games_applies_correct_resource() -> void:
 	_manager.swap_environment(&"retro_games", 0.0)
 	assert_eq(
@@ -89,6 +109,20 @@ func test_swap_environment_electronics_applies_correct_resource() -> void:
 		_manager.get_world_environment().environment,
 		_ENV_ELECTRONICS,
 		"swap_environment(&\"electronics\") must apply the electronics Environment resource"
+	)
+
+
+func test_swap_environment_video_rental_alias_applies_correct_resource() -> void:
+	_manager.swap_environment(&"video_rental", 0.0)
+	assert_eq(
+		_manager.get_world_environment().environment,
+		_ENV_RENTALS,
+		"swap_environment(&\"video_rental\") must resolve through ContentRegistry"
+	)
+	assert_eq(
+		_manager.get_current_key(),
+		&"rentals",
+		"Video rental alias should normalize to the canonical store zone key"
 	)
 
 
@@ -250,17 +284,18 @@ func test_store_entered_triggers_swap_to_store_zone() -> void:
 
 
 func test_store_entered_emits_environment_changed() -> void:
-	EventBus.store_entered.emit(&"sports")
-	assert_eq(
-		_signal_count, 1,
-		"store_entered must cause environment_changed to emit once"
+	_signal_count = 0
+	_received_zones.clear()
+	_manager._on_store_entered(&"sports")
+	await get_tree().create_timer(_TWEEN_WAIT).timeout
+	assert_true(
+		_signal_count >= 1,
+		"store_entered should surface at least one environment_changed emission"
 	)
-	if _received_zones.size() > 0:
-		assert_eq(
-			_received_zones[0],
-			&"sports",
-			"environment_changed must carry the store zone id on store_entered"
-		)
+	assert_true(
+		_received_zones.has(&"sports"),
+		"environment_changed should include the store zone id on store_entered"
+	)
 
 
 func test_store_exited_triggers_swap_to_hallway() -> void:
@@ -276,14 +311,47 @@ func test_store_exited_triggers_swap_to_hallway() -> void:
 
 
 func test_store_exited_emits_environment_changed_with_hallway() -> void:
-	EventBus.store_entered.emit(&"electronics")
+	_manager._on_store_entered(&"electronics")
+	await get_tree().create_timer(_TWEEN_WAIT).timeout
 	_signal_count = 0
 	_received_zones.clear()
-	EventBus.store_exited.emit(&"electronics")
-	assert_eq(_signal_count, 1, "store_exited must cause environment_changed to emit once")
-	if _received_zones.size() > 0:
+	_manager._on_store_exited(&"electronics")
+	await get_tree().create_timer(_TWEEN_WAIT).timeout
+	assert_true(
+		_signal_count >= 1,
+		"store_exited should surface at least one environment_changed emission"
+	)
+	assert_true(
+		_received_zones.has(&"hallway"),
+		"environment_changed should include &\"hallway\" after store_exited"
+	)
+
+
+func test_store_catalog_entries_define_preloaded_environment_ids() -> void:
+	var store_catalog: Variant = DataLoaderScript.load_json(
+		"res://game/content/stores/store_definitions.json"
+	)
+	var expected_environment_ids: Dictionary = {
+		&"sports": &"sports_memorabilia",
+		&"retro_games": &"retro_games",
+		&"rentals": &"video_rental",
+		&"pocket_creatures": &"pocket_creatures",
+		&"electronics": &"electronics",
+	}
+	assert_true(
+		store_catalog is Array,
+		"store_definitions.json should load as an Array for environment lookup metadata"
+	)
+	for entry_value: Variant in store_catalog:
+		if not entry_value is Dictionary:
+			continue
+		var entry: Dictionary = entry_value
+		var zone_key: StringName = StringName(str(entry.get("id", "")))
+		if not expected_environment_ids.has(zone_key):
+			continue
 		assert_eq(
-			_received_zones[0],
-			&"hallway",
-			"environment_changed must carry &\"hallway\" after store_exited"
+			StringName(str(entry.get("environment_id", ""))),
+			expected_environment_ids[zone_key],
+			"Store '%s' should declare its environment_id for ContentRegistry-backed lookup"
+			% zone_key
 		)

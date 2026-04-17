@@ -355,9 +355,10 @@ func _mark_customer_served(customer_id: String, satisfied: bool) -> void:
 func _on_haggle_completed(
 	_store_id: StringName, _item_id: StringName,
 	_final_price: float, _asking_price: float,
-	_accepted: bool, _offer_count: int
+	accepted: bool, _offer_count: int
 ) -> void:
-	_daily_haggle_wins += 1
+	if accepted:
+		_daily_haggle_wins += 1
 
 
 func _on_haggle_failed(

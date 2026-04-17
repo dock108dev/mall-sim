@@ -53,6 +53,10 @@ func before_each() -> void:
 	_item.player_set_price = 65.0
 
 
+func after_each() -> void:
+	GameManager.current_store_id = &""
+
+
 func _make_customer() -> Customer:
 	var customer: Customer = Customer.new()
 	add_child_autofree(customer)
@@ -103,6 +107,110 @@ func test_negotiation_started_fires_with_ask_price() -> void:
 	assert_true(
 		received_offer[0] > 0.0,
 		"negotiation_started should emit a positive customer offer"
+	)
+
+
+# --- ISSUE-069 formula contracts ---
+
+
+func test_haggle_chance_uses_sensitivity_mood_and_markup() -> void:
+	var expected: float = (
+		HaggleSystem.BASE_HAGGLE_CHANCE
+		* _profile.price_sensitivity
+		* 1.3
+		* ((_item.player_set_price / _item.get_current_value()) - 1.0)
+	)
+	var actual: float = _haggle._calculate_haggle_chance(
+		_item, _profile.price_sensitivity, 1.3
+	)
+	assert_almost_eq(
+		actual, expected, 0.001,
+		"haggle_chance should be 0.40 * sensitivity * mood * markup"
+	)
+
+
+func test_opening_offer_uses_perceived_floor_to_sticker_lerp() -> void:
+	var customer: Customer = _make_customer()
+	_haggle.begin_negotiation(customer, _item)
+	var expected: float = lerpf(
+		_item.get_current_value() * 0.7,
+		_item.player_set_price,
+		1.0 - _profile.price_sensitivity
+	)
+	assert_almost_eq(
+		_haggle._current_customer_offer, expected, 0.001,
+		"Opening offer should lerp from 70% perceived value to sticker price"
+	)
+
+
+func test_customer_counter_closes_quarter_to_half_of_player_value_gap() -> void:
+	var customer: Customer = _make_customer()
+	_haggle.begin_negotiation(customer, _item)
+	var player_offer: float = _item.player_set_price
+	var perceived: float = _haggle._perceived_value
+	var counter_offer: float = _haggle._calculate_customer_counter(player_offer)
+	assert_between(
+		counter_offer,
+		perceived + ((player_offer - perceived) * HaggleSystem.MIN_COUNTER_CLOSE_RATE),
+		perceived + ((player_offer - perceived) * HaggleSystem.MAX_COUNTER_CLOSE_RATE),
+		"Customer counter should close 25-50% of the remaining value gap"
+	)
+
+
+func test_gap_within_counter_threshold_emits_customer_counter() -> void:
+	_profile.patience = 0.9
+	var customer: Customer = _make_customer()
+	_haggle.begin_negotiation(customer, _item)
+	var countered: Array = [false]
+	_haggle.customer_countered.connect(
+		func(_offer: float, _round: int) -> void:
+			countered[0] = true
+	)
+	_haggle.player_counter(_haggle._perceived_value * 1.4)
+	assert_true(
+		countered[0],
+		"Gap below patience-derived counter threshold should counter"
+	)
+	assert_true(
+		_haggle.is_active(),
+		"Countered haggle should remain active"
+	)
+
+
+func test_walkaway_emits_completed_with_rejected_flag() -> void:
+	var customer: Customer = _make_customer()
+	_haggle.begin_negotiation(customer, _item)
+	watch_signals(EventBus)
+	_haggle.player_counter(_haggle._perceived_value * 3.0)
+	assert_signal_emitted(
+		EventBus,
+		"haggle_completed",
+		"Walkaway should still emit haggle_completed with accepted=false"
+	)
+	var params: Array = get_signal_parameters(EventBus, "haggle_completed", 0)
+	assert_false(
+		params[4] as bool,
+		"Walkaway haggle_completed accepted flag should be false"
+	)
+
+
+func test_insulting_counter_applies_minus_three_reputation() -> void:
+	var store_id: String = "test_haggle_store"
+	GameManager.current_store_id = StringName(store_id)
+	_reputation.initialize_store(store_id)
+	_haggle._on_active_store_changed(StringName(store_id))
+	var customer: Customer = _make_customer()
+	_haggle.begin_negotiation(customer, _item)
+	var rep_before: float = _reputation.get_reputation(store_id)
+	_haggle._previous_player_offer = _haggle._perceived_value * 2.0
+	_haggle._previous_customer_offer = _haggle._perceived_value * 1.6
+	_haggle._current_customer_offer = _haggle._perceived_value * 1.4
+	_haggle.player_counter(_haggle._previous_player_offer * 1.005)
+	assert_almost_eq(
+		_reputation.get_reputation(store_id),
+		rep_before + HaggleSystem.REP_INSULT_PENALTY,
+		0.001,
+		"Insulting counter should apply the -3 reputation penalty"
 	)
 
 

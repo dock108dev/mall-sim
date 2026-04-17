@@ -103,8 +103,8 @@ func has_valid_aisles(
 	return _get_narrow_aisle_cells(new_cells, occupied_cells).is_empty()
 
 
-## BFS from entry zone through empty cells. Returns true if all fixture
-## cells have at least one adjacent reachable empty cell.
+## BFS from entry zone through empty cells. Returns true if every empty cell and
+## every occupied fixture/register cell remains reachable from the entrance.
 func is_layout_connected(
 	all_occupied: Dictionary,
 	register_cells: Array[Vector2i]
@@ -195,6 +195,14 @@ func _is_layout_connected(
 				continue
 			reachable[neighbor] = true
 			queue.append(neighbor)
+
+	for x: int in range(_grid_size.x):
+		for y: int in range(_grid_size.y):
+			var cell := Vector2i(x, y)
+			if all_occupied.has(cell):
+				continue
+			if not reachable.has(cell):
+				return false
 
 	for occ_key: Variant in all_occupied:
 		var occ_cell: Vector2i = occ_key as Vector2i

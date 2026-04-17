@@ -128,6 +128,38 @@ func test_scenario_a_haggle_completed_carries_accepted_flag_and_final_price() ->
 	)
 
 
+func test_begin_negotiation_uses_profile_patience_for_session_rounds() -> void:
+	_customer.profile.patience = 0.8
+	_haggle.begin_negotiation(_customer, _item)
+	assert_eq(
+		_haggle._max_rounds_for_customer, 4,
+		"Casual-fan patience should map to four rounds"
+	)
+
+	_haggle.decline_offer()
+	_customer.profile.patience = 0.3
+	_haggle.begin_negotiation(_customer, _item)
+	assert_eq(
+		_haggle._max_rounds_for_customer, 2,
+		"Investor patience should map to two rounds"
+	)
+
+
+func test_begin_negotiation_reduces_turn_time_for_busy_queue() -> void:
+	_customer.profile.patience = 0.5
+	_haggle.begin_negotiation(_customer, _item, 0)
+	var no_queue_time: float = _haggle.time_per_turn
+	_haggle.decline_offer()
+
+	_haggle.begin_negotiation(_customer, _item, 2)
+	assert_almost_eq(
+		_haggle.time_per_turn,
+		no_queue_time * 0.7,
+		0.01,
+		"Queue pressure should reduce haggle turn time by 30%"
+	)
+
+
 # ── Scenario B: customer walks — economy unchanged, reputation drops ───────────
 
 

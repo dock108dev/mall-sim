@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://fixcatalog01"]
 
-[ext_resource type="Script" path="res://game/scenes/ui/fixture_catalog.gd" id="1"]
+[ext_resource type="Script" path="res://game/scripts/ui/fixture_catalog_panel.gd" id="1"]
 
-[node name="FixtureCatalog" type="CanvasLayer"]
+[node name="FixtureCatalogPanel" type="CanvasLayer"]
 layer = 6
 script = ExtResource("1")
 

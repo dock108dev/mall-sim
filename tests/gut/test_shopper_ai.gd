@@ -2,6 +2,29 @@
 extends GutTest
 
 
+class AlwaysBuyShopper:
+	extends ShopperAI
+
+	func _should_buy_item() -> bool:
+		return true
+
+
+class NeverBuyShopper:
+	extends ShopperAI
+
+	func _should_buy_item() -> bool:
+		return false
+
+
+class RecordingShopperNavigation:
+	extends ShopperNavigation
+
+	var separation_calls: int = 0
+
+	func apply_separation(_delta: float) -> void:
+		separation_calls += 1
+
+
 var _shopper: ShopperAI
 
 
@@ -217,6 +240,21 @@ func test_needs_initialized_with_defaults() -> void:
 	assert_eq(_shopper.needs.social, 0.5)
 
 
+func test_ready_initializes_needs_from_personality() -> void:
+	var shopper := ShopperAI.new()
+	var agent := MallWaypointAgent.new()
+	agent.name = "MallWaypointAgent"
+	shopper.add_child(agent)
+	var pd: PersonalityData = _make_personality()
+	pd.social_need_baseline = 0.85
+	shopper.personality = pd
+	add_child_autofree(shopper)
+	assert_eq(
+		shopper.needs.social, 0.85,
+		"_ready should seed needs from the assigned personality"
+	)
+
+
 func test_needs_initialized_from_personality() -> void:
 	var pd: PersonalityData = _make_personality()
 	pd.social_need_baseline = 0.9
@@ -353,6 +391,17 @@ func test_score_action_leave_high_when_shopping_depleted() -> void:
 	)
 
 
+func test_execute_window_shop_transitions_to_window_shopping() -> void:
+	_shopper._transition_to(ShopperAI.ShopperState.WALKING)
+	_shopper._execute_action("window_shop")
+	assert_eq(
+		_shopper.current_state,
+		ShopperAI.ShopperState.WINDOW_SHOPPING
+	)
+	assert_null(_shopper.target_waypoint)
+	assert_null(_shopper._nav.target_waypoint)
+
+
 func test_budget_assigned_from_personality_on_initialize() -> void:
 	var pd: PersonalityData = _make_personality()
 	pd.min_budget = 50.0
@@ -486,6 +535,90 @@ func test_simple_detail_uses_longer_utility_interval() -> void:
 	)
 
 
+func test_simple_detail_skips_browsing_and_heads_to_register() -> void:
+	var hallway: MallWaypoint = _make_waypoint(
+		"Hallway", Vector3(0, 0, 0),
+		MallWaypoint.WaypointType.HALLWAY
+	)
+	var store: MallWaypoint = _make_waypoint(
+		"Store", Vector3(4, 0, 0),
+		MallWaypoint.WaypointType.STORE_ENTRANCE, &"retro_games"
+	)
+	var register: MallWaypoint = _make_waypoint(
+		"Register", Vector3(8, 0, 0),
+		MallWaypoint.WaypointType.REGISTER, &"retro_games"
+	)
+	_connect_bi(hallway, store)
+	_connect_bi(store, register)
+
+	var shopper := AlwaysBuyShopper.new()
+	var agent := MallWaypointAgent.new()
+	agent.name = "MallWaypointAgent"
+	shopper.add_child(agent)
+	add_child_autofree(shopper)
+
+	shopper.initialize(store.global_position)
+	shopper.global_position = store.global_position
+	shopper.ai_detail = ShopperAI.AIDetail.SIMPLE
+	shopper._transition_to(ShopperAI.ShopperState.BROWSING)
+	shopper._physics_process(0.016)
+
+	assert_eq(shopper.current_state, ShopperAI.ShopperState.WALKING)
+	for _i: int in range(120):
+		shopper._physics_process(0.1)
+		if shopper.current_state == ShopperAI.ShopperState.BUYING:
+			break
+	assert_eq(shopper.current_state, ShopperAI.ShopperState.BUYING)
+
+
+func test_simple_detail_skips_browsing_and_requests_leave() -> void:
+	var exit_wp: MallWaypoint = _make_waypoint(
+		"Exit", Vector3(-4, 0, 0),
+		MallWaypoint.WaypointType.EXIT
+	)
+	var hallway: MallWaypoint = _make_waypoint(
+		"Hallway", Vector3(0, 0, 0),
+		MallWaypoint.WaypointType.HALLWAY
+	)
+	var store: MallWaypoint = _make_waypoint(
+		"Store", Vector3(4, 0, 0),
+		MallWaypoint.WaypointType.STORE_ENTRANCE, &"retro_games"
+	)
+	_connect_bi(exit_wp, hallway)
+	_connect_bi(hallway, store)
+
+	var shopper := NeverBuyShopper.new()
+	var agent := MallWaypointAgent.new()
+	agent.name = "MallWaypointAgent"
+	shopper.add_child(agent)
+	add_child_autofree(shopper)
+
+	shopper.initialize(store.global_position)
+	shopper.global_position = store.global_position
+	shopper.ai_detail = ShopperAI.AIDetail.SIMPLE
+	shopper._transition_to(ShopperAI.ShopperState.BROWSING)
+	shopper._physics_process(0.016)
+
+	assert_eq(shopper.current_state, ShopperAI.ShopperState.LEAVING)
+
+
+func test_simple_detail_skips_separation_steering() -> void:
+	var recording_nav := RecordingShopperNavigation.new()
+	_shopper._nav = recording_nav
+	var _hw: MallWaypoint = _make_waypoint(
+		"H1", Vector3(50, 0, 0),
+		MallWaypoint.WaypointType.HALLWAY
+	)
+	_shopper.initialize(Vector3.ZERO)
+	_shopper.ai_detail = ShopperAI.AIDetail.SIMPLE
+	_shopper._utility_timer = 99.0
+	_shopper._transition_to(ShopperAI.ShopperState.WALKING)
+
+	_shopper._physics_process(0.016)
+
+	assert_eq(recording_nav.separation_calls, 0)
+
+
 func test_full_detail_uses_standard_utility_interval() -> void:
 	var _hw: MallWaypoint = _make_waypoint(
 		"H1", Vector3(50, 0, 0),
@@ -501,6 +634,42 @@ func test_full_detail_uses_standard_utility_interval() -> void:
 		ShopperAI.UTILITY_EVAL_INTERVAL,
 		0.1,
 		"FULL should reset utility timer to 1s interval"
+	)
+
+
+func test_full_detail_evaluates_to_leave_after_one_second() -> void:
+	var exit_wp: MallWaypoint = _make_waypoint(
+		"Exit", Vector3(-5, 0, 0),
+		MallWaypoint.WaypointType.EXIT
+	)
+	var hallway: MallWaypoint = _make_waypoint(
+		"Hallway", Vector3(5, 0, 0),
+		MallWaypoint.WaypointType.HALLWAY
+	)
+	_connect_bi(exit_wp, hallway)
+	_shopper.initialize(Vector3.ZERO)
+	_shopper._transition_to(ShopperAI.ShopperState.WALKING)
+	_shopper.target_waypoint = null
+	_shopper._nav.target_waypoint = null
+	_shopper.needs.shopping = 0.0
+	_shopper.needs.hunger = 0.0
+	_shopper.needs.energy = 1.0
+	_shopper.needs.social = 0.0
+	_shopper._utility_timer = 0.0
+	_shopper._state_timer = 0.0
+
+	_shopper._physics_process(1.0)
+
+	assert_eq(
+		_shopper.current_state,
+		ShopperAI.ShopperState.LEAVING,
+		"A zero shopping need should drive the leave action on the 1s utility tick"
+	)
+	assert_almost_eq(
+		_shopper._utility_timer,
+		ShopperAI.UTILITY_EVAL_INTERVAL,
+		0.001,
+		"FULL detail should reset the utility timer to 1 second after evaluation"
 	)
 
 

@@ -2,12 +2,33 @@
 extends Node
 
 const DEFAULT_FADE_DURATION: float = 0.5
+const HALLWAY_ZONE_ID: StringName = &"hallway"
+const HALLWAY_ENVIRONMENT_ID: StringName = &"mall_hallway"
+const FALLBACK_ZONE_IDS: Dictionary = {
+	&"sports": &"sports",
+	&"sports_memorabilia": &"sports",
+	&"retro_games": &"retro_games",
+	&"rentals": &"rentals",
+	&"video_rental": &"rentals",
+	&"pocket_creatures": &"pocket_creatures",
+	&"electronics": &"electronics",
+	&"consumer_electronics": &"electronics",
+}
+const FALLBACK_ENVIRONMENT_IDS: Dictionary = {
+	&"sports": &"sports_memorabilia",
+	&"retro_games": &"retro_games",
+	&"rentals": &"video_rental",
+	&"pocket_creatures": &"pocket_creatures",
+	&"electronics": &"electronics",
+}
 
-const ZONE_ENVIRONMENTS: Dictionary = {
-	&"hallway": preload("res://game/resources/environments/env_hallway.tres"),
-	&"sports": preload("res://game/resources/environments/env_sports.tres"),
+const PRELOADED_ENVIRONMENTS: Dictionary = {
+	HALLWAY_ENVIRONMENT_ID: preload("res://game/resources/environments/env_hallway.tres"),
+	&"sports_memorabilia": preload(
+		"res://game/resources/environments/env_sports_memorabilia.tres"
+	),
 	&"retro_games": preload("res://game/resources/environments/env_retro_games.tres"),
-	&"rentals": preload("res://game/resources/environments/env_rentals.tres"),
+	&"video_rental": preload("res://game/resources/environments/env_video_rental.tres"),
 	&"pocket_creatures": preload("res://game/resources/environments/env_pocket_creatures.tres"),
 	&"electronics": preload("res://game/resources/environments/env_electronics.tres"),
 }
@@ -21,23 +42,31 @@ func _ready() -> void:
 	_world_env = WorldEnvironment.new()
 	_world_env.name = "WorldEnvironment"
 	add_child(_world_env)
-	swap_environment(&"hallway", 0.0)
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.store_exited.connect(_on_store_exited)
+	swap_environment(HALLWAY_ZONE_ID, 0.0)
 
 
 func swap_environment(
 	zone_id: StringName, fade_duration: float = DEFAULT_FADE_DURATION
 ) -> void:
-	if zone_id == _current_key:
-		return
-
 	var resolved: StringName = _resolve_zone(zone_id)
 	if resolved.is_empty():
 		push_error("EnvironmentManager: unknown zone '%s'" % zone_id)
 		return
 
-	var target_env: Environment = ZONE_ENVIRONMENTS[resolved]
+	if resolved == _current_key:
+		return
+
+	var environment_id: StringName = _resolve_environment_id(resolved)
+	if environment_id.is_empty():
+		push_error(
+			"EnvironmentManager: missing environment mapping for zone '%s'"
+			% resolved
+		)
+		return
+
+	var target_env: Environment = PRELOADED_ENVIRONMENTS[environment_id]
 
 	if _fade_tween and _fade_tween.is_valid():
 		_fade_tween.kill()
@@ -80,12 +109,28 @@ func get_world_environment() -> WorldEnvironment:
 
 
 func _resolve_zone(zone_id: StringName) -> StringName:
-	if ZONE_ENVIRONMENTS.has(zone_id):
-		return zone_id
+	if zone_id == HALLWAY_ZONE_ID or zone_id == HALLWAY_ENVIRONMENT_ID:
+		return HALLWAY_ZONE_ID
 	if ContentRegistry.is_ready() and ContentRegistry.exists(String(zone_id)):
-		var canonical: StringName = ContentRegistry.resolve(String(zone_id))
-		if ZONE_ENVIRONMENTS.has(canonical):
-			return canonical
+		return ContentRegistry.resolve(String(zone_id))
+	if FALLBACK_ZONE_IDS.has(zone_id):
+		return FALLBACK_ZONE_IDS[zone_id]
+	return &""
+
+
+func _resolve_environment_id(zone_key: StringName) -> StringName:
+	if zone_key == HALLWAY_ZONE_ID:
+		return HALLWAY_ENVIRONMENT_ID
+	if ContentRegistry.is_ready():
+		var entry: Dictionary = ContentRegistry.get_entry(zone_key)
+		if not entry.is_empty():
+			var environment_id: StringName = StringName(
+				str(entry.get("environment_id", ""))
+			)
+			if PRELOADED_ENVIRONMENTS.has(environment_id):
+				return environment_id
+	if FALLBACK_ENVIRONMENT_IDS.has(zone_key):
+		return FALLBACK_ENVIRONMENT_IDS[zone_key]
 	return &""
 
 
@@ -94,4 +139,4 @@ func _on_store_entered(store_id: StringName) -> void:
 
 
 func _on_store_exited(_store_id: StringName) -> void:
-	swap_environment(&"hallway")
+	swap_environment(HALLWAY_ZONE_ID)

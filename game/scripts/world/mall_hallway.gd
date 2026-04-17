@@ -130,9 +130,10 @@ func _add_storefront_accent_light(at_pos: Vector3) -> void:
 	accent_light.position = at_pos + Vector3(0.0, 3.25, 2.8)
 	accent_light.rotation_degrees = Vector3(-88.0, 0.0, 0.0)
 	accent_light.light_color = Color(1.0, 0.9, 0.75, 1.0)
-	accent_light.light_energy = 0.22
-	accent_light.spot_range = 4.5
-	accent_light.spot_angle = 30.0
+	# Keep storefront pools readable without overpowering the hallway key/fill rig.
+	accent_light.light_energy = 0.14
+	accent_light.spot_range = 4.2
+	accent_light.spot_angle = 28.0
 	accent_light.spot_attenuation = 1.0
 	accent_light.shadow_enabled = false
 	_hallway_geometry.add_child(accent_light)

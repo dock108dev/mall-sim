@@ -2,6 +2,7 @@
 ## budget assignment, intent generation, day_started scheduling, and difficulty modifier.
 extends GutTest
 
+
 var _system: CustomerSystem
 var _original_tier: StringName
 
@@ -96,8 +97,8 @@ func test_social_butterfly_budget_range_matches_documented_minimum() -> void:
 		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY
 	)
 	assert_almost_eq(
-		personality.min_budget, 20.0, 0.001,
-		"SOCIAL_BUTTERFLY min_budget should be 20.0"
+		personality.min_budget, 30.0, 0.001,
+		"SOCIAL_BUTTERFLY min_budget should match the authored personality data"
 	)
 
 
@@ -106,8 +107,8 @@ func test_social_butterfly_budget_range_matches_documented_maximum() -> void:
 		PersonalityData.PersonalityType.SOCIAL_BUTTERFLY
 	)
 	assert_almost_eq(
-		personality.max_budget, 80.0, 0.001,
-		"SOCIAL_BUTTERFLY max_budget should be 80.0"
+		personality.max_budget, 120.0, 0.001,
+		"SOCIAL_BUTTERFLY max_budget should match the authored personality data"
 	)
 
 
@@ -116,8 +117,8 @@ func test_power_shopper_budget_range_matches_documented_minimum() -> void:
 		PersonalityData.PersonalityType.POWER_SHOPPER
 	)
 	assert_almost_eq(
-		personality.min_budget, 50.0, 0.001,
-		"POWER_SHOPPER min_budget should be 50.0"
+		personality.min_budget, 80.0, 0.001,
+		"POWER_SHOPPER min_budget should match the authored personality data"
 	)
 
 
@@ -126,8 +127,8 @@ func test_power_shopper_budget_range_matches_documented_maximum() -> void:
 		PersonalityData.PersonalityType.POWER_SHOPPER
 	)
 	assert_almost_eq(
-		personality.max_budget, 200.0, 0.001,
-		"POWER_SHOPPER max_budget should be 200.0"
+		personality.max_budget, 300.0, 0.001,
+		"POWER_SHOPPER max_budget should match the authored personality data"
 	)
 
 

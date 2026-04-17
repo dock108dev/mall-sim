@@ -279,7 +279,7 @@ func _begin_checkout(customer: Customer) -> void:
 	):
 		_is_haggling = true
 		_haggle_system.begin_negotiation(
-			customer, _active_item
+			customer, _active_item, _get_haggle_queue_count()
 		)
 		return
 	if _is_rental_transaction():
@@ -401,6 +401,12 @@ func _on_haggle_panel_counter(price: float) -> void:
 func _on_haggle_panel_decline() -> void:
 	if _haggle_system and _haggle_system.is_active():
 		_haggle_system.decline_offer()
+
+
+func _get_haggle_queue_count() -> int:
+	if _register_queue == null:
+		return 0
+	return maxi(_register_queue.get_size() - 1, 0)
 
 
 func _on_customer_countered(

@@ -12,19 +12,19 @@ const ENERGY_DRAIN_WALKING: float = -0.003
 const ENERGY_RESTORE_SITTING: float = 0.015
 const SOCIAL_DRIFT_RATE: float = 0.001
 const SOCIAL_GAIN_SOCIALIZING: float = 0.01
-const ACTION_NOISE: float = 0.1
-
 var shopping: float = 1.0
 var hunger: float = 0.0
 var energy: float = 1.0
 var social: float = 0.5
 
 
+## Initializes social need from the selected personality archetype.
 func initialize_from_personality(personality: PersonalityData) -> void:
 	if personality:
 		social = personality.social_need_baseline
 
 
+## Applies per-second need changes for the shopper's current activity.
 func update(
 	delta: float,
 	is_moving: bool,
@@ -78,6 +78,7 @@ func get_dict() -> Dictionary:
 	}
 
 
+## Returns the deterministic utility score for an action before tie-breaking noise.
 func score_action(action: String, personality: PersonalityData,
 	store_appeal: float, food_proximity: float,
 	bench_proximity: float, shopper_density: float,
@@ -102,5 +103,4 @@ func score_action(action: String, personality: PersonalityData,
 			score = social * shopper_density * 0.3
 		"leave":
 			score = (1.0 - shopping) * time_factor
-	score += randf_range(-ACTION_NOISE, ACTION_NOISE)
 	return score

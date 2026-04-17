@@ -39,6 +39,8 @@ const _OUTLINE_MATERIAL: ShaderMaterial = preload(
 @export var display_name: String = "Item"
 @export var interaction_prompt: String = ""
 @export var enabled: bool = true
+@export var highlight_color: Color = Color(0.0, 0.737, 0.725, 1.0)
+@export_range(0.001, 0.05, 0.001) var highlight_outline_width: float = 0.012
 
 var _original_materials: Array[Material] = []
 var _highlight_active: bool = false
@@ -76,7 +78,15 @@ func highlight() -> void:
 			surface_mat = mat.duplicate()
 		else:
 			surface_mat = StandardMaterial3D.new()
-		surface_mat.next_pass = _OUTLINE_MATERIAL.duplicate()
+		var outline_material: ShaderMaterial = (
+			_OUTLINE_MATERIAL.duplicate() as ShaderMaterial
+		)
+		outline_material.set_shader_parameter("outline_color", highlight_color)
+		outline_material.set_shader_parameter(
+			"outline_width",
+			highlight_outline_width
+		)
+		surface_mat.next_pass = outline_material
 		mesh_node.set_surface_override_material(i, surface_mat)
 
 

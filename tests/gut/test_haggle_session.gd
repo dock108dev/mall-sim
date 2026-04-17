@@ -16,6 +16,17 @@ func _make_session(
 	return session
 
 
+func _make_profile(
+	profile_id: String,
+	patience: float
+) -> CustomerTypeDefinition:
+	var profile := CustomerTypeDefinition.new()
+	profile.id = profile_id
+	profile.customer_name = profile_id.capitalize()
+	profile.patience = patience
+	return profile
+
+
 func test_initial_state() -> void:
 	var session: HaggleSession = _make_session()
 	assert_eq(session.state, HaggleSession.HaggleState.IDLE)
@@ -97,22 +108,47 @@ func test_insult_detection_false_no_customer_concession() -> void:
 
 
 func test_max_rounds_high_patience() -> void:
-	var session: HaggleSession = _make_session(100.0, 80.0, 0.9)
+	var session: HaggleSession = _make_session(100.0, 80.0, 1.0)
 	assert_eq(session.max_rounds, 5)
 
 
 func test_max_rounds_medium_patience() -> void:
-	var session: HaggleSession = _make_session(100.0, 80.0, 0.5)
+	var session: HaggleSession = _make_session(100.0, 80.0, 0.8)
 	assert_eq(session.max_rounds, 4)
 
 
 func test_max_rounds_low_patience() -> void:
-	var session: HaggleSession = _make_session(100.0, 80.0, 0.3)
+	var session: HaggleSession = _make_session(100.0, 80.0, 0.5)
 	assert_eq(session.max_rounds, 3)
 
 
 func test_max_rounds_very_low_patience() -> void:
+	var session: HaggleSession = _make_session(100.0, 80.0, 0.3)
+	assert_eq(session.max_rounds, 2)
+
+
+func test_max_rounds_minimum_patience() -> void:
 	var session: HaggleSession = _make_session(100.0, 80.0, 0.1)
+	assert_eq(session.max_rounds, 1)
+
+
+func test_create_from_profile_maps_casual_fan_patience_to_four_rounds() -> void:
+	var profile: CustomerTypeDefinition = _make_profile(
+		"sports_casual_fan", 0.8
+	)
+	var session: HaggleSession = HaggleSession.create_from_profile(
+		null, profile, &"test_item", 100.0, 80.0, 0
+	)
+	assert_eq(session.max_rounds, 4)
+
+
+func test_create_from_profile_maps_investor_patience_to_two_rounds() -> void:
+	var profile: CustomerTypeDefinition = _make_profile(
+		"sports_investor", 0.3
+	)
+	var session: HaggleSession = HaggleSession.create_from_profile(
+		null, profile, &"test_item", 100.0, 80.0, 0
+	)
 	assert_eq(session.max_rounds, 2)
 
 

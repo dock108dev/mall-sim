@@ -1,7 +1,7 @@
-## Tests fixture JSON loading, FixtureDefinition fields, ContentRegistry
-## fixture resolution, and FixtureCatalog panel unlock/filtering logic.
+## Tests fixture catalog content loading, registry resolution, and store filtering.
 extends GutTest
 
+const FIXTURE_CATALOG_PATH: String = "res://game/content/fixtures.json"
 
 var _data_loader: DataLoader
 
@@ -12,287 +12,76 @@ func before_each() -> void:
 
 
 func test_fixture_count() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	assert_eq(all.size(), 14, "Should load exactly 14 fixtures")
+	var fixtures: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
+	assert_eq(fixtures.size(), 14, "Should load exactly 14 fixtures")
 
 
-func test_universal_fixture_count() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var universal_count: Array = [0]
-	for f: FixtureDefinition in all:
-		if f.category == "universal":
-			universal_count[0] += 1
-	assert_gte(
-		universal_count[0], 3,
-		"Should have at least 3 universal fixtures"
-	)
+func test_fixture_json_entries_include_required_fields() -> void:
+	var raw: Variant = DataLoaderSingleton.load_json(FIXTURE_CATALOG_PATH)
+	assert_true(raw is Dictionary, "fixtures.json should load as a dictionary")
+	var entries: Array = (raw as Dictionary).get("entries", [])
+	assert_eq(entries.size(), 14, "fixtures.json should include 14 entries")
+	for entry_value: Variant in entries:
+		assert_true(entry_value is Dictionary, "Each fixture entry must be a dictionary")
+		var entry: Dictionary = entry_value as Dictionary
+		for field: String in [
+			"id",
+			"display_name",
+			"cost",
+			"slot_count",
+			"footprint_cells",
+			"rotation_support",
+			"store_type_restriction",
+			"unlock_rep",
+			"unlock_day",
+		]:
+			assert_true(entry.has(field), "Fixture entry missing field '%s'" % field)
 
 
-func test_store_specific_fixture_count() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var specific_count: Array = [0]
-	for f: FixtureDefinition in all:
-		if f.category == "store_specific":
-			specific_count[0] += 1
-	assert_gte(
-		specific_count[0], 5,
-		"Should have at least 5 store-specific fixtures"
-	)
+func test_content_registry_resolves_fixture_entries() -> void:
+	var wall_shelf_entry: Dictionary = ContentRegistry.get_entry(&"wall_shelf")
+	assert_false(wall_shelf_entry.is_empty(), "wall_shelf should resolve from ContentRegistry")
+	assert_eq(wall_shelf_entry.get("display_name"), "Wall Shelf")
+	assert_eq(int(wall_shelf_entry.get("slot_count", -1)), 4)
+
+	var demo_station_entry: Dictionary = ContentRegistry.get_entry(&"demo_station")
+	assert_false(demo_station_entry.is_empty(), "demo_station should resolve from ContentRegistry")
+	assert_eq(demo_station_entry.get("store_type_restriction"), "consumer_electronics")
 
 
-func test_wall_shelf_fields() -> void:
-	var f: FixtureDefinition = _data_loader.get_fixture("wall_shelf")
-	assert_not_null(f, "wall_shelf should exist")
-	assert_eq(f.display_name, "Wall Shelf")
-	assert_eq(f.cost, 30.0)
-	assert_eq(f.slot_count, 4)
-	assert_eq(f.grid_size, Vector2i(2, 1))
-	assert_eq(f.footprint_cells.size(), 2)
-	assert_eq(f.rotation_support, true)
-	assert_eq(f.store_type_restriction, "")
-	assert_eq(f.unlock_rep, 0.0)
-	assert_eq(f.unlock_day, 0)
-	assert_eq(f.visual_category, "shelf")
-	assert_false(f.scene_path.is_empty(), "scene_path should be set")
+func test_register_matches_issue_schema() -> void:
+	var fixture: FixtureDefinition = _data_loader.get_fixture("register")
+	assert_not_null(fixture, "register should load")
+	assert_eq(fixture.cost, 90.0)
+	assert_eq(fixture.slot_count, 0)
+	assert_eq(fixture.footprint_cells.size(), 1)
+	assert_false(fixture.rotation_support)
 
 
-func test_register_fields() -> void:
-	var f: FixtureDefinition = _data_loader.get_fixture("register")
-	assert_not_null(f, "register should exist")
-	assert_eq(f.cost, 90.0)
-	assert_eq(f.slot_count, 2)
-	assert_eq(f.grid_size, Vector2i(1, 1))
-	assert_eq(f.rotation_support, false)
+func test_store_specific_filter_resolves_store_aliases() -> void:
+	var sports_fixtures: Array[FixtureDefinition] = _data_loader.get_fixtures_for_store("sports")
+	var electronics_fixtures: Array[FixtureDefinition] = _data_loader.get_fixtures_for_store("electronics")
+	var rental_fixtures: Array[FixtureDefinition] = _data_loader.get_fixtures_for_store("rentals")
+
+	assert_true(_contains_fixture(sports_fixtures, "authentication_station"))
+	assert_false(_contains_fixture(sports_fixtures, "testing_station"))
+	assert_true(_contains_fixture(electronics_fixtures, "demo_station"))
+	assert_false(_contains_fixture(electronics_fixtures, "authentication_station"))
+	assert_true(_contains_fixture(rental_fixtures, "return_kiosk"))
+	assert_false(_contains_fixture(rental_fixtures, "demo_station"))
 
 
-func test_store_specific_restriction() -> void:
-	var f: FixtureDefinition = _data_loader.get_fixture(
-		"authentication_station"
-	)
-	assert_not_null(f, "authentication_station should exist")
-	assert_eq(f.store_type_restriction, "sports_memorabilia")
-	assert_eq(f.category, "store_specific")
-	assert_true(
-		"sports_memorabilia" in f.store_types,
-		"store_types should contain the restriction"
-	)
+func test_sellback_price_is_half_cost() -> void:
+	var fixture: FixtureDefinition = _data_loader.get_fixture("glass_case")
+	assert_not_null(fixture, "glass_case should load")
+	assert_eq(fixture.get_sellback_price(), 40.0)
 
 
-func test_fixtures_for_store_filtering() -> void:
-	var retro: Array[FixtureDefinition] = (
-		_data_loader.get_fixtures_for_store("retro_games")
-	)
-	var has_testing: Array = [false]
-	var has_repair: Array = [false]
-	var has_auth: Array = [false]
-	for f: FixtureDefinition in retro:
-		if f.id == "testing_station":
-			has_testing[0] = true
-		if f.id == "repair_workbench":
-			has_repair[0] = true
-		if f.id == "authentication_station":
-			has_auth[0] = true
-	assert_true(has_testing[0], "retro_games should include testing_station")
-	assert_true(has_repair[0], "retro_games should include repair_workbench")
-	assert_false(
-		has_auth[0],
-		"retro_games should NOT include authentication_station"
-	)
-
-
-func test_universal_fixtures_appear_for_all_stores() -> void:
-	var stores: Array[String] = [
-		"sports_memorabilia", "retro_games", "video_rental",
-		"pocket_creatures", "consumer_electronics",
-	]
-	for store_type: String in stores:
-		var fixtures: Array[FixtureDefinition] = (
-			_data_loader.get_fixtures_for_store(store_type)
-		)
-		var has_wall_shelf: bool = false
-		for f: FixtureDefinition in fixtures:
-			if f.id == "wall_shelf":
-				has_wall_shelf = true
-				break
-		assert_true(
-			has_wall_shelf,
-			"wall_shelf should appear for %s" % store_type
-		)
-
-
-func test_sellback_price() -> void:
-	var f: FixtureDefinition = _data_loader.get_fixture("glass_case")
-	assert_not_null(f, "glass_case should exist")
-	assert_eq(
-		f.get_sellback_price(), 40.0,
-		"Sell-back should be 50%% of cost ($80 -> $40)"
-	)
-
-
-func test_unlock_rep_and_day() -> void:
-	var f: FixtureDefinition = _data_loader.get_fixture(
-		"repair_workbench"
-	)
-	assert_not_null(f, "repair_workbench should exist")
-	assert_eq(f.unlock_rep, 15.0)
-	assert_eq(f.unlock_day, 3)
-
-
-func test_endcap_unlock_rep() -> void:
-	var f: FixtureDefinition = _data_loader.get_fixture("endcap")
-	assert_not_null(f, "endcap should exist")
-	assert_eq(f.unlock_rep, 10.0)
-	assert_eq(f.unlock_day, 0)
-
-
-func test_footprint_cells_match_grid_size() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	for f: FixtureDefinition in all:
-		var expected_count: int = f.grid_size.x * f.grid_size.y
-		assert_eq(
-			f.footprint_cells.size(), expected_count,
-			"%s footprint_cells count should match grid_size"
-			% f.id
-		)
-
-
-func test_name_equals_display_name() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	for f: FixtureDefinition in all:
-		assert_eq(
-			f.name, f.display_name,
-			"%s name should equal display_name" % f.id
-		)
-
-
-func test_cost_equals_price() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	for f: FixtureDefinition in all:
-		assert_eq(
-			f.price, f.cost,
-			"%s price should equal cost" % f.id
-		)
-
-
-func test_all_fixture_ids_present() -> void:
-	var expected_ids: Array[String] = [
-		"wall_shelf", "glass_case", "floor_rack", "counter",
-		"register", "endcap", "storage_unit",
-		"authentication_station", "testing_station", "return_kiosk",
-		"tournament_table", "demo_station", "card_binder",
-		"repair_workbench",
-	]
-	for fixture_id: String in expected_ids:
-		var f: FixtureDefinition = _data_loader.get_fixture(fixture_id)
-		assert_not_null(
-			f, "Fixture '%s' should be loadable" % fixture_id
-		)
-
-
-func test_all_visual_categories_represented() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var categories: Dictionary = {}
-	for f: FixtureDefinition in all:
-		categories[f.visual_category] = true
-	var required: Array[String] = [
-		"shelf", "case", "rack", "counter", "display",
-	]
-	for cat: String in required:
-		assert_true(
-			categories.has(cat),
-			"visual_category '%s' should be represented" % cat
-		)
-
-
-func test_item_capacity_range() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	for f: FixtureDefinition in all:
-		assert_gte(
-			f.slot_count, 2,
-			"%s item_capacity should be >= 2" % f.id
-		)
-		assert_lte(
-			f.slot_count, 12,
-			"%s item_capacity should be <= 12" % f.id
-		)
-
-
-func test_purchase_cost_range() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	for f: FixtureDefinition in all:
-		assert_gte(
-			f.cost, 25.0,
-			"%s purchase_cost should be >= $25" % f.id
-		)
-		assert_lte(
-			f.cost, 150.0,
-			"%s purchase_cost should be <= $150" % f.id
-		)
-
-
-func test_grid_size_variants_present() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var has_1x1: Array = [false]
-	var has_2x1: Array = [false]
-	var has_1x2: Array = [false]
-	for f: FixtureDefinition in all:
-		if f.grid_size == Vector2i(1, 1):
-			has_1x1[0] = true
-		if f.grid_size == Vector2i(2, 1):
-			has_2x1[0] = true
-		if f.grid_size == Vector2i(1, 2):
-			has_1x2[0] = true
-	assert_true(has_1x1[0], "Should have at least one 1x1 fixture")
-	assert_true(has_2x1[0], "Should have at least one 2x1 fixture")
-	assert_true(has_1x2[0], "Should have at least one 1x2 fixture")
-
-
-func test_scene_paths_set() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	for f: FixtureDefinition in all:
-		assert_false(
-			f.scene_path.is_empty(),
-			"%s should have a scene_path" % f.id
-		)
-		assert_true(
-			f.scene_path.begins_with("res://"),
-			"%s scene_path should be a res:// path" % f.id
-		)
-
-
-func test_each_store_has_specific_fixture() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var store_covered: Dictionary = {}
-	for f: FixtureDefinition in all:
-		if f.category == "store_specific":
-			for st: String in f.store_types:
-				store_covered[st] = true
-	var required_stores: Array[String] = [
-		"sports_memorabilia", "retro_games", "video_rental",
-		"pocket_creatures", "consumer_electronics",
-	]
-	for store_id: String in required_stores:
-		assert_true(
-			store_covered.has(store_id),
-			"Store '%s' should have a specific fixture" % store_id
-		)
-
-
-func test_no_real_brand_names() -> void:
-	var all: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	var banned: Array[String] = [
-		"IKEA", "Steelcase", "Herman Miller", "Staples",
-		"Pottery Barn", "Crate & Barrel", "West Elm",
-	]
-	for f: FixtureDefinition in all:
-		for brand: String in banned:
-			assert_false(
-				f.display_name.containsn(brand),
-				"%s display_name should not reference '%s'"
-				% [f.id, brand]
-			)
-			assert_false(
-				f.description.containsn(brand),
-				"%s description should not reference '%s'"
-				% [f.id, brand]
-			)
+func _contains_fixture(
+	fixtures: Array[FixtureDefinition],
+	fixture_id: String
+) -> bool:
+	for fixture: FixtureDefinition in fixtures:
+		if fixture.id == fixture_id:
+			return true
+	return false

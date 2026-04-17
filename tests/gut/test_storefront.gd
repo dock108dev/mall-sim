@@ -81,6 +81,26 @@ func test_has_door_body() -> void:
 	assert_not_null(door, "DoorBody StaticBody3D exists")
 
 
+func test_storefront_door_uses_high_contrast_highlight_override() -> void:
+	var interactable: Interactable = _storefront.find_child(
+		"DoorInteractable", true, false
+	) as Interactable
+	assert_not_null(interactable, "DoorInteractable should exist")
+	if interactable == null:
+		return
+
+	assert_eq(
+		interactable.highlight_color,
+		Color(1.0, 0.45, 0.3, 1.0),
+		"Storefront door should use a coral highlight that contrasts with the facade"
+	)
+	assert_gt(
+		interactable.highlight_outline_width,
+		0.012,
+		"Storefront door highlight should be thicker than the generic default"
+	)
+
+
 func test_sign_displays_store_name_when_owned() -> void:
 	_storefront.set_owned("retro_games", "Retro Games")
 	var label: Label3D = _storefront.find_child(

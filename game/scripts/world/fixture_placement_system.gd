@@ -262,12 +262,13 @@ func try_place(grid_pos: Vector2i) -> bool:
 			return false
 
 	var fixture_id: String = _generate_fixture_id()
+	var is_register: bool = _selected_fixture_type == "register"
 	register_existing_fixture(
 		fixture_id,
 		_selected_fixture_type,
 		grid_pos,
 		_current_rotation,
-		false,
+		is_register,
 		price
 	)
 

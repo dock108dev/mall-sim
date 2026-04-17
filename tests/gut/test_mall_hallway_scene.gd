@@ -107,13 +107,83 @@ func test_scene_has_lighting_nodes() -> void:
 		var name: StringName = state.get_node_name(i)
 		if name == &"KeyLight":
 			found_key[0] = true
-		elif name == &"FillOmniBank":
+		elif name == &"FillLight":
 			found_fill[0] = true
 		elif name == &"AccentNeonStrip":
 			found_accent[0] = true
 	assert_true(found_key[0], "Should have KeyLight")
-	assert_true(found_fill[0], "Should have FillOmniBank")
+	assert_true(found_fill[0], "Should have FillLight")
 	assert_true(found_accent[0], "Should have AccentNeonStrip")
+
+
+func test_scene_hallway_omni_light_budget_is_seven_or_less() -> void:
+	var scene: PackedScene = load(
+		"res://game/scenes/world/mall_hallway.tscn"
+	)
+	var state: SceneState = scene.get_state()
+	var omni_count: int = 0
+	var accent_count: int = 0
+	for i: int in range(state.get_node_count()):
+		if state.get_node_type(i) != &"OmniLight3D":
+			continue
+		omni_count += 1
+		if String(state.get_node_name(i)).begins_with("NeonAccent_"):
+			accent_count += 1
+	assert_lte(
+		omni_count, 7,
+		"Hallway should keep to a single key, a single fill, and a small neon accent set"
+	)
+	assert_eq(accent_count, 5, "Each storefront should have one neon accent light")
+
+
+func test_scene_hallway_neon_accents_are_colored_and_not_plain_white() -> void:
+	var scene: PackedScene = load(
+		"res://game/scenes/world/mall_hallway.tscn"
+	)
+	var state: SceneState = scene.get_state()
+	var saw_warm: bool = false
+	var saw_cool: bool = false
+	for i: int in range(state.get_node_count()):
+		var name: String = String(state.get_node_name(i))
+		if not name.begins_with("NeonAccent_"):
+			continue
+		var light_color: Color = _get_scene_color_property(state, i, &"light_color")
+		var contrast: float = (
+			max(light_color.r, max(light_color.g, light_color.b))
+			- min(light_color.r, min(light_color.g, light_color.b))
+		)
+		assert_gt(
+			contrast, 0.18,
+			"%s should stay colored instead of drifting to white" % name
+		)
+		if light_color.r > light_color.b:
+			saw_warm = true
+		if light_color.b > light_color.r:
+			saw_cool = true
+	assert_true(saw_warm, "Accent rig should include warm storefront splashes")
+	assert_true(saw_cool, "Accent rig should include cool storefront splashes")
+
+
+func test_scene_hallway_omni_energy_budget_avoids_washout() -> void:
+	var scene: PackedScene = load(
+		"res://game/scenes/world/mall_hallway.tscn"
+	)
+	var state: SceneState = scene.get_state()
+	var total_energy: float = 0.0
+	var key_energy: float = 0.0
+	var fill_energy: float = 0.0
+	for i: int in range(state.get_node_count()):
+		if state.get_node_type(i) != &"OmniLight3D":
+			continue
+		var energy: float = _get_scene_float_property(state, i, &"light_energy")
+		total_energy += energy
+		if state.get_node_name(i) == &"KeyLight":
+			key_energy = energy
+		elif state.get_node_name(i) == &"FillLight":
+			fill_energy = energy
+	assert_lte(total_energy, 1.2, "Combined omni energy should leave headroom for ambient and spots")
+	assert_lte(key_energy, 0.45, "Key light should stay below the old washout-heavy energy")
+	assert_lte(fill_energy, 0.15, "Fill light should remain gentle enough to preserve contrast")
 
 
 func test_scene_has_no_world_environment() -> void:
@@ -449,3 +519,25 @@ func _register_store_catalog_for_restore() -> void:
 		},
 		"store"
 	)
+
+
+func _get_scene_color_property(
+	state: SceneState,
+	node_index: int,
+	property_name: StringName
+) -> Color:
+	for prop_idx: int in range(state.get_node_property_count(node_index)):
+		if state.get_node_property_name(node_index, prop_idx) == property_name:
+			return state.get_node_property_value(node_index, prop_idx) as Color
+	return Color.WHITE
+
+
+func _get_scene_float_property(
+	state: SceneState,
+	node_index: int,
+	property_name: StringName
+) -> float:
+	for prop_idx: int in range(state.get_node_property_count(node_index)):
+		if state.get_node_property_name(node_index, prop_idx) == property_name:
+			return float(state.get_node_property_value(node_index, prop_idx))
+	return 0.0

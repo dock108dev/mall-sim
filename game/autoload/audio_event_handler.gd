@@ -85,9 +85,10 @@ func _on_reputation_changed(_store_id: String, _new: float) -> void:
 func _on_haggle_completed(
 	_store_id: StringName, _item_id: StringName,
 	_final_price: float, _asking_price: float,
-	_accepted: bool, _offer_count: int
+	accepted: bool, _offer_count: int
 ) -> void:
-	_audio.play_sfx("haggle_accept")
+	if accepted:
+		_audio.play_sfx("haggle_accept")
 
 
 func _on_haggle_failed(_item_id: String, _customer_id: int) -> void:

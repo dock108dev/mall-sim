@@ -88,6 +88,7 @@ func _ready() -> void:
 	EventBus.order_failed.connect(_on_order_failed)
 	EventBus.supplier_tier_changed.connect(_on_supplier_tier_changed)
 	EventBus.active_store_changed.connect(_on_active_store_changed)
+	_sync_active_store()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -110,6 +111,8 @@ func open() -> void:
 	if not order_system:
 		push_warning("OrderPanel: no order_system assigned")
 		return
+	_sync_active_store()
+	_ensure_valid_selected_tier()
 	_is_open = true
 	_cart.clear()
 	_error_label.visible = false
@@ -159,7 +162,7 @@ func _toggle() -> void:
 func _build_tier_tabs() -> void:
 	_clear_container(_tier_tabs)
 	_tier_buttons.clear()
-	if not order_system:
+	if not order_system or store_type.is_empty():
 		return
 	# Static-validation compatibility marker:
 	# ordering_system.get_supplier_tier_config()
@@ -227,7 +230,12 @@ func _on_tier_tab_pressed(tier: OrderSystem.SupplierTier) -> void:
 
 func _refresh_catalog() -> void:
 	_clear_container(_catalog_grid)
-	if not GameManager.data_loader or store_type.is_empty():
+	if store_type.is_empty():
+		_empty_label.text = "No active store selected"
+		_empty_label.visible = true
+		_catalog_scroll.visible = false
+		return
+	if not GameManager.data_loader:
 		_empty_label.visible = true
 		_catalog_scroll.visible = false
 		return
@@ -239,6 +247,7 @@ func _refresh_catalog() -> void:
 		GameManager.data_loader.get_items_by_store(store_type)
 	)
 	var items: Array[ItemDefinition] = _filter_catalog(all_items)
+	_empty_label.text = "No items available at this supplier tier"
 	_empty_label.visible = items.is_empty()
 	_catalog_scroll.visible = not items.is_empty()
 	items.sort_custom(_sort_by_price)
@@ -413,9 +422,19 @@ func _on_submit_pressed() -> void:
 
 func _refresh_deliveries() -> void:
 	_clear_container(_deliveries_grid)
+	if store_type.is_empty():
+		var inactive_label := Label.new()
+		inactive_label.text = "No active store selected"
+		inactive_label.add_theme_color_override(
+			"font_color", Color(0.6, 0.6, 0.6)
+		)
+		_deliveries_grid.add_child(inactive_label)
+		return
 	if not order_system:
 		return
-	var orders: Array[Dictionary] = order_system.get_pending_orders()
+	var orders: Array[Dictionary] = order_system.get_pending_orders_for_store(
+		StringName(store_type)
+	)
 	if orders.is_empty():
 		var none_label := Label.new()
 		none_label.text = "No active deliveries"
@@ -458,6 +477,11 @@ func _refresh_deliveries() -> void:
 
 func _update_header() -> void:
 	if not order_system:
+		return
+	if store_type.is_empty():
+		_title_label.text = "Stock Orders (No active store)"
+		_budget_label.text = "Budget: --"
+		_cash_label.text = "Cash: --"
 		return
 	var config: Dictionary = OrderSystem.TIER_CONFIG[_selected_tier]
 	_title_label.text = "Stock Orders (%s)" % config["name"]
@@ -528,15 +552,14 @@ func _on_order_failed(reason: String) -> void:
 func _on_active_store_changed(new_store_id: StringName) -> void:
 	store_type = String(new_store_id)
 	if _is_open:
-		if new_store_id.is_empty():
-			close(true)
-		else:
-			_cart.clear()
-			_error_label.visible = false
-			_refresh_catalog()
-			_refresh_cart_display()
-			_refresh_deliveries()
-			_update_header()
+		_cart.clear()
+		_error_label.visible = false
+		_ensure_valid_selected_tier()
+		_build_tier_tabs()
+		_refresh_catalog()
+		_refresh_cart_display()
+		_refresh_deliveries()
+		_update_header()
 
 
 # --- Helpers ---
@@ -560,3 +583,24 @@ static func _sort_by_price(
 	a: ItemDefinition, b: ItemDefinition
 ) -> bool:
 	return a.base_price < b.base_price
+
+
+func _sync_active_store() -> void:
+	store_type = String(GameManager.current_store_id)
+
+
+func _ensure_valid_selected_tier() -> void:
+	if not order_system or store_type.is_empty():
+		_selected_tier = OrderSystem.SupplierTier.BASIC
+		return
+	var current_store_id: StringName = StringName(store_type)
+	if order_system.is_tier_unlocked(_selected_tier, current_store_id):
+		return
+	for tier_val: int in _all_tier_values():
+		var tier: OrderSystem.SupplierTier = (
+			tier_val as OrderSystem.SupplierTier
+		)
+		if order_system.is_tier_unlocked(tier, current_store_id):
+			_selected_tier = tier
+			return
+	_selected_tier = OrderSystem.SupplierTier.BASIC

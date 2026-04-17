@@ -8,14 +8,21 @@ const _SCENE: PackedScene = preload(
 var _panel: TrendsPanel
 var _trend_system: TrendSystem
 var _saved_day: int
+var _saved_store_id: StringName = &""
+var _saved_data_loader: DataLoader
 
 
 func before_each() -> void:
 	_saved_day = GameManager.current_day
+	_saved_store_id = GameManager.current_store_id
+	_saved_data_loader = GameManager.data_loader
+	DataLoaderSingleton.load_all_content()
+	GameManager.data_loader = DataLoaderSingleton
+	GameManager.current_store_id = &"retro_games"
 
 	_trend_system = TrendSystem.new()
 	add_child_autofree(_trend_system)
-	_trend_system.initialize(null)
+	_trend_system.initialize(GameManager.data_loader)
 
 	_panel = _SCENE.instantiate() as TrendsPanel
 	_panel.trend_system = _trend_system
@@ -23,7 +30,9 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	GameManager._current_day = _saved_day
+	GameManager._current_day_shadow = _saved_day
+	GameManager.current_store_id = _saved_store_id
+	GameManager.data_loader = _saved_data_loader
 
 
 # ── Visibility ────────────────────────────────────────────────────────────────
@@ -166,7 +175,7 @@ func _inject_hot_trend() -> void:
 	var current_day: int = GameManager.current_day
 	_trend_system._active_trends.append({
 		"target_type": "category",
-		"target": "games",
+		"target": "cartridges",
 		"trend_type": TrendSystem.TrendType.HOT,
 		"multiplier": 1.8,
 		"announced_day": current_day - 2,
@@ -180,7 +189,7 @@ func _inject_cold_trend() -> void:
 	var current_day: int = GameManager.current_day
 	_trend_system._active_trends.append({
 		"target_type": "category",
-		"target": "electronics",
+		"target": "consoles",
 		"trend_type": TrendSystem.TrendType.COLD,
 		"multiplier": 0.6,
 		"announced_day": current_day - 2,

@@ -1,6 +1,19 @@
 ## Tests EnvironmentManager: per-zone environment switching, crossfade, signal wiring.
 extends GutTest
 
+const _ENV_HALLWAY: Environment = preload("res://game/resources/environments/env_hallway.tres")
+const _ENV_SPORTS: Environment = preload(
+	"res://game/resources/environments/env_sports_memorabilia.tres"
+)
+const _ENV_RETRO_GAMES: Environment = preload("res://game/resources/environments/env_retro_games.tres")
+const _ENV_RENTALS: Environment = preload(
+	"res://game/resources/environments/env_video_rental.tres"
+)
+const _ENV_POCKET_CREATURES: Environment = preload(
+	"res://game/resources/environments/env_pocket_creatures.tres"
+)
+const _ENV_ELECTRONICS: Environment = preload("res://game/resources/environments/env_electronics.tres")
+
 
 var _manager: Node
 var _signal_received_key: StringName = &""
@@ -46,6 +59,14 @@ func test_swap_to_store_zone() -> void:
 	assert_eq(
 		_manager.get_current_key(), &"sports",
 		"Should switch to sports environment"
+	)
+
+
+func test_swap_alias_resolves_to_canonical_store_zone() -> void:
+	_manager.swap_environment(&"sports_memorabilia", 0.0)
+	assert_eq(
+		_manager.get_current_key(), &"sports",
+		"Alias zone IDs should resolve through ContentRegistry before swapping"
 	)
 
 
@@ -100,22 +121,58 @@ func test_store_exited_returns_to_hallway() -> void:
 	)
 
 
-func test_all_store_zones_have_distinct_ambient() -> void:
+func test_hallway_and_store_zones_have_distinct_color_temperature() -> void:
+	var ambient_colors: Dictionary = {
+		&"hallway": _ENV_HALLWAY.ambient_light_color,
+		&"sports": _ENV_SPORTS.ambient_light_color,
+		&"retro_games": _ENV_RETRO_GAMES.ambient_light_color,
+		&"rentals": _ENV_RENTALS.ambient_light_color,
+		&"pocket_creatures": _ENV_POCKET_CREATURES.ambient_light_color,
+		&"electronics": _ENV_ELECTRONICS.ambient_light_color,
+	}
+	assert_true(
+		ambient_colors[&"hallway"].b > ambient_colors[&"hallway"].r,
+		"Hallway ambient fill should stay cooler than the warm store interiors"
+	)
+	assert_true(
+		ambient_colors[&"sports"].r > ambient_colors[&"sports"].b,
+		"Sports memorabilia should read as a warm environment"
+	)
+	assert_true(
+		ambient_colors[&"retro_games"].b > ambient_colors[&"retro_games"].r,
+		"Retro games should read as a cooler neon environment"
+	)
+	assert_true(
+		ambient_colors[&"rentals"].b > ambient_colors[&"rentals"].r,
+		"Video rental should read as a cooler fluorescent environment"
+	)
+	assert_true(
+		ambient_colors[&"pocket_creatures"].r > ambient_colors[&"pocket_creatures"].b,
+		"Pocket creatures should read as a warm showcase environment"
+	)
+	assert_true(
+		ambient_colors[&"electronics"].b > ambient_colors[&"electronics"].r,
+		"Electronics should read as a cool showroom environment"
+	)
+
+
+func test_each_swap_finishes_within_frame_budget() -> void:
 	var zones: Array[StringName] = [
-		&"hallway", &"sports", &"retro_games",
-		&"rentals", &"pocket_creatures", &"electronics",
+		&"hallway",
+		&"sports_memorabilia",
+		&"retro_games",
+		&"video_rental",
+		&"pocket_creatures",
+		&"consumer_electronics",
 	]
-	var seen_colors: Array[Color] = []
 	for zone_id: StringName in zones:
+		var started_usec: int = Time.get_ticks_usec()
 		_manager.swap_environment(zone_id, 0.0)
-		var env: Environment = _manager.get_world_environment().environment
-		assert_not_null(env, "Zone '%s' should have a valid Environment" % zone_id)
-		for prev: Color in seen_colors:
-			assert_ne(
-				env.ambient_light_color, prev,
-				"Zone '%s' ambient color should be unique" % zone_id
-			)
-		seen_colors.append(env.ambient_light_color)
+		var elapsed_usec: int = Time.get_ticks_usec() - started_usec
+		assert_true(
+			elapsed_usec < 16000,
+			"Zone '%s' should swap in under 16 ms" % zone_id
+		)
 
 
 func test_all_zones_have_glow_enabled() -> void:
@@ -159,4 +216,8 @@ func test_all_zones_have_ssao_enabled() -> void:
 		assert_eq(
 			env.ssao_intensity, 1.5,
 			"Zone '%s' ssao_intensity should be 1.5" % zone_id
+		)
+		assert_eq(
+			env.ssao_detail, 0.5,
+			"Zone '%s' should keep SSAO detail tuned for contact depth" % zone_id
 		)

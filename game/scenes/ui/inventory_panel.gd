@@ -92,6 +92,7 @@ func _ready() -> void:
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
 	EventBus.active_store_changed.connect(_on_active_store_changed)
+	_sync_active_store()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -126,6 +127,7 @@ func open(source: String = SOURCE_BACKROOM) -> void:
 		push_warning("InventoryPanel: no inventory_system assigned")
 		return
 	PanelAnimator.kill_tween(_anim_tween)
+	_sync_active_store()
 	_shelf_actions.inventory_system = inventory_system
 	match source:
 		SOURCE_SHELVES:
@@ -231,7 +233,15 @@ func _get_filtered_items() -> Array[ItemInstance]:
 
 func _refresh_grid() -> void:
 	_clear_grid()
+	if store_id.is_empty():
+		_empty_label.text = "No active store selected"
+		_empty_label.visible = true
+		_scroll.visible = false
+		_footer_count.text = "No active store"
+		_footer_value.text = "Value: $0.00"
+		return
 	var items: Array[ItemInstance] = _get_filtered_items()
+	_empty_label.text = "No items found"
 	_empty_label.visible = items.is_empty()
 	_scroll.visible = not items.is_empty()
 	for item: ItemInstance in items:
@@ -394,11 +404,9 @@ func _on_inventory_changed() -> void:
 func _on_active_store_changed(new_store_id: StringName) -> void:
 	store_id = String(new_store_id)
 	if _is_open:
-		if new_store_id.is_empty():
-			close(true)
-		else:
-			_selected_item = null
-			_refresh_grid()
+		_selected_item = null
+		EventBus.item_tooltip_hidden.emit()
+		call_deferred("_refresh_grid")
 
 
 func _on_cell_mouse_entered(item: ItemInstance) -> void:
@@ -410,6 +418,8 @@ func _on_cell_mouse_exited() -> void:
 
 
 func _build_count_label(visible_count: int) -> String:
+	if store_id.is_empty():
+		return "No active store"
 	if not rental_controller:
 		return "%d items" % visible_count
 	var available: int = rental_controller.get_available_count()
@@ -508,3 +518,7 @@ func _retire_selected_tape(sell: bool) -> void:
 	if success:
 		_selected_item = null
 		_refresh_grid()
+
+
+func _sync_active_store() -> void:
+	store_id = String(GameManager.current_store_id)

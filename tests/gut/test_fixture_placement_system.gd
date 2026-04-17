@@ -288,6 +288,7 @@ func test_save_data_round_trip() -> void:
 
 func test_placement_result_success() -> void:
 	var result: PlacementResult = PlacementResult.success()
+	assert_true(result is Resource)
 	assert_true(result.valid)
 	assert_eq(result.reason, "")
 	assert_eq(result.blocking_cells.size(), 0)
@@ -312,6 +313,24 @@ func test_entry_zone_blocked() -> void:
 	assert_eq(result.reason, "entry_zone_blocked")
 
 
+func test_placement_creating_narrow_aisle_returns_reason() -> void:
+	var cells: Array[Vector2i] = [Vector2i(5, 5)]
+	var occupied: Dictionary = {Vector2i(5, 7): "existing"}
+	var result: PlacementResult = _validator.validate_placement(
+		cells, occupied, [], 0, false
+	)
+	assert_false(result.valid)
+	assert_eq(result.reason, "aisle_too_narrow")
+
+
+func test_non_wall_fixture_against_wall_valid() -> void:
+	var cells: Array[Vector2i] = [Vector2i(0, 5)]
+	var result: PlacementResult = _validator.validate_placement(
+		cells, {}, [], 0, false
+	)
+	assert_true(result.valid)
+
+
 func test_wall_required_shelf_in_center() -> void:
 	var cells: Array[Vector2i] = [Vector2i(5, 5)]
 	var result: PlacementResult = _validator.validate_placement(
@@ -327,6 +346,25 @@ func test_wall_shelf_against_wall_valid() -> void:
 		cells, {}, [], 0, true
 	)
 	assert_true(result.valid)
+
+
+func test_bfs_rejects_unreachable_open_cells() -> void:
+	var occupied: Dictionary = {}
+	for x: int in range(_grid_size.x):
+		occupied[Vector2i(x, 5)] = "barrier_%d" % x
+	var cells: Array[Vector2i] = [Vector2i(2, 2)]
+	var result: PlacementResult = _validator.validate_placement(
+		cells, occupied, [], 0, false
+	)
+	assert_false(result.valid)
+	assert_eq(result.reason, "not_reachable")
+
+
+func test_try_place_register_satisfies_register_exit_validation() -> void:
+	_system.select_fixture("register")
+	var placed: bool = _system.try_place(Vector2i(4, 4))
+	assert_true(placed)
+	assert_true(_system.validate_register_exists().valid)
 
 
 func test_cell_state_enum() -> void:

@@ -1,6 +1,6 @@
 ## Result of a fixture placement validation containing validity, reason, and blocking cells.
 class_name PlacementResult
-extends RefCounted
+extends Resource
 
 var valid: bool = true
 var reason: String = ""

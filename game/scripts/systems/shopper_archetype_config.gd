@@ -2,6 +2,8 @@
 class_name ShopperArchetypeConfig
 extends RefCounted
 
+const PERSONALITY_CONFIG_PATH: String = "res://game/content/customers/personalities.json"
+
 const WEIGHTS_MORNING: Dictionary = {
 	PersonalityData.PersonalityType.POWER_SHOPPER: 25,
 	PersonalityData.PersonalityType.WINDOW_BROWSER: 15,
@@ -49,67 +51,112 @@ const GROUP_SIZE_RANGES: Dictionary = {
 
 const ARCHETYPE_DEFAULTS: Dictionary = {
 	PersonalityData.PersonalityType.POWER_SHOPPER: {
+		"personality_type": "POWER_SHOPPER",
 		"shop_weight": 1.5,
 		"impulse_factor": 0.3,
+		"hunger_rate_mult": 0.5,
+		"energy_drain_mult": 0.667,
 		"social_need_baseline": 0.1,
 		"browse_duration_mult": 1.2,
-		"min_budget": 50.0,
-		"max_budget": 200.0,
+		"min_budget": 80.0,
+		"max_budget": 300.0,
+		"avg_visit_minutes_min": 45.0,
+		"avg_visit_minutes_max": 90.0,
 	},
 	PersonalityData.PersonalityType.WINDOW_BROWSER: {
+		"personality_type": "WINDOW_BROWSER",
 		"shop_weight": 0.8,
 		"impulse_factor": 0.1,
+		"hunger_rate_mult": 1.0,
+		"energy_drain_mult": 0.333,
 		"social_need_baseline": 0.3,
 		"browse_duration_mult": 1.5,
-		"min_budget": 10.0,
-		"max_budget": 50.0,
+		"min_budget": 15.0,
+		"max_budget": 60.0,
+		"avg_visit_minutes_min": 30.0,
+		"avg_visit_minutes_max": 60.0,
 	},
 	PersonalityData.PersonalityType.FOOD_COURT_CAMPER: {
+		"personality_type": "FOOD_COURT_CAMPER",
 		"shop_weight": 0.3,
 		"impulse_factor": 0.2,
-		"hunger_rate_mult": 1.5,
+		"hunger_rate_mult": 2.0,
+		"energy_drain_mult": 0.167,
 		"social_need_baseline": 0.7,
+		"browse_duration_mult": 0.6,
 		"min_budget": 15.0,
 		"max_budget": 40.0,
+		"avg_visit_minutes_min": 60.0,
+		"avg_visit_minutes_max": 120.0,
 	},
 	PersonalityData.PersonalityType.SOCIAL_BUTTERFLY: {
+		"personality_type": "SOCIAL_BUTTERFLY",
 		"shop_weight": 0.6,
-		"impulse_factor": 0.4,
+		"impulse_factor": 0.5,
+		"hunger_rate_mult": 1.0,
+		"energy_drain_mult": 0.333,
 		"social_need_baseline": 0.9,
-		"min_budget": 20.0,
-		"max_budget": 80.0,
+		"browse_duration_mult": 1.0,
+		"min_budget": 30.0,
+		"max_budget": 120.0,
+		"avg_visit_minutes_min": 40.0,
+		"avg_visit_minutes_max": 80.0,
 	},
 	PersonalityData.PersonalityType.RELUCTANT_COMPANION: {
-		"shop_weight": 0.4,
+		"personality_type": "RELUCTANT_COMPANION",
+		"shop_weight": 0.2,
 		"impulse_factor": 0.1,
-		"energy_drain_mult": 1.3,
+		"hunger_rate_mult": 1.5,
+		"energy_drain_mult": 1.0,
 		"social_need_baseline": 0.2,
+		"browse_duration_mult": 0.7,
 		"min_budget": 10.0,
-		"max_budget": 30.0,
+		"max_budget": 35.0,
+		"avg_visit_minutes_min": 20.0,
+		"avg_visit_minutes_max": 50.0,
 	},
 	PersonalityData.PersonalityType.IMPULSE_BUYER: {
+		"personality_type": "IMPULSE_BUYER",
 		"shop_weight": 1.2,
-		"impulse_factor": 0.8,
+		"impulse_factor": 0.9,
+		"hunger_rate_mult": 1.0,
+		"energy_drain_mult": 0.667,
 		"social_need_baseline": 0.4,
-		"min_budget": 30.0,
-		"max_budget": 150.0,
+		"browse_duration_mult": 0.8,
+		"min_budget": 50.0,
+		"max_budget": 200.0,
+		"avg_visit_minutes_min": 30.0,
+		"avg_visit_minutes_max": 60.0,
 	},
 	PersonalityData.PersonalityType.SPEED_RUNNER: {
+		"personality_type": "SPEED_RUNNER",
 		"shop_weight": 1.0,
-		"impulse_factor": 0.2,
-		"browse_duration_mult": 0.5,
-		"energy_drain_mult": 0.8,
+		"impulse_factor": 0.1,
+		"hunger_rate_mult": 0.5,
+		"energy_drain_mult": 0.333,
+		"browse_duration_mult": 0.4,
 		"min_budget": 40.0,
-		"max_budget": 120.0,
+		"max_budget": 150.0,
+		"avg_visit_minutes_min": 10.0,
+		"avg_visit_minutes_max": 20.0,
 	},
 	PersonalityData.PersonalityType.TEEN_PACK_MEMBER: {
+		"personality_type": "TEEN_PACK_MEMBER",
 		"shop_weight": 0.5,
 		"impulse_factor": 0.7,
+		"hunger_rate_mult": 1.5,
+		"energy_drain_mult": 0.167,
 		"social_need_baseline": 0.95,
+		"browse_duration_mult": 1.0,
 		"min_budget": 5.0,
-		"max_budget": 40.0,
+		"max_budget": 30.0,
+		"avg_visit_minutes_min": 60.0,
+		"avg_visit_minutes_max": 180.0,
 	},
 }
+
+static var _personality_data_by_type: Dictionary = {}
+static var _personality_data_loaded: bool = false
 
 
 static func get_weights_for_hour(
@@ -141,26 +188,10 @@ static func get_weights_for_phase(
 static func create_personality(
 	archetype: PersonalityData.PersonalityType,
 ) -> PersonalityData:
-	var pd: PersonalityData = PersonalityData.new()
-	pd.personality_type = archetype
-	var defaults: Dictionary = ARCHETYPE_DEFAULTS.get(archetype, {})
-	pd.shop_weight = float(defaults.get("shop_weight", 1.0))
-	pd.impulse_factor = float(defaults.get("impulse_factor", 0.3))
-	pd.hunger_rate_mult = float(
-		defaults.get("hunger_rate_mult", 1.0)
-	)
-	pd.energy_drain_mult = float(
-		defaults.get("energy_drain_mult", 1.0)
-	)
-	pd.social_need_baseline = float(
-		defaults.get("social_need_baseline", 0.5)
-	)
-	pd.browse_duration_mult = float(
-		defaults.get("browse_duration_mult", 1.0)
-	)
-	pd.min_budget = float(defaults.get("min_budget", 20.0))
-	pd.max_budget = float(defaults.get("max_budget", 100.0))
-	return pd
+	var defaults: Dictionary = _get_personality_data(archetype)
+	var personality: PersonalityData = PersonalityData.from_dictionary(defaults)
+	personality.personality_type = archetype
+	return personality
 
 
 static func is_group_archetype(
@@ -190,3 +221,46 @@ static func weighted_random_select(
 		if roll <= cumulative:
 			return archetype
 	return PersonalityData.PersonalityType.WINDOW_BROWSER
+
+
+static func _get_personality_data(
+	archetype: PersonalityData.PersonalityType,
+) -> Dictionary:
+	_ensure_personality_data_loaded()
+	var from_json: Dictionary = _personality_data_by_type.get(archetype, {})
+	if not from_json.is_empty():
+		return from_json.duplicate(true)
+	var fallback: Dictionary = ARCHETYPE_DEFAULTS.get(archetype, {})
+	return fallback.duplicate(true)
+
+
+static func _ensure_personality_data_loaded() -> void:
+	if _personality_data_loaded:
+		return
+	_personality_data_loaded = true
+	var file: FileAccess = FileAccess.open(PERSONALITY_CONFIG_PATH, FileAccess.READ)
+	if file == null:
+		push_error(
+			"ShopperArchetypeConfig: failed to open %s" % PERSONALITY_CONFIG_PATH
+		)
+		return
+	var json: JSON = JSON.new()
+	var parse_result: Error = json.parse(file.get_as_text())
+	if parse_result != OK:
+		push_error(
+			"ShopperArchetypeConfig: failed to parse %s" % PERSONALITY_CONFIG_PATH
+		)
+		return
+	if not (json.data is Dictionary):
+		push_error(
+			"ShopperArchetypeConfig: invalid root in %s" % PERSONALITY_CONFIG_PATH
+		)
+		return
+	var root: Dictionary = json.data as Dictionary
+	var entries: Array = root.get("personalities", [])
+	for entry_value: Variant in entries:
+		if not (entry_value is Dictionary):
+			continue
+		var entry: Dictionary = entry_value as Dictionary
+		var personality: PersonalityData = PersonalityData.from_dictionary(entry)
+		_personality_data_by_type[personality.personality_type] = entry.duplicate(true)

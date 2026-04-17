@@ -705,7 +705,13 @@ func get_seasonal_config() -> Array[Dictionary]:
 
 
 func get_fixture(id: String) -> FixtureDefinition:
-	return _fixtures.get(id) as FixtureDefinition
+	var direct: FixtureDefinition = _fixtures.get(id) as FixtureDefinition
+	if direct != null:
+		return direct
+	var canonical: StringName = ContentRegistry.resolve(id)
+	if canonical.is_empty():
+		return null
+	return _fixtures.get(String(canonical)) as FixtureDefinition
 
 
 func get_all_fixtures() -> Array[FixtureDefinition]:
@@ -718,9 +724,30 @@ func get_fixtures_for_store(
 	store_type: String
 ) -> Array[FixtureDefinition]:
 	var r: Array[FixtureDefinition] = []
+	var store_candidates: Dictionary = {}
+	store_candidates[store_type] = true
+	var canonical_store: StringName = ContentRegistry.resolve(store_type)
+	if not canonical_store.is_empty():
+		store_candidates[String(canonical_store)] = true
 	for f: FixtureDefinition in _fixtures.values():
-		if f.store_types.is_empty() or store_type in f.store_types:
+		if f.store_types.is_empty():
 			r.append(f)
+			continue
+		for restricted_store: String in f.store_types:
+			if store_candidates.has(restricted_store):
+				r.append(f)
+				break
+			var canonical_restriction: StringName = ContentRegistry.resolve(
+				restricted_store
+			)
+			if not canonical_restriction.is_empty():
+				if store_candidates.has(String(canonical_restriction)):
+					r.append(f)
+					break
+				continue
+			if restricted_store == store_type:
+				r.append(f)
+				break
 	return r
 
 

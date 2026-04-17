@@ -33,11 +33,14 @@ func test_slider_step_is_025() -> void:
 
 
 func test_slider_min_is_item_cost() -> void:
-	_panel.show_negotiation("Widget", "Good", 20.0, 12.0, 3)
+	_panel.show_negotiation(
+		"Widget", "Good", 20.0, 12.0, 3, 10.0,
+		"Customer", null, 8.0
+	)
 	var slider: HSlider = _panel._price_slider
 	assert_eq(
-		slider.min_value, 12.0,
-		"Slider min should equal customer offer (item cost floor)"
+		slider.min_value, 8.0,
+		"Slider min should equal item cost floor"
 	)
 
 
@@ -116,6 +119,56 @@ func test_timer_auto_submits_at_zero() -> void:
 	assert_signal_emitted(
 		_panel, "counter_submitted",
 		"Timer expiry should auto-submit counter"
+	)
+
+
+func test_haggle_requested_slides_panel_open_disabled() -> void:
+	EventBus.haggle_requested.emit("item_1", 42)
+	assert_true(_panel.is_open(), "Request should open the haggle panel")
+	assert_true(
+		_panel._accept_button.disabled,
+		"Buttons should stay disabled until session data arrives"
+	)
+
+
+func test_update_from_session_displays_customer_profile_name() -> void:
+	var customer: Customer = Customer.new()
+	add_child_autofree(customer)
+	var profile: CustomerTypeDefinition = CustomerTypeDefinition.new()
+	profile.customer_name = "Casey"
+	customer.profile = profile
+	var session: HaggleSession = HaggleSession.create(
+		customer, &"item_1", 24.0, 10.0, 0.6, 0
+	)
+	session.record_customer_offer(14.0)
+	session.round_number = 1
+	session.state = HaggleSession.HaggleState.PLAYER_TURN
+	_panel.update_from_session(session, "Widget", "Good", 9.0)
+	assert_eq(
+		_panel._customer_name_label.text, "Casey",
+		"Customer name should display from session customer_ref"
+	)
+
+
+func test_update_from_session_disables_buttons_during_customer_turn() -> void:
+	var session: HaggleSession = HaggleSession.create(
+		null, &"item_1", 24.0, 10.0, 0.6, 0
+	)
+	session.record_customer_offer(14.0)
+	session.round_number = 2
+	session.state = HaggleSession.HaggleState.CUSTOMER_TURN
+	_panel.update_from_session(session, "Widget", "Good", 9.0)
+	assert_true(
+		_panel._accept_button.disabled,
+		"Accept should be disabled during customer turn"
+	)
+	assert_true(
+		_panel._counter_button.disabled,
+		"Counter should be disabled during customer turn"
+	)
+	assert_true(
+		_panel._reject_button.disabled,
+		"Reject should be disabled during customer turn"
 	)
 
 

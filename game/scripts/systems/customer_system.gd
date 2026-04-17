@@ -12,7 +12,7 @@ const SHOPPER_SCENE_PATH: String = (
 )
 const POOL_SIZE: int = 12
 const STAGGER_SLOTS: int = 8
-const SPAWN_CHECK_INTERVAL: float = 2.0
+const SPAWN_CHECK_INTERVAL: float = Constants.SECONDS_PER_GAME_MINUTE
 const LOD_UPDATE_INTERVAL: float = 1.0
 ## Base entry conversion probability applied only when a greeter is assigned.
 const BASE_ENTRY_CONVERSION: float = 0.85
@@ -116,7 +116,7 @@ func _process(delta: float) -> void:
 	var scaled_delta: float = delta * _time_scale
 	_hour_elapsed += scaled_delta
 	_spawn_check_timer += scaled_delta
-	if _spawn_check_timer >= SPAWN_CHECK_INTERVAL:
+	while _spawn_check_timer >= SPAWN_CHECK_INTERVAL:
 		_spawn_check_timer -= SPAWN_CHECK_INTERVAL
 		_update_mall_shoppers()
 	_lod_timer += delta
@@ -343,14 +343,14 @@ func _connect_signals() -> void:
 		EventBus.hour_changed.connect(_on_hour_changed)
 	if not EventBus.day_started.is_connected(_on_day_started):
 		EventBus.day_started.connect(_on_day_started)
-	if not EventBus.store_opened.is_connected(_on_store_opened):
-		EventBus.store_opened.connect(_on_store_opened)
-	if not EventBus.store_closed.is_connected(_on_store_closed):
-		EventBus.store_closed.connect(_on_store_closed)
-	if not EventBus.customer_left_mall.is_connected(
-		_on_customer_left_mall
+	if not EventBus.store_entered.is_connected(_on_store_entered):
+		EventBus.store_entered.connect(_on_store_entered)
+	if not EventBus.active_store_changed.is_connected(
+		_on_active_store_changed
 	):
-		EventBus.customer_left_mall.connect(_on_customer_left_mall)
+		EventBus.active_store_changed.connect(_on_active_store_changed)
+	if not EventBus.customer_left.is_connected(_on_customer_left):
+		EventBus.customer_left.connect(_on_customer_left)
 	if not EventBus.speed_changed.is_connected(_on_speed_changed):
 		EventBus.speed_changed.connect(_on_speed_changed)
 	if not EventBus.day_phase_changed.is_connected(
@@ -382,10 +382,10 @@ func _connect_signals() -> void:
 
 
 func _update_shopper_lod() -> void:
-	var camera: Camera3D = get_viewport().get_camera_3d()
-	if not camera:
+	var lod_origin: Node3D = _get_shopper_lod_origin()
+	if lod_origin == null:
 		return
-	var cam_pos: Vector3 = camera.global_position
+	var player_pos: Vector3 = lod_origin.global_position
 	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
 		"shoppers"
 	)
@@ -393,7 +393,7 @@ func _update_shopper_lod() -> void:
 		var shopper: ShopperAI = node as ShopperAI
 		if not shopper or not is_instance_valid(shopper):
 			continue
-		var dist: float = cam_pos.distance_to(
+		var dist: float = player_pos.distance_to(
 			shopper.global_position
 		)
 		var new_detail: ShopperAI.AIDetail
@@ -404,6 +404,18 @@ func _update_shopper_lod() -> void:
 		else:
 			new_detail = ShopperAI.AIDetail.MINIMAL
 		shopper.ai_detail = new_detail
+
+
+func _get_shopper_lod_origin() -> Node3D:
+	var active_camera: Camera3D = CameraManager.get_active_camera()
+	if active_camera == null:
+		active_camera = get_viewport().get_camera_3d()
+	if active_camera == null:
+		return null
+	var camera_parent: Node = active_camera.get_parent()
+	if camera_parent is Node3D:
+		return camera_parent as Node3D
+	return active_camera
 
 
 func _update_mall_shoppers() -> void:
@@ -581,29 +593,49 @@ func _on_day_started(day: int) -> void:
 	_spawn_check_timer = 0.0
 	_lod_timer = 0.0
 	_current_day_of_week = (day - 1) % 7
-	_current_archetype_weights = (
-		ShopperArchetypeConfig.WEIGHTS_MORNING
-	)
+	_refresh_current_archetype_weights()
 
 
 func _on_hour_changed(hour: int) -> void:
 	_current_hour = hour
 	_hour_elapsed = 0.0
+	_refresh_current_archetype_weights()
 	if hour >= Constants.STORE_CLOSE_HOUR:
 		_request_all_shoppers_leave()
 
 
-func _on_store_opened(_store_id: String) -> void:
+func _on_store_entered(_store_id: StringName) -> void:
 	_in_mall_hallway = false
 
 
+func _on_active_store_changed(store_id: StringName) -> void:
+	_in_mall_hallway = store_id.is_empty()
+
+
+func _on_customer_left(customer_data: Dictionary) -> void:
+	var customer_node: Node = customer_data.get("customer", null) as Node
+	if customer_node == null:
+		return
+	if not (customer_node is ShopperAI) and not customer_node.is_in_group("shoppers"):
+		return
+	_decrement_active_mall_shopper_count()
+
+
+func _on_store_opened(_store_id: String) -> void:
+	_on_store_entered(&"")
+
+
 func _on_store_closed(_store_id: String) -> void:
-	_in_mall_hallway = true
+	_on_active_store_changed(&"")
 
 
 func _on_customer_left_mall(
 	_customer: Node, _satisfied: bool
 ) -> void:
+	_decrement_active_mall_shopper_count()
+
+
+func _decrement_active_mall_shopper_count() -> void:
 	_active_mall_shopper_count = maxi(
 		_active_mall_shopper_count - 1, 0
 	)
@@ -631,9 +663,10 @@ func _on_speed_changed(new_speed: float) -> void:
 
 
 func _on_day_phase_changed(new_phase: int) -> void:
-	_current_archetype_weights = (
-		ShopperArchetypeConfig.get_weights_for_phase(new_phase)
-	)
+	if new_phase == TimeSystem.DayPhase.PRE_OPEN:
+		_current_archetype_weights = ShopperArchetypeConfig.WEIGHTS_MORNING
+		return
+	_refresh_current_archetype_weights()
 
 
 func _request_one_shopper_leave() -> void:
@@ -761,6 +794,12 @@ func _rebuild_spawn_pool() -> void:
 		else:
 			_spawn_pool_cache.append(profile)
 	_spawn_pool_dirty = false
+
+
+func _refresh_current_archetype_weights() -> void:
+	_current_archetype_weights = (
+		ShopperArchetypeConfig.get_weights_for_hour(_current_hour)
+	)
 
 
 func _validate_vip_type() -> void:

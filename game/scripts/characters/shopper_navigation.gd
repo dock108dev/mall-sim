@@ -24,7 +24,7 @@ func setup(
 
 
 func move_toward_target(delta: float) -> void:
-	if not target_waypoint:
+	if not target_waypoint or _body == null:
 		return
 	var target_pos: Vector3 = _get_lane_adjusted_position(
 		target_waypoint
@@ -40,7 +40,7 @@ func move_toward_target(delta: float) -> void:
 
 
 func has_arrived_at_target() -> bool:
-	if not target_waypoint:
+	if not target_waypoint or _body == null:
 		return true
 	var target_pos: Vector3 = _get_lane_adjusted_position(
 		target_waypoint
@@ -53,10 +53,14 @@ func has_arrived_at_target() -> bool:
 func set_target(wp: MallWaypoint) -> void:
 	target_waypoint = wp
 	var path: Array[MallWaypoint] = [wp]
-	_agent.set_path(path)
+	if _agent != null:
+		_agent.set_path(path)
 
 
 func advance_along_path() -> void:
+	if _agent == null:
+		target_waypoint = null
+		return
 	if _agent.is_path_complete():
 		target_waypoint = null
 		return
@@ -64,6 +68,9 @@ func advance_along_path() -> void:
 
 
 func navigate_to_waypoint(dest: MallWaypoint) -> void:
+	if _agent == null or _body == null:
+		set_target(dest)
+		return
 	var nearest: MallWaypoint = _agent.get_nearest_waypoint_of_type(
 		_body.global_position, MallWaypoint.WaypointType.HALLWAY
 	)
@@ -79,6 +86,8 @@ func navigate_to_waypoint(dest: MallWaypoint) -> void:
 
 
 func pick_next_walking_destination() -> void:
+	if _body == null or _agent == null:
+		return
 	var candidates: Array[MallWaypoint] = []
 	var waypoints: Array[Node] = (
 		_body.get_tree().get_nodes_in_group("mall_waypoints")
@@ -108,6 +117,9 @@ func pick_next_walking_destination() -> void:
 
 
 func pick_exit_path() -> bool:
+	if _agent == null or _body == null:
+		push_error("ShopperNavigation: navigation not initialized.")
+		return false
 	var exit_wp: MallWaypoint = _agent.get_nearest_waypoint_of_type(
 		_body.global_position, MallWaypoint.WaypointType.EXIT
 	)
@@ -119,6 +131,8 @@ func pick_exit_path() -> bool:
 
 
 func apply_separation(delta: float) -> void:
+	if _body == null:
+		return
 	var steer: Vector3 = Vector3.ZERO
 	var nearby: Array[Node] = (
 		_body.get_tree().get_nodes_in_group("shoppers")
@@ -149,6 +163,8 @@ func apply_separation(delta: float) -> void:
 func get_nearest_of_type(
 	wp_type: MallWaypoint.WaypointType
 ) -> MallWaypoint:
+	if _agent == null or _body == null:
+		return null
 	return _agent.get_nearest_waypoint_of_type(
 		_body.global_position, wp_type
 	)
@@ -157,6 +173,8 @@ func get_nearest_of_type(
 func waypoint_proximity(
 	wp_type: MallWaypoint.WaypointType
 ) -> float:
+	if _body == null:
+		return 0.0
 	var wp: MallWaypoint = get_nearest_of_type(wp_type)
 	if not wp:
 		return 0.0
@@ -168,6 +186,8 @@ func waypoint_proximity(
 
 func _get_lane_adjusted_position(wp: MallWaypoint) -> Vector3:
 	if wp.waypoint_type != MallWaypoint.WaypointType.HALLWAY:
+		return wp.global_position
+	if _agent == null:
 		return wp.global_position
 	var next_pos: Vector3 = _agent.next_position()
 	if next_pos == Vector3.ZERO:

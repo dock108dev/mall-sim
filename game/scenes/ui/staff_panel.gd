@@ -63,6 +63,7 @@ func _ready() -> void:
 	EventBus.staff_hired.connect(_on_staff_changed)
 	EventBus.staff_fired.connect(_on_staff_changed)
 	EventBus.staff_quit.connect(_on_staff_quit)
+	_sync_active_store()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -82,10 +83,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func open() -> void:
 	if _is_open:
 		return
-	_current_store_id = GameManager.current_store_id
-	if _current_store_id.is_empty():
-		push_warning("StaffPanel: no current store")
-		return
+	_sync_active_store()
 	_is_open = true
 	_refresh_all()
 	PanelAnimator.kill_tween(_anim_tween)
@@ -116,6 +114,9 @@ func _toggle() -> void:
 
 
 func _refresh_all() -> void:
+	if _current_store_id.is_empty():
+		_show_inactive_state()
+		return
 	_update_capacity_label()
 	_refresh_current_staff()
 	_refresh_hire_list()
@@ -316,11 +317,10 @@ func _on_panel_opened(panel_name: String) -> void:
 
 func _on_active_store_changed(new_store_id: StringName) -> void:
 	_current_store_id = String(new_store_id)
+	_pending_fire_id = ""
+	_confirm_dialog.hide()
 	if _is_open:
-		if new_store_id.is_empty():
-			close(true)
-		else:
-			_refresh_all()
+		_refresh_all()
 
 
 func _on_staff_changed(
@@ -363,3 +363,21 @@ static func _get_role_name(role: StaffDefinition.StaffRole) -> String:
 		StaffDefinition.StaffRole.GREETER:
 			return "Greeter"
 	return "Unknown"
+
+
+func _show_inactive_state() -> void:
+	_capacity_label.text = "No active store"
+	_clear_container(_current_staff_list)
+	_clear_container(_hire_list)
+	var current_label := Label.new()
+	current_label.text = "Enter a store to view staff"
+	current_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_current_staff_list.add_child(current_label)
+	var hire_label := Label.new()
+	hire_label.text = "Enter a store to manage hiring"
+	hire_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hire_list.add_child(hire_label)
+
+
+func _sync_active_store() -> void:
+	_current_store_id = String(GameManager.current_store_id)
