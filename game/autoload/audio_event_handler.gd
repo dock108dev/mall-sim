@@ -196,11 +196,12 @@ func _play_store_music() -> void:
 
 
 func _play_store_music_for(store_id: String) -> void:
-	if GameManager.data_loader == null:
+	if not ContentRegistry.exists(store_id):
+		_audio.play_bgm("mall_hallway_music")
 		return
-
-	var store_def: StoreDefinition = GameManager.data_loader.get_store(
-		store_id
+	var canonical: StringName = ContentRegistry.resolve(store_id)
+	var store_def: StoreDefinition = ContentRegistry.get_store_definition(
+		canonical
 	)
 	if store_def == null:
 		_audio.play_bgm("mall_hallway_music")
@@ -223,11 +224,12 @@ func _play_store_ambient() -> void:
 
 
 func _play_store_ambient_for(store_id: String) -> void:
-	if GameManager.data_loader == null:
+	if not ContentRegistry.exists(store_id):
+		_audio.play_ambient("mall_hallway")
 		return
-
-	var store_def: StoreDefinition = GameManager.data_loader.get_store(
-		store_id
+	var canonical: StringName = ContentRegistry.resolve(store_id)
+	var store_def: StoreDefinition = ContentRegistry.get_store_definition(
+		canonical
 	)
 	if store_def == null:
 		_audio.play_ambient("mall_hallway")

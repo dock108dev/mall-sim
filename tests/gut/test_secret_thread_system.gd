@@ -67,6 +67,23 @@ func _setup_with_defs(defs: Array[Dictionary]) -> void:
 	_system._init_thread_states()
 
 
+func _all_json_defs() -> Array[Dictionary]:
+	var file: FileAccess = FileAccess.open(
+		"res://game/content/meta/secret_threads.json", FileAccess.READ
+	)
+	if not file:
+		return [] as Array[Dictionary]
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed is Array:
+		var result: Array[Dictionary] = []
+		for entry: Variant in (parsed as Array):
+			if entry is Dictionary:
+				result.append(entry as Dictionary)
+		return result
+	return [] as Array[Dictionary]
+
+
 # --- Phase transitions ---
 
 
@@ -195,14 +212,9 @@ func test_resettable_returns_to_dormant() -> void:
 	_system._on_day_started(1)
 	assert_eq(
 		_system.get_thread_phase("test_resettable"),
-		SecretThreadSystem.ThreadPhase.ACTIVE
-	)
-	_system._on_day_started(2)
-	assert_eq(
-		_system.get_thread_phase("test_resettable"),
 		SecretThreadSystem.ThreadPhase.REVEALED
 	)
-	_system._on_day_started(3)
+	_system._on_day_started(2)
 	assert_eq(
 		_system.get_thread_phase("test_resettable"),
 		SecretThreadSystem.ThreadPhase.DORMANT,
@@ -220,14 +232,20 @@ func test_timeout_emits_failed() -> void:
 		func(tid: StringName) -> void:
 			failed_id[0] = tid
 	)
-	for i: int in range(3):
-		_system._on_item_sold("item_%d" % i, 10.0, "cards")
-	_system._on_day_started(1)
-	assert_eq(
-		_system.get_thread_phase("test_resettable"),
-		SecretThreadSystem.ThreadPhase.ACTIVE
-	)
-	_system._on_day_started(6)
+	_system.load_state({
+		"thread_states": {
+			"test_resettable": {
+				"phase": SecretThreadSystem.ThreadPhase.ACTIVE,
+				"step_index": 0,
+				"activated_day": 1,
+				"revealed_day": 0,
+				"watch_counters": {},
+			},
+		},
+		"signal_counts": {"day_started": 1},
+		"owned_store_count": 0,
+	})
+	_system._on_day_started(7)
 	assert_eq(
 		failed_id[0], &"test_resettable",
 		"Timeout should emit secret_thread_failed"
@@ -360,13 +378,11 @@ func test_store_owned_precondition() -> void:
 	}
 	_setup_with_defs([ghost_def])
 	_system._on_lease_completed(&"store_a", true, "")
-	_system._on_day_started(1)
 	assert_eq(
 		_system.get_thread_phase("the_ghost_tenant"),
 		SecretThreadSystem.ThreadPhase.WATCHING
 	)
 	_system._on_lease_completed(&"store_b", true, "")
-	_system._on_day_started(2)
 	assert_eq(
 		_system.get_thread_phase("the_ghost_tenant"),
 		SecretThreadSystem.ThreadPhase.ACTIVE,
@@ -429,10 +445,20 @@ func test_failed_thread_does_not_emit_completed() -> void:
 		func(_tid: StringName, _reward_data: Dictionary) -> void:
 			completed[0] = true
 	)
-	for i: int in range(3):
-		_system._on_item_sold("item_%d" % i, 10.0, "cards")
-	_system._on_day_started(1)
-	_system._on_day_started(6)
+	_system.load_state({
+		"thread_states": {
+			"test_resettable": {
+				"phase": SecretThreadSystem.ThreadPhase.ACTIVE,
+				"step_index": 0,
+				"activated_day": 1,
+				"revealed_day": 0,
+				"watch_counters": {},
+			},
+		},
+		"signal_counts": {"day_started": 1},
+		"owned_store_count": 0,
+	})
+	_system._on_day_started(7)
 	assert_false(
 		completed[0],
 		"Timed-out thread should not emit secret_thread_completed"

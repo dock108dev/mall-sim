@@ -9,8 +9,9 @@ const ACKNOWLEDGE_DELAY: float = 1.0
 const OVERLAY_FADE_DURATION: float = 0.2
 const OVERLAY_TARGET_ALPHA: float = 0.6
 const STAT_STAGGER_DELAY: float = 0.05
-const NET_POSITIVE_COLOR := Color(0.4, 0.8, 0.35)
+const NET_POSITIVE_COLOR := Color(0.2, 0.8, 0.2)
 const NET_NEGATIVE_COLOR := Color(0.9, 0.2, 0.2)
+const NET_ZERO_COLOR := Color(1.0, 1.0, 1.0)
 const MILESTONE_COLOR := Color(1.0, 0.84, 0.0)
 const RECORD_HIGH_FLASH_COLOR := Color(1.0, 0.84, 0.0)
 const RECORD_LOW_FLASH_COLOR := Color(0.3, 0.6, 1.0)
@@ -109,6 +110,7 @@ func _populate_and_show() -> void:
 
 func _apply_report(report: PerformanceReport) -> void:
 	var summary: Dictionary = report.to_dict()
+	summary["net_profit"] = report.profit
 	summary["staff_wages"] = _wages_this_day
 	_apply_summary(summary)
 
@@ -124,9 +126,7 @@ func _apply_summary(summary: Dictionary) -> void:
 	var wages: float = _get_summary_float(
 		summary, ["staff_wages", "wages_paid"], _wages_this_day
 	)
-	var net: float = _get_summary_float(
-		summary, ["profit", "net_profit"], revenue - expenses
-	)
+	var net: float = _get_summary_float(summary, ["net_profit"], 0.0)
 
 	_title_label.text = "Day %d Complete" % _current_day
 	_revenue_label.text = "Revenue: $%.2f" % revenue
@@ -141,12 +141,7 @@ func _apply_summary(summary: Dictionary) -> void:
 	_wages_label.add_theme_color_override(
 		"font_color", NET_NEGATIVE_COLOR
 	)
-	if net > 0.0:
-		_net_label.text = "Net: +$%.2f" % net
-	elif net < 0.0:
-		_net_label.text = "Net: -$%.2f" % absf(net)
-	else:
-		_net_label.text = "Net: $0.00"
+	_set_net_display(net)
 	_set_net_color(net)
 	_set_net_bold()
 	var record_flags: Dictionary = _get_summary_dictionary(
@@ -205,10 +200,23 @@ func _set_net_color(net: float) -> void:
 		_net_label.add_theme_color_override(
 			"font_color", NET_POSITIVE_COLOR
 		)
-	else:
+	elif net < 0.0:
 		_net_label.add_theme_color_override(
 			"font_color", NET_NEGATIVE_COLOR
 		)
+	else:
+		_net_label.add_theme_color_override(
+			"font_color", NET_ZERO_COLOR
+		)
+
+
+func _set_net_display(net: float) -> void:
+	if net > 0.0:
+		_net_label.text = "NET PROFIT: +$%.2f" % net
+	elif net < 0.0:
+		_net_label.text = "NET LOSS: -$%.2f" % absf(net)
+	else:
+		_net_label.text = "NET PROFIT: $0.00"
 
 
 func _set_net_bold() -> void:
@@ -484,7 +492,7 @@ func _get_visible_stat_rows() -> Array[Control]:
 	var rows: Array[Control] = []
 	var candidates: Array[Control] = [
 		_title_label, _revenue_label, _expenses_label,
-		_wages_label, _net_label,
+		_net_label, _wages_label,
 	]
 	for label: Label in _report_detail_labels:
 		candidates.append(label)

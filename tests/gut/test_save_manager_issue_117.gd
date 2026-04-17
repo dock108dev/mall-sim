@@ -5,17 +5,20 @@ extends GutTest
 const MANUAL_SLOT_A: int = 1
 const MANUAL_SLOT_B: int = 2
 const MANUAL_SLOT_C: int = 3
+const _STORE_IDS: Array[StringName] = [&"sports", &"retro_games", &"electronics"]
 
 var _save_manager: SaveManager
 var _economy: EconomySystem
 var _inventory: InventorySystem
 var _time_system: TimeSystem
 var _reputation: ReputationSystem
+var _data_loader: DataLoader
 var _saved_owned_stores: Array[StringName] = []
 var _saved_store_id: StringName = &""
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
 	_save_manager = SaveManager.new()
 	add_child_autofree(_save_manager)
 
@@ -34,6 +37,10 @@ func before_each() -> void:
 	_reputation = ReputationSystem.new()
 	add_child_autofree(_reputation)
 
+	_data_loader = DataLoader.new()
+	add_child_autofree(_data_loader)
+	_register_store_catalog()
+
 	_save_manager.initialize(_economy, _inventory, _time_system)
 	_save_manager.set_reputation_system(_reputation)
 	_save_manager.set_store_state_manager(null)
@@ -47,6 +54,7 @@ func after_each() -> void:
 		_save_manager.delete_save(slot)
 	if FileAccess.file_exists(SaveManager.SLOT_INDEX_PATH):
 		DirAccess.remove_absolute(SaveManager.SLOT_INDEX_PATH)
+	ContentRegistry.clear_for_testing()
 	GameManager.owned_stores = _saved_owned_stores
 	GameManager.current_store_id = _saved_store_id
 
@@ -211,6 +219,27 @@ func test_three_manual_slots_remain_independent() -> void:
 		&"retro_games",
 		"Slot 2 should keep its own owned store list"
 	)
+
+
+func _register_store_catalog() -> void:
+	for store_id: StringName in _STORE_IDS:
+		var store_definition := StoreDefinition.new()
+		store_definition.id = String(store_id)
+		store_definition.store_name = "%s Test Store" % String(store_id)
+		store_definition.store_type = store_id
+		store_definition.backroom_capacity = 20
+		store_definition.daily_rent = 0.0
+		_data_loader._stores[String(store_id)] = store_definition
+		ContentRegistry.register(store_id, store_definition, "store")
+		ContentRegistry.register_entry(
+			{
+				"id": String(store_id),
+				"name": "%s Test Store" % String(store_id),
+				"store_name": "%s Test Store" % String(store_id),
+				"backroom_capacity": 20,
+			},
+			"store"
+		)
 
 
 func _configure_state(

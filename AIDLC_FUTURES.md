@@ -6,18 +6,15 @@
 
 - **Run ID**: aidlc_20260417_012457
 - **Issues planned**: 502
-- **Issues implemented**: 98
+- **Issues implemented**: 103
 - **Issues verified**: 0
-- **Issues failed**: 1
-- **Finalization passes completed**: ssot, abend, cleanup
+- **Issues failed**: 5
+- **Finalization passes completed**: ssot, security, abend, docs, cleanup
 
 ## Audit Reports
 
-- [abend-handling](docs/audits/abend-handling.md)
 - [cleanup-report](docs/audits/cleanup-report.md)
 - [docs-consolidation](docs/audits/docs-consolidation.md)
-- [security-audit](docs/audits/security-audit.md)
-- [ssot-cleanup](docs/audits/ssot-cleanup.md)
 
 ## Preparing for Next Run
 

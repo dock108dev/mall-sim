@@ -9,7 +9,7 @@ var _market_event_system: MarketEventSystem
 func _create_event_def(overrides: Dictionary = {}) -> MarketEventDefinition:
 	var def := MarketEventDefinition.new()
 	def.id = overrides.get("id", "test_boom")
-		def.name = overrides.get("name", "Test Boom")
+	def.name = overrides.get("name", "Test Boom")
 	def.event_type = overrides.get("event_type", "boom")
 	def.target_tags = overrides.get("target_tags", PackedStringArray([]))
 	def.target_categories = overrides.get(
@@ -257,18 +257,18 @@ func test_market_event_system_emits_active_on_immediate_start() -> void:
 	_market_event_system._event_definitions = [def]
 
 	var received_id: Array = [&""]
-	var received_modifier: Dictionary = {}
+	var received_modifier: Array = [{}]
 	EventBus.market_event_active.connect(
 		func(eid: StringName, mod: Dictionary) -> void:
 			received_id[0] = eid
-			received_modifier = mod
+			received_modifier[0] = mod
 	)
 
 	_market_event_system._activate_event(def, 1)
 
 	assert_eq(received_id[0], &"instant_event", "market_event_active should fire event_id")
 	assert_true(
-		received_modifier.has("spawn_rate_multiplier"),
+		(received_modifier[0] as Dictionary).has("spawn_rate_multiplier"),
 		"Emitted modifier must include spawn_rate_multiplier"
 	)
 

@@ -30,7 +30,10 @@ var _saved_difficulty_downgrade_used: bool = false
 func before_each() -> void:
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	_saved_store_id = GameManager.current_store_id
-	_saved_data_loader = GameManager.data_loader
+	if is_instance_valid(GameManager.data_loader):
+		_saved_data_loader = GameManager.data_loader
+	else:
+		_saved_data_loader = null
 	_saved_difficulty_config = DataLoaderSingleton._difficulty_config.duplicate(true)
 	_saved_difficulty_tiers = DifficultySystemSingleton._tiers.duplicate(true)
 	_saved_difficulty_order = DifficultySystemSingleton._tier_order.duplicate()
@@ -61,7 +64,10 @@ func after_each() -> void:
 	ContentRegistry.clear_for_testing()
 	GameManager.owned_stores = _saved_owned_stores.duplicate()
 	GameManager.current_store_id = _saved_store_id
-	GameManager.data_loader = _saved_data_loader
+	if is_instance_valid(_saved_data_loader):
+		GameManager.data_loader = _saved_data_loader
+	else:
+		GameManager.data_loader = null
 
 	DataLoaderSingleton._difficulty_config = _saved_difficulty_config.duplicate(true)
 	DifficultySystemSingleton._tiers = _saved_difficulty_tiers.duplicate(true)
@@ -90,8 +96,9 @@ func test_save_game_creates_valid_file_for_each_slot() -> void:
 			"Slot %d should create a file at the expected path" % slot
 		)
 		var raw: Dictionary = _read_raw_save(slot)
+		var save_metadata: Dictionary = raw.get("save_metadata", {}) as Dictionary
 		assert_eq(
-			int((raw.get("metadata", {}) as Dictionary).get("day_number", 0)),
+			int(save_metadata.get("day_number", 0)),
 			7,
 			"Slot %d should persist metadata.day_number" % slot
 		)

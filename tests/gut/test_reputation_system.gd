@@ -244,17 +244,6 @@ func test_global_reputation_uses_owned_store_ids_when_present() -> void:
 	)
 
 
-# --- modify_reputation alias ---
-
-
-func test_modify_reputation_works_as_alias() -> void:
-	_rep.modify_reputation(STORE_A, 5.0)
-	assert_eq(
-		_rep.get_reputation(STORE_A), 55.0,
-		"modify_reputation should work as alias for add_reputation"
-	)
-
-
 # --- Tier name ---
 
 

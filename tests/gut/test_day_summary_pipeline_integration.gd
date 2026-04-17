@@ -107,12 +107,12 @@ func test_net_label_positive_with_green_color() -> void:
 	_economy.charge(50.0, "Stock purchase")
 	EventBus.day_ended.emit(1)
 	assert_eq(
-		_panel._net_label.text, "Net: +$150.00",
+		_panel._net_label.text, "NET PROFIT: +$150.00",
 		"Net label must show positive sign when revenue > expenses"
 	)
 	var color: Color = _panel._net_label.get_theme_color("font_color")
 	assert_eq(
-		color, UIThemeConstants.get_positive_color(),
+		color, DaySummaryPanel.NET_POSITIVE_COLOR,
 		"Positive net must use green color"
 	)
 
@@ -123,7 +123,7 @@ func test_net_label_negative_with_red_color() -> void:
 	_economy.charge(80.0, "Stock purchase")
 	EventBus.day_ended.emit(1)
 	assert_eq(
-		_panel._net_label.text, "Net: -$50.00",
+		_panel._net_label.text, "NET LOSS: -$50.00",
 		"Net label must show negative sign when expenses > revenue"
 	)
 	var color: Color = _panel._net_label.get_theme_color("font_color")
@@ -171,7 +171,9 @@ func test_zero_transaction_day_shows_all_zeros_without_errors() -> void:
 		"Wages must be zero when no wages were paid"
 	)
 	assert_eq(
-		_panel._net_label.text, "Net: $0.00",
+		_panel._net_label.text, "NET PROFIT: $0.00",
 		"Net must be zero when no transactions occurred"
 	)
+	var color: Color = _panel._net_label.get_theme_color("font_color")
+	assert_eq(color, DaySummaryPanel.NET_ZERO_COLOR)
 	assert_true(_panel.visible, "Panel must be visible even on zero-transaction day")

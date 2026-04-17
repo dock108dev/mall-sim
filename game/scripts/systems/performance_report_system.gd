@@ -5,6 +5,9 @@ extends Node
 
 const MAX_HISTORY_SIZE: int = 30
 
+var _current_day: int = 1
+var _daily_gross_revenue: float = 0.0
+var _daily_total_expenses: float = 0.0
 var _daily_items_sold: int = 0
 var _daily_units_sold: int = 0
 var _daily_customers_served: int = 0
@@ -34,8 +37,10 @@ var _snapshot_received: bool = false
 
 
 func initialize() -> void:
+	_current_day = max(GameManager.get_current_day(), 1)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.day_ended.connect(_on_day_ended)
+	EventBus.transaction_completed.connect(_on_transaction_completed)
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.customer_purchased.connect(_on_customer_purchased)
 	EventBus.customer_left.connect(_on_customer_left)
@@ -76,12 +81,31 @@ func get_daily_customers_served() -> int:
 	return _daily_customers_served
 
 
+## Returns the legacy live daily summary dictionary used by UI and tests.
+func generate_report() -> Dictionary:
+	var gross_revenue: float = _daily_gross_revenue
+	var total_expenses: float = _daily_total_expenses
+	if _snapshot_received:
+		gross_revenue = _snapshot_revenue
+		total_expenses = _snapshot_expenses
+	return {
+		"gross_revenue": gross_revenue,
+		"total_expenses": total_expenses,
+		"net_profit": gross_revenue - total_expenses,
+		"units_sold": _daily_units_sold,
+		"day": _current_day,
+	}
+
+
 func get_save_data() -> Dictionary:
 	var serialized_history: Array[Dictionary] = []
 	for report: PerformanceReport in _history:
 		serialized_history.append(report.to_dict())
 	return {
 		"history": serialized_history,
+		"current_day": _current_day,
+		"daily_gross_revenue": _daily_gross_revenue,
+		"daily_total_expenses": _daily_total_expenses,
 		"daily_items_sold": _daily_items_sold,
 		"daily_units_sold": _daily_units_sold,
 		"daily_customers_served": _daily_customers_served,
@@ -109,6 +133,7 @@ func get_save_data() -> Dictionary:
 
 func load_save_data(data: Dictionary) -> void:
 	_history.clear()
+	_current_day = int(data.get("current_day", max(GameManager.get_current_day(), 1)))
 	var saved_history: Variant = data.get("history", [])
 	if saved_history is Array:
 		for entry: Variant in saved_history:
@@ -116,6 +141,10 @@ func load_save_data(data: Dictionary) -> void:
 				_history.append(
 					PerformanceReport.from_dict(entry as Dictionary)
 				)
+	_daily_gross_revenue = float(
+		data.get("daily_gross_revenue", data.get("daily_revenue", 0.0))
+	)
+	_daily_total_expenses = float(data.get("daily_total_expenses", 0.0))
 	_daily_items_sold = int(data.get("daily_items_sold", 0))
 	_daily_units_sold = int(data.get("daily_units_sold", 0))
 	_daily_customers_served = int(
@@ -171,12 +200,17 @@ func load_save_data(data: Dictionary) -> void:
 func _on_daily_financials_snapshot(
 	revenue: float, expenses: float, _net: float
 ) -> void:
+	_daily_gross_revenue = revenue
+	_daily_total_expenses = expenses
 	_snapshot_revenue = revenue
 	_snapshot_expenses = expenses
 	_snapshot_received = true
 
 
-func _on_day_started(_day: int) -> void:
+func _on_day_started(day: int) -> void:
+	_current_day = max(day, 1)
+	_daily_gross_revenue = 0.0
+	_daily_total_expenses = 0.0
 	_daily_items_sold = 0
 	_daily_units_sold = 0
 	_daily_customers_served = 0
@@ -195,6 +229,20 @@ func _on_day_started(_day: int) -> void:
 	_daily_milestones.clear()
 	_daily_start_tier = _daily_end_tier
 	_daily_reputation_start = _daily_reputation_end
+	_snapshot_received = false
+	_snapshot_revenue = 0.0
+	_snapshot_expenses = 0.0
+
+
+func _on_transaction_completed(
+	amount: float, success: bool, message: String
+) -> void:
+	if not success or amount <= 0.0:
+		return
+	if _is_expense_transaction(message):
+		_daily_total_expenses += amount
+		return
+	_daily_gross_revenue += amount
 
 
 func _on_day_ended(day: int) -> void:
@@ -316,6 +364,17 @@ func _find_top_item() -> Dictionary:
 			best_id = item_id
 	var count: int = int(_daily_item_counts.get(best_id, 0))
 	return {"id": best_id, "count": count}
+
+
+func _is_expense_transaction(message: String) -> bool:
+	var normalized: String = message.strip_edges().to_lower()
+	return (
+		normalized.begins_with("rent:")
+		or normalized.contains("wage")
+		or normalized.contains("order cost")
+		or normalized.contains("cost")
+		or normalized.contains("expense")
+	)
 
 
 func _mark_customer_served(customer_id: String, satisfied: bool) -> void:

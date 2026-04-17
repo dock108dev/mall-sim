@@ -1,60 +1,61 @@
-# mallcore-sim
+# Mallcore Sim
 
-A 3D retail simulator set in a 2000s-era shopping mall, built with Godot 4.3+ and GDScript.
+Mallcore Sim is a Godot retail simulator about running stores in a 2000s mall.
+The project is built with Godot/GDScript, uses JSON files for gameplay content,
+and has automated GUT test coverage for systems, UI flows, and integrations.
 
-Run specialty stores in a sprawling mall — stock shelves, set prices, haggle with customers, chase trends, and expand your retail empire. Five store types with unique mechanics: sports memorabilia, retro games, video rentals, collectible card shop, and consumer electronics.
+## Current Project Shape
 
-## Current Status
+- Engine: Godot 4.x standard build, GDScript, Forward Plus renderer.
+- Main scene: `res://game/scenes/bootstrap/boot.tscn`.
+- Runtime world: `res://game/scenes/world/game_world.tscn`.
+- Content source: JSON under `game/content/`, loaded at boot by
+  `DataLoaderSingleton` and registered in `ContentRegistry`.
+- Tests: GUT tests under `tests/`, `tests/gut/`, `tests/unit/`, and
+  `game/tests/`.
+- Exports: Windows, macOS, and Linux presets in `export_presets.cfg`.
 
-All core systems are implemented and functional. Five store types are playable with unique mechanics (authentication, refurbishment, rental lifecycle, pack opening, product depreciation). The game has a working economy, customer AI, build mode, progression milestones, event systems, save/load, and a tutorial. Primary remaining work: final 3D art, audio polish, balance tuning, and export preparation.
+## Run Locally
 
-## Running the Game
+1. Install the standard, non-.NET Godot editor.
+2. Open this repository by importing `project.godot`.
+3. Let Godot import project assets.
+4. Press F5, or run the project from the editor.
 
-1. Install [Godot 4.3+](https://godotengine.org/download) (standard build, not .NET)
-2. Clone this repo
-3. Open Godot > Import > select `project.godot`
-4. Press F5 to run
+The boot scene loads all JSON content, validates the content registry, loads
+settings, initializes audio, then transitions to the main menu.
 
-See [docs/setup.md](docs/setup.md) for detailed setup, input map, build targets, and troubleshooting.
+## Run Tests
 
-## Project Structure
-
+```bash
+bash tests/run_tests.sh
 ```
-project.godot              Godot project config
-CLAUDE.md                  AI development instructions
-game/                      Everything Godot loads at runtime
-  autoload/                4 singletons (GameManager, EventBus, AudioManager, Settings)
-  content/                 25 JSON data files (items, stores, customers, economy, events)
-  resources/               Resource class definitions (ItemDefinition, StoreDefinition, etc.)
-  scenes/                  39 scene files (.tscn)
-  scripts/                 77 GDScript files (~23K LOC)
-    systems/               35 gameplay systems
-    stores/                5 store controllers + store-specific scripts
-  assets/                  Audio, materials (3D models and textures pending)
-docs/                      All project documentation
-```
+
+The runner looks for Godot through `GODOT`, `GODOT_EXECUTABLE`, `godot` on
+`PATH`, and common macOS install paths. When Godot is available, it imports
+assets and runs GUT headlessly through `res://addons/gut/gut_cmdln.gd`.
+
+## Deployment Basics
+
+Export presets are checked into `export_presets.cfg` for:
+
+- `Windows Desktop` -> `exports/windows/MallcoreSim.exe`
+- `macOS` -> `exports/macos/MallcoreSim.zip`
+- `Linux/X11` -> `exports/linux/MallcoreSim.x86_64`
+
+The GitHub export workflow validates export configuration on version tags and
+builds Windows and macOS artifacts. Built-in code signing is disabled in the
+checked-in presets.
 
 ## Documentation
 
-| Document | Contents |
-|---|---|
-| [Architecture](docs/architecture.md) | System design, autoloads, data pipeline, scene structure |
-| [Setup](docs/setup.md) | Local development, project settings, build targets, tech stack |
-| [Roadmap](docs/roadmap.md) | Milestone progress and remaining work |
-| [Contributing](docs/contributing.md) | Code conventions, branch naming, PR process |
-| [Design: Game Pillars](docs/design/GAME_PILLARS.md) | Core design principles |
-| [Design: Core Loop](docs/design/CORE_LOOP.md) | Daily gameplay loop |
-| [Design: Store Types](docs/design/STORE_TYPES.md) | Five store types overview |
-| [Design: Store Details](docs/design/stores/) | Deep dives per store type |
-| [Art Direction](docs/art/ART_DIRECTION.md) | Visual style, color palette, lighting |
-| [Asset Pipeline](docs/art/ASSET_PIPELINE.md) | Modeling, texturing, and import standards |
-| [Save System](docs/tech/SAVE_SYSTEM_PLAN.md) | Save/load architecture |
-| [NPC Performance](docs/tech/npc_performance_profile.md) | NPC profiling results and navigation optimizations |
-| [Distribution](docs/distribution.md) | macOS notarization and Windows code signing guide |
-| [Production Risks](docs/production/RISKS.md) | Known risks and mitigations |
+The active project docs are in `docs/`:
 
-## Platforms
-
-- **macOS** — primary development and testing platform
-- **Windows** — near-term export target
-- Linux and web are stretch goals
+- [Docs Index](docs/index.md)
+- [Setup](docs/setup.md)
+- [Architecture](docs/architecture.md)
+- [Content and Data](docs/content-data.md)
+- [Testing](docs/testing.md)
+- [Configuration and Deployment](docs/configuration-deployment.md)
+- [Contributing](docs/contributing.md)
+- [Docs Consolidation Audit](docs/audits/docs-consolidation.md)

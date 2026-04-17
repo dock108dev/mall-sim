@@ -26,6 +26,8 @@ var _preloaded_scenes: Dictionary = {}
 
 func _ready() -> void:
 	_active_store_id = _resolve_store_id(GameManager.current_store_id)
+	_connect_signal(EventBus.store_entered, _on_store_entered)
+	_connect_signal(EventBus.store_exited, _on_store_exited)
 	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
 
 
@@ -47,6 +49,8 @@ func initialize(
 	_active_store_id = _resolve_store_id(GameManager.current_store_id)
 	_connect_signal(EventBus.enter_store_requested, _on_enter_store_requested)
 	_connect_signal(EventBus.exit_store_requested, _on_exit_store_requested)
+	_connect_signal(EventBus.store_entered, _on_store_entered)
+	_connect_signal(EventBus.store_exited, _on_store_exited)
 	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
 
 
@@ -60,16 +64,26 @@ func get_active_store_scene() -> Node3D:
 	return _active_store_scene
 
 
+## Returns the canonical ID of the currently active store.
+func get_active_store_id() -> StringName:
+	return _active_store_id
+
+
+## Returns the configured scene path for a store ID, or empty when missing.
+func get_store_scene_path(store_id: StringName) -> String:
+	return ContentRegistry.get_scene_path(store_id)
+
+
 ## Selects an owned store as the active store without triggering a scene
 ## transition. No-op when the same store is already active. Calls push_error
 ## and returns without emitting on ownership or validity failure.
 func select_store(store_id: StringName) -> void:
 	if store_id.is_empty():
-		push_error("StoreSelectorSystem: select_store called with empty id")
+		_push_system_error("StoreSelectorSystem: select_store called with empty id")
 		return
 
 	if _find_slot_for_store(store_id) < 0:
-		push_error(
+		_push_system_error(
 			"StoreSelectorSystem: store '%s' is not owned" % store_id
 		)
 		return
@@ -86,9 +100,15 @@ func enter_store(store_id: StringName) -> bool:
 	if _is_transitioning or _inside_store:
 		return false
 
+	var scene_path: String = get_store_scene_path(store_id)
+	if scene_path.is_empty():
+		_push_system_error(
+			"StoreSelectorSystem: unknown store_id '%s'" % store_id
+		)
+		return false
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if canonical.is_empty():
-		push_error(
+		_push_system_error(
 			"StoreSelectorSystem: unknown store_id '%s'" % store_id
 		)
 		return false
@@ -97,7 +117,7 @@ func enter_store(store_id: StringName) -> bool:
 
 	var store_scene: PackedScene = _get_store_scene(canonical)
 	if store_scene == null:
-		push_error(
+		_push_system_error(
 			"StoreSelectorSystem: failed to load scene for '%s'"
 			% canonical
 		)
@@ -105,7 +125,7 @@ func enter_store(store_id: StringName) -> bool:
 
 	var loaded_scene: Node3D = store_scene.instantiate() as Node3D
 	if loaded_scene == null:
-		push_error(
+		_push_system_error(
 			"StoreSelectorSystem: scene for '%s' did not instantiate as Node3D"
 			% canonical
 		)
@@ -116,7 +136,7 @@ func enter_store(store_id: StringName) -> bool:
 	)
 	if loaded_camera == null:
 		loaded_scene.queue_free()
-		push_error(
+		_push_system_error(
 			"StoreSelectorSystem: failed to instantiate store camera for '%s'"
 			% canonical
 		)
@@ -190,6 +210,30 @@ func _on_enter_store_requested(store_id: StringName) -> void:
 
 func _on_exit_store_requested() -> void:
 	exit_store()
+
+
+func _on_store_entered(store_id: StringName) -> void:
+	if _is_transitioning:
+		return
+	var scene_path: String = get_store_scene_path(store_id)
+	if scene_path.is_empty():
+		_push_system_error(
+			"StoreSelectorSystem: unknown store_id '%s'" % store_id
+		)
+		return
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty() or _active_store_id == canonical:
+		return
+	_set_active_store_for_transition(canonical)
+
+
+func _on_store_exited(store_id: StringName) -> void:
+	if _is_transitioning or _active_store_id.is_empty():
+		return
+	var canonical: StringName = _resolve_store_id(store_id)
+	if not canonical.is_empty() and canonical != _active_store_id:
+		return
+	_set_active_store_for_transition(&"")
 
 
 func _move_store_camera_to_spawn(
@@ -336,3 +380,7 @@ func _resolve_store_id(raw_store_id: Variant) -> StringName:
 func _connect_signal(signal_ref: Signal, callable: Callable) -> void:
 	if not signal_ref.is_connected(callable):
 		signal_ref.connect(callable)
+
+
+func _push_system_error(message: String) -> void:
+	push_error(message)

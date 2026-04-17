@@ -1,15 +1,29 @@
 ## GUT tests for StoreSelectorSystem transition sequencing and rollback safety.
 extends GutTest
 
+
+class TestStoreSelectorSystem extends StoreSelectorSystem:
+	var missing_store_id: StringName = &""
+	var error_messages: Array[String] = []
+
+	func _get_store_scene(store_id: StringName) -> PackedScene:
+		if store_id == missing_store_id:
+			return null
+		return super._get_store_scene(store_id)
+
+	func _push_system_error(message: String) -> void:
+		error_messages.append(message)
+
+
 const _STORE_ID: StringName = &"retro_games"
 const _STORE_SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 const _BROKEN_STORE_ID: StringName = &"broken_store"
-const _BROKEN_SCENE_PATH: String = "res://game/scenes/stores/missing_store.tscn"
+const _BROKEN_SCENE_PATH: String = "res://game/scenes/stores/sports_memorabilia.tscn"
 const _PlayerControllerScene: PackedScene = preload(
 	"res://game/scenes/player/player_controller.tscn"
 )
 
-var _system: StoreSelectorSystem
+var _system: TestStoreSelectorSystem
 var _store_state: StoreStateManager
 var _hallway_node: Node3D
 var _store_container: Node3D
@@ -25,6 +39,7 @@ var _active_cameras: Array[Camera3D] = []
 var _hallway_visible_during_enter: bool = false
 var _store_scene_loaded_during_enter: bool = false
 var _saved_game_store_id: StringName = &""
+var _zone_player: AudioStreamPlayer
 
 
 func before_each() -> void:
@@ -77,7 +92,12 @@ func before_each() -> void:
 	_storefront_marker.position = Vector3(4.0, 0.0, 2.5)
 	_waypoint_graph.add_child(_storefront_marker)
 
-	_system = StoreSelectorSystem.new()
+	_zone_player = AudioStreamPlayer.new()
+	add_child_autofree(_zone_player)
+	AudioManager.register_zone(String(_STORE_ID), _zone_player)
+
+	_system = TestStoreSelectorSystem.new()
+	_system.missing_store_id = _BROKEN_STORE_ID
 	add_child_autofree(_system)
 	_system.initialize(
 		_store_state, _hallway_node, _store_container, _hallway_camera, _ui_layer
@@ -101,6 +121,7 @@ func after_each() -> void:
 	_safe_disconnect(EventBus.store_exited, _on_store_exited)
 	_safe_disconnect(EventBus.active_store_changed, _on_active_store_changed)
 	_safe_disconnect(EventBus.active_camera_changed, _on_active_camera_changed)
+	AudioManager.unregister_zone(String(_STORE_ID))
 	GameManager.current_store_id = _saved_game_store_id
 	ContentRegistry.clear_for_testing()
 

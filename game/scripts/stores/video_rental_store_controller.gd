@@ -422,7 +422,7 @@ func _apply_rental_reputation() -> void:
 	var rep_mult: float = POLICY_REP_MULTIPLIERS.get(
 		_late_fee_policy, 1.0
 	)
-	_reputation_system.modify_reputation(
+	_reputation_system.add_reputation(
 		STORE_ID, RENTAL_REP_GAIN * rep_mult
 	)
 

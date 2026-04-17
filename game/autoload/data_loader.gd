@@ -463,7 +463,7 @@ func _load_endings(data: Variant) -> void:
 	var entries: Array[Dictionary] = _extract_entries(data)
 	for entry: Dictionary in entries:
 		if not entry.has("id"):
-			push_error("DataLoader: ending entry missing 'id'")
+			_record_load_error("ending entry missing 'id'")
 			continue
 		var reg_entry: Dictionary = entry.duplicate()
 		if not reg_entry.has("name") and reg_entry.has("display_name"):
@@ -473,28 +473,46 @@ func _load_endings(data: Variant) -> void:
 
 func _load_secret_threads(data: Variant) -> void:
 	if data is not Array:
+		_record_load_error("secret_threads root must be an Array")
 		return
-	for entry: Variant in data:
-		if entry is Dictionary:
-			var dict: Dictionary = entry as Dictionary
-			if dict.has("id"):
-				_secret_threads.append(dict)
-				ContentRegistry.register_entry(dict, "secret_thread")
+	for index: int in range((data as Array).size()):
+		var entry: Variant = (data as Array)[index]
+		if entry is not Dictionary:
+			_record_load_error(
+				"secret_thread entry at index %d is not a Dictionary"
+				% index
+			)
+			continue
+		var dict: Dictionary = entry as Dictionary
+		if not dict.has("id"):
+			_record_load_error(
+				"secret_thread entry at index %d missing 'id'"
+				% index
+			)
+			continue
+		_secret_threads.append(dict)
+		ContentRegistry.register_entry(dict, "secret_thread")
 
 
 func _parse_seasonal_config(data: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var seasons: Variant = data.get("seasons", [])
 	if seasons is not Array:
-		push_error("DataLoader: seasonal_config missing 'seasons' array")
+		_record_load_error("seasonal_config missing 'seasons' array")
 		return result
-	for entry: Variant in seasons:
+	for index: int in range((seasons as Array).size()):
+		var entry: Variant = (seasons as Array)[index]
 		if entry is not Dictionary:
+			_record_load_error(
+				"seasonal_config entry at index %d is not a Dictionary"
+				% index
+			)
 			continue
 		var season: Dictionary = entry as Dictionary
 		if not season.has("index") or not season.has("store_multipliers"):
-			push_error(
-				"DataLoader: seasonal_config entry missing required fields"
+			_record_load_error(
+				"seasonal_config entry at index %d missing required fields"
+				% index
 			)
 			continue
 		result.append(season)
@@ -505,15 +523,21 @@ func _parse_named_seasons(data: Dictionary) -> void:
 	_named_season_cycle_length = int(data.get("cycle_length", 70))
 	var seasons_arr: Variant = data.get("seasons", [])
 	if seasons_arr is not Array:
-		push_error("DataLoader: seasons.json missing 'seasons' array")
+		_record_load_error("seasons.json missing 'seasons' array")
 		return
-	for entry: Variant in seasons_arr:
+	for index: int in range((seasons_arr as Array).size()):
+		var entry: Variant = (seasons_arr as Array)[index]
 		if entry is not Dictionary:
+			_record_load_error(
+				"season entry at index %d is not a Dictionary"
+				% index
+			)
 			continue
 		var season: Dictionary = entry as Dictionary
 		if not season.has("id") or not season.has("start_day"):
-			push_error(
-				"DataLoader: season entry missing required fields"
+			_record_load_error(
+				"season entry at index %d missing required fields"
+				% index
 			)
 			continue
 		var id: String = str(season["id"])
@@ -541,45 +565,47 @@ func _normalize_store_types() -> void:
 
 
 static func load_json(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		push_error("DataLoader: file not found: %s" % path)
-		return null
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		push_error(
-			"DataLoader: failed to open '%s' — %s"
-			% [path, error_string(FileAccess.get_open_error())]
-		)
-		return null
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		push_error(
-			"DataLoader: parse error in %s: %s"
-			% [path, json.get_error_message()]
-		)
-		return null
-	return json.data
+	return _read_json_file(path)
 
 
 func _load_json_with_error(path: String) -> Variant:
+	return _read_json_file(path, _record_load_error)
+
+
+static func _read_json_file(
+	path: String,
+	on_error: Callable = Callable()
+) -> Variant:
 	if not FileAccess.file_exists(path):
-		_record_load_error("file not found: %s" % path)
-		return null
+		return _report_json_error("file not found: %s" % path, on_error)
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if not file:
-		_record_load_error(
+		return _report_json_error(
 			"failed to open '%s' — %s"
-			% [path, error_string(FileAccess.get_open_error())]
+			% [path, error_string(FileAccess.get_open_error())],
+			on_error
 		)
-		return null
+	var json_text: String = file.get_as_text()
+	file.close()
 	var json: JSON = JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		_record_load_error(
+	if json.parse(json_text) != OK:
+		return _report_json_error(
 			"parse error in %s: %s"
-			% [path, json.get_error_message()]
+			% [path, json.get_error_message()],
+			on_error
 		)
-		return null
 	return json.data
+
+
+static func _report_json_error(
+	message: String,
+	on_error: Callable
+) -> Variant:
+	if on_error.is_valid():
+		on_error.call(message)
+	else:
+		push_error("DataLoader: %s" % message)
+	return null
 
 
 func _record_load_error(message: String) -> void:

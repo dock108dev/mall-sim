@@ -220,7 +220,7 @@ func _on_customer_left(customer_data: Dictionary) -> void:
 	if not _register_queue.has_customer_id(cust_id):
 		return
 	_register_queue.remove_by_id(cust_id)
-	_reputation_system.modify_reputation(
+	_reputation_system.add_reputation(
 		"sports_memorabilia", PATIENCE_REP_PENALTY
 	)
 	if (
@@ -520,7 +520,7 @@ func _apply_sale_reputation(market_value: float) -> void:
 	var rep_delta: float = ReputationSystemSingleton.REP_FAIR_SALE
 	if ratio < GENEROUS_THRESHOLD:
 		rep_delta = ReputationSystemSingleton.REP_FAIR_SALE * 1.5
-	_reputation_system.modify_reputation("", rep_delta)
+	_reputation_system.add_reputation("", rep_delta)
 
 
 func _show_warranty_dialog() -> void:

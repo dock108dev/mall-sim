@@ -3,9 +3,13 @@ class_name RandomEventDefinition
 extends Resource
 
 @export var id: String = ""
+@export var display_name: String = ""
 @export var name: String = ""
 @export var description: String = ""
+@export var trigger_probability: float = 1.0
 @export var effect_type: String = ""
+@export var effect_target: String = ""
+@export var effect_magnitude: float = 1.0
 @export var duration_days: int = 1
 @export var severity: String = "medium"
 @export var cooldown_days: int = 10

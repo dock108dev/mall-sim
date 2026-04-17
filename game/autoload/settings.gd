@@ -48,6 +48,7 @@ const FONT_SIZE_LABEL_KEYS: Array[String] = [
 const UI_SCALE_MIN: float = 0.75
 const UI_SCALE_MAX: float = 1.50
 const UI_SCALE_STEP: float = 0.05
+const MAX_PERSISTED_KEYCODE: int = 33554431
 
 var master_volume: float = 1.0
 var music_volume: float = 0.8
@@ -350,6 +351,12 @@ func _load_keybindings(config: ConfigFile) -> void:
 		var keycode_val: int = config.get_value("input", action, -1)
 		if keycode_val < 0:
 			continue
+		if keycode_val > MAX_PERSISTED_KEYCODE:
+			push_warning(
+				"Settings: ignoring out-of-range keycode %d for action '%s'"
+				% [keycode_val, action]
+			)
+			continue
 		if not InputMap.has_action(action):
 			continue
 		var new_event := InputEventKey.new()
@@ -400,10 +407,24 @@ func _apply_locale_preference() -> void:
 	if resolved.is_empty():
 		resolved = "en"
 		locale = resolved
+	if not _is_supported_locale(resolved):
+		push_warning(
+			"Settings: unsupported locale '%s', falling back to 'en'"
+			% resolved
+		)
+		resolved = "en"
+		locale = resolved
 	var old_locale: String = TranslationServer.get_locale()
 	TranslationServer.set_locale(resolved)
 	if old_locale != resolved:
 		EventBus.locale_changed.emit(resolved)
+
+
+func _is_supported_locale(value: String) -> bool:
+	for entry: Dictionary in SUPPORTED_LOCALES:
+		if str(entry.get("code", "")) == value:
+			return true
+	return false
 
 
 func _on_preference_changed(key: StringName, _value: Variant) -> void:

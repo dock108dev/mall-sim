@@ -8,7 +8,7 @@ var _system: PackOpeningSystem
 var _inventory: InventorySystem
 var _data_loader: DataLoader
 var _pack_opened_ids: Array[String] = []
-var _pack_opened_cards: Array[Array[String]] = []
+var _pack_opened_cards: Array = []
 
 
 func _ensure_store_registry_entry() -> void:
@@ -197,6 +197,7 @@ func test_pack_opened_signal_fires_only_on_commit() -> void:
 	var cards: Array[ItemInstance] = _system.open_pack_preview(
 		String(pack.instance_id)
 	)
+	var expected_card_count: int = cards.size()
 
 	assert_eq(
 		_pack_opened_ids.size(),
@@ -217,7 +218,7 @@ func test_pack_opened_signal_fires_only_on_commit() -> void:
 	)
 	assert_eq(
 		_pack_opened_cards[0].size(),
-		cards.size(),
+		expected_card_count,
 		"Commit should publish all staged card ids, not only the five preview cards",
 	)
 

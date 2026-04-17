@@ -374,13 +374,13 @@ func _apply_sale_reputation(final_price: float) -> void:
 	var delta: float = lerpf(
 		REP_SALE_MAX, REP_SALE_MIN, clampf(ratio, 0.0, 1.0)
 	)
-	_reputation_system.modify_reputation("", delta)
+	_reputation_system.add_reputation("", delta)
 
 
 func _apply_walkaway_reputation() -> void:
 	if not _reputation_system:
 		return
-	_reputation_system.modify_reputation("", REP_WALKAWAY_MIN)
+	_reputation_system.add_reputation("", REP_WALKAWAY_MIN)
 
 
 func _apply_walkaway_reputation_with_insult_check(
@@ -389,7 +389,7 @@ func _apply_walkaway_reputation_with_insult_check(
 	if not _reputation_system:
 		return
 	if _was_insulting_counter(player_price):
-		_reputation_system.modify_reputation(
+		_reputation_system.add_reputation(
 			"", REP_INSULT_PENALTY
 		)
 		return
@@ -401,7 +401,7 @@ func _apply_walkaway_reputation_with_insult_check(
 	var delta: float = lerpf(
 		REP_WALKAWAY_MIN, REP_WALKAWAY_MAX, stubbornness
 	)
-	_reputation_system.modify_reputation("", delta)
+	_reputation_system.add_reputation("", delta)
 
 
 func _was_insulting_counter(_player_price: float) -> bool:

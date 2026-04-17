@@ -7,14 +7,22 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 G="${GODOT:-${GODOT_EXECUTABLE:-godot}}"
 
 _resolve_godot() {
-	if [ -x "$G" ]; then
-		echo "$G"
-		return 0
-	fi
-	if command -v "$G" >/dev/null 2>&1; then
-		command -v "$G"
-		return 0
-	fi
+	local candidates=(
+		"$G"
+		"/Applications/Godot.app/Contents/MacOS/Godot"
+		"$HOME/Applications/Godot.app/Contents/MacOS/Godot"
+	)
+	local candidate=""
+	for candidate in "${candidates[@]}"; do
+		if [ -x "$candidate" ]; then
+			echo "$candidate"
+			return 0
+		fi
+		if command -v "$candidate" >/dev/null 2>&1; then
+			command -v "$candidate"
+			return 0
+		fi
+	done
 	return 1
 }
 

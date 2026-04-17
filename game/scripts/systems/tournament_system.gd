@@ -234,7 +234,7 @@ func _complete_tournament() -> void:
 	)
 
 	if _reputation_system:
-		_reputation_system.modify_reputation(STORE_TYPE, rep_gain)
+		_reputation_system.add_reputation(STORE_TYPE, rep_gain)
 
 	EventBus.tournament_completed.emit(
 		_participant_count, _tournament_revenue

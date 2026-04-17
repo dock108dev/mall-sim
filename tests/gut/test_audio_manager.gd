@@ -195,12 +195,7 @@ func test_play_sfx_unknown_name_warns() -> void:
 	assert_true(true, "Unknown SFX name should warn but not crash")
 
 
-func test_play_sfx_stream_null_warns() -> void:
-	_manager.play_sfx_stream(null)
-	assert_true(true, "Null stream should warn but not crash")
-
-
-func test_play_sfx_stream_api_assigns_stream() -> void:
+func test_play_sfx_audio_stream_assigns_stream() -> void:
 	var stream: AudioStreamWAV = AudioStreamWAV.new()
 	_manager.play_sfx(stream, -3.0)
 	var found: bool = false

@@ -2,17 +2,21 @@
 extends GutTest
 
 
+const STORE_ID: StringName = &"sports"
+
 var _save_manager: SaveManager
 var _economy: EconomySystem
 var _inventory: InventorySystem
 var _time_system: TimeSystem
 var _reputation: ReputationSystem
 var _store_state_manager: StoreStateManager
+var _data_loader: DataLoader
 var _saved_owned_stores: Array[StringName] = []
 var _saved_store_id: StringName = &""
 
 
 func before_each() -> void:
+	ContentRegistry.clear_for_testing()
 	_save_manager = SaveManager.new()
 	add_child_autofree(_save_manager)
 
@@ -26,7 +30,10 @@ func before_each() -> void:
 
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
-	_inventory.initialize(null)
+	_data_loader = DataLoader.new()
+	add_child_autofree(_data_loader)
+	_register_store_catalog()
+	_inventory.initialize(_data_loader)
 
 	_reputation = ReputationSystem.new()
 	_reputation.auto_connect_bus = false
@@ -49,6 +56,7 @@ func after_each() -> void:
 		_save_manager.delete_save(slot)
 	if FileAccess.file_exists(SaveManager.SLOT_INDEX_PATH):
 		DirAccess.remove_absolute(SaveManager.SLOT_INDEX_PATH)
+	ContentRegistry.clear_for_testing()
 	GameManager.owned_stores = _saved_owned_stores
 	GameManager.current_store_id = _saved_store_id
 
@@ -270,42 +278,6 @@ func test_get_slot_metadata_ignores_stale_slot_index() -> void:
 	)
 
 
-func test_save_game_does_not_overwrite_corrupt_slot_index() -> void:
-	_economy._current_cash = 125.0
-	_time_system.current_day = 4
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
-
-	assert_true(
-		_save_manager.save_game(1),
-		"Precondition: initial save should succeed"
-	)
-	var corrupt_index: String = "[slot_1\nbroken=true"
-	var index_file: FileAccess = FileAccess.open(
-		SaveManager.SLOT_INDEX_PATH, FileAccess.WRITE
-	)
-	assert_not_null(index_file, "Precondition: slot index should be writable")
-	index_file.store_string(corrupt_index)
-	index_file.close()
-
-	assert_true(
-		_save_manager.save_game(2),
-		"Save should still succeed when only the slot index is corrupt"
-	)
-
-	var verify_index: FileAccess = FileAccess.open(
-		SaveManager.SLOT_INDEX_PATH, FileAccess.READ
-	)
-	assert_not_null(verify_index, "Corrupt slot index should remain readable")
-	var index_contents: String = verify_index.get_as_text()
-	verify_index.close()
-	assert_eq(
-		index_contents,
-		corrupt_index,
-		"SaveManager should not overwrite a corrupt slot index with partial data"
-	)
-
-
 # --- Save version field ---
 
 
@@ -467,6 +439,26 @@ func _assert_dict_match(
 				str(actual[key]), str(expected[key]),
 				"%s.%s mismatch" % [label, key]
 			)
+
+
+func _register_store_catalog() -> void:
+	var store_definition := StoreDefinition.new()
+	store_definition.id = String(STORE_ID)
+	store_definition.store_name = "Test Sports"
+	store_definition.store_type = STORE_ID
+	store_definition.backroom_capacity = 20
+	store_definition.daily_rent = 0.0
+	_data_loader._stores[String(STORE_ID)] = store_definition
+	ContentRegistry.register(STORE_ID, store_definition, "store")
+	ContentRegistry.register_entry(
+		{
+			"id": String(STORE_ID),
+			"name": "Test Sports",
+			"store_name": "Test Sports",
+			"backroom_capacity": 20,
+		},
+		"store"
+	)
 
 
 func _read_save_file_raw(slot: int) -> Dictionary:

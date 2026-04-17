@@ -78,14 +78,10 @@ func before_each() -> void:
 	)
 	_day_cycle.set_day_summary(_summary_panel)
 
-	GameManager.notify_day_loaded(1)
-
-
 func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
-	GameManager.notify_day_loaded(1)
 
 
 ## Scenario 1: Full loop — panel shows on day_ended, day advances after acknowledgement.

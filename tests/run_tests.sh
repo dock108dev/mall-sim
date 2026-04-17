@@ -8,15 +8,23 @@ EXIT_CODE=0
 
 # Resolve Godot binary (PATH, GODOT, or GODOT_EXECUTABLE).
 _resolve_godot_bin() {
-	local g="${GODOT:-${GODOT_EXECUTABLE:-godot}}"
-	if [ -x "$g" ]; then
-		echo "$g"
-		return 0
-	fi
-	if command -v "$g" &>/dev/null; then
-		command -v "$g"
-		return 0
-	fi
+	local configured="${GODOT:-${GODOT_EXECUTABLE:-godot}}"
+	local candidates=(
+		"$configured"
+		"/Applications/Godot.app/Contents/MacOS/Godot"
+		"$HOME/Applications/Godot.app/Contents/MacOS/Godot"
+	)
+	local candidate=""
+	for candidate in "${candidates[@]}"; do
+		if [ -x "$candidate" ]; then
+			echo "$candidate"
+			return 0
+		fi
+		if command -v "$candidate" &>/dev/null; then
+			command -v "$candidate"
+			return 0
+		fi
+	done
 	return 1
 }
 

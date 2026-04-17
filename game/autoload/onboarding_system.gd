@@ -100,12 +100,21 @@ func _load_hint_definitions() -> void:
 		push_error("OnboardingSystem: 'hints' must be an Array")
 		return
 
-	for hint: Variant in hints:
-		if not hint is Dictionary:
+	for index: int in range(hints.size()):
+		var hint: Variant = hints[index]
+		if hint is not Dictionary:
+			push_warning(
+				"OnboardingSystem: skipping non-dictionary hint at index %d"
+				% index
+			)
 			continue
 		var hint_dict: Dictionary = hint as Dictionary
 		var trigger: String = hint_dict.get("trigger", "")
 		if trigger.is_empty():
+			push_warning(
+				"OnboardingSystem: skipping hint at index %d with empty trigger"
+				% index
+			)
 			continue
 		_hint_definitions.append(hint_dict)
 		_trigger_map[StringName(trigger)] = hint_dict

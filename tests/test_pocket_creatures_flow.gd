@@ -88,6 +88,10 @@ func test_all_drawn_card_ids_resolve_in_content_registry() -> void:
 	var cards: Array[ItemInstance] = _pack_system.open_pack(
 		pack.instance_id
 	)
+	assert_false(
+		cards.is_empty(),
+		"Pack opening should generate cards before validating registry ids"
+	)
 	for card: ItemInstance in cards:
 		assert_true(
 			ContentRegistry.exists(card.definition.id),
@@ -127,7 +131,7 @@ func test_50_packs_yield_at_least_one_ultra_rare() -> void:
 			if sub == "rare_holo" or sub == "secret_rare":
 				holo_or_better_found[0] = true
 				break
-		if holo_or_better_found:
+		if holo_or_better_found[0]:
 			break
 	assert_true(
 		holo_or_better_found[0],
@@ -276,7 +280,7 @@ func _make_card_def(
 	def.base_price = 1.0
 	def.rarity = "common"
 	def.condition_range = PackedStringArray(["good", "near_mint", "mint"])
-	def.tags = PackedStringArray(tags)
+	def.tags = ItemDefinition._normalize_string_name_array(tags)
 	return def
 
 
@@ -289,7 +293,7 @@ func _make_tournament_def(
 ) -> TournamentEventDefinition:
 	var def := TournamentEventDefinition.new()
 	def.id = id
-	def.item_name = id
+	def.name = id
 	def.card_category = card_category
 	def.start_day = start_day
 	def.duration_days = duration_days
@@ -320,9 +324,9 @@ func _populate_test_data_loader() -> void:
 	_pack_def.base_price = 3.99
 	_pack_def.rarity = "common"
 	_pack_def.condition_range = PackedStringArray(["good", "near_mint", "mint"])
-	_pack_def.tags = PackedStringArray(
-		["pack", "booster", "sealed", TEST_SET_TAG]
-	)
+	_pack_def.tags = ItemDefinition._normalize_string_name_array([
+		"pack", "booster", "sealed", TEST_SET_TAG,
+	])
 
 	for def: ItemDefinition in card_defs:
 		_register_test_item(def)

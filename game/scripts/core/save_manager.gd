@@ -8,6 +8,7 @@ const SAVE_DIR := "user://"
 const SLOT_INDEX_PATH := "user://save_index.cfg"
 const MAX_MANUAL_SLOTS: int = 3
 const AUTO_SAVE_SLOT: int = 0
+const MAX_SAVE_FILE_BYTES: int = 10485760
 
 var _economy_system: EconomySystem
 var _order_system: OrderSystem
@@ -223,31 +224,16 @@ func mark_run_complete(ending_id: StringName) -> void:
 	var path: String = _get_slot_path(AUTO_SAVE_SLOT)
 	if not FileAccess.file_exists(path):
 		return
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if not file:
-		push_warning(
-			"SaveManager: failed to open auto-save '%s' while recording ending — %s"
-			% [path, error_string(FileAccess.get_open_error())]
-		)
+	var read_result: Dictionary = _read_save_dictionary(
+		path,
+		"failed to open auto-save '%s' while recording ending — %s",
+		"auto-save '%s' is too large to update safely",
+		"failed to parse auto-save '%s' while recording ending — %s",
+		"auto-save '%s' did not contain a dictionary while recording ending"
+	)
+	if not bool(read_result.get("ok", false)):
 		return
-	var json := JSON.new()
-	var parse_error: Error = json.parse(file.get_as_text())
-	if parse_error != OK:
-		file.close()
-		push_warning(
-			"SaveManager: failed to parse auto-save '%s' while recording ending — %s"
-			% [path, json.get_error_message()]
-		)
-		return
-	file.close()
-	var data: Variant = json.data
-	if data is not Dictionary:
-		push_warning(
-			"SaveManager: auto-save '%s' did not contain a dictionary while recording ending"
-			% path
-		)
-		return
-	var save_data: Dictionary = data as Dictionary
+	var save_data: Dictionary = read_result.get("data", {}) as Dictionary
 	var metadata: Dictionary = save_data.get("metadata", {}) as Dictionary
 	var save_metadata: Dictionary = (
 		save_data.get("save_metadata", {}) as Dictionary
@@ -304,52 +290,30 @@ func load_game(slot: int) -> bool:
 
 	var path: String = _get_slot_path(slot)
 	if not FileAccess.file_exists(path):
-		var reason: String = "No save file at '%s'" % path
-		push_warning("SaveManager: %s" % reason)
-		EventBus.save_load_failed.emit(slot, reason)
-		return false
-
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if not file:
-		var reason: String = (
-			"Failed to open '%s' — %s"
-			% [path, error_string(FileAccess.get_open_error())]
-		)
-		push_warning("SaveManager: %s" % reason)
-		EventBus.save_load_failed.emit(slot, reason)
-		return false
-
-	var json_string: String = file.get_as_text()
-	file.close()
-
-	var json := JSON.new()
-	var parse_result: Error = json.parse(json_string)
-	if parse_result != OK:
-		var reason: String = (
-			"JSON parse error in '%s' at line %d — %s"
-			% [path, json.get_error_line(), json.get_error_message()]
-		)
-		push_warning("SaveManager: %s" % reason)
-		EventBus.save_load_failed.emit(slot, reason)
-		return false
-
-	var data: Variant = json.data
-	if data is not Dictionary:
-		var reason: String = "Save file root is not a Dictionary"
-		push_warning("SaveManager: %s" % reason)
-		EventBus.save_load_failed.emit(slot, reason)
-		return false
-
-	var save_data: Dictionary = data as Dictionary
+		return _fail_load(slot, "No save file at '%s'" % path)
+	var read_result: Dictionary = _read_save_dictionary(
+		path,
+		"Failed to open '%s' — %s",
+		"Save file '%s' exceeds maximum supported size",
+		"JSON parse error in '%s' at %s",
+		"Save file '%s' root is not a Dictionary",
+		true
+	)
+	if not bool(read_result.get("ok", false)):
+		return _fail_load(slot, str(read_result.get("reason", "")))
+	var save_data: Dictionary = read_result.get("data", {}) as Dictionary
 	var save_version: int = int(save_data.get("save_version", 0))
 	if save_version > CURRENT_SAVE_VERSION:
-		var reason: String = (
+		return _fail_load(
+			slot,
 			"Save version %d is newer than supported version %d"
 			% [save_version, CURRENT_SAVE_VERSION]
 		)
-		push_warning("SaveManager: %s" % reason)
-		EventBus.save_load_failed.emit(slot, reason)
-		return false
+	if save_version < CURRENT_SAVE_VERSION:
+		push_warning(
+			"SaveManager: migrating save version %d to %d"
+			% [save_version, CURRENT_SAVE_VERSION]
+		)
 	save_data = _migrate_save(save_data)
 	_distribute_save_data(save_data)
 	return true
@@ -904,7 +868,7 @@ func _extract_owned_slots(data: Dictionary) -> Dictionary:
 	if raw_slots is Dictionary:
 		return (raw_slots as Dictionary).duplicate(true)
 	if raw_slots is Array:
-		push_error(
+		push_warning(
 			"SaveManager: migrating legacy owned_slots array during load"
 		)
 		return _migrate_legacy_owned_store_array(
@@ -913,7 +877,7 @@ func _extract_owned_slots(data: Dictionary) -> Dictionary:
 
 	var legacy_owned_stores: Variant = data.get("owned_stores", null)
 	if legacy_owned_stores is Array:
-		push_error(
+		push_warning(
 			"SaveManager: migrating legacy owned_stores array during load"
 		)
 		return _migrate_legacy_owned_store_array(
@@ -921,7 +885,7 @@ func _extract_owned_slots(data: Dictionary) -> Dictionary:
 		)
 
 	if raw_slots != null:
-		push_error(
+		push_warning(
 			"SaveManager: expected Dictionary for owned_slots, got %s"
 			% type_string(typeof(raw_slots))
 		)
@@ -1035,6 +999,12 @@ func _systems_ready() -> bool:
 	)
 
 
+func _fail_load(slot: int, reason: String) -> bool:
+	push_warning("SaveManager: %s" % reason)
+	EventBus.save_load_failed.emit(slot, reason)
+	return false
+
+
 func _get_reputation_system() -> ReputationSystem:
 	if _reputation_ref:
 		return _reputation_ref
@@ -1140,6 +1110,53 @@ func _write_save_file_atomic(path: String, contents: String) -> Error:
 	return rename_error
 
 
+func _read_save_dictionary(
+	path: String,
+	open_reason_template: String,
+	too_large_reason_template: String,
+	parse_reason_template: String,
+	root_reason_template: String,
+	include_parse_line: bool = false
+) -> Dictionary:
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return _save_read_failure(
+			open_reason_template
+			% [path, error_string(FileAccess.get_open_error())]
+		)
+	if file.get_length() > MAX_SAVE_FILE_BYTES:
+		file.close()
+		return _save_read_failure(too_large_reason_template % path)
+	var json_text: String = file.get_as_text()
+	file.close()
+	var json: JSON = JSON.new()
+	var parse_result: Error = json.parse(json_text)
+	if parse_result != OK:
+		var parse_context: String = json.get_error_message()
+		if include_parse_line:
+			parse_context = "line %d — %s" % [
+				json.get_error_line(), parse_context
+			]
+		return _save_read_failure(
+			parse_reason_template % [path, parse_context]
+		)
+	var data: Variant = json.data
+	if data is not Dictionary:
+		return _save_read_failure(root_reason_template % path)
+	return {
+		"ok": true,
+		"data": data as Dictionary,
+	}
+
+
+func _save_read_failure(reason: String) -> Dictionary:
+	push_warning("SaveManager: %s" % reason)
+	return {
+		"ok": false,
+		"reason": reason,
+	}
+
+
 func _build_slot_index_metadata(save_data: Dictionary) -> Dictionary:
 	var metadata: Dictionary = {}
 	var save_metadata: Variant = save_data.get("save_metadata", {})
@@ -1186,29 +1203,16 @@ func _build_slot_index_metadata(save_data: Dictionary) -> Dictionary:
 
 func _read_slot_metadata_from_save(slot: int) -> Dictionary:
 	var path: String = _get_slot_path(slot)
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if not file:
-		push_warning(
-			"SaveManager: failed to open save slot '%s' for metadata — %s"
-			% [path, error_string(FileAccess.get_open_error())]
-		)
+	var read_result: Dictionary = _read_save_dictionary(
+		path,
+		"failed to open save slot '%s' for metadata — %s",
+		"save slot '%s' is too large for metadata preview",
+		"failed to parse save slot '%s' for metadata — %s",
+		"save slot '%s' did not contain a dictionary for metadata"
+	)
+	if not bool(read_result.get("ok", false)):
 		return {}
-	var json := JSON.new()
-	var parse_result: Error = json.parse(file.get_as_text())
-	file.close()
-	if parse_result != OK:
-		push_warning(
-			"SaveManager: failed to parse save slot '%s' for metadata — %s"
-			% [path, json.get_error_message()]
-		)
-		return {}
-	if json.data is not Dictionary:
-		push_warning(
-			"SaveManager: save slot '%s' did not contain a dictionary for metadata"
-			% path
-		)
-		return {}
-	var save_data: Dictionary = json.data as Dictionary
+	var save_data: Dictionary = read_result.get("data", {}) as Dictionary
 	var save_metadata: Variant = save_data.get("save_metadata", {})
 	if save_metadata is Dictionary:
 		return _build_slot_index_metadata(save_data)

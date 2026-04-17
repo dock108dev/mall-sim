@@ -349,7 +349,7 @@ func _on_food_court_sfx_timeout() -> void:
 	if not _food_court_active or _food_court_sfx_streams.is_empty():
 		return
 	var stream: AudioStream = _food_court_sfx_streams.pick_random()
-	AudioManager.play_sfx_stream(stream, FOOD_COURT_VOLUME_DB)
+	AudioManager.play_sfx(stream, FOOD_COURT_VOLUME_DB)
 	_schedule_next_food_court_sfx()
 
 

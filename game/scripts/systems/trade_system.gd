@@ -213,7 +213,7 @@ func _process_trade() -> void:
 	_offered_item.acquired_day = GameManager.current_day
 	_inventory_system.register_item(_offered_item)
 	_trades_today += 1
-	_reputation_system.modify_reputation(
+	_reputation_system.add_reputation(
 		"pocket_creatures", TRADE_REP_BONUS
 	)
 	EventBus.trade_accepted.emit(

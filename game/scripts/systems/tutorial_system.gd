@@ -382,6 +382,11 @@ func _load_progress() -> void:
 	var config := ConfigFile.new()
 	var err: Error = config.load(PROGRESS_PATH)
 	if err != OK:
+		if FileAccess.file_exists(PROGRESS_PATH):
+			push_warning(
+				"TutorialSystem: failed to load '%s' — resetting progress"
+				% PROGRESS_PATH
+			)
 		_apply_state({
 			"tutorial_completed": false,
 			"current_step": TutorialStep.WELCOME,

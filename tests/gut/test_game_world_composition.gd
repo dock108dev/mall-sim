@@ -230,7 +230,7 @@ func test_total_system_count() -> void:
 	var total: Array = [0]
 	for tier: Array in _all_tiers:
 		total[0] += tier.size()
-	assert_ge(
+	assert_gte(
 		total[0],
 		35,
 		"Expected at least 35 required systems across tiers, got %d" % total[0]

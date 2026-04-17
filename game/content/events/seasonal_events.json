@@ -1,11 +1,20 @@
 [
   {
     "id": "grand_opening_week",
+    "display_name": "Grand Opening Week",
     "name": "Grand Opening Week",
-    "description": "The mall celebrates its grand reopening with balloons, banners, and a flood of curious shoppers eager to see what's new.",
-    "frequency_days": 90,
+    "description": "Ribbon cannons, coupon mascots, and the unhinged optimism of the Mallcore relaunch send curious shoppers ricocheting through every storefront.",
+    "start_day": 1,
     "duration_days": 7,
-    "offset_days": 0,
+    "store_type_multipliers": {
+      "sports": 1.3,
+      "retro_games": 1.3,
+      "rentals": 1.3,
+      "pocket_creatures": 1.3,
+      "electronics": 1.3
+    },
+    "frequency_days": 90,
+    "offset_days": -89,
     "customer_traffic_multiplier": 1.3,
     "spending_multiplier": 1.3,
     "customer_type_weights": {
@@ -14,16 +23,21 @@
       "kid_with_allowance": 1.5
     },
     "target_categories": [],
-    "announcement_text": "Grand Opening Week starts tomorrow! The mall is buzzing with anticipation.",
-    "active_text": "Grand Opening Week! Crowds are pouring in to check out the stores."
+    "announcement_text": "Grand Opening Week kicks off tomorrow. The mascot already knocked over the pretzel stand.",
+    "active_text": "Grand Opening Week is live. Every store is riding the ribbon-cutting chaos."
   },
   {
     "id": "sports_season_kickoff",
+    "display_name": "Sports Season Kickoff",
     "name": "Sports Season Kickoff",
-    "description": "The local league kicks off its new season and fans are desperate for jerseys, cards, and memorabilia to show their loyalty.",
+    "description": "The city loses its collective mind for opening whistles, lucky pennants, and any collectible that can be waved dramatically from the food court railing.",
+    "start_day": 20,
+    "duration_days": 16,
+    "store_type_multipliers": {
+      "sports": 1.5
+    },
     "frequency_days": 90,
-    "duration_days": 15,
-    "offset_days": 20,
+    "offset_days": -70,
     "customer_traffic_multiplier": 1.5,
     "spending_multiplier": 1.2,
     "customer_type_weights": {
@@ -31,16 +45,22 @@
       "casual_fan": 2.0
     },
     "target_categories": ["sports_card", "autographed", "jersey", "memorabilia"],
-    "announcement_text": "Sports Season Kickoff tomorrow! Fans will be hunting for memorabilia.",
-    "active_text": "Sports Season Kickoff! The memorabilia crowd is out in full force."
+    "announcement_text": "Sports Season Kickoff starts tomorrow. Foam fingers are already appearing in the parking lot.",
+    "active_text": "Sports Season Kickoff is here. Memorabilia hunters are sprinting between display cases."
   },
   {
     "id": "collectors_convention_weekend",
-    "name": "Collectors Convention Weekend",
-    "description": "The annual MallCon descends upon the food court parking lot, drawing hordes of card traders and retro game hunters.",
+    "display_name": "Collector's Convention Weekend",
+    "name": "Collector's Convention Weekend",
+    "description": "Badge-wearing traders spill out of Concourse Con Annex with rolling binders, whispered wants lists, and exactly zero chill about limited runs.",
+    "start_day": 45,
+    "duration_days": 4,
+    "store_type_multipliers": {
+      "pocket_creatures": 1.8,
+      "retro_games": 1.3
+    },
     "frequency_days": 90,
-    "duration_days": 3,
-    "offset_days": 45,
+    "offset_days": -45,
     "customer_traffic_multiplier": 1.8,
     "spending_multiplier": 1.4,
     "customer_type_weights": {
@@ -50,16 +70,22 @@
       "reseller": 1.5
     },
     "target_categories": ["trading_cards", "graded_cards", "booster_pack", "cartridge", "sealed_product"],
-    "announcement_text": "MallCon starts tomorrow! Collectors are converging on the mall.",
-    "active_text": "MallCon is here! Collectors and traders are everywhere."
+    "announcement_text": "Collector's Convention Weekend starts tomorrow. Binder backpacks have reached critical mass.",
+    "active_text": "Collector's Convention Weekend is underway. Traders and retro hunters are flooding the corridor."
   },
   {
     "id": "back_to_school_rush",
-    "name": "Back to School Rush",
-    "description": "Summer's over and parents are dragging kids through the mall for last-minute school supplies, gadgets, and bribes.",
+    "display_name": "Back-to-School Rush",
+    "name": "Back-to-School Rush",
+    "description": "Parents hunt for morale-saving gadgets while students negotiate for one last fun purchase before the semester devours their free time.",
+    "start_day": 55,
+    "duration_days": 16,
+    "store_type_multipliers": {
+      "electronics": 1.4,
+      "retro_games": 1.2
+    },
     "frequency_days": 90,
-    "duration_days": 15,
-    "offset_days": 55,
+    "offset_days": -35,
     "customer_traffic_multiplier": 1.4,
     "spending_multiplier": 1.2,
     "customer_type_weights": {
@@ -68,16 +94,25 @@
       "casual_fan": 1.3
     },
     "target_categories": ["electronics", "handheld", "accessories", "cartridge"],
-    "announcement_text": "Back to School Rush starts tomorrow! Families incoming.",
-    "active_text": "Back to School Rush! Parents and students are stocking up."
+    "announcement_text": "Back-to-School Rush starts tomorrow. Expect stressed parents and heroic impulse purchases.",
+    "active_text": "Back-to-School Rush is on. Electronics counters and retro shelves are getting mobbed."
   },
   {
     "id": "holiday_shopping_season",
+    "display_name": "Holiday Shopping Season",
     "name": "Holiday Shopping Season",
-    "description": "The big one. Tinsel in the rafters, carols on the speakers, and shoppers with gift lists longer than their patience.",
+    "description": "Gift lists, decorative snowflakes, and the annual mall rumor that a mechanical reindeer grants good luck to anyone who buys three things at once.",
+    "start_day": 75,
+    "duration_days": 16,
+    "store_type_multipliers": {
+      "sports": 1.6,
+      "retro_games": 1.6,
+      "rentals": 1.6,
+      "pocket_creatures": 1.6,
+      "electronics": 1.6
+    },
     "frequency_days": 90,
-    "duration_days": 15,
-    "offset_days": 75,
+    "offset_days": -15,
     "customer_traffic_multiplier": 1.6,
     "spending_multiplier": 1.6,
     "customer_type_weights": {
@@ -87,16 +122,25 @@
       "kid_with_allowance": 1.3
     },
     "target_categories": [],
-    "announcement_text": "Holiday Shopping Season starts tomorrow! Prepare for the rush.",
-    "active_text": "Holiday Shopping Season! The mall is packed wall to wall."
+    "announcement_text": "Holiday Shopping Season starts tomorrow. The gift-wrap kiosk has already formed a line.",
+    "active_text": "Holiday Shopping Season is here. Every register in the mall is earning its keep."
   },
   {
     "id": "post_holiday_slump",
+    "display_name": "Post-Holiday Slump",
     "name": "Post-Holiday Slump",
-    "description": "The decorations are down, the gift cards are spent, and everyone's broke. The mall echoes with emptiness.",
-    "frequency_days": 90,
+    "description": "The tinsel is gone, wallets are hollow, and shoppers now enter stores with the haunted focus of people comparing clearance stickers to couch-cushion coins.",
+    "start_day": 1,
     "duration_days": 10,
-    "offset_days": 80,
+    "store_type_multipliers": {
+      "sports": 0.7,
+      "retro_games": 0.7,
+      "rentals": 0.7,
+      "pocket_creatures": 0.7,
+      "electronics": 0.7
+    },
+    "frequency_days": 90,
+    "offset_days": 1,
     "customer_traffic_multiplier": 0.7,
     "spending_multiplier": 0.7,
     "customer_type_weights": {
@@ -104,41 +148,7 @@
       "reseller": 1.5
     },
     "target_categories": [],
-    "announcement_text": "Post-Holiday Slump expected tomorrow. Brace for low traffic.",
-    "active_text": "Post-Holiday Slump. The mall feels like a ghost town."
-  },
-  {
-    "id": "retro_revival_week",
-    "name": "Retro Revival Week",
-    "description": "A wave of 90s nostalgia sweeps through town. Everyone suddenly wants the stuff they threw away a decade ago.",
-    "frequency_days": 90,
-    "duration_days": 5,
-    "offset_days": 35,
-    "customer_traffic_multiplier": 1.3,
-    "spending_multiplier": 1.3,
-    "customer_type_weights": {
-      "nostalgic_adult": 2.5,
-      "serious_collector": 1.5
-    },
-    "target_categories": ["cartridge", "console", "sealed_product", "vhs"],
-    "announcement_text": "Retro Revival Week starts tomorrow! Nostalgia is in the air.",
-    "active_text": "Retro Revival Week! Everyone wants a piece of the past."
-  },
-  {
-    "id": "summer_clearance",
-    "name": "Summer Clearance",
-    "description": "Mid-year clearance draws deal-seekers but they're only buying if it's cheap. Very cheap.",
-    "frequency_days": 90,
-    "duration_days": 5,
-    "offset_days": 12,
-    "customer_traffic_multiplier": 1.2,
-    "spending_multiplier": 0.8,
-    "customer_type_weights": {
-      "bargain_hunter": 2.5,
-      "reseller": 1.8
-    },
-    "target_categories": [],
-    "announcement_text": "Summer Clearance starts tomorrow! Bargain hunters incoming.",
-    "active_text": "Summer Clearance! Shoppers are hunting for deals on everything."
+    "announcement_text": "Post-Holiday Slump lands tomorrow. Even the escalators sound tired.",
+    "active_text": "Post-Holiday Slump has settled in. The mall is running on gift-card fumes."
   }
 ]

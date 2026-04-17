@@ -52,7 +52,7 @@ func test_net_positive_green() -> void:
 	var report := _make_report(200.0, 50.0, 150.0)
 	EventBus.performance_report_ready.emit(report)
 	EventBus.day_ended.emit(1)
-	assert_eq(_panel._net_label.text, "Net: +$150.00")
+	assert_eq(_panel._net_label.text, "NET PROFIT: +$150.00")
 	var color: Color = _panel._net_label.get_theme_color("font_color")
 	assert_eq(color, DaySummaryPanel.NET_POSITIVE_COLOR)
 
@@ -61,18 +61,18 @@ func test_net_negative_red() -> void:
 	var report := _make_report(50.0, 100.0, -50.0)
 	EventBus.performance_report_ready.emit(report)
 	EventBus.day_ended.emit(1)
-	assert_eq(_panel._net_label.text, "Net: -$50.00")
+	assert_eq(_panel._net_label.text, "NET LOSS: -$50.00")
 	var color: Color = _panel._net_label.get_theme_color("font_color")
-	assert_eq(color, Color(0.9, 0.2, 0.2))
+	assert_eq(color, DaySummaryPanel.NET_NEGATIVE_COLOR)
 
 
-func test_net_zero_red() -> void:
+func test_net_zero_white() -> void:
 	var report := _make_report(100.0, 100.0, 0.0)
 	EventBus.performance_report_ready.emit(report)
 	EventBus.day_ended.emit(1)
-	assert_eq(_panel._net_label.text, "Net: $0.00")
+	assert_eq(_panel._net_label.text, "NET PROFIT: $0.00")
 	var color: Color = _panel._net_label.get_theme_color("font_color")
-	assert_eq(color, Color(0.9, 0.2, 0.2))
+	assert_eq(color, DaySummaryPanel.NET_ZERO_COLOR)
 
 
 func test_milestone_hidden_when_empty() -> void:
@@ -208,7 +208,7 @@ func test_show_summary_dictionary_populates_sales_fields() -> void:
 	})
 	assert_eq(_panel._title_label.text, "Day 4 Complete")
 	assert_eq(_panel._revenue_label.text, "Revenue: $250.00")
-	assert_eq(_panel._net_label.text, "Net: +$175.00")
+	assert_eq(_panel._net_label.text, "NET PROFIT: +$175.00")
 	assert_eq(_panel._report_detail_labels[0].text, "Items Sold: 9")
 	assert_eq(
 		_panel._report_detail_labels[5].text,
@@ -218,6 +218,16 @@ func test_show_summary_dictionary_populates_sales_fields() -> void:
 		_panel._report_detail_labels[6].text,
 		"Haggling: 2 won / 1 lost"
 	)
+
+
+func test_show_summary_uses_net_profit_without_recomputing() -> void:
+	_panel.show_summary({
+		"day": 4,
+		"revenue": 250.0,
+		"expenses": 75.0,
+		"net_profit": -10.0,
+	})
+	assert_eq(_panel._net_label.text, "NET LOSS: -$10.00")
 
 
 func test_review_inventory_closes_and_emits_request() -> void:

@@ -390,7 +390,7 @@ static func parse_market_event(
 static func parse_seasonal_event(
 	data: Dictionary
 ) -> SeasonalEventDefinition:
-	if not data.has("id") or not data.has("name"):
+	if not data.has("id"):
 		push_error(
 			"ContentParser: seasonal event missing required fields: %s"
 			% [data]
@@ -398,8 +398,22 @@ static func parse_seasonal_event(
 		return null
 	var e := SeasonalEventDefinition.new()
 	e.id = str(data["id"])
-	e.name = str(data["name"])
+	e.display_name = str(
+		data.get("display_name", data.get("name", ""))
+	)
+	e.name = e.display_name
 	e.description = str(data.get("description", ""))
+	e.start_day = int(
+		data.get("start_day", data.get("offset_days", 1))
+	)
+	if data.has("store_type_multipliers"):
+		var raw_store_multipliers: Variant = (
+			data["store_type_multipliers"]
+		)
+		if raw_store_multipliers is Dictionary:
+			e.store_type_multipliers = (
+				raw_store_multipliers as Dictionary
+			)
 	e.frequency_days = int(data.get("frequency_days", 30))
 	e.duration_days = int(data.get("duration_days", 5))
 	e.offset_days = int(data.get("offset_days", 0))
@@ -425,7 +439,7 @@ static func parse_seasonal_event(
 static func parse_random_event(
 	data: Dictionary
 ) -> RandomEventDefinition:
-	if not data.has("id") or not data.has("name"):
+	if not data.has("id"):
 		push_error(
 			"ContentParser: random event missing required fields: %s"
 			% [data]
@@ -433,13 +447,21 @@ static func parse_random_event(
 		return null
 	var e := RandomEventDefinition.new()
 	e.id = str(data["id"])
-	e.name = str(data["name"])
+	e.display_name = str(
+		data.get("display_name", data.get("name", ""))
+	)
+	e.name = e.display_name
 	e.description = str(data.get("description", ""))
+	e.trigger_probability = float(
+		data.get("trigger_probability", data.get("probability_weight", 1.0))
+	)
 	e.effect_type = str(data.get("effect_type", ""))
+	e.effect_target = str(data.get("effect_target", ""))
+	e.effect_magnitude = float(data.get("effect_magnitude", 1.0))
 	e.duration_days = int(data.get("duration_days", 1))
 	e.severity = str(data.get("severity", "medium"))
 	e.cooldown_days = int(data.get("cooldown_days", 10))
-	e.probability_weight = float(data.get("probability_weight", 1.0))
+	e.probability_weight = e.trigger_probability
 	e.target_category = str(data.get("target_category", ""))
 	e.target_item_id = str(data.get("target_item_id", ""))
 	e.notification_text = str(data.get("notification_text", ""))

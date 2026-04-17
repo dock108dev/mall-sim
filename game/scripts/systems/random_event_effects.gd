@@ -93,7 +93,7 @@ func apply_health_inspection(
 			"Inspection passed! Your store looks great. (+5 rep)"
 		)
 		if _reputation_system:
-			_reputation_system.modify_reputation(
+			_reputation_system.add_reputation(
 				store_id, HEALTH_INSPECTION_PASS_REP
 			)
 	else:
@@ -101,7 +101,7 @@ func apply_health_inspection(
 			"Inspection failed! Shelves are understocked. (-10 rep)"
 		)
 		if _reputation_system:
-			_reputation_system.modify_reputation(
+			_reputation_system.add_reputation(
 				store_id, HEALTH_INSPECTION_FAIL_REP
 			)
 	return passes
@@ -138,7 +138,7 @@ func apply_shoplifting(
 	EventBus.item_lost.emit(stolen.instance_id, "shoplifting")
 	_inventory_system.remove_item(stolen.instance_id)
 	if _reputation_system:
-		_reputation_system.modify_reputation(
+		_reputation_system.add_reputation(
 			String(store_id), SHOPLIFTING_REPUTATION_PENALTY
 		)
 	return item_name

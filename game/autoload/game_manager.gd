@@ -262,11 +262,6 @@ func quit_game() -> void:
 	get_tree().quit()
 
 
-## Legacy no-op kept for compatibility. TimeSystem is the day source of truth.
-func notify_day_loaded(_day: int) -> void:
-	return
-
-
 func _on_content_load_failed(errors: Array[String]) -> void:
 	_content_load_errors = errors.duplicate()
 

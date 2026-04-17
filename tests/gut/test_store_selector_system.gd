@@ -1,11 +1,19 @@
 ## Tests for StoreSelectorSystem scene transition orchestration.
 extends GutTest
 
+
+class TestStoreSelectorSystem extends StoreSelectorSystem:
+	var error_messages: Array[String] = []
+
+	func _push_system_error(message: String) -> void:
+		error_messages.append(message)
+
+
 const _PlayerControllerScene: PackedScene = preload(
 	"res://game/scenes/player/player_controller.tscn"
 )
 
-var _system: StoreSelectorSystem
+var _system: TestStoreSelectorSystem
 var _store_state_manager: StoreStateManager
 var _hallway_node: Node3D
 var _store_container: Node3D
@@ -16,6 +24,7 @@ var _exited_stores: Array[StringName] = []
 var _active_store_changed_ids: Array[StringName] = []
 var _storefront_entered_calls: Array[Dictionary] = []
 var _storefront_exited_count: int = 0
+var _zone_player: AudioStreamPlayer
 
 const TEST_STORE_ID: StringName = &"retro_games"
 const TEST_SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
@@ -54,7 +63,11 @@ func before_each() -> void:
 	_ui_layer.name = "UILayer"
 	add_child_autofree(_ui_layer)
 
-	_system = StoreSelectorSystem.new()
+	_zone_player = AudioStreamPlayer.new()
+	add_child_autofree(_zone_player)
+	AudioManager.register_zone(String(TEST_STORE_ID), _zone_player)
+
+	_system = TestStoreSelectorSystem.new()
 	_system.name = "StoreSelectorSystem"
 	add_child_autofree(_system)
 
@@ -89,6 +102,7 @@ func after_each() -> void:
 		_on_storefront_exited
 	):
 		EventBus.storefront_exited.disconnect(_on_storefront_exited)
+	AudioManager.unregister_zone(String(TEST_STORE_ID))
 	ContentRegistry.clear_for_testing()
 
 
@@ -253,4 +267,3 @@ func _on_storefront_entered(
 
 func _on_storefront_exited() -> void:
 	_storefront_exited_count += 1
-

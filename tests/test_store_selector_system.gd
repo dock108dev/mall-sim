@@ -1,16 +1,22 @@
-## GUT unit tests for StoreSelectorSystem.select_store — ownership guard and
-## EventBus signal contracts.
+## GUT unit tests for StoreSelectorSystem signal contracts and scene path lookup.
 extends GutTest
 
 
-const STORE_A: StringName = &"sports"
-const STORE_SLOT_A: int = 0
+class TestStoreSelectorSystem extends StoreSelectorSystem:
+	var error_messages: Array[String] = []
+
+	func _push_system_error(message: String) -> void:
+		error_messages.append(message)
 
 
-var _system: StoreSelectorSystem
-var _state_manager: StoreStateManager
-var _store_changed: Array[StringName] = []
+const _STORE_ID: StringName = &"sports"
+const _UNKNOWN_STORE_ID: StringName = &"unknown_store"
+const _STORE_SCENE_PATH: String = "res://game/scenes/stores/sports_memorabilia.tscn"
+
+var _system: TestStoreSelectorSystem
 var _saved_current_store_id: StringName = &""
+var _valid_zone_player: AudioStreamPlayer
+var _unknown_zone_player: AudioStreamPlayer
 
 
 func before_each() -> void:
@@ -19,80 +25,136 @@ func before_each() -> void:
 	ContentRegistry.clear_for_testing()
 	ContentRegistry.register_entry(
 		{
-			"id": "sports",
+			"id": String(_STORE_ID),
 			"name": "Sports",
+			"scene_path": _STORE_SCENE_PATH,
 		},
 		"store"
 	)
-	_state_manager = StoreStateManager.new()
-	add_child_autofree(_state_manager)
-	_system = StoreSelectorSystem.new()
-	_system._store_state_manager = _state_manager
+
+	_valid_zone_player = AudioStreamPlayer.new()
+	add_child_autofree(_valid_zone_player)
+	AudioManager.register_zone(String(_STORE_ID), _valid_zone_player)
+
+	_unknown_zone_player = AudioStreamPlayer.new()
+	add_child_autofree(_unknown_zone_player)
+	AudioManager.register_zone(String(_UNKNOWN_STORE_ID), _unknown_zone_player)
+
+	_system = TestStoreSelectorSystem.new()
 	add_child_autofree(_system)
-	_store_changed.clear()
-	EventBus.active_store_changed.connect(_on_active_store_changed)
+	_disconnect_autoload_listeners()
+	watch_signals(EventBus)
 
 
 func after_each() -> void:
-	if EventBus.active_store_changed.is_connected(_on_active_store_changed):
-		EventBus.active_store_changed.disconnect(_on_active_store_changed)
+	_restore_autoload_listeners()
+	AudioManager.unregister_zone(String(_STORE_ID))
+	AudioManager.unregister_zone(String(_UNKNOWN_STORE_ID))
 	GameManager.current_store_id = _saved_current_store_id
 	ContentRegistry.clear_for_testing()
 
 
-## Owned store: active_store_changed fires with the correct store StringName.
-func test_select_owned_store_emits_signal() -> void:
-	_state_manager.owned_slots[STORE_SLOT_A] = STORE_A
-	_system.select_store(STORE_A)
-	assert_eq(
-		_store_changed.size(), 1,
-		"active_store_changed should fire once for an owned store"
-	)
-	assert_eq(
-		_store_changed[0], STORE_A,
-		"active_store_changed should carry the correct store_id"
+func test_store_entered_emits_active_store_changed_for_valid_store() -> void:
+	EventBus.store_entered.emit(_STORE_ID)
+
+	assert_signal_emitted(EventBus, "active_store_changed")
+	assert_signal_emitted_with_parameters(
+		EventBus, "active_store_changed", [_STORE_ID]
 	)
 
 
-## Unowned store: signal does not fire; push_error is recorded.
-func test_select_unowned_store_rejected() -> void:
-	_system.select_store(STORE_A)
+func test_unknown_store_entry_records_error_without_active_store_change() -> void:
+	EventBus.store_entered.emit(_UNKNOWN_STORE_ID)
+
 	assert_eq(
-		_store_changed.size(), 0,
-		"active_store_changed should not fire when store is not owned"
+		_system.error_messages.size(), 1,
+		"Unknown store entry should record a single error"
+	)
+	assert_true(
+		_system.error_messages[0].contains(String(_UNKNOWN_STORE_ID)),
+		"Error message should include the unknown store id"
+	)
+	assert_signal_not_emitted(
+		EventBus,
+		"active_store_changed",
+		"Unknown store entry must not emit active_store_changed"
+	)
+	assert_eq(
+		_system.get_active_store_id(), &"",
+		"Unknown store entry should leave the active store empty"
 	)
 
 
-## After a valid selection, StoreStateManager.active_store_id equals the
-## selected id.
-func test_active_store_id_updates_after_selection() -> void:
-	_state_manager.owned_slots[STORE_SLOT_A] = STORE_A
-	_system.select_store(STORE_A)
+func test_get_active_store_id_returns_store_after_store_entered() -> void:
+	EventBus.store_entered.emit(_STORE_ID)
+
 	assert_eq(
-		_state_manager.active_store_id, STORE_A,
-		"StoreStateManager.active_store_id should equal the selected store id"
+		_system.get_active_store_id(), _STORE_ID,
+		"get_active_store_id should return the current store id"
 	)
 
 
-## Selecting the same owned store twice fires active_store_changed only once.
-func test_selecting_same_store_is_no_op() -> void:
-	_state_manager.owned_slots[STORE_SLOT_A] = STORE_A
-	_system.select_store(STORE_A)
-	_system.select_store(STORE_A)
+func test_store_exited_clears_active_store_identity() -> void:
+	EventBus.store_entered.emit(_STORE_ID)
+	EventBus.store_exited.emit(_STORE_ID)
+
 	assert_eq(
-		_store_changed.size(), 1,
-		"active_store_changed should fire exactly once for duplicate selection"
+		_system.get_active_store_id(), &"",
+		"store_exited should clear the active store id"
 	)
 
 
-## An unrecognised id is rejected: push_error fires and no signal is emitted.
-func test_select_invalid_id_is_rejected() -> void:
-	_system.select_store(&"not_a_real_store")
+func test_get_store_scene_path_matches_content_registry() -> void:
 	assert_eq(
-		_store_changed.size(), 0,
-		"active_store_changed should not fire for an unrecognised store id"
+		_system.get_store_scene_path(_STORE_ID),
+		ContentRegistry.get_scene_path(_STORE_ID),
+		"get_store_scene_path should match ContentRegistry"
 	)
 
 
-func _on_active_store_changed(store_id: StringName) -> void:
-	_store_changed.append(store_id)
+func _disconnect_autoload_listeners() -> void:
+	_disconnect_listener(
+		EventBus.store_entered,
+		Callable(EnvironmentManager, "_on_store_entered")
+	)
+	_disconnect_listener(
+		EventBus.store_exited,
+		Callable(EnvironmentManager, "_on_store_exited")
+	)
+	_disconnect_listener(
+		EventBus.store_entered,
+		Callable(CameraManager, "_on_store_entered")
+	)
+	_disconnect_listener(
+		EventBus.store_exited,
+		Callable(CameraManager, "_on_store_exited")
+	)
+
+
+func _restore_autoload_listeners() -> void:
+	_connect_listener(
+		EventBus.store_entered,
+		Callable(EnvironmentManager, "_on_store_entered")
+	)
+	_connect_listener(
+		EventBus.store_exited,
+		Callable(EnvironmentManager, "_on_store_exited")
+	)
+	_connect_listener(
+		EventBus.store_entered,
+		Callable(CameraManager, "_on_store_entered")
+	)
+	_connect_listener(
+		EventBus.store_exited,
+		Callable(CameraManager, "_on_store_exited")
+	)
+
+
+func _disconnect_listener(signal_ref: Signal, callable: Callable) -> void:
+	if signal_ref.is_connected(callable):
+		signal_ref.disconnect(callable)
+
+
+func _connect_listener(signal_ref: Signal, callable: Callable) -> void:
+	if not signal_ref.is_connected(callable):
+		signal_ref.connect(callable)

@@ -356,7 +356,9 @@ func get_save_data() -> Dictionary:
 		var entries: Array[Dictionary] = []
 		for entry: Variant in _hired_staff[store_id]:
 			if entry is Dictionary:
-				entries.append((entry as Dictionary).duplicate())
+				entries.append(
+					_canonicalize_staff_entry(entry as Dictionary)
+				)
 		staff_data[store_id] = entries
 	var policies: Dictionary = {}
 	for store_id: String in _price_policies:
@@ -389,22 +391,9 @@ func _apply_state(data: Dictionary) -> void:
 			if raw is Array:
 				for entry: Variant in raw:
 					if entry is Dictionary:
-						var e: Dictionary = entry as Dictionary
-						# Reconstruct with canonical key order and restore int types.
-						entries.append({
-							"instance_id": str(e.get("instance_id", "")),
-							"definition_id": str(e.get("definition_id", "")),
-							"store_id": str(e.get("store_id", "")),
-							"hired_day": int(e.get("hired_day", 0)),
-							"morale": clampf(
-								float(e.get(
-									"morale",
-									StaffDefinition.DEFAULT_MORALE
-								)),
-								StaffDefinition.MIN_MORALE,
-								StaffDefinition.MAX_MORALE
-							),
-						})
+						entries.append(
+							_canonicalize_staff_entry(entry as Dictionary)
+						)
 			_hired_staff[store_id] = entries
 	var saved_policies: Variant = data.get("price_policies", {})
 	if saved_policies is Dictionary:
@@ -445,6 +434,20 @@ func _create_staff_record(
 		"store_id": store_id,
 		"hired_day": GameManager.current_day,
 		"morale": StaffDefinition.DEFAULT_MORALE,
+	}
+
+
+func _canonicalize_staff_entry(entry: Dictionary) -> Dictionary:
+	return {
+		"instance_id": str(entry.get("instance_id", "")),
+		"definition_id": str(entry.get("definition_id", "")),
+		"store_id": str(entry.get("store_id", "")),
+		"hired_day": int(entry.get("hired_day", 0)),
+		"morale": clampf(
+			float(entry.get("morale", StaffDefinition.DEFAULT_MORALE)),
+			StaffDefinition.MIN_MORALE,
+			StaffDefinition.MAX_MORALE
+		),
 	}
 
 

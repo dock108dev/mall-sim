@@ -50,15 +50,6 @@ func test_game_manager_current_day_is_read_only_proxy() -> void:
 	)
 
 
-func test_notify_day_loaded_does_not_override_time_system() -> void:
-	_time_system.current_day = 15
-	GameManager.notify_day_loaded(2)
-	assert_eq(
-		GameManager.current_day, 15,
-		"notify_day_loaded should not diverge from TimeSystem-owned day"
-	)
-
-
 func test_start_new_game_keeps_time_system_as_day_owner() -> void:
 	_time_system.current_day = 99
 	GameManager.start_new_game()

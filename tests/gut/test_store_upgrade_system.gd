@@ -108,7 +108,7 @@ func test_store_specific_upgrade_restriction() -> void:
 
 
 func test_store_specific_upgrade_cannot_be_purchased_for_other_store() -> void:
-	_reputation.modify_reputation("retro_games", 50.0)
+	_reputation.add_reputation("retro_games", 50.0)
 	var result: bool = _system.purchase_upgrade(
 		"retro_games", "sports_trophy_wall"
 	)
@@ -167,7 +167,7 @@ func test_universal_upgrades_appear_for_all_stores() -> void:
 
 
 func test_purchase_deducts_cash() -> void:
-	_reputation.modify_reputation(TEST_STORE, 20.0)
+	_reputation.add_reputation(TEST_STORE, 20.0)
 	var before: float = _economy.get_cash()
 	var result: bool = _system.purchase_upgrade(
 		TEST_STORE, "better_shelving"
@@ -181,7 +181,7 @@ func test_purchase_deducts_cash() -> void:
 
 func test_purchase_emits_effect_application_signal() -> void:
 	watch_signals(EventBus)
-	_reputation.modify_reputation(TEST_STORE, 20.0)
+	_reputation.add_reputation(TEST_STORE, 20.0)
 	var result: bool = _system.purchase_upgrade(
 		TEST_STORE, "better_shelving"
 	)
@@ -202,7 +202,7 @@ func test_purchase_emits_effect_application_signal() -> void:
 
 
 func test_purchase_marks_installed() -> void:
-	_reputation.modify_reputation(TEST_STORE, 20.0)
+	_reputation.add_reputation(TEST_STORE, 20.0)
 	_system.purchase_upgrade(TEST_STORE, "better_shelving")
 	assert_true(
 		_system.is_purchased(TEST_STORE, "better_shelving"),
@@ -211,7 +211,7 @@ func test_purchase_marks_installed() -> void:
 
 
 func test_cannot_repurchase() -> void:
-	_reputation.modify_reputation(TEST_STORE, 20.0)
+	_reputation.add_reputation(TEST_STORE, 20.0)
 	_system.purchase_upgrade(TEST_STORE, "better_shelving")
 	var result: bool = _system.purchase_upgrade(
 		TEST_STORE, "better_shelving"
@@ -221,7 +221,7 @@ func test_cannot_repurchase() -> void:
 
 func test_insufficient_cash_blocks_purchase() -> void:
 	_economy.initialize(100.0)
-	_reputation.modify_reputation(TEST_STORE, 20.0)
+	_reputation.add_reputation(TEST_STORE, 20.0)
 	var result: bool = _system.purchase_upgrade(
 		TEST_STORE, "better_shelving"
 	)
@@ -232,7 +232,7 @@ func test_insufficient_cash_blocks_purchase() -> void:
 
 
 func test_insufficient_rep_blocks_purchase() -> void:
-	_reputation.modify_reputation(TEST_STORE, -50.0)
+	_reputation.add_reputation(TEST_STORE, -50.0)
 	var result: bool = _system.purchase_upgrade(
 		TEST_STORE, "better_shelving"
 	)
@@ -243,7 +243,7 @@ func test_insufficient_rep_blocks_purchase() -> void:
 
 
 func test_slot_bonus_effect() -> void:
-	_reputation.modify_reputation(TEST_STORE, 20.0)
+	_reputation.add_reputation(TEST_STORE, 20.0)
 	assert_eq(
 		_system.get_slot_bonus(TEST_STORE), 0,
 		"No bonus before purchase"
@@ -256,7 +256,7 @@ func test_slot_bonus_effect() -> void:
 
 
 func test_price_multiplier_effect() -> void:
-	_reputation.modify_reputation(TEST_STORE, 30.0)
+	_reputation.add_reputation(TEST_STORE, 30.0)
 	assert_eq(
 		_system.get_price_multiplier(TEST_STORE), 1.0,
 		"Default price multiplier is 1.0"
@@ -269,7 +269,7 @@ func test_price_multiplier_effect() -> void:
 
 
 func test_traffic_multiplier_effect() -> void:
-	_reputation.modify_reputation(TEST_STORE, 25.0)
+	_reputation.add_reputation(TEST_STORE, 25.0)
 	_system.purchase_upgrade(TEST_STORE, "premium_signage")
 	assert_almost_eq(
 		_system.get_traffic_multiplier(TEST_STORE), 1.15,
@@ -278,7 +278,7 @@ func test_traffic_multiplier_effect() -> void:
 
 
 func test_capacity_bonus_effect() -> void:
-	_reputation.modify_reputation(TEST_STORE, 30.0)
+	_reputation.add_reputation(TEST_STORE, 30.0)
 	_system.purchase_upgrade(TEST_STORE, "backroom_expansion")
 	assert_eq(
 		_system.get_capacity_bonus(TEST_STORE), 20,
@@ -287,7 +287,7 @@ func test_capacity_bonus_effect() -> void:
 
 
 func test_decay_reduction_effect() -> void:
-	_reputation.modify_reputation(TEST_STORE, 35.0)
+	_reputation.add_reputation(TEST_STORE, 35.0)
 	_system.purchase_upgrade(TEST_STORE, "climate_control")
 	assert_almost_eq(
 		_system.get_decay_multiplier(TEST_STORE), 0.5,
@@ -296,7 +296,7 @@ func test_decay_reduction_effect() -> void:
 
 
 func test_floor_size_increase_effect() -> void:
-	_reputation.modify_reputation(TEST_STORE, 40.0)
+	_reputation.add_reputation(TEST_STORE, 40.0)
 	_system.purchase_upgrade(TEST_STORE, "store_expansion")
 	assert_eq(
 		_system.get_floor_size_bonus(TEST_STORE), 4,
@@ -305,7 +305,7 @@ func test_floor_size_increase_effect() -> void:
 
 
 func test_save_and_load_persistence() -> void:
-	_reputation.modify_reputation(TEST_STORE, 50.0)
+	_reputation.add_reputation(TEST_STORE, 50.0)
 	_system.purchase_upgrade(TEST_STORE, "better_shelving")
 	_system.purchase_upgrade(TEST_STORE, "display_cases")
 
@@ -331,7 +331,7 @@ func test_save_and_load_persistence() -> void:
 
 
 func test_effect_value_after_load() -> void:
-	_reputation.modify_reputation(TEST_STORE, 50.0)
+	_reputation.add_reputation(TEST_STORE, 50.0)
 	_system.purchase_upgrade(TEST_STORE, "better_shelving")
 
 	var save_data: Dictionary = _system.get_save_data()
@@ -367,7 +367,7 @@ func test_all_upgrade_ids_present() -> void:
 
 
 func test_stacked_multiplier_effects() -> void:
-	_reputation.modify_reputation(TEST_STORE, 30.0)
+	_reputation.add_reputation(TEST_STORE, 30.0)
 	_system.purchase_upgrade(TEST_STORE, "display_cases")
 	_system.purchase_upgrade(TEST_STORE, "sports_trophy_wall")
 	var expected: float = 1.1 * 1.15

@@ -195,11 +195,6 @@ func get_max_customers(
 	return MAX_CUSTOMERS_BY_TIER_SMALL.get(tier, 5) as int
 
 
-## Alias for add_reputation to maintain backward compatibility.
-func modify_reputation(store_id: String, delta: float) -> void:
-	add_reputation(store_id, delta)
-
-
 func initialize_store(store_id: String) -> void:
 	var sid: String = _resolve_store_id(store_id)
 	if sid.is_empty():
@@ -232,13 +227,6 @@ func load_save_data(data: Dictionary) -> void:
 				float(scores_data[key]),
 				MIN_REPUTATION, MAX_REPUTATION
 			)
-	elif data.has("score"):
-		var active: String = String(GameManager.current_store_id)
-		if active.is_empty():
-			active = "default"
-		_scores[active] = clampf(
-			float(data["score"]), MIN_REPUTATION, MAX_REPUTATION
-		)
 	for sid: String in _scores:
 		_tiers[sid] = _score_to_tier(_scores[sid] as float)
 	var tier_locks_data: Variant = data.get("tier_locks", {})
