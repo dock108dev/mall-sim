@@ -9,7 +9,7 @@
 - **Issues implemented**: 123
 - **Issues verified**: 0
 - **Issues failed**: 5
-- **Finalization passes completed**: ssot, security, abend, docs, cleanup
+- **Finalization passes completed**: none
 
 ## Audit Reports
 
