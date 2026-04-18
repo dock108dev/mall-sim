@@ -49,6 +49,7 @@ const UI_SCALE_MIN: float = 0.75
 const UI_SCALE_MAX: float = 1.50
 const UI_SCALE_STEP: float = 0.05
 const MAX_PERSISTED_KEYCODE: int = 33554431
+const MAX_SETTINGS_FILE_BYTES: int = 262144
 
 var master_volume: float = 1.0
 var music_volume: float = 0.8
@@ -140,35 +141,67 @@ func load() -> void:
 
 func load_settings() -> void:
 	var config := ConfigFile.new()
+	if FileAccess.file_exists(settings_path):
+		var settings_file: FileAccess = FileAccess.open(
+			settings_path, FileAccess.READ
+		)
+		if settings_file and settings_file.get_length() > MAX_SETTINGS_FILE_BYTES:
+			settings_file.close()
+			push_warning(
+				(
+					"Settings: '%s' exceeds maximum supported size (%d bytes) — using defaults"
+					% [settings_path, MAX_SETTINGS_FILE_BYTES]
+				)
+			)
+			_restore_defaults_after_failed_load()
+			return
+		if settings_file:
+			settings_file.close()
 	if config.load(settings_path) != OK:
 		if FileAccess.file_exists(settings_path):
 			push_warning(
 				"Settings: failed to parse '%s' — using defaults" % settings_path
 			)
+			_restore_defaults_after_failed_load()
 		return
-	master_volume = config.get_value("audio", "master_volume", 1.0)
-	music_volume = config.get_value("audio", "music_volume", 0.8)
-	sfx_volume = config.get_value("audio", "sfx_volume", 1.0)
-	ambient_volume = config.get_value("audio", "ambient_volume", 0.8)
-	fullscreen = config.get_value("display", "fullscreen", true)
-	vsync = config.get_value("display", "vsync", true)
-	var res_x: int = config.get_value("display", "resolution_x", 1920)
-	var res_y: int = config.get_value("display", "resolution_y", 1080)
+	master_volume = _get_config_float(
+		config, "audio", "master_volume", 1.0, 0.0, 1.0
+	)
+	music_volume = _get_config_float(
+		config, "audio", "music_volume", 0.8, 0.0, 1.0
+	)
+	sfx_volume = _get_config_float(
+		config, "audio", "sfx_volume", 1.0, 0.0, 1.0
+	)
+	ambient_volume = _get_config_float(
+		config, "audio", "ambient_volume", 0.8, 0.0, 1.0
+	)
+	fullscreen = _get_config_bool(config, "display", "fullscreen", true)
+	vsync = _get_config_bool(config, "display", "vsync", true)
+	var res_x: int = _get_config_positive_int(
+		config, "display", "resolution_x", 1920
+	)
+	var res_y: int = _get_config_positive_int(
+		config, "display", "resolution_y", 1080
+	)
 	resolution = Vector2i(res_x, res_y)
-	ui_scale = clampf(
-		config.get_value("display", "ui_scale", 1.0),
-		UI_SCALE_MIN, UI_SCALE_MAX
+	ui_scale = _get_config_float(
+		config, "display", "ui_scale", 1.0, UI_SCALE_MIN, UI_SCALE_MAX
 	)
-	font_size = clampi(
-		config.get_value("display", "font_size", FontSize.MEDIUM),
-		FontSize.SMALL, FontSize.EXTRA_LARGE
+	font_size = _get_config_int(
+		config, "display", "font_size",
+		FontSize.MEDIUM, FontSize.SMALL, FontSize.EXTRA_LARGE
 	)
-	colorblind_mode = config.get_value(
-		"display", "colorblind_mode", false
+	colorblind_mode = _get_config_bool(
+		config, "display", "colorblind_mode", false
 	)
-	locale = config.get_value("locale", "language", "en")
-	display_mode = config.get_value("preferences", "display_mode", 1)
-	control_scheme = config.get_value("preferences", "control_scheme", 0)
+	locale = _get_config_string(config, "locale", "language", "en")
+	display_mode = _get_config_int(
+		config, "preferences", "display_mode", 1
+	)
+	control_scheme = _get_config_int(
+		config, "preferences", "control_scheme", 0
+	)
 	_load_keybindings(config)
 	apply_settings()
 
@@ -197,6 +230,10 @@ func reset_to_defaults() -> void:
 	control_scheme = 0
 	reset_keybindings_to_defaults()
 	apply_settings()
+
+
+func _restore_defaults_after_failed_load() -> void:
+	reset_to_defaults()
 
 
 func set_master_volume(value: float) -> void:
@@ -348,7 +385,9 @@ func _load_keybindings(config: ConfigFile) -> void:
 	for action: String in REBINDABLE_ACTIONS:
 		if not config.has_section_key("input", action):
 			continue
-		var keycode_val: int = config.get_value("input", action, -1)
+		var keycode_val: int = _get_config_int(
+			config, "input", action, -1
+		)
 		if keycode_val < 0:
 			continue
 		if keycode_val > MAX_PERSISTED_KEYCODE:
@@ -364,6 +403,119 @@ func _load_keybindings(config: ConfigFile) -> void:
 		rebind_action(action, new_event)
 
 
+func _get_config_bool(
+	config: ConfigFile,
+	section: String,
+	key: String,
+	default_value: bool
+) -> bool:
+	if not config.has_section_key(section, key):
+		return default_value
+	var value: Variant = config.get_value(section, key, default_value)
+	if value is bool:
+		return value as bool
+	_warn_invalid_config_type(section, key, "bool", value)
+	return default_value
+
+
+func _get_config_float(
+	config: ConfigFile,
+	section: String,
+	key: String,
+	default_value: float,
+	min_value: float = -INF,
+	max_value: float = INF
+) -> float:
+	if not config.has_section_key(section, key):
+		return default_value
+	var value: Variant = config.get_value(section, key, default_value)
+	var parsed: float = default_value
+	if value is float:
+		parsed = value as float
+	elif value is int:
+		parsed = float(value as int)
+	else:
+		_warn_invalid_config_type(section, key, "float", value)
+		return default_value
+	if is_nan(parsed) or is_inf(parsed):
+		_warn_invalid_config_value(section, key, "finite float", parsed)
+		return default_value
+	return clampf(parsed, min_value, max_value)
+
+
+func _get_config_int(
+	config: ConfigFile,
+	section: String,
+	key: String,
+	default_value: int,
+	min_value: int = -2147483648,
+	max_value: int = 2147483647
+) -> int:
+	if not config.has_section_key(section, key):
+		return default_value
+	var value: Variant = config.get_value(section, key, default_value)
+	if value is not int:
+		_warn_invalid_config_type(section, key, "int", value)
+		return default_value
+	return clampi(value as int, min_value, max_value)
+
+
+func _get_config_positive_int(
+	config: ConfigFile,
+	section: String,
+	key: String,
+	default_value: int
+) -> int:
+	var value: int = _get_config_int(config, section, key, default_value)
+	if value <= 0:
+		_warn_invalid_config_value(section, key, "positive int", value)
+		return default_value
+	return value
+
+
+func _get_config_string(
+	config: ConfigFile,
+	section: String,
+	key: String,
+	default_value: String
+) -> String:
+	if not config.has_section_key(section, key):
+		return default_value
+	var value: Variant = config.get_value(section, key, default_value)
+	if value is String:
+		return value as String
+	_warn_invalid_config_type(section, key, "String", value)
+	return default_value
+
+
+func _warn_invalid_config_type(
+	section: String,
+	key: String,
+	expected_type: String,
+	value: Variant
+) -> void:
+	_warn_invalid_config_value(
+		section,
+		key,
+		expected_type,
+		"%s (%s)" % [type_string(typeof(value)), value]
+	)
+
+
+func _warn_invalid_config_value(
+	section: String,
+	key: String,
+	expected: String,
+	value: Variant
+) -> void:
+	push_warning(
+		(
+			"Settings: invalid value for [%s] %s in '%s' — expected %s, got %s; using default"
+			% [section, key, settings_path, expected, value]
+		)
+	)
+
+
 func _apply_ui_scale() -> void:
 	var window: Window = get_window()
 	if window == null:
@@ -375,6 +527,12 @@ func _apply_font_size() -> void:
 	var theme: Theme = ThemeDB.get_project_theme()
 	if theme == null:
 		return
+	if font_size < FontSize.SMALL or font_size > FontSize.EXTRA_LARGE:
+		push_warning(
+			"Settings: font_size %d out of range, falling back to default"
+			% font_size
+		)
+		font_size = FontSize.MEDIUM
 	var px: int = FONT_SIZE_VALUES[font_size]
 	# Scale proportionally from Medium (14px) baseline
 	var ratio: float = float(px) / 14.0

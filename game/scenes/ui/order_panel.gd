@@ -611,7 +611,7 @@ static func _sort_by_price(
 
 
 func _sync_active_store() -> void:
-	store_type = String(GameManager.current_store_id)
+	store_type = String(GameManager.get_active_store_id())
 
 
 func _ensure_valid_selected_tier() -> void:

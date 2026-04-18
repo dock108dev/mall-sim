@@ -22,27 +22,35 @@ error panel instead of opening the main menu.
 
 ## Content Directories
 
-Current content roots include:
+Current content roots include both canonical subdirectories and a few
+compatibility-era root files that are still scanned because the loader walks the
+entire tree:
 
 | Directory | Purpose |
 | --- | --- |
-| `game/content/items/` | Item catalogs for store categories. |
-| `game/content/stores/` | Store definitions and store-specific config files. |
-| `game/content/customers/` | Customer profiles and store-specific customer data. |
+| `game/content/items/` | Canonical per-store item catalogs. |
+| `game/content/stores/` | Store definitions plus store-specific config and compatibility copies for some catalogs. |
+| `game/content/customers/` | Customer profiles, store-specific customer sets, and personalities data. |
 | `game/content/economy/` | Pricing, difficulty, and seasonal economy config. |
-| `game/content/events/` | Market, seasonal, random, ambient, and named season data. |
-| `game/content/endings/` | Ending configuration. |
-| `game/content/meta/` | Secret thread data. |
-| `game/content/milestones/` and `game/content/progression/` | Milestone definitions. |
-| `game/content/onboarding/` | Onboarding hint config. |
+| `game/content/events/` | Market events, seasonal events, random events, ambient moments, and named seasons. |
+| `game/content/endings/` | Ending configuration entries. |
+| `game/content/meta/` | Secret thread definitions. |
+| `game/content/milestones/` and `game/content/progression/` | Milestone definitions, with progression taking precedence over the legacy milestone file. |
+| `game/content/onboarding/` | Onboarding hint configuration. |
 | `game/content/staff/` | Staff definitions. |
 | `game/content/suppliers/` | Supplier catalog. |
 | `game/content/unlocks/` | Unlock definitions. |
+| Root-level compatibility files | `fixtures.json`, `market_trends_catalog.json`, `tutorial_steps.json`, `upgrades.json`, `items_*`, `pocket_creatures_*`, and `sports_seasons.json`. |
 
-There are also legacy root-level content files such as
-`game/content/items_retro_games.json`, `game/content/sports_seasons.json`, and
-`game/content/upgrades.json`. They are still loaded because `DataLoaderSingleton`
-scans the whole content tree.
+When both canonical and legacy copies exist, `DataLoaderSingleton` skips some
+legacy files explicitly:
+
+1. `game/content/milestones/milestone_definitions.json` when
+   `game/content/progression/milestone_definitions.json` exists.
+2. `game/content/items_pocket_creatures.json` when
+   `game/content/stores/pocket_creatures_cards.json` exists.
+3. Root `game/content/sports_seasons.json` when
+   `game/content/stores/sports_seasons.json` exists.
 
 ## Type Detection
 
@@ -53,9 +61,10 @@ scans the whole content tree.
 3. Known directories such as `items`, `stores`, `customers`, `fixtures`,
    `milestones`, `progression`, `staff`, `upgrades`, `economy`, `suppliers`,
    `unlocks`, and `endings`.
-4. Known file basenames such as `pocket_creatures_cards`,
-   `pocket_creatures_tournaments`, `sports_seasons`, `seasonal_config`, and
-   `secret_threads`.
+4. Known file basenames such as `retro_games`, `electronics`,
+   `video_rental_config`, `pocket_creatures_cards`,
+   `pocket_creatures_tournaments`, `sports_seasons`, `seasonal_config`,
+   `secret_threads`, and `personalities`.
 
 For dictionary files, entries are extracted from `entries`, `items`, or
 `definitions` arrays when those keys exist. Otherwise the loader uses the first
@@ -95,11 +104,21 @@ Important resource classes in `game/resources/`:
 | `SupplierDefinition` | Tier, store type, lead time, reliability, unlock condition, catalog. |
 | `UnlockDefinition` | Effect type, target, value, and unlock message. |
 | `UpgradeDefinition` | Store type, cost, reputation requirement, effect type/value, one-time flag. |
+| `SportsSeasonDefinition` | League/season hotness scheduling for sports content. |
+| `TournamentEventDefinition` | Tournament reward, timing, and participation data. |
+| `AmbientMomentDefinition` | Flavor moment trigger and presentation data. |
 | `PerformanceReport` | Daily revenue, expenses, profit, sales, customers, walkouts, satisfaction, reputation delta, special income/costs. |
 
 Field names above come from current resource scripts. When adding JSON, confirm
 the parser maps the authored keys into the target resource before documenting a
 new contract.
+
+Not every loaded content file becomes a typed `Resource`:
+
+- endings are registered as entry dictionaries in `ContentRegistry`
+- secret threads remain dictionary entries plus a `DataLoaderSingleton` array
+- difficulty config, seasonal config, named seasons, and several store-specific
+  configs remain dictionary or array data exposed through `DataLoaderSingleton`
 
 ## Content Validation
 
@@ -122,6 +141,7 @@ var store_id: StringName = ContentRegistry.resolve("Sports")
 var store_def: StoreDefinition = ContentRegistry.get_store_definition(store_id)
 ```
 
-Use `DataLoaderSingleton` helpers when a system needs catalog collections, such
-as all fixtures, all suppliers for a store, all market events, all tournament
-events, or all ambient moments.
+Use `DataLoaderSingleton` helpers when a system needs catalog collections or
+plain config data, such as all fixtures, all suppliers for a store, all market
+events, all tournament events, all ambient moments, difficulty config, store
+configs, or named seasons.

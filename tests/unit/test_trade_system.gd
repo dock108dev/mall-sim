@@ -76,22 +76,17 @@ func test_generate_offer_produces_valid_trade() -> void:
 	customer._desired_item = wanted
 	customer._desired_item_slot = null
 
-	var started: bool = _trade.begin_trade(customer)
-	assert_true(started, "begin_trade should return true with valid offer")
-	if not started:
-		_cleanup_customer(customer)
-		return
-	assert_not_null(
-		_trade._offered_item,
-		"Offered item should be set after begin_trade"
-	)
-	assert_not_null(
-		_trade._wanted_item,
-		"Wanted item should be set after begin_trade"
+	var offer: Dictionary = _trade.generate_trade_offer(customer)
+	assert_false(offer.is_empty(), "generate_trade_offer should return an offer")
+	assert_true(offer.has("offered_card"), "Offer should include offered_card")
+	assert_true(offer.has("requested_card"), "Offer should include requested_card")
+	assert_true(
+		offer.has("cash_adjustment"),
+		"Offer should include cash_adjustment"
 	)
 	assert_ne(
-		_trade._offered_item.definition.id,
-		_trade._wanted_item.definition.id,
+		(offer["offered_card"] as ItemInstance).definition.id,
+		(offer["requested_card"] as ItemInstance).definition.id,
 		"Offered card should differ from wanted card"
 	)
 	_cleanup_customer(customer)
@@ -154,35 +149,57 @@ func test_trade_completed_signal_fires() -> void:
 	_trade._on_trade_accepted()
 
 	assert_signal_emitted(
-		EventBus, "trade_accepted",
-		"trade_accepted should fire on accepted trade"
+		EventBus, "trade_completed",
+		"trade_completed should fire on accepted trade"
 	)
-	var params: Array = get_signal_parameters(EventBus, "trade_accepted")
+	var params: Array = get_signal_parameters(EventBus, "trade_completed")
 	assert_eq(
-		params[0] as String, wanted_id,
-		"First param should be the wanted item instance_id"
+		params[0] as String, offered_id,
+		"First param should be the offered item instance_id"
 	)
 	assert_eq(
-		params[1] as String, offered_id,
-		"Second param should be the offered item instance_id"
+		params[1] as String, wanted_id,
+		"Second param should be the received item instance_id"
 	)
 
 
 func test_trade_rejected_signal_fires() -> void:
 	_setup_active_trade()
-	var customer_id: int = _trade._active_customer.get_instance_id()
+	var offered_id: String = _trade._offered_item.instance_id
 
 	watch_signals(EventBus)
 	_trade._on_trade_declined()
 
 	assert_signal_emitted(
-		EventBus, "trade_declined",
-		"trade_declined should fire on rejected trade"
+		EventBus, "trade_rejected",
+		"trade_rejected should fire on rejected trade"
 	)
-	var params: Array = get_signal_parameters(EventBus, "trade_declined")
+	var params: Array = get_signal_parameters(EventBus, "trade_rejected")
 	assert_eq(
-		params[0] as int, customer_id,
-		"Signal param should be the customer instance id"
+		params[0] as String, offered_id,
+		"Signal param should be the offered item instance_id"
+	)
+
+
+func test_unfair_trade_has_cash_adjustment() -> void:
+	var expensive_def: ItemDefinition = _make_definition(
+		"pc_card_expensive", "Expensive Card", 20.0, "common"
+	)
+	var cheap_def: ItemDefinition = _make_definition(
+		"pc_card_cheap_offer", "Cheap Offer", 10.0, "common"
+	)
+	var requested: ItemInstance = ItemInstance.create(
+		expensive_def, "good", 0, expensive_def.base_price
+	)
+	var offered: ItemInstance = ItemInstance.create(
+		cheap_def, "good", 0, cheap_def.base_price
+	)
+	var customer: Customer = _make_customer()
+
+	var offer: Dictionary = _trade._build_offer(customer, requested, offered)
+	assert_lte(
+		offer["cash_adjustment"] as float, 0.0,
+		"Unfavorable offers should require the player to pay the difference"
 	)
 
 

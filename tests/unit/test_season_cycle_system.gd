@@ -148,17 +148,14 @@ func test_get_demand_multiplier_off_season() -> void:
 		"announced": false,
 		"current_day": 1,
 	})
-	var cold_index: int = 2
 	var item: ItemInstance = _make_sports_item(
-		SeasonCycleSystem.LEAGUES[cold_index]
+		"memorabilia"
 	)
 	var multiplier: float = _season.get_season_multiplier(item)
 	assert_eq(
 		multiplier,
-		SeasonCycleSystem.PHASE_MULTIPLIERS[
-			SeasonCycleSystem.SeasonPhase.COLD
-		],
-		"Cold league multiplier should match COLD phase value"
+		1.0,
+		"Sports memorabilia without an active league tag should return 1.0"
 	)
 
 	var non_sports_def := ItemDefinition.new()

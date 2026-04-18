@@ -104,7 +104,7 @@ func _ready() -> void:
 func _load_store_markup_ranges() -> void:
 	if GameManager.data_loader == null:
 		return
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		return
 	var store_def: StoreDefinition = GameManager.data_loader.get_store(

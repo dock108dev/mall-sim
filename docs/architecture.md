@@ -63,6 +63,20 @@ Current system nodes in `GameWorld`:
 - Store-specific systems: `TournamentSystem`, `MetaShiftSystem`.
 - Persistence: `SaveManager`.
 
+## UI Layer
+
+`GameWorld` builds the gameplay UI in two phases. Essential panels are created
+immediately, then heavier panels are loaded deferred after the first frame.
+
+Panels instantiated directly from `game_world.gd` include:
+
+- HUD, inventory, pricing, checkout, haggle, item tooltip, visual feedback
+- tutorial overlay and ending screen
+- day summary, fixture catalog, milestone popup/banner, milestones panel
+- order panel, trends panel, settings panel, pause menu, save/load panel
+- pack opening panel, staff panel, upgrade panel
+- debug overlay in debug builds only
+
 ## Initialization Tiers
 
 `GameWorld.initialize_systems()` runs systems in ordered tiers:
@@ -84,11 +98,11 @@ slot, create starting inventory, initialize tutorial state, and emit
 
 ## Communication Rules
 
-Systems communicate through `EventBus` signals for cross-system events. Direct
-references are still used where `GameWorld` injects explicit dependencies
-during initialization, such as inventory into economy or store controller
-references into customer systems. Global state changes should be announced by
-signals so UI and other systems can react without polling.
+Systems communicate through `EventBus` signals for cross-system events.
+`GameWorld` still injects explicit dependencies during initialization where a
+system needs a concrete collaborator, such as inventory into economy or store
+controller references into customer systems. Global state changes should still
+be announced by signals so UI and other systems can react without polling.
 
 Important signal domains in `EventBus` include:
 
@@ -120,8 +134,8 @@ store-specific base:
 | `sports_memorabilia.tscn` | Sports memorabilia authentication and sports-season behavior. |
 | `retro_games.tscn` | Retro game testing and refurbishment behavior. |
 | `video_rental.tscn` | Rental lifecycle, tape wear, late fees, and returns. |
-| `pocket_creatures.tscn` | Pack opening, tournaments, and card-store behavior. |
-| `consumer_electronics.tscn` | Demo units, warranties, and product lifecycle/depreciation. |
+| `pocket_creatures.tscn` | Pack inventory tracking, tournaments, and card-store hooks. |
+| `consumer_electronics.tscn` | Demo-unit, warranty, and product-lifecycle hooks. |
 
 ## Save and Load
 
@@ -134,8 +148,10 @@ store-specific base:
 
 Save data includes a `save_version`, `save_metadata`, core system state
 (`time`, `economy`, `inventory`, `reputation`, `owned_slots`), and optional
-state for systems that are present in the current `GameWorld`. The current save
-version is `1`; older save dictionaries are migrated before distribution.
+state for systems that are present in the current `GameWorld`, including orders,
+progression, milestones, trends, market events, staff, tutorial, endings,
+upgrades, completion, unlocks, and onboarding. The current save version is `1`;
+older save dictionaries are migrated before distribution.
 
 ## State Ownership
 

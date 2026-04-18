@@ -234,15 +234,11 @@ func mark_run_complete(ending_id: StringName) -> void:
 	if not bool(read_result.get("ok", false)):
 		return
 	var save_data: Dictionary = read_result.get("data", {}) as Dictionary
-	var metadata: Dictionary = save_data.get("metadata", {}) as Dictionary
 	var save_metadata: Dictionary = (
 		save_data.get("save_metadata", {}) as Dictionary
 	)
-	metadata["run_complete"] = true
-	metadata["ending_id"] = String(ending_id)
 	save_metadata["run_complete"] = true
 	save_metadata["ending_id"] = String(ending_id)
-	save_data["metadata"] = metadata
 	save_data["save_metadata"] = save_metadata
 	var write_error: Error = _write_save_file_atomic(
 		path, JSON.stringify(save_data, "\t")
@@ -371,10 +367,6 @@ func _collect_save_data() -> Dictionary:
 				canonical = StringName(raw_store_id)
 			owned_slots_data[str(idx)] = String(canonical)
 			owned_store_list.append(String(canonical))
-	if owned_store_list.is_empty() and not GameManager.owned_stores.is_empty():
-		for store_id: StringName in GameManager.owned_stores:
-			owned_store_list.append(String(store_id))
-			owned_slots_data[str(owned_store_list.size() - 1)] = String(store_id)
 
 	var save_metadata: Dictionary = {
 		"day": _time_system.current_day,
@@ -385,7 +377,6 @@ func _collect_save_data() -> Dictionary:
 		"saved_at": Time.get_datetime_string_from_system(true),
 		"last_saved_at": Time.get_datetime_string_from_system(true),
 		"timestamp": Time.get_datetime_string_from_system(true),
-		"store_type": String(preview_store_id),
 		"store_name": preview_store_name,
 		"active_store_id": String(active_store_id),
 		"play_time": _time_system.get_play_time_seconds(),
@@ -537,15 +528,15 @@ func _distribute_save_data(data: Dictionary) -> void:
 				prog_data as Dictionary
 			)
 
-	if _store_state_manager:
-		var store_data: Variant = data.get("store_states", {})
-		if store_data is Dictionary:
-			_store_state_manager.load_save_data(
-				store_data as Dictionary
-			)
-		_restore_owned_slots_with_fallback(_extract_owned_slots(data))
-	else:
-		_apply_loaded_owned_stores(_extract_owned_slots(data))
+	if _store_state_manager == null:
+		push_error("SaveManager: StoreStateManager is required before load_game()")
+		return
+	var store_data: Variant = data.get("store_states", {})
+	if store_data is Dictionary:
+		_store_state_manager.load_save_data(
+			store_data as Dictionary
+		)
+	_store_state_manager.restore_owned_slots(_extract_owned_slots(data))
 	_apply_loaded_active_store(data)
 
 	if _milestone_system:
@@ -737,45 +728,25 @@ func _apply_loaded_active_store(data: Dictionary) -> void:
 				% raw_active_store
 			)
 	if canonical.is_empty() and not has_explicit_active_store:
-		if not GameManager.owned_stores.is_empty():
-			canonical = GameManager.owned_stores[0]
-		else:
-			canonical = GameManager.DEFAULT_STARTING_STORE
-	if _store_state_manager:
-		_store_state_manager.set_active_store(canonical)
-	else:
-		GameManager.current_store_id = canonical
+		canonical = _get_primary_owned_store_id()
+	_store_state_manager.set_active_store(canonical)
 
 
 func _get_saved_active_store_id(data: Dictionary) -> String:
 	var save_metadata: Variant = data.get("save_metadata", {})
-	if save_metadata is Dictionary:
-		if (save_metadata as Dictionary).has("active_store_id"):
-			return str(
-				(save_metadata as Dictionary).get("active_store_id", "")
-			)
-		var save_store_type: String = str(
-			(save_metadata as Dictionary).get("store_type", "")
+	if save_metadata is Dictionary and (
+		save_metadata as Dictionary
+	).has("active_store_id"):
+		return str(
+			(save_metadata as Dictionary).get("active_store_id", "")
 		)
-		if not save_store_type.is_empty():
-			return save_store_type
-	var metadata: Variant = data.get("metadata", {})
-	if metadata is Dictionary:
-		if (metadata as Dictionary).has("active_store_id"):
-			return str((metadata as Dictionary).get("active_store_id", ""))
-		return str((metadata as Dictionary).get("store_type", ""))
 	return ""
 
 
 func _has_saved_active_store_id(data: Dictionary) -> bool:
 	var save_metadata: Variant = data.get("save_metadata", {})
-	if save_metadata is Dictionary and (
+	return save_metadata is Dictionary and (
 		save_metadata as Dictionary
-	).has("active_store_id"):
-		return true
-	var metadata: Variant = data.get("metadata", {})
-	return metadata is Dictionary and (
-		metadata as Dictionary
 	).has("active_store_id")
 
 
@@ -791,6 +762,11 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 	data["owned_slots"] = _extract_owned_slots(data)
 	if data.has("owned_stores"):
 		data.erase("owned_stores")
+	if data.has("metadata"):
+		data.erase("metadata")
+	var save_metadata: Variant = data.get("save_metadata", {})
+	if save_metadata is Dictionary:
+		(save_metadata as Dictionary).erase("store_type")
 	data["save_version"] = CURRENT_SAVE_VERSION
 	return data
 
@@ -845,13 +821,9 @@ func _migrate_v0_to_v1(data: Dictionary) -> Dictionary:
 		save_metadata["timestamp"] = str(
 			legacy_metadata_dict.get("timestamp", save_metadata.get("saved_at", ""))
 		)
-	if not save_metadata.has("store_type"):
-		save_metadata["store_type"] = str(
-			legacy_metadata_dict.get("store_type", "")
-		)
 	if not save_metadata.has("active_store_id"):
 		save_metadata["active_store_id"] = str(
-			save_metadata.get("store_type", "")
+			legacy_metadata_dict.get("active_store_id", "")
 		)
 	if not save_metadata.has("play_time"):
 		save_metadata["play_time"] = float(
@@ -867,22 +839,6 @@ func _extract_owned_slots(data: Dictionary) -> Dictionary:
 	var raw_slots: Variant = data.get("owned_slots", null)
 	if raw_slots is Dictionary:
 		return (raw_slots as Dictionary).duplicate(true)
-	if raw_slots is Array:
-		push_warning(
-			"SaveManager: migrating legacy owned_slots array during load"
-		)
-		return _migrate_legacy_owned_store_array(
-			raw_slots as Array, "owned_slots"
-		)
-
-	var legacy_owned_stores: Variant = data.get("owned_stores", null)
-	if legacy_owned_stores is Array:
-		push_warning(
-			"SaveManager: migrating legacy owned_stores array during load"
-		)
-		return _migrate_legacy_owned_store_array(
-			legacy_owned_stores as Array, "owned_stores"
-		)
 
 	if raw_slots != null:
 		push_warning(
@@ -892,51 +848,12 @@ func _extract_owned_slots(data: Dictionary) -> Dictionary:
 	return {}
 
 
-func _migrate_legacy_owned_store_array(
-	store_list: Array,
-	source_field: String
-) -> Dictionary:
-	var store_ids: Array[StringName] = ContentRegistry.get_all_ids("store")
-	var migrated_slots: Dictionary = {}
-	for entry: Variant in store_list:
-		var raw_store_id: String = str(entry)
-		var canonical: StringName = ContentRegistry.resolve(raw_store_id)
-		if canonical.is_empty():
-			canonical = StringName(raw_store_id)
-		var slot_index: int = store_ids.find(canonical)
-		if slot_index < 0:
-			slot_index = migrated_slots.size()
-		migrated_slots[str(slot_index)] = String(canonical)
-	return migrated_slots
-
-
-func _apply_loaded_owned_stores(saved_slots: Dictionary) -> void:
-	GameManager.owned_stores = []
-	for key: Variant in saved_slots:
-		var raw_store_id: String = str(saved_slots[key])
-		var canonical: StringName = ContentRegistry.resolve(raw_store_id)
-		if canonical.is_empty():
-			canonical = StringName(raw_store_id)
-		if canonical not in GameManager.owned_stores:
-			GameManager.owned_stores.append(canonical)
-	if GameManager.owned_stores.is_empty():
-		GameManager.owned_stores = [
-			GameManager.DEFAULT_STARTING_STORE
-		]
-
-
 func _get_active_store_id_for_save() -> StringName:
 	if _store_state_manager:
 		var active_store_id: StringName = _store_state_manager.active_store_id
 		if not active_store_id.is_empty():
 			return active_store_id
-	var raw_store_id: String = String(GameManager.current_store_id)
-	if raw_store_id.is_empty():
-		return &""
-	var canonical: StringName = ContentRegistry.resolve(raw_store_id)
-	if canonical.is_empty():
-		return StringName(raw_store_id)
-	return canonical
+	return &""
 
 
 func _get_preview_store_name(store_id: StringName) -> String:
@@ -956,8 +873,6 @@ func _get_primary_owned_store_id() -> StringName:
 			slot_indices.append(slot_index)
 		slot_indices.sort()
 		return _store_state_manager.owned_slots[slot_indices[0]]
-	if not GameManager.owned_stores.is_empty():
-		return GameManager.owned_stores[0]
 	return GameManager.DEFAULT_STARTING_STORE
 
 
@@ -1162,11 +1077,6 @@ func _build_slot_index_metadata(save_data: Dictionary) -> Dictionary:
 	var save_metadata: Variant = save_data.get("save_metadata", {})
 	if save_metadata is Dictionary:
 		metadata = (save_metadata as Dictionary).duplicate(true)
-	var legacy_metadata: Variant = save_data.get("metadata", {})
-	if legacy_metadata is Dictionary:
-		for key: String in legacy_metadata as Dictionary:
-			if not metadata.has(key):
-				metadata[key] = (legacy_metadata as Dictionary)[key]
 	if not metadata.has("store_count"):
 		var stores: Variant = metadata.get("owned_stores", [])
 		metadata["store_count"] = (
@@ -1186,7 +1096,7 @@ func _build_slot_index_metadata(save_data: Dictionary) -> Dictionary:
 			)
 	if not metadata.has("store_name"):
 		var raw_store_id: String = str(
-			metadata.get("store_type", "")
+			metadata.get("active_store_id", "")
 		)
 		if not raw_store_id.is_empty():
 			if ContentRegistry.exists(raw_store_id):
@@ -1216,31 +1126,4 @@ func _read_slot_metadata_from_save(slot: int) -> Dictionary:
 	var save_metadata: Variant = save_data.get("save_metadata", {})
 	if save_metadata is Dictionary:
 		return _build_slot_index_metadata(save_data)
-	var legacy_metadata: Variant = save_data.get("metadata", {})
-	if legacy_metadata is Dictionary:
-		return _build_slot_index_metadata(save_data)
 	return {}
-
-
-func _restore_owned_slots_with_fallback(saved_slots: Dictionary) -> void:
-	_store_state_manager.restore_owned_slots(saved_slots)
-	if _store_state_manager.owned_slots.size() == saved_slots.size():
-		return
-	var fallback_slots: Dictionary[int, StringName] = {}
-	for key: Variant in saved_slots:
-		fallback_slots[int(key)] = StringName(str(saved_slots[key]))
-	_store_state_manager.owned_slots = fallback_slots
-	var active_store_id: StringName = _store_state_manager.active_store_id
-	GameManager.owned_stores = []
-	var slot_indices: Array[int] = []
-	for slot_index: int in fallback_slots:
-		slot_indices.append(slot_index)
-	slot_indices.sort()
-	for slot_index: int in slot_indices:
-		var store_id: StringName = fallback_slots[slot_index]
-		if store_id not in GameManager.owned_stores:
-			GameManager.owned_stores.append(store_id)
-	if GameManager.owned_stores.is_empty():
-		GameManager.owned_stores = [GameManager.DEFAULT_STARTING_STORE]
-	_store_state_manager.active_store_id = active_store_id
-	EventBus.owned_slots_restored.emit(_store_state_manager.owned_slots)

@@ -193,6 +193,21 @@ func _scan_dir(path: String, files: Array[String]) -> void:
 func _should_skip_file(path: String) -> bool:
 	if path == _LEGACY_MILESTONE_PATH and FileAccess.file_exists(_PROGRESSION_MILESTONE_PATH):
 		return true
+	if (
+		path.ends_with("/items_pocket_creatures.json")
+		and FileAccess.file_exists(
+			"res://game/content/stores/pocket_creatures_cards.json"
+		)
+	):
+		return true
+	if (
+		path.ends_with("/sports_seasons.json")
+		and not path.ends_with("/stores/sports_seasons.json")
+		and FileAccess.file_exists(
+			"res://game/content/stores/sports_seasons.json"
+		)
+	):
+		return true
 	return false
 
 
@@ -643,14 +658,14 @@ func get_all_items() -> Array[ItemDefinition]:
 func get_items_by_store(
 	store_type: String
 ) -> Array[ItemDefinition]:
-	if not ContentRegistry.exists(store_type):
-		return []
-	var canonical: StringName = ContentRegistry.resolve(store_type)
-	if canonical.is_empty():
-		return []
+	var canonical: String = store_type
+	if ContentRegistry.exists(store_type):
+		var resolved: StringName = ContentRegistry.resolve(store_type)
+		if not resolved.is_empty():
+			canonical = String(resolved)
 	var r: Array[ItemDefinition] = []
 	for item: ItemDefinition in _items.values():
-		if item.store_type == String(canonical):
+		if item.store_type == canonical:
 			r.append(item)
 	return r
 

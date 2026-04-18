@@ -154,8 +154,7 @@ func get_active_demo_count() -> int:
 
 ## Returns true if more demo units can be designated.
 func has_demo_slots_available() -> bool:
-	return _demo_item_ids.size() < _max_demo_units \
-		and _demo_item_ids.size() < _demo_station_slots.size()
+	return _demo_item_ids.size() < _max_demo_units
 
 
 ## Returns true if there is an active demo item in the given category.
@@ -382,7 +381,13 @@ func _get_next_available_demo_slot() -> Node:
 
 
 func _load_demo_config() -> void:
-	var entry: Dictionary = ContentRegistry.get_entry(STORE_ID)
+	var entry_id: StringName = STORE_ID
+	if not ContentRegistry.exists(String(entry_id)):
+		var legacy_entry_id: StringName = &"consumer_electronics"
+		if not ContentRegistry.exists(String(legacy_entry_id)):
+			return
+		entry_id = legacy_entry_id
+	var entry: Dictionary = ContentRegistry.get_entry(entry_id)
 	if entry.is_empty():
 		return
 	_max_demo_units = int(

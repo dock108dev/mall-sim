@@ -68,7 +68,7 @@ func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
 	)
 	_bankruptcy_declared = false
 	_last_injection_day = -1
-	_active_store_id = _resolve_store_id(GameManager.current_store_id)
+	_active_store_id = _resolve_store_id(GameManager.get_active_store_id())
 	_apply_state({"player_cash": starting_cash * cash_mult})
 	_connect_runtime_signals()
 
@@ -256,7 +256,7 @@ func _apply_state(data: Dictionary) -> void:
 	_daily_expenses = float(data.get("daily_expenses", 0.0))
 	_trades_today = int(data.get("trades_today", 0))
 	_last_injection_day = int(data.get("last_injection_day", -1))
-	_active_store_id = _resolve_store_id(GameManager.current_store_id)
+	_active_store_id = _resolve_store_id(GameManager.get_active_store_id())
 
 	_daily_transactions = _restore_transactions(
 		data.get("daily_transactions", [])
@@ -349,15 +349,16 @@ func _emit_daily_financials_snapshot() -> void:
 func _deduct_all_store_rents() -> void:
 	_daily_rent_total = 0.0
 	var rent_mult: float = DifficultySystemSingleton.get_modifier(&"daily_rent_multiplier")
-	for store_id: String in GameManager.owned_stores:
+	for store_id: StringName in GameManager.get_owned_store_ids():
+		var store_key: String = String(store_id)
 		var rent: float = _daily_rent
 		if GameManager.data_loader:
-			var store_def: StoreDefinition = GameManager.data_loader.get_store(store_id)
+			var store_def: StoreDefinition = GameManager.data_loader.get_store(store_key)
 			if store_def:
 				rent = store_def.daily_rent
 		rent *= rent_mult
 		_daily_rent_total += rent
-		force_deduct_cash(rent, "Rent: %s" % store_id)
+		force_deduct_cash(rent, "Rent: %s" % store_key)
 
 func _on_hour_changed(hour: int) -> void:
 	_current_time_minutes = hour * Constants.MINUTES_PER_HOUR
@@ -486,7 +487,7 @@ func _get_daily_revenue_total() -> float:
 func _get_active_store_id() -> StringName:
 	if not _active_store_id.is_empty():
 		return _active_store_id
-	return _resolve_store_id(GameManager.current_store_id)
+	return _resolve_store_id(GameManager.get_active_store_id())
 
 
 func _resolve_store_id(raw_store_id: Variant) -> StringName:

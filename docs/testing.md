@@ -69,7 +69,16 @@ script-level behavior can be asserted directly.
 
 ## CI Status
 
-`.github/workflows/validate.yml` currently validates repository structure and
-runs non-blocking `gdlint`. The GUT job in that workflow is present but
-commented out. The export workflow validates export presets and builds release
-artifacts on version tags.
+`.github/workflows/validate.yml` currently runs three jobs:
+
+1. `lint-docs` checks for required files and common repository issues.
+2. `gut-tests` installs Godot, imports the project, and runs GUT headlessly.
+3. `lint-gdscript` runs non-blocking `gdlint`.
+
+The `lint-docs` job still expects a root `CLAUDE.md` path even though the active
+project documentation now lives in `README.md` and `docs/`. Treat that workflow
+check as a current repo-configuration mismatch, not as part of the canonical
+documentation structure.
+
+`.github/workflows/export.yml` validates export presets and builds tagged
+Windows and macOS release artifacts.

@@ -4,6 +4,7 @@ extends GutTest
 
 var _system: MarketValueSystem
 var _inventory: InventorySystem
+var _saved_tier: StringName
 
 
 func _create_electronics_def(overrides: Dictionary = {}) -> ItemDefinition:
@@ -26,6 +27,8 @@ func _create_electronics_def(overrides: Dictionary = {}) -> ItemDefinition:
 
 
 func before_each() -> void:
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton.set_tier(&"normal")
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
 	_inventory.initialize(null)
@@ -33,6 +36,10 @@ func before_each() -> void:
 	_system = MarketValueSystem.new()
 	add_child_autofree(_system)
 	_system.initialize(_inventory, null, null)
+
+
+func after_each() -> void:
+	DifficultySystemSingleton.set_tier(_saved_tier)
 
 
 func test_no_depreciation_on_launch_day() -> void:

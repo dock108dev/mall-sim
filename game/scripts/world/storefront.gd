@@ -570,7 +570,7 @@ func _sync_initial_owned_state() -> void:
 	var is_initially_owned: bool = (
 		not canonical.is_empty()
 		and (
-			canonical in GameManager.owned_stores
+			canonical in GameManager.get_owned_store_ids()
 			or GameManager.is_store_owned(String(canonical))
 		)
 	)

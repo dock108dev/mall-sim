@@ -5,6 +5,8 @@ extends GutTest
 var _controller: VideoRental
 var _registered_store_entry: bool = false
 var _registered_item_entries: Array[StringName] = []
+var _store_entry_snapshot: Dictionary = {}
+var _item_entry_snapshots: Dictionary = {}
 
 
 func before_each() -> void:
@@ -172,29 +174,36 @@ func test_store_entered_seeds_inventory_and_emits_store_opened() -> void:
 
 func after_each() -> void:
 	for item_id: StringName in _registered_item_entries:
-		_unregister_test_entry(item_id)
+		_restore_test_entry(
+			item_id,
+			_item_entry_snapshots.get(String(item_id), {})
+		)
 	_registered_item_entries.clear()
+	_item_entry_snapshots.clear()
 	if _registered_store_entry:
-		_unregister_test_entry(&"rentals")
+		_restore_test_entry(&"rentals", _store_entry_snapshot)
 		_registered_store_entry = false
+	_store_entry_snapshot = {}
 
 
 func _register_test_store_entry() -> void:
-	if not ContentRegistry.exists("rentals"):
-		ContentRegistry.register_entry(
-			{
-				"id": "rentals",
-				"aliases": ["video_rental"],
-				"name": "Video Rental",
-				"store_type": "rentals",
-				"starting_inventory": [
-					"test_video_rental_item_a",
-					"test_video_rental_item_b",
-				],
-			},
-			"store"
-		)
-		_registered_store_entry = true
+	if not _registered_store_entry:
+		_store_entry_snapshot = _snapshot_test_entry(&"rentals")
+	_registered_store_entry = true
+	_unregister_test_entry(&"rentals")
+	ContentRegistry.register_entry(
+		{
+			"id": "rentals",
+			"aliases": ["video_rental"],
+			"name": "Video Rental",
+			"store_type": "rentals",
+			"starting_inventory": [
+				"test_video_rental_item_a",
+				"test_video_rental_item_b",
+			],
+		},
+		"store"
+	)
 	_register_test_item_entry(
 		&"test_video_rental_item_a",
 		"Starter Tape A"
@@ -206,8 +215,10 @@ func _register_test_store_entry() -> void:
 
 
 func _register_test_item_entry(item_id: StringName, item_name: String) -> void:
-	if ContentRegistry.exists(String(item_id)):
-		return
+	var snapshot_key: String = String(item_id)
+	if not _item_entry_snapshots.has(snapshot_key):
+		_item_entry_snapshots[snapshot_key] = _snapshot_test_entry(item_id)
+	_unregister_test_entry(item_id)
 	ContentRegistry.register_entry(
 		{
 			"id": String(item_id),
@@ -219,7 +230,8 @@ func _register_test_item_entry(item_id: StringName, item_name: String) -> void:
 		},
 		"item"
 	)
-	_registered_item_entries.append(item_id)
+	if not _registered_item_entries.has(item_id):
+		_registered_item_entries.append(item_id)
 
 
 func _unregister_test_entry(entry_id: StringName) -> void:
@@ -235,3 +247,43 @@ func _unregister_test_entry(entry_id: StringName) -> void:
 	for alias: StringName in aliases.keys():
 		if aliases[alias] == entry_id:
 			aliases.erase(alias)
+
+
+func _snapshot_test_entry(entry_id: StringName) -> Dictionary:
+	var aliases: Array[StringName] = []
+	for alias: StringName in ContentRegistry._aliases.keys():
+		if ContentRegistry._aliases[alias] == entry_id:
+			aliases.append(alias)
+	var entry: Dictionary = {}
+	if ContentRegistry._entries.has(entry_id):
+		var existing_entry: Variant = ContentRegistry._entries[entry_id]
+		if existing_entry is Dictionary:
+			entry = (existing_entry as Dictionary).duplicate(true)
+	return {
+		"exists": ContentRegistry._entries.has(entry_id),
+		"entry": entry,
+		"type": str(ContentRegistry._types.get(entry_id, "")),
+		"display_name": str(ContentRegistry._display_names.get(entry_id, "")),
+		"scene_path": str(ContentRegistry._scene_map.get(entry_id, "")),
+		"aliases": aliases,
+	}
+
+
+func _restore_test_entry(entry_id: StringName, snapshot: Dictionary) -> void:
+	_unregister_test_entry(entry_id)
+	if not bool(snapshot.get("exists", false)):
+		return
+	var entry: Dictionary = snapshot.get("entry", {})
+	ContentRegistry._entries[entry_id] = entry.duplicate(true)
+	var entry_type: String = str(snapshot.get("type", ""))
+	if not entry_type.is_empty():
+		ContentRegistry._types[entry_id] = entry_type
+	var display_name: String = str(snapshot.get("display_name", ""))
+	if not display_name.is_empty():
+		ContentRegistry._display_names[entry_id] = display_name
+	var scene_path: String = str(snapshot.get("scene_path", ""))
+	if not scene_path.is_empty():
+		ContentRegistry._scene_map[entry_id] = scene_path
+	for alias: Variant in snapshot.get("aliases", []):
+		if alias is StringName:
+			ContentRegistry._aliases[alias] = entry_id

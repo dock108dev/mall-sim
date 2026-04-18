@@ -23,7 +23,7 @@ var _secret_moments: AmbientSecretThreadMoments
 
 func _ready() -> void:
 	_load_definitions()
-	_active_store_id = GameManager.current_store_id
+	_active_store_id = GameManager.get_active_store_id()
 
 
 ## Sets up the system with required references and loads definitions.
@@ -388,7 +388,7 @@ func _check_random_trigger(
 
 
 func _get_current_reputation() -> float:
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		return 0.0
 	var rep_sys: Node = get_node_or_null(
@@ -496,7 +496,7 @@ func load_state(data: Dictionary) -> void:
 
 func _apply_state(data: Dictionary) -> void:
 	_state = int(data.get("state", State.IDLE))
-	_active_store_id = GameManager.current_store_id
+	_active_store_id = GameManager.get_active_store_id()
 	_suspend_count = 0
 	_delivery_queue = []
 	_recent_item_categories.clear()

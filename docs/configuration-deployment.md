@@ -60,8 +60,16 @@ running `bash scripts/godot_import.sh`.
 ## GitHub Workflows
 
 `.github/workflows/validate.yml` runs on pushes and pull requests to `main`.
-It checks for required files and common repository issues, then runs GDScript
-lint through `gdtoolkit` as a non-blocking job.
+It currently includes:
+
+1. `lint-docs` for required-file and repository-shape checks
+2. `gut-tests` for headless Godot import and GUT execution
+3. `lint-gdscript` for non-blocking `gdtoolkit` linting
+
+`lint-docs` still checks for a root `CLAUDE.md` path. That workflow
+configuration is out of sync with the current documentation structure, where
+`README.md` is the only root project doc and the rest of the active docs live in
+`docs/`.
 
 `.github/workflows/export.yml` runs on tags matching `v*`. It:
 

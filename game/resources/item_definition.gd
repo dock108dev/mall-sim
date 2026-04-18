@@ -64,7 +64,7 @@ const CONDITION_ORDER: PackedStringArray = [
 		return _condition_tier_range
 @export var condition_value_multipliers: Dictionary = {}
 @export var icon_path: String = ""
-@export var tags: Array[StringName] = []:
+@export var tags: PackedStringArray = PackedStringArray():
 	set(value):
 		_tags = _normalize_string_name_array(value)
 	get:
@@ -108,7 +108,7 @@ var _condition_range: PackedStringArray = PackedStringArray([
 	"poor", "fair", "good", "near_mint", "mint",
 ])
 var _condition_tier_range: Vector2 = Vector2(0.0, 4.0)
-var _tags: Array[StringName] = []
+var _tags: PackedStringArray = PackedStringArray()
 
 
 func _init() -> void:
@@ -140,14 +140,14 @@ static func tier_to_condition(condition_tier: int) -> String:
 	return CONDITION_ORDER[index]
 
 
-static func _normalize_string_name_array(values: Variant) -> Array[StringName]:
-	var normalized: Array[StringName] = []
+static func _normalize_string_name_array(values: Variant) -> PackedStringArray:
+	var normalized: PackedStringArray = PackedStringArray()
 	if values is PackedStringArray:
 		for entry: String in values:
-			normalized.append(StringName(entry))
+			normalized.append(str(entry))
 	elif values is Array:
 		for entry: Variant in values:
-			normalized.append(StringName(str(entry)))
+			normalized.append(str(entry))
 	return normalized
 
 

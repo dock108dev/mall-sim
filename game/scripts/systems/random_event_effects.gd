@@ -87,7 +87,7 @@ func apply_health_inspection(
 		and float(shelf_items.size()) / float(total_items)
 			>= HEALTH_INSPECTION_STOCK_THRESHOLD
 	)
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if passes:
 		EventBus.notification_requested.emit(
 			"Inspection passed! Your store looks great. (+5 rep)"
@@ -128,7 +128,7 @@ func apply_shoplifting(
 	var msg: String = def.notification_text % item_name
 	EventBus.notification_requested.emit(msg)
 	var store_id: StringName = StringName(
-		GameManager.current_store_id
+		GameManager.get_active_store_id()
 	)
 	EventBus.inventory_item_removed.emit(
 		StringName(stolen.instance_id),

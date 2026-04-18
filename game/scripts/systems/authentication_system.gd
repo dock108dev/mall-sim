@@ -141,6 +141,8 @@ func authenticate(instance_id: String) -> bool:
 
 
 func _load_config() -> void:
+	if not ContentRegistry.exists(STORE_TYPE):
+		return
 	var entry: Dictionary = ContentRegistry.get_entry(
 		StringName(STORE_TYPE)
 	)

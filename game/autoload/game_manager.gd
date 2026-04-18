@@ -44,6 +44,7 @@ var owned_stores: Array[StringName] = []
 var pending_load_slot: int = -1
 var _scene_transition: SceneTransition
 var _time_system_ref: WeakRef
+var _store_state_manager_ref: WeakRef
 var _boot_completed: bool = false
 var _ending_id: StringName = &""
 var _content_load_errors: Array[String] = []
@@ -151,17 +152,23 @@ func is_store_owned(store_id: String) -> bool:
 	var canonical: StringName = ContentRegistry.resolve(store_id)
 	if canonical.is_empty():
 		return false
-	return canonical in owned_stores
+	return canonical in get_owned_store_ids()
 
 
-## Adds a store to the player's owned stores list.
-func own_store(store_id: String) -> void:
-	var canonical: StringName = ContentRegistry.resolve(store_id)
-	if canonical.is_empty():
-		return
-	if canonical in owned_stores:
-		return
-	owned_stores.append(canonical)
+## Returns the authoritative active store from StoreStateManager when available.
+func get_active_store_id() -> StringName:
+	var store_state_manager: StoreStateManager = get_store_state_manager()
+	if store_state_manager != null:
+		return store_state_manager.active_store_id
+	return current_store_id
+
+
+## Returns owned store IDs ordered by storefront slot when StoreStateManager is active.
+func get_owned_store_ids() -> Array[StringName]:
+	var store_state_manager: StoreStateManager = get_store_state_manager()
+	if store_state_manager != null:
+		return store_state_manager.get_owned_store_ids()
+	return owned_stores.duplicate()
 
 
 func change_scene(scene_path: String) -> void:
@@ -256,6 +263,31 @@ func get_time_system() -> TimeSystem:
 	var time_system: TimeSystem = matches[0] as TimeSystem
 	_time_system_ref = weakref(time_system)
 	return time_system
+
+
+## Returns the active StoreStateManager from the current scene tree when available.
+func get_store_state_manager() -> StoreStateManager:
+	if _store_state_manager_ref != null:
+		var cached: StoreStateManager = (
+			_store_state_manager_ref.get_ref() as StoreStateManager
+		)
+		if cached != null and cached.is_inside_tree():
+			return cached
+	if not is_inside_tree():
+		return null
+	var root: Window = get_tree().root
+	if root == null:
+		return null
+	var matches: Array[Node] = root.find_children(
+		"*", "StoreStateManager", true, false
+	)
+	if matches.is_empty():
+		return null
+	var store_state_manager: StoreStateManager = (
+		matches[0] as StoreStateManager
+	)
+	_store_state_manager_ref = weakref(store_state_manager)
+	return store_state_manager
 
 
 func quit_game() -> void:

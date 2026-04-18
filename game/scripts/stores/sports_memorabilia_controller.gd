@@ -166,6 +166,8 @@ func _disconnect_market_event_signals() -> void:
 
 
 func _load_season_boost() -> void:
+	if not ContentRegistry.exists(String(STORE_ID)):
+		return
 	var entry: Dictionary = ContentRegistry.get_entry(STORE_ID)
 	if entry.is_empty():
 		return

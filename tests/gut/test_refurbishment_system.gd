@@ -51,7 +51,8 @@ func _make_item(
 	item.tested = tested
 	item.test_result = test_result
 	item.current_location = "backroom"
-	_inventory.add_item(&"retro_games", item)
+	_inventory._items[String(item.instance_id)] = item
+	_inventory._item_store_ids[item.instance_id] = "retro_games"
 	return item
 
 

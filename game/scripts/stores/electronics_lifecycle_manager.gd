@@ -3,12 +3,11 @@ class_name ElectronicsLifecycleManager
 extends RefCounted
 
 
-enum Phase { LAUNCH, PEAK, MATURE, CLEARANCE, OBSOLETE }
+enum Phase { PEAK, DECLINE, CLEARANCE, OBSOLETE }
 
 const PHASE_NAMES: Dictionary = {
-	Phase.LAUNCH: "launch",
 	Phase.PEAK: "peak",
-	Phase.MATURE: "mature",
+	Phase.DECLINE: "decline",
 	Phase.CLEARANCE: "clearance",
 	Phase.OBSOLETE: "obsolete",
 }
@@ -99,12 +98,10 @@ func get_phase(item: ItemDefinition, current_day: int) -> Phase:
 	if days_since < 0:
 		days_since = 0
 
-	if days_since <= LAUNCH_END_DAY:
-		return Phase.LAUNCH
 	if days_since <= PEAK_END_DAY:
 		return Phase.PEAK
 	if days_since <= MATURE_END_DAY:
-		return Phase.MATURE
+		return Phase.DECLINE
 	return Phase.CLEARANCE
 
 
@@ -120,14 +117,14 @@ func get_multiplier(item: ItemDefinition, current_day: int) -> float:
 	var days_since: int = maxi(0, current_day - effective_launch)
 
 	match phase:
-		Phase.LAUNCH:
-			return _lerp_range(
-				days_since, 1, LAUNCH_END_DAY,
-				LAUNCH_MULT_MAX, LAUNCH_MULT_MIN
-			)
 		Phase.PEAK:
+			if days_since <= LAUNCH_END_DAY:
+				return _lerp_range(
+					days_since, 1, LAUNCH_END_DAY,
+					LAUNCH_MULT_MAX, LAUNCH_MULT_MIN
+				)
 			return PEAK_MULT
-		Phase.MATURE:
+		Phase.DECLINE:
 			return _lerp_range(
 				days_since, PEAK_END_DAY + 1, MATURE_END_DAY,
 				MATURE_MULT_MAX, MATURE_MULT_MIN
@@ -172,6 +169,10 @@ func check_phase_transitions(
 			EventBus.electronics_phase_changed.emit(
 				item.id, last_phase, current_phase_name
 			)
+			if current_phase_name == "decline":
+				EventBus.product_entered_decline.emit(item.id)
+			elif current_phase_name == "clearance":
+				EventBus.product_entered_clearance.emit(item.id)
 
 
 ## Degrades a demo unit's condition by one tier. Returns the new condition.

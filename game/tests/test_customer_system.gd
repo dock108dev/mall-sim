@@ -1,6 +1,8 @@
 ## GUT unit tests for CustomerSystem — spawn, state machine, and satisfaction.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+
 var _system: CustomerSystem
 var _economy: EconomySystem
 var _inventory: InventorySystem
@@ -56,17 +58,12 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	_safe_disconnect(EventBus.customer_entered, _on_entered)
-	_safe_disconnect(EventBus.customer_left, _on_left)
-	_safe_disconnect(
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.customer_entered, _on_entered)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.customer_left, _on_left)
+	TEST_SIGNAL_UTILS.safe_disconnect(
 		EventBus.customer_purchased, _on_purchased
 	)
-	_safe_disconnect(EventBus.customer_greeted, _on_greeted)
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.customer_greeted, _on_greeted)
 
 
 func _make_profile() -> CustomerTypeDefinition:

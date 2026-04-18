@@ -205,7 +205,7 @@ func _on_day_started(_day: int) -> void:
 func _on_item_sold(
 	_item_id: String, _price: float, _category: String
 ) -> void:
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		return
 	var current: int = _daily_sales_per_store.get(store_id, 0) as int
@@ -335,7 +335,7 @@ func _on_active_store_changed(_store_id: StringName) -> void:
 
 
 func _spawn_staff_npcs() -> void:
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		return
 

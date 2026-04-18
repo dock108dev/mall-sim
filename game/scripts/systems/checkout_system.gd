@@ -609,7 +609,7 @@ func _finalize_checkout_no_sale() -> void:
 
 func _refresh_cashier() -> void:
 	_cashier = null
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		return
 	var staff: Array[StaffDefinition] = StaffManager.get_staff_for_store(store_id)

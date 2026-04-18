@@ -41,6 +41,7 @@ var _days_until_next_announcement: int = 0
 var _shift_active: bool = false
 
 var _data_loader: DataLoader = null
+var _manual_shift_days_remaining: int = 0
 
 
 func initialize(data_loader: DataLoader) -> void:
@@ -87,6 +88,47 @@ func get_falling_cards() -> Array[Dictionary]:
 ## Returns true if a meta shift is currently active.
 func is_shift_active() -> bool:
 	return _shift_active
+
+
+## Triggers an immediate single-card meta shift for the given duration.
+func trigger_shift(card_id: StringName, duration_days: int) -> void:
+	if card_id == StringName():
+		push_warning("MetaShiftSystem: trigger_shift requires a card_id")
+		return
+	if duration_days <= 0:
+		push_warning("MetaShiftSystem: trigger_shift duration must be positive")
+		return
+
+	_end_current_shift()
+
+	var multiplier: float = SPIKE_MULT_MIN
+	_rising_cards = [{
+		"item_id": String(card_id),
+		"name": String(card_id).capitalize(),
+		"multiplier": multiplier,
+		"set_tag": "manual",
+	}]
+	_falling_cards = []
+	_active_day = 1
+	_announced_day = 1
+	_days_until_next_announcement = maxi(duration_days + 1, MIN_SHIFT_INTERVAL)
+	_shift_active = true
+	_manual_shift_days_remaining = duration_days
+
+	EventBus.meta_shift_started.emit(card_id, multiplier, duration_days)
+	EventBus.meta_shift_activated.emit(
+		_extract_names(_rising_cards), _extract_names(_falling_cards)
+	)
+
+
+## Returns the demand modifier for the supplied card ID.
+func get_demand_modifier(card_id: StringName) -> float:
+	if not _shift_active or card_id == StringName():
+		return 1.0
+	for entry: Dictionary in _rising_cards:
+		if StringName(entry.get("item_id", "")) == card_id:
+			return float(entry.get("multiplier", 1.0))
+	return 1.0
 
 
 ## Returns true if a shift has been announced but not yet active.
@@ -148,9 +190,16 @@ func _apply_state(data: Dictionary) -> void:
 		))
 	)
 	_shift_active = bool(data.get("shift_active", false))
+	_manual_shift_days_remaining = 0
 
 
 func _on_day_started(day: int) -> void:
+	if _shift_active and _manual_shift_days_remaining > 0:
+		_manual_shift_days_remaining -= 1
+		if _manual_shift_days_remaining <= 0:
+			_end_current_shift()
+			return
+
 	if _announced_day > 0 and day >= _active_day and not _shift_active:
 		_activate_shift()
 
@@ -210,12 +259,14 @@ func _activate_shift() -> void:
 func _end_current_shift() -> void:
 	if _rising_cards.is_empty() and _falling_cards.is_empty():
 		return
+	var ended_card_id: StringName = _get_primary_card_id()
 	_rising_cards = []
 	_falling_cards = []
 	_active_day = 0
 	_announced_day = 0
 	_shift_active = false
-	EventBus.meta_shift_ended.emit()
+	_manual_shift_days_remaining = 0
+	EventBus.meta_shift_ended.emit(ended_card_id)
 
 
 ## Selects cards from different sets for a meta shift direction.
@@ -313,6 +364,12 @@ func _extract_names(cards: Array[Dictionary]) -> Array[String]:
 	for entry: Dictionary in cards:
 		names.append(entry.get("name", "Unknown") as String)
 	return names
+
+
+func _get_primary_card_id() -> StringName:
+	if _rising_cards.is_empty():
+		return &""
+	return StringName(_rising_cards[0].get("item_id", ""))
 
 
 ## Sends HUD notification about the upcoming meta shift.

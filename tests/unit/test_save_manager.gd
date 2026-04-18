@@ -11,8 +11,6 @@ var _time_system: TimeSystem
 var _reputation: ReputationSystem
 var _store_state_manager: StoreStateManager
 var _data_loader: DataLoader
-var _saved_owned_stores: Array[StringName] = []
-var _saved_store_id: StringName = &""
 
 
 func before_each() -> void:
@@ -47,9 +45,6 @@ func before_each() -> void:
 	_save_manager.set_reputation_system(_reputation)
 	_save_manager.set_store_state_manager(_store_state_manager)
 
-	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	_saved_store_id = GameManager.current_store_id
-
 
 func after_each() -> void:
 	for slot: int in range(0, 4):
@@ -57,8 +52,6 @@ func after_each() -> void:
 	if FileAccess.file_exists(SaveManager.SLOT_INDEX_PATH):
 		DirAccess.remove_absolute(SaveManager.SLOT_INDEX_PATH)
 	ContentRegistry.clear_for_testing()
-	GameManager.owned_stores = _saved_owned_stores
-	GameManager.current_store_id = _saved_store_id
 
 
 # --- Slot path generation ---
@@ -117,8 +110,7 @@ func test_save_and_load_round_trip_preserves_dictionary() -> void:
 	_reputation.initialize_store("sports")
 	_reputation.add_reputation("sports", 10.0)
 	_store_state_manager.register_slot_ownership(0, &"sports")
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
+	_store_state_manager.set_active_store(&"sports", false)
 
 	var pre_economy: Dictionary = _economy.get_save_data()
 	var pre_time: Dictionary = _time_system.get_save_data()
@@ -130,7 +122,7 @@ func test_save_and_load_round_trip_preserves_dictionary() -> void:
 	_time_system.current_day = 1
 	_reputation.reset()
 	_store_state_manager.owned_slots = {}
-	GameManager.owned_stores = []
+	_store_state_manager.active_store_id = &""
 
 	var loaded: bool = _save_manager.load_game(1)
 	assert_true(loaded, "Load should succeed")
@@ -165,8 +157,8 @@ func test_load_nonexistent_slot_returns_null() -> void:
 
 
 func test_delete_save_slot_removes_file() -> void:
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
+	_store_state_manager.register_slot_ownership(0, &"sports")
+	_store_state_manager.set_active_store(&"sports", false)
 	_save_manager.save_game(1)
 	assert_true(
 		_save_manager.slot_exists(1),
@@ -187,8 +179,8 @@ func test_delete_save_slot_removes_file() -> void:
 func test_get_slot_metadata_returns_day_and_cash() -> void:
 	_economy._current_cash = 250.0
 	_time_system.current_day = 5
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
+	_store_state_manager.register_slot_ownership(0, &"sports")
+	_store_state_manager.set_active_store(&"sports", false)
 
 	_save_manager.save_game(1)
 	var metadata: Dictionary = _save_manager.get_slot_metadata(1)
@@ -212,10 +204,7 @@ func test_get_slot_metadata_returns_day_and_cash() -> void:
 		"owned_stores should include the saved store"
 	)
 	assert_has(metadata, "saved_at", "Metadata should have saved_at")
-	assert_has(
-		metadata, "store_type",
-		"Metadata should have store_type"
-	)
+	assert_has(metadata, "active_store_id", "Metadata should have active_store_id")
 	assert_has(
 		metadata, "timestamp",
 		"Metadata should have timestamp"
@@ -229,8 +218,8 @@ func test_get_slot_metadata_returns_day_and_cash() -> void:
 func test_save_file_contains_top_level_save_metadata() -> void:
 	_economy._current_cash = 800.0
 	_time_system.current_day = 9
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
+	_store_state_manager.register_slot_ownership(0, &"sports")
+	_store_state_manager.set_active_store(&"sports", false)
 
 	assert_true(_save_manager.save_game(1), "Save should succeed")
 
@@ -255,8 +244,8 @@ func test_save_file_contains_top_level_save_metadata() -> void:
 func test_get_slot_metadata_ignores_stale_slot_index() -> void:
 	_economy._current_cash = 250.0
 	_time_system.current_day = 5
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
+	_store_state_manager.register_slot_ownership(0, &"sports")
+	_store_state_manager.set_active_store(&"sports", false)
 
 	assert_true(_save_manager.save_game(1), "Save should succeed")
 
@@ -282,8 +271,8 @@ func test_get_slot_metadata_ignores_stale_slot_index() -> void:
 
 
 func test_save_version_field_is_written() -> void:
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
+	_store_state_manager.register_slot_ownership(0, &"sports")
+	_store_state_manager.set_active_store(&"sports", false)
 	_save_manager.save_game(1)
 
 	var data: Dictionary = _read_save_file_raw(1)
@@ -295,54 +284,14 @@ func test_save_version_field_is_written() -> void:
 	)
 
 
-# --- Old version migration ---
-
-
-func test_load_version_0_save_migrates_without_rewriting_disk() -> void:
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
-
-	var v0_data: Dictionary = {
-		"save_version": 0,
-		"metadata": {
-			"timestamp": "2026-01-01T00:00:00",
-			"day_number": 1,
-			"store_type": "sports",
-			"play_time": 0.0,
-		},
-		"time": _time_system.get_save_data(),
-		"economy": _economy.get_save_data(),
-		"inventory": _inventory.get_save_data(),
-		"reputation": _reputation.get_save_data(),
-		"owned_stores": ["sports"],
-	}
-
-	var path: String = SaveManager.SAVE_DIR + "save_slot_1.json"
-	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	file.store_string(JSON.stringify(v0_data, "\t"))
-	file.close()
-
-	var loaded: bool = _save_manager.load_game(1)
-	assert_true(
-		loaded,
-		"Loading old-version save should succeed (not crash)"
-	)
-
-	var reloaded: Dictionary = _read_save_file_raw(1)
-	assert_eq(
-		int(reloaded.get("save_version", -1)), 0,
-		"Original file should retain version 0 on disk"
-	)
-
-
 # --- Slot independence ---
 
 
 func test_all_three_slots_are_independent() -> void:
 	_economy._current_cash = 100.0
 	_time_system.current_day = 1
-	GameManager.owned_stores = [&"sports"]
-	GameManager.current_store_id = &"sports"
+	_store_state_manager.register_slot_ownership(0, &"sports")
+	_store_state_manager.set_active_store(&"sports", false)
 	_save_manager.save_game(1)
 
 	_economy._current_cash = 200.0

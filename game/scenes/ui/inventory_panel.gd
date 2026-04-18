@@ -548,7 +548,7 @@ func _retire_selected_tape(sell: bool) -> void:
 
 
 func _sync_active_store() -> void:
-	store_id = String(GameManager.current_store_id)
+	store_id = String(GameManager.get_active_store_id())
 
 
 func _open_pricing_for_selected_item() -> void:

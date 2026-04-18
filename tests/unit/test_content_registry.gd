@@ -115,6 +115,33 @@ func test_get_item_definition_type_mismatch_returns_null_and_records_error() -> 
 	)
 
 
+func test_store_scene_path_outside_store_scene_root_is_rejected() -> void:
+	_registry.error_messages.clear()
+	_registry.register_entry(
+		{
+			"id": "rogue_store",
+			"name": "Rogue Store",
+			"scene_path": "res://game/scenes/ui/settings_panel.tscn",
+		},
+		"store"
+	)
+	assert_eq(
+		_registry.get_scene_path(&"rogue_store"),
+		"",
+		"Store entries should not retain scene paths outside the store scene root"
+	)
+	assert_eq(
+		_registry.error_messages.size(),
+		1,
+		"Invalid store scene path should emit exactly one error"
+	)
+	assert_string_contains(
+		_registry.error_messages[0],
+		"store scene path 'res://game/scenes/ui/settings_panel.tscn'",
+		"Error should describe the rejected store scene path"
+	)
+
+
 func test_resolve_empty_string_returns_empty() -> void:
 	var result: StringName = _registry.resolve("")
 	assert_eq(result, &"", "Empty input returns empty StringName")

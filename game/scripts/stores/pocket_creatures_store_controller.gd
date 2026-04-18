@@ -29,6 +29,7 @@ func initialize() -> void:
 	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
 	_connect_signal(EventBus.inventory_item_added, _on_inventory_item_added)
 	_connect_signal(EventBus.seasonal_event_started, _on_seasonal_event_started)
+	_connect_signal(EventBus.tournament_resolved, _on_tournament_resolved)
 	_initialized = true
 
 
@@ -208,6 +209,12 @@ func _on_tournament_started(_event_id: StringName) -> void:
 	pass
 
 
+func _on_tournament_resolved(
+	_winner_id: StringName, _prize_amount: float
+) -> void:
+	pass
+
+
 func _on_inventory_item_added(
 	store_id: StringName, item_id: StringName
 ) -> void:
@@ -281,10 +288,7 @@ func _build_definition_from_entry(
 	if data.has("store_type"):
 		def.store_type = str(data["store_type"])
 	var raw_tags: Variant = data.get("tags", [])
-	if raw_tags is Array:
-		for tag: Variant in raw_tags:
-			if tag is String:
-				def.tags.append(tag as String)
+	def.tags = ItemDefinition._normalize_string_name_array(raw_tags)
 	return def
 
 

@@ -320,7 +320,7 @@ func _get_current_reputation() -> float:
 func _get_active_store_id() -> StringName:
 	var candidate: String = String(store_type)
 	if candidate.is_empty():
-		candidate = String(GameManager.current_store_id)
+		candidate = String(GameManager.get_active_store_id())
 	if candidate.is_empty():
 		return &""
 	var resolved: StringName = ContentRegistry.resolve(candidate)

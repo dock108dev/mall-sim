@@ -3,6 +3,7 @@ extends Control
 
 
 const SAVE_DIR := "user://"
+const MAX_SAVE_PREVIEW_BYTES: int = SaveManager.MAX_SAVE_FILE_BYTES
 const SLOT_PATHS: Dictionary = {
 	0: "user://save_slot_0.json",
 	1: "user://save_slot_1.json",
@@ -220,6 +221,15 @@ func _read_slot_info(path: String) -> Dictionary:
 		push_warning(
 			"MainMenu: failed to read save slot '%s' — %s"
 			% [path, error_string(FileAccess.get_open_error())]
+		)
+		return {}
+	if file.get_length() > MAX_SAVE_PREVIEW_BYTES:
+		file.close()
+		push_warning(
+			(
+				"MainMenu: save slot '%s' exceeds maximum preview size (%d bytes)"
+				% [path, MAX_SAVE_PREVIEW_BYTES]
+			)
 		)
 		return {}
 	var json_string: String = file.get_as_text()

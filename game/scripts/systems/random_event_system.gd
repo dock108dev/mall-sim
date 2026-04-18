@@ -388,7 +388,7 @@ func _activate_event(
 	EventBus.random_event_started.emit(def.id)
 	var effect: Dictionary = _apply_effect(def)
 	var store_id: StringName = StringName(
-		GameManager.current_store_id
+		GameManager.get_active_store_id()
 	)
 	EventBus.random_event_triggered.emit(
 		StringName(def.id), store_id, effect

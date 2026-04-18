@@ -1,6 +1,8 @@
 ## GUT unit tests for TradeSystem offer lifecycle, valuation, and resolution flow.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+
 
 var _trade: TradeSystem
 var _economy: EconomySystem
@@ -81,9 +83,11 @@ func before_each() -> void:
 
 func after_each() -> void:
 	if _trade != null:
-		_safe_disconnect(EventBus.day_started, _trade._on_day_started)
-	_safe_disconnect(EventBus.trade_offer_received, _on_trade_offer_received)
-	_safe_disconnect(EventBus.trade_resolved, _on_trade_resolved)
+		TEST_SIGNAL_UTILS.safe_disconnect(EventBus.day_started, _trade._on_day_started)
+	TEST_SIGNAL_UTILS.safe_disconnect(
+		EventBus.trade_offer_received, _on_trade_offer_received
+	)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.trade_resolved, _on_trade_resolved)
 
 
 func test_offer_construction_includes_required_fields() -> void:
@@ -325,11 +329,6 @@ func _on_trade_resolved(offer: Dictionary, accepted: bool) -> void:
 		"offer": offer,
 		"accepted": accepted,
 	})
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
 
 
 func _register_store_in_content_registry() -> void:

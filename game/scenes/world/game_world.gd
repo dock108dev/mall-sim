@@ -250,7 +250,7 @@ func initialize_tier_3_operational() -> void:
 	var store_ctrl: StoreController = _find_store_controller(false)
 
 	ReputationSystemSingleton.initialize_store(
-		String(GameManager.current_store_id)
+		String(GameManager.get_active_store_id())
 	)
 
 	customer_system.initialize(
@@ -258,7 +258,7 @@ func initialize_tier_3_operational() -> void:
 	)
 	if store_ctrl:
 		customer_system.set_store_id(
-			GameManager.current_store_id
+			GameManager.get_active_store_id()
 		)
 
 	mall_customer_spawner.initialize(
@@ -450,7 +450,7 @@ func _setup_ui() -> void:
 		_InventoryPanelScene.instantiate() as InventoryPanel
 	)
 	_inventory_panel.inventory_system = inventory_system
-	_inventory_panel.store_id = String(GameManager.current_store_id)
+	_inventory_panel.store_id = String(GameManager.get_active_store_id())
 	_ui_layer.add_child(_inventory_panel)
 
 	var pricing_panel: PricingPanel = (
@@ -540,7 +540,7 @@ func _setup_deferred_panels() -> void:
 	)
 	order_panel.order_system = order_system
 	order_panel.economy_system = economy_system
-	order_panel.store_type = String(GameManager.current_store_id)
+	order_panel.store_type = String(GameManager.get_active_store_id())
 	_ui_layer.add_child(order_panel)
 	if _inventory_panel:
 		_inventory_panel.order_panel = order_panel
@@ -1031,7 +1031,6 @@ func apply_pending_session_state() -> void:
 func bootstrap_new_game_state(
 	store_id: StringName = GameManager.DEFAULT_STARTING_STORE
 ) -> void:
-	GameManager.current_store_id = &""
 	var slot_index: int = _find_store_slot_index(store_id)
 	if slot_index < 0:
 		push_error(
@@ -1130,17 +1129,12 @@ func _collect_state_validation_errors(
 ) -> Array[String]:
 	var errors: Array[String] = []
 
-	if GameManager.owned_stores.is_empty():
+	if GameManager.get_owned_store_ids().is_empty():
 		errors.append("No owned stores are registered")
 
 	if store_state_manager:
 		if store_state_manager.owned_slots.is_empty():
 			errors.append("StoreStateManager.owned_slots is empty")
-		if GameManager.current_store_id != store_state_manager.active_store_id:
-			errors.append(
-				"GameManager.current_store_id '%s' is out of sync with active_store_id '%s'"
-				% [GameManager.current_store_id, store_state_manager.active_store_id]
-			)
 
 	if economy_system:
 		if is_nan(economy_system.get_cash()):
@@ -1188,7 +1182,7 @@ func _collect_state_validation_errors(
 		errors.append("Inventory is empty")
 
 	if validate_active_store:
-		var actual_active_store: StringName = GameManager.current_store_id
+		var actual_active_store: StringName = GameManager.get_active_store_id()
 		if actual_active_store != expected_store_id:
 			errors.append(
 				"Active store '%s' does not match saved active_store_id '%s'"

@@ -25,7 +25,7 @@ var _preloaded_scenes: Dictionary = {}
 
 
 func _ready() -> void:
-	_active_store_id = _resolve_store_id(GameManager.current_store_id)
+	_active_store_id = _resolve_store_id(GameManager.get_active_store_id())
 	_connect_signal(EventBus.store_entered, _on_store_entered)
 	_connect_signal(EventBus.store_exited, _on_store_exited)
 	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
@@ -46,7 +46,7 @@ func initialize(
 	_ui_layer = ui_layer
 	_preload_store_scenes()
 	_register_hallway_camera()
-	_active_store_id = _resolve_store_id(GameManager.current_store_id)
+	_active_store_id = _resolve_store_id(GameManager.get_active_store_id())
 	_connect_signal(EventBus.enter_store_requested, _on_enter_store_requested)
 	_connect_signal(EventBus.exit_store_requested, _on_exit_store_requested)
 	_connect_signal(EventBus.store_entered, _on_store_entered)
@@ -290,9 +290,9 @@ func _set_active_store_for_transition(store_id: StringName) -> void:
 		_store_state_manager.set_active_store(store_id, false)
 		return
 
-	var canonical: StringName = _resolve_store_id(store_id)
-	GameManager.current_store_id = canonical
-	EventBus.active_store_changed.emit(canonical)
+	push_error(
+		"StoreSelectorSystem: StoreStateManager is required for store transitions"
+	)
 
 
 func _set_hallway_camera_enabled(enabled: bool) -> void:

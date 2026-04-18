@@ -2,11 +2,26 @@
 extends GutTest
 
 
+const STORE_ID: StringName = &"pocket_creatures"
+
 var _system: PackOpeningSystem
 var _inventory: InventorySystem
 var _economy: EconomySystem
 var _pack_opened_ids: Array[String] = []
 var _pack_opened_cards: Array = []
+
+
+func _ensure_store_registry_entry() -> void:
+	if ContentRegistry.exists(String(STORE_ID)):
+		return
+	ContentRegistry.register_entry(
+		{
+			"id": String(STORE_ID),
+			"store_type": String(STORE_ID),
+			"item_name": "Pocket Creatures",
+		},
+		"store",
+	)
 
 
 func _make_card_definition(
@@ -20,9 +35,9 @@ func _make_card_definition(
 	def.item_name = "Test %s Card" % subcategory
 	def.category = "singles"
 	def.subcategory = subcategory
-	def.store_type = "pocket_creatures"
+	def.store_type = STORE_ID
 	def.base_price = 1.0
-	def.tags = PackedStringArray([set_tag])
+	def.tags = [StringName(set_tag)]
 	return def
 
 
@@ -34,9 +49,9 @@ func _make_pack_definition(
 	def.item_name = "Test Booster Pack"
 	def.category = "booster_packs"
 	def.subcategory = "sealed"
-	def.store_type = "pocket_creatures"
+	def.store_type = STORE_ID
 	def.base_price = 3.99
-	def.tags = PackedStringArray(["pack", "booster", "sealed", set_tag])
+	def.tags = [&"pack", &"booster", &"sealed", StringName(set_tag)]
 	return def
 
 
@@ -86,6 +101,7 @@ func _on_pack_opened(pack_id: String, cards: Array[String]) -> void:
 func before_each() -> void:
 	_pack_opened_ids = []
 	_pack_opened_cards = []
+	_ensure_store_registry_entry()
 
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
@@ -193,6 +209,11 @@ func test_opened_cards_added_to_inventory() -> void:
 		assert_not_null(
 			found,
 			"Card '%s' should be present in inventory" % card.instance_id
+		)
+		assert_true(
+			_inventory.get_stock(STORE_ID).has(card),
+			"Card '%s' should be stocked under pocket_creatures"
+			% card.instance_id
 		)
 
 

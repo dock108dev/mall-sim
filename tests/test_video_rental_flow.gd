@@ -18,6 +18,7 @@ var _cfg_standard_rental_period: int = 3
 const STORE_ID: StringName = &"rentals"
 const STARTING_CASH: float = 1000.0
 const FLOAT_TOLERANCE: float = 0.01
+const RNG_SEED: int = 42
 
 
 func before_all() -> void:
@@ -100,7 +101,7 @@ func test_normal_return_copy_transitions_to_available() -> void:
 	)
 
 	var return_day: int = checkout_day + _cfg_standard_rental_period
-	_controller._on_day_started(return_day)
+	_process_test_day(return_day)
 
 	assert_false(
 		_controller.rental_records.has(item.instance_id),
@@ -179,7 +180,7 @@ func test_overdue_late_fee_formula() -> void:
 
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	var trigger_day: int = return_day + _cfg_grace_period_days + extra_days
-	_controller._on_day_started(trigger_day)
+	_process_test_day(trigger_day)
 
 	var expected_fee: float = _cfg_base_late_fee + (
 		float(extra_days) * _cfg_per_day_rate
@@ -209,7 +210,7 @@ func test_overdue_late_fee_added_to_economy_with_late_fee_reason() -> void:
 	var cash_before: float = _economy.get_cash()
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	var trigger_day: int = return_day + _cfg_grace_period_days + extra_days
-	_controller._on_day_started(trigger_day)
+	_process_test_day(trigger_day)
 
 	var expected_fee: float = _cfg_base_late_fee + (
 		float(extra_days) * _cfg_per_day_rate
@@ -245,7 +246,7 @@ func test_overdue_late_fee_in_performance_report() -> void:
 
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	var trigger_day: int = return_day + _cfg_grace_period_days + extra_days
-	_controller._on_day_started(trigger_day)
+	_process_test_day(trigger_day)
 
 	var expected_fee: float = _cfg_base_late_fee + (
 		float(extra_days) * _cfg_per_day_rate
@@ -277,7 +278,7 @@ func test_overdue_max_late_fee_cap_enforced() -> void:
 
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	var trigger_day: int = return_day + _cfg_grace_period_days + 150
-	_controller._on_day_started(trigger_day)
+	_process_test_day(trigger_day)
 
 	assert_almost_eq(
 		late_fee_amount[0], _cfg_max_late_fee, FLOAT_TOLERANCE,
@@ -312,7 +313,7 @@ func test_no_late_fee_within_grace_period() -> void:
 
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	var grace_deadline: int = return_day + _cfg_grace_period_days
-	_controller._on_day_started(grace_deadline)
+	_process_test_day(grace_deadline)
 
 	assert_false(
 		late_fee_fired[0],
@@ -374,6 +375,11 @@ func _create_item_definition() -> ItemDefinition:
 		["poor", "fair", "good", "near_mint", "mint"]
 	)
 	return def
+
+
+func _process_test_day(day: int) -> void:
+	seed(RNG_SEED)
+	_controller._on_day_started(day)
 
 
 func _register_store_in_content_registry() -> void:

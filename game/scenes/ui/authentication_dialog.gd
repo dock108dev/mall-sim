@@ -130,17 +130,17 @@ func _on_cancel() -> void:
 
 
 func _on_authentication_completed(
-	item_id: String, success: bool, message: String
+	item_id: Variant, success: bool, result: Variant = ""
 ) -> void:
 	if not _is_open or not _current_item:
 		return
-	if item_id != _current_item.instance_id:
+	if StringName(item_id) != _current_item.instance_id:
 		return
 	_is_pending = false
 	if success:
 		close()
 	else:
-		_error_label.text = message
+		_error_label.text = str(result)
 		_error_label.visible = true
 		_set_inputs_enabled(true)
 

@@ -7,12 +7,9 @@ var _lease_results: Array[Dictionary] = []
 var _store_changed: Array[StringName] = []
 var _store_entered: Array[StringName] = []
 var _store_exited: Array[StringName] = []
-var _saved_owned_stores: Array[StringName] = []
 
 
 func before_each() -> void:
-	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	GameManager.owned_stores = []
 	ContentRegistry.clear_for_testing()
 	_register_store_catalog()
 	_manager = StoreStateManager.new()
@@ -39,7 +36,6 @@ func after_each() -> void:
 		EventBus.store_entered.disconnect(_on_store_entered)
 	if EventBus.store_exited.is_connected(_on_store_exited):
 		EventBus.store_exited.disconnect(_on_store_exited)
-	GameManager.owned_stores = _saved_owned_stores
 
 
 # ── 1. Slot assignment records ownership ───────────────────────────────────
@@ -62,14 +58,14 @@ func test_slot_assignment_lookup_returns_correct_store() -> void:
 	assert_eq(_manager.owned_slots[1], &"retro_games")
 
 
-func test_lease_store_syncs_game_manager_owned_stores() -> void:
+func test_lease_store_updates_canonical_owned_store_ids() -> void:
 	assert_true(
-		GameManager.owned_stores.has(&"sports"),
-		"Leased stores should be reflected in GameManager.owned_stores"
+		_manager.get_owned_store_ids().has(&"sports"),
+		"Leased stores should be reflected in StoreStateManager.get_owned_store_ids()"
 	)
 	assert_true(
-		GameManager.owned_stores.has(&"retro_games"),
-		"Each successful lease should sync the canonical store ID"
+		_manager.get_owned_store_ids().has(&"retro_games"),
+		"Each successful lease should register the canonical store ID"
 	)
 
 

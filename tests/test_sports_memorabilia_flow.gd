@@ -63,12 +63,12 @@ func _safe_disconnect(sig: Signal, callable: Callable) -> void:
 
 
 func _on_auth_completed(
-	instance_id: String, success: bool, message: String
+	instance_id: Variant, success: bool, message: Variant = ""
 ) -> void:
 	_auth_signals.append({
-		"instance_id": instance_id,
+		"instance_id": String(instance_id),
 		"success": success,
-		"message": message,
+		"message": str(message),
 	})
 
 

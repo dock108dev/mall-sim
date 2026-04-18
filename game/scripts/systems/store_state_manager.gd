@@ -66,7 +66,6 @@ func lease_store(
 		)
 		return false
 	owned_slots[slot_index] = canonical_store_id
-	GameManager.own_store(String(canonical_store_id))
 	if not store_type.is_empty():
 		var canonical_type: StringName = ContentRegistry.resolve(
 			String(store_type)
@@ -109,7 +108,6 @@ func set_active_store(
 		return
 	var previous: StringName = active_store_id
 	active_store_id = canonical
-	GameManager.current_store_id = canonical
 	if previous != canonical:
 		EventBus.store_switched.emit(String(previous), String(canonical))
 	EventBus.active_store_changed.emit(canonical)
@@ -156,16 +154,15 @@ func get_store_name(store_id: StringName) -> String:
 	return ContentRegistry.get_display_name(canonical)
 
 
-## Restores owned_slots from saved data and syncs GameManager.
+## Restores owned_slots from saved data.
 func restore_owned_slots(slots: Dictionary) -> void:
 	owned_slots = _deserialize_owned_slots(
 		slots, "restore_owned_slots()"
 	)
-	_sync_owned_stores_from_slots()
 	EventBus.owned_slots_restored.emit(owned_slots)
 
 
-## Backward-compatible alias used by existing callers.
+## Registers canonical slot ownership without touching legacy GameManager state.
 func register_slot_ownership(
 	slot_index: int, store_id: StringName
 ) -> void:
@@ -178,10 +175,8 @@ func register_slot_ownership(
 		return
 	if owned_slots.has(slot_index):
 		owned_slots[slot_index] = canonical
-		GameManager.own_store(String(canonical))
 		return
 	owned_slots[slot_index] = canonical
-	GameManager.own_store(String(canonical))
 
 
 func _on_store_leased(
@@ -262,6 +257,20 @@ func get_store_revenue(store_id: String) -> float:
 	return _store_revenue.get(String(canonical), 0.0)
 
 
+## Returns owned store IDs ordered by storefront slot.
+func get_owned_store_ids() -> Array[StringName]:
+	var owned_store_ids: Array[StringName] = []
+	var slot_indices: Array[int] = []
+	for slot_index: int in owned_slots:
+		slot_indices.append(slot_index)
+	slot_indices.sort()
+	for slot_index: int in slot_indices:
+		var canonical: StringName = owned_slots[slot_index]
+		if canonical not in owned_store_ids:
+			owned_store_ids.append(canonical)
+	return owned_store_ids
+
+
 ## Resets daily revenue tracking for all stores.
 func reset_daily_revenue() -> void:
 	_store_revenue.clear()
@@ -288,10 +297,10 @@ func simulate_background(delta: float) -> void:
 		return
 	_background_timer -= BACKGROUND_SALE_INTERVAL
 
-	for store_id: String in GameManager.owned_stores:
-		if store_id == String(active_store_id):
+	for store_id: StringName in get_owned_store_ids():
+		if store_id == active_store_id:
 			continue
-		_simulate_store_sales(store_id)
+		_simulate_store_sales(String(store_id))
 
 
 ## Serializes ownership and store type state for saving.
@@ -509,22 +518,6 @@ func _deserialize_owned_slots(
 			continue
 		normalized[idx] = canonical
 	return normalized
-
-
-func _sync_owned_stores_from_slots() -> void:
-	GameManager.owned_stores = []
-	var slot_indices: Array[int] = []
-	for slot_index: int in owned_slots:
-		slot_indices.append(slot_index)
-	slot_indices.sort()
-
-	for slot_index: int in slot_indices:
-		var canonical: StringName = owned_slots[slot_index]
-		if canonical not in GameManager.owned_stores:
-			GameManager.owned_stores.append(canonical)
-
-	if GameManager.owned_stores.is_empty():
-		GameManager.owned_stores = [GameManager.DEFAULT_STARTING_STORE]
 
 
 func _simulate_store_sales(store_id: String) -> void:

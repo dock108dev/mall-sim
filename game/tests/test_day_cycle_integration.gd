@@ -2,6 +2,8 @@
 ## economy day-end summary, and inventory depletion.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+
 const STORE_ID: String = "test_day_cycle_store"
 const STARTING_CASH: float = 1000.0
 const TEST_PRICE: float = 42.0
@@ -101,8 +103,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	_safe_disconnect(EventBus.customer_entered, _on_customer_entered)
-	_safe_disconnect(EventBus.day_ended, _on_day_ended)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.customer_entered, _on_customer_entered)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.day_ended, _on_day_ended)
 	EventBus.clear_day_end_summary()
 	_unregister_test_store()
 	GameManager.current_store_id = _saved_store_id
@@ -246,11 +248,6 @@ func _on_day_ended(day: int) -> void:
 		"day": day,
 		"summary": EventBus.get_day_end_summary(),
 	})
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
 
 
 func _register_test_store() -> void:

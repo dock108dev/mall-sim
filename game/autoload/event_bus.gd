@@ -210,6 +210,7 @@ signal pack_opened(pack_id: String, cards: Array[String])
 # ── Tournament ────────────────────────────────────────────────────────────────
 signal tournament_started(participant_count: int, cost: float)
 signal tournament_completed(participant_count: int, revenue: float)
+signal tournament_resolved(winner_id: StringName, prize: float)
 
 # ── Tournament Events (Scheduled) ────────────────────────────────────────────
 signal tournament_event_announced(event_id: String)
@@ -222,11 +223,14 @@ signal trade_offer_received(offer: Dictionary)
 signal trade_accepted(wanted_item_id: String, offered_item_id: String)
 signal trade_declined(customer_id: int)
 signal trade_resolved(offer: Dictionary, accepted: bool)
+signal trade_completed(offered_card_id: String, received_card_id: String)
+signal trade_rejected(offered_card_id: String)
 
 # ── Meta Shift (PocketCreatures) ─────────────────────────────────────────────
 signal meta_shift_announced(rising: Array[String], falling: Array[String])
 signal meta_shift_activated(rising: Array[String], falling: Array[String])
-signal meta_shift_ended()
+signal meta_shift_started(card_id: StringName, modifier: float, duration: int)
+signal meta_shift_ended(card_id: StringName)
 
 # ── Rental ────────────────────────────────────────────────────────────────────
 signal item_rented(item_id: String, rental_fee: float, rental_tier: String)
@@ -248,6 +252,8 @@ signal demo_item_degraded(item_id: String, new_condition: String)
 signal electronics_product_announced(product_line: String, generation: int, launch_day: int)
 signal electronics_product_launched(product_line: String, generation: int)
 signal electronics_phase_changed(item_id: String, old_phase: String, new_phase: String)
+signal product_entered_decline(item_id: String)
+signal product_entered_clearance(item_id: String)
 
 # ── Progression and Milestones ────────────────────────────────────────────────
 ## Emitted by MilestoneSystem when a milestone condition is first satisfied.

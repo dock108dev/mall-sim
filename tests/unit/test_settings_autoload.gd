@@ -188,6 +188,138 @@ func test_null_to_int_key_rejected() -> void:
 	)
 
 
+func test_invalid_persisted_types_fall_back_to_defaults() -> void:
+	var config := ConfigFile.new()
+	config.set_value("audio", "master_volume", "loud")
+	config.set_value("audio", "music_volume", true)
+	config.set_value("audio", "sfx_volume", "1.0")
+	config.set_value("audio", "ambient_volume", "quiet")
+	config.set_value("display", "fullscreen", "yes")
+	config.set_value("display", "vsync", 1)
+	config.set_value("display", "resolution_x", "wide")
+	config.set_value("display", "resolution_y", -10)
+	config.set_value("display", "ui_scale", "huge")
+	config.set_value("display", "font_size", "large")
+	config.set_value("display", "colorblind_mode", 1)
+	config.set_value("locale", "language", 7)
+	config.set_value("preferences", "display_mode", "windowed")
+	config.set_value("preferences", "control_scheme", "keyboard")
+	config.save(_temp_path)
+
+	var s2: Node = _create_loaded_settings()
+
+	assert_almost_eq(
+		s2.get_preference(&"master_volume") as float, 1.0, 0.01,
+		"Invalid master_volume type should fall back to default"
+	)
+	assert_almost_eq(
+		s2.get_preference(&"music_volume") as float, 0.8, 0.01,
+		"Invalid music_volume type should fall back to default"
+	)
+	assert_almost_eq(
+		s2.get_preference(&"sfx_volume") as float, 1.0, 0.01,
+		"Stringified sfx_volume should not be trusted from config"
+	)
+	assert_almost_eq(
+		s2.ambient_volume, 0.8, 0.01,
+		"Invalid ambient_volume type should fall back to default"
+	)
+	assert_true(s2.fullscreen, "Invalid fullscreen type should fall back to default")
+	assert_true(s2.vsync, "Invalid vsync type should fall back to default")
+	assert_eq(
+		s2.resolution, Vector2i(1920, 1080),
+		"Invalid persisted resolution should fall back to default"
+	)
+	assert_almost_eq(
+		s2.ui_scale, 1.0, 0.01,
+		"Invalid ui_scale type should fall back to default"
+	)
+	assert_eq(
+		s2.font_size, Settings.FontSize.MEDIUM,
+		"Invalid font_size type should fall back to default"
+	)
+	assert_false(
+		s2.colorblind_mode,
+		"Invalid colorblind_mode type should fall back to default"
+	)
+	assert_eq(
+		s2.locale, "en",
+		"Invalid persisted locale type should fall back to default"
+	)
+	assert_eq(
+		s2.get_preference(&"display_mode") as int, 1,
+		"Invalid display_mode type should fall back to default"
+	)
+	assert_eq(
+		s2.get_preference(&"control_scheme") as int, 0,
+		"Invalid control_scheme type should fall back to default"
+	)
+
+
+func test_oversized_settings_file_is_rejected() -> void:
+	var file: FileAccess = FileAccess.open(_temp_path, FileAccess.WRITE)
+	assert_not_null(file, "Precondition: oversized settings file should be writable")
+	if file == null:
+		return
+	file.store_string("x".repeat(Settings.MAX_SETTINGS_FILE_BYTES + 1))
+	file.close()
+
+	var s2: Node = _create_loaded_settings()
+
+	assert_almost_eq(
+		s2.get_preference(&"master_volume") as float, 1.0, 0.01,
+		"Oversized settings file should leave defaults intact"
+	)
+	assert_eq(
+		s2.locale, "en",
+		"Oversized settings file should not override locale"
+	)
+
+
+func test_failed_parse_reload_resets_mutated_state_to_defaults() -> void:
+	_settings.set_preference(&"master_volume", 0.25)
+	_settings.set_preference(&"language", "es")
+	var file: FileAccess = FileAccess.open(_temp_path, FileAccess.WRITE)
+	assert_not_null(file, "Precondition: corrupt settings file should be writable")
+	if file == null:
+		return
+	file.store_string("[audio\nmaster_volume = broken")
+	file.close()
+
+	_settings.load_settings()
+
+	assert_almost_eq(
+		_settings.get_preference(&"master_volume") as float, 1.0, 0.01,
+		"Parse failure should restore default master_volume instead of keeping stale state"
+	)
+	assert_eq(
+		_settings.locale, "en",
+		"Parse failure should restore default locale instead of keeping stale state"
+	)
+
+
+func test_oversized_reload_resets_mutated_state_to_defaults() -> void:
+	_settings.set_preference(&"music_volume", 0.15)
+	_settings.set_preference(&"language", "es")
+	var file: FileAccess = FileAccess.open(_temp_path, FileAccess.WRITE)
+	assert_not_null(file, "Precondition: oversized settings file should be writable")
+	if file == null:
+		return
+	file.store_string("x".repeat(Settings.MAX_SETTINGS_FILE_BYTES + 1))
+	file.close()
+
+	_settings.load_settings()
+
+	assert_almost_eq(
+		_settings.get_preference(&"music_volume") as float, 0.8, 0.01,
+		"Oversized reload should restore default music_volume instead of keeping stale state"
+	)
+	assert_eq(
+		_settings.locale, "en",
+		"Oversized reload should restore default locale instead of keeping stale state"
+	)
+
+
 # -- Helpers --------------------------------------------------------------
 
 func _create_loaded_settings() -> Node:

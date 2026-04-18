@@ -2,6 +2,8 @@
 extends Node
 
 const ID_PATTERN := "^[a-z][a-z0-9_]{0,63}$"
+const SCENE_PATH_PREFIX := "res://game/scenes/"
+const STORE_SCENE_PATH_PREFIX := "res://game/scenes/stores/"
 
 var _entries: Dictionary = {}
 var _aliases: Dictionary = {}
@@ -277,7 +279,9 @@ func _register_entry(
 	_ready_flag = true
 	var display_name: String = _get_display_name(entry, raw_id)
 	_display_names[id] = display_name
-	var scene_path: String = _get_scene_path(entry)
+	var scene_path: String = _sanitize_scene_path(
+		_get_scene_path(entry), content_type, id
+	)
 	if not scene_path.is_empty():
 		_scene_map[id] = scene_path
 	_register_optional_alias(display_name, id)
@@ -333,6 +337,41 @@ func _get_scene_path(entry: Dictionary) -> String:
 	if entry.has("scene"):
 		return str(entry["scene"])
 	return ""
+
+
+func _sanitize_scene_path(
+	raw_path: String,
+	content_type: String,
+	id: StringName
+) -> String:
+	var scene_path: String = raw_path.strip_edges()
+	if scene_path.is_empty():
+		return ""
+	if not scene_path.begins_with(SCENE_PATH_PREFIX):
+		_emit_error(
+			(
+				"ContentRegistry: scene path '%s' for ID '%s' must stay under '%s'"
+				% [scene_path, id, SCENE_PATH_PREFIX]
+			)
+		)
+		return ""
+	if not scene_path.ends_with(".tscn"):
+		_emit_error(
+			(
+				"ContentRegistry: scene path '%s' for ID '%s' must reference a .tscn scene"
+				% [scene_path, id]
+			)
+		)
+		return ""
+	if content_type == "store" and not scene_path.begins_with(STORE_SCENE_PATH_PREFIX):
+		_emit_error(
+			(
+				"ContentRegistry: store scene path '%s' for ID '%s' must stay under '%s'"
+				% [scene_path, id, STORE_SCENE_PATH_PREFIX]
+			)
+		)
+		return ""
+	return scene_path
 
 
 func _register_optional_alias(

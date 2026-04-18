@@ -111,7 +111,7 @@ func commit_pack_results(revealed_cards: Array[Dictionary]) -> bool:
 		push_warning("PackOpeningSystem: no pending pack results to commit")
 		return false
 	if not _revealed_cards_match_pending(revealed_cards):
-		push_error(
+		push_warning(
 			"PackOpeningSystem: revealed card payload does not match pending pack '%s'"
 			% _pending_pack_id
 		)
@@ -333,7 +333,7 @@ func _add_to_pool(
 		"energy":
 			pool["energy"].append(item)
 		_:
-			push_error(
+			push_warning(
 				"PackOpeningSystem: unrecognized subcategory '%s' for item '%s'"
 				% [item.subcategory, item.id]
 			)

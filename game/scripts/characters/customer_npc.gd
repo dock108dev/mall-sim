@@ -174,7 +174,7 @@ func _evaluate_purchase_intent() -> bool:
 	final_chance += _get_demo_browse_bonus(interest_category)
 	var store_key: String = String(_store_id)
 	if store_key.is_empty():
-		store_key = GameManager.current_store_id
+		store_key = GameManager.get_active_store_id()
 	var tier: int = ReputationSystemSingleton.get_tier(store_key) as int
 	if tier > REPUTATION_TIER_BONUS_THRESHOLD:
 		final_chance += REPUTATION_PURCHASE_BONUS
@@ -190,7 +190,7 @@ func _has_stock_matching_category(
 		return true
 	var store_key: StringName = _store_id
 	if store_key.is_empty():
-		store_key = StringName(GameManager.current_store_id)
+		store_key = GameManager.get_active_store_id()
 	if store_key.is_empty():
 		return true
 	var stock: Array[ItemInstance] = _inventory_system.get_stock(
@@ -211,7 +211,7 @@ func _get_demo_browse_bonus(
 		return 0.0
 	var store_key: StringName = _store_id
 	if store_key.is_empty():
-		store_key = StringName(GameManager.current_store_id)
+		store_key = GameManager.get_active_store_id()
 	if store_key.is_empty():
 		return 0.0
 	var entry: Dictionary = ContentRegistry.get_entry(store_key)

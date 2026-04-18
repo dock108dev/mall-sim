@@ -249,7 +249,7 @@ func _on_meta_shift_changed(_rising: Array, _falling: Array) -> void:
 		_refresh_trend_list()
 
 
-func _on_meta_shift_ended() -> void:
+func _on_meta_shift_ended(_card_id: StringName = &"") -> void:
 	if _is_open:
 		_refresh_trend_list()
 
@@ -299,4 +299,4 @@ func _trend_matches_active_store(trend: Dictionary) -> bool:
 
 
 func _get_active_store_id() -> StringName:
-	return GameManager.current_store_id
+	return GameManager.get_active_store_id()

@@ -1,24 +1,26 @@
 # Documentation Index
 
-This is the active documentation set for Mallcore Sim. Older design notes,
-roadmaps, research dumps, generated issue drafts, and duplicated architecture
-files were removed during consolidation.
+This is the active documentation set for Mallcore Sim.
 
 ## Core Docs
 
-- [Setup](setup.md) - local editor setup, test runner setup, and common
-  development commands.
-- [Architecture](architecture.md) - current runtime composition, autoloads,
-  system tiers, signal-driven integration, and save/load ownership.
-- [Content and Data](content-data.md) - JSON content layout, loader behavior,
-  canonical IDs, and resource models.
-- [Testing](testing.md) - GUT configuration, test locations, and what the test
-  suite currently covers.
+- [Setup](setup.md) - local editor setup, helper scripts, test entry points, and
+  repo layout.
+- [Architecture](architecture.md) - boot flow, autoloads, `GameWorld`
+  composition, UI wiring, store controllers, and state ownership.
+- [Content and Data](content-data.md) - JSON loader behavior, content locations,
+  canonical IDs, resource models, and compatibility files.
+- [Testing](testing.md) - GUT configuration, test runner behavior, coverage
+  areas, and CI test jobs.
 - [Configuration and Deployment](configuration-deployment.md) - project
-  settings, input actions, CI workflows, export presets, and release basics.
-- [Contributing](contributing.md) - coding standards and documentation rules.
+  settings, user data paths, export presets, and GitHub workflow behavior.
+- [Contributing](contributing.md) - code style, naming, content rules, and
+  documentation scope.
 
-## Audit
+## Audit Notes
 
 - [Docs Consolidation Audit](audits/docs-consolidation.md) - summary of what
-  was added, deleted, and consolidated in this documentation pass.
+  changed in this documentation review.
+
+Markdown under `.github/`, `tools/`, and similar folders is configuration,
+templates, or tooling material, not active game documentation.

@@ -79,20 +79,20 @@ func _load_all_profiles() -> void:
 			"MallCustomerSpawner: DataLoader not available"
 		)
 		return
-	for store_id: String in GameManager.owned_stores:
+	for store_id: StringName in GameManager.get_owned_store_ids():
 		var profiles: Array[CustomerTypeDefinition] = (
 			GameManager.data_loader.get_customer_types_for_store(
-				store_id
+				String(store_id)
 			)
 		)
 		if not profiles.is_empty():
-			_all_profiles[store_id] = profiles
+			_all_profiles[String(store_id)] = profiles
 
 
 func _init_store_counts() -> void:
 	_store_customer_counts.clear()
-	for store_id: String in GameManager.owned_stores:
-		_store_customer_counts[store_id] = 0
+	for store_id: StringName in GameManager.get_owned_store_ids():
+		_store_customer_counts[String(store_id)] = 0
 	_total_customer_count = 0
 	if _store_selector:
 		_store_selector.set_store_counts(_store_customer_counts)
@@ -131,7 +131,7 @@ func _get_time_multiplier(hour: int) -> float:
 
 
 func _get_reputation_spawn_multiplier() -> float:
-	if not _reputation_system or GameManager.owned_stores.is_empty():
+	if not _reputation_system or GameManager.get_owned_store_ids().is_empty():
 		return 1.0
 	return _reputation_system.get_global_customer_multiplier()
 
@@ -154,7 +154,7 @@ func _spawn_for_store(store_id: String) -> void:
 
 	var profile: CustomerTypeDefinition = profiles.pick_random()
 	var is_active: bool = (
-		store_id == GameManager.current_store_id
+		store_id == String(GameManager.get_active_store_id())
 	)
 
 	if is_active and _customer_system:
@@ -302,7 +302,7 @@ func _on_store_leased(
 
 ## Spawns a customer in the current store for debug purposes.
 func debug_spawn_customer() -> void:
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		push_warning(
 			"MallCustomerSpawner: No current store for debug spawn"

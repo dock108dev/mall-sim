@@ -152,9 +152,9 @@ func get_global_reputation() -> float:
 		return DEFAULT_REPUTATION
 	if not _owned_store_ids.is_empty():
 		return _get_owned_store_average()
-	if not GameManager.owned_stores.is_empty():
+	if not GameManager.get_owned_store_ids().is_empty():
 		var owned_store_ids: Array[String] = []
-		for store_id: StringName in GameManager.owned_stores:
+		for store_id: StringName in GameManager.get_owned_store_ids():
 			owned_store_ids.append(String(store_id))
 		return _get_store_average(owned_store_ids)
 	var total: float = 0.0
@@ -326,7 +326,7 @@ func _resolve_store_id(store_id: String) -> String:
 			if not canonical.is_empty():
 				return String(canonical)
 		return store_id
-	var active: StringName = GameManager.current_store_id
+	var active: StringName = GameManager.get_active_store_id()
 	if not active.is_empty():
 		return String(active)
 	return ""

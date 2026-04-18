@@ -72,6 +72,19 @@ func begin_trade(customer: Customer) -> bool:
 	return true
 
 
+## Generates a trade offer snapshot for a customer without starting the flow.
+func generate_trade_offer(customer: Customer) -> Dictionary:
+	if not customer:
+		return {}
+	var requested_card: ItemInstance = customer.get_desired_item()
+	if not requested_card:
+		return {}
+	var offered_card: ItemInstance = _generate_offer(requested_card)
+	if not offered_card:
+		return {}
+	return _build_offer(customer, requested_card, offered_card)
+
+
 ## Returns the number of trades completed today.
 func get_trades_today() -> int:
 	return _trades_today
@@ -131,6 +144,8 @@ func accept_trade() -> bool:
 func decline_trade() -> bool:
 	if not _active_customer:
 		return false
+	if _offered_item:
+		EventBus.trade_rejected.emit(_offered_item.instance_id)
 	EventBus.trade_declined.emit(
 		_active_customer.get_instance_id()
 		if _active_customer else 0
@@ -138,6 +153,11 @@ func decline_trade() -> bool:
 	_emit_trade_resolved(false)
 	_finish_trade()
 	return true
+
+
+## Rejects the active trade and leaves both inventories unchanged.
+func reject_trade() -> bool:
+	return decline_trade()
 
 
 func _generate_offer(wanted: ItemInstance) -> ItemInstance:
@@ -220,6 +240,10 @@ func _process_trade() -> void:
 		_wanted_item.instance_id,
 		_offered_item.instance_id,
 	)
+	EventBus.trade_completed.emit(
+		_offered_item.instance_id,
+		_wanted_item.instance_id,
+	)
 	EventBus.notification_requested.emit(
 		"Trade completed! Received %s" % _offered_item.definition.item_name
 	)
@@ -252,10 +276,16 @@ func _build_offer(
 	target_card: ItemInstance,
 	offered_card: ItemInstance,
 ) -> Dictionary:
+	var cash_adjustment: float = (
+		_get_card_value(offered_card) - _get_card_value(target_card)
+	)
 	return {
 		"npc_id": customer.get_instance_id(),
 		"offered_cards": [offered_card],
 		"target_card": target_card,
+		"offered_card": offered_card,
+		"requested_card": target_card,
+		"cash_adjustment": cash_adjustment,
 	}
 
 

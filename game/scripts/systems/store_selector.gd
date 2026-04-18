@@ -35,12 +35,13 @@ func select_store(exclude_store: String = "") -> String:
 ## Calculates selection weights for each owned store with capacity.
 func calculate_store_weights() -> Dictionary:
 	var weights: Dictionary = {}
-	for store_id: String in GameManager.owned_stores:
-		if not _has_capacity(store_id):
+	for store_id: StringName in GameManager.get_owned_store_ids():
+		var store_key: String = String(store_id)
+		if not _has_capacity(store_key):
 			continue
-		var weight: float = _get_store_weight(store_id)
+		var weight: float = _get_store_weight(store_key)
 		if weight > 0.0:
-			weights[store_id] = weight
+			weights[store_key] = weight
 	return weights
 
 

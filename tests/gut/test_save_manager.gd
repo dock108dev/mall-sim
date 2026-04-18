@@ -15,8 +15,6 @@ var _store_state_manager: StoreStateManager
 var _data_loader: DataLoader
 var _item_definition: ItemDefinition
 
-var _saved_owned_stores: Array[StringName] = []
-var _saved_store_id: StringName = &""
 var _saved_data_loader = null
 var _saved_difficulty_config: Dictionary = {}
 var _saved_difficulty_tiers: Dictionary = {}
@@ -28,8 +26,6 @@ var _saved_difficulty_downgrade_used: bool = false
 
 
 func before_each() -> void:
-	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	_saved_store_id = GameManager.current_store_id
 	if is_instance_valid(GameManager.data_loader):
 		_saved_data_loader = GameManager.data_loader
 	else:
@@ -62,8 +58,6 @@ func after_each() -> void:
 		DirAccess.remove_absolute(SaveManager.SLOT_INDEX_PATH)
 
 	ContentRegistry.clear_for_testing()
-	GameManager.owned_stores = _saved_owned_stores.duplicate()
-	GameManager.current_store_id = _saved_store_id
 	if is_instance_valid(_saved_data_loader):
 		GameManager.data_loader = _saved_data_loader
 	else:
@@ -116,8 +110,6 @@ func test_save_and_load_round_trip_restores_core_state() -> void:
 	_inventory.load_save_data({})
 	_store_state_manager.owned_slots = {}
 	_store_state_manager.active_store_id = &""
-	GameManager.owned_stores = []
-	GameManager.current_store_id = &""
 
 	assert_true(_save_manager.load_game(1), "Load should succeed")
 
@@ -351,10 +343,7 @@ func _create_systems() -> void:
 func _seed_store_state() -> void:
 	_store_state_manager.register_slot_ownership(1, STORE_ID)
 	_store_state_manager.set_store_name(STORE_ID, CUSTOM_STORE_NAME)
-	_store_state_manager.active_store_id = STORE_ID
-
-	GameManager.owned_stores = [STORE_ID]
-	GameManager.current_store_id = STORE_ID
+	_store_state_manager.set_active_store(STORE_ID, false)
 
 
 func _seed_round_trip_state() -> ItemInstance:

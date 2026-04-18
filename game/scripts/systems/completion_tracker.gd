@@ -379,7 +379,7 @@ func _on_tournament_completed(
 
 
 func _on_authentication_completed(
-	_item_id: String, is_genuine: bool
+	_item_id: Variant, is_genuine: bool, _result: Variant = null
 ) -> void:
 	if is_genuine:
 		_authentications_completed += 1

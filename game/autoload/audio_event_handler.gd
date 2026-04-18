@@ -128,7 +128,7 @@ func _on_item_rented(
 
 
 func _on_authentication_completed(
-	_item_id: String, _is_genuine: bool
+	_item_id: Variant, _is_genuine: bool, _result: Variant = null
 ) -> void:
 	_audio.play_sfx("auth_reveal")
 
@@ -188,7 +188,7 @@ func _on_build_mode_exited() -> void:
 
 
 func _play_store_music() -> void:
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		_audio.play_bgm("mall_hallway_music")
 		return
@@ -216,7 +216,7 @@ func _play_store_music_for(store_id: String) -> void:
 
 
 func _play_store_ambient() -> void:
-	var store_id: String = GameManager.current_store_id
+	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
 		_audio.play_ambient("mall_hallway")
 		return

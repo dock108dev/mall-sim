@@ -221,7 +221,7 @@ func _assign_waypoint_store_id(
 	waypoint.associated_store_id = store_id
 
 
-## Marks storefronts as owned based on GameManager.owned_stores.
+## Marks storefronts as owned based on StoreStateManager-owned slots.
 func _apply_owned_stores() -> void:
 	var owned_slots: Dictionary = {}
 	for i: int in range(_storefronts.size()):
@@ -343,7 +343,7 @@ func _show_lease_dialog(storefront: Storefront) -> void:
 	_lease_dialog.show_for_slot(
 		storefront.slot_index,
 		store_defs,
-		GameManager.owned_stores,
+		GameManager.get_owned_store_ids(),
 		cash,
 		reputation
 	)

@@ -4,9 +4,11 @@ extends Node
 
 
 enum TournamentSize { SMALL, LARGE }
+enum TournamentState { IDLE, SCHEDULED, ACTIVE, RESOLVED }
 
 const SMALL_COST: float = 30.0
 const LARGE_COST: float = 50.0
+const DEFAULT_PRIZE_AMOUNT: float = 100.0
 const COOLDOWN_DAYS: int = 3
 const MIN_PARTICIPANTS: int = 6
 const MAX_PARTICIPANTS: int = 12
@@ -30,6 +32,9 @@ var _fixture_placement_system: FixturePlacementSystem = null
 var _data_loader: DataLoader = null
 
 var _is_active: bool = false
+var _state: TournamentState = TournamentState.IDLE
+var _scheduled_days: Array[int] = []
+var _active_scheduled_day: int = -1
 var _cooldown_remaining: int = 0
 var _participant_count: int = 0
 var _tournament_revenue: float = 0.0
@@ -83,7 +88,7 @@ func can_host_tournament() -> bool:
 		return false
 	if not has_tournament_table():
 		return false
-	if GameManager.current_store_id != STORE_TYPE:
+	if GameManager.get_active_store_id() != STORE_TYPE:
 		return false
 	return true
 
@@ -96,7 +101,7 @@ func get_block_reason() -> String:
 		return "Cooldown: %d day(s) remaining" % _cooldown_remaining
 	if not has_tournament_table():
 		return "Place a Tournament Table fixture first"
-	if GameManager.current_store_id != STORE_TYPE:
+	if GameManager.get_active_store_id() != STORE_TYPE:
 		return "Must be in the PocketCreatures store"
 	var cost: float = _get_cost(TournamentSize.SMALL)
 	if _economy_system and _economy_system.get_cash() < cost:
@@ -130,6 +135,7 @@ func start_tournament(size: TournamentSize) -> bool:
 
 	_current_size = size
 	_is_active = true
+	_state = TournamentState.ACTIVE
 	_tournament_revenue = 0.0
 	_participant_count = _calculate_participant_count()
 
@@ -141,6 +147,55 @@ func start_tournament(size: TournamentSize) -> bool:
 	)
 
 	_spawn_tournament_customers()
+	return true
+
+
+## Schedules a tournament to begin when day_started emits the matching day.
+func schedule_tournament(day: int) -> bool:
+	if day < 0:
+		push_warning(
+			"TournamentSystem: cannot schedule tournament for day %d" % day
+		)
+		return false
+	if _scheduled_days.has(day):
+		return false
+
+	_scheduled_days.append(day)
+	_scheduled_days.sort()
+	if not _is_active:
+		_state = TournamentState.SCHEDULED
+	return true
+
+
+## Returns true when a tournament is scheduled for the given day.
+func is_tournament_scheduled(day: int) -> bool:
+	return _scheduled_days.has(day)
+
+
+## Returns a copy of scheduled tournament days.
+func get_scheduled_tournament_days() -> Array[int]:
+	return _scheduled_days.duplicate()
+
+
+## Returns the current tournament lifecycle state.
+func get_state() -> TournamentState:
+	return _state
+
+
+## Resolves the active tournament, emits the winner contract, and awards prize.
+func resolve_tournament(
+	winner_id: StringName = &"participant_1",
+	prize_amount: float = DEFAULT_PRIZE_AMOUNT
+) -> bool:
+	if not _is_active:
+		return false
+	if winner_id.is_empty() or prize_amount <= 0.0:
+		return false
+
+	if _economy_system:
+		_economy_system.add_cash(prize_amount, "Tournament prize")
+	EventBus.tournament_resolved.emit(winner_id, prize_amount)
+	_complete_tournament()
 	return true
 
 
@@ -167,6 +222,9 @@ func get_save_data() -> Dictionary:
 		"participant_count": _participant_count,
 		"tournament_revenue": _tournament_revenue,
 		"current_size": _current_size,
+		"state": _state,
+		"scheduled_days": _scheduled_days.duplicate(),
+		"active_scheduled_day": _active_scheduled_day,
 	}
 
 
@@ -177,6 +235,18 @@ func load_save_data(data: Dictionary) -> void:
 
 func _apply_state(data: Dictionary) -> void:
 	_is_active = bool(data.get("is_active", false))
+	_state = int(data.get(
+		"state",
+		TournamentState.ACTIVE if _is_active else TournamentState.IDLE
+	)) as TournamentState
+	_scheduled_days = _restore_scheduled_days(data.get("scheduled_days", []))
+	if (
+		not _is_active
+		and _state == TournamentState.IDLE
+		and not _scheduled_days.is_empty()
+	):
+		_state = TournamentState.SCHEDULED
+	_active_scheduled_day = int(data.get("active_scheduled_day", -1))
 	_cooldown_remaining = int(data.get("cooldown_remaining", 0))
 	_participant_count = int(data.get("participant_count", 0))
 	_tournament_revenue = float(
@@ -185,6 +255,17 @@ func _apply_state(data: Dictionary) -> void:
 	_current_size = int(
 		data.get("current_size", TournamentSize.SMALL)
 	) as TournamentSize
+
+
+func _restore_scheduled_days(raw_days: Variant) -> Array[int]:
+	var restored: Array[int] = []
+	if raw_days is Array:
+		for raw_day: Variant in raw_days:
+			var day: int = int(raw_day)
+			if day >= 0 and not restored.has(day):
+				restored.append(day)
+	restored.sort()
+	return restored
 
 
 func _calculate_participant_count() -> int:
@@ -225,6 +306,8 @@ func _complete_tournament() -> void:
 		return
 
 	_is_active = false
+	_state = TournamentState.RESOLVED
+	_active_scheduled_day = -1
 	_cooldown_remaining = COOLDOWN_DAYS
 
 	var rep_gain: float = lerpf(
@@ -251,6 +334,21 @@ func _complete_tournament() -> void:
 func _on_day_started(_day: int) -> void:
 	if _cooldown_remaining > 0:
 		_cooldown_remaining -= 1
+	if not _is_active and _scheduled_days.has(_day):
+		_start_scheduled_tournament(_day)
+	elif not _is_active and _cooldown_remaining == 0 and _scheduled_days.is_empty():
+		_state = TournamentState.IDLE
+
+
+func _start_scheduled_tournament(day: int) -> void:
+	_scheduled_days.erase(day)
+	_active_scheduled_day = day
+	_is_active = true
+	_state = TournamentState.ACTIVE
+	_tournament_revenue = 0.0
+	_participant_count = _calculate_participant_count()
+	EventBus.tournament_started.emit(_participant_count, 0.0)
+	_spawn_tournament_customers()
 
 
 func _on_day_phase_changed(new_phase: int) -> void:

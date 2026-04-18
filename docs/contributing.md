@@ -5,6 +5,14 @@
 Keep changes focused on the feature, bug, or documentation issue being handled.
 Do not refactor unrelated systems while making a narrow fix.
 
+## Formatting
+
+`.editorconfig` is the checked-in source of truth for whitespace rules:
+
+- tabs for general source files
+- two spaces for Markdown, YAML, and JSON
+- LF line endings, UTF-8, and final newlines
+
 ## GDScript Standards
 
 - Use static typing for variables, parameters, and return values.

@@ -9,6 +9,7 @@ var _market_event: MarketEventSystem
 var _seasonal_event: SeasonalEventSystem
 var _electronics_config: Dictionary = {}
 var _sold_signals: Array[Dictionary] = []
+var _saved_tier: StringName
 
 
 func _load_electronics_config() -> void:
@@ -59,6 +60,8 @@ func _on_item_sold(
 
 func before_each() -> void:
 	_sold_signals.clear()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton.set_tier(&"normal")
 	_load_electronics_config()
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
@@ -78,6 +81,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	DifficultySystemSingleton.set_tier(_saved_tier)
 	if EventBus.item_sold.is_connected(_on_item_sold):
 		EventBus.item_sold.disconnect(_on_item_sold)
 
