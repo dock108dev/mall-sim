@@ -65,8 +65,8 @@ func test_create_trend_emits_signal() -> void:
 
 	var cb: Callable = func(trending: Array, cold: Array) -> void:
 		signal_fired[0] = true
-		trending_received = trending.duplicate()
-		cold_received = cold.duplicate()
+		trending_received.assign(trending)
+		cold_received.assign(cold)
 	EventBus.trend_changed.connect(cb)
 
 	_inject_trend("collectibles", HOT_MULTIPLIER, 5, TrendSystem.TrendType.HOT)

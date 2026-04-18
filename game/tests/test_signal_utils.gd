@@ -1,4 +1,4 @@
-## Shared signal helpers for GUT tests that need defensive cleanup.
+## Shared signal helpers for both `game/tests` and top-level `tests/` suites.
 extends RefCounted
 
 

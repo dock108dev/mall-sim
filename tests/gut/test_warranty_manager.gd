@@ -10,6 +10,25 @@ func before_each() -> void:
 	_manager = WarrantyManager.new()
 
 
+func _get_active_warranties(manager: WarrantyManager = _manager) -> Array[Dictionary]:
+	var active_entries: Array[Dictionary] = []
+	var saved_active: Array = manager.get_save_data().get("active_warranties", [])
+	for entry: Variant in saved_active:
+		if entry is Dictionary:
+			active_entries.append(entry as Dictionary)
+	return active_entries
+
+
+func _find_seed_for_threshold(
+	threshold: float, max_seed: int = 10_000
+) -> int:
+	for candidate_seed: int in range(max_seed):
+		seed(candidate_seed)
+		if randf() < threshold:
+			return candidate_seed
+	return -1
+
+
 # --- Eligibility ---
 
 
@@ -105,10 +124,21 @@ func test_calculate_fee_mid_percent_in_range() -> void:
 
 
 func test_add_warranty_creates_entry_in_active_warranties() -> void:
-	_manager.add_warranty("item_001", 150.0, 25.0, 80.0, 1)
+	var record: Dictionary = _manager.add_warranty("item_001", 150.0, 25.0, 80.0, 1)
+	var active_warranties: Array[Dictionary] = _get_active_warranties()
 	assert_eq(
-		_manager.get_active_count(), 1,
-		"One warranty should be active after add_warranty"
+		active_warranties.size(), 1,
+		"add_warranty should register one active warranty entry"
+	)
+	assert_eq(
+		active_warranties[0].get("item_id", ""),
+		record.get("item_id", ""),
+		"Active warranty entry should keep the item_id"
+	)
+	assert_eq(
+		active_warranties[0].get("expiry_day", -1),
+		record.get("expiry_day", -1),
+		"Active warranty entry should keep the computed expiry day"
 	)
 
 
@@ -183,41 +213,58 @@ func test_purge_expired_keeps_active_warranties() -> void:
 
 func test_process_daily_claims_adds_to_daily_claim_costs() -> void:
 	var wholesale: float = 80.0
+	var claim_seed: int = _find_seed_for_threshold(
+		WarrantyManager.CLAIM_PROBABILITY
+	)
+	assert_ne(
+		claim_seed,
+		-1,
+		"Test setup should find a deterministic seed for claim rolls"
+	)
 	_manager.add_warranty("item_009", 120.0, 20.0, wholesale, 1)
-	seed(0)
-	var iterations: Array = [0]
-	var claimed: Array = [false]
-	while iterations[0] < 10000 and not claimed[0]:
-		_manager = WarrantyManager.new()
-		_manager.add_warranty("item_009", 120.0, 20.0, wholesale, 1)
-		var claims: Array[Dictionary] = _manager.process_daily_claims(15)
-		if not claims.is_empty():
-			claimed[0] = true
-			assert_almost_eq(
-				_manager.get_daily_claim_costs(),
-				wholesale,
-				0.001,
-				"Claim cost should equal wholesale_cost of claimed item"
-			)
-		iterations[0] += 1
-	if not claimed[0]:
-		push_warning(
-			"test_process_daily_claims_adds_to_daily_claim_costs: "
-			+ "no claim triggered in %d iterations (low probability event)"
-			% iterations[0]
-		)
-
-
-func test_process_daily_claims_does_not_affect_warranty_revenue() -> void:
-	var fee: float = 22.0
-	_manager.add_warranty("item_010", 150.0, fee, 90.0, 1)
-	var revenue_before: float = _manager.get_daily_warranty_revenue()
-	_manager.process_daily_claims(15)
+	seed(claim_seed)
+	var claims: Array[Dictionary] = _manager.process_daily_claims(15)
+	assert_eq(claims.size(), 1, "Seeded claim roll should produce one claim")
 	assert_almost_eq(
-		_manager.get_daily_warranty_revenue(),
-		revenue_before,
+		_manager.get_daily_claim_costs(),
+		wholesale,
 		0.001,
-		"process_daily_claims should not change daily_warranty_revenue"
+		"Claim cost should equal wholesale_cost of claimed item"
+	)
+	assert_true(
+		_get_active_warranties()[0].get("claimed", false),
+		"Claimed warranty should remain tracked and be marked as claimed"
+	)
+
+
+func test_day_started_claim_processing_zeroes_revenue_and_tracks_claim_cost() -> void:
+	var controller: ElectronicsStoreController = ElectronicsStoreController.new()
+	add_child_autofree(controller)
+	var wholesale: float = 90.0
+	var claim_seed: int = _find_seed_for_threshold(
+		WarrantyManager.CLAIM_PROBABILITY
+	)
+	assert_ne(
+		claim_seed,
+		-1,
+		"Test setup should find a deterministic seed for day-started claim rolls"
+	)
+	controller.get_warranty_manager().add_warranty(
+		"item_010", 150.0, 22.0, wholesale, 1
+	)
+	seed(claim_seed)
+	EventBus.day_started.emit(15)
+	assert_almost_eq(
+		controller.get_warranty_manager().get_daily_warranty_revenue(),
+		0.0,
+		0.001,
+		"day_started claim processing should clear daily_warranty_revenue before claims"
+	)
+	assert_almost_eq(
+		controller.get_warranty_manager().get_daily_claim_costs(),
+		wholesale,
+		0.001,
+		"day_started claim processing should track the replacement cost"
 	)
 
 
@@ -306,16 +353,27 @@ func test_reset_daily_totals_zeroes_revenue_and_costs() -> void:
 	)
 
 
-func test_reset_daily_totals_called_on_day_started_via_controller() -> void:
-	_manager.add_warranty("item_013", 100.0, 18.0, 55.0, 1)
-	_manager.reset_daily_totals()
+func test_day_started_signal_resets_daily_totals_without_active_claims() -> void:
+	var controller: ElectronicsStoreController = ElectronicsStoreController.new()
+	add_child_autofree(controller)
+	controller.get_warranty_manager().load_save_data({
+		"active_warranties": [],
+		"claim_history": [],
+		"daily_warranty_revenue": 18.0,
+		"daily_claim_costs": 7.5,
+	})
+	EventBus.day_started.emit(15)
 	assert_almost_eq(
-		_manager.get_daily_warranty_revenue(), 0.0, 0.001,
-		"reset_daily_totals (triggered by day_started) should zero revenue"
+		controller.get_warranty_manager().get_daily_warranty_revenue(),
+		0.0,
+		0.001,
+		"day_started should reset daily_warranty_revenue to zero"
 	)
 	assert_almost_eq(
-		_manager.get_daily_claim_costs(), 0.0, 0.001,
-		"reset_daily_totals (triggered by day_started) should zero claim costs"
+		controller.get_warranty_manager().get_daily_claim_costs(),
+		0.0,
+		0.001,
+		"day_started should reset daily_claim_costs to zero when no claims trigger"
 	)
 
 

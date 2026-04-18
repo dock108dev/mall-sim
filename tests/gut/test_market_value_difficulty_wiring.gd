@@ -23,7 +23,7 @@ func _create_item(
 	def.rarity = overrides.get("rarity", "common")
 	def.category = overrides.get("category", "trading_cards")
 	def.tags = overrides.get("tags", PackedStringArray())
-	def.store_type = overrides.get("store_type", "retro_games")
+	def.store_type = overrides.get("store_type", "")
 	return ItemInstance.create_from_definition(def, condition)
 
 
@@ -41,6 +41,7 @@ func before_each() -> void:
 	_system = MarketValueSystem.new()
 	add_child_autofree(_system)
 	_system.initialize(_inventory, null, null)
+	_system._calendar_seasonal_multipliers = {}
 
 
 func after_each() -> void:
@@ -58,8 +59,8 @@ func test_normal_floor_does_not_alter_healthy_price() -> void:
 
 func test_easy_floor_raises_collapsed_price() -> void:
 	DifficultySystemSingleton.set_tier(&"easy")
-	# damaged common: 10.0 * (1.0 * 0.90) * 0.15 = 1.35; floor = 10.0 * 0.5 * 1.10 = 5.5
-	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "damaged")
+	# poor common: 10.0 * (1.0 * 0.90) * 0.30 = 2.7; floor = 10.0 * 0.5 * 1.10 = 5.5
+	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "poor")
 	var value: float = _system.calculate_item_value(item)
 	assert_almost_eq(
 		value, 5.5, 0.001,
@@ -69,8 +70,8 @@ func test_easy_floor_raises_collapsed_price() -> void:
 
 func test_hard_floor_raises_collapsed_price_less_than_easy() -> void:
 	DifficultySystemSingleton.set_tier(&"hard")
-	# damaged common: 10.0 * (1.0 * 1.20) * 0.15 = 1.80; floor = 10.0 * 0.5 * 0.85 = 4.25
-	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "damaged")
+	# poor common: 10.0 * (1.0 * 1.20) * 0.30 = 3.6; floor = 10.0 * 0.5 * 0.85 = 4.25
+	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "poor")
 	var value: float = _system.calculate_item_value(item)
 	assert_almost_eq(
 		value, 4.25, 0.001,
@@ -79,7 +80,7 @@ func test_hard_floor_raises_collapsed_price_less_than_easy() -> void:
 
 
 func test_easy_floor_higher_than_hard_floor() -> void:
-	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "damaged")
+	var item: ItemInstance = _create_item({"base_price": 10.0, "rarity": "common"}, "poor")
 	DifficultySystemSingleton.set_tier(&"easy")
 	var easy_value: float = _system.calculate_item_value(item)
 	DifficultySystemSingleton.set_tier(&"hard")
@@ -155,6 +156,15 @@ func test_normal_trend_active_within_duration() -> void:
 		"end_day": 6,
 		"fade_end_day": 8,
 	})
+	_system._current_day = 4
+	EventBus.trend_updated.emit(
+		&"trading_cards",
+		_trend._calc_trend_multiplier_scaled(
+			_trend._active_trends[0],
+			4,
+			DifficultySystemSingleton.get_modifier(&"trend_duration_multiplier")
+		)
+	)
 	var item: ItemInstance = _create_item(
 		{"base_price": 10.0, "rarity": "common", "category": "trading_cards"}, "mint"
 	)
@@ -183,6 +193,15 @@ func test_hard_trend_fades_earlier_than_normal() -> void:
 
 	DifficultySystemSingleton.set_tier(&"normal")
 	_trend._active_trends = [trend.duplicate()]
+	_system._current_day = 6
+	EventBus.trend_updated.emit(
+		&"trading_cards",
+		_trend._calc_trend_multiplier_scaled(
+			trend,
+			6,
+			DifficultySystemSingleton.get_modifier(&"trend_duration_multiplier")
+		)
+	)
 	var item: ItemInstance = _create_item(
 		{"base_price": 10.0, "rarity": "common", "category": "trading_cards"}, "mint"
 	)
@@ -190,6 +209,14 @@ func test_hard_trend_fades_earlier_than_normal() -> void:
 
 	DifficultySystemSingleton.set_tier(&"hard")
 	_trend._active_trends = [trend.duplicate()]
+	EventBus.trend_updated.emit(
+		&"trading_cards",
+		_trend._calc_trend_multiplier_scaled(
+			trend,
+			6,
+			DifficultySystemSingleton.get_modifier(&"trend_duration_multiplier")
+		)
+	)
 	var hard_value: float = _system.calculate_item_value(item)
 
 	# Hard trend has faded further on day 6 than Normal trend
@@ -219,6 +246,15 @@ func test_easy_trend_still_active_past_base_end() -> void:
 
 	DifficultySystemSingleton.set_tier(&"normal")
 	_trend._active_trends = [trend.duplicate()]
+	_system._current_day = 7
+	EventBus.trend_updated.emit(
+		&"trading_cards",
+		_trend._calc_trend_multiplier_scaled(
+			trend,
+			7,
+			DifficultySystemSingleton.get_modifier(&"trend_duration_multiplier")
+		)
+	)
 	var item: ItemInstance = _create_item(
 		{"base_price": 10.0, "rarity": "common", "category": "trading_cards"}, "mint"
 	)
@@ -226,6 +262,14 @@ func test_easy_trend_still_active_past_base_end() -> void:
 
 	DifficultySystemSingleton.set_tier(&"easy")
 	_trend._active_trends = [trend.duplicate()]
+	EventBus.trend_updated.emit(
+		&"trading_cards",
+		_trend._calc_trend_multiplier_scaled(
+			trend,
+			7,
+			DifficultySystemSingleton.get_modifier(&"trend_duration_multiplier")
+		)
+	)
 	var easy_value: float = _system.calculate_item_value(item)
 
 	# Easy trend is still fully active on day 7; Normal trend is mid-fade

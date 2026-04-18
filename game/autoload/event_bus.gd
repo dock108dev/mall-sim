@@ -196,7 +196,6 @@ signal provenance_completed(item_id: String, success: bool, message: String)
 # ── Testing Station ──────────────────────────────────────────────────────────
 signal item_testing_started(instance_id: String, duration: float)
 signal item_test_completed(instance_id: String, result: String)
-signal item_tested(item_id: String, success: bool)
 
 # ── Refurbishment ─────────────────────────────────────────────────────────────
 signal refurbishment_started(item_id: String, parts_cost: float, duration: int)

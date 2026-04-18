@@ -2,39 +2,38 @@
 
 ## Diff-Driven Deletion Summary
 
-1. **Removed runtime store-state shadow writes into `GameManager`.**
-   `StoreStateManager` no longer syncs `active_store_id` or owned stores into `GameManager`, and runtime callers now resolve store identity through `StoreStateManager` via `GameManager.get_active_store_id()` / `GameManager.get_owned_store_ids()`.
+1. **Deleted non-runtime `DataLoader` shim code.**
+   `game/scripts/data_loader.gd` was only a grep target for shell validators. The real parser path is `game/scripts/content_parser.gd` plus `game/autoload/data_loader.gd`, so the shim was removed and the validators were retargeted to the canonical parser.
 
-2. **Deleted legacy save/load fallbacks that bypassed `StoreStateManager`.**
-   `SaveManager` no longer falls back to `GameManager.current_store_id`, `GameManager.owned_stores`, legacy `metadata`, legacy `store_type`, `_apply_loaded_owned_stores()`, `_restore_owned_slots_with_fallback()`, or `_migrate_legacy_owned_store_array()`.
+2. **Removed dead Pocket Creatures and sports-season compatibility catalogs.**
+   `game/content/items_pocket_creatures.json` and `game/content/sports_seasons.json` were deleted because runtime no longer used them; canonical content already lives in `game/content/stores/pocket_creatures_cards.json` and `game/content/stores/sports_seasons.json`.
 
-3. **Removed tests that only preserved deleted compatibility behavior.**
-   Save-manager coverage was updated to seed canonical store state through `StoreStateManager`, and the unit test that validated legacy v0 `metadata/store_type` + `owned_stores` migration was deleted.
+3. **Deleted loader branches that only existed to skip the removed compatibility files.**
+   `DataLoaderSingleton._should_skip_file()` no longer special-cases the deleted root Pocket Creatures and sports-season catalogs.
 
-4. **Deleted the GameManager-owned-store mutation path.**
-   `GameManager.own_store()` is gone; ownership registration now happens only through `StoreStateManager.owned_slots`.
+4. **Removed the dead `item_tested` signal path.**
+   Runtime testing code now emits only `item_test_completed`, and the tests that existed solely to preserve the old `item_tested` compatibility signal were removed or updated.
 
 ## SSOT Verification
 
 | Domain | Authoritative module | Notes |
 | --- | --- | --- |
-| Active store identity | `StoreStateManager.active_store_id` | Runtime reads now use `GameManager.get_active_store_id()` as a read-through helper only. |
-| Owned stores / storefront ownership | `StoreStateManager.owned_slots` | Ordered store lists now come from `StoreStateManager.get_owned_store_ids()`. |
-| Save/load store restoration | `SaveManager` + `StoreStateManager.restore_owned_slots()` | Save files restore canonical slot ownership first, then set the active store. |
-| Save metadata preview store | `save_metadata.active_store_id` | Legacy `metadata.store_type` fallback was removed. |
-| Current day | `TimeSystem.current_day` | Unchanged in this pass; still exposed through `GameManager.get_current_day()` as a read-through legacy helper. |
+| Store content parsing | `game/scripts/content_parser.gd` via `game/autoload/data_loader.gd` | Shell validators now point at the parser that actually sets `store.music` and recommended markup fields. |
+| Pocket Creatures item catalog | `game/content/stores/pocket_creatures_cards.json` | Root `items_pocket_creatures.json` copy was deleted. |
+| Sports season content | `game/content/stores/sports_seasons.json` | Root `sports_seasons.json` copy was deleted. |
+| Runtime item-testing completion signal | `EventBus.item_test_completed` | `item_tested` was removed because no runtime listener used it. |
+| Milestone catalog loaded by boot | `game/content/progression/milestone_definitions.json` through `DataLoaderSingleton` | Loader still skips the legacy `game/content/milestones/milestone_definitions.json` file when both exist. |
 
 ## Risk Log
 
-1. **Retained legacy `GameManager.current_store_id` and `GameManager.owned_stores` fields.**
-   They remain in the autoload as compatibility shims for older tests, but production code no longer uses them as a source of truth.
+1. **Retained legacy milestone consumers outside the boot loader.**
+   `ProgressionSystem` still reads `game/content/milestones/milestone_definitions.json` directly, and `CompletionTracker` still names revenue milestones from that legacy set. That overlap is active runtime behavior, not dead code, so it was left for a broader convergence pass instead of being partially deleted here.
 
-2. **Retained v0 save migration shell.**
-   Version migration still exists, but it now normalizes into `save_metadata.active_store_id` + `owned_slots` and drops legacy `metadata` / `store_type` on migration.
+2. **Retained milestone loader skip for the legacy milestone catalog.**
+   The boot pipeline still contains the progression-over-milestones precedence rule because the legacy milestone file still exists in the repository and one runtime system still depends on it directly.
 
 ## Sanity Check
 
-- No code references remain to deleted symbols: `GameManager.own_store`, `_apply_loaded_owned_stores`, `_restore_owned_slots_with_fallback`, `_migrate_legacy_owned_store_array`.
-- Runtime code no longer reads `GameManager.current_store_id` or `GameManager.owned_stores`; those references are now confined to legacy tests.
-- Focused regression slice passed:
-  `res://tests/unit/test_save_manager.gd`, `res://tests/gut/test_save_manager.gd`, `res://game/tests/test_store_state_system.gd`, `res://tests/unit/test_store_selector_system.gd`, `res://tests/gut/test_economy_system.gd`.
+- No runtime or validator references remain to deleted files `game/scripts/data_loader.gd`, `game/content/items_pocket_creatures.json`, or `game/content/sports_seasons.json`.
+- No runtime code emits or listens for the deleted `item_tested` signal; the remaining tests use `item_test_completed`.
+- Documentation and catalog validation now point at the surviving canonical content locations for sports seasons and store parsing.

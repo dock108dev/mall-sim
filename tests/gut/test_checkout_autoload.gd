@@ -1,6 +1,7 @@
 ## Tests for CheckoutSystem autoload — NPC transaction processing.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
 
 var _system: Node
 var _inventory: InventorySystem
@@ -60,17 +61,12 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	_safe_disconnect(
+	TEST_SIGNAL_UTILS.safe_disconnect(
 		EventBus.customer_purchased, _on_purchased
 	)
-	_safe_disconnect(
+	TEST_SIGNAL_UTILS.safe_disconnect(
 		EventBus.customer_left_mall, _on_left_mall
 	)
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
 
 
 func _on_purchased(

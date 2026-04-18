@@ -47,10 +47,7 @@ func initialize(
 	_reputation_system = reputation
 	_load_milestone_definitions()
 	_apply_state({})
-	EventBus.day_ended.connect(_on_day_ended)
-	EventBus.item_sold.connect(_on_item_sold)
-	EventBus.reputation_changed.connect(_on_reputation_changed)
-	EventBus.day_started.connect(_on_day_started)
+	_connect_event_bus()
 
 
 ## Re-evaluates milestones after the day summary is acknowledged.
@@ -183,14 +180,26 @@ func get_save_data() -> Dictionary:
 		"unlocked_supplier_tier": _unlocked_supplier_tier,
 		"current_day": _current_day,
 		"current_reputation": _current_reputation,
+		"cumulative_cash": _cumulative_cash_earned,
 		"cumulative_cash_earned": _cumulative_cash_earned,
 		"mall_reputation": _mall_reputation,
+		"unlocked_slots": unlocked_slots_list,
 		"unlocked_slot_indices": unlocked_slots_list,
 	}
 
 
 func load_save_data(data: Dictionary) -> void:
 	_apply_state(data)
+
+
+## Returns save-state data using the shared serialize/deserialize API.
+func serialize() -> Dictionary:
+	return get_save_data()
+
+
+## Restores save-state data without replaying unlock side effects.
+func deserialize(data: Dictionary) -> void:
+	load_save_data(data)
 
 
 func _apply_state(data: Dictionary) -> void:
@@ -213,7 +222,10 @@ func _apply_state(data: Dictionary) -> void:
 		data.get("current_reputation", 0.0)
 	)
 	_cumulative_cash_earned = float(
-		data.get("cumulative_cash_earned", 0.0)
+		data.get(
+			"cumulative_cash_earned",
+			data.get("cumulative_cash", 0.0)
+		)
 	)
 	_mall_reputation = float(
 		data.get("mall_reputation", 0.0)
@@ -226,10 +238,34 @@ func _apply_state(data: Dictionary) -> void:
 			_unlocked_fixtures.append(str(entry))
 
 	_unlocked_slot_indices = {}
-	var saved_slots: Variant = data.get("unlocked_slot_indices", [])
+	var saved_slots: Variant = data.get(
+		"unlocked_slot_indices",
+		data.get("unlocked_slots", [])
+	)
 	if saved_slots is Array:
 		for entry: Variant in saved_slots:
 			_unlocked_slot_indices[int(entry)] = true
+
+	if not data.has("unlocked_store_slots"):
+		for slot_index: int in _unlocked_slot_indices.keys():
+			_unlocked_store_slots = maxi(
+				_unlocked_store_slots, slot_index + 1
+			)
+
+
+func _connect_event_bus() -> void:
+	if not EventBus.day_ended.is_connected(_on_day_ended):
+		EventBus.day_ended.connect(_on_day_ended)
+	if not EventBus.item_sold.is_connected(_on_item_sold):
+		EventBus.item_sold.connect(_on_item_sold)
+	if not EventBus.transaction_completed.is_connected(
+		_on_transaction_completed
+	):
+		EventBus.transaction_completed.connect(_on_transaction_completed)
+	if not EventBus.reputation_changed.is_connected(_on_reputation_changed):
+		EventBus.reputation_changed.connect(_on_reputation_changed)
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
 
 
 func _load_milestone_definitions() -> void:
@@ -403,12 +439,33 @@ func _on_item_sold(
 ) -> void:
 	_total_items_sold += 1
 	_total_revenue += price
-	_cumulative_cash_earned += price
 	_evaluate_milestones()
+
+
+func _on_transaction_completed(
+	amount: float, success: bool, reason: String
+) -> void:
+	if not _is_sale_transaction(amount, success, reason):
+		return
+	_cumulative_cash_earned += amount
+	_check_store_unlock_thresholds()
 
 
 func _on_reputation_changed(
 	_store_id: String, new_value: float
 ) -> void:
 	_current_reputation = new_value
+	if _reputation_system:
+		_recalculate_mall_reputation()
+	else:
+		_mall_reputation = new_value
+	_check_store_unlock_thresholds()
 	_evaluate_milestones()
+
+
+func _is_sale_transaction(
+	amount: float, success: bool, reason: String
+) -> bool:
+	if not success or amount <= 0.0:
+		return false
+	return reason.to_lower().contains("sale")

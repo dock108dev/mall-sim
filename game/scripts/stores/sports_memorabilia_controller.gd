@@ -56,10 +56,32 @@ func get_demand_multiplier(category: StringName) -> float:
 	return 1.0
 
 
+## Returns the current sale price for an inventory item in this store.
+func get_item_price(item_id: StringName) -> float:
+	if not _inventory_system:
+		push_warning(
+			"SportsMemorabiliaController: InventorySystem is required for pricing"
+		)
+		return 0.0
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item or not item.definition:
+		push_warning(
+			"SportsMemorabiliaController: item '%s' not found for pricing"
+			% item_id
+		)
+		return 0.0
+	var price: float = item.definition.base_price
+	if item.authentication_status == "suspicious":
+		price *= AuthenticationSystem.SUSPICIOUS_PRICE_MULTIPLIER
+	price *= get_demand_multiplier(item.definition.category)
+	return price
+
+
 ## Serializes sports-memorabilia-specific state for saving.
 func get_save_data() -> Dictionary:
 	return {
 		"season_cycle": _season_cycle.get_save_data(),
+		"authentication": _authentication.get_save_data(),
 		"season_boost_active": _season_boost_active,
 	}
 
@@ -69,7 +91,14 @@ func load_save_data(data: Dictionary) -> void:
 	var cycle_data: Variant = data.get("season_cycle", {})
 	if cycle_data is Dictionary:
 		_season_cycle.load_save_data(cycle_data as Dictionary)
+	var authentication_data: Variant = data.get("authentication", {})
+	if authentication_data is Dictionary:
+		_authentication.load_save_data(authentication_data as Dictionary)
 	_season_boost_active = bool(data.get("season_boost_active", false))
+
+
+func _defer_store_entered(store_id: StringName) -> void:
+	_on_store_entered(store_id)
 
 
 func _on_day_started(day: int) -> void:

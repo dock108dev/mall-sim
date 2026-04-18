@@ -3,6 +3,7 @@ class_name DataLoader
 extends Node
 
 const CONTENT_ROOT := "res://game/content/"
+const MAX_JSON_FILE_BYTES: int = 1048576
 const _LEGACY_MILESTONE_PATH := "res://game/content/milestones/milestone_definitions.json"
 const _PROGRESSION_MILESTONE_PATH := "res://game/content/progression/milestone_definitions.json"
 
@@ -192,21 +193,6 @@ func _scan_dir(path: String, files: Array[String]) -> void:
 
 func _should_skip_file(path: String) -> bool:
 	if path == _LEGACY_MILESTONE_PATH and FileAccess.file_exists(_PROGRESSION_MILESTONE_PATH):
-		return true
-	if (
-		path.ends_with("/items_pocket_creatures.json")
-		and FileAccess.file_exists(
-			"res://game/content/stores/pocket_creatures_cards.json"
-		)
-	):
-		return true
-	if (
-		path.ends_with("/sports_seasons.json")
-		and not path.ends_with("/stores/sports_seasons.json")
-		and FileAccess.file_exists(
-			"res://game/content/stores/sports_seasons.json"
-		)
-	):
 		return true
 	return false
 
@@ -608,6 +594,13 @@ static func _read_json_file(
 		return _report_json_error(
 			"failed to open '%s' — %s"
 			% [path, error_string(FileAccess.get_open_error())],
+			on_error
+		)
+	if file.get_length() > MAX_JSON_FILE_BYTES:
+		file.close()
+		return _report_json_error(
+			"file '%s' exceeds maximum supported size (%d bytes)"
+			% [path, MAX_JSON_FILE_BYTES],
 			on_error
 		)
 	var json_text: String = file.get_as_text()

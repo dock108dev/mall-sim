@@ -142,24 +142,26 @@ func test_retest_blocked() -> void:
 	)
 
 
-func test_item_tested_signal_emitted() -> void:
+func test_item_test_completed_signal_emitted() -> void:
 	var captured_ids: Array[String] = []
-	var captured_success: Array[bool] = []
-	var capture: Callable = func(item_id: String, success: bool) -> void:
+	var captured_results: Array[String] = []
+	var capture: Callable = func(item_id: String, result: String) -> void:
 		captured_ids.append(item_id)
-		captured_success.append(success)
-	EventBus.item_tested.connect(capture)
+		captured_results.append(result)
+	EventBus.item_test_completed.connect(capture)
 	var item: ItemInstance = _make_item()
 	_system.start_test(item.instance_id)
 	_system._on_test_timer_timeout()
-	EventBus.item_tested.disconnect(capture)
-	assert_eq(captured_ids.size(), 1, "item_tested signal should fire exactly once")
+	EventBus.item_test_completed.disconnect(capture)
+	assert_eq(
+		captured_ids.size(), 1,
+		"item_test_completed signal should fire exactly once"
+	)
 	assert_eq(
 		captured_ids[0], item.instance_id,
 		"Signal should carry the correct item instance_id"
 	)
-	var expected_success: bool = item.test_result == "tested_working"
 	assert_eq(
-		captured_success[0], expected_success,
-		"Signal success flag should match the item test_result"
+		captured_results[0], item.test_result,
+		"Signal result should match the item test_result"
 	)

@@ -8,10 +8,13 @@ var _trend: TrendSystem
 var _reputation: ReputationSystem
 var _perf_report: PerformanceReportSystem
 var _data_loader: DataLoader
+var _store_state: StoreStateManager
 
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 var _saved_day: int
+var _saved_difficulty_tier: StringName
+var _saved_store_state_manager_ref: WeakRef
 
 const STARTING_CASH: float = 1000.0
 const DAILY_WAGE: float = 50.0
@@ -30,10 +33,17 @@ func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	_saved_day = GameManager.current_day
+	_saved_difficulty_tier = DifficultySystemSingleton.get_current_tier_id()
+	_saved_store_state_manager_ref = GameManager._store_state_manager_ref
 
 	GameManager.current_store_id = &"test_store"
 	GameManager.owned_stores = []
 	GameManager.current_day = 1
+	DifficultySystemSingleton.set_tier(&"normal")
+
+	_store_state = StoreStateManager.new()
+	add_child_autofree(_store_state)
+	GameManager._store_state_manager_ref = weakref(_store_state)
 
 	_time = TimeSystem.new()
 	add_child_autofree(_time)
@@ -72,6 +82,8 @@ func after_each() -> void:
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
 	GameManager.current_day = _saved_day
+	GameManager._store_state_manager_ref = _saved_store_state_manager_ref
+	DifficultySystemSingleton.set_tier(_saved_difficulty_tier)
 
 
 func test_time_system_reaches_day_6_after_5_advances() -> void:
@@ -197,6 +209,7 @@ func _advance_day(day: int) -> void:
 
 func _end_day(day: int) -> void:
 	EventBus.day_ended.emit(day)
+	_reputation._on_day_ended(day)
 	_staff.process_daily_wages()
 
 

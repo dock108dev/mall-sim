@@ -27,6 +27,10 @@ var _season_cycle_length: int = 70
 var _current_named_season: StringName = &""
 
 
+func _ready() -> void:
+	_ensure_day_started_connected()
+
+
 func initialize(data_loader: DataLoader) -> void:
 	_event_definitions = []
 	_sports_seasons = []
@@ -46,7 +50,7 @@ func initialize(data_loader: DataLoader) -> void:
 		)
 		_validate_tournament_schedule()
 	_apply_state({})
-	EventBus.day_started.connect(_on_day_started)
+	_ensure_day_started_connected()
 
 
 func get_traffic_multiplier() -> float:
@@ -364,6 +368,11 @@ func _on_day_started(day: int) -> void:
 	_expire_active_tournaments(day)
 	_promote_announced_tournaments(day)
 	_check_for_new_tournaments(day)
+
+
+func _ensure_day_started_connected() -> void:
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
 
 
 func _init_named_season(day: int) -> void:

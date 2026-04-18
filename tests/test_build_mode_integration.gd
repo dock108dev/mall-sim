@@ -11,8 +11,10 @@ const REGISTER_POS: Vector2i = Vector2i(0, 0)
 
 var _build_mode: BuildModeSystem
 var _placement: FixturePlacementSystem
+var _data_loader: DataLoader
 var _economy: EconomySystem
 var _inventory: InventorySystem
+var _store_state: StoreStateManager
 var _time_system: TimeSystem
 var _save_manager: SaveManager
 
@@ -35,13 +37,21 @@ func before_each() -> void:
 	GameManager.current_store_id = &"sports"
 	GameManager.owned_stores = [&"sports"]
 
+	_data_loader = DataLoader.new()
+	add_child_autofree(_data_loader)
+	_data_loader.load_all_content()
+
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_economy.initialize(5000.0)
 
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)
-	_inventory.initialize(null)
+	_inventory.initialize(_data_loader)
+
+	_store_state = StoreStateManager.new()
+	add_child_autofree(_store_state)
+	_store_state.initialize(_inventory, _economy)
 
 	_time_system = TimeSystem.new()
 	add_child_autofree(_time_system)
@@ -70,6 +80,7 @@ func before_each() -> void:
 	_save_manager = SaveManager.new()
 	add_child_autofree(_save_manager)
 	_save_manager.initialize(_economy, _inventory, _time_system)
+	_save_manager.set_store_state_manager(_store_state)
 	_save_manager.set_fixture_placement_system(_placement)
 
 	DirAccess.make_dir_recursive_absolute(SaveManager.SAVE_DIR)

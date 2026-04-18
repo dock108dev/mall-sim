@@ -1,46 +1,51 @@
 # Mallcore Sim
 
-Mallcore Sim is a Godot retail simulator about operating specialty stores in a
-2000s-style mall. The project uses GDScript for gameplay code, JSON for game
-content, GUT for automated tests, and checked-in export presets for local and
-CI builds.
+Mallcore Sim is a Godot retail simulator about running specialty stores in a
+2000s-style mall. Gameplay code lives in GDScript, boot-time content is loaded
+from JSON under `game/content/`, tests run through the checked-in GUT addon, and
+export presets are versioned in the repository.
 
-## Run Locally
+## Run locally
 
-1. Install the standard Godot editor build.
+1. Install a standard Godot 4.x editor build.
 2. Import `project.godot`.
 3. Let Godot import project assets.
 4. Run the project with F5.
 
-`project.godot` starts `res://game/scenes/bootstrap/boot.tscn`. Boot loads JSON
-content from `game/content/`, validates `ContentRegistry`, loads settings from
-`user://settings.cfg`, initializes audio, then transitions to the main menu.
+The configured entry scene is `res://game/scenes/bootstrap/boot.tscn`. Boot
+loads content, validates the registry, loads settings from `user://settings.cfg`,
+initializes audio, and then opens the main menu.
 
-## Run Tests
+## Run tests
 
 ```bash
 bash tests/run_tests.sh
 ```
 
 The test runner resolves Godot from `GODOT`, `GODOT_EXECUTABLE`, `godot` on
-`PATH`, or common macOS install paths, imports project assets, runs GUT
-headlessly, and then runs any shell validators in `tests/validate_*.sh`.
+`PATH`, or common macOS install paths, imports assets, runs GUT headlessly,
+runs `game/tests/run_tests.gd` when present, writes output to
+`tests/test_run.log`, and then runs shell validators matching
+`tests/validate_*.sh`.
 
-## Deployment Basics
+## Deployment basics
 
-`export_presets.cfg` defines local export presets for:
+`export_presets.cfg` defines checked-in local export presets for:
 
 - `Windows Desktop` -> `exports/windows/MallcoreSim.exe`
 - `macOS` -> `exports/macos/MallcoreSim.zip`
 - `Linux/X11` -> `exports/linux/MallcoreSim.x86_64`
 
-Tagged GitHub releases validate export configuration and build Windows and macOS
-artifacts. Linux has a checked-in preset for local export, but the current
-release workflow does not publish a Linux artifact.
+Tagged GitHub releases validate export configuration and publish Windows and
+macOS artifacts. Linux has a checked-in preset for local exports, but the
+current release workflow does not upload a Linux artifact. The project declares
+Godot `4.6` features in `project.godot`, while the tagged export workflow still
+uses Godot `4.3`, so release builds should be verified with the engine version
+you intend to ship.
 
 ## Documentation
 
-Active project docs live under `docs/`:
+Supporting project docs live under `docs/`:
 
 - [Docs Index](docs/index.md)
 - [Setup](docs/setup.md)

@@ -10,7 +10,7 @@ func _ready() -> void:
 	_error_panel.visible = false
 	if GameManager.is_boot_completed():
 		push_error("Boot: boot scene entered after boot already completed")
-		GameManager.transition_to(GameManager.State.MAIN_MENU)
+		_transition_to_main_menu()
 		return
 	call_deferred("initialize")
 
@@ -44,10 +44,14 @@ func initialize() -> void:
 	Settings.load()
 	AudioManager.initialize()
 	GameManager.mark_boot_completed()
-	GameManager.transition_to(GameManager.State.MAIN_MENU)
+	_transition_to_main_menu()
 
 
 func _show_error(message: String) -> void:
 	_title_label.visible = false
 	_error_panel.visible = true
 	_error_label.text = "[b]Boot Error[/b]\n\n%s\n\nCheck the console for details." % message
+
+
+func _transition_to_main_menu() -> void:
+	GameManager.transition_to(GameManager.State.MAIN_MENU)

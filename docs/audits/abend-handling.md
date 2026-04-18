@@ -1,84 +1,93 @@
 # Abend / Error-Handling Audit
 
-Reviewed the runtime GDScript under `game/autoload/` and `game/scripts/` for intentionally handled, swallowed, downgraded, suppressed, or quieted errors. This codebase does **not** use Python-style `try/except`, and the audit found **no broad catch-all exception handlers**. The dominant patterns are guard-clause returns, `push_warning` / `push_error`, aggregated boot-time error collection, and quiet no-op behavior for optional UX/audio paths.
+Reviewed the current runtime GDScript under `game/autoload/`, `game/scripts/`, and the save-preview path in `game/scenes/ui/` for intentionally handled, swallowed, downgraded, suppressed, or quieted errors. This codebase does **not** use broad catch-all exception handlers; the dominant patterns are guard-clause returns, `push_warning` / `push_error`, fail-soft aggregation at boot, and deliberate no-op behavior for optional UX systems.
 
 ## Executive summary
 
-1. **Most hard failures are handled explicitly, not swallowed.** `DataLoader` and `SaveManager` are the strongest examples: they validate inputs, log concrete reasons, and emit failure signals instead of crashing or silently continuing.
-2. **Quiet behavior is concentrated in UX/helper paths.** Audio, onboarding, unlock restore, and some registry lookup helpers intentionally degrade to warnings, empty values, or no-ops so the game can keep running.
-3. **The biggest real blind spot was settings reload drift.** `Settings.load_settings()` warned that it was “using defaults” on parse/oversize failures, but a reload after mutated in-memory state could keep stale values alive. That path is now tightened in code and covered by regression tests.
-4. **No retry/backoff/circuit-breaker mechanisms were found.** Runtime I/O is single-attempt throughout; when it fails, the code usually warns/errors once and returns a default or aborts the current action.
+1. **Most core persistence and boot flows are explicit and observable.** `DataLoader` and `SaveManager` reject malformed input with concrete reasons and keep their hard-failure paths visible.
+2. **Quiet behavior is concentrated in helper and polish paths.** Audio, onboarding, unlock restore, and save-preview helpers intentionally degrade to warnings, defaults, or no-ops so gameplay can continue.
+3. **This pass fixed one real data-integrity gap and one observability gap.** Order delivery now refunds items that fail to materialize during item creation, and `ContentRegistry` helper fallbacks now warn once instead of failing silently.
+4. **No retries, backoff, circuit breakers, or multi-attempt recovery loops were found.** Runtime I/O is single-attempt throughout; failures usually log once and then return a default, abort the action, or continue with reduced behavior.
 
 ## Audit-time hardening applied
 
 | Change | Evidence |
 | --- | --- |
-| Failed settings reloads now really reset runtime state to defaults instead of leaving stale in-memory values alive. | `game/autoload/settings.gd:142-166`, `game/autoload/settings.gd:217-236` |
-| Added regression coverage for parse-failure reloads and oversized-file reloads after settings had already been mutated in memory. | `tests/unit/test_settings_autoload.gd:279-320` |
+| `ContentRegistry.get_display_name()` and `get_scene_path()` now emit warn-once diagnostics when they fall back for unknown IDs or missing registered scene paths. | `game/autoload/content_registry.gd:76-115`, `game/autoload/content_registry.gd:352-364` |
+| Order delivery now refunds undelivered items when `InventorySystem.create_item()` fails after payment was already accepted. | `game/scripts/systems/order_system.gd:286-364` |
+| Added regression coverage for the new registry diagnostics and the delivery-refund path. | `tests/unit/test_content_registry.gd:103-160`, `tests/gut/test_order_system.gd:674-721` |
 
 ## Detailed findings
 
 | ID | Location | Observed behavior | Class | Risk assessment |
 | --- | --- | --- | --- | --- |
-| F1 | `game/autoload/settings.gd:142-166`, `217-236` | On settings parse/oversize failure, code warned “using defaults”. Before this audit, reloads could keep stale in-memory values instead of actually restoring defaults. Fixed in-place. | **High** | **Reliability:** high; **data integrity:** medium; **security:** low; **observability:** medium |
-| F2 | `game/autoload/data_loader.gd:127-155`, `600-638` | Boot-time content load is intentionally fail-soft per file/entry: record each error, continue scanning remaining content, then emit `content_load_failed` with the aggregated error list. This is deliberate and observable. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
-| F3 | `game/scripts/core/save_manager.gd:280-315`, `917-920`, `1028-1072` | Save load rejects missing files, oversize files, malformed JSON, wrong root type, and unsupported future versions. It logs the reason and emits `save_load_failed` instead of trying partial recovery. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
-| F4 | `game/scripts/core/save_manager.gd:929-972` | Slot-index preview handling is intentionally quieter than authoritative save loading: corrupted `save_index.cfg` yields warnings plus `{}`, and index updates/removals can be skipped with “keeping index unchanged”. Runtime survives, but UI metadata can drift until rebuilt. | **Low** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** medium |
-| F5 | `game/autoload/difficulty_system.gd:168-205` | Difficulty persistence failures are downgraded to warnings: restore falls back to the in-memory tier; persist failures keep the file unchanged. This is acceptable for preferences, but intentionally quieter than a hard stop. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
-| F6 | `game/autoload/onboarding_system.gd:74-120` | Missing/invalid onboarding config is logged as `push_error`; malformed individual hints are warned and skipped while valid hints continue loading. This is a deliberate partial-load strategy. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
-| F7 | `game/autoload/unlock_system.gd:45-52`, `87-100` | Duplicate unlock grants are no-ops; unknown unlock IDs from rewards/save data are warned and discarded rather than failing load or progression flow. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
-| F8 | `game/autoload/content_registry.gd:67-88` | `get_entry()` reports unknown IDs, but `get_display_name()` and `get_scene_path()` silently fall back to raw ID / empty string for unresolved IDs. This keeps UI alive, but weakens bug visibility in callers that treat empty strings as normal. | **Low** | **Reliability:** medium; **data integrity:** low; **security:** low; **observability:** medium |
-| F9 | `game/autoload/market_trend_system.gd:35-41`, `64-85` | Trend catalog load failures are explicit errors, but runtime queries for unknown categories downgrade to a neutral multiplier of `1.0`. That fail-open behavior preserves gameplay but can mask content/config drift. | **Medium** | **Reliability:** medium; **data integrity:** medium; **security:** low; **observability:** medium |
-| F10 | `game/autoload/audio_manager.gd:60-111`, `228-299`; `game/scripts/audio/store_bleed_audio.gd:35-42` | Audio paths are intentionally quiet: unknown tracks/zones warn and no-op, same-track requests short-circuit, and missing store-bleed assets only warn. This is appropriate for polish systems, and production behavior is intentionally quieter here. | **Note** | **Reliability:** low; **data integrity:** none; **security:** low; **observability:** low |
-| F11 | `game/autoload/staff_manager.gd:337-353` | If the active store scene is missing `StoreStaffConfig`, staff spawning is downgraded to a warning and skipped. The game stays alive, but store staffing silently disappears from the player’s perspective unless logs are monitored. | **Medium** | **Reliability:** medium; **data integrity:** low; **security:** low; **observability:** medium |
+| F1 | `game/autoload/data_loader.gd:127-156`, `582-626` | Boot-time content loading is intentionally fail-soft per file: each parse/open/size failure is recorded, scanning continues, and `content_load_failed` emits the aggregated list at the end. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
+| F2 | `game/scripts/core/save_manager.gd:280-315`, `917-920`, `1028-1072` | Authoritative save loading rejects missing files, oversize files, malformed JSON, wrong root type, and unsupported future versions. It logs the specific reason and emits `save_load_failed` instead of attempting partial recovery. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
+| F3 | `game/scripts/core/save_manager.gd:929-972`; `game/scenes/ui/main_menu.gd:218-248` | Save-slot preview/index paths are intentionally quieter than full save loading. Corrupt slot index or preview data yields warnings plus `{}` so menus keep working, but metadata can disappear until rebuilt. | **Low** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** medium |
+| F4 | `game/autoload/difficulty_system.gd:168-205` | Difficulty persistence failures are downgraded to warnings: restore falls back to the current in-memory tier, and persist failures leave the file unchanged. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
+| F5 | `game/autoload/onboarding_system.gd:74-120` | Missing or malformed onboarding config is an explicit error. Individual malformed hints are warned and skipped while valid hints continue loading. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
+| F6 | `game/autoload/unlock_system.gd:45-52`, `87-100` | Duplicate unlock grants are no-ops. Unknown unlock IDs from rewards/save data are warned and discarded rather than failing progression restore. | **Note** | **Reliability:** low; **data integrity:** low; **security:** low; **observability:** low |
+| F7 | `game/autoload/audio_manager.gd:60-111`, `228-299` | Audio is intentionally quiet: unsupported SFX values, missing tracks, unknown zones, and same-track requests degrade to warnings or no-ops so optional polish systems do not break gameplay. | **Note** | **Reliability:** low; **data integrity:** none; **security:** low; **observability:** low |
+| F8 | `game/autoload/content_registry.gd:76-115`, `352-364` | Helper lookups used to return raw IDs / empty strings silently. This pass tightened them to warn once on unknown IDs and missing registered scene paths while preserving non-fatal fallback behavior. | **Low** | **Reliability:** medium; **data integrity:** low; **security:** low; **observability:** medium |
+| F9 | `game/autoload/market_trend_system.gd:35-40`, `64-85` | Trend catalog load failures are explicit errors, but runtime queries for unknown categories fail open to a neutral multiplier of `1.0` after logging an error. That keeps gameplay moving but can mask config drift in callers. | **Medium** | **Reliability:** medium; **data integrity:** medium; **security:** low; **observability:** medium |
+| F10 | `game/autoload/staff_manager.gd:337-353` | Missing `StoreStaffConfig` causes a warning and skips staff spawning for the active store. The session stays playable, but staffing disappears unless logs are monitored. | **Medium** | **Reliability:** medium; **data integrity:** low; **security:** low; **observability:** medium |
+| F11 | `game/scripts/systems/order_system.gd:286-364` | Delivery previously warned when `InventorySystem.create_item()` failed but left the player short on paid inventory. This pass refunds the undelivered shortfall while keeping the warning path visible. | **High (fixed)** | **Reliability:** medium; **data integrity:** high; **security:** low; **observability:** medium |
 
 ## Categorization
 
 ### Acceptable
 
-- **F2 – DataLoader aggregated partial-load behavior**
-- **F3 – SaveManager hard reject + signal on malformed saves**
-- **F5 – Difficulty preference persistence downgrades**
-- **F6 – Onboarding partial-load behavior**
-- **F7 – Unlock duplicate/discard behavior**
-- **F10 – Audio/store-bleed no-op behavior**
+- **F1 - DataLoader aggregated partial-load behavior**
+- **F2 - SaveManager hard reject + failure signal on malformed saves**
+- **F4 - Difficulty preference persistence downgrades**
+- **F5 - Onboarding partial-load behavior**
+- **F6 - Unlock duplicate/discard behavior**
+- **F7 - Audio no-op / warn-and-continue behavior**
 
-These are intentional resilience choices with sufficient local logging for their risk level.
+These are intentional resilience choices with error text proportional to their risk.
 
 ### Needs telemetry
 
-- **F4 – Save index degradation**
-- **F11 – Staff spawning skipped when scene config is missing**
+- **F3 - Save preview / slot-index degradation**
+- **F10 - Staff spawning skipped when `StoreStaffConfig` is missing**
 
-These currently rely on logs/warnings only. They would benefit from surfaced UI diagnostics, debug counters, or automated scene validation so production issues are not discovered only through log review.
+These currently rely on warnings only. They would benefit from surfaced diagnostics in a debug HUD, scene validator, or developer-facing diagnostics panel.
 
 ### Should tighten
 
-- **F8 – ContentRegistry silent helper fallbacks**
-- **F9 – MarketTrendSystem neutral `1.0` fallback on unknown categories**
+- **F9 - `MarketTrendSystem` neutral `1.0` fallback for unknown categories**
 
-Both patterns keep the game running, but they blur the line between “optional missing data” and “real bug/config drift”. Warn-once behavior or stronger caller-side assertions would improve observability without making the game brittle.
+The current fail-open behavior is survivable, but it blurs the difference between “no trend modifier” and “bad content/config wiring”. Warn-once caller diagnostics or stronger assertions at integration points would make drift easier to detect.
 
-### High risk
+### Tightened in this pass
 
-- **F1 – Settings reload drift on failed parse / oversize input**
+- **F8 - `ContentRegistry` helper fallbacks are no longer silent**
+- **F11 - Order delivery now refunds post-payment creation shortfalls**
 
-This was the one high-signal blind spot found in the runtime audit, and it has been fixed in-place.
+Both changes preserve gameplay continuity while making the degraded path more correct and more observable.
 
 ## Intentional quiet / no-op behavior inventory
 
 - No retries, exponential backoff, circuit breakers, or recovery loops were found.
 - Common intentional no-op patterns:
   - duplicate operations (`UnlockSystem.grant_unlock()`, same-track `AudioManager.play_bgm()`)
-  - optional UX assets missing (`StoreBleedAudio`, `AudioManager`)
-  - preview/helper lookups returning empty dictionaries or empty strings (`SaveManager.get_slot_metadata()`, `ContentRegistry.get_scene_path()`)
-  - invalid optional runtime inputs downgraded to warnings (`DifficultySystem`, onboarding hint entries, audio zone requests)
-- Production behavior is intentionally quieter in **audio**, **tutorial/onboarding**, **unlock restore**, and **UI preview/helper** paths than in **content boot** and **save loading** paths.
+  - optional UX/audio requests that can safely disappear (`AudioManager`, ambient zone transitions)
+  - helper preview lookups returning `{}` or `""` (`SaveManager.get_all_slot_metadata()`, main-menu preview reads, `ContentRegistry.get_scene_path()`)
+  - config restore paths that keep the game running on failure (`DifficultySystem`, onboarding hint filtering)
+- Production behavior is intentionally quieter in **audio**, **unlock restore**, **tutorial/onboarding**, and **save-preview helper** paths than in **boot-time content loading** and **authoritative save loading** paths.
 
 ## Recommended remediation plan
 
-1. **Keep persistence/load paths strict.** Preserve the current `SaveManager` / `DataLoader` posture: structured failure reasons, bounded reads, and explicit signals.
-2. **Add warn-once telemetry to helper fallbacks.** `ContentRegistry.get_display_name()` / `get_scene_path()` should emit warn-once diagnostics when resolving unknown IDs in production code paths.
-3. **Surface degraded-but-playable failures.** Missing `StoreStaffConfig`, corrupt `save_index.cfg`, and similar “warning and continue” cases should be visible in debug HUD, developer console, or a diagnostics panel.
-4. **Unify JSON reader behavior for smaller systems.** `OnboardingSystem` and `MarketTrendSystem` still hand-roll JSON reads instead of reusing the more consistent `DataLoader`-style reporting path.
-5. **Add regression tests whenever warnings imply state changes.** The settings reload bug was a good example of log text promising stronger behavior than the code actually enforced.
+1. **Keep boot and save loads strict.** Preserve the current `DataLoader` and `SaveManager` posture: bounded reads, explicit failure reasons, and concrete failure signals.
+2. **Surface degraded-but-playable failures.** Missing `StoreStaffConfig`, corrupt slot metadata, and similar warning-only cases should be visible somewhere besides the engine log.
+3. **Tighten fail-open helper defaults where they influence game logic.** `MarketTrendSystem.get_trend_modifier()` is the clearest remaining example.
+4. **Prefer warn-once diagnostics for non-fatal helper fallbacks.** The `ContentRegistry` hardening applied here is a good pattern for similar lookup helpers.
+5. **Add regression coverage when warnings imply economic or state changes.** The order delivery refund fix is a good template: if a warning path changes paid state, it should have an automated test.
+
+## Verification notes
+
+- Focused coverage passed for:
+  - `res://tests/unit/test_content_registry.gd`
+  - `res://game/tests/test_content_registry.gd`
+  - `res://tests/gut/test_order_system.gd` with `-gunit_test_name=test_delivery_creation_failure_refunds_missing_items`
+- Repository-wide `bash tests/run_tests.sh` still ends at **68 failing / 12 risky** tests, matching the pre-change failure count while adding four new passing assertions from this audit pass.

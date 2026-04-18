@@ -36,6 +36,13 @@ var current_state: GameState = GameState.MAIN_MENU
 var current_day: int:
 	get:
 		return get_current_day()
+	set(value):
+		set_current_day(value)
+var _current_day: int:
+	get:
+		return get_current_day()
+	set(value):
+		set_current_day(value)
 var current_store_id: StringName = &""
 var is_tutorial_active: bool = false
 var data_loader: DataLoader
@@ -242,6 +249,16 @@ func get_current_day() -> int:
 	if time_system == null:
 		return _current_day_shadow
 	return time_system.current_day
+
+
+## Keeps legacy tests and systems able to override the current day without a
+## live TimeSystem, while still forwarding to TimeSystem when present.
+func set_current_day(day: int) -> void:
+	var normalized_day: int = max(day, 1)
+	_current_day_shadow = normalized_day
+	var time_system: TimeSystem = get_time_system()
+	if time_system != null:
+		time_system.current_day = normalized_day
 
 
 ## Returns the active TimeSystem from the current scene tree when available.

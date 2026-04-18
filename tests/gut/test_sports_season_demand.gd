@@ -148,7 +148,13 @@ func test_market_value_includes_sport_season() -> void:
 		PackedStringArray(["baseball", "CBF"]), 10.0
 	)
 	var value: float = _system.calculate_item_value(item)
-	var expected: float = 10.0 * 1.0 * 1.0 * 1.4
+	var expected: float = (
+		10.0
+		* DifficultySystemSingleton.get_modifier(
+			&"rarity_scale_multiplier"
+		)
+		* 1.4
+	)
 	assert_almost_eq(value, expected, 0.001)
 
 
@@ -159,7 +165,13 @@ func test_off_season_reduces_market_value() -> void:
 		PackedStringArray(["baseball", "CBF"]), 10.0
 	)
 	var value: float = _system.calculate_item_value(item)
-	var expected: float = 10.0 * 1.0 * 1.0 * 0.7
+	var expected: float = (
+		10.0
+		* DifficultySystemSingleton.get_modifier(
+			&"rarity_scale_multiplier"
+		)
+		* 0.7
+	)
 	assert_almost_eq(value, expected, 0.001)
 
 

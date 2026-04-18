@@ -67,10 +67,9 @@ func test_item(instance_id: String) -> bool:
 		push_warning(
 			"RetroGameStoreController: item '%s' cannot be tested"
 			% instance_id
-		)
+	)
 		return false
 	item.tested = true
-	EventBus.item_tested.emit(instance_id, true)
 	return true
 
 

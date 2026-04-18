@@ -1,6 +1,7 @@
 ## Integration test: build mode fixture placement pipeline end-to-end.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
 
 const ENTRY_EDGE_Y: int = 8
 const REGISTER_ID: String = "register_placement_test"
@@ -83,18 +84,15 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	_safe_disconnect(EventBus.fixture_placed, _on_fixture_placed)
-	_safe_disconnect(EventBus.fixture_removed, _on_fixture_removed)
-	_safe_disconnect(EventBus.fixture_placement_invalid, _on_fixture_placement_invalid)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.fixture_placed, _on_fixture_placed)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.fixture_removed, _on_fixture_removed)
+	TEST_SIGNAL_UTILS.safe_disconnect(
+		EventBus.fixture_placement_invalid, _on_fixture_placement_invalid
+	)
 	GameManager.current_state = _saved_game_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
 	GameManager.data_loader = _saved_data_loader
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
 
 
 func _on_fixture_placed(fixture_id: String, grid_pos: Vector2i, _rot: int) -> void:

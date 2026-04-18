@@ -4,10 +4,27 @@ extends RefCounted
 
 const RENTALS_PER_CONDITION_DROP: int = 5
 const POOREST_CONDITION: String = "poor"
+const VHS_DEGRADATION_RATE: float = 0.08
+const DVD_DEGRADATION_RATE: float = 0.04
+const MEDIA_TYPE_VHS: String = "vhs"
+const MEDIA_TYPE_DVD: String = "dvd"
+const WEAR_EPSILON: float = 0.00001
+const CONDITION_TO_WEAR: Dictionary = {
+	"mint": 0.0,
+	"near_mint": 0.2,
+	"good": 0.4,
+	"fair": 0.6,
+	"poor": 0.8,
+}
+const CONDITION_WEAR_ORDER: PackedStringArray = [
+	"mint", "near_mint", "good", "fair", "poor",
+]
 
 var _play_counts: Dictionary = {}
 var _conditions: Dictionary = {}
 var _written_off: Dictionary = {}
+var _wear: Dictionary = {}
+var _media_types: Dictionary = {}
 
 
 ## Synchronizes tracked tape state with the current store inventory.
@@ -39,10 +56,29 @@ func initialize(items: Array[ItemInstance] = []) -> void:
 
 
 ## Registers an item with its current condition if not already tracked.
-func initialize_item(instance_id: String, condition: String) -> void:
+func initialize_item(instance_id: String, condition_or_media_type: String) -> void:
 	if instance_id.is_empty():
 		return
-	var normalized_condition: String = _normalize_condition(condition)
+	var normalized_input: String = str(condition_or_media_type).strip_edges().to_lower()
+	if _is_media_type(normalized_input):
+		_play_counts[instance_id] = clampi(
+			int(_play_counts.get(instance_id, 0)),
+			0,
+			RENTALS_PER_CONDITION_DROP
+		)
+		_media_types[instance_id] = normalized_input
+		_wear[instance_id] = float(_wear.get(instance_id, 0.0))
+		var wear_condition: String = get_condition_for_wear(
+			float(_wear[instance_id])
+		)
+		_conditions[instance_id] = wear_condition
+		_written_off[instance_id] = (
+			wear_condition == POOREST_CONDITION
+			and float(_wear[instance_id]) >= float(CONDITION_TO_WEAR[POOREST_CONDITION])
+		)
+		return
+
+	var normalized_condition: String = _normalize_condition(normalized_input)
 	var count: int = clampi(
 		int(_play_counts.get(instance_id, 0)),
 		0,
@@ -50,10 +86,35 @@ func initialize_item(instance_id: String, condition: String) -> void:
 	)
 	_play_counts[instance_id] = count
 	_conditions[instance_id] = normalized_condition
+	_wear[instance_id] = float(
+		_wear.get(
+			instance_id,
+			float(CONDITION_TO_WEAR.get(normalized_condition, 0.0))
+		)
+	)
 	_written_off[instance_id] = (
 		normalized_condition == POOREST_CONDITION
 		and count >= RENTALS_PER_CONDITION_DROP
 	)
+
+
+## Applies media-specific wear degradation and returns the new wear value.
+func apply_degradation(instance_id: String) -> float:
+	if instance_id.is_empty() or not _media_types.has(instance_id):
+		return 0.0
+
+	var rate: float = VHS_DEGRADATION_RATE
+	if str(_media_types.get(instance_id, MEDIA_TYPE_VHS)) == MEDIA_TYPE_DVD:
+		rate = DVD_DEGRADATION_RATE
+	var updated_wear: float = minf(float(_wear.get(instance_id, 0.0)) + rate, 1.0)
+	_wear[instance_id] = updated_wear
+	var condition: String = get_condition_for_wear(updated_wear)
+	_conditions[instance_id] = condition
+	_written_off[instance_id] = (
+		condition == POOREST_CONDITION
+		and updated_wear >= float(CONDITION_TO_WEAR[POOREST_CONDITION])
+	)
+	return updated_wear
 
 
 ## Updates the cached condition for an item without changing its play progress.
@@ -65,6 +126,12 @@ func sync_condition(instance_id: String, condition: String) -> void:
 		return
 	var normalized_condition: String = _normalize_condition(condition)
 	_conditions[instance_id] = normalized_condition
+	_wear[instance_id] = float(
+		_wear.get(
+			instance_id,
+			float(CONDITION_TO_WEAR.get(normalized_condition, 0.0))
+		)
+	)
 	_written_off[instance_id] = (
 		normalized_condition == POOREST_CONDITION
 		and int(_play_counts.get(instance_id, 0)) >= RENTALS_PER_CONDITION_DROP
@@ -108,6 +175,7 @@ func record_return(instance_id: String) -> Dictionary:
 	var new_condition: String = _degrade_condition(current_condition)
 	_play_counts[instance_id] = 0
 	_conditions[instance_id] = new_condition
+	_wear[instance_id] = float(CONDITION_TO_WEAR.get(new_condition, 0.0))
 	_written_off[instance_id] = false
 	result["condition_changed"] = true
 	result["new_condition"] = new_condition
@@ -125,6 +193,26 @@ func get_condition(instance_id: String) -> String:
 	return str(_conditions.get(instance_id, "good"))
 
 
+## Returns the accumulated wear for a tracked item.
+func get_wear(instance_id: String) -> float:
+	return float(_wear.get(instance_id, 0.0))
+
+
+## Returns the condition tier associated with a wear amount.
+func get_condition_for_wear(wear_amount: float) -> String:
+	var normalized_wear: float = clampf(wear_amount, 0.0, 1.0)
+	var resolved_condition: String = "mint"
+	for condition: String in CONDITION_WEAR_ORDER:
+		if normalized_wear + WEAR_EPSILON >= float(CONDITION_TO_WEAR.get(condition, 0.0)):
+			resolved_condition = condition
+	return resolved_condition
+
+
+## Returns the number of unique tracked items.
+func get_tracked_item_count() -> int:
+	return maxi(_conditions.size(), _wear.size())
+
+
 ## Returns true when the tape can still be rented.
 func is_rentable(instance_id: String) -> bool:
 	if instance_id.is_empty() or not _conditions.has(instance_id):
@@ -137,6 +225,8 @@ func erase_item(instance_id: String) -> void:
 	_play_counts.erase(instance_id)
 	_conditions.erase(instance_id)
 	_written_off.erase(instance_id)
+	_wear.erase(instance_id)
+	_media_types.erase(instance_id)
 
 
 ## Serializes per-item play counts for save/load.
@@ -169,3 +259,7 @@ func _normalize_condition(condition: String) -> String:
 	if ItemDefinition.CONDITION_ORDER.has(condition):
 		return condition
 	return "good"
+
+
+func _is_media_type(value: String) -> bool:
+	return value == MEDIA_TYPE_VHS or value == MEDIA_TYPE_DVD

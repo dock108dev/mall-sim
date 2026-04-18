@@ -1,4 +1,4 @@
-## Tests TapeWearTracker play-count thresholds, condition drops, and write-off state.
+## Tests TapeWearTracker wear rates, condition thresholds, and retirement boundary.
 extends GutTest
 
 
@@ -9,120 +9,164 @@ func before_each() -> void:
 	_tracker = TapeWearTracker.new()
 
 
-func test_initialize_item_starts_play_count_at_zero() -> void:
-	_tracker.initialize_item("item_a", "good")
+func test_initialize_item_registers_zero_wear_for_media_type() -> void:
+	_tracker.initialize_item("vhs_item", TapeWearTracker.MEDIA_TYPE_VHS)
 
-	assert_eq(
-		_tracker.get_play_count("item_a"),
-		0,
-		"Newly tracked items should start at zero plays in their current tier"
+	assert_almost_eq(
+		_tracker.get_wear("vhs_item"),
+		0.0,
+		0.0001,
+		"Newly initialized media items should start with zero accumulated wear"
 	)
 	assert_eq(
-		_tracker.get_condition("item_a"),
-		"good",
-		"Tracker should cache the item's current condition"
+		_tracker.get_tracked_item_count(),
+		1,
+		"Initializing a single item should create exactly one tracked entry"
 	)
 
 
-func test_record_return_increments_play_count_without_changing_condition() -> void:
-	_tracker.initialize_item("item_b", "near_mint")
+func test_apply_degradation_uses_vhs_rate() -> void:
+	_tracker.initialize_item("vhs_item", TapeWearTracker.MEDIA_TYPE_VHS)
 
-	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
-		var result: Dictionary = _tracker.record_return("item_b")
-		assert_false(
-			bool(result.get("condition_changed", false)),
-			"Condition should not drop before the threshold is reached"
+	var updated_wear: float = _tracker.apply_degradation("vhs_item")
+
+	assert_almost_eq(
+		updated_wear,
+		TapeWearTracker.VHS_DEGRADATION_RATE,
+		0.0001,
+		"VHS items should gain the configured VHS degradation rate per rental"
+	)
+	assert_almost_eq(
+		_tracker.get_wear("vhs_item"),
+		TapeWearTracker.VHS_DEGRADATION_RATE,
+		0.0001,
+		"Stored wear should match the applied VHS degradation rate"
+	)
+
+
+func test_apply_degradation_uses_dvd_rate() -> void:
+	_tracker.initialize_item("dvd_item", TapeWearTracker.MEDIA_TYPE_DVD)
+
+	var updated_wear: float = _tracker.apply_degradation("dvd_item")
+
+	assert_almost_eq(
+		updated_wear,
+		TapeWearTracker.DVD_DEGRADATION_RATE,
+		0.0001,
+		"DVD items should gain the configured DVD degradation rate per rental"
+	)
+	assert_almost_eq(
+		_tracker.get_wear("dvd_item"),
+		TapeWearTracker.DVD_DEGRADATION_RATE,
+		0.0001,
+		"Stored wear should match the applied DVD degradation rate"
+	)
+
+
+func test_condition_tier_changes_when_wear_crosses_threshold() -> void:
+	_tracker.initialize_item("threshold_item", TapeWearTracker.MEDIA_TYPE_VHS)
+
+	for _i: int in range(3):
+		_tracker.apply_degradation("threshold_item")
+
+	assert_eq(
+		_tracker.get_condition("threshold_item"),
+		"near_mint",
+		"Crossing the first wear threshold should advance the item into the next condition tier"
+	)
+
+
+func test_condition_threshold_boundaries_match_condition_map() -> void:
+	for condition: String in TapeWearTracker.CONDITION_WEAR_ORDER:
+		var threshold: float = float(
+			TapeWearTracker.CONDITION_TO_WEAR[condition]
+		)
+		assert_eq(
+			_tracker.get_condition_for_wear(threshold),
+			condition,
+			"Wear exactly at %s threshold should resolve to %s" % [
+				str(threshold), condition,
+			]
 		)
 
-	assert_eq(
-		_tracker.get_play_count("item_b"),
-		TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1,
-		"Play count should reflect progress within the current condition tier"
+
+func test_vhs_item_reaches_poor_threshold_after_exact_rentals() -> void:
+	var item_id: String = "vhs_retire"
+	var target_wear: float = float(
+		TapeWearTracker.CONDITION_TO_WEAR[TapeWearTracker.POOREST_CONDITION]
 	)
-	assert_eq(
-		_tracker.get_condition("item_b"),
-		"near_mint",
-		"Condition should stay unchanged before the threshold"
+	var expected_rentals: int = int(
+		ceili(target_wear / TapeWearTracker.VHS_DEGRADATION_RATE)
 	)
+	_tracker.initialize_item(item_id, TapeWearTracker.MEDIA_TYPE_VHS)
 
-
-func test_record_return_degrades_condition_and_resets_progress() -> void:
-	_tracker.initialize_item("item_c", "good")
-
-	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
-		_tracker.record_return("item_c")
-	var result: Dictionary = _tracker.record_return("item_c")
+	for _i: int in range(expected_rentals - 1):
+		_tracker.apply_degradation(item_id)
 
 	assert_true(
-		bool(result.get("condition_changed", false)),
-		"Crossing the threshold should report a condition change"
+		_tracker.get_wear(item_id) < target_wear,
+		"VHS items should stay below the retirement threshold until the final qualifying rental"
+	)
+	_tracker.apply_degradation(item_id)
+
+	assert_almost_eq(
+		_tracker.get_wear(item_id),
+		target_wear,
+		0.0001,
+		"VHS items should hit the poor-condition threshold on the expected rental count"
 	)
 	assert_eq(
-		str(result.get("new_condition", "")),
-		"fair",
-		"Good tapes should degrade to fair at the threshold"
-	)
-	assert_eq(
-		_tracker.get_play_count("item_c"),
-		0,
-		"Progress should reset after dropping a condition tier"
+		_tracker.get_condition(item_id),
+		TapeWearTracker.POOREST_CONDITION,
+		"Reaching the threshold should mark the item as poor"
 	)
 
 
-func test_poor_tape_becomes_unrentable_after_next_threshold() -> void:
-	_tracker.initialize_item("item_d", "poor")
+func test_dvd_item_reaches_poor_threshold_after_exact_rentals() -> void:
+	var item_id: String = "dvd_retire"
+	var target_wear: float = float(
+		TapeWearTracker.CONDITION_TO_WEAR[TapeWearTracker.POOREST_CONDITION]
+	)
+	var expected_rentals: int = int(
+		ceili(target_wear / TapeWearTracker.DVD_DEGRADATION_RATE)
+	)
+	_tracker.initialize_item(item_id, TapeWearTracker.MEDIA_TYPE_DVD)
 
-	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
-		_tracker.record_return("item_d")
-	var result: Dictionary = _tracker.record_return("item_d")
+	for _i: int in range(expected_rentals - 1):
+		_tracker.apply_degradation(item_id)
 
 	assert_true(
-		bool(result.get("became_unrentable", false)),
-		"Poor tapes should transition into write-off state at the threshold"
+		_tracker.get_wear(item_id) < target_wear,
+		"DVD items should stay below the retirement threshold until the final qualifying rental"
 	)
-	assert_false(
-		_tracker.is_rentable("item_d"),
-		"Written-off tapes should no longer be rentable"
+	_tracker.apply_degradation(item_id)
+
+	assert_almost_eq(
+		_tracker.get_wear(item_id),
+		target_wear,
+		0.0001,
+		"DVD items should hit the poor-condition threshold on the expected rental count"
 	)
 	assert_eq(
-		_tracker.get_play_count("item_d"),
-		TapeWearTracker.RENTALS_PER_CONDITION_DROP,
-		"Written-off tapes should keep a full threshold count for save/load restoration"
+		_tracker.get_condition(item_id),
+		TapeWearTracker.POOREST_CONDITION,
+		"Reaching the threshold should mark the item as poor"
 	)
 
 
-func test_initialize_from_inventory_restores_written_off_state() -> void:
-	var item: ItemInstance = ItemInstance.new()
-	item.instance_id = "item_e"
-	item.condition = "poor"
-	_tracker.load_save_data({
-		"item_e": TapeWearTracker.RENTALS_PER_CONDITION_DROP,
-	})
-
-	_tracker.initialize([item])
-
-	assert_false(
-		_tracker.is_rentable("item_e"),
-		"Initializing from inventory should infer written-off state from poor condition plus full play count"
-	)
-
-
-func test_save_load_preserves_partial_progress() -> void:
-	_tracker.initialize_item("item_f", "fair")
-	for _i: int in range(TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1):
-		_tracker.record_return("item_f")
-	var saved: Dictionary = _tracker.get_save_data()
-
-	_tracker = TapeWearTracker.new()
-	_tracker.load_save_data(saved)
-	_tracker.initialize_item("item_f", "fair")
+func test_reinitializing_same_item_does_not_duplicate_entry() -> void:
+	_tracker.initialize_item("duplicate_item", TapeWearTracker.MEDIA_TYPE_VHS)
+	_tracker.apply_degradation("duplicate_item")
+	_tracker.initialize_item("duplicate_item", TapeWearTracker.MEDIA_TYPE_VHS)
 
 	assert_eq(
-		_tracker.get_play_count("item_f"),
-		TapeWearTracker.RENTALS_PER_CONDITION_DROP - 1,
-		"Saved play progress should restore exactly"
+		_tracker.get_tracked_item_count(),
+		1,
+		"Reinitializing an existing item_id should reuse the tracked entry instead of duplicating it"
 	)
-	assert_true(
-		_tracker.is_rentable("item_f"),
-		"Partial-progress tapes should remain rentable after reload"
+	assert_almost_eq(
+		_tracker.get_wear("duplicate_item"),
+		TapeWearTracker.VHS_DEGRADATION_RATE,
+		0.0001,
+		"Reinitializing should preserve the existing wear entry"
 	)

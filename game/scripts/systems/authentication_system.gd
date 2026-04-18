@@ -23,7 +23,8 @@ func initialize(
 	_inventory_system = inventory
 	_economy_system = economy
 	_load_config()
-	EventBus.price_set.connect(_on_price_set)
+	if not EventBus.price_set.is_connected(_on_price_set):
+		EventBus.price_set.connect(_on_price_set)
 
 
 ## Returns the configured authentication fee.
@@ -138,6 +139,27 @@ func authenticate(instance_id: String) -> bool:
 		% [item.definition.item_name, _auth_multiplier]
 	)
 	return true
+
+
+func get_save_data() -> Dictionary:
+	var authenticated_ids: Array[String] = []
+	for canonical_id: Variant in _authenticated_canonical_ids.keys():
+		authenticated_ids.append(String(canonical_id))
+	return {
+		"authenticated_canonical_ids": authenticated_ids,
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	_authenticated_canonical_ids.clear()
+	var saved_ids: Variant = data.get("authenticated_canonical_ids", [])
+	if saved_ids is not Array:
+		return
+	for saved_id: Variant in saved_ids:
+		var canonical_id: String = str(saved_id)
+		if canonical_id.is_empty():
+			continue
+		_authenticated_canonical_ids[StringName(canonical_id)] = true
 
 
 func _load_config() -> void:

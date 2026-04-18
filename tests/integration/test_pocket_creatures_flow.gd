@@ -1,26 +1,25 @@
-## Integration test: PocketCreatures store flow — pack opening, card
-## inventory, and tournament eligibility.
+## Integration test for the PocketCreatures flow from pack opening through
+## tournament resolution.
 extends GutTest
 
-var _inventory: InventorySystem
-var _economy: EconomySystem
-var _data_loader: DataLoader
-var _controller: PocketCreaturesStoreController
-var _tournament: TournamentSystem
-var _reputation: ReputationSystem
-var _customer: CustomerSystem
-var _fixture_placement: FixturePlacementSystem
 
 const STORE_ID: StringName = &"pocket_creatures"
-const PACK_ID: String = "pc_booster_base_set"
-const PACK_BASE_PRICE: float = 3.99
-const STARTING_CASH: float = 5000.0
-const BACKROOM_CAPACITY: int = 500
+const PACK_DEFINITION_ID: String = "pc_booster_base_set"
+const PRIMARY_PACK_INSTANCE_ID: StringName = &"booster_pack"
+const TOURNAMENT_DAY: int = 5
+const PRIZE_AMOUNT: float = 125.0
+const STARTING_CASH: float = 1000.0
+const RARE_SUBCATEGORIES: Array[String] = ["rare", "rare_holo", "secret_rare"]
+
+var _data_loader: DataLoader
+var _inventory: InventorySystem
+var _economy: EconomySystem
+var _reputation: ReputationSystem
+var _controller: PocketCreaturesStoreController
+var _tournament: TournamentSystem
 
 
 func before_each() -> void:
-	_register_store_in_content_registry()
-
 	_data_loader = DataLoader.new()
 	add_child_autofree(_data_loader)
 	_data_loader.load_all()
@@ -34,13 +33,9 @@ func before_each() -> void:
 	_inventory.initialize(_data_loader)
 
 	_reputation = ReputationSystem.new()
+	_reputation.auto_connect_bus = false
 	add_child_autofree(_reputation)
-
-	_customer = CustomerSystem.new()
-	add_child_autofree(_customer)
-
-	_fixture_placement = FixturePlacementSystem.new()
-	add_child_autofree(_fixture_placement)
+	_reputation.initialize_store(String(STORE_ID))
 
 	_controller = PocketCreaturesStoreController.new()
 	add_child_autofree(_controller)
@@ -50,259 +45,114 @@ func before_each() -> void:
 
 	_tournament = TournamentSystem.new()
 	add_child_autofree(_tournament)
-	_tournament.initialize(
-		_economy, _reputation, _customer,
-		_fixture_placement, _data_loader
-	)
+	_tournament.initialize(_economy, _reputation, null, null, null)
 	_controller.set_tournament_system(_tournament)
 
 
-func after_each() -> void:
-	_unregister_store_from_content_registry()
+func test_open_pack_returns_non_empty_array_and_registers_cards() -> void:
+	var pack: ItemInstance = _create_pack_instance(PRIMARY_PACK_INSTANCE_ID)
 
-
-func test_open_pack_returns_non_empty_array() -> void:
-	var pack: ItemInstance = _create_and_stock_pack()
 	var cards: Array[ItemInstance] = (
-		_controller.pack_opening_system.open_pack(pack.instance_id)
-	)
-	assert_gt(
-		cards.size(), 0,
-		"open_pack returns non-empty Array for booster pack"
+		_controller.pack_opening_system.open_pack(String(pack.instance_id))
 	)
 
+	assert_gt(cards.size(), 0, "open_pack should return a non-empty Array")
 
-func test_opened_cards_present_in_inventory() -> void:
-	var pack: ItemInstance = _create_and_stock_pack()
-	var cards: Array[ItemInstance] = (
-		_controller.pack_opening_system.open_pack(pack.instance_id)
+	var store_items: Array[ItemInstance] = _inventory.get_items_for_store(
+		String(STORE_ID)
 	)
-	assert_gt(cards.size(), 0, "Cards were generated")
-
 	for card: ItemInstance in cards:
-		var found: ItemInstance = _inventory.get_item(card.instance_id)
 		assert_not_null(
-			found,
-			"Card '%s' present in InventorySystem" % card.instance_id
+			_inventory.get_item(String(card.instance_id)),
+			"Card '%s' should be present in InventorySystem" % card.instance_id
+		)
+		assert_true(
+			_store_has_item(store_items, String(card.instance_id)),
+			"Card '%s' should be stocked under pocket_creatures" % card.instance_id
 		)
 
 
-func test_rare_card_appears_across_100_opens() -> void:
-	var rare_found: Array = [false]
-	var rare_subcategories: Array[String] = [
-		"rare", "rare_holo", "secret_rare",
-	]
+func test_rare_or_higher_card_appears_across_100_pack_opens() -> void:
+	seed(224)
+	var rare_found: bool = false
 
-	for i: int in range(100):
-		var pack: ItemInstance = _create_and_stock_pack()
+	for pack_index: int in range(100):
+		var pack: ItemInstance = _create_pack_instance(
+			StringName("booster_pack_%d" % pack_index)
+		)
 		var cards: Array[ItemInstance] = (
-			_controller.pack_opening_system.open_pack(pack.instance_id)
+			_controller.pack_opening_system.open_pack(String(pack.instance_id))
 		)
 		for card: ItemInstance in cards:
 			if not card.definition:
 				continue
-			if card.definition.subcategory in rare_subcategories:
-				rare_found[0] = true
+			if RARE_SUBCATEGORIES.has(card.definition.subcategory):
+				rare_found = true
 				break
 		if rare_found:
 			break
 
 	assert_true(
-		rare_found[0],
-		"At least 1 rare+ card appears across 100 pack opens"
+		rare_found,
+		"At least one pack opening should produce a rare-or-better card"
 	)
 
 
-func test_tournament_scheduling_and_activation() -> void:
-	_place_tournament_table()
-	GameManager.current_store_id = STORE_TYPE_STR
-
+func test_tournament_schedule_activation_and_resolution_award_prize() -> void:
+	var scheduled: bool = _controller.tournament_system.schedule_tournament(
+		TOURNAMENT_DAY
+	)
+	assert_true(scheduled, "schedule_tournament should return true")
 	assert_true(
-		_tournament.can_host_tournament(),
-		"Can host tournament with table placed"
+		_controller.tournament_system.is_tournament_scheduled(TOURNAMENT_DAY),
+		"Tournament day should be scheduled"
 	)
 
-	var started: bool = _tournament.start_tournament(
-		TournamentSystem.TournamentSize.SMALL
+	EventBus.day_started.emit(TOURNAMENT_DAY)
+
+	assert_eq(
+		_controller.tournament_system.get_state(),
+		TournamentSystem.TournamentState.ACTIVE,
+		"Tournament should become ACTIVE on day 5"
 	)
-	assert_true(started, "Tournament started successfully")
-	assert_true(
-		_tournament.is_active(),
-		"Tournament is ACTIVE after starting"
-	)
-
-
-func test_tournament_completes_and_awards_prize() -> void:
-	_place_tournament_table()
-	GameManager.current_store_id = STORE_TYPE_STR
-
-	_tournament.start_tournament(
-		TournamentSystem.TournamentSize.SMALL
-	)
-	assert_true(_tournament.is_active(), "Tournament is active")
-
-	var completed_fired: Array = [false]
-	var completed_participants: Array = [0]
-	var completed_revenue: Array = [0.0]
-
-	var on_completed := func(
-		participants: int, revenue: float
-	) -> void:
-		completed_fired[0] = true
-		completed_participants[0] = participants
-		completed_revenue[0] = revenue
-
-	EventBus.tournament_completed.connect(on_completed)
 
 	var cash_before: float = _economy.get_cash()
+	watch_signals(EventBus)
 
-	EventBus.item_sold.emit("test_card_001", 15.0, "singles")
-	EventBus.item_sold.emit("test_card_002", 10.0, "singles")
-
-	EventBus.day_phase_changed.emit(TimeSystem.DayPhase.EVENING)
-
-	assert_true(completed_fired[0], "tournament_completed signal fires")
-	assert_false(
-		_tournament.is_active(),
-		"Tournament is no longer active after completion"
-	)
-	assert_gt(
-		completed_participants[0], 0,
-		"Participant count is positive"
+	var resolved: bool = _controller.tournament_system.resolve_tournament(
+		&"player_one", PRIZE_AMOUNT
 	)
 
-	EventBus.tournament_completed.disconnect(on_completed)
-
-
-func test_tournament_cooldown_after_completion() -> void:
-	_place_tournament_table()
-	GameManager.current_store_id = STORE_TYPE_STR
-
-	_tournament.start_tournament(
-		TournamentSystem.TournamentSize.SMALL
+	assert_true(resolved, "resolve_tournament should return true")
+	assert_signal_emitted(
+		EventBus,
+		"tournament_resolved",
+		"tournament_resolved signal should fire after resolution"
 	)
-	EventBus.day_phase_changed.emit(TimeSystem.DayPhase.EVENING)
-
-	assert_eq(
-		_tournament.get_cooldown_remaining(),
-		TournamentSystem.COOLDOWN_DAYS,
-		"Cooldown set after tournament completion"
-	)
-
-	for i: int in range(TournamentSystem.COOLDOWN_DAYS):
-		EventBus.day_started.emit(i + 2)
-
-	assert_eq(
-		_tournament.get_cooldown_remaining(), 0,
-		"Cooldown reaches 0 after enough days pass"
-	)
-
-
-func test_full_flow_pack_to_tournament() -> void:
-	var pack: ItemInstance = _create_and_stock_pack()
-	var cards: Array[ItemInstance] = (
-		_controller.pack_opening_system.open_pack(pack.instance_id)
-	)
-	assert_gt(cards.size(), 0, "Pack opened with cards")
-
-	for card: ItemInstance in cards:
-		var found: ItemInstance = _inventory.get_item(card.instance_id)
-		assert_not_null(found, "Card in inventory")
-
-	_place_tournament_table()
-	GameManager.current_store_id = STORE_TYPE_STR
-
-	var cash_before_tournament: float = _economy.get_cash()
-	var started: bool = _tournament.start_tournament(
-		TournamentSystem.TournamentSize.SMALL
-	)
-	assert_true(started, "Tournament started")
 	assert_almost_eq(
 		_economy.get_cash(),
-		cash_before_tournament - TournamentSystem.SMALL_COST,
+		cash_before + PRIZE_AMOUNT,
 		0.01,
-		"Tournament cost deducted"
-	)
-
-	EventBus.item_sold.emit("sale_during_tourney", 20.0, "singles")
-	EventBus.day_phase_changed.emit(TimeSystem.DayPhase.EVENING)
-
-	assert_false(
-		_tournament.is_active(),
-		"Tournament completed after EVENING phase"
+		"Player cash should increase by the tournament prize amount"
 	)
 
 
-# -- Helpers ----------------------------------------------------------
-
-const STORE_TYPE_STR: String = "pocket_creatures"
-
-
-func _create_pack_definition() -> ItemDefinition:
-	var def := ItemDefinition.new()
-	def.id = PACK_ID
-	def.item_name = "Base Set Booster"
-	def.category = "booster_packs"
-	def.subcategory = "sealed"
-	def.store_type = "pocket_creatures"
-	def.base_price = PACK_BASE_PRICE
-	def.rarity = "common"
-	def.condition_range = PackedStringArray(
-		["good", "near_mint", "mint"]
+func _create_pack_instance(instance_id: StringName) -> ItemInstance:
+	var pack_definition: ItemDefinition = _data_loader.get_item(PACK_DEFINITION_ID)
+	assert_not_null(
+		pack_definition,
+		"PocketCreatures pack definition should load from content data"
 	)
-	def.tags = PackedStringArray(
-		["base_set", "sealed", "booster", "pack"]
-	)
-	return def
-
-
-func _create_and_stock_pack() -> ItemInstance:
-	var def: ItemDefinition = _create_pack_definition()
-	var pack: ItemInstance = ItemInstance.create(
-		def, "mint", 0, PACK_BASE_PRICE
-	)
+	var pack: ItemInstance = ItemInstance.create_from_definition(pack_definition)
+	pack.instance_id = instance_id
 	_inventory.add_item(STORE_ID, pack)
 	return pack
 
 
-func _place_tournament_table() -> void:
-	_fixture_placement.register_existing_fixture(
-		"tournament_table_001",
-		"tournament_table",
-		Vector2i(0, 0),
-		0,
-		false,
-		0.0,
-	)
-
-
-func _register_store_in_content_registry() -> void:
-	if ContentRegistry.exists("pocket_creatures"):
-		return
-	ContentRegistry.register_entry(
-		{
-			"id": "pocket_creatures",
-			"name": "PocketCreatures Cards",
-			"scene_path": "",
-			"backroom_capacity": BACKROOM_CAPACITY,
-		},
-		"store"
-	)
-
-
-func _unregister_store_from_content_registry() -> void:
-	if not ContentRegistry.exists("pocket_creatures"):
-		return
-	var entries: Dictionary = ContentRegistry._entries
-	var aliases: Dictionary = ContentRegistry._aliases
-	var types: Dictionary = ContentRegistry._types
-	var display_names: Dictionary = ContentRegistry._display_names
-	var scene_map: Dictionary = ContentRegistry._scene_map
-	entries.erase(&"pocket_creatures")
-	types.erase(&"pocket_creatures")
-	display_names.erase(&"pocket_creatures")
-	scene_map.erase(&"pocket_creatures")
-	var alias_key: StringName = StringName("pocket_creatures")
-	for key: StringName in aliases.keys():
-		if aliases[key] == alias_key:
-			aliases.erase(key)
+func _store_has_item(
+	store_items: Array[ItemInstance], instance_id: String
+) -> bool:
+	for item: ItemInstance in store_items:
+		if String(item.instance_id) == instance_id:
+			return true
+	return false

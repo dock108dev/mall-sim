@@ -1,137 +1,150 @@
 # Security Audit
 
-Reviewed the actual Godot/GDScript runtime, local persistence paths, and GitHub Actions workflows. The codebase does **not** expose a browser, HTTP API, or account/session surface in the reviewed runtime, so the highest-signal issues are local trust boundaries and CI/release supply chain.
+Date: 2026-04-18
+
+Reviewed the actual Godot/GDScript runtime, local persistence paths, content/config loaders, debug-only tooling, and GitHub Actions workflows. The repository does **not** expose a browser, HTTP API, or account/session implementation in the reviewed code, so the highest-signal findings are local trust boundaries and CI/release supply chain.
 
 ## Audit-time hardening applied
 
 | Change | Evidence |
 | --- | --- |
-| Rejected oversized `settings.cfg` files and validated persisted setting types before applying them. | `game/autoload/settings.gd:48-52`, `game/autoload/settings.gd:142-204`, `game/autoload/settings.gd:400-530` |
-| Added a defensive bounds check before applying `font_size`. | `game/autoload/settings.gd:520-530` |
-| Capped main-menu save preview reads to the same 10 MB limit used by `SaveManager`. | `game/scenes/ui/main_menu.gd:5-7`, `game/scenes/ui/main_menu.gd:218-235`, `game/scripts/core/save_manager.gd:1028-1045` |
-| Restricted content-driven scene paths to project scene roots, and store scenes to `res://game/scenes/stores/`. | `game/autoload/content_registry.gd:4-6`, `game/autoload/content_registry.gd:282-286`, `game/autoload/content_registry.gd:342-374` |
+| Rejected oversized JSON files in the central content loader by adding a 1 MiB bound before parsing. | `game/autoload/data_loader.gd:5-7`, `game/autoload/data_loader.gd:586-610` |
+| Added regression coverage for oversized JSON rejection in the shared loader. | `tests/gut/test_data_loader.gd:24-39` |
+| Enabled Dependabot updates for GitHub Actions so workflow dependencies are no longer left unmonitored by an empty ecosystem entry. | `.github/dependabot.yml:6-11` |
 
 ## 1. Confirmed vulnerabilities
 
 ### 1. Unverified Godot binary download in CI
 **Severity:** high
 
-**Evidence:** `validate.yml` downloads and installs a Godot zip directly from GitHub Releases, then executes it, without any checksum or signature verification (`.github/workflows/validate.yml:66-74`).
+**Evidence:** The validation workflow downloads a Godot zip directly from GitHub Releases and executes it without verifying a checksum or signature (`.github/workflows/validate.yml:66-74`).
 
-**Exploit scenario:** If the release asset is tampered with in transit or upstream, the validation runner executes a malicious editor binary. That gives attacker-controlled code execution inside CI, which can alter test results, poison caches, or pivot into later jobs.
+**Realistic exploit scenario:** If the downloaded archive is replaced upstream, tampered with in transit, or served from a compromised mirror/cache, the workflow runs attacker-controlled code in CI. That can falsify test results, poison caches, or tamper with build inputs for later jobs.
 
-**Recommended fix:** Pin the expected archive hash and verify it before unzip/install. Prefer a trusted setup action pinned to a commit SHA if available.
+**Recommended fix:** Pin the expected archive hash and verify it before unzip/install, or switch to a vetted setup action pinned to a full commit SHA.
 
-### 2. Mutable third-party actions in build/release workflows
+### 2. Mutable third-party GitHub Actions are used in release-capable workflows
 **Severity:** high
 
-**Evidence:** The export and validation workflows use mutable tags such as `actions/checkout@v4`, `chickensoft-games/setup-godot@v2`, `actions/download-artifact@v4`, and `softprops/action-gh-release@v2` instead of immutable commit SHAs (`.github/workflows/validate.yml:22,56,59,108,111`; `.github/workflows/export.yml:106,109,160,175,178,226,232,238`).
+**Evidence:** The repo uses mutable tags such as `actions/checkout@v4`, `actions/cache@v4`, `actions/setup-python@v5`, `chickensoft-games/setup-godot@v2`, `actions/upload-artifact@v4`, `actions/download-artifact@v4`, and `softprops/action-gh-release@v2` instead of immutable SHAs (`.github/workflows/validate.yml:56-60,108-116`; `.github/workflows/export.yml:106-123,159-160,175-179,208-209,224-245`). The release job also holds `contents: write` (`.github/workflows/export.yml:216-222`).
 
-**Exploit scenario:** If one of those upstream actions is compromised or a tag is moved, the next run can execute attacker code. In the release workflow that is especially sensitive because the job has `contents: write` and publishes artifacts (`.github/workflows/export.yml:216-245`).
+**Realistic exploit scenario:** If an upstream action tag is moved or an action release is compromised, the next workflow run executes unreviewed code. In the release workflow, that can directly publish attacker-controlled artifacts or alter release contents.
 
-**Recommended fix:** Pin every action to a full commit SHA and review/update pins intentionally.
+**Recommended fix:** Pin every external action to a full commit SHA and update those pins intentionally through review.
 
-### 3. Floating tool installs in CI/release jobs
+### 3. Floating build-time package installs remain in CI/export jobs
 **Severity:** medium
 
-**Evidence:** The Windows export job installs `rcedit` from npm without a version pin (`.github/workflows/export.yml:115-123`), and lint installs `gdtoolkit==4.*`, which still floats within a major line (`.github/workflows/validate.yml:115-121`).
+**Evidence:** The Windows export job installs `rcedit` from npm without a version pin (`.github/workflows/export.yml:115-123`), and lint installs `gdtoolkit==4.*`, which still floats within the major line (`.github/workflows/validate.yml:115-121`).
 
-**Exploit scenario:** A compromised package release or malicious update to the `latest` / matching major tag can execute during build time and tamper with exported artifacts or validation output.
+**Realistic exploit scenario:** A malicious or compromised upstream package release is pulled automatically during CI, giving an attacker execution inside the workflow and a path to tamper with exported artifacts or validation output.
 
-**Recommended fix:** Pin exact versions for `rcedit` and `gdtoolkit`, and review those upgrades deliberately.
-
-### 4. Release artifacts are published without integrity verification
-**Severity:** medium
-
-**Evidence:** The release job downloads artifacts produced by earlier jobs and immediately publishes them, with no checksum verification or attestation step (`.github/workflows/export.yml:224-245`).
-
-**Exploit scenario:** If an upstream export job or its dependencies are compromised, the workflow will publish trojaned release zips with no secondary integrity gate.
-
-**Recommended fix:** Generate checksums in export jobs, verify them in the release job, and consider artifact attestations or a signing/notarization stage before publication.
+**Recommended fix:** Pin exact package versions, preferably with lockfile-backed or checksum-verified installs where possible.
 
 ## 2. Risky patterns / hardening opportunities
 
-### 1. `save_index.cfg` is still trusted more than it should be
+### 1. `save_index.cfg` metadata is loaded without size or schema bounds
 **Severity:** low
 
-**Evidence:** `SaveManager.get_all_slot_metadata()` reads `user://save_index.cfg` through `ConfigFile.load()` and returns section/key data without a size cap or schema validation (`game/scripts/core/save_manager.gd:929-949`).
+**Evidence:** `SaveManager.get_all_slot_metadata()` trusts `user://save_index.cfg` through `ConfigFile.load()` and returns arbitrary section/key data with no size cap or per-key validation (`game/scripts/core/save_manager.gd:929-949`).
 
-**Exploit scenario:** A local actor can replace the index file with oversized or misleading data, causing preview/slot-list confusion or a local denial of service path in UI code that consumes the index.
+**Realistic exploit scenario:** A local user or malware with access to the profile directory can replace the slot index with oversized or misleading data, causing UI confusion, resource pressure, or spoofed save previews without touching the authoritative save files.
 
-**Recommended fix:** Apply a small size cap similar to `settings.cfg`, validate expected keys/types, and rebuild the index from authoritative save files when parsing fails.
+**Recommended fix:** Apply a small size limit similar to `settings.cfg`, validate only expected keys/types, and rebuild the index from authoritative save files when parsing fails.
 
-### 2. Some repo-managed JSON readers bypass the central bounded loader
+### 2. Several JSON-backed systems still parse whole files without bounded reads
 **Severity:** low
 
-**Evidence:** Several systems still read JSON directly with `FileAccess.open(...).get_as_text()` instead of reusing `DataLoader._read_json_file()`, including `MarketTrendSystem` (`game/autoload/market_trend_system.gd:64-80`), `OnboardingSystem` (`game/autoload/onboarding_system.gd:74-101`), and `ProgressionSystem` (`game/scripts/systems/progression_system.gd:235-277`).
+**Evidence:** The central loader is now bounded (`game/autoload/data_loader.gd:586-610`), but other JSON readers still call `file.get_as_text()` directly before parsing, including `MarketTrendSystem` (`game/autoload/market_trend_system.gd:64-80`), `OnboardingSystem` (`game/autoload/onboarding_system.gd:74-101`), and `ProgressionSystem` (`game/scripts/systems/progression_system.gd:271-308`).
 
-**Exploit scenario:** Today these files are `res://` assets under source control, so impact is limited. If the project later supports mods, DLC, or user-supplied content packs, these paths become easier denial-of-service and malformed-input targets than the central loader path.
+**Realistic exploit scenario:** Under today's trusted-repo model this is mostly a local corruption/DoS concern. If the project later supports mods, DLC, or externally supplied content packs, those paths become easier malformed-input and memory-pressure targets than the hardened central loader.
 
-**Recommended fix:** Consolidate JSON reads behind one helper that enforces root-type checks, bounded reads where appropriate, and uniform error reporting.
+**Recommended fix:** Consolidate remaining JSON reads behind one bounded helper and keep root-type validation consistent across all config/content loaders.
 
-### 3. Release job trust is concentrated in one third-party publishing action
-**Severity:** low
+### 3. Release artifacts are published without an in-repo integrity gate
+**Severity:** medium
 
-**Evidence:** The release stage delegates publishing to `softprops/action-gh-release@v2` while holding `contents: write` (`.github/workflows/export.yml:216-245`).
+**Evidence:** The release job downloads artifacts from earlier jobs and immediately publishes them with `softprops/action-gh-release`, without generating or verifying checksums or attestations inside the workflow (`.github/workflows/export.yml:224-245`).
 
-**Exploit scenario:** If that action is compromised, the blast radius includes release creation and artifact publication.
+**Realistic exploit scenario:** If an earlier export job, its toolchain, or one of its dependencies is compromised, the release stage publishes trojaned zips with no secondary verification step.
 
-**Recommended fix:** Pin the action SHA, or replace it with a GitHub-maintained release path plus manual/environment approval for final publication.
+**Recommended fix:** Generate checksums in export jobs, verify them in the release job, and add artifact attestations and/or signing before publication.
 
 ## 3. Intentional or acceptable patterns worth documenting
 
-### 1. Debug/cheat tooling is gated to debug builds
+### 1. The reviewed runtime has no account/session authentication surface
 **Severity:** informational
 
-**Evidence:** The debug overlay frees itself outside debug builds, and its cheat handlers are only reachable after that gate (`game/scenes/debug/debug_overlay.gd:19-35`).
+**Evidence:** The `AuthenticationSystem` is gameplay logic for authenticating in-game inventory items; it operates on `ItemInstance`, inventory state, and economy deductions rather than credentials, tokens, or network identities (`game/scripts/systems/authentication_system.gd:1-16`, `game/scripts/systems/authentication_system.gd:102-141`).
 
-**Why this is acceptable:** It prevents the obvious “cheat hotkey in production build” class of business-logic issue.
+**Why this is acceptable:** It means classic web findings like session fixation, token leakage, password storage, CORS, and IDOR are not present in the reviewed repository surface. If platform login or cloud identity exists elsewhere, that needs a separate review.
 
-### 2. Save loading already defends against oversized or malformed save files
+### 2. Debug/cheat tooling is gated to debug builds
 **Severity:** informational
 
-**Evidence:** `SaveManager` caps save reads at 10 MB, requires the JSON root to be a dictionary, and returns structured failures instead of blindly deserializing (`game/scripts/core/save_manager.gd:1028-1064`).
+**Evidence:** The debug overlay frees itself outside debug builds before any hotkeys or cheat handlers become reachable (`game/scenes/debug/debug_overlay.gd:19-30`).
 
-**Why this is acceptable:** This is the strongest local-input boundary in the runtime and materially reduces save-file denial-of-service risk.
+**Why this is acceptable:** It prevents obvious production exposure of developer shortcuts such as free cash, forced spawns, and time manipulation.
 
-### 3. Content IDs and scene roots are constrained
+### 3. Save loading already treats save files as untrusted local input
 **Severity:** informational
 
-**Evidence:** Content IDs are regex-constrained and scene paths are now constrained to project scene roots, with stricter rules for store scenes (`game/autoload/content_registry.gd:4-6`, `game/autoload/content_registry.gd:261-286`, `game/autoload/content_registry.gd:342-374`).
+**Evidence:** `SaveManager` bounds save-file size, requires a dictionary root, surfaces structured failures, and writes updates atomically through a temporary file and rename (`game/scripts/core/save_manager.gd:1008-1025`, `game/scripts/core/save_manager.gd:1028-1068`).
 
-**Why this is acceptable:** It limits path abuse and keeps content-driven lookup keyed to canonical identifiers.
+**Why this is acceptable:** This is the strongest local-input boundary in the runtime and materially reduces corruption and denial-of-service risk from malformed save files.
 
-### 4. Locale and persisted input bindings are whitelisted/sanitized
+### 4. Content-driven scene loading is constrained to approved roots
 **Severity:** informational
 
-**Evidence:** Supported locales are explicitly enumerated (`game/autoload/settings.gd:68-72`), persisted keycodes are bounded (`game/autoload/settings.gd:380-397`), and persisted settings values are now type-checked before use (`game/autoload/settings.gd:142-204`, `game/autoload/settings.gd:400-510`).
+**Evidence:** `ContentRegistry` rejects scene paths outside `res://game/scenes/`, requires `.tscn`, and applies a stricter store-scene root under `res://game/scenes/stores/` (`game/autoload/content_registry.gd:342-374`).
 
-**Why this is acceptable:** This is the right “fail closed to defaults” posture for `user://` preferences.
+**Why this is acceptable:** It narrows the dynamic-loading surface and prevents content entries from pointing at arbitrary project files.
+
+### 5. Workflow permissions start from read-only by default
+**Severity:** informational
+
+**Evidence:** Both workflows default to `contents: read`, and the write-capable permission is isolated to the final release job (`.github/workflows/validate.yml:9-20`; `.github/workflows/export.yml:8-20,216-222`).
+
+**Why this is acceptable:** Least-privilege defaults reduce blast radius even though action pinning and dependency verification still need improvement.
 
 ## 4. Items needing manual verification
 
-### 1. External release signing / notarization process
+### 1. External signing / notarization process for published builds
 **Severity:** medium
 
-**Evidence:** The repository explicitly validates that built-in code signing is disabled for export presets (`.github/workflows/export.yml:53-60`, `.github/workflows/export.yml:78-85`), and the README states checked-in presets have built-in signing disabled (`README.md:46-48`).
+**Evidence:** The repo explicitly keeps built-in signing disabled in export presets (`export_presets.cfg:35-39`, `export_presets.cfg:78-83`) and the workflow validates that those settings remain disabled (`.github/workflows/export.yml:53-60,78-85`).
 
-**Manual check:** Verify whether release artifacts are signed or notarized outside this repository before distribution. If not, consumers have no authenticity signal beyond the GitHub release itself.
+**Manual verification:** Confirm whether release artifacts are signed or notarized outside this repository before distribution. If not, end users have no artifact-authenticity signal beyond the GitHub release itself.
 
 ### 2. Organization-level GitHub Actions policy
 **Severity:** medium
 
-**Evidence:** The workflows themselves do not pin actions to immutable SHAs.
+**Evidence:** The repository workflows do not pin actions to immutable SHAs.
 
-**Manual check:** If the GitHub organization enforces allowlisted actions, SHA pinning, or artifact attestations at the platform level, the CI supply-chain risk is lower than it appears from repository code alone.
+**Manual verification:** If the GitHub organization enforces allowlists, SHA pinning, or artifact attestation at the platform level, the operational risk is lower than the repo-local YAML suggests.
 
-### 3. Modding or user-supplied content expectations
+### 3. Whether modding or externally supplied content is in scope
 **Severity:** low
 
-**Evidence:** Most runtime JSON/content reads are from `res://` and look safe under a trusted-repo model.
+**Evidence:** Most reviewed loaders read trusted `res://` assets, while local profile data stays under `user://`.
 
-**Manual check:** Confirm whether end users are expected to load modded content or externally supplied packs. If yes, the remaining direct JSON readers should be treated as higher-priority hardening targets.
+**Manual verification:** If players or partners are expected to supply content packs, mods, or externally sourced JSON, prioritize hardening the remaining direct JSON readers and add schema validation at those boundaries.
+
+### 4. macOS network entitlement necessity
+**Severity:** low
+
+**Evidence:** The macOS export preset sets `codesign/entitlements/app_sandbox/network_client=true` even though the reviewed runtime shows no in-repo network client surface (`export_presets.cfg:78-82`).
+
+**Manual verification:** If sandboxed signing is enabled outside this repo later, verify that outbound network entitlement is actually required. If it is not, disable it to keep the shipped capability set minimal.
+
+### 5. Any external platform identity, telemetry, or crash-reporting layer
+**Severity:** informational
+
+**Evidence:** The reviewed repository contains no HTTP client, browser bridge, or account-management implementation in gameplay/runtime code.
+
+**Manual verification:** If Steam, Epic, console services, telemetry SDKs, or crash uploaders are injected during packaging or in private forks, review those components separately for credential handling, privacy, and transport security.
 
 ## Notes
 
-- Full-suite baseline validation was already failing in unrelated areas before these changes; the audit-specific hardening was validated with focused tests covering the touched runtime paths.
-- No evidence of browser/XSS/CORS/token-storage issues was found because the reviewed runtime does not expose a web surface.
+- Full-suite baseline validation was already failing before this audit pass; the audit-specific code change was checked with focused GUT coverage for `res://tests/gut/test_data_loader.gd`.
+- No XSS, HTML injection, token storage, CORS, or API rate-limiting findings were identified because the reviewed repository does not expose a browser or HTTP API surface.

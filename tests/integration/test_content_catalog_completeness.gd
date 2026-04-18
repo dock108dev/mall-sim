@@ -16,7 +16,7 @@ const NON_ITEM_CATALOG_PATHS: Array[String] = [
 	"res://game/content/staff/staff_definitions.json",
 	"res://game/content/market_trends_catalog.json",
 	"res://game/content/events/ambient_moments.json",
-	"res://game/content/sports_seasons.json",
+	"res://game/content/stores/sports_seasons.json",
 	"res://game/content/events/seasonal_events.json",
 	"res://game/content/events/random_events.json",
 	"res://game/content/fixtures.json",

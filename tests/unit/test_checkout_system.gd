@@ -1,6 +1,7 @@
 ## Unit tests for CheckoutSystem sale processing, receipt signals, and inventory deduction.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
 
 var _checkout: PlayerCheckout
 var _economy: EconomySystem
@@ -70,12 +71,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	_safe_disconnect(EventBus.item_sold, _on_item_sold)
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.item_sold, _on_item_sold)
 
 
 func _make_customer() -> Customer:

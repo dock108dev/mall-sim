@@ -670,3 +670,51 @@ func test_refund_signal_emitted_for_partial_stockout() -> void:
 	EventBus.order_refund_issued.emit(25.0, "Stockout: 2x test_item undelivered")
 	assert_eq(_refund_amounts.size(), 1, "Should capture one refund signal")
 	assert_almost_eq(_refund_amounts[0], 25.0, 0.01, "Refund amount should match")
+
+
+func test_delivery_creation_failure_refunds_missing_items() -> void:
+	var item: ItemDefinition = _get_store_item(
+		"retro_games", PackedStringArray(["common", "uncommon"])
+	)
+	if not item:
+		pending("No BASIC-tier retro_games item available for testing")
+		return
+	var store_entry: Dictionary = ContentRegistry.get_entry(&"retro_games")
+	store_entry["backroom_capacity"] = 1
+	var existing_item: ItemInstance = _inventory_system.create_item(
+		item.id, "good", item.base_price
+	)
+	assert_not_null(existing_item, "Setup should fill the retro_games backroom")
+	var order_cost: float = _order_system.get_order_cost(
+		item, OrderSystem.SupplierTier.BASIC
+	)
+	var placed: bool = _order_system.place_order(
+		&"retro_games",
+		OrderSystem.SupplierTier.BASIC,
+		StringName(item.id),
+		1,
+	)
+	assert_true(placed, "Order should be accepted before delivery runs")
+	var pending_orders: Array[Dictionary] = _order_system.get_pending_orders()
+	assert_eq(pending_orders.size(), 1, "Expected one pending order for delivery")
+	var delivered_by_store: Dictionary = {}
+	_order_system._process_order_delivery(
+		pending_orders[0], 0.0, delivered_by_store
+	)
+	_order_system._emit_delivery_results(delivered_by_store)
+	assert_eq(
+		_refund_amounts.size(), 1,
+		"Delivery creation failures should emit a refund"
+	)
+	assert_almost_eq(
+		_refund_amounts[0], order_cost, 0.01,
+		"Refund should match the undelivered item cost"
+	)
+	assert_eq(
+		_delivered_items.size(), 0,
+		"Failed item creation should not emit delivered items"
+	)
+	assert_eq(
+		_inventory_system.get_stock(&"retro_games").size(), 1,
+		"Inventory should still contain only the setup item"
+	)

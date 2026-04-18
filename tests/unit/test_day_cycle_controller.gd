@@ -2,6 +2,7 @@
 class_name TestDayCycleController
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
 
 var _controller: DayCycleController
 var _time: TimeSystem
@@ -72,14 +73,11 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
-	_safe_disconnect(EventBus.bankruptcy_declared, _on_bankruptcy)
-	_safe_disconnect(EventBus.ending_requested, _on_ending_requested)
-	_safe_disconnect(EventBus.day_started, _on_day_started)
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.bankruptcy_declared, _on_bankruptcy)
+	TEST_SIGNAL_UTILS.safe_disconnect(
+		EventBus.ending_requested, _on_ending_requested
+	)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.day_started, _on_day_started)
 
 
 func _on_bankruptcy() -> void:

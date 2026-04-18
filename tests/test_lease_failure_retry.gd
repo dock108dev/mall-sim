@@ -11,6 +11,7 @@ const LEASE_COST: float = 500.0
 var _dialog: StoreLeaseDialog
 var _economy: EconomySystem
 var _store_state: StoreStateManager
+var _store_defs: Array[StoreDefinition] = []
 var _saved_owned_stores: Array[StringName] = []
 var _lease_requested_calls: Array[Dictionary] = []
 var _lease_completed_calls: Array[Dictionary] = []
@@ -23,6 +24,7 @@ func before_each() -> void:
 	GameManager.owned_stores = [&"retro_games"]
 	ContentRegistry.clear_for_testing()
 	_register_store_catalog()
+	_store_defs = _build_store_defs()
 
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
@@ -81,6 +83,59 @@ func test_lease_requested_fires_on_confirm() -> void:
 	assert_eq(
 		_lease_requested_calls.size(), 1,
 		"lease_requested must fire once when confirm is pressed"
+	)
+
+
+func test_failure_then_retry_matches_transactional_dialog_pattern() -> void:
+	_open_dialog()
+	_advance_to_confirmation()
+
+	_dialog._on_confirm_pressed()
+
+	assert_eq(
+		_lease_requested_calls.size(), 1,
+		"First confirm must emit lease_requested"
+	)
+	assert_eq(
+		_lease_completed_calls.size(), 1,
+		"Failed first attempt must emit lease_completed"
+	)
+	assert_true(
+		_dialog.visible,
+		"Dialog must remain visible after an insufficient-funds failure"
+	)
+	assert_string_contains(
+		_dialog._error_label.text,
+		"Insufficient funds.",
+		"Failure reason must be shown in the dialog"
+	)
+	assert_false(
+		_dialog._confirm_button.disabled,
+		"Confirm button must unlock after a failed attempt"
+	)
+
+	_economy.add_cash(1000.0, "test grant")
+	_dialog._on_confirm_pressed()
+
+	assert_eq(
+		_lease_requested_calls.size(), 2,
+		"Retry must emit a second lease_requested"
+	)
+	assert_eq(
+		_lease_completed_calls.size(), 2,
+		"Retry must emit a second lease_completed"
+	)
+	assert_true(
+		_lease_completed_calls[1]["success"] as bool,
+		"Retry must complete successfully"
+	)
+	assert_false(
+		_dialog.visible,
+		"Dialog must close after a successful retry"
+	)
+	assert_true(
+		_store_state.owned_slots.has(TEST_SLOT),
+		"Successful retry must register the leased slot"
 	)
 
 
@@ -197,12 +252,7 @@ func _open_dialog() -> void:
 		owned.append(canonical)
 	else:
 		owned.append(&"retro_games")
-
-	var store_defs: Array[StoreDefinition] = []
-	if GameManager.data_loader:
-		store_defs = GameManager.data_loader.get_all_stores()
-
-	_dialog.show_for_slot(TEST_SLOT, store_defs, owned, 1000.0, 100.0)
+	_dialog.show_for_slot(TEST_SLOT, _store_defs, owned, 1000.0, 100.0)
 
 
 func _advance_to_confirmation() -> void:
@@ -210,13 +260,61 @@ func _advance_to_confirmation() -> void:
 	_dialog._selected_store_type = (
 		String(canonical) if not canonical.is_empty() else "sports"
 	)
-	if GameManager.data_loader:
-		_dialog._selected_store_def = (
-			GameManager.data_loader.get_store("sports")
-		)
+	_dialog._selected_store_def = _get_store_def("sports")
 	_dialog._update_confirm_button()
 	_dialog._on_confirm_pressed()
 	_dialog._on_confirm_pressed()
+
+
+func _get_store_def(store_id: String) -> StoreDefinition:
+	var target_id: StringName = ContentRegistry.resolve(store_id)
+	for store_def: StoreDefinition in _store_defs:
+		var canonical_id: StringName = ContentRegistry.resolve(
+			store_def.id
+		)
+		if canonical_id == target_id:
+			return store_def
+	return null
+
+
+func _build_store_defs() -> Array[StoreDefinition]:
+	return [
+		_make_store_def(
+			"sports",
+			"Sports Memorabilia",
+			"Authentic jerseys and rare collectibles.",
+			120.0,
+			8,
+			4
+		),
+		_make_store_def(
+			"retro_games",
+			"Retro Games",
+			"Classic consoles, carts, and repairs.",
+			140.0,
+			10,
+			5
+		),
+	]
+
+
+func _make_store_def(
+	store_id: String,
+	store_name: String,
+	description: String,
+	daily_rent: float,
+	shelf_capacity: int,
+	backroom_capacity: int
+) -> StoreDefinition:
+	var store_def := StoreDefinition.new()
+	store_def.id = store_id
+	store_def.store_name = store_name
+	store_def.description = description
+	store_def.size_category = "small"
+	store_def.daily_rent = daily_rent
+	store_def.shelf_capacity = shelf_capacity
+	store_def.backroom_capacity = backroom_capacity
+	return store_def
 
 
 func _register_store_catalog() -> void:

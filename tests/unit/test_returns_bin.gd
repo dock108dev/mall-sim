@@ -1,6 +1,7 @@
 ## Unit tests for ReturnsBin return eligibility, late fee computation, and condition degradation.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
 
 var _controller: VideoRentalStoreController
 var _inventory: InventorySystem
@@ -46,12 +47,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	GameManager.data_loader = _previous_data_loader
-	_safe_disconnect(EventBus.rental_late_fee, _on_rental_late_fee)
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.rental_late_fee, _on_rental_late_fee)
 
 
 func _on_rental_late_fee(item_id: String, late_fee: float, days_late: int) -> void:

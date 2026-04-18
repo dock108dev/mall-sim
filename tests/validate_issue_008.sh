@@ -67,8 +67,8 @@ echo "[AC-extra] StoreDefinition and data pipeline"
 SD="$ROOT/game/resources/store_definition.gd"
 check "grep -q 'var music: String' '$SD'" "StoreDefinition has music field"
 
-DL="$ROOT/game/scripts/data_loader.gd"
-check "grep -q 'store.music' '$DL'" "DataLoader parses music field"
+CONTENT_PARSER_GD="$ROOT/game/scripts/content_parser.gd"
+check "grep -q 'store.music = str(data.get(\"music\", \"\"))' '$CONTENT_PARSER_GD'" "ContentParser parses music field"
 
 # Store definitions JSON has music paths
 JSON="$ROOT/game/content/stores/store_definitions.json"

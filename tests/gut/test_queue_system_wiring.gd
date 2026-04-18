@@ -4,6 +4,7 @@
 ## active_store_changed flush.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
 
 var _queue_system: QueueSystem
 var _customer_scene: PackedScene
@@ -39,20 +40,15 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	_safe_disconnect(
+	TEST_SIGNAL_UTILS.safe_disconnect(
 		EventBus.checkout_queue_ready, _on_checkout_queue_ready
 	)
-	_safe_disconnect(EventBus.customer_left, _on_customer_left)
-	_safe_disconnect(EventBus.queue_advanced, _on_queue_advanced)
-	_safe_disconnect(EventBus.queue_changed, _on_queue_changed)
-	_safe_disconnect(
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.customer_left, _on_customer_left)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.queue_advanced, _on_queue_advanced)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.queue_changed, _on_queue_changed)
+	TEST_SIGNAL_UTILS.safe_disconnect(
 		EventBus.customer_abandoned_queue, _on_customer_abandoned
 	)
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
 
 
 func _make_customer() -> Customer:

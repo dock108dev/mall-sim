@@ -183,19 +183,3 @@ func test_signal_emitted_on_completion() -> void:
 		"Signal result should be valid"
 	)
 
-
-func test_legacy_item_tested_signal_emitted() -> void:
-	var tested_results: Array[bool] = []
-	var capture: Callable = func(
-		_item_id: String, success: bool
-	) -> void:
-		tested_results.append(success)
-	EventBus.item_tested.connect(capture)
-	var item: ItemInstance = _make_item()
-	_system.start_test(item.instance_id)
-	_system._on_test_timer_timeout()
-	EventBus.item_tested.disconnect(capture)
-	assert_eq(
-		tested_results.size(), 1,
-		"Should emit legacy item_tested signal"
-	)

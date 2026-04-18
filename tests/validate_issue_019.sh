@@ -16,7 +16,7 @@ echo ""
 
 STORE_FILE="$ROOT/game/content/stores/store_definitions.json"
 STORE_DEF_GD="$ROOT/game/resources/store_definition.gd"
-DATA_LOADER_GD="$ROOT/game/scripts/data_loader.gd"
+CONTENT_PARSER_GD="$ROOT/game/scripts/content_parser.gd"
 PRICING_PANEL_GD="$ROOT/game/scenes/ui/pricing_panel.gd"
 
 # --- AC1: Each store has recommended_markup with optimal_min, optimal_max, max_viable ---
@@ -80,14 +80,14 @@ for field in recommended_markup_optimal_min recommended_markup_optimal_max recom
     fi
 done
 
-# --- AC3: DataLoader parses recommended_markup ---
+# --- AC3: ContentParser parses recommended_markup ---
 echo ""
-echo "[AC3] DataLoader parses recommended_markup"
+echo "[AC3] ContentParser parses recommended_markup"
 
-if grep -q "recommended_markup" "$DATA_LOADER_GD"; then
-    pass "DataLoader handles recommended_markup"
+if grep -q "recommended_markup" "$CONTENT_PARSER_GD"; then
+    pass "ContentParser handles recommended_markup"
 else
-    fail "DataLoader does not parse recommended_markup"
+    fail "ContentParser does not parse recommended_markup"
 fi
 
 # --- AC4: Pricing panel reads thresholds from store data, not hardcoded ---

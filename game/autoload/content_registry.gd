@@ -12,6 +12,7 @@ var _display_names: Dictionary = {}
 var _types: Dictionary = {}
 var _resources: Dictionary = {}
 var _warned_missing_scenes: Dictionary = {}
+var _warned_helper_fallbacks: Dictionary = {}
 var _id_regex: RegEx
 var _ready_flag: bool = false
 
@@ -76,6 +77,15 @@ func get_entry(id: StringName) -> Dictionary:
 func get_display_name(id: StringName) -> String:
 	var canonical: StringName = _resolve_internal(id)
 	if canonical.is_empty():
+		if not id.is_empty():
+			_warn_helper_fallback_once(
+				"get_display_name:%s" % id,
+				(
+					"ContentRegistry: get_display_name fallback for unknown ID "
+					+ "'%s' (normalized: '%s')"
+				)
+				% [id, _normalize(String(id))]
+			)
 		return String(id)
 	return _display_names.get(canonical, String(canonical))
 
@@ -84,7 +94,24 @@ func get_display_name(id: StringName) -> String:
 func get_scene_path(id: StringName) -> String:
 	var canonical: StringName = _resolve_internal(id)
 	if canonical.is_empty():
+		if not id.is_empty():
+			_warn_helper_fallback_once(
+				"get_scene_path:unknown:%s" % id,
+				(
+					"ContentRegistry: get_scene_path fallback for unknown ID "
+					+ "'%s' (normalized: '%s')"
+				)
+				% [id, _normalize(String(id))]
+			)
 		return ""
+	if not _scene_map.has(canonical):
+		_warn_helper_fallback_once(
+			"get_scene_path:missing:%s" % canonical,
+			(
+				"ContentRegistry: get_scene_path fallback for ID '%s' — no scene path is registered"
+				% canonical
+			)
+		)
 	return _scene_map.get(canonical, "")
 
 
@@ -122,6 +149,7 @@ func clear_for_testing() -> void:
 	_types.clear()
 	_resources.clear()
 	_warned_missing_scenes.clear()
+	_warned_helper_fallbacks.clear()
 	_ready_flag = false
 	DataLoaderSingleton.clear_for_testing()
 
@@ -323,6 +351,17 @@ func _report_unknown_id(raw: String, normalized: StringName) -> void:
 
 func _emit_error(message: String) -> void:
 	push_error(message)
+
+
+func _emit_warning(message: String) -> void:
+	push_warning(message)
+
+
+func _warn_helper_fallback_once(key: String, message: String) -> void:
+	if _warned_helper_fallbacks.has(key):
+		return
+	_warned_helper_fallbacks[key] = true
+	_emit_warning(message)
 
 
 func _get_display_name(entry: Dictionary, raw_id: String) -> String:

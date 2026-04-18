@@ -151,7 +151,6 @@ func _on_test_timer_timeout() -> void:
 
 	var success: bool = result == "tested_working"
 	EventBus.item_test_completed.emit(instance_id, result)
-	EventBus.item_tested.emit(instance_id, success)
 	EventBus.inventory_changed.emit()
 
 	var status_text: String = "Working" if success else "Not Working"

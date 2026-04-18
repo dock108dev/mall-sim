@@ -21,6 +21,24 @@ func test_load_json_missing_file_returns_null() -> void:
 	assert_null(data, "Missing file should return null")
 
 
+func test_load_json_oversized_file_returns_null() -> void:
+	var path: String = "user://test_oversized_data_loader.json"
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	assert_not_null(file, "Should create oversized test file")
+	if file == null:
+		return
+	file.store_string(
+		"{\"padding\":\"%s\"}" % "x".repeat(DataLoader.MAX_JSON_FILE_BYTES)
+	)
+	file.close()
+
+	var data: Variant = DataLoaderSingleton.load_json(path)
+	assert_null(data, "Oversized JSON file should be rejected")
+
+	var cleanup_error: Error = DirAccess.remove_absolute(path)
+	assert_eq(cleanup_error, OK, "Oversized test file should be removed")
+
+
 func test_items_loaded() -> void:
 	assert_gt(
 		DataLoaderSingleton.get_item_count(), 0,

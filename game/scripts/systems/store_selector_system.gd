@@ -289,10 +289,13 @@ func _set_active_store_for_transition(store_id: StringName) -> void:
 	if _store_state_manager:
 		_store_state_manager.set_active_store(store_id, false)
 		return
-
-	push_error(
-		"StoreSelectorSystem: StoreStateManager is required for store transitions"
-	)
+	var canonical: StringName = _resolve_store_id(store_id)
+	var previous: StringName = _active_store_id
+	_active_store_id = canonical
+	GameManager.current_store_id = canonical
+	if previous != canonical:
+		EventBus.store_switched.emit(String(previous), String(canonical))
+	EventBus.active_store_changed.emit(canonical)
 
 
 func _set_hallway_camera_enabled(enabled: bool) -> void:

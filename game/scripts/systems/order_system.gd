@@ -292,13 +292,24 @@ func _process_order_delivery(
 	var iid: String = order.get("item_id", "")
 	var qty: int = int(order.get("quantity", 1))
 	var cost: float = float(order.get("unit_cost", 0.0))
+	var requested_delivery_qty: int = qty
 	if _force_stockout_for_test or randf() < stockout_prob:
 		var fulfilled: int = _calculate_partial_fill(qty)
 		EventBus.order_stockout.emit(StringName(iid), qty, fulfilled)
 		_issue_partial_refund(order, fulfilled)
-		_create_and_collect_items(sid, iid, fulfilled, cost, delivered_by_store)
+		requested_delivery_qty = fulfilled
 	else:
-		_create_and_collect_items(sid, iid, qty, cost, delivered_by_store)
+		requested_delivery_qty = qty
+	var created_count: int = _create_and_collect_items(
+		sid, iid, requested_delivery_qty, cost, delivered_by_store
+	)
+	var undelivered_after_creation: int = requested_delivery_qty - created_count
+	if undelivered_after_creation > 0:
+		_issue_refund_for_missing_quantity(
+			order,
+			undelivered_after_creation,
+			"Delivery failure"
+		)
 
 
 func _calculate_partial_fill(requested: int) -> int:
@@ -311,13 +322,23 @@ func _issue_partial_refund(order: Dictionary, fulfilled: int) -> void:
 	var qty: int = int(order.get("quantity", 1))
 	var unit_cost: float = float(order.get("unit_cost", 0.0))
 	var undelivered: int = qty - fulfilled
+	_issue_refund_for_missing_quantity(order, undelivered, "Stockout")
+
+
+func _issue_refund_for_missing_quantity(
+	order: Dictionary,
+	missing_quantity: int,
+	reason_prefix: String,
+) -> void:
+	var unit_cost: float = float(order.get("unit_cost", 0.0))
+	var undelivered: int = maxi(0, missing_quantity)
 	var refund: float = unit_cost * float(undelivered)
 	if refund <= 0.0:
 		return
 	var item_id: String = order.get("item_id", "unknown")
 	EventBus.order_refund_issued.emit(
 		refund,
-		"Stockout: %dx %s undelivered" % [undelivered, item_id],
+		"%s: %dx %s undelivered" % [reason_prefix, undelivered, item_id],
 	)
 
 
@@ -327,7 +348,7 @@ func _create_and_collect_items(
 	qty: int,
 	unit_cost: float,
 	delivered_by_store: Dictionary,
-) -> void:
+) -> int:
 	var items_created: Array[String] = []
 	for i: int in range(qty):
 		var item: ItemInstance = _inventory_system.create_item(iid, "good", unit_cost)
@@ -340,6 +361,7 @@ func _create_and_collect_items(
 	if not delivered_by_store.has(sid):
 		delivered_by_store[sid] = []
 	delivered_by_store[sid].append_array(items_created)
+	return items_created.size()
 
 
 func _emit_delivery_results(delivered_by_store: Dictionary) -> void:

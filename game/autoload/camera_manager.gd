@@ -20,8 +20,8 @@ func _process(_delta: float) -> void:
 
 
 ## Explicitly sets the active camera and emits active_camera_changed.
-func register_camera(camera: Camera3D) -> void:
-	_set_active_camera(camera, true)
+func register_camera(camera: Variant) -> void:
+	_set_active_camera(_coerce_camera(camera), true)
 
 
 ## Returns the currently active camera, or null if none is registered.
@@ -30,13 +30,17 @@ func get_active_camera() -> Camera3D:
 
 
 ## Stores the hallway camera for use when a store is exited.
-func register_hallway_camera(camera: Camera3D) -> void:
-	_hallway_camera = camera
+func register_hallway_camera(camera: Variant) -> void:
+	_hallway_camera = _coerce_camera(camera)
 
 
 ## Associates a camera with a store_id for use when that store is entered.
-func register_store_camera(store_id: StringName, camera: Camera3D) -> void:
-	_store_cameras[store_id] = camera
+func register_store_camera(store_id: StringName, camera: Variant) -> void:
+	var resolved: Camera3D = _coerce_camera(camera)
+	if resolved == null:
+		_store_cameras.erase(store_id)
+		return
+	_store_cameras[store_id] = resolved
 
 
 func _refresh_active_camera() -> void:
@@ -71,8 +75,22 @@ func _on_node_removed(node: Node) -> void:
 func _on_store_entered(store_id: StringName) -> void:
 	if not _store_cameras.has(store_id):
 		return
-	register_camera(_store_cameras[store_id])
+	var store_camera: Camera3D = _coerce_camera(_store_cameras.get(store_id))
+	if store_camera == null:
+		_store_cameras.erase(store_id)
+		return
+	register_camera(store_camera)
 
 
 func _on_store_exited(_store_id: StringName) -> void:
 	register_camera(_hallway_camera)
+
+
+func _coerce_camera(camera: Variant) -> Camera3D:
+	if camera == null:
+		return null
+	if not is_instance_valid(camera):
+		return null
+	if not camera is Camera3D:
+		return null
+	return camera as Camera3D

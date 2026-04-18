@@ -100,6 +100,70 @@ func test_get_entry_invalid_id_returns_empty_and_records_error() -> void:
 	)
 
 
+func test_get_display_name_invalid_id_returns_raw_and_warns_once() -> void:
+	var first_result: String = _registry.get_display_name(&"bad_id")
+	var second_result: String = _registry.get_display_name(&"bad_id")
+	assert_eq(first_result, "bad_id", "Unknown IDs should fall back to raw display text")
+	assert_eq(
+		second_result, "bad_id",
+		"Repeated unknown lookups should keep the same fallback text"
+	)
+	assert_eq(
+		_registry.warning_messages.size(), 1,
+		"Unknown display-name fallback should warn once"
+	)
+	assert_string_contains(
+		_registry.warning_messages[0],
+		"get_display_name fallback for unknown ID 'bad_id'",
+		"Warning should describe the helper fallback"
+	)
+
+
+func test_get_scene_path_invalid_id_returns_empty_and_warns_once() -> void:
+	var first_result: String = _registry.get_scene_path(&"bad_id")
+	var second_result: String = _registry.get_scene_path(&"bad_id")
+	assert_eq(first_result, "", "Unknown IDs should return an empty scene path")
+	assert_eq(
+		second_result, "",
+		"Repeated unknown scene-path lookups should keep the empty fallback"
+	)
+	assert_eq(
+		_registry.warning_messages.size(), 1,
+		"Unknown scene-path fallback should warn once"
+	)
+	assert_string_contains(
+		_registry.warning_messages[0],
+		"get_scene_path fallback for unknown ID 'bad_id'",
+		"Warning should describe the missing scene-path lookup"
+	)
+
+
+func test_get_scene_path_registered_store_without_scene_warns_once() -> void:
+	_registry.register_entry(
+		{
+			"id": "scene_less_store",
+			"name": "Scene-less Store",
+		},
+		"store"
+	)
+	var first_result: String = _registry.get_scene_path(&"scene_less_store")
+	var second_result: String = _registry.get_scene_path(&"scene_less_store")
+	assert_eq(first_result, "", "Registered stores without a scene should still return empty")
+	assert_eq(
+		second_result, "",
+		"Repeated scene-less store lookups should keep the empty fallback"
+	)
+	assert_eq(
+		_registry.warning_messages.size(), 1,
+		"Missing registered scene paths should warn once"
+	)
+	assert_string_contains(
+		_registry.warning_messages[0],
+		"get_scene_path fallback for ID 'scene_less_store' — no scene path is registered",
+		"Warning should explain that the store has no registered scene"
+	)
+
+
 func test_get_item_definition_type_mismatch_returns_null_and_records_error() -> void:
 	var result: ItemDefinition = _registry.get_item_definition(&"sports")
 	assert_null(result, "Type mismatch should return null")

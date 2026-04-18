@@ -293,3 +293,54 @@ func test_store_exited_without_hallway_camera_emits_null() -> void:
 		_manager.get_active_camera(),
 		"get_active_camera() must return null when no hallway camera is registered and store exits"
 	)
+
+
+func test_store_entered_with_freed_store_camera_keeps_current_camera() -> void:
+	var current_cam: Camera3D = Camera3D.new()
+	var store_cam: Camera3D = Camera3D.new()
+	add_child_autofree(current_cam)
+	add_child(store_cam)
+	_manager.register_camera(current_cam)
+	_manager.register_store_camera(_STORE_ID, store_cam)
+	store_cam.queue_free()
+	await get_tree().process_frame
+
+	_signal_count = 0
+	_received_cameras.clear()
+	EventBus.store_entered.emit(_STORE_ID)
+
+	assert_eq(
+		_manager.get_active_camera(),
+		current_cam,
+		"Freed store cameras should be ignored instead of replacing the current camera"
+	)
+	assert_eq(
+		_signal_count, 0,
+		"Ignoring a freed store camera should not emit active_camera_changed"
+	)
+
+
+func test_store_exited_with_freed_hallway_camera_emits_null() -> void:
+	var hallway_cam: Camera3D = Camera3D.new()
+	add_child(hallway_cam)
+	_manager.register_hallway_camera(hallway_cam)
+	hallway_cam.queue_free()
+	await get_tree().process_frame
+
+	_signal_count = 0
+	_received_cameras.clear()
+	EventBus.store_exited.emit(_STORE_ID)
+
+	assert_eq(
+		_signal_count, 1,
+		"store_exited should still emit active_camera_changed when the hallway camera was freed"
+	)
+	assert_null(
+		_manager.get_active_camera(),
+		"Freed hallway cameras should resolve to null instead of crashing on store_exited"
+	)
+	if _received_cameras.size() > 0:
+		assert_null(
+			_received_cameras[0],
+			"active_camera_changed should carry null when the hallway camera was freed"
+		)

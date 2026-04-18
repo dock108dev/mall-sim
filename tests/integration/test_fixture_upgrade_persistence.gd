@@ -1,6 +1,7 @@
 ## Integration test: fixture tier upgrade persists through save/load cycle.
 extends GutTest
 
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
 
 const SAVE_SLOT: int = 1
 const ENTRY_EDGE_Y: int = 8
@@ -96,16 +97,11 @@ func before_each() -> void:
 
 func after_each() -> void:
 	_save_manager.delete_save(SAVE_SLOT)
-	_safe_disconnect(EventBus.fixture_placed, _on_fixture_placed)
+	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.fixture_placed, _on_fixture_placed)
 	GameManager.current_state = _saved_game_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
 	GameManager.data_loader = _saved_data_loader
-
-
-func _safe_disconnect(sig: Signal, callable: Callable) -> void:
-	if sig.is_connected(callable):
-		sig.disconnect(callable)
 
 
 func _on_fixture_placed(
