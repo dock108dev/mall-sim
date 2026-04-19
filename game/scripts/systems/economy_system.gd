@@ -56,7 +56,6 @@ var _demand_modifiers: Dictionary = {}
 var _store_daily_revenue: Dictionary = {}
 ## Per item def id, random walk with mean reversion.
 var _drift_factors: Dictionary = {}
-var _trades_today: int = 0
 var _bankruptcy_declared: bool = false
 var _last_injection_day: int = -1
 var _active_store_id: StringName = &""
@@ -114,7 +113,6 @@ func reset_daily_totals() -> void:
 	_daily_transactions = []
 	_current_time_minutes = 0
 	_items_sold_today = 0
-	_trades_today = 0
 	_daily_rent_total = 0.0
 	_daily_revenue = 0.0
 	_daily_expenses = 0.0
@@ -202,7 +200,6 @@ func get_daily_summary() -> Dictionary:
 		"net_profit": total_revenue - total_expenses,
 		"transaction_count": transaction_count,
 		"items_sold": _items_sold_today,
-		"trades": _trades_today,
 		"rent": _daily_rent_total,
 	}
 
@@ -232,7 +229,6 @@ func get_save_data() -> Dictionary:
 		"today_sales": _today_sales.duplicate(),
 		"demand_modifiers": _demand_modifiers.duplicate(),
 		"store_daily_revenue": _store_daily_revenue.duplicate(),
-		"trades_today": _trades_today,
 		"drift_factors": _drift_factors.duplicate(),
 		"last_injection_day": _last_injection_day,
 	}
@@ -254,7 +250,6 @@ func _apply_state(data: Dictionary) -> void:
 	_daily_rent = float(data.get("daily_rent", 50.0))
 	_daily_rent_total = float(data.get("daily_rent_total", 0.0))
 	_daily_expenses = float(data.get("daily_expenses", 0.0))
-	_trades_today = int(data.get("trades_today", 0))
 	_last_injection_day = int(data.get("last_injection_day", -1))
 	_active_store_id = _resolve_store_id(GameManager.get_active_store_id())
 
@@ -287,7 +282,6 @@ func _connect_runtime_signals() -> void:
 	_connect_signal(EventBus.hour_changed, _on_hour_changed)
 	_connect_signal(EventBus.day_ended, _on_day_ended)
 	_connect_signal(EventBus.item_sold, _on_item_sold)
-	_connect_signal(EventBus.trade_accepted, _on_trade_accepted)
 	_connect_signal(EventBus.order_cash_check, _on_order_cash_check)
 	_connect_signal(EventBus.order_cash_deduct, _on_order_cash_deduct)
 	_connect_signal(EventBus.order_refund_issued, _on_order_refund_issued)
@@ -377,9 +371,6 @@ func record_store_revenue(store_id: String, amount: float) -> void:
 	_store_daily_revenue[key] = (
 		_store_daily_revenue.get(key, 0.0) as float
 	) + amount
-
-func _on_trade_accepted(_wanted_id: String, _offered_id: String) -> void:
-	_trades_today += 1
 
 func _on_item_sold(_item_id: String, _price: float, category: String) -> void:
 	_items_sold_today += 1

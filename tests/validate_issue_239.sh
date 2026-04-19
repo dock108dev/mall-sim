@@ -1,23 +1,32 @@
 #!/usr/bin/env bash
-# Validate ISSUE-239: pocket_creatures_cards.json and pocket_creatures_tournaments.json
+# Validate ISSUE-239 / ISSUE-013: creatures.json and packs.json canonical content,
+# pocket_creatures_tournaments.json, and DataLoader routing.
 set -euo pipefail
 
-CARDS_FILE="game/content/stores/pocket_creatures_cards.json"
+CREATURES_FILE="game/content/stores/pocket_creatures/creatures.json"
+PACKS_FILE="game/content/stores/pocket_creatures/packs.json"
 TOURNAMENTS_FILE="game/content/stores/pocket_creatures_tournaments.json"
 DATA_LOADER="game/autoload/data_loader.gd"
 CONTENT_PARSER="game/scripts/content_parser.gd"
 TOURNAMENT_DEF="game/resources/tournament_event_definition.gd"
 EXIT_CODE=0
 
-echo "=== ISSUE-239: PocketCreatures Cards and Tournaments Content Files ==="
+echo "=== ISSUE-239 / ISSUE-013: PocketCreatures Content Files ==="
 
 echo ""
 echo "[File existence]"
 
-if [ -f "$CARDS_FILE" ]; then
-    echo "PASS: pocket_creatures_cards.json exists at stores/"
+if [ -f "$CREATURES_FILE" ]; then
+    echo "PASS: creatures.json exists at pocket_creatures/"
 else
-    echo "FAIL: pocket_creatures_cards.json not found at $CARDS_FILE"
+    echo "FAIL: creatures.json not found at $CREATURES_FILE"
+    EXIT_CODE=1
+fi
+
+if [ -f "$PACKS_FILE" ]; then
+    echo "PASS: packs.json exists at pocket_creatures/"
+else
+    echo "FAIL: packs.json not found at $PACKS_FILE"
     EXIT_CODE=1
 fi
 
@@ -31,10 +40,17 @@ fi
 echo ""
 echo "[JSON validity]"
 
-if python3 -c "import json,sys; json.load(open('$CARDS_FILE'))" 2>/dev/null; then
-    echo "PASS: pocket_creatures_cards.json is valid JSON"
+if python3 -c "import json,sys; json.load(open('$CREATURES_FILE'))" 2>/dev/null; then
+    echo "PASS: creatures.json is valid JSON"
 else
-    echo "FAIL: pocket_creatures_cards.json is not valid JSON"
+    echo "FAIL: creatures.json is not valid JSON"
+    EXIT_CODE=1
+fi
+
+if python3 -c "import json,sys; json.load(open('$PACKS_FILE'))" 2>/dev/null; then
+    echo "PASS: packs.json is valid JSON"
+else
+    echo "FAIL: packs.json is not valid JSON"
     EXIT_CODE=1
 fi
 
@@ -46,33 +62,55 @@ else
 fi
 
 echo ""
-echo "[Cards: minimum count >= 20]"
+echo "[Creatures: root type is item_definition]"
 
-CARD_COUNT=$(python3 -c "import json; data=json.load(open('$CARDS_FILE')); print(len(data))" 2>/dev/null || echo "0")
-if [ "$CARD_COUNT" -ge 20 ]; then
-    echo "PASS: $CARD_COUNT card entries found (>= 20)"
+if python3 -c "
+import json, sys
+data = json.load(open('$CREATURES_FILE'))
+assert isinstance(data, dict), 'root must be a dict'
+assert data.get('type') == 'item_definition', 'root type must be item_definition'
+print('type=%s' % data.get('type'))
+" 2>/dev/null; then
+    echo "PASS: creatures.json root type is item_definition"
 else
-    echo "FAIL: only $CARD_COUNT card entries found (need >= 20)"
+    echo "FAIL: creatures.json root type must be item_definition"
     EXIT_CODE=1
 fi
 
 echo ""
-echo "[Cards: required fields]"
+echo "[Creatures: minimum count >= 20]"
+
+CARD_COUNT=$(python3 -c "
+import json
+data = json.load(open('$CREATURES_FILE'))
+items = data.get('items', [])
+print(len(items))
+" 2>/dev/null || echo "0")
+if [ "$CARD_COUNT" -ge 20 ]; then
+    echo "PASS: $CARD_COUNT creature entries found (>= 20)"
+else
+    echo "FAIL: only $CARD_COUNT creature entries found (need >= 20)"
+    EXIT_CODE=1
+fi
+
+echo ""
+echo "[Creatures: required fields]"
 
 MISSING_FIELDS=$(python3 -c "
 import json
-data = json.load(open('$CARDS_FILE'))
-required = {'id', 'display_name', 'card_category', 'rarity', 'base_price', 'spawn_weight', 'flavor_text'}
+data = json.load(open('$CREATURES_FILE'))
+items = data.get('items', [])
+required = {'id', 'display_name', 'category', 'rarity', 'base_price', 'creature_type', 'spawn_weight', 'flavor_text'}
 missing = []
-for i, card in enumerate(data):
+for i, card in enumerate(items):
     for field in required:
         if field not in card:
-            missing.append('card[%d] (%s) missing %s' % (i, card.get('id', '?'), field))
+            missing.append('creature[%d] (%s) missing %s' % (i, card.get('id', '?'), field))
 print('\n'.join(missing))
 " 2>/dev/null || echo "parse error")
 
 if [ -z "$MISSING_FIELDS" ]; then
-    echo "PASS: all cards have required fields (id, display_name, card_category, rarity, base_price, spawn_weight, flavor_text)"
+    echo "PASS: all creatures have required fields (id, display_name, category, rarity, base_price, creature_type, spawn_weight, flavor_text)"
 else
     echo "FAIL: missing fields detected:"
     echo "$MISSING_FIELDS"
@@ -80,13 +118,14 @@ else
 fi
 
 echo ""
-echo "[Cards: rarity distribution]"
+echo "[Creatures: rarity distribution]"
 
 python3 -c "
 import json, sys
-data = json.load(open('$CARDS_FILE'))
+data = json.load(open('$CREATURES_FILE'))
+items = data.get('items', [])
 counts = {}
-for card in data:
+for card in items:
     r = card.get('rarity', '')
     counts[r] = counts.get(r, 0) + 1
 exit_code = 0
@@ -101,13 +140,14 @@ sys.exit(exit_code)
 " 2>/dev/null || EXIT_CODE=1
 
 echo ""
-echo "[Cards: spawn_weight sums per rarity bucket]"
+echo "[Creatures: spawn_weight sums per rarity bucket]"
 
 python3 -c "
 import json, sys
-data = json.load(open('$CARDS_FILE'))
+data = json.load(open('$CREATURES_FILE'))
+items = data.get('items', [])
 buckets = {}
-for card in data:
+for card in items:
     r = card.get('rarity', '')
     buckets.setdefault(r, []).append(float(card.get('spawn_weight', 0)))
 exit_code = 0
@@ -122,13 +162,14 @@ sys.exit(exit_code)
 " 2>/dev/null || EXIT_CODE=1
 
 echo ""
-echo "[Cards: base_price scaling by rarity]"
+echo "[Creatures: base_price scaling by rarity]"
 
 python3 -c "
 import json, sys
-data = json.load(open('$CARDS_FILE'))
+data = json.load(open('$CREATURES_FILE'))
+items = data.get('items', [])
 buckets = {}
-for card in data:
+for card in items:
     r = card.get('rarity', '')
     buckets.setdefault(r, []).append(float(card.get('base_price', 0)))
 medians = {}
@@ -150,12 +191,12 @@ sys.exit(exit_code)
 " 2>/dev/null || EXIT_CODE=1
 
 echo ""
-echo "[Cards: original parody names — no real TCG names]"
+echo "[Creatures: original parody names — no real TCG names]"
 
 REAL_NAMES=("Charizard" "Pikachu" "Blastoise" "Venusaur" "Mewtwo" "Mew" "Gengar" "Alakazam" "Machamp")
 FOUND_REAL=""
 for name in "${REAL_NAMES[@]}"; do
-    if grep -qi "\"$name\"" "$CARDS_FILE"; then
+    if grep -qi "\"$name\"" "$CREATURES_FILE"; then
         FOUND_REAL="$FOUND_REAL $name"
     fi
 done
@@ -165,6 +206,69 @@ else
     echo "FAIL: real TCG card names found:$FOUND_REAL"
     EXIT_CODE=1
 fi
+
+echo ""
+echo "[Packs: required fields per pack type]"
+
+MISSING_PACK=$(python3 -c "
+import json
+packs = json.load(open('$PACKS_FILE'))
+required = {'id', 'display_name', 'set_tag', 'cost', 'slot_count', 'slots', 'rarity_weights'}
+missing = []
+for i, p in enumerate(packs):
+    for field in required:
+        if field not in p:
+            missing.append('pack[%d] (%s) missing %s' % (i, p.get('id', '?'), field))
+    rw = p.get('rarity_weights', {})
+    for rk in ('rare', 'holo_rare', 'secret_rare'):
+        if rk not in rw:
+            missing.append('pack[%d] (%s) rarity_weights missing %s' % (i, p.get('id', '?'), rk))
+print('\n'.join(missing))
+" 2>/dev/null || echo "parse error")
+
+if [ -z "$MISSING_PACK" ]; then
+    echo "PASS: all pack types have required fields"
+else
+    echo "FAIL: missing pack fields:"
+    echo "$MISSING_PACK"
+    EXIT_CODE=1
+fi
+
+echo ""
+echo "[Packs: rarity weights sum to ~1.0 per pack]"
+
+python3 -c "
+import json, sys
+packs = json.load(open('$PACKS_FILE'))
+exit_code = 0
+for p in packs:
+    rw = p.get('rarity_weights', {})
+    total = sum(float(v) for v in rw.values())
+    if abs(total - 1.0) < 0.01:
+        print('PASS: %s rarity_weights sum = %.4f (~1.0)' % (p.get('set_tag', '?'), total))
+    else:
+        print('FAIL: %s rarity_weights sum = %.4f (should be ~1.0)' % (p.get('set_tag', '?'), total))
+        exit_code = 1
+sys.exit(exit_code)
+" 2>/dev/null || EXIT_CODE=1
+
+echo ""
+echo "[Packs: slot_count matches slots sum]"
+
+python3 -c "
+import json, sys
+packs = json.load(open('$PACKS_FILE'))
+exit_code = 0
+for p in packs:
+    declared = int(p.get('slot_count', 0))
+    slots_sum = sum(int(s.get('count', 0)) for s in p.get('slots', []))
+    if declared == slots_sum:
+        print('PASS: %s slot_count=%d matches slots sum' % (p.get('set_tag', '?'), declared))
+    else:
+        print('FAIL: %s slot_count=%d but slots sum=%d' % (p.get('set_tag', '?'), declared, slots_sum))
+        exit_code = 1
+sys.exit(exit_code)
+" 2>/dev/null || EXIT_CODE=1
 
 echo ""
 echo "[Tournaments: minimum count >= 3]"
@@ -229,38 +333,22 @@ sys.exit(exit_code)
 " 2>/dev/null || EXIT_CODE=1
 
 echo ""
-echo "[Tournaments: card_category values match cards.json categories]"
+echo "[DataLoader: routes item_definition root type to item]"
 
-python3 -c "
-import json, sys
-cards = json.load(open('$CARDS_FILE'))
-tournaments = json.load(open('$TOURNAMENTS_FILE'))
-card_cats = set(c.get('card_category', '') for c in cards)
-exit_code = 0
-for t in tournaments:
-    cat = t.get('card_category', '')
-    if cat in card_cats:
-        print('PASS: tournament category %s found in cards.json' % cat)
-    else:
-        print('FAIL: tournament category %s not found in cards.json (available: %s)' % (cat, sorted(card_cats)))
-        exit_code = 1
-sys.exit(exit_code)
-" 2>/dev/null || EXIT_CODE=1
-
-echo ""
-echo "[DataLoader: routes pocket_creatures_cards as item type]"
-
-if grep -q "pocket_creatures_cards" "$DATA_LOADER"; then
-    echo "PASS: DataLoader has pocket_creatures_cards detection"
+if grep -q '"item_definition": "item"' "$DATA_LOADER"; then
+    echo "PASS: DataLoader _ROOT_TYPE_MAP routes item_definition to item"
 else
-    echo "FAIL: DataLoader missing pocket_creatures_cards routing"
+    echo "FAIL: DataLoader missing item_definition -> item routing"
     EXIT_CODE=1
 fi
 
-if grep -A2 "pocket_creatures_cards" "$DATA_LOADER" | grep -q '"item"'; then
-    echo "PASS: pocket_creatures_cards routed to item type"
+echo ""
+echo "[DataLoader: routes packs.json to pocket_creatures_packs_config]"
+
+if grep -q "pocket_creatures_packs_config" "$DATA_LOADER"; then
+    echo "PASS: DataLoader routes packs.json to pocket_creatures_packs_config"
 else
-    echo "FAIL: pocket_creatures_cards not routed to item type"
+    echo "FAIL: DataLoader missing pocket_creatures_packs_config routing"
     EXIT_CODE=1
 fi
 

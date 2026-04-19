@@ -4,8 +4,6 @@ extends Node
 
 const CONTENT_ROOT := "res://game/content/"
 const MAX_JSON_FILE_BYTES: int = 1048576
-const _LEGACY_MILESTONE_PATH := "res://game/content/milestones/milestone_definitions.json"
-const _PROGRESSION_MILESTONE_PATH := "res://game/content/progression/milestone_definitions.json"
 
 const _ROOT_TYPE_MAP: Dictionary = {
 	"item_definition": "item",
@@ -68,6 +66,7 @@ var _electronics_config: Dictionary = {}
 var _video_rental_config: Dictionary = {}
 var _named_seasons: Dictionary = {}
 var _named_season_cycle_length: int = 70
+var _pocket_creatures_packs: Array = []
 var _loaded: bool = false
 var _load_errors: Array[String] = []
 
@@ -106,6 +105,7 @@ func clear_for_testing() -> void:
 	_electronics_config = {}
 	_video_rental_config = {}
 	_named_seasons = {}
+	_pocket_creatures_packs = []
 	_load_errors = []
 	_loaded = false
 
@@ -134,8 +134,6 @@ func load_all_content_from_root(root: String) -> void:
 	var files: Array[String] = _discover_json_files(root)
 	var economy_data: Dictionary = {}
 	for path: String in files:
-		if _should_skip_file(path):
-			continue
 		_process_file(path, economy_data, root)
 	if not economy_data.is_empty():
 		_economy_config = ContentParser.parse_economy_config(
@@ -191,12 +189,6 @@ func _scan_dir(path: String, files: Array[String]) -> void:
 		file_name = dir.get_next()
 
 
-func _should_skip_file(path: String) -> bool:
-	if path == _LEGACY_MILESTONE_PATH and FileAccess.file_exists(_PROGRESSION_MILESTONE_PATH):
-		return true
-	return false
-
-
 func _process_file(
 	path: String, economy_data: Dictionary, root: String
 ) -> void:
@@ -238,6 +230,10 @@ func _process_file(
 		if data is Dictionary:
 			_video_rental_config = data as Dictionary
 		return
+	if content_type == "pocket_creatures_packs_config":
+		if data is Array:
+			_pocket_creatures_packs = data.duplicate()
+		return
 	if content_type == "personality_data":
 		return
 	if content_type.is_empty():
@@ -276,8 +272,8 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 		return "electronics_config"
 	if file_base == "video_rental_config":
 		return "video_rental_config"
-	if file_base == "pocket_creatures_cards":
-		return "item"
+	if file_base == "packs":
+		return "pocket_creatures_packs_config"
 	if file_base == "pocket_creatures_tournaments":
 		return "tournament_event"
 	if file_base == "sports_seasons":
@@ -365,6 +361,13 @@ func _build_and_register(
 			"%s entry missing 'id' in %s: %s"
 			% [content_type, source_path, entry]
 		)
+		return
+	var schema_errors: Array[String] = ContentSchema.validate(
+		entry, content_type, source_path
+	)
+	if not schema_errors.is_empty():
+		for err: String in schema_errors:
+			_record_load_error(err)
 		return
 	var id: String = str(entry["id"])
 	var resource: Resource = _build_resource(
@@ -476,6 +479,13 @@ func _load_endings(data: Variant) -> void:
 		if not entry.has("id"):
 			_record_load_error("ending entry missing 'id'")
 			continue
+		var ending_errors: Array[String] = ContentSchema.validate(
+			entry, "ending", "ending_config"
+		)
+		if not ending_errors.is_empty():
+			for err: String in ending_errors:
+				_record_load_error(err)
+			continue
 		var reg_entry: Dictionary = entry.duplicate()
 		if not reg_entry.has("name") and reg_entry.has("display_name"):
 			reg_entry["name"] = reg_entry["display_name"]
@@ -500,6 +510,13 @@ func _load_secret_threads(data: Variant) -> void:
 				"secret_thread entry at index %d missing 'id'"
 				% index
 			)
+			continue
+		var thread_errors: Array[String] = ContentSchema.validate(
+			dict, "secret_thread", "secret_threads.json"
+		)
+		if not thread_errors.is_empty():
+			for err: String in thread_errors:
+				_record_load_error(err)
 			continue
 		_secret_threads.append(dict)
 		ContentRegistry.register_entry(dict, "secret_thread")
@@ -742,6 +759,11 @@ func get_electronics_config() -> Dictionary:
 
 func get_video_rental_config() -> Dictionary:
 	return _video_rental_config
+
+
+## Returns per-pack-type definitions loaded from pocket_creatures/packs.json.
+func get_pocket_creatures_packs() -> Array:
+	return _pocket_creatures_packs
 
 
 func get_seasonal_config() -> Array[Dictionary]:

@@ -61,6 +61,12 @@ func get_traffic_multiplier() -> float:
 		) as SeasonalEventDefinition
 		if def:
 			combined *= def.customer_traffic_multiplier
+	for evt: Dictionary in _active_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if def and def.traffic_multiplier != 1.0:
+			combined *= def.traffic_multiplier
 	return combined
 
 
@@ -142,6 +148,30 @@ func get_tournament_demand_multiplier(item: ItemInstance) -> float:
 		) as TournamentEventDefinition
 		if def and item.definition.category == def.card_category:
 			combined *= def.demand_multiplier
+	return combined
+
+
+## Returns the price_spike_multiplier for an item from active tournaments.
+## Matches on creature_type_focus (item tag) if set; falls back to card_category.
+func get_tournament_price_spike_multiplier(item: ItemInstance) -> float:
+	if not item or not item.definition:
+		return 1.0
+	if item.definition.store_type != STORE_TYPE_POCKET_CREATURES:
+		return 1.0
+	var combined: float = 1.0
+	for evt: Dictionary in _active_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if not def:
+			continue
+		var matches: bool = false
+		if not def.creature_type_focus.is_empty():
+			matches = item.definition.tags.has(def.creature_type_focus)
+		if not matches:
+			matches = item.definition.category == def.card_category
+		if matches:
+			combined *= def.price_spike_multiplier
 	return combined
 
 
@@ -230,6 +260,21 @@ func get_store_seasonal_multiplier(store_id: String) -> float:
 	return float(_current_multipliers.get(store_id, 1.0))
 
 
+## Returns the combined price multiplier from all active events for store_id.
+## Returns 1.0 when no active event targets that store.
+func get_event_price_multiplier_for_store(store_id: String) -> float:
+	var combined: float = 1.0
+	for evt: Dictionary in _active_events:
+		var def: SeasonalEventDefinition = evt.get(
+			"definition", null
+		) as SeasonalEventDefinition
+		if not def:
+			continue
+		if def.affected_stores.has(store_id):
+			combined *= def.price_multiplier
+	return combined
+
+
 func _update_calendar_season(day: int) -> void:
 	var new_season: int = compute_season(day)
 	if new_season != _current_season:
@@ -283,10 +328,13 @@ func _serialize_list(
 		var def: Variant = evt.get("definition")
 		if def and def is Resource:
 			def_id = str(def.get("id"))
-		result.append({
+		var entry: Dictionary = {
 			"definition_id": def_id,
 			day_key: evt.get(day_key, 0),
-		})
+		}
+		if evt.has("start_day") and day_key != "start_day":
+			entry["start_day"] = evt["start_day"]
+		result.append(entry)
 	return result
 
 
@@ -329,10 +377,13 @@ func _restore_seasonal_list(
 					% def_id
 				)
 			continue
-		result.append({
+		var restored: Dictionary = {
 			"definition": def,
 			day_key: int(evt.get(day_key, 0)),
-		})
+		}
+		if evt.has("start_day"):
+			restored["start_day"] = int(evt["start_day"])
+		result.append(restored)
 	return result
 
 
@@ -373,6 +424,8 @@ func _on_day_started(day: int) -> void:
 func _ensure_day_started_connected() -> void:
 	if not EventBus.day_started.is_connected(_on_day_started):
 		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.day_ended.is_connected(_on_day_ended):
+		EventBus.day_ended.connect(_on_day_ended)
 
 
 func _init_named_season(day: int) -> void:
@@ -448,7 +501,10 @@ func _promote_announced_events(day: int) -> void:
 		if not def:
 			continue
 		var announced_day: int = evt.get("announced_day", 0) as int
-		var start_day: int = announced_day + ANNOUNCEMENT_DAYS
+		var start_day: int = evt.get(
+			"start_day",
+			announced_day + maxi(def.telegraph_days, 1)
+		) as int
 		if day >= start_day:
 			_active_events.append({
 				"definition": def, "start_day": start_day,
@@ -498,10 +554,14 @@ func _is_event_active_or_announced(event_id: String) -> bool:
 func _announce_event(
 	def: SeasonalEventDefinition, day: int
 ) -> void:
+	var lead: int = maxi(def.telegraph_days, 1)
 	_announced_events.append({
-		"definition": def, "announced_day": day,
+		"definition": def,
+		"announced_day": day,
+		"start_day": day + lead,
 	})
 	EventBus.seasonal_event_announced.emit(def.id)
+	EventBus.event_telegraphed.emit(def.id, lead)
 	if not def.announcement_text.is_empty():
 		EventBus.notification_requested.emit(def.announcement_text)
 
@@ -584,7 +644,8 @@ func _check_for_new_tournaments(day: int) -> void:
 	for def: TournamentEventDefinition in _tournament_definitions:
 		if _is_tournament_active_or_announced(def.id):
 			continue
-		if day != def.start_day - 1:
+		var lead: int = maxi(def.telegraph_days, 1)
+		if day != def.start_day - lead:
 			continue
 		_announce_tournament(def, day)
 
@@ -614,8 +675,29 @@ func _announce_tournament(
 		"definition": def, "announced_day": day,
 	})
 	EventBus.tournament_event_announced.emit(def.id)
+	EventBus.tournament_telegraphed.emit(def.id)
 	if not def.announcement_text.is_empty():
 		EventBus.notification_requested.emit(def.announcement_text)
+
+
+func _on_day_ended(day: int) -> void:
+	for evt: Dictionary in _active_tournaments:
+		var def: TournamentEventDefinition = evt.get(
+			"definition", null
+		) as TournamentEventDefinition
+		if not def:
+			continue
+		var start_day: int = evt.get("start_day", 0) as int
+		if day == start_day + def.duration_days - 1:
+			var result_summary: Dictionary = {
+				"tournament_id": def.id,
+				"display_name": def.name,
+				"creature_type_focus": def.creature_type_focus,
+				"duration_days": def.duration_days,
+				"traffic_multiplier": def.traffic_multiplier,
+				"price_spike_multiplier": def.price_spike_multiplier,
+			}
+			EventBus.tournament_ended.emit(def.id, result_summary)
 
 
 func _find_tournament_definition(

@@ -22,6 +22,8 @@ const SET_TAGS: Array[String] = [
 	"neo_genesis", "gym_heroes", "crystal_storm",
 ]
 
+const META_SHIFTS_PATH: String = "res://game/content/meta_shifts.json"
+
 ## Cards currently spiking. Each: {item_id, multiplier, set_tag, name}
 var _rising_cards: Array[Dictionary] = []
 
@@ -43,29 +45,57 @@ var _shift_active: bool = false
 var _data_loader: DataLoader = null
 var _manual_shift_days_remaining: int = 0
 
+# ── JSON-driven type-based shift state ────────────────────────────────────────
+
+## Shift definitions loaded from meta_shifts.json; never mutated at runtime.
+var _json_shift_defs: Array[Dictionary] = []
+
+## Index of the next shift to apply (cycles through _json_shift_defs).
+var _json_shift_index: int = 0
+
+## Game day on which the next JSON shift activates (-1 = not scheduled).
+var _json_next_activation_day: int = -1
+
+## True once meta_shift_telegraphed has fired for the pending shift.
+var _json_telegraphed: bool = false
+
+## ID of the currently active JSON-driven shift (empty when none active).
+var _json_active_shift_id: String = ""
+
+## Live session state: creature-type tag → demand multiplier.
+## Cleared when the next shift applies; never written back to JSON.
+var _active_type_multipliers: Dictionary = {}
+
 
 func initialize(data_loader: DataLoader) -> void:
 	_data_loader = data_loader
 	_apply_state({})
+	_load_json_shift_defs()
+	if not _json_shift_defs.is_empty():
+		_schedule_next_json_shift(1)
 	EventBus.day_started.connect(_on_day_started)
 
 
 ## Returns the meta shift multiplier for an item. 1.0 if unaffected.
+## Checks both the per-item card shift and the JSON-driven type-based shift.
 func get_meta_shift_multiplier(item: ItemInstance) -> float:
 	if not item or not item.definition:
 		return 1.0
 	if item.definition.store_type != STORE_TYPE:
 		return 1.0
-	if item.definition.category != CARD_CATEGORY:
-		return 1.0
-	if not _shift_active:
-		return 1.0
-	for entry: Dictionary in _rising_cards:
-		if entry.get("item_id", "") == item.definition.id:
-			return entry.get("multiplier", 1.0) as float
-	for entry: Dictionary in _falling_cards:
-		if entry.get("item_id", "") == item.definition.id:
-			return DROP_MULT
+	# Per-item card shift check.
+	if item.definition.category == CARD_CATEGORY and _shift_active:
+		for entry: Dictionary in _rising_cards:
+			if entry.get("item_id", "") == item.definition.id:
+				return entry.get("multiplier", 1.0) as float
+		for entry: Dictionary in _falling_cards:
+			if entry.get("item_id", "") == item.definition.id:
+				return DROP_MULT
+	# JSON-driven type-based shift check.
+	if not _active_type_multipliers.is_empty():
+		for tag: String in item.definition.tags:
+			if _active_type_multipliers.has(tag):
+				return float(_active_type_multipliers[tag])
 	return 1.0
 
 
@@ -146,6 +176,12 @@ func get_days_until_next_announcement() -> int:
 	return _days_until_next_announcement
 
 
+## Returns the demand multiplier for the given creature-type tag from the active
+## JSON-driven meta shift. Returns 1.0 when no shift affects that type.
+func get_type_multiplier(type_tag: String) -> float:
+	return float(_active_type_multipliers.get(type_tag, 1.0))
+
+
 ## Serializes meta shift state for saving.
 func get_save_data() -> Dictionary:
 	var rising_copy: Array[Dictionary] = []
@@ -161,6 +197,11 @@ func get_save_data() -> Dictionary:
 		"announced_day": _announced_day,
 		"days_until_next_announcement": _days_until_next_announcement,
 		"shift_active": _shift_active,
+		"json_shift_index": _json_shift_index,
+		"json_next_activation_day": _json_next_activation_day,
+		"json_telegraphed": _json_telegraphed,
+		"json_active_shift_id": _json_active_shift_id,
+		"active_type_multipliers": _active_type_multipliers.duplicate(),
 	}
 
 
@@ -192,8 +233,20 @@ func _apply_state(data: Dictionary) -> void:
 	_shift_active = bool(data.get("shift_active", false))
 	_manual_shift_days_remaining = 0
 
+	_json_shift_index = int(data.get("json_shift_index", 0))
+	_json_next_activation_day = int(data.get("json_next_activation_day", -1))
+	_json_telegraphed = bool(data.get("json_telegraphed", false))
+	_json_active_shift_id = str(data.get("json_active_shift_id", ""))
+	_active_type_multipliers = {}
+	var saved_mults: Variant = data.get("active_type_multipliers", {})
+	if saved_mults is Dictionary:
+		for key: Variant in (saved_mults as Dictionary):
+			_active_type_multipliers[str(key)] = float((saved_mults as Dictionary)[key])
+
 
 func _on_day_started(day: int) -> void:
+	_handle_json_shifts(day)
+
 	if _shift_active and _manual_shift_days_remaining > 0:
 		_manual_shift_days_remaining -= 1
 		if _manual_shift_days_remaining <= 0:
@@ -206,6 +259,76 @@ func _on_day_started(day: int) -> void:
 	_days_until_next_announcement -= 1
 	if _days_until_next_announcement <= 0:
 		_announce_new_shift(day)
+
+
+## Loads shift definitions from meta_shifts.json into session memory.
+func _load_json_shift_defs() -> void:
+	if not FileAccess.file_exists(META_SHIFTS_PATH):
+		push_warning("MetaShiftSystem: %s not found" % META_SHIFTS_PATH)
+		return
+	var file := FileAccess.open(META_SHIFTS_PATH, FileAccess.READ)
+	if not file:
+		push_warning("MetaShiftSystem: cannot open %s" % META_SHIFTS_PATH)
+		return
+	var text: String = file.get_as_text()
+	var parsed: Variant = JSON.parse_string(text)
+	if parsed is not Array:
+		push_error("MetaShiftSystem: meta_shifts.json must be a JSON array")
+		return
+	for entry: Variant in parsed as Array:
+		if entry is Dictionary:
+			_json_shift_defs.append((entry as Dictionary).duplicate())
+
+
+## Schedules the next JSON-driven shift to fire day_offset days from from_day.
+func _schedule_next_json_shift(from_day: int) -> void:
+	if _json_shift_defs.is_empty():
+		return
+	var def: Dictionary = _json_shift_defs[_json_shift_index % _json_shift_defs.size()]
+	var offset: int = maxi(2, int(def.get("day_offset", 7)))
+	_json_next_activation_day = from_day + offset
+	_json_telegraphed = false
+
+
+## Checks and fires telegraph/applied signals for the pending JSON shift.
+func _handle_json_shifts(day: int) -> void:
+	if _json_shift_defs.is_empty() or _json_next_activation_day < 0:
+		return
+	if not _json_telegraphed and day == _json_next_activation_day - 1:
+		_fire_json_telegraph()
+	elif day >= _json_next_activation_day:
+		_fire_json_applied(day)
+
+
+func _fire_json_telegraph() -> void:
+	var def: Dictionary = _json_shift_defs[_json_shift_index % _json_shift_defs.size()]
+	var shift_id: String = str(def.get("id", ""))
+	var affected: Array[String] = []
+	for t: Variant in def.get("affected_types", []) as Array:
+		affected.append(str(t))
+	var message: String = str(def.get("telegraph_message", "Meta shift incoming."))
+	_json_telegraphed = true
+	EventBus.meta_shift_telegraphed.emit(shift_id, affected, message)
+
+
+func _fire_json_applied(day: int) -> void:
+	var def: Dictionary = _json_shift_defs[_json_shift_index % _json_shift_defs.size()]
+	var shift_id: String = str(def.get("id", ""))
+	var multiplier: float = float(def.get("multiplier", 1.0))
+	var affected: Array[String] = []
+	for t: Variant in def.get("affected_types", []) as Array:
+		affected.append(str(t))
+
+	# Clear previous type multipliers before applying the new shift.
+	_active_type_multipliers.clear()
+	_json_active_shift_id = shift_id
+	for type_tag: String in affected:
+		_active_type_multipliers[type_tag] = multiplier
+
+	_json_shift_index = (_json_shift_index + 1) % _json_shift_defs.size()
+	_schedule_next_json_shift(day)
+
+	EventBus.meta_shift_applied.emit(shift_id, affected, multiplier)
 
 
 ## Announces a new meta shift, ending any previous one.

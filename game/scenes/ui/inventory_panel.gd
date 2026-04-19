@@ -321,6 +321,8 @@ func _show_context_menu(item: ItemInstance) -> void:
 		_context_menu.add_item("Set as Demo", 7)
 	if _can_remove_from_demo(item):
 		_context_menu.add_item("Remove from Demo", 8)
+	if _can_try_demo(item):
+		_context_menu.add_item("Try Demo", 11)
 	if _can_retire_tape(item):
 		_context_menu.add_item("Retire (Sell)", 9)
 		_context_menu.add_item("Write Off", 10)
@@ -359,6 +361,11 @@ func _on_context_action(id: int) -> void:
 			_retire_selected_tape(true)
 		10:
 			_retire_selected_tape(false)
+		11:
+			if electronics_controller and _selected_item:
+				electronics_controller.try_demo_interaction(
+					_selected_item.instance_id
+				)
 
 
 func _on_interactable_interacted(
@@ -501,6 +508,13 @@ func _can_set_as_demo(item: ItemInstance) -> bool:
 
 
 func _can_remove_from_demo(item: ItemInstance) -> bool:
+	if not electronics_controller:
+		return false
+	return item.is_demo \
+		and electronics_controller.is_demo_unit(item.instance_id)
+
+
+func _can_try_demo(item: ItemInstance) -> bool:
 	if not electronics_controller:
 		return false
 	return item.is_demo \

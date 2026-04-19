@@ -17,3 +17,9 @@ extends Resource
 @export var target_categories: PackedStringArray = []
 @export var announcement_text: String = ""
 @export var active_text: String = ""
+## Store IDs that this event applies a price multiplier to.
+@export var affected_stores: PackedStringArray = []
+## Price multiplier applied to items in affected_stores during this event.
+@export var price_multiplier: float = 1.0
+## Days before event_started that event_telegraphed fires.
+@export var telegraph_days: int = 3

@@ -98,6 +98,7 @@ func initialize(
 	_shopper_scene = load(SHOPPER_SCENE_PATH) as PackedScene
 	if not _shopper_scene:
 		push_error("CustomerSystem: failed to load shopper scene")
+		return
 
 	_connect_signals()
 	_spawn_pool_cache = []

@@ -3,7 +3,8 @@ class_name SaveManager
 extends Node
 
 
-const CURRENT_SAVE_VERSION: int = 1
+const CURRENT_SAVE_VERSION: int = 2
+const MIN_SUPPORTED_SAVE_VERSION: int = 0
 const SAVE_DIR := "user://"
 const SLOT_INDEX_PATH := "user://save_index.cfg"
 const MAX_MANUAL_SLOTS: int = 3
@@ -305,12 +306,24 @@ func load_game(slot: int) -> bool:
 			"Save version %d is newer than supported version %d"
 			% [save_version, CURRENT_SAVE_VERSION]
 		)
+	if save_version < MIN_SUPPORTED_SAVE_VERSION:
+		return _fail_load(
+			slot,
+			"Save version %d is older than minimum supported version %d"
+			% [save_version, MIN_SUPPORTED_SAVE_VERSION]
+		)
 	if save_version < CURRENT_SAVE_VERSION:
 		push_warning(
 			"SaveManager: migrating save version %d to %d"
 			% [save_version, CURRENT_SAVE_VERSION]
 		)
-	save_data = _migrate_save(save_data)
+	var migration_result: Dictionary = migrate_save_data(save_data)
+	if not bool(migration_result.get("ok", false)):
+		return _fail_load(
+			slot,
+			"Migration failed — %s" % str(migration_result.get("reason", ""))
+		)
+	save_data = migration_result.get("data", {}) as Dictionary
 	_distribute_save_data(save_data)
 	return true
 
@@ -750,25 +763,46 @@ func _has_saved_active_store_id(data: Dictionary) -> bool:
 	).has("active_store_id")
 
 
-func _migrate_save(data: Dictionary) -> Dictionary:
-	var version: int = int(data.get("save_version", 0))
+## Runs the full migration chain on a save dictionary.
+## Returns {"ok": bool, "data": Dictionary, "reason": String}.
+## The input dictionary is not mutated in-place on failure so callers can
+## preserve the original save if migration cannot complete.
+func migrate_save_data(data: Dictionary) -> Dictionary:
+	var working: Dictionary = data.duplicate(true)
+	var version: int = int(working.get("save_version", 0))
 	while version < CURRENT_SAVE_VERSION:
-		match version:
-			0:
-				data = _migrate_v0_to_v1(data)
-			_:
-				break
+		var step: Callable = _get_migration_step(version)
+		if not step.is_valid():
+			return {
+				"ok": false,
+				"data": data,
+				"reason": (
+					"No migration registered for version %d → %d"
+					% [version, version + 1]
+				),
+			}
+		working = step.call(working)
 		version += 1
-	data["owned_slots"] = _extract_owned_slots(data)
-	if data.has("owned_stores"):
-		data.erase("owned_stores")
-	if data.has("metadata"):
-		data.erase("metadata")
-	var save_metadata: Variant = data.get("save_metadata", {})
+	working["owned_slots"] = _extract_owned_slots(working)
+	if working.has("owned_stores"):
+		working.erase("owned_stores")
+	if working.has("metadata"):
+		working.erase("metadata")
+	var save_metadata: Variant = working.get("save_metadata", {})
 	if save_metadata is Dictionary:
 		(save_metadata as Dictionary).erase("store_type")
-	data["save_version"] = CURRENT_SAVE_VERSION
-	return data
+	working["save_version"] = CURRENT_SAVE_VERSION
+	return {"ok": true, "data": working, "reason": ""}
+
+
+func _get_migration_step(from_version: int) -> Callable:
+	match from_version:
+		0:
+			return Callable(self, "_migrate_v0_to_v1")
+		1:
+			return Callable(self, "_migrate_v1_to_v2")
+		_:
+			return Callable()
 
 
 func _migrate_v0_to_v1(data: Dictionary) -> Dictionary:
@@ -831,6 +865,22 @@ func _migrate_v0_to_v1(data: Dictionary) -> Dictionary:
 		)
 	if not save_metadata.has("used_difficulty_downgrade"):
 		save_metadata["used_difficulty_downgrade"] = false
+	data["save_metadata"] = save_metadata
+	return data
+
+
+## v1 → v2: drop root-level sections for systems removed in Phase 0 triage
+## (trade system) and ensure save_metadata carries the current version tag.
+func _migrate_v1_to_v2(data: Dictionary) -> Dictionary:
+	const OBSOLETE_ROOT_KEYS: Array[String] = ["trade"]
+	for key: String in OBSOLETE_ROOT_KEYS:
+		if data.has(key):
+			data.erase(key)
+	var save_metadata: Dictionary = {}
+	var existing_metadata: Variant = data.get("save_metadata", {})
+	if existing_metadata is Dictionary:
+		save_metadata = (existing_metadata as Dictionary).duplicate(true)
+	save_metadata["save_version_tag"] = 2
 	data["save_metadata"] = save_metadata
 	return data
 

@@ -60,10 +60,15 @@
     "launch_demand_multiplier": 1.35,
     "launch_spike_days": 5,
     "can_be_demo_unit": true,
+    "demo_unit_eligible": true,
     "monthly_depreciation_rate": 0.05,
     "launch_spike_eligible": true,
     "launch_spike_multiplier": 1.8,
-    "supplier_tier": 1
+    "supplier_tier": 1,
+    "warranty_tiers": [
+      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
+      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+    ]
   },
   {
     "id": "elec_podplay_5gb",
@@ -94,10 +99,15 @@
     "launch_demand_multiplier": 1.5,
     "launch_spike_days": 7,
     "can_be_demo_unit": true,
+    "demo_unit_eligible": true,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": true,
     "launch_spike_multiplier": 2.0,
-    "supplier_tier": 2
+    "supplier_tier": 2,
+    "warranty_tiers": [
+      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
+      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+    ]
   },
   {
     "id": "elec_discman_cd",
@@ -161,10 +171,15 @@
     "launch_demand_multiplier": 1.2,
     "launch_spike_days": 3,
     "can_be_demo_unit": true,
+    "demo_unit_eligible": true,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": true,
     "launch_spike_multiplier": 1.6,
-    "supplier_tier": 2
+    "supplier_tier": 2,
+    "warranty_tiers": [
+      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
+      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+    ]
   },
   {
     "id": "elec_portastation_console",
@@ -195,10 +210,15 @@
     "launch_demand_multiplier": 1.5,
     "launch_spike_days": 7,
     "can_be_demo_unit": true,
+    "demo_unit_eligible": true,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": true,
     "launch_spike_multiplier": 2.0,
-    "supplier_tier": 2
+    "supplier_tier": 2,
+    "warranty_tiers": [
+      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
+      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+    ]
   },
   {
     "id": "elec_portastation_racer",
@@ -342,10 +362,15 @@
       "specs"
     ],
     "can_be_demo_unit": true,
+    "demo_unit_eligible": true,
     "monthly_depreciation_rate": 0.03,
     "launch_spike_eligible": false,
     "launch_spike_multiplier": 1.0,
-    "supplier_tier": 2
+    "supplier_tier": 2,
+    "warranty_tiers": [
+      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
+      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+    ]
   },
   {
     "id": "elec_speaker_portable",
@@ -430,10 +455,15 @@
     "launch_demand_multiplier": 1.2,
     "launch_spike_days": 5,
     "can_be_demo_unit": true,
+    "demo_unit_eligible": true,
     "monthly_depreciation_rate": 0.05,
     "launch_spike_eligible": false,
     "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
+    "supplier_tier": 1,
+    "warranty_tiers": [
+      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
+      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+    ]
   },
   {
     "id": "elec_camera_pixelsnap_pro",
@@ -465,10 +495,15 @@
     "launch_demand_multiplier": 1.4,
     "launch_spike_days": 7,
     "can_be_demo_unit": true,
+    "demo_unit_eligible": true,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": true,
     "launch_spike_multiplier": 2.0,
-    "supplier_tier": 2
+    "supplier_tier": 2,
+    "warranty_tiers": [
+      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
+      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+    ]
   },
   {
     "id": "elec_usb_drive_64mb",

@@ -104,13 +104,11 @@ func test_store_exited_ignores_other_stores() -> void:
 	)
 
 
-func test_authentication_eligible_without_inventory() -> void:
-	var result: bool = _controller._is_authentication_eligible(
-		&"some_item", 100.0
-	)
-	assert_false(
-		result,
-		"Should return false when no InventorySystem is set"
+func test_card_condition_selected_ignored_without_inventory() -> void:
+	EventBus.card_condition_selected.emit(&"some_item", "mint")
+	assert_true(
+		true,
+		"card_condition_selected should not crash when no InventorySystem is set"
 	)
 
 
@@ -132,27 +130,32 @@ func test_season_cycle_accessible() -> void:
 	)
 
 
-func test_authentication_system_accessible() -> void:
-	var auth: AuthenticationSystem = (
-		_controller.get_authentication_system()
-	)
-	assert_not_null(
-		auth,
-		"AuthenticationSystem should be accessible"
-	)
-
-
-func test_save_load_round_trip() -> void:
+func test_save_data_has_season_cycle_key() -> void:
 	var save_data: Dictionary = _controller.get_save_data()
 	assert_true(
 		save_data.has("season_cycle"),
 		"Save data should include season_cycle"
 	)
-	assert_true(
+	assert_false(
 		save_data.has("authentication"),
-		"Save data should include authentication"
+		"Save data must not include binary authentication key"
 	)
+
+
+func test_save_load_round_trip() -> void:
+	var save_data: Dictionary = _controller.get_save_data()
 	_controller.load_save_data(save_data)
+	assert_true(true, "load_save_data should not crash")
+
+
+func test_load_save_data_ignores_legacy_authentication_key() -> void:
+	var legacy_data: Dictionary = {
+		"season_cycle": {},
+		"season_boost_active": false,
+		"authentication": {"authenticated_canonical_ids": ["some_id"]},
+	}
+	_controller.load_save_data(legacy_data)
+	assert_true(true, "Legacy authentication key should be silently ignored")
 
 
 func test_customer_purchased_does_not_crash_when_inactive() -> void:

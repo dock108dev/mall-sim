@@ -92,7 +92,7 @@ DEFERRED_IN_DEFERRED=$(awk '
   BEGIN { count=0; inside=0 }
   /^func _setup_deferred_panels/ { inside=1; next }
   inside && /^func / { inside=0 }
-  inside && /DaySummaryScene|FixtureCatalogScene|MilestonePopupScene|PauseMenuScene|SaveLoadPanelScene|SettingsPanelScene|PackOpeningPanelScene|StaffPanelScene|EndingScreenScene/ { count++ }
+  inside && /DaySummaryScene|FixtureCatalogScene|MilestoneCardScene|PauseMenuScene|SaveLoadPanelScene|SettingsPanelScene|PackOpeningPanelScene|StaffPanelScene|EndingScreenScene/ { count++ }
   END { print count }
 ' "$GW")
 if [ "$DEFERRED_IN_DEFERRED" -ge 7 ]; then

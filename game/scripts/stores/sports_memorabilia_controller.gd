@@ -1,4 +1,5 @@
-## Controller for the sports memorabilia store. Manages season cycle and authentication.
+## Controller for the sports memorabilia store. Manages season cycle and
+## card condition grading via PriceResolver.
 class_name SportsMemorabiliaController
 extends StoreController
 
@@ -6,9 +7,10 @@ const STORE_ID: StringName = &"sports"
 const STORE_TYPE: StringName = &"sports_memorabilia"
 const BOOSTED_CATEGORIES: PackedStringArray = ["memorabilia", "autograph"]
 const DEFAULT_SEASON_BOOST: float = 1.5
+## Minimum provenance_score for a card to pass the authentication check.
+const AUTH_THRESHOLD: float = 0.5
 
 var _season_cycle: SeasonCycleSystem = SeasonCycleSystem.new()
-var _authentication: AuthenticationSystem = AuthenticationSystem.new()
 var _season_boost_active: bool = false
 var _season_boost_value: float = DEFAULT_SEASON_BOOST
 var _market_event_connected: bool = false
@@ -23,28 +25,17 @@ func _ready() -> void:
 	EventBus.provenance_accepted.connect(_on_provenance_accepted)
 	EventBus.provenance_rejected.connect(_on_provenance_rejected)
 	EventBus.haggle_completed.connect(_on_haggle_completed)
+	EventBus.card_condition_selected.connect(_on_card_condition_selected)
 
 
-## Initializes both the season cycle and authentication systems.
+## Initializes the season cycle system.
 func initialize(starting_day: int) -> void:
 	_season_cycle.initialize(starting_day)
-
-
-## Initializes the authentication system with required references.
-func initialize_authentication(
-	inventory: InventorySystem, economy: EconomySystem
-) -> void:
-	_authentication.initialize(inventory, economy)
 
 
 ## Returns the SeasonCycleSystem for external wiring (EconomySystem, etc.).
 func get_season_cycle() -> SeasonCycleSystem:
 	return _season_cycle
-
-
-## Returns the AuthenticationSystem for UI dialog wiring.
-func get_authentication_system() -> AuthenticationSystem:
-	return _authentication
 
 
 ## Returns the demand multiplier for the given category.
@@ -56,7 +47,8 @@ func get_demand_multiplier(category: StringName) -> float:
 	return 1.0
 
 
-## Returns the current sale price for an inventory item in this store.
+## Returns the current sale price for an inventory item, resolved via
+## PriceResolver with condition and season-demand multipliers in the audit chain.
 func get_item_price(item_id: StringName) -> float:
 	if not _inventory_system:
 		push_warning(
@@ -70,30 +62,55 @@ func get_item_price(item_id: StringName) -> float:
 			% item_id
 		)
 		return 0.0
-	var price: float = item.definition.base_price
-	if item.authentication_status == "suspicious":
-		price *= AuthenticationSystem.SUSPICIOUS_PRICE_MULTIPLIER
-	price *= get_demand_multiplier(item.definition.category)
-	return price
+	var multipliers: Array = []
+	if item.is_graded and not item.card_grade.is_empty():
+		# Formal grade supersedes the player's condition assessment.
+		var grade_factor: float = PriceResolver.GRADE_MULTIPLIERS.get(
+			item.card_grade, 1.0
+		)
+		multipliers.append({
+			"slot": "grade",
+			"label": "Grade",
+			"factor": grade_factor,
+			"detail": "Certified Grade: %s" % item.card_grade,
+		})
+	else:
+		var condition_factor: float = ItemInstance.CONDITION_MULTIPLIERS.get(
+			item.condition, 1.0
+		)
+		multipliers.append({
+			"label": "Condition",
+			"factor": condition_factor,
+			"detail": item.condition.capitalize().replace("_", " "),
+		})
+	var demand_factor: float = get_demand_multiplier(item.definition.category)
+	if demand_factor != 1.0:
+		multipliers.append({
+			"slot": "seasonal",
+			"label": "Season Demand",
+			"factor": demand_factor,
+			"detail": "Active season boost",
+		})
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(item_id), item.definition.base_price, multipliers
+	)
+	return result.final_price
 
 
 ## Serializes sports-memorabilia-specific state for saving.
 func get_save_data() -> Dictionary:
 	return {
 		"season_cycle": _season_cycle.get_save_data(),
-		"authentication": _authentication.get_save_data(),
 		"season_boost_active": _season_boost_active,
 	}
 
 
 ## Restores sports-memorabilia-specific state from saved data.
+## The legacy "authentication" key is silently ignored for forward compatibility.
 func load_save_data(data: Dictionary) -> void:
 	var cycle_data: Variant = data.get("season_cycle", {})
 	if cycle_data is Dictionary:
 		_season_cycle.load_save_data(cycle_data as Dictionary)
-	var authentication_data: Variant = data.get("authentication", {})
-	if authentication_data is Dictionary:
-		_authentication.load_save_data(authentication_data as Dictionary)
 	_season_boost_active = bool(data.get("season_boost_active", false))
 
 
@@ -120,20 +137,26 @@ func _on_store_exited(store_id: StringName) -> void:
 	EventBus.store_closed.emit(String(STORE_ID))
 
 
-## Returns true if the item needs authentication at the given price.
-func _is_authentication_eligible(
-	item_id: StringName, price: float
-) -> bool:
+## Updates item condition and recalculates price via PriceResolver.
+func _on_card_condition_selected(
+	item_id: StringName, condition: String
+) -> void:
 	if not _inventory_system:
-		return false
+		return
 	var item: ItemInstance = _inventory_system.get_item(String(item_id))
 	if not item:
-		return false
-	return _authentication.needs_authentication(item, price)
+		return
+	if condition not in ItemInstance.CONDITION_MULTIPLIERS:
+		push_warning(
+			"SportsMemorabiliaController: unknown condition '%s'" % condition
+		)
+		return
+	item.condition = condition
+	var price: float = get_item_price(item_id)
+	EventBus.price_set.emit(String(item_id), price)
 
 
-## Returns the season demand modifier for a given category. Returns 1.0
-## by default. Stub — full logic in ISSUE-054.
+## Returns the season demand modifier for a given category.
 func _get_season_modifier(_category: StringName) -> float:
 	return 1.0
 
@@ -205,6 +228,51 @@ func _load_season_boost() -> void:
 	)
 
 
+## Runs the authentication check for a sports card in inventory.
+## Emits card_authenticated or card_rejected, then card_graded on success.
+func authenticate_card(item_id: StringName) -> void:
+	if not _inventory_system:
+		push_warning(
+			"SportsMemorabiliaController: InventorySystem required for authentication"
+		)
+		return
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item or not item.definition:
+		push_warning(
+			"SportsMemorabiliaController: item '%s' not found for authentication"
+			% item_id
+		)
+		return
+	var score: float = item.definition.provenance_score
+	if score < AUTH_THRESHOLD:
+		item.authentication_status = "rejected"
+		EventBus.card_rejected.emit(item_id)
+		return
+	item.authentication_status = "authenticated"
+	item.is_authenticated = true
+	EventBus.card_authenticated.emit(item_id)
+	var grade: String = _compute_grade(score)
+	item.card_grade = grade
+	item.is_graded = true
+	item.grade_value = PriceResolver.GRADE_ORDER.find(grade)
+	EventBus.card_graded.emit(item_id, grade)
+
+
+## Maps a provenance_score (must be >= AUTH_THRESHOLD) to a letter grade.
+func _compute_grade(provenance_score: float) -> String:
+	if provenance_score >= 0.95:
+		return "S"
+	if provenance_score >= 0.85:
+		return "A"
+	if provenance_score >= 0.75:
+		return "B"
+	if provenance_score >= 0.65:
+		return "C"
+	if provenance_score >= 0.55:
+		return "D"
+	return "F"
+
+
 ## Triggers the provenance verification flow for a customer offer.
 func request_provenance_check(
 	item_id: String, customer: Node
@@ -253,12 +321,14 @@ func _on_haggle_completed(
 	if not accepted or not _inventory_system:
 		return
 	var item: ItemInstance = _inventory_system.get_item(String(item_id))
-	if not item or item.authentication_status != "authenticated":
+	if not item:
 		return
-	var bonus: float = maxf(
-		final_price - item.definition.base_price,
-		final_price * (_authentication.get_auth_multiplier() - 1.0),
+	var condition_factor: float = ItemInstance.CONDITION_MULTIPLIERS.get(
+		item.condition, 1.0
 	)
+	if condition_factor <= 1.0:
+		return
+	var bonus: float = final_price * (condition_factor - 1.0)
 	if bonus <= 0.0:
 		return
 	EventBus.bonus_sale_completed.emit(item_id, bonus)
@@ -351,4 +421,8 @@ func _build_definition_from_entry(
 		def.store_type = str(data["store_type"])
 	if data.has("suspicious_chance"):
 		def.suspicious_chance = float(data["suspicious_chance"])
+	if data.has("era"):
+		def.era = str(data["era"])
+	if data.has("provenance_score"):
+		def.provenance_score = float(data["provenance_score"])
 	return def

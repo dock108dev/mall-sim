@@ -4,6 +4,7 @@
   "base_late_fee": 1.00,
   "per_day_late_rate": 1.00,
   "max_late_fee": 20.00,
+  "new_release_window_days": 7,
   "rental_fee_by_category": {
     "vhs": 3.99,
     "dvd": 4.99,

@@ -79,3 +79,45 @@ func test_warranty_manager_save_load_roundtrip() -> void:
 	wm2.load_save_data(data)
 	assert_eq(wm2.get_active_count(), 1)
 	assert_eq(wm2.get_daily_warranty_revenue(), 16.0)
+
+
+func test_warranty_offer_presented_signal_emitted_on_eligible_item() -> void:
+	var controller := ElectronicsStoreController.new()
+	add_child_autofree(controller)
+	var presented_ids: Array[String] = []
+	var cb: Callable = func(item_id: String) -> void:
+		presented_ids.append(item_id)
+	EventBus.warranty_offer_presented.connect(cb)
+	controller.present_warranty_offer("item_abc", 120.0)
+	assert_eq(presented_ids.size(), 1, "Signal should fire once for eligible price")
+	assert_eq(presented_ids[0], "item_abc")
+	EventBus.warranty_offer_presented.disconnect(cb)
+
+
+func test_warranty_offer_not_emitted_below_price_threshold() -> void:
+	var controller := ElectronicsStoreController.new()
+	add_child_autofree(controller)
+	var presented_ids: Array[String] = []
+	var cb: Callable = func(item_id: String) -> void:
+		presented_ids.append(item_id)
+	EventBus.warranty_offer_presented.connect(cb)
+	controller.present_warranty_offer("cheap_item", 30.0)
+	assert_eq(
+		presented_ids.size(), 0,
+		"Signal must not fire for ineligible price"
+	)
+	EventBus.warranty_offer_presented.disconnect(cb)
+
+
+func test_warranty_purchase_adds_to_manager_and_emits_signal() -> void:
+	var wm := WarrantyManager.new()
+	var purchased_ids: Array[String] = []
+	var cb: Callable = func(item_id: String, _fee: float) -> void:
+		purchased_ids.append(item_id)
+	EventBus.warranty_purchased.connect(cb)
+	wm.add_warranty("sold_item", 150.0, 30.0, 75.0, 1)
+	EventBus.warranty_purchased.emit("sold_item", 30.0)
+	assert_eq(wm.get_active_count(), 1)
+	assert_eq(purchased_ids.size(), 1)
+	assert_eq(purchased_ids[0], "sold_item")
+	EventBus.warranty_purchased.disconnect(cb)

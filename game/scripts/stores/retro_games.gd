@@ -1,11 +1,12 @@
 ## Controller for the retro game store. Manages lifecycle, testing stations,
-## and refurbishment queue integration.
+## refurbishment queue integration, and quality grade assessment.
 class_name RetroGames
 extends StoreController
 
 const STORE_ID: StringName = &"retro_games"
 const STORE_TYPE: StringName = &"retro_games"
 const TESTING_STATION_FIXTURE_ID: String = "testing_station"
+const GRADES_PATH: String = "res://game/content/stores/retro_games/grades.json"
 
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
@@ -13,6 +14,10 @@ var _testing_system: TestingSystem = null
 var _testing_available: bool = false
 var _store_definition: Dictionary = {}
 var _initialized: bool = false
+## Maps instance_id → grade_id for all graded items this session.
+var _item_grades: Dictionary = {}
+## Maps grade_id → grade entry dict (loaded from grades.json at boot).
+var _grade_table: Dictionary = {}
 
 
 func _ready() -> void:
@@ -31,6 +36,7 @@ func initialize() -> void:
 	_connect_store_signal(EventBus.customer_purchased, _on_customer_purchased)
 	_connect_store_signal(EventBus.inventory_item_added, _on_inventory_item_added)
 	_connect_store_signal(EventBus.item_stocked, _on_item_stocked)
+	_load_grades()
 	_initialized = true
 
 
@@ -79,6 +85,98 @@ func _can_test_item(item_id: StringName) -> bool:
 	return _testing_system.can_test(item)
 
 
+## Returns true if the given item is valid for the testing station.
+func can_test_item(item: ItemInstance) -> bool:
+	if not item or not item.definition:
+		return false
+	if item.definition.store_type != String(STORE_ID):
+		return false
+	if item.tested:
+		return false
+	return true
+
+
+## Places an item on the testing station and marks it as tested.
+## Returns true on success.
+func test_item(instance_id: String) -> bool:
+	if not _inventory_system:
+		push_warning("RetroGames: no InventorySystem set")
+		return false
+	if not _testing_station_slot:
+		push_warning("RetroGames: no testing station placed")
+		return false
+	var item: ItemInstance = _inventory_system.get_item(instance_id)
+	if not can_test_item(item):
+		push_warning("RetroGames: item '%s' cannot be tested" % instance_id)
+		return false
+	item.tested = true
+	return true
+
+
+## Inspects item_id and emits inspection_ready with condition and grade data.
+## Returns false if item_id cannot be resolved.
+func inspect_item(item_id: StringName) -> bool:
+	if not _inventory_system:
+		push_warning("RetroGames: inspect_item called without InventorySystem")
+		return false
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item:
+		push_warning("RetroGames: inspect_item — item '%s' not found" % item_id)
+		return false
+	var condition_data: Dictionary = {
+		"instance_id": item.instance_id,
+		"item_name": item.definition.item_name if item.definition else "",
+		"condition": item.condition,
+		"current_grade": _item_grades.get(item.instance_id, ""),
+		"grades": _grade_table.values(),
+	}
+	EventBus.inspection_ready.emit(item_id, condition_data)
+	return true
+
+
+## Records grade_id on item_id, emits grade_assigned, then resolves and emits
+## item_priced via PriceResolver. Returns false on invalid inputs.
+func assign_grade(item_id: StringName, grade_id: String) -> bool:
+	if not _inventory_system:
+		push_warning("RetroGames: assign_grade called without InventorySystem")
+		return false
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item:
+		push_warning("RetroGames: assign_grade — item '%s' not found" % item_id)
+		return false
+	if not _grade_table.has(grade_id):
+		push_warning("RetroGames: assign_grade — unknown grade_id '%s'" % grade_id)
+		return false
+	_item_grades[item.instance_id] = grade_id
+	EventBus.grade_assigned.emit(item_id, grade_id)
+	var price: float = get_item_price(item_id)
+	EventBus.item_priced.emit(item_id, price)
+	return true
+
+
+## Returns the current sale price for an inventory item resolved via
+## PriceResolver, applying the assigned grade multiplier in the audit chain.
+func get_item_price(item_id: StringName) -> float:
+	if not _inventory_system:
+		return 0.0
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item or not item.definition:
+		return 0.0
+	var multipliers: Array = []
+	var grade_id: String = _item_grades.get(item.instance_id, "")
+	if not grade_id.is_empty() and _grade_table.has(grade_id):
+		var grade: Dictionary = _grade_table[grade_id]
+		multipliers.append({
+			"label": "Grade",
+			"factor": float(grade.get("price_multiplier", 1.0)),
+			"detail": str(grade.get("label", grade_id)),
+		})
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		item_id, item.definition.base_price, multipliers
+	)
+	return result.final_price
+
+
 ## Queues an item for refurbishment via the RefurbishmentSystem.
 func _queue_refurbishment(item_id: StringName) -> void:
 	if not _refurbishment_system:
@@ -91,12 +189,48 @@ func _queue_refurbishment(item_id: StringName) -> void:
 func get_save_data() -> Dictionary:
 	return {
 		"testing_available": _testing_available,
+		"item_grades": _item_grades.duplicate(),
 	}
 
 
 ## Restores retro-games-specific state from saved data.
 func load_save_data(data: Dictionary) -> void:
 	_testing_available = bool(data.get("testing_available", false))
+	var grades_data: Variant = data.get("item_grades", {})
+	if grades_data is Dictionary:
+		_item_grades = grades_data as Dictionary
+
+
+func _load_grades() -> void:
+	if not FileAccess.file_exists(GRADES_PATH):
+		push_error("RetroGames: grades.json not found at '%s'" % GRADES_PATH)
+		return
+	var file: FileAccess = FileAccess.open(GRADES_PATH, FileAccess.READ)
+	if not file:
+		push_error("RetroGames: cannot open grades.json (error %d)" % FileAccess.get_open_error())
+		return
+	var text: String = file.get_as_text()
+	file.close()
+	var json: JSON = JSON.new()
+	if json.parse(text) != OK:
+		push_error("RetroGames: grades.json parse error: %s" % json.get_error_message())
+		return
+	var data: Variant = json.get_data()
+	if data is not Dictionary:
+		push_error("RetroGames: grades.json root must be a Dictionary")
+		return
+	var grades_arr: Variant = (data as Dictionary).get("grades", [])
+	if grades_arr is not Array:
+		push_error("RetroGames: grades.json 'grades' key must be an Array")
+		return
+	for entry: Variant in grades_arr as Array:
+		if entry is not Dictionary:
+			continue
+		var grade_entry: Dictionary = entry as Dictionary
+		var gid: Variant = grade_entry.get("id", "")
+		if gid is not String or (gid as String).is_empty():
+			continue
+		_grade_table[gid as String] = grade_entry
 
 
 func _on_store_entered(store_id: StringName) -> void:

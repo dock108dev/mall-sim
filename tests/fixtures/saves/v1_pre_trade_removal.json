@@ -1,0 +1,22 @@
+{
+	"save_version": 1,
+	"save_metadata": {
+		"day": 8,
+		"day_number": 8,
+		"cash": 3750.25,
+		"owned_stores": ["sports"],
+		"store_count": 1,
+		"saved_at": "2026-04-05T09:15:00",
+		"last_saved_at": "2026-04-05T09:15:00",
+		"timestamp": "2026-04-05T09:15:00",
+		"active_store_id": "sports",
+		"play_time": 4200.0,
+		"used_difficulty_downgrade": false
+	},
+	"time": {"current_day": 8, "current_hour": 12},
+	"economy": {"player_cash": 3750.25},
+	"inventory": {},
+	"reputation": {},
+	"owned_slots": {"0": "sports"},
+	"trade": {"legacy_pending_offers": []}
+}

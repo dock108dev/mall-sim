@@ -11,7 +11,7 @@ const ITEM_CATALOG_PATHS: Array[String] = [
 
 const NON_ITEM_CATALOG_PATHS: Array[String] = [
 	"res://game/content/endings/ending_config.json",
-	"res://game/content/milestones/milestone_definitions.json",
+	"res://game/content/progression/milestone_definitions.json",
 	"res://game/content/suppliers/supplier_catalog.json",
 	"res://game/content/staff/staff_definitions.json",
 	"res://game/content/market_trends_catalog.json",

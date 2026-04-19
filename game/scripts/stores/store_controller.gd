@@ -172,6 +172,11 @@ func _on_day_started(_day: int) -> void:
 	pass
 
 
+## Virtual method called when the day ends; override to add store-specific cleanup.
+func _on_day_ended(_day: int) -> void:
+	pass
+
+
 ## Virtual method called when a customer enters a store.
 func _on_customer_entered(_customer_data: Dictionary) -> void:
 	pass
@@ -225,7 +230,36 @@ func _connect_lifecycle_signals() -> void:
 	_connect_signal(EventBus.store_exited, _on_store_exited)
 	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
 	_connect_signal(EventBus.day_started, _on_day_started)
+	_connect_signal(EventBus.day_ended, _on_day_ended_notify)
 	_connect_signal(EventBus.customer_entered, _on_customer_entered)
+
+
+func _on_day_ended_notify(day: int) -> void:
+	if store_type.is_empty():
+		return
+	_on_day_ended(day)
+	_run_customer_simulation()
+	EventBus.store_day_closed.emit(StringName(store_type), {"day": day})
+
+
+## Runs the batch customer simulation for this store at end of day.
+## Subclasses may override _get_event_traffic_multiplier() to provide
+## store-specific event boosts.
+func _run_customer_simulation() -> void:
+	if not _inventory_system:
+		return
+	var rep_mult: float = ReputationSystemSingleton.get_customer_multiplier(store_type)
+	var event_mult: float = _get_event_traffic_multiplier()
+	var traffic: int = CustomerSimulator.calculate_traffic(
+		CustomerSimulator.DEFAULT_BASE_TRAFFIC, rep_mult, event_mult
+	)
+	var snapshot: Array[ItemInstance] = _inventory_system.get_items_for_store(store_type)
+	CustomerSimulator.simulate_day(StringName(store_type), traffic, snapshot)
+
+
+## Override to return a store-specific event traffic multiplier.
+func _get_event_traffic_multiplier() -> float:
+	return 1.0
 
 
 func _connect_signal(sig: Signal, callable: Callable) -> void:

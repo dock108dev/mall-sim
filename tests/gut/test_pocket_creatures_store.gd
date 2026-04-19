@@ -104,23 +104,6 @@ func test_extends_store_controller() -> void:
 	)
 
 
-func test_issue_148_class_extends_store_controller() -> void:
-	var script: Script = load(
-		"res://game/scripts/stores/pocket_creatures_store.gd"
-	)
-	var store: StoreController = script.new()
-	add_child_autofree(store)
-	assert_true(
-		store is StoreController,
-		"PocketCreaturesStore should extend StoreController"
-	)
-	assert_eq(
-		store.STORE_ID,
-		&"pocket_creatures",
-		"PocketCreaturesStore should expose the required STORE_ID"
-	)
-
-
 func test_open_pack_with_cards_returns_empty_without_system() -> void:
 	var result: Array[ItemInstance] = (
 		_controller.open_pack_with_cards(&"test_pack")

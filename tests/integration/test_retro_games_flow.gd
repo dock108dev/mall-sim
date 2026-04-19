@@ -4,7 +4,7 @@ extends GutTest
 var _inventory: InventorySystem
 var _economy: EconomySystem
 var _refurbishment: RefurbishmentSystem
-var _controller: RetroGameStoreController
+var _controller: RetroGames
 var _item_def: ItemDefinition
 var _testing_slot: Node
 
@@ -30,7 +30,7 @@ func before_each() -> void:
 	_testing_slot = Node.new()
 	_testing_slot.add_to_group("shelf_slot")
 
-	_controller = RetroGameStoreController.new()
+	_controller = RetroGames.new()
 	add_child_autofree(_controller)
 	add_child_autofree(_testing_slot)
 

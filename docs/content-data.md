@@ -38,33 +38,26 @@ The checked-in content tree currently includes these canonical subdirectories:
 | `game/content/events/` | Market, seasonal, random, ambient, and named-season event data. |
 | `game/content/endings/` | Ending definitions. |
 | `game/content/meta/` | Secret thread data. |
-| `game/content/milestones/` | Legacy milestone file still used directly by `ProgressionSystem`. |
-| `game/content/progression/` | Boot-time milestone definitions that take precedence in `DataLoader`. |
+| `game/content/progression/` | Canonical milestone definitions consumed by both `DataLoader` and `ProgressionSystem`. |
 | `game/content/onboarding/` | Onboarding hint config. |
 | `game/content/staff/` | Staff definitions. |
 | `game/content/suppliers/` | Supplier definitions. |
 | `game/content/unlocks/` | Unlock definitions. |
-| `game/content/fixtures/` | Fixture data alongside the legacy root fixture file. |
 
-The root of `game/content/` still contains compatibility-era or config-oriented
-JSON files such as:
+The root of `game/content/` also contains a handful of config-oriented JSON
+files:
 
 - `fixtures.json`
 - `market_trends_catalog.json`
-- `milestone_catalog.json`
+- `meta_shifts.json`
+- `pocket_creatures_cards.json`
 - `tutorial_steps.json`
 - `upgrades.json`
-- `pocket_creatures_cards.json`
-- `pocket_creatures_tournaments.json`
-- `items_retro_games.json`
-- `items_sports_memo.json`
-- `items_video_rental.json`
 
-When both milestone copies are present, `DataLoaderSingleton` skips
-`game/content/milestones/milestone_definitions.json` during boot if
-`game/content/progression/milestone_definitions.json` exists. That does **not**
-remove the legacy file from runtime entirely: `ProgressionSystem` still reads
-`game/content/milestones/milestone_definitions.json` directly.
+`game/content/` is the single canonical content root. `DataLoaderSingleton`
+loads only from `res://game/content/` with no fallback paths, and
+`ProgressionSystem` reads milestones from
+`res://game/content/progression/milestone_definitions.json`.
 
 ## Type detection
 

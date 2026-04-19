@@ -2,7 +2,7 @@
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/video_rental.tscn"
-const SCRIPT_PATH: String = "res://game/scripts/stores/video_rental.gd"
+const SCRIPT_PATH: String = "res://game/scripts/stores/video_rental_store_controller.gd"
 const GENRE_SECTION_NAMES: Array[String] = [
 	"ActionSection",
 	"ComedySection",

@@ -8,8 +8,7 @@ const STORE_TYPE: StringName = &"pocket_creatures"
 var pack_opening_system: PackOpeningSystem = null
 var tournament_system: TournamentSystem = null
 var meta_shift_system: MetaShiftSystem = null
-var trade_system: TradeSystem = null
-
+var _seasonal_event_system: SeasonalEventSystem = null
 var _economy_system: EconomySystem = null
 var _pack_inventory_count: int = 0
 var _initialized: bool = false
@@ -59,27 +58,37 @@ func set_meta_shift_system(system: MetaShiftSystem) -> void:
 	meta_shift_system = system
 
 
-## Initializes the trade system for Trader customer card swaps.
-func initialize_trade_system(
-	data_loader: DataLoader,
-	inventory_system: InventorySystem,
-	economy_system: EconomySystem,
-	reputation_system: ReputationSystem,
-) -> void:
-	trade_system = TradeSystem.new()
-	trade_system.initialize(
-		data_loader, inventory_system,
-		economy_system, reputation_system,
+## Sets the seasonal event system reference for tournament price resolution.
+func set_seasonal_event_system(system: SeasonalEventSystem) -> void:
+	_seasonal_event_system = system
+
+
+## Resolves the tournament-adjusted price for a card via PriceResolver.
+## Includes tournament price_spike_multiplier in the audit trace when active.
+func resolve_card_price(item_id: StringName) -> PriceResolver.Result:
+	if not _inventory_system:
+		return PriceResolver.Result.new()
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item or not item.definition:
+		return PriceResolver.Result.new()
+	var multipliers: Array = []
+	if _seasonal_event_system:
+		var spike: float = (
+			_seasonal_event_system.get_tournament_price_spike_multiplier(item)
+		)
+		if not is_equal_approx(spike, 1.0):
+			multipliers.append({
+				"slot": "event",
+				"label": "Tournament",
+				"factor": spike,
+				"detail": "Active tournament price spike",
+			})
+	return PriceResolver.resolve_for_item(
+		item_id, item.definition.base_price, multipliers
 	)
 
 
-## Sets the trade panel UI reference on the trade system.
-func set_trade_panel(panel: TradePanel) -> void:
-	if trade_system:
-		trade_system.set_trade_panel(panel)
-
-
-## Opens a booster pack and returns card IDs.
+## Opens a booster pack, emits items_revealed, and returns card IDs.
 func open_pack(item_id: StringName) -> Array[StringName]:
 	if not pack_opening_system:
 		push_warning("PocketCreaturesStoreController: pack system not set")
@@ -87,6 +96,8 @@ func open_pack(item_id: StringName) -> Array[StringName]:
 	var pack_result: Array[ItemInstance] = (
 		pack_opening_system.open_pack(String(item_id))
 	)
+	if not pack_result.is_empty():
+		EventBus.items_revealed.emit(String(item_id), pack_result)
 	var card_ids: Array[StringName] = []
 	for item: ItemInstance in pack_result:
 		card_ids.append(StringName(item.instance_id))

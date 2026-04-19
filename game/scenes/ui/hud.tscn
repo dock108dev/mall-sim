@@ -76,6 +76,19 @@ grow_horizontal = 0
 text = ""
 horizontal_alignment = 2
 
+[node name="TelegraphCard" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 86.0
+offset_right = -20.0
+offset_bottom = 116.0
+grow_horizontal = 0
+text = ""
+horizontal_alignment = 2
+visible = false
+
 [node name="PromptLabel" type="Label" parent="."]
 anchors_preset = 7
 anchor_left = 0.5

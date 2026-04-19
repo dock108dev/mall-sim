@@ -4,6 +4,9 @@ extends Node3D
 const _HudScene: PackedScene = preload(
 	"res://game/scenes/ui/hud.tscn"
 )
+const _MallOverviewScene: PackedScene = preload(
+	"res://game/scenes/mall/mall_overview.tscn"
+)
 const _InventoryPanelScene: PackedScene = preload(
 	"res://game/scenes/ui/inventory_panel.tscn"
 )
@@ -22,11 +25,8 @@ const _DaySummaryScene: PackedScene = preload(
 const _FixtureCatalogScene: PackedScene = preload(
 	"res://game/scenes/ui/fixture_catalog.tscn"
 )
-const _MilestonePopupScene: PackedScene = preload(
-	"res://game/scenes/ui/milestone_popup.tscn"
-)
-const _MilestoneBannerScene: PackedScene = preload(
-	"res://game/scenes/ui/milestone_banner.tscn"
+const _MilestoneCardScene: PackedScene = preload(
+	"res://game/scenes/ui/milestone_card.tscn"
 )
 const _MilestonesPanelScene: PackedScene = preload(
 	"res://game/scenes/ui/milestones_panel.tscn"
@@ -70,14 +70,17 @@ const _EndingScreenScene: PackedScene = preload(
 const _UpgradePanelScene: PackedScene = preload(
 	"res://game/scenes/ui/upgrade_panel.tscn"
 )
-const _AuthenticationDialogScene: PackedScene = preload(
-	"res://game/scenes/ui/authentication_dialog.tscn"
+const _ConditionPickerDialogScene: PackedScene = preload(
+	"res://game/scenes/ui/condition_picker_dialog.tscn"
 )
 const _RefurbishmentDialogScene: PackedScene = preload(
 	"res://game/scenes/ui/refurbishment_dialog.tscn"
 )
 const _RefurbQueuePanelScene: PackedScene = preload(
 	"res://game/scenes/ui/refurb_queue_panel.tscn"
+)
+const _WarrantyDialogScene: PackedScene = preload(
+	"res://game/scenes/ui/warranty_dialog.tscn"
 )
 const _DebugOverlayScene: PackedScene = preload(
 	"res://game/scenes/debug/debug_overlay.tscn"
@@ -148,7 +151,8 @@ var reputation_system: ReputationSystem:
 
 var _inventory_panel: InventoryPanel
 var _day_summary: DaySummary
-var _fixture_catalog
+var _mall_overview: MallOverview
+var _fixture_catalog: FixtureCatalogPanel
 var _mall_hallway: MallHallway
 var _pause_menu: PauseMenu
 var _save_load_panel: SaveLoadPanel
@@ -158,11 +162,11 @@ var _staff_panel: StaffPanel
 var _tutorial_overlay: TutorialOverlay
 var _item_tooltip: ItemTooltip
 var _ending_screen: EndingScreen
-var _authentication_dialog: AuthenticationDialog = null
+var _warranty_dialog: WarrantyDialog = null
+var _condition_picker_dialog: ConditionPickerDialog = null
 var _refurbishment_dialog: RefurbishmentDialog = null
 var _refurb_queue_panel: RefurbQueuePanel = null
 var _deferred_panels_loaded: bool = false
-var _startup_time_ms: float = 0.0
 var _nav_mesh_rebaker: NavMeshRebaker = null
 
 @onready var _ui_layer: CanvasLayer = $UILayer
@@ -441,8 +445,6 @@ func _wire_store_controllers() -> void:
 
 
 func _setup_ui() -> void:
-	var start_usec: int = Time.get_ticks_usec()
-
 	var hud: CanvasLayer = _HudScene.instantiate()
 	_ui_layer.add_child(hud)
 
@@ -491,18 +493,12 @@ func _setup_ui() -> void:
 	_tutorial_overlay.tutorial_system = tutorial_system
 	_ui_layer.add_child(_tutorial_overlay)
 
-	var essential_ms: float = (
-		float(Time.get_ticks_usec() - start_usec) / 1000.0
-	)
-	_startup_time_ms = essential_ms
-
 	_setup_deferred_panels.call_deferred()
 
 
 func _setup_deferred_panels() -> void:
 	if _deferred_panels_loaded:
 		return
-	var start_usec: int = Time.get_ticks_usec()
 
 	_day_summary = _DaySummaryScene.instantiate() as DaySummary
 	_ui_layer.add_child(_day_summary)
@@ -510,6 +506,10 @@ func _setup_deferred_panels() -> void:
 		_on_day_summary_review_inventory
 	)
 	day_cycle_controller.set_day_summary(_day_summary)
+
+	_mall_overview = _MallOverviewScene.instantiate() as MallOverview
+	_mall_overview.setup(inventory_system, economy_system)
+	_ui_layer.add_child(_mall_overview)
 
 	_fixture_catalog = (
 		_FixtureCatalogScene.instantiate()
@@ -519,15 +519,11 @@ func _setup_deferred_panels() -> void:
 	_fixture_catalog.store_type = GameManager.DEFAULT_STARTING_STORE
 	_ui_layer.add_child(_fixture_catalog)
 
-	var milestone_popup: MilestonePopup = (
-		_MilestonePopupScene.instantiate() as MilestonePopup
+	var milestone_card: MilestoneCard = (
+		_MilestoneCardScene.instantiate() as MilestoneCard
 	)
-	_ui_layer.add_child(milestone_popup)
-
-	var milestone_banner: MilestoneBanner = (
-		_MilestoneBannerScene.instantiate() as MilestoneBanner
-	)
-	_ui_layer.add_child(milestone_banner)
+	milestone_card.notification_mode = true
+	_ui_layer.add_child(milestone_card)
 
 	var milestones_panel: MilestonesPanel = (
 		_MilestonesPanelScene.instantiate() as MilestonesPanel
@@ -605,6 +601,12 @@ func _setup_deferred_panels() -> void:
 	add_child(_ending_screen)
 	_ending_screen.dismissed.connect(_on_ending_dismissed)
 
+	_warranty_dialog = (
+		_WarrantyDialogScene.instantiate() as WarrantyDialog
+	)
+	_ui_layer.add_child(_warranty_dialog)
+	checkout_system.set_warranty_dialog(_warranty_dialog)
+
 	var initial_ctrl: StoreController = _find_store_controller(false)
 	if initial_ctrl:
 		_wire_pack_system(initial_ctrl)
@@ -612,21 +614,12 @@ func _setup_deferred_panels() -> void:
 	_setup_debug_overlay()
 
 	_deferred_panels_loaded = true
-	var deferred_ms: float = (
-		float(Time.get_ticks_usec() - start_usec) / 1000.0
-	)
-	_startup_time_ms += deferred_ms
-	_log_panel_profile(deferred_ms)
 
 
 ## Forces deferred panels to load if not yet initialized.
 func _ensure_deferred_panels() -> void:
 	if not _deferred_panels_loaded:
 		_setup_deferred_panels()
-
-
-func _log_panel_profile(_deferred_ms: float) -> void:
-	return
 
 
 func _setup_debug_overlay() -> void:
@@ -837,20 +830,17 @@ func _wire_base_store_controller(store_ctrl: StoreController) -> void:
 
 ## Wires up a VideoRentalStoreController with system references if applicable.
 func _wire_rental_system(store_ctrl: StoreController) -> void:
-	if store_ctrl is VideoRentalStoreController:
-		var rental: VideoRentalStoreController = (
-			store_ctrl as VideoRentalStoreController
-		)
-		rental.set_inventory_system(inventory_system)
-		rental.set_economy_system(economy_system)
-		rental.set_reputation_system(ReputationSystemSingleton)
-		save_manager.set_rental_system(rental)
-		if _inventory_panel:
-			_inventory_panel.rental_controller = rental
-	elif store_ctrl is VideoRental:
-		var rental: VideoRental = store_ctrl as VideoRental
-		rental.set_inventory_system(inventory_system)
-		rental.initialize()
+	if not store_ctrl is VideoRentalStoreController:
+		return
+	var rental: VideoRentalStoreController = (
+		store_ctrl as VideoRentalStoreController
+	)
+	rental.set_inventory_system(inventory_system)
+	rental.set_economy_system(economy_system)
+	rental.set_reputation_system(ReputationSystemSingleton)
+	save_manager.set_rental_system(rental)
+	if _inventory_panel:
+		_inventory_panel.rental_controller = rental
 
 
 ## Wires up a PocketCreaturesStoreController with pack and tournament systems.
@@ -867,6 +857,8 @@ func _wire_pack_system(store_ctrl: StoreController) -> void:
 			pc_ctrl.set_tournament_system(tournament_system)
 		if meta_shift_system:
 			pc_ctrl.set_meta_shift_system(meta_shift_system)
+		if seasonal_event_system:
+			pc_ctrl.set_seasonal_event_system(seasonal_event_system)
 		if _inventory_panel:
 			_inventory_panel.pack_controller = pc_ctrl
 			_inventory_panel.pack_opening_panel = (
@@ -906,15 +898,12 @@ func _wire_sports_memorabilia_system(
 			store_ctrl as SportsMemorabiliaController
 		)
 		sports.initialize(time_system.current_day)
-		sports.initialize_authentication(
-			inventory_system, economy_system
-		)
 		var cycle: SeasonCycleSystem = sports.get_season_cycle()
 		economy_system.set_season_cycle_system(cycle)
 		save_manager.set_season_cycle_system(cycle)
 		if _item_tooltip:
 			_item_tooltip.season_cycle_system = cycle
-		_ensure_authentication_dialog(sports)
+		_ensure_condition_picker_dialog(sports)
 	else:
 		economy_system.set_season_cycle_system(null)
 		save_manager.set_season_cycle_system(null)
@@ -957,19 +946,16 @@ func _wire_retro_games_system(store_ctrl: StoreController) -> void:
 			_inventory_panel.refurbishment_dialog = null
 
 
-func _ensure_authentication_dialog(
-	sports: SportsMemorabiliaController,
+func _ensure_condition_picker_dialog(
+	_sports: SportsMemorabiliaController,
 ) -> void:
-	if not _authentication_dialog:
-		_authentication_dialog = (
-			_AuthenticationDialogScene.instantiate()
-			as AuthenticationDialog
+	if not _condition_picker_dialog:
+		_condition_picker_dialog = (
+			_ConditionPickerDialogScene.instantiate()
+			as ConditionPickerDialog
 		)
-		_ui_layer.add_child(_authentication_dialog)
-	_authentication_dialog.set_authentication_system(
-		sports.get_authentication_system()
-	)
-	_authentication_dialog.set_inventory_system(inventory_system)
+		_ui_layer.add_child(_condition_picker_dialog)
+	_condition_picker_dialog.set_inventory_system(inventory_system)
 
 
 func _ensure_refurbishment_ui(

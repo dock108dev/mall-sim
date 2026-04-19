@@ -6,7 +6,7 @@ const OFFER_LOW: float = 0.85
 const OFFER_HIGH: float = 1.15
 const SENSITIVITY_FACTOR: float = 0.3
 const PATIENCE_REP_PENALTY: float = -2.0
-const ELECTRONICS_STORE_TYPE: String = "consumer_electronics"
+const ELECTRONICS_STORE_TYPE: String = "electronics"
 const CHECKOUT_DURATION: float = 2.0
 const GENEROUS_THRESHOLD: float = 0.75
 const FAIR_THRESHOLD_HIGH: float = 1.25
@@ -21,7 +21,6 @@ var _haggle_panel: HagglePanel = null
 var _register_queue: RegisterQueue = null
 var _warranty_manager: WarrantyManager = null
 var _warranty_dialog: WarrantyDialog = null
-var _trade_system: TradeSystem = null
 var _market_value_system: MarketValueSystem = null
 var _rental_controller: VideoRentalStoreController = null
 
@@ -124,10 +123,6 @@ func set_warranty_dialog(dialog: WarrantyDialog) -> void:
 	)
 
 
-func set_trade_system(system: TradeSystem) -> void:
-	_trade_system = system
-
-
 func set_rental_controller(
 	controller: VideoRentalStoreController,
 ) -> void:
@@ -189,8 +184,6 @@ func _on_interactable_interacted(
 	if _checkout_panel and _checkout_panel.is_open():
 		return
 	if _haggle_panel and _haggle_panel.is_open():
-		return
-	if _trade_system and _trade_system.is_active():
 		return
 	var customer: Customer = _find_waiting_customer()
 	if not customer:
@@ -268,12 +261,6 @@ func _begin_checkout(customer: Customer) -> void:
 		)
 		_finalize_checkout_no_sale()
 		return
-	if _trade_system and _trade_system.is_trader(customer):
-		if _trade_system.begin_trade(customer):
-			_register_queue.remove(customer)
-			_active_customer = null
-			_active_item = null
-			return
 	if _haggle_system and _haggle_system.should_haggle(
 		customer, _active_item
 	):

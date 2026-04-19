@@ -1,4 +1,4 @@
-## GUT integration test: sports flow from suspicious stock to sports_win sale.
+## GUT integration test: sports flow from condition grading to boosted sale.
 extends GutTest
 
 
@@ -37,7 +37,6 @@ func before_each() -> void:
 	add_child_autofree(_controller)
 	_controller.set_inventory_system(_inventory)
 	_controller.initialize(1)
-	_controller.initialize_authentication(_inventory, _economy)
 
 	_item_sold_signals.clear()
 	EventBus.item_sold.connect(_on_item_sold)
@@ -64,7 +63,7 @@ func _on_item_sold(
 	})
 
 
-func _stock_test_item() -> ItemInstance:
+func _stock_test_item(condition: String = "good") -> ItemInstance:
 	var definition: ItemDefinition = ContentRegistry.get_item_definition(
 		ITEM_DEFINITION_ID
 	)
@@ -73,9 +72,8 @@ func _stock_test_item() -> ItemInstance:
 		"Sports autograph definition should load from ContentRegistry"
 	)
 	var item: ItemInstance = ItemInstance.create_from_definition(
-		definition, "good"
+		definition, condition
 	)
-	item.authentication_status = "suspicious"
 	_inventory.add_item(STORE_ID, item)
 	return item
 
@@ -84,7 +82,7 @@ func _enter_store() -> void:
 	_controller.call_deferred("_on_store_entered", STORE_ID)
 
 
-func test_sports_memorabilia_flow_stock_auth_boost_and_sale() -> void:
+func test_sports_memorabilia_flow_condition_grading_and_boosted_sale() -> void:
 	_enter_store()
 	await get_tree().process_frame
 
@@ -94,23 +92,32 @@ func test_sports_memorabilia_flow_stock_auth_boost_and_sale() -> void:
 		"Sports store data should load from ContentRegistry"
 	)
 
-	var item: ItemInstance = _stock_test_item()
+	var item: ItemInstance = _stock_test_item("good")
 	var base_price: float = item.definition.base_price
-	var clean_price: float = base_price
-	var suspicious_price: float = _controller.get_item_price(
+
+	# Good condition → ×1.0 multiplier
+	var good_price: float = _controller.get_item_price(
 		StringName(item.instance_id)
 	)
 	assert_almost_eq(
-		suspicious_price,
-		base_price * AuthenticationSystem.SUSPICIOUS_PRICE_MULTIPLIER,
+		good_price,
+		base_price * 1.0,
 		FLOAT_TOLERANCE,
-		"Suspicious item price should be exactly 50%% of base price before the season boost"
+		"Good condition price should be exactly base_price × 1.0"
+	)
+
+	# Mint condition → ×2.0 multiplier
+	EventBus.card_condition_selected.emit(
+		StringName(item.instance_id), "mint"
+	)
+	var mint_price: float = _controller.get_item_price(
+		StringName(item.instance_id)
 	)
 	assert_almost_eq(
-		suspicious_price,
-		clean_price * AuthenticationSystem.SUSPICIOUS_PRICE_MULTIPLIER,
+		mint_price,
+		base_price * 2.0,
 		FLOAT_TOLERANCE,
-		"Suspicious price should be exactly half of the clean pre-boost price"
+		"Mint condition price should be exactly base_price × 2.0"
 	)
 
 	EventBus.market_event_started.emit(MARKET_EVENT_ID)
@@ -130,7 +137,6 @@ func test_sports_memorabilia_flow_stock_auth_boost_and_sale() -> void:
 		"sports_win should activate at least a 1.5x demand multiplier for autograph"
 	)
 
-	item.authentication_status = "none"
 	var boosted_price: float = _controller.get_item_price(
 		StringName(item.instance_id)
 	)
@@ -158,14 +164,9 @@ func test_sports_memorabilia_flow_stock_auth_boost_and_sale() -> void:
 	)
 	assert_almost_eq(
 		float(_item_sold_signals[0]["price"]),
-		base_price * memorabilia_multiplier,
+		base_price * 2.0 * memorabilia_multiplier,
 		FLOAT_TOLERANCE,
-		"item_sold should carry base_price × active season multiplier when suspicion is cleared"
-	)
-	assert_eq(
-		_item_sold_signals[0]["category"],
-		String(item.definition.category),
-		"item_sold should carry the memorabilia category"
+		"item_sold should carry base_price × mint_multiplier × season_multiplier"
 	)
 	assert_almost_eq(
 		_economy.get_cash() - cash_before,

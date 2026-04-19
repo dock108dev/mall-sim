@@ -1,6 +1,6 @@
 [gd_scene load_steps=50 format=3 uid="uid://video_rental_001"]
 
-[ext_resource type="Script" path="res://game/scripts/stores/video_rental.gd" id="1"]
+[ext_resource type="Script" path="res://game/scripts/stores/video_rental_store_controller.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
 [ext_resource type="Script" path="res://game/scripts/components/interactable.gd" id="3"]
 [ext_resource type="Script" path="res://game/scripts/stores/returns_bin.gd" id="4"]

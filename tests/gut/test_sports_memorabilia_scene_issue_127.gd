@@ -2,7 +2,7 @@
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/sports_memorabilia.tscn"
-const SCRIPT_PATH: String = "res://game/scripts/stores/sports_memorabilia.gd"
+const SCRIPT_PATH: String = "res://game/scripts/stores/sports_memorabilia_controller.gd"
 const GRID_CELL_SIZE: float = 0.5
 
 var _root: Node3D = null

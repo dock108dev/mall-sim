@@ -3,7 +3,7 @@ class_name ProgressionSystem
 extends Node
 
 
-const MILESTONES_PATH := "res://game/content/milestones/milestone_definitions.json"
+const MILESTONES_PATH := "res://game/content/progression/milestone_definitions.json"
 
 const CONDITION_REVENUE := "cumulative_revenue"
 const CONDITION_REPUTATION := "max_reputation_score"
@@ -297,14 +297,13 @@ func _load_milestone_definitions() -> void:
 		return
 
 	var root: Variant = json.data
-	if root is not Dictionary:
-		push_warning(
-			"ProgressionSystem: root is not a Dictionary"
-		)
-		return
-
-	var entries: Variant = (root as Dictionary).get("milestones", [])
-	if entries is not Array:
+	var entries: Array
+	if root is Array:
+		entries = root as Array
+	elif root is Dictionary:
+		entries = (root as Dictionary).get("milestones", [])
+	else:
+		push_warning("ProgressionSystem: unexpected root type in %s" % MILESTONES_PATH)
 		return
 
 	_milestones = []

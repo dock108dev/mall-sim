@@ -32,6 +32,12 @@ static func calculate_fee(
 	return sale_price * clamped
 
 
+## Calculates the warranty fee using a JSON tier Dictionary (margin_percent key).
+static func calculate_tier_fee(sale_price: float, tier_data: Dictionary) -> float:
+	var margin: float = float(tier_data.get("margin_percent", MIN_WARRANTY_PERCENT))
+	return sale_price * clampf(margin, MIN_WARRANTY_PERCENT, MAX_WARRANTY_PERCENT)
+
+
 ## Returns the customer acceptance probability for a given sale price.
 static func get_acceptance_probability(sale_price: float) -> float:
 	if sale_price >= HIGH_PRICE_THRESHOLD:
@@ -39,9 +45,19 @@ static func get_acceptance_probability(sale_price: float) -> float:
 	return BASE_ACCEPTANCE_RATE
 
 
+## Returns the acceptance probability from a JSON tier Dictionary.
+static func get_tier_acceptance_probability(tier_data: Dictionary) -> float:
+	return float(tier_data.get("acceptance_probability", BASE_ACCEPTANCE_RATE))
+
+
 ## Rolls whether the customer accepts the warranty offer.
 static func roll_acceptance(sale_price: float) -> bool:
 	return randf() < get_acceptance_probability(sale_price)
+
+
+## Rolls acceptance using a JSON tier Dictionary's acceptance_probability.
+static func roll_tier_acceptance(tier_data: Dictionary) -> bool:
+	return randf() < get_tier_acceptance_probability(tier_data)
 
 
 ## Records a purchased warranty. Returns the warranty record.

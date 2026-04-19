@@ -32,6 +32,8 @@ var _record_high_rows: Array[Control] = []
 var _record_low_rows: Array[Control] = []
 var _pending_summary: Dictionary = {}
 var _emit_day_acknowledged_on_close: bool = false
+var _pending_tournament_results: Array[Dictionary] = []
+var _tournament_result_labels: Array[Label] = []
 
 @onready var _overlay: ColorRect = $Overlay
 @onready var _panel: PanelContainer = $Panel
@@ -67,6 +69,7 @@ func _ready() -> void:
 		_on_performance_report_ready
 	)
 	EventBus.staff_wages_paid.connect(_on_staff_wages_paid)
+	EventBus.tournament_ended.connect(_on_tournament_ended)
 
 
 ## Populates the modal from an end-of-day summary dictionary and displays it.
@@ -94,6 +97,12 @@ func _on_performance_report_ready(report: PerformanceReport) -> void:
 
 func _on_staff_wages_paid(total_amount: float) -> void:
 	_wages_this_day = total_amount
+
+
+func _on_tournament_ended(
+	_tournament_id: String, result_summary: Dictionary
+) -> void:
+	_pending_tournament_results.append(result_summary)
 
 
 func _populate_and_show() -> void:
@@ -151,6 +160,7 @@ func _apply_summary(summary: Dictionary) -> void:
 	_populate_report_details(summary)
 	_populate_reputation(summary)
 	_populate_milestones(summary)
+	_populate_tournament_results()
 
 
 func _get_summary_float(
@@ -414,6 +424,25 @@ func _populate_milestones(summary: Dictionary) -> void:
 	PanelAnimator.pulse_scale(_milestone_banner, 1.08)
 
 
+func _populate_tournament_results() -> void:
+	for label: Label in _tournament_result_labels:
+		if is_instance_valid(label):
+			label.queue_free()
+	_tournament_result_labels.clear()
+	for result: Dictionary in _pending_tournament_results:
+		var label := Label.new()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var name_str: String = str(result.get("display_name", "Tournament"))
+		var spike: float = float(result.get("price_spike_multiplier", 1.0))
+		var traffic: float = float(result.get("traffic_multiplier", 1.0))
+		label.text = (
+			"%s concluded — ×%.2f price spike, ×%.2f traffic"
+			% [name_str, spike, traffic]
+		)
+		_vbox.add_child(label)
+		_tournament_result_labels.append(label)
+
+
 func _clear_reputation() -> void:
 	for child: Node in _reputation_container.get_children():
 		child.queue_free()
@@ -458,6 +487,7 @@ func _close() -> void:
 		_overlay.visible = false
 		_pending_report = null
 		_pending_summary.clear()
+		_pending_tournament_results.clear()
 		_wages_this_day = 0.0
 		dismissed.emit()
 		if _emit_day_acknowledged_on_close:

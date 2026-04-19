@@ -15,11 +15,15 @@ This is the active project documentation set for Mallcore Sim.
   settings, user data paths, export presets, and checked-in automation.
 - [Contributing](contributing.md) - formatting, naming, content, testing, and
   documentation rules.
+- [Roadmap](roadmap.md) - finalization phases from triage through 1.0 ship
+  criteria.
 
 ## Audit docs
 
 - [Docs Consolidation Audit](audits/docs-consolidation.md) - what this rewrite
   changed, deleted, and consolidated.
+- [State Assessment](audits/braindump.md) - honest assessment of what is working,
+  what is scaffolded, and where trust breaks.
 - `docs/audits/*.md` - point-in-time review notes for error handling, security,
   SSOT cleanup, and related maintenance work.
 

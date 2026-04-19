@@ -1,0 +1,40 @@
+[gd_scene load_steps=2 format=3 uid="uid://store_slot_card01"]
+
+[ext_resource type="Script" path="res://game/scenes/mall/store_slot_card.gd" id="1"]
+
+[node name="StoreSlotCard" type="PanelContainer"]
+custom_minimum_size = Vector2(160, 130)
+script = ExtResource("1")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="NameLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Store Name"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="RevenueLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "$0"
+horizontal_alignment = 1
+
+[node name="StockLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="AlertBadge" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "! ALERT"
+horizontal_alignment = 1
+visible = false

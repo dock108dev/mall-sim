@@ -4,7 +4,7 @@ extends Node
 
 signal preference_changed(key: StringName, value: Variant)
 
-var settings_path: String = "user://settings.cfg"
+const settings_path: String = "user://settings.cfg"
 
 const COMMON_RESOLUTIONS: Array[Vector2i] = [
 	Vector2i(1280, 720),

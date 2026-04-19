@@ -31,6 +31,7 @@ var _record_high_items: int = 0
 var _record_high_labels: Array[Label] = []
 var _record_low_labels: Array[Label] = []
 var _milestone_labels: Array[Label] = []
+var _store_revenue_labels: Array[Label] = []
 var _last_net_profit: float = 0.0
 var _last_summary_args: Dictionary = {}
 var _emit_day_acknowledged_on_hide: bool = false
@@ -98,6 +99,7 @@ func _ready() -> void:
 	EventBus.performance_report_ready.connect(
 		_on_performance_report_ready
 	)
+	EventBus.day_closed.connect(_on_day_closed_payload)
 
 
 ## Populates the summary with daily stats and shows the panel.
@@ -224,6 +226,9 @@ func _get_visible_stat_rows() -> Array[Control]:
 	for label: Control in _get_stat_row_candidates():
 		if label.visible:
 			rows.append(label)
+	for store_label: Label in _store_revenue_labels:
+		if is_instance_valid(store_label) and store_label.visible:
+			rows.append(store_label)
 	for child: Node in _milestone_container.get_children():
 		if child is Label and child.visible:
 			rows.append(child as Control)
@@ -452,6 +457,36 @@ func _clear_milestones() -> void:
 		if is_instance_valid(label):
 			label.queue_free()
 	_milestone_labels.clear()
+
+
+## Updates per-store revenue breakdown labels from the day_closed payload.
+func _update_store_revenue_display(store_revenue: Dictionary) -> void:
+	for label: Label in _store_revenue_labels:
+		if is_instance_valid(label):
+			label.queue_free()
+	_store_revenue_labels.clear()
+	if store_revenue.is_empty():
+		return
+	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var insert_after: int = _revenue_label.get_index() + 1
+	for store_id: String in store_revenue:
+		var rev: float = store_revenue[store_id]
+		if rev <= 0.0:
+			continue
+		var label := Label.new()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.text = "  %s: $%.2f" % [store_id.capitalize(), rev]
+		vbox.add_child(label)
+		vbox.move_child(label, insert_after)
+		insert_after += 1
+		_store_revenue_labels.append(label)
+
+
+## Receives the day_closed payload to refresh per-store revenue display.
+func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
+	_update_store_revenue_display(
+		summary.get("store_revenue", {})
+	)
 
 
 func _create_discrepancy_label() -> void:

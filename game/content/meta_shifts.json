@@ -1,0 +1,23 @@
+[
+  {
+    "id": "fire_surge",
+    "affected_types": ["fire"],
+    "multiplier": 1.8,
+    "day_offset": 7,
+    "telegraph_message": "Tournament results show fire-type dominance — prices rising."
+  },
+  {
+    "id": "water_meta_sweep",
+    "affected_types": ["water", "ice"],
+    "multiplier": 2.0,
+    "day_offset": 8,
+    "telegraph_message": "Rain City Regionals: Water and Ice sweep — expect a market surge."
+  },
+  {
+    "id": "grass_correction",
+    "affected_types": ["grass"],
+    "multiplier": 0.6,
+    "day_offset": 6,
+    "telegraph_message": "Counter-tech discovered for grass builds — values cooling fast."
+  }
+]

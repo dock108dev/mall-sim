@@ -218,7 +218,34 @@ func validate_all_references() -> Array[String]:
 				"ID '%s' references missing scene '%s'"
 				% [scene_id, path]
 			)
+	_validate_entry_cross_refs(errors)
 	return errors
+
+
+func _validate_entry_cross_refs(errors: Array[String]) -> void:
+	for entry_id: StringName in _entries:
+		var entry: Dictionary = _entries[entry_id]
+		var entry_type: String = str(_types.get(entry_id, ""))
+		match entry_type:
+			"market_event", "seasonal_event":
+				_validate_event_store_refs(entry_id, entry, errors)
+
+
+func _validate_event_store_refs(
+	entry_id: StringName, entry: Dictionary, errors: Array[String]
+) -> void:
+	var targets: Variant = entry.get("target_store_types", [])
+	if targets is not Array:
+		return
+	for raw: Variant in targets:
+		var store_id: String = str(raw)
+		if store_id.is_empty():
+			continue
+		if not exists(store_id):
+			errors.append(
+				"Event '%s' references unknown store_type '%s'"
+				% [entry_id, store_id]
+			)
 
 
 func _report_missing_scene_once(path: String, scene_id: StringName) -> void:

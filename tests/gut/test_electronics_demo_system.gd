@@ -15,7 +15,9 @@ func before_each() -> void:
 
 
 func _make_item(
-	category: String, condition: String = "good"
+	category: String,
+	condition: String = "good",
+	can_be_demo: bool = true
 ) -> ItemInstance:
 	var def := ItemDefinition.new()
 	def.id = "test_%s" % category
@@ -23,6 +25,7 @@ func _make_item(
 	def.category = category
 	def.store_type = "electronics"
 	def.base_price = 50.0
+	def.can_be_demo_unit = can_be_demo
 	var item: ItemInstance = ItemInstance.create_from_definition(
 		def, condition
 	)
@@ -188,4 +191,38 @@ func test_remove_demo_nonexistent_returns_false() -> void:
 	assert_false(
 		_controller.remove_demo_item("nonexistent"),
 		"Should return false for non-demo item"
+	)
+
+
+func test_can_demo_item_rejects_non_demoable_content() -> void:
+	var item: ItemInstance = _make_item("portable_audio", "good", false)
+	assert_false(
+		_controller.can_demo_item(item),
+		"Should reject items with can_be_demo_unit = false"
+	)
+
+
+func test_try_demo_interaction_returns_false_for_non_demo() -> void:
+	assert_false(
+		_controller.try_demo_interaction("nonexistent"),
+		"Should return false when item is not a demo unit"
+	)
+
+
+func test_try_demo_interaction_emits_signal() -> void:
+	var triggered_ids: Array[String] = []
+	var capture: Callable = func(item_id: String) -> void:
+		triggered_ids.append(item_id)
+	EventBus.demo_interaction_triggered.connect(capture)
+	_controller._demo_item_ids.append("demo_item_1")
+	var result: bool = _controller.try_demo_interaction("demo_item_1")
+	EventBus.demo_interaction_triggered.disconnect(capture)
+	assert_true(result, "try_demo_interaction should return true for demo unit")
+	assert_eq(
+		triggered_ids.size(), 1,
+		"demo_interaction_triggered should be emitted once"
+	)
+	assert_eq(
+		triggered_ids[0], "demo_item_1",
+		"Signal should carry the correct item_id"
 	)

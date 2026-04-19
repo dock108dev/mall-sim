@@ -1,4 +1,5 @@
 ## Coordinates the end-of-day flow: report → summary panel → wages → evaluation → advance.
+## Acts as DayManager: only this class emits EventBus.day_closed.
 class_name DayCycleController
 extends Node
 
@@ -32,6 +33,7 @@ func initialize(
 	_ending_evaluator = ending_evaluator
 	_performance_report_system = performance_report_system
 	EventBus.day_ended.connect(_on_day_ended)
+	EventBus.day_close_requested.connect(_on_day_close_requested)
 	EventBus.next_day_confirmed.connect(_on_day_acknowledged)
 	EventBus.performance_report_ready.connect(_on_report_ready)
 
@@ -52,8 +54,18 @@ func set_ensure_panels_callback(callback: Callable) -> void:
 	_ensure_panels_callback = callback
 
 
+func _on_day_close_requested() -> void:
+	if not _time_system:
+		push_warning("DayCycleController: day_close_requested before initialize")
+		return
+	_on_day_ended(_time_system.current_day)
+
+
 func _on_day_ended(day: int) -> void:
 	if GameManager.current_state == GameManager.GameState.GAME_OVER:
+		return
+	# Prevent double-close if both day_ended and day_close_requested fire.
+	if _awaiting_acknowledgement:
 		return
 
 	if _ensure_panels_callback.is_valid():
@@ -121,13 +133,35 @@ func _show_day_summary(day: int) -> void:
 	if _staff_system:
 		wages = _staff_system.get_total_daily_wages()
 
+	# Build the full payload emitted as day_closed so UI and tests can consume it.
+	var store_revenue: Dictionary = (
+		_economy_system.get_day_end_summary(day).get("store_daily_revenue", {})
+	)
+	var payload: Dictionary = {
+		"day": day,
+		"total_revenue": summary.get("total_revenue", 0.0),
+		"total_expenses": summary.get("total_expenses", 0.0),
+		"net_profit": summary.get("net_profit", 0.0),
+		"items_sold": summary.get("items_sold", 0),
+		"rent": summary.get("rent", 0.0),
+		"net_cash": _economy_system.get_cash(),
+		"store_revenue": store_revenue,
+		"warranty_revenue": warranty_rev,
+		"warranty_claims": warranty_claims,
+		"seasonal_impact": seasonal_impact,
+		"discrepancy": discrepancy,
+		"staff_wages": wages,
+	}
+	EventBus.day_closed.emit(day, payload)
+	EventBus.publish_day_end_summary(payload)
+
 	_day_summary.show_summary(
 		day,
-		summary.get("total_revenue", 0.0),
-		summary.get("total_expenses", 0.0),
-		summary.get("net_profit", 0.0),
-		summary.get("items_sold", 0),
-		summary.get("rent", 0.0),
+		payload["total_revenue"],
+		payload["total_expenses"],
+		payload["net_profit"],
+		payload["items_sold"],
+		payload["rent"],
 		warranty_rev,
 		warranty_claims,
 		seasonal_impact,

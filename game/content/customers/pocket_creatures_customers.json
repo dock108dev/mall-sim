@@ -70,23 +70,5 @@
     "mood_tags": ["uncertain", "asking", "grateful"],
     "dialogue_pool": "parent_shopping",
     "model": "res://game/assets/models/customers/parent.glb"
-  },
-  {
-    "id": "pc_trader",
-    "name": "Trader",
-    "store_types": ["pocket_creatures"],
-    "budget_range": [5.00, 25.00],
-    "patience": 0.6,
-    "price_sensitivity": 0.85,
-    "preferred_categories": ["singles"],
-    "preferred_tags": ["uncommon", "holo", "rare", "trade_fodder"],
-    "condition_preference": "good",
-    "browse_time_range": [30, 90],
-    "purchase_probability_base": 0.40,
-    "impulse_buy_chance": 0.15,
-    "visit_frequency": "medium",
-    "mood_tags": ["chatty", "haggling", "friendly"],
-    "dialogue_pool": "trader",
-    "model": "res://game/assets/models/customers/young_adult.glb"
   }
 ]

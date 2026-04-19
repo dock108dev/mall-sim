@@ -132,6 +132,53 @@ func present_warranty_offer(instance_id: String, sale_price: float) -> bool:
 	return true
 
 
+## Pitches a warranty tier to the customer. Rolls acceptance, records the warranty
+## if accepted, and emits warranty_accepted or warranty_declined.
+## Returns the warranty fee charged (0.0 if declined or not eligible).
+## Pass tier_id="" to use hardcoded defaults when no tiers are defined in JSON.
+func pitch_warranty(
+	instance_id: String, sale_price: float, tier_id: String, wholesale_cost: float = 0.0
+) -> float:
+	if not WarrantyManager.is_eligible(sale_price):
+		return 0.0
+	var tier_data: Dictionary = {}
+	if not tier_id.is_empty() and _inventory_system:
+		var item: ItemInstance = _inventory_system.get_item(instance_id)
+		tier_data = _find_warranty_tier(item, tier_id)
+	var accepted: bool
+	var fee: float
+	if tier_data.is_empty():
+		accepted = WarrantyManager.roll_acceptance(sale_price)
+		fee = WarrantyManager.calculate_fee(
+			sale_price, WarrantyManager.MIN_WARRANTY_PERCENT
+		)
+	else:
+		accepted = WarrantyManager.roll_tier_acceptance(tier_data)
+		fee = WarrantyManager.calculate_tier_fee(sale_price, tier_data)
+	if accepted:
+		_warranty_manager.add_warranty(
+			instance_id, sale_price, fee, wholesale_cost, _current_day
+		)
+		EventBus.warranty_accepted.emit(instance_id, tier_id, fee)
+		return fee
+	EventBus.warranty_declined.emit(instance_id, tier_id)
+	return 0.0
+
+
+## Resolves the effective browse-rate multiplier for a product category via PriceResolver.
+## When a demo unit is active for the category, a demo_unit slot multiplier is injected.
+func resolve_browse_rate(category: String, base_rate: float) -> PriceResolver.Result:
+	var multipliers: Array = []
+	if has_active_demo_for_category(category):
+		multipliers.append({
+			"slot": "demo_unit",
+			"label": "Demo Unit Active",
+			"factor": 1.0 + _demo_interest_bonus,
+			"detail": "Demo unit on floor for %s" % category,
+		})
+	return PriceResolver.resolve(base_rate, multipliers)
+
+
 ## Returns true if the store has at least one demo station fixture placed.
 func has_demo_station() -> bool:
 	return not _demo_station_slots.is_empty()
@@ -173,6 +220,8 @@ func has_active_demo_for_category(category: String) -> bool:
 func can_demo_item(item: ItemInstance) -> bool:
 	if not item or not item.definition:
 		return false
+	if not item.definition.can_be_demo_unit:
+		return false
 	if _demo_station_slots.is_empty():
 		return false
 	if item.definition.store_type != STORE_ID:
@@ -183,6 +232,21 @@ func can_demo_item(item: ItemInstance) -> bool:
 		return false
 	if item.condition == "poor":
 		return false
+	return true
+
+
+## Simulates a customer trying a demo unit. Emits demo_interaction_triggered
+## and applies a soft reputation bonus. Returns false if item is not a demo unit.
+func try_demo_interaction(instance_id: String) -> bool:
+	if not is_demo_unit(instance_id):
+		push_warning(
+			"ElectronicsStoreController: '%s' is not a demo unit" % instance_id
+		)
+		return false
+	EventBus.demo_interaction_triggered.emit(instance_id)
+	ReputationSystemSingleton.add_reputation(
+		String(STORE_ID), _demo_interest_bonus
+	)
 	return true
 
 
@@ -218,6 +282,7 @@ func place_demo_item(instance_id: String) -> bool:
 	if not slot_id.is_empty():
 		_inventory_system.move_item(instance_id, "shelf:%s" % slot_id)
 	EventBus.demo_item_placed.emit(instance_id)
+	EventBus.demo_unit_activated.emit(instance_id, String(item.definition.category))
 	return true
 
 
@@ -240,6 +305,7 @@ func remove_demo_item(instance_id: String = "") -> bool:
 	_inventory_system.move_item(target_id, "backroom")
 	_demo_item_ids.erase(target_id)
 	EventBus.demo_item_removed.emit(target_id, days_on_demo)
+	EventBus.demo_unit_removed.emit(target_id, days_on_demo)
 	return true
 
 
@@ -445,3 +511,12 @@ func _degrade_condition(current: String) -> String:
 	if idx < 0 or idx >= CONDITION_ORDER.size() - 1:
 		return current
 	return CONDITION_ORDER[idx + 1]
+
+
+func _find_warranty_tier(item: ItemInstance, tier_id: String) -> Dictionary:
+	if not item or not item.definition:
+		return {}
+	for tier: Variant in item.definition.warranty_tiers:
+		if tier is Dictionary and str((tier as Dictionary).get("id", "")) == tier_id:
+			return tier as Dictionary
+	return {}

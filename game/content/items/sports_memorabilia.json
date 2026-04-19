@@ -6,6 +6,8 @@
     "category": "trading_cards",
     "base_price": 2.0,
     "rarity": "common",
+    "era": "late_1990s",
+    "provenance_score": 0.72,
     "condition_range": [
       "mint",
       "good",
@@ -29,6 +31,8 @@
     "category": "trading_cards",
     "base_price": 1.5,
     "rarity": "common",
+    "era": "early_1990s",
+    "provenance_score": 0.68,
     "condition_range": [
       "mint",
       "good",
@@ -52,6 +56,8 @@
     "category": "trading_cards",
     "base_price": 3.0,
     "rarity": "common",
+    "era": "reprint",
+    "provenance_score": 0.28,
     "condition_range": [
       "mint",
       "good",
@@ -74,6 +80,8 @@
     "category": "trading_cards",
     "base_price": 2.5,
     "rarity": "common",
+    "era": "early_2000s",
+    "provenance_score": 0.70,
     "condition_range": [
       "mint",
       "good",
@@ -97,6 +105,8 @@
     "category": "trading_cards",
     "base_price": 12.0,
     "rarity": "uncommon",
+    "era": "late_1990s",
+    "provenance_score": 0.82,
     "condition_range": [
       "mint",
       "good",
@@ -120,6 +130,8 @@
     "category": "trading_cards",
     "base_price": 18.0,
     "rarity": "uncommon",
+    "era": "mid_1990s",
+    "provenance_score": 0.87,
     "condition_range": [
       "mint",
       "good",
@@ -142,6 +154,8 @@
     "category": "trading_cards",
     "base_price": 15.0,
     "rarity": "uncommon",
+    "era": "mid_1990s",
+    "provenance_score": 0.80,
     "condition_range": [
       "mint",
       "good",
@@ -164,6 +178,8 @@
     "category": "trading_cards",
     "base_price": 55.0,
     "rarity": "rare",
+    "era": "late_1980s",
+    "provenance_score": 0.91,
     "condition_range": [
       "mint",
       "good",
@@ -187,6 +203,8 @@
     "category": "trading_cards",
     "base_price": 60.0,
     "rarity": "rare",
+    "era": "early_1990s",
+    "provenance_score": 0.89,
     "condition_range": [
       "mint",
       "good",
@@ -209,6 +227,8 @@
     "category": "trading_cards",
     "base_price": 90.0,
     "rarity": "rare",
+    "era": "mid_1980s",
+    "provenance_score": 0.96,
     "condition_range": [
       "mint",
       "good",

@@ -1,4 +1,4 @@
-## Unit tests for SportsMemorabiliaController: authentication workflow,
+## Unit tests for SportsMemorabiliaController: condition grading,
 ## season multiplier logic, and bonus_sale_completed signal on haggle accept.
 extends GutTest
 
@@ -19,11 +19,10 @@ func before_each() -> void:
 	_controller = SportsMemorabiliaController.new()
 	add_child_autofree(_controller)
 	_controller.initialize(1)
-	_controller.initialize_authentication(_inventory, _economy)
 	_controller.set_inventory_system(_inventory)
 
 
-func _make_sports_item(auth_status: String = "none") -> ItemInstance:
+func _make_sports_item(condition: String = "good") -> ItemInstance:
 	var def: ItemDefinition = ItemDefinition.new()
 	def.id = "test_jersey"
 	def.item_name = "Test Jersey"
@@ -34,8 +33,7 @@ func _make_sports_item(auth_status: String = "none") -> ItemInstance:
 	def.tags = PackedStringArray(["CBF", "memorabilia"])
 	def.condition_range = PackedStringArray(["good", "near_mint", "mint"])
 	def.suspicious_chance = 0.0
-	var item: ItemInstance = ItemInstance.create_from_definition(def, "mint")
-	item.authentication_status = auth_status
+	var item: ItemInstance = ItemInstance.create_from_definition(def, condition)
 	return item
 
 
@@ -52,71 +50,44 @@ func _make_sports_item_for_season(league_tag: String) -> ItemInstance:
 	return ItemInstance.create_from_definition(def, "good")
 
 
-## ---  Authentication pass ---
+## --- Condition grading ---
 
 
-func test_authentication_pass_marks_item_authentic() -> void:
-	var item: ItemInstance = _make_sports_item("none")
+func test_condition_selection_updates_item_condition() -> void:
+	var item: ItemInstance = _make_sports_item("good")
 	_inventory._items[item.instance_id] = item
 
-	watch_signals(EventBus)
-	var success: bool = (
-		_controller.get_authentication_system().authenticate(item.instance_id)
+	EventBus.card_condition_selected.emit(
+		StringName(item.instance_id), "mint"
 	)
 
-	assert_true(success, "authenticate should return true for eligible item")
 	assert_eq(
-		item.authentication_status, "authenticated",
-		"Item should be marked authenticated after successful auth"
-	)
-	assert_signal_emitted(
-		EventBus, "authentication_completed",
-		"authentication_completed should fire on success"
-	)
-	var params: Array = get_signal_parameters(
-		EventBus, "authentication_completed"
-	)
-	assert_true(
-		params[1] as bool,
-		"authentication_completed should carry success[0] = true"
-	)
-	assert_gt(
-		_controller.get_authentication_system().get_auth_multiplier(),
-		1.0,
-		"Auth multiplier should be > 1.0 (authenticity premium applied)"
+		item.condition, "mint",
+		"card_condition_selected should update item.condition to mint"
 	)
 
 
-## --- Authentication fail for suspicious item ---
-
-
-func test_authentication_fail_flags_suspicious() -> void:
-	var item: ItemInstance = _make_sports_item("suspicious")
+func test_condition_selection_emits_price_set() -> void:
+	var item: ItemInstance = _make_sports_item("good")
 	_inventory._items[item.instance_id] = item
 
-	watch_signals(EventBus)
-	var success: bool = (
-		_controller.get_authentication_system().authenticate(item.instance_id)
+	var prices: Array[float] = []
+	var capture: Callable = func(iid: String, p: float) -> void:
+		if iid == String(item.instance_id):
+			prices.append(p)
+	EventBus.price_set.connect(capture)
+
+	EventBus.card_condition_selected.emit(
+		StringName(item.instance_id), "mint"
 	)
 
-	assert_false(
-		success,
-		"authenticate should return false for suspicious item"
-	)
-	assert_eq(
-		item.authentication_status, "suspicious",
-		"Suspicious status should remain unchanged after failed auth"
-	)
-	assert_signal_emitted(
-		EventBus, "authentication_completed",
-		"authentication_completed should fire even on failure"
-	)
-	var params: Array = get_signal_parameters(
-		EventBus, "authentication_completed"
-	)
-	assert_false(
-		params[1] as bool,
-		"authentication_completed should carry success[0] = false for suspicious item"
+	EventBus.price_set.disconnect(capture)
+	assert_eq(prices.size(), 1, "price_set should emit once after condition selection")
+	assert_almost_eq(
+		prices[0],
+		150.0 * 2.0,
+		0.001,
+		"Mint condition price should be base_price × 2.0"
 	)
 
 
@@ -176,11 +147,11 @@ func test_out_of_season_no_multiplier() -> void:
 	)
 
 
-## --- Bonus sale signal on authentic haggle accepted ---
+## --- Bonus sale signal on mint-condition haggle accepted ---
 
 
-func test_bonus_sale_signal_on_authentic_haggle_accepted() -> void:
-	var item: ItemInstance = _make_sports_item("authenticated")
+func test_bonus_sale_signal_on_mint_haggle_accepted() -> void:
+	var item: ItemInstance = _make_sports_item("mint")
 	_inventory._items[item.instance_id] = item
 	item.player_set_price = 200.0
 
@@ -196,7 +167,7 @@ func test_bonus_sale_signal_on_authentic_haggle_accepted() -> void:
 
 	assert_signal_emitted(
 		EventBus, "bonus_sale_completed",
-		"bonus_sale_completed should fire when authenticated item sells via accepted haggle"
+		"bonus_sale_completed should fire when mint-condition item sells via accepted haggle"
 	)
 	var params: Array = get_signal_parameters(EventBus, "bonus_sale_completed")
 	assert_eq(
@@ -207,5 +178,25 @@ func test_bonus_sale_signal_on_authentic_haggle_accepted() -> void:
 	var bonus_amount: float = params[1] as float
 	assert_gt(
 		bonus_amount, 0.0,
-		"bonus_amount should be non-zero for authenticated item sale"
+		"bonus_amount should be non-zero for mint-condition item sale"
+	)
+
+
+func test_no_bonus_sale_for_good_condition_haggle() -> void:
+	var item: ItemInstance = _make_sports_item("good")
+	_inventory._items[item.instance_id] = item
+
+	watch_signals(EventBus)
+	EventBus.haggle_completed.emit(
+		SportsMemorabiliaController.STORE_ID,
+		StringName(item.instance_id),
+		180.0,
+		200.0,
+		true,
+		2,
+	)
+
+	assert_signal_not_emitted(
+		EventBus, "bonus_sale_completed",
+		"No bonus sale for good (×1.0) condition item"
 	)

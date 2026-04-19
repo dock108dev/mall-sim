@@ -75,6 +75,12 @@ const CONDITION_ORDER: PackedStringArray = [
 @export var rental_tier: String = ""
 @export var rental_fee: float = 0.0
 @export var rental_period_days: int = 0
+## Day number this title was released/added; used for new-release price decay.
+@export var release_day: int = 0
+## Rental price after the new-release window expires (0 = not applicable).
+@export var catalog_price: float = 0.0
+## Per-item late fee rate override; negative = use store default.
+@export var late_fee_rate: float = -1.0
 @export var brand: String = ""
 @export var product_line: String = ""
 @export var generation: int = 0
@@ -92,7 +98,13 @@ const CONDITION_ORDER: PackedStringArray = [
 @export var platform: String = ""
 @export var region: String = ""
 @export var suspicious_chance: float = 0.0
+## Array of warranty tier Dictionaries ({id, label, margin_percent, acceptance_probability}).
+@export var warranty_tiers: Array = []
 @export var extra: Dictionary = {}
+## Card era label (e.g. "early_1990s"). Required for sports trading cards.
+@export var era: String = ""
+## Provenance authenticity score 0.0–1.0 for sports cards; -1.0 if not applicable.
+@export var provenance_score: float = -1.0
 
 var name: String:
 	get:

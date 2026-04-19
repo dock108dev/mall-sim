@@ -2,6 +2,10 @@
 class_name MilestonesPanel
 extends CanvasLayer
 
+const _MilestoneCardScene: PackedScene = preload(
+	"res://game/scenes/ui/milestone_card.tscn"
+)
+
 
 const PANEL_NAME: String = "milestones"
 
@@ -96,66 +100,20 @@ func _clear_list() -> void:
 
 func _create_milestone_row(milestone: Dictionary) -> void:
 	var mid: String = milestone.get("id", "")
-	var mname: String = milestone.get("display_name", mid)
-	var desc: String = milestone.get("description", "")
-	var reward: String = milestone.get("reward_type", "")
 	var is_done: bool = progression_system.is_milestone_completed(mid)
-	var progress: float = (
-		progression_system.get_milestone_progress(milestone)
-	)
+	var progress: float = progression_system.get_milestone_progress(milestone)
 
-	var row := HBoxContainer.new()
-	row.custom_minimum_size = Vector2(0, 50)
-
-	var status_label := Label.new()
-	status_label.custom_minimum_size = Vector2(30, 0)
-	if is_done:
-		status_label.text = tr("MILESTONE_CHECK_DONE")
-	else:
-		status_label.text = tr("MILESTONE_CHECK_UNDONE")
-	row.add_child(status_label)
-
-	var info_box := VBoxContainer.new()
-	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var name_label := Label.new()
-	name_label.text = mname
-	info_box.add_child(name_label)
-
-	var desc_label := Label.new()
-	desc_label.text = desc
-	desc_label.add_theme_font_size_override("font_size", 12)
-	info_box.add_child(desc_label)
-
-	row.add_child(info_box)
-
-	var right_box := VBoxContainer.new()
-	right_box.custom_minimum_size = Vector2(160, 0)
-
-	var reward_label := Label.new()
-	reward_label.text = reward
-	reward_label.add_theme_font_size_override("font_size", 12)
-	right_box.add_child(reward_label)
-
-	if is_done:
-		var done_label := Label.new()
-		done_label.text = tr("MILESTONE_COMPLETED")
-		done_label.add_theme_color_override(
-			"font_color", Color(0.3, 0.9, 0.3)
-		)
-		right_box.add_child(done_label)
-	else:
-		var progress_label := Label.new()
-		var pct: int = int(progress * 100.0)
-		progress_label.text = tr("MILESTONE_PROGRESS") % pct
-		right_box.add_child(progress_label)
-
-	row.add_child(right_box)
-
-	var sep := HSeparator.new()
-
-	_grid.add_child(row)
-	_grid.add_child(sep)
+	var card: MilestoneCard = _MilestoneCardScene.instantiate() as MilestoneCard
+	card.configure({
+		"milestone_id": mid,
+		"name": milestone.get("display_name", mid),
+		"description": milestone.get("description", ""),
+		"reward": milestone.get("reward_type", ""),
+		"is_completed": is_done,
+		"progress": progress,
+	})
+	_grid.add_child(card)
+	_grid.add_child(HSeparator.new())
 
 
 func _on_panel_opened(panel_name: String) -> void:

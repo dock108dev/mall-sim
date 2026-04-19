@@ -9,6 +9,7 @@ const _ITEM_FIELD_ALIASES: Dictionary = {
 	],
 	"icon_path": ["icon_path", "icon"],
 	"set_name": ["set_name", "set"],
+	"can_be_demo_unit": ["can_be_demo_unit", "demo_unit_eligible"],
 }
 
 const _ITEM_KNOWN_KEYS: Array[String] = [
@@ -16,12 +17,15 @@ const _ITEM_KNOWN_KEYS: Array[String] = [
 	"store_type", "base_price", "rarity", "condition_range",
 	"condition_value_multipliers", "icon_path", "tags", "set_name",
 	"depreciates", "appreciates", "rental_tier", "rental_fee",
-	"rental_period_days", "brand", "product_line", "generation",
+	"rental_period_days", "release_day", "catalog_price", "late_fee_rate",
+	"brand", "product_line", "generation",
 	"lifecycle_phase", "launch_day", "depreciation_rate",
 	"min_value_ratio", "launch_demand_multiplier", "launch_spike_days",
 	"can_be_demo_unit", "monthly_depreciation_rate",
 	"launch_spike_eligible", "launch_spike_multiplier", "supplier_tier",
 	"platform", "region",
+	"warranty_tiers", "demo_unit_eligible",
+	"era", "provenance_score",
 ]
 
 
@@ -92,6 +96,9 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	item.rental_tier = str(normalized.get("rental_tier", ""))
 	item.rental_fee = float(normalized.get("rental_fee", 0.0))
 	item.rental_period_days = int(normalized.get("rental_period_days", 0))
+	item.release_day = int(normalized.get("release_day", 0))
+	item.catalog_price = float(normalized.get("catalog_price", 0.0))
+	item.late_fee_rate = float(normalized.get("late_fee_rate", -1.0))
 	item.brand = str(normalized.get("brand", ""))
 	item.product_line = str(normalized.get("product_line", ""))
 	item.generation = int(normalized.get("generation", 0))
@@ -116,6 +123,11 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	item.supplier_tier = int(normalized.get("supplier_tier", 0))
 	item.platform = str(normalized.get("platform", ""))
 	item.region = str(normalized.get("region", ""))
+	item.era = str(normalized.get("era", ""))
+	item.provenance_score = float(normalized.get("provenance_score", -1.0))
+	var raw_tiers: Variant = normalized.get("warranty_tiers", [])
+	if raw_tiers is Array:
+		item.warranty_tiers = raw_tiers.duplicate(true)
 	if normalized.has("condition_range"):
 		item.condition_range = _normalize_condition_labels(
 			normalized["condition_range"]
@@ -128,6 +140,7 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 		item.tags = ItemDefinition._normalize_string_name_array(
 			normalized["tags"]
 		)
+	_validate_sports_card(item, normalized)
 	var extra: Dictionary = {}
 	for key: String in normalized:
 		if key not in _ITEM_KNOWN_KEYS:
@@ -135,6 +148,25 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	if not extra.is_empty():
 		item.extra = extra
 	return item
+
+
+## Validates required fields for sports trading cards and pushes a boot-time
+## error if any are missing (so boot stops with a visible error panel).
+static func _validate_sports_card(item: ItemDefinition, data: Dictionary) -> void:
+	if str(item.store_type) != "sports":
+		return
+	if str(item.category) != "trading_cards":
+		return
+	var missing: Array[String] = []
+	if item.era.is_empty():
+		missing.append("era")
+	if not data.has("provenance_score"):
+		missing.append("provenance_score")
+	if not missing.is_empty():
+		push_error(
+			"ContentParser: sports trading card '%s' missing required fields: %s"
+			% [item.id, missing]
+		)
 
 
 static func _normalize_item_data(data: Dictionary) -> Dictionary:
@@ -433,6 +465,10 @@ static func parse_seasonal_event(
 		)
 	e.announcement_text = str(data.get("announcement_text", ""))
 	e.active_text = str(data.get("active_text", ""))
+	if data.has("affected_stores"):
+		e.affected_stores = PackedStringArray(data["affected_stores"])
+	e.price_multiplier = float(data.get("price_multiplier", 1.0))
+	e.telegraph_days = int(data.get("telegraph_days", 3))
 	return e
 
 
@@ -826,13 +862,19 @@ static func parse_tournament_event(
 	t.name = str(data.get("name", data.get("display_name", "")))
 	t.description = str(data.get("description", ""))
 	t.card_category = str(data.get("card_category", ""))
+	t.creature_type_focus = str(data.get("creature_type_focus", ""))
 	t.start_day = int(data.get("start_day", data.get("day", 0)))
 	t.duration_days = int(data.get("duration_days", 1))
+	t.telegraph_days = int(data.get("telegraph_days", 1))
 	t.demand_multiplier = float(data.get("demand_multiplier", 1.0))
+	t.price_spike_multiplier = float(
+		data.get("price_spike_multiplier", t.demand_multiplier)
+	)
+	t.traffic_multiplier = float(data.get("traffic_multiplier", 1.0))
 	t.announcement_text = str(data.get("announcement_text", ""))
 	t.active_text = str(data.get("active_text", ""))
 	t.notification_day = int(
-		data.get("notification_day", t.start_day - 1)
+		data.get("notification_day", t.start_day - t.telegraph_days)
 	)
 	return t
 

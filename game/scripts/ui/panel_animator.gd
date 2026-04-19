@@ -292,10 +292,9 @@ static func stagger_fade_in(
 	for node: Control in nodes:
 		node.set_meta(_ACTIVE_TWEEN_META, tween)
 	for i: int in range(nodes.size()):
-		var node: Control = nodes[i]
 		if i > 0:
 			tween.tween_interval(delay_step)
 		tween.tween_property(
-			node, "modulate", Color.WHITE, fade_duration
+			nodes[i], "modulate", Color.WHITE, fade_duration
 		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	return tween

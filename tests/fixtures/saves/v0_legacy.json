@@ -1,0 +1,15 @@
+{
+	"save_version": 0,
+	"metadata": {
+		"day_number": 4,
+		"timestamp": "2026-04-01T12:00:00",
+		"active_store_id": "sports",
+		"play_time": 1234.5
+	},
+	"time": {"current_day": 4, "current_hour": 10},
+	"economy": {"player_cash": 2500.0},
+	"inventory": {},
+	"reputation": {},
+	"owned_stores": ["sports"],
+	"trade": {"legacy_pending_offers": []}
+}

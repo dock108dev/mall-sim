@@ -5,13 +5,17 @@ extends RefCounted
 const PACK_CATEGORY: String = "booster_packs"
 const PACK_SUBCATEGORY: String = "sealed"
 const CARD_CATEGORY: String = "singles"
-const CARDS_CONFIG_PATH: String = (
-	"res://game/content/pocket_creatures_cards.json"
-)
+
+const _VALID_RARITIES: Array[String] = [
+	"common", "uncommon", "rare", "rare_holo",
+	"holo_rare", "secret_rare", "ultra_rare", "energy",
+]
 
 var _data_loader: DataLoader = null
 var _inventory_system: InventorySystem = null
 var _economy_system: EconomySystem = null
+
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _commons_per_pack: int = 6
 var _uncommons_per_pack: int = 3
@@ -24,13 +28,15 @@ var _set_tags: Array[String] = [
 	"base_set", "jungle", "fossil",
 	"team_rocket", "neo_genesis", "crystal_storm",
 ]
+## Per-set-tag pack type configs loaded from packs.json; keyed by set_tag.
+var _pack_type_configs: Dictionary = {}
 var _opening_ids: Dictionary = {}
 var _pending_pack_id: String = ""
 var _pending_pack_cards: Array[ItemInstance] = []
 var _pending_preview_ids: Array[String] = []
 
 
-## Initializes with required system references.
+## Initializes with required system references and loads pack type configs.
 func initialize(
 	data_loader: DataLoader,
 	inventory_system: InventorySystem,
@@ -39,7 +45,12 @@ func initialize(
 	_data_loader = data_loader
 	_inventory_system = inventory_system
 	_economy_system = economy_system
-	_load_cards_config()
+	_load_pack_types(data_loader.get_pocket_creatures_packs())
+
+
+## Seeds the internal RNG for deterministic pack opening.
+func seed_rng(seed: int) -> void:
+	_rng.seed = seed
 
 
 ## Returns true if the item is an openable booster pack.
@@ -230,7 +241,7 @@ func _is_first_edition(pack: ItemInstance) -> bool:
 	return "first_edition" in pack.definition.tags
 
 
-## Generates cards: commons, uncommons, 1 rare slot, 1 energy.
+## Generates cards using per-pack-type config when available, else global defaults.
 func _generate_cards(
 	set_tag: String, is_first_edition: bool,
 ) -> Array[ItemInstance]:
@@ -250,36 +261,38 @@ func _generate_cards(
 		)
 		return []
 
+	var pack_cfg: Dictionary = _pack_type_configs.get(set_tag, {})
+	var commons_count: int = int(pack_cfg.get("commons_count", _commons_per_pack))
+	var uncommons_count: int = int(pack_cfg.get("uncommons_count", _uncommons_per_pack))
+	var rare_chance: float = float(pack_cfg.get("rare_chance", _rare_slot_rare_chance))
+	var holo_chance: float = float(pack_cfg.get("holo_chance", _rare_slot_holo_chance))
+
 	var cards: Array[ItemInstance] = []
 
 	var commons: Array[ItemDefinition] = pool["common"]
-	for i: int in range(_commons_per_pack):
-		var def: ItemDefinition = commons[randi() % commons.size()]
+	for i: int in range(commons_count):
+		var def: ItemDefinition = commons[_rng.randi() % commons.size()]
 		cards.append(_create_card(def))
 
 	var uncommons: Array[ItemDefinition] = pool["uncommon"]
-	for i: int in range(_uncommons_per_pack):
-		var def: ItemDefinition = uncommons[
-			randi() % uncommons.size()
-		]
+	for i: int in range(uncommons_count):
+		var def: ItemDefinition = uncommons[_rng.randi() % uncommons.size()]
 		cards.append(_create_card(def))
 
-	var rare_card: ItemInstance = _roll_rare_slot(pool)
+	var rare_card: ItemInstance = _roll_rare_slot(pool, rare_chance, holo_chance)
 	if rare_card:
 		cards.append(rare_card)
 	else:
-		var fallback: ItemDefinition = commons[
-			randi() % commons.size()
-		]
+		push_warning("PackOpeningSystem: rare slot roll produced no card — substituting common")
+		var fallback: ItemDefinition = commons[_rng.randi() % commons.size()]
 		cards.append(_create_card(fallback))
 
 	var energy_card: ItemInstance = _pick_energy(pool)
 	if energy_card:
 		cards.append(energy_card)
 	else:
-		var fallback: ItemDefinition = commons[
-			randi() % commons.size()
-		]
+		push_warning("PackOpeningSystem: energy slot produced no card — substituting common")
+		var fallback: ItemDefinition = commons[_rng.randi() % commons.size()]
 		cards.append(_create_card(fallback))
 
 	return cards
@@ -339,29 +352,31 @@ func _add_to_pool(
 			)
 
 
-## Rolls the rare slot using weighted RNG from config.
-func _roll_rare_slot(pool: Dictionary) -> ItemInstance:
-	var roll: float = randf()
+## Rolls the rare slot using weighted RNG.
+func _roll_rare_slot(
+	pool: Dictionary, rare_chance: float, holo_chance: float,
+) -> ItemInstance:
+	var roll: float = _rng.randf()
 	var rares: Array[ItemDefinition] = pool["rare"]
 	var holos: Array[ItemDefinition] = pool["holo_rare"]
 	var secrets: Array[ItemDefinition] = pool["secret_rare"]
 
-	if roll < _rare_slot_rare_chance and not rares.is_empty():
-		return _create_card(rares[randi() % rares.size()])
-	elif roll < _rare_slot_rare_chance + _rare_slot_holo_chance:
+	if roll < rare_chance and not rares.is_empty():
+		return _create_card(rares[_rng.randi() % rares.size()])
+	elif roll < rare_chance + holo_chance:
 		if not holos.is_empty():
-			return _create_card(holos[randi() % holos.size()])
+			return _create_card(holos[_rng.randi() % holos.size()])
 		if not rares.is_empty():
-			return _create_card(rares[randi() % rares.size()])
+			return _create_card(rares[_rng.randi() % rares.size()])
 	else:
 		if not secrets.is_empty():
 			return _create_card(
-				secrets[randi() % secrets.size()]
+				secrets[_rng.randi() % secrets.size()]
 			)
 		if not holos.is_empty():
-			return _create_card(holos[randi() % holos.size()])
+			return _create_card(holos[_rng.randi() % holos.size()])
 		if not rares.is_empty():
-			return _create_card(rares[randi() % rares.size()])
+			return _create_card(rares[_rng.randi() % rares.size()])
 	return null
 
 
@@ -370,13 +385,13 @@ func _pick_energy(pool: Dictionary) -> ItemInstance:
 	var energies: Array[ItemDefinition] = pool["energy"]
 	if energies.is_empty():
 		return null
-	return _create_card(energies[randi() % energies.size()])
+	return _create_card(energies[_rng.randi() % energies.size()])
 
 
-## Creates a card ItemInstance with random condition from config.
+## Creates a card ItemInstance with random condition.
 func _create_card(def: ItemDefinition) -> ItemInstance:
 	var condition: String = _pack_conditions[
-		randi() % _pack_conditions.size()
+		_rng.randi() % _pack_conditions.size()
 	]
 	var inst: ItemInstance = ItemInstance.create(
 		def, condition, 0, 0.0
@@ -385,78 +400,38 @@ func _create_card(def: ItemDefinition) -> ItemInstance:
 	return inst
 
 
-## Loads rarity weights, price table, and pack formula from JSON.
-func _load_cards_config() -> void:
-	if not FileAccess.file_exists(CARDS_CONFIG_PATH):
-		push_warning(
-			"PackOpeningSystem: config not found at %s"
-			% CARDS_CONFIG_PATH
-		)
-		return
-	var file: FileAccess = FileAccess.open(
-		CARDS_CONFIG_PATH, FileAccess.READ
-	)
-	if not file:
-		push_warning(
-			"PackOpeningSystem: failed to open %s"
-			% CARDS_CONFIG_PATH
-		)
-		return
-	var json := JSON.new()
-	var err: Error = json.parse(file.get_as_text())
-	file.close()
-	if err != OK:
-		push_error(
-			"PackOpeningSystem: JSON parse error in %s: %s"
-			% [CARDS_CONFIG_PATH, json.get_error_message()]
-		)
-		return
-	var data: Variant = json.data
-	if not data is Dictionary:
-		push_error("PackOpeningSystem: config root must be a Dictionary")
-		return
-	var config: Dictionary = data as Dictionary
-	_apply_config(config)
+## Parses pack type config entries from DataLoader and indexes by set_tag.
+func _load_pack_types(packs: Array) -> void:
+	_pack_type_configs.clear()
+	for entry: Variant in packs:
+		if entry is not Dictionary:
+			continue
+		var set_tag: String = str(entry.get("set_tag", ""))
+		if set_tag.is_empty():
+			continue
+		var rw: Variant = entry.get("rarity_weights", {})
+		var weights: Dictionary = rw as Dictionary if rw is Dictionary else {}
+		var slots: Variant = entry.get("slots", [])
+		var cfg: Dictionary = {
+			"slot_count": int(entry.get("slot_count", 11)),
+			"commons_count": _count_slot_type(slots, "common"),
+			"uncommons_count": _count_slot_type(slots, "uncommon"),
+			"rare_chance": float(weights.get("rare", _rare_slot_rare_chance)),
+			"holo_chance": float(weights.get("holo_rare", _rare_slot_holo_chance)),
+			"cost": float(entry.get("cost", 3.99)),
+		}
+		_pack_type_configs[set_tag] = cfg
+		if set_tag not in _set_tags:
+			_set_tags.append(set_tag)
 
 
-## Applies parsed config values.
-func _apply_config(config: Dictionary) -> void:
-	var formula: Variant = config.get("pack_formula", {})
-	if formula is Dictionary:
-		_commons_per_pack = int(formula.get("commons", _commons_per_pack))
-		_uncommons_per_pack = int(
-			formula.get("uncommons", _uncommons_per_pack)
-		)
-		_energy_per_pack = int(
-			formula.get("energy", _energy_per_pack)
-		)
-
-	var weights: Variant = config.get("rarity_weights", {})
-	if weights is Dictionary:
-		_rare_slot_rare_chance = float(
-			weights.get("rare", _rare_slot_rare_chance)
-		)
-		_rare_slot_holo_chance = float(
-			weights.get("holo_rare", _rare_slot_holo_chance)
-		)
-
-	var prices: Variant = config.get("rarity_price_table", {})
-	if prices is Dictionary:
-		_rarity_price_table = prices as Dictionary
-
-	var conditions: Variant = config.get("pack_conditions", [])
-	if conditions is Array and not conditions.is_empty():
-		_pack_conditions.clear()
-		for cond: Variant in conditions:
-			if cond is String:
-				_pack_conditions.append(cond as String)
-
-	var tags: Variant = config.get("set_tags", [])
-	if tags is Array and not tags.is_empty():
-		_set_tags.clear()
-		for tag: Variant in tags:
-			if tag is String:
-				_set_tags.append(tag as String)
+func _count_slot_type(slots: Variant, slot_type: String) -> int:
+	if slots is not Array:
+		return 0
+	for slot: Variant in slots:
+		if slot is Dictionary and str(slot.get("type", "")) == slot_type:
+			return int(slot.get("count", 0))
+	return 0
 
 
 func _register_cards(cards: Array[ItemInstance]) -> bool:

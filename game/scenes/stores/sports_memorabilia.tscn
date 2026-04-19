@@ -1,6 +1,6 @@
 [gd_scene load_steps=43 format=3 uid="uid://sports_mem_001"]
 
-[ext_resource type="Script" path="res://game/scripts/stores/sports_memorabilia.gd" id="1"]
+[ext_resource type="Script" path="res://game/scripts/stores/sports_memorabilia_controller.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
 [ext_resource type="Script" path="res://game/scripts/components/interactable.gd" id="3"]
 [ext_resource type="Material" path="res://game/assets/materials/mat_floor_wood_warm.tres" id="4"]

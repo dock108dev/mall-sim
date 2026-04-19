@@ -57,8 +57,11 @@ const _BUILD_MODE_DIM_ALPHA: float = 0.5
 @onready var _prompt_label: Label = $PromptLabel
 @onready var _store_label: Label = $StoreLabel
 @onready var _seasonal_event_label: Label = $SeasonalEventLabel
+@onready var _telegraph_card: Label = $TelegraphCard
 @onready var _milestones_button: Button = $MilestonesButton
 @onready var _control_hint_label: Label = $ControlHintLabel
+
+var _telegraphed_events: Dictionary = {}
 
 var _current_day: int = 1
 var _current_hour: int = Constants.STORE_OPEN_HOUR
@@ -74,12 +77,14 @@ var _cash_scale_tween: Tween
 var _cash_color_tween: Tween
 var _rep_arrow_tween: Tween
 var _dim_tween: Tween
+var _close_day_button: Button
 
 
 func _ready() -> void:
 	_prompt_label.visible = false
 	_store_label.visible = false
 	_seasonal_event_label.visible = false
+	_telegraph_card.visible = false
 
 	EventBus.notification_requested.connect(_on_notification_requested)
 	EventBus.panel_opened.connect(_on_panel_opened_track)
@@ -98,11 +103,14 @@ func _ready() -> void:
 	EventBus.seasonal_event_ended.connect(
 		_on_seasonal_event_ended
 	)
+	EventBus.event_telegraphed.connect(_on_event_telegraphed)
 	EventBus.locale_changed.connect(_on_locale_changed)
 	EventBus.build_mode_entered.connect(_on_build_mode_entered)
 	EventBus.build_mode_exited.connect(_on_build_mode_exited)
 	_milestones_button.pressed.connect(_on_milestones_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
+
+	_create_close_day_button()
 
 	_update_cash_display(_displayed_cash)
 	_update_reputation_display(_last_reputation)
@@ -147,6 +155,19 @@ func _on_reputation_changed(
 	_flash_reputation_label(old_value, new_value)
 
 
+func _create_close_day_button() -> void:
+	_close_day_button = Button.new()
+	_close_day_button.name = "CloseDayButton"
+	_close_day_button.text = "Close Day"
+	_close_day_button.pressed.connect(_on_close_day_pressed)
+	_top_bar.add_child(_close_day_button)
+
+
+func _on_close_day_pressed() -> void:
+	if GameManager.current_state == GameManager.GameState.GAMEPLAY:
+		EventBus.day_close_requested.emit()
+
+
 func _on_speed_button_pressed() -> void:
 	if GameManager.current_state != GameManager.GameState.GAMEPLAY:
 		return
@@ -158,6 +179,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed():
 		return
 	if GameManager.current_state != GameManager.GameState.GAMEPLAY:
+		return
+	if event.is_action("close_day"):
+		EventBus.day_close_requested.emit()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action("time_speed_1"):
 		EventBus.time_speed_requested.emit(TimeSystem.SpeedTier.NORMAL)
@@ -357,7 +382,6 @@ func _on_notification_requested(message: String) -> void:
 		show_prompt(message)
 
 
-
 func _on_panel_opened_track(_panel_name: String) -> void:
 	_open_panel_count += 1
 
@@ -383,12 +407,43 @@ func _on_store_closed(_store_id: String) -> void:
 	_store_label.visible = false
 
 
-func _on_seasonal_event_started(_event_id: String) -> void:
+func _on_seasonal_event_started(event_id: String) -> void:
+	_telegraphed_events.erase(event_id)
+	_refresh_telegraph_card()
 	_refresh_seasonal_event_display()
 
 
 func _on_seasonal_event_ended(_event_id: String) -> void:
 	_refresh_seasonal_event_display()
+
+
+func _on_event_telegraphed(event_id: String, days_until: int) -> void:
+	_telegraphed_events[event_id] = days_until
+	_refresh_telegraph_card()
+
+
+func _refresh_telegraph_card() -> void:
+	if _telegraphed_events.is_empty():
+		_telegraph_card.visible = false
+		return
+	var sys: SeasonalEventSystem = _find_seasonal_event_system()
+	var parts: PackedStringArray = []
+	for event_id: String in _telegraphed_events:
+		var days: int = _telegraphed_events[event_id]
+		var display: String = event_id
+		if sys:
+			for evt: Dictionary in sys.get_announced_events():
+				var def: SeasonalEventDefinition = evt.get(
+					"definition", null
+				) as SeasonalEventDefinition
+				if def and def.id == event_id:
+					display = def.name
+					break
+		parts.append("%s in %d day%s" % [
+			display, days, "s" if days != 1 else ""
+		])
+	_telegraph_card.text = "[!] Coming: %s" % ", ".join(parts)
+	_telegraph_card.visible = true
 
 
 func _refresh_seasonal_event_display() -> void:

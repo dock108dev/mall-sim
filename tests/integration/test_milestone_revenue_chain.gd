@@ -150,14 +150,14 @@ func test_no_duplicate_milestone_after_crossing_threshold() -> void:
 
 
 func _build_milestone_defs() -> void:
-	var json_path := "res://game/content/milestones/milestone_definitions.json"
+	var json_path := "res://game/content/progression/milestone_definitions.json"
 	var file := FileAccess.open(json_path, FileAccess.READ)
 	assert_not_null(file, "milestone_definitions.json must be readable")
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	file.close()
-	assert_true(parsed is Dictionary, "JSON root must be a Dictionary")
+	assert_true(parsed is Array, "JSON root must be an Array")
 
-	var entries: Array = (parsed as Dictionary).get("milestones", [])
+	var entries: Array = parsed as Array
 	for entry: Variant in entries:
 		var d: Dictionary = entry as Dictionary
 		var def := MilestoneDefinition.new()

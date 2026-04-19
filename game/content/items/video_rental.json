@@ -93,6 +93,8 @@
       "blockbuster"
     ],
     "rental_fee": 3.5,
+    "catalog_price": 2.0,
+    "release_day": 1,
     "rental_period_days": 1
   },
   {
@@ -117,6 +119,8 @@
       "blockbuster"
     ],
     "rental_fee": 3.5,
+    "catalog_price": 2.0,
+    "release_day": 1,
     "rental_period_days": 1
   },
   {
@@ -140,6 +144,8 @@
       "new_release"
     ],
     "rental_fee": 3.5,
+    "catalog_price": 2.0,
+    "release_day": 1,
     "rental_period_days": 1
   },
   {
@@ -356,6 +362,8 @@
       "new_release"
     ],
     "rental_fee": 4.5,
+    "catalog_price": 3.0,
+    "release_day": 1,
     "rental_period_days": 1
   },
   {
@@ -381,6 +389,8 @@
       "new_release"
     ],
     "rental_fee": 4.5,
+    "catalog_price": 3.0,
+    "release_day": 1,
     "rental_period_days": 1
   },
   {
@@ -627,6 +637,8 @@
       "blockbuster"
     ],
     "rental_fee": 3.5,
+    "catalog_price": 2.0,
+    "release_day": 1,
     "rental_period_days": 1
   },
   {
@@ -651,6 +663,8 @@
       "twist"
     ],
     "rental_fee": 3.5,
+    "catalog_price": 2.0,
+    "release_day": 1,
     "rental_period_days": 1
   }
 ]

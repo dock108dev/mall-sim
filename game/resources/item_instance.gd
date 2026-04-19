@@ -84,7 +84,10 @@ var is_authenticated: bool = false:
 		return _is_authenticated
 var rental_due_day: int = -1
 var is_graded: bool = false
-var grade_value: int = 0
+## Numeric grade index into PriceResolver.GRADE_ORDER (0=F … 5=S); -1 if ungraded.
+var grade_value: int = -1
+## Letter grade assigned by authentication (F/D/C/B/A/S); empty if ungraded.
+var card_grade: String = ""
 
 var _definition: ItemDefinition = null
 var _current_location: String = "backroom"

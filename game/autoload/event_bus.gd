@@ -16,6 +16,13 @@ signal content_load_failed(errors: Array[String])
 signal day_started(day: int)
 signal hour_changed(hour: int)
 signal day_ended(day: int)
+## Emitted by the player via HUD to request early end-of-day.
+signal day_close_requested()
+## Emitted by DayCycleController after all store_day_closed signals have fired.
+## summary keys: day, total_revenue, total_expenses, net_profit, items_sold,
+## rent, net_cash, store_revenue, warranty_revenue, warranty_claims,
+## seasonal_impact, discrepancy, staff_wages
+signal day_closed(day: int, summary: Dictionary)
 signal day_phase_changed(new_phase: int)
 signal speed_changed(new_speed: float)
 signal speed_reduced_by_event(reason: String)
@@ -41,6 +48,9 @@ signal bankruptcy_declared()
 signal player_quit_to_end()
 
 # ── Store Transitions ─────────────────────────────────────────────────────────
+## Emitted by each StoreController when day_ended fires. store_summary contains
+## at least {day: int}; revenue data is in day_closed summary from EconomySystem.
+signal store_day_closed(store_id: StringName, store_summary: Dictionary)
 signal store_entered(store_id: StringName)
 signal store_exited(store_id: StringName)
 signal active_store_changed(store_id: StringName)
@@ -170,6 +180,8 @@ signal trend_updated(category: StringName, multiplier: float)
 
 # ── Seasonal Events ──────────────────────────────────────────────────────────
 signal seasonal_event_announced(event_id: String)
+## Fires telegraph_days before seasonal_event_started; gives players advance notice.
+signal event_telegraphed(event_id: String, days_until: int)
 signal seasonal_event_started(event_id: String)
 signal seasonal_event_ended(event_id: String)
 
@@ -187,6 +199,23 @@ signal authentication_completed(item_id, success: bool, result)
 signal authentication_dialog_requested(item_id)
 signal authentication_rejected(item_id: StringName)
 
+# ── Sports Cards — Authentication & Grading ───────────────────────────────────
+## Emitted when provenance_score meets the authentication threshold.
+signal card_authenticated(item_id: StringName)
+## Emitted when provenance_score falls below the authentication threshold.
+signal card_rejected(item_id: StringName)
+## Emitted after authentication succeeds with the assigned grade (F/D/C/B/A/S).
+signal card_graded(item_id: StringName, grade: String)
+
+# ── Card Condition Grading (Sports Memorabilia) ───────────────────────────────
+## Emitted by ConditionPickerDialog when the player confirms a condition grade.
+signal card_condition_selected(item_id: StringName, condition: String)
+## Emitted to request the condition picker dialog for a sports card item.
+signal condition_picker_requested(item_id: StringName)
+## Emitted by PriceResolver.resolve_for_item after the full multiplier chain
+## (base → seasonal → reputation → event → haggle) has produced a final price.
+signal price_resolved(item_id: StringName, final_price: float, audit_steps: Array)
+
 # ── Provenance Verification (Sports Memorabilia) ─────────────────────────────
 signal provenance_requested(item_id: String, customer: Node)
 signal provenance_accepted(item_id: String)
@@ -197,6 +226,14 @@ signal provenance_completed(item_id: String, success: bool, message: String)
 signal item_testing_started(instance_id: String, duration: float)
 signal item_test_completed(instance_id: String, result: String)
 
+# ── Retro Games — Quality Grading ─────────────────────────────────────────────
+## Emitted by RetroGames.inspect_item() when condition data is ready for display.
+signal inspection_ready(item_id: StringName, condition_data: Dictionary)
+## Emitted by RetroGames.assign_grade() when the player confirms a grade tier.
+signal grade_assigned(item_id: StringName, grade_id: String)
+## Emitted by RetroGames after PriceResolver produces a final graded price.
+signal item_priced(item_id: StringName, price: float)
+
 # ── Refurbishment ─────────────────────────────────────────────────────────────
 signal refurbishment_started(item_id: String, parts_cost: float, duration: int)
 signal refurbishment_completed(item_id: String, success: bool, new_condition: String)
@@ -205,6 +242,7 @@ signal refurbishment_failed(item_id: String)
 # ── Pack Opening ──────────────────────────────────────────────────────────────
 signal pack_opening_started(pack_id: String, card_results: Array[Dictionary])
 signal pack_opened(pack_id: String, cards: Array[String])
+signal items_revealed(pack_id: String, creatures: Array)
 
 # ── Tournament ────────────────────────────────────────────────────────────────
 signal tournament_started(participant_count: int, cost: float)
@@ -215,37 +253,52 @@ signal tournament_resolved(winner_id: StringName, prize: float)
 signal tournament_event_announced(event_id: String)
 signal tournament_event_started(event_id: String)
 signal tournament_event_ended(event_id: String)
-
-# ── Trade (PocketCreatures) ───────────────────────────────────────────────────
-signal trade_offered(customer_id: int, wanted_item_id: String, offered_item_id: String)
-signal trade_offer_received(offer: Dictionary)
-signal trade_accepted(wanted_item_id: String, offered_item_id: String)
-signal trade_declined(customer_id: int)
-signal trade_resolved(offer: Dictionary, accepted: bool)
-signal trade_completed(offered_card_id: String, received_card_id: String)
-signal trade_rejected(offered_card_id: String)
+## Emitted telegraph_days before a scheduled tournament starts.
+signal tournament_telegraphed(tournament_id: String)
+## Emitted at the close of a scheduled tournament's last day with a result summary.
+signal tournament_ended(tournament_id: String, result_summary: Dictionary)
 
 # ── Meta Shift (PocketCreatures) ─────────────────────────────────────────────
 signal meta_shift_announced(rising: Array[String], falling: Array[String])
 signal meta_shift_activated(rising: Array[String], falling: Array[String])
 signal meta_shift_started(card_id: StringName, modifier: float, duration: int)
 signal meta_shift_ended(card_id: StringName)
+## Emitted 1 day before a JSON-defined meta shift activates.
+signal meta_shift_telegraphed(shift_id: String, affected_types: Array[String], message: String)
+## Emitted when a JSON-defined meta shift becomes active; PriceResolver callers should fetch updated multipliers.
+signal meta_shift_applied(shift_id: String, affected_types: Array[String], multiplier: float)
 
 # ── Rental ────────────────────────────────────────────────────────────────────
 signal item_rented(item_id: String, rental_fee: float, rental_tier: String)
 signal rental_returned(item_id: String, degraded: bool)
 signal rental_late_fee(item_id: String, late_fee: float, days_late: int)
 signal rental_item_lost(item_id: String)
+## Canonical rental lifecycle signals (alias set required by ISSUE-020).
+signal title_rented(item_id: String, rental_fee: float, rental_tier: String)
+signal title_returned(item_id: String, degraded: bool)
+## Player waived a late fee; reputation_delta is the positive rep awarded.
+signal late_fee_waived(item_id: String, amount: float, reputation_delta: float)
+## Player (or auto-collect) collected a late fee from an overdue return.
+signal late_fee_collected(item_id: String, amount: float, days_late: int)
 
 # ── Warranty ──────────────────────────────────────────────────────────────────
 signal warranty_purchased(item_id: String, warranty_fee: float)
 signal warranty_claim_triggered(item_id: String, replacement_cost: float)
 signal warranty_offer_presented(item_id: String)
+## Emitted when a customer accepts a warranty pitch for a specific tier.
+signal warranty_accepted(item_id: String, tier_id: String, warranty_fee: float)
+## Emitted when a customer declines a warranty pitch for a specific tier.
+signal warranty_declined(item_id: String, tier_id: String)
 
 # ── Demo Station ──────────────────────────────────────────────────────────────
 signal demo_item_placed(item_id: String)
 signal demo_item_removed(item_id: String, days_on_demo: int)
 signal demo_item_degraded(item_id: String, new_condition: String)
+signal demo_interaction_triggered(item_id: String)
+## Emitted when a demo unit is activated on the floor (canonical mechanic signal).
+signal demo_unit_activated(item_id: String, category: String)
+## Emitted when a demo unit is removed from the floor (canonical mechanic signal).
+signal demo_unit_removed(item_id: String, days_on_demo: int)
 
 # ── Electronics Lifecycle ─────────────────────────────────────────────────────
 signal electronics_product_announced(product_line: String, generation: int, launch_day: int)
