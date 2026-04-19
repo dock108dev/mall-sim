@@ -11,6 +11,15 @@ const NUMERIC: Array = [TYPE_INT, TYPE_FLOAT]
 const STRING_LIKE: Array = [TYPE_STRING, TYPE_STRING_NAME]
 
 const SCHEMAS: Dictionary = {
+	"season": {
+		"required": {
+			"id": [TYPE_STRING],
+			"name": [TYPE_STRING],
+			"event_pool": [TYPE_ARRAY],
+			"price_modifier_table": [TYPE_DICTIONARY],
+			"visual_variant": [TYPE_STRING],
+		},
+	},
 	"item": {
 		"required": {
 			"id": [TYPE_STRING],
@@ -60,6 +69,11 @@ const SCHEMAS: Dictionary = {
 			"id": [TYPE_STRING],
 			"trigger_category": [TYPE_STRING],
 			"flavor_text": [TYPE_STRING],
+			"store_id": [TYPE_STRING],
+			"season_id": [TYPE_STRING],
+			"min_day": [TYPE_INT],
+			"max_day": [TYPE_INT],
+			"duration_seconds": [TYPE_INT, TYPE_FLOAT],
 		},
 	},
 	"secret_thread": {
@@ -67,6 +81,9 @@ const SCHEMAS: Dictionary = {
 			"id": [TYPE_STRING],
 			"display_name": [TYPE_STRING],
 			"steps": [TYPE_ARRAY],
+			"trigger_conditions": [TYPE_ARRAY],
+			"stages": [TYPE_ARRAY],
+			"resolution_text": [TYPE_STRING],
 		},
 	},
 	"milestone": {

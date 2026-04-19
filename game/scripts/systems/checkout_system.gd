@@ -61,6 +61,7 @@ func initialize(
 	EventBus.staff_fired.connect(_on_staff_fired)
 	EventBus.staff_quit.connect(_on_staff_quit)
 	EventBus.staff_morale_changed.connect(_on_staff_morale_changed)
+	EventBus.action_requested.connect(_on_action_requested)
 	_refresh_cashier()
 
 
@@ -396,6 +397,21 @@ func _get_haggle_queue_count() -> int:
 	return maxi(_register_queue.get_size() - 1, 0)
 
 
+func _on_action_requested(action_id: StringName, _store_id: StringName) -> void:
+	if action_id != &"haggle":
+		return
+	if not _active_customer or not _active_item:
+		return
+	if _is_haggling or not _haggle_system:
+		return
+	if _haggle_system.is_active():
+		return
+	_is_haggling = true
+	_haggle_system.begin_negotiation(
+		_active_customer, _active_item, _get_haggle_queue_count()
+	)
+
+
 func _on_customer_countered(
 	new_offer: float, round_number: int
 ) -> void:
@@ -477,6 +493,9 @@ func _execute_rental() -> void:
 		rental_tier = "three_day"
 	if rental_fee <= 0.0:
 		rental_fee = _active_offer
+	if rental_fee <= 0.0:
+		push_error("CheckoutSystem: rental has no valid fee, aborting")
+		return
 	var cust_id: String = ""
 	if _active_customer:
 		cust_id = str(_active_customer.get_instance_id())

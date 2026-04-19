@@ -32,27 +32,31 @@ The checked-in content tree currently includes these canonical subdirectories:
 | Path | Current role |
 | --- | --- |
 | `game/content/items/` | Main item catalogs. |
-| `game/content/stores/` | Store definitions plus store-specific catalogs such as tournaments and sports seasons. |
+| `game/content/stores/` | Store definitions (`store_definitions.json`), store-specific config files (`electronics.json`, `retro_games.json`, `video_rental_config.json`), tournament and sports-season catalogs, and per-store subdirectories (`pocket_creatures/` with `creatures.json` and `packs.json`; `retro_games/` with `grades.json`). |
 | `game/content/customers/` | Customer definitions and personalities-related data. |
 | `game/content/economy/` | Economy and difficulty-related config. |
 | `game/content/events/` | Market, seasonal, random, ambient, and named-season event data. |
 | `game/content/endings/` | Ending definitions. |
-| `game/content/meta/` | Secret thread data. |
+| `game/content/meta/` | Secret thread data and regulars thread data. |
 | `game/content/progression/` | Canonical milestone definitions consumed by both `DataLoader` and `ProgressionSystem`. |
 | `game/content/onboarding/` | Onboarding hint config. |
 | `game/content/staff/` | Staff definitions. |
 | `game/content/suppliers/` | Supplier definitions. |
 | `game/content/unlocks/` | Unlock definitions. |
 
-The root of `game/content/` also contains a handful of config-oriented JSON
-files:
+The root of `game/content/` also contains several config-oriented JSON files:
 
+- `audio_registry.json`
 - `fixtures.json`
+- `haggle_dialogue.json`
 - `market_trends_catalog.json`
 - `meta_shifts.json`
 - `pocket_creatures_cards.json`
 - `tutorial_steps.json`
 - `upgrades.json`
+
+A `localization/` subdirectory is present at the content root but is currently
+empty.
 
 `game/content/` is the single canonical content root. `DataLoaderSingleton`
 loads only from `res://game/content/` with no fallback paths, and

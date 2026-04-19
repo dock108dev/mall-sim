@@ -4,102 +4,107 @@ Date: 2026-04-19
 
 ## Scope
 
-Non-behavioral cleanup pass covering `game/` (autoloads, scripts, scenes, resources).
-`addons/` (vendored GUT) and `tests/` were audited but not modified.
+Cleanup pass over `game/autoload/`, `game/scripts/`, and `game/scenes/` GDScript
+sources. Excluded: `addons/` (vendored GUT). No behavioral changes were made.
 
 ---
 
-## Dead Code Removed
+## Dead code removed
 
-### `game/scenes/world/game_world.gd` — startup profiling system
+### `AMBIENT_BUS` alias constant — `game/autoload/audio_manager.gd`
 
-A complete but disconnected profiling scaffold was measuring UI setup time into
-a variable that was never read and logging it through a no-op function. Removed:
+`const AMBIENT_BUS: String = AMBIENCE_BUS` was defined and used only twice
+internally in the same file (`_create_players()`). The alias existed to smooth
+over an earlier naming inconsistency. All uses now reference `AMBIENCE_BUS`
+directly, matching the canonical constant and the AudioServer bus name.
 
-- `var _startup_time_ms: float = 0.0` — written at two call sites, never read
-- `var start_usec` + `var essential_ms` in `_setup_ui()` — computed only to
-  feed `_startup_time_ms`
-- `_startup_time_ms = essential_ms` assignment
-- `var start_usec` + `var deferred_ms` in `_setup_deferred_panels()` — same
-  pattern
-- `_startup_time_ms += deferred_ms` assignment
-- `_log_panel_profile(deferred_ms)` call
-- `func _log_panel_profile(_deferred_ms: float) -> void: return` — the no-op
-  sink for the above
+### `_apply_locale()` wrapper — `game/autoload/settings.gd`
 
-All 9 removed items were inert. No timing data was ever surfaced to the player,
-emitted as a signal, or used by any other system.
+A two-line pass-through function that only called `_apply_locale_preference()`.
+`apply_settings()` now calls `_apply_locale_preference()` directly. Direct
+callers in `_ready()` and `_on_preference_changed()` already bypassed the wrapper.
 
 ---
 
-## Consistency Changes Made
+## Files refactored
 
-### `game/scenes/world/game_world.gd` — missing type annotation
+### `game/autoload/settings.gd` — constant naming
 
-`var _fixture_catalog` was the only module-level instance variable in the file
-without a type annotation. Changed to `var _fixture_catalog: FixtureCatalogPanel`.
+`const settings_path: String` renamed to `const SETTINGS_PATH: String` to match
+the `ALL_CAPS_SNAKE` convention used by every other constant in the same file
+(`COMMON_RESOLUTIONS`, `REBINDABLE_ACTIONS`, `FONT_SIZE_VALUES`, etc.).
+All 7 internal call sites updated.
 
-### `game/autoload/content_registry.gd` — excess blank lines
+### `game/autoload/difficulty_system.gd` — constant reference update
 
-Three consecutive blank lines between two functions at the end of the event
-validation block reduced to the standard two.
+5 references to `Settings.settings_path` updated to `Settings.SETTINGS_PATH`
+following the rename above.
 
-### `game/scenes/ui/hud.gd` — excess blank lines
+### `game/autoload/audio_manager.gd` — doc-comment syntax fix
 
-Three consecutive blank lines between `_on_notification_requested` and
-`_on_panel_opened_track` reduced to the standard two.
-
----
-
-## Files Over 500 LOC — Status
-
-The following project files exceed 500 lines. Each has a justification or a
-flag for a future dedicated refactor pass.
-
-| Lines | File | Status |
-|-------|------|--------|
-| ~1230 | `game/scenes/world/game_world.gd` | Owns scene composition, 5-tier init, and UI wiring. Extraction candidate: UI factory helper. Flag for follow-up. |
-| ~1179 | `game/scripts/core/save_manager.gd` | Domain-grouped save/load for 20+ systems. Split only with save regression coverage. Flag for follow-up. |
-| ~1043 | `game/autoload/data_loader.gd` | Recursive content discovery + per-type parsing. Extraction candidate: per-type loader classes. Flag for follow-up. |
-| ~921  | `game/scripts/content_parser.gd` | Static parser for every content type. Per-type extraction would help readability. Flag for follow-up. |
-| ~871  | `game/scripts/systems/customer_system.gd` | Customer lifecycle + AI integration. Flag for follow-up. |
-| ~846  | `game/scripts/systems/inventory_system.gd` | Core inventory state owner. Split only with inventory regression coverage. |
-| ~743  | `game/scripts/systems/order_system.gd` | Multi-responsibility: supplier catalog, cart, submission. Extraction candidate: cart helper. |
-| ~707  | `game/scripts/characters/shopper_ai.gd` | Customer behavior state machine. Acceptable for AI complexity. |
+A `##` doc-comment marker was misused as a trailing inline comment inside
+`_setup_event_handler()`. GDScript `##` is a declaration doc-comment and should
+appear before a declaration, not free-floating inside a function body.
+Changed to `#`.
 
 ---
 
-## Architecture Violations Flagged (Not Fixed — Behavioral)
+## Consistency changes
 
-Two store controllers calculate price outside `PriceResolver`, violating the
-single-resolver rule from CLAUDE.md. These require behavioral review before
-fixing and were not changed in this pass:
-
-- `game/scripts/stores/electronics_store_controller.gd` — `get_current_price()`
-  applies a lifecycle multiplier directly instead of routing through
-  `PriceResolver`.
-- `game/scripts/stores/video_rental_store_controller.gd` —
-  `get_effective_rental_price()` returns `def.catalog_price` or `def.rental_fee`
-  directly based on release window instead of routing through `PriceResolver`.
+| File | Change |
+|------|--------|
+| `game/autoload/settings.gd` | `settings_path` → `SETTINGS_PATH` (ALL_CAPS constant) |
+| `game/autoload/difficulty_system.gd` | 5× `Settings.settings_path` → `Settings.SETTINGS_PATH` |
+| `game/autoload/audio_manager.gd` | Removed `AMBIENT_BUS` alias; `##` trailing comment → `#` |
 
 ---
 
-## What Was Confirmed Clean
+## Files still over 500 LOC
 
-- **Signal naming** — all signals follow past-tense convention (`item_sold`,
-  `day_closed`, `late_fee_waived`, etc.).
-- **File/class naming** — all `.gd` files use `snake_case`; all `class_name`
-  declarations use `PascalCase`.
-- **Content as data** — no game content embedded in GDScript files.
-- **Cross-system references** — all inter-system wiring uses the setter-injection
-  pattern or `EventBus` signals; no direct cross-system instantiation found.
-- **Backing variables in resources** — `ItemDefinition` and `ItemInstance` use
-  explicit private backing vars (`_id`, `_rarity`, etc.) as required storage for
-  `@export` properties with custom setters/getters. Not dead code.
-- **`demo_unit_eligible` in `_ITEM_KNOWN_KEYS`** — intentional backward-compat
-  entry so JSON files using the old key do not trigger "unknown key" warnings
-  during content validation.
-- **`store_controller.gd` virtual hooks** — `pass`-body methods documented as
-  virtual overrides for subclasses. Correct pattern; not stub dead code.
-- **`@warning_ignore("unused_signal")` in `event_bus.gd`** — required because
-  signals declared on the bus are consumed across the codebase, not internally.
+None split in this pass — each carries justified complexity or needs dedicated
+test coverage before safe extraction.
+
+| LOC | File | Status |
+|-----|------|--------|
+| ~1226 | `game/scenes/world/game_world.gd` | Scene composition root; five-tier init is load-bearing. Split only with full integration coverage. |
+| ~1199 | `game/scripts/core/save_manager.gd` | Migration-chain hotspot; split only with per-version isolation tests. |
+| ~1050 | `game/autoload/data_loader.gd` | Boot-critical loader; backward-compat API section intentional. |
+| ~926 | `game/scripts/content_parser.gd` | Dense JSON-to-resource mapping; candidate for type-specific helper extraction. |
+| ~871 | `game/scripts/systems/customer_system.gd` | Candidate for spawn/state helper extraction. |
+| ~846 | `game/scripts/systems/inventory_system.gd` | Core state owner; split with inventory regression coverage. |
+| ~743 | `game/scripts/systems/order_system.gd` | Multi-responsibility; extract supplier/cart helpers later. |
+| ~723 | `game/scripts/systems/ambient_moments_system.gd` | Candidate for scheduler/history helper extraction. |
+| ~707 | `game/scripts/characters/shopper_ai.gd` | Candidate for state/behavior helper extraction. |
+| ~685 | `game/scripts/stores/video_rental_store_controller.gd` | Candidate for rental/returns helper extraction. |
+| ~679 | `game/scripts/world/storefront.gd` | Mixed world-building; extract presentation helpers later. |
+| ~667 | `game/autoload/audio_manager.gd` | Core autoload; isolate player-pool helpers in a future pass. |
+| ~655 | `game/scripts/systems/checkout_system.gd` | Runtime-critical; split only with checkout regression coverage. |
+| ~653 | `game/autoload/settings.gd` | Persistence/wiring hotspot; refactor with settings coverage. |
+| ~638 | `game/scripts/systems/secret_thread_system.gd` | Candidate for state-transition helper extraction. |
+| ~628 | `game/scripts/characters/customer.gd` | Candidate for movement/state helper extraction. |
+| ~627 | `game/scripts/systems/seasonal_event_system.gd` | Candidate for calendar/config helpers. |
+| ~611 | `game/scripts/systems/economy_system.gd` | Core state owner; split only with economy regression coverage. |
+| ~559 | `game/scripts/systems/build_mode_system.gd` | Candidate for grid normalization and transition helpers. |
+| ~557 | `game/scripts/systems/store_state_manager.gd` | Candidate for persistence/query helper extraction. |
+| ~545 | `game/scenes/ui/day_summary.gd` | Candidate for section-render helper extraction. |
+| ~531 | `game/autoload/staff_manager.gd` | Candidate for scene lookup and data helpers. |
+| ~531 | `game/scripts/systems/fixture_placement_system.gd` | Candidate for validation/save helpers. |
+| ~527 | `game/scripts/stores/electronics_store_controller.gd` | Dense due to lifecycle + demo + warranty; flagged for follow-up. |
+| ~513 | `game/scripts/ui/day_summary_panel.gd` | Candidate for row/formatting helper extraction. |
+| ~513 | `game/scripts/characters/customer_animator.gd` | Candidate for per-animation builder helpers. |
+
+---
+
+## Flagged for follow-up (not changed in this pass)
+
+**Duplicate haggle thresholds** — `HaggleSystem` defines `INSULT_MOVE_THRESHOLD`
+(0.02) and `CUSTOMER_CONCESSION_THRESHOLD` (0.15) independently of the identical
+constants in `HaggleSession`. `HaggleSession.is_insulting_counter()` already
+encapsulates the comparison; `HaggleSystem` should delegate to that method rather
+than reimplementing the check. Deferred: requires verifying both paths produce
+identical results before consolidating.
+
+**`Settings.VOLUME_BUS_MAP` underused** — `VOLUME_BUS_MAP` maps preference keys
+to bus names but `_apply_audio()` addresses buses with hardcoded strings,
+duplicating the mapping. Consider driving `_apply_audio()` from the map in a
+future settings-coverage pass.

@@ -34,6 +34,7 @@ var _season_cycle_system: SeasonCycleSystem
 var _secret_thread_manager: SecretThreadManager
 var _secret_thread_system: SecretThreadSystem
 var _ambient_moments_system: AmbientMomentsSystem
+var _regulars_log_system: RegularsLogSystem
 var _ending_evaluator: EndingEvaluatorSystem
 var _store_upgrade_system: StoreUpgradeSystem
 var _completion_tracker: CompletionTracker
@@ -177,6 +178,13 @@ func set_ambient_moments_system(
 	system: AmbientMomentsSystem
 ) -> void:
 	_ambient_moments_system = system
+
+
+## Sets the RegularsLogSystem reference for save/load.
+func set_regulars_log_system(
+	system: RegularsLogSystem
+) -> void:
+	_regulars_log_system = system
 
 
 ## Sets the EndingEvaluatorSystem reference for save/load.
@@ -477,6 +485,11 @@ func _collect_save_data() -> Dictionary:
 			_ambient_moments_system.get_save_data()
 		)
 
+	if _regulars_log_system:
+		data["regulars_log"] = (
+			_regulars_log_system.get_save_data()
+		)
+
 	if _ending_evaluator:
 		var ending_data: Dictionary = (
 			_ending_evaluator.get_save_data()
@@ -670,6 +683,13 @@ func _distribute_save_data(data: Dictionary) -> void:
 		if ambient_data is Dictionary:
 			_ambient_moments_system.load_save_data(
 				ambient_data as Dictionary
+			)
+
+	if _regulars_log_system:
+		var regulars_data: Variant = data.get("regulars_log", {})
+		if regulars_data is Dictionary:
+			_regulars_log_system.load_state(
+				regulars_data as Dictionary
 			)
 
 	if _ending_evaluator:

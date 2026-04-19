@@ -205,6 +205,13 @@ func _on_store_entered(store_id: StringName) -> void:
 	EventBus.store_opened.emit(String(STORE_ID))
 
 
+func get_store_actions() -> Array:
+	var actions: Array = super()
+	actions.append({"id": &"open_pack", "label": "Open Pack", "icon": ""})
+	actions.append({"id": &"host_tournament", "label": "Host Tournament", "icon": ""})
+	return actions
+
+
 func _on_store_exited(store_id: StringName) -> void:
 	if store_id != STORE_ID:
 		return

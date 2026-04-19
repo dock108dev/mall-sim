@@ -904,6 +904,11 @@ static func parse_ambient_moment(
 		data.get("scheduling_weight", 1.0)
 	)
 	m.cooldown_days = int(data.get("cooldown_days", 1))
+	m.store_id = str(data.get("store_id", ""))
+	m.season_id = str(data.get("season_id", ""))
+	m.min_day = int(data.get("min_day", 0))
+	m.max_day = int(data.get("max_day", 0))
+	m.duration_seconds = float(data.get("duration_seconds", 8.0))
 	return m
 
 

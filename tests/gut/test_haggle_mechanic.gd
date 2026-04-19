@@ -92,7 +92,7 @@ func test_multi_round_negotiation_terminates_within_max_rounds() -> void:
 		HaggleSystem.MAX_ROUNDS,
 		"Haggle must terminate within max rounds"
 	)
-	assert_eq(HaggleSystem.MAX_ROUNDS, 5, "Max rounds should be 5")
+	assert_eq(HaggleSystem.MAX_ROUNDS, 3, "Max rounds should be 3")
 
 
 func test_accepting_haggle_uses_customer_offer_as_final_price() -> void:

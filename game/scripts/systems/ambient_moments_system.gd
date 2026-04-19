@@ -6,16 +6,21 @@ extends Node
 enum State { IDLE, MONITORING, SUSPENDED }
 
 const MAX_QUEUE_SIZE: int = 3
+## Maximum number of moment cards shown simultaneously in the tray.
+const MAX_ACTIVE_SLOTS: int = 3
 
 var _state: int = State.IDLE
 var _moment_definitions: Array[AmbientMomentDefinition] = []
 var _definition_cache: Dictionary = {}
 var _cooldowns: Dictionary = {}
 var _delivery_queue: Array[StringName] = []
+## Moment IDs currently displayed; value is remaining display time in seconds.
+var _active_moments: Dictionary = {}
 var _delivery_history: Dictionary = {}
 var _recent_item_categories: Dictionary = {}
 var _recent_store_entries: Dictionary = {}
 var _active_store_id: StringName = &""
+var _current_season_id: String = ""
 var _current_hour_context: int = 0
 var _suspend_count: int = 0
 var _secret_moments: AmbientSecretThreadMoments
@@ -69,6 +74,8 @@ func _connect_signals() -> void:
 		EventBus.day_ended.connect(_on_day_ended)
 	if not EventBus.hour_changed.is_connected(_on_hour_changed):
 		EventBus.hour_changed.connect(_on_hour_changed)
+	if not EventBus.season_changed.is_connected(_on_season_changed):
+		EventBus.season_changed.connect(_on_season_changed)
 	if not EventBus.haggle_started.is_connected(_on_haggle_started):
 		EventBus.haggle_started.connect(_on_haggle_started)
 	if not EventBus.haggle_completed.is_connected(_on_haggle_completed):
@@ -123,6 +130,7 @@ func _connect_signals() -> void:
 func _process(delta: float) -> void:
 	if _secret_moments:
 		_secret_moments.process_tick(delta)
+	_tick_active_moments(delta)
 
 
 ## Returns the current scheduler state.
@@ -133,6 +141,16 @@ func get_state() -> int:
 ## Returns the current queued moment count.
 func get_queue_size() -> int:
 	return _delivery_queue.size()
+
+
+## Returns the number of moment cards currently displayed in the tray.
+func get_active_moment_count() -> int:
+	return _active_moments.size()
+
+
+## Overrides the current season ID for filter evaluation (also used in tests).
+func set_current_season_id(season_id: String) -> void:
+	_current_season_id = season_id
 
 
 ## Returns the queued moment IDs in delivery order.
@@ -315,6 +333,8 @@ func _get_eligible_moments(
 			continue
 		if _delivery_queue.size() >= MAX_QUEUE_SIZE:
 			break
+		if not _matches_extended_filter(def):
+			continue
 		if _check_trigger(def, hour):
 			eligible.append(def)
 	return eligible
@@ -422,20 +442,80 @@ func _dispatch_next() -> void:
 		return
 	if _delivery_queue.is_empty():
 		return
+	if _active_moments.size() >= MAX_ACTIVE_SLOTS:
+		return
 	var moment_id: StringName = _delivery_queue.pop_front()
-	var def: AmbientMomentDefinition = _find_definition(
-		String(moment_id)
-	)
+	var def: AmbientMomentDefinition = _find_definition(String(moment_id))
+	var duration: float = 8.0
+	var flavor: String = str(moment_id)
+	var display_type: StringName = &"toast"
+	var audio_cue: StringName = &""
 	if def:
 		_apply_delivery_tracking(def)
-		EventBus.ambient_moment_delivered.emit(
-			moment_id, def.display_type,
-			def.flavor_text, def.audio_cue_id
-		)
+		duration = def.duration_seconds if def.duration_seconds > 0.0 else 8.0
+		flavor = def.flavor_text
+		display_type = def.display_type
+		audio_cue = def.audio_cue_id
+	_active_moments[moment_id] = duration
+	EventBus.ambient_moment_delivered.emit(
+		moment_id, display_type, flavor, audio_cue
+	)
+	EventBus.moment_displayed.emit(moment_id, flavor, duration)
+
+
+func _tick_active_moments(delta: float) -> void:
+	if _active_moments.is_empty():
+		return
+	var expired: Array[StringName] = []
+	for moment_id: StringName in _active_moments:
+		_active_moments[moment_id] = float(_active_moments[moment_id]) - delta
+		if float(_active_moments[moment_id]) <= 0.0:
+			expired.append(moment_id)
+	for moment_id: StringName in expired:
+		_expire_moment(moment_id)
+
+
+func _expire_moment(moment_id: StringName) -> void:
+	_active_moments.erase(moment_id)
+	EventBus.moment_expired.emit(moment_id)
+	if _active_moments.is_empty() and _delivery_queue.is_empty():
+		EventBus.moment_queue_empty.emit()
 	else:
-		EventBus.ambient_moment_delivered.emit(
-			moment_id, &"toast", str(moment_id), &""
-		)
+		_dispatch_next()
+
+
+## Returns false when the moment's store_id, season_id, or day range doesn't
+## match the current game context. Empty fields mean "no constraint".
+func _matches_extended_filter(def: AmbientMomentDefinition) -> bool:
+	if not def.store_id.is_empty():
+		if String(_active_store_id) != def.store_id:
+			return false
+	if not def.season_id.is_empty():
+		if _current_season_id != def.season_id:
+			return false
+	var current_day: int = _get_current_day()
+	if def.min_day > 0 and current_day < def.min_day:
+		return false
+	if def.max_day > 0 and current_day > def.max_day:
+		return false
+	return true
+
+
+func _on_season_changed(new_season: int, _old_season: int) -> void:
+	_current_season_id = _season_int_to_id(new_season)
+
+
+func _season_int_to_id(season: int) -> String:
+	match season:
+		0:
+			return "spring"
+		1:
+			return "summer"
+		2:
+			return "fall"
+		3:
+			return "winter"
+	return ""
 
 
 func _find_definition(
@@ -499,6 +579,7 @@ func _apply_state(data: Dictionary) -> void:
 	_active_store_id = GameManager.get_active_store_id()
 	_suspend_count = 0
 	_delivery_queue = []
+	_active_moments.clear()
 	_recent_item_categories.clear()
 	_recent_store_entries.clear()
 	var queue_data: Variant = data.get("delivery_queue", [])

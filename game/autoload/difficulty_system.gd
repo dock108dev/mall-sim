@@ -167,12 +167,12 @@ func _load_config() -> void:
 
 func _restore_persisted_tier() -> void:
 	var config := ConfigFile.new()
-	var load_err: Error = config.load(Settings.settings_path)
+	var load_err: Error = config.load(Settings.SETTINGS_PATH)
 	if load_err != OK:
-		if FileAccess.file_exists(Settings.settings_path):
+		if FileAccess.file_exists(Settings.SETTINGS_PATH):
 			push_warning(
 				"DifficultySystem: failed to load '%s' — using in-memory tier (%s)"
-				% [Settings.settings_path, error_string(load_err)]
+				% [Settings.SETTINGS_PATH, error_string(load_err)]
 			)
 		_initialized = true
 		return
@@ -188,15 +188,15 @@ func _restore_persisted_tier() -> void:
 
 func _persist_tier() -> void:
 	var config := ConfigFile.new()
-	var load_err: Error = config.load(Settings.settings_path)
-	if load_err != OK and FileAccess.file_exists(Settings.settings_path):
+	var load_err: Error = config.load(Settings.SETTINGS_PATH)
+	if load_err != OK and FileAccess.file_exists(Settings.SETTINGS_PATH):
 		push_warning(
 			"DifficultySystem: failed to load '%s' for persistence — keeping file unchanged"
-			% Settings.settings_path
+			% Settings.SETTINGS_PATH
 		)
 		return
 	config.set_value(SETTINGS_SECTION, SETTINGS_KEY, String(_current_tier_id))
-	var err: Error = config.save(Settings.settings_path)
+	var err: Error = config.save(Settings.SETTINGS_PATH)
 	if err != OK:
 		push_warning(
 			"DifficultySystem: failed to persist tier — %s"

@@ -241,6 +241,47 @@ func test_set_bus_volume_invalid_bus_no_crash() -> void:
 	assert_true(true, "Invalid bus name should not crash")
 
 
+func test_audio_played_emitted_on_play_sfx() -> void:
+	watch_signals(_manager)
+	_manager.play_sfx("purchase_chime")
+	assert_signal_emitted_with_parameters(
+		_manager, "audio_played", ["purchase_chime"],
+		"play_sfx should emit audio_played with the registry key"
+	)
+
+
+func test_audio_played_emitted_on_play_bgm() -> void:
+	watch_signals(_manager)
+	_manager.play_bgm("menu_music")
+	assert_signal_emitted_with_parameters(
+		_manager, "audio_played", ["menu_music"],
+		"play_bgm should emit audio_played with the track key"
+	)
+
+
+func test_audio_played_not_emitted_for_same_bgm_track() -> void:
+	_manager.play_bgm("menu_music")
+	watch_signals(_manager)
+	_manager.play_bgm("menu_music")
+	assert_signal_not_emitted(
+		_manager, "audio_played",
+		"play_bgm for same track should not emit audio_played"
+	)
+
+
+func test_set_volume_delegates_to_bus() -> void:
+	var idx: int = AudioServer.get_bus_index("Music")
+	if idx < 0:
+		pending("Music bus not available in test runner")
+		return
+	_manager.set_volume("Music", 0.4)
+	var actual_db: float = AudioServer.get_bus_volume_db(idx)
+	assert_almost_eq(
+		actual_db, linear_to_db(0.4), 0.01,
+		"set_volume should set the named bus volume"
+	)
+
+
 func test_crossfade_switches_active_player() -> void:
 	_manager.play_bgm("menu_music")
 	var first_player: AudioStreamPlayer = _manager._active_music_player

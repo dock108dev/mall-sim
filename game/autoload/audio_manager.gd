@@ -1,14 +1,18 @@
 ## Manages audio playback for music, SFX, and ambient sounds.
 extends Node
 
+## Emitted on every key-based play call (play_sfx or play_bgm/play_music).
+## Allows external systems to monitor or test audio dispatch without AudioServer.
+signal audio_played(key: String)
+
 const SFX_DIR: String = "res://game/assets/audio/sfx/"
 const MUSIC_DIR: String = "res://game/assets/audio/music/"
 const AMBIANCE_DIR: String = "res://game/assets/audio/ambiance/"
+const AUDIO_REGISTRY_PATH: String = "res://game/content/audio_registry.json"
 const SFX_POOL_SIZE: int = 8
 const SFX_BUS: String = "SFX"
 const MUSIC_BUS: String = "Music"
 const AMBIENCE_BUS: String = "Ambience"
-const AMBIENT_BUS: String = AMBIENCE_BUS
 const DEFAULT_CROSSFADE: float = 0.5
 const AMBIENT_CROSSFADE_DURATION: float = 0.5
 const MUSIC_VOLUME_DB: float = -6.0
@@ -41,9 +45,7 @@ var _event_handler: Node = null
 
 func _ready() -> void:
 	_create_players()
-	_preload_sfx()
-	_preload_music()
-	_preload_ambient()
+	_load_from_registry()
 	_setup_event_handler()
 	if not EventBus.preference_changed.is_connected(_on_preference_changed):
 		EventBus.preference_changed.connect(_on_preference_changed)
@@ -66,14 +68,12 @@ func play_sfx(sound: Variant, volume_db: float = 0.0) -> void:
 		return
 
 	var sound_name: String = String(sound)
+	audio_played.emit(sound_name)
 	if not _sfx_streams.has(sound_name):
 		push_warning("AudioManager: Unknown SFX '%s'" % sound_name)
 		return
 
 	var player: AudioStreamPlayer = _get_available_player()
-	if player == null:
-		return
-
 	player.stream = _sfx_streams[sound_name]
 	player.volume_db = volume_db
 	player.play()
@@ -87,9 +87,6 @@ func _play_sfx_stream(
 		return
 
 	var player: AudioStreamPlayer = _get_available_player()
-	if player == null:
-		return
-
 	player.stream = stream
 	player.volume_db = volume_db
 	player.play()
@@ -102,6 +99,7 @@ func play_bgm(
 	if track_key == _current_track_name:
 		return
 
+	audio_played.emit(track_key)
 	var stream: AudioStream = _resolve_music_stream(track_key)
 	if stream == null:
 		_warn_once(
@@ -342,13 +340,19 @@ func _setup_event_handler() -> void:
 	)
 	add_child(_event_handler)
 	_event_handler.initialize(self)
-	## Keep signal wiring in AudioEventHandler so this autoload only owns
-	## playback state, player pools, and bus volume control.
+	# Keep signal wiring in AudioEventHandler so this autoload only owns
+	# playback state, player pools, and bus volume control.
 
 
 ## Alias for play_bgm — plays a background music track by name.
 func play_music(track_key: String) -> void:
 	play_bgm(track_key)
+
+
+## Sets volume for a named audio bus in linear scale (0.0–1.0).
+## Convenience wrapper over set_bus_volume for String bus names.
+func set_volume(bus: String, value: float) -> void:
+	set_bus_volume(StringName(bus), value)
 
 
 func _kill_zone_tween(zone_id: String) -> void:
@@ -412,11 +416,11 @@ func _create_players() -> void:
 		_on_music_finished.bind(_music_player_b)
 	)
 	_active_music_player = _music_player_a
-	_ambient_player_a = _make_stream_player(AMBIENT_BUS, 0.0)
+	_ambient_player_a = _make_stream_player(AMBIENCE_BUS, 0.0)
 	_ambient_player_a.finished.connect(
 		_on_ambient_finished.bind(_ambient_player_a)
 	)
-	_ambient_player_b = _make_stream_player(AMBIENT_BUS, linear_to_db(0.0))
+	_ambient_player_b = _make_stream_player(AMBIENCE_BUS, linear_to_db(0.0))
 	_ambient_player_b.finished.connect(
 		_on_ambient_finished.bind(_ambient_player_b)
 	)
@@ -433,48 +437,24 @@ func _make_stream_player(
 	return player
 
 
-func _preload_ambient() -> void:
-	_load_audio_dir(
-		{&"mall_hallway": "mall_hallway.wav"}, AMBIANCE_DIR, _ambient_streams
-	)
-
-
-func _preload_sfx() -> void:
-	_load_audio_dir({
-		&"purchase_chime": "purchase_chime.wav",
-		# purchase_ding.wav not yet produced — alias to purchase_chime
-		&"purchase_ding": "purchase_chime.wav",
-		&"door_bell": "door_bell.wav",
-		&"cash_register": "cash_register.wav",
-		&"item_placement": "item_placement.wav",
-		&"ui_click": "ui_click.wav",
-		&"day_end_chime": "day_end_chime.wav",
-		&"notification_ping": "notification_ping.wav",
-		&"haggle_accept": "haggle_accept.wav",
-		&"haggle_reject": "haggle_reject.wav",
-		&"build_place": "build_place.wav",
-		&"build_error": "build_error.wav",
-		# build_mode_enter.wav not yet produced — alias to build_place
-		&"build_mode_enter": "build_place.wav",
-		&"pack_opening": "pack_opening.wav",
-		&"refurbish_start": "refurbish_start.wav",
-		&"refurbish_complete": "refurbish_complete.wav",
-		&"tape_insert": "tape_insert.wav",
-		&"auth_reveal": "auth_reveal.wav",
-		&"demo_activate": "demo_activate.wav",
-	}, SFX_DIR, _sfx_streams)
-
-
-func _preload_music() -> void:
-	_load_audio_dir({
-		&"menu_music": "menu_music.wav",
-		&"day_summary_music": "day_summary_music.wav",
-		&"mall_hallway_music": "mall_hallway_music.wav",
-		# Dedicated variants are not shipped yet, so reuse nearby tracks.
-		&"mall_open_music": "mall_hallway_music.wav",
-		&"mall_close_music": "day_summary_music.wav",
-		&"build_mode_music": "mall_hallway_music.wav",
-	}, MUSIC_DIR, _music_streams)
+func _load_from_registry() -> void:
+	if not FileAccess.file_exists(AUDIO_REGISTRY_PATH):
+		push_error(
+			"AudioManager: audio registry not found: %s" % AUDIO_REGISTRY_PATH
+		)
+		return
+	var file := FileAccess.open(AUDIO_REGISTRY_PATH, FileAccess.READ)
+	if file == null:
+		push_error("AudioManager: cannot open audio registry")
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		push_error("AudioManager: audio registry parse error")
+		return
+	var reg: Dictionary = parsed as Dictionary
+	_load_audio_dir(reg.get("sfx", {}), SFX_DIR, _sfx_streams)
+	_load_audio_dir(reg.get("music", {}), MUSIC_DIR, _music_streams)
+	_load_audio_dir(reg.get("ambient", {}), AMBIANCE_DIR, _ambient_streams)
 
 
 func _load_audio_dir(
@@ -482,6 +462,9 @@ func _load_audio_dir(
 ) -> void:
 	for key: String in files:
 		var path: String = base_dir + files[key]
+		if ".." in path:
+			push_warning("AudioManager: rejecting path with traversal segment: %s" % path)
+			continue
 		if ResourceLoader.exists(path):
 			target[key] = load(path)
 		else:
@@ -662,6 +645,7 @@ func _get_available_player() -> AudioStreamPlayer:
 			_next_player_index = (idx + 1) % SFX_POOL_SIZE
 			return _sfx_players[idx]
 
+	_warn_once("sfx_pool_full", "AudioManager: SFX pool saturated — stealing a playing channel")
 	var player: AudioStreamPlayer = _sfx_players[_next_player_index]
 	_next_player_index = (_next_player_index + 1) % SFX_POOL_SIZE
 	return player

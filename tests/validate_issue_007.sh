@@ -49,37 +49,40 @@ echo ""
 echo "[AC2] Each store type has at least 1 unique interaction SFX"
 
 AUDIO_MGR="$ROOT/game/autoload/audio_manager.gd"
+# Audio keys live in the registry JSON; signal wiring lives in the event handler.
+AUDIO_REG="$ROOT/game/content/audio_registry.json"
+AUDIO_EVT="$ROOT/game/autoload/audio_event_handler.gd"
 
 # Sports Memorabilia -> auth_reveal
-if grep -q 'auth_reveal' "$AUDIO_MGR"; then
+if grep -q 'auth_reveal' "$AUDIO_REG" || grep -q 'auth_reveal' "$AUDIO_EVT"; then
     pass "Sports Memorabilia has auth_reveal SFX"
 else
     fail "Sports Memorabilia missing unique SFX"
 fi
 
 # Retro Games -> refurbish_start / refurbish_complete
-if grep -q 'refurbish_start\|refurbish_complete' "$AUDIO_MGR"; then
+if grep -q 'refurbish_start\|refurbish_complete' "$AUDIO_REG" || grep -q 'refurbish_start\|refurbish_complete' "$AUDIO_EVT"; then
     pass "Retro Games has refurbishment SFX"
 else
     fail "Retro Games missing unique SFX"
 fi
 
 # Video Rental -> tape_insert
-if grep -q 'tape_insert' "$AUDIO_MGR"; then
+if grep -q 'tape_insert' "$AUDIO_REG" || grep -q 'tape_insert' "$AUDIO_EVT"; then
     pass "Video Rental has tape_insert SFX"
 else
     fail "Video Rental missing unique SFX"
 fi
 
 # PocketCreatures -> pack_opening
-if grep -q 'pack_opening' "$AUDIO_MGR"; then
+if grep -q 'pack_opening' "$AUDIO_REG" || grep -q 'pack_opening' "$AUDIO_EVT"; then
     pass "PocketCreatures has pack_opening SFX"
 else
     fail "PocketCreatures missing unique SFX"
 fi
 
 # Consumer Electronics -> demo_activate
-if grep -q 'demo_activate' "$AUDIO_MGR"; then
+if grep -q 'demo_activate' "$AUDIO_REG" || grep -q 'demo_activate' "$AUDIO_EVT"; then
     pass "Consumer Electronics has demo_activate SFX"
 else
     fail "Consumer Electronics missing unique SFX"
@@ -103,7 +106,7 @@ SIGNAL_WIRING=(
 )
 
 for sig in "${SIGNAL_WIRING[@]}"; do
-    if grep -q "EventBus\\.${sig}\\.connect" "$AUDIO_MGR"; then
+    if grep -q "EventBus\\.${sig}\\.connect" "$AUDIO_MGR" || grep -q "EventBus\\.${sig}\\.connect" "$AUDIO_EVT"; then
         pass "EventBus.$sig connected in AudioManager"
     else
         fail "EventBus.$sig not connected in AudioManager"
@@ -114,7 +117,8 @@ done
 echo ""
 echo "[AC4] Haggle accept and reject have distinct sounds"
 
-if grep -q 'haggle_accept' "$AUDIO_MGR" && grep -q 'haggle_reject' "$AUDIO_MGR"; then
+if (grep -q 'haggle_accept' "$AUDIO_REG" || grep -q 'haggle_accept' "$AUDIO_EVT") && \
+   (grep -q 'haggle_reject' "$AUDIO_REG" || grep -q 'haggle_reject' "$AUDIO_EVT"); then
     pass "Haggle accept and reject use distinct SFX names"
 else
     fail "Haggle sounds not distinct"
@@ -139,7 +143,8 @@ fi
 echo ""
 echo "[AC5] Build mode has placement success and error sounds"
 
-if grep -q 'build_place' "$AUDIO_MGR" && grep -q 'build_error' "$AUDIO_MGR"; then
+if (grep -q 'build_place' "$AUDIO_REG" || grep -q 'build_place' "$AUDIO_EVT") && \
+   (grep -q 'build_error' "$AUDIO_REG" || grep -q 'build_error' "$AUDIO_EVT"); then
     pass "Build mode has distinct place and error SFX"
 else
     fail "Build mode missing distinct SFX"
@@ -163,7 +168,7 @@ SFX_KEYS=(
 )
 
 for key in "${SFX_KEYS[@]}"; do
-    if grep -q "\"${key}\"" "$AUDIO_MGR"; then
+    if grep -q "\"${key}\"" "$AUDIO_REG" || grep -q "\"${key}\"" "$AUDIO_EVT" || grep -q "\"${key}\"" "$AUDIO_MGR"; then
         pass "SFX key '$key' registered in AudioManager"
     else
         fail "SFX key '$key' not registered in AudioManager"

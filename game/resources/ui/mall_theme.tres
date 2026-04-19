@@ -1,4 +1,8 @@
-[gd_resource type="Theme" load_steps=14 format=3]
+[gd_resource type="Theme" load_steps=15 format=3]
+
+[sub_resource type="SystemFont" id="mall_font"]
+font_names = PackedStringArray("Verdana", "Tahoma", "Arial Rounded MT Bold", "Arial", "sans-serif")
+font_weight = 700
 
 [sub_resource type="StyleBoxFlat" id="panel_bg"]
 bg_color = Color(0.16, 0.12, 0.1, 0.96)
@@ -246,3 +250,19 @@ PopupPanel/styles/panel = SubResource("panel_bg")
 HSlider/styles/slider = SubResource("lineedit_normal")
 HSlider/styles/grabber_area = SubResource("btn_normal")
 HSlider/styles/grabber_area_highlight = SubResource("btn_hover")
+Label/fonts/font = SubResource("mall_font")
+Button/fonts/font = SubResource("mall_font")
+LineEdit/fonts/font = SubResource("mall_font")
+OptionButton/fonts/font = SubResource("mall_font")
+TabContainer/fonts/font = SubResource("mall_font")
+PopupMenu/fonts/font = SubResource("mall_font")
+HeaderLabel/fonts/font = SubResource("mall_font")
+TitleLabel/fonts/font = SubResource("mall_font")
+MallTheme/colors/teal = Color(0.0, 0.608, 0.608, 1.0)
+MallTheme/colors/burgundy = Color(0.769, 0.071, 0.188, 1.0)
+MallTheme/colors/forest_green = Color(0.176, 0.353, 0.153, 1.0)
+MallTheme/colors/gold = Color(0.788, 0.659, 0.298, 1.0)
+MallTheme/colors/cobalt = Color(0.102, 0.227, 0.420, 1.0)
+MallTheme/colors/cream = Color(0.961, 0.941, 0.910, 1.0)
+MallTheme/colors/near_black = Color(0.11, 0.11, 0.118, 1.0)
+MallTheme/colors/steel = Color(0.722, 0.745, 0.780, 1.0)

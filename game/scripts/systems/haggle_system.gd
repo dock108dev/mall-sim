@@ -3,7 +3,7 @@ class_name HaggleSystem
 extends Node
 
 const BASE_HAGGLE_CHANCE: float = 0.40
-const MAX_ROUNDS: int = 5
+const MAX_ROUNDS: int = 3
 const MIN_COUNTER_CLOSE_RATE: float = 0.25
 const MAX_COUNTER_CLOSE_RATE: float = 0.50
 const INSULT_MOVE_THRESHOLD: float = 0.02
@@ -14,6 +14,13 @@ const REP_SALE_MAX: float = 2.0
 const REP_WALKAWAY_MIN: float = -1.0
 const REP_WALKAWAY_MAX: float = -3.0
 const REP_INSULT_PENALTY: float = -3.0
+
+const MOOD_HIGH: String = "high"
+const MOOD_NEUTRAL: String = "neutral"
+const MOOD_LOW: String = "low"
+const MOOD_HIGH_THRESHOLD: float = 0.10
+const MOOD_NEUTRAL_THRESHOLD: float = 0.25
+const DIALOGUE_PATH: String = "res://game/content/haggle_dialogue.json"
 
 signal negotiation_started(
 	item_name: String,
@@ -26,6 +33,10 @@ signal customer_countered(new_offer: float, round_number: int)
 signal negotiation_accepted(final_price: float)
 signal negotiation_failed()
 signal session_state_changed(session: HaggleSession)
+## Emitted when the customer's mood tier is evaluated. mood is "high", "neutral", or "low".
+signal customer_mood_changed(mood: String)
+## Emitted with a JSON-sourced customer dialogue line.
+signal customer_dialogue_line(text: String)
 
 var _active_customer: Customer = null
 var _active_item: ItemInstance = null
@@ -43,10 +54,20 @@ var _active_store_id: StringName = &""
 var _reputation_system: ReputationSystem = null
 var _session: HaggleSession = null
 var time_per_turn: float = HaggleSession.TIME_PER_TURN_MAX
+var _dialogue: Dictionary = {}
 
 
 func _ready() -> void:
 	EventBus.active_store_changed.connect(_on_active_store_changed)
+	_load_dialogue()
+
+
+func _load_dialogue() -> void:
+	var data: Variant = DataLoaderSingleton.load_json(DIALOGUE_PATH)
+	if data is Dictionary:
+		_dialogue = data as Dictionary
+	else:
+		push_error("HaggleSystem: failed to load haggle_dialogue.json")
 
 
 func _on_active_store_changed(store_id: StringName) -> void:
@@ -111,6 +132,14 @@ func begin_negotiation(
 		_current_customer_offer,
 		_max_rounds_for_customer,
 	)
+	var mood: String = _compute_mood(_sticker_price, _perceived_value)
+	customer_mood_changed.emit(mood)
+	EventBus.customer_mood_changed.emit(
+		StringName(item.instance_id), mood
+	)
+	customer_dialogue_line.emit(
+		_pick_dialogue("opening", mood)
+	)
 	_emit_session_state_changed()
 	return true
 
@@ -126,11 +155,16 @@ func accept_offer() -> void:
 		_session.current_offer = final_price
 		_emit_session_state_changed()
 	_apply_sale_reputation(final_price)
+	customer_dialogue_line.emit(_pick_dialogue("accept", ""))
+	var multiplier: float = _resolve_haggle_price(final_price)
 	EventBus.haggle_completed.emit(
 		_active_store_id, StringName(_active_item.instance_id),
 		final_price, _sticker_price, true, _current_round
 	)
 	negotiation_accepted.emit(final_price)
+	EventBus.haggle_resolved.emit(
+		StringName(_active_item.instance_id), final_price, multiplier
+	)
 	_clear_state()
 
 
@@ -179,11 +213,16 @@ func player_counter(player_price: float) -> void:
 			_session.current_offer = final_price
 			_emit_session_state_changed()
 		_apply_sale_reputation(final_price)
+		customer_dialogue_line.emit(_pick_dialogue("accept", ""))
+		var multiplier: float = _resolve_haggle_price(final_price)
 		EventBus.haggle_completed.emit(
 			_active_store_id, StringName(_active_item.instance_id),
 			final_price, _sticker_price, true, _current_round
 		)
 		negotiation_accepted.emit(final_price)
+		EventBus.haggle_resolved.emit(
+			StringName(_active_item.instance_id), final_price, multiplier
+		)
 		_clear_state()
 		return
 
@@ -194,6 +233,9 @@ func player_counter(player_price: float) -> void:
 			_emit_session_state_changed()
 		_apply_walkaway_reputation_with_insult_check(
 			player_price
+		)
+		customer_dialogue_line.emit(
+			_pick_dialogue("reject_patience", "")
 		)
 		_emit_failure()
 		_clear_state()
@@ -220,6 +262,14 @@ func player_counter(player_price: float) -> void:
 		_session.record_customer_offer(_current_customer_offer)
 		_session.state = HaggleSession.HaggleState.PLAYER_TURN
 		_emit_session_state_changed()
+	var counter_mood: String = _compute_mood(player_price, _perceived_value)
+	customer_mood_changed.emit(counter_mood)
+	EventBus.customer_mood_changed.emit(
+		StringName(_active_item.instance_id), counter_mood
+	)
+	customer_dialogue_line.emit(
+		_pick_dialogue("counter", counter_mood)
+	)
 	customer_countered.emit(
 		_current_customer_offer, _current_round
 	)
@@ -228,6 +278,49 @@ func player_counter(player_price: float) -> void:
 ## Returns whether a negotiation is currently active.
 func is_active() -> bool:
 	return _active_customer != null
+
+
+func _compute_mood(offer_price: float, reference_price: float) -> String:
+	if reference_price <= 0.0:
+		return MOOD_NEUTRAL
+	var markup: float = (offer_price - reference_price) / reference_price
+	if markup <= MOOD_HIGH_THRESHOLD:
+		return MOOD_HIGH
+	if markup <= MOOD_NEUTRAL_THRESHOLD:
+		return MOOD_NEUTRAL
+	return MOOD_LOW
+
+
+func _pick_dialogue(table_key: String, mood: String) -> String:
+	if not _dialogue.has(table_key):
+		return ""
+	var table: Variant = _dialogue[table_key]
+	var candidates: Array = []
+	if table is Dictionary and mood != "" and (table as Dictionary).has(mood):
+		candidates = (table as Dictionary)[mood]
+	elif table is Array:
+		candidates = table as Array
+	if candidates.is_empty():
+		return ""
+	return str(candidates[randi() % candidates.size()])
+
+
+func _resolve_haggle_price(final_price: float) -> float:
+	if _sticker_price <= 0.0 or _active_item == null:
+		return 1.0
+	var multiplier: float = final_price / _sticker_price
+	PriceResolver.resolve_for_item(
+		StringName(_active_item.instance_id),
+		_sticker_price,
+		[{
+			"slot": "haggle",
+			"label": "Haggle",
+			"factor": multiplier,
+			"detail": "Negotiated round %d" % _current_round,
+		}],
+		false,
+	)
+	return multiplier
 
 
 func _calculate_time_per_turn(

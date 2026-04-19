@@ -235,8 +235,10 @@ func _process_file(
 			_pocket_creatures_packs = data.duplicate()
 		return
 	if content_type == "personality_data":
+		# personalities.json is recognized but not yet loaded; loader not implemented
 		return
 	if content_type.is_empty():
+		push_warning("DataLoader: unrecognized content file, skipping: %s" % path)
 		return
 	var entries: Array[Dictionary] = _extract_entries(data)
 	for entry: Dictionary in entries:
@@ -569,6 +571,11 @@ func _parse_named_seasons(data: Dictionary) -> void:
 			)
 			continue
 		var id: String = str(season["id"])
+		var season_errors: Array[String] = ContentSchema.validate(
+			season, "season", "seasons.json"
+		)
+		for err: String in season_errors:
+			_record_load_error(err)
 		_named_seasons[id] = season
 
 

@@ -162,6 +162,29 @@ func _on_store_entered(_store_id: StringName) -> void:
 	pass
 
 
+## Returns the descriptors the ActionDrawer should render for this store.
+## Each entry is {id: StringName, label: String, icon: String}. Subclasses
+## override to append store-specific actions — call `super()` to keep the
+## shared stock/price/inspect set.
+func get_store_actions() -> Array:
+	return [
+		{"id": &"stock", "label": "Stock", "icon": ""},
+		{"id": &"price", "label": "Price", "icon": ""},
+		{"id": &"inspect", "label": "Inspect", "icon": ""},
+		{"id": &"haggle", "label": "Haggle", "icon": ""},
+	]
+
+
+## Emits EventBus.actions_registered so the ActionDrawer can render this
+## store's buttons. Called from the deferred store-entered handler.
+func emit_actions_registered() -> void:
+	if store_type.is_empty():
+		return
+	EventBus.actions_registered.emit(
+		StringName(store_type), get_store_actions()
+	)
+
+
 ## Virtual method called when the player exits this store.
 func _on_store_exited(_store_id: StringName) -> void:
 	pass
@@ -268,4 +291,10 @@ func _connect_signal(sig: Signal, callable: Callable) -> void:
 
 
 func _defer_store_entered(store_id: StringName) -> void:
-	call_deferred("_on_store_entered", store_id)
+	call_deferred("_handle_store_entered", store_id)
+
+
+func _handle_store_entered(store_id: StringName) -> void:
+	_on_store_entered(store_id)
+	if StringName(store_type) == store_id:
+		emit_actions_registered()

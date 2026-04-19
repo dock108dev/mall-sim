@@ -30,6 +30,9 @@ func process_transaction(npc: Customer) -> bool:
 
 	var desired_item: ItemInstance = npc.get_desired_item()
 	if not desired_item or not desired_item.definition:
+		push_warning(
+			"CheckoutSystem: customer %s has no desired item or definition" % customer_id
+		)
 		_processing_ids.erase(customer_id)
 		EventBus.customer_left_mall.emit(npc, false)
 		return false

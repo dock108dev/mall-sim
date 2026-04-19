@@ -41,6 +41,8 @@ var _current_customer_offer: float = 0.0
 
 ## Records a player counter-offer and advances the round.
 func record_player_offer(price: float) -> void:
+	if not is_finite(price) or price <= 0.0:
+		return
 	offer_history.append(price)
 	current_offer = price
 	round_number += 1
@@ -127,12 +129,9 @@ static func create_from_profile(
 
 
 ## Maps customer patience to the number of haggle rounds they will tolerate.
+## Capped at 3: players may submit at most 3 offer rounds; round 4 auto-rejects.
 static func calculate_max_rounds(patience: float) -> int:
 	var clamped_patience: float = clampf(patience, 0.0, 1.0)
-	if clamped_patience >= 0.95:
-		return 5
-	if clamped_patience >= 0.7:
-		return 4
 	if clamped_patience >= 0.45:
 		return 3
 	if clamped_patience >= 0.2:

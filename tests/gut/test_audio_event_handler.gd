@@ -151,6 +151,22 @@ func test_build_mode_exited_restores_mall_open_music() -> void:
 	assert_true(found[0], "build_mode_exited should restore mall_open_music with 0.3 fade")
 
 
+func test_haggle_started_plays_haggle_start_sfx() -> void:
+	EventBus.haggle_started.emit("item_001", 42)
+	assert_true(
+		_mock.sfx_calls.has("haggle_start"),
+		"haggle_started should play haggle_start SFX"
+	)
+
+
+func test_milestone_unlocked_plays_milestone_pop_sfx() -> void:
+	EventBus.milestone_unlocked.emit(&"first_sale", {})
+	assert_true(
+		_mock.sfx_calls.has("milestone_pop"),
+		"milestone_unlocked should play milestone_pop SFX"
+	)
+
+
 func test_no_direct_autoload_references_in_handler() -> void:
 	# Verify the handler holds no direct system references — only the audio node.
 	assert_eq(

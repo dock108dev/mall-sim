@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3 uid="uid://crtoverlay01"]
+
+[ext_resource type="Script" path="res://game/scripts/ui/crt_overlay.gd" id="1"]
+[ext_resource type="Shader" path="res://game/resources/shaders/crt_overlay.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="crt_mat"]
+shader = ExtResource("2")
+shader_parameter/scanline_intensity = 0.25
+shader_parameter/scanline_count = 400.0
+shader_parameter/vignette_strength = 0.35
+shader_parameter/phosphor_tint = Vector3(1.05, 1.0, 0.85)
+
+[node name="CRTOverlay" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1")
+intensity = 0.25
+
+[node name="CRTRect" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+material = SubResource("crt_mat")

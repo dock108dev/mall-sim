@@ -94,6 +94,13 @@ func get_store_type() -> String:
 	return STORE_ID
 
 
+func get_store_actions() -> Array:
+	var actions: Array = super()
+	actions.append({"id": &"demo", "label": "Demo", "icon": ""})
+	actions.append({"id": &"offer_warranty", "label": "Offer Warranty", "icon": ""})
+	return actions
+
+
 ## Returns the current depreciated price for an item, clamped to its floor price.
 func get_current_price(instance_id: String) -> float:
 	if not _inventory_system:
@@ -449,10 +456,8 @@ func _get_next_available_demo_slot() -> Node:
 func _load_demo_config() -> void:
 	var entry_id: StringName = STORE_ID
 	if not ContentRegistry.exists(String(entry_id)):
-		var legacy_entry_id: StringName = &"consumer_electronics"
-		if not ContentRegistry.exists(String(legacy_entry_id)):
-			return
-		entry_id = legacy_entry_id
+		push_error("electronics: store entry '%s' not found in ContentRegistry" % entry_id)
+		return
 	var entry: Dictionary = ContentRegistry.get_entry(entry_id)
 	if entry.is_empty():
 		return

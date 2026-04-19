@@ -66,6 +66,14 @@ signal storefront_exited()
 signal storefront_zone_entered(store_id: String)
 signal storefront_zone_exited(store_id: String)
 
+# ── Store Actions (ActionDrawer) ──────────────────────────────────────────────
+## Emitted by a StoreController when it enters; carries the list of action
+## descriptors ({id: StringName, label: String, icon: String}) that the drawer
+## should render for that store.
+signal actions_registered(store_id: StringName, actions: Array)
+## Emitted by ActionDrawer when the player presses an action button.
+signal action_requested(action_id: StringName, store_id: StringName)
+
 # ── Inventory and Pricing ─────────────────────────────────────────────────────
 signal inventory_updated(store_id: StringName)
 signal inventory_changed()
@@ -118,6 +126,10 @@ signal haggle_requested(item_id: String, customer_id: int)
 signal haggle_started(item_id: String, customer_id: int)
 signal haggle_completed(store_id: StringName, item_id: StringName, final_price: float, asking_price: float, accepted: bool, offer_count: int)
 signal haggle_failed(item_id: String, customer_id: int)
+## Emitted after a haggle resolves with the PriceResolver-computed multiplier applied.
+signal haggle_resolved(item_id: StringName, final_price: float, haggle_multiplier: float)
+## Emitted by HaggleSystem when the customer's mood tier changes during negotiation.
+signal customer_mood_changed(item_id: StringName, mood: String)
 ## Emitted by SportsMemorabiliaController when an authenticated item sells via accepted haggle.
 signal bonus_sale_completed(item_id: StringName, bonus_amount: float)
 
@@ -347,6 +359,14 @@ signal secret_thread_completed(thread_id: StringName, reward_data: Dictionary)
 signal secret_thread_revealed(thread_id: StringName)
 signal secret_thread_failed(thread_id: StringName)
 
+# ── Regulars Log ──────────────────────────────────────────────────────────────
+## Emitted when a customer's visit count first reaches the recognition threshold.
+signal regular_recognized(customer_id: StringName, regular_name: String, visit_count: int)
+## Emitted when a regulars-log thread advances to a new phase (not the final phase).
+signal thread_advanced(thread_id: String, customer_id: StringName, new_phase: int)
+## Emitted when a regulars-log thread reaches its final resolution phase.
+signal thread_resolved(thread_id: String, customer_id: StringName, payoff_text: String)
+
 # ── Ambient Moments ──────────────────────────────────────────────────────────
 signal mystery_item_inspected(instance_id: String)
 signal odd_notification_read(notification_id: String)
@@ -356,6 +376,12 @@ signal wrong_name_customer_interacted()
 signal ambient_moment_queued(moment_id: StringName)
 signal ambient_moment_delivered(moment_id: StringName, display_type: StringName, flavor_text: String, audio_cue_id: StringName)
 signal ambient_moment_cancelled(moment_id: StringName, reason: StringName)
+## Emitted when a moment card becomes visible in the tray.
+signal moment_displayed(moment_id: StringName, flavor_text: String, duration_seconds: float)
+## Emitted when a moment card's display duration expires and it is dismissed.
+signal moment_expired(moment_id: StringName)
+## Emitted when all active moment slots are empty and the waiting queue is also empty.
+signal moment_queue_empty()
 
 # ── Endings ───────────────────────────────────────────────────────────────────
 signal ending_requested(trigger_type: String)

@@ -1,0 +1,102 @@
+[
+	{
+		"id": "the_familiar_face",
+		"display_name": "The Familiar Face",
+		"description": "A quiet visitor becomes a fixture of the store. Over time their daily ritual reveals a story of memory and quiet resilience.",
+		"phases": [
+			{
+				"phase": 1,
+				"trigger": { "type": "visit_count", "threshold": 5 },
+				"narrative_text": "She's here every day. One of the regulars.",
+				"payoff_text": ""
+			},
+			{
+				"phase": 2,
+				"trigger": { "type": "day_range", "min_day": 15, "max_day": 999 },
+				"narrative_text": "She lingered near the new display longer than usual. Something about it seemed familiar.",
+				"payoff_text": ""
+			},
+			{
+				"phase": 3,
+				"trigger": { "type": "visit_count", "threshold": 20 },
+				"narrative_text": "",
+				"payoff_text": "She left a folded note at her usual spot: 'I've been coming here a long time. It's not the same place anymore — but then, neither am I. Thank you for keeping it open.'"
+			}
+		]
+	},
+	{
+		"id": "the_notebook_critic",
+		"display_name": "The Notebook Critic",
+		"description": "A sharp-tongued local reviewer shows up with a notebook and suspicious eyes. Consistent quality earns a grudging upgrade.",
+		"phases": [
+			{
+				"phase": 1,
+				"trigger": { "type": "visit_count", "threshold": 3 },
+				"narrative_text": "A visitor with a notebook. He doesn't look impressed.",
+				"payoff_text": ""
+			},
+			{
+				"phase": 2,
+				"trigger": { "type": "purchase_type", "category": "singles" },
+				"narrative_text": "He bought something. He'll probably return it. He's scribbling in the notebook again.",
+				"payoff_text": ""
+			},
+			{
+				"phase": 3,
+				"trigger": { "type": "visit_count", "threshold": 12 },
+				"narrative_text": "",
+				"payoff_text": "A review appears in the local feed: 'Four stars. The fifth is being held in reserve for the day they fix the pretzel cart location.'"
+			}
+		]
+	},
+	{
+		"id": "the_vacant_unit",
+		"display_name": "The Vacant Unit",
+		"description": "Utility readings in an empty storefront run at suspicious levels. Someone may be using the space after hours.",
+		"phases": [
+			{
+				"phase": 1,
+				"trigger": { "type": "day_range", "min_day": 10, "max_day": 999 },
+				"narrative_text": "Unit 7B shows a minor utility draw. Possible HVAC issue — monitoring.",
+				"payoff_text": ""
+			},
+			{
+				"phase": 2,
+				"trigger": { "type": "visit_count", "threshold": 5 },
+				"narrative_text": "A figure was seen departing the unit at 6:44 AM. They were carrying a laptop bag.",
+				"payoff_text": ""
+			},
+			{
+				"phase": 3,
+				"trigger": { "type": "day_range", "min_day": 25, "max_day": 999 },
+				"narrative_text": "",
+				"payoff_text": "A note appears under your door: 'I know I shouldn't have been here. Thank you for not making it worse than it had to be. The mall is better than I expected.'"
+			}
+		]
+	},
+	{
+		"id": "the_legend",
+		"display_name": "The Legend",
+		"description": "An old rumor circulates about a kid who once lived in this mall during the summer of 1994. Some things turn out to be true.",
+		"phases": [
+			{
+				"phase": 1,
+				"trigger": { "type": "day_range", "min_day": 14, "max_day": 999 },
+				"narrative_text": "Community buzz: 'Anyone remember the story about the kid who lived in the mall in the 90s? My mom swore it was true.'",
+				"payoff_text": ""
+			},
+			{
+				"phase": 2,
+				"trigger": { "type": "visit_count", "threshold": 3 },
+				"narrative_text": "Workers found an old inscription during maintenance: 'P.A. + Pete — Summer 1994. This place saved me.'",
+				"payoff_text": ""
+			},
+			{
+				"phase": 3,
+				"trigger": { "type": "day_range", "min_day": 50, "max_day": 999 },
+				"narrative_text": "",
+				"payoff_text": "An anonymous post: 'It's real. I was there. The mall was the safest place I'd ever been. I'm glad it's still open.'"
+			}
+		]
+	}
+]

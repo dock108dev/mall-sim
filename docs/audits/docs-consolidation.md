@@ -1,5 +1,42 @@
 # Documentation Consolidation Audit
 
+## 2026-04-19 — Content inventory and AIDLC cleanup
+
+### Goal
+
+Correct the content-data doc to match the actual `game/content/` tree and
+remove the auto-generated `AIDLC_FUTURES.md` file that had been recreated after
+the previous deletion pass.
+
+### Deleted
+
+- `AIDLC_FUTURES.md` — auto-generated AIDLC tooling output recreated at root
+  after the prior pass; not project documentation.
+
+### Updated
+
+- `docs/content-data.md` — added missing root content files
+  (`audio_registry.json`, `haggle_dialogue.json`), noted the empty
+  `localization/` subdirectory, expanded the `stores/` entry to name
+  per-store config files (`electronics.json`, `retro_games.json`,
+  `video_rental_config.json`) and subdirectories
+  (`pocket_creatures/creatures.json`, `pocket_creatures/packs.json`,
+  `retro_games/grades.json`), and corrected the `meta/` description to include
+  regulars thread data alongside secret thread data.
+
+### Validation sources
+
+- `ls game/content/` — confirmed `audio_registry.json`, `haggle_dialogue.json`,
+  `localization/` present
+- `ls game/content/stores/` — confirmed `electronics.json`, `retro_games.json`,
+  `pocket_creatures/`, `retro_games/` present
+- `ls game/content/meta/` — confirmed `regulars_threads.json` present alongside
+  `secret_threads.json`
+- `project.godot` autoloads — confirmed unchanged; still matches the 16-entry
+  table in `docs/architecture.md`
+
+---
+
 ## 2026-04-19 — Root cleanup and roadmap pass
 
 ### Goal

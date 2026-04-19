@@ -1,0 +1,41 @@
+{
+  "sfx": {
+    "purchase_chime": "purchase_chime.wav",
+    "purchase_ding": "purchase_chime.wav",
+    "door_bell": "door_bell.wav",
+    "cash_register": "cash_register.wav",
+    "item_placement": "item_placement.wav",
+    "ui_click": "ui_click.wav",
+    "day_end_chime": "day_end_chime.wav",
+    "notification_ping": "notification_ping.wav",
+    "haggle_accept": "haggle_accept.wav",
+    "haggle_reject": "haggle_reject.wav",
+    "haggle_start": "haggle_start.wav",
+    "build_place": "build_place.wav",
+    "build_error": "build_error.wav",
+    "build_mode_enter": "build_place.wav",
+    "pack_opening": "pack_opening.wav",
+    "refurbish_start": "refurbish_start.wav",
+    "refurbish_complete": "refurbish_complete.wav",
+    "tape_insert": "tape_insert.wav",
+    "auth_reveal": "auth_reveal.wav",
+    "demo_activate": "demo_activate.wav",
+    "milestone_pop": "milestone_pop.wav"
+  },
+  "music": {
+    "menu_music": "menu_music.wav",
+    "day_summary_music": "day_summary_music.wav",
+    "mall_hallway_music": "mall_hallway_music.wav",
+    "mall_open_music": "mall_hallway_music.wav",
+    "mall_close_music": "day_summary_music.wav",
+    "build_mode_music": "mall_hallway_music.wav",
+    "sports_store_music": "sports_store_music.wav",
+    "retro_games_music": "retro_games_music.wav",
+    "video_rental_music": "video_rental_music.wav",
+    "card_shop_music": "card_shop_music.wav",
+    "electronics_store_music": "electronics_store_music.wav"
+  },
+  "ambient": {
+    "mall_hallway": "mall_hallway.wav"
+  }
+}

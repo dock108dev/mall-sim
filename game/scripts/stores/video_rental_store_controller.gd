@@ -355,6 +355,13 @@ func _on_store_entered(store_id: StringName) -> void:
 	EventBus.store_opened.emit(String(STORE_ID))
 
 
+func get_store_actions() -> Array:
+	var actions: Array = super()
+	actions.append({"id": &"rent", "label": "Rent", "icon": ""})
+	actions.append({"id": &"process_returns", "label": "Process Returns", "icon": ""})
+	return actions
+
+
 func _on_day_started(day: int) -> void:
 	_daily_late_fee_total = 0.0
 	_process_returns(day)

@@ -116,6 +116,15 @@ func load_save_data(data: Dictionary) -> void:
 
 func _defer_store_entered(store_id: StringName) -> void:
 	_on_store_entered(store_id)
+	if StringName(store_type) == store_id:
+		emit_actions_registered()
+
+
+func get_store_actions() -> Array:
+	var actions: Array = super()
+	actions.append({"id": &"authenticate", "label": "Authenticate", "icon": ""})
+	actions.append({"id": &"grade", "label": "Grade", "icon": ""})
+	return actions
 
 
 func _on_day_started(day: int) -> void:

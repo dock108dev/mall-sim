@@ -4,7 +4,7 @@ extends Node
 
 signal preference_changed(key: StringName, value: Variant)
 
-const settings_path: String = "user://settings.cfg"
+const SETTINGS_PATH: String = "user://settings.cfg"
 
 const COMMON_RESOLUTIONS: Array[Vector2i] = [
 	Vector2i(1280, 720),
@@ -39,6 +39,9 @@ const REBINDABLE_ACTIONS: Array[String] = [
 ## Font size presets: Small, Medium, Large, Extra Large.
 enum FontSize { SMALL, MEDIUM, LARGE, EXTRA_LARGE }
 
+## Rendering quality tiers. LOW disables the CRT overlay and other post-process effects.
+enum RenderQuality { LOW, MEDIUM, HIGH }
+
 const FONT_SIZE_VALUES: Array[int] = [12, 14, 18, 22]
 const FONT_SIZE_LABEL_KEYS: Array[String] = [
 	"SETTINGS_FONT_SMALL", "SETTINGS_FONT_MEDIUM",
@@ -64,6 +67,7 @@ var colorblind_mode: bool = false
 var locale: String = "en"
 var display_mode: int = 1
 var control_scheme: int = 0
+var render_quality: int = RenderQuality.HIGH
 
 ## Supported locales — add entries here when new CSV columns are added.
 const SUPPORTED_LOCALES: Array[Dictionary] = [
@@ -125,12 +129,13 @@ func save_settings() -> void:
 	config.set_value("locale", "language", locale)
 	config.set_value("preferences", "display_mode", display_mode)
 	config.set_value("preferences", "control_scheme", control_scheme)
+	config.set_value("display", "render_quality", render_quality)
 	_save_keybindings(config)
-	var save_err: Error = config.save(settings_path)
+	var save_err: Error = config.save(SETTINGS_PATH)
 	if save_err != OK:
 		push_warning(
 			"Settings: failed to save '%s' — %s"
-			% [settings_path, error_string(save_err)]
+			% [SETTINGS_PATH, error_string(save_err)]
 		)
 
 
@@ -141,26 +146,26 @@ func load() -> void:
 
 func load_settings() -> void:
 	var config := ConfigFile.new()
-	if FileAccess.file_exists(settings_path):
+	if FileAccess.file_exists(SETTINGS_PATH):
 		var settings_file: FileAccess = FileAccess.open(
-			settings_path, FileAccess.READ
+			SETTINGS_PATH, FileAccess.READ
 		)
 		if settings_file and settings_file.get_length() > MAX_SETTINGS_FILE_BYTES:
 			settings_file.close()
 			push_warning(
 				(
 					"Settings: '%s' exceeds maximum supported size (%d bytes) — using defaults"
-					% [settings_path, MAX_SETTINGS_FILE_BYTES]
+					% [SETTINGS_PATH, MAX_SETTINGS_FILE_BYTES]
 				)
 			)
 			_restore_defaults_after_failed_load()
 			return
 		if settings_file:
 			settings_file.close()
-	if config.load(settings_path) != OK:
-		if FileAccess.file_exists(settings_path):
+	if config.load(SETTINGS_PATH) != OK:
+		if FileAccess.file_exists(SETTINGS_PATH):
 			push_warning(
-				"Settings: failed to parse '%s' — using defaults" % settings_path
+				"Settings: failed to parse '%s' — using defaults" % SETTINGS_PATH
 			)
 			_restore_defaults_after_failed_load()
 		return
@@ -202,6 +207,10 @@ func load_settings() -> void:
 	control_scheme = _get_config_int(
 		config, "preferences", "control_scheme", 0
 	)
+	render_quality = _get_config_int(
+		config, "display", "render_quality",
+		RenderQuality.HIGH, RenderQuality.LOW, RenderQuality.HIGH
+	)
 	_load_keybindings(config)
 	apply_settings()
 
@@ -211,7 +220,7 @@ func apply_settings() -> void:
 	_apply_display()
 	_apply_ui_scale()
 	_apply_font_size()
-	_apply_locale()
+	_apply_locale_preference()
 
 
 func reset_to_defaults() -> void:
@@ -228,6 +237,7 @@ func reset_to_defaults() -> void:
 	locale = "en"
 	display_mode = 1
 	control_scheme = 0
+	render_quality = RenderQuality.HIGH
 	reset_keybindings_to_defaults()
 	apply_settings()
 
@@ -511,7 +521,7 @@ func _warn_invalid_config_value(
 	push_warning(
 		(
 			"Settings: invalid value for [%s] %s in '%s' — expected %s, got %s; using default"
-			% [section, key, settings_path, expected, value]
+			% [section, key, SETTINGS_PATH, expected, value]
 		)
 	)
 
@@ -554,10 +564,6 @@ func _apply_font_size() -> void:
 	theme.set_font_size(
 		"font_size", "TitleLabel", int(28.0 * ratio)
 	)
-
-
-func _apply_locale() -> void:
-	_apply_locale_preference()
 
 
 func _apply_locale_preference() -> void:

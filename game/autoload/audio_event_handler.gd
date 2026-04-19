@@ -20,8 +20,10 @@ func _connect_sfx_signals() -> void:
 	EventBus.customer_purchased.connect(_on_customer_purchased)
 	EventBus.item_stocked.connect(_on_item_stocked)
 	EventBus.reputation_changed.connect(_on_reputation_changed)
+	EventBus.haggle_started.connect(_on_haggle_started)
 	EventBus.haggle_completed.connect(_on_haggle_completed)
 	EventBus.haggle_failed.connect(_on_haggle_failed)
+	EventBus.milestone_unlocked.connect(_on_milestone_unlocked)
 	EventBus.fixture_placed.connect(_on_fixture_placed)
 	EventBus.fixture_placement_invalid.connect(_on_fixture_placement_invalid)
 	EventBus.pack_opened.connect(_on_pack_opened)
@@ -82,6 +84,10 @@ func _on_reputation_changed(_store_id: String, _new: float) -> void:
 	_audio.play_sfx("notification_ping")
 
 
+func _on_haggle_started(_item_id: String, _customer_id: int) -> void:
+	_audio.play_sfx("haggle_start")
+
+
 func _on_haggle_completed(
 	_store_id: StringName, _item_id: StringName,
 	_final_price: float, _asking_price: float,
@@ -93,6 +99,12 @@ func _on_haggle_completed(
 
 func _on_haggle_failed(_item_id: String, _customer_id: int) -> void:
 	_audio.play_sfx("haggle_reject")
+
+
+func _on_milestone_unlocked(
+	_milestone_id: StringName, _reward: Dictionary
+) -> void:
+	_audio.play_sfx("milestone_pop")
 
 
 func _on_fixture_placed(

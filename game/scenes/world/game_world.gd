@@ -82,6 +82,9 @@ const _RefurbQueuePanelScene: PackedScene = preload(
 const _WarrantyDialogScene: PackedScene = preload(
 	"res://game/scenes/ui/warranty_dialog.tscn"
 )
+const _MomentsTrayScene: PackedScene = preload(
+	"res://game/scenes/ui/moments_tray.tscn"
+)
 const _DebugOverlayScene: PackedScene = preload(
 	"res://game/scenes/debug/debug_overlay.tscn"
 )
@@ -135,6 +138,9 @@ var reputation_system: ReputationSystem:
 )
 @onready var ambient_moments_system: AmbientMomentsSystem = (
 	$AmbientMomentsSystem
+)
+@onready var regulars_log_system: RegularsLogSystem = (
+	$RegularsLogSystem
 )
 @onready var ending_evaluator: EndingEvaluatorSystem = (
 	$EndingEvaluatorSystem
@@ -360,6 +366,8 @@ func initialize_tier_5_meta() -> void:
 
 	secret_thread_system.initialize(ambient_moments_system)
 
+	regulars_log_system.initialize()
+
 	ending_evaluator.initialize()
 
 	store_upgrade_system.initialize(
@@ -416,6 +424,7 @@ func _wire_save_manager() -> void:
 	save_manager.set_secret_thread_manager(secret_thread_manager)
 	save_manager.set_secret_thread_system(secret_thread_system)
 	save_manager.set_ambient_moments_system(ambient_moments_system)
+	save_manager.set_regulars_log_system(regulars_log_system)
 	save_manager.set_ending_evaluator(ending_evaluator)
 	save_manager.set_store_upgrade_system(store_upgrade_system)
 	save_manager.set_completion_tracker(completion_tracker)
@@ -610,6 +619,11 @@ func _setup_deferred_panels() -> void:
 	var initial_ctrl: StoreController = _find_store_controller(false)
 	if initial_ctrl:
 		_wire_pack_system(initial_ctrl)
+
+	var moments_tray: MomentsTray = (
+		_MomentsTrayScene.instantiate() as MomentsTray
+	)
+	add_child(moments_tray)
 
 	_setup_debug_overlay()
 

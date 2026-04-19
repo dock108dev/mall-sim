@@ -5,10 +5,10 @@
 ## What Was Done This Run
 
 - **Run ID**: aidlc_20260419_132620
-- **Issues planned**: 30
-- **Issues implemented**: 22
-- **Issues verified**: 0
-- **Issues failed**: 3
+- **Issues planned**: 31
+- **Issues implemented**: 30
+- **Issues verified**: 30
+- **Issues failed**: 6
 - **Finalization passes completed**: ssot, security, abend, docs, cleanup
 
 ## Audit Reports

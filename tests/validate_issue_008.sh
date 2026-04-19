@@ -34,10 +34,12 @@ done
 echo ""
 echo "[AC2] Music changes on store entry/exit via AudioManager"
 AM="$ROOT/game/autoload/audio_manager.gd"
-check "grep -q 'storefront_entered.connect' '$AM'" "AudioManager connects to storefront_entered"
-check "grep -q 'storefront_exited.connect' '$AM'" "AudioManager connects to storefront_exited"
-check "grep -q '_play_store_music_for' '$AM'" "AudioManager has _play_store_music_for method"
-check "grep -q 'store_def.music' '$AM'" "AudioManager reads store_def.music field"
+AEH="$ROOT/game/autoload/audio_event_handler.gd"
+AREG="$ROOT/game/content/audio_registry.json"
+check "grep -q 'storefront_entered.connect' '$AEH'" "AudioManager connects to storefront_entered"
+check "grep -q 'storefront_exited.connect' '$AEH'" "AudioManager connects to storefront_exited"
+check "grep -q '_play_store_music_for' '$AEH'" "AudioManager has _play_store_music_for method"
+check "grep -q 'store_def.music' '$AEH'" "AudioManager reads store_def.music field"
 check "grep -q '_crossfade_to' '$AM'" "AudioManager uses crossfade for music transitions"
 
 # AC3: Music loops seamlessly (restart on finished signal)
@@ -56,10 +58,10 @@ check "grep -q 'db_to_linear(MUSIC_VOLUME_DB)' '$AM'" "Crossfade uses MUSIC_VOLU
 # AC5: Mall hallway has its own music distinct from store interiors
 echo ""
 echo "[AC5] Mall hallway has distinct music"
-check "grep -q 'mall_hallway_music' '$AM'" "mall_hallway_music referenced in AudioManager"
-check "grep -q 'play_music(\"mall_hallway_music\")' '$AM'" "Mall hallway music played on store exit"
+check "grep -q 'mall_hallway_music' '$AREG' || grep -q 'mall_hallway_music' '$AEH'" "mall_hallway_music referenced in AudioManager"
+check "grep -q 'play_bgm(\"mall_hallway_music\")' '$AEH' || grep -q 'play_music(\"mall_hallway_music\")' '$AEH'" "Mall hallway music played on store exit"
 # Verify it's not using menu_music for gameplay
-check "! grep -q '_on_storefront_exited.*menu_music' '$AM'" "Store exit does not fall back to menu_music"
+check "! grep -q '_on_storefront_exited.*menu_music' '$AEH'" "Store exit does not fall back to menu_music"
 
 # StoreDefinition has music field
 echo ""

@@ -131,14 +131,6 @@ func test_store_exited_ignores_other_stores() -> void:
 	)
 
 
-func test_can_test_item_returns_false_without_testing_system() -> void:
-	var result: bool = _controller._can_test_item(&"some_item")
-	assert_false(
-		result,
-		"_can_test_item should return false without TestingSystem"
-	)
-
-
 func test_queue_refurbishment_does_not_crash_without_system() -> void:
 	_controller._queue_refurbishment(&"some_item")
 	assert_true(

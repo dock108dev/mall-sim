@@ -1,0 +1,51 @@
+{
+  "opening": {
+    "high": [
+      "That's a reasonable ask. I might bite.",
+      "Could work. I'm listening.",
+      "Not bad. What's the best you can do?"
+    ],
+    "neutral": [
+      "Hmm, not quite what I had in mind.",
+      "That's a stretch. Can you do better?",
+      "I dunno... let me think about that."
+    ],
+    "low": [
+      "You're kidding, right?",
+      "That's way too high for me.",
+      "I wouldn't pay that much. Come on."
+    ]
+  },
+  "counter": {
+    "high": [
+      "Now we're talking.",
+      "Getting closer — keep going.",
+      "I could work with that."
+    ],
+    "neutral": [
+      "Still a bit much.",
+      "Come down a little more.",
+      "Meet me halfway and we've got a deal."
+    ],
+    "low": [
+      "Still not feeling it.",
+      "I've seen better prices elsewhere.",
+      "We're pretty far apart here."
+    ]
+  },
+  "accept": [
+    "Deal! You drive a hard bargain.",
+    "Alright, you got me. I'll take it.",
+    "Fair enough. Sold."
+  ],
+  "reject_patience": [
+    "I'm done negotiating. Forget it.",
+    "You wasted my time. I'm out.",
+    "Too much back and forth. I'll pass."
+  ],
+  "reject_walkaway": [
+    "We're too far apart. Goodbye.",
+    "Not worth my time. I'll find it elsewhere.",
+    "No deal. See ya."
+  ]
+}

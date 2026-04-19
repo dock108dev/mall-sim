@@ -75,16 +75,6 @@ func has_testing_station() -> bool:
 	return _testing_station_slot != null
 
 
-## Returns true if the given item can be tested.
-func _can_test_item(item_id: StringName) -> bool:
-	if not _testing_system or not _inventory_system:
-		return false
-	var item: ItemInstance = _inventory_system.get_item(String(item_id))
-	if not item:
-		return false
-	return _testing_system.can_test(item)
-
-
 ## Returns true if the given item is valid for the testing station.
 func can_test_item(item: ItemInstance) -> bool:
 	if not item or not item.definition:
@@ -230,6 +220,11 @@ func _load_grades() -> void:
 		var gid: Variant = grade_entry.get("id", "")
 		if gid is not String or (gid as String).is_empty():
 			continue
+		var raw_mult: Variant = grade_entry.get("price_multiplier", 1.0)
+		var mult: float = float(raw_mult) if (raw_mult is float or raw_mult is int) else 0.0
+		if not is_finite(mult) or mult <= 0.0:
+			push_warning("RetroGames: skipping grade '%s' — invalid price_multiplier" % (gid as String))
+			continue
 		_grade_table[gid as String] = grade_entry
 
 
@@ -239,6 +234,13 @@ func _on_store_entered(store_id: StringName) -> void:
 	_seed_starter_inventory()
 	_testing_available = has_testing_station()
 	EventBus.store_opened.emit(String(STORE_ID))
+
+
+func get_store_actions() -> Array:
+	var actions: Array = super()
+	actions.append({"id": &"test", "label": "Test", "icon": ""})
+	actions.append({"id": &"refurbish", "label": "Refurbish", "icon": ""})
+	return actions
 
 
 func _on_store_exited(store_id: StringName) -> void:
