@@ -517,8 +517,8 @@ func _setup_deferred_panels() -> void:
 	day_cycle_controller.set_day_summary(_day_summary)
 
 	_mall_overview = _MallOverviewScene.instantiate() as MallOverview
-	_mall_overview.setup(inventory_system, economy_system)
 	_ui_layer.add_child(_mall_overview)
+	_mall_overview.setup(inventory_system, economy_system)
 
 	_fixture_catalog = (
 		_FixtureCatalogScene.instantiate()
@@ -1085,6 +1085,15 @@ func _get_configured_starting_cash() -> float:
 	return starting_cash
 
 
+## Matches `EconomySystem.initialize`: base config × difficulty starting_cash_multiplier.
+func _get_effective_starting_cash() -> float:
+	var base: float = _get_configured_starting_cash()
+	var cash_mult: float = DifficultySystemSingleton.get_modifier(
+		&"starting_cash_multiplier"
+	)
+	return base * cash_mult
+
+
 func _validate_loaded_game_state(save_metadata: Dictionary = {}) -> void:
 	var expected_cash: Variant = save_metadata.get("cash", null)
 	var active_store_raw: String = str(
@@ -1113,7 +1122,7 @@ func _validate_new_game_state(store_id: StringName) -> void:
 		canonical_store_id = store_id
 	var errors: Array[String] = _collect_state_validation_errors(
 		canonical_store_id,
-		_get_configured_starting_cash(),
+		_get_effective_starting_cash(),
 		true,
 		false
 	)

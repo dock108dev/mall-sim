@@ -44,7 +44,7 @@
       "auth_multiplier": 2.0
     },
     "aesthetic_tags": ["wood_shelves", "glass_cases", "poster_walls", "sports_radio"],
-    "ambient_sound": "res://game/assets/audio/ambiance/sports_store.ogg",
+    "ambient_sound": "res://game/assets/audio/ambiance/sports_store.wav",
     "music": "sports_store_music",
     "recommended_markup": {
       "optimal_min": 1.30,
@@ -97,7 +97,7 @@
       "tested_not_working_multiplier": 0.4
     },
     "aesthetic_tags": ["neon_lights", "crt_glow", "cluttered_shelves", "poster_walls"],
-    "ambient_sound": "res://game/assets/audio/ambiance/retro_store.ogg",
+    "ambient_sound": "res://game/assets/audio/ambiance/retro_games_store.wav",
     "music": "retro_games_music",
     "recommended_markup": {
       "optimal_min": 1.25,
@@ -152,7 +152,7 @@
       "grace_period_days": 1
     },
     "aesthetic_tags": ["blue_carpet", "fluorescent_lights", "plastic_cases", "candy_counter"],
-    "ambient_sound": "res://game/assets/audio/ambiance/video_rental.ogg",
+    "ambient_sound": "res://game/assets/audio/ambiance/video_rental_store.wav",
     "music": "video_rental_music",
     "recommended_markup": {
       "optimal_min": 1.40,
@@ -214,7 +214,7 @@
     "available_supplier_tiers": [1, 2, 3],
     "unique_mechanics": ["pack_opening", "tournament_hosting", "meta_shifts"],
     "aesthetic_tags": ["bright_colors", "binder_cases", "booster_towers", "tournament_banners"],
-    "ambient_sound": "res://game/assets/audio/ambiance/card_shop.ogg",
+    "ambient_sound": "res://game/assets/audio/ambiance/card_shop.wav",
     "music": "card_shop_music",
     "recommended_markup": {
       "optimal_min": 1.30,
@@ -268,7 +268,7 @@
     "demo_interest_bonus": 0.20,
     "unique_mechanics": ["demo_units", "product_lifecycle", "warranty_upsell"],
     "aesthetic_tags": ["chrome_shelving", "white_displays", "demo_stations", "product_boxes"],
-    "ambient_sound": "res://game/assets/audio/ambiance/electronics_store.ogg",
+    "ambient_sound": "res://game/assets/audio/ambiance/electronics_store.wav",
     "music": "electronics_store_music",
     "recommended_markup": {
       "optimal_min": 1.15,

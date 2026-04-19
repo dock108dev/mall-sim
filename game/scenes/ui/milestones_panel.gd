@@ -104,6 +104,7 @@ func _create_milestone_row(milestone: Dictionary) -> void:
 	var progress: float = progression_system.get_milestone_progress(milestone)
 
 	var card: MilestoneCard = _MilestoneCardScene.instantiate() as MilestoneCard
+	_grid.add_child(card)
 	card.configure({
 		"milestone_id": mid,
 		"name": milestone.get("display_name", mid),
@@ -112,7 +113,6 @@ func _create_milestone_row(milestone: Dictionary) -> void:
 		"is_completed": is_done,
 		"progress": progress,
 	})
-	_grid.add_child(card)
 	_grid.add_child(HSeparator.new())
 
 

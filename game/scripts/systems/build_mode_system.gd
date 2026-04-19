@@ -520,10 +520,10 @@ func _sync_grid_state_from_placement() -> void:
 
 
 func _duplicate_grid_state(state: Array[Dictionary]) -> Array[Dictionary]:
-	var duplicate: Array[Dictionary] = []
+	var state_copy: Array[Dictionary] = []
 	for entry: Dictionary in state:
-		duplicate.append(_normalize_grid_entry(entry))
-	return duplicate
+		state_copy.append(_normalize_grid_entry(entry))
+	return state_copy
 
 
 func _normalize_grid_state(state: Array[Dictionary]) -> Array[Dictionary]:

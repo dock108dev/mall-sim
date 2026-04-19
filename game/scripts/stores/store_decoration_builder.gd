@@ -44,7 +44,7 @@ static func build(parent: Node3D, store_type: String) -> Node3D:
 	parent.add_child(decorations)
 
 	match store_type:
-		"sports_memorabilia":
+		"sports", "sports_memorabilia":
 			_build_sports(decorations)
 		"retro_games":
 			_build_retro(decorations)

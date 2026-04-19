@@ -46,27 +46,20 @@ func before_each() -> void:
 	_handler.initialize(_mock)
 
 
-func test_store_entered_calls_enter_zone() -> void:
+func test_store_entered_does_not_call_enter_zone() -> void:
+	# Store IDs are not AudioManager hallway zone IDs; ambient/BGM use other handlers.
 	EventBus.store_entered.emit(&"sports_memorabilia")
 	assert_eq(
-		_mock.enter_zone_calls.size(), 1,
-		"store_entered should trigger enter_zone once"
-	)
-	assert_eq(
-		_mock.enter_zone_calls[0], "sports_memorabilia",
-		"enter_zone should receive the correct store_id"
+		_mock.enter_zone_calls.size(), 0,
+		"store_entered must not call enter_zone with a store_id"
 	)
 
 
-func test_store_exited_calls_exit_zone() -> void:
+func test_store_exited_does_not_call_exit_zone() -> void:
 	EventBus.store_exited.emit(&"sports_memorabilia")
 	assert_eq(
-		_mock.exit_zone_calls.size(), 1,
-		"store_exited should trigger exit_zone once"
-	)
-	assert_eq(
-		_mock.exit_zone_calls[0], "sports_memorabilia",
-		"exit_zone should receive the correct store_id"
+		_mock.exit_zone_calls.size(), 0,
+		"store_exited must not call exit_zone with a store_id"
 	)
 
 

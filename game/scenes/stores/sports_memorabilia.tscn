@@ -894,10 +894,6 @@ shape = SubResource("register_area_shape")
 [node name="StoreStaffConfig" type="Node" parent="."]
 script = ExtResource("13")
 max_staff = 2
-register_points = [NodePath("RegisterPoint")]
-backroom_point = NodePath("BackroomPoint")
-greeter_point = NodePath("GreeterPoint")
-break_point = NodePath("StaffBreakPoint")
 
 [node name="RegisterPoint" type="Marker3D" parent="StoreStaffConfig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 1.0)
@@ -917,10 +913,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 1.5)
 
 [node name="CustomerNavConfig" type="Node" parent="."]
 script = ExtResource("14")
-entry_point = NodePath("EntryPoint")
-browse_waypoints = [NodePath("BrowseWaypoint01"), NodePath("BrowseWaypoint02"), NodePath("BrowseWaypoint03"), NodePath("BrowseWaypoint04")]
-checkout_approach = NodePath("CheckoutApproach")
-exit_point = NodePath("ExitPoint")
 max_concurrent_customers = 4
 
 [node name="EntryPoint" type="Marker3D" parent="CustomerNavConfig"]

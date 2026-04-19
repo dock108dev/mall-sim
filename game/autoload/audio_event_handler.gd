@@ -163,12 +163,14 @@ func _on_game_state_changed(_old: int, new_state: int) -> void:
 			_audio.stop_bgm(2.0)
 
 
-func _on_store_entered(store_id: StringName) -> void:
-	_audio.enter_zone(String(store_id))
+func _on_store_entered(_store_id: StringName) -> void:
+	# Store interiors use play_ambient / BGM from storefront + active_store handlers.
+	# enter_zone() is only for hallway-registered zone IDs (see HallwayAmbientZones).
+	pass
 
 
-func _on_store_exited(store_id: StringName) -> void:
-	_audio.exit_zone(String(store_id))
+func _on_store_exited(_store_id: StringName) -> void:
+	pass
 
 
 func _on_storefront_entered(_slot: int, store_id: String) -> void:
