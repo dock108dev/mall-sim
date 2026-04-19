@@ -222,6 +222,8 @@ func _process_file(
 		if data is Dictionary:
 			_retro_games_config = data as Dictionary
 		return
+	if content_type == "retro_games_grades_data":
+		return
 	if content_type == "electronics_config":
 		if data is Dictionary:
 			_electronics_config = data as Dictionary
@@ -270,6 +272,9 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 	var file_base := path.get_file().get_basename()
 	if file_base == "retro_games":
 		return "retro_games_config"
+	if file_base == "grades":
+		# Under stores/retro_games/; loaded by retro_games.gd, not ContentRegistry.
+		return "retro_games_grades_data"
 	if file_base == "electronics":
 		return "electronics_config"
 	if file_base == "video_rental_config":

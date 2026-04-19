@@ -106,7 +106,8 @@ const SCHEMAS: Dictionary = {
 			"id": [TYPE_STRING],
 			"display_name": [TYPE_STRING],
 			"cost": [TYPE_INT, TYPE_FLOAT],
-			"slot_count": [TYPE_INT],
+			# JSON numbers parse as float; parser uses int().
+			"slot_count": NUMERIC,
 		},
 	},
 	"upgrade": {
