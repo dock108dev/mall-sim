@@ -53,7 +53,8 @@ func _load_json(path: String) -> Variant:
 		return null
 	var text := file.get_as_text()
 	file.close()
-	var result := JSON.parse_string(text)
+	var result: Variant
+	result = JSON.parse_string(text)
 	return result
 
 

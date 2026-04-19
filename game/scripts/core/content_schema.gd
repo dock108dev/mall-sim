@@ -71,8 +71,9 @@ const SCHEMAS: Dictionary = {
 			"flavor_text": [TYPE_STRING],
 			"store_id": [TYPE_STRING],
 			"season_id": [TYPE_STRING],
-			"min_day": [TYPE_INT],
-			"max_day": [TYPE_INT],
+			# JSON numbers parse as float in Godot; parser uses int().
+			"min_day": NUMERIC,
+			"max_day": NUMERIC,
 			"duration_seconds": [TYPE_INT, TYPE_FLOAT],
 		},
 	},
