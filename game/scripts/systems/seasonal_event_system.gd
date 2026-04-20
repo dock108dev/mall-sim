@@ -204,14 +204,14 @@ func get_impact_summary() -> String:
 			var pct: int = roundi(
 				(def.customer_traffic_multiplier - 1.0) * 100.0
 			)
-			var sign: String = "+" if pct > 0 else ""
-			parts.append("%s%d%% traffic" % [sign, pct])
+			var pct_sign: String = "+" if pct > 0 else ""
+			parts.append("%s%d%% traffic" % [pct_sign, pct])
 		if not is_equal_approx(def.spending_multiplier, 1.0):
 			var pct: int = roundi(
 				(def.spending_multiplier - 1.0) * 100.0
 			)
-			var sign: String = "+" if pct > 0 else ""
-			parts.append("%s%d%% spending" % [sign, pct])
+			var pct_sign: String = "+" if pct > 0 else ""
+			parts.append("%s%d%% spending" % [pct_sign, pct])
 		if not parts.is_empty():
 			lines.append(
 				"%s: %s" % [def.name, ", ".join(parts)]
@@ -220,7 +220,9 @@ func get_impact_summary() -> String:
 
 
 static func compute_season(day: int) -> int:
-	return ((day - 1) / DAYS_PER_SEASON) % SEASONS_PER_YEAR
+	return (
+		floori((float(day) - 1.0) / float(DAYS_PER_SEASON)) % SEASONS_PER_YEAR
+	)
 
 
 func get_current_season() -> StringName:

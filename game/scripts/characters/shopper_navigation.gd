@@ -23,7 +23,7 @@ func setup(
 	lane_side = LANE_OFFSET if randf() > 0.5 else -LANE_OFFSET
 
 
-func move_toward_target(delta: float) -> void:
+func move_toward_target(_delta: float) -> void:
 	if not target_waypoint or _body == null:
 		return
 	var target_pos: Vector3 = _get_lane_adjusted_position(

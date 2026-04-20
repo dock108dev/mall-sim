@@ -194,11 +194,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		EventBus.time_speed_requested.emit(TimeSystem.SpeedTier.ULTRA)
 		get_viewport().set_input_as_handled()
 	elif event.is_action("time_toggle_pause"):
-		var tier: int = (
-			TimeSystem.SpeedTier.NORMAL if _current_speed <= 0.0
+		var tier: TimeSystem.SpeedTier = (
+			TimeSystem.SpeedTier.NORMAL
+			if _current_speed <= 0.0
 			else TimeSystem.SpeedTier.PAUSED
 		)
-		EventBus.time_speed_requested.emit(tier)
+		EventBus.time_speed_requested.emit(tier as int)
 		get_viewport().set_input_as_handled()
 
 
@@ -216,7 +217,6 @@ func _refresh_time_display() -> void:
 	var phase_key: String = _PHASE_KEYS.get(
 		_current_phase, "HUD_PHASE_MORNING"
 	)
-	var phase_name: String = tr(phase_key)
 	var phase_color: Color = _PHASE_COLORS.get(
 		_current_phase, Color.WHITE
 	)
@@ -224,6 +224,7 @@ func _refresh_time_display() -> void:
 		_current_day, formatted
 	]
 	_time_label.modulate = phase_color
+	_control_hint_label.text = tr(phase_key)
 
 
 func _format_hour_12(hour: int) -> String:

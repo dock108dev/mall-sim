@@ -8,14 +8,14 @@ const _ITEM_FIELD_ALIASES: Dictionary = {
 		"condition_range", "condition_variants",
 	],
 	"icon_path": ["icon_path", "icon"],
-	"set_name": ["set_name", "set"],
+	"product_set_name": ["set_name", "set"],
 	"can_be_demo_unit": ["can_be_demo_unit", "demo_unit_eligible"],
 }
 
 const _ITEM_KNOWN_KEYS: Array[String] = [
 	"id", "item_name", "description", "category", "subcategory",
 	"store_type", "base_price", "rarity", "condition_range",
-	"condition_value_multipliers", "icon_path", "tags", "set_name",
+	"condition_value_multipliers", "icon_path", "tags", "product_set_name",
 	"depreciates", "appreciates", "rental_tier", "rental_fee",
 	"rental_period_days", "release_day", "catalog_price", "late_fee_rate",
 	"brand", "product_line", "generation",
@@ -90,7 +90,7 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	item.base_price = price_val
 	item.rarity = str(normalized.get("rarity", "common"))
 	item.icon_path = str(normalized.get("icon_path", ""))
-	item.set_name = str(normalized.get("set_name", ""))
+	item.product_set_name = str(normalized.get("product_set_name", ""))
 	item.depreciates = bool(normalized.get("depreciates", false))
 	item.appreciates = bool(normalized.get("appreciates", false))
 	item.rental_tier = str(normalized.get("rental_tier", ""))

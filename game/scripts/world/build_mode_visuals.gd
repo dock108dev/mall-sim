@@ -43,7 +43,7 @@ func initialize(
 func update_ghost(
 	grid_pos: Variant,
 	fixture_type: String,
-	rotation: int
+	fixture_rotation: int
 ) -> void:
 	if grid_pos == null or fixture_type.is_empty():
 		_ghost.hide_ghost()
@@ -51,7 +51,7 @@ func update_ghost(
 
 	var cell: Vector2i = grid_pos as Vector2i
 	var cells: Array[Vector2i] = _get_fixture_cells(
-		fixture_type, cell, rotation
+		fixture_type, cell, fixture_rotation
 	)
 
 	var result: PlacementResult = _placement_system.validate_placement(
@@ -83,9 +83,9 @@ func _on_build_mode_exited() -> void:
 
 
 func _on_fixture_placed(
-	fixture_id: String, grid_pos: Vector2i, rotation: int
+	fixture_id: String, grid_pos: Vector2i, fixture_rotation: int
 ) -> void:
-	_play_scale_punch(fixture_id, grid_pos, rotation)
+	_play_scale_punch(fixture_id, grid_pos, fixture_rotation)
 	_cell_overlay.build_overlay()
 
 
@@ -98,10 +98,10 @@ func _on_fixture_selected(fixture_id: String) -> void:
 
 
 func _play_scale_punch(
-	fixture_id: String, grid_pos: Vector2i, rotation: int
+	fixture_id: String, grid_pos: Vector2i, fixture_rotation: int
 ) -> void:
 	var cells: Array[Vector2i] = _get_placed_fixture_cells(
-		fixture_id, grid_pos, rotation
+		fixture_id, grid_pos, fixture_rotation
 	)
 	if cells.is_empty():
 		return
@@ -126,7 +126,7 @@ func _play_scale_punch(
 
 
 func _get_placed_fixture_cells(
-	fixture_id: String, grid_pos: Vector2i, rotation: int
+	fixture_id: String, grid_pos: Vector2i, fixture_rotation: int
 ) -> Array[Vector2i]:
 	var data: Dictionary = _placement_system.get_fixture_data(fixture_id)
 	if data.has("cells"):
@@ -140,7 +140,7 @@ func _get_placed_fixture_cells(
 		fixture_type = _placement_system.get_selected_fixture_type()
 	if fixture_type.is_empty():
 		return []
-	return _get_fixture_cells(fixture_type, grid_pos, rotation)
+	return _get_fixture_cells(fixture_type, grid_pos, fixture_rotation)
 
 
 func _create_punch_footprint(cells: Array[Vector2i]) -> Node3D:
@@ -182,13 +182,13 @@ func _get_cells_center(cells: Array[Vector2i]) -> Vector3:
 func _get_fixture_cells(
 	fixture_type: String,
 	grid_pos: Vector2i,
-	rotation: int
+	fixture_rotation: int
 ) -> Array[Vector2i]:
 	var base_size: Vector2i = _placement_system.get_fixture_size(
 		fixture_type
 	)
 	var size: Vector2i = base_size
-	if rotation % 2 == 1:
+	if fixture_rotation % 2 == 1:
 		size = Vector2i(base_size.y, base_size.x)
 
 	var cells: Array[Vector2i] = []

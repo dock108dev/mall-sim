@@ -19,10 +19,8 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _commons_per_pack: int = 6
 var _uncommons_per_pack: int = 3
-var _energy_per_pack: int = 1
 var _rare_slot_rare_chance: float = 0.64
 var _rare_slot_holo_chance: float = 0.33
-var _rarity_price_table: Dictionary = {}
 var _pack_conditions: Array[String] = ["good", "near_mint", "mint"]
 var _set_tags: Array[String] = [
 	"base_set", "jungle", "fossil",
@@ -49,8 +47,8 @@ func initialize(
 
 
 ## Seeds the internal RNG for deterministic pack opening.
-func seed_rng(seed: int) -> void:
-	_rng.seed = seed
+func seed_rng(rng_seed: int) -> void:
+	_rng.seed = rng_seed
 
 
 ## Returns true if the item is an openable booster pack.

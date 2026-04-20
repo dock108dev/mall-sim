@@ -149,9 +149,9 @@ static func from_collider(collider: Node) -> Interactable:
 	if collider is Interactable:
 		return collider as Interactable
 	if collider.has_meta(String(INTERACTION_OWNER_META)):
-		var owner: Variant = collider.get_meta(String(INTERACTION_OWNER_META))
-		if owner is Interactable and is_instance_valid(owner):
-			return owner as Interactable
+		var meta_owner: Variant = collider.get_meta(String(INTERACTION_OWNER_META))
+		if meta_owner is Interactable and is_instance_valid(meta_owner):
+			return meta_owner as Interactable
 	var current: Node = collider
 	while current != null:
 		if current is Interactable:

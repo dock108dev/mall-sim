@@ -239,6 +239,8 @@ func _process_file(
 	if content_type == "personality_data":
 		# personalities.json is recognized but not yet loaded; loader not implemented
 		return
+	if content_type == "market_trends_catalog_data":
+		return
 	if content_type.is_empty():
 		push_warning("DataLoader: unrecognized content file, skipping: %s" % path)
 		return
@@ -287,6 +289,9 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 		return "sports_season"
 	if file_base == "personalities":
 		return "personality_data"
+	if file_base == "market_trends_catalog":
+		# Loaded by MarketTrendSystem; not registered via DataLoader.
+		return "market_trends_catalog_data"
 	if file_base == "upgrades":
 		return "upgrade"
 	if _DIR_TYPE_MAP.has(dir_name):

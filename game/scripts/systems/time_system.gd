@@ -138,7 +138,9 @@ func get_active_phases() -> Array[DayPhase]:
 
 
 func get_current_month() -> int:
-	var month_index: int = ((current_day - 1) / DAYS_PER_MONTH) % 12
+	var month_index: int = (
+		floori((float(current_day) - 1.0) / float(DAYS_PER_MONTH)) % 12
+	)
 	return month_index + 1
 
 

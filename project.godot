@@ -173,6 +173,10 @@ toggle_pricing={
 ]
 }
 
+[debug]
+
+gdscript/warnings/unused_signal=0
+
 [internationalization]
 
 locale/translations=PackedStringArray("res://game/assets/localization/translations.en.en.translation", "res://game/assets/localization/translations.es.es.translation")

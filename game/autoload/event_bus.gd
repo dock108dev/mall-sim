@@ -1,5 +1,4 @@
 ## Central signal bus for decoupled communication between systems.
-@warning_ignore("unused_signal")
 extends Node
 
 var _latest_day_end_summary: Dictionary = {}

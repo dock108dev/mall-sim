@@ -355,9 +355,13 @@ func _register_alias(
 	if alias.is_empty():
 		return
 	if _entries.has(alias):
-		_emit_error(
-			"ContentRegistry: alias '%s' collides with existing ID"
-			% alias
+		# Optional display-name / path aliases must not claim another entry's ID.
+		_warn_helper_fallback_once(
+			"alias_skips_primary_id_%s" % str(alias),
+			(
+				"ContentRegistry: skipping alias '%s' for '%s' (already a primary ID)"
+				% [alias, canonical]
+			)
 		)
 		return
 	if _aliases.has(alias) and _aliases[alias] != canonical:

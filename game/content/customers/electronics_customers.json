@@ -19,7 +19,7 @@
   },
   {
     "id": "elec_bargain_hunter",
-    "name": "Bargain Hunter",
+    "name": "Electronics Bargain Hunter",
     "store_types": ["electronics"],
     "budget_range": [10.00, 60.00],
     "patience": 0.8,

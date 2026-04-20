@@ -621,7 +621,7 @@ func _on_hour_changed(hour: int) -> void:
 		_request_all_shoppers_leave()
 
 
-func _on_store_entered(_store_id: StringName) -> void:
+func _on_store_entered(_entered_store_id: StringName) -> void:
 	_in_mall_hallway = false
 
 
@@ -638,11 +638,11 @@ func _on_customer_left(customer_data: Dictionary) -> void:
 	_decrement_active_mall_shopper_count()
 
 
-func _on_store_opened(_store_id: String) -> void:
+func _on_store_opened(_opened_store_id: String) -> void:
 	_on_store_entered(&"")
 
 
-func _on_store_closed(_store_id: String) -> void:
+func _on_store_closed(_closed_store_id: String) -> void:
 	_on_active_store_changed(&"")
 
 

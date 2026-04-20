@@ -69,7 +69,7 @@ const CONDITION_ORDER: PackedStringArray = [
 		_tags = _normalize_string_name_array(value)
 	get:
 		return _tags
-@export var set_name: String = ""
+@export var product_set_name: String = ""
 @export var depreciates: bool = false
 @export var appreciates: bool = false
 @export var rental_tier: String = ""
