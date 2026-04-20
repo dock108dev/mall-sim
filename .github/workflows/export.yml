@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  GODOT_VERSION: "4.3"
+  GODOT_VERSION: "4.6.2"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
             exit 1
           fi
 
-          for preset in 'name="Windows Desktop"' 'name="macOS"'; do
+          for preset in 'name="Windows Desktop"' 'name="macOS"' 'name="Linux/X11"'; do
             if ! grep -q "$preset" export_presets.cfg; then
               echo "::error::Missing required preset: $preset"
               exit 1
@@ -61,7 +61,7 @@ jobs:
           fi
 
           if ! grep -q '^binary_format/architecture="x86_64"$' export_presets.cfg; then
-            echo "::error::Windows preset must target x86_64 for Godot 4.3 templates"
+            echo "::error::Windows preset must target x86_64 for Godot export templates"
             exit 1
           fi
 
@@ -213,9 +213,63 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
+  export-linux:
+    name: Export Linux Build
+    needs: validate-export-config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true
+
+      - name: Create output directory
+        run: mkdir -p build/linux
+
+      - name: Import project assets
+        run: bash scripts/godot_import.sh
+        timeout-minutes: 10
+
+      - name: Export Linux
+        run: |
+          set -euo pipefail
+          godot --headless --export-release \
+            "Linux/X11" \
+            "build/linux/MallcoreSim.x86_64"
+        timeout-minutes: 10
+
+      - name: Verify export output
+        run: |
+          set -euo pipefail
+          if [ ! -f "build/linux/MallcoreSim.x86_64" ]; then
+            echo "::error::Export failed — MallcoreSim.x86_64 not produced"
+            exit 1
+          fi
+          echo "Export artifact size: $(du -h build/linux/MallcoreSim.x86_64 | cut -f1)"
+
+      - name: Package Linux artifact
+        run: |
+          tar -czf build/linux/mallcore-sim-linux.tar.gz \
+            -C build/linux MallcoreSim.x86_64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: build/linux/mallcore-sim-linux.tar.gz
+          if-no-files-found: error
+          retention-days: 5
+
   release:
     name: Create GitHub Release
-    needs: [export-windows, export-macos]
+    needs: [export-windows, export-macos, export-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -234,6 +288,12 @@ jobs:
           name: windows-build
           path: artifacts/windows
 
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          path: artifacts/linux
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -243,3 +303,4 @@ jobs:
           files: |
             artifacts/macos/mallcore-sim-macos.zip
             artifacts/windows/mallcore-sim-windows.zip
+            artifacts/linux/mallcore-sim-linux.tar.gz

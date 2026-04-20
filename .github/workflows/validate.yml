@@ -98,6 +98,84 @@ jobs:
 
           exit $GUT_EXIT
 
+  interaction-audit:
+    name: Interaction Audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot import cache
+        uses: actions/cache@v4
+        with:
+          path: .godot
+          key: godot-import-${{ runner.os }}-4.6.2-${{ hashFiles('project.godot', '**/*.import') }}
+          restore-keys: |
+            godot-import-${{ runner.os }}-4.6.2-
+
+      - name: Install Godot
+        run: |
+          GODOT_VERSION="4.6.2-stable"
+          GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          wget -q "$GODOT_URL" -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo mv /tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+
+      - name: Import project
+        run: bash scripts/godot_import.sh
+
+      - name: Run interaction audit
+        run: bash tests/audit_run.sh
+
+      - name: Upload audit table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interaction-audit-${{ github.run_number }}
+          path: docs/audits/
+
+  content-originality:
+    name: Content Originality Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Grep for banned trademarked terms
+        run: |
+          set -euo pipefail
+          BANNED=(
+            "Pokemon" "Pokémon" "Pikachu"
+            "Nintendo" "GameBoy" "GameCube" "Wii\b" "NES\b" "SNES\b"
+            "Blockbuster"
+            "\bPSA\b"
+            "\bESPN\b"
+            "Marvel" "DC Comics"
+            "Disney"
+            "\bNBA\b" "\bNFL\b" "\bMLB\b" "\bNHL\b" "\bFIFA\b"
+            "PlayStation" "Xbox"
+            "Adidas" "Nike\b"
+          )
+          FAILED=0
+          for term in "${BANNED[@]}"; do
+            matches=$(grep -rn --include="*.json" --include="*.gd" -E "$term" \
+              game/content/ game/scripts/ game/autoload/ game/scenes/ \
+              --exclude-dir=".godot" 2>/dev/null || true)
+            if [ -n "$matches" ]; then
+              echo "::error::Banned term '$term' found in content or scripts:"
+              echo "$matches"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::Content originality check failed — remove all trademarked IP references."
+            exit 1
+          fi
+          echo "Content originality check passed — no banned terms found."
+
   lint-gdscript:
     name: GDScript Lint
     runs-on: ubuntu-latest

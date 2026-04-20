@@ -105,7 +105,7 @@ func add_reputation(store_id: String, delta: float) -> void:
 	_tiers[sid] = new_tier
 	_tier_locks.erase(sid)
 	if not is_equal_approx(old_score, new_score):
-		EventBus.reputation_changed.emit(sid, new_score)
+		EventBus.reputation_changed.emit(sid, old_score, new_score)
 	if new_tier != old_tier:
 		_emit_tier_change_toast(sid, old_tier, new_tier)
 
@@ -133,7 +133,14 @@ func add_reputation_event(
 	elif sid not in _tiers:
 		_tiers[sid] = old_tier
 	if not is_equal_approx(old_score, new_score):
-		EventBus.reputation_changed.emit(sid, new_score)
+		EventBus.reputation_changed.emit(sid, old_score, new_score)
+
+
+## Returns the reputation value as a PriceResolver-facing multiplier in [0.0, 2.0].
+## Score 50 (DEFAULT_REPUTATION) maps to 1.0; 0 → 0.0; 100 → 2.0. Clamped at both ends.
+func get_reputation_multiplier(store_id: String = "") -> float:
+	var score: float = get_reputation(store_id)
+	return clampf(score / 50.0, 0.0, 2.0)
 
 
 func get_tier(store_id: String = "") -> ReputationTier:

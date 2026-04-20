@@ -38,10 +38,10 @@ runs `game/tests/run_tests.gd` when present, writes output to
 
 Tagged GitHub releases validate export configuration and publish Windows and
 macOS artifacts. Linux has a checked-in preset for local exports, but the
-current release workflow does not upload a Linux artifact. The project declares
-Godot `4.6` features in `project.godot`, while the tagged export workflow still
-uses Godot `4.3`, so release builds should be verified with the engine version
-you intend to ship.
+current release workflow does not upload a Linux artifact. The canonical
+engine version is Godot `4.6.2`: `project.godot` declares `4.6` features and
+both the validate and export CI workflows install `4.6.2`. Run local builds
+and tests with the same version.
 
 ## Documentation
 

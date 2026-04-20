@@ -61,6 +61,7 @@ const _BUILD_MODE_DIM_ALPHA: float = 0.5
 @onready var _milestones_button: Button = $MilestonesButton
 
 var _telegraphed_events: Dictionary = {}
+var _random_event_telegraph: String = ""
 
 var _current_day: int = 1
 var _current_hour: int = Constants.STORE_OPEN_HOUR
@@ -103,6 +104,7 @@ func _ready() -> void:
 		_on_seasonal_event_ended
 	)
 	EventBus.event_telegraphed.connect(_on_event_telegraphed)
+	EventBus.random_event_telegraphed.connect(_on_random_event_telegraphed)
 	EventBus.locale_changed.connect(_on_locale_changed)
 	EventBus.build_mode_entered.connect(_on_build_mode_entered)
 	EventBus.build_mode_exited.connect(_on_build_mode_exited)
@@ -119,6 +121,7 @@ func _ready() -> void:
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
+	_random_event_telegraph = ""
 	_refresh_time_display()
 
 
@@ -146,7 +149,7 @@ func _on_speed_changed(new_speed: float) -> void:
 
 
 func _on_reputation_changed(
-	_store_id: String, new_value: float
+	_store_id: String, _old_score: float, new_value: float
 ) -> void:
 	var old_value: float = _last_reputation
 	_last_reputation = new_value
@@ -422,26 +425,34 @@ func _on_event_telegraphed(event_id: String, days_until: int) -> void:
 	_refresh_telegraph_card()
 
 
+func _on_random_event_telegraphed(message: String) -> void:
+	_random_event_telegraph = message
+	_refresh_telegraph_card()
+
+
 func _refresh_telegraph_card() -> void:
-	if _telegraphed_events.is_empty():
+	var parts: PackedStringArray = []
+	if not _random_event_telegraph.is_empty():
+		parts.append(_random_event_telegraph)
+	if not _telegraphed_events.is_empty():
+		var sys: SeasonalEventSystem = _find_seasonal_event_system()
+		for event_id: String in _telegraphed_events:
+			var days: int = _telegraphed_events[event_id]
+			var display: String = event_id
+			if sys:
+				for evt: Dictionary in sys.get_announced_events():
+					var def: SeasonalEventDefinition = evt.get(
+						"definition", null
+					) as SeasonalEventDefinition
+					if def and def.id == event_id:
+						display = def.name
+						break
+			parts.append("%s in %d day%s" % [
+				display, days, "s" if days != 1 else ""
+			])
+	if parts.is_empty():
 		_telegraph_card.visible = false
 		return
-	var sys: SeasonalEventSystem = _find_seasonal_event_system()
-	var parts: PackedStringArray = []
-	for event_id: String in _telegraphed_events:
-		var days: int = _telegraphed_events[event_id]
-		var display: String = event_id
-		if sys:
-			for evt: Dictionary in sys.get_announced_events():
-				var def: SeasonalEventDefinition = evt.get(
-					"definition", null
-				) as SeasonalEventDefinition
-				if def and def.id == event_id:
-					display = def.name
-					break
-		parts.append("%s in %d day%s" % [
-			display, days, "s" if days != 1 else ""
-		])
 	_telegraph_card.text = "[!] Coming: %s" % ", ".join(parts)
 	_telegraph_card.visible = true
 

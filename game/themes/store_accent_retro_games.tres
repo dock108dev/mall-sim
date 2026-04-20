@@ -1,0 +1,25 @@
+[gd_resource type="Theme" load_steps=2 format=3]
+
+[sub_resource type="StyleBoxFlat" id="accent_border"]
+bg_color = Color(0.122, 0.102, 0.086, 0.96)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.482, 0.294, 0.812, 1.0)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[resource]
+Panel/styles/panel = SubResource("accent_border")
+PanelContainer/styles/panel = SubResource("accent_border")
+StoreAccent/colors/accent = Color(0.482, 0.294, 0.812, 1.0)
+StoreAccent/colors/border = Color(0.482, 0.294, 0.812, 1.0)
+HeaderLabel/base_type = &"Label"
+HeaderLabel/colors/font_color = Color(0.482, 0.294, 0.812, 1.0)

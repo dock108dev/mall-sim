@@ -88,6 +88,10 @@ var is_graded: bool = false
 var grade_value: int = -1
 ## Letter grade assigned by authentication (F/D/C/B/A/S); empty if ungraded.
 var card_grade: String = ""
+## ACC 1–10 numeric grade returned by the grading service; -1 if not graded.
+var numeric_grade: int = -1
+## True while card is submitted for ACC grading and awaiting a result.
+var is_grading_pending: bool = false
 
 var _definition: ItemDefinition = null
 var _current_location: String = "backroom"

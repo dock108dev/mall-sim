@@ -49,7 +49,12 @@ if GODOT_BIN="$(_resolve_godot_bin)"; then
         [ "${PIPESTATUS[0]}" -ne 0 ] && EXIT_CODE="${PIPESTATUS[0]}"
     fi
 else
-    echo "Godot not found — running static validation tests..."
+    if [ -n "${GODOT:-}" ] || [ -n "${GODOT_EXECUTABLE:-}" ]; then
+        echo "ERROR: GODOT/GODOT_EXECUTABLE is set (\"${GODOT:-${GODOT_EXECUTABLE:-}}\") but no executable Godot binary was found." >&2
+        echo "Install Godot 4.6.2 and point GODOT at it, then re-run." >&2
+        exit 1
+    fi
+    echo "Godot not found — running static validation tests only (install Godot 4.6.2 for full suite)..."
     echo ""
 fi
 

@@ -68,6 +68,8 @@ var locale: String = "en"
 var display_mode: int = 1
 var control_scheme: int = 0
 var render_quality: int = RenderQuality.HIGH
+## False = follow auto-hide behaviour (default). True = force-show rail even after day-3 auto-hide.
+var show_objective_rail: bool = false
 
 ## Supported locales — add entries here when new CSV columns are added.
 const SUPPORTED_LOCALES: Array[Dictionary] = [
@@ -90,6 +92,7 @@ const PREFERENCE_DEFAULTS: Dictionary = {
 	&"display_mode": 1,
 	&"control_scheme": 0,
 	&"language": "en",
+	&"show_objective_rail": false,
 }
 
 ## Default bindings captured from InputMap at startup.
@@ -130,6 +133,7 @@ func save_settings() -> void:
 	config.set_value("preferences", "display_mode", display_mode)
 	config.set_value("preferences", "control_scheme", control_scheme)
 	config.set_value("display", "render_quality", render_quality)
+	config.set_value("ui", "show_objective_rail", show_objective_rail)
 	_save_keybindings(config)
 	var save_err: Error = config.save(SETTINGS_PATH)
 	if save_err != OK:
@@ -211,6 +215,7 @@ func load_settings() -> void:
 		config, "display", "render_quality",
 		RenderQuality.HIGH, RenderQuality.LOW, RenderQuality.HIGH
 	)
+	show_objective_rail = _get_config_bool(config, "ui", "show_objective_rail", true)
 	_load_keybindings(config)
 	apply_settings()
 
@@ -238,6 +243,7 @@ func reset_to_defaults() -> void:
 	display_mode = 1
 	control_scheme = 0
 	render_quality = RenderQuality.HIGH
+	show_objective_rail = false
 	reset_keybindings_to_defaults()
 	apply_settings()
 
@@ -277,6 +283,7 @@ func get_preference(key: StringName) -> Variant:
 		&"display_mode": return display_mode
 		&"control_scheme": return control_scheme
 		&"language": return locale
+		&"show_objective_rail": return show_objective_rail
 		_:
 			push_warning(
 				"Settings: unknown preference key '%s'" % key
@@ -321,6 +328,7 @@ func set_preference(key: StringName, value: Variant) -> void:
 		&"display_mode": display_mode = value as int
 		&"control_scheme": control_scheme = value as int
 		&"language": locale = value as String
+		&"show_objective_rail": show_objective_rail = value as bool
 	preference_changed.emit(String(key), value)
 	EventBus.preference_changed.emit(String(key), value)
 

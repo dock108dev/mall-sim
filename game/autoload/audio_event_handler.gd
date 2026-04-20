@@ -46,6 +46,10 @@ func _connect_state_signals() -> void:
 	EventBus.day_phase_changed.connect(_on_day_phase_changed)
 	EventBus.build_mode_entered.connect(_on_build_mode_entered)
 	EventBus.build_mode_exited.connect(_on_build_mode_exited)
+	EventBus.drawer_opened.connect(_on_drawer_opened)
+	EventBus.drawer_closed.connect(_on_drawer_closed)
+	EventBus.warranty_accepted.connect(_on_warranty_accepted)
+	EventBus.rare_pull_occurred.connect(_on_rare_pull_occurred)
 
 
 func _on_item_sold(_id: String, _p: float, _c: String) -> void:
@@ -80,7 +84,9 @@ func _on_day_ended(_day: int) -> void:
 	_audio.play_bgm("mall_close_music", 1.0)
 
 
-func _on_reputation_changed(_store_id: String, _new: float) -> void:
+func _on_reputation_changed(
+	_store_id: String, _old: float, _new: float
+) -> void:
 	_audio.play_sfx("notification_ping")
 
 
@@ -199,6 +205,26 @@ func _on_build_mode_entered() -> void:
 
 func _on_build_mode_exited() -> void:
 	_audio.play_bgm("mall_open_music", 0.3)
+
+
+func _on_drawer_opened(store_id: StringName) -> void:
+	_audio.crossfade(store_id)
+	_audio.duck_hub_ambience()
+
+
+func _on_drawer_closed(_store_id: StringName) -> void:
+	_audio.play_bgm("mall_open_music")
+	_audio.unduck_hub_ambience()
+
+
+func _on_warranty_accepted(
+	_item_id: String, _tier_id: String, _fee: float
+) -> void:
+	_audio.play_sfx("warranty_confirm")
+
+
+func _on_rare_pull_occurred(_pack_id: String) -> void:
+	_audio.play_sfx("rare_pull")
 
 
 func _play_store_music() -> void:

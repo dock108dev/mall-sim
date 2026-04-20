@@ -10,11 +10,13 @@ var _staff_system: StaffSystem
 var _progression_system: ProgressionSystem
 var _ending_evaluator: EndingEvaluatorSystem
 var _performance_report_system: PerformanceReportSystem
+var _day_manager: DayManager
 var _day_summary: DaySummary
 var _seasonal_event_system: SeasonalEventSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _pending_report: PerformanceReport
 var _awaiting_acknowledgement: bool = false
+var _last_closed_day: int = 0
 var _ensure_panels_callback: Callable
 
 
@@ -40,6 +42,10 @@ func initialize(
 
 func set_day_summary(panel: DaySummary) -> void:
 	_day_summary = panel
+
+
+func set_day_manager(manager: DayManager) -> void:
+	_day_manager = manager
 
 
 func set_seasonal_event_system(system: SeasonalEventSystem) -> void:
@@ -68,6 +74,8 @@ func _on_day_ended(day: int) -> void:
 	if _awaiting_acknowledgement:
 		return
 
+	_last_closed_day = day
+
 	if _ensure_panels_callback.is_valid():
 		_ensure_panels_callback.call()
 
@@ -92,6 +100,7 @@ func _on_day_acknowledged() -> void:
 
 	_evaluate_milestones()
 	_evaluate_endings()
+	_evaluate_arc()
 
 	if GameManager.current_state == GameManager.GameState.GAME_OVER:
 		return
@@ -190,6 +199,12 @@ func _evaluate_endings() -> void:
 	var ending_id: StringName = _ending_evaluator.evaluate()
 	if ending_id != EndingEvaluatorSystem.FALLBACK_ENDING_ID:
 		_ending_evaluator.force_ending(ending_id)
+
+
+func _evaluate_arc() -> void:
+	if not _day_manager or not _economy_system:
+		return
+	_day_manager.evaluate_day_end(_last_closed_day, _economy_system.get_cash())
 
 
 func _find_store_controller() -> StoreController:

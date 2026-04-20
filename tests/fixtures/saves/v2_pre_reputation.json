@@ -1,0 +1,21 @@
+{
+	"save_version": 2,
+	"save_metadata": {
+		"day": 5,
+		"day_number": 5,
+		"cash": 2100.0,
+		"owned_stores": ["retro_games"],
+		"store_count": 1,
+		"saved_at": "2026-04-03T14:30:00",
+		"last_saved_at": "2026-04-03T14:30:00",
+		"timestamp": "2026-04-03T14:30:00",
+		"active_store_id": "retro_games",
+		"play_time": 1800.0,
+		"used_difficulty_downgrade": false,
+		"save_version_tag": 2
+	},
+	"time": {"current_day": 5, "current_hour": 14},
+	"economy": {"player_cash": 2100.0},
+	"inventory": {},
+	"owned_slots": {"0": "retro_games"}
+}

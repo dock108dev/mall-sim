@@ -10,6 +10,14 @@ const SHIFT_THRESHOLD: float = 0.05
 const VOLATILITY_MIN: float = 0.0
 const VOLATILITY_MAX: float = 2.0
 
+## Bidirectional propagation rules: when a source category shifts, a weighted
+## fraction of its deviation from 1.0 is applied to each target category.
+## vintage ↔ sports: retro-games vintage shelf and sports-cards share demand.
+const CROSS_PROPAGATION_RULES: Dictionary = {
+	"vintage": {"sports": 0.4},
+	"sports": {"vintage": 0.4},
+}
+
 var _trend_levels: Dictionary = {}
 var _category_configs: Dictionary = {}
 var _initialized: bool = false
@@ -18,6 +26,7 @@ var _initialized: bool = false
 func _ready() -> void:
 	_load_catalog()
 	EventBus.day_ended.connect(_on_day_ended)
+	EventBus.tournament_completed.connect(_on_tournament_completed)
 	_initialized = true
 
 
@@ -103,6 +112,31 @@ func _load_catalog() -> void:
 
 func _on_day_ended(_day: int) -> void:
 	_shift_trends()
+	_apply_cross_propagations()
+
+
+## Propagates weighted trend deviations between linked categories (e.g.,
+## vintage ↔ sports) so that a shift in one store's shelf affects the other
+## within the same day tick.
+func _apply_cross_propagations() -> void:
+	for source_key: Variant in CROSS_PROPAGATION_RULES:
+		var source_id: StringName = StringName(str(source_key))
+		if not _trend_levels.has(source_id):
+			continue
+		var source_delta: float = (_trend_levels[source_id] as float) - 1.0
+		if absf(source_delta) < SHIFT_THRESHOLD:
+			continue
+		var rules: Dictionary = CROSS_PROPAGATION_RULES[source_key] as Dictionary
+		for target_key: Variant in rules:
+			var target_id: StringName = StringName(str(target_key))
+			if not _trend_levels.has(target_id):
+				continue
+			var weight: float = float(rules[target_key])
+			var old_level: float = _trend_levels[target_id] as float
+			var nudge: float = source_delta * weight * 0.5
+			var new_level: float = clampf(old_level + nudge, MIN_LEVEL, MAX_LEVEL)
+			_trend_levels[target_id] = new_level
+			_maybe_emit_trend_shifted(target_id, old_level, new_level)
 
 
 func _shift_trends() -> void:
@@ -119,9 +153,24 @@ func _shift_trends() -> void:
 		_maybe_emit_trend_shifted(sid, old_level, new_level)
 
 
+## Applies a multiplicative spike to a trend category, clamped to MAX_LEVEL.
+## Used by tournament completion to drive post-event demand surges.
+func apply_spike(category_id: StringName, factor: float) -> void:
+	if not _trend_levels.has(category_id):
+		return
+	var old_level: float = _trend_levels[category_id] as float
+	var new_level: float = clampf(old_level * factor, MIN_LEVEL, MAX_LEVEL)
+	_trend_levels[category_id] = new_level
+	_maybe_emit_trend_shifted(category_id, old_level, new_level)
+
+
 ## Emits trend_shifted when the level change meets or exceeds SHIFT_THRESHOLD.
 func _maybe_emit_trend_shifted(
 	category_id: StringName, old_level: float, new_level: float
 ) -> void:
 	if absf(new_level - old_level) >= SHIFT_THRESHOLD:
 		EventBus.trend_shifted.emit(category_id, new_level)
+
+
+func _on_tournament_completed(_participant_count: int, _revenue: float) -> void:
+	apply_spike(&"singles", 1.3)

@@ -42,8 +42,20 @@ var _warned_messages: Dictionary = {}
 
 var _event_handler: Node = null
 
+## Cached music_stems section from audio registry; keyed by store_id string.
+var _music_stems: Dictionary = {}
+
+## Ambience bus duck state: volume_db before ducking.
+var _ambience_pre_duck_db: float = 0.0
+var _duck_tween: Tween = null
+
+const DUCK_DURATION: float = 0.3
+const DUCK_TARGET_DB: float = -12.0
+
 
 func _ready() -> void:
+	if _is_headless():
+		return
 	_create_players()
 	_load_from_registry()
 	_setup_event_handler()
@@ -55,11 +67,75 @@ func _ready() -> void:
 ## Applies bus volumes from current Settings values. Called by boot sequence
 ## after Settings.load_settings() so volumes reflect saved preferences.
 func initialize() -> void:
+	if _is_headless():
+		return
 	_apply_settings_volumes()
+
+
+## Crossfades BGM to the music stem registered for the given store_id.
+## Falls back to mall_hallway_music when no stem is configured.
+func crossfade(store_id: StringName) -> void:
+	if _is_headless():
+		return
+	var key: String = _music_stems.get(String(store_id), "")
+	if key.is_empty():
+		play_bgm("mall_hallway_music", DEFAULT_CROSSFADE)
+		return
+	play_bgm(key, DEFAULT_CROSSFADE)
+
+
+## Ducks the Ambience bus to DUCK_TARGET_DB over DUCK_DURATION seconds.
+func duck_hub_ambience() -> void:
+	if _is_headless():
+		return
+	var idx: int = _get_ambience_bus_index()
+	if idx < 0:
+		return
+	_ambience_pre_duck_db = AudioServer.get_bus_volume_db(idx)
+	_kill_duck_tween()
+	_duck_tween = create_tween()
+	_duck_tween.tween_method(
+		func(db: float) -> void: AudioServer.set_bus_volume_db(idx, db),
+		_ambience_pre_duck_db, DUCK_TARGET_DB, DUCK_DURATION
+	)
+
+
+## Restores the Ambience bus to its pre-duck volume over DUCK_DURATION seconds.
+func unduck_hub_ambience() -> void:
+	if _is_headless():
+		return
+	var idx: int = _get_ambience_bus_index()
+	if idx < 0:
+		return
+	var current_db: float = AudioServer.get_bus_volume_db(idx)
+	_kill_duck_tween()
+	_duck_tween = create_tween()
+	_duck_tween.tween_method(
+		func(db: float) -> void: AudioServer.set_bus_volume_db(idx, db),
+		current_db, _ambience_pre_duck_db, DUCK_DURATION
+	)
+
+
+## Returns a cached ambient stream by registry key, or null if not found.
+func get_ambient_stream(key: String) -> AudioStream:
+	return _ambient_streams.get(key, null) as AudioStream
+
+
+## Returns true when running without a display (CI headless mode).
+func _is_headless() -> bool:
+	return DisplayServer.get_name() == "headless"
+
+
+func _kill_duck_tween() -> void:
+	if _duck_tween != null and _duck_tween.is_valid():
+		_duck_tween.kill()
+	_duck_tween = null
 
 
 ## Plays a one-shot SFX from either a preloaded name key or an AudioStream.
 func play_sfx(sound: Variant, volume_db: float = 0.0) -> void:
+	if _is_headless():
+		return
 	if sound is AudioStream:
 		_play_sfx_stream(sound as AudioStream, volume_db)
 		return
@@ -96,6 +172,8 @@ func _play_sfx_stream(
 func play_bgm(
 	track_key: String, fade_duration: float = DEFAULT_CROSSFADE
 ) -> void:
+	if _is_headless():
+		return
 	if track_key == _current_track_name:
 		return
 
@@ -113,6 +191,8 @@ func play_bgm(
 
 ## Fades out the current BGM without starting a new track.
 func stop_bgm(fade_duration: float = DEFAULT_CROSSFADE) -> void:
+	if _is_headless():
+		return
 	if _current_track_name.is_empty():
 		return
 
@@ -284,6 +364,8 @@ func exit_zone(zone_id: String) -> void:
 
 
 func play_ambient(track_name: String) -> void:
+	if _is_headless():
+		return
 	if track_name == _current_ambient_name:
 		return
 
@@ -298,6 +380,8 @@ func play_ambient(track_name: String) -> void:
 
 
 func stop_ambient() -> void:
+	if _is_headless():
+		return
 	if _current_ambient_name.is_empty():
 		return
 
@@ -455,6 +539,9 @@ func _load_from_registry() -> void:
 	_load_audio_dir(reg.get("sfx", {}), SFX_DIR, _sfx_streams)
 	_load_audio_dir(reg.get("music", {}), MUSIC_DIR, _music_streams)
 	_load_audio_dir(reg.get("ambient", {}), AMBIANCE_DIR, _ambient_streams)
+	var stems: Variant = reg.get("music_stems", {})
+	if stems is Dictionary:
+		_music_stems = stems as Dictionary
 
 
 func _load_audio_dir(

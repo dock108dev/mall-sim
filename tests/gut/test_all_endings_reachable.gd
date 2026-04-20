@@ -118,7 +118,7 @@ func test_going_going_gone() -> void:
 ## Priority 5 — full success: revenue, reputation, satisfaction, longevity.
 func test_prestige_champion() -> void:
 	_advance_days(30)
-	EventBus.reputation_changed.emit("store_0", 90.0)
+	EventBus.reputation_changed.emit("store_0", 0.0, 90.0)
 	_accumulate_revenue(60000.0, 600.0)
 	_satisfy_customers(200, 10)
 	EventBus.ending_requested.emit("completion")
@@ -133,7 +133,7 @@ func test_prestige_champion() -> void:
 func test_the_local_legend() -> void:
 	_advance_days(30)
 	_lease_stores(1)
-	EventBus.reputation_changed.emit("store_0", 90.0)
+	EventBus.reputation_changed.emit("store_0", 0.0, 90.0)
 	_accumulate_revenue(12000.0, 100.0)
 	_satisfy_customers(50, 30)
 	EventBus.ending_requested.emit("completion")
@@ -173,7 +173,7 @@ func test_the_mini_empire() -> void:
 ## Priority 9 — 200 satisfied customers without using haggle.
 func test_the_fair_dealer() -> void:
 	_advance_days(10)
-	EventBus.reputation_changed.emit("store_0", 65.0)
+	EventBus.reputation_changed.emit("store_0", 0.0, 65.0)
 	_satisfy_customers(200, 0)
 	EventBus.ending_requested.emit("completion")
 	assert_eq(

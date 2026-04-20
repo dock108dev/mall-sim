@@ -1,0 +1,43 @@
+[gd_resource type="Theme" load_steps=3 format=3]
+
+[sub_resource type="StyleBoxFlat" id="light_bg"]
+bg_color = Color(0.961, 0.925, 0.839, 1.0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.420, 0.306, 0.180, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="light_btn"]
+bg_color = Color(0.420, 0.306, 0.180, 1.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.169, 0.114, 0.071, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[resource]
+Label/colors/font_color = Color(0.169, 0.114, 0.071, 1.0)
+Panel/styles/panel = SubResource("light_bg")
+PanelContainer/styles/panel = SubResource("light_bg")
+Button/colors/font_color = Color(0.961, 0.925, 0.839, 1.0)
+Button/colors/font_hover_color = Color(1.0, 0.98, 0.95, 1.0)
+Button/styles/normal = SubResource("light_btn")
+SecondaryLabel/base_type = &"Label"
+SecondaryLabel/colors/font_color = Color(0.420, 0.306, 0.180, 1.0)

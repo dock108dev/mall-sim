@@ -155,9 +155,7 @@ func _evaluate_thread_for_regular(
 	state["phase"] = new_phase
 	var payoff: String = str(phase_dict.get("payoff_text", ""))
 	if new_phase >= phases.size():
-		EventBus.thread_resolved.emit(
-			thread_id, StringName(customer_id), payoff
-		)
+		EventBus.thread_resolved.emit(thread_id, "resolved")
 	else:
 		EventBus.thread_advanced.emit(
 			thread_id, StringName(customer_id), new_phase

@@ -127,7 +127,7 @@ func test_reputation_milestone_fires_on_change() -> void:
 		completed_ids.append(id)
 	EventBus.milestone_completed.connect(on_milestone)
 
-	EventBus.reputation_changed.emit("test_store", 15.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 15.0)
 
 	assert_true(
 		completed_ids.has("local_name"),

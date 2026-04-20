@@ -8,7 +8,7 @@ enum GameState {
 
 const DEFAULT_STARTING_STORE: StringName = &"sports"
 const MAIN_MENU_SCENE_PATH := "res://game/scenes/ui/main_menu.tscn"
-const GAMEPLAY_SCENE_PATH := "res://game/scenes/world/game_world.tscn"
+const GAMEPLAY_SCENE_PATH := "res://game/scenes/mall/mall_hub.tscn"
 
 const _VALID_TRANSITIONS: Dictionary = {
 	GameState.MAIN_MENU: [GameState.LOADING],

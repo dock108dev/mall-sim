@@ -1,5 +1,5 @@
 ## Integration test for the PocketCreatures flow from pack opening through
-## tournament resolution.
+## tournament resolution, including meta_shift factor in PriceBreakdown.
 extends GutTest
 
 
@@ -17,6 +17,7 @@ var _economy: EconomySystem
 var _reputation: ReputationSystem
 var _controller: PocketCreaturesStoreController
 var _tournament: TournamentSystem
+var _meta_shift: MetaShiftSystem
 
 
 func before_each() -> void:
@@ -37,11 +38,16 @@ func before_each() -> void:
 	add_child_autofree(_reputation)
 	_reputation.initialize_store(String(STORE_ID))
 
+	_meta_shift = MetaShiftSystem.new()
+	add_child_autofree(_meta_shift)
+	_meta_shift.initialize(_data_loader)
+
 	_controller = PocketCreaturesStoreController.new()
 	add_child_autofree(_controller)
 	_controller.set_economy_system(_economy)
 	_controller.initialize()
 	_controller.initialize_pack_system(_data_loader, _inventory)
+	_controller.set_meta_shift_system(_meta_shift)
 
 	_tournament = TournamentSystem.new()
 	add_child_autofree(_tournament)
@@ -134,6 +140,43 @@ func test_tournament_schedule_activation_and_resolution_award_prize() -> void:
 		cash_before + PRIZE_AMOUNT,
 		0.01,
 		"Player cash should increase by the tournament prize amount"
+	)
+
+
+## Verifies that when a meta shift is active, resolve_card_price() returns a
+## PriceBreakdown containing a meta_shift step with factor != 1.0.
+func test_resolve_card_price_includes_meta_shift_when_shift_active() -> void:
+	# Seed a card single into inventory so resolve_card_price can find it.
+	var card_def: ItemDefinition = _data_loader.get_item("pc_single_flameleon_common")
+	if not card_def:
+		pass_test("pc_single_flameleon_common not in content — skip")
+		return
+	var card: ItemInstance = ItemInstance.create_from_definition(card_def)
+	card.instance_id = &"meta_test_card"
+	_inventory.add_item(STORE_ID, card)
+	_controller._inventory_system = _inventory
+
+	# Activate a manual meta shift on this card.
+	_meta_shift.trigger_shift(StringName(card_def.id), 3)
+	assert_true(_meta_shift.is_shift_active(), "Meta shift should be active")
+
+	# Resolve price — breakdown should contain a meta_shift step.
+	var result: PriceResolver.Result = _controller.resolve_card_price(
+		&"meta_test_card"
+	)
+	assert_gt(result.final_price, 0.0, "Resolved price should be positive")
+
+	var found_meta_shift: bool = false
+	for step: Variant in result.audit_trace:
+		if step is Dictionary:
+			var label: String = str((step as Dictionary).get("name", ""))
+			if label == "MetaShift":
+				found_meta_shift = true
+				break
+
+	assert_true(
+		found_meta_shift,
+		"PriceBreakdown audit_trace should contain a MetaShift step"
 	)
 
 

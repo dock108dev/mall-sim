@@ -255,6 +255,8 @@ func _process_file(
 		return
 	if content_type == "onboarding_config_data":
 		return
+	if content_type == "sports_grade_definitions_data":
+		return
 	if content_type.is_empty():
 		push_warning("DataLoader: unrecognized content file, skipping: %s" % path)
 		return
@@ -323,6 +325,9 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 	if file_base == "meta_shifts":
 		# Loaded by MetaShiftSystem; not registered via DataLoader.
 		return "meta_shifts_data"
+	if file_base == "grade_definitions":
+		# ACC grade table — PriceResolver holds the constants; file is content record.
+		return "sports_grade_definitions_data"
 	if file_base == "upgrades":
 		return "upgrade"
 	if _DIR_TYPE_MAP.has(dir_name):

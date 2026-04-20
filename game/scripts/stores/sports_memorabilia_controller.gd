@@ -1,5 +1,5 @@
-## Controller for the sports memorabilia store. Manages season cycle and
-## card condition grading via PriceResolver.
+## Controller for the sports memorabilia store. Manages season cycle,
+## card condition grading, and ACC numeric grading via PriceResolver.
 class_name SportsMemorabiliaController
 extends StoreController
 
@@ -10,10 +10,25 @@ const DEFAULT_SEASON_BOOST: float = 1.5
 ## Minimum provenance_score for a card to pass the authentication check.
 const AUTH_THRESHOLD: float = 0.5
 
+## Grade ranges per condition for the ACC numeric grading RNG.
+## Format: [min_grade, max_grade] (inclusive, 1–10 scale).
+const _CONDITION_GRADE_RANGES: Dictionary = {
+	"mint":      [7, 10],
+	"near_mint": [6,  9],
+	"good":      [4,  7],
+	"fair":      [2,  5],
+	"poor":      [1,  3],
+}
+
 var _season_cycle: SeasonCycleSystem = SeasonCycleSystem.new()
 var _season_boost_active: bool = false
 var _season_boost_value: float = DEFAULT_SEASON_BOOST
 var _market_event_connected: bool = false
+
+## Maps instance_id → day_submitted for cards pending ACC grading.
+var _pending_grades: Dictionary = {}
+## Accumulates grades returned on the current day for the grading_day_summary emit.
+var _today_returned: Array = []
 
 
 func _ready() -> void:
@@ -63,8 +78,22 @@ func get_item_price(item_id: StringName) -> float:
 		)
 		return 0.0
 	var multipliers: Array = []
-	if item.is_graded and not item.card_grade.is_empty():
-		# Formal grade supersedes the player's condition assessment.
+	if item.numeric_grade >= 1:
+		# ACC numeric grade supersedes all other condition/grade multipliers.
+		var grade_factor: float = PriceResolver.NUMERIC_GRADE_MULTIPLIERS.get(
+			item.numeric_grade, 1.0
+		)
+		var grade_label: String = PriceResolver.NUMERIC_GRADE_LABELS.get(
+			item.numeric_grade, "Grade %d" % item.numeric_grade
+		)
+		multipliers.append({
+			"slot": "numeric_grade",
+			"label": "ACC Grade",
+			"factor": grade_factor,
+			"detail": "ACC %d — %s" % [item.numeric_grade, grade_label],
+		})
+	elif item.is_graded and not item.card_grade.is_empty():
+		# Letter grade (authentication mechanic) supersedes condition.
 		var grade_factor: float = PriceResolver.GRADE_MULTIPLIERS.get(
 			item.card_grade, 1.0
 		)
@@ -91,6 +120,14 @@ func get_item_price(item_id: StringName) -> float:
 			"factor": demand_factor,
 			"detail": "Active season boost",
 		})
+	var vintage_trend: float = MarketTrendSystem.get_trend_modifier(&"vintage")
+	if vintage_trend != 1.0:
+		multipliers.append({
+			"slot": "trend",
+			"label": "Vintage Trend",
+			"factor": vintage_trend,
+			"detail": "Vintage shelf trend: %.2f" % vintage_trend,
+		})
 	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
 		StringName(item_id), item.definition.base_price, multipliers
 	)
@@ -102,6 +139,7 @@ func get_save_data() -> Dictionary:
 	return {
 		"season_cycle": _season_cycle.get_save_data(),
 		"season_boost_active": _season_boost_active,
+		"pending_grades": _pending_grades.duplicate(),
 	}
 
 
@@ -112,6 +150,10 @@ func load_save_data(data: Dictionary) -> void:
 	if cycle_data is Dictionary:
 		_season_cycle.load_save_data(cycle_data as Dictionary)
 	_season_boost_active = bool(data.get("season_boost_active", false))
+	var saved_pending: Variant = data.get("pending_grades", {})
+	if saved_pending is Dictionary:
+		_pending_grades = (saved_pending as Dictionary).duplicate()
+		_restore_pending_grade_locks()
 
 
 func _defer_store_entered(store_id: StringName) -> void:
@@ -124,11 +166,23 @@ func get_store_actions() -> Array:
 	var actions: Array = super()
 	actions.append({"id": &"authenticate", "label": "Authenticate", "icon": ""})
 	actions.append({"id": &"grade", "label": "Grade", "icon": ""})
+	actions.append({
+		"id": &"send_for_grading",
+		"label": "Send for Grading (ACC)",
+		"icon": "",
+	})
 	return actions
 
 
 func _on_day_started(day: int) -> void:
 	_season_cycle.process_day(day)
+	_deliver_pending_grades(day)
+
+
+func _on_day_ended(_day: int) -> void:
+	EventBus.grading_day_summary.emit(
+		_pending_grades.size(), _today_returned.duplicate()
+	)
 
 
 func _on_store_entered(store_id: StringName) -> void:
@@ -341,6 +395,104 @@ func _on_haggle_completed(
 	if bonus <= 0.0:
 		return
 	EventBus.bonus_sale_completed.emit(item_id, bonus)
+
+
+## Submits card to the Apex Card Certification service for numeric grading.
+## Card is locked from sale until grade_returned fires on day_started of day N+1.
+func send_for_grading(item_id: StringName) -> void:
+	if not _inventory_system:
+		push_warning(
+			"SportsMemorabiliaController: InventorySystem required for grading"
+		)
+		return
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item:
+		push_warning(
+			"SportsMemorabiliaController: item '%s' not found for grading" % item_id
+		)
+		return
+	if item.is_grading_pending:
+		push_warning(
+			"SportsMemorabiliaController: item '%s' already pending grading" % item_id
+		)
+		return
+	if item.numeric_grade >= 1:
+		push_warning(
+			"SportsMemorabiliaController: item '%s' already has ACC grade %d"
+			% [item_id, item.numeric_grade]
+		)
+		return
+	var current_day: int = GameManager.get_current_day()
+	item.is_grading_pending = true
+	_pending_grades[String(item_id)] = current_day
+	EventBus.grade_submitted.emit(item_id, current_day)
+
+
+## Delivers any grades that were submitted on day N when day N+1 starts.
+func _deliver_pending_grades(current_day: int) -> void:
+	_today_returned.clear()
+	var to_deliver: Array[String] = []
+	for card_id: String in _pending_grades:
+		if _pending_grades[card_id] < current_day:
+			to_deliver.append(card_id)
+	for card_id: String in to_deliver:
+		_deliver_single_grade(card_id, current_day)
+		_pending_grades.erase(card_id)
+
+
+func _deliver_single_grade(card_id: String, current_day: int) -> void:
+	var item: ItemInstance = (
+		_inventory_system.get_item(card_id) if _inventory_system else null
+	)
+	if not item:
+		push_warning(
+			"SportsMemorabiliaController: graded item '%s' not found in inventory"
+			% card_id
+		)
+		return
+	var grade: int = _roll_numeric_grade(item, current_day)
+	item.numeric_grade = grade
+	item.is_graded = true
+	item.is_grading_pending = false
+	var grade_label: String = PriceResolver.NUMERIC_GRADE_LABELS.get(
+		grade, "Grade %d" % grade
+	)
+	_today_returned.append({
+		"card_id": card_id,
+		"card_name": item.definition.item_name if item.definition else card_id,
+		"grade": grade,
+		"grade_label": grade_label,
+	})
+	EventBus.grade_returned.emit(StringName(card_id), grade)
+	EventBus.toast_requested.emit(
+		"ACC Grade Returned: %s — %d (%s)" % [
+			item.definition.item_name if item.definition else card_id,
+			grade, grade_label,
+		],
+		&"sports",
+		4.0,
+	)
+
+
+## Seeded RNG using hash(item_id + day) for deterministic results.
+func _roll_numeric_grade(item: ItemInstance, day: int) -> int:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(String(item.instance_id) + str(day))
+	var condition: String = item.condition if not item.condition.is_empty() else "good"
+	var range_arr: Variant = _CONDITION_GRADE_RANGES.get(condition, [4, 7])
+	var min_g: int = int((range_arr as Array)[0])
+	var max_g: int = int((range_arr as Array)[1])
+	return rng.randi_range(min_g, max_g)
+
+
+## Restores is_grading_pending on items after a save/load cycle.
+func _restore_pending_grade_locks() -> void:
+	if not _inventory_system:
+		return
+	for card_id: String in _pending_grades:
+		var item: ItemInstance = _inventory_system.get_item(card_id)
+		if item:
+			item.is_grading_pending = true
 
 
 func _resolve_offered_item(item_id: String) -> ItemInstance:

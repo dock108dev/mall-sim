@@ -35,13 +35,13 @@ func test_transaction_completed_accumulates_successful_sales() -> void:
 
 
 func test_reputation_changed_updates_mall_reputation_to_latest_tier_score() -> void:
-	EventBus.reputation_changed.emit("retro_games", 25.0)
+	EventBus.reputation_changed.emit("retro_games", 0.0, 25.0)
 	assert_almost_eq(
 		_progression.get_mall_reputation(), 25.0, 0.01,
 		"Mall reputation should reflect the emitted threshold score"
 	)
 
-	EventBus.reputation_changed.emit("retro_games", 55.0)
+	EventBus.reputation_changed.emit("retro_games", 0.0, 55.0)
 	assert_almost_eq(
 		_progression.get_mall_reputation(), 55.0, 0.01,
 		"Mall reputation should update when a higher reputation tier is reached"
@@ -49,7 +49,7 @@ func test_reputation_changed_updates_mall_reputation_to_latest_tier_score() -> v
 
 
 func test_store_slot_unlocked_fires_when_cash_crosses_threshold() -> void:
-	EventBus.reputation_changed.emit("retro_games", 25.0)
+	EventBus.reputation_changed.emit("retro_games", 0.0, 25.0)
 	watch_signals(EventBus)
 
 	EventBus.transaction_completed.emit(2000.0, true, "grand sale")
@@ -63,7 +63,7 @@ func test_store_slot_unlocked_fires_when_cash_crosses_threshold() -> void:
 
 
 func test_store_slot_unlocked_fires_only_once_per_threshold() -> void:
-	EventBus.reputation_changed.emit("retro_games", 25.0)
+	EventBus.reputation_changed.emit("retro_games", 0.0, 25.0)
 	EventBus.transaction_completed.emit(2000.0, true, "grand sale")
 
 	watch_signals(EventBus)
@@ -76,7 +76,7 @@ func test_store_slot_unlocked_fires_only_once_per_threshold() -> void:
 
 
 func test_serialize_returns_cash_reputation_and_unlocked_slots() -> void:
-	EventBus.reputation_changed.emit("retro_games", 25.0)
+	EventBus.reputation_changed.emit("retro_games", 0.0, 25.0)
 	EventBus.transaction_completed.emit(2000.0, true, "grand sale")
 
 	var data: Dictionary = _progression.serialize()

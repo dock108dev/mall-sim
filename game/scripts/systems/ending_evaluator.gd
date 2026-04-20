@@ -229,7 +229,7 @@ func _on_money_changed(
 
 
 func _on_reputation_changed(
-	_store_id: String, new_value: float
+	_store_id: String, _old_score: float, new_value: float
 ) -> void:
 	var tier: float = _reputation_to_tier(new_value)
 	_stats["final_reputation_tier"] = tier
@@ -257,7 +257,7 @@ func _on_secret_thread_completed(
 	_stats["secret_threads_completed"] = (
 		float(_stats.get("secret_threads_completed", 0.0)) + 1.0
 	)
-	if thread_id == &"the_ghost_tenant":
+	if thread_id == &"ghost_tenant_7b":
 		_stats["ghost_tenant_thread_completed"] = 1.0
 
 

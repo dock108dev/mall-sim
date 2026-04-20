@@ -120,7 +120,11 @@ func test_reputation_changed_signal_fires_with_correct_params() -> void:
 		"Signal should carry correct store_id"
 	)
 	assert_almost_eq(
-		params[1] as float, 55.0, 0.01,
+		params[1] as float, 50.0, 0.01,
+		"Signal should carry old score value"
+	)
+	assert_almost_eq(
+		params[2] as float, 55.0, 0.01,
 		"Signal should carry new score value"
 	)
 
@@ -192,4 +196,87 @@ func test_unknown_store_id_tier_returns_default_tier() -> void:
 		tier,
 		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
 		"Unknown store_id tier should match DEFAULT_REPUTATION tier"
+	)
+
+
+const ALL_STORE_IDS: Array[String] = [
+	"sports", "retro_games", "rentals", "pocket_creatures", "electronics"
+]
+
+
+func test_good_sale_increases_reputation_for_all_stores() -> void:
+	for sid: String in ALL_STORE_IDS:
+		_rep.initialize_store(sid)
+		var before: float = _rep.get_reputation(sid)
+		_rep.add_reputation(sid, ReputationSystemSingleton.REP_FAIR_SALE)
+		var after: float = _rep.get_reputation(sid)
+		assert_gt(
+			after, before,
+			"Fair-sale delta should raise reputation for %s" % sid
+		)
+
+
+func test_bad_sale_decreases_reputation_for_all_stores() -> void:
+	for sid: String in ALL_STORE_IDS:
+		_rep.initialize_store(sid)
+		var before: float = _rep.get_reputation(sid)
+		_rep.add_reputation(sid, ReputationSystemSingleton.REP_OVERPRICED_REJECTED)
+		var after: float = _rep.get_reputation(sid)
+		assert_lt(
+			after, before,
+			"Overpriced-rejection delta should lower reputation for %s" % sid
+		)
+
+
+func test_multiplier_clamps_at_upper_bound() -> void:
+	_rep.initialize_store(STORE_ID)
+	_rep._scores[STORE_ID] = ReputationSystemSingleton.MAX_REPUTATION
+	var mult: float = _rep.get_reputation_multiplier(STORE_ID)
+	assert_almost_eq(
+		mult, 2.0, 0.001,
+		"Max reputation (100) should map to multiplier 2.0"
+	)
+	assert_true(
+		mult <= 2.0,
+		"Multiplier must not exceed 2.0"
+	)
+
+
+func test_multiplier_clamps_at_lower_bound() -> void:
+	_rep.initialize_store(STORE_ID)
+	_rep._scores[STORE_ID] = ReputationSystemSingleton.MIN_REPUTATION
+	var mult: float = _rep.get_reputation_multiplier(STORE_ID)
+	assert_almost_eq(
+		mult, 0.0, 0.001,
+		"Min reputation (0) should map to multiplier 0.0"
+	)
+	assert_true(
+		mult >= 0.0,
+		"Multiplier must not be negative"
+	)
+
+
+func test_multiplier_defaults_to_one_at_default_score() -> void:
+	_rep.initialize_store(STORE_ID)
+	var mult: float = _rep.get_reputation_multiplier(STORE_ID)
+	assert_almost_eq(
+		mult, 1.0, 0.001,
+		"Default reputation should map to multiplier 1.0"
+	)
+
+
+func test_reputation_changed_emits_old_and_new_score() -> void:
+	_rep._scores[STORE_ID] = 40.0
+	watch_signals(EventBus)
+	_rep.add_reputation(STORE_ID, 10.0)
+	var params: Array = get_signal_parameters(
+		EventBus, "reputation_changed"
+	)
+	assert_almost_eq(
+		params[1] as float, 40.0, 0.01,
+		"old_score should be pre-mutation value"
+	)
+	assert_almost_eq(
+		params[2] as float, 50.0, 0.01,
+		"new_score should be post-mutation value"
 	)

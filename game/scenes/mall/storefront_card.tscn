@@ -1,0 +1,88 @@
+[gd_scene load_steps=4 format=3 uid="uid://storefront_card_001"]
+
+[ext_resource type="Script" path="res://game/scenes/mall/storefront_card.gd" id="1"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_card"]
+size = Vector2(180, 220)
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_customer"]
+size = Vector2(24, 40)
+
+[node name="StorefrontCard" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Frame" type="ColorRect" parent="."]
+offset_left = -90.0
+offset_top = -110.0
+offset_right = 90.0
+offset_bottom = 110.0
+color = Color(0.12, 0.1, 0.09, 1)
+
+[node name="ClickArea" type="Area2D" parent="."]
+input_pickable = true
+
+[node name="ClickCollision" type="CollisionShape2D" parent="ClickArea"]
+shape = SubResource("RectangleShape2D_card")
+
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -80.0
+offset_top = -100.0
+offset_right = 80.0
+offset_bottom = -75.0
+text = "Store"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DioramaContainer" type="SubViewportContainer" parent="."]
+offset_left = -80.0
+offset_top = -70.0
+offset_right = 80.0
+offset_bottom = 90.0
+stretch = true
+
+[node name="Diorama" type="SubViewport" parent="DioramaContainer"]
+size = Vector2i(160, 160)
+render_target_update_mode = 4
+
+[node name="Floor" type="ColorRect" parent="DioramaContainer/Diorama"]
+offset_right = 160.0
+offset_bottom = 160.0
+color = Color(0.23, 0.19, 0.16, 1)
+
+[node name="StockBar" type="ColorRect" parent="DioramaContainer/Diorama"]
+offset_left = 0.0
+offset_top = 10.0
+offset_right = 160.0
+offset_bottom = 22.0
+color = Color(0.43, 0.75, 0.36, 1)
+
+[node name="ReputationPips" type="HBoxContainer" parent="DioramaContainer/Diorama"]
+offset_left = 8.0
+offset_top = 34.0
+offset_right = 152.0
+offset_bottom = 50.0
+theme_override_constants/separation = 6
+
+[node name="Pip1" type="ColorRect" parent="DioramaContainer/Diorama/ReputationPips"]
+custom_minimum_size = Vector2(14, 14)
+color = Color(1, 0.85, 0.3, 1)
+
+[node name="Pip2" type="ColorRect" parent="DioramaContainer/Diorama/ReputationPips"]
+custom_minimum_size = Vector2(14, 14)
+color = Color(1, 0.85, 0.3, 1)
+
+[node name="Pip3" type="ColorRect" parent="DioramaContainer/Diorama/ReputationPips"]
+custom_minimum_size = Vector2(14, 14)
+color = Color(1, 0.85, 0.3, 1)
+
+[node name="Pip4" type="ColorRect" parent="DioramaContainer/Diorama/ReputationPips"]
+custom_minimum_size = Vector2(14, 14)
+color = Color(1, 0.85, 0.3, 1)
+
+[node name="Pip5" type="ColorRect" parent="DioramaContainer/Diorama/ReputationPips"]
+custom_minimum_size = Vector2(14, 14)
+color = Color(1, 0.85, 0.3, 1)
+
+[node name="IdleCustomer" type="Sprite2D" parent="DioramaContainer/Diorama"]
+position = Vector2(80, 120)
+texture = SubResource("PlaceholderTexture2D_customer")

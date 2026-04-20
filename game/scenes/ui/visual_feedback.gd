@@ -1,4 +1,5 @@
-## Spawns floating text labels for sale amounts and expense notifications.
+## Spawns floating text labels for sale amounts, expense notifications,
+## and CPUParticles2D bursts for special mechanic moments.
 class_name VisualFeedback
 extends CanvasLayer
 
@@ -14,6 +15,9 @@ const SALE_TEXT_ORIGIN := Vector2(140.0, 50.0)
 ## Anchor position for expense notifications (below cash area).
 const EXPENSE_TEXT_ORIGIN := Vector2(20.0, 130.0)
 
+## Screen-centre position used as default burst origin.
+const BURST_ORIGIN := Vector2(960.0, 540.0)
+
 var _expense_label: Label
 var _expense_tween: Tween
 
@@ -22,6 +26,9 @@ func _ready() -> void:
 	layer = 11
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.money_changed.connect(_on_money_changed)
+	EventBus.rare_pull_occurred.connect(_on_rare_pull_occurred)
+	EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
+	EventBus.warranty_accepted.connect(_on_warranty_accepted_fx)
 	_setup_expense_label()
 
 
@@ -100,3 +107,59 @@ func _show_expense_notification(delta: float) -> void:
 
 func _hide_expense_label() -> void:
 	_expense_label.visible = false
+
+
+func _on_rare_pull_occurred(_pack_id: String) -> void:
+	_spawn_burst(
+		BURST_ORIGIN,
+		Color(1.0, 0.82, 0.1, 1.0),  # foil gold
+		32, 120.0, 1.5
+	)
+
+
+func _on_refurbishment_completed(
+	_item_id: String, _success: bool, _condition: String
+) -> void:
+	_spawn_burst(
+		BURST_ORIGIN,
+		Color(0.55, 0.95, 0.55, 1.0),  # sparkle green
+		20, 80.0, 1.0
+	)
+
+
+func _on_warranty_accepted_fx(
+	_item_id: String, _tier_id: String, _fee: float
+) -> void:
+	_spawn_burst(
+		BURST_ORIGIN,
+		Color(0.43, 0.81, 0.35, 1.0),  # success green
+		16, 60.0, 0.8
+	)
+
+
+## Spawns a short-lived CPUParticles2D burst then frees it.
+func _spawn_burst(
+	origin: Vector2,
+	color: Color,
+	amount: int,
+	speed: float,
+	lifetime: float
+) -> void:
+	var particles: CPUParticles2D = CPUParticles2D.new()
+	particles.position = origin
+	particles.emitting = true
+	particles.one_shot = true
+	particles.amount = amount
+	particles.lifetime = lifetime
+	particles.speed_scale = 1.0
+	particles.explosiveness = 0.9
+	particles.spread = 180.0
+	particles.initial_velocity_min = speed * 0.5
+	particles.initial_velocity_max = speed
+	particles.gravity = Vector2(0.0, 200.0)
+	particles.color = color
+	particles.scale_amount_min = 3.0
+	particles.scale_amount_max = 6.0
+	add_child(particles)
+	var timer: SceneTreeTimer = get_tree().create_timer(lifetime + 0.5)
+	timer.timeout.connect(particles.queue_free)

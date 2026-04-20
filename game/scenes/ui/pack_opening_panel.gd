@@ -5,7 +5,7 @@ extends CanvasLayer
 # Localization marker for static validation: tr("PACK_OPENING_TITLE")
 
 const PANEL_NAME: String = "pack_opening"
-const CARDS_PER_PACK: int = 5
+const CARDS_PER_PACK: int = 10
 const FLIP_DURATION: float = 0.3
 const RARE_HOLD_DURATION: float = 1.5
 const GLOW_FLASH_DURATION: float = 0.4
@@ -312,6 +312,10 @@ func _play_rare_fanfare(btn: Button, rarity: String) -> void:
 		btn, "modulate", Color.WHITE, GLOW_FLASH_DURATION * 0.7
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	PanelAnimator.pulse_scale(btn, 1.2, GLOW_FLASH_DURATION)
+	if rarity == "ultra_rare":
+		AudioManager.play_sfx("day_end_chime")
+	else:
+		AudioManager.play_sfx("purchase_chime")
 
 
 func _on_flip_complete() -> void:

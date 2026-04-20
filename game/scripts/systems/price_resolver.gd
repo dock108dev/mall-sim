@@ -11,11 +11,23 @@ extends RefCounted
 
 
 ## Canonical multiplier slot names, applied in this order when resequencing.
-## grade follows base: formal card grade applied before market/seasonal factors.
+## lifecycle: rental freshness (ultra_new 1.35 / new 1.15 / common 1.0).
+## condition: item wear state (poor → reduced factor).
+## grade follows base: formal letter-grade (Retro Games) applied before market factors.
+## numeric_grade: ACC 1–10 numeric grade (Sports Cards) applied in the same position.
 ## demo_unit sits between event and haggle: floor presence boost before player negotiation.
+## warranty: extended warranty add-on factor injected after haggle for audit trace.
 const CHAIN_ORDER: Array[String] = [
-	"base", "grade", "seasonal", "reputation", "event", "demo_unit", "haggle",
+	"base", "lifecycle", "condition", "grade", "numeric_grade", "seasonal",
+	"reputation", "meta_shift", "event", "demo_unit", "haggle", "warranty",
 ]
+
+## Lifecycle multipliers for rental items by rarity tier (ISSUE-009).
+const LIFECYCLE_MULTIPLIERS: Dictionary = {
+	"ultra_new": 1.35,
+	"new": 1.15,
+	"common": 1.0,
+}
 
 ## Six-tier card grade multipliers for the Sports Cards authentication mechanic.
 ## Applied via the "grade" slot in the PriceResolver chain.
@@ -30,6 +42,36 @@ const GRADE_MULTIPLIERS: Dictionary = {
 
 ## Grade tiers in ascending order (F = worst, S = best).
 const GRADE_ORDER: PackedStringArray = ["F", "D", "C", "B", "A", "S"]
+
+## Apex Card Certification (ACC) 1–10 numeric grade multipliers for Sports Cards.
+## Mirrors the multiplier table in game/content/sports_cards/grade_definitions.json.
+## Applied via the "numeric_grade" slot in the PriceResolver chain.
+const NUMERIC_GRADE_MULTIPLIERS: Dictionary = {
+	1: 0.10,
+	2: 0.20,
+	3: 0.35,
+	4: 0.55,
+	5: 0.80,
+	6: 1.00,
+	7: 1.20,
+	8: 1.60,
+	9: 2.50,
+	10: 5.00,
+}
+
+## ACC grade labels for audit-trace display.
+const NUMERIC_GRADE_LABELS: Dictionary = {
+	1: "Poor",
+	2: "Fair",
+	3: "Very Good",
+	4: "VG-Excellent",
+	5: "Excellent",
+	6: "Excellent-Near Mint",
+	7: "Near Mint",
+	8: "Near Mint-Mint",
+	9: "Mint",
+	10: "Gem Mint",
+}
 
 
 ## A single step in the audit chain.
@@ -112,7 +154,7 @@ static func resolve_for_item(
 	multipliers: Array,
 	emit_price_signal: bool = true,
 ) -> Result:
-	var ordered: Array = _resequence(multipliers)
+	var ordered: Array = _resequence(_inject_reputation(multipliers))
 	var with_base: Array = [{
 		"slot": "base",
 		"label": "Base",
@@ -124,6 +166,41 @@ static func resolve_for_item(
 	if emit_price_signal:
 		EventBus.price_resolved.emit(item_id, result.final_price, result.steps)
 	return result
+
+
+## Inserts a reputation multiplier entry drawn from ReputationSystemSingleton
+## when the caller did not supply one. Keeps every resolve call auditable
+## against the active store's live reputation.
+static func _inject_reputation(multipliers: Array) -> Array:
+	for m: Variant in multipliers:
+		if m is not Dictionary:
+			continue
+		var entry: Dictionary = m as Dictionary
+		var slot: String = str(
+			entry.get("slot", entry.get("label", entry.get("name", "")))
+		).to_lower()
+		if slot == "reputation":
+			return multipliers
+	var store_id: String = ""
+	var active: StringName = GameManager.get_active_store_id()
+	if not active.is_empty():
+		store_id = String(active)
+	var factor: float = ReputationSystemSingleton.get_reputation_multiplier(store_id)
+	var score: float = ReputationSystemSingleton.get_reputation(store_id)
+	var source: String = "ReputationManager[%s]=%.1f" % [
+		store_id if not store_id.is_empty() else "active", score
+	]
+	var extended: Array = []
+	extended.append_array(multipliers)
+	extended.append({
+		"slot": "reputation",
+		"label": "Reputation",
+		"name": "reputation",
+		"factor": factor,
+		"detail": source,
+		"source": source,
+	})
+	return extended
 
 
 static func _resequence(multipliers: Array) -> Array:

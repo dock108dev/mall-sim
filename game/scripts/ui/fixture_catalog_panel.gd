@@ -360,7 +360,9 @@ func _on_money_changed(_old_amount: float, _new_amount: float) -> void:
 	_refresh_catalog()
 
 
-func _on_reputation_changed(store_id: String, _new_score: float) -> void:
+func _on_reputation_changed(
+	store_id: String, _old_score: float, _new_score: float
+) -> void:
 	if not _is_open:
 		return
 	if ContentRegistry.resolve(store_id) != _get_active_store_id():

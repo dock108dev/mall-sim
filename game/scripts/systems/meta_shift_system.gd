@@ -18,8 +18,8 @@ const SPIKE_MULT_MAX: float = 3.0
 const DROP_MULT: float = 0.5
 
 const SET_TAGS: Array[String] = [
-	"base_set", "jungle", "fossil",
-	"neo_genesis", "gym_heroes", "crystal_storm",
+	"base_set", "canopy", "deep_dig",
+	"neo_spark", "shadow_set", "crystal_storm",
 ]
 
 const META_SHIFTS_PATH: String = "res://game/content/meta_shifts.json"

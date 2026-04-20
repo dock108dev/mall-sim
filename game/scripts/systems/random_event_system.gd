@@ -3,6 +3,11 @@ class_name RandomEventSystem
 extends Node
 
 
+## RandomEventSystem is dormant on days 1-2; activates from day 3 onward.
+const ACTIVATION_DAY: int = 3
+## In-game hour at which the next-day event telegraph fires (STORE_CLOSE_HOUR - 12 = 9).
+const TELEGRAPH_HOUR: int = 9
+
 const CELEBRITY_TRAFFIC_MULTIPLIER: float = 3.0
 const POWER_OUTAGE_TRAFFIC_MULTIPLIER: float = 0.5
 const COLLECTOR_CONVENTION_TRAFFIC_MULTIPLIER: float = 2.0
@@ -20,6 +25,7 @@ var _effects: RandomEventEffects
 var _daily_rolled: bool = false
 var _hourly_rolled_events: Dictionary = {}
 var _current_day: int = 1
+var _telegraph_emitted_today: bool = false
 
 
 func initialize(
@@ -217,6 +223,7 @@ func _apply_state(data: Dictionary) -> void:
 	_disabled_fixture_id = ""
 	_daily_rolled = false
 	_hourly_rolled_events = {}
+	_telegraph_emitted_today = false
 	var active_data: Variant = data.get("active_event", {})
 	if active_data is Dictionary:
 		_load_active_event(active_data as Dictionary)
@@ -265,13 +272,21 @@ func _on_day_started(day: int) -> void:
 	_current_day = day
 	_daily_rolled = false
 	_hourly_rolled_events = {}
+	_telegraph_emitted_today = false
 	_tick_cooldowns()
 	_check_active_event_expiry(day)
-	if _active_event.is_empty():
+	if _active_event.is_empty() and day >= ACTIVATION_DAY:
 		evaluate_daily_events(day)
 
 
 func _on_hour_changed(hour: int) -> void:
+	if _current_day >= ACTIVATION_DAY and hour == TELEGRAPH_HOUR and not _telegraph_emitted_today:
+		_telegraph_emitted_today = true
+		EventBus.random_event_telegraphed.emit(
+			"Unusual market activity expected — watch prices tomorrow."
+		)
+	if _current_day < ACTIVATION_DAY:
+		return
 	if not _active_event.is_empty():
 		return
 	_try_trigger_hourly_event(hour)

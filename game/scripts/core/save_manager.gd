@@ -3,7 +3,7 @@ class_name SaveManager
 extends Node
 
 
-const CURRENT_SAVE_VERSION: int = 2
+const CURRENT_SAVE_VERSION: int = 3
 const MIN_SUPPORTED_SAVE_VERSION: int = 0
 const SAVE_DIR := "user://"
 const SLOT_INDEX_PATH := "user://save_index.cfg"
@@ -821,6 +821,8 @@ func _get_migration_step(from_version: int) -> Callable:
 			return Callable(self, "_migrate_v0_to_v1")
 		1:
 			return Callable(self, "_migrate_v1_to_v2")
+		2:
+			return Callable(self, "_migrate_v2_to_v3")
 		_:
 			return Callable()
 
@@ -901,6 +903,31 @@ func _migrate_v1_to_v2(data: Dictionary) -> Dictionary:
 	if existing_metadata is Dictionary:
 		save_metadata = (existing_metadata as Dictionary).duplicate(true)
 	save_metadata["save_version_tag"] = 2
+	data["save_metadata"] = save_metadata
+	return data
+
+
+## v2 → v3: reputation scores are now the canonical PriceResolver multiplier
+## source. Ensure a reputation block exists so load_save_data restores cleanly
+## for saves written before ReputationManager was wired through PriceResolver.
+func _migrate_v2_to_v3(data: Dictionary) -> Dictionary:
+	var reputation: Variant = data.get("reputation", null)
+	if not (reputation is Dictionary):
+		data["reputation"] = {"scores": {}, "tiers": {}, "tier_locks": {}}
+	else:
+		var rep_dict: Dictionary = reputation as Dictionary
+		if not rep_dict.has("scores"):
+			rep_dict["scores"] = {}
+		if not rep_dict.has("tiers"):
+			rep_dict["tiers"] = {}
+		if not rep_dict.has("tier_locks"):
+			rep_dict["tier_locks"] = {}
+		data["reputation"] = rep_dict
+	var save_metadata: Dictionary = {}
+	var existing_metadata: Variant = data.get("save_metadata", {})
+	if existing_metadata is Dictionary:
+		save_metadata = (existing_metadata as Dictionary).duplicate(true)
+	save_metadata["save_version_tag"] = 3
 	data["save_metadata"] = save_metadata
 	return data
 

@@ -20,6 +20,12 @@ const GREETER_ENTRY_BONUS: float = 0.2
 const GREETER_BROWSE_BONUS: float = 0.15
 const VIP_CUSTOMER_ID: StringName = &"vip_customer"
 const VIP_UNLOCK_ID: StringName = &"vip_customer_events"
+## Cross-store traffic formula: for each adjacent store whose budget_multiplier
+## (from ReputationSystem) exceeds CROSS_STORE_REP_THRESHOLD (1.2 = REPUTABLE tier),
+## add CROSS_STORE_BROWSE_BONUS to the spawned customer's browse_mult.
+## Adjacent store IDs are set via set_adjacent_store_ids() during GameWorld init.
+const CROSS_STORE_REP_THRESHOLD: float = 1.2
+const CROSS_STORE_BROWSE_BONUS: float = 0.15
 
 const HOUR_DENSITY: Dictionary = {
 	9: 0.1,
@@ -76,6 +82,7 @@ var _active_event_spawn_modifier: float = 1.0
 var _active_event_intent_modifier: float = 1.0
 ## Tracks per-event modifiers so multiple concurrent events compose correctly.
 var _active_event_modifiers: Dictionary = {}
+var _adjacent_store_ids: Array[String] = []
 
 
 func initialize(
@@ -193,6 +200,10 @@ func spawn_customer(
 	var browse_mult: float = 1.0
 	if greeter:
 		browse_mult = 1.0 + GREETER_BROWSE_BONUS * greeter.performance_multiplier()
+	if _reputation_system and not _adjacent_store_ids.is_empty():
+		for adj_id: String in _adjacent_store_ids:
+			if _reputation_system.get_budget_multiplier(adj_id) > CROSS_STORE_REP_THRESHOLD:
+				browse_mult += CROSS_STORE_BROWSE_BONUS
 	customer.initialize(
 		profile, _store_controller, _inventory_system,
 		budget_mult, browse_mult
@@ -268,6 +279,10 @@ func set_inventory_system(system: InventorySystem) -> void:
 func set_reputation_system(system: ReputationSystem) -> void:
 	_reputation_system = system
 	_update_max_customers()
+
+
+func set_adjacent_store_ids(ids: Array[String]) -> void:
+	_adjacent_store_ids = ids.duplicate()
 
 
 func set_market_event_system(system: MarketEventSystem) -> void:
@@ -589,7 +604,7 @@ func _on_customer_despawn_requested(customer: Customer) -> void:
 
 
 func _on_reputation_changed(
-	_changed_store_id: String, _new_value: float
+	_changed_store_id: String, _old_score: float, _new_value: float
 ) -> void:
 	_update_max_customers()
 

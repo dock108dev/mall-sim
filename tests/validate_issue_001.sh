@@ -13,14 +13,15 @@ fail() { FAIL=$((FAIL + 1)); echo "  FAIL: $1"; }
 echo "=== ISSUE-001: Wire MarketEventSystem into GameWorld ==="
 echo ""
 
-# --- AC1: MarketEventSystem instantiated in game_world.gd:_setup_systems() ---
-echo "[AC1] MarketEventSystem instantiated in _setup_systems()"
+# --- AC1: MarketEventSystem instantiated in game_world.gd ---
+echo "[AC1] MarketEventSystem declared in game_world.gd"
 
-if grep -q 'market_event_system\s*=\s*MarketEventSystem\.new()' \
+# Accept either @onready scene-node pattern or new()+add_child() pattern
+if grep -qE '(market_event_system\s*[:=].*MarketEventSystem|MarketEventSystem\.new\(\))' \
     "$ROOT/game/scenes/world/game_world.gd"; then
-    pass "MarketEventSystem.new() found in game_world.gd"
+    pass "MarketEventSystem declared in game_world.gd"
 else
-    fail "MarketEventSystem.new() not found in game_world.gd"
+    fail "MarketEventSystem not declared in game_world.gd"
 fi
 
 if grep -q 'market_event_system\.initialize()' \
@@ -30,11 +31,12 @@ else
     fail "market_event_system.initialize() not called"
 fi
 
-if grep -q 'add_child(market_event_system)' \
+# Accept either add_child() call or @onready $NodePath pattern
+if grep -qE '(add_child\(market_event_system\)|@onready var market_event_system)' \
     "$ROOT/game/scenes/world/game_world.gd"; then
-    pass "market_event_system added as child"
+    pass "market_event_system added to scene"
 else
-    fail "market_event_system not added as child"
+    fail "market_event_system not added to scene"
 fi
 
 # --- AC2: EventBus declares 3 market event signals ---

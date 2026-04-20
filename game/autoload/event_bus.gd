@@ -28,6 +28,7 @@ signal speed_reduced_by_event(reason: String)
 signal time_speed_requested(speed_tier: int)
 
 # ── Game State ────────────────────────────────────────────────────────────────
+signal boot_completed()
 signal game_state_changed(old_state: int, new_state: int)
 signal gameplay_ready()
 signal game_over_triggered()
@@ -38,6 +39,8 @@ signal day_acknowledged()
 signal transaction_completed(amount: float, success: bool, message: String)
 signal money_changed(old_amount: float, new_amount: float)
 signal item_sold(item_id: String, price: float, category: String)
+## Emitted by ObjectiveDirector on the first item_sold in a run.
+signal first_sale_completed(store_id: StringName, item_id: String, price: float)
 signal item_lost(item_id: String, reason: String)
 signal lease_requested(store_id: StringName, slot_index: int, store_name: String)
 signal lease_completed(store_id: StringName, success: bool, message: String)
@@ -64,6 +67,12 @@ signal storefront_entered(slot_index: int, store_id: String)
 signal storefront_exited()
 signal storefront_zone_entered(store_id: String)
 signal storefront_zone_exited(store_id: String)
+## Emitted by StorefrontCard on left-click; MallHub re-emits enter_store_requested.
+signal storefront_clicked(store_id: StringName)
+## Emitted by DrawerHost when a store drawer has begun opening for store_id.
+signal drawer_opened(store_id: StringName)
+## Emitted by DrawerHost when the active drawer has begun closing for store_id.
+signal drawer_closed(store_id: StringName)
 
 # ── Store Actions (ActionDrawer) ──────────────────────────────────────────────
 ## Emitted by a StoreController when it enters; carries the list of action
@@ -133,8 +142,9 @@ signal customer_mood_changed(item_id: StringName, mood: String)
 signal bonus_sale_completed(item_id: StringName, bonus_amount: float)
 
 # ── Reputation ────────────────────────────────────────────────────────────────
-## Emitted by ReputationSystem when a store's reputation score changes.
-signal reputation_changed(store_id: String, new_score: float)
+## Emitted by ReputationSystem after every reputation mutation.
+## old_score is the pre-mutation score; new_score is the post-clamp score.
+signal reputation_changed(store_id: String, old_score: float, new_score: float)
 ## Emitted by ReputationSystem when an event raises a store into a new tier.
 signal reputation_tier_changed(store_id: String, old_tier: int, new_tier: int)
 
@@ -181,6 +191,8 @@ signal market_event_expired(event_id: StringName)
 signal market_event_triggered(event_id: StringName, store_id: StringName, effect: Dictionary)
 signal random_event_started(event_id: String)
 signal random_event_ended(event_id: String)
+## Emitted by RandomEventSystem at STORE_CLOSE_HOUR - 12 on days 3+ to telegraph upcoming market activity.
+signal random_event_telegraphed(message: String)
 signal random_event_resolved(event_id: StringName, outcome: StringName)
 signal random_event_triggered(event_id: StringName, store_id: StringName, effect: Dictionary)
 signal bulk_order_started(item_id: StringName, quantity: int, unit_price: float)
@@ -218,6 +230,18 @@ signal card_rejected(item_id: StringName)
 ## Emitted after authentication succeeds with the assigned grade (F/D/C/B/A/S).
 signal card_graded(item_id: StringName, grade: String)
 
+# ── Sports Cards — ACC Numeric Grading (ISSUE-015) ───────────────────────────
+## Emitted when the player submits a card to the Apex Card Certification service.
+## card_id is the item instance_id; day_submitted is the current game day.
+signal grade_submitted(card_id: StringName, day_submitted: int)
+## Emitted at day_started of day N+1 for each card submitted on day N.
+## grade is a numeric int 1–10 matching PriceResolver.NUMERIC_GRADE_MULTIPLIERS.
+signal grade_returned(card_id: StringName, grade: int)
+## Emitted by SportsMemorabiliaController on day_ended with a summary of grading
+## activity: pending_count is cards still in queue; returned is an Array of
+## Dictionaries with keys {card_id, card_name, grade, grade_label}.
+signal grading_day_summary(pending_count: int, returned: Array)
+
 # ── Card Condition Grading (Sports Memorabilia) ───────────────────────────────
 ## Emitted by ConditionPickerDialog when the player confirms a condition grade.
 signal card_condition_selected(item_id: StringName, condition: String)
@@ -254,6 +278,8 @@ signal refurbishment_failed(item_id: String)
 signal pack_opening_started(pack_id: String, card_results: Array[Dictionary])
 signal pack_opened(pack_id: String, cards: Array[String])
 signal items_revealed(pack_id: String, creatures: Array)
+## Emitted after pack_opened when at least one card is holo_rare, secret_rare, or ultra_rare.
+signal rare_pull_occurred(pack_id: String)
 
 # ── Tournament ────────────────────────────────────────────────────────────────
 signal tournament_started(participant_count: int, cost: float)
@@ -291,6 +317,9 @@ signal title_returned(item_id: String, degraded: bool)
 signal late_fee_waived(item_id: String, amount: float, reputation_delta: float)
 ## Player (or auto-collect) collected a late fee from an overdue return.
 signal late_fee_collected(item_id: String, amount: float, days_late: int)
+## Emitted at day transition for each item still out past its deadline.
+## customer_id may be empty when the rental was created without one.
+signal rental_overdue(customer_id: String, item_id: String)
 
 # ── Warranty ──────────────────────────────────────────────────────────────────
 signal warranty_purchased(item_id: String, warranty_fee: float)
@@ -322,6 +351,8 @@ signal product_entered_clearance(item_id: String)
 ## Emitted by MilestoneSystem when a milestone condition is first satisfied.
 signal milestone_unlocked(milestone_id: StringName, reward: Dictionary)
 signal milestone_completed(milestone_id: String, milestone_name: String, reward_description: String)
+## Emitted by ProgressionSystem alongside milestone_completed; carries only the ID for lightweight listeners.
+signal milestone_reached(milestone_id: StringName)
 signal milestone_reputation_reward(milestone_id: StringName, delta: int)
 signal milestone_unlock_granted(unlock_id: StringName)
 signal store_slot_unlocked(slot_index: int)
@@ -363,8 +394,9 @@ signal secret_thread_failed(thread_id: StringName)
 signal regular_recognized(customer_id: StringName, regular_name: String, visit_count: int)
 ## Emitted when a regulars-log thread advances to a new phase (not the final phase).
 signal thread_advanced(thread_id: String, customer_id: StringName, new_phase: int)
-## Emitted when a regulars-log thread reaches its final resolution phase.
-signal thread_resolved(thread_id: String, customer_id: StringName, payoff_text: String)
+## Emitted when any narrative thread closes. resolution_type is "resolved"
+## (player completed the deliberate action) or "non_resolved" (timeout / passive path).
+signal thread_resolved(thread_id: String, resolution_type: String)
 
 # ── Ambient Moments ──────────────────────────────────────────────────────────
 signal mystery_item_inspected(instance_id: String)
@@ -381,6 +413,21 @@ signal moment_displayed(moment_id: StringName, flavor_text: String, duration_sec
 signal moment_expired(moment_id: StringName)
 ## Emitted when all active moment slots are empty and the waiting queue is also empty.
 signal moment_queue_empty()
+
+# ── 30-Day Arc ────────────────────────────────────────────────────────────────
+## Emitted by DayManager the first time a day-threshold unlock is reached.
+## unlock_id matches an entry in arc_unlocks.json; fires exactly once per run.
+signal arc_unlock_triggered(unlock_id: String, day: int)
+## Emitted by DayManager after day acknowledgement when win/loss is determined.
+## outcome: 'win' | 'loss'. stats_dict keys: outcome, final_cash (float),
+## days_survived (int), items_sold_per_store (Dictionary), endings_unlocked (Array).
+signal game_ended(outcome: String, stats_dict: Dictionary)
+## Emitted by EconomySystem on days that are multiples of 30 (30, 60, 90…).
+## total_amount is the sum deducted across all owned stores for the month.
+signal monthly_rent_posted(day: int, total_amount: float)
+## Emitted by EconomySystem on day 90 and every 90 days thereafter.
+## Triggers the quarterly lease review event (rent-increase risk).
+signal quarterly_lease_review(day: int)
 
 # ── Endings ───────────────────────────────────────────────────────────────────
 signal ending_requested(trigger_type: String)
@@ -412,6 +459,10 @@ signal notification_requested(message: String)
 signal toast_requested(message: String, category: StringName, duration: float)
 signal panel_opened(panel_name: String)
 signal panel_closed(panel_name: String)
+## Emitted by ObjectiveDirector whenever the three-slot objective display should update.
+## payload keys: objective (String), action (String), key (String).
+## When payload contains hidden: true the rail should conceal itself.
+signal objective_changed(payload: Dictionary)
 signal keybind_changed(action: String, new_event: InputEventKey)
 signal item_tooltip_requested(item: ItemInstance)
 signal item_tooltip_hidden()

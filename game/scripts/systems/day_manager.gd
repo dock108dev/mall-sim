@@ -1,0 +1,136 @@
+## Manages the 30-day game arc: phase classification, unlock triggers, win/loss.
+##
+## Arc phases (from arc_unlocks.json):
+##   slow_open    days  1–7
+##   main_stretch days  8–21
+##   crunch       days 22–30
+##
+## Unlock thresholds (arc_unlocks.json) fire arc_unlock_triggered exactly once
+## per run when the matching day is first reached.
+##
+## Win: day 30 reached with cash >= win_condition.min_cash.
+## Loss: end-of-day cash < 0 (checked every day).
+## game_ended fires at most once; call evaluate_day_end() from DayCycleController.
+class_name DayManager
+extends Node
+
+const ARC_UNLOCKS_PATH := "res://game/content/progression/arc_unlocks.json"
+
+var _economy_system: EconomySystem = null
+var _ending_evaluator: EndingEvaluatorSystem = null
+var _arc_phases: Array = []
+var _arc_unlocks: Array = []
+var _win_condition: Dictionary = {}
+var _fired_unlocks: Dictionary = {}
+var _game_ended_emitted: bool = false
+
+
+func initialize(
+	economy_system: EconomySystem,
+	ending_evaluator: EndingEvaluatorSystem = null,
+) -> void:
+	_economy_system = economy_system
+	_ending_evaluator = ending_evaluator
+	_load_arc_config()
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
+
+
+## Returns the arc phase label for the current day.
+func current_arc_phase() -> String:
+	return _phase_for_day(GameManager.get_current_day())
+
+
+## Called by DayCycleController after wages and milestone evaluation.
+## Emits game_ended(outcome, stats) when win or loss conditions are met.
+func evaluate_day_end(day: int, current_cash: float) -> void:
+	if _game_ended_emitted:
+		return
+	if current_cash < 0.0:
+		_emit_game_ended("loss", day, current_cash)
+		return
+	var target_day: int = int(_win_condition.get("target_day", 30))
+	var min_cash: float = float(_win_condition.get("min_cash", 5000.0))
+	if day >= target_day and current_cash >= min_cash:
+		_emit_game_ended("win", day, current_cash)
+
+
+func get_save_data() -> Dictionary:
+	return {"fired_unlocks": _fired_unlocks.duplicate()}
+
+
+func load_save_data(data: Dictionary) -> void:
+	var fired: Variant = data.get("fired_unlocks", {})
+	if fired is Dictionary:
+		_fired_unlocks = (fired as Dictionary).duplicate()
+	_game_ended_emitted = false
+
+
+# ── Internal ──────────────────────────────────────────────────────────────────
+
+func _phase_for_day(day: int) -> String:
+	for phase: Variant in _arc_phases:
+		if not (phase is Dictionary):
+			continue
+		var p: Dictionary = phase as Dictionary
+		if day >= int(p.get("day_start", 1)) and day <= int(p.get("day_end", 30)):
+			return str(p.get("id", "main_stretch"))
+	return "crunch"
+
+
+func _load_arc_config() -> void:
+	var file := FileAccess.open(ARC_UNLOCKS_PATH, FileAccess.READ)
+	if not file:
+		push_error("DayManager: cannot open %s" % ARC_UNLOCKS_PATH)
+		return
+	var text: String = file.get_as_text()
+	file.close()
+	var json := JSON.new()
+	if json.parse(text) != OK:
+		push_error(
+			"DayManager: JSON parse error in arc_unlocks.json: %s" % json.get_error_message()
+		)
+		return
+	var data: Variant = json.get_data()
+	if not (data is Dictionary):
+		push_error("DayManager: arc_unlocks.json root must be a Dictionary")
+		return
+	var d: Dictionary = data as Dictionary
+	_arc_phases = d.get("arc_phases", []) as Array
+	_arc_unlocks = d.get("arc_unlocks", []) as Array
+	_win_condition = d.get("win_condition", {"target_day": 30, "min_cash": 5000.0}) as Dictionary
+
+
+func _on_day_started(day: int) -> void:
+	_check_arc_unlocks(day)
+
+
+func _check_arc_unlocks(day: int) -> void:
+	for unlock: Variant in _arc_unlocks:
+		if not (unlock is Dictionary):
+			continue
+		var u: Dictionary = unlock as Dictionary
+		var uid: String = str(u.get("unlock_id", ""))
+		var threshold: int = int(u.get("day", 0))
+		if uid.is_empty() or threshold <= 0:
+			continue
+		if day >= threshold and not _fired_unlocks.get(uid, false):
+			_fired_unlocks[uid] = true
+			EventBus.arc_unlock_triggered.emit(uid, day)
+
+
+func _emit_game_ended(outcome: String, day: int, final_cash: float) -> void:
+	_game_ended_emitted = true
+	var endings_unlocked: Array = []
+	if _ending_evaluator:
+		var rid: StringName = _ending_evaluator.get_resolved_ending_id()
+		if not rid.is_empty():
+			endings_unlocked.append(String(rid))
+	var stats: Dictionary = {
+		"outcome": outcome,
+		"final_cash": final_cash,
+		"days_survived": day,
+		"items_sold_per_store": {},
+		"endings_unlocked": endings_unlocked,
+	}
+	EventBus.game_ended.emit(outcome, stats)

@@ -263,8 +263,8 @@ func test_walkouts_not_incremented_on_satisfied_leave() -> void:
 
 func test_reputation_delta_tracked() -> void:
 	EventBus.day_started.emit(1)
-	EventBus.reputation_changed.emit("test_store", 55.0)
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 55.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	EventBus.day_ended.emit(1)
 	var report: PerformanceReport = _system.get_history()[0]
 	assert_almost_eq(report.reputation_delta, 5.0, 0.01)
@@ -322,7 +322,7 @@ func test_save_load_round_trip() -> void:
 	EventBus.day_started.emit(1)
 	EventBus.item_sold.emit("card_a", 50.0, "cards")
 	EventBus.customer_purchased.emit(&"store", &"card_a", 50.0, &"c1")
-	EventBus.reputation_changed.emit("test_store", 55.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 55.0)
 	EventBus.day_ended.emit(1)
 
 	var save_data: Dictionary = _system.get_save_data()

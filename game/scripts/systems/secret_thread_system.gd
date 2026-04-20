@@ -41,6 +41,10 @@ func _load_thread_definitions() -> void:
 	if loaded.is_empty() and GameManager.data_loader:
 		loaded = GameManager.data_loader.get_all_secret_threads()
 	_thread_defs = loaded
+	for def: Dictionary in _thread_defs:
+		var err: String = _validate_phase_ordering(def)
+		if not err.is_empty():
+			push_warning("SecretThreadSystem: " + err)
 
 
 ## Injects the economy system used to apply cash completion rewards.
@@ -56,6 +60,32 @@ func _init_thread_states() -> void:
 		if _thread_states.has(thread_id):
 			continue
 		_thread_states[thread_id] = _default_state()
+
+
+## Validates that every substrate phase in def.phases is preceded by ≥2
+## signal-phase entries. Returns an error string, or "" if the def is valid.
+## Threads without a "phases" key skip this check (legacy format).
+func _validate_phase_ordering(def: Dictionary) -> String:
+	var phases: Variant = def.get("phases", null)
+	if phases == null:
+		return ""
+	if phases is not Array:
+		return "thread '%s' has a non-array 'phases' field" % str(def.get("id", "?"))
+	var signal_count: int = 0
+	for entry: Variant in (phases as Array):
+		if entry is not Dictionary:
+			continue
+		var phase_type: String = str((entry as Dictionary).get("type", ""))
+		match phase_type:
+			"signal":
+				signal_count += 1
+			"substrate":
+				if signal_count < 2:
+					return (
+						"thread '%s' substrate phase has only %d preceding signal phase(s); need ≥2"
+						% [str(def.get("id", "?")), signal_count]
+					)
+	return ""
 
 
 func _default_state() -> Dictionary:
@@ -104,7 +134,9 @@ func _on_money_changed(_old: float, new_amount: float) -> void:
 	_evaluate_all_threads()
 
 
-func _on_reputation_changed(_store_id: String, new_value: float) -> void:
+func _on_reputation_changed(
+	_store_id: String, _old_score: float, new_value: float
+) -> void:
 	_reputation = new_value
 	_record_signal("reputation_changed", [_store_id, new_value])
 	_evaluate_all_threads()
@@ -406,6 +438,7 @@ func _check_timeout(
 	if day - activated < timeout:
 		return false
 	EventBus.secret_thread_failed.emit(StringName(thread_id))
+	EventBus.thread_resolved.emit(thread_id, "non_resolved")
 	if bool(def.get("resettable", false)):
 		_reset_thread(thread_id, state)
 	else:
@@ -433,6 +466,7 @@ func _do_reveal(
 func _do_resolve(
 	thread_id: String, def: Dictionary, state: Dictionary
 ) -> void:
+	EventBus.thread_resolved.emit(thread_id, "resolved")
 	var reward_data: Dictionary = _reward_data(def)
 	_apply_completion_reward(thread_id, reward_data)
 	var reward_unlock_id: StringName = StringName(
@@ -469,7 +503,7 @@ func _apply_completion_reward(
 					amount, "secret_thread_reward: " + thread_id
 				)
 		"reputation":
-			EventBus.reputation_changed.emit(
+			ReputationSystemSingleton.add_reputation(
 				str(reward_data.get("store_id", "")),
 				float(reward_data.get("value", 0.0)),
 			)

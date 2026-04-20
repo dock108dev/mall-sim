@@ -1,0 +1,41 @@
+{
+  "day_beats": [
+    {
+      "day": 1,
+      "story_beat": "A kid stops in front of the shelf, mouth open. 'They still make these?' His older sister steers him toward the food court. He looks back twice.",
+      "forward_hook": "Word travels fast. A collector mentioned she'd swing by tomorrow with a specific wish list."
+    },
+    {
+      "day": 2,
+      "story_beat": "A woman in a blazer picks up a cartridge, turns it over, sets it back down. She doesn't buy — but she lingers longer than most.",
+      "forward_hook": "The weekend crowd tends to run younger. Keep the counter clear and the prices honest."
+    },
+    {
+      "day": 3,
+      "story_beat": "Someone left a handwritten note in the returns bin: 'This game saved my summer. Hope it saves someone else's too.' No name.",
+      "forward_hook": "Rumor from the food court: a reseller is doing the rounds. Price accordingly."
+    },
+    {
+      "day": 4,
+      "story_beat": "The mall's overhead PA plays a jingle that hasn't aired since 1998. Three customers stop mid-sentence and just listen.",
+      "forward_hook": "You're starting to see regulars. That's a good sign — it means they trust the stock."
+    },
+    {
+      "day": 5,
+      "story_beat": "A teenager haggles for twenty minutes on a ten-dollar game, then buys it at full price anyway. He seems satisfied regardless.",
+      "forward_hook": "The weekend is close. Fridays move more cartridges than any other day of the week."
+    },
+    {
+      "day": 6,
+      "story_beat": "Two customers arrive separately, both looking for the same item. One leaves with it. The other takes your number. You didn't know you had a number until you gave it.",
+      "forward_hook": "End of your first week tomorrow. Take stock of what sold and what didn't. The shelf tells a story if you let it."
+    },
+    {
+      "day": 7,
+      "story_beat": "A little girl asks if you work here every day. You say yes. She nods like this is important information she will remember. Maybe she will.",
+      "forward_hook": "Week two. The patterns are becoming visible. Stock what moves; rotate what doesn't."
+    }
+  ],
+  "fallback_beat": "The mall hums along. Another day logged.",
+  "fallback_hook": "Tomorrow brings fresh inventory and new faces."
+}

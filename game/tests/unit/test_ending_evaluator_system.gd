@@ -146,7 +146,7 @@ func test_ghost_thread_sets_flag_other_threads_do_not() -> void:
 		_system.get_tracked_stat(&"ghost_tenant_thread_completed"), 0.0,
 		"Non-ghost threads must not set ghost_tenant_thread_completed"
 	)
-	EventBus.secret_thread_completed.emit(&"the_ghost_tenant", {})
+	EventBus.secret_thread_completed.emit(&"ghost_tenant_7b", {})
 	assert_eq(
 		_system.get_tracked_stat(&"ghost_tenant_thread_completed"), 1.0,
 		"ghost_tenant_thread_completed should be 1.0 after ghost thread"
@@ -205,12 +205,12 @@ func test_money_changed_tracks_expenses_and_peak_cash() -> void:
 
 
 func test_reputation_changed_updates_max_tier_and_never_decreases() -> void:
-	EventBus.reputation_changed.emit("store", 85.0)
+	EventBus.reputation_changed.emit("store", 0.0, 85.0)
 	assert_eq(
 		_system.get_tracked_stat(&"max_reputation_tier"), 4.0,
 		"Reputation 85 should map to tier 4"
 	)
-	EventBus.reputation_changed.emit("store", 30.0)
+	EventBus.reputation_changed.emit("store", 85.0, 30.0)
 	assert_eq(
 		_system.get_tracked_stat(&"max_reputation_tier"), 4.0,
 		"max_reputation_tier should never decrease"
@@ -446,7 +446,7 @@ func test_save_load_round_trip_preserves_accumulated_stats() -> void:
 	EventBus.day_started.emit(1)
 	EventBus.day_started.emit(2)
 	EventBus.haggle_completed.emit(&"store", &"item", 15.0, 20.0, true, 1)
-	EventBus.secret_thread_completed.emit(&"the_ghost_tenant", {})
+	EventBus.secret_thread_completed.emit(&"ghost_tenant_7b", {})
 	EventBus.customer_left.emit({"satisfied": true})
 	EventBus.customer_left.emit({"satisfied": false})
 

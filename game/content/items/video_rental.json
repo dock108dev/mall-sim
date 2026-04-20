@@ -21,7 +21,10 @@
       "blockbuster"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_velociraptor_gardens_vhs",
@@ -45,7 +48,10 @@
       "blockbuster"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_ghostcatchers_vhs",
@@ -69,7 +75,10 @@
       "family"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_the_grid_vhs",
@@ -77,7 +86,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 14.0,
-    "rarity": "uncommon",
+    "rarity": "ultra_new",
     "condition_range": [
       "mint",
       "good",
@@ -93,9 +102,12 @@
       "blockbuster"
     ],
     "rental_fee": 3.5,
+    "base_rental_fee": 3.5,
     "catalog_price": 2.0,
     "release_day": 1,
-    "rental_period_days": 1
+    "release_date": 1,
+    "rental_period_days": 1,
+    "late_fee_per_day": 2.0
   },
   {
     "id": "rental_wizard_academy_vhs",
@@ -103,7 +115,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 15.0,
-    "rarity": "uncommon",
+    "rarity": "ultra_new",
     "condition_range": [
       "mint",
       "good",
@@ -119,9 +131,12 @@
       "blockbuster"
     ],
     "rental_fee": 3.5,
+    "base_rental_fee": 3.5,
     "catalog_price": 2.0,
     "release_day": 1,
-    "rental_period_days": 1
+    "release_date": 1,
+    "rental_period_days": 1,
+    "late_fee_per_day": 2.0
   },
   {
     "id": "rental_speed_racer_turbo_vhs",
@@ -129,7 +144,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 13.0,
-    "rarity": "common",
+    "rarity": "ultra_new",
     "condition_range": [
       "mint",
       "good",
@@ -144,9 +159,12 @@
       "new_release"
     ],
     "rental_fee": 3.5,
+    "base_rental_fee": 3.5,
     "catalog_price": 2.0,
     "release_day": 1,
-    "rental_period_days": 1
+    "release_date": 1,
+    "rental_period_days": 1,
+    "late_fee_per_day": 2.0
   },
   {
     "id": "rental_pixel_story_vhs",
@@ -170,7 +188,10 @@
       "classic"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_karate_pupil_vhs",
@@ -194,7 +215,10 @@
       "80s"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_frightmare_oak_street_vhs",
@@ -218,7 +242,10 @@
       "80s"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_notebook_of_secrets_vhs",
@@ -241,7 +268,10 @@
       "classic"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_space_cowboy_bebop_vhs",
@@ -249,7 +279,7 @@
     "store_type": "rentals",
     "category": "vhs_cult",
     "base_price": 9.0,
-    "rarity": "uncommon",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -265,7 +295,10 @@
       "action"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 5
+    "base_rental_fee": 2.0,
+    "rental_period_days": 5,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_big_lebonski_vhs",
@@ -289,7 +322,10 @@
       "classic"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 5
+    "base_rental_fee": 2.0,
+    "rental_period_days": 5,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_chainsaw_ballet_vhs",
@@ -297,7 +333,7 @@
     "store_type": "rentals",
     "category": "vhs_cult",
     "base_price": 6.0,
-    "rarity": "uncommon",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -313,7 +349,10 @@
       "director"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 5
+    "base_rental_fee": 2.0,
+    "rental_period_days": 5,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_foreign_cinema_collection_vhs",
@@ -321,7 +360,7 @@
     "store_type": "rentals",
     "category": "vhs_cult",
     "base_price": 5.0,
-    "rarity": "uncommon",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -337,7 +376,10 @@
       "indie"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 5
+    "base_rental_fee": 2.0,
+    "rental_period_days": 5,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_the_grid_dvd",
@@ -345,7 +387,7 @@
     "store_type": "rentals",
     "category": "dvd_new_release",
     "base_price": 16.0,
-    "rarity": "uncommon",
+    "rarity": "ultra_new",
     "condition_range": [
       "mint",
       "good",
@@ -362,9 +404,12 @@
       "new_release"
     ],
     "rental_fee": 4.5,
+    "base_rental_fee": 4.5,
     "catalog_price": 3.0,
     "release_day": 1,
-    "rental_period_days": 1
+    "release_date": 1,
+    "rental_period_days": 1,
+    "late_fee_per_day": 2.0
   },
   {
     "id": "rental_wizard_academy_dvd",
@@ -372,7 +417,7 @@
     "store_type": "rentals",
     "category": "dvd_new_release",
     "base_price": 18.0,
-    "rarity": "uncommon",
+    "rarity": "ultra_new",
     "condition_range": [
       "mint",
       "good",
@@ -389,9 +434,12 @@
       "new_release"
     ],
     "rental_fee": 4.5,
+    "base_rental_fee": 4.5,
     "catalog_price": 3.0,
     "release_day": 1,
-    "rental_period_days": 1
+    "release_date": 1,
+    "rental_period_days": 1,
+    "late_fee_per_day": 2.0
   },
   {
     "id": "rental_velociraptor_gardens_dvd",
@@ -415,7 +463,10 @@
       "blockbuster"
     ],
     "rental_fee": 3.0,
-    "rental_period_days": 3
+    "base_rental_fee": 3.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_snack_microwave_popcorn",
@@ -530,7 +581,7 @@
     "store_type": "rentals",
     "category": "merchandise",
     "base_price": 12.0,
-    "rarity": "uncommon",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -589,7 +640,10 @@
       "blockbuster"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_bug_life_vhs",
@@ -613,7 +667,10 @@
       "classic"
     ],
     "rental_fee": 2.0,
-    "rental_period_days": 3
+    "base_rental_fee": 2.0,
+    "rental_period_days": 3,
+    "release_date": 0,
+    "late_fee_per_day": 1.0
   },
   {
     "id": "rental_gladiator_maximus_vhs",
@@ -621,7 +678,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 13.0,
-    "rarity": "common",
+    "rarity": "ultra_new",
     "condition_range": [
       "mint",
       "good",
@@ -637,9 +694,12 @@
       "blockbuster"
     ],
     "rental_fee": 3.5,
+    "base_rental_fee": 3.5,
     "catalog_price": 2.0,
     "release_day": 1,
-    "rental_period_days": 1
+    "release_date": 1,
+    "rental_period_days": 1,
+    "late_fee_per_day": 2.0
   },
   {
     "id": "rental_sixth_feeling_vhs",
@@ -647,7 +707,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 12.0,
-    "rarity": "common",
+    "rarity": "ultra_new",
     "condition_range": [
       "mint",
       "good",
@@ -663,8 +723,11 @@
       "twist"
     ],
     "rental_fee": 3.5,
+    "base_rental_fee": 3.5,
     "catalog_price": 2.0,
     "release_day": 1,
-    "rental_period_days": 1
+    "release_date": 1,
+    "rental_period_days": 1,
+    "late_fee_per_day": 2.0
   }
 ]

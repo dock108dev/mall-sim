@@ -81,6 +81,11 @@ const CONDITION_ORDER: PackedStringArray = [
 @export var catalog_price: float = 0.0
 ## Per-item late fee rate override; negative = use store default.
 @export var late_fee_rate: float = -1.0
+## Per-day late fee (ISSUE-009 rental schema); overrides store default when > 0.
+## Formula: late_fee_per_day × days_overdue (no base fee component).
+@export var late_fee_per_day: float = -1.0
+## Canonical release date in game-days (mirrors release_day; required by rental schema).
+@export var release_date: int = 0
 @export var brand: String = ""
 @export var product_line: String = ""
 @export var generation: int = 0

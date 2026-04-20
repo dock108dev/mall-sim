@@ -23,7 +23,7 @@
     "appreciates": true
   },
   {
-    "id": "pc_booster_jungle",
+    "id": "pc_booster_canopy",
     "item_name": "Canopy Clash Expansion Booster",
     "store_type": "pocket_creatures",
     "category": "booster_packs",
@@ -41,12 +41,12 @@
       "pack",
       "booster",
       "sealed",
-      "jungle"
+      "canopy"
     ],
     "appreciates": true
   },
   {
-    "id": "pc_booster_fossil",
+    "id": "pc_booster_deep_dig",
     "item_name": "Fossil Depths Expansion Booster",
     "store_type": "pocket_creatures",
     "category": "booster_packs",
@@ -64,12 +64,12 @@
       "pack",
       "booster",
       "sealed",
-      "fossil"
+      "deep_dig"
     ],
     "appreciates": true
   },
   {
-    "id": "pc_booster_team_rocket",
+    "id": "pc_booster_shadow_set",
     "item_name": "Shadow Syndicate Edition Booster",
     "store_type": "pocket_creatures",
     "category": "booster_packs",
@@ -92,7 +92,7 @@
     "appreciates": true
   },
   {
-    "id": "pc_booster_neo_genesis",
+    "id": "pc_booster_neo_spark",
     "item_name": "Neo Spark Booster",
     "store_type": "pocket_creatures",
     "category": "booster_packs",
@@ -110,7 +110,7 @@
       "pack",
       "booster",
       "sealed",
-      "neo_genesis"
+      "neo_spark"
     ],
     "appreciates": true
   },
@@ -218,7 +218,7 @@
     "description": "A mascot-grade electric critter that kids recognize before they know the rules.",
     "subcategory": "common",
     "tags": [
-      "jungle",
+      "canopy",
       "electric",
       "mascot",
       "popular"
@@ -282,7 +282,7 @@
     "description": "A plated tunnel beast with enough defensive text to keep tournament players interested.",
     "subcategory": "uncommon",
     "tags": [
-      "fossil",
+      "deep_dig",
       "steel",
       "meta",
       "competitive"
@@ -304,7 +304,7 @@
     "description": "A twisting vine creature best known for lovely art and annoyingly solid play.",
     "subcategory": "uncommon",
     "tags": [
-      "jungle",
+      "canopy",
       "grass",
       "art"
     ]
@@ -346,7 +346,7 @@
     "description": "A storm-swept sea creature whose tournament usefulness makes it vanish from bulk trays.",
     "subcategory": "rare",
     "tags": [
-      "neo_genesis",
+      "neo_spark",
       "water",
       "competitive",
       "meta"
@@ -392,7 +392,7 @@
     "description": "A gleaming jungle mascot card with bright foil and constant trade-table demand.",
     "subcategory": "rare_holo",
     "tags": [
-      "jungle",
+      "canopy",
       "electric",
       "holo",
       "mascot",
@@ -415,7 +415,7 @@
     "description": "A purple-foil ghost titan that collectors call one of the set's best artworks.",
     "subcategory": "rare_holo",
     "tags": [
-      "fossil",
+      "deep_dig",
       "ghost",
       "holo",
       "art"
@@ -460,7 +460,7 @@
     "description": "A tournament-era holo bird that spikes whenever the local meta gets clever.",
     "subcategory": "rare_holo",
     "tags": [
-      "neo_genesis",
+      "neo_spark",
       "electric",
       "holo",
       "competitive",
@@ -505,7 +505,7 @@
     "description": "A flashy full-art finisher that competitive players price-check before they even sit down.",
     "subcategory": "ultra_rare",
     "tags": [
-      "neo_genesis",
+      "neo_spark",
       "ex",
       "competitive",
       "meta",
@@ -604,7 +604,7 @@
     "appreciates": true
   },
   {
-    "id": "pc_box_team_rocket",
+    "id": "pc_box_shadow_set",
     "item_name": "Shadow Syndicate Booster Box",
     "store_type": "pocket_creatures",
     "category": "sealed_product",

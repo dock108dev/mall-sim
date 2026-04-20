@@ -23,8 +23,13 @@ var _anim_tween: Tween
 var _overlay_tween: Tween
 var _stagger_tween: Tween
 var _continue_tween: Tween
+var _grading_label: Label
 var _current_day: int = 0
 var _discrepancy_label: Label
+var _story_beat_label: Label
+var _forward_hook_label: Label
+var _warranty_attach_label: Label
+var _demo_status_label: Label
 var _record_high_revenue: float = 0.0
 var _record_high_profit: float = 0.0
 var _record_high_items: int = 0
@@ -96,10 +101,13 @@ func _ready() -> void:
 		_on_review_inventory_pressed
 	)
 	_create_discrepancy_label()
+	_create_narrative_labels()
+	_create_electronics_labels()
 	EventBus.performance_report_ready.connect(
 		_on_performance_report_ready
 	)
 	EventBus.day_closed.connect(_on_day_closed_payload)
+	EventBus.grading_day_summary.connect(_on_grading_day_summary)
 
 
 ## Populates the summary with daily stats and shows the panel.
@@ -138,6 +146,8 @@ func show_summary(
 	_tier_change_label.visible = false
 	_haggle_label.visible = false
 	_late_fee_label.visible = false
+	if _grading_label:
+		_grading_label.visible = false
 	_clear_milestones()
 	_apply_record_highlights(revenue, net_profit, items_sold)
 	_animate_open()
@@ -248,6 +258,16 @@ func _get_stat_row_candidates() -> Array[Control]:
 	]
 	if _discrepancy_label:
 		stat_labels.append(_discrepancy_label)
+	if _warranty_attach_label:
+		stat_labels.append(_warranty_attach_label)
+	if _demo_status_label:
+		stat_labels.append(_demo_status_label)
+	if _grading_label:
+		stat_labels.append(_grading_label)
+	if _story_beat_label:
+		stat_labels.append(_story_beat_label)
+	if _forward_hook_label:
+		stat_labels.append(_forward_hook_label)
 	return stat_labels
 
 
@@ -518,6 +538,123 @@ func _set_discrepancy_display(discrepancy: float) -> void:
 		)
 
 
+func _create_electronics_labels() -> void:
+	var vbox: VBoxContainer = $Panel/Margin/VBox
+	_warranty_attach_label = Label.new()
+	_warranty_attach_label.name = "WarrantyAttachLabel"
+	_warranty_attach_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_warranty_attach_label.visible = false
+	vbox.add_child(_warranty_attach_label)
+
+	_demo_status_label = Label.new()
+	_demo_status_label.name = "DemoStatusLabel"
+	_demo_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_demo_status_label.visible = false
+	vbox.add_child(_demo_status_label)
+
+
+func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void:
+	var has_attach: bool = attach_rate > 0.0
+	_warranty_attach_label.visible = has_attach
+	if has_attach:
+		_warranty_attach_label.text = (
+			"Warranty Attach Rate: %.0f%%" % (attach_rate * 100.0)
+		)
+	_demo_status_label.visible = true
+	if demo_active:
+		_demo_status_label.text = "Demo Unit: Active"
+		_demo_status_label.add_theme_color_override(
+			"font_color", UIThemeConstants.get_positive_color()
+		)
+	else:
+		_demo_status_label.text = "Demo Unit: Inactive"
+		_demo_status_label.remove_theme_color_override("font_color")
+
+
+func _create_grading_label() -> void:
+	var vbox: VBoxContainer = $Panel/Margin/VBox
+	_grading_label = Label.new()
+	_grading_label.name = "GradingLabel"
+	_grading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_grading_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_grading_label.add_theme_color_override(
+		"font_color", Color(0.78, 0.85, 0.60)
+	)
+	_grading_label.visible = false
+	vbox.add_child(_grading_label)
+
+
+func _set_grading_display(pending_count: int, returned: Array) -> void:
+	var lines: Array[String] = []
+	for entry: Variant in returned:
+		if entry is Dictionary:
+			var d: Dictionary = entry as Dictionary
+			lines.append(
+				"ACC Grade: %s — %d (%s)"
+				% [
+					str(d.get("card_name", d.get("card_id", "?"))),
+					int(d.get("grade", 0)),
+					str(d.get("grade_label", "")),
+				]
+			)
+	if pending_count > 0:
+		lines.append(
+			"%d card%s pending ACC grading" % [
+				pending_count,
+				"s" if pending_count != 1 else "",
+			]
+		)
+	if lines.is_empty():
+		if _grading_label:
+			_grading_label.visible = false
+		return
+	if _grading_label:
+		_grading_label.text = "\n".join(lines)
+		_grading_label.visible = true
+
+
+func _on_grading_day_summary(pending_count: int, returned: Array) -> void:
+	_set_grading_display(pending_count, returned)
+
+
+func _create_narrative_labels() -> void:
+	_create_grading_label()
+	var vbox: VBoxContainer = $Panel/Margin/VBox
+	_story_beat_label = Label.new()
+	_story_beat_label.name = "StoryBeatLabel"
+	_story_beat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_story_beat_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_story_beat_label.add_theme_color_override(
+		"font_color", Color(0.85, 0.80, 0.70)
+	)
+	_story_beat_label.visible = false
+	vbox.add_child(_story_beat_label)
+
+	_forward_hook_label = Label.new()
+	_forward_hook_label.name = "ForwardHookLabel"
+	_forward_hook_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_forward_hook_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_forward_hook_label.add_theme_color_override(
+		"font_color", Color(0.60, 0.80, 0.95)
+	)
+	_forward_hook_label.visible = false
+	vbox.add_child(_forward_hook_label)
+
+
+func _set_narrative_display(
+	story_beat: String, forward_hook: String
+) -> void:
+	var has_beat: bool = not story_beat.is_empty()
+	_story_beat_label.visible = has_beat
+	if has_beat:
+		_story_beat_label.text = story_beat
+
+	var has_hook: bool = not forward_hook.is_empty()
+	_forward_hook_label.visible = has_hook
+	if has_hook:
+		_forward_hook_label.text = "Tomorrow: %s" % forward_hook
+
+
 func _on_discrepancy_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
@@ -545,7 +682,12 @@ func _on_performance_report_ready(
 	var has_top_item: bool = not report.top_item_sold.is_empty()
 	_top_item_label.visible = has_top_item
 	if has_top_item:
-		if report.top_item_quantity > 0:
+		if report.top_item_price > 0.0:
+			_top_item_label.text = (
+				"Best Sale: %s — $%.2f"
+				% [report.top_item_sold, report.top_item_price]
+			)
+		elif report.top_item_quantity > 0:
 			_top_item_label.text = (
 				"Top Seller: %s (x%d)"
 				% [report.top_item_sold, report.top_item_quantity]
@@ -554,10 +696,14 @@ func _on_performance_report_ready(
 			_top_item_label.text = (
 				"Top Seller: %s" % report.top_item_sold
 			)
+	_set_narrative_display(report.story_beat, report.forward_hook)
 	_set_haggle_display(report.haggle_wins, report.haggle_losses)
 	_set_late_fee_display(report.late_fee_income)
 	_set_warranty_display(
 		report.warranty_revenue, report.warranty_claim_costs
+	)
+	_set_warranty_attach_display(
+		report.warranty_attach_rate, report.electronics_demo_active
 	)
 	if report.tier_changed:
 		_set_tier_change_display(

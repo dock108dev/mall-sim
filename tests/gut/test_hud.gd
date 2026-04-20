@@ -98,7 +98,7 @@ func test_speed_cycle_wraps_around() -> void:
 
 
 func test_reputation_updates_on_signal() -> void:
-	EventBus.reputation_changed.emit("test_store", 80.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 80.0)
 	assert_eq(_hud._last_reputation, 80.0)
 
 
@@ -185,9 +185,9 @@ func test_income_scale_grows() -> void:
 
 
 func test_reputation_arrow_tween_on_increase() -> void:
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	_hud._last_reputation = 60.0
-	EventBus.reputation_changed.emit("test_store", 70.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 70.0)
 	assert_not_null(
 		_hud._rep_arrow_tween,
 		"Should create arrow tween on reputation increase"
@@ -195,9 +195,9 @@ func test_reputation_arrow_tween_on_increase() -> void:
 
 
 func test_reputation_arrow_tween_on_decrease() -> void:
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	_hud._last_reputation = 60.0
-	EventBus.reputation_changed.emit("test_store", 50.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 50.0)
 	assert_not_null(
 		_hud._rep_arrow_tween,
 		"Should create arrow tween on reputation decrease"
@@ -206,7 +206,7 @@ func test_reputation_arrow_tween_on_decrease() -> void:
 
 func test_reputation_arrow_up_text() -> void:
 	_hud._last_reputation = 50.0
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	var label: Label = _hud.get_node("TopBar/ReputationLabel")
 	assert_string_contains(
 		label.text, "\u25B2",
@@ -216,7 +216,7 @@ func test_reputation_arrow_up_text() -> void:
 
 func test_reputation_arrow_down_text() -> void:
 	_hud._last_reputation = 60.0
-	EventBus.reputation_changed.emit("test_store", 50.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 50.0)
 	var label: Label = _hud.get_node("TopBar/ReputationLabel")
 	assert_string_contains(
 		label.text, "\u25BC",
@@ -232,7 +232,7 @@ func test_reputation_flash_uses_issue_025_timing() -> void:
 
 func test_reputation_increase_flashes_positive_color() -> void:
 	_hud._last_reputation = 50.0
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	await get_tree().create_timer(_hud._REP_ARROW_FADE_IN + 0.05).timeout
 	var label: Label = _hud.get_node("TopBar/ReputationLabel")
 	assert_eq(
@@ -244,7 +244,7 @@ func test_reputation_increase_flashes_positive_color() -> void:
 
 func test_reputation_decrease_flashes_negative_color() -> void:
 	_hud._last_reputation = 60.0
-	EventBus.reputation_changed.emit("test_store", 50.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 50.0)
 	await get_tree().create_timer(_hud._REP_ARROW_FADE_IN + 0.05).timeout
 	var label: Label = _hud.get_node("TopBar/ReputationLabel")
 	assert_eq(
@@ -256,7 +256,7 @@ func test_reputation_decrease_flashes_negative_color() -> void:
 
 func test_reputation_arrow_removed_after_hold() -> void:
 	_hud._last_reputation = 50.0
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	await get_tree().create_timer(
 		_hud._REP_ARROW_FADE_IN + _hud._REP_ARROW_HOLD + 0.05
 	).timeout
@@ -269,7 +269,7 @@ func test_reputation_arrow_removed_after_hold() -> void:
 
 func test_reputation_color_fades_to_body_font_color() -> void:
 	_hud._last_reputation = 50.0
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	await get_tree().create_timer(
 		_hud._REP_ARROW_FADE_IN
 		+ _hud._REP_ARROW_HOLD
@@ -286,7 +286,7 @@ func test_reputation_color_fades_to_body_font_color() -> void:
 
 func test_no_arrow_on_same_reputation() -> void:
 	_hud._last_reputation = 50.0
-	EventBus.reputation_changed.emit("test_store", 50.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 50.0)
 	assert_null(
 		_hud._rep_arrow_tween,
 		"No arrow tween when reputation unchanged"
@@ -296,6 +296,6 @@ func test_no_arrow_on_same_reputation() -> void:
 func test_simultaneous_cash_and_reputation_effects() -> void:
 	EventBus.money_changed.emit(100.0, 200.0)
 	_hud._last_reputation = 50.0
-	EventBus.reputation_changed.emit("test_store", 60.0)
+	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	assert_not_null(_hud._cash_scale_tween, "Cash tween active")
 	assert_not_null(_hud._rep_arrow_tween, "Rep tween active")

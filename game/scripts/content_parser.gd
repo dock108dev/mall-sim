@@ -10,6 +10,9 @@ const _ITEM_FIELD_ALIASES: Dictionary = {
 	"icon_path": ["icon_path", "icon"],
 	"product_set_name": ["set_name", "set"],
 	"can_be_demo_unit": ["can_be_demo_unit", "demo_unit_eligible"],
+	# Rental schema aliases (ISSUE-009): JSON authors may use either name.
+	"rental_fee": ["rental_fee", "base_rental_fee"],
+	"release_day": ["release_day", "release_date"],
 }
 
 const _ITEM_KNOWN_KEYS: Array[String] = [
@@ -26,6 +29,8 @@ const _ITEM_KNOWN_KEYS: Array[String] = [
 	"platform", "region",
 	"warranty_tiers", "demo_unit_eligible",
 	"era", "provenance_score",
+	# Rental schema canonical field names (ISSUE-009).
+	"base_rental_fee", "release_date", "late_fee_per_day",
 ]
 
 
@@ -99,6 +104,8 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	item.release_day = int(normalized.get("release_day", 0))
 	item.catalog_price = float(normalized.get("catalog_price", 0.0))
 	item.late_fee_rate = float(normalized.get("late_fee_rate", -1.0))
+	item.late_fee_per_day = float(normalized.get("late_fee_per_day", -1.0))
+	item.release_date = int(normalized.get("release_date", 0))
 	item.brand = str(normalized.get("brand", ""))
 	item.product_line = str(normalized.get("product_line", ""))
 	item.generation = int(normalized.get("generation", 0))

@@ -458,6 +458,7 @@ func _execute_sale() -> void:
 	_inventory_system.remove_item(item_id)
 	_apply_sale_reputation(market_value)
 	EventBus.item_sold.emit(item_id, _active_offer, category)
+	EventBus.transaction_completed.emit(_active_offer, true, "")
 	var store_id: StringName = &""
 	if _active_item.definition:
 		store_id = ContentRegistry.resolve(
@@ -536,11 +537,16 @@ func _show_warranty_dialog() -> void:
 		wholesale = _economy_system.get_wholesale_price(
 			_active_item.definition
 		)
+	var tiers: Array = []
+	if _active_item.definition.warranty_tiers.size() > 0:
+		tiers = _active_item.definition.warranty_tiers
 	_warranty_dialog.open(
 		_active_item.instance_id,
 		item_name,
 		_active_offer,
 		wholesale,
+		WarrantyDialog.DEFAULT_WARRANTY_PERCENT,
+		tiers,
 	)
 
 
@@ -564,11 +570,37 @@ func _on_warranty_accepted(
 		)
 	if _economy_system:
 		_economy_system.add_cash(fee, "Warranty: %s" % item_id)
+	_emit_warranty_price_audit(item_id, fee)
 	EventBus.warranty_purchased.emit(item_id, fee)
 	EventBus.notification_requested.emit(
 		"Warranty sold for $%.2f" % fee
 	)
 	_complete_checkout()
+
+
+func _emit_warranty_price_audit(item_id: String, fee: float) -> void:
+	if _active_offer <= 0.0:
+		return
+	var tier_id: String = ""
+	if _warranty_dialog:
+		tier_id = _warranty_dialog.get_selected_tier_id()
+	var tier_label: String = (
+		"Warranty (%s)" % tier_id.capitalize()
+		if not tier_id.is_empty()
+		else "Warranty Add-on"
+	)
+	var factor: float = 1.0 + fee / _active_offer
+	PriceResolver.resolve_for_item(
+		StringName(item_id),
+		_active_offer,
+		[{
+			"slot": "warranty",
+			"label": tier_label,
+			"factor": factor,
+			"detail": "Extended warranty fee: $%.2f" % fee,
+		}],
+		true,
+	)
 
 
 func _on_warranty_declined() -> void:

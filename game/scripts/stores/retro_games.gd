@@ -7,6 +7,10 @@ const STORE_ID: StringName = &"retro_games"
 const STORE_TYPE: StringName = &"retro_games"
 const TESTING_STATION_FIXTURE_ID: String = "testing_station"
 const GRADES_PATH: String = "res://game/content/stores/retro_games/grades.json"
+## Ordered condition tiers used by refurb actions.
+const CONDITION_ORDER: PackedStringArray = [
+	"poor", "fair", "good", "near_mint", "mint",
+]
 
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
@@ -145,7 +149,9 @@ func assign_grade(item_id: StringName, grade_id: String) -> bool:
 
 
 ## Returns the current sale price for an inventory item resolved via
-## PriceResolver, applying the assigned grade multiplier in the audit chain.
+## PriceResolver. Applies the explicitly assigned grade; falls back to the
+## item's current condition tier so Clean/Repair/Restore each produce a
+## distinct multiplier visible in the AuditStep log.
 func get_item_price(item_id: StringName) -> float:
 	if not _inventory_system:
 		return 0.0
@@ -154,17 +160,43 @@ func get_item_price(item_id: StringName) -> float:
 		return 0.0
 	var multipliers: Array = []
 	var grade_id: String = _item_grades.get(item.instance_id, "")
+	if grade_id.is_empty():
+		grade_id = item.condition  # condition tier as fallback grade
 	if not grade_id.is_empty() and _grade_table.has(grade_id):
 		var grade: Dictionary = _grade_table[grade_id]
 		multipliers.append({
-			"label": "Grade",
+			"label": "Condition",
 			"factor": float(grade.get("price_multiplier", 1.0)),
 			"detail": str(grade.get("label", grade_id)),
+		})
+	var vintage_trend: float = MarketTrendSystem.get_trend_modifier(&"vintage")
+	if vintage_trend != 1.0:
+		multipliers.append({
+			"slot": "trend",
+			"label": "Vintage Trend",
+			"factor": vintage_trend,
+			"detail": "Vintage shelf trend: %.2f" % vintage_trend,
 		})
 	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
 		item_id, item.definition.base_price, multipliers
 	)
 	return result.final_price
+
+
+## Applies a single-tier condition bump (Clean action). Returns false if the
+## item cannot be advanced or is not found.
+func refurbish_clean(item_id: StringName) -> bool:
+	return _apply_refurb_tier(item_id, 1)
+
+
+## Applies a two-tier condition bump (Repair action).
+func refurbish_repair(item_id: StringName) -> bool:
+	return _apply_refurb_tier(item_id, 2)
+
+
+## Restores item to mint condition (Restore action).
+func refurbish_restore(item_id: StringName) -> bool:
+	return _apply_refurb_tier(item_id, CONDITION_ORDER.size() - 1)
 
 
 ## Queues an item for refurbishment via the RefurbishmentSystem.
@@ -173,6 +205,31 @@ func _queue_refurbishment(item_id: StringName) -> void:
 		push_warning("RetroGames: no RefurbishmentSystem set")
 		return
 	_refurbishment_system.start_refurbishment(String(item_id))
+
+
+## Advances item condition by `steps` tiers (capped at mint) and emits
+## refurbishment_completed. Does not use the queue; single-click for the
+## vertical slice. Returns false if item cannot be found or is already at max.
+func _apply_refurb_tier(item_id: StringName, steps: int) -> bool:
+	if not _inventory_system:
+		push_warning("RetroGames: _apply_refurb_tier called without InventorySystem")
+		return false
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item:
+		push_warning("RetroGames: _apply_refurb_tier — item '%s' not found" % item_id)
+		return false
+	var current_idx: int = CONDITION_ORDER.find(item.condition)
+	if current_idx < 0:
+		current_idx = 0
+	var max_idx: int = CONDITION_ORDER.size() - 1
+	if current_idx >= max_idx:
+		push_warning("RetroGames: item '%s' is already at max condition" % item_id)
+		return false
+	var new_idx: int = mini(current_idx + steps, max_idx)
+	var new_condition: String = CONDITION_ORDER[new_idx]
+	item.condition = new_condition
+	EventBus.refurbishment_completed.emit(String(item_id), true, new_condition)
+	return true
 
 
 ## Serializes retro-games-specific state for saving.

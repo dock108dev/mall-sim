@@ -39,6 +39,9 @@ CheckoutSystem="*res://game/autoload/checkout_system.gd"
 OnboardingSystemSingleton="*res://game/autoload/onboarding_system.gd"
 MarketTrendSystemSingleton="*res://game/autoload/market_trend_system.gd"
 TooltipManager="*res://game/autoload/tooltip_manager.gd"
+ObjectiveRail="*res://game/scenes/ui/objective_rail.tscn"
+ObjectiveDirector="*res://game/autoload/objective_director.gd"
+AuditOverlay="*res://game/autoload/audit_overlay.gd"
 
 [debug]
 

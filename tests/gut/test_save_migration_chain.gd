@@ -1,4 +1,4 @@
-## ISSUE-011: Save file versioning and migration chain.
+## ISSUE-011/ISSUE-014: Save file versioning and migration chain.
 ## Each migration function is a pure Dictionary → Dictionary transform and
 ## can be tested in isolation. The full-chain test loads fixture saves at
 ## earlier versions and asserts the output matches CURRENT_SAVE_VERSION.
@@ -7,6 +7,8 @@ extends GutTest
 
 const FIXTURE_V0: String = "res://tests/fixtures/saves/v0_legacy.json"
 const FIXTURE_V1: String = "res://tests/fixtures/saves/v1_pre_trade_removal.json"
+const FIXTURE_V2: String = "res://tests/fixtures/saves/v2_pre_reputation.json"
+const FIXTURE_V3: String = "res://tests/fixtures/saves/v3_current.json"
 
 var _save_manager: SaveManager
 
@@ -114,6 +116,70 @@ func test_full_chain_migrates_v1_fixture_to_current_version() -> void:
 		"Full chain should arrive at CURRENT_SAVE_VERSION"
 	)
 	assert_false(migrated.has("trade"), "Obsolete trade key should be removed")
+
+
+func test_migrate_v2_to_v3_adds_reputation_block_when_missing() -> void:
+	var raw: Dictionary = _load_fixture(FIXTURE_V2)
+	assert_false(raw.has("reputation"), "v2 fixture must not have reputation block")
+	var migrated: Dictionary = _save_manager._migrate_v2_to_v3(raw.duplicate(true))
+
+	assert_true(migrated.has("reputation"), "v2 → v3 must add reputation block")
+	var rep: Dictionary = migrated["reputation"] as Dictionary
+	assert_true(rep.has("scores"), "reputation must have scores key")
+	assert_true(rep.has("tiers"), "reputation must have tiers key")
+	assert_true(rep.has("tier_locks"), "reputation must have tier_locks key")
+	assert_eq(
+		int((migrated["save_metadata"] as Dictionary).get("save_version_tag", -1)),
+		3,
+		"v2 → v3 should tag save_metadata with version 3"
+	)
+
+
+func test_migrate_v2_to_v3_preserves_existing_reputation_subkeys() -> void:
+	var raw: Dictionary = {
+		"save_version": 2,
+		"save_metadata": {"save_version_tag": 2},
+		"reputation": {"scores": {"retro_games": 25.0}},
+	}
+	var migrated: Dictionary = _save_manager._migrate_v2_to_v3(raw.duplicate(true))
+
+	var rep: Dictionary = migrated["reputation"] as Dictionary
+	assert_eq(
+		float(rep.get("scores", {}).get("retro_games", 0.0)),
+		25.0,
+		"Existing reputation scores must be preserved"
+	)
+	assert_true(rep.has("tiers"), "tiers key must be added when missing")
+	assert_true(rep.has("tier_locks"), "tier_locks key must be added when missing")
+
+
+func test_full_chain_migrates_v2_fixture_to_current_version() -> void:
+	var raw: Dictionary = _load_fixture(FIXTURE_V2)
+	var result: Dictionary = _save_manager.migrate_save_data(raw)
+	assert_true(bool(result.get("ok", false)), "Migration chain from v2 should succeed")
+	var migrated: Dictionary = result["data"] as Dictionary
+	assert_eq(
+		int(migrated.get("save_version", -1)),
+		SaveManager.CURRENT_SAVE_VERSION,
+		"Full chain from v2 should arrive at CURRENT_SAVE_VERSION"
+	)
+	var rep: Dictionary = migrated.get("reputation", {}) as Dictionary
+	assert_true(rep.has("scores"), "reputation.scores must exist after v2 chain")
+	assert_true(rep.has("tiers"), "reputation.tiers must exist after v2 chain")
+	assert_true(rep.has("tier_locks"), "reputation.tier_locks must exist after v2 chain")
+
+
+func test_v3_fixture_is_already_at_current_version() -> void:
+	var raw: Dictionary = _load_fixture(FIXTURE_V3)
+	assert_eq(
+		int(raw.get("save_version", -1)),
+		SaveManager.CURRENT_SAVE_VERSION,
+		"v3 fixture must match CURRENT_SAVE_VERSION"
+	)
+	var rep: Dictionary = raw.get("reputation", {}) as Dictionary
+	assert_true(rep.has("scores"), "v3 fixture must have reputation.scores")
+	assert_true(rep.has("tiers"), "v3 fixture must have reputation.tiers")
+	assert_true(rep.has("tier_locks"), "v3 fixture must have reputation.tier_locks")
 
 
 func test_migration_does_not_mutate_input_dictionary() -> void:

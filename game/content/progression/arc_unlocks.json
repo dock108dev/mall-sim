@@ -1,0 +1,36 @@
+{
+  "arc_phases": [
+    { "id": "slow_open",     "day_start": 1,  "day_end": 7  },
+    { "id": "main_stretch",  "day_start": 8,  "day_end": 21 },
+    { "id": "crunch",        "day_start": 22, "day_end": 30 }
+  ],
+  "arc_unlocks": [
+    {
+      "unlock_id": "regulars_enabled",
+      "day": 3,
+      "description": "Regular customers begin recognising the store after day 3 (ISSUE-023)"
+    },
+    {
+      "unlock_id": "tournament_events",
+      "day": 10,
+      "description": "Tournament events become available to Pocket Creatures after day 10 (ISSUE-015)"
+    },
+    {
+      "unlock_id": "secret_threads_enabled",
+      "day": 14,
+      "description": "Secret narrative threads begin revealing after day 14 (SecretThreadSystem)"
+    }
+  ],
+  "store_adjacency": {
+    "sports":           ["retro_games"],
+    "retro_games":      ["sports", "pocket_creatures"],
+    "pocket_creatures": ["retro_games", "video_rental"],
+    "video_rental":     ["pocket_creatures", "electronics"],
+    "electronics":      ["video_rental"]
+  },
+  "win_condition": {
+    "target_day": 30,
+    "min_cash":   5000.0,
+    "description": "Reach day 30 with at least $5000 cash"
+  }
+}

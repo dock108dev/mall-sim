@@ -301,7 +301,7 @@ func _on_store_leased(
 
 
 func _on_reputation_changed(
-	store_id: String, new_value: float
+	store_id: String, _old_score: float, new_value: float
 ) -> void:
 	if store_id.is_empty():
 		return

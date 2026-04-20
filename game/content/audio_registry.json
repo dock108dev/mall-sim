@@ -20,7 +20,10 @@
     "tape_insert": "tape_insert.wav",
     "auth_reveal": "auth_reveal.wav",
     "demo_activate": "demo_activate.wav",
-    "milestone_pop": "notification_ping.wav"
+    "milestone_pop": "notification_ping.wav",
+    "rare_pull": "notification_ping.wav",
+    "condition_jump": "refurbish_complete.wav",
+    "warranty_confirm": "purchase_chime.wav"
   },
   "music": {
     "menu_music": "menu_music.wav",
@@ -35,7 +38,22 @@
     "card_shop_music": "card_shop_music.wav",
     "electronics_store_music": "electronics_store_music.wav"
   },
+  "music_stems": {
+    "retro_games": "retro_games_music",
+    "pocket_creatures": "card_shop_music",
+    "rentals": "video_rental_music",
+    "electronics": "electronics_store_music",
+    "sports": "sports_store_music"
+  },
   "ambient": {
-    "mall_hallway": "mall_hallway.wav"
+    "mall_hallway": "mall_hallway.wav",
+    "food_court_murmur": "mall_hallway.wav",
+    "escalator_hum": "mall_hallway.wav",
+    "hvac_ambient": "mall_hallway.wav",
+    "retro_games": "retro_games_store.wav",
+    "pocket_creatures": "card_shop.wav",
+    "rentals": "video_rental_store.wav",
+    "electronics": "electronics_store.wav",
+    "sports": "sports_store.wav"
   }
 }

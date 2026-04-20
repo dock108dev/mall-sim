@@ -4,8 +4,10 @@ extends Node
 
 
 const MAX_HISTORY_SIZE: int = 30
+const DAY_BEATS_PATH: String = "res://game/content/day_beats.json"
 
 var _current_day: int = 1
+var _day_beats: Dictionary = {}  # loaded from day_beats.json at initialize
 var _daily_gross_revenue: float = 0.0
 var _daily_total_expenses: float = 0.0
 var _daily_items_sold: int = 0
@@ -25,6 +27,9 @@ var _daily_haggle_losses: int = 0
 var _daily_late_fee_income: float = 0.0
 var _daily_warranty_revenue: float = 0.0
 var _daily_warranty_claim_costs: float = 0.0
+var _daily_electronics_sold: int = 0
+var _daily_warranty_sold: int = 0
+var _demo_unit_was_active: bool = false
 var _daily_milestones: Array[String] = []
 var _daily_start_tier: int = -1
 var _daily_end_tier: int = -1
@@ -38,6 +43,7 @@ var _snapshot_received: bool = false
 
 func initialize() -> void:
 	_current_day = max(GameManager.get_current_day(), 1)
+	_load_day_beats()
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.day_ended.connect(_on_day_ended)
 	EventBus.transaction_completed.connect(_on_transaction_completed)
@@ -53,6 +59,7 @@ func initialize() -> void:
 	EventBus.warranty_claim_triggered.connect(
 		_on_warranty_claim_triggered
 	)
+	EventBus.demo_unit_activated.connect(_on_demo_unit_activated)
 	EventBus.daily_financials_snapshot.connect(
 		_on_daily_financials_snapshot
 	)
@@ -226,6 +233,9 @@ func _on_day_started(day: int) -> void:
 	_daily_late_fee_income = 0.0
 	_daily_warranty_revenue = 0.0
 	_daily_warranty_claim_costs = 0.0
+	_daily_electronics_sold = 0
+	_daily_warranty_sold = 0
+	_demo_unit_was_active = false
 	_daily_milestones.clear()
 	_daily_start_tier = _daily_end_tier
 	_daily_reputation_start = _daily_reputation_end
@@ -274,7 +284,7 @@ func _on_item_sold(
 
 
 func _on_customer_purchased(
-	_store_id: StringName, _item_id: StringName,
+	store_id: StringName, _item_id: StringName,
 	price: float, _customer_id: StringName
 ) -> void:
 	if price <= 0.0:
@@ -283,6 +293,8 @@ func _on_customer_purchased(
 		_daily_revenue += price
 	_daily_units_sold += 1
 	_mark_customer_served(String(_customer_id), true)
+	if store_id == &"electronics":
+		_daily_electronics_sold += 1
 
 
 func _on_customer_left(customer_data: Dictionary) -> void:
@@ -294,7 +306,7 @@ func _on_customer_left(customer_data: Dictionary) -> void:
 
 
 func _on_reputation_changed(
-	_store_id: String, new_value: float
+	_store_id: String, _old_score: float, new_value: float
 ) -> void:
 	if _daily_reputation_start == 0.0:
 		_daily_reputation_start = new_value
@@ -337,7 +349,10 @@ func _build_report(day: int) -> PerformanceReport:
 	)
 	var top_result: Dictionary = _find_top_item()
 	report.top_item_sold = top_result.get("id", "")
+	report.top_item_price = float(top_result.get("price", 0.0))
 	report.top_item_quantity = top_result.get("count", 0)
+	report.story_beat = _get_story_beat(day)
+	report.forward_hook = _get_forward_hook(day)
 	report.haggle_wins = _daily_haggle_wins
 	report.haggle_losses = _daily_haggle_losses
 	report.tier_changed = (
@@ -350,6 +365,11 @@ func _build_report(day: int) -> PerformanceReport:
 	report.late_fee_income = _daily_late_fee_income
 	report.warranty_revenue = _daily_warranty_revenue
 	report.warranty_claim_costs = _daily_warranty_claim_costs
+	if _daily_electronics_sold > 0:
+		report.warranty_attach_rate = (
+			float(_daily_warranty_sold) / float(_daily_electronics_sold)
+		)
+	report.electronics_demo_active = _demo_unit_was_active
 	report.milestones_unlocked = _daily_milestones.duplicate()
 	return report
 
@@ -363,7 +383,59 @@ func _find_top_item() -> Dictionary:
 			best_price = price
 			best_id = item_id
 	var count: int = int(_daily_item_counts.get(best_id, 0))
-	return {"id": best_id, "count": count}
+	return {"id": best_id, "count": count, "price": best_price}
+
+
+func _load_day_beats() -> void:
+	if not FileAccess.file_exists(DAY_BEATS_PATH):
+		push_warning("PerformanceReportSystem: day_beats.json not found")
+		return
+	var file := FileAccess.open(DAY_BEATS_PATH, FileAccess.READ)
+	if not file:
+		push_warning("PerformanceReportSystem: cannot open day_beats.json")
+		return
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		push_warning("PerformanceReportSystem: day_beats.json parse error")
+		return
+	file.close()
+	var data: Variant = json.get_data()
+	if data is not Dictionary:
+		return
+	_day_beats = data as Dictionary
+
+
+func _get_beat_for_day(day: int) -> Dictionary:
+	var beats: Variant = _day_beats.get("day_beats", [])
+	if beats is Array:
+		for entry: Variant in beats as Array:
+			if entry is Dictionary and int((entry as Dictionary).get("day", -1)) == day:
+				return entry as Dictionary
+	return {}
+
+
+func _get_story_beat(day: int) -> String:
+	var beat: Dictionary = _get_beat_for_day(day)
+	if not beat.is_empty():
+		var text: String = str(beat.get("story_beat", ""))
+		if not text.is_empty():
+			return text
+	var fallback: String = str(_day_beats.get("fallback_beat", ""))
+	if not fallback.is_empty():
+		return fallback
+	return "Another day at Cormorant Ridge Mall."
+
+
+func _get_forward_hook(day: int) -> String:
+	var beat: Dictionary = _get_beat_for_day(day)
+	if not beat.is_empty():
+		var text: String = str(beat.get("forward_hook", ""))
+		if not text.is_empty():
+			return text
+	var fallback: String = str(_day_beats.get("fallback_hook", ""))
+	if not fallback.is_empty():
+		return fallback
+	return "Tomorrow brings fresh opportunities."
 
 
 func _is_expense_transaction(message: String) -> bool:
@@ -436,12 +508,17 @@ func _on_warranty_purchased(
 	_item_id: String, warranty_fee: float
 ) -> void:
 	_daily_warranty_revenue += warranty_fee
+	_daily_warranty_sold += 1
 
 
 func _on_warranty_claim_triggered(
 	_item_id: String, replacement_cost: float
 ) -> void:
 	_daily_warranty_claim_costs += replacement_cost
+
+
+func _on_demo_unit_activated(_item_id: String, _category: String) -> void:
+	_demo_unit_was_active = true
 
 
 func _on_milestone_completed(

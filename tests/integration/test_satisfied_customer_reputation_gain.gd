@@ -58,9 +58,13 @@ func test_reputation_changed_carries_updated_score() -> void:
 	EventBus.customer_left_mall.emit(_mock_customer, true)
 	var params: Array = get_signal_parameters(EventBus, "reputation_changed")
 	assert_almost_eq(
-		params[1] as float,
+		params[1] as float, score_before, 0.01,
+		"reputation_changed second parameter must equal the pre-mutation score"
+	)
+	assert_almost_eq(
+		params[2] as float,
 		score_before + ReputationSystemSingleton.SATISFACTION_GAIN, 0.01,
-		"reputation_changed second parameter must equal the updated score"
+		"reputation_changed third parameter must equal the updated score"
 	)
 
 

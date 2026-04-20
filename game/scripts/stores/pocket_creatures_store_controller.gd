@@ -63,8 +63,8 @@ func set_seasonal_event_system(system: SeasonalEventSystem) -> void:
 	_seasonal_event_system = system
 
 
-## Resolves the tournament-adjusted price for a card via PriceResolver.
-## Includes tournament price_spike_multiplier in the audit trace when active.
+## Resolves the tournament- and meta-adjusted price for a card via PriceResolver.
+## Includes meta_shift and tournament price_spike_multiplier in the audit trace.
 func resolve_card_price(item_id: StringName) -> PriceResolver.Result:
 	if not _inventory_system:
 		return PriceResolver.Result.new()
@@ -72,6 +72,15 @@ func resolve_card_price(item_id: StringName) -> PriceResolver.Result:
 	if not item or not item.definition:
 		return PriceResolver.Result.new()
 	var multipliers: Array = []
+	if meta_shift_system:
+		var meta_factor: float = meta_shift_system.get_meta_shift_multiplier(item)
+		if not is_equal_approx(meta_factor, 1.0):
+			multipliers.append({
+				"slot": "meta_shift",
+				"label": "MetaShift",
+				"factor": meta_factor,
+				"detail": "Active meta shift",
+			})
 	if _seasonal_event_system:
 		var spike: float = (
 			_seasonal_event_system.get_tournament_price_spike_multiplier(item)

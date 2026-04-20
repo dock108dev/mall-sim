@@ -128,8 +128,8 @@ func test_top_item_quantity_tracked() -> void:
 
 func test_tier_change_detected() -> void:
 	EventBus.day_started.emit(1)
-	EventBus.reputation_changed.emit("store_a", 20.0)
-	EventBus.reputation_changed.emit("store_a", 55.0)
+	EventBus.reputation_changed.emit("store_a", 0.0, 20.0)
+	EventBus.reputation_changed.emit("store_a", 0.0, 55.0)
 	EventBus.day_ended.emit(1)
 	var report: PerformanceReport = _system.get_history()[0]
 	assert_true(report.tier_changed)
@@ -138,8 +138,8 @@ func test_tier_change_detected() -> void:
 
 func test_no_tier_change_within_same_tier() -> void:
 	EventBus.day_started.emit(1)
-	EventBus.reputation_changed.emit("store_a", 30.0)
-	EventBus.reputation_changed.emit("store_a", 40.0)
+	EventBus.reputation_changed.emit("store_a", 0.0, 30.0)
+	EventBus.reputation_changed.emit("store_a", 0.0, 40.0)
 	EventBus.day_ended.emit(1)
 	var report: PerformanceReport = _system.get_history()[0]
 	assert_false(report.tier_changed)

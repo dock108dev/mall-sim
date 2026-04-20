@@ -9,6 +9,9 @@ const CONDITION_REVENUE := "cumulative_revenue"
 const CONDITION_REPUTATION := "max_reputation_score"
 const CONDITION_DAYS := "current_day"
 const CONDITION_ITEMS_SOLD := "customer_purchased_count"
+const CONDITION_REFURB := "refurb_completed_count"
+const CONDITION_HAGGLE := "haggle_completed_count"
+const CONDITION_STORE_SLOTS := "unlocked_store_slots"
 
 const REWARD_CASH_BONUS := "cash"
 const REWARD_STORE_SLOT := "store_slot"
@@ -37,6 +40,8 @@ var _unlocked_supplier_tier: int = 0
 var _cumulative_cash_earned: float = 0.0
 var _mall_reputation: float = 0.0
 var _unlocked_slot_indices: Dictionary = {}
+var _refurb_count: int = 0
+var _haggle_count: int = 0
 
 
 func initialize(
@@ -129,6 +134,12 @@ func increment_progress(milestone_id: String, amount: float) -> void:
 			_current_day += int(amount)
 		CONDITION_REPUTATION:
 			_current_reputation += amount
+		CONDITION_REFURB:
+			_refurb_count += int(amount)
+		CONDITION_HAGGLE:
+			_haggle_count += int(amount)
+		CONDITION_STORE_SLOTS:
+			_unlocked_store_slots = maxi(_unlocked_store_slots, int(amount))
 	_evaluate_milestones()
 
 
@@ -185,6 +196,8 @@ func get_save_data() -> Dictionary:
 		"mall_reputation": _mall_reputation,
 		"unlocked_slots": unlocked_slots_list,
 		"unlocked_slot_indices": unlocked_slots_list,
+		"refurb_count": _refurb_count,
+		"haggle_count": _haggle_count,
 	}
 
 
@@ -252,6 +265,9 @@ func _apply_state(data: Dictionary) -> void:
 				_unlocked_store_slots, slot_index + 1
 			)
 
+	_refurb_count = int(data.get("refurb_count", 0))
+	_haggle_count = int(data.get("haggle_count", 0))
+
 
 func _connect_event_bus() -> void:
 	if not EventBus.day_ended.is_connected(_on_day_ended):
@@ -266,6 +282,12 @@ func _connect_event_bus() -> void:
 		EventBus.reputation_changed.connect(_on_reputation_changed)
 	if not EventBus.day_started.is_connected(_on_day_started):
 		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.refurbishment_completed.is_connected(
+		_on_refurb_completed
+	):
+		EventBus.refurbishment_completed.connect(_on_refurb_completed)
+	if not EventBus.haggle_completed.is_connected(_on_haggle_done):
+		EventBus.haggle_completed.connect(_on_haggle_done)
 
 
 func _load_milestone_definitions() -> void:
@@ -329,6 +351,12 @@ func _get_current_value_for(condition_type: String) -> float:
 			return float(_current_day)
 		CONDITION_ITEMS_SOLD:
 			return float(_total_items_sold)
+		CONDITION_REFURB:
+			return float(_refurb_count)
+		CONDITION_HAGGLE:
+			return float(_haggle_count)
+		CONDITION_STORE_SLOTS:
+			return float(_unlocked_store_slots)
 	return 0.0
 
 
@@ -361,6 +389,7 @@ func _complete_milestone(milestone: Dictionary) -> void:
 	)
 	var mdesc: String = str(milestone.get("description", ""))
 	EventBus.milestone_completed.emit(mid, mname, mdesc)
+	EventBus.milestone_reached.emit(StringName(mid))
 
 
 func _grant_reward(milestone: Dictionary) -> void:
@@ -451,7 +480,7 @@ func _on_transaction_completed(
 
 
 func _on_reputation_changed(
-	_store_id: String, new_value: float
+	_store_id: String, _old_score: float, new_value: float
 ) -> void:
 	_current_reputation = new_value
 	if _reputation_system:
@@ -468,3 +497,21 @@ func _is_sale_transaction(
 	if not success or amount <= 0.0:
 		return false
 	return reason.to_lower().contains("sale")
+
+
+func _on_refurb_completed(
+	_item_id: String, success: bool, _new_condition: String
+) -> void:
+	if not success:
+		return
+	_refurb_count += 1
+	_evaluate_milestones()
+
+
+func _on_haggle_done(
+	_store_id: StringName, _item_id: StringName,
+	_final_price: float, _asking_price: float,
+	_accepted: bool, _offer_count: int
+) -> void:
+	_haggle_count += 1
+	_evaluate_milestones()

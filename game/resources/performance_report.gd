@@ -14,7 +14,10 @@ extends Resource
 @export var satisfaction_rate: float = 0.0
 @export var reputation_delta: float = 0.0
 @export var top_item_sold: String = ""
+@export var top_item_price: float = 0.0
 @export var top_item_quantity: int = 0
+@export var story_beat: String = ""
+@export var forward_hook: String = ""
 @export var haggle_wins: int = 0
 @export var haggle_losses: int = 0
 @export var tier_changed: bool = false
@@ -23,6 +26,8 @@ extends Resource
 @export var late_fee_income: float = 0.0
 @export var warranty_revenue: float = 0.0
 @export var warranty_claim_costs: float = 0.0
+@export var warranty_attach_rate: float = 0.0
+@export var electronics_demo_active: bool = false
 @export var record_flags: Dictionary = {}
 
 
@@ -39,7 +44,10 @@ func to_dict() -> Dictionary:
 		"satisfaction_rate": satisfaction_rate,
 		"reputation_delta": reputation_delta,
 		"top_item_sold": top_item_sold,
+		"top_item_price": top_item_price,
 		"top_item_quantity": top_item_quantity,
+		"story_beat": story_beat,
+		"forward_hook": forward_hook,
 		"haggle_wins": haggle_wins,
 		"haggle_losses": haggle_losses,
 		"tier_changed": tier_changed,
@@ -48,6 +56,8 @@ func to_dict() -> Dictionary:
 		"late_fee_income": late_fee_income,
 		"warranty_revenue": warranty_revenue,
 		"warranty_claim_costs": warranty_claim_costs,
+		"warranty_attach_rate": warranty_attach_rate,
+		"electronics_demo_active": electronics_demo_active,
 		"record_flags": record_flags.duplicate(),
 	}
 
@@ -69,7 +79,10 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 		data.get("reputation_delta", 0.0)
 	)
 	report.top_item_sold = str(data.get("top_item_sold", ""))
+	report.top_item_price = float(data.get("top_item_price", 0.0))
 	report.top_item_quantity = int(data.get("top_item_quantity", 0))
+	report.story_beat = str(data.get("story_beat", ""))
+	report.forward_hook = str(data.get("forward_hook", ""))
 	report.haggle_wins = int(data.get("haggle_wins", 0))
 	report.haggle_losses = int(data.get("haggle_losses", 0))
 	report.tier_changed = bool(data.get("tier_changed", false))
@@ -84,6 +97,12 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 	)
 	report.warranty_claim_costs = float(
 		data.get("warranty_claim_costs", 0.0)
+	)
+	report.warranty_attach_rate = float(
+		data.get("warranty_attach_rate", 0.0)
+	)
+	report.electronics_demo_active = bool(
+		data.get("electronics_demo_active", false)
 	)
 	var flags: Variant = data.get("record_flags", {})
 	if flags is Dictionary:

@@ -19,12 +19,12 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _commons_per_pack: int = 6
 var _uncommons_per_pack: int = 3
-var _rare_slot_rare_chance: float = 0.64
-var _rare_slot_holo_chance: float = 0.33
+var _rare_slot_rare_chance: float = 0.90
+var _rare_slot_holo_chance: float = 0.09
 var _pack_conditions: Array[String] = ["good", "near_mint", "mint"]
 var _set_tags: Array[String] = [
-	"base_set", "jungle", "fossil",
-	"team_rocket", "neo_genesis", "crystal_storm",
+	"base_set", "canopy", "deep_dig",
+	"shadow_set", "neo_spark", "crystal_storm",
 ]
 ## Per-set-tag pack type configs loaded from packs.json; keyed by set_tag.
 var _pack_type_configs: Dictionary = {}
@@ -92,6 +92,7 @@ func open_pack(
 	if not _register_cards(cards):
 		return []
 	EventBus.pack_opened.emit(pack_instance_id, _collect_card_ids(cards))
+	_emit_rare_pull_if_needed(cards, pack_instance_id)
 	return cards
 
 
@@ -131,6 +132,7 @@ func commit_pack_results(revealed_cards: Array[Dictionary]) -> bool:
 		_pending_pack_id,
 		_collect_card_ids(_pending_pack_cards),
 	)
+	_emit_rare_pull_if_needed(_pending_pack_cards, _pending_pack_id)
 	_clear_pending_pack_results()
 	return true
 
@@ -172,6 +174,11 @@ func _prepare_pack_cards(
 			% pack_instance_id
 		)
 		return []
+
+	var day: int = 0
+	if Engine.has_singleton("GameManager"):
+		day = (Engine.get_singleton("GameManager") as GameManager).get_current_day()
+	_rng.seed = hash(pack_instance_id + str(day))
 
 	var pack: ItemInstance = _inventory_system.get_item(
 		pack_instance_id
@@ -468,3 +475,17 @@ func _clear_pending_pack_results() -> void:
 	_pending_pack_id = ""
 	_pending_pack_cards.clear()
 	_pending_preview_ids.clear()
+
+
+## Emits rare_pull_occurred when any card is holo, secret, or ultra rare.
+func _emit_rare_pull_if_needed(
+	cards: Array[ItemInstance], pack_id: String
+) -> void:
+	for card: ItemInstance in cards:
+		if not card or not card.definition:
+			continue
+		if card.definition.subcategory in [
+			"rare_holo", "holo_rare", "secret_rare", "ultra_rare"
+		]:
+			EventBus.rare_pull_occurred.emit(pack_id)
+			return

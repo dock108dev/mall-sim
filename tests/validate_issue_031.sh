@@ -55,9 +55,9 @@ check_grep "workflow triggers on tag pushes" 'tags:' "$WORKFLOW"
 check_grep "workflow matches v* tags" '- "v*"' "$WORKFLOW"
 
 echo ""
-echo "[AC2] Workflow installs Godot 4.3 with export templates"
+echo "[AC2] Workflow installs Godot 4.6.2 with export templates"
 check_grep "setup-godot action used" 'uses: chickensoft-games/setup-godot@v2' "$WORKFLOW"
-check_grep "Godot version pinned to 4.3" 'GODOT_VERSION: "4.3"' "$WORKFLOW"
+check_grep "Godot version pinned to 4.6.2" 'GODOT_VERSION: "4.6.2"' "$WORKFLOW"
 check_grep "export templates requested" 'include-templates: true' "$WORKFLOW"
 check_grep "Windows rcedit installed for icon metadata" 'npm install --global rcedit' "$WORKFLOW"
 

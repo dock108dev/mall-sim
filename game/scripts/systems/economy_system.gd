@@ -7,6 +7,10 @@ enum TransactionType { REVENUE, EXPENSE }
 
 const MAX_MARKET_VALUE: float = EconomyValueCalculator.MAX_MARKET_VALUE
 const TRANSACTION_HISTORY_LIMIT: int = 100
+## Monthly lease charged on day 30, 60, 90… (per owned store).
+const MONTHLY_LEASE_BASE: float = 300.0
+const DAYS_PER_MONTH: int = 30
+const DAYS_PER_QUARTER: int = 90
 ## Constant pass-throughs for backwards compatibility with tests and external code.
 const DEFAULT_DEMAND: float = EconomyValueCalculator.DEFAULT_DEMAND
 const DEMAND_CAP: float = EconomyValueCalculator.DEMAND_CAP
@@ -329,6 +333,7 @@ func _on_day_ended(day: int) -> void:
 	_commit_daily_sales()
 	_update_demand_modifiers()
 	_deduct_all_store_rents()
+	_check_monthly_lease(day)
 	_check_emergency_injection(day)
 	_emit_daily_financials_snapshot()
 	if Time.get_ticks_msec() - start_ticks > 100:
@@ -580,6 +585,38 @@ func _check_emergency_injection(day: int) -> void:
 
 func _can_inject_this_week(current_day: int) -> bool:
 	return _last_injection_day < 0 or (current_day - _last_injection_day) >= 7
+
+
+## Deducts a monthly lease payment on every DAYS_PER_MONTH multiple.
+## Announces the deduction via toast and emits monthly_rent_posted.
+## On quarterly intervals also emits quarterly_lease_review.
+func _check_monthly_lease(day: int) -> void:
+	if day <= 0 or day % DAYS_PER_MONTH != 0:
+		return
+	var owned: Array[StringName] = GameManager.get_owned_store_ids()
+	if owned.is_empty():
+		return
+	var rent_mult: float = DifficultySystemSingleton.get_modifier(
+		&"daily_rent_multiplier"
+	)
+	var total_lease: float = 0.0
+	for store_id: StringName in owned:
+		total_lease += MONTHLY_LEASE_BASE * rent_mult
+	force_deduct_cash(total_lease, "Monthly Lease (Day %d)" % day)
+	var month_num: int = day / DAYS_PER_MONTH
+	EventBus.toast_requested.emit(
+		"Month %d lease: -$%.0f" % [month_num, total_lease],
+		&"expense",
+		4.0
+	)
+	EventBus.monthly_rent_posted.emit(day, total_lease)
+	if day % DAYS_PER_QUARTER == 0:
+		EventBus.quarterly_lease_review.emit(day)
+		EventBus.toast_requested.emit(
+			"Quarterly lease review — management is watching.",
+			&"warning",
+			5.0
+		)
 
 func _on_customer_purchased(
 	store_id: StringName, item_id: StringName, price: float, _customer_id: StringName

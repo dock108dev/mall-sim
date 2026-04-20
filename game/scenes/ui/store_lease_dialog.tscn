@@ -98,7 +98,7 @@ alignment = 1
 
 [node name="CharCountLabel" type="Label" parent="DialogPanel/Margin/VBox/NamingPage"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_type_variation = &"SecondaryLabel"
 text = "0 / 24"
 horizontal_alignment = 2
 
@@ -116,7 +116,7 @@ autowrap_mode = 2
 
 [node name="ErrorLabel" type="Label" parent="DialogPanel/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.2, 0.2, 1)
+theme_type_variation = &"NegativeLabel"
 text = ""
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -137,7 +137,7 @@ value = 1.0
 
 [node name="StatusLabel" type="Label" parent="DialogPanel/Margin/VBox/PendingRow"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_type_variation = &"SecondaryLabel"
 text = ""
 horizontal_alignment = 1
 

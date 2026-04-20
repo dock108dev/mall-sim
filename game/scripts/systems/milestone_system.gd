@@ -194,7 +194,7 @@ func _on_store_leased(
 
 
 func _on_reputation_changed(
-	_store_id: String, new_score: float
+	_store_id: String, _old_score: float, new_score: float
 ) -> void:
 	var tier: int = _score_to_tier(new_score)
 	if tier > int(_counters["max_reputation_tier_seen"]):

@@ -316,7 +316,7 @@ func test_day_started_increments_days_survived() -> void:
 
 
 func test_reputation_changed_updates_max_tier() -> void:
-	EventBus.reputation_changed.emit("s", 65.0)
+	EventBus.reputation_changed.emit("s", 0.0, 65.0)
 	assert_eq(
 		_system.get_tracked_stat(&"max_reputation_tier"), 3.0,
 		"Reputation 65 should map to tier 3"
@@ -324,8 +324,8 @@ func test_reputation_changed_updates_max_tier() -> void:
 
 
 func test_reputation_max_tier_never_decreases() -> void:
-	EventBus.reputation_changed.emit("s", 85.0)
-	EventBus.reputation_changed.emit("s", 30.0)
+	EventBus.reputation_changed.emit("s", 0.0, 85.0)
+	EventBus.reputation_changed.emit("s", 0.0, 30.0)
 	assert_eq(
 		_system.get_tracked_stat(&"max_reputation_tier"), 4.0,
 		"max_reputation_tier should never decrease"

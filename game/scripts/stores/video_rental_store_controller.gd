@@ -398,6 +398,10 @@ func _handle_return(rental: Dictionary, late_days: int) -> void:
 		return
 	var degradation_result: Dictionary = _apply_degradation(rental)
 	if late_days > 0:
+		EventBus.rental_overdue.emit(
+			str(rental.get("customer_id", "")),
+			str(rental.get("instance_id", ""))
+		)
 		_collect_late_fee(rental, late_days)
 	var worn_out: bool = bool(
 		degradation_result.get("became_unrentable", false)
@@ -444,17 +448,24 @@ func _apply_degradation(rental: Dictionary) -> Dictionary:
 	return result
 
 
-## Calculates the late fee for a rental using formula: base + (days × per_day_rate), capped.
+## Calculates the late fee for a rental.
+## When the item definition has late_fee_per_day > 0, uses the simple formula:
+##   late_fee_per_day × days_overdue × policy_multiplier
+## Otherwise falls back to: (base_late_fee + days × per_day_rate) × policy_multiplier
 func _calculate_late_fee(rental: Dictionary, days_overdue: int) -> float:
+	var per_day_new: float = -1.0
 	var item_rate: float = -1.0
 	if _inventory_system:
 		var item: ItemInstance = _inventory_system.get_item(
 			str(rental.get("instance_id", ""))
 		)
 		if item and item.definition:
+			per_day_new = item.definition.late_fee_per_day
 			item_rate = item.definition.late_fee_rate
-	var per_day: float = _per_day_rate if item_rate < 0.0 else item_rate
 	var policy_mult: float = LATE_FEE_MULTIPLIERS.get(_late_fee_policy, 1.0)
+	if per_day_new > 0.0:
+		return minf(per_day_new * float(days_overdue) * policy_mult, _max_late_fee)
+	var per_day: float = _per_day_rate if item_rate < 0.0 else item_rate
 	var raw_fee: float = (_base_late_fee + float(days_overdue) * per_day) * policy_mult
 	return minf(raw_fee, _max_late_fee)
 
@@ -514,11 +525,16 @@ func _apply_rental_reputation() -> void:
 
 
 ## Collects daily late fees for rentals still out past the grace period.
+## Emits rental_overdue for each item found overdue.
 func _collect_overdue_late_fees(current_day: int) -> void:
 	for record: Dictionary in rental_records.values():
 		var deadline: int = int(record["return_day"]) + _grace_period_days
 		var days_overdue: int = current_day - deadline
 		if days_overdue > 0:
+			EventBus.rental_overdue.emit(
+				str(record.get("customer_id", "")),
+				str(record.get("instance_id", ""))
+			)
 			_collect_late_fee(record, days_overdue)
 
 
@@ -593,6 +609,70 @@ func _emit_worn_out_notification(instance_id: String) -> void:
 	EventBus.notification_requested.emit(
 		"'%s' is worn out — consider retiring it" % tape_name
 	)
+
+
+## Resolves the effective rental price via PriceResolver, applying lifecycle
+## and condition multipliers. Use this for auditable price display at checkout.
+## Falls back to get_effective_rental_price() when no multipliers apply.
+func resolve_rental_price(item: ItemInstance, current_day: int) -> float:
+	if not item or not item.definition:
+		return 0.0
+	var base_fee: float = get_effective_rental_price(item, current_day)
+	var multipliers: Array = []
+	var lifecycle_factor: float = _compute_lifecycle_factor(item.definition, current_day)
+	if lifecycle_factor != 1.0:
+		multipliers.append({
+			"slot": "lifecycle",
+			"label": "Lifecycle",
+			"factor": lifecycle_factor,
+			"detail": "rarity:%s" % item.definition.rarity,
+		})
+	var condition_factor: float = _compute_condition_factor(item.condition)
+	if condition_factor != 1.0:
+		multipliers.append({
+			"slot": "condition",
+			"label": "Condition",
+			"factor": condition_factor,
+			"detail": item.condition,
+		})
+	if multipliers.is_empty():
+		return base_fee
+	var result: PriceResolver.Result = PriceResolver.resolve(base_fee, multipliers)
+	return result.final_price
+
+
+## Returns the lifecycle multiplier for a rental item definition on the given day.
+func _compute_lifecycle_factor(def: ItemDefinition, current_day: int) -> float:
+	var rarity: String = def.rarity
+	if rarity == "ultra_new" or rarity == "new":
+		var release: int = def.release_day if def.release_day > 0 else def.release_date
+		if release > 0:
+			var age: int = current_day - release
+			if age < 0:
+				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
+			if age < 7:
+				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
+			if age < 21:
+				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("new", 1.15)
+	if rarity == "ultra_new":
+		return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
+	if rarity == "new":
+		return PriceResolver.LIFECYCLE_MULTIPLIERS.get("new", 1.15)
+	return PriceResolver.LIFECYCLE_MULTIPLIERS.get("common", 1.0)
+
+
+## Returns a condition-based rental price factor: worn items rent for less.
+func _compute_condition_factor(condition: String) -> float:
+	match condition:
+		"mint", "near_mint":
+			return 1.0
+		"good":
+			return 1.0
+		"fair":
+			return 0.90
+		"poor":
+			return 0.80
+	return 1.0
 
 
 func _seed_starter_inventory() -> void:
