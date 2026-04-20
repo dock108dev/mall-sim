@@ -66,7 +66,7 @@ func _configure_row_status(data: Dictionary) -> void:
 		_done_label.visible = true
 		_progress_label.visible = false
 	else:
-		var pct: int = int(data.get("progress", 0.0) * 100.0)
+		var pct: int = roundi(float(data.get("progress", 0.0)) * 100.0)
 		_progress_label.text = tr("MILESTONE_PROGRESS") % pct
 		_progress_label.visible = true
 		_done_label.visible = false

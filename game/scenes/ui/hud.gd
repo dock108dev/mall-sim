@@ -25,7 +25,7 @@ const _SPEED_LABELS: Dictionary = {
 	6.0: "Ultra",
 }
 
-const _SPEED_CYCLE: Array[int] = [
+const _SPEED_CYCLE: Array[TimeSystem.SpeedTier] = [
 	TimeSystem.SpeedTier.PAUSED,
 	TimeSystem.SpeedTier.NORMAL,
 	TimeSystem.SpeedTier.FAST,
@@ -64,7 +64,7 @@ var _telegraphed_events: Dictionary = {}
 
 var _current_day: int = 1
 var _current_hour: int = Constants.STORE_OPEN_HOUR
-var _current_phase: int = TimeSystem.DayPhase.PRE_OPEN
+var _current_phase: TimeSystem.DayPhase = TimeSystem.DayPhase.PRE_OPEN
 var _displayed_cash: float = 0.0
 var _target_cash: float = 0.0
 var _current_speed: float = 1.0
@@ -128,7 +128,7 @@ func _on_hour_changed(hour: int) -> void:
 
 
 func _on_day_phase_changed(new_phase: int) -> void:
-	_current_phase = new_phase
+	_current_phase = new_phase as TimeSystem.DayPhase
 	_refresh_time_display()
 
 
@@ -170,8 +170,8 @@ func _on_close_day_pressed() -> void:
 func _on_speed_button_pressed() -> void:
 	if GameManager.current_state != GameManager.GameState.GAMEPLAY:
 		return
-	var next_tier: int = _get_next_speed_tier()
-	EventBus.time_speed_requested.emit(next_tier)
+	var next_tier: TimeSystem.SpeedTier = _get_next_speed_tier()
+	EventBus.time_speed_requested.emit(int(next_tier))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -303,7 +303,7 @@ func _update_speed_display(speed: float) -> void:
 		_speed_button.modulate = Color.WHITE
 
 
-func _get_next_speed_tier() -> int:
+func _get_next_speed_tier() -> TimeSystem.SpeedTier:
 	var current_index: int = -1
 	for i: int in range(_SPEED_CYCLE.size()):
 		if is_equal_approx(float(_SPEED_CYCLE[i]), _current_speed):

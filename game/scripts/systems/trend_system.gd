@@ -352,7 +352,7 @@ func _calc_trend_multiplier_scaled(
 	var duration: int = orig_end_day - active_day
 	var fade_days: int = orig_fade_end - orig_end_day
 	var effective_end: int = active_day + maxi(
-		1, int(round(float(duration) * duration_scale))
+		1, roundi(float(duration) * duration_scale)
 	)
 	var effective_fade: int = effective_end + fade_days
 

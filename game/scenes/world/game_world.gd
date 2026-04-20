@@ -794,7 +794,7 @@ func _register_initial_fixtures() -> void:
 		var size: Vector2i = FixturePlacementSystem.FIXTURE_SIZES.get(
 			fix_type, Vector2i(1, 1)
 		)
-		var row: int = (i / 3) * (size.y + 3)
+		var row: int = int(i / 3.0) * (size.y + 3)
 		var col: int = col_offset
 		col_offset += size.x + 3
 		if col_offset + size.x > grid.grid_size.x:
