@@ -157,7 +157,7 @@ jobs:
             -DestinationPath "build\windows\mallcore-sim-windows.zip" -Force
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-build
           path: build/windows/mallcore-sim-windows.zip
@@ -206,7 +206,7 @@ jobs:
           echo "Export artifact size: $(du -h build/macos/mallcore-sim-macos.zip | cut -f1)"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-build
           path: build/macos/mallcore-sim-macos.zip
@@ -260,7 +260,7 @@ jobs:
             -C build/linux MallcoreSim.x86_64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-build
           path: build/linux/mallcore-sim-linux.tar.gz
