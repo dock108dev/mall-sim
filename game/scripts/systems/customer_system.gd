@@ -589,7 +589,7 @@ func _on_customer_despawn_requested(customer: Customer) -> void:
 
 
 func _on_reputation_changed(
-	_store_id: String, _new_value: float
+	_changed_store_id: String, _new_value: float
 ) -> void:
 	_update_max_customers()
 

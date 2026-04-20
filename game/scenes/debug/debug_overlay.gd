@@ -63,9 +63,9 @@ func _process(_delta: float) -> void:
 
 func _build_display_text() -> String:
 	var fps: int = Engine.get_frames_per_second()
-	var state_name: String = (
-		GameManager.GameState.keys()[GameManager.current_state]
-	)
+	var state_name: String = GameManager.GameState.keys()[
+		int(GameManager.current_state)
+	]
 
 	var cash_text: String = "N/A"
 	if economy_system:
@@ -86,7 +86,7 @@ func _build_display_text() -> String:
 	var day_text: String = "N/A"
 	var hour_text: String = "N/A"
 	if time_system:
-		phase_text = TimeSystem.DayPhase.keys()[time_system.current_phase]
+		phase_text = TimeSystem.DayPhase.keys()[int(time_system.current_phase)]
 		speed_text = "%.0fx" % time_system.speed_multiplier
 		day_text = str(time_system.current_day)
 		hour_text = str(time_system.current_hour) + ":00"

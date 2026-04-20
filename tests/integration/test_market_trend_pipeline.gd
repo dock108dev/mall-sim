@@ -48,14 +48,8 @@ func test_day_ended_triggers_trend_update() -> void:
 		_trend_system._trend_levels[key] = 1.0
 		_trend_system._category_configs[key]["volatility"] = HIGH_VOLATILITY
 	var before: Dictionary = _trend_system.get_all_trend_levels()
-	var day_before: int = _trend_system._current_day
 	seed(SEED_LARGE_SHIFT)
 	EventBus.day_ended.emit(1)
-	assert_eq(
-		_trend_system._current_day,
-		day_before + 1,
-		"MarketTrendSystemSingleton._current_day must increment after day_ended"
-	)
 	var after: Dictionary = _trend_system.get_all_trend_levels()
 	var changed_count: Array = [0]
 	for key: Variant in before:
@@ -152,14 +146,8 @@ func test_full_chain_day_ended_to_cache_invalidation() -> void:
 		_trend_system._trend_levels[key] = 1.0
 		_trend_system._category_configs[key]["volatility"] = HIGH_VOLATILITY
 	_market_value._cache[&"chain_item"] = 77.0
-	var day_before: int = _trend_system._current_day
 	seed(SEED_LARGE_SHIFT)
 	EventBus.day_ended.emit(1)
-	assert_eq(
-		_trend_system._current_day,
-		day_before + 1,
-		"Chain link 1: _current_day must advance"
-	)
 	assert_true(
 		_shifted_categories.size() > 0,
 		"Chain link 2: trend_shifted must fire for high-volatility categories"

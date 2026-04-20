@@ -249,6 +249,8 @@ func _process_file(
 		return
 	if content_type == "tutorial_steps_data":
 		return
+	if content_type == "meta_shifts_data":
+		return
 	if content_type == "meta_config_data":
 		return
 	if content_type == "onboarding_config_data":
@@ -318,6 +320,9 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 		return "pocket_creatures_cards_data"
 	if file_base == "tutorial_steps":
 		return "tutorial_steps_data"
+	if file_base == "meta_shifts":
+		# Loaded by MetaShiftSystem; not registered via DataLoader.
+		return "meta_shifts_data"
 	if file_base == "upgrades":
 		return "upgrade"
 	if _DIR_TYPE_MAP.has(dir_name):

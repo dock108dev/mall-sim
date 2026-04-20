@@ -54,4 +54,4 @@ func _show_error(message: String) -> void:
 
 
 func _transition_to_main_menu() -> void:
-	GameManager.transition_to(GameManager.State.MAIN_MENU)
+	GameManager.transition_to(GameManager.GameState.MAIN_MENU)

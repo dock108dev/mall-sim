@@ -209,15 +209,15 @@ func test_is_assisted_false_on_fresh_instance() -> void:
 
 
 func test_is_assisted_true_after_downgrade_to_easier_tier_on_day_greater_than_one() -> void:
-	var original_day: int = GameManager._current_day
+	var original_day: int = GameManager.current_day
 	_ds.set_tier(&"hard")
-	GameManager._current_day = 2
+	GameManager.current_day = 2
 	_ds.set_tier(&"easy")
 	assert_true(
 		_ds.is_assisted(),
 		"Switching to an easier tier after day 1 should activate assisted mode"
 	)
-	GameManager._current_day = original_day
+	GameManager.current_day = original_day
 
 
 # --- Display names ---

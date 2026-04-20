@@ -21,7 +21,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	GameManager._current_day = _saved_day
+	GameManager.current_day = _saved_day
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ func test_trend_expires_after_duration() -> void:
 	# Advance past end_day + FADE_DAYS so the trend is fully expired.
 	# With duration=1: end_day = start+1, fade_end = start+1+FADE_DAYS.
 	var expire_day: int = start_day + 1 + TrendSystem.FADE_DAYS + 1
-	GameManager._current_day = expire_day
+	GameManager.current_day = expire_day
 	_system._on_day_started(expire_day)
 
 	var mult_after: float = _system.get_trend_multiplier(item)

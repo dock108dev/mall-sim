@@ -13,7 +13,6 @@ const VOLATILITY_MAX: float = 2.0
 var _trend_levels: Dictionary = {}
 var _category_configs: Dictionary = {}
 var _initialized: bool = false
-var _current_day: int = 0
 
 
 func _ready() -> void:
@@ -103,7 +102,6 @@ func _load_catalog() -> void:
 
 
 func _on_day_ended(_day: int) -> void:
-	_current_day += 1
 	_shift_trends()
 
 

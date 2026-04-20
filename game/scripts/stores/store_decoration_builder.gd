@@ -2,9 +2,6 @@
 class_name StoreDecorationBuilder
 extends RefCounted
 
-static var _sign_mat: StandardMaterial3D = preload(
-	"res://game/assets/materials/mat_sign_backing.tres"
-)
 static var _poster_red: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_poster_red.tres"
 )

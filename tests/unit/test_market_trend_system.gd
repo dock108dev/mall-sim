@@ -77,13 +77,21 @@ func test_category_modifier_additive() -> void:
 
 # --- Day counter ---
 
-func test_daily_update_increments_day() -> void:
-	var initial: int = _system._current_day
+func test_daily_update_applies_shift_on_day_end() -> void:
+	var before: Dictionary = _system.get_all_trend_levels().duplicate(true)
 	_system._on_day_ended(1)
+	var after: Dictionary = _system.get_all_trend_levels()
 	assert_eq(
-		_system._current_day, initial + 1,
-		"_on_day_ended must increment _current_day by 1"
+		before.size(),
+		after.size(),
+		"_on_day_ended must preserve all tracked categories"
 	)
+	for key: Variant in before:
+		var v: float = float(after[key])
+		assert_true(
+			v >= MarketTrendSystem.MIN_LEVEL and v <= MarketTrendSystem.MAX_LEVEL,
+			"level for %s must stay clamped after day end" % str(key)
+		)
 
 
 # --- Reproducibility ---

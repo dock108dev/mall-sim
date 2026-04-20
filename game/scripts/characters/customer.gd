@@ -516,12 +516,12 @@ func _get_meta_shift_bonus(item: ItemInstance) -> float:
 func _filter_preferred_slots(slots: Array[Node]) -> Array[Node]:
 	if profile.preferred_categories.is_empty() or not _inventory_system:
 		return []
+	var matched: Array[Node] = []
 	if not _preferred_slots_dirty:
-		var result: Array[Node] = []
 		for slot: Node in _cached_preferred_slots:
 			if slot in slots:
-				result.append(slot)
-		return result
+				matched.append(slot)
+		return matched
 	_cached_preferred_slots.clear()
 	for slot: Node in slots:
 		var slot_id: String = str(slot.get("slot_id"))
@@ -538,11 +538,10 @@ func _filter_preferred_slots(slots: Array[Node]) -> Array[Node]:
 				_cached_preferred_slots.append(slot)
 				break
 	_preferred_slots_dirty = false
-	var result: Array[Node] = []
 	for slot: Node in _cached_preferred_slots:
 		if slot in slots:
-			result.append(slot)
-	return result
+			matched.append(slot)
+	return matched
 
 
 func _reset_browse_timer() -> void:

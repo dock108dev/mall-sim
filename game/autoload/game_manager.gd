@@ -6,11 +6,6 @@ enum GameState {
 	LOADING, DAY_SUMMARY, BUILD,
 }
 
-enum State {
-	MAIN_MENU, GAMEPLAY, PAUSED, GAME_OVER,
-	LOADING, DAY_SUMMARY, BUILD,
-}
-
 const DEFAULT_STARTING_STORE: StringName = &"sports"
 const MAIN_MENU_SCENE_PATH := "res://game/scenes/ui/main_menu.tscn"
 const GAMEPLAY_SCENE_PATH := "res://game/scenes/world/game_world.tscn"
@@ -34,11 +29,6 @@ const _VALID_TRANSITIONS: Dictionary = {
 
 var current_state: GameState = GameState.MAIN_MENU
 var current_day: int:
-	get:
-		return get_current_day()
-	set(value):
-		set_current_day(value)
-var _current_day: int:
 	get:
 		return get_current_day()
 	set(value):
@@ -79,7 +69,10 @@ func change_state(new_state: GameState) -> bool:
 	if new_state not in allowed:
 		push_warning(
 			"GameManager: Invalid transition %s → %s"
-			% [GameState.keys()[current_state], GameState.keys()[new_state]]
+			% [
+				GameState.keys()[int(current_state)],
+				GameState.keys()[int(new_state)],
+			]
 		)
 		return false
 
@@ -212,15 +205,14 @@ func transition_to_game() -> void:
 
 
 ## Public state transition entry point used by boot sequence and UI flows.
-func transition_to(state: State) -> void:
-	var target: GameState = state as int
-	match target:
+func transition_to(state: GameState) -> void:
+	match state:
 		GameState.MAIN_MENU:
 			transition_to_menu()
 		GameState.GAMEPLAY:
 			transition_to_game()
 		_:
-			change_state(target)
+			change_state(state)
 
 
 func transition_to_menu() -> void:
