@@ -7,7 +7,7 @@ func before_all() -> void:
 
 
 func test_load_json_valid_file() -> void:
-	var data: Variant = DataLoaderSingleton.load_json(
+	var data: Variant = DataLoader.load_json(
 		"res://game/content/stores/store_definitions.json"
 	)
 	assert_not_null(data, "Should parse valid JSON")
@@ -15,7 +15,7 @@ func test_load_json_valid_file() -> void:
 
 
 func test_load_json_missing_file_returns_null() -> void:
-	var data: Variant = DataLoaderSingleton.load_json(
+	var data: Variant = DataLoader.load_json(
 		"res://nonexistent_file.json"
 	)
 	assert_null(data, "Missing file should return null")
@@ -32,7 +32,7 @@ func test_load_json_oversized_file_returns_null() -> void:
 	)
 	file.close()
 
-	var data: Variant = DataLoaderSingleton.load_json(path)
+	var data: Variant = DataLoader.load_json(path)
 	assert_null(data, "Oversized JSON file should be rejected")
 
 	var cleanup_error: Error = DirAccess.remove_absolute(path)
@@ -441,7 +441,7 @@ func test_item_json_uses_item_name_not_name() -> void:
 		"res://game/content/items/video_rental.json",
 	]
 	for path: String in catalog_paths:
-		var data: Variant = DataLoaderSingleton.load_json(path)
+		var data: Variant = DataLoader.load_json(path)
 		assert_not_null(data, "Should parse %s" % path)
 		if data is not Array:
 			continue

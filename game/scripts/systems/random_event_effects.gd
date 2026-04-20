@@ -53,10 +53,9 @@ func apply_viral_trend(
 		_inventory_system.get_shelf_items()
 	)
 	if shelf_items.is_empty():
-		var msg: String = def.notification_text % [
-			"an item", def.duration_days
-		]
-		EventBus.notification_requested.emit(msg)
+		EventBus.notification_requested.emit(
+			def.notification_text % ["an item", def.duration_days]
+		)
 		return
 	var chosen: ItemInstance = shelf_items[
 		randi() % shelf_items.size()
@@ -67,10 +66,9 @@ func apply_viral_trend(
 		active_event["target_item_id"] = chosen.definition.id
 	else:
 		item_name = "an item"
-	var msg: String = def.notification_text % [
-		item_name, def.duration_days
-	]
-	EventBus.notification_requested.emit(msg)
+	EventBus.notification_requested.emit(
+		def.notification_text % [item_name, def.duration_days]
+	)
 
 
 ## Evaluates store stocking state.

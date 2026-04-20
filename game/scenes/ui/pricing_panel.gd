@@ -366,7 +366,6 @@ func _on_apply_all() -> void:
 	var items: Array[ItemInstance] = (
 		inventory_system.get_items_for_store(store_id)
 	)
-	var count: int = 0
 	for item: ItemInstance in items:
 		if not item.definition:
 			continue
@@ -383,7 +382,6 @@ func _on_apply_all() -> void:
 		item.player_set_price = new_price
 		EventBus.price_set.emit(item.instance_id, new_price)
 		_emit_item_price_set(item, new_price)
-		count += 1
 	PanelAnimator.pulse_scale(_apply_all_button)
 
 

@@ -426,8 +426,9 @@ func _apply_effect(def: RandomEventDefinition) -> Dictionary:
 		"water_leak":
 			_disabled_fixture_id = "fixture_leak_%d" % randi()
 			effect["disabled_fixture"] = _disabled_fixture_id
-			var msg: String = def.notification_text % def.duration_days
-			EventBus.notification_requested.emit(msg)
+			EventBus.notification_requested.emit(
+				def.notification_text % def.duration_days
+			)
 		"celebrity_visit", "power_outage", "collector_convention":
 			EventBus.notification_requested.emit(
 				def.notification_text

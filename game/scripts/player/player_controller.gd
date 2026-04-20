@@ -97,8 +97,8 @@ func get_camera() -> Camera3D:
 
 
 ## Teleports camera pivot and smoothing target to the same position.
-func set_pivot(position: Vector3) -> void:
-	_target_pivot = position.clamp(store_bounds_min, store_bounds_max)
+func set_pivot(pivot_position: Vector3) -> void:
+	_target_pivot = pivot_position.clamp(store_bounds_min, store_bounds_max)
 	_pivot = _target_pivot
 	_update_camera_transform()
 

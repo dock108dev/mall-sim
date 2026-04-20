@@ -285,16 +285,13 @@ func _emit_tier_change_toast(
 	var store_display: String = _get_store_display_name(store_id)
 	var tier_name: String = _tier_to_name(new_tier)
 	var is_upgrade: bool = new_tier > old_tier
+	var toast_msg: String
 	if is_upgrade:
-		var msg: String = "%s reputation up: now %s" % [
-			store_display, tier_name
-		]
-		EventBus.toast_requested.emit(msg, &"reputation_up", 4.0)
+		toast_msg = "%s reputation up: now %s" % [store_display, tier_name]
+		EventBus.toast_requested.emit(toast_msg, &"reputation_up", 4.0)
 	else:
-		var msg: String = "%s reputation dropped to %s" % [
-			store_display, tier_name
-		]
-		EventBus.toast_requested.emit(msg, &"reputation_down", 5.0)
+		toast_msg = "%s reputation dropped to %s" % [store_display, tier_name]
+		EventBus.toast_requested.emit(toast_msg, &"reputation_down", 5.0)
 
 
 func _get_store_display_name(store_id: String) -> String:

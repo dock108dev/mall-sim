@@ -241,6 +241,18 @@ func _process_file(
 		return
 	if content_type == "market_trends_catalog_data":
 		return
+	if content_type == "audio_registry_data":
+		return
+	if content_type == "haggle_dialogue_data":
+		return
+	if content_type == "pocket_creatures_cards_data":
+		return
+	if content_type == "tutorial_steps_data":
+		return
+	if content_type == "meta_config_data":
+		return
+	if content_type == "onboarding_config_data":
+		return
 	if content_type.is_empty():
 		push_warning("DataLoader: unrecognized content file, skipping: %s" % path)
 		return
@@ -271,6 +283,12 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 		return "market_event"
 	if dir_name == "items":
 		return "item"
+	if dir_name == "onboarding":
+		return "onboarding_config_data"
+	if dir_name == "meta":
+		var meta_file := path.get_file().get_basename()
+		if meta_file == "regulars_threads" or meta_file == "shifts":
+			return "meta_config_data"
 	var file_base := path.get_file().get_basename()
 	if file_base == "retro_games":
 		return "retro_games_config"
@@ -292,6 +310,14 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 	if file_base == "market_trends_catalog":
 		# Loaded by MarketTrendSystem; not registered via DataLoader.
 		return "market_trends_catalog_data"
+	if file_base == "audio_registry":
+		return "audio_registry_data"
+	if file_base == "haggle_dialogue":
+		return "haggle_dialogue_data"
+	if file_base == "pocket_creatures_cards":
+		return "pocket_creatures_cards_data"
+	if file_base == "tutorial_steps":
+		return "tutorial_steps_data"
 	if file_base == "upgrades":
 		return "upgrade"
 	if _DIR_TYPE_MAP.has(dir_name):

@@ -32,7 +32,7 @@ func _ready() -> void:
 		return
 
 
-func _on_tutorial_step_changed(step_id: String) -> void:
+func _on_tutorial_step_changed(_step_id: String) -> void:
 	if not tutorial_system:
 		return
 	var prompt_text: String = tutorial_system.get_current_step_text()

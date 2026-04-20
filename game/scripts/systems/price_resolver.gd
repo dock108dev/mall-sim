@@ -101,7 +101,7 @@ static func resolve(base_price: float, multipliers: Array) -> Result:
 
 
 ## Resolves a price for an item by applying canonical-ordered multipliers and
-## emitting price_resolved on EventBus when emit_signal is true.
+## emitting price_resolved on EventBus when emit_price_signal is true.
 ##
 ## The caller supplies multipliers with "slot" (one of CHAIN_ORDER) or "label"
 ## that matches a canonical name; unrecognized slots are applied after the
@@ -110,7 +110,7 @@ static func resolve_for_item(
 	item_id: StringName,
 	base_price: float,
 	multipliers: Array,
-	emit_signal: bool = true,
+	emit_price_signal: bool = true,
 ) -> Result:
 	var ordered: Array = _resequence(multipliers)
 	var with_base: Array = [{
@@ -121,7 +121,7 @@ static func resolve_for_item(
 	}]
 	with_base.append_array(ordered)
 	var result: Result = resolve(base_price, with_base)
-	if emit_signal:
+	if emit_price_signal:
 		EventBus.price_resolved.emit(item_id, result.final_price, result.steps)
 	return result
 
@@ -141,9 +141,9 @@ static func _resequence(multipliers: Array) -> Array:
 		else:
 			tail.append(entry)
 	var result: Array = []
-	for name: String in CHAIN_ORDER:
-		if slots.has(name):
-			result.append(slots[name])
+	for slot_key: String in CHAIN_ORDER:
+		if slots.has(slot_key):
+			result.append(slots[slot_key])
 	for entry: Dictionary in tail:
 		result.append(entry)
 	return result

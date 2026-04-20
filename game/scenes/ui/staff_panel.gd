@@ -83,6 +83,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func open() -> void:
 	if _is_open:
 		return
+	_tab_container.current_tab = 0
 	_sync_active_store()
 	_is_open = true
 	_refresh_all()

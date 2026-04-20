@@ -21,7 +21,6 @@ var trend_system: TrendSystem
 
 var _is_open: bool = false
 var _rest_x: float = 0.0
-var _anim_tween: Tween
 var _active_store_id: StringName = &""
 
 @onready var _trend_list: VBoxContainer = $VBoxContainer/ScrollContainer/TrendList
@@ -262,11 +261,11 @@ func _get_current_day() -> int:
 
 
 func _get_visible_trends() -> Array[Dictionary]:
-	var visible: Array[Dictionary] = []
+	var visible_trends: Array[Dictionary] = []
 	for trend: Dictionary in trend_system.get_active_trends():
 		if _trend_matches_active_store(trend):
-			visible.append(trend)
-	return visible
+			visible_trends.append(trend)
+	return visible_trends
 
 
 func _should_show_meta_watch() -> bool:

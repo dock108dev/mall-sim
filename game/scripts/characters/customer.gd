@@ -558,7 +558,7 @@ func _build_customer_data() -> Dictionary:
 		"profile_id": profile.id if profile else "",
 		"profile_name": profile.customer_name if profile else "",
 		"desired_item_id": (
-			_desired_item.instance_id if _desired_item else ""
+			str(_desired_item.instance_id) if _desired_item else ""
 		),
 	}
 

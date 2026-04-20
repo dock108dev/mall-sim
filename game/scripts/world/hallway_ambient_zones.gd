@@ -25,21 +25,21 @@ const AMBIANCE_DIR: String = "res://game/assets/audio/ambiance/"
 const MUSIC_DIR: String = "res://game/assets/audio/music/"
 const SFX_DIR: String = "res://game/assets/audio/sfx/"
 
-const _MUZAK_PATH: String = AMBIANCE_DIR + "hallway_muzak.wav"
-const _MUZAK_FALLBACK_PATH: String = MUSIC_DIR + "mall_hallway_music.wav"
+const _MUZAK_PATH: String = MUSIC_DIR + "mall_hallway_music.wav"
+const _MUZAK_FALLBACK_PATH: String = AMBIANCE_DIR + "mall_hallway.wav"
 const _MUZAK_CHRISTMAS_PATH: String = (
 	AMBIANCE_DIR + "hallway_muzak_christmas.wav"
 )
-const _MECHANICAL_PATH: String = AMBIANCE_DIR + "hallway_mechanical.wav"
-const _MECHANICAL_FALLBACK_PATH: String = AMBIANCE_DIR + "mall_hallway.wav"
-const _CROWD_PATH: String = AMBIANCE_DIR + "hallway_crowd.wav"
-const _CROWD_FALLBACK_PATH: String = AMBIANCE_DIR + "mall_hallway.wav"
-const _FOOD_COURT_PATH: String = AMBIANCE_DIR + "food_court_ambience.wav"
-const _FOOD_COURT_FALLBACK_PATH: String = AMBIANCE_DIR + "mall_hallway.wav"
-const _TRAY_CLATTER_PATH: String = SFX_DIR + "tray_clatter.wav"
-const _TRAY_CLATTER_FALLBACK_PATH: String = SFX_DIR + "item_placement.wav"
-const _FRYER_SFX_PATH: String = SFX_DIR + "fryer_sizzle.wav"
-const _FRYER_SFX_FALLBACK_PATH: String = SFX_DIR + "refurbish_start.wav"
+const _MECHANICAL_PATH: String = AMBIANCE_DIR + "mall_hallway.wav"
+const _MECHANICAL_FALLBACK_PATH: String = MUSIC_DIR + "mall_hallway_music.wav"
+const _CROWD_PATH: String = AMBIANCE_DIR + "mall_hallway.wav"
+const _CROWD_FALLBACK_PATH: String = MUSIC_DIR + "mall_hallway_music.wav"
+const _FOOD_COURT_PATH: String = AMBIANCE_DIR + "mall_hallway.wav"
+const _FOOD_COURT_FALLBACK_PATH: String = MUSIC_DIR + "mall_hallway_music.wav"
+const _TRAY_CLATTER_PATH: String = SFX_DIR + "item_placement.wav"
+const _TRAY_CLATTER_FALLBACK_PATH: String = SFX_DIR + "build_place.wav"
+const _FRYER_SFX_PATH: String = SFX_DIR + "refurbish_start.wav"
+const _FRYER_SFX_FALLBACK_PATH: String = SFX_DIR + "demo_activate.wav"
 
 var _muzak_player: AudioStreamPlayer3D = null
 var _mechanical_player: AudioStreamPlayer3D = null
@@ -107,11 +107,9 @@ func _load_streams() -> void:
 	_muzak_stream = _load_stream_with_fallback(
 		_MUZAK_PATH, _MUZAK_FALLBACK_PATH, "hallway muzak"
 	)
-	_muzak_christmas_stream = _load_stream_or_default(
-		_MUZAK_CHRISTMAS_PATH,
-		_build_christmas_muzak_stream(),
-		"hallway Christmas muzak"
-	)
+	_muzak_christmas_stream = _load_stream_or_null(_MUZAK_CHRISTMAS_PATH)
+	if _muzak_christmas_stream == null:
+		_muzak_christmas_stream = _build_christmas_muzak_stream()
 	_mechanical_stream = _load_stream_with_fallback(
 		_MECHANICAL_PATH, _MECHANICAL_FALLBACK_PATH, "hallway mechanical"
 	)
@@ -379,20 +377,6 @@ func _load_stream_with_fallback(
 		"HallwayAmbientZones: missing audio for %s" % label
 	)
 	return null
-
-
-func _load_stream_or_default(
-	path: String,
-	default_stream: AudioStream,
-	label: String
-) -> AudioStream:
-	var stream: AudioStream = _load_stream_or_null(path)
-	if stream != null:
-		return stream
-	push_warning(
-		"HallwayAmbientZones: using procedural fallback for %s" % label
-	)
-	return default_stream
 
 
 func _load_stream_or_null(path: String) -> AudioStream:

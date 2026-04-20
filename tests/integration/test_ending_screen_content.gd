@@ -127,7 +127,7 @@ func test_ending_triggered_routes_survival_ending_id_to_correct_title() -> void:
 
 func _load_catalog_entries() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var data: Variant = DataLoaderSingleton.load_json(CATALOG_PATH)
+	var data: Variant = DataLoader.load_json(CATALOG_PATH)
 	if data is not Dictionary:
 		push_error(
 			"test_ending_screen_content: failed to load catalog at %s" % CATALOG_PATH

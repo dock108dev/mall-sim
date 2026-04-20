@@ -59,7 +59,6 @@ const _BUILD_MODE_DIM_ALPHA: float = 0.5
 @onready var _seasonal_event_label: Label = $SeasonalEventLabel
 @onready var _telegraph_card: Label = $TelegraphCard
 @onready var _milestones_button: Button = $MilestonesButton
-@onready var _control_hint_label: Label = $ControlHintLabel
 
 var _telegraphed_events: Dictionary = {}
 
@@ -223,8 +222,8 @@ func _refresh_time_display() -> void:
 	_time_label.text = tr("HUD_DAY_FORMAT") % [
 		_current_day, formatted
 	]
+	_time_label.tooltip_text = tr(phase_key)
 	_time_label.modulate = phase_color
-	_control_hint_label.text = tr(phase_key)
 
 
 func _format_hour_12(hour: int) -> String:
@@ -248,7 +247,7 @@ func _format_cash(amount: float) -> String:
 	else:
 		while whole > 0:
 			var chunk: int = whole % 1000
-			whole = whole / 1000
+			whole = int(whole / 1000.0)
 			if whole > 0:
 				groups.append("%03d" % chunk)
 			else:
@@ -529,7 +528,7 @@ func _on_build_mode_exited() -> void:
 	_tween_children_alpha(1.0, Tween.EASE_IN)
 
 
-func _tween_children_alpha(target: float, ease: int) -> void:
+func _tween_children_alpha(target: float, tween_ease: int) -> void:
 	PanelAnimator.kill_tween(_dim_tween)
 	_dim_tween = create_tween()
 	for child: Node in get_children():
@@ -537,6 +536,6 @@ func _tween_children_alpha(target: float, ease: int) -> void:
 			_dim_tween.parallel().tween_property(
 				child, "modulate:a", target,
 				PanelAnimator.BUILD_MODE_TRANSITION
-			).set_ease(ease).set_trans(
+			).set_ease(tween_ease).set_trans(
 				Tween.TRANS_CUBIC
 			)

@@ -320,7 +320,6 @@ func _calculate_partial_fill(requested: int) -> int:
 
 func _issue_partial_refund(order: Dictionary, fulfilled: int) -> void:
 	var qty: int = int(order.get("quantity", 1))
-	var unit_cost: float = float(order.get("unit_cost", 0.0))
 	var undelivered: int = qty - fulfilled
 	_issue_refund_for_missing_quantity(order, undelivered, "Stockout")
 

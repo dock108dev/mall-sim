@@ -19,9 +19,6 @@ var _settings_panel: SettingsPanel = null
 var _any_saves_exist: bool = false
 
 @onready var _continue_button: Button = $VBox/ContinueButton
-@onready var _play_button: Button = $VBox/PlayButton
-@onready var _load_button: Button = $VBox/LoadButton
-@onready var _quit_button: Button = $VBox/QuitButton
 @onready var _load_container: PanelContainer = $LoadPanel
 @onready var _slot_list: VBoxContainer = (
 	$LoadPanel/Margin/VBox/SlotContainer

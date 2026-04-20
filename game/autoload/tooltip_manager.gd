@@ -33,17 +33,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		hide_tooltip()
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if _is_visible:
 		_follow_mouse()
 
 
 ## Shows a text tooltip at the supplied cursor position.
-func show_tooltip(text: String, position: Vector2) -> void:
+func show_tooltip(text: String, screen_position: Vector2) -> void:
 	if text.is_empty():
 		hide_tooltip()
 		return
-	_display_tooltip(text, position)
+	_display_tooltip(text, screen_position)
 
 
 ## Immediately hides the tooltip.
@@ -54,8 +54,8 @@ func hide_tooltip() -> void:
 	_panel.modulate = Color.WHITE
 
 
-func _display_tooltip(text: String, position: Vector2) -> void:
-	_last_position = position
+func _display_tooltip(text: String, screen_position: Vector2) -> void:
+	_last_position = screen_position
 	_label.custom_minimum_size = Vector2.ZERO
 	_label.size = Vector2.ZERO
 	_label.text = text

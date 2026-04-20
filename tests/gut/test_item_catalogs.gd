@@ -79,7 +79,7 @@ func test_catalog_json_entries_match_issue_139_schema() -> void:
 		"res://game/content/items/consumer_electronics.json",
 	]
 	for path: String in catalog_paths:
-		var data: Variant = DataLoaderSingleton.load_json(path)
+		var data: Variant = DataLoader.load_json(path)
 		assert_true(data is Array, "Catalog should be an array: %s" % path)
 		if data is not Array:
 			continue
@@ -120,7 +120,7 @@ func test_issue_139_catalog_ids_unique_across_target_files() -> void:
 	]
 	var seen_ids: Dictionary = {}
 	for path: String in catalog_paths:
-		var data: Variant = DataLoaderSingleton.load_json(path)
+		var data: Variant = DataLoader.load_json(path)
 		assert_true(data is Array, "Catalog should be an array: %s" % path)
 		if data is not Array:
 			continue

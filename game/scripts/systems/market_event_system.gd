@@ -205,7 +205,7 @@ func _determine_phase(
 
 
 func _handle_phase_transition(
-	evt: Dictionary,
+	_evt: Dictionary,
 	old_phase: int,
 	new_phase: int,
 	def: MarketEventDefinition,

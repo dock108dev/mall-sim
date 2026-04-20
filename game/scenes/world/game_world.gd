@@ -704,9 +704,10 @@ func _find_player_node(camera: Camera3D) -> Node:
 func _on_game_state_changed(
 	_old_state: int, new_state: int
 ) -> void:
+	var new_gs: GameManager.GameState = new_state as GameManager.GameState
 	var should_pause: bool = (
-		new_state == GameManager.GameState.PAUSED
-		or new_state == GameManager.GameState.BUILD
+		new_gs == GameManager.GameState.PAUSED
+		or new_gs == GameManager.GameState.BUILD
 	)
 	_set_systems_paused(should_pause)
 

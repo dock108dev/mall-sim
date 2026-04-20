@@ -17,7 +17,7 @@ func test_fixture_count() -> void:
 
 
 func test_fixture_json_entries_include_required_fields() -> void:
-	var raw: Variant = DataLoaderSingleton.load_json(FIXTURE_CATALOG_PATH)
+	var raw: Variant = DataLoader.load_json(FIXTURE_CATALOG_PATH)
 	assert_true(raw is Dictionary, "fixtures.json should load as a dictionary")
 	var entries: Array = (raw as Dictionary).get("entries", [])
 	assert_eq(entries.size(), 14, "fixtures.json should include 14 entries")

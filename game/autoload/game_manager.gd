@@ -69,10 +69,10 @@ func _ready() -> void:
 
 
 func change_state(new_state: GameState) -> bool:
+	var previous_state: GameState = current_state
 	if new_state == GameState.MAIN_MENU:
-		var old_state: GameState = current_state
 		current_state = new_state
-		EventBus.game_state_changed.emit(old_state, new_state)
+		EventBus.game_state_changed.emit(previous_state, new_state)
 		return true
 
 	var allowed: Array = _VALID_TRANSITIONS.get(current_state, [])
@@ -83,9 +83,9 @@ func change_state(new_state: GameState) -> bool:
 		)
 		return false
 
-	var old_state: GameState = current_state
+	previous_state = current_state
 	current_state = new_state
-	EventBus.game_state_changed.emit(old_state, new_state)
+	EventBus.game_state_changed.emit(previous_state, new_state)
 	return true
 
 

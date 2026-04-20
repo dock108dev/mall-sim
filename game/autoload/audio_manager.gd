@@ -565,14 +565,14 @@ func _resolve_ambient_stream(track_name: String) -> AudioStream:
 
 
 func _resolve_stream(
-	name: String, cache: Dictionary
+	stream_key: String, cache: Dictionary
 ) -> AudioStream:
-	if cache.has(name):
-		return cache[name] as AudioStream
-	if ResourceLoader.exists(name):
-		var stream: AudioStream = load(name) as AudioStream
+	if cache.has(stream_key):
+		return cache[stream_key] as AudioStream
+	if ResourceLoader.exists(stream_key):
+		var stream: AudioStream = load(stream_key) as AudioStream
 		if stream != null:
-			cache[name] = stream
+			cache[stream_key] = stream
 			return stream
 	return null
 

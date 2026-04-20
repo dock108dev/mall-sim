@@ -63,7 +63,7 @@ func _ready() -> void:
 
 
 func _load_dialogue() -> void:
-	var data: Variant = DataLoaderSingleton.load_json(DIALOGUE_PATH)
+	var data: Variant = DataLoader.load_json(DIALOGUE_PATH)
 	if data is Dictionary:
 		_dialogue = data as Dictionary
 	else:

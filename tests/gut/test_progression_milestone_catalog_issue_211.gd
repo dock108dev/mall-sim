@@ -167,7 +167,7 @@ func test_issue_211_data_loader_loads_progression_without_errors() -> void:
 
 
 func _load_milestones() -> Array[Dictionary]:
-	var data: Variant = DataLoaderSingleton.load_json(MILESTONE_PATH)
+	var data: Variant = DataLoader.load_json(MILESTONE_PATH)
 	assert_not_null(data, "Milestone definitions JSON must load")
 	if not (data is Array):
 		fail_test("Milestone definitions JSON must be a top-level array")
@@ -190,7 +190,7 @@ func _load_milestones_by_id() -> Dictionary:
 
 
 func _load_unlock_ids() -> Dictionary:
-	var data: Variant = DataLoaderSingleton.load_json(UNLOCKS_PATH)
+	var data: Variant = DataLoader.load_json(UNLOCKS_PATH)
 	assert_not_null(data, "Unlock definitions JSON must load")
 
 	var unlock_ids: Dictionary = {}

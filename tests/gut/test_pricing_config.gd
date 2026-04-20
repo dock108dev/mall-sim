@@ -23,7 +23,7 @@ func test_pricing_config_file_exists() -> void:
 
 
 func test_pricing_config_type_field() -> void:
-	var data: Variant = DataLoaderSingleton.load_json(PRICING_CONFIG_PATH)
+	var data: Variant = DataLoader.load_json(PRICING_CONFIG_PATH)
 	assert_not_null(data, "pricing_config.json must parse without errors")
 	assert_true(data is Dictionary, "pricing_config root must be a Dictionary")
 	var d: Dictionary = data as Dictionary
