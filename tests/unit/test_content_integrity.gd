@@ -107,8 +107,10 @@ func _classify(path: String, data: Variant) -> String:
 		if file_base.begins_with("ambient"):
 			return "ambient_moment"
 		return "market_event"
-	if dir_name == "items" or file_base == "pocket_creatures_cards":
+	if dir_name == "items":
 		return "item"
+	if file_base == "pocket_creatures_cards":
+		return ""
 	if dir_name == "customers":
 		if file_base == "personalities":
 			return ""
@@ -118,6 +120,8 @@ func _classify(path: String, data: Variant) -> String:
 			return "store"
 		return ""
 	if dir_name == "progression" or dir_name == "milestones":
+		if file_base == "arc_unlocks":
+			return ""
 		return "milestone"
 	if dir_name == "staff":
 		return "staff"

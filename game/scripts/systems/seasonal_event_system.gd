@@ -168,7 +168,7 @@ func get_tournament_price_spike_multiplier(item: ItemInstance) -> float:
 		var matches: bool = false
 		if not def.creature_type_focus.is_empty():
 			matches = item.definition.tags.has(def.creature_type_focus)
-		if not matches:
+		else:
 			matches = item.definition.category == def.card_category
 		if matches:
 			combined *= def.price_spike_multiplier

@@ -56,11 +56,8 @@ func test_start_new_game_initializes_systems_before_bootstrap() -> void:
 
 	assert_eq(
 		fake_world.calls,
-		[
-			"initialize_systems",
-			"bootstrap_new_game_state:sports",
-		],
-		"New game bootstrap should initialize runtime systems before seeding state"
+		["bootstrap_new_game_state:retro_games"],
+		"_start_new_game should call bootstrap with DEFAULT_STARTING_STORE"
 	)
 	assert_eq(GameManager.current_store_id, &"")
 	assert_eq(GameManager.owned_stores, [])

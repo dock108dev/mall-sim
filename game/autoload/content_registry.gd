@@ -31,13 +31,21 @@ func is_ready() -> bool:
 func resolve(raw: String) -> StringName:
 	if raw.is_empty():
 		return &""
-	var normalized: StringName = _normalize(raw)
+	var trimmed: String = raw.strip_edges()
+	var id: StringName = StringName(trimmed)
+	if _entries.has(id):
+		return id
+	if _resources.has(id):
+		return id
+	if _aliases.has(id):
+		return _aliases[id]
+	var normalized: StringName = _normalize(trimmed)
 	if _entries.has(normalized):
+		return normalized
+	if _resources.has(normalized):
 		return normalized
 	if _aliases.has(normalized):
 		return _aliases[normalized]
-	if _resources.has(normalized):
-		return normalized
 	_report_unknown_id(raw, normalized)
 	return &""
 
@@ -46,6 +54,9 @@ func resolve(raw: String) -> StringName:
 func exists(raw: String) -> bool:
 	if raw.is_empty():
 		return false
+	var id: StringName = StringName(raw.strip_edges())
+	if _entries.has(id) or _resources.has(id) or _aliases.has(id):
+		return true
 	var normalized: StringName = _normalize(raw)
 	return (
 		_entries.has(normalized)

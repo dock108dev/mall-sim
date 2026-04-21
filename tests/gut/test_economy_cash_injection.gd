@@ -3,20 +3,21 @@ extends GutTest
 
 
 var _economy: EconomySystem
-var _saved_tier: StringName
 var _injections: Array[Dictionary] = []
 
 
 func before_each() -> void:
-	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton.set_tier(&"normal")
 	_economy = EconomySystem.new()
 	add_child_autofree(_economy)
 	_injections = []
+	if EventBus.emergency_cash_injected.is_connected(_on_injected):
+		EventBus.emergency_cash_injected.disconnect(_on_injected)
 	EventBus.emergency_cash_injected.connect(_on_injected)
 
 
 func after_each() -> void:
-	DifficultySystemSingleton.set_tier(_saved_tier)
+	DifficultySystemSingleton.set_tier(&"normal")
 	if EventBus.emergency_cash_injected.is_connected(_on_injected):
 		EventBus.emergency_cash_injected.disconnect(_on_injected)
 

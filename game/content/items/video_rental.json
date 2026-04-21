@@ -532,6 +532,48 @@
     ]
   },
   {
+    "id": "rental_snack_chocolate_bar",
+    "item_name": "Midnight Cocoa Bar",
+    "store_type": "rentals",
+    "category": "snacks",
+    "base_price": 1.5,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "A thin chocolate bar that melts into the plot of whatever is playing.",
+    "subcategory": "candy",
+    "tags": [
+      "snack",
+      "candy",
+      "impulse"
+    ]
+  },
+  {
+    "id": "rental_snack_licorice",
+    "item_name": "Twist Rope Licorice",
+    "store_type": "rentals",
+    "category": "snacks",
+    "base_price": 1.5,
+    "rarity": "common",
+    "condition_range": [
+      "mint",
+      "good",
+      "fair",
+      "poor"
+    ],
+    "description": "Chewy ropes that outlast most opening credits.",
+    "subcategory": "candy",
+    "tags": [
+      "snack",
+      "candy",
+      "impulse"
+    ]
+  },
+  {
     "id": "rental_poster_cosmic_battles",
     "item_name": "Star Patrol Saga Poster",
     "store_type": "rentals",

@@ -556,16 +556,18 @@ func _distribute_save_data(data: Dictionary) -> void:
 				prog_data as Dictionary
 			)
 
-	if _store_state_manager == null:
-		push_error("SaveManager: StoreStateManager is required before load_game()")
-		return
-	var store_data: Variant = data.get("store_states", {})
-	if store_data is Dictionary:
-		_store_state_manager.load_save_data(
-			store_data as Dictionary
+	if _store_state_manager != null:
+		var store_data: Variant = data.get("store_states", {})
+		if store_data is Dictionary:
+			_store_state_manager.load_save_data(
+				store_data as Dictionary
+			)
+		_store_state_manager.restore_owned_slots(_extract_owned_slots(data))
+		_apply_loaded_active_store(data)
+	else:
+		push_warning(
+			"SaveManager: StoreStateManager missing — skipping store / active-store restore"
 		)
-	_store_state_manager.restore_owned_slots(_extract_owned_slots(data))
-	_apply_loaded_active_store(data)
 
 	if _milestone_system:
 		var ms_data: Variant = data.get("milestones", {})
