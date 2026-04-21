@@ -130,7 +130,7 @@ static func resolve(base_price: float, multipliers: Array) -> Result:
 		var factor: float = float(entry.get("factor", 1.0))
 		price *= factor
 		var label: String = str(
-			entry.get("label", entry.get("name", "?"))
+			entry.get("label", entry.get("name", entry.get("slot", "?")))
 		)
 		var detail: String = str(
 			entry.get("detail", entry.get("source", ""))

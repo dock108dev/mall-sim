@@ -174,9 +174,12 @@ func test_basic_tier_always_unlocked() -> void:
 
 
 func test_specialty_tier_locked_at_low_rep() -> void:
+	_reputation_system.initialize_store("retro_games")
+	_reputation_system.add_reputation("retro_games", -30.0)
 	assert_false(
 		_order_system.is_tier_unlocked(
-			OrderSystem.SupplierTier.SPECIALTY
+			OrderSystem.SupplierTier.SPECIALTY,
+			&"retro_games"
 		),
 		"SPECIALTY should be locked at low reputation"
 	)
@@ -337,6 +340,8 @@ func test_premium_price_at_wholesale() -> void:
 
 
 func test_place_order_fails_with_locked_tier() -> void:
+	_reputation_system.initialize_store("retro_games")
+	_reputation_system.add_reputation("retro_games", -30.0)
 	var result: bool = _order_system.place_order(
 		&"retro_games",
 		OrderSystem.SupplierTier.SPECIALTY,
@@ -371,7 +376,7 @@ func test_place_order_fails_with_insufficient_cash() -> void:
 	if not item:
 		pending("No BASIC-tier retro_games item available for testing")
 		return
-	_economy_system.load_save_data({"cash": 0.0})
+	_economy_system.load_save_data({"current_cash": 0.0})
 	var result: bool = _order_system.place_order(
 		&"retro_games",
 		OrderSystem.SupplierTier.BASIC,

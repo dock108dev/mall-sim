@@ -149,16 +149,23 @@ func _emit_current() -> void:
 		EventBus.objective_changed.emit(hidden)
 		EventBus.objective_updated.emit(hidden)
 		return
-	var payload: Dictionary
+	var source: Dictionary
 	if _tutorial_active and _tutorial_steps.has(_current_tutorial_step_id):
-		payload = _tutorial_steps[_current_tutorial_step_id].duplicate()
+		source = _tutorial_steps[_current_tutorial_step_id]
 	else:
-		payload = _day_objectives.get(_current_day, _defaults).duplicate()
+		source = _day_objectives.get(_current_day, _defaults)
+	var text_value: String = str(source.get("text", ""))
+	var payload: Dictionary = {
+		"objective": text_value,
+		"text": text_value,
+		"action": str(source.get("action", "")),
+		"key": str(source.get("key", "")),
+	}
 	EventBus.objective_changed.emit(payload)
 	var updated: Dictionary = {
-		"current_objective": str(payload.get("text", "")),
-		"next_action": str(payload.get("action", "")),
-		"input_hint": str(payload.get("key", "")),
-		"optional_hint": str(payload.get("optional_hint", "")),
+		"current_objective": str(source.get("text", "")),
+		"next_action": str(source.get("action", "")),
+		"input_hint": str(source.get("key", "")),
+		"optional_hint": str(source.get("optional_hint", "")),
 	}
 	EventBus.objective_updated.emit(updated)

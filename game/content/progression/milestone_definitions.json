@@ -9,7 +9,7 @@
     "trigger_threshold": 1,
     "trigger_stat_key": "customer_purchased_count",
     "reward_type": "cash",
-    "reward_value": 25.0,
+    "reward_value": 50.0,
     "unlock_id": null
   },
   {
@@ -18,7 +18,7 @@
     "description": "You cleaned, repaired, or restored a piece of merchandise and actually improved it. The condition bar moved. That felt good, didn't it.",
     "is_visible": true,
     "tier": "early",
-    "trigger_type": "refurbishment_completed",
+    "trigger_type": "transaction_completed",
     "trigger_threshold": 1,
     "trigger_stat_key": "refurb_completed_count",
     "reward_type": "cash",
@@ -70,7 +70,7 @@
     "description": "You signed a second lease. The mall directory now lists two stores under your name. Somewhere, a property manager is updating a spreadsheet about you.",
     "is_visible": true,
     "tier": "early",
-    "trigger_type": "store_slot_unlocked",
+    "trigger_type": "transaction_completed",
     "trigger_threshold": 2,
     "trigger_stat_key": "unlocked_store_slots",
     "reward_type": "cash",
@@ -492,5 +492,57 @@
     "reward_type": "unlock",
     "reward_value": 0.0,
     "unlock_id": "prestige_bronze_badge"
+  },
+  {
+    "id": "first_hundred",
+    "display_name": "First Hundred",
+    "description": "Hit $100 in cumulative revenue \u2014 your first meaningful ledger entry.",
+    "is_visible": false,
+    "tier": "early",
+    "trigger_type": "revenue_total",
+    "trigger_threshold": 100,
+    "trigger_stat_key": "cumulative_revenue",
+    "reward_type": "cash",
+    "reward_value": 20.0,
+    "unlock_id": null
+  },
+  {
+    "id": "steady_seller",
+    "display_name": "Steady Seller",
+    "description": "Ten customers paid up and walked out happy. You have a business now.",
+    "is_visible": false,
+    "tier": "early",
+    "trigger_type": "transaction_completed",
+    "trigger_threshold": 10,
+    "trigger_stat_key": "customer_purchased_count",
+    "reward_type": "fixture_unlock",
+    "reward_value": "wall_display",
+    "unlock_id": null
+  },
+  {
+    "id": "getting_started",
+    "display_name": "Getting Started",
+    "description": "Three days survived. The pattern of the week is starting to make sense.",
+    "is_visible": false,
+    "tier": "early",
+    "trigger_type": "day_advanced",
+    "trigger_threshold": 3,
+    "trigger_stat_key": "current_day",
+    "reward_type": "cash",
+    "reward_value": 25.0,
+    "unlock_id": null
+  },
+  {
+    "id": "local_name",
+    "display_name": "Local Name",
+    "description": "Reputation 10. The regulars know your hours without asking.",
+    "is_visible": false,
+    "tier": "early",
+    "trigger_type": "reputation_reached",
+    "trigger_threshold": 10,
+    "trigger_stat_key": "max_reputation_score",
+    "reward_type": "reputation",
+    "reward_value": 2.0,
+    "unlock_id": null
   }
 ]

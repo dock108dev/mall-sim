@@ -117,13 +117,6 @@ func _on_day_acknowledged() -> void:
 
 
 func _show_day_summary(day: int) -> void:
-	if not _day_summary:
-		push_error(
-			"DayCycleController: no DaySummary panel — "
-			+ "ensure deferred panels are loaded before day ends"
-		)
-		return
-
 	var summary: Dictionary = _economy_system.get_daily_summary()
 
 	var warranty_rev: float = 0.0
@@ -170,6 +163,9 @@ func _show_day_summary(day: int) -> void:
 	}
 	EventBus.day_closed.emit(day, payload)
 	EventBus.publish_day_end_summary(payload)
+
+	if not _day_summary:
+		return
 
 	_day_summary.show_summary(
 		day,

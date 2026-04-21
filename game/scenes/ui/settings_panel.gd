@@ -151,12 +151,8 @@ func close() -> void:
 	_is_open = false
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.modal_close(_panel)
-	_anim_tween.finished.connect(
-		func() -> void:
-			EventBus.panel_closed.emit(PANEL_NAME)
-			closed.emit(),
-		CONNECT_ONE_SHOT,
-	)
+	EventBus.panel_closed.emit(PANEL_NAME)
+	closed.emit()
 
 
 func is_open() -> bool:

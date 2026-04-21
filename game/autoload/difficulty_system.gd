@@ -28,6 +28,8 @@ func _ready() -> void:
 
 
 func set_tier(tier_id: StringName) -> void:
+	if _tiers.is_empty():
+		_load_config()
 	if not _tiers.has(tier_id):
 		push_error("DifficultySystem: unknown tier '%s'" % tier_id)
 		return
@@ -99,6 +101,8 @@ func _get_tier_index(tier_id: StringName) -> int:
 
 
 func get_modifier(key: StringName) -> float:
+	if _tiers.is_empty():
+		_load_config()
 	var tier: Dictionary = _tiers.get(_current_tier_id, {})
 	var modifiers: Dictionary = tier.get("modifiers", {})
 	if not modifiers.has(String(key)):
@@ -111,6 +115,8 @@ func get_modifier(key: StringName) -> float:
 
 
 func get_flag(key: StringName) -> bool:
+	if _tiers.is_empty():
+		_load_config()
 	var tier: Dictionary = _tiers.get(_current_tier_id, {})
 	var flags: Dictionary = tier.get("flags", {})
 	if not flags.has(String(key)):
@@ -167,12 +173,12 @@ func _load_config() -> void:
 
 func _restore_persisted_tier() -> void:
 	var config := ConfigFile.new()
-	var load_err: Error = config.load(Settings.SETTINGS_PATH)
+	var load_err: Error = config.load(Settings.settings_path)
 	if load_err != OK:
-		if FileAccess.file_exists(Settings.SETTINGS_PATH):
+		if FileAccess.file_exists(Settings.settings_path):
 			push_warning(
 				"DifficultySystem: failed to load '%s' — using in-memory tier (%s)"
-				% [Settings.SETTINGS_PATH, error_string(load_err)]
+				% [Settings.settings_path, error_string(load_err)]
 			)
 		_initialized = true
 		return
@@ -188,15 +194,15 @@ func _restore_persisted_tier() -> void:
 
 func _persist_tier() -> void:
 	var config := ConfigFile.new()
-	var load_err: Error = config.load(Settings.SETTINGS_PATH)
-	if load_err != OK and FileAccess.file_exists(Settings.SETTINGS_PATH):
+	var load_err: Error = config.load(Settings.settings_path)
+	if load_err != OK and FileAccess.file_exists(Settings.settings_path):
 		push_warning(
 			"DifficultySystem: failed to load '%s' for persistence — keeping file unchanged"
-			% Settings.SETTINGS_PATH
+			% Settings.settings_path
 		)
 		return
 	config.set_value(SETTINGS_SECTION, SETTINGS_KEY, String(_current_tier_id))
-	var err: Error = config.save(Settings.SETTINGS_PATH)
+	var err: Error = config.save(Settings.settings_path)
 	if err != OK:
 		push_warning(
 			"DifficultySystem: failed to persist tier — %s"

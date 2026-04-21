@@ -5,6 +5,8 @@ extends Node
 signal preference_changed(key: StringName, value: Variant)
 
 const SETTINGS_PATH: String = "user://settings.cfg"
+## Runtime override for SETTINGS_PATH. Tests set this to an isolated cfg path.
+var settings_path: String = SETTINGS_PATH
 
 const _CRT_SHADER_PATH: String = "res://game/resources/shaders/crt_overlay.gdshader"
 
@@ -197,7 +199,7 @@ func save_settings() -> void:
 	config.set_value("display", "crt_enabled", crt_enabled)
 	config.set_value("display", "text_scale", text_scale)
 	_save_keybindings(config)
-	var save_err: Error = config.save(SETTINGS_PATH)
+	var save_err: Error = config.save(settings_path)
 	if save_err != OK:
 		push_warning(
 			"Settings: failed to save '%s' — %s"
@@ -212,9 +214,9 @@ func load() -> void:
 
 func load_settings() -> void:
 	var config := ConfigFile.new()
-	if FileAccess.file_exists(SETTINGS_PATH):
+	if FileAccess.file_exists(settings_path):
 		var settings_file: FileAccess = FileAccess.open(
-			SETTINGS_PATH, FileAccess.READ
+			settings_path, FileAccess.READ
 		)
 		if settings_file and settings_file.get_length() > MAX_SETTINGS_FILE_BYTES:
 			settings_file.close()
@@ -228,12 +230,12 @@ func load_settings() -> void:
 			return
 		if settings_file:
 			settings_file.close()
-	if config.load(SETTINGS_PATH) != OK:
-		if FileAccess.file_exists(SETTINGS_PATH):
+	if config.load(settings_path) != OK:
+		if FileAccess.file_exists(settings_path):
 			push_warning(
 				"Settings: failed to parse '%s' — using defaults" % SETTINGS_PATH
 			)
-			_restore_defaults_after_failed_load()
+		_restore_defaults_after_failed_load()
 		return
 	master_volume = _get_config_float(
 		config, "audio", "master_volume", 1.0, 0.0, 1.0

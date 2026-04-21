@@ -10,7 +10,13 @@ func before_each() -> void:
 	_settings.set_script(
 		preload("res://game/autoload/settings.gd")
 	)
+	_settings.settings_path = "user://gut_settings_isolated_%d.cfg" % Time.get_ticks_usec()
 	add_child_autofree(_settings)
+
+
+func after_each() -> void:
+	if _settings and FileAccess.file_exists(_settings.settings_path):
+		DirAccess.remove_absolute(_settings.settings_path)
 
 
 func test_default_master_volume() -> void:
@@ -190,6 +196,7 @@ func test_save_and_load_roundtrip() -> void:
 	fresh.set_script(
 		preload("res://game/autoload/settings.gd")
 	)
+	fresh.settings_path = _settings.settings_path
 	add_child_autofree(fresh)
 	fresh.load_settings()
 
@@ -423,6 +430,7 @@ func test_crt_and_text_scale_roundtrip() -> void:
 
 	var fresh: Node = Node.new()
 	fresh.set_script(preload("res://game/autoload/settings.gd"))
+	fresh.settings_path = _settings.settings_path
 	add_child_autofree(fresh)
 	fresh.load_settings()
 

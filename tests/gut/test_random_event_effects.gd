@@ -63,6 +63,8 @@ func before_each() -> void:
 	var data_loader := DataLoader.new()
 	data_loader.load_all_content()
 
+	GameManager.current_store_id = &"retro_games"
+
 	_inventory_system = InventorySystem.new()
 	add_child_autofree(_inventory_system)
 	_inventory_system.initialize(data_loader)
@@ -87,6 +89,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	GameManager.current_store_id = &""
 	if EventBus.notification_requested.is_connected(_on_notification):
 		EventBus.notification_requested.disconnect(_on_notification)
 	if EventBus.inventory_item_removed.is_connected(_on_item_removed):

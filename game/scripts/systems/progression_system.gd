@@ -467,6 +467,7 @@ func _on_item_sold(
 ) -> void:
 	_total_items_sold += 1
 	_total_revenue += price
+	_cumulative_cash_earned += price
 	_evaluate_milestones()
 
 

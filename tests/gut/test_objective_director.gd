@@ -57,12 +57,17 @@ func test_day_started_unknown_day_falls_back_to_default() -> void:
 
 func test_store_entered_emits_objective_changed() -> void:
 	var director := _make_director()
-	watch_signals(EventBus)
+	var received: Array[Dictionary] = []
+	EventBus.objective_changed.connect(
+		func(p: Dictionary) -> void: received.append(p)
+	)
 	EventBus.day_started.emit(1)
 	EventBus.store_entered.emit(&"retro_games")
-	assert_signal_emitted_with_parameters(
-		EventBus, "objective_changed", [{"objective": "Open the store and make your first sale", "action": "Stock items on shelves", "key": "E"}]
-	)
+	assert_gt(received.size(), 0, "objective_changed must fire")
+	var payload: Dictionary = received[received.size() - 1]
+	assert_eq(payload.get("objective", ""), "Open the store and make your first sale")
+	assert_eq(payload.get("action", ""), "Stock items on shelves")
+	assert_eq(payload.get("key", ""), "E")
 
 
 # ── Signal connection: item_stocked ───────────────────────────────────────────
@@ -88,13 +93,13 @@ func test_first_item_sold_emits_first_sale_completed() -> void:
 func test_second_item_sold_does_not_re_emit_first_sale_completed() -> void:
 	var director := _make_director()
 	EventBus.day_started.emit(1)
-	var count: int = 0
+	var count: Array = [0]
 	EventBus.first_sale_completed.connect(
-		func(_sid: StringName, _iid: String, _p: float) -> void: count += 1
+		func(_sid: StringName, _iid: String, _p: float) -> void: count[0] += 1
 	)
 	EventBus.item_sold.emit("item_001", 20.0, "retro")
 	EventBus.item_sold.emit("item_002", 15.0, "retro")
-	assert_eq(count, 1, "first_sale_completed must emit exactly once per day cycle")
+	assert_eq(count[0], 1, "first_sale_completed must emit exactly once per day cycle")
 
 
 # ── Auto-hide: loop complete + day > 3 ────────────────────────────────────────
@@ -155,4 +160,4 @@ func test_show_objective_rail_setting_overrides_auto_hide() -> void:
 
 func after_each() -> void:
 	# Restore Settings default so tests don't bleed
-	Settings.show_objective_rail = true
+	Settings.show_objective_rail = false

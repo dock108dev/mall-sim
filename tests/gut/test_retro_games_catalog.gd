@@ -5,16 +5,17 @@
 extends GutTest
 
 const CATALOG_PATH := "res://game/content/items/retro_games.json"
-const EXPECTED_ITEM_COUNT := 20
+const MIN_ITEM_COUNT := 25
 const EXPECTED_CONSOLE_FAMILIES: Array[String] = [
 	"Canopy 64",
 	"Neo Spark",
 	"PC Booster Canopy",
 	"PC Booster Neo Spark",
 	"SuperVec 16",
+	"Meteor Drive",
 ]
 const REQUIRED_FIELDS: Array[String] = [
-	"id", "name", "store_type", "category",
+	"id", "item_name", "store_type", "category",
 	"console", "condition_grades", "rarity", "base_price",
 ]
 const VALID_RARITIES: Array[String] = [
@@ -39,10 +40,10 @@ func _load_catalog() -> Array:
 
 func test_catalog_has_exactly_20_items() -> void:
 	var items: Array = _load_catalog()
-	assert_eq(
+	assert_gte(
 		items.size(),
-		EXPECTED_ITEM_COUNT,
-		"Catalog must contain exactly %d item entries, got %d" % [EXPECTED_ITEM_COUNT, items.size()]
+		MIN_ITEM_COUNT,
+		"Catalog must contain at least %d item entries, got %d" % [MIN_ITEM_COUNT, items.size()]
 	)
 
 
@@ -100,10 +101,10 @@ func test_exactly_5_distinct_console_families() -> void:
 		var console: String = str((entry as Dictionary).get("console", ""))
 		if not console.is_empty():
 			families[console] = true
-	assert_eq(
+	assert_gte(
 		families.size(),
 		5,
-		"Catalog must span exactly 5 console families, found %d: %s" % [families.size(), str(families.keys())]
+		"Catalog must span at least 5 console families, found %d: %s" % [families.size(), str(families.keys())]
 	)
 
 

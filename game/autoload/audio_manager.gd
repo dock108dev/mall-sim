@@ -54,8 +54,6 @@ const DUCK_TARGET_DB: float = -12.0
 
 
 func _ready() -> void:
-	if _is_headless():
-		return
 	_create_players()
 	_load_from_registry()
 	_setup_event_handler()
@@ -134,8 +132,6 @@ func _kill_duck_tween() -> void:
 
 ## Plays a one-shot SFX from either a preloaded name key or an AudioStream.
 func play_sfx(sound: Variant, volume_db: float = 0.0) -> void:
-	if _is_headless():
-		return
 	if sound is AudioStream:
 		_play_sfx_stream(sound as AudioStream, volume_db)
 		return
@@ -172,8 +168,6 @@ func _play_sfx_stream(
 func play_bgm(
 	track_key: String, fade_duration: float = DEFAULT_CROSSFADE
 ) -> void:
-	if _is_headless():
-		return
 	if track_key == _current_track_name:
 		return
 
@@ -191,8 +185,6 @@ func play_bgm(
 
 ## Fades out the current BGM without starting a new track.
 func stop_bgm(fade_duration: float = DEFAULT_CROSSFADE) -> void:
-	if _is_headless():
-		return
 	if _current_track_name.is_empty():
 		return
 
@@ -364,8 +356,6 @@ func exit_zone(zone_id: String) -> void:
 
 
 func play_ambient(track_name: String) -> void:
-	if _is_headless():
-		return
 	if track_name == _current_ambient_name:
 		return
 
@@ -380,8 +370,6 @@ func play_ambient(track_name: String) -> void:
 
 
 func stop_ambient() -> void:
-	if _is_headless():
-		return
 	if _current_ambient_name.is_empty():
 		return
 

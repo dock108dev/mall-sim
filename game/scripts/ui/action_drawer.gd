@@ -47,6 +47,7 @@ func _rebuild(actions: Array) -> void:
 	if _button_container == null:
 		return
 	for child: Node in _button_container.get_children():
+		_button_container.remove_child(child)
 		child.queue_free()
 	for entry: Variant in actions:
 		if typeof(entry) != TYPE_DICTIONARY:

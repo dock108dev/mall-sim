@@ -19,7 +19,7 @@ func test_item_definition_aliases_stay_in_sync() -> void:
 	assert_eq(item.category, &"trading_cards")
 	assert_eq(item.store_type, &"sports")
 	assert_eq(item.get_rarity_tier(), 2)
-	assert_eq(item.tags, [StringName("rookie"), StringName("foil")])
+	assert_eq(Array(item.tags), ["rookie", "foil"])
 
 
 func test_store_definition_builds_starter_inventory_alias() -> void:

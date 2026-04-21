@@ -19,9 +19,15 @@ const STORE_CUSTOMER_PATHS: Dictionary = {
 const MAX_REPUTATION_BUDGET_MULTIPLIER: float = 2.0
 
 var _economy: EconomySystem
+var _saved_tiers: Dictionary = {}
+var _saved_tier_order: Array[StringName] = []
+var _saved_tier_id: StringName = &""
 
 
 func before_all() -> void:
+	_saved_tiers = DifficultySystemSingleton._tiers.duplicate(true)
+	_saved_tier_order = DifficultySystemSingleton._tier_order.duplicate()
+	_saved_tier_id = DifficultySystemSingleton._current_tier_id
 	DifficultySystemSingleton._current_tier_id = &"normal"
 	DifficultySystemSingleton._tiers = {
 		&"normal": {
@@ -30,6 +36,12 @@ func before_all() -> void:
 			},
 		},
 	}
+
+
+func after_all() -> void:
+	DifficultySystemSingleton._tiers = _saved_tiers.duplicate(true)
+	DifficultySystemSingleton._tier_order = _saved_tier_order.duplicate()
+	DifficultySystemSingleton._current_tier_id = _saved_tier_id
 
 
 func before_each() -> void:

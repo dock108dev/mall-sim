@@ -84,6 +84,7 @@ func _record_purchase(
 		"day": _current_day,
 	})
 	entry["purchase_history"] = history
+	_evaluate_threads(customer_id)
 
 
 func _on_customer_left(customer_data: Dictionary) -> void:
@@ -119,6 +120,7 @@ func _record_visit(customer_id: String, display_name: String) -> void:
 			str(entry.get("name", "")),
 			new_count
 		)
+	_evaluate_threads(customer_id)
 
 
 func _evaluate_threads(customer_id: String) -> void:

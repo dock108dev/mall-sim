@@ -163,6 +163,9 @@ func clear_for_testing() -> void:
 	_warned_helper_fallbacks.clear()
 	_ready_flag = false
 	DataLoaderSingleton.clear_for_testing()
+	ReputationSystemSingleton.reset()
+	MarketTrendSystemSingleton.reset()
+	DifficultySystemSingleton._current_tier_id = DifficultySystemSingleton.DEFAULT_TIER
 
 
 ## Returns all canonical IDs of a given content type.

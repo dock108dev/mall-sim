@@ -12,7 +12,7 @@ enum ReputationTier {
 const TIER_THRESHOLDS: Dictionary = {
 	ReputationTier.NOTORIOUS: 0.0,
 	ReputationTier.UNREMARKABLE: 25.0,
-	ReputationTier.REPUTABLE: 51.0,
+	ReputationTier.REPUTABLE: 50.0,
 	ReputationTier.LEGENDARY: 80.0,
 }
 
@@ -96,7 +96,7 @@ func add_reputation(store_id: String, delta: float) -> void:
 	if sid.is_empty():
 		return
 	var old_score: float = _scores.get(sid, DEFAULT_REPUTATION) as float
-	var old_tier: ReputationTier = _tiers.get(sid, _score_to_tier(old_score))
+	var old_tier: ReputationTier = _score_to_tier(old_score)
 	var new_score: float = clampf(
 		old_score + delta, MIN_REPUTATION, MAX_REPUTATION
 	)

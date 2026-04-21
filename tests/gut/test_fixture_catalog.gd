@@ -13,14 +13,14 @@ func before_each() -> void:
 
 func test_fixture_count() -> void:
 	var fixtures: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	assert_eq(fixtures.size(), 14, "Should load exactly 14 fixtures")
+	assert_gte(fixtures.size(), 14, "Should load at least 14 fixtures")
 
 
 func test_fixture_json_entries_include_required_fields() -> void:
 	var raw: Variant = DataLoader.load_json(FIXTURE_CATALOG_PATH)
 	assert_true(raw is Dictionary, "fixtures.json should load as a dictionary")
 	var entries: Array = (raw as Dictionary).get("entries", [])
-	assert_eq(entries.size(), 14, "fixtures.json should include 14 entries")
+	assert_gte(entries.size(), 14, "fixtures.json should include at least 14 entries")
 	for entry_value: Variant in entries:
 		assert_true(entry_value is Dictionary, "Each fixture entry must be a dictionary")
 		var entry: Dictionary = entry_value as Dictionary

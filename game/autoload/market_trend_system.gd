@@ -53,6 +53,13 @@ func get_all_trend_levels() -> Dictionary:
 	return _trend_levels.duplicate()
 
 
+## Resets all trend levels to their configured defaults. For test isolation.
+func reset() -> void:
+	for id: StringName in _category_configs:
+		var cfg: Dictionary = _category_configs[id]
+		_trend_levels[id] = float(cfg.get("default_level", 1.0))
+
+
 func get_save_data() -> Dictionary:
 	return {"trend_levels": _trend_levels.duplicate()}
 

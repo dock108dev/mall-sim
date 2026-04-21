@@ -40,11 +40,11 @@ func test_tier_advances_through_multiple_thresholds() -> void:
 
 
 func test_tier_does_not_advance_beyond_legendary() -> void:
-	_rep._scores[STORE_ID] = 76.0
+	_rep._scores[STORE_ID] = 80.0
 	assert_eq(
 		_rep.get_tier(STORE_ID),
 		ReputationSystemSingleton.ReputationTier.LEGENDARY,
-		"Score 76 should be LEGENDARY"
+		"Score 80 should be LEGENDARY"
 	)
 	_rep.add_reputation(STORE_ID, 50.0)
 	assert_eq(
@@ -71,17 +71,17 @@ func test_daily_decay_reduces_score_above_floor() -> void:
 
 
 func test_daily_decay_can_downgrade_tier() -> void:
-	_rep._scores[STORE_ID] = 51.1
+	_rep._scores[STORE_ID] = 80.2
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystemSingleton.ReputationTier.REPUTABLE,
-		"Score 51.1 should be REPUTABLE"
+		ReputationSystemSingleton.ReputationTier.LEGENDARY,
+		"Score 80.2 should be LEGENDARY"
 	)
 	_rep._on_day_ended(1)
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
-		"Decay below 51 should downgrade to UNREMARKABLE"
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
+		"Decay below 80 should downgrade to REPUTABLE"
 	)
 
 
@@ -140,9 +140,9 @@ func test_reputation_changed_signal_not_fired_on_zero_delta() -> void:
 
 
 func test_tier_change_emits_toast_requested() -> void:
-	_rep._scores[STORE_ID] = 50.0
+	_rep._scores[STORE_ID] = 49.0
 	watch_signals(EventBus)
-	_rep.add_reputation(STORE_ID, 1.0)
+	_rep.add_reputation(STORE_ID, 2.0)
 	assert_signal_emitted(
 		EventBus, "toast_requested",
 		"Crossing tier threshold should emit toast"
@@ -160,8 +160,8 @@ func test_new_store_starts_at_default_reputation() -> void:
 func test_new_store_starts_at_base_tier() -> void:
 	assert_eq(
 		_rep.get_tier(STORE_ID),
-		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
-		"Default reputation 50 should place store at UNREMARKABLE"
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
+		"Default reputation 50 should place store at REPUTABLE"
 	)
 
 
@@ -194,7 +194,7 @@ func test_unknown_store_id_tier_returns_default_tier() -> void:
 	)
 	assert_eq(
 		tier,
-		ReputationSystemSingleton.ReputationTier.UNREMARKABLE,
+		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Unknown store_id tier should match DEFAULT_REPUTATION tier"
 	)
 

@@ -129,10 +129,14 @@ static func create_from_profile(
 
 
 ## Maps customer patience to the number of haggle rounds they will tolerate.
-## Capped at 3: players may submit at most 3 offer rounds; round 4 auto-rejects.
+## Five tiers: 0.9+ → 5, 0.7+ → 4, 0.4+ → 3, 0.2+ → 2, else 1.
 static func calculate_max_rounds(patience: float) -> int:
 	var clamped_patience: float = clampf(patience, 0.0, 1.0)
-	if clamped_patience >= 0.45:
+	if clamped_patience >= 0.9:
+		return 5
+	if clamped_patience >= 0.7:
+		return 4
+	if clamped_patience >= 0.4:
 		return 3
 	if clamped_patience >= 0.2:
 		return 2

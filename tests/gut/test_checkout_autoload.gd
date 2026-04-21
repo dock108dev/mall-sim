@@ -97,7 +97,7 @@ func _make_customer_with_item() -> Customer:
 
 
 func test_successful_transaction_emits_customer_purchased() -> void:
-	_inventory._items[_item.instance_id] = _item
+	_inventory.add_item(&"pocket_creatures", _item)
 	var customer: Customer = _make_customer_with_item()
 
 	var result: bool = _system.process_transaction(customer)
@@ -110,7 +110,7 @@ func test_successful_transaction_emits_customer_purchased() -> void:
 
 
 func test_successful_transaction_includes_all_signal_params() -> void:
-	_inventory._items[_item.instance_id] = _item
+	_inventory.add_item(&"pocket_creatures", _item)
 	var customer: Customer = _make_customer_with_item()
 
 	_system.process_transaction(customer)

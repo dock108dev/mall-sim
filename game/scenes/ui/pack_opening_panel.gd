@@ -5,7 +5,7 @@ extends CanvasLayer
 # Localization marker for static validation: tr("PACK_OPENING_TITLE")
 
 const PANEL_NAME: String = "pack_opening"
-const CARDS_PER_PACK: int = 10
+const CARDS_PER_PACK: int = 5
 const FLIP_DURATION: float = 0.3
 const RARE_HOLD_DURATION: float = 1.5
 const GLOW_FLASH_DURATION: float = 0.4

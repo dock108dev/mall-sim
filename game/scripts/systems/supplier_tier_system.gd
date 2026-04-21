@@ -25,7 +25,7 @@ const TIERS: Dictionary = {
 	3: {
 		"wholesale": 0.55,
 		"daily_limit": 1500.0,
-		"rarities": ["uncommon", "rare", "very_rare"],
+		"rarities": ["common", "uncommon", "rare", "very_rare"],
 		"delivery_days": 2,
 		"rep_threshold": 50.0,
 		"name": "Tier 3",

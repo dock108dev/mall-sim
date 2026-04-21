@@ -643,8 +643,8 @@ func resolve_rental_price(item: ItemInstance, current_day: int) -> float:
 
 ## Returns the lifecycle multiplier for a rental item definition on the given day.
 func _compute_lifecycle_factor(def: ItemDefinition, current_day: int) -> float:
-	var rarity: String = def.rarity
-	if rarity == "ultra_new" or rarity == "new":
+	var phase: String = def.lifecycle_phase if not def.lifecycle_phase.is_empty() else def.rarity
+	if phase == "ultra_new" or phase == "new":
 		var release: int = def.release_day if def.release_day > 0 else def.release_date
 		if release > 0:
 			var age: int = current_day - release
@@ -654,9 +654,9 @@ func _compute_lifecycle_factor(def: ItemDefinition, current_day: int) -> float:
 				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
 			if age < 21:
 				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("new", 1.15)
-	if rarity == "ultra_new":
+	if phase == "ultra_new":
 		return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
-	if rarity == "new":
+	if phase == "new":
 		return PriceResolver.LIFECYCLE_MULTIPLIERS.get("new", 1.15)
 	return PriceResolver.LIFECYCLE_MULTIPLIERS.get("common", 1.0)
 

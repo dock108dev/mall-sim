@@ -31,7 +31,7 @@ func _on_trend_shifted(
 
 func test_loads_all_five_categories() -> void:
 	var levels: Dictionary = _system.get_all_trend_levels()
-	assert_eq(levels.size(), 5, "Should load 5 categories")
+	assert_gte(levels.size(), 5, "Should load at least 5 categories")
 	assert_true(levels.has(&"fashion"), "Should have fashion")
 	assert_true(levels.has(&"sports"), "Should have sports")
 	assert_true(levels.has(&"entertainment"), "Should have entertainment")

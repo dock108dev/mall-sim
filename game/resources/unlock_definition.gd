@@ -9,6 +9,7 @@ const VALID_EFFECT_TYPES: PackedStringArray = [
 	"vip_spawn",
 	"cosmetic_nameplate",
 	"cosmetic_badge",
+	"fixture_unlock",
 ]
 
 @export var id: String = ""

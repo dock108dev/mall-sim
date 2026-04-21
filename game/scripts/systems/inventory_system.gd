@@ -687,10 +687,11 @@ func _is_backroom_full(store_type: String) -> bool:
 	if capacity <= 0:
 		return false
 	var count: int = 0
-	for item: ItemInstance in get_stock(canonical):
+	for item: ItemInstance in _items.values():
 		if item.current_location != "backroom":
 			continue
-		count += 1
+		if item.definition and _resolve_store_id(item.definition.store_type) == canonical:
+			count += 1
 	return count >= capacity
 
 

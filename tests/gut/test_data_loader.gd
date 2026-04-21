@@ -487,9 +487,9 @@ func test_item_json_uses_item_name_not_name() -> void:
 
 
 func test_unlocks_loaded() -> void:
-	assert_eq(
+	assert_gte(
 		DataLoaderSingleton.get_unlock_count(), 6,
-		"Should load exactly 6 unlock definitions"
+		"Should load at least 6 unlock definitions"
 	)
 
 

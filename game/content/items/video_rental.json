@@ -86,7 +86,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 14.0,
-    "rarity": "ultra_new",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -107,7 +107,8 @@
     "release_day": 1,
     "release_date": 1,
     "rental_period_days": 1,
-    "late_fee_per_day": 2.0
+    "late_fee_per_day": 2.0,
+    "lifecycle_phase": "ultra_new"
   },
   {
     "id": "rental_wizard_academy_vhs",
@@ -115,7 +116,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 15.0,
-    "rarity": "ultra_new",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -136,7 +137,8 @@
     "release_day": 1,
     "release_date": 1,
     "rental_period_days": 1,
-    "late_fee_per_day": 2.0
+    "late_fee_per_day": 2.0,
+    "lifecycle_phase": "ultra_new"
   },
   {
     "id": "rental_speed_racer_turbo_vhs",
@@ -144,7 +146,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 13.0,
-    "rarity": "ultra_new",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -164,7 +166,8 @@
     "release_day": 1,
     "release_date": 1,
     "rental_period_days": 1,
-    "late_fee_per_day": 2.0
+    "late_fee_per_day": 2.0,
+    "lifecycle_phase": "ultra_new"
   },
   {
     "id": "rental_pixel_story_vhs",
@@ -387,7 +390,7 @@
     "store_type": "rentals",
     "category": "dvd_new_release",
     "base_price": 16.0,
-    "rarity": "ultra_new",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -409,7 +412,8 @@
     "release_day": 1,
     "release_date": 1,
     "rental_period_days": 1,
-    "late_fee_per_day": 2.0
+    "late_fee_per_day": 2.0,
+    "lifecycle_phase": "ultra_new"
   },
   {
     "id": "rental_wizard_academy_dvd",
@@ -417,7 +421,7 @@
     "store_type": "rentals",
     "category": "dvd_new_release",
     "base_price": 18.0,
-    "rarity": "ultra_new",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -439,7 +443,8 @@
     "release_day": 1,
     "release_date": 1,
     "rental_period_days": 1,
-    "late_fee_per_day": 2.0
+    "late_fee_per_day": 2.0,
+    "lifecycle_phase": "ultra_new"
   },
   {
     "id": "rental_velociraptor_gardens_dvd",
@@ -720,7 +725,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 13.0,
-    "rarity": "ultra_new",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -741,7 +746,8 @@
     "release_day": 1,
     "release_date": 1,
     "rental_period_days": 1,
-    "late_fee_per_day": 2.0
+    "late_fee_per_day": 2.0,
+    "lifecycle_phase": "ultra_new"
   },
   {
     "id": "rental_sixth_feeling_vhs",
@@ -749,7 +755,7 @@
     "store_type": "rentals",
     "category": "vhs_new_release",
     "base_price": 12.0,
-    "rarity": "ultra_new",
+    "rarity": "common",
     "condition_range": [
       "mint",
       "good",
@@ -770,6 +776,7 @@
     "release_day": 1,
     "release_date": 1,
     "rental_period_days": 1,
-    "late_fee_per_day": 2.0
+    "late_fee_per_day": 2.0,
+    "lifecycle_phase": "ultra_new"
   }
 ]

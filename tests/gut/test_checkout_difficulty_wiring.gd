@@ -132,7 +132,7 @@ func test_zero_modifier_all_transactions_fail() -> void:
 	_set_difficulty_modifier(0.0)
 	var trials: int = 50
 	for i: int in range(trials):
-		_inventory._items[_item.instance_id] = _item
+		_inventory.add_item(&"pocket_creatures", _item)
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
 
@@ -159,7 +159,7 @@ func test_high_modifier_clamped_all_transactions_succeed() -> void:
 	_profile.purchase_probability_base = 1.0
 	var trials: int = 50
 	for i: int in range(trials):
-		_inventory._items[_item.instance_id] = _item
+		_inventory.add_item(&"pocket_creatures", _item)
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
 
@@ -178,7 +178,7 @@ func test_high_modifier_clamped_all_transactions_succeed() -> void:
 
 func test_modifier_read_at_transaction_time() -> void:
 	_set_difficulty_modifier(0.0)
-	_inventory._items[_item.instance_id] = _item
+	_inventory.add_item(&"pocket_creatures", _item)
 	var customer1: Customer = _make_customer_with_item()
 	_system.process_transaction(customer1)
 	assert_eq(
@@ -188,7 +188,7 @@ func test_modifier_read_at_transaction_time() -> void:
 
 	_set_difficulty_modifier(2.0)
 	_profile.purchase_probability_base = 1.0
-	_inventory._items[_item.instance_id] = _item
+	_inventory.add_item(&"pocket_creatures", _item)
 	var customer2: Customer = _make_customer_with_item()
 	_system.process_transaction(customer2)
 	assert_eq(
@@ -208,7 +208,7 @@ func test_easy_modifier_increases_probability() -> void:
 	for i: int in range(trials):
 		_purchased_signals = []
 		_left_signals = []
-		_inventory._items[_item.instance_id] = _item
+		_inventory.add_item(&"pocket_creatures", _item)
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
 		if _purchased_signals.size() > 0:
@@ -234,7 +234,7 @@ func test_hard_modifier_decreases_probability() -> void:
 	for i: int in range(trials):
 		_purchased_signals = []
 		_left_signals = []
-		_inventory._items[_item.instance_id] = _item
+		_inventory.add_item(&"pocket_creatures", _item)
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
 		if _purchased_signals.size() > 0:

@@ -8,14 +8,14 @@ extends GutTest
 # ── Audit checkpoint signal wiring ───────────────────────────────────────────
 
 func test_inventory_open_checkpoint_fires_on_panel_opened_inventory() -> void:
-	var triggered: bool = false
+	var triggered: Array = [false]
 	var on_panel: Callable = func(panel_name: String) -> void:
 		if panel_name == "inventory":
-			triggered = true
+			triggered[0] = true
 	EventBus.panel_opened.connect(on_panel)
 	EventBus.panel_opened.emit("inventory")
 	EventBus.panel_opened.disconnect(on_panel)
-	assert_true(triggered, "panel_opened('inventory') must trigger inventory_open checkpoint")
+	assert_true(triggered[0], "panel_opened('inventory') must trigger inventory_open checkpoint")
 
 
 func test_other_panel_open_does_not_trigger_inventory_open() -> void:
@@ -30,23 +30,23 @@ func test_other_panel_open_does_not_trigger_inventory_open() -> void:
 
 
 func test_shelf_stock_checkpoint_fires_on_item_stocked() -> void:
-	var triggered: bool = false
+	var triggered: Array = [false]
 	var on_stocked: Callable = func(_iid: String, _sid: String) -> void:
-		triggered = true
+		triggered[0] = true
 	EventBus.item_stocked.connect(on_stocked)
 	EventBus.item_stocked.emit("test_item_001", "cart_left_1")
 	EventBus.item_stocked.disconnect(on_stocked)
-	assert_true(triggered, "item_stocked must trigger shelf_stock checkpoint")
+	assert_true(triggered[0], "item_stocked must trigger shelf_stock checkpoint")
 
 
 func test_price_set_checkpoint_fires_on_price_set() -> void:
-	var triggered: bool = false
+	var triggered: Array = [false]
 	var on_price: Callable = func(_iid: String, _price: float) -> void:
-		triggered = true
+		triggered[0] = true
 	EventBus.price_set.connect(on_price)
 	EventBus.price_set.emit("test_item_001", 42.0)
 	EventBus.price_set.disconnect(on_price)
-	assert_true(triggered, "price_set signal must trigger price_set checkpoint")
+	assert_true(triggered[0], "price_set signal must trigger price_set checkpoint")
 
 
 # ── ShelfSlot.set_display_data / clear_display_data ──────────────────────────

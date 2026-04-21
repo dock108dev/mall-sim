@@ -42,6 +42,12 @@ func open(from_pause: bool = false) -> void:
 
 func _load_tiers() -> void:
 	var config: Dictionary = DataLoaderSingleton.get_difficulty_config()
+	if config.is_empty():
+		var loaded: Variant = DataLoader.load_json(
+			"res://game/content/economy/difficulty_config.json"
+		)
+		if loaded is Dictionary:
+			config = loaded as Dictionary
 	var tiers_array: Array = config.get("tiers", [])
 	for tier_data: Variant in tiers_array:
 		var tier: Dictionary = tier_data as Dictionary

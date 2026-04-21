@@ -462,7 +462,7 @@ func _set_milestone_display(
 ) -> void:
 	_clear_milestones()
 	for milestone_name: String in milestones:
-		_add_milestone_label(milestone_name, "")
+		_add_milestone_label(milestone_name, "", "")
 
 
 func _set_milestone_display_rich(data: Array[Dictionary]) -> void:

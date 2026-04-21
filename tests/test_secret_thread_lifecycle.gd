@@ -186,11 +186,11 @@ func test_thread_transitions_to_resolved_day_after_revealed() -> void:
 
 func test_secret_thread_completed_emitted_on_resolve() -> void:
 	var completed_thread: Array = [&""]
-	var completed_reward: Dictionary = {"unlock_id": "sentinel"}
+	var completed_reward: Array = [{"unlock_id": "sentinel"}]
 	EventBus.secret_thread_completed.connect(
 		func(tid: StringName, reward_data: Dictionary) -> void:
 			completed_thread[0] = tid
-			completed_reward = reward_data
+			completed_reward[0] = reward_data
 	)
 	for i: int in range(3):
 		EventBus.item_sold.emit("rare_item_%d" % i, 50.0, "collectibles")
@@ -201,7 +201,7 @@ func test_secret_thread_completed_emitted_on_resolve() -> void:
 		"secret_thread_completed must emit thread id 'the_regular'"
 	)
 	assert_eq(
-		str(completed_reward.get("unlock_id", "")), "",
+		str((completed_reward[0] as Dictionary).get("unlock_id", "")), "",
 		"Thread with no reward_unlock_id must omit unlock_id"
 	)
 
