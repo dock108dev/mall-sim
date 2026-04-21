@@ -149,7 +149,7 @@ jobs:
           set -euo pipefail
           BANNED=(
             "Pokemon" "Pokémon" "Pikachu"
-            "Nintendo" "GameBoy" "GameCube" "Wii\b" "NES\b" "SNES\b"
+            "Nintendo" "GameBoy" "GameCube" "\bWii\b" "\bNES\b" "\bSNES\b"
             "Blockbuster"
             "\bPSA\b"
             "\bESPN\b"
@@ -157,7 +157,7 @@ jobs:
             "Disney"
             "\bNBA\b" "\bNFL\b" "\bMLB\b" "\bNHL\b" "\bFIFA\b"
             "PlayStation" "Xbox"
-            "Adidas" "Nike\b"
+            "Adidas" "\bNike\b"
           )
           FAILED=0
           for term in "${BANNED[@]}"; do
