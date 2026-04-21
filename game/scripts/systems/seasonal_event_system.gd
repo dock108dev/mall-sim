@@ -152,7 +152,7 @@ func get_tournament_demand_multiplier(item: ItemInstance) -> float:
 
 
 ## Returns the price_spike_multiplier for an item from active tournaments.
-## Matches on creature_type_focus (item tag) if set; falls back to card_category.
+## If creature_type_focus is set, matches item tags only; otherwise uses card_category.
 func get_tournament_price_spike_multiplier(item: ItemInstance) -> float:
 	if not item or not item.definition:
 		return 1.0
