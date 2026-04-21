@@ -390,6 +390,14 @@ func _collect_save_data() -> Dictionary:
 				canonical = StringName(raw_store_id)
 			owned_slots_data[str(idx)] = String(canonical)
 			owned_store_list.append(String(canonical))
+	elif not GameManager.owned_stores.is_empty():
+		for idx: int in range(GameManager.owned_stores.size()):
+			var raw_store_id: String = String(GameManager.owned_stores[idx])
+			var canonical: StringName = ContentRegistry.resolve(raw_store_id)
+			if canonical.is_empty():
+				canonical = StringName(raw_store_id)
+			owned_slots_data[str(idx)] = String(canonical)
+			owned_store_list.append(String(canonical))
 
 	var save_metadata: Dictionary = {
 		"day": _time_system.current_day,
@@ -565,9 +573,19 @@ func _distribute_save_data(data: Dictionary) -> void:
 		_store_state_manager.restore_owned_slots(_extract_owned_slots(data))
 		_apply_loaded_active_store(data)
 	else:
-		push_warning(
-			"SaveManager: StoreStateManager missing — skipping store / active-store restore"
-		)
+		var owned_slots: Dictionary = _extract_owned_slots(data)
+		var owned_list: Array[StringName] = []
+		for idx_key: Variant in owned_slots.keys():
+			var raw_id: String = str(owned_slots[idx_key])
+			if raw_id.is_empty():
+				continue
+			var canonical: StringName = ContentRegistry.resolve(raw_id)
+			if canonical.is_empty():
+				canonical = StringName(raw_id)
+			if canonical not in owned_list:
+				owned_list.append(canonical)
+		if not owned_list.is_empty():
+			GameManager.owned_stores = owned_list
 
 	if _milestone_system:
 		var ms_data: Variant = data.get("milestones", {})
@@ -771,20 +789,21 @@ func _apply_loaded_active_store(data: Dictionary) -> void:
 
 func _get_saved_active_store_id(data: Dictionary) -> String:
 	var save_metadata: Variant = data.get("save_metadata", {})
-	if save_metadata is Dictionary and (
-		save_metadata as Dictionary
-	).has("active_store_id"):
-		return str(
-			(save_metadata as Dictionary).get("active_store_id", "")
-		)
+	if save_metadata is Dictionary:
+		var meta: Dictionary = save_metadata as Dictionary
+		if meta.has("active_store_id"):
+			return str(meta.get("active_store_id", ""))
+		if meta.has("store_type"):
+			return str(meta.get("store_type", ""))
 	return ""
 
 
 func _has_saved_active_store_id(data: Dictionary) -> bool:
 	var save_metadata: Variant = data.get("save_metadata", {})
-	return save_metadata is Dictionary and (
-		save_metadata as Dictionary
-	).has("active_store_id")
+	if save_metadata is Dictionary:
+		var meta: Dictionary = save_metadata as Dictionary
+		return meta.has("active_store_id") or meta.has("store_type")
+	return false
 
 
 ## Runs the full migration chain on a save dictionary.
@@ -946,6 +965,15 @@ func _extract_owned_slots(data: Dictionary) -> Dictionary:
 			"SaveManager: expected Dictionary for owned_slots, got %s"
 			% type_string(typeof(raw_slots))
 		)
+	# Legacy fallback: reconstruct from "owned_stores" array.
+	var legacy_stores: Variant = data.get("owned_stores", null)
+	if legacy_stores is Array:
+		var result: Dictionary = {}
+		var idx: int = 0
+		for store_id: Variant in (legacy_stores as Array):
+			result[str(idx)] = str(store_id)
+			idx += 1
+		return result
 	return {}
 
 

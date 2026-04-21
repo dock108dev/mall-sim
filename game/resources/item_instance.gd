@@ -163,7 +163,7 @@ static func _generate_id(base: String) -> StringName:
 
 
 static func _resolve_condition(def: ItemDefinition, cond: String) -> String:
-	if cond != "" and cond in CONDITION_MULTIPLIERS:
+	if cond != "":
 		return cond
 	if def.condition_range.size() > 0:
 		return def.condition_range[randi() % def.condition_range.size()]

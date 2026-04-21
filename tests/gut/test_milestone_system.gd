@@ -235,17 +235,17 @@ func test_revenue_milestone_does_not_refire_on_additional_revenue() -> void:
 
 
 func test_milestone_completed_carries_reward_description() -> void:
-	var received_reward: String = ""
+	var received_reward: Array = [""]
 	var handler: Callable = func(
 		_id: String, _name: String, reward: String
 	) -> void:
-		received_reward = reward
+		received_reward[0] = reward
 	EventBus.milestone_completed.connect(handler, CONNECT_ONE_SHOT)
 
 	EventBus.transaction_completed.emit(500.0, true, "Sale")
 
 	assert_false(
-		received_reward.is_empty(),
+		str(received_reward[0]).is_empty(),
 		"milestone_completed must carry a non-empty reward_description"
 	)
 

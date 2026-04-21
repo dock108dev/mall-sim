@@ -22,6 +22,7 @@ func _make_def(overrides: Dictionary = {}) -> AmbientMomentDefinition:
 
 
 func before_each() -> void:
+	GameManager.current_day = 0
 	_sys = AmbientMomentsSystem.new()
 	add_child_autofree(_sys)
 	_sys._apply_state({})

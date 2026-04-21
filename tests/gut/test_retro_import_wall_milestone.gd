@@ -131,16 +131,16 @@ func test_unlock_is_granted_through_unlock_system() -> void:
 
 
 func test_milestone_completed_description_includes_unlock_target() -> void:
-	var received_reward: String = ""
+	var received_reward: Array = [""]
 	var handler: Callable = func(
 		_id: String, _name: String, reward: String
 	) -> void:
-		received_reward = reward
+		received_reward[0] = reward
 	EventBus.milestone_completed.connect(handler, CONNECT_ONE_SHOT)
 
 	EventBus.transaction_completed.emit(500.0, true, "Sale")
 
 	assert_true(
-		received_reward.begins_with("Unlocked:"),
+		str(received_reward[0]).begins_with("Unlocked:"),
 		"fixture_unlock reward_description must report what was unlocked"
 	)

@@ -247,7 +247,7 @@ func test_place_order_insufficient_funds_no_pending_order() -> void:
 	if not item:
 		pending("DataLoader or basic-tier items not available")
 		return
-	_economy_system.load_save_data({"cash": 0.0})
+	_economy_system.load_save_data({"current_cash": 0.0})
 	_order_system.place_order(
 		&"retro_games",
 		OrderSystem.SupplierTier.BASIC,
@@ -449,8 +449,8 @@ func test_multiple_orders_track_independently() -> void:
 		"Day 7: all orders delivered"
 	)
 	assert_eq(
-		_delivered_stores[0], &"video_rental",
-		"Day 7: video_rental order delivered"
+		_delivered_stores[0], &"rentals",
+		"Day 7: video_rental order delivered (canonicalized to rentals)"
 	)
 
 

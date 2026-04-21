@@ -16,9 +16,11 @@ var _inventory_system: InventorySystem = null
 var _economy_system: EconomySystem = null
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _rng_manually_seeded: bool = false
 
 var _commons_per_pack: int = 6
 var _uncommons_per_pack: int = 3
+var _energy_per_pack: int = 1
 var _rare_slot_rare_chance: float = 0.90
 var _rare_slot_holo_chance: float = 0.09
 var _pack_conditions: Array[String] = ["good", "near_mint", "mint"]
@@ -47,8 +49,10 @@ func initialize(
 
 
 ## Seeds the internal RNG for deterministic pack opening.
+## Sets _rng_manually_seeded so _prepare_pack_cards skips pack-id reseeding.
 func seed_rng(rng_seed: int) -> void:
 	_rng.seed = rng_seed
+	_rng_manually_seeded = true
 
 
 ## Returns true if the item is an openable booster pack.
@@ -92,6 +96,7 @@ func open_pack(
 	if not _register_cards(cards):
 		return []
 	EventBus.pack_opened.emit(pack_instance_id, _collect_card_ids(cards))
+	EventBus.items_revealed.emit(pack_instance_id, cards)
 	_emit_rare_pull_if_needed(cards, pack_instance_id)
 	return cards
 
@@ -178,7 +183,8 @@ func _prepare_pack_cards(
 	var day: int = 0
 	if Engine.has_singleton("GameManager"):
 		day = (Engine.get_singleton("GameManager") as GameManager).get_current_day()
-	_rng.seed = hash(pack_instance_id + str(day))
+	if not _rng_manually_seeded:
+		_rng.seed = hash(pack_instance_id + str(day))
 
 	var pack: ItemInstance = _inventory_system.get_item(
 		pack_instance_id

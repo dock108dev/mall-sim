@@ -72,6 +72,8 @@ func _on_objective_updated(payload: Dictionary) -> void:
 func _on_preference_changed(key: String, value: Variant) -> void:
 	if key == "show_objective_rail":
 		_show_rail = value as bool
+		if _show_rail:
+			_auto_hidden = false
 		_refresh_visibility()
 
 

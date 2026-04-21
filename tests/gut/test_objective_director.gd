@@ -3,6 +3,11 @@ extends GutTest
 
 
 func _make_director() -> Node:
+	# Sync the autoload's _sold flag with any test-local instance so
+	# first_sale_completed still fires exactly once across both listeners.
+	ObjectiveDirector._sold = false
+	ObjectiveDirector._current_day = 0
+	ObjectiveDirector._loop_completed = false
 	var director: Node = preload(
 		"res://game/autoload/objective_director.gd"
 	).new() as Node
@@ -91,6 +96,9 @@ func test_first_item_sold_emits_first_sale_completed() -> void:
 
 
 func test_second_item_sold_does_not_re_emit_first_sale_completed() -> void:
+	var autoload_handler: Callable = ObjectiveDirector._on_item_sold
+	if EventBus.item_sold.is_connected(autoload_handler):
+		EventBus.item_sold.disconnect(autoload_handler)
 	var director := _make_director()
 	EventBus.day_started.emit(1)
 	var count: Array = [0]
@@ -100,6 +108,8 @@ func test_second_item_sold_does_not_re_emit_first_sale_completed() -> void:
 	EventBus.item_sold.emit("item_001", 20.0, "retro")
 	EventBus.item_sold.emit("item_002", 15.0, "retro")
 	assert_eq(count[0], 1, "first_sale_completed must emit exactly once per day cycle")
+	if not EventBus.item_sold.is_connected(autoload_handler):
+		EventBus.item_sold.connect(autoload_handler)
 
 
 # ── Auto-hide: loop complete + day > 3 ────────────────────────────────────────
