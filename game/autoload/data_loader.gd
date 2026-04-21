@@ -257,6 +257,8 @@ func _process_file(
 		return
 	if content_type == "sports_grade_definitions_data":
 		return
+	if content_type == "arc_unlocks_data":
+		return
 	if content_type.is_empty():
 		push_warning("DataLoader: unrecognized content file, skipping: %s" % path)
 		return
@@ -330,6 +332,9 @@ func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> S
 		return "sports_grade_definitions_data"
 	if file_base == "upgrades":
 		return "upgrade"
+	if file_base == "arc_unlocks":
+		# Consumed directly by boot.gd and day_manager.gd; not a milestone catalog.
+		return "arc_unlocks_data"
 	if _DIR_TYPE_MAP.has(dir_name):
 		return _DIR_TYPE_MAP[dir_name]
 	if file_base == "seasonal_config":

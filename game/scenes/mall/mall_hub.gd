@@ -9,7 +9,7 @@ const AMBIENCE_KEY: String = "food_court_murmur"
 const DUCK_DB: float = -12.0
 const DUCK_DURATION: float = 0.3
 
-@onready var _storefront_row: Control = $HubLayer/ConcourseRoot/StorefrontRow
+@onready var _storefront_row: Node2D = $HubLayer/ConcourseRoot/StorefrontRow
 @onready var _ambient_layer: Node2D = $HubLayer/ConcourseRoot/AmbientCustomers
 @onready var _ambience_player: AudioStreamPlayer = $HubAmbiencePlayer
 
