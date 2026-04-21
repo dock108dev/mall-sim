@@ -76,7 +76,7 @@ var _lane_side: float = 0.0
 var _animation_player: AnimationPlayer = null
 var _is_despawning: bool = false
 var _emit_spawn_signal_on_ready: bool = true
-var _leave_reason: StringName = &"mall_exit"
+var _leave_reason: StringName = &"patience_expired"
 
 
 func _ready() -> void:
@@ -315,7 +315,7 @@ func _execute_action(action: String) -> void:
 		"socialize":
 			_transition_to(ShopperState.SOCIALIZING)
 		"leave":
-			_leave_reason = &"utility_leave"
+			_leave_reason = &"patience_expired"
 			request_leave()
 
 
@@ -398,7 +398,7 @@ func _process_simple_browsing() -> void:
 			return
 		_navigate_to_register()
 		return
-	_leave_reason = &"no_buy"
+	_leave_reason = &"no_matching_item"
 	request_leave()
 
 
@@ -419,7 +419,7 @@ func _process_walking(delta: float) -> void:
 		_nav.pick_next_walking_destination()
 		_sync_target()
 		if target_waypoint == null:
-			_leave_reason = &"no_route"
+			_leave_reason = &"no_matching_item"
 			request_leave()
 			return
 
@@ -470,7 +470,7 @@ func _navigate_to_register() -> void:
 		MallWaypoint.WaypointType.REGISTER
 	)
 	if register == null:
-		_leave_reason = &"no_register"
+		_leave_reason = &"no_matching_item"
 		request_leave()
 		return
 	if purchase_store_id.is_empty():

@@ -284,6 +284,10 @@ func test_customer_left_satisfied_after_purchase() -> void:
 		_left_signals[0].get("satisfied", false) as bool,
 		"satisfied should be true after purchase"
 	)
+	assert_eq(
+		_left_signals[0].get("reason"), &"purchase_complete",
+		"reason should be purchase_complete after sale"
+	)
 
 
 func test_customer_left_unsatisfied_without_purchase() -> void:
@@ -300,6 +304,10 @@ func test_customer_left_unsatisfied_without_purchase() -> void:
 	assert_false(
 		_left_signals[0].get("satisfied", true) as bool,
 		"satisfied should be false without purchase"
+	)
+	assert_eq(
+		_left_signals[0].get("reason"), &"patience_expired",
+		"reason should be set on customer_left"
 	)
 
 

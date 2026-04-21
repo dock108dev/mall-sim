@@ -47,12 +47,30 @@ func test_day_closed_checkpoint() -> void:
 	)
 
 
+func test_customer_walked_checkpoint() -> void:
+	EventBus.customer_left.emit({
+		"satisfied": false,
+		"reason": &"price_too_high",
+	})
+	assert_true(
+		AuditOverlay.get_results().get(&"customer_walked") == true,
+		"customer_walked must record PASS when unsatisfied with a reason"
+	)
+
+
 func test_all_checkpoints_pass_after_full_sequence() -> void:
 	EventBus.boot_completed.emit()
 	EventBus.store_entered.emit(&"retro_games")
+	EventBus.panel_opened.emit("inventory")
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	EventBus.price_set.emit("item_001", 9.99)
 	EventBus.refurbishment_completed.emit("item_001", true, "excellent")
 	EventBus.transaction_completed.emit(25.0, true, "sale")
 	EventBus.day_closed.emit(1, {})
+	EventBus.customer_left.emit({
+		"satisfied": false,
+		"reason": &"no_matching_item",
+	})
 	assert_true(
 		AuditOverlay.all_passed(),
 		"all_passed() must return true after full checkpoint sequence"

@@ -243,6 +243,7 @@ func despawn_customer(customer_node: Node) -> void:
 		),
 		"store_id": _store_id,
 		"satisfied": customer._made_purchase,
+		"reason": customer.get_leave_reason(),
 	}
 
 	if customer.despawn_requested.is_connected(

@@ -44,6 +44,8 @@ var _desired_item: ItemInstance = null
 var _desired_item_slot: Node = null
 var _current_target_slot: Node = null
 var _made_purchase: bool = false
+## Set when transitioning to LEAVING; included in EventBus.customer_left (store NPCs).
+var _leave_reason: StringName = &"patience_expired"
 var _exit_position: Vector3 = Vector3.ZERO
 var _register_position: Vector3 = Vector3.ZERO
 var _initialized: bool = false
@@ -110,6 +112,7 @@ func initialize(
 	_desired_item_slot = null
 	_current_target_slot = null
 	_made_purchase = false
+	_leave_reason = &"patience_expired"
 	_cache_navigation_targets()
 	_navigate_to_random_shelf()
 	if _animator != null:
@@ -157,11 +160,17 @@ func get_desired_item_slot() -> Node:
 	return _desired_item_slot
 
 
+## Reason code for EventBus.customer_left when this NPC despawns (see _leave_reason).
+func get_leave_reason() -> StringName:
+	return _leave_reason
+
+
 ## Called by CheckoutSystem when checkout completes (accept or decline).
 func complete_purchase() -> void:
 	_made_purchase = true
 	_desired_item = null
 	_desired_item_slot = null
+	_leave_reason = &"purchase_complete"
 	_transition_to(State.LEAVING)
 
 
@@ -185,7 +194,7 @@ func advance_to_register() -> void:
 
 ## Called by CheckoutSystem when the queue is full.
 func reject_from_queue() -> void:
-	_transition_to(State.LEAVING)
+	_leave_with(&"patience_expired")
 
 
 func _process_entering() -> void:
@@ -212,30 +221,30 @@ func _process_browsing(delta: float) -> void:
 		_transition_to(State.DECIDING)
 		return
 	if not _navigate_to_random_shelf():
-		_transition_to(State.LEAVING)
+		_leave_with(&"no_matching_item")
 
 
 func _process_deciding() -> void:
 	if not _desired_item:
-		_transition_to(State.LEAVING)
+		_leave_with(&"no_matching_item")
 		return
 	var willing_to_pay: float = _get_willingness_to_pay()
 	var item_price: float = _desired_item.player_set_price
 	if item_price <= 0.0:
 		item_price = _desired_item.get_current_value()
 	if item_price > willing_to_pay:
-		_transition_to(State.LEAVING)
+		_leave_with(&"price_too_high")
 		return
 	var match_quality: float = _calculate_match_quality(_desired_item)
 	var buy_chance: float = profile.purchase_probability_base * match_quality
 	if _desired_item.tested:
 		if randf() < DISAPPOINTED_CHANCE:
-			_transition_to(State.LEAVING)
+			_leave_with(&"no_matching_item")
 			return
 		buy_chance *= (1.0 + TESTED_BONUS)
 	buy_chance *= _get_demo_bonus(_desired_item)
 	if randf() > buy_chance:
-		_transition_to(State.LEAVING)
+		_leave_with(&"no_matching_item")
 		return
 	_transition_to(State.PURCHASING)
 
@@ -244,13 +253,13 @@ func _process_purchasing(delta: float) -> void:
 	if _is_navigation_finished():
 		patience_timer -= delta
 		if patience_timer <= 0.0:
-			_transition_to(State.LEAVING)
+			_leave_with(&"patience_expired")
 
 
 func _process_waiting_in_queue(delta: float) -> void:
 	patience_timer -= delta
 	if patience_timer <= 0.0:
-		_transition_to(State.LEAVING)
+		_leave_with(&"patience_expired")
 
 
 func _process_leaving() -> void:
@@ -278,7 +287,12 @@ func _transition_to_deciding_or_leaving() -> void:
 	if _desired_item:
 		_transition_to(State.DECIDING)
 	else:
-		_transition_to(State.LEAVING)
+		_leave_with(&"patience_expired")
+
+
+func _leave_with(reason: StringName) -> void:
+	_leave_reason = reason
+	_transition_to(State.LEAVING)
 
 
 func _move_along_path(delta: float) -> void:

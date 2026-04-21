@@ -19,6 +19,9 @@ const EXPENSE_TEXT_ORIGIN := Vector2(20.0, 130.0)
 const WALK_TEXT_ORIGIN := Vector2(140.0, 90.0)
 
 const _WALK_REASON_LABELS: Dictionary = {
+	&"price_too_high": "Price too high",
+	&"patience_expired": "Out of patience",
+	&"no_matching_item": "Nothing matched",
 	&"utility_leave": "Lost interest",
 	&"no_buy": "Nothing to buy",
 	&"no_route": "Couldn't navigate",
@@ -67,7 +70,7 @@ func _on_item_sold(
 func _on_customer_left(customer_data: Dictionary) -> void:
 	if customer_data.get("satisfied", true):
 		return
-	var reason: StringName = customer_data.get("reason", &"mall_exit")
+	var reason: StringName = customer_data.get("reason", &"patience_expired")
 	var label_text: String = _WALK_REASON_LABELS.get(reason, "Customer left")
 	_spawn_floating_text(label_text, WALK_TEXT_ORIGIN, UIThemeConstants.get_negative_color())
 
