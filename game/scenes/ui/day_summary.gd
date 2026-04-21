@@ -462,14 +462,49 @@ func _set_milestone_display(
 ) -> void:
 	_clear_milestones()
 	for milestone_name: String in milestones:
-		var label := Label.new()
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.text = "Milestone: %s" % milestone_name
-		label.add_theme_color_override(
-			"font_color", MILESTONE_BANNER_COLOR
+		_add_milestone_label(milestone_name, "")
+
+
+func _set_milestone_display_rich(data: Array[Dictionary]) -> void:
+	_clear_milestones()
+	for entry: Dictionary in data:
+		_add_milestone_label(
+			str(entry.get("name", "")),
+			str(entry.get("description", "")),
+			str(entry.get("reward", "")),
 		)
-		_milestone_container.add_child(label)
-		_milestone_labels.append(label)
+
+
+func _add_milestone_label(
+	name: String, description: String, reward: String
+) -> void:
+	if name.is_empty():
+		return
+	var label := Label.new()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.text = "Milestone: %s" % name
+	label.add_theme_color_override("font_color", MILESTONE_BANNER_COLOR)
+	_milestone_container.add_child(label)
+	_milestone_labels.append(label)
+	if not description.is_empty():
+		var description_label := Label.new()
+		description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		description_label.text = description
+		description_label.add_theme_color_override(
+			"font_color", Color(0.78, 0.78, 0.78, 1.0)
+		)
+		_milestone_container.add_child(description_label)
+		_milestone_labels.append(description_label)
+	if not reward.is_empty():
+		var reward_label := Label.new()
+		reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		reward_label.text = reward
+		reward_label.add_theme_color_override(
+			"font_color", Color(0.85, 0.75, 0.55, 1.0)
+		)
+		_milestone_container.add_child(reward_label)
+		_milestone_labels.append(reward_label)
 
 
 func _clear_milestones() -> void:
@@ -711,7 +746,10 @@ func _on_performance_report_ready(
 		)
 	else:
 		_tier_change_label.visible = false
-	_set_milestone_display(report.milestones_unlocked)
+	if not report.milestones_data.is_empty():
+		_set_milestone_display_rich(report.milestones_data)
+	else:
+		_set_milestone_display(report.milestones_unlocked)
 
 
 func _on_continue_pressed() -> void:

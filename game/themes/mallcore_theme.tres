@@ -1,0 +1,330 @@
+[gd_resource type="Theme" load_steps=17 format=3]
+
+[sub_resource type="SystemFont" id="mall_system_font"]
+font_names = PackedStringArray("Verdana", "Tahoma", "Arial Rounded MT Bold", "Arial", "sans-serif")
+font_weight = 700
+
+[sub_resource type="FontVariation" id="mall_font"]
+base_font = SubResource("mall_system_font")
+spacing_glyph = 1
+
+[sub_resource type="SystemFont" id="money_system_font"]
+font_names = PackedStringArray("Barlow Condensed", "Impact", "Arial Narrow", "Verdana", "sans-serif")
+font_weight = 800
+
+[sub_resource type="FontVariation" id="money_font"]
+base_font = SubResource("money_system_font")
+spacing_glyph = 0
+
+[sub_resource type="StyleBoxFlat" id="panel_bg"]
+bg_color = Color(0.122, 0.102, 0.086, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.53, 0.4, 0.27, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="btn_normal"]
+bg_color = Color(0.180, 0.153, 0.133, 1.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.53, 0.4, 0.27, 0.6)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="btn_hover"]
+bg_color = Color(0.239, 0.188, 0.157, 1.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.357, 0.722, 0.910, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="btn_pressed"]
+bg_color = Color(0.075, 0.063, 0.051, 1.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.357, 0.722, 0.910, 1.0)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="btn_disabled"]
+bg_color = Color(0.122, 0.102, 0.086, 0.5)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.3, 0.25, 0.3)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="btn_focus"]
+bg_color = Color(0.0, 0.0, 0.0, 0.0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.357, 0.722, 0.910, 1.0)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="lineedit_normal"]
+bg_color = Color(0.075, 0.063, 0.051, 1.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.53, 0.4, 0.27, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="lineedit_focus"]
+bg_color = Color(0.122, 0.102, 0.086, 1.0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.357, 0.722, 0.910, 0.9)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="tab_selected"]
+bg_color = Color(0.180, 0.153, 0.133, 1.0)
+border_width_left = 1
+border_width_top = 2
+border_width_right = 1
+border_width_bottom = 0
+border_color = Color(0.357, 0.722, 0.910, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="tab_unselected"]
+bg_color = Color(0.122, 0.102, 0.086, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 0
+border_color = Color(0.35, 0.3, 0.25, 0.5)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="tab_panel"]
+bg_color = Color(0.180, 0.153, 0.133, 0.95)
+border_width_left = 1
+border_width_top = 0
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.53, 0.4, 0.27, 0.6)
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+
+[sub_resource type="StyleBoxFlat" id="tooltip_panel"]
+bg_color = Color(0.075, 0.063, 0.051, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.53, 0.4, 0.27, 0.7)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+
+[resource]
+; --- Font size scale: h1=32 h2=24 body=18 caption=14 ---
+Button/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+Button/colors/font_hover_color = Color(1.0, 0.95, 0.85, 1.0)
+Button/colors/font_pressed_color = Color(0.357, 0.722, 0.910, 1.0)
+Button/colors/font_disabled_color = Color(0.722, 0.659, 0.549, 0.5)
+Button/colors/font_focus_color = Color(0.957, 0.914, 0.831, 1.0)
+Button/font_sizes/font_size = 18
+Button/fonts/font = SubResource("mall_font")
+Button/styles/normal = SubResource("btn_normal")
+Button/styles/hover = SubResource("btn_hover")
+Button/styles/pressed = SubResource("btn_pressed")
+Button/styles/disabled = SubResource("btn_disabled")
+Button/styles/focus = SubResource("btn_focus")
+CheckButton/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+CheckButton/colors/font_hover_color = Color(1.0, 0.95, 0.85, 1.0)
+CheckButton/colors/font_pressed_color = Color(0.357, 0.722, 0.910, 1.0)
+CheckButton/font_sizes/font_size = 18
+CheckButton/fonts/font = SubResource("mall_font")
+CheckButton/styles/normal = SubResource("btn_normal")
+CheckButton/styles/hover = SubResource("btn_hover")
+CheckButton/styles/pressed = SubResource("btn_pressed")
+CheckButton/styles/disabled = SubResource("btn_disabled")
+CheckButton/styles/focus = SubResource("btn_focus")
+Label/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+Label/font_sizes/font_size = 18
+Label/fonts/font = SubResource("mall_font")
+LineEdit/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+LineEdit/colors/font_placeholder_color = Color(0.722, 0.659, 0.549, 0.6)
+LineEdit/colors/caret_color = Color(0.357, 0.722, 0.910, 1.0)
+LineEdit/colors/selection_color = Color(0.357, 0.722, 0.910, 0.3)
+LineEdit/font_sizes/font_size = 18
+LineEdit/fonts/font = SubResource("mall_font")
+LineEdit/styles/normal = SubResource("lineedit_normal")
+LineEdit/styles/focus = SubResource("lineedit_focus")
+OptionButton/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+OptionButton/colors/font_hover_color = Color(1.0, 0.95, 0.85, 1.0)
+OptionButton/colors/font_pressed_color = Color(0.357, 0.722, 0.910, 1.0)
+OptionButton/colors/font_disabled_color = Color(0.722, 0.659, 0.549, 0.5)
+OptionButton/font_sizes/font_size = 18
+OptionButton/fonts/font = SubResource("mall_font")
+OptionButton/styles/normal = SubResource("btn_normal")
+OptionButton/styles/hover = SubResource("btn_hover")
+OptionButton/styles/pressed = SubResource("btn_pressed")
+OptionButton/styles/disabled = SubResource("btn_disabled")
+OptionButton/styles/focus = SubResource("btn_focus")
+Panel/styles/panel = SubResource("panel_bg")
+PanelContainer/styles/panel = SubResource("panel_bg")
+SpinBox/font_sizes/font_size = 18
+TabContainer/colors/font_selected_color = Color(0.957, 0.914, 0.831, 1.0)
+TabContainer/colors/font_unselected_color = Color(0.722, 0.659, 0.549, 0.8)
+TabContainer/colors/font_hovered_color = Color(1.0, 0.95, 0.85, 1.0)
+TabContainer/font_sizes/font_size = 18
+TabContainer/fonts/font = SubResource("mall_font")
+TabContainer/styles/tab_selected = SubResource("tab_selected")
+TabContainer/styles/tab_unselected = SubResource("tab_unselected")
+TabContainer/styles/panel = SubResource("tab_panel")
+TooltipLabel/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+TooltipLabel/font_sizes/font_size = 14
+TooltipPanel/styles/panel = SubResource("tooltip_panel")
+HSeparator/colors/separator_color = Color(0.53, 0.4, 0.27, 0.5)
+HSeparator/constants/separation = 8
+VSeparator/colors/separator_color = Color(0.53, 0.4, 0.27, 0.5)
+VSeparator/constants/separation = 8
+PopupMenu/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+PopupMenu/colors/font_hover_color = Color(1.0, 0.95, 0.85, 1.0)
+PopupMenu/font_sizes/font_size = 18
+PopupMenu/fonts/font = SubResource("mall_font")
+PopupMenu/styles/panel = SubResource("panel_bg")
+PopupMenu/styles/hover = SubResource("btn_hover")
+PopupPanel/styles/panel = SubResource("panel_bg")
+HSlider/styles/slider = SubResource("lineedit_normal")
+HSlider/styles/grabber_area = SubResource("btn_normal")
+HSlider/styles/grabber_area_highlight = SubResource("btn_hover")
+; --- Named type: TitleLabel (h1 = 32px) ---
+TitleLabel/base_type = &"Label"
+TitleLabel/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+TitleLabel/fonts/font = SubResource("mall_font")
+TitleLabel/font_sizes/font_size = 32
+; --- Named type: HeaderLabel (h2 = 24px) ---
+HeaderLabel/base_type = &"Label"
+HeaderLabel/colors/font_color = Color(0.910, 0.647, 0.278, 1.0)
+HeaderLabel/fonts/font = SubResource("mall_font")
+HeaderLabel/font_sizes/font_size = 24
+; --- Named type: CaptionLabel (caption = 14px) ---
+CaptionLabel/base_type = &"Label"
+CaptionLabel/colors/font_color = Color(0.722, 0.659, 0.549, 1.0)
+CaptionLabel/fonts/font = SubResource("mall_font")
+CaptionLabel/font_sizes/font_size = 14
+; --- Semantic label variants ---
+NegativeLabel/base_type = &"Label"
+NegativeLabel/colors/font_color = Color(0.898, 0.243, 0.169, 1.0)
+NegativeLabel/fonts/font = SubResource("mall_font")
+WarningLabel/base_type = &"Label"
+WarningLabel/colors/font_color = Color(0.949, 0.722, 0.110, 1.0)
+WarningLabel/fonts/font = SubResource("mall_font")
+SuccessLabel/base_type = &"Label"
+SuccessLabel/colors/font_color = Color(0.427, 0.812, 0.353, 1.0)
+SuccessLabel/fonts/font = SubResource("mall_font")
+InfoLabel/base_type = &"Label"
+InfoLabel/colors/font_color = Color(0.357, 0.722, 0.910, 1.0)
+InfoLabel/fonts/font = SubResource("mall_font")
+CriticalLabel/base_type = &"Label"
+CriticalLabel/colors/font_color = Color(1.0, 0.176, 0.310, 1.0)
+CriticalLabel/fonts/font = SubResource("mall_font")
+MutedLabel/base_type = &"Label"
+MutedLabel/colors/font_color = Color(0.722, 0.659, 0.549, 0.85)
+MutedLabel/fonts/font = SubResource("mall_font")
+SecondaryLabel/base_type = &"Label"
+SecondaryLabel/colors/font_color = Color(0.722, 0.659, 0.549, 1.0)
+SecondaryLabel/fonts/font = SubResource("mall_font")
+MoneyLabel/base_type = &"Label"
+MoneyLabel/colors/font_color = Color(0.957, 0.914, 0.831, 1.0)
+MoneyLabel/fonts/font = SubResource("money_font")
+MoneyLabel/font_sizes/font_size = 18
+MoneyGainLabel/base_type = &"Label"
+MoneyGainLabel/colors/font_color = Color(0.561, 0.878, 0.459, 1.0)
+MoneyGainLabel/fonts/font = SubResource("money_font")
+MoneyGainLabel/font_sizes/font_size = 18
+MoneyCostLabel/base_type = &"Label"
+MoneyCostLabel/colors/font_color = Color(1.0, 0.706, 0.659, 1.0)
+MoneyCostLabel/fonts/font = SubResource("money_font")
+MoneyCostLabel/font_sizes/font_size = 18
+; --- Palette token colors for editor-side theme queries ---
+Palette/colors/world_base = Color(0.075, 0.063, 0.051, 1.0)
+Palette/colors/panel_surface = Color(0.122, 0.102, 0.086, 1.0)
+Palette/colors/panel_raised = Color(0.180, 0.153, 0.133, 1.0)
+Palette/colors/text_primary = Color(0.957, 0.914, 0.831, 1.0)
+Palette/colors/text_muted = Color(0.722, 0.659, 0.549, 1.0)
+Palette/colors/accent_interact = Color(0.357, 0.722, 0.910, 1.0)
+Palette/colors/accent_success = Color(0.427, 0.812, 0.353, 1.0)
+Palette/colors/accent_warning = Color(0.949, 0.722, 0.110, 1.0)
+Palette/colors/accent_danger = Color(0.898, 0.243, 0.169, 1.0)
+StoreAccents/colors/retro_games = Color(0.910, 0.647, 0.278, 1.0)
+StoreAccents/colors/pocket_creatures = Color(0.180, 0.710, 0.659, 1.0)
+StoreAccents/colors/video_rental = Color(0.878, 0.306, 0.549, 1.0)
+StoreAccents/colors/electronics = Color(0.227, 0.659, 0.847, 1.0)
+StoreAccents/colors/sports_cards = Color(0.910, 0.333, 0.333, 1.0)

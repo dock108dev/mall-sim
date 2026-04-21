@@ -23,6 +23,8 @@ extends Resource
 @export var tier_changed: bool = false
 @export var new_tier_name: String = ""
 @export var milestones_unlocked: Array[String] = []
+## Richer milestone data: [{name, reward}] populated alongside milestones_unlocked.
+@export var milestones_data: Array[Dictionary] = []
 @export var late_fee_income: float = 0.0
 @export var warranty_revenue: float = 0.0
 @export var warranty_claim_costs: float = 0.0
@@ -53,6 +55,7 @@ func to_dict() -> Dictionary:
 		"tier_changed": tier_changed,
 		"new_tier_name": new_tier_name,
 		"milestones_unlocked": milestones_unlocked.duplicate(),
+		"milestones_data": milestones_data.duplicate(),
 		"late_fee_income": late_fee_income,
 		"warranty_revenue": warranty_revenue,
 		"warranty_claim_costs": warranty_claim_costs,
@@ -91,6 +94,11 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 	if saved_milestones is Array:
 		for entry: Variant in saved_milestones:
 			report.milestones_unlocked.append(str(entry))
+	var saved_ms_data: Variant = data.get("milestones_data", [])
+	if saved_ms_data is Array:
+		for entry: Variant in saved_ms_data:
+			if entry is Dictionary:
+				report.milestones_data.append((entry as Dictionary).duplicate())
 	report.late_fee_income = float(data.get("late_fee_income", 0.0))
 	report.warranty_revenue = float(
 		data.get("warranty_revenue", 0.0)

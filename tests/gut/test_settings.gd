@@ -288,10 +288,10 @@ func test_set_preference_unknown_key_no_signal() -> void:
 	)
 
 
-func test_volume_bus_map_has_three_entries() -> void:
+func test_volume_bus_map_has_four_entries() -> void:
 	assert_eq(
-		_settings.VOLUME_BUS_MAP.size(), 3,
-		"VOLUME_BUS_MAP should map 3 volume keys to buses"
+		_settings.VOLUME_BUS_MAP.size(), 4,
+		"VOLUME_BUS_MAP should map 4 volume keys to buses (master, music, sfx, ambient)"
 	)
 
 
@@ -386,3 +386,65 @@ func test_set_preference_language_emits_signal() -> void:
 		"preference_changed should emit with locale value"
 	)
 	_settings.set_preference(&"language", "en")
+
+
+func test_default_crt_enabled_is_false() -> void:
+	assert_false(
+		_settings.crt_enabled,
+		"Default crt_enabled should be false"
+	)
+
+
+func test_default_text_scale_is_zero() -> void:
+	assert_eq(
+		_settings.text_scale, 0,
+		"Default text_scale index should be 0 (100%)"
+	)
+
+
+func test_reset_to_defaults_resets_crt_and_text_scale() -> void:
+	_settings.crt_enabled = true
+	_settings.text_scale = 2
+	_settings.reset_to_defaults()
+	assert_false(
+		_settings.crt_enabled,
+		"reset_to_defaults should reset crt_enabled to false"
+	)
+	assert_eq(
+		_settings.text_scale, 0,
+		"reset_to_defaults should reset text_scale to 0"
+	)
+
+
+func test_crt_and_text_scale_roundtrip() -> void:
+	_settings.crt_enabled = true
+	_settings.text_scale = 1
+	_settings.save_settings()
+
+	var fresh: Node = Node.new()
+	fresh.set_script(preload("res://game/autoload/settings.gd"))
+	add_child_autofree(fresh)
+	fresh.load_settings()
+
+	assert_true(
+		fresh.crt_enabled,
+		"Roundtrip crt_enabled should be true"
+	)
+	assert_eq(
+		fresh.text_scale, 1,
+		"Roundtrip text_scale should be 1 (125%)"
+	)
+
+
+func test_text_scale_values_count() -> void:
+	assert_eq(
+		Settings.TEXT_SCALE_VALUES.size(), 3,
+		"TEXT_SCALE_VALUES should have 3 entries (100/125/150%)"
+	)
+
+
+func test_text_scale_labels_count() -> void:
+	assert_eq(
+		Settings.TEXT_SCALE_LABELS.size(), 3,
+		"TEXT_SCALE_LABELS should have 3 entries"
+	)

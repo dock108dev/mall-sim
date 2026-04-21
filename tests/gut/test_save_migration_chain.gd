@@ -191,3 +191,55 @@ func test_migration_does_not_mutate_input_dictionary() -> void:
 		original_snapshot,
 		"migrate_save_data must work on a copy; input must be untouched"
 	)
+
+
+## ISSUE-016: migrations must copy the pre-migration file to user://backups/
+## so operators can recover the original on-disk shape.
+func test_backup_before_migration_writes_copy_to_backup_dir() -> void:
+	var source_path: String = "user://test_issue016_source.json"
+	var payload: String = JSON.stringify(
+		{"save_version": 1, "marker": "original_v1"}, "\t"
+	)
+	var writer: FileAccess = FileAccess.open(source_path, FileAccess.WRITE)
+	assert_not_null(writer, "Test fixture file must open for write")
+	writer.store_string(payload)
+	writer.close()
+
+	_save_manager._backup_before_migration(source_path, 0, 1)
+
+	var found_backup: String = ""
+	var dir: DirAccess = DirAccess.open(SaveManager.BACKUP_DIR)
+	assert_not_null(
+		dir, "Backup directory must be created by _backup_before_migration"
+	)
+	dir.list_dir_begin()
+	var entry: String = dir.get_next()
+	while entry != "":
+		if entry.begins_with("save_slot_0_v1_") and entry.ends_with(".json"):
+			found_backup = SaveManager.BACKUP_DIR + entry
+			break
+		entry = dir.get_next()
+	dir.list_dir_end()
+
+	assert_ne(found_backup, "", "A versioned backup file must exist")
+	var reader: FileAccess = FileAccess.open(found_backup, FileAccess.READ)
+	assert_not_null(reader, "Backup file must be readable")
+	var backup_contents: String = reader.get_as_text()
+	reader.close()
+	assert_eq(
+		backup_contents,
+		payload,
+		"Backup contents must match the pre-migration source byte-for-byte"
+	)
+
+	DirAccess.remove_absolute(source_path)
+	DirAccess.remove_absolute(found_backup)
+
+
+func test_backup_before_migration_is_noop_when_source_missing() -> void:
+	var missing_path: String = "user://does_not_exist_issue016.json"
+	_save_manager._backup_before_migration(missing_path, 0, 1)
+	assert_false(
+		FileAccess.file_exists(missing_path),
+		"Noop path must not create the source file"
+	)

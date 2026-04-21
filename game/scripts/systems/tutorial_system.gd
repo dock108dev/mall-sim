@@ -154,6 +154,8 @@ func skip_tutorial() -> void:
 		return
 	_mark_all_steps_complete(true)
 	current_step = TutorialStep.FINISHED
+	Settings.set_preference(&"tutorial_skip", true)
+	Settings.save_settings()
 	EventBus.tutorial_skipped.emit()
 	_complete_tutorial()
 

@@ -1,20 +1,28 @@
-## Persistent HUD strip showing the player's current three-slot objective display.
+## Persistent HUD strip showing the player's current four-slot objective display.
 ## Registered as an autoload CanvasLayer so it survives scene transitions.
-## Content arrives via EventBus.objective_changed(payload); no text is hardcoded here.
-## Mouse input is never captured — all containers use MOUSE_FILTER_IGNORE.
+## Content arrives via EventBus.objective_changed or EventBus.objective_updated;
+## no text is hardcoded here.
+## When optional_hint carries a "goto:<store_id>" prefix, the label displays a
+## store-routing prompt and EventBus.hub_store_highlighted is emitted immediately
+## so the player can see which card to click.
 ## Auto-hide and Settings-override logic lives in ObjectiveDirector, not here.
 extends CanvasLayer
 
-@onready var _objective_label: Label = $MarginContainer/VBoxContainer/ObjectiveLabel
-@onready var _action_label: Label = $MarginContainer/VBoxContainer/ActionLabel
-@onready var _hint_label: Label = $MarginContainer/VBoxContainer/HintLabel
+@onready var _margin: MarginContainer = $MarginContainer
+@onready var _objective_label: Label = $MarginContainer/HBoxContainer/ObjectiveLabel
+@onready var _action_label: Label = $MarginContainer/HBoxContainer/ActionLabel
+@onready var _hint_label: Label = $MarginContainer/HBoxContainer/HintLabel
+@onready var _optional_hint_label: Label = $MarginContainer/HBoxContainer/OptionalHintLabel
 
 var _auto_hidden: bool = false
 var _current_payload: Dictionary = {}
+var _show_rail: bool = true
+var _tween: Tween
 
 
 func _ready() -> void:
 	EventBus.objective_changed.connect(_on_objective_changed)
+	EventBus.objective_updated.connect(_on_objective_updated)
 	EventBus.preference_changed.connect(_on_preference_changed)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.arc_unlock_triggered.connect(_on_arc_unlock_triggered)
@@ -36,18 +44,60 @@ func _on_objective_changed(payload: Dictionary) -> void:
 		return
 	_auto_hidden = false
 	_current_payload = payload
-	_objective_label.text = str(payload.get("text", ""))
-	_action_label.text = str(payload.get("action", ""))
-	_hint_label.text = str(payload.get("key", ""))
+	_objective_label.text = str(payload.get("text", payload.get("current_objective", "")))
+	_action_label.text = str(payload.get("action", payload.get("next_action", "")))
+	_hint_label.text = str(payload.get("key", payload.get("input_hint", "")))
+	_update_optional_hint(str(payload.get("optional_hint", "")))
+	_flash()
+	_refresh_visibility()
+
+
+func _on_objective_updated(payload: Dictionary) -> void:
+	if payload.get("hidden", false):
+		_auto_hidden = true
+		_refresh_visibility()
+		return
+	_auto_hidden = false
+	_current_payload = payload
+	_objective_label.text = str(payload.get("current_objective", payload.get("text", "")))
+	_action_label.text = str(payload.get("next_action", payload.get("action", "")))
+	_hint_label.text = str(payload.get("input_hint", payload.get("key", "")))
+	_update_optional_hint(str(payload.get("optional_hint", "")))
+	_flash()
 	_refresh_visibility()
 
 
 ## ObjectiveDirector re-emits the appropriate payload on preference_changed,
-## so this handler only needs to trigger a visibility recalc.
-func _on_preference_changed(key: String, _value: Variant) -> void:
+## so this handler caches the show flag and triggers a visibility recalc.
+func _on_preference_changed(key: String, value: Variant) -> void:
 	if key == "show_objective_rail":
+		_show_rail = value as bool
 		_refresh_visibility()
 
 
+## Handles optional_hint display. When the hint starts with "goto:<store_id>",
+## the label shows a store-routing prompt and hub_store_highlighted fires so the
+## matching card animates immediately. All other hints display as plain text.
+func _update_optional_hint(opt: String) -> void:
+	if opt.begins_with("goto:"):
+		var target_id: StringName = StringName(opt.substr(5))
+		var name_text: String = ContentRegistry.get_display_name(target_id)
+		_optional_hint_label.text = "→ Go to %s" % name_text
+		_optional_hint_label.visible = true
+		EventBus.hub_store_highlighted.emit(target_id)
+	else:
+		_optional_hint_label.text = opt
+		_optional_hint_label.visible = opt != ""
+
+
 func _refresh_visibility() -> void:
-	visible = not _auto_hidden and not _current_payload.is_empty()
+	visible = _show_rail and not _auto_hidden and not _current_payload.is_empty()
+
+
+## Fades the rail in over one second whenever the objective content changes.
+func _flash() -> void:
+	if _tween and _tween.is_valid():
+		_tween.kill()
+	_margin.modulate.a = 0.0
+	_tween = create_tween()
+	_tween.tween_property(_margin, "modulate:a", 1.0, 1.0)

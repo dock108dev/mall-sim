@@ -7,6 +7,8 @@ This is the active project documentation set for Mallcore Sim.
 - [Setup](setup.md) - local editor setup, helper scripts, and repository layout.
 - [Architecture](architecture.md) - boot flow, scene entry points, autoloads,
   `GameWorld`, and save/load ownership.
+- [Design](design.md) - design philosophy, player loop, visual grammar,
+  objective rail, store principles, economy, and interaction audit checklist.
 - [Content and Data](content-data.md) - how JSON content is discovered, typed,
   validated, and accessed at runtime.
 - [Testing](testing.md) - local test entry points, GUT configuration, coverage
@@ -17,6 +19,13 @@ This is the active project documentation set for Mallcore Sim.
   documentation rules.
 - [Roadmap](roadmap.md) - finalization phases from triage through 1.0 ship
   criteria.
+
+## Decision records
+
+- [ADR-0001: Mall Presentation Model](decisions/0001-mall-presentation-model.md) -
+  management hub (click-to-enter) chosen for 1.0; walkable mall rejected.
+- [ADR-0002: Vertical Slice Store](decisions/0002-vertical-slice-store.md) -
+  Retro Games selected as the Phase 4 vertical slice anchor.
 
 ## Audit docs
 

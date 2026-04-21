@@ -50,6 +50,7 @@ Supporting project docs live under `docs/`:
 - [Docs Index](docs/index.md)
 - [Setup](docs/setup.md)
 - [Architecture](docs/architecture.md)
+- [Design](docs/design.md)
 - [Content and Data](docs/content-data.md)
 - [Testing](docs/testing.md)
 - [Configuration and Deployment](docs/configuration-deployment.md)

@@ -7,6 +7,9 @@ const CASH_REWARD_AMOUNT: float = 50.0
 const UNLOCK_MILESTONE_ID: StringName = &"week_one_survivor"
 const UNLOCK_ID: StringName = &"order_catalog_expansion_1"
 const UNLOCK_THRESHOLD: int = 3
+const REVENUE_MILESTONE_ID: StringName = &"revenue_target"
+const REVENUE_THRESHOLD: float = 500.0
+const REVENUE_REWARD: float = 100.0
 
 var _data_loader: DataLoader
 var _economy_system: EconomySystem
@@ -175,6 +178,78 @@ func test_duplicate_milestone_trigger_does_not_refire_signal_or_regrant_reward()
 	)
 
 
+func test_revenue_milestone_triggers_at_five_hundred() -> void:
+	watch_signals(EventBus)
+
+	# One transaction just under threshold — should not fire yet.
+	EventBus.transaction_completed.emit(499.0, true, "Sale")
+	assert_signal_emit_count(
+		EventBus,
+		"milestone_unlocked",
+		0,
+		"revenue milestone must not fire below threshold"
+	)
+
+	# Push over threshold.
+	EventBus.transaction_completed.emit(1.0, true, "Sale")
+	assert_signal_emit_count(
+		EventBus,
+		"milestone_unlocked",
+		1,
+		"revenue milestone must fire exactly once at threshold"
+	)
+	var params: Array = get_signal_parameters(
+		EventBus, "milestone_unlocked", 0
+	)
+	assert_eq(
+		params[0] as StringName,
+		REVENUE_MILESTONE_ID,
+		"revenue milestone_unlocked must carry the correct id"
+	)
+	assert_true(
+		_milestone_system.is_complete(REVENUE_MILESTONE_ID),
+		"revenue milestone must be marked complete after triggering"
+	)
+	assert_almost_eq(
+		_economy_system.get_cash(),
+		REVENUE_REWARD,
+		0.01,
+		"revenue milestone cash reward must be credited to player"
+	)
+
+
+func test_revenue_milestone_does_not_refire_on_additional_revenue() -> void:
+	watch_signals(EventBus)
+
+	EventBus.transaction_completed.emit(600.0, true, "Sale")
+	assert_signal_emit_count(
+		EventBus, "milestone_unlocked", 1,
+		"revenue milestone fires once at first crossing"
+	)
+
+	EventBus.transaction_completed.emit(100.0, true, "Sale")
+	assert_signal_emit_count(
+		EventBus, "milestone_unlocked", 1,
+		"revenue milestone must not refire on subsequent revenue"
+	)
+
+
+func test_milestone_completed_carries_reward_description() -> void:
+	var received_reward: String = ""
+	var handler: Callable = func(
+		_id: String, _name: String, reward: String
+	) -> void:
+		received_reward = reward
+	EventBus.milestone_completed.connect(handler, CONNECT_ONE_SHOT)
+
+	EventBus.transaction_completed.emit(500.0, true, "Sale")
+
+	assert_false(
+		received_reward.is_empty(),
+		"milestone_completed must carry a non-empty reward_description"
+	)
+
+
 func _emit_purchase_events(count: int) -> void:
 	for index: int in range(count):
 		EventBus.customer_purchased.emit(
@@ -217,3 +292,12 @@ func _register_milestone_definitions() -> void:
 	unlock_milestone.reward_value = 0.0
 	unlock_milestone.unlock_id = String(UNLOCK_ID)
 	_data_loader._milestones[String(UNLOCK_MILESTONE_ID)] = unlock_milestone
+
+	var revenue_milestone: MilestoneDefinition = MilestoneDefinition.new()
+	revenue_milestone.id = String(REVENUE_MILESTONE_ID)
+	revenue_milestone.display_name = "Breaking Even"
+	revenue_milestone.trigger_stat_key = "cumulative_revenue"
+	revenue_milestone.trigger_threshold = REVENUE_THRESHOLD
+	revenue_milestone.reward_type = "cash"
+	revenue_milestone.reward_value = REVENUE_REWARD
+	_data_loader._milestones[String(REVENUE_MILESTONE_ID)] = revenue_milestone

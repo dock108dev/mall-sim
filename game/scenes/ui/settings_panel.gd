@@ -12,6 +12,7 @@ const _SNAPSHOT_KEYS: Array[String] = [
 	"master_volume", "music_volume", "sfx_volume",
 	"ambient_volume", "fullscreen", "vsync", "resolution",
 	"ui_scale", "font_size", "colorblind_mode", "locale",
+	"crt_enabled", "text_scale",
 ]
 
 var _is_open: bool = false
@@ -77,6 +78,12 @@ var _saved_bindings: Dictionary = {}
 @onready var _locale_option: OptionButton = (
 	$PanelRoot/Margin/VBox/TabContainer/Display/VBox/LanguageRow/Option
 )
+@onready var _text_scale_option: OptionButton = (
+	$PanelRoot/Margin/VBox/TabContainer/Display/VBox/TextScaleRow/Option
+)
+@onready var _crt_check: CheckButton = (
+	$PanelRoot/Margin/VBox/TabContainer/Display/VBox/CrtRow/Check
+)
 @onready var _controls_list: VBoxContainer = (
 	$PanelRoot/Margin/VBox/TabContainer/Controls/Outer/ScrollContainer/VBox
 )
@@ -113,11 +120,14 @@ func _ready() -> void:
 	_font_size_option.item_selected.connect(_on_font_size_selected)
 	_colorblind_check.toggled.connect(_on_colorblind_toggled)
 	_locale_option.item_selected.connect(_on_locale_selected)
+	_text_scale_option.item_selected.connect(_on_text_scale_selected)
+	_crt_check.toggled.connect(_on_crt_toggled)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.locale_changed.connect(_on_locale_changed)
 	_populate_resolutions()
 	_populate_font_sizes()
 	_populate_locales()
+	_populate_text_scale_options()
 	_populate_controls()
 
 
@@ -214,6 +224,10 @@ func _load_from_settings() -> void:
 	_font_size_option.selected = Settings.font_size
 	_colorblind_check.button_pressed = Settings.colorblind_mode
 	_select_locale(Settings.locale)
+	_text_scale_option.selected = clampi(
+		Settings.text_scale, 0, Settings.TEXT_SCALE_VALUES.size() - 1
+	)
+	_crt_check.button_pressed = Settings.crt_enabled
 
 
 func _populate_resolutions() -> void:
@@ -235,6 +249,12 @@ func _populate_locales() -> void:
 	_locale_option.clear()
 	for entry: Dictionary in Settings.SUPPORTED_LOCALES:
 		_locale_option.add_item(entry["name"])
+
+
+func _populate_text_scale_options() -> void:
+	_text_scale_option.clear()
+	for label: String in Settings.TEXT_SCALE_LABELS:
+		_text_scale_option.add_item(label)
 
 
 func _select_locale(code: String) -> void:
@@ -442,22 +462,26 @@ func _apply_volume_slider(
 	label.text = "%d" % int(value)
 	Settings.set(channel + "_volume", value / 100.0)
 	Settings.apply_settings()
+	Settings.schedule_save()
 
 
 func _on_ui_scale_changed(value: float) -> void:
 	_ui_scale_label.text = "%d%%" % int(value)
 	Settings.ui_scale = value / 100.0
 	Settings.apply_settings()
+	Settings.schedule_save()
 
 
 func _on_font_size_selected(index: int) -> void:
 	Settings.font_size = index
 	Settings.apply_settings()
+	Settings.schedule_save()
 
 
 func _on_colorblind_toggled(pressed: bool) -> void:
 	Settings.colorblind_mode = pressed
 	EventBus.colorblind_mode_changed.emit(pressed)
+	Settings.schedule_save()
 
 
 func _on_locale_selected(index: int) -> void:
@@ -465,6 +489,21 @@ func _on_locale_selected(index: int) -> void:
 		return
 	Settings.locale = Settings.SUPPORTED_LOCALES[index]["code"]
 	Settings.apply_settings()
+	Settings.schedule_save()
+
+
+func _on_text_scale_selected(index: int) -> void:
+	if index < 0 or index >= Settings.TEXT_SCALE_VALUES.size():
+		return
+	Settings.text_scale = index
+	Settings.apply_settings()
+	Settings.schedule_save()
+
+
+func _on_crt_toggled(pressed: bool) -> void:
+	Settings.crt_enabled = pressed
+	Settings.apply_settings()
+	Settings.schedule_save()
 
 
 func _on_apply_pressed() -> void:
@@ -500,6 +539,10 @@ func _apply_ui_to_settings() -> void:
 	var locale_idx: int = _locale_option.selected
 	if locale_idx >= 0 and locale_idx < Settings.SUPPORTED_LOCALES.size():
 		Settings.locale = Settings.SUPPORTED_LOCALES[locale_idx]["code"]
+	var ts_idx: int = _text_scale_option.selected
+	if ts_idx >= 0 and ts_idx < Settings.TEXT_SCALE_VALUES.size():
+		Settings.text_scale = ts_idx
+	Settings.crt_enabled = _crt_check.button_pressed
 
 
 func _restore_snapshot() -> void:

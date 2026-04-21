@@ -221,6 +221,19 @@
     "unlock_id": null
   },
   {
+    "id": "retro_import_wall_unlock",
+    "display_name": "Signature Import Wall",
+    "description": "Retro sales crossed five hundred dollars. Your regulars are asking about imports and rarities. Time to build them a wall.",
+    "is_visible": true,
+    "tier": "early",
+    "trigger_type": "revenue_total",
+    "trigger_threshold": 500.0,
+    "trigger_stat_key": "cumulative_revenue",
+    "reward_type": "fixture_unlock",
+    "reward_value": 0.0,
+    "unlock_id": "import_wall_display"
+  },
+  {
     "id": "revenue_one_thousand",
     "display_name": "Four Digits",
     "description": "One thousand dollars lifetime revenue. The food court pretzel stand respects you now. It doesn't show, but the respect is there.",

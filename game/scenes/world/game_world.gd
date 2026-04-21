@@ -175,6 +175,11 @@ var _refurb_queue_panel: RefurbQueuePanel = null
 var _deferred_panels_loaded: bool = false
 var _nav_mesh_rebaker: NavMeshRebaker = null
 
+## Hub-mode state (used when debug/walkable_mall = false).
+var _hub_transition: SceneTransition = null
+var _hub_is_inside_store: bool = false
+var _hub_active_store_scene: Node3D = null
+
 @onready var _ui_layer: CanvasLayer = $UILayer
 @onready var _store_container: Node3D = $StoreContainer
 
@@ -204,8 +209,19 @@ func _ready() -> void:
 
 
 func _setup_mall_hallway() -> void:
+	if not ProjectSettings.get_setting("debug/walkable_mall", false):
+		_setup_hub_mode()
+		return
 	_mall_hallway = _MallHallwayScene.instantiate() as MallHallway
 	_store_container.add_child(_mall_hallway)
+
+
+## Sets up the direct click-to-enter hub mode (walkable mall disabled).
+func _setup_hub_mode() -> void:
+	_hub_transition = SceneTransition.new()
+	add_child(_hub_transition)
+	EventBus.enter_store_requested.connect(_on_hub_enter_store_requested)
+	EventBus.exit_store_requested.connect(_on_hub_exit_store_requested)
 
 
 ## Initializes all gameplay systems in dependency-tier order.
@@ -401,6 +417,7 @@ func initialize_tier_5_meta() -> void:
 func finalize_system_wiring() -> void:
 	_wire_save_manager()
 	_wire_store_controllers()
+	day_cycle_controller.set_save_manager(save_manager)
 
 
 func _wire_save_manager() -> void:
@@ -812,6 +829,54 @@ func _register_initial_fixtures() -> void:
 		)
 
 
+## Hub-mode entry: loads store scene into _store_container with a crossfade.
+func _on_hub_enter_store_requested(store_id: StringName) -> void:
+	if _hub_is_inside_store:
+		return
+	var scene_path: String = ContentRegistry.get_scene_path(store_id)
+	if scene_path.is_empty():
+		push_error("GameWorld: hub entry — unknown store_id '%s'" % store_id)
+		return
+	var canonical: StringName = ContentRegistry.resolve(String(store_id))
+	if canonical.is_empty():
+		push_error("GameWorld: hub entry — unresolvable store_id '%s'" % store_id)
+		return
+	var store_packed: PackedScene = load(scene_path) as PackedScene
+	if store_packed == null:
+		push_error("GameWorld: hub entry — failed to load scene '%s'" % scene_path)
+		return
+	_hub_is_inside_store = true
+	await _hub_transition.crossfade(func() -> void:
+		_hub_active_store_scene = store_packed.instantiate() as Node3D
+		_store_container.add_child(_hub_active_store_scene)
+		EventBus.store_entered.emit(canonical)
+	)
+
+
+## Hub-mode exit: removes active store scene with a crossfade.
+func _on_hub_exit_store_requested() -> void:
+	if not _hub_is_inside_store:
+		return
+	var leaving_id: StringName = GameManager.get_active_store_id()
+	await _hub_transition.crossfade(func() -> void:
+		if _hub_active_store_scene != null:
+			_hub_active_store_scene.queue_free()
+			_hub_active_store_scene = null
+		_hub_is_inside_store = false
+		EventBus.store_exited.emit(leaving_id)
+	)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _mall_hallway != null:
+		return
+	if not _hub_is_inside_store:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		EventBus.exit_store_requested.emit()
+		get_viewport().set_input_as_handled()
+
+
 func _on_store_entered(store_id: StringName) -> void:
 	if performance_manager:
 		performance_manager.begin_store_switch()
@@ -1049,13 +1114,14 @@ func bootstrap_new_game_state(
 
 
 func _find_store_slot_index(store_id: StringName) -> int:
-	if not _mall_hallway:
+	if _mall_hallway:
+		var slot_ids: Array[StringName] = _mall_hallway.slot_store_ids
+		for i: int in range(slot_ids.size()):
+			if slot_ids[i] == store_id:
+				return i
 		return -1
-	var slot_ids: Array[StringName] = _mall_hallway.SLOT_STORE_IDS
-	for i: int in range(slot_ids.size()):
-		if slot_ids[i] == store_id:
-			return i
-	return -1
+	var all_ids: Array[StringName] = ContentRegistry.get_all_ids("store")
+	return all_ids.find(store_id)
 
 
 func _create_default_store_inventory(store_id: StringName) -> void:

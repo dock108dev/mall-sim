@@ -7,13 +7,13 @@ signal focused()
 signal unfocused()
 
 enum InteractionType {
-	SHELF_SLOT,   ## 0
-	REGISTER,     ## 1
-	ITEM,         ## 2
-	BACKROOM,     ## 3
-	CUSTOMER,     ## 4
-	STOREFRONT,   ## 5
-	RETURNS_BIN,  ## 6
+	SHELF_SLOT,
+	REGISTER,
+	ITEM,
+	BACKROOM,
+	CUSTOMER,
+	STOREFRONT,
+	RETURNS_BIN,
 }
 
 ## Maps each interaction type to a default prompt verb.
@@ -107,15 +107,10 @@ func highlight() -> void:
 			surface_mat = mat.duplicate()
 		else:
 			surface_mat = StandardMaterial3D.new()
-		var outline_material: ShaderMaterial = (
-			_OUTLINE_MATERIAL.duplicate() as ShaderMaterial
-		)
-		outline_material.set_shader_parameter("outline_color", highlight_color)
-		outline_material.set_shader_parameter(
-			"outline_width",
-			highlight_outline_width
-		)
-		surface_mat.next_pass = outline_material
+		surface_mat.next_pass = _OUTLINE_MATERIAL.duplicate()
+		var outline_mat := surface_mat.next_pass as ShaderMaterial
+		outline_mat.set_shader_parameter("outline_color", highlight_color)
+		outline_mat.set_shader_parameter("outline_width", highlight_outline_width)
 		mesh_node.set_surface_override_material(i, surface_mat)
 
 

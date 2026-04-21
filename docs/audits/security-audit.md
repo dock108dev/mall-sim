@@ -1,301 +1,260 @@
 # Security Audit — Mallcore Sim
 
-**Date:** 2026-04-19  
-**Auditor:** Deep automated review (senior application-security perspective)  
-**Scope:** GDScript autoloads, runtime systems, store controllers, shell scripts, CI/CD workflows, export config, JSON content  
-**Project type:** Offline single-player Godot 4.x desktop game
+**Date:** 2026-04-21
+**Auditor:** Deep automated review (senior application-security perspective)
+**Scope:** GDScript autoloads, runtime systems, save/load pipeline, settings, UI panels, CI/CD workflows, export config, JSON content
+**Engine:** Godot 4.6.2 (GDScript only, offline desktop game)
 
 ---
 
 ## Executive Summary
 
-This is a local-first, single-player Godot game with no network surfaces, no authentication layer, and no server-side components. Traditional web-security categories (XSS, CSRF, IDOR, SQLi) do not apply. The meaningful risks are:
-
-- **Business-logic manipulation** via unvalidated numeric inputs in the haggle and checkout pipeline
-- **Path traversal** through registry-driven resource loading in `AudioManager`
-- **Shell anti-patterns** in test scripts (`eval`, implicit variable expansion) that are safe today but fragile
-- **CI/CD supply chain** — unpinned third-party Actions and an unpinned npm tool in the release pipeline
-- **JSON content integrity** — several parsers accept out-of-range or non-finite numeric values
-
-Four safe in-place hardening changes were applied during the audit. No credentials, API keys, or network endpoints were found anywhere in the codebase.
+Mallcore Sim is an **offline, single-player desktop game** with no network connectivity at runtime. The attack surface is therefore narrow: a local attacker who can already write to `user://` can modify saves, and CI supply chain is the only meaningful remote threat vector. No critical or high-severity vulnerabilities were found. The codebase demonstrates careful defensive practice in several areas (atomic saves, clamped config values, locale allowlist, debug-only guards). The findings below are primarily low-severity hardening opportunities and documentation of intentional design decisions.
 
 ---
 
-## 1. Confirmed Vulnerabilities (All Fixed In-Place)
+## 1. Confirmed Vulnerabilities
 
-### 1.1 NaN/Infinity/Negative Values Pass Through Haggle Offer Recording — MEDIUM
-**File:** `game/scripts/systems/haggle_session.gd:43`
-
-**Evidence (before fix):**
-```gdscript
-func record_player_offer(price: float) -> void:
-    offer_history.append(price)   # no guard on validity
-    current_offer = price
-    round_number += 1
-```
-
-**Exploit scenario:** If upstream code (a save file, a future mod hook, or a UI bug) passes `NaN`, `INF`, or a negative float into `player_counter()`, `is_insulting_counter()` subsequently divides by `sticker_price` using corrupted `offer_history` values. NaN arithmetic propagates — the insult-detection path can be silently suppressed and reputation penalties skipped, or gap-ratio comparisons invert (walkaway logic fires when acceptance was correct).
-
-**Fix applied:**
-```gdscript
-func record_player_offer(price: float) -> void:
-    if not is_finite(price) or price <= 0.0:
-        return
-    offer_history.append(price)
-    current_offer = price
-    round_number += 1
-```
-
----
-
-### 1.2 Zero/Negative Rental Fee Passed to `process_rental()` — MEDIUM
-**File:** `game/scripts/systems/checkout_system.gd:494`
-
-**Evidence (before fix):**
-```gdscript
-if rental_fee <= 0.0:
-    rental_fee = _active_offer   # _active_offer can also be ≤0
-# ... then unconditionally:
-_rental_controller.process_rental(item_id, category, rental_tier, rental_fee, ...)
-```
-
-**Exploit scenario:** If `rental_fee` from the item definition is ≤ 0 and `_active_offer` is also ≤ 0 (which `initiate_sale()` was supposed to block but the rental path doesn't call `initiate_sale()`), `process_rental()` fires with a zero/negative fee. The inventory slot is removed and `customer_purchased` is emitted, but no cash changes hands. A player who triggers this path (e.g., renting an item that was never priced) loses the item from inventory for free.
-
-**Fix applied:** A second guard aborts `_execute_rental()` if `rental_fee` is still ≤ 0 after the fallback:
-```gdscript
-if rental_fee <= 0.0:
-    rental_fee = _active_offer
-if rental_fee <= 0.0:
-    push_error("CheckoutSystem: rental has no valid fee, aborting")
-    return
-```
-
----
-
-### 1.3 Grade `price_multiplier` Not Validated — MEDIUM
-**File:** `game/scripts/stores/retro_games.gd:223`
-
-**Evidence (before fix):**
-```gdscript
-_grade_table[gid as String] = grade_entry   # price_multiplier unchecked
-```
-
-`get_item_price()` multiplies the item's base price by `price_multiplier` from this table. A zero multiplier produces a zero price; a negative multiplier produces a negative price. Both would flow into the checkout pipeline. `initiate_sale()` guards `agreed_price > 0`, so the transaction is eventually blocked, but the item is left in a permanently unsellable state for the rest of the session.
-
-**Fix applied:** Non-finite, zero, or negative `price_multiplier` values now cause the grade entry to be skipped with a warning at load time:
-```gdscript
-var raw_mult: Variant = grade_entry.get("price_multiplier", 1.0)
-var mult: float = float(raw_mult) if (raw_mult is float or raw_mult is int) else 0.0
-if not is_finite(mult) or mult <= 0.0:
-    push_warning("RetroGames: skipping grade '%s' — invalid price_multiplier" % (gid as String))
-    continue
-_grade_table[gid as String] = grade_entry
-```
-
----
-
-### 1.4 Registry-Driven Path Traversal in `AudioManager` — LOW
-**File:** `game/autoload/audio_manager.gd:471`
-
-**Evidence (before fix):**
-```gdscript
-var path: String = base_dir + files[key]   # files[key] is a raw JSON string
-if ResourceLoader.exists(path):
-    target[key] = load(path)
-```
-
-**Exploit scenario:** `files[key]` comes from `audio_registry.json`. In the exported PCK the `res://` virtual filesystem cannot traverse outside the bundle. In development (directory project), a registry entry of `"../../sensitive_file.tres"` would resolve to an unintended resource path. While Godot's `load()` restricts to project resources, a maliciously crafted registry could load arbitrary project resources (e.g., scripts) instead of audio streams.
-
-**Fix applied:** Paths containing `..` are rejected before any filesystem operation:
-```gdscript
-if ".." in path:
-    push_warning("AudioManager: rejecting path with traversal segment: %s" % path)
-    continue
-```
+No confirmed vulnerabilities with a realistic exploit path were found in the current codebase.
 
 ---
 
 ## 2. Risky Patterns / Hardening Opportunities
 
-### 2.1 `eval` Anti-Pattern in Shell Validator — LOW
-**File:** `tests/validate_issue_008.sh:11`
+### 2.1 CI — Godot Binary Downloaded Without Checksum Verification
 
-```bash
-check() { if eval "$1" 2>/dev/null; then pass "$2"; else fail "$2"; fi; }
+**Severity:** Low
+**Location:** `.github/workflows/validate.yml:69–73`, `.github/workflows/export.yml` (equivalent block)
+
+**Evidence:**
+```yaml
+wget -q "$GODOT_URL" -O /tmp/godot.zip
+unzip -q /tmp/godot.zip -d /tmp/godot
+sudo mv /tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
 ```
 
-All callers pass hardcoded string literals; `$MUSIC_DIR` is expanded by the shell before the string is passed to `check()`, so there is no injection from external input today. The pattern is fragile: a future test case that interpolates a path with a space or a single quote will either break silently or execute unintended code.
+**Exploit scenario:** A compromised GitHub releases CDN, a DNS hijack of `github.com`, or a GitHub infrastructure incident during a CI run could serve a tampered Godot binary. Since this binary runs arbitrary code as `sudo`, the CI runner environment would be fully compromised in a build that follows. Artifacts produced in that run could contain malicious payloads.
 
-**Recommended fix:** Replace with explicit named helpers:
+**Recommended fix:** Add a SHA-256 checksum step immediately after the download:
 ```bash
-check_file()  { [ -f "$1" ] && pass "$2" || fail "$2"; }
-check_grep()  { grep -q "$1" "$2" && pass "$3" || fail "$3"; }
+GODOT_SHA256="<official-sha256-for-4.6.2-stable-linux-x86_64>"
+echo "$GODOT_SHA256  /tmp/godot.zip" | sha256sum --check
 ```
-The existing callers map cleanly to one of these two forms.
+Godot publishes SHA-256 hashes alongside each release. Hardcode the expected hash for the pinned version.
 
 ---
 
-### 2.2 CI/CD — Unpinned Third-Party GitHub Actions — MEDIUM
-**Files:** `.github/workflows/validate.yml`, `.github/workflows/export.yml`
+### 2.2 CI — GitHub Actions Pinned to Semver Tags, Not SHA Digests
 
-Both workflows use floating version tags for third-party Actions:
-- `actions/checkout@v4`
-- `actions/cache@v4`
-- `actions/upload-artifact@v4`
-- `actions/download-artifact@v4`
-- `actions/setup-python@v5`
-- `chickensoft-games/setup-godot@v2`
-- `softprops/action-gh-release@v2`
+**Severity:** Low
+**Location:** `.github/workflows/validate.yml:22,59,109,133`, `.github/workflows/export.yml`
 
-The release job holds `contents: write`. A tag re-pointed to a malicious commit would silently execute arbitrary code in the build pipeline and could inject backdoors into exported binaries or publish them to the release.
-
-**Recommended fix:** Pin every third-party Action to a full commit SHA. Example:
+**Evidence:**
 ```yaml
-# Before:
-uses: actions/checkout@v4
-# After (verify correct SHA before using):
+uses: actions/checkout@v6
+uses: actions/cache@v4
+uses: actions/upload-artifact@v7
+uses: actions/setup-python@v6
+```
+
+**Exploit scenario:** A maintainer of those actions (or GitHub itself) could force-push a new commit under the same `v6` tag. The next CI run would execute the new code with whatever permissions the job possesses. For GitHub-maintained actions this risk is low, but it is a recognised supply chain pattern.
+
+**Recommended fix:** Pin each action to a full commit SHA:
+```yaml
 uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 ```
+Tools like `dependabot` (Actions flavor) or `pin-github-action` can automate this.
 
 ---
 
-### 2.3 CI/CD — Unpinned `rcedit` npm Install — LOW
-**File:** `.github/workflows/export.yml:101`
+### 2.3 Settings — `display_mode` and `control_scheme` Lack Enum Bounds
 
+**Severity:** Low (informational in practice)
+**Location:** `game/autoload/settings.gd:270–275`
+
+**Evidence:**
+```gdscript
+display_mode = _get_config_int(
+    config, "preferences", "display_mode", 1
+)
+control_scheme = _get_config_int(
+    config, "preferences", "control_scheme", 0
+)
+```
+Both calls omit `min_value`/`max_value` arguments, so `_get_config_int` applies the widest possible range (`-2147483648` to `2147483647`). A crafted `settings.cfg` could set these to values that have no corresponding enum member, potentially causing `match` fall-through or undefined rendering states.
+
+**Recommended fix:** Add bounds to both calls matching the valid enum ranges:
+```gdscript
+display_mode = _get_config_int(config, "preferences", "display_mode", 1, 0, 3)
+control_scheme = _get_config_int(config, "preferences", "control_scheme", 0, 0, 1)
+```
+
+---
+
+### 2.4 GDScript Lint Job is Non-Blocking in CI
+
+**Severity:** Informational
+**Location:** `.github/workflows/validate.yml:179`
+
+**Evidence:**
 ```yaml
-npm install --global rcedit
+lint-gdscript:
+  name: GDScript Lint
+  continue-on-error: true
 ```
 
-No version is pinned. A compromised `rcedit` package on the npm registry would execute arbitrary code during Windows binary post-processing.
+The linter can surface security-relevant patterns (use of `print`, untyped functions, unreachable code) but currently cannot block a merge. This is a development convenience, but over time erodes the value of the check.
 
-**Recommended fix:** `npm install --global rcedit@3.0.0` (verify the current stable version).
-
----
-
-### 2.4 Content-Parser Numeric Fields Have No Upper Bound — LOW
-**File:** `game/scripts/content_parser.gd`
-
-`base_price`, `starting_budget`, `starting_cash`, and `daily_rent` are validated for `< 0.0` but have no upper bound. A malformed JSON entry with `"starting_cash": 1e18` would pass parse-time validation and break UI label formatting throughout the session.
-
-**Recommended fix:** Add a named constant (e.g., `MAX_CURRENCY_VALUE = 1_000_000.0`) and clamp or reject values above it during parse.
+**Recommended fix (optional):** Consider promoting to a blocking check or maintaining a lint-error count baseline. At minimum, ensure `push_error`/`push_warning` calls in production paths are caught by the existing `ERROR:` grep in the GUT step.
 
 ---
 
-### 2.5 String Fields Have No Length Bound — INFORMATIONAL
-**File:** `game/scripts/content_parser.gd:88–126`
+### 2.5 Banned-Terms Regex Has False Positive / False Negative Risk
 
-`item_name`, `description`, and `store_name` are accepted at any length. A 100 000-character description silently accepted at boot would not crash Godot but would cause UI layout jank in any label that displays it.
+**Severity:** Informational
+**Location:** `.github/workflows/validate.yml:150–177`
 
-**Recommended fix:** Add a `MAX_LABEL_LEN = 512` clamp with a parse-time warning.
-
----
-
-### 2.6 `settings_path` Is a Mutable Public Variable — LOW
-**File:** `game/autoload/settings.gd:7`
-
-```gdscript
-var settings_path: String = "user://settings.cfg"
+**Evidence:**
+```bash
+BANNED=(
+  "Marvel" "DC Comics"
+  "Adidas" "\bNike\b"
+  ...
+)
+grep -rn --include="*.json" --include="*.gd" -E "$term"
 ```
 
-Any code that assigns this before `save()` or `load()` redirects all settings I/O silently. In tests, a fixture that sets this without restoring it could corrupt another test's persistence state.
+`"Marvel"` (without a word-boundary anchor) would match `"marveling"`, `"remarkable"`, etc. CLAUDE.md acknowledges prior false-positive regressions. Conversely, mixed-case variants like `"MARVEL"` or `"marvel"` would not be caught because `grep -E` is case-sensitive by default.
 
-**Recommended fix:** Convert to `const`. This was fixed in the previous audit pass; verify it is still `const` in the current working tree.
-
----
-
-### 2.7 Secondary Persistence Files Lack Size Validation — LOW
-**Files:** `game/scripts/systems/tutorial_system.gd`, `game/autoload/onboarding_system.gd`
-
-Both load `ConfigFile` from `user://` without a prior size check. `save_manager.gd` and `settings.gd` both guard with `MAX_*_FILE_BYTES` before reading. Inconsistency means a corrupted or abnormally large tutorial/onboarding file would be read fully into memory.
-
-**Recommended fix:** Apply the same file-size-before-open pattern used in `save_manager.gd`.
-
----
-
-### 2.8 GUT Addon Vendored Without Pinned Version — INFORMATIONAL
-**Directory:** `addons/gut/` (194 files)
-
-The GUT testing framework is a full vendored copy with no version recorded in the repository and no hash check in CI. A future contributor silently updating these files could introduce code that runs during CI.
-
-**Recommended fix:** Record the expected GUT version in `addons/gut/plugin.cfg` as a comment. Optionally add a `sha256sum` check in the CI step that imports the project.
-
----
-
-### 2.9 `FileAccess.file_exists()` + `open()` TOCTOU Pattern — INFORMATIONAL
-**File:** `game/autoload/audio_manager.gd:449–454`
-
-```gdscript
-if not FileAccess.file_exists(AUDIO_REGISTRY_PATH):
-    ...
-var file := FileAccess.open(AUDIO_REGISTRY_PATH, FileAccess.READ)
-if file == null:
-    ...
+**Recommended fix:** Add `\b` anchors and the `-i` (case-insensitive) flag uniformly:
+```bash
+matches=$(grep -rni --include="*.json" --include="*.gd" -E "\b${term}\b" ... || true)
 ```
-
-The existence check and open are not atomic. For a local game file this is harmless, but the pattern diverges from `save_manager.gd` (which only checks the result of `open()`). Standardise on checking `open() == null` only.
+Review each term individually — some already have anchors (`\bNike\b`) while others do not (`"Marvel"`). Consistency reduces both false positives and false negatives.
 
 ---
 
-## 3. Intentional / Acceptable Patterns
+## 3. Intentional or Acceptable Patterns Worth Documenting
 
-| Pattern | Location | Rationale |
-|---|---|---|
-| `user://` for all save paths | `save_manager.gd:8–9` | Godot sandboxes `user://` per user; no traversal outside the app data directory |
-| Save slot bounded to integer 0–3 | `save_manager.gd:969–976` | Prevents slot-parameter path injection |
-| Atomic save via temp-file rename | `save_manager.gd:1078–1095` | Correct pattern; prevents partial-write corruption |
-| 10 MB save file size cap | `save_manager.gd:12` | Guards against oversized/crafted saves |
-| Content loaded only from `res://game/content/` | `data_loader.gd:5` | Bundled, read-only; no user-supplied paths |
-| Debug overlay gated on `OS.is_debug_build()` | `game_world.gd:639` | Not present in release exports |
-| No HTTP, no `OS.execute()`, no `eval` in GDScript | Entire codebase | Zero remote attack surface; no command injection vectors in game code |
-| Export CI rejects credentials in `export_presets.cfg` | `export.yml:83–91` | Regex detects `secret`, `token`, `apikey`, `api_key` keywords |
-| `"Authentication"` is an in-game mechanic | `authentication_system.gd` | No credentials or sessions involved |
+### 3.1 All File I/O Scoped to Godot's `user://` Sandbox
+
+Save files (`save_slot_N.json`), backups (`user://backups/`), settings (`settings.cfg`), and the slot index (`save_index.cfg`) all live under Godot's `user://` virtual path. On all target platforms this maps to an OS-level user application-data directory inaccessible to other applications without elevated privileges. No path is constructed from user-supplied strings.
+
+### 3.2 Save Slot Enumeration Prevents Path Traversal
+
+`game/scripts/core/save_manager.gd:_validate_slot()` enforces slot ∈ [0, 3] before constructing any path. The path template `"save_slot_%d.json" % slot` cannot contain path separators, so no traversal outside `user://` is possible.
+
+### 3.3 Atomic Save Writes Prevent Corruption
+
+`_write_save_file_atomic()` writes to a `.tmp` file and then renames it over the target. This is the correct pattern for crash-safe writes and prevents partially-written saves.
+
+### 3.4 Size Limits on All User-Controlled Files
+
+- Save files: `MAX_SAVE_FILE_BYTES = 10_485_760` (10 MB), checked in `_read_save_dictionary` before parsing.
+- Settings file: `MAX_SETTINGS_FILE_BYTES = 262_144` (256 KB), checked in `load_settings` before parsing.
+
+Neither limit can be exhausted by legitimate game state. An adversary writing an oversized file to `user://` (implying they already have local filesystem access) would hit a graceful fallback rather than an OOM or unbounded parse.
+
+### 3.5 Debug Overlays Properly Gated to Debug Builds
+
+`game/autoload/audit_overlay.gd:_ready()` and `game/scripts/debug/debug_commands.gd:_ready()` both call `queue_free()` unconditionally when `OS.is_debug_build()` is false. The `AuditOverlay` also uses `layer = 128` to ensure it renders above game UI when visible, but this is irrelevant in release builds since the node is freed at startup.
+
+### 3.6 Locale String Validated Against Allowlist Before `TranslationServer` Call
+
+`settings.gd:_apply_locale_preference()` calls `_is_supported_locale()`, which iterates the `SUPPORTED_LOCALES` constant. An unsupported locale string from a tampered `settings.cfg` is rejected and falls back to `"en"` before being passed to `TranslationServer.set_locale()`.
+
+### 3.7 Settings Values Type-Checked and Clamped
+
+All config reads go through typed helper functions (`_get_config_float`, `_get_config_int`, `_get_config_bool`, `_get_config_string`). Each validates the stored type and applies min/max clamps. NaN and Inf are explicitly rejected for float values. Out-of-type values produce a warning and fall back to the declared default.
+
+### 3.8 Keycode Bounds Check on Rebind Load
+
+`_load_keybindings()` checks `keycode_val > MAX_PERSISTED_KEYCODE` (33554431) and ignores keycodes exceeding that threshold. Only actions in the `REBINDABLE_ACTIONS` allowlist are applied; arbitrary action names from the config are ignored.
+
+### 3.9 Content JSON Loaded from `res://` (Immutable in Release)
+
+`DataLoader` reads all item, store, milestone, and arc definitions from `res://game/content/`. In a packaged Godot export the PCK filesystem is read-only — content cannot be modified at runtime by an attacker without replacing the binary or PCK. Runtime mutations of game state live in `GameState` / `InventorySystem`, not in the content catalog.
+
+### 3.10 No `OS.execute()` / Shell Invocations in GDScript
+
+A full grep of all `.gd` files confirms zero calls to `OS.execute`, `OS.shell_open`, or `OS.create_process`. There is no runtime shell injection surface.
+
+### 3.11 No `print()` in Production Code
+
+Zero `print()` calls found in `game/` outside test scripts. All diagnostics use `push_error` / `push_warning`, which are stripped or rate-limited in Godot release exports and do not leak to user-visible surfaces.
+
+### 3.12 Save File Integrity: Single-Player Design Decision
+
+Save files (`user://save_slot_N.json`) are plain JSON with no cryptographic MAC or signature. A local user can edit any value (money, reputation, milestones). This is an intentional single-player game design choice — cheat-enabling edits are the player's prerogative and there is no server-side state to protect. The versioned migration system handles schema evolution; it does not verify provenance.
+
+### 3.13 CI Workflow Permissions Are Minimal
+
+Both `validate.yml` and `export.yml` declare `permissions: contents: read` at the top level and repeat it per-job. No job requests `write` access to contents, packages, or secrets beyond what individual steps explicitly need (the export workflow uses `GODOT_ENCRYPTION_KEY` and signing secrets only in the export job via `secrets:` contexts, not as environment-wide vars).
 
 ---
 
 ## 4. Items Needing Manual Verification
 
-### 4.1 Haggle Price Floor in UI
-`haggle_system.gd:player_counter()` receives `player_price` directly from the haggle panel. The `record_player_offer()` guard (added in §1.1) catches NaN/Infinity/negatives but does not enforce a business-logic floor (e.g., ≥ 10% of sticker price). Verify that the haggle panel UI slider enforces a minimum before emitting the call, or add an explicit `maxf(player_price, sticker_price * MIN_OFFER_RATIO)` floor inside `player_counter()`.
+### 4.1 `icon_path` from Item Content Used in `load()` Call
 
-### 4.2 `_scan_dir` Recursion and Symlinks
-`data_loader.gd:176` recursively descends all subdirectories under `res://game/content/`. In an exported PCK the virtual filesystem cannot contain symlinks. During development, a symlink inside `game/content/` pointing to an ancestor directory would cause infinite recursion at boot. Confirm no such symlinks exist; consider a max-depth guard if external contributors are added.
+**Location:** `game/scenes/ui/pricing_panel.gd:_populate_item_data()`
 
-### 4.3 Save Migration Does Not Fully Validate Sub-Dictionaries
-`save_manager.gd` performs forward migration on the save version field before distributing data to systems. If a hand-edited save passes the root-type and version checks but contains invalid sub-values (e.g., `economy.balance = -999999`), those values pass through to `EconomySystem.load_state()` without further sanitisation. Verify that each system's `load_state()` clamps or validates its numeric fields on ingestion.
+```gdscript
+if def.icon_path and not def.icon_path.is_empty():
+    var tex: Texture2D = load(def.icon_path) as Texture2D
+```
 
-### 4.4 `chickensoft-games/setup-godot` Download Integrity
-This Action downloads and installs the Godot binary in CI. Verify that it fetches from the official Godot GitHub releases endpoint and validates a checksum before installation, since exported binaries are produced from this binary.
+`icon_path` originates from JSON content loaded at boot. In a release PCK, `load()` is restricted to bundled `res://` assets; attempting to load a path outside the PCK silently returns `null`. **Manual check:** Confirm that `ContentRegistry` / `DataLoader` validates `icon_path` values against an allowed prefix (e.g. `res://game/assets/`) at boot, or that a tampered PCK is your actual threat model. In a standard distribution this is low risk.
 
-### 4.5 Release Job `contents: write` Scope
-The `release` job in `export.yml` is the only job with `contents: write`. Confirm that `softprops/action-gh-release@v2` only creates/updates the tagged release and does not push commits or modify branches. Re-verify after any SHA pin update for that Action.
+### 4.2 `store_id` from Save Metadata Passed to `ContentRegistry.resolve()`
+
+**Location:** `game/scripts/core/save_manager.gd:_apply_loaded_active_store()`
+
+```gdscript
+var raw_active_store: String = _get_saved_active_store_id(data)
+canonical = ContentRegistry.resolve(raw_active_store)
+```
+
+A crafted save file could supply an arbitrary string as `active_store_id`. `ContentRegistry.resolve()` is the gatekeeper. **Manual check:** Confirm `ContentRegistry.resolve()` returns an empty `StringName` (rather than the raw input) for unknown IDs, and that an empty canonical causes no harmful code path downstream. From the save manager code the fallback to `_get_primary_owned_store_id()` appears correct, but full tracing through `StoreStateManager.set_active_store()` should be verified.
+
+### 4.3 Pack Opening `card_dicts` Array Built from Item Definitions
+
+**Location:** `game/scenes/ui/inventory_panel.gd:_open_selected_pack()`
+
+```gdscript
+var entry: Dictionary = {
+    "name": card.definition.item_name if card.definition else "Unknown",
+    ...
+}
+EventBus.pack_opening_started.emit(instance_id, card_dicts)
+```
+
+`item_name` from item definitions is displayed in the pack-opening UI. If this string is later rendered as BBCode or HTML-like markup in a RichTextLabel, a maliciously crafted item name in a modded content file could inject formatting. **Manual check:** Verify the pack opening panel renders the name as plain text (use `text` property, not `append_text` with bbcode enabled) or that content validation strips markup characters at load time.
+
+### 4.4 `debug_overlay.gd` Scene Guard
+
+**Location:** `game/scenes/debug/debug_overlay.gd`
+
+The `audit_overlay.gd` and `debug_commands.gd` are both confirmed to guard with `OS.is_debug_build()`. **Manual check:** Verify `debug_overlay.gd` (a different file, not reviewed in this audit) applies the same guard. The push_warning count for that file suggests minimal code, but confirm it does not remain instantiated in release builds.
 
 ---
 
-## 5. Summary Table
+## 5. Safe Hardening Changes Applied In-Place
 
-| # | Title | Severity | Status |
-|---|---|---|---|
-| 1.1 | NaN/negative in haggle offer recording | Medium | **Fixed** |
-| 1.2 | Zero/negative rental fee passthrough | Medium | **Fixed** |
-| 1.3 | Grade `price_multiplier` not validated | Medium | **Fixed** |
-| 1.4 | Registry-driven path traversal in AudioManager | Low | **Fixed** |
-| 2.1 | `eval` in shell validator | Low | Open — restructure test helpers |
-| 2.2 | Unpinned third-party GitHub Actions | Medium | Open — pin to commit SHAs |
-| 2.3 | Unpinned `rcedit` npm install | Low | Open — add version pin |
-| 2.4 | No upper bound on currency fields in content parser | Low | Open |
-| 2.5 | No string length limit on display fields | Informational | Open |
-| 2.6 | `settings_path` mutable public var | Low | Verify previous fix still applies |
-| 2.7 | Secondary persistence files lack size limits | Low | Open |
-| 2.8 | GUT addon vendored without version pin | Informational | Open |
-| 2.9 | TOCTOU pattern in AudioManager open | Informational | Open |
+None applied in this pass. The two most impactful changes (adding SHA verification to CI downloads and adding enum bounds to `display_mode` / `control_scheme` config reads) are low-risk but require confirming the correct SHA and enum ranges with the team before committing. They are documented under Section 2 above.
 
 ---
 
-## 6. In-Place Hardening Changes Applied
+## Appendix: Review Coverage
 
-| File | Change |
-|---|---|
-| `game/scripts/systems/haggle_session.gd` | `record_player_offer` rejects non-finite and non-positive prices |
-| `game/scripts/systems/checkout_system.gd` | `_execute_rental` aborts if `rental_fee` remains ≤ 0 after fallback |
-| `game/scripts/stores/retro_games.gd` | `_load_grades` skips entries with non-finite or non-positive `price_multiplier` |
-| `game/autoload/audio_manager.gd` | `_load_audio_dir` rejects registry paths containing `..` |
+| Area | Files Reviewed | Finding Summary |
+|---|---|---|
+| Save / load pipeline | `save_manager.gd` (1287 lines) | Atomic writes, size limits, versioned migration — well-hardened |
+| Settings persistence | `settings.gd` (744 lines) | Clamped values, locale allowlist, keycode bounds — well-hardened; `display_mode` missing bounds |
+| Content loading | `content_parser.gd`, `data_loader.gd` | res:// immutable, validated at boot |
+| Economy / pricing | `economy_system.gd` (648 lines) | No injection surface; pure math pipeline |
+| UI panels | `pricing_panel.gd`, `inventory_panel.gd`, `haggle_panel.gd` | Plain-text rendering; no XSS surface |
+| Debug surfaces | `audit_overlay.gd`, `debug_commands.gd` | Both properly gated to debug builds |
+| CI pipeline | `validate.yml`, `export.yml` | Semver-pinned actions; Godot downloaded without checksum |
+| Event bus | `event_bus.gd` (514 lines) | Signal-only; no exec surface |
+| Input / keybindings | `settings.gd:_load_keybindings` | Bounds-checked against allowlist |

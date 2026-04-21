@@ -403,6 +403,10 @@ func _on_store_opened(store_id: String) -> void:
 		return
 	var display_name: String = _get_store_display_name(store_id)
 	_store_label.text = display_name
+	var accent: Color = UIThemeConstants.get_store_accent(
+		StringName(store_id)
+	)
+	_store_label.add_theme_color_override("font_color", accent)
 	_store_label.visible = true
 
 

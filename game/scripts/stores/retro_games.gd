@@ -28,6 +28,7 @@ func _ready() -> void:
 	initialize()
 	super._ready()
 	_find_testing_station()
+	_connect_slot_signals()
 
 
 ## Initializes Retro Games lifecycle state and EventBus wiring.
@@ -290,6 +291,7 @@ func _on_store_entered(store_id: StringName) -> void:
 		return
 	_seed_starter_inventory()
 	_testing_available = has_testing_station()
+	_apply_accent_to_slots(UIThemeConstants.STORE_ACCENT_RETRO_GAMES)
 	EventBus.store_opened.emit(String(STORE_ID))
 
 
@@ -303,7 +305,14 @@ func get_store_actions() -> Array:
 func _on_store_exited(store_id: StringName) -> void:
 	if store_id != STORE_ID:
 		return
+	_apply_accent_to_slots(Color.WHITE)
 	EventBus.store_closed.emit(String(STORE_ID))
+
+
+func _apply_accent_to_slots(color: Color) -> void:
+	for slot_node: Node in _slots:
+		if slot_node is ShelfSlot:
+			(slot_node as ShelfSlot).apply_accent(color)
 
 
 func _on_customer_purchased(
@@ -360,6 +369,61 @@ func _try_auto_test(item_id: String) -> void:
 	if not _testing_system:
 		return
 	_testing_system.start_test(item_id)
+
+
+## Connects all shelf slot slot_changed signals and price update signals so
+## slot labels stay in sync when items are placed or prices are changed.
+func _connect_slot_signals() -> void:
+	for slot_node: Node in _slots:
+		if not slot_node is ShelfSlot:
+			continue
+		var slot := slot_node as ShelfSlot
+		if not slot.slot_changed.is_connected(_on_slot_changed):
+			slot.slot_changed.connect(_on_slot_changed)
+	_connect_store_signal(EventBus.price_set, _on_price_set)
+	_connect_store_signal(EventBus.item_priced, _on_item_priced)
+
+
+## Refreshes the display label on a single slot from the current inventory state.
+func _refresh_slot_display(slot: ShelfSlot) -> void:
+	if not _inventory_system:
+		return
+	var item_id: StringName = slot.get_item_id()
+	if item_id.is_empty():
+		return
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item or not item.definition:
+		return
+	var price: float = get_item_price(item_id)
+	slot.set_display_data(item.definition.item_name, item.condition, price)
+
+
+func _on_slot_changed(slot: ShelfSlot) -> void:
+	if not slot.is_occupied():
+		slot.clear_display_data()
+		return
+	_refresh_slot_display(slot)
+
+
+## Updates the display on whichever slot holds the priced item instance.
+func _on_price_set(instance_id: String, _price: float) -> void:
+	for slot_node: Node in _slots:
+		if not slot_node is ShelfSlot:
+			continue
+		var slot := slot_node as ShelfSlot
+		if slot.get_item_instance_id() == instance_id:
+			_refresh_slot_display(slot)
+			return
+
+
+func _on_item_priced(item_id: StringName, _price: float) -> void:
+	for slot_node: Node in _slots:
+		if not slot_node is ShelfSlot:
+			continue
+		var slot := slot_node as ShelfSlot
+		if slot.get_item_id() == item_id:
+			_refresh_slot_display(slot)
+			return
 
 
 func _connect_store_signal(sig: Signal, callable: Callable) -> void:

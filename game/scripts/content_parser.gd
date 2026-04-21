@@ -147,7 +147,8 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 		item.tags = ItemDefinition._normalize_string_name_array(
 			normalized["tags"]
 		)
-	_validate_sports_card(item, normalized)
+	if not _validate_sports_card(item, normalized):
+		return null
 	var extra: Dictionary = {}
 	for key: String in normalized:
 		if key not in _ITEM_KNOWN_KEYS:
@@ -157,13 +158,13 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	return item
 
 
-## Validates required fields for sports trading cards and pushes a boot-time
-## error if any are missing (so boot stops with a visible error panel).
-static func _validate_sports_card(item: ItemDefinition, data: Dictionary) -> void:
+## Validates required fields for sports trading cards. Returns false and emits
+## push_error if validation fails so DataLoader records a boot-time failure.
+static func _validate_sports_card(item: ItemDefinition, data: Dictionary) -> bool:
 	if str(item.store_type) != "sports":
-		return
+		return true
 	if str(item.category) != "trading_cards":
-		return
+		return true
 	var missing: Array[String] = []
 	if item.era.is_empty():
 		missing.append("era")
@@ -174,6 +175,8 @@ static func _validate_sports_card(item: ItemDefinition, data: Dictionary) -> voi
 			"ContentParser: sports trading card '%s' missing required fields: %s"
 			% [item.id, missing]
 		)
+		return false
+	return true
 
 
 static func _normalize_item_data(data: Dictionary) -> Dictionary:
@@ -548,7 +551,13 @@ static func parse_staff(data: Dictionary) -> StaffDefinition:
 			d.role = StaffDefinition.StaffRole.STOCKER
 		"greeter":
 			d.role = StaffDefinition.StaffRole.GREETER
+		"cashier":
+			d.role = StaffDefinition.StaffRole.CASHIER
 		_:
+			push_warning(
+				"ContentParser: staff '%s' has unknown role '%s', defaulting to CASHIER"
+				% [d.staff_id, role_str]
+			)
 			d.role = StaffDefinition.StaffRole.CASHIER
 	return d
 

@@ -89,7 +89,7 @@ func sample() -> float:
 	if total_sampled == 0:
 		return 0.0
 	var pct: float = float(matched) / float(total_sampled)
-	print("[AccentBudget] sampled %d px, %.1f%% accent+alert" % [total_sampled, pct * 100.0])
+	push_warning("[AccentBudget] sampled %d px, %.1f%% accent+alert" % [total_sampled, pct * 100.0])
 	return pct
 
 

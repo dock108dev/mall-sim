@@ -172,6 +172,20 @@
       "visual_category": "rack"
     },
     {
+      "id": "import_wall_display",
+      "display_name": "Import Wall Display",
+      "description": "A featured wall fixture for signature imports and rare retro finds.",
+      "cost": 0.0,
+      "slot_count": 3,
+      "footprint_cells": [[0, 0], [1, 0], [2, 0]],
+      "rotation_support": true,
+      "store_type_restriction": "retro_games",
+      "unlock_rep": 0,
+      "unlock_day": 0,
+      "requires_wall": true,
+      "visual_category": "shelf"
+    },
+    {
       "id": "repair_workbench",
       "display_name": "Repair Workbench",
       "description": "A workshop bench for cleaning, repairs, and refurb jobs.",

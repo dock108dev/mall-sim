@@ -67,6 +67,22 @@ func is_transitioning() -> bool:
 	return _is_transitioning
 
 
+## Fades out, invokes callback (use to swap in-scene content), then fades back in.
+## Does not change the scene tree root.
+func crossfade(callback: Callable) -> void:
+	if _is_transitioning:
+		push_warning("SceneTransition: transition already in progress")
+		return
+	_is_transitioning = true
+	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	await _fade_out()
+	callback.call()
+	await get_tree().process_frame
+	await _fade_in()
+	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_is_transitioning = false
+
+
 func _fade_out() -> void:
 	_kill_tween()
 	_tween = create_tween()

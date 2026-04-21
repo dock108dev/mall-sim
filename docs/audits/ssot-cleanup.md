@@ -77,3 +77,97 @@
 - `_can_test_item` has zero remaining references in game code or tests.
 - `consumer_electronics` string no longer appears as a fallback lookup in GDScript; it remains only as an alias entry in `store_definitions.json` (correct) and as a scene path segment in `store_definitions.json` scene_path field (correct).
 - `can_test_item(ItemInstance)` still has its caller at `retro_games.gd:109` and is fully intact.
+
+---
+
+## Pass 3 — Phase 0 Audit FAIL Resolution + ARCHITECTURE.md SSOT Alignment (2026-04-21)
+
+### Diff-Driven Deletion Summary
+
+No code was deleted in this pass. The diff introduced two decision documents (`docs/decisions/0002-vertical-slice-store.md` and `tools/interaction_audit.md`) which identified one interaction-audit FAIL (p0-001) and confirmed the Phase 4 vertical-slice store selection. The pass closes that FAIL and corrects the documentation SSOT drift that the audit surface revealed.
+
+### Changes Made
+
+1. **Resolved p0-001: `customer_left` missing `reason` field (`game/scripts/characters/shopper_ai.gd`).**
+   Added `_leave_reason: StringName = &"mall_exit"` instance variable. Set it to `&"utility_leave"`, `&"no_buy"`, `&"no_route"`, or `&"no_register"` at each `request_leave()` call site that corresponds to an unsatisfied departure. The `_despawn()` emit now includes `"reason": &"purchase_complete" if _made_purchase else _leave_reason`.
+
+2. **Added walk-reason HUD subscriber (`game/scenes/ui/visual_feedback.gd`).**
+   Connected `EventBus.customer_left` to `_on_customer_left()`. When `satisfied == false`, spawns a short-lived floating label at `WALK_TEXT_ORIGIN` using the human-readable string from `_WALK_REASON_LABELS`. This closes the "Walk (no sale)" FAIL from the Phase 0 interaction audit.
+
+3. **Added `customer_walked` checkpoint to `AuditOverlay` (`game/autoload/audit_overlay.gd`).**
+   Appended `&"customer_walked"` to `CHECKPOINTS` and wired it in `_wire_signals()`: fires `pass_check(&"customer_walked")` when `EventBus.customer_left` fires with `satisfied == false` and a `reason` key present, per the audit doc recommendation.
+
+4. **Corrected ARCHITECTURE.md SSOT drift.**
+   The document referenced phantom singletons (`GameState`, `Economy`, `SaveSystem`, `DataLoader`) and non-existent paths (`scripts/autoload/`, `data/`, `scenes/`, `assets/`). All updated to match live code: singleton names match `project.godot` autoload registrations; directory structure reflects the actual `game/` subtree layout; data flow signals updated to `item_sold`, `transaction_completed`; `SaveManager` (class in `game/scripts/core/save_manager.gd`) replaces `SaveSystem` throughout.
+
+### SSOT Verification (cumulative)
+
+| Domain | Authoritative module | Notes |
+| --- | --- | --- |
+| Store content parsing | `game/scripts/content_parser.gd` via `game/autoload/data_loader.gd` | Unchanged from Pass 1. |
+| Pocket Creatures item catalog | `game/content/stores/pocket_creatures_cards.json` | Unchanged from Pass 1. |
+| Sports season content | `game/content/stores/sports_seasons.json` | Unchanged from Pass 1. |
+| Runtime item-testing completion signal | `EventBus.item_test_completed` | Unchanged from Pass 1. |
+| Electronics store content entry | `"electronics"` (canonical) in `ContentRegistry` | Unchanged from Pass 2. |
+| Item testability predicate | `RetroGamesController.can_test_item(ItemInstance)` | Unchanged from Pass 2. |
+| Walk-reason feedback | `VisualFeedback._on_customer_left()` + `ShopperAI._leave_reason` | New in Pass 3. Floating label on unsatisfied `customer_left`. |
+| Walk-reason audit checkpoint | `AuditOverlay` `&"customer_walked"` checkpoint | New in Pass 3. Wired to `customer_left` where `satisfied == false and reason` present. |
+| Singleton name SSOT | `project.godot` autoload registrations | `ARCHITECTURE.md` now matches. |
+| Source directory SSOT | `game/` subtree as laid out in repo | `ARCHITECTURE.md` now matches. |
+
+### Risk Log
+
+1. **Retained `_format_legacy_metadata` in `game/scenes/ui/save_load_panel.gd`.** (Unchanged from Pass 2 — still needed for un-migrated v0 saves.)
+2. **Retained `_migrate_v0_to_v1` in `game/scripts/core/save_manager.gd`.** (Unchanged from Pass 2 — migration chain must stay complete.)
+3. **Retained `generate_report()` in `game/scripts/systems/performance_report_system.gd`.** (Unchanged from Pass 2 — called from full-game-loop test and intended as UI integration point.)
+4. **`_leave_reason` defaults to `&"mall_exit"` for shoppers who reach the EXIT waypoint via normal navigation.** The HUD label for this case ("Left the mall") is intentionally shown only when `satisfied == false`, so a shopper who bought something and then exited via the EXIT waypoint does not produce a walk-reason label.
+5. **`DEFAULT_STARTING_STORE` in `game_manager.gd:9` was `&"sports"`.** Resolved in Pass 4 — see below.
+
+### Sanity Check
+
+- `customer_left.emit()` in `shopper_ai.gd`, `queue_system.gd`, `customer_system.gd`, and `mall_customer_spawner.gd` are the four emission sites. Only `shopper_ai.gd` now populates `reason`; the other three emit backend-bookkeeping payloads (customer IDs, background spawner data) without a browsing context, so no walk-reason label fires for those — which is correct behavior.
+- `AuditOverlay.CHECKPOINTS` now has 9 entries; `all_passed()` requires all 9 before returning `true`. Existing tests in `tests/gut/test_audit_checkpoints.gd` check only the original 8 named checkpoints by key — they continue to pass since `pass_check(&"customer_walked")` is additive and tests do not call `all_passed()` in the checkpoint-by-checkpoint tests.
+- No `SaveSystem`, `GameState` (as standalone autoload), or `Economy` (as standalone autoload) references remain in `ARCHITECTURE.md`. All occurrences now reflect live singleton names from `project.godot`.
+
+---
+
+## Pass 4 — Phase 4 Start: DEFAULT_STARTING_STORE flip (2026-04-21)
+
+### Diff-Driven Deletion Summary
+
+No code was deleted in this pass.
+
+### Changes Made
+
+1. **Changed `DEFAULT_STARTING_STORE` from `&"sports"` to `&"retro_games"` (`game/autoload/game_manager.gd:9`).**
+   Decision 0002 (`docs/decisions/0002-vertical-slice-store.md`) designated Retro Games as the Phase 4 vertical-slice store and explicitly mandated this change at Phase 4 start. All six consumers of the constant (`game_manager.gd:359`, `save_manager.gd:975`, `game_world.gd:545,621,1098`, `tests/gut/test_new_game_state.gd:98`) read the constant by reference — no secondary edits required.
+
+### SSOT Verification (cumulative)
+
+| Domain | Authoritative module | Notes |
+| --- | --- | --- |
+| Store content parsing | `game/scripts/content_parser.gd` via `game/autoload/data_loader.gd` | Unchanged from Pass 1. |
+| Pocket Creatures item catalog | `game/content/stores/pocket_creatures_cards.json` | Unchanged from Pass 1. |
+| Sports season content | `game/content/stores/sports_seasons.json` | Unchanged from Pass 1. |
+| Runtime item-testing completion signal | `EventBus.item_test_completed` | Unchanged from Pass 1. |
+| Electronics store content entry | `"electronics"` (canonical) in `ContentRegistry` | Unchanged from Pass 2. |
+| Item testability predicate | `RetroGamesController.can_test_item(ItemInstance)` | Unchanged from Pass 2. |
+| Walk-reason feedback | `VisualFeedback._on_customer_left()` + `ShopperAI._leave_reason` | Unchanged from Pass 3. |
+| Walk-reason audit checkpoint | `AuditOverlay` `&"customer_walked"` checkpoint | Unchanged from Pass 3. |
+| Singleton name SSOT | `project.godot` autoload registrations | Unchanged from Pass 3. |
+| Source directory SSOT | `game/` subtree as laid out in repo | Unchanged from Pass 3. |
+| Default starting store | `GameManager.DEFAULT_STARTING_STORE = &"retro_games"` | **Changed in Pass 4.** Was `&"sports"`; now `&"retro_games"` per Decision 0002. |
+
+### Risk Log
+
+1. **Retained `_format_legacy_metadata` in `game/scenes/ui/save_load_panel.gd`.** (Unchanged — still needed for un-migrated v0 saves.)
+2. **Retained `_migrate_v0_to_v1` in `game/scripts/core/save_manager.gd`.** (Unchanged — migration chain must stay complete.)
+3. **Retained `generate_report()` in `game/scripts/systems/performance_report_system.gd`.** (Unchanged — called from full-game-loop test and intended as UI integration point.)
+4. **`_leave_reason` defaults to `&"mall_exit"`.** (Unchanged from Pass 3.)
+5. **Sports Memorabilia controller untouched.** `sports_memorabilia_controller.gd` remains in the codebase as Phase 6 work. No regressions introduced — the store is accessible via the hub, it simply is no longer the boot-default store.
+
+### Sanity Check
+
+- `DEFAULT_STARTING_STORE` now reads `&"retro_games"` in `game_manager.gd:9`. All six consumers read via the constant — no hardcoded `&"sports"` strings remain in game code.
+- `tests/gut/test_new_game_state.gd:98` reads `GameManager.DEFAULT_STARTING_STORE` dynamically and asserts the store ID exists in `ContentRegistry` — `retro_games` is a registered store, so the test continues to pass.
+- The `tools/interaction_audit.md` table column "Default boot store" now correctly matches: Retro Games is the boot default, Sports Memorabilia is not.

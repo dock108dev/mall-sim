@@ -18,7 +18,7 @@ func _ready() -> void:
 
 
 func _on_interactable_focused(action_label: String) -> void:
-	_label.text = "[E] %s" % action_label
+	_label.text = action_label
 	_panel.visible = true
 	_fade_to(1.0)
 

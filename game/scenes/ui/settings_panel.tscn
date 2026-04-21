@@ -253,6 +253,29 @@ text = "Language"
 layout_mode = 2
 custom_minimum_size = Vector2(160, 0)
 
+[node name="TextScaleRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox/TextScaleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Text Scale"
+
+[node name="Option" type="OptionButton" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox/TextScaleRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+
+[node name="CrtRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox/CrtRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "CRT Shader"
+
+[node name="Check" type="CheckButton" parent="PanelRoot/Margin/VBox/TabContainer/Display/VBox/CrtRow"]
+layout_mode = 2
+
 [node name="Controls" type="MarginContainer" parent="PanelRoot/Margin/VBox/TabContainer"]
 visible = false
 layout_mode = 2

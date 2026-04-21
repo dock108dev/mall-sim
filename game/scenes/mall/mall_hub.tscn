@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://mall_hub001"]
+[gd_scene load_steps=6 format=3 uid="uid://mall_hub001"]
 
 [ext_resource type="Script" path="res://game/scenes/mall/mall_hub.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://world001" path="res://game/scenes/world/game_world.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://storefront_card_001" path="res://game/scenes/mall/storefront_card.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://drawerhost001" path="res://game/scenes/ui/drawer_host.tscn" id="4"]
+[ext_resource type="PackedScene" uid="uid://settingsp1" path="res://game/scenes/ui/settings_panel.tscn" id="5"]
 
 [node name="MallHub" type="Node"]
 script = ExtResource("1")
@@ -54,6 +55,26 @@ store_id = &"sports"
 display_name = "Sports Cards"
 accent_color = Color(0.788, 0.604, 0.169, 1)
 
+[node name="HubUIOverlay" type="Control" parent="HubLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="SettingsButton" type="Button" parent="HubLayer/HubUIOverlay"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -100.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 40.0
+grow_horizontal = 0
+text = "Settings"
+
 [node name="AmbientCustomers" type="Node2D" parent="HubLayer/ConcourseRoot"]
 
 [node name="AmbientCustomer1" type="Sprite2D" parent="HubLayer/ConcourseRoot/AmbientCustomers"]
@@ -74,3 +95,5 @@ autoplay = false
 volume_db = -6.0
 
 [node name="DrawerHost" parent="." instance=ExtResource("4")]
+
+[connection signal="pressed" from="HubLayer/HubUIOverlay/SettingsButton" to="." method="_on_settings_pressed"]

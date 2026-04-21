@@ -6,6 +6,8 @@ signal preference_changed(key: StringName, value: Variant)
 
 const SETTINGS_PATH: String = "user://settings.cfg"
 
+const _CRT_SHADER_PATH: String = "res://game/resources/shaders/crt_overlay.gdshader"
+
 const COMMON_RESOLUTIONS: Array[Vector2i] = [
 	Vector2i(1280, 720),
 	Vector2i(1366, 768),
@@ -48,6 +50,9 @@ const FONT_SIZE_LABEL_KEYS: Array[String] = [
 	"SETTINGS_FONT_LARGE", "SETTINGS_FONT_EXTRA_LARGE",
 ]
 
+const TEXT_SCALE_VALUES: Array[float] = [1.0, 1.25, 1.5]
+const TEXT_SCALE_LABELS: Array[String] = ["100%", "125%", "150%"]
+
 const UI_SCALE_MIN: float = 0.75
 const UI_SCALE_MAX: float = 1.50
 const UI_SCALE_STEP: float = 0.05
@@ -70,6 +75,12 @@ var control_scheme: int = 0
 var render_quality: int = RenderQuality.HIGH
 ## False = follow auto-hide behaviour (default). True = force-show rail even after day-3 auto-hide.
 var show_objective_rail: bool = false
+## True once the player has explicitly skipped the first-play tutorial.
+var tutorial_skip: bool = false
+## CRT scanline shader overlay. Default off so all screens remain fully legible.
+var crt_enabled: bool = false
+## Text scale multiplier index: 0=100%, 1=125%, 2=150%.
+var text_scale: int = 0
 
 ## Supported locales — add entries here when new CSV columns are added.
 const SUPPORTED_LOCALES: Array[Dictionary] = [
@@ -93,10 +104,14 @@ const PREFERENCE_DEFAULTS: Dictionary = {
 	&"control_scheme": 0,
 	&"language": "en",
 	&"show_objective_rail": false,
+	&"tutorial_skip": false,
 }
 
 ## Default bindings captured from InputMap at startup.
 var _default_bindings: Dictionary = {}
+
+var _crt_layer: CanvasLayer = null
+var _save_pending: bool = false
 
 
 func _ready() -> void:
@@ -105,6 +120,50 @@ func _ready() -> void:
 	apply_settings()
 	_apply_locale_preference()
 	preference_changed.connect(_on_preference_changed)
+	_setup_crt_overlay()
+
+
+## Schedule a deferred save so rapid slider changes write only once per frame.
+func schedule_save() -> void:
+	if _save_pending or not is_inside_tree():
+		return
+	_save_pending = true
+	call_deferred("_execute_deferred_save")
+
+
+func _execute_deferred_save() -> void:
+	_save_pending = false
+	save_settings()
+
+
+func _setup_crt_overlay() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	_crt_layer = CanvasLayer.new()
+	_crt_layer.layer = 100
+	_crt_layer.name = "CRTLayer"
+	add_child(_crt_layer)
+
+	var rect := ColorRect.new()
+	rect.name = "CRTRect"
+	rect.anchor_right = 1.0
+	rect.anchor_bottom = 1.0
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var crt_shader: Shader = load(_CRT_SHADER_PATH)
+	if crt_shader != null:
+		var mat := ShaderMaterial.new()
+		mat.shader = crt_shader
+		rect.material = mat
+
+	_crt_layer.add_child(rect)
+	_apply_crt()
+
+
+func _apply_crt() -> void:
+	if _crt_layer == null:
+		return
+	_crt_layer.visible = crt_enabled
 
 
 func _capture_default_bindings() -> void:
@@ -134,6 +193,9 @@ func save_settings() -> void:
 	config.set_value("preferences", "control_scheme", control_scheme)
 	config.set_value("display", "render_quality", render_quality)
 	config.set_value("ui", "show_objective_rail", show_objective_rail)
+	config.set_value("ui", "tutorial_skip", tutorial_skip)
+	config.set_value("display", "crt_enabled", crt_enabled)
+	config.set_value("display", "text_scale", text_scale)
 	_save_keybindings(config)
 	var save_err: Error = config.save(SETTINGS_PATH)
 	if save_err != OK:
@@ -216,6 +278,11 @@ func load_settings() -> void:
 		RenderQuality.HIGH, RenderQuality.LOW, RenderQuality.HIGH
 	)
 	show_objective_rail = _get_config_bool(config, "ui", "show_objective_rail", true)
+	tutorial_skip = _get_config_bool(config, "ui", "tutorial_skip", false)
+	crt_enabled = _get_config_bool(config, "display", "crt_enabled", false)
+	text_scale = _get_config_int(
+		config, "display", "text_scale", 0, 0, TEXT_SCALE_VALUES.size() - 1
+	)
 	_load_keybindings(config)
 	apply_settings()
 
@@ -226,6 +293,7 @@ func apply_settings() -> void:
 	_apply_ui_scale()
 	_apply_font_size()
 	_apply_locale_preference()
+	_apply_crt()
 
 
 func reset_to_defaults() -> void:
@@ -244,6 +312,9 @@ func reset_to_defaults() -> void:
 	control_scheme = 0
 	render_quality = RenderQuality.HIGH
 	show_objective_rail = false
+	tutorial_skip = false
+	crt_enabled = false
+	text_scale = 0
 	reset_keybindings_to_defaults()
 	apply_settings()
 
@@ -284,6 +355,7 @@ func get_preference(key: StringName) -> Variant:
 		&"control_scheme": return control_scheme
 		&"language": return locale
 		&"show_objective_rail": return show_objective_rail
+		&"tutorial_skip": return tutorial_skip
 		_:
 			push_warning(
 				"Settings: unknown preference key '%s'" % key
@@ -329,6 +401,7 @@ func set_preference(key: StringName, value: Variant) -> void:
 		&"control_scheme": control_scheme = value as int
 		&"language": locale = value as String
 		&"show_objective_rail": show_objective_rail = value as bool
+		&"tutorial_skip": tutorial_skip = value as bool
 	preference_changed.emit(String(key), value)
 	EventBus.preference_changed.emit(String(key), value)
 
@@ -551,7 +624,10 @@ func _apply_font_size() -> void:
 			% font_size
 		)
 		font_size = FontSize.MEDIUM
-	var px: int = FONT_SIZE_VALUES[font_size]
+	var clamped_scale_idx: int = clampi(text_scale, 0, TEXT_SCALE_VALUES.size() - 1)
+	var scale: float = TEXT_SCALE_VALUES[clamped_scale_idx]
+	var base_px: int = FONT_SIZE_VALUES[font_size]
+	var px: int = maxi(10, int(float(base_px) * scale))
 	# Scale proportionally from Medium (14px) baseline
 	var ratio: float = float(px) / 14.0
 	theme.set_font_size("font_size", "Label", px)

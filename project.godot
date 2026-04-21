@@ -40,12 +40,14 @@ OnboardingSystemSingleton="*res://game/autoload/onboarding_system.gd"
 MarketTrendSystemSingleton="*res://game/autoload/market_trend_system.gd"
 TooltipManager="*res://game/autoload/tooltip_manager.gd"
 ObjectiveRail="*res://game/scenes/ui/objective_rail.tscn"
+InteractionPrompt="*res://game/scenes/ui/interaction_prompt.tscn"
 ObjectiveDirector="*res://game/autoload/objective_director.gd"
 AuditOverlay="*res://game/autoload/audit_overlay.gd"
 
 [debug]
 
 gdscript/warnings/unused_signal=0
+walkable_mall=false
 
 [display]
 
@@ -60,7 +62,7 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [gui]
 
-theme/custom="res://game/resources/ui/mall_theme.tres"
+theme/custom="res://game/themes/mallcore_theme.tres"
 
 [input]
 

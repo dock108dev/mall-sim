@@ -45,6 +45,15 @@
     "unlock_message": "Prestige nameplate unlocked! Your storefront now bears a mark of distinction."
   },
   {
+    "id": "import_wall_display",
+    "display_name": "Import Wall Display",
+    "description": "A dedicated wall fixture for showcasing rare imports and signature retro games. Adds three high-visibility display slots.",
+    "effect_type": "fixture_unlock",
+    "effect_target": "import_wall_display",
+    "effect_value": null,
+    "unlock_message": "Import Wall Display unlocked! Place it in Retro Games to feature your rarest imports."
+  },
+  {
     "id": "prestige_bronze_badge",
     "display_name": "Bronze Prestige Badge",
     "description": "A bronze badge displayed on your save slot and end screen, commemorating your retail achievements.",

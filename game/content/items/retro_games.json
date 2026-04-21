@@ -1,552 +1,243 @@
 [
   {
-    "id": "retro_plumber_world_ss_loose",
-    "item_name": "Pipebound Kingdom",
+    "id": "canopy64_orbital_smash_loose",
+    "name": "Orbital Smash Arena",
     "store_type": "retro_games",
     "category": "cartridges",
-    "base_price": 25.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A bright, secret-packed platformer that everyone swears they can still finish in one sitting.",
-    "subcategory": "loose",
-    "tags": [
-      "platformer",
-      "SuperStation",
-      "classic",
-      "16bit",
-      "starter"
-    ]
-  },
-  {
-    "id": "retro_hedgehog_rush_md_loose",
-    "item_name": "Volt Varmint Velocity",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 12.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A blur-fast mascot platformer built around slopes, loops, and smug speedrun talk.",
-    "subcategory": "loose",
-    "tags": [
-      "platformer",
-      "MegaDrive16",
-      "classic",
-      "16bit",
-      "starter"
-    ]
-  },
-  {
-    "id": "retro_elf_quest_64_loose",
-    "item_name": "Oath of Hours",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 35.0,
+    "console": "Canopy 64",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
     "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A sprawling adventure cartridge with dungeons, ocarina puzzles, and endless forum nostalgia.",
-    "subcategory": "loose",
-    "tags": [
-      "adventure",
-      "TriForce64",
-      "classic",
-      "64bit"
-    ]
-  },
-  {
-    "id": "retro_galaxy_kart_64_loose",
-    "item_name": "Nebula Kart Circuit",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 30.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "Four-player kart chaos with rubber-band items and friendships tested over one finish line.",
-    "subcategory": "loose",
-    "tags": [
-      "racing",
-      "TriForce64",
-      "multiplayer",
-      "family"
-    ]
-  },
-  {
-    "id": "retro_final_saga_7_ds_loose",
-    "item_name": "Starfall Ballad VII",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 40.0,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A melodramatic disc-spanning role-playing epic people quote like it changed their lives.",
-    "subcategory": "loose",
-    "tags": [
-      "rpg",
-      "DiscStation",
-      "classic",
-      "story"
-    ]
-  },
-  {
-    "id": "retro_plumber_land_pb_loose",
-    "item_name": "Pipebound Pocket Isles",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 15.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A compact handheld platformer that feels tiny until someone starts chasing every hidden coin.",
-    "subcategory": "loose",
-    "tags": [
-      "platformer",
-      "PortaBoy",
-      "handheld",
-      "starter"
-    ]
-  },
-  {
-    "id": "retro_creature_catcher_pb_loose",
-    "item_name": "Myth Menagerie Scarlet",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 20.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A portable collecting RPG that made schoolyard trade charts look like stock tickers.",
-    "subcategory": "loose",
-    "tags": [
-      "rpg",
-      "PortaBoy",
-      "handheld",
-      "collector",
-      "starter"
-    ]
-  },
-  {
-    "id": "retro_street_brawler_2_md_loose",
-    "item_name": "Metro Brawl Turbo",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 10.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "The couch-fighting staple with sharp inputs, louder taunts, and one infamously cheap sweep kick.",
-    "subcategory": "loose",
-    "tags": [
-      "fighting",
-      "MegaDrive16",
-      "classic",
-      "multiplayer"
-    ]
-  },
-  {
-    "id": "retro_star_pilot_64_loose",
-    "item_name": "Comet Ace 64",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 22.0,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "An on-rails space shooter with chatter-box wingmates and stage music people still hum.",
-    "subcategory": "loose",
-    "tags": [
-      "shooter",
-      "TriForce64",
-      "sci_fi",
-      "classic"
-    ]
-  },
-  {
-    "id": "retro_phantom_thief_ds_loose",
-    "item_name": "Phantom Cipher",
-    "store_type": "retro_games",
-    "category": "cartridges",
     "base_price": 28.0,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A sneaky action game where boxes, vents, and patience solve more problems than bullets do.",
-    "subcategory": "loose",
-    "tags": [
-      "stealth",
-      "DiscStation",
-      "action",
-      "classic"
-    ]
+    "description": "A gravity-bending platform fighter with eight-player chaos and a tournament scene that never quite died."
   },
   {
-    "id": "retro_dungeon_quest_ss_rare",
-    "item_name": "Clockwork Catacomb",
+    "id": "canopy64_stoneward_depths_loose",
+    "name": "Stoneward Depths",
     "store_type": "retro_games",
     "category": "cartridges",
+    "console": "Canopy 64",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "rare",
     "base_price": 55.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A late-run time-twisting role-player that collectors quietly snatch the moment it hits a shelf.",
-    "subcategory": "loose",
-    "tags": [
-      "rpg",
-      "SuperStation",
-      "rare",
-      "classic"
-    ]
+    "description": "A late-run dungeon crawler with hand-drawn maps, a notorious final boss, and devoted speedrunners."
   },
   {
-    "id": "retro_earth_kids_ss_rare",
-    "item_name": "Sidewalk Psykids",
+    "id": "canopy64_chromatic_drift_loose",
+    "name": "Chromatic Drift 64",
     "store_type": "retro_games",
     "category": "cartridges",
-    "base_price": 60.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A heartfelt suburbia RPG with weird humor, oddball enemies, and a fiercely loyal fan base.",
-    "subcategory": "loose",
-    "tags": [
-      "rpg",
-      "SuperStation",
-      "cult",
-      "rare"
-    ]
-  },
-  {
-    "id": "retro_ninja_shadow_md_legendary",
-    "item_name": "Shadow Circuit Zero",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 65.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A brutally clean action cart from the end of the 16-bit era with rumor-fueled scarcity.",
-    "subcategory": "loose",
-    "tags": [
-      "action",
-      "MegaDrive16",
-      "rare",
-      "limited_run"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "retro_elf_quest_64_cib",
-    "item_name": "Oath of Hours (CIB)",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 58.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "Complete with box, booklet, and insert map, this copy feels like it dodged an entire childhood.",
-    "subcategory": "CIB",
-    "tags": [
-      "adventure",
-      "TriForce64",
-      "CIB",
-      "classic"
-    ]
-  },
-  {
-    "id": "retro_plumber_world_ss_cib",
-    "item_name": "Pipebound Kingdom (CIB)",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 42.0,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "Cart, box, and manual together at last, which somehow makes the cheerful mascot feel premium.",
-    "subcategory": "CIB",
-    "tags": [
-      "platformer",
-      "SuperStation",
-      "CIB",
-      "classic"
-    ]
-  },
-  {
-    "id": "retro_final_saga_7_ds_nib",
-    "item_name": "Starfall Ballad VII (Sealed)",
-    "store_type": "retro_games",
-    "category": "cartridges",
-    "base_price": 60.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A factory-sealed copy that asks the eternal retro question of whether opening it would be a crime.",
-    "subcategory": "NIB",
-    "tags": [
-      "rpg",
-      "DiscStation",
-      "sealed",
-      "investment"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "retro_superstation_console",
-    "item_name": "SuperStation Console (Working)",
-    "store_type": "retro_games",
-    "category": "consoles",
-    "base_price": 50.0,
+    "console": "Canopy 64",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
     "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A tested 16-bit workhorse bundled with cables and enough scuffs to prove it earned them.",
-    "subcategory": "working",
-    "tags": [
-      "SuperStation",
-      "console",
-      "16bit",
-      "starter"
-    ]
+    "base_price": 18.0,
+    "description": "A vibrant kart racer with color-coded boost lanes and a multiplayer mode that tested every friendship."
   },
   {
-    "id": "retro_triforce64_console",
-    "item_name": "Prism 64 Console (Working)",
+    "id": "console_canopy_64",
+    "name": "Canopy 64 Console (Working)",
     "store_type": "retro_games",
     "category": "consoles",
-    "base_price": 65.0,
+    "console": "Canopy 64",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
     "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A chunky polygon-era console that still turns any living room into a tournament bracket.",
-    "subcategory": "working",
-    "tags": [
-      "TriForce64",
-      "console",
-      "64bit",
-      "multiplayer"
-    ]
+    "base_price": 70.0,
+    "description": "A tested 64-bit powerhouse with the signature trident grip and enough scuffs to prove its history."
   },
   {
-    "id": "retro_megadrive16_forparts",
-    "item_name": "MegaVector 16 Console (For Parts)",
+    "id": "neo_spark_starfall_chronicle_loose",
+    "name": "Starfall Chronicle",
     "store_type": "retro_games",
-    "category": "consoles",
+    "category": "cartridges",
+    "console": "Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "uncommon",
+    "base_price": 35.0,
+    "description": "A sweeping disc-spanning RPG that fans still quote in hushed, reverent tones at swap meets."
+  },
+  {
+    "id": "neo_spark_hollowveil_asylum_loose",
+    "name": "Hollowveil Asylum",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "rare",
+    "base_price": 60.0,
+    "description": "A 32-bit survival horror title that collectors quietly snatch the moment it appears on any shelf."
+  },
+  {
+    "id": "neo_spark_turbojump_world_loose",
+    "name": "Turbojump World",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "common",
     "base_price": 15.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A fixer-upper system with mystery symptoms and just enough hope to tempt a refurbisher.",
-    "subcategory": "for_parts",
-    "tags": [
-      "MegaDrive16",
-      "console",
-      "repair",
-      "starter"
-    ]
+    "description": "A bright mascot platformer everyone swears they finished in one sitting without saving."
   },
   {
-    "id": "retro_ss_controller",
-    "item_name": "SuperStation Controller",
+    "id": "console_neo_spark",
+    "name": "Neo Spark Console (Working)",
     "store_type": "retro_games",
-    "category": "accessories",
+    "category": "consoles",
+    "console": "Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "common",
+    "base_price": 50.0,
+    "description": "A disc-tray workhorse that still loads without complaint if you know the right angle to hold it."
+  },
+  {
+    "id": "pc_booster_canopy_fable_creatures_loose",
+    "name": "Fable Creatures Azure",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "PC Booster Canopy",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "common",
+    "base_price": 18.0,
+    "description": "A handheld collecting RPG that turned schoolyard lunch breaks into frantic trade negotiations."
+  },
+  {
+    "id": "pc_booster_canopy_block_logic_loose",
+    "name": "Block Logic Express",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "PC Booster Canopy",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "common",
     "base_price": 10.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A classic pad with a clicky d-pad and the kind of worn plastic fans find reassuring.",
-    "subcategory": "controllers",
-    "tags": [
-      "SuperStation",
-      "controller",
-      "accessory"
-    ]
+    "description": "A compact puzzle game with deceptively simple rules and a high-score screen that broke many thumbs."
   },
   {
-    "id": "retro_t64_controller",
-    "item_name": "Prism 64 Tri-Grip Controller",
+    "id": "pc_booster_canopy_sunken_realm_loose",
+    "name": "Sunken Realm Pocket",
     "store_type": "retro_games",
-    "category": "accessories",
-    "base_price": 12.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "The infamous three-handle controller that somehow feels right only after a few rounds.",
-    "subcategory": "controllers",
-    "tags": [
-      "TriForce64",
-      "controller",
-      "accessory"
-    ]
-  },
-  {
-    "id": "retro_ds_memory_card",
-    "item_name": "DiscArc Memory Card",
-    "store_type": "retro_games",
-    "category": "accessories",
-    "base_price": 5.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A tiny save card that usually arrives with someone else's unfinished role-playing campaign.",
-    "subcategory": "memory_cards",
-    "tags": [
-      "DiscStation",
-      "memory_card",
-      "accessory"
-    ]
-  },
-  {
-    "id": "retro_portaboy_link_cable",
-    "item_name": "PocketLink Transfer Cable",
-    "store_type": "retro_games",
-    "category": "accessories",
-    "base_price": 8.0,
+    "category": "cartridges",
+    "console": "PC Booster Canopy",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
     "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A must-have cable for traders, duelers, and siblings settling scores over lunch break.",
-    "subcategory": "cables",
-    "tags": [
-      "PortaBoy",
-      "cable",
-      "accessory",
-      "multiplayer"
-    ]
+    "base_price": 25.0,
+    "description": "An underwater adventure crammed into a handheld that felt twice the size of its cartridge."
   },
   {
-    "id": "retro_elf_quest_guide",
-    "item_name": "Oath of Hours Strategy Almanac",
+    "id": "console_pc_booster_canopy",
+    "name": "PC Booster Canopy Handheld (Working)",
     "store_type": "retro_games",
-    "category": "guides",
-    "base_price": 10.0,
+    "category": "consoles",
+    "console": "PC Booster Canopy",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
     "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A dog-eared guide full of puzzle maps, hand-notes, and the exact boss weakness everyone forgets.",
-    "subcategory": "strategy_guides",
-    "tags": [
-      "guide",
-      "TriForce64",
-      "adventure"
-    ]
+    "base_price": 35.0,
+    "description": "A pocket-sized unit that survived backpacks, road trips, and one reported visit to a swimming pool."
   },
   {
-    "id": "retro_power_magazine_vol12",
-    "item_name": "Pixel Quest Annual Vol. 12",
+    "id": "pc_booster_neo_spark_rival_clash_loose",
+    "name": "Rival Clash Micro",
     "store_type": "retro_games",
-    "category": "guides",
-    "base_price": 6.0,
+    "category": "cartridges",
+    "console": "PC Booster Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "uncommon",
+    "base_price": 28.0,
+    "description": "A razor-sharp portable fighter with tight inputs and a roster that still sparks heated debates."
+  },
+  {
+    "id": "pc_booster_neo_spark_embersong_loose",
+    "name": "Embersong Advance",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "PC Booster Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "uncommon",
+    "base_price": 32.0,
+    "description": "A handheld tactical RPG with branching support conversations and a replayability problem."
+  },
+  {
+    "id": "pc_booster_neo_spark_comet_runner_loose",
+    "name": "Comet Runner",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "PC Booster Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
     "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A preview-heavy issue with demo impressions, foldout art, and enough ads to smell like a time machine.",
-    "subcategory": "magazines",
-    "tags": [
-      "magazine",
-      "vintage",
-      "collectible"
-    ]
+    "base_price": 16.0,
+    "description": "An action title about a courier dodging asteroids with snappy controls that still feel sharp today."
+  },
+  {
+    "id": "console_pc_booster_neo_spark",
+    "name": "PC Booster Neo Spark Handheld (Working)",
+    "store_type": "retro_games",
+    "category": "consoles",
+    "console": "PC Booster Neo Spark",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "uncommon",
+    "base_price": 45.0,
+    "description": "A backlit clamshell handheld that marked the moment portables stopped being just for kids."
+  },
+  {
+    "id": "supervec16_vortex_squadron_loose",
+    "name": "Vortex Squadron",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "SuperVec 16",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "uncommon",
+    "base_price": 30.0,
+    "description": "A Mode-7 style scrolling shooter with a soundtrack people still hum while waiting in line."
+  },
+  {
+    "id": "supervec16_ironfoot_run_loose",
+    "name": "Ironfoot Run",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "SuperVec 16",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "common",
+    "base_price": 12.0,
+    "description": "A 16-bit platformer with tight jump physics and a couch co-op mode that ended many arguments."
+  },
+  {
+    "id": "supervec16_mirror_desert_loose",
+    "name": "Mirror Desert",
+    "store_type": "retro_games",
+    "category": "cartridges",
+    "console": "SuperVec 16",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "rare",
+    "base_price": 65.0,
+    "description": "A late-run 16-bit RPG with a cult following and forum lore that rivals the actual game text.",
+    "appreciates": true
+  },
+  {
+    "id": "console_supervec_16",
+    "name": "SuperVec 16 Console (Working)",
+    "store_type": "retro_games",
+    "category": "consoles",
+    "console": "SuperVec 16",
+    "condition_grades": ["Loose", "CIB", "Sealed"],
+    "condition_range": ["poor", "fair", "good", "near_mint", "mint"],
+    "rarity": "common",
+    "base_price": 40.0,
+    "description": "A sturdy 16-bit unit with blast-processing claims and enough cable outputs to confuse a modern TV."
   }
 ]

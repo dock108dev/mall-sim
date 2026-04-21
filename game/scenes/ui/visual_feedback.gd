@@ -15,6 +15,17 @@ const SALE_TEXT_ORIGIN := Vector2(140.0, 50.0)
 ## Anchor position for expense notifications (below cash area).
 const EXPENSE_TEXT_ORIGIN := Vector2(20.0, 130.0)
 
+## Anchor for walk-reason labels (below the sale row).
+const WALK_TEXT_ORIGIN := Vector2(140.0, 90.0)
+
+const _WALK_REASON_LABELS: Dictionary = {
+	&"utility_leave": "Lost interest",
+	&"no_buy": "Nothing to buy",
+	&"no_route": "Couldn't navigate",
+	&"no_register": "No checkout available",
+	&"mall_exit": "Left the mall",
+}
+
 ## Screen-centre position used as default burst origin.
 const BURST_ORIGIN := Vector2(960.0, 540.0)
 
@@ -26,6 +37,7 @@ func _ready() -> void:
 	layer = 11
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.money_changed.connect(_on_money_changed)
+	EventBus.customer_left.connect(_on_customer_left)
 	EventBus.rare_pull_occurred.connect(_on_rare_pull_occurred)
 	EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
 	EventBus.warranty_accepted.connect(_on_warranty_accepted_fx)
@@ -50,6 +62,14 @@ func _on_item_sold(
 		SALE_TEXT_ORIGIN,
 		UIThemeConstants.get_positive_color()
 	)
+
+
+func _on_customer_left(customer_data: Dictionary) -> void:
+	if customer_data.get("satisfied", true):
+		return
+	var reason: StringName = customer_data.get("reason", &"mall_exit")
+	var label_text: String = _WALK_REASON_LABELS.get(reason, "Customer left")
+	_spawn_floating_text(label_text, WALK_TEXT_ORIGIN, UIThemeConstants.get_negative_color())
 
 
 func _on_money_changed(

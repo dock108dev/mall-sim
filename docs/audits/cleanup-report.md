@@ -1,6 +1,6 @@
 # Code Quality Cleanup Report
 
-Date: 2026-04-19
+Date: 2026-04-19 (updated 2026-04-21)
 
 ## Scope
 
@@ -108,3 +108,89 @@ identical results before consolidating.
 to bus names but `_apply_audio()` addresses buses with hardcoded strings,
 duplicating the mapping. Consider driving `_apply_audio()` from the map in a
 future settings-coverage pass.
+
+---
+
+## Pass 2 — 2026-04-21
+
+### Dead code removed
+
+**Commented compatibility markers — `game/scenes/ui/fixture_catalog.gd`**
+
+27 lines of commented-out variable declarations and method references existed
+under a "Compatibility markers for legacy static validators" heading. These
+commented fragments served no executable purpose and referenced the now-canonical
+`game/scripts/ui/fixture_catalog_panel.gd` implementation. Removed; the one-line
+`extends` is self-documenting.
+
+**Commented compatibility markers — `game/scenes/ui/haggle_panel.gd`**
+
+16 lines of the same pattern removed for the same reason. The `extends` line
+alone describes the wrapper relationship without noise.
+
+**Deprecated font-size aliases — `game/scripts/ui/ui_theme_constants.gd`**
+
+`FONT_SIZE_HEADER`, `FONT_SIZE_TITLE`, and `FONT_SIZE_SMALL` were declared as
+aliases for the canonical `FONT_SIZE_H2`, `FONT_SIZE_H1`, and `FONT_SIZE_CAPTION`
+constants with a comment noting they were "kept for call-sites not yet migrated."
+A full project search confirmed zero call-sites remain. Removed.
+
+### Consistency changes
+
+**`SLOT_STORE_IDS` rename — `game/scripts/world/mall_hallway.gd` and `game/scenes/world/game_world.gd`**
+
+`var SLOT_STORE_IDS: Array[StringName] = []` used `SCREAMING_SNAKE_CASE` reserved
+by convention for `const` declarations. This is a mutable member variable that is
+populated in `_ready()` and read externally. Renamed to `slot_store_ids` (7 occurrences
+in `mall_hallway.gd`, 1 in `game_world.gd`).
+
+**`print()` → `push_warning()` — `game/scenes/debug/accent_budget_overlay.gd`**
+
+One `print()` call in `_sample_viewport()` replaced with `push_warning()` to
+match the diagnostic pattern used throughout the project (`push_error` /
+`push_warning`). This was the only `print()` call remaining outside test files.
+
+### Files still over 500 LOC (unchanged from Pass 1)
+
+No additional splits in this pass. The table in Pass 1 remains accurate with
+updated line counts in parentheses where drift occurred:
+
+| LOC | File | Note |
+|-----|------|------|
+| 1302 | `game/scenes/world/game_world.gd` | No change |
+| 1286 | `game/scripts/core/save_manager.gd` | No change |
+| 1101 | `game/autoload/data_loader.gd` | No change |
+| 942 | `game/scripts/content_parser.gd` | No change |
+| 886 | `game/scripts/systems/customer_system.gd` | No change |
+| 846 | `game/scripts/systems/inventory_system.gd` | No change |
+
+---
+
+## Pass 3 — 2026-04-21
+
+### Dead code removed
+
+**Redundant ordinal annotations — `game/scripts/components/interactable.gd`**
+
+`InteractionType` enum members carried trailing `## 0` through `## 6` comments
+annotating their implicit ordinal values. GDScript enums are implicitly numbered
+from zero; the annotations added no information and misused `##` (GDScript
+doc-comment syntax) as inline trailing comments. Removed all seven.
+
+### Consistency changes
+
+**`InteractionRayScript` rename — `game/scripts/world/mall_hallway.gd`**
+
+Local variable `InteractionRayScript: GDScript` used `PascalCase`, which by
+project convention is reserved for `class_name` types. Renamed to
+`interaction_ray_script` (2 occurrences — declaration and `.set_script()` call).
+
+**Untyped `result` variable — `game/autoload/audit_overlay.gd`**
+
+`var result = _results.get(key)` lacked a type annotation. `Dictionary.get()`
+returns `Variant`; annotated as `var result: Variant` to match the project
+convention of typing all non-trivial locals.
+
+### Files still over 500 LOC (unchanged from Pass 2)
+
+No splits in this pass. Table from Pass 2 remains accurate.

@@ -6,7 +6,7 @@ const STOREFRONT_COUNT: int = 5
 const STOREFRONT_SPACING: float = 8.0
 const DEFAULT_RENT: float = 60.0
 
-var SLOT_STORE_IDS: Array[StringName] = []
+var slot_store_ids: Array[StringName] = []
 
 const _StoreLeaseDialogScene: PackedScene = preload(
 	"res://game/scenes/ui/store_lease_dialog.tscn"
@@ -42,7 +42,7 @@ var _ambient_zones: HallwayAmbientZones = null
 
 
 func _ready() -> void:
-	SLOT_STORE_IDS = ContentRegistry.get_all_ids("store")
+	slot_store_ids = ContentRegistry.get_all_ids("store")
 
 	_store_container = Node3D.new()
 	_store_container.name = "ActiveStoreContainer"
@@ -159,12 +159,12 @@ func _setup_camera() -> void:
 	_camera_controller.set_zoom_distance(8.0)
 	add_child(_camera_controller)
 
-	var InteractionRayScript: GDScript = preload(
+	var interaction_ray_script: GDScript = preload(
 		"res://game/scripts/player/interaction_ray.gd"
 	)
 	_interaction_ray = Node.new()
 	_interaction_ray.name = "InteractionRay"
-	_interaction_ray.set_script(InteractionRayScript)
+	_interaction_ray.set_script(interaction_ray_script)
 	add_child(_interaction_ray)
 
 
@@ -200,9 +200,9 @@ func _setup_navigation() -> void:
 
 func _initialize_waypoint_graph() -> void:
 	if _waypoint_graph.get_child_count() == 0:
-		MallWaypointGraphBuilder.build(_waypoint_graph, SLOT_STORE_IDS)
-	for i: int in range(SLOT_STORE_IDS.size()):
-		var store_id: StringName = SLOT_STORE_IDS[i]
+		MallWaypointGraphBuilder.build(_waypoint_graph, slot_store_ids)
+	for i: int in range(slot_store_ids.size()):
+		var store_id: StringName = slot_store_ids[i]
 		_assign_waypoint_store_id("StoreEntrance_%d" % i, store_id)
 		_assign_waypoint_store_id("Register_%d" % i, store_id)
 
@@ -225,9 +225,9 @@ func _assign_waypoint_store_id(
 func _apply_owned_stores() -> void:
 	var owned_slots: Dictionary = {}
 	for i: int in range(_storefronts.size()):
-		if i >= SLOT_STORE_IDS.size():
+		if i >= slot_store_ids.size():
 			break
-		var store_id: StringName = SLOT_STORE_IDS[i]
+		var store_id: StringName = slot_store_ids[i]
 		if not GameManager.is_store_owned(String(store_id)):
 			continue
 		owned_slots[i] = store_id
@@ -292,10 +292,10 @@ func _get_store_display_name(store_type: String) -> String:
 
 
 func _get_rent_for_slot(slot_index: int) -> float:
-	if slot_index < 0 or slot_index >= SLOT_STORE_IDS.size():
+	if slot_index < 0 or slot_index >= slot_store_ids.size():
 		return DEFAULT_RENT
 	var entry: Dictionary = ContentRegistry.get_entry(
-		SLOT_STORE_IDS[slot_index]
+		slot_store_ids[slot_index]
 	)
 	if entry.has("daily_rent"):
 		return float(entry["daily_rent"])

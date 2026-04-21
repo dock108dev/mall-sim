@@ -72,6 +72,8 @@ var _occupied: bool = false
 var _held_item_id: String = ""
 var _item_node: Node3D = null
 var _placement_active: bool = false
+var _info_label: Label3D = null
+var _label_accent: Color = Color.WHITE
 
 @onready var _empty_mesh: MeshInstance3D = _resolve_empty_mesh()
 
@@ -145,6 +147,7 @@ func remove_item() -> String:
 	_occupied = false
 	_free_item_mesh()
 	_update_empty_indicator()
+	clear_display_data()
 	slot_changed.emit(self)
 	return item_id
 
@@ -152,6 +155,37 @@ func remove_item() -> String:
 ## Removes the held item and restores availability.
 func deassign() -> void:
 	remove_item()
+
+
+## Displays item name, condition, and price above this slot as a billboard label.
+## Creates the Label3D on first call; subsequent calls update text in place.
+func set_display_data(item_name: String, condition: String, price: float) -> void:
+	if not _info_label:
+		_info_label = Label3D.new()
+		_info_label.pixel_size = 0.004
+		_info_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_info_label.no_depth_test = true
+		_info_label.font_size = 28
+		_info_label.position = Vector3(0.0, 0.22, 0.0)
+		_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_info_label.modulate = _label_accent
+		add_child(_info_label)
+	_info_label.text = "%s\n%s  $%.2f" % [item_name, condition.capitalize(), price]
+	_info_label.visible = true
+
+
+## Sets the accent color used for the info label text. Applies immediately if
+## the label already exists.
+func apply_accent(color: Color) -> void:
+	_label_accent = color
+	if _info_label:
+		_info_label.modulate = color
+
+
+## Hides the info label without destroying it.
+func clear_display_data() -> void:
+	if _info_label:
+		_info_label.visible = false
 
 
 ## Shows or hides the translucent empty-slot indicator.

@@ -71,17 +71,14 @@
       "reliability_rate": 0.78,
       "unlock_condition": { "type": "always", "threshold": 0 },
       "catalog": [
-        { "item_id": "retro_plumber_world_ss_loose", "cost_per_unit": 15.00, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "retro_hedgehog_rush_md_loose", "cost_per_unit": 7.20, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "retro_galaxy_kart_64_loose", "cost_per_unit": 18.00, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "retro_plumber_land_pb_loose", "cost_per_unit": 9.00, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "retro_creature_catcher_pb_loose", "cost_per_unit": 12.00, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "retro_street_brawler_2_md_loose", "cost_per_unit": 6.00, "min_order_qty": 1, "max_order_qty": 15 },
-        { "item_id": "retro_ss_controller", "cost_per_unit": 6.00, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "retro_t64_controller", "cost_per_unit": 7.20, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "retro_ds_memory_card", "cost_per_unit": 3.00, "min_order_qty": 3, "max_order_qty": 15 },
-        { "item_id": "retro_megadrive16_forparts", "cost_per_unit": 9.00, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "retro_power_magazine_vol12", "cost_per_unit": 3.60, "min_order_qty": 2, "max_order_qty": 10 }
+        { "item_id": "pc_booster_canopy_block_logic_loose", "cost_per_unit": 5.50, "min_order_qty": 1, "max_order_qty": 15 },
+        { "item_id": "supervec16_ironfoot_run_loose", "cost_per_unit": 6.60, "min_order_qty": 1, "max_order_qty": 12 },
+        { "item_id": "neo_spark_turbojump_world_loose", "cost_per_unit": 8.25, "min_order_qty": 1, "max_order_qty": 10 },
+        { "item_id": "pc_booster_neo_spark_comet_runner_loose", "cost_per_unit": 8.80, "min_order_qty": 1, "max_order_qty": 10 },
+        { "item_id": "pc_booster_canopy_fable_creatures_loose", "cost_per_unit": 9.90, "min_order_qty": 1, "max_order_qty": 10 },
+        { "item_id": "canopy64_chromatic_drift_loose", "cost_per_unit": 9.90, "min_order_qty": 1, "max_order_qty": 8 },
+        { "item_id": "console_pc_booster_canopy", "cost_per_unit": 19.25, "min_order_qty": 1, "max_order_qty": 5 },
+        { "item_id": "console_neo_spark", "cost_per_unit": 27.50, "min_order_qty": 1, "max_order_qty": 4 }
       ]
     },
     {
@@ -93,18 +90,15 @@
       "reliability_rate": 0.91,
       "unlock_condition": { "type": "days_and_revenue", "threshold": 1200, "days_required": 14 },
       "catalog": [
-        { "item_id": "retro_plumber_world_ss_loose", "cost_per_unit": 13.00, "min_order_qty": 1, "max_order_qty": 12 },
-        { "item_id": "retro_hedgehog_rush_md_loose", "cost_per_unit": 6.24, "min_order_qty": 1, "max_order_qty": 12 },
-        { "item_id": "retro_galaxy_kart_64_loose", "cost_per_unit": 15.60, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "retro_elf_quest_64_loose", "cost_per_unit": 18.20, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "retro_final_saga_7_ds_loose", "cost_per_unit": 20.80, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "retro_star_pilot_64_loose", "cost_per_unit": 11.44, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "retro_phantom_thief_ds_loose", "cost_per_unit": 14.56, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "retro_plumber_world_ss_cib", "cost_per_unit": 31.20, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "retro_superstation_console", "cost_per_unit": 26.00, "min_order_qty": 1, "max_order_qty": 4 },
-        { "item_id": "retro_triforce64_console", "cost_per_unit": 33.80, "min_order_qty": 1, "max_order_qty": 3 },
-        { "item_id": "retro_portaboy_link_cable", "cost_per_unit": 4.16, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "retro_elf_quest_guide", "cost_per_unit": 5.20, "min_order_qty": 1, "max_order_qty": 8 }
+        { "item_id": "pc_booster_canopy_fable_creatures_loose", "cost_per_unit": 8.55, "min_order_qty": 1, "max_order_qty": 12 },
+        { "item_id": "supervec16_ironfoot_run_loose", "cost_per_unit": 5.70, "min_order_qty": 1, "max_order_qty": 12 },
+        { "item_id": "canopy64_chromatic_drift_loose", "cost_per_unit": 8.55, "min_order_qty": 1, "max_order_qty": 10 },
+        { "item_id": "pc_booster_canopy_sunken_realm_loose", "cost_per_unit": 11.88, "min_order_qty": 1, "max_order_qty": 8 },
+        { "item_id": "canopy64_orbital_smash_loose", "cost_per_unit": 13.30, "min_order_qty": 1, "max_order_qty": 8 },
+        { "item_id": "supervec16_vortex_squadron_loose", "cost_per_unit": 14.25, "min_order_qty": 1, "max_order_qty": 8 },
+        { "item_id": "neo_spark_starfall_chronicle_loose", "cost_per_unit": 16.63, "min_order_qty": 1, "max_order_qty": 6 },
+        { "item_id": "console_supervec_16", "cost_per_unit": 19.00, "min_order_qty": 1, "max_order_qty": 4 },
+        { "item_id": "console_neo_spark", "cost_per_unit": 23.75, "min_order_qty": 1, "max_order_qty": 3 }
       ]
     },
     {
@@ -116,15 +110,14 @@
       "reliability_rate": 0.98,
       "unlock_condition": { "type": "days_and_revenue_or_reputation", "threshold": 4000, "days_required": 30, "reputation_threshold": 75 },
       "catalog": [
-        { "item_id": "retro_elf_quest_64_loose", "cost_per_unit": 15.75, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "retro_final_saga_7_ds_loose", "cost_per_unit": 18.00, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "retro_plumber_world_ss_cib", "cost_per_unit": 27.00, "min_order_qty": 1, "max_order_qty": 6 },
-        { "item_id": "retro_dungeon_quest_ss_rare", "cost_per_unit": 33.75, "min_order_qty": 1, "max_order_qty": 3 },
-        { "item_id": "retro_elf_quest_64_cib", "cost_per_unit": 38.25, "min_order_qty": 1, "max_order_qty": 3 },
-        { "item_id": "retro_cosmic_warrior_jp_import", "cost_per_unit": 24.75, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "retro_puzzle_drop_pb_jp", "cost_per_unit": 15.75, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "retro_triforce64_cib_console", "cost_per_unit": 72.00, "min_order_qty": 1, "max_order_qty": 2 },
-        { "item_id": "retro_triforce64_console", "cost_per_unit": 29.25, "min_order_qty": 1, "max_order_qty": 4 }
+        { "item_id": "canopy64_orbital_smash_loose", "cost_per_unit": 12.60, "min_order_qty": 1, "max_order_qty": 10 },
+        { "item_id": "neo_spark_starfall_chronicle_loose", "cost_per_unit": 15.75, "min_order_qty": 1, "max_order_qty": 10 },
+        { "item_id": "pc_booster_neo_spark_embersong_loose", "cost_per_unit": 14.40, "min_order_qty": 1, "max_order_qty": 8 },
+        { "item_id": "canopy64_stoneward_depths_loose", "cost_per_unit": 24.75, "min_order_qty": 1, "max_order_qty": 5 },
+        { "item_id": "neo_spark_hollowveil_asylum_loose", "cost_per_unit": 27.00, "min_order_qty": 1, "max_order_qty": 4 },
+        { "item_id": "supervec16_mirror_desert_loose", "cost_per_unit": 29.25, "min_order_qty": 1, "max_order_qty": 3 },
+        { "item_id": "console_pc_booster_neo_spark", "cost_per_unit": 20.25, "min_order_qty": 1, "max_order_qty": 4 },
+        { "item_id": "console_canopy_64", "cost_per_unit": 31.50, "min_order_qty": 1, "max_order_qty": 3 }
       ]
     },
     {

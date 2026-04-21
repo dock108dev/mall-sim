@@ -95,6 +95,7 @@ func _ready() -> void:
 	EventBus.interactable_interacted.connect(
 		_on_interactable_interacted
 	)
+	EventBus.active_store_changed.connect(_on_active_store_changed)
 	_load_store_markup_ranges()
 	_set_disabled_state()
 
@@ -383,6 +384,24 @@ func _on_apply_all() -> void:
 		EventBus.price_set.emit(item.instance_id, new_price)
 		_emit_item_price_set(item, new_price)
 	PanelAnimator.pulse_scale(_apply_all_button)
+
+
+func _on_active_store_changed(store_id: StringName) -> void:
+	_apply_store_accent(store_id)
+
+
+func _apply_store_accent(store_id_sn: StringName) -> void:
+	var accent: Color = UIThemeConstants.get_store_accent(store_id_sn)
+	var style := StyleBoxFlat.new()
+	style.bg_color = UIThemeConstants.DARK_PANEL_FILL
+	style.border_color = accent
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 12.0
+	style.content_margin_top = 10.0
+	style.content_margin_right = 12.0
+	style.content_margin_bottom = 10.0
+	_panel.add_theme_stylebox_override(&"panel", style)
 
 
 func _emit_item_price_set(item: ItemInstance, price: float) -> void:

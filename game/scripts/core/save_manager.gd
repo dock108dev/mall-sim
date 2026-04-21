@@ -6,6 +6,7 @@ extends Node
 const CURRENT_SAVE_VERSION: int = 3
 const MIN_SUPPORTED_SAVE_VERSION: int = 0
 const SAVE_DIR := "user://"
+const BACKUP_DIR := "user://backups/"
 const SLOT_INDEX_PATH := "user://save_index.cfg"
 const MAX_MANUAL_SLOTS: int = 3
 const AUTO_SAVE_SLOT: int = 0
@@ -325,6 +326,7 @@ func load_game(slot: int) -> bool:
 			"SaveManager: migrating save version %d to %d"
 			% [save_version, CURRENT_SAVE_VERSION]
 		)
+		_backup_before_migration(path, slot, save_version)
 	var migration_result: Dictionary = migrate_save_data(save_data)
 	if not bool(migration_result.get("ok", false)):
 		return _fail_load(
@@ -1012,9 +1014,67 @@ func _systems_ready() -> bool:
 
 
 func _fail_load(slot: int, reason: String) -> bool:
-	push_warning("SaveManager: %s" % reason)
+	push_error("SaveManager: %s" % reason)
 	EventBus.save_load_failed.emit(slot, reason)
 	return false
+
+
+## Copies the source save file to user://backups/ before a destructive
+## migration so operators can recover the original on-disk shape.
+func _backup_before_migration(
+	source_path: String, slot: int, save_version: int
+) -> void:
+	if not FileAccess.file_exists(source_path):
+		return
+	_ensure_backup_dir()
+	var timestamp: String = (
+		Time.get_datetime_string_from_system(true)
+			.replace(":", "-")
+			.replace("T", "_")
+	)
+	var backup_name: String = (
+		"save_slot_%d_v%d_%s.json"
+		% [slot, save_version, timestamp]
+	)
+	var backup_path: String = BACKUP_DIR + backup_name
+	var src: FileAccess = FileAccess.open(source_path, FileAccess.READ)
+	if not src:
+		push_warning(
+			"SaveManager: failed to open source for backup '%s' — %s"
+			% [source_path, error_string(FileAccess.get_open_error())]
+		)
+		return
+	var contents: String = src.get_as_text()
+	src.close()
+	var dst: FileAccess = FileAccess.open(backup_path, FileAccess.WRITE)
+	if not dst:
+		push_warning(
+			"SaveManager: failed to write backup '%s' — %s"
+			% [backup_path, error_string(FileAccess.get_open_error())]
+		)
+		return
+	dst.store_string(contents)
+	dst.flush()
+	dst.close()
+
+
+func _ensure_backup_dir() -> void:
+	if DirAccess.dir_exists_absolute(BACKUP_DIR):
+		return
+	var err: Error = DirAccess.make_dir_recursive_absolute(BACKUP_DIR)
+	if err != OK:
+		push_warning(
+			"SaveManager: failed to create backup dir '%s' — %s"
+			% [BACKUP_DIR, error_string(err)]
+		)
+
+
+## Graceful quit: flush to the auto-save slot before the window closes so
+## in-flight progress is not lost.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if _systems_ready():
+			save_game(AUTO_SAVE_SLOT)
 
 
 func _get_reputation_system() -> ReputationSystem:

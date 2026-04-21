@@ -44,6 +44,7 @@ func place_item(
 	if item.definition:
 		category = item.definition.category
 	slot.place_item(item.instance_id, category)
+	EventBus.item_stocked.emit(item.instance_id, slot.slot_id)
 	exit_placement_mode()
 	return true
 

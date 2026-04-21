@@ -18,6 +18,7 @@ var _pending_report: PerformanceReport
 var _awaiting_acknowledgement: bool = false
 var _last_closed_day: int = 0
 var _ensure_panels_callback: Callable
+var _save_manager: SaveManager = null
 
 
 func initialize(
@@ -58,6 +59,10 @@ func set_ambient_moments_system(system: AmbientMomentsSystem) -> void:
 
 func set_ensure_panels_callback(callback: Callable) -> void:
 	_ensure_panels_callback = callback
+
+
+func set_save_manager(manager: SaveManager) -> void:
+	_save_manager = manager
 
 
 func _on_day_close_requested() -> void:
@@ -106,6 +111,8 @@ func _on_day_acknowledged() -> void:
 		return
 
 	GameManager.change_state(GameManager.GameState.GAMEPLAY)
+	if _save_manager:
+		_save_manager.save_game(0)
 	_time_system.advance_to_next_day()
 
 

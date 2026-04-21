@@ -428,10 +428,25 @@ func _on_inventory_changed() -> void:
 
 func _on_active_store_changed(new_store_id: StringName) -> void:
 	store_id = String(new_store_id)
+	_apply_store_accent(new_store_id)
 	if _is_open:
 		_selected_item = null
 		EventBus.item_tooltip_hidden.emit()
 		call_deferred("_refresh_grid")
+
+
+func _apply_store_accent(store_id_sn: StringName) -> void:
+	var accent: Color = UIThemeConstants.get_store_accent(store_id_sn)
+	var style := StyleBoxFlat.new()
+	style.bg_color = UIThemeConstants.DARK_PANEL_FILL
+	style.border_color = accent
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 12.0
+	style.content_margin_top = 10.0
+	style.content_margin_right = 12.0
+	style.content_margin_bottom = 10.0
+	_panel.add_theme_stylebox_override(&"panel", style)
 
 
 func _on_cell_mouse_entered(item: ItemInstance) -> void:

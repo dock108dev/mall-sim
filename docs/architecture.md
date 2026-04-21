@@ -36,6 +36,7 @@ Boot succeeds only when the current content set is usable:
 | `EventBus` | `game/autoload/event_bus.gd` | Global cross-system signal hub. |
 | `GameManager` | `game/autoload/game_manager.gd` | State transitions, scene changes, new game/load flow, and boot completion. |
 | `AudioManager` | `game/autoload/audio_manager.gd` | Music/SFX initialization and playback. |
+| `AudioEventHandler` | `game/autoload/audio_event_handler.gd` | EventBus listener that routes audio events to AudioManager. |
 | `Settings` | `game/autoload/settings.gd` | User settings persistence and application. |
 | `EnvironmentManager` | `game/autoload/environment_manager.gd` | Shared environment and zone-lighting ownership. |
 | `CameraManager` | `game/autoload/camera_manager.gd` | Active camera registration and `active_camera_changed`. |
@@ -47,6 +48,18 @@ Boot succeeds only when the current content set is usable:
 | `OnboardingSystemSingleton` | `game/autoload/onboarding_system.gd` | Onboarding hint state. |
 | `MarketTrendSystemSingleton` | `game/autoload/market_trend_system.gd` | Global trend catalog helper. |
 | `TooltipManager` | `game/autoload/tooltip_manager.gd` | Tooltip coordination. |
+| `ObjectiveDirector` | `game/autoload/objective_director.gd` | Active objective chain tracking, rail driving, and completion events. |
+| `AuditOverlay` | `game/autoload/audit_overlay.gd` | Debug HUD surfacing PASS/FAIL rows for the interaction audit. Active in debug builds only. |
+
+Two additional autoloads are registered as scene instances rather than scripts:
+
+| Name | Scene | Responsibility |
+| --- | --- | --- |
+| `ObjectiveRail` | `game/scenes/ui/objective_rail.tscn` | Persistent bottom strip answering "what to do next"; CanvasLayer with `mouse_filter = PASS`. |
+| `InteractionPrompt` | `game/scenes/ui/interaction_prompt.tscn` | Hover-driven input hint overlay shown over interactable elements. |
+
+Autoloads communicate **outward via EventBus signals**, not by direct peer
+calls, to keep scenes decoupled.
 
 ## `GameWorld` composition
 
@@ -103,6 +116,25 @@ pending load slot or the default new-game state.
 
 When loading instead, `apply_pending_session_state()` calls
 `SaveManager.load_game(slot)` after the UI and systems are in place.
+
+## Per-day loop
+
+```
+MallHub (select store)
+   └── EventBus.enter_store_requested → StoreSelectorSystem.enter_store()
+        └── Store scene loads
+             ├── Inventory drawer reads from InventorySystem for store X
+             ├── Player stocks / prices items → autoload mutations
+             ├── Customer sim → EconomySystem.resolve_sale(item, context)
+             │     └── multiplier chain: base × condition × rarity × trend × reputation × event
+             │     └── EventBus.item_sold + transaction_completed
+             │           → ReputationSystemSingleton, ObjectiveDirector, EconomySystem
+             └── Player closes day
+                  └── DayCycleController → DaySummary scene
+                       └── ObjectiveDirector advances, MarketTrendSystemSingleton ticks, milestones evaluated
+                       └── SaveManager.save_game()
+                       └── Return to MallHub with updated objective rail
+```
 
 ## UI construction
 
@@ -168,6 +200,20 @@ Cross-system events are published through `EventBus`. Common signal domains are:
 Use `game/autoload/event_bus.gd` as the source of truth for the complete signal
 catalog.
 
+Producers (store scenes, `EconomySystem`, `ReputationSystemSingleton`) emit on
+`EventBus`. Consumers (`ObjectiveDirector`, `ObjectiveRail`, `AuditOverlay`,
+`SaveManager`, HUD) subscribe. No scene directly references another scene's
+nodes — all coupling is through EventBus and authoritative system reads.
+
+## Input and focus routing
+
+- `ObjectiveRail` and drawer UIs use CanvasLayer + `mouse_filter = PASS` to
+  avoid stealing gameplay input.
+- Modal panels coordinate through the active scene; the player controller checks
+  modal state before processing movement or interact actions.
+- `AuditOverlay` surfaces any mismatch (e.g., player frozen with no modal
+  active) as a FAIL row.
+
 ## Store-specific controller wiring
 
 Store scenes live under `game/scenes/stores/`. `GameWorld` wires additional
@@ -204,8 +250,10 @@ current `GameWorld`, including progression, milestones, refurbishment, trends,
 market events, fixtures, tournaments, meta shifts, seasonal events, random
 events, staff, tutorial, season cycle, secret threads, ambient moments,
 endings, upgrades, completion, performance reporting, unlocks, and onboarding.
-Current save version is `1`, and older save dictionaries are migrated before
-distribution.
+Each saveable system exposes `get_save_data()` / `restore_save_data()` so
+`SaveManager` never reaches into private fields. Older save dictionaries are
+migrated before distribution; see `SaveManager.CURRENT_SAVE_VERSION` for the
+active schema version.
 
 ## State ownership
 
@@ -223,3 +271,17 @@ Current authoritative owners that are directly traceable in code:
 | Save-slot persistence | `SaveManager` |
 | Active camera | `CameraManager` |
 | Shared environment resource | `EnvironmentManager` |
+
+## Conventions
+
+- Autoload scripts omit `class_name` when the singleton name is sufficient —
+  `AuditOverlay`, `ObjectiveDirector`, and `ObjectiveRail` are intentionally
+  anonymous to avoid class-name collisions.
+- Scene nodes hosting child `Node2D`s (e.g., `_storefront_row` in
+  `mall_hub.gd`) are typed as `Node2D`, not `Control`, when they live in the
+  world layer.
+- Every new content type must ship with (a) a schema, (b) a
+  `DataLoaderSingleton` handler case, and (c) a GUT integration test.
+- Content JSON is **immutable at runtime** — `DataLoaderSingleton` loads into
+  read-only resources. Runtime mutations (e.g., item condition decay) live on
+  `InventorySystem` item instances, not on catalog entries.

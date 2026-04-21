@@ -108,6 +108,14 @@ func credit(amount: float, source: StringName) -> void:
 	_apply_credit(amount, String(source), _get_active_store_id())
 
 
+## Resolves a single customer sale attempt using the full multiplier chain via
+## CustomerSimulator.simulate_single(). Emits item_sold / customer_purchased on
+## acceptance and customer_walked on rejection.
+## Returns {item_id, item_name, accepted, price, walk_reason, market_price}.
+func resolve_sale(item: ItemInstance, store_id: StringName) -> Dictionary:
+	return CustomerSimulator.simulate_single(store_id, item)
+
+
 ## Returns total daily revenue minus daily expenses for the current day.
 func get_daily_profit() -> float:
 	return _get_daily_revenue_total() - _daily_expenses

@@ -1,0 +1,17 @@
+[gd_resource type="Theme" load_steps=1 format=3]
+
+[resource]
+Palette/colors/world_base = Color(0.075, 0.063, 0.051, 1.0)
+Palette/colors/panel_surface = Color(0.122, 0.102, 0.086, 1.0)
+Palette/colors/panel_raised = Color(0.180, 0.153, 0.133, 1.0)
+Palette/colors/text_primary = Color(0.957, 0.914, 0.831, 1.0)
+Palette/colors/text_muted = Color(0.722, 0.659, 0.549, 1.0)
+Palette/colors/accent_interact = Color(0.357, 0.722, 0.910, 1.0)
+Palette/colors/accent_success = Color(0.427, 0.812, 0.353, 1.0)
+Palette/colors/accent_warning = Color(0.949, 0.722, 0.110, 1.0)
+Palette/colors/accent_danger = Color(0.898, 0.243, 0.169, 1.0)
+StoreAccents/colors/retro_games = Color(0.910, 0.647, 0.278, 1.0)
+StoreAccents/colors/pocket_creatures = Color(0.180, 0.710, 0.659, 1.0)
+StoreAccents/colors/video_rental = Color(0.878, 0.306, 0.549, 1.0)
+StoreAccents/colors/electronics = Color(0.227, 0.659, 0.847, 1.0)
+StoreAccents/colors/sports_cards = Color(0.910, 0.333, 0.333, 1.0)

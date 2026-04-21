@@ -86,6 +86,7 @@ are deleted.
 **Goal:** Push 2000s mall identity into the visual chrome.
 
 - period typography and jewel-tone color palette applied to HUD and panels
+- [x] Custom shaders (outline highlight shader for interactable objects)
 - CRT warmth or scanline shader on appropriate UI surfaces
 - mall-map style for the mall overview
 - unified `ActionDrawer` pattern for all in-store actions (haggle, refurbish,
@@ -121,3 +122,22 @@ are deleted.
 - price model is fully traceable via `PriceResolver` audit output
 - 2000s visual identity is visible in the chrome
 - CI passes, exports build, save/load round-trips on current save version
+
+---
+
+## Cross-cutting rules
+
+These apply at every phase, not just the one you are currently working on.
+
+- **No real brands, trademarks, copyrighted characters, or real people.** All
+  store names, console names, game titles, team names, athlete names, box art,
+  logos, and flavor text must be original. Boot-time content validator is the
+  enforcement mechanism.
+- **Every new screen must pass the 3-second test** before merge: primary focus,
+  current mode, next action visible in under 3 seconds.
+- **Every interactable must have hover feedback and an input hint.** No silent
+  click targets.
+- **Never re-enable the walkable mall** unless it clears the same playability
+  audit from Phase 0 in a dedicated proposal.
+- **One PR = one phase objective.** Do not bundle a Phase 1 store mechanic with
+  a Phase 3 event system.

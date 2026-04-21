@@ -165,7 +165,7 @@ TR_CHECK_FILES=(
     "game/scenes/ui/trends_panel.gd"
     "game/scenes/ui/refurbishment_dialog.gd"
     "game/scenes/ui/authentication_dialog.gd"
-    "game/scenes/ui/tutorial_overlay.gd"
+    "game/scripts/ui/tutorial_overlay.gd"
 )
 
 TR_PASS=0

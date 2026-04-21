@@ -76,6 +76,9 @@ static func simulate_day(
 					ask = counter
 					accepted = true
 
+		var item_name: String = (
+			candidate.definition.item_name if candidate.definition else ""
+		)
 		if accepted:
 			sold_ids[candidate.instance_id] = true
 			var category: String = (
@@ -87,11 +90,16 @@ static func simulate_day(
 			EventBus.customer_purchased.emit(
 				store_id, candidate.instance_id, ask, &"simulated"
 			)
+		else:
+			var reason: String = _classify_walk(ask, wtp, market_price)
+			EventBus.customer_walked.emit(store_id, candidate.instance_id, reason)
 
 		results.append({
 			"item_id": candidate.instance_id,
+			"item_name": item_name,
 			"accepted": accepted,
 			"price": ask,
+			"walk_reason": "" if accepted else _classify_walk(ask, wtp, market_price),
 		})
 
 	return results
@@ -110,6 +118,122 @@ static func inject_archetypes_for_testing(archetypes: Array) -> void:
 static func reset_archetype_cache() -> void:
 	_archetypes.clear()
 	_archetypes_loaded = false
+
+
+## Simulates one customer visit for a single item. Emits EventBus signals on acceptance.
+## Returns {item_id, item_name, accepted, price, walk_reason, market_price}.
+static func simulate_single(
+	store_id: StringName,
+	item: ItemInstance,
+) -> Dictionary:
+	if not item or not item.definition:
+		return {
+			"item_id": &"",
+			"item_name": "",
+			"accepted": false,
+			"price": 0.0,
+			"walk_reason": "no_item",
+			"market_price": 0.0,
+		}
+	_ensure_archetypes_loaded()
+	if _archetypes.is_empty():
+		return {
+			"item_id": item.instance_id,
+			"item_name": item.definition.item_name,
+			"accepted": false,
+			"price": 0.0,
+			"walk_reason": "no_archetype",
+			"market_price": 0.0,
+		}
+	var archetype: Dictionary = _archetypes[randi() % _archetypes.size()]
+	var market_price: float = _market_price(item)
+	if market_price <= 0.0:
+		return {
+			"item_id": item.instance_id,
+			"item_name": item.definition.item_name,
+			"accepted": false,
+			"price": 0.0,
+			"walk_reason": "no_price",
+			"market_price": 0.0,
+		}
+	var ask: float = (
+		item.player_set_price if item.player_set_price > 0.0 else market_price
+	)
+	var wtp: float = archetype.get("wtp_multiplier", 1.0) * market_price
+	var accepted: bool = ask <= wtp
+	if not accepted:
+		var haggle_prob: float = archetype.get("haggle_probability", 0.0)
+		if randf() < haggle_prob:
+			var counter: float = ask * HAGGLE_COUNTER_FACTOR
+			if counter <= wtp:
+				ask = counter
+				accepted = true
+	var walk_reason: String = "" if accepted else _classify_walk(ask, wtp, market_price)
+	var item_name: String = item.definition.item_name if item.definition else ""
+	if accepted:
+		var category: String = String(item.definition.category) if item.definition else ""
+		EventBus.item_sold.emit(String(item.instance_id), ask, category)
+		EventBus.customer_purchased.emit(store_id, item.instance_id, ask, &"simulated")
+	else:
+		EventBus.customer_walked.emit(store_id, item.instance_id, walk_reason)
+	return {
+		"item_id": item.instance_id,
+		"item_name": item_name,
+		"accepted": accepted,
+		"price": ask,
+		"walk_reason": walk_reason,
+		"market_price": market_price,
+	}
+
+
+## Like simulate_day but emits no EventBus signals — for preview/dry-run use only.
+## Returns Array[Dictionary] with keys: item_id, item_name, accepted, price, walk_reason.
+static func simulate_day_dry_run(
+	traffic_count: int,
+	inventory_snapshot: Array,
+) -> Array[Dictionary]:
+	_ensure_archetypes_loaded()
+	if _archetypes.is_empty() or traffic_count <= 0:
+		return []
+	var results: Array[Dictionary] = []
+	var sold_ids: Dictionary = {}
+	var shelf_items: Array = _shelf_items(inventory_snapshot)
+	if shelf_items.is_empty():
+		return results
+	for _i: int in range(traffic_count):
+		var archetype: Dictionary = _archetypes[randi() % _archetypes.size()]
+		var candidate: ItemInstance = _find_candidate(shelf_items, sold_ids)
+		if not candidate:
+			continue
+		var market_price: float = _market_price(candidate)
+		if market_price <= 0.0:
+			continue
+		var ask: float = (
+			candidate.player_set_price if candidate.player_set_price > 0.0
+			else market_price
+		)
+		var wtp: float = archetype.get("wtp_multiplier", 1.0) * market_price
+		var accepted: bool = ask <= wtp
+		if not accepted:
+			var haggle_prob: float = archetype.get("haggle_probability", 0.0)
+			if randf() < haggle_prob:
+				var counter: float = ask * HAGGLE_COUNTER_FACTOR
+				if counter <= wtp:
+					ask = counter
+					accepted = true
+		if accepted:
+			sold_ids[candidate.instance_id] = true
+		var item_name: String = (
+			candidate.definition.item_name if candidate.definition else ""
+		)
+		results.append({
+			"item_id": candidate.instance_id,
+			"item_name": item_name,
+			"accepted": accepted,
+			"price": ask,
+			"walk_reason": "" if accepted else _classify_walk(ask, wtp, market_price),
+		})
+	return results
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────
@@ -151,6 +275,14 @@ static func _market_price(item: ItemInstance) -> float:
 		item.instance_id, item.definition.base_price, multipliers, false
 	)
 	return result.final_price
+
+
+static func _classify_walk(ask: float, wtp: float, market_price: float) -> String:
+	if market_price > 0.0 and ask / market_price > 1.5:
+		return "price_too_high"
+	if ask > wtp:
+		return "over_budget"
+	return "not_interested"
 
 
 static func _ensure_archetypes_loaded() -> void:

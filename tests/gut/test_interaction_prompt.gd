@@ -49,14 +49,23 @@ func test_label_text_driven_by_action_label() -> void:
 	EventBus.interactable_focused.emit("Examine Item")
 	var label: Label = _prompt.get_node("PanelContainer/Label")
 	assert_eq(
-		label.text, "[E] Examine Item",
-		"Label should display [E] prefix with action_label"
+		label.text, "Examine Item",
+		"Label should display the action_label verbatim (callers include key prefix)"
+	)
+
+
+func test_label_displays_click_prefix() -> void:
+	EventBus.interactable_focused.emit("[Click] Enter Store")
+	var label: Label = _prompt.get_node("PanelContainer/Label")
+	assert_eq(
+		label.text, "[Click] Enter Store",
+		"Label must preserve caller-supplied key prefix"
 	)
 
 
 func test_label_updates_on_new_focus() -> void:
-	EventBus.interactable_focused.emit("Enter Store")
-	EventBus.interactable_focused.emit("Stock Shelf")
+	EventBus.interactable_focused.emit("[E] Enter Store")
+	EventBus.interactable_focused.emit("[E] Stock Shelf")
 	var label: Label = _prompt.get_node("PanelContainer/Label")
 	assert_eq(
 		label.text, "[E] Stock Shelf",

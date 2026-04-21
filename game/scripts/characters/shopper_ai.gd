@@ -76,6 +76,7 @@ var _lane_side: float = 0.0
 var _animation_player: AnimationPlayer = null
 var _is_despawning: bool = false
 var _emit_spawn_signal_on_ready: bool = true
+var _leave_reason: StringName = &"mall_exit"
 
 
 func _ready() -> void:
@@ -314,6 +315,7 @@ func _execute_action(action: String) -> void:
 		"socialize":
 			_transition_to(ShopperState.SOCIALIZING)
 		"leave":
+			_leave_reason = &"utility_leave"
 			request_leave()
 
 
@@ -396,6 +398,7 @@ func _process_simple_browsing() -> void:
 			return
 		_navigate_to_register()
 		return
+	_leave_reason = &"no_buy"
 	request_leave()
 
 
@@ -416,6 +419,7 @@ func _process_walking(delta: float) -> void:
 		_nav.pick_next_walking_destination()
 		_sync_target()
 		if target_waypoint == null:
+			_leave_reason = &"no_route"
 			request_leave()
 			return
 
@@ -466,6 +470,7 @@ func _navigate_to_register() -> void:
 		MallWaypoint.WaypointType.REGISTER
 	)
 	if register == null:
+		_leave_reason = &"no_register"
 		request_leave()
 		return
 	if purchase_store_id.is_empty():
@@ -658,6 +663,7 @@ func _despawn() -> void:
 	EventBus.customer_left.emit({
 		"customer": self,
 		"satisfied": _made_purchase,
+		"reason": &"purchase_complete" if _made_purchase else _leave_reason,
 	})
 	EventBus.customer_left_mall.emit(self, _made_purchase)
 	queue_free()

@@ -365,8 +365,10 @@ func _build_reward_description(
 			return "Bonus: $%d cash" % int(milestone.reward_value)
 		"reputation":
 			return "+%d reputation" % int(milestone.reward_value)
-		"unlock":
-			return "Unlocked: %s" % milestone.unlock_id
+		"unlock", "fixture_unlock":
+			return "Unlocked: %s" % ContentRegistry.get_display_name(
+				StringName(milestone.unlock_id)
+			)
 	return ""
 
 

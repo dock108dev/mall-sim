@@ -6,7 +6,7 @@ enum GameState {
 	LOADING, DAY_SUMMARY, BUILD,
 }
 
-const DEFAULT_STARTING_STORE: StringName = &"sports"
+const DEFAULT_STARTING_STORE: StringName = &"retro_games"
 const MAIN_MENU_SCENE_PATH := "res://game/scenes/ui/main_menu.tscn"
 const GAMEPLAY_SCENE_PATH := "res://game/scenes/mall/mall_hub.tscn"
 
@@ -300,7 +300,25 @@ func get_store_state_manager() -> StoreStateManager:
 
 
 func quit_game() -> void:
+	_flush_save_before_quit()
 	get_tree().quit()
+
+
+func _flush_save_before_quit() -> void:
+	if current_state != GameState.GAMEPLAY and current_state != GameState.PAUSED:
+		return
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.current_scene == null:
+		return
+	var matches: Array[Node] = tree.current_scene.find_children(
+		"*", "SaveManager", true, false
+	)
+	if matches.is_empty():
+		return
+	var save_manager: SaveManager = matches[0] as SaveManager
+	if save_manager == null:
+		return
+	save_manager.save_game(SaveManager.AUTO_SAVE_SLOT)
 
 
 func _on_content_load_failed(errors: Array[String]) -> void:

@@ -110,6 +110,7 @@ signal restock_requested(store_id: StringName, item_id: StringName, quantity: in
 signal customer_spawned(customer: Node)
 signal customer_entered(customer_data: Dictionary)
 signal customer_purchased(store_id: StringName, item_id: StringName, price: float, customer_id: StringName)
+signal customer_walked(store_id: StringName, item_id: StringName, reason: String)
 signal customer_left(customer_data: Dictionary)
 signal customer_left_mall(customer: Node, satisfied: bool)
 signal customer_ready_to_purchase(customer_data: Dictionary)
@@ -451,6 +452,8 @@ signal interactable_focused(action_label: String)
 signal interactable_unfocused()
 
 # ── UI ────────────────────────────────────────────────────────────────────────
+## Emitted when a hub store card should be highlighted (e.g. from objective routing).
+signal hub_store_highlighted(store_id: StringName)
 signal toggle_milestones_panel()
 signal toggle_staff_panel()
 signal toggle_refurb_queue_panel()
@@ -460,9 +463,13 @@ signal toast_requested(message: String, category: StringName, duration: float)
 signal panel_opened(panel_name: String)
 signal panel_closed(panel_name: String)
 ## Emitted by ObjectiveDirector whenever the three-slot objective display should update.
-## payload keys: objective (String), action (String), key (String).
+## payload keys: text (String), action (String), key (String).
 ## When payload contains hidden: true the rail should conceal itself.
 signal objective_changed(payload: Dictionary)
+## Four-slot variant of objective_changed.
+## payload keys: current_objective, next_action, input_hint, optional_hint (all String).
+## hidden: true instructs the rail to conceal itself.
+signal objective_updated(payload: Dictionary)
 signal keybind_changed(action: String, new_event: InputEventKey)
 signal item_tooltip_requested(item: ItemInstance)
 signal item_tooltip_hidden()

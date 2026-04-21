@@ -31,6 +31,7 @@ var _daily_electronics_sold: int = 0
 var _daily_warranty_sold: int = 0
 var _demo_unit_was_active: bool = false
 var _daily_milestones: Array[String] = []
+var _daily_milestone_data: Array[Dictionary] = []
 var _daily_start_tier: int = -1
 var _daily_end_tier: int = -1
 var _history: Array[PerformanceReport] = []
@@ -133,6 +134,7 @@ func get_save_data() -> Dictionary:
 		"daily_warranty_revenue": _daily_warranty_revenue,
 		"daily_warranty_claim_costs": _daily_warranty_claim_costs,
 		"daily_milestones": _daily_milestones.duplicate(),
+		"daily_milestone_data": _daily_milestone_data.duplicate(),
 		"daily_start_tier": _daily_start_tier,
 		"daily_end_tier": _daily_end_tier,
 	}
@@ -198,10 +200,18 @@ func load_save_data(data: Dictionary) -> void:
 	_daily_start_tier = int(data.get("daily_start_tier", -1))
 	_daily_end_tier = int(data.get("daily_end_tier", -1))
 	_daily_milestones.clear()
+	_daily_milestone_data.clear()
 	var saved_ms: Variant = data.get("daily_milestones", [])
 	if saved_ms is Array:
 		for entry: Variant in saved_ms:
 			_daily_milestones.append(str(entry))
+	var saved_ms_data: Variant = data.get("daily_milestone_data", [])
+	if saved_ms_data is Array:
+		for entry: Variant in saved_ms_data:
+			if entry is Dictionary:
+				_daily_milestone_data.append(
+					(entry as Dictionary).duplicate()
+				)
 
 
 func _on_daily_financials_snapshot(
@@ -237,6 +247,7 @@ func _on_day_started(day: int) -> void:
 	_daily_warranty_sold = 0
 	_demo_unit_was_active = false
 	_daily_milestones.clear()
+	_daily_milestone_data.clear()
 	_daily_start_tier = _daily_end_tier
 	_daily_reputation_start = _daily_reputation_end
 	_snapshot_received = false
@@ -371,6 +382,7 @@ func _build_report(day: int) -> PerformanceReport:
 		)
 	report.electronics_demo_active = _demo_unit_was_active
 	report.milestones_unlocked = _daily_milestones.duplicate()
+	report.milestones_data = _daily_milestone_data.duplicate()
 	return report
 
 
@@ -522,11 +534,30 @@ func _on_demo_unit_activated(_item_id: String, _category: String) -> void:
 
 
 func _on_milestone_completed(
-	_milestone_id: String,
+	milestone_id: String,
 	milestone_name: String,
-	_reward_description: String,
+	reward_description: String,
 ) -> void:
 	_daily_milestones.append(milestone_name)
+	var description: String = _lookup_milestone_description(milestone_id)
+	_daily_milestone_data.append({
+		"name": milestone_name,
+		"description": description,
+		"reward": reward_description,
+	})
+
+
+func _lookup_milestone_description(milestone_id: String) -> String:
+	if milestone_id.is_empty():
+		return ""
+	if GameManager == null or GameManager.data_loader == null:
+		return ""
+	var definition: MilestoneDefinition = (
+		GameManager.data_loader.get_milestone(milestone_id)
+	)
+	if definition == null:
+		return ""
+	return definition.description
 
 
 func _score_to_tier(score: float) -> int:

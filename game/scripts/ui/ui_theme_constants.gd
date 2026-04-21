@@ -81,34 +81,34 @@ const WARNING_COLOR_CB := Color(0.8, 0.47, 0.65, 1.0)
 # Store accent hex values (from four-layer palette spec)
 # Use on borders/headers only; never as body text unless darkened variant
 # ---------------------------------------------------------------------------
-const STORE_ACCENT_RETRO_GAMES := Color(0.482, 0.294, 0.812, 1.0)      # #7B4BCF Cartridge Purple
+const STORE_ACCENT_RETRO_GAMES := Color(0.910, 0.647, 0.278, 1.0)      # #E8A547 CRT Amber
 const STORE_ACCENT_POCKET_CREATURES := Color(0.180, 0.710, 0.659, 1.0) # #2EB5A8 Holo Teal
-const STORE_ACCENT_VIDEO_RENTAL := Color(0.820, 0.231, 0.180, 1.0)     # #D13B2E VHS Red
+const STORE_ACCENT_VIDEO_RENTAL := Color(0.878, 0.306, 0.549, 1.0)     # #E04E8C Late-Fee Magenta
 const STORE_ACCENT_ELECTRONICS := Color(0.227, 0.659, 0.847, 1.0)      # #3AA8D8 CRT Cyan
-const STORE_ACCENT_SPORTS_CARDS := Color(0.788, 0.604, 0.169, 1.0)     # #C99A2B Foil Gold
+const STORE_ACCENT_SPORTS_CARDS := Color(0.910, 0.333, 0.333, 1.0)     # #E85555 Grading Crimson
 
 ## Inactive (desaturated) store accent for hub view when store is not selected.
-const STORE_ACCENT_INACTIVE_RETRO_GAMES := Color(0.239, 0.188, 0.314, 1.0)
+const STORE_ACCENT_INACTIVE_RETRO_GAMES := Color(0.247, 0.196, 0.133, 1.0)
 const STORE_ACCENT_INACTIVE_POCKET_CREATURES := Color(0.157, 0.259, 0.251, 1.0)
-const STORE_ACCENT_INACTIVE_VIDEO_RENTAL := Color(0.314, 0.180, 0.180, 1.0)
+const STORE_ACCENT_INACTIVE_VIDEO_RENTAL := Color(0.271, 0.157, 0.216, 1.0)
 const STORE_ACCENT_INACTIVE_ELECTRONICS := Color(0.157, 0.231, 0.314, 1.0)
-const STORE_ACCENT_INACTIVE_SPORTS_CARDS := Color(0.275, 0.239, 0.157, 1.0)
+const STORE_ACCENT_INACTIVE_SPORTS_CARDS := Color(0.271, 0.173, 0.173, 1.0)
 
 ## Keyed by store StringName for runtime lookup.
 const STORE_ACCENTS: Dictionary = {
-	"retro_games": Color(0.482, 0.294, 0.812, 1.0),
+	"retro_games": Color(0.910, 0.647, 0.278, 1.0),
 	"pocket_creatures": Color(0.180, 0.710, 0.659, 1.0),
-	"video_rental": Color(0.820, 0.231, 0.180, 1.0),
+	"video_rental": Color(0.878, 0.306, 0.549, 1.0),
 	"electronics": Color(0.227, 0.659, 0.847, 1.0),
-	"sports_cards": Color(0.788, 0.604, 0.169, 1.0),
+	"sports_cards": Color(0.910, 0.333, 0.333, 1.0),
 }
 
 const STORE_ACCENTS_INACTIVE: Dictionary = {
-	"retro_games": Color(0.239, 0.188, 0.314, 1.0),
+	"retro_games": Color(0.247, 0.196, 0.133, 1.0),
 	"pocket_creatures": Color(0.157, 0.259, 0.251, 1.0),
-	"video_rental": Color(0.314, 0.180, 0.180, 1.0),
+	"video_rental": Color(0.271, 0.157, 0.216, 1.0),
 	"electronics": Color(0.157, 0.231, 0.314, 1.0),
-	"sports_cards": Color(0.275, 0.239, 0.157, 1.0),
+	"sports_cards": Color(0.271, 0.173, 0.173, 1.0),
 }
 
 # ---------------------------------------------------------------------------
@@ -172,11 +172,11 @@ const SEMANTIC_STATES: Dictionary = {
 const TRACKING_PRIMARY: int = 80
 ## Minimum letter spacing for body copy.
 const TRACKING_BODY: int = 40
-## Recommended font size for primary UI labels.
-const FONT_SIZE_BODY: int = 16
-const FONT_SIZE_HEADER: int = 22
-const FONT_SIZE_TITLE: int = 28
-const FONT_SIZE_SMALL: int = 13
+## Font size scale matching mallcore_theme.tres tokens.
+const FONT_SIZE_CAPTION: int = 14  # caption — tooltips, footnotes
+const FONT_SIZE_BODY: int = 18     # body — all readable copy (minimum)
+const FONT_SIZE_H2: int = 24       # h2 — section/panel headers
+const FONT_SIZE_H1: int = 32       # h1 — screen titles
 
 ## Markup label thresholds: ratio <= threshold yields that label.
 const MARKUP_LABEL_FAIR_MAX: float = 1.5
