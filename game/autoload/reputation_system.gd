@@ -12,7 +12,7 @@ enum ReputationTier {
 const TIER_THRESHOLDS: Dictionary = {
 	ReputationTier.NOTORIOUS: 0.0,
 	ReputationTier.UNREMARKABLE: 25.0,
-	ReputationTier.REPUTABLE: 50.0,
+	ReputationTier.REPUTABLE: 51.0,
 	ReputationTier.LEGENDARY: 80.0,
 }
 
