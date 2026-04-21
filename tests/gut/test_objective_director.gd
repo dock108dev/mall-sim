@@ -2,10 +2,10 @@
 extends GutTest
 
 
-func _make_director() -> ObjectiveDirector:
-	var director: ObjectiveDirector = preload(
+func _make_director() -> Node:
+	var director: Node = preload(
 		"res://game/autoload/objective_director.gd"
-	).new() as ObjectiveDirector
+	).new() as Node
 	add_child_autofree(director)
 	return director
 

@@ -169,7 +169,7 @@ func get_item_price(item_id: StringName) -> float:
 			"factor": float(grade.get("price_multiplier", 1.0)),
 			"detail": str(grade.get("label", grade_id)),
 		})
-	var vintage_trend: float = MarketTrendSystem.get_trend_modifier(&"vintage")
+	var vintage_trend: float = MarketTrendSystemSingleton.get_trend_modifier(&"vintage")
 	if vintage_trend != 1.0:
 		multipliers.append({
 			"slot": "trend",

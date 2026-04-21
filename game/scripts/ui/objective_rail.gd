@@ -3,7 +3,6 @@
 ## Content arrives via EventBus.objective_changed(payload); no text is hardcoded here.
 ## Mouse input is never captured — all containers use MOUSE_FILTER_IGNORE.
 ## Auto-hide and Settings-override logic lives in ObjectiveDirector, not here.
-class_name ObjectiveRail
 extends CanvasLayer
 
 @onready var _objective_label: Label = $MarginContainer/VBoxContainer/ObjectiveLabel

@@ -120,7 +120,7 @@ func get_item_price(item_id: StringName) -> float:
 			"factor": demand_factor,
 			"detail": "Active season boost",
 		})
-	var vintage_trend: float = MarketTrendSystem.get_trend_modifier(&"vintage")
+	var vintage_trend: float = MarketTrendSystemSingleton.get_trend_modifier(&"vintage")
 	if vintage_trend != 1.0:
 		multipliers.append({
 			"slot": "trend",

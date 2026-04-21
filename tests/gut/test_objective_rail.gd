@@ -2,10 +2,10 @@
 extends GutTest
 
 
-func _make_rail() -> ObjectiveRail:
-	var rail: ObjectiveRail = preload(
+func _make_rail() -> CanvasLayer:
+	var rail: CanvasLayer = preload(
 		"res://game/scenes/ui/objective_rail.tscn"
-	).instantiate() as ObjectiveRail
+	).instantiate() as CanvasLayer
 	add_child_autofree(rail)
 	return rail
 

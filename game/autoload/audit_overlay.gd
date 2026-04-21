@@ -1,7 +1,6 @@
 ## Debug autoload for headless interaction audit. Stripped to no-op in release builds.
 ## Connects to EventBus signals to auto-instrument the five required checkpoints.
 extends Node
-class_name AuditOverlay
 
 const CHECKPOINTS: Array[StringName] = [
 	&"boot_complete",

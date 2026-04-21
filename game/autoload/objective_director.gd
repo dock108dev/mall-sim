@@ -1,7 +1,6 @@
 ## Routes gameplay signals to EventBus.objective_changed with a three-slot payload.
 ## All text is sourced from objectives.json — zero hardcoded strings in this file.
 ## Tracks the first full stock→sell→close loop to trigger auto-hide after day 3.
-class_name ObjectiveDirector
 extends Node
 
 const CONTENT_PATH := "res://game/content/objectives.json"
