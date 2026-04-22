@@ -1,12 +1,6 @@
 ## Central signal bus for decoupled communication between systems.
 extends Node
 
-var _latest_day_end_summary: Dictionary = {}
-
-
-func _ready() -> void:
-	day_started.connect(_on_day_started)
-
 # ── Content Pipeline ──────────────────────────────────────────────────────────
 signal content_loaded()
 signal content_load_failed(errors: Array[String])
@@ -109,7 +103,12 @@ signal restock_requested(store_id: StringName, item_id: StringName, quantity: in
 # ── Customer and Sales ────────────────────────────────────────────────────────
 signal customer_spawned(customer: Node)
 signal customer_entered(customer_data: Dictionary)
-signal customer_purchased(store_id: StringName, item_id: StringName, price: float, customer_id: StringName)
+signal customer_purchased(
+	store_id: StringName,
+	item_id: StringName,
+	price: float,
+	customer_id: StringName,
+)
 signal customer_walked(store_id: StringName, item_id: StringName, reason: String)
 signal customer_left(customer_data: Dictionary)
 signal customer_left_mall(customer: Node, satisfied: bool)
@@ -133,7 +132,14 @@ signal checkout_completed(customer: Node)
 # ── Haggling ──────────────────────────────────────────────────────────────────
 signal haggle_requested(item_id: String, customer_id: int)
 signal haggle_started(item_id: String, customer_id: int)
-signal haggle_completed(store_id: StringName, item_id: StringName, final_price: float, asking_price: float, accepted: bool, offer_count: int)
+signal haggle_completed(
+	store_id: StringName,
+	item_id: StringName,
+	final_price: float,
+	asking_price: float,
+	accepted: bool,
+	offer_count: int,
+)
 signal haggle_failed(item_id: String, customer_id: int)
 ## Emitted after a haggle resolves with the PriceResolver-computed multiplier applied.
 signal haggle_resolved(item_id: StringName, final_price: float, haggle_multiplier: float)
@@ -192,7 +198,8 @@ signal market_event_expired(event_id: StringName)
 signal market_event_triggered(event_id: StringName, store_id: StringName, effect: Dictionary)
 signal random_event_started(event_id: String)
 signal random_event_ended(event_id: String)
-## Emitted by RandomEventSystem at STORE_CLOSE_HOUR - 12 on days 3+ to telegraph upcoming market activity.
+## Emitted by RandomEventSystem at STORE_CLOSE_HOUR - 12 on days 3+ to telegraph
+## upcoming market activity.
 signal random_event_telegraphed(message: String)
 signal random_event_resolved(event_id: StringName, outcome: StringName)
 signal random_event_triggered(event_id: StringName, store_id: StringName, effect: Dictionary)
@@ -303,8 +310,11 @@ signal meta_shift_started(card_id: StringName, modifier: float, duration: int)
 signal meta_shift_ended(card_id: StringName)
 ## Emitted 1 day before a JSON-defined meta shift activates.
 signal meta_shift_telegraphed(shift_id: String, affected_types: Array[String], message: String)
-## Emitted when a JSON-defined meta shift becomes active; PriceResolver callers should fetch updated multipliers.
-signal meta_shift_applied(shift_id: String, affected_types: Array[String], multiplier: float)
+## Emitted when a JSON-defined meta shift becomes active; PriceResolver callers
+## should fetch updated multipliers.
+signal meta_shift_applied(
+	shift_id: String, affected_types: Array[String], multiplier: float
+)
 
 # ── Rental ────────────────────────────────────────────────────────────────────
 signal item_rented(item_id: String, rental_fee: float, rental_tier: String)
@@ -352,7 +362,8 @@ signal product_entered_clearance(item_id: String)
 ## Emitted by MilestoneSystem when a milestone condition is first satisfied.
 signal milestone_unlocked(milestone_id: StringName, reward: Dictionary)
 signal milestone_completed(milestone_id: String, milestone_name: String, reward_description: String)
-## Emitted by ProgressionSystem alongside milestone_completed; carries only the ID for lightweight listeners.
+## Emitted by ProgressionSystem alongside milestone_completed; carries only the
+## ID for lightweight listeners.
 signal milestone_reached(milestone_id: StringName)
 signal milestone_reputation_reward(milestone_id: StringName, delta: int)
 signal milestone_unlock_granted(unlock_id: StringName)
@@ -385,7 +396,9 @@ signal onboarding_hint_shown(hint_id: StringName, message: String, position_hint
 signal onboarding_disabled()
 
 # ── Secret Threads ────────────────────────────────────────────────────────────
-signal secret_thread_state_changed(thread_id: StringName, old_phase: StringName, new_phase: StringName)
+signal secret_thread_state_changed(
+	thread_id: StringName, old_phase: StringName, new_phase: StringName
+)
 signal secret_thread_completed(thread_id: StringName, reward_data: Dictionary)
 signal secret_thread_revealed(thread_id: StringName)
 signal secret_thread_failed(thread_id: StringName)
@@ -406,7 +419,12 @@ signal discrepancy_noticed(day: int)
 signal renovation_sounds_heard()
 signal wrong_name_customer_interacted()
 signal ambient_moment_queued(moment_id: StringName)
-signal ambient_moment_delivered(moment_id: StringName, display_type: StringName, flavor_text: String, audio_cue_id: StringName)
+signal ambient_moment_delivered(
+	moment_id: StringName,
+	display_type: StringName,
+	flavor_text: String,
+	audio_cue_id: StringName,
+)
 signal ambient_moment_cancelled(moment_id: StringName, reason: StringName)
 ## Emitted when a moment card becomes visible in the tray.
 signal moment_displayed(moment_id: StringName, flavor_text: String, duration_seconds: float)
@@ -491,6 +509,12 @@ signal locale_changed(new_locale: String)
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 signal preference_changed(key: String, value: Variant)
+
+var _latest_day_end_summary: Dictionary = {}
+
+
+func _ready() -> void:
+	day_started.connect(_on_day_started)
 
 
 ## Publishes the latest end-of-day summary for listeners that need more than

@@ -18,14 +18,14 @@ extends Node3D
 ## Vertical orbit sensitivity in radians per pixel.
 @export var pitch_sensitivity: float = 0.003
 
-@onready var _camera: Camera3D = $Camera3D
-@onready var _interaction_ray: Node = $InteractionRay
-
 var _yaw: float = 0.0
 var _pitch: float = deg_to_rad(-40.0)
 var _zoom: float = 8.0
 var _is_orbiting: bool = false
 var _build_mode_active: bool = false
+
+@onready var _camera: Camera3D = $Camera3D
+@onready var _interaction_ray: Node = $InteractionRay
 
 
 func _ready() -> void:

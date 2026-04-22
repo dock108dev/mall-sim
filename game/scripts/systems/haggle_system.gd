@@ -2,6 +2,22 @@
 class_name HaggleSystem
 extends Node
 
+signal negotiation_started(
+	item_name: String,
+	item_condition: String,
+	sticker_price: float,
+	customer_offer: float,
+	max_rounds: int
+)
+signal customer_countered(new_offer: float, round_number: int)
+signal negotiation_accepted(final_price: float)
+signal negotiation_failed()
+signal session_state_changed(session: HaggleSession)
+## Emitted when the customer's mood tier is evaluated. mood is "high", "neutral", or "low".
+signal customer_mood_changed(mood: String)
+## Emitted with a JSON-sourced customer dialogue line.
+signal customer_dialogue_line(text: String)
+
 const BASE_HAGGLE_CHANCE: float = 0.40
 const MAX_ROUNDS: int = 3
 const MIN_COUNTER_CLOSE_RATE: float = 0.25
@@ -21,22 +37,7 @@ const MOOD_LOW: String = "low"
 const MOOD_HIGH_THRESHOLD: float = 0.10
 const MOOD_NEUTRAL_THRESHOLD: float = 0.25
 const DIALOGUE_PATH: String = "res://game/content/haggle_dialogue.json"
-
-signal negotiation_started(
-	item_name: String,
-	item_condition: String,
-	sticker_price: float,
-	customer_offer: float,
-	max_rounds: int
-)
-signal customer_countered(new_offer: float, round_number: int)
-signal negotiation_accepted(final_price: float)
-signal negotiation_failed()
-signal session_state_changed(session: HaggleSession)
-## Emitted when the customer's mood tier is evaluated. mood is "high", "neutral", or "low".
-signal customer_mood_changed(mood: String)
-## Emitted with a JSON-sourced customer dialogue line.
-signal customer_dialogue_line(text: String)
+var time_per_turn: float = HaggleSession.TIME_PER_TURN_MAX
 
 var _active_customer: Customer = null
 var _active_item: ItemInstance = null
@@ -53,7 +54,6 @@ var _previous_customer_offer: float = 0.0
 var _active_store_id: StringName = &""
 var _reputation_system: ReputationSystem = null
 var _session: HaggleSession = null
-var time_per_turn: float = HaggleSession.TIME_PER_TURN_MAX
 var _dialogue: Dictionary = {}
 
 

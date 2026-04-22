@@ -2,15 +2,15 @@
 class_name SaveLoadPanel
 extends CanvasLayer
 
+signal save_requested(slot: int)
+signal load_requested(slot: int)
+
+enum Mode { SAVE, LOAD }
+
 
 const PANEL_NAME: String = "save_load"
 const MANUAL_SLOTS: int = 3
 const AUTO_SLOT: int = 0
-
-enum Mode { SAVE, LOAD }
-
-signal save_requested(slot: int)
-signal load_requested(slot: int)
 
 var save_manager: SaveManager
 var _mode: Mode = Mode.SAVE

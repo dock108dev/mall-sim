@@ -8,13 +8,13 @@ extends PanelContainer
 ## the queue regardless of whether dismiss was manual or time-based.
 signal dismissed(moment_id: StringName)
 
+## Visual flavour matched to ambient_moments.json display_type field.
+enum DisplayStyle { TOAST, THOUGHT_BUBBLE, LOG_ENTRY, AUDIO_ONLY }
+
 const _ANIMATE_IN_SECS: float = 0.18
 const _ANIMATE_OUT_SECS: float = 0.22
 const _MIN_DURATION: float = 0.5
 const _SLIDE_OFFSET: float = 24.0
-
-## Visual flavour matched to ambient_moments.json display_type field.
-enum DisplayStyle { TOAST, THOUGHT_BUBBLE, LOG_ENTRY, AUDIO_ONLY }
 
 var moment_id: StringName = &""
 var display_style: DisplayStyle = DisplayStyle.TOAST

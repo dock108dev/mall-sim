@@ -27,8 +27,6 @@ extends Node3D
 ## Store boundary max corner for pivot clamping.
 @export var store_bounds_max: Vector3 = Vector3(7.0, 0.0, 5.0)
 
-@onready var _camera: Camera3D = $Camera3D
-
 var _yaw: float = 0.0
 var _pitch: float = deg_to_rad(40.0)
 var _zoom: float = 8.0
@@ -40,6 +38,8 @@ var _target_pivot: Vector3 = Vector3.ZERO
 var _is_orbiting: bool = false
 var _is_panning: bool = false
 var _build_mode_active: bool = false
+
+@onready var _camera: Camera3D = $Camera3D
 
 
 func _ready() -> void:

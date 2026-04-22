@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Owns all item instances and tracks their locations across stores.
 class_name InventorySystem
 extends Node

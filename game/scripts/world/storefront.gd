@@ -40,6 +40,8 @@ static var _sign_backing_mat: StandardMaterial3D = preload(
 static var _threshold_mat: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_floor_tile_cream.tres"
 )
+static var _lease_marker_materials: Dictionary = {}
+static var _sign_materials: Dictionary = {}
 
 @export var slot_index: int = 0
 @export var store_id: String = ""
@@ -62,8 +64,6 @@ var _is_store_open: bool = false
 var _active_camera: Camera3D = null
 var _status_base_modulate: Color = Color.WHITE
 var _status_outline_modulate: Color = Color.BLACK
-static var _lease_marker_materials: Dictionary = {}
-static var _sign_materials: Dictionary = {}
 
 
 func _ready() -> void:

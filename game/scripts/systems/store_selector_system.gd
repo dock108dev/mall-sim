@@ -2,7 +2,7 @@
 class_name StoreSelectorSystem
 extends Node
 
-const _PlayerControllerScene: PackedScene = preload(
+const _PLAYER_CONTROLLER_SCENE: PackedScene = preload(
 	"res://game/scenes/player/player_controller.tscn"
 )
 const _STORE_ENTRY_MARKER_NAMES: Array[StringName] = [
@@ -96,6 +96,7 @@ func select_store(store_id: StringName) -> void:
 
 
 ## Enters the requested store interior and returns whether the transition ran.
+# gdlint:disable=max-returns
 func enter_store(store_id: StringName) -> bool:
 	if _is_transitioning or _inside_store:
 		return false
@@ -132,7 +133,7 @@ func enter_store(store_id: StringName) -> bool:
 		return false
 
 	var loaded_camera: PlayerController = (
-		_PlayerControllerScene.instantiate() as PlayerController
+		_PLAYER_CONTROLLER_SCENE.instantiate() as PlayerController
 	)
 	if loaded_camera == null:
 		loaded_scene.queue_free()
@@ -166,6 +167,7 @@ func enter_store(store_id: StringName) -> bool:
 
 
 ## Exits the current store interior and returns whether the transition ran.
+# gdlint:enable=max-returns
 func exit_store() -> bool:
 	if _is_transitioning or not _inside_store:
 		return false

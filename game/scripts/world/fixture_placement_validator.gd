@@ -43,6 +43,7 @@ func get_cell_state(
 
 
 ## Full validation returning a PlacementResult.
+# gdlint:disable=max-returns
 func validate_placement(
 	cells: Array[Vector2i],
 	occupied_cells: Dictionary,
@@ -88,6 +89,7 @@ func validate_placement(
 
 
 ## Returns true if the fixture cells avoid the entry zone.
+# gdlint:enable=max-returns
 func is_outside_entry_zone(cells: Array[Vector2i]) -> bool:
 	for cell: Vector2i in cells:
 		if _is_in_entry_zone(cell):

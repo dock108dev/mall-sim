@@ -1,4 +1,5 @@
-## Integration test: Staff stocker role — hire → auto-restock timer fires and staff_restocked_shelf emitted.
+## Integration test: Staff stocker role — hire → auto-restock timer fires and
+## staff_restocked_shelf emitted.
 extends GutTest
 
 const STORE_ID: String = "test_stocker_effect_store"

@@ -30,10 +30,10 @@ const _ALERT_COLORS: Array[Color] = [
 ## How close a pixel must be to count (squared Euclidean in linear RGB).
 const _MATCH_THRESHOLD_SQ: float = 0.12
 
-@onready var _label: Label = $Label
-
 var _visible_overlay: bool = false
 var _frame_counter: int = 0
+
+@onready var _label: Label = $Label
 
 
 func _ready() -> void:

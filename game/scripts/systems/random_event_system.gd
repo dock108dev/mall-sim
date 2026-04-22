@@ -140,6 +140,7 @@ func get_demand_multiplier(item_id: String) -> float:
 
 
 ## Returns the traffic multiplier from active events.
+# gdlint:disable=max-returns
 func get_traffic_multiplier() -> float:
 	if _active_event.is_empty():
 		return 1.0
@@ -161,6 +162,7 @@ func get_traffic_multiplier() -> float:
 
 
 ## Returns the category blocked by an active supply shortage, or empty.
+# gdlint:enable=max-returns
 func get_blocked_category() -> String:
 	if _active_event.is_empty():
 		return ""

@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Manages audio playback for music, SFX, and ambient sounds.
 extends Node
 
@@ -16,6 +17,9 @@ const AMBIENCE_BUS: String = "Ambience"
 const DEFAULT_CROSSFADE: float = 0.5
 const AMBIENT_CROSSFADE_DURATION: float = 0.5
 const MUSIC_VOLUME_DB: float = -6.0
+
+const DUCK_DURATION: float = 0.3
+const DUCK_TARGET_DB: float = -12.0
 
 var _sfx_streams: Dictionary = {}
 var _sfx_players: Array[AudioStreamPlayer] = []
@@ -48,9 +52,6 @@ var _music_stems: Dictionary = {}
 ## Ambience bus duck state: volume_db before ducking.
 var _ambience_pre_duck_db: float = 0.0
 var _duck_tween: Tween = null
-
-const DUCK_DURATION: float = 0.3
-const DUCK_TARGET_DB: float = -12.0
 
 
 func _ready() -> void:

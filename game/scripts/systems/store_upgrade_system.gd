@@ -53,6 +53,7 @@ func get_purchased_ids(store_id: String) -> Array:
 
 
 ## Returns true if the player can afford the upgrade and meets rep.
+# gdlint:disable=max-returns
 func can_purchase(
 	store_id: String, upgrade_id: String
 ) -> bool:
@@ -75,6 +76,7 @@ func can_purchase(
 
 
 ## Attempts to purchase an upgrade. Returns true on success.
+# gdlint:enable=max-returns
 func purchase_upgrade(
 	store_id: String, upgrade_id: String
 ) -> bool:

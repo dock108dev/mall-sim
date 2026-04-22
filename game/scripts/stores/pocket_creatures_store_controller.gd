@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Controller for the PocketCreatures card shop lifecycle and hooks.
 class_name PocketCreaturesStoreController
 extends StoreController

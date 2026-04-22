@@ -15,14 +15,14 @@ const _BAR_MAX: float = 2.0
 const _SELECTED_MODULATE: Color = Color(1.0, 1.0, 1.0, 1.0)
 const _DESELECTED_MODULATE: Color = Color(0.65, 0.65, 0.65, 1.0)
 
-@onready var _cards_row: HBoxContainer = $Panel/Margin/VBox/CardsRow
-@onready var _assisted_dialog: ConfirmationDialog = $AssistedWarningDialog
-
 var _tiers: Array[Dictionary] = []
 var _tier_ids: Array[StringName] = []
 var _selected_tier_id: StringName = &""
 var _from_pause: bool = false
 var _pending_tier_id: StringName = &""
+
+@onready var _cards_row: HBoxContainer = $Panel/Margin/VBox/CardsRow
+@onready var _assisted_dialog: ConfirmationDialog = $AssistedWarningDialog
 
 
 func _ready() -> void:

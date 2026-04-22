@@ -4,10 +4,10 @@ extends CanvasLayer
 
 const FADE_DURATION: float = 0.15
 
+var _fade_tween: Tween
+
 @onready var _panel: PanelContainer = $PanelContainer
 @onready var _label: Label = $PanelContainer/Label
-
-var _fade_tween: Tween
 
 
 func _ready() -> void:

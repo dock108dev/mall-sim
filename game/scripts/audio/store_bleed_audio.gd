@@ -12,9 +12,9 @@ const PRE_OPEN_PHASE: int = 0
 ## Res-path to the WAV/OGG placeholder track for this store genre.
 @export var music_path: String = ""
 
-@onready var _player: AudioStreamPlayer3D = $AudioStreamPlayer3D
-
 var _is_open: bool = false
+
+@onready var _player: AudioStreamPlayer3D = $AudioStreamPlayer3D
 
 
 func _ready() -> void:

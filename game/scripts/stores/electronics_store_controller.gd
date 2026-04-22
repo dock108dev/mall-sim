@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Controller for the Consumer Electronics store. Manages product lifecycle,
 ## demo units, and warranty upsell tracking.
 class_name ElectronicsStoreController
@@ -224,6 +225,7 @@ func has_active_demo_for_category(category: String) -> bool:
 
 
 ## Returns true if the item can be placed on a demo station.
+# gdlint:disable=max-returns
 func can_demo_item(item: ItemInstance) -> bool:
 	if not item or not item.definition:
 		return false
@@ -244,6 +246,7 @@ func can_demo_item(item: ItemInstance) -> bool:
 
 ## Simulates a customer trying a demo unit. Emits demo_interaction_triggered
 ## and applies a soft reputation bonus. Returns false if item is not a demo unit.
+# gdlint:enable=max-returns
 func try_demo_interaction(instance_id: String) -> bool:
 	if not is_demo_unit(instance_id):
 		push_warning(

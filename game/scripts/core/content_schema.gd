@@ -156,6 +156,10 @@ const RENTAL_ITEM_REQUIRED: Dictionary = {
 }
 
 
+## Valid operator strings for ending criteria.
+const VALID_OPERATORS: PackedStringArray = ["gte", "lte", "gt", "lt", "eq"]
+
+
 ## Returns true when the registry has a schema for this content type.
 static func has_schema(content_type: String) -> bool:
 	return SCHEMAS.has(content_type)
@@ -233,10 +237,6 @@ static func _validate_rental_item_fields(
 				% [prefix, field, _type_names(accepted), _type_name(typeof(value))]
 			)
 	return errors
-
-
-## Valid operator strings for ending criteria.
-const VALID_OPERATORS: PackedStringArray = ["gte", "lte", "gt", "lt", "eq"]
 
 ## Validates required_all, required_any, and forbidden_all criterion arrays
 ## for an ending entry. Each criterion must have stat_key (String), operator

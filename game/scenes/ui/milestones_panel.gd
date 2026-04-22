@@ -2,7 +2,7 @@
 class_name MilestonesPanel
 extends CanvasLayer
 
-const _MilestoneCardScene: PackedScene = preload(
+const _MILESTONE_CARD_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/milestone_card.tscn"
 )
 
@@ -103,7 +103,7 @@ func _create_milestone_row(milestone: Dictionary) -> void:
 	var is_done: bool = progression_system.is_milestone_completed(mid)
 	var progress: float = progression_system.get_milestone_progress(milestone)
 
-	var card: MilestoneCard = _MilestoneCardScene.instantiate() as MilestoneCard
+	var card: MilestoneCard = _MILESTONE_CARD_SCENE.instantiate() as MilestoneCard
 	_grid.add_child(card)
 	card.configure({
 		"milestone_id": mid,

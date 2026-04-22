@@ -8,16 +8,16 @@
 ## Auto-hide and Settings-override logic lives in ObjectiveDirector, not here.
 extends CanvasLayer
 
+var _auto_hidden: bool = false
+var _current_payload: Dictionary = {}
+var _show_rail: bool = true
+var _tween: Tween
+
 @onready var _margin: MarginContainer = $MarginContainer
 @onready var _objective_label: Label = $MarginContainer/HBoxContainer/ObjectiveLabel
 @onready var _action_label: Label = $MarginContainer/HBoxContainer/ActionLabel
 @onready var _hint_label: Label = $MarginContainer/HBoxContainer/HintLabel
 @onready var _optional_hint_label: Label = $MarginContainer/HBoxContainer/OptionalHintLabel
-
-var _auto_hidden: bool = false
-var _current_payload: Dictionary = {}
-var _show_rail: bool = true
-var _tween: Tween
 
 
 func _ready() -> void:

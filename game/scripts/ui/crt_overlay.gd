@@ -5,9 +5,9 @@ extends CanvasLayer
 
 @export var intensity: float = 0.25 : set = _set_intensity
 
-@onready var _rect: ColorRect = $CRTRect
-
 var _retro_drawer_active: bool = false
+
+@onready var _rect: ColorRect = $CRTRect
 
 
 func _ready() -> void:

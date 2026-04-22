@@ -4,11 +4,11 @@
 class_name WarrantyDialog
 extends CanvasLayer
 
-const PANEL_NAME: String = "warranty"
-const DEFAULT_WARRANTY_PERCENT: float = 0.20
-
 signal warranty_accepted(item_id: String, warranty_fee: float)
 signal warranty_declined
+
+const PANEL_NAME: String = "warranty"
+const DEFAULT_WARRANTY_PERCENT: float = 0.20
 
 var _is_open: bool = false
 var _item_id: String = ""

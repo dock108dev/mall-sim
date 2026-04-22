@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Global game state manager. Handles state transitions and session lifecycle.
 extends Node
 

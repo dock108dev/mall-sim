@@ -10,6 +10,10 @@ extends Node2D
 @export var display_name: String = ""
 @export var accent_color: Color = Color(0.7, 0.7, 0.8, 1.0)
 
+var _day_closed: bool = false
+var _last_day_revenue: float = 0.0
+var _highlight_tween: Tween = null
+
 @onready var _click_area: Area2D = $ClickArea
 @onready var _frame: ColorRect = $Frame
 @onready var _name_label: Label = $NameLabel
@@ -21,10 +25,6 @@ extends Node2D
 @onready var _urgency_dot: ColorRect = $UrgencyDot
 @onready var _preview_panel: PanelContainer = $PreviewPanel
 @onready var _preview_revenue_label: Label = $PreviewPanel/PreviewContent/RevenueLabel
-
-var _day_closed: bool = false
-var _last_day_revenue: float = 0.0
-var _highlight_tween: Tween = null
 
 
 func _ready() -> void:

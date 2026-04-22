@@ -5,8 +5,6 @@ extends CanvasLayer
 
 const DEBUG_CASH_AMOUNT: float = 100.0
 
-@onready var _label: Label = $Label
-
 var time_system: TimeSystem
 var economy_system: EconomySystem
 var inventory_system: InventorySystem
@@ -14,6 +12,8 @@ var customer_system: CustomerSystem
 var mall_customer_spawner: MallCustomerSpawner
 
 var _overlay_visible: bool = false
+
+@onready var _label: Label = $Label
 
 
 func _ready() -> void:

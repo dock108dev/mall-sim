@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## GUT unit tests for EndingEvaluatorSystem — stat initialization, accumulation,
 ## evaluate() logic, trigger guards, and save/load symmetry.
 extends GutTest

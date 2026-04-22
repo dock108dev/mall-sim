@@ -2,6 +2,12 @@
 class_name StoreDecorationBuilder
 extends RefCounted
 
+const SMALL_STORE_HALF_W: float = 3.5
+const SMALL_STORE_HALF_D: float = 2.5
+const MEDIUM_STORE_HALF_W: float = 4.5
+const MEDIUM_STORE_HALF_D: float = 3.0
+const WALL_HEIGHT: float = 3.0
+
 static var _poster_red: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_poster_red.tres"
 )
@@ -26,12 +32,6 @@ static var _plant_mat: StandardMaterial3D = preload(
 static var _wood_dark: StandardMaterial3D = preload(
 	"res://game/assets/materials/mat_wood_dark.tres"
 )
-
-const SMALL_STORE_HALF_W: float = 3.5
-const SMALL_STORE_HALF_D: float = 2.5
-const MEDIUM_STORE_HALF_W: float = 4.5
-const MEDIUM_STORE_HALF_D: float = 3.0
-const WALL_HEIGHT: float = 3.0
 
 
 ## Builds decorations for the given store type under a Decorations node.

@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## GUT unit tests for MilestoneSystem — counter accumulation, threshold
 ## evaluation, reward emission, and no re-emission on load.
 extends GutTest

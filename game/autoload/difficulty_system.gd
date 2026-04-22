@@ -11,6 +11,7 @@ const SETTINGS_KEY: String = "tier"
 const PEAK_HOURS_START: int = 11
 const PEAK_HOURS_END: int = 20
 const DIFFICULTY_CONFIG_PATH: String = "res://game/content/economy/difficulty_config.json"
+var used_difficulty_downgrade: bool = false
 
 var _current_tier_id: StringName = DEFAULT_TIER
 var _current_hour: int = 0
@@ -18,7 +19,6 @@ var _tiers: Dictionary = {}
 var _tier_order: Array[StringName] = []
 var _assisted: bool = false
 var _initialized: bool = false
-var used_difficulty_downgrade: bool = false
 
 
 func _ready() -> void:

@@ -2,6 +2,8 @@
 class_name Customer
 extends CharacterBody3D
 
+signal despawn_requested(customer: Customer)
+
 enum State {
 	ENTERING,
 	BROWSING,
@@ -10,8 +12,6 @@ enum State {
 	WAITING_IN_QUEUE,
 	LEAVING,
 }
-
-signal despawn_requested(customer: Customer)
 
 const MOVE_SPEED: float = 2.0
 const MOVE_TO_NEXT_SHELF_CHANCE: float = 0.5
@@ -34,6 +34,10 @@ var patience_timer: float = 0.0
 var browse_timer: float = 0.0
 ## Frame stagger offset assigned by CustomerSystem (0.0 to 1.0).
 var stagger_offset: float = 0.0
+## Per-frame timing for profiling (set each _physics_process).
+var last_script_time_ms: float = 0.0
+var last_nav_time_ms: float = 0.0
+var last_anim_time_ms: float = 0.0
 
 var _store_controller: StoreController = null
 var _inventory_system: InventorySystem = null
@@ -53,10 +57,6 @@ var _time_paused: bool = false
 var _nav_recalc_timer: float = 0.0
 var _cached_preferred_slots: Array[Node] = []
 var _preferred_slots_dirty: bool = true
-## Per-frame timing for profiling (set each _physics_process).
-var last_script_time_ms: float = 0.0
-var last_nav_time_ms: float = 0.0
-var last_anim_time_ms: float = 0.0
 
 @onready var _navigation_agent: NavigationAgent3D = (
 	get_node_or_null("NavigationAgent3D") as NavigationAgent3D
@@ -389,6 +389,7 @@ func _evaluate_current_shelf() -> void:
 			_desired_item_slot = _current_target_slot
 
 
+# gdlint:disable=max-returns
 func _is_item_desirable(item: ItemInstance) -> bool:
 	if not item.definition or not profile:
 		return false
@@ -415,6 +416,7 @@ func _is_item_desirable(item: ItemInstance) -> bool:
 	return true
 
 
+# gdlint:enable=max-returns
 func _matches_categories(item: ItemInstance) -> bool:
 	if profile.preferred_categories.is_empty():
 		return true

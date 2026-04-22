@@ -1,4 +1,5 @@
-## Integration test: Staff greeter role — hire + assign → entry conversion bonus applied and customer_greeted emitted.
+## Integration test: Staff greeter role — hire + assign → entry conversion bonus
+## applied and customer_greeted emitted.
 extends GutTest
 
 const STORE_ID: String = "test_greeter_effect_store"

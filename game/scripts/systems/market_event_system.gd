@@ -220,6 +220,7 @@ func _handle_phase_transition(
 		)
 
 
+# gdlint:disable=max-returns
 func _calc_phase_multiplier(event_data: Dictionary) -> float:
 	var def: MarketEventDefinition = event_data.get(
 		"definition", null
@@ -251,6 +252,7 @@ func _calc_phase_multiplier(event_data: Dictionary) -> float:
 
 
 ## Ticks down all cooldown counters by one day.
+# gdlint:enable=max-returns
 func _tick_cooldowns() -> void:
 	var expired: Array[String] = []
 	for event_id: String in _cooldowns:

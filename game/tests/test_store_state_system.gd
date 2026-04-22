@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## GUT unit tests for StoreStateManager slot ownership, active store, and signals.
 extends GutTest
 

@@ -2,13 +2,13 @@
 class_name PauseMenu
 extends CanvasLayer
 
+signal return_to_menu_pressed
+signal view_day_summary_requested
+
 
 const PANEL_NAME: String = "pause_menu"
 const FADE_DURATION: float = 0.15
 const SAVE_TOAST_DURATION: float = 2.0
-
-signal return_to_menu_pressed
-signal view_day_summary_requested
 
 var completion_tracker: CompletionTracker
 var tutorial_system: TutorialSystem

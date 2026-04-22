@@ -2,11 +2,11 @@
 class_name SettingsPanel
 extends CanvasLayer
 
-
-const PANEL_NAME: String = "settings_panel"
-
 signal closed
 signal settings_saved
+
+
+const PANEL_NAME: String = "settings_panel"
 
 const _SNAPSHOT_KEYS: Array[String] = [
 	"master_volume", "music_volume", "sfx_volume",
@@ -411,6 +411,7 @@ func _format_action_name(action: String) -> String:
 	return action.replace("_", " ").capitalize()
 
 
+# gdlint:disable=max-returns
 func _get_action_binding(action: String) -> String:
 	var events: Array[InputEvent] = InputMap.action_get_events(action)
 	if events.is_empty():
@@ -436,6 +437,7 @@ func _get_action_binding(action: String) -> String:
 	return event.as_text()
 
 
+# gdlint:enable=max-returns
 func _on_master_changed(value: float) -> void:
 	_apply_volume_slider("master", _master_label, value)
 

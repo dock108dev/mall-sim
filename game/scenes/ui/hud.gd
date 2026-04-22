@@ -49,17 +49,6 @@ const _REP_ARROW_HOLD: float = 1.0
 const _REP_ARROW_FADE_OUT: float = 0.4
 const _BUILD_MODE_DIM_ALPHA: float = 0.5
 
-@onready var _top_bar: HBoxContainer = $TopBar
-@onready var _cash_label: Label = $TopBar/CashLabel
-@onready var _time_label: Label = $TopBar/TimeLabel
-@onready var _speed_button: Button = $TopBar/SpeedButton
-@onready var _reputation_label: Label = $TopBar/ReputationLabel
-@onready var _prompt_label: Label = $PromptLabel
-@onready var _store_label: Label = $StoreLabel
-@onready var _seasonal_event_label: Label = $SeasonalEventLabel
-@onready var _telegraph_card: Label = $TelegraphCard
-@onready var _milestones_button: Button = $MilestonesButton
-
 var _telegraphed_events: Dictionary = {}
 var _random_event_telegraph: String = ""
 
@@ -78,6 +67,17 @@ var _cash_color_tween: Tween
 var _rep_arrow_tween: Tween
 var _dim_tween: Tween
 var _close_day_button: Button
+
+@onready var _top_bar: HBoxContainer = $TopBar
+@onready var _cash_label: Label = $TopBar/CashLabel
+@onready var _time_label: Label = $TopBar/TimeLabel
+@onready var _speed_button: Button = $TopBar/SpeedButton
+@onready var _reputation_label: Label = $TopBar/ReputationLabel
+@onready var _prompt_label: Label = $PromptLabel
+@onready var _store_label: Label = $StoreLabel
+@onready var _seasonal_event_label: Label = $SeasonalEventLabel
+@onready var _telegraph_card: Label = $TelegraphCard
+@onready var _milestones_button: Button = $MilestonesButton
 
 
 func _ready() -> void:
@@ -332,9 +332,9 @@ func _format_reputation(score: float) -> String:
 func _get_tier_name(score: float) -> String:
 	if score >= 80.0:
 		return tr("HUD_TIER_LEGENDARY")
-	elif score >= 50.0:
+	if score >= 50.0:
 		return tr("HUD_TIER_DESTINATION")
-	elif score >= 25.0:
+	if score >= 25.0:
 		return tr("HUD_TIER_LOCAL_FAV")
 	return tr("HUD_TIER_UNKNOWN")
 

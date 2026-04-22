@@ -89,6 +89,7 @@ func _get_walk_animation() -> String:
 	return "walk"
 
 
+# gdlint:disable=max-returns
 func _get_animation_for_state(state: Customer.State) -> String:
 	match state:
 		Customer.State.ENTERING:
@@ -107,6 +108,7 @@ func _get_animation_for_state(state: Customer.State) -> String:
 
 
 ## Returns the animation to play when the customer is stationary.
+# gdlint:enable=max-returns
 func _get_stationary_animation(state: Customer.State) -> String:
 	match state:
 		Customer.State.BROWSING:

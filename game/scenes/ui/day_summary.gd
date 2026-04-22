@@ -111,6 +111,7 @@ func _ready() -> void:
 
 
 ## Populates the summary with daily stats and shows the panel.
+# gdlint:ignore=function-arguments-number
 func show_summary(
 	day: int,
 	revenue: float,

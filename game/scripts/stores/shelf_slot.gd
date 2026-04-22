@@ -4,62 +4,44 @@ extends Interactable
 
 signal slot_changed(slot: ShelfSlot)
 
-const CATEGORY_SCENES: Dictionary = {
-	"trading_cards": preload(
-		"res://game/assets/models/props/placeholder_prop_card_pack.tscn"
-	),
-	"sealed_packs": preload(
-		"res://game/assets/models/props/placeholder_prop_card_pack.tscn"
-	),
-	"sealed_product": preload(
-		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
-	),
-	"memorabilia": preload(
-		"res://game/assets/models/props/placeholder_prop_sports_memorabilia.tscn"
-	),
-	"cartridge": preload(
-		"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
-	),
-	"console": preload(
-		"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
-	),
-	"accessory": preload(
-		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
-	),
-	"guide": preload(
-		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
-	),
-	"vhs_tapes": preload(
-		"res://game/assets/models/props/placeholder_prop_vhs_tape.tscn"
-	),
-	"dvd_titles": preload(
-		"res://game/assets/models/props/placeholder_prop_vhs_tape.tscn"
-	),
-	"snacks": preload(
-		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
-	),
-	"merchandise": preload(
-		"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
-	),
-	"portable_audio": preload(
-		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
-	),
-	"digital_camera": preload(
-		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
-	),
-	"gadget": preload(
-		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
-	),
-	"audio_equipment": preload(
-		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
-	),
-	"portable_gaming": preload(
-		"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
-	),
-}
-const DEFAULT_ITEM_SCENE: PackedScene = preload(
+const _CARD_PACK_SCENE: PackedScene = preload(
+	"res://game/assets/models/props/placeholder_prop_card_pack.tscn"
+)
+const _SHELF_PRODUCT_SCENE: PackedScene = preload(
 	"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
 )
+const _SPORTS_MEMORABILIA_SCENE: PackedScene = preload(
+	"res://game/assets/models/props/placeholder_prop_sports_memorabilia.tscn"
+)
+const _GAME_CARTRIDGE_SCENE: PackedScene = preload(
+	"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
+)
+const _VHS_TAPE_SCENE: PackedScene = preload(
+	"res://game/assets/models/props/placeholder_prop_vhs_tape.tscn"
+)
+const _ELECTRONICS_DEVICE_SCENE: PackedScene = preload(
+	"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
+)
+const CATEGORY_SCENES: Dictionary = {
+	"trading_cards": _CARD_PACK_SCENE,
+	"sealed_packs": _CARD_PACK_SCENE,
+	"sealed_product": _SHELF_PRODUCT_SCENE,
+	"memorabilia": _SPORTS_MEMORABILIA_SCENE,
+	"cartridge": _GAME_CARTRIDGE_SCENE,
+	"console": _GAME_CARTRIDGE_SCENE,
+	"accessory": _SHELF_PRODUCT_SCENE,
+	"guide": _SHELF_PRODUCT_SCENE,
+	"vhs_tapes": _VHS_TAPE_SCENE,
+	"dvd_titles": _VHS_TAPE_SCENE,
+	"snacks": _SHELF_PRODUCT_SCENE,
+	"merchandise": _SHELF_PRODUCT_SCENE,
+	"portable_audio": _ELECTRONICS_DEVICE_SCENE,
+	"digital_camera": _ELECTRONICS_DEVICE_SCENE,
+	"gadget": _ELECTRONICS_DEVICE_SCENE,
+	"audio_equipment": _ELECTRONICS_DEVICE_SCENE,
+	"portable_gaming": _ELECTRONICS_DEVICE_SCENE,
+}
+const DEFAULT_ITEM_SCENE: PackedScene = _SHELF_PRODUCT_SCENE
 
 const HIGHLIGHT_EMPTY := Color(0.2, 0.8, 0.2)
 const HIGHLIGHT_OCCUPIED := Color(0.9, 0.2, 0.2)

@@ -2,11 +2,11 @@
 class_name TradePanel
 extends PanelContainer
 
-const PANEL_NAME: StringName = &"trade"
-const FAIR_TRADE_THRESHOLD: float = 0.20
-
 signal trade_accepted
 signal trade_declined
+
+const PANEL_NAME: StringName = &"trade"
+const FAIR_TRADE_THRESHOLD: float = 0.20
 
 var _is_open: bool = false
 var _is_pending: bool = false

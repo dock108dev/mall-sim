@@ -10,6 +10,12 @@ const CELL_Y_OFFSET: float = 0.015
 const HIGHLIGHT_BLUE: Color = Color(0.2, 0.4, 1.0, 0.6)
 const HIGHLIGHT_YELLOW: Color = Color(1.0, 0.9, 0.2, 0.5)
 const HIGHLIGHT_Y_OFFSET: float = 0.04
+var overlay_alpha: float = 0.0:
+	set(value):
+		_overlay_alpha = clampf(value, 0.0, 1.0)
+		_apply_overlay_alpha()
+	get:
+		return _overlay_alpha
 
 var _grid: BuildModeGrid = null
 var _validator: FixturePlacementValidator = null
@@ -19,12 +25,6 @@ var _cells_container: Node3D = null
 var _cell_meshes: Array[MeshInstance3D] = []
 var _fade_tween: Tween = null
 var _overlay_alpha: float = 0.0
-var overlay_alpha: float = 0.0:
-	set(value):
-		_overlay_alpha = clampf(value, 0.0, 1.0)
-		_apply_overlay_alpha()
-	get:
-		return _overlay_alpha
 
 var _highlight_meshes: Array[MeshInstance3D] = []
 var _hovered_fixture_id: String = ""

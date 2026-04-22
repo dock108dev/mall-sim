@@ -10,7 +10,7 @@ const SLOT_PATHS: Dictionary = {
 	2: "user://save_slot_2.json",
 	3: "user://save_slot_3.json",
 }
-const _SettingsPanelScene: PackedScene = preload(
+const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
 )
 
@@ -94,7 +94,7 @@ func _on_settings_pressed() -> void:
 	if _load_panel_visible:
 		_close_load_panel()
 	if _settings_panel == null:
-		_settings_panel = _SettingsPanelScene.instantiate() as SettingsPanel
+		_settings_panel = _SETTINGS_PANEL_SCENE.instantiate() as SettingsPanel
 		add_child(_settings_panel)
 	_settings_panel.open()
 

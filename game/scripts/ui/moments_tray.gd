@@ -13,7 +13,7 @@ const MAX_QUEUE_DEPTH: int = 8
 ## Seconds of silence inserted between consecutive card appearances.
 const INTER_CARD_PAUSE_SECS: float = 0.35
 
-const _MomentCardScene: PackedScene = preload(
+const _MOMENT_CARD_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/moment_card.tscn"
 )
 
@@ -165,7 +165,7 @@ func _try_show_next() -> void:
 
 
 func _spawn_card(entry: Dictionary) -> void:
-	var card: MomentCard = _MomentCardScene.instantiate() as MomentCard
+	var card: MomentCard = _MOMENT_CARD_SCENE.instantiate() as MomentCard
 	_container.add_child(card)
 	card.setup(
 		StringName(str(entry.get("moment_id", ""))),

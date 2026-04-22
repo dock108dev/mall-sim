@@ -28,6 +28,7 @@ func is_ready() -> bool:
 
 
 ## Resolves any raw ID string to its canonical StringName form.
+# gdlint:disable=max-returns
 func resolve(raw: String) -> StringName:
 	if raw.is_empty():
 		return &""
@@ -51,6 +52,7 @@ func resolve(raw: String) -> StringName:
 
 
 ## Returns true if the ID (or an alias for it) exists.
+# gdlint:enable=max-returns
 func exists(raw: String) -> bool:
 	if raw.is_empty():
 		return false

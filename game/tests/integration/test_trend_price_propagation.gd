@@ -1,15 +1,16 @@
-## Integration test: TrendSystem category multiplier propagates to MarketValueSystem via trend_updated.
+## Integration test: TrendSystem category multiplier propagates to
+## MarketValueSystem via trend_updated.
 extends GutTest
 
 const FLOAT_TOLERANCE: float = 0.01
+
+
+const TEST_STORE_ID: StringName = &"test_store"
 
 var _market_value: MarketValueSystem
 var _inventory: InventorySystem
 var _collectibles_item: ItemInstance
 var _electronics_item: ItemInstance
-
-
-const TEST_STORE_ID: StringName = &"test_store"
 
 func before_each() -> void:
 	_inventory = InventorySystem.new()

@@ -1,3 +1,4 @@
+# gdlint:disable=max-returns
 ## Handles booster pack opening logic for the PocketCreatures card shop.
 class_name PackOpeningSystem
 extends RefCounted
@@ -374,20 +375,20 @@ func _roll_rare_slot(
 
 	if roll < rare_chance and not rares.is_empty():
 		return _create_card(rares[_rng.randi() % rares.size()])
-	elif roll < rare_chance + holo_chance:
+	if roll < rare_chance + holo_chance:
 		if not holos.is_empty():
 			return _create_card(holos[_rng.randi() % holos.size()])
 		if not rares.is_empty():
 			return _create_card(rares[_rng.randi() % rares.size()])
-	else:
-		if not secrets.is_empty():
-			return _create_card(
-				secrets[_rng.randi() % secrets.size()]
-			)
-		if not holos.is_empty():
-			return _create_card(holos[_rng.randi() % holos.size()])
-		if not rares.is_empty():
-			return _create_card(rares[_rng.randi() % rares.size()])
+		return null
+	if not secrets.is_empty():
+		return _create_card(
+			secrets[_rng.randi() % secrets.size()]
+		)
+	if not holos.is_empty():
+		return _create_card(holos[_rng.randi() % holos.size()])
+	if not rares.is_empty():
+		return _create_card(rares[_rng.randi() % rares.size()])
 	return null
 
 

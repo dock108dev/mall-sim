@@ -66,6 +66,8 @@ const FAIR_MARKUP_MIN: float = 1.2
 const FAIR_MARKUP_MAX: float = 1.5
 const OVERPRICED_THRESHOLD: float = 1.8
 const DEFAULT_EVENT_STORE_ID: String = "default"
+## Set to false before add_child() in tests to prevent EventBus auto-connections.
+var auto_connect_bus: bool = true
 
 var _scores: Dictionary = {}
 var _tiers: Dictionary = {}
@@ -74,8 +76,6 @@ var _pending_buyer_exits: Dictionary = {}
 var _price_ratios_by_item: Dictionary = {}
 var _sale_reputation_applied_items: Dictionary = {}
 var _owned_store_ids: Array[String] = []
-## Set to false before add_child() in tests to prevent EventBus auto-connections.
-var auto_connect_bus: bool = true
 
 
 func _ready() -> void:

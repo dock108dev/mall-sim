@@ -16,15 +16,15 @@ const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
 )
 
-@onready var _storefront_row: Node2D = $HubLayer/ConcourseRoot/StorefrontRow
-@onready var _ambient_layer: Node2D = $HubLayer/ConcourseRoot/AmbientCustomers
-@onready var _ambience_player: AudioStreamPlayer = $HubAmbiencePlayer
-@onready var _hub_layer: CanvasLayer = $HubLayer
-
 var _duck_tween: Tween = null
 var _normal_volume_db: float = -6.0
 var _kpi_strip: Control = null
 var _settings_panel: SettingsPanel = null
+
+@onready var _storefront_row: Node2D = $HubLayer/ConcourseRoot/StorefrontRow
+@onready var _ambient_layer: Node2D = $HubLayer/ConcourseRoot/AmbientCustomers
+@onready var _ambience_player: AudioStreamPlayer = $HubAmbiencePlayer
+@onready var _hub_layer: CanvasLayer = $HubLayer
 
 
 func _ready() -> void:

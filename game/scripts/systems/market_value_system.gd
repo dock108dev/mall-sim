@@ -232,22 +232,24 @@ func _get_sport_season_multiplier(item: ItemInstance) -> float:
 	return _seasonal_event_system.get_sport_season_multiplier(item)
 
 
+# gdlint:disable=max-returns
 func _get_test_multiplier(item: ItemInstance) -> float:
 	if not item.tested or item.test_result.is_empty():
 		return 1.0
 	if not _testing_system:
 		if item.test_result == "tested_working":
 			return 1.25
-		elif item.test_result == "tested_not_working":
+		if item.test_result == "tested_not_working":
 			return 0.4
 		return 1.0
 	if item.test_result == "tested_working":
 		return _testing_system.get_working_multiplier()
-	elif item.test_result == "tested_not_working":
+	if item.test_result == "tested_not_working":
 		return _testing_system.get_not_working_multiplier()
 	return 1.0
 
 
+# gdlint:enable=max-returns
 func _get_calendar_seasonal_multiplier(
 	item: ItemInstance
 ) -> float:

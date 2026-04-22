@@ -341,6 +341,7 @@ func _find_milestone(milestone_id: String) -> Dictionary:
 	return {}
 
 
+# gdlint:disable=max-returns
 func _get_current_value_for(condition_type: String) -> float:
 	match condition_type:
 		CONDITION_REVENUE:
@@ -360,6 +361,7 @@ func _get_current_value_for(condition_type: String) -> float:
 	return 0.0
 
 
+# gdlint:enable=max-returns
 func _evaluate_milestones() -> void:
 	for milestone: Dictionary in _milestones:
 		var mid: String = milestone.get("id", "")

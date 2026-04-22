@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Manages recurring seasonal events and scheduled tournament events.
 class_name SeasonalEventSystem
 extends Node

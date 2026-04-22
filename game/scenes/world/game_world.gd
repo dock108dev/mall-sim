@@ -1,97 +1,123 @@
+# gdlint:disable=max-file-lines
 ## Root scene for the playable game world. Instantiates runtime systems and UI.
 extends Node3D
 
-const _HudScene: PackedScene = preload(
+const _HUD_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/hud.tscn"
 )
-const _MallOverviewScene: PackedScene = preload(
+const _MALL_OVERVIEW_SCENE: PackedScene = preload(
 	"res://game/scenes/mall/mall_overview.tscn"
 )
-const _InventoryPanelScene: PackedScene = preload(
+const _INVENTORY_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/inventory_panel.tscn"
 )
-const _CheckoutPanelScene: PackedScene = preload(
+const _CHECKOUT_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/checkout_panel.tscn"
 )
-const _PricingPanelScene: PackedScene = preload(
+const _PRICING_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/pricing_panel.tscn"
 )
-const _HagglePanelScene: PackedScene = preload(
+const _HAGGLE_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/haggle_panel.tscn"
 )
-const _DaySummaryScene: PackedScene = preload(
+const _DAY_SUMMARY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/day_summary.tscn"
 )
-const _FixtureCatalogScene: PackedScene = preload(
+const _FIXTURE_CATALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/fixture_catalog.tscn"
 )
-const _MilestoneCardScene: PackedScene = preload(
+const _MILESTONE_CARD_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/milestone_card.tscn"
 )
-const _MilestonesPanelScene: PackedScene = preload(
+const _MILESTONES_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/milestones_panel.tscn"
 )
-const _OrderPanelScene: PackedScene = preload(
+const _ORDER_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/order_panel.tscn"
 )
-const _TrendsPanelScene: PackedScene = preload(
+const _TRENDS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/trends_panel.tscn"
 )
-const _PauseMenuScene: PackedScene = preload(
+const _PAUSE_MENU_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/pause_menu.tscn"
 )
-const _SaveLoadPanelScene: PackedScene = preload(
+const _SAVE_LOAD_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/save_load_panel.tscn"
 )
-const _SettingsPanelScene: PackedScene = preload(
+const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
 )
-const _PackOpeningPanelScene: PackedScene = preload(
+const _PACK_OPENING_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/pack_opening_panel.tscn"
 )
-const _MallHallwayScene: PackedScene = preload(
+const _MALL_HALLWAY_SCENE: PackedScene = preload(
 	"res://game/scenes/world/mall_hallway.tscn"
 )
-const _StaffPanelScene: PackedScene = preload(
+const _STAFF_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/staff_panel.tscn"
 )
-const _TutorialOverlayScene: PackedScene = preload(
+const _TUTORIAL_OVERLAY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/tutorial_overlay.tscn"
 )
-const _ItemTooltipScene: PackedScene = preload(
+const _ITEM_TOOLTIP_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/item_tooltip.tscn"
 )
-const _VisualFeedbackScene: PackedScene = preload(
+const _VISUAL_FEEDBACK_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/visual_feedback.tscn"
 )
-const _EndingScreenScene: PackedScene = preload(
+const _ENDING_SCREEN_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/ending_screen.tscn"
 )
-const _UpgradePanelScene: PackedScene = preload(
+const _UPGRADE_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/upgrade_panel.tscn"
 )
-const _ConditionPickerDialogScene: PackedScene = preload(
+const _CONDITION_PICKER_DIALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/condition_picker_dialog.tscn"
 )
-const _RefurbishmentDialogScene: PackedScene = preload(
+const _REFURBISHMENT_DIALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/refurbishment_dialog.tscn"
 )
-const _RefurbQueuePanelScene: PackedScene = preload(
+const _REFURB_QUEUE_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/refurb_queue_panel.tscn"
 )
-const _WarrantyDialogScene: PackedScene = preload(
+const _WARRANTY_DIALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/warranty_dialog.tscn"
 )
-const _MomentsTrayScene: PackedScene = preload(
+const _MOMENTS_TRAY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/moments_tray.tscn"
 )
-const _DebugOverlayScene: PackedScene = preload(
+const _DEBUG_OVERLAY_SCENE: PackedScene = preload(
 	"res://game/scenes/debug/debug_overlay.tscn"
 )
 
 var reputation_system: ReputationSystem:
 	get:
 		return ReputationSystemSingleton
+
+var _inventory_panel: InventoryPanel
+var _day_summary: DaySummary
+var _mall_overview: MallOverview
+var _fixture_catalog: FixtureCatalogPanel
+var _mall_hallway: MallHallway
+var _pause_menu: PauseMenu
+var _save_load_panel: SaveLoadPanel
+var _settings_panel: SettingsPanel
+var _pack_opening_panel: PackOpeningPanel
+var _staff_panel: StaffPanel
+var _tutorial_overlay: TutorialOverlay
+var _item_tooltip: ItemTooltip
+var _ending_screen: EndingScreen
+var _warranty_dialog: WarrantyDialog = null
+var _condition_picker_dialog: ConditionPickerDialog = null
+var _refurbishment_dialog: RefurbishmentDialog = null
+var _refurb_queue_panel: RefurbQueuePanel = null
+var _deferred_panels_loaded: bool = false
+var _nav_mesh_rebaker: NavMeshRebaker = null
+
+## Hub-mode state (used when debug/walkable_mall = false).
+var _hub_transition: SceneTransition = null
+var _hub_is_inside_store: bool = false
+var _hub_active_store_scene: Node3D = null
 
 @onready var time_system: TimeSystem = $TimeSystem
 @onready var economy_system: EconomySystem = $EconomySystem
@@ -155,31 +181,6 @@ var reputation_system: ReputationSystem:
 )
 @onready var day_phase_lighting: DayPhaseLighting = $DayPhaseLighting
 
-var _inventory_panel: InventoryPanel
-var _day_summary: DaySummary
-var _mall_overview: MallOverview
-var _fixture_catalog: FixtureCatalogPanel
-var _mall_hallway: MallHallway
-var _pause_menu: PauseMenu
-var _save_load_panel: SaveLoadPanel
-var _settings_panel: SettingsPanel
-var _pack_opening_panel: PackOpeningPanel
-var _staff_panel: StaffPanel
-var _tutorial_overlay: TutorialOverlay
-var _item_tooltip: ItemTooltip
-var _ending_screen: EndingScreen
-var _warranty_dialog: WarrantyDialog = null
-var _condition_picker_dialog: ConditionPickerDialog = null
-var _refurbishment_dialog: RefurbishmentDialog = null
-var _refurb_queue_panel: RefurbQueuePanel = null
-var _deferred_panels_loaded: bool = false
-var _nav_mesh_rebaker: NavMeshRebaker = null
-
-## Hub-mode state (used when debug/walkable_mall = false).
-var _hub_transition: SceneTransition = null
-var _hub_is_inside_store: bool = false
-var _hub_active_store_scene: Node3D = null
-
 @onready var _ui_layer: CanvasLayer = $UILayer
 @onready var _store_container: Node3D = $StoreContainer
 
@@ -212,7 +213,7 @@ func _setup_mall_hallway() -> void:
 	if not ProjectSettings.get_setting("debug/walkable_mall", false):
 		_setup_hub_mode()
 		return
-	_mall_hallway = _MallHallwayScene.instantiate() as MallHallway
+	_mall_hallway = _MALL_HALLWAY_SCENE.instantiate() as MallHallway
 	_store_container.add_child(_mall_hallway)
 
 
@@ -471,18 +472,18 @@ func _wire_store_controllers() -> void:
 
 
 func _setup_ui() -> void:
-	var hud: CanvasLayer = _HudScene.instantiate()
+	var hud: CanvasLayer = _HUD_SCENE.instantiate()
 	_ui_layer.add_child(hud)
 
 	_inventory_panel = (
-		_InventoryPanelScene.instantiate() as InventoryPanel
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
 	)
 	_inventory_panel.inventory_system = inventory_system
 	_inventory_panel.store_id = String(GameManager.get_active_store_id())
 	_ui_layer.add_child(_inventory_panel)
 
 	var pricing_panel: PricingPanel = (
-		_PricingPanelScene.instantiate() as PricingPanel
+		_PRICING_PANEL_SCENE.instantiate() as PricingPanel
 	)
 	pricing_panel.inventory_system = inventory_system
 	pricing_panel.economy_system = economy_system
@@ -490,31 +491,31 @@ func _setup_ui() -> void:
 	_inventory_panel.pricing_panel = pricing_panel
 
 	var checkout_panel: CheckoutPanel = (
-		_CheckoutPanelScene.instantiate() as CheckoutPanel
+		_CHECKOUT_PANEL_SCENE.instantiate() as CheckoutPanel
 	)
 	_ui_layer.add_child(checkout_panel)
 	checkout_system.set_checkout_panel(checkout_panel)
 
 	var haggle_panel: HagglePanel = (
-		_HagglePanelScene.instantiate() as HagglePanel
+		_HAGGLE_PANEL_SCENE.instantiate() as HagglePanel
 	)
 	_ui_layer.add_child(haggle_panel)
 	checkout_system.set_haggle_panel(haggle_panel)
 
 	_item_tooltip = (
-		_ItemTooltipScene.instantiate() as ItemTooltip
+		_ITEM_TOOLTIP_SCENE.instantiate() as ItemTooltip
 	)
 	_item_tooltip.economy_system = economy_system
 	_item_tooltip.inventory_system = inventory_system
 	_ui_layer.add_child(_item_tooltip)
 
 	var visual_feedback: VisualFeedback = (
-		_VisualFeedbackScene.instantiate() as VisualFeedback
+		_VISUAL_FEEDBACK_SCENE.instantiate() as VisualFeedback
 	)
 	_ui_layer.add_child(visual_feedback)
 
 	_tutorial_overlay = (
-		_TutorialOverlayScene.instantiate() as TutorialOverlay
+		_TUTORIAL_OVERLAY_SCENE.instantiate() as TutorialOverlay
 	)
 	_tutorial_overlay.tutorial_system = tutorial_system
 	_ui_layer.add_child(_tutorial_overlay)
@@ -526,19 +527,19 @@ func _setup_deferred_panels() -> void:
 	if _deferred_panels_loaded:
 		return
 
-	_day_summary = _DaySummaryScene.instantiate() as DaySummary
+	_day_summary = _DAY_SUMMARY_SCENE.instantiate() as DaySummary
 	_ui_layer.add_child(_day_summary)
 	_day_summary.review_inventory_requested.connect(
 		_on_day_summary_review_inventory
 	)
 	day_cycle_controller.set_day_summary(_day_summary)
 
-	_mall_overview = _MallOverviewScene.instantiate() as MallOverview
+	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
 	_ui_layer.add_child(_mall_overview)
 	_mall_overview.setup(inventory_system, economy_system)
 
 	_fixture_catalog = (
-		_FixtureCatalogScene.instantiate()
+		_FIXTURE_CATALOG_SCENE.instantiate()
 	)
 	_fixture_catalog.data_loader = GameManager.data_loader
 	_fixture_catalog.economy_system = economy_system
@@ -546,19 +547,19 @@ func _setup_deferred_panels() -> void:
 	_ui_layer.add_child(_fixture_catalog)
 
 	var milestone_card: MilestoneCard = (
-		_MilestoneCardScene.instantiate() as MilestoneCard
+		_MILESTONE_CARD_SCENE.instantiate() as MilestoneCard
 	)
 	milestone_card.notification_mode = true
 	_ui_layer.add_child(milestone_card)
 
 	var milestones_panel: MilestonesPanel = (
-		_MilestonesPanelScene.instantiate() as MilestonesPanel
+		_MILESTONES_PANEL_SCENE.instantiate() as MilestonesPanel
 	)
 	milestones_panel.progression_system = progression_system
 	_ui_layer.add_child(milestones_panel)
 
 	var order_panel: OrderPanel = (
-		_OrderPanelScene.instantiate() as OrderPanel
+		_ORDER_PANEL_SCENE.instantiate() as OrderPanel
 	)
 	order_panel.order_system = order_system
 	order_panel.economy_system = economy_system
@@ -568,17 +569,17 @@ func _setup_deferred_panels() -> void:
 		_inventory_panel.order_panel = order_panel
 
 	var trends_panel: TrendsPanel = (
-		_TrendsPanelScene.instantiate() as TrendsPanel
+		_TRENDS_PANEL_SCENE.instantiate() as TrendsPanel
 	)
 	trends_panel.trend_system = trend_system
 	_ui_layer.add_child(trends_panel)
 
 	_settings_panel = (
-		_SettingsPanelScene.instantiate() as SettingsPanel
+		_SETTINGS_PANEL_SCENE.instantiate() as SettingsPanel
 	)
 	_ui_layer.add_child(_settings_panel)
 
-	_pause_menu = _PauseMenuScene.instantiate() as PauseMenu
+	_pause_menu = _PAUSE_MENU_SCENE.instantiate() as PauseMenu
 	_pause_menu.completion_tracker = completion_tracker
 	_pause_menu.tutorial_system = tutorial_system
 	_pause_menu.save_manager = save_manager
@@ -592,7 +593,7 @@ func _setup_deferred_panels() -> void:
 	)
 
 	_save_load_panel = (
-		_SaveLoadPanelScene.instantiate() as SaveLoadPanel
+		_SAVE_LOAD_PANEL_SCENE.instantiate() as SaveLoadPanel
 	)
 	_save_load_panel.save_manager = save_manager
 	_ui_layer.add_child(_save_load_panel)
@@ -604,15 +605,15 @@ func _setup_deferred_panels() -> void:
 	)
 
 	_pack_opening_panel = (
-		_PackOpeningPanelScene.instantiate() as PackOpeningPanel
+		_PACK_OPENING_PANEL_SCENE.instantiate() as PackOpeningPanel
 	)
 	_ui_layer.add_child(_pack_opening_panel)
 
-	_staff_panel = _StaffPanelScene.instantiate() as StaffPanel
+	_staff_panel = _STAFF_PANEL_SCENE.instantiate() as StaffPanel
 	_ui_layer.add_child(_staff_panel)
 
 	var upgrade_panel: UpgradePanel = (
-		_UpgradePanelScene.instantiate() as UpgradePanel
+		_UPGRADE_PANEL_SCENE.instantiate() as UpgradePanel
 	)
 	upgrade_panel.upgrade_system = store_upgrade_system
 	upgrade_panel.economy_system = economy_system
@@ -622,13 +623,13 @@ func _setup_deferred_panels() -> void:
 	_ui_layer.add_child(upgrade_panel)
 
 	_ending_screen = (
-		_EndingScreenScene.instantiate() as EndingScreen
+		_ENDING_SCREEN_SCENE.instantiate() as EndingScreen
 	)
 	add_child(_ending_screen)
 	_ending_screen.dismissed.connect(_on_ending_dismissed)
 
 	_warranty_dialog = (
-		_WarrantyDialogScene.instantiate() as WarrantyDialog
+		_WARRANTY_DIALOG_SCENE.instantiate() as WarrantyDialog
 	)
 	_ui_layer.add_child(_warranty_dialog)
 	checkout_system.set_warranty_dialog(_warranty_dialog)
@@ -638,7 +639,7 @@ func _setup_deferred_panels() -> void:
 		_wire_pack_system(initial_ctrl)
 
 	var moments_tray: MomentsTray = (
-		_MomentsTrayScene.instantiate() as MomentsTray
+		_MOMENTS_TRAY_SCENE.instantiate() as MomentsTray
 	)
 	add_child(moments_tray)
 
@@ -656,7 +657,7 @@ func _ensure_deferred_panels() -> void:
 func _setup_debug_overlay() -> void:
 	if not OS.is_debug_build():
 		return
-	var overlay: CanvasLayer = _DebugOverlayScene.instantiate()
+	var overlay: CanvasLayer = _DEBUG_OVERLAY_SCENE.instantiate()
 	overlay.time_system = time_system
 	overlay.economy_system = economy_system
 	overlay.inventory_system = inventory_system
@@ -1031,7 +1032,7 @@ func _ensure_condition_picker_dialog(
 ) -> void:
 	if not _condition_picker_dialog:
 		_condition_picker_dialog = (
-			_ConditionPickerDialogScene.instantiate()
+			_CONDITION_PICKER_DIALOG_SCENE.instantiate()
 			as ConditionPickerDialog
 		)
 		_ui_layer.add_child(_condition_picker_dialog)
@@ -1043,7 +1044,7 @@ func _ensure_refurbishment_ui(
 ) -> void:
 	if not _refurbishment_dialog:
 		_refurbishment_dialog = (
-			_RefurbishmentDialogScene.instantiate()
+			_REFURBISHMENT_DIALOG_SCENE.instantiate()
 			as RefurbishmentDialog
 		)
 		_ui_layer.add_child(_refurbishment_dialog)
@@ -1052,7 +1053,7 @@ func _ensure_refurbishment_ui(
 		_inventory_panel.refurbishment_dialog = _refurbishment_dialog
 	if not _refurb_queue_panel:
 		_refurb_queue_panel = (
-			_RefurbQueuePanelScene.instantiate()
+			_REFURB_QUEUE_PANEL_SCENE.instantiate()
 			as RefurbQueuePanel
 		)
 		_ui_layer.add_child(_refurb_queue_panel)

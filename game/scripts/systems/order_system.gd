@@ -451,6 +451,7 @@ func _resolve_item_id(item_id: StringName) -> StringName:
 	return canonical
 
 
+# gdlint:disable=max-returns
 func _prepare_submission(
 	store_id: StringName,
 	supplier_tier: SupplierTier,
@@ -524,6 +525,7 @@ func _prepare_submission(
 	}
 
 
+# gdlint:enable=max-returns
 func _commit_submission(submission: Dictionary) -> bool:
 	var total_cost: float = float(submission.get("total_cost", 0.0))
 	var deduct_result: Array = []

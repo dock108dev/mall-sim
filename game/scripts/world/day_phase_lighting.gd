@@ -3,6 +3,28 @@ class_name DayPhaseLighting
 extends Node
 
 
+enum LightingState { MORNING, AFTERNOON, EVENING, NIGHT }
+
+const TWEEN_DURATION: float = 2.0
+const _HALLWAY_ZONE_ID: StringName = &"hallway"
+
+@export var directional_light: DirectionalLight3D
+
+var _tween: Tween = null
+var _in_hallway: bool = true
+var _current_day_phase: int = TimeSystem.DayPhase.PRE_OPEN
+var _phase_presets: Dictionary = _build_phase_presets()
+
+@onready var _world_environment: WorldEnvironment = (
+	EnvironmentManager.get_world_environment()
+)
+@onready var _scene_directional_light: DirectionalLight3D = (
+	directional_light
+	if directional_light != null
+	else get_node_or_null(^"../SunLight") as DirectionalLight3D
+)
+
+
 class LightingPreset:
 	extends RefCounted
 
@@ -35,28 +57,6 @@ class LightingPreset:
 			"light_energy": light_energy,
 			"background_color": background_color,
 		}
-
-
-enum LightingState { MORNING, AFTERNOON, EVENING, NIGHT }
-
-const TWEEN_DURATION: float = 2.0
-const _HALLWAY_ZONE_ID: StringName = &"hallway"
-
-@export var directional_light: DirectionalLight3D
-
-@onready var _world_environment: WorldEnvironment = (
-	EnvironmentManager.get_world_environment()
-)
-@onready var _scene_directional_light: DirectionalLight3D = (
-	directional_light
-	if directional_light != null
-	else get_node_or_null(^"../SunLight") as DirectionalLight3D
-)
-
-var _tween: Tween = null
-var _in_hallway: bool = true
-var _current_day_phase: int = TimeSystem.DayPhase.PRE_OPEN
-var _phase_presets: Dictionary = _build_phase_presets()
 
 
 ## Connects runtime signals and applies the current hallway lighting preset.

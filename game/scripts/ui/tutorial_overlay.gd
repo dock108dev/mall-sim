@@ -9,12 +9,12 @@ const SLIDE_OFFSET: float = 100.0
 
 var tutorial_system: TutorialSystem
 
+var _current_tween: Tween
+var _rest_offset_top: float
+
 @onready var _bottom_bar: PanelContainer = $BottomBar
 @onready var _prompt_label: Label = $BottomBar/HBox/PromptLabel
 @onready var _skip_button: Button = $BottomBar/HBox/SkipButton
-
-var _current_tween: Tween
-var _rest_offset_top: float
 
 
 func _ready() -> void:

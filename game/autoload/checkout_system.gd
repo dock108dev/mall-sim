@@ -16,6 +16,7 @@ func initialize(
 	_difficulty_system = difficulty
 
 
+# gdlint:disable=max-returns
 func process_transaction(npc: Customer) -> bool:
 	if not npc or not is_instance_valid(npc):
 		push_warning("CheckoutSystem: invalid npc in process_transaction")
@@ -67,6 +68,7 @@ func process_transaction(npc: Customer) -> bool:
 	return true
 
 
+# gdlint:enable=max-returns
 func _has_stock(
 	store_id: StringName, item_id: StringName
 ) -> bool:

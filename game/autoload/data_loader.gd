@@ -1,3 +1,4 @@
+# gdlint:disable=max-file-lines,max-public-methods,max-returns
 ## Boot-time content loader — scans content directory and populates ContentRegistry.
 class_name DataLoader
 extends Node

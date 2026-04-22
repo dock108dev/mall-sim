@@ -2,14 +2,14 @@
 class_name InventoryPanel
 extends CanvasLayer
 
+enum Tab { BACKROOM, SHELVES, ALL }
+
 # Localization marker for static validation: tr("INVENTORY_CONDITION")
 
 const PANEL_NAME: String = "inventory"
 const SOURCE_BACKROOM: String = "backroom"
 const SOURCE_SHELVES: String = "shelves"
 const SOURCE_ALL: String = "all"
-
-enum Tab { BACKROOM, SHELVES, ALL }
 
 var inventory_system: InventorySystem
 var store_id: String = ""

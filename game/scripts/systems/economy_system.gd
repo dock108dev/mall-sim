@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Manages player cash, transactions, and market value calculations.
 ## Value calculation helpers are in EconomyValueCalculator.
 class_name EconomySystem
@@ -332,8 +333,11 @@ func _record_transaction(
 func _on_day_started(_day: int) -> void:
 	var start_ticks: int = Time.get_ticks_msec()
 	_update_drift_factors()
-	if Time.get_ticks_msec() - start_ticks > 100:
-		push_warning("EconomySystem: day-start calculations took %dms" % (Time.get_ticks_msec() - start_ticks))
+	var elapsed_start: int = Time.get_ticks_msec() - start_ticks
+	if elapsed_start > 100:
+		push_warning(
+			"EconomySystem: day-start calculations took %dms" % elapsed_start
+		)
 	reset_daily_totals()
 
 func _on_day_ended(day: int) -> void:
@@ -344,8 +348,11 @@ func _on_day_ended(day: int) -> void:
 	_check_monthly_lease(day)
 	_check_emergency_injection(day)
 	_emit_daily_financials_snapshot()
-	if Time.get_ticks_msec() - start_ticks > 100:
-		push_warning("EconomySystem: day-end calculations took %dms" % (Time.get_ticks_msec() - start_ticks))
+	var elapsed_end: int = Time.get_ticks_msec() - start_ticks
+	if elapsed_end > 100:
+		push_warning(
+			"EconomySystem: day-end calculations took %dms" % elapsed_end
+		)
 
 func _emit_daily_financials_snapshot() -> void:
 	var total_revenue: float = _get_daily_revenue_total()

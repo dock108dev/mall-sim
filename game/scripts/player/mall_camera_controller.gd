@@ -17,10 +17,10 @@ extends Node3D
 ## Interpolation weight per second for smooth movement.
 @export var lerp_speed: float = 6.0
 
-@onready var _camera: Camera3D = $Camera3D
-
 var _target_x: float = 0.0
 var _current_x: float = 0.0
+
+@onready var _camera: Camera3D = $Camera3D
 
 
 func _ready() -> void:

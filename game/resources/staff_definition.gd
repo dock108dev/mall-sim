@@ -22,6 +22,14 @@ const DAILY_WAGE_BY_SKILL: Dictionary = {
 	3: 110.0,
 }
 
+
+const SKILL_PERFORMANCE_MULTIPLIERS: Dictionary = {
+	1: 1.0,
+	2: 1.5,
+	3: 2.0,
+}
+
+
 @export var staff_id: String = ""
 @export var display_name: String = ""
 @export var role: StaffRole = StaffRole.CASHIER
@@ -67,10 +75,3 @@ func performance_multiplier() -> float:
 		1.0,
 	)
 	return skill_factor * morale_factor
-
-
-const SKILL_PERFORMANCE_MULTIPLIERS: Dictionary = {
-	1: 1.0,
-	2: 1.5,
-	3: 2.0,
-}

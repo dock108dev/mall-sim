@@ -1,8 +1,14 @@
+# gdlint:disable=max-public-methods
 ## GUT unit tests for ReputationSystem tier advancement, decay, and signal emission.
 extends GutTest
 
 
 const STORE_ID: String = "test_store"
+
+
+const ALL_STORE_IDS: Array[String] = [
+	"sports", "retro_games", "rentals", "pocket_creatures", "electronics"
+]
 
 var _rep: ReputationSystem
 
@@ -197,11 +203,6 @@ func test_unknown_store_id_tier_returns_default_tier() -> void:
 		ReputationSystemSingleton.ReputationTier.REPUTABLE,
 		"Unknown store_id tier should match DEFAULT_REPUTATION tier"
 	)
-
-
-const ALL_STORE_IDS: Array[String] = [
-	"sports", "retro_games", "rentals", "pocket_creatures", "electronics"
-]
 
 
 func test_good_sale_increases_reputation_for_all_stores() -> void:

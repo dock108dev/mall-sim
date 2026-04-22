@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Controller for the video rental store with rental lifecycle, late fees, and tape wear.
 class_name VideoRentalStoreController
 extends StoreController

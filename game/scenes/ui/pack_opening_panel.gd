@@ -31,6 +31,7 @@ const RARITY_LABELS: Dictionary = {
 	"rare": "Rare",
 	"ultra_rare": "Ultra Rare",
 }
+var pack_opening_system: PackOpeningSystem = null
 
 var _cards: Array[Dictionary] = []
 var _revealed_count: int = 0
@@ -39,7 +40,6 @@ var _is_flipping: bool = false
 var _anim_tween: Tween
 var _flip_tween: Tween
 var _glow_tween: Tween
-var pack_opening_system: PackOpeningSystem = null
 
 @onready var _background: ColorRect = $Background
 @onready var _panel: PanelContainer = $PanelRoot

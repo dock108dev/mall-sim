@@ -4,9 +4,13 @@ extends Node
 
 signal preference_changed(key: StringName, value: Variant)
 
+## Font size presets: Small, Medium, Large, Extra Large.
+enum FontSize { SMALL, MEDIUM, LARGE, EXTRA_LARGE }
+
+## Rendering quality tiers. LOW disables the CRT overlay and other post-process effects.
+enum RenderQuality { LOW, MEDIUM, HIGH }
+
 const SETTINGS_PATH: String = "user://settings.cfg"
-## Runtime override for SETTINGS_PATH. Tests set this to an isolated cfg path.
-var settings_path: String = SETTINGS_PATH
 
 const _CRT_SHADER_PATH: String = "res://game/resources/shaders/crt_overlay.gdshader"
 
@@ -40,12 +44,6 @@ const REBINDABLE_ACTIONS: Array[String] = [
 	"orbit_right",
 ]
 
-## Font size presets: Small, Medium, Large, Extra Large.
-enum FontSize { SMALL, MEDIUM, LARGE, EXTRA_LARGE }
-
-## Rendering quality tiers. LOW disables the CRT overlay and other post-process effects.
-enum RenderQuality { LOW, MEDIUM, HIGH }
-
 const FONT_SIZE_VALUES: Array[int] = [12, 14, 18, 22]
 const FONT_SIZE_LABEL_KEYS: Array[String] = [
 	"SETTINGS_FONT_SMALL", "SETTINGS_FONT_MEDIUM",
@@ -60,29 +58,6 @@ const UI_SCALE_MAX: float = 1.50
 const UI_SCALE_STEP: float = 0.05
 const MAX_PERSISTED_KEYCODE: int = 33554431
 const MAX_SETTINGS_FILE_BYTES: int = 262144
-
-var master_volume: float = 1.0
-var music_volume: float = 0.8
-var sfx_volume: float = 1.0
-var ambient_volume: float = 0.8
-var fullscreen: bool = true
-var vsync: bool = true
-var resolution: Vector2i = Vector2i(1920, 1080)
-var ui_scale: float = 1.0
-var font_size: int = FontSize.MEDIUM
-var colorblind_mode: bool = false
-var locale: String = "en"
-var display_mode: int = 1
-var control_scheme: int = 0
-var render_quality: int = RenderQuality.HIGH
-## False = follow auto-hide behaviour (default). True = force-show rail even after day-3 auto-hide.
-var show_objective_rail: bool = false
-## True once the player has explicitly skipped the first-play tutorial.
-var tutorial_skip: bool = false
-## CRT scanline shader overlay. Default off so all screens remain fully legible.
-var crt_enabled: bool = false
-## Text scale multiplier index: 0=100%, 1=125%, 2=150%.
-var text_scale: int = 0
 
 ## Supported locales — add entries here when new CSV columns are added.
 const SUPPORTED_LOCALES: Array[Dictionary] = [
@@ -108,6 +83,31 @@ const PREFERENCE_DEFAULTS: Dictionary = {
 	&"show_objective_rail": false,
 	&"tutorial_skip": false,
 }
+## Runtime override for SETTINGS_PATH. Tests set this to an isolated cfg path.
+var settings_path: String = SETTINGS_PATH
+
+var master_volume: float = 1.0
+var music_volume: float = 0.8
+var sfx_volume: float = 1.0
+var ambient_volume: float = 0.8
+var fullscreen: bool = true
+var vsync: bool = true
+var resolution: Vector2i = Vector2i(1920, 1080)
+var ui_scale: float = 1.0
+var font_size: int = FontSize.MEDIUM
+var colorblind_mode: bool = false
+var locale: String = "en"
+var display_mode: int = 1
+var control_scheme: int = 0
+var render_quality: int = RenderQuality.HIGH
+## False = follow auto-hide behaviour (default). True = force-show rail even after day-3 auto-hide.
+var show_objective_rail: bool = false
+## True once the player has explicitly skipped the first-play tutorial.
+var tutorial_skip: bool = false
+## CRT scanline shader overlay. Default off so all screens remain fully legible.
+var crt_enabled: bool = false
+## Text scale multiplier index: 0=100%, 1=125%, 2=150%.
+var text_scale: int = 0
 
 ## Default bindings captured from InputMap at startup.
 var _default_bindings: Dictionary = {}
@@ -370,6 +370,7 @@ func set_sfx_volume(value: float) -> void:
 
 
 ## Returns the current value for a named preference key.
+# gdlint:disable=max-returns
 func get_preference(key: StringName) -> Variant:
 	match key:
 		&"master_volume": return master_volume
@@ -389,6 +390,7 @@ func get_preference(key: StringName) -> Variant:
 
 
 ## Sets a named preference with type validation and idempotency guard.
+# gdlint:enable=max-returns
 func set_preference(key: StringName, value: Variant) -> void:
 	if value == null:
 		push_warning(

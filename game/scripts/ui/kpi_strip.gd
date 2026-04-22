@@ -3,16 +3,16 @@
 ## completion progress. All values are driven by EventBus signals — no polling.
 extends PanelContainer
 
-@onready var _day_label: Label = $MarginContainer/Row/DayLabel
-@onready var _cash_label: Label = $MarginContainer/Row/CashLabel
-@onready var _rep_label: Label = $MarginContainer/Row/RepLabel
-@onready var _milestone_bar: ProgressBar = $MarginContainer/Row/MilestoneRow/MilestoneBar
-
 var _current_day: int = 1
 var _current_cash: float = 0.0
 var _best_reputation: float = 0.0
 var _milestones_completed: int = 0
 var _milestones_total: int = 1
+
+@onready var _day_label: Label = $MarginContainer/Row/DayLabel
+@onready var _cash_label: Label = $MarginContainer/Row/CashLabel
+@onready var _rep_label: Label = $MarginContainer/Row/RepLabel
+@onready var _milestone_bar: ProgressBar = $MarginContainer/Row/MilestoneRow/MilestoneBar
 
 
 func _ready() -> void:

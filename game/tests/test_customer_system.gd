@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## GUT unit tests for CustomerSystem — spawn, state machine, and satisfaction.
 extends GutTest
 

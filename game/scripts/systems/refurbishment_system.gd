@@ -36,6 +36,7 @@ func initialize(
 
 
 ## Returns true if the item is eligible for refurbishment.
+# gdlint:disable=max-returns
 func can_refurbish(item: ItemInstance) -> bool:
 	if not item or not item.definition:
 		return false
@@ -62,6 +63,7 @@ func can_refurbish(item: ItemInstance) -> bool:
 
 
 ## Calculates the parts cost based on condition tier or item base price.
+# gdlint:enable=max-returns
 func get_parts_cost(item: ItemInstance) -> float:
 	if not item or not item.definition:
 		return MAX_PARTS_COST

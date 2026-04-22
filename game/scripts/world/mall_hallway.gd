@@ -6,17 +6,17 @@ const STOREFRONT_COUNT: int = 5
 const STOREFRONT_SPACING: float = 8.0
 const DEFAULT_RENT: float = 60.0
 
-var slot_store_ids: Array[StringName] = []
-
-const _StoreLeaseDialogScene: PackedScene = preload(
+const _STORE_LEASE_DIALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/store_lease_dialog.tscn"
 )
-const _PlayerControllerScene: PackedScene = preload(
+const _PLAYER_CONTROLLER_SCENE: PackedScene = preload(
 	"res://game/scenes/player/player_controller.tscn"
 )
-const _StorefrontScene: PackedScene = preload(
+const _STOREFRONT_SCENE: PackedScene = preload(
 	"res://game/scenes/world/storefront.tscn"
 )
+
+var slot_store_ids: Array[StringName] = []
 
 var _storefronts: Array[Storefront] = []
 var _camera_controller: PlayerController
@@ -148,7 +148,7 @@ func _add_storefront_accent_light(at_pos: Vector3) -> void:
 
 func _setup_camera() -> void:
 	_camera_controller = (
-		_PlayerControllerScene.instantiate() as PlayerController
+		_PLAYER_CONTROLLER_SCENE.instantiate() as PlayerController
 	)
 	_camera_controller.name = "MallCameraController"
 	_camera_controller.store_bounds_min = Vector3(-20.0, 0.0, -2.0)
@@ -159,18 +159,18 @@ func _setup_camera() -> void:
 	_camera_controller.set_zoom_distance(8.0)
 	add_child(_camera_controller)
 
-	var interaction_ray_script: GDScript = preload(
+	var InteractionRayScript: GDScript = preload(
 		"res://game/scripts/player/interaction_ray.gd"
 	)
 	_interaction_ray = Node.new()
 	_interaction_ray.name = "InteractionRay"
-	_interaction_ray.set_script(interaction_ray_script)
+	_interaction_ray.set_script(InteractionRayScript)
 	add_child(_interaction_ray)
 
 
 func _setup_lease_dialog() -> void:
 	_lease_dialog = (
-		_StoreLeaseDialogScene.instantiate() as StoreLeaseDialog
+		_STORE_LEASE_DIALOG_SCENE.instantiate() as StoreLeaseDialog
 	)
 	_ui_layer.add_child(_lease_dialog)
 	_lease_dialog.hide()
@@ -276,7 +276,7 @@ func _spawn_renovation_storefront() -> void:
 	var reno_x: float = (
 		start_x + float(STOREFRONT_COUNT) * STOREFRONT_SPACING
 	)
-	var reno: Storefront = _StorefrontScene.instantiate()
+	var reno: Storefront = _STOREFRONT_SCENE.instantiate()
 	reno.name = "Storefront_Renovation"
 	reno.slot_index = -1
 	reno.position = Vector3(reno_x, 0.0, 0.1)

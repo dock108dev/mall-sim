@@ -189,7 +189,6 @@ jobs:
   lint-gdscript:
     name: GDScript Lint
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
       contents: read
     steps:
@@ -204,6 +203,4 @@ jobs:
         run: pip install "gdtoolkit==4.*"
 
       - name: Run gdlint
-        run: |
-          echo "Running GDScript linter (non-blocking)..."
-          gdlint game/ || echo "::warning::GDScript lint issues found — see output above"
+        run: gdlint game/

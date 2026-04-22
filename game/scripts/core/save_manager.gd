@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods,max-file-lines
 ## Manages saving and loading game state to JSON files in user://.
 class_name SaveManager
 extends Node
@@ -287,6 +288,7 @@ func save_game(slot: int) -> bool:
 	return true
 
 
+# gdlint:disable=max-returns
 func load_game(slot: int) -> bool:
 	if not _validate_slot(slot):
 		return false
@@ -338,6 +340,7 @@ func load_game(slot: int) -> bool:
 	return true
 
 
+# gdlint:enable=max-returns
 func slot_exists(slot: int) -> bool:
 	if not _validate_slot(slot):
 		return false

@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Manages fixture placement, removal, and validation on the build mode grid.
 class_name FixturePlacementSystem
 extends Node
@@ -23,6 +24,7 @@ const FIXTURE_PRICES: Dictionary = {
 }
 
 const SELLBACK_RATE: float = 0.5
+var needs_nav_rebake: bool = false
 
 var _grid: BuildModeGrid = null
 var _validator: FixturePlacementValidator = null
@@ -38,7 +40,6 @@ var _selected_fixture_type: String = ""
 var _current_rotation: int = 0
 var _register_cells: Array[Vector2i] = []
 var _register_fixture_id: String = ""
-var needs_nav_rebake: bool = false
 
 
 ## Sets the DataLoader for fixture definition lookups.

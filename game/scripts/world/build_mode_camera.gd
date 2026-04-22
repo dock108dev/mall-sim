@@ -9,6 +9,7 @@ const ZOOM_MIN: float = 3.0
 const ZOOM_MAX: float = 15.0
 const ZOOM_STEP: float = 1.0
 const PAN_SPEED: float = 0.02
+var is_transitioning: bool = false
 
 var _camera: Camera3D = null
 var _tween: Tween = null
@@ -22,7 +23,6 @@ var _saved_ortho_size: float = 6.0
 var _target_center: Vector3 = Vector3.ZERO
 var _store_bounds_min: Vector3 = Vector3.ZERO
 var _store_bounds_max: Vector3 = Vector3.ZERO
-var is_transitioning: bool = false
 var _is_top_down: bool = false
 
 

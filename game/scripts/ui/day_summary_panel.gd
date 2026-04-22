@@ -17,6 +17,8 @@ const RECORD_HIGH_FLASH_COLOR := Color(1.0, 0.84, 0.0)
 const RECORD_LOW_FLASH_COLOR := Color(0.3, 0.6, 1.0)
 const REPUTATION_UP := "\u2191"
 const REPUTATION_DOWN := "\u2193"
+## Optional panel opened directly when Review Inventory is pressed.
+var inventory_panel: InventoryPanel = null
 
 var _anim_tween: Tween
 var _overlay_tween: Tween
@@ -24,8 +26,6 @@ var _stagger_tween: Tween
 var _delay_timer: SceneTreeTimer
 var _current_day: int = 0
 var _pending_report: PerformanceReport
-## Optional panel opened directly when Review Inventory is pressed.
-var inventory_panel: InventoryPanel = null
 var _wages_this_day: float = 0.0
 var _report_detail_labels: Array[Label] = []
 var _record_high_rows: Array[Control] = []

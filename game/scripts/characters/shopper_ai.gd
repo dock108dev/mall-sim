@@ -50,8 +50,6 @@ const ANIMATION_MAP: Dictionary = {
 	ShopperState.LEAVING: &"walk",
 }
 
-@onready var _waypoint_agent: MallWaypointAgent = $MallWaypointAgent
-
 var current_state: ShopperState = ShopperState.ENTERING
 var ai_detail: AIDetail = AIDetail.FULL
 var target_waypoint: MallWaypoint = null
@@ -77,6 +75,8 @@ var _animation_player: AnimationPlayer = null
 var _is_despawning: bool = false
 var _emit_spawn_signal_on_ready: bool = true
 var _leave_reason: StringName = &"patience_expired"
+
+@onready var _waypoint_agent: MallWaypointAgent = $MallWaypointAgent
 
 
 func _ready() -> void:

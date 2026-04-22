@@ -7,7 +7,7 @@ extends Control
 
 signal store_selected(store_id: StringName)
 
-const _StoreSlotCardScene: PackedScene = preload(
+const _STORE_SLOT_CARD_SCENE: PackedScene = preload(
 	"res://game/scenes/mall/store_slot_card.tscn"
 )
 
@@ -45,7 +45,7 @@ func _populate_stores() -> void:
 
 	var store_ids: Array[StringName] = ContentRegistry.get_all_store_ids()
 	for store_id: StringName in store_ids:
-		var card: StoreSlotCard = _StoreSlotCardScene.instantiate() as StoreSlotCard
+		var card: StoreSlotCard = _STORE_SLOT_CARD_SCENE.instantiate() as StoreSlotCard
 		_store_grid.add_child(card)
 		var display_name: String = ContentRegistry.get_display_name(store_id)
 		card.setup(store_id, display_name)

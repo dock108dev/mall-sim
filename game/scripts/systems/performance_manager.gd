@@ -11,16 +11,16 @@ const FRAME_BUDGET_MS: float = 16.67
 const WARNING_THRESHOLD_FPS: float = 55.0
 const SAMPLE_WINDOW: int = 120
 const WARNING_COOLDOWN: float = 10.0
+const CACHE_TTL_MINUTES: int = 5
+
+## NPC profiling: rolling window of per-frame NPC subsystem costs in ms.
+const NPC_SAMPLE_WINDOW: int = 60
 
 var _market_value_cache: Dictionary = {}
-const CACHE_TTL_MINUTES: int = 5
 var _cache_hits: int = 0
 var _cache_misses: int = 0
 var _last_store_switch_ms: float = 0.0
 var _store_switch_start_usec: int = 0
-
-## NPC profiling: rolling window of per-frame NPC subsystem costs in ms.
-const NPC_SAMPLE_WINDOW: int = 60
 var _npc_script_times: PackedFloat64Array = PackedFloat64Array()
 var _npc_navigation_times: PackedFloat64Array = PackedFloat64Array()
 var _npc_animation_times: PackedFloat64Array = PackedFloat64Array()
