@@ -108,9 +108,12 @@ done
 echo ""
 
 # ── Exit code ─────────────────────────────────────────────────────────────────
+# PENDING means no [AUDIT] line was emitted for this checkpoint — treat as
+# failure, otherwise a silently-broken instrumentation path would slip through.
 for key in "${CHECKPOINTS[@]}"; do
-	if [ "${RESULTS[$key]:-PENDING}" = "FAIL" ]; then
-		echo "AUDIT FAILED: checkpoint '$key' did not pass." >&2
+	status="${RESULTS[$key]:-PENDING}"
+	if [ "$status" != "PASS" ]; then
+		echo "AUDIT FAILED: checkpoint '$key' status is $status (expected PASS)." >&2
 		EXIT_CODE=1
 	fi
 done

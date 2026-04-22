@@ -64,6 +64,7 @@ func pass_check(key: StringName) -> void:
 	if _results.get(key) == true:
 		return
 	_results[key] = true
+	print("[AUDIT] %s: PASS" % key)
 
 
 func fail_check(key: StringName, reason: String = "") -> void:
