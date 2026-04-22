@@ -23,7 +23,7 @@ func setup(
 	lane_side = LANE_OFFSET if randf() > 0.5 else -LANE_OFFSET
 
 
-func move_toward_target(_delta: float) -> void:
+func move_toward_target(delta: float) -> void:
 	if not target_waypoint or _body == null:
 		return
 	var target_pos: Vector3 = _get_lane_adjusted_position(
@@ -36,7 +36,12 @@ func move_toward_target(_delta: float) -> void:
 		return
 	direction = direction.normalized()
 	_body.velocity = direction * BASE_WALK_SPEED
-	_body.move_and_slide()
+	# Use move_and_collide with an explicit motion vector instead of
+	# move_and_slide. move_and_slide multiplies velocity by the engine's
+	# physics_process_delta_time, which is 0 when tests drive _physics_process
+	# manually before the physics server ever ticks — leaving the body
+	# stationary on CI even though the test simulates multiple frames.
+	_body.move_and_collide(_body.velocity * delta)
 
 
 func has_arrived_at_target() -> bool:
