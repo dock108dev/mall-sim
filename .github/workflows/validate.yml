@@ -78,19 +78,24 @@ jobs:
 
       - name: Run GUT tests
         run: |
-          set -o pipefail
           GUT_OUTPUT_FILE="$(mktemp)"
           godot --path "$GITHUB_WORKSPACE" --headless \
             --script res://addons/gut/gut_cmdln.gd -- \
             -gconfig=res://.gutconfig.json -gexit \
-            2>&1 | tee "$GUT_OUTPUT_FILE"
-          GUT_EXIT=$?
+            2>&1 | tee "$GUT_OUTPUT_FILE" || true
 
-          # GUT only exits non-zero on assert failures. Also catch push_error()
-          # calls which GDScript emits as "ERROR:" lines but don't fail assertions.
-          # Exclude known engine-shutdown cleanup errors (RID/resource leaks
-          # emitted after GUT finishes) — these are unavoidable in headless runs
-          # and do not reflect test or gameplay failures.
+          # Trust GUT's own summary for pass/fail. On Linux, headless Godot
+          # exits non-zero whenever autoload-held resources leak at shutdown
+          # (unavoidable engine cleanup), so Godot's exit code is unreliable.
+          if ! grep -q "^---- All tests passed" "$GUT_OUTPUT_FILE"; then
+            echo "::error::GUT reported test failures (no 'All tests passed' summary found)."
+            exit 1
+          fi
+
+          # Catch push_error() calls which GDScript emits as "ERROR:" lines but
+          # don't fail assertions. Exclude known engine-shutdown cleanup errors
+          # (RID/resource leaks emitted after GUT finishes) — these are
+          # unavoidable in headless runs and do not reflect gameplay failures.
           ERROR_COUNT=$(grep "^ERROR:" "$GUT_OUTPUT_FILE" \
             | grep -vE "RID allocations of type '.*' were leaked at exit\." \
             | grep -vE "resources still in use at exit" \
@@ -103,8 +108,6 @@ jobs:
               | grep -vE "resources still in use at exit"
             exit 1
           fi
-
-          exit $GUT_EXIT
 
   interaction-audit:
     name: Interaction Audit
