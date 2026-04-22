@@ -14,6 +14,12 @@ var _restock_signals: Array[Dictionary] = []
 func before_each() -> void:
 	_restock_signals = []
 
+	# Ensure the autoload DataLoader is populated and reachable — earlier
+	# tests may have redirected GameManager.data_loader to a local instance
+	# and left the reference dangling.
+	DataLoaderSingleton.load_all_content()
+	GameManager.data_loader = DataLoaderSingleton
+
 	_economy_system = EconomySystem.new()
 	_economy_system.name = "EconomySystem"
 	add_child(_economy_system)

@@ -15,7 +15,10 @@ func before_each() -> void:
 
 
 func test_haggle_panel_has_anim_tween() -> void:
-	assert_has(_haggle, "_anim_tween", "HagglePanel should have _anim_tween")
+	assert_true(
+		"_anim_tween" in _haggle,
+		"HagglePanel should have _anim_tween"
+	)
 
 
 func test_haggle_panel_starts_hidden() -> void:
@@ -45,8 +48,8 @@ func test_haggle_rapid_open_close_no_crash() -> void:
 
 
 func test_haggle_panel_has_feedback_tween() -> void:
-	assert_has(
-		_haggle, "_feedback_tween",
+	assert_true(
+		"_feedback_tween" in _haggle,
 		"HagglePanel should have _feedback_tween for result animations"
 	)
 

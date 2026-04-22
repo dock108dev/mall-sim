@@ -6,6 +6,11 @@ var _system: CustomerSystem
 
 
 func before_each() -> void:
+	# Ensure the autoload DataLoader owns the current customer catalog — other
+	# tests may have temporarily pointed GameManager.data_loader at a local
+	# instance and left a dangling reference behind.
+	DataLoaderSingleton.load_all_content()
+	GameManager.data_loader = DataLoaderSingleton
 	UnlockSystemSingleton.initialize()
 	_system = CustomerSystem.new()
 	add_child_autofree(_system)

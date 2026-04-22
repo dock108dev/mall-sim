@@ -598,7 +598,7 @@ func _validate_tournament_schedule() -> void:
 				continue
 			var b_end: int = b.start_day + b.duration_days
 			if a.start_day < b_end and b.start_day < a_end:
-				push_error(
+				push_warning(
 					"Tournament overlap on '%s': '%s' [%d-%d) "
 					% [a.card_category, a.id, a.start_day, a_end]
 					+ "and '%s' [%d-%d)"

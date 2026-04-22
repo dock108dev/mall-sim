@@ -262,6 +262,10 @@ func test_validate_no_overlap_different_categories() -> void:
 	})
 	_seasonal._tournament_definitions = [a, b]
 	_seasonal._validate_tournament_schedule()
+	assert_eq(
+		_seasonal._tournament_definitions.size(), 2,
+		"Non-overlapping tournaments (different categories) should be preserved"
+	)
 
 
 func test_validate_no_overlap_same_category_no_conflict() -> void:
@@ -275,6 +279,10 @@ func test_validate_no_overlap_same_category_no_conflict() -> void:
 	})
 	_seasonal._tournament_definitions = [a, b]
 	_seasonal._validate_tournament_schedule()
+	assert_eq(
+		_seasonal._tournament_definitions.size(), 2,
+		"Non-overlapping tournaments in the same category should be preserved"
+	)
 
 
 # --- Save/load round-trip ---

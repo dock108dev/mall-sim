@@ -106,14 +106,15 @@ func test_assisted_warning_requires_day_greater_than_one() -> void:
 	# When day == 1 and from_pause == true, no warning should appear.
 	DifficultySystemSingleton.set_tier(&"hard")
 	_panel._from_pause = true
+	var saved_day: int = GameManager.current_day
+	GameManager.current_day = 1
 	var dialog: ConfirmationDialog = _panel.get_node("AssistedWarningDialog")
-	# GameManager.current_day defaults to 1 on a fresh session.
-	if GameManager.current_day <= 1:
-		_panel._on_select_pressed(&"easy")
-		assert_false(
-			dialog.visible,
-			"Assisted warning should not appear on day 1 even from pause"
-		)
+	_panel._on_select_pressed(&"easy")
+	assert_false(
+		dialog.visible,
+		"Assisted warning should not appear on day 1 even from pause"
+	)
+	GameManager.current_day = saved_day
 
 
 func test_assisted_canceled_reverts_highlight() -> void:

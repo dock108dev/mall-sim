@@ -20,6 +20,7 @@ func before_each() -> void:
 	_previous_store_id = GameManager.current_store_id
 	GameManager.data_loader = _data_loader
 	_inventory_system = InventorySystem.new()
+	add_child_autofree(_inventory_system)
 	_inventory_system.initialize(_data_loader)
 
 

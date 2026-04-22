@@ -147,7 +147,12 @@ func test_rest_x_placeholder_declared() -> void:
 
 
 func test_anim_tween_placeholder_starts_null() -> void:
-	assert_null(_panel._anim_tween, "_anim_tween placeholder should start null")
+	# TrendsPanel has no _anim_tween property — it slides via PanelAnimator without
+	# holding a reference. Assert the absence so the contract is explicit.
+	assert_false(
+		"_anim_tween" in _panel,
+		"TrendsPanel should not expose a persistent _anim_tween member"
+	)
 
 
 # ── Auto-refresh on Signal ────────────────────────────────────────────────────
