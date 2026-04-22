@@ -86,7 +86,7 @@ jobs:
           # Trust GUT's own summary for pass/fail. On Linux, headless Godot
           # exits non-zero whenever autoload-held resources leak at shutdown
           # (unavoidable engine cleanup), so Godot's exit code is unreliable.
-          if ! grep -q "^---- All tests passed" "$GUT_OUTPUT_FILE"; then
+          if ! grep -q "All tests passed" "$GUT_OUTPUT_FILE"; then
             echo "::error::GUT reported test failures (no 'All tests passed' summary found)."
             exit 1
           fi
