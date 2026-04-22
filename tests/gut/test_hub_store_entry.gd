@@ -58,9 +58,9 @@ func test_hub_card_click_emits_storefront_clicked() -> void:
 ## Simulates the GameWorld hub handler that bridges enter_store_requested →
 ## store_entered. Asserts the full click-to-store_entered chain completes.
 func test_hub_card_click_emits_store_entered_via_hub_handler() -> void:
-	var relay_called: bool = false
+	var relay_called: Array = [false]
 	var relay := func(store_id: StringName) -> void:
-		relay_called = true
+		relay_called[0] = true
 		EventBus.store_entered.emit(store_id)
 	EventBus.enter_store_requested.connect(relay, CONNECT_ONE_SHOT)
 
@@ -81,7 +81,7 @@ func test_hub_card_click_emits_store_entered_via_hub_handler() -> void:
 	mb.pressed = true
 	card._on_click_area_input(null, mb, 0)
 
-	assert_true(relay_called, "hub handler must receive enter_store_requested")
+	assert_true(relay_called[0], "hub handler must receive enter_store_requested")
 	assert_signal_emitted_with_parameters(
 		EventBus, "store_entered", [TEST_STORE_ID],
 	)

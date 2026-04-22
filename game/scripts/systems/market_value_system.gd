@@ -146,6 +146,10 @@ func calculate_item_value(item: ItemInstance) -> float:
 	var floor_mult: float = DifficultySystemSingleton.get_modifier(
 		&"market_floor_multiplier"
 	)
+	# Damaged condition bypasses the 0.5 floor: a severely-worn item can sink
+	# below half of base price (its condition multiplier is 0.15).
+	if item.condition == "damaged":
+		return result
 	return maxf(result, base * 0.5 * floor_mult)
 
 

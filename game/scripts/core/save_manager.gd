@@ -833,7 +833,12 @@ func migrate_save_data(data: Dictionary) -> Dictionary:
 		working.erase("metadata")
 	var save_metadata: Variant = working.get("save_metadata", {})
 	if save_metadata is Dictionary:
-		(save_metadata as Dictionary).erase("store_type")
+		var sm: Dictionary = save_metadata as Dictionary
+		# Preserve legacy store_type as active_store_id so downstream
+		# load logic can restore the saved active store.
+		if sm.has("store_type") and not sm.has("active_store_id"):
+			sm["active_store_id"] = sm.get("store_type", "")
+		sm.erase("store_type")
 	working["save_version"] = CURRENT_SAVE_VERSION
 	return {"ok": true, "data": working, "reason": ""}
 

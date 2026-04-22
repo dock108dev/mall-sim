@@ -103,6 +103,7 @@ func _make_console_definition() -> ItemDefinition:
 	definition.generation = maxi(source.generation, 1)
 	definition.launch_day = 1
 	definition.min_value_ratio = 0.20
+	definition.can_be_demo_unit = true
 	definition.condition_range = PackedStringArray(
 		["good", "near_mint", "mint"]
 	)

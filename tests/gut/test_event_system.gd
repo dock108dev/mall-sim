@@ -52,6 +52,7 @@ func _make_seasonal_event_definition(
 	definition.active_text = str(
 		overrides.get("active_text", "Holiday rush is live.")
 	)
+	definition.telegraph_days = int(overrides.get("telegraph_days", 1))
 	return definition
 
 

@@ -498,8 +498,8 @@ func _apply_walkaway_reputation_with_insult_check(
 
 
 func _was_insulting_counter(_player_price: float) -> bool:
-	if _session != null:
-		return _session.is_insulting_counter()
+	if _session != null and _session.is_insulting_counter():
+		return true
 	if _previous_player_offer <= 0.0 or _previous_customer_offer <= 0.0:
 		return false
 	if _perceived_value <= 0.0:

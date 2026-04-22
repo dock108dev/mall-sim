@@ -254,19 +254,24 @@ func _run_morale_ticks() -> void:
 	var decay_mult: float = DifficultySystemSingleton.get_modifier(&"morale_decay_multiplier")
 	for staff: StaffDefinition in _staff_registry.values():
 		var delta: float = 0.0
+		var any_event: bool = false
 		if not _was_not_paid(staff.staff_id):
 			delta += MORALE_PAID_BONUS
+			any_event = true
 		var store_id: String = staff.assigned_store_id
 		var store_sales: int = get_daily_sales_for_store(store_id)
 		if store_sales >= HIGH_SALES_THRESHOLD:
 			delta += MORALE_HIGH_SALES_BONUS
+			any_event = true
 		elif store_sales == 0:
 			delta += MORALE_NO_SALES_PENALTY
+			any_event = true
 		if _stores_with_firing_today.has(store_id):
 			delta += MORALE_WITNESSED_FIRING_PENALTY
+			any_event = true
 		if delta < 0.0:
 			delta *= decay_mult
-		if delta != 0.0:
+		if any_event:
 			_apply_morale_delta(staff, delta)
 
 

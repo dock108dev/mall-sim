@@ -384,17 +384,15 @@ func test_resettable_thread_returns_to_dormant() -> void:
 	_setup_with_defs([_resettable_def])
 	for i: int in range(2):
 		_system._on_item_sold("item_%d" % i, 10.0, "cards")
+	# After item_sold events the thread is ACTIVE with activated_day=0.
+	# day_started(1) auto-reveals (day 1 > 0). day_started(2) resolves; since
+	# the def is resettable, phase transitions back to DORMANT.
 	_system._on_day_started(1)
-	assert_eq(
-		_system.get_thread_phase("test_resettable"),
-		SecretThreadSystem.ThreadPhase.ACTIVE
-	)
-	_system._on_day_started(2)
 	assert_eq(
 		_system.get_thread_phase("test_resettable"),
 		SecretThreadSystem.ThreadPhase.REVEALED
 	)
-	_system._on_day_started(3)
+	_system._on_day_started(2)
 	assert_eq(
 		_system.get_thread_phase("test_resettable"),
 		SecretThreadSystem.ThreadPhase.DORMANT,

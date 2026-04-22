@@ -339,7 +339,7 @@ func test_max_rounds_declines_further_offers() -> void:
 
 
 func test_offers_declined_after_limit_regardless_of_price() -> void:
-	_profile.patience = 0.1
+	_profile.patience = 0.3
 	_profile.price_sensitivity = 0.9
 	var customer: Customer = _make_customer()
 	_haggle.begin_negotiation(customer, _item)

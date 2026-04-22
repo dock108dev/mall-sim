@@ -64,6 +64,7 @@ func test_grade_returned_fires_on_next_day_start() -> void:
 	var item: ItemInstance = _stock_test_item("good")
 
 	# Simulate day 1 — submit for grading
+	GameManager.current_day = 1
 	_controller.send_for_grading(StringName(item.instance_id))
 
 	assert_true(

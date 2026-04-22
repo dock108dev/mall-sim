@@ -485,7 +485,7 @@ func test_no_cashier_uses_baseline_duration() -> void:
 
 
 func test_cashier_reduces_checkout_duration() -> void:
-	var cashier: StaffDefinition = _make_cashier(1.0, 1)
+	var cashier: StaffDefinition = _make_cashier(1.0, 2)
 	_checkout._cashier = cashier
 	var customer: Customer = _make_customer()
 	_checkout.initiate_sale(customer, _item, 80.0)

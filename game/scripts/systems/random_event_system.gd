@@ -51,10 +51,15 @@ func initialize(
 
 ## Evaluates all eligible daily events and returns IDs of those that fire.
 func evaluate_daily_events(day: int = -1) -> Array[StringName]:
-	_daily_rolled = true
-	var roll_day: int = day if day > 0 else _get_current_day()
-	_current_day = roll_day
 	var fired: Array[StringName] = []
+	var roll_day: int = day if day > 0 else _get_current_day()
+	# Reset the once-per-day guard when the caller advances days directly.
+	if roll_day != _current_day:
+		_daily_rolled = false
+	if _daily_rolled:
+		return fired
+	_daily_rolled = true
+	_current_day = roll_day
 	var eligible: Array[RandomEventDefinition] = _get_eligible_daily()
 	if eligible.is_empty():
 		return fired

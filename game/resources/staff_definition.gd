@@ -55,10 +55,22 @@ static func wage_for_skill(skill: int) -> float:
 	return DAILY_WAGE_BY_SKILL.get(clampi(skill, 1, 3), 30.0) as float
 
 
-## Used by role-effect systems to scale staff impact from current morale.
+## Used by role-effect systems to scale staff impact from current morale
+## and skill level. Skill 1=1.0x, skill 2=1.5x, skill 3=2.0x at full morale.
 func performance_multiplier() -> float:
-	return clampf(
+	var skill_factor: float = SKILL_PERFORMANCE_MULTIPLIERS.get(
+		clampi(skill_level, 1, 3), 1.0
+	) as float
+	var morale_factor: float = clampf(
 		PERFORMANCE_BASE + (morale * PERFORMANCE_MORALE_WEIGHT),
 		PERFORMANCE_BASE,
 		1.0,
 	)
+	return skill_factor * morale_factor
+
+
+const SKILL_PERFORMANCE_MULTIPLIERS: Dictionary = {
+	1: 1.0,
+	2: 1.5,
+	3: 2.0,
+}

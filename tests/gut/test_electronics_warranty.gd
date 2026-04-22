@@ -137,10 +137,10 @@ func test_resolve_browse_rate_no_demo_returns_base() -> void:
 
 
 func test_resolve_browse_rate_with_demo_applies_multiplier() -> void:
-	_controller._demo_item_ids.append("demo_a")
 	var item: ItemInstance = _make_item("demo_a", "portable_audio", 60.0)
 	_inventory.register_item(item)
 	item.is_demo = true
+	_controller._demo_item_ids.append(item.instance_id)
 	var result: PriceResolver.Result = _controller.resolve_browse_rate(
 		"portable_audio", 1.0
 	)
@@ -149,10 +149,10 @@ func test_resolve_browse_rate_with_demo_applies_multiplier() -> void:
 
 
 func test_resolve_browse_rate_audit_includes_demo_unit_step() -> void:
-	_controller._demo_item_ids.append("demo_b")
 	var item: ItemInstance = _make_item("demo_b", "gadgets", 80.0)
 	_inventory.register_item(item)
 	item.is_demo = true
+	_controller._demo_item_ids.append(item.instance_id)
 	var result: PriceResolver.Result = _controller.resolve_browse_rate("gadgets", 1.0)
 	var has_demo_step: bool = false
 	for step: Variant in result.steps:

@@ -50,7 +50,7 @@ func after_each() -> void:
 func _register_test_fixture() -> void:
 	var def := FixtureDefinition.new()
 	def.id = FIXTURE_TYPE
-	def.item_name = FIXTURE_TYPE
+	def.display_name = FIXTURE_TYPE
 	def.cost = FIXTURE_COST
 	_data_loader._fixtures[FIXTURE_TYPE] = def
 

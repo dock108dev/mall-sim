@@ -360,7 +360,15 @@ func _advance_active_step(
 ) -> void:
 	var steps: Array = def.get("steps", [])
 	if steps.is_empty():
-		if day > int(state.get("activated_day", 0)):
+		# Threads without steps only auto-advance if they define a completion
+		# reward (naturally resolve). Otherwise they sit active and can only
+		# exit via timeout — see test_thread_resolved_emits_non_resolved_on_timeout.
+		var has_reward: bool = (
+			_non_empty(def.get("completion_reward"))
+			or _non_empty(def.get("reward"))
+			or not str(def.get("reward_unlock_id", "")).is_empty()
+		)
+		if has_reward and day > int(state.get("activated_day", 0)):
 			_do_reveal(thread_id, def, state, day)
 		return
 	var step_index: int = int(state.get("step_index", 0))
@@ -535,6 +543,18 @@ func _reveal_moment_id(def: Dictionary) -> String:
 		var payload: Dictionary = step_dict.get("effect_payload", {})
 		return str(payload.get("moment_id", ""))
 	return ""
+
+
+static func _non_empty(value: Variant) -> bool:
+	if value == null:
+		return false
+	if value is Dictionary:
+		return not (value as Dictionary).is_empty()
+	if value is Array:
+		return not (value as Array).is_empty()
+	if value is String:
+		return not (value as String).is_empty()
+	return true
 
 
 func _reset_thread(thread_id: String, state: Dictionary) -> void:

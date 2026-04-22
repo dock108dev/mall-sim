@@ -305,6 +305,7 @@ func test_event_telegraphed_fires_on_trigger_day() -> void:
 
 
 func test_event_started_fires_exactly_telegraph_days_after_telegraph() -> void:
+	_sys._season_table = []
 	var def := _make_event_def("test_evt", 10, 0, 5, 3, ["sports"], 1.5)
 	_sys._event_definitions = [def]
 	# Day 10: telegraph fires

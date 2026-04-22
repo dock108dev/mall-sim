@@ -27,7 +27,8 @@ func _make_recurring_def(
 	frequency_days: int,
 	offset_days: int,
 	duration_days: int,
-	traffic_multiplier: float
+	traffic_multiplier: float,
+	telegraph_days: int = 1
 ) -> SeasonalEventDefinition:
 	var def: SeasonalEventDefinition = SeasonalEventDefinition.new()
 	def.id = id
@@ -35,6 +36,7 @@ func _make_recurring_def(
 	def.frequency_days = frequency_days
 	def.offset_days = offset_days
 	def.duration_days = duration_days
+	def.telegraph_days = telegraph_days
 	def.customer_traffic_multiplier = traffic_multiplier
 	def.spending_multiplier = 1.0
 	def.customer_type_weights = {}

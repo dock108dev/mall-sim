@@ -583,6 +583,7 @@ func _register_starter_inventory_catalog(data_loader: DataLoader) -> void:
 			"id": "retro_games",
 			"name": "Retro Games",
 			"store_name": "Retro Games",
+			"scene_path": "res://game/scenes/stores/retro_games.tscn",
 			"description": "Classic consoles, carts, and repairs.",
 			"daily_rent": 140.0,
 			"shelf_capacity": 10,

@@ -455,12 +455,14 @@ func test_seeded_rng_single_event_always_selected() -> void:
 		"id": "always_pick",
 		"effect_type": "rainy_day",
 		"probability_weight": 1.0,
+		"cooldown_days": 0,
 		"notification_text": "Rainy!",
 	})
 	_system._event_definitions = [def]
 	for i: int in range(20):
 		_system._active_event = {}
 		_system._cooldowns = {}
+		_system._last_fired = {}
 		_system._daily_rolled = false
 		var fired: Array[StringName] = _system.evaluate_daily_events(
 			i + 1

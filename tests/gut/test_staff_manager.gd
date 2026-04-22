@@ -199,7 +199,10 @@ func test_store_capacity_defaults_to_small() -> void:
 
 func test_save_and_load_round_trip() -> void:
 	var pool: Array = _manager.get_candidate_pool()
-	var candidate_id: String = (pool[0] as StaffDefinition).staff_id
+	var candidate: StaffDefinition = pool[0] as StaffDefinition
+	candidate.skill_level = 1
+	var candidate_id: String = candidate.staff_id
+	var expected_wage: float = candidate.daily_wage
 	_manager.hire_candidate(candidate_id, "test_store")
 	_manager._on_day_ended(1)
 	var save_data: Dictionary = _manager.get_save_data()
@@ -215,6 +218,6 @@ func test_save_and_load_round_trip() -> void:
 	)
 	assert_eq(loaded_staff.assigned_store_id, "test_store")
 	assert_eq(loaded_staff.seniority_days, 1)
-	assert_almost_eq(loaded_staff.daily_wage, 30.0, 0.01)
+	assert_almost_eq(loaded_staff.daily_wage, expected_wage, 0.01)
 	assert_eq(new_manager.get_candidate_pool().size(), 7)
 	new_manager.free()

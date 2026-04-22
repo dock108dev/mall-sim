@@ -257,7 +257,7 @@ func _on_secret_thread_completed(
 	_stats["secret_threads_completed"] = (
 		float(_stats.get("secret_threads_completed", 0.0)) + 1.0
 	)
-	if thread_id == &"ghost_tenant_7b":
+	if thread_id == &"ghost_tenant_7b" or thread_id == &"the_ghost_tenant":
 		_stats["ghost_tenant_thread_completed"] = 1.0
 
 
@@ -272,6 +272,7 @@ func _on_random_event_resolved(
 
 
 func _on_bankruptcy_declared() -> void:
+	EventBus.ending_requested.emit("bankruptcy")
 	_on_ending_requested("bankruptcy")
 
 

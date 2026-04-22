@@ -149,6 +149,7 @@ func test_thread_resolved_emits_non_resolved_on_timeout() -> void:
 		"id": "timeout_thread",
 		"timeout_days": 3,
 		"preconditions": [{"type": "day_reached", "value": 1}],
+		"reward": {},
 	})
 	_system._thread_defs = [def]
 	_system._init_thread_states()

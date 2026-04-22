@@ -257,11 +257,11 @@ func test_open_pack_emits_items_revealed_signal() -> void:
 	add_child_autofree(controller)
 	controller.pack_opening_system = _system
 
-	var revealed_pack_id: String = ""
-	var revealed_creatures: Array = []
+	var revealed_pack_id: Array = [""]
+	var revealed_creatures: Array = [[]]
 	var _on_revealed := func(pid: String, creatures: Array) -> void:
-		revealed_pack_id = pid
-		revealed_creatures = creatures
+		revealed_pack_id[0] = pid
+		revealed_creatures[0] = creatures
 	EventBus.items_revealed.connect(_on_revealed)
 
 	var pack: ItemInstance = _add_pack_to_inventory("base_set")
@@ -271,11 +271,11 @@ func test_open_pack_emits_items_revealed_signal() -> void:
 		EventBus.items_revealed.disconnect(_on_revealed)
 
 	assert_eq(
-		revealed_pack_id, pack.instance_id,
+		revealed_pack_id[0], pack.instance_id,
 		"items_revealed should carry the opened pack's instance_id"
 	)
 	assert_gt(
-		revealed_creatures.size(), 0,
+		(revealed_creatures[0] as Array).size(), 0,
 		"items_revealed creature list should be non-empty"
 	)
 

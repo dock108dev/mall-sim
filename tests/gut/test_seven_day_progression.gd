@@ -135,9 +135,9 @@ func test_story_beat_always_present_even_on_zero_revenue_day() -> void:
 	add_child_autofree(report_sys)
 	report_sys.initialize()
 
-	var received_report: PerformanceReport = null
+	var received_report: Array = [null]
 	var on_report: Callable = func(r: PerformanceReport) -> void:
-		received_report = r
+		received_report[0] = r
 	EventBus.performance_report_ready.connect(on_report)
 
 	# Emit day_ended with no sales — zero-revenue day
@@ -145,9 +145,9 @@ func test_story_beat_always_present_even_on_zero_revenue_day() -> void:
 
 	EventBus.performance_report_ready.disconnect(on_report)
 
-	assert_not_null(received_report, "PerformanceReport should be emitted")
-	if received_report:
+	assert_not_null(received_report[0], "PerformanceReport should be emitted")
+	if received_report[0]:
 		assert_false(
-			received_report.story_beat.is_empty(),
+			(received_report[0] as PerformanceReport).story_beat.is_empty(),
 			"story_beat must never be empty — even on a $0 revenue day"
 		)

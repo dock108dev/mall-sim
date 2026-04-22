@@ -218,7 +218,7 @@ func test_initialize_game_systems_bootstraps_new_game_before_ready_signal() -> v
 			"initialize_tier_4_world",
 			"initialize_tier_5_meta",
 			"finalize_system_wiring",
-			"bootstrap_new_game_state:sports",
+			"bootstrap_new_game_state:retro_games",
 		],
 		"New game flow should initialize GameWorld tiers before bootstrapping default state"
 	)

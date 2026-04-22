@@ -2,6 +2,8 @@
 extends GutTest
 const EVENT_BUS_PATH := "res://game/autoload/event_bus.gd"
 const GAME_SCRIPTS_DIR := "res://game/scripts"
+const GAME_AUTOLOAD_DIR := "res://game/autoload"
+const GAME_SCENES_DIR := "res://game/scenes"
 const CONNECT_WRAPPER_PREFIX := "_connect"
 const SAFE_CONNECT_WRAPPER := "_safe_connect"
 
@@ -147,6 +149,10 @@ func _scan_game_scripts() -> void:
 	_emit_calls.clear()
 
 	for path: String in _list_gd_files_recursive(GAME_SCRIPTS_DIR):
+		_scan_script(path)
+	for path: String in _list_gd_files_recursive(GAME_AUTOLOAD_DIR):
+		_scan_script(path)
+	for path: String in _list_gd_files_recursive(GAME_SCENES_DIR):
 		_scan_script(path)
 
 func _scan_script(path: String) -> void:
