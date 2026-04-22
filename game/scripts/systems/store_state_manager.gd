@@ -49,7 +49,7 @@ func lease_store(
 		String(store_id)
 	)
 	if canonical_store_id.is_empty():
-		push_error(
+		push_warning(
 			"StoreStateManager: invalid store_id '%s' for lease_store()"
 			% store_id
 		)
@@ -101,7 +101,7 @@ func set_active_store(
 ) -> void:
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if not store_id.is_empty() and canonical.is_empty():
-		push_error(
+		push_warning(
 			"StoreStateManager: invalid store_id '%s' for set_active_store()"
 			% store_id
 		)
@@ -137,7 +137,7 @@ func set_store_name(
 ) -> void:
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if canonical.is_empty():
-		push_error(
+		push_warning(
 			"StoreStateManager: invalid store_id '%s' for set_store_name()"
 			% store_id
 		)
@@ -169,7 +169,7 @@ func register_slot_ownership(
 ) -> void:
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if canonical.is_empty():
-		push_error(
+		push_warning(
 			"StoreStateManager: invalid store_id '%s' for register_slot_ownership()"
 			% store_id
 		)
@@ -438,7 +438,7 @@ func _on_lease_requested(
 ) -> void:
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if canonical.is_empty():
-		push_error(
+		push_warning(
 			"StoreStateManager: invalid store_id '%s' for lease_requested"
 			% store_id
 		)
@@ -501,7 +501,7 @@ func _deserialize_owned_slots(
 	var normalized: Dictionary[int, StringName] = {}
 	if slots_data is not Dictionary:
 		if slots_data != null and not str(slots_data).is_empty():
-			push_error(
+			push_warning(
 				"StoreStateManager: expected Dictionary for owned_slots in %s"
 				% context
 			)
@@ -512,7 +512,7 @@ func _deserialize_owned_slots(
 		var raw_id: String = str((slots_data as Dictionary)[key])
 		var canonical: StringName = ContentRegistry.resolve(raw_id)
 		if canonical.is_empty():
-			push_error(
+			push_warning(
 				"StoreStateManager: unknown store_id '%s' in slot %d"
 				% [raw_id, idx]
 			)

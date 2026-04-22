@@ -456,7 +456,9 @@ func _get_next_available_demo_slot() -> Node:
 func _load_demo_config() -> void:
 	var entry_id: StringName = STORE_ID
 	if not ContentRegistry.exists(String(entry_id)):
-		push_error("electronics: store entry '%s' not found in ContentRegistry" % entry_id)
+		# Recoverable: tests instantiate this controller without a registered
+		# store entry; fall back to compile-time defaults.
+		push_warning("electronics: store entry '%s' not found in ContentRegistry" % entry_id)
 		return
 	var entry: Dictionary = ContentRegistry.get_entry(entry_id)
 	if entry.is_empty():

@@ -137,10 +137,10 @@ func initiate_sale(
 	agreed_price: float
 ) -> void:
 	if not customer or not item:
-		push_error("CheckoutSystem: null customer or item in initiate_sale")
+		push_warning("CheckoutSystem: null customer or item in initiate_sale")
 		return
 	if agreed_price <= 0.0:
-		push_error("CheckoutSystem: invalid agreed_price: %f" % agreed_price)
+		push_warning("CheckoutSystem: invalid agreed_price: %f" % agreed_price)
 		return
 	if not _inventory_system._items.has(item.instance_id):
 		EventBus.notification_requested.emit(

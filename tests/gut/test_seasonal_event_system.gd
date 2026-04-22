@@ -54,7 +54,8 @@ func before_each() -> void:
 	_sys._season_table = _build_season_table()
 	_sys._season_cycle_length = 20
 	_sys._seasonal_config = []
-	EventBus.day_started.connect(_sys._on_day_started)
+	# System auto-connects in _ensure_day_started_connected(); do not
+	# re-connect here, which would produce "already connected" errors.
 
 
 func after_each() -> void:

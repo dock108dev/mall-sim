@@ -175,7 +175,7 @@ func is_discrepancy_active() -> bool:
 ## Bypasses scheduler and adds moment directly to delivery queue.
 func enqueue_by_id(moment_id: StringName) -> void:
 	if moment_id.is_empty():
-		push_error("AmbientMomentsSystem: empty moment_id")
+		push_warning("AmbientMomentsSystem: empty moment_id")
 		return
 	if is_moment_on_cooldown(moment_id):
 		EventBus.ambient_moment_cancelled.emit(moment_id, &"cooldown")

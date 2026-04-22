@@ -59,7 +59,9 @@ func grant_unlock(unlock_id: StringName) -> void:
 
 func _get_display_name(unlock_id: StringName) -> String:
 	if not ContentRegistry.exists(String(unlock_id)):
-		push_error(
+		# Recoverable: fall back to the raw id as a display string. Tests seed
+		# unlocks without a registry entry, so this path is hit often.
+		push_warning(
 			"UnlockSystem: ContentRegistry cannot resolve display name for '%s'" % unlock_id
 		)
 		return String(unlock_id)

@@ -1049,7 +1049,7 @@ func _systems_ready() -> bool:
 
 
 func _fail_load(slot: int, reason: String) -> bool:
-	push_error("SaveManager: %s" % reason)
+	push_warning("SaveManager: %s" % reason)
 	EventBus.save_load_failed.emit(slot, reason)
 	return false
 

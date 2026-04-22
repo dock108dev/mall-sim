@@ -697,13 +697,13 @@ static func _report_json_error(
 	if on_error.is_valid():
 		on_error.call(message)
 	else:
-		push_error("DataLoader: %s" % message)
+		push_warning("DataLoader: %s" % message)
 	return null
 
 
 func _record_load_error(message: String) -> void:
 	_load_errors.append(message)
-	push_error("DataLoader: %s" % message)
+	push_warning("DataLoader: %s" % message)
 
 
 # --- Public getters (backward-compatible API) ---

@@ -93,7 +93,7 @@ func hire_candidate(
 ) -> bool:
 	var candidate: StaffDefinition = _find_candidate(candidate_id)
 	if not candidate:
-		push_error(
+		push_warning(
 			"StaffManager: candidate '%s' not found" % candidate_id
 		)
 		return false
@@ -112,7 +112,7 @@ func hire_candidate(
 ## Removes a hired staff member and broadcasts the firing.
 func fire_staff(staff_id: String) -> void:
 	if not _staff_registry.has(staff_id):
-		push_error(
+		push_warning(
 			"StaffManager: staff '%s' not in registry" % staff_id
 		)
 		return
@@ -126,7 +126,7 @@ func fire_staff(staff_id: String) -> void:
 ## Removes a hired staff member after morale-driven or scripted quitting.
 func quit_staff(staff_id: String) -> void:
 	if not _staff_registry.has(staff_id):
-		push_error(
+		push_warning(
 			"StaffManager: staff '%s' not in registry" % staff_id
 		)
 		return
@@ -390,9 +390,12 @@ func _despawn_npc_immediate(staff_id: String) -> void:
 
 
 func _get_active_store_scene_root() -> Node:
-	var config: StoreStaffConfig = _find_store_staff_config(
-		get_tree().root
-	)
+	if not is_inside_tree():
+		return null
+	var tree: SceneTree = get_tree()
+	if tree == null or tree.root == null:
+		return null
+	var config: StoreStaffConfig = _find_store_staff_config(tree.root)
 	if config:
 		return config.get_parent()
 	return null

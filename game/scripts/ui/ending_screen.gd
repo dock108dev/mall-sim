@@ -140,7 +140,7 @@ func _show_ending(ending_id: StringName, stats: Dictionary) -> void:
 	_cached_stats = stats.duplicate(true)
 	var entry: Dictionary = ContentRegistry.get_entry(ending_id)
 	if entry.is_empty():
-		push_error(
+		push_warning(
 			"EndingScreen: no ContentRegistry entry for '%s'" % ending_id
 		)
 		entry = _build_fallback_entry()

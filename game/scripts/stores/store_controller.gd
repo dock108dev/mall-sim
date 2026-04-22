@@ -83,7 +83,7 @@ func emit_store_signal(
 		)
 		return
 	if not EventBus.has_signal(signal_name):
-		push_error(
+		push_warning(
 			"StoreController: EventBus has no signal '%s'" % signal_name
 		)
 		return

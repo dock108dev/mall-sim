@@ -120,16 +120,16 @@ func _request_bake() -> void:
 
 func _has_valid_nav_region() -> bool:
 	if not _nav_region:
-		push_error("NavMeshRebaker: no NavigationRegion3D set")
+		push_warning("NavMeshRebaker: no NavigationRegion3D set")
 		return false
 	if _nav_region.navigation_mesh == null:
-		push_error("NavMeshRebaker: NavigationRegion3D has no NavigationMesh")
+		push_warning("NavMeshRebaker: NavigationRegion3D has no NavigationMesh")
 		return false
 	if not is_equal_approx(
 		_nav_region.navigation_mesh.cell_size,
 		REQUIRED_NAV_CELL_SIZE
 	):
-		push_error(
+		push_warning(
 			"NavMeshRebaker: NavigationMesh cell_size must be %.2f"
 			% REQUIRED_NAV_CELL_SIZE
 		)

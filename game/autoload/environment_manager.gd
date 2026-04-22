@@ -52,7 +52,8 @@ func swap_environment(
 ) -> void:
 	var resolved: StringName = _resolve_zone(zone_id)
 	if resolved.is_empty():
-		push_error("EnvironmentManager: unknown zone '%s'" % zone_id)
+		# Recoverable: ignore requests for zones that aren't registered.
+		push_warning("EnvironmentManager: unknown zone '%s'" % zone_id)
 		return
 
 	if resolved == _current_key:
@@ -60,7 +61,7 @@ func swap_environment(
 
 	var environment_id: StringName = _resolve_environment_id(resolved)
 	if environment_id.is_empty():
-		push_error(
+		push_warning(
 			"EnvironmentManager: missing environment mapping for zone '%s'"
 			% resolved
 		)

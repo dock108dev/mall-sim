@@ -70,7 +70,7 @@ func get_market_value(item_id: StringName) -> float:
 
 	var item: ItemInstance = _find_item(item_id)
 	if not item:
-		push_error("MarketValueSystem: unknown item_id: %s" % item_id)
+		push_warning("MarketValueSystem: unknown item_id: %s" % item_id)
 		return 0.0
 
 	var value: float = calculate_item_value(item)

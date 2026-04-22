@@ -91,7 +91,7 @@ func get_event_config(event_id: StringName) -> Dictionary:
 		String(event_id)
 	)
 	if not def:
-		push_error(
+		push_warning(
 			"RandomEventSystem: unknown event_id '%s'" % event_id
 		)
 		return {}

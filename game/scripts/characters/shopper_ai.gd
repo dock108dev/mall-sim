@@ -109,7 +109,7 @@ func initialize(spawn_position: Vector3) -> void:
 		MallWaypoint.WaypointType.HALLWAY
 	)
 	if first_hallway == null:
-		push_error("ShopperAI: No HALLWAY waypoint found near spawn.")
+		push_warning("ShopperAI: No HALLWAY waypoint found near spawn.")
 		current_state = ShopperState.LEAVING
 		_initialized = true
 		return

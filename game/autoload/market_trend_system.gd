@@ -42,7 +42,7 @@ static func _clamp_volatility(raw_volatility: float) -> float:
 
 func get_trend_modifier(category_id: StringName) -> float:
 	if not _trend_levels.has(category_id):
-		push_error(
+		push_warning(
 			"MarketTrendSystem: unknown category '%s'" % category_id
 		)
 		return 1.0

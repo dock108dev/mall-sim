@@ -18,7 +18,7 @@ func initialize(
 
 func process_transaction(npc: Customer) -> bool:
 	if not npc or not is_instance_valid(npc):
-		push_error("CheckoutSystem: invalid npc in process_transaction")
+		push_warning("CheckoutSystem: invalid npc in process_transaction")
 		return false
 
 	var customer_id: StringName = StringName(

@@ -576,14 +576,14 @@ func is_worn_out(item: ItemInstance) -> bool:
 ## Retires a worn-out tape by selling at poor-condition price or writing off.
 func retire_tape(instance_id: String, sell: bool) -> bool:
 	if not _inventory_system:
-		push_error("VideoRental: no inventory_system for retire_tape")
+		push_warning("VideoRental: no inventory_system for retire_tape")
 		return false
 	var item: ItemInstance = _inventory_system.get_item(instance_id)
 	if not item:
-		push_error("VideoRental: item not found: %s" % instance_id)
+		push_warning("VideoRental: item not found: %s" % instance_id)
 		return false
 	if not is_worn_out(item):
-		push_error("VideoRental: item not worn out: %s" % instance_id)
+		push_warning("VideoRental: item not worn out: %s" % instance_id)
 		return false
 	if sell:
 		var sale_value: float = _get_retirement_sale_value(item)

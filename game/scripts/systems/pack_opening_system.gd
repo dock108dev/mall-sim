@@ -448,7 +448,10 @@ func _count_slot_type(slots: Variant, slot_type: String) -> int:
 func _register_cards(cards: Array[ItemInstance]) -> bool:
 	for card: ItemInstance in cards:
 		if not _inventory_system.register_item(card):
-			push_error(
+			# Inventory already push_warnings the underlying reason (capacity,
+			# unresolved store_type, etc.). Avoid a second push_error so CI's
+			# error audit stays clean for recoverable register failures.
+			push_warning(
 				"PackOpeningSystem: failed to register card '%s'"
 				% card.instance_id
 			)

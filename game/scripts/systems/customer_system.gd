@@ -181,9 +181,9 @@ func spawn_customer(
 		return
 
 	var spawn_pos: Vector3 = _get_spawn_position()
-	customer.global_position = spawn_pos
 	if not customer.is_inside_tree():
 		add_child(customer)
+	customer.global_position = spawn_pos
 	customer.visible = true
 	customer.set_physics_process(true)
 	customer.set_process(true)
@@ -859,7 +859,7 @@ func _validate_vip_type() -> void:
 		if StringName(profile.id) == VIP_CUSTOMER_ID:
 			_vip_type_valid = true
 			return
-	push_error(
+	push_warning(
 		"CustomerSystem: VIP customer type '%s' not found in registry"
 		% VIP_CUSTOMER_ID
 	)

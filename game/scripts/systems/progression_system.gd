@@ -116,7 +116,7 @@ func is_slot_unlocked(slot_index: int) -> bool:
 func increment_progress(milestone_id: String, amount: float) -> void:
 	var milestone: Dictionary = _find_milestone(milestone_id)
 	if milestone.is_empty():
-		push_error(
+		push_warning(
 			"ProgressionSystem: unknown milestone_id '%s'" % milestone_id
 		)
 		return
@@ -147,7 +147,7 @@ func increment_progress(milestone_id: String, amount: float) -> void:
 func get_progress(milestone_id: String) -> float:
 	var milestone: Dictionary = _find_milestone(milestone_id)
 	if milestone.is_empty():
-		push_error(
+		push_warning(
 			"ProgressionSystem: unknown milestone_id '%s'" % milestone_id
 		)
 		return 0.0

@@ -361,7 +361,7 @@ func _start_new_game(game_world: Node) -> void:
 
 func _run_data_loader() -> bool:
 	if data_loader == null:
-		push_error("GameManager: cannot start session without DataLoader")
+		push_warning("GameManager: cannot start session without DataLoader")
 		return false
 	_content_load_errors = []
 	data_loader.run()

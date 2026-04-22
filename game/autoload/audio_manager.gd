@@ -256,7 +256,7 @@ func set_ambience_volume(linear: float) -> void:
 func set_bus_volume(bus_name: StringName, linear_volume: float) -> void:
 	var idx: int = _get_bus_index(String(bus_name))
 	if idx < 0:
-		push_error("AudioManager: bus '%s' not found" % bus_name)
+		push_warning("AudioManager: bus '%s' not found" % bus_name)
 		return
 	AudioServer.set_bus_volume_db(
 		idx, linear_to_db(clampf(linear_volume, 0.0, 1.0))
@@ -279,15 +279,15 @@ func register_zone(
 	zone_id: String, player: Node
 ) -> void:
 	if zone_id.is_empty():
-		push_error("AudioManager: empty zone_id in register_zone")
+		push_warning("AudioManager: empty zone_id in register_zone")
 		return
 	if player == null:
-		push_error(
+		push_warning(
 			"AudioManager: null player for zone '%s'" % zone_id
 		)
 		return
 	if not _is_zone_audio_player(player):
-		push_error(
+		push_warning(
 			"AudioManager: unsupported zone player for '%s'" % zone_id
 		)
 		return

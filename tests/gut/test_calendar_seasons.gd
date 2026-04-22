@@ -20,7 +20,7 @@ func before_each() -> void:
 	add_child_autofree(_seasonal)
 	_seasonal._seasonal_config = _build_test_config()
 	_seasonal._apply_state({})
-	EventBus.day_started.connect(_seasonal._on_day_started)
+	# System auto-connects day_started in _ready → _ensure_day_started_connected().
 
 	_inventory = InventorySystem.new()
 	add_child_autofree(_inventory)

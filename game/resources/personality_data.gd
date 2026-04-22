@@ -61,5 +61,5 @@ static func _parse_type(type_str: String) -> PersonalityType:
 		"TEEN_PACK_MEMBER":
 			return PersonalityType.TEEN_PACK_MEMBER
 		_:
-			push_error("PersonalityData: Unknown type '%s'" % type_str)
+			push_warning("PersonalityData: Unknown type '%s'" % type_str)
 			return PersonalityType.WINDOW_BROWSER

@@ -125,7 +125,7 @@ func _wire_signals() -> void:
 			pass_check(&"customer_walked")
 	)
 	EventBus.storefront_zone_entered.connect(func(sid: String): _last_interactable = sid)
-	EventBus.storefront_zone_exited.connect(func(): _last_interactable = "none")
+	EventBus.storefront_zone_exited.connect(func(_sid: String): _last_interactable = "none")
 
 
 func _build_hud() -> void:

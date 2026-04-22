@@ -88,11 +88,19 @@ jobs:
 
           # GUT only exits non-zero on assert failures. Also catch push_error()
           # calls which GDScript emits as "ERROR:" lines but don't fail assertions.
-          ERROR_COUNT=$(grep -c "^ERROR:" "$GUT_OUTPUT_FILE" || true)
+          # Exclude known engine-shutdown cleanup errors (RID/resource leaks
+          # emitted after GUT finishes) — these are unavoidable in headless runs
+          # and do not reflect test or gameplay failures.
+          ERROR_COUNT=$(grep "^ERROR:" "$GUT_OUTPUT_FILE" \
+            | grep -vE "RID allocations of type '.*' were leaked at exit\." \
+            | grep -vE "resources still in use at exit" \
+            | wc -l | tr -d ' ')
           if [ "$ERROR_COUNT" -gt 0 ]; then
             echo ""
             echo "::error::GUT run produced $ERROR_COUNT push_error() call(s). Tests must not emit errors."
-            grep "^ERROR:" "$GUT_OUTPUT_FILE"
+            grep "^ERROR:" "$GUT_OUTPUT_FILE" \
+              | grep -vE "RID allocations of type '.*' were leaked at exit\." \
+              | grep -vE "resources still in use at exit"
             exit 1
           fi
 

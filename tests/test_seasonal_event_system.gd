@@ -53,7 +53,7 @@ func before_each() -> void:
 	_sys._season_cycle_length = 100
 	_sys._seasonal_config = []
 	_sys._event_definitions = []
-	EventBus.day_started.connect(_sys._on_day_started)
+	# System auto-connects day_started via _ready → _ensure_day_started_connected().
 
 
 func after_each() -> void:

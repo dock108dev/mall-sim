@@ -13,7 +13,7 @@ func before_each() -> void:
 	_seasonal._season_table = _build_test_seasons()
 	_seasonal._season_cycle_length = 70
 	_seasonal._apply_state({})
-	EventBus.day_started.connect(_seasonal._on_day_started)
+	# System auto-connects day_started in _ready → _ensure_day_started_connected().
 	EventBus.seasonal_event_started.connect(_record_started)
 
 

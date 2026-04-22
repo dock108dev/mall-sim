@@ -54,13 +54,13 @@ func test_resolve_unknown_id_returns_empty_and_records_error() -> void:
 		"Unknown ID returns empty StringName"
 	)
 	assert_eq(
-		_registry.error_messages.size(), 1,
-		"Unknown ID should emit exactly one error"
+		_registry.warning_messages.size(), 1,
+		"Unknown ID should emit exactly one warning"
 	)
 	assert_string_contains(
-		_registry.error_messages[0],
+		_registry.warning_messages[0],
 		"unknown ID 'nonexistent_store' (normalized: 'nonexistent_store')",
-		"Unknown ID error should include the raw and normalized forms"
+		"Unknown ID warning should include the raw and normalized forms"
 	)
 
 
@@ -90,11 +90,11 @@ func test_get_entry_invalid_id_returns_empty_and_records_error() -> void:
 		"Unknown ID returns empty Dictionary"
 	)
 	assert_eq(
-		_registry.error_messages.size(), 1,
-		"Invalid get_entry should emit exactly one error"
+		_registry.warning_messages.size(), 1,
+		"Invalid get_entry should emit exactly one warning"
 	)
 	assert_string_contains(
-		_registry.error_messages[0],
+		_registry.warning_messages[0],
 		"unknown ID 'bad_id' (normalized: 'bad_id')",
 		"Invalid get_entry should report the unknown ID"
 	)

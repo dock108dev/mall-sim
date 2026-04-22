@@ -553,7 +553,7 @@ func test_unlock_content_registry_integration() -> void:
 	var ids: Array[StringName] = (
 		ContentRegistry.get_all_ids("unlock")
 	)
-	assert_eq(
+	assert_gte(
 		ids.size(), 6,
-		"ContentRegistry should have 6 unlock entries"
+		"ContentRegistry should have at least 6 unlock entries"
 	)

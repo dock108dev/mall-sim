@@ -140,7 +140,7 @@ func test_unknown_id_returns_empty_and_emits_push_error() -> void:
 		"Unknown IDs should resolve to an empty StringName"
 	)
 	assert_called(
-		registry, "_emit_error",
+		registry, "_emit_warning",
 		[
 			"ContentRegistry: unknown ID 'nonexistent_item' (normalized: 'nonexistent_item')"
 		]
