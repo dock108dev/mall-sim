@@ -534,6 +534,7 @@ func _find_exit_waypoint_position() -> Vector3:
 		if wp and wp.waypoint_type == MallWaypoint.WaypointType.EXIT:
 			exits.append(wp)
 	if exits.is_empty():
+
 		push_warning(
 			"CustomerSystem: No EXIT waypoints found for spawning"
 		)
