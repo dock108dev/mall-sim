@@ -27,7 +27,6 @@ jobs:
             "project.godot"
             "README.md"
             "LICENSE"
-            "CLAUDE.md"
             "docs/architecture.md"
           )
           for f in "${files[@]}"; do
