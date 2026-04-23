@@ -17,6 +17,7 @@ const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 var _load_panel_visible: bool = false
 var _settings_panel: SettingsPanel = null
 var _any_saves_exist: bool = false
+var _input_focus_pushed: bool = false
 
 @onready var _continue_button: Button = $VBox/ContinueButton
 @onready var _load_container: PanelContainer = $LoadPanel
@@ -36,6 +37,7 @@ var _any_saves_exist: bool = false
 func _ready() -> void:
 	Settings.load_settings()
 	GameManager.change_state(GameManager.GameState.MAIN_MENU)
+	_push_main_menu_input_focus()
 	_load_container.visible = false
 	_load_close_button.pressed.connect(_close_load_panel)
 
@@ -57,6 +59,28 @@ func _ready() -> void:
 
 	if AuditLog != null:
 		AuditLog.pass_check(&"main_menu_ready", "from=main_menu.gd")
+
+
+func _exit_tree() -> void:
+	_pop_main_menu_input_focus()
+
+
+func _push_main_menu_input_focus() -> void:
+	if InputFocus == null:
+		return
+	InputFocus.push_context(InputFocus.CTX_MAIN_MENU)
+	_input_focus_pushed = true
+
+
+func _pop_main_menu_input_focus() -> void:
+	if not _input_focus_pushed:
+		return
+	if InputFocus == null:
+		_input_focus_pushed = false
+		return
+	if InputFocus.current() == InputFocus.CTX_MAIN_MENU:
+		InputFocus.pop_context()
+	_input_focus_pushed = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
