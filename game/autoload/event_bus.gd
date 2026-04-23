@@ -1,5 +1,25 @@
 ## Central signal bus for decoupled communication between systems.
+##
+## Per docs/architecture/ownership.md row 10, EventBus is the only permitted
+## cross-system signal route. Owner autoloads declare their own authoritative
+## signals on themselves; the Phase 1 mirror block below lets other systems
+## listen through the bus without reaching into owners directly.
 extends Node
+
+# ── Phase 1 Signal Inventory (ISSUE-022) ──────────────────────────────────────
+# Typed cross-system signals for the golden path: Boot → Mall → Store Ready.
+# Emitters must still be the conceptual owners listed in ownership.md; these
+# mirrors are listener-facing. Use the emit_* wrappers below for type safety.
+signal store_ready(store_id: StringName)
+signal store_failed(store_id: StringName, reason: String)
+signal scene_ready(scene_name: StringName)
+# NOTE: the Phase 1 parameterless `game_state_changed()` is satisfied by
+# `run_state_changed()` below (declared by ISSUE-020). The legacy
+# `game_state_changed(old_state: int, new_state: int)` is the GameManager FSM
+# transition signal and predates Phase 1 — both are typed. See
+# docs/architecture/ownership.md row 6.
+signal input_focus_changed(owner: StringName)
+signal camera_authority_changed(camera_path: NodePath)
 
 # ── Content Pipeline ──────────────────────────────────────────────────────────
 signal content_loaded()
@@ -24,6 +44,11 @@ signal time_speed_requested(speed_tier: int)
 # ── Game State ────────────────────────────────────────────────────────────────
 signal boot_completed()
 signal game_state_changed(old_state: int, new_state: int)
+## Emitted by GameState (ISSUE-020) on any mutation to the active run state
+## (active_store_id, day, money, flags). Parameterless on purpose — listeners
+## read the current values directly from the GameState autoload. Distinct from
+## game_state_changed, which is the GameManager FSM transition signal.
+signal run_state_changed()
 signal gameplay_ready()
 signal game_over_triggered()
 signal next_day_confirmed()
@@ -484,6 +509,9 @@ signal panel_closed(panel_name: String)
 ## payload keys: text (String), action (String), key (String).
 ## When payload contains hidden: true the rail should conceal itself.
 signal objective_changed(payload: Dictionary)
+## ISSUE-017: mirror of StoreController.objective_text_changed so the HUD
+## (and any other listener) can bind without a direct controller reference.
+signal objective_text_changed(text: String)
 ## Four-slot variant of objective_changed.
 ## payload keys: current_objective, next_action, input_hint, optional_hint (all String).
 ## hidden: true instructs the rail to conceal itself.
@@ -535,3 +563,28 @@ func clear_day_end_summary() -> void:
 
 func _on_day_started(_day: int) -> void:
 	clear_day_end_summary()
+
+
+# ── Phase 1 emit_* wrappers (ISSUE-022) ───────────────────────────────────────
+# Thin type-safe wrappers around the Phase 1 signals. No logic — the wrappers
+# exist so callers get a method signature GDScript can typecheck, rather than
+# passing arbitrary args to `emit_signal("…", …)`.
+
+func emit_store_ready(store_id: StringName) -> void:
+	store_ready.emit(store_id)
+
+
+func emit_store_failed(store_id: StringName, reason: String) -> void:
+	store_failed.emit(store_id, reason)
+
+
+func emit_scene_ready(scene_name: StringName) -> void:
+	scene_ready.emit(scene_name)
+
+
+func emit_input_focus_changed(owner: StringName) -> void:
+	input_focus_changed.emit(owner)
+
+
+func emit_camera_authority_changed(camera_path: NodePath) -> void:
+	camera_authority_changed.emit(camera_path)

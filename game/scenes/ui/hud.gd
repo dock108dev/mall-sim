@@ -75,6 +75,9 @@ var _close_day_button: Button
 @onready var _reputation_label: Label = $TopBar/ReputationLabel
 @onready var _prompt_label: Label = $PromptLabel
 @onready var _store_label: Label = $StoreLabel
+## ISSUE-017: bound to StoreController.current_objective_text via the
+## EventBus.objective_text_changed mirror.
+@onready var _objective_label: Label = $ObjectiveLabel
 @onready var _seasonal_event_label: Label = $SeasonalEventLabel
 @onready var _telegraph_card: Label = $TelegraphCard
 @onready var _milestones_button: Button = $MilestonesButton
@@ -85,7 +88,9 @@ func _ready() -> void:
 	_store_label.visible = false
 	_seasonal_event_label.visible = false
 	_telegraph_card.visible = false
+	_objective_label.visible = false
 
+	EventBus.objective_text_changed.connect(_on_objective_text_changed)
 	EventBus.notification_requested.connect(_on_notification_requested)
 	EventBus.panel_opened.connect(_on_panel_opened_track)
 	EventBus.panel_closed.connect(_on_panel_closed_track)
@@ -376,6 +381,13 @@ func _flash_reputation_label(
 		UIThemeConstants.BODY_FONT_COLOR,
 		_REP_ARROW_FADE_OUT,
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+
+
+## ISSUE-017: HUD <- StoreController.current_objective_text binding. Updates
+## the visible objective text within one frame of `set_objective_text()`.
+func _on_objective_text_changed(text: String) -> void:
+	_objective_label.text = text
+	_objective_label.visible = not text.strip_edges().is_empty()
 
 
 func _on_notification_requested(message: String) -> void:

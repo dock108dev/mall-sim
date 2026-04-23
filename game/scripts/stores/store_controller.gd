@@ -3,7 +3,16 @@
 class_name StoreController
 extends Node
 
+## ISSUE-017: emitted whenever current_objective_text changes. The HUD
+## ObjectiveLabel binds to this (mirrored on EventBus.objective_text_changed
+## for cross-scene wiring) so updates propagate within one frame.
+signal objective_text_changed(text: String)
+
 var store_type: String = ""
+
+## ISSUE-017: HUD-driving objective text. Set via `set_objective_text()` so
+## the binding signal fires; do not assign directly from outside.
+var current_objective_text: String = ""
 
 var _slots: Array[Node] = []
 var _fixtures: Array[Node] = []
@@ -12,6 +21,7 @@ var _entry_area: Area3D = null
 var _is_active: bool = false
 var _inventory_system: InventorySystem = null
 var _customer_system: CustomerSystem = null
+var _registered_interactables: Array[Interactable] = []
 
 
 ## Initializes shared store identity before ready-time lifecycle wiring.
@@ -28,6 +38,7 @@ func _ready() -> void:
 	_collect_fixtures()
 	_collect_slots()
 	_collect_areas()
+	_register_interactables()
 	_build_decorations()
 	_connect_lifecycle_signals()
 
@@ -298,3 +309,101 @@ func _handle_store_entered(store_id: StringName) -> void:
 	_on_store_entered(store_id)
 	if StringName(store_type) == store_id:
 		emit_actions_registered()
+
+
+## ISSUE-017: Register an Interactable with the controller. Idempotent.
+func register_interactable(node: Interactable) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	if _registered_interactables.has(node):
+		return
+	_registered_interactables.append(node)
+
+
+## ISSUE-017: All Interactables registered with this controller (visible or not).
+func get_registered_interactables() -> Array[Interactable]:
+	return _registered_interactables.duplicate()
+
+
+## ISSUE-017: Count Interactables that are currently visible in the tree.
+func count_visible_interactables() -> int:
+	var count: int = 0
+	for node: Interactable in _registered_interactables:
+		if not is_instance_valid(node):
+			continue
+		if not node.is_inside_tree():
+			continue
+		if not node.is_visible_in_tree():
+			continue
+		count += 1
+	return count
+
+
+## ISSUE-017: HUD/objective binding. Sets current_objective_text and emits
+## both the local signal and the EventBus mirror so HUDs not parented to
+## this controller (e.g. autoloaded HUD CanvasLayer) update within one frame.
+func set_objective_text(text: String) -> void:
+	if text == current_objective_text:
+		return
+	current_objective_text = text
+	objective_text_changed.emit(text)
+	if EventBus.has_signal(&"objective_text_changed"):
+		EventBus.objective_text_changed.emit(text)
+
+
+## ISSUE-017: StoreReadyContract invariant #10. The objective text references
+## a real action when at least one registered, visible Interactable has an
+## action_verb that appears as a token in the objective text AND a
+## display_name token also appears in the text. Empty objective text is
+## treated as a contract violation (no action to verify against).
+func objective_matches_action() -> bool:
+	if current_objective_text.strip_edges().is_empty():
+		return false
+	var lowered: String = current_objective_text.to_lower()
+	for node: Interactable in _registered_interactables:
+		if not is_instance_valid(node):
+			continue
+		if not node.is_visible_in_tree():
+			continue
+		var verb: String = node.action_verb.strip_edges().to_lower()
+		var subject: String = node.display_name.strip_edges().to_lower()
+		if verb.is_empty() or subject.is_empty():
+			continue
+		if lowered.contains(verb) and _objective_mentions_subject(lowered, subject):
+			return true
+	return false
+
+
+func _objective_mentions_subject(lowered_text: String, subject: String) -> bool:
+	if lowered_text.contains(subject):
+		return true
+	# Subject phrases like "interactable shelf" should still match an objective
+	# that names only the head noun ("shelf").
+	for token: String in subject.split(" ", false):
+		if token.length() < 3:
+			continue
+		if lowered_text.contains(token):
+			return true
+	return false
+
+
+func _register_interactables() -> void:
+	_registered_interactables.clear()
+	_collect_interactables_recursive(self)
+	for node: Interactable in _registered_interactables:
+		if not node.interacted_by.is_connected(_on_interactable_interacted):
+			node.interacted_by.connect(_on_interactable_interacted)
+
+
+func _collect_interactables_recursive(node: Node) -> void:
+	for child: Node in node.get_children():
+		if child is Interactable:
+			_registered_interactables.append(child as Interactable)
+		_collect_interactables_recursive(child)
+
+
+func _on_interactable_interacted(_by: Node) -> void:
+	# Routed through EventBus.interactable_interacted by the Interactable
+	# itself; this hook exists so subclasses can react via override without
+	# wiring their own signal connections.
+	pass

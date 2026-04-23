@@ -30,7 +30,13 @@ var _label_controller_state: Label
 var _label_focus_owner: Label
 var _label_modal_depth: Label
 var _label_interactable: Label
+var _label_camera_path: Label
+var _label_input_focus: Label
+var _label_player_path: Label
+var _label_store_id: Label
 var _checkpoint_labels: Dictionary = {}
+var _entry_labels: Array[Label] = []
+const _ENTRY_ROWS: int = 10
 
 
 func _ready() -> void:
@@ -170,12 +176,22 @@ func _build_hud() -> void:
 	_label_focus_owner = _make_label(vbox, "focus: —")
 	_label_modal_depth = _make_label(vbox, "modal_depth: 0")
 	_label_interactable = _make_label(vbox, "interactable: none")
+	_label_camera_path = _make_label(vbox, "camera: —")
+	_label_input_focus = _make_label(vbox, "input: gameplay")
+	_label_player_path = _make_label(vbox, "player: <none>")
+	_label_store_id = _make_label(vbox, "store: —")
 
 	vbox.add_child(_hline())
 
 	for key: StringName in CHECKPOINTS:
 		var lbl := _make_label(vbox, "%s: —" % key)
 		_checkpoint_labels[key] = lbl
+
+	vbox.add_child(_hline())
+	var entries_title := _make_label(vbox, "RECENT AUDIT (last %d)" % _ENTRY_ROWS, 12)
+	entries_title.add_theme_color_override(&"font_color", _COLOR_TITLE)
+	for i in range(_ENTRY_ROWS):
+		_entry_labels.append(_make_label(vbox, "—"))
 
 
 func _make_label(parent: Control, text: String, font_size: int = 12) -> Label:
@@ -208,6 +224,29 @@ func _refresh_hud() -> void:
 	_label_modal_depth.text = "modal_depth: %d" % _modal_stack.size()
 	_label_interactable.text = "interactable: %s" % _last_interactable
 
+	var cam_path: String = "<none>"
+	var cam3d: Camera3D = get_viewport().get_camera_3d()
+	if cam3d:
+		cam_path = str(cam3d.get_path())
+	else:
+		var cam2d: Camera2D = get_viewport().get_camera_2d()
+		if cam2d:
+			cam_path = str(cam2d.get_path())
+	_label_camera_path.text = "camera: %s" % cam_path
+
+	var input_top: String = "gameplay"
+	if not _modal_stack.is_empty():
+		input_top = "modal:%s" % _modal_stack[_modal_stack.size() - 1]
+	_label_input_focus.text = "input: %s" % input_top
+
+	var player: Node = get_tree().get_first_node_in_group("player")
+	_label_player_path.text = "player: %s" % (str(player.get_path()) if player else "<none>")
+
+	var sid: StringName = GameManager.get_active_store_id()
+	_label_store_id.text = "store: %s" % (String(sid) if sid != &"" else "<none>")
+
+	_refresh_entries()
+
 	for key: StringName in CHECKPOINTS:
 		var lbl: Label = _checkpoint_labels.get(key)
 		if not lbl:
@@ -222,3 +261,25 @@ func _refresh_hud() -> void:
 		else:
 			lbl.text = "%s: —" % key
 			lbl.add_theme_color_override(&"font_color", _COLOR_PENDING)
+
+
+func _refresh_entries() -> void:
+	var entries: Array[Dictionary] = AuditLog.recent(_ENTRY_ROWS)
+	var n: int = entries.size()
+	for i in range(_ENTRY_ROWS):
+		var lbl: Label = _entry_labels[i]
+		if i >= n:
+			lbl.text = "—"
+			lbl.add_theme_color_override(&"font_color", _COLOR_PENDING)
+			continue
+		var entry: Dictionary = entries[n - 1 - i]
+		var status: String = String(entry.get("status", ""))
+		var checkpoint: StringName = entry.get("checkpoint", &"")
+		if status == "PASS":
+			var detail: String = String(entry.get("detail", ""))
+			lbl.text = "PASS %s%s" % [checkpoint, (" " + detail) if detail != "" else ""]
+			lbl.add_theme_color_override(&"font_color", _COLOR_PASS)
+		else:
+			var reason: String = String(entry.get("reason", ""))
+			lbl.text = "FAIL %s%s" % [checkpoint, (" " + reason) if reason != "" else ""]
+			lbl.add_theme_color_override(&"font_color", _COLOR_FAIL)

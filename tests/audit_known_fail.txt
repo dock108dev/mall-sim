@@ -1,0 +1,45 @@
+# Known-FAIL checkpoints (one per line, # comments ignored).
+#
+# Entries here are required checkpoints from audit_required_checkpoints.txt
+# whose emitter is not yet implemented. They count toward the matrix total
+# but do NOT count as verified — they appear in the audit summary as known
+# FAIL so Phase 0 can progress without inventing passes.
+#
+# Rules enforced by tests/audit_run.sh:
+#   - Every entry must also appear in audit_required_checkpoints.txt
+#     (orphans here cause the gate to fail).
+#   - When a checkpoint starts emitting AUDIT: PASS in a real run, REMOVE
+#     it from this file in the same PR — leaving a verified checkpoint
+#     whitelisted hides regressions.
+
+# Boot — emitters landed in ISSUE-014 (boot_scene_ready, main_menu_ready,
+# new_game_clicked). Whitelisted because the audit_run GUT prefix
+# `test_audit_*` does not load the boot/main_menu scene scripts; coverage
+# is enforced separately by tests/validate_issue_014_entry_flow.sh.
+boot_scene_ready
+main_menu_ready
+new_game_clicked
+
+# Mall — mall_hub_ready emitter landed in ISSUE-014; same coverage caveat as
+# above. Remove once an integration test loads MallHub during audit_run.
+mall_hub_ready
+store_card_rendered
+
+# Transition — emitters land in Phase 1.
+transition_requested
+scene_change_ok
+
+# Store Ready — emitters land in Phase 1 (StoreReadyContract).
+store_id_resolved
+scene_instantiated
+controller_ready
+content_instantiated
+camera_active
+player_present
+input_gameplay
+objective_matches
+
+# Loop — emitters land in Phase 2 (DayCycleController).
+interaction_fired
+day_open
+day_close

@@ -1,0 +1,83 @@
+[gd_scene load_steps=9 format=3 uid="uid://sneakercitadel012"]
+
+[ext_resource type="Script" path="res://game/scripts/stores/store_sneaker_citadel_controller.gd" id="1"]
+[ext_resource type="Script" path="res://game/scripts/components/interactable.gd" id="2"]
+[ext_resource type="PackedScene" path="res://game/scenes/player/store_player_body.tscn" id="3"]
+
+[sub_resource type="BoxMesh" id="floor_mesh"]
+size = Vector3(8, 0.1, 6)
+
+[sub_resource type="BoxMesh" id="counter_mesh"]
+size = Vector3(2.2, 1.0, 0.7)
+
+[sub_resource type="BoxMesh" id="shelf_mesh"]
+size = Vector3(1.4, 1.8, 0.5)
+
+[sub_resource type="BoxMesh" id="interactable_shelf_mesh"]
+size = Vector3(1.4, 1.8, 0.5)
+
+[sub_resource type="BoxShape3D" id="interactable_shelf_shape"]
+size = Vector3(1.4, 1.8, 0.5)
+
+[node name="SneakerCitadel" type="Node3D"]
+script = ExtResource("1")
+
+[node name="StoreContent" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Floor" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("floor_mesh")
+
+[node name="Counter" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0.55, -1.5)
+mesh = SubResource("counter_mesh")
+
+[node name="Shelf1" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.95, -2.5)
+mesh = SubResource("shelf_mesh")
+
+[node name="Shelf2" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.95, -0.5)
+mesh = SubResource("shelf_mesh")
+
+[node name="Shelf3" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.95, 1.5)
+mesh = SubResource("shelf_mesh")
+
+[node name="InteractableShelf" type="Area3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 2.0)
+script = ExtResource("2")
+display_name = "sneaker shelf"
+action_verb = "Interact"
+interaction_type = 0
+prompt_text = "Stock sneakers"
+
+[node name="Mesh" type="MeshInstance3D" parent="StoreContent/InteractableShelf"]
+mesh = SubResource("interactable_shelf_mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StoreContent/InteractableShelf"]
+shape = SubResource("interactable_shelf_shape")
+
+[node name="StoreCamera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0.866, 0.5, 0, -0.5, 0.866, 0, 5, 6)
+current = true
+
+[node name="Player" parent="." instance=ExtResource("3")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 2.5)
+
+[node name="EntryMarker" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 2.5)
+
+[node name="StoreLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_energy = 1.5
+omni_range = 12.0
+
+[node name="ObjectiveText" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, -2.9)
+text = "Interact with the shelf to stock sneakers"
+pixel_size = 0.01

@@ -61,6 +61,8 @@ func initialize() -> void:
 	AudioManager.initialize()
 	GameManager.mark_boot_completed()
 	EventBus.boot_completed.emit()
+	if AuditLog != null:
+		AuditLog.pass_check(&"boot_scene_ready", "from=boot.gd")
 	_transition_to_main_menu()
 
 

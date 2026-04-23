@@ -304,7 +304,9 @@ func _set_hallway_camera_enabled(enabled: bool) -> void:
 	if _hallway_camera == null:
 		return
 	_hallway_camera.set_process(enabled)
-	_hallway_camera.set_process_unhandled_input(enabled)
+	# Input gating routes through PlayerController.set_input_listening so the
+	# bypass-detector (`tests/validate_input_focus.sh`, ISSUE-011) stays clean.
+	_hallway_camera.set_input_listening(enabled)
 
 
 func _find_slot_for_store(store_id: StringName) -> int:

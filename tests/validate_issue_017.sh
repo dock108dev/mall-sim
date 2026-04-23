@@ -1,141 +1,135 @@
 #!/usr/bin/env bash
-# ISSUE-017: Customer simulation — static structural validation.
-set -uo pipefail
+# Validates ISSUE-017 (.aidlc/issues): Interactable component + HUD
+# objective text bound to store state.
+set -u
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0
 FAIL=0
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
-fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
+INTERACTABLE_GD="$ROOT/game/scripts/components/interactable.gd"
+STORE_GD="$ROOT/game/scripts/stores/store_controller.gd"
+HUD_GD="$ROOT/game/scenes/ui/hud.gd"
+HUD_TSCN="$ROOT/game/scenes/ui/hud.tscn"
+EVENTBUS_GD="$ROOT/game/autoload/event_bus.gd"
+TEST_GD="$ROOT/tests/gut/test_interactable_objective_issue_017.gd"
 
-# ── archetypes.json ────────────────────────────────────────────────────────────
+pass() { PASS=$((PASS + 1)); echo "  PASS: $1"; }
+fail() { FAIL=$((FAIL + 1)); echo "  FAIL: $1"; }
 
-ARCHETYPES="$ROOT/game/content/customers/archetypes.json"
+echo "=== ISSUE-017: Interactable + HUD objective binding ==="
 
-if [ -f "$ARCHETYPES" ]; then
-    pass "archetypes.json exists"
+# AC1: Interactable exposes display_name, action_verb, interacted signal.
+if grep -q '^class_name Interactable' "$INTERACTABLE_GD"; then
+	pass "interactable.gd defines class_name Interactable"
 else
-    fail "archetypes.json missing at game/content/customers/archetypes.json"
+	fail "class_name Interactable missing"
 fi
 
-ARCHETYPE_COUNT=$(python3 -c "import json,sys; d=json.load(open('$ARCHETYPES')); print(len(d))" 2>/dev/null || echo 0)
-if [ "$ARCHETYPE_COUNT" -ge 3 ]; then
-    pass "archetypes.json defines >= 3 archetypes ($ARCHETYPE_COUNT found)"
+if grep -q '@export var display_name' "$INTERACTABLE_GD"; then
+	pass "Interactable exposes display_name"
 else
-    fail "archetypes.json needs >= 3 archetypes (found $ARCHETYPE_COUNT)"
+	fail "Interactable.display_name missing"
 fi
 
-python3 - "$ARCHETYPES" <<'EOF'
-import json, sys
-path = sys.argv[1]
-data = json.load(open(path))
-missing = []
-for entry in data:
-    for field in ("id", "wtp_multiplier", "preferred_types", "haggle_probability"):
-        if field not in entry:
-            missing.append("archetype '%s' missing field '%s'" % (entry.get("id","?"), field))
-if missing:
-    for m in missing:
-        print("FAIL:", m)
-    sys.exit(1)
-print("PASS: all archetypes have wtp_multiplier, preferred_types, haggle_probability")
-EOF
-[ $? -eq 0 ] && PASS=$((PASS + 1)) || FAIL=$((FAIL + 1))
-
-# ── CustomerSimulator script ──────────────────────────────────────────────────
-
-SIM="$ROOT/game/scripts/systems/customer_simulator.gd"
-
-if [ -f "$SIM" ]; then
-    pass "customer_simulator.gd exists"
+if grep -q '@export var action_verb' "$INTERACTABLE_GD"; then
+	pass "Interactable exposes action_verb"
 else
-    fail "customer_simulator.gd missing"
+	fail "Interactable.action_verb missing"
 fi
 
-if grep -q "func simulate_day" "$SIM" 2>/dev/null; then
-    pass "simulate_day method defined"
+if grep -q '^signal interacted' "$INTERACTABLE_GD" \
+	&& grep -q 'signal interacted_by' "$INTERACTABLE_GD"; then
+	pass "Interactable declares interacted + interacted_by signals"
 else
-    fail "simulate_day method missing from customer_simulator.gd"
+	fail "Interactable interacted/interacted_by signals missing"
 fi
 
-if grep -q "func calculate_traffic" "$SIM" 2>/dev/null; then
-    pass "calculate_traffic method defined"
+if grep -q 'add_to_group(&"interactables")' "$INTERACTABLE_GD"; then
+	pass "Interactable joins the 'interactables' group used by StoreReadyContract"
 else
-    fail "calculate_traffic method missing from customer_simulator.gd"
+	fail "Interactable not added to 'interactables' group"
 fi
 
-if grep -q "PriceResolver" "$SIM" 2>/dev/null; then
-    pass "CustomerSimulator uses PriceResolver"
+if grep -q 'func interact(by: Node = null)' "$INTERACTABLE_GD" \
+	&& grep -q 'interacted_by.emit(by)' "$INTERACTABLE_GD"; then
+	pass "interact(by) emits interacted_by(by)"
 else
-    fail "CustomerSimulator does not reference PriceResolver"
+	fail "interact(by) does not emit interacted_by(by)"
 fi
 
-if grep -q "item_sold" "$SIM" 2>/dev/null; then
-    pass "item_sold emitted in customer_simulator.gd"
+# AC2: StoreController.count_visible_interactables() returns visible only.
+if grep -q 'func count_visible_interactables' "$STORE_GD"; then
+	pass "StoreController.count_visible_interactables() defined"
 else
-    fail "item_sold not emitted in customer_simulator.gd"
+	fail "count_visible_interactables() missing on StoreController"
 fi
 
-if grep -q "customer_purchased" "$SIM" 2>/dev/null; then
-    pass "customer_purchased emitted in customer_simulator.gd"
+if grep -q 'is_visible_in_tree' "$STORE_GD"; then
+	pass "count uses is_visible_in_tree filter"
 else
-    fail "customer_purchased not emitted in customer_simulator.gd"
+	fail "count_visible_interactables does not filter on is_visible_in_tree"
 fi
 
-# ── StoreController integration ───────────────────────────────────────────────
-
-SC="$ROOT/game/scripts/stores/store_controller.gd"
-
-if grep -q "_run_customer_simulation" "$SC" 2>/dev/null; then
-    pass "StoreController calls _run_customer_simulation"
+if grep -q 'func register_interactable' "$STORE_GD" \
+	&& grep -q '_register_interactables' "$STORE_GD"; then
+	pass "StoreController auto-registers interactables on _ready"
 else
-    fail "StoreController missing _run_customer_simulation"
+	fail "StoreController interactable registration missing"
 fi
 
-if grep -q "CustomerSimulator" "$SC" 2>/dev/null; then
-    pass "StoreController references CustomerSimulator"
+# AC3: HUD bound to StoreController.current_objective_text via signal.
+if grep -q 'signal objective_text_changed' "$STORE_GD" \
+	&& grep -q 'var current_objective_text' "$STORE_GD" \
+	&& grep -q 'func set_objective_text' "$STORE_GD"; then
+	pass "StoreController exposes current_objective_text + set_objective_text"
 else
-    fail "StoreController does not reference CustomerSimulator"
+	fail "StoreController objective text API missing"
 fi
 
-# ── GUT test exists ───────────────────────────────────────────────────────────
-
-TEST="$ROOT/tests/gut/test_customer_simulator.gd"
-
-if [ -f "$TEST" ]; then
-    pass "test_customer_simulator.gd exists"
+if grep -q 'signal objective_text_changed' "$EVENTBUS_GD"; then
+	pass "EventBus mirrors objective_text_changed"
 else
-    fail "test_customer_simulator.gd missing"
+	fail "EventBus.objective_text_changed signal missing"
 fi
 
-if grep -q "test_seeded_simulate_day" "$TEST" 2>/dev/null; then
-    pass "seeded determinism test present"
+if grep -q 'name="ObjectiveLabel"' "$HUD_TSCN"; then
+	pass "hud.tscn contains ObjectiveLabel node"
 else
-    fail "seeded determinism test missing"
+	fail "hud.tscn missing ObjectiveLabel node"
 fi
 
-if grep -q "test_traffic_formula" "$TEST" 2>/dev/null; then
-    pass "traffic formula test present"
+if grep -q 'EventBus.objective_text_changed.connect' "$HUD_GD" \
+	&& grep -q '_on_objective_text_changed' "$HUD_GD"; then
+	pass "HUD binds ObjectiveLabel to EventBus.objective_text_changed"
 else
-    fail "traffic formula test missing"
+	fail "HUD ObjectiveLabel binding missing"
 fi
 
-# ── No store implements its own purchase loop ─────────────────────────────────
+# AC4: StoreReadyContract objective_matches_action() lives on controller.
+if grep -q 'func objective_matches_action' "$STORE_GD"; then
+	pass "StoreController.objective_matches_action() defined (Contract INV_OBJECTIVE)"
+else
+	fail "objective_matches_action() missing on StoreController"
+fi
 
-for ctrl in retro_games.gd pocket_creatures_store_controller.gd video_rental_store_controller.gd electronics_store_controller.gd sports_memorabilia_controller.gd; do
-    path="$ROOT/game/scripts/stores/$ctrl"
-    if [ -f "$path" ]; then
-        if grep -qE "purchase_loop|_simulate_purchases|_run_purchases" "$path" 2>/dev/null; then
-            fail "$ctrl contains its own purchase loop"
-        else
-            pass "$ctrl delegates to CustomerSimulator (no own purchase loop)"
-        fi
-    fi
-done
+# AC5: GUT integration test present and covers the required cases.
+if [ -f "$TEST_GD" ]; then
+	pass "GUT integration test present"
+else
+	fail "tests/gut/test_interactable_objective_issue_017.gd missing"
+fi
 
-# ── Summary ───────────────────────────────────────────────────────────────────
+if grep -q 'test_count_visible_interactables_returns_one_for_shelf' "$TEST_GD" \
+	&& grep -q 'test_objective_match_passes_when_text_references_action' "$TEST_GD" \
+	&& grep -q 'test_hud_objective_label_updates_within_one_frame' "$TEST_GD"; then
+	pass "GUT test covers count, objective match, and HUD binding"
+else
+	fail "GUT test missing required cases"
+fi
 
 echo ""
-echo "=== ISSUE-017 Results: $PASS passed, $FAIL failed ==="
-[ "$FAIL" -eq 0 ]
+TOTAL=$((PASS + FAIL))
+echo "=== Results: ${PASS}/${TOTAL} passed, ${FAIL} failed ==="
+[ "$FAIL" -eq 0 ] || exit 1
+exit 0

@@ -35,9 +35,9 @@ func transition_to_scene(scene_path: String) -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	await _fade_out()
-	get_tree().change_scene_to_file(scene_path)
-	# Wait one frame for the new scene tree to settle
-	await get_tree().process_frame
+	# SceneRouter (autoload) is the sole owner of `change_scene_to_*` calls.
+	# See docs/architecture/ownership.md row 1.
+	await SceneRouter.route_to_path(scene_path)
 	await _fade_in()
 
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -54,8 +54,7 @@ func transition_to_packed(scene: PackedScene) -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	await _fade_out()
-	get_tree().change_scene_to_packed(scene)
-	await get_tree().process_frame
+	await SceneRouter.route_to_packed(scene)
 	await _fade_in()
 
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE

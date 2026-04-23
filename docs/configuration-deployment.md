@@ -10,7 +10,7 @@ Key current settings in `project.godot`:
 - main scene: `res://game/scenes/bootstrap/boot.tscn`
 - project features: `4.6` with `Forward Plus`
 - icon: `res://icon.svg`
-- custom theme: `res://game/resources/ui/mall_theme.tres`
+- custom theme: `res://game/themes/mallcore_theme.tres`
 - translations: English and Spanish translation resources
 - enabled editor plugin: `res://addons/gut/plugin.cfg`
 
@@ -89,15 +89,17 @@ Then use Godot's `--export-release` with the preset name.
 
 ### Validation workflow
 
-`.github/workflows/validate.yml` runs on pushes and pull requests to `main` and
-currently includes:
+`.github/workflows/validate.yml` runs on pushes and pull requests to `main`
+and currently includes:
 
-1. `lint-docs` for required-file and repository-shape checks
-2. `gut-tests` for Godot install, import, and headless GUT execution
-3. `lint-gdscript` for non-blocking `gdlint`
-
-Current documented mismatch: `lint-docs` still checks for a root `CLAUDE.md`
-file even though the active project docs set is `README.md` plus `docs/`.
+1. `lint-docs` - required-file checks (`project.godot`, `README.md`, `LICENSE`,
+   `docs/architecture.md`) and repository-shape checks (no committed
+   `.DS_Store`).
+2. `gut-tests` - Godot install, import, and headless GUT execution.
+3. `interaction-audit` - headless audit run that regenerates the daily audit
+   summary under `docs/audits/`.
+4. `content-originality` - banned-term check for real brands and trademarks.
+5. `lint-gdscript` - `gdlint` via `gdtoolkit`.
 
 ### Export workflow
 
@@ -113,8 +115,8 @@ file even though the active project docs set is `README.md` plus `docs/`.
 Linux is not currently exported by the release workflow even though a Linux
 preset exists locally.
 
-## Version-sensitive deployment note
+## Godot version
 
-The project file declares Godot `4.6` features, `validate.yml` installs
-Godot `4.6.2-stable`, and `export.yml` still declares `GODOT_VERSION: "4.3"`.
-That version split is the main deployment caveat in the checked-in automation.
+`project.godot` declares Godot `4.6` features. Both `validate.yml` and
+`export.yml` install Godot `4.6.2-stable`. Use that version for local builds
+and tests to match CI.

@@ -74,17 +74,20 @@ Add or update coverage when changing:
 
 ## CI validation
 
-`.github/workflows/validate.yml` currently runs three jobs:
+`.github/workflows/validate.yml` currently runs these jobs:
 
-1. `lint-docs` - required-file and repository-shape checks
-2. `gut-tests` - Godot install, import, and headless GUT execution
-3. `lint-gdscript` - non-blocking `gdlint` via `gdtoolkit`
+1. `lint-docs` - required-file and repository-shape checks (requires
+   `project.godot`, `README.md`, `LICENSE`, and `docs/architecture.md`; also
+   fails on any committed `.DS_Store`).
+2. `gut-tests` - installs Godot `4.6.2-stable`, imports project assets, and
+   runs GUT headlessly. Trusts GUT's `All tests passed` summary line for
+   pass/fail; also scans stderr for `push_error()` output (excluding known
+   engine RID-leak noise during shutdown).
+3. `interaction-audit` - runs the headless audit and regenerates the daily
+   audit summary under `docs/audits/`.
+4. `content-originality` - grep-based banned-term check for real brands,
+   trademarks, and copyrighted characters.
+5. `lint-gdscript` - `gdlint` via `gdtoolkit`.
 
-Two current workflow quirks matter for documentation:
-
-1. `lint-docs` still expects a root `CLAUDE.md` file even though the active
-   project docs set is `README.md` plus `docs/`.
-2. `gut-tests` installs Godot `4.6.2-stable`, while the tagged export workflow
-   still uses Godot `4.3`.
-
-Tagged release exports are handled separately by `.github/workflows/export.yml`.
+Tagged release exports are handled separately by `.github/workflows/export.yml`,
+which installs the same Godot `4.6.2-stable` version.

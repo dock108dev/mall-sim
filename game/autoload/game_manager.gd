@@ -86,11 +86,24 @@ func change_state(new_state: GameState) -> bool:
 func start_new_game() -> void:
 	if not _run_data_loader():
 		return
-	pending_load_slot = -1
-	_reset_session_state()
+	begin_new_run()
 	change_state(GameState.LOADING)
 	change_state(GameState.GAMEPLAY)
 	change_scene(GAMEPLAY_SCENE_PATH)
+
+
+## Initializes a fresh run: clears session state, resets day to 1, and emits
+## the `new_game_clicked` audit checkpoint. Called by `start_new_game()` before
+## the mall_hub scene swap so day/money are set before MallHub._ready() runs.
+func begin_new_run() -> void:
+	pending_load_slot = -1
+	_reset_session_state()
+	set_current_day(1)
+	if AuditLog != null:
+		AuditLog.pass_check(
+			&"new_game_clicked",
+			"day=1 store=%s" % DEFAULT_STARTING_STORE
+		)
 
 
 ## Loads a save slot and transitions to gameplay.
@@ -174,10 +187,6 @@ func get_owned_store_ids() -> Array[StringName]:
 
 func change_scene(scene_path: String) -> void:
 	_scene_transition.transition_to_scene(scene_path)
-
-
-func change_scene_packed(scene: PackedScene) -> void:
-	_scene_transition.transition_to_packed(scene)
 
 
 ## Orchestrates tiered system initialization after DataLoader completes.

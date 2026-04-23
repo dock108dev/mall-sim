@@ -55,6 +55,9 @@ func _ready() -> void:
 			_on_continue_pressed.bind(most_recent)
 		)
 
+	if AuditLog != null:
+		AuditLog.pass_check(&"main_menu_ready", "from=main_menu.gd")
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey:

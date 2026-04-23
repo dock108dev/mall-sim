@@ -38,6 +38,7 @@ var _target_pivot: Vector3 = Vector3.ZERO
 var _is_orbiting: bool = false
 var _is_panning: bool = false
 var _build_mode_active: bool = false
+var _input_listening: bool = true
 
 @onready var _camera: Camera3D = $Camera3D
 
@@ -49,6 +50,10 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _build_mode_active:
+		return
+	if not _input_listening:
+		return
+	if not _input_focus_allows_gameplay():
 		return
 
 	if event is InputEventMouseButton:
@@ -80,6 +85,17 @@ func _process(delta: float) -> void:
 	_zoom = lerpf(_zoom, _target_zoom, weight)
 	_pivot = _pivot.lerp(_target_pivot, weight)
 	_update_camera_transform()
+
+
+## Toggles whether this controller listens for unhandled input. Owners that
+## previously called `set_process_unhandled_input(...)` directly (now banned by
+## ISSUE-011 / `tests/validate_input_focus.sh`) route through this method
+## instead. Process tick is left to the caller via `set_process(...)`.
+func set_input_listening(listening: bool) -> void:
+	_input_listening = listening
+	if not listening:
+		_is_orbiting = false
+		_is_panning = false
 
 
 ## Enables or disables orbit controls for build mode.
@@ -150,6 +166,8 @@ func _handle_pan(motion: InputEventMouseMotion) -> void:
 
 
 func _apply_keyboard_movement(delta: float) -> void:
+	if not _input_focus_allows_gameplay():
+		return
 	var movement_input: Vector2 = Input.get_vector(
 		"move_left",
 		"move_right",
@@ -171,6 +189,22 @@ func _apply_keyboard_movement(delta: float) -> void:
 	).normalized()
 	_target_pivot += movement_dir * move_speed * delta
 	_target_pivot = _target_pivot.clamp(store_bounds_min, store_bounds_max)
+
+
+## Returns true when the InputFocus autoload either is absent (test/unit
+## context) or reports `&"store_gameplay"`. Any other context (modal, mall
+## hub, menu) suppresses gameplay input — see ISSUE-011 / ownership.md row 5.
+func _input_focus_allows_gameplay() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return true
+	var ifocus: Node = tree.root.get_node_or_null("InputFocus")
+	if ifocus == null or not ifocus.has_method("current"):
+		return true
+	var ctx: StringName = ifocus.call("current")
+	if ctx == &"":
+		return true
+	return ctx == &"store_gameplay"
 
 
 func _update_camera_transform() -> void:

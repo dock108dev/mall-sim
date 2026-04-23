@@ -1,0 +1,36 @@
+# Required runtime checkpoints (one per line, # comments ignored).
+# Source of truth: docs/audit/pass-fail-matrix.md.
+# Each entry is a StringName passed to AuditLog.pass_check(...).
+# Adding a row here without an emitter will fail CI by design — the audit
+# gate compares verified PASS lines against this manifest.
+
+# Boot
+boot_scene_ready
+main_menu_ready
+new_game_clicked
+
+# Mall
+mall_hub_ready
+store_card_rendered
+
+# Transition
+transition_requested
+scene_change_ok
+
+# Store Ready (StoreReadyContract)
+store_id_resolved
+scene_instantiated
+controller_ready
+content_instantiated
+camera_active
+player_present
+input_gameplay
+objective_matches
+
+# Loop
+interaction_fired
+day_open
+day_close
+
+# Golden path (ISSUE-013) — emitted by tests/gut/test_audit_golden_path.gd
+golden_path

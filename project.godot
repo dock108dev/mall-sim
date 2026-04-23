@@ -43,6 +43,15 @@ ObjectiveRail="*res://game/scenes/ui/objective_rail.tscn"
 InteractionPrompt="*res://game/scenes/ui/interaction_prompt.tscn"
 ObjectiveDirector="*res://game/autoload/objective_director.gd"
 AuditOverlay="*res://game/autoload/audit_overlay.gd"
+AuditLog="*res://game/autoload/audit_log.gd"
+SceneRouter="*res://game/autoload/scene_router.gd"
+ErrorBanner="*res://game/autoload/error_banner.gd"
+CameraAuthority="*res://game/autoload/camera_authority.gd"
+InputFocus="*res://game/autoload/input_focus.gd"
+StoreRegistry="*res://game/autoload/store_registry.gd"
+StoreDirector="*res://game/autoload/store_director.gd"
+GameState="*res://game/autoload/game_state.gd"
+FailCard="*res://game/scenes/ui/fail_card.tscn"
 
 [debug]
 

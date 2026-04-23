@@ -3,6 +3,10 @@ class_name Interactable
 extends Area3D
 
 signal interacted()
+## ISSUE-017: parameterised variant — emits the actor that triggered the
+## interaction. Kept separate from `interacted()` so existing parameterless
+## listeners (storefront door, GUT tests) keep working.
+signal interacted_by(by: Node)
 signal focused()
 signal unfocused()
 
@@ -41,6 +45,11 @@ const _OUTLINE_MATERIAL: ShaderMaterial = preload(
 
 @export var interaction_type: InteractionType = InteractionType.ITEM
 @export var display_name: String = "Item"
+## ISSUE-017: action verb the StoreController/StoreReadyContract uses to
+## prove the HUD objective text references a real interactable in the scene
+## (e.g. objective "Interact with the shelf" requires action_verb=="Interact"
+## on an interactable whose display_name contains "shelf").
+@export var action_verb: String = "Interact"
 @export var prompt_text: String = ""
 @export var enabled: bool = true
 @export var highlight_color: Color = Color(0.0, 0.737, 0.725, 1.0)
@@ -72,6 +81,10 @@ func _ready() -> void:
 	monitorable = false
 	input_ray_pickable = false
 	add_to_group("interactable")
+	# ISSUE-017: StoreReadyContract enumerates this group (plural) when
+	# counting visible interactions. Kept alongside the legacy singular
+	# group so existing systems keep filtering correctly.
+	add_to_group(&"interactables")
 	_interaction_area = _ensure_interaction_area()
 	_register_interaction_area()
 
@@ -130,10 +143,13 @@ func unhighlight() -> void:
 
 
 ## Triggers the interaction, emitting both local and global signals.
-func interact() -> void:
+## `by` (ISSUE-017) identifies the actor that triggered the interaction so
+## listeners can attribute it; defaults to null for the legacy callsites.
+func interact(by: Node = null) -> void:
 	if not enabled:
 		return
 	interacted.emit()
+	interacted_by.emit(by)
 	EventBus.interactable_interacted.emit(self, interaction_type)
 
 

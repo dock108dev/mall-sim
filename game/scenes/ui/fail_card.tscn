@@ -1,0 +1,79 @@
+[gd_scene load_steps=2 format=3 uid="uid://cfailcard018018"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/fail_card.gd" id="1_fc018"]
+
+[node name="FailCard" type="CanvasLayer"]
+layer = 255
+script = ExtResource("1_fc018")
+
+[node name="FailCardRoot" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+visible = false
+
+[node name="Background" type="ColorRect" parent="FailCardRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.02, 0.02, 0.94)
+mouse_filter = 0
+
+[node name="Card" type="PanelContainer" parent="FailCardRoot"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -200.0
+offset_right = 360.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="FailCardRoot/Card"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="FailCardRoot/Card/VBox"]
+layout_mode = 2
+text = "Store failed to load"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+
+[node name="InvariantLabel" type="Label" parent="FailCardRoot/Card/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Invariant: "
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+
+[node name="StoreIdLabel" type="Label" parent="FailCardRoot/Card/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "store_id: "
+horizontal_alignment = 1
+
+[node name="ReasonLabel" type="Label" parent="FailCardRoot/Card/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+horizontal_alignment = 1
+text = ""
+
+[node name="ReturnToMallButton" type="Button" parent="FailCardRoot/Card/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Return to Mall"

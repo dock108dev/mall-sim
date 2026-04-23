@@ -171,3 +171,100 @@ No code was deleted in this pass.
 - `DEFAULT_STARTING_STORE` now reads `&"retro_games"` in `game_manager.gd:9`. All six consumers read via the constant — no hardcoded `&"sports"` strings remain in game code.
 - `tests/gut/test_new_game_state.gd:98` reads `GameManager.DEFAULT_STARTING_STORE` dynamically and asserts the store ID exists in `ContentRegistry` — `retro_games` is a registered store, so the test continues to pass.
 - The `tools/interaction_audit.md` table column "Default boot store" now correctly matches: Retro Games is the boot default, Sports Memorabilia is not.
+
+---
+
+## Pass 5 — Phase 1 Scaffolding Audit (2026-04-22)
+
+### Diff-Driven Deletion Summary
+
+The working-tree diff under audit is the Phase 1 SSOT scaffolding pass: new
+autoloads (`SceneRouter`, `StoreDirector`, `StoreRegistry`, `GameState`,
+`CameraAuthority`, `InputFocus`, `AuditLog`, `ErrorBanner`, `FailCard`) and
+the corresponding ownership / contract / interactable wiring on existing
+controllers. The diff is **purely additive** — no flags were retired, no
+SSOT module was replaced in this pass, and the legacy retail-sim systems
+(`StoreStateManager`, `customer_system`, `inventory_system`,
+`reputation_system`, `staff_manager`, etc.) remain the live runtime owners
+of their domains. There are therefore no flag-removal-driven deletions to
+make in this pass.
+
+One narrow dead method was identified and removed:
+
+1. **Deleted `GameManager.change_scene_packed(scene: PackedScene)`
+   (`game/autoload/game_manager.gd`).** Verified zero callers across
+   `game/`, `tests/`, and `scripts/`. The method was a two-line wrapper
+   around `SceneTransition.transition_to_packed()` that no production code
+   or test ever invoked. `SceneTransition.transition_to_packed()` itself
+   was retained because `tests/validate_issue_006.sh` (AC4) enforces its
+   existence as part of the issue-006 contract — removing the contract is
+   out of scope for an SSOT cleanup pass and belongs with issue-006 closure.
+
+### SSOT Verification (Phase 1 surfaces, additive)
+
+The new ownership map in `docs/architecture/ownership.md` (rows 1–10)
+declares the authoritative writer per responsibility for the Phase 1
+golden path. None of these have a legacy duplicate that is reachable from
+the Phase 1 chain (Boot → Mall → Selection → Transition → Store Ready):
+
+| Domain | Authoritative module | Legacy reader/writer status |
+| --- | --- | --- |
+| Scene load / `change_scene_to_*` | `SceneRouter` (autoload) | `SceneTransition` is the fade wrapper that delegates into `SceneRouter`; `GameManager.change_scene` is the legacy fade entry point still used by `error_banner.gd` and three internal call sites — retained as a documented thin wrapper, not a duplicate writer. |
+| Store lifecycle / readiness | `StoreDirector` + per-scene `StoreController` | No legacy ready-declarer in the Phase 1 chain. |
+| Run state (active store / day / money / flags) | `GameState` (autoload) | `GameManager.current_store_id`, `GameManager.owned_stores`, `GameManager.get_active_store_id()`, `GameManager.get_owned_store_ids()`, `GameManager.is_store_owned()` are still the live readers/writers consumed by ~40+ legacy sites (staff, reputation, audio, customer, save, world, UI). Retained per Risk Log §1 below. |
+| Camera authority | `CameraAuthority` (autoload, write owner) | `CameraManager` remains as a read-only viewport observer feeding build-mode and UI listeners. Layered, not duplicated. |
+| Input focus / modal | `InputFocus` (autoload) | New surface; no legacy owner. |
+| Store registry / id resolution | `StoreRegistry` (autoload) | `ContentRegistry.resolve(id)` still owns content-id resolution for the legacy retail-sim path — not the same domain. |
+| Audit checkpoints | `AuditLog` (autoload) | `AuditOverlay` continues to render the on-screen pass/fail matrix and now forwards through `AuditLog`. |
+| Cross-system events | `EventBus` (autoload) | Phase 1 mirror signals (`store_ready`, `store_failed`, `scene_ready`, `run_state_changed`, `input_focus_changed`, `camera_authority_changed`) added per row 10. Owners remain authoritative emitters. |
+
+### Risk Log
+
+1. **Retained `GameManager.current_store_id`, `GameManager.owned_stores`,
+   `GameManager.get_active_store_id()`, `GameManager.get_owned_store_ids()`,
+   and `GameManager.is_store_owned()`.** `GameState.active_store_id` is the
+   ownership-doc SSOT for the active-store field, but the legacy run-state
+   surface on `GameManager` is read by 40+ live call sites across
+   `staff_manager`, `reputation_system`, `audio_event_handler`, `audit_overlay`,
+   `customer_npc`, `tournament_system`, `mall_customer_spawner`,
+   `random_event_system`, `storefront`, `game_world`, `staff_panel`,
+   `inventory_panel`, `pricing_panel`, `close_day_preview`, `order_panel`,
+   and ~12 test files that mutate the field directly. Migrating them is a
+   distinct convergence pass (Phase 2/3 work per ROADMAP) and was
+   explicitly out of scope for this Phase 1 scaffolding pass — deleting
+   the legacy surface unilaterally would break the live retail-sim path.
+2. **Retained `SceneTransition.transition_to_packed()` and
+   `SceneRouter.route_to_packed()`.** No production caller remains after
+   `GameManager.change_scene_packed` was removed, but `tests/validate_issue_006.sh`
+   (AC4) and the test stubs in `tests/gut/test_new_game_hub_flow.gd` /
+   `tests/gut/test_game_manager.gd` enforce their existence as part of the
+   issue-006 contract. Removal belongs with issue-006 closure, not an SSOT
+   cleanup pass.
+3. **Retained legacy autoloads** (`StaffManager`, `ReputationSystemSingleton`,
+   `DifficultySystemSingleton`, `UnlockSystemSingleton`, `CheckoutSystem`,
+   `OnboardingSystemSingleton`, `MarketTrendSystemSingleton`, `TooltipManager`,
+   `ObjectiveDirector`, `EnvironmentManager`, `CameraManager`, etc.). Per
+   `BRAINDUMP.md` §"What Is Likely Happening" and the ROADMAP Phase 0/1
+   scope, the current mandate is verification of the golden path, not
+   tear-down of the legacy retail simulation. These autoloads remain the
+   live owners of their domains and are not Phase 1 SSOT duplicates.
+4. **Retained Risk-Log entries from Passes 2–4** (`_format_legacy_metadata`,
+   `_migrate_v0_to_v1`, `generate_report()`, `_leave_reason` default,
+   `sports_memorabilia_controller`). Status unchanged.
+
+### Sanity Check
+
+- `change_scene_packed` has zero remaining references in `game/`, `tests/`,
+  or `scripts/`. The only consumer of `SceneTransition.transition_to_packed`
+  was the deleted method; the contract on `SceneTransition` itself remains
+  intact (validate_issue_006.sh AC4 still passes via the surviving
+  `func transition_to_packed` declaration on `scene_transition.gd:48`).
+- `GameManager.change_scene` retained — three internal callers
+  (`start_new_game`, `load_game`, `transition_to_menu`) plus
+  `error_banner.gd:128` consume it. Documented as the legacy fade entry
+  point that delegates into `SceneTransition` → `SceneRouter` per
+  ownership.md row 1.
+- No new singletons were introduced in this pass; all Phase 1 SSOT
+  autoloads referenced above are pre-existing in the working-tree diff
+  under audit.
+
