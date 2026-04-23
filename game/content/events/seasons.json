@@ -1,4 +1,5 @@
 {
+  "type": "named_seasons",
   "cycle_length": 70,
   "seasons": [
     {
@@ -13,7 +14,11 @@
         "accessories": 1.2
       },
       "price_sensitivity_modifier": 1.0,
-      "event_pool": ["school_supply_rush", "tech_demo_day", "back_to_school_sale"],
+      "event_pool": [
+        "school_supply_rush",
+        "tech_demo_day",
+        "back_to_school_sale"
+      ],
       "price_modifier_table": {
         "electronics": 1.1,
         "handheld": 1.1,
@@ -33,7 +38,11 @@
         "memorabilia": 1.3
       },
       "price_sensitivity_modifier": 1.0,
-      "event_pool": ["playoff_card_surge", "autograph_signing", "collector_fair"],
+      "event_pool": [
+        "playoff_card_surge",
+        "autograph_signing",
+        "collector_fair"
+      ],
       "price_modifier_table": {
         "sports_cards": 1.15,
         "autographs": 1.1,
@@ -61,7 +70,12 @@
         "dvd": 1.2
       },
       "price_sensitivity_modifier": 0.8,
-      "event_pool": ["gift_buying_surge", "holiday_bundle_deal", "late_night_hours", "mall_raffle"],
+      "event_pool": [
+        "gift_buying_surge",
+        "holiday_bundle_deal",
+        "late_night_hours",
+        "mall_raffle"
+      ],
       "price_modifier_table": {
         "electronics": 1.15,
         "cartridge": 1.1,
@@ -88,7 +102,11 @@
         "dvd": 0.9
       },
       "price_sensitivity_modifier": 1.3,
-      "event_pool": ["trade_in_event", "clearance_sale", "return_window_spike"],
+      "event_pool": [
+        "trade_in_event",
+        "clearance_sale",
+        "return_window_spike"
+      ],
       "price_modifier_table": {
         "electronics": 0.9,
         "handheld": 0.9,
@@ -110,7 +128,11 @@
         "booster_pack": 1.3
       },
       "price_sensitivity_modifier": 1.0,
-      "event_pool": ["tournament_weekend", "new_set_release", "spring_collector_meet"],
+      "event_pool": [
+        "tournament_weekend",
+        "new_set_release",
+        "spring_collector_meet"
+      ],
       "price_modifier_table": {
         "cartridge": 1.1,
         "console": 1.1,
@@ -122,12 +144,15 @@
     {
       "id": "summer_lull",
       "name": "Summer Lull",
-      "description": "Baseline — no modifiers",
+      "description": "Baseline \u2014 no modifiers",
       "start_day": 57,
       "end_day": 70,
       "category_multipliers": {},
       "price_sensitivity_modifier": 1.0,
-      "event_pool": ["mall_walkers_week", "summer_clearance"],
+      "event_pool": [
+        "mall_walkers_week",
+        "summer_clearance"
+      ],
       "price_modifier_table": {},
       "visual_variant": "summer_lull"
     }

@@ -1,4 +1,5 @@
 {
+  "type": "day_beats_data",
   "day_beats": [
     {
       "day": 1,
@@ -7,7 +8,7 @@
     },
     {
       "day": 2,
-      "story_beat": "A woman in a blazer picks up a cartridge, turns it over, sets it back down. She doesn't buy — but she lingers longer than most.",
+      "story_beat": "A woman in a blazer picks up a cartridge, turns it over, sets it back down. She doesn't buy \u2014 but she lingers longer than most.",
       "forward_hook": "The weekend crowd tends to run younger. Keep the counter clear and the prices honest."
     },
     {
@@ -18,7 +19,7 @@
     {
       "day": 4,
       "story_beat": "The mall's overhead PA plays a jingle that hasn't aired since 1998. Three customers stop mid-sentence and just listen.",
-      "forward_hook": "You're starting to see regulars. That's a good sign — it means they trust the stock."
+      "forward_hook": "You're starting to see regulars. That's a good sign \u2014 it means they trust the stock."
     },
     {
       "day": 5,

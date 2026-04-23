@@ -6,6 +6,12 @@ extends Node
 
 const CURRENT_SAVE_VERSION: int = 3
 const MIN_SUPPORTED_SAVE_VERSION: int = 0
+## Canonical top-level schema version key. `save_version` is preserved as a
+## legacy alias for compatibility with v0–v3 readers. Any new persisted field
+## in an active store/system must bump CURRENT_SAVE_VERSION and add a migration
+## step (see docs/architecture.md "Save schema versioning").
+const SCHEMA_VERSION_KEY: String = "schema_version"
+const LEGACY_SCHEMA_VERSION_KEY: String = "save_version"
 const SAVE_DIR := "user://"
 const BACKUP_DIR := "user://backups/"
 const SLOT_INDEX_PATH := "user://save_index.cfg"
@@ -310,17 +316,17 @@ func load_game(slot: int) -> bool:
 	if not bool(read_result.get("ok", false)):
 		return _fail_load(slot, str(read_result.get("reason", "")))
 	var save_data: Dictionary = read_result.get("data", {}) as Dictionary
-	var save_version: int = int(save_data.get("save_version", 0))
+	var save_version: int = _read_schema_version(save_data)
 	if save_version > CURRENT_SAVE_VERSION:
 		return _fail_load(
 			slot,
-			"Save version %d is newer than supported version %d"
+			"Save schema version %d is newer than supported version %d"
 			% [save_version, CURRENT_SAVE_VERSION]
 		)
 	if save_version < MIN_SUPPORTED_SAVE_VERSION:
 		return _fail_load(
 			slot,
-			"Save version %d is older than minimum supported version %d"
+			"Save schema version %d is older than minimum supported version %d"
 			% [save_version, MIN_SUPPORTED_SAVE_VERSION]
 		)
 	if save_version < CURRENT_SAVE_VERSION:
@@ -420,7 +426,8 @@ func _collect_save_data() -> Dictionary:
 	}
 
 	var data: Dictionary = {
-		"save_version": CURRENT_SAVE_VERSION,
+		SCHEMA_VERSION_KEY: CURRENT_SAVE_VERSION,
+		LEGACY_SCHEMA_VERSION_KEY: CURRENT_SAVE_VERSION,
 		"save_metadata": save_metadata,
 		"time": _time_system.get_save_data(),
 		"economy": _economy_system.get_save_data(),
@@ -815,7 +822,7 @@ func _has_saved_active_store_id(data: Dictionary) -> bool:
 ## preserve the original save if migration cannot complete.
 func migrate_save_data(data: Dictionary) -> Dictionary:
 	var working: Dictionary = data.duplicate(true)
-	var version: int = int(working.get("save_version", 0))
+	var version: int = _read_schema_version(working)
 	while version < CURRENT_SAVE_VERSION:
 		var step: Callable = _get_migration_step(version)
 		if not step.is_valid():
@@ -842,8 +849,18 @@ func migrate_save_data(data: Dictionary) -> Dictionary:
 		if sm.has("store_type") and not sm.has("active_store_id"):
 			sm["active_store_id"] = sm.get("store_type", "")
 		sm.erase("store_type")
-	working["save_version"] = CURRENT_SAVE_VERSION
+	working[LEGACY_SCHEMA_VERSION_KEY] = CURRENT_SAVE_VERSION
+	working[SCHEMA_VERSION_KEY] = CURRENT_SAVE_VERSION
 	return {"ok": true, "data": working, "reason": ""}
+
+
+## Reads the schema version from a save dictionary, preferring the canonical
+## `schema_version` field and falling back to the legacy `save_version` alias
+## written by builds prior to ISSUE-024.
+func _read_schema_version(data: Dictionary) -> int:
+	if data.has(SCHEMA_VERSION_KEY):
+		return int(data.get(SCHEMA_VERSION_KEY, 0))
+	return int(data.get(LEGACY_SCHEMA_VERSION_KEY, 0))
 
 
 func _get_migration_step(from_version: int) -> Callable:

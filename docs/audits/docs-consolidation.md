@@ -99,3 +99,108 @@ All other documentation lives under `docs/` as called out in
 `docs/contributing.md`. The four aspirational/duplicate root docs are gone,
 and the three `/docs` files that contained stale CI and engine-version claims
 now match the checked-in workflows and `project.godot`.
+
+---
+
+## 2026-04-23 — Second consolidation pass
+
+### Goal
+
+Re-enforce the root = `README.md + LICENSE + BRAINDUMP.md + CLAUDE.md` boundary
+(three pointer/duplicate docs had reappeared at root), align
+`docs/architecture.md` with the current autoload set in `project.godot` (ten
+new autoloads had landed without doc updates), and remove unverified /
+aspirational matrix files that contradicted the shipped autoloads.
+
+### Deleted
+
+- `ARCHITECTURE.md` (root) — pointer-only wrapper around
+  `docs/architecture.md`. Violated the "README.md only in root" rule and had
+  already drifted: listed six of the twenty-six real autoloads and referenced
+  `AudioEventHandler` as an autoload (it is preloaded by `AudioManager`, not
+  registered in `project.godot`).
+- `DESIGN.md` (root) — pointer-only wrapper around `docs/design.md`.
+- `STATUS.md` (root) — AIDLC auto-scan output that described only `tools/`
+  (the Python AIDLC harness, 35 files) and implied the whole project was
+  Python. Misleading: Mallcore Sim is a Godot 4 / GDScript game with ~850
+  files under `game/`. Auto-regenerating this file is not useful for project
+  documentation.
+- `docs/archive/` (entire directory, contained only `README.md`) — described
+  a *future* walkable-world retirement that has not happened. The listed
+  scenes (`player.tscn`, `mall_hallway.tscn`, `storefront.tscn`,
+  `game_world.tscn`) are still live in `game/scenes/`. The doc's own "status"
+  said "Phase 1" but the checked-in state has moved past that scaffolding.
+- `docs/audit/pass-fail-matrix.md` (entire `docs/audit/` directory) —
+  aspirational checkpoint list: **0 of 17 verified**, referenced
+  `SceneTransitionController` (never existed; the real autoload is
+  `SceneRouter`), `%Player` resolution as a checkpoint (the game does not
+  emit a `player_present` `AuditLog.pass_check`), and a `ROADMAP.md` at root
+  (deleted in the previous pass). The actual checkpoint set is authoritatively
+  emitted by runtime code and captured in daily `docs/audits/YYYY-MM-DD-audit.md`
+  files (see `2026-04-23-audit.md`: five real checkpoints — `boot_complete`,
+  `store_entered`, `refurb_completed`, `transaction_completed`, `day_closed`).
+  Singular `docs/audit/` next to plural `docs/audits/` was also a navigation
+  footgun.
+- `docs/decisions/vertical-slice-anchor.md` — unnumbered ADR that duplicated
+  `docs/decisions/0002-vertical-slice-store.md` (both nominate Retro Games as
+  the vertical slice anchor for Phase 4). Kept the numbered, dated version.
+
+### Updated
+
+- `docs/architecture.md` — the autoload table now reflects the 26 autoloads
+  actually registered in `project.godot` (verified against
+  `grep '=\"\*' project.godot`). Added rows for `AuditLog`, `SceneRouter`,
+  `ErrorBanner`, `CameraAuthority`, `InputFocus`, `StoreRegistry`,
+  `StoreDirector`, `RunState`, `TutorialContextSystem`, and the `FailCard`
+  scene autoload. Removed the stale `AudioEventHandler` autoload row (the
+  file exists at `game/autoload/audio_event_handler.gd` but is preloaded by
+  `AudioManager` — it is not an entry in `project.godot` `[autoload]`).
+  Added a pointer to `architecture/ownership.md` for the single-owner
+  responsibility matrix those autoloads enforce.
+- `docs/index.md` — added links to `architecture/ownership.md`, ADRs 0003–0006
+  (previously unlinked), the `research/` reference set, and `style/visual-grammar.md`.
+  Removed the broken backlinks that implied `docs/audit/pass-fail-matrix.md`
+  and `docs/archive/` existed.
+
+### Retained (spot-verified against current code)
+
+- `README.md` — entry point; correctly pins Godot `4.6.2` and points at
+  `res://game/scenes/bootstrap/boot.tscn`.
+- `CLAUDE.md` — harness instructions; references
+  `docs/audits/braindump.md`, `docs/architecture.md`, `docs/design.md`,
+  `docs/roadmap.md`, and the root `BRAINDUMP.md` (customer voice). All paths
+  resolve.
+- `BRAINDUMP.md` (root) — customer-voice artifact. Per project convention,
+  never rewritten. Left untouched.
+- `docs/architecture/ownership.md` — single-owner matrix; references
+  `SceneRouter`, `StoreDirector`, `CameraAuthority`, `StoreRegistry`,
+  `InputFocus`, `AuditLog`, `ErrorBanner`, all verified present in
+  `project.godot`.
+- `docs/research/*.md` — 10 research notes cited from `CLAUDE.md` and
+  `ownership.md`. Not touched.
+- `docs/decisions/0001`–`0006-*.md` — six numbered ADRs. Not touched.
+- `docs/audits/*.md` — point-in-time audit notes (`2026-04-23-audit.md`,
+  `abend-handling.md`, `braindump.md`, `cleanup-report.md`,
+  `security-audit.md`, `ssot-cleanup.md`). Not touched beyond appending
+  this section.
+- `docs/setup.md`, `docs/testing.md`, `docs/content-data.md`,
+  `docs/configuration-deployment.md`, `docs/contributing.md`,
+  `docs/roadmap.md`, `docs/design.md`, `docs/style/visual-grammar.md` —
+  verified accurate against `project.godot`, `.github/workflows/validate.yml`,
+  and `.gutconfig.json`.
+
+### Consolidation outcome
+
+Root-level Markdown:
+
+```
+README.md     ← project entry point
+CLAUDE.md     ← agent harness instructions (not project documentation)
+BRAINDUMP.md  ← customer-voice artifact, never rewritten
+LICENSE       ← license (non-markdown)
+```
+
+Every `/docs` file either describes current reality or is explicitly labeled
+as a point-in-time audit. The autoload table, CI workflow list, and engine
+version are consistent across `architecture.md`, `testing.md`, and
+`configuration-deployment.md`.

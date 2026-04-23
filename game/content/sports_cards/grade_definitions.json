@@ -2,14 +2,14 @@
   {
     "grade": 1,
     "label": "Poor",
-    "description": "Severe damage — card barely holds together but is identifiable.",
-    "multiplier": 0.10
+    "description": "Severe damage \u2014 card barely holds together but is identifiable.",
+    "multiplier": 0.1
   },
   {
     "grade": 2,
     "label": "Fair",
     "description": "Heavy creasing, staining, and discoloration throughout.",
-    "multiplier": 0.20
+    "multiplier": 0.2
   },
   {
     "grade": 3,
@@ -26,37 +26,37 @@
   {
     "grade": 5,
     "label": "Excellent",
-    "description": "Above-average condition — corners show minor rounding.",
-    "multiplier": 0.80
+    "description": "Above-average condition \u2014 corners show minor rounding.",
+    "multiplier": 0.8
   },
   {
     "grade": 6,
     "label": "Excellent-Near Mint",
     "description": "Light centering issues; minor corner wear visible under magnification.",
-    "multiplier": 1.00
+    "multiplier": 1.0
   },
   {
     "grade": 7,
     "label": "Near Mint",
     "description": "Slight corner fraying; nearly pristine surface.",
-    "multiplier": 1.20
+    "multiplier": 1.2
   },
   {
     "grade": 8,
     "label": "Near Mint-Mint",
-    "description": "Minimal imperfections — sharp corners, clean surface.",
-    "multiplier": 1.60
+    "description": "Minimal imperfections \u2014 sharp corners, clean surface.",
+    "multiplier": 1.6
   },
   {
     "grade": 9,
     "label": "Mint",
-    "description": "Nearly perfect — one minor allowable defect.",
-    "multiplier": 2.50
+    "description": "Nearly perfect \u2014 one minor allowable defect.",
+    "multiplier": 2.5
   },
   {
     "grade": 10,
     "label": "Gem Mint",
-    "description": "Virtually perfect — four sharp corners, full gloss, centered 55/45 or better.",
-    "multiplier": 5.00
+    "description": "Virtually perfect \u2014 four sharp corners, full gloss, centered 55/45 or better.",
+    "multiplier": 5.0
   }
 ]

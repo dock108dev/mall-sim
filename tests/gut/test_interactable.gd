@@ -271,6 +271,52 @@ func test_multiple_interactables_independent() -> void:
 	)
 
 
+func test_resolve_interactable_id_defaults_to_node_name() -> void:
+	var node: Interactable = Interactable.new()
+	node.name = "SlotAlpha"
+	add_child_autofree(node)
+	assert_eq(
+		String(node.resolve_interactable_id()), "SlotAlpha",
+		"Empty interactable_id should fall back to the node name"
+	)
+
+
+func test_resolve_interactable_id_prefers_explicit_export() -> void:
+	var node: Interactable = Interactable.new()
+	node.interactable_id = &"cart_left_1"
+	node.name = "Slot3"
+	add_child_autofree(node)
+	assert_eq(
+		String(node.resolve_interactable_id()), "cart_left_1",
+		"Explicit interactable_id should win over the node name"
+	)
+
+
+func test_interact_emits_scoped_clicked_signal_with_id_and_store() -> void:
+	_interactable.interactable_id = &"register_main"
+	_interactable.store_id = &"retro_games"
+	var captured: Array = []
+	var handler := func(id: StringName, store: StringName) -> void:
+		captured.append([id, store])
+	EventBus.interactable_clicked.connect(handler)
+	_interactable.interact()
+	EventBus.interactable_clicked.disconnect(handler)
+	assert_eq(captured.size(), 1, "Scoped click signal should fire once")
+	assert_eq(String(captured[0][0]), "register_main")
+	assert_eq(String(captured[0][1]), "retro_games")
+
+
+func test_interact_scoped_signal_suppressed_when_disabled() -> void:
+	_interactable.enabled = false
+	var captured_count: int = 0
+	var handler := func(_id: StringName, _store: StringName) -> void:
+		captured_count += 1
+	EventBus.interactable_clicked.connect(handler)
+	_interactable.interact()
+	EventBus.interactable_clicked.disconnect(handler)
+	assert_eq(captured_count, 0, "Disabled interactable should not emit scoped click")
+
+
 func test_re_enable_allows_interaction() -> void:
 	_interactable.enabled = false
 	_interactable.interact()

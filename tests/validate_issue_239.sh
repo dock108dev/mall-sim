@@ -335,10 +335,11 @@ sys.exit(exit_code)
 echo ""
 echo "[DataLoader: routes item_definition root type to item]"
 
-if grep -q '"item_definition": "item"' "$DATA_LOADER"; then
-    echo "PASS: DataLoader _ROOT_TYPE_MAP routes item_definition to item"
+# ISSUE-021: explicit type routing replaces the old _ROOT_TYPE_MAP heuristic.
+if grep -q '"item_definition": "entries:item"' "$DATA_LOADER"; then
+    echo "PASS: DataLoader _TYPE_ROUTES routes item_definition to entries:item"
 else
-    echo "FAIL: DataLoader missing item_definition -> item routing"
+    echo "FAIL: DataLoader missing item_definition -> entries:item routing"
     EXIT_CODE=1
 fi
 
@@ -353,14 +354,14 @@ else
 fi
 
 echo ""
-echo "[DataLoader: pocket_creatures_tournaments detection before dir check]"
+echo "[DataLoader: explicit tournament_event route present]"
 
-TOURN_LINE=$(grep -n "pocket_creatures_tournaments" "$DATA_LOADER" | head -1 | cut -d: -f1)
-DIR_MAP_LINE=$(grep -n "_DIR_TYPE_MAP.has(dir_name)" "$DATA_LOADER" | head -1 | cut -d: -f1)
-if [ -n "$TOURN_LINE" ] && [ -n "$DIR_MAP_LINE" ] && [ "$TOURN_LINE" -lt "$DIR_MAP_LINE" ]; then
-    echo "PASS: pocket_creatures_tournaments detected before directory type check"
+# ISSUE-021: pocket_creatures_tournaments.json now declares "type": "tournament_event"
+# at its root; the legacy filename/directory heuristic (_DIR_TYPE_MAP) was removed.
+if grep -q '"tournament_event": "entries:tournament_event"' "$DATA_LOADER"; then
+    echo "PASS: DataLoader _TYPE_ROUTES routes tournament_event to registered entries"
 else
-    echo "FAIL: pocket_creatures_tournaments should be checked before _DIR_TYPE_MAP"
+    echo "FAIL: DataLoader missing tournament_event route in _TYPE_ROUTES"
     EXIT_CODE=1
 fi
 

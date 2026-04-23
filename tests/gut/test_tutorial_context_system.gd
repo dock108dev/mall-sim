@@ -1,0 +1,100 @@
+## ISSUE-004: per-store tutorial context swaps on store_entered / store_exited
+## and exposes context-appropriate first-step text.
+extends GutTest
+
+
+var _received: Array = []
+
+
+func before_each() -> void:
+	DataLoaderSingleton.load_all()
+	TutorialContextSystem.reload()
+	TutorialContextSystem.clear_active_context()
+	_received = []
+	EventBus.tutorial_context_entered.connect(_capture_entered)
+	EventBus.tutorial_context_cleared.connect(_capture_cleared)
+
+
+func after_each() -> void:
+	if EventBus.tutorial_context_entered.is_connected(_capture_entered):
+		EventBus.tutorial_context_entered.disconnect(_capture_entered)
+	if EventBus.tutorial_context_cleared.is_connected(_capture_cleared):
+		EventBus.tutorial_context_cleared.disconnect(_capture_cleared)
+	TutorialContextSystem.clear_active_context()
+
+
+func _capture_entered(
+	store_id: StringName, context_id: StringName, text: String
+) -> void:
+	_received.append({
+		"event": "entered",
+		"store_id": store_id,
+		"context_id": context_id,
+		"text": text,
+	})
+
+
+func _capture_cleared() -> void:
+	_received.append({"event": "cleared"})
+
+
+func _first_entered() -> Dictionary:
+	for event: Dictionary in _received:
+		if event.get("event") == "entered":
+			return event
+	return {}
+
+
+func test_entering_sports_memorabilia_emits_sports_first_step() -> void:
+	EventBus.store_entered.emit(StringName("sports"))
+	var event: Dictionary = _first_entered()
+	assert_eq(String(event.get("context_id", "")), "sports_memorabilia")
+	var text: String = String(event.get("text", ""))
+	assert_ne(text.strip_edges(), "", "sports_memorabilia should have first-step text")
+	assert_true(
+		text.to_lower().contains("backroom") or text.to_lower().contains("card"),
+		"sports first step should reference backroom/cards, got: %s" % text
+	)
+
+
+func test_entering_retro_games_emits_retro_first_step() -> void:
+	EventBus.store_entered.emit(StringName("retro_games"))
+	var event: Dictionary = _first_entered()
+	assert_eq(String(event.get("context_id", "")), "retro_games")
+	var text: String = String(event.get("text", "")).to_lower()
+	assert_true(
+		text.contains("cart") or text.contains("test") or text.contains("refurb"),
+		"retro_games first step should reference cart/test/refurb, got: %s" % text
+	)
+
+
+func test_entering_pocket_creatures_emits_pocket_first_step() -> void:
+	EventBus.store_entered.emit(StringName("pocket_creatures"))
+	var event: Dictionary = _first_entered()
+	assert_eq(String(event.get("context_id", "")), "pocket_creatures")
+	var text: String = String(event.get("text", "")).to_lower()
+	assert_true(
+		text.contains("service") or text.contains("pack") or text.contains("booster"),
+		"pocket_creatures first step should reference packs/service, got: %s" % text
+	)
+
+
+func test_store_exited_clears_active_context() -> void:
+	EventBus.store_entered.emit(StringName("retro_games"))
+	assert_eq(String(TutorialContextSystem.active_context_id), "retro_games")
+	EventBus.store_exited.emit(StringName("retro_games"))
+	assert_eq(String(TutorialContextSystem.active_context_id), "")
+	assert_eq(String(TutorialContextSystem.active_store_id), "")
+	var saw_cleared: bool = false
+	for event: Dictionary in _received:
+		if event.get("event") == "cleared":
+			saw_cleared = true
+			break
+	assert_true(saw_cleared, "tutorial_context_cleared should fire on exit")
+
+
+func test_switching_stores_swaps_context() -> void:
+	EventBus.store_entered.emit(StringName("sports"))
+	EventBus.store_exited.emit(StringName("sports"))
+	EventBus.store_entered.emit(StringName("retro_games"))
+	assert_eq(String(TutorialContextSystem.active_context_id), "retro_games")

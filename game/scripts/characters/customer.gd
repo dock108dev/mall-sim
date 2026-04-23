@@ -243,6 +243,7 @@ func _process_deciding() -> void:
 			return
 		buy_chance *= (1.0 + TESTED_BONUS)
 	buy_chance *= _get_demo_bonus(_desired_item)
+	buy_chance *= _get_rental_wear_appeal(_desired_item)
 	if randf() > buy_chance:
 		_leave_with(&"no_matching_item")
 		return
@@ -492,6 +493,21 @@ func _calculate_match_quality(item: ItemInstance) -> float:
 	var cond_score: float = _get_condition_score(item.condition)
 	quality *= cond_score
 	return clampf(quality, 0.5, 1.5)
+
+
+## Returns the rental-tape wear appeal multiplier in [0.5, 1.0].
+## Only rental tapes receive this multiplier; sale items return 1.0.
+func _get_rental_wear_appeal(item: ItemInstance) -> float:
+	if not item or not item.definition or not _store_controller:
+		return 1.0
+	if not _store_controller is VideoRentalStoreController:
+		return 1.0
+	var rental_ctrl: VideoRentalStoreController = (
+		_store_controller as VideoRentalStoreController
+	)
+	if not rental_ctrl.is_rental_item(String(item.definition.category)):
+		return 1.0
+	return rental_ctrl.get_tape_appeal_factor(item)
 
 
 ## Returns the demo station purchase probability multiplier.

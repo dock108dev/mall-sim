@@ -7,7 +7,11 @@
     "store_type": "electronics",
     "base_price": 399.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": true,
     "monthly_depreciation_rate": 0.05,
     "launch_spike_eligible": false,
@@ -22,7 +26,10 @@
     "store_type": "electronics",
     "base_price": 599.99,
     "rarity": "rare",
-    "condition_range": ["near_mint", "mint"],
+    "condition_range": [
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": true,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": true,
@@ -37,7 +44,12 @@
     "store_type": "electronics",
     "base_price": 149.99,
     "rarity": "common",
-    "condition_range": ["fair", "good", "near_mint", "mint"],
+    "condition_range": [
+      "fair",
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": false,
@@ -52,7 +64,11 @@
     "store_type": "electronics",
     "base_price": 79.99,
     "rarity": "common",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": true,
     "monthly_depreciation_rate": 0.06,
     "launch_spike_eligible": false,
@@ -67,7 +83,11 @@
     "store_type": "electronics",
     "base_price": 129.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.06,
     "launch_spike_eligible": false,
@@ -82,7 +102,11 @@
     "store_type": "electronics",
     "base_price": 179.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.07,
     "launch_spike_eligible": false,
@@ -97,7 +121,11 @@
     "store_type": "electronics",
     "base_price": 299.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": true,
     "monthly_depreciation_rate": 0.03,
     "launch_spike_eligible": true,
@@ -112,7 +140,11 @@
     "store_type": "electronics",
     "base_price": 199.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": true,
     "monthly_depreciation_rate": 0.03,
     "launch_spike_eligible": true,
@@ -127,7 +159,12 @@
     "store_type": "electronics",
     "base_price": 149.99,
     "rarity": "uncommon",
-    "condition_range": ["fair", "good", "near_mint", "mint"],
+    "condition_range": [
+      "fair",
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.05,
     "launch_spike_eligible": false,
@@ -142,7 +179,11 @@
     "store_type": "electronics",
     "base_price": 79.99,
     "rarity": "common",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.05,
     "launch_spike_eligible": false,
@@ -157,7 +198,11 @@
     "store_type": "electronics",
     "base_price": 149.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": true,
@@ -172,7 +217,10 @@
     "store_type": "electronics",
     "base_price": 249.99,
     "rarity": "rare",
-    "condition_range": ["near_mint", "mint"],
+    "condition_range": [
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.03,
     "launch_spike_eligible": true,
@@ -187,7 +235,12 @@
     "store_type": "electronics",
     "base_price": 39.99,
     "rarity": "common",
-    "condition_range": ["fair", "good", "near_mint", "mint"],
+    "condition_range": [
+      "fair",
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.06,
     "launch_spike_eligible": false,
@@ -202,7 +255,11 @@
     "store_type": "electronics",
     "base_price": 29.99,
     "rarity": "common",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": false,
@@ -217,7 +274,11 @@
     "store_type": "electronics",
     "base_price": 149.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": true,
     "monthly_depreciation_rate": 0.03,
     "launch_spike_eligible": true,
@@ -232,7 +293,11 @@
     "store_type": "electronics",
     "base_price": 129.99,
     "rarity": "uncommon",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.03,
     "launch_spike_eligible": false,
@@ -247,7 +312,11 @@
     "store_type": "electronics",
     "base_price": 99.99,
     "rarity": "common",
-    "condition_range": ["good", "near_mint", "mint"],
+    "condition_range": [
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.04,
     "launch_spike_eligible": false,
@@ -262,7 +331,12 @@
     "store_type": "electronics",
     "base_price": 39.99,
     "rarity": "common",
-    "condition_range": ["fair", "good", "near_mint", "mint"],
+    "condition_range": [
+      "fair",
+      "good",
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.05,
     "launch_spike_eligible": false,
@@ -277,7 +351,10 @@
     "store_type": "electronics",
     "base_price": 20.99,
     "rarity": "common",
-    "condition_range": ["near_mint", "mint"],
+    "condition_range": [
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.0,
     "launch_spike_eligible": false,
@@ -292,7 +369,10 @@
     "store_type": "electronics",
     "base_price": 29.99,
     "rarity": "common",
-    "condition_range": ["near_mint", "mint"],
+    "condition_range": [
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.0,
     "launch_spike_eligible": false,
@@ -307,7 +387,10 @@
     "store_type": "electronics",
     "base_price": 24.99,
     "rarity": "common",
-    "condition_range": ["near_mint", "mint"],
+    "condition_range": [
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.0,
     "launch_spike_eligible": false,
@@ -322,7 +405,10 @@
     "store_type": "electronics",
     "base_price": 29.99,
     "rarity": "common",
-    "condition_range": ["near_mint", "mint"],
+    "condition_range": [
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.0,
     "launch_spike_eligible": false,
@@ -337,7 +423,10 @@
     "store_type": "electronics",
     "base_price": 34.99,
     "rarity": "uncommon",
-    "condition_range": ["near_mint", "mint"],
+    "condition_range": [
+      "near_mint",
+      "mint"
+    ],
     "can_be_demo_unit": false,
     "monthly_depreciation_rate": 0.02,
     "launch_spike_eligible": false,

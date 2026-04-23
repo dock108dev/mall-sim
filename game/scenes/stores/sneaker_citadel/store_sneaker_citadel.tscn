@@ -1,20 +1,50 @@
-[gd_scene load_steps=9 format=3 uid="uid://sneakercitadel012"]
+[gd_scene load_steps=20 format=3 uid="uid://sneakercitadel012"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/store_sneaker_citadel_controller.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/components/interactable.gd" id="2"]
 [ext_resource type="PackedScene" path="res://game/scenes/player/store_player_body.tscn" id="3"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_floor_tile_cream.tres" id="4"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_wall_cream.tres" id="5"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_ceiling_warm.tres" id="6"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_laminate_counter.tres" id="7"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_metal_brushed.tres" id="8"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_sign_backing.tres" id="9"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(8, 0.1, 6)
+material = ExtResource("4")
+
+[sub_resource type="BoxMesh" id="wall_long_mesh"]
+size = Vector3(8, 3, 0.1)
+material = ExtResource("5")
+
+[sub_resource type="BoxMesh" id="wall_short_mesh"]
+size = Vector3(0.1, 3, 6)
+material = ExtResource("5")
+
+[sub_resource type="BoxMesh" id="ceiling_mesh"]
+size = Vector3(8, 0.1, 6)
+material = ExtResource("6")
+
+[sub_resource type="BoxMesh" id="sign_backing_mesh"]
+size = Vector3(3.6, 0.7, 0.08)
+material = ExtResource("9")
 
 [sub_resource type="BoxMesh" id="counter_mesh"]
 size = Vector3(2.2, 1.0, 0.7)
+material = ExtResource("7")
 
 [sub_resource type="BoxMesh" id="shelf_mesh"]
 size = Vector3(1.4, 1.8, 0.5)
+material = ExtResource("8")
+
+[sub_resource type="BoxMesh" id="register_mesh"]
+size = Vector3(0.45, 0.3, 0.35)
+material = ExtResource("8")
 
 [sub_resource type="BoxMesh" id="interactable_shelf_mesh"]
 size = Vector3(1.4, 1.8, 0.5)
+material = ExtResource("8")
 
 [sub_resource type="BoxShape3D" id="interactable_shelf_shape"]
 size = Vector3(1.4, 1.8, 0.5)
@@ -29,21 +59,83 @@ unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("floor_mesh")
 
+[node name="BackWall" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -3)
+mesh = SubResource("wall_long_mesh")
+
+[node name="LeftWall" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 1.5, 0)
+mesh = SubResource("wall_short_mesh")
+
+[node name="RightWall" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 1.5, 0)
+mesh = SubResource("wall_short_mesh")
+
+[node name="Ceiling" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+mesh = SubResource("ceiling_mesh")
+
+[node name="StoreSign" type="MeshInstance3D" parent="StoreContent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, -2.94)
+mesh = SubResource("sign_backing_mesh")
+
+[node name="SignLabel" type="Label3D" parent="StoreContent/StoreSign"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.06)
+text = "Sneaker Citadel"
+pixel_size = 0.012
+modulate = Color(1, 0.95, 0.7, 1)
+outline_size = 8
+outline_modulate = Color(0.1, 0.05, 0.02, 1)
+
 [node name="Counter" type="MeshInstance3D" parent="StoreContent"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0.55, -1.5)
 mesh = SubResource("counter_mesh")
+
+[node name="CounterLabel" type="Label3D" parent="StoreContent/Counter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0.36)
+text = "Counter"
+pixel_size = 0.006
+outline_size = 6
+
+[node name="Register" type="MeshInstance3D" parent="StoreContent/Counter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.65, 0)
+mesh = SubResource("register_mesh")
+
+[node name="RegisterLabel" type="Label3D" parent="StoreContent/Counter/Register"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0.2)
+text = "Register"
+pixel_size = 0.004
+outline_size = 4
 
 [node name="Shelf1" type="MeshInstance3D" parent="StoreContent"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.95, -2.5)
 mesh = SubResource("shelf_mesh")
 
+[node name="Shelf1Label" type="Label3D" parent="StoreContent/Shelf1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.26)
+text = "Runners Shelf"
+pixel_size = 0.005
+outline_size = 4
+
 [node name="Shelf2" type="MeshInstance3D" parent="StoreContent"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.95, -0.5)
 mesh = SubResource("shelf_mesh")
 
+[node name="Shelf2Label" type="Label3D" parent="StoreContent/Shelf2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.26)
+text = "Hightops Shelf"
+pixel_size = 0.005
+outline_size = 4
+
 [node name="Shelf3" type="MeshInstance3D" parent="StoreContent"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.95, 1.5)
 mesh = SubResource("shelf_mesh")
+
+[node name="Shelf3Label" type="Label3D" parent="StoreContent/Shelf3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.26)
+text = "Limited Edition Shelf"
+pixel_size = 0.005
+outline_size = 4
 
 [node name="InteractableShelf" type="Area3D" parent="StoreContent"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 2.0)
@@ -59,6 +151,12 @@ mesh = SubResource("interactable_shelf_mesh")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StoreContent/InteractableShelf"]
 shape = SubResource("interactable_shelf_shape")
 
+[node name="InteractableShelfLabel" type="Label3D" parent="StoreContent/InteractableShelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.26)
+text = "Stock Shelf"
+pixel_size = 0.005
+outline_size = 4
+
 [node name="StoreCamera" type="Camera3D" parent="."]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 0.866, 0.5, 0, -0.5, 0.866, 0, 5, 6)
@@ -73,11 +171,11 @@ unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 2.5)
 
 [node name="StoreLight" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
 light_energy = 1.5
 omni_range = 12.0
 
 [node name="ObjectiveText" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, -2.9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, -2.9)
 text = "Interact with the shelf to stock sneakers"
 pixel_size = 0.01

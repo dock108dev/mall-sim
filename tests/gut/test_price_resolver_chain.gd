@@ -78,6 +78,67 @@ func test_audit_trace_dicts_expose_breakdown() -> void:
 		assert_true(entry.has("price_after"), "audit dict must have price_after")
 
 
+## ISSUE-020: running subtotal per step must equal the exact cumulative product
+## of factors applied so far, with no premature rounding between steps.
+func test_running_subtotal_preserves_precision() -> void:
+	var multipliers: Array = [
+		{"slot": "seasonal", "factor": 1.07},
+		{"slot": "reputation", "factor": 1.03},
+		{"slot": "event", "factor": 0.97},
+		{"slot": "haggle", "factor": 1.11},
+	]
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		&"precision_item", 19.99, multipliers, false
+	)
+	# Expected: slots resolve in canonical order (seasonal, reputation, event,
+	# haggle) on top of the base step, so the running subtotal at each step is
+	# the ordered cumulative product, not the caller's declaration order.
+	var cumulative: float = 19.99
+	# Base step
+	var base_step: PriceResolver.AuditStep = result.steps[0]
+	assert_eq(base_step.label.to_lower(), "base", "First step must be base")
+	assert_almost_eq(
+		base_step.price_after, cumulative, TOLERANCE,
+		"Base price_after should equal starting base_price"
+	)
+	var expected_factors: Array[float] = [1.07, 1.03, 0.97, 1.11]
+	for i: int in range(expected_factors.size()):
+		cumulative *= expected_factors[i]
+		var step: PriceResolver.AuditStep = result.steps[i + 1]
+		assert_almost_eq(
+			step.price_after, cumulative, TOLERANCE,
+			"Step %d running subtotal must equal cumulative product" % i
+		)
+	assert_almost_eq(
+		result.final_price, cumulative, TOLERANCE,
+		"final_price must equal final cumulative subtotal"
+	)
+
+
+## Identity factors (1.0) must leave the price unchanged end-to-end — guards
+## against drift from floating-point rounding in the chain.
+func test_identity_factor_chain_is_stable() -> void:
+	var multipliers: Array = [
+		{"slot": "seasonal", "factor": 1.0},
+		{"slot": "event", "factor": 1.0},
+		{"slot": "haggle", "factor": 1.0},
+		{"slot": "reputation", "factor": 1.0},
+	]
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		&"identity_item", BASE_PRICE, multipliers, false
+	)
+	assert_almost_eq(
+		result.final_price, BASE_PRICE, TOLERANCE,
+		"Chain of identity factors must preserve base price"
+	)
+	for step: Variant in result.steps:
+		if step is PriceResolver.AuditStep:
+			assert_almost_eq(
+				(step as PriceResolver.AuditStep).price_after, BASE_PRICE, TOLERANCE,
+				"Every step in an identity chain must equal the base price"
+			)
+
+
 func test_price_resolved_signal_carries_audit() -> void:
 	var captured: Array = []
 	var capture: Callable = func(iid: StringName, price: float, steps: Array) -> void:

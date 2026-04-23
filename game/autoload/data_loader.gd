@@ -6,41 +6,68 @@ extends Node
 const CONTENT_ROOT := "res://game/content/"
 const MAX_JSON_FILE_BYTES: int = 1048576
 
-const _ROOT_TYPE_MAP: Dictionary = {
-	"item_definition": "item",
-	"store_definition": "store",
-	"customer_profile": "customer",
-	"milestone_definition": "milestone",
-	"staff_definition": "staff",
-	"fixture_definition": "fixture",
-	"unlock_definition": "unlock",
-	"economy_config": "economy",
-}
-
-const _DIR_TYPE_MAP: Dictionary = {
-	"items": "item",
-	"stores": "store",
-	"customers": "customer",
-	"fixtures": "fixture",
-	"milestones": "milestone",
-	"progression": "milestone",
-	"staff": "staff",
-	"upgrades": "upgrade",
+## ISSUE-021: every content JSON must declare a root "type" field. The value
+## is looked up in _TYPE_ROUTES below. Missing or unknown types produce a
+## per-file load error and fail boot via the error panel — no heuristic
+## detection via filename or directory is permitted.
+##
+## Routed types fall into three buckets:
+##   - "entries:<kind>" — parsed as a list of registered entries of <kind>
+##   - any other non-empty string — singleton / specialized config handler
+##   - "ignore" — file is recognized but not loaded by DataLoader (consumed
+##     by another system)
+const _TYPE_ROUTES: Dictionary = {
+	# Registered entry types — stored in ContentRegistry + local dicts.
+	"item": "entries:item",
+	"item_definition": "entries:item",
+	"store": "entries:store",
+	"store_definition": "entries:store",
+	"customer": "entries:customer",
+	"customer_profile": "entries:customer",
+	"fixture": "entries:fixture",
+	"fixture_definition": "entries:fixture",
+	"milestone": "entries:milestone",
+	"milestone_definition": "entries:milestone",
+	"staff": "entries:staff",
+	"staff_definition": "entries:staff",
+	"upgrade": "entries:upgrade",
+	"supplier": "entries:supplier",
+	"unlock": "entries:unlock",
+	"unlock_definition": "entries:unlock",
+	"market_event": "entries:market_event",
+	"seasonal_event": "entries:seasonal_event",
+	"random_event": "entries:random_event",
+	"sports_season": "entries:sports_season",
+	"tournament_event": "entries:tournament_event",
+	"ambient_moment": "entries:ambient_moment",
+	# Singleton / specialized configs.
 	"economy": "economy",
-	"suppliers": "supplier",
-	"unlocks": "unlock",
-	"endings": "ending",
-}
-
-const _TYPE_KEY_MAP: Dictionary = {
-	"item_definition": "item",
-	"store_definition": "store",
-	"event_config": "event",
-	"milestone_definition": "milestone",
-	"staff_definition": "staff",
-	"fixture_definition": "fixture",
-	"unlock_definition": "unlock",
 	"economy_config": "economy",
+	"difficulty_config": "difficulty_config",
+	"seasonal_config": "seasonal_config",
+	"named_seasons": "named_seasons",
+	"secret_thread": "secret_thread",
+	"ending": "ending",
+	"retro_games_config": "retro_games_config",
+	"electronics_config": "electronics_config",
+	"video_rental_config": "video_rental_config",
+	"pocket_creatures_packs_config": "pocket_creatures_packs_config",
+	# Recognized but not consumed by DataLoader (loaded by other systems).
+	"personality_data": "ignore",
+	"market_trends_catalog_data": "ignore",
+	"audio_registry_data": "ignore",
+	"haggle_dialogue_data": "ignore",
+	"pocket_creatures_cards_data": "ignore",
+	"tutorial_steps_data": "ignore",
+	"tutorial_contexts_data": "ignore",
+	"meta_shifts_data": "ignore",
+	"meta_config_data": "ignore",
+	"onboarding_config_data": "ignore",
+	"sports_grade_definitions_data": "ignore",
+	"arc_unlocks_data": "ignore",
+	"retro_games_grades_data": "ignore",
+	"day_beats_data": "ignore",
+	"objectives_data": "ignore",
 }
 
 var _items: Dictionary = {}
@@ -191,183 +218,88 @@ func _scan_dir(path: String, files: Array[String]) -> void:
 
 
 func _process_file(
-	path: String, economy_data: Dictionary, root: String
+	path: String, economy_data: Dictionary, _root: String
 ) -> void:
 	var data: Variant = _load_json_with_error(path)
 	if data == null:
 		return
-	var content_type: String = _detect_type(path, data, root)
-	if content_type == "economy":
-		if data is Dictionary:
-			economy_data.merge(data, true)
-		return
-	if content_type == "difficulty_config":
-		if data is Dictionary:
-			_difficulty_config = data
-		return
-	if content_type == "seasonal_config":
-		if data is Dictionary:
-			_seasonal_config = _parse_seasonal_config(data)
-		return
-	if content_type == "named_seasons":
-		if data is Dictionary:
-			_parse_named_seasons(data)
-		return
-	if content_type == "secret_thread":
-		_load_secret_threads(data)
-		return
-	if content_type == "ending":
-		_load_endings(data)
-		return
-	if content_type == "retro_games_config":
-		if data is Dictionary:
-			_retro_games_config = data as Dictionary
-		return
-	if content_type == "retro_games_grades_data":
-		return
-	if content_type == "electronics_config":
-		if data is Dictionary:
-			_electronics_config = data as Dictionary
-		return
-	if content_type == "video_rental_config":
-		if data is Dictionary:
-			_video_rental_config = data as Dictionary
-		return
-	if content_type == "pocket_creatures_packs_config":
-		if data is Array:
-			_pocket_creatures_packs = data.duplicate()
-		return
-	if content_type == "personality_data":
-		# personalities.json is recognized but not yet loaded; loader not implemented
-		return
-	if content_type == "market_trends_catalog_data":
-		return
-	if content_type == "audio_registry_data":
-		return
-	if content_type == "haggle_dialogue_data":
-		return
-	if content_type == "pocket_creatures_cards_data":
-		return
-	if content_type == "tutorial_steps_data":
-		return
-	if content_type == "meta_shifts_data":
-		return
-	if content_type == "meta_config_data":
-		return
-	if content_type == "onboarding_config_data":
-		return
-	if content_type == "sports_grade_definitions_data":
-		return
-	if content_type == "arc_unlocks_data":
-		return
-	if content_type.is_empty():
-		push_warning("DataLoader: unrecognized content file, skipping: %s" % path)
-		return
-	var entries: Array[Dictionary] = _extract_entries(data)
-	for entry: Dictionary in entries:
-		_build_and_register(content_type, entry, path)
-
-
-func _detect_type(path: String, data: Variant, root: String = CONTENT_ROOT) -> String:
-	if data is Dictionary and data.has("type"):
-		var raw_type: String = str(data["type"])
-		if raw_type == "event_config":
-			return _detect_event_config_type(path, data, root)
-		return _ROOT_TYPE_MAP.get(
-			raw_type,
-			_TYPE_KEY_MAP.get(raw_type, raw_type)
+	if data is not Dictionary:
+		_record_load_error(
+			"%s: root must be a Dictionary with a 'type' field (got %s)"
+			% [path, typeof_string(data)]
 		)
-	var rel: String = path.replace(root, "")
-	var dir_name := rel.get_slice("/", 0)
-	if dir_name == "events":
-		var file_name := path.get_file()
-		if file_name == "seasons.json":
-			return "named_seasons"
-		if file_name.begins_with("seasonal"):
-			return "seasonal_event"
-		if file_name.begins_with("random"):
-			return "random_event"
-		return "market_event"
-	if dir_name == "items":
-		return "item"
-	if dir_name == "onboarding":
-		return "onboarding_config_data"
-	if dir_name == "meta":
-		var meta_file := path.get_file().get_basename()
-		if meta_file == "regulars_threads" or meta_file == "shifts":
-			return "meta_config_data"
-	var file_base := path.get_file().get_basename()
-	if file_base == "retro_games":
-		return "retro_games_config"
-	if file_base == "grades":
-		# Under stores/retro_games/; loaded by retro_games.gd, not ContentRegistry.
-		return "retro_games_grades_data"
-	if file_base == "electronics":
-		return "electronics_config"
-	if file_base == "video_rental_config":
-		return "video_rental_config"
-	if file_base == "packs":
-		return "pocket_creatures_packs_config"
-	if file_base == "pocket_creatures_tournaments":
-		return "tournament_event"
-	if file_base == "sports_seasons":
-		return "sports_season"
-	if file_base == "personalities":
-		return "personality_data"
-	if file_base == "market_trends_catalog":
-		# Loaded by MarketTrendSystem; not registered via DataLoader.
-		return "market_trends_catalog_data"
-	if file_base == "audio_registry":
-		return "audio_registry_data"
-	if file_base == "haggle_dialogue":
-		return "haggle_dialogue_data"
-	if file_base == "pocket_creatures_cards":
-		return "pocket_creatures_cards_data"
-	if file_base == "tutorial_steps":
-		return "tutorial_steps_data"
-	if file_base == "meta_shifts":
-		# Loaded by MetaShiftSystem; not registered via DataLoader.
-		return "meta_shifts_data"
-	if file_base == "grade_definitions":
-		# ACC grade table — PriceResolver holds the constants; file is content record.
-		return "sports_grade_definitions_data"
-	if file_base == "upgrades":
-		return "upgrade"
-	if file_base == "arc_unlocks":
-		# Consumed directly by boot.gd and day_manager.gd; not a milestone catalog.
-		return "arc_unlocks_data"
-	if _DIR_TYPE_MAP.has(dir_name):
-		return _DIR_TYPE_MAP[dir_name]
-	if file_base == "seasonal_config":
-		return "seasonal_config"
-	if file_base == "secret_threads":
-		return "secret_thread"
-	return ""
+		return
+	var dict: Dictionary = data as Dictionary
+	if not dict.has("type"):
+		_record_load_error(
+			"%s: missing required 'type' field at root" % path
+		)
+		return
+	var content_type: String = str(dict["type"])
+	if not _TYPE_ROUTES.has(content_type):
+		_record_load_error(
+			"%s: unknown content type '%s' (not in DataLoader._TYPE_ROUTES)"
+			% [path, content_type]
+		)
+		return
+	var route: String = str(_TYPE_ROUTES[content_type])
+	if route == "ignore":
+		return
+	if route == "economy":
+		economy_data.merge(dict, true)
+		return
+	if route == "difficulty_config":
+		_difficulty_config = dict
+		return
+	if route == "seasonal_config":
+		_seasonal_config = _parse_seasonal_config(dict)
+		return
+	if route == "named_seasons":
+		_parse_named_seasons(dict)
+		return
+	if route == "secret_thread":
+		_load_secret_threads(dict)
+		return
+	if route == "ending":
+		_load_endings(dict)
+		return
+	if route == "retro_games_config":
+		_retro_games_config = dict
+		return
+	if route == "electronics_config":
+		_electronics_config = dict
+		return
+	if route == "video_rental_config":
+		_video_rental_config = dict
+		return
+	if route == "pocket_creatures_packs_config":
+		var packs_data: Variant = dict.get("entries", [])
+		if packs_data is Array:
+			_pocket_creatures_packs = (packs_data as Array).duplicate()
+		else:
+			_record_load_error(
+				"%s: pocket_creatures_packs_config requires 'entries' array"
+				% path
+			)
+		return
+	if route.begins_with("entries:"):
+		var entry_kind: String = route.substr("entries:".length())
+		var entries: Array[Dictionary] = _extract_entries(dict)
+		for entry: Dictionary in entries:
+			_build_and_register(entry_kind, entry, path)
+		return
+	_record_load_error(
+		"%s: internal routing error for type '%s' (route='%s')"
+		% [path, content_type, route]
+	)
 
 
-func _detect_event_config_type(
-	path: String, data: Dictionary, root: String
-) -> String:
-	var file_name: String = path.get_file().to_lower()
-	if file_name.begins_with("seasonal"):
-		return "seasonal_event"
-	if file_name.begins_with("random"):
-		return "random_event"
-	var entries: Array[Dictionary] = _extract_entries(data)
-	if not entries.is_empty():
-		var sample: Dictionary = entries[0]
-		if sample.has("effect_type"):
-			return "random_event"
-		if sample.has("frequency_days") or sample.has("customer_traffic_multiplier"):
-			return "seasonal_event"
-		if sample.has("event_type"):
-			return "market_event"
-	var rel: String = path.replace(root, "")
-	if rel.begins_with("/events/random_"):
-		return "random_event"
-	if rel.begins_with("/events/seasonal_"):
-		return "seasonal_event"
-	return "market_event"
+static func typeof_string(value: Variant) -> String:
+	if value is Array:
+		return "Array"
+	if value is Dictionary:
+		return "Dictionary"
+	return "non-Dictionary (%d)" % typeof(value)
 
 
 func _extract_entries(data: Variant) -> Array[Dictionary]:
@@ -416,6 +348,13 @@ func _build_and_register(
 			% [content_type, source_path, entry]
 		)
 		return
+	var trademark_errors: Array[String] = TrademarkValidator.validate_entry(
+		entry, content_type, source_path
+	)
+	if not trademark_errors.is_empty():
+		for err: String in trademark_errors:
+			_record_load_error(err)
+		return
 	var schema_errors: Array[String] = ContentSchema.validate(
 		entry, content_type, source_path
 	)
@@ -460,13 +399,6 @@ func _build_resource(
 			return ContentParser.parse_staff(data)
 		"fixture", "fixture_definition":
 			return ContentParser.parse_fixture(data)
-		"event_config":
-			var event_type: String = _detect_event_config_type(
-				source_path,
-				{"entries": [data]},
-				source_path.get_base_dir().get_base_dir(),
-			)
-			return _build_resource(event_type, data, source_path)
 		_:
 			return ContentParser.build_resource(content_type, data)
 
@@ -533,6 +465,13 @@ func _load_endings(data: Variant) -> void:
 		if not entry.has("id"):
 			_record_load_error("ending entry missing 'id'")
 			continue
+		var ending_trademark_errors: Array[String] = TrademarkValidator.validate_entry(
+			entry, "ending", "ending_config"
+		)
+		if not ending_trademark_errors.is_empty():
+			for err: String in ending_trademark_errors:
+				_record_load_error(err)
+			continue
 		var ending_errors: Array[String] = ContentSchema.validate(
 			entry, "ending", "ending_config"
 		)
@@ -547,11 +486,20 @@ func _load_endings(data: Variant) -> void:
 
 
 func _load_secret_threads(data: Variant) -> void:
-	if data is not Array:
-		_record_load_error("secret_threads root must be an Array")
+	var entries_array: Array = []
+	if data is Dictionary:
+		var raw_entries: Variant = (data as Dictionary).get("entries", [])
+		if raw_entries is not Array:
+			_record_load_error("secret_thread: 'entries' must be an Array")
+			return
+		entries_array = raw_entries as Array
+	elif data is Array:
+		entries_array = data as Array
+	else:
+		_record_load_error("secret_thread: root must be a Dictionary with 'entries'")
 		return
-	for index: int in range((data as Array).size()):
-		var entry: Variant = (data as Array)[index]
+	for index: int in range(entries_array.size()):
+		var entry: Variant = entries_array[index]
 		if entry is not Dictionary:
 			_record_load_error(
 				"secret_thread entry at index %d is not a Dictionary"
@@ -564,6 +512,13 @@ func _load_secret_threads(data: Variant) -> void:
 				"secret_thread entry at index %d missing 'id'"
 				% index
 			)
+			continue
+		var thread_trademark_errors: Array[String] = TrademarkValidator.validate_entry(
+			dict, "secret_thread", "secret_threads.json"
+		)
+		if not thread_trademark_errors.is_empty():
+			for err: String in thread_trademark_errors:
+				_record_load_error(err)
 			continue
 		var thread_errors: Array[String] = ContentSchema.validate(
 			dict, "secret_thread", "secret_threads.json"
@@ -653,6 +608,22 @@ func _normalize_store_types() -> void:
 
 static func load_json(path: String) -> Variant:
 	return _read_json_file(path)
+
+
+## Returns the entries array for a wrapped content catalog
+## ({"type": ..., "entries": [...]}). If the file legacy-parses as an Array,
+## returns it directly. Returns [] on missing/invalid JSON.
+static func load_catalog_entries(path: String) -> Array:
+	var data: Variant = _read_json_file(path)
+	if data is Dictionary:
+		var dict: Dictionary = data as Dictionary
+		for key: String in ["entries", "items", "definitions"]:
+			if dict.has(key) and dict[key] is Array:
+				return (dict[key] as Array).duplicate()
+		return []
+	if data is Array:
+		return (data as Array).duplicate()
+	return []
 
 
 func _load_json_with_error(path: String) -> Variant:

@@ -4,12 +4,12 @@
 
 ## What Was Done This Run
 
-- **Run ID**: aidlc_20260423_004642
-- **Issues planned**: 23
-- **Issues implemented**: 23
+- **Run ID**: aidlc_20260423_161152
+- **Issues planned**: 26
+- **Issues implemented**: 25
 - **Issues verified**: 0
 - **Issues failed**: 0
-- **Finalization passes completed**: ssot, security, abend, docs, cleanup
+- **Finalization passes completed**: docs, cleanup
 
 ## Audit Reports
 
@@ -23,16 +23,14 @@
 
 ## Preparing for Next Run
 
-1. Review and update project docs (`README.md`, `ARCHITECTURE.md`, `DESIGN.md`, optional `ROADMAP.md`)
-2. Address any critical findings in the audit reports above
-3. Run `aidlc audit` to refresh `STATUS.md` with current codebase state
-4. Run `aidlc precheck` to identify recommended documentation gaps
-5. Run `aidlc run` for the next development cycle
+1. Update `BRAINDUMP.md` with what you want next — that is the single source of truth
+2. Review and update supporting docs (`README.md`, `ARCHITECTURE.md`, `DESIGN.md`, optional `ROADMAP.md`)
+3. Address any critical findings in the audit reports above
+4. Run `aidlc run` for the next development cycle
 
 ## Tips for a Productive Next Run
 
-- **Repository is source of truth** — planner uses code + docs, not a single planning file
-- **Be specific** — vague requirements produce vague issues
+- **BRAINDUMP.md is the contract** — be specific about what you want
 - **Acceptance criteria matter** — the implementer tests against them
 - **Optional roadmap** — use `ROADMAP.md` for milestone tracking if your team prefers phases
 - **Review the plan first** — use `aidlc run --plan-only` to review before implementing

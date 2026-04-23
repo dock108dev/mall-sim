@@ -7,6 +7,8 @@ This is the active project documentation set for Mallcore Sim.
 - [Setup](setup.md) - local editor setup, helper scripts, and repository layout.
 - [Architecture](architecture.md) - boot flow, scene entry points, autoloads,
   `GameWorld`, and save/load ownership.
+- [Ownership Matrix](architecture/ownership.md) - single-owner responsibilities
+  (scene transitions, store lifecycle, camera, input focus, etc.).
 - [Design](design.md) - design philosophy, player loop, visual grammar,
   objective rail, store principles, economy, and interaction audit checklist.
 - [Content and Data](content-data.md) - how JSON content is discovered, typed,
@@ -26,6 +28,21 @@ This is the active project documentation set for Mallcore Sim.
   management hub (click-to-enter) chosen for 1.0; walkable mall rejected.
 - [ADR-0002: Vertical Slice Store](decisions/0002-vertical-slice-store.md) -
   Retro Games selected as the Phase 4 vertical slice anchor.
+- [ADR-0003: Video Rental Kill-or-Commit](decisions/0003-video-rental-kill-or-commit.md)
+- [ADR-0004: Electronics Scope](decisions/0004-electronics-scope.md)
+- [ADR-0005: Sports Memorabilia Authentication](decisions/0005-sports-memorabilia-authentication.md)
+- [ADR-0006: Pocket Creatures Trade](decisions/0006-pocket-creatures-trade.md)
+
+## Research
+
+- [`docs/research/*.md`](research/) - reference material on scene transitions,
+  camera authority, input focus, assertion patterns, aesthetic direction, and
+  retail-sim reference games. Cited from `CLAUDE.md` and ownership docs.
+
+## Style
+
+- [Visual Grammar](style/visual-grammar.md) - palette, typography, and panel
+  tone rules that back `design.md`.
 
 ## Audit docs
 

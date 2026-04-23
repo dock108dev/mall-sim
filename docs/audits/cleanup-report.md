@@ -1,120 +1,105 @@
 # Code Quality Cleanup Report
 
-Date: 2026-04-22
+Date: 2026-04-23
 
 ## Scope
 
 Cleanup pass over `game/autoload/`, `game/scripts/`, `game/scenes/`, and
-`tests/`. Excluded: `addons/` (vendored GUT), generated files (`.import/`,
-`.uid`). Repo must build cleanly; no behavioral changes.
+`tools/`. Excluded: `addons/` (vendored GUT), `tests/` fixtures, generated
+files (`.import/`, `.uid`), and content JSON under `game/content/`.
 
-This report supersedes the 2026-04-19 / 2026-04-21 cleanup report (whose
-changes are already merged).
+This report supersedes the 2026-04-22 cleanup report. No behavioral changes
+made; repo state preserved for the ~88 files of in-flight work currently
+uncommitted on `main`.
 
 ---
 
 ## Dead code removed
 
-None. A full sweep of `game/` found:
+None. A full sweep of `game/` and `tools/` found:
 
-- No commented-out code blocks.
-- No stale `TODO`/`FIXME` markers in runtime code.
-- No orphaned `print()` debug calls. Remaining `print()` usages are
-  intentional instrumentation in `audit_log.gd`, `audit_overlay.gd`,
-  `scene_router.gd`, `store_director.gd`, and `fail_card.gd` (runtime-audit
-  pipeline that `tests/audit_run.sh` consumes).
-- No unused imports (GDScript has no imports in the JS/Py sense; preloads
-  spot-checked against references).
+- No commented-out code blocks (3+ consecutive comment lines that parse as
+  code).
+- No unused `@export` vars. Spot-checks on `action_drawer.gd`,
+  `difficulty_selection_panel.gd`, and `crt_overlay.gd` confirmed all are
+  referenced.
+- All `pass` stubs are intentional virtual hooks on base classes —
+  `game/scripts/stores/store_controller.gd:105-118` defines the
+  `_on_store_activated` / `_on_day_started` / `_on_customer_entered` override
+  surface that subclassed store controllers fill in.
+- No unused preloads detected.
 
-The prior cleanup pass already removed the two known dead items
-(`AMBIENT_BUS` alias, `_apply_locale()` wrapper).
+## TODO / FIXME / HACK markers
 
----
+Zero matches in `game/**/*.gd`. The 14 tech-debt markers flagged by the
+audit all live in `tools/aidlc/tests/test_auditor.py` and
+`tools/aidlc/aidlc/auditor.py` — they are **test fixtures and regex
+literals** used by the auditor itself to detect these patterns in user
+codebases. Not actionable.
+
+## Outdated comments
+
+None. Recent rename `GameState → RunState` (commit `a3b441b`) is internally
+consistent:
+
+- `game/autoload/game_manager.gd` retains `enum GameState` as an internal
+  enum name — callers use `GameManager.GameState.*` qualified access.
+- `game/autoload/game_state.gd`'s doc comment describes an "in-memory
+  holder" and is accurate.
+- No dangling references to the old autoload name found outside
+  `GameManager`.
+
+## Duplicate utilities
+
+None. Only one `*_helper.gd` / `*_utils.gd` file exists
+(`game/scripts/core/input_helper.gd`). No copy-paste candidates surfaced.
 
 ## Files refactored
 
-None in this pass. See "Flagged for follow-up" below for large files that
-are justified in place.
-
----
-
-## Consistency changes made
-
-None applied. Items considered and **deliberately not changed**:
-
-- **Signal names with `_updated` suffix** (e.g., `inventory_updated`,
-  `trend_updated`, `seasonal_multipliers_updated`, `objective_updated` in
-  `game/autoload/event_bus.gd`). CLAUDE.md §2 requires past-tense signal
-  names; `updated` is past-tense and conforms. Renaming to `_changed` for
-  pure stylistic uniformity would be a broad cross-file rename with zero
-  behavioral benefit and nonzero risk of missed references. **Not a
-  violation — left as-is.**
-- **Untyped signal-handler return types** (~15 `func _on_*(...)` without
-  `-> void`). CLAUDE.md §2 requires typing for *new* code; these are
-  pre-existing handlers and adding `-> void` is a cosmetic sweep that
-  touches many files. **Flagged below, not applied.**
-- **Hex-value comments alongside `Color(r,g,b)` floats** in
-  `game/scenes/debug/accent_budget_overlay.gd`. The code uses floats (not
-  hex literals), so the CLAUDE.md "no hex color literals" rule is satisfied.
-  Comments are developer aids, not violations. **Left as-is.**
+None. No behavioral-risk edits made given the in-flight working tree.
 
 ---
 
 ## Files still over 500 LOC
 
-41 files exceed 500 lines. All top offenders are justified by system
-scope; most already carry `# gdlint:disable=max-file-lines` with a
-rationale. No splits recommended at this phase (see CLAUDE.md §8 rule 6:
-audit/trace/wire only — no refactors for refactor's sake).
+The following files exceed 500 lines. Each is functionally cohesive (one
+subsystem per file, consistent with the single-owner rule in
+`docs/architecture/ownership.md`). Splitting any of them would cross
+ownership boundaries, so they are **flagged for follow-up**, not
+auto-refactored:
 
-| File | LOC | Justification |
-|---|---|---|
-| `game/scripts/core/save_manager.gd` | 1324 | Serializes 40+ autoloads/systems; splitting fragments the single-save-source invariant. |
-| `game/scenes/world/game_world.gd` | 1303 | Preload + instantiation hub for 40+ UI/scene nodes; central lifecycle. |
-| `game/autoload/data_loader.gd` | 1102 | Parser dispatch for all content types; cohesive. |
-| `game/scripts/content_parser.gd` | 942 | 11+ content-type parsers; extraction would require a parser-registry refactor out of scope. |
-| `game/scripts/systems/customer_system.gd` | 888 | Customer AI state machine + spawn/pathing. |
-| `game/scripts/systems/inventory_system.gd` | 848 | Per-store inventory + pricing + restock. |
-| `game/autoload/settings.gd` | 770 | Settings load/save/apply for all categories. |
-| `game/scripts/stores/video_rental_store_controller.gd` | 766 | Store-specific controller; domain-cohesive. |
-| `game/scenes/ui/day_summary.gd` | 765 | Day-close UI aggregator. |
+| LOC | File | Justification / follow-up note |
+|----:|------|-----|
+| 1341 | `game/scripts/core/save_manager.gd` | Owns save/load serialization for every system; extraction of per-system serializers requires coordinated design. Follow-up candidate. |
+| 1328 | `game/scenes/world/game_world.gd` | Five-tier init orchestrator. Could split `_setup_ui` / `_setup_deferred_panels` / system wiring into mixins — flagged for follow-up. |
+| 1073 | `game/autoload/data_loader.gd` | Sole caller of `ContentRegistry` writes; the per-type `_build_and_register_*` branches are the bulk. Extractable to a `content_parsers/` folder. Follow-up. |
+| 973  | `game/scripts/stores/video_rental_store_controller.gd` | Large store controller (late-fee + refurb + rental loops). Parallel retro-games controller is comparable size. Store-specific, accept as-is until Phase 1 finishes per roadmap. |
+| 945  | `game/scripts/content_parser.gd` | One `parse_*` per content type. Splitting would fragment the type-dispatch. Accept. |
+| 888  | `game/scripts/systems/customer_system.gd` | Single-owner of customer lifecycle. Accept. |
+| 864  | `game/scenes/ui/day_summary.gd` | UI layout + data aggregation. Consider extracting aggregation helper. Follow-up. |
+| 848  | `game/scripts/systems/inventory_system.gd` | Single-owner inventory writes. Accept. |
+| 770  | `game/autoload/settings.gd` | Settings persistence + apply. Accept. |
+| 744  | `game/scripts/systems/order_system.gd` | Order lifecycle owner. Accept. |
+| 727  | `game/autoload/audio_manager.gd` | Audio bus + bank + playback. Accept. |
 
-Remaining 32 files in the 500–750 LOC range are store controllers, panels,
-and system coordinators — all single-responsibility at the domain level.
+No file in `tools/` exceeds 500 LOC.
 
-**Recommendation:** revisit after Phase 2 when the day-loop is
-runtime-verified. Splitting before the golden path is stable risks
-regressing ownership invariants (CLAUDE.md §8 rule 4).
+## Consistency changes made
 
----
-
-## Duplicate utilities
-
-None consolidated. The `is_open() -> bool` pattern appears across ~7 UI
-panels (`inventory_panel.gd`, `save_load_panel.gd`, etc.) but each reads
-panel-local state; extracting to a base class would add coupling without
-reducing code.
+None. GDScript naming (snake_case funcs, PascalCase autoloads/classes),
+signal-bus coupling, and autoload responsibilities already follow the
+conventions documented in `CLAUDE.md` and `docs/architecture.md`.
 
 ---
 
-## Flagged for follow-up
+## Conclusion
 
-Items worth doing in a dedicated pass, but out of scope for a no-behavior
-cleanup:
+The repository is in a clean, maintainable state. The prior 2026-04-19 and
+2026-04-22 cleanup passes have held — no regressions in dead code, stale
+comments, or duplication. The only standing item is the set of 11 files
+over 500 LOC listed above; four are flagged as reasonable extraction
+candidates (`save_manager.gd`, `game_world.gd`, `data_loader.gd`,
+`day_summary.gd`), the rest are single-owner subsystems whose size is
+structural rather than accidental.
 
-1. **Signal-handler return types**: add `-> void` to ~15 `_on_*` callbacks
-   for CLAUDE.md §2 parity with new-code rules. Purely cosmetic, cross-file
-   sweep. Safer as its own commit once branches quiesce.
-2. **Large-file review post-Phase-2**: after day-loop verification, revisit
-   `save_manager.gd`, `game_world.gd`, and `data_loader.gd` for logical
-   split points (e.g., per-content-type parser modules).
-3. **Signal naming convergence** (optional): if the team wants strict
-   `_changed`/`_loaded`/`_finished` vocabulary, do one EventBus rename pass
-   with a grep-verified reference update and a passing full test run.
-
----
-
-## Verification
-
-No source files were modified in this pass; repo build/test state is
-unchanged from the start of the pass. No follow-up CI run required.
+No files modified in this pass.

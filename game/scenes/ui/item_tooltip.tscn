@@ -80,3 +80,12 @@ theme_override_font_sizes/font_size = 12
 theme_type_variation = &"MutedLabel"
 text = "Item description goes here."
 autowrap_mode = 2
+
+[node name="AuditLabel" type="Label" parent="Margin/VBox"]
+mouse_filter = 2
+custom_minimum_size = Vector2(200, 0)
+theme_override_font_sizes/font_size = 11
+theme_type_variation = &"MutedLabel"
+text = ""
+autowrap_mode = 2
+visible = false

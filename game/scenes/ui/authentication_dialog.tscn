@@ -55,6 +55,16 @@ layout_mode = 2
 text = "Authentication Fee: $0.00"
 horizontal_alignment = 1
 
+[node name="KnownStateLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = "Known state: Unknown"
+horizontal_alignment = 1
+
+[node name="HintCostLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
+layout_mode = 2
+text = "Grading hint: $10.00"
+horizontal_alignment = 1
+
 [node name="ErrorLabel" type="Label" parent="PanelRoot/Margin/VBox/InfoVBox"]
 layout_mode = 2
 text = ""

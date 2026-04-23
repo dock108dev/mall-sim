@@ -1,6 +1,7 @@
 {
+  "type": "electronics_config",
   "max_demo_units": 2,
-  "demo_interest_bonus": 0.20,
+  "demo_interest_bonus": 0.2,
   "purchase_intent_threshold": 0.55,
   "launch_spike_days": 7,
   "products": [
@@ -33,7 +34,7 @@
       "launch_day": 5,
       "launch_demand_multiplier": 1.5,
       "depreciation_rate": 0.012,
-      "min_value_ratio": 0.20,
+      "min_value_ratio": 0.2,
       "base_price": 149.99,
       "warranty_eligible": true
     },
@@ -44,7 +45,7 @@
       "launch_day": 10,
       "launch_demand_multiplier": 1.5,
       "depreciation_rate": 0.011,
-      "min_value_ratio": 0.20,
+      "min_value_ratio": 0.2,
       "base_price": 249.99,
       "warranty_eligible": true
     },
@@ -55,7 +56,7 @@
       "launch_day": 3,
       "launch_demand_multiplier": 1.5,
       "depreciation_rate": 0.012,
-      "min_value_ratio": 0.20,
+      "min_value_ratio": 0.2,
       "base_price": 129.99,
       "warranty_eligible": true
     },
@@ -77,7 +78,7 @@
       "launch_day": 12,
       "launch_demand_multiplier": 1.4,
       "depreciation_rate": 0.011,
-      "min_value_ratio": 0.20,
+      "min_value_ratio": 0.2,
       "base_price": 179.99,
       "warranty_eligible": true
     },

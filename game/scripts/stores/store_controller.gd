@@ -390,7 +390,11 @@ func _objective_mentions_subject(lowered_text: String, subject: String) -> bool:
 func _register_interactables() -> void:
 	_registered_interactables.clear()
 	_collect_interactables_recursive(self)
+	var owning_store_id: StringName = StringName(store_type)
 	for node: Interactable in _registered_interactables:
+		# ISSUE-003: tag every interactable with the owning store so scoped
+		# EventBus.interactable_clicked/_hovered events can identify source.
+		node.store_id = owning_store_id
 		if not node.interacted_by.is_connected(_on_interactable_interacted):
 			node.interacted_by.connect(_on_interactable_interacted)
 

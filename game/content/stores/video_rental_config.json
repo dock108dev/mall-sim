@@ -1,9 +1,10 @@
 {
+  "type": "video_rental_config",
   "standard_rental_period_days": 3,
   "grace_period_days": 1,
-  "base_late_fee": 1.00,
-  "per_day_late_rate": 1.00,
-  "max_late_fee": 20.00,
+  "base_late_fee": 1.0,
+  "per_day_late_rate": 1.0,
+  "max_late_fee": 20.0,
   "new_release_window_days": 7,
   "rental_fee_by_category": {
     "vhs": 3.99,

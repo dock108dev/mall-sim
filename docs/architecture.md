@@ -35,8 +35,7 @@ Boot succeeds only when the current content set is usable:
 | `ContentRegistry` | `game/autoload/content_registry.gd` | Canonical IDs, aliases, scene paths, typed resource lookup, and reference validation. |
 | `EventBus` | `game/autoload/event_bus.gd` | Global cross-system signal hub. |
 | `GameManager` | `game/autoload/game_manager.gd` | State transitions, scene changes, new game/load flow, and boot completion. |
-| `AudioManager` | `game/autoload/audio_manager.gd` | Music/SFX initialization and playback. |
-| `AudioEventHandler` | `game/autoload/audio_event_handler.gd` | EventBus listener that routes audio events to AudioManager. |
+| `AudioManager` | `game/autoload/audio_manager.gd` | Music/SFX initialization and playback. Preloads `audio_event_handler.gd` internally for EventBus-to-audio routing. |
 | `Settings` | `game/autoload/settings.gd` | User settings persistence and application. |
 | `EnvironmentManager` | `game/autoload/environment_manager.gd` | Shared environment and zone-lighting ownership. |
 | `CameraManager` | `game/autoload/camera_manager.gd` | Active camera registration and `active_camera_changed`. |
@@ -50,13 +49,26 @@ Boot succeeds only when the current content set is usable:
 | `TooltipManager` | `game/autoload/tooltip_manager.gd` | Tooltip coordination. |
 | `ObjectiveDirector` | `game/autoload/objective_director.gd` | Active objective chain tracking, rail driving, and completion events. |
 | `AuditOverlay` | `game/autoload/audit_overlay.gd` | Debug HUD surfacing PASS/FAIL rows for the interaction audit. Active in debug builds only. |
+| `AuditLog` | `game/autoload/audit_log.gd` | Named checkpoint ledger (`pass_check` / `fail_check`); source of truth for runtime golden-path verification. |
+| `SceneRouter` | `game/autoload/scene_router.gd` | **Sole caller** of `get_tree().change_scene_to_*`. Runs the transition state machine (IDLE → REQUESTED → LOADING → INSTANTIATING → VERIFYING → READY/FAILED). |
+| `ErrorBanner` | `game/autoload/error_banner.gd` | Centralized user-facing failure banner for contract/boot errors. |
+| `CameraAuthority` | `game/autoload/camera_authority.gd` | Single-owner of `current` camera flag; enforces one-active-camera invariant. |
+| `InputFocus` | `game/autoload/input_focus.gd` | Focus stack (`store_gameplay`, modal, etc.); input routing single-owner. |
+| `StoreRegistry` | `game/autoload/store_registry.gd` | Canonical `store_id` → scene path resolver. Returns null (never defaults) on unknown id. |
+| `StoreDirector` | `game/autoload/store_director.gd` | Store lifecycle / ready-contract owner; drives `enter_store()` with `StoreReadyContract.check()` and fails loud via AuditLog + ErrorBanner. |
+| `RunState` | `game/autoload/game_state.gd` | Active-run state (cash, reputation, day, unlocks) consumed by UI and systems. |
+| `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` | Context-aware tutorial hinting. |
 
-Two additional autoloads are registered as scene instances rather than scripts:
+Three additional autoloads are registered as scene instances rather than scripts:
 
 | Name | Scene | Responsibility |
 | --- | --- | --- |
 | `ObjectiveRail` | `game/scenes/ui/objective_rail.tscn` | Persistent bottom strip answering "what to do next"; CanvasLayer with `mouse_filter = PASS`. |
 | `InteractionPrompt` | `game/scenes/ui/interaction_prompt.tscn` | Hover-driven input hint overlay shown over interactable elements. |
+| `FailCard` | `game/scenes/ui/fail_card.tscn` | Full-screen fail surface shown when `StoreDirector._fail()` fires. |
+
+See [`architecture/ownership.md`](architecture/ownership.md) for the single-owner
+responsibility matrix that these autoloads enforce.
 
 Autoloads communicate **outward via EventBus signals**, not by direct peer
 calls, to keep scenes decoupled.
@@ -237,7 +249,7 @@ systems based on the active controller:
 
 The authoritative save dictionary always includes:
 
-- `save_version`
+- `schema_version` (canonical) and `save_version` (legacy alias of the same int)
 - `save_metadata`
 - `time`
 - `economy`
@@ -254,6 +266,32 @@ Each saveable system exposes `get_save_data()` / `restore_save_data()` so
 `SaveManager` never reaches into private fields. Older save dictionaries are
 migrated before distribution; see `SaveManager.CURRENT_SAVE_VERSION` for the
 active schema version.
+
+### Save schema versioning (ISSUE-024)
+
+The top-level `schema_version` int is the single source of truth for the on-disk
+save shape. `SaveManager` enforces three rules at load time:
+
+1. **Matching version** loads directly.
+2. **Lower version** runs the explicit migration chain in `migrate_save_data()`
+   (one step per version delta, e.g. `_migrate_v2_to_v3`) and writes a backup of
+   the pre-migration file under `user://backups/` before replacing it.
+3. **Higher version** is rejected without partial loads — `SaveManager` emits
+   `EventBus.save_load_failed`, `GameWorld` surfaces a non-fatal notification,
+   and `GameManager.go_to_main_menu()` returns the player to the menu.
+
+**Version bump rule:** any change that adds, removes, or renames a persisted
+field in an active store or system controller must:
+
+- bump `SaveManager.CURRENT_SAVE_VERSION` by one;
+- add a `_migrate_vN_to_vN+1(data: Dictionary) -> Dictionary` step and register
+  it in `_get_migration_step`;
+- extend `tests/gut/test_save_migration_chain.gd` with a fixture and assertion
+  for the new step.
+
+`save_version` is preserved alongside `schema_version` on writes so that older
+readers (pre-ISSUE-024) continue to parse the version cleanly; `SaveManager`
+prefers `schema_version` on reads.
 
 ## State ownership
 

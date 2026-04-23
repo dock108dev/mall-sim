@@ -1,8 +1,21 @@
 {
+  "type": "arc_unlocks_data",
   "arc_phases": [
-    { "id": "slow_open",     "day_start": 1,  "day_end": 7  },
-    { "id": "main_stretch",  "day_start": 8,  "day_end": 21 },
-    { "id": "crunch",        "day_start": 22, "day_end": 30 }
+    {
+      "id": "slow_open",
+      "day_start": 1,
+      "day_end": 7
+    },
+    {
+      "id": "main_stretch",
+      "day_start": 8,
+      "day_end": 21
+    },
+    {
+      "id": "crunch",
+      "day_start": 22,
+      "day_end": 30
+    }
   ],
   "arc_unlocks": [
     {
@@ -22,15 +35,28 @@
     }
   ],
   "store_adjacency": {
-    "sports":           ["retro_games"],
-    "retro_games":      ["sports", "pocket_creatures"],
-    "pocket_creatures": ["retro_games", "video_rental"],
-    "video_rental":     ["pocket_creatures", "electronics"],
-    "electronics":      ["video_rental"]
+    "sports": [
+      "retro_games"
+    ],
+    "retro_games": [
+      "sports",
+      "pocket_creatures"
+    ],
+    "pocket_creatures": [
+      "retro_games",
+      "video_rental"
+    ],
+    "video_rental": [
+      "pocket_creatures",
+      "electronics"
+    ],
+    "electronics": [
+      "video_rental"
+    ]
   },
   "win_condition": {
     "target_day": 30,
-    "min_cash":   5000.0,
+    "min_cash": 5000.0,
     "description": "Reach day 30 with at least $5000 cash"
   }
 }

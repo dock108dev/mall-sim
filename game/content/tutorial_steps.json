@@ -1,4 +1,5 @@
 {
+  "type": "tutorial_steps_data",
   "tutorial_steps": [
     {
       "id": "welcome",
@@ -37,13 +38,15 @@
       "action": "Open inventory panel",
       "key": "[I]",
       "trigger_event": "panel_opened",
-      "trigger_condition": {"panel_name": "inventory"},
+      "trigger_condition": {
+        "panel_name": "inventory"
+      },
       "is_skippable": false
     },
     {
       "id": "place_item",
       "index": 4,
-      "prompt_text": "Stock a shelf — drag an item from inventory onto an empty shelf slot.",
+      "prompt_text": "Stock a shelf \u2014 drag an item from inventory onto an empty shelf slot.",
       "action": "Drag item to shelf slot",
       "key": "Drag",
       "trigger_event": "item_stocked",
@@ -57,7 +60,9 @@
       "action": "Open pricing panel",
       "key": "[P]",
       "trigger_event": "panel_opened",
-      "trigger_condition": {"panel_name": "pricing"},
+      "trigger_condition": {
+        "panel_name": "pricing"
+      },
       "is_skippable": false
     },
     {
@@ -83,7 +88,7 @@
     {
       "id": "sale_completed",
       "index": 8,
-      "prompt_text": "A customer is ready to buy. Watch the sale complete — that sound is money.",
+      "prompt_text": "A customer is ready to buy. Watch the sale complete \u2014 that sound is money.",
       "action": "Sale in progress!",
       "key": "",
       "trigger_event": "customer_purchased",

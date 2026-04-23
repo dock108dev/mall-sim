@@ -147,9 +147,19 @@ func _set_hovered_target(new_target: Interactable) -> void:
 		_hovered_target.focused.emit()
 		var action_label: String = _build_action_label(_hovered_target)
 		EventBus.interactable_focused.emit(action_label)
+		# ISSUE-003: scoped hover event + pointing-hand cursor. The hover
+		# transition runs every physics frame, so the cursor/label update
+		# well inside the 100ms budget.
+		EventBus.interactable_hovered.emit(
+			_hovered_target.resolve_interactable_id(),
+			_hovered_target.store_id,
+			action_label
+		)
+		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND)
 		_emit_tooltip_for_target(_hovered_target)
 	else:
 		EventBus.interactable_unfocused.emit()
+		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 		EventBus.item_tooltip_hidden.emit()
 
 
@@ -169,6 +179,7 @@ func _on_hovered_target_tree_exiting() -> void:
 		exiting_target.unfocused.emit()
 	_hovered_target = null
 	EventBus.interactable_unfocused.emit()
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	EventBus.item_tooltip_hidden.emit()
 
 

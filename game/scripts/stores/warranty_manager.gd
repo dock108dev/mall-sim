@@ -4,6 +4,9 @@ extends RefCounted
 
 const MIN_WARRANTY_PERCENT: float = 0.15
 const MAX_WARRANTY_PERCENT: float = 0.25
+## Eligibility threshold. Authoritative value documented in
+## `game/content/stores/store_definitions.json` under the electronics entry
+## as `warranty_min_price`; this constant mirrors that value.
 const MIN_ITEM_PRICE: float = 50.0
 const BASE_ACCEPTANCE_RATE: float = 0.40
 const HIGH_PRICE_THRESHOLD: float = 100.0
@@ -61,12 +64,14 @@ static func roll_tier_acceptance(tier_data: Dictionary) -> bool:
 
 
 ## Records a purchased warranty. Returns the warranty record.
+## tier_id identifies the coverage tier chosen by the customer ("" = default/no-tier).
 func add_warranty(
 	item_id: String,
 	sale_price: float,
 	warranty_fee: float,
 	wholesale_cost: float,
 	purchase_day: int,
+	tier_id: String = "",
 ) -> Dictionary:
 	var record: Dictionary = {
 		"item_id": item_id,
@@ -76,10 +81,70 @@ func add_warranty(
 		"purchase_day": purchase_day,
 		"expiry_day": purchase_day + WARRANTY_DURATION_DAYS,
 		"claimed": false,
+		"tier_id": tier_id,
 	}
 	_active_warranties.append(record)
 	_daily_warranty_revenue += warranty_fee
 	return record
+
+
+## Finds an active, unclaimed, unexpired warranty for the item.
+## Returns {} if none exists.
+func find_active_warranty(item_id: String, current_day: int) -> Dictionary:
+	for w: Dictionary in _active_warranties:
+		if w.get("item_id", "") != item_id:
+			continue
+		if w.get("claimed", false):
+			continue
+		var expiry: int = w.get("expiry_day", 0)
+		if current_day > expiry:
+			continue
+		return w
+	return {}
+
+
+## Processes a return/refund for a previously-sold item. Branches on warranty state:
+## - If an active warranty covers the item: full refund (sale_price), warranty consumed
+##   (marked claimed), and tier_id is reflected in the outcome.
+## - If no warranty: partial refund using default_refund_percent of sale_price.
+## Returns a Dictionary with keys:
+##   { refund_amount: float, warranty_consumed: bool, tier_id: String,
+##     reason: String, sale_price: float }
+func process_return(
+	item_id: String,
+	sale_price: float,
+	current_day: int,
+	default_refund_percent: float = 0.5,
+) -> Dictionary:
+	var warranty: Dictionary = find_active_warranty(item_id, current_day)
+	if warranty.is_empty():
+		return {
+			"refund_amount": sale_price * clampf(default_refund_percent, 0.0, 1.0),
+			"warranty_consumed": false,
+			"tier_id": "",
+			"reason": "no_warranty",
+			"sale_price": sale_price,
+		}
+	warranty["claimed"] = true
+	var tier_id: String = String(warranty.get("tier_id", ""))
+	var covered_price: float = float(warranty.get("sale_price", sale_price))
+	var cost: float = float(warranty.get("wholesale_cost", 0.0))
+	_daily_claim_costs += cost
+	var claim: Dictionary = {
+		"item_id": item_id,
+		"replacement_cost": cost,
+		"claim_day": current_day,
+		"tier_id": tier_id,
+		"reason": "return",
+	}
+	_claim_history.append(claim)
+	return {
+		"refund_amount": covered_price,
+		"warranty_consumed": true,
+		"tier_id": tier_id,
+		"reason": "warranty_covered",
+		"sale_price": covered_price,
+	}
 
 
 ## Processes daily claim checks. Returns an array of triggered claims.

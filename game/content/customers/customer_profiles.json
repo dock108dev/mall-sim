@@ -2,33 +2,73 @@
   {
     "id": "power_shopper",
     "name": "Power Shopper",
-    "description": "Arrives with a list and leaves with bags — no browsing, just buying.",
-    "store_types": ["sports", "electronics", "retro_games"],
-    "budget_range": [80.00, 300.00],
+    "description": "Arrives with a list and leaves with bags \u2014 no browsing, just buying.",
+    "store_types": [
+      "sports",
+      "electronics",
+      "retro_games"
+    ],
+    "budget_range": [
+      80.0,
+      300.0
+    ],
     "patience": 0.8,
     "price_sensitivity": 0.35,
     "haggle_tendency": 0.7,
     "impulse_buy_chance": 0.15,
     "purchase_probability_base": 0.7,
     "visit_frequency": "high",
-    "preferred_categories": ["memorabilia", "portable_audio", "handheld_gaming"],
-    "preferred_tags": ["premium", "authenticated", "flagship"],
-    "preferred_rarities": ["rare", "ultra_rare"],
+    "preferred_categories": [
+      "memorabilia",
+      "portable_audio",
+      "handheld_gaming"
+    ],
+    "preferred_tags": [
+      "premium",
+      "authenticated",
+      "flagship"
+    ],
+    "preferred_rarities": [
+      "rare",
+      "ultra_rare"
+    ],
     "condition_preference": "near_mint",
-    "browse_time_range": [15.0, 40.0],
+    "browse_time_range": [
+      15.0,
+      40.0
+    ],
     "max_price_to_market_ratio": 1.3,
     "leaves_if_unavailable": true,
-    "mood_tags": ["focused", "decisive", "efficient"],
+    "mood_tags": [
+      "focused",
+      "decisive",
+      "efficient"
+    ],
     "dialogue_pool": "power_shopper",
     "model": "res://game/assets/models/customers/casual_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.25, "12": 0.15, "14": 0.2, "17": 0.25, "19": 0.15}
+    "spawn_weight_by_hour": {
+      "10": 0.25,
+      "12": 0.15,
+      "14": 0.2,
+      "17": 0.25,
+      "19": 0.15
+    }
   },
   {
     "id": "window_browser",
     "name": "Window Browser",
     "description": "Looks at everything, touches nothing, buys even less.",
-    "store_types": ["sports", "electronics", "retro_games", "pocket_creatures", "rentals"],
-    "budget_range": [15.00, 60.00],
+    "store_types": [
+      "sports",
+      "electronics",
+      "retro_games",
+      "pocket_creatures",
+      "rentals"
+    ],
+    "budget_range": [
+      15.0,
+      60.0
+    ],
     "patience": 0.9,
     "price_sensitivity": 0.7,
     "haggle_tendency": 0.1,
@@ -36,72 +76,160 @@
     "purchase_probability_base": 0.2,
     "visit_frequency": "high",
     "preferred_categories": [],
-    "preferred_tags": ["clearance", "display"],
-    "preferred_rarities": ["common", "uncommon"],
+    "preferred_tags": [
+      "clearance",
+      "display"
+    ],
+    "preferred_rarities": [
+      "common",
+      "uncommon"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [40.0, 90.0],
+    "browse_time_range": [
+      40.0,
+      90.0
+    ],
     "max_price_to_market_ratio": 0.8,
     "leaves_if_unavailable": false,
-    "mood_tags": ["browsing", "distracted", "curious"],
+    "mood_tags": [
+      "browsing",
+      "distracted",
+      "curious"
+    ],
     "dialogue_pool": "window_browser",
     "model": "res://game/assets/models/customers/casual_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.15, "12": 0.25, "14": 0.25, "17": 0.2, "19": 0.15}
+    "spawn_weight_by_hour": {
+      "10": 0.15,
+      "12": 0.25,
+      "14": 0.25,
+      "17": 0.2,
+      "19": 0.15
+    }
   },
   {
     "id": "food_court_camper",
     "name": "Food Court Camper",
     "description": "Came for the pretzels, stayed for the air conditioning.",
-    "store_types": ["rentals", "pocket_creatures"],
-    "budget_range": [10.00, 40.00],
+    "store_types": [
+      "rentals",
+      "pocket_creatures"
+    ],
+    "budget_range": [
+      10.0,
+      40.0
+    ],
     "patience": 0.5,
     "price_sensitivity": 0.8,
     "haggle_tendency": 0.05,
     "impulse_buy_chance": 0.1,
     "purchase_probability_base": 0.15,
     "visit_frequency": "medium",
-    "preferred_categories": ["vhs_tapes", "booster_packs"],
-    "preferred_tags": ["budget", "snack", "impulse"],
-    "preferred_rarities": ["common"],
+    "preferred_categories": [
+      "vhs_tapes",
+      "booster_packs"
+    ],
+    "preferred_tags": [
+      "budget",
+      "snack",
+      "impulse"
+    ],
+    "preferred_rarities": [
+      "common"
+    ],
     "condition_preference": "fair",
-    "browse_time_range": [10.0, 30.0],
+    "browse_time_range": [
+      10.0,
+      30.0
+    ],
     "snack_purchase_probability": 0.85,
     "max_price_to_market_ratio": 0.7,
     "leaves_if_unavailable": false,
-    "mood_tags": ["bored", "hungry", "lounging"],
+    "mood_tags": [
+      "bored",
+      "hungry",
+      "lounging"
+    ],
     "dialogue_pool": "food_court_camper",
     "model": "res://game/assets/models/customers/casual_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.05, "12": 0.35, "14": 0.25, "17": 0.25, "19": 0.1}
+    "spawn_weight_by_hour": {
+      "10": 0.05,
+      "12": 0.35,
+      "14": 0.25,
+      "17": 0.25,
+      "19": 0.1
+    }
   },
   {
     "id": "social_butterfly",
     "name": "Social Butterfly",
-    "description": "Shopping is a team sport — consensus required on every purchase.",
-    "store_types": ["pocket_creatures", "retro_games", "sports", "electronics"],
-    "budget_range": [30.00, 120.00],
+    "description": "Shopping is a team sport \u2014 consensus required on every purchase.",
+    "store_types": [
+      "pocket_creatures",
+      "retro_games",
+      "sports",
+      "electronics"
+    ],
+    "budget_range": [
+      30.0,
+      120.0
+    ],
     "patience": 0.65,
     "price_sensitivity": 0.45,
     "haggle_tendency": 0.3,
     "impulse_buy_chance": 0.4,
     "purchase_probability_base": 0.45,
     "visit_frequency": "medium",
-    "preferred_categories": ["booster_packs", "retro_cartridges", "memorabilia"],
-    "preferred_tags": ["popular", "trending", "gift"],
-    "preferred_rarities": ["uncommon", "rare"],
+    "preferred_categories": [
+      "booster_packs",
+      "retro_cartridges",
+      "memorabilia"
+    ],
+    "preferred_tags": [
+      "popular",
+      "trending",
+      "gift"
+    ],
+    "preferred_rarities": [
+      "uncommon",
+      "rare"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [30.0, 70.0],
+    "browse_time_range": [
+      30.0,
+      70.0
+    ],
     "max_price_to_market_ratio": 1.1,
     "leaves_if_unavailable": false,
-    "mood_tags": ["chatty", "excited", "indecisive"],
+    "mood_tags": [
+      "chatty",
+      "excited",
+      "indecisive"
+    ],
     "dialogue_pool": "social_butterfly",
     "model": "res://game/assets/models/customers/young_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.1, "12": 0.2, "14": 0.2, "17": 0.25, "19": 0.25}
+    "spawn_weight_by_hour": {
+      "10": 0.1,
+      "12": 0.2,
+      "14": 0.2,
+      "17": 0.25,
+      "19": 0.25
+    }
   },
   {
     "id": "reluctant_companion",
     "name": "Reluctant Companion",
-    "description": "Clearly did not choose to be here — checking the exit every thirty seconds.",
-    "store_types": ["sports", "electronics", "retro_games", "pocket_creatures", "rentals"],
-    "budget_range": [10.00, 35.00],
+    "description": "Clearly did not choose to be here \u2014 checking the exit every thirty seconds.",
+    "store_types": [
+      "sports",
+      "electronics",
+      "retro_games",
+      "pocket_creatures",
+      "rentals"
+    ],
+    "budget_range": [
+      10.0,
+      35.0
+    ],
     "patience": 0.15,
     "price_sensitivity": 0.6,
     "haggle_tendency": 0.05,
@@ -109,111 +237,261 @@
     "purchase_probability_base": 0.1,
     "visit_frequency": "low",
     "preferred_categories": [],
-    "preferred_tags": ["impulse", "cheap"],
-    "preferred_rarities": ["common"],
+    "preferred_tags": [
+      "impulse",
+      "cheap"
+    ],
+    "preferred_rarities": [
+      "common"
+    ],
     "condition_preference": "fair",
-    "browse_time_range": [10.0, 25.0],
+    "browse_time_range": [
+      10.0,
+      25.0
+    ],
     "max_price_to_market_ratio": 0.6,
     "leaves_if_unavailable": true,
-    "mood_tags": ["bored", "impatient", "sighing"],
+    "mood_tags": [
+      "bored",
+      "impatient",
+      "sighing"
+    ],
     "dialogue_pool": "reluctant_companion",
     "model": "res://game/assets/models/customers/casual_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.1, "12": 0.15, "14": 0.2, "17": 0.3, "19": 0.25}
+    "spawn_weight_by_hour": {
+      "10": 0.1,
+      "12": 0.15,
+      "14": 0.2,
+      "17": 0.3,
+      "19": 0.25
+    }
   },
   {
     "id": "impulse_buyer",
     "name": "Impulse Buyer",
-    "description": "Walks in for one thing, walks out with seven — no regrets until tomorrow.",
-    "store_types": ["electronics", "pocket_creatures", "retro_games", "sports"],
-    "budget_range": [50.00, 200.00],
+    "description": "Walks in for one thing, walks out with seven \u2014 no regrets until tomorrow.",
+    "store_types": [
+      "electronics",
+      "pocket_creatures",
+      "retro_games",
+      "sports"
+    ],
+    "budget_range": [
+      50.0,
+      200.0
+    ],
     "patience": 0.55,
     "price_sensitivity": 0.2,
     "haggle_tendency": 0.15,
     "impulse_buy_chance": 0.85,
     "purchase_probability_base": 0.65,
     "visit_frequency": "medium",
-    "preferred_categories": ["portable_audio", "booster_packs", "gadgets", "retro_cartridges"],
-    "preferred_tags": ["new_model", "limited", "bundle", "clearance"],
-    "preferred_rarities": ["common", "uncommon", "rare"],
+    "preferred_categories": [
+      "portable_audio",
+      "booster_packs",
+      "gadgets",
+      "retro_cartridges"
+    ],
+    "preferred_tags": [
+      "new_model",
+      "limited",
+      "bundle",
+      "clearance"
+    ],
+    "preferred_rarities": [
+      "common",
+      "uncommon",
+      "rare"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [20.0, 50.0],
+    "browse_time_range": [
+      20.0,
+      50.0
+    ],
     "max_price_to_market_ratio": 1.4,
     "leaves_if_unavailable": false,
-    "mood_tags": ["excited", "impulsive", "happy"],
+    "mood_tags": [
+      "excited",
+      "impulsive",
+      "happy"
+    ],
     "dialogue_pool": "impulse_buyer",
     "model": "res://game/assets/models/customers/young_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.15, "12": 0.2, "14": 0.2, "17": 0.2, "19": 0.25}
+    "spawn_weight_by_hour": {
+      "10": 0.15,
+      "12": 0.2,
+      "14": 0.2,
+      "17": 0.2,
+      "19": 0.25
+    }
   },
   {
     "id": "speed_runner",
     "name": "Speed Runner",
-    "description": "In, grab, pay, out — treats shopping like a timed event.",
-    "store_types": ["electronics", "retro_games", "rentals"],
-    "budget_range": [40.00, 150.00],
+    "description": "In, grab, pay, out \u2014 treats shopping like a timed event.",
+    "store_types": [
+      "electronics",
+      "retro_games",
+      "rentals"
+    ],
+    "budget_range": [
+      40.0,
+      150.0
+    ],
     "patience": 0.1,
     "price_sensitivity": 0.4,
     "haggle_tendency": 0.05,
     "impulse_buy_chance": 0.05,
     "purchase_probability_base": 0.75,
     "visit_frequency": "medium",
-    "preferred_categories": ["portable_audio", "retro_cartridges", "vhs_tapes"],
-    "preferred_tags": ["popular", "in_stock", "quick_grab"],
-    "preferred_rarities": ["common", "uncommon"],
+    "preferred_categories": [
+      "portable_audio",
+      "retro_cartridges",
+      "vhs_tapes"
+    ],
+    "preferred_tags": [
+      "popular",
+      "in_stock",
+      "quick_grab"
+    ],
+    "preferred_rarities": [
+      "common",
+      "uncommon"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [5.0, 15.0],
+    "browse_time_range": [
+      5.0,
+      15.0
+    ],
     "max_price_to_market_ratio": 1.2,
     "leaves_if_unavailable": true,
-    "mood_tags": ["rushed", "focused", "no_nonsense"],
+    "mood_tags": [
+      "rushed",
+      "focused",
+      "no_nonsense"
+    ],
     "dialogue_pool": "speed_runner",
     "model": "res://game/assets/models/customers/casual_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.2, "12": 0.3, "14": 0.15, "17": 0.25, "19": 0.1}
+    "spawn_weight_by_hour": {
+      "10": 0.2,
+      "12": 0.3,
+      "14": 0.15,
+      "17": 0.25,
+      "19": 0.1
+    }
   },
   {
     "id": "teen_pack_member",
     "name": "Teen Pack Member",
     "description": "Travels in herds, pooling allowance money for one legendary pull.",
-    "store_types": ["pocket_creatures", "retro_games"],
-    "budget_range": [5.00, 30.00],
+    "store_types": [
+      "pocket_creatures",
+      "retro_games"
+    ],
+    "budget_range": [
+      5.0,
+      30.0
+    ],
     "patience": 0.4,
     "price_sensitivity": 0.75,
     "haggle_tendency": 0.2,
     "impulse_buy_chance": 0.6,
     "purchase_probability_base": 0.35,
     "visit_frequency": "high",
-    "preferred_categories": ["booster_packs", "retro_cartridges", "singles"],
-    "preferred_tags": ["cheap", "trending", "rare_pull"],
-    "preferred_rarities": ["common", "uncommon", "rare"],
+    "preferred_categories": [
+      "booster_packs",
+      "retro_cartridges",
+      "singles"
+    ],
+    "preferred_tags": [
+      "cheap",
+      "trending",
+      "rare_pull"
+    ],
+    "preferred_rarities": [
+      "common",
+      "uncommon",
+      "rare"
+    ],
     "condition_preference": "fair",
-    "browse_time_range": [40.0, 100.0],
+    "browse_time_range": [
+      40.0,
+      100.0
+    ],
     "max_price_to_market_ratio": 0.9,
     "leaves_if_unavailable": false,
-    "mood_tags": ["loud", "excited", "competitive"],
+    "mood_tags": [
+      "loud",
+      "excited",
+      "competitive"
+    ],
     "dialogue_pool": "teen_pack_member",
     "model": "res://game/assets/models/customers/teen.glb",
-    "spawn_weight_by_hour": {"10": 0.05, "12": 0.15, "14": 0.2, "17": 0.3, "19": 0.3}
+    "spawn_weight_by_hour": {
+      "10": 0.05,
+      "12": 0.15,
+      "14": 0.2,
+      "17": 0.3,
+      "19": 0.3
+    }
   },
   {
     "id": "vip_customer",
     "name": "VIP Customer",
-    "description": "A high-spending regular with refined taste and deep pockets — treat them right.",
-    "store_types": ["sports", "electronics", "retro_games", "pocket_creatures", "rentals"],
-    "budget_range": [200.00, 500.00],
+    "description": "A high-spending regular with refined taste and deep pockets \u2014 treat them right.",
+    "store_types": [
+      "sports",
+      "electronics",
+      "retro_games",
+      "pocket_creatures",
+      "rentals"
+    ],
+    "budget_range": [
+      200.0,
+      500.0
+    ],
     "patience": 0.9,
     "price_sensitivity": 0.15,
     "haggle_tendency": 0.2,
     "impulse_buy_chance": 0.5,
     "purchase_probability_base": 0.85,
     "visit_frequency": "low",
-    "preferred_categories": ["memorabilia", "portable_audio", "handheld_gaming", "booster_packs"],
-    "preferred_tags": ["premium", "authenticated", "flagship", "limited"],
-    "preferred_rarities": ["rare", "ultra_rare"],
+    "preferred_categories": [
+      "memorabilia",
+      "portable_audio",
+      "handheld_gaming",
+      "booster_packs"
+    ],
+    "preferred_tags": [
+      "premium",
+      "authenticated",
+      "flagship",
+      "limited"
+    ],
+    "preferred_rarities": [
+      "rare",
+      "ultra_rare"
+    ],
     "condition_preference": "near_mint",
-    "browse_time_range": [45.0, 90.0],
+    "browse_time_range": [
+      45.0,
+      90.0
+    ],
     "max_price_to_market_ratio": 1.5,
     "leaves_if_unavailable": false,
-    "mood_tags": ["discerning", "wealthy", "patient"],
+    "mood_tags": [
+      "discerning",
+      "wealthy",
+      "patient"
+    ],
     "dialogue_pool": "vip_customer",
     "model": "res://game/assets/models/customers/casual_adult.glb",
-    "spawn_weight_by_hour": {"10": 0.05, "12": 0.05, "14": 0.05, "17": 0.05, "19": 0.05}
+    "spawn_weight_by_hour": {
+      "10": 0.05,
+      "12": 0.05,
+      "14": 0.05,
+      "17": 0.05,
+      "19": 0.05
+    }
   }
 ]

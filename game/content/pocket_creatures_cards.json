@@ -1,4 +1,5 @@
 {
+  "type": "pocket_creatures_cards_data",
   "pack_formula": {
     "commons": 6,
     "uncommons": 3,
@@ -7,20 +8,24 @@
     "total_cards": 11
   },
   "rarity_weights": {
-    "rare": 0.90,
+    "rare": 0.9,
     "holo_rare": 0.09,
     "secret_rare": 0.01
   },
   "rarity_price_table": {
     "common": 0.25,
-    "uncommon": 1.00,
-    "rare": 3.50,
-    "holo_rare": 15.00,
-    "secret_rare": 75.00,
-    "ultra_rare": 35.00,
-    "energy": 0.10
+    "uncommon": 1.0,
+    "rare": 3.5,
+    "holo_rare": 15.0,
+    "secret_rare": 75.0,
+    "ultra_rare": 35.0,
+    "energy": 0.1
   },
-  "pack_conditions": ["good", "near_mint", "mint"],
+  "pack_conditions": [
+    "good",
+    "near_mint",
+    "mint"
+  ],
   "set_tags": [
     "base_set",
     "canopy",

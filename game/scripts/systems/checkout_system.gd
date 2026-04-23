@@ -561,12 +561,16 @@ func _on_warranty_accepted(
 				wholesale = _economy_system.get_wholesale_price(
 					_active_item.definition
 				)
+		var tier_id: String = ""
+		if _warranty_dialog:
+			tier_id = _warranty_dialog.get_selected_tier_id()
 		_warranty_manager.add_warranty(
 			item_id,
 			_active_offer,
 			fee,
 			wholesale,
 			GameManager.current_day,
+			tier_id,
 		)
 	if _economy_system:
 		_economy_system.add_cash(fee, "Warranty: %s" % item_id)

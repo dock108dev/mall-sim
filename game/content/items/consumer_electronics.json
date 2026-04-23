@@ -66,8 +66,20 @@
     "launch_spike_multiplier": 1.8,
     "supplier_tier": 1,
     "warranty_tiers": [
-      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
-      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+      {
+        "id": "basic",
+        "label": "Basic Warranty",
+        "margin_percent": 0.15,
+        "acceptance_probability": 0.45,
+        "duration_days": 30
+      },
+      {
+        "id": "extended",
+        "label": "Extended Warranty",
+        "margin_percent": 0.25,
+        "acceptance_probability": 0.3,
+        "duration_days": 60
+      }
     ]
   },
   {
@@ -105,8 +117,20 @@
     "launch_spike_multiplier": 2.0,
     "supplier_tier": 2,
     "warranty_tiers": [
-      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
-      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+      {
+        "id": "basic",
+        "label": "Basic Warranty",
+        "margin_percent": 0.15,
+        "acceptance_probability": 0.45,
+        "duration_days": 30
+      },
+      {
+        "id": "extended",
+        "label": "Extended Warranty",
+        "margin_percent": 0.25,
+        "acceptance_probability": 0.3,
+        "duration_days": 60
+      }
     ]
   },
   {
@@ -177,8 +201,20 @@
     "launch_spike_multiplier": 1.6,
     "supplier_tier": 2,
     "warranty_tiers": [
-      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
-      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+      {
+        "id": "basic",
+        "label": "Basic Warranty",
+        "margin_percent": 0.15,
+        "acceptance_probability": 0.45,
+        "duration_days": 30
+      },
+      {
+        "id": "extended",
+        "label": "Extended Warranty",
+        "margin_percent": 0.25,
+        "acceptance_probability": 0.3,
+        "duration_days": 60
+      }
     ]
   },
   {
@@ -216,8 +252,20 @@
     "launch_spike_multiplier": 2.0,
     "supplier_tier": 2,
     "warranty_tiers": [
-      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
-      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+      {
+        "id": "basic",
+        "label": "Basic Warranty",
+        "margin_percent": 0.15,
+        "acceptance_probability": 0.45,
+        "duration_days": 30
+      },
+      {
+        "id": "extended",
+        "label": "Extended Warranty",
+        "margin_percent": 0.25,
+        "acceptance_probability": 0.3,
+        "duration_days": 60
+      }
     ]
   },
   {
@@ -368,8 +416,20 @@
     "launch_spike_multiplier": 1.0,
     "supplier_tier": 2,
     "warranty_tiers": [
-      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
-      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+      {
+        "id": "basic",
+        "label": "Basic Warranty",
+        "margin_percent": 0.15,
+        "acceptance_probability": 0.45,
+        "duration_days": 30
+      },
+      {
+        "id": "extended",
+        "label": "Extended Warranty",
+        "margin_percent": 0.25,
+        "acceptance_probability": 0.3,
+        "duration_days": 60
+      }
     ]
   },
   {
@@ -461,8 +521,20 @@
     "launch_spike_multiplier": 1.0,
     "supplier_tier": 1,
     "warranty_tiers": [
-      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
-      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+      {
+        "id": "basic",
+        "label": "Basic Warranty",
+        "margin_percent": 0.15,
+        "acceptance_probability": 0.45,
+        "duration_days": 30
+      },
+      {
+        "id": "extended",
+        "label": "Extended Warranty",
+        "margin_percent": 0.25,
+        "acceptance_probability": 0.3,
+        "duration_days": 60
+      }
     ]
   },
   {
@@ -501,8 +573,20 @@
     "launch_spike_multiplier": 2.0,
     "supplier_tier": 2,
     "warranty_tiers": [
-      {"id": "basic", "label": "Basic Warranty", "margin_percent": 0.15, "acceptance_probability": 0.45, "duration_days": 30},
-      {"id": "extended", "label": "Extended Warranty", "margin_percent": 0.25, "acceptance_probability": 0.30, "duration_days": 60}
+      {
+        "id": "basic",
+        "label": "Basic Warranty",
+        "margin_percent": 0.15,
+        "acceptance_probability": 0.45,
+        "duration_days": 30
+      },
+      {
+        "id": "extended",
+        "label": "Extended Warranty",
+        "margin_percent": 0.25,
+        "acceptance_probability": 0.3,
+        "duration_days": 60
+      }
     ]
   },
   {

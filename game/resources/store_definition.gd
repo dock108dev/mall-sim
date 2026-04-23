@@ -33,6 +33,21 @@ extends Resource
 		return _store_type
 @export var description: String = ""
 @export var scene_path: String = ""
+@export var inventory_type: StringName = &"":
+	set(value):
+		_inventory_type = StringName(String(value))
+	get:
+		return _inventory_type
+@export var interaction_set_id: StringName = &"":
+	set(value):
+		_interaction_set_id = StringName(String(value))
+	get:
+		return _interaction_set_id
+@export var tutorial_context_id: StringName = &"":
+	set(value):
+		_tutorial_context_id = StringName(String(value))
+	get:
+		return _tutorial_context_id
 @export var size_category: String = "small"
 @export var starting_budget: float = 5000.0
 @export var allowed_categories: PackedStringArray = []
@@ -79,6 +94,9 @@ var _store_id: StringName = &""
 var _store_name: String = ""
 var _display_name: String = ""
 var _store_type: StringName = &""
+var _inventory_type: StringName = &""
+var _interaction_set_id: StringName = &""
+var _tutorial_context_id: StringName = &""
 var _starting_inventory: PackedStringArray = []
 var _starter_inventory: Array[Dictionary] = []
 var _upgrade_ids: Array[StringName] = []

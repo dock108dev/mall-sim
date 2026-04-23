@@ -1,4 +1,5 @@
 {
+  "type": "customer",
   "id": "customer_casual_browser",
   "name": "Casual Browser",
   "description": "Window shoppers who rarely buy unless something catches their eye.",
@@ -7,6 +8,12 @@
   "impulse_buy_chance": 0.15,
   "preferred_categories": [],
   "visit_frequency": "high",
-  "spending_range": [2.00, 30.00],
-  "mood_tags": ["relaxed", "distracted"]
+  "spending_range": [
+    2.0,
+    30.0
+  ],
+  "mood_tags": [
+    "relaxed",
+    "distracted"
+  ]
 }

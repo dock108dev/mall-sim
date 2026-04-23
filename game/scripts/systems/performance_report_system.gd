@@ -25,11 +25,13 @@ var _daily_customer_satisfaction_by_id: Dictionary = {}
 var _daily_haggle_wins: int = 0
 var _daily_haggle_losses: int = 0
 var _daily_late_fee_income: float = 0.0
+var _daily_overdue_count: int = 0
 var _daily_warranty_revenue: float = 0.0
 var _daily_warranty_claim_costs: float = 0.0
 var _daily_electronics_sold: int = 0
 var _daily_warranty_sold: int = 0
 var _demo_unit_was_active: bool = false
+var _daily_demo_contribution: float = 0.0
 var _daily_milestones: Array[String] = []
 var _daily_milestone_data: Array[Dictionary] = []
 var _daily_start_tier: int = -1
@@ -56,11 +58,16 @@ func initialize() -> void:
 	EventBus.haggle_failed.connect(_on_haggle_failed)
 	EventBus.milestone_completed.connect(_on_milestone_completed)
 	EventBus.rental_late_fee.connect(_on_rental_late_fee)
+	EventBus.late_fee_collected.connect(_on_late_fee_collected)
+	EventBus.rental_overdue.connect(_on_rental_overdue)
 	EventBus.warranty_purchased.connect(_on_warranty_purchased)
 	EventBus.warranty_claim_triggered.connect(
 		_on_warranty_claim_triggered
 	)
 	EventBus.demo_unit_activated.connect(_on_demo_unit_activated)
+	EventBus.demo_contribution_recorded.connect(
+		_on_demo_contribution_recorded
+	)
 	EventBus.daily_financials_snapshot.connect(
 		_on_daily_financials_snapshot
 	)
@@ -241,11 +248,13 @@ func _on_day_started(day: int) -> void:
 	_daily_haggle_wins = 0
 	_daily_haggle_losses = 0
 	_daily_late_fee_income = 0.0
+	_daily_overdue_count = 0
 	_daily_warranty_revenue = 0.0
 	_daily_warranty_claim_costs = 0.0
 	_daily_electronics_sold = 0
 	_daily_warranty_sold = 0
 	_demo_unit_was_active = false
+	_daily_demo_contribution = 0.0
 	_daily_milestones.clear()
 	_daily_milestone_data.clear()
 	_daily_start_tier = _daily_end_tier
@@ -374,6 +383,7 @@ func _build_report(day: int) -> PerformanceReport:
 	if report.tier_changed:
 		report.new_tier_name = _tier_name(_daily_end_tier)
 	report.late_fee_income = _daily_late_fee_income
+	report.overdue_items_count = _daily_overdue_count
 	report.warranty_revenue = _daily_warranty_revenue
 	report.warranty_claim_costs = _daily_warranty_claim_costs
 	if _daily_electronics_sold > 0:
@@ -381,6 +391,7 @@ func _build_report(day: int) -> PerformanceReport:
 			float(_daily_warranty_sold) / float(_daily_electronics_sold)
 		)
 	report.electronics_demo_active = _demo_unit_was_active
+	report.demo_contribution_revenue = _daily_demo_contribution
 	report.milestones_unlocked = _daily_milestones.duplicate()
 	report.milestones_data = _daily_milestone_data.duplicate()
 	return report
@@ -510,10 +521,24 @@ func _on_haggle_failed(
 	_daily_haggle_losses += 1
 
 
+## rental_late_fee now fires on accrual (pending, not yet collected); we only
+## count actual collected revenue via late_fee_collected below.
 func _on_rental_late_fee(
-	_item_id: String, late_fee: float, _days_late: int
+	_item_id: String, _late_fee: float, _days_late: int
 ) -> void:
-	_daily_late_fee_income += late_fee
+	pass
+
+
+func _on_late_fee_collected(
+	_item_id: String, amount: float, _days_late: int
+) -> void:
+	_daily_late_fee_income += amount
+
+
+func _on_rental_overdue(
+	_customer_id: String, _item_id: String
+) -> void:
+	_daily_overdue_count += 1
 
 
 func _on_warranty_purchased(
@@ -531,6 +556,13 @@ func _on_warranty_claim_triggered(
 
 func _on_demo_unit_activated(_item_id: String, _category: String) -> void:
 	_demo_unit_was_active = true
+
+
+func _on_demo_contribution_recorded(amount: float) -> void:
+	if amount <= 0.0:
+		return
+	_demo_unit_was_active = true
+	_daily_demo_contribution += amount
 
 
 func _on_milestone_completed(

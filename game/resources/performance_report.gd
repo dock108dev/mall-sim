@@ -26,10 +26,12 @@ extends Resource
 ## Richer milestone data: [{name, reward}] populated alongside milestones_unlocked.
 @export var milestones_data: Array[Dictionary] = []
 @export var late_fee_income: float = 0.0
+@export var overdue_items_count: int = 0
 @export var warranty_revenue: float = 0.0
 @export var warranty_claim_costs: float = 0.0
 @export var warranty_attach_rate: float = 0.0
 @export var electronics_demo_active: bool = false
+@export var demo_contribution_revenue: float = 0.0
 @export var record_flags: Dictionary = {}
 
 
@@ -57,10 +59,12 @@ func to_dict() -> Dictionary:
 		"milestones_unlocked": milestones_unlocked.duplicate(),
 		"milestones_data": milestones_data.duplicate(),
 		"late_fee_income": late_fee_income,
+		"overdue_items_count": overdue_items_count,
 		"warranty_revenue": warranty_revenue,
 		"warranty_claim_costs": warranty_claim_costs,
 		"warranty_attach_rate": warranty_attach_rate,
 		"electronics_demo_active": electronics_demo_active,
+		"demo_contribution_revenue": demo_contribution_revenue,
 		"record_flags": record_flags.duplicate(),
 	}
 
@@ -100,6 +104,7 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 			if entry is Dictionary:
 				report.milestones_data.append((entry as Dictionary).duplicate())
 	report.late_fee_income = float(data.get("late_fee_income", 0.0))
+	report.overdue_items_count = int(data.get("overdue_items_count", 0))
 	report.warranty_revenue = float(
 		data.get("warranty_revenue", 0.0)
 	)
@@ -111,6 +116,9 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 	)
 	report.electronics_demo_active = bool(
 		data.get("electronics_demo_active", false)
+	)
+	report.demo_contribution_revenue = float(
+		data.get("demo_contribution_revenue", 0.0)
 	)
 	var flags: Variant = data.get("record_flags", {})
 	if flags is Dictionary:

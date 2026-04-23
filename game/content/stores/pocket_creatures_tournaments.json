@@ -13,8 +13,8 @@
     "price_spike_multiplier": 1.6,
     "traffic_multiplier": 1.4,
     "notification_day": 20,
-    "announcement_text": "Crystal Storm Invitational announced — singles demand rising",
-    "active_text": "Crystal Storm Invitational underway — singles cards flying off shelves!"
+    "announcement_text": "Crystal Storm Invitational announced \u2014 singles demand rising",
+    "active_text": "Crystal Storm Invitational underway \u2014 singles cards flying off shelves!"
   },
   {
     "id": "pc_tournament_fossil_league_open",
@@ -30,8 +30,8 @@
     "price_spike_multiplier": 1.45,
     "traffic_multiplier": 1.3,
     "notification_day": 36,
-    "announcement_text": "Fossil League Open incoming — stock up on singles now",
-    "active_text": "Fossil League Open in progress — singles demand surging!"
+    "announcement_text": "Fossil League Open incoming \u2014 stock up on singles now",
+    "active_text": "Fossil League Open in progress \u2014 singles demand surging!"
   },
   {
     "id": "pc_tournament_dark_masters_cup",
@@ -47,7 +47,7 @@
     "price_spike_multiplier": 1.9,
     "traffic_multiplier": 1.5,
     "notification_day": 61,
-    "announcement_text": "Dark Masters Cup announced — competitive singles in high demand",
-    "active_text": "Dark Masters Cup active — tournament players clearing your singles shelf!"
+    "announcement_text": "Dark Masters Cup announced \u2014 competitive singles in high demand",
+    "active_text": "Dark Masters Cup active \u2014 tournament players clearing your singles shelf!"
   }
 ]

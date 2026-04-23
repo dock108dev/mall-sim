@@ -277,7 +277,9 @@ func _clear_grid() -> void:
 
 
 func _add_item_row(item: ItemInstance) -> void:
-	var row: PanelContainer = InventoryRowBuilder.build(item)
+	var row: PanelContainer = InventoryRowBuilder.build(
+		item, rental_controller
+	)
 	InventoryRowBuilder.add_overlay_button(
 		row,
 		_on_item_clicked.bind(item, row),

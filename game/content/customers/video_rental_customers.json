@@ -2,72 +2,161 @@
   {
     "id": "rental_friday_family",
     "name": "Friday Night Family",
-    "store_types": ["rentals"],
-    "budget_range": [8.00, 20.00],
+    "store_types": [
+      "rentals"
+    ],
+    "budget_range": [
+      8.0,
+      20.0
+    ],
     "patience": 0.7,
     "price_sensitivity": 0.5,
-    "preferred_categories": ["vhs_new_release", "vhs_classic", "dvd_new_release", "snacks"],
-    "preferred_tags": ["family", "comedy", "animation", "blockbuster", "snack"],
+    "preferred_categories": [
+      "vhs_new_release",
+      "vhs_classic",
+      "dvd_new_release",
+      "snacks"
+    ],
+    "preferred_tags": [
+      "family",
+      "comedy",
+      "animation",
+      "blockbuster",
+      "snack"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [30, 75],
-    "purchase_probability_base": 0.70,
+    "browse_time_range": [
+      30,
+      75
+    ],
+    "purchase_probability_base": 0.7,
     "impulse_buy_chance": 0.5,
     "visit_frequency": "high",
-    "mood_tags": ["cheerful", "browsing", "decided"],
+    "mood_tags": [
+      "cheerful",
+      "browsing",
+      "decided"
+    ],
     "dialogue_pool": "friday_family",
     "model": "res://game/assets/models/customers/family_group.glb"
   },
   {
     "id": "rental_movie_buff",
     "name": "Movie Buff",
-    "store_types": ["rentals"],
-    "budget_range": [4.00, 12.00],
+    "store_types": [
+      "rentals"
+    ],
+    "budget_range": [
+      4.0,
+      12.0
+    ],
     "patience": 0.8,
     "price_sensitivity": 0.4,
-    "preferred_categories": ["vhs_cult", "vhs_classic", "dvd_classic"],
-    "preferred_tags": ["cult", "foreign", "director", "indie", "classic"],
+    "preferred_categories": [
+      "vhs_cult",
+      "vhs_classic",
+      "dvd_classic"
+    ],
+    "preferred_tags": [
+      "cult",
+      "foreign",
+      "director",
+      "indie",
+      "classic"
+    ],
     "condition_preference": "fair",
-    "browse_time_range": [60, 120],
-    "purchase_probability_base": 0.60,
+    "browse_time_range": [
+      60,
+      120
+    ],
+    "purchase_probability_base": 0.6,
     "impulse_buy_chance": 0.2,
     "visit_frequency": "high",
-    "mood_tags": ["knowledgeable", "browsing", "particular"],
+    "mood_tags": [
+      "knowledgeable",
+      "browsing",
+      "particular"
+    ],
     "dialogue_pool": "movie_buff",
     "model": "res://game/assets/models/customers/casual_adult.glb"
   },
   {
     "id": "rental_binge_renter",
     "name": "Binge Renter",
-    "store_types": ["rentals"],
-    "budget_range": [10.00, 25.00],
+    "store_types": [
+      "rentals"
+    ],
+    "budget_range": [
+      10.0,
+      25.0
+    ],
     "patience": 0.5,
     "price_sensitivity": 0.6,
-    "preferred_categories": ["vhs_classic", "vhs_new_release", "vhs_cult", "snacks"],
-    "preferred_tags": ["action", "thriller", "sci-fi", "horror", "blockbuster"],
+    "preferred_categories": [
+      "vhs_classic",
+      "vhs_new_release",
+      "vhs_cult",
+      "snacks"
+    ],
+    "preferred_tags": [
+      "action",
+      "thriller",
+      "sci-fi",
+      "horror",
+      "blockbuster"
+    ],
     "condition_preference": "fair",
-    "browse_time_range": [20, 50],
+    "browse_time_range": [
+      20,
+      50
+    ],
     "purchase_probability_base": 0.75,
     "impulse_buy_chance": 0.35,
     "visit_frequency": "medium",
-    "mood_tags": ["eager", "decisive", "loading_up"],
+    "mood_tags": [
+      "eager",
+      "decisive",
+      "loading_up"
+    ],
     "dialogue_pool": "binge_renter",
     "model": "res://game/assets/models/customers/young_adult.glb"
   },
   {
     "id": "rental_new_release_chaser",
     "name": "New Release Chaser",
-    "store_types": ["rentals"],
-    "budget_range": [4.00, 10.00],
+    "store_types": [
+      "rentals"
+    ],
+    "budget_range": [
+      4.0,
+      10.0
+    ],
     "patience": 0.2,
     "price_sensitivity": 0.3,
-    "preferred_categories": ["vhs_new_release", "dvd_new_release"],
-    "preferred_tags": ["new_release", "blockbuster", "action", "dvd", "premium"],
+    "preferred_categories": [
+      "vhs_new_release",
+      "dvd_new_release"
+    ],
+    "preferred_tags": [
+      "new_release",
+      "blockbuster",
+      "action",
+      "dvd",
+      "premium"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [10, 30],
-    "purchase_probability_base": 0.80,
+    "browse_time_range": [
+      10,
+      30
+    ],
+    "purchase_probability_base": 0.8,
     "impulse_buy_chance": 0.1,
     "visit_frequency": "medium",
-    "mood_tags": ["impatient", "specific", "frustrated"],
+    "mood_tags": [
+      "impatient",
+      "specific",
+      "frustrated"
+    ],
     "dialogue_pool": "new_release_chaser",
     "model": "res://game/assets/models/customers/casual_adult.glb"
   }

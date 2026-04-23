@@ -9,6 +9,10 @@ const DEMO_STATION_FIXTURE_ID: String = "demo_station"
 const DEMO_DEGRADE_INTERVAL_DAYS: int = 10
 const DEFAULT_MAX_DEMO_UNITS: int = 2
 const DEFAULT_DEMO_INTEREST_BONUS: float = 0.20
+## Value lost per day a unit remains designated as a demo.
+const DEMO_DAILY_DEPRECIATION: float = 0.05
+## Minimum fraction of original value a demo unit can depreciate to.
+const DEMO_DEPRECIATION_FLOOR: float = 0.5
 const CONDITION_ORDER: Array[String] = [
 	"mint", "near_mint", "good", "fair", "poor",
 ]
@@ -22,6 +26,7 @@ var _demo_item_ids: Array[String] = []
 var _warranty_manager: WarrantyManager = WarrantyManager.new()
 var _max_demo_units: int = DEFAULT_MAX_DEMO_UNITS
 var _demo_interest_bonus: float = DEFAULT_DEMO_INTEREST_BONUS
+var _daily_demo_contribution: float = 0.0
 
 
 func _ready() -> void:
@@ -31,6 +36,7 @@ func _ready() -> void:
 	_find_demo_stations()
 	_load_demo_config()
 	EventBus.item_stocked.connect(_on_item_stocked)
+	EventBus.item_sold.connect(_on_item_sold_for_demo)
 
 
 ## Provides the economy system reference for warranty claim costs.
@@ -66,12 +72,16 @@ func get_lifecycle_multiplier(item: ItemDefinition) -> float:
 
 
 ## Returns the full market value for an electronics item including lifecycle.
+## Routes through PriceResolver so the multiplier chain is auditable (ISSUE-020).
 func calculate_electronics_value(
 	item: ItemInstance, economy: EconomySystem
 ) -> float:
 	var base_value: float = economy.calculate_market_value(item)
-	var lifecycle_mult: float = get_lifecycle_multiplier(item.definition)
-	return base_value * lifecycle_mult
+	var multipliers: Array = [_build_lifecycle_entry(item.definition)]
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(item.instance_id), base_value, multipliers
+	)
+	return result.final_price
 
 
 ## Returns true if the item is available in the supplier catalog.
@@ -103,6 +113,8 @@ func get_store_actions() -> Array:
 
 
 ## Returns the current depreciated price for an item, clamped to its floor price.
+## Lifecycle is applied via PriceResolver so every price call contributes to the
+## auditable chain surfaced by the HUD (ISSUE-020).
 func get_current_price(instance_id: String) -> float:
 	if not _inventory_system:
 		return 0.0
@@ -110,9 +122,12 @@ func get_current_price(instance_id: String) -> float:
 	if not item or not item.definition:
 		return 0.0
 	var base_value: float = item.get_current_value()
-	var lifecycle_mult: float = get_lifecycle_multiplier(item.definition)
+	var multipliers: Array = [_build_lifecycle_entry(item.definition)]
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(instance_id), base_value, multipliers
+	)
 	var floor_price: float = item.definition.base_price * item.definition.min_value_ratio
-	return maxf(base_value * lifecycle_mult, floor_price)
+	return maxf(result.final_price, floor_price)
 
 
 ## Attempts a purchase. Returns false and warns if the item is a demo unit.
@@ -165,7 +180,7 @@ func pitch_warranty(
 		fee = WarrantyManager.calculate_tier_fee(sale_price, tier_data)
 	if accepted:
 		_warranty_manager.add_warranty(
-			instance_id, sale_price, fee, wholesale_cost, _current_day
+			instance_id, sale_price, fee, wholesale_cost, _current_day, tier_id
 		)
 		EventBus.warranty_accepted.emit(instance_id, tier_id, fee)
 		return fee
@@ -287,6 +302,7 @@ func place_demo_item(instance_id: String) -> bool:
 		return false
 	item.is_demo = true
 	item.demo_placed_day = _current_day
+	item.demo_depreciation_factor = 1.0
 	_demo_item_ids.append(instance_id)
 	var slot_id: String = str(slot.get("slot_id"))
 	if not slot_id.is_empty():
@@ -310,12 +326,15 @@ func remove_demo_item(instance_id: String = "") -> bool:
 		_demo_item_ids.erase(target_id)
 		return false
 	var days_on_demo: int = _current_day - item.demo_placed_day
+	var remaining_value: float = get_demo_remaining_value(target_id)
 	item.is_demo = false
 	item.demo_placed_day = 0
+	item.player_price = remaining_value
 	_inventory_system.move_item(target_id, "backroom")
 	_demo_item_ids.erase(target_id)
 	EventBus.demo_item_removed.emit(target_id, days_on_demo)
 	EventBus.demo_unit_removed.emit(target_id, days_on_demo)
+	EventBus.demo_item_retired.emit(target_id, remaining_value)
 	return true
 
 
@@ -327,6 +346,46 @@ func get_demo_item_ids() -> Array[String]:
 ## Returns true if the given item is currently a demo unit.
 func is_demo_unit(instance_id: String) -> bool:
 	return instance_id in _demo_item_ids
+
+
+## Returns the current depreciated resale value of a demo unit, floored at
+## DEMO_DEPRECIATION_FLOOR of its base current_value. Depreciation is applied
+## through PriceResolver's demo_unit slot so the chain is auditable (ISSUE-020).
+func get_demo_remaining_value(instance_id: String) -> float:
+	if not _inventory_system:
+		return 0.0
+	var item: ItemInstance = _inventory_system.get_item(instance_id)
+	if not item or not item.definition:
+		return 0.0
+	var base_value: float = item.get_current_value()
+	var factor: float = maxf(item.demo_depreciation_factor, DEMO_DEPRECIATION_FLOOR)
+	var multipliers: Array = [{
+		"slot": "demo_unit",
+		"label": "Demo Depreciation",
+		"factor": factor,
+		"detail": "Demo unit resale factor %.2f" % factor,
+	}]
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(instance_id), base_value, multipliers
+	)
+	return result.final_price
+
+
+## Builds a canonical lifecycle multiplier entry for PriceResolver.
+func _build_lifecycle_entry(definition: ItemDefinition) -> Dictionary:
+	var factor: float = get_lifecycle_multiplier(definition)
+	var phase: String = get_lifecycle_phase(definition)
+	return {
+		"slot": "lifecycle",
+		"label": "Lifecycle",
+		"factor": factor,
+		"detail": "Phase: %s" % phase,
+	}
+
+
+## Accumulated per-day revenue attributable to the active demo unit's buff.
+func get_daily_demo_contribution() -> float:
+	return _daily_demo_contribution
 
 
 ## Returns true if a demo item is at 'poor' condition and needs removal.
@@ -379,11 +438,27 @@ func _on_store_exited(store_id: StringName) -> void:
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
+	_daily_demo_contribution = 0.0
 	if _lifecycle:
 		_lifecycle.process_day(day, _electronics_items)
 		_lifecycle.check_phase_transitions(_electronics_items, day)
 	_process_demo_degradation()
 	_process_warranty_claims(day)
+
+
+func _on_item_sold_for_demo(
+	_item_id: String, price: float, category: String
+) -> void:
+	if price <= 0.0 or category.is_empty():
+		return
+	if not has_active_demo_for_category(category):
+		return
+	var bonus: float = _demo_interest_bonus
+	if bonus <= 0.0:
+		return
+	var attribution: float = price * bonus / (1.0 + bonus)
+	_daily_demo_contribution += attribution
+	EventBus.demo_contribution_recorded.emit(attribution)
 
 
 func _on_item_stocked(item_id: String, shelf_id: String) -> void:
@@ -486,6 +561,11 @@ func _process_demo_degradation() -> void:
 		var days_on_demo: int = _current_day - item.demo_placed_day
 		if days_on_demo <= 0:
 			continue
+		var target_factor: float = maxf(
+			1.0 - DEMO_DAILY_DEPRECIATION * float(days_on_demo),
+			DEMO_DEPRECIATION_FLOOR,
+		)
+		item.demo_depreciation_factor = target_factor
 		if days_on_demo % DEMO_DEGRADE_INTERVAL_DAYS != 0:
 			continue
 		var new_condition: String = _degrade_condition(item.condition)

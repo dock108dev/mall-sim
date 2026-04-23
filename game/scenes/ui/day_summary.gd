@@ -18,6 +18,9 @@ const MILESTONE_BANNER_COLOR := Color(1.0, 0.84, 0.0)
 const NET_PROFIT_POSITIVE_COLOR := Color(0.2, 0.8, 0.2)
 const NET_PROFIT_NEGATIVE_COLOR := Color(0.9, 0.2, 0.2)
 const NET_PROFIT_ZERO_COLOR := Color(1.0, 1.0, 1.0)
+const REVENUE_DELTA_POSITIVE_COLOR := Color(0.35, 0.85, 0.35)
+const REVENUE_DELTA_NEGATIVE_COLOR := Color(0.9, 0.45, 0.45)
+const SECONDARY_BUTTON_MODULATE := Color(1.0, 1.0, 1.0, 0.65)
 
 var _anim_tween: Tween
 var _overlay_tween: Tween
@@ -26,6 +29,7 @@ var _continue_tween: Tween
 var _grading_label: Label
 var _current_day: int = 0
 var _discrepancy_label: Label
+var _overdue_count_label: Label
 var _story_beat_label: Label
 var _forward_hook_label: Label
 var _warranty_attach_label: Label
@@ -40,6 +44,8 @@ var _store_revenue_labels: Array[Label] = []
 var _last_net_profit: float = 0.0
 var _last_summary_args: Dictionary = {}
 var _emit_day_acknowledged_on_hide: bool = false
+var _previous_day_revenue: float = -1.0
+var _has_previous_day_revenue: bool = false
 
 @onready var _overlay: ColorRect = $Overlay
 @onready var _panel: PanelContainer = $Panel
@@ -101,8 +107,11 @@ func _ready() -> void:
 		_on_review_inventory_pressed
 	)
 	_create_discrepancy_label()
+	_create_overdue_count_label()
 	_create_narrative_labels()
 	_create_electronics_labels()
+	_apply_headline_order()
+	_style_secondary_actions()
 	EventBus.performance_report_ready.connect(
 		_on_performance_report_ready
 	)
@@ -125,6 +134,13 @@ func show_summary(
 	discrepancy: float = 0.0,
 	staff_wages: float = 0.0,
 ) -> void:
+	if not _last_summary_args.is_empty():
+		var prev_day: int = int(_last_summary_args.get("day", 0))
+		if prev_day > 0 and prev_day != day:
+			_previous_day_revenue = float(
+				_last_summary_args.get("revenue", 0.0)
+			)
+			_has_previous_day_revenue = true
 	_last_summary_args = {
 		"day": day, "revenue": revenue, "expenses": expenses,
 		"net_profit": net_profit, "items_sold": items_sold,
@@ -135,7 +151,7 @@ func show_summary(
 	}
 	_current_day = day
 	_day_label.text = tr("DAY_SUMMARY_TITLE") % day
-	_revenue_label.text = tr("DAY_SUMMARY_REVENUE") % revenue
+	_apply_revenue_headline(revenue)
 	_rent_label.text = tr("DAY_SUMMARY_RENT") % rent
 	_expenses_label.text = tr("DAY_SUMMARY_EXPENSES") % expenses
 	_set_net_profit_display(net_profit)
@@ -147,6 +163,8 @@ func show_summary(
 	_tier_change_label.visible = false
 	_haggle_label.visible = false
 	_late_fee_label.visible = false
+	if _overdue_count_label:
+		_overdue_count_label.visible = false
 	if _grading_label:
 		_grading_label.visible = false
 	_clear_milestones()
@@ -259,6 +277,8 @@ func _get_stat_row_candidates() -> Array[Control]:
 	]
 	if _discrepancy_label:
 		stat_labels.append(_discrepancy_label)
+	if _overdue_count_label:
+		stat_labels.append(_overdue_count_label)
 	if _warranty_attach_label:
 		stat_labels.append(_warranty_attach_label)
 	if _demo_status_label:
@@ -358,6 +378,50 @@ func _apply_net_profit_color() -> void:
 		)
 
 
+func _apply_revenue_headline(revenue: float) -> void:
+	var base: String = tr("DAY_SUMMARY_REVENUE") % revenue
+	if not _has_previous_day_revenue:
+		_revenue_label.text = base
+		_revenue_label.remove_theme_color_override("font_color")
+		return
+	var delta: float = revenue - _previous_day_revenue
+	var delta_text: String
+	var delta_color: Color
+	if delta > 0.0:
+		delta_text = "  (+$%.2f vs yesterday)" % delta
+		delta_color = REVENUE_DELTA_POSITIVE_COLOR
+	elif delta < 0.0:
+		delta_text = "  (-$%.2f vs yesterday)" % absf(delta)
+		delta_color = REVENUE_DELTA_NEGATIVE_COLOR
+	else:
+		delta_text = "  (flat vs yesterday)"
+		delta_color = NET_PROFIT_ZERO_COLOR
+	_revenue_label.text = base + delta_text
+	_revenue_label.add_theme_color_override("font_color", delta_color)
+
+
+## Hoist the top-seller and forward-hook rows above the detail dump
+## so headline signals are visible without scrolling (ISSUE-012).
+func _apply_headline_order() -> void:
+	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var anchor_index: int = _profit_label.get_index() + 1
+	if is_instance_valid(_top_item_label):
+		vbox.move_child(_top_item_label, anchor_index)
+		anchor_index += 1
+	if is_instance_valid(_forward_hook_label):
+		vbox.move_child(_forward_hook_label, anchor_index)
+
+
+## Visually de-emphasize the review-inventory action so the
+## Continue CTA reads as the single primary action (ISSUE-012).
+func _style_secondary_actions() -> void:
+	_review_inventory_button.custom_minimum_size = Vector2(160, 36)
+	_review_inventory_button.flat = true
+	_review_inventory_button.modulate = SECONDARY_BUTTON_MODULATE
+	_review_inventory_button.focus_mode = Control.FOCUS_NONE
+	_continue_button.custom_minimum_size = Vector2(240, 56)
+
+
 func _kill_all_tweens() -> void:
 	PanelAnimator.kill_tween(_anim_tween)
 	PanelAnimator.kill_tween(_overlay_tween)
@@ -430,6 +494,29 @@ func _set_late_fee_display(amount: float) -> void:
 	_late_fee_label.visible = has_fees
 	if has_fees:
 		_late_fee_label.text = "Late Fees Collected: +$%.2f" % amount
+
+
+func _create_overdue_count_label() -> void:
+	_overdue_count_label = Label.new()
+	_overdue_count_label.name = "OverdueCountLabel"
+	_overdue_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_overdue_count_label.visible = false
+	var vbox: VBoxContainer = $Panel/Margin/VBox
+	vbox.add_child(_overdue_count_label)
+	vbox.move_child(
+		_overdue_count_label, _late_fee_label.get_index() + 1
+	)
+
+
+func _set_overdue_count_display(count: int) -> void:
+	if not _overdue_count_label:
+		return
+	_overdue_count_label.visible = count > 0
+	if count > 0:
+		_overdue_count_label.text = "Overdue Rentals: %d" % count
+		_overdue_count_label.add_theme_color_override(
+			"font_color", Color(0.9, 0.7, 0.3)
+		)
 
 
 func _set_haggle_display(wins: int, losses: int) -> void:
@@ -598,7 +685,15 @@ func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void
 		)
 	_demo_status_label.visible = true
 	if demo_active:
-		_demo_status_label.text = "Demo Unit: Active"
+		var contribution: float = float(
+			_last_summary_args.get("demo_contribution_revenue", 0.0)
+		)
+		if contribution > 0.0:
+			_demo_status_label.text = (
+				"Demo Unit: Active — Contribution: +$%.2f" % contribution
+			)
+		else:
+			_demo_status_label.text = "Demo Unit: Active"
 		_demo_status_label.add_theme_color_override(
 			"font_color", UIThemeConstants.get_positive_color()
 		)
@@ -735,8 +830,12 @@ func _on_performance_report_ready(
 	_set_narrative_display(report.story_beat, report.forward_hook)
 	_set_haggle_display(report.haggle_wins, report.haggle_losses)
 	_set_late_fee_display(report.late_fee_income)
+	_set_overdue_count_display(report.overdue_items_count)
 	_set_warranty_display(
 		report.warranty_revenue, report.warranty_claim_costs
+	)
+	_last_summary_args["demo_contribution_revenue"] = (
+		report.demo_contribution_revenue
 	)
 	_set_warranty_attach_display(
 		report.warranty_attach_rate, report.electronics_demo_active

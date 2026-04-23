@@ -13,6 +13,7 @@ var _types: Dictionary = {}
 var _resources: Dictionary = {}
 var _warned_missing_scenes: Dictionary = {}
 var _warned_helper_fallbacks: Dictionary = {}
+var _duplicate_errors: Array[String] = []
 var _id_regex: RegEx
 var _ready_flag: bool = false
 
@@ -128,6 +129,50 @@ func get_scene_path(id: StringName) -> String:
 	return _scene_map.get(canonical, "")
 
 
+## Returns the routing payload for a store ID as a Dictionary with keys
+## `scene_path` (String), `inventory_type` (StringName),
+## `interaction_set_id` (StringName), `tutorial_context_id` (StringName).
+## Returns an empty Dictionary and emits push_error for unknown IDs or stores
+## missing any routing field — the single source of truth for store
+## category → scene → data binding (ISSUE-001, DESIGN.md §1.2).
+func get_store_route(id: StringName) -> Dictionary:
+	var canonical: StringName = _resolve_resource_id(id)
+	if canonical.is_empty():
+		_emit_error(
+			"ContentRegistry: get_store_route unknown store_id '%s'" % id
+		)
+		return {}
+	var resource: Resource = _resources.get(canonical)
+	var store: StoreDefinition = resource as StoreDefinition
+	if store == null:
+		_emit_error(
+			"ContentRegistry: get_store_route id '%s' is not a store" % canonical
+		)
+		return {}
+	var missing: Array[String] = []
+	if store.scene_path.is_empty():
+		missing.append("scene_path")
+	if store.inventory_type == &"":
+		missing.append("inventory_type")
+	if store.interaction_set_id == &"":
+		missing.append("interaction_set_id")
+	if store.tutorial_context_id == &"":
+		missing.append("tutorial_context_id")
+	if not missing.is_empty():
+		_emit_error(
+			"ContentRegistry: store '%s' missing route fields: %s"
+			% [canonical, ", ".join(missing)]
+		)
+		return {}
+	return {
+		"store_id": canonical,
+		"scene_path": store.scene_path,
+		"inventory_type": store.inventory_type,
+		"interaction_set_id": store.interaction_set_id,
+		"tutorial_context_id": store.tutorial_context_id,
+	}
+
+
 ## Returns a typed item definition resource for a canonical or alias ID.
 func get_item_definition(id: StringName) -> ItemDefinition:
 	return _get_typed_resource(id, "item") as ItemDefinition
@@ -163,6 +208,7 @@ func clear_for_testing() -> void:
 	_resources.clear()
 	_warned_missing_scenes.clear()
 	_warned_helper_fallbacks.clear()
+	_duplicate_errors.clear()
 	_ready_flag = false
 	DataLoaderSingleton.clear_for_testing()
 	ReputationSystemSingleton.reset()
@@ -199,7 +245,11 @@ func register(
 		)
 		return
 	if _resources.has(id):
-		_emit_error("ContentRegistry: duplicate ID '%s'" % raw_id)
+		var existing_type: String = str(_types.get(id, ""))
+		_record_duplicate(
+			"ContentRegistry: duplicate resource ID '%s' (existing type '%s', new type '%s')"
+			% [raw_id, existing_type, content_type]
+		)
 		return
 	_resources[id] = resource
 	if not _types.has(id):
@@ -214,8 +264,13 @@ func register_entry(
 
 
 ## Checks cross-references between registered resources.
+## Includes duplicate-id and alias-conflict errors recorded during registration
+## so boot fails loudly when any id or alias resolves to more than one target
+## (ISSUE-010).
 func validate_all_references() -> Array[String]:
 	var errors: Array[String] = []
+	for message: String in _duplicate_errors:
+		errors.append(message)
 	for id: StringName in _resources:
 		var resource: Resource = _resources[id]
 		if resource is ItemDefinition:
@@ -292,6 +347,16 @@ func _validate_store(
 	id: StringName, store: StoreDefinition,
 	errors: Array[String]
 ) -> void:
+	# ISSUE-001: every store must expose a complete routing payload so boot
+	# fails loud rather than silently falling back to another store's wiring.
+	if store.scene_path.is_empty():
+		errors.append("Store '%s' missing scene_path" % id)
+	if store.inventory_type == &"":
+		errors.append("Store '%s' missing inventory_type" % id)
+	if store.interaction_set_id == &"":
+		errors.append("Store '%s' missing interaction_set_id" % id)
+	if store.tutorial_context_id == &"":
+		errors.append("Store '%s' missing tutorial_context_id" % id)
 	for item_id: String in store.starting_inventory:
 		if item_id.is_empty():
 			continue
@@ -343,7 +408,11 @@ func _register_entry(
 		)
 		return
 	if _entries.has(id):
-		_emit_error("ContentRegistry: duplicate ID '%s'" % raw_id)
+		var existing_type: String = str(_types.get(id, ""))
+		_record_duplicate(
+			"ContentRegistry: duplicate entry ID '%s' (existing type '%s', new type '%s')"
+			% [raw_id, existing_type, content_type]
+		)
 		return
 	_entries[id] = entry
 	_types[id] = content_type
@@ -381,7 +450,7 @@ func _register_alias(
 		)
 		return
 	if _aliases.has(alias) and _aliases[alias] != canonical:
-		_emit_warning(
+		_record_duplicate(
 			"ContentRegistry: alias '%s' maps to both '%s' and '%s'"
 			% [alias, _aliases[alias], canonical]
 		)
@@ -399,6 +468,13 @@ func _report_unknown_id(raw: String, normalized: StringName) -> void:
 
 
 func _emit_error(message: String) -> void:
+	push_error(message)
+
+
+## Records a duplicate-id or alias-conflict error for boot-time validation.
+## Boot fails loudly when any of these accumulate (see validate_all_references).
+func _record_duplicate(message: String) -> void:
+	_duplicate_errors.append(message)
 	push_error(message)
 
 

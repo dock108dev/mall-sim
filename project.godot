@@ -52,6 +52,7 @@ StoreRegistry="*res://game/autoload/store_registry.gd"
 StoreDirector="*res://game/autoload/store_director.gd"
 RunState="*res://game/autoload/game_state.gd"
 FailCard="*res://game/scenes/ui/fail_card.tscn"
+TutorialContextSystem="*res://game/autoload/tutorial_context_system.gd"
 
 [debug]
 

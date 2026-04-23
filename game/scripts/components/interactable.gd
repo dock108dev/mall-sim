@@ -44,6 +44,10 @@ const _OUTLINE_MATERIAL: ShaderMaterial = preload(
 )
 
 @export var interaction_type: InteractionType = InteractionType.ITEM
+## ISSUE-003: stable identifier used as the subject of the scoped
+## `EventBus.interactable_clicked` / `_hovered` signals. When left empty the
+## node's runtime name is used so existing scene data continues to round-trip.
+@export var interactable_id: StringName = &""
 @export var display_name: String = "Item"
 ## ISSUE-017: action verb the StoreController/StoreReadyContract uses to
 ## prove the HUD objective text references a real interactable in the scene
@@ -64,6 +68,11 @@ const _OUTLINE_MATERIAL: ShaderMaterial = preload(
 		return display_name
 	set(value):
 		display_name = value
+
+## ISSUE-003: store_id is assigned by the owning StoreController on registration
+## so scoped EventBus signals can identify which store an interactable belongs
+## to without listeners needing to climb the scene tree.
+var store_id: StringName = &""
 
 var _interaction_area: Area3D = null
 var _original_materials: Array[Material] = []
@@ -151,6 +160,16 @@ func interact(by: Node = null) -> void:
 	interacted.emit()
 	interacted_by.emit(by)
 	EventBus.interactable_interacted.emit(self, interaction_type)
+	EventBus.interactable_clicked.emit(resolve_interactable_id(), store_id)
+
+
+## ISSUE-003: resolves the stable id used for scoped EventBus routing. Falls
+## back to the node's runtime name so existing scene data keeps working
+## without an explicit export.
+func resolve_interactable_id() -> StringName:
+	if interactable_id != &"":
+		return interactable_id
+	return StringName(name)
 
 
 ## Resolves an Interactable from a collider hit by the player's interaction ray.

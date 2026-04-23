@@ -213,6 +213,32 @@ func get_tracked_item_count() -> int:
 	return maxi(_conditions.size(), _wear.size())
 
 
+## Maps a wear value in [0, 1] to a customer appeal factor in [0.5, 1.0].
+## Low wear (≤0.2) keeps full appeal; wear beyond that linearly erodes appeal
+## down to 0.5 at maximum wear. Used by the rental customer appeal formula.
+static func compute_appeal_factor(wear_amount: float) -> float:
+	var w: float = clampf(wear_amount, 0.0, 1.0)
+	if w <= 0.2:
+		return 1.0
+	var erosion: float = (w - 0.2) / 0.8
+	return clampf(1.0 - 0.5 * erosion, 0.5, 1.0)
+
+
+## Categorizes a wear value for UI display: "pristine", "light", "moderate",
+## "heavy", or "worn_out".
+static func classify_wear(wear_amount: float) -> String:
+	var w: float = clampf(wear_amount, 0.0, 1.0)
+	if w <= 0.2:
+		return "pristine"
+	if w <= 0.4:
+		return "light"
+	if w <= 0.6:
+		return "moderate"
+	if w + WEAR_EPSILON < float(CONDITION_TO_WEAR[POOREST_CONDITION]):
+		return "heavy"
+	return "worn_out"
+
+
 ## Returns true when the tape can still be rented.
 func is_rentable(instance_id: String) -> bool:
 	if instance_id.is_empty() or not _conditions.has(instance_id):
@@ -229,17 +255,64 @@ func erase_item(instance_id: String) -> void:
 	_media_types.erase(instance_id)
 
 
-## Serializes per-item play counts for save/load.
+## Serializes per-item wear state for save/load.
+## Format: {version: 2, items: {instance_id: {play_count, wear, condition, media_type}}}.
+## Version 1 (flat play_counts only) still loads for backward compat.
 func get_save_data() -> Dictionary:
-	return _play_counts.duplicate()
+	var items: Dictionary = {}
+	var ids: Dictionary = {}
+	for id_key: Variant in _play_counts.keys():
+		ids[str(id_key)] = true
+	for id_key: Variant in _wear.keys():
+		ids[str(id_key)] = true
+	for id_key: Variant in _conditions.keys():
+		ids[str(id_key)] = true
+	for id_str: String in ids.keys():
+		items[id_str] = {
+			"play_count": int(_play_counts.get(id_str, 0)),
+			"wear": float(_wear.get(id_str, 0.0)),
+			"condition": str(_conditions.get(id_str, "good")),
+			"media_type": str(_media_types.get(id_str, "")),
+			"written_off": bool(_written_off.get(id_str, false)),
+		}
+	return {"version": 2, "items": items}
 
 
-## Restores saved play counts.
+## Restores saved wear state. Accepts v2 nested format or v1 flat play-count map.
 func load_save_data(data: Dictionary) -> void:
 	_play_counts = {}
 	_conditions = {}
 	_written_off = {}
+	_wear = {}
+	_media_types = {}
+	var items_data: Variant = data.get("items", null)
+	if items_data is Dictionary:
+		for raw_key: Variant in (items_data as Dictionary).keys():
+			var instance_id: String = str(raw_key)
+			var entry: Variant = (items_data as Dictionary)[raw_key]
+			if not (entry is Dictionary):
+				continue
+			var row: Dictionary = entry as Dictionary
+			_play_counts[instance_id] = clampi(
+				int(row.get("play_count", 0)),
+				0,
+				RENTALS_PER_CONDITION_DROP,
+			)
+			_wear[instance_id] = clampf(
+				float(row.get("wear", 0.0)), 0.0, 1.0
+			)
+			_conditions[instance_id] = _normalize_condition(
+				str(row.get("condition", "good"))
+			)
+			var mt: String = str(row.get("media_type", ""))
+			if _is_media_type(mt):
+				_media_types[instance_id] = mt
+			_written_off[instance_id] = bool(row.get("written_off", false))
+		return
+	# Backward compat: legacy flat {instance_id: play_count}.
 	for raw_key: Variant in data.keys():
+		if raw_key == "version" or raw_key == "items":
+			continue
 		var instance_id: String = str(raw_key)
 		_play_counts[instance_id] = clampi(
 			int(data[raw_key]),

@@ -3,21 +3,36 @@
     "id": "bargain_hunter",
     "name": "Bargain Hunter",
     "wtp_multiplier": 0.85,
-    "preferred_types": ["retro_games", "rentals", "pocket_creatures"],
+    "preferred_types": [
+      "retro_games",
+      "rentals",
+      "pocket_creatures"
+    ],
     "haggle_probability": 0.65
   },
   {
     "id": "enthusiast",
     "name": "Enthusiast",
-    "wtp_multiplier": 1.30,
-    "preferred_types": ["pocket_creatures", "sports", "retro_games", "electronics"],
-    "haggle_probability": 0.10
+    "wtp_multiplier": 1.3,
+    "preferred_types": [
+      "pocket_creatures",
+      "sports",
+      "retro_games",
+      "electronics"
+    ],
+    "haggle_probability": 0.1
   },
   {
     "id": "casual_shopper",
     "name": "Casual Shopper",
     "wtp_multiplier": 1.05,
-    "preferred_types": ["electronics", "rentals", "retro_games", "pocket_creatures", "sports"],
-    "haggle_probability": 0.20
+    "preferred_types": [
+      "electronics",
+      "rentals",
+      "retro_games",
+      "pocket_creatures",
+      "sports"
+    ],
+    "haggle_probability": 0.2
   }
 ]

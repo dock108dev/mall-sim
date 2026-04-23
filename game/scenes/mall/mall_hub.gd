@@ -25,16 +25,21 @@ const _KPI_SCENE: PackedScene = preload("res://game/scenes/ui/kpi_strip.tscn")
 const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
 )
+const _META_NOTIFICATION_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/meta_notification_overlay.tscn"
+)
 
 var _duck_tween: Tween = null
 var _normal_volume_db: float = -6.0
 var _kpi_strip: Control = null
 var _settings_panel: SettingsPanel = null
+var _meta_notifications: MetaNotificationOverlay = null
 
 @onready var _storefront_row: Node2D = $HubLayer/ConcourseRoot/StorefrontRow
 @onready var _ambient_layer: Node2D = $HubLayer/ConcourseRoot/AmbientCustomers
 @onready var _ambience_player: AudioStreamPlayer = $HubAmbiencePlayer
 @onready var _hub_layer: CanvasLayer = $HubLayer
+@onready var _hub_ui_overlay: Control = $HubLayer/HubUIOverlay
 @onready var _sneaker_citadel_tile: Button = %SneakerCitadelTile
 
 
@@ -47,6 +52,7 @@ func _ready() -> void:
 	EventBus.objective_updated.connect(_on_objective_updated)
 	_start_hub_ambience()
 	_setup_kpi_strip()
+	_setup_meta_notifications()
 	_wire_sneaker_citadel_tile()
 	_push_mall_hub_input_focus()
 	_connect_store_director_failed()
@@ -83,11 +89,26 @@ func _setup_kpi_strip() -> void:
 	_kpi_strip.offset_bottom = 64.0
 
 
+## ISSUE-023: hub-level surface for ambient-moment and secret-thread signals.
+## Lives under the hub layer so it inherently does not exist during boot
+## (mall_hub is post-boot) and auto-hides when a store scene is active.
+func _setup_meta_notifications() -> void:
+	_meta_notifications = _META_NOTIFICATION_SCENE.instantiate() as MetaNotificationOverlay
+	_hub_layer.add_child(_meta_notifications)
+
+
 func _on_settings_pressed() -> void:
 	if _settings_panel == null:
 		_settings_panel = _SETTINGS_PANEL_SCENE.instantiate() as SettingsPanel
 		add_child(_settings_panel)
 	_settings_panel.open()
+
+
+## ISSUE-022: Progress button routes to the Completion Tracker panel via
+## EventBus so the hub stays decoupled from the panel instance (which lives
+## under game_world's UI layer).
+func _on_progress_pressed() -> void:
+	EventBus.toggle_completion_tracker_panel.emit()
 
 
 func _on_storefront_clicked(store_id: StringName) -> void:
@@ -99,6 +120,7 @@ func _on_store_entered(_store_id: StringName) -> void:
 	_ambient_layer.hide()
 	if _kpi_strip != null:
 		_kpi_strip.hide()
+	_set_hub_input_enabled(false)
 
 
 func _on_store_exited(_store_id: StringName) -> void:
@@ -106,6 +128,31 @@ func _on_store_exited(_store_id: StringName) -> void:
 	_ambient_layer.show()
 	if _kpi_strip != null:
 		_kpi_strip.show()
+	_set_hub_input_enabled(true)
+
+
+## ISSUE-002: while a store scene is active, the mall hub shares the viewport.
+## Hub buttons (e.g. SneakerCitadelTile at top-left) and StorefrontCard Area2D
+## pickers must not intercept clicks or a player-click inside the store would
+## navigate away. Acceptance: hub Controls are IGNORE + DISABLED, and card
+## click areas stop picking input.
+func _set_hub_input_enabled(enabled: bool) -> void:
+	if _hub_ui_overlay != null:
+		_hub_ui_overlay.visible = enabled
+		# Overlay itself stays MOUSE_FILTER_IGNORE (its Button children are the
+		# STOP targets); toggling visibility + process_mode is what blocks them.
+		_hub_ui_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_hub_ui_overlay.process_mode = (
+			Node.PROCESS_MODE_INHERIT if enabled else Node.PROCESS_MODE_DISABLED
+		)
+	if _storefront_row != null:
+		_storefront_row.process_mode = (
+			Node.PROCESS_MODE_INHERIT if enabled else Node.PROCESS_MODE_DISABLED
+		)
+		for card: Node in _storefront_row.get_children():
+			var click_area: Area2D = card.get_node_or_null("ClickArea") as Area2D
+			if click_area != null:
+				click_area.input_pickable = enabled
 
 
 ## When an objective payload carries a "goto:<store_id>" optional_hint,

@@ -1,9 +1,10 @@
 {
+  "type": "onboarding_config_data",
   "hints": [
     {
       "id": "hint_day_start",
       "trigger": "day_start",
-      "message": "A new day begins — check your orders and prepare for customers.",
+      "message": "A new day begins \u2014 check your orders and prepare for customers.",
       "position_hint": "bottom_left",
       "display_duration_sec": 5.0
     },
@@ -17,7 +18,7 @@
     {
       "id": "hint_first_customer_spawned",
       "trigger": "first_customer_spawned",
-      "message": "A customer just walked in — they'll browse and buy if they find what they want.",
+      "message": "A customer just walked in \u2014 they'll browse and buy if they find what they want.",
       "position_hint": "bottom_left",
       "display_duration_sec": 5.0
     },
@@ -31,14 +32,14 @@
     {
       "id": "hint_inventory_low",
       "trigger": "inventory_low",
-      "message": "Your inventory is running low — place a restocking order soon.",
+      "message": "Your inventory is running low \u2014 place a restocking order soon.",
       "position_hint": "bottom_right",
       "display_duration_sec": 5.0
     },
     {
       "id": "hint_day_ending_soon",
       "trigger": "day_ending_soon",
-      "message": "The mall is closing soon — wrap up any active transactions.",
+      "message": "The mall is closing soon \u2014 wrap up any active transactions.",
       "position_hint": "top_center",
       "display_duration_sec": 5.0
     },
@@ -59,7 +60,7 @@
     {
       "id": "hint_reputation_changed",
       "trigger": "reputation_changed",
-      "message": "Your reputation score has changed — it affects customer traffic and unlock thresholds.",
+      "message": "Your reputation score has changed \u2014 it affects customer traffic and unlock thresholds.",
       "position_hint": "top_center",
       "display_duration_sec": 5.0
     },

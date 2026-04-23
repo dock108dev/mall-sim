@@ -1,4 +1,5 @@
 {
+  "type": "audio_registry_data",
   "sfx": {
     "purchase_chime": "purchase_chime.wav",
     "purchase_ding": "purchase_chime.wav",

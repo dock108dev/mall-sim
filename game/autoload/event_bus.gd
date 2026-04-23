@@ -263,6 +263,20 @@ signal card_rejected(item_id: StringName)
 ## Emitted after authentication succeeds with the assigned grade (F/D/C/B/A/S).
 signal card_graded(item_id: StringName, grade: String)
 
+# ── Sports Cards — Grading Hint & Fake Sale Penalty (ISSUE-018) ──────────────
+## Emitted by SportsMemorabiliaController.request_grading_hint() after a paid
+## probabilistic hint is stamped onto the item. hint is one of
+## "authentic" | "questionable" | "fake"; fee is the charge deducted.
+signal grading_hint_revealed(item_id: StringName, hint: String, fee: float)
+## Emitted when the player sells a card the hidden true_authenticity of which
+## is "fake" while declaring it authentic. reputation_delta is negative.
+signal fake_sold_as_authentic(
+	item_id: StringName,
+	store_id: StringName,
+	price: float,
+	reputation_delta: float,
+)
+
 # ── Sports Cards — ACC Numeric Grading (ISSUE-015) ───────────────────────────
 ## Emitted when the player submits a card to the Apex Card Certification service.
 ## card_id is the item instance_id; day_submitted is the current game day.
@@ -375,6 +389,11 @@ signal demo_interaction_triggered(item_id: String)
 signal demo_unit_activated(item_id: String, category: String)
 ## Emitted when a demo unit is removed from the floor (canonical mechanic signal).
 signal demo_unit_removed(item_id: String, days_on_demo: int)
+## Emitted when a demo unit is retired to inventory at its depreciated value.
+signal demo_item_retired(item_id: String, remaining_value: float)
+## Emitted when a same-category sale occurs while a demo unit is active. The
+## amount is the portion of the sale price attributable to the demo buff.
+signal demo_contribution_recorded(amount: float)
 
 # ── Electronics Lifecycle ─────────────────────────────────────────────────────
 signal electronics_product_announced(product_line: String, generation: int, launch_day: int)
@@ -415,6 +434,14 @@ signal tutorial_completed()
 signal tutorial_skipped()
 signal skip_tutorial_requested()
 signal contextual_tip_requested(tip_text: String)
+## ISSUE-004: emitted when the active tutorial context swaps to the store the
+## player just entered. `context_id` is the StoreDefinition.tutorial_context_id;
+## `first_step_text` is the localized prompt for the first step of that context.
+signal tutorial_context_entered(
+	store_id: StringName, context_id: StringName, first_step_text: String
+)
+## ISSUE-004: emitted when leaving a store clears the active tutorial context.
+signal tutorial_context_cleared()
 
 # ── Onboarding ───────────────────────────────────────────────────────────────
 signal onboarding_hint_shown(hint_id: StringName, message: String, position_hint: String)
@@ -493,6 +520,16 @@ signal interactable_interacted(target: Interactable, type: int)
 signal interactable_right_clicked(target: Interactable, type: int)
 signal interactable_focused(action_label: String)
 signal interactable_unfocused()
+## ISSUE-003: scoped hover and click events tagged with the interactable's
+## stable id and its owning store_id. Listeners should prefer these over the
+## target-reference signals above when they need to reason about *which*
+## interactable in *which* store fired — no global fallback handler exists.
+signal interactable_hovered(
+	interactable_id: StringName, store_id: StringName, label: String
+)
+signal interactable_clicked(
+	interactable_id: StringName, store_id: StringName
+)
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 ## Emitted when a hub store card should be highlighted (e.g. from objective routing).
@@ -500,6 +537,8 @@ signal hub_store_highlighted(store_id: StringName)
 signal toggle_milestones_panel()
 signal toggle_staff_panel()
 signal toggle_refurb_queue_panel()
+## ISSUE-022: opens/closes the hub-accessible Completion Tracker panel.
+signal toggle_completion_tracker_panel()
 signal notification_requested(message: String)
 ## Emitted by any system requesting a non-blocking player notification.
 signal toast_requested(message: String, category: StringName, duration: float)

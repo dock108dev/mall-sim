@@ -1,4 +1,5 @@
 {
+  "type": "ending",
   "endings": [
     {
       "id": "the_mall_between_the_walls",
@@ -9,7 +10,11 @@
       "priority": 0,
       "category": "secret",
       "required_all": [
-        { "stat_key": "ghost_tenant_thread_completed", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "ghost_tenant_thread_completed",
+          "operator": "eq",
+          "value": 1.0
+        }
       ],
       "required_any": [],
       "forbidden_all": []
@@ -23,8 +28,16 @@
       "priority": 1,
       "category": "secret",
       "required_all": [
-        { "stat_key": "secret_threads_completed", "operator": "gte", "value": 4.0 },
-        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 25000.0 }
+        {
+          "stat_key": "secret_threads_completed",
+          "operator": "gte",
+          "value": 4.0
+        },
+        {
+          "stat_key": "cumulative_revenue",
+          "operator": "gte",
+          "value": 25000.0
+        }
       ],
       "required_any": [],
       "forbidden_all": []
@@ -38,8 +51,16 @@
       "priority": 2,
       "category": "bankruptcy",
       "required_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 },
-        { "stat_key": "days_survived", "operator": "lte", "value": 7.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        },
+        {
+          "stat_key": "days_survived",
+          "operator": "lte",
+          "value": 7.0
+        }
       ],
       "required_any": [],
       "forbidden_all": []
@@ -53,9 +74,21 @@
       "priority": 3,
       "category": "bankruptcy",
       "required_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 },
-        { "stat_key": "days_survived", "operator": "gte", "value": 8.0 },
-        { "stat_key": "days_survived", "operator": "lte", "value": 14.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        },
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 8.0
+        },
+        {
+          "stat_key": "days_survived",
+          "operator": "lte",
+          "value": 14.0
+        }
       ],
       "required_any": [],
       "forbidden_all": []
@@ -69,8 +102,16 @@
       "priority": 4,
       "category": "bankruptcy",
       "required_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 },
-        { "stat_key": "days_survived", "operator": "gte", "value": 15.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        },
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 15.0
+        }
       ],
       "required_any": [],
       "forbidden_all": []
@@ -84,14 +125,34 @@
       "priority": 5,
       "category": "success",
       "required_all": [
-        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 50000.0 },
-        { "stat_key": "max_reputation_tier", "operator": "gte", "value": 4.0 },
-        { "stat_key": "satisfaction_ratio", "operator": "gte", "value": 0.85 },
-        { "stat_key": "days_survived", "operator": "gte", "value": 30.0 }
+        {
+          "stat_key": "cumulative_revenue",
+          "operator": "gte",
+          "value": 50000.0
+        },
+        {
+          "stat_key": "max_reputation_tier",
+          "operator": "gte",
+          "value": 4.0
+        },
+        {
+          "stat_key": "satisfaction_ratio",
+          "operator": "gte",
+          "value": 0.85
+        },
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 30.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ],
       "stat_summary_keys": [
         "cumulative_revenue",
@@ -110,13 +171,29 @@
       "priority": 6,
       "category": "success",
       "required_all": [
-        { "stat_key": "owned_store_count_final", "operator": "gte", "value": 1.0 },
-        { "stat_key": "max_reputation_tier", "operator": "gte", "value": 4.0 },
-        { "stat_key": "days_survived", "operator": "gte", "value": 30.0 }
+        {
+          "stat_key": "owned_store_count_final",
+          "operator": "gte",
+          "value": 1.0
+        },
+        {
+          "stat_key": "max_reputation_tier",
+          "operator": "gte",
+          "value": 4.0
+        },
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 30.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -128,12 +205,24 @@
       "priority": 7,
       "category": "success",
       "required_all": [
-        { "stat_key": "owned_store_count_final", "operator": "eq", "value": 5.0 },
-        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 25000.0 }
+        {
+          "stat_key": "owned_store_count_final",
+          "operator": "eq",
+          "value": 5.0
+        },
+        {
+          "stat_key": "cumulative_revenue",
+          "operator": "gte",
+          "value": 25000.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -145,12 +234,24 @@
       "priority": 8,
       "category": "success",
       "required_all": [
-        { "stat_key": "owned_store_count_final", "operator": "gte", "value": 3.0 },
-        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 10000.0 }
+        {
+          "stat_key": "owned_store_count_final",
+          "operator": "gte",
+          "value": 3.0
+        },
+        {
+          "stat_key": "cumulative_revenue",
+          "operator": "gte",
+          "value": 10000.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -162,13 +263,29 @@
       "priority": 9,
       "category": "success",
       "required_all": [
-        { "stat_key": "satisfied_customer_count", "operator": "gte", "value": 200.0 },
-        { "stat_key": "haggle_never_used", "operator": "eq", "value": 1.0 },
-        { "stat_key": "max_reputation_tier", "operator": "gte", "value": 3.0 }
+        {
+          "stat_key": "satisfied_customer_count",
+          "operator": "gte",
+          "value": 200.0
+        },
+        {
+          "stat_key": "haggle_never_used",
+          "operator": "eq",
+          "value": 1.0
+        },
+        {
+          "stat_key": "max_reputation_tier",
+          "operator": "gte",
+          "value": 3.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -180,13 +297,29 @@
       "priority": 10,
       "category": "survival",
       "required_all": [
-        { "stat_key": "days_survived", "operator": "gte", "value": 30.0 },
-        { "stat_key": "final_cash", "operator": "gt", "value": 0.0 },
-        { "stat_key": "cumulative_revenue", "operator": "lt", "value": 2000.0 }
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 30.0
+        },
+        {
+          "stat_key": "final_cash",
+          "operator": "gt",
+          "value": 0.0
+        },
+        {
+          "stat_key": "cumulative_revenue",
+          "operator": "lt",
+          "value": 2000.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -198,13 +331,29 @@
       "priority": 11,
       "category": "survival",
       "required_all": [
-        { "stat_key": "days_survived", "operator": "gte", "value": 30.0 },
-        { "stat_key": "cumulative_revenue", "operator": "gte", "value": 2000.0 },
-        { "stat_key": "cumulative_revenue", "operator": "lt", "value": 10000.0 }
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 30.0
+        },
+        {
+          "stat_key": "cumulative_revenue",
+          "operator": "gte",
+          "value": 2000.0
+        },
+        {
+          "stat_key": "cumulative_revenue",
+          "operator": "lt",
+          "value": 10000.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -216,13 +365,29 @@
       "priority": 12,
       "category": "survival",
       "required_all": [
-        { "stat_key": "days_near_bankruptcy", "operator": "gte", "value": 10.0 },
-        { "stat_key": "days_survived", "operator": "gte", "value": 30.0 },
-        { "stat_key": "final_cash", "operator": "gt", "value": 0.0 }
+        {
+          "stat_key": "days_near_bankruptcy",
+          "operator": "gte",
+          "value": 10.0
+        },
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 30.0
+        },
+        {
+          "stat_key": "final_cash",
+          "operator": "gt",
+          "value": 0.0
+        }
       ],
       "required_any": [],
       "forbidden_all": [
-        { "stat_key": "trigger_type_bankruptcy", "operator": "eq", "value": 1.0 }
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
       ]
     }
   ]

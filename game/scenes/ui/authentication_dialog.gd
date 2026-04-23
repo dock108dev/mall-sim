@@ -24,6 +24,12 @@ var _anim_tween: Tween
 @onready var _cost_label: Label = (
 	$PanelRoot/Margin/VBox/InfoVBox/CostLabel
 )
+@onready var _known_state_label: Label = (
+	$PanelRoot/Margin/VBox/InfoVBox/KnownStateLabel
+)
+@onready var _hint_cost_label: Label = (
+	$PanelRoot/Margin/VBox/InfoVBox/HintCostLabel
+)
 @onready var _error_label: Label = (
 	$PanelRoot/Margin/VBox/InfoVBox/ErrorLabel
 )
@@ -110,6 +116,13 @@ func _populate(item: ItemInstance) -> void:
 	var fee: float = _authentication_system.get_auth_fee()
 	_cost_label.text = "Authentication Fee: $%.2f" % fee
 	_confirm_button.text = "Authenticate ($%.2f)" % fee
+	var known: String = item.revealed_authenticity
+	if known.is_empty():
+		known = "unknown"
+	_known_state_label.text = "Known state: %s" % known.capitalize()
+	_hint_cost_label.text = (
+		"Grading hint: $%.2f" % SportsMemorabiliaController.GRADING_HINT_FEE
+	)
 
 
 func _on_confirm() -> void:

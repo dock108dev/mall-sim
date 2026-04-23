@@ -103,6 +103,101 @@ func get_late_fee_policy() -> LateFeePolicy:
 	return _late_fee_policy
 
 
+## Returns the selectable rental duration options for an item, ordered by length.
+## Each entry: {tier, days, price, label}. Price is the effective rental fee for
+## that tier on the given day; tiers inherit the item's base rental_fee and
+## scale by duration multiplier so UIs can show at least two meaningful choices.
+func get_rental_duration_options(
+	item: ItemInstance, current_day: int
+) -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	if not item or not item.definition:
+		return options
+	var base_fee: float = resolve_rental_price(item, current_day)
+	if base_fee <= 0.0:
+		base_fee = item.definition.rental_fee
+	var tiers: Array = [
+		{"tier": "overnight", "label": "Overnight (1 day)", "scale": 1.0},
+		{"tier": "three_day", "label": "Three-day", "scale": 2.0},
+		{"tier": "weekly", "label": "Weekly (7 days)", "scale": 3.5},
+	]
+	for row: Dictionary in tiers:
+		var tier: String = row["tier"]
+		var days: int = int(RENTAL_DURATIONS.get(tier, 3))
+		var price: float = snappedf(base_fee * float(row["scale"]), 0.01)
+		options.append({
+			"tier": tier,
+			"days": days,
+			"price": price,
+			"label": row["label"],
+		})
+	return options
+
+
+## Rents an item using the chosen tier. Returns a rental record with
+## tape_id, due_day, and price keys (matches ISSUE-014 acceptance language).
+## Returns an empty dict when the item is missing, unrentable, or already out.
+## Returns {blocked_by_late_fees: true, customer_id, pending_total, pending_items}
+## when the customer has unresolved pending late fees (ISSUE-015).
+func rent_item(
+	item_instance_id: String,
+	rental_tier: String,
+	current_day: int,
+	customer_id: String = "",
+) -> Dictionary:
+	if item_instance_id.is_empty():
+		push_warning("VideoRental: rent_item called with empty instance_id")
+		return {}
+	if not customer_id.is_empty():
+		var pending: Dictionary = get_pending_fees_for_customer(customer_id)
+		if float(pending.get("total", 0.0)) > 0.0:
+			return {
+				"blocked_by_late_fees": true,
+				"customer_id": customer_id,
+				"pending_total": pending["total"],
+				"pending_items": pending["items"],
+			}
+	if rental_records.has(item_instance_id):
+		push_warning(
+			"VideoRental: item %s already rented" % item_instance_id
+		)
+		return {}
+	if not _inventory_system:
+		push_warning("VideoRental: rent_item without inventory_system")
+		return {}
+	var item: ItemInstance = _inventory_system.get_item(item_instance_id)
+	if not item or not item.definition:
+		push_warning(
+			"VideoRental: rent_item unknown item %s" % item_instance_id
+		)
+		return {}
+	if not is_rentable(item):
+		return {}
+	if not RENTAL_DURATIONS.has(rental_tier):
+		rental_tier = "three_day"
+	var options: Array[Dictionary] = get_rental_duration_options(item, current_day)
+	var price: float = item.definition.rental_fee
+	for opt: Dictionary in options:
+		if String(opt.get("tier", "")) == rental_tier:
+			price = float(opt.get("price", price))
+			break
+	var record: Dictionary = process_rental(
+		item_instance_id,
+		String(item.definition.category),
+		rental_tier,
+		price,
+		current_day,
+		customer_id,
+	)
+	return {
+		"tape_id": item_instance_id,
+		"due_day": int(record.get("return_day", -1)),
+		"price": price,
+		"rental_tier": rental_tier,
+		"record": record,
+	}
+
+
 ## Processes a rental checkout: records rental and initializes tape wear.
 func process_rental(
 	item_instance_id: String,
@@ -194,12 +289,16 @@ func waive_late_fee(item_id: String) -> bool:
 	var rep_delta: float = RENTAL_REP_GAIN * rep_mult * 2.0
 	if _reputation_system:
 		_reputation_system.add_reputation(STORE_ID, rep_delta)
+	if rental_records.has(item_id):
+		var record: Dictionary = rental_records[item_id]
+		rental_records.erase(item_id)
+		_handle_return(record, 0)
 	EventBus.late_fee_waived.emit(item_id, amount, rep_delta)
 	return true
 
 
 ## Player-initiated: collect the pending late fee for item_id.
-## Adds cash and emits late_fee_collected.
+## Adds cash, emits late_fee_collected, and clears overdue flag on the record.
 func collect_late_fee(item_id: String) -> bool:
 	if not _pending_late_fees.has(item_id):
 		return false
@@ -213,6 +312,10 @@ func collect_late_fee(item_id: String) -> bool:
 		)
 		_economy_system.record_store_revenue(String(STORE_ID), amount)
 	_daily_late_fee_total += amount
+	if rental_records.has(item_id):
+		var record: Dictionary = rental_records[item_id]
+		rental_records.erase(item_id)
+		_handle_return(record, 0)
 	EventBus.late_fee_collected.emit(item_id, amount, days_late)
 	return true
 
@@ -220,6 +323,46 @@ func collect_late_fee(item_id: String) -> bool:
 ## Returns pending late fees awaiting player decision {item_id: {amount, days_late}}.
 func get_pending_late_fees() -> Dictionary:
 	return _pending_late_fees.duplicate()
+
+
+## Returns pending late-fee summary for a given customer_id.
+## Result: {total: float, items: Array[{item_id, amount, days_late}]}.
+func get_pending_fees_for_customer(customer_id: String) -> Dictionary:
+	var items: Array[Dictionary] = []
+	var total: float = 0.0
+	if customer_id.is_empty():
+		return {"total": 0.0, "items": items}
+	for item_id: String in _pending_late_fees:
+		var record: Dictionary = rental_records.get(item_id, {})
+		if str(record.get("customer_id", "")) != customer_id:
+			continue
+		var pending: Dictionary = _pending_late_fees[item_id]
+		var amount: float = float(pending.get("amount", 0.0))
+		total += amount
+		items.append({
+			"item_id": item_id,
+			"amount": amount,
+			"days_late": int(pending.get("days_late", 0)),
+		})
+	return {"total": total, "items": items}
+
+
+## Resolves all pending late fees for a customer. When pay is true, calls
+## collect_late_fee for each item; when false, leaves pending intact so the
+## block persists into the next rental attempt. Returns {paid, total, items}.
+func resolve_customer_late_fees(
+	customer_id: String, pay: bool
+) -> Dictionary:
+	var summary: Dictionary = get_pending_fees_for_customer(customer_id)
+	var total_paid: float = 0.0
+	var count: int = 0
+	if pay:
+		for entry: Dictionary in summary.get("items", []):
+			var iid: String = str(entry.get("item_id", ""))
+			if collect_late_fee(iid):
+				total_paid += float(entry.get("amount", 0.0))
+				count += 1
+	return {"paid": pay, "total": total_paid, "items_resolved": count}
 
 
 ## Returns items currently in the returns bin.
@@ -260,6 +403,48 @@ func get_available_count() -> int:
 ## Returns the current play-count progress for an item.
 func get_tape_wear(instance_id: String) -> int:
 	return _wear_tracker.get_play_count(instance_id)
+
+
+## Returns the accumulated wear value in [0, 1] for a tracked tape.
+func get_tape_wear_amount(instance_id: String) -> float:
+	return _wear_tracker.get_wear(instance_id)
+
+
+## Returns the customer appeal factor [0.5, 1.0] for a tape based on wear.
+## Used by the rental customer appeal formula; a pristine tape returns 1.0
+## while a maximally worn tape returns 0.5.
+func get_tape_appeal_factor(item: ItemInstance) -> float:
+	if not item:
+		return 1.0
+	_wear_tracker.initialize_item(item.instance_id, item.condition)
+	return TapeWearTracker.compute_appeal_factor(
+		_wear_tracker.get_wear(item.instance_id)
+	)
+
+
+## Returns a UI wear classification: pristine, light, moderate, heavy, worn_out.
+func get_tape_wear_class(item: ItemInstance) -> String:
+	if not item:
+		return "pristine"
+	_wear_tracker.initialize_item(item.instance_id, item.condition)
+	return TapeWearTracker.classify_wear(
+		_wear_tracker.get_wear(item.instance_id)
+	)
+
+
+## Returns an empty string if the tape can be rented; otherwise a player-facing
+## reason the tape is blocked (currently: worn out, must be retired).
+func get_rentability_reason(item: ItemInstance) -> String:
+	if not item:
+		return "No item"
+	if not item.definition:
+		return ""
+	if not is_rental_item(String(item.definition.category)):
+		return ""
+	_wear_tracker.initialize_item(item.instance_id, item.condition)
+	if _wear_tracker.is_rentable(item.instance_id):
+		return ""
+	return "Worn out — retire to remove from shelf"
 
 
 ## Sets a title as a staff pick (max 3). Returns true on success.
@@ -376,19 +561,22 @@ func _on_day_started(day: int) -> void:
 		)
 
 
-## Checks all rental records and processes items due for return.
+## Auto-processes on-time returns (return_day through end of grace window).
+## Past-deadline rentals stay in rental_records and are flagged overdue by
+## _collect_overdue_late_fees so the customer must resolve the fee before
+## their next rental (ISSUE-015).
 func _process_returns(current_day: int) -> void:
 	var to_return: Array[String] = []
 	for instance_id: String in rental_records:
 		var record: Dictionary = rental_records[instance_id]
-		if current_day >= int(record["return_day"]):
+		var return_day: int = int(record["return_day"])
+		var deadline: int = return_day + _grace_period_days
+		if current_day >= return_day and current_day <= deadline:
 			to_return.append(instance_id)
 	for instance_id: String in to_return:
 		var record: Dictionary = rental_records[instance_id]
-		var deadline: int = int(record["return_day"]) + _grace_period_days
-		var days_overdue: int = maxi(0, current_day - deadline)
 		rental_records.erase(instance_id)
-		_handle_return(record, days_overdue)
+		_handle_return(record, 0)
 
 
 ## Handles a single item return: degradation, late fees, lost item check.
@@ -525,18 +713,37 @@ func _apply_rental_reputation() -> void:
 	)
 
 
-## Collects daily late fees for rentals still out past the grace period.
-## Emits rental_overdue for each item found overdue.
+## Processes overdue rentals still out past the grace period. Tags each record
+## with overdue=true + days_overdue, accrues the late fee as pending (awaiting
+## the customer's next interaction), and emits rental_overdue + rental_late_fee.
 func _collect_overdue_late_fees(current_day: int) -> void:
 	for record: Dictionary in rental_records.values():
 		var deadline: int = int(record["return_day"]) + _grace_period_days
 		var days_overdue: int = current_day - deadline
-		if days_overdue > 0:
-			EventBus.rental_overdue.emit(
-				str(record.get("customer_id", "")),
-				str(record.get("instance_id", ""))
-			)
-			_collect_late_fee(record, days_overdue)
+		if days_overdue <= 0:
+			continue
+		record["overdue"] = true
+		record["days_overdue"] = days_overdue
+		EventBus.rental_overdue.emit(
+			str(record.get("customer_id", "")),
+			str(record.get("instance_id", ""))
+		)
+		_accrue_pending_late_fee(record, days_overdue)
+
+
+## Records a late fee as pending on the given rental without collecting cash.
+## The fee is resolved at the customer's next rental interaction via
+## collect_late_fee / waive_late_fee / resolve_customer_late_fees.
+func _accrue_pending_late_fee(rental: Dictionary, days_overdue: int) -> void:
+	var late_fee: float = _calculate_late_fee(rental, days_overdue)
+	if late_fee <= 0.0:
+		return
+	var item_id: String = str(rental.get("instance_id", ""))
+	_pending_late_fees[item_id] = {
+		"amount": late_fee,
+		"days_late": days_overdue,
+	}
+	EventBus.rental_late_fee.emit(item_id, late_fee, days_overdue)
 
 
 ## Loads late fee formula constants from video_rental_config.json via DataLoaderSingleton.

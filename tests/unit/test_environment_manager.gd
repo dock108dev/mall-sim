@@ -328,7 +328,7 @@ func test_store_exited_emits_environment_changed_with_hallway() -> void:
 
 
 func test_store_catalog_entries_define_preloaded_environment_ids() -> void:
-	var store_catalog: Variant = DataLoaderScript.load_json(
+	var store_catalog: Variant = DataLoaderScript.load_catalog_entries(
 		"res://game/content/stores/store_definitions.json"
 	)
 	var expected_environment_ids: Dictionary = {

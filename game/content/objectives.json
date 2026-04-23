@@ -1,35 +1,186 @@
 {
+  "type": "objectives_data",
   "objectives": [
-    { "day": 1,  "text": "Open the store and make your first sale", "action": "Stock items on shelves", "key": "E" },
-    { "day": 2,  "text": "Stock shelves and find your pricing sweet spot", "action": "Set prices on stocked items", "key": "P" },
-    { "day": 3,  "text": "Earn repeat customers \u2014 reputation matters now", "action": "Greet customers at the counter", "key": "F" },
-    { "day": 4,  "text": "Keep the momentum going \u2014 watch for busy hours", "action": "Monitor the customer queue", "key": "Q" },
-    { "day": 5,  "text": "End the week strong \u2014 hit your revenue target", "action": "Check today's revenue in the HUD", "key": "H" },
-    { "day": 6,  "text": "Weekend rush incoming \u2014 be ready to move volume", "action": "Restock before opening", "key": "R" },
-    { "day": 7,  "text": "Close out week one and check your standings", "action": "Review the day summary", "key": "TAB" },
-    { "day": 8,  "text": "New week, new stock \u2014 reorder before shelves empty", "action": "Place a reorder with your supplier", "key": "O" },
-    { "day": 9,  "text": "Price competitively \u2014 the mall economy is heating up", "action": "Adjust prices based on trends", "key": "P" },
-    { "day": 10, "text": "Tournament season begins \u2014 prepare your Creatures stock", "action": "Open a fresh pack at the counter", "key": "E" },
-    { "day": 11, "text": "Keep regulars happy \u2014 their word spreads fast", "action": "Engage a returning customer", "key": "F" },
-    { "day": 12, "text": "Mid-stretch push \u2014 margins count now", "action": "Review your best-selling items", "key": "H" },
-    { "day": 13, "text": "Manage your staff wisely \u2014 wages eat into profit", "action": "Check the staff panel", "key": "S" },
-    { "day": 14, "text": "Something feels off \u2014 pay attention to the regulars", "action": "Speak to today's first customer", "key": "F" },
-    { "day": 15, "text": "Halfway point \u2014 review what is and is not selling", "action": "Open yesterday's day summary", "key": "TAB" },
-    { "day": 16, "text": "Double down on your best category", "action": "Stock more of your top seller", "key": "E" },
-    { "day": 17, "text": "Clear slow stock \u2014 shelf space is money", "action": "Mark slow items for discount", "key": "P" },
-    { "day": 18, "text": "Community events are drawing foot traffic", "action": "Greet the wave of new visitors", "key": "F" },
-    { "day": 19, "text": "Stay ahead of market trends this week", "action": "Check the market ticker", "key": "M" },
-    { "day": 20, "text": "Three weeks in \u2014 keep the pressure on", "action": "Restock all empty shelves", "key": "R" },
-    { "day": 21, "text": "Main stretch is closing \u2014 begin the crunch", "action": "Set aggressive but fair prices", "key": "P" },
-    { "day": 22, "text": "Crunch time \u2014 every sale counts toward the finish", "action": "Clear the queue before close", "key": "Q" },
-    { "day": 23, "text": "Maximise volume without tanking your reputation", "action": "Balance price and reputation", "key": "H" },
-    { "day": 24, "text": "The regulars are watching \u2014 do not disappoint them", "action": "Serve regulars at the counter", "key": "F" },
-    { "day": 25, "text": "Final stretch \u2014 stock up and hold your prices", "action": "Place your last big order", "key": "O" },
-    { "day": 26, "text": "Four days left \u2014 stay focused", "action": "Review your milestone progress", "key": "M" },
-    { "day": 27, "text": "Three days \u2014 push for your best day yet", "action": "Maximise sales before close", "key": "E" },
-    { "day": 28, "text": "Two days left \u2014 clear the shelves", "action": "Discount remaining slow stock", "key": "P" },
-    { "day": 29, "text": "Last full day of business \u2014 make it count", "action": "Sell everything you have left", "key": "E" },
-    { "day": 30, "text": "Final day \u2014 reach $5 000 and close out strong", "action": "Close the day and see your ending", "key": "SPACE" }
+    {
+      "day": 1,
+      "text": "Open the store and make your first sale",
+      "action": "Stock items on shelves",
+      "key": "E"
+    },
+    {
+      "day": 2,
+      "text": "Stock shelves and find your pricing sweet spot",
+      "action": "Set prices on stocked items",
+      "key": "P"
+    },
+    {
+      "day": 3,
+      "text": "Earn repeat customers \u2014 reputation matters now",
+      "action": "Greet customers at the counter",
+      "key": "F"
+    },
+    {
+      "day": 4,
+      "text": "Keep the momentum going \u2014 watch for busy hours",
+      "action": "Monitor the customer queue",
+      "key": "Q"
+    },
+    {
+      "day": 5,
+      "text": "End the week strong \u2014 hit your revenue target",
+      "action": "Check today's revenue in the HUD",
+      "key": "H"
+    },
+    {
+      "day": 6,
+      "text": "Weekend rush incoming \u2014 be ready to move volume",
+      "action": "Restock before opening",
+      "key": "R"
+    },
+    {
+      "day": 7,
+      "text": "Close out week one and check your standings",
+      "action": "Review the day summary",
+      "key": "TAB"
+    },
+    {
+      "day": 8,
+      "text": "New week, new stock \u2014 reorder before shelves empty",
+      "action": "Place a reorder with your supplier",
+      "key": "O"
+    },
+    {
+      "day": 9,
+      "text": "Price competitively \u2014 the mall economy is heating up",
+      "action": "Adjust prices based on trends",
+      "key": "P"
+    },
+    {
+      "day": 10,
+      "text": "Tournament season begins \u2014 prepare your Creatures stock",
+      "action": "Open a fresh pack at the counter",
+      "key": "E"
+    },
+    {
+      "day": 11,
+      "text": "Keep regulars happy \u2014 their word spreads fast",
+      "action": "Engage a returning customer",
+      "key": "F"
+    },
+    {
+      "day": 12,
+      "text": "Mid-stretch push \u2014 margins count now",
+      "action": "Review your best-selling items",
+      "key": "H"
+    },
+    {
+      "day": 13,
+      "text": "Manage your staff wisely \u2014 wages eat into profit",
+      "action": "Check the staff panel",
+      "key": "S"
+    },
+    {
+      "day": 14,
+      "text": "Something feels off \u2014 pay attention to the regulars",
+      "action": "Speak to today's first customer",
+      "key": "F"
+    },
+    {
+      "day": 15,
+      "text": "Halfway point \u2014 review what is and is not selling",
+      "action": "Open yesterday's day summary",
+      "key": "TAB"
+    },
+    {
+      "day": 16,
+      "text": "Double down on your best category",
+      "action": "Stock more of your top seller",
+      "key": "E"
+    },
+    {
+      "day": 17,
+      "text": "Clear slow stock \u2014 shelf space is money",
+      "action": "Mark slow items for discount",
+      "key": "P"
+    },
+    {
+      "day": 18,
+      "text": "Community events are drawing foot traffic",
+      "action": "Greet the wave of new visitors",
+      "key": "F"
+    },
+    {
+      "day": 19,
+      "text": "Stay ahead of market trends this week",
+      "action": "Check the market ticker",
+      "key": "M"
+    },
+    {
+      "day": 20,
+      "text": "Three weeks in \u2014 keep the pressure on",
+      "action": "Restock all empty shelves",
+      "key": "R"
+    },
+    {
+      "day": 21,
+      "text": "Main stretch is closing \u2014 begin the crunch",
+      "action": "Set aggressive but fair prices",
+      "key": "P"
+    },
+    {
+      "day": 22,
+      "text": "Crunch time \u2014 every sale counts toward the finish",
+      "action": "Clear the queue before close",
+      "key": "Q"
+    },
+    {
+      "day": 23,
+      "text": "Maximise volume without tanking your reputation",
+      "action": "Balance price and reputation",
+      "key": "H"
+    },
+    {
+      "day": 24,
+      "text": "The regulars are watching \u2014 do not disappoint them",
+      "action": "Serve regulars at the counter",
+      "key": "F"
+    },
+    {
+      "day": 25,
+      "text": "Final stretch \u2014 stock up and hold your prices",
+      "action": "Place your last big order",
+      "key": "O"
+    },
+    {
+      "day": 26,
+      "text": "Four days left \u2014 stay focused",
+      "action": "Review your milestone progress",
+      "key": "M"
+    },
+    {
+      "day": 27,
+      "text": "Three days \u2014 push for your best day yet",
+      "action": "Maximise sales before close",
+      "key": "E"
+    },
+    {
+      "day": 28,
+      "text": "Two days left \u2014 clear the shelves",
+      "action": "Discount remaining slow stock",
+      "key": "P"
+    },
+    {
+      "day": 29,
+      "text": "Last full day of business \u2014 make it count",
+      "action": "Sell everything you have left",
+      "key": "E"
+    },
+    {
+      "day": 30,
+      "text": "Final day \u2014 reach $5 000 and close out strong",
+      "action": "Close the day and see your ending",
+      "key": "SPACE"
+    }
   ],
   "default_text": "Keep the store running",
   "default_action": "Manage your stores",

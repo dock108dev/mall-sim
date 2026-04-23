@@ -6,10 +6,22 @@
     "cost": 3.99,
     "slot_count": 11,
     "slots": [
-      {"type": "common", "count": 6},
-      {"type": "uncommon", "count": 3},
-      {"type": "rare_slot", "count": 1},
-      {"type": "energy", "count": 1}
+      {
+        "type": "common",
+        "count": 6
+      },
+      {
+        "type": "uncommon",
+        "count": 3
+      },
+      {
+        "type": "rare_slot",
+        "count": 1
+      },
+      {
+        "type": "energy",
+        "count": 1
+      }
     ],
     "rarity_weights": {
       "rare": 0.64,
@@ -24,13 +36,25 @@
     "cost": 3.99,
     "slot_count": 11,
     "slots": [
-      {"type": "common", "count": 6},
-      {"type": "uncommon", "count": 3},
-      {"type": "rare_slot", "count": 1},
-      {"type": "energy", "count": 1}
+      {
+        "type": "common",
+        "count": 6
+      },
+      {
+        "type": "uncommon",
+        "count": 3
+      },
+      {
+        "type": "rare_slot",
+        "count": 1
+      },
+      {
+        "type": "energy",
+        "count": 1
+      }
     ],
     "rarity_weights": {
-      "rare": 0.60,
+      "rare": 0.6,
       "holo_rare": 0.36,
       "secret_rare": 0.04
     }
@@ -42,10 +66,22 @@
     "cost": 3.99,
     "slot_count": 11,
     "slots": [
-      {"type": "common", "count": 6},
-      {"type": "uncommon", "count": 3},
-      {"type": "rare_slot", "count": 1},
-      {"type": "energy", "count": 1}
+      {
+        "type": "common",
+        "count": 6
+      },
+      {
+        "type": "uncommon",
+        "count": 3
+      },
+      {
+        "type": "rare_slot",
+        "count": 1
+      },
+      {
+        "type": "energy",
+        "count": 1
+      }
     ],
     "rarity_weights": {
       "rare": 0.64,
@@ -60,10 +96,22 @@
     "cost": 4.49,
     "slot_count": 11,
     "slots": [
-      {"type": "common", "count": 6},
-      {"type": "uncommon", "count": 3},
-      {"type": "rare_slot", "count": 1},
-      {"type": "energy", "count": 1}
+      {
+        "type": "common",
+        "count": 6
+      },
+      {
+        "type": "uncommon",
+        "count": 3
+      },
+      {
+        "type": "rare_slot",
+        "count": 1
+      },
+      {
+        "type": "energy",
+        "count": 1
+      }
     ],
     "rarity_weights": {
       "rare": 0.58,
@@ -78,10 +126,22 @@
     "cost": 4.99,
     "slot_count": 11,
     "slots": [
-      {"type": "common", "count": 6},
-      {"type": "uncommon", "count": 3},
-      {"type": "rare_slot", "count": 1},
-      {"type": "energy", "count": 1}
+      {
+        "type": "common",
+        "count": 6
+      },
+      {
+        "type": "uncommon",
+        "count": 3
+      },
+      {
+        "type": "rare_slot",
+        "count": 1
+      },
+      {
+        "type": "energy",
+        "count": 1
+      }
     ],
     "rarity_weights": {
       "rare": 0.62,
@@ -96,10 +156,22 @@
     "cost": 5.49,
     "slot_count": 11,
     "slots": [
-      {"type": "common", "count": 6},
-      {"type": "uncommon", "count": 3},
-      {"type": "rare_slot", "count": 1},
-      {"type": "energy", "count": 1}
+      {
+        "type": "common",
+        "count": 6
+      },
+      {
+        "type": "uncommon",
+        "count": 3
+      },
+      {
+        "type": "rare_slot",
+        "count": 1
+      },
+      {
+        "type": "energy",
+        "count": 1
+      }
     ],
     "rarity_weights": {
       "rare": 0.55,

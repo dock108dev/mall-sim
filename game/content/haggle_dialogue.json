@@ -1,4 +1,5 @@
 {
+  "type": "haggle_dialogue_data",
   "opening": {
     "high": [
       "That's a reasonable ask. I might bite.",
@@ -19,7 +20,7 @@
   "counter": {
     "high": [
       "Now we're talking.",
-      "Getting closer — keep going.",
+      "Getting closer \u2014 keep going.",
       "I could work with that."
     ],
     "neutral": [

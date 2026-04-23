@@ -32,6 +32,9 @@ const _MILESTONE_CARD_SCENE: PackedScene = preload(
 const _MILESTONES_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/milestones_panel.tscn"
 )
+const _COMPLETION_TRACKER_PANEL_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/completion_tracker_panel.tscn"
+)
 const _ORDER_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/order_panel.tscn"
 )
@@ -58,6 +61,9 @@ const _STAFF_PANEL_SCENE: PackedScene = preload(
 )
 const _TUTORIAL_OVERLAY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/tutorial_overlay.tscn"
+)
+const _FIRST_RUN_CUE_OVERLAY_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/first_run_cue_overlay.tscn"
 )
 const _ITEM_TOOLTIP_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/item_tooltip.tscn"
@@ -520,6 +526,13 @@ func _setup_ui() -> void:
 	_tutorial_overlay.tutorial_system = tutorial_system
 	_ui_layer.add_child(_tutorial_overlay)
 
+	var first_run_cue: FirstRunCueOverlay = (
+		_FIRST_RUN_CUE_OVERLAY_SCENE.instantiate() as FirstRunCueOverlay
+	)
+	first_run_cue.inventory_system = inventory_system
+	first_run_cue.time_system = time_system
+	_ui_layer.add_child(first_run_cue)
+
 	_setup_deferred_panels.call_deferred()
 
 
@@ -557,6 +570,12 @@ func _setup_deferred_panels() -> void:
 	)
 	milestones_panel.progression_system = progression_system
 	_ui_layer.add_child(milestones_panel)
+
+	var completion_tracker_panel: CompletionTrackerPanel = (
+		_COMPLETION_TRACKER_PANEL_SCENE.instantiate() as CompletionTrackerPanel
+	)
+	completion_tracker_panel.completion_tracker = completion_tracker
+	_ui_layer.add_child(completion_tracker_panel)
 
 	var order_panel: OrderPanel = (
 		_ORDER_PANEL_SCENE.instantiate() as OrderPanel
@@ -979,6 +998,7 @@ func _wire_sports_memorabilia_system(
 			store_ctrl as SportsMemorabiliaController
 		)
 		sports.initialize(time_system.current_day)
+		sports.set_economy_system(economy_system)
 		var cycle: SeasonCycleSystem = sports.get_season_cycle()
 		economy_system.set_season_cycle_system(cycle)
 		save_manager.set_season_cycle_system(cycle)
@@ -1089,6 +1109,11 @@ func apply_pending_session_state() -> void:
 		var save_metadata: Dictionary = save_manager.get_slot_metadata(slot)
 		if save_manager.load_game(slot):
 			_validate_loaded_game_state(save_metadata)
+		else:
+			EventBus.notification_requested.emit(
+				"Save slot %d could not be loaded — returning to main menu." % slot
+			)
+			GameManager.go_to_main_menu()
 	else:
 		tutorial_system.initialize(true)
 		EventBus.day_started.emit(1)

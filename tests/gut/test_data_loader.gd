@@ -7,7 +7,7 @@ func before_all() -> void:
 
 
 func test_load_json_valid_file() -> void:
-	var data: Variant = DataLoader.load_json(
+	var data: Variant = DataLoader.load_catalog_entries(
 		"res://game/content/stores/store_definitions.json"
 	)
 	assert_not_null(data, "Should parse valid JSON")

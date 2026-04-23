@@ -39,8 +39,10 @@
     "display_name": "Vintage",
     "volatility": 0.2,
     "default_level": 1.0,
-    "description": "Demand for retro games and sports memorabilia on the vintage shelf. Shared by Retro Games and Sports Cards — a shift in either store propagates to the other.",
-    "cross_propagates_to": ["sports"],
+    "description": "Demand for retro games and sports memorabilia on the vintage shelf. Shared by Retro Games and Sports Cards \u2014 a shift in either store propagates to the other.",
+    "cross_propagates_to": [
+      "sports"
+    ],
     "cross_propagation_weight": 0.4
   }
 ]

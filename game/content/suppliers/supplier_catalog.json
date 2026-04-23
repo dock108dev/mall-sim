@@ -5,18 +5,64 @@
       "display_name": "Wholesale Wax Co.",
       "tier": 1,
       "store_type": "sports",
-      "lead_time_days": { "min": 4, "max": 5 },
+      "lead_time_days": {
+        "min": 4,
+        "max": 5
+      },
       "reliability_rate": 0.85,
-      "unlock_condition": { "type": "always", "threshold": 0 },
+      "unlock_condition": {
+        "type": "always",
+        "threshold": 0
+      },
       "catalog": [
-        { "item_id": "sports_duvall_hr_common", "cost_per_unit": 1.20, "min_order_qty": 5, "max_order_qty": 30 },
-        { "item_id": "sports_okoro_hoops_common", "cost_per_unit": 0.90, "min_order_qty": 5, "max_order_qty": 30 },
-        { "item_id": "sports_sledge_reprint_common", "cost_per_unit": 1.80, "min_order_qty": 5, "max_order_qty": 30 },
-        { "item_id": "sports_esperanza_base_common", "cost_per_unit": 1.50, "min_order_qty": 5, "max_order_qty": 30 },
-        { "item_id": "sports_pinnacle_pack_1993", "cost_per_unit": 2.40, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "sports_vanguard_pack_2001", "cost_per_unit": 1.80, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "sports_jersey_replica_monarchs", "cost_per_unit": 21.00, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "sports_bat_display", "cost_per_unit": 7.20, "min_order_qty": 1, "max_order_qty": 10 }
+        {
+          "item_id": "sports_duvall_hr_common",
+          "cost_per_unit": 1.2,
+          "min_order_qty": 5,
+          "max_order_qty": 30
+        },
+        {
+          "item_id": "sports_okoro_hoops_common",
+          "cost_per_unit": 0.9,
+          "min_order_qty": 5,
+          "max_order_qty": 30
+        },
+        {
+          "item_id": "sports_sledge_reprint_common",
+          "cost_per_unit": 1.8,
+          "min_order_qty": 5,
+          "max_order_qty": 30
+        },
+        {
+          "item_id": "sports_esperanza_base_common",
+          "cost_per_unit": 1.5,
+          "min_order_qty": 5,
+          "max_order_qty": 30
+        },
+        {
+          "item_id": "sports_pinnacle_pack_1993",
+          "cost_per_unit": 2.4,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "sports_vanguard_pack_2001",
+          "cost_per_unit": 1.8,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "sports_jersey_replica_monarchs",
+          "cost_per_unit": 21.0,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "sports_bat_display",
+          "cost_per_unit": 7.2,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        }
       ]
     },
     {
@@ -24,23 +70,95 @@
       "display_name": "Tri-State Sports Distribution",
       "tier": 2,
       "store_type": "sports",
-      "lead_time_days": { "min": 2, "max": 3 },
+      "lead_time_days": {
+        "min": 2,
+        "max": 3
+      },
       "reliability_rate": 0.94,
-      "unlock_condition": { "type": "days_and_revenue", "threshold": 1200, "days_required": 14 },
+      "unlock_condition": {
+        "type": "days_and_revenue",
+        "threshold": 1200,
+        "days_required": 14
+      },
       "catalog": [
-        { "item_id": "sports_duvall_hr_common", "cost_per_unit": 1.04, "min_order_qty": 5, "max_order_qty": 40 },
-        { "item_id": "sports_okoro_hoops_common", "cost_per_unit": 0.78, "min_order_qty": 5, "max_order_qty": 40 },
-        { "item_id": "sports_sledge_reprint_common", "cost_per_unit": 1.56, "min_order_qty": 5, "max_order_qty": 40 },
-        { "item_id": "sports_esperanza_base_common", "cost_per_unit": 1.30, "min_order_qty": 5, "max_order_qty": 40 },
-        { "item_id": "sports_duvall_refractor_uncommon", "cost_per_unit": 6.24, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "sports_simmons_chrome_uncommon", "cost_per_unit": 9.36, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "sports_vance_finest_uncommon", "cost_per_unit": 7.80, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "sports_pinnacle_pack_1993", "cost_per_unit": 2.08, "min_order_qty": 5, "max_order_qty": 36 },
-        { "item_id": "sports_vanguard_pack_2001", "cost_per_unit": 1.56, "min_order_qty": 5, "max_order_qty": 36 },
-        { "item_id": "sports_summit_chrome_pack_1996", "cost_per_unit": 3.12, "min_order_qty": 3, "max_order_qty": 20 },
-        { "item_id": "sports_pinnacle_factory_set_1995", "cost_per_unit": 20.80, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "sports_helmet_display_titans", "cost_per_unit": 11.44, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "sports_jersey_replica_monarchs", "cost_per_unit": 18.20, "min_order_qty": 1, "max_order_qty": 8 }
+        {
+          "item_id": "sports_duvall_hr_common",
+          "cost_per_unit": 1.04,
+          "min_order_qty": 5,
+          "max_order_qty": 40
+        },
+        {
+          "item_id": "sports_okoro_hoops_common",
+          "cost_per_unit": 0.78,
+          "min_order_qty": 5,
+          "max_order_qty": 40
+        },
+        {
+          "item_id": "sports_sledge_reprint_common",
+          "cost_per_unit": 1.56,
+          "min_order_qty": 5,
+          "max_order_qty": 40
+        },
+        {
+          "item_id": "sports_esperanza_base_common",
+          "cost_per_unit": 1.3,
+          "min_order_qty": 5,
+          "max_order_qty": 40
+        },
+        {
+          "item_id": "sports_duvall_refractor_uncommon",
+          "cost_per_unit": 6.24,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "sports_simmons_chrome_uncommon",
+          "cost_per_unit": 9.36,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "sports_vance_finest_uncommon",
+          "cost_per_unit": 7.8,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "sports_pinnacle_pack_1993",
+          "cost_per_unit": 2.08,
+          "min_order_qty": 5,
+          "max_order_qty": 36
+        },
+        {
+          "item_id": "sports_vanguard_pack_2001",
+          "cost_per_unit": 1.56,
+          "min_order_qty": 5,
+          "max_order_qty": 36
+        },
+        {
+          "item_id": "sports_summit_chrome_pack_1996",
+          "cost_per_unit": 3.12,
+          "min_order_qty": 3,
+          "max_order_qty": 20
+        },
+        {
+          "item_id": "sports_pinnacle_factory_set_1995",
+          "cost_per_unit": 20.8,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "sports_helmet_display_titans",
+          "cost_per_unit": 11.44,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "sports_jersey_replica_monarchs",
+          "cost_per_unit": 18.2,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        }
       ]
     },
     {
@@ -48,18 +166,66 @@
       "display_name": "Apex Certified Collectibles",
       "tier": 3,
       "store_type": "sports",
-      "lead_time_days": { "min": 1, "max": 2 },
+      "lead_time_days": {
+        "min": 1,
+        "max": 2
+      },
       "reliability_rate": 0.99,
-      "unlock_condition": { "type": "days_and_revenue_or_reputation", "threshold": 4000, "days_required": 30, "reputation_threshold": 75 },
+      "unlock_condition": {
+        "type": "days_and_revenue_or_reputation",
+        "threshold": 4000,
+        "days_required": 30,
+        "reputation_threshold": 75
+      },
       "catalog": [
-        { "item_id": "sports_duvall_refractor_uncommon", "cost_per_unit": 5.40, "min_order_qty": 2, "max_order_qty": 20 },
-        { "item_id": "sports_simmons_chrome_uncommon", "cost_per_unit": 8.10, "min_order_qty": 2, "max_order_qty": 20 },
-        { "item_id": "sports_vance_finest_uncommon", "cost_per_unit": 6.75, "min_order_qty": 2, "max_order_qty": 20 },
-        { "item_id": "sports_sledge_rookie_rare", "cost_per_unit": 20.25, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "sports_esperanza_prospect_rare", "cost_per_unit": 29.25, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "sports_vanguard_hobby_box_1998", "cost_per_unit": 38.25, "min_order_qty": 1, "max_order_qty": 3 },
-        { "item_id": "sports_signed_photo_briggs", "cost_per_unit": 33.75, "min_order_qty": 1, "max_order_qty": 3 },
-        { "item_id": "sports_helmet_display_titans", "cost_per_unit": 9.90, "min_order_qty": 1, "max_order_qty": 8 }
+        {
+          "item_id": "sports_duvall_refractor_uncommon",
+          "cost_per_unit": 5.4,
+          "min_order_qty": 2,
+          "max_order_qty": 20
+        },
+        {
+          "item_id": "sports_simmons_chrome_uncommon",
+          "cost_per_unit": 8.1,
+          "min_order_qty": 2,
+          "max_order_qty": 20
+        },
+        {
+          "item_id": "sports_vance_finest_uncommon",
+          "cost_per_unit": 6.75,
+          "min_order_qty": 2,
+          "max_order_qty": 20
+        },
+        {
+          "item_id": "sports_sledge_rookie_rare",
+          "cost_per_unit": 20.25,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "sports_esperanza_prospect_rare",
+          "cost_per_unit": 29.25,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "sports_vanguard_hobby_box_1998",
+          "cost_per_unit": 38.25,
+          "min_order_qty": 1,
+          "max_order_qty": 3
+        },
+        {
+          "item_id": "sports_signed_photo_briggs",
+          "cost_per_unit": 33.75,
+          "min_order_qty": 1,
+          "max_order_qty": 3
+        },
+        {
+          "item_id": "sports_helmet_display_titans",
+          "cost_per_unit": 9.9,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        }
       ]
     },
     {
@@ -67,18 +233,64 @@
       "display_name": "Flea Circuit Resale",
       "tier": 1,
       "store_type": "retro_games",
-      "lead_time_days": { "min": 5, "max": 7 },
+      "lead_time_days": {
+        "min": 5,
+        "max": 7
+      },
       "reliability_rate": 0.78,
-      "unlock_condition": { "type": "always", "threshold": 0 },
+      "unlock_condition": {
+        "type": "always",
+        "threshold": 0
+      },
       "catalog": [
-        { "item_id": "pc_booster_canopy_block_logic_loose", "cost_per_unit": 5.50, "min_order_qty": 1, "max_order_qty": 15 },
-        { "item_id": "supervec16_ironfoot_run_loose", "cost_per_unit": 6.60, "min_order_qty": 1, "max_order_qty": 12 },
-        { "item_id": "neo_spark_turbojump_world_loose", "cost_per_unit": 8.25, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "pc_booster_neo_spark_comet_runner_loose", "cost_per_unit": 8.80, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "pc_booster_canopy_fable_creatures_loose", "cost_per_unit": 9.90, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "canopy64_chromatic_drift_loose", "cost_per_unit": 9.90, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "console_pc_booster_canopy", "cost_per_unit": 19.25, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "console_neo_spark", "cost_per_unit": 27.50, "min_order_qty": 1, "max_order_qty": 4 }
+        {
+          "item_id": "pc_booster_canopy_block_logic_loose",
+          "cost_per_unit": 5.5,
+          "min_order_qty": 1,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "supervec16_ironfoot_run_loose",
+          "cost_per_unit": 6.6,
+          "min_order_qty": 1,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "neo_spark_turbojump_world_loose",
+          "cost_per_unit": 8.25,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_booster_neo_spark_comet_runner_loose",
+          "cost_per_unit": 8.8,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_booster_canopy_fable_creatures_loose",
+          "cost_per_unit": 9.9,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "canopy64_chromatic_drift_loose",
+          "cost_per_unit": 9.9,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "console_pc_booster_canopy",
+          "cost_per_unit": 19.25,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "console_neo_spark",
+          "cost_per_unit": 27.5,
+          "min_order_qty": 1,
+          "max_order_qty": 4
+        }
       ]
     },
     {
@@ -86,19 +298,71 @@
       "display_name": "Midland Game Exchange",
       "tier": 2,
       "store_type": "retro_games",
-      "lead_time_days": { "min": 2, "max": 3 },
+      "lead_time_days": {
+        "min": 2,
+        "max": 3
+      },
       "reliability_rate": 0.91,
-      "unlock_condition": { "type": "days_and_revenue", "threshold": 1200, "days_required": 14 },
+      "unlock_condition": {
+        "type": "days_and_revenue",
+        "threshold": 1200,
+        "days_required": 14
+      },
       "catalog": [
-        { "item_id": "pc_booster_canopy_fable_creatures_loose", "cost_per_unit": 8.55, "min_order_qty": 1, "max_order_qty": 12 },
-        { "item_id": "supervec16_ironfoot_run_loose", "cost_per_unit": 5.70, "min_order_qty": 1, "max_order_qty": 12 },
-        { "item_id": "canopy64_chromatic_drift_loose", "cost_per_unit": 8.55, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "pc_booster_canopy_sunken_realm_loose", "cost_per_unit": 11.88, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "canopy64_orbital_smash_loose", "cost_per_unit": 13.30, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "supervec16_vortex_squadron_loose", "cost_per_unit": 14.25, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "neo_spark_starfall_chronicle_loose", "cost_per_unit": 16.63, "min_order_qty": 1, "max_order_qty": 6 },
-        { "item_id": "console_supervec_16", "cost_per_unit": 19.00, "min_order_qty": 1, "max_order_qty": 4 },
-        { "item_id": "console_neo_spark", "cost_per_unit": 23.75, "min_order_qty": 1, "max_order_qty": 3 }
+        {
+          "item_id": "pc_booster_canopy_fable_creatures_loose",
+          "cost_per_unit": 8.55,
+          "min_order_qty": 1,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "supervec16_ironfoot_run_loose",
+          "cost_per_unit": 5.7,
+          "min_order_qty": 1,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "canopy64_chromatic_drift_loose",
+          "cost_per_unit": 8.55,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_booster_canopy_sunken_realm_loose",
+          "cost_per_unit": 11.88,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "canopy64_orbital_smash_loose",
+          "cost_per_unit": 13.3,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "supervec16_vortex_squadron_loose",
+          "cost_per_unit": 14.25,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "neo_spark_starfall_chronicle_loose",
+          "cost_per_unit": 16.63,
+          "min_order_qty": 1,
+          "max_order_qty": 6
+        },
+        {
+          "item_id": "console_supervec_16",
+          "cost_per_unit": 19.0,
+          "min_order_qty": 1,
+          "max_order_qty": 4
+        },
+        {
+          "item_id": "console_neo_spark",
+          "cost_per_unit": 23.75,
+          "min_order_qty": 1,
+          "max_order_qty": 3
+        }
       ]
     },
     {
@@ -106,18 +370,66 @@
       "display_name": "Heritage Cartridge Co.",
       "tier": 3,
       "store_type": "retro_games",
-      "lead_time_days": { "min": 1, "max": 2 },
+      "lead_time_days": {
+        "min": 1,
+        "max": 2
+      },
       "reliability_rate": 0.98,
-      "unlock_condition": { "type": "days_and_revenue_or_reputation", "threshold": 4000, "days_required": 30, "reputation_threshold": 75 },
+      "unlock_condition": {
+        "type": "days_and_revenue_or_reputation",
+        "threshold": 4000,
+        "days_required": 30,
+        "reputation_threshold": 75
+      },
       "catalog": [
-        { "item_id": "canopy64_orbital_smash_loose", "cost_per_unit": 12.60, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "neo_spark_starfall_chronicle_loose", "cost_per_unit": 15.75, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "pc_booster_neo_spark_embersong_loose", "cost_per_unit": 14.40, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "canopy64_stoneward_depths_loose", "cost_per_unit": 24.75, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "neo_spark_hollowveil_asylum_loose", "cost_per_unit": 27.00, "min_order_qty": 1, "max_order_qty": 4 },
-        { "item_id": "supervec16_mirror_desert_loose", "cost_per_unit": 29.25, "min_order_qty": 1, "max_order_qty": 3 },
-        { "item_id": "console_pc_booster_neo_spark", "cost_per_unit": 20.25, "min_order_qty": 1, "max_order_qty": 4 },
-        { "item_id": "console_canopy_64", "cost_per_unit": 31.50, "min_order_qty": 1, "max_order_qty": 3 }
+        {
+          "item_id": "canopy64_orbital_smash_loose",
+          "cost_per_unit": 12.6,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "neo_spark_starfall_chronicle_loose",
+          "cost_per_unit": 15.75,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_booster_neo_spark_embersong_loose",
+          "cost_per_unit": 14.4,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "canopy64_stoneward_depths_loose",
+          "cost_per_unit": 24.75,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "neo_spark_hollowveil_asylum_loose",
+          "cost_per_unit": 27.0,
+          "min_order_qty": 1,
+          "max_order_qty": 4
+        },
+        {
+          "item_id": "supervec16_mirror_desert_loose",
+          "cost_per_unit": 29.25,
+          "min_order_qty": 1,
+          "max_order_qty": 3
+        },
+        {
+          "item_id": "console_pc_booster_neo_spark",
+          "cost_per_unit": 20.25,
+          "min_order_qty": 1,
+          "max_order_qty": 4
+        },
+        {
+          "item_id": "console_canopy_64",
+          "cost_per_unit": 31.5,
+          "min_order_qty": 1,
+          "max_order_qty": 3
+        }
       ]
     },
     {
@@ -125,24 +437,100 @@
       "display_name": "Closeout Cinema Supply",
       "tier": 1,
       "store_type": "rentals",
-      "lead_time_days": { "min": 4, "max": 6 },
+      "lead_time_days": {
+        "min": 4,
+        "max": 6
+      },
       "reliability_rate": 0.82,
-      "unlock_condition": { "type": "always", "threshold": 0 },
+      "unlock_condition": {
+        "type": "always",
+        "threshold": 0
+      },
       "catalog": [
-        { "item_id": "rental_cosmic_battles_4_vhs", "cost_per_unit": 4.80, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_velociraptor_gardens_vhs", "cost_per_unit": 6.00, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_ghostcatchers_vhs", "cost_per_unit": 4.20, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_pixel_story_vhs", "cost_per_unit": 6.00, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_karate_pupil_vhs", "cost_per_unit": 3.60, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_frightmare_oak_street_vhs", "cost_per_unit": 4.20, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_notebook_of_secrets_vhs", "cost_per_unit": 4.80, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_cosmic_battles_5_vhs", "cost_per_unit": 4.80, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_bug_life_vhs", "cost_per_unit": 5.40, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "rental_snack_microwave_popcorn", "cost_per_unit": 0.45, "min_order_qty": 12, "max_order_qty": 48 },
-        { "item_id": "rental_snack_gummy_worms", "cost_per_unit": 0.34, "min_order_qty": 12, "max_order_qty": 48 },
-        { "item_id": "rental_snack_chocolate_bar", "cost_per_unit": 0.27, "min_order_qty": 12, "max_order_qty": 48 },
-        { "item_id": "rental_snack_cola", "cost_per_unit": 0.23, "min_order_qty": 24, "max_order_qty": 72 },
-        { "item_id": "rental_snack_licorice", "cost_per_unit": 0.36, "min_order_qty": 12, "max_order_qty": 48 }
+        {
+          "item_id": "rental_cosmic_battles_4_vhs",
+          "cost_per_unit": 4.8,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_velociraptor_gardens_vhs",
+          "cost_per_unit": 6.0,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_ghostcatchers_vhs",
+          "cost_per_unit": 4.2,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_pixel_story_vhs",
+          "cost_per_unit": 6.0,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_karate_pupil_vhs",
+          "cost_per_unit": 3.6,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_frightmare_oak_street_vhs",
+          "cost_per_unit": 4.2,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_notebook_of_secrets_vhs",
+          "cost_per_unit": 4.8,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_cosmic_battles_5_vhs",
+          "cost_per_unit": 4.8,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_bug_life_vhs",
+          "cost_per_unit": 5.4,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "rental_snack_microwave_popcorn",
+          "cost_per_unit": 0.45,
+          "min_order_qty": 12,
+          "max_order_qty": 48
+        },
+        {
+          "item_id": "rental_snack_gummy_worms",
+          "cost_per_unit": 0.34,
+          "min_order_qty": 12,
+          "max_order_qty": 48
+        },
+        {
+          "item_id": "rental_snack_chocolate_bar",
+          "cost_per_unit": 0.27,
+          "min_order_qty": 12,
+          "max_order_qty": 48
+        },
+        {
+          "item_id": "rental_snack_cola",
+          "cost_per_unit": 0.23,
+          "min_order_qty": 24,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "rental_snack_licorice",
+          "cost_per_unit": 0.36,
+          "min_order_qty": 12,
+          "max_order_qty": 48
+        }
       ]
     },
     {
@@ -150,25 +538,107 @@
       "display_name": "Lakeside Home Entertainment",
       "tier": 2,
       "store_type": "rentals",
-      "lead_time_days": { "min": 2, "max": 3 },
+      "lead_time_days": {
+        "min": 2,
+        "max": 3
+      },
       "reliability_rate": 0.93,
-      "unlock_condition": { "type": "days_and_revenue", "threshold": 1200, "days_required": 14 },
+      "unlock_condition": {
+        "type": "days_and_revenue",
+        "threshold": 1200,
+        "days_required": 14
+      },
       "catalog": [
-        { "item_id": "rental_the_grid_vhs", "cost_per_unit": 9.36, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_wizard_academy_vhs", "cost_per_unit": 10.40, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_speed_racer_turbo_vhs", "cost_per_unit": 9.36, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_gladiator_maximus_vhs", "cost_per_unit": 8.84, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_sixth_feeling_vhs", "cost_per_unit": 8.32, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_big_lebonski_vhs", "cost_per_unit": 4.16, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "rental_velociraptor_gardens_dvd", "cost_per_unit": 9.36, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "rental_space_cowboy_bebop_vhs", "cost_per_unit": 6.24, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "rental_snack_microwave_popcorn", "cost_per_unit": 0.39, "min_order_qty": 12, "max_order_qty": 60 },
-        { "item_id": "rental_snack_gummy_worms", "cost_per_unit": 0.29, "min_order_qty": 12, "max_order_qty": 60 },
-        { "item_id": "rental_snack_chocolate_bar", "cost_per_unit": 0.23, "min_order_qty": 12, "max_order_qty": 60 },
-        { "item_id": "rental_snack_cola", "cost_per_unit": 0.20, "min_order_qty": 24, "max_order_qty": 96 },
-        { "item_id": "rental_poster_cosmic_battles", "cost_per_unit": 4.16, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "rental_poster_frightmare", "cost_per_unit": 3.12, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "rental_promo_keychain_velociraptor", "cost_per_unit": 1.56, "min_order_qty": 5, "max_order_qty": 20 }
+        {
+          "item_id": "rental_the_grid_vhs",
+          "cost_per_unit": 9.36,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_wizard_academy_vhs",
+          "cost_per_unit": 10.4,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_speed_racer_turbo_vhs",
+          "cost_per_unit": 9.36,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_gladiator_maximus_vhs",
+          "cost_per_unit": 8.84,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_sixth_feeling_vhs",
+          "cost_per_unit": 8.32,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_big_lebonski_vhs",
+          "cost_per_unit": 4.16,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "rental_velociraptor_gardens_dvd",
+          "cost_per_unit": 9.36,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "rental_space_cowboy_bebop_vhs",
+          "cost_per_unit": 6.24,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "rental_snack_microwave_popcorn",
+          "cost_per_unit": 0.39,
+          "min_order_qty": 12,
+          "max_order_qty": 60
+        },
+        {
+          "item_id": "rental_snack_gummy_worms",
+          "cost_per_unit": 0.29,
+          "min_order_qty": 12,
+          "max_order_qty": 60
+        },
+        {
+          "item_id": "rental_snack_chocolate_bar",
+          "cost_per_unit": 0.23,
+          "min_order_qty": 12,
+          "max_order_qty": 60
+        },
+        {
+          "item_id": "rental_snack_cola",
+          "cost_per_unit": 0.2,
+          "min_order_qty": 24,
+          "max_order_qty": 96
+        },
+        {
+          "item_id": "rental_poster_cosmic_battles",
+          "cost_per_unit": 4.16,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "rental_poster_frightmare",
+          "cost_per_unit": 3.12,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "rental_promo_keychain_velociraptor",
+          "cost_per_unit": 1.56,
+          "min_order_qty": 5,
+          "max_order_qty": 20
+        }
       ]
     },
     {
@@ -176,18 +646,66 @@
       "display_name": "Pinnacle Entertainment Distribution",
       "tier": 3,
       "store_type": "rentals",
-      "lead_time_days": { "min": 1, "max": 2 },
+      "lead_time_days": {
+        "min": 1,
+        "max": 2
+      },
       "reliability_rate": 0.97,
-      "unlock_condition": { "type": "days_and_revenue_or_reputation", "threshold": 4000, "days_required": 30, "reputation_threshold": 75 },
+      "unlock_condition": {
+        "type": "days_and_revenue_or_reputation",
+        "threshold": 4000,
+        "days_required": 30,
+        "reputation_threshold": 75
+      },
       "catalog": [
-        { "item_id": "rental_the_grid_dvd", "cost_per_unit": 10.80, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "rental_wizard_academy_dvd", "cost_per_unit": 11.25, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "rental_velociraptor_gardens_dvd", "cost_per_unit": 8.10, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_the_grid_vhs", "cost_per_unit": 8.10, "min_order_qty": 1, "max_order_qty": 12 },
-        { "item_id": "rental_wizard_academy_vhs", "cost_per_unit": 9.00, "min_order_qty": 1, "max_order_qty": 12 },
-        { "item_id": "rental_chainsaw_ballet_vhs", "cost_per_unit": 2.70, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_foreign_cinema_collection_vhs", "cost_per_unit": 2.25, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "rental_standee_wizard_academy", "cost_per_unit": 5.40, "min_order_qty": 1, "max_order_qty": 3 }
+        {
+          "item_id": "rental_the_grid_dvd",
+          "cost_per_unit": 10.8,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "rental_wizard_academy_dvd",
+          "cost_per_unit": 11.25,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "rental_velociraptor_gardens_dvd",
+          "cost_per_unit": 8.1,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_the_grid_vhs",
+          "cost_per_unit": 8.1,
+          "min_order_qty": 1,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "rental_wizard_academy_vhs",
+          "cost_per_unit": 9.0,
+          "min_order_qty": 1,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "rental_chainsaw_ballet_vhs",
+          "cost_per_unit": 2.7,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_foreign_cinema_collection_vhs",
+          "cost_per_unit": 2.25,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "rental_standee_wizard_academy",
+          "cost_per_unit": 5.4,
+          "min_order_qty": 1,
+          "max_order_qty": 3
+        }
       ]
     },
     {
@@ -195,22 +713,88 @@
       "display_name": "Gamma Ray Games Wholesale",
       "tier": 1,
       "store_type": "pocket_creatures",
-      "lead_time_days": { "min": 5, "max": 7 },
-      "reliability_rate": 0.80,
-      "unlock_condition": { "type": "always", "threshold": 0 },
+      "lead_time_days": {
+        "min": 5,
+        "max": 7
+      },
+      "reliability_rate": 0.8,
+      "unlock_condition": {
+        "type": "always",
+        "threshold": 0
+      },
       "catalog": [
-        { "item_id": "pc_booster_base_set", "cost_per_unit": 2.39, "min_order_qty": 5, "max_order_qty": 36 },
-        { "item_id": "pc_booster_canopy", "cost_per_unit": 2.39, "min_order_qty": 5, "max_order_qty": 36 },
-        { "item_id": "pc_booster_deep_dig", "cost_per_unit": 2.39, "min_order_qty": 5, "max_order_qty": 36 },
-        { "item_id": "pc_booster_neo_spark", "cost_per_unit": 2.39, "min_order_qty": 5, "max_order_qty": 36 },
-        { "item_id": "pc_single_flameleon_common", "cost_per_unit": 0.15, "min_order_qty": 10, "max_order_qty": 50 },
-        { "item_id": "pc_single_aquashell_common", "cost_per_unit": 0.15, "min_order_qty": 10, "max_order_qty": 50 },
-        { "item_id": "pc_single_thornsprout_common", "cost_per_unit": 0.18, "min_order_qty": 10, "max_order_qty": 50 },
-        { "item_id": "pc_single_voltrat_common", "cost_per_unit": 0.30, "min_order_qty": 10, "max_order_qty": 50 },
-        { "item_id": "pc_single_shadowfang_common", "cost_per_unit": 0.24, "min_order_qty": 10, "max_order_qty": 50 },
-        { "item_id": "pc_deck_starter_set", "cost_per_unit": 9.00, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "pc_acc_sleeves_clear", "cost_per_unit": 1.80, "min_order_qty": 5, "max_order_qty": 30 },
-        { "item_id": "pc_acc_sleeves_clear", "cost_per_unit": 2.40, "min_order_qty": 5, "max_order_qty": 20 }
+        {
+          "item_id": "pc_booster_base_set",
+          "cost_per_unit": 2.39,
+          "min_order_qty": 5,
+          "max_order_qty": 36
+        },
+        {
+          "item_id": "pc_booster_canopy",
+          "cost_per_unit": 2.39,
+          "min_order_qty": 5,
+          "max_order_qty": 36
+        },
+        {
+          "item_id": "pc_booster_deep_dig",
+          "cost_per_unit": 2.39,
+          "min_order_qty": 5,
+          "max_order_qty": 36
+        },
+        {
+          "item_id": "pc_booster_neo_spark",
+          "cost_per_unit": 2.39,
+          "min_order_qty": 5,
+          "max_order_qty": 36
+        },
+        {
+          "item_id": "pc_single_flameleon_common",
+          "cost_per_unit": 0.15,
+          "min_order_qty": 10,
+          "max_order_qty": 50
+        },
+        {
+          "item_id": "pc_single_aquashell_common",
+          "cost_per_unit": 0.15,
+          "min_order_qty": 10,
+          "max_order_qty": 50
+        },
+        {
+          "item_id": "pc_single_thornsprout_common",
+          "cost_per_unit": 0.18,
+          "min_order_qty": 10,
+          "max_order_qty": 50
+        },
+        {
+          "item_id": "pc_single_voltrat_common",
+          "cost_per_unit": 0.3,
+          "min_order_qty": 10,
+          "max_order_qty": 50
+        },
+        {
+          "item_id": "pc_single_shadowfang_common",
+          "cost_per_unit": 0.24,
+          "min_order_qty": 10,
+          "max_order_qty": 50
+        },
+        {
+          "item_id": "pc_deck_starter_set",
+          "cost_per_unit": 9.0,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "pc_acc_sleeves_clear",
+          "cost_per_unit": 1.8,
+          "min_order_qty": 5,
+          "max_order_qty": 30
+        },
+        {
+          "item_id": "pc_acc_sleeves_clear",
+          "cost_per_unit": 2.4,
+          "min_order_qty": 5,
+          "max_order_qty": 20
+        }
       ]
     },
     {
@@ -218,28 +802,125 @@
       "display_name": "Meridian TCG Distribution",
       "tier": 2,
       "store_type": "pocket_creatures",
-      "lead_time_days": { "min": 2, "max": 3 },
+      "lead_time_days": {
+        "min": 2,
+        "max": 3
+      },
       "reliability_rate": 0.95,
-      "unlock_condition": { "type": "days_and_revenue", "threshold": 1200, "days_required": 14 },
+      "unlock_condition": {
+        "type": "days_and_revenue",
+        "threshold": 1200,
+        "days_required": 14
+      },
       "catalog": [
-        { "item_id": "pc_booster_base_set", "cost_per_unit": 2.07, "min_order_qty": 6, "max_order_qty": 72 },
-        { "item_id": "pc_booster_canopy", "cost_per_unit": 2.07, "min_order_qty": 6, "max_order_qty": 72 },
-        { "item_id": "pc_booster_deep_dig", "cost_per_unit": 2.07, "min_order_qty": 6, "max_order_qty": 72 },
-        { "item_id": "pc_booster_shadow_set", "cost_per_unit": 2.60, "min_order_qty": 6, "max_order_qty": 72 },
-        { "item_id": "pc_booster_neo_spark", "cost_per_unit": 2.07, "min_order_qty": 6, "max_order_qty": 72 },
-        { "item_id": "pc_booster_premium", "cost_per_unit": 3.63, "min_order_qty": 3, "max_order_qty": 36 },
-        { "item_id": "pc_single_crystalwing_uncommon", "cost_per_unit": 0.52, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "pc_single_ironclad_uncommon", "cost_per_unit": 0.78, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "pc_single_mossvine_uncommon", "cost_per_unit": 0.65, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "pc_single_blazedragon_rare", "cost_per_unit": 2.08, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "pc_single_stormtide_rare", "cost_per_unit": 1.82, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "pc_tin_collector_blazedragon", "cost_per_unit": 10.40, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "pc_deck_theme_fire", "cost_per_unit": 6.76, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "pc_deck_theme_water", "cost_per_unit": 6.76, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "pc_acc_sleeves_art", "cost_per_unit": 2.60, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "pc_acc_binder", "cost_per_unit": 6.24, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "pc_acc_binder", "cost_per_unit": 9.36, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "pc_acc_sleeves_art", "cost_per_unit": 3.64, "min_order_qty": 3, "max_order_qty": 15 }
+        {
+          "item_id": "pc_booster_base_set",
+          "cost_per_unit": 2.07,
+          "min_order_qty": 6,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "pc_booster_canopy",
+          "cost_per_unit": 2.07,
+          "min_order_qty": 6,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "pc_booster_deep_dig",
+          "cost_per_unit": 2.07,
+          "min_order_qty": 6,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "pc_booster_shadow_set",
+          "cost_per_unit": 2.6,
+          "min_order_qty": 6,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "pc_booster_neo_spark",
+          "cost_per_unit": 2.07,
+          "min_order_qty": 6,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "pc_booster_premium",
+          "cost_per_unit": 3.63,
+          "min_order_qty": 3,
+          "max_order_qty": 36
+        },
+        {
+          "item_id": "pc_single_crystalwing_uncommon",
+          "cost_per_unit": 0.52,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "pc_single_ironclad_uncommon",
+          "cost_per_unit": 0.78,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "pc_single_mossvine_uncommon",
+          "cost_per_unit": 0.65,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "pc_single_blazedragon_rare",
+          "cost_per_unit": 2.08,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_single_stormtide_rare",
+          "cost_per_unit": 1.82,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_tin_collector_blazedragon",
+          "cost_per_unit": 10.4,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_deck_theme_fire",
+          "cost_per_unit": 6.76,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "pc_deck_theme_water",
+          "cost_per_unit": 6.76,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "pc_acc_sleeves_art",
+          "cost_per_unit": 2.6,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "pc_acc_binder",
+          "cost_per_unit": 6.24,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_acc_binder",
+          "cost_per_unit": 9.36,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "pc_acc_sleeves_art",
+          "cost_per_unit": 3.64,
+          "min_order_qty": 3,
+          "max_order_qty": 15
+        }
       ]
     },
     {
@@ -247,21 +928,84 @@
       "display_name": "Apex Hobbies Licensed Distribution",
       "tier": 3,
       "store_type": "pocket_creatures",
-      "lead_time_days": { "min": 1, "max": 2 },
+      "lead_time_days": {
+        "min": 1,
+        "max": 2
+      },
       "reliability_rate": 0.99,
-      "unlock_condition": { "type": "days_and_revenue_or_reputation", "threshold": 4000, "days_required": 30, "reputation_threshold": 75 },
+      "unlock_condition": {
+        "type": "days_and_revenue_or_reputation",
+        "threshold": 4000,
+        "days_required": 30,
+        "reputation_threshold": 75
+      },
       "catalog": [
-        { "item_id": "pc_booster_premium", "cost_per_unit": 3.15, "min_order_qty": 6, "max_order_qty": 72 },
-        { "item_id": "pc_booster_shadow_set", "cost_per_unit": 2.25, "min_order_qty": 6, "max_order_qty": 72 },
-        { "item_id": "pc_single_blazedragon_holo", "cost_per_unit": 11.25, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "pc_single_voltrat_holo_jungle", "cost_per_unit": 6.75, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "pc_single_phantomking_holo", "cost_per_unit": 8.10, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "pc_single_dark_blazedragon_holo", "cost_per_unit": 9.90, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "pc_single_neostorm_holo", "cost_per_unit": 5.40, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "pc_box_base_set", "cost_per_unit": 32.00, "min_order_qty": 1, "max_order_qty": 6 },
-        { "item_id": "pc_box_shadow_set", "cost_per_unit": 36.00, "min_order_qty": 1, "max_order_qty": 6 },
-        { "item_id": "pc_acc_binder", "cost_per_unit": 8.10, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "pc_acc_binder", "cost_per_unit": 5.40, "min_order_qty": 2, "max_order_qty": 12 }
+        {
+          "item_id": "pc_booster_premium",
+          "cost_per_unit": 3.15,
+          "min_order_qty": 6,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "pc_booster_shadow_set",
+          "cost_per_unit": 2.25,
+          "min_order_qty": 6,
+          "max_order_qty": 72
+        },
+        {
+          "item_id": "pc_single_blazedragon_holo",
+          "cost_per_unit": 11.25,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "pc_single_voltrat_holo_jungle",
+          "cost_per_unit": 6.75,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "pc_single_phantomking_holo",
+          "cost_per_unit": 8.1,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "pc_single_dark_blazedragon_holo",
+          "cost_per_unit": 9.9,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "pc_single_neostorm_holo",
+          "cost_per_unit": 5.4,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "pc_box_base_set",
+          "cost_per_unit": 32.0,
+          "min_order_qty": 1,
+          "max_order_qty": 6
+        },
+        {
+          "item_id": "pc_box_shadow_set",
+          "cost_per_unit": 36.0,
+          "min_order_qty": 1,
+          "max_order_qty": 6
+        },
+        {
+          "item_id": "pc_acc_binder",
+          "cost_per_unit": 8.1,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "pc_acc_binder",
+          "cost_per_unit": 5.4,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        }
       ]
     },
     {
@@ -269,26 +1013,112 @@
       "display_name": "ValueTronics Import & Wholesale",
       "tier": 1,
       "store_type": "electronics",
-      "lead_time_days": { "min": 5, "max": 7 },
+      "lead_time_days": {
+        "min": 5,
+        "max": 7
+      },
       "reliability_rate": 0.79,
-      "unlock_condition": { "type": "always", "threshold": 0 },
+      "unlock_condition": {
+        "type": "always",
+        "threshold": 0
+      },
       "catalog": [
-        { "item_id": "elec_zunewave_128", "cost_per_unit": 24.00, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "elec_zunewave_256", "cost_per_unit": 36.00, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "elec_discman_cd", "cost_per_unit": 18.00, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "elec_headphones_budget_earbuds", "cost_per_unit": 6.00, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "elec_headphones_onear", "cost_per_unit": 21.00, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "elec_speaker_portable", "cost_per_unit": 15.00, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "elec_clock_radio", "cost_per_unit": 12.00, "min_order_qty": 2, "max_order_qty": 8 },
-        { "item_id": "elec_screen_protector", "cost_per_unit": 3.00, "min_order_qty": 5, "max_order_qty": 30 },
-        { "item_id": "elec_cable_usb", "cost_per_unit": 3.60, "min_order_qty": 5, "max_order_qty": 25 },
-        { "item_id": "elec_minidisc_player", "cost_per_unit": 41.60, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "elec_usb_drive_64mb", "cost_per_unit": 4.20, "min_order_qty": 5, "max_order_qty": 30 },
-        { "item_id": "elec_usb_drive_512mb", "cost_per_unit": 9.00, "min_order_qty": 3, "max_order_qty": 15 },
-        { "item_id": "elec_case_mp3_player", "cost_per_unit": 5.40, "min_order_qty": 3, "max_order_qty": 15 },
-        { "item_id": "elec_camera_pixelsnap_budget", "cost_per_unit": 18.00, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "elec_portastation_racer", "cost_per_unit": 15.60, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "elec_portastation_quest", "cost_per_unit": 18.20, "min_order_qty": 2, "max_order_qty": 12 }
+        {
+          "item_id": "elec_zunewave_128",
+          "cost_per_unit": 24.0,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_zunewave_256",
+          "cost_per_unit": 36.0,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_discman_cd",
+          "cost_per_unit": 18.0,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_headphones_budget_earbuds",
+          "cost_per_unit": 6.0,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "elec_headphones_onear",
+          "cost_per_unit": 21.0,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "elec_speaker_portable",
+          "cost_per_unit": 15.0,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_clock_radio",
+          "cost_per_unit": 12.0,
+          "min_order_qty": 2,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "elec_screen_protector",
+          "cost_per_unit": 3.0,
+          "min_order_qty": 5,
+          "max_order_qty": 30
+        },
+        {
+          "item_id": "elec_cable_usb",
+          "cost_per_unit": 3.6,
+          "min_order_qty": 5,
+          "max_order_qty": 25
+        },
+        {
+          "item_id": "elec_minidisc_player",
+          "cost_per_unit": 41.6,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "elec_usb_drive_64mb",
+          "cost_per_unit": 4.2,
+          "min_order_qty": 5,
+          "max_order_qty": 30
+        },
+        {
+          "item_id": "elec_usb_drive_512mb",
+          "cost_per_unit": 9.0,
+          "min_order_qty": 3,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "elec_case_mp3_player",
+          "cost_per_unit": 5.4,
+          "min_order_qty": 3,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "elec_camera_pixelsnap_budget",
+          "cost_per_unit": 18.0,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_portastation_racer",
+          "cost_per_unit": 15.6,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "elec_portastation_quest",
+          "cost_per_unit": 18.2,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        }
       ]
     },
     {
@@ -296,22 +1126,89 @@
       "display_name": "Continental Electronics Supply Co.",
       "tier": 2,
       "store_type": "electronics",
-      "lead_time_days": { "min": 2, "max": 3 },
+      "lead_time_days": {
+        "min": 2,
+        "max": 3
+      },
       "reliability_rate": 0.93,
-      "unlock_condition": { "type": "days_and_revenue", "threshold": 1200, "days_required": 14 },
+      "unlock_condition": {
+        "type": "days_and_revenue",
+        "threshold": 1200,
+        "days_required": 14
+      },
       "catalog": [
-        { "item_id": "elec_zunewave_128", "cost_per_unit": 20.80, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "elec_zunewave_256", "cost_per_unit": 31.20, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "elec_discman_cd", "cost_per_unit": 15.60, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "elec_minidisc_player", "cost_per_unit": 41.60, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "elec_headphones_onear", "cost_per_unit": 18.20, "min_order_qty": 2, "max_order_qty": 15 },
-        { "item_id": "elec_headphones_overear_pro", "cost_per_unit": 36.40, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "elec_portastation_racer", "cost_per_unit": 15.60, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "elec_portastation_quest", "cost_per_unit": 18.20, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "elec_portastation_console", "cost_per_unit": 67.60, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "elec_camera_pixelsnap_budget", "cost_per_unit": 46.80, "min_order_qty": 1, "max_order_qty": 6 },
-        { "item_id": "elec_usb_drive_512mb", "cost_per_unit": 18.20, "min_order_qty": 2, "max_order_qty": 10 },
-        { "item_id": "elec_camera_pixelsnap_budget", "cost_per_unit": 15.60, "min_order_qty": 2, "max_order_qty": 8 }
+        {
+          "item_id": "elec_zunewave_128",
+          "cost_per_unit": 20.8,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "elec_zunewave_256",
+          "cost_per_unit": 31.2,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "elec_discman_cd",
+          "cost_per_unit": 15.6,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "elec_minidisc_player",
+          "cost_per_unit": 41.6,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "elec_headphones_onear",
+          "cost_per_unit": 18.2,
+          "min_order_qty": 2,
+          "max_order_qty": 15
+        },
+        {
+          "item_id": "elec_headphones_overear_pro",
+          "cost_per_unit": 36.4,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "elec_portastation_racer",
+          "cost_per_unit": 15.6,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "elec_portastation_quest",
+          "cost_per_unit": 18.2,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "elec_portastation_console",
+          "cost_per_unit": 67.6,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "elec_camera_pixelsnap_budget",
+          "cost_per_unit": 46.8,
+          "min_order_qty": 1,
+          "max_order_qty": 6
+        },
+        {
+          "item_id": "elec_usb_drive_512mb",
+          "cost_per_unit": 18.2,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_camera_pixelsnap_budget",
+          "cost_per_unit": 15.6,
+          "min_order_qty": 2,
+          "max_order_qty": 8
+        }
       ]
     },
     {
@@ -319,19 +1216,72 @@
       "display_name": "Prestige Consumer Electronics",
       "tier": 3,
       "store_type": "electronics",
-      "lead_time_days": { "min": 1, "max": 2 },
+      "lead_time_days": {
+        "min": 1,
+        "max": 2
+      },
       "reliability_rate": 0.99,
-      "unlock_condition": { "type": "days_and_revenue_or_reputation", "threshold": 4000, "days_required": 30, "reputation_threshold": 75 },
+      "unlock_condition": {
+        "type": "days_and_revenue_or_reputation",
+        "threshold": 4000,
+        "days_required": 30,
+        "reputation_threshold": 75
+      },
       "catalog": [
-        { "item_id": "elec_podplay_5gb", "cost_per_unit": 67.50, "min_order_qty": 1, "max_order_qty": 8 },
-        { "item_id": "elec_camera_pixelsnap_pro", "cost_per_unit": 72.00, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "elec_minidisc_player", "cost_per_unit": 36.00, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "elec_headphones_overear_pro", "cost_per_unit": 31.50, "min_order_qty": 1, "max_order_qty": 10 },
-        { "item_id": "elec_camera_pixelsnap_pro", "cost_per_unit": 81.00, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "elec_minidisc_player", "cost_per_unit": 52.00, "min_order_qty": 1, "max_order_qty": 5 },
-        { "item_id": "elec_portastation_console", "cost_per_unit": 58.50, "min_order_qty": 1, "max_order_qty": 6 },
-        { "item_id": "elec_usb_drive_512mb", "cost_per_unit": 15.75, "min_order_qty": 2, "max_order_qty": 12 },
-        { "item_id": "elec_camera_pixelsnap_budget", "cost_per_unit": 13.50, "min_order_qty": 2, "max_order_qty": 10 }
+        {
+          "item_id": "elec_podplay_5gb",
+          "cost_per_unit": 67.5,
+          "min_order_qty": 1,
+          "max_order_qty": 8
+        },
+        {
+          "item_id": "elec_camera_pixelsnap_pro",
+          "cost_per_unit": 72.0,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "elec_minidisc_player",
+          "cost_per_unit": 36.0,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_headphones_overear_pro",
+          "cost_per_unit": 31.5,
+          "min_order_qty": 1,
+          "max_order_qty": 10
+        },
+        {
+          "item_id": "elec_camera_pixelsnap_pro",
+          "cost_per_unit": 81.0,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "elec_minidisc_player",
+          "cost_per_unit": 52.0,
+          "min_order_qty": 1,
+          "max_order_qty": 5
+        },
+        {
+          "item_id": "elec_portastation_console",
+          "cost_per_unit": 58.5,
+          "min_order_qty": 1,
+          "max_order_qty": 6
+        },
+        {
+          "item_id": "elec_usb_drive_512mb",
+          "cost_per_unit": 15.75,
+          "min_order_qty": 2,
+          "max_order_qty": 12
+        },
+        {
+          "item_id": "elec_camera_pixelsnap_budget",
+          "cost_per_unit": 13.5,
+          "min_order_qty": 2,
+          "max_order_qty": 10
+        }
       ]
     }
   ]

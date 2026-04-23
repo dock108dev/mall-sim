@@ -75,6 +75,21 @@ offset_bottom = 40.0
 grow_horizontal = 0
 text = "Settings"
 
+[node name="ProgressButton" type="Button" parent="HubLayer/HubUIOverlay"]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -220.0
+offset_top = 8.0
+offset_right = -108.0
+offset_bottom = 40.0
+grow_horizontal = 0
+focus_mode = 2
+text = "Progress"
+
 [node name="SneakerCitadelTile" type="Button" parent="HubLayer/HubUIOverlay"]
 unique_name_in_owner = true
 layout_mode = 1
@@ -109,3 +124,4 @@ volume_db = -6.0
 [node name="DrawerHost" parent="." instance=ExtResource("4")]
 
 [connection signal="pressed" from="HubLayer/HubUIOverlay/SettingsButton" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="HubLayer/HubUIOverlay/ProgressButton" to="." method="_on_progress_pressed"]

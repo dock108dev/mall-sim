@@ -2,72 +2,156 @@
   {
     "id": "pc_competitive_player",
     "name": "Competitive Player",
-    "store_types": ["pocket_creatures"],
-    "budget_range": [10.00, 60.00],
+    "store_types": [
+      "pocket_creatures"
+    ],
+    "budget_range": [
+      10.0,
+      60.0
+    ],
     "patience": 0.5,
     "price_sensitivity": 0.7,
-    "preferred_categories": ["singles", "accessories"],
-    "preferred_tags": ["meta", "holo", "rare", "competitive", "trainer"],
+    "preferred_categories": [
+      "singles",
+      "accessories"
+    ],
+    "preferred_tags": [
+      "meta",
+      "holo",
+      "rare",
+      "competitive",
+      "trainer"
+    ],
     "condition_preference": "near_mint",
-    "browse_time_range": [15, 45],
+    "browse_time_range": [
+      15,
+      45
+    ],
     "purchase_probability_base": 0.55,
     "impulse_buy_chance": 0.1,
     "visit_frequency": "high",
-    "mood_tags": ["focused", "knowledgeable", "decisive"],
+    "mood_tags": [
+      "focused",
+      "knowledgeable",
+      "decisive"
+    ],
     "dialogue_pool": "competitive_player",
     "model": "res://game/assets/models/customers/young_adult.glb"
   },
   {
     "id": "pc_collector",
     "name": "Set Collector",
-    "store_types": ["pocket_creatures"],
-    "budget_range": [20.00, 150.00],
+    "store_types": [
+      "pocket_creatures"
+    ],
+    "budget_range": [
+      20.0,
+      150.0
+    ],
     "patience": 0.8,
     "price_sensitivity": 0.4,
-    "preferred_categories": ["singles", "sealed_product"],
-    "preferred_tags": ["holo", "first_edition", "rare", "complete_set", "foil"],
+    "preferred_categories": [
+      "singles",
+      "sealed_product"
+    ],
+    "preferred_tags": [
+      "holo",
+      "first_edition",
+      "rare",
+      "complete_set",
+      "foil"
+    ],
     "condition_preference": "mint",
-    "browse_time_range": [45, 120],
-    "purchase_probability_base": 0.50,
+    "browse_time_range": [
+      45,
+      120
+    ],
+    "purchase_probability_base": 0.5,
     "impulse_buy_chance": 0.2,
     "visit_frequency": "medium",
-    "mood_tags": ["meticulous", "browsing", "excited"],
+    "mood_tags": [
+      "meticulous",
+      "browsing",
+      "excited"
+    ],
     "dialogue_pool": "pc_collector",
     "model": "res://game/assets/models/customers/casual_adult.glb"
   },
   {
     "id": "pc_pack_cracker",
     "name": "Pack Cracker",
-    "store_types": ["pocket_creatures"],
-    "budget_range": [5.00, 40.00],
+    "store_types": [
+      "pocket_creatures"
+    ],
+    "budget_range": [
+      5.0,
+      40.0
+    ],
     "patience": 0.4,
     "price_sensitivity": 0.3,
-    "preferred_categories": ["booster_packs"],
-    "preferred_tags": ["booster", "sealed", "base_set", "jungle", "neo_genesis"],
+    "preferred_categories": [
+      "booster_packs"
+    ],
+    "preferred_tags": [
+      "booster",
+      "sealed",
+      "base_set",
+      "jungle",
+      "neo_genesis"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [10, 30],
-    "purchase_probability_base": 0.80,
+    "browse_time_range": [
+      10,
+      30
+    ],
+    "purchase_probability_base": 0.8,
     "impulse_buy_chance": 0.6,
     "visit_frequency": "high",
-    "mood_tags": ["eager", "impulsive", "hopeful"],
+    "mood_tags": [
+      "eager",
+      "impulsive",
+      "hopeful"
+    ],
     "dialogue_pool": "pack_cracker",
     "model": "res://game/assets/models/customers/young_adult.glb"
   },
   {
     "id": "pc_parent_buyer",
     "name": "Parent Buying for Kid",
-    "store_types": ["pocket_creatures"],
-    "budget_range": [8.00, 30.00],
+    "store_types": [
+      "pocket_creatures"
+    ],
+    "budget_range": [
+      8.0,
+      30.0
+    ],
     "patience": 0.7,
     "price_sensitivity": 0.6,
-    "preferred_categories": ["booster_packs", "starter_decks", "accessories"],
-    "preferred_tags": ["starter", "booster", "sleeves", "binder", "gift"],
+    "preferred_categories": [
+      "booster_packs",
+      "starter_decks",
+      "accessories"
+    ],
+    "preferred_tags": [
+      "starter",
+      "booster",
+      "sleeves",
+      "binder",
+      "gift"
+    ],
     "condition_preference": "good",
-    "browse_time_range": [20, 60],
-    "purchase_probability_base": 0.60,
+    "browse_time_range": [
+      20,
+      60
+    ],
+    "purchase_probability_base": 0.6,
     "impulse_buy_chance": 0.25,
     "visit_frequency": "low",
-    "mood_tags": ["uncertain", "asking", "grateful"],
+    "mood_tags": [
+      "uncertain",
+      "asking",
+      "grateful"
+    ],
     "dialogue_pool": "parent_shopping",
     "model": "res://game/assets/models/customers/parent.glb"
   }

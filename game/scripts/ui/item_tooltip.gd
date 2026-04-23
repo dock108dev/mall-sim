@@ -17,6 +17,10 @@ var _current_item: ItemInstance = null
 var _show_timer: float = -1.0
 var _pending_item: ItemInstance = null
 var _fade_tween: Tween
+## ISSUE-020: cached PriceResolver audit trace per item_id, populated from
+## EventBus.price_resolved. The tooltip renders the most recent trace for the
+## inspected listing so the player can see which multipliers drove the price.
+var _last_audit: Dictionary = {}
 
 @onready var _name_label: Label = $Margin/VBox/NameLabel
 @onready var _rarity_label: Label = $Margin/VBox/RarityLabel
@@ -27,6 +31,7 @@ var _fade_tween: Tween
 @onready var _trend_label: Label = $Margin/VBox/TrendLabel
 @onready var _auth_label: Label = $Margin/VBox/AuthLabel
 @onready var _desc_label: Label = $Margin/VBox/DescLabel
+@onready var _audit_label: Label = $Margin/VBox/AuditLabel
 
 
 func _ready() -> void:
@@ -36,6 +41,7 @@ func _ready() -> void:
 	EventBus.item_tooltip_requested.connect(show_for_item)
 	EventBus.item_tooltip_hidden.connect(hide_tooltip)
 	EventBus.panel_opened.connect(_on_panel_opened)
+	EventBus.price_resolved.connect(_on_price_resolved)
 
 
 func _process(delta: float) -> void:
@@ -89,6 +95,7 @@ func _display_item(item: ItemInstance) -> void:
 	_update_trend(item)
 	_update_authentication(item)
 	_update_description(def)
+	_update_price_audit(item)
 
 	PanelAnimator.kill_tween(_fade_tween)
 	_fade_tween = PanelAnimator.fade_in(self)
@@ -191,6 +198,45 @@ func _update_authentication(item: ItemInstance) -> void:
 			_auth_label.visible = true
 		_:
 			_auth_label.visible = false
+
+
+## ISSUE-020: renders the most recent PriceResolver audit trace for the
+## inspected item. Hidden when no trace has been captured for the item.
+func _update_price_audit(item: ItemInstance) -> void:
+	if not _audit_label:
+		return
+	var key: StringName = StringName(item.instance_id)
+	var trace: Array = _last_audit.get(key, [])
+	if trace.is_empty():
+		_audit_label.visible = false
+		return
+	var lines: PackedStringArray = ["Price breakdown:"]
+	for entry: Variant in trace:
+		if entry is not Dictionary:
+			continue
+		var step: Dictionary = entry as Dictionary
+		lines.append("  %s  ×%.3f  →  $%.2f" % [
+			str(step.get("name", "?")),
+			float(step.get("factor", 1.0)),
+			float(step.get("price_after", 0.0)),
+		])
+	_audit_label.text = "\n".join(lines)
+	_audit_label.visible = true
+
+
+## Caches the latest audit trace so the tooltip can surface it on demand.
+func _on_price_resolved(
+	item_id: StringName, _final_price: float, steps: Array
+) -> void:
+	var trace: Array = []
+	for step: Variant in steps:
+		if step is PriceResolver.AuditStep:
+			trace.append((step as PriceResolver.AuditStep).to_dict())
+		elif step is Dictionary:
+			trace.append(step)
+	_last_audit[item_id] = trace
+	if _current_item and StringName(_current_item.instance_id) == item_id and visible:
+		_update_price_audit(_current_item)
 
 
 func _update_description(def: ItemDefinition) -> void:

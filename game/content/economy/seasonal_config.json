@@ -1,4 +1,5 @@
 {
+  "type": "seasonal_config",
   "seasons": [
     {
       "index": 0,

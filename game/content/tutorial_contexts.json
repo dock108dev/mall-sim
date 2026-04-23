@@ -1,0 +1,80 @@
+{
+  "type": "tutorial_contexts_data",
+  "_comment": "ISSUE-004: per-store tutorial context. Keyed by StoreDefinition.tutorial_context_id. Each step's interactable_id must resolve to an Interactable in the bound scene (validated by tests/gut/test_tutorial_context_validation.gd).",
+  "tutorial_contexts": {
+    "sports_memorabilia": {
+      "scene_path": "res://game/scenes/stores/sports_memorabilia.tscn",
+      "steps": [
+        {
+          "id": "sports_open_backroom",
+          "prompt_text": "Head to the backroom door to pull autographed cards for the display case.",
+          "action": "Open backroom",
+          "key": "[E]",
+          "interactable_id": "BackroomInteractable"
+        },
+        {
+          "id": "sports_ring_up",
+          "prompt_text": "Ring up collectors at the checkout counter when they bring a card over.",
+          "action": "Use register",
+          "key": "[E]",
+          "interactable_id": "Interactable"
+        }
+      ]
+    },
+    "retro_games": {
+      "scene_path": "res://game/scenes/stores/retro_games.tscn",
+      "steps": [
+        {
+          "id": "retro_test_cart",
+          "prompt_text": "Test used cartridges at the testing station before you put them on the shelf.",
+          "action": "Test cartridge",
+          "key": "[E]",
+          "interactable_id": "Interactable"
+        },
+        {
+          "id": "retro_refurb",
+          "prompt_text": "Dirty carts go on the refurbishment bench \u2014 clean them up for a price bump.",
+          "action": "Refurbish",
+          "key": "[E]",
+          "interactable_id": "Interactable"
+        }
+      ]
+    },
+    "pocket_creatures": {
+      "scene_path": "res://game/scenes/stores/pocket_creatures.tscn",
+      "steps": [
+        {
+          "id": "pocket_service",
+          "prompt_text": "Open booster packs and ring up traders at the service counter.",
+          "action": "Use service counter",
+          "key": "[E]",
+          "interactable_id": "Interactable"
+        }
+      ]
+    },
+    "video_rental": {
+      "scene_path": "res://game/scenes/stores/video_rental.tscn",
+      "steps": [
+        {
+          "id": "video_stock_newreleases",
+          "prompt_text": "Stock the New Releases wall first \u2014 that's what walk-ins rent.",
+          "action": "Stock shelf",
+          "key": "[E]",
+          "interactable_id": "Slot1"
+        }
+      ]
+    },
+    "consumer_electronics": {
+      "scene_path": "res://game/scenes/stores/consumer_electronics.tscn",
+      "steps": [
+        {
+          "id": "electronics_demo_kiosk",
+          "prompt_text": "Set a demo unit on a kiosk \u2014 shoppers buy what they can touch.",
+          "action": "Stock kiosk",
+          "key": "[E]",
+          "interactable_id": "Slot1"
+        }
+      ]
+    }
+  }
+}

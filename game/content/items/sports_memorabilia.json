@@ -81,7 +81,7 @@
     "base_price": 2.5,
     "rarity": "common",
     "era": "early_2000s",
-    "provenance_score": 0.70,
+    "provenance_score": 0.7,
     "condition_range": [
       "mint",
       "good",
@@ -155,7 +155,7 @@
     "base_price": 15.0,
     "rarity": "uncommon",
     "era": "mid_1990s",
-    "provenance_score": 0.80,
+    "provenance_score": 0.8,
     "condition_range": [
       "mint",
       "good",

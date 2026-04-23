@@ -9,6 +9,14 @@ const BOOSTED_CATEGORIES: PackedStringArray = ["memorabilia", "autograph"]
 const DEFAULT_SEASON_BOOST: float = 1.5
 ## Minimum provenance_score for a card to pass the authentication check.
 const AUTH_THRESHOLD: float = 0.5
+## Flat cost of a single probabilistic grading hint (ISSUE-018).
+const GRADING_HINT_FEE: float = 10.0
+## Probability that a grading hint reports the true authenticity. The remaining
+## probability is split between the two adjacent states, giving the player
+## partial but not certain information.
+const GRADING_HINT_ACCURACY: float = 0.7
+## Reputation magnitude deducted when a fake is sold as authentic.
+const FAKE_SALE_REPUTATION_PENALTY: float = -5.0
 
 ## Grade ranges per condition for the ACC numeric grading RNG.
 ## Format: [min_grade, max_grade] (inclusive, 1–10 scale).
@@ -24,11 +32,17 @@ var _season_cycle: SeasonCycleSystem = SeasonCycleSystem.new()
 var _season_boost_active: bool = false
 var _season_boost_value: float = DEFAULT_SEASON_BOOST
 var _market_event_connected: bool = false
+var _economy_system: EconomySystem = null
 
 ## Maps instance_id → day_submitted for cards pending ACC grading.
 var _pending_grades: Dictionary = {}
 ## Accumulates grades returned on the current day for the grading_day_summary emit.
 var _today_returned: Array = []
+
+
+## Injects the EconomySystem reference so grading-hint fees can be deducted.
+func set_economy_system(economy: EconomySystem) -> void:
+	_economy_system = economy
 
 
 func _ready() -> void:
@@ -171,7 +185,82 @@ func get_store_actions() -> Array:
 		"label": "Send for Grading (ACC)",
 		"icon": "",
 	})
+	actions.append({
+		"id": &"grading_hint",
+		"label": "Buy Grading Hint ($%d)" % int(GRADING_HINT_FEE),
+		"icon": "",
+	})
 	return actions
+
+
+## Returns the flat cost of a probabilistic grading hint.
+func get_grading_hint_fee() -> float:
+	return GRADING_HINT_FEE
+
+
+## Pays GRADING_HINT_FEE and stamps item.revealed_authenticity with a
+## probabilistic hint that matches true_authenticity GRADING_HINT_ACCURACY of
+## the time and otherwise reports an adjacent state. Emits
+## grading_hint_revealed on success.
+func request_grading_hint(item_id: StringName) -> bool:
+	if not _inventory_system:
+		push_warning(
+			"SportsMemorabiliaController: InventorySystem required for hint"
+		)
+		return false
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item or not item.definition:
+		push_warning(
+			"SportsMemorabiliaController: item '%s' not found for hint" % item_id
+		)
+		return false
+	if item.true_authenticity.is_empty():
+		item.true_authenticity = ItemInstance.derive_true_authenticity(item.definition)
+	if item.true_authenticity.is_empty():
+		push_warning(
+			"SportsMemorabiliaController: item '%s' has no provenance to grade"
+			% item_id
+		)
+		return false
+	var economy: EconomySystem = _economy_system
+	if economy and not economy.deduct_cash(
+		GRADING_HINT_FEE, "Grading hint: %s" % item.definition.item_name
+	):
+		EventBus.notification_requested.emit(
+			"Insufficient funds for grading hint ($%.2f)" % GRADING_HINT_FEE
+		)
+		return false
+	var hint: String = _roll_authenticity_hint(item)
+	item.revealed_authenticity = hint
+	EventBus.grading_hint_revealed.emit(item_id, hint, GRADING_HINT_FEE)
+	EventBus.notification_requested.emit(
+		"Grading hint: %s looks %s" % [item.definition.item_name, hint]
+	)
+	return true
+
+
+## Returns a probabilistic authenticity hint for an item. Uses a per-call RNG
+## seeded from instance_id + current day so repeated hints on the same day
+## return a stable answer (player can't spam-reroll for certainty).
+func _roll_authenticity_hint(item: ItemInstance) -> String:
+	var states: PackedStringArray = ["authentic", "questionable", "fake"]
+	var truth: String = item.true_authenticity
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(
+		"hint:" + String(item.instance_id) + ":"
+		+ str(GameManager.get_current_day())
+	)
+	if rng.randf() < GRADING_HINT_ACCURACY:
+		return truth
+	var truth_idx: int = states.find(truth)
+	if truth_idx < 0:
+		return truth
+	if truth_idx == 0:
+		return states[1]
+	if truth_idx == states.size() - 1:
+		return states[states.size() - 2]
+	# Middle state ("questionable") has two neighbours — pick one.
+	return states[0] if rng.randf() < 0.5 else states[states.size() - 1]
 
 
 func _on_day_started(day: int) -> void:
@@ -225,11 +314,42 @@ func _get_season_modifier(_category: StringName) -> float:
 
 
 func _on_customer_purchased(
-	_store_id: StringName, _item_id: StringName,
-	_price: float, _customer_id: StringName
+	store_id: StringName, item_id: StringName,
+	price: float, _customer_id: StringName
 ) -> void:
-	if not _is_active:
+	if store_id != STORE_ID:
 		return
+	_check_fake_sold_as_authentic(item_id, price)
+
+
+## Triggers a reputation penalty when the sold item's true authenticity is
+## "fake" but the player declared it authentic (is_authenticated). Emits
+## fake_sold_as_authentic so UI/audit can surface the incident.
+func _check_fake_sold_as_authentic(
+	item_id: StringName, price: float
+) -> void:
+	if not _inventory_system:
+		return
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item:
+		return
+	if item.true_authenticity.is_empty():
+		item.true_authenticity = ItemInstance.derive_true_authenticity(item.definition)
+	if item.true_authenticity != "fake":
+		return
+	if not item.is_authenticated:
+		return
+	ReputationSystemSingleton.add_reputation(
+		String(STORE_ID), FAKE_SALE_REPUTATION_PENALTY
+	)
+	EventBus.fake_sold_as_authentic.emit(
+		item_id, STORE_ID, price, FAKE_SALE_REPUTATION_PENALTY
+	)
+	EventBus.notification_requested.emit(
+		"Customer exposed fake: %s (-%.1f reputation)"
+		% [item.definition.item_name if item.definition else String(item_id),
+		   absf(FAKE_SALE_REPUTATION_PENALTY)]
+	)
 
 
 func _on_market_event(
