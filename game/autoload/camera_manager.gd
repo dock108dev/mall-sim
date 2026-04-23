@@ -1,5 +1,11 @@
-## Tracks the active Camera3D and emits EventBus.active_camera_changed on transitions.
+## Tracks the active Camera3D and emits EventBus.active_camera_changed on
+## transitions. When it detects a new active camera, it mirrors it into
+## CameraAuthority (ISSUE-010, ownership.md row 4) so the single-writer
+## contract is satisfied regardless of how the camera became current
+## (explicit `make_current()`, Godot auto-current on tree-add, etc.).
 extends Node
+
+const _AUTHORITY_SOURCE: StringName = &"camera_manager"
 
 var active_camera: Camera3D = null
 
@@ -59,7 +65,20 @@ func _set_active_camera(camera: Camera3D, force_emit: bool) -> void:
 	if not force_emit and camera == active_camera:
 		return
 	active_camera = camera
+	_sync_to_camera_authority(camera)
 	EventBus.active_camera_changed.emit(active_camera)
+
+
+func _sync_to_camera_authority(camera: Camera3D) -> void:
+	if camera == null:
+		return
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var authority: Node = tree.root.get_node_or_null("CameraAuthority")
+	if authority == null or not authority.has_method("request_current"):
+		return
+	authority.request_current(camera, _AUTHORITY_SOURCE)
 
 
 func _on_node_added(node: Node) -> void:

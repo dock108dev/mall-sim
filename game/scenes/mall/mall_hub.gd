@@ -235,6 +235,12 @@ func _on_store_director_failed(store_id: StringName, reason: String) -> void:
 
 
 func _assert_mall_hub_camera() -> void:
+	# Camera authority only applies when the walkable 3D mall is active. In the
+	# default click-to-enter hub mode (game_world.gd:212-217) the scene is a
+	# pure 2D UI with no Camera3D, so the single-active-camera assert is
+	# inapplicable and would always fail with zero cameras in the group.
+	if not ProjectSettings.get_setting("debug/walkable_mall", false):
+		return
 	if CameraAuthority == null or not CameraAuthority.has_method("assert_single_active"):
 		return
 	if not CameraAuthority.assert_single_active():
