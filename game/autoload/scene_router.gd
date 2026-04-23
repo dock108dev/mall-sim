@@ -8,9 +8,10 @@
 ##
 ## A successful transition emits the `scene_ready(target, payload)` signal
 ## and prints the audit line `AUDIT: PASS scene_change_ok target=<...>` via
-## AuditLog. The signal fires after a single `process_frame` settle so the
-## new scene tree is in place; per-scene readiness contracts (StoreReady, etc)
-## are layered on top of this by their owning controllers.
+## AuditLog. The signal fires after the new scene root has been added to the
+## tree (its `_ready` has run) and one additional `process_frame` has
+## elapsed; per-scene readiness contracts (StoreReady, etc.) are layered on
+## top of this by their owning controllers.
 extends Node
 
 signal scene_ready(target: StringName, payload: Dictionary)
@@ -84,6 +85,10 @@ func route_to_packed(scene: PackedScene, payload: Dictionary = {}) -> void:
 		_in_flight = false
 		_fail(target, "change_scene_to_packed failed: %d" % err)
 		return
+	# change_scene_to_* queues the swap; the new root isn't in the tree yet.
+	# Wait for tree_changed so the new scene root has been added (triggers its
+	# _ready), then one more process_frame so @onready/_ready deferrals settle.
+	await get_tree().tree_changed
 	await get_tree().process_frame
 	_in_flight = false
 	_emit_pass(target, scene.resource_path)
@@ -99,6 +104,10 @@ func _change_scene_to_file(
 		_in_flight = false
 		_fail(target, "change_scene_to_file failed: %d (%s)" % [err, scene_path])
 		return
+	# change_scene_to_* queues the swap; the new root isn't in the tree yet.
+	# Wait for tree_changed so the new scene root has been added (triggers its
+	# _ready), then one more process_frame so @onready/_ready deferrals settle.
+	await get_tree().tree_changed
 	await get_tree().process_frame
 	_in_flight = false
 	_emit_pass(target, scene_path)
