@@ -148,11 +148,9 @@ func test_unknown_id_returns_empty_and_emits_push_error() -> void:
 
 
 func _load_ids_from_json(path: String) -> Array[StringName]:
-	var data: Variant = DataLoader.load_json(path)
-	assert_true(data is Array, "%s should contain a top-level array" % path)
+	var data: Array = DataLoader.load_catalog_entries(path)
+	assert_false(data.is_empty(), "%s should have entries" % path)
 	var ids: Array[StringName] = []
-	if data is not Array:
-		return ids
 	for entry: Variant in data:
 		assert_true(entry is Dictionary, "%s entries should be dictionaries" % path)
 		if entry is not Dictionary:

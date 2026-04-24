@@ -79,10 +79,8 @@ func test_catalog_json_entries_match_issue_139_schema() -> void:
 		"res://game/content/items/consumer_electronics.json",
 	]
 	for path: String in catalog_paths:
-		var data: Variant = DataLoader.load_json(path)
-		assert_true(data is Array, "Catalog should be an array: %s" % path)
-		if data is not Array:
-			continue
+		var data: Array = DataLoader.load_catalog_entries(path)
+		assert_false(data.is_empty(), "Catalog should have entries: %s" % path)
 		for raw_entry: Variant in data:
 			assert_true(raw_entry is Dictionary, "Entry should be object in %s" % path)
 			if raw_entry is not Dictionary:
@@ -120,10 +118,8 @@ func test_issue_139_catalog_ids_unique_across_target_files() -> void:
 	]
 	var seen_ids: Dictionary = {}
 	for path: String in catalog_paths:
-		var data: Variant = DataLoader.load_json(path)
-		assert_true(data is Array, "Catalog should be an array: %s" % path)
-		if data is not Array:
-			continue
+		var data: Array = DataLoader.load_catalog_entries(path)
+		assert_false(data.is_empty(), "Catalog should have entries: %s" % path)
 		for raw_entry: Variant in data:
 			if raw_entry is not Dictionary:
 				continue

@@ -82,18 +82,7 @@ func before_all() -> void:
 
 
 func _load_json(path: String) -> Array:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		push_error("Cannot open %s" % path)
-		return []
-	var json := JSON.new()
-	var err: Error = json.parse(file.get_as_text())
-	if err != OK:
-		push_error("JSON parse error in %s: %s" % [path, json.get_error_message()])
-		return []
-	if json.data is Array:
-		return json.data
-	return []
+	return DataLoader.load_catalog_entries(path)
 
 
 func test_seasonal_events_parses_without_error() -> void:

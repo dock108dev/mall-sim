@@ -441,10 +441,8 @@ func test_item_json_uses_item_name_not_name() -> void:
 		"res://game/content/items/video_rental.json",
 	]
 	for path: String in catalog_paths:
-		var data: Variant = DataLoader.load_json(path)
-		assert_not_null(data, "Should parse %s" % path)
-		if data is not Array:
-			continue
+		var data: Array = DataLoader.load_catalog_entries(path)
+		assert_false(data.is_empty(), "Should have entries in %s" % path)
 		for entry: Variant in data:
 			if entry is not Dictionary:
 				continue

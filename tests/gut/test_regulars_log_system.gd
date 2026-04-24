@@ -131,29 +131,19 @@ func _simulate_purchase(customer_id: String, category: String) -> void:
 
 
 func test_json_file_loads_four_threads() -> void:
-	var file: FileAccess = FileAccess.open(
-		"res://game/content/meta/regulars_threads.json", FileAccess.READ
+	var parsed: Array = DataLoader.load_catalog_entries(
+		"res://game/content/meta/regulars_threads.json"
 	)
-	assert_not_null(file, "regulars_threads.json must exist")
-	if not file:
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	assert_true(parsed is Array, "JSON root must be an array")
-	assert_eq((parsed as Array).size(), 4, "Must have exactly four thread entries")
+	assert_eq(parsed.size(), 4, "Must have exactly four thread entries")
 
 
 func test_json_threads_have_required_fields() -> void:
-	var file: FileAccess = FileAccess.open(
-		"res://game/content/meta/regulars_threads.json", FileAccess.READ
+	var parsed: Array = DataLoader.load_catalog_entries(
+		"res://game/content/meta/regulars_threads.json"
 	)
-	if not file:
+	if parsed.is_empty():
 		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is not Array:
-		return
-	for entry: Variant in (parsed as Array):
+	for entry: Variant in parsed:
 		assert_true(entry is Dictionary, "Each entry must be a Dictionary")
 		if entry is not Dictionary:
 			continue

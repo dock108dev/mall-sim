@@ -1,782 +1,785 @@
-[
-  {
-    "id": "pc_booster_base_set",
-    "item_name": "PocketCreatures Base Set Booster Pack",
-    "store_type": "pocket_creatures",
-    "category": "booster_packs",
-    "base_price": 3.99,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "The first-wave booster that still makes players talk about lucky pulls like urban legends.",
-    "subcategory": "sealed",
-    "tags": [
-      "pack",
-      "booster",
-      "sealed",
-      "base_set"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_booster_canopy",
-    "item_name": "Canopy Clash Expansion Booster",
-    "store_type": "pocket_creatures",
-    "category": "booster_packs",
-    "base_price": 3.99,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A leafy expansion pack known for bright artwork, swift creatures, and very loud collector opinions.",
-    "subcategory": "sealed",
-    "tags": [
-      "pack",
-      "booster",
-      "sealed",
-      "canopy"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_booster_deep_dig",
-    "item_name": "Fossil Depths Expansion Booster",
-    "store_type": "pocket_creatures",
-    "category": "booster_packs",
-    "base_price": 3.99,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A dig-site themed booster with stony monsters and a reputation for excellent holo pulls.",
-    "subcategory": "sealed",
-    "tags": [
-      "pack",
-      "booster",
-      "sealed",
-      "deep_dig"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_booster_shadow_set",
-    "item_name": "Shadow Syndicate Edition Booster",
-    "store_type": "pocket_creatures",
-    "category": "booster_packs",
-    "base_price": 4.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A darker villain-focused set whose moody art made it an instant cult favorite.",
-    "subcategory": "sealed",
-    "tags": [
-      "pack",
-      "booster",
-      "sealed",
-      "shadow_set"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_booster_neo_spark",
-    "item_name": "Neo Spark Booster",
-    "store_type": "pocket_creatures",
-    "category": "booster_packs",
-    "base_price": 3.99,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A second-wave booster that pushed new creature lines and half the local tournament chatter.",
-    "subcategory": "sealed",
-    "tags": [
-      "pack",
-      "booster",
-      "sealed",
-      "neo_spark"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_booster_premium",
-    "item_name": "Prism Vault Premium Pack",
-    "store_type": "pocket_creatures",
-    "category": "booster_packs",
-    "base_price": 6.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A short premium pack built for instant excitement and dramatic table reactions.",
-    "subcategory": "sealed",
-    "tags": [
-      "pack",
-      "booster",
-      "sealed",
-      "premium"
-    ]
-  },
-  {
-    "id": "pc_single_flameleon_common",
-    "item_name": "Emberpup",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 0.25,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A playful fire pup that shows up in starter binders everywhere.",
-    "subcategory": "common",
-    "tags": [
-      "base_set",
-      "fire",
-      "starter",
-      "bulk"
-    ]
-  },
-  {
-    "id": "pc_single_aquashell_common",
-    "item_name": "Splashkit",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 0.25,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A shell-backed swimmer with reliable stats and even more reliable bulk-bin placement.",
-    "subcategory": "common",
-    "tags": [
-      "base_set",
-      "water",
-      "starter",
-      "bulk"
-    ]
-  },
-  {
-    "id": "pc_single_thornsprout_common",
-    "item_name": "Sproutling",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 0.3,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A tiny seed creature whose cute art keeps it from lingering in common boxes for long.",
-    "subcategory": "common",
-    "tags": [
-      "base_set",
-      "grass",
-      "starter",
-      "bulk"
-    ]
-  },
-  {
-    "id": "pc_single_voltrat_common",
-    "item_name": "Voltpup",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 0.5,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A mascot-grade electric critter that kids recognize before they know the rules.",
-    "subcategory": "common",
-    "tags": [
-      "canopy",
-      "electric",
-      "mascot",
-      "popular"
-    ]
-  },
-  {
-    "id": "pc_single_shadowfang_common",
-    "item_name": "Shadefang",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 0.4,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A sharp-toothed dark variant that always looks cooler under binder sleeves.",
-    "subcategory": "common",
-    "tags": [
-      "shadow_set",
-      "dark",
-      "bulk"
-    ]
-  },
-  {
-    "id": "pc_single_crystalwing_uncommon",
-    "item_name": "Crystalwing",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 1.0,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A prismatic ice bird that casual collectors remember even when they forget the set name.",
-    "subcategory": "uncommon",
-    "tags": [
-      "base_set",
-      "ice",
-      "flying"
-    ]
-  },
-  {
-    "id": "pc_single_ironclad_uncommon",
-    "item_name": "Ironclad",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 1.5,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A plated tunnel beast with enough defensive text to keep tournament players interested.",
-    "subcategory": "uncommon",
-    "tags": [
-      "deep_dig",
-      "steel",
-      "meta",
-      "competitive"
-    ]
-  },
-  {
-    "id": "pc_single_mossvine_uncommon",
-    "item_name": "Mossvine",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 1.25,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A twisting vine creature best known for lovely art and annoyingly solid play.",
-    "subcategory": "uncommon",
-    "tags": [
-      "canopy",
-      "grass",
-      "art"
-    ]
-  },
-  {
-    "id": "pc_single_blazedragon_rare",
-    "item_name": "Charfang",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 4.0,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A non-holo fire dragon that still gives the binder page a sense of importance.",
-    "subcategory": "rare",
-    "tags": [
-      "base_set",
-      "fire",
-      "dragon"
-    ]
-  },
-  {
-    "id": "pc_single_stormtide_rare",
-    "item_name": "Tideclaw",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 3.5,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A storm-swept sea creature whose tournament usefulness makes it vanish from bulk trays.",
-    "subcategory": "rare",
-    "tags": [
-      "neo_spark",
-      "water",
-      "competitive",
-      "meta"
-    ]
-  },
-  {
-    "id": "pc_single_blazedragon_holo",
-    "item_name": "Blazethorn Holo",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 24.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "The showcase holo dragon that makes half the room gather around when someone pulls one.",
-    "subcategory": "rare_holo",
-    "tags": [
-      "base_set",
-      "fire",
-      "dragon",
-      "holo",
-      "iconic",
-      "chase"
-    ]
-  },
-  {
-    "id": "pc_single_voltrat_holo_jungle",
-    "item_name": "Boltmane Holo",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 15.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A gleaming jungle mascot card with bright foil and constant trade-table demand.",
-    "subcategory": "rare_holo",
-    "tags": [
-      "canopy",
-      "electric",
-      "holo",
-      "mascot",
-      "popular"
-    ]
-  },
-  {
-    "id": "pc_single_phantomking_holo",
-    "item_name": "Wraithfang Holo",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 18.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A purple-foil ghost titan that collectors call one of the set's best artworks.",
-    "subcategory": "rare_holo",
-    "tags": [
-      "deep_dig",
-      "ghost",
-      "holo",
-      "art"
-    ]
-  },
-  {
-    "id": "pc_single_dark_blazedragon_holo",
-    "item_name": "Shadowflame Holo",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 20.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A villain-set dragon variant whose red foil treatment looks dramatic under any light.",
-    "subcategory": "rare_holo",
-    "tags": [
-      "shadow_set",
-      "fire",
-      "dragon",
-      "holo",
-      "chase"
-    ]
-  },
-  {
-    "id": "pc_single_neostorm_holo",
-    "item_name": "Stormtalon Holo",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 12.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A tournament-era holo bird that spikes whenever the local meta gets clever.",
-    "subcategory": "rare_holo",
-    "tags": [
-      "neo_spark",
-      "electric",
-      "holo",
-      "competitive",
-      "meta"
-    ]
-  },
-  {
-    "id": "pc_single_ancientmew_ultra",
-    "item_name": "Runic Echo Promo",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 22.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "An event-only promo full of arcane symbols that made kids feel like they owned a secret.",
-    "subcategory": "promo",
-    "tags": [
-      "promo",
-      "movie",
-      "mysterious",
-      "collector"
-    ]
-  },
-  {
-    "id": "pc_single_titanwyrm_ultra",
-    "item_name": "Titanwyrm EX",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 32.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A flashy full-art finisher that competitive players price-check before they even sit down.",
-    "subcategory": "ultra_rare",
-    "tags": [
-      "neo_spark",
-      "ex",
-      "competitive",
-      "meta",
-      "chase"
-    ]
-  },
-  {
-    "id": "pc_single_shadowlord_secret",
-    "item_name": "Nightlord Secret Foil",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 38.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A hidden-number foil that feels legendary even when its market graph says otherwise.",
-    "subcategory": "secret_rare",
-    "tags": [
-      "shadow_set",
-      "secret_rare",
-      "chase",
-      "collector"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_single_blazedragon_1st_holo",
-    "item_name": "Blazethorn First Edition",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 40.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A first-run foil dragon whose stamp does almost as much work as the artwork.",
-    "subcategory": "secret_rare",
-    "tags": [
-      "base_set",
-      "first_edition",
-      "holo",
-      "dragon",
-      "iconic"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_single_cosmicray_secret",
-    "item_name": "Prismwing Secret Foil",
-    "store_type": "pocket_creatures",
-    "category": "singles",
-    "base_price": 34.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A late-print foil bird card prized for its strange shimmer and sharper-than-usual texture.",
-    "subcategory": "secret_rare",
-    "tags": [
-      "legendary_collection",
-      "reverse_holo",
-      "collector"
-    ]
-  },
-  {
-    "id": "pc_box_base_set",
-    "item_name": "Base Set Booster Box",
-    "store_type": "pocket_creatures",
-    "category": "sealed_product",
-    "base_price": 38.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A full sealed booster box that dares every pack-opener to show restraint.",
-    "subcategory": "booster_box",
-    "tags": [
-      "sealed",
-      "base_set",
-      "booster_box",
-      "investment"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_box_shadow_set",
-    "item_name": "Shadow Syndicate Booster Box",
-    "store_type": "pocket_creatures",
-    "category": "sealed_product",
-    "base_price": 42.0,
-    "rarity": "rare",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A moody sealed box from the villain set that tends to disappear the day it lands.",
-    "subcategory": "booster_box",
-    "tags": [
-      "sealed",
-      "shadow_set",
-      "booster_box",
-      "investment"
-    ],
-    "appreciates": true
-  },
-  {
-    "id": "pc_tin_collector_blazedragon",
-    "item_name": "Blazethorn Collector Tin",
-    "store_type": "pocket_creatures",
-    "category": "sealed_product",
-    "base_price": 19.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A giftable tin packed with sealed product and exactly enough foil to excite a newcomer.",
-    "subcategory": "collector_tin",
-    "tags": [
-      "sealed",
-      "tin",
-      "promo",
-      "gift"
-    ]
-  },
-  {
-    "id": "pc_deck_theme_fire",
-    "item_name": "Blaze Trail Theme Deck",
-    "store_type": "pocket_creatures",
-    "category": "starter_decks",
-    "base_price": 12.99,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A ready-to-play fire deck that teaches the game by letting players swing early and often.",
-    "subcategory": "theme_deck",
-    "tags": [
-      "theme_deck",
-      "fire",
-      "beginner",
-      "starter"
-    ]
-  },
-  {
-    "id": "pc_deck_theme_water",
-    "item_name": "Tide Current Theme Deck",
-    "store_type": "pocket_creatures",
-    "category": "starter_decks",
-    "base_price": 12.99,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A balanced water deck that rewards patient setup and makes new players feel smart quickly.",
-    "subcategory": "theme_deck",
-    "tags": [
-      "theme_deck",
-      "water",
-      "beginner",
-      "starter"
-    ]
-  },
-  {
-    "id": "pc_deck_starter_set",
-    "item_name": "PocketCreatures 2-Player Starter Set",
-    "store_type": "pocket_creatures",
-    "category": "starter_decks",
-    "base_price": 14.99,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "Two starter decks, play aids, and just enough cardboard drama to hook a friend.",
-    "subcategory": "starter_set",
-    "tags": [
-      "starter",
-      "beginner",
-      "gift",
-      "two_player"
-    ]
-  },
-  {
-    "id": "pc_acc_sleeves_clear",
-    "item_name": "Clear Card Sleeves (50-pack)",
-    "store_type": "pocket_creatures",
-    "category": "accessories",
-    "base_price": 3.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "Basic clear sleeves that keep fingerprints off anything you hope to trade later.",
-    "subcategory": "sleeves",
-    "tags": [
-      "accessory",
-      "sleeves",
-      "protection"
-    ]
-  },
-  {
-    "id": "pc_acc_sleeves_art",
-    "item_name": "Blazethorn Art Sleeves (50-pack)",
-    "store_type": "pocket_creatures",
-    "category": "accessories",
-    "base_price": 5.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "Matte art sleeves for players who want their deck to look louder before the match even starts.",
-    "subcategory": "sleeves",
-    "tags": [
-      "accessory",
-      "sleeves",
-      "art",
-      "competitive"
-    ]
-  },
-  {
-    "id": "pc_acc_binder",
-    "item_name": "9-Pocket Card Binder",
-    "store_type": "pocket_creatures",
-    "category": "accessories",
-    "base_price": 12.0,
-    "rarity": "common",
-    "condition_range": [
-      "mint",
-      "good",
-      "fair",
-      "poor"
-    ],
-    "description": "A sturdy binder that turns chaos into neat pages and neat pages into bragging rights.",
-    "subcategory": "binders",
-    "tags": [
-      "accessory",
-      "binder",
-      "storage",
-      "collector"
-    ]
-  }
-]
+{
+  "type": "item_definition",
+  "entries": [
+    {
+      "id": "pc_booster_base_set",
+      "item_name": "PocketCreatures Base Set Booster Pack",
+      "store_type": "pocket_creatures",
+      "category": "booster_packs",
+      "base_price": 3.99,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "The first-wave booster that still makes players talk about lucky pulls like urban legends.",
+      "subcategory": "sealed",
+      "tags": [
+        "pack",
+        "booster",
+        "sealed",
+        "base_set"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_booster_canopy",
+      "item_name": "Canopy Clash Expansion Booster",
+      "store_type": "pocket_creatures",
+      "category": "booster_packs",
+      "base_price": 3.99,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A leafy expansion pack known for bright artwork, swift creatures, and very loud collector opinions.",
+      "subcategory": "sealed",
+      "tags": [
+        "pack",
+        "booster",
+        "sealed",
+        "canopy"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_booster_deep_dig",
+      "item_name": "Fossil Depths Expansion Booster",
+      "store_type": "pocket_creatures",
+      "category": "booster_packs",
+      "base_price": 3.99,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A dig-site themed booster with stony monsters and a reputation for excellent holo pulls.",
+      "subcategory": "sealed",
+      "tags": [
+        "pack",
+        "booster",
+        "sealed",
+        "deep_dig"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_booster_shadow_set",
+      "item_name": "Shadow Syndicate Edition Booster",
+      "store_type": "pocket_creatures",
+      "category": "booster_packs",
+      "base_price": 4.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A darker villain-focused set whose moody art made it an instant cult favorite.",
+      "subcategory": "sealed",
+      "tags": [
+        "pack",
+        "booster",
+        "sealed",
+        "shadow_set"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_booster_neo_spark",
+      "item_name": "Neo Spark Booster",
+      "store_type": "pocket_creatures",
+      "category": "booster_packs",
+      "base_price": 3.99,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A second-wave booster that pushed new creature lines and half the local tournament chatter.",
+      "subcategory": "sealed",
+      "tags": [
+        "pack",
+        "booster",
+        "sealed",
+        "neo_spark"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_booster_premium",
+      "item_name": "Prism Vault Premium Pack",
+      "store_type": "pocket_creatures",
+      "category": "booster_packs",
+      "base_price": 6.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A short premium pack built for instant excitement and dramatic table reactions.",
+      "subcategory": "sealed",
+      "tags": [
+        "pack",
+        "booster",
+        "sealed",
+        "premium"
+      ]
+    },
+    {
+      "id": "pc_single_flameleon_common",
+      "item_name": "Emberpup",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 0.25,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A playful fire pup that shows up in starter binders everywhere.",
+      "subcategory": "common",
+      "tags": [
+        "base_set",
+        "fire",
+        "starter",
+        "bulk"
+      ]
+    },
+    {
+      "id": "pc_single_aquashell_common",
+      "item_name": "Splashkit",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 0.25,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A shell-backed swimmer with reliable stats and even more reliable bulk-bin placement.",
+      "subcategory": "common",
+      "tags": [
+        "base_set",
+        "water",
+        "starter",
+        "bulk"
+      ]
+    },
+    {
+      "id": "pc_single_thornsprout_common",
+      "item_name": "Sproutling",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 0.3,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A tiny seed creature whose cute art keeps it from lingering in common boxes for long.",
+      "subcategory": "common",
+      "tags": [
+        "base_set",
+        "grass",
+        "starter",
+        "bulk"
+      ]
+    },
+    {
+      "id": "pc_single_voltrat_common",
+      "item_name": "Voltpup",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 0.5,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A mascot-grade electric critter that kids recognize before they know the rules.",
+      "subcategory": "common",
+      "tags": [
+        "canopy",
+        "electric",
+        "mascot",
+        "popular"
+      ]
+    },
+    {
+      "id": "pc_single_shadowfang_common",
+      "item_name": "Shadefang",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 0.4,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A sharp-toothed dark variant that always looks cooler under binder sleeves.",
+      "subcategory": "common",
+      "tags": [
+        "shadow_set",
+        "dark",
+        "bulk"
+      ]
+    },
+    {
+      "id": "pc_single_crystalwing_uncommon",
+      "item_name": "Crystalwing",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 1.0,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A prismatic ice bird that casual collectors remember even when they forget the set name.",
+      "subcategory": "uncommon",
+      "tags": [
+        "base_set",
+        "ice",
+        "flying"
+      ]
+    },
+    {
+      "id": "pc_single_ironclad_uncommon",
+      "item_name": "Ironclad",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 1.5,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A plated tunnel beast with enough defensive text to keep tournament players interested.",
+      "subcategory": "uncommon",
+      "tags": [
+        "deep_dig",
+        "steel",
+        "meta",
+        "competitive"
+      ]
+    },
+    {
+      "id": "pc_single_mossvine_uncommon",
+      "item_name": "Mossvine",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 1.25,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A twisting vine creature best known for lovely art and annoyingly solid play.",
+      "subcategory": "uncommon",
+      "tags": [
+        "canopy",
+        "grass",
+        "art"
+      ]
+    },
+    {
+      "id": "pc_single_blazedragon_rare",
+      "item_name": "Charfang",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 4.0,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A non-holo fire dragon that still gives the binder page a sense of importance.",
+      "subcategory": "rare",
+      "tags": [
+        "base_set",
+        "fire",
+        "dragon"
+      ]
+    },
+    {
+      "id": "pc_single_stormtide_rare",
+      "item_name": "Tideclaw",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 3.5,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A storm-swept sea creature whose tournament usefulness makes it vanish from bulk trays.",
+      "subcategory": "rare",
+      "tags": [
+        "neo_spark",
+        "water",
+        "competitive",
+        "meta"
+      ]
+    },
+    {
+      "id": "pc_single_blazedragon_holo",
+      "item_name": "Blazethorn Holo",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 24.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "The showcase holo dragon that makes half the room gather around when someone pulls one.",
+      "subcategory": "rare_holo",
+      "tags": [
+        "base_set",
+        "fire",
+        "dragon",
+        "holo",
+        "iconic",
+        "chase"
+      ]
+    },
+    {
+      "id": "pc_single_voltrat_holo_jungle",
+      "item_name": "Boltmane Holo",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 15.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A gleaming jungle mascot card with bright foil and constant trade-table demand.",
+      "subcategory": "rare_holo",
+      "tags": [
+        "canopy",
+        "electric",
+        "holo",
+        "mascot",
+        "popular"
+      ]
+    },
+    {
+      "id": "pc_single_phantomking_holo",
+      "item_name": "Wraithfang Holo",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 18.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A purple-foil ghost titan that collectors call one of the set's best artworks.",
+      "subcategory": "rare_holo",
+      "tags": [
+        "deep_dig",
+        "ghost",
+        "holo",
+        "art"
+      ]
+    },
+    {
+      "id": "pc_single_dark_blazedragon_holo",
+      "item_name": "Shadowflame Holo",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 20.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A villain-set dragon variant whose red foil treatment looks dramatic under any light.",
+      "subcategory": "rare_holo",
+      "tags": [
+        "shadow_set",
+        "fire",
+        "dragon",
+        "holo",
+        "chase"
+      ]
+    },
+    {
+      "id": "pc_single_neostorm_holo",
+      "item_name": "Stormtalon Holo",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 12.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A tournament-era holo bird that spikes whenever the local meta gets clever.",
+      "subcategory": "rare_holo",
+      "tags": [
+        "neo_spark",
+        "electric",
+        "holo",
+        "competitive",
+        "meta"
+      ]
+    },
+    {
+      "id": "pc_single_ancientmew_ultra",
+      "item_name": "Runic Echo Promo",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 22.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "An event-only promo full of arcane symbols that made kids feel like they owned a secret.",
+      "subcategory": "promo",
+      "tags": [
+        "promo",
+        "movie",
+        "mysterious",
+        "collector"
+      ]
+    },
+    {
+      "id": "pc_single_titanwyrm_ultra",
+      "item_name": "Titanwyrm EX",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 32.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A flashy full-art finisher that competitive players price-check before they even sit down.",
+      "subcategory": "ultra_rare",
+      "tags": [
+        "neo_spark",
+        "ex",
+        "competitive",
+        "meta",
+        "chase"
+      ]
+    },
+    {
+      "id": "pc_single_shadowlord_secret",
+      "item_name": "Nightlord Secret Foil",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 38.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A hidden-number foil that feels legendary even when its market graph says otherwise.",
+      "subcategory": "secret_rare",
+      "tags": [
+        "shadow_set",
+        "secret_rare",
+        "chase",
+        "collector"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_single_blazedragon_1st_holo",
+      "item_name": "Blazethorn First Edition",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 40.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A first-run foil dragon whose stamp does almost as much work as the artwork.",
+      "subcategory": "secret_rare",
+      "tags": [
+        "base_set",
+        "first_edition",
+        "holo",
+        "dragon",
+        "iconic"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_single_cosmicray_secret",
+      "item_name": "Prismwing Secret Foil",
+      "store_type": "pocket_creatures",
+      "category": "singles",
+      "base_price": 34.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A late-print foil bird card prized for its strange shimmer and sharper-than-usual texture.",
+      "subcategory": "secret_rare",
+      "tags": [
+        "legendary_collection",
+        "reverse_holo",
+        "collector"
+      ]
+    },
+    {
+      "id": "pc_box_base_set",
+      "item_name": "Base Set Booster Box",
+      "store_type": "pocket_creatures",
+      "category": "sealed_product",
+      "base_price": 38.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A full sealed booster box that dares every pack-opener to show restraint.",
+      "subcategory": "booster_box",
+      "tags": [
+        "sealed",
+        "base_set",
+        "booster_box",
+        "investment"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_box_shadow_set",
+      "item_name": "Shadow Syndicate Booster Box",
+      "store_type": "pocket_creatures",
+      "category": "sealed_product",
+      "base_price": 42.0,
+      "rarity": "rare",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A moody sealed box from the villain set that tends to disappear the day it lands.",
+      "subcategory": "booster_box",
+      "tags": [
+        "sealed",
+        "shadow_set",
+        "booster_box",
+        "investment"
+      ],
+      "appreciates": true
+    },
+    {
+      "id": "pc_tin_collector_blazedragon",
+      "item_name": "Blazethorn Collector Tin",
+      "store_type": "pocket_creatures",
+      "category": "sealed_product",
+      "base_price": 19.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A giftable tin packed with sealed product and exactly enough foil to excite a newcomer.",
+      "subcategory": "collector_tin",
+      "tags": [
+        "sealed",
+        "tin",
+        "promo",
+        "gift"
+      ]
+    },
+    {
+      "id": "pc_deck_theme_fire",
+      "item_name": "Blaze Trail Theme Deck",
+      "store_type": "pocket_creatures",
+      "category": "starter_decks",
+      "base_price": 12.99,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A ready-to-play fire deck that teaches the game by letting players swing early and often.",
+      "subcategory": "theme_deck",
+      "tags": [
+        "theme_deck",
+        "fire",
+        "beginner",
+        "starter"
+      ]
+    },
+    {
+      "id": "pc_deck_theme_water",
+      "item_name": "Tide Current Theme Deck",
+      "store_type": "pocket_creatures",
+      "category": "starter_decks",
+      "base_price": 12.99,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A balanced water deck that rewards patient setup and makes new players feel smart quickly.",
+      "subcategory": "theme_deck",
+      "tags": [
+        "theme_deck",
+        "water",
+        "beginner",
+        "starter"
+      ]
+    },
+    {
+      "id": "pc_deck_starter_set",
+      "item_name": "PocketCreatures 2-Player Starter Set",
+      "store_type": "pocket_creatures",
+      "category": "starter_decks",
+      "base_price": 14.99,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "Two starter decks, play aids, and just enough cardboard drama to hook a friend.",
+      "subcategory": "starter_set",
+      "tags": [
+        "starter",
+        "beginner",
+        "gift",
+        "two_player"
+      ]
+    },
+    {
+      "id": "pc_acc_sleeves_clear",
+      "item_name": "Clear Card Sleeves (50-pack)",
+      "store_type": "pocket_creatures",
+      "category": "accessories",
+      "base_price": 3.0,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "Basic clear sleeves that keep fingerprints off anything you hope to trade later.",
+      "subcategory": "sleeves",
+      "tags": [
+        "accessory",
+        "sleeves",
+        "protection"
+      ]
+    },
+    {
+      "id": "pc_acc_sleeves_art",
+      "item_name": "Blazethorn Art Sleeves (50-pack)",
+      "store_type": "pocket_creatures",
+      "category": "accessories",
+      "base_price": 5.0,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "Matte art sleeves for players who want their deck to look louder before the match even starts.",
+      "subcategory": "sleeves",
+      "tags": [
+        "accessory",
+        "sleeves",
+        "art",
+        "competitive"
+      ]
+    },
+    {
+      "id": "pc_acc_binder",
+      "item_name": "9-Pocket Card Binder",
+      "store_type": "pocket_creatures",
+      "category": "accessories",
+      "base_price": 12.0,
+      "rarity": "common",
+      "condition_range": [
+        "mint",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "A sturdy binder that turns chaos into neat pages and neat pages into bragging rights.",
+      "subcategory": "binders",
+      "tags": [
+        "accessory",
+        "binder",
+        "storage",
+        "collector"
+      ]
+    }
+  ]
+}

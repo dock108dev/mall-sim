@@ -88,18 +88,13 @@ func test_no_substrate_phase_is_valid() -> void:
 
 
 func test_all_json_threads_pass_phase_ordering() -> void:
-	var file: FileAccess = FileAccess.open(
-		"res://game/content/meta/secret_threads.json", FileAccess.READ
+	var parsed: Array = DataLoader.load_catalog_entries(
+		"res://game/content/meta/secret_threads.json"
 	)
-	if not file:
+	if parsed.is_empty():
 		pass_test("secret_threads.json not found — skipping")
 		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is not Array:
-		fail_test("secret_threads.json must be a JSON array")
-		return
-	for entry: Variant in (parsed as Array):
+	for entry: Variant in parsed:
 		if entry is not Dictionary:
 			continue
 		var err: String = _system._validate_phase_ordering(entry as Dictionary)
@@ -184,19 +179,14 @@ func test_thread_resolved_resolution_type_is_string() -> void:
 
 
 func test_required_thread_ids_present() -> void:
-	var file: FileAccess = FileAccess.open(
-		"res://game/content/meta/secret_threads.json", FileAccess.READ
+	var parsed: Array = DataLoader.load_catalog_entries(
+		"res://game/content/meta/secret_threads.json"
 	)
-	if not file:
-		fail_test("secret_threads.json not found")
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is not Array:
-		fail_test("secret_threads.json must be a JSON array")
+	if parsed.is_empty():
+		fail_test("secret_threads.json not found or empty")
 		return
 	var ids: Array[String] = []
-	for entry: Variant in (parsed as Array):
+	for entry: Variant in parsed:
 		if entry is Dictionary:
 			ids.append(str((entry as Dictionary).get("id", "")))
 	var required: Array[String] = [
@@ -213,16 +203,11 @@ func test_required_thread_ids_present() -> void:
 
 
 func test_all_required_threads_have_non_resolution_path() -> void:
-	var file: FileAccess = FileAccess.open(
-		"res://game/content/meta/secret_threads.json", FileAccess.READ
+	var parsed: Array = DataLoader.load_catalog_entries(
+		"res://game/content/meta/secret_threads.json"
 	)
-	if not file:
-		fail_test("secret_threads.json not found")
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is not Array:
-		fail_test("Expected JSON array")
+	if parsed.is_empty():
+		fail_test("secret_threads.json not found or empty")
 		return
 	var required_ids: Array[String] = [
 		"regular_at_food_court",
@@ -230,7 +215,7 @@ func test_all_required_threads_have_non_resolution_path() -> void:
 		"ghost_tenant_7b",
 		"mall_legend",
 	]
-	for entry: Variant in (parsed as Array):
+	for entry: Variant in parsed:
 		if entry is not Dictionary:
 			continue
 		var id: String = str((entry as Dictionary).get("id", ""))

@@ -68,20 +68,14 @@ func _setup_with_defs(defs: Array[Dictionary]) -> void:
 
 
 func _all_json_defs() -> Array[Dictionary]:
-	var file: FileAccess = FileAccess.open(
-		"res://game/content/meta/secret_threads.json", FileAccess.READ
+	var parsed: Array = DataLoader.load_catalog_entries(
+		"res://game/content/meta/secret_threads.json"
 	)
-	if not file:
-		return [] as Array[Dictionary]
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is Array:
-		var result: Array[Dictionary] = []
-		for entry: Variant in (parsed as Array):
-			if entry is Dictionary:
-				result.append(entry as Dictionary)
-		return result
-	return [] as Array[Dictionary]
+	var result: Array[Dictionary] = []
+	for entry: Variant in parsed:
+		if entry is Dictionary:
+			result.append(entry as Dictionary)
+	return result
 
 
 # --- Phase transitions ---

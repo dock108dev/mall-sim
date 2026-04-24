@@ -1,145 +1,148 @@
-[
-  {
-    "id": "sports_casual_fan",
-    "name": "Casual Fan",
-    "description": "Weekend browser who roots for the home team. Buys team gear and common cards without overthinking it.",
-    "store_types": [
-      "sports_memorabilia"
-    ],
-    "budget_range": [
-      10.0,
-      40.0
-    ],
-    "patience": 0.8,
-    "price_sensitivity": 0.4,
-    "preferred_categories": [
-      "trading_cards",
-      "memorabilia"
-    ],
-    "preferred_tags": [
-      "starter",
-      "jersey",
-      "bulls",
-      "baseball"
-    ],
-    "condition_preference": "good",
-    "browse_time_range": [
-      30,
-      80
-    ],
-    "purchase_probability_base": 0.65,
-    "impulse_buy_chance": 0.25,
-    "visit_frequency": "high",
-    "mood_tags": [
-      "friendly",
-      "browsing"
-    ]
-  },
-  {
-    "id": "sports_serious_collector",
-    "name": "Serious Collector",
-    "description": "Knows every card in the Beckett price guide. Hunts rookie cards and graded singles. Won't settle for less than near-mint.",
-    "store_types": [
-      "sports_memorabilia"
-    ],
-    "budget_range": [
-      50.0,
-      200.0
-    ],
-    "patience": 0.5,
-    "price_sensitivity": 0.5,
-    "preferred_categories": [
-      "trading_cards"
-    ],
-    "preferred_tags": [
-      "rookie",
-      "HOF",
-      "vintage",
-      "chrome",
-      "iconic"
-    ],
-    "condition_preference": "near_mint",
-    "browse_time_range": [
-      45,
-      120
-    ],
-    "purchase_probability_base": 0.45,
-    "impulse_buy_chance": 0.05,
-    "visit_frequency": "medium",
-    "mood_tags": [
-      "focused",
-      "knowledgeable"
-    ]
-  },
-  {
-    "id": "sports_kid_allowance",
-    "name": "Kid with Allowance",
-    "description": "Clutching a crumpled $10 bill, eyes wide at the glass cases. Just wants to open a pack.",
-    "store_types": [
-      "sports_memorabilia"
-    ],
-    "budget_range": [
-      3.0,
-      15.0
-    ],
-    "patience": 0.3,
-    "price_sensitivity": 0.9,
-    "preferred_categories": [
-      "sealed_packs"
-    ],
-    "preferred_tags": [
-      "pack",
-      "booster",
-      "sealed"
-    ],
-    "condition_preference": "fair",
-    "browse_time_range": [
-      15,
-      40
-    ],
-    "purchase_probability_base": 0.7,
-    "impulse_buy_chance": 0.1,
-    "visit_frequency": "high",
-    "mood_tags": [
-      "excited",
-      "eager"
-    ]
-  },
-  {
-    "id": "sports_investor",
-    "name": "Card Investor",
-    "description": "Treats cards like stocks. Scans the case for underpriced sealed product and high-grade rookies. Will not overpay by a penny.",
-    "store_types": [
-      "sports_memorabilia"
-    ],
-    "budget_range": [
-      100.0,
-      500.0
-    ],
-    "patience": 0.3,
-    "price_sensitivity": 0.95,
-    "preferred_categories": [
-      "trading_cards",
-      "sealed_product"
-    ],
-    "preferred_tags": [
-      "sealed",
-      "rookie",
-      "investment",
-      "hobby_box",
-      "iconic"
-    ],
-    "condition_preference": "mint",
-    "browse_time_range": [
-      20,
-      50
-    ],
-    "purchase_probability_base": 0.3,
-    "impulse_buy_chance": 0.0,
-    "visit_frequency": "low",
-    "mood_tags": [
-      "calculating",
-      "sharp"
-    ]
-  }
-]
+{
+  "type": "customer_profile",
+  "entries": [
+    {
+      "id": "sports_casual_fan",
+      "name": "Casual Fan",
+      "description": "Weekend browser who roots for the home team. Buys team gear and common cards without overthinking it.",
+      "store_types": [
+        "sports_memorabilia"
+      ],
+      "budget_range": [
+        10.0,
+        40.0
+      ],
+      "patience": 0.8,
+      "price_sensitivity": 0.4,
+      "preferred_categories": [
+        "trading_cards",
+        "memorabilia"
+      ],
+      "preferred_tags": [
+        "starter",
+        "jersey",
+        "bulls",
+        "baseball"
+      ],
+      "condition_preference": "good",
+      "browse_time_range": [
+        30,
+        80
+      ],
+      "purchase_probability_base": 0.65,
+      "impulse_buy_chance": 0.25,
+      "visit_frequency": "high",
+      "mood_tags": [
+        "friendly",
+        "browsing"
+      ]
+    },
+    {
+      "id": "sports_serious_collector",
+      "name": "Serious Collector",
+      "description": "Knows every card in the Beckett price guide. Hunts rookie cards and graded singles. Won't settle for less than near-mint.",
+      "store_types": [
+        "sports_memorabilia"
+      ],
+      "budget_range": [
+        50.0,
+        200.0
+      ],
+      "patience": 0.5,
+      "price_sensitivity": 0.5,
+      "preferred_categories": [
+        "trading_cards"
+      ],
+      "preferred_tags": [
+        "rookie",
+        "HOF",
+        "vintage",
+        "chrome",
+        "iconic"
+      ],
+      "condition_preference": "near_mint",
+      "browse_time_range": [
+        45,
+        120
+      ],
+      "purchase_probability_base": 0.45,
+      "impulse_buy_chance": 0.05,
+      "visit_frequency": "medium",
+      "mood_tags": [
+        "focused",
+        "knowledgeable"
+      ]
+    },
+    {
+      "id": "sports_kid_allowance",
+      "name": "Kid with Allowance",
+      "description": "Clutching a crumpled $10 bill, eyes wide at the glass cases. Just wants to open a pack.",
+      "store_types": [
+        "sports_memorabilia"
+      ],
+      "budget_range": [
+        3.0,
+        15.0
+      ],
+      "patience": 0.3,
+      "price_sensitivity": 0.9,
+      "preferred_categories": [
+        "sealed_packs"
+      ],
+      "preferred_tags": [
+        "pack",
+        "booster",
+        "sealed"
+      ],
+      "condition_preference": "fair",
+      "browse_time_range": [
+        15,
+        40
+      ],
+      "purchase_probability_base": 0.7,
+      "impulse_buy_chance": 0.1,
+      "visit_frequency": "high",
+      "mood_tags": [
+        "excited",
+        "eager"
+      ]
+    },
+    {
+      "id": "sports_investor",
+      "name": "Card Investor",
+      "description": "Treats cards like stocks. Scans the case for underpriced sealed product and high-grade rookies. Will not overpay by a penny.",
+      "store_types": [
+        "sports_memorabilia"
+      ],
+      "budget_range": [
+        100.0,
+        500.0
+      ],
+      "patience": 0.3,
+      "price_sensitivity": 0.95,
+      "preferred_categories": [
+        "trading_cards",
+        "sealed_product"
+      ],
+      "preferred_tags": [
+        "sealed",
+        "rookie",
+        "investment",
+        "hobby_box",
+        "iconic"
+      ],
+      "condition_preference": "mint",
+      "browse_time_range": [
+        20,
+        50
+      ],
+      "purchase_probability_base": 0.3,
+      "impulse_buy_chance": 0.0,
+      "visit_frequency": "low",
+      "mood_tags": [
+        "calculating",
+        "sharp"
+      ]
+    }
+  ]
+}

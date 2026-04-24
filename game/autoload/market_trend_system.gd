@@ -77,15 +77,15 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _load_catalog() -> void:
-	var entries: Variant = DataLoader.load_json(CATALOG_PATH)
-	if not (entries is Array):
+	var entries: Array = DataLoader.load_catalog_entries(CATALOG_PATH)
+	if entries.is_empty():
 		push_error(
-			"MarketTrendSystem: failed to load catalog '%s' as Array"
+			"MarketTrendSystem: no entries loaded from catalog '%s'"
 			% CATALOG_PATH
 		)
 		return
 
-	for entry: Variant in entries as Array:
+	for entry: Variant in entries:
 		if not entry is Dictionary:
 			continue
 		var dict: Dictionary = entry as Dictionary

@@ -174,15 +174,9 @@ func test_missing_id_field_rejects_entry() -> void:
 
 func _load_catalog_entries(store_id: String) -> Array[Dictionary]:
 	var path: String = CATALOG_FILES[store_id]
-	var raw: Variant = DataLoader.load_json(path)
-	assert_typeof(
-		raw,
-		TYPE_ARRAY,
-		"Catalog '%s' should parse as an array" % path
-	)
+	var raw: Array = DataLoader.load_catalog_entries(path)
+	assert_false(raw.is_empty(), "Catalog '%s' should have entries" % path)
 	var entries: Array[Dictionary] = []
-	if raw is not Array:
-		return entries
 	for item: Variant in raw:
 		assert_typeof(
 			item,

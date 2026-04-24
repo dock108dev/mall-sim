@@ -68,6 +68,8 @@ const _TYPE_ROUTES: Dictionary = {
 	"retro_games_grades_data": "ignore",
 	"day_beats_data": "ignore",
 	"objectives_data": "ignore",
+	"archetypes_data": "ignore",
+	"regulars_threads_data": "ignore",
 }
 
 var _items: Dictionary = {}

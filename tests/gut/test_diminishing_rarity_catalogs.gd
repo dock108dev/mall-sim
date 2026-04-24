@@ -98,14 +98,8 @@ func _load_item_definitions(path: String) -> Array[ItemDefinition]:
 
 
 func _load_array_entries(path: String) -> Array[Dictionary]:
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return []
-	var data: Variant = JSON.parse_string(file.get_as_text())
 	var entries: Array[Dictionary] = []
-	if data is not Array:
-		return entries
-	for entry: Variant in data:
+	for entry: Variant in DataLoader.load_catalog_entries(path):
 		if entry is Dictionary:
 			entries.append(entry as Dictionary)
 	return entries

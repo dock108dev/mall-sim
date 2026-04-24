@@ -1,568 +1,571 @@
-[
-  {
-    "id": "sports",
-    "aliases": [
-      "sports_memorabilia"
-    ],
-    "name": "Sports Memorabilia",
-    "store_type": "sports",
-    "environment_id": "sports_memorabilia",
-    "description": "A small sports card and memorabilia shop. Wood-paneled walls, glass display cases, and the sound of sports radio.",
-    "scene_path": "res://game/scenes/stores/sports_memorabilia.tscn",
-    "inventory_type": "sports_memorabilia",
-    "interaction_set_id": "sports_memorabilia",
-    "tutorial_context_id": "sports_memorabilia",
-    "size_category": "small",
-    "shelf_capacity": 31,
-    "backroom_capacity": 100,
-    "starting_cash": 750.0,
-    "daily_rent": 50.0,
-    "starting_inventory": [
-      "sports_duvall_hr_common",
-      "sports_okoro_hoops_common",
-      "sports_esperanza_base_common",
-      "sports_duvall_refractor_uncommon",
-      "sports_simmons_chrome_uncommon",
-      "sports_sledge_rookie_rare",
-      "sports_pinnacle_pack_1993",
-      "sports_vanguard_pack_2001",
-      "sports_signed_baseball_sledge"
-    ],
-    "allowed_categories": [
-      "trading_cards",
-      "sealed_packs",
-      "sealed_product",
-      "memorabilia"
-    ],
-    "fixture_slots": 6,
-    "fixtures": [
-      {
-        "id": "card_case_1",
-        "type": "glass_case",
-        "slots": 8,
-        "label": "Card Display Case"
+{
+  "type": "store_definition",
+  "entries": [
+    {
+      "id": "sports",
+      "aliases": [
+        "sports_memorabilia"
+      ],
+      "name": "Sports Memorabilia",
+      "store_type": "sports",
+      "environment_id": "sports_memorabilia",
+      "description": "A small sports card and memorabilia shop. Wood-paneled walls, glass display cases, and the sound of sports radio.",
+      "scene_path": "res://game/scenes/stores/sports_memorabilia.tscn",
+      "inventory_type": "sports_memorabilia",
+      "interaction_set_id": "sports_memorabilia",
+      "tutorial_context_id": "sports_memorabilia",
+      "size_category": "small",
+      "shelf_capacity": 31,
+      "backroom_capacity": 100,
+      "starting_cash": 750.0,
+      "daily_rent": 50.0,
+      "starting_inventory": [
+        "sports_duvall_hr_common",
+        "sports_okoro_hoops_common",
+        "sports_esperanza_base_common",
+        "sports_duvall_refractor_uncommon",
+        "sports_simmons_chrome_uncommon",
+        "sports_sledge_rookie_rare",
+        "sports_pinnacle_pack_1993",
+        "sports_vanguard_pack_2001",
+        "sports_signed_baseball_sledge"
+      ],
+      "allowed_categories": [
+        "trading_cards",
+        "sealed_packs",
+        "sealed_product",
+        "memorabilia"
+      ],
+      "fixture_slots": 6,
+      "fixtures": [
+        {
+          "id": "card_case_1",
+          "type": "glass_case",
+          "slots": 8,
+          "label": "Card Display Case"
+        },
+        {
+          "id": "card_case_2",
+          "type": "glass_case",
+          "slots": 8,
+          "label": "Card Display Case"
+        },
+        {
+          "id": "sealed_shelf",
+          "type": "shelf",
+          "slots": 6,
+          "label": "Sealed Product Shelf"
+        },
+        {
+          "id": "memorabilia_shelf",
+          "type": "shelf",
+          "slots": 4,
+          "label": "Memorabilia Shelf"
+        },
+        {
+          "id": "wall_display",
+          "type": "wall_mount",
+          "slots": 3,
+          "label": "Wall Display"
+        },
+        {
+          "id": "checkout_counter",
+          "type": "counter",
+          "slots": 2,
+          "label": "Checkout Counter"
+        }
+      ],
+      "max_employees": 2,
+      "base_foot_traffic": 0.4,
+      "available_supplier_tiers": [
+        1,
+        2,
+        3
+      ],
+      "unique_mechanics": [
+        "authentication"
+      ],
+      "season_boost": 1.5,
+      "authentication_config": {
+        "value_threshold": 100.0,
+        "auth_fee": 25.0,
+        "auth_multiplier": 2.0
       },
-      {
-        "id": "card_case_2",
-        "type": "glass_case",
-        "slots": 8,
-        "label": "Card Display Case"
-      },
-      {
-        "id": "sealed_shelf",
-        "type": "shelf",
-        "slots": 6,
-        "label": "Sealed Product Shelf"
-      },
-      {
-        "id": "memorabilia_shelf",
-        "type": "shelf",
-        "slots": 4,
-        "label": "Memorabilia Shelf"
-      },
-      {
-        "id": "wall_display",
-        "type": "wall_mount",
-        "slots": 3,
-        "label": "Wall Display"
-      },
-      {
-        "id": "checkout_counter",
-        "type": "counter",
-        "slots": 2,
-        "label": "Checkout Counter"
+      "aesthetic_tags": [
+        "wood_shelves",
+        "glass_cases",
+        "poster_walls",
+        "sports_radio"
+      ],
+      "ambient_sound": "res://game/assets/audio/ambiance/sports_store.wav",
+      "music": "sports_store_music",
+      "recommended_markup": {
+        "optimal_min": 1.3,
+        "optimal_max": 1.8,
+        "max_viable": 3.0
       }
-    ],
-    "max_employees": 2,
-    "base_foot_traffic": 0.4,
-    "available_supplier_tiers": [
-      1,
-      2,
-      3
-    ],
-    "unique_mechanics": [
-      "authentication"
-    ],
-    "season_boost": 1.5,
-    "authentication_config": {
-      "value_threshold": 100.0,
-      "auth_fee": 25.0,
-      "auth_multiplier": 2.0
     },
-    "aesthetic_tags": [
-      "wood_shelves",
-      "glass_cases",
-      "poster_walls",
-      "sports_radio"
-    ],
-    "ambient_sound": "res://game/assets/audio/ambiance/sports_store.wav",
-    "music": "sports_store_music",
-    "recommended_markup": {
-      "optimal_min": 1.3,
-      "optimal_max": 1.8,
-      "max_viable": 3.0
-    }
-  },
-  {
-    "id": "retro_games",
-    "name": "Retro Game Store",
-    "store_type": "retro_games",
-    "environment_id": "retro_games",
-    "description": "Buy, sell, and trade classic video games and consoles. CRT glow, cartridge clacking, and posters for games that never existed.",
-    "scene_path": "res://game/scenes/stores/retro_games.tscn",
-    "inventory_type": "retro_games",
-    "interaction_set_id": "retro_games",
-    "tutorial_context_id": "retro_games",
-    "size_category": "small",
-    "shelf_capacity": 33,
-    "backroom_capacity": 120,
-    "starting_cash": 800.0,
-    "daily_rent": 55.0,
-    "starting_inventory": [
-      "pc_booster_canopy_fable_creatures_loose",
-      "supervec16_ironfoot_run_loose",
-      "canopy64_chromatic_drift_loose",
-      "neo_spark_turbojump_world_loose",
-      "pc_booster_canopy_block_logic_loose",
-      "console_supervec_16",
-      "console_canopy_64",
-      "pc_booster_neo_spark_comet_runner_loose",
-      "canopy64_orbital_smash_loose",
-      "neo_spark_starfall_chronicle_loose"
-    ],
-    "allowed_categories": [
-      "cartridges",
-      "consoles",
-      "accessories",
-      "guides"
-    ],
-    "fixture_slots": 6,
-    "fixtures": [
-      {
-        "id": "cart_wall_rack",
-        "type": "wall_rack",
-        "slots": 10,
-        "label": "Cartridge Wall Rack"
+    {
+      "id": "retro_games",
+      "name": "Retro Game Store",
+      "store_type": "retro_games",
+      "environment_id": "retro_games",
+      "description": "Buy, sell, and trade classic video games and consoles. CRT glow, cartridge clacking, and posters for games that never existed.",
+      "scene_path": "res://game/scenes/stores/retro_games.tscn",
+      "inventory_type": "retro_games",
+      "interaction_set_id": "retro_games",
+      "tutorial_context_id": "retro_games",
+      "size_category": "small",
+      "shelf_capacity": 33,
+      "backroom_capacity": 120,
+      "starting_cash": 800.0,
+      "daily_rent": 55.0,
+      "starting_inventory": [
+        "pc_booster_canopy_fable_creatures_loose",
+        "supervec16_ironfoot_run_loose",
+        "canopy64_chromatic_drift_loose",
+        "neo_spark_turbojump_world_loose",
+        "pc_booster_canopy_block_logic_loose",
+        "console_supervec_16",
+        "console_canopy_64",
+        "pc_booster_neo_spark_comet_runner_loose",
+        "canopy64_orbital_smash_loose",
+        "neo_spark_starfall_chronicle_loose"
+      ],
+      "allowed_categories": [
+        "cartridges",
+        "consoles",
+        "accessories",
+        "guides"
+      ],
+      "fixture_slots": 6,
+      "fixtures": [
+        {
+          "id": "cart_wall_rack",
+          "type": "wall_rack",
+          "slots": 10,
+          "label": "Cartridge Wall Rack"
+        },
+        {
+          "id": "cib_display",
+          "type": "shelf",
+          "slots": 6,
+          "label": "CIB Display Shelf"
+        },
+        {
+          "id": "console_shelf",
+          "type": "shelf",
+          "slots": 3,
+          "label": "Console Shelf"
+        },
+        {
+          "id": "accessories_bin",
+          "type": "bin",
+          "slots": 8,
+          "label": "Accessories Bin"
+        },
+        {
+          "id": "glass_showcase",
+          "type": "glass_case",
+          "slots": 4,
+          "label": "Glass Showcase"
+        },
+        {
+          "id": "checkout_counter",
+          "type": "counter",
+          "slots": 2,
+          "label": "Checkout Counter"
+        }
+      ],
+      "max_employees": 2,
+      "base_foot_traffic": 0.35,
+      "available_supplier_tiers": [
+        1,
+        2,
+        3
+      ],
+      "unique_mechanics": [
+        "testing_station",
+        "refurbishment"
+      ],
+      "testing_config": {
+        "testing_duration": 2.0,
+        "working_chance": 0.8,
+        "tested_working_multiplier": 1.25,
+        "tested_not_working_multiplier": 0.4
       },
-      {
-        "id": "cib_display",
-        "type": "shelf",
-        "slots": 6,
-        "label": "CIB Display Shelf"
-      },
-      {
-        "id": "console_shelf",
-        "type": "shelf",
-        "slots": 3,
-        "label": "Console Shelf"
-      },
-      {
-        "id": "accessories_bin",
-        "type": "bin",
-        "slots": 8,
-        "label": "Accessories Bin"
-      },
-      {
-        "id": "glass_showcase",
-        "type": "glass_case",
-        "slots": 4,
-        "label": "Glass Showcase"
-      },
-      {
-        "id": "checkout_counter",
-        "type": "counter",
-        "slots": 2,
-        "label": "Checkout Counter"
+      "aesthetic_tags": [
+        "neon_lights",
+        "crt_glow",
+        "cluttered_shelves",
+        "poster_walls"
+      ],
+      "ambient_sound": "res://game/assets/audio/ambiance/retro_games_store.wav",
+      "music": "retro_games_music",
+      "recommended_markup": {
+        "optimal_min": 1.25,
+        "optimal_max": 1.6,
+        "max_viable": 2.5
       }
-    ],
-    "max_employees": 2,
-    "base_foot_traffic": 0.35,
-    "available_supplier_tiers": [
-      1,
-      2,
-      3
-    ],
-    "unique_mechanics": [
-      "testing_station",
-      "refurbishment"
-    ],
-    "testing_config": {
-      "testing_duration": 2.0,
-      "working_chance": 0.8,
-      "tested_working_multiplier": 1.25,
-      "tested_not_working_multiplier": 0.4
     },
-    "aesthetic_tags": [
-      "neon_lights",
-      "crt_glow",
-      "cluttered_shelves",
-      "poster_walls"
-    ],
-    "ambient_sound": "res://game/assets/audio/ambiance/retro_games_store.wav",
-    "music": "retro_games_music",
-    "recommended_markup": {
-      "optimal_min": 1.25,
-      "optimal_max": 1.6,
-      "max_viable": 2.5
-    }
-  },
-  {
-    "id": "rentals",
-    "aliases": [
-      "video_rental"
-    ],
-    "name": "Video Rental",
-    "store_type": "rentals",
-    "environment_id": "video_rental",
-    "description": "Rent VHS and DVD movies. Blue carpet, fluorescent lights, and a NEW RELEASES wall that never stops calling your name.",
-    "scene_path": "res://game/scenes/stores/video_rental.tscn",
-    "inventory_type": "video_rental",
-    "interaction_set_id": "video_rental",
-    "tutorial_context_id": "video_rental",
-    "size_category": "medium",
-    "shelf_capacity": 50,
-    "backroom_capacity": 150,
-    "starting_cash": 900.0,
-    "daily_rent": 55.0,
-    "starting_inventory": [
-      "rental_cosmic_battles_5_vhs",
-      "rental_velociraptor_gardens_vhs",
-      "rental_ghostcatchers_vhs",
-      "rental_pixel_story_vhs",
-      "rental_the_grid_vhs",
-      "rental_wizard_academy_vhs",
-      "rental_snack_microwave_popcorn",
-      "rental_snack_gummy_worms",
-      "rental_snack_cola",
-      "rental_poster_cosmic_battles"
-    ],
-    "allowed_categories": [
-      "vhs_classic",
-      "vhs_new_release",
-      "vhs_cult",
-      "dvd_new_release",
-      "dvd_classic",
-      "snacks",
-      "merchandise"
-    ],
-    "fixture_slots": 7,
-    "fixtures": [
-      {
-        "id": "new_releases_wall",
-        "type": "wall_display",
-        "slots": 8,
-        "label": "New Releases Wall"
+    {
+      "id": "rentals",
+      "aliases": [
+        "video_rental"
+      ],
+      "name": "Video Rental",
+      "store_type": "rentals",
+      "environment_id": "video_rental",
+      "description": "Rent VHS and DVD movies. Blue carpet, fluorescent lights, and a NEW RELEASES wall that never stops calling your name.",
+      "scene_path": "res://game/scenes/stores/video_rental.tscn",
+      "inventory_type": "video_rental",
+      "interaction_set_id": "video_rental",
+      "tutorial_context_id": "video_rental",
+      "size_category": "medium",
+      "shelf_capacity": 50,
+      "backroom_capacity": 150,
+      "starting_cash": 900.0,
+      "daily_rent": 55.0,
+      "starting_inventory": [
+        "rental_cosmic_battles_5_vhs",
+        "rental_velociraptor_gardens_vhs",
+        "rental_ghostcatchers_vhs",
+        "rental_pixel_story_vhs",
+        "rental_the_grid_vhs",
+        "rental_wizard_academy_vhs",
+        "rental_snack_microwave_popcorn",
+        "rental_snack_gummy_worms",
+        "rental_snack_cola",
+        "rental_poster_cosmic_battles"
+      ],
+      "allowed_categories": [
+        "vhs_classic",
+        "vhs_new_release",
+        "vhs_cult",
+        "dvd_new_release",
+        "dvd_classic",
+        "snacks",
+        "merchandise"
+      ],
+      "fixture_slots": 7,
+      "fixtures": [
+        {
+          "id": "new_releases_wall",
+          "type": "wall_display",
+          "slots": 8,
+          "label": "New Releases Wall"
+        },
+        {
+          "id": "classic_shelf_1",
+          "type": "shelf",
+          "slots": 10,
+          "label": "Classics Aisle"
+        },
+        {
+          "id": "classic_shelf_2",
+          "type": "shelf",
+          "slots": 10,
+          "label": "Genre Aisle"
+        },
+        {
+          "id": "cult_corner",
+          "type": "shelf",
+          "slots": 6,
+          "label": "Cult Corner"
+        },
+        {
+          "id": "dvd_shelf",
+          "type": "shelf",
+          "slots": 6,
+          "label": "DVD Section"
+        },
+        {
+          "id": "snack_rack",
+          "type": "counter_rack",
+          "slots": 6,
+          "label": "Snack Rack"
+        },
+        {
+          "id": "checkout_counter",
+          "type": "counter",
+          "slots": 4,
+          "label": "Checkout Counter"
+        }
+      ],
+      "max_employees": 2,
+      "base_foot_traffic": 0.5,
+      "available_supplier_tiers": [
+        1,
+        2,
+        3
+      ],
+      "unique_mechanics": [
+        "rental_system",
+        "late_fees",
+        "recommendation_engine"
+      ],
+      "late_fee_config": {
+        "base_late_fee": 1.0,
+        "per_day_rate": 0.5,
+        "max_late_fee": 15.0,
+        "grace_period_days": 1
       },
-      {
-        "id": "classic_shelf_1",
-        "type": "shelf",
-        "slots": 10,
-        "label": "Classics Aisle"
-      },
-      {
-        "id": "classic_shelf_2",
-        "type": "shelf",
-        "slots": 10,
-        "label": "Genre Aisle"
-      },
-      {
-        "id": "cult_corner",
-        "type": "shelf",
-        "slots": 6,
-        "label": "Cult Corner"
-      },
-      {
-        "id": "dvd_shelf",
-        "type": "shelf",
-        "slots": 6,
-        "label": "DVD Section"
-      },
-      {
-        "id": "snack_rack",
-        "type": "counter_rack",
-        "slots": 6,
-        "label": "Snack Rack"
-      },
-      {
-        "id": "checkout_counter",
-        "type": "counter",
-        "slots": 4,
-        "label": "Checkout Counter"
+      "aesthetic_tags": [
+        "blue_carpet",
+        "fluorescent_lights",
+        "plastic_cases",
+        "candy_counter"
+      ],
+      "ambient_sound": "res://game/assets/audio/ambiance/video_rental_store.wav",
+      "music": "video_rental_music",
+      "recommended_markup": {
+        "optimal_min": 1.4,
+        "optimal_max": 2.0,
+        "max_viable": 3.0
       }
-    ],
-    "max_employees": 2,
-    "base_foot_traffic": 0.5,
-    "available_supplier_tiers": [
-      1,
-      2,
-      3
-    ],
-    "unique_mechanics": [
-      "rental_system",
-      "late_fees",
-      "recommendation_engine"
-    ],
-    "late_fee_config": {
-      "base_late_fee": 1.0,
-      "per_day_rate": 0.5,
-      "max_late_fee": 15.0,
-      "grace_period_days": 1
     },
-    "aesthetic_tags": [
-      "blue_carpet",
-      "fluorescent_lights",
-      "plastic_cases",
-      "candy_counter"
-    ],
-    "ambient_sound": "res://game/assets/audio/ambiance/video_rental_store.wav",
-    "music": "video_rental_music",
-    "recommended_markup": {
-      "optimal_min": 1.4,
-      "optimal_max": 2.0,
-      "max_viable": 3.0
-    }
-  },
-  {
-    "id": "pocket_creatures",
-    "name": "PocketCreatures Card Shop",
-    "store_type": "pocket_creatures",
-    "environment_id": "pocket_creatures",
-    "description": "Booster packs, singles binders, and tournament tables. Bright colors, card shuffling, and the thrill of the pull.",
-    "scene_path": "res://game/scenes/stores/pocket_creatures.tscn",
-    "inventory_type": "pocket_creatures",
-    "interaction_set_id": "pocket_creatures",
-    "tutorial_context_id": "pocket_creatures",
-    "size_category": "medium",
-    "shelf_capacity": 63,
-    "backroom_capacity": 130,
-    "starting_cash": 850.0,
-    "daily_rent": 50.0,
-    "starting_inventory": [
-      "pc_booster_base_set",
-      "pc_booster_base_set",
-      "pc_booster_base_set",
-      "pc_booster_base_set",
-      "pc_booster_base_set",
-      "pc_booster_canopy",
-      "pc_booster_canopy",
-      "pc_booster_canopy",
-      "pc_booster_neo_spark",
-      "pc_booster_neo_spark",
-      "pc_deck_starter_set",
-      "pc_deck_theme_fire",
-      "pc_single_blazedragon_holo",
-      "pc_single_voltrat_holo_jungle",
-      "pc_single_crystalwing_uncommon",
-      "pc_single_ironclad_uncommon",
-      "pc_single_flameleon_common",
-      "pc_single_aquashell_common",
-      "pc_single_thornsprout_common",
-      "pc_single_voltrat_common",
-      "pc_single_shadowfang_common",
-      "pc_acc_sleeves_clear",
-      "pc_acc_sleeves_clear"
-    ],
-    "allowed_categories": [
-      "booster_packs",
-      "singles",
-      "sealed_product",
-      "starter_decks",
-      "accessories"
-    ],
-    "fixture_slots": 8,
-    "fixtures": [
-      {
-        "id": "booster_wall",
-        "type": "wall_display",
-        "slots": 8,
-        "label": "Booster Pack Wall"
-      },
-      {
-        "id": "singles_binder_case",
-        "type": "glass_case",
-        "slots": 12,
-        "label": "Singles Binder Case"
-      },
-      {
-        "id": "bulk_bins",
-        "type": "bin",
-        "slots": 10,
-        "label": "Commons / Uncommons Bins"
-      },
-      {
-        "id": "sealed_product_shelf",
-        "type": "shelf",
-        "slots": 4,
-        "label": "Sealed Product Shelf"
-      },
-      {
-        "id": "starter_deck_rack",
-        "type": "shelf",
-        "slots": 4,
-        "label": "Starter Deck Rack"
-      },
-      {
-        "id": "accessories_wall",
-        "type": "wall_rack",
-        "slots": 8,
-        "label": "Accessories Wall"
-      },
-      {
-        "id": "ultra_rare_showcase",
-        "type": "glass_case",
-        "slots": 3,
-        "label": "Ultra Rare Showcase"
-      },
-      {
-        "id": "checkout_counter",
-        "type": "counter",
-        "slots": 2,
-        "label": "Checkout Counter"
+    {
+      "id": "pocket_creatures",
+      "name": "PocketCreatures Card Shop",
+      "store_type": "pocket_creatures",
+      "environment_id": "pocket_creatures",
+      "description": "Booster packs, singles binders, and tournament tables. Bright colors, card shuffling, and the thrill of the pull.",
+      "scene_path": "res://game/scenes/stores/pocket_creatures.tscn",
+      "inventory_type": "pocket_creatures",
+      "interaction_set_id": "pocket_creatures",
+      "tutorial_context_id": "pocket_creatures",
+      "size_category": "medium",
+      "shelf_capacity": 63,
+      "backroom_capacity": 130,
+      "starting_cash": 850.0,
+      "daily_rent": 50.0,
+      "starting_inventory": [
+        "pc_booster_base_set",
+        "pc_booster_base_set",
+        "pc_booster_base_set",
+        "pc_booster_base_set",
+        "pc_booster_base_set",
+        "pc_booster_canopy",
+        "pc_booster_canopy",
+        "pc_booster_canopy",
+        "pc_booster_neo_spark",
+        "pc_booster_neo_spark",
+        "pc_deck_starter_set",
+        "pc_deck_theme_fire",
+        "pc_single_blazedragon_holo",
+        "pc_single_voltrat_holo_jungle",
+        "pc_single_crystalwing_uncommon",
+        "pc_single_ironclad_uncommon",
+        "pc_single_flameleon_common",
+        "pc_single_aquashell_common",
+        "pc_single_thornsprout_common",
+        "pc_single_voltrat_common",
+        "pc_single_shadowfang_common",
+        "pc_acc_sleeves_clear",
+        "pc_acc_sleeves_clear"
+      ],
+      "allowed_categories": [
+        "booster_packs",
+        "singles",
+        "sealed_product",
+        "starter_decks",
+        "accessories"
+      ],
+      "fixture_slots": 8,
+      "fixtures": [
+        {
+          "id": "booster_wall",
+          "type": "wall_display",
+          "slots": 8,
+          "label": "Booster Pack Wall"
+        },
+        {
+          "id": "singles_binder_case",
+          "type": "glass_case",
+          "slots": 12,
+          "label": "Singles Binder Case"
+        },
+        {
+          "id": "bulk_bins",
+          "type": "bin",
+          "slots": 10,
+          "label": "Commons / Uncommons Bins"
+        },
+        {
+          "id": "sealed_product_shelf",
+          "type": "shelf",
+          "slots": 4,
+          "label": "Sealed Product Shelf"
+        },
+        {
+          "id": "starter_deck_rack",
+          "type": "shelf",
+          "slots": 4,
+          "label": "Starter Deck Rack"
+        },
+        {
+          "id": "accessories_wall",
+          "type": "wall_rack",
+          "slots": 8,
+          "label": "Accessories Wall"
+        },
+        {
+          "id": "ultra_rare_showcase",
+          "type": "glass_case",
+          "slots": 3,
+          "label": "Ultra Rare Showcase"
+        },
+        {
+          "id": "checkout_counter",
+          "type": "counter",
+          "slots": 2,
+          "label": "Checkout Counter"
+        }
+      ],
+      "max_employees": 2,
+      "base_foot_traffic": 0.45,
+      "available_supplier_tiers": [
+        1,
+        2,
+        3
+      ],
+      "unique_mechanics": [
+        "pack_opening",
+        "tournament_hosting",
+        "meta_shifts"
+      ],
+      "aesthetic_tags": [
+        "bright_colors",
+        "binder_cases",
+        "booster_towers",
+        "tournament_banners"
+      ],
+      "ambient_sound": "res://game/assets/audio/ambiance/card_shop.wav",
+      "music": "card_shop_music",
+      "recommended_markup": {
+        "optimal_min": 1.3,
+        "optimal_max": 1.7,
+        "max_viable": 2.5
       }
-    ],
-    "max_employees": 2,
-    "base_foot_traffic": 0.45,
-    "available_supplier_tiers": [
-      1,
-      2,
-      3
-    ],
-    "unique_mechanics": [
-      "pack_opening",
-      "tournament_hosting",
-      "meta_shifts"
-    ],
-    "aesthetic_tags": [
-      "bright_colors",
-      "binder_cases",
-      "booster_towers",
-      "tournament_banners"
-    ],
-    "ambient_sound": "res://game/assets/audio/ambiance/card_shop.wav",
-    "music": "card_shop_music",
-    "recommended_markup": {
-      "optimal_min": 1.3,
-      "optimal_max": 1.7,
-      "max_viable": 2.5
-    }
-  },
-  {
-    "id": "electronics",
-    "aliases": [
-      "consumer_electronics"
-    ],
-    "name": "Consumer Electronics",
-    "store_type": "electronics",
-    "environment_id": "electronics",
-    "description": "MP3 players, handheld consoles, gadgets, and accessories. Chrome shelving, demo stations, and the smell of new plastic.",
-    "inventory_type": "consumer_electronics",
-    "interaction_set_id": "consumer_electronics",
-    "tutorial_context_id": "consumer_electronics",
-    "scene_path": "res://game/scenes/stores/consumer_electronics.tscn",
-    "size_category": "medium",
-    "shelf_capacity": 48,
-    "backroom_capacity": 120,
-    "starting_cash": 1000.0,
-    "starting_inventory": [
-      "elec_zunewave_128",
-      "elec_zunewave_256",
-      "elec_portastation_console",
-      "elec_portastation_racer",
-      "elec_portastation_quest",
-      "elec_headphones_onear",
-      "elec_headphones_budget_earbuds",
-      "elec_camera_pixelsnap_budget",
-      "elec_case_mp3_player",
-      "elec_cable_usb",
-      "elec_screen_protector",
-      "elec_usb_drive_64mb",
-      "elec_usb_drive_512mb"
-    ],
-    "allowed_categories": [
-      "portable_audio",
-      "handheld_gaming",
-      "audio",
-      "gadgets",
-      "accessories"
-    ],
-    "fixture_slots": 8,
-    "fixtures": [
-      {
-        "id": "mp3_display",
-        "type": "acrylic_stand",
-        "slots": 6,
-        "label": "MP3 Player Display"
-      },
-      {
-        "id": "handheld_shelf",
-        "type": "shelf",
-        "slots": 10,
-        "label": "Handheld Gaming Shelf"
-      },
-      {
-        "id": "audio_wall",
-        "type": "wall_rack",
-        "slots": 8,
-        "label": "Audio Wall"
-      },
-      {
-        "id": "gadget_case",
-        "type": "glass_case",
-        "slots": 6,
-        "label": "Camera & Gadget Case"
-      },
-      {
-        "id": "accessory_pegboard",
-        "type": "pegboard",
-        "slots": 12,
-        "label": "Accessory Pegboard"
-      },
-      {
-        "id": "demo_station_1",
-        "type": "demo_station",
-        "slots": 1,
-        "label": "Demo Station 1"
-      },
-      {
-        "id": "demo_station_2",
-        "type": "demo_station",
-        "slots": 1,
-        "label": "Demo Station 2"
-      },
-      {
-        "id": "checkout_counter",
-        "type": "counter",
-        "slots": 4,
-        "label": "Checkout Counter"
+    },
+    {
+      "id": "electronics",
+      "aliases": [
+        "consumer_electronics"
+      ],
+      "name": "Consumer Electronics",
+      "store_type": "electronics",
+      "environment_id": "electronics",
+      "description": "MP3 players, handheld consoles, gadgets, and accessories. Chrome shelving, demo stations, and the smell of new plastic.",
+      "inventory_type": "consumer_electronics",
+      "interaction_set_id": "consumer_electronics",
+      "tutorial_context_id": "consumer_electronics",
+      "scene_path": "res://game/scenes/stores/consumer_electronics.tscn",
+      "size_category": "medium",
+      "shelf_capacity": 48,
+      "backroom_capacity": 120,
+      "starting_cash": 1000.0,
+      "starting_inventory": [
+        "elec_zunewave_128",
+        "elec_zunewave_256",
+        "elec_portastation_console",
+        "elec_portastation_racer",
+        "elec_portastation_quest",
+        "elec_headphones_onear",
+        "elec_headphones_budget_earbuds",
+        "elec_camera_pixelsnap_budget",
+        "elec_case_mp3_player",
+        "elec_cable_usb",
+        "elec_screen_protector",
+        "elec_usb_drive_64mb",
+        "elec_usb_drive_512mb"
+      ],
+      "allowed_categories": [
+        "portable_audio",
+        "handheld_gaming",
+        "audio",
+        "gadgets",
+        "accessories"
+      ],
+      "fixture_slots": 8,
+      "fixtures": [
+        {
+          "id": "mp3_display",
+          "type": "acrylic_stand",
+          "slots": 6,
+          "label": "MP3 Player Display"
+        },
+        {
+          "id": "handheld_shelf",
+          "type": "shelf",
+          "slots": 10,
+          "label": "Handheld Gaming Shelf"
+        },
+        {
+          "id": "audio_wall",
+          "type": "wall_rack",
+          "slots": 8,
+          "label": "Audio Wall"
+        },
+        {
+          "id": "gadget_case",
+          "type": "glass_case",
+          "slots": 6,
+          "label": "Camera & Gadget Case"
+        },
+        {
+          "id": "accessory_pegboard",
+          "type": "pegboard",
+          "slots": 12,
+          "label": "Accessory Pegboard"
+        },
+        {
+          "id": "demo_station_1",
+          "type": "demo_station",
+          "slots": 1,
+          "label": "Demo Station 1"
+        },
+        {
+          "id": "demo_station_2",
+          "type": "demo_station",
+          "slots": 1,
+          "label": "Demo Station 2"
+        },
+        {
+          "id": "checkout_counter",
+          "type": "counter",
+          "slots": 4,
+          "label": "Checkout Counter"
+        }
+      ],
+      "max_employees": 2,
+      "base_foot_traffic": 0.4,
+      "available_supplier_tiers": [
+        1,
+        2,
+        3
+      ],
+      "max_demo_units": 2,
+      "demo_interest_bonus": 0.2,
+      "warranty_min_price": 50.0,
+      "unique_mechanics": [
+        "demo_units",
+        "product_lifecycle",
+        "warranty_upsell"
+      ],
+      "aesthetic_tags": [
+        "chrome_shelving",
+        "white_displays",
+        "demo_stations",
+        "product_boxes"
+      ],
+      "ambient_sound": "res://game/assets/audio/ambiance/electronics_store.wav",
+      "music": "electronics_store_music",
+      "recommended_markup": {
+        "optimal_min": 1.15,
+        "optimal_max": 1.4,
+        "max_viable": 2.0
       }
-    ],
-    "max_employees": 2,
-    "base_foot_traffic": 0.4,
-    "available_supplier_tiers": [
-      1,
-      2,
-      3
-    ],
-    "max_demo_units": 2,
-    "demo_interest_bonus": 0.2,
-    "warranty_min_price": 50.0,
-    "unique_mechanics": [
-      "demo_units",
-      "product_lifecycle",
-      "warranty_upsell"
-    ],
-    "aesthetic_tags": [
-      "chrome_shelving",
-      "white_displays",
-      "demo_stations",
-      "product_boxes"
-    ],
-    "ambient_sound": "res://game/assets/audio/ambiance/electronics_store.wav",
-    "music": "electronics_store_music",
-    "recommended_markup": {
-      "optimal_min": 1.15,
-      "optimal_max": 1.4,
-      "max_viable": 2.0
     }
-  }
-]
+  ]
+}

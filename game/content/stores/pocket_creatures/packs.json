@@ -1,182 +1,185 @@
-[
-  {
-    "id": "pack_base_set",
-    "display_name": "Base Set Booster",
-    "set_tag": "base_set",
-    "cost": 3.99,
-    "slot_count": 11,
-    "slots": [
-      {
-        "type": "common",
-        "count": 6
-      },
-      {
-        "type": "uncommon",
-        "count": 3
-      },
-      {
-        "type": "rare_slot",
-        "count": 1
-      },
-      {
-        "type": "energy",
-        "count": 1
+{
+  "type": "pocket_creatures_packs_config",
+  "entries": [
+    {
+      "id": "pack_base_set",
+      "display_name": "Base Set Booster",
+      "set_tag": "base_set",
+      "cost": 3.99,
+      "slot_count": 11,
+      "slots": [
+        {
+          "type": "common",
+          "count": 6
+        },
+        {
+          "type": "uncommon",
+          "count": 3
+        },
+        {
+          "type": "rare_slot",
+          "count": 1
+        },
+        {
+          "type": "energy",
+          "count": 1
+        }
+      ],
+      "rarity_weights": {
+        "rare": 0.64,
+        "holo_rare": 0.33,
+        "secret_rare": 0.03
       }
-    ],
-    "rarity_weights": {
-      "rare": 0.64,
-      "holo_rare": 0.33,
-      "secret_rare": 0.03
-    }
-  },
-  {
-    "id": "pack_jungle",
-    "display_name": "Jungle Booster",
-    "set_tag": "jungle",
-    "cost": 3.99,
-    "slot_count": 11,
-    "slots": [
-      {
-        "type": "common",
-        "count": 6
-      },
-      {
-        "type": "uncommon",
-        "count": 3
-      },
-      {
-        "type": "rare_slot",
-        "count": 1
-      },
-      {
-        "type": "energy",
-        "count": 1
+    },
+    {
+      "id": "pack_jungle",
+      "display_name": "Jungle Booster",
+      "set_tag": "jungle",
+      "cost": 3.99,
+      "slot_count": 11,
+      "slots": [
+        {
+          "type": "common",
+          "count": 6
+        },
+        {
+          "type": "uncommon",
+          "count": 3
+        },
+        {
+          "type": "rare_slot",
+          "count": 1
+        },
+        {
+          "type": "energy",
+          "count": 1
+        }
+      ],
+      "rarity_weights": {
+        "rare": 0.6,
+        "holo_rare": 0.36,
+        "secret_rare": 0.04
       }
-    ],
-    "rarity_weights": {
-      "rare": 0.6,
-      "holo_rare": 0.36,
-      "secret_rare": 0.04
-    }
-  },
-  {
-    "id": "pack_fossil",
-    "display_name": "Fossil Booster",
-    "set_tag": "fossil",
-    "cost": 3.99,
-    "slot_count": 11,
-    "slots": [
-      {
-        "type": "common",
-        "count": 6
-      },
-      {
-        "type": "uncommon",
-        "count": 3
-      },
-      {
-        "type": "rare_slot",
-        "count": 1
-      },
-      {
-        "type": "energy",
-        "count": 1
+    },
+    {
+      "id": "pack_fossil",
+      "display_name": "Fossil Booster",
+      "set_tag": "fossil",
+      "cost": 3.99,
+      "slot_count": 11,
+      "slots": [
+        {
+          "type": "common",
+          "count": 6
+        },
+        {
+          "type": "uncommon",
+          "count": 3
+        },
+        {
+          "type": "rare_slot",
+          "count": 1
+        },
+        {
+          "type": "energy",
+          "count": 1
+        }
+      ],
+      "rarity_weights": {
+        "rare": 0.64,
+        "holo_rare": 0.33,
+        "secret_rare": 0.03
       }
-    ],
-    "rarity_weights": {
-      "rare": 0.64,
-      "holo_rare": 0.33,
-      "secret_rare": 0.03
-    }
-  },
-  {
-    "id": "pack_team_rocket",
-    "display_name": "Team Rocket Booster",
-    "set_tag": "team_rocket",
-    "cost": 4.49,
-    "slot_count": 11,
-    "slots": [
-      {
-        "type": "common",
-        "count": 6
-      },
-      {
-        "type": "uncommon",
-        "count": 3
-      },
-      {
-        "type": "rare_slot",
-        "count": 1
-      },
-      {
-        "type": "energy",
-        "count": 1
+    },
+    {
+      "id": "pack_team_rocket",
+      "display_name": "Team Rocket Booster",
+      "set_tag": "team_rocket",
+      "cost": 4.49,
+      "slot_count": 11,
+      "slots": [
+        {
+          "type": "common",
+          "count": 6
+        },
+        {
+          "type": "uncommon",
+          "count": 3
+        },
+        {
+          "type": "rare_slot",
+          "count": 1
+        },
+        {
+          "type": "energy",
+          "count": 1
+        }
+      ],
+      "rarity_weights": {
+        "rare": 0.58,
+        "holo_rare": 0.37,
+        "secret_rare": 0.05
       }
-    ],
-    "rarity_weights": {
-      "rare": 0.58,
-      "holo_rare": 0.37,
-      "secret_rare": 0.05
-    }
-  },
-  {
-    "id": "pack_neo_genesis",
-    "display_name": "Neo Genesis Booster",
-    "set_tag": "neo_genesis",
-    "cost": 4.99,
-    "slot_count": 11,
-    "slots": [
-      {
-        "type": "common",
-        "count": 6
-      },
-      {
-        "type": "uncommon",
-        "count": 3
-      },
-      {
-        "type": "rare_slot",
-        "count": 1
-      },
-      {
-        "type": "energy",
-        "count": 1
+    },
+    {
+      "id": "pack_neo_genesis",
+      "display_name": "Neo Genesis Booster",
+      "set_tag": "neo_genesis",
+      "cost": 4.99,
+      "slot_count": 11,
+      "slots": [
+        {
+          "type": "common",
+          "count": 6
+        },
+        {
+          "type": "uncommon",
+          "count": 3
+        },
+        {
+          "type": "rare_slot",
+          "count": 1
+        },
+        {
+          "type": "energy",
+          "count": 1
+        }
+      ],
+      "rarity_weights": {
+        "rare": 0.62,
+        "holo_rare": 0.34,
+        "secret_rare": 0.04
       }
-    ],
-    "rarity_weights": {
-      "rare": 0.62,
-      "holo_rare": 0.34,
-      "secret_rare": 0.04
-    }
-  },
-  {
-    "id": "pack_crystal_storm",
-    "display_name": "Crystal Storm Booster",
-    "set_tag": "crystal_storm",
-    "cost": 5.49,
-    "slot_count": 11,
-    "slots": [
-      {
-        "type": "common",
-        "count": 6
-      },
-      {
-        "type": "uncommon",
-        "count": 3
-      },
-      {
-        "type": "rare_slot",
-        "count": 1
-      },
-      {
-        "type": "energy",
-        "count": 1
+    },
+    {
+      "id": "pack_crystal_storm",
+      "display_name": "Crystal Storm Booster",
+      "set_tag": "crystal_storm",
+      "cost": 5.49,
+      "slot_count": 11,
+      "slots": [
+        {
+          "type": "common",
+          "count": 6
+        },
+        {
+          "type": "uncommon",
+          "count": 3
+        },
+        {
+          "type": "rare_slot",
+          "count": 1
+        },
+        {
+          "type": "energy",
+          "count": 1
+        }
+      ],
+      "rarity_weights": {
+        "rare": 0.55,
+        "holo_rare": 0.38,
+        "secret_rare": 0.07
       }
-    ],
-    "rarity_weights": {
-      "rare": 0.55,
-      "holo_rare": 0.38,
-      "secret_rare": 0.07
     }
-  }
-]
+  ]
+}

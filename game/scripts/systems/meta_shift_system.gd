@@ -263,13 +263,13 @@ func _on_day_started(day: int) -> void:
 
 ## Loads shift definitions from meta_shifts.json into session memory.
 func _load_json_shift_defs() -> void:
-	var parsed: Variant = DataLoader.load_json(META_SHIFTS_PATH)
-	if not (parsed is Array):
+	var parsed: Array = DataLoader.load_catalog_entries(META_SHIFTS_PATH)
+	if parsed.is_empty():
 		push_warning(
-			"MetaShiftSystem: failed to load %s as Array" % META_SHIFTS_PATH
+			"MetaShiftSystem: no entries loaded from %s" % META_SHIFTS_PATH
 		)
 		return
-	for entry: Variant in parsed as Array:
+	for entry: Variant in parsed:
 		if entry is Dictionary:
 			_json_shift_defs.append((entry as Dictionary).duplicate())
 

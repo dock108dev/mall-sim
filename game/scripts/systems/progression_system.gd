@@ -291,21 +291,12 @@ func _connect_event_bus() -> void:
 
 
 func _load_milestone_definitions() -> void:
-	var root: Variant = DataLoader.load_json(MILESTONES_PATH)
-	if root == null:
+	var entries: Array = DataLoader.load_catalog_entries(MILESTONES_PATH)
+	if entries.is_empty():
 		push_warning(
-			"ProgressionSystem: failed to load %s" % MILESTONES_PATH
+			"ProgressionSystem: no entries loaded from %s" % MILESTONES_PATH
 		)
 		return
-	var entries: Array
-	if root is Array:
-		entries = root as Array
-	elif root is Dictionary:
-		entries = (root as Dictionary).get("milestones", [])
-	else:
-		push_warning("ProgressionSystem: unexpected root type in %s" % MILESTONES_PATH)
-		return
-
 	_milestones = []
 	for entry: Variant in entries:
 		if entry is Dictionary:

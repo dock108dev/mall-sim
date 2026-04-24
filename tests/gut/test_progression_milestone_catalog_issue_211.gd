@@ -167,12 +167,8 @@ func test_issue_211_data_loader_loads_progression_without_errors() -> void:
 
 
 func _load_milestones() -> Array[Dictionary]:
-	var data: Variant = DataLoader.load_json(MILESTONE_PATH)
-	assert_not_null(data, "Milestone definitions JSON must load")
-	if not (data is Array):
-		fail_test("Milestone definitions JSON must be a top-level array")
-		return []
-
+	var data: Array = DataLoader.load_catalog_entries(MILESTONE_PATH)
+	assert_false(data.is_empty(), "Milestone definitions JSON must load entries")
 	var milestones: Array[Dictionary] = []
 	for entry: Variant in data:
 		if entry is Dictionary:
@@ -190,20 +186,10 @@ func _load_milestones_by_id() -> Dictionary:
 
 
 func _load_unlock_ids() -> Dictionary:
-	var data: Variant = DataLoader.load_json(UNLOCKS_PATH)
-	assert_not_null(data, "Unlock definitions JSON must load")
-
+	var data: Array = DataLoader.load_catalog_entries(UNLOCKS_PATH)
+	assert_false(data.is_empty(), "Unlock definitions JSON must load entries")
 	var unlock_ids: Dictionary = {}
-	if data is Array:
-		for entry: Variant in data:
-			if entry is Dictionary and entry.has("id"):
-				unlock_ids[str(entry["id"])] = true
-	elif data is Dictionary:
-		for key: Variant in data.keys():
-			var value: Variant = data[key]
-			if value is Array:
-				for entry: Variant in value:
-					if entry is Dictionary and entry.has("id"):
-						unlock_ids[str(entry["id"])] = true
-
+	for entry: Variant in data:
+		if entry is Dictionary and entry.has("id"):
+			unlock_ids[str(entry["id"])] = true
 	return unlock_ids

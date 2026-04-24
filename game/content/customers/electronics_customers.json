@@ -1,165 +1,168 @@
-[
-  {
-    "id": "elec_early_adopter",
-    "name": "Early Adopter",
-    "store_types": [
-      "electronics"
-    ],
-    "budget_range": [
-      50.0,
-      250.0
-    ],
-    "patience": 0.4,
-    "price_sensitivity": 0.2,
-    "preferred_categories": [
-      "portable_audio",
-      "handheld_gaming",
-      "gadgets"
-    ],
-    "preferred_tags": [
-      "premium",
-      "new_model",
-      "flagship",
-      "latest",
-      "innovative"
-    ],
-    "condition_preference": "mint",
-    "browse_time_range": [
-      15,
-      40
-    ],
-    "purchase_probability_base": 0.65,
-    "impulse_buy_chance": 0.35,
-    "visit_frequency": "medium",
-    "mood_tags": [
-      "excited",
-      "decisive",
-      "showing_off"
-    ],
-    "dialogue_pool": "early_adopter",
-    "model": "res://game/assets/models/customers/casual_adult.glb"
-  },
-  {
-    "id": "elec_bargain_hunter",
-    "name": "Electronics Bargain Hunter",
-    "store_types": [
-      "electronics"
-    ],
-    "budget_range": [
-      10.0,
-      60.0
-    ],
-    "patience": 0.8,
-    "price_sensitivity": 0.9,
-    "preferred_categories": [
-      "portable_audio",
-      "handheld_gaming",
-      "audio",
-      "gadgets"
-    ],
-    "preferred_tags": [
-      "budget",
-      "clearance",
-      "last_gen",
-      "value",
-      "refurbished"
-    ],
-    "condition_preference": "good",
-    "browse_time_range": [
-      40,
-      100
-    ],
-    "purchase_probability_base": 0.45,
-    "impulse_buy_chance": 0.1,
-    "visit_frequency": "medium",
-    "mood_tags": [
-      "comparing",
-      "patient",
-      "skeptical"
-    ],
-    "dialogue_pool": "bargain_hunter",
-    "model": "res://game/assets/models/customers/casual_adult.glb"
-  },
-  {
-    "id": "elec_gift_buyer",
-    "name": "Gift Buyer",
-    "store_types": [
-      "electronics"
-    ],
-    "budget_range": [
-      25.0,
-      120.0
-    ],
-    "patience": 0.6,
-    "price_sensitivity": 0.5,
-    "preferred_categories": [
-      "portable_audio",
-      "handheld_gaming",
-      "gadgets",
-      "accessories"
-    ],
-    "preferred_tags": [
-      "gift",
-      "popular",
-      "starter",
-      "bundle",
-      "premium"
-    ],
-    "condition_preference": "mint",
-    "browse_time_range": [
-      25,
-      70
-    ],
-    "purchase_probability_base": 0.55,
-    "impulse_buy_chance": 0.3,
-    "visit_frequency": "low",
-    "mood_tags": [
-      "uncertain",
-      "asking",
-      "browsing"
-    ],
-    "dialogue_pool": "gift_buyer",
-    "model": "res://game/assets/models/customers/parent.glb"
-  },
-  {
-    "id": "elec_tech_enthusiast",
-    "name": "Tech Enthusiast",
-    "store_types": [
-      "electronics"
-    ],
-    "budget_range": [
-      15.0,
-      100.0
-    ],
-    "patience": 0.7,
-    "price_sensitivity": 0.6,
-    "preferred_categories": [
-      "portable_audio",
-      "gadgets",
-      "accessories",
-      "audio"
-    ],
-    "preferred_tags": [
-      "specs",
-      "premium",
-      "innovative",
-      "audiophile",
-      "pro"
-    ],
-    "condition_preference": "near_mint",
-    "browse_time_range": [
-      30,
-      90
-    ],
-    "purchase_probability_base": 0.5,
-    "impulse_buy_chance": 0.2,
-    "visit_frequency": "high",
-    "mood_tags": [
-      "knowledgeable",
-      "comparing",
-      "chatty"
-    ],
-    "dialogue_pool": "tech_enthusiast",
-    "model": "res://game/assets/models/customers/young_adult.glb"
-  }
-]
+{
+  "type": "customer_profile",
+  "entries": [
+    {
+      "id": "elec_early_adopter",
+      "name": "Early Adopter",
+      "store_types": [
+        "electronics"
+      ],
+      "budget_range": [
+        50.0,
+        250.0
+      ],
+      "patience": 0.4,
+      "price_sensitivity": 0.2,
+      "preferred_categories": [
+        "portable_audio",
+        "handheld_gaming",
+        "gadgets"
+      ],
+      "preferred_tags": [
+        "premium",
+        "new_model",
+        "flagship",
+        "latest",
+        "innovative"
+      ],
+      "condition_preference": "mint",
+      "browse_time_range": [
+        15,
+        40
+      ],
+      "purchase_probability_base": 0.65,
+      "impulse_buy_chance": 0.35,
+      "visit_frequency": "medium",
+      "mood_tags": [
+        "excited",
+        "decisive",
+        "showing_off"
+      ],
+      "dialogue_pool": "early_adopter",
+      "model": "res://game/assets/models/customers/casual_adult.glb"
+    },
+    {
+      "id": "elec_bargain_hunter",
+      "name": "Electronics Bargain Hunter",
+      "store_types": [
+        "electronics"
+      ],
+      "budget_range": [
+        10.0,
+        60.0
+      ],
+      "patience": 0.8,
+      "price_sensitivity": 0.9,
+      "preferred_categories": [
+        "portable_audio",
+        "handheld_gaming",
+        "audio",
+        "gadgets"
+      ],
+      "preferred_tags": [
+        "budget",
+        "clearance",
+        "last_gen",
+        "value",
+        "refurbished"
+      ],
+      "condition_preference": "good",
+      "browse_time_range": [
+        40,
+        100
+      ],
+      "purchase_probability_base": 0.45,
+      "impulse_buy_chance": 0.1,
+      "visit_frequency": "medium",
+      "mood_tags": [
+        "comparing",
+        "patient",
+        "skeptical"
+      ],
+      "dialogue_pool": "bargain_hunter",
+      "model": "res://game/assets/models/customers/casual_adult.glb"
+    },
+    {
+      "id": "elec_gift_buyer",
+      "name": "Gift Buyer",
+      "store_types": [
+        "electronics"
+      ],
+      "budget_range": [
+        25.0,
+        120.0
+      ],
+      "patience": 0.6,
+      "price_sensitivity": 0.5,
+      "preferred_categories": [
+        "portable_audio",
+        "handheld_gaming",
+        "gadgets",
+        "accessories"
+      ],
+      "preferred_tags": [
+        "gift",
+        "popular",
+        "starter",
+        "bundle",
+        "premium"
+      ],
+      "condition_preference": "mint",
+      "browse_time_range": [
+        25,
+        70
+      ],
+      "purchase_probability_base": 0.55,
+      "impulse_buy_chance": 0.3,
+      "visit_frequency": "low",
+      "mood_tags": [
+        "uncertain",
+        "asking",
+        "browsing"
+      ],
+      "dialogue_pool": "gift_buyer",
+      "model": "res://game/assets/models/customers/parent.glb"
+    },
+    {
+      "id": "elec_tech_enthusiast",
+      "name": "Tech Enthusiast",
+      "store_types": [
+        "electronics"
+      ],
+      "budget_range": [
+        15.0,
+        100.0
+      ],
+      "patience": 0.7,
+      "price_sensitivity": 0.6,
+      "preferred_categories": [
+        "portable_audio",
+        "gadgets",
+        "accessories",
+        "audio"
+      ],
+      "preferred_tags": [
+        "specs",
+        "premium",
+        "innovative",
+        "audiophile",
+        "pro"
+      ],
+      "condition_preference": "near_mint",
+      "browse_time_range": [
+        30,
+        90
+      ],
+      "purchase_probability_base": 0.5,
+      "impulse_buy_chance": 0.2,
+      "visit_frequency": "high",
+      "mood_tags": [
+        "knowledgeable",
+        "comparing",
+        "chatty"
+      ],
+      "dialogue_pool": "tech_enthusiast",
+      "model": "res://game/assets/models/customers/young_adult.glb"
+    }
+  ]
+}

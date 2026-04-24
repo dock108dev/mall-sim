@@ -1,5 +1,6 @@
 {
-  "suppliers": [
+  "type": "supplier",
+  "entries": [
     {
       "id": "wholesale_wax_co",
       "display_name": "Wholesale Wax Co.",

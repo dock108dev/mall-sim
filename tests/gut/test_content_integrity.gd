@@ -173,12 +173,7 @@ func test_seasons_count() -> void:
 
 func test_secret_threads_have_required_fields() -> void:
 	var path := CONTENT_ROOT + "meta/secret_threads.json"
-	var data: Variant = _load_json(path)
-	assert_not_null(data, "secret_threads.json failed to parse")
-	if data == null:
-		return
-	assert_true(data is Array, "secret_threads.json root must be an Array")
-	var arr: Array = data as Array
+	var arr: Array = DataLoader.load_catalog_entries(path)
 	assert_true(arr.size() >= 4, "Need >= 4 secret threads, got %d" % arr.size())
 	for entry: Variant in arr:
 		assert_true(entry is Dictionary, "secret thread entry is not a Dictionary")
@@ -203,13 +198,13 @@ func test_secret_threads_have_required_fields() -> void:
 
 func test_secret_threads_count() -> void:
 	var path := CONTENT_ROOT + "meta/secret_threads.json"
-	var data: Variant = _load_json(path)
-	if data == null or data is not Array:
+	var arr: Array = DataLoader.load_catalog_entries(path)
+	if arr.is_empty():
 		fail_test("Could not load secret_threads.json")
 		return
 	assert_true(
-		(data as Array).size() >= 4,
-		"Expected >= 4 secret threads, got %d" % (data as Array).size()
+		arr.size() >= 4,
+		"Expected >= 4 secret threads, got %d" % arr.size()
 	)
 
 
@@ -232,20 +227,7 @@ func test_inventory_minimum_counts() -> void:
 	for store_id: String in STORE_ITEM_FILES:
 		var rel_path: String = STORE_ITEM_FILES[store_id]
 		var path := CONTENT_ROOT + rel_path
-		var data: Variant = _load_json(path)
-		assert_not_null(
-			data,
-			"Could not load item file for store '%s': %s" % [store_id, path]
-		)
-		if data == null:
-			continue
-		var items: Array = []
-		if data is Array:
-			items = data as Array
-		elif data is Dictionary and (data as Dictionary).has("items"):
-			var v: Variant = (data as Dictionary).get("items")
-			if v is Array:
-				items = v as Array
+		var items: Array = DataLoader.load_catalog_entries(path)
 		assert_true(
 			items.size() >= MIN_ITEMS_PER_STORE,
 			"Store '%s' has %d items, need >= %d" % [store_id, items.size(), MIN_ITEMS_PER_STORE]
@@ -256,16 +238,7 @@ func test_inventory_items_have_required_fields() -> void:
 	for store_id: String in STORE_ITEM_FILES:
 		var rel_path: String = STORE_ITEM_FILES[store_id]
 		var path := CONTENT_ROOT + rel_path
-		var data: Variant = _load_json(path)
-		if data == null:
-			continue
-		var items: Array = []
-		if data is Array:
-			items = data as Array
-		elif data is Dictionary and (data as Dictionary).has("items"):
-			var v: Variant = (data as Dictionary).get("items")
-			if v is Array:
-				items = v as Array
+		var items: Array = DataLoader.load_catalog_entries(path)
 		for entry: Variant in items:
 			if entry is not Dictionary:
 				continue

@@ -31,11 +31,11 @@ func _ready() -> void:
 
 func _load_thread_definitions() -> void:
 	var path: String = "res://game/content/meta/regulars_threads.json"
-	var parsed: Variant = DataLoader.load_json(path)
-	if not (parsed is Array):
-		push_error("RegularsLogSystem: failed to load %s as Array" % path)
+	var parsed: Array = DataLoader.load_catalog_entries(path)
+	if parsed.is_empty():
+		push_error("RegularsLogSystem: failed to load entries from %s" % path)
 		return
-	for entry: Variant in (parsed as Array):
+	for entry: Variant in parsed:
 		if entry is Dictionary:
 			_thread_defs.append(entry as Dictionary)
 

@@ -24,18 +24,9 @@ const VALID_RARITIES: Array[String] = [
 
 
 func _load_catalog() -> Array:
-	var file := FileAccess.open(CATALOG_PATH, FileAccess.READ)
-	assert_not_null(file, "retro_games.json must be readable")
-	if file == null:
-		return []
-	var text := file.get_as_text()
-	file.close()
-	var parsed: Variant = JSON.parse_string(text)
-	assert_not_null(parsed, "retro_games.json must parse as valid JSON")
-	assert_true(parsed is Array, "retro_games.json root must be an Array")
-	if parsed is not Array:
-		return []
-	return parsed as Array
+	var entries: Array = DataLoader.load_catalog_entries(CATALOG_PATH)
+	assert_false(entries.is_empty(), "retro_games.json must have entries")
+	return entries
 
 
 func test_catalog_has_exactly_20_items() -> void:

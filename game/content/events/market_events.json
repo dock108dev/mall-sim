@@ -1,273 +1,276 @@
-[
-  {
-    "id": "spm_rookie_rush",
-    "name": "Rookie Rush",
-    "description": "A breakout prospect has collectors scrambling for rookie cards.",
-    "event_type": "boom",
-    "target_tags": [
-      "rookie"
-    ],
-    "target_categories": [
-      "trading_cards"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 1.8,
-    "duration_days": 8,
-    "announcement_days": 2,
-    "ramp_up_days": 2,
-    "ramp_down_days": 2,
-    "cooldown_days": 20,
-    "weight": 1.5,
-    "announcement_text": "Buzz is building around a breakout rookie \u2014 collectors are taking notice.",
-    "active_text": "Rookie cards are in high demand! Prices are climbing."
-  },
-  {
-    "id": "spm_championship_fever",
-    "name": "Championship Fever",
-    "description": "The big game is approaching and fans want star player memorabilia.",
-    "event_type": "boom",
-    "target_tags": [
-      "star",
-      "HOF",
-      "autograph"
-    ],
-    "target_categories": [
-      "trading_cards",
-      "memorabilia"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 2.2,
-    "duration_days": 10,
-    "announcement_days": 2,
-    "ramp_up_days": 2,
-    "ramp_down_days": 2,
-    "cooldown_days": 40,
-    "weight": 1.0,
-    "announcement_text": "Championship weekend is approaching \u2014 expect a surge in memorabilia demand.",
-    "active_text": "Championship fever! Star player items are commanding premium prices."
-  },
-  {
-    "id": "spm_wax_pack_nostalgia",
-    "name": "Wax Pack Nostalgia Wave",
-    "description": "Viral pack-opening videos have sealed product flying off shelves.",
-    "event_type": "boom",
-    "target_tags": [
-      "sealed",
-      "booster",
-      "pack"
-    ],
-    "target_categories": [
-      "sealed_packs",
-      "sealed_product"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 1.6,
-    "duration_days": 7,
-    "announcement_days": 1,
-    "ramp_up_days": 1,
-    "ramp_down_days": 2,
-    "cooldown_days": 15,
-    "weight": 1.2,
-    "announcement_text": "Pack-opening videos are trending online. Sealed product interest is picking up.",
-    "active_text": "Sealed packs and boxes are selling fast \u2014 nostalgia is in the air!"
-  },
-  {
-    "id": "spm_market_correction",
-    "name": "Market Correction",
-    "description": "The collectibles market is cooling off as speculators pull back.",
-    "event_type": "bust",
-    "target_tags": [],
-    "target_categories": [
-      "trading_cards",
-      "memorabilia"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 0.6,
-    "duration_days": 10,
-    "announcement_days": 2,
-    "ramp_up_days": 2,
-    "ramp_down_days": 2,
-    "cooldown_days": 30,
-    "weight": 0.8,
-    "announcement_text": "Analysts are predicting a cooldown in the collectibles market.",
-    "active_text": "Market correction underway \u2014 prices are dropping across the board."
-  },
-  {
-    "id": "spm_hall_of_fame_induction",
-    "name": "Hall of Fame Induction",
-    "description": "A beloved player is being inducted. HOF and vintage items are surging.",
-    "event_type": "spike",
-    "target_tags": [
-      "HOF",
-      "vintage",
-      "legend"
-    ],
-    "target_categories": [
-      "trading_cards",
-      "memorabilia"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 2.5,
-    "duration_days": 3,
-    "announcement_days": 2,
-    "ramp_up_days": 1,
-    "ramp_down_days": 1,
-    "cooldown_days": 40,
-    "weight": 0.6,
-    "announcement_text": "Hall of Fame induction ceremony announced \u2014 vintage card interest rising.",
-    "active_text": "Hall of Fame weekend! Legendary player items are at peak demand!"
-  },
-  {
-    "id": "spm_scandal_bust",
-    "name": "Doping Scandal",
-    "description": "A star player caught in a scandal. Their memorabilia is plummeting.",
-    "event_type": "bust",
-    "target_tags": [
-      "star"
-    ],
-    "target_categories": [
-      "trading_cards",
-      "memorabilia"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 0.4,
-    "duration_days": 12,
-    "announcement_days": 0,
-    "ramp_up_days": 1,
-    "ramp_down_days": 2,
-    "cooldown_days": 30,
-    "weight": 0.5,
-    "announcement_text": "",
-    "active_text": "Scandal rocks the sports world \u2014 star player memorabilia is tanking!"
-  },
-  {
-    "id": "spm_vintage_craze",
-    "name": "Vintage Craze",
-    "description": "Collectors pivot to vintage cards. Classic era is king.",
-    "event_type": "shift",
-    "target_tags": [
-      "vintage",
-      "classic"
-    ],
-    "target_categories": [
-      "trading_cards"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 1.7,
-    "duration_days": 12,
-    "announcement_days": 2,
-    "ramp_up_days": 2,
-    "ramp_down_days": 2,
-    "cooldown_days": 25,
-    "weight": 0.9,
-    "announcement_text": "Collectors are buzzing about classic-era cards. A vintage trend may be forming.",
-    "active_text": "Vintage is king! Classic-era cards are commanding strong premiums."
-  },
-  {
-    "id": "spm_jersey_retirement",
-    "name": "Jersey Retirement Ceremony",
-    "description": "A franchise icon is having their number retired. Jersey demand spikes.",
-    "event_type": "spike",
-    "target_tags": [
-      "jersey",
-      "apparel",
-      "game-worn"
-    ],
-    "target_categories": [
-      "memorabilia"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 2.8,
-    "duration_days": 2,
-    "announcement_days": 2,
-    "ramp_up_days": 1,
-    "ramp_down_days": 1,
-    "cooldown_days": 35,
-    "weight": 0.5,
-    "announcement_text": "A jersey retirement ceremony has been announced \u2014 expect a run on apparel.",
-    "active_text": "Jersey retirement day! Memorabilia demand is through the roof!"
-  },
-  {
-    "id": "spm_card_show_weekend",
-    "name": "Card Show Weekend",
-    "description": "A major card show brings dealers and collectors. Everything moves faster.",
-    "event_type": "boom",
-    "target_tags": [],
-    "target_categories": [
-      "trading_cards",
-      "sealed_packs",
-      "sealed_product"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 1.4,
-    "duration_days": 3,
-    "announcement_days": 2,
-    "ramp_up_days": 1,
-    "ramp_down_days": 1,
-    "cooldown_days": 20,
-    "weight": 1.3,
-    "announcement_text": "A card show is coming to the convention center this weekend!",
-    "active_text": "Card show weekend! Foot traffic is up and cards are moving."
-  },
-  {
-    "id": "spm_sports_win",
-    "name": "Big Game Victory",
-    "description": "The home team just won a major game. Memorabilia and autograph demand surges.",
-    "event_type": "sports_win",
-    "target_tags": [],
-    "target_categories": [
-      "memorabilia",
-      "autograph"
-    ],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 1.5,
-    "duration_days": 5,
-    "announcement_days": 0,
-    "ramp_up_days": 1,
-    "ramp_down_days": 1,
-    "cooldown_days": 20,
-    "weight": 1.0,
-    "announcement_text": "",
-    "active_text": "The home team won big! Memorabilia and autograph demand is surging!"
-  },
-  {
-    "id": "spm_offseason_doldrums",
-    "name": "Offseason Doldrums",
-    "description": "Between seasons, casual fans lose interest. Foot traffic is down.",
-    "event_type": "bust",
-    "target_tags": [],
-    "target_categories": [],
-    "target_store_types": [
-      "sports_memorabilia"
-    ],
-    "magnitude": 0.7,
-    "duration_days": 8,
-    "announcement_days": 2,
-    "ramp_up_days": 2,
-    "ramp_down_days": 2,
-    "cooldown_days": 40,
-    "weight": 1.0,
-    "announcement_text": "The offseason lull is setting in \u2014 expect slower foot traffic.",
-    "active_text": "Offseason doldrums. Only the dedicated collectors are browsing."
-  }
-]
+{
+  "type": "market_event",
+  "entries": [
+    {
+      "id": "spm_rookie_rush",
+      "name": "Rookie Rush",
+      "description": "A breakout prospect has collectors scrambling for rookie cards.",
+      "event_type": "boom",
+      "target_tags": [
+        "rookie"
+      ],
+      "target_categories": [
+        "trading_cards"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 1.8,
+      "duration_days": 8,
+      "announcement_days": 2,
+      "ramp_up_days": 2,
+      "ramp_down_days": 2,
+      "cooldown_days": 20,
+      "weight": 1.5,
+      "announcement_text": "Buzz is building around a breakout rookie — collectors are taking notice.",
+      "active_text": "Rookie cards are in high demand! Prices are climbing."
+    },
+    {
+      "id": "spm_championship_fever",
+      "name": "Championship Fever",
+      "description": "The big game is approaching and fans want star player memorabilia.",
+      "event_type": "boom",
+      "target_tags": [
+        "star",
+        "HOF",
+        "autograph"
+      ],
+      "target_categories": [
+        "trading_cards",
+        "memorabilia"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 2.2,
+      "duration_days": 10,
+      "announcement_days": 2,
+      "ramp_up_days": 2,
+      "ramp_down_days": 2,
+      "cooldown_days": 40,
+      "weight": 1.0,
+      "announcement_text": "Championship weekend is approaching — expect a surge in memorabilia demand.",
+      "active_text": "Championship fever! Star player items are commanding premium prices."
+    },
+    {
+      "id": "spm_wax_pack_nostalgia",
+      "name": "Wax Pack Nostalgia Wave",
+      "description": "Viral pack-opening videos have sealed product flying off shelves.",
+      "event_type": "boom",
+      "target_tags": [
+        "sealed",
+        "booster",
+        "pack"
+      ],
+      "target_categories": [
+        "sealed_packs",
+        "sealed_product"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 1.6,
+      "duration_days": 7,
+      "announcement_days": 1,
+      "ramp_up_days": 1,
+      "ramp_down_days": 2,
+      "cooldown_days": 15,
+      "weight": 1.2,
+      "announcement_text": "Pack-opening videos are trending online. Sealed product interest is picking up.",
+      "active_text": "Sealed packs and boxes are selling fast — nostalgia is in the air!"
+    },
+    {
+      "id": "spm_market_correction",
+      "name": "Market Correction",
+      "description": "The collectibles market is cooling off as speculators pull back.",
+      "event_type": "bust",
+      "target_tags": [],
+      "target_categories": [
+        "trading_cards",
+        "memorabilia"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 0.6,
+      "duration_days": 10,
+      "announcement_days": 2,
+      "ramp_up_days": 2,
+      "ramp_down_days": 2,
+      "cooldown_days": 30,
+      "weight": 0.8,
+      "announcement_text": "Analysts are predicting a cooldown in the collectibles market.",
+      "active_text": "Market correction underway — prices are dropping across the board."
+    },
+    {
+      "id": "spm_hall_of_fame_induction",
+      "name": "Hall of Fame Induction",
+      "description": "A beloved player is being inducted. HOF and vintage items are surging.",
+      "event_type": "spike",
+      "target_tags": [
+        "HOF",
+        "vintage",
+        "legend"
+      ],
+      "target_categories": [
+        "trading_cards",
+        "memorabilia"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 2.5,
+      "duration_days": 3,
+      "announcement_days": 2,
+      "ramp_up_days": 1,
+      "ramp_down_days": 1,
+      "cooldown_days": 40,
+      "weight": 0.6,
+      "announcement_text": "Hall of Fame induction ceremony announced — vintage card interest rising.",
+      "active_text": "Hall of Fame weekend! Legendary player items are at peak demand!"
+    },
+    {
+      "id": "spm_scandal_bust",
+      "name": "Doping Scandal",
+      "description": "A star player caught in a scandal. Their memorabilia is plummeting.",
+      "event_type": "bust",
+      "target_tags": [
+        "star"
+      ],
+      "target_categories": [
+        "trading_cards",
+        "memorabilia"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 0.4,
+      "duration_days": 12,
+      "announcement_days": 0,
+      "ramp_up_days": 1,
+      "ramp_down_days": 2,
+      "cooldown_days": 30,
+      "weight": 0.5,
+      "announcement_text": "",
+      "active_text": "Scandal rocks the sports world — star player memorabilia is tanking!"
+    },
+    {
+      "id": "spm_vintage_craze",
+      "name": "Vintage Craze",
+      "description": "Collectors pivot to vintage cards. Classic era is king.",
+      "event_type": "shift",
+      "target_tags": [
+        "vintage",
+        "classic"
+      ],
+      "target_categories": [
+        "trading_cards"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 1.7,
+      "duration_days": 12,
+      "announcement_days": 2,
+      "ramp_up_days": 2,
+      "ramp_down_days": 2,
+      "cooldown_days": 25,
+      "weight": 0.9,
+      "announcement_text": "Collectors are buzzing about classic-era cards. A vintage trend may be forming.",
+      "active_text": "Vintage is king! Classic-era cards are commanding strong premiums."
+    },
+    {
+      "id": "spm_jersey_retirement",
+      "name": "Jersey Retirement Ceremony",
+      "description": "A franchise icon is having their number retired. Jersey demand spikes.",
+      "event_type": "spike",
+      "target_tags": [
+        "jersey",
+        "apparel",
+        "game-worn"
+      ],
+      "target_categories": [
+        "memorabilia"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 2.8,
+      "duration_days": 2,
+      "announcement_days": 2,
+      "ramp_up_days": 1,
+      "ramp_down_days": 1,
+      "cooldown_days": 35,
+      "weight": 0.5,
+      "announcement_text": "A jersey retirement ceremony has been announced — expect a run on apparel.",
+      "active_text": "Jersey retirement day! Memorabilia demand is through the roof!"
+    },
+    {
+      "id": "spm_card_show_weekend",
+      "name": "Card Show Weekend",
+      "description": "A major card show brings dealers and collectors. Everything moves faster.",
+      "event_type": "boom",
+      "target_tags": [],
+      "target_categories": [
+        "trading_cards",
+        "sealed_packs",
+        "sealed_product"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 1.4,
+      "duration_days": 3,
+      "announcement_days": 2,
+      "ramp_up_days": 1,
+      "ramp_down_days": 1,
+      "cooldown_days": 20,
+      "weight": 1.3,
+      "announcement_text": "A card show is coming to the convention center this weekend!",
+      "active_text": "Card show weekend! Foot traffic is up and cards are moving."
+    },
+    {
+      "id": "spm_sports_win",
+      "name": "Big Game Victory",
+      "description": "The home team just won a major game. Memorabilia and autograph demand surges.",
+      "event_type": "sports_win",
+      "target_tags": [],
+      "target_categories": [
+        "memorabilia",
+        "autograph"
+      ],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 1.5,
+      "duration_days": 5,
+      "announcement_days": 0,
+      "ramp_up_days": 1,
+      "ramp_down_days": 1,
+      "cooldown_days": 20,
+      "weight": 1.0,
+      "announcement_text": "",
+      "active_text": "The home team won big! Memorabilia and autograph demand is surging!"
+    },
+    {
+      "id": "spm_offseason_doldrums",
+      "name": "Offseason Doldrums",
+      "description": "Between seasons, casual fans lose interest. Foot traffic is down.",
+      "event_type": "bust",
+      "target_tags": [],
+      "target_categories": [],
+      "target_store_types": [
+        "sports_memorabilia"
+      ],
+      "magnitude": 0.7,
+      "duration_days": 8,
+      "announcement_days": 2,
+      "ramp_up_days": 2,
+      "ramp_down_days": 2,
+      "cooldown_days": 40,
+      "weight": 1.0,
+      "announcement_text": "The offseason lull is setting in — expect slower foot traffic.",
+      "active_text": "Offseason doldrums. Only the dedicated collectors are browsing."
+    }
+  ]
+}

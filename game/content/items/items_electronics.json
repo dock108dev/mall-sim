@@ -1,436 +1,439 @@
-[
-  {
-    "id": "celec_vivid_27_flat",
-    "display_name": "VividView 27\" Flatscreen TV",
-    "description": "Slim profile, widescreen aspect ratio, stereo speakers built in. The new living room centerpiece.",
-    "category": "tv",
-    "store_type": "electronics",
-    "base_price": 399.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": true,
-    "monthly_depreciation_rate": 0.05,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_vivid_32_wide",
-    "display_name": "VividView 32\" Widescreen TV",
-    "description": "32-inch widescreen, 720p capable, component inputs. The one that sells out before Black Friday.",
-    "category": "tv",
-    "store_type": "electronics",
-    "base_price": 599.99,
-    "rarity": "rare",
-    "condition_range": [
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": true,
-    "monthly_depreciation_rate": 0.04,
-    "launch_spike_eligible": true,
-    "launch_spike_multiplier": 2.0,
-    "supplier_tier": 3
-  },
-  {
-    "id": "celec_tubepro_20",
-    "display_name": "TubePro 20\" CRT Television",
-    "description": "20-inch CRT with built-in coax tuner. Heavy, reliable, and still the budget living room staple.",
-    "category": "tv",
-    "store_type": "electronics",
-    "base_price": 149.99,
-    "rarity": "common",
-    "condition_range": [
-      "fair",
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.04,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_spinmax_100",
-    "display_name": "SpinMax 100 DVD Player",
-    "description": "Single-disc, remote included, plays DVD-R and CD. Plug it in and movie night starts.",
-    "category": "dvd_player",
-    "store_type": "electronics",
-    "base_price": 79.99,
-    "rarity": "common",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": true,
-    "monthly_depreciation_rate": 0.06,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_spinmax_200",
-    "display_name": "SpinMax 200 Progressive Scan DVD Player",
-    "description": "Progressive scan output, DTS audio pass-through. For the home theater enthusiast on a budget.",
-    "category": "dvd_player",
-    "store_type": "electronics",
-    "base_price": 129.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.06,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_spinmax_combo",
-    "display_name": "SpinMax DVD/VHS Combo Player",
-    "description": "Plays DVDs AND VHS tapes. Bridge the format gap without juggling two remotes.",
-    "category": "dvd_player",
-    "store_type": "electronics",
-    "base_price": 179.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.07,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_powerbox_2",
-    "display_name": "PowerBox 2 Home Console",
-    "description": "128-bit, online capable, controller port expander. The must-have console of the season.",
-    "category": "home_console",
-    "store_type": "electronics",
-    "base_price": 299.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": true,
-    "monthly_depreciation_rate": 0.03,
-    "launch_spike_eligible": true,
-    "launch_spike_multiplier": 2.5,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_pixelstation",
-    "display_name": "PixelStation Home Console",
-    "description": "DVD playback built in, dual controller ports, memory card slots. Two devices for the price of one.",
-    "category": "home_console",
-    "store_type": "electronics",
-    "base_price": 199.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": true,
-    "monthly_depreciation_rate": 0.03,
-    "launch_spike_eligible": true,
-    "launch_spike_multiplier": 2.0,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_fantasycast",
-    "display_name": "FantasyCast Online Console",
-    "description": "Internet-ready out of the box, 56k modem port included. Ahead of its time, behind in sales.",
-    "category": "home_console",
-    "store_type": "electronics",
-    "base_price": 149.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "fair",
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.05,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_beatpod_256",
-    "display_name": "BeatPod 256MB MP3 Player",
-    "description": "Aluminum shell, 60+ songs, built-in FM transmitter. Finally, your commute has a soundtrack.",
-    "category": "portable_music",
-    "store_type": "electronics",
-    "base_price": 79.99,
-    "rarity": "common",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.05,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_beatpod_1gb",
-    "display_name": "BeatPod 1GB Digital Music Player",
-    "description": "Scroll wheel, 250 songs, photo viewer. The click-wheel design everyone is copying.",
-    "category": "portable_music",
-    "store_type": "electronics",
-    "base_price": 149.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.04,
-    "launch_spike_eligible": true,
-    "launch_spike_multiplier": 1.8,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_beatpod_5gb",
-    "display_name": "BeatPod 5GB Hard Drive Player",
-    "description": "1,250 songs in your pocket. Hard disk, white earbuds, and one very satisfying click.",
-    "category": "portable_music",
-    "store_type": "electronics",
-    "base_price": 249.99,
-    "rarity": "rare",
-    "condition_range": [
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.03,
-    "launch_spike_eligible": true,
-    "launch_spike_multiplier": 2.0,
-    "supplier_tier": 3
-  },
-  {
-    "id": "celec_wavewalk_cd",
-    "display_name": "WaveWalk Portable CD Player",
-    "description": "Anti-skip buffer, LCD track display, auto-resume. Outlasted your Discman by three years.",
-    "category": "portable_music",
-    "store_type": "electronics",
-    "base_price": 39.99,
-    "rarity": "common",
-    "condition_range": [
-      "fair",
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.06,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_wavewalk_mini",
-    "display_name": "WaveWalk Mini FM/AM Radio Player",
-    "description": "Armband clip, 20 station presets, bass boost button. Small enough to take anywhere.",
-    "category": "portable_music",
-    "store_type": "electronics",
-    "base_price": 29.99,
-    "rarity": "common",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.04,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_gamebrick_xl",
-    "display_name": "GameBrick XL Handheld Console",
-    "description": "Backlit screen, rechargeable battery, 32-bit processor. The handheld that redefined portable gaming.",
-    "category": "gaming_handheld",
-    "store_type": "electronics",
-    "base_price": 149.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": true,
-    "monthly_depreciation_rate": 0.03,
-    "launch_spike_eligible": true,
-    "launch_spike_multiplier": 2.2,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_gamebrick_sp",
-    "display_name": "GameBrick SP Folding Console",
-    "description": "Clamshell design, built-in backlight, rechargeable. Fits in a shirt pocket. Mostly.",
-    "category": "gaming_handheld",
-    "store_type": "electronics",
-    "base_price": 129.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.03,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 2
-  },
-  {
-    "id": "celec_gamebrick_color",
-    "display_name": "GameBrick Color Handheld",
-    "description": "Full-color screen, backward compatible with original cartridges. 20 hours on two AA batteries.",
-    "category": "gaming_handheld",
-    "store_type": "electronics",
-    "base_price": 99.99,
-    "rarity": "common",
-    "condition_range": [
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.04,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_microgame_plus",
-    "display_name": "MicroGame Plus Handheld",
-    "description": "Budget handheld with 10 built-in games. No cartridge slot. Great for kids, great for road trips.",
-    "category": "gaming_handheld",
-    "store_type": "electronics",
-    "base_price": 39.99,
-    "rarity": "common",
-    "condition_range": [
-      "fair",
-      "good",
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.05,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_av_cable_pro",
-    "display_name": "ZapLink Pro AV Cable (6 ft)",
-    "description": "Gold-plated composite connectors, triple-shielded. The last AV cable you'll ever buy.",
-    "category": "accessory",
-    "store_type": "electronics",
-    "base_price": 20.99,
-    "rarity": "common",
-    "condition_range": [
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.0,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_hdmi_cable",
-    "display_name": "ZapLink HDMI Cable (6 ft)",
-    "description": "Single cable for audio and video. The new standard everyone is slowly adopting.",
-    "category": "accessory",
-    "store_type": "electronics",
-    "base_price": 29.99,
-    "rarity": "common",
-    "condition_range": [
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.0,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_remote_universal",
-    "display_name": "ZapLink Universal Remote Control",
-    "description": "Programs to control up to 8 devices. Solve the drawer full of remotes problem once and for all.",
-    "category": "accessory",
-    "store_type": "electronics",
-    "base_price": 24.99,
-    "rarity": "common",
-    "condition_range": [
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.0,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_surge_protector",
-    "display_name": "ZapLink 6-Outlet Surge Protector",
-    "description": "1080 joule rating, 6-foot cord, indicator light. Protect your electronics investment.",
-    "category": "accessory",
-    "store_type": "electronics",
-    "base_price": 29.99,
-    "rarity": "common",
-    "condition_range": [
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.0,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  },
-  {
-    "id": "celec_mem_card_256",
-    "display_name": "ZapLink 256MB Memory Card",
-    "description": "Compatible with most console memory card slots. Never lose a save file again.",
-    "category": "accessory",
-    "store_type": "electronics",
-    "base_price": 34.99,
-    "rarity": "uncommon",
-    "condition_range": [
-      "near_mint",
-      "mint"
-    ],
-    "can_be_demo_unit": false,
-    "monthly_depreciation_rate": 0.02,
-    "launch_spike_eligible": false,
-    "launch_spike_multiplier": 1.0,
-    "supplier_tier": 1
-  }
-]
+{
+  "type": "item_definition",
+  "entries": [
+    {
+      "id": "celec_vivid_27_flat",
+      "display_name": "VividView 27\" Flatscreen TV",
+      "description": "Slim profile, widescreen aspect ratio, stereo speakers built in. The new living room centerpiece.",
+      "category": "tv",
+      "store_type": "electronics",
+      "base_price": 399.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": true,
+      "monthly_depreciation_rate": 0.05,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_vivid_32_wide",
+      "display_name": "VividView 32\" Widescreen TV",
+      "description": "32-inch widescreen, 720p capable, component inputs. The one that sells out before Black Friday.",
+      "category": "tv",
+      "store_type": "electronics",
+      "base_price": 599.99,
+      "rarity": "rare",
+      "condition_range": [
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": true,
+      "monthly_depreciation_rate": 0.04,
+      "launch_spike_eligible": true,
+      "launch_spike_multiplier": 2.0,
+      "supplier_tier": 3
+    },
+    {
+      "id": "celec_tubepro_20",
+      "display_name": "TubePro 20\" CRT Television",
+      "description": "20-inch CRT with built-in coax tuner. Heavy, reliable, and still the budget living room staple.",
+      "category": "tv",
+      "store_type": "electronics",
+      "base_price": 149.99,
+      "rarity": "common",
+      "condition_range": [
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.04,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_spinmax_100",
+      "display_name": "SpinMax 100 DVD Player",
+      "description": "Single-disc, remote included, plays DVD-R and CD. Plug it in and movie night starts.",
+      "category": "dvd_player",
+      "store_type": "electronics",
+      "base_price": 79.99,
+      "rarity": "common",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": true,
+      "monthly_depreciation_rate": 0.06,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_spinmax_200",
+      "display_name": "SpinMax 200 Progressive Scan DVD Player",
+      "description": "Progressive scan output, DTS audio pass-through. For the home theater enthusiast on a budget.",
+      "category": "dvd_player",
+      "store_type": "electronics",
+      "base_price": 129.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.06,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_spinmax_combo",
+      "display_name": "SpinMax DVD/VHS Combo Player",
+      "description": "Plays DVDs AND VHS tapes. Bridge the format gap without juggling two remotes.",
+      "category": "dvd_player",
+      "store_type": "electronics",
+      "base_price": 179.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.07,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_powerbox_2",
+      "display_name": "PowerBox 2 Home Console",
+      "description": "128-bit, online capable, controller port expander. The must-have console of the season.",
+      "category": "home_console",
+      "store_type": "electronics",
+      "base_price": 299.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": true,
+      "monthly_depreciation_rate": 0.03,
+      "launch_spike_eligible": true,
+      "launch_spike_multiplier": 2.5,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_pixelstation",
+      "display_name": "PixelStation Home Console",
+      "description": "DVD playback built in, dual controller ports, memory card slots. Two devices for the price of one.",
+      "category": "home_console",
+      "store_type": "electronics",
+      "base_price": 199.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": true,
+      "monthly_depreciation_rate": 0.03,
+      "launch_spike_eligible": true,
+      "launch_spike_multiplier": 2.0,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_fantasycast",
+      "display_name": "FantasyCast Online Console",
+      "description": "Internet-ready out of the box, 56k modem port included. Ahead of its time, behind in sales.",
+      "category": "home_console",
+      "store_type": "electronics",
+      "base_price": 149.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.05,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_beatpod_256",
+      "display_name": "BeatPod 256MB MP3 Player",
+      "description": "Aluminum shell, 60+ songs, built-in FM transmitter. Finally, your commute has a soundtrack.",
+      "category": "portable_music",
+      "store_type": "electronics",
+      "base_price": 79.99,
+      "rarity": "common",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.05,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_beatpod_1gb",
+      "display_name": "BeatPod 1GB Digital Music Player",
+      "description": "Scroll wheel, 250 songs, photo viewer. The click-wheel design everyone is copying.",
+      "category": "portable_music",
+      "store_type": "electronics",
+      "base_price": 149.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.04,
+      "launch_spike_eligible": true,
+      "launch_spike_multiplier": 1.8,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_beatpod_5gb",
+      "display_name": "BeatPod 5GB Hard Drive Player",
+      "description": "1,250 songs in your pocket. Hard disk, white earbuds, and one very satisfying click.",
+      "category": "portable_music",
+      "store_type": "electronics",
+      "base_price": 249.99,
+      "rarity": "rare",
+      "condition_range": [
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.03,
+      "launch_spike_eligible": true,
+      "launch_spike_multiplier": 2.0,
+      "supplier_tier": 3
+    },
+    {
+      "id": "celec_wavewalk_cd",
+      "display_name": "WaveWalk Portable CD Player",
+      "description": "Anti-skip buffer, LCD track display, auto-resume. Outlasted your Discman by three years.",
+      "category": "portable_music",
+      "store_type": "electronics",
+      "base_price": 39.99,
+      "rarity": "common",
+      "condition_range": [
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.06,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_wavewalk_mini",
+      "display_name": "WaveWalk Mini FM/AM Radio Player",
+      "description": "Armband clip, 20 station presets, bass boost button. Small enough to take anywhere.",
+      "category": "portable_music",
+      "store_type": "electronics",
+      "base_price": 29.99,
+      "rarity": "common",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.04,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_gamebrick_xl",
+      "display_name": "GameBrick XL Handheld Console",
+      "description": "Backlit screen, rechargeable battery, 32-bit processor. The handheld that redefined portable gaming.",
+      "category": "gaming_handheld",
+      "store_type": "electronics",
+      "base_price": 149.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": true,
+      "monthly_depreciation_rate": 0.03,
+      "launch_spike_eligible": true,
+      "launch_spike_multiplier": 2.2,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_gamebrick_sp",
+      "display_name": "GameBrick SP Folding Console",
+      "description": "Clamshell design, built-in backlight, rechargeable. Fits in a shirt pocket. Mostly.",
+      "category": "gaming_handheld",
+      "store_type": "electronics",
+      "base_price": 129.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.03,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 2
+    },
+    {
+      "id": "celec_gamebrick_color",
+      "display_name": "GameBrick Color Handheld",
+      "description": "Full-color screen, backward compatible with original cartridges. 20 hours on two AA batteries.",
+      "category": "gaming_handheld",
+      "store_type": "electronics",
+      "base_price": 99.99,
+      "rarity": "common",
+      "condition_range": [
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.04,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_microgame_plus",
+      "display_name": "MicroGame Plus Handheld",
+      "description": "Budget handheld with 10 built-in games. No cartridge slot. Great for kids, great for road trips.",
+      "category": "gaming_handheld",
+      "store_type": "electronics",
+      "base_price": 39.99,
+      "rarity": "common",
+      "condition_range": [
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.05,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_av_cable_pro",
+      "display_name": "ZapLink Pro AV Cable (6 ft)",
+      "description": "Gold-plated composite connectors, triple-shielded. The last AV cable you'll ever buy.",
+      "category": "accessory",
+      "store_type": "electronics",
+      "base_price": 20.99,
+      "rarity": "common",
+      "condition_range": [
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.0,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_hdmi_cable",
+      "display_name": "ZapLink HDMI Cable (6 ft)",
+      "description": "Single cable for audio and video. The new standard everyone is slowly adopting.",
+      "category": "accessory",
+      "store_type": "electronics",
+      "base_price": 29.99,
+      "rarity": "common",
+      "condition_range": [
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.0,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_remote_universal",
+      "display_name": "ZapLink Universal Remote Control",
+      "description": "Programs to control up to 8 devices. Solve the drawer full of remotes problem once and for all.",
+      "category": "accessory",
+      "store_type": "electronics",
+      "base_price": 24.99,
+      "rarity": "common",
+      "condition_range": [
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.0,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_surge_protector",
+      "display_name": "ZapLink 6-Outlet Surge Protector",
+      "description": "1080 joule rating, 6-foot cord, indicator light. Protect your electronics investment.",
+      "category": "accessory",
+      "store_type": "electronics",
+      "base_price": 29.99,
+      "rarity": "common",
+      "condition_range": [
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.0,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    },
+    {
+      "id": "celec_mem_card_256",
+      "display_name": "ZapLink 256MB Memory Card",
+      "description": "Compatible with most console memory card slots. Never lose a save file again.",
+      "category": "accessory",
+      "store_type": "electronics",
+      "base_price": 34.99,
+      "rarity": "uncommon",
+      "condition_range": [
+        "near_mint",
+        "mint"
+      ],
+      "can_be_demo_unit": false,
+      "monthly_depreciation_rate": 0.02,
+      "launch_spike_eligible": false,
+      "launch_spike_multiplier": 1.0,
+      "supplier_tier": 1
+    }
+  ]
+}

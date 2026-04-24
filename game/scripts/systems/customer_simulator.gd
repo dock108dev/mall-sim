@@ -289,12 +289,13 @@ static func _ensure_archetypes_loaded() -> void:
 	if _archetypes_loaded:
 		return
 	_archetypes_loaded = true
-	var parsed: Variant = DataLoader.load_json(ARCHETYPES_PATH)
-	if not (parsed is Array):
+	var parsed: Array = DataLoader.load_catalog_entries(ARCHETYPES_PATH)
+	if parsed.is_empty():
 		push_error(
-			"CustomerSimulator: failed to load %s as Array" % ARCHETYPES_PATH
+			"CustomerSimulator: failed to load entries from %s"
+			% ARCHETYPES_PATH
 		)
 		return
-	for entry: Variant in parsed as Array:
+	for entry: Variant in parsed:
 		if entry is Dictionary:
 			_archetypes.append(entry as Dictionary)
