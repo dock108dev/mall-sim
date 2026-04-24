@@ -1,7 +1,10 @@
 ## Persistent root gameplay scene: the mall hub.
-## Hosts five StorefrontCards and decorative ambient customer sprites over a
-## game_world child that owns all runtime systems. Store mechanics are launched
-## via slide-out drawers in response to EventBus.storefront_clicked.
+## Hosts the game_world child that owns all runtime systems, plus the
+## concourse backdrop, hub UI overlay, and ambience player. The five store
+## cards live in `MallOverview` (instantiated by `game_world` into its UI
+## layer, data-driven from `ContentRegistry`) — the hub does not carry its
+## own hardcoded storefront row (per ADR 0007 and
+## docs/audits/phase0-ui-integrity.md P1.2).
 ## Also hosts the KPI strip (instantiated at runtime) and routes objective
 ## store-routing signals to card highlight effects.
 class_name MallHub
@@ -11,14 +14,8 @@ const AMBIENCE_KEY: String = "food_court_murmur"
 const DUCK_DB: float = -12.0
 const DUCK_DURATION: float = 0.3
 
-## ISSUE-015: clickable Sneaker Citadel tile invokes StoreDirector directly.
-## DESIGN.md §2.1 — the director, not SceneRouter, owns the store lifecycle.
-const SNEAKER_CITADEL_ID: StringName = &"sneaker_citadel"
 const _CHECKPOINT_HUB_CAMERA_OK: StringName = &"mall_hub_camera_ok"
 
-# Test seam — unit tests inject a mock StoreDirector to verify activation
-# without booting the full director state machine.
-var _director_override: Node = null
 var _input_focus_pushed: bool = false
 
 const _KPI_SCENE: PackedScene = preload("res://game/scenes/ui/kpi_strip.tscn")
@@ -35,27 +32,20 @@ var _kpi_strip: Control = null
 var _settings_panel: SettingsPanel = null
 var _meta_notifications: MetaNotificationOverlay = null
 
-@onready var _storefront_row: Node2D = $HubLayer/ConcourseRoot/StorefrontRow
-@onready var _ambient_layer: Node2D = $HubLayer/ConcourseRoot/AmbientCustomers
 @onready var _ambience_player: AudioStreamPlayer = $HubAmbiencePlayer
 @onready var _hub_layer: CanvasLayer = $HubLayer
 @onready var _hub_ui_overlay: Control = $HubLayer/HubUIOverlay
-@onready var _sneaker_citadel_tile: Button = %SneakerCitadelTile
 
 
 func _ready() -> void:
-	EventBus.storefront_clicked.connect(_on_storefront_clicked)
 	EventBus.drawer_opened.connect(_on_drawer_opened)
 	EventBus.drawer_closed.connect(_on_drawer_closed)
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.store_exited.connect(_on_store_exited)
-	EventBus.objective_updated.connect(_on_objective_updated)
 	_start_hub_ambience()
 	_setup_kpi_strip()
 	_setup_meta_notifications()
-	_wire_sneaker_citadel_tile()
 	_push_mall_hub_input_focus()
-	_connect_store_director_failed()
 	call_deferred("_assert_mall_hub_camera")
 	if AuditLog != null:
 		AuditLog.pass_check(&"mall_hub_ready", "from=mall_hub.gd")
@@ -63,17 +53,6 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_pop_mall_hub_input_focus()
-	_disconnect_store_director_failed()
-
-
-## Returns the five storefront cards in slot order. Used by tests.
-func get_storefront_cards() -> Array[StorefrontCard]:
-	var cards: Array[StorefrontCard] = []
-	for child: Node in _storefront_row.get_children():
-		var card: StorefrontCard = child as StorefrontCard
-		if card != null:
-			cards.append(card)
-	return cards
 
 
 func _setup_kpi_strip() -> void:
@@ -111,31 +90,23 @@ func _on_progress_pressed() -> void:
 	EventBus.toggle_completion_tracker_panel.emit()
 
 
-func _on_storefront_clicked(store_id: StringName) -> void:
-	EventBus.enter_store_requested.emit(store_id)
-
-
 func _on_store_entered(_store_id: StringName) -> void:
-	_storefront_row.hide()
-	_ambient_layer.hide()
 	if _kpi_strip != null:
 		_kpi_strip.hide()
 	_set_hub_input_enabled(false)
 
 
 func _on_store_exited(_store_id: StringName) -> void:
-	_storefront_row.show()
-	_ambient_layer.show()
 	if _kpi_strip != null:
 		_kpi_strip.show()
 	_set_hub_input_enabled(true)
 
 
 ## ISSUE-002: while a store scene is active, the mall hub shares the viewport.
-## Hub buttons (e.g. SneakerCitadelTile at top-left) and StorefrontCard Area2D
-## pickers must not intercept clicks or a player-click inside the store would
-## navigate away. Acceptance: hub Controls are IGNORE + DISABLED, and card
-## click areas stop picking input.
+## Hub Controls must not intercept clicks or a player-click inside the store
+## would navigate away. Acceptance: hub Controls are IGNORE + DISABLED.
+## The store-card UI (`MallOverview`) is owned by `game_world` and hides
+## itself on `EventBus.store_entered` (see `mall_overview.gd`).
 func _set_hub_input_enabled(enabled: bool) -> void:
 	if _hub_ui_overlay != null:
 		_hub_ui_overlay.visible = enabled
@@ -145,23 +116,6 @@ func _set_hub_input_enabled(enabled: bool) -> void:
 		_hub_ui_overlay.process_mode = (
 			Node.PROCESS_MODE_INHERIT if enabled else Node.PROCESS_MODE_DISABLED
 		)
-	if _storefront_row != null:
-		_storefront_row.process_mode = (
-			Node.PROCESS_MODE_INHERIT if enabled else Node.PROCESS_MODE_DISABLED
-		)
-		for card: Node in _storefront_row.get_children():
-			var click_area: Area2D = card.get_node_or_null("ClickArea") as Area2D
-			if click_area != null:
-				click_area.input_pickable = enabled
-
-
-## When an objective payload carries a "goto:<store_id>" optional_hint,
-## highlight the matching store card so the player can act immediately.
-func _on_objective_updated(payload: Dictionary) -> void:
-	var hint: String = str(payload.get("optional_hint", ""))
-	if hint.begins_with("goto:"):
-		var target_id: StringName = StringName(hint.substr(5))
-		EventBus.hub_store_highlighted.emit(target_id)
 
 
 func _start_hub_ambience() -> void:
@@ -201,35 +155,6 @@ func _kill_duck_tween() -> void:
 	_duck_tween = null
 
 
-# ── ISSUE-015: Sneaker Citadel tile + StoreDirector handoff ────────────────
-
-## Test seam — unit tests inject a mock director so activation can be verified
-## without spinning up the full StoreDirector state machine.
-func set_director_for_tests(director: Node) -> void:
-	_director_override = director
-
-
-## Activates Sneaker Citadel via StoreDirector.enter_store. DESIGN.md §2.1
-## designates the director (not SceneRouter) as the sole owner of the store
-## lifecycle, so the hub never calls change_scene_to_* directly.
-func activate_sneaker_citadel() -> void:
-	var director: Node = _get_store_director()
-	if director == null:
-		push_error("[MallHub] StoreDirector unavailable; cannot enter %s"
-			% SNEAKER_CITADEL_ID)
-		return
-	assert(director.has_method("enter_store"),
-		"StoreDirector missing enter_store(store_id)")
-	director.call("enter_store", SNEAKER_CITADEL_ID)
-
-
-func _wire_sneaker_citadel_tile() -> void:
-	if _sneaker_citadel_tile == null:
-		return
-	if not _sneaker_citadel_tile.pressed.is_connected(activate_sneaker_citadel):
-		_sneaker_citadel_tile.pressed.connect(activate_sneaker_citadel)
-
-
 func _push_mall_hub_input_focus() -> void:
 	if InputFocus == null:
 		return
@@ -251,36 +176,6 @@ func _pop_mall_hub_input_focus() -> void:
 	_input_focus_pushed = false
 
 
-func _connect_store_director_failed() -> void:
-	var director: Node = _get_store_director()
-	if director == null or not director.has_signal("store_failed"):
-		return
-	if not director.store_failed.is_connected(_on_store_director_failed):
-		director.store_failed.connect(_on_store_director_failed)
-
-
-func _disconnect_store_director_failed() -> void:
-	var director: Node = _get_store_director()
-	if director == null or not director.has_signal("store_failed"):
-		return
-	if director.store_failed.is_connected(_on_store_director_failed):
-		director.store_failed.disconnect(_on_store_director_failed)
-
-
-func _on_store_director_failed(store_id: StringName, reason: String) -> void:
-	if store_id != SNEAKER_CITADEL_ID:
-		return
-	# Surface the failure on the inline ErrorBanner (the Phase-1 fail card).
-	# The dedicated ISSUE-018 fail_card will replace this when it lands.
-	if ErrorBanner != null and ErrorBanner.has_method("show_failure"):
-		ErrorBanner.show_failure(
-			"Store entry failed",
-			"%s: %s" % [store_id, reason]
-		)
-	# Hub stays in the scene tree and the tile remains focusable so the player
-	# can retry — the ErrorBanner overlays without freeing the hub.
-
-
 func _assert_mall_hub_camera() -> void:
 	# Camera authority only applies when the walkable 3D mall is active. In the
 	# default click-to-enter hub mode (game_world.gd:212-217) the scene is a
@@ -295,12 +190,3 @@ func _assert_mall_hub_camera() -> void:
 	if AuditLog != null:
 		AuditLog.pass_check(_CHECKPOINT_HUB_CAMERA_OK,
 			"source=mall_hub current=%s" % [CameraAuthority.current_source()])
-
-
-func _get_store_director() -> Node:
-	if _director_override != null:
-		return _director_override
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	return tree.root.get_node_or_null("StoreDirector")

@@ -1,6 +1,9 @@
 ## Full-screen day summary overlay shown at end of each day.
+## Rendered on its own CanvasLayer at layer=12 so it sits above
+## tutorial_overlay (layer=10) and the hub/game_world UI (layer=5/10).
+## See docs/audits/phase0-ui-integrity.md P1.4.
 class_name DaySummary
-extends Control
+extends CanvasLayer
 
 
 signal continue_pressed
@@ -8,13 +11,13 @@ signal dismissed
 signal review_inventory_requested
 
 const OVERLAY_FADE_DURATION: float = 0.2
-const OVERLAY_TARGET_ALPHA: float = 0.6
+const OVERLAY_TARGET_ALPHA: float = 0.9
 const PANEL_DELAY: float = 0.05
 const STAT_STAGGER_DELAY: float = 0.05
 const CONTINUE_FADE_DELAY: float = 0.2
 const CONTINUE_FADE_DURATION: float = 0.15
 const RECORD_PULSE_SCALE: float = 1.05
-const MILESTONE_BANNER_COLOR := Color(1.0, 0.84, 0.0)
+const TIER_CHANGE_COLOR := Color(1.0, 0.84, 0.0)
 const NET_PROFIT_POSITIVE_COLOR := Color(0.2, 0.8, 0.2)
 const NET_PROFIT_NEGATIVE_COLOR := Color(0.9, 0.2, 0.2)
 const NET_PROFIT_ZERO_COLOR := Color(1.0, 1.0, 1.0)
@@ -39,7 +42,6 @@ var _record_high_profit: float = 0.0
 var _record_high_items: int = 0
 var _record_high_labels: Array[Label] = []
 var _record_low_labels: Array[Label] = []
-var _milestone_labels: Array[Label] = []
 var _store_revenue_labels: Array[Label] = []
 var _last_net_profit: float = 0.0
 var _last_summary_args: Dictionary = {}
@@ -47,54 +49,51 @@ var _emit_day_acknowledged_on_hide: bool = false
 var _previous_day_revenue: float = -1.0
 var _has_previous_day_revenue: bool = false
 
-@onready var _overlay: ColorRect = $Overlay
-@onready var _panel: PanelContainer = $Panel
-@onready var _day_label: Label = $Panel/Margin/VBox/DayLabel
-@onready var _revenue_label: Label = $Panel/Margin/VBox/RevenueLabel
-@onready var _rent_label: Label = $Panel/Margin/VBox/RentLabel
-@onready var _expenses_label: Label = $Panel/Margin/VBox/ExpensesLabel
-@onready var _profit_label: Label = $Panel/Margin/VBox/ProfitLabel
-@onready var _items_sold_label: Label = $Panel/Margin/VBox/ItemsSoldLabel
+@onready var _overlay: ColorRect = $Root/Overlay
+@onready var _panel: PanelContainer = $Root/Panel
+@onready var _day_label: Label = $Root/Panel/Margin/VBox/DayLabel
+@onready var _revenue_label: Label = $Root/Panel/Margin/VBox/RevenueLabel
+@onready var _rent_label: Label = $Root/Panel/Margin/VBox/RentLabel
+@onready var _expenses_label: Label = $Root/Panel/Margin/VBox/ExpensesLabel
+@onready var _profit_label: Label = $Root/Panel/Margin/VBox/ProfitLabel
+@onready var _items_sold_label: Label = $Root/Panel/Margin/VBox/ItemsSoldLabel
 @onready var _top_item_label: Label = (
-	$Panel/Margin/VBox/TopItemLabel
+	$Root/Panel/Margin/VBox/TopItemLabel
 )
-@onready var _haggle_label: Label = $Panel/Margin/VBox/HaggleLabel
-@onready var _late_fee_label: Label = $Panel/Margin/VBox/LateFeeLabel
+@onready var _haggle_label: Label = $Root/Panel/Margin/VBox/HaggleLabel
+@onready var _late_fee_label: Label = $Root/Panel/Margin/VBox/LateFeeLabel
 @onready var _warranty_revenue_label: Label = (
-	$Panel/Margin/VBox/WarrantyRevenueLabel
+	$Root/Panel/Margin/VBox/WarrantyRevenueLabel
 )
 @onready var _warranty_claims_label: Label = (
-	$Panel/Margin/VBox/WarrantyClaimsLabel
+	$Root/Panel/Margin/VBox/WarrantyClaimsLabel
 )
 @onready var _customers_served_label: Label = (
-	$Panel/Margin/VBox/CustomersServedLabel
+	$Root/Panel/Margin/VBox/CustomersServedLabel
 )
 @onready var _satisfaction_label: Label = (
-	$Panel/Margin/VBox/SatisfactionLabel
+	$Root/Panel/Margin/VBox/SatisfactionLabel
 )
 @onready var _reputation_delta_label: Label = (
-	$Panel/Margin/VBox/ReputationDeltaLabel
+	$Root/Panel/Margin/VBox/ReputationDeltaLabel
 )
 @onready var _tier_change_label: Label = (
-	$Panel/Margin/VBox/TierChangeLabel
+	$Root/Panel/Margin/VBox/TierChangeLabel
 )
 @onready var _staff_wages_label: Label = (
-	$Panel/Margin/VBox/StaffWagesLabel
+	$Root/Panel/Margin/VBox/StaffWagesLabel
 )
 @onready var _seasonal_event_label: Label = (
-	$Panel/Margin/VBox/SeasonalEventLabel
-)
-@onready var _milestone_container: VBoxContainer = (
-	$Panel/Margin/VBox/MilestoneContainer
+	$Root/Panel/Margin/VBox/SeasonalEventLabel
 )
 @onready var _button_row: HBoxContainer = (
-	$Panel/Margin/VBox/ButtonRow
+	$Root/Panel/Margin/VBox/ButtonRow
 )
 @onready var _review_inventory_button: Button = (
-	$Panel/Margin/VBox/ButtonRow/ReviewInventoryButton
+	$Root/Panel/Margin/VBox/ButtonRow/ReviewInventoryButton
 )
 @onready var _continue_button: Button = (
-	$Panel/Margin/VBox/ButtonRow/ContinueButton
+	$Root/Panel/Margin/VBox/ButtonRow/ContinueButton
 )
 
 
@@ -167,7 +166,6 @@ func show_summary(
 		_overdue_count_label.visible = false
 	if _grading_label:
 		_grading_label.visible = false
-	_clear_milestones()
 	_apply_record_highlights(revenue, net_profit, items_sold)
 	_animate_open()
 
@@ -258,9 +256,6 @@ func _get_visible_stat_rows() -> Array[Control]:
 	for store_label: Label in _store_revenue_labels:
 		if is_instance_valid(store_label) and store_label.visible:
 			rows.append(store_label)
-	for child: Node in _milestone_container.get_children():
-		if child is Label and child.visible:
-			rows.append(child as Control)
 	return rows
 
 
@@ -303,9 +298,6 @@ func _on_stat_rows_finished() -> void:
 
 func _get_animated_controls() -> Array[Control]:
 	var controls: Array[Control] = _get_stat_row_candidates()
-	for child: Node in _milestone_container.get_children():
-		if child is Label and child.visible:
-			controls.append(child as Control)
 	controls.append(_button_row)
 	return controls
 
@@ -403,7 +395,7 @@ func _apply_revenue_headline(revenue: float) -> void:
 ## Hoist the top-seller and forward-hook rows above the detail dump
 ## so headline signals are visible without scrolling (ISSUE-012).
 func _apply_headline_order() -> void:
-	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	var anchor_index: int = _profit_label.get_index() + 1
 	if is_instance_valid(_top_item_label):
 		vbox.move_child(_top_item_label, anchor_index)
@@ -501,7 +493,7 @@ func _create_overdue_count_label() -> void:
 	_overdue_count_label.name = "OverdueCountLabel"
 	_overdue_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_overdue_count_label.visible = false
-	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	vbox.add_child(_overdue_count_label)
 	vbox.move_child(
 		_overdue_count_label, _late_fee_label.get_index() + 1
@@ -540,66 +532,9 @@ func _set_tier_change_display(
 		"Tier %s: %s!" % [direction, tier_name]
 	)
 	_tier_change_label.add_theme_color_override(
-		"font_color", MILESTONE_BANNER_COLOR
+		"font_color", TIER_CHANGE_COLOR
 	)
 	PanelAnimator.pulse_scale(_tier_change_label, 1.08)
-
-
-func _set_milestone_display(
-	milestones: Array[String],
-) -> void:
-	_clear_milestones()
-	for milestone_name: String in milestones:
-		_add_milestone_label(milestone_name, "", "")
-
-
-func _set_milestone_display_rich(data: Array[Dictionary]) -> void:
-	_clear_milestones()
-	for entry: Dictionary in data:
-		_add_milestone_label(
-			str(entry.get("name", "")),
-			str(entry.get("description", "")),
-			str(entry.get("reward", "")),
-		)
-
-
-func _add_milestone_label(
-	name: String, description: String, reward: String
-) -> void:
-	if name.is_empty():
-		return
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.text = "Milestone: %s" % name
-	label.add_theme_color_override("font_color", MILESTONE_BANNER_COLOR)
-	_milestone_container.add_child(label)
-	_milestone_labels.append(label)
-	if not description.is_empty():
-		var description_label := Label.new()
-		description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		description_label.text = description
-		description_label.add_theme_color_override(
-			"font_color", Color(0.78, 0.78, 0.78, 1.0)
-		)
-		_milestone_container.add_child(description_label)
-		_milestone_labels.append(description_label)
-	if not reward.is_empty():
-		var reward_label := Label.new()
-		reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		reward_label.text = reward
-		reward_label.add_theme_color_override(
-			"font_color", Color(0.85, 0.75, 0.55, 1.0)
-		)
-		_milestone_container.add_child(reward_label)
-		_milestone_labels.append(reward_label)
-
-
-func _clear_milestones() -> void:
-	for label: Label in _milestone_labels:
-		if is_instance_valid(label):
-			label.queue_free()
-	_milestone_labels.clear()
 
 
 ## Updates per-store revenue breakdown labels from the day_closed payload.
@@ -610,7 +545,7 @@ func _update_store_revenue_display(store_revenue: Dictionary) -> void:
 	_store_revenue_labels.clear()
 	if store_revenue.is_empty():
 		return
-	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	var insert_after: int = _revenue_label.get_index() + 1
 	for store_id: String in store_revenue:
 		var rev: float = store_revenue[store_id]
@@ -640,7 +575,7 @@ func _create_discrepancy_label() -> void:
 	_discrepancy_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	_discrepancy_label.tooltip_text = tr("DAY_SUMMARY_CLICK_REPORT")
 	_discrepancy_label.gui_input.connect(_on_discrepancy_input)
-	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	var idx: int = _seasonal_event_label.get_index() + 1
 	vbox.add_child(_discrepancy_label)
 	vbox.move_child(_discrepancy_label, idx)
@@ -662,7 +597,7 @@ func _set_discrepancy_display(discrepancy: float) -> void:
 
 
 func _create_electronics_labels() -> void:
-	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	_warranty_attach_label = Label.new()
 	_warranty_attach_label.name = "WarrantyAttachLabel"
 	_warranty_attach_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -703,7 +638,7 @@ func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void
 
 
 func _create_grading_label() -> void:
-	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	_grading_label = Label.new()
 	_grading_label.name = "GradingLabel"
 	_grading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -750,7 +685,7 @@ func _on_grading_day_summary(pending_count: int, returned: Array) -> void:
 
 func _create_narrative_labels() -> void:
 	_create_grading_label()
-	var vbox: VBoxContainer = $Panel/Margin/VBox
+	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	_story_beat_label = Label.new()
 	_story_beat_label.name = "StoryBeatLabel"
 	_story_beat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -846,10 +781,8 @@ func _on_performance_report_ready(
 		)
 	else:
 		_tier_change_label.visible = false
-	if not report.milestones_data.is_empty():
-		_set_milestone_display_rich(report.milestones_data)
-	else:
-		_set_milestone_display(report.milestones_unlocked)
+	# Milestone completions are shown by the standalone `milestone_card`
+	# slide-in notification — no longer rendered inside this summary (P1.5).
 
 
 func _on_continue_pressed() -> void:

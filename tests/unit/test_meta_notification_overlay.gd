@@ -114,12 +114,12 @@ func test_day_close_suppresses_signals_until_next_day_starts() -> void:
 
 
 func test_store_entered_hides_overlay() -> void:
-	EventBus.store_entered.emit(&"sneaker_citadel")
+	EventBus.store_entered.emit(&"retro_games")
 	assert_false(_overlay.visible, "Overlay hides while a store scene is active")
 	EventBus.ambient_moment_delivered.emit(&"m", &"toast", "inside store", &"")
 	assert_eq(
 		_overlay.get_ambient_card_count(), 0,
 		"Ambient signal while store is active is suppressed"
 	)
-	EventBus.store_exited.emit(&"sneaker_citadel")
+	EventBus.store_exited.emit(&"retro_games")
 	assert_true(_overlay.visible, "Overlay reappears when the store exits")

@@ -550,6 +550,8 @@ func _setup_deferred_panels() -> void:
 	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
 	_ui_layer.add_child(_mall_overview)
 	_mall_overview.setup(inventory_system, economy_system)
+	# Day Summary hides MallOverview while open and restores on dismiss (P1.4).
+	day_cycle_controller.set_mall_overview(_mall_overview)
 
 	_fixture_catalog = (
 		_FIXTURE_CATALOG_SCENE.instantiate()
@@ -869,6 +871,7 @@ func _on_hub_enter_store_requested(store_id: StringName) -> void:
 	await _hub_transition.crossfade(func() -> void:
 		_hub_active_store_scene = store_packed.instantiate() as Node3D
 		_store_container.add_child(_hub_active_store_scene)
+		_activate_store_camera(_hub_active_store_scene, canonical)
 		EventBus.store_entered.emit(canonical)
 	)
 
@@ -885,6 +888,30 @@ func _on_hub_exit_store_requested() -> void:
 		_hub_is_inside_store = false
 		EventBus.store_exited.emit(leaving_id)
 	)
+
+
+## Activates the store scene's `StoreCamera` through `CameraAuthority` so
+## exactly one camera is current (per ownership.md row 4). Fails loud if the
+## scene has no Camera3D — the hub path cannot render without one.
+func _activate_store_camera(store_root: Node, store_id: StringName) -> void:
+	var camera: Camera3D = _find_first_camera(store_root)
+	if camera == null:
+		push_error(
+			"GameWorld: store '%s' has no Camera3D — rendering will fall back to the default clear color (brown)"
+			% store_id
+		)
+		return
+	CameraAuthority.request_current(camera, store_id)
+
+
+func _find_first_camera(node: Node) -> Camera3D:
+	if node is Camera3D:
+		return node as Camera3D
+	for child: Node in node.get_children():
+		var found: Camera3D = _find_first_camera(child)
+		if found != null:
+			return found
+	return null
 
 
 func _unhandled_input(event: InputEvent) -> void:

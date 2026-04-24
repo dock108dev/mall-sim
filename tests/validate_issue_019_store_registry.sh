@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Validates .aidlc/issues/ISSUE-019: StoreRegistry autoload + sneaker_citadel seed.
+# Validates .aidlc/issues/ISSUE-019: StoreRegistry autoload as a runtime cache
+# of ContentRegistry (per docs/decisions/0007-remove-sneaker-citadel.md; the
+# hardcoded sneaker_citadel seed has been replaced with data-driven seeding).
 # (Distinct from tests/validate_issue_019.sh which covers a different issue
 # numbering namespace — recommended markup guidance.)
 set -euo pipefail
@@ -41,10 +43,16 @@ else
 	fail "register(entry) signature missing"
 fi
 
-if grep -q 'sneaker_citadel' "$REGISTRY"; then
-	pass "seeds sneaker_citadel entry"
+if grep -q '_seed_from_content_registry' "$REGISTRY"; then
+	pass "seeds from ContentRegistry (SSOT: store_definitions.json)"
 else
-	fail "sneaker_citadel not seeded in _seed_defaults"
+	fail "_seed_from_content_registry missing — registry must be data-driven"
+fi
+
+if ! grep -q 'sneaker_citadel' "$REGISTRY"; then
+	pass "no hardcoded sneaker_citadel block (removed per ADR 0007)"
+else
+	fail "sneaker_citadel reference still present — removal incomplete"
 fi
 
 if grep -q 'push_error' "$REGISTRY" && grep -q 'unknown store_id' "$REGISTRY"; then
@@ -62,10 +70,10 @@ fi
 [ -f "$TEST" ] && pass "GUT test exists: tests/unit/test_store_registry.gd" \
 	|| fail "missing GUT test tests/unit/test_store_registry.gd"
 
-if grep -q 'sneaker_citadel' "$TEST"; then
-	pass "test covers seeded sneaker_citadel resolution"
+if grep -q 'test_resolves_all_definitions_from_content_registry' "$TEST"; then
+	pass "test covers seeded resolution from ContentRegistry"
 else
-	fail "test does not cover sneaker_citadel"
+	fail "test does not cover content-registry-driven seeding"
 fi
 
 if grep -q 'bogus_id\|unknown' "$TEST"; then

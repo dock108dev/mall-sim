@@ -2,7 +2,9 @@
 
 **Date:** 2026-04-23
 **Status:** Accepted
-**Related:** ISSUE-006 (this ADR), roadmap.md Phase 0 exit criteria
+**Related:** ISSUE-006 (this ADR), roadmap.md Phase 0 exit criteria. Store
+roster: superseded by ADR 0007 — the shipping roster is five stores, not six
+(Sneaker Citadel removed).
 
 ## Decision
 

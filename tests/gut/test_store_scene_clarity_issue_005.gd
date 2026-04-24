@@ -8,11 +8,6 @@ extends GutTest
 
 const STORES: Array = [
 	{
-		"id": &"sneaker_citadel",
-		"path": "res://game/scenes/stores/sneaker_citadel/store_sneaker_citadel.tscn",
-		"sign_name": "Sneaker Citadel",
-	},
-	{
 		"id": &"retro_games",
 		"path": "res://game/scenes/stores/retro_games.tscn",
 		"sign_name": "Retro Games",

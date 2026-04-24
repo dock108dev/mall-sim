@@ -16,7 +16,7 @@ var _entries: Dictionary = {}
 
 
 func _ready() -> void:
-	_seed_defaults()
+	_seed_from_content_registry()
 
 
 ## Registers an entry. Asserts on null/empty inputs (programmer error) and
@@ -79,18 +79,42 @@ func _reset_for_tests() -> void:
 	_entries.clear()
 
 
-func _seed_defaults() -> void:
-	# Sneaker Citadel — Phase 1 vertical-slice store (ROADMAP Phase 1).
-	# scene_path/controller_script point at the planned files; the registry is
-	# pure data and does not require the targets to exist yet. StoreDirector
-	# will surface a load failure separately (and loudly) when the time comes.
-	register(StoreRegistryEntry.new(
-		&"sneaker_citadel",
-		"res://game/scenes/stores/sneaker_citadel/store_sneaker_citadel.tscn",
-		null,
-		"Sneaker Citadel",
-		{}
-	))
+## Seeds the registry from ContentRegistry (the SSOT per
+## docs/decisions/0007-remove-sneaker-citadel.md).
+## Runs after ContentRegistry has loaded `store_definitions.json`; if content
+## isn't ready yet the registry is left empty — callers fail loud through
+## `resolve()` rather than returning stale data.
+func _seed_from_content_registry() -> void:
+	var content: Node = _autoload("ContentRegistry")
+	if content == null:
+		return
+	if not content.has_method("get_all_store_ids"):
+		return
+	var ids: Array[StringName] = content.get_all_store_ids()
+	for store_id: StringName in ids:
+		if _entries.has(store_id):
+			continue
+		var scene_path: String = ""
+		if content.has_method("get_scene_path"):
+			scene_path = content.get_scene_path(store_id)
+		if scene_path.is_empty():
+			continue
+		var display_name: String = String(store_id)
+		if content.has_method("get_display_name"):
+			display_name = content.get_display_name(store_id)
+		register(StoreRegistryEntry.new(
+			store_id, scene_path, null, display_name, {}
+		))
+
+
+func _autoload(name_str: String) -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var root: Window = tree.root
+	if root == null:
+		return null
+	return root.get_node_or_null(name_str)
 
 
 func _pass(detail: String) -> void:

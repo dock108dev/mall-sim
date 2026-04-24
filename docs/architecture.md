@@ -119,8 +119,8 @@ pending load slot or the default new-game state.
 
 ## New-game and load flow
 
-- New runs bootstrap the default `sports` store through
-  `bootstrap_new_game_state()`.
+- New runs bootstrap the default `retro_games` store through
+  `bootstrap_new_game_state()` (per ADR 0002).
 - `StoreStateManager.lease_store()` claims the starting slot.
 - Default inventory is created for that store.
 - Tutorial state is initialized for a fresh run.
@@ -132,9 +132,16 @@ When loading instead, `apply_pending_session_state()` calls
 ## Per-day loop
 
 ```
-MallHub (select store)
-   └── EventBus.enter_store_requested → StoreSelectorSystem.enter_store()
-        └── Store scene loads
+MallOverview (click a StoreSlotCard — data-driven from
+              ContentRegistry.get_all_store_ids(), SSOT =
+              game/content/stores/store_definitions.json)
+   └── EventBus.enter_store_requested → game_world._on_hub_enter_store_requested
+        └── SceneTransition crossfade → store.tscn added under _store_container
+             ├── CameraAuthority.request_current(store.StoreCamera, store_id)
+             │     (per-store Camera3D at scene root, current=false at rest;
+             │      the authority makes it current and clears all others —
+             │      docs/architecture/ownership.md row 4)
+             ├── EventBus.store_entered.emit(canonical_store_id)
              ├── Inventory drawer reads from InventorySystem for store X
              ├── Player stocks / prices items → autoload mutations
              ├── Customer sim → EconomySystem.resolve_sale(item, context)

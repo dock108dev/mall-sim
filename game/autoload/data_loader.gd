@@ -58,7 +58,6 @@ const _TYPE_ROUTES: Dictionary = {
 	"audio_registry_data": "ignore",
 	"haggle_dialogue_data": "ignore",
 	"pocket_creatures_cards_data": "ignore",
-	"tutorial_steps_data": "ignore",
 	"tutorial_contexts_data": "ignore",
 	"meta_shifts_data": "ignore",
 	"meta_config_data": "ignore",

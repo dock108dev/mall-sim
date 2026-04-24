@@ -95,11 +95,12 @@ already in `CLAUDE.md`, and referenced root-level `ARCHITECTURE.md` /
   holds.
 - `BRAINDUMP.md` at the root is the customer's voice and is never
   rewritten by documentation passes — only referenced.
-- A `sneaker_citadel` store scene and controller exist under
+- ~~A `sneaker_citadel` store scene and controller exist under
   `game/scenes/stores/sneaker_citadel/` but are not registered in
-  `game/content/stores/store_definitions.json` and are not a live store in
-  any user-facing doc. Leaving it out of the docs set is correct until it
-  is promoted to real content.
+  `game/content/stores/store_definitions.json`…~~ **Resolved:** Sneaker
+  Citadel has been removed from the repo per
+  [ADR 0007](../decisions/0007-remove-sneaker-citadel.md). The shipping
+  roster is the five stores in `store_definitions.json`.
 - If a future AIDLC cycle re-emits `AIDLC_FUTURES.md` at the root, it
   should be redirected into `docs/audits/` as a dated snapshot or excluded
   from commit entirely — it is tooling state, not documentation.

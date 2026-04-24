@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-23
 **Status:** Accepted
-**Related:** ISSUE-007 (this ADR), ISSUE-028 (follow-on), ADR 0003 (parallel pattern), roadmap.md Phase 0 exit criteria
+**Related:** ISSUE-007 (this ADR), ISSUE-028 (follow-on), ADR 0003 (parallel pattern), roadmap.md Phase 0 exit criteria. Store roster: superseded by ADR 0007 — the shipping roster is five stores, not six.
 
 ## Decision
 

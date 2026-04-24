@@ -18,9 +18,9 @@ func after_each() -> void:
 func test_validate_entry_accepts_clean_content() -> void:
 	var errors: Array[String] = TrademarkValidator.validate_entry(
 		{
-			"id": "sneaker_citadel_heat_03",
-			"item_name": "Heat Runners",
-			"description": "Parody hypebeast kicks.",
+			"id": "retro_cartridge_fixture_03",
+			"item_name": "Parody Racer",
+			"description": "Parody of a racing game.",
 		},
 		"item",
 		"res://test/path.json",
@@ -89,7 +89,7 @@ func test_data_loader_records_trademark_error_with_file_and_entry_context() -> v
 		bad_item_path,
 		{
 			"type": "item_definition",
-			"id": "bad_sneaker_01",
+			"id": "bad_cartridge_01",
 			"item_name": "Nike Authentic",
 			"category": "shoes",
 			"store_type": "test_store",
@@ -108,7 +108,7 @@ func test_data_loader_records_trademark_error_with_file_and_entry_context() -> v
 	for err: String in errors:
 		if (
 			err.contains("Nike")
-			and err.contains("bad_sneaker_01")
+			and err.contains("bad_cartridge_01")
 			and err.contains(bad_item_path)
 		):
 			matched = true

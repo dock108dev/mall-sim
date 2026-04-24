@@ -12,6 +12,7 @@ var _ending_evaluator: EndingEvaluatorSystem
 var _performance_report_system: PerformanceReportSystem
 var _day_manager: DayManager
 var _day_summary: DaySummary
+var _mall_overview: Control
 var _seasonal_event_system: SeasonalEventSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _pending_report: PerformanceReport
@@ -43,6 +44,19 @@ func initialize(
 
 func set_day_summary(panel: DaySummary) -> void:
 	_day_summary = panel
+	if is_instance_valid(panel):
+		panel.dismissed.connect(_on_day_summary_dismissed)
+
+
+## The hub's MallOverview Control is hidden while the Day Summary modal is
+## open so it does not bleed through the overlay (P1.4).
+func set_mall_overview(overview: Control) -> void:
+	_mall_overview = overview
+
+
+func _on_day_summary_dismissed() -> void:
+	if is_instance_valid(_mall_overview):
+		_mall_overview.visible = true
 
 
 func set_day_manager(manager: DayManager) -> void:
@@ -166,6 +180,11 @@ func _show_day_summary(day: int) -> void:
 
 	if not _day_summary:
 		return
+
+	# Hide the MallOverview while the summary modal is open so its store
+	# cards do not bleed through the overlay (P1.4).
+	if is_instance_valid(_mall_overview):
+		_mall_overview.visible = false
 
 	_day_summary.show_summary(
 		day,

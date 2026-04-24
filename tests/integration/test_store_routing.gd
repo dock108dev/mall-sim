@@ -46,7 +46,7 @@ func test_unknown_store_id_returns_empty_route() -> void:
 	assert_true(route.is_empty(), "unknown store_id must return empty route")
 
 
-func test_sports_route_resolves_to_sports_scene_not_sneakers_fallback() -> void:
+func test_sports_route_resolves_to_sports_scene() -> void:
 	var route: Dictionary = ContentRegistry.get_store_route(&"sports")
 	assert_false(route.is_empty(), "sports route must resolve")
 	var scene_path: String = String(route.get("scene_path", ""))

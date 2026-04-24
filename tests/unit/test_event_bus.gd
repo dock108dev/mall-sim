@@ -18,14 +18,14 @@ func before_each() -> void:
 
 
 func test_store_ready_emits_with_string_name() -> void:
-	_bus.emit_store_ready(&"sneaker_citadel")
-	assert_signal_emitted_with_parameters(_bus, "store_ready", [&"sneaker_citadel"])
+	_bus.emit_store_ready(&"retro_games")
+	assert_signal_emitted_with_parameters(_bus, "store_ready", [&"retro_games"])
 
 
 func test_store_failed_emits_with_id_and_reason() -> void:
-	_bus.emit_store_failed(&"sneaker_citadel", "player missing")
+	_bus.emit_store_failed(&"retro_games", "player missing")
 	assert_signal_emitted_with_parameters(
-		_bus, "store_failed", [&"sneaker_citadel", "player missing"]
+		_bus, "store_failed", [&"retro_games", "player missing"]
 	)
 
 

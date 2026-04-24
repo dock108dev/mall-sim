@@ -99,8 +99,11 @@ else
 	fail "SceneTransition.transition_to_packed() missing"
 fi
 
-# ── AC5: MallHub is the hub scene and relays storefront_clicked ───────────────
-echo "[AC5] MallHub wires storefront_clicked → enter_store_requested"
+# ── AC5: MallHub hub scene exists; store routing goes through MallOverview ───
+# Phase 0.1 removed the hub-hosted StorefrontRow and its storefront_clicked
+# relay. MallOverview (in game_world's UI layer) now emits
+# enter_store_requested directly on card click.
+echo "[AC5] MallHub scene exists; MallOverview emits enter_store_requested"
 
 HUB="$ROOT/game/scenes/mall/mall_hub.gd"
 if [ -f "$HUB" ]; then
@@ -109,10 +112,11 @@ else
 	fail "mall_hub.gd not found"
 fi
 
-if grep -q 'storefront_clicked' "$HUB" && grep -q 'enter_store_requested' "$HUB"; then
-	pass "MallHub bridges storefront_clicked → enter_store_requested"
+OVERVIEW="$ROOT/game/scenes/mall/mall_overview.gd"
+if grep -q 'enter_store_requested' "$OVERVIEW"; then
+	pass "MallOverview emits enter_store_requested on card click"
 else
-	fail "MallHub does not bridge storefront_clicked to enter_store_requested"
+	fail "MallOverview does not emit enter_store_requested"
 fi
 
 # ── AC6: debug/walkable_mall is not enabled by default ───────────────────────

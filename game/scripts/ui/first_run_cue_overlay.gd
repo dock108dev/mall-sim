@@ -12,7 +12,6 @@ const _STORE_MESSAGES: Dictionary = {
 	&"rentals": "Empty shelves! Open Inventory (I) and stock the rental wall.",
 	&"retro_games": "Empty shelves! Open Inventory (I) and stock the Retro Games store.",
 	&"retro": "Empty shelves! Open Inventory (I) and stock the Retro Games store.",
-	&"sneaker_citadel": "Empty shelves! Open Inventory (I) and stock sneakers.",
 	&"sports": "Empty shelves! Open Inventory (I) and stock the Sports store.",
 	&"video_rental": "Empty shelves! Open Inventory (I) and stock the rental wall.",
 }

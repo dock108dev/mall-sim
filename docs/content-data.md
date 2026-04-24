@@ -105,6 +105,29 @@ Scene paths registered through content are also constrained:
 
 Use canonical `StringName` IDs at runtime rather than display names.
 
+## Stores — SSOT
+
+`game/content/stores/store_definitions.json` is the single source of truth
+for the shipping store roster. Every authoritative property (id, display
+name, scene path, inventory type, interaction set, starting inventory,
+rent, fixtures, unique mechanics) lives there.
+
+- `ContentRegistry.get_all_store_ids()` returns the live roster.
+- `StoreRegistry` is a runtime cache seeded from `ContentRegistry` in its
+  `_ready` (`_seed_from_content_registry()`). It does **not** hardcode
+  entries.
+- `MallOverview` (the hub's store-selection UI) iterates the roster from
+  `ContentRegistry`; card content is fully data-driven.
+- Adding or removing a store is a JSON edit; no scene or autoload code needs
+  to change as long as the scene file at the declared `scene_path` follows
+  the store-contract conventions (Camera3D at root for hub-mode entry, an
+  `OrbitPivot` marker, a store controller script attached to the root).
+
+Shipping roster (per ADR 0007 and `store_definitions.json`): `sports`
+(aliased `sports_memorabilia`), `retro_games`, `rentals` (aliased
+`video_rental`), `pocket_creatures`, `electronics` (aliased
+`consumer_electronics`).
+
 ## Typed resource models
 
 The loader currently builds and registers typed resources from `game/resources/`

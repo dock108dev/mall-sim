@@ -66,4 +66,13 @@ for test_script in "$TESTS_DIR"/validate_*.sh; do
     fi
 done
 
+# Phase 0.1 SSOT tripwires (see docs/audits/phase0-ui-integrity.md P2.1).
+SCRIPTS_DIR="$ROOT/scripts"
+for tripwire in validate_translations.sh validate_single_store_ui.sh validate_tutorial_single_source.sh; do
+    if [ -x "$SCRIPTS_DIR/$tripwire" ]; then
+        echo ""
+        bash "$SCRIPTS_DIR/$tripwire" || EXIT_CODE=$?
+    fi
+done
+
 exit $EXIT_CODE

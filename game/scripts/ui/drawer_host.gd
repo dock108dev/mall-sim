@@ -8,7 +8,7 @@
 ##    through while it is visible.
 ##  - The HUD root (the full-rect Control parent on the CanvasLayer) is kept at
 ##    MOUSE_FILTER_IGNORE whenever the drawer is closed so hub clicks reach the
-##    StorefrontCard Area2D nodes beneath.
+##    store-card Area2D nodes beneath.
 ##
 ## Opening drawer A while drawer B is active first closes B (no overlapping
 ## drawers ever render). Emits EventBus.drawer_opened / drawer_closed with the

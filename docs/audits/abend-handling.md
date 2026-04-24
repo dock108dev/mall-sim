@@ -33,7 +33,7 @@ The two concrete bugs fixed in the previous audit (F-01 sports-card validator no
 | F-06 | `game/autoload/data_loader.gd` | 149–154 | `_loaded = _load_errors.is_empty()` — any load error halts boot via `GameManager.start_session()` | Note | Acceptable |
 | F-07 | Store controllers (various) | various | Null-guard returns (`if not _inventory_system: return []`) without log | Note | Acceptable |
 | **N-01** | `game/autoload/scene_router.gd` | 53, 69, 78 | Concurrent `route_to*` calls emit `push_warning` but do **not** raise `AuditLog.fail_check` — headless CI cannot detect contention | Low | Needs telemetry |
-| **N-02** | `game/scripts/stores/store_sneaker_citadel_controller.gd` | 68–72 | `_activate_camera()` falls back to `cam.set("current", true)` directly when `CameraAuthority` autoload absent — bypasses single-owner rule | Low | Test-only shim; document in code |
+| **N-02** | ~~`game/scripts/stores/store_sneaker_citadel_controller.gd`~~ | ~~68–72~~ | **Resolved** per [ADR 0007](../decisions/0007-remove-sneaker-citadel.md): Sneaker Citadel removed from the roster; camera activation for the five shipping stores goes through `CameraAuthority.request_current` in `game_world._on_hub_enter_store_requested` — no direct `current = true` fallback. | — | Closed |
 | **N-03** | `game/autoload/camera_authority.gd` | 100, `input_focus.gd` 68, `scene_router.gd` 134 | Early `return null`/`return` when `get_tree()` is null with no `push_warning` | Note | Acceptable (unreachable in running game) |
 | **N-04** | `game/autoload/store_director.gd` | 281–285 | `_raise_fail_card` silently returns when `FailCard` autoload missing — intentional test-env shim, no log | Note | Acceptable |
 | **N-05** | `game/autoload/audit_log.gd` | 18–19 | Duplicate `pass_check` for same checkpoint is downgraded to `push_warning`, not `push_error` | Note | Acceptable (idempotency is a test quirk, not a contract violation) |
@@ -71,24 +71,15 @@ if _in_flight:
 
 **Recommendation:** Either (a) promote to `_fail(target, "concurrent transition")` so the existing `scene_failed` signal fires and AuditLog records it, or (b) add an explicit `director_scene_router_busy` checkpoint. Option (a) is simpler and reuses the existing failure surface.
 
-### N-02 — Sneaker Citadel camera fallback bypass (Low)
+### N-02 — Sneaker Citadel camera fallback bypass (Resolved)
 
-**Location:** `game/scripts/stores/store_sneaker_citadel_controller.gd:59–73`
-
-```gdscript
-if authority != null and authority.has_method("request_current"):
-    authority.call("request_current", cam, STORE_ID)
-    return
-# Fallback when the autoload is absent (unit-test fixtures …)
-if "current" in cam:
-    cam.set("current", true)
-```
-
-**Assessment:** Intentional test-env shim. A store controller directly writing `camera.current = true` in production would violate the single-owner rule enforced by `tests/validate_camera_ownership.sh`. The fallback is only reachable when `CameraAuthority` autoload is absent (unit fixtures without full autoload tree).
-
-**Risk:** If the autoload registration ever drifts (e.g. `CameraAuthority` renamed in `project.godot`), the fallback masks the misconfiguration and the contract passes with a non-authority-owned camera.
-
-**Recommendation:** Keep the fallback but emit `push_warning("SneakerCitadel: CameraAuthority autoload unavailable — using direct fallback (test mode only)")` so a prod misconfiguration surfaces.
+**Resolution:** Per [ADR 0007](../decisions/0007-remove-sneaker-citadel.md) the
+Sneaker Citadel controller and its camera fallback have been removed. The
+five shipping stores do not own camera activation — `_on_hub_enter_store_requested`
+in `game_world.gd` locates the store's `Camera3D` after the scene is parented
+and calls `CameraAuthority.request_current(camera, store_id)`. There is no
+direct `cam.set("current", true)` fallback path; a missing `CameraAuthority`
+autoload now surfaces as a `push_error` with no silent success.
 
 ### N-04 — StoreDirector FailCard lookup silent (Note)
 
@@ -136,7 +127,7 @@ Duplicate `pass_check` calls for the same checkpoint emit `push_warning` but sti
 
 ### Needs telemetry (quick-fix recommended)
 - **N-01** — SceneRouter concurrent-call warnings should emit `AuditLog.fail_check`
-- **N-02** — SneakerCitadel camera fallback should emit `push_warning` when autoload absent
+- ~~**N-02**~~ — resolved by removal of Sneaker Citadel (ADR 0007)
 
 ### Should tighten (longer term)
 - F-03 — add `push_warning` when JSON field types mismatch expected type in ContentParser
@@ -158,7 +149,6 @@ Duplicate `pass_check` calls for the same checkpoint emit `push_warning` but sti
 | Priority | Location | Action | Benefit |
 |----------|----------|--------|---------|
 | Low | `game/autoload/scene_router.gd:52, 68, 77` | Replace `push_warning` + `return` with call to `_fail(target, "concurrent transition in flight")` so `scene_failed` fires and AuditLog records | Headless CI observes contended transitions; matches StoreDirector's concurrent-enter handling |
-| Low | `game/scripts/stores/store_sneaker_citadel_controller.gd:68–72` | Add `push_warning("SneakerCitadel: CameraAuthority autoload unavailable — using direct fallback (test mode only)")` before the fallback | Catches prod misconfiguration of autoload registration |
 | Low | `game/scripts/content_parser.gd` field extractors | Add type-check guards to `float()` / `int()` / `bool()` coercions — emit `push_warning` on mismatch | Earlier detection of JSON authoring errors |
 | Low | store controllers in `game/scripts/stores/*.gd` | Add `push_warning` to null-guard returns reachable during test setup | Easier debugging of construction-order races |
 | Nice-to-have | `game/autoload/data_loader.gd` | Log `get_load_errors()` count in boot metrics | Visibility into near-misses |

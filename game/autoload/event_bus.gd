@@ -86,7 +86,8 @@ signal storefront_entered(slot_index: int, store_id: String)
 signal storefront_exited()
 signal storefront_zone_entered(store_id: String)
 signal storefront_zone_exited(store_id: String)
-## Emitted by StorefrontCard on left-click; MallHub re-emits enter_store_requested.
+## Legacy signal — no current emitters. `MallOverview` emits
+## `enter_store_requested` directly on card click (P1.2).
 signal storefront_clicked(store_id: StringName)
 ## Emitted by DrawerHost when a store drawer has begun opening for store_id.
 signal drawer_opened(store_id: StringName)

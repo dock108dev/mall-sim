@@ -16,7 +16,7 @@ func before_each() -> void:
 func test_reset_new_game_zeroes_fields() -> void:
 	_state.day = 7
 	_state.money = 1234
-	_state.active_store_id = &"sneaker_citadel"
+	_state.active_store_id = &"retro_games"
 	_state.set_flag(&"tutorial_done", true)
 
 	_state.reset_new_game()
@@ -29,21 +29,21 @@ func test_reset_new_game_zeroes_fields() -> void:
 
 
 func test_set_active_store_updates_id() -> void:
-	_state.set_active_store(&"sneaker_citadel")
-	assert_eq(_state.active_store_id, &"sneaker_citadel")
+	_state.set_active_store(&"retro_games")
+	assert_eq(_state.active_store_id, &"retro_games")
 
 
 func test_set_active_store_emits_changed_exactly_once() -> void:
 	watch_signals(_state)
-	_state.set_active_store(&"sneaker_citadel")
+	_state.set_active_store(&"retro_games")
 	assert_signal_emit_count(_state, "changed", 1,
 		"set_active_store should emit changed exactly once on a real mutation")
 
 
 func test_set_active_store_no_op_does_not_emit() -> void:
-	_state.set_active_store(&"sneaker_citadel")
+	_state.set_active_store(&"retro_games")
 	watch_signals(_state)
-	_state.set_active_store(&"sneaker_citadel")
+	_state.set_active_store(&"retro_games")
 	assert_signal_emit_count(_state, "changed", 0,
 		"setting the same store_id should not re-emit")
 

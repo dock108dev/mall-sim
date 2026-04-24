@@ -123,9 +123,3 @@ vertical_alignment = 1
 
 [node name="InteractionPrompt" parent="." instance=ExtResource("3")]
 
-[node name="ControlHintLabel" type="Label" parent="."]
-offset_left = 20.0
-offset_top = 930.0
-offset_right = 520.0
-offset_bottom = 960.0
-text = "WASD Move  •  Click Interact"
