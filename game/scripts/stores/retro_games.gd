@@ -250,22 +250,11 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _load_grades() -> void:
-	if not FileAccess.file_exists(GRADES_PATH):
-		push_error("RetroGames: grades.json not found at '%s'" % GRADES_PATH)
-		return
-	var file: FileAccess = FileAccess.open(GRADES_PATH, FileAccess.READ)
-	if not file:
-		push_error("RetroGames: cannot open grades.json (error %d)" % FileAccess.get_open_error())
-		return
-	var text: String = file.get_as_text()
-	file.close()
-	var json: JSON = JSON.new()
-	if json.parse(text) != OK:
-		push_error("RetroGames: grades.json parse error: %s" % json.get_error_message())
-		return
-	var data: Variant = json.get_data()
-	if data is not Dictionary:
-		push_error("RetroGames: grades.json root must be a Dictionary")
+	var data: Variant = DataLoader.load_json(GRADES_PATH)
+	if not (data is Dictionary):
+		push_error(
+			"RetroGames: failed to load %s as Dictionary" % GRADES_PATH
+		)
 		return
 	var grades_arr: Variant = (data as Dictionary).get("grades", [])
 	if grades_arr is not Array:

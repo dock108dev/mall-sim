@@ -410,20 +410,8 @@ func _find_top_item() -> Dictionary:
 
 
 func _load_day_beats() -> void:
-	if not FileAccess.file_exists(DAY_BEATS_PATH):
-		push_warning("PerformanceReportSystem: day_beats.json not found")
-		return
-	var file := FileAccess.open(DAY_BEATS_PATH, FileAccess.READ)
-	if not file:
-		push_warning("PerformanceReportSystem: cannot open day_beats.json")
-		return
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		push_warning("PerformanceReportSystem: day_beats.json parse error")
-		return
-	file.close()
-	var data: Variant = json.get_data()
-	if data is not Dictionary:
+	var data: Variant = DataLoader.load_json(DAY_BEATS_PATH)
+	if not (data is Dictionary):
 		return
 	_day_beats = data as Dictionary
 

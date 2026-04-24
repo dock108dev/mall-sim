@@ -291,34 +291,12 @@ func _connect_event_bus() -> void:
 
 
 func _load_milestone_definitions() -> void:
-	if not FileAccess.file_exists(MILESTONES_PATH):
+	var root: Variant = DataLoader.load_json(MILESTONES_PATH)
+	if root == null:
 		push_warning(
-			"ProgressionSystem: milestone file not found at %s"
-			% MILESTONES_PATH
+			"ProgressionSystem: failed to load %s" % MILESTONES_PATH
 		)
 		return
-
-	var file: FileAccess = FileAccess.open(
-		MILESTONES_PATH, FileAccess.READ
-	)
-	if not file:
-		push_warning(
-			"ProgressionSystem: failed to open %s" % MILESTONES_PATH
-		)
-		return
-
-	var json := JSON.new()
-	var err: Error = json.parse(file.get_as_text())
-	file.close()
-
-	if err != OK:
-		push_warning(
-			"ProgressionSystem: JSON parse error — %s"
-			% json.get_error_message()
-		)
-		return
-
-	var root: Variant = json.data
 	var entries: Array
 	if root is Array:
 		entries = root as Array

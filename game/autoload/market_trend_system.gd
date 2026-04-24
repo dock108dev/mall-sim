@@ -77,26 +77,12 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _load_catalog() -> void:
-	var file := FileAccess.open(CATALOG_PATH, FileAccess.READ)
-	if not file:
+	var entries: Variant = DataLoader.load_json(CATALOG_PATH)
+	if not (entries is Array):
 		push_error(
-			"MarketTrendSystem: failed to open %s — %s"
-			% [CATALOG_PATH, error_string(FileAccess.get_open_error())]
+			"MarketTrendSystem: failed to load catalog '%s' as Array"
+			% CATALOG_PATH
 		)
-		return
-
-	var json := JSON.new()
-	var err: Error = json.parse(file.get_as_text())
-	if err != OK:
-		push_error(
-			"MarketTrendSystem: JSON parse error in %s — %s"
-			% [CATALOG_PATH, json.get_error_message()]
-		)
-		return
-
-	var entries: Variant = json.data
-	if not entries is Array:
-		push_error("MarketTrendSystem: catalog root must be an Array")
 		return
 
 	for entry: Variant in entries as Array:

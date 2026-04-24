@@ -69,21 +69,9 @@ func initialize() -> void:
 func _validate_arc_unlocks() -> Array[String]:
 	var errors: Array[String] = []
 	var path := "res://game/content/progression/arc_unlocks.json"
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		errors.append("arc_unlocks.json not found at %s" % path)
-		return errors
-	var text: String = file.get_as_text()
-	file.close()
-	var json := JSON.new()
-	if json.parse(text) != OK:
-		errors.append(
-			"arc_unlocks.json parse error: %s" % json.get_error_message()
-		)
-		return errors
-	var data: Variant = json.get_data()
+	var data: Variant = DataLoader.load_json(path)
 	if not (data is Dictionary):
-		errors.append("arc_unlocks.json root must be a Dictionary")
+		errors.append("arc_unlocks.json missing or invalid at %s" % path)
 		return errors
 	var d: Dictionary = data as Dictionary
 	for key: String in ["arc_phases", "arc_unlocks"]:
@@ -108,21 +96,9 @@ func _validate_arc_unlocks() -> Array[String]:
 func _validate_objectives() -> Array[String]:
 	var errors: Array[String] = []
 	var path := "res://game/content/objectives.json"
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		errors.append("objectives.json not found at %s" % path)
-		return errors
-	var text: String = file.get_as_text()
-	file.close()
-	var json := JSON.new()
-	if json.parse(text) != OK:
-		errors.append(
-			"objectives.json parse error: %s" % json.get_error_message()
-		)
-		return errors
-	var data: Variant = json.get_data()
+	var data: Variant = DataLoader.load_json(path)
 	if not (data is Dictionary):
-		errors.append("objectives.json root must be a Dictionary")
+		errors.append("objectives.json missing or invalid at %s" % path)
 		return errors
 	var d: Dictionary = data as Dictionary
 	if not d.has("objectives"):

@@ -289,13 +289,11 @@ static func _ensure_archetypes_loaded() -> void:
 	if _archetypes_loaded:
 		return
 	_archetypes_loaded = true
-	if not FileAccess.file_exists(ARCHETYPES_PATH):
-		push_error("CustomerSimulator: archetypes file missing: %s" % ARCHETYPES_PATH)
-		return
-	var raw: String = FileAccess.get_file_as_string(ARCHETYPES_PATH)
-	var parsed: Variant = JSON.parse_string(raw)
-	if parsed is not Array:
-		push_error("CustomerSimulator: archetypes.json root must be an Array")
+	var parsed: Variant = DataLoader.load_json(ARCHETYPES_PATH)
+	if not (parsed is Array):
+		push_error(
+			"CustomerSimulator: failed to load %s as Array" % ARCHETYPES_PATH
+		)
 		return
 	for entry: Variant in parsed as Array:
 		if entry is Dictionary:

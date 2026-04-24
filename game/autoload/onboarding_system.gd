@@ -72,27 +72,12 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _load_hint_definitions() -> void:
-	if not FileAccess.file_exists(ONBOARDING_CONFIG_PATH):
-		push_error("OnboardingSystem: config not found at %s" % ONBOARDING_CONFIG_PATH)
-		return
-
-	var file: FileAccess = FileAccess.open(ONBOARDING_CONFIG_PATH, FileAccess.READ)
-	if not file:
-		push_error("OnboardingSystem: failed to open %s" % ONBOARDING_CONFIG_PATH)
-		return
-
-	var json: JSON = JSON.new()
-	var error: Error = json.parse(file.get_as_text())
-	file.close()
-	if error != OK:
-		push_error("OnboardingSystem: JSON parse error in %s: %s" % [
-			ONBOARDING_CONFIG_PATH, json.get_error_message()
-		])
-		return
-
-	var config: Variant = json.data
-	if not config is Dictionary:
-		push_error("OnboardingSystem: config root must be a Dictionary")
+	var config: Variant = DataLoader.load_json(ONBOARDING_CONFIG_PATH)
+	if not (config is Dictionary):
+		push_error(
+			"OnboardingSystem: failed to load config '%s' as Dictionary"
+			% ONBOARDING_CONFIG_PATH
+		)
 		return
 
 	var hints: Variant = config.get("hints", [])

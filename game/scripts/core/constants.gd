@@ -14,17 +14,3 @@ const MAX_MARKUP := 5.0
 
 # Interaction
 const DEFAULT_INTERACTION_RANGE := 3.0
-
-# Content paths
-const ITEMS_PATH := "res://game/content/items/"
-const STORES_PATH := "res://game/content/stores/"
-const CUSTOMERS_PATH := "res://game/content/customers/"
-const ECONOMY_PATH := "res://game/content/economy/"
-const FIXTURES_PATH := "res://game/content/fixtures/"
-const MILESTONES_PATH := "res://game/content/milestones/"
-const EVENTS_PATH := "res://game/content/events/"
-const SEASONAL_EVENTS_PATH := "res://game/content/events/seasonal_events.json"
-const RANDOM_EVENTS_PATH := "res://game/content/events/random_events.json"
-const STAFF_PATH := "res://game/content/staff/"
-const SECRET_THREADS_PATH := "res://game/content/meta/secret_threads.json"
-const UPGRADES_PATH := "res://game/content/upgrades.json"

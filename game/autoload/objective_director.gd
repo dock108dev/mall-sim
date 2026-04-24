@@ -34,19 +34,9 @@ func _ready() -> void:
 
 
 func _load_content() -> void:
-	var file := FileAccess.open(CONTENT_PATH, FileAccess.READ)
-	if not file:
-		push_error("ObjectiveDirector: cannot open %s" % CONTENT_PATH)
-		return
-	var raw: String = file.get_as_text()
-	file.close()
-	var json := JSON.new()
-	if json.parse(raw) != OK:
-		push_error("ObjectiveDirector: parse error in objectives.json: %s" % json.get_error_message())
-		return
-	var data: Variant = json.get_data()
+	var data: Variant = DataLoader.load_json(CONTENT_PATH)
 	if not (data is Dictionary):
-		push_error("ObjectiveDirector: objectives.json root must be a Dictionary")
+		push_error("ObjectiveDirector: failed to load %s as Dictionary" % CONTENT_PATH)
 		return
 	var d := data as Dictionary
 	_defaults = {
@@ -68,18 +58,9 @@ func _load_content() -> void:
 
 
 func _load_tutorial_steps() -> void:
-	var file := FileAccess.open(TUTORIAL_STEPS_PATH, FileAccess.READ)
-	if not file:
-		push_warning("ObjectiveDirector: cannot open %s" % TUTORIAL_STEPS_PATH)
-		return
-	var raw: String = file.get_as_text()
-	file.close()
-	var json := JSON.new()
-	if json.parse(raw) != OK:
-		push_warning("ObjectiveDirector: parse error in tutorial_steps.json")
-		return
-	var data: Variant = json.get_data()
+	var data: Variant = DataLoader.load_json(TUTORIAL_STEPS_PATH)
 	if not (data is Dictionary):
+		push_warning("ObjectiveDirector: failed to load %s" % TUTORIAL_STEPS_PATH)
 		return
 	for entry: Variant in (data as Dictionary).get("tutorial_steps", []):
 		if not (entry is Dictionary):

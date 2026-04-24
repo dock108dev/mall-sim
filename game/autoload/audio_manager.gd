@@ -511,18 +511,12 @@ func _make_stream_player(
 
 
 func _load_from_registry() -> void:
-	if not FileAccess.file_exists(AUDIO_REGISTRY_PATH):
+	var parsed: Variant = DataLoader.load_json(AUDIO_REGISTRY_PATH)
+	if not (parsed is Dictionary):
 		push_error(
-			"AudioManager: audio registry not found: %s" % AUDIO_REGISTRY_PATH
+			"AudioManager: failed to load audio registry '%s'"
+			% AUDIO_REGISTRY_PATH
 		)
-		return
-	var file := FileAccess.open(AUDIO_REGISTRY_PATH, FileAccess.READ)
-	if file == null:
-		push_error("AudioManager: cannot open audio registry")
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary:
-		push_error("AudioManager: audio registry parse error")
 		return
 	var reg: Dictionary = parsed as Dictionary
 	_load_audio_dir(reg.get("sfx", {}), SFX_DIR, _sfx_streams)

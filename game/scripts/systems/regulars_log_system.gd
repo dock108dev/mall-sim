@@ -31,14 +31,9 @@ func _ready() -> void:
 
 func _load_thread_definitions() -> void:
 	var path: String = "res://game/content/meta/regulars_threads.json"
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if not file:
-		push_error("RegularsLogSystem: cannot open %s" % path)
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is not Array:
-		push_error("RegularsLogSystem: expected JSON array in %s" % path)
+	var parsed: Variant = DataLoader.load_json(path)
+	if not (parsed is Array):
+		push_error("RegularsLogSystem: failed to load %s as Array" % path)
 		return
 	for entry: Variant in (parsed as Array):
 		if entry is Dictionary:

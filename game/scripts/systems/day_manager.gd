@@ -79,21 +79,11 @@ func _phase_for_day(day: int) -> String:
 
 
 func _load_arc_config() -> void:
-	var file := FileAccess.open(ARC_UNLOCKS_PATH, FileAccess.READ)
-	if not file:
-		push_error("DayManager: cannot open %s" % ARC_UNLOCKS_PATH)
-		return
-	var text: String = file.get_as_text()
-	file.close()
-	var json := JSON.new()
-	if json.parse(text) != OK:
-		push_error(
-			"DayManager: JSON parse error in arc_unlocks.json: %s" % json.get_error_message()
-		)
-		return
-	var data: Variant = json.get_data()
+	var data: Variant = DataLoader.load_json(ARC_UNLOCKS_PATH)
 	if not (data is Dictionary):
-		push_error("DayManager: arc_unlocks.json root must be a Dictionary")
+		push_error(
+			"DayManager: failed to load %s as Dictionary" % ARC_UNLOCKS_PATH
+		)
 		return
 	var d: Dictionary = data as Dictionary
 	_arc_phases = d.get("arc_phases", []) as Array

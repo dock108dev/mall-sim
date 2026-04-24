@@ -425,34 +425,11 @@ func _load_config() -> void:
 
 
 func _register_endings_in_content_registry() -> void:
-	if not FileAccess.file_exists(CONFIG_PATH):
+	var root: Variant = DataLoader.load_json(CONFIG_PATH)
+	if not (root is Dictionary):
 		push_error(
-			"EndingEvaluatorSystem: config not found at %s"
+			"EndingEvaluatorSystem: failed to load %s as Dictionary"
 			% CONFIG_PATH
-		)
-		return
-	var file: FileAccess = FileAccess.open(
-		CONFIG_PATH, FileAccess.READ
-	)
-	if not file:
-		push_error(
-			"EndingEvaluatorSystem: failed to open %s"
-			% CONFIG_PATH
-		)
-		return
-	var json := JSON.new()
-	var err: Error = json.parse(file.get_as_text())
-	file.close()
-	if err != OK:
-		push_error(
-			"EndingEvaluatorSystem: JSON parse error — %s"
-			% json.get_error_message()
-		)
-		return
-	var root: Variant = json.data
-	if root is not Dictionary:
-		push_error(
-			"EndingEvaluatorSystem: config root must be a Dictionary"
 		)
 		return
 	var endings_raw: Variant = (root as Dictionary).get("endings", [])

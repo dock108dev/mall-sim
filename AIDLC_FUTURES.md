@@ -5,8 +5,8 @@
 ## What Was Done This Run
 
 - **Run ID**: aidlc_20260423_161152
-- **Issues planned**: 26
-- **Issues implemented**: 25
+- **Issues planned**: 27
+- **Issues implemented**: 27
 - **Issues verified**: 0
 - **Issues failed**: 0
 - **Finalization passes completed**: docs, cleanup
@@ -14,6 +14,7 @@
 ## Audit Reports
 
 - [2026-04-23-audit](docs/audits/2026-04-23-audit.md)
+- [2026-04-23-legacy-content-paths](docs/audits/2026-04-23-legacy-content-paths.md)
 - [abend-handling](docs/audits/abend-handling.md)
 - [braindump](docs/audits/braindump.md)
 - [cleanup-report](docs/audits/cleanup-report.md)

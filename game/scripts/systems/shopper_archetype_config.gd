@@ -238,25 +238,14 @@ static func _ensure_personality_data_loaded() -> void:
 	if _personality_data_loaded:
 		return
 	_personality_data_loaded = true
-	var file: FileAccess = FileAccess.open(PERSONALITY_CONFIG_PATH, FileAccess.READ)
-	if file == null:
+	var data: Variant = DataLoader.load_json(PERSONALITY_CONFIG_PATH)
+	if not (data is Dictionary):
 		push_error(
-			"ShopperArchetypeConfig: failed to open %s" % PERSONALITY_CONFIG_PATH
+			"ShopperArchetypeConfig: failed to load %s as Dictionary"
+			% PERSONALITY_CONFIG_PATH
 		)
 		return
-	var json: JSON = JSON.new()
-	var parse_result: Error = json.parse(file.get_as_text())
-	if parse_result != OK:
-		push_error(
-			"ShopperArchetypeConfig: failed to parse %s" % PERSONALITY_CONFIG_PATH
-		)
-		return
-	if not (json.data is Dictionary):
-		push_error(
-			"ShopperArchetypeConfig: invalid root in %s" % PERSONALITY_CONFIG_PATH
-		)
-		return
-	var root: Dictionary = json.data as Dictionary
+	var root: Dictionary = data as Dictionary
 	var entries: Array = root.get("personalities", [])
 	for entry_value: Variant in entries:
 		if not (entry_value is Dictionary):

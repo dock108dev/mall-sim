@@ -263,17 +263,11 @@ func _on_day_started(day: int) -> void:
 
 ## Loads shift definitions from meta_shifts.json into session memory.
 func _load_json_shift_defs() -> void:
-	if not FileAccess.file_exists(META_SHIFTS_PATH):
-		push_warning("MetaShiftSystem: %s not found" % META_SHIFTS_PATH)
-		return
-	var file := FileAccess.open(META_SHIFTS_PATH, FileAccess.READ)
-	if not file:
-		push_warning("MetaShiftSystem: cannot open %s" % META_SHIFTS_PATH)
-		return
-	var text: String = file.get_as_text()
-	var parsed: Variant = JSON.parse_string(text)
-	if parsed is not Array:
-		push_error("MetaShiftSystem: meta_shifts.json must be a JSON array")
+	var parsed: Variant = DataLoader.load_json(META_SHIFTS_PATH)
+	if not (parsed is Array):
+		push_warning(
+			"MetaShiftSystem: failed to load %s as Array" % META_SHIFTS_PATH
+		)
 		return
 	for entry: Variant in parsed as Array:
 		if entry is Dictionary:

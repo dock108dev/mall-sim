@@ -79,25 +79,11 @@ func clear_active_context() -> void:
 func _load_contexts() -> void:
 	if _loaded:
 		return
-	if not FileAccess.file_exists(CONTENT_PATH):
-		push_error(
-			"TutorialContextSystem: missing content file '%s'" % CONTENT_PATH
-		)
-		_loaded = true
-		return
-	var file: FileAccess = FileAccess.open(CONTENT_PATH, FileAccess.READ)
-	if file == null:
-		push_error(
-			"TutorialContextSystem: failed to open '%s'" % CONTENT_PATH
-		)
-		_loaded = true
-		return
-	var text: String = file.get_as_text()
-	file.close()
-	var parsed: Variant = JSON.parse_string(text)
+	var parsed: Variant = DataLoader.load_json(CONTENT_PATH)
 	if not (parsed is Dictionary):
 		push_error(
-			"TutorialContextSystem: '%s' must contain a JSON object" % CONTENT_PATH
+			"TutorialContextSystem: failed to load '%s' as Dictionary"
+			% CONTENT_PATH
 		)
 		_loaded = true
 		return
