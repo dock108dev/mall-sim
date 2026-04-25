@@ -30,12 +30,15 @@ func test_every_store_scene_has_exactly_one_camera_3d() -> void:
 		var cameras: Array[Camera3D] = _collect_cameras(root)
 		assert_eq(
 			cameras.size(), 1,
-			"store '%s' must ship exactly 1 Camera3D (got %d at %s)"
+			# `root` is a freshly-instantiated subtree not in the scene tree;
+			# Camera3D.get_path() would push_error on each camera. Identify
+			# them by name instead so the failure message stays informative.
+			"store '%s' must ship exactly 1 Camera3D (got %d: %s)"
 			% [
 				store_id,
 				cameras.size(),
 				str(cameras.map(
-					func(c: Camera3D) -> String: return str(c.get_path())
+					func(c: Camera3D) -> String: return c.name
 				)),
 			]
 		)

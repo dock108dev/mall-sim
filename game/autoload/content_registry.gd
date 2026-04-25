@@ -132,13 +132,17 @@ func get_scene_path(id: StringName) -> String:
 ## Returns the routing payload for a store ID as a Dictionary with keys
 ## `scene_path` (String), `inventory_type` (StringName),
 ## `interaction_set_id` (StringName), `tutorial_context_id` (StringName).
-## Returns an empty Dictionary and emits push_error for unknown IDs or stores
-## missing any routing field — the single source of truth for store
-## category → scene → data binding (ISSUE-001, DESIGN.md §1.2).
+## Returns an empty Dictionary for unknown IDs or stores missing any routing
+## field — the single source of truth for store category → scene → data
+## binding (ISSUE-001, DESIGN.md §1.2). Boot-time `validate_all_references()`
+## still surfaces missing/incomplete entries via `_record_duplicate` so a
+## production miswiring fails loud at startup; runtime queries downgrade to
+## `push_warning` because callers (router, store director) already handle the
+## empty-dict path explicitly.
 func get_store_route(id: StringName) -> Dictionary:
 	var canonical: StringName = _resolve_resource_id(id)
 	if canonical.is_empty():
-		_emit_error(
+		_emit_warning(
 			"ContentRegistry: get_store_route unknown store_id '%s'" % id
 		)
 		return {}
@@ -159,7 +163,7 @@ func get_store_route(id: StringName) -> Dictionary:
 	if store.tutorial_context_id == &"":
 		missing.append("tutorial_context_id")
 	if not missing.is_empty():
-		_emit_error(
+		_emit_warning(
 			"ContentRegistry: store '%s' missing route fields: %s"
 			% [canonical, ", ".join(missing)]
 		)
