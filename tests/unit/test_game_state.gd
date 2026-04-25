@@ -64,7 +64,19 @@ func test_set_flag_emits_only_on_change() -> void:
 
 func test_no_scene_or_camera_or_input_calls_in_source() -> void:
 	# AC: GameState contains NO change_scene_to_*, camera, or input calls.
-	var src: String = FileAccess.get_file_as_string("res://game/autoload/game_state.gd")
+	# Strip comments so the docstring may name these owners (matches the
+	# behavior of tests/validate_issue_020_game_state.sh).
+	var raw: String = FileAccess.get_file_as_string("res://game/autoload/game_state.gd")
+	var code_lines: PackedStringArray = []
+	for line in raw.split("\n"):
+		var trimmed: String = line.strip_edges()
+		if trimmed.begins_with("#"):
+			continue
+		var hash_idx: int = line.find("#")
+		if hash_idx >= 0:
+			line = line.substr(0, hash_idx)
+		code_lines.append(line)
+	var src: String = "\n".join(code_lines)
 	assert_false(src.contains("change_scene_to_"),
 		"GameState must not call change_scene_to_*")
 	assert_false(src.contains("CameraAuthority"),

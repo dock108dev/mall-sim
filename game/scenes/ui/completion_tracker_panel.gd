@@ -146,8 +146,13 @@ func _fetch_data() -> Array[Dictionary]:
 
 
 func _clear_rows() -> void:
+	# Free synchronously so that subsequent `_create_row` calls in the same
+	# refresh pass append to a clean grid. queue_free() defers until end of
+	# frame, which leaves stale rows visible to readers reading get_child(0)
+	# (e.g. live-refresh tests, ISSUE-022 acceptance).
 	for child: Node in _grid.get_children():
-		child.queue_free()
+		_grid.remove_child(child)
+		child.free()
 
 
 func _create_row(criterion: Dictionary) -> void:

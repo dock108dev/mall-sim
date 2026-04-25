@@ -489,6 +489,12 @@ func _register_entry(
 			% [raw_id, existing_type, content_type]
 		)
 		return
+	# Canonical IDs always win over previously-registered display-name / path
+	# aliases. Drop any alias that collides with this new primary so the
+	# uniqueness invariant (alias key never shadows an entry key) holds across
+	# load order.
+	if _aliases.has(id):
+		_aliases.erase(id)
 	_entries[id] = entry
 	_types[id] = content_type
 	_ready_flag = true

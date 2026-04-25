@@ -86,7 +86,7 @@ func test_duplicate_register_is_rejected_and_keeps_original() -> void:
 	var original_entry: StoreRegistryEntry = _registry.resolve(seed_id)
 	var original_path: String = original_entry.scene_path
 
-	var dup := StoreRegistryEntryScript.new(
+	var dup: StoreRegistryEntry = StoreRegistryEntryScript.new(
 		seed_id,
 		"res://game/scenes/stores/SHOULD_NOT_OVERWRITE.tscn",
 		null,

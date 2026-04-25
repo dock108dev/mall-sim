@@ -25,6 +25,7 @@ func before_each() -> void:
 	stub(diff, "get_modifier").to_return(1.0)
 
 	stub(_market, "calculate_item_value").to_return(50.0)
+	stub(_market, "get_item_multipliers").to_return([])
 
 	_checkout.initialize(_market, _inv, diff)
 

@@ -380,7 +380,7 @@ func _build_and_register(
 
 
 func _build_resource(
-	content_type: String, data: Dictionary, _source_path: String = ""
+	content_type: String, data: Dictionary, source_path: String = ""
 ) -> Resource:
 	match content_type:
 		"item", "item_definition":
@@ -395,6 +395,15 @@ func _build_resource(
 			return ContentParser.parse_staff(data)
 		"fixture", "fixture_definition":
 			return ContentParser.parse_fixture(data)
+		"event_config":
+			# Event config files share a content_type alias; the source_path
+			# disambiguates between market / seasonal / random event entries.
+			var lowered: String = source_path.to_lower()
+			if lowered.contains("seasonal"):
+				return ContentParser.parse_seasonal_event(data)
+			if lowered.contains("random"):
+				return ContentParser.parse_random_event(data)
+			return ContentParser.parse_market_event(data)
 		_:
 			return ContentParser.build_resource(content_type, data)
 

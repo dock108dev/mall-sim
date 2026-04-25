@@ -32,11 +32,15 @@ func test_clean_registration_has_no_duplicate_errors() -> void:
 	_registry.register_entry(_SPORTS_ENTRY, "store")
 	_registry.register_entry(_RETRO_ENTRY, "store")
 	var errors: Array[String] = _registry.validate_all_references()
+	var duplicate_errors: Array[String] = []
 	for err: String in errors:
-		assert_false(
-			err.contains("duplicate"),
-			"Unexpected duplicate error from clean registration: %s" % err
-		)
+		if err.contains("duplicate"):
+			duplicate_errors.append(err)
+	assert_true(
+		duplicate_errors.is_empty(),
+		"Unexpected duplicate errors from clean registration: %s"
+		% str(duplicate_errors)
+	)
 
 
 func test_duplicate_entry_id_is_recorded_as_validation_error() -> void:

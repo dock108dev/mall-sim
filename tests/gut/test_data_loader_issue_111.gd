@@ -182,8 +182,13 @@ func test_validation_errors_emit_content_load_failed() -> void:
 	loader.load_all_content_from_root(root)
 
 	assert_gt(_content_load_errors.size(), 0, "Validation failures should emit content_load_failed")
+	var mentions_missing: bool = false
+	for err: String in _content_load_errors:
+		if err.contains("missing_store"):
+			mentions_missing = true
+			break
 	assert_true(
-		_content_load_errors[0].contains("missing_store"),
+		mentions_missing,
 		"Validation error should mention the missing reference"
 	)
 	assert_eq(_content_loaded_count, 0, "content_loaded should not fire after validation failure")

@@ -1,10 +1,9 @@
 ## Integration tests for InputFocus + PlayerController gating (ISSUE-011).
-## Mounts a stand-in InputFocus at /root/InputFocus so PlayerController's
-## lookup `tree.root.get_node_or_null("InputFocus")` resolves to the stub,
-## then verifies movement is blocked outside `&"store_gameplay"`.
+## Drives the InputFocus autoload directly; PlayerController's lookup
+## `tree.root.get_node_or_null("InputFocus")` resolves to the same node, so
+## context pushes here are observed by the controller.
 extends GutTest
 
-const InputFocusScript: GDScript = preload("res://game/autoload/input_focus.gd")
 const PlayerControllerScene: PackedScene = preload(
 	"res://game/scenes/player/player_controller.tscn"
 )
@@ -14,17 +13,19 @@ var _player: PlayerController
 
 
 func before_each() -> void:
-	_focus = InputFocusScript.new()
-	_focus.name = "InputFocus"
-	get_tree().root.add_child(_focus)
-	_focus._reset_for_tests()
+	_focus = get_tree().root.get_node_or_null("InputFocus")
+	assert_not_null(
+		_focus, "InputFocus autoload must be present for integration tests"
+	)
+	if _focus != null:
+		_focus._reset_for_tests()
 	_player = PlayerControllerScene.instantiate() as PlayerController
 	add_child_autofree(_player)
 
 
 func after_each() -> void:
-	if is_instance_valid(_focus):
-		_focus.queue_free()
+	if _focus != null and is_instance_valid(_focus):
+		_focus._reset_for_tests()
 
 
 func test_modal_blocks_gameplay_input() -> void:

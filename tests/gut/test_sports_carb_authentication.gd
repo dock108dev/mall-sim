@@ -116,7 +116,7 @@ func test_economy_fee_respects_min_floor() -> void:
 	item.definition.base_price = 1.0  # would produce sub-floor fee without clamping
 	_controller.submit_for_carb_authentication(StringName(item.instance_id), 0)
 	var cost: float = _economy.total_deducted
-	assert_ge(
+	assert_gte(
 		cost,
 		SportsMemorabiliaController.AUTH_MIN_FEE,
 		"Fee must not fall below AUTH_MIN_FEE"

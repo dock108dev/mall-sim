@@ -73,17 +73,26 @@ func test_assert_single_active_fails_with_zero() -> void:
 
 
 func test_assert_single_active_fails_with_multiple() -> void:
-	var cam_a: Camera3D = _make_cam_3d("CamA")
-	var cam_b: Camera3D = _make_cam_3d("CamB")
-	# Route both through the authority so they're in the cameras group, then
-	# force the second one current via the engine API to simulate a violator.
-	_authority.request_current(cam_a, &"source_a")
+	# Godot 4 enforces single-camera-current per viewport, so simulate a
+	# violator by parenting each camera under its own SubViewport. Each camera
+	# is then legitimately current within its own viewport, but the cameras
+	# group still reports two current at the SceneTree level.
+	var sv_a: SubViewport = SubViewport.new()
+	var sv_b: SubViewport = SubViewport.new()
+	add_child_autofree(sv_a)
+	add_child_autofree(sv_b)
+	var cam_a: Camera3D = Camera3D.new()
+	cam_a.name = "CamA"
+	var cam_b: Camera3D = Camera3D.new()
+	cam_b.name = "CamB"
+	sv_a.add_child(cam_a)
+	sv_b.add_child(cam_b)
 	cam_a.add_to_group(_authority.CAMERAS_GROUP)
 	cam_b.add_to_group(_authority.CAMERAS_GROUP)
+	cam_a.make_current()
 	cam_b.make_current()
-	# Both report current=true now (cam_a was not cleared by the bypass).
-	assert_true(cam_a.current)
-	assert_true(cam_b.current)
+	assert_true(cam_a.current, "cam_a current within its own SubViewport")
+	assert_true(cam_b.current, "cam_b current within its own SubViewport")
 	assert_false(_authority.assert_single_active(),
 		"should fail when more than one camera in 'cameras' group is current")
 

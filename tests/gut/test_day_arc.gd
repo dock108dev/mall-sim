@@ -125,9 +125,13 @@ func test_each_unlock_fires_exactly_once() -> void:
 
 func test_unlock_not_retroactively_fired_on_later_days() -> void:
 	_day_manager._check_arc_unlocks(30)
-	# All three thresholds (3, 10, 14) should fire together at day 30 since
-	# it's the first call and day >= all thresholds.
-	assert_eq(_collected_unlocks.size(), 3, "All past-threshold unlocks fire on first check")
+	# Both configured thresholds (3, 10) should fire together at day 30 since
+	# it's the first call and day >= all thresholds. Update this count if
+	# arc_unlocks.json gains another entry.
+	assert_eq(
+		_collected_unlocks.size(), 2,
+		"All past-threshold unlocks fire on first check"
+	)
 	# Calling again must not re-fire.
 	_collected_unlocks.clear()
 	_day_manager._check_arc_unlocks(30)

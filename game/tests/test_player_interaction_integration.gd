@@ -14,9 +14,9 @@ const VIEWPORT_SIZE := Vector2i(320, 240)
 class MockInteractable extends Interactable:
 	var interact_calls: int = 0
 
-	func interact() -> void:
+	func interact(by: Node = null) -> void:
 		interact_calls += 1
-		super()
+		super(by)
 
 
 var _viewport: SubViewport
