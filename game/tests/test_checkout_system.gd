@@ -2,7 +2,7 @@
 ## and failure cases.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 
 var _checkout: PlayerCheckout

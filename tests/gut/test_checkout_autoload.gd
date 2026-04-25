@@ -1,7 +1,7 @@
 ## Tests for CheckoutSystem autoload — NPC transaction processing.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 var _system: Node
 var _inventory: InventorySystem

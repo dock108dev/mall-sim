@@ -407,10 +407,11 @@ func _apply_revenue_headline(revenue: float) -> void:
 
 
 ## Hoist the top-seller and forward-hook rows above the detail dump
-## so headline signals are visible without scrolling (ISSUE-012).
+## (rent / expenses / profit / etc.) so headline signals are visible
+## without scrolling (ISSUE-012). Anchor right after the revenue row.
 func _apply_headline_order() -> void:
 	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
-	var anchor_index: int = _profit_label.get_index() + 1
+	var anchor_index: int = _revenue_label.get_index() + 1
 	if is_instance_valid(_top_item_label):
 		vbox.move_child(_top_item_label, anchor_index)
 		anchor_index += 1

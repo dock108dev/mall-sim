@@ -2,7 +2,7 @@
 ## economy day-end summary, and inventory depletion.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 const STORE_ID: String = "test_day_cycle_store"
 const STARTING_CASH: float = 1000.0

@@ -22,26 +22,26 @@ func before_each() -> void:
 
 	_economy_system = EconomySystem.new()
 	_economy_system.name = "EconomySystem"
-	add_child(_economy_system)
+	add_child_autofree(_economy_system)
 	_economy_system.initialize()
 
 	_inventory_system = InventorySystem.new()
 	_inventory_system.name = "InventorySystem"
-	add_child(_inventory_system)
+	add_child_autofree(_inventory_system)
 	_inventory_system.initialize(GameManager.data_loader)
 
 	_reputation_system = ReputationSystem.new()
 	_reputation_system.name = "ReputationSystem"
-	add_child(_reputation_system)
+	add_child_autofree(_reputation_system)
 
 	_progression_system = ProgressionSystem.new()
 	_progression_system.name = "ProgressionSystem"
-	add_child(_progression_system)
+	add_child_autofree(_progression_system)
 	_progression_system.initialize(_economy_system, _reputation_system)
 
 	_order_system = OrderSystem.new()
 	_order_system.name = "OrderSystem"
-	add_child(_order_system)
+	add_child_autofree(_order_system)
 	_order_system.initialize(
 		_inventory_system, _reputation_system, _progression_system
 	)
@@ -52,11 +52,6 @@ func before_each() -> void:
 func after_each() -> void:
 	if EventBus.restock_requested.is_connected(_on_restock_requested):
 		EventBus.restock_requested.disconnect(_on_restock_requested)
-	_order_system.queue_free()
-	_progression_system.queue_free()
-	_reputation_system.queue_free()
-	_inventory_system.queue_free()
-	_economy_system.queue_free()
 
 
 func _on_restock_requested(

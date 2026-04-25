@@ -1,7 +1,7 @@
 ## Integration test: build mode fixture placement pipeline end-to-end.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 const ENTRY_EDGE_Y: int = 8
 const REGISTER_ID: String = "register_placement_test"

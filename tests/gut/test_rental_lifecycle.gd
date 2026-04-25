@@ -133,6 +133,11 @@ func test_written_off_return_moves_tape_to_backroom_and_notifies_player() -> voi
 		1
 	)
 
+	# Seed the global RNG so `randf() < LOST_ITEM_CHANCE` (0.02) inside
+	# `_handle_return` is deterministic — otherwise this test occasionally
+	# routes through `_handle_lost_item`, which removes the item (location
+	# becomes "sold") instead of moving it to the backroom.
+	seed(0xDEAD_BEEF)
 	_controller._on_day_started(2)
 
 	assert_eq(

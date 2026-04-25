@@ -2,7 +2,7 @@
 ## Verifies: day_started → mock sales → day_close_requested → day_closed payload.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 var _time: TimeSystem
 var _economy: EconomySystem

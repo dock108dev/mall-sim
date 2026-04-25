@@ -21,6 +21,7 @@ class _EconomySpy extends EconomySystem:
 
 
 var _saved_data_loader: DataLoader
+var _saved_current_day: int = 1
 var _data_loader: DataLoader
 var _inventory: InventorySystem
 var _controller: SportsMemorabiliaController
@@ -29,6 +30,11 @@ var _economy: _EconomySpy
 
 func before_each() -> void:
 	_saved_data_loader = GameManager.data_loader
+	# Pin the current day to 1 so submission_day captured by
+	# `submit_for_carb_authentication` is deterministic regardless of which
+	# upstream test ran last and left GameManager day-state polluted.
+	_saved_current_day = GameManager.get_current_day()
+	GameManager.set_current_day(1)
 	ContentRegistry.clear_for_testing()
 
 	_data_loader = DataLoader.new()
@@ -53,6 +59,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	GameManager.data_loader = _saved_data_loader
+	GameManager.set_current_day(_saved_current_day)
 	ContentRegistry.clear_for_testing()
 
 

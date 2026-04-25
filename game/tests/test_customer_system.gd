@@ -2,7 +2,7 @@
 ## GUT unit tests for CustomerSystem — spawn, state machine, and satisfaction.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 var _system: CustomerSystem
 var _economy: EconomySystem

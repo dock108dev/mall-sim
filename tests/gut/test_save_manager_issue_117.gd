@@ -95,7 +95,12 @@ func test_manual_save_writes_root_level_json_and_index_metadata() -> void:
 	)
 
 
-func test_load_version_0_save_migrates_without_crashing() -> void:
+func test_load_version_0_save_is_rejected_as_too_old() -> void:
+	# Version 0 predates the save_metadata block and owned-slots schema and
+	# falls below MIN_SUPPORTED_SAVE_VERSION (1). Per the SaveManager class
+	# docstring, v0 saves are rejected outright with the "Save too old —
+	# start a new game" error and are NOT migrated. Pre-existing runtime
+	# state must remain untouched.
 	var legacy_data: Dictionary = {
 		"save_version": 0,
 		"metadata": {
@@ -104,54 +109,31 @@ func test_load_version_0_save_migrates_without_crashing() -> void:
 			"store_type": "retro_games",
 			"play_time": 12.0,
 		},
-		"time": {
-			"current_day": 4,
-			"game_time_minutes": 540.0,
-			"total_play_time": 12.0,
-			"speed_multiplier": 1,
-			"last_emitted_hour": 9,
-			"auto_slow_stack": [],
-		},
-		"economy": {
-			"current_cash": 1550.0,
-			"daily_transactions": [],
-			"current_time_minutes": 0,
-			"items_sold_today": 0,
-			"daily_rent": 50.0,
-			"daily_rent_total": 0.0,
-			"daily_revenue": 0.0,
-			"daily_expenses": 0.0,
-			"sales_history": [],
-			"today_sales": {},
-			"demand_modifiers": {},
-			"store_daily_revenue": {},
-			"trades_today": 0,
-			"drift_factors": {},
-			"last_injection_day": -1,
-		},
+		"time": {"current_day": 4},
+		"economy": {"current_cash": 1550.0},
 		"inventory": _inventory.get_save_data(),
 		"reputation": _reputation.get_save_data(),
 		"owned_stores": ["retro_games"],
 	}
 	_write_save(MANUAL_SLOT_A, legacy_data)
 
+	var pre_day: int = _time_system.current_day
+	var pre_cash: float = _economy.get_cash()
+	var pre_owned: Array[StringName] = GameManager.owned_stores.duplicate()
+
 	var loaded: bool = _save_manager.load_game(MANUAL_SLOT_A)
-	assert_true(loaded, "Version 0 save should load successfully")
+	assert_false(loaded, "Version 0 save should be rejected as too old")
 	assert_eq(
-		_time_system.current_day,
-		4,
-		"Migrated version 0 save should restore the day"
+		_time_system.current_day, pre_day,
+		"Rejected v0 load must not mutate TimeSystem"
 	)
 	assert_almost_eq(
-		_economy.get_cash(),
-		1550.0,
-		0.01,
-		"Migrated version 0 save should restore cash"
+		_economy.get_cash(), pre_cash, 0.01,
+		"Rejected v0 load must not mutate cash"
 	)
-	assert_has(
-		GameManager.owned_stores,
-		&"retro_games",
-		"Migrated version 0 save should restore owned stores"
+	assert_eq(
+		GameManager.owned_stores, pre_owned,
+		"Rejected v0 load must not mutate owned_stores"
 	)
 
 

@@ -1,7 +1,7 @@
 ## Unit tests for ReturnsBin return eligibility, late fee computation, and condition degradation.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 var _controller: VideoRentalStoreController
 var _inventory: InventorySystem

@@ -2,7 +2,7 @@
 ## versus Normal mode via purchase_probability_multiplier in CheckoutSystem.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 const CHECKOUT_SCRIPT: GDScript = preload(
 	"res://game/autoload/checkout_system.gd"

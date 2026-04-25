@@ -1,7 +1,7 @@
 ## GUT tests for MetaShiftSystem JSON-driven type-based meta shifts.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 const FIRE_SHIFT: Dictionary = {
 	"id": "fire_surge",
@@ -52,7 +52,7 @@ func _on_applied(
 
 func before_each() -> void:
 	_system = MetaShiftSystem.new()
-	add_child(_system)
+	add_child_autofree(_system)
 	_telegraphed = []
 	_applied = []
 	EventBus.meta_shift_telegraphed.connect(_on_telegraphed)

@@ -119,5 +119,5 @@ func test_duplicate_add_rejected() -> void:
 
 func _create_mock_customer() -> Customer:
 	var customer: Customer = Customer.new()
-	add_child(customer)
+	add_child_autofree(customer)
 	return customer

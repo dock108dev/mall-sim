@@ -198,6 +198,9 @@ func test_overdue_late_fee_formula() -> void:
 
 
 func test_overdue_late_fee_added_to_economy_with_late_fee_reason() -> void:
+	# ISSUE-015 changed late-fee accounting: overdue rentals accrue a pending
+	# fee on day_started; cash only moves once the player calls collect_late_fee
+	# (driven from rental_checkout_dialog when the customer returns to rent).
 	var item: ItemInstance = _create_and_stock_item()
 	var checkout_day: int = 1
 	var extra_days: int = 2
@@ -211,6 +214,9 @@ func test_overdue_late_fee_added_to_economy_with_late_fee_reason() -> void:
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	var trigger_day: int = return_day + _cfg_grace_period_days + extra_days
 	_process_test_day(trigger_day)
+
+	# Player resolves the pending fee — the canonical path that moves cash.
+	_controller.collect_late_fee(item.instance_id)
 
 	var expected_fee: float = _cfg_base_late_fee + (
 		float(extra_days) * _cfg_per_day_rate
@@ -247,6 +253,9 @@ func test_overdue_late_fee_in_performance_report() -> void:
 	var return_day: int = checkout_day + _cfg_standard_rental_period
 	var trigger_day: int = return_day + _cfg_grace_period_days + extra_days
 	_process_test_day(trigger_day)
+	# PerformanceReport accumulates from the late_fee_collected event, which
+	# the controller emits on `collect_late_fee` (player action, ISSUE-015).
+	_controller.collect_late_fee(item.instance_id)
 
 	var expected_fee: float = _cfg_base_late_fee + (
 		float(extra_days) * _cfg_per_day_rate

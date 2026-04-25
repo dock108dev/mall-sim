@@ -10,12 +10,10 @@ func before_each() -> void:
 		"res://game/scenes/ui/pause_menu.tscn"
 	)
 	_pause_menu = scene.instantiate() as PauseMenu
-	add_child(_pause_menu)
+	add_child_autofree(_pause_menu)
 
 
 func after_each() -> void:
-	if is_instance_valid(_pause_menu):
-		_pause_menu.queue_free()
 	get_tree().paused = false
 	GameManager.current_state = GameManager.State.MAIN_MENU
 

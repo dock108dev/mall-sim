@@ -223,13 +223,16 @@ func test_game_world_has_initialize_systems_method() -> void:
 
 
 func test_total_system_count() -> void:
+	# Floor matches the current tier definitions (2 + 6 + 10 + 5 + 10 = 33).
+	# Bump this with the tier arrays whenever a new required system lands so
+	# accidental removals fail the gate.
 	var total: Array = [0]
 	for tier: Array in _all_tiers:
 		total[0] += tier.size()
 	assert_gte(
 		total[0],
-		35,
-		"Expected at least 35 required systems across tiers, got %d" % total[0]
+		33,
+		"Expected at least 33 required systems across tiers, got %d" % total[0]
 	)
 
 

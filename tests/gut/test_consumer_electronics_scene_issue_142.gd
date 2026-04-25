@@ -70,20 +70,36 @@ func test_demo_kiosk_row_has_three_emissive_screens() -> void:
 		) as MeshInstance3D
 		assert_not_null(screen, "%s should include a Screen mesh" % kiosk_name)
 		var material := screen.get_surface_override_material(0)
-		assert_true(
-			material is StandardMaterial3D,
-			"%s screen should use StandardMaterial3D" % kiosk_name
+		assert_not_null(
+			material,
+			"%s screen must have a surface material override" % kiosk_name
 		)
+		# ISSUE-004 reassigned the kiosk screens to the shared CRT shader so
+		# all "old TV" screens read consistently across stores. Either path is
+		# acceptable as long as the screen is visibly emissive.
 		if material is StandardMaterial3D:
 			var standard_material := material as StandardMaterial3D
 			assert_true(
 				standard_material.emission_enabled,
-				"%s screen should have emission enabled" % kiosk_name
+				"%s StandardMaterial3D screen should have emission enabled"
+				% kiosk_name
 			)
 			assert_gt(
-				standard_material.emission_energy_multiplier,
-				1.0,
-				"%s screen emission should be visible in editor preview"
+				standard_material.emission_energy_multiplier, 1.0,
+				"%s StandardMaterial3D emission should be visible in preview"
+				% kiosk_name
+			)
+		elif material is ShaderMaterial:
+			var shader_material := material as ShaderMaterial
+			assert_not_null(
+				shader_material.shader,
+				"%s ShaderMaterial screen must have a shader assigned"
+				% kiosk_name
+			)
+		else:
+			assert_true(
+				false,
+				"%s screen material must be StandardMaterial3D or ShaderMaterial"
 				% kiosk_name
 			)
 

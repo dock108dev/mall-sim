@@ -6,12 +6,10 @@ var _controller: PocketCreaturesStoreController = null
 
 func before_each() -> void:
 	_controller = PocketCreaturesStoreController.new()
-	add_child(_controller)
+	add_child_autofree(_controller)
 
 
 func after_each() -> void:
-	if _controller and is_instance_valid(_controller):
-		_controller.queue_free()
 	_controller = null
 
 

@@ -35,6 +35,13 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	# EndingScreen parents its credits overlay to its own parent (the test
+	# script) so it can render as a sibling modal in production. Reach in and
+	# free that sibling here so GUT doesn't count it as an unfreed child of
+	# the test script.
+	if is_instance_valid(_screen) and is_instance_valid(_screen._credits_overlay):
+		_screen._credits_overlay.free()
+		_screen._credits_overlay = null
 	_restore_user_file(_SAVE_PATH, _save_backup_exists, _save_backup_text)
 
 

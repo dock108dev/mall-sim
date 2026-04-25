@@ -24,7 +24,7 @@ func test_crt_shader_exists() -> void:
 func test_crt_overlay_intensity_property() -> void:
 	var scene: PackedScene = load("res://game/scenes/ui/crt_overlay.tscn")
 	var overlay: Node = scene.instantiate()
-	add_child(overlay)
+	add_child_autofree(overlay)
 	assert_true(overlay.has_method("_set_intensity") or "intensity" in overlay, "overlay must expose intensity")
 	overlay.intensity = 0.5
 	assert_almost_eq(overlay.intensity, 0.5, 0.001, "intensity clamps correctly")

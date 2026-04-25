@@ -1,7 +1,7 @@
 ## Integration test: fixture tier upgrade persists through save/load cycle.
 extends GutTest
 
-const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/test_signal_utils.gd")
+const TEST_SIGNAL_UTILS: GDScript = preload("res://game/tests/signal_utils.gd")
 
 const SAVE_SLOT: int = 1
 const ENTRY_EDGE_Y: int = 8
