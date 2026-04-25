@@ -56,8 +56,11 @@ func test_overlay_exposes_required_fields() -> void:
 
 func test_overlay_renders_last_audit_entries_with_status_colors() -> void:
 	AuditLog.clear()
-	AuditLog.pass_check(&"issue_002_pass_demo", "ok")
-	AuditLog.fail_check(&"issue_002_fail_demo", "boom")
+	# Use record_*_for_test seams so the demo entries do not write
+	# `AUDIT: PASS|FAIL` lines to stdout — tests/audit_run.sh would otherwise
+	# treat issue_002_fail_demo as a real (un-whitelisted) runtime failure.
+	AuditLog.record_pass_for_test(&"issue_002_pass_demo", "ok")
+	AuditLog.record_fail_for_test(&"issue_002_fail_demo", "boom")
 	AuditOverlay.toggle()
 	AuditOverlay._refresh_entries()
 

@@ -43,3 +43,9 @@ objective_matches
 interaction_fired
 day_open
 day_close
+
+# Golden path — emitter `tests/gut/test_audit_golden_path.gd` was removed in
+# ADR 0007 (Sneaker Citadel removal). Re-implementation against the 5-store
+# roster is pending Phase 1; until then the checkpoint counts toward the
+# matrix total but does not gate CI.
+golden_path
