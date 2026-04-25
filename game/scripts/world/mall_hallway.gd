@@ -159,12 +159,12 @@ func _setup_camera() -> void:
 	_camera_controller.set_zoom_distance(8.0)
 	add_child(_camera_controller)
 
-	var InteractionRayScript: GDScript = preload(
+	var interaction_ray_script: GDScript = preload(
 		"res://game/scripts/player/interaction_ray.gd"
 	)
 	_interaction_ray = Node.new()
 	_interaction_ray.name = "InteractionRay"
-	_interaction_ray.set_script(InteractionRayScript)
+	_interaction_ray.set_script(interaction_ray_script)
 	add_child(_interaction_ray)
 
 

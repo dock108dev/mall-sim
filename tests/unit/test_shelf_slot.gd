@@ -83,3 +83,75 @@ func test_capacity_is_one_item_per_slot() -> void:
 		1,
 		"get_occupied must return 1 when an item is assigned"
 	)
+
+
+# ── Stocking cursor tests ─────────────────────────────────────────────────────
+
+func _make_slot_with_marker() -> ShelfSlot:
+	var slot := ShelfSlot.new()
+	var mesh := MeshInstance3D.new()
+	mesh.name = "Marker"
+	mesh.mesh = BoxMesh.new()
+	slot.add_child(mesh)
+	add_child_autofree(slot)
+	return slot
+
+
+func test_matching_category_applies_stocking_material() -> void:
+	var slot := _make_slot_with_marker()
+	var mesh: MeshInstance3D = slot.get_node("Marker")
+	slot.accepted_category = "trading_cards"
+
+	EventBus.stocking_cursor_active.emit(&"trading_cards")
+
+	var mat: Material = mesh.get_surface_override_material(0)
+	assert_not_null(mat, "Material override must be set for a matching category")
+	var std_mat := mat as StandardMaterial3D
+	assert_not_null(std_mat, "Override material must be a StandardMaterial3D")
+	assert_almost_eq(std_mat.albedo_color.a, 0.35, 0.01, "Alpha must be 0.35")
+
+
+func test_wrong_category_does_not_apply_stocking_material() -> void:
+	var slot := _make_slot_with_marker()
+	var mesh: MeshInstance3D = slot.get_node("Marker")
+	slot.accepted_category = "trading_cards"
+
+	EventBus.stocking_cursor_active.emit(&"vhs_tapes")
+
+	var mat: Material = mesh.get_surface_override_material(0)
+	assert_null(mat, "No material override for non-matching category")
+
+
+func test_stocking_cursor_inactive_clears_material() -> void:
+	var slot := _make_slot_with_marker()
+	var mesh: MeshInstance3D = slot.get_node("Marker")
+	slot.accepted_category = "trading_cards"
+
+	EventBus.stocking_cursor_active.emit(&"trading_cards")
+	EventBus.stocking_cursor_inactive.emit()
+
+	var mat: Material = mesh.get_surface_override_material(0)
+	assert_null(mat, "Material override must be cleared after stocking_cursor_inactive")
+
+
+func test_occupied_slot_does_not_show_stocking_material() -> void:
+	var slot := _make_slot_with_marker()
+	var mesh: MeshInstance3D = slot.get_node("Marker")
+	slot.accepted_category = "trading_cards"
+	slot.assign_item(&"inst_occ")
+
+	EventBus.stocking_cursor_active.emit(&"trading_cards")
+
+	var mat: Material = mesh.get_surface_override_material(0)
+	assert_null(mat, "Occupied slot must not receive stocking material override")
+
+
+func test_empty_accepted_category_matches_any() -> void:
+	var slot := _make_slot_with_marker()
+	var mesh: MeshInstance3D = slot.get_node("Marker")
+	slot.accepted_category = ""
+
+	EventBus.stocking_cursor_active.emit(&"vhs_tapes")
+
+	var mat: Material = mesh.get_surface_override_material(0)
+	assert_not_null(mat, "Empty accepted_category must match any item category")

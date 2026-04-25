@@ -16,6 +16,9 @@ const _SPORTS_MEMORABILIA_SCENE: PackedScene = preload(
 const _GAME_CARTRIDGE_SCENE: PackedScene = preload(
 	"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
 )
+const _GAME_CONSOLE_SCENE: PackedScene = preload(
+	"res://game/assets/models/props/prop_game_console.tscn"
+)
 const _VHS_TAPE_SCENE: PackedScene = preload(
 	"res://game/assets/models/props/placeholder_prop_vhs_tape.tscn"
 )
@@ -28,7 +31,7 @@ const CATEGORY_SCENES: Dictionary = {
 	"sealed_product": _SHELF_PRODUCT_SCENE,
 	"memorabilia": _SPORTS_MEMORABILIA_SCENE,
 	"cartridge": _GAME_CARTRIDGE_SCENE,
-	"console": _GAME_CARTRIDGE_SCENE,
+	"console": _GAME_CONSOLE_SCENE,
 	"accessory": _SHELF_PRODUCT_SCENE,
 	"guide": _SHELF_PRODUCT_SCENE,
 	"vhs_tapes": _VHS_TAPE_SCENE,
@@ -45,10 +48,14 @@ const DEFAULT_ITEM_SCENE: PackedScene = _SHELF_PRODUCT_SCENE
 
 const HIGHLIGHT_EMPTY := Color(0.2, 0.8, 0.2)
 const HIGHLIGHT_OCCUPIED := Color(0.9, 0.2, 0.2)
+# accent_interact #5BB8E8 at alpha 0.35 — shown only when stocking cursor matches
+const STOCKING_TINT := Color(91.0 / 255.0, 184.0 / 255.0, 232.0 / 255.0, 0.35)
 
 @export var slot_id: String = ""
 @export var fixture_id: String = ""
 @export var slot_size: String = "standard"
+## Category filter for stocking highlights. Empty string accepts any category.
+@export var accepted_category: String = ""
 
 var _occupied: bool = false
 var _held_item_id: String = ""
@@ -69,6 +76,8 @@ func _ready() -> void:
 	_update_empty_indicator()
 	EventBus.placement_mode_entered.connect(_on_placement_entered)
 	EventBus.placement_mode_exited.connect(_on_placement_exited)
+	EventBus.stocking_cursor_active.connect(_on_stocking_cursor_active)
+	EventBus.stocking_cursor_inactive.connect(_on_stocking_cursor_inactive)
 
 
 ## Returns whether an item is currently placed in this slot.
@@ -225,6 +234,37 @@ func _on_placement_exited() -> void:
 	_placement_active = false
 	if _highlight_active:
 		unhighlight()
+
+
+func _on_stocking_cursor_active(item_category: StringName) -> void:
+	if _occupied or _empty_mesh == null:
+		return
+	if not _accepts_stocking_category(item_category):
+		return
+	_apply_stocking_highlight()
+
+
+func _on_stocking_cursor_inactive() -> void:
+	_clear_stocking_highlight()
+
+
+func _accepts_stocking_category(item_category: StringName) -> bool:
+	if accepted_category.is_empty():
+		return true
+	return accepted_category == String(item_category)
+
+
+func _apply_stocking_highlight() -> void:
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = STOCKING_TINT
+	_empty_mesh.set_surface_override_material(0, mat)
+
+
+func _clear_stocking_highlight() -> void:
+	if _empty_mesh == null:
+		return
+	_empty_mesh.set_surface_override_material(0, null)
 
 
 ## Applies green (empty) or red (occupied) emission highlight.

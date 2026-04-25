@@ -11,15 +11,31 @@ extends RefCounted
 
 
 ## Canonical multiplier slot names, applied in this order when resequencing.
+## rarity: raw rarity tier × difficulty rarity_scale (applied once, before lifecycle).
 ## lifecycle: rental freshness (ultra_new 1.35 / new 1.15 / common 1.0).
 ## condition: item wear state (poor → reduced factor).
-## grade follows base: formal letter-grade (Retro Games) applied before market factors.
-## numeric_grade: ACC 1–10 numeric grade (Sports Cards) applied in the same position.
-## demo_unit sits between event and haggle: floor presence boost before player negotiation.
-## warranty: extended warranty add-on factor injected after haggle for audit trace.
+## grade follows condition: formal letter-grade (Retro Games / Sports Cards).
+## numeric_grade: ACC 1–10 numeric grade (Sports Cards).
+## auth: authentication status multiplier (authenticated items get a bonus).
+## demand: category demand modifier from EconomySystem sales history.
+## drift: per-item random-walk drift factor from EconomySystem.
+## trend: category trend level from MarketTrendSystem.
+## seasonal: spending season × calendar × sport_season × tournament demand.
+## reputation: store reputation tier (auto-injected when absent).
+## meta_shift: meta-shift system multiplier for Pocket Creatures.
+## event: active market event multiplier.
+## test: item test-result multiplier (tested_working / tested_not_working).
+## depreciation: time-based electronics depreciation / appreciation.
+## demo_unit: floor-presence boost before player negotiation.
+## random: checkout offer variance (±15% market noise).
+## sensitivity: customer price-sensitivity discount in checkout offers.
+## haggle: negotiated price ratio (final agreed price / sticker price).
+## warranty: extended warranty add-on factor injected after haggle.
 const CHAIN_ORDER: Array[String] = [
-	"base", "lifecycle", "condition", "grade", "numeric_grade", "seasonal",
-	"reputation", "meta_shift", "event", "demo_unit", "haggle", "warranty",
+	"base", "rarity", "lifecycle", "condition", "grade", "numeric_grade",
+	"auth", "demand", "drift", "trend", "seasonal", "reputation",
+	"meta_shift", "event", "test", "depreciation", "demo_unit",
+	"random", "sensitivity", "haggle", "warranty",
 ]
 
 ## Lifecycle multipliers for rental items by rarity tier (ISSUE-009).

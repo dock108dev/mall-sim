@@ -212,6 +212,18 @@ func get_demo_interest_bonus() -> float:
 	return _demo_interest_bonus
 
 
+## Returns the browse-rate bonus for a demo unit in its category.
+## When instance_id is provided, returns the bonus only if that specific item
+## is currently a demo unit. When empty, returns the bonus if any demo item is
+## active. Returns 0.0 when no qualifying demo item exists.
+func get_demo_browse_bonus(instance_id: String = "") -> float:
+	if instance_id.is_empty():
+		return _demo_interest_bonus if not _demo_item_ids.is_empty() else 0.0
+	if not is_demo_unit(instance_id):
+		return 0.0
+	return _demo_interest_bonus
+
+
 ## Returns the max number of demo units allowed.
 func get_max_demo_units() -> int:
 	return _max_demo_units
@@ -310,6 +322,15 @@ func place_demo_item(instance_id: String) -> bool:
 	EventBus.demo_item_placed.emit(instance_id)
 	EventBus.demo_unit_activated.emit(instance_id, String(item.definition.category))
 	return true
+
+
+## Player-facing entry point for designating an item as a demo unit.
+## Sets the is_demo flag on the inventory item record, records the instance in
+## _demo_item_ids, and emits demo_unit_activated so the designation persists
+## through get_save_data / load_save_data. Delegates to place_demo_item() for
+## station wiring and can_demo_item() eligibility checks.
+func designate_demo(instance_id: String) -> bool:
+	return place_demo_item(instance_id)
 
 
 ## Removes a specific demo item and returns it to backroom.

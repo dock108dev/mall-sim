@@ -52,7 +52,6 @@ The root of `game/content/` also contains several config-oriented JSON files:
 - `market_trends_catalog.json`
 - `meta_shifts.json`
 - `pocket_creatures_cards.json`
-- `tutorial_steps.json`
 - `upgrades.json`
 
 A `localization/` subdirectory is present at the content root but is currently

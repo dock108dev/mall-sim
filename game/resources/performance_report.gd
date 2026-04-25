@@ -33,6 +33,8 @@ extends Resource
 @export var electronics_demo_active: bool = false
 @export var demo_contribution_revenue: float = 0.0
 @export var record_flags: Dictionary = {}
+## Per-store daily revenue breakdown; populated from day_closed signal.
+@export var store_revenue: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -66,6 +68,7 @@ func to_dict() -> Dictionary:
 		"electronics_demo_active": electronics_demo_active,
 		"demo_contribution_revenue": demo_contribution_revenue,
 		"record_flags": record_flags.duplicate(),
+		"store_revenue": store_revenue.duplicate(),
 	}
 
 
@@ -123,4 +126,7 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 	var flags: Variant = data.get("record_flags", {})
 	if flags is Dictionary:
 		report.record_flags = (flags as Dictionary).duplicate()
+	var store_rev: Variant = data.get("store_revenue", {})
+	if store_rev is Dictionary:
+		report.store_revenue = (store_rev as Dictionary).duplicate()
 	return report

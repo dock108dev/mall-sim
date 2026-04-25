@@ -31,7 +31,6 @@ func _ready() -> void:
 	custom_minimum_size.x = CLOSED_WIDTH
 	visible = false
 	_set_hud_root_pass_through(true)
-	EventBus.storefront_clicked.connect(_on_storefront_clicked)
 	EventBus.exit_store_requested.connect(_on_exit_store_requested)
 
 
@@ -102,10 +101,6 @@ func _set_hud_root_pass_through(pass_through: bool) -> void:
 	_hud_root.mouse_filter = (
 		Control.MOUSE_FILTER_IGNORE if pass_through else Control.MOUSE_FILTER_STOP
 	)
-
-
-func _on_storefront_clicked(store_id: StringName) -> void:
-	open_drawer(store_id)
 
 
 func _on_exit_store_requested() -> void:

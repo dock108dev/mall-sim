@@ -32,48 +32,6 @@ func test_ambient_empty_text_is_ignored() -> void:
 	assert_eq(_overlay.get_ambient_card_count(), 0)
 
 
-# ── Secret thread surface ─────────────────────────────────────────────────────
-
-func test_secret_thread_state_change_spawns_card() -> void:
-	EventBus.secret_thread_state_changed.emit(
-		&"hidden_shelf", &"dormant", &"stirring"
-	)
-	assert_eq(
-		_overlay.get_secret_card_count(), 1,
-		"Secret thread signal should spawn one card in the secret stack"
-	)
-
-
-# ── Distinguishable surfaces ──────────────────────────────────────────────────
-
-func test_ambient_and_secret_surfaces_are_distinguishable() -> void:
-	EventBus.ambient_moment_delivered.emit(
-		&"m1", &"toast", "ambient body text", &""
-	)
-	EventBus.secret_thread_state_changed.emit(
-		&"t1", &"a", &"b"
-	)
-	assert_eq(_overlay.get_ambient_card_count(), 1)
-	assert_eq(_overlay.get_secret_card_count(), 1)
-
-	var ambient_card: PanelContainer = (
-		_overlay.get_ambient_stack().get_child(0) as PanelContainer
-	)
-	var secret_card: PanelContainer = (
-		_overlay.get_secret_stack().get_child(0) as PanelContainer
-	)
-	assert_eq(
-		ambient_card.get_meta(&"variant"),
-		MetaNotificationOverlay.AMBIENT_VARIANT,
-		"Ambient card carries the ambient variant tag"
-	)
-	assert_eq(
-		secret_card.get_meta(&"variant"),
-		MetaNotificationOverlay.SECRET_VARIANT,
-		"Secret card carries the secret variant tag"
-	)
-
-
 # ── Input focus (does not steal from stores) ─────────────────────────────────
 
 func test_root_and_stacks_pass_mouse_input() -> void:
@@ -85,9 +43,6 @@ func test_root_and_stacks_pass_mouse_input() -> void:
 	assert_eq(
 		_overlay.get_ambient_stack().mouse_filter, Control.MOUSE_FILTER_IGNORE
 	)
-	assert_eq(
-		_overlay.get_secret_stack().mouse_filter, Control.MOUSE_FILTER_IGNORE
-	)
 
 
 # ── Suppression ───────────────────────────────────────────────────────────────
@@ -95,14 +50,9 @@ func test_root_and_stacks_pass_mouse_input() -> void:
 func test_day_close_suppresses_signals_until_next_day_starts() -> void:
 	EventBus.day_closed.emit(1, {})
 	EventBus.ambient_moment_delivered.emit(&"m", &"toast", "suppressed", &"")
-	EventBus.secret_thread_state_changed.emit(&"t", &"a", &"b")
 	assert_eq(
 		_overlay.get_ambient_card_count(), 0,
 		"Ambient signal during day-close summary must be suppressed"
-	)
-	assert_eq(
-		_overlay.get_secret_card_count(), 0,
-		"Secret signal during day-close summary must be suppressed"
 	)
 
 	EventBus.day_started.emit(2)

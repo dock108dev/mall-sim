@@ -11,10 +11,12 @@ var current_state: State = State.IDLE
 
 var _grid: BuildModeGrid = null
 var _camera_controller: BuildModeCamera = null
+var _drift_camera_controller: BuildModeCamera = null
 var _camera: Camera3D = null
 var _player_node: Node = null
 var _placement_system: FixturePlacementSystem = null
 var _visuals: BuildModeVisuals = null
+var _inside_store: bool = false
 
 var _hovered_cell: Variant = null
 var _selected_fixture_id: String = ""
@@ -34,6 +36,11 @@ func _ready() -> void:
 	EventBus.fixture_removed.connect(_on_fixture_removed)
 	if is_instance_valid(CameraManager.active_camera):
 		_camera = CameraManager.active_camera
+	_drift_camera_controller = BuildModeCamera.new()
+	_drift_camera_controller.name = "BuildModeCameraDrift"
+	add_child(_drift_camera_controller)
+	EventBus.store_entered.connect(_on_store_entered_drift)
+	EventBus.store_exited.connect(_on_store_exited_drift)
 
 
 ## Sets up build mode with required references.
@@ -456,11 +463,37 @@ func _on_active_camera_changed(camera: Camera3D) -> void:
 func _on_build_mode_entered() -> void:
 	if _camera_controller:
 		_camera_controller.transition_to_top_down()
+	if is_instance_valid(_drift_camera_controller):
+		_drift_camera_controller.stop_idle_drift()
 
 
 func _on_build_mode_exited() -> void:
 	if _camera_controller:
 		_camera_controller.transition_to_orbit()
+
+
+func _on_store_entered_drift(store_id: StringName) -> void:
+	_inside_store = true
+	if is_active or not is_instance_valid(_drift_camera_controller):
+		return
+	var pivot: Vector3 = _find_orbit_pivot()
+	var cam: Camera3D = CameraManager.active_camera
+	if cam == null:
+		return
+	_drift_camera_controller.start_idle_drift(pivot, cam, store_id)
+
+
+func _on_store_exited_drift(_store_id: StringName) -> void:
+	_inside_store = false
+	if is_instance_valid(_drift_camera_controller):
+		_drift_camera_controller.stop_idle_drift()
+
+
+func _find_orbit_pivot() -> Vector3:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(&"orbit_pivot")
+	if not nodes.is_empty() and is_instance_valid(nodes[0]):
+		return (nodes[0] as Node3D).global_position
+	return Vector3(0.0, 1.2, 0.0)
 
 
 func _on_fixture_placed(

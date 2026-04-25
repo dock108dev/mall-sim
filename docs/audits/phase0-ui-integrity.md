@@ -1,6 +1,6 @@
 # Phase 0.1 — UI Integrity and SSOT Cleanup
 
-**Status:** In progress
+**Status:** Complete
 **Created:** 2026-04-24
 **Context:** Screenshot evidence (New Game → mall → store click → day close → milestone) showed five independent UI systems claiming the same pixels at the same time. Full analysis in `BRAINDUMP.md`. This doc is the executable checklist for the cleanup.
 

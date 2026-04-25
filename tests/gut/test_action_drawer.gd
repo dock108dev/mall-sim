@@ -173,3 +173,266 @@ func test_emit_actions_registered_reaches_drawer() -> void:
 	await get_tree().process_frame
 	assert_eq(_drawer.get_current_store_id(), StringName("retro_games"))
 	assert_gt(_button_count(), 0)
+
+
+# ── Mode enum ────────────────────────────────────────────────────────────────
+
+
+func test_mode_enum_defines_all_five_modes() -> void:
+	assert_eq(ActionDrawer.Mode.IDLE, 0, "IDLE is 0")
+	assert_eq(ActionDrawer.Mode.HAGGLE, 1, "HAGGLE is 1")
+	assert_eq(ActionDrawer.Mode.REFURB, 2, "REFURB is 2")
+	assert_eq(ActionDrawer.Mode.AUTHENTICATE, 3, "AUTHENTICATE is 3")
+	assert_eq(ActionDrawer.Mode.WARRANTY, 4, "WARRANTY is 4")
+	assert_eq(ActionDrawer.Mode.TRADE, 5, "TRADE is 5")
+
+
+func test_drawer_starts_in_idle_mode() -> void:
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.IDLE)
+
+
+# ── Mode switching via open_mode ─────────────────────────────────────────────
+
+
+func test_open_mode_sets_current_mode() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.HAGGLE)
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.HAGGLE)
+
+
+func test_close_mode_resets_to_idle() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.WARRANTY)
+	_drawer.close_mode()
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.IDLE)
+
+
+func test_open_mode_idle_arg_closes() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.REFURB)
+	_drawer.open_mode(ActionDrawer.Mode.IDLE)
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.IDLE)
+
+
+# ── Mode switching via action_requested ──────────────────────────────────────
+
+
+func _register_store_with_actions(store_id: StringName, action_ids: Array) -> void:
+	var actions: Array = []
+	for aid: StringName in action_ids:
+		actions.append({"id": aid, "label": String(aid), "icon": ""})
+	EventBus.actions_registered.emit(store_id, actions)
+
+
+func test_haggle_action_opens_haggle_mode() -> void:
+	_register_store_with_actions(&"retro_games", [&"haggle"])
+	EventBus.action_requested.emit(&"haggle", &"retro_games")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.HAGGLE)
+
+
+func test_refurbish_action_opens_refurb_mode() -> void:
+	_register_store_with_actions(&"retro_games", [&"refurbish"])
+	EventBus.action_requested.emit(&"refurbish", &"retro_games")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.REFURB)
+
+
+func test_authenticate_action_opens_auth_mode() -> void:
+	_register_store_with_actions(&"sports", [&"authenticate"])
+	EventBus.action_requested.emit(&"authenticate", &"sports")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.AUTHENTICATE)
+
+
+func test_warranty_action_opens_warranty_mode() -> void:
+	_register_store_with_actions(&"electronics", [&"offer_warranty"])
+	EventBus.action_requested.emit(&"offer_warranty", &"electronics")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.WARRANTY)
+
+
+func test_trade_action_opens_trade_mode() -> void:
+	_register_store_with_actions(&"pocket_creatures", [&"open_pack"])
+	EventBus.action_requested.emit(&"open_pack", &"pocket_creatures")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.TRADE)
+
+
+func test_unknown_action_does_not_open_mode() -> void:
+	_register_store_with_actions(&"retro_games", [&"stock"])
+	EventBus.action_requested.emit(&"stock", &"retro_games")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.IDLE)
+
+
+func test_wrong_store_action_does_not_open_mode() -> void:
+	_register_store_with_actions(&"retro_games", [&"haggle"])
+	EventBus.action_requested.emit(&"haggle", &"other_store")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.IDLE)
+
+
+func test_store_exited_closes_active_mode() -> void:
+	_register_store_with_actions(&"retro_games", [&"refurbish"])
+	EventBus.action_requested.emit(&"refurbish", &"retro_games")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.REFURB)
+	EventBus.store_exited.emit(&"retro_games")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.IDLE)
+
+
+# ── EventBus signal emission ──────────────────────────────────────────────────
+
+
+func test_open_mode_emits_action_drawer_opened() -> void:
+	var captured: Array = []
+	var handler: Callable = func(mode: int) -> void:
+		captured.append(mode)
+	EventBus.action_drawer_opened.connect(handler)
+	_drawer.open_mode(ActionDrawer.Mode.HAGGLE)
+	EventBus.action_drawer_opened.disconnect(handler)
+	assert_eq(captured.size(), 1)
+	assert_eq(captured[0], ActionDrawer.Mode.HAGGLE as int)
+
+
+func test_close_mode_emits_action_drawer_closed() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.REFURB)
+	var captured: Array = []
+	var handler: Callable = func() -> void:
+		captured.append(true)
+	EventBus.action_drawer_closed.connect(handler)
+	_drawer.close_mode()
+	EventBus.action_drawer_closed.disconnect(handler)
+	assert_eq(captured.size(), 1)
+
+
+func test_haggle_accept_emits_player_accepted_signal() -> void:
+	_register_store_with_actions(&"retro_games", [&"haggle"])
+	_drawer.open_mode(ActionDrawer.Mode.HAGGLE)
+	var captured: Array = []
+	var handler: Callable = func() -> void:
+		captured.append(true)
+	EventBus.haggle_player_accepted.connect(handler)
+	_drawer._on_haggle_accept()
+	EventBus.haggle_player_accepted.disconnect(handler)
+	assert_eq(captured.size(), 1, "Accept should emit haggle_player_accepted")
+	assert_eq(_drawer.get_current_mode(), ActionDrawer.Mode.IDLE)
+
+
+func test_haggle_decline_emits_player_declined_signal() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.HAGGLE)
+	var captured: Array = []
+	var handler: Callable = func() -> void:
+		captured.append(true)
+	EventBus.haggle_player_declined.connect(handler)
+	_drawer._on_haggle_decline()
+	EventBus.haggle_player_declined.disconnect(handler)
+	assert_eq(captured.size(), 1, "Decline should emit haggle_player_declined")
+
+
+func test_haggle_counter_emits_player_countered_signal() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.HAGGLE)
+	var captured_price: Array = []
+	var handler: Callable = func(price: float) -> void:
+		captured_price.append(price)
+	EventBus.haggle_player_countered.connect(handler)
+	_drawer._on_haggle_counter()
+	EventBus.haggle_player_countered.disconnect(handler)
+	assert_eq(captured_price.size(), 1, "Counter should emit haggle_player_countered")
+
+
+func test_warranty_accept_emits_player_accepted_signal() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.WARRANTY)
+	var captured: Array = []
+	var handler: Callable = func(_item_id: String, _tier_id: String) -> void:
+		captured.append(true)
+	EventBus.warranty_player_accepted.connect(handler)
+	_drawer._on_warranty_accept()
+	EventBus.warranty_player_accepted.disconnect(handler)
+	assert_eq(captured.size(), 1, "Warranty accept should emit warranty_player_accepted")
+
+
+func test_warranty_decline_emits_player_declined_signal() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.WARRANTY)
+	var captured: Array = []
+	var handler: Callable = func(_item_id: String) -> void:
+		captured.append(true)
+	EventBus.warranty_player_declined.connect(handler)
+	_drawer._on_warranty_decline()
+	EventBus.warranty_player_declined.disconnect(handler)
+	assert_eq(captured.size(), 1, "Warranty decline should emit warranty_player_declined")
+
+
+func test_auth_tier_selected_emits_submitted_signal() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.AUTHENTICATE)
+	var captured: Array = []
+	var handler: Callable = func(_item_id: String, tier: int) -> void:
+		captured.append(tier)
+	EventBus.authentication_player_submitted.connect(handler)
+	_drawer._on_auth_tier_selected(1)
+	EventBus.authentication_player_submitted.disconnect(handler)
+	assert_eq(captured.size(), 1)
+	assert_eq(captured[0], 1, "Tier 1 should be emitted")
+
+
+func test_trade_accept_emits_player_accepted_signal() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.TRADE)
+	var captured: Array = []
+	var handler: Callable = func() -> void:
+		captured.append(true)
+	EventBus.trade_player_accepted.connect(handler)
+	_drawer._on_trade_accept()
+	EventBus.trade_player_accepted.disconnect(handler)
+	assert_eq(captured.size(), 1, "Trade accept should emit trade_player_accepted")
+
+
+func test_trade_decline_emits_player_declined_signal() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.TRADE)
+	var captured: Array = []
+	var handler: Callable = func() -> void:
+		captured.append(true)
+	EventBus.trade_player_declined.connect(handler)
+	_drawer._on_trade_decline()
+	EventBus.trade_player_declined.disconnect(handler)
+	assert_eq(captured.size(), 1, "Trade decline should emit trade_player_declined")
+
+
+func test_refurb_start_emits_queued_signal() -> void:
+	_register_store_with_actions(&"retro_games", [&"refurbish"])
+	_drawer.open_mode(ActionDrawer.Mode.REFURB)
+	var captured: Array = []
+	var handler: Callable = func(store_id: StringName) -> void:
+		captured.append(store_id)
+	EventBus.refurb_player_queued.connect(handler)
+	_drawer._on_refurb_start()
+	EventBus.refurb_player_queued.disconnect(handler)
+	assert_eq(captured.size(), 1)
+	assert_eq(captured[0], StringName("retro_games"))
+
+
+# ── Haggle negotiation_started opens HAGGLE mode ─────────────────────────────
+
+
+func test_haggle_negotiation_started_opens_haggle_mode() -> void:
+	EventBus.haggle_negotiation_started.emit(
+		"Widget", "Good", 20.0, 15.0, 3, 10.0
+	)
+	assert_eq(
+		_drawer.get_current_mode(), ActionDrawer.Mode.HAGGLE,
+		"haggle_negotiation_started should switch to HAGGLE mode"
+	)
+
+
+func test_haggle_completed_closes_haggle_mode() -> void:
+	_drawer.open_mode(ActionDrawer.Mode.HAGGLE)
+	EventBus.haggle_completed.emit(&"retro_games", &"item_1", 18.0, 20.0, true, 2)
+	assert_eq(
+		_drawer.get_current_mode(), ActionDrawer.Mode.IDLE,
+		"haggle_completed should close to IDLE"
+	)
+
+
+func test_warranty_offer_presented_opens_warranty_mode() -> void:
+	EventBus.warranty_offer_presented.emit("item_electronics_1")
+	assert_eq(
+		_drawer.get_current_mode(), ActionDrawer.Mode.WARRANTY,
+		"warranty_offer_presented should open WARRANTY mode"
+	)
+
+
+func test_auth_dialog_requested_opens_authenticate_mode() -> void:
+	EventBus.authentication_dialog_requested.emit("card_001")
+	assert_eq(
+		_drawer.get_current_mode(), ActionDrawer.Mode.AUTHENTICATE,
+		"authentication_dialog_requested should open AUTHENTICATE mode"
+	)

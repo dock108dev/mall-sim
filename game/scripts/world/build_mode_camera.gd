@@ -1,4 +1,5 @@
-## Handles camera transitions between orbit and top-down orthographic for build mode.
+## Handles camera transitions between orbit and top-down orthographic for build mode,
+## and ambient idle drift for store cameras (ISSUE-003 Model A).
 class_name BuildModeCamera
 extends Node
 
@@ -9,6 +10,13 @@ const ZOOM_MIN: float = 3.0
 const ZOOM_MAX: float = 15.0
 const ZOOM_STEP: float = 1.0
 const PAN_SPEED: float = 0.02
+## Orbit period in seconds for idle drift.
+const DRIFT_PERIOD: float = 20.0
+## XZ orbital radius in metres for idle drift.
+const DRIFT_RADIUS: float = 0.75
+## Vertical bob amplitude in metres (≤ 0.2 per spec).
+const DRIFT_BOB_AMP: float = 0.15
+
 var is_transitioning: bool = false
 
 var _camera: Camera3D = null
@@ -24,6 +32,10 @@ var _target_center: Vector3 = Vector3.ZERO
 var _store_bounds_min: Vector3 = Vector3.ZERO
 var _store_bounds_max: Vector3 = Vector3.ZERO
 var _is_top_down: bool = false
+
+var _is_drifting: bool = false
+var _drift_time: float = 0.0
+var _drift_pivot: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
@@ -191,3 +203,40 @@ func _kill_tween() -> void:
 
 func _on_active_camera_changed(camera: Camera3D) -> void:
 	update_camera(camera)
+
+
+## Starts ambient idle drift: camera slowly arcs around pivot at DRIFT_RADIUS,
+## with a sine-wave vertical bob. Activates the camera via CameraAuthority.
+## Pure ambient — no input handling.
+func start_idle_drift(pivot: Vector3, camera: Camera3D, source: StringName) -> void:
+	if camera == null or not is_instance_valid(camera):
+		return
+	_camera = camera
+	_drift_pivot = pivot
+	_drift_time = 0.0
+	_is_drifting = true
+	CameraAuthority.request_current(camera, source)
+	_apply_drift_position()
+
+
+## Stops the ambient idle drift.
+func stop_idle_drift() -> void:
+	_is_drifting = false
+
+
+func _process(delta: float) -> void:
+	if not _is_drifting or is_transitioning or not is_instance_valid(_camera):
+		return
+	_drift_time += delta
+	_apply_drift_position()
+
+
+func _apply_drift_position() -> void:
+	if not is_instance_valid(_camera):
+		return
+	var theta: float = _drift_time * (TAU / DRIFT_PERIOD)
+	var x: float = _drift_pivot.x + DRIFT_RADIUS * cos(theta)
+	var z: float = _drift_pivot.z + DRIFT_RADIUS * sin(theta)
+	var y: float = _drift_pivot.y + DRIFT_BOB_AMP * sin(theta * 2.0)
+	_camera.global_position = Vector3(x, y, z)
+	_camera.look_at(_drift_pivot, Vector3.UP)

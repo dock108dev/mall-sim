@@ -32,6 +32,8 @@ This is the active project documentation set for Mallcore Sim.
 - [ADR-0004: Electronics Scope](decisions/0004-electronics-scope.md)
 - [ADR-0005: Sports Memorabilia Authentication](decisions/0005-sports-memorabilia-authentication.md)
 - [ADR-0006: Pocket Creatures Trade](decisions/0006-pocket-creatures-trade.md)
+- [ADR-0007: Remove Sneaker Citadel](decisions/0007-remove-sneaker-citadel.md) -
+  shipping roster fixed at five stores; Sneaker Citadel removed.
 
 ## Research
 

@@ -18,6 +18,59 @@ const GRADING_HINT_ACCURACY: float = 0.7
 ## Reputation magnitude deducted when a fake is sold as authentic.
 const FAKE_SALE_REPUTATION_PENALTY: float = -5.0
 
+## Grade states for the CARB (Certified Artifact Rating Bureau) authentication flow.
+## Grade 6 is intentionally absent — parodies real grading services (PSA/BGS).
+enum AuthGrade {
+	COUNTERFEIT = 0,
+	AUTHENTIC_RAW = 1,
+	POOR = 2,
+	GOOD = 3,
+	VERY_GOOD = 4,
+	EXCELLENT = 5,
+	NEAR_MINT = 7,
+	MINT = 8,
+	GEM_MINT = 9,
+	PRISTINE = 10,
+}
+
+## Service tier chosen at CARB submission time.
+enum AuthTier { ECONOMY = 0, EXPRESS = 1, PREMIUM = 2 }
+
+## Value multiplier applied to base_price after CARB authentication resolves.
+const CARB_GRADE_MULTIPLIERS: Dictionary = {
+	0: 0.0,    # COUNTERFEIT
+	1: 0.6,    # AUTHENTIC_RAW
+	2: 0.8,    # POOR
+	3: 1.0,    # GOOD
+	4: 1.35,   # VERY_GOOD
+	5: 1.75,   # EXCELLENT
+	7: 2.8,    # NEAR_MINT
+	8: 4.5,    # MINT
+	9: 9.0,    # GEM_MINT
+	10: 22.0,  # PRISTINE
+}
+
+## Authentication fee rate as fraction of base_value per AuthTier int key.
+const AUTH_TIER_RATES: Dictionary = {0: 0.08, 1: 0.18, 2: 0.35}
+const AUTH_MIN_FEE: float = 50.0
+const AUTH_MAX_FEE: float = 2000.0
+
+## Maps item.condition to CARB condition_tier for grade probability lookup.
+const _CONDITION_TO_CARB_TIER: Dictionary = {
+	"mint": "mint_plus", "near_mint": "near_mint",
+	"good": "lightly_played", "fair": "played", "poor": "damaged",
+}
+
+## Grade probability tables by condition_tier; each entry is [grade_value, weight].
+## Weights sum to 100. Provenance halves the COUNTERFEIT (grade 0) weight at roll time.
+const _CARB_GRADE_TABLES: Dictionary = {
+	"damaged":       [[0,20],[1,15],[2,20],[3,20],[4,10],[5,10],[7,5],[8,0],[9,0],[10,0]],
+	"played":        [[0,8],[1,10],[2,15],[3,15],[4,18],[5,17],[7,15],[8,2],[9,0],[10,0]],
+	"lightly_played":[[0,3],[1,5],[2,5],[3,5],[4,15],[5,15],[7,35],[8,15],[9,2],[10,0]],
+	"near_mint":     [[0,1],[1,3],[2,2],[3,3],[4,5],[5,5],[7,25],[8,35],[9,18],[10,3]],
+	"mint_plus":     [[0,0],[1,1],[2,1],[3,1],[4,2],[5,3],[7,10],[8,20],[9,45],[10,17]],
+}
+
 ## Grade ranges per condition for the ACC numeric grading RNG.
 ## Format: [min_grade, max_grade] (inclusive, 1–10 scale).
 const _CONDITION_GRADE_RANGES: Dictionary = {
@@ -38,6 +91,12 @@ var _economy_system: EconomySystem = null
 var _pending_grades: Dictionary = {}
 ## Accumulates grades returned on the current day for the grading_day_summary emit.
 var _today_returned: Array = []
+## Tracks in-progress CARB authentication submissions. Key: item_id String.
+var _pending_carb_auths: Dictionary = {}
+## Local cache of ItemInstance references for items in the sports store.
+## Kept alive so _check_fake_sold_as_authentic can resolve an item even after
+## InventorySystem.remove_item has erased it from _items on the same signal.
+var _item_state_cache: Dictionary = {}
 
 
 ## Injects the EconomySystem reference so grading-hint fees can be deducted.
@@ -50,6 +109,7 @@ func _ready() -> void:
 	super._ready()
 	_load_season_boost()
 	EventBus.customer_purchased.connect(_on_customer_purchased)
+	EventBus.inventory_updated.connect(_on_inventory_updated)
 	EventBus.market_event_triggered.connect(_on_market_event)
 	EventBus.provenance_accepted.connect(_on_provenance_accepted)
 	EventBus.provenance_rejected.connect(_on_provenance_rejected)
@@ -92,7 +152,16 @@ func get_item_price(item_id: StringName) -> float:
 		)
 		return 0.0
 	var multipliers: Array = []
-	if item.numeric_grade >= 1:
+	if item.authentication_status == "carb_graded":
+		var grade_factor: float = float(CARB_GRADE_MULTIPLIERS.get(item.numeric_grade, 0.0))
+		var grade_label: String = _carb_grade_label(item.numeric_grade)
+		multipliers.append({
+			"slot": "carb_grade",
+			"label": "CARB Grade",
+			"factor": grade_factor,
+			"detail": "CARB %s" % grade_label,
+		})
+	elif item.numeric_grade >= 1:
 		# ACC numeric grade supersedes all other condition/grade multipliers.
 		var grade_factor: float = PriceResolver.NUMERIC_GRADE_MULTIPLIERS.get(
 			item.numeric_grade, 1.0
@@ -154,6 +223,7 @@ func get_save_data() -> Dictionary:
 		"season_cycle": _season_cycle.get_save_data(),
 		"season_boost_active": _season_boost_active,
 		"pending_grades": _pending_grades.duplicate(),
+		"pending_carb_auths": _pending_carb_auths.duplicate(true),
 	}
 
 
@@ -168,6 +238,9 @@ func load_save_data(data: Dictionary) -> void:
 	if saved_pending is Dictionary:
 		_pending_grades = (saved_pending as Dictionary).duplicate()
 		_restore_pending_grade_locks()
+	var saved_carb: Variant = data.get("pending_carb_auths", {})
+	if saved_carb is Dictionary:
+		_pending_carb_auths = (saved_carb as Dictionary).duplicate(true)
 
 
 func _defer_store_entered(store_id: StringName) -> void:
@@ -266,6 +339,7 @@ func _roll_authenticity_hint(item: ItemInstance) -> String:
 func _on_day_started(day: int) -> void:
 	_season_cycle.process_day(day)
 	_deliver_pending_grades(day)
+	_process_carb_reveals(day)
 
 
 func _on_day_ended(_day: int) -> void:
@@ -289,6 +363,13 @@ func _on_store_exited(store_id: StringName) -> void:
 	EventBus.store_closed.emit(String(STORE_ID))
 
 
+func _on_inventory_updated(store_id: StringName) -> void:
+	if store_id != STORE_ID or not _inventory_system:
+		return
+	for item: ItemInstance in _inventory_system.get_items_for_store(String(STORE_ID)):
+		_item_state_cache[String(item.instance_id)] = item
+
+
 ## Updates item condition and recalculates price via PriceResolver.
 func _on_card_condition_selected(
 	item_id: StringName, condition: String
@@ -308,9 +389,19 @@ func _on_card_condition_selected(
 	EventBus.price_set.emit(String(item_id), price)
 
 
-## Returns the season demand modifier for a given category.
-func _get_season_modifier(_category: StringName) -> float:
-	return 1.0
+## Returns a season-based demand modifier for the given category.
+## Non-boosted categories always return 1.0; boosted categories follow a
+## sports-calendar curve derived from the current in-game month (30 days/month).
+func _get_season_modifier(category: StringName) -> float:
+	if String(category) not in BOOSTED_CATEGORIES:
+		return 1.0
+	var day: int = GameManager.get_current_day()
+	var month: int = ((day - 1) / 30) % 12 + 1
+	const MONTH_MODIFIERS: Dictionary = {
+		1: 1.40, 2: 1.10, 3: 0.85, 4: 0.80, 5: 0.80, 6: 0.85,
+		7: 0.90, 8: 0.95, 9: 1.25, 10: 1.25, 11: 1.35, 12: 1.65,
+	}
+	return MONTH_MODIFIERS.get(month, 1.0)
 
 
 func _on_customer_purchased(
@@ -331,6 +422,8 @@ func _check_fake_sold_as_authentic(
 	if not _inventory_system:
 		return
 	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item:
+		item = _item_state_cache.get(String(item_id), null) as ItemInstance
 	if not item:
 		return
 	if item.true_authenticity.is_empty():
@@ -683,6 +776,244 @@ func _add_starter_item(item_data: Dictionary) -> void:
 			ItemInstance.create_from_definition(def, condition)
 		)
 		_inventory_system.add_item(STORE_ID, instance)
+
+
+## Returns the CARB display label for an AuthGrade int value.
+func _carb_grade_label(grade: int) -> String:
+	const LABELS: Dictionary = {
+		0: "COUNTERFEIT", 1: "Authentic (Ungraded)",
+		2: "CARB 2 — Poor", 3: "CARB 3 — Good",
+		4: "CARB 4 — Very Good", 5: "CARB 5 — Excellent",
+		7: "CARB 7 — Near Mint", 8: "CARB 8 — Mint",
+		9: "CARB 9 — Gem Mint", 10: "CARB 10 — Pristine",
+	}
+	return LABELS.get(grade, "Grade %d" % grade)
+
+
+## Returns the bracket hint text shown to the player on PREMIUM submissions.
+func _bracket_display_text(bracket: String) -> String:
+	match bracket:
+		"BRACKET_LOW":
+			return "Our experts note significant concerns."
+		"BRACKET_MID":
+			return "Solid specimen. Moderate condition."
+		"BRACKET_HIGH":
+			return "Strong condition. Collectors will notice."
+		"BRACKET_ELITE":
+			return "Exceptional. One of the finest examples seen."
+	return "Review in progress."
+
+
+## Computes the CARB authentication fee for an item at the chosen tier.
+func _compute_auth_cost(tier: int, base_value: float) -> float:
+	var rate: float = float(AUTH_TIER_RATES.get(tier, 0.08))
+	return clampf(base_value * rate, AUTH_MIN_FEE, AUTH_MAX_FEE)
+
+
+## Submits an item to CARB for multi-state authentication grading.
+## Deducts the authentication fee via EconomySystem (if set) before accepting.
+## Emits EventBus.store_auth_started on success; returns false on any failure.
+func submit_for_carb_authentication(item_id: StringName, tier: int) -> bool:
+	if not _inventory_system:
+		push_warning(
+			"SportsMemorabiliaController: InventorySystem required for CARB auth"
+		)
+		return false
+	var item: ItemInstance = _inventory_system.get_item(String(item_id))
+	if not item or not item.definition:
+		push_warning(
+			"SportsMemorabiliaController: item '%s' not found for CARB auth" % item_id
+		)
+		return false
+	if item.authentication_status == "carb_graded":
+		push_warning(
+			"SportsMemorabiliaController: item '%s' already CARB-graded" % item_id
+		)
+		return false
+	if _pending_carb_auths.has(String(item_id)):
+		push_warning(
+			"SportsMemorabiliaController: item '%s' already pending CARB auth" % item_id
+		)
+		return false
+	var cost: float = _compute_auth_cost(tier, item.definition.base_price)
+	if _economy_system and not _economy_system.deduct_cash(
+		cost, "CARB auth: %s" % item.definition.item_name
+	):
+		EventBus.notification_requested.emit(
+			"Insufficient funds for CARB authentication ($%.2f)" % cost
+		)
+		return false
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(
+		"carb_roll:" + String(item_id) + ":" + str(GameManager.get_current_day())
+	)
+	var final_grade: int = _roll_carb_grade(item, rng)
+	var bracket: String = _classify_carb_bracket(final_grade)
+	var reveal_schedule: Array = _build_carb_reveal_schedule(tier, bracket)
+	_pending_carb_auths[String(item_id)] = {
+		"item_id": String(item_id),
+		"tier": tier,
+		"cost_paid": cost,
+		"submission_day": GameManager.get_current_day(),
+		"final_grade": final_grade,
+		"bracket": bracket,
+		"reveal_schedule": reveal_schedule,
+		"revealed_indices": [],
+	}
+	EventBus.store_auth_started.emit(item_id, tier, cost)
+	EventBus.notification_requested.emit(
+		"CARB submission accepted: %s ($%.2f)" % [item.definition.item_name, cost]
+	)
+	return true
+
+
+## Rolls the final CARB grade from the condition-tier probability table.
+## Uses a seeded RNG so the result is deterministic per item+day; rolled at
+## submission time and hidden until reveals fire.
+func _roll_carb_grade(item: ItemInstance, rng: RandomNumberGenerator) -> int:
+	var tier: String = _CONDITION_TO_CARB_TIER.get(item.condition, "lightly_played")
+	var base_table: Variant = (
+		_CARB_GRADE_TABLES.get(tier, _CARB_GRADE_TABLES["lightly_played"])
+	)
+	var has_provenance: bool = (
+		item.definition != null and item.definition.provenance_score >= 0.7
+	)
+	var grades: Array[int] = []
+	var weights: Array[int] = []
+	var total_weight: int = 0
+	for entry: Variant in (base_table as Array):
+		var pair: Array = entry as Array
+		var grade: int = int(pair[0])
+		var weight: int = int(pair[1])
+		if grade == AuthGrade.COUNTERFEIT and has_provenance:
+			weight = maxi(weight / 2, 0)
+		grades.append(grade)
+		weights.append(weight)
+		total_weight += weight
+	if total_weight == 0:
+		return AuthGrade.GOOD
+	var roll: int = rng.randi_range(0, total_weight - 1)
+	var cumulative: int = 0
+	for i: int in range(weights.size()):
+		cumulative += weights[i]
+		if roll < cumulative:
+			return grades[i]
+	return grades[-1]
+
+
+## Maps a CARB grade int to its bracket label for the partial-information reveal.
+func _classify_carb_bracket(grade: int) -> String:
+	if grade <= 3:
+		return "BRACKET_LOW"
+	if grade <= 5:
+		return "BRACKET_MID"
+	if grade <= 8:
+		return "BRACKET_HIGH"
+	return "BRACKET_ELITE"
+
+
+## Builds the reveal schedule for a CARB submission based on the chosen tier.
+## Economy: binary reveal at day 3, final at day 5.
+## Express: binary at day 1, final at day 2.
+## Premium: bracket+binary at day 1, final at day 2.
+func _build_carb_reveal_schedule(tier: int, bracket: String) -> Array:
+	match tier:
+		AuthTier.EXPRESS:
+			return [
+				{"day_offset": 1, "reveal_type": "binary"},
+				{"day_offset": 2, "reveal_type": "final_grade"},
+			]
+		AuthTier.PREMIUM:
+			return [
+				{"day_offset": 1, "reveal_type": "bracket", "bracket": bracket},
+				{"day_offset": 1, "reveal_type": "binary"},
+				{"day_offset": 2, "reveal_type": "final_grade"},
+			]
+		_:  # ECONOMY default
+			return [
+				{"day_offset": 3, "reveal_type": "binary"},
+				{"day_offset": 5, "reveal_type": "final_grade"},
+			]
+
+
+## Processes pending CARB reveals for the current day.
+## Called from _on_day_started so reveals fire at the top of each new day.
+func _process_carb_reveals(day: int) -> void:
+	var to_finalize: Array[String] = []
+	for item_id: String in _pending_carb_auths:
+		var auth: Dictionary = _pending_carb_auths[item_id]
+		var elapsed: int = day - int(auth.get("submission_day", day))
+		var schedule: Array = auth.get("reveal_schedule", [])
+		var revealed: Array = auth.get("revealed_indices", [])
+		for i: int in range(schedule.size()):
+			if i in revealed:
+				continue
+			var event: Dictionary = schedule[i] as Dictionary
+			if elapsed >= int(event.get("day_offset", 999)):
+				revealed.append(i)
+				auth["revealed_indices"] = revealed
+				_emit_carb_reveal(item_id, auth, event)
+				if event.get("reveal_type", "") == "final_grade":
+					to_finalize.append(item_id)
+	for item_id: String in to_finalize:
+		_finalize_carb_authentication(item_id)
+
+
+## Emits the appropriate notification for a single CARB reveal event.
+func _emit_carb_reveal(
+	item_id: String, auth: Dictionary, event: Dictionary
+) -> void:
+	var final_grade: int = int(auth.get("final_grade", AuthGrade.GOOD))
+	var reveal_type: String = event.get("reveal_type", "")
+	var item: ItemInstance = (
+		_inventory_system.get_item(item_id) if _inventory_system else null
+	)
+	var name_str: String = (
+		item.definition.item_name if item and item.definition else item_id
+	)
+	match reveal_type:
+		"binary":
+			var authentic: bool = final_grade != AuthGrade.COUNTERFEIT
+			EventBus.notification_requested.emit(
+				"CARB update for %s: %s" % [
+					name_str,
+					"AUTHENTIC — awaiting final grade." if authentic
+					else "WARNING: COUNTERFEIT detected.",
+				]
+			)
+		"bracket":
+			var bracket: String = event.get("bracket", auth.get("bracket", ""))
+			EventBus.notification_requested.emit(
+				"CARB assessment for %s: %s" % [name_str, _bracket_display_text(bracket)]
+			)
+
+
+## Applies the final CARB grade to the item and emits store_auth_resolved.
+func _finalize_carb_authentication(item_id: String) -> void:
+	var auth: Dictionary = _pending_carb_auths.get(item_id, {})
+	if auth.is_empty():
+		return
+	var grade: int = int(auth.get("final_grade", AuthGrade.GOOD))
+	if _inventory_system:
+		var item: ItemInstance = _inventory_system.get_item(item_id)
+		if item:
+			item.authentication_status = "carb_graded"
+			item.numeric_grade = grade
+			item.is_graded = true
+			var base_val: float = item.definition.base_price if item.definition else 0.0
+			var final_val: float = (
+				base_val * float(CARB_GRADE_MULTIPLIERS.get(grade, 0.0))
+			)
+			EventBus.store_auth_resolved.emit(StringName(item_id), grade, final_val)
+			EventBus.toast_requested.emit(
+				"CARB Final Grade: %s — %s" % [
+					item.definition.item_name if item.definition else item_id,
+					_carb_grade_label(grade),
+				],
+				&"sports",
+				4.0,
+			)
+	_pending_carb_auths.erase(item_id)
 
 
 func _build_definition_from_entry(

@@ -298,3 +298,71 @@ func test_rental_income_signal_emitted() -> void:
 		0.001,
 		"item_rented should carry the correct rental fee amount"
 	)
+
+
+# ── ISSUE-007 store_rental_* signal contracts ──────────────────────────────────
+
+
+func test_store_rental_started_emitted_with_correct_fields() -> void:
+	var item: ItemInstance = _make_item("tape_srs")
+	var checkout_day: int = 1
+	var signals: Array[Dictionary] = []
+	var capture: Callable = func(
+		item_id: String, customer_id: String, due_day: int
+	) -> void:
+		signals.append({"item_id": item_id, "customer_id": customer_id, "due_day": due_day})
+	EventBus.store_rental_started.connect(capture)
+	_controller.process_rental(
+		item.instance_id, "vhs_tapes", "three_day", 2.99, checkout_day, "cust_x"
+	)
+	EventBus.store_rental_started.disconnect(capture)
+	assert_eq(signals.size(), 1, "store_rental_started must fire once per checkout")
+	assert_eq(
+		signals[0]["item_id"], item.instance_id,
+		"store_rental_started item_id must match the rented copy"
+	)
+	assert_eq(
+		signals[0]["customer_id"], "cust_x",
+		"store_rental_started customer_id must match"
+	)
+	assert_gt(
+		int(signals[0]["due_day"]), checkout_day,
+		"store_rental_started due_day must be after checkout_day"
+	)
+
+
+func test_store_rental_returned_emitted_on_return() -> void:
+	var item: ItemInstance = _make_item("tape_srr")
+	var checkout_day: int = 1
+	_controller.process_rental(item.instance_id, "vhs_tapes", "three_day", 2.99, checkout_day)
+	var return_day: int = checkout_day + _standard_rental_period_days
+	var signals: Array[Dictionary] = []
+	var capture: Callable = func(item_id: String, _late_days: int) -> void:
+		signals.append({"item_id": item_id})
+	EventBus.store_rental_returned.connect(capture)
+	seed(42)
+	_controller._on_day_started(return_day)
+	EventBus.store_rental_returned.disconnect(capture)
+	assert_eq(signals.size(), 1, "store_rental_returned must fire once when item is returned")
+	assert_eq(
+		signals[0]["item_id"], item.instance_id,
+		"store_rental_returned item_id must match the returned copy"
+	)
+
+
+func test_store_rental_overdue_emitted_at_day_transition() -> void:
+	var item: ItemInstance = _make_item("tape_sro")
+	var checkout_day: int = 1
+	_controller.process_rental(item.instance_id, "vhs_tapes", "three_day", 2.99, checkout_day)
+	var return_day: int = checkout_day + _standard_rental_period_days
+	var signals: Array[Dictionary] = []
+	var capture: Callable = func(customer_id: String, item_id: String) -> void:
+		signals.append({"customer_id": customer_id, "item_id": item_id})
+	EventBus.store_rental_overdue.connect(capture)
+	_controller._on_day_started(return_day + _grace_period_days + 1)
+	EventBus.store_rental_overdue.disconnect(capture)
+	assert_eq(signals.size(), 1, "store_rental_overdue must fire once per overdue item at day transition")
+	assert_eq(
+		signals[0]["item_id"], item.instance_id,
+		"store_rental_overdue item_id must match the overdue copy"
+	)

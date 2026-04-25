@@ -31,7 +31,6 @@ func _build_stats(overrides: Dictionary) -> Dictionary:
 		"satisfaction_ratio": 0.0,
 		"max_reputation_tier": 0.0,
 		"final_reputation_tier": 0.0,
-		"secret_threads_completed": 0.0,
 		"haggle_attempts": 0.0,
 		"haggle_never_used": 1.0,
 		"days_near_bankruptcy": 0.0,
@@ -39,7 +38,6 @@ func _build_stats(overrides: Dictionary) -> Dictionary:
 		"market_events_survived": 0.0,
 		"unique_store_types_owned": 0.0,
 		"trigger_type_bankruptcy": 0.0,
-		"ghost_tenant_thread_completed": 0.0,
 	}
 	for key: String in overrides:
 		base[key] = overrides[key]
@@ -55,20 +53,6 @@ func _load_stats(overrides: Dictionary) -> void:
 ## and no higher-priority ending.
 func _ending_cases() -> Array[Dictionary]:
 	return [
-		{
-			"id": "the_mall_between_the_walls",
-			"stats": {
-				"ghost_tenant_thread_completed": 1.0,
-			},
-		},
-		{
-			"id": "the_mall_legend_redux",
-			"stats": {
-				"secret_threads_completed": 4.0,
-				"cumulative_revenue": 25000.0,
-				"ghost_tenant_thread_completed": 0.0,
-			},
-		},
 		{
 			"id": "lights_out",
 			"stats": {

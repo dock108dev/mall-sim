@@ -520,18 +520,3 @@ func test_load_definitions_uses_content_registry() -> void:
 	assert_eq(_sys._moment_definitions[0].category, "any")
 
 
-func test_secret_thread_category_is_not_auto_scheduled() -> void:
-	var def: AmbientMomentDefinition = _make_def({
-		"id": "secret_only",
-		"trigger_category": "random_chance",
-		"trigger_value": "1.0",
-	})
-	def.category = "secret_thread"
-	_sys._moment_definitions = [def]
-	_sys._state = AmbientMomentsSystem.State.MONITORING
-	watch_signals(EventBus)
-
-	_sys._evaluate_moments(9)
-
-	assert_signal_not_emitted(EventBus, "ambient_moment_queued")
-	assert_signal_not_emitted(EventBus, "ambient_moment_delivered")

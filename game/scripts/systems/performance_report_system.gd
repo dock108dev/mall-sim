@@ -49,6 +49,7 @@ func initialize() -> void:
 	_load_day_beats()
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.day_ended.connect(_on_day_ended)
+	EventBus.day_closed.connect(_on_day_closed_store_revenue)
 	EventBus.transaction_completed.connect(_on_transaction_completed)
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.customer_purchased.connect(_on_customer_purchased)
@@ -71,6 +72,24 @@ func initialize() -> void:
 	EventBus.daily_financials_snapshot.connect(
 		_on_daily_financials_snapshot
 	)
+
+
+## Returns the report with the highest revenue across all history.
+## Returns null if history is empty.
+func get_best_day_report() -> PerformanceReport:
+	var best: PerformanceReport = null
+	for report: PerformanceReport in _history:
+		if best == null or report.revenue > best.revenue:
+			best = report
+	return best
+
+
+## Returns the most recent `count` reports, sorted oldest to newest.
+func get_recent_history(count: int) -> Array[PerformanceReport]:
+	var sorted: Array[PerformanceReport] = get_history()
+	if sorted.size() <= count:
+		return sorted
+	return sorted.slice(sorted.size() - count)
 
 
 func get_history() -> Array[PerformanceReport]:
@@ -601,6 +620,19 @@ func _tier_name(tier: int) -> String:
 		3:
 			return "Legendary"
 	return "Unremarkable"
+
+
+## Patches the most recent history entry with per-store revenue from the
+## day_closed payload. Called after day_ended so the report already exists.
+func _on_day_closed_store_revenue(day: int, summary: Dictionary) -> void:
+	if _history.is_empty():
+		return
+	var last: PerformanceReport = _history[_history.size() - 1]
+	if last.day != day:
+		return
+	var store_rev: Variant = summary.get("store_revenue", {})
+	if store_rev is Dictionary:
+		last.store_revenue = (store_rev as Dictionary).duplicate()
 
 
 func _apply_record_flags(report: PerformanceReport) -> void:

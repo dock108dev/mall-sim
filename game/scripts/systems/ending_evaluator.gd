@@ -120,7 +120,6 @@ func _reset_stats() -> void:
 		"satisfaction_ratio": 0.0,
 		"max_reputation_tier": 0.0,
 		"final_reputation_tier": 0.0,
-		"secret_threads_completed": 0.0,
 		"haggle_attempts": 0.0,
 		"haggle_never_used": 1.0,
 		"days_near_bankruptcy": 0.0,
@@ -128,7 +127,6 @@ func _reset_stats() -> void:
 		"market_events_survived": 0.0,
 		"unique_store_types_owned": 0.0,
 		"trigger_type_bankruptcy": 0.0,
-		"ghost_tenant_thread_completed": 0.0,
 	}
 
 
@@ -141,9 +139,6 @@ func _connect_signals() -> void:
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.reputation_changed.connect(_on_reputation_changed)
 	EventBus.haggle_completed.connect(_on_haggle_completed)
-	EventBus.secret_thread_completed.connect(
-		_on_secret_thread_completed
-	)
 	EventBus.random_event_resolved.connect(
 		_on_random_event_resolved
 	)
@@ -249,16 +244,6 @@ func _on_haggle_completed(
 		float(_stats.get("haggle_attempts", 0.0)) + 1.0
 	)
 	_stats["haggle_never_used"] = 0.0
-
-
-func _on_secret_thread_completed(
-	thread_id: StringName, _reward_data: Dictionary
-) -> void:
-	_stats["secret_threads_completed"] = (
-		float(_stats.get("secret_threads_completed", 0.0)) + 1.0
-	)
-	if thread_id == &"ghost_tenant_7b" or thread_id == &"the_ghost_tenant":
-		_stats["ghost_tenant_thread_completed"] = 1.0
 
 
 func _on_random_event_resolved(

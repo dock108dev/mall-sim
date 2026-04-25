@@ -160,22 +160,6 @@ func test_haggle_completed_sets_never_used_false() -> void:
 	)
 
 
-func test_secret_thread_ghost_tenant_tracked() -> void:
-	EventBus.secret_thread_completed.emit(
-		&"ghost_tenant_7b", {}
-	)
-
-	assert_eq(
-		_system.get_tracked_stat(&"ghost_tenant_thread_completed"),
-		1.0,
-		"Ghost tenant completion should be tracked"
-	)
-	assert_eq(
-		_system.get_tracked_stat(&"secret_threads_completed"),
-		1.0,
-		"secret_threads_completed should increment"
-	)
-
 
 func test_days_near_bankruptcy_tracked() -> void:
 	EventBus.money_changed.emit(0.0, 50.0)

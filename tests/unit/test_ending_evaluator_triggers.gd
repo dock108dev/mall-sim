@@ -21,13 +21,11 @@ func _build_stats(overrides: Dictionary) -> Dictionary:
 		"unsatisfied_customer_count": 0.0,
 		"satisfaction_ratio": 0.0, "max_reputation_tier": 0.0,
 		"final_reputation_tier": 0.0,
-		"secret_threads_completed": 0.0,
 		"haggle_attempts": 0.0, "haggle_never_used": 1.0,
 		"days_near_bankruptcy": 0.0, "rare_items_sold": 0.0,
 		"market_events_survived": 0.0,
 		"unique_store_types_owned": 0.0,
 		"trigger_type_bankruptcy": 0.0,
-		"ghost_tenant_thread_completed": 0.0,
 	}
 	for key: String in overrides:
 		base[key] = overrides[key]
@@ -281,15 +279,15 @@ func test_load_restores_resolved_ending_id() -> void:
 
 
 func test_priority_conflict_emits_once_with_highest_priority_winner() -> void:
-	# Stats satisfy both the_mall_legend_redux (priority 1) and
-	# the_mall_tycoon (priority 8) simultaneously. Only one
+	# Stats satisfy both the_local_legend (priority 4) and
+	# the_mall_tycoon (priority 5) simultaneously. Only one
 	# ending_triggered should fire, carrying the lower priority number.
 	_system.load_state({
 		"stats": _build_stats({
-			"ghost_tenant_thread_completed": 0.0,
-			"secret_threads_completed": 4.0,
-			"cumulative_revenue": 25000.0,
 			"owned_store_count_final": 5.0,
+			"max_reputation_tier": 4.0,
+			"days_survived": 30.0,
+			"cumulative_revenue": 25000.0,
 			"trigger_type_bankruptcy": 0.0,
 		}),
 	})
@@ -308,7 +306,7 @@ func test_priority_conflict_emits_once_with_highest_priority_winner() -> void:
 		"Exactly one ending_triggered should fire even when multiple endings match"
 	)
 	assert_eq(
-		emitted_ids[0], &"the_mall_legend_redux",
+		emitted_ids[0], &"the_local_legend",
 		"Highest-priority ending (lowest priority number) should win"
 	)
 	EventBus.ending_triggered.disconnect(on_ending)

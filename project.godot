@@ -50,7 +50,7 @@ CameraAuthority="*res://game/autoload/camera_authority.gd"
 InputFocus="*res://game/autoload/input_focus.gd"
 StoreRegistry="*res://game/autoload/store_registry.gd"
 StoreDirector="*res://game/autoload/store_director.gd"
-RunState="*res://game/autoload/game_state.gd"
+GameState="*res://game/autoload/game_state.gd"
 FailCard="*res://game/scenes/ui/fail_card.tscn"
 TutorialContextSystem="*res://game/autoload/tutorial_context_system.gd"
 

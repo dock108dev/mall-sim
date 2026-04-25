@@ -6,13 +6,31 @@
 custom_minimum_size = Vector2(320, 0)
 script = ExtResource("1")
 
-[node name="Margin" type="MarginContainer" parent="."]
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Chrome" type="PanelContainer" parent="Layout"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Layout/Chrome"]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 8
 
-[node name="Buttons" type="HBoxContainer" parent="Margin"]
+[node name="Buttons" type="HBoxContainer" parent="Layout/Chrome/Margin"]
 layout_mode = 2
 theme_override_constants/separation = 8
+
+[node name="Separator" type="HSeparator" parent="Layout"]
+layout_mode = 2
+visible = false
+
+[node name="Content" type="VBoxContainer" parent="Layout"]
+layout_mode = 2
+visible = false
+clip_contents = true
+custom_minimum_size = Vector2(0, 0)
+theme_override_constants/separation = 4

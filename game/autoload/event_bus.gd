@@ -86,13 +86,18 @@ signal storefront_entered(slot_index: int, store_id: String)
 signal storefront_exited()
 signal storefront_zone_entered(store_id: String)
 signal storefront_zone_exited(store_id: String)
-## Legacy signal — no current emitters. `MallOverview` emits
-## `enter_store_requested` directly on card click (P1.2).
-signal storefront_clicked(store_id: StringName)
 ## Emitted by DrawerHost when a store drawer has begun opening for store_id.
 signal drawer_opened(store_id: StringName)
 ## Emitted by DrawerHost when the active drawer has begun closing for store_id.
 signal drawer_closed(store_id: StringName)
+## Emitted by ActionDrawer when it opens a mechanic content pane. mode is ActionDrawer.Mode int.
+signal action_drawer_opened(mode: int)
+## Emitted by ActionDrawer when it collapses back to the chrome button bar (IDLE).
+signal action_drawer_closed()
+## Emitted by ActionDrawer when the player accepts an incoming trade offer.
+signal trade_player_accepted()
+## Emitted by ActionDrawer when the player declines an incoming trade offer.
+signal trade_player_declined()
 
 # ── Store Actions (ActionDrawer) ──────────────────────────────────────────────
 ## Emitted by a StoreController when it enters; carries the list of action
@@ -173,6 +178,23 @@ signal haggle_resolved(item_id: StringName, final_price: float, haggle_multiplie
 signal customer_mood_changed(item_id: StringName, mood: String)
 ## Emitted by SportsMemorabiliaController when an authenticated item sells via accepted haggle.
 signal bonus_sale_completed(item_id: StringName, bonus_amount: float)
+## Emitted by HaggleSystem alongside its local negotiation_started for ActionDrawer listeners.
+signal haggle_negotiation_started(
+	item_name: String,
+	condition: String,
+	sticker_price: float,
+	customer_offer: float,
+	max_rounds: int,
+	time_per_turn: float,
+)
+## Emitted by HaggleSystem alongside its local customer_countered for ActionDrawer listeners.
+signal haggle_customer_countered(new_offer: float, round_number: int, max_rounds: int)
+## Emitted by ActionDrawer when the player accepts the current haggle offer.
+signal haggle_player_accepted()
+## Emitted by ActionDrawer when the player submits a counter-offer.
+signal haggle_player_countered(price: float)
+## Emitted by ActionDrawer when the player declines to negotiate further.
+signal haggle_player_declined()
 
 # ── Reputation ────────────────────────────────────────────────────────────────
 ## Emitted by ReputationSystem after every reputation mutation.
@@ -205,6 +227,14 @@ signal fixture_upgraded(fixture_id: String, new_tier: int)
 signal fixture_placement_invalid(reason: String)
 signal placement_mode_entered()
 signal placement_mode_exited()
+
+# ── Stocking ──────────────────────────────────────────────────────────────────
+## Emitted when inventory is open and the player hovers a stockable item.
+## item_category identifies which ShelfSlot category markers to reveal.
+signal stocking_cursor_active(item_category: StringName)
+## Emitted when inventory closes or the player stops hovering a stockable item.
+signal stocking_cursor_inactive()
+
 signal nav_mesh_baked()
 signal customer_spawning_disabled()
 signal customer_spawning_enabled()
@@ -255,6 +285,14 @@ signal authentication_started(item_id, cost: float)
 signal authentication_completed(item_id, success: bool, result)
 signal authentication_dialog_requested(item_id)
 signal authentication_rejected(item_id: StringName)
+## Emitted by ActionDrawer when the player submits an item for authentication at a tier.
+## tier matches SportsMemorabiliaController.AuthTier (0=ECONOMY, 1=EXPRESS, 2=PREMIUM).
+signal authentication_player_submitted(item_id: String, tier: int)
+## Emitted when an item is submitted to CARB for multi-state grading.
+## tier matches SportsMemorabiliaController.AuthTier (0=ECONOMY, 1=EXPRESS, 2=PREMIUM).
+signal store_auth_started(item_id: StringName, tier: int, cost: float)
+## Emitted when CARB finalizes grading. grade is the AuthGrade int value (0–10, skips 6).
+signal store_auth_resolved(item_id: StringName, grade: int, final_value: float)
 
 # ── Sports Cards — Authentication & Grading ───────────────────────────────────
 ## Emitted when provenance_score meets the authentication threshold.
@@ -321,6 +359,8 @@ signal item_priced(item_id: StringName, price: float)
 signal refurbishment_started(item_id: String, parts_cost: float, duration: int)
 signal refurbishment_completed(item_id: String, success: bool, new_condition: String)
 signal refurbishment_failed(item_id: String)
+## Emitted by ActionDrawer when the player queues an item for refurbishment.
+signal refurb_player_queued(store_id: StringName)
 
 # ── Pack Opening ──────────────────────────────────────────────────────────────
 signal pack_opening_started(pack_id: String, card_results: Array[Dictionary])
@@ -371,6 +411,10 @@ signal late_fee_collected(item_id: String, amount: float, days_late: int)
 ## Emitted at day transition for each item still out past its deadline.
 ## customer_id may be empty when the rental was created without one.
 signal rental_overdue(customer_id: String, item_id: String)
+## ISSUE-007 canonical store-scoped rental lifecycle signals.
+signal store_rental_started(item_id: String, customer_id: String, due_day: int)
+signal store_rental_returned(item_id: String, late_days: int)
+signal store_rental_overdue(customer_id: String, item_id: String)
 
 # ── Warranty ──────────────────────────────────────────────────────────────────
 signal warranty_purchased(item_id: String, warranty_fee: float)
@@ -380,6 +424,10 @@ signal warranty_offer_presented(item_id: String)
 signal warranty_accepted(item_id: String, tier_id: String, warranty_fee: float)
 ## Emitted when a customer declines a warranty pitch for a specific tier.
 signal warranty_declined(item_id: String, tier_id: String)
+## Emitted by ActionDrawer when the player confirms offering warranty to the customer.
+signal warranty_player_accepted(item_id: String, tier_id: String)
+## Emitted by ActionDrawer when the player skips the warranty pitch.
+signal warranty_player_declined(item_id: String)
 
 # ── Demo Station ──────────────────────────────────────────────────────────────
 signal demo_item_placed(item_id: String)
@@ -447,14 +495,6 @@ signal tutorial_context_cleared()
 # ── Onboarding ───────────────────────────────────────────────────────────────
 signal onboarding_hint_shown(hint_id: StringName, message: String, position_hint: String)
 signal onboarding_disabled()
-
-# ── Secret Threads ────────────────────────────────────────────────────────────
-signal secret_thread_state_changed(
-	thread_id: StringName, old_phase: StringName, new_phase: StringName
-)
-signal secret_thread_completed(thread_id: StringName, reward_data: Dictionary)
-signal secret_thread_revealed(thread_id: StringName)
-signal secret_thread_failed(thread_id: StringName)
 
 # ── Regulars Log ──────────────────────────────────────────────────────────────
 ## Emitted when a customer's visit count first reaches the recognition threshold.
@@ -628,3 +668,11 @@ func emit_input_focus_changed(owner: StringName) -> void:
 
 func emit_camera_authority_changed(camera_path: NodePath) -> void:
 	camera_authority_changed.emit(camera_path)
+
+
+func emit_stocking_cursor_active(item_category: StringName) -> void:
+	stocking_cursor_active.emit(item_category)
+
+
+func emit_stocking_cursor_inactive() -> void:
+	stocking_cursor_inactive.emit()

@@ -23,7 +23,9 @@ var _active_store_id: StringName = &""
 var _current_season_id: String = ""
 var _current_hour_context: int = 0
 var _suspend_count: int = 0
-var _secret_moments: AmbientSecretThreadMoments
+const MAX_WITNESSED_LOG: int = 20
+var _witnessed_log: Array[Dictionary] = []
+var _current_phase: int = 0
 
 
 func _ready() -> void:
@@ -33,15 +35,9 @@ func _ready() -> void:
 
 ## Sets up the system with required references and loads definitions.
 func initialize(
-	secret_thread: SecretThreadManager,
 	inventory: InventorySystem,
 	time: TimeSystem,
 ) -> void:
-	_secret_moments = AmbientSecretThreadMoments.new()
-	_secret_moments.secret_thread_manager = secret_thread
-	_secret_moments.inventory_system = inventory
-	_secret_moments.time_system = time
-	_secret_moments.pick_trigger_days()
 	_load_definitions()
 	_apply_state({})
 	_connect_signals()
@@ -94,42 +90,11 @@ func _connect_signals() -> void:
 		_on_active_store_changed
 	):
 		EventBus.active_store_changed.connect(_on_active_store_changed)
-	if _secret_moments:
-		if not EventBus.mystery_item_inspected.is_connected(
-			_secret_moments.on_mystery_item_inspected
-		):
-			EventBus.mystery_item_inspected.connect(
-				_secret_moments.on_mystery_item_inspected
-			)
-		if not EventBus.odd_notification_read.is_connected(
-			_secret_moments.on_odd_notification_read
-		):
-			EventBus.odd_notification_read.connect(
-				_secret_moments.on_odd_notification_read
-			)
-		if not EventBus.discrepancy_noticed.is_connected(
-			_secret_moments.on_discrepancy_noticed
-		):
-			EventBus.discrepancy_noticed.connect(
-				_secret_moments.on_discrepancy_noticed
-			)
-		if not EventBus.wrong_name_customer_interacted.is_connected(
-			_secret_moments.on_wrong_name_customer_interacted
-		):
-			EventBus.wrong_name_customer_interacted.connect(
-				_secret_moments.on_wrong_name_customer_interacted
-			)
-		if not EventBus.renovation_sounds_heard.is_connected(
-			_secret_moments.on_renovation_sounds_heard
-		):
-			EventBus.renovation_sounds_heard.connect(
-				_secret_moments.on_renovation_sounds_heard
-			)
+	if not EventBus.day_phase_changed.is_connected(_on_day_phase_changed):
+		EventBus.day_phase_changed.connect(_on_day_phase_changed)
 
 
 func _process(delta: float) -> void:
-	if _secret_moments:
-		_secret_moments.process_tick(delta)
 	_tick_active_moments(delta)
 
 
@@ -160,15 +125,11 @@ func get_queued_moment_ids() -> Array[StringName]:
 
 ## Returns the discrepancy amount if active, else 0.0.
 func get_active_discrepancy() -> float:
-	if _secret_moments:
-		return _secret_moments.get_active_discrepancy()
 	return 0.0
 
 
 ## Returns true if the discrepancy is currently visible.
 func is_discrepancy_active() -> bool:
-	if _secret_moments:
-		return _secret_moments.is_discrepancy_active()
 	return false
 
 
@@ -194,13 +155,14 @@ func _on_day_started(day: int) -> void:
 	if _state == State.IDLE:
 		_state = State.MONITORING
 	_tick_cooldowns()
-	if _secret_moments:
-		_secret_moments.on_day_started(day)
 
 
-func _on_day_ended(day: int) -> void:
-	if _secret_moments:
-		_secret_moments.on_day_ended(day)
+func _on_day_ended(_day: int) -> void:
+	pass
+
+
+func _on_day_phase_changed(new_phase: int) -> void:
+	_current_phase = new_phase
 
 
 func _on_hour_changed(hour: int) -> void:
@@ -457,10 +419,27 @@ func _dispatch_next() -> void:
 		display_type = def.display_type
 		audio_cue = def.audio_cue_id
 	_active_moments[moment_id] = duration
+	_append_witnessed_log(moment_id, flavor)
 	EventBus.ambient_moment_delivered.emit(
 		moment_id, display_type, flavor, audio_cue
 	)
 	EventBus.moment_displayed.emit(moment_id, flavor, duration)
+
+
+func _append_witnessed_log(moment_id: StringName, flavor_text: String) -> void:
+	_witnessed_log.append({
+		"moment_id": String(moment_id),
+		"flavor_text": flavor_text,
+		"day": _get_current_day(),
+		"phase": _current_phase,
+	})
+	while _witnessed_log.size() > MAX_WITNESSED_LOG:
+		_witnessed_log.pop_front()
+
+
+## Returns witnessed moments in chronological order (oldest first).
+func get_witnessed_log() -> Array[Dictionary]:
+	return _witnessed_log.duplicate(true)
 
 
 func _tick_active_moments(delta: float) -> void:
@@ -558,9 +537,8 @@ func get_save_data() -> Dictionary:
 		"cooldowns": cooldown_save,
 		"delivery_queue": _delivery_queue.duplicate(),
 		"delivery_history": history_save,
+		"witnessed_log": _witnessed_log.duplicate(true),
 	}
-	if _secret_moments:
-		data.merge(_secret_moments.get_save_data())
 	return data
 
 
@@ -614,8 +592,18 @@ func _apply_state(data: Dictionary) -> void:
 					history_entry.get("total_deliveries", 0)
 				),
 			}
-	if _secret_moments:
-		_secret_moments.apply_state(data)
+	_witnessed_log = []
+	var log_data: Variant = data.get("witnessed_log", [])
+	if log_data is Array:
+		for entry: Variant in (log_data as Array):
+			if entry is Dictionary:
+				var e := entry as Dictionary
+				_witnessed_log.append({
+					"moment_id": String(e.get("moment_id", "")),
+					"flavor_text": String(e.get("flavor_text", "")),
+					"day": int(e.get("day", 0)),
+					"phase": int(e.get("phase", 0)),
+				})
 
 
 ## Returns true when the moment is blocked by an active cooldown or one-shot history.
@@ -668,8 +656,6 @@ func _matches_location_category(
 			return _active_store_id.is_empty()
 		"store":
 			return not _active_store_id.is_empty()
-		"secret_thread":
-			return false
 	return false
 
 
@@ -698,8 +684,6 @@ func _mark_delivered(moment_id: String) -> void:
 func _is_definition_auto_scheduler_blocked(
 	def: AmbientMomentDefinition
 ) -> bool:
-	if def.category == "secret_thread":
-		return true
 	return _is_definition_on_cooldown(def)
 
 

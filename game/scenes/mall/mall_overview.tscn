@@ -18,7 +18,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.063, 0.133, 0.251, 0.92)
+color = Color(0.075, 0.063, 0.051, 0.96)
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -28,15 +28,16 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -500.0
-offset_top = -220.0
+offset_top = -310.0
 offset_right = 500.0
-offset_bottom = 220.0
+offset_bottom = 310.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
+theme_type_variation = &"TitleLabel"
 text = "MALL OVERVIEW"
 horizontal_alignment = 1
 
@@ -44,6 +45,22 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 12
+
+[node name="FeedTitle" type="Label" parent="VBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "RECENT EVENTS"
+horizontal_alignment = 1
+
+[node name="EventFeedScroll" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 120)
+size_flags_vertical = 3
+
+[node name="EventFeed" type="VBoxContainer" parent="VBox/EventFeedScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 
 [node name="BottomRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
@@ -53,3 +70,18 @@ alignment = 1
 layout_mode = 2
 custom_minimum_size = Vector2(160, 0)
 text = "Close Day"
+
+[node name="MomentsLogButton" type="Button" parent="VBox/BottomRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Moments Log"
+
+[node name="CompletionButton" type="Button" parent="VBox/BottomRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(130, 0)
+text = "Completion"
+
+[node name="PerformanceButton" type="Button" parent="VBox/BottomRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(130, 0)
+text = "Performance"

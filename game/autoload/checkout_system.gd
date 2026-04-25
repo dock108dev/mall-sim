@@ -87,9 +87,27 @@ func _has_stock(
 func _get_item_price(
 	_store_id: StringName, item: ItemInstance
 ) -> float:
+	if not item.definition:
+		return item.get_current_value()
+	var base: float = item.definition.base_price
+	var multipliers: Array = []
 	if _market_value_system:
-		return _market_value_system.calculate_item_value(item)
-	return item.get_current_value()
+		multipliers.append_array(_market_value_system.get_item_multipliers(item))
+	else:
+		multipliers.append({
+			"slot": "condition", "label": "Condition",
+			"factor": ItemInstance.CONDITION_MULTIPLIERS.get(item.condition, 1.0),
+			"detail": item.condition,
+		})
+		multipliers.append({
+			"slot": "rarity", "label": "Rarity",
+			"factor": ItemInstance.calculate_effective_rarity(base, item.definition.rarity),
+			"detail": item.definition.rarity,
+		})
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(item.instance_id), base, multipliers, false
+	)
+	return result.final_price
 
 
 func _get_budget(npc: Customer) -> float:

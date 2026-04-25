@@ -5,7 +5,7 @@
 `game_world.gd` drives a 5-tier initialization sequence on scene ready. Each tier must complete before the next begins:
 
 1. **Tier 1 — Data loading:** `DataLoaderSingleton` reads all JSON content files; `ContentRegistry` builds typed catalogs (items, stores, events, milestones). Boot-time content validator runs immediately: parody-name check, `type` field enforcement, cross-reference validation.
-2. **Tier 2 — Autoload services:** `GameManager`, `AudioManager`, `AudioEventHandler`, `EventBus` confirm ready state via `_on_system_ready` callbacks.
+2. **Tier 2 — Autoload services:** `GameManager`, `AudioManager`, `EventBus` confirm ready state via `_on_system_ready` callbacks.
 3. **Tier 3 — Store controllers:** Each store controller initializes from `ContentRegistry` data. Controllers are autoload-adjacent singletons referenced by `game_world.gd`, not scene nodes.
 4. **Tier 4 — World systems:** `checkout_system`, `haggle_system`, `inventory_system`, `reputation_system`, day-cycle clock, and customer spawner start in dependency order.
 5. **Tier 5 — UI layer:** HUD, mall overview, and store entry scenes attach and request `CameraAuthority` slots.
@@ -16,12 +16,11 @@ Declared in `project.godot` in load order. Later autoloads may reference earlier
 
 | Autoload | Purpose | File |
 |---|---|---|
-| `DataLoaderSingleton` | Reads JSON content files at boot; exposes raw data dictionaries to `ContentRegistry` | `game/autoload/data_loader_singleton.gd` |
+| `DataLoaderSingleton` | Reads JSON content files at boot; exposes raw data dictionaries to `ContentRegistry` | `game/autoload/data_loader.gd` |
 | `ContentRegistry` | Builds typed catalogs from raw loader data; canonical query surface for all in-game content | `game/autoload/content_registry.gd` |
 | `EventBus` | Central signal relay — all cross-system communication routes here; direct cross-node refs across systems are prohibited | `game/autoload/event_bus.gd` |
 | `GameManager` | Owns runtime state: current store, day phase, progression flags, reputation tier | `game/autoload/game_manager.gd` |
-| `AudioManager` | Audio buses, ambient track scheduling, SFX pool | `game/autoload/audio_manager.gd` |
-| `AudioEventHandler` | Translates `EventBus` signals to `AudioManager` calls — the only audio caller | `game/autoload/audio_event_handler.gd` |
+| `AudioManager` | Audio buses, ambient track scheduling, SFX pool; instantiates `AudioEventHandler` to wire `EventBus` signals to audio calls | `game/autoload/audio_manager.gd` |
 
 ## Signal Bus Model
 
@@ -49,13 +48,13 @@ Signal name conventions:
 
 | Scene | Role |
 |---|---|
-| `game/scenes/main/game_world.tscn` | Root; owns all store scenes as children, drives tier init |
-| `game/scenes/ui/mall_overview.tscn` | Hub screen — store selection cards, per-store KPI display |
-| `game/scenes/stores/<name>/<name>.tscn` | Per-store 3D interior; camera framing via `CameraAuthority` |
+| `game/scenes/world/game_world.tscn` | Root; owns all store scenes as children, drives tier init |
+| `game/scenes/mall/mall_overview.tscn` | Hub screen — store selection cards, per-store KPI display |
+| `game/scenes/stores/<name>.tscn` | Per-store 3D interior; camera framing via `CameraAuthority` |
 | `game/scenes/ui/day_summary.tscn` | End-of-day summary panel |
 | `game/scenes/ui/hud.tscn` | Persistent overlay: time/phase indicator, funds, reputation tier |
 
-Store entry is gated through `StoreDirector.enter_store(store_id)`. Do not navigate to store scenes directly — the parallel `_on_hub_enter_store_requested` crossfade path is deprecated and pending removal (ISSUE-009).
+Store entry is routed through `game_world._on_hub_enter_store_requested`, which activates the store scene and calls `CameraAuthority.request_current` for the store's `Camera3D`. `StoreDirector.enter_store(store_id)` is the intended long-term single entry point, but currently delegates to `SceneRouter.route_to_path` (full-scene replacement), which would tear down `GameWorld`. Sub-tree hosting in `StoreDirector` is a future refactor before the hub signal path can be retired.
 
 ## Visual Systems
 

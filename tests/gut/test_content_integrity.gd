@@ -17,10 +17,6 @@ const SEASON_REQUIRED: Array[String] = [
 	"id", "name", "event_pool", "price_modifier_table", "visual_variant",
 ]
 
-const SECRET_THREAD_REQUIRED: Array[String] = [
-	"id", "display_name", "trigger_conditions", "stages", "resolution_text",
-]
-
 const ITEM_REQUIRED: Array[String] = [
 	"id", "store_type", "category", "base_price",
 ]
@@ -68,10 +64,6 @@ func _assert_fields(entry: Dictionary, required: Array[String], label: String) -
 
 func _ambient_label(entry: Dictionary) -> String:
 	return "ambient_moment '%s'" % str(entry.get("id", "<missing>"))
-
-
-func _thread_label(entry: Dictionary) -> String:
-	return "secret_thread '%s'" % str(entry.get("id", "<missing>"))
 
 
 func _item_label(entry: Dictionary) -> String:
@@ -164,47 +156,6 @@ func test_seasons_count() -> void:
 	assert_true(
 		(seasons as Array).size() >= 4,
 		"Expected >= 4 seasons, got %d" % (seasons as Array).size()
-	)
-
-
-# ---------------------------------------------------------------------------
-# Secret threads
-# ---------------------------------------------------------------------------
-
-func test_secret_threads_have_required_fields() -> void:
-	var path := CONTENT_ROOT + "meta/secret_threads.json"
-	var arr: Array = DataLoader.load_catalog_entries(path)
-	assert_true(arr.size() >= 4, "Need >= 4 secret threads, got %d" % arr.size())
-	for entry: Variant in arr:
-		assert_true(entry is Dictionary, "secret thread entry is not a Dictionary")
-		if entry is Dictionary:
-			var thread: Dictionary = entry as Dictionary
-			_assert_fields(thread, SECRET_THREAD_REQUIRED, _thread_label(thread))
-			var tc: Variant = thread.get("trigger_conditions", null)
-			assert_true(
-				tc is Array,
-				"%s: trigger_conditions must be an Array" % _thread_label(thread)
-			)
-			var stages: Variant = thread.get("stages", null)
-			assert_true(
-				stages is Array,
-				"%s: stages must be an Array" % _thread_label(thread)
-			)
-			assert_true(
-				thread.has("resolution_text") and thread.get("resolution_text") is String,
-				"%s: resolution_text must be a String" % _thread_label(thread)
-			)
-
-
-func test_secret_threads_count() -> void:
-	var path := CONTENT_ROOT + "meta/secret_threads.json"
-	var arr: Array = DataLoader.load_catalog_entries(path)
-	if arr.is_empty():
-		fail_test("Could not load secret_threads.json")
-		return
-	assert_true(
-		arr.size() >= 4,
-		"Expected >= 4 secret threads, got %d" % arr.size()
 	)
 
 

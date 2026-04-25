@@ -103,7 +103,7 @@ func test_full_sequence_1_3_10_14_30() -> void:
 	for day: int in [1, 3, 10, 14, 30]:
 		_day_manager._check_arc_unlocks(day)
 
-	assert_eq(_collected_unlocks.size(), 3, "Exactly 3 unlocks in sequence")
+	assert_eq(_collected_unlocks.size(), 2, "Exactly 2 unlocks in sequence")
 
 	var ids: Array = []
 	for entry: Dictionary in _collected_unlocks:
@@ -111,7 +111,6 @@ func test_full_sequence_1_3_10_14_30() -> void:
 
 	assert_true(ids.has("regulars_enabled"), "regulars_enabled must fire")
 	assert_true(ids.has("tournament_events"), "tournament_events must fire")
-	assert_true(ids.has("secret_threads_enabled"), "secret_threads_enabled must fire")
 
 
 func test_each_unlock_fires_exactly_once() -> void:

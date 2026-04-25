@@ -77,16 +77,6 @@ const SCHEMAS: Dictionary = {
 			"duration_seconds": [TYPE_INT, TYPE_FLOAT],
 		},
 	},
-	"secret_thread": {
-		"required": {
-			"id": [TYPE_STRING],
-			"display_name": [TYPE_STRING],
-			"steps": [TYPE_ARRAY],
-			"trigger_conditions": [TYPE_ARRAY],
-			"stages": [TYPE_ARRAY],
-			"resolution_text": [TYPE_STRING],
-		},
-	},
 	"milestone": {
 		"required": {
 			"id": [TYPE_STRING],

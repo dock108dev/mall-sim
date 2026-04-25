@@ -131,8 +131,6 @@ func _classify(path: String, data: Variant) -> String:
 		return "unlock"
 	if dir_name == "endings":
 		return "ending"
-	if dir_name == "meta" and file_base == "secret_threads":
-		return "secret_thread"
 	if file_base == "fixtures":
 		return "fixture"
 	if file_base == "upgrades":

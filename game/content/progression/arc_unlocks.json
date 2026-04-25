@@ -27,11 +27,6 @@
       "unlock_id": "tournament_events",
       "day": 10,
       "description": "Tournament events become available to Pocket Creatures after day 10 (ISSUE-015)"
-    },
-    {
-      "unlock_id": "secret_threads_enabled",
-      "day": 14,
-      "description": "Secret narrative threads begin revealing after day 14 (SecretThreadSystem)"
     }
   ],
   "store_adjacency": {

@@ -212,10 +212,21 @@ func _populate_item_data(item: ItemInstance) -> void:
 	var cond_mult: float = ItemInstance.CONDITION_MULTIPLIERS.get(
 		item.condition, 1.0
 	)
+	var pr_multipliers: Array = []
 	if economy_system:
-		_market_value = economy_system.calculate_market_value(item)
+		pr_multipliers = economy_system.get_item_multipliers(item)
 	else:
-		_market_value = item.get_current_value()
+		var rarity_mult: float = ItemInstance.calculate_effective_rarity(
+			base, def.rarity
+		)
+		pr_multipliers = [
+			{"slot": "rarity", "label": "Rarity", "factor": rarity_mult, "detail": def.rarity},
+			{"slot": "condition", "label": "Condition", "factor": cond_mult, "detail": item.condition},
+		]
+	var pr_result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(item.instance_id), base, pr_multipliers, true
+	)
+	_market_value = pr_result.final_price
 
 	_base_price_label.text = "Base Price: $%.2f" % base
 	_condition_mult_label.text = (

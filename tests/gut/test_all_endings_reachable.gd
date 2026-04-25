@@ -58,31 +58,7 @@ func _lease_stores(count: int) -> void:
 		EventBus.store_leased.emit(i, STORE_TYPES[i])
 
 
-## Priority 0 — secret ending via the ghost-tenant thread.
-func test_the_mall_between_the_walls() -> void:
-	EventBus.secret_thread_completed.emit(&"the_ghost_tenant", {})
-	EventBus.ending_requested.emit("completion")
-	assert_eq(
-		_system.get_resolved_ending_id(),
-		&"the_mall_between_the_walls",
-		"Ghost-tenant completion must resolve to the_mall_between_the_walls"
-	)
-
-
-## Priority 1 — four non-ghost secret threads plus high revenue.
-func test_the_mall_legend_redux() -> void:
-	for thread_id in [&"thread_a", &"thread_b", &"thread_c", &"thread_d"]:
-		EventBus.secret_thread_completed.emit(thread_id, {})
-	_accumulate_revenue(25000.0, 500.0)
-	EventBus.ending_requested.emit("completion")
-	assert_eq(
-		_system.get_resolved_ending_id(),
-		&"the_mall_legend_redux",
-		"Four secret threads + 25k revenue must resolve to the_mall_legend_redux"
-	)
-
-
-## Priority 2 — bankruptcy on or before day 7.
+## Priority 0 — bankruptcy on or before day 7.
 func test_lights_out() -> void:
 	_advance_days(5)
 	EventBus.bankruptcy_declared.emit()

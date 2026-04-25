@@ -16,20 +16,16 @@ extends CanvasLayer
 
 
 const AMBIENT_VARIANT: StringName = &"ambient"
-const SECRET_VARIANT: StringName = &"secret"
 const DEFAULT_DURATION: float = 6.0
 const MAX_CARDS_PER_STACK: int = 3
 
 const AMBIENT_TINT: Color = Color(0.85, 0.90, 1.0)
-const SECRET_TINT: Color = Color(1.0, 0.80, 0.55)
 const AMBIENT_BADGE: String = "Moment"
-const SECRET_BADGE: String = "Secret"
 
 var _day_close_active: bool = false
 var _hidden_by_store: bool = false
 
 @onready var _ambient_stack: VBoxContainer = $Root/AmbientStack
-@onready var _secret_stack: VBoxContainer = $Root/SecretStack
 
 
 func _ready() -> void:
@@ -38,9 +34,6 @@ func _ready() -> void:
 
 func _connect_bus_signals() -> void:
 	EventBus.ambient_moment_delivered.connect(_on_ambient_moment_delivered)
-	EventBus.secret_thread_state_changed.connect(_on_secret_state_changed)
-	EventBus.secret_thread_revealed.connect(_on_secret_revealed)
-	EventBus.secret_thread_completed.connect(_on_secret_completed)
 	EventBus.day_closed.connect(_on_day_closed)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.store_entered.connect(_on_store_entered)
@@ -84,29 +77,6 @@ func _on_ambient_moment_delivered(
 	if flavor_text.is_empty():
 		return
 	_push_card(_ambient_stack, AMBIENT_VARIANT, flavor_text)
-
-
-func _on_secret_state_changed(
-	thread_id: StringName, _old_phase: StringName, new_phase: StringName
-) -> void:
-	if is_suppressed():
-		return
-	_push_card(
-		_secret_stack, SECRET_VARIANT,
-		"%s advanced → %s" % [str(thread_id), str(new_phase)]
-	)
-
-
-func _on_secret_revealed(thread_id: StringName) -> void:
-	if is_suppressed():
-		return
-	_push_card(_secret_stack, SECRET_VARIANT, "%s revealed" % str(thread_id))
-
-
-func _on_secret_completed(thread_id: StringName, _reward: Dictionary) -> void:
-	if is_suppressed():
-		return
-	_push_card(_secret_stack, SECRET_VARIANT, "%s completed" % str(thread_id))
 
 
 # ── Card construction ─────────────────────────────────────────────────────────
@@ -167,15 +137,11 @@ func _build_card(variant: StringName, message: String) -> PanelContainer:
 	return card
 
 
-func _badge_text(variant: StringName) -> String:
-	if variant == SECRET_VARIANT:
-		return SECRET_BADGE
+func _badge_text(_variant: StringName) -> String:
 	return AMBIENT_BADGE
 
 
-func _tint_for(variant: StringName) -> Color:
-	if variant == SECRET_VARIANT:
-		return SECRET_TINT
+func _tint_for(_variant: StringName) -> Color:
 	return AMBIENT_TINT
 
 
@@ -185,13 +151,5 @@ func get_ambient_card_count() -> int:
 	return _ambient_stack.get_child_count()
 
 
-func get_secret_card_count() -> int:
-	return _secret_stack.get_child_count()
-
-
 func get_ambient_stack() -> VBoxContainer:
 	return _ambient_stack
-
-
-func get_secret_stack() -> VBoxContainer:
-	return _secret_stack

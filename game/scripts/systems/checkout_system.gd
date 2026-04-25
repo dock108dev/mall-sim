@@ -322,15 +322,48 @@ func _should_show_warranty() -> bool:
 func _calculate_offer(
 	item: ItemInstance, customer: Customer
 ) -> float:
-	var market_value: float = _get_perceived_value(item)
+	if not item.definition:
+		return item.get_current_value()
+	var base: float = item.definition.base_price
+	var multipliers: Array = []
+	if _market_value_system:
+		multipliers.append_array(_market_value_system.get_item_multipliers(item))
+	else:
+		var cond: float = ItemInstance.CONDITION_MULTIPLIERS.get(item.condition, 1.0)
+		var rarity: float = ItemInstance.calculate_effective_rarity(
+			base, item.definition.rarity
+		)
+		multipliers.append({
+			"slot": "condition", "label": "Condition",
+			"factor": cond, "detail": item.condition,
+		})
+		multipliers.append({
+			"slot": "rarity", "label": "Rarity",
+			"factor": rarity, "detail": item.definition.rarity,
+		})
 	var random_mult: float = randf_range(OFFER_LOW, OFFER_HIGH)
 	var sensitivity: float = 0.5
 	if customer.profile:
 		sensitivity = customer.profile.price_sensitivity
-	var sensitivity_mult: float = (
-		1.0 - sensitivity * SENSITIVITY_FACTOR
+	var sensitivity_mult: float = 1.0 - sensitivity * SENSITIVITY_FACTOR
+	multipliers.append({
+		"slot": "random", "label": "Offer Variance",
+		"factor": random_mult, "detail": "±15% market noise",
+	})
+	multipliers.append({
+		"slot": "sensitivity", "label": "Price Sensitivity",
+		"factor": sensitivity_mult,
+		"detail": "sensitivity=%.2f" % sensitivity,
+	})
+	# Suppress auto-injection: checkout offers use intrinsic value, not reputation-adjusted price.
+	multipliers.append({
+		"slot": "reputation", "label": "Reputation",
+		"factor": 1.0, "detail": "n/a for customer offer",
+	})
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(item.instance_id), base, multipliers, true
 	)
-	return market_value * random_mult * sensitivity_mult
+	return result.final_price
 
 
 func _get_perceived_value(item: ItemInstance) -> float:

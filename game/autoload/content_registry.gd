@@ -298,8 +298,15 @@ func _validate_entry_cross_refs(errors: Array[String]) -> void:
 		var entry: Dictionary = _entries[entry_id]
 		var entry_type: String = str(_types.get(entry_id, ""))
 		match entry_type:
-			"market_event", "seasonal_event":
+			"market_event":
 				_validate_event_store_refs(entry_id, entry, errors)
+			"seasonal_event":
+				_validate_event_store_refs(entry_id, entry, errors)
+				_validate_seasonal_event_store_refs(entry_id, entry, errors)
+			"supplier":
+				_validate_supplier_refs(entry_id, entry, errors)
+			"milestone":
+				_validate_milestone_refs(entry_id, entry, errors)
 
 
 func _validate_event_store_refs(
@@ -317,6 +324,74 @@ func _validate_event_store_refs(
 				"Event '%s' references unknown store_type '%s'"
 				% [entry_id, store_id]
 			)
+
+
+func _validate_seasonal_event_store_refs(
+	entry_id: StringName, entry: Dictionary, errors: Array[String]
+) -> void:
+	var affected: Variant = entry.get("affected_stores", [])
+	if affected is Array:
+		for raw: Variant in (affected as Array):
+			var sid: String = str(raw)
+			if sid.is_empty():
+				continue
+			if not exists(sid):
+				errors.append(
+					"SeasonalEvent '%s' affected_stores references unknown store '%s'"
+					% [entry_id, sid]
+				)
+	var multipliers: Variant = entry.get("store_type_multipliers", {})
+	if multipliers is Dictionary:
+		for key: Variant in (multipliers as Dictionary):
+			var sid: String = str(key)
+			if sid.is_empty():
+				continue
+			if not exists(sid):
+				errors.append(
+					"SeasonalEvent '%s' store_type_multipliers references unknown store '%s'"
+					% [entry_id, sid]
+				)
+
+
+func _validate_supplier_refs(
+	entry_id: StringName, entry: Dictionary, errors: Array[String]
+) -> void:
+	var store_type: String = str(entry.get("store_type", ""))
+	if not store_type.is_empty() and not exists(store_type):
+		errors.append(
+			"Supplier '%s' references unknown store_type '%s'"
+			% [entry_id, store_type]
+		)
+	var catalog: Variant = entry.get("catalog", [])
+	if catalog is not Array:
+		return
+	for cat_entry: Variant in (catalog as Array):
+		if cat_entry is not Dictionary:
+			continue
+		var item_id: String = str((cat_entry as Dictionary).get("item_id", ""))
+		if item_id.is_empty():
+			continue
+		if not exists(item_id):
+			errors.append(
+				"Supplier '%s' catalog references unknown item_id '%s'"
+				% [entry_id, item_id]
+			)
+
+
+func _validate_milestone_refs(
+	entry_id: StringName, entry: Dictionary, errors: Array[String]
+) -> void:
+	var unlock_raw: Variant = entry.get("unlock_id", null)
+	if unlock_raw == null or typeof(unlock_raw) != TYPE_STRING:
+		return
+	var uid: String = unlock_raw as String
+	if uid.is_empty():
+		return
+	if not exists(uid):
+		errors.append(
+			"Milestone '%s' references unknown unlock_id '%s'"
+			% [entry_id, uid]
+		)
 
 
 func _report_missing_scene_once(path: String, scene_id: StringName) -> void:

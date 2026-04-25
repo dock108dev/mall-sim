@@ -29,8 +29,6 @@
 [ext_resource type="Script" path="res://game/scripts/systems/performance_manager.gd" id="sys_perf_mgr"]
 [ext_resource type="Script" path="res://game/scripts/systems/performance_report_system.gd" id="sys_perf_report"]
 [ext_resource type="Script" path="res://game/scripts/systems/random_event_system.gd" id="sys_random_event"]
-[ext_resource type="Script" path="res://game/scripts/systems/secret_thread_manager.gd" id="sys_secret_mgr"]
-[ext_resource type="Script" path="res://game/scripts/systems/secret_thread_system.gd" id="sys_secret_thread"]
 [ext_resource type="Script" path="res://game/scripts/systems/ambient_moments_system.gd" id="sys_ambient"]
 [ext_resource type="Script" path="res://game/scripts/systems/regulars_log_system.gd" id="sys_regulars_log"]
 [ext_resource type="Script" path="res://game/scripts/systems/ending_evaluator.gd" id="sys_ending"]
@@ -130,12 +128,6 @@ script = ExtResource("sys_perf_report")
 
 [node name="RandomEventSystem" type="Node" parent="."]
 script = ExtResource("sys_random_event")
-
-[node name="SecretThreadManager" type="Node" parent="."]
-script = ExtResource("sys_secret_mgr")
-
-[node name="SecretThreadSystem" type="Node" parent="."]
-script = ExtResource("sys_secret_thread")
 
 [node name="AmbientMomentsSystem" type="Node" parent="."]
 script = ExtResource("sys_ambient")

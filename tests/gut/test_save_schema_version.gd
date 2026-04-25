@@ -180,6 +180,29 @@ func test_lower_schema_version_is_migrated_and_loads() -> void:
 	)
 
 
+func test_version_below_minimum_supported_is_rejected_with_signal() -> void:
+	_seed_minimal_save()
+	var data: Dictionary = _read_raw(TEST_SLOT)
+	# Version 0 is below MIN_SUPPORTED_SAVE_VERSION (1) — v0 saves predate
+	# the save_metadata block and must be rejected, not migrated.
+	data["schema_version"] = SaveManager.MIN_SUPPORTED_SAVE_VERSION - 1
+	data["save_version"] = SaveManager.MIN_SUPPORTED_SAVE_VERSION - 1
+	_write_raw(TEST_SLOT, data)
+
+	var loaded: bool = _save_manager.load_game(TEST_SLOT)
+	assert_false(loaded, "Version below minimum supported must be rejected")
+	assert_eq(
+		int(_failed_signal_payload.get("slot", -1)),
+		TEST_SLOT,
+		"save_load_failed must fire for the rejected slot"
+	)
+	var reason: String = str(_failed_signal_payload.get("reason", ""))
+	assert_true(
+		reason.to_lower().contains("too old") or reason.to_lower().contains("new game"),
+		"Failure reason should mention the save being too old (got '%s')" % reason
+	)
+
+
 func test_schema_version_takes_precedence_over_legacy_save_version() -> void:
 	_seed_minimal_save()
 	var data: Dictionary = _read_raw(TEST_SLOT)

@@ -100,6 +100,34 @@ func test_tracking_primary_constant_gte_80() -> void:
 	assert_gte(UIThemeConstants.TRACKING_PRIMARY, 80)
 
 
+func test_button_hover_border_uses_interact_blue() -> void:
+	var theme: Theme = load("res://game/themes/mallcore_theme.tres")
+	assert_not_null(theme, "mallcore_theme.tres must be loadable")
+	var hover_style: StyleBoxFlat = theme.get_stylebox("hover", "Button") as StyleBoxFlat
+	assert_not_null(hover_style, "Button hover StyleBox must be a StyleBoxFlat")
+	# #5BB8E8 = Color(0.357, 0.722, 0.910, 0.9) — interact blue
+	assert_eq(hover_style.border_color.r8, 91,
+		"Button hover border red channel must match #5BB8E8")
+	assert_eq(hover_style.border_color.g8, 184,
+		"Button hover border green channel must match #5BB8E8")
+	assert_eq(hover_style.border_color.b8, 232,
+		"Button hover border blue channel must match #5BB8E8")
+
+
+func test_button_pressed_border_uses_crt_amber() -> void:
+	var theme: Theme = load("res://game/themes/mallcore_theme.tres")
+	assert_not_null(theme, "mallcore_theme.tres must be loadable")
+	var pressed_style: StyleBoxFlat = theme.get_stylebox("pressed", "Button") as StyleBoxFlat
+	assert_not_null(pressed_style, "Button pressed StyleBox must be a StyleBoxFlat")
+	# #E8A547 = Color(0.910, 0.647, 0.278, 1.0) — CRT amber
+	assert_eq(pressed_style.border_color.r8, 232,
+		"Button pressed border red channel must match #E8A547")
+	assert_eq(pressed_style.border_color.g8, 165,
+		"Button pressed border green channel must match #E8A547")
+	assert_eq(pressed_style.border_color.b8, 71,
+		"Button pressed border blue channel must match #E8A547")
+
+
 # WCAG relative luminance for sRGB color.
 func _relative_luminance(c: Color) -> float:
 	var r: float = _linearize(c.r)

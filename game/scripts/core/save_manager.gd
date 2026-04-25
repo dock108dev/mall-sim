@@ -1,15 +1,43 @@
 # gdlint:disable=max-public-methods,max-file-lines
 ## Manages saving and loading game state to JSON files in user://.
+##
+## Save Versioning Policy
+## ──────────────────────
+## WHEN TO BUMP CURRENT_SAVE_VERSION:
+##   Increment by 1 whenever a new field is persisted or an existing field is
+##   removed/renamed in the active save schema. Additive-only changes that are
+##   safe to default also require a bump so the migration chain can supply the
+##   sentinel value. Do not bump for bug-fixes that leave the schema shape
+##   unchanged.
+##
+## MINIMUM SUPPORTED VERSION (MIN_SUPPORTED_SAVE_VERSION = 1):
+##   Saves strictly below this version are rejected with the player-facing error
+##   "Save too old — start a new game" and are NOT migrated. v0 saves predate
+##   the save_metadata block and owned-slots schema; they are excluded from the
+##   supported range. Raise the floor only when a migration would be unreliable
+##   or when the old schema no longer maps to current runtime types.
+##
+## FORWARD-ONLY MIGRATION:
+##   Saves at version > CURRENT_SAVE_VERSION are rejected with the player-facing
+##   error "Save from newer version — cannot load". There is no downgrade path.
+##   Migration functions (_migrate_vN_to_vNp1) are append-only; never alter or
+##   remove a registered step after it has shipped to players.
+##
+## ADDING A NEW MIGRATION:
+##   1. Write _migrate_vN_to_vNp1(data: Dictionary) → Dictionary.
+##   2. Register it in _get_migration_step().
+##   3. Increment CURRENT_SAVE_VERSION.
+##   4. Add a fixture file tests/fixtures/saves/vN_*.json and tests in
+##      tests/gut/test_save_migration_chain.gd.
 class_name SaveManager
 extends Node
 
 
 const CURRENT_SAVE_VERSION: int = 3
-const MIN_SUPPORTED_SAVE_VERSION: int = 0
+## Saves below this version are rejected outright; see class docstring policy.
+const MIN_SUPPORTED_SAVE_VERSION: int = 1
 ## Canonical top-level schema version key. `save_version` is preserved as a
-## legacy alias for compatibility with v0–v3 readers. Any new persisted field
-## in an active store/system must bump CURRENT_SAVE_VERSION and add a migration
-## step (see docs/architecture.md "Save schema versioning").
+## legacy alias for compatibility with v0–v3 readers.
 const SCHEMA_VERSION_KEY: String = "schema_version"
 const LEGACY_SCHEMA_VERSION_KEY: String = "save_version"
 const SAVE_DIR := "user://"
@@ -39,8 +67,6 @@ var _random_event_system: RandomEventSystem
 var _staff_system: StaffSystem
 var _tutorial_system: TutorialSystem
 var _season_cycle_system: SeasonCycleSystem
-var _secret_thread_manager: SecretThreadManager
-var _secret_thread_system: SecretThreadSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _regulars_log_system: RegularsLogSystem
 var _ending_evaluator: EndingEvaluatorSystem
@@ -165,20 +191,6 @@ func set_tutorial_system(system: TutorialSystem) -> void:
 ## Sets the SeasonCycleSystem reference for save/load.
 func set_season_cycle_system(system: SeasonCycleSystem) -> void:
 	_season_cycle_system = system
-
-
-## Sets the SecretThreadManager reference for save/load.
-func set_secret_thread_manager(
-	manager: SecretThreadManager
-) -> void:
-	_secret_thread_manager = manager
-
-
-## Sets the SecretThreadSystem reference for save/load.
-func set_secret_thread_system(
-	system: SecretThreadSystem
-) -> void:
-	_secret_thread_system = system
 
 
 ## Sets the AmbientMomentsSystem reference for save/load.
@@ -318,17 +330,17 @@ func load_game(slot: int) -> bool:
 	var save_data: Dictionary = read_result.get("data", {}) as Dictionary
 	var save_version: int = _read_schema_version(save_data)
 	if save_version > CURRENT_SAVE_VERSION:
-		return _fail_load(
-			slot,
-			"Save schema version %d is newer than supported version %d"
+		push_warning(
+			"SaveManager: schema version %d > current %d"
 			% [save_version, CURRENT_SAVE_VERSION]
 		)
+		return _fail_load(slot, "Save from newer version — cannot load")
 	if save_version < MIN_SUPPORTED_SAVE_VERSION:
-		return _fail_load(
-			slot,
-			"Save schema version %d is older than minimum supported version %d"
+		push_warning(
+			"SaveManager: schema version %d < minimum supported %d"
 			% [save_version, MIN_SUPPORTED_SAVE_VERSION]
 		)
+		return _fail_load(slot, "Save too old — start a new game")
 	if save_version < CURRENT_SAVE_VERSION:
 		push_warning(
 			"SaveManager: migrating save version %d to %d"
@@ -487,18 +499,6 @@ func _collect_save_data() -> Dictionary:
 
 	if _season_cycle_system:
 		data["season_cycle"] = _season_cycle_system.get_save_data()
-
-	if _secret_thread_manager:
-		var secret_data: Dictionary = (
-			_secret_thread_manager.get_save_data()
-		)
-		if not secret_data.is_empty():
-			data["secret_state"] = secret_data
-
-	if _secret_thread_system:
-		data["secret_threads"] = (
-			_secret_thread_system.get_save_data()
-		)
 
 	if _ambient_moments_system:
 		data["ambient_moments"] = (
@@ -690,22 +690,6 @@ func _distribute_save_data(data: Dictionary) -> void:
 		if cycle_data is Dictionary:
 			_season_cycle_system.load_save_data(
 				cycle_data as Dictionary
-			)
-
-	if _secret_thread_manager:
-		var secret_data: Variant = data.get("secret_state", {})
-		if secret_data is Dictionary:
-			_secret_thread_manager.load_save_data(
-				secret_data as Dictionary
-			)
-
-	if _secret_thread_system:
-		var thread_sys_data: Variant = data.get(
-			"secret_threads", {}
-		)
-		if thread_sys_data is Dictionary:
-			_secret_thread_system.load_state(
-				thread_sys_data as Dictionary
 			)
 
 	if _ambient_moments_system:

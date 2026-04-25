@@ -79,7 +79,7 @@ check "day_close_requested emitted on button press" \
 echo ""
 echo "[AC7] GameWorld wires the mall overview"
 check "MallOverviewScene preloaded in game_world" \
-	grep -q "_MallOverviewScene" "$GAME_WORLD"
+	grep -q "_MALL_OVERVIEW_SCENE" "$GAME_WORLD"
 check "mall overview instantiated in game_world" \
 	grep -q "_mall_overview" "$GAME_WORLD"
 check "mall overview setup called with systems" \

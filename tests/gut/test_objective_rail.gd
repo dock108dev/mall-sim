@@ -1,5 +1,6 @@
 ## Tests for ObjectiveRail: four-slot rendering, auto-hide, Settings toggle,
-## optional_hint visibility, flash animation, and objective_updated signal.
+## optional_hint visibility, flash animation, objective_updated signal,
+## and D4 accent band store-identity color binding.
 extends GutTest
 
 
@@ -234,3 +235,89 @@ func test_no_input_captured_optional_hint_label() -> void:
 		int(Control.MOUSE_FILTER_IGNORE),
 		"OptionalHintLabel must have MOUSE_FILTER_IGNORE"
 	)
+
+
+# ── D4 accent band store-identity color binding ───────────────────────────────
+
+func test_accent_band_node_exists() -> void:
+	var rail := _make_rail()
+	assert_not_null(rail._band, "AccentBand ColorRect must exist")
+
+
+func test_accent_band_default_color_is_hub() -> void:
+	var rail := _make_rail()
+	assert_eq(rail._band.color, Color.html("#5BB8E8"),
+		"Default band color must be hub accent #5BB8E8")
+
+
+func test_accent_band_retro_games_amber() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"retro_games")
+	assert_eq(rail._band.color, Color.html("#E8A547"),
+		"Retro Games must show CRT Amber #E8A547")
+
+
+func test_accent_band_pocket_creatures_teal() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"pocket_creatures")
+	assert_eq(rail._band.color, Color.html("#2EB5A8"),
+		"Pocket Creatures must show Holo Teal #2EB5A8")
+
+
+func test_accent_band_rentals_magenta() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"rentals")
+	assert_eq(rail._band.color, Color.html("#E04E8C"),
+		"Video Rental (rentals) must show Late-Fee Magenta #E04E8C")
+
+
+func test_accent_band_video_rental_alias_magenta() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"video_rental")
+	assert_eq(rail._band.color, Color.html("#E04E8C"),
+		"Video Rental alias must show Late-Fee Magenta #E04E8C")
+
+
+func test_accent_band_electronics_cyan() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"electronics")
+	assert_eq(rail._band.color, Color.html("#3AA8D8"),
+		"Electronics must show CRT Cyan #3AA8D8")
+
+
+func test_accent_band_consumer_electronics_alias_cyan() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"consumer_electronics")
+	assert_eq(rail._band.color, Color.html("#3AA8D8"),
+		"consumer_electronics alias must show CRT Cyan #3AA8D8")
+
+
+func test_accent_band_sports_crimson() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"sports")
+	assert_eq(rail._band.color, Color.html("#E85555"),
+		"Sports must show Grading Crimson #E85555")
+
+
+func test_accent_band_sports_memorabilia_alias_crimson() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"sports_memorabilia")
+	assert_eq(rail._band.color, Color.html("#E85555"),
+		"sports_memorabilia alias must show Grading Crimson #E85555")
+
+
+func test_accent_band_resets_to_hub_on_store_exited() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"retro_games")
+	assert_eq(rail._band.color, Color.html("#E8A547"),
+		"Pre-condition: band should be amber after entering retro_games")
+	EventBus.store_exited.emit(&"retro_games")
+	assert_eq(rail._band.color, Color.html("#5BB8E8"),
+		"Band must reset to hub color #5BB8E8 after store_exited")
+
+
+func test_accent_band_unknown_store_defaults_to_hub() -> void:
+	var rail := _make_rail()
+	EventBus.store_entered.emit(&"nonexistent_store_xyz")
+	assert_eq(rail._band.color, Color.html("#5BB8E8"),
+		"Unknown store ID must fall back to hub color #5BB8E8")

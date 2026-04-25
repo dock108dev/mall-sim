@@ -48,6 +48,8 @@ var _last_summary_args: Dictionary = {}
 var _emit_day_acknowledged_on_hide: bool = false
 var _previous_day_revenue: float = -1.0
 var _has_previous_day_revenue: bool = false
+var _last_report: PerformanceReport = null
+var _prev_report: PerformanceReport = null
 
 @onready var _overlay: ColorRect = $Root/Overlay
 @onready var _panel: PanelContainer = $Root/Panel
@@ -368,6 +370,18 @@ func _apply_net_profit_color() -> void:
 		_profit_label.add_theme_color_override(
 			"font_color", NET_PROFIT_ZERO_COLOR
 		)
+
+
+func _build_customers_text(served: int) -> String:
+	var base: String = "Customers Served: %d" % served
+	if _prev_report == null:
+		return base
+	var delta: int = served - _prev_report.customers_served
+	if delta > 0:
+		return base + "  (+%d vs yesterday)" % delta
+	if delta < 0:
+		return base + "  (-%d vs yesterday)" % absi(delta)
+	return base + "  (flat vs yesterday)"
 
 
 func _apply_revenue_headline(revenue: float) -> void:
@@ -735,9 +749,12 @@ func _on_discrepancy_input(event: InputEvent) -> void:
 func _on_performance_report_ready(
 	report: PerformanceReport
 ) -> void:
+	if _last_report != null and report.day != _last_report.day:
+		_prev_report = _last_report
+	_last_report = report
 	_set_net_profit_display(report.profit)
-	_customers_served_label.text = (
-		"Customers Served: %d" % report.customers_served
+	_customers_served_label.text = _build_customers_text(
+		report.customers_served
 	)
 	var sat_pct: float = report.satisfaction_rate * 100.0
 	_satisfaction_label.text = "Satisfaction: %.0f%%" % sat_pct

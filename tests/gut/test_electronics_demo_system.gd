@@ -1,6 +1,12 @@
 ## Tests ElectronicsStoreController demo unit designation and browse influence.
 extends GutTest
 
+## Minimal station slot node: exposes slot_id as a real property so that
+## ElectronicsStoreController._get_next_available_demo_slot() can read it
+## via Node.get("slot_id") without returning null.
+class FakeSlot extends Node:
+	var slot_id: String = "test_demo_slot"
+
 
 var _controller: ElectronicsStoreController
 var _inventory: InventorySystem
@@ -225,4 +231,97 @@ func test_try_demo_interaction_emits_signal() -> void:
 	assert_eq(
 		triggered_ids[0], "demo_item_1",
 		"Signal should carry the correct item_id"
+	)
+
+
+# ── designate_demo ────────────────────────────────────────────────────────────
+
+func test_designate_demo_returns_false_without_demo_stations() -> void:
+	var item: ItemInstance = _make_item("portable_audio")
+	var result: bool = _controller.designate_demo(item.instance_id)
+	assert_false(
+		result,
+		"designate_demo should return false when no demo stations are available"
+	)
+
+
+func test_designate_demo_sets_is_demo_flag_when_stations_present() -> void:
+	var item: ItemInstance = _make_item("portable_audio")
+	# FakeSlot exposes slot_id as a real var so node.get("slot_id") returns it.
+	var fake_slot := FakeSlot.new()
+	fake_slot.slot_id = "demo_0"
+	add_child_autofree(fake_slot)
+	_controller._demo_station_slots.append(fake_slot)
+	var result: bool = _controller.designate_demo(item.instance_id)
+	assert_true(result, "designate_demo should succeed with a demo station slot")
+	assert_true(item.is_demo, "Item is_demo flag should be set after designate_demo")
+	assert_true(
+		_controller.is_demo_unit(item.instance_id),
+		"Item should appear in the controller's demo unit list"
+	)
+
+
+func test_designate_demo_persists_to_save_data() -> void:
+	var item: ItemInstance = _make_item("gadgets")
+	var fake_slot := FakeSlot.new()
+	fake_slot.slot_id = "demo_save_0"
+	add_child_autofree(fake_slot)
+	_controller._demo_station_slots.append(fake_slot)
+	_controller.designate_demo(item.instance_id)
+	var data: Dictionary = _controller.get_save_data()
+	var saved_ids: Array = data.get("demo_item_ids", [])
+	assert_true(
+		item.instance_id in saved_ids,
+		"designate_demo should persist the instance_id in save data"
+	)
+
+
+# ── get_demo_browse_bonus ─────────────────────────────────────────────────────
+
+func test_get_demo_browse_bonus_returns_zero_when_no_demo_active() -> void:
+	var bonus: float = _controller.get_demo_browse_bonus()
+	assert_almost_eq(
+		bonus, 0.0, 0.001,
+		"get_demo_browse_bonus should return 0 when no demo items are active"
+	)
+
+
+func test_get_demo_browse_bonus_returns_nonzero_when_any_demo_active() -> void:
+	var item: ItemInstance = _make_item("portable_audio")
+	item.is_demo = true
+	_controller._demo_item_ids.append(item.instance_id)
+	var bonus: float = _controller.get_demo_browse_bonus()
+	assert_gt(bonus, 0.0, "get_demo_browse_bonus should be positive when a demo unit is active")
+	assert_almost_eq(
+		bonus, _controller.get_demo_interest_bonus(), 0.001,
+		"Bonus should match the configured demo_interest_bonus"
+	)
+
+
+func test_get_demo_browse_bonus_for_specific_demo_item_returns_bonus() -> void:
+	var item: ItemInstance = _make_item("gadgets")
+	item.is_demo = true
+	_controller._demo_item_ids.append(item.instance_id)
+	var bonus: float = _controller.get_demo_browse_bonus(item.instance_id)
+	assert_gt(bonus, 0.0, "Should return bonus for a specific active demo item")
+
+
+func test_get_demo_browse_bonus_for_non_demo_item_returns_zero() -> void:
+	var item: ItemInstance = _make_item("gadgets")
+	var bonus: float = _controller.get_demo_browse_bonus(item.instance_id)
+	assert_almost_eq(
+		bonus, 0.0, 0.001,
+		"Should return 0 for an item that is not a demo unit"
+	)
+
+
+func test_get_demo_browse_bonus_default_is_configurable() -> void:
+	_controller._demo_interest_bonus = 0.35
+	var item: ItemInstance = _make_item("portable_audio")
+	item.is_demo = true
+	_controller._demo_item_ids.append(item.instance_id)
+	var bonus: float = _controller.get_demo_browse_bonus()
+	assert_almost_eq(
+		bonus, 0.35, 0.001,
+		"get_demo_browse_bonus should reflect the configured interest bonus"
 	)

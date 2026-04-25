@@ -65,7 +65,6 @@ func test_stats_overlay_reflects_final_stats_values() -> void:
 		"satisfied_customer_count": 175.0,
 		"max_reputation_tier": 2.0,
 		"rare_items_sold": 7.0,
-		"secret_threads_completed": 2.0,
 	}
 	var first_id: StringName = StringName(str(_catalog_entries[0]["id"]))
 	EventBus.ending_triggered.emit(first_id, test_stats)

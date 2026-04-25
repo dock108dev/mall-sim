@@ -1,10 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://tooltip001"]
+[gd_scene load_steps=2 format=3 uid="uid://tooltip001"]
 
 [ext_resource type="Script" path="res://game/scripts/ui/item_tooltip.gd" id="1"]
-[ext_resource type="Theme" path="res://game/resources/ui/mall_theme.tres" id="2"]
 
 [node name="ItemTooltip" type="PanelContainer"]
-theme = ExtResource("2")
 theme_type_variation = "TooltipPanel"
 custom_minimum_size = Vector2(220, 0)
 offset_right = 220.0

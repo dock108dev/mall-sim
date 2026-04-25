@@ -3,4 +3,4 @@
 [resource]
 resource_name = "Slot Marker"
 transparency = 1
-albedo_color = Color(0.2, 0.8, 0.3, 0.7)
+albedo_color = Color(0.2, 0.8, 0.3, 0.0)

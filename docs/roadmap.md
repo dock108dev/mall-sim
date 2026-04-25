@@ -27,13 +27,19 @@ is wired to the signal bus but has no player-facing UI surface.
   warranty from checkout and reshape electronics around lifecycle alone
 - sports memorabilia: turn authentication into a real mechanic with grading
   states, cost, and partial information, or accept it as a flavor checkbox
-- Pocket Creatures: finish or delete the trade system
+- Pocket Creatures: trade system deleted (ADR 0006)
 - delete remaining legacy content path duplicates
 
 Exit criteria: zero stubbed `return false` or `return null` store methods in
 the active store controllers.
 
 ### Phase 0.1 — UI integrity and SSOT cleanup
+
+> **Complete.** All ten blocks shipped 2026-04-24. GUT suite at 4241 passing /
+> 14 pre-existing failures. Three SSOT tripwire scripts under
+> `scripts/validate_*.sh` are wired into `tests/run_tests.sh`. See the full
+> completion record at
+> [docs/audits/phase0-ui-integrity.md](audits/phase0-ui-integrity.md).
 
 **Goal:** Collapse every duplicated UI system down to one source of truth
 before any new feature work.
@@ -77,7 +83,6 @@ each store entry shows the 3D interior with a camera framed on the storefront.
   the electronics controller
 - sports memorabilia: multi-state authentication with risk, cost, partial
   information, and outcome multiplier
-- Pocket Creatures trade system wired into `game_world.gd` if kept from Phase 0
 
 ## Phase 2 — Architecture Hardening
 
@@ -124,7 +129,7 @@ are deleted.
 - CRT warmth or scanline shader on appropriate UI surfaces
 - mall-map style for the mall overview
 - unified `ActionDrawer` pattern for all in-store actions (haggle, refurbish,
-  authenticate, warranty, trade)
+  authenticate, warranty)
 
 ## Phase 6 — Content Volume
 

@@ -264,13 +264,6 @@ func test_staff_definitions_loaded() -> void:
 	assert_gt(staff.size(), 0, "Should load staff definitions")
 
 
-func test_secret_threads_loaded() -> void:
-	var threads: Array[Dictionary] = (
-		DataLoaderSingleton.get_all_secret_threads()
-	)
-	assert_gt(threads.size(), 0, "Should load secret threads")
-
-
 func test_validate_all_references_clean() -> void:
 	var errors: Array[String] = (
 		ContentRegistry.validate_all_references()
@@ -555,3 +548,85 @@ func test_unlock_content_registry_integration() -> void:
 		ids.size(), 6,
 		"ContentRegistry should have at least 6 unlock entries"
 	)
+
+
+func test_supplier_catalog_item_ids_all_registered() -> void:
+	var suppliers: Array[SupplierDefinition] = (
+		DataLoaderSingleton.get_all_suppliers()
+	)
+	assert_gt(suppliers.size(), 0, "Should have loaded suppliers")
+	for s: SupplierDefinition in suppliers:
+		for cat_entry: Dictionary in s.catalog:
+			var item_id: String = str(cat_entry.get("item_id", ""))
+			if item_id.is_empty():
+				continue
+			var def: ItemDefinition = DataLoaderSingleton.get_item(item_id)
+			assert_not_null(
+				def,
+				"Supplier '%s' catalog item '%s' must be a registered item"
+				% [s.id, item_id]
+			)
+
+
+func test_milestone_unlock_ids_all_registered() -> void:
+	var milestones: Array[MilestoneDefinition] = (
+		DataLoaderSingleton.get_all_milestones()
+	)
+	for m: MilestoneDefinition in milestones:
+		if m.unlock_id.is_empty():
+			continue
+		var u: UnlockDefinition = DataLoaderSingleton.get_unlock(m.unlock_id)
+		assert_not_null(
+			u,
+			"Milestone '%s' unlock_id '%s' must be a registered unlock"
+			% [m.id, m.unlock_id]
+		)
+
+
+func test_seasonal_event_affected_stores_all_registered() -> void:
+	var events: Array[SeasonalEventDefinition] = (
+		DataLoaderSingleton.get_all_seasonal_events()
+	)
+	assert_gt(events.size(), 0, "Should have loaded seasonal events")
+	for event: SeasonalEventDefinition in events:
+		for store_id: String in event.affected_stores:
+			if store_id.is_empty():
+				continue
+			assert_true(
+				ContentRegistry.exists(store_id),
+				"SeasonalEvent '%s' affected_store '%s' must be registered"
+				% [event.id, store_id]
+			)
+
+
+func test_trend_catalog_cross_refs_valid() -> void:
+	var data: Variant = DataLoader.load_json(
+		"res://game/content/market_trends_catalog.json"
+	)
+	assert_not_null(data, "Should load trend catalog")
+	assert_true(data is Dictionary, "Trend catalog root must be Dictionary")
+	var entries_raw: Variant = (data as Dictionary).get("entries", [])
+	assert_true(entries_raw is Array, "Trend catalog must have entries array")
+	var entries: Array = entries_raw as Array
+	var known_ids: Dictionary = {}
+	for entry: Variant in entries:
+		if entry is not Dictionary:
+			continue
+		var tid: String = str((entry as Dictionary).get("id", ""))
+		if not tid.is_empty():
+			known_ids[tid] = true
+	for entry: Variant in entries:
+		if entry is not Dictionary:
+			continue
+		var edict: Dictionary = entry as Dictionary
+		var tid: String = str(edict.get("id", "?"))
+		var propagates: Variant = edict.get("cross_propagates_to", [])
+		if propagates is not Array:
+			continue
+		for ref: Variant in (propagates as Array):
+			var ref_id: String = str(ref)
+			assert_true(
+				known_ids.has(ref_id),
+				"Trend '%s' cross_propagates_to unknown trend '%s'"
+				% [tid, ref_id]
+			)

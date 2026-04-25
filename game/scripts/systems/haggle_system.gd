@@ -59,6 +59,9 @@ var _dialogue: Dictionary = {}
 
 func _ready() -> void:
 	EventBus.active_store_changed.connect(_on_active_store_changed)
+	EventBus.haggle_player_accepted.connect(_on_player_accepted)
+	EventBus.haggle_player_countered.connect(_on_player_countered)
+	EventBus.haggle_player_declined.connect(_on_player_declined)
 	_load_dialogue()
 
 
@@ -105,8 +108,28 @@ func begin_negotiation(
 	_active_customer = customer
 	_active_item = item
 	_current_round = 1
-	_perceived_value = item.get_current_value()
 	_sticker_price = _get_sticker_price(item)
+	# Route perceived value through PriceResolver so price_resolved is emitted
+	# and the ItemTooltip can display the breakdown during negotiation.
+	var pv_base: float = item.definition.base_price if item.definition else 0.0
+	var pv_cond: float = ItemInstance.CONDITION_MULTIPLIERS.get(item.condition, 1.0)
+	var pv_rarity: float = (
+		ItemInstance.calculate_effective_rarity(pv_base, item.definition.rarity)
+		if item.definition else 1.0
+	)
+	var pv_result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		StringName(item.instance_id),
+		pv_base,
+		[
+			{"slot": "condition", "label": "Condition", "factor": pv_cond, "detail": item.condition},
+			{"slot": "rarity", "label": "Rarity", "factor": pv_rarity,
+				"detail": item.definition.rarity if item.definition else ""},
+			{"slot": "reputation", "label": "Reputation", "factor": 1.0,
+				"detail": "perceived value — not reputation-adjusted"},
+		],
+		true,
+	)
+	_perceived_value = pv_result.final_price
 	_session = _create_session(customer, item, queue_count)
 	_max_rounds_for_customer = _session.max_rounds
 	time_per_turn = _session.time_per_turn
@@ -131,6 +154,14 @@ func begin_negotiation(
 		_sticker_price,
 		_current_customer_offer,
 		_max_rounds_for_customer,
+	)
+	EventBus.haggle_negotiation_started.emit(
+		item.definition.item_name,
+		item.condition.capitalize(),
+		_sticker_price,
+		_current_customer_offer,
+		_max_rounds_for_customer,
+		time_per_turn,
 	)
 	var mood: String = _compute_mood(_sticker_price, _perceived_value)
 	customer_mood_changed.emit(mood)
@@ -272,6 +303,9 @@ func player_counter(player_price: float) -> void:
 	)
 	customer_countered.emit(
 		_current_customer_offer, _current_round
+	)
+	EventBus.haggle_customer_countered.emit(
+		_current_customer_offer, _current_round, _max_rounds_for_customer
 	)
 
 
@@ -570,3 +604,18 @@ func _create_session(
 func _emit_session_state_changed() -> void:
 	if _session != null:
 		session_state_changed.emit(_session)
+
+
+func _on_player_accepted() -> void:
+	if is_active():
+		accept_offer()
+
+
+func _on_player_countered(price: float) -> void:
+	if is_active():
+		player_counter(price)
+
+
+func _on_player_declined() -> void:
+	if is_active():
+		decline_offer()

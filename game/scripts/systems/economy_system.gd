@@ -151,6 +151,17 @@ func calculate_market_value(item: ItemInstance) -> float:
 		_trend_system, _market_event_system,
 		_meta_shift_system, _season_cycle_system
 	)
+
+## Returns PriceResolver-compatible multiplier dicts for each factor that
+## calculate_market_value() applies. Pass to PriceResolver.resolve_for_item()
+## to get a full audit trace. Base step is injected by resolve_for_item().
+func get_item_multipliers(item: ItemInstance) -> Array:
+	return EconomyValueCalculator.get_item_multipliers(
+		item, _demand_modifiers, _drift_factors,
+		_trend_system, _market_event_system,
+		_meta_shift_system, _season_cycle_system
+	)
+
 func _get_trend_multiplier(item: ItemInstance) -> float:
 	return EconomyValueCalculator.get_trend_multiplier(item, _trend_system)
 func _get_market_event_multiplier(item: ItemInstance) -> float:

@@ -22,12 +22,11 @@ func _build_stats(overrides: Dictionary) -> Dictionary:
 		"satisfied_customer_count": 0.0,
 		"unsatisfied_customer_count": 0.0,
 		"satisfaction_ratio": 0.0, "max_reputation_tier": 0.0,
-		"final_reputation_tier": 0.0, "secret_threads_completed": 0.0,
+		"final_reputation_tier": 0.0,
 		"haggle_attempts": 0.0, "haggle_never_used": 1.0,
 		"days_near_bankruptcy": 0.0, "rare_items_sold": 0.0,
 		"market_events_survived": 0.0, "unique_store_types_owned": 0.0,
 		"trigger_type_bankruptcy": 0.0,
-		"ghost_tenant_thread_completed": 0.0,
 	}
 	for key: String in overrides:
 		base[key] = overrides[key]
@@ -49,10 +48,9 @@ func test_all_numeric_stats_initialize_to_zero() -> void:
 		"owned_store_count_final", "total_sales_count",
 		"satisfied_customer_count", "unsatisfied_customer_count",
 		"satisfaction_ratio", "max_reputation_tier", "final_reputation_tier",
-		"secret_threads_completed", "haggle_attempts",
+		"haggle_attempts",
 		"days_near_bankruptcy", "rare_items_sold", "market_events_survived",
 		"unique_store_types_owned", "trigger_type_bankruptcy",
-		"ghost_tenant_thread_completed",
 	]
 	for key: String in numeric_keys:
 		assert_eq(
@@ -141,23 +139,6 @@ func test_haggle_never_used_does_not_revert_to_true() -> void:
 	)
 
 
-func test_ghost_thread_sets_flag_other_threads_do_not() -> void:
-	EventBus.secret_thread_completed.emit(&"some_other_thread", {})
-	assert_eq(
-		_system.get_tracked_stat(&"ghost_tenant_thread_completed"), 0.0,
-		"Non-ghost threads must not set ghost_tenant_thread_completed"
-	)
-	EventBus.secret_thread_completed.emit(&"ghost_tenant_7b", {})
-	assert_eq(
-		_system.get_tracked_stat(&"ghost_tenant_thread_completed"), 1.0,
-		"ghost_tenant_thread_completed should be 1.0 after ghost thread"
-	)
-	assert_eq(
-		_system.get_tracked_stat(&"secret_threads_completed"), 2.0,
-		"secret_threads_completed should count all completions"
-	)
-
-
 func test_random_event_resolved_tracks_survived_only() -> void:
 	EventBus.random_event_resolved.emit(&"market_crash", &"survived")
 	EventBus.random_event_resolved.emit(&"market_crash", &"failed")
@@ -219,20 +200,6 @@ func test_reputation_changed_updates_max_tier_and_never_decreases() -> void:
 
 
 # ── 3. evaluate() — one test per ending condition ──
-
-
-func test_ending_the_mall_between_the_walls() -> void:
-	_load_stats({
-		"ghost_tenant_thread_completed": 1.0, "owned_store_count_final": 5.0,
-	})
-	assert_eq(_system.evaluate(), &"the_mall_between_the_walls")
-
-
-func test_ending_the_mall_legend_redux() -> void:
-	_load_stats({
-		"secret_threads_completed": 4.0, "cumulative_revenue": 25000.0,
-	})
-	assert_eq(_system.evaluate(), &"the_mall_legend_redux")
 
 
 func test_ending_lights_out() -> void:
@@ -432,10 +399,9 @@ func test_save_data_contains_all_22_stat_keys_and_ending_triggered() -> void:
 		"total_sales_count", "satisfied_customer_count",
 		"unsatisfied_customer_count", "satisfaction_ratio",
 		"max_reputation_tier", "final_reputation_tier",
-		"secret_threads_completed", "haggle_attempts", "haggle_never_used",
+		"haggle_attempts", "haggle_never_used",
 		"days_near_bankruptcy", "rare_items_sold", "market_events_survived",
 		"unique_store_types_owned", "trigger_type_bankruptcy",
-		"ghost_tenant_thread_completed",
 	]
 	for key: String in expected_keys:
 		assert_true(stats.has(key), "stats must include key: %s" % key)
@@ -447,7 +413,6 @@ func test_save_load_round_trip_preserves_accumulated_stats() -> void:
 	EventBus.day_started.emit(1)
 	EventBus.day_started.emit(2)
 	EventBus.haggle_completed.emit(&"store", &"item", 15.0, 20.0, true, 1)
-	EventBus.secret_thread_completed.emit(&"ghost_tenant_7b", {})
 	EventBus.customer_left.emit({"satisfied": true})
 	EventBus.customer_left.emit({"satisfied": false})
 

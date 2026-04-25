@@ -202,6 +202,81 @@ func load_save_data(data: Dictionary) -> void:
 	_cache.clear()
 
 
+## Returns a PriceResolver-compatible multiplier array for all factors that
+## calculate_item_value() applies. Pass the result to PriceResolver.resolve_for_item()
+## to obtain a full audit trace. Only non-identity (≠1.0) market-dynamic entries
+## are included; rarity and condition are always present.
+func get_item_multipliers(item: ItemInstance) -> Array:
+	if not item or not item.definition:
+		return []
+	var rarity_scale: float = DifficultySystemSingleton.get_modifier(
+		&"rarity_scale_multiplier"
+	)
+	var rarity_raw: float = RARITY_MULTIPLIERS.get(item.definition.rarity, 1.0)
+	var rarity_mult: float = rarity_raw * rarity_scale
+	var cond_mult: float = CONDITION_MULTIPLIERS.get(item.condition, 0.75)
+	var trend_mult: float = _get_trend_multiplier(item)
+	var season_mult: float = _get_season_multiplier()
+	var calendar_mult: float = _get_calendar_seasonal_multiplier(item)
+	var event_mult: float = _get_event_multiplier(item)
+	var sport_season_mult: float = _get_sport_season_multiplier(item)
+	var tournament_mult: float = _get_tournament_demand_multiplier(item)
+	var test_mult: float = _get_test_multiplier(item)
+	var time_mod: float = get_time_modifier(item.definition, _current_day)
+	var combined_seasonal: float = (
+		season_mult * calendar_mult * sport_season_mult * tournament_mult
+	)
+	var multipliers: Array = []
+	multipliers.append({
+		"slot": "rarity",
+		"label": "Rarity",
+		"factor": rarity_mult,
+		"detail": "%s ×%.2f difficulty scale" % [item.definition.rarity, rarity_scale],
+	})
+	multipliers.append({
+		"slot": "condition",
+		"label": "Condition",
+		"factor": cond_mult,
+		"detail": item.condition,
+	})
+	if trend_mult != 1.0:
+		multipliers.append({
+			"slot": "trend",
+			"label": "Trend",
+			"factor": trend_mult,
+			"detail": "category=%s" % item.definition.category,
+		})
+	if combined_seasonal != 1.0:
+		multipliers.append({
+			"slot": "seasonal",
+			"label": "Seasonal",
+			"factor": combined_seasonal,
+			"detail": "season×calendar×sport×tournament",
+		})
+	if event_mult != 1.0:
+		multipliers.append({
+			"slot": "event",
+			"label": "Market Event",
+			"factor": event_mult,
+			"detail": "market_event",
+		})
+	if test_mult != 1.0:
+		multipliers.append({
+			"slot": "test",
+			"label": "Test Result",
+			"factor": test_mult,
+			"detail": item.test_result if item.tested else "untested",
+		})
+	if time_mod != 1.0:
+		multipliers.append({
+			"slot": "depreciation",
+			"label": "Depreciation",
+			"factor": time_mod,
+			"detail": "day=%d" % _current_day,
+		})
+	return multipliers
+
+
 func _get_trend_multiplier(item: ItemInstance) -> float:
 	if not item or not item.definition:
 		return 1.0

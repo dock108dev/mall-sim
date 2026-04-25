@@ -1,0 +1,110 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "MallcoreSimPropGen"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "CartridgeSNES",
+      "mesh": 0
+    }
+  ],
+  "meshes": [
+    {
+      "name": "CartridgeSNESMesh",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.263273,
+          0.233022,
+          0.187317,
+          1.0
+        ],
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.8
+      }
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.055,
+        -0.07,
+        -0.0125
+      ],
+      "max": [
+        0.055,
+        0.07,
+        0.0125
+      ]
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 0,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 288,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 576,
+      "byteLength": 72,
+      "target": 34963
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 648,
+      "uri": "data:application/octet-stream;base64,rkdhPSlcjz3NzEw8rkdhPSlcjz3NzEy8rkdhPSlcj73NzEy8rkdhPSlcj73NzEw8rkdhvSlcjz3NzEy8rkdhvSlcjz3NzEw8rkdhvSlcj73NzEw8rkdhvSlcj73NzEy8rkdhvSlcjz3NzEy8rkdhPSlcjz3NzEy8rkdhPSlcjz3NzEw8rkdhvSlcjz3NzEw8rkdhvSlcj73NzEw8rkdhPSlcj73NzEw8rkdhPSlcj73NzEy8rkdhvSlcj73NzEy8rkdhvSlcjz3NzEw8rkdhPSlcjz3NzEw8rkdhPSlcj73NzEw8rkdhvSlcj73NzEw8rkdhPSlcjz3NzEy8rkdhvSlcjz3NzEy8rkdhvSlcj73NzEy8rkdhPSlcj73NzEy8AACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAABAAIAAAACAAMABAAFAAYABAAGAAcACAAJAAoACAAKAAsADAANAA4ADAAOAA8AEAARABIAEAASABMAFAAVABYAFAAWABcA"
+    }
+  ]
+}

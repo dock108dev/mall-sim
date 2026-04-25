@@ -21,13 +21,11 @@ func _build_stats(overrides: Dictionary) -> Dictionary:
 		"unsatisfied_customer_count": 0.0,
 		"satisfaction_ratio": 0.0, "max_reputation_tier": 0.0,
 		"final_reputation_tier": 0.0,
-		"secret_threads_completed": 0.0,
 		"haggle_attempts": 0.0, "haggle_never_used": 1.0,
 		"days_near_bankruptcy": 0.0, "rare_items_sold": 0.0,
 		"market_events_survived": 0.0,
 		"unique_store_types_owned": 0.0,
 		"trigger_type_bankruptcy": 0.0,
-		"ghost_tenant_thread_completed": 0.0,
 	}
 	for key: String in overrides:
 		base[key] = overrides[key]
@@ -39,19 +37,6 @@ func _load_stats(overrides: Dictionary) -> void:
 
 
 # ── Group 1: evaluate() pure function ──
-
-
-func test_secret_ending_priority_over_success() -> void:
-	_load_stats({
-		"ghost_tenant_thread_completed": 1.0,
-		"owned_store_count_final": 5.0,
-		"max_reputation_tier": 4.0, "cumulative_revenue": 25000.0,
-		"days_survived": 30.0,
-	})
-	assert_eq(
-		_system.evaluate(), &"the_mall_between_the_walls",
-		"Secret ending should take priority over success endings"
-	)
 
 
 func test_lights_out_under_7_days() -> void:
@@ -277,15 +262,6 @@ func test_haggle_never_used_cannot_revert() -> void:
 	)
 
 
-func test_secret_thread_increments_counter() -> void:
-	EventBus.secret_thread_completed.emit(&"thread_a", {})
-	EventBus.secret_thread_completed.emit(&"thread_b", {})
-	assert_eq(
-		_system.get_tracked_stat(&"secret_threads_completed"),
-		2.0, "Two secret threads should yield count of 2"
-	)
-
-
 func test_days_near_bankruptcy_below_threshold() -> void:
 	EventBus.money_changed.emit(0.0, 50.0)
 	EventBus.day_ended.emit(1)
@@ -341,18 +317,6 @@ func test_satisfaction_ratio_computed() -> void:
 	assert_almost_eq(
 		float(stats.get("satisfaction_ratio", 0.0)),
 		0.75, 0.001, "3/4 satisfied should yield 0.75 ratio"
-	)
-
-
-func test_the_mall_legend_redux() -> void:
-	_load_stats({
-		"ghost_tenant_thread_completed": 0.0,
-		"secret_threads_completed": 4.0,
-		"cumulative_revenue": 25000.0,
-	})
-	assert_eq(
-		_system.evaluate(), &"the_mall_legend_redux",
-		"4+ secret threads + 25000 revenue = the_mall_legend_redux"
 	)
 
 

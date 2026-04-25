@@ -46,7 +46,6 @@ const _TYPE_ROUTES: Dictionary = {
 	"difficulty_config": "difficulty_config",
 	"seasonal_config": "seasonal_config",
 	"named_seasons": "named_seasons",
-	"secret_thread": "secret_thread",
 	"ending": "ending",
 	"retro_games_config": "retro_games_config",
 	"electronics_config": "electronics_config",
@@ -86,7 +85,6 @@ var _unlocks: Dictionary = {}
 var _sports_seasons: Dictionary = {}
 var _tournament_events: Dictionary = {}
 var _ambient_moments: Dictionary = {}
-var _secret_threads: Array[Dictionary] = []
 var _economy_config: EconomyConfig = null
 var _difficulty_config: Dictionary = {}
 var _seasonal_config: Array[Dictionary] = []
@@ -126,7 +124,6 @@ func clear_for_testing() -> void:
 	_sports_seasons.clear()
 	_tournament_events.clear()
 	_ambient_moments.clear()
-	_secret_threads.clear()
 	_economy_config = null
 	_difficulty_config = {}
 	_seasonal_config = []
@@ -172,6 +169,7 @@ func load_all_content_from_root(root: String) -> void:
 			&"economy_config", _economy_config, "economy"
 		)
 	_normalize_store_types()
+	_validate_trend_catalog(root)
 	var validation_errors: Array[String] = ContentRegistry.validate_all_references()
 	for err: String in validation_errors:
 		_record_load_error(err)
@@ -257,9 +255,6 @@ func _process_file(
 		return
 	if route == "named_seasons":
 		_parse_named_seasons(dict)
-		return
-	if route == "secret_thread":
-		_load_secret_threads(dict)
 		return
 	if route == "ending":
 		_load_endings(dict)
@@ -486,52 +481,6 @@ func _load_endings(data: Variant) -> void:
 		ContentRegistry.register_entry(reg_entry, "ending")
 
 
-func _load_secret_threads(data: Variant) -> void:
-	var entries_array: Array = []
-	if data is Dictionary:
-		var raw_entries: Variant = (data as Dictionary).get("entries", [])
-		if raw_entries is not Array:
-			_record_load_error("secret_thread: 'entries' must be an Array")
-			return
-		entries_array = raw_entries as Array
-	elif data is Array:
-		entries_array = data as Array
-	else:
-		_record_load_error("secret_thread: root must be a Dictionary with 'entries'")
-		return
-	for index: int in range(entries_array.size()):
-		var entry: Variant = entries_array[index]
-		if entry is not Dictionary:
-			_record_load_error(
-				"secret_thread entry at index %d is not a Dictionary"
-				% index
-			)
-			continue
-		var dict: Dictionary = entry as Dictionary
-		if not dict.has("id"):
-			_record_load_error(
-				"secret_thread entry at index %d missing 'id'"
-				% index
-			)
-			continue
-		var thread_trademark_errors: Array[String] = TrademarkValidator.validate_entry(
-			dict, "secret_thread", "secret_threads.json"
-		)
-		if not thread_trademark_errors.is_empty():
-			for err: String in thread_trademark_errors:
-				_record_load_error(err)
-			continue
-		var thread_errors: Array[String] = ContentSchema.validate(
-			dict, "secret_thread", "secret_threads.json"
-		)
-		if not thread_errors.is_empty():
-			for err: String in thread_errors:
-				_record_load_error(err)
-			continue
-		_secret_threads.append(dict)
-		ContentRegistry.register_entry(dict, "secret_thread")
-
-
 func _parse_seasonal_config(data: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var seasons: Variant = data.get("seasons", [])
@@ -585,6 +534,41 @@ func _parse_named_seasons(data: Dictionary) -> void:
 		for err: String in season_errors:
 			_record_load_error(err)
 		_named_seasons[id] = season
+
+
+func _validate_trend_catalog(root: String) -> void:
+	var catalog_path: String = root.path_join("market_trends_catalog.json")
+	var data: Variant = _load_json_with_error(catalog_path)
+	if data == null or data is not Dictionary:
+		return
+	var entries_raw: Variant = (data as Dictionary).get("entries", [])
+	if entries_raw is not Array:
+		return
+	var entries: Array = entries_raw as Array
+	var known_ids: Dictionary = {}
+	for entry: Variant in entries:
+		if entry is not Dictionary:
+			continue
+		var tid: String = str((entry as Dictionary).get("id", ""))
+		if not tid.is_empty():
+			known_ids[tid] = true
+	for entry: Variant in entries:
+		if entry is not Dictionary:
+			continue
+		var edict: Dictionary = entry as Dictionary
+		var tid: String = str(edict.get("id", "?"))
+		var propagates: Variant = edict.get("cross_propagates_to", [])
+		if propagates is not Array:
+			continue
+		for ref: Variant in (propagates as Array):
+			var ref_id: String = str(ref)
+			if ref_id.is_empty():
+				continue
+			if not known_ids.has(ref_id):
+				_record_load_error(
+					"%s: trend '%s' cross_propagates_to unknown trend '%s'"
+					% [catalog_path, tid, ref_id]
+				)
 
 
 func _normalize_store_types() -> void:
@@ -990,10 +974,6 @@ func get_all_ambient_moments() -> Array[AmbientMomentDefinition]:
 	var r: Array[AmbientMomentDefinition] = []
 	r.assign(_ambient_moments.values())
 	return r
-
-
-func get_all_secret_threads() -> Array[Dictionary]:
-	return _secret_threads.duplicate()
 
 
 func create_starting_inventory(

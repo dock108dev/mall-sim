@@ -13,6 +13,7 @@ var _current_payload: Dictionary = {}
 var _show_rail: bool = true
 var _tween: Tween
 
+@onready var _band: ColorRect = $AccentBand
 @onready var _margin: MarginContainer = $MarginContainer
 @onready var _objective_label: Label = $MarginContainer/HBoxContainer/ObjectiveLabel
 @onready var _action_label: Label = $MarginContainer/HBoxContainer/ActionLabel
@@ -26,6 +27,9 @@ func _ready() -> void:
 	EventBus.preference_changed.connect(_on_preference_changed)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.arc_unlock_triggered.connect(_on_arc_unlock_triggered)
+	EventBus.store_entered.connect(_on_store_entered)
+	EventBus.store_exited.connect(_on_store_exited)
+	_band.color = Color.html("#5BB8E8")
 	visible = false
 
 
@@ -103,3 +107,25 @@ func _flash() -> void:
 	_margin.modulate.a = 0.0
 	_tween = create_tween()
 	_tween.tween_property(_margin, "modulate:a", 1.0, 1.0)
+
+
+## Sets the accent band color to reflect the active store identity.
+## Unknown store IDs fall back to the hub default.
+func _on_store_entered(store_id: StringName) -> void:
+	match store_id:
+		&"retro_games":
+			_band.color = Color.html("#E8A547")  # CRT Amber
+		&"pocket_creatures":
+			_band.color = Color.html("#2EB5A8")  # Holo Teal
+		&"rentals", &"video_rental":
+			_band.color = Color.html("#E04E8C")  # Late-Fee Magenta
+		&"electronics", &"consumer_electronics":
+			_band.color = Color.html("#3AA8D8")  # CRT Cyan
+		&"sports", &"sports_memorabilia":
+			_band.color = Color.html("#E85555")  # Grading Crimson
+		_:
+			_band.color = Color.html("#5BB8E8")  # Hub accent_interact
+
+
+func _on_store_exited(_store_id: StringName) -> void:
+	_band.color = Color.html("#5BB8E8")  # Hub accent_interact

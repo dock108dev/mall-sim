@@ -76,3 +76,23 @@ func test_phase1_signals_declared() -> void:
 			_bus.has_signal(signal_name),
 			"EventBus missing Phase 1 signal: %s" % signal_name,
 		)
+
+
+func test_stocking_cursor_active_emits_with_category() -> void:
+	_bus.emit_stocking_cursor_active(&"trading_cards")
+	assert_signal_emitted_with_parameters(
+		_bus, "stocking_cursor_active", [&"trading_cards"]
+	)
+
+
+func test_stocking_cursor_inactive_emits_parameterless() -> void:
+	_bus.emit_stocking_cursor_inactive()
+	assert_signal_emitted(_bus, "stocking_cursor_inactive")
+
+
+func test_stocking_signals_declared() -> void:
+	for signal_name in ["stocking_cursor_active", "stocking_cursor_inactive"]:
+		assert_true(
+			_bus.has_signal(signal_name),
+			"EventBus missing stocking signal: %s" % signal_name,
+		)

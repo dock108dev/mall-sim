@@ -19,6 +19,9 @@
 [ext_resource type="Script" path="res://game/scripts/stores/store_staff_config.gd" id="17"]
 [ext_resource type="Script" path="res://game/scripts/world/customer_nav_config.gd" id="18"]
 [ext_resource type="Script" path="res://game/scripts/audio/store_bleed_audio.gd" id="19"]
+[ext_resource type="PackedScene" path="res://game/assets/models/props/prop_crt_monitor.gltf" id="20"]
+[ext_resource type="Texture2D" path="res://game/assets/textures/tex_product_retro_games_albedo.png" id="21"]
+[ext_resource type="ShaderMaterial" path="res://game/assets/materials/mat_crt_screen_static.tres" id="22"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(7, 0.1, 5)
@@ -132,17 +135,6 @@ emission_energy_multiplier = 1.5
 albedo_color = Color(0.14, 0.11, 0.32, 1)
 roughness = 0.82
 
-[sub_resource type="BoxMesh" id="crt_body_mesh"]
-size = Vector3(0.8, 0.6, 0.5)
-
-[sub_resource type="BoxMesh" id="crt_screen_mesh"]
-size = Vector3(0.5, 0.34, 0.02)
-
-[sub_resource type="StandardMaterial3D" id="crt_screen_mat"]
-albedo_color = Color(0.06, 0.12, 0.1, 1)
-emission_enabled = true
-emission = Color(0.35, 0.95, 0.58, 1)
-emission_energy_multiplier = 1.2
 
 [sub_resource type="BoxMesh" id="neon_panel_mesh"]
 size = Vector3(1.2, 0.35, 0.04)
@@ -173,7 +165,7 @@ script = ExtResource("1")
 ; Camera pivot at store center
 ; ============================================================
 
-[node name="OrbitPivot" type="Marker3D" parent="."]
+[node name="OrbitPivot" type="Marker3D" parent="." groups=["orbit_pivot"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 
 [node name="StoreCamera" type="Camera3D" parent="."]
@@ -228,6 +220,17 @@ surface_material_override/0 = ExtResource("16")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -2.55)
 mesh = SubResource("wall_long_mesh")
 surface_material_override/0 = ExtResource("5")
+
+; Wall poster decals — project onto the back wall surface
+[node name="PosterLeft" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -1.8, 1.6, -2.50)
+size = Vector3(0.5, 0.25, 0.7)
+albedo_texture = ExtResource("21")
+
+[node name="PosterRight" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.5, 1.6, -2.50)
+size = Vector3(0.5, 0.25, 0.6)
+albedo_texture = ExtResource("21")
 
 [node name="LeftWall" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.55, 1.5, 0)
@@ -333,15 +336,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
 mesh = SubResource("testing_station_mesh")
 surface_material_override/0 = ExtResource("9")
 
-[node name="CRTBody" type="MeshInstance3D" parent="crt_demo_area"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, -0.02)
-mesh = SubResource("crt_body_mesh")
-surface_material_override/0 = ExtResource("14")
+[node name="CRTMonitor" parent="crt_demo_area" instance=ExtResource("20")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.075, -0.02)
 
-[node name="CRTScreen" type="MeshInstance3D" parent="crt_demo_area"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0.24)
-mesh = SubResource("crt_screen_mesh")
-surface_material_override/0 = SubResource("crt_screen_mat")
+[node name="CRTScreen" parent="crt_demo_area/CRTMonitor"]
+surface_material_override/0 = ExtResource("22")
 
 [node name="WarmNeonPanel" type="MeshInstance3D" parent="crt_demo_area"]
 transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.9, -0.18)

@@ -2,53 +2,12 @@
   "type": "ending",
   "endings": [
     {
-      "id": "the_mall_between_the_walls",
-      "title": "The Mall Between the Walls",
-      "text": "You followed the last loose thread and found a corridor the blueprints had never admitted to. Behind the drywall and maintenance doors, the mall kept a second version of itself: quieter, older, and still somehow open. When you left, you were no longer certain which set of halls had been the real one.",
-      "tone": "bittersweet",
-      "music_cue": "ending_ghost",
-      "priority": 0,
-      "category": "secret",
-      "required_all": [
-        {
-          "stat_key": "ghost_tenant_thread_completed",
-          "operator": "eq",
-          "value": 1.0
-        }
-      ],
-      "required_any": [],
-      "forbidden_all": []
-    },
-    {
-      "id": "the_mall_legend_redux",
-      "title": "The Mall Legend Redux",
-      "text": "The custodial staff started leaving notes in your suggestion box that read more like coordinates than complaints. Each one led to something the building had hidden from ordinary tenants, and you followed every thread until the mall began to feel less like a property and more like a witness. Revenue was only the part of the story that fit on a ledger.",
-      "tone": "positive",
-      "music_cue": "ending_legend",
-      "priority": 1,
-      "category": "secret",
-      "required_all": [
-        {
-          "stat_key": "secret_threads_completed",
-          "operator": "gte",
-          "value": 4.0
-        },
-        {
-          "stat_key": "cumulative_revenue",
-          "operator": "gte",
-          "value": 25000.0
-        }
-      ],
-      "required_any": [],
-      "forbidden_all": []
-    },
-    {
       "id": "lights_out",
       "title": "Lights Out",
       "text": "The register never warmed up. Seven days of unlocking the gate, straightening the shelves, and watching the corridor stay empty was all it took for management to decide the space had better uses. Your name was gone from the directory before lunch.",
       "tone": "negative",
       "music_cue": "ending_bankruptcy",
-      "priority": 2,
+      "priority": 0,
       "category": "bankruptcy",
       "required_all": [
         {
@@ -71,7 +30,7 @@
       "text": "Two weeks of diminishing returns turned the storefront into a long goodbye. The regulars stopped coming, then the casual shoppers thinned, then even the hallway outside felt like it was avoiding you. The eviction notice arrived warm from the copier.",
       "tone": "negative",
       "music_cue": "ending_bankruptcy",
-      "priority": 3,
+      "priority": 1,
       "category": "bankruptcy",
       "required_all": [
         {
@@ -99,7 +58,7 @@
       "text": "You stayed open past the point where optimism became a kind of stubborn theater. The numbers shrank slowly enough to be insulting, and the final sale felt less like commerce than sympathy. When the gate locked for the last time, the sound echoed further than it should have.",
       "tone": "bittersweet",
       "music_cue": "ending_bankruptcy",
-      "priority": 4,
+      "priority": 2,
       "category": "bankruptcy",
       "required_all": [
         {
@@ -122,7 +81,7 @@
       "text": "Fifty thousand in revenue and a reputation that arrived in conversations before you did made your store the one every other tenant measured themselves against. Customers left satisfied, management stopped pretending not to notice, and the mall treated your unit like proof it could still produce legends. Even the stale air around the escalators felt impressed.",
       "tone": "positive",
       "music_cue": "ending_triumph",
-      "priority": 5,
+      "priority": 3,
       "category": "success",
       "required_all": [
         {
@@ -168,7 +127,7 @@
       "text": "One store, run well enough and long enough that it stopped being a business and started being a landmark. The food court regulars used your sign as a landmark, the parking attendants recognized your car, and people gave directions with your storefront as a reference point. That kind of reputation outlasts a lease.",
       "tone": "positive",
       "music_cue": "ending_success",
-      "priority": 6,
+      "priority": 4,
       "category": "success",
       "required_all": [
         {
@@ -202,7 +161,7 @@
       "text": "Every occupied unit on the directory bore your name. Tenant meetings became a formality, the corridor became an empire, and the escalators ferried people toward your stores because there was nowhere else to go. At some point the mall stopped renting space to you and started orbiting you instead.",
       "tone": "positive",
       "music_cue": "ending_triumph",
-      "priority": 7,
+      "priority": 5,
       "category": "success",
       "required_all": [
         {
@@ -231,7 +190,7 @@
       "text": "Three storefronts meant three gate codes, three sets of keys, and a daily route through the building that felt like a private transit line. The other tenants learned to watch you the way people watch weather systems: cautiously, respectfully, and with the understanding that you operated at a larger scale than they did. Control had become its own form of atmosphere.",
       "tone": "positive",
       "music_cue": "ending_success",
-      "priority": 8,
+      "priority": 6,
       "category": "success",
       "required_all": [
         {
@@ -260,7 +219,7 @@
       "text": "Two hundred satisfied customers walked out having paid exactly what the tag said. In a mall full of markup tricks, pressure tactics, and soft negotiations, you made fixed prices feel almost radical. People trusted your shelves the way they trusted a scale at the deli counter.",
       "tone": "positive",
       "music_cue": "ending_success",
-      "priority": 9,
+      "priority": 7,
       "category": "success",
       "required_all": [
         {
@@ -294,7 +253,7 @@
       "text": "Thirty days later, the ledger balanced to a number that was technically positive and emotionally neutral. You covered the lights, paid the rent, kept the gate rolling up in the morning, and ended with enough left to call it survival. The directory still listed your store, which was the whole point of the exercise.",
       "tone": "neutral",
       "music_cue": "ending_survival",
-      "priority": 10,
+      "priority": 8,
       "category": "survival",
       "required_all": [
         {
@@ -328,7 +287,7 @@
       "text": "You found the revenue band where management stopped checking in but never started paying special attention. The rent cleared, the shelves turned over, and your store occupied the calm middle of the directory with admirable anonymity. Nothing dramatic happened, which over thirty days counted as its own kind of triumph.",
       "tone": "neutral",
       "music_cue": "ending_survival",
-      "priority": 11,
+      "priority": 9,
       "category": "survival",
       "required_all": [
         {
@@ -362,7 +321,7 @@
       "text": "Ten days below the bankruptcy line taught you more about timing than comfort ever could. The balance dipped, recovered, dipped again, and each rescue came at the last plausible second until nerve itself became part of the business model. By day thirty you had not escaped the edge so much as learned how to live on it.",
       "tone": "bittersweet",
       "music_cue": "ending_survival",
-      "priority": 12,
+      "priority": 10,
       "category": "survival",
       "required_all": [
         {

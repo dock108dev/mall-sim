@@ -139,6 +139,111 @@ func test_identity_factor_chain_is_stable() -> void:
 			)
 
 
+## Regression: all twelve multiplier-source slots can be expressed in PriceResolver
+## and the final price equals the product of all factors in canonical order.
+func test_all_twelve_source_slots_representable() -> void:
+	var base: float = 10.0
+	var multipliers: Array = [
+		{"slot": "rarity",      "label": "Rarity",        "factor": 1.5,  "detail": "rare"},
+		{"slot": "lifecycle",   "label": "Lifecycle",     "factor": 1.35, "detail": "ultra_new"},
+		{"slot": "condition",   "label": "Condition",     "factor": 1.0,  "detail": "good"},
+		{"slot": "grade",       "label": "Grade",         "factor": 2.0,  "detail": "B"},
+		{"slot": "auth",        "label": "Authentication","factor": 2.0,  "detail": "authenticated"},
+		{"slot": "trend",       "label": "Trend",         "factor": 1.2,  "detail": "hot"},
+		{"slot": "seasonal",    "label": "Seasonal",      "factor": 1.1,  "detail": "holiday"},
+		{"slot": "reputation",  "label": "Reputation",    "factor": 1.05, "detail": "tier-2"},
+		{"slot": "meta_shift",  "label": "Meta Shift",    "factor": 0.8,  "detail": "meta down"},
+		{"slot": "event",       "label": "Market Event",  "factor": 1.15, "detail": "weekend"},
+		{"slot": "depreciation","label": "Depreciation",  "factor": 0.9,  "detail": "day-7"},
+		{"slot": "warranty",    "label": "Warranty",      "factor": 1.2,  "detail": "1-year"},
+	]
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		&"twelve_source_item", base, multipliers, false
+	)
+	# step count = 12 supplied + 1 base step
+	assert_eq(result.steps.size(), 13,
+		"All twelve source slots plus base must appear in the trace")
+	# All twelve unique slot labels must appear in the output
+	var labels: Array[String] = []
+	for s: Variant in result.steps:
+		if s is PriceResolver.AuditStep:
+			labels.append((s as PriceResolver.AuditStep).label.to_lower())
+	assert_true(labels.has("base"),          "trace must have base step")
+	assert_true(labels.has("rarity"),        "trace must have rarity")
+	assert_true(labels.has("lifecycle"),     "trace must have lifecycle")
+	assert_true(labels.has("condition"),     "trace must have condition")
+	assert_true(labels.has("grade"),         "trace must have grade")
+	assert_true(labels.has("authentication"),"trace must have authentication")
+	assert_true(labels.has("trend"),         "trace must have trend")
+	assert_true(labels.has("seasonal"),      "trace must have seasonal")
+	assert_true(labels.has("reputation"),    "trace must have reputation")
+	assert_true(labels.has("meta shift"),    "trace must have meta_shift")
+	assert_true(labels.has("market event"),  "trace must have market event")
+	assert_true(labels.has("depreciation"),  "trace must have depreciation")
+	assert_true(labels.has("warranty"),      "trace must have warranty")
+	# Final price must equal exact product
+	var expected: float = base
+	for m: Dictionary in multipliers:
+		expected *= float(m["factor"])
+	assert_almost_eq(result.final_price, expected, TOLERANCE,
+		"Final price must equal the exact product of all twelve source multipliers")
+
+
+## Regression: checkout offer formula (market value × random × sensitivity)
+## produces the same result when routed through PriceResolver as it did when
+## computed directly. This guards against the migration changing prices.
+func test_checkout_offer_matches_direct_formula() -> void:
+	var base: float = 20.0
+	var rarity_mult: float = 1.0   # common
+	var cond_mult: float = 1.0     # good
+	var random_mult: float = 1.05  # fixed variance (no RNG — deterministic test)
+	var sensitivity: float = 0.5
+	var sensitivity_mult: float = 1.0 - sensitivity * 0.3  # = 0.85
+	# Direct formula: same as pre-refactor checkout calculation
+	var direct: float = base * rarity_mult * cond_mult * random_mult * sensitivity_mult
+	# PriceResolver path with reputation suppressed (matches pre-refactor behaviour)
+	var multipliers: Array = [
+		{"slot": "rarity",      "label": "Rarity",            "factor": rarity_mult,      "detail": "common"},
+		{"slot": "condition",   "label": "Condition",         "factor": cond_mult,        "detail": "good"},
+		{"slot": "random",      "label": "Offer Variance",    "factor": random_mult,      "detail": "fixed"},
+		{"slot": "sensitivity", "label": "Price Sensitivity", "factor": sensitivity_mult, "detail": "0.5"},
+		{"slot": "reputation",  "label": "Reputation",        "factor": 1.0,              "detail": "suppressed"},
+	]
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		&"checkout_reg_item", base, multipliers, false
+	)
+	assert_almost_eq(result.final_price, direct, TOLERANCE,
+		"PriceResolver checkout path must equal direct formula product")
+	# Verify canonical ordering: random and sensitivity are applied after rarity/condition
+	var labels: Array[String] = []
+	for s: Variant in result.steps:
+		if s is PriceResolver.AuditStep:
+			labels.append((s as PriceResolver.AuditStep).label.to_lower())
+	var rarity_idx: int  = labels.find("rarity")
+	var cond_idx: int    = labels.find("condition")
+	var random_idx: int  = labels.find("offer variance")
+	var sens_idx: int    = labels.find("price sensitivity")
+	assert_gt(random_idx, cond_idx,   "random must come after condition in trace")
+	assert_gt(sens_idx,   random_idx, "sensitivity must come after random in trace")
+	assert_gt(random_idx, rarity_idx, "random must come after rarity in trace")
+
+
+## Regression: CHAIN_ORDER change must preserve relative ordering of the five
+## canonical slots used by the existing store-coverage test.
+func test_legacy_canonical_slot_order_unchanged() -> void:
+	var multipliers: Array = _canonical_multipliers("electronics")
+	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
+		&"legacy_order_item", BASE_PRICE, multipliers, false
+	)
+	var labels: Array[String] = []
+	for step: Variant in result.steps:
+		if step is PriceResolver.AuditStep:
+			labels.append((step as PriceResolver.AuditStep).label.to_lower())
+	var expected: Array[String] = ["base", "seasonal", "reputation", "event", "haggle"]
+	assert_eq(labels, expected,
+		"Existing canonical slot order must be preserved after CHAIN_ORDER expansion")
+
+
 func test_price_resolved_signal_carries_audit() -> void:
 	var captured: Array = []
 	var capture: Callable = func(iid: StringName, price: float, steps: Array) -> void:

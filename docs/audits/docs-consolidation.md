@@ -1,106 +1,123 @@
-# Documentation Consolidation — 2026-04-23
+# Documentation Consolidation — 2026-04-24
 
 Scope: full review and consolidation of every Markdown file in the repository
-against the actual codebase. The project has ~86 `.md` files spanning root
-guidance, a core docs set under `docs/`, decision records, research notes,
-style guidelines, and point-in-time audit reports.
+against the actual codebase. Follows the prior 2026-04-23 pass (which verified
+core doc accuracy) and covers the delta introduced by Phase 0.1 (UI integrity
+and SSOT cleanup), which shipped 2026-04-24.
 
 ## Method
 
-1. Inventoried every `.md` file in the repo.
-2. Verified the core docs (README, index, setup, architecture, ownership,
-   design, content-data, testing, contributing, configuration-deployment,
-   roadmap) against authoritative sources:
-   - `project.godot` (autoloads, entry scene, input map, version)
-   - `game/autoload/*.gd` (actual autoload scripts behind the names)
-   - `tests/run_tests.sh`, `tests/validate_*.sh`, `.gutconfig.json`
-   - `.github/workflows/*.yml` (CI jobs and Godot version pins)
-   - `export_presets.cfg` (export targets and artifact paths)
-   - `game/content/**` (JSON shape and store definitions)
-   - `game/scenes/**` (scene structure and store controllers)
-3. Cross-checked decision records, research notes, and audit docs against
-   what they claim to back (ownership matrix, `CLAUDE.md` rules, research
-   citations).
+1. Inventoried every `.md` file in the repo (142 total).
+2. Verified the core docs against authoritative sources:
+   - `project.godot` (autoloads, entry scene, version)
+   - `game/autoload/*.gd` (actual scripts behind autoload names and files)
+   - `game/scenes/**` (actual scene structure and store scene paths)
+   - `game/content/**` (JSON layout, deleted files post-Phase 0.1)
+   - `tests/run_tests.sh`, `.gutconfig.json`, `.github/workflows/*.yml`
+   - `docs/audits/phase0-ui-integrity.md` (Phase 0.1 completion record)
+3. Cross-checked all root-level Markdown files against the clean-root rule
+   (only `README.md` as active project documentation at root).
 
 ## Findings
 
-The core `docs/` set is accurate and well-maintained. The autoload table in
-`docs/architecture.md` matches `project.godot` exactly; the CI jobs listed in
-`docs/testing.md` match `.github/workflows/validate.yml`; the export preset
-list in `docs/configuration-deployment.md` matches `export_presets.cfg`; the
-content loader pipeline in `docs/content-data.md` matches
-`game/autoload/data_loader.gd`; the Godot version `4.6.2` is consistent
-across `README.md`, `docs/setup.md`, `docs/configuration-deployment.md`, and
-both CI workflows. The "non-negotiables" in `docs/design.md` are enforced in
-code (boot-time content validator for trademarks, `walkable_mall` behind a
-debug flag, JSON-driven content via `DataLoaderSingleton`).
+### Inaccuracies requiring correction
 
-Root layout is already clean: `README.md` (user-facing), `CLAUDE.md` (Claude
-Code guidance), `BRAINDUMP.md` (customer voice — never rewritten by doc
-passes), `LICENSE`.
+**`docs/architecture.md`**
 
-One obsolete file was found at the root: `AIDLC_FUTURES.md`. It was
-auto-generated tooling output from a prior AIDLC cycle, duplicated guidance
-already in `CLAUDE.md`, and referenced root-level `ARCHITECTURE.md` /
-`DESIGN.md` — files that do not exist (those docs live at
-`docs/architecture.md` and `docs/design.md`).
+- Autoload table listed `data_loader_singleton.gd` as the file for
+  `DataLoaderSingleton`. Actual file is `game/autoload/data_loader.gd`;
+  the autoload alias in `project.godot` is `DataLoaderSingleton` but the
+  filename does not carry that suffix.
+- `AudioEventHandler` was listed as a separate autoload row. It is not
+  registered in `project.godot`. `AudioManager._ready` instantiates it
+  via `preload("res://game/autoload/audio_event_handler.gd")`. The row
+  was removed; the `AudioManager` description now notes this delegation.
+- Scene entry point table had two wrong paths:
+  - `game/scenes/main/game_world.tscn` → actual: `game/scenes/world/game_world.tscn`
+  - `game/scenes/ui/mall_overview.tscn` → actual: `game/scenes/mall/mall_overview.tscn`
+- Store scene pattern `game/scenes/stores/<name>/<name>.tscn` was wrong.
+  Store scenes are flat: `game/scenes/stores/<name>.tscn`.
+- Store entry note claimed `_on_hub_enter_store_requested` was "deprecated
+  and pending removal (ISSUE-009)." Phase 0.1 P0.3 retained this path as
+  the working entry route; `StoreDirector.enter_store` requires a sub-tree
+  hosting refactor before it can replace the hub signal path. Note updated
+  to reflect current reality.
 
-## Changes this cycle
+**`docs/content-data.md`**
 
-### Deleted
-- `AIDLC_FUTURES.md` (root) — ephemeral auto-generated tooling state. Listed
-  a prior run's stats, duplicated `CLAUDE.md` guidance, and linked to
-  root-level `ARCHITECTURE.md` / `DESIGN.md` that do not exist. No incoming
-  links from other docs.
+- `tutorial_steps.json` listed under root content files. Deleted in
+  Phase 0.1 P1.3. Removed from the list.
 
-### Rewritten
-- `docs/audits/docs-consolidation.md` (this file) — replaced prior
-  consolidation report with the 2026-04-23 review results.
+**`docs/roadmap.md`**
 
-### Kept as-is (verified accurate against the code)
+- Phase 0.1 described as future work. All ten blocks shipped 2026-04-24.
+  Completion callout added at the top of the Phase 0.1 section.
+
+**`docs/index.md`**
+
+- ADR-0007 (Remove Sneaker Citadel) was missing from the decision records
+  list. Added.
+
+**`docs/audits/phase0-ui-integrity.md`**
+
+- Header still read `Status: In progress`. Updated to `Status: Complete`.
+
+### Obsolete root files deleted
+
+The clean-root rule (only `README.md` as active project documentation at
+the repository root) was enforced. Three files were deleted:
+
+- **`AIDLC_FUTURES.md`** — auto-generated tooling output from a prior AIDLC
+  cycle. Duplicated guidance already in `CLAUDE.md`; no incoming links
+  from other docs. Flagged for deletion in the 2026-04-23 pass but not
+  removed at that time.
+- **`ARCHITECTURE.md`** — root-level summary of `docs/architecture.md`.
+  Contained incorrect file paths (`data_loader_singleton.gd`,
+  `game/scenes/main/game_world.tscn`), a wrong content root
+  (`game/data/` instead of `game/content/`), and a stale deprecation note
+  matching the issues found in the full doc. Fully superseded by
+  `docs/architecture.md`; no incoming links.
+- **`DESIGN.md`** — root-level summary of `docs/design.md`. Fully
+  superseded by `docs/design.md`; no incoming links.
+
+Neither `CLAUDE.md` nor `README.md` links to `ARCHITECTURE.md` or
+`DESIGN.md`; both reference the canonical `docs/architecture.md` and
+`docs/design.md` directly.
+
+## Kept as-is (verified accurate against the code)
+
 - `README.md` — run/test/deploy instructions match `tests/run_tests.sh`,
   `export_presets.cfg`, and the `4.6.2` CI pin.
-- `docs/index.md` — link list matches the current doc set.
-- `docs/setup.md` — Godot resolution order matches `tests/run_tests.sh`.
-- `docs/architecture.md` — autoload table matches `project.godot`; boot
-  flow matches `game/scripts/core/boot.gd`; GameWorld composition and tier
-  order match `game/scenes/world/game_world.gd`.
-- `docs/architecture/ownership.md` — ownership matrix rows are backed by
-  the autoloads they cite; research cross-references resolve.
-- `docs/design.md` — non-negotiables are enforced in code; interaction
-  audit checklist matches `AuditOverlay` checkpoints.
-- `docs/content-data.md` — layout and validation rules match
-  `game/autoload/data_loader.gd` and the JSON shapes under `game/content/`.
-- `docs/testing.md` — entry points and CI jobs match the workflow files.
+- `docs/setup.md` — Godot resolution order matches `tests/run_tests.sh`;
+  repository layout accurate.
+- `docs/architecture/ownership.md` — ownership matrix rows backed by
+  cited autoloads; research cross-references resolve.
+- `docs/design.md` — non-negotiables enforced in code; store roster,
+  progression model, and visual anti-patterns accurate.
+- `docs/content-data.md` (after fix) — loader pipeline, content layout,
+  type detection, SSOT register, typed resources, and runtime access
+  match `game/autoload/data_loader.gd` and `game/content/`.
+- `docs/testing.md` — entry points and CI jobs match workflow files.
 - `docs/contributing.md` — standards match observed code and content rules.
-- `docs/configuration-deployment.md` — version, exports, and CI workflow
-  descriptions verified.
-- `docs/roadmap.md` — presented as a phased plan, not a completion
-  snapshot; no factual drift from current scaffolded state.
-- `docs/decisions/000{1..6}-*.md` — ADRs are historical records; each
-  still reflects an actual commitment visible in code or content.
-- `docs/research/*.md` — reference material cited by `CLAUDE.md` and
-  `docs/architecture/ownership.md`; not meant to track code churn.
-- `docs/style/visual-grammar.md` — backs `docs/design.md`; still current.
-- Prior audit docs under `docs/audits/` (`2026-04-23-audit.md`,
-  `2026-04-23-legacy-content-paths.md`, `abend-handling.md`,
-  `braindump.md`, `cleanup-report.md`, `security-audit.md`,
-  `ssot-cleanup.md`) — retained as dated point-in-time snapshots.
+- `docs/configuration-deployment.md` — Godot version, export presets, and
+  CI workflow descriptions verified.
+- `docs/decisions/000{1..7}-*.md` — ADRs are historical records; each
+  reflects an active commitment visible in code or content.
+- `docs/research/*.md` — reference material; not expected to track code churn.
+- `docs/style/visual-grammar.md` — backs `docs/design.md`; current.
+- Prior audit docs (`abend-handling.md`, `braindump.md`, `cleanup-report.md`,
+  `security-audit.md`, `ssot-cleanup.md`, dated audit snapshots) — retained
+  as point-in-time records.
 
 ## Notes for future reviewers
 
-- `CLAUDE.md` at the root is intentional: Claude Code reads it as project
-  guidance. It is not "active project documentation" in the
-  `docs/index.md` sense, so the root-layout rule in `docs/index.md` still
-  holds.
-- `BRAINDUMP.md` at the root is the customer's voice and is never
-  rewritten by documentation passes — only referenced.
-- ~~A `sneaker_citadel` store scene and controller exist under
-  `game/scenes/stores/sneaker_citadel/` but are not registered in
-  `game/content/stores/store_definitions.json`…~~ **Resolved:** Sneaker
-  Citadel has been removed from the repo per
-  [ADR 0007](../decisions/0007-remove-sneaker-citadel.md). The shipping
-  roster is the five stores in `store_definitions.json`.
-- If a future AIDLC cycle re-emits `AIDLC_FUTURES.md` at the root, it
-  should be redirected into `docs/audits/` as a dated snapshot or excluded
-  from commit entirely — it is tooling state, not documentation.
+- `BRAINDUMP.md` at the root is the customer's voice and is never rewritten
+  by documentation passes — only referenced.
+- `CLAUDE.md` at the root is Claude Code project guidance. It is not active
+  project documentation in the `docs/index.md` sense.
+- If a future AIDLC cycle emits `AIDLC_FUTURES.md` at the root, redirect it
+  into `docs/audits/` as a dated snapshot or exclude it from the commit.
+- `AudioEventHandler` (`game/autoload/audio_event_handler.gd`) is not a
+  registered autoload. It is instantiated by `AudioManager`. If it is ever
+  registered in `project.godot`, the `docs/architecture.md` autoload table
+  should be updated.

@@ -69,6 +69,107 @@ static func calculate_market_value(
 	return minf(value, MAX_MARKET_VALUE)
 
 
+## Returns PriceResolver-compatible multiplier dicts for all factors that
+## calculate_market_value() applies. Pass these to PriceResolver.resolve_for_item()
+## for a full audit trace. Supply the same system references held by EconomySystem.
+static func get_item_multipliers(
+	item: ItemInstance,
+	demand_modifiers: Dictionary,
+	drift_factors: Dictionary,
+	trend_system: TrendSystem,
+	market_event_system: MarketEventSystem,
+	meta_shift_system: MetaShiftSystem,
+	season_cycle_system: SeasonCycleSystem,
+) -> Array:
+	if not item or not item.definition:
+		return []
+	if item.authentication_status == "fake":
+		return [{"slot": "auth", "label": "Auth (Fake)", "factor": 0.0, "detail": "item is counterfeit"}]
+	var base: float = item.definition.base_price
+	var cond_mult: float = ItemInstance.CONDITION_MULTIPLIERS.get(item.condition, 1.0)
+	var rarity_mult: float = ItemInstance.calculate_effective_rarity(
+		base, item.definition.rarity
+	)
+	var demand: float = demand_modifiers.get(item.definition.category, DEFAULT_DEMAND)
+	var drift: float = drift_factors.get(item.definition.id, DRIFT_DEFAULT)
+	var time_mult: float = calc_time_multiplier(item)
+	var trend: float = get_trend_multiplier(item, trend_system)
+	var market_event: float = get_market_event_multiplier(item, market_event_system)
+	var meta_shift: float = get_meta_shift_multiplier(item, meta_shift_system)
+	var season: float = get_season_multiplier(item, season_cycle_system)
+	var auth: float = get_authentication_multiplier(item)
+	var multipliers: Array = []
+	multipliers.append({
+		"slot": "rarity",
+		"label": "Rarity",
+		"factor": rarity_mult,
+		"detail": item.definition.rarity,
+	})
+	multipliers.append({
+		"slot": "condition",
+		"label": "Condition",
+		"factor": cond_mult,
+		"detail": item.condition,
+	})
+	if auth != 1.0:
+		multipliers.append({
+			"slot": "auth",
+			"label": "Authentication",
+			"factor": auth,
+			"detail": item.authentication_status,
+		})
+	if demand != DEFAULT_DEMAND:
+		multipliers.append({
+			"slot": "demand",
+			"label": "Demand",
+			"factor": demand,
+			"detail": "category=%s" % item.definition.category,
+		})
+	if drift != DRIFT_DEFAULT:
+		multipliers.append({
+			"slot": "drift",
+			"label": "Market Drift",
+			"factor": drift,
+			"detail": "item=%s" % item.definition.id,
+		})
+	if trend != 1.0:
+		multipliers.append({
+			"slot": "trend",
+			"label": "Trend",
+			"factor": trend,
+			"detail": "category=%s" % item.definition.category,
+		})
+	if season != 1.0:
+		multipliers.append({
+			"slot": "seasonal",
+			"label": "Seasonal",
+			"factor": season,
+			"detail": "season cycle",
+		})
+	if meta_shift != 1.0:
+		multipliers.append({
+			"slot": "meta_shift",
+			"label": "Meta Shift",
+			"factor": meta_shift,
+			"detail": "meta state",
+		})
+	if market_event != 1.0:
+		multipliers.append({
+			"slot": "event",
+			"label": "Market Event",
+			"factor": market_event,
+			"detail": "active event",
+		})
+	if time_mult != 1.0:
+		multipliers.append({
+			"slot": "depreciation",
+			"label": "Depreciation",
+			"factor": time_mult,
+			"detail": "day=%d" % GameManager.current_day,
+		})
+	return multipliers
+
+
 static func get_trend_multiplier(
 	item: ItemInstance, trend_system: TrendSystem
 ) -> float:

@@ -135,7 +135,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          godot --headless --export-release \
+          bash scripts/godot_exec.sh --headless --export-release \
             "Windows Desktop" \
             "build/windows/MallcoreSim.exe"
         timeout-minutes: 10
@@ -191,7 +191,7 @@ jobs:
       - name: Export macOS
         run: |
           set -euo pipefail
-          godot --headless --export-release \
+          bash scripts/godot_exec.sh --headless --export-release \
             "macOS" \
             "build/macos/mallcore-sim-macos.zip"
         timeout-minutes: 10
@@ -240,7 +240,7 @@ jobs:
       - name: Export Linux
         run: |
           set -euo pipefail
-          godot --headless --export-release \
+          bash scripts/godot_exec.sh --headless --export-release \
             "Linux/X11" \
             "build/linux/MallcoreSim.x86_64"
         timeout-minutes: 10
@@ -295,7 +295,7 @@ jobs:
           path: artifacts/linux
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}

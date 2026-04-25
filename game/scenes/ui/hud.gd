@@ -67,6 +67,7 @@ var _cash_color_tween: Tween
 var _rep_arrow_tween: Tween
 var _dim_tween: Tween
 var _close_day_button: Button
+var _hub_back_button: Button
 
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
@@ -113,10 +114,13 @@ func _ready() -> void:
 	EventBus.locale_changed.connect(_on_locale_changed)
 	EventBus.build_mode_entered.connect(_on_build_mode_entered)
 	EventBus.build_mode_exited.connect(_on_build_mode_exited)
+	EventBus.store_entered.connect(_on_store_entered_hub)
+	EventBus.store_exited.connect(_on_store_exited_hub)
 	_milestones_button.pressed.connect(_on_milestones_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
 
 	_create_close_day_button()
+	_create_hub_back_button()
 
 	_update_cash_display(_displayed_cash)
 	_update_reputation_display(_last_reputation)
@@ -173,6 +177,29 @@ func _create_close_day_button() -> void:
 func _on_close_day_pressed() -> void:
 	if GameManager.current_state == GameManager.GameState.GAMEPLAY:
 		EventBus.day_close_requested.emit()
+
+
+func _create_hub_back_button() -> void:
+	_hub_back_button = Button.new()
+	_hub_back_button.name = "HubBackButton"
+	_hub_back_button.text = "← Hub"
+	_hub_back_button.visible = false
+	_hub_back_button.pressed.connect(_on_hub_back_pressed)
+	_top_bar.add_child(_hub_back_button)
+
+
+func _on_hub_back_pressed() -> void:
+	EventBus.exit_store_requested.emit()
+
+
+func _on_store_entered_hub(_store_id: StringName) -> void:
+	if is_instance_valid(_hub_back_button):
+		_hub_back_button.visible = true
+
+
+func _on_store_exited_hub(_store_id: StringName) -> void:
+	if is_instance_valid(_hub_back_button):
+		_hub_back_button.visible = false
 
 
 func _on_speed_button_pressed() -> void:

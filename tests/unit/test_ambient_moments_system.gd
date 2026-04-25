@@ -470,3 +470,77 @@ func test_save_load_roundtrip_preserves_delivery_queue() -> void:
 		&"queued_moment",
 		"load_save_data should restore the correct moment id in the queue"
 	)
+
+
+# ── Witnessed Log ─────────────────────────────────────────────────────────────
+
+
+func test_witnessed_log_appended_on_dispatch() -> void:
+	_sys._state = AmbientMomentsSystem.State.MONITORING
+	var def := _make_def({
+		"id": "log_test",
+		"category": "hallway",
+		"trigger_category": "time_of_day",
+		"trigger_value": "9",
+		"flavor_text": "A moment occurred.",
+	})
+	_sys._moment_definitions = [def]
+	_sys._evaluate_moments(9)
+
+	var log: Array[Dictionary] = _sys.get_witnessed_log()
+	assert_eq(log.size(), 1, "Witnessed log should have one entry after dispatch")
+	assert_eq(
+		log[0].get("moment_id", ""),
+		"log_test",
+		"Log entry moment_id should match dispatched moment"
+	)
+	assert_eq(
+		log[0].get("flavor_text", ""),
+		"A moment occurred.",
+		"Log entry flavor_text should match moment definition"
+	)
+
+
+func test_witnessed_log_capped_at_max_entries() -> void:
+	_sys._state = AmbientMomentsSystem.State.MONITORING
+	var total: int = AmbientMomentsSystem.MAX_WITNESSED_LOG + 5
+	for i: int in range(total):
+		_sys._append_witnessed_log(
+			StringName("moment_%d" % i), "Flavor %d" % i
+		)
+
+	var log: Array[Dictionary] = _sys.get_witnessed_log()
+	assert_eq(
+		log.size(),
+		AmbientMomentsSystem.MAX_WITNESSED_LOG,
+		"Witnessed log must not exceed MAX_WITNESSED_LOG entries"
+	)
+	assert_eq(
+		log[0].get("moment_id", ""),
+		"moment_%d" % 5,
+		"Oldest entries should be evicted when cap is reached"
+	)
+
+
+func test_save_load_roundtrip_preserves_witnessed_log() -> void:
+	_sys._append_witnessed_log(&"persisted_moment", "Saved flavor text.")
+
+	var saved: Dictionary = _sys.get_save_data()
+
+	var fresh := AmbientMomentsSystem.new()
+	add_child_autofree(fresh)
+	fresh._apply_state({})
+	fresh.load_save_data(saved)
+
+	var log: Array[Dictionary] = fresh.get_witnessed_log()
+	assert_eq(log.size(), 1, "Witnessed log should survive save/load round-trip")
+	assert_eq(
+		log[0].get("moment_id", ""),
+		"persisted_moment",
+		"moment_id should be preserved after load"
+	)
+	assert_eq(
+		log[0].get("flavor_text", ""),
+		"Saved flavor text.",
+		"flavor_text should be preserved after load"
+	)

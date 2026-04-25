@@ -41,6 +41,9 @@ const _ORDER_PANEL_SCENE: PackedScene = preload(
 const _TRENDS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/trends_panel.tscn"
 )
+const _PERFORMANCE_PANEL_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/performance_panel.tscn"
+)
 const _PAUSE_MENU_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/pause_menu.tscn"
 )
@@ -91,6 +94,9 @@ const _WARRANTY_DIALOG_SCENE: PackedScene = preload(
 )
 const _MOMENTS_TRAY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/moments_tray.tscn"
+)
+const _MOMENTS_LOG_PANEL_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/moments_log_panel.tscn"
 )
 const _DEBUG_OVERLAY_SCENE: PackedScene = preload(
 	"res://game/scenes/debug/debug_overlay.tscn"
@@ -162,12 +168,6 @@ var _hub_active_store_scene: Node3D = null
 	$PerformanceReportSystem
 )
 @onready var random_event_system: RandomEventSystem = $RandomEventSystem
-@onready var secret_thread_manager: SecretThreadManager = (
-	$SecretThreadManager
-)
-@onready var secret_thread_system: SecretThreadSystem = (
-	$SecretThreadSystem
-)
 @onready var ambient_moments_system: AmbientMomentsSystem = (
 	$AmbientMomentsSystem
 )
@@ -383,11 +383,7 @@ func initialize_tier_5_meta() -> void:
 		economy_system
 	)
 
-	ambient_moments_system.initialize(
-		secret_thread_manager, inventory_system, time_system
-	)
-
-	secret_thread_system.initialize(ambient_moments_system)
+	ambient_moments_system.initialize(inventory_system, time_system)
 
 	regulars_log_system.initialize()
 
@@ -445,8 +441,6 @@ func _wire_save_manager() -> void:
 	save_manager.set_random_event_system(random_event_system)
 	save_manager.set_staff_system(staff_system)
 	save_manager.set_tutorial_system(tutorial_system)
-	save_manager.set_secret_thread_manager(secret_thread_manager)
-	save_manager.set_secret_thread_system(secret_thread_system)
 	save_manager.set_ambient_moments_system(ambient_moments_system)
 	save_manager.set_regulars_log_system(regulars_log_system)
 	save_manager.set_ending_evaluator(ending_evaluator)
@@ -552,6 +546,20 @@ func _setup_deferred_panels() -> void:
 	_mall_overview.setup(inventory_system, economy_system)
 	# Day Summary hides MallOverview while open and restores on dismiss (P1.4).
 	day_cycle_controller.set_mall_overview(_mall_overview)
+
+	var moments_log_panel: MomentsLogPanel = (
+		_MOMENTS_LOG_PANEL_SCENE.instantiate() as MomentsLogPanel
+	)
+	moments_log_panel.ambient_moments_system = ambient_moments_system
+	_ui_layer.add_child(moments_log_panel)
+	_mall_overview.set_moments_log_panel(moments_log_panel)
+
+	var performance_panel: PerformancePanel = (
+		_PERFORMANCE_PANEL_SCENE.instantiate() as PerformancePanel
+	)
+	performance_panel.performance_report_system = performance_report_system
+	_ui_layer.add_child(performance_panel)
+	_mall_overview.set_performance_panel(performance_panel)
 
 	_fixture_catalog = (
 		_FIXTURE_CATALOG_SCENE.instantiate()

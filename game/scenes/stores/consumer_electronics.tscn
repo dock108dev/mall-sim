@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://game/scripts/stores/store_staff_config.gd" id="13"]
 [ext_resource type="Script" path="res://game/scripts/world/customer_nav_config.gd" id="14"]
 [ext_resource type="Script" path="res://game/scripts/audio/store_bleed_audio.gd" id="15"]
+[ext_resource type="ShaderMaterial" path="res://game/assets/materials/mat_crt_screen_static.tres" id="16"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(9, 0.1, 6)
@@ -40,11 +41,6 @@ size = Vector3(0.6, 1.0, 0.6)
 [sub_resource type="BoxMesh" id="kiosk_screen_mesh"]
 size = Vector3(0.5, 0.4, 0.05)
 
-[sub_resource type="StandardMaterial3D" id="kiosk_screen_mat"]
-albedo_color = Color(0.05, 0.1, 0.2, 1)
-emission_enabled = true
-emission = Color(0.3, 0.7, 1.0, 1)
-emission_energy_multiplier = 2.5
 
 [sub_resource type="BoxMesh" id="shelf_3tier_mesh"]
 size = Vector3(2.5, 2.0, 0.4)
@@ -291,7 +287,7 @@ surface_material_override/0 = ExtResource("9")
 [node name="Screen" type="MeshInstance3D" parent="DemoKiosks/Kiosk_A"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 mesh = SubResource("kiosk_screen_mesh")
-surface_material_override/0 = SubResource("kiosk_screen_mat")
+surface_material_override/0 = ExtResource("16")
 
 [node name="Slot1" type="Area3D" parent="DemoKiosks/Kiosk_A"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 1.05, -0.2)
@@ -333,7 +329,7 @@ surface_material_override/0 = ExtResource("9")
 [node name="Screen" type="MeshInstance3D" parent="DemoKiosks/Kiosk_B"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 mesh = SubResource("kiosk_screen_mesh")
-surface_material_override/0 = SubResource("kiosk_screen_mat")
+surface_material_override/0 = ExtResource("16")
 
 [node name="Slot1" type="Area3D" parent="DemoKiosks/Kiosk_B"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 1.05, -0.2)
@@ -376,7 +372,7 @@ surface_material_override/0 = ExtResource("9")
 [node name="Screen" type="MeshInstance3D" parent="DemoKiosks/Kiosk_C"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 mesh = SubResource("kiosk_screen_mesh")
-surface_material_override/0 = SubResource("kiosk_screen_mat")
+surface_material_override/0 = ExtResource("16")
 
 [node name="Slot1" type="Area3D" parent="DemoKiosks/Kiosk_C"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 1.05, -0.2)

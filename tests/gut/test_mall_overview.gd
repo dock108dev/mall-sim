@@ -187,6 +187,177 @@ func test_store_entered_hides_overview() -> void:
 	assert_false(_overview.visible, "Overview must become hidden on store_entered")
 
 
+# ── StoreSlotCard reputation and locked state ─────────────────────────────────
+
+func test_store_slot_card_has_rep_badge() -> void:
+	var scene: PackedScene = load(STORE_SLOT_CARD_SCENE_PATH)
+	var state: SceneState = scene.get_state()
+	var found: bool = false
+	for i: int in range(state.get_node_count()):
+		if state.get_node_name(i) == &"RepBadge":
+			found = true
+			break
+	assert_true(found, "store_slot_card.tscn must contain a RepBadge node")
+
+
+func test_store_slot_card_has_locked_overlay() -> void:
+	var scene: PackedScene = load(STORE_SLOT_CARD_SCENE_PATH)
+	var state: SceneState = scene.get_state()
+	var found: bool = false
+	for i: int in range(state.get_node_count()):
+		if state.get_node_name(i) == &"LockedOverlay":
+			found = true
+			break
+	assert_true(found, "store_slot_card.tscn must contain a LockedOverlay node")
+
+
+func test_store_slot_card_rep_badge_updates() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.set_reputation_tier("REPUTABLE")
+	assert_eq(card._rep_badge.text, "REPUTABLE")
+
+
+func test_store_slot_card_locked_shows_overlay() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"pocket_creatures", "Pocket Creatures")
+	card.set_locked(true, "REP 25 | $500")
+	assert_true(card._locked_overlay.visible, "LockedOverlay must be visible when locked")
+	assert_string_contains(card._locked_overlay.text, "LOCKED")
+	assert_string_contains(card._locked_overlay.text, "REP 25")
+
+
+func test_store_slot_card_locked_hides_rep_badge() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"pocket_creatures", "Pocket Creatures")
+	card.set_reputation_tier("UNREMARKABLE")
+	card.set_locked(true, "REP 25 | $500")
+	assert_false(card._rep_badge.visible, "RepBadge must be hidden when card is locked")
+
+
+func test_store_slot_card_locked_blocks_click() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	var received: Array[StringName] = []
+	card.store_selected.connect(func(sid: StringName) -> void: received.append(sid))
+	card.setup(&"pocket_creatures", "Pocket Creatures")
+	card.set_locked(true, "")
+	card._gui_input(_make_left_click())
+	assert_eq(received.size(), 0, "Locked card must not emit store_selected on click")
+
+
+func test_store_slot_card_unlocked_shows_rep_badge_hides_overlay() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.set_locked(true, "")
+	card.set_locked(false, "")
+	assert_false(card._locked_overlay.visible, "LockedOverlay must be hidden when unlocked")
+	assert_true(card._rep_badge.visible, "RepBadge must be visible when unlocked")
+
+
+# ── MallOverview event feed ───────────────────────────────────────────────────
+
+func test_mall_overview_has_event_feed_scroll() -> void:
+	var scene: PackedScene = load(MALL_OVERVIEW_SCENE_PATH)
+	var state: SceneState = scene.get_state()
+	var found: bool = false
+	for i: int in range(state.get_node_count()):
+		if state.get_node_name(i) == &"EventFeedScroll":
+			found = true
+			break
+	assert_true(found, "mall_overview.tscn must contain an EventFeedScroll node")
+
+
+func test_mall_overview_has_event_feed() -> void:
+	var scene: PackedScene = load(MALL_OVERVIEW_SCENE_PATH)
+	var state: SceneState = scene.get_state()
+	var found: bool = false
+	for i: int in range(state.get_node_count()):
+		if state.get_node_name(i) == &"EventFeed":
+			found = true
+			break
+	assert_true(found, "mall_overview.tscn must contain an EventFeed node")
+
+
+func test_event_feed_appends_entry_on_day_started() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var feed: VBoxContainer = _overview._event_feed
+	var before: int = feed.get_child_count()
+	EventBus.day_started.emit(3)
+	assert_gt(feed.get_child_count(), before, "Feed must grow after day_started")
+
+
+func test_event_feed_appends_entry_on_market_event() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var feed: VBoxContainer = _overview._event_feed
+	EventBus.market_event_triggered.emit(
+		&"boom", &"retro_games", {}
+	)
+	assert_gt(feed.get_child_count(), 0, "Feed must show market event entry")
+
+
+func test_event_feed_appends_entry_on_milestone_reached() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var feed: VBoxContainer = _overview._event_feed
+	EventBus.milestone_reached.emit(&"first_sale")
+	assert_gt(feed.get_child_count(), 0, "Feed must show milestone entry")
+
+
+func test_event_feed_caps_at_ten_entries() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	# Fire 15 events to exceed the cap.
+	for i: int in range(15):
+		EventBus.day_started.emit(i + 1)
+	assert_lte(
+		_overview._event_feed.get_child_count(),
+		10,
+		"Event feed must not exceed 10 entries"
+	)
+
+
+# ── Completion button (ISSUE-019) ─────────────────────────────────────────────
+
+func test_mall_overview_has_completion_button() -> void:
+	var scene: PackedScene = load(MALL_OVERVIEW_SCENE_PATH)
+	var state: SceneState = scene.get_state()
+	var found: bool = false
+	for i: int in range(state.get_node_count()):
+		if state.get_node_name(i) == &"CompletionButton":
+			found = true
+			break
+	assert_true(found, "mall_overview.tscn must contain a CompletionButton node")
+
+
+func test_completion_button_emits_toggle_signal() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	watch_signals(EventBus)
+	_overview._completion_button.pressed.emit()
+	assert_signal_emitted(
+		EventBus,
+		"toggle_completion_tracker_panel",
+		"Completion button must emit toggle_completion_tracker_panel"
+	)
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 func _on_day_close_requested() -> void:

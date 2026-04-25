@@ -236,6 +236,7 @@ func process_rental(
 		)
 	EventBus.item_rented.emit(item_instance_id, rental_fee, rental_tier)
 	EventBus.title_rented.emit(item_instance_id, rental_fee, rental_tier)
+	EventBus.store_rental_started.emit(item_instance_id, customer_id, return_day)
 	return rental_record
 
 
@@ -548,10 +549,22 @@ func get_store_actions() -> Array:
 	return actions
 
 
+## Processes on-time returns for the given day. Called from _on_day_started;
+## also available as a named entry point for testing and tooling.
+func _process_daily_returns(day: int) -> void:
+	_process_returns(day)
+
+
+## Detects rentals past their deadline and accrues pending late fees.
+## Called from _on_day_started after _process_daily_returns.
+func _check_overdue_rentals(day: int) -> void:
+	_collect_overdue_late_fees(day)
+
+
 func _on_day_started(day: int) -> void:
 	_daily_late_fee_total = 0.0
-	_process_returns(day)
-	_collect_overdue_late_fees(day)
+	_process_daily_returns(day)
+	_check_overdue_rentals(day)
 	_update_returns_bin_count()
 	if _daily_late_fee_total > 0.0:
 		EventBus.toast_requested.emit(
@@ -618,6 +631,7 @@ func _handle_return(rental: Dictionary, late_days: int) -> void:
 	})
 	EventBus.rental_returned.emit(instance_id, worn_out)
 	EventBus.title_returned.emit(instance_id, worn_out)
+	EventBus.store_rental_returned.emit(instance_id, late_days)
 
 
 ## Applies guaranteed wear degradation to a returned item.
@@ -725,6 +739,10 @@ func _collect_overdue_late_fees(current_day: int) -> void:
 		record["overdue"] = true
 		record["days_overdue"] = days_overdue
 		EventBus.rental_overdue.emit(
+			str(record.get("customer_id", "")),
+			str(record.get("instance_id", ""))
+		)
+		EventBus.store_rental_overdue.emit(
 			str(record.get("customer_id", "")),
 			str(record.get("instance_id", ""))
 		)
