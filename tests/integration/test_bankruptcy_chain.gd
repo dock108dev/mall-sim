@@ -13,7 +13,7 @@ var _economy: EconomySystem
 var _ending_evaluator: EndingEvaluatorSystem
 var _time: TimeSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_ending_id: StringName
 var _saved_difficulty: StringName
 
@@ -24,7 +24,7 @@ func before_each() -> void:
 	_saved_difficulty = DifficultySystemSingleton.get_current_tier_id()
 
 	DifficultySystemSingleton.set_tier(&"normal")
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager._ending_id = &""
 
 	_time = TimeSystem.new()
@@ -61,7 +61,7 @@ func test_deduction_below_zero_triggers_full_bankruptcy_chain() -> void:
 		"ending_triggered should fire as part of the bankruptcy chain"
 	)
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"GameManager should transition to GAME_OVER after bankruptcy chain"
 	)
 	assert_true(
@@ -99,7 +99,7 @@ func test_time_paused_after_game_over() -> void:
 	_economy.force_deduct_cash(DEDUCTION_AMOUNT, "test rent")
 
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"Precondition: GameManager must be GAME_OVER before checking pause"
 	)
 	assert_true(

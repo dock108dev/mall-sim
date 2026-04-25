@@ -54,11 +54,6 @@ var _warranty_tier_id: String = ""
 # ── Auth pane state ──────────────────────────────────────────────────────────
 var _auth_item_id: String = ""
 
-# ── Scene refs ────────────────────────────────────────────────────────────────
-@onready var _button_container: BoxContainer = $Layout/Chrome/Margin/Buttons
-@onready var _separator: HSeparator = $Layout/Separator
-@onready var _content: VBoxContainer = $Layout/Content
-
 # ── Per-mode panes (built in _ready) ─────────────────────────────────────────
 var _panes: Dictionary = {}
 
@@ -78,6 +73,11 @@ var _refurb_status_label: Label = null
 
 # Trade pane node refs
 var _trade_offer_label: Label = null
+
+# ── Scene refs ────────────────────────────────────────────────────────────────
+@onready var _button_container: BoxContainer = $Layout/Chrome/Margin/Buttons
+@onready var _separator: HSeparator = $Layout/Separator
+@onready var _content: VBoxContainer = $Layout/Content
 
 
 func _ready() -> void:

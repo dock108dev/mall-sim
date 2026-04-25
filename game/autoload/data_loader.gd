@@ -380,7 +380,7 @@ func _build_and_register(
 
 
 func _build_resource(
-	content_type: String, data: Dictionary, source_path: String = ""
+	content_type: String, data: Dictionary, _source_path: String = ""
 ) -> Resource:
 	match content_type:
 		"item", "item_definition":

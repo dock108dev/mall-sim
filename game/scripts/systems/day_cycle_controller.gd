@@ -87,7 +87,7 @@ func _on_day_close_requested() -> void:
 
 
 func _on_day_ended(day: int) -> void:
-	if GameManager.current_state == GameManager.GameState.GAME_OVER:
+	if GameManager.current_state == GameManager.State.GAME_OVER:
 		return
 	# Prevent double-close if both day_ended and day_close_requested fire.
 	if _awaiting_acknowledgement:
@@ -98,7 +98,7 @@ func _on_day_ended(day: int) -> void:
 	if _ensure_panels_callback.is_valid():
 		_ensure_panels_callback.call()
 
-	GameManager.change_state(GameManager.GameState.DAY_SUMMARY)
+	GameManager.change_state(GameManager.State.DAY_SUMMARY)
 	_awaiting_acknowledgement = true
 	_show_day_summary(day)
 
@@ -114,17 +114,17 @@ func _on_day_acknowledged() -> void:
 
 	_process_wages()
 
-	if GameManager.current_state == GameManager.GameState.GAME_OVER:
+	if GameManager.current_state == GameManager.State.GAME_OVER:
 		return
 
 	_evaluate_milestones()
 	_evaluate_endings()
 	_evaluate_arc()
 
-	if GameManager.current_state == GameManager.GameState.GAME_OVER:
+	if GameManager.current_state == GameManager.State.GAME_OVER:
 		return
 
-	GameManager.change_state(GameManager.GameState.GAMEPLAY)
+	GameManager.change_state(GameManager.State.GAMEPLAY)
 	if _save_manager:
 		_save_manager.save_game(0)
 	_time_system.advance_to_next_day()

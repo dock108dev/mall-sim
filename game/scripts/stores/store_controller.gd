@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Base controller for all store types. Provides shared lifecycle, signal
 ## wiring, inventory interface, and slot/fixture management.
 class_name StoreController

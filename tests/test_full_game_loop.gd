@@ -24,7 +24,7 @@ var _sold_items: Array[Dictionary] = []
 var _day_end_payloads: Array[Dictionary] = []
 var _reports: Array[PerformanceReport] = []
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_store_id: StringName = &""
 var _saved_owned_stores: Array[StringName] = []
 var _saved_day: int = 1
@@ -47,7 +47,7 @@ func before_each() -> void:
 	_day_end_payloads.clear()
 	_reports.clear()
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &""
 	GameManager.owned_stores = []
 	GameManager.current_day = 1

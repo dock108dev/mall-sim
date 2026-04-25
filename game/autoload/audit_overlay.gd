@@ -20,6 +20,7 @@ const _COLOR_PASS := Color(0.2, 0.9, 0.2)
 const _COLOR_FAIL := Color(0.9, 0.2, 0.2)
 const _COLOR_PENDING := Color(0.65, 0.65, 0.65)
 const _PANEL_WIDTH := 320.0
+const _ENTRY_ROWS: int = 10
 
 var _results: Dictionary = {}
 var _modal_stack: Array[String] = []
@@ -36,7 +37,6 @@ var _label_player_path: Label
 var _label_store_id: Label
 var _checkpoint_labels: Dictionary = {}
 var _entry_labels: Array[Label] = []
-const _ENTRY_ROWS: int = 10
 
 
 func _ready() -> void:

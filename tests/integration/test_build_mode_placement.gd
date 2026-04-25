@@ -18,7 +18,7 @@ var _economy: EconomySystem
 var _inventory: InventorySystem
 var _data_loader: DataLoader
 
-var _saved_game_state: GameManager.GameState
+var _saved_game_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 var _saved_data_loader: DataLoader
@@ -35,7 +35,7 @@ func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	_saved_data_loader = GameManager.data_loader
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = TEST_STORE
 	GameManager.owned_stores = [TEST_STORE]
 

@@ -84,7 +84,7 @@ func test_boot_script_uses_issue_137_sequence() -> void:
 		"boot.gd should initialize AudioManager"
 	)
 	assert_true(
-		source.contains("GameManager.transition_to(GameManager.GameState.MAIN_MENU)"),
+		source.contains("GameManager.transition_to(GameManager.State.MAIN_MENU)"),
 		"boot.gd should transition through GameManager.transition_to()"
 	)
 
@@ -96,7 +96,7 @@ func test_boot_script_uses_issue_137_sequence() -> void:
 	)
 	var load_pos: int = source.find("DataLoaderSingleton.load_all()")
 	var transition_pos: int = source.find(
-		"GameManager.transition_to(GameManager.GameState.MAIN_MENU)"
+		"GameManager.transition_to(GameManager.State.MAIN_MENU)"
 	)
 	assert_true(
 		load_pos >= 0 and transition_pos > load_pos,

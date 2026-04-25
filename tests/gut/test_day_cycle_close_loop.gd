@@ -26,7 +26,7 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"pocket_creatures"
 	GameManager.owned_stores = []
 

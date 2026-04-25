@@ -93,7 +93,7 @@ func test_connects_to_day_ended() -> void:
 
 
 func test_game_over_blocks_panel() -> void:
-	GameManager.current_state = GameManager.GameState.GAME_OVER
+	GameManager.current_state = GameManager.State.GAME_OVER
 	_controller._on_day_ended(1)
 	assert_false(
 		_controller._awaiting_acknowledgement,
@@ -102,11 +102,11 @@ func test_game_over_blocks_panel() -> void:
 
 
 func test_day_ended_transitions_to_day_summary() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_controller._on_day_ended(1)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.DAY_SUMMARY,
+		GameManager.State.DAY_SUMMARY,
 		"State should transition to DAY_SUMMARY on day_ended"
 	)
 	assert_true(
@@ -116,7 +116,7 @@ func test_day_ended_transitions_to_day_summary() -> void:
 
 
 func test_acknowledgement_advances_day() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_controller._on_day_ended(1)
 	assert_eq(
 		_controller._awaiting_acknowledgement, true,
@@ -130,7 +130,7 @@ func test_acknowledgement_advances_day() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAMEPLAY,
+		GameManager.State.GAMEPLAY,
 		"State should return to GAMEPLAY"
 	)
 
@@ -140,7 +140,7 @@ func test_bankruptcy_emitted_when_cash_negative() -> void:
 	_staff.initialize(
 		_economy, ReputationSystemSingleton, null, null
 	)
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_controller._on_day_ended(1)
 	_economy.force_deduct_cash(100.0, "Test overdraft")
 
@@ -152,7 +152,7 @@ func test_bankruptcy_emitted_when_cash_negative() -> void:
 
 
 func test_duplicate_acknowledgement_ignored() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_controller._on_day_ended(1)
 	_controller._on_day_acknowledged()
 	var day_after_first: int = _time.current_day
@@ -165,7 +165,7 @@ func test_duplicate_acknowledgement_ignored() -> void:
 
 
 func test_no_advance_if_ending_triggered() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_ending_eval.initialize()
 	_controller._on_day_ended(1)
 

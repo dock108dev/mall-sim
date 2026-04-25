@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ## Flavor event scheduler with hidden state model and 5 trigger categories.
 class_name AmbientMomentsSystem
 extends Node
@@ -8,6 +9,7 @@ enum State { IDLE, MONITORING, SUSPENDED }
 const MAX_QUEUE_SIZE: int = 3
 ## Maximum number of moment cards shown simultaneously in the tray.
 const MAX_ACTIVE_SLOTS: int = 3
+const MAX_WITNESSED_LOG: int = 20
 
 var _state: int = State.IDLE
 var _moment_definitions: Array[AmbientMomentDefinition] = []
@@ -23,7 +25,6 @@ var _active_store_id: StringName = &""
 var _current_season_id: String = ""
 var _current_hour_context: int = 0
 var _suspend_count: int = 0
-const MAX_WITNESSED_LOG: int = 20
 var _witnessed_log: Array[Dictionary] = []
 var _current_phase: int = 0
 
@@ -35,8 +36,8 @@ func _ready() -> void:
 
 ## Sets up the system with required references and loads definitions.
 func initialize(
-	inventory: InventorySystem,
-	time: TimeSystem,
+	_inventory: InventorySystem,
+	_time: TimeSystem,
 ) -> void:
 	_load_definitions()
 	_apply_state({})
@@ -151,7 +152,7 @@ func enqueue_by_id(moment_id: StringName) -> void:
 	_dispatch_next()
 
 
-func _on_day_started(day: int) -> void:
+func _on_day_started(_day: int) -> void:
 	if _state == State.IDLE:
 		_state = State.MONITORING
 	_tick_cooldowns()

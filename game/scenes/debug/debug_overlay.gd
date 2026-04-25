@@ -63,7 +63,7 @@ func _process(_delta: float) -> void:
 
 func _build_display_text() -> String:
 	var fps: int = Engine.get_frames_per_second()
-	var state_name: String = GameManager.GameState.keys()[
+	var state_name: String = GameManager.State.keys()[
 		int(GameManager.current_state)
 	]
 

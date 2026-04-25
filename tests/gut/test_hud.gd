@@ -74,7 +74,7 @@ func test_speed_cycle_emits_time_speed_requested() -> void:
 		func(tier: int) -> void: received.append(tier)
 	)
 	_hud._current_speed = 1.0
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_hud._on_speed_button_pressed()
 	assert_eq(received.size(), 1)
 	assert_eq(
@@ -89,7 +89,7 @@ func test_speed_cycle_wraps_around() -> void:
 		func(tier: int) -> void: received.append(tier)
 	)
 	_hud._current_speed = 6.0
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_hud._on_speed_button_pressed()
 	assert_eq(
 		received[0], TimeSystem.SpeedTier.PAUSED,

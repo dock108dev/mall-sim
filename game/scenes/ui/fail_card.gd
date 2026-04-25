@@ -22,15 +22,15 @@ const CHECKPOINT_SHOWN: StringName = &"fail_card_shown"
 const CHECKPOINT_DISMISSED: StringName = &"fail_card_dismissed"
 const LAYER_INDEX: int = 255
 
+var _is_visible: bool = false
+var _pushed_focus: bool = false
+var _current_store: StringName = &""
+
 @onready var _root: Control = %FailCardRoot
 @onready var _invariant_label: Label = %InvariantLabel
 @onready var _reason_label: Label = %ReasonLabel
 @onready var _store_id_label: Label = %StoreIdLabel
 @onready var _return_button: Button = %ReturnToMallButton
-
-var _is_visible: bool = false
-var _pushed_focus: bool = false
-var _current_store: StringName = &""
 
 
 func _ready() -> void:

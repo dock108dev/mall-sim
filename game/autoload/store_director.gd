@@ -55,6 +55,7 @@ var _injected_scene_provider: Callable = Callable()
 ## Drives the full state machine for `store_id`. Returns true when state ends
 ## at READY, false on any failure path (unknown id, scene load error, contract
 ## violation, or rejected concurrent call).
+# gdlint:disable=max-returns
 func enter_store(store_id: StringName) -> bool:
 	if state != State.IDLE:
 		var rejection: String = (
@@ -123,6 +124,7 @@ func enter_store(store_id: StringName) -> bool:
 	# checkpoint above is the durable "we got there" record.
 	state = State.IDLE
 	return true
+# gdlint:enable=max-returns
 
 
 ## Resets the director to IDLE. Test-only seam — production code reaches IDLE

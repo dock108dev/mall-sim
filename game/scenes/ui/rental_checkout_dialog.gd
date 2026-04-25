@@ -9,9 +9,9 @@ signal rental_declined()
 signal late_fee_pay_confirmed(customer_id: String)
 signal late_fee_pay_declined(customer_id: String)
 
-const PANEL_NAME: String = "rental_checkout"
-
 enum Mode { RENTAL, LATE_FEE }
+
+const PANEL_NAME: String = "rental_checkout"
 
 var _is_open: bool = false
 var _mode: int = Mode.RENTAL

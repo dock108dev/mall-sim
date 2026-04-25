@@ -24,7 +24,7 @@ var _placed_fixture_id: String = ""
 var _placed_pos: Vector2i = Vector2i.ZERO
 var _placed_rotation: int = -1
 
-var _saved_game_state: GameManager.GameState
+var _saved_game_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 
@@ -33,7 +33,7 @@ func before_each() -> void:
 	_saved_game_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"sports"
 	GameManager.owned_stores = [&"sports"]
 

@@ -1,25 +1,12 @@
+# gdlint:disable=max-file-lines
 ## Controller for the sports memorabilia store. Manages season cycle,
 ## card condition grading, and ACC numeric grading via PriceResolver.
 class_name SportsMemorabiliaController
 extends StoreController
 
-const STORE_ID: StringName = &"sports"
-const STORE_TYPE: StringName = &"sports_memorabilia"
-const BOOSTED_CATEGORIES: PackedStringArray = ["memorabilia", "autograph"]
-const DEFAULT_SEASON_BOOST: float = 1.5
-## Minimum provenance_score for a card to pass the authentication check.
-const AUTH_THRESHOLD: float = 0.5
-## Flat cost of a single probabilistic grading hint (ISSUE-018).
-const GRADING_HINT_FEE: float = 10.0
-## Probability that a grading hint reports the true authenticity. The remaining
-## probability is split between the two adjacent states, giving the player
-## partial but not certain information.
-const GRADING_HINT_ACCURACY: float = 0.7
-## Reputation magnitude deducted when a fake is sold as authentic.
-const FAKE_SALE_REPUTATION_PENALTY: float = -5.0
-
 ## Grade states for the CARB (Certified Artifact Rating Bureau) authentication flow.
-## Grade 6 is intentionally absent — parodies real grading services (PSA/BGS).
+## Grade 6 is intentionally absent — parodies the gap-skipping quirks of real-world
+## third-party grading scales.
 enum AuthGrade {
 	COUNTERFEIT = 0,
 	AUTHENTIC_RAW = 1,
@@ -35,6 +22,21 @@ enum AuthGrade {
 
 ## Service tier chosen at CARB submission time.
 enum AuthTier { ECONOMY = 0, EXPRESS = 1, PREMIUM = 2 }
+
+const STORE_ID: StringName = &"sports"
+const STORE_TYPE: StringName = &"sports_memorabilia"
+const BOOSTED_CATEGORIES: PackedStringArray = ["memorabilia", "autograph"]
+const DEFAULT_SEASON_BOOST: float = 1.5
+## Minimum provenance_score for a card to pass the authentication check.
+const AUTH_THRESHOLD: float = 0.5
+## Flat cost of a single probabilistic grading hint (ISSUE-018).
+const GRADING_HINT_FEE: float = 10.0
+## Probability that a grading hint reports the true authenticity. The remaining
+## probability is split between the two adjacent states, giving the player
+## partial but not certain information.
+const GRADING_HINT_ACCURACY: float = 0.7
+## Reputation magnitude deducted when a fake is sold as authentic.
+const FAKE_SALE_REPUTATION_PENALTY: float = -5.0
 
 ## Value multiplier applied to base_price after CARB authentication resolves.
 const CARB_GRADE_MULTIPLIERS: Dictionary = {
@@ -438,10 +440,12 @@ func _check_fake_sold_as_authentic(
 	EventBus.fake_sold_as_authentic.emit(
 		item_id, STORE_ID, price, FAKE_SALE_REPUTATION_PENALTY
 	)
+	var item_label: String = (
+		item.definition.item_name if item.definition else String(item_id)
+	)
 	EventBus.notification_requested.emit(
 		"Customer exposed fake: %s (-%.1f reputation)"
-		% [item.definition.item_name if item.definition else String(item_id),
-		   absf(FAKE_SALE_REPUTATION_PENALTY)]
+		% [item_label, absf(FAKE_SALE_REPUTATION_PENALTY)]
 	)
 
 

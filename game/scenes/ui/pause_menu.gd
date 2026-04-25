@@ -162,7 +162,7 @@ func is_open() -> bool:
 
 
 func _can_open() -> bool:
-	if GameManager.current_state != GameManager.GameState.GAMEPLAY:
+	if GameManager.current_state != GameManager.State.GAMEPLAY:
 		return false
 	if _open_panel_count > 0:
 		return false

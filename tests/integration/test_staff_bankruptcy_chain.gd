@@ -12,7 +12,7 @@ var _reputation: ReputationSystem
 var _data_loader: DataLoader
 var _ending_evaluator: EndingEvaluatorSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 var _saved_difficulty: StringName
@@ -25,7 +25,7 @@ func before_each() -> void:
 	_saved_difficulty = DifficultySystemSingleton.get_current_tier_id()
 
 	DifficultySystemSingleton.set_tier(&"normal")
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"test_store"
 	GameManager.owned_stores = []
 
@@ -75,7 +75,7 @@ func test_wages_exhaust_cash_triggers_bankruptcy_and_game_over() -> void:
 		"bankruptcy_declared should fire when wages exhaust player cash"
 	)
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"GameManager should transition to GAME_OVER after bankruptcy"
 	)
 
@@ -97,7 +97,7 @@ func test_wages_equal_cash_still_triggers_bankruptcy() -> void:
 		"bankruptcy_declared should fire even when cash reaches exactly zero"
 	)
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"GameManager should enter GAME_OVER when cash reaches exactly zero"
 	)
 

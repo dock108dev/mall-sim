@@ -26,7 +26,7 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"pocket_creatures"
 	GameManager.owned_stores = []
 
@@ -109,7 +109,7 @@ func test_day_ended_signal_transitions_to_day_summary() -> void:
 	EventBus.day_ended.emit(1)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.DAY_SUMMARY,
+		GameManager.State.DAY_SUMMARY,
 		"day_ended should transition state to DAY_SUMMARY"
 	)
 	assert_true(
@@ -217,7 +217,7 @@ func test_ending_triggered_prevents_advance() -> void:
 
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"State should be GAME_OVER after ending triggered"
 	)
 	assert_eq(
@@ -247,7 +247,7 @@ func test_ending_evaluate_returns_nondefault_prevents_advance() -> void:
 # ── Test 6: GAME_OVER guard at handler entry ────────────────────────────────
 
 func test_game_over_blocks_day_ended() -> void:
-	GameManager.current_state = GameManager.GameState.GAME_OVER
+	GameManager.current_state = GameManager.State.GAME_OVER
 	_controller._on_day_ended(1)
 
 	assert_false(
@@ -256,13 +256,13 @@ func test_game_over_blocks_day_ended() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"State should remain GAME_OVER"
 	)
 
 
 func test_game_over_prevents_panel_and_advance() -> void:
-	GameManager.current_state = GameManager.GameState.GAME_OVER
+	GameManager.current_state = GameManager.State.GAME_OVER
 	var day_before: int = _time.current_day
 
 	_controller._on_day_ended(1)
@@ -296,7 +296,7 @@ func test_normal_path_advances_day_once() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAMEPLAY,
+		GameManager.State.GAMEPLAY,
 		"State should return to GAMEPLAY"
 	)
 
@@ -317,7 +317,7 @@ func test_day_ended_does_not_advance_directly() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.DAY_SUMMARY,
+		GameManager.State.DAY_SUMMARY,
 		"State should be DAY_SUMMARY, waiting for acknowledgement"
 	)
 

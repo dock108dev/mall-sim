@@ -87,7 +87,7 @@ func before_each() -> void:
 	_fake_transition = FakeSceneTransition.new()
 	GameManager.data_loader = _fake_loader
 	GameManager._scene_transition = _fake_transition
-	GameManager.current_state = GameManager.GameState.MAIN_MENU
+	GameManager.current_state = GameManager.State.MAIN_MENU
 	GameManager.pending_load_slot = -1
 	GameManager.current_store_id = &"retro_games"
 	GameManager.owned_stores = [&"retro_games"]
@@ -115,7 +115,7 @@ func test_start_new_game_runs_data_loader_and_queues_gameplay_scene() -> void:
 
 	assert_eq(_fake_loader.run_calls, 1, "start_new_game should run DataLoader")
 	assert_eq(GameManager.pending_load_slot, -1)
-	assert_eq(GameManager.current_state, GameManager.GameState.GAMEPLAY)
+	assert_eq(GameManager.current_state, GameManager.State.GAMEPLAY)
 	assert_eq(GameManager.current_store_id, &"")
 	assert_eq(GameManager.owned_stores, [])
 	assert_eq(GameManager.get_ending_id(), &"")
@@ -131,7 +131,7 @@ func test_load_game_preserves_requested_slot_and_queues_gameplay_scene() -> void
 
 	assert_eq(_fake_loader.run_calls, 1, "load_game should run DataLoader")
 	assert_eq(GameManager.pending_load_slot, 2)
-	assert_eq(GameManager.current_state, GameManager.GameState.GAMEPLAY)
+	assert_eq(GameManager.current_state, GameManager.State.GAMEPLAY)
 	assert_eq(
 		_fake_transition.requested_paths,
 		[GameManager.GAMEPLAY_SCENE_PATH],
@@ -145,33 +145,33 @@ func test_pause_and_resume_emit_state_changes() -> void:
 		received.append({"old": old_state, "new": new_state})
 	EventBus.game_state_changed.connect(conn)
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.pause_game()
 	GameManager.resume_game()
 
 	EventBus.game_state_changed.disconnect(conn)
-	assert_eq(GameManager.current_state, GameManager.GameState.GAMEPLAY)
+	assert_eq(GameManager.current_state, GameManager.State.GAMEPLAY)
 	assert_eq(received.size(), 2, "pause/resume should emit two state changes")
-	assert_eq(received[0]["new"], GameManager.GameState.PAUSED)
-	assert_eq(received[1]["new"], GameManager.GameState.GAMEPLAY)
+	assert_eq(received[0]["new"], GameManager.State.PAUSED)
+	assert_eq(received[1]["new"], GameManager.State.GAMEPLAY)
 
 
 func test_game_over_trigger_signal_transitions_state() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 
 	EventBus.game_over_triggered.emit()
 
-	assert_eq(GameManager.current_state, GameManager.GameState.GAME_OVER)
+	assert_eq(GameManager.current_state, GameManager.State.GAME_OVER)
 
 
 func test_go_to_main_menu_resets_pending_slot_and_queues_menu_scene() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.pending_load_slot = 1
 
 	GameManager.go_to_main_menu()
 
 	assert_eq(GameManager.pending_load_slot, -1)
-	assert_eq(GameManager.current_state, GameManager.GameState.MAIN_MENU)
+	assert_eq(GameManager.current_state, GameManager.State.MAIN_MENU)
 	assert_eq(
 		_fake_transition.requested_paths,
 		[GameManager.MAIN_MENU_SCENE_PATH],

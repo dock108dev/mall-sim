@@ -204,7 +204,10 @@ func _on_market_event_triggered(
 ) -> void:
 	if _cards.has(store_id):
 		(_cards[store_id] as StoreSlotCard).set_event_pending(true)
-	var store_name: String = ContentRegistry.get_display_name(store_id) if not store_id.is_empty() else "mall"
+	var store_name: String = (
+		ContentRegistry.get_display_name(store_id)
+		if not store_id.is_empty() else "mall"
+	)
 	_add_feed_entry("Market event at %s: %s" % [store_name, String(event_id)])
 
 
@@ -213,7 +216,10 @@ func _on_random_event_triggered(
 ) -> void:
 	if _cards.has(store_id):
 		(_cards[store_id] as StoreSlotCard).set_event_pending(true)
-	var store_name: String = ContentRegistry.get_display_name(store_id) if not store_id.is_empty() else "mall"
+	var store_name: String = (
+		ContentRegistry.get_display_name(store_id)
+		if not store_id.is_empty() else "mall"
+	)
 	_add_feed_entry("Event at %s: %s" % [store_name, String(event_id)])
 
 

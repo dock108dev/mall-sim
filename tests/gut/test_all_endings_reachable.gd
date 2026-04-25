@@ -13,14 +13,14 @@ const STORE_TYPES := [
 
 var _system: EndingEvaluatorSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_ending_id: StringName
 
 
 func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_ending_id = GameManager.get_ending_id()
-	GameManager.current_state = GameManager.GameState.MAIN_MENU
+	GameManager.current_state = GameManager.State.MAIN_MENU
 	GameManager._ending_id = &""
 
 	_system = EndingEvaluatorSystem.new()

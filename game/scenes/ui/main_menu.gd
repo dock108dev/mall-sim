@@ -36,7 +36,7 @@ var _input_focus_pushed: bool = false
 
 func _ready() -> void:
 	Settings.load_settings()
-	GameManager.change_state(GameManager.GameState.MAIN_MENU)
+	GameManager.change_state(GameManager.State.MAIN_MENU)
 	_push_main_menu_input_focus()
 	_load_container.visible = false
 	_load_close_button.pressed.connect(_close_load_panel)

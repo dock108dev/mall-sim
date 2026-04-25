@@ -11,7 +11,7 @@ var _saved_game_state: int = 0
 func before_each() -> void:
 	_triggered_endings = []
 	_saved_game_state = GameManager.current_state
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 
 	_evaluator = EndingEvaluatorSystem.new()
 	add_child_autofree(_evaluator)
@@ -60,7 +60,7 @@ func test_prestige_champion_thresholds_met_triggers_correct_ending() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER after ending fires"
 	)
 

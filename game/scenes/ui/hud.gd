@@ -175,7 +175,7 @@ func _create_close_day_button() -> void:
 
 
 func _on_close_day_pressed() -> void:
-	if GameManager.current_state == GameManager.GameState.GAMEPLAY:
+	if GameManager.current_state == GameManager.State.GAMEPLAY:
 		EventBus.day_close_requested.emit()
 
 
@@ -203,7 +203,7 @@ func _on_store_exited_hub(_store_id: StringName) -> void:
 
 
 func _on_speed_button_pressed() -> void:
-	if GameManager.current_state != GameManager.GameState.GAMEPLAY:
+	if GameManager.current_state != GameManager.State.GAMEPLAY:
 		return
 	var next_tier: TimeSystem.SpeedTier = _get_next_speed_tier()
 	EventBus.time_speed_requested.emit(int(next_tier))
@@ -212,7 +212,7 @@ func _on_speed_button_pressed() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed():
 		return
-	if GameManager.current_state != GameManager.GameState.GAMEPLAY:
+	if GameManager.current_state != GameManager.State.GAMEPLAY:
 		return
 	if event.is_action("close_day"):
 		EventBus.day_close_requested.emit()

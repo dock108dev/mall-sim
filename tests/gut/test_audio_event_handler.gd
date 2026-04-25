@@ -103,8 +103,8 @@ func test_day_ended_also_plays_day_end_chime_sfx() -> void:
 
 func test_game_over_stops_bgm_with_two_second_fade() -> void:
 	EventBus.game_state_changed.emit(
-		GameManager.GameState.GAMEPLAY,
-		GameManager.GameState.GAME_OVER
+		GameManager.State.GAMEPLAY,
+		GameManager.State.GAME_OVER
 	)
 	assert_eq(
 		_mock.stop_bgm_calls.size(), 1,

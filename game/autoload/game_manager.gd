@@ -2,7 +2,7 @@
 ## Global game state manager. Handles state transitions and session lifecycle.
 extends Node
 
-enum GameState {
+enum State {
 	MAIN_MENU, GAMEPLAY, PAUSED, GAME_OVER,
 	LOADING, DAY_SUMMARY, BUILD,
 }
@@ -12,23 +12,23 @@ const MAIN_MENU_SCENE_PATH := "res://game/scenes/ui/main_menu.tscn"
 const GAMEPLAY_SCENE_PATH := "res://game/scenes/mall/mall_hub.tscn"
 
 const _VALID_TRANSITIONS: Dictionary = {
-	GameState.MAIN_MENU: [GameState.LOADING],
-	GameState.LOADING: [GameState.GAMEPLAY],
-	GameState.GAMEPLAY: [
-		GameState.PAUSED, GameState.DAY_SUMMARY,
-		GameState.MAIN_MENU, GameState.BUILD, GameState.GAME_OVER,
+	State.MAIN_MENU: [State.LOADING],
+	State.LOADING: [State.GAMEPLAY],
+	State.GAMEPLAY: [
+		State.PAUSED, State.DAY_SUMMARY,
+		State.MAIN_MENU, State.BUILD, State.GAME_OVER,
 	],
-	GameState.PAUSED: [
-		GameState.GAMEPLAY, GameState.MAIN_MENU, GameState.BUILD,
+	State.PAUSED: [
+		State.GAMEPLAY, State.MAIN_MENU, State.BUILD,
 	],
-	GameState.DAY_SUMMARY: [
-		GameState.GAMEPLAY, GameState.MAIN_MENU, GameState.GAME_OVER,
+	State.DAY_SUMMARY: [
+		State.GAMEPLAY, State.MAIN_MENU, State.GAME_OVER,
 	],
-	GameState.BUILD: [GameState.GAMEPLAY],
-	GameState.GAME_OVER: [GameState.MAIN_MENU],
+	State.BUILD: [State.GAMEPLAY],
+	State.GAME_OVER: [State.MAIN_MENU],
 }
 
-var current_state: GameState = GameState.MAIN_MENU
+var current_state: State = State.MAIN_MENU
 var current_day: int:
 	get:
 		return get_current_day()
@@ -59,9 +59,9 @@ func _ready() -> void:
 	EventBus.player_bankrupt.connect(_on_player_bankrupt)
 
 
-func change_state(new_state: GameState) -> bool:
-	var previous_state: GameState = current_state
-	if new_state == GameState.MAIN_MENU:
+func change_state(new_state: State) -> bool:
+	var previous_state: State = current_state
+	if new_state == State.MAIN_MENU:
 		current_state = new_state
 		EventBus.game_state_changed.emit(previous_state, new_state)
 		return true
@@ -71,8 +71,8 @@ func change_state(new_state: GameState) -> bool:
 		push_warning(
 			"GameManager: Invalid transition %s → %s"
 			% [
-				GameState.keys()[int(current_state)],
-				GameState.keys()[int(new_state)],
+				State.keys()[int(current_state)],
+				State.keys()[int(new_state)],
 			]
 		)
 		return false
@@ -87,8 +87,8 @@ func start_new_game() -> void:
 	if not _run_data_loader():
 		return
 	begin_new_run()
-	change_state(GameState.LOADING)
-	change_state(GameState.GAMEPLAY)
+	change_state(State.LOADING)
+	change_state(State.GAMEPLAY)
 	change_scene(GAMEPLAY_SCENE_PATH)
 
 
@@ -112,19 +112,19 @@ func load_game(slot: int) -> void:
 		return
 	pending_load_slot = slot
 	_reset_session_state()
-	change_state(GameState.LOADING)
-	change_state(GameState.GAMEPLAY)
+	change_state(State.LOADING)
+	change_state(State.GAMEPLAY)
 	change_scene(GAMEPLAY_SCENE_PATH)
 
 
 ## Toggles current_state to PAUSED from GAMEPLAY.
 func pause_game() -> void:
-	change_state(GameState.PAUSED)
+	change_state(State.PAUSED)
 
 
 ## Toggles current_state back to GAMEPLAY from PAUSED.
 func resume_game() -> void:
-	change_state(GameState.GAMEPLAY)
+	change_state(State.GAMEPLAY)
 
 
 ## Unloads the GameWorld scene and loads the main menu scene.
@@ -135,7 +135,7 @@ func go_to_main_menu() -> void:
 
 ## Transitions to the GAME_OVER state.
 func trigger_game_over() -> void:
-	change_state(GameState.GAME_OVER)
+	change_state(State.GAME_OVER)
 
 
 ## Returns the ending_id that triggered the current game_over state.
@@ -146,17 +146,17 @@ func get_ending_id() -> StringName:
 func _on_ending_triggered(
 	ending_id: StringName, _final_stats: Dictionary
 ) -> void:
-	if current_state == GameState.GAME_OVER:
+	if current_state == State.GAME_OVER:
 		return
-	if current_state == GameState.MAIN_MENU:
+	if current_state == State.MAIN_MENU:
 		return
 	_ending_id = ending_id
-	change_state(GameState.GAME_OVER)
+	change_state(State.GAME_OVER)
 	EventBus.time_speed_requested.emit(TimeSystem.SpeedTier.PAUSED)
 
 
 func _on_player_bankrupt() -> void:
-	if current_state != GameState.GAMEPLAY:
+	if current_state != State.GAMEPLAY:
 		return
 	EventBus.ending_requested.emit("bankruptcy")
 
@@ -215,18 +215,18 @@ func transition_to_game() -> void:
 
 
 ## Public state transition entry point used by boot sequence and UI flows.
-func transition_to(state: GameState) -> void:
+func transition_to(state: State) -> void:
 	match state:
-		GameState.MAIN_MENU:
+		State.MAIN_MENU:
 			transition_to_menu()
-		GameState.GAMEPLAY:
+		State.GAMEPLAY:
 			transition_to_game()
 		_:
 			change_state(state)
 
 
 func transition_to_menu() -> void:
-	change_state(GameState.MAIN_MENU)
+	change_state(State.MAIN_MENU)
 	change_scene(MAIN_MENU_SCENE_PATH)
 
 
@@ -315,7 +315,7 @@ func quit_game() -> void:
 
 
 func _flush_save_before_quit() -> void:
-	if current_state != GameState.GAMEPLAY and current_state != GameState.PAUSED:
+	if current_state != State.GAMEPLAY and current_state != State.PAUSED:
 		return
 	var tree: SceneTree = get_tree()
 	if tree == null or tree.current_scene == null:

@@ -139,6 +139,7 @@ func get_rental_duration_options(
 ## Returns an empty dict when the item is missing, unrentable, or already out.
 ## Returns {blocked_by_late_fees: true, customer_id, pending_total, pending_items}
 ## when the customer has unresolved pending late fees (ISSUE-015).
+# gdlint:disable=max-returns
 func rent_item(
 	item_instance_id: String,
 	rental_tier: String,
@@ -196,6 +197,7 @@ func rent_item(
 		"rental_tier": rental_tier,
 		"record": record,
 	}
+# gdlint:enable=max-returns
 
 
 ## Processes a rental checkout: records rental and initializes tape wear.

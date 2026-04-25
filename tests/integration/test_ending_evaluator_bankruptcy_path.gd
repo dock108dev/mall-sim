@@ -24,7 +24,7 @@ const SURVIVAL_ENDINGS: Array[StringName] = [
 
 var _ending_evaluator: EndingEvaluatorSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_ending_id: StringName
 
 
@@ -32,7 +32,7 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_ending_id = GameManager.get_ending_id()
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager._ending_id = &""
 
 	_ending_evaluator = EndingEvaluatorSystem.new()
@@ -89,7 +89,7 @@ func test_early_bankruptcy_triggers_lights_out() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER after bankruptcy chain"
 	)
 	assert_true(
@@ -131,7 +131,7 @@ func test_late_bankruptcy_triggers_going_going_gone() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER after bankruptcy chain"
 	)
 	assert_true(
@@ -173,7 +173,7 @@ func test_mid_bankruptcy_triggers_foreclosure() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER after bankruptcy chain"
 	)
 

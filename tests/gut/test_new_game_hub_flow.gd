@@ -49,7 +49,7 @@ func before_each() -> void:
 	_fake_transition = FakeSceneTransition.new()
 	GameManager.data_loader = _fake_loader
 	GameManager._scene_transition = _fake_transition
-	GameManager.current_state = GameManager.GameState.MAIN_MENU
+	GameManager.current_state = GameManager.State.MAIN_MENU
 	GameManager.pending_load_slot = -1
 	GameManager._boot_completed = true
 
@@ -116,7 +116,7 @@ func test_new_game_and_load_game_share_gameplay_scene_path() -> void:
 	var new_game_path: String = _fake_transition.requested_paths[0]
 
 	_fake_transition.requested_paths.clear()
-	GameManager.current_state = GameManager.GameState.MAIN_MENU
+	GameManager.current_state = GameManager.State.MAIN_MENU
 	GameManager.load_game(2)
 	var load_path: String = _fake_transition.requested_paths[0]
 

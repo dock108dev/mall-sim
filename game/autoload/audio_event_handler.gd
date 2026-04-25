@@ -157,15 +157,15 @@ func _on_demo_item_placed(_item_id: String) -> void:
 
 func _on_game_state_changed(_old: int, new_state: int) -> void:
 	match new_state:
-		GameManager.GameState.MAIN_MENU:
+		GameManager.State.MAIN_MENU:
 			_audio.play_bgm("menu_music")
 			_audio.stop_ambient()
-		GameManager.GameState.DAY_SUMMARY:
+		GameManager.State.DAY_SUMMARY:
 			_audio.play_bgm("day_summary_music")
-		GameManager.GameState.GAMEPLAY:
+		GameManager.State.GAMEPLAY:
 			_play_store_music()
 			_play_store_ambient()
-		GameManager.GameState.GAME_OVER:
+		GameManager.State.GAME_OVER:
 			_audio.stop_bgm(2.0)
 
 

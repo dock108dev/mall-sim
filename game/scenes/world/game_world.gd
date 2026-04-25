@@ -751,10 +751,10 @@ func _find_player_node(camera: Camera3D) -> Node:
 func _on_game_state_changed(
 	_old_state: int, new_state: int
 ) -> void:
-	var new_gs: GameManager.GameState = new_state as GameManager.GameState
+	var new_gs: GameManager.State = new_state as GameManager.State
 	var should_pause: bool = (
-		new_gs == GameManager.GameState.PAUSED
-		or new_gs == GameManager.GameState.BUILD
+		new_gs == GameManager.State.PAUSED
+		or new_gs == GameManager.State.BUILD
 	)
 	_set_systems_paused(should_pause)
 
@@ -905,7 +905,10 @@ func _activate_store_camera(store_root: Node, store_id: StringName) -> void:
 	var camera: Camera3D = _find_first_camera(store_root)
 	if camera == null:
 		push_error(
-			"GameWorld: store '%s' has no Camera3D — rendering will fall back to the default clear color (brown)"
+			(
+				"GameWorld: store '%s' has no Camera3D — rendering will fall back"
+				+ " to the default clear color (brown)"
+			)
 			% store_id
 		)
 		return

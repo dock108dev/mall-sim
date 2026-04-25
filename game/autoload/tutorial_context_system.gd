@@ -13,10 +13,11 @@ extends Node
 
 const CONTENT_PATH: String = "res://game/content/tutorial_contexts.json"
 
-var _contexts: Dictionary = {}
-var _loaded: bool = false
 var active_store_id: StringName = &""
 var active_context_id: StringName = &""
+
+var _contexts: Dictionary = {}
+var _loaded: bool = false
 
 
 func _ready() -> void:

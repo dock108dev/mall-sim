@@ -8,7 +8,7 @@ const BANKRUPTCY_ENDINGS: Array[StringName] = [
 
 var _ending_evaluator: EndingEvaluatorSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_ending_id: StringName
 
 
@@ -16,7 +16,7 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_ending_id = GameManager.get_ending_id()
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager._ending_id = &""
 
 	_ending_evaluator = EndingEvaluatorSystem.new()
@@ -111,7 +111,7 @@ func test_bankruptcy_ending() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER"
 	)
 	assert_true(
@@ -160,7 +160,7 @@ func test_survival_ending() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER"
 	)
 	assert_true(
@@ -206,7 +206,7 @@ func test_prestige_ending() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER"
 	)
 	assert_true(
@@ -248,7 +248,7 @@ func test_no_premature_trigger() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAMEPLAY,
+		GameManager.State.GAMEPLAY,
 		"GameManager must remain in GAMEPLAY after day_ended on day 15"
 	)
 	assert_false(

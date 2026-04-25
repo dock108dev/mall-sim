@@ -171,9 +171,12 @@ jobs:
           )
           FAILED=0
           for term in "${BANNED[@]}"; do
+            # trademark_validator.gd is the authoritative denylist — its source
+            # *must* contain the banned terms verbatim. Exclude it from the scan.
             matches=$(grep -rn --include="*.json" --include="*.gd" -E "$term" \
               game/content/ game/scripts/ game/autoload/ game/scenes/ \
-              --exclude-dir=".godot" 2>/dev/null || true)
+              --exclude-dir=".godot" \
+              --exclude="trademark_validator.gd" 2>/dev/null || true)
             if [ -n "$matches" ]; then
               echo "::error::Banned term '$term' found in content or scripts:"
               echo "$matches"

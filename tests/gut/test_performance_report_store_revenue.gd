@@ -3,7 +3,7 @@ extends GutTest
 
 
 var _system: PerformanceReportSystem
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 
@@ -12,7 +12,7 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &""
 	GameManager.owned_stores = []
 

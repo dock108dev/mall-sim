@@ -6,7 +6,7 @@ var _time: TimeSystem
 var _ending_evaluator: EndingEvaluatorSystem
 var _save_manager: SaveManager
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_ending_id: StringName
 
 
@@ -14,7 +14,7 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_ending_id = GameManager.get_ending_id()
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager._ending_id = &""
 
 	_time = TimeSystem.new()
@@ -49,7 +49,7 @@ func test_normal_ending_chain() -> void:
 
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager should transition to GAME_OVER after ending_triggered"
 	)
 	assert_eq(
@@ -78,7 +78,7 @@ func test_bankruptcy_chain_reaches_game_over() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager should be GAME_OVER after bankruptcy_declared chain completes"
 	)
 	assert_true(
@@ -93,7 +93,7 @@ func test_duplicate_ending_ignored() -> void:
 
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager should be GAME_OVER after first ending_triggered"
 	)
 	assert_eq(
@@ -111,20 +111,20 @@ func test_duplicate_ending_ignored() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"State must remain GAME_OVER after duplicate emission"
 	)
 
 
 ## Scenario 4: ending_triggered while in MAIN_MENU is silently ignored.
 func test_ending_from_main_menu_ignored() -> void:
-	GameManager.current_state = GameManager.GameState.MAIN_MENU
+	GameManager.current_state = GameManager.State.MAIN_MENU
 
 	EventBus.ending_triggered.emit(&"successful_exit", {})
 
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.MAIN_MENU,
+		GameManager.State.MAIN_MENU,
 		"GameManager must remain in MAIN_MENU when ending_triggered fires from that state"
 	)
 	assert_eq(

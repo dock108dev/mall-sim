@@ -17,7 +17,7 @@ var _reputation: ReputationSystem
 var _data_loader: DataLoader
 var _perf_report: PerformanceReportSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 var _saved_difficulty: StringName
@@ -33,7 +33,7 @@ func before_each() -> void:
 	_saved_difficulty = DifficultySystemSingleton.get_current_tier_id()
 
 	DifficultySystemSingleton.set_tier(&"normal")
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"wage_test_store"
 	GameManager.owned_stores = []
 
@@ -127,7 +127,7 @@ func test_wage_triggered_bankruptcy_emits_once_and_enters_game_over() -> void:
 		"bankruptcy_declared should fire exactly once"
 	)
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"GameManager should be in GAME_OVER after wage-triggered bankruptcy"
 	)
 	assert_eq(
@@ -146,14 +146,14 @@ func test_day_summary_transitions_to_game_over_not_gameplay() -> void:
 
 	EventBus.day_ended.emit(5)
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.DAY_SUMMARY,
+		GameManager.current_state, GameManager.State.DAY_SUMMARY,
 		"State should be DAY_SUMMARY while awaiting player acknowledgement"
 	)
 
 	EventBus.next_day_confirmed.emit()
 
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"State should be GAME_OVER after bankruptcy, not GAMEPLAY"
 	)
 	assert_eq(
@@ -202,7 +202,7 @@ func test_no_staff_no_bankruptcy_day_advances() -> void:
 		"bankruptcy_declared should not fire when there are no staff wages"
 	)
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAMEPLAY,
+		GameManager.current_state, GameManager.State.GAMEPLAY,
 		"GameManager should remain in GAMEPLAY when no bankruptcy occurs"
 	)
 	assert_eq(

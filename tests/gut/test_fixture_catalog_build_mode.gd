@@ -8,7 +8,7 @@ const _CatalogScript := preload(
 	"res://game/scripts/ui/fixture_catalog_panel.gd"
 )
 
-var _saved_game_state: GameManager.GameState
+var _saved_game_state: GameManager.State
 var _saved_store_id: StringName = &""
 var _catalog
 var _data_loader: DataLoader
@@ -18,7 +18,7 @@ var _economy_system: EconomySystem
 func before_each() -> void:
 	_saved_game_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"sports"
 
 	_data_loader = DataLoader.new()

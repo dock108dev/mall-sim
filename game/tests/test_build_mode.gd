@@ -26,7 +26,7 @@ func before_each() -> void:
 	)
 	_build.set_placement_system(_placement)
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 
 
 func test_enter_build_mode_sets_active_and_emits_signal() -> void:

@@ -11,7 +11,7 @@ var _saved_game_state: int = 0
 func before_each() -> void:
 	_triggered_endings = []
 	_saved_game_state = GameManager.current_state
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 
 	_evaluator = EndingEvaluatorSystem.new()
 	add_child_autofree(_evaluator)
@@ -47,7 +47,7 @@ func test_bankruptcy_after_fifteen_days_selects_going_going_gone() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER after ending fires"
 	)
 
@@ -83,7 +83,7 @@ func test_all_stores_with_max_rep_over_30_days_selects_local_legend() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER"
 	)
 
@@ -117,6 +117,6 @@ func test_partial_stores_moderate_revenue_selects_comfortable_middle() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must transition to GAME_OVER"
 	)

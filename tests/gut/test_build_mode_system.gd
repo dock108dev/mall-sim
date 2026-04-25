@@ -3,14 +3,14 @@ extends GutTest
 
 
 var _system: BuildModeSystem
-var _saved_game_state: GameManager.GameState
+var _saved_game_state: GameManager.State
 var _saved_active_camera: Camera3D = null
 
 
 func before_each() -> void:
 	_saved_game_state = GameManager.current_state
 	_saved_active_camera = CameraManager.active_camera
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_system = BuildModeSystem.new()
 	add_child_autofree(_system)
 

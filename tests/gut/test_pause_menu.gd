@@ -17,7 +17,7 @@ func after_each() -> void:
 	if is_instance_valid(_pause_menu):
 		_pause_menu.queue_free()
 	get_tree().paused = false
-	GameManager.current_state = GameManager.GameState.MAIN_MENU
+	GameManager.current_state = GameManager.State.MAIN_MENU
 
 
 func test_process_mode_always() -> void:
@@ -32,23 +32,23 @@ func test_starts_hidden() -> void:
 
 
 func test_open_pauses_tree() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_true(get_tree().paused)
 	assert_true(_pause_menu.is_open())
 
 
 func test_open_sets_paused_state() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.PAUSED,
+		GameManager.State.PAUSED,
 	)
 
 
 func test_open_starts_overlay_and_panel_fade_in() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_true(_pause_menu._overlay.visible)
 	assert_true(_pause_menu._panel.visible)
@@ -57,7 +57,7 @@ func test_open_starts_overlay_and_panel_fade_in() -> void:
 
 
 func test_close_unpauses_tree() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	_pause_menu.close()
 	assert_false(get_tree().paused)
@@ -65,10 +65,10 @@ func test_close_unpauses_tree() -> void:
 
 
 func test_rapid_reopen_keeps_pause_menu_visible() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	_pause_menu.close()
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_true(_pause_menu.is_open())
 	assert_true(_pause_menu._overlay.visible)
@@ -77,31 +77,31 @@ func test_rapid_reopen_keeps_pause_menu_visible() -> void:
 
 
 func test_resume_restores_gameplay_state() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	_pause_menu._resume()
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAMEPLAY,
+		GameManager.State.GAMEPLAY,
 	)
 	assert_false(_pause_menu.is_open())
 
 
 func test_cannot_open_outside_gameplay() -> void:
-	GameManager.current_state = GameManager.GameState.MAIN_MENU
+	GameManager.current_state = GameManager.State.MAIN_MENU
 	var can_open: bool = _pause_menu._can_open()
 	assert_false(can_open)
 
 
 func test_cannot_open_when_panel_is_open() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	EventBus.panel_opened.emit("inventory_panel")
 	var can_open: bool = _pause_menu._can_open()
 	assert_false(can_open)
 
 
 func test_can_open_after_panel_closes() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	EventBus.panel_opened.emit("inventory_panel")
 	EventBus.panel_closed.emit("inventory_panel")
 	var can_open: bool = _pause_menu._can_open()
@@ -114,7 +114,7 @@ func test_day_summary_button_disabled_by_default() -> void:
 
 func test_day_summary_enabled_after_day_end() -> void:
 	EventBus.day_ended.emit(1)
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_false(_pause_menu._day_summary_button.disabled)
 
@@ -122,13 +122,13 @@ func test_day_summary_enabled_after_day_end() -> void:
 func test_day_summary_disabled_on_new_day() -> void:
 	EventBus.day_ended.emit(1)
 	EventBus.day_started.emit(2)
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_true(_pause_menu._day_summary_button.disabled)
 
 
 func test_quit_confirmed_unpauses_tree() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_true(get_tree().paused)
 	_pause_menu._on_quit_confirmed()
@@ -137,7 +137,7 @@ func test_quit_confirmed_unpauses_tree() -> void:
 
 
 func test_quit_canceled_stays_paused() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	_pause_menu._on_quit_canceled()
 	assert_true(get_tree().paused)
@@ -145,6 +145,6 @@ func test_quit_canceled_stays_paused() -> void:
 
 
 func test_save_toast_hidden_on_open() -> void:
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
 	assert_false(_pause_menu._save_toast.visible)

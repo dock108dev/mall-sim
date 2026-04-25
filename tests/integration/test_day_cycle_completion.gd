@@ -20,7 +20,7 @@ var _ending_evaluator: EndingEvaluatorSystem
 var _progression: ProgressionSystem
 var _reputation: ReputationSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 
@@ -30,7 +30,7 @@ func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"test_store"
 	GameManager.owned_stores = [&"test_store"]
 
@@ -159,7 +159,7 @@ func test_bankruptcy_on_wage_deduction() -> void:
 		"bankruptcy_declared should fire when wages push cash below zero"
 	)
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"GameManager should enter GAME_OVER state after bankruptcy"
 	)
 	assert_eq(
@@ -181,7 +181,7 @@ func test_ending_blocks_day_advance() -> void:
 	EventBus.ending_triggered.emit(&"test_ending", {})
 
 	assert_eq(
-		GameManager.current_state, GameManager.GameState.GAME_OVER,
+		GameManager.current_state, GameManager.State.GAME_OVER,
 		"GameManager should be GAME_OVER after ending_triggered"
 	)
 
@@ -195,7 +195,7 @@ func test_ending_blocks_day_advance() -> void:
 
 ## Scenario 5: Summary panel stays hidden when GameManager is already GAME_OVER.
 func test_panel_suppressed_when_game_over() -> void:
-	GameManager.current_state = GameManager.GameState.GAME_OVER
+	GameManager.current_state = GameManager.State.GAME_OVER
 
 	EventBus.day_ended.emit(1)
 
@@ -260,7 +260,7 @@ func test_progression_evaluated_then_day_advances() -> void:
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAMEPLAY,
+		GameManager.State.GAMEPLAY,
 		"State should return to GAMEPLAY after full orchestration cycle"
 	)
 
@@ -293,7 +293,7 @@ func test_ending_evaluate_path_blocks_advance_and_suppresses_panel_reshow() -> v
 	)
 	assert_eq(
 		GameManager.current_state,
-		GameManager.GameState.GAME_OVER,
+		GameManager.State.GAME_OVER,
 		"GameManager must be GAME_OVER after ending evaluation triggers an ending"
 	)
 	# Panel should not be re-shown — it was already hidden by _acknowledge_day()

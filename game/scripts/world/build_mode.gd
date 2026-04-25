@@ -124,8 +124,8 @@ func _toggle_build_mode() -> void:
 func _try_enter_build_mode() -> void:
 	var state: int = GameManager.current_state
 	var can_enter: bool = (
-		state == GameManager.GameState.GAMEPLAY
-		or state == GameManager.GameState.PAUSED
+		state == GameManager.State.GAMEPLAY
+		or state == GameManager.State.PAUSED
 	)
 	if not can_enter:
 		return
@@ -138,7 +138,7 @@ func enter_build_mode() -> void:
 		return
 
 	var changed: bool = GameManager.change_state(
-		GameManager.GameState.BUILD
+		GameManager.State.BUILD
 	)
 	if not changed:
 		push_warning("BuildMode: failed to transition to BUILD state")
@@ -170,7 +170,7 @@ func exit_build_mode() -> void:
 	if _player_node and _player_node.has_method("set_build_mode"):
 		_player_node.set_build_mode(false)
 
-	GameManager.change_state(GameManager.GameState.GAMEPLAY)
+	GameManager.change_state(GameManager.State.GAMEPLAY)
 	EventBus.build_mode_exited.emit()
 
 

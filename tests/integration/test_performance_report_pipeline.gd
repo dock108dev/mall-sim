@@ -7,7 +7,7 @@ const FLOAT_EPSILON: float = 0.01
 var _economy: EconomySystem
 var _perf_report: PerformanceReportSystem
 
-var _saved_state: GameManager.GameState
+var _saved_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
 
@@ -17,7 +17,7 @@ func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 
-	GameManager.current_state = GameManager.GameState.GAMEPLAY
+	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &""
 	# No owned stores so rent deductions do not pollute expense totals.
 	GameManager.owned_stores = []

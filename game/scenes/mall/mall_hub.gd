@@ -15,9 +15,6 @@ const DUCK_DB: float = -12.0
 const DUCK_DURATION: float = 0.3
 
 const _CHECKPOINT_HUB_CAMERA_OK: StringName = &"mall_hub_camera_ok"
-
-var _input_focus_pushed: bool = false
-
 const _KPI_SCENE: PackedScene = preload("res://game/scenes/ui/kpi_strip.tscn")
 const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
@@ -26,6 +23,7 @@ const _META_NOTIFICATION_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/meta_notification_overlay.tscn"
 )
 
+var _input_focus_pushed: bool = false
 var _duck_tween: Tween = null
 var _normal_volume_db: float = -6.0
 var _kpi_strip: Control = null
