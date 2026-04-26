@@ -50,7 +50,7 @@ func _on_objective_changed(payload: Dictionary) -> void:
 	_current_payload = payload
 	_objective_label.text = str(payload.get("text", payload.get("current_objective", "")))
 	_action_label.text = str(payload.get("action", payload.get("next_action", "")))
-	_hint_label.text = str(payload.get("key", payload.get("input_hint", "")))
+	_set_hint_text(str(payload.get("key", payload.get("input_hint", ""))))
 	_update_optional_hint(str(payload.get("optional_hint", "")))
 	_flash()
 	_refresh_visibility()
@@ -65,7 +65,7 @@ func _on_objective_updated(payload: Dictionary) -> void:
 	_current_payload = payload
 	_objective_label.text = str(payload.get("current_objective", payload.get("text", "")))
 	_action_label.text = str(payload.get("next_action", payload.get("action", "")))
-	_hint_label.text = str(payload.get("input_hint", payload.get("key", "")))
+	_set_hint_text(str(payload.get("input_hint", payload.get("key", ""))))
 	_update_optional_hint(str(payload.get("optional_hint", "")))
 	_flash()
 	_refresh_visibility()
@@ -79,6 +79,13 @@ func _on_preference_changed(key: String, value: Variant) -> void:
 		if _show_rail:
 			_auto_hidden = false
 		_refresh_visibility()
+
+
+## Sets hint text and hides the chip entirely when the key is empty so days
+## without a single-key affordance do not render a stray indicator.
+func _set_hint_text(key_text: String) -> void:
+	_hint_label.text = key_text
+	_hint_label.visible = key_text != ""
 
 
 ## Handles optional_hint display. When the hint starts with "goto:<store_id>",

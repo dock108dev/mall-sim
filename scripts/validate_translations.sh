@@ -2,7 +2,7 @@
 # Tripwire for Phase 0.1 P2.1. Walks every `tr("KEY")` / `tr(&"KEY")` call
 # site in game/**/*.gd and asserts KEY exists as a row in
 # game/assets/localization/translations.en.csv. A missing row is what caused
-# "TUTORIAL_WALK_TO_STORE" to render on-screen as the raw key — this script
+# tutorial keys to render on-screen as the raw key — this script
 # catches that regression at CI time.
 set -euo pipefail
 

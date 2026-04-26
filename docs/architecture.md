@@ -12,15 +12,45 @@
 
 ## Autoloads
 
-Declared in `project.godot` in load order. Later autoloads may reference earlier ones.
+Declared in `project.godot` in load order. Later autoloads may reference earlier
+ones. Two entries are scenes (`ObjectiveRail`, `InteractionPrompt`, `FailCard`)
+rather than scripts.
 
-| Autoload | Purpose | File |
-|---|---|---|
-| `DataLoaderSingleton` | Reads JSON content files at boot; exposes raw data dictionaries to `ContentRegistry` | `game/autoload/data_loader.gd` |
-| `ContentRegistry` | Builds typed catalogs from raw loader data; canonical query surface for all in-game content | `game/autoload/content_registry.gd` |
-| `EventBus` | Central signal relay — all cross-system communication routes here; direct cross-node refs across systems are prohibited | `game/autoload/event_bus.gd` |
-| `GameManager` | Owns runtime state: current store, day phase, progression flags, reputation tier | `game/autoload/game_manager.gd` |
-| `AudioManager` | Audio buses, ambient track scheduling, SFX pool; instantiates `AudioEventHandler` to wire `EventBus` signals to audio calls | `game/autoload/audio_manager.gd` |
+| Autoload | File / scene |
+|---|---|
+| `DataLoaderSingleton` | `game/autoload/data_loader.gd` — JSON content discovery and raw-data exposure |
+| `ContentRegistry` | `game/autoload/content_registry.gd` — typed catalogs and canonical IDs |
+| `EventBus` | `game/autoload/event_bus.gd` — cross-system signal hub |
+| `GameManager` | `game/autoload/game_manager.gd` — legacy run state and session entry points |
+| `AudioManager` | `game/autoload/audio_manager.gd` — buses, streams, SFX; instantiates `AudioEventHandler` (`game/autoload/audio_event_handler.gd`) which is **not** a registered autoload |
+| `Settings` | `game/autoload/settings.gd` |
+| `EnvironmentManager` | `game/autoload/environment_manager.gd` |
+| `CameraManager` | `game/autoload/camera_manager.gd` — read-only viewport observer |
+| `StaffManager` | `game/autoload/staff_manager.gd` |
+| `ReputationSystemSingleton` | `game/autoload/reputation_system.gd` |
+| `DifficultySystemSingleton` | `game/autoload/difficulty_system.gd` |
+| `UnlockSystemSingleton` | `game/autoload/unlock_system.gd` |
+| `CheckoutSystem` | `game/autoload/checkout_system.gd` |
+| `OnboardingSystemSingleton` | `game/autoload/onboarding_system.gd` |
+| `MarketTrendSystemSingleton` | `game/autoload/market_trend_system.gd` |
+| `TooltipManager` | `game/autoload/tooltip_manager.gd` |
+| `ObjectiveRail` | `game/scenes/ui/objective_rail.tscn` |
+| `InteractionPrompt` | `game/scenes/ui/interaction_prompt.tscn` |
+| `ObjectiveDirector` | `game/autoload/objective_director.gd` |
+| `AuditOverlay` | `game/autoload/audit_overlay.gd` |
+| `AuditLog` | `game/autoload/audit_log.gd` |
+| `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
+| `ErrorBanner` | `game/autoload/error_banner.gd` |
+| `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |
+| `InputFocus` | `game/autoload/input_focus.gd` — modal/context stack |
+| `StoreRegistry` | `game/autoload/store_registry.gd` — runtime cache seeded from `ContentRegistry` |
+| `StoreDirector` | `game/autoload/store_director.gd` |
+| `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
+| `FailCard` | `game/scenes/ui/fail_card.tscn` |
+| `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
+
+Single-owner responsibilities for the ownership-enforcing subset are tracked
+in [`docs/architecture/ownership.md`](architecture/ownership.md).
 
 ## Signal Bus Model
 

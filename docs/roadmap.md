@@ -3,8 +3,8 @@
 Mallcore Sim is in a finalization phase. The goal is to close the gap between
 scaffolded systems and player-visible functionality before adding new features.
 
-See [docs/audits/braindump.md](audits/braindump.md) for the full state
-assessment that informs this roadmap.
+The customer-voice state assessment that informs this roadmap is
+`BRAINDUMP.md` at the repository root.
 
 ## Current state
 

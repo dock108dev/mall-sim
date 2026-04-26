@@ -55,7 +55,7 @@ All primaries are verified ≥ 4.5:1 (WCAG AA) against `panel_surface`. All pair
 1. **Accent = band + outline + CTA only.** Never use a store accent as a panel body fill, global HUD color, or body text color.
 2. **Semantic colors outrank store accents.** Inside any store drawer, `accent_danger` / `accent_warning` / `accent_success` override the store accent for status communication.
 3. **Inactive accent**: each store has a dark, desaturated variant (see `STORE_ACCENTS_INACTIVE` in `UIThemeConstants`) used in the hub when that store's card is not focused.
-4. **Color-blind safety**: accent is never the sole signal channel. Every color-coded element also carries a glyph or label (e.g., `✓ Success`, store icon + name). See §4.2 in `docs/research/store-identity-accent-system.md`.
+4. **Color-blind safety**: accent is never the sole signal channel. Every color-coded element also carries a glyph or label (e.g., `✓ Success`, store icon + name).
 5. **No accent-on-accent**: cross-store views (daily summary, hub overview) use neutral chrome with an 8px left border in the store's accent. Never tint row backgrounds.
 
 ---
@@ -111,9 +111,6 @@ Screenshots are not committed to the repository; run the game and open the audit
 
 ## References
 
-- Palette research: `docs/research/2000s-mall-visual-palette.md`
-- Store identity system: `docs/research/store-identity-accent-system.md`
-- Information hierarchy: `docs/research/sim-game-palette-information-hierarchy.md`
 - Runtime constants: `game/scripts/ui/ui_theme_constants.gd`
 - Global theme: `game/themes/mallcore_theme.tres` (set as project-wide default in `project.godot`)
 - Palette token resource: `game/themes/palette.tres`

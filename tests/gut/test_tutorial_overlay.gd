@@ -50,6 +50,12 @@ func test_prompt_updates_on_step_changed() -> void:
 		label.text, "",
 		"PromptLabel should have text after step change"
 	)
+	# Tutorial moved from WELCOME → CLICK_STORE; the label reflects the new step.
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.CLICK_STORE,
+		"Tutorial should be on CLICK_STORE after WELCOME timer expires"
+	)
 
 
 func test_skip_button_emits_signal() -> void:

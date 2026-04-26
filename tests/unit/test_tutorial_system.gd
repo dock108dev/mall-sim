@@ -45,8 +45,8 @@ func test_advance_step_moves_forward_and_emits_step_completed() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.WALK_TO_STORE,
-		"Step should advance from WELCOME to WALK_TO_STORE"
+		TutorialSystem.TutorialStep.CLICK_STORE,
+		"Step should advance from WELCOME to CLICK_STORE"
 	)
 	assert_eq(
 		completed_id[0], "welcome",
@@ -65,18 +65,13 @@ func test_advance_on_final_step_emits_tutorial_completed() -> void:
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
-	_tutorial._movement_accumulated = TutorialSystem.MOVEMENT_THRESHOLD
-	_tutorial._track_movement(0.01)
-	EventBus.store_entered.emit(&"test_store")
+	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
 	EventBus.panel_opened.emit("inventory")
 	EventBus.item_stocked.emit("item_1", "shelf_1")
-	EventBus.panel_opened.emit("pricing")
 	EventBus.price_set.emit("item_1", 9.99)
-	var mock_customer := Node.new()
-	EventBus.customer_spawned.emit(mock_customer)
-	mock_customer.queue_free()
 	EventBus.customer_purchased.emit(&"", &"item_1", 9.99, &"")
-	EventBus.day_ended.emit(1)
+	EventBus.day_close_requested.emit()
+	EventBus.day_acknowledged.emit()
 
 	assert_eq(
 		_tutorial.current_step,
@@ -114,10 +109,10 @@ func test_advance_after_completion_is_noop() -> void:
 	EventBus.tutorial_step_completed.connect(on_completed)
 	EventBus.tutorial_completed.connect(on_done)
 
-	EventBus.store_entered.emit(&"test_store")
+	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
 	EventBus.panel_opened.emit("inventory")
 	EventBus.item_stocked.emit("item_1", "shelf_1")
-	EventBus.day_ended.emit(1)
+	EventBus.day_close_requested.emit()
 
 	assert_eq(
 		signals_fired[0], 0,
@@ -166,8 +161,8 @@ func test_save_state_serializes_step_and_completion() -> void:
 	)
 	assert_eq(
 		int(data["current_step"]),
-		TutorialSystem.TutorialStep.WALK_TO_STORE,
-		"Serialized step should be WALK_TO_STORE"
+		TutorialSystem.TutorialStep.CLICK_STORE,
+		"Serialized step should be CLICK_STORE"
 	)
 	assert_false(
 		data["tutorial_completed"] as bool,
@@ -217,8 +212,7 @@ func test_load_state_restores_mid_tutorial() -> void:
 		"current_step": TutorialSystem.TutorialStep.OPEN_INVENTORY,
 		"completed_steps": {
 			"welcome": true,
-			"walk_to_store": true,
-			"enter_store": true,
+			"click_store": true,
 		},
 		"tips_shown": {},
 	}
@@ -239,7 +233,7 @@ func test_load_state_restores_mid_tutorial() -> void:
 		"Tutorial should be active for mid-tutorial state"
 	)
 	assert_true(
-		_tutorial._completed_steps.get("enter_store", false) as bool,
+		_tutorial._completed_steps.get("click_store", false) as bool,
 		"Mid-tutorial completed step IDs should be restored"
 	)
 
@@ -251,8 +245,7 @@ func test_load_state_resumes_last_incomplete_step() -> void:
 		"current_step": TutorialSystem.TutorialStep.WELCOME,
 		"completed_steps": {
 			"welcome": true,
-			"walk_to_store": true,
-			"enter_store": true,
+			"click_store": true,
 		},
 		"tips_shown": {},
 	}
@@ -279,15 +272,11 @@ func test_eventbus_step_completed_has_correct_step_id() -> void:
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 
-	_tutorial._movement_accumulated = TutorialSystem.MOVEMENT_THRESHOLD
-	_tutorial._track_movement(0.01)
+	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
 
-	EventBus.store_entered.emit(&"test_store")
-
-	assert_eq(emitted_ids.size(), 3, "Three steps should have completed")
+	assert_eq(emitted_ids.size(), 2, "Two steps should have completed")
 	assert_eq(emitted_ids[0], "welcome", "First: welcome")
-	assert_eq(emitted_ids[1], "walk_to_store", "Second: walk_to_store")
-	assert_eq(emitted_ids[2], "enter_store", "Third: enter_store")
+	assert_eq(emitted_ids[1], "click_store", "Second: click_store")
 
 	EventBus.tutorial_step_completed.disconnect(on_completed)
 
@@ -303,8 +292,33 @@ func test_eventbus_step_changed_emits_new_step_id() -> void:
 	_tutorial._process(0.01)
 
 	assert_true(
-		changed_ids.has("walk_to_store"),
-		"tutorial_step_changed should emit walk_to_store after advancing"
+		changed_ids.has("click_store"),
+		"tutorial_step_changed should emit click_store after advancing"
 	)
 
 	EventBus.tutorial_step_changed.disconnect(on_changed)
+
+
+func test_click_store_ignores_non_retro_games_store() -> void:
+	_tutorial.initialize(true)
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
+	_tutorial._process(0.01)
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.CLICK_STORE,
+		"Should be on CLICK_STORE after WELCOME"
+	)
+
+	EventBus.store_entered.emit(&"electronics")
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.CLICK_STORE,
+		"Non-retro_games store entry should not advance CLICK_STORE"
+	)
+
+	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		"retro_games entry should advance to OPEN_INVENTORY"
+	)

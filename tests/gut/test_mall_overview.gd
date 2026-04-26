@@ -358,6 +358,53 @@ func test_completion_button_emits_toggle_signal() -> void:
 	)
 
 
+# ── ISSUE-005: locked card does not emit enter_store_requested ─────────────────
+
+func test_locked_card_click_does_not_emit_enter_store_requested() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var locked_ids: Array[StringName] = [
+		&"sports_memorabilia",
+		&"video_rental",
+		&"pocket_creatures",
+		&"consumer_electronics",
+	]
+	for store_id: StringName in locked_ids:
+		var card: StoreSlotCard = (
+			load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+		)
+		add_child_autofree(card)
+		card.setup(store_id, String(store_id))
+		card.set_locked(true, "REP 5 | $200")
+		card.store_selected.connect(_overview._on_card_store_selected)
+		watch_signals(EventBus)
+		card._gui_input(_make_left_click())
+		assert_signal_not_emitted(
+			EventBus,
+			"enter_store_requested",
+			"Locked card %s must not emit enter_store_requested" % store_id
+		)
+
+
+func test_unlocked_card_click_emits_enter_store_requested() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.set_locked(false, "")
+	card.store_selected.connect(_overview._on_card_store_selected)
+	watch_signals(EventBus)
+	card._gui_input(_make_left_click())
+	assert_signal_emitted(
+		EventBus,
+		"enter_store_requested",
+		"Unlocked retro_games card must emit enter_store_requested"
+	)
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 func _on_day_close_requested() -> void:

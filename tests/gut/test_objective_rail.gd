@@ -47,6 +47,20 @@ func test_hint_slot_renders_on_objective_changed() -> void:
 	var rail := _make_rail()
 	EventBus.objective_changed.emit(_day_payload(1))
 	assert_eq(rail._hint_label.text, "E")
+	assert_true(rail._hint_label.visible)
+
+
+func test_hint_slot_hidden_when_key_empty() -> void:
+	var rail := _make_rail()
+	EventBus.objective_changed.emit({
+		"text": "No-key day",
+		"action": "Right-click stocked items to adjust price",
+		"key": "",
+	})
+	assert_false(
+		rail._hint_label.visible,
+		"hint chip must be hidden when key is empty"
+	)
 
 
 func test_rail_becomes_visible_on_valid_payload() -> void:

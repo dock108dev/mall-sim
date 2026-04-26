@@ -3,21 +3,21 @@
   "objectives": [
     {
       "day": 1,
-      "text": "Open the store and make your first sale",
-      "action": "Stock items on shelves",
-      "key": "E"
+      "text": "Stock your first item and make a sale",
+      "action": "Press I to open inventory",
+      "key": "I"
     },
     {
       "day": 2,
-      "text": "Stock shelves and find your pricing sweet spot",
-      "action": "Set prices on stocked items",
-      "key": "P"
+      "text": "Find your pricing sweet spot",
+      "action": "Right-click stocked items to adjust price",
+      "key": ""
     },
     {
       "day": 3,
-      "text": "Earn repeat customers \u2014 reputation matters now",
-      "action": "Greet customers at the counter",
-      "key": "F"
+      "text": "Keep the shelves alive",
+      "action": "Refill empty slots before close",
+      "key": ""
     },
     {
       "day": 4,

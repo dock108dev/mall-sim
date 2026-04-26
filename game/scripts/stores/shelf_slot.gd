@@ -113,6 +113,8 @@ func get_occupied() -> int:
 
 
 ## Places an item into this slot, returning true on success.
+## Returning false on a re-stock of an occupied slot is a typed contract,
+## not a silent failure — see docs/audits/error-handling-report.md EH-01.
 func place_item(instance_id: String, category: String = "") -> bool:
 	if _occupied:
 		return false
@@ -130,6 +132,8 @@ func assign_item(id: StringName) -> bool:
 
 
 ## Removes the item from this slot and returns its instance ID.
+## Empty string on an already-empty slot is a typed contract, not a silent
+## failure — see docs/audits/error-handling-report.md EH-01.
 func remove_item() -> String:
 	if not _occupied:
 		return ""
@@ -183,7 +187,7 @@ func clear_display_data() -> void:
 func _update_empty_indicator() -> void:
 	if not is_node_ready() or _empty_mesh == null:
 		return
-	_empty_mesh.visible = not _occupied
+	_empty_mesh.visible = (not _occupied) and _placement_active
 
 
 ## Spawns a placeholder scene representing the placed item.
@@ -228,12 +232,14 @@ func unhighlight() -> void:
 
 func _on_placement_entered() -> void:
 	_placement_active = true
+	_update_empty_indicator()
 
 
 func _on_placement_exited() -> void:
 	_placement_active = false
 	if _highlight_active:
 		unhighlight()
+	_update_empty_indicator()
 
 
 func _on_stocking_cursor_active(item_category: StringName) -> void:

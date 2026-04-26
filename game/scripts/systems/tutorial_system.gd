@@ -4,51 +4,45 @@ extends Node
 
 enum TutorialStep {
 	WELCOME,
-	WALK_TO_STORE,
-	ENTER_STORE,
+	CLICK_STORE,
 	OPEN_INVENTORY,
 	PLACE_ITEM,
-	OPEN_PRICING,
 	SET_PRICE,
 	WAIT_FOR_CUSTOMER,
-	SALE_COMPLETED,
-	END_OF_DAY,
+	CLOSE_DAY,
+	DAY_SUMMARY,
 	FINISHED,
 }
 
 const STEP_IDS: Dictionary = {
 	TutorialStep.WELCOME: "welcome",
-	TutorialStep.WALK_TO_STORE: "walk_to_store",
-	TutorialStep.ENTER_STORE: "enter_store",
+	TutorialStep.CLICK_STORE: "click_store",
 	TutorialStep.OPEN_INVENTORY: "open_inventory",
 	TutorialStep.PLACE_ITEM: "place_item",
-	TutorialStep.OPEN_PRICING: "open_pricing",
 	TutorialStep.SET_PRICE: "set_price",
 	TutorialStep.WAIT_FOR_CUSTOMER: "wait_for_customer",
-	TutorialStep.SALE_COMPLETED: "sale_completed",
-	TutorialStep.END_OF_DAY: "end_of_day",
+	TutorialStep.CLOSE_DAY: "close_day",
+	TutorialStep.DAY_SUMMARY: "day_summary",
 	TutorialStep.FINISHED: "finished",
 }
 
 const STEP_TEXT_KEYS: Dictionary = {
 	TutorialStep.WELCOME: "TUTORIAL_WELCOME",
-	TutorialStep.WALK_TO_STORE: "TUTORIAL_WALK_TO_STORE",
-	TutorialStep.ENTER_STORE: "TUTORIAL_ENTER_STORE",
+	TutorialStep.CLICK_STORE: "TUTORIAL_CLICK_STORE",
 	TutorialStep.OPEN_INVENTORY: "TUTORIAL_OPEN_INVENTORY",
 	TutorialStep.PLACE_ITEM: "TUTORIAL_PLACE_ITEM",
-	TutorialStep.OPEN_PRICING: "TUTORIAL_OPEN_PRICING",
 	TutorialStep.SET_PRICE: "TUTORIAL_SET_PRICE",
 	TutorialStep.WAIT_FOR_CUSTOMER: "TUTORIAL_WAIT_CUSTOMER",
-	TutorialStep.SALE_COMPLETED: "TUTORIAL_SALE_COMPLETED",
-	TutorialStep.END_OF_DAY: "TUTORIAL_END_OF_DAY",
+	TutorialStep.CLOSE_DAY: "TUTORIAL_CLOSE_DAY",
+	TutorialStep.DAY_SUMMARY: "TUTORIAL_DAY_SUMMARY",
 	TutorialStep.FINISHED: "",
 }
 
 const PROGRESS_PATH: String = "user://tutorial_progress.cfg"
 const WELCOME_DURATION: float = 5.0
-const MOVEMENT_THRESHOLD: float = 5.0
 const CONTEXTUAL_TIP_DAYS: int = 3
 const STEP_COUNT: int = TutorialStep.FINISHED
+const TUTORIAL_STORE_ID: StringName = &"retro_games"
 
 const CONTEXTUAL_TIP_KEYS: Dictionary = {
 	"ordering": "TIP_ORDERING",
@@ -62,7 +56,6 @@ var current_step: TutorialStep = TutorialStep.WELCOME
 var _tips_shown: Dictionary = {}
 var _completed_steps: Dictionary = {}
 var _welcome_timer: float = 0.0
-var _movement_accumulated: float = 0.0
 
 
 ## Starts a new tutorial session or resumes persisted first-play progress.
@@ -95,16 +88,18 @@ func _connect_signals() -> void:
 		EventBus.item_stocked.connect(_on_item_stocked)
 	if not EventBus.price_set.is_connected(_on_price_set):
 		EventBus.price_set.connect(_on_price_set)
-	if not EventBus.customer_spawned.is_connected(
-		_on_customer_spawned
-	):
-		EventBus.customer_spawned.connect(_on_customer_spawned)
 	if not EventBus.customer_purchased.is_connected(
 		_on_customer_purchased
 	):
 		EventBus.customer_purchased.connect(_on_customer_purchased)
-	if not EventBus.day_ended.is_connected(_on_day_ended):
-		EventBus.day_ended.connect(_on_day_ended)
+	if not EventBus.day_close_requested.is_connected(
+		_on_day_close_requested
+	):
+		EventBus.day_close_requested.connect(_on_day_close_requested)
+	if not EventBus.day_acknowledged.is_connected(
+		_on_day_acknowledged
+	):
+		EventBus.day_acknowledged.connect(_on_day_acknowledged)
 	_ensure_day_started_connected()
 
 
@@ -123,18 +118,22 @@ func _disconnect_step_signals() -> void:
 		EventBus.item_stocked.disconnect(_on_item_stocked)
 	if EventBus.price_set.is_connected(_on_price_set):
 		EventBus.price_set.disconnect(_on_price_set)
-	if EventBus.customer_spawned.is_connected(
-		_on_customer_spawned
-	):
-		EventBus.customer_spawned.disconnect(_on_customer_spawned)
 	if EventBus.customer_purchased.is_connected(
 		_on_customer_purchased
 	):
 		EventBus.customer_purchased.disconnect(
 			_on_customer_purchased
 		)
-	if EventBus.day_ended.is_connected(_on_day_ended):
-		EventBus.day_ended.disconnect(_on_day_ended)
+	if EventBus.day_close_requested.is_connected(
+		_on_day_close_requested
+	):
+		EventBus.day_close_requested.disconnect(
+			_on_day_close_requested
+		)
+	if EventBus.day_acknowledged.is_connected(
+		_on_day_acknowledged
+	):
+		EventBus.day_acknowledged.disconnect(_on_day_acknowledged)
 
 
 func _process(delta: float) -> void:
@@ -144,8 +143,6 @@ func _process(delta: float) -> void:
 		_welcome_timer += delta
 		if _welcome_timer >= WELCOME_DURATION:
 			_advance_step()
-	elif current_step == TutorialStep.WALK_TO_STORE:
-		_track_movement(delta)
 
 
 ## Marks every tutorial step complete and permanently disables prompts.
@@ -206,7 +203,6 @@ func _advance_step() -> void:
 		return
 
 	current_step = next_value as TutorialStep
-	_movement_accumulated = 0.0
 	_save_progress()
 	_emit_current_step()
 
@@ -232,21 +228,6 @@ func _emit_current_step() -> void:
 	EventBus.tutorial_step_changed.emit(step_id)
 
 
-func _track_movement(delta: float) -> void:
-	if _movement_accumulated >= MOVEMENT_THRESHOLD:
-		_advance_step()
-		return
-	var input: Vector2 = Input.get_vector(
-		"move_left", "move_right",
-		"move_forward", "move_back",
-	)
-	if input.is_zero_approx():
-		return
-	_movement_accumulated += input.length() * delta * 6.0
-	if _movement_accumulated >= MOVEMENT_THRESHOLD:
-		_advance_step()
-
-
 func _on_gameplay_ready() -> void:
 	if not tutorial_active:
 		return
@@ -254,10 +235,13 @@ func _on_gameplay_ready() -> void:
 		_advance_step()
 
 
-func _on_store_entered(_store_id: StringName) -> void:
+func _on_store_entered(store_id: StringName) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.ENTER_STORE:
+	if (
+		current_step == TutorialStep.CLICK_STORE
+		and store_id == TUTORIAL_STORE_ID
+	):
 		_advance_step()
 
 
@@ -267,11 +251,6 @@ func _on_panel_opened(panel_name: String) -> void:
 	if (
 		current_step == TutorialStep.OPEN_INVENTORY
 		and panel_name == "inventory"
-	):
-		_advance_step()
-	elif (
-		current_step == TutorialStep.OPEN_PRICING
-		and panel_name == "pricing"
 	):
 		_advance_step()
 
@@ -294,27 +273,27 @@ func _on_price_set(
 		_advance_step()
 
 
-func _on_customer_spawned(_customer: Node) -> void:
-	if not tutorial_active:
-		return
-	if current_step == TutorialStep.WAIT_FOR_CUSTOMER:
-		_advance_step()
-
-
 func _on_customer_purchased(
 	_store_id: StringName, _item_id: StringName,
 	_price: float, _customer_id: StringName
 ) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.SALE_COMPLETED:
+	if current_step == TutorialStep.WAIT_FOR_CUSTOMER:
 		_advance_step()
 
 
-func _on_day_ended(_day: int) -> void:
+func _on_day_close_requested() -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.END_OF_DAY:
+	if current_step == TutorialStep.CLOSE_DAY:
+		_advance_step()
+
+
+func _on_day_acknowledged() -> void:
+	if not tutorial_active:
+		return
+	if current_step == TutorialStep.DAY_SUMMARY:
 		_advance_step()
 
 
@@ -419,6 +398,8 @@ func _apply_state(data: Dictionary) -> void:
 	tutorial_completed = bool(
 		data.get("tutorial_completed", false)
 	)
+	# Out-of-range ints from a hand-edited user:// blob are clamped by
+	# _resolve_resume_step below; see docs/audits/security-report.md §3 finding 1.
 	current_step = int(
 		data.get("current_step", TutorialStep.WELCOME)
 	) as TutorialStep
@@ -444,7 +425,6 @@ func _apply_state(data: Dictionary) -> void:
 			_tips_shown[str(key)] = bool(tips_dict[key])
 
 	_welcome_timer = 0.0
-	_movement_accumulated = 0.0
 
 	if tutorial_completed or current_step == TutorialStep.FINISHED:
 		tutorial_active = false

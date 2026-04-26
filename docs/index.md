@@ -38,8 +38,9 @@ This is the active project documentation set for Mallcore Sim.
 ## Research
 
 - [`docs/research/*.md`](research/) - reference material on scene transitions,
-  camera authority, input focus, assertion patterns, aesthetic direction, and
-  retail-sim reference games. Cited from `CLAUDE.md` and ownership docs.
+  camera authority, input focus, runtime assertions, scene-lifecycle
+  verification, the store-ready contract, and retail-sim reference games.
+  Cited from ADRs and `docs/architecture/ownership.md`.
 
 ## Style
 
@@ -48,14 +49,13 @@ This is the active project documentation set for Mallcore Sim.
 
 ## Audit docs
 
-- [Docs Consolidation Audit](audits/docs-consolidation.md) - what this rewrite
-  changed, deleted, and consolidated.
-- [State Assessment](audits/braindump.md) - honest assessment of what is working,
-  what is scaffolded, and where trust breaks.
-- `docs/audits/*.md` - point-in-time review notes for error handling, security,
-  SSOT cleanup, and related maintenance work.
+- [Docs Consolidation Audit](audits/docs-consolidation.md) - latest pass; what
+  was deleted, rewritten, and consolidated.
+- `docs/audits/*.md` - point-in-time review notes (error handling, security,
+  SSOT, abend-handling, Phase 0.1 UI integrity, legacy content paths).
 
 Only `README.md` should live at the repository root as active project
-documentation. Markdown under `.github/`, `tools/`, `addons/`, and similar
-folders is configuration, templates, vendored material, or tooling support
-rather than the active game documentation set.
+documentation. `BRAINDUMP.md` at the root is the customer's voice and is not
+edited by documentation passes. Markdown under `.github/`, `tools/`,
+`addons/`, and similar folders is configuration, templates, vendored material,
+or tooling support rather than the active game documentation set.

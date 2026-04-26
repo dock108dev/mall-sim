@@ -44,7 +44,7 @@ func test_day_started_day1_objective_text() -> void:
 	EventBus.day_started.emit(1)
 	assert_eq(
 		received[0].get("objective", ""),
-		"Open the store and make your first sale"
+		"Stock your first item and make a sale"
 	)
 
 
@@ -70,9 +70,9 @@ func test_store_entered_emits_objective_changed() -> void:
 	EventBus.store_entered.emit(&"retro_games")
 	assert_gt(received.size(), 0, "objective_changed must fire")
 	var payload: Dictionary = received[received.size() - 1]
-	assert_eq(payload.get("objective", ""), "Open the store and make your first sale")
-	assert_eq(payload.get("action", ""), "Stock items on shelves")
-	assert_eq(payload.get("key", ""), "E")
+	assert_eq(payload.get("objective", ""), "Stock your first item and make a sale")
+	assert_eq(payload.get("action", ""), "Press I to open inventory")
+	assert_eq(payload.get("key", ""), "I")
 
 
 # ── Signal connection: item_stocked ───────────────────────────────────────────

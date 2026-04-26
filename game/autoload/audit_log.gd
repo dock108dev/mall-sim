@@ -2,6 +2,11 @@
 ## Emits stable AUDIT lines parseable by tests/audit_run.sh and keeps a ring
 ## buffer of recent entries for the debug overlay. `pass` is a GDScript keyword,
 ## so the public methods are named `pass_check` / `fail_check`.
+##
+## `assert()` calls in this file (and across the ownership autoloads) are
+## debug-only tripwires paired with a runtime push_error/fail_check on the
+## same code path — see docs/audits/error-handling-report.md EH-AS-1 for
+## the justification of stripping in release.
 extends Node
 
 signal checkpoint_passed(checkpoint: StringName, detail: String)
