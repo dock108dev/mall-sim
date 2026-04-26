@@ -138,11 +138,17 @@ func _execute_deferred_save() -> void:
 	save_settings()
 
 
+## Preference-driven CRT toggle. Renders the same shader as crt_overlay.tscn
+## but is gated by the user-facing `crt_enabled` setting rather than the
+## Retro Games drawer state. Layer is intentionally one band below
+## crt_overlay.tscn (POST_FX 110) so that, when both are visible, the
+## drawer-driven scene wins; see docs/audits/ssot-report.md "Risk log" for the
+## known parallel-CRT divergence this leaves behind.
 func _setup_crt_overlay() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	_crt_layer = CanvasLayer.new()
-	_crt_layer.layer = 100
+	_crt_layer.layer = UILayers.SYSTEM
 	_crt_layer.name = "CRTLayer"
 	add_child(_crt_layer)
 
@@ -203,7 +209,7 @@ func save_settings() -> void:
 	if save_err != OK:
 		push_warning(
 			"Settings: failed to save '%s' — %s"
-			% [SETTINGS_PATH, error_string(save_err)]
+			% [settings_path, error_string(save_err)]
 		)
 
 
@@ -223,7 +229,7 @@ func load_settings() -> void:
 			push_warning(
 				(
 					"Settings: '%s' exceeds maximum supported size (%d bytes) — using defaults"
-					% [SETTINGS_PATH, MAX_SETTINGS_FILE_BYTES]
+					% [settings_path, MAX_SETTINGS_FILE_BYTES]
 				)
 			)
 			_restore_defaults_after_failed_load()
@@ -233,7 +239,7 @@ func load_settings() -> void:
 	if _safe_load_config(config, settings_path) != OK:
 		if FileAccess.file_exists(settings_path):
 			push_warning(
-				"Settings: failed to parse '%s' — using defaults" % SETTINGS_PATH
+				"Settings: failed to parse '%s' — using defaults" % settings_path
 			)
 		_restore_defaults_after_failed_load()
 		return
@@ -328,11 +334,22 @@ func _restore_defaults_after_failed_load() -> void:
 # Wrapper around ConfigFile.load that pre-validates the file to avoid the
 # engine's internal "ConfigFile parse error" message — which tests trigger
 # intentionally via corrupt fixtures and which would otherwise fail CI's
-# push_error audit.
+# push_error audit. The size cap re-check is defense-in-depth: load_settings
+# already gates on MAX_SETTINGS_FILE_BYTES, but this function is reusable and
+# closes the open/check/reopen TOCTOU window. See security-report.md §F4.
 func _safe_load_config(config: ConfigFile, path: String) -> Error:
 	if not FileAccess.file_exists(path):
 		return ERR_FILE_NOT_FOUND
-	var text: String = FileAccess.get_file_as_string(path)
+	var probe: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if probe == null:
+		return FileAccess.get_open_error()
+	if probe.get_length() > MAX_SETTINGS_FILE_BYTES:
+		probe.close()
+		# Treated identically to a parse failure by the caller; both surface the
+		# same player-visible warning and reset to defaults.
+		return ERR_PARSE_ERROR
+	var text: String = probe.get_as_text()
+	probe.close()
 	if not _looks_parseable_cfg(text):
 		return ERR_PARSE_ERROR
 	return config.parse(text)
@@ -629,7 +646,7 @@ func _warn_invalid_config_value(
 	push_warning(
 		(
 			"Settings: invalid value for [%s] %s in '%s' — expected %s, got %s; using default"
-			% [section, key, SETTINGS_PATH, expected, value]
+			% [section, key, settings_path, expected, value]
 		)
 	)
 

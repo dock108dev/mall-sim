@@ -603,10 +603,25 @@ func _process_warranty_claims(day: int) -> void:
 	var claims: Array[Dictionary] = (
 		_warranty_manager.process_daily_claims(day)
 	)
+	if not claims.is_empty() and _economy_system == null:
+		# Claims fire signals + UI notifications; without economy_system the
+		# replacement cost is silently free, which is a real money-leak bug.
+		# Surface it loudly and abort the day's claims so the deficit doesn't
+		# accumulate unnoticed.
+		push_error(
+			(
+				"ElectronicsStore: %d warranty claim(s) on day %d but "
+				+ "economy_system is null — replacement cost would be free. "
+				+ "Skipping claim emission."
+			)
+			% [claims.size(), day]
+		)
+		_warranty_manager.purge_expired(day)
+		return
 	for claim: Dictionary in claims:
 		var cost: float = claim.get("replacement_cost", 0.0)
 		var item_id: String = claim.get("item_id", "")
-		if _economy_system and cost > 0.0:
+		if cost > 0.0:
 			_economy_system.force_deduct_cash(
 				cost, "Warranty claim: %s" % item_id
 			)

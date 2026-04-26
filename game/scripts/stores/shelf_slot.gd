@@ -217,6 +217,15 @@ func _resolve_empty_mesh() -> MeshInstance3D:
 	return get_node_or_null("Marker") as MeshInstance3D
 
 
+## ISSUE-005: state-aware prompt label. During placement mode an occupied slot
+## reads "Slot occupied" so the InteractionPrompt HUD warns the player before
+## press-E is wasted; otherwise the base "Stock <name>" cue applies.
+func get_prompt_label() -> String:
+	if _placement_active and _occupied:
+		return "Slot occupied"
+	return super.get_prompt_label()
+
+
 ## Overrides base highlight to use green/red during placement mode.
 func highlight() -> void:
 	if _placement_active:

@@ -33,15 +33,18 @@ Use `project.godot` as the source of truth for exact bindings.
 
 Runtime persistence uses Godot `user://` paths:
 
-- settings: `user://settings.cfg`
+- settings: `user://settings.cfg` (owned by `Settings` autoload —
+  `game/autoload/settings.gd`)
 - save index: `user://save_index.cfg`
 - saves: `user://save_slot_<n>.json`
 
-`SaveManager` currently:
+`SaveManager` (`game/scripts/core/save_manager.gd`) currently:
 
-- supports one auto-save slot plus three manual slots
-- caps save-file reads at `10 MiB`
-- writes save files atomically through a temporary file and rename
+- supports one auto-save slot (slot `0`) plus three manual slots
+  (`MAX_MANUAL_SLOTS = 3`)
+- caps save-file reads at `10 MiB` (`MAX_SAVE_FILE_BYTES = 10485760`)
+- writes save files atomically by writing to a `.tmp` companion file,
+  flushing, closing, and renaming over the destination
 
 ## Checked-in integrations
 
@@ -105,15 +108,15 @@ and currently includes:
 
 `.github/workflows/export.yml` runs on tags matching `v*` and currently:
 
-1. validates `export_presets.cfg`
-2. installs Godot plus export templates
+1. validates `export_presets.cfg` (preset names, x86_64 Windows, no
+   hardcoded code-signing identity, no absolute export paths, no obvious
+   secrets, ETC2 ASTC import support in `project.godot`)
+2. installs Godot plus export templates via `chickensoft-games/setup-godot@v2`
 3. imports project assets
-4. exports Windows and macOS release artifacts
+4. exports Windows, macOS, and Linux release artifacts in parallel jobs
 5. uploads short-retention build artifacts
+   (`mallcore-sim-{windows,macos,linux}.{zip,zip,tar.gz}`)
 6. creates a GitHub release from those tagged artifacts
-
-Linux is not currently exported by the release workflow even though a Linux
-preset exists locally.
 
 ## Godot version
 

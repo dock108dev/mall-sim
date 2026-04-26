@@ -36,12 +36,11 @@ runs `game/tests/run_tests.gd` when present, writes output to
 - `macOS` -> `exports/macos/MallcoreSim.zip`
 - `Linux/X11` -> `exports/linux/MallcoreSim.x86_64`
 
-Tagged GitHub releases validate export configuration and publish Windows and
-macOS artifacts. Linux has a checked-in preset for local exports, but the
-current release workflow does not upload a Linux artifact. The canonical
-engine version is Godot `4.6.2`: `project.godot` declares `4.6` features and
-both the validate and export CI workflows install `4.6.2`. Run local builds
-and tests with the same version.
+Tagged GitHub releases (`v*` tags) validate export configuration and publish
+Windows, macOS, and Linux artifacts. The canonical engine version is Godot
+`4.6.2`: `project.godot` declares `4.6` features and both the validate and
+export CI workflows install `4.6.2-stable`. Run local builds and tests with
+the same version.
 
 ## Documentation
 

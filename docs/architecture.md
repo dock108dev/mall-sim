@@ -2,93 +2,139 @@
 
 ## Boot Flow
 
-`game_world.gd` drives a 5-tier initialization sequence on scene ready. Each tier must complete before the next begins:
+The configured entry scene is `res://game/scenes/bootstrap/boot.tscn`. The boot
+script (`game/scripts/core/boot.gd`, wrapped by `game/scenes/bootstrap/boot.gd`)
+runs synchronous startup checks before opening the main menu:
 
-1. **Tier 1 — Data loading:** `DataLoaderSingleton` reads all JSON content files; `ContentRegistry` builds typed catalogs (items, stores, events, milestones). Boot-time content validator runs immediately: parody-name check, `type` field enforcement, cross-reference validation.
-2. **Tier 2 — Autoload services:** `GameManager`, `AudioManager`, `EventBus` confirm ready state via `_on_system_ready` callbacks.
-3. **Tier 3 — Store controllers:** Each store controller initializes from `ContentRegistry` data. Controllers are autoload-adjacent singletons referenced by `game_world.gd`, not scene nodes.
-4. **Tier 4 — World systems:** `checkout_system`, `haggle_system`, `inventory_system`, `reputation_system`, day-cycle clock, and customer spawner start in dependency order.
-5. **Tier 5 — UI layer:** HUD, mall overview, and store entry scenes attach and request `CameraAuthority` slots.
+1. `DataLoaderSingleton.load_all()` discovers JSON content under
+   `res://game/content/` and aggregates load errors.
+2. `arc_unlocks.json` and `objectives.json` are schema-validated.
+3. `ContentRegistry.is_ready()` is asserted.
+4. The shipping store roster is asserted to contain at least five IDs.
+5. `Settings.load()` then `AudioManager.initialize()` runs.
+6. `GameManager.mark_boot_completed()` is called and `EventBus.boot_completed`
+   is emitted.
+7. `GameManager.transition_to(GameManager.State.MAIN_MENU)` opens the menu.
+
+If any boot step fails, an in-scene error panel is shown and the transition
+does not occur.
+
+## GameWorld init tiers
+
+`game/scenes/world/game_world.gd` runs five named initialization tiers when
+the playable world scene is brought up. The tiers are ordered explicitly and
+each runs in the entered phase of the previous; they are not the same as the
+boot script above.
+
+| Tier | Function | Systems started |
+|---|---|---|
+| 1 — data | `initialize_tier_1_data` | `time_system`, `economy_system` (with starting cash), end-of-day summary callable |
+| 2 — state | `initialize_tier_2_state` | `inventory_system`, `store_state_manager`, `trend_system`, `market_event_system`, `seasonal_event_system`, `market_value_system` |
+| 3 — operational | `initialize_tier_3_operational` | per-store `ReputationSystemSingleton`, `customer_system`, `mall_customer_spawner`, `npc_spawner_system`, `haggle_system`, `checkout_system`, `queue_system`, `progression_system`, `milestone_system`, `order_system`, `staff_system`, `meta_shift_system` |
+| 4 — world | `initialize_tier_4_world` | `store_selector_system`, build mode, `tournament_system`, `day_phase_lighting` |
+| 5 — meta | `initialize_tier_5_meta` | `performance_manager`, `performance_report_system`, `random_event_system`, `ambient_moments_system`, `regulars_log_system`, `ending_evaluator`, `store_upgrade_system`, `completion_tracker`, `day_cycle_controller` |
+
+These tier functions are scene nodes' `initialize(...)` calls — not
+autoloads. The autoload roster below is initialized earlier by Godot before
+any scene loads.
 
 ## Autoloads
 
-Declared in `project.godot` in load order. Later autoloads may reference earlier
-ones. Two entries are scenes (`ObjectiveRail`, `InteractionPrompt`, `FailCard`)
-rather than scripts.
+Declared in `project.godot` in load order. Later autoloads may reference
+earlier ones. Three entries are scenes (`ObjectiveRail`, `InteractionPrompt`,
+`FailCard`); the rest are scripts.
 
-| Autoload | File / scene |
-|---|---|
-| `DataLoaderSingleton` | `game/autoload/data_loader.gd` — JSON content discovery and raw-data exposure |
-| `ContentRegistry` | `game/autoload/content_registry.gd` — typed catalogs and canonical IDs |
-| `EventBus` | `game/autoload/event_bus.gd` — cross-system signal hub |
-| `GameManager` | `game/autoload/game_manager.gd` — legacy run state and session entry points |
-| `AudioManager` | `game/autoload/audio_manager.gd` — buses, streams, SFX; instantiates `AudioEventHandler` (`game/autoload/audio_event_handler.gd`) which is **not** a registered autoload |
-| `Settings` | `game/autoload/settings.gd` |
-| `EnvironmentManager` | `game/autoload/environment_manager.gd` |
-| `CameraManager` | `game/autoload/camera_manager.gd` — read-only viewport observer |
-| `StaffManager` | `game/autoload/staff_manager.gd` |
-| `ReputationSystemSingleton` | `game/autoload/reputation_system.gd` |
-| `DifficultySystemSingleton` | `game/autoload/difficulty_system.gd` |
-| `UnlockSystemSingleton` | `game/autoload/unlock_system.gd` |
-| `CheckoutSystem` | `game/autoload/checkout_system.gd` |
-| `OnboardingSystemSingleton` | `game/autoload/onboarding_system.gd` |
-| `MarketTrendSystemSingleton` | `game/autoload/market_trend_system.gd` |
-| `TooltipManager` | `game/autoload/tooltip_manager.gd` |
-| `ObjectiveRail` | `game/scenes/ui/objective_rail.tscn` |
-| `InteractionPrompt` | `game/scenes/ui/interaction_prompt.tscn` |
-| `ObjectiveDirector` | `game/autoload/objective_director.gd` |
-| `AuditOverlay` | `game/autoload/audit_overlay.gd` |
-| `AuditLog` | `game/autoload/audit_log.gd` |
-| `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
-| `ErrorBanner` | `game/autoload/error_banner.gd` |
-| `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |
-| `InputFocus` | `game/autoload/input_focus.gd` — modal/context stack |
-| `StoreRegistry` | `game/autoload/store_registry.gd` — runtime cache seeded from `ContentRegistry` |
-| `StoreDirector` | `game/autoload/store_director.gd` |
-| `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
-| `FailCard` | `game/scenes/ui/fail_card.tscn` |
-| `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
+| # | Autoload | Source |
+|---|---|---|
+| 1 | `DataLoaderSingleton` | `game/autoload/data_loader.gd` — JSON content discovery and raw-data exposure |
+| 2 | `ContentRegistry` | `game/autoload/content_registry.gd` — typed catalogs and canonical IDs |
+| 3 | `EventBus` | `game/autoload/event_bus.gd` — cross-system signal hub |
+| 4 | `GameManager` | `game/autoload/game_manager.gd` — top-level FSM (`MAIN_MENU`, `GAMEPLAY`, `PAUSED`, `GAME_OVER`, `LOADING`, `DAY_SUMMARY`, `BUILD`) and run-session entry points |
+| 5 | `AudioManager` | `game/autoload/audio_manager.gd` — buses, streams, SFX; instantiates `AudioEventHandler` (`game/autoload/audio_event_handler.gd`) as a child node, not a registered autoload |
+| 6 | `Settings` | `game/autoload/settings.gd` |
+| 7 | `EnvironmentManager` | `game/autoload/environment_manager.gd` |
+| 8 | `CameraManager` | `game/autoload/camera_manager.gd` — read-only viewport observer |
+| 9 | `StaffManager` | `game/autoload/staff_manager.gd` |
+| 10 | `ReputationSystemSingleton` | `game/autoload/reputation_system.gd` |
+| 11 | `DifficultySystemSingleton` | `game/autoload/difficulty_system.gd` |
+| 12 | `UnlockSystemSingleton` | `game/autoload/unlock_system.gd` |
+| 13 | `CheckoutSystem` | `game/autoload/checkout_system.gd` |
+| 14 | `OnboardingSystemSingleton` | `game/autoload/onboarding_system.gd` |
+| 15 | `MarketTrendSystemSingleton` | `game/autoload/market_trend_system.gd` |
+| 16 | `TooltipManager` | `game/autoload/tooltip_manager.gd` |
+| 17 | `ObjectiveRail` | `game/scenes/ui/objective_rail.tscn` (scene) |
+| 18 | `InteractionPrompt` | `game/scenes/ui/interaction_prompt.tscn` (scene) |
+| 19 | `ObjectiveDirector` | `game/autoload/objective_director.gd` |
+| 20 | `AuditOverlay` | `game/autoload/audit_overlay.gd` |
+| 21 | `AuditLog` | `game/autoload/audit_log.gd` |
+| 22 | `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
+| 23 | `ErrorBanner` | `game/autoload/error_banner.gd` |
+| 24 | `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |
+| 25 | `InputFocus` | `game/autoload/input_focus.gd` — modal/context stack |
+| 26 | `StoreRegistry` | `game/autoload/store_registry.gd` — runtime cache seeded from `ContentRegistry` |
+| 27 | `StoreDirector` | `game/autoload/store_director.gd` |
+| 28 | `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
+| 29 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
+| 30 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
 
 Single-owner responsibilities for the ownership-enforcing subset are tracked
 in [`docs/architecture/ownership.md`](architecture/ownership.md).
 
 ## Signal Bus Model
 
-All inter-system communication flows through `EventBus`. Direct `$NodePath` or `get_node()` references across system boundaries are merge-blocked. Systems may hold refs to their own child nodes only.
+All inter-system communication flows through `EventBus`. Direct `$NodePath` or
+`get_node()` references across system boundaries are merge-blocked. Systems
+may hold refs to their own child nodes only.
 
 Pattern:
 
-```
+```text
 emitter.gd  →  EventBus.emit_signal("signal_name", payload)  →  receiver.gd
 ```
 
-Signal name conventions:
+Signal name conventions used in `event_bus.gd`:
 
 | Prefix | Domain |
 |---|---|
-| `store_` | Store entry/exit, shelf interaction, checkout events |
-| `day_` | Phase transitions (PRE_OPEN → MORNING_RAMP → MIDDAY_RUSH → AFTERNOON → EVENING), day open/close |
+| `store_` | Store entry/exit, lease, store ready/failed, register/shelf events |
+| `day_` / `hour_` | Day open/close/end, hour ticks, phase transitions, speed changes |
 | `customer_` | Spawn, browse decision, haggle, purchase, depart |
-| `inventory_` | Stock change, item add/remove, price set |
+| `inventory_` | Stock changes, item add/remove, price set |
 | `reputation_` | Tier change, decay tick |
-| `progression_` | Unlock triggered, milestone reached, completion tracker update |
-| `ui_` | Panel open/close, tooltip show/hide, interactable focus |
+| `milestone_` / `unlock_` / `completion_` | Progression triggers |
+| `tutorial_` / `onboarding_` | Tutorial step changes, hints |
+| `interactable_` / `panel_` / `tooltip_` | UI focus, modal open/close, hover panes |
+
+`run_state_changed()` is a parameterless mirror that lets listeners react to
+any `GameState` mutation without subscribing to each typed setter.
 
 ## Scene Entry Points
 
 | Scene | Role |
 |---|---|
-| `game/scenes/world/game_world.tscn` | Root; owns all store scenes as children, drives tier init |
+| `game/scenes/bootstrap/boot.tscn` | Entry scene; runs boot script, transitions to main menu |
+| `game/scenes/mall/mall_hub.tscn` | Mall hub host; embeds `game_world.tscn` and the hub UI overlay |
+| `game/scenes/world/game_world.tscn` | Root of the playable world; runs the five init tiers; owns runtime systems |
 | `game/scenes/mall/mall_overview.tscn` | Hub screen — store selection cards, per-store KPI display |
 | `game/scenes/stores/<name>.tscn` | Per-store 3D interior; camera framing via `CameraAuthority` |
 | `game/scenes/ui/day_summary.tscn` | End-of-day summary panel |
-| `game/scenes/ui/hud.tscn` | Persistent overlay: time/phase indicator, funds, reputation tier |
+| `game/scenes/ui/hud.tscn` | Persistent overlay: time/phase indicator, funds, reputation tier, live counters |
 
-Store entry is routed through `game_world._on_hub_enter_store_requested`, which activates the store scene and calls `CameraAuthority.request_current` for the store's `Camera3D`. `StoreDirector.enter_store(store_id)` is the intended long-term single entry point, but currently delegates to `SceneRouter.route_to_path` (full-scene replacement), which would tear down `GameWorld`. Sub-tree hosting in `StoreDirector` is a future refactor before the hub signal path can be retired.
+Store entry is currently routed through
+`game_world._on_hub_enter_store_requested`, which activates the store scene
+and calls `CameraAuthority.request_current` for the store's `Camera3D`.
+`StoreDirector.enter_store(store_id)` is the intended long-term single entry
+point, but currently delegates to `SceneRouter.route_to_path` (full-scene
+replacement), which would tear down `GameWorld`. Sub-tree hosting in
+`StoreDirector` is a future refactor before the hub signal path can be
+retired.
 
 ## Visual Systems
 
-The following reusable building blocks govern all visual work. Any PR adding a visual feature MUST reference at least one entry; new controllers, shaders, or tooltip panels are merge-blocked unless the existing one is reused or an ADR overrides it.
+The following reusable building blocks govern all visual work. Any PR adding
+a visual feature should reuse an entry; new controllers, shaders, or tooltip
+panels are merge-blocked unless the existing one is reused or a documented
+exception applies.
 
 | Need | Use this | File |
 |---|---|---|
@@ -98,7 +144,8 @@ The following reusable building blocks govern all visual work. Any PR adding a v
 | Hover tint on 2D Controls | `InteractableHover` (`self_modulate` → `ACCENT_INTERACT`) | `game/scripts/ui/interactable_hover.gd` |
 | Delayed hover tooltip at cursor | `TooltipManager.show_tooltip(text, pos)` + `TooltipTrigger` | `game/autoload/tooltip_manager.gd` |
 | `[E] to interact` contextual hint | `InteractionPrompt` listening to `EventBus.interactable_focused` | `game/scenes/ui/interaction_prompt.tscn` |
-| One-unit shelf slot with empty→stocked mesh swap | `ShelfSlot` (extends Interactable) | `game/scripts/stores/shelf_slot.gd` |
+| One-unit shelf slot with empty→stocked mesh swap | `ShelfSlot` (extends `Interactable`) | `game/scripts/stores/shelf_slot.gd` |
 | Day/night light interpolation | `DayPhaseLighting` tweening `DirectionalLight3D` | `game/scripts/world/day_phase_lighting.gd` |
 | CRT scanline post-process shader (2D UI) | `crt_overlay.gdshader` | `game/resources/shaders/crt_overlay.gdshader` |
 | Modal open/close tween pattern | `PanelAnimator.modal_open / slide_open / stagger_fade_in` | `game/scripts/ui/panel_animator.gd` |
+| Canonical CanvasLayer band assignment | `UILayers` constants | `game/scripts/ui/ui_layers.gd` |

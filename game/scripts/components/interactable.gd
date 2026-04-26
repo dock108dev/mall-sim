@@ -107,6 +107,20 @@ func get_interaction_area() -> Area3D:
 	return _interaction_area
 
 
+## ISSUE-005: state-aware prompt label that drives the InteractionPrompt HUD
+## (the InteractionRay prepends "[E] " when emitting). Default is
+## "<verb> <name>" using prompt_text and display_name. Subclasses such as
+## ShelfSlot override this to surface placement-mode states.
+func get_prompt_label() -> String:
+	var verb: String = prompt_text.strip_edges()
+	if verb.is_empty():
+		verb = PROMPT_VERBS.get(interaction_type, "Interact")
+	var target_name: String = display_name.strip_edges()
+	if target_name.is_empty():
+		return verb
+	return "%s %s" % [verb, target_name]
+
+
 ## Activates an outline highlight on the associated mesh via next_pass.
 func highlight() -> void:
 	if _highlight_active:

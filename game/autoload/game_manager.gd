@@ -43,6 +43,9 @@ var pending_load_slot: int = -1
 var _scene_transition: SceneTransition
 var _time_system_ref: WeakRef
 var _store_state_manager_ref: WeakRef
+var _inventory_system_ref: WeakRef
+var _customer_system_ref: WeakRef
+var _economy_system_ref: WeakRef
 var _boot_completed: bool = false
 var _ending_id: StringName = &""
 var _content_load_errors: Array[String] = []
@@ -265,48 +268,77 @@ func set_current_day(day: int) -> void:
 
 ## Returns the active TimeSystem from the current scene tree when available.
 func get_time_system() -> TimeSystem:
-	if _time_system_ref != null:
-		var cached: TimeSystem = _time_system_ref.get_ref() as TimeSystem
-		if cached != null and cached.is_inside_tree():
-			return cached
-	if not is_inside_tree():
+	_time_system_ref = _resolve_system_ref(_time_system_ref, "TimeSystem")
+	if _time_system_ref == null:
 		return null
-	var root: Window = get_tree().root
-	if root == null:
-		return null
-	var matches: Array[Node] = root.find_children(
-		"*", "TimeSystem", true, false
+	return _time_system_ref.get_ref() as TimeSystem
+
+
+## Returns the active InventorySystem from the current scene tree when available.
+func get_inventory_system() -> InventorySystem:
+	_inventory_system_ref = _resolve_system_ref(
+		_inventory_system_ref, "InventorySystem"
 	)
-	if matches.is_empty():
+	if _inventory_system_ref == null:
 		return null
-	var time_system: TimeSystem = matches[0] as TimeSystem
-	_time_system_ref = weakref(time_system)
-	return time_system
+	return _inventory_system_ref.get_ref() as InventorySystem
+
+
+## Returns the active CustomerSystem from the current scene tree when available.
+func get_customer_system() -> CustomerSystem:
+	_customer_system_ref = _resolve_system_ref(
+		_customer_system_ref, "CustomerSystem"
+	)
+	if _customer_system_ref == null:
+		return null
+	return _customer_system_ref.get_ref() as CustomerSystem
+
+
+## Returns the active EconomySystem from the current scene tree when available.
+func get_economy_system() -> EconomySystem:
+	_economy_system_ref = _resolve_system_ref(
+		_economy_system_ref, "EconomySystem"
+	)
+	if _economy_system_ref == null:
+		return null
+	return _economy_system_ref.get_ref() as EconomySystem
 
 
 ## Returns the active StoreStateManager from the current scene tree when available.
 func get_store_state_manager() -> StoreStateManager:
-	if _store_state_manager_ref != null:
-		var cached: StoreStateManager = (
-			_store_state_manager_ref.get_ref() as StoreStateManager
-		)
+	_store_state_manager_ref = _resolve_system_ref(
+		_store_state_manager_ref, "StoreStateManager"
+	)
+	if _store_state_manager_ref == null:
+		return null
+	return _store_state_manager_ref.get_ref() as StoreStateManager
+
+
+## Returns a WeakRef to a system node by class name, reusing the supplied cached
+## ref when it still points into the current scene tree. Returns null when the
+## tree is not yet ready or no matching node exists.
+##
+## Silent null is intentional: HUD `_seed_counters_from_systems()` and other
+## early callers run during Tier-5 UI ready (before world systems may have
+## attached) and during headless tests. Logging here would create push_warning
+## spam that breaks CI's error audit. Callers that need to assert presence
+## must do so themselves. See docs/audits/error-handling-report.md §J1.
+func _resolve_system_ref(cached_ref: WeakRef, class_name_filter: String) -> WeakRef:
+	if cached_ref != null:
+		var cached: Node = cached_ref.get_ref() as Node
 		if cached != null and cached.is_inside_tree():
-			return cached
+			return cached_ref
 	if not is_inside_tree():
 		return null
 	var root: Window = get_tree().root
 	if root == null:
 		return null
 	var matches: Array[Node] = root.find_children(
-		"*", "StoreStateManager", true, false
+		"*", class_name_filter, true, false
 	)
 	if matches.is_empty():
 		return null
-	var store_state_manager: StoreStateManager = (
-		matches[0] as StoreStateManager
-	)
-	_store_state_manager_ref = weakref(store_state_manager)
-	return store_state_manager
+	return weakref(matches[0])
 
 
 func quit_game() -> void:

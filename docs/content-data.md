@@ -38,24 +38,29 @@ The checked-in content tree currently includes these canonical subdirectories:
 | `game/content/events/` | Market, seasonal, random, ambient, and named-season event data. |
 | `game/content/endings/` | Ending definitions. |
 | `game/content/meta/` | Secret thread data and regulars thread data. |
-| `game/content/progression/` | Canonical milestone definitions consumed by both `DataLoader` and `ProgressionSystem`. |
+| `game/content/progression/` | Canonical milestone definitions, the win-condition (`arc_unlocks.json`), and arc phases. |
 | `game/content/onboarding/` | Onboarding hint config. |
 | `game/content/staff/` | Staff definitions. |
 | `game/content/suppliers/` | Supplier definitions. |
+| `game/content/sports_cards/` | Sports memorabilia card catalogs. |
 | `game/content/unlocks/` | Unlock definitions. |
 
-The root of `game/content/` also contains several config-oriented JSON files:
+The root of `game/content/` also contains several config and data JSON files:
 
 - `audio_registry.json`
+- `day_beats.json`
 - `fixtures.json`
 - `haggle_dialogue.json`
 - `market_trends_catalog.json`
 - `meta_shifts.json`
+- `objectives.json` (boot-validated for required keys)
 - `pocket_creatures_cards.json`
+- `tutorial_contexts.json`
 - `upgrades.json`
 
-A `localization/` subdirectory is present at the content root but is currently
-empty.
+A `localization/` subdirectory is present at the content root and is
+currently empty (project-side translation resources live under
+`game/assets/localization/` and are referenced from `project.godot`).
 
 `game/content/` is the single canonical content root. `DataLoaderSingleton`
 loads only from `res://game/content/` with no fallback paths, and
@@ -157,11 +162,13 @@ for these main domains:
 Not every content file becomes a typed `Resource`. Current examples include:
 
 - endings, which are kept as entry dictionaries in `ContentRegistry`
-- secret threads, which remain dictionaries plus a `DataLoaderSingleton` array
-- difficulty config, seasonal config, and named seasons, which remain dictionary
-  or array data exposed through `DataLoaderSingleton`
-- store-specific config dictionaries such as retro games, electronics, and video
-  rental config
+- secret-thread and regulars-thread data under `game/content/meta/`, which
+  is consumed directly by the systems that use it rather than re-exposed as
+  a typed catalog through `DataLoaderSingleton`
+- difficulty config, seasonal config, and named seasons, which remain
+  dictionary or array data exposed through `DataLoaderSingleton`
+- store-specific config dictionaries such as retro games, electronics, and
+  video rental config
 
 ## Validation
 
@@ -191,9 +198,9 @@ config data. The current public getter surface includes:
 - `get_all_fixtures()`, `get_all_market_events()`,
   `get_all_seasonal_events()`, `get_all_random_events()`
 - `get_all_staff_definitions()`, `get_all_upgrades()`,
-  `get_all_suppliers()`, `get_all_milestones()`, `get_all_unlocks()`
+  `get_all_suppliers()`, `get_all_milestones()`
 - `get_all_sports_seasons()`, `get_all_tournament_events()`,
-  `get_all_ambient_moments()`, `get_all_secret_threads()`
+  `get_all_ambient_moments()`
 - `get_economy_config()`, `get_difficulty_config()`,
   `get_retro_games_config()`, `get_electronics_config()`,
   `get_video_rental_config()`, `get_seasonal_config()`,

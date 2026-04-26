@@ -1,8 +1,12 @@
-## Phase 0.1 P1.4 regression test: Day Summary covers the mall cleanly and
-## sits above the tutorial overlay. Verifies the tscn ships as a CanvasLayer
-## at layer=12, the Overlay alpha target is ≥ 0.9, the Panel has a solid
-## StyleBoxFlat background, and the responsive-modal margins replace the
-## broken 400/200 hardcoded margins.
+## Phase 0.1 P1.4 regression test: Day Summary covers the mall cleanly. Verifies
+## the tscn ships as a CanvasLayer at layer=12, the Overlay alpha target is
+## ≥ 0.9, the Panel has a solid StyleBoxFlat background, and the
+## responsive-modal margins replace the broken 400/200 hardcoded margins.
+##
+## NOTE: layer=12 predates the canonical band table in
+## docs/research/canvas-layer-z-order-conflicts.md. After ISSUE-007 the
+## tutorial overlay moved to band 50, so day_summary now renders BELOW
+## tutorial. Tracked in docs/audits/ssot-report.md "Risk log".
 extends GutTest
 
 const _DS_TSCN: String = "res://game/scenes/ui/day_summary.tscn"
@@ -13,11 +17,11 @@ func test_day_summary_is_canvas_layer_at_layer_12() -> void:
 	var src: String = FileAccess.get_file_as_string(_DS_TSCN)
 	assert_true(
 		src.contains('[node name="DaySummary" type="CanvasLayer"]'),
-		"DaySummary root must be a CanvasLayer so it can sit above layer=10"
+		"DaySummary root must be a CanvasLayer for explicit z-ordering"
 	)
 	assert_true(
 		src.contains("layer = 12"),
-		"DaySummary CanvasLayer must be at layer=12 (above tutorial_overlay=10)"
+		"DaySummary CanvasLayer must be at layer=12 (pre-band-table value)"
 	)
 
 

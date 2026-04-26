@@ -1,6 +1,7 @@
 ## CRT scanline post-process overlay.
-## Sits on CanvasLayer 100 and reads SCREEN_TEXTURE.
-## Only visible when the Retro Games drawer is open and render quality is not LOW.
+## Sits on CanvasLayer UILayers.POST_FX (110) per docs/research/canvas-layer-z-order-conflicts.md
+## and reads SCREEN_TEXTURE. Only visible when the Retro Games drawer is open
+## and render quality is not LOW.
 extends CanvasLayer
 
 @export var intensity: float = 0.25 : set = _set_intensity

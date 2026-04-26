@@ -106,7 +106,7 @@ func _on_panel_opened(_panel_name: String) -> void:
 
 func _build_panel() -> void:
 	var canvas := CanvasLayer.new()
-	canvas.layer = 100
+	canvas.layer = UILayers.SYSTEM
 	add_child(canvas)
 
 	_panel = PanelContainer.new()

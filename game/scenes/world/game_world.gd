@@ -926,6 +926,12 @@ func _find_first_camera(node: Node) -> Camera3D:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ISSUE-011: ESC globally skips an active tutorial before the existing
+	# exit/cancel chain. Runs ahead of the hub-mode early returns so the skip
+	# works in both Main Menu→Overview transition steps and in-store steps.
+	if event.is_action_pressed("ui_cancel") and _try_skip_active_tutorial():
+		get_viewport().set_input_as_handled()
+		return
 	if _mall_hallway != null:
 		return
 	if not _hub_is_inside_store:
@@ -933,6 +939,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		EventBus.exit_store_requested.emit()
 		get_viewport().set_input_as_handled()
+
+
+# ISSUE-011: returns true (and emits skip_tutorial_requested) when a tutorial
+# step is mid-flight. Callers must consume the input event when this returns
+# true so exit/cancel handlers downstream do not also fire.
+func _try_skip_active_tutorial() -> bool:
+	if not GameManager.is_tutorial_active:
+		return false
+	if tutorial_system == null:
+		return false
+	if tutorial_system.current_step == TutorialSystem.TutorialStep.FINISHED:
+		return false
+	EventBus.skip_tutorial_requested.emit()
+	return true
 
 
 func _on_store_entered(store_id: StringName) -> void:

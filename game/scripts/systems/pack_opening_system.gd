@@ -95,6 +95,20 @@ func open_pack(
 	if cards.is_empty():
 		return []
 	if not _register_cards(cards):
+		# Pack was already removed and money already charged inside
+		# _prepare_pack_cards. _register_cards failure (e.g. backroom full
+		# during pack open) currently leaves the player with no pack and no
+		# cards. Surface it loud so it shows up in CI / telemetry instead of
+		# being a silent loss. Rollback would require a refund + re-register
+		# of the pack ItemInstance — see error-handling-report.md
+		# Escalations §E1.
+		push_error(
+			(
+				"PackOpeningSystem: register failed for pack '%s' after pack was "
+				+ "consumed — cards lost. Backroom likely at capacity."
+			)
+			% pack_instance_id
+		)
 		return []
 	EventBus.pack_opened.emit(pack_instance_id, _collect_card_ids(cards))
 	EventBus.items_revealed.emit(pack_instance_id, cards)
@@ -133,6 +147,18 @@ func commit_pack_results(revealed_cards: Array[Dictionary]) -> bool:
 		)
 		return false
 	if not _register_cards(_pending_pack_cards):
+		# Same loss mode as open_pack: pack was removed during preview, money
+		# was charged, register failure here (backroom full) leaves the
+		# player with no cards. Tightened from a silent return false to a
+		# loud push_error so the loss is observable. Rollback gap tracked in
+		# error-handling-report.md Escalations §E1.
+		push_error(
+			(
+				"PackOpeningSystem: register failed at commit for pack '%s' — "
+				+ "cards lost. Backroom likely at capacity."
+			)
+			% _pending_pack_id
+		)
 		return false
 	EventBus.pack_opened.emit(
 		_pending_pack_id,
@@ -447,6 +473,13 @@ func _count_slot_type(slots: Variant, slot_type: String) -> int:
 
 
 func _register_cards(cards: Array[ItemInstance]) -> bool:
+	# Roll back partial registrations: if the third card fails, the first two
+	# are already in InventorySystem._items but are about to be discarded by
+	# the caller (no signal emitted, no UI update). Without this, a backroom
+	# capacity boundary leaves orphaned ItemInstances stuck in inventory while
+	# the UI thinks the pack open failed entirely. See
+	# docs/audits/error-handling-report.md §F1.
+	var registered: Array[ItemInstance] = []
 	for card: ItemInstance in cards:
 		if not _inventory_system.register_item(card):
 			# Inventory already push_warnings the underlying reason (capacity,
@@ -456,7 +489,10 @@ func _register_cards(cards: Array[ItemInstance]) -> bool:
 				"PackOpeningSystem: failed to register card '%s'"
 				% card.instance_id
 			)
+			for registered_card: ItemInstance in registered:
+				_inventory_system.remove_item(registered_card.instance_id)
 			return false
+		registered.append(card)
 	return true
 
 

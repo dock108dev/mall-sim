@@ -322,3 +322,92 @@ func test_click_store_ignores_non_retro_games_store() -> void:
 		TutorialSystem.TutorialStep.OPEN_INVENTORY,
 		"retro_games entry should advance to OPEN_INVENTORY"
 	)
+
+
+# --- ISSUE-010: SET_PRICE grace-timer auto-advance ---
+
+
+func _drive_to_place_item_step() -> void:
+	_tutorial.initialize(true)
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
+	_tutorial._process(0.01)
+	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	EventBus.panel_opened.emit("inventory")
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.PLACE_ITEM,
+		"Pre-condition: should be at PLACE_ITEM"
+	)
+
+
+func test_item_stocked_arms_set_price_grace_timer() -> void:
+	_drive_to_place_item_step()
+	EventBus.item_stocked.emit("item_1", "shelf_1")
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.SET_PRICE,
+		"item_stocked should advance PLACE_ITEM → SET_PRICE"
+	)
+	assert_not_null(
+		_tutorial._set_price_grace_timer,
+		"Grace timer should be armed at PLACE_ITEM → SET_PRICE transition"
+	)
+
+
+func test_set_price_grace_timeout_advances_to_wait_for_customer() -> void:
+	_drive_to_place_item_step()
+	EventBus.item_stocked.emit("item_1", "shelf_1")
+	var armed_timer: SceneTreeTimer = _tutorial._set_price_grace_timer
+
+	_tutorial._on_set_price_grace_timeout(armed_timer)
+
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.WAIT_FOR_CUSTOMER,
+		"Grace timeout should advance SET_PRICE → WAIT_FOR_CUSTOMER"
+	)
+	assert_null(
+		_tutorial._set_price_grace_timer,
+		"Grace timer reference should clear after timeout fires"
+	)
+
+
+func test_price_set_fast_path_clears_grace_timer_no_double_advance() -> void:
+	_drive_to_place_item_step()
+	EventBus.item_stocked.emit("item_1", "shelf_1")
+	var armed_timer: SceneTreeTimer = _tutorial._set_price_grace_timer
+	assert_not_null(armed_timer, "Grace timer should be armed")
+
+	EventBus.price_set.emit("item_1", 9.99)
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.WAIT_FOR_CUSTOMER,
+		"price_set fast path should advance SET_PRICE → WAIT_FOR_CUSTOMER"
+	)
+	assert_null(
+		_tutorial._set_price_grace_timer,
+		"price_set should clear the grace timer reference"
+	)
+
+	# Late timeout from the now-stale timer must be a no-op.
+	_tutorial._on_set_price_grace_timeout(armed_timer)
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.WAIT_FOR_CUSTOMER,
+		"Stale grace timeout must not double-advance past WAIT_FOR_CUSTOMER"
+	)
+
+
+func test_grace_timeout_does_not_fire_after_completion() -> void:
+	_drive_to_place_item_step()
+	EventBus.item_stocked.emit("item_1", "shelf_1")
+	var armed_timer: SceneTreeTimer = _tutorial._set_price_grace_timer
+
+	_tutorial.skip_tutorial()
+	_tutorial._on_set_price_grace_timeout(armed_timer)
+
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.FINISHED,
+		"Skipped tutorial should remain FINISHED after a stale grace timeout"
+	)

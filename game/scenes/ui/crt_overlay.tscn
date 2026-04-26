@@ -11,7 +11,7 @@ shader_parameter/vignette_strength = 0.35
 shader_parameter/phosphor_tint = Vector3(1.05, 1.0, 0.85)
 
 [node name="CRTOverlay" type="CanvasLayer"]
-layer = 100
+layer = 110
 script = ExtResource("1")
 intensity = 0.25
 

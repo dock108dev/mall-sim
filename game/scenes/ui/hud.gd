@@ -48,6 +48,8 @@ const _REP_ARROW_FADE_IN: float = 0.1
 const _REP_ARROW_HOLD: float = 1.0
 const _REP_ARROW_FADE_OUT: float = 0.4
 const _BUILD_MODE_DIM_ALPHA: float = 0.5
+const _COUNTER_PULSE_SCALE: float = 1.08
+const _COUNTER_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
 
 var _telegraphed_events: Dictionary = {}
 var _random_event_telegraph: String = ""
@@ -68,10 +70,18 @@ var _rep_arrow_tween: Tween
 var _dim_tween: Tween
 var _close_day_button: Button
 var _hub_back_button: Button
+var _items_placed_count: int = 0
+var _customers_active_count: int = 0
+var _sales_today_count: int = 0
+var _counter_scale_tweens: Dictionary = {}
+var _counter_color_tweens: Dictionary = {}
 
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
 @onready var _time_label: Label = $TopBar/TimeLabel
+@onready var _items_placed_label: Label = $TopBar/ItemsPlacedLabel
+@onready var _customers_label: Label = $TopBar/CustomersLabel
+@onready var _sales_today_label: Label = $TopBar/SalesTodayLabel
 @onready var _speed_button: Button = $TopBar/SpeedButton
 @onready var _reputation_label: Label = $TopBar/ReputationLabel
 @onready var _prompt_label: Label = $PromptLabel
@@ -116,6 +126,10 @@ func _ready() -> void:
 	EventBus.build_mode_exited.connect(_on_build_mode_exited)
 	EventBus.store_entered.connect(_on_store_entered_hub)
 	EventBus.store_exited.connect(_on_store_exited_hub)
+	EventBus.inventory_changed.connect(_on_inventory_changed)
+	EventBus.customer_entered.connect(_on_customer_entered)
+	EventBus.customer_left.connect(_on_customer_left)
+	EventBus.item_sold.connect(_on_item_sold)
 	_milestones_button.pressed.connect(_on_milestones_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
 
@@ -126,12 +140,17 @@ func _ready() -> void:
 	_update_reputation_display(_last_reputation)
 	_update_speed_display(_current_speed)
 	_refresh_time_display()
+	_seed_counters_from_systems()
 
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
 	_random_event_telegraph = ""
+	_sales_today_count = 0
+	_update_sales_today_display(_sales_today_count)
 	_refresh_time_display()
+	_refresh_items_placed()
+	_refresh_customers_active()
 
 
 func _on_hour_changed(hour: int) -> void:
@@ -572,6 +591,9 @@ func _on_locale_changed(_new_locale: String) -> void:
 	_update_cash_display(_displayed_cash)
 	_update_reputation_display(_last_reputation)
 	_update_speed_display(_current_speed)
+	_update_items_placed_display(_items_placed_count)
+	_update_customers_display(_customers_active_count)
+	_update_sales_today_display(_sales_today_count)
 
 
 func _on_build_mode_entered() -> void:
@@ -593,3 +615,91 @@ func _tween_children_alpha(target: float, tween_ease: int) -> void:
 			).set_ease(tween_ease).set_trans(
 				Tween.TRANS_CUBIC
 			)
+
+
+## ISSUE-006: Seeds Items Placed / Customers / Sales Today counters from
+## authoritative system getters so save/load and scene reload do not start from
+## zero while system state is already populated.
+func _seed_counters_from_systems() -> void:
+	_refresh_items_placed()
+	_refresh_customers_active()
+	var economy: EconomySystem = GameManager.get_economy_system()
+	if economy != null:
+		_sales_today_count = economy.get_items_sold_today()
+	_update_sales_today_display(_sales_today_count)
+
+
+func _on_inventory_changed() -> void:
+	_refresh_items_placed()
+
+
+func _refresh_items_placed() -> void:
+	# Silent return: HUD is Tier-5 init (per docs/architecture.md), so
+	# inventory_system may legitimately be null on the very first frame and
+	# during headless test setup. We re-poll on every inventory_changed
+	# signal anyway. See docs/audits/error-handling-report.md §J2.
+	var inventory: InventorySystem = GameManager.get_inventory_system()
+	if inventory == null:
+		return
+	var new_count: int = inventory.get_shelf_items().size()
+	if new_count == _items_placed_count:
+		return
+	var delta: int = new_count - _items_placed_count
+	_items_placed_count = new_count
+	_update_items_placed_display(new_count)
+	_pulse_counter(_items_placed_label, delta > 0)
+
+
+func _on_customer_entered(_data: Dictionary) -> void:
+	_customers_active_count += 1
+	_update_customers_display(_customers_active_count)
+	_pulse_counter(_customers_label, true)
+
+
+func _on_customer_left(_data: Dictionary) -> void:
+	_customers_active_count = maxi(_customers_active_count - 1, 0)
+	_update_customers_display(_customers_active_count)
+	_pulse_counter(_customers_label, false)
+
+
+func _refresh_customers_active() -> void:
+	var customers: CustomerSystem = GameManager.get_customer_system()
+	if customers == null:
+		return
+	_customers_active_count = customers.get_active_customer_count()
+	_update_customers_display(_customers_active_count)
+
+
+func _on_item_sold(
+	_item_id: String, _price: float, _category: String
+) -> void:
+	_sales_today_count += 1
+	_update_sales_today_display(_sales_today_count)
+	_pulse_counter(_sales_today_label, true)
+
+
+func _update_items_placed_display(count: int) -> void:
+	_items_placed_label.text = tr("HUD_PLACED_FORMAT") % count
+
+
+func _update_customers_display(count: int) -> void:
+	_customers_label.text = tr("HUD_CUST_FORMAT") % count
+
+
+func _update_sales_today_display(count: int) -> void:
+	_sales_today_label.text = tr("HUD_SOLD_FORMAT") % count
+
+
+func _pulse_counter(label: Label, positive: bool) -> void:
+	PanelAnimator.kill_tween(_counter_scale_tweens.get(label))
+	PanelAnimator.kill_tween(_counter_color_tweens.get(label))
+	var color: Color = (
+		UIThemeConstants.get_positive_color() if positive
+		else UIThemeConstants.get_negative_color()
+	)
+	_counter_scale_tweens[label] = PanelAnimator.pulse_scale(
+		label, _COUNTER_PULSE_SCALE, _COUNTER_PULSE_DURATION
+	)
+	_counter_color_tweens[label] = PanelAnimator.flash_color(
+		label, color, _COUNTER_PULSE_DURATION
+	)

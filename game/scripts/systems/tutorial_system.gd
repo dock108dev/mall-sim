@@ -39,10 +39,21 @@ const STEP_TEXT_KEYS: Dictionary = {
 }
 
 const PROGRESS_PATH: String = "user://tutorial_progress.cfg"
+# Hardening: cap the size of the user-controlled progress blob so a planted
+# multi-GB file can't wedge boot. See docs/audits/security-report.md §F1.
+const MAX_PROGRESS_FILE_BYTES: int = 65536
+# Bounds for completed_steps / tips_shown dicts loaded from the cfg. Both keysets
+# are small in practice (STEP_COUNT ≈ 9, three contextual tips); a hostile cfg
+# with millions of keys would otherwise bloat memory before any validation. See
+# docs/audits/security-report.md §F2.
+const MAX_PERSISTED_DICT_KEYS: int = 1024
 const WELCOME_DURATION: float = 5.0
 const CONTEXTUAL_TIP_DAYS: int = 3
 const STEP_COUNT: int = TutorialStep.FINISHED
 const TUTORIAL_STORE_ID: StringName = &"retro_games"
+# ISSUE-010: grace window so the SET_PRICE step never strands an unpriced
+# playthrough — pricing is optional per BRAINDUMP minimum loop.
+const SET_PRICE_GRACE_DURATION: float = 4.0
 
 const CONTEXTUAL_TIP_KEYS: Dictionary = {
 	"ordering": "TIP_ORDERING",
@@ -56,6 +67,7 @@ var current_step: TutorialStep = TutorialStep.WELCOME
 var _tips_shown: Dictionary = {}
 var _completed_steps: Dictionary = {}
 var _welcome_timer: float = 0.0
+var _set_price_grace_timer: SceneTreeTimer = null
 
 
 ## Starts a new tutorial session or resumes persisted first-play progress.
@@ -262,12 +274,40 @@ func _on_item_stocked(
 		return
 	if current_step == TutorialStep.PLACE_ITEM:
 		_advance_step()
+		_arm_set_price_grace_timer()
 
 
 func _on_price_set(
 	_item_id: String, _price: float
 ) -> void:
 	if not tutorial_active:
+		return
+	if current_step == TutorialStep.SET_PRICE:
+		_set_price_grace_timer = null
+		_advance_step()
+
+
+# ISSUE-010: arm a one-shot timer at the PLACE_ITEM → SET_PRICE transition so
+# unpriced playthroughs (BRAINDUMP minimum loop) advance past SET_PRICE on
+# their own. The price_set fast path still wins when it fires; the timeout
+# handler guards on current_step so a late firing is a no-op.
+func _arm_set_price_grace_timer() -> void:
+	if not is_inside_tree():
+		return
+	var timer: SceneTreeTimer = get_tree().create_timer(
+		SET_PRICE_GRACE_DURATION
+	)
+	_set_price_grace_timer = timer
+	timer.timeout.connect(
+		func() -> void: _on_set_price_grace_timeout(timer)
+	)
+
+
+func _on_set_price_grace_timeout(timer: SceneTreeTimer) -> void:
+	if _set_price_grace_timer != timer:
+		return
+	_set_price_grace_timer = null
+	if not tutorial_active or tutorial_completed:
 		return
 	if current_step == TutorialStep.SET_PRICE:
 		_advance_step()
@@ -361,6 +401,29 @@ func _save_progress() -> void:
 
 func _load_progress() -> void:
 	var config := ConfigFile.new()
+	# Pre-validate file size before handing the blob to ConfigFile so a planted
+	# oversized user:// file can't wedge boot. See security-report.md §F1.
+	if FileAccess.file_exists(PROGRESS_PATH):
+		var probe: FileAccess = FileAccess.open(
+			PROGRESS_PATH, FileAccess.READ
+		)
+		if probe and probe.get_length() > MAX_PROGRESS_FILE_BYTES:
+			probe.close()
+			push_warning(
+				(
+					"TutorialSystem: '%s' exceeds maximum supported size "
+					+ "(%d bytes) — resetting progress"
+				)
+				% [PROGRESS_PATH, MAX_PROGRESS_FILE_BYTES]
+			)
+			_apply_state({
+				"tutorial_completed": false,
+				"current_step": TutorialStep.WELCOME,
+				"completed_steps": {},
+			})
+			return
+		if probe:
+			probe.close()
 	var err: Error = config.load(PROGRESS_PATH)
 	if err != OK:
 		if FileAccess.file_exists(PROGRESS_PATH):
@@ -408,9 +471,26 @@ func _apply_state(data: Dictionary) -> void:
 	var completed_data: Variant = data.get("completed_steps", {})
 	if completed_data is Dictionary:
 		var completed_dict: Dictionary = completed_data as Dictionary
+		# Hardening: cap iteration and accept only known step IDs so a hostile
+		# cfg can't bloat memory or smuggle arbitrary keys into the state map.
+		# See security-report.md §F2.
+		var completed_loaded: int = 0
 		for key: Variant in completed_dict:
+			if completed_loaded >= MAX_PERSISTED_DICT_KEYS:
+				push_warning(
+					(
+						"TutorialSystem: completed_steps dict exceeds %d keys "
+						+ "— ignoring remainder"
+					)
+					% MAX_PERSISTED_DICT_KEYS
+				)
+				break
+			completed_loaded += 1
+			var step_key: String = str(key)
+			if not STEP_IDS.values().has(step_key):
+				continue
 			if bool(completed_dict[key]):
-				_completed_steps[str(key)] = true
+				_completed_steps[step_key] = true
 	if tutorial_completed:
 		current_step = TutorialStep.FINISHED
 	else:
@@ -421,8 +501,24 @@ func _apply_state(data: Dictionary) -> void:
 	var tips_data: Variant = data.get("tips_shown", {})
 	if tips_data is Dictionary:
 		var tips_dict: Dictionary = tips_data as Dictionary
+		# Same cardinality + allow-list hardening as completed_steps above.
+		# See security-report.md §F2.
+		var tips_loaded: int = 0
 		for key: Variant in tips_dict:
-			_tips_shown[str(key)] = bool(tips_dict[key])
+			if tips_loaded >= MAX_PERSISTED_DICT_KEYS:
+				push_warning(
+					(
+						"TutorialSystem: tips_shown dict exceeds %d keys — "
+						+ "ignoring remainder"
+					)
+					% MAX_PERSISTED_DICT_KEYS
+				)
+				break
+			tips_loaded += 1
+			var tip_key: String = str(key)
+			if not CONTEXTUAL_TIP_KEYS.has(tip_key):
+				continue
+			_tips_shown[tip_key] = bool(tips_dict[key])
 
 	_welcome_timer = 0.0
 

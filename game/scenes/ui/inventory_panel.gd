@@ -25,6 +25,7 @@ var order_panel: OrderPanel = null
 
 var _selected_item: ItemInstance = null
 var _is_open: bool = false
+var _focus_pushed: bool = false
 var _cell_map: Dictionary = {}
 var _store_inventory: Array[Dictionary] = []
 var _active_tab: Tab = Tab.BACKROOM
@@ -95,7 +96,13 @@ func _ready() -> void:
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
 	EventBus.active_store_changed.connect(_on_active_store_changed)
+	SceneRouter.scene_ready.connect(_on_scene_ready)
 	_sync_active_store()
+
+
+func _exit_tree() -> void:
+	if _focus_pushed:
+		_pop_modal_focus()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -157,7 +164,11 @@ func open(source: String = SOURCE_BACKROOM) -> void:
 	_anim_tween = PanelAnimator.slide_open(
 		_panel, _rest_x, true
 	)
+	# Emit FIRST so any sibling panels' mutual-exclusion handlers run their
+	# close(true) and pop their own frames, THEN claim modal focus on top of
+	# whatever world context was current. See research §4.1.
 	EventBus.panel_opened.emit(PANEL_NAME)
+	_push_modal_focus()
 
 
 func close(immediate: bool = false) -> void:
@@ -174,8 +185,55 @@ func close(immediate: bool = false) -> void:
 		_anim_tween = PanelAnimator.slide_close(
 			_panel, _rest_x, true
 		)
+	# Pop FIRST while CTX_MODAL is still on top, THEN broadcast close. See
+	# research §4.1.
+	_pop_modal_focus()
 	EventBus.item_tooltip_hidden.emit()
 	EventBus.panel_closed.emit(PANEL_NAME)
+
+
+func _push_modal_focus() -> void:
+	if _focus_pushed:
+		return
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	_focus_pushed = true
+
+
+func _pop_modal_focus() -> void:
+	if not _focus_pushed:
+		return
+	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
+	# without going through this contract. Surface it via push_error AND skip
+	# the pop so we don't corrupt someone else's frame. assert() alone would
+	# be stripped from release builds and silently double-pop the wrong frame
+	# — see docs/audits/security-report.md §F3.
+	if InputFocus.current() != InputFocus.CTX_MODAL:
+		push_error(
+			(
+				"InventoryPanel.close: expected CTX_MODAL on top, got %s — "
+				+ "leaving stack untouched to avoid corrupting sibling frame"
+			)
+			% String(InputFocus.current())
+		)
+		_focus_pushed = false
+		return
+	InputFocus.pop_context()
+	_focus_pushed = false
+
+
+func _on_scene_ready(_target: StringName, _payload: Dictionary) -> void:
+	# Modals never survive a scene change. Force-close (popping our frame)
+	# before the new scene's gameplay context becomes the audited top of stack.
+	# Research §4.2.
+	if _is_open:
+		close(true)
+
+
+## Test seam — clears _focus_pushed without calling pop_context. Pair with
+## InputFocus._reset_for_tests() so test harnesses that wipe the focus stack
+## don't leave the panel believing it still owns a frame.
+func _reset_for_tests() -> void:
+	_focus_pushed = false
 
 
 func is_open() -> bool:

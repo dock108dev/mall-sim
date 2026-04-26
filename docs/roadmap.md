@@ -27,7 +27,6 @@ is wired to the signal bus but has no player-facing UI surface.
   warranty from checkout and reshape electronics around lifecycle alone
 - sports memorabilia: turn authentication into a real mechanic with grading
   states, cost, and partial information, or accept it as a flavor checkbox
-- Pocket Creatures: trade system deleted (ADR 0006)
 - delete remaining legacy content path duplicates
 
 Exit criteria: zero stubbed `return false` or `return null` store methods in
@@ -35,43 +34,20 @@ the active store controllers.
 
 ### Phase 0.1 — UI integrity and SSOT cleanup
 
-> **Complete.** All ten blocks shipped 2026-04-24. GUT suite at 4241 passing /
-> 14 pre-existing failures. Three SSOT tripwire scripts under
-> `scripts/validate_*.sh` are wired into `tests/run_tests.sh`. See the full
-> completion record at
-> [docs/audits/phase0-ui-integrity.md](audits/phase0-ui-integrity.md).
+> **Complete.** Three SSOT tripwire scripts —
+> `scripts/validate_translations.sh`, `scripts/validate_single_store_ui.sh`,
+> and `scripts/validate_tutorial_single_source.sh` — are checked in and
+> invoked by `tests/run_tests.sh`. The shipping store roster is fixed at
+> five (`sports`, `retro_games`, `rentals`, `pocket_creatures`,
+> `electronics`) per `game/content/stores/store_definitions.json`.
 
-**Goal:** Collapse every duplicated UI system down to one source of truth
-before any new feature work.
+**Goal achieved:** Every duplicated UI system collapsed down to one source
+of truth before any new feature work. The SSOT outcomes for this batch are
+recorded in [`docs/audits/ssot-report.md`](audits/ssot-report.md).
 
-See the executable checklist at
-[docs/audits/phase0-ui-integrity.md](audits/phase0-ui-integrity.md) and the
-roster decision in
-[docs/decisions/0007-remove-sneaker-citadel.md](decisions/0007-remove-sneaker-citadel.md).
-
-Priority-ordered blocks:
-
-- **P0.1** re-import localization CSV (kills raw `TUTORIAL_*` keys on screen)
-- **P0.2** add a `Camera3D` to each store scene and activate it through
-  `CameraAuthority` on store entry (un-bricks the brown-screen regression)
-- **P0.3** route all store entry through `StoreDirector.enter_store`; delete
-  the parallel `_on_hub_enter_store_requested` crossfade
-- **P1.1** remove Sneaker Citadel (scenes, controller, registry seed, button,
-  10 test files)
-- **P1.2** delete the duplicate `StorefrontRow` store-card UI; keep
-  `MallOverview` as the data-driven SSOT
-- **P1.3** collapse tutorial text to `TutorialOverlay` + CSV only; delete
-  `tutorial_steps.json` and the tutorial branch in `ObjectiveDirector`
-- **P1.4** fix Day Summary occlusion, panel background, responsive margins
-- **P1.5** single milestone surface (`milestone_card` notification) — remove
-  the duplicate `MilestoneContainer` in Day Summary
-- **P2.1** guardrail scripts (`validate_translations.sh`,
-  `validate_single_store_ui.sh`, `validate_tutorial_single_source.sh`)
-- **P2.2** docs close-out (architecture, content-data, audit tombstone)
-
-Exit criteria: all boxes in `phase0-ui-integrity.md` checked, CI green, no
-raw translation keys on screen, exactly five store cards in the mall overview,
-each store entry shows the 3D interior with a camera framed on the storefront.
+Exit criteria met: CI green, no raw translation keys on screen, exactly
+five store cards in the mall overview, each store entry shows the 3D
+interior with a camera framed on the storefront.
 
 ## Phase 1 — Store Completion
 

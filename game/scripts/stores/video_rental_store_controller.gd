@@ -681,13 +681,29 @@ func _collect_late_fee(rental: Dictionary, days_overdue: int) -> void:
 	var item_id: String = str(rental.get("instance_id", ""))
 	if late_fee <= 0.0:
 		return
-	_pending_late_fees[item_id] = {"amount": late_fee, "days_late": days_overdue}
-	if _economy_system:
-		_economy_system.add_cash(
-			late_fee,
-			"Late fee: %s (%dd)" % [item_id, days_overdue]
+	if not _economy_system:
+		# Without an economy system the cash never lands; emitting
+		# late_fee_collected and bumping daily totals here would lie about
+		# revenue and silently drop the pending fee. Fail loud instead. The
+		# fee is parked in _pending_late_fees so a downstream day-cycle
+		# handler can settle it once economy_system is wired. See
+		# docs/audits/error-handling-report.md §A2.
+		push_error(
+			(
+				"VideoRental: _collect_late_fee called without economy_system "
+				+ "(item=%s, fee=%.2f) — fee not collected"
+			)
+			% [item_id, late_fee]
 		)
-		_economy_system.record_store_revenue(String(STORE_ID), late_fee)
+		_pending_late_fees[item_id] = {"amount": late_fee, "days_late": days_overdue}
+		EventBus.rental_late_fee.emit(item_id, late_fee, days_overdue)
+		return
+	_pending_late_fees[item_id] = {"amount": late_fee, "days_late": days_overdue}
+	_economy_system.add_cash(
+		late_fee,
+		"Late fee: %s (%dd)" % [item_id, days_overdue]
+	)
+	_economy_system.record_store_revenue(String(STORE_ID), late_fee)
 	_pending_late_fees.erase(item_id)
 	_daily_late_fee_total += late_fee
 	EventBus.rental_late_fee.emit(item_id, late_fee, days_overdue)

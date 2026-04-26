@@ -1034,7 +1034,7 @@ func generate_starter_inventory(
 	var instances: Array[ItemInstance] = []
 	for i: int in range(count):
 		instances.append(
-			ItemInstance.create_from_definition(common[i])
+			ItemInstance.create_from_definition(common[i], "good")
 		)
 	return instances
 
