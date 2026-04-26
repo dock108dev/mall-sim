@@ -77,6 +77,18 @@ func clear_active_context() -> void:
 	EventBus.tutorial_context_cleared.emit()
 
 
+## Returns false during states where tutorial prompts must not render.
+## Guards emission so tutorial_context_entered never fires in MAIN_MENU,
+## DAY_SUMMARY, or while a modal has input focus.
+func _can_show_tutorial() -> bool:
+	var state: GameManager.State = GameManager.current_state
+	if state == GameManager.State.MAIN_MENU or state == GameManager.State.DAY_SUMMARY:
+		return false
+	if InputFocus.current() == InputFocus.CTX_MODAL:
+		return false
+	return true
+
+
 func _load_contexts() -> void:
 	if _loaded:
 		return
@@ -123,6 +135,8 @@ func _connect_signals() -> void:
 func _on_store_entered(store_id: StringName) -> void:
 	if store_id == &"":
 		return
+	if not _can_show_tutorial():
+		return
 	var route: Dictionary = ContentRegistry.get_store_route(store_id)
 	if route.is_empty():
 		return
@@ -156,6 +170,8 @@ func _on_day_started(_day: int) -> void:
 	# inside a store, so the rail reflects "what can I do now?" without
 	# requiring a re-entry.
 	if active_context_id == &"":
+		return
+	if not _can_show_tutorial():
 		return
 	var first: Dictionary = get_first_step(active_context_id)
 	var text: String = String(first.get("prompt_text", ""))

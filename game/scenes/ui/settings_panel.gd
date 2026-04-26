@@ -16,8 +16,10 @@ const _SNAPSHOT_KEYS: Array[String] = [
 ]
 
 var _is_open: bool = false
+var _focus_pushed: bool = false
 var _anim_tween: Tween
 var _snapshot: Dictionary = {}
+var _backdrop: ColorRect
 
 ## Action currently awaiting a keypress, empty when not listening.
 var _listening_action: String = ""
@@ -129,12 +131,19 @@ func _ready() -> void:
 	_populate_locales()
 	_populate_text_scale_options()
 	_populate_controls()
+	_setup_modal_backdrop()
+
+
+func _exit_tree() -> void:
+	if _focus_pushed:
+		_pop_modal_focus()
 
 
 func open() -> void:
 	if _is_open:
 		return
 	_is_open = true
+	_clamp_panel_to_viewport()
 	_snapshot_current()
 	_load_from_settings()
 	_refresh_controls()
@@ -142,6 +151,8 @@ func open() -> void:
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.modal_open(_panel)
 	EventBus.panel_opened.emit(PANEL_NAME)
+	_push_modal_focus()
+	_backdrop.visible = true
 
 
 func close() -> void:
@@ -151,6 +162,8 @@ func close() -> void:
 	_is_open = false
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.modal_close(_panel)
+	_backdrop.visible = false
+	_pop_modal_focus()
 	EventBus.panel_closed.emit(PANEL_NAME)
 	closed.emit()
 
@@ -557,3 +570,65 @@ func _on_locale_changed(_new_locale: String) -> void:
 func _on_panel_opened(panel_name: String) -> void:
 	if panel_name != PANEL_NAME and _is_open:
 		close()
+
+
+func _push_modal_focus() -> void:
+	if _focus_pushed:
+		return
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	_focus_pushed = true
+
+
+func _pop_modal_focus() -> void:
+	if not _focus_pushed:
+		return
+	if InputFocus.current() != InputFocus.CTX_MODAL:
+		push_error(
+			(
+				"SettingsPanel: expected CTX_MODAL on top, got %s — "
+				+ "leaving stack untouched to avoid corrupting sibling frame"
+			)
+			% String(InputFocus.current())
+		)
+		_focus_pushed = false
+		return
+	InputFocus.pop_context()
+	_focus_pushed = false
+
+
+## Test seam — clears _focus_pushed without calling pop_context.
+func _reset_for_tests() -> void:
+	_focus_pushed = false
+
+
+func _clamp_panel_to_viewport() -> void:
+	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	if vp_size.y < 64.0:
+		return
+	var max_h: float = vp_size.y - 32.0
+	var current_h: float = _panel.offset_bottom - _panel.offset_top
+	if current_h <= max_h:
+		return
+	var half_h: float = max_h / 2.0
+	_panel.offset_top = -half_h
+	_panel.offset_bottom = half_h
+
+
+func _setup_modal_backdrop() -> void:
+	_backdrop = ColorRect.new()
+	_backdrop.color = Color(0.0, 0.0, 0.0, 0.5)
+	_backdrop.mouse_filter = MOUSE_FILTER_STOP
+	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_backdrop.visible = false
+	_backdrop.gui_input.connect(_on_backdrop_input)
+	add_child(_backdrop)
+	move_child(_backdrop, 0)
+
+
+func _on_backdrop_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+		_on_cancel_pressed()
+		get_viewport().set_input_as_handled()

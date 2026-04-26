@@ -83,6 +83,8 @@ var _active_event_intent_modifier: float = 1.0
 ## Tracks per-event modifiers so multiple concurrent events compose correctly.
 var _active_event_modifiers: Dictionary = {}
 var _adjacent_store_ids: Array[String] = []
+## Prevents spawning more than one Day 1 trigger customer per day.
+var _day1_customer_spawned: bool = false
 
 
 func initialize(
@@ -396,6 +398,8 @@ func _connect_signals() -> void:
 		EventBus.market_event_active.connect(_on_market_event_active)
 	if not EventBus.market_event_expired.is_connected(_on_market_event_expired):
 		EventBus.market_event_expired.connect(_on_market_event_expired)
+	if not EventBus.item_stocked.is_connected(_on_item_stocked):
+		EventBus.item_stocked.connect(_on_item_stocked)
 
 
 func _update_shopper_lod() -> void:
@@ -620,7 +624,22 @@ func _on_day_ended(_day: int) -> void:
 	_hour_elapsed = 0.0
 
 
+func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
+	if GameManager.get_current_day() != 1:
+		return
+	if _day1_customer_spawned:
+		return
+	if not _active_customers.is_empty():
+		return
+	var pool: Array[CustomerTypeDefinition] = get_spawn_pool()
+	if pool.is_empty():
+		return
+	_day1_customer_spawned = true
+	spawn_customer(pool.pick_random(), _store_id)
+
+
 func _on_day_started(day: int) -> void:
+	_day1_customer_spawned = false
 	_active_mall_shopper_count = 0
 	_current_hour = Constants.STORE_OPEN_HOUR
 	_hour_elapsed = 0.0

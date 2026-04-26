@@ -4,9 +4,14 @@ extends GutTest
 
 
 var _received: Array = []
+var _saved_game_state: GameManager.State
 
 
 func before_each() -> void:
+	_saved_game_state = GameManager.current_state
+	# TutorialContextSystem guards emission in MAIN_MENU / DAY_SUMMARY;
+	# use STORE_VIEW so store_entered triggers fire normally in tests.
+	GameManager.current_state = GameManager.State.STORE_VIEW
 	DataLoaderSingleton.load_all()
 	TutorialContextSystem.reload()
 	TutorialContextSystem.clear_active_context()
@@ -21,6 +26,7 @@ func after_each() -> void:
 	if EventBus.tutorial_context_cleared.is_connected(_capture_cleared):
 		EventBus.tutorial_context_cleared.disconnect(_capture_cleared)
 	TutorialContextSystem.clear_active_context()
+	GameManager.current_state = _saved_game_state
 
 
 func _capture_entered(

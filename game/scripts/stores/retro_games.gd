@@ -12,6 +12,8 @@ const CONDITION_ORDER: PackedStringArray = [
 	"poor", "fair", "good", "near_mint", "mint",
 ]
 
+@onready var _debug_labels: Node3D = $DebugLabels
+
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
 var _testing_system: TestingSystem = null
@@ -29,6 +31,7 @@ func _ready() -> void:
 	super._ready()
 	_find_testing_station()
 	_connect_slot_signals()
+	_apply_debug_label_visibility()
 
 
 ## Initializes Retro Games lifecycle state and EventBus wiring.
@@ -501,3 +504,9 @@ func _assign_testing_station_slots(fixture: Node) -> void:
 		if child.is_in_group("shelf_slot") or child.get("slot_id") != null:
 			_testing_station_slot = child
 			return
+
+
+## Hides debug zone labels in release builds; shows them in debug builds.
+func _apply_debug_label_visibility() -> void:
+	if _debug_labels:
+		_debug_labels.visible = OS.is_debug_build()

@@ -22,6 +22,7 @@ layout_mode = 2
 size_flags_horizontal = 2
 text = "$0.00"
 horizontal_alignment = 0
+clip_text = true
 
 [node name="TimeLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(200, 0)
@@ -29,6 +30,7 @@ layout_mode = 2
 size_flags_horizontal = 6
 text = "Day 1 — 9:00 AM"
 horizontal_alignment = 1
+clip_text = true
 
 [node name="ItemsPlacedLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(80, 0)
@@ -36,6 +38,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Placed: 0"
 horizontal_alignment = 1
+clip_text = true
 
 [node name="CustomersLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(80, 0)
@@ -43,6 +46,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Cust: 0"
 horizontal_alignment = 1
+clip_text = true
 
 [node name="SalesTodayLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(80, 0)
@@ -50,6 +54,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Sold: 0"
 horizontal_alignment = 1
+clip_text = true
 
 [node name="SpeedButton" type="Button" parent="TopBar"]
 custom_minimum_size = Vector2(80, 0)
@@ -64,6 +69,7 @@ layout_mode = 2
 size_flags_horizontal = 10
 text = "Unknown"
 horizontal_alignment = 2
+clip_text = true
 
 [node name="ObjectiveLabel" type="Label" parent="."]
 unique_name_in_owner = true

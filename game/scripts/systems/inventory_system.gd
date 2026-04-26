@@ -289,6 +289,35 @@ func create_item(
 	return item
 
 
+## Seeds `count` backroom items for `store_id` on Day 1, adding only as many as
+## are needed to reach the target. No-op if backroom already has >= count items.
+func seed_starting_items(store_id: StringName, count: int) -> void:
+	if count <= 0:
+		return
+	if not _data_loader:
+		push_warning("InventorySystem: seed_starting_items called without DataLoader")
+		return
+	var canonical: StringName = _resolve_store_id(store_id)
+	if canonical.is_empty():
+		push_warning("InventorySystem: seed_starting_items invalid store_id '%s'" % store_id)
+		return
+	var existing: int = get_backroom_items_for_store(String(canonical)).size()
+	if existing >= count:
+		return
+	var defs: Array[ItemDefinition] = _data_loader.get_items_by_store(String(canonical))
+	if defs.is_empty():
+		push_warning(
+			"InventorySystem: no item definitions for store '%s' — cannot seed" % canonical
+		)
+		return
+	var to_add: int = count - existing
+	for i: int in range(to_add):
+		var def: ItemDefinition = defs[i % defs.size()]
+		var item: ItemInstance = ItemInstance.create(def, "good", 0, def.base_price)
+		item.current_location = "backroom"
+		add_item(canonical, item)
+
+
 func register_item(item: ItemInstance) -> bool:
 	if not item or item.instance_id.is_empty():
 		push_warning("InventorySystem: cannot register null/invalid item")

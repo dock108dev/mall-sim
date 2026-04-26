@@ -63,6 +63,7 @@ var _current_speed: float = 1.0
 var _last_reputation: float = ReputationSystemSingleton.DEFAULT_REPUTATION
 
 var _open_panel_count: int = 0
+var _tutorial_step_active: bool = false
 var _cash_count_tween: Tween
 var _cash_scale_tween: Tween
 var _cash_color_tween: Tween
@@ -132,6 +133,11 @@ func _ready() -> void:
 	EventBus.item_sold.connect(_on_item_sold)
 	_milestones_button.pressed.connect(_on_milestones_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
+	EventBus.game_state_changed.connect(_on_game_state_changed)
+	EventBus.tutorial_step_changed.connect(_on_tutorial_step_changed_hud)
+	EventBus.tutorial_completed.connect(_on_tutorial_hint_ended)
+	EventBus.tutorial_skipped.connect(_on_tutorial_hint_ended)
+	EventBus.run_state_changed.connect(_on_run_state_changed)
 
 	_create_close_day_button()
 	_create_hub_back_button()
@@ -141,6 +147,7 @@ func _ready() -> void:
 	_update_speed_display(_current_speed)
 	_refresh_time_display()
 	_seed_counters_from_systems()
+	_apply_state_visibility(GameManager.current_state)
 
 
 func _on_day_started(day: int) -> void:
@@ -189,12 +196,36 @@ func _create_close_day_button() -> void:
 	_close_day_button = Button.new()
 	_close_day_button.name = "CloseDayButton"
 	_close_day_button.text = "Close Day"
+	_close_day_button.custom_minimum_size.x = 80
+	_close_day_button.clip_text = false
 	_close_day_button.pressed.connect(_on_close_day_pressed)
 	_top_bar.add_child(_close_day_button)
 
 
+func _is_day1_gate_active() -> bool:
+	return (
+		GameManager.get_current_day() == 1
+		and not GameState.get_flag(&"first_sale_complete")
+	)
+
+
+func _on_run_state_changed() -> void:
+	if is_instance_valid(_close_day_button):
+		_close_day_button.tooltip_text = (
+			"Make your first sale before closing Day 1."
+			if _is_day1_gate_active()
+			else ""
+		)
+
+
 func _on_close_day_pressed() -> void:
-	if GameManager.current_state == GameManager.State.GAMEPLAY:
+	var state := GameManager.current_state
+	if state == GameManager.State.STORE_VIEW or state == GameManager.State.GAMEPLAY:
+		if _is_day1_gate_active():
+			EventBus.notification_requested.emit(
+				"Make your first sale before closing Day 1."
+			)
+			return
 		EventBus.day_close_requested.emit()
 
 
@@ -202,6 +233,8 @@ func _create_hub_back_button() -> void:
 	_hub_back_button = Button.new()
 	_hub_back_button.name = "HubBackButton"
 	_hub_back_button.text = "← Hub"
+	_hub_back_button.custom_minimum_size.x = 80
+	_hub_back_button.clip_text = false
 	_hub_back_button.visible = false
 	_hub_back_button.pressed.connect(_on_hub_back_pressed)
 	_top_bar.add_child(_hub_back_button)
@@ -213,12 +246,48 @@ func _on_hub_back_pressed() -> void:
 
 func _on_store_entered_hub(_store_id: StringName) -> void:
 	if is_instance_valid(_hub_back_button):
-		_hub_back_button.visible = true
+		_hub_back_button.visible = (
+			GameManager.current_state == GameManager.State.STORE_VIEW
+		)
 
 
 func _on_store_exited_hub(_store_id: StringName) -> void:
 	if is_instance_valid(_hub_back_button):
 		_hub_back_button.visible = false
+
+
+func _on_game_state_changed(_old_state: int, new_state: int) -> void:
+	_apply_state_visibility(new_state as GameManager.State)
+
+
+func _apply_state_visibility(state: GameManager.State) -> void:
+	match state:
+		GameManager.State.MAIN_MENU, GameManager.State.DAY_SUMMARY:
+			visible = false
+		GameManager.State.MALL_OVERVIEW:
+			visible = true
+			_cash_label.visible = true
+			_time_label.visible = true
+			_milestones_button.visible = true
+			_close_day_button.visible = false
+			_hub_back_button.visible = false
+			_store_label.visible = false
+			_objective_label.visible = false
+			_items_placed_label.visible = false
+			_customers_label.visible = false
+			_sales_today_label.visible = false
+			_seasonal_event_label.visible = false
+			_telegraph_card.visible = false
+		GameManager.State.STORE_VIEW:
+			visible = true
+			_close_day_button.visible = true
+			_items_placed_label.visible = true
+			_customers_label.visible = true
+			_sales_today_label.visible = true
+			_seasonal_event_label.visible = false
+			_telegraph_card.visible = false
+		_:
+			pass
 
 
 func _on_speed_button_pressed() -> void:
@@ -234,6 +303,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameManager.current_state != GameManager.State.GAMEPLAY:
 		return
 	if event.is_action("close_day"):
+		if _is_day1_gate_active():
+			EventBus.notification_requested.emit(
+				"Make your first sale before closing Day 1."
+			)
+			get_viewport().set_input_as_handled()
+			return
 		EventBus.day_close_requested.emit()
 		get_viewport().set_input_as_handled()
 		return
@@ -492,7 +567,22 @@ func _on_random_event_telegraphed(message: String) -> void:
 	_refresh_telegraph_card()
 
 
+func _on_tutorial_step_changed_hud(step_id: String) -> void:
+	_tutorial_step_active = not step_id.is_empty()
+	if _tutorial_step_active:
+		_telegraph_card.visible = false
+		_seasonal_event_label.visible = false
+
+
+func _on_tutorial_hint_ended() -> void:
+	_tutorial_step_active = false
+	_refresh_seasonal_event_display()
+	_refresh_telegraph_card()
+
+
 func _refresh_telegraph_card() -> void:
+	if _tutorial_step_active:
+		return
 	var parts: PackedStringArray = []
 	if not _random_event_telegraph.is_empty():
 		parts.append(_random_event_telegraph)
@@ -520,6 +610,8 @@ func _refresh_telegraph_card() -> void:
 
 
 func _refresh_seasonal_event_display() -> void:
+	if _tutorial_step_active:
+		return
 	var sys: SeasonalEventSystem = _find_seasonal_event_system()
 	if not sys:
 		_seasonal_event_label.visible = false

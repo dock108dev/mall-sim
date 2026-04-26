@@ -7,10 +7,23 @@ extends CanvasLayer
 const SLIDE_DURATION: float = 0.3
 const SLIDE_OFFSET: float = 100.0
 
+## Game states each tutorial step requires before its prompt may appear.
+## Steps absent from this map have no state restriction.
+const _STEP_REQUIRED_STATES: Dictionary = {
+	"click_store": GameManager.State.MALL_OVERVIEW,
+	"open_inventory": GameManager.State.STORE_VIEW,
+	"place_item": GameManager.State.STORE_VIEW,
+	"set_price": GameManager.State.STORE_VIEW,
+	"wait_for_customer": GameManager.State.STORE_VIEW,
+	"close_day": GameManager.State.STORE_VIEW,
+}
+
 var tutorial_system: TutorialSystem
 
 var _current_tween: Tween
 var _rest_offset_top: float
+## Most-recently-received step id; used to re-show after a state transition.
+var _pending_step_id: String = ""
 
 @onready var _bottom_bar: PanelContainer = $BottomBar
 @onready var _prompt_label: Label = $BottomBar/HBox/PromptLabel
@@ -21,19 +34,48 @@ func _ready() -> void:
 	_bottom_bar.visible = false
 	_rest_offset_top = _bottom_bar.offset_top
 	_skip_button.pressed.connect(_on_skip_pressed)
-	EventBus.tutorial_step_changed.connect(
-		_on_tutorial_step_changed
-	)
+	EventBus.tutorial_step_changed.connect(_on_tutorial_step_changed)
 	EventBus.tutorial_completed.connect(_on_tutorial_completed)
 	EventBus.tutorial_skipped.connect(_on_tutorial_completed)
+	EventBus.game_state_changed.connect(_on_game_state_changed)
+	InputFocus.context_changed.connect(_on_input_focus_changed)
 	if tutorial_system and tutorial_system.tutorial_completed:
 		_bottom_bar.visible = false
 		set_process(false)
 		return
+	if GameState.get_flag(&"tutorial_skipped"):
+		_bottom_bar.visible = false
+		set_process(false)
 
 
-func _on_tutorial_step_changed(_step_id: String) -> void:
+## Returns false when tutorial UI must not render:
+## blocked in MAIN_MENU or DAY_SUMMARY states, when a modal has input focus,
+## or when the tutorial_skipped flag is set.
+func _can_show_tutorial() -> bool:
+	if GameState.get_flag(&"tutorial_skipped"):
+		return false
+	var state: GameManager.State = GameManager.current_state
+	if state == GameManager.State.MAIN_MENU or state == GameManager.State.DAY_SUMMARY:
+		return false
+	if InputFocus.current() == InputFocus.CTX_MODAL:
+		return false
+	return true
+
+
+func _step_allowed_in_state(step_id: String) -> bool:
+	if not _STEP_REQUIRED_STATES.has(step_id):
+		return true
+	var required: int = int(_STEP_REQUIRED_STATES[step_id])
+	return int(GameManager.current_state) == required
+
+
+func _on_tutorial_step_changed(step_id: String) -> void:
+	_pending_step_id = step_id
 	if not tutorial_system:
+		return
+	if not _can_show_tutorial():
+		return
+	if not _step_allowed_in_state(step_id):
 		return
 	var prompt_text: String = tutorial_system.get_current_step_text()
 	if prompt_text.is_empty():
@@ -42,11 +84,41 @@ func _on_tutorial_step_changed(_step_id: String) -> void:
 
 
 func _on_tutorial_completed() -> void:
+	_pending_step_id = ""
 	_slide_out_and_free()
 
 
 func _on_skip_pressed() -> void:
 	EventBus.skip_tutorial_requested.emit()
+
+
+func _on_game_state_changed(_old_state: int, _new_state: int) -> void:
+	_reevaluate_visibility()
+
+
+func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void:
+	_reevaluate_visibility()
+
+
+## Re-checks whether the pending step can be shown or must be hidden.
+## Called on every game_state_changed or InputFocus.context_changed.
+func _reevaluate_visibility() -> void:
+	if _bottom_bar.visible:
+		if not _can_show_tutorial() or not _step_allowed_in_state(_pending_step_id):
+			_kill_tween()
+			_bottom_bar.visible = false
+		return
+	if _pending_step_id.is_empty():
+		return
+	if not _can_show_tutorial():
+		return
+	if not _step_allowed_in_state(_pending_step_id):
+		return
+	if tutorial_system == null:
+		return
+	var prompt: String = tutorial_system.get_current_step_text()
+	if not prompt.is_empty():
+		_show_step(prompt)
 
 
 func _show_step(prompt_text: String) -> void:

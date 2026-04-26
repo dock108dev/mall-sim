@@ -5,6 +5,7 @@ extends Node
 enum State {
 	MAIN_MENU, GAMEPLAY, PAUSED, GAME_OVER,
 	LOADING, DAY_SUMMARY, BUILD,
+	MALL_OVERVIEW, STORE_VIEW,
 }
 
 const DEFAULT_STARTING_STORE: StringName = &"retro_games"
@@ -13,19 +14,30 @@ const GAMEPLAY_SCENE_PATH := "res://game/scenes/mall/mall_hub.tscn"
 
 const _VALID_TRANSITIONS: Dictionary = {
 	State.MAIN_MENU: [State.LOADING],
-	State.LOADING: [State.GAMEPLAY],
+	State.LOADING: [State.GAMEPLAY, State.MALL_OVERVIEW],
 	State.GAMEPLAY: [
 		State.PAUSED, State.DAY_SUMMARY,
 		State.MAIN_MENU, State.BUILD, State.GAME_OVER,
+		State.MALL_OVERVIEW,
 	],
 	State.PAUSED: [
 		State.GAMEPLAY, State.MAIN_MENU, State.BUILD,
+		State.MALL_OVERVIEW, State.STORE_VIEW,
 	],
 	State.DAY_SUMMARY: [
 		State.GAMEPLAY, State.MAIN_MENU, State.GAME_OVER,
+		State.MALL_OVERVIEW,
 	],
-	State.BUILD: [State.GAMEPLAY],
+	State.BUILD: [State.GAMEPLAY, State.MALL_OVERVIEW],
 	State.GAME_OVER: [State.MAIN_MENU],
+	State.MALL_OVERVIEW: [
+		State.STORE_VIEW, State.PAUSED, State.DAY_SUMMARY,
+		State.MAIN_MENU, State.BUILD, State.GAME_OVER,
+	],
+	State.STORE_VIEW: [
+		State.MALL_OVERVIEW, State.PAUSED, State.DAY_SUMMARY,
+		State.MAIN_MENU, State.BUILD, State.GAME_OVER,
+	],
 }
 
 var current_state: State = State.MAIN_MENU

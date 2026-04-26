@@ -1,4 +1,4 @@
-[gd_scene load_steps=60 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=61 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -22,6 +22,7 @@
 [ext_resource type="PackedScene" path="res://game/assets/models/props/prop_crt_monitor.gltf" id="20"]
 [ext_resource type="Texture2D" path="res://game/assets/textures/tex_product_retro_games_albedo.png" id="21"]
 [ext_resource type="ShaderMaterial" path="res://game/assets/materials/mat_crt_screen_static.tres" id="22"]
+[ext_resource type="Script" path="res://game/scripts/player/player_controller.gd" id="23"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(7, 0.1, 5)
@@ -162,15 +163,17 @@ size = Vector3(1.8, 2.4, 0.08)
 script = ExtResource("1")
 
 ; ============================================================
-; Camera pivot at store center
+; Orbit camera controller — WASD pan + LMB orbit + scroll zoom
+; bounds match navigable floor: ±3.2 x, ±2.2 z
 ; ============================================================
 
-[node name="OrbitPivot" type="Marker3D" parent="." groups=["orbit_pivot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+[node name="PlayerController" type="Node3D" parent="."]
+script = ExtResource("23")
+store_bounds_min = Vector3(-3.2, 0.0, -2.2)
+store_bounds_max = Vector3(3.2, 0.0, 2.2)
 
-[node name="StoreCamera" type="Camera3D" parent="."]
-transform = Transform3D(0.447, 0.267, -0.854, 0, 0.954, 0.299, 0.894, -0.134, 0.427, -2.5, 1.9, 1.5)
-current = false
+[node name="Camera3D" type="Camera3D" parent="PlayerController"]
+current = true
 fov = 60.0
 
 ; ============================================================
@@ -1298,3 +1301,80 @@ music_path = "res://game/assets/audio/music/retro_games_music.wav"
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="StoreBleedAudio"]
 bus = &"Music"
+
+; ============================================================
+; Debug zone labels — hidden at runtime unless OS.is_debug_build()
+; Visibility controlled by retro_games.gd._apply_debug_label_visibility()
+; ============================================================
+
+[node name="DebugLabels" type="Node3D" parent="."]
+
+[node name="ShelfLabel" type="Label3D" parent="DebugLabels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 2.3, -1.2)
+pixel_size = 0.007
+billboard = 1
+no_depth_test = true
+font_size = 36
+text = "SHELF — Press E / Click to Stock"
+modulate = Color(1.0, 0.78, 0.2, 1.0)
+outline_size = 5
+outline_modulate = Color(0.1, 0.05, 0.0, 1.0)
+shaded = false
+
+[node name="RegisterLabel" type="Label3D" parent="DebugLabels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2.2, 2.0)
+pixel_size = 0.007
+billboard = 1
+no_depth_test = true
+font_size = 36
+text = "REGISTER"
+modulate = Color(1.0, 0.78, 0.2, 1.0)
+outline_size = 5
+outline_modulate = Color(0.1, 0.05, 0.0, 1.0)
+shaded = false
+
+[node name="CustomerEntryLabel" type="Label3D" parent="DebugLabels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 2.6)
+pixel_size = 0.007
+billboard = 1
+no_depth_test = true
+font_size = 36
+text = "CUSTOMER ENTRY"
+modulate = Color(1.0, 0.78, 0.2, 1.0)
+outline_size = 5
+outline_modulate = Color(0.1, 0.05, 0.0, 1.0)
+shaded = false
+
+[node name="BackroomLabel" type="Label3D" parent="DebugLabels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 2.5, -2.5)
+pixel_size = 0.007
+billboard = 1
+no_depth_test = true
+font_size = 36
+text = "BACKROOM"
+modulate = Color(1.0, 0.78, 0.2, 1.0)
+outline_size = 5
+outline_modulate = Color(0.1, 0.05, 0.0, 1.0)
+shaded = false
+
+[node name="DisplayTableLabel" type="Label3D" parent="DebugLabels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 2.2, -1.0)
+pixel_size = 0.007
+billboard = 1
+no_depth_test = true
+font_size = 36
+text = "DISPLAY TABLE"
+modulate = Color(1.0, 0.78, 0.2, 1.0)
+outline_size = 5
+outline_modulate = Color(0.1, 0.05, 0.0, 1.0)
+shaded = false
+
+; ============================================================
+; Customer spawn / exit markers — used by ISSUE-007 NPC routing
+; ============================================================
+
+[node name="CustomerSpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.8)
+
+[node name="CustomerExit" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.2)

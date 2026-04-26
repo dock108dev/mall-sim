@@ -165,6 +165,7 @@ func skip_tutorial() -> void:
 	current_step = TutorialStep.FINISHED
 	Settings.set_preference(&"tutorial_skip", true)
 	Settings.save_settings()
+	GameState.set_flag(&"tutorial_skipped", true)
 	EventBus.tutorial_skipped.emit()
 	_complete_tutorial()
 

@@ -26,6 +26,7 @@ var order_panel: OrderPanel = null
 var _selected_item: ItemInstance = null
 var _is_open: bool = false
 var _focus_pushed: bool = false
+var _backdrop: ColorRect
 var _cell_map: Dictionary = {}
 var _store_inventory: Array[Dictionary] = []
 var _active_tab: Tab = Tab.BACKROOM
@@ -98,6 +99,7 @@ func _ready() -> void:
 	EventBus.active_store_changed.connect(_on_active_store_changed)
 	SceneRouter.scene_ready.connect(_on_scene_ready)
 	_sync_active_store()
+	_setup_modal_backdrop()
 
 
 func _exit_tree() -> void:
@@ -169,6 +171,7 @@ func open(source: String = SOURCE_BACKROOM) -> void:
 	# whatever world context was current. See research §4.1.
 	EventBus.panel_opened.emit(PANEL_NAME)
 	_push_modal_focus()
+	_backdrop.visible = true
 
 
 func close(immediate: bool = false) -> void:
@@ -187,6 +190,7 @@ func close(immediate: bool = false) -> void:
 		)
 	# Pop FIRST while CTX_MODAL is still on top, THEN broadcast close. See
 	# research §4.1.
+	_backdrop.visible = false
 	_pop_modal_focus()
 	EventBus.item_tooltip_hidden.emit()
 	EventBus.panel_closed.emit(PANEL_NAME)
@@ -234,6 +238,28 @@ func _on_scene_ready(_target: StringName, _payload: Dictionary) -> void:
 ## don't leave the panel believing it still owns a frame.
 func _reset_for_tests() -> void:
 	_focus_pushed = false
+
+
+func _setup_modal_backdrop() -> void:
+	_backdrop = ColorRect.new()
+	_backdrop.color = Color(0.0, 0.0, 0.0, 0.5)
+	_backdrop.mouse_filter = MOUSE_FILTER_STOP
+	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_backdrop.visible = false
+	_backdrop.gui_input.connect(_on_backdrop_input)
+	add_child(_backdrop)
+	move_child(_backdrop, 0)
+
+
+func _on_backdrop_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+		if _context_menu.visible:
+			return
+		close()
+		get_viewport().set_input_as_handled()
 
 
 func is_open() -> bool:

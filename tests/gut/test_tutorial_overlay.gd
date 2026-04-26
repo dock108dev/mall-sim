@@ -9,10 +9,12 @@ const _OverlayScene: PackedScene = preload(
 var _tutorial: TutorialSystem
 var _overlay: TutorialOverlay
 var _saved_tutorial_active: bool
+var _saved_game_state: GameManager.State
 
 
 func before_each() -> void:
 	_saved_tutorial_active = GameManager.is_tutorial_active
+	_saved_game_state = GameManager.current_state
 	_tutorial = TutorialSystem.new()
 	add_child_autofree(_tutorial)
 	_overlay = _OverlayScene.instantiate() as TutorialOverlay
@@ -22,6 +24,9 @@ func before_each() -> void:
 
 func after_each() -> void:
 	GameManager.is_tutorial_active = _saved_tutorial_active
+	GameManager.current_state = _saved_game_state
+	GameState.flags.clear()
+	InputFocus._reset_for_tests()
 
 
 func test_overlay_hidden_on_ready() -> void:
@@ -33,6 +38,8 @@ func test_overlay_hidden_on_ready() -> void:
 
 
 func test_prompt_updates_on_step_changed() -> void:
+	# CLICK_STORE step requires MALL_OVERVIEW state to be visible.
+	GameManager.current_state = GameManager.State.MALL_OVERVIEW
 	_tutorial.initialize(true)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -44,7 +51,7 @@ func test_prompt_updates_on_step_changed() -> void:
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(
 		bar.visible,
-		"BottomBar should be visible after step change"
+		"BottomBar should be visible after step change in MALL_OVERVIEW"
 	)
 	assert_ne(
 		label.text, "",

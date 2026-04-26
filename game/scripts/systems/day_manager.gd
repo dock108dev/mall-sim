@@ -34,6 +34,8 @@ func initialize(
 	_load_arc_config()
 	if not EventBus.day_started.is_connected(_on_day_started):
 		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.first_sale_completed.is_connected(_on_first_sale_completed):
+		EventBus.first_sale_completed.connect(_on_first_sale_completed)
 
 
 ## Returns the arc phase label for the current day.
@@ -93,6 +95,28 @@ func _load_arc_config() -> void:
 
 func _on_day_started(day: int) -> void:
 	_check_arc_unlocks(day)
+	if day == 1:
+		_seed_day_one_inventory()
+
+
+func _seed_day_one_inventory() -> void:
+	var inv: InventorySystem = GameManager.get_inventory_system()
+	if not inv:
+		return
+	var store_id: StringName = GameManager.get_active_store_id()
+	if store_id.is_empty():
+		store_id = GameManager.current_store_id
+	if store_id.is_empty():
+		push_warning("DayManager: no active store — skipping Day 1 inventory seed")
+		return
+	inv.seed_starting_items(store_id, 7)
+
+
+func _on_first_sale_completed(
+	_store_id: StringName, _item_id: String, _price: float
+) -> void:
+	if GameManager.get_current_day() == 1:
+		GameState.set_flag(&"first_sale_complete", true)
 
 
 func _check_arc_unlocks(day: int) -> void:
