@@ -240,6 +240,11 @@ func test_process_daily_claims_adds_to_daily_claim_costs() -> void:
 func test_day_started_claim_processing_zeroes_revenue_and_tracks_claim_cost() -> void:
 	var controller: ElectronicsStoreController = ElectronicsStoreController.new()
 	add_child_autofree(controller)
+	# _process_warranty_claims push_errors when economy_system is null because
+	# the replacement-cost deduction would silently turn into a free swap.
+	var economy: EconomySystem = EconomySystem.new()
+	add_child_autofree(economy)
+	controller.set_economy_system(economy)
 	var wholesale: float = 90.0
 	var claim_seed: int = _find_seed_for_threshold(
 		WarrantyManager.CLAIM_PROBABILITY

@@ -112,7 +112,14 @@ func test_seeded_rng_produces_identical_output_over_100_opens() -> void:
 	const SEED := 20030101
 	const OPEN_COUNT := 100
 
+	# Give both runs enough cash for OPEN_COUNT packs at the default $3.99 cost
+	# (default before_each balance only covers ~125 packs; depletion mid-run B
+	# would silently truncate results_b). Determinism only needs identical
+	# preconditions, not identical economy state with the rest of the suite.
+	const RUN_CASH: float = 1000.0
+
 	# First run
+	_economy.initialize(RUN_CASH)
 	_system.seed_rng(SEED)
 	var results_a: Array[String] = []
 	for _i: int in range(OPEN_COUNT):
@@ -120,9 +127,13 @@ func test_seeded_rng_produces_identical_output_over_100_opens() -> void:
 		var cards: Array[ItemInstance] = _system.open_pack(pack.instance_id)
 		for card: ItemInstance in cards:
 			results_a.append(card.definition.id)
+		# Drain inventory: pocket_creatures backroom holds 130 items, so 100
+		# packs × 11 cards would overflow capacity and register_item would fail.
+		_inventory._items.clear()
 
-	# Reset inventory and seed for second run
+	# Reset inventory, economy, and seed for second run
 	_inventory._items.clear()
+	_economy.initialize(RUN_CASH)
 	_system.seed_rng(SEED)
 	var results_b: Array[String] = []
 	for _i: int in range(OPEN_COUNT):
@@ -130,6 +141,7 @@ func test_seeded_rng_produces_identical_output_over_100_opens() -> void:
 		var cards: Array[ItemInstance] = _system.open_pack(pack.instance_id)
 		for card: ItemInstance in cards:
 			results_b.append(card.definition.id)
+		_inventory._items.clear()
 
 	assert_eq(
 		results_a.size(), results_b.size(),

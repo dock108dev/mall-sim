@@ -71,6 +71,11 @@ func test_pull_probabilities_match_spec() -> void:
 					counts["common"] += 1
 				_:
 					counts["other"] += 1
+		# Drain inventory between iterations: pocket_creatures backroom holds
+		# 130 items, so 1000 packs × ~11 cards would otherwise overflow capacity
+		# and trigger PackOpeningSystem register_item failures.
+		for card: ItemInstance in cards:
+			_inventory.remove_item(card.instance_id)
 
 	assert_gt(total_cards, 0, "Should have drawn cards")
 

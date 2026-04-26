@@ -14,6 +14,13 @@ const STORE_PLAYER_SCENE: PackedScene = preload(
 
 const PLAYER_ENTRY_SPAWN_NAME: StringName = &"PlayerEntrySpawn"
 
+
+class MockStoreRoot:
+	extends Node3D
+	func get_store_id() -> StringName:
+		return &"retro_games"
+
+
 var _store_root: Node3D
 var _player: StorePlayerBody
 var _baseline_focus_depth: int
@@ -85,12 +92,15 @@ func test_store_controller_exposes_get_store_id() -> void:
 
 
 func test_player_camera_is_in_cameras_group() -> void:
-	# Loading a fresh body (without parent) is enough — the .tscn declares
-	# group membership at author time.
+	# The body's _ready asserts a store-root ancestor (parent chain has
+	# get_store_id). Wrap in MockStoreRoot so the spawn contract passes; the
+	# .tscn structure (group + Camera3D child) is what we actually verify.
+	var root := MockStoreRoot.new()
+	add_child_autofree(root)
 	var player: StorePlayerBody = (
 		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
 	)
-	add_child_autofree(player)  # add_child runs _ready; we do not assert focus here
+	root.add_child(player)  # add_child runs _ready; we do not assert focus here
 	var cam: Camera3D = player.find_child("Camera3D", false, false) as Camera3D
 	assert_not_null(cam, "store_player_body.tscn must include a Camera3D child")
 	assert_true(
@@ -102,10 +112,12 @@ func test_player_camera_is_in_cameras_group() -> void:
 func test_player_camera_has_interaction_ray_child() -> void:
 	# ISSUE-002: body camera owns the InteractionRay so the press-E loop
 	# follows the player's view direction.
+	var root := MockStoreRoot.new()
+	add_child_autofree(root)
 	var player: StorePlayerBody = (
 		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
 	)
-	add_child_autofree(player)
+	root.add_child(player)
 	var cam: Camera3D = player.find_child("Camera3D", false, false) as Camera3D
 	assert_not_null(cam, "body must have a Camera3D")
 	if cam == null:
