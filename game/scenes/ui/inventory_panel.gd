@@ -243,7 +243,7 @@ func _reset_for_tests() -> void:
 func _setup_modal_backdrop() -> void:
 	_backdrop = ColorRect.new()
 	_backdrop.color = Color(0.0, 0.0, 0.0, 0.5)
-	_backdrop.mouse_filter = MOUSE_FILTER_STOP
+	_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_backdrop.visible = false
 	_backdrop.gui_input.connect(_on_backdrop_input)
