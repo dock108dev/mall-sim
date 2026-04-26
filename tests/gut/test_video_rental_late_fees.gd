@@ -3,11 +3,18 @@ extends GutTest
 
 
 var _controller: VideoRentalStoreController
+var _economy: EconomySystem
 
 
 func before_each() -> void:
 	_controller = VideoRentalStoreController.new()
 	add_child_autofree(_controller)
+	# _collect_late_fee fails loud without an economy_system (it parks the fee
+	# in _pending_late_fees instead of bumping _daily_late_fee_total). Wire one
+	# so the cash-flow path the formula tests assert against actually runs.
+	_economy = EconomySystem.new()
+	add_child_autofree(_economy)
+	_controller.set_economy_system(_economy)
 
 
 func test_no_late_fee_on_exact_return_day() -> void:

@@ -863,7 +863,9 @@ func resolve_rental_price(item: ItemInstance, current_day: int) -> float:
 		return 0.0
 	var base_fee: float = get_effective_rental_price(item, current_day)
 	var multipliers: Array = []
-	var lifecycle_factor: float = _compute_lifecycle_factor(item.definition, current_day)
+	var lifecycle_factor: float = RentalPriceCalculator.compute_lifecycle_factor(
+		item.definition, current_day
+	)
 	if lifecycle_factor != 1.0:
 		multipliers.append({
 			"slot": "lifecycle",
@@ -871,7 +873,9 @@ func resolve_rental_price(item: ItemInstance, current_day: int) -> float:
 			"factor": lifecycle_factor,
 			"detail": "rarity:%s" % item.definition.rarity,
 		})
-	var condition_factor: float = _compute_condition_factor(item.condition)
+	var condition_factor: float = RentalPriceCalculator.compute_condition_factor(
+		item.condition
+	)
 	if condition_factor != 1.0:
 		multipliers.append({
 			"slot": "condition",
@@ -883,40 +887,6 @@ func resolve_rental_price(item: ItemInstance, current_day: int) -> float:
 		return base_fee
 	var result: PriceResolver.Result = PriceResolver.resolve(base_fee, multipliers)
 	return result.final_price
-
-
-## Returns the lifecycle multiplier for a rental item definition on the given day.
-func _compute_lifecycle_factor(def: ItemDefinition, current_day: int) -> float:
-	var phase: String = def.lifecycle_phase if not def.lifecycle_phase.is_empty() else def.rarity
-	if phase == "ultra_new" or phase == "new":
-		var release: int = def.release_day if def.release_day > 0 else def.release_date
-		if release > 0:
-			var age: int = current_day - release
-			if age < 0:
-				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
-			if age < 7:
-				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
-			if age < 21:
-				return PriceResolver.LIFECYCLE_MULTIPLIERS.get("new", 1.15)
-	if phase == "ultra_new":
-		return PriceResolver.LIFECYCLE_MULTIPLIERS.get("ultra_new", 1.35)
-	if phase == "new":
-		return PriceResolver.LIFECYCLE_MULTIPLIERS.get("new", 1.15)
-	return PriceResolver.LIFECYCLE_MULTIPLIERS.get("common", 1.0)
-
-
-## Returns a condition-based rental price factor: worn items rent for less.
-func _compute_condition_factor(condition: String) -> float:
-	match condition:
-		"mint", "near_mint":
-			return 1.0
-		"good":
-			return 1.0
-		"fair":
-			return 0.90
-		"poor":
-			return 0.80
-	return 1.0
 
 
 func _seed_starter_inventory() -> void:

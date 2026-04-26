@@ -174,6 +174,13 @@ current = false
 fov = 60.0
 
 ; ============================================================
+; Player Entry Spawn (inside the storefront, in front of the back wall)
+; ============================================================
+
+[node name="PlayerEntrySpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.3)
+
+; ============================================================
 ; Lighting (fluorescent key light with warm + green neon accent fill)
 ; ============================================================
 

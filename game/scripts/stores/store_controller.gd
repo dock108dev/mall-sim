@@ -44,6 +44,12 @@ func _ready() -> void:
 	_connect_lifecycle_signals()
 
 
+## Returns the canonical store id for this controller. Satisfies the
+## StoreReadyContract / StorePlayerBody parent-chain check.
+func get_store_id() -> StringName:
+	return StringName(store_type)
+
+
 ## Sets the InventorySystem reference for inventory queries.
 func set_inventory_system(inv: InventorySystem) -> void:
 	_inventory_system = inv

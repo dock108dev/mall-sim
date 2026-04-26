@@ -217,7 +217,7 @@
         "mint"
       ],
       "rarity": "common",
-      "base_price": 10.0,
+      "base_price": 15.0,
       "description": "A compact puzzle game with deceptively simple rules and a high-score screen that broke many thumbs.",
       "item_name": "Block Logic Express"
     },
@@ -393,7 +393,7 @@
         "mint"
       ],
       "rarity": "common",
-      "base_price": 12.0,
+      "base_price": 15.0,
       "description": "A 16-bit platformer with tight jump physics and a couch co-op mode that ended many arguments.",
       "item_name": "Ironfoot Run"
     },
@@ -549,7 +549,7 @@
         "mint"
       ],
       "rarity": "common",
-      "base_price": 14.0,
+      "base_price": 15.0,
       "description": "A blistering side-scroller starring a cobalt speedster and a soundtrack that still powers high scores."
     }
   ]
