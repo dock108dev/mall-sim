@@ -1,0 +1,101 @@
+[
+  {
+    "topic": "store-entry-routing",
+    "question": "How does clicking a storefront in the mall hub trigger entry to a store interior \u2014 is it a SceneRouter scene change, an in-scene activation, and what InputFocus context push happens at that moment?",
+    "scope": [
+      "game/scenes/mall/mall_hub.gd",
+      "game/scenes/mall/mall_hub.tscn",
+      "game/autoload/scene_router.gd",
+      "game/scripts/stores/store_controller.gd",
+      "game/autoload/input_focus.gd"
+    ]
+  },
+  {
+    "topic": "npc-purchase-trigger",
+    "question": "What concretely triggers CheckoutSystem.process_transaction \u2014 is it a shelf collision, a register-zone Area3D, an NPC state change, or none of the above?",
+    "scope": [
+      "game/autoload/checkout_system.gd",
+      "game/scripts/characters/customer_npc.gd",
+      "game/scripts/characters/customer.gd",
+      "game/scripts/systems/customer_system.gd",
+      "game/scripts/stores/shelf_slot.gd"
+    ]
+  },
+  {
+    "topic": "npc-target-item-selection",
+    "question": "How does an NPC choose which placed shelf item to buy, and how are stocked items registered as 'purchasable' to the customer AI?",
+    "scope": [
+      "game/scripts/characters/customer.gd",
+      "game/scripts/characters/customer_npc.gd",
+      "game/scripts/systems/inventory_system.gd",
+      "game/scripts/stores/shelf_slot.gd"
+    ]
+  },
+  {
+    "topic": "inventory-modal-focus",
+    "question": "When the inventory panel (I key) opens, does it push a modal InputFocus context that suspends StorePlayerBody movement, and how does it close cleanly?",
+    "scope": [
+      "game/scenes/ui/inventory_panel.tscn",
+      "game/scripts/ui/inventory_shelf_actions.gd",
+      "game/autoload/input_focus.gd",
+      "game/scripts/player/store_player_body.gd"
+    ]
+  },
+  {
+    "topic": "camera-authority-handoff",
+    "question": "How is camera ownership arbitrated between the mall-hub orbit camera (player.gd) and the in-store StorePlayerBody, and is there a CameraAuthority autoload owning the switch?",
+    "scope": [
+      "game/autoload/",
+      "game/scenes/player/player.gd",
+      "game/scripts/player/store_player_body.gd"
+    ]
+  },
+  {
+    "topic": "tutorial-systems-coordination",
+    "question": "When TutorialSystem (global FSM) and TutorialContextSystem (per-store JSON hints) are both eligible to show text on store entry, which suppresses the other and where is the arbitration?",
+    "scope": [
+      "game/scripts/systems/tutorial_system.gd",
+      "game/autoload/tutorial_context_system.gd",
+      "game/scripts/ui/tutorial_overlay.gd",
+      "game/content/tutorial_contexts.json"
+    ]
+  },
+  {
+    "topic": "objective-text-pipeline",
+    "question": "How does StoreController.current_objective_text reach the HUD ObjectiveLabel \u2014 what signal path runs through ObjectiveDirector and EventBus?",
+    "scope": [
+      "game/autoload/objective_director.gd",
+      "game/scripts/stores/store_controller.gd",
+      "game/scenes/ui/hud.gd",
+      "game/scenes/ui/objective_rail.tscn",
+      "game/autoload/event_bus.gd"
+    ]
+  },
+  {
+    "topic": "store-ready-contract",
+    "question": "What does StoreReadyContract actually validate before a store is declared ready, and what happens on failure (silent skip, error banner, blocked input)?",
+    "scope": [
+      "game/scripts/stores/",
+      "game/autoload/",
+      "game/scripts/core/boot.gd"
+    ]
+  },
+  {
+    "topic": "shelf-slot-event-bus",
+    "question": "Does ShelfSlot.place_item emit on EventBus (item_stocked) in addition to its internal slot_changed signal, and which listeners react?",
+    "scope": [
+      "game/scripts/stores/shelf_slot.gd",
+      "game/autoload/event_bus.gd",
+      "game/scripts/systems/tutorial_system.gd"
+    ]
+  },
+  {
+    "topic": "interactable-prompt-rendering",
+    "question": "Does the Interactable base class render a 'Press E' world prompt or look-at highlight, and if not, where would such an affordance hook in?",
+    "scope": [
+      "game/scripts/components/interactable.gd",
+      "game/scripts/stores/shelf_slot.gd",
+      "game/scripts/player/store_player_body.gd"
+    ]
+  }
+]
