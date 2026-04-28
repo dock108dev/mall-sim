@@ -15,9 +15,13 @@
 ##   store_id_resolved      — scene.get_store_id() returns a non-empty StringName
 ##   scene_loaded           — scene != null and is inside the SceneTree
 ##   controller_initialized — scene.is_controller_initialized() == true
-##   content_instantiated   — a `StoreContent` node exists and has ≥1 child
+##   content_instantiated   — scene has ≥1 direct child that contributes content
+##                            (anything that isn't pure scaffolding: Camera2D/3D,
+##                            Light3D, Marker3D, or the player presence anchor)
 ##   camera_current         — a `StoreCamera` (Camera2D/3D) exists and .current
-##   player_present         — a `Player` node exists under the scene
+##   player_present         — a presence anchor exists under the scene; accepts
+##                            `PlayerController` (walking-player stores like
+##                            retro_games) or `OrbitPivot` (orbit-camera stores)
 ##   input_gameplay         — scene.get_input_context() == &"store_gameplay"
 ##   no_modal_focus         — scene.has_blocking_modal() == false
 ##   interaction_count_ge_1 — ≥1 node in group "interactables" under the scene
@@ -47,6 +51,14 @@ const INVARIANTS: Array[StringName] = [
 	INV_NO_MODAL,
 	INV_INTERACTIONS,
 	INV_OBJECTIVE,
+]
+
+## Player presence anchors used across stores. retro_games has a
+## walkable PlayerController; orbit-cam stores (sports, electronics, pocket
+## creatures, video_rental) anchor the camera to an OrbitPivot Marker3D.
+## Both count as "presence". `Player` is kept for legacy/test fixtures.
+const _PLAYER_ANCHOR_NAMES: PackedStringArray = [
+	"PlayerController", "Player", "OrbitPivot",
 ]
 
 
@@ -80,7 +92,7 @@ static func check(scene: Node) -> StoreReadyResult:
 		failures.append(INV_CAMERA)
 
 	# 6. player_present
-	if _find(scene, "Player") == null:
+	if not _player_present(scene):
 		failures.append(INV_PLAYER)
 
 	# 7. input_gameplay
@@ -119,9 +131,37 @@ static func _method_returns_true(scene: Node, method: StringName) -> bool:
 	return v is bool and v == true
 
 
+static func _player_present(scene: Node) -> bool:
+	for anchor_name: String in _PLAYER_ANCHOR_NAMES:
+		if _find(scene, anchor_name) != null:
+			return true
+	return false
+
+
+## True iff the scene root has at least one direct child that is real content
+## (geometry, fixtures, lighting rig groups, etc.) rather than pure scaffolding.
+## Scaffolding is the camera (validated by `camera_current`), the player anchor
+## (validated by `player_present`), bare Marker3D entry points, and individual
+## Light3D nodes. Container Node3D groups (LightingRig, Geometry, DisplayCases)
+## count as content.
 static func _content_instantiated(scene: Node) -> bool:
-	var content: Node = _find(scene, "StoreContent")
-	return content != null and content.get_child_count() > 0
+	for child: Node in scene.get_children():
+		if _is_scaffolding(child):
+			continue
+		return true
+	return false
+
+
+static func _is_scaffolding(node: Node) -> bool:
+	if node is Camera2D or node is Camera3D:
+		return true
+	if node is Light3D:
+		return true
+	if node is Marker3D:
+		return true
+	if _PLAYER_ANCHOR_NAMES.has(node.name):
+		return true
+	return false
 
 
 static func _camera_current(scene: Node) -> bool:

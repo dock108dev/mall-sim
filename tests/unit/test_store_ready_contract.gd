@@ -38,21 +38,20 @@ func _make_ready_scene() -> Node:
 	root.name = "StoreScene"
 	add_child_autofree(root)
 
-	var content: Node = Node.new()
-	content.name = "StoreContent"
+	# A non-scaffold direct child satisfies `content_instantiated`.
+	var content: Node3D = Node3D.new()
+	content.name = "Geometry"
 	root.add_child(content)
-	# One content child satisfies `content_instantiated`.
-	var prop: Node = Node.new()
-	prop.name = "Shelf"
-	content.add_child(prop)
 
 	var camera: Camera3D = Camera3D.new()
 	camera.name = "StoreCamera"
 	camera.current = true
 	root.add_child(camera)
 
+	# `PlayerController` is one of the accepted presence anchors (along with
+	# `Player` and `OrbitPivot`); see StoreReadyContract `_PLAYER_ANCHOR_NAMES`.
 	var player: Node = Node.new()
-	player.name = "Player"
+	player.name = "PlayerController"
 	root.add_child(player)
 
 	var interactable: Node = Node.new()
@@ -105,25 +104,32 @@ func test_controller_not_initialized_fails() -> void:
 	assert_true(result.failures.has(StoreReadyContractScript.INV_CONTROLLER_INIT))
 
 
-func test_empty_content_fails() -> void:
+func test_only_scaffolding_fails_content_instantiated() -> void:
+	# Strip every non-scaffold child so only camera + player anchor remain.
 	var scene: Node = _make_ready_scene()
-	var content: Node = scene.find_child("StoreContent", true, false)
-	for child in content.get_children():
-		content.remove_child(child)
+	for child in scene.get_children():
+		if child is Camera3D or child.name == "PlayerController":
+			continue
+		scene.remove_child(child)
 		child.free()
 	var result: StoreReadyResult = StoreReadyContractScript.check(scene)
 	assert_false(result.ok)
 	assert_true(result.failures.has(StoreReadyContractScript.INV_CONTENT))
 
 
-func test_missing_store_content_node_fails() -> void:
+func test_orbit_pivot_satisfies_player_present() -> void:
+	# Orbit-cam stores (sports, electronics, pocket_creatures, video_rental)
+	# use an OrbitPivot Marker3D in lieu of a walking PlayerController.
 	var scene: Node = _make_ready_scene()
-	var content: Node = scene.find_child("StoreContent", true, false)
-	scene.remove_child(content)
-	content.free()
+	var anchor: Node = scene.find_child("PlayerController", true, false)
+	scene.remove_child(anchor)
+	anchor.free()
+	var pivot: Marker3D = Marker3D.new()
+	pivot.name = "OrbitPivot"
+	scene.add_child(pivot)
 	var result: StoreReadyResult = StoreReadyContractScript.check(scene)
-	assert_false(result.ok)
-	assert_true(result.failures.has(StoreReadyContractScript.INV_CONTENT))
+	assert_false(result.failures.has(StoreReadyContractScript.INV_PLAYER),
+		"OrbitPivot must satisfy player_present invariant")
 
 
 func test_camera_not_current_fails() -> void:
@@ -147,7 +153,7 @@ func test_missing_camera_fails() -> void:
 
 func test_missing_player_fails() -> void:
 	var scene: Node = _make_ready_scene()
-	var player: Node = scene.find_child("Player", true, false)
+	var player: Node = scene.find_child("PlayerController", true, false)
 	scene.remove_child(player)
 	player.free()
 	var result: StoreReadyResult = StoreReadyContractScript.check(scene)
