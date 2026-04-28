@@ -63,6 +63,8 @@ var _current_speed: float = 1.0
 var _last_reputation: float = ReputationSystemSingleton.DEFAULT_REPUTATION
 
 var _tutorial_step_active: bool = false
+var _objective_active: bool = false
+var _interactable_focused: bool = false
 var _cash_count_tween: Tween
 var _cash_scale_tween: Tween
 var _cash_color_tween: Tween
@@ -135,6 +137,8 @@ func _ready() -> void:
 	EventBus.tutorial_completed.connect(_on_tutorial_hint_ended)
 	EventBus.tutorial_skipped.connect(_on_tutorial_hint_ended)
 	EventBus.run_state_changed.connect(_on_run_state_changed)
+	EventBus.interactable_focused.connect(_on_interactable_focused)
+	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
 
 	_create_close_day_button()
 	_create_hub_back_button()
@@ -155,6 +159,7 @@ func _on_day_started(day: int) -> void:
 	_refresh_time_display()
 	_refresh_items_placed()
 	_refresh_customers_active()
+	_apply_state_visibility(GameManager.current_state)
 
 
 func _on_hour_changed(hour: int) -> void:
@@ -281,7 +286,13 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			_time_label.visible = true
 			_reputation_label.visible = true
 			_speed_button.visible = false
-			_milestones_button.visible = true
+			# Day 1 quarantine: the centered MilestonesPanel covers store fixtures
+			# while the player is still learning the stock-and-sell loop. Hide the
+			# button on Day 1 STORE_VIEW; it remains accessible from MALL_OVERVIEW
+			# and re-appears in STORE_VIEW on Day 2+.
+			_milestones_button.visible = (
+				GameManager.get_current_day() > 1
+			)
 			_close_day_button.visible = true
 			_items_placed_label.visible = true
 			_customers_label.visible = true
@@ -516,7 +527,20 @@ func _flash_reputation_label(
 ## Updates the visible objective text within one frame of `set_objective_text()`.
 func _on_objective_text_changed(text: String) -> void:
 	_objective_label.text = text
-	_objective_label.visible = not text.strip_edges().is_empty()
+	var has_text: bool = not text.strip_edges().is_empty()
+	_objective_label.visible = has_text
+	_objective_active = has_text
+	_refresh_telegraph_card()
+
+
+func _on_interactable_focused(_action_label: String) -> void:
+	_interactable_focused = true
+	_refresh_telegraph_card()
+
+
+func _on_interactable_unfocused() -> void:
+	_interactable_focused = false
+	_refresh_telegraph_card()
 
 
 func _on_notification_requested(message: String) -> void:
@@ -587,6 +611,12 @@ func _on_tutorial_hint_ended() -> void:
 
 func _refresh_telegraph_card() -> void:
 	if _tutorial_step_active:
+		return
+	# Overlay priority: tutorial > objective rail > interaction prompt > ticker.
+	# Hide the telegraph card whenever a higher-priority surface is active so
+	# upcoming-event flavor text never competes with the player's current task.
+	if _objective_active or _interactable_focused:
+		_telegraph_card.visible = false
 		return
 	var parts: PackedStringArray = []
 	if not _random_event_telegraph.is_empty():
@@ -812,6 +842,8 @@ func _reset_for_tests() -> void:
 	_telegraphed_events.clear()
 	_random_event_telegraph = ""
 	_tutorial_step_active = false
+	_objective_active = false
+	_interactable_focused = false
 	_telegraph_card.visible = false
 	_seasonal_event_label.visible = false
 	_prompt_label.visible = false

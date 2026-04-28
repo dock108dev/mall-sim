@@ -184,12 +184,13 @@ func test_price_spike_falls_back_to_card_category() -> void:
 
 
 # ── 2-day tournament golden path ──────────────────────────────────────────────
-# tournament starts day 1, duration 2 → active days 1 & 2, expires day 3
+# Day 1 quarantine suppresses event/tournament dispatch on day 1; the tournament
+# is announced on day 2 (telegraph_days=1, start_day=3) and active on days 3-4.
 
-func test_two_day_tournament_multiplier_active_day_1() -> void:
+func test_two_day_tournament_multiplier_active_on_start_day() -> void:
 	var def: TournamentEventDefinition = _make_def({
 		"id": "golden_tourney",
-		"start_day": 1,
+		"start_day": 3,
 		"duration_days": 2,
 		"telegraph_days": 1,
 		"creature_type_focus": "fossil",
@@ -197,35 +198,6 @@ func test_two_day_tournament_multiplier_active_day_1() -> void:
 		"traffic_multiplier": 1.3,
 	})
 	_seasonal._tournament_definitions = [def]
-	_seasonal._on_day_started(0)
-	_seasonal._on_day_started(1)
-	var item: ItemInstance = _make_item(
-		"singles", "pocket_creatures", [&"fossil"]
-	)
-	assert_almost_eq(
-		_seasonal.get_tournament_price_spike_multiplier(item),
-		1.5, 0.001,
-		"Price spike multiplier active on day 1"
-	)
-	assert_almost_eq(
-		_seasonal.get_traffic_multiplier(), 1.3, 0.001,
-		"Traffic multiplier active on day 1"
-	)
-
-
-func test_two_day_tournament_multiplier_inactive_day_3() -> void:
-	var def: TournamentEventDefinition = _make_def({
-		"id": "golden_tourney",
-		"start_day": 1,
-		"duration_days": 2,
-		"telegraph_days": 1,
-		"creature_type_focus": "fossil",
-		"price_spike_multiplier": 1.5,
-		"traffic_multiplier": 1.3,
-	})
-	_seasonal._tournament_definitions = [def]
-	_seasonal._on_day_started(0)
-	_seasonal._on_day_started(1)
 	_seasonal._on_day_started(2)
 	_seasonal._on_day_started(3)
 	var item: ItemInstance = _make_item(
@@ -233,19 +205,19 @@ func test_two_day_tournament_multiplier_inactive_day_3() -> void:
 	)
 	assert_almost_eq(
 		_seasonal.get_tournament_price_spike_multiplier(item),
-		1.0, 0.001,
-		"Price spike multiplier inactive on day 3"
+		1.5, 0.001,
+		"Price spike multiplier active on start day"
 	)
 	assert_almost_eq(
-		_seasonal.get_traffic_multiplier(), 1.0, 0.001,
-		"Traffic multiplier inactive on day 3"
+		_seasonal.get_traffic_multiplier(), 1.3, 0.001,
+		"Traffic multiplier active on start day"
 	)
 
 
-func test_two_day_tournament_result_summary_emitted_after_day_2() -> void:
+func test_two_day_tournament_multiplier_inactive_after_expiry() -> void:
 	var def: TournamentEventDefinition = _make_def({
 		"id": "golden_tourney",
-		"start_day": 1,
+		"start_day": 3,
 		"duration_days": 2,
 		"telegraph_days": 1,
 		"creature_type_focus": "fossil",
@@ -253,9 +225,38 @@ func test_two_day_tournament_result_summary_emitted_after_day_2() -> void:
 		"traffic_multiplier": 1.3,
 	})
 	_seasonal._tournament_definitions = [def]
-	_seasonal._on_day_started(0)
-	_seasonal._on_day_started(1)
 	_seasonal._on_day_started(2)
+	_seasonal._on_day_started(3)
+	_seasonal._on_day_started(4)
+	_seasonal._on_day_started(5)
+	var item: ItemInstance = _make_item(
+		"singles", "pocket_creatures", [&"fossil"]
+	)
+	assert_almost_eq(
+		_seasonal.get_tournament_price_spike_multiplier(item),
+		1.0, 0.001,
+		"Price spike multiplier inactive after expiry"
+	)
+	assert_almost_eq(
+		_seasonal.get_traffic_multiplier(), 1.0, 0.001,
+		"Traffic multiplier inactive after expiry"
+	)
+
+
+func test_two_day_tournament_result_summary_emitted_after_final_day() -> void:
+	var def: TournamentEventDefinition = _make_def({
+		"id": "golden_tourney",
+		"start_day": 3,
+		"duration_days": 2,
+		"telegraph_days": 1,
+		"creature_type_focus": "fossil",
+		"price_spike_multiplier": 1.5,
+		"traffic_multiplier": 1.3,
+	})
+	_seasonal._tournament_definitions = [def]
+	_seasonal._on_day_started(2)
+	_seasonal._on_day_started(3)
+	_seasonal._on_day_started(4)
 
 	var got_id: Array = [""]
 	var got_summary: Array = [{}]
@@ -263,11 +264,11 @@ func test_two_day_tournament_result_summary_emitted_after_day_2() -> void:
 		got_id[0] = tid
 		got_summary[0] = rs
 	EventBus.tournament_ended.connect(cb)
-	# day_ended(2) fires tournament_ended for a 2-day tournament (start=1, dur=2)
-	EventBus.day_ended.emit(2)
+	# day_ended(4) fires tournament_ended for a 2-day tournament (start=3, dur=2)
+	EventBus.day_ended.emit(4)
 	EventBus.tournament_ended.disconnect(cb)
 
-	assert_eq(got_id[0], "golden_tourney", "tournament_ended should fire after day 2")
+	assert_eq(got_id[0], "golden_tourney", "tournament_ended should fire after final day")
 	assert_false(
 		got_summary[0].is_empty(), "result_summary should not be empty"
 	)

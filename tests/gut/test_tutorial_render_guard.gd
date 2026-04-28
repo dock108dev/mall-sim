@@ -244,6 +244,19 @@ func test_skipped_flag_suppresses_future_step_renders() -> void:
 	)
 
 
+func test_bar_hides_on_tutorial_context_cleared() -> void:
+	GameManager.current_state = GameManager.State.MALL_OVERVIEW
+	_advance_to_click_store()
+	var bar: PanelContainer = _overlay.get_node("BottomBar")
+	assert_true(bar.visible, "Bar should be visible before tutorial_context_cleared fires")
+
+	EventBus.tutorial_context_cleared.emit()
+	assert_false(
+		bar.visible,
+		"Tutorial bar must hide when tutorial_context_cleared fires"
+	)
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 

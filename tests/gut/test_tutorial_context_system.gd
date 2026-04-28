@@ -104,3 +104,63 @@ func test_switching_stores_swaps_context() -> void:
 	EventBus.store_exited.emit(StringName("sports"))
 	EventBus.store_entered.emit(StringName("retro_games"))
 	assert_eq(String(TutorialContextSystem.active_context_id), "retro_games")
+
+
+# ── is_tutorial_rendering_allowed() public API ───────────────────────────────
+
+
+func test_is_tutorial_rendering_allowed_false_in_main_menu() -> void:
+	GameManager.current_state = GameManager.State.MAIN_MENU
+	assert_false(
+		TutorialContextSystem.is_tutorial_rendering_allowed(),
+		"Tutorial rendering must not be allowed in MAIN_MENU"
+	)
+
+
+func test_is_tutorial_rendering_allowed_false_in_mall_overview() -> void:
+	GameManager.current_state = GameManager.State.MALL_OVERVIEW
+	assert_false(
+		TutorialContextSystem.is_tutorial_rendering_allowed(),
+		"Tutorial rendering must not be allowed in MALL_OVERVIEW"
+	)
+
+
+func test_is_tutorial_rendering_allowed_false_in_day_summary() -> void:
+	GameManager.current_state = GameManager.State.DAY_SUMMARY
+	assert_false(
+		TutorialContextSystem.is_tutorial_rendering_allowed(),
+		"Tutorial rendering must not be allowed in DAY_SUMMARY"
+	)
+
+
+func test_is_tutorial_rendering_allowed_false_when_modal_focused() -> void:
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	assert_false(
+		TutorialContextSystem.is_tutorial_rendering_allowed(),
+		"Tutorial rendering must not be allowed while a modal has focus"
+	)
+	InputFocus.pop_context()
+
+
+func test_is_tutorial_rendering_allowed_true_in_store_view() -> void:
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	assert_true(
+		TutorialContextSystem.is_tutorial_rendering_allowed(),
+		"Tutorial rendering must be allowed in STORE_VIEW"
+	)
+
+
+func test_no_context_emission_in_mall_overview() -> void:
+	GameManager.current_state = GameManager.State.MALL_OVERVIEW
+	_received.clear()
+	EventBus.store_entered.emit(StringName("retro_games"))
+	var saw_entered: bool = false
+	for event: Dictionary in _received:
+		if event.get("event") == "entered":
+			saw_entered = true
+			break
+	assert_false(
+		saw_entered,
+		"tutorial_context_entered must not fire while in MALL_OVERVIEW"
+	)

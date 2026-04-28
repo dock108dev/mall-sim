@@ -53,6 +53,7 @@ StoreDirector="*res://game/autoload/store_director.gd"
 GameState="*res://game/autoload/game_state.gd"
 FailCard="*res://game/scenes/ui/fail_card.tscn"
 TutorialContextSystem="*res://game/autoload/tutorial_context_system.gd"
+Day1ReadinessAudit="*res://game/autoload/day1_readiness_audit.gd"
 
 [debug]
 

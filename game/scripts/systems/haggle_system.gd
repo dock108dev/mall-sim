@@ -82,9 +82,13 @@ func initialize(reputation_system: ReputationSystem) -> void:
 
 
 ## Returns true if this customer will attempt to haggle on the item.
+## Day 1 quarantine: returns false on Day 1 so no haggle UI / signals fire while
+## the player is learning the stock-and-sell loop. Negotiation re-enables Day 2+.
 func should_haggle(
 	customer: Customer, item: ItemInstance
 ) -> bool:
+	if GameManager.get_current_day() <= 1:
+		return false
 	if not customer or not customer.profile:
 		return false
 	var sensitivity: float = customer.profile.price_sensitivity

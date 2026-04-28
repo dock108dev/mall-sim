@@ -11,6 +11,11 @@ const GRADES_PATH: String = "res://game/content/stores/retro_games/grades.json"
 const CONDITION_ORDER: PackedStringArray = [
 	"poor", "fair", "good", "near_mint", "mint",
 ]
+## Upper bound on starter-inventory `quantity` per entry. Per-store shelf
+## footprint tops out near 30 slots, so anything beyond this is a content
+## authoring typo — clamp it before the loop so a stray three-digit value
+## cannot stall the boot path.
+const _MAX_STARTER_QUANTITY: int = 64
 
 @onready var _debug_labels: Node3D = $DebugLabels
 
@@ -41,7 +46,6 @@ func initialize() -> void:
 	store_type = String(STORE_ID)
 	_connect_lifecycle_signals()
 	_store_definition = ContentRegistry.get_entry(STORE_ID)
-	_connect_store_signal(EventBus.customer_purchased, _on_customer_purchased)
 	_connect_store_signal(EventBus.inventory_item_added, _on_inventory_item_added)
 	_connect_store_signal(EventBus.item_stocked, _on_item_stocked)
 	_load_grades()
@@ -284,7 +288,35 @@ func _on_store_entered(store_id: StringName) -> void:
 	_seed_starter_inventory()
 	_testing_available = has_testing_station()
 	_apply_accent_to_slots(UIThemeConstants.STORE_ACCENT_RETRO_GAMES)
+	_apply_day1_quarantine()
 	EventBus.store_opened.emit(String(STORE_ID))
+
+
+## Hides testing_station and refurb_bench from the Day 1 store floor so the
+## introductory loop only exposes shelves and the register. They re-enable on
+## Day 2+ or when running a debug build, satisfying the quarantine rule that
+## non-Day-1 surfaces stay behind a debug-build flag or a later-day gate.
+##
+## §F-41 — silent `continue` on a missing node is intentional: future store
+## variants may legitimately omit testing_station or refurb_bench (e.g. an
+## early-game retro_games.tscn before either fixture is authored). The
+## quarantine is moot for missing nodes because nothing is rendered. A missing
+## `Interactable` child on an existing node is also tolerated — toggling the
+## parent's visibility is enough to suppress player interaction.
+func _apply_day1_quarantine() -> void:
+	var quarantined: bool = (
+		GameManager.get_current_day() <= 1 and not OS.is_debug_build()
+	)
+	for node_name: String in ["testing_station", "refurb_bench"]:
+		var node: Node3D = get_node_or_null(node_name) as Node3D
+		if node == null:
+			continue
+		node.visible = not quarantined
+		var interactable: Interactable = node.get_node_or_null(
+			"Interactable"
+		) as Interactable
+		if interactable:
+			interactable.enabled = not quarantined
 
 
 func get_store_actions() -> Array:
@@ -307,15 +339,6 @@ func _apply_accent_to_slots(color: Color) -> void:
 			(slot_node as ShelfSlot).apply_accent(color)
 
 
-func _on_customer_purchased(
-	_store_id: StringName, item_id: StringName,
-	_price: float, _customer_id: StringName
-) -> void:
-	if not _is_active:
-		return
-	_check_condition_note(item_id)
-
-
 func _on_inventory_item_added(
 	store_id: StringName, item_id: StringName
 ) -> void:
@@ -333,16 +356,6 @@ func _on_item_stocked(item_id: String, shelf_id: String) -> void:
 	if station_slot_id.is_empty() or shelf_id != station_slot_id:
 		return
 	_try_auto_test(item_id)
-
-
-func _check_condition_note(item_id: StringName) -> void:
-	if not _inventory_system:
-		return
-	var item: ItemInstance = _inventory_system.get_item(String(item_id))
-	if not item or not item.definition:
-		return
-	if item.definition.store_type != String(STORE_ID):
-		return
 
 
 func _check_needs_refurbishment(item_id: StringName) -> void:
@@ -441,28 +454,82 @@ func _seed_starter_inventory() -> void:
 		)
 		return
 	var starter_items: Variant = entry.get("starting_inventory", [])
-	if starter_items is Array:
-		for item_data: Variant in starter_items:
-			if item_data is Dictionary:
-				_add_starter_item(item_data as Dictionary)
-
-
-func _add_starter_item(item_data: Dictionary) -> void:
-	var raw_id: Variant = item_data.get("item_id", "")
-	if not raw_id is String or (raw_id as String).is_empty():
+	if starter_items is not Array:
+		# §F-32 — non-Array `starting_inventory` is a content-authoring error;
+		# warn so the typo surfaces in CI/dev logs rather than silently
+		# shipping a store with no starter inventory.
+		push_warning(
+			"RetroGames: starting_inventory for %s is %s, expected Array"
+			% [STORE_ID, type_string(typeof(starter_items))]
+		)
 		return
-	var canonical: StringName = ContentRegistry.resolve(raw_id as String)
+	# `starting_inventory` accepts either bare item-id strings (the canonical
+	# JSON form in store_definitions.json) or `{item_id, quantity, condition}`
+	# dictionaries (legacy form retained for save-data compatibility).
+	for item_data: Variant in starter_items as Array:
+		if item_data is String:
+			_add_starter_item_by_id(item_data as String, 1, "")
+		elif item_data is Dictionary:
+			var dict := item_data as Dictionary
+			var raw_id: Variant = dict.get("item_id", "")
+			if not raw_id is String:
+				# §F-32 — non-String `item_id` in dict form is a content
+				# authoring error; warn instead of silent skip.
+				push_warning(
+					(
+						"RetroGames: starting_inventory entry has non-String "
+						+ "item_id %s for %s"
+					)
+					% [type_string(typeof(raw_id)), STORE_ID]
+				)
+				continue
+			_add_starter_item_by_id(
+				raw_id as String,
+				int(dict.get("quantity", 1)),
+				str(dict.get("condition", "")),
+			)
+		else:
+			# §F-32 — neither String nor Dictionary; warn for any other shape.
+			push_warning(
+				(
+					"RetroGames: starting_inventory entry is %s, expected "
+					+ "String or Dictionary (store=%s)"
+				)
+				% [type_string(typeof(item_data)), STORE_ID]
+			)
+
+
+func _add_starter_item_by_id(
+	raw_id: String, quantity: int, condition: String
+) -> void:
+	if raw_id.is_empty() or quantity <= 0:
+		return
+	if quantity > _MAX_STARTER_QUANTITY:
+		push_warning(
+			(
+				"RetroGames: starter quantity %d for '%s' exceeds cap %d; "
+				+ "clamping (likely content authoring typo)"
+			)
+			% [quantity, raw_id, _MAX_STARTER_QUANTITY]
+		)
+		quantity = _MAX_STARTER_QUANTITY
+	var canonical: StringName = ContentRegistry.resolve(raw_id)
 	if canonical.is_empty():
 		push_error("RetroGames: unknown item_id '%s'" % raw_id)
 		return
 	var entry: Dictionary = ContentRegistry.get_entry(canonical)
 	if entry.is_empty():
+		# §F-33 — `resolve()` succeeded so the alias map knows the id, but
+		# the entry table doesn't. That's a registry inconsistency, not a
+		# normal "unknown id" case; promote to push_error so CI catches it.
+		push_error(
+			"RetroGames: registry inconsistency — '%s' resolves to '%s' but has no entry"
+			% [raw_id, canonical]
+		)
 		return
 	var def: ItemDefinition = _build_definition_from_entry(
 		canonical, entry
 	)
-	var quantity: int = int(item_data.get("quantity", 1))
-	var condition: String = str(item_data.get("condition", ""))
 	for i: int in range(quantity):
 		var instance: ItemInstance = (
 			ItemInstance.create_from_definition(def, condition)
@@ -506,7 +573,16 @@ func _assign_testing_station_slots(fixture: Node) -> void:
 			return
 
 
-## Hides debug zone labels in release builds; shows them in debug builds.
+## Hides debug zone labels and nav-zone debug meshes in release builds; shows
+## them in debug builds. Scene defaults are `visible = false` so a missed call
+## still leaves no debug geometry leaking into normal play.
 func _apply_debug_label_visibility() -> void:
+	var show_debug: bool = OS.is_debug_build()
 	if _debug_labels:
-		_debug_labels.visible = OS.is_debug_build()
+		_debug_labels.visible = show_debug
+	var nav_zones: Node = get_node_or_null("NavZones")
+	if nav_zones:
+		for zone: Node in nav_zones.get_children():
+			var debug_mesh: Node3D = zone.get_node_or_null("DebugMesh") as Node3D
+			if debug_mesh:
+				debug_mesh.visible = show_debug

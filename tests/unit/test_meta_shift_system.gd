@@ -50,17 +50,19 @@ func test_non_shifted_card_returns_base_modifier() -> void:
 
 
 func test_shift_expires_after_duration() -> void:
+	# Day 1 quarantine: _on_day_started returns early on day <= 1, so progress
+	# the shift via days 2 and 3 instead.
 	_trigger_active_shift(&"hot_card", 2)
 	assert_true(
 		_system.is_shift_active(),
 		"Shift should be active before expiration"
 	)
-	_system._on_day_started(1)
+	_system._on_day_started(2)
 	assert_true(
 		_system.is_shift_active(),
 		"Shift should still be active before its duration elapses"
 	)
-	_system._on_day_started(2)
+	_system._on_day_started(3)
 	assert_false(
 		_system.is_shift_active(),
 		"Shift should expire after its duration elapses"
@@ -92,9 +94,11 @@ func test_meta_shift_started_signal() -> void:
 
 
 func test_meta_shift_ended_signal() -> void:
+	# Day 1 quarantine: _on_day_started returns early on day <= 1, so use day 2
+	# to expire a 1-day shift.
 	_trigger_active_shift(&"hot_card", 1)
 	watch_signals(EventBus)
-	_system._on_day_started(1)
+	_system._on_day_started(2)
 	assert_signal_emitted(
 		EventBus, "meta_shift_ended",
 		"meta_shift_ended should fire when shift expires"

@@ -167,8 +167,57 @@ func test_store_slot_card_revenue_label_updates() -> void:
 func test_day_close_button_emits_event_bus_signal() -> void:
 	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
 	add_child_autofree(_overview)
+	GameManager.set_current_day(2)
+	GameState.set_flag(&"first_sale_complete", false)
 	_overview._day_close_button.pressed.emit()
 	assert_eq(_day_close_requests, 1, "Day close button must emit day_close_requested")
+
+
+# ── Day 1 close gate ──────────────────────────────────────────────────────────
+
+func test_day_close_gated_on_day1_before_first_sale() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", false)
+	watch_signals(EventBus)
+	_overview._day_close_button.pressed.emit()
+	assert_eq(
+		_day_close_requests,
+		0,
+		"Day close must not emit day_close_requested on Day 1 before first sale"
+	)
+	assert_signal_emitted(
+		EventBus,
+		"critical_notification_requested",
+		"Gate must surface a critical notification on Day 1 before first sale"
+	)
+
+
+func test_day_close_passes_on_day1_after_first_sale() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", true)
+	_overview._day_close_button.pressed.emit()
+	assert_eq(
+		_day_close_requests,
+		1,
+		"Day close must emit day_close_requested on Day 1 once first sale is complete"
+	)
+
+
+func test_day_close_passes_on_day_two_unconditionally() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	GameManager.set_current_day(2)
+	GameState.set_flag(&"first_sale_complete", false)
+	_overview._day_close_button.pressed.emit()
+	assert_eq(
+		_day_close_requests,
+		1,
+		"Day close must emit day_close_requested on Day 2+ regardless of flag"
+	)
 
 
 func test_store_exited_shows_overview() -> void:

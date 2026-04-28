@@ -278,16 +278,18 @@ func get_event_price_multiplier_for_store(store_id: String) -> float:
 	return combined
 
 
-func _update_calendar_season(day: int) -> void:
+func _update_calendar_season(day: int, suppress_emit: bool = false) -> void:
 	var new_season: int = compute_season(day)
 	if new_season != _current_season:
 		var old_season: int = _current_season
 		_current_season = new_season
-		EventBus.season_changed.emit(new_season, old_season)
+		if not suppress_emit:
+			EventBus.season_changed.emit(new_season, old_season)
 	_current_multipliers = _build_multipliers(_current_season)
-	EventBus.seasonal_multipliers_updated.emit(
-		_current_multipliers.duplicate()
-	)
+	if not suppress_emit:
+		EventBus.seasonal_multipliers_updated.emit(
+			_current_multipliers.duplicate()
+		)
 
 
 func _build_multipliers(season_index: int) -> Dictionary:
@@ -413,9 +415,15 @@ func _restore_tournament_list(
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
-	_update_calendar_season(day)
-	_update_named_season(day)
+	# Day 1 quarantine: still update internal calendar state so demand multipliers
+	# and season tracking are correct, but suppress EventBus signal emissions and
+	# event/tournament dispatch. Day 2+ resumes the full pipeline.
+	var quarantine: bool = day <= 1
+	_update_calendar_season(day, quarantine)
+	_update_named_season(day, quarantine)
 	_recalculate_sport_seasons()
+	if quarantine:
+		return
 	_expire_active_events(day)
 	_promote_announced_events(day)
 	_check_for_new_events(day)
@@ -447,7 +455,7 @@ func _init_named_season(day: int) -> void:
 	_current_named_season = &""
 
 
-func _update_named_season(day: int) -> void:
+func _update_named_season(day: int, suppress_emit: bool = false) -> void:
 	if _season_table.is_empty():
 		return
 	var cycle_day: int = _day_in_cycle(day)
@@ -460,7 +468,7 @@ func _update_named_season(day: int) -> void:
 			break
 	if new_season != _current_named_season:
 		_current_named_season = new_season
-		if not new_season.is_empty():
+		if not suppress_emit and not new_season.is_empty():
 			EventBus.seasonal_event_started.emit(
 				String(new_season)
 			)

@@ -17,7 +17,15 @@
 ## Dependencies are looked up as autoloads by default (StoreRegistry,
 ## SceneRouter, AuditLog) but each can be injected for unit tests via the
 ## `set_*_for_tests` seams. The director never calls `change_scene_to_*`
-## directly; SceneRouter is the only owner of that operation (ISSUE-009).
+## directly; SceneRouter is the only owner of that operation.
+##
+## A scene injector seam (`set_scene_injector`) lets a host scene replace the
+## SceneRouter step with an in-tree injection (e.g. GameWorld's hub mode adds
+## the store under its `StoreContainer` to preserve the 30+ runtime systems
+## that a full viewport swap would destroy). When an injector is registered,
+## the director calls it instead of SceneRouter and uses its returned node as
+## the root passed to `StoreReadyContract.check`. SceneRouter remains the
+## owner of full viewport transitions (main menu, etc.).
 extends Node
 
 signal store_ready(store_id: StringName)
@@ -50,6 +58,7 @@ var _injected_router: Node = null
 var _injected_registry: Node = null
 var _injected_audit: Node = null
 var _injected_scene_provider: Callable = Callable()
+var _scene_injector: Callable = Callable()
 
 
 ## Drives the full state machine for `store_id`. Returns true when state ends
@@ -80,27 +89,39 @@ func enter_store(store_id: StringName) -> bool:
 	var scene_path: String = entry.scene_path
 	_to(State.LOADING_SCENE, "path=%s" % scene_path)
 
-	var router: Node = _get_router()
-	if router == null:
-		return await _fail("SceneRouter autoload missing")
-	if not router.has_method("route_to_path"):
-		return await _fail("SceneRouter missing route_to_path()")
-	if not router.has_signal("scene_ready") or not router.has_signal("scene_failed"):
-		return await _fail("SceneRouter missing scene_ready/scene_failed signals")
+	var scene_root: Node = null
+	if _scene_injector.is_valid():
+		# In-tree injection path (e.g. GameWorld hub mode). The injector is
+		# responsible for loading, instantiating, and parenting the store
+		# scene into its host container. Returning null is treated as a load
+		# failure.
+		var injected: Variant = await _scene_injector.call(scene_path, store_id)
+		if injected is Node:
+			scene_root = injected as Node
+		if scene_root == null or not scene_root.is_inside_tree():
+			return await _fail("scene injector returned no scene")
+	else:
+		var router: Node = _get_router()
+		if router == null:
+			return await _fail("SceneRouter autoload missing")
+		if not router.has_method("route_to_path"):
+			return await _fail("SceneRouter missing route_to_path()")
+		if not router.has_signal("scene_ready") or not router.has_signal("scene_failed"):
+			return await _fail("SceneRouter missing scene_ready/scene_failed signals")
 
-	# Kick the router and race scene_ready against scene_failed. The router is
-	# the sole owner of change_scene_to_* (ISSUE-009); we never call it here.
-	router.route_to_path(scene_path, {"store_id": store_id})
-	var route_result: Array = await _await_router_result(router)
-	var ok: bool = route_result[0]
-	if not ok:
-		return await _fail("scene load failed: %s" % route_result[1])
+		# Kick the router and race scene_ready against scene_failed. The router
+		# is the sole owner of change_scene_to_*; we never call it here.
+		router.route_to_path(scene_path, {"store_id": store_id})
+		var route_result: Array = await _await_router_result(router)
+		var ok: bool = route_result[0]
+		if not ok:
+			return await _fail("scene load failed: %s" % route_result[1])
+
+		scene_root = _get_active_scene()
+		if scene_root == null:
+			return await _fail("no current_scene after route")
 
 	_to(State.INSTANTIATING, "path=%s" % scene_path)
-
-	var scene_root: Node = _get_active_scene()
-	if scene_root == null:
-		return await _fail("no current_scene after route")
 
 	# Wait for the controller to report initialized. Scenes that already report
 	# initialized synchronously (common in unit fixtures) skip the await; scenes
@@ -125,6 +146,15 @@ func enter_store(store_id: StringName) -> bool:
 	state = State.IDLE
 	return true
 # gdlint:enable=max-returns
+
+
+## Registers a callable that will be invoked instead of SceneRouter to bring
+## the store scene into the tree. The callable signature is
+## `(scene_path: String, store_id: StringName) -> Node` and may be a coroutine.
+## It must return the scene root (already added to the tree) or null on
+## failure. Pass `Callable()` to clear and revert to SceneRouter.
+func set_scene_injector(callable: Callable) -> void:
+	_scene_injector = callable
 
 
 ## Resets the director to IDLE. Test-only seam — production code reaches IDLE

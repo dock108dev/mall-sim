@@ -218,7 +218,8 @@ func test_non_seasonal_store_type_unaffected_by_calendar_multiplier() -> void:
 		},
 	]
 	_seasonal_event._current_season = 0
-	_seasonal_event._on_day_started(1)
+	# Day 1 quarantine suppresses seasonal_multipliers_updated; use Day 2.
+	_seasonal_event._on_day_started(2)
 	_market_value.invalidate_cache()
 
 	var sports_value: float = _market_value.calculate_item_value(

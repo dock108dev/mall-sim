@@ -37,6 +37,7 @@ func _ready() -> void:
 	EventBus.tutorial_step_changed.connect(_on_tutorial_step_changed)
 	EventBus.tutorial_completed.connect(_on_tutorial_completed)
 	EventBus.tutorial_skipped.connect(_on_tutorial_completed)
+	EventBus.tutorial_context_cleared.connect(_on_tutorial_context_cleared)
 	EventBus.game_state_changed.connect(_on_game_state_changed)
 	InputFocus.context_changed.connect(_on_input_focus_changed)
 	if tutorial_system and tutorial_system.tutorial_completed:
@@ -50,7 +51,11 @@ func _ready() -> void:
 
 ## Returns false when tutorial UI must not render:
 ## blocked in MAIN_MENU or DAY_SUMMARY states, when a modal has input focus,
-## or when the tutorial_skipped flag is set.
+## or when the tutorial_skipped flag is set. NOTE: MALL_OVERVIEW must remain
+## allowed here because the click_store tutorial step renders during mall
+## overview. TutorialContextSystem.is_tutorial_rendering_allowed() additionally
+## blocks MALL_OVERVIEW for autoload-level context-entry decisions, which is
+## a separate concern from overlay rendering.
 func _can_show_tutorial() -> bool:
 	if GameState.get_flag(&"tutorial_skipped"):
 		return false
@@ -90,6 +95,13 @@ func _on_tutorial_completed() -> void:
 
 func _on_skip_pressed() -> void:
 	EventBus.skip_tutorial_requested.emit()
+
+
+func _on_tutorial_context_cleared() -> void:
+	if not _bottom_bar.visible:
+		return
+	_kill_tween()
+	_bottom_bar.visible = false
 
 
 func _on_game_state_changed(_old_state: int, _new_state: int) -> void:

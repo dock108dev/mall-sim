@@ -253,6 +253,11 @@ func _on_store_slot_unlocked(_slot_index: int) -> void:
 
 
 func _on_card_store_selected(store_id: StringName) -> void:
+	var scene_path: String = ContentRegistry.get_scene_path(store_id)
+	AuditLog.pass_check(
+		&"mall_card_clicked",
+		"store_id=%s scene=%s" % [store_id, scene_path]
+	)
 	store_selected.emit(store_id)
 	EventBus.enter_store_requested.emit(store_id)
 
@@ -284,6 +289,14 @@ func _on_performance_pressed() -> void:
 
 
 func _on_day_close_pressed() -> void:
+	if (
+		GameManager.get_current_day() == 1
+		and not GameState.get_flag(&"first_sale_complete")
+	):
+		EventBus.critical_notification_requested.emit(
+			"Make your first sale before closing Day 1."
+		)
+		return
 	EventBus.day_close_requested.emit()
 
 

@@ -189,7 +189,8 @@ script = ExtResource("23")
 store_bounds_min = Vector3(-3.2, 0.0, -2.2)
 store_bounds_max = Vector3(3.2, 0.0, 2.2)
 
-[node name="Camera3D" type="Camera3D" parent="PlayerController"]
+[node name="StoreCamera" type="Camera3D" parent="PlayerController"]
+unique_name_in_owner = true
 fov = 60.0
 
 ; ============================================================
@@ -401,6 +402,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot2" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0)
@@ -416,6 +418,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot3" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
@@ -431,6 +434,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot4" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0)
@@ -446,6 +450,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot5" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0)
@@ -461,6 +466,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot5"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot6" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0)
@@ -476,6 +482,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot6"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot7" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0)
@@ -491,6 +498,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot7"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot8" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
@@ -506,6 +514,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot8"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot9" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0)
@@ -521,6 +530,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot9"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot10" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0)
@@ -536,6 +546,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackLeft/Slot10"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="ShelfBoard1" type="MeshInstance3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -579,6 +590,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot2" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0)
@@ -594,6 +606,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot3" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
@@ -609,6 +622,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot4" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0)
@@ -624,6 +638,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot5" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0)
@@ -639,6 +654,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot5"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot6" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0)
@@ -654,6 +670,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot6"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot7" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0)
@@ -669,6 +686,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot7"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot8" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
@@ -684,6 +702,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot8"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot9" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0)
@@ -699,6 +718,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot9"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot10" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0)
@@ -714,6 +734,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="CartRackRight/Slot10"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="ShelfBoard1" type="MeshInstance3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -757,6 +778,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="GlassCase/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot2" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.05, -0.15)
@@ -772,6 +794,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="GlassCase/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot3" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, -0.15)
@@ -787,6 +810,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="GlassCase/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot4" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, -0.15)
@@ -802,6 +826,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="GlassCase/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot5" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0.15)
@@ -817,6 +842,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="GlassCase/Slot5"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot6" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0.15)
@@ -832,6 +858,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="GlassCase/Slot6"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 ; ============================================================
 ; Fixture 4: Console Shelf (4 large slots)
@@ -861,6 +888,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="ConsoleShelf/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot2" type="Area3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.25, 0)
@@ -877,6 +905,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="ConsoleShelf/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot3" type="Area3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.25, 0)
@@ -893,6 +922,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="ConsoleShelf/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot4" type="Area3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.25, 0)
@@ -909,6 +939,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="ConsoleShelf/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="ShelfBoard1" type="MeshInstance3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -952,6 +983,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="AccessoriesBin/Slot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot2" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 1.05, 0)
@@ -967,6 +999,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="AccessoriesBin/Slot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot3" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, 0)
@@ -982,6 +1015,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="AccessoriesBin/Slot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot4" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1.05, 0)
@@ -997,6 +1031,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="AccessoriesBin/Slot4"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="Slot5" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
@@ -1012,6 +1047,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="AccessoriesBin/Slot5"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 ; ============================================================
 ; Fixture 6: Checkout Counter (register + 3 impulse slots)
@@ -1050,7 +1086,7 @@ collision_mask = 0
 script = ExtResource("2")
 slot_id = "impulse_1"
 slot_size = "small"
-display_name = "Impulse Slot"
+display_name = "Impulse Item"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Checkout/ImpulseSlot1"]
 shape = SubResource("slot_collision")
@@ -1058,6 +1094,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="Checkout/ImpulseSlot1"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="ImpulseSlot2" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.2)
@@ -1074,6 +1111,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="Checkout/ImpulseSlot2"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="ImpulseSlot3" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, 0.2)
@@ -1090,6 +1128,7 @@ shape = SubResource("slot_collision")
 [node name="PlaceholderMesh" type="MeshInstance3D" parent="Checkout/ImpulseSlot3"]
 mesh = SubResource("slot_marker_mesh")
 surface_material_override/0 = ExtResource("12")
+visible = false
 
 [node name="CustomerWaitPosition" type="Marker3D" parent="Checkout/Register"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.15, 1.2)
@@ -1366,6 +1405,7 @@ bus = &"Music"
 ; ============================================================
 
 [node name="DebugLabels" type="Node3D" parent="."]
+visible = false
 
 [node name="ShelfLabel" type="Label3D" parent="DebugLabels"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 2.8, -2.25)
@@ -1463,6 +1503,7 @@ shape = SubResource("nav_zone_shape")
 [node name="DebugMesh" type="MeshInstance3D" parent="NavZones/ZoneEntrance"]
 mesh = SubResource("nav_zone_debug_mesh")
 surface_material_override/0 = SubResource("nav_zone_debug_mat")
+visible = false
 
 [node name="ZoneShelf" type="Area3D" parent="NavZones" groups=["nav_zone"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0, -2.0)
@@ -1481,6 +1522,7 @@ shape = SubResource("nav_zone_shape")
 [node name="DebugMesh" type="MeshInstance3D" parent="NavZones/ZoneShelf"]
 mesh = SubResource("nav_zone_debug_mesh")
 surface_material_override/0 = SubResource("nav_zone_debug_mat")
+visible = false
 
 [node name="ZoneDisplayTable" type="Area3D" parent="NavZones" groups=["nav_zone"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
@@ -1499,6 +1541,7 @@ shape = SubResource("nav_zone_shape")
 [node name="DebugMesh" type="MeshInstance3D" parent="NavZones/ZoneDisplayTable"]
 mesh = SubResource("nav_zone_debug_mesh")
 surface_material_override/0 = SubResource("nav_zone_debug_mat")
+visible = false
 
 [node name="ZoneRegister" type="Area3D" parent="NavZones" groups=["nav_zone"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.0)
@@ -1517,6 +1560,7 @@ shape = SubResource("nav_zone_shape")
 [node name="DebugMesh" type="MeshInstance3D" parent="NavZones/ZoneRegister"]
 mesh = SubResource("nav_zone_debug_mesh")
 surface_material_override/0 = SubResource("nav_zone_debug_mat")
+visible = false
 
 [node name="ZoneBackroom" type="Area3D" parent="NavZones" groups=["nav_zone"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -2.0)
@@ -1535,3 +1579,4 @@ shape = SubResource("nav_zone_shape")
 [node name="DebugMesh" type="MeshInstance3D" parent="NavZones/ZoneBackroom"]
 mesh = SubResource("nav_zone_debug_mesh")
 surface_material_override/0 = SubResource("nav_zone_debug_mat")
+visible = false

@@ -11,7 +11,7 @@ cross-references before gameplay starts.
 ```text
 game/content/**/*.json
   -> DataLoaderSingleton._discover_json_files()
-  -> DataLoaderSingleton._detect_type()
+  -> dict["type"] looked up in DataLoader._TYPE_ROUTES
   -> ContentParser.parse_*()
   -> ContentRegistry.register()
   -> ContentRegistry.register_entry()
@@ -21,7 +21,7 @@ game/content/**/*.json
 Important current loader behavior:
 
 - the content root is `res://game/content/`
-- JSON reads are capped at `1 MiB` per file
+- JSON reads are capped at `1 MiB` per file (`MAX_JSON_FILE_BYTES`)
 - per-file load failures are recorded and aggregated
 - boot fails visibly if any content errors remain at the end of the scan
 
@@ -37,7 +37,7 @@ The checked-in content tree currently includes these canonical subdirectories:
 | `game/content/economy/` | Economy and difficulty-related config. |
 | `game/content/events/` | Market, seasonal, random, ambient, and named-season event data. |
 | `game/content/endings/` | Ending definitions. |
-| `game/content/meta/` | Secret thread data and regulars thread data. |
+| `game/content/meta/` | Regulars-thread data (`regulars_threads.json`). |
 | `game/content/progression/` | Canonical milestone definitions, the win-condition (`arc_unlocks.json`), and arc phases. |
 | `game/content/onboarding/` | Onboarding hint config. |
 | `game/content/staff/` | Staff definitions. |
@@ -69,21 +69,30 @@ loads only from `res://game/content/` with no fallback paths, and
 
 ## Type detection
 
-`DataLoaderSingleton` determines content type in this order:
+Per ISSUE-021, every content JSON must declare a root `"type"` field. The
+loader looks the value up in `DataLoader._TYPE_ROUTES`; a missing field, a
+non-Dictionary root, or an unknown type produces a per-file load error and
+fails boot via the in-scene error panel. There is no heuristic detection by
+filename or directory.
 
-1. a dictionary `type` field when present
-2. special handling for files under `game/content/events/`
-3. known directory names such as `items`, `stores`, `customers`, `fixtures`,
-   `milestones`, `progression`, `staff`, `upgrades`, `economy`, `suppliers`,
-   `unlocks`, and `endings`
-4. known file basenames such as `retro_games`, `electronics`,
-   `video_rental_config`, `pocket_creatures_cards`,
-   `pocket_creatures_tournaments`, `sports_seasons`, `seasonal_config`,
-   `secret_threads`, and `personalities`
+Routes fall into three buckets in `_TYPE_ROUTES`:
 
-For dictionary-shaped files, entries come from `entries`, `items`, or
-`definitions` arrays when present. Otherwise the loader uses the first array of
-dictionaries it finds, or treats the dictionary itself as a single entry.
+1. **`entries:<kind>`** — parsed as a list of registered entries of `<kind>`
+   (item, store, customer, fixture, milestone, staff, upgrade, supplier,
+   unlock, market_event, seasonal_event, random_event, sports_season,
+   tournament_event, ambient_moment).
+2. **Singleton / specialized configs** — `economy`, `difficulty_config`,
+   `seasonal_config`, `named_seasons`, `ending`, `retro_games_config`,
+   `electronics_config`, `video_rental_config`, `pocket_creatures_packs_config`.
+3. **`ignore`** — recognized type strings whose payloads are loaded by
+   another system (e.g. `audio_registry_data`, `haggle_dialogue_data`,
+   `tutorial_contexts_data`, `meta_shifts_data`, `arc_unlocks_data`,
+   `objectives_data`, `regulars_threads_data`).
+
+For entry-bucket dictionary-shaped files, entries come from `entries`,
+`items`, or `definitions` arrays when present. Otherwise the loader uses the
+first array of dictionaries it finds, or treats the dictionary itself as a
+single entry.
 
 ## Canonical IDs and scene-path rules
 
@@ -162,21 +171,28 @@ for these main domains:
 Not every content file becomes a typed `Resource`. Current examples include:
 
 - endings, which are kept as entry dictionaries in `ContentRegistry`
-- secret-thread and regulars-thread data under `game/content/meta/`, which
-  is consumed directly by the systems that use it rather than re-exposed as
-  a typed catalog through `DataLoaderSingleton`
+- regulars-thread data under `game/content/meta/`, which is consumed
+  directly by the systems that use it rather than re-exposed as a typed
+  catalog through `DataLoaderSingleton`
 - difficulty config, seasonal config, and named seasons, which remain
   dictionary or array data exposed through `DataLoaderSingleton`
 - store-specific config dictionaries such as retro games, electronics, and
   video rental config
+- pocket-creatures pack-config entries, which are loaded into an internal
+  array on `DataLoaderSingleton` rather than registered as resources
 
 ## Validation
 
 `ContentRegistry.validate_all_references()` currently checks:
 
+- duplicate IDs and alias-conflict errors recorded during registration (so
+  boot fails loudly when an id or alias resolves to more than one target)
 - item `store_type` values resolve to known content
 - store `starting_inventory` entries exist as item resources
 - registered scene paths exist through `ResourceLoader.exists()`
+- market-event and seasonal-event `target_store_types` resolve to known stores
+- seasonal-event `affected_stores` resolve to known stores
+- supplier and milestone cross-references resolve to known content
 
 Additional GUT and integration tests also validate the boot content set, store
 scene references, event data, catalog completeness, and related content
@@ -198,7 +214,7 @@ config data. The current public getter surface includes:
 - `get_all_fixtures()`, `get_all_market_events()`,
   `get_all_seasonal_events()`, `get_all_random_events()`
 - `get_all_staff_definitions()`, `get_all_upgrades()`,
-  `get_all_suppliers()`, `get_all_milestones()`
+  `get_all_suppliers()`, `get_all_milestones()`, `get_all_unlocks()`
 - `get_all_sports_seasons()`, `get_all_tournament_events()`,
   `get_all_ambient_moments()`
 - `get_economy_config()`, `get_difficulty_config()`,

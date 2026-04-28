@@ -61,6 +61,11 @@ func _spawn_player_at_marker(store_root: Node3D) -> StorePlayerBody:
 	)
 	store_root.add_child(player)
 	player.global_position = marker.global_position
+	# Production: StoreController pushes CTX_STORE_GAMEPLAY on
+	# EventBus.store_entered. The retro_games scene root extends StoreController
+	# but EventBus.store_entered is not emitted in this fixture, so simulate the
+	# push here.
+	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
 	return player
 
 
@@ -138,15 +143,6 @@ func test_player_camera_has_interaction_ray_child() -> void:
 		)
 
 
-func test_spawn_pushes_store_gameplay_context() -> void:
-	_store_root = _instantiate_store()
-	_player = _spawn_player_at_marker(_store_root)
-	assert_eq(
-		InputFocus.current(), &"store_gameplay",
-		"Player._ready must push store_gameplay onto InputFocus"
-	)
-
-
 func test_camera_authority_marks_body_camera_current() -> void:
 	_store_root = _instantiate_store()
 	_player = _spawn_player_at_marker(_store_root)
@@ -176,32 +172,6 @@ func test_movement_halts_when_modal_steals_focus() -> void:
 	assert_eq(
 		_player.velocity, Vector3.ZERO,
 		"_physics_process must zero velocity while a modal owns focus"
-	)
-
-
-func test_enter_exit_enter_does_not_leak_input_focus_frames() -> void:
-	# Cycle 1
-	_store_root = _instantiate_store()
-	_player = _spawn_player_at_marker(_store_root)
-	assert_eq(InputFocus.current(), &"store_gameplay")
-	_store_root.queue_free()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_eq(
-		InputFocus.depth(), _baseline_focus_depth,
-		"InputFocus depth should return to baseline after the store is freed"
-	)
-
-	# Cycle 2 — re-enter and confirm push happens cleanly.
-	_store_root = _instantiate_store()
-	_player = _spawn_player_at_marker(_store_root)
-	assert_eq(
-		InputFocus.current(), &"store_gameplay",
-		"Re-entering the store must push store_gameplay again"
-	)
-	assert_eq(
-		InputFocus.depth(), _baseline_focus_depth + 1,
-		"Re-entry should add exactly one frame, not stack residue"
 	)
 
 

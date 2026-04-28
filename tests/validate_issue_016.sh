@@ -64,19 +64,22 @@ else
 	fail "movement implementation missing Input.get_vector / move_and_slide"
 fi
 
-# AC3: pushes store_gameplay on ready, pops on exit_tree.
-if grep -q 'push_context' "$PLAYER_GD" \
-	&& grep -q 'CTX_STORE_GAMEPLAY' "$PLAYER_GD"; then
-	pass "pushes store_gameplay context on ready"
+# AC3: gameplay focus is managed by StoreController, not StorePlayerBody.
+# The body must read CTX_STORE_GAMEPLAY (to gate input) but must NOT push/pop
+# it — push/pop is owned by StoreController on EventBus.store_entered/exited
+# per docs/architecture/ownership.md row 5.
+if grep -q 'CTX_STORE_GAMEPLAY' "$PLAYER_GD"; then
+	pass "reads CTX_STORE_GAMEPLAY for input gating"
 else
-	fail "store_gameplay push missing"
+	fail "CTX_STORE_GAMEPLAY reference missing (needed for _gameplay_allowed)"
 fi
 
-if grep -q 'func _exit_tree' "$PLAYER_GD" \
-	&& grep -q 'pop_context' "$PLAYER_GD"; then
-	pass "_exit_tree pops InputFocus context"
+if grep -q 'push_context' "$PLAYER_GD" \
+	|| grep -q 'pop_context' "$PLAYER_GD" \
+	|| grep -q 'func _exit_tree' "$PLAYER_GD"; then
+	fail "StorePlayerBody must not push/pop InputFocus — owned by StoreController"
 else
-	fail "_exit_tree must pop the pushed InputFocus context"
+	pass "StorePlayerBody does not push/pop CTX_STORE_GAMEPLAY (owned by StoreController)"
 fi
 
 if grep -q 'get_store_id' "$PLAYER_GD"; then

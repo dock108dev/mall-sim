@@ -1,10 +1,10 @@
 ## Store-interior player avatar.
 ##
 ## Provides movement (WASD via InputMap `move_*`) and an `interact` action.
-## Pushes the `store_gameplay` context on InputFocus in `_ready` and pops it
-## in `_exit_tree`, so the gameplay-focus invariant in
-## `docs/architecture/ownership.md` row 5 is owned here — scenes do not
-## push/pop that context themselves.
+## Reads InputFocus to gate input — the `store_gameplay` context is pushed and
+## popped by `StoreController` (the per-store root) on `EventBus.store_entered`
+## / `store_exited`, so this body is purely a reader of focus. See
+## `docs/architecture/ownership.md` row 5.
 ##
 ## `interact_pressed(interactable)` is only emitted when:
 ##   * `current_interactable` is non-null (set by the interaction-ray system), and
@@ -45,8 +45,6 @@ const ACTION_MOVE_BACK: StringName = &"move_back"
 ## objective director can render prompts off the same source of truth.
 var current_interactable: Node = null
 
-var _pushed_context: bool = false
-
 
 func _ready() -> void:
 	if not _assert_inside_store_scene():
@@ -54,22 +52,7 @@ func _ready() -> void:
 	if not _assert_input_focus_present():
 		return
 
-	_push_gameplay_context()
 	_emit_spawned_checkpoint()
-
-
-func _exit_tree() -> void:
-	if not _pushed_context:
-		return
-	var ifocus: Node = _input_focus()
-	if ifocus == null:
-		return
-	# Only pop if we are still on top — another modal mid-scene is expected
-	# to have popped already via its own lifecycle; popping an unrelated
-	# context would violate single ownership.
-	if ifocus.has_method("current") and ifocus.call("current") == CTX_STORE_GAMEPLAY:
-		ifocus.call("pop_context")
-	_pushed_context = false
 
 
 func _physics_process(_delta: float) -> void:
@@ -114,14 +97,6 @@ func _gameplay_allowed() -> bool:
 	if ifocus == null or not ifocus.has_method("current"):
 		return false
 	return ifocus.call("current") == CTX_STORE_GAMEPLAY
-
-
-func _push_gameplay_context() -> void:
-	var ifocus: Node = _input_focus()
-	if ifocus == null or not ifocus.has_method("push_context"):
-		return
-	ifocus.call("push_context", CTX_STORE_GAMEPLAY)
-	_pushed_context = true
 
 
 func _emit_spawned_checkpoint() -> void:

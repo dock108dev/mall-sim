@@ -34,6 +34,12 @@ func before_each() -> void:
 	_player = StorePlayerScene.instantiate() as StorePlayerBody
 	_root.add_child(_player)
 
+	# Production: StoreController pushes CTX_STORE_GAMEPLAY on
+	# EventBus.store_entered. The mock store root above does not extend
+	# StoreController, so we simulate that push here so input gating tests
+	# observe the same focus state as a live store.
+	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+
 	_interactable = MockInteractable.new()
 	add_child_autofree(_interactable)
 	_player.current_interactable = _interactable
@@ -54,14 +60,6 @@ func _make_interact_event() -> InputEventAction:
 	ev.action = &"interact"
 	ev.pressed = true
 	return ev
-
-
-func test_player_ready_pushes_store_gameplay_context() -> void:
-	assert_eq(
-		InputFocus.current(),
-		&"store_gameplay",
-		"Player._ready must push store_gameplay onto InputFocus"
-	)
 
 
 func test_interact_fires_when_focus_is_store_gameplay() -> void:
@@ -94,12 +92,3 @@ func test_interact_suppressed_when_no_interactable_hovered() -> void:
 	_player._unhandled_input(_make_interact_event())
 	assert_eq(_received.size(), 0,
 		"interact must NOT fire when current_interactable is null")
-
-
-func test_exit_tree_pops_gameplay_context() -> void:
-	assert_eq(InputFocus.current(), &"store_gameplay")
-	_player.queue_free()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_ne(InputFocus.current(), &"store_gameplay",
-		"Player._exit_tree must pop store_gameplay from InputFocus")

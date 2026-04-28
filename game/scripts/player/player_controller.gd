@@ -44,7 +44,7 @@ var _is_panning: bool = false
 var _build_mode_active: bool = false
 var _input_listening: bool = true
 
-@onready var _camera: Camera3D = $Camera3D
+@onready var _camera: Camera3D = _resolve_camera()
 
 
 func _ready() -> void:
@@ -128,6 +128,22 @@ func set_build_mode(active: bool) -> void:
 func get_camera() -> Camera3D:
 	if _camera:
 		return _camera
+	return _resolve_camera()
+
+
+## StoreReadyContract invariant 5 looks up `StoreCamera` by name. Stores that
+## adopt that contract rename the child node accordingly; legacy scenes still
+## ship a default `Camera3D`. Resolve either, in that order.
+##
+## §F-36 — returning null when neither child exists is silent on purpose:
+## CameraAuthority asserts exactly one current camera at every `store_ready`
+## (per docs/architecture/ownership.md), and the StoreReadyContract check on
+## the controller fails loudly if the player body has no camera attached.
+## Adding a `push_error` here would double-fire on the same contract violation.
+func _resolve_camera() -> Camera3D:
+	var cam: Camera3D = get_node_or_null("StoreCamera") as Camera3D
+	if cam != null:
+		return cam
 	return get_node_or_null("Camera3D") as Camera3D
 
 

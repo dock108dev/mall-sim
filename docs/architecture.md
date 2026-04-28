@@ -32,7 +32,7 @@ boot script above.
 | 2 — state | `initialize_tier_2_state` | `inventory_system`, `store_state_manager`, `trend_system`, `market_event_system`, `seasonal_event_system`, `market_value_system` |
 | 3 — operational | `initialize_tier_3_operational` | per-store `ReputationSystemSingleton`, `customer_system`, `mall_customer_spawner`, `npc_spawner_system`, `haggle_system`, `checkout_system`, `queue_system`, `progression_system`, `milestone_system`, `order_system`, `staff_system`, `meta_shift_system` |
 | 4 — world | `initialize_tier_4_world` | `store_selector_system`, build mode, `tournament_system`, `day_phase_lighting` |
-| 5 — meta | `initialize_tier_5_meta` | `performance_manager`, `performance_report_system`, `random_event_system`, `ambient_moments_system`, `regulars_log_system`, `ending_evaluator`, `store_upgrade_system`, `completion_tracker`, `day_cycle_controller` |
+| 5 — meta | `initialize_tier_5_meta` | `performance_manager`, `performance_report_system`, `random_event_system`, `ambient_moments_system`, `regulars_log_system`, `ending_evaluator`, `DayManager` (instantiated and added as a child here), `store_upgrade_system`, `completion_tracker`, `day_cycle_controller` |
 
 These tier functions are scene nodes' `initialize(...)` calls — not
 autoloads. The autoload roster below is initialized earlier by Godot before
@@ -76,6 +76,7 @@ earlier ones. Three entries are scenes (`ObjectiveRail`, `InteractionPrompt`,
 | 28 | `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
 | 29 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
 | 30 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
+| 31 | `Day1ReadinessAudit` | `game/autoload/day1_readiness_audit.gd` — composite Day 1 playable check that subscribes to `StoreDirector.store_ready` and emits `AuditLog.pass_check(&"day1_playable_ready", …)` / `fail_check(&"day1_playable_failed", …)` |
 
 Single-owner responsibilities for the ownership-enforcing subset are tracked
 in [`docs/architecture/ownership.md`](architecture/ownership.md).
@@ -103,7 +104,7 @@ Signal name conventions used in `event_bus.gd`:
 | `reputation_` | Tier change, decay tick |
 | `milestone_` / `unlock_` / `completion_` | Progression triggers |
 | `tutorial_` / `onboarding_` | Tutorial step changes, hints |
-| `interactable_` / `panel_` / `tooltip_` | UI focus, modal open/close, hover panes |
+| `interactable_` / `panel_` | UI focus and modal open/close (`panel_opened` / `panel_closed`); 3D and 2D hover events |
 
 `run_state_changed()` is a parameterless mirror that lets listeners react to
 any `GameState` mutation without subscribing to each typed setter.

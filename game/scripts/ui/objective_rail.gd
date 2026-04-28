@@ -6,6 +6,9 @@
 ## store-routing prompt and EventBus.hub_store_highlighted is emitted immediately
 ## so the player can see which card to click.
 ## Auto-hide and Settings-override logic lives in ObjectiveDirector, not here.
+## Visibility is also gated by GameManager.State (hidden in MAIN_MENU and
+## DAY_SUMMARY) and by the InputFocus modal context (hidden when a modal is on
+## top of the stack) so gameplay overlays do not linger across screen states.
 extends CanvasLayer
 
 var _auto_hidden: bool = false
@@ -29,8 +32,19 @@ func _ready() -> void:
 	EventBus.arc_unlock_triggered.connect(_on_arc_unlock_triggered)
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.store_exited.connect(_on_store_exited)
+	EventBus.game_state_changed.connect(_on_game_state_changed)
+	if InputFocus != null:
+		InputFocus.context_changed.connect(_on_input_focus_changed)
 	_band.color = Color.html("#5BB8E8")
 	visible = false
+
+
+func _on_game_state_changed(_old_state: int, _new_state: int) -> void:
+	_refresh_visibility()
+
+
+func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void:
+	_refresh_visibility()
 
 
 func _on_day_started(_day: int) -> void:
@@ -103,8 +117,39 @@ func _update_optional_hint(opt: String) -> void:
 		_optional_hint_label.visible = opt != ""
 
 
+## Returns true when the rail currently holds objective content. Used by
+## composite readiness audits that need to verify a Day-1 entry surfaced an
+## objective without reaching into private state.
+func has_active_objective() -> bool:
+	return not _current_payload.is_empty()
+
+
 func _refresh_visibility() -> void:
-	visible = _show_rail and not _auto_hidden and not _current_payload.is_empty()
+	visible = (
+		_show_rail
+		and not _auto_hidden
+		and not _current_payload.is_empty()
+		and _state_allows_rail()
+		and not _modal_active()
+	)
+
+
+func _state_allows_rail() -> bool:
+	var state: GameManager.State = GameManager.current_state
+	return (
+		state != GameManager.State.MAIN_MENU
+		and state != GameManager.State.DAY_SUMMARY
+	)
+
+
+## §F-44 — `InputFocus == null` returns false (no modal blocks the rail) on
+## purpose: production boot always registers the autoload; the null arm only
+## fires under unit-test isolation. Mirrors the test-seam contract used in
+## `interaction_prompt.gd` and `StoreController.has_blocking_modal()`.
+func _modal_active() -> bool:
+	if InputFocus == null:
+		return false
+	return InputFocus.current() == InputFocus.CTX_MODAL
 
 
 ## Fades the rail in over one second whenever the objective content changes.

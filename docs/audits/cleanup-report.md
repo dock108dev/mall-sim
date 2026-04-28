@@ -250,3 +250,198 @@ None. No commented-out blocks, unused variables, or stale experiment remnants we
 ### Files Still >500 LOC (unchanged from Pass 2)
 
 No new extractions performed. Pass 2 extraction plans remain valid and are not repeated here. Line counts are stable from Pass 2.
+
+---
+
+## Pass 4 — 2026-04-28
+
+Scope: working-tree modified files and untracked new files added since the
+Pass 3 commit. Constraint: no behavioral changes to public API; defensive
+behavior preserved.
+
+### Dead Code Removed
+
+**`game/autoload/tutorial_context_system.gd`** — `_on_objective_changed` placeholder hook (8 lines)
+
+The function body was `pass`; the comment justified keeping it as a hook for
+"future step-advancement logic" — the exact "design for hypothetical future
+requirements" anti-pattern called out in the cleanup rules. The matching
+`EventBus.objective_changed` connection in `_connect_signals()` was removed
+alongside the function. No test asserted the connection existed (verified
+across `tests/` and `game/tests/`). Same shape as the Pass 2 cleanup of the
+`hud.gd` panel-count tracking chain: connect → no-op handler → no reader.
+
+- Removed lines: connection block at `_connect_signals` (2 lines) plus the
+  `_on_objective_changed` function (6 lines including blank-line separator).
+- Net: −10 lines (file 191 → 181 LOC).
+- Verification: full GUT suite (4651/4651 passed, 26646 asserts) and the
+  `test_tutorial_context_system.gd` / `test_tutorial_context_validation.gd`
+  suites pass after the removal.
+
+### Comments — Inspected and Left Unchanged
+
+| Location | Finding | Decision |
+|---|---|---|
+| `game/scripts/stores/retro_games.gd:443–486` | Three `push_warning` blocks each prefixed with `# §F-32 — …` justifying the silent-skip path | Accurate cross-references to `docs/audits/error-handling-report.md`. Left as-is. |
+| `game/scripts/stores/retro_games.gd:498–507` | `push_error` block prefixed with `# §F-33 —` for registry-inconsistency | Accurate cross-reference. Left as-is. |
+| `game/scripts/player/player_controller.gd:135–142` | `_resolve_camera()` docblock cites §F-36 explaining why null return is silent | Accurate: CameraAuthority + StoreReadyContract own the loud failure path; double-firing here would be noise. Left as-is. |
+| `game/scripts/stores/store_controller.gd:359–404` | `_push_/_pop_gameplay_input_context` docblock cites §F-35 explaining each silent-return branch | Accurate. Left as-is. |
+| `game/scripts/stores/store_controller.gd:597–600` | `print("[dev-fallback] …")` inside `dev_force_place_test_item` | Intentional dev logging; method is guarded by `OS.is_debug_build()`. Left as-is. |
+| `game/scripts/ui/tutorial_overlay.gd:5` | `# Localization marker for static validation: tr("TUTORIAL_WELCOME")` | Established codebase pattern (8 other UI scripts use the same marker); already justified in Pass 3. Left as-is. |
+| `game/scenes/debug/debug_overlay.gd:206, 213` | Calls `time_system._advance_hour()` / `_end_day()` (private API) | Pre-existing pattern; debug overlays are privileged callers in this codebase. Tests follow the same convention. Not introduced by this pass. Left as-is. |
+
+### Duplicates — Justified, Not Consolidated
+
+**`store_controller._on_objective_updated` vs `_on_objective_changed`**
+
+Both handlers extract a text string from a Dictionary payload, check `hidden`,
+and forward to `set_objective_text()`. Apparent duplicate, but they are bound
+to two distinct `EventBus` signals with different payload schemas (verified
+against `objective_director.gd:90–112`):
+
+- `objective_updated` payload uses keys `current_objective`, `next_action`,
+  `input_hint`, `optional_hint` — handler reads `current_objective` first.
+- `objective_changed` payload uses keys `objective`, `text`, `action`, `key` —
+  handler reads `text` first.
+
+Each handler's fallback key handles the other emitter's text key, but
+removing the fallbacks (or merging into one method) would change defensive
+depth. The signals exist as parallel lineages on purpose (already documented
+in `event_bus.gd:16–20` per Pass 3). **Justified: keep separate.**
+
+### ISSUE-XXX References — Sweep Deferred
+
+The Pass 2 directive ("Removing only a subset would create inconsistency, so
+the remainder is left for a dedicated sweeping sed pass over the full repo")
+was followed. Notably, `store_director.gd:2` retains `(ISSUE-008, …)` even
+though the same diff removed `(ISSUE-009)` from line 20 of the same file —
+the broader cross-codebase sweep (validate scripts, test names, autoload
+docstrings) is still pending and removing the line-2 reference in isolation
+would create internal inconsistency with `tests/validate_issue_008_*.sh` and
+`tests/unit/test_store_director.gd:1`. Left as-is for the dedicated sweep.
+
+### Files Still >500 LOC
+
+Two files in the working-tree set crossed (or remain over) the 500-line bar
+this pass; one was already covered by a Pass 1/2 plan. No extractions
+performed; rationale below.
+
+| File | LOC | Disposition |
+|---|---|---|
+| `game/scenes/world/game_world.gd` | 1427 (was 1397 in Pass 2) | Pass 1/2 extraction plan still valid. Growth this pass is the StoreDirector injector seam (`_inject_store_into_container`, +27 lines) — fits inside the existing "hub-mode wiring" cluster, no new clean split surfaced. |
+| `game/scripts/stores/store_controller.gd` | 627 (was ~451 pre-pass) | Newly over 500. **Justified:** added surface is the `StoreReadyContract` interface (`is_controller_initialized`, `get_input_context`, `has_blocking_modal`) plus the InputFocus push/pop machinery (`_push_/_pop_gameplay_input_context`, `_get_input_focus`) — all directly enforcing the contract documented in `docs/architecture/ownership.md` rows 2 and 5. Splitting the contract methods into a mixin would force every subclass (electronics, retro_games, video_rental, sports_memorabilia, pocket_creatures) to take on the mixin and re-thread `_inventory_system` access. Defer; revisit only when a sixth store concretely needs another StoreReadyContract method. |
+| `game/scripts/stores/retro_games.gd` | 566 (was ~485 pre-pass) | Newly over 500. **Justified:** the +80 lines are the §F-32 / §F-33 defensive-shape branches in `_seed_starter_inventory` plus the new `_add_starter_item_by_id(raw_id, quantity, condition)` overload that supports both String and Dictionary `starting_inventory` JSON shapes. Each new branch carries a `push_warning` / `push_error` and a section reference; a helper file would scatter the related diagnostics. Acceptable for a single store-scene controller. |
+| `tests/gut/test_day1_inventory_placement_loop.gd` | 321 | Under 500. New, no action. |
+| `tests/gut/test_first_sale_chain.gd` | 261 | Under 500. New, no action. |
+
+### Verification
+
+- Full GUT suite: 4651/4651 passed, 26646 asserts (`tests/run_tests.sh`).
+- Static-validator FAILs reported by `run_tests.sh` are pre-existing and
+  unrelated to this pass (e.g. `economy_system.gd is 665 lines`, missing
+  English CSV registration in `project.godot`, `wrapped_store` tutorial-context
+  warnings) — none touch files modified in this pass.
+
+---
+
+## Pass 5 — 2026-04-28
+
+Scope: working-tree modified files and untracked new files added since the
+Pass 4 commit, including the Day-1 quarantine guard set, `Day1ReadinessAudit`
+autoload, and the `StoreDirector.set_scene_injector` seam.
+Constraint: no behavioral changes, no public API signature changes.
+
+### Dead Code Removed
+
+**`game/scripts/stores/retro_games.gd`** — `_on_customer_purchased` +
+`_check_condition_note` placeholder chain (20 lines)
+
+`_check_condition_note` was three early-return guards and an empty body —
+no signal emission, no state change, no observable effect. Its only caller
+was `_on_customer_purchased` (`if not _is_active: return; _check_condition_note(...)`),
+whose only purpose was to forward to the no-op. The matching
+`EventBus.customer_purchased` connection in `initialize()` was removed
+alongside both functions. Same shape as the Pass 2 `hud.gd` panel-count
+chain and Pass 4 `tutorial_context_system.gd` `_on_objective_changed`
+removal: emitter → handler → no-op terminator with no readers.
+
+- Removed: `EventBus.customer_purchased` connection in `initialize()` (1 line),
+  `_on_customer_purchased` (7 lines), `_check_condition_note` (8 lines),
+  blank-line separators (4 lines).
+- Net: −20 lines (file 608 → 588 LOC).
+- Verification: full GUT suite passes (4666/4666); the
+  `customer_purchased` signal still has 14 other production listeners
+  (reputation, milestones, ending evaluator, tutorial, inventory, audio,
+  performance, etc.), all unaffected.
+
+### Comments — Stale Provenance Reference Stripped
+
+**`game/scripts/stores/store_controller.gd`** — `dev_force_place_test_item`
+docstring suffix
+
+Removed the trailing `Per BRAINDUMP Audit Pass 9.` from the docstring of
+`dev_force_place_test_item`. BRAINDUMP is project meta-state (a rolling
+scratchpad, see `BRAINDUMP.md` policy at `docs/contributing.md`), not a
+stable doc — citing a specific "Audit Pass 9" by number is the same kind
+of provenance metadata as the `ISSUE-XXX` references stripped in Pass 2:
+it rots when the BRAINDUMP is rewritten (which the recent
+`235f628 Overwrite BRAINDUMP with repo audit rescue plan` commit just
+did). The remainder of the docstring already explains *why* the function
+exists ("intended to unblock the Day-1 placement loop when the inventory
+UI is broken; not a substitute for the real flow") — the sentence stands
+on its own.
+
+### ISSUE-XXX References — Sweep Still Deferred
+
+Two new `ISSUE-011` references appear in `game/scenes/world/game_world.gd`
+(lines 982, 997) at the `_unhandled_input` and `_try_skip_active_tutorial`
+sites. These were committed in `8dd85ee2` (2026-04-26), pre-date this
+pass, and follow the existing inline-issue-citation convention shared
+with `~50 other locations` flagged in Pass 2. Per the Pass 2/4 directive
+("Removing only a subset would create inconsistency, so the remainder is
+left for a dedicated sweeping sed pass over the full repo"), these are
+out of scope for an in-pass surgical edit. Left as-is for the dedicated
+sweep.
+
+### Untracked Files — Inspected and Accepted Unchanged
+
+| File | LOC | Finding |
+|---|---|---|
+| `game/autoload/day1_readiness_audit.gd` | 207 | Clean. The §F-40 docstring on `_resolve_camera_source` already justifies the silent `&""` fallback under unit-test isolation. No commented-out blocks, no TODOs, no dead variables. |
+| `tests/gut/test_day1_readiness_audit.gd` | 253 | Clean. Test seam (`evaluate_for_test`) is already documented at the autoload definition site. |
+| `tests/gut/test_day1_quarantine.gd` | 206 | Clean. `before_all` / `after_all` save/restore `GameManager` global state — necessary for parallel-test safety, no cleanup needed. |
+| `tests/gut/test_day1_inventory_placement_loop.gd` | 321 | Clean. End-to-end JSON-driven placement loop test; no commented-out scaffolding. |
+| `tests/gut/test_first_sale_chain.gd` | 261 | Clean. |
+| `tests/gut/test_day_summary_post_sale_snapshot.gd` | 154 | Clean. |
+| `tests/gut/test_retro_games_debug_geometry_defaults.gd` | 106 | Clean. |
+| `docs/audits/2026-04-28-audit.md` | 12 | Auto-generated checkpoint table; no action. |
+| `CLAUDE.md` | (root) | Project agent notes; user-authored. |
+
+### Files Still >500 LOC
+
+Line-count delta from Pass 4 baseline:
+
+| File | Pass 4 LOC | Now | Disposition |
+|---|---|---|---|
+| `game/scenes/world/game_world.gd` | 1427 | 1443 | +16 from `_inject_store_into_container` injector seam (StoreDirector hub-mode wiring). Pass 1/2 extraction plan still valid. |
+| `game/scripts/core/save_manager.gd` | 1330 | 1364 | +34 from new save-key fan-out (Day-1 quarantine flags); append-only migration policy at file lines 27–30 still holds. Justified — see Pass 2. |
+| `game/scenes/ui/hud.gd` | 802 | 849 | +47 from objective/interactable focus tracking (`_objective_active`, `_interactable_focused`) that drives the telegraph-card priority order documented in `CLAUDE.md`. The two booleans plus their handler triplet are tightly coupled to `_refresh_telegraph_card`; extracting them would require exposing the priority state through a new component interface. Pass 2 extraction plan (HudCounterAnimator) remains the cleanest split. |
+| `game/scripts/stores/store_controller.gd` | 627 | 637 | +10 from the StoreReadyContract invariant 3/7/8 helpers (`is_controller_initialized`, `get_input_context`, `has_blocking_modal`) plus the `_pushed_gameplay_context` push/pop ownership move. Pass 4 justification still holds. |
+| `game/scripts/stores/retro_games.gd` | 566 | 588 | −20 from this pass's dead-code removal vs +42 in this commit set (slot-display refresh helpers, `_apply_debug_label_visibility`, Day-1 quarantine). Net: still over 500 but Pass 4 justification (per-store §F-32/§F-33 defensive shapes) holds; quarantine helper is co-located with the rest of the lifecycle code. |
+| `game/autoload/data_loader.gd` | 1059 | 1059 | Unchanged. Pass 1 extraction plan still valid. |
+| `game/scripts/systems/customer_system.gd` | 907 | 907 | Unchanged. |
+| `game/scripts/systems/inventory_system.gd` | 877 | 877 | Unchanged. |
+| `game/scenes/ui/day_summary.gd` | 815 | 815 | Unchanged. |
+| `game/autoload/event_bus.gd` | 681 | 686 | +5 from new Day-1 quarantine signal additions; pure signal registry, justification from Pass 2 holds. |
+
+### Verification
+
+- Full GUT suite: 4666/4666 passed (`tests/run_tests.sh`).
+- Static-validator FAILs reported by `run_tests.sh` are pre-existing and
+  unrelated to this pass (ISSUE-239 packs/tournaments JSON parse errors,
+  pre-existing `wrapped_store` tutorial-context warnings) — none touch
+  files modified in this pass.
+
+### Escalations
+
+None.

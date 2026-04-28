@@ -23,6 +23,9 @@ var _is_active: bool = false
 var _inventory_system: InventorySystem = null
 var _customer_system: CustomerSystem = null
 var _registered_interactables: Array[Interactable] = []
+## Tracks whether this controller pushed CTX_STORE_GAMEPLAY so we never pop a
+## context another owner placed (push/pop must stay balanced per InputFocus).
+var _pushed_gameplay_context: bool = false
 
 
 ## Initializes shared store identity before ready-time lifecycle wiring.
@@ -48,6 +51,42 @@ func _ready() -> void:
 ## StoreReadyContract / StorePlayerBody parent-chain check.
 func get_store_id() -> StringName:
 	return StringName(store_type)
+
+
+## StoreReadyContract invariant 3. True once `initialize_store()` has set
+## `store_type`. Subclasses may override to require stricter readiness (e.g.
+## inventory wired) but must keep the base condition.
+func is_controller_initialized() -> bool:
+	return not store_type.is_empty()
+
+
+## StoreReadyContract invariant 7. Returns the topmost InputFocus context so
+## the contract verifies focus through the single owner instead of a parallel
+## authority. Returns `&""` when the InputFocus autoload is absent (e.g. unit
+## tests without the autoload tree).
+func get_input_context() -> StringName:
+	var focus: Node = _get_input_focus()
+	if focus == null or not focus.has_method("current"):
+		return &""
+	return focus.call("current")
+
+
+## StoreReadyContract invariant 8. True iff the topmost InputFocus context is
+## CTX_MODAL — i.e. a modal panel has captured focus and gameplay input is
+## suppressed. Same null-safe fallback as `get_input_context()`.
+##
+## §F-42 — `null` constant on `focus.get(&"CTX_MODAL")` is treated as "no
+## blocking modal" (returns false). That branch fires only under unit-test
+## isolation where InputFocus is partially stubbed (see §F-34); production
+## boot always defines CTX_MODAL.
+func has_blocking_modal() -> bool:
+	var focus: Node = _get_input_focus()
+	if focus == null:
+		return false
+	var modal_const: Variant = focus.get(&"CTX_MODAL")
+	if modal_const == null:
+		return false
+	return get_input_context() == StringName(modal_const)
 
 
 ## Sets the InventorySystem reference for inventory queries.
@@ -105,8 +144,9 @@ func emit_store_signal(
 			"StoreController: EventBus has no signal '%s'" % signal_name
 		)
 		return
-	var sig: Signal = Signal(EventBus, signal_name)
-	sig.callv(args)
+	# Signal has no callv; route through Callable so callers can pass an
+	# Array of args without manual splatting.
+	Callable(EventBus, signal_name).callv(args)
 
 
 ## Returns all ShelfSlot children across all fixtures.
@@ -268,13 +308,18 @@ func _build_decorations() -> void:
 
 func _connect_lifecycle_signals() -> void:
 	_connect_signal(EventBus.store_entered, _defer_store_entered)
-	_connect_signal(EventBus.store_exited, _on_store_exited)
+	_connect_signal(EventBus.store_exited, _on_store_exited_notify)
 	_connect_signal(EventBus.active_store_changed, _on_active_store_changed)
 	_connect_signal(EventBus.day_started, _on_day_started)
 	_connect_signal(EventBus.day_ended, _on_day_ended_notify)
 	_connect_signal(EventBus.customer_entered, _on_customer_entered)
 	_connect_signal(EventBus.item_stocked, _on_slot_stocked_visual)
 	_connect_signal(EventBus.item_removed_from_shelf, _on_slot_cleared_visual)
+	# `current_objective_text` mirrors ObjectiveDirector's day text so
+	# StoreReadyContract invariant 10 (objective_matches_action) can validate
+	# against the same text the player sees on the objective rail.
+	_connect_signal(EventBus.objective_updated, _on_objective_updated)
+	_connect_signal(EventBus.objective_changed, _on_objective_changed)
 
 
 func _on_day_ended_notify(day: int) -> void:
@@ -315,9 +360,90 @@ func _defer_store_entered(store_id: StringName) -> void:
 
 
 func _handle_store_entered(store_id: StringName) -> void:
+	if StringName(store_type) == store_id:
+		_push_gameplay_input_context()
 	_on_store_entered(store_id)
 	if StringName(store_type) == store_id:
 		emit_actions_registered()
+
+
+## Listens to `EventBus.store_exited` so the base class can pop the gameplay
+## input context before delegating to subclasses. Subclasses still receive the
+## bare `_on_store_exited(store_id)` virtual.
+func _on_store_exited_notify(store_id: StringName) -> void:
+	if StringName(store_type) == store_id:
+		_pop_gameplay_input_context()
+	_on_store_exited(store_id)
+
+
+## §F-35 — silent returns here are deliberate. Production builds always have
+## the InputFocus autoload with CTX_STORE_GAMEPLAY defined, so these guards
+## only fire under the unit-test seam (`get_input_context()` already documents
+## the same contract). Repeat-entry idempotency (`_pushed_gameplay_context`)
+## also short-circuits silently because pushing the same context twice would
+## desync the stack the second time we pop.
+func _push_gameplay_input_context() -> void:
+	if _pushed_gameplay_context:
+		return
+	var focus: Node = _get_input_focus()
+	if focus == null or not focus.has_method("push_context"):
+		return
+	var ctx: Variant = focus.get(&"CTX_STORE_GAMEPLAY")
+	if ctx == null:
+		return
+	focus.call("push_context", StringName(ctx))
+	_pushed_gameplay_context = true
+
+
+func _pop_gameplay_input_context() -> void:
+	if not _pushed_gameplay_context:
+		return
+	var focus: Node = _get_input_focus()
+	if focus == null or not focus.has_method("pop_context"):
+		_pushed_gameplay_context = false
+		return
+	var current_ctx: StringName = focus.call("current")
+	var ctx_const: Variant = focus.get(&"CTX_STORE_GAMEPLAY")
+	if ctx_const != null and current_ctx != StringName(ctx_const):
+		# A modal pushed on top of us — leave it alone. The modal owner is
+		# responsible for popping itself; once it does, the store_gameplay
+		# context will be on top again. We mark our flag down so the next
+		# store entry can re-push from a known state.
+		_pushed_gameplay_context = false
+		return
+	focus.call("pop_context")
+	_pushed_gameplay_context = false
+
+
+func _get_input_focus() -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("InputFocus")
+
+
+## §F-43 — silent skip on `payload.hidden == true` is intentional: the
+## ObjectiveDirector raises that flag when the rail is auto-hidden so
+## subscribers (StoreController, HUD) keep their last visible text instead of
+## flashing it to empty. Empty `text` is treated as "no payload to mirror"
+## for the same reason. Both branches are stable-state mirrors, not failure
+## paths.
+func _on_objective_updated(payload: Dictionary) -> void:
+	if payload.get("hidden", false):
+		return
+	var text: String = str(payload.get("current_objective", payload.get("text", "")))
+	if text.is_empty():
+		return
+	set_objective_text(text)
+
+
+func _on_objective_changed(payload: Dictionary) -> void:
+	if payload.get("hidden", false):
+		return
+	var text: String = str(payload.get("text", payload.get("objective", "")))
+	if text.is_empty():
+		return
+	set_objective_text(text)
 
 
 ## Registers an Interactable with this controller. Idempotent.
@@ -419,6 +545,71 @@ func _on_interactable_interacted(_by: Node) -> void:
 	# itself; this hook exists so subclasses can react via override without
 	# wiring their own signal connections.
 	pass
+
+
+## Dev-only fallback that places one valid backroom item on the first empty
+## ShelfSlot in this store. Routes through `assign_to_shelf()` so the normal
+## item_stocked / inventory_changed signals fire and downstream listeners
+## (HUD ItemsPlacedLabel, sale-eligibility, slot visuals) update exactly as
+## they would for a real placement. Returns true on success.
+##
+## Guarded by `OS.is_debug_build()` — release builds short-circuit and return
+## false. Intended to unblock the Day-1 placement loop when the inventory UI
+## is broken; not a substitute for the real flow.
+func dev_force_place_test_item() -> bool:
+	if not OS.is_debug_build():
+		return false
+	if _inventory_system == null:
+		push_warning(
+			"StoreController: dev_force_place_test_item — no inventory_system"
+		)
+		return false
+	var store_id: StringName = StringName(store_type)
+	if store_id.is_empty():
+		push_warning(
+			"StoreController: dev_force_place_test_item — store_type unset"
+		)
+		return false
+	var backroom: Array[ItemInstance] = (
+		_inventory_system.get_backroom_items_for_store(String(store_id))
+	)
+	if backroom.is_empty():
+		push_warning(
+			(
+				"StoreController: dev_force_place_test_item — backroom empty "
+				+ "for '%s'; nothing to place"
+			)
+			% store_id
+		)
+		return false
+	var target_slot: ShelfSlot = null
+	for slot_node: Node in _slots:
+		if not slot_node is ShelfSlot:
+			continue
+		var slot := slot_node as ShelfSlot
+		if slot.is_occupied():
+			continue
+		if str(slot.slot_id).is_empty():
+			continue
+		target_slot = slot
+		break
+	if target_slot == null:
+		push_warning(
+			"StoreController: dev_force_place_test_item — no empty shelf slot"
+		)
+		return false
+	var item: ItemInstance = backroom[0]
+	var ok: bool = _inventory_system.assign_to_shelf(
+		store_id,
+		StringName(item.instance_id),
+		StringName(target_slot.slot_id),
+	)
+	if ok:
+		print(
+			"[dev-fallback] dev_force_place_test_item placed '%s' on '%s' (store: %s)"
+				% [item.instance_id, target_slot.slot_id, store_id]
+		)
+	return ok
 
 
 ## Shows a 3D mesh on the matching ShelfSlot when an item is stocked onto it.

@@ -71,6 +71,11 @@ func _ready() -> void:
 	interaction_type = InteractionType.SHELF_SLOT
 	if display_name.is_empty():
 		display_name = "Shelf Slot"
+	# Shelf slots are stocked, not generically "interacted with". Only override
+	# when the scene left the inherited Interactable default in place so authored
+	# verbs (e.g. "Inspect") still win.
+	if action_verb == "Interact":
+		action_verb = "Stock"
 	add_to_group("shelf_slot")
 	super._ready()
 	_update_empty_indicator()

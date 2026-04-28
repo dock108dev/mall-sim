@@ -245,6 +245,10 @@ func _apply_state(data: Dictionary) -> void:
 
 
 func _on_day_started(day: int) -> void:
+	# Day 1 quarantine: meta-shift announcements would surprise the player on
+	# the introductory loop. Defer the first shift evaluation until Day 2.
+	if day <= 1:
+		return
 	_handle_json_shifts(day)
 
 	if _shift_active and _manual_shift_days_remaining > 0:

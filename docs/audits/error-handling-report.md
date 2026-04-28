@@ -1,6 +1,8 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-04-27 (Pass 3 — modified-files deep scan + surrounding context)  
+**Latest pass:** 2026-04-28 (Pass 5 — Day-1 quarantine + composite readiness audit)  
+**Pass 4:** 2026-04-28 (Day-1 inventory loop + StoreReadyContract wiring)  
+**Pass 3:** 2026-04-27 (modified-files deep scan + surrounding context)  
 **Pass 2:** 2026-04-27 (full codebase re-scan)  
 **Pass 1:** prior commit (staff_manager + save_manager level corrections)  
 **Scope:** All GDScript under `game/`, `scripts/`, and referenced autoloads.
@@ -14,10 +16,10 @@ Test files (`tests/`, `game/tests/`) excluded.
 | Severity | Count | Disposition |
 |---|---|---|
 | Critical | 0 | — |
-| High | 3 | 1 Pass 2, **2 Pass 3** (tier cascade, wrong signal dispatch) |
-| Medium | 7 | 3 Pass 1, 2 Pass 2, **2 Pass 3** (data loss, wrong severity) |
-| Low | 9 | 5 acted, 3 justified with inline comments, **1 Pass 3** |
-| Note | 15 | Justified — intentional, low-risk, documented |
+| High | 3 | 1 Pass 2, 2 Pass 3 (tier cascade, wrong signal dispatch) |
+| Medium | 8 | 3 Pass 1, 2 Pass 2, 2 Pass 3, 1 Pass 4 (registry inconsistency) |
+| Low | 13 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, **1 Pass 5** (Node3D-cast guard) |
+| Note | 22 | Justified — intentional, low-risk, documented (**+5 Pass 5**) |
 
 **Overall posture: Prod posture acceptable.**
 
@@ -27,8 +29,19 @@ non-blocking push_error), and three Low gaps (undocumented null guards plus
 one silent type-check fallback). Pass 3 found two High bugs (Tier-2 cascade
 abort missing, wrong signal dispatch API), two Medium gaps (authentication
 history silent loss, migration failure wrong log severity), and one Low gap
-(scene-authoring error in NavZoneInteractable silently swallowed). All
-findings in all passes were acted on in-place.
+(scene-authoring error in NavZoneInteractable silently swallowed). Pass 4
+reviewed the Day-1 inventory loop refactor, the StoreDirector scene-injector
+seam, the StoreReadyContract wiring on `StoreController`, and the
+mall-overview Day-1 close gate. It found one Medium (registry-inconsistency
+silent skip in retro-games starter seeding) and three Low gaps. Pass 5
+reviewed the Day-1 quarantine roll-out (5 system guards + retro_games scene
+quarantine), the new `Day1ReadinessAudit` composite autoload, the StoreDirector
+hub-mode injector callable in `game_world.gd`, the `StoreController` objective
+mirror + `dev_force_place_test_item` debug fallback, and the new
+`InteractionPrompt` / `ObjectiveRail` modal-aware visibility gating. It found
+one Low gap (`_inject_store_into_container` `as Node3D` cast cascading into
+`add_child(null)` on bad scene root) and five Note-level test-seam fallbacks.
+All findings in all passes were acted on in-place.
 
 ---
 
@@ -68,6 +81,20 @@ findings in all passes were acted on in-place.
 | F-30 | `game_world.gd:238–246, 261–285` | Tier-2 failure cascades into Tier-3/4/5 | High | **Acted** Pass 3 — bool return + abort guard |
 | F-31 | `store_controller.gd:109` | `sig.emit(args)` passes Array as single arg | High | **Acted** Pass 3 — `sig.callv(args)` |
 | J-4  | `hud.gd:293–299` | Bare `pass` in default state-visibility case | Note | **Acted** Pass 3 — justifying comment added |
+| F-32 | `retro_games.gd:443–486` | Malformed `starting_inventory` shapes silently skipped | Low | **Acted** Pass 4 — three push_warning sites added |
+| F-33 | `retro_games.gd:498–507` | `resolve()` ok but `get_entry()` empty silently dropped | Medium | **Acted** Pass 4 — push_error escalation |
+| F-34 | `store_controller.gd:67–84` | InputFocus null fallbacks for unit tests | Note | Justified §F-34 — docstrings already cite seam |
+| F-35 | `store_controller.gd:374–404` | `_push/_pop_gameplay_input_context` silent paths | Low | **Acted** Pass 4 — §F-35 docstring added |
+| F-36 | `player_controller.gd:137–141` | `_resolve_camera()` returns null when neither camera child exists | Low | **Acted** Pass 4 — §F-36 docstring added |
+| F-37 | `store_director.gd:99–104` | Injector returning null treated as load failure | Note | Justified §F-37 — already escalates via `_fail()` |
+| F-38 | `mall_overview.gd:292–301` | Day-1 close blocked when no first sale | Note | Justified §F-38 — paired with `critical_notification_requested` |
+| F-39 | `game_world.gd:914–921` | `as Node3D` cast cascading into `add_child(null)` | Low | **Acted** Pass 5 — null-guard + queue_free + state rollback |
+| F-40 | `day1_readiness_audit.gd:111–122` | Autoload-missing returns `&""` silently | Note | **Acted** Pass 5 — §F-40 docstring added |
+| F-41 | `retro_games.gd:300–319` | `_apply_day1_quarantine` silent `continue` on missing nodes | Note | **Acted** Pass 5 — §F-41 docstring added |
+| F-42 | `store_controller.gd:77–84` | `has_blocking_modal` `null` CTX_MODAL → false | Note | **Acted** Pass 5 — §F-42 docstring added |
+| F-43 | `store_controller.gd:425–440` | `_on_objective_updated/_changed` silent skip on hidden/empty | Note | **Acted** Pass 5 — §F-43 docstring added |
+| F-44 | `interaction_prompt.gd:59–65`, `objective_rail.gd:145–148` | `InputFocus == null` test-seam fallback | Note | **Acted** Pass 5 — §F-44 docstring added at both sites |
+| F-45 | `seasonal/market_event/meta_shift/trend/haggle` | `_on_day_started` early-return on `day <= 1` | Note | Justified §F-45 — Day-1 quarantine documented in `CLAUDE.md` |
 
 ---
 
@@ -420,6 +447,309 @@ The `_:` default case in the state-visibility match block did nothing (bare `pas
 
 ---
 
+## Pass 4 Per-Finding Details
+
+### §F-32 — `retro_games.gd:443–486` — malformed `starting_inventory` shapes silently skipped (Pass 4)
+
+**Was:** `_seed_starter_inventory()` accepted JSON of any shape. A
+non-Array `starting_inventory` returned silently. Inside the loop, a
+non-String `item_id` in dict form `continue`'d silently, and any other entry
+shape (number, bool, etc.) was ignored without a trace. The only feedback
+authoring errors received was a downstream "store has no starter inventory"
+gameplay symptom — already too late and disconnected from the cause.
+
+**Now:** Three `push_warning` call sites added with §F-32 references:
+
+- non-Array `starting_inventory` container
+- non-String `item_id` inside dict-form entries
+- entries that are neither String nor Dictionary
+
+All three keep the original control flow (early `return` / `continue`); they
+just surface the authoring error via the engine warning pipe so it appears in
+CI stderr scans and dev consoles before it ships.
+
+**Risk lenses:** Observability (silent authoring drift). Severity Low —
+content authoring goes through CI which already greps for warnings, and the
+downstream gameplay still produces a clear symptom; this just shortens the
+debug loop.
+
+---
+
+### §F-33 — `retro_games.gd:498–507` — registry inconsistency silently dropped (Pass 4)
+
+**Was:** When `ContentRegistry.resolve(raw_id)` returned a non-empty canonical
+id but the subsequent `ContentRegistry.get_entry(canonical)` returned an
+empty Dictionary, `_add_starter_item_by_id` returned silently. That is a
+genuine registry inconsistency (the alias map and the entry table disagree
+about whether the id exists) and would silently lose a starter item.
+
+The earlier branch (`canonical.is_empty()`) is *expected* — that's the
+"unknown item id" content-authoring case, which already calls `push_error`.
+The "resolved-but-no-entry" case is qualitatively different: it indicates a
+bug in `ContentRegistry` itself or a partial-load condition, not user
+content.
+
+**Now:** A separate `push_error` (citing §F-33) fires before the early return
+and includes both the raw id and the canonical id so the registry mismatch is
+diagnosable from a single log line.
+
+**Risk lenses:** Reliability (silent registry drift), Observability. Severity
+Medium — registry inconsistency at boot is a class of bug that has historic
+precedent in this project (see §F-30 cascade narrative); treating it the same
+as routine "unknown id" understates the severity.
+
+---
+
+### §F-34 — `store_controller.gd:67–84` — InputFocus null fallbacks for unit-test seam (Pass 4)
+
+`get_input_context()` and `has_blocking_modal()` return `&""` and `false`
+respectively when the InputFocus autoload (or its `current()` method / its
+`CTX_MODAL` constant) is missing. These are dedicated test seams: production
+boot always loads the InputFocus autoload (per `project.godot`), so the
+null-arm only fires under unit-test isolation where the autoload tree is
+stubbed out.
+
+The existing docstrings on both functions explicitly say so ("Returns `&""`
+when the InputFocus autoload is absent (e.g. unit tests without the autoload
+tree)"); no code change needed.
+
+**Risk lenses:** Reliability (silent fallback if autoload removed). Severity
+Note — the autoload registration is enforced by `tests/validate_*.sh`
+checks and the autoload list is asserted at boot.
+
+---
+
+### §F-35 — `store_controller.gd:374–404` — `_push/_pop_gameplay_input_context` silent paths (Pass 4)
+
+**Was:** Multiple silent `return` paths in the gameplay-context push/pop
+handlers (idempotent re-push, missing autoload, modal-on-top abandon).
+Documented only by an inline comment on the modal-on-top branch.
+
+**Now:** Hoisted the rationale into a §F-35 docstring on
+`_push_gameplay_input_context()` covering all three silent paths (idempotency,
+test-seam, contract-violation behavior). The modal-on-top inline comment on
+`_pop_gameplay_input_context()` is preserved because it carries the
+rationale for the *flag-mark-down* behavior, which is specific to that
+function.
+
+**Risk lenses:** Operational (push/pop balance violation invisible).
+Severity Low — InputFocus has its own audit mechanism that catches stack
+imbalance at every `scene_ready`, per `docs/architecture/ownership.md` row 5.
+
+---
+
+### §F-36 — `player_controller.gd:137–141` — `_resolve_camera()` returns null silently (Pass 4)
+
+`_resolve_camera()` looks up `StoreCamera` first, then falls back to
+`Camera3D` (legacy scenes). If neither child exists, it returns `null`
+silently.
+
+This is intentional: the `CameraAuthority` autoload asserts exactly one
+current camera at every `store_ready`, and the `StoreReadyContract`
+`camera_current` invariant fails loudly if no `StoreCamera` is present.
+Adding a `push_error` here would double-fire on the same contract violation
+and clutter logs.
+
+**Acted:** Added a §F-36 docstring at the function explaining this contract
+relationship so a future reader knows why the silent null is correct.
+
+**Risk lenses:** Reliability (missing camera in production). Severity Low —
+catastrophic missing-camera state is caught by upstream invariants; this
+function is just one of multiple resolvers.
+
+---
+
+### §F-37 — `store_director.gd:99–104` — injector returning null treated as load failure (Pass 4)
+
+The new `_scene_injector` callable seam (registered by `GameWorld._ready` to
+keep hub-mode store entries from destroying the 30+ in-tree systems) is
+allowed to return `null` or a node not yet in the tree. Both cases route to
+`_fail("scene injector returned no scene")`, which logs (push_error +
+AuditLog), emits `store_failed`, and transitions the state machine to
+`FAILED`.
+
+The existing class docstring already notes "Returning null is treated as a
+load failure"; no code change. The injector's own implementation in
+`game_world.gd:_inject_store_into_container` calls `push_error` at every
+failure path before returning null, so the failure surface is multi-layered:
+injector-side `push_error` → director-side `_fail()` → `store_failed`
+signal → `AuditLog.fail_check`.
+
+**Risk lenses:** Reliability. Severity Note — escalation path verified.
+
+---
+
+### §F-38 — `mall_overview.gd:292–301` — Day-1 close gated on first sale (Pass 4)
+
+The new `_on_day_close_pressed` early-return when `GameManager.get_current_day() == 1` and `GameState.get_flag(&"first_sale_complete") == false` is paired with `EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")`.
+
+This is not a silent suppression — it's a player-visible UX gate that prevents accidentally ending Day 1 without progressing the tutorial onboarding. The `EventBus.day_close_requested` signal is *not* emitted, so the day-end pipeline doesn't run; this is correct behavior for the intent.
+
+**Risk lenses:** UX (player understanding of why click did nothing). Severity Note — the critical-notification surface (`HUDPrompt`) provides the user feedback that distinguishes this from a swallowed click.
+
+---
+
+## Pass 5 Per-Finding Details
+
+### §F-39 — `game_world.gd:914–921` — `as Node3D` cast cascading into `add_child(null)` (Pass 5)
+
+**Was:** The hub-mode scene injector (`_inject_store_into_container`)
+loaded the packed scene, then inside the crossfade lambda performed
+`store_packed.instantiate() as Node3D`. If the scene root was authored as a
+non-Node3D type (or `instantiate()` failed for any other reason), the cast
+silently produced `null`, and the very next line —
+`_store_container.add_child(null)` — would emit a Godot engine error
+(`Parameter "p_child" is null`) and abort the crossfade mid-flight,
+followed by `_activate_store_camera(null, canonical)` which would also
+crash. The injector still eventually returned `null` to StoreDirector, so
+the failure path *did* terminate, but only after producing two unrelated
+engine errors that masked the root cause.
+
+**Now:** The lambda captures the bare `instantiated` Node first, attempts
+the `as Node3D` cast, and on null cast: pushes a clear
+`"hub injector — scene root for '%s' is not Node3D"` error, frees the
+instantiated node if it exists, and returns from the lambda. The outer
+function then rolls back `_hub_is_inside_store` so a retry can proceed,
+and returns `null` to StoreDirector — which calls `_fail("scene injector
+returned no scene")` cleanly with no spurious cascades.
+
+**Risk lenses:** Reliability (cascade crash on bad scene root),
+Observability (root cause masked by add_child + camera errors). Severity
+Low — content authoring constraint (every store scene root is a Node3D).
+
+---
+
+### §F-40 — `day1_readiness_audit.gd:111–122` — autoload-missing returns `&""` silently (Pass 5)
+
+The new `Day1ReadinessAudit` autoload runs eight read-only conditions on
+`StoreDirector.store_ready` and reports the first failure via
+`AuditLog.fail_check(&"day1_playable_failed", "<cond>=<value>")`.
+`_resolve_camera_source()` and `_resolve_input_context()` return `&""` when
+their respective autoloads are missing or lack the expected method.
+
+This is intentional: a missing-autoload condition reports as
+`camera_source=` (or `input_focus=`) through the same composite-checkpoint
+channel that surfaces every other failure, rather than firing a `push_error`
+that would compete with the AuditLog signal. Production boot always
+registers CameraAuthority and InputFocus; the silent-empty arm only fires
+under unit-test isolation.
+
+**Acted:** Added a §F-40 docstring at both resolvers explaining the
+contract.
+
+**Risk lenses:** Observability. Severity Note — single composite
+checkpoint is the louder surface here.
+
+---
+
+### §F-41 — `retro_games.gd:300–319` — `_apply_day1_quarantine` silent `continue` (Pass 5)
+
+The Day-1 quarantine for `testing_station` and `refurb_bench` iterates a
+fixed two-element list. If either node is missing from the scene,
+`get_node_or_null` returns null and the loop `continue`s without warning.
+A missing `Interactable` child on an existing parent node is also tolerated
+silently — only the parent's `visible` flag is toggled.
+
+This is intentional: a future early-game retro_games variant may legitimately
+omit one or both fixtures (the project's "scene defaults are quarantined"
+posture means it's safer to ship a store *without* a fixture than with one
+that escapes quarantine). The quarantine is moot for missing nodes because
+nothing renders. Toggling parent visibility is sufficient to suppress player
+interaction even without an Interactable child.
+
+**Acted:** Added a §F-41 docstring explaining both tolerated-absence cases.
+
+**Risk lenses:** Reliability (silent scene-authoring drift). Severity Note
+— scene authoring is CI-validated; missing fixtures already produce visible
+gameplay symptoms.
+
+---
+
+### §F-42 — `store_controller.gd:77–84` — `has_blocking_modal` null CTX_MODAL → false (Pass 5)
+
+`has_blocking_modal()` returns `false` when `focus.get(&"CTX_MODAL")`
+returns `null`. That branch only fires under unit-test isolation where
+InputFocus is partially stubbed (see §F-34); production boot always defines
+`CTX_MODAL`.
+
+**Acted:** Added a §F-42 docstring cross-referencing §F-34's test-seam
+contract so the fallback is anchored to a single test-seam invariant.
+
+**Risk lenses:** Reliability. Severity Note — test seam, autoload contract
+asserted at boot.
+
+---
+
+### §F-43 — `store_controller.gd:425–440` — `_on_objective_updated/_on_objective_changed` silent skip (Pass 5)
+
+Both handlers silently return when `payload.hidden == true` or when the
+extracted `text` is empty. This is intentional stable-state mirroring:
+`ObjectiveDirector` raises `hidden` when the rail auto-hides so subscribers
+keep their last visible text instead of clearing to empty; an empty text
+payload is treated the same way (no payload to mirror).
+
+**Acted:** Added a §F-43 docstring above the pair explaining the
+"stable-state mirror, not failure path" contract so a future reader does
+not mistake the silent return for a swallowed error.
+
+**Risk lenses:** Observability. Severity Note — stable-state design.
+
+---
+
+### §F-44 — `interaction_prompt.gd:59–65`, `objective_rail.gd:145–148` — `InputFocus == null` test-seam fallback (Pass 5)
+
+Both functions check `InputFocus == null` and return defaults that mean
+"no modal blocks rendering" (true / false respectively). Production boot
+always registers the InputFocus autoload; these arms only fire under unit
+tests that stub the autoload tree.
+
+**Acted:** Added §F-44 docstrings at both sites cross-referencing the
+shared test-seam contract used by `StoreController.has_blocking_modal`
+(§F-42) and the explicit InputFocus seam justification (§F-34).
+
+**Risk lenses:** Reliability. Severity Note — autoload presence is
+asserted at boot; failure to register would surface long before these
+functions run.
+
+---
+
+### §F-45 — `haggle/market_event/meta_shift/trend/seasonal_event_system._on_day_started` — Day-1 quarantine guards (Pass 5)
+
+Five gameplay systems carry an explicit `if day <= 1: return` (or the
+parameter-renamed `_day` equivalent) guard at the top of `_on_day_started`:
+
+- `haggle_system.should_haggle()` returns false on Day 1 (no haggle UI fires)
+- `market_event_system._on_day_started(day)` returns on Day 1 (no event lifecycle advance)
+- `meta_shift_system._on_day_started(day)` returns on Day 1 (no telegraphs)
+- `trend_system._on_day_started(_day)` returns on Day 1 (no trend toasts)
+- `seasonal_event_system._on_day_started(day)` updates calendar + multipliers
+  internally but suppresses `season_changed` / `seasonal_multipliers_updated`
+  emissions and event/tournament dispatch on Day 1
+
+This is by design: Day 1 is the introductory loop and these surfaces would
+add noise the player has not been onboarded to. The canonical determination
+table for which systems are quarantined and where the guard lives is in
+`CLAUDE.md` ("Day 1 Quarantine — System Determinations").
+
+**Day-1 subscriber correctness:** SeasonalEventSystem still updates internal
+`_current_season` / `_current_multipliers` on Day 1, and these are also
+seeded by `initialize()._apply_state({})` at boot. Subscribers that read
+through getters (`get_event_price_multiplier_for_store`,
+`get_current_multipliers`) see correct values on Day 1 even without the
+emitted signal. Subscribers that cache off the signal (e.g.
+`CustomerSystem._on_seasonal_multipliers_updated`) keep their default
+(1.0) seasonal modifier on Day 1, which is the intended quarantine
+behavior — no seasonal density modulation during the introductory loop.
+
+**Acted:** No code change — all guards are inline-commented with a
+"Day 1 quarantine" rationale at each site, and CLAUDE.md is the canonical
+record. Documenting here for cross-reference completeness.
+
+**Risk lenses:** Reliability (would a future system change route around the
+guard?), Observability. Severity Note — explicitly documented design.
+
+---
+
 ## Categorization
 
 | Category | Items |
@@ -427,7 +757,9 @@ The `_:` default case in the state-visibility match block did nothing (bare `pas
 | Tightened (Pass 1) | §F-01, §F-02, §F-03 |
 | Tightened (Pass 2) | §F-22, §F-23, §F-24, §F-25, §F-26 |
 | Tightened (Pass 3) | §F-27, §F-28, §F-29, §F-30, §F-31 |
-| Acceptable prod notes (justified) | §F-04–§F-21, §J4 |
+| Tightened (Pass 4) | §F-32, §F-33, §F-35, §F-36 |
+| Tightened (Pass 5) | §F-39, §F-40, §F-41, §F-42, §F-43, §F-44 |
+| Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §J4 |
 | Needs telemetry | None — EventBus + AuditLog provide sufficient observability |
 | Hidden failure risk (remaining) | None |
 
@@ -435,7 +767,7 @@ The `_:` default case in the state-visibility match block did nothing (bare `pas
 
 ## Escalations
 
-None. All findings across all three passes were either tightened in-place or justified with inline comments.
+None. All findings across all five passes were either tightened in-place or justified with inline comments.
 
 ---
 
@@ -443,4 +775,15 @@ None. All findings across all three passes were either tightened in-place or jus
 
 **Prod posture acceptable.**
 
-Pass 3 found and fixed two High bugs (§F-30: tier-cascade abort missing — downstream tiers ran on partially-initialized systems; §F-31: wrong signal dispatch API passes Array as single argument), two Medium gaps (§F-27: authentication history silently lost on type mismatch; §F-29: migration failure at wrong log severity), one Low gap (§F-28: wrong-type label node silently discarded), and one Note (§J4: bare `pass` in HUD visibility match now carries justifying comment). No hidden data-corruption paths remain across any pass.
+Pass 5 found and fixed one Low gap (§F-39: hub-mode scene-injector cascade
+when scene root is not a Node3D — now null-guarded with explicit error and
+state rollback) and added five Note-level docstrings/cross-references
+(§F-40 composite-audit autoload silent-empty, §F-41 quarantine missing-node
+tolerance, §F-42 has_blocking_modal CTX_MODAL fallback, §F-43 objective
+mirror stable-state skip, §F-44 InputFocus test-seam at two UI sites). The
+five Day-1 system quarantine guards (§F-45) are explicitly documented as
+intentional in `CLAUDE.md` and re-confirmed here. No hidden data-corruption
+paths remain across any pass.
+
+After Pass 5 the repo's full test suite (`bash tests/run_tests.sh`) reports
+4666 / 4666 GUT tests passing, plus all shell validators green.

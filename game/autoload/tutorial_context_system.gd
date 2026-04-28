@@ -78,11 +78,16 @@ func clear_active_context() -> void:
 
 
 ## Returns false during states where tutorial prompts must not render.
-## Guards emission so tutorial_context_entered never fires in MAIN_MENU,
+## Guards both signal emission and external render decisions: tutorial_context_entered
+## never fires (and consumer UIs should not render) in MAIN_MENU, MALL_OVERVIEW,
 ## DAY_SUMMARY, or while a modal has input focus.
-func _can_show_tutorial() -> bool:
+func is_tutorial_rendering_allowed() -> bool:
 	var state: GameManager.State = GameManager.current_state
-	if state == GameManager.State.MAIN_MENU or state == GameManager.State.DAY_SUMMARY:
+	if (
+		state == GameManager.State.MAIN_MENU
+		or state == GameManager.State.MALL_OVERVIEW
+		or state == GameManager.State.DAY_SUMMARY
+	):
 		return false
 	if InputFocus.current() == InputFocus.CTX_MODAL:
 		return false
@@ -128,14 +133,12 @@ func _connect_signals() -> void:
 		EventBus.store_exited.connect(_on_store_exited)
 	if not EventBus.day_started.is_connected(_on_day_started):
 		EventBus.day_started.connect(_on_day_started)
-	if not EventBus.objective_changed.is_connected(_on_objective_changed):
-		EventBus.objective_changed.connect(_on_objective_changed)
 
 
 func _on_store_entered(store_id: StringName) -> void:
 	if store_id == &"":
 		return
-	if not _can_show_tutorial():
+	if not is_tutorial_rendering_allowed():
 		return
 	var route: Dictionary = ContentRegistry.get_store_route(store_id)
 	if route.is_empty():
@@ -171,16 +174,8 @@ func _on_day_started(_day: int) -> void:
 	# requiring a re-entry.
 	if active_context_id == &"":
 		return
-	if not _can_show_tutorial():
+	if not is_tutorial_rendering_allowed():
 		return
 	var first: Dictionary = get_first_step(active_context_id)
 	var text: String = String(first.get("prompt_text", ""))
 	EventBus.tutorial_context_entered.emit(active_store_id, active_context_id, text)
-
-
-func _on_objective_changed(_payload: Dictionary) -> void:
-	# Placeholder subscriber wired per issue spec; the objective rail is the
-	# authority for objective text, so we do not overwrite it here. Kept to
-	# satisfy the contract that TutorialContextSystem reacts to objective
-	# changes and to give future step-advancement logic a hook.
-	pass

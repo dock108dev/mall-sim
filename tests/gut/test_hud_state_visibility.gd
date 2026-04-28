@@ -276,12 +276,23 @@ func test_tutorial_hint_ended_restores_telegraph_card() -> void:
 	)
 
 
-func test_store_view_shows_milestones_button() -> void:
+func test_store_view_hides_milestones_button_on_day_one() -> void:
+	GameManager.set_current_day(1)
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_false(
+		_hud.get_node("TopBar/MilestonesButton").visible,
+		"MilestonesButton must be hidden in STORE_VIEW on Day 1 so the panel does not cover store fixtures"
+	)
+
+
+func test_store_view_shows_milestones_button_after_day_one() -> void:
+	GameManager.set_current_day(2)
 	_emit_state(GameManager.State.STORE_VIEW)
 	assert_true(
 		_hud.get_node("TopBar/MilestonesButton").visible,
-		"MilestonesButton must be visible in STORE_VIEW"
+		"MilestonesButton must be visible in STORE_VIEW on Day 2+"
 	)
+	GameManager.set_current_day(1)
 
 
 func test_store_view_hides_store_label_before_store_opened() -> void:

@@ -165,6 +165,10 @@ func _apply_state(data: Dictionary) -> void:
 
 
 func _on_day_started(_day: int) -> void:
+	# Day 1 quarantine: trends generate notification toasts and trend_changed
+	# signals that would clutter the introductory loop. Defer to Day 2.
+	if _day <= 1:
+		return
 	_remove_expired_trends(_day)
 	_days_until_next_shift -= 1
 	if _days_until_next_shift <= 0:

@@ -35,10 +35,61 @@ func test_player_controller_has_camera3d_child() -> void:
 	assert_not_null(pc, "PlayerController must exist")
 	if not pc:
 		return
-	var cam: Camera3D = pc.get_node_or_null("Camera3D") as Camera3D
-	assert_not_null(cam, "PlayerController must have a Camera3D child named Camera3D")
+	var cam: Camera3D = pc.get_node_or_null("StoreCamera") as Camera3D
+	assert_not_null(cam, "PlayerController must have a Camera3D child named StoreCamera")
 	if cam:
-		assert_false(cam.current, "Camera3D must ship current=false so CameraAuthority owns activation")
+		assert_false(cam.current, "StoreCamera must ship current=false so CameraAuthority owns activation")
+
+
+func test_store_camera_has_unique_name_in_owner_flag() -> void:
+	# StoreReadyContract invariant 5 first tries `%StoreCamera`; that lookup
+	# only resolves when the node has `unique_name_in_owner = true`. Without it
+	# the contract falls back to a recursive find_child scan, which works but
+	# is slower and less explicit about the design intent.
+	var unique: Node = _root.get_node_or_null("%StoreCamera")
+	assert_not_null(
+		unique,
+		"%StoreCamera unique-name lookup must resolve — "
+		+ "set 'Unique Name in Owner' on the camera node"
+	)
+
+
+func test_store_ready_contract_camera_passes_after_authority_activation() -> void:
+	var pc: Node = _root.get_node_or_null("PlayerController")
+	assert_not_null(pc, "PlayerController must exist")
+	if not pc:
+		return
+	var cam: Camera3D = pc.get_node_or_null("StoreCamera") as Camera3D
+	assert_not_null(cam, "StoreCamera must exist for invariant 5")
+	if cam == null:
+		return
+	# Invariant 5 fails until CameraAuthority activates the camera.
+	assert_false(cam.current, "precondition: camera ships not-current")
+	var activated: bool = CameraAuthority.request_current(cam, &"store_director")
+	assert_true(activated, "CameraAuthority.request_current must succeed")
+	assert_true(cam.current, "StoreCamera must report current=true after activation")
+	# Cross-check against the contract helper directly.
+	var contract: GDScript = load("res://game/scripts/stores/store_ready_contract.gd")
+	var found: Node = contract.call("_find", _root, "StoreCamera")
+	assert_eq(found, cam, "contract _find must resolve our StoreCamera")
+	assert_true(
+		"current" in found and found.get("current") == true,
+		"contract must see camera_current=true"
+	)
+
+
+func test_camera_changed_signal_fires_with_store_camera() -> void:
+	var pc: Node = _root.get_node_or_null("PlayerController")
+	if not pc:
+		return
+	var cam: Camera3D = pc.get_node_or_null("StoreCamera") as Camera3D
+	if cam == null:
+		return
+	watch_signals(CameraAuthority)
+	CameraAuthority.request_current(cam, &"store_director")
+	assert_signal_emitted_with_parameters(
+		CameraAuthority, "camera_changed", [cam, &"store_director"]
+	)
 
 
 func test_store_bounds_are_tighter_than_defaults() -> void:
@@ -395,6 +446,48 @@ func test_sign_labels_face_exterior_via_y_rotation() -> void:
 			0.0,
 			"%s must have a 180-degree Y rotation (basis.z.z < 0)" % lbl.name
 		)
+
+
+# ── StoreReadyContract interface methods on retro_games root ─────────────────
+
+func test_root_exposes_controller_initialized_after_ready() -> void:
+	assert_true(
+		_root.has_method("is_controller_initialized"),
+		"retro_games root must expose StoreReadyContract method "
+		+ "is_controller_initialized()"
+	)
+	assert_true(
+		_root.is_controller_initialized(),
+		"retro_games initialize() runs in _ready() so the root must report "
+		+ "is_controller_initialized()=true once added to the tree"
+	)
+
+
+func test_root_exposes_get_input_context() -> void:
+	assert_true(
+		_root.has_method("get_input_context"),
+		"retro_games root must expose StoreReadyContract method get_input_context()"
+	)
+
+
+func test_root_exposes_has_blocking_modal() -> void:
+	assert_true(
+		_root.has_method("has_blocking_modal"),
+		"retro_games root must expose StoreReadyContract method has_blocking_modal()"
+	)
+
+
+func test_objective_matches_action_passes_for_day_one_text() -> void:
+	# Day 1 objective from res://game/content/objectives.json. Verifies that at
+	# least one registered Interactable in the live retro_games scene satisfies
+	# StoreReadyContract invariant 10 against the canonical day-one text.
+	_root.set_objective_text("Stock your first item and make a sale")
+	assert_true(
+		_root.objective_matches_action(),
+		"Day 1 objective text must match at least one registered interactable; "
+		+ "shelf slots ship with action_verb='Stock' and at least one slot "
+		+ "carries an 'Item' display token"
+	)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

@@ -59,6 +59,9 @@ func _input(event: InputEvent) -> void:
 		KEY_D:
 			_debug_end_day()
 			get_viewport().set_input_as_handled()
+		KEY_P:
+			_debug_force_place_test_item()
+			get_viewport().set_input_as_handled()
 
 
 func _process(_delta: float) -> void:
@@ -110,7 +113,7 @@ func _build_display_text() -> String:
 		],
 		"",
 		"Ctrl+M: +$100 | Ctrl+C: Spawn customer",
-		"Ctrl+H: +1 hour | Ctrl+D: End day",
+		"Ctrl+H: +1 hour | Ctrl+D: End day | Ctrl+P: Force-place item",
 		"F3: Toggle zone labels always-on (currently: %s)" % ("ON" if _zone_labels_always_on else "OFF"),
 	])
 	lines.append_array(_build_movement_debug_lines())
@@ -208,3 +211,27 @@ func _debug_end_day() -> void:
 		push_warning("DebugOverlay: TimeSystem not available")
 		return
 	time_system._end_day()
+
+
+func _debug_force_place_test_item() -> void:
+	var controller: StoreController = _find_active_store_controller()
+	if controller == null:
+		push_warning(
+			"DebugOverlay: no active StoreController for force-place fallback"
+		)
+		return
+	controller.dev_force_place_test_item()
+
+
+func _find_active_store_controller() -> StoreController:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var queue: Array[Node] = [tree.root]
+	while not queue.is_empty():
+		var node: Node = queue.pop_front()
+		if node is StoreController:
+			return node as StoreController
+		for child: Node in node.get_children():
+			queue.append(child)
+	return null

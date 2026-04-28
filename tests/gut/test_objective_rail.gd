@@ -1,7 +1,24 @@
 ## Tests for ObjectiveRail: four-slot rendering, auto-hide, Settings toggle,
 ## optional_hint visibility, flash animation, objective_updated signal,
-## and D4 accent band store-identity color binding.
+## D4 accent band store-identity color binding, and screen-state / modal
+## visibility guards.
 extends GutTest
+
+
+var _saved_state: GameManager.State
+
+
+func before_each() -> void:
+	_saved_state = GameManager.current_state
+	# Default to STORE_VIEW so existing tests of payload-driven visibility do
+	# not collide with the MAIN_MENU/DAY_SUMMARY guard added for ISSUE-004.
+	GameManager.current_state = GameManager.State.STORE_VIEW
+
+
+func after_each() -> void:
+	GameManager.current_state = _saved_state
+	if InputFocus != null:
+		InputFocus._reset_for_tests()
 
 
 func _make_rail() -> CanvasLayer:
@@ -10,6 +27,12 @@ func _make_rail() -> CanvasLayer:
 	).instantiate() as CanvasLayer
 	add_child_autofree(rail)
 	return rail
+
+
+func _emit_state(new_state: GameManager.State) -> void:
+	var old: GameManager.State = GameManager.current_state
+	GameManager.current_state = new_state
+	EventBus.game_state_changed.emit(int(old), int(new_state))
 
 
 func _day_payload(day: int) -> Dictionary:
@@ -335,3 +358,73 @@ func test_accent_band_unknown_store_defaults_to_hub() -> void:
 	EventBus.store_entered.emit(&"nonexistent_store_xyz")
 	assert_eq(rail._band.color, Color.html("#5BB8E8"),
 		"Unknown store ID must fall back to hub color #5BB8E8")
+
+
+# ── Screen-state guard ─────────────────────────────────────────────────────────
+
+func test_rail_hidden_in_main_menu_state() -> void:
+	var rail := _make_rail()
+	EventBus.objective_changed.emit(_day_payload(1))
+	assert_true(rail.visible, "Pre-condition: rail visible in STORE_VIEW")
+	_emit_state(GameManager.State.MAIN_MENU)
+	assert_false(
+		rail.visible,
+		"Rail must hide when GameManager state is MAIN_MENU"
+	)
+
+
+func test_rail_hidden_in_day_summary_state() -> void:
+	var rail := _make_rail()
+	EventBus.objective_changed.emit(_day_payload(1))
+	_emit_state(GameManager.State.DAY_SUMMARY)
+	assert_false(
+		rail.visible,
+		"Rail must hide when GameManager state is DAY_SUMMARY"
+	)
+
+
+func test_rail_visible_again_after_returning_to_gameplay_state() -> void:
+	var rail := _make_rail()
+	EventBus.objective_changed.emit(_day_payload(1))
+	_emit_state(GameManager.State.MAIN_MENU)
+	assert_false(rail.visible)
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_true(
+		rail.visible,
+		"Rail must reappear once state returns to a gameplay state"
+	)
+
+
+func test_payload_during_main_menu_does_not_show_rail() -> void:
+	var rail := _make_rail()
+	_emit_state(GameManager.State.MAIN_MENU)
+	EventBus.objective_changed.emit(_day_payload(1))
+	assert_false(
+		rail.visible,
+		"A payload arriving while in MAIN_MENU must not surface the rail"
+	)
+
+
+# ── Modal context guard ────────────────────────────────────────────────────────
+
+func test_rail_hidden_when_modal_context_pushed() -> void:
+	var rail := _make_rail()
+	EventBus.objective_changed.emit(_day_payload(1))
+	assert_true(rail.visible, "Pre-condition: rail visible without modal")
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	assert_false(
+		rail.visible,
+		"Rail must hide while a modal context is on top of the InputFocus stack"
+	)
+
+
+func test_rail_visible_again_when_modal_context_popped() -> void:
+	var rail := _make_rail()
+	EventBus.objective_changed.emit(_day_payload(1))
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	assert_false(rail.visible, "Pre-condition: rail hidden under modal")
+	InputFocus.pop_context()
+	assert_true(
+		rail.visible,
+		"Rail must reappear when the modal context is popped"
+	)

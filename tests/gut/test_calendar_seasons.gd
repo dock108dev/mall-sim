@@ -174,14 +174,15 @@ func test_season_changed_fires_at_all_boundaries() -> void:
 
 
 func test_multipliers_emitted_every_day() -> void:
-	EventBus.day_started.emit(1)
+	# Day 1 quarantine suppresses the emit; Days 2-4 each emit once.
 	EventBus.day_started.emit(2)
 	EventBus.day_started.emit(3)
+	EventBus.day_started.emit(4)
 	assert_eq(_multiplier_update_calls.size(), 3)
 
 
 func test_multipliers_contain_store_ids() -> void:
-	EventBus.day_started.emit(1)
+	EventBus.day_started.emit(2)
 	assert_true(_multiplier_update_calls.size() > 0)
 	var mults: Dictionary = _multiplier_update_calls[0]
 	assert_true(mults.has("sports"))

@@ -155,6 +155,11 @@ func _apply_state(data: Dictionary) -> void:
 
 
 func _on_day_started(day: int) -> void:
+	# Day 1 quarantine: no market events should announce, start, or end on Day 1.
+	# The system has no active events at session start, so skipping the lifecycle
+	# advance is safe; the cooldown/selection skip prevents new events from firing.
+	if day <= 1:
+		return
 	_advance_event_lifecycles(day)
 	_tick_cooldowns()
 	_days_since_last_event += 1

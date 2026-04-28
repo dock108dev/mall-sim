@@ -206,6 +206,16 @@ func _ready() -> void:
 			customer_system, time_system
 		)
 		_mall_hallway.apply_unlock_state(progression_system)
+	# Hub-mode wiring runs after `initialize_game_systems` (which calls
+	# `finalize_system_wiring`) so an early click cannot route to systems that
+	# are still being constructed. The injector seam routes hub-mode entries
+	# through StoreDirector while preserving all 30+ in-tree systems.
+	if _hub_transition != null:
+		StoreDirector.set_scene_injector(
+			Callable(self, "_inject_store_into_container")
+		)
+		EventBus.enter_store_requested.connect(_on_hub_enter_store_requested)
+		EventBus.exit_store_requested.connect(_on_hub_exit_store_requested)
 	EventBus.game_state_changed.connect(_on_game_state_changed)
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.all_milestones_completed.connect(
@@ -226,11 +236,12 @@ func _setup_mall_hallway() -> void:
 
 
 ## Sets up the direct click-to-enter hub mode (walkable mall disabled).
+## EventBus signal connections are deferred to `_ready()` until after
+## `finalize_system_wiring()` so an early `enter_store_requested` cannot
+## fire while runtime systems are still being constructed.
 func _setup_hub_mode() -> void:
 	_hub_transition = SceneTransition.new()
 	add_child(_hub_transition)
-	EventBus.enter_store_requested.connect(_on_hub_enter_store_requested)
-	EventBus.exit_store_requested.connect(_on_hub_exit_store_requested)
 
 
 ## Initializes all gameplay systems in dependency-tier order.
@@ -871,29 +882,59 @@ func _register_initial_fixtures() -> void:
 		)
 
 
-## Hub-mode entry: loads store scene into _store_container with a crossfade.
+## Hub-mode entry: routes through StoreDirector so the 6-state machine,
+## AuditLog checkpoints, and StoreReadyContract verification all run. The
+## actual scene injection happens in `_inject_store_into_container`, which the
+## director invokes via the injector seam registered in `_ready()`.
 func _on_hub_enter_store_requested(store_id: StringName) -> void:
 	if _hub_is_inside_store:
 		return
-	var scene_path: String = ContentRegistry.get_scene_path(store_id)
+	StoreDirector.enter_store(store_id)
+
+
+## Injector callable handed to StoreDirector. Loads the store packed scene,
+## runs a crossfade, parents it under `StoreContainer`, activates its camera,
+## emits `EventBus.store_entered`, and returns the scene root so the director
+## can run `StoreReadyContract.check` against it. Returns null on any load
+## failure — StoreDirector treats null as a load failure and FAILs the run.
+func _inject_store_into_container(
+	scene_path: String, store_id: StringName
+) -> Node:
 	if scene_path.is_empty():
-		push_error("GameWorld: hub entry — unknown store_id '%s'" % store_id)
-		return
+		push_error("GameWorld: hub injector — empty scene_path for '%s'" % store_id)
+		return null
 	var canonical: StringName = ContentRegistry.resolve(String(store_id))
 	if canonical.is_empty():
-		push_error("GameWorld: hub entry — unresolvable store_id '%s'" % store_id)
-		return
+		push_error("GameWorld: hub injector — unresolvable store_id '%s'" % store_id)
+		return null
 	var store_packed: PackedScene = load(scene_path) as PackedScene
 	if store_packed == null:
-		push_error("GameWorld: hub entry — failed to load scene '%s'" % scene_path)
-		return
+		push_error("GameWorld: hub injector — failed to load scene '%s'" % scene_path)
+		return null
 	_hub_is_inside_store = true
+	# §F-39 — guard `as Node3D` cast so a non-Node3D scene root (content
+	# authoring error) doesn't reach `_store_container.add_child(null)`. Any
+	# null returned here flows into StoreDirector's `_fail()` cleanly without
+	# an extra Godot engine error from add_child.
+	var instantiated: Node = null
 	await _hub_transition.crossfade(func() -> void:
-		_hub_active_store_scene = store_packed.instantiate() as Node3D
+		instantiated = store_packed.instantiate()
+		_hub_active_store_scene = instantiated as Node3D
+		if _hub_active_store_scene == null:
+			push_error(
+				"GameWorld: hub injector — scene root for '%s' is not Node3D"
+				% canonical
+			)
+			if instantiated != null:
+				instantiated.queue_free()
+			return
 		_store_container.add_child(_hub_active_store_scene)
 		_activate_store_camera(_hub_active_store_scene, canonical)
 		EventBus.store_entered.emit(canonical)
 	)
+	if _hub_active_store_scene == null:
+		_hub_is_inside_store = false
+	return _hub_active_store_scene
 
 
 ## Hub-mode exit: removes active store scene with a crossfade.
