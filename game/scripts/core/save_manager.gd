@@ -46,6 +46,9 @@ const SLOT_INDEX_PATH := "user://save_index.cfg"
 const MAX_MANUAL_SLOTS: int = 3
 const AUTO_SAVE_SLOT: int = 0
 const MAX_SAVE_FILE_BYTES: int = 10485760
+## §SR-01: cap slot-index reads so a hand-crafted oversized file can't wedge
+## the save menu. 64 KB is far above any real index (4 slots × ~1 KB each).
+const MAX_SLOT_INDEX_BYTES: int = 65536
 
 var _economy_system: EconomySystem
 var _order_system: OrderSystem
@@ -272,6 +275,7 @@ func mark_run_complete(ending_id: StringName) -> void:
 	var write_error: Error = _write_save_file_atomic(
 		path, JSON.stringify(save_data, "\t")
 	)
+	# §F-04: ending metadata only; run is already committed to the slot — push_warning is appropriate.
 	if write_error != OK:
 		push_warning(
 			"SaveManager: failed to update auto-save '%s' with ending metadata — %s"
@@ -295,10 +299,13 @@ func save_game(slot: int) -> bool:
 	var json_string: String = JSON.stringify(save_data, "\t")
 	var write_error: Error = _write_save_file_atomic(path, json_string)
 	if write_error != OK:
-		push_warning(
+		push_error(
 			"SaveManager: failed to write '%s' — %s"
 			% [path, error_string(write_error)]
 		)
+		# §F-17: surface disk-write failures to the player so progress loss is
+		# not silent. push_error alone is invisible at runtime.
+		EventBus.notification_requested.emit("Save failed — check disk space.")
 		return false
 
 	_update_slot_index(slot, _build_slot_index_metadata(save_data))
@@ -349,10 +356,13 @@ func load_game(slot: int) -> bool:
 		_backup_before_migration(path, slot, save_version)
 	var migration_result: Dictionary = migrate_save_data(save_data)
 	if not bool(migration_result.get("ok", false)):
-		return _fail_load(
-			slot,
+		var migration_reason: String = (
 			"Migration failed — %s" % str(migration_result.get("reason", ""))
 		)
+		# §F-29: migration failure is data-integrity severity — push_error in
+		# addition to _fail_load's push_warning + EventBus notification.
+		push_error("SaveManager: %s" % migration_reason)
+		return _fail_load(slot, migration_reason)
 	save_data = migration_result.get("data", {}) as Dictionary
 	_distribute_save_data(save_data)
 	return true
@@ -381,6 +391,7 @@ func delete_save(slot: int) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
 	var err: Error = DirAccess.remove_absolute(path)
+	# §F-05: delete failure returns false; callers (save menu UI) surface this to the player.
 	if err != OK:
 		push_warning(
 			"SaveManager: failed to delete '%s' — %s"
@@ -1053,6 +1064,7 @@ func _systems_ready() -> bool:
 
 
 func _fail_load(slot: int, reason: String) -> bool:
+	# §F-21: player notification travels via save_load_failed signal; push_warning is log-only.
 	push_warning("SaveManager: %s" % reason)
 	EventBus.save_load_failed.emit(slot, reason)
 	return false
@@ -1077,6 +1089,7 @@ func _backup_before_migration(
 	)
 	var backup_path: String = BACKUP_DIR + backup_name
 	var src: FileAccess = FileAccess.open(source_path, FileAccess.READ)
+	# §F-06: backup is best-effort before migration; missing backup does not block the migration.
 	if not src:
 		push_warning(
 			"SaveManager: failed to open source for backup '%s' — %s"
@@ -1101,6 +1114,7 @@ func _ensure_backup_dir() -> void:
 	if DirAccess.dir_exists_absolute(BACKUP_DIR):
 		return
 	var err: Error = DirAccess.make_dir_recursive_absolute(BACKUP_DIR)
+	# §F-06: backup dir creation is best-effort; migration proceeds without backup if this fails.
 	if err != OK:
 		push_warning(
 			"SaveManager: failed to create backup dir '%s' — %s"
@@ -1124,6 +1138,8 @@ func _get_reputation_system() -> ReputationSystem:
 
 ## Returns metadata for all slots from the index without loading saves.
 func get_all_slot_metadata() -> Dictionary:
+	if not _slot_index_size_ok():
+		return {}
 	var config := ConfigFile.new()
 	var load_err: Error = config.load(SLOT_INDEX_PATH)
 	if load_err != OK:
@@ -1146,6 +1162,8 @@ func get_all_slot_metadata() -> Dictionary:
 
 
 func _update_slot_index(slot: int, metadata: Dictionary) -> void:
+	if not _slot_index_size_ok():
+		return
 	var config := ConfigFile.new()
 	var load_err: Error = config.load(SLOT_INDEX_PATH)
 	if load_err != OK and FileAccess.file_exists(SLOT_INDEX_PATH):
@@ -1168,6 +1186,8 @@ func _update_slot_index(slot: int, metadata: Dictionary) -> void:
 
 
 func _remove_slot_from_index(slot: int) -> void:
+	if not _slot_index_size_ok():
+		return
 	var config := ConfigFile.new()
 	var load_err: Error = config.load(SLOT_INDEX_PATH)
 	if load_err != OK:
@@ -1188,9 +1208,28 @@ func _remove_slot_from_index(slot: int) -> void:
 			)
 
 
+## §SR-01: Returns false and warns when the slot-index file exceeds the cap.
+## Prevents a hand-crafted oversized file from wedging ConfigFile.load().
+func _slot_index_size_ok() -> bool:
+	if not FileAccess.file_exists(SLOT_INDEX_PATH):
+		return true
+	var probe: FileAccess = FileAccess.open(SLOT_INDEX_PATH, FileAccess.READ)
+	if not probe:
+		return true
+	var size: int = probe.get_length()
+	probe.close()
+	if size > MAX_SLOT_INDEX_BYTES:
+		push_warning(
+			"SaveManager: slot index '%s' exceeds %d bytes (%d) — ignoring"
+			% [SLOT_INDEX_PATH, MAX_SLOT_INDEX_BYTES, size]
+		)
+		return false
+	return true
+
+
 func _ensure_save_dir() -> void:
 	if SAVE_DIR == "user://":
-		return
+		return  # user:// always exists; the push_warning below is unreachable (§F-07).
 	if DirAccess.dir_exists_absolute(SAVE_DIR):
 		return
 	var err: Error = DirAccess.make_dir_recursive_absolute(SAVE_DIR)

@@ -425,6 +425,9 @@ func _on_context_action(id: int) -> void:
 		0:
 			_open_pricing_for_selected_item()
 		1:
+			var item_for_placement := _selected_item
+			close()
+			_selected_item = item_for_placement
 			_shelf_actions.enter_placement_mode()
 		2:
 			_shelf_actions.move_to_backroom(_selected_item)

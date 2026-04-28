@@ -12,6 +12,7 @@ var customer_system: CustomerSystem
 var mall_customer_spawner: MallCustomerSpawner
 
 var _overlay_visible: bool = false
+var _zone_labels_always_on: bool = false
 
 @onready var _label: Label = $Label
 
@@ -27,6 +28,11 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_debug"):
 		_overlay_visible = not _overlay_visible
 		visible = _overlay_visible
+		return
+
+	if event.is_action_pressed("zone_labels_debug"):
+		_toggle_zone_labels_debug()
+		get_viewport().set_input_as_handled()
 		return
 
 	if not _overlay_visible:
@@ -105,8 +111,72 @@ func _build_display_text() -> String:
 		"",
 		"Ctrl+M: +$100 | Ctrl+C: Spawn customer",
 		"Ctrl+H: +1 hour | Ctrl+D: End day",
+		"F3: Toggle zone labels always-on (currently: %s)" % ("ON" if _zone_labels_always_on else "OFF"),
 	])
+	lines.append_array(_build_movement_debug_lines())
 	return "\n".join(lines)
+
+
+func _build_movement_debug_lines() -> PackedStringArray:
+	var player: Node = _get_active_player_controller()
+	var player_present: String = "false" if player == null else "true"
+	var camera_pos: String = "N/A"
+	var pivot_pos: String = "N/A"
+	var can_move_text: String = "N/A"
+
+	if player != null:
+		if player.has_method("get_camera"):
+			var cam: Camera3D = player.call("get_camera") as Camera3D
+			if cam:
+				var p: Vector3 = cam.global_position
+				camera_pos = "(%.1f, %.1f, %.1f)" % [p.x, p.y, p.z]
+		if player.has_method("get_pivot"):
+			var piv: Vector3 = player.call("get_pivot")
+			pivot_pos = "(%.1f, %.1f, %.1f)" % [piv.x, piv.y, piv.z]
+		if player.has_method("can_move"):
+			can_move_text = str(player.call("can_move"))
+
+	var focus_text: String = "N/A"
+	var ifocus: Node = _get_input_focus_node()
+	if ifocus != null and ifocus.has_method("current"):
+		focus_text = str(ifocus.call("current"))
+
+	var w: String = str(Input.is_action_pressed("move_forward"))
+	var a: String = str(Input.is_action_pressed("move_left"))
+	var s: String = str(Input.is_action_pressed("move_back"))
+	var d: String = str(Input.is_action_pressed("move_right"))
+
+	return PackedStringArray([
+		"",
+		"--- Movement Debug ---",
+		"InputFocus: %s" % focus_text,
+		"CanMove: %s | PlayerController: %s" % [can_move_text, player_present],
+		"Camera Pos: %s" % camera_pos,
+		"Pivot Pos: %s" % pivot_pos,
+		"W:%s A:%s S:%s D:%s" % [w, a, s, d],
+	])
+
+
+func _get_active_player_controller() -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var nodes: Array[Node] = tree.get_nodes_in_group(&"player_controller")
+	if nodes.is_empty():
+		return null
+	return nodes[0]
+
+
+func _get_input_focus_node() -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("InputFocus")
+
+
+func _toggle_zone_labels_debug() -> void:
+	_zone_labels_always_on = not _zone_labels_always_on
+	EventBus.zone_labels_debug_toggled.emit(_zone_labels_always_on)
 
 
 func _debug_add_cash() -> void:

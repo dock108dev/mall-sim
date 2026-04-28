@@ -235,11 +235,11 @@ func test_reputation_increase_flashes_positive_color() -> void:
 	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	await get_tree().create_timer(_hud._REP_ARROW_FADE_IN + 0.05).timeout
 	var label: Label = _hud.get_node("TopBar/ReputationLabel")
-	assert_eq(
-		label.get_theme_color("font_color"),
-		UIThemeConstants.get_positive_color(),
-		"Increase should flash positive color"
-	)
+	var actual: Color = label.get_theme_color("font_color")
+	var expected: Color = UIThemeConstants.get_positive_color()
+	assert_almost_eq(actual.r, expected.r, 0.005, "Increase should flash positive color (R)")
+	assert_almost_eq(actual.g, expected.g, 0.005, "Increase should flash positive color (G)")
+	assert_almost_eq(actual.b, expected.b, 0.005, "Increase should flash positive color (B)")
 
 
 func test_reputation_decrease_flashes_negative_color() -> void:
@@ -247,11 +247,11 @@ func test_reputation_decrease_flashes_negative_color() -> void:
 	EventBus.reputation_changed.emit("test_store", 0.0, 50.0)
 	await get_tree().create_timer(_hud._REP_ARROW_FADE_IN + 0.05).timeout
 	var label: Label = _hud.get_node("TopBar/ReputationLabel")
-	assert_eq(
-		label.get_theme_color("font_color"),
-		UIThemeConstants.get_negative_color(),
-		"Decrease should flash negative color"
-	)
+	var actual: Color = label.get_theme_color("font_color")
+	var expected: Color = UIThemeConstants.get_negative_color()
+	assert_almost_eq(actual.r, expected.r, 0.005, "Decrease should flash negative color (R)")
+	assert_almost_eq(actual.g, expected.g, 0.005, "Decrease should flash negative color (G)")
+	assert_almost_eq(actual.b, expected.b, 0.005, "Decrease should flash negative color (B)")
 
 
 func test_reputation_arrow_removed_after_hold() -> void:

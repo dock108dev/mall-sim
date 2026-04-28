@@ -36,6 +36,7 @@ func _ready() -> void:
 ## Registers (or overrides) a `target` alias to a scene path. Used by tests or
 ## future systems that need to reach scenes outside the default alias table.
 func register_target(target: StringName, scene_path: String) -> void:
+	# §F-14: asserts crash on empty args in debug; release fallback is _fail() via push_error.
 	assert(target != &"", "SceneRouter.register_target: empty target")
 	assert(scene_path != "", "SceneRouter.register_target: empty scene_path")
 	_targets[target] = scene_path

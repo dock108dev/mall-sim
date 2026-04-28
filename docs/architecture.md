@@ -49,7 +49,7 @@ earlier ones. Three entries are scenes (`ObjectiveRail`, `InteractionPrompt`,
 | 1 | `DataLoaderSingleton` | `game/autoload/data_loader.gd` — JSON content discovery and raw-data exposure |
 | 2 | `ContentRegistry` | `game/autoload/content_registry.gd` — typed catalogs and canonical IDs |
 | 3 | `EventBus` | `game/autoload/event_bus.gd` — cross-system signal hub |
-| 4 | `GameManager` | `game/autoload/game_manager.gd` — top-level FSM (`MAIN_MENU`, `GAMEPLAY`, `PAUSED`, `GAME_OVER`, `LOADING`, `DAY_SUMMARY`, `BUILD`) and run-session entry points |
+| 4 | `GameManager` | `game/autoload/game_manager.gd` — top-level FSM (`MAIN_MENU`, `GAMEPLAY`, `PAUSED`, `GAME_OVER`, `LOADING`, `DAY_SUMMARY`, `BUILD`, `MALL_OVERVIEW`, `STORE_VIEW`) and run-session entry points |
 | 5 | `AudioManager` | `game/autoload/audio_manager.gd` — buses, streams, SFX; instantiates `AudioEventHandler` (`game/autoload/audio_event_handler.gd`) as a child node, not a registered autoload |
 | 6 | `Settings` | `game/autoload/settings.gd` |
 | 7 | `EnvironmentManager` | `game/autoload/environment_manager.gd` |
@@ -120,14 +120,10 @@ any `GameState` mutation without subscribing to each typed setter.
 | `game/scenes/ui/day_summary.tscn` | End-of-day summary panel |
 | `game/scenes/ui/hud.tscn` | Persistent overlay: time/phase indicator, funds, reputation tier, live counters |
 
-Store entry is currently routed through
-`game_world._on_hub_enter_store_requested`, which activates the store scene
-and calls `CameraAuthority.request_current` for the store's `Camera3D`.
-`StoreDirector.enter_store(store_id)` is the intended long-term single entry
-point, but currently delegates to `SceneRouter.route_to_path` (full-scene
-replacement), which would tear down `GameWorld`. Sub-tree hosting in
-`StoreDirector` is a future refactor before the hub signal path can be
-retired.
+Store entry is routed through `EventBus.enter_store_requested`, which
+`game_world._on_hub_enter_store_requested` handles. `StoreDirector.enter_store(store_id)`
+is the single entry point; it delegates to `SceneRouter.route_to_path` for the
+scene load (full-scene replacement).
 
 ## Visual Systems
 

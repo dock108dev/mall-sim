@@ -26,13 +26,17 @@ extends Node3D
 @export var store_bounds_min: Vector3 = Vector3(-7.0, 0.0, -5.0)
 ## Store boundary max corner for pivot clamping.
 @export var store_bounds_max: Vector3 = Vector3(7.0, 0.0, 5.0)
+## Starting zoom distance from pivot in meters. Overridable per store.
+@export var zoom_default: float = 3.5
+## Starting pitch angle in degrees from horizontal. Overridable per store.
+@export var pitch_default_deg: float = 50.0
 
 var _yaw: float = 0.0
-var _pitch: float = deg_to_rad(40.0)
-var _zoom: float = 8.0
+var _pitch: float = 0.0
+var _zoom: float = 0.0
 var _target_yaw: float = 0.0
-var _target_pitch: float = deg_to_rad(40.0)
-var _target_zoom: float = 8.0
+var _target_pitch: float = 0.0
+var _target_zoom: float = 0.0
 var _pivot: Vector3 = Vector3.ZERO
 var _target_pivot: Vector3 = Vector3.ZERO
 var _is_orbiting: bool = false
@@ -44,8 +48,18 @@ var _input_listening: bool = true
 
 
 func _ready() -> void:
+	_pitch = deg_to_rad(pitch_default_deg)
+	_target_pitch = _pitch
+	_zoom = zoom_default
+	_target_zoom = _zoom
 	InputHelper.unlock_cursor()
 	_update_camera_transform()
+	if _camera:
+		_camera.current = false
+	add_to_group(&"player_controller")
+	var eb: Node = _get_event_bus()
+	if eb != null and eb.has_signal("nav_zone_selected"):
+		eb.nav_zone_selected.connect(_on_nav_zone_selected)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -72,6 +86,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("camera_zoom_out"):
 		_target_zoom = clampf(_target_zoom + zoom_step, zoom_min, zoom_max)
 
+	for i: int in range(1, 6):
+		if event.is_action_pressed("nav_zone_%d" % i):
+			_jump_to_nav_zone(i)
+			return
+
 
 func _process(delta: float) -> void:
 	if _build_mode_active:
@@ -87,10 +106,10 @@ func _process(delta: float) -> void:
 	_update_camera_transform()
 
 
-## Toggles whether this controller listens for unhandled input. Owners that
-## previously called `set_process_unhandled_input(...)` directly (now banned by
-## ISSUE-011 / `tests/validate_input_focus.sh`) route through this method
-## instead. Process tick is left to the caller via `set_process(...)`.
+## Toggles whether this controller listens for unhandled input. Owners must
+## route through this method instead of calling `set_process_unhandled_input`
+## directly (enforced by `tests/validate_input_focus.sh`). Process tick is
+## left to the caller via `set_process(...)`.
 func set_input_listening(listening: bool) -> void:
 	_input_listening = listening
 	if not listening:
@@ -135,6 +154,16 @@ func set_zoom_distance(zoom_distance: float) -> void:
 	_target_zoom = clampf(zoom_distance, zoom_min, zoom_max)
 	_zoom = _target_zoom
 	_update_camera_transform()
+
+
+## Returns the current pivot world position for diagnostic reads.
+func get_pivot() -> Vector3:
+	return _pivot
+
+
+## Returns true when movement input is currently allowed by InputFocus.
+func can_move() -> bool:
+	return _input_focus_allows_gameplay()
 
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
@@ -193,18 +222,47 @@ func _apply_keyboard_movement(delta: float) -> void:
 
 ## Returns true when the InputFocus autoload either is absent (test/unit
 ## context) or reports `&"store_gameplay"`. Any other context (modal, mall
-## hub, menu) suppresses gameplay input — see ISSUE-011 / ownership.md row 5.
+## hub, menu) suppresses gameplay input — see ownership.md row 5.
 func _input_focus_allows_gameplay() -> bool:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return true
-	var ifocus: Node = tree.root.get_node_or_null("InputFocus")
+	var ifocus: Node = _get_input_focus()
 	if ifocus == null or not ifocus.has_method("current"):
 		return true
 	var ctx: StringName = ifocus.call("current")
 	if ctx == &"":
 		return true
 	return ctx == &"store_gameplay"
+
+
+func _get_input_focus() -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("InputFocus")
+
+
+func _get_event_bus() -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("EventBus")
+
+
+## Snaps pivot to zone_position when nav_zone_selected fires on the EventBus.
+func _on_nav_zone_selected(zone_position: Vector3) -> void:
+	set_pivot(zone_position)
+
+
+## Finds the nav zone with the given index (1–5) in the "nav_zone" group and
+## teleports the camera pivot there. No-op when no matching zone exists.
+func _jump_to_nav_zone(index: int) -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var zones: Array[Node] = tree.get_nodes_in_group(&"nav_zone")
+	for zone: Node in zones:
+		if int(zone.get("zone_index")) == index:
+			set_pivot(zone.global_position)
+			return
 
 
 func _update_camera_transform() -> void:

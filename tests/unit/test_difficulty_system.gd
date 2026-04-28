@@ -202,24 +202,6 @@ func test_get_flag_unknown_key_returns_false() -> void:
 	assert_false(result, "Unknown flag key should return false")
 
 
-# --- Assisted mode ---
-
-func test_is_assisted_false_on_fresh_instance() -> void:
-	assert_false(_ds.is_assisted(), "Fresh instance should not be in assisted mode")
-
-
-func test_is_assisted_true_after_downgrade_to_easier_tier_on_day_greater_than_one() -> void:
-	var original_day: int = GameManager.current_day
-	_ds.set_tier(&"hard")
-	GameManager.current_day = 2
-	_ds.set_tier(&"easy")
-	assert_true(
-		_ds.is_assisted(),
-		"Switching to an easier tier after day 1 should activate assisted mode"
-	)
-	GameManager.current_day = original_day
-
-
 # --- Display names ---
 
 func test_get_tier_display_name_easy() -> void:

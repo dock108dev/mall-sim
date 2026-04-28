@@ -7,10 +7,21 @@ var _hud: CanvasLayer
 var _saved_state: GameManager.State
 
 
-func before_each() -> void:
+func before_all() -> void:
 	_saved_state = GameManager.current_state
 	_hud = _HudScene.instantiate()
-	add_child_autofree(_hud)
+	add_child(_hud)
+
+
+func after_all() -> void:
+	GameManager.current_state = _saved_state
+	if is_instance_valid(_hud):
+		_hud.free()
+	_hud = null
+
+
+func before_each() -> void:
+	_hud._reset_for_tests()
 
 
 func after_each() -> void:
@@ -87,7 +98,7 @@ func test_mall_overview_shows_time_label() -> void:
 func test_mall_overview_shows_milestones_button() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	assert_true(
-		_hud.get_node("MilestonesButton").visible,
+		_hud.get_node("TopBar/MilestonesButton").visible,
 		"MilestonesButton must be visible in MALL_OVERVIEW"
 	)
 
@@ -262,4 +273,134 @@ func test_tutorial_hint_ended_restores_telegraph_card() -> void:
 	assert_true(
 		card.visible,
 		"TelegraphCard must re-appear after tutorial_completed restores ticker"
+	)
+
+
+func test_store_view_shows_milestones_button() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_true(
+		_hud.get_node("TopBar/MilestonesButton").visible,
+		"MilestonesButton must be visible in STORE_VIEW"
+	)
+
+
+func test_store_view_hides_store_label_before_store_opened() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_false(
+		_hud.get_node("StoreLabel").visible,
+		"StoreLabel must be hidden in STORE_VIEW until store_opened fires"
+	)
+
+
+func test_store_view_hides_objective_label_before_objective_text() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_false(
+		_hud.get_node("ObjectiveLabel").visible,
+		"ObjectiveLabel must be hidden in STORE_VIEW until objective text is set"
+	)
+
+
+func test_store_view_shows_cash_label() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_true(
+		_hud.get_node("TopBar/CashLabel").visible,
+		"CashLabel must be visible in STORE_VIEW"
+	)
+
+
+func test_store_view_shows_time_label() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_true(
+		_hud.get_node("TopBar/TimeLabel").visible,
+		"TimeLabel must be visible in STORE_VIEW"
+	)
+
+
+func test_store_view_shows_reputation_label() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_true(
+		_hud.get_node("TopBar/ReputationLabel").visible,
+		"ReputationLabel must be visible in STORE_VIEW"
+	)
+
+
+func test_store_view_hides_speed_button() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_false(
+		_hud.get_node("TopBar/SpeedButton").visible,
+		"SpeedButton must be hidden in STORE_VIEW — it is non-functional outside GAMEPLAY"
+	)
+
+
+func test_reputation_label_has_no_placeholder_text_in_store_view() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	var label: Label = _hud.get_node("TopBar/ReputationLabel")
+	assert_false(
+		label.text == "Unknown" and label.visible,
+		"ReputationLabel must not display bare 'Unknown' placeholder text in STORE_VIEW"
+	)
+
+
+func test_notification_suppressed_during_tutorial_step() -> void:
+	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.notification_requested.emit("Some flavor message")
+	var prompt: Label = _hud.get_node("PromptLabel")
+	assert_false(
+		prompt.visible,
+		"PromptLabel must stay hidden when notification_requested fires during an active tutorial step"
+	)
+
+
+func test_critical_notification_shows_during_tutorial_step() -> void:
+	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")
+	var prompt: Label = _hud.get_node("PromptLabel")
+	assert_true(
+		prompt.visible,
+		"PromptLabel must show for critical_notification_requested even during an active tutorial step"
+	)
+	assert_eq(
+		prompt.text,
+		"Make your first sale before closing Day 1.",
+		"Prompt text must match the critical message"
+	)
+
+
+func test_notification_shows_after_tutorial_completed() -> void:
+	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_completed.emit()
+	EventBus.notification_requested.emit("Order delivered.")
+	var prompt: Label = _hud.get_node("PromptLabel")
+	assert_true(
+		prompt.visible,
+		"PromptLabel must show notification_requested messages after tutorial_completed"
+	)
+
+
+func test_notification_shows_after_tutorial_skipped() -> void:
+	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_skipped.emit()
+	EventBus.notification_requested.emit("Order delivered.")
+	var prompt: Label = _hud.get_node("PromptLabel")
+	assert_true(
+		prompt.visible,
+		"PromptLabel must show notification_requested messages after tutorial_skipped"
+	)
+
+
+func test_notification_shows_with_no_tutorial_active() -> void:
+	EventBus.notification_requested.emit("Game saved.")
+	var prompt: Label = _hud.get_node("PromptLabel")
+	assert_true(
+		prompt.visible,
+		"PromptLabel must show notification_requested when no tutorial step is active"
+	)
+
+
+func test_critical_notification_shows_with_no_tutorial_active() -> void:
+	EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")
+	var prompt: Label = _hud.get_node("PromptLabel")
+	assert_true(
+		prompt.visible,
+		"PromptLabel must show critical_notification_requested when no tutorial step is active"
 	)

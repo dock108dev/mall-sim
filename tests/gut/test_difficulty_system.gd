@@ -108,13 +108,6 @@ func test_get_tier_display_name() -> void:
 	)
 
 
-func test_is_assisted_false_on_fresh_game() -> void:
-	assert_false(
-		_ds.is_assisted(),
-		"Fresh game should not be assisted"
-	)
-
-
 func test_set_tier_invalid_id_no_crash() -> void:
 	_ds.set_tier(&"nonexistent")
 	assert_eq(

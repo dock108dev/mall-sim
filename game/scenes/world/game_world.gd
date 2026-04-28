@@ -126,6 +126,8 @@ var _refurb_queue_panel: RefurbQueuePanel = null
 var _deferred_panels_loaded: bool = false
 var _nav_mesh_rebaker: NavMeshRebaker = null
 
+var _day_manager: DayManager = null
+
 ## Hub-mode state (used when debug/walkable_mall = false).
 var _hub_transition: SceneTransition = null
 var _hub_is_inside_store: bool = false
@@ -235,7 +237,9 @@ func _setup_hub_mode() -> void:
 ## Called by GameManager after DataLoader completes content loading.
 func initialize_systems() -> void:
 	initialize_tier_1_data()
-	initialize_tier_2_state()
+	if not initialize_tier_2_state():
+		push_error("GameWorld: aborting system initialization — Tier 2 failed")
+		return
 	initialize_tier_3_operational()
 	initialize_tier_4_world()
 	initialize_tier_5_meta()
@@ -252,12 +256,14 @@ func initialize_tier_1_data() -> void:
 
 
 ## Initializes Tier 2 state systems that depend on the data tier.
-func initialize_tier_2_state() -> void:
+## Returns false on hard failure; initialize_systems() aborts subsequent tiers
+## to prevent cascading null-reference errors on partially-initialized systems.
+func initialize_tier_2_state() -> bool:
 	if market_event_system == null:
 		push_error(
 			"GameWorld: cannot initialize Tier 2 without MarketEventSystem"
 		)
-		return
+		return false
 	inventory_system.initialize(GameManager.data_loader)
 	economy_system.set_inventory_system(inventory_system)
 
@@ -276,6 +282,7 @@ func initialize_tier_2_state() -> void:
 		market_event_system,
 		seasonal_event_system,
 	)
+	return true
 
 
 ## Initializes Tier 3 operational systems after state systems are ready.
@@ -389,6 +396,10 @@ func initialize_tier_5_meta() -> void:
 
 	ending_evaluator.initialize()
 
+	_day_manager = DayManager.new()
+	add_child(_day_manager)
+	_day_manager.initialize(economy_system, ending_evaluator)
+
 	store_upgrade_system.initialize(
 		GameManager.data_loader,
 		economy_system,
@@ -405,6 +416,7 @@ func initialize_tier_5_meta() -> void:
 		ending_evaluator,
 		performance_report_system,
 	)
+	day_cycle_controller.set_day_manager(_day_manager)
 	day_cycle_controller.set_seasonal_event_system(
 		seasonal_event_system
 	)
@@ -1262,6 +1274,9 @@ func _validate_loaded_game_state(save_metadata: Dictionary = {}) -> void:
 		save_metadata.has("active_store_id")
 	)
 	for msg: String in errors:
+		# §F-16: push_error is intentional (state inconsistency detected), but the
+		# game continues — forcing a menu-return here would be worse than degraded
+		# gameplay. See docs/audits/error-handling-report.md §F-16.
 		push_error("Load validation failed: %s" % msg)
 
 
@@ -1278,6 +1293,7 @@ func _validate_new_game_state(store_id: StringName) -> void:
 		false
 	)
 	for msg: String in errors:
+		# §F-16: same as load validation — push_error is diagnostic, non-blocking.
 		push_error("New game validation failed: %s" % msg)
 
 

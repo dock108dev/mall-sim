@@ -17,8 +17,6 @@ var _current_tier_id: StringName = DEFAULT_TIER
 var _current_hour: int = 0
 var _tiers: Dictionary = {}
 var _tier_order: Array[StringName] = []
-var _assisted: bool = false
-var _initialized: bool = false
 
 
 func _ready() -> void:
@@ -33,17 +31,12 @@ func set_tier(tier_id: StringName) -> void:
 	if not _tiers.has(tier_id):
 		push_warning("DifficultySystem: unknown tier '%s'" % tier_id)
 		return
-	if _initialized and _is_lower_tier(tier_id):
-		var day: int = GameManager.current_day
-		if day > 1:
-			_assisted = true
 	_current_tier_id = tier_id
 	_persist_tier()
-	_initialized = true
 	difficulty_selected.emit(tier_id)
 
 
-## Changes difficulty mid-game. Emits difficulty_changed signal.
+## Changes difficulty mid-game. Emits difficulty_selected and difficulty_changed.
 ## Does NOT retroactively adjust cash or inventory.
 func apply_difficulty_change(new_tier_id: StringName) -> void:
 	if not _tiers.has(new_tier_id):
@@ -91,9 +84,9 @@ func load_save_data(data: Dictionary) -> void:
 	if not tier_str.is_empty() and _tiers.has(StringName(tier_str)):
 		_current_tier_id = StringName(tier_str)
 		_persist_tier()
-	used_difficulty_downgrade = data.get(
+	used_difficulty_downgrade = bool(data.get(
 		"used_difficulty_downgrade", false
-	)
+	))
 
 
 func _get_tier_index(tier_id: StringName) -> int:
@@ -137,10 +130,6 @@ func get_tier_display_name() -> String:
 	return tier.get("display_name", "") as String
 
 
-func is_assisted() -> bool:
-	return _assisted
-
-
 ## Returns true when the current in-game hour falls within peak-traffic hours.
 func is_peak_hours() -> bool:
 	return _current_hour >= PEAK_HOURS_START and _current_hour < PEAK_HOURS_END
@@ -180,16 +169,13 @@ func _restore_persisted_tier() -> void:
 				"DifficultySystem: failed to load '%s' — using in-memory tier (%s)"
 				% [Settings.settings_path, error_string(load_err)]
 			)
-		_initialized = true
 		return
 	var saved_tier: String = config.get_value(
 		SETTINGS_SECTION, SETTINGS_KEY, ""
 	)
 	if saved_tier.is_empty() or not _tiers.has(StringName(saved_tier)):
-		_initialized = true
 		return
 	_current_tier_id = StringName(saved_tier)
-	_initialized = true
 
 
 # Wrapper around ConfigFile.load that pre-validates the file to avoid the
@@ -229,6 +215,7 @@ func _persist_tier() -> void:
 		return
 	config.set_value(SETTINGS_SECTION, SETTINGS_KEY, String(_current_tier_id))
 	var err: Error = config.save(Settings.settings_path)
+	# §F-10: persistence is best-effort; in-memory tier still governs the current session.
 	if err != OK:
 		push_warning(
 			"DifficultySystem: failed to persist tier — %s"

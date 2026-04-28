@@ -1,4 +1,4 @@
-## Store-interior player avatar (ISSUE-016).
+## Store-interior player avatar.
 ##
 ## Provides movement (WASD via InputMap `move_*`) and an `interact` action.
 ## Pushes the `store_gameplay` context on InputFocus in `_ready` and pops it
@@ -18,9 +18,9 @@
 ## ErrorBanner is raised; see DESIGN.md §1.2 "Fail Loud, Never Grey".
 ##
 ## Note on class name: `PlayerController` is already taken by the legacy
-## floating orbit-camera controller in `player_controller.gd` (14+ callers).
-## This file introduces the CharacterBody avatar described by ISSUE-016 under
-## a distinct class name (`StorePlayerBody`) so the existing public surface is
+## floating orbit-camera controller in `player_controller.gd`.
+## This file introduces the CharacterBody avatar under a distinct class name
+## (`StorePlayerBody`) so the existing public surface is
 ## preserved, while the node is still named `Player` in the scene tree to
 ## satisfy `StoreReadyContract` (`INV_PLAYER`).
 class_name StorePlayerBody
@@ -165,6 +165,8 @@ func _fail_spawn(reason: String) -> void:
 	var banner: Node = _error_banner()
 	if banner != null and banner.has_method("show_failure"):
 		banner.call("show_failure", "Player spawn contract violated", reason)
+	# §F-15: push_error + ErrorBanner + AuditLog already fired above; assert crashes in
+	# debug builds only — release handles the failure via the UI paths above.
 	assert(false, "StorePlayerBody spawn contract: %s" % reason)
 
 

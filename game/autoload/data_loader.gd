@@ -663,24 +663,24 @@ static func _report_json_error(
 	if on_error.is_valid():
 		on_error.call(message)
 	else:
+		# §F-08: static callers (load_json, load_catalog_entries) check null return;
+		# boot-path callers always pass _record_load_error, which escalates via EventBus.
 		push_warning("DataLoader: %s" % message)
 	return null
 
 
 func _record_load_error(message: String) -> void:
 	_load_errors.append(message)
+	# §F-09: errors aggregate into _load_errors; EventBus.content_load_failed propagates
+	# them all at boot-end and blocks the main-menu transition on any failure.
 	push_warning("DataLoader: %s" % message)
 
 
-# --- Public getters (backward-compatible API) ---
+# --- Public getters ---
 
 
 func get_item(id: String) -> ItemDefinition:
 	return _items.get(id) as ItemDefinition
-
-
-func get_item_definition(id: String) -> ItemDefinition:
-	return get_item(id)
 
 
 func get_all_items() -> Array[ItemDefinition]:
@@ -725,10 +725,6 @@ func get_store(id: String) -> StoreDefinition:
 	if canonical.is_empty():
 		return null
 	return _stores.get(String(canonical)) as StoreDefinition
-
-
-func get_store_definition(id: String) -> StoreDefinition:
-	return get_store(id)
 
 
 func get_all_stores() -> Array[StoreDefinition]:

@@ -20,8 +20,6 @@ var _saved_difficulty_config: Dictionary = {}
 var _saved_difficulty_tiers: Dictionary = {}
 var _saved_difficulty_order: Array[StringName] = []
 var _saved_difficulty_tier_id: StringName = &""
-var _saved_difficulty_assisted: bool = false
-var _saved_difficulty_initialized: bool = false
 var _saved_difficulty_downgrade_used: bool = false
 
 
@@ -34,8 +32,6 @@ func before_each() -> void:
 	_saved_difficulty_tiers = DifficultySystemSingleton._tiers.duplicate(true)
 	_saved_difficulty_order = DifficultySystemSingleton._tier_order.duplicate()
 	_saved_difficulty_tier_id = DifficultySystemSingleton._current_tier_id
-	_saved_difficulty_assisted = DifficultySystemSingleton._assisted
-	_saved_difficulty_initialized = DifficultySystemSingleton._initialized
 	_saved_difficulty_downgrade_used = (
 		DifficultySystemSingleton.used_difficulty_downgrade
 	)
@@ -67,8 +63,6 @@ func after_each() -> void:
 	DifficultySystemSingleton._tiers = _saved_difficulty_tiers.duplicate(true)
 	DifficultySystemSingleton._tier_order = _saved_difficulty_order.duplicate()
 	DifficultySystemSingleton._current_tier_id = _saved_difficulty_tier_id
-	DifficultySystemSingleton._assisted = _saved_difficulty_assisted
-	DifficultySystemSingleton._initialized = _saved_difficulty_initialized
 	DifficultySystemSingleton.used_difficulty_downgrade = (
 		_saved_difficulty_downgrade_used
 	)
@@ -266,8 +260,6 @@ func _configure_difficulty() -> void:
 	}
 	DifficultySystemSingleton._load_config()
 	DifficultySystemSingleton._current_tier_id = &"normal"
-	DifficultySystemSingleton._assisted = false
-	DifficultySystemSingleton._initialized = true
 	DifficultySystemSingleton.used_difficulty_downgrade = false
 
 

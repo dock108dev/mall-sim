@@ -66,6 +66,10 @@ if [ "${AUDIT_SKIP_RUN:-0}" != "1" ]; then
 	echo "Importing project assets..."
 	"$GODOT_BIN" --path "$ROOT" --headless --import 2>/dev/null || true
 
+	echo "Seeding GUT editor environment..."
+	"$GODOT_BIN" --path "$ROOT" --headless \
+		--script res://tests/setup_gut_env.gd 2>/dev/null || true
+
 	echo "Running audit checkpoint tests..."
 	"$GODOT_BIN" --path "$ROOT" --headless \
 		--script res://addons/gut/gut_cmdln.gd -- \

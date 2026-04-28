@@ -16,6 +16,13 @@ offset_bottom = 48.0
 grow_horizontal = 2
 theme_override_constants/separation = 24
 
+[node name="MilestonesButton" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Milestones [M]"
+clip_text = true
+
 [node name="CashLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
@@ -67,7 +74,7 @@ flat = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 10
-text = "Unknown"
+text = ""
 horizontal_alignment = 2
 clip_text = true
 
@@ -97,13 +104,6 @@ grow_horizontal = 2
 text = ""
 horizontal_alignment = 1
 vertical_alignment = 0
-
-[node name="MilestonesButton" type="Button" parent="."]
-offset_left = 20.0
-offset_top = 56.0
-offset_right = 160.0
-offset_bottom = 86.0
-text = "Milestones [M]"
 
 [node name="SeasonalEventLabel" type="Label" parent="."]
 anchors_preset = 1

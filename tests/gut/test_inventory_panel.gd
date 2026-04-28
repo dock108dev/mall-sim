@@ -346,3 +346,73 @@ func _popup_menu_has_text(menu: PopupMenu, text: String) -> bool:
 		if menu.get_item_text(index) == text:
 			return true
 	return false
+
+
+func test_move_to_shelf_closes_panel_and_enters_placement_mode() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var item: ItemInstance = _create_test_item(items[0].id, "good", "backroom")
+
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	add_child_autofree(panel)
+
+	# Directly arm the panel's open state to avoid InputFocus setup in tests.
+	# close() needs _is_open true to proceed; _focus_pushed false means
+	# _pop_modal_focus returns immediately (no stack pop needed).
+	panel._is_open = true
+	panel._selected_item = item
+
+	var closed_names: Array[String] = []
+	var on_closed: Callable = func(n: String) -> void: closed_names.append(n)
+	EventBus.panel_closed.connect(on_closed)
+
+	panel._on_context_action(1)
+
+	EventBus.panel_closed.disconnect(on_closed)
+
+	assert_false(
+		panel.is_open(),
+		"Panel must close when Move to Shelf is selected"
+	)
+	assert_true(
+		panel._shelf_actions.is_placement_mode,
+		"Placement mode must be active after Move to Shelf"
+	)
+	assert_eq(
+		panel._selected_item,
+		item,
+		"_selected_item must survive close() so the placement click can find it"
+	)
+	assert_eq(
+		closed_names.size(), 1,
+		"panel_closed must fire exactly once"
+	)
+
+	panel._shelf_actions.exit_placement_mode()
+
+
+func test_move_to_shelf_does_nothing_when_no_item_selected() -> void:
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	add_child_autofree(panel)
+
+	panel._is_open = true
+	# _selected_item intentionally left null
+
+	panel._on_context_action(1)
+
+	assert_true(
+		panel.is_open(),
+		"Panel must stay open when no item is selected"
+	)
+	assert_false(
+		panel._shelf_actions.is_placement_mode,
+		"Placement mode must not activate without a selected item"
+	)

@@ -6,7 +6,7 @@
 ## listen through the bus without reaching into owners directly.
 extends Node
 
-# ── Phase 1 Signal Inventory (ISSUE-022) ──────────────────────────────────────
+# ── Phase 1 Signal Inventory ──────────────────────────────────────────────────
 # Typed cross-system signals for the golden path: Boot → Mall → Store Ready.
 # Emitters must still be the conceptual owners listed in ownership.md; these
 # mirrors are listener-facing. Use the emit_* wrappers below for type safety.
@@ -14,7 +14,7 @@ signal store_ready(store_id: StringName)
 signal store_failed(store_id: StringName, reason: String)
 signal scene_ready(scene_name: StringName)
 # NOTE: the Phase 1 parameterless `game_state_changed()` is satisfied by
-# `run_state_changed()` below (declared by ISSUE-020). The legacy
+# `run_state_changed()` below. The legacy
 # `game_state_changed(old_state: int, new_state: int)` is the GameManager FSM
 # transition signal and predates Phase 1 — both are typed. See
 # docs/architecture/ownership.md row 6.
@@ -44,7 +44,7 @@ signal time_speed_requested(speed_tier: int)
 # ── Game State ────────────────────────────────────────────────────────────────
 signal boot_completed()
 signal game_state_changed(old_state: int, new_state: int)
-## Emitted by GameState (ISSUE-020) on any mutation to the active run state
+## Emitted by GameState on any mutation to the active run state
 ## (active_store_id, day, money, flags). Parameterless on purpose — listeners
 ## read the current values directly from the GameState autoload. Distinct from
 ## game_state_changed, which is the GameManager FSM transition signal.
@@ -302,7 +302,7 @@ signal card_rejected(item_id: StringName)
 ## Emitted after authentication succeeds with the assigned grade (F/D/C/B/A/S).
 signal card_graded(item_id: StringName, grade: String)
 
-# ── Sports Cards — Grading Hint & Fake Sale Penalty (ISSUE-018) ──────────────
+# ── Sports Cards — Grading Hint & Fake Sale Penalty ──────────────────────────
 ## Emitted by SportsMemorabiliaController.request_grading_hint() after a paid
 ## probabilistic hint is stamped onto the item. hint is one of
 ## "authentic" | "questionable" | "fake"; fee is the charge deducted.
@@ -316,7 +316,7 @@ signal fake_sold_as_authentic(
 	reputation_delta: float,
 )
 
-# ── Sports Cards — ACC Numeric Grading (ISSUE-015) ───────────────────────────
+# ── Sports Cards — ACC Numeric Grading ───────────────────────────────────────
 ## Emitted when the player submits a card to the Apex Card Certification service.
 ## card_id is the item instance_id; day_submitted is the current game day.
 signal grade_submitted(card_id: StringName, day_submitted: int)
@@ -401,7 +401,7 @@ signal item_rented(item_id: String, rental_fee: float, rental_tier: String)
 signal rental_returned(item_id: String, degraded: bool)
 signal rental_late_fee(item_id: String, late_fee: float, days_late: int)
 signal rental_item_lost(item_id: String)
-## Canonical rental lifecycle signals (alias set required by ISSUE-020).
+## Canonical rental lifecycle signals (aliases kept for backward compatibility).
 signal title_rented(item_id: String, rental_fee: float, rental_tier: String)
 signal title_returned(item_id: String, degraded: bool)
 ## Player waived a late fee; reputation_delta is the positive rep awarded.
@@ -411,7 +411,7 @@ signal late_fee_collected(item_id: String, amount: float, days_late: int)
 ## Emitted at day transition for each item still out past its deadline.
 ## customer_id may be empty when the rental was created without one.
 signal rental_overdue(customer_id: String, item_id: String)
-## ISSUE-007 canonical store-scoped rental lifecycle signals.
+## Canonical store-scoped rental lifecycle signals.
 signal store_rental_started(item_id: String, customer_id: String, due_day: int)
 signal store_rental_returned(item_id: String, late_days: int)
 signal store_rental_overdue(customer_id: String, item_id: String)
@@ -483,13 +483,13 @@ signal tutorial_completed()
 signal tutorial_skipped()
 signal skip_tutorial_requested()
 signal contextual_tip_requested(tip_text: String)
-## ISSUE-004: emitted when the active tutorial context swaps to the store the
-## player just entered. `context_id` is the StoreDefinition.tutorial_context_id;
+## Emitted when the active tutorial context swaps to the store the player just
+## entered. `context_id` is the StoreDefinition.tutorial_context_id;
 ## `first_step_text` is the localized prompt for the first step of that context.
 signal tutorial_context_entered(
 	store_id: StringName, context_id: StringName, first_step_text: String
 )
-## ISSUE-004: emitted when leaving a store clears the active tutorial context.
+## Emitted when leaving a store clears the active tutorial context.
 signal tutorial_context_cleared()
 
 # ── Onboarding ───────────────────────────────────────────────────────────────
@@ -561,10 +561,16 @@ signal interactable_interacted(target: Interactable, type: int)
 signal interactable_right_clicked(target: Interactable, type: int)
 signal interactable_focused(action_label: String)
 signal interactable_unfocused()
-## ISSUE-003: scoped hover and click events tagged with the interactable's
-## stable id and its owning store_id. Listeners should prefer these over the
-## target-reference signals above when they need to reason about *which*
-## interactable in *which* store fired — no global fallback handler exists.
+## Emitted by NavZoneInteractable when clicked or triggered by keyboard shortcut.
+## PlayerController subscribes to snap _pivot to zone_position instantly.
+signal nav_zone_selected(zone_position: Vector3)
+## Emitted by the debug overlay (F3) to toggle always-on zone label display.
+## Only meaningful in debug builds; NavZoneInteractable instances subscribe.
+signal zone_labels_debug_toggled(always_on: bool)
+## Scoped hover and click events tagged with the interactable's stable id and
+## its owning store_id. Listeners should prefer these over the target-reference
+## signals above when they need to reason about *which* interactable in *which*
+## store fired — no global fallback handler exists.
 signal interactable_hovered(
 	interactable_id: StringName, store_id: StringName, label: String
 )
@@ -578,9 +584,11 @@ signal hub_store_highlighted(store_id: StringName)
 signal toggle_milestones_panel()
 signal toggle_staff_panel()
 signal toggle_refurb_queue_panel()
-## ISSUE-022: opens/closes the hub-accessible Completion Tracker panel.
+## Opens/closes the hub-accessible Completion Tracker panel.
 signal toggle_completion_tracker_panel()
 signal notification_requested(message: String)
+## Emitted for critical player-action messages that must display even during active tutorial steps.
+signal critical_notification_requested(message: String)
 ## Emitted by any system requesting a non-blocking player notification.
 signal toast_requested(message: String, category: StringName, duration: float)
 signal panel_opened(panel_name: String)
@@ -589,8 +597,8 @@ signal panel_closed(panel_name: String)
 ## payload keys: text (String), action (String), key (String).
 ## When payload contains hidden: true the rail should conceal itself.
 signal objective_changed(payload: Dictionary)
-## ISSUE-017: mirror of StoreController.objective_text_changed so the HUD
-## (and any other listener) can bind without a direct controller reference.
+## Mirror of StoreController.objective_text_changed so the HUD (and any other
+## listener) can bind without a direct controller reference.
 signal objective_text_changed(text: String)
 ## Four-slot variant of objective_changed.
 ## payload keys: current_objective, next_action, input_hint, optional_hint (all String).
@@ -645,7 +653,7 @@ func _on_day_started(_day: int) -> void:
 	clear_day_end_summary()
 
 
-# ── Phase 1 emit_* wrappers (ISSUE-022) ───────────────────────────────────────
+# ── Phase 1 emit_* wrappers ───────────────────────────────────────────────────
 # Thin type-safe wrappers around the Phase 1 signals. No logic — the wrappers
 # exist so callers get a method signature GDScript can typecheck, rather than
 # passing arbitrary args to `emit_signal("…", …)`.

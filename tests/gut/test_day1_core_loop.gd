@@ -133,6 +133,21 @@ func test_first_sale_after_day1_does_not_set_flag() -> void:
 	)
 
 
+func test_item_sold_propagates_to_first_sale_flag() -> void:
+	# Full chain: item_sold → ObjectiveDirector → first_sale_completed → DayManager → flag.
+	# Verifies the wiring that game_world.gd must establish at runtime.
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", false)
+	var prev_sold: bool = ObjectiveDirector._sold
+	ObjectiveDirector._sold = false
+	EventBus.item_sold.emit("chain_item", 15.0, "retro")
+	ObjectiveDirector._sold = prev_sold
+	assert_true(
+		GameState.get_flag(&"first_sale_complete"),
+		"item_sold must propagate through ObjectiveDirector to set first_sale_complete flag"
+	)
+
+
 # ── DayManager: day_started triggers seed ─────────────────────────────────────
 
 func test_day_started_day1_seeds_inventory() -> void:

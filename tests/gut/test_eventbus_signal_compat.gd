@@ -10,9 +10,6 @@ const SAFE_CONNECT_WRAPPER := "_safe_connect"
 # Signals declared on EventBus that are known to be referenced via paths the
 # static scanner can't see. Each entry must have a documented reason.
 const KNOWN_ORPHAN_SIGNALS: Array[String] = [
-	# Dynamic dispatch: emitted via `bus.run_state_changed.emit()` in
-	# game_state.gd where `bus` is resolved at runtime (ISSUE-020).
-	"run_state_changed",
 	# Cross-cutting cross-system hooks emitted via emit_*() helper functions
 	# on EventBus itself (camera_authority.gd / input_focus.gd dispatch through
 	# the helpers rather than touching `EventBus.<signal>` directly).

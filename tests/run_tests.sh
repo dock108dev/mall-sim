@@ -35,6 +35,10 @@ if GODOT_BIN="$(_resolve_godot_bin)"; then
     echo "Godot found — importing project assets (addons/GUT textures, etc.)..."
     "$GODOT_BIN" --path "$ROOT" --headless --import 2>/dev/null
 
+    echo "Seeding GUT editor environment..."
+    "$GODOT_BIN" --path "$ROOT" --headless \
+        --script res://tests/setup_gut_env.gd 2>/dev/null || true
+
     echo "Running GDScript tests... (full output → $LOG_FILE)"
     # Redirect stderr (Godot engine warnings/errors) to the log file only.
     # Stdout (GUT results) is tee'd so the terminal shows the pass/fail summary

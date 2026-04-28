@@ -11,6 +11,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GODOT_VERSION: "4.6.2-stable"
 
 jobs:
   lint-docs:
@@ -58,13 +59,12 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .godot
-          key: godot-import-${{ runner.os }}-4.6.2-${{ hashFiles('project.godot', '**/*.import') }}
+          key: godot-import-${{ runner.os }}-${{ env.GODOT_VERSION }}-${{ hashFiles('project.godot', '**/*.import') }}
           restore-keys: |
-            godot-import-${{ runner.os }}-4.6.2-
+            godot-import-${{ runner.os }}-${{ env.GODOT_VERSION }}-
 
       - name: Install Godot
         run: |
-          GODOT_VERSION="4.6.2-stable"
           GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           wget -q "$GODOT_URL" -O /tmp/godot.zip
           unzip -q /tmp/godot.zip -d /tmp/godot
@@ -74,6 +74,15 @@ jobs:
 
       - name: Import project
         run: bash scripts/godot_import.sh
+
+      - name: Seed GUT editor environment
+        run: |
+          # GutBottomPanel._ready() (initialised by the GUT editor plugin during
+          # --import) calls load_options() on this path and prints an ERROR: line
+          # when it does not exist. Create it before the test run so no spurious
+          # error appears in the GUT output.
+          godot --path "$GITHUB_WORKSPACE" --headless \
+            --script res://tests/setup_gut_env.gd 2>/dev/null || true
 
       - name: Run GUT tests
         run: |
@@ -125,13 +134,12 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .godot
-          key: godot-import-${{ runner.os }}-4.6.2-${{ hashFiles('project.godot', '**/*.import') }}
+          key: godot-import-${{ runner.os }}-${{ env.GODOT_VERSION }}-${{ hashFiles('project.godot', '**/*.import') }}
           restore-keys: |
-            godot-import-${{ runner.os }}-4.6.2-
+            godot-import-${{ runner.os }}-${{ env.GODOT_VERSION }}-
 
       - name: Install Godot
         run: |
-          GODOT_VERSION="4.6.2-stable"
           GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           wget -q "$GODOT_URL" -O /tmp/godot.zip
           unzip -q /tmp/godot.zip -d /tmp/godot

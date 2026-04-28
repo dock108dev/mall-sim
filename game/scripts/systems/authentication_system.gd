@@ -102,6 +102,8 @@ func reject_authentication(item_id: Variant) -> bool:
 ## Authenticates the item immediately. Returns true on success.
 func authenticate(instance_id: String) -> bool:
 	if not _inventory_system or not _economy_system:
+		# §F-13: failure is signaled via authentication_completed(false) on EventBus;
+		# push_warning is supplementary log evidence.
 		push_warning("AuthenticationSystem: systems not initialized")
 		EventBus.authentication_completed.emit(
 			instance_id, false, "System not ready"
@@ -110,6 +112,7 @@ func authenticate(instance_id: String) -> bool:
 
 	var item: ItemInstance = _inventory_system.get_item(instance_id)
 	if not can_authenticate(item):
+		# §F-13: same — EventBus carries the failure to UI.
 		push_warning(
 			"AuthenticationSystem: item '%s' not eligible"
 			% instance_id
@@ -154,6 +157,12 @@ func load_save_data(data: Dictionary) -> void:
 	_authenticated_canonical_ids.clear()
 	var saved_ids: Variant = data.get("authenticated_canonical_ids", [])
 	if saved_ids is not Array:
+		# §F-27: wrong type in save data means authentication history is lost for
+		# this load; push_warning surfaces the regression in logs.
+		push_warning(
+			"AuthenticationSystem: expected Array for authenticated_canonical_ids, got %s — authentication history reset"
+			% type_string(typeof(saved_ids))
+		)
 		return
 	for saved_id: Variant in saved_ids:
 		var canonical_id: String = str(saved_id)
@@ -172,6 +181,12 @@ func _load_config() -> void:
 		return
 	var config: Variant = entry.get("authentication_config", {})
 	if config is not Dictionary:
+		# §F-15: authentication_config key exists but is the wrong type — likely
+		# a content-authoring error. Log and fall back to compile-time defaults.
+		push_warning(
+			"AuthenticationSystem: authentication_config for '%s' is %s, not Dictionary — using defaults"
+			% [STORE_TYPE, type_string(typeof(config))]
+		)
 		return
 	var auth_config: Dictionary = config as Dictionary
 	_value_threshold = float(
@@ -206,6 +221,9 @@ func _resolve_canonical_item_id(item_id: Variant) -> StringName:
 
 
 func _is_suspicious_entry(entry: Dictionary) -> bool:
+	# Three content schema generations: "suspicious" (v1), "is_suspicious" (v2),
+	# "suspicious_chance >= 1.0" (v3 probability encoding). All must be checked
+	# until legacy content is migrated.
 	if bool(entry.get("suspicious", false)):
 		return true
 	if bool(entry.get("is_suspicious", false)):

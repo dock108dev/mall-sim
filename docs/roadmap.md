@@ -101,7 +101,7 @@ are deleted.
 **Goal:** Push 2000s mall identity into the visual chrome.
 
 - period typography and jewel-tone color palette applied to HUD and panels
-- [x] Custom shaders (outline highlight shader for interactable objects)
+- outline highlight shader for interactable objects (shipped)
 - CRT warmth or scanline shader on appropriate UI surfaces
 - mall-map style for the mall overview
 - unified `ActionDrawer` pattern for all in-store actions (haggle, refurbish,

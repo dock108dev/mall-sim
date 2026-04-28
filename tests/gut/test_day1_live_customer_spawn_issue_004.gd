@@ -14,7 +14,7 @@ const STORE_ID: String = "retro_games"
 ## Real-seconds upper bound for first-spawn timing at default speed (1x):
 ## 1 real second = 1 in-game minute, so 120s = 2 in-game hours.
 const TWO_GAME_HOURS_SECONDS: float = 120.0
-const RETRO_PROFILE_IDS: Array = [
+const RETRO_PROFILE_IDS = [
 	"retro_nostalgic_adult",
 	"retro_speedrunner",
 	"retro_parent",

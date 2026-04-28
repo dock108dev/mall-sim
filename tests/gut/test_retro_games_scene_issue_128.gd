@@ -8,14 +8,14 @@ const GRID_CELL_SIZE: float = 0.5
 var _root: Node3D = null
 
 
-func before_each() -> void:
+func before_all() -> void:
 	var scene: PackedScene = load(SCENE_PATH)
 	assert_not_null(scene, "Retro Games scene should load")
 	_root = scene.instantiate() as Node3D
 	add_child(_root)
 
 
-func after_each() -> void:
+func after_all() -> void:
 	if is_instance_valid(_root):
 		_root.free()
 	_root = null
@@ -105,6 +105,48 @@ func test_checkout_testing_and_refurb_nodes_are_interactable() -> void:
 	assert_eq(refurb_interactable.prompt_text, "Refurbish Gear")
 
 
+func test_checkout_register_node_is_disabled() -> void:
+	var register: Interactable = (
+		_root.get_node_or_null("Checkout/Register") as Interactable
+	)
+	assert_not_null(register, "Checkout/Register must exist in the scene")
+	if register:
+		assert_false(
+			register.enabled,
+			"Checkout/Register must be disabled to prevent double-firing interactable_interacted"
+		)
+
+
+func test_only_checkout_counter_register_is_enabled() -> void:
+	var enabled_registers: Array[Interactable] = []
+	_collect_enabled_register_interactables(_root, enabled_registers)
+	assert_eq(
+		enabled_registers.size(), 1,
+		"Exactly one REGISTER interactable must be enabled in the scene"
+	)
+	if enabled_registers.size() == 1:
+		assert_eq(
+			enabled_registers[0].get_parent().name,
+			"checkout_counter",
+			"The sole enabled REGISTER interactable must be checkout_counter/Interactable"
+		)
+
+
+func test_checkout_counter_has_no_duplicate_mesh() -> void:
+	var counter: Node3D = _root.get_node_or_null("checkout_counter") as Node3D
+	assert_not_null(counter, "checkout_counter must exist")
+	if not counter:
+		return
+	var mesh_children: Array[Node] = []
+	for child: Node in counter.get_children():
+		if child is MeshInstance3D:
+			mesh_children.append(child)
+	assert_eq(
+		mesh_children.size(), 0,
+		"checkout_counter must not contain a duplicate CounterMesh (visual provided by Checkout)"
+	)
+
+
 func test_queue_markers_fixture_zones_and_scene_layout_match_issue() -> void:
 	var queue_markers: Array[Node] = _root.get_tree().get_nodes_in_group(
 		"queue_markers"
@@ -179,6 +221,22 @@ func test_emissive_panels_and_lighting_budget_match_retro_vibe() -> void:
 				(material as StandardMaterial3D).emission_enabled,
 				"%s should remain emissive" % panel.name
 			)
+
+
+func _collect_enabled_register_interactables(
+	root: Node, out: Array[Interactable]
+) -> void:
+	for node: Node in root.get_tree().get_nodes_in_group("interactables"):
+		if not root.is_ancestor_of(node) and node != root:
+			continue
+		if not node is Interactable:
+			continue
+		var interactable := node as Interactable
+		if (
+			interactable.interaction_type == Interactable.InteractionType.REGISTER
+			and interactable.enabled
+		):
+			out.append(interactable)
 
 
 func _get_fixture_zones() -> Array[Marker3D]:

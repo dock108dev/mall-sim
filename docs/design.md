@@ -48,7 +48,7 @@ At cadence: unlock new store, market/seasonal event fires, reputation tier chang
 - Any store beyond the five-store roster
 - New mechanics before Phase 0 exit criteria are cleared
 
-## 11. Visual Anti-Patterns (merge-blockers)
+## 7. Visual Anti-Patterns (merge-blockers)
 
 See `docs/style/visual-grammar.md` for the full grammar. The following are merge-blocking in any PR touching visual or UI code.
 

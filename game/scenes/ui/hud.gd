@@ -62,7 +62,6 @@ var _target_cash: float = 0.0
 var _current_speed: float = 1.0
 var _last_reputation: float = ReputationSystemSingleton.DEFAULT_REPUTATION
 
-var _open_panel_count: int = 0
 var _tutorial_step_active: bool = false
 var _cash_count_tween: Tween
 var _cash_scale_tween: Tween
@@ -87,12 +86,10 @@ var _counter_color_tweens: Dictionary = {}
 @onready var _reputation_label: Label = $TopBar/ReputationLabel
 @onready var _prompt_label: Label = $PromptLabel
 @onready var _store_label: Label = $StoreLabel
-## ISSUE-017: bound to StoreController.current_objective_text via the
-## EventBus.objective_text_changed mirror.
 @onready var _objective_label: Label = $ObjectiveLabel
 @onready var _seasonal_event_label: Label = $SeasonalEventLabel
 @onready var _telegraph_card: Label = $TelegraphCard
-@onready var _milestones_button: Button = $MilestonesButton
+@onready var _milestones_button: Button = $TopBar/MilestonesButton
 
 
 func _ready() -> void:
@@ -101,11 +98,11 @@ func _ready() -> void:
 	_seasonal_event_label.visible = false
 	_telegraph_card.visible = false
 	_objective_label.visible = false
+	_speed_button.visible = false
 
 	EventBus.objective_text_changed.connect(_on_objective_text_changed)
 	EventBus.notification_requested.connect(_on_notification_requested)
-	EventBus.panel_opened.connect(_on_panel_opened_track)
-	EventBus.panel_closed.connect(_on_panel_closed_track)
+	EventBus.critical_notification_requested.connect(_on_critical_notification_requested)
 	EventBus.reputation_changed.connect(_on_reputation_changed)
 	EventBus.store_opened.connect(_on_store_opened)
 	EventBus.store_closed.connect(_on_store_closed)
@@ -222,7 +219,7 @@ func _on_close_day_pressed() -> void:
 	var state := GameManager.current_state
 	if state == GameManager.State.STORE_VIEW or state == GameManager.State.GAMEPLAY:
 		if _is_day1_gate_active():
-			EventBus.notification_requested.emit(
+			EventBus.critical_notification_requested.emit(
 				"Make your first sale before closing Day 1."
 			)
 			return
@@ -280,13 +277,25 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			_telegraph_card.visible = false
 		GameManager.State.STORE_VIEW:
 			visible = true
+			_cash_label.visible = true
+			_time_label.visible = true
+			_reputation_label.visible = true
+			_speed_button.visible = false
+			_milestones_button.visible = true
 			_close_day_button.visible = true
 			_items_placed_label.visible = true
 			_customers_label.visible = true
 			_sales_today_label.visible = true
+			_store_label.visible = false
+			_objective_label.visible = false
 			_seasonal_event_label.visible = false
 			_telegraph_card.visible = false
 		_:
+			# §J4: PAUSED, LOADING, BUILD, and other intermediate states inherit
+			# the current visibility established by the most recent explicit
+			# transition (STORE_VIEW / MALL_OVERVIEW → visible; MAIN_MENU /
+			# DAY_SUMMARY → hidden). New GameManager.State values must be
+			# added explicitly here if they need distinct HUD visibility.
 			pass
 
 
@@ -304,7 +313,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action("close_day"):
 		if _is_day1_gate_active():
-			EventBus.notification_requested.emit(
+			EventBus.critical_notification_requested.emit(
 				"Make your first sale before closing Day 1."
 			)
 			get_viewport().set_input_as_handled()
@@ -504,30 +513,26 @@ func _flash_reputation_label(
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 
 
-## ISSUE-017: HUD <- StoreController.current_objective_text binding. Updates
-## the visible objective text within one frame of `set_objective_text()`.
+## Updates the visible objective text within one frame of `set_objective_text()`.
 func _on_objective_text_changed(text: String) -> void:
 	_objective_label.text = text
 	_objective_label.visible = not text.strip_edges().is_empty()
 
 
 func _on_notification_requested(message: String) -> void:
+	if _tutorial_step_active:
+		return
 	if message.is_empty():
 		hide_prompt()
 	else:
 		show_prompt(message)
 
 
-func _on_panel_opened_track(_panel_name: String) -> void:
-	_open_panel_count += 1
-
-
-func _on_panel_closed_track(_panel_name: String) -> void:
-	_open_panel_count = maxi(_open_panel_count - 1, 0)
-
-
-func _has_modal_open() -> bool:
-	return _open_panel_count > 0
+func _on_critical_notification_requested(message: String) -> void:
+	if message.is_empty():
+		hide_prompt()
+	else:
+		show_prompt(message)
 
 
 func _on_store_opened(store_id: String) -> void:
@@ -709,9 +714,9 @@ func _tween_children_alpha(target: float, tween_ease: int) -> void:
 			)
 
 
-## ISSUE-006: Seeds Items Placed / Customers / Sales Today counters from
-## authoritative system getters so save/load and scene reload do not start from
-## zero while system state is already populated.
+## Seeds Items Placed / Customers / Sales Today counters from authoritative
+## system getters so save/load and scene reload do not start from zero while
+## system state is already populated.
 func _seed_counters_from_systems() -> void:
 	_refresh_items_placed()
 	_refresh_customers_active()
@@ -755,6 +760,10 @@ func _on_customer_left(_data: Dictionary) -> void:
 
 
 func _refresh_customers_active() -> void:
+	# Silent return: HUD is Tier-5 init (per docs/architecture.md), so
+	# customer_system may legitimately be null on the first frame and during
+	# headless test setup. Re-polls on every customer_entered/left signal.
+	# See docs/audits/error-handling-report.md §J2.
 	var customers: CustomerSystem = GameManager.get_customer_system()
 	if customers == null:
 		return
@@ -795,3 +804,14 @@ func _pulse_counter(label: Label, positive: bool) -> void:
 	_counter_color_tweens[label] = PanelAnimator.flash_color(
 		label, color, _COUNTER_PULSE_DURATION
 	)
+
+
+## Resets transient display state for test isolation. Called by GUT tests that
+## share a single HUD instance across multiple test functions via before_all().
+func _reset_for_tests() -> void:
+	_telegraphed_events.clear()
+	_random_event_telegraph = ""
+	_tutorial_step_active = false
+	_telegraph_card.visible = false
+	_seasonal_event_label.visible = false
+	_prompt_label.visible = false

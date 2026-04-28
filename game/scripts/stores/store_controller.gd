@@ -4,15 +4,15 @@
 class_name StoreController
 extends Node
 
-## ISSUE-017: emitted whenever current_objective_text changes. The HUD
-## ObjectiveLabel binds to this (mirrored on EventBus.objective_text_changed
-## for cross-scene wiring) so updates propagate within one frame.
+## Emitted whenever current_objective_text changes. The HUD ObjectiveLabel
+## binds to this (mirrored on EventBus.objective_text_changed for cross-scene
+## wiring) so updates propagate within one frame.
 signal objective_text_changed(text: String)
 
 var store_type: String = ""
 
-## ISSUE-017: HUD-driving objective text. Set via `set_objective_text()` so
-## the binding signal fires; do not assign directly from outside.
+## HUD-driving objective text. Set via `set_objective_text()` so the binding
+## signal fires; do not assign directly from outside.
 var current_objective_text: String = ""
 
 var _slots: Array[Node] = []
@@ -106,7 +106,7 @@ func emit_store_signal(
 		)
 		return
 	var sig: Signal = Signal(EventBus, signal_name)
-	sig.emit(args)
+	sig.callv(args)
 
 
 ## Returns all ShelfSlot children across all fixtures.
@@ -273,6 +273,8 @@ func _connect_lifecycle_signals() -> void:
 	_connect_signal(EventBus.day_started, _on_day_started)
 	_connect_signal(EventBus.day_ended, _on_day_ended_notify)
 	_connect_signal(EventBus.customer_entered, _on_customer_entered)
+	_connect_signal(EventBus.item_stocked, _on_slot_stocked_visual)
+	_connect_signal(EventBus.item_removed_from_shelf, _on_slot_cleared_visual)
 
 
 func _on_day_ended_notify(day: int) -> void:
@@ -318,7 +320,7 @@ func _handle_store_entered(store_id: StringName) -> void:
 		emit_actions_registered()
 
 
-## ISSUE-017: Register an Interactable with the controller. Idempotent.
+## Registers an Interactable with this controller. Idempotent.
 func register_interactable(node: Interactable) -> void:
 	if node == null or not is_instance_valid(node):
 		return
@@ -327,12 +329,12 @@ func register_interactable(node: Interactable) -> void:
 	_registered_interactables.append(node)
 
 
-## ISSUE-017: All Interactables registered with this controller (visible or not).
+## Returns all Interactables registered with this controller (visible or not).
 func get_registered_interactables() -> Array[Interactable]:
 	return _registered_interactables.duplicate()
 
 
-## ISSUE-017: Count Interactables that are currently visible in the tree.
+## Returns the count of Interactables currently visible in the scene tree.
 func count_visible_interactables() -> int:
 	var count: int = 0
 	for node: Interactable in _registered_interactables:
@@ -346,9 +348,8 @@ func count_visible_interactables() -> int:
 	return count
 
 
-## ISSUE-017: HUD/objective binding. Sets current_objective_text and emits
-## both the local signal and the EventBus mirror so HUDs not parented to
-## this controller (e.g. autoloaded HUD CanvasLayer) update within one frame.
+## Sets current_objective_text and emits both the local signal and the
+## EventBus mirror so HUDs not parented to this controller update within one frame.
 func set_objective_text(text: String) -> void:
 	if text == current_objective_text:
 		return
@@ -358,8 +359,8 @@ func set_objective_text(text: String) -> void:
 		EventBus.objective_text_changed.emit(text)
 
 
-## ISSUE-017: StoreReadyContract invariant #10. The objective text references
-## a real action when at least one registered, visible Interactable has an
+## StoreReadyContract invariant #10. The objective text references a real
+## action when at least one registered, visible Interactable has an
 ## action_verb that appears as a token in the objective text AND a
 ## display_name token also appears in the text. Empty objective text is
 ## treated as a contract violation (no action to verify against).
@@ -399,7 +400,7 @@ func _register_interactables() -> void:
 	_collect_interactables_recursive(self)
 	var owning_store_id: StringName = StringName(store_type)
 	for node: Interactable in _registered_interactables:
-		# ISSUE-003: tag every interactable with the owning store so scoped
+		# Tag every interactable with the owning store so scoped
 		# EventBus.interactable_clicked/_hovered events can identify source.
 		node.store_id = owning_store_id
 		if not node.interacted_by.is_connected(_on_interactable_interacted):
@@ -418,3 +419,29 @@ func _on_interactable_interacted(_by: Node) -> void:
 	# itself; this hook exists so subclasses can react via override without
 	# wiring their own signal connections.
 	pass
+
+
+## Shows a 3D mesh on the matching ShelfSlot when an item is stocked onto it.
+## Idempotent: skipped when the slot is already visually occupied.
+func _on_slot_stocked_visual(item_id: String, shelf_id: String) -> void:
+	var slot_node: Node = get_slot_by_id(shelf_id)
+	if not slot_node is ShelfSlot:
+		return
+	var slot := slot_node as ShelfSlot
+	if slot.is_occupied():
+		return
+	var category: String = ""
+	if _inventory_system:
+		var item: ItemInstance = _inventory_system.get_item(item_id)
+		if item and item.definition:
+			category = item.definition.category
+	slot.place_item(item_id, category)
+
+
+## Clears the 3D mesh on the matching ShelfSlot when an item leaves it.
+## Idempotent: no-op when the slot is already empty.
+func _on_slot_cleared_visual(_item_id: String, shelf_id: String) -> void:
+	var slot_node: Node = get_slot_by_id(shelf_id)
+	if not slot_node is ShelfSlot:
+		return
+	(slot_node as ShelfSlot).remove_item()

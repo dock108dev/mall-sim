@@ -16,6 +16,7 @@ var _milestones_total: int = 1
 
 
 func _ready() -> void:
+	_best_reputation = ReputationSystemSingleton.DEFAULT_REPUTATION
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.day_closed.connect(_on_day_closed)
 	EventBus.money_changed.connect(_on_money_changed)
@@ -75,6 +76,9 @@ func _try_load_milestone_total() -> void:
 	if _milestones_total > 1:
 		return
 	if GameManager == null or GameManager.data_loader == null:
+		# Silent return: data_loader is null during pre-gameplay init frames.
+		# _on_gameplay_ready() re-polls once all systems are live.
+		# See docs/audits/error-handling-report.md §J3.
 		return
 	var count: int = GameManager.data_loader.get_all_milestones().size()
 	if count > 0:

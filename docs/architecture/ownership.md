@@ -30,10 +30,6 @@ document first (with justification) and update every caller.
 
 - **Autoload roster** — `../architecture.md` §"Autoloads" defines the
   autoload list this doc formalizes ownership for.
-- **Store-Ready Contract** — `docs/research/store-ready-contract.md`.
-- **Camera handoff** — `docs/research/camera-authority-handoff.md`.
-- **Store entry routing** — `docs/research/store-entry-routing.md`,
-  `docs/research/storedirector-vs-hub-entry.md`.
 
 ## How to change this document
 
@@ -41,5 +37,3 @@ document first (with justification) and update every caller.
 2. If ownership genuinely needs to move, update the row **and** every caller
    in the same change — do not leave the codebase with two owners "during the
    transition." That is the exact failure mode this doc exists to prevent.
-3. Add or update the matching `docs/research/*.md` note so the *why* survives
-   the next refactor.

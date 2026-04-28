@@ -211,6 +211,7 @@ func test_easy_modifier_increases_probability() -> void:
 		_inventory.add_item(&"pocket_creatures", _item)
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
+		customer.free()
 		if _purchased_signals.size() > 0:
 			success_count[0] += 1
 
@@ -237,6 +238,7 @@ func test_hard_modifier_decreases_probability() -> void:
 		_inventory.add_item(&"pocket_creatures", _item)
 		var customer: Customer = _make_customer_with_item()
 		_system.process_transaction(customer)
+		customer.free()
 		if _purchased_signals.size() > 0:
 			success_count[0] += 1
 
