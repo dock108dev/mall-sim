@@ -160,7 +160,10 @@ func load_save_data(data: Dictionary) -> void:
 		# §F-27: wrong type in save data means authentication history is lost for
 		# this load; push_warning surfaces the regression in logs.
 		push_warning(
-			"AuthenticationSystem: expected Array for authenticated_canonical_ids, got %s — authentication history reset"
+			(
+				"AuthenticationSystem: expected Array for authenticated_canonical_ids,"
+				+ " got %s — authentication history reset"
+			)
 			% type_string(typeof(saved_ids))
 		)
 		return

@@ -11,10 +11,11 @@ enum WaypointType {
 	EXIT,
 }
 
-var connected_waypoints: Array[MallWaypoint] = []
 @export var connected_waypoint_paths: Array[NodePath] = []
 @export var waypoint_type: WaypointType = WaypointType.HALLWAY
 @export var associated_store_id: StringName = &""
+
+var connected_waypoints: Array[MallWaypoint] = []
 
 
 func _ready() -> void:

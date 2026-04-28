@@ -17,8 +17,6 @@ const CONDITION_ORDER: PackedStringArray = [
 ## cannot stall the boot path.
 const _MAX_STARTER_QUANTITY: int = 64
 
-@onready var _debug_labels: Node3D = $DebugLabels
-
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
 var _testing_system: TestingSystem = null
@@ -29,6 +27,8 @@ var _initialized: bool = false
 var _item_grades: Dictionary = {}
 ## Maps grade_id → grade entry dict (loaded from grades.json at boot).
 var _grade_table: Dictionary = {}
+
+@onready var _debug_labels: Node3D = $DebugLabels
 
 
 func _ready() -> void:

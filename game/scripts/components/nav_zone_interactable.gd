@@ -15,6 +15,10 @@
 class_name NavZoneInteractable
 extends Interactable
 
+## Session-wide debug toggle: all instances share this flag so it survives
+## store scene changes within a single play session.
+static var _debug_always_on_session: bool = false
+
 ## Keyboard shortcut index (1–5). PlayerController maps nav_zone_N actions to
 ## nodes in the "nav_zone" group by matching this value.
 @export var zone_index: int = 0
@@ -23,10 +27,6 @@ extends Interactable
 @export var linked_label: NodePath = NodePath("")
 ## Distance (world units) from the camera pivot within which the label is shown.
 @export var proximity_radius: float = 2.5
-
-## Session-wide debug toggle: all instances share this flag so it survives
-## store scene changes within a single play session.
-static var _debug_always_on_session: bool = false
 
 var _label_node: Label3D = null
 var _is_hovered: bool = false
