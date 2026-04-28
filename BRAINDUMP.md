@@ -1,937 +1,1418 @@
-# MALLCORE_SIM_PLAYABLE_DAY_RESCUE_BRAINDUMP.md
+# MALLCORE_SIM_REPO_AUDIT_BRAINDUMP.md
+
 ## Mission
-We are not adding more game yet.
-We are fixing the last major blockers so Mallcore Sim can support one real playable Day 1.
-The current build is closer than before, but it still has two core failures:
-1. The player still cannot move.
-2. The store still does not feel like a real playable store.
-Everything else is secondary.
-The goal is:
-Main Menu  
-→ New Game  
-→ Mall Overview  
-→ Click Retro Game Store  
-→ Spawn inside the store  
-→ Move around or use reliable hotspot navigation  
-→ Stock one item  
-→ See the item placed  
-→ Customer buys it  
-→ Money / placed / customer / sold counts update  
-→ Close Day  
-→ Day Summary is accurate
-That is the whole mission.
+
+This is a fresh repo audit brain dump for `dock108dev/mall-sim`.
+
+The goal is not to add more game.
+The goal is to make the existing game prove one clean playable Day 1 from boot to day summary.
+
+Right now the repo has a lot of serious architecture already in place:
+
+- Godot 4.6 project
+- boot scene
+- content loading
+- store definitions
+- store registry
+- scene routing
+- camera ownership
+- input focus ownership
+- audit log / fail card / error banner concepts
+- objective rail
+- interaction prompt
+- tutorial context system
+- store director
+- game state
+
+That is good.
+
+But the actual user-facing result is still not good enough:
+
+- I can still end up unable to move.
+- The store still does not clearly feel like a store I am inside.
+- There are overlays fighting overlays.
+- Some screens still feel like debug state leaked into the playable state.
+- The scene can technically have lots of systems and still fail the only test that matters: can I play one day?
+
+So this pass should be treated as a repo-level wiring audit and playable loop rescue.
+
+Do not interpret this as a design expansion.
+Do not add new stores.
+Do not add more economy.
+Do not add a new tutorial system.
+Do not invent a second camera/input/router/store lifecycle pattern.
+
+The job is to make the current architecture stop fighting itself and deliver one working Day 1.
+
 ---
-# Current Observations
-## What improved
-The UI is cleaner than before.
-The main menu is mostly isolated now.
-The mall overview is cleaner.
-The store has at least some visual identity now:
-- Retro Games sign
-- store facade
-- labels for shelf, display table, register, backroom
-That is progress.
-## What is still broken
-The build is still not playable.
-Major remaining problems:
-- I still cannot move.
-- The store appears from a bird’s-eye / exterior debug-camera angle.
-- I am looking at a cube/facade instead of standing inside a shop.
-- Labels describe the store instead of the store actually being obvious.
-- The “Retro Games” sign / text overlaps badly.
-- The top HUD still overlaps on the far left.
-- The bottom ticker / task bar still competes with gameplay.
-- Pause/menu overlay works better, but it still confirms that the core game is not playable yet.
-- The Day 1 loop is still not proven.
-This is still not a content problem.
-This is a playable-state, camera, movement, layout, and interaction problem.
----
-# Non-Negotiable Priority
-Before any feature work, the next implementation pass must prove the following:
+
+## Repo Reality Check
+
+The app is not a blank prototype anymore.
+
+`project.godot` has the main scene set to:
+
 ```text
-Player can enter store and perform one successful stock/sale/close-day loop.
+res://game/scenes/bootstrap/boot.tscn
+```
+
+It also has many autoloads already registered, including:
+
+```text
+DataLoaderSingleton
+ContentRegistry
+EventBus
+GameManager
+AudioManager
+Settings
+EnvironmentManager
+CameraManager
+StaffManager
+ReputationSystemSingleton
+DifficultySystemSingleton
+UnlockSystemSingleton
+CheckoutSystem
+OnboardingSystemSingleton
+MarketTrendSystemSingleton
+TooltipManager
+ObjectiveRail
+InteractionPrompt
+ObjectiveDirector
+AuditOverlay
+AuditLog
+SceneRouter
+ErrorBanner
+CameraAuthority
+InputFocus
+StoreRegistry
+StoreDirector
+GameState
+FailCard
+TutorialContextSystem
+```
+
+That means the implementation pass should not randomly wire around these.
+
+The repo is already trying to enforce single owners:
+
+- `StoreDirector` owns `enter_store(store_id)`.
+- `SceneRouter` owns scene changes.
+- `CameraAuthority` owns camera activation.
+- `InputFocus` owns input/modal focus.
+- `StoreRegistry` owns store id to scene path resolution.
+- Content files own store definitions.
+
+The problem is likely not “missing all systems.”
+
+The problem is likely one or more of:
+
+- systems are not connected in the playable path
+- systems are connected but using the wrong state/context
+- systems are correct in isolation but not validated end-to-end
+- UI state is not being cleared between screens
+- camera authority selects a camera that is technically active but visually wrong
+- input focus is technically non-empty but not set to the context gameplay expects
+- store ready contract proves technical invariants but not player usability
+- tutorial/objective overlays keep rendering after ownership should move elsewhere
+
+This brain dump is about auditing those exact seams.
 
-If movement cannot be fixed quickly, use a fallback navigation mode.
+---
+
+## The One True Playable Path
 
-Do not spend more time expanding systems while the player cannot actually play.
+This is the golden path.
 
-⸻
+Nothing else matters until this works.
 
-Phase 1: Movement Must Stop Being Ambiguous
+```text
+Launch game
+→ Boot completes
+→ Main Menu appears cleanly
+→ Click New Game
+→ Mall overview appears cleanly
+→ Click Retro Game Store
+→ StoreDirector enters retro_games
+→ SceneRouter loads retro_games scene
+→ Store scene reports controller initialized
+→ StoreReadyContract passes
+→ CameraAuthority activates the correct playable interior camera
+→ InputFocus context becomes store_gameplay
+→ HUD/objective prompts are readable
+→ Player can navigate or select zones
+→ Inventory opens
+→ One item can be placed on a fixture
+→ Placed count becomes 1
+→ One customer appears
+→ Customer buys the item
+→ Money/customers/sold counts update
+→ Close Day becomes valid
+→ Day Summary reflects the actual sale
+→ Next Day or Main Menu transition does not leave stale overlays behind
+```
 
-Problem
+If any step fails, the pass is not complete.
 
-“I can’t move” has continued through multiple passes.
+Do not say “the systems are there.”
+The only acceptable answer is the path works from a fresh launch.
 
-That means movement is either:
+---
 
-* not implemented
-* not bound
-* blocked by UI focus
-* attached to the wrong object
-* using the wrong camera
-* disabled in the current game state
-* blocked by collision
-* or technically working but impossible to perceive because the camera is static/wrong
+## Current Top-Level Diagnosis
 
-Required Work
+The repo seems to have moved from “missing systems” into “too many partial systems without a proven end-to-end loop.”
 
-Add a movement diagnostic pass before touching anything else.
+That is a dangerous phase for agent-built games.
 
-Add Dev Movement Debug Overlay
+The app can look sophisticated in code while still being impossible to play.
 
-Show this in dev builds only:
+The next pass needs to be boring, strict, and validation-driven.
 
-Movement Debug
-GameState:
-UIState:
-InputFocus:
-PlayerControllerActive:
-CameraMode:
-CameraAttachedToPlayer:
-CanMove:
-WASD Input:
-Velocity:
-Player Position:
-Grounded:
-Collision Blocked:
-Current Modal:
+No more visual band-aids.
+No more new menus.
+No more extra content.
+No more “this should work now” without a direct manual script and audit checkpoint.
 
-This can be ugly. It just has to tell the truth.
+---
 
-Required Logging
+## Non-Negotiable Rule: Single Source Of Truth Must Win
 
-When pressing WASD / arrows, logs should clearly say:
+Do not create parallel systems to fix symptoms.
 
-Input received: forward
-Input received: backward
-Input received: left
-Input received: right
+### Store lifecycle
 
-Then separately:
+Use `StoreDirector.enter_store(store_id)`.
 
-Movement applied: velocity/position changed
+Do not have UI buttons directly load store scenes.
+Do not have mall cards call `change_scene_to_file`.
+Do not instantiate stores manually from random UI scripts.
 
-This separates input failure from movement failure.
+### Store catalog
 
-Acceptance
+Use content-backed store definitions and `StoreRegistry`.
 
-Movement is not considered fixed until:
+The repo already has `game/content/stores/store_definitions.json` with real store entries like:
 
-* pressing W changes debug input state
-* player position changes
-* camera view changes or movement is visibly represented
-* UI focus is not blocking gameplay input
-* movement works after entering Retro Game Store from the mall overview
+- `sports`
+- `retro_games`
+- `rentals`
+- `pocket_creatures`
+- `electronics`
 
-⸻
+The Day 1 path should use `retro_games` unless the UI explicitly chooses another valid store.
 
-Phase 2: Add a Navigation Fallback Immediately
+Do not hardcode a separate fake “Retro Game Store” path in UI.
+Do not keep legacy Sneaker/Sports/Mall debug targets that bypass registry.
 
-Reason
+### Scene transitions
 
-Movement has already consumed too much time.
+Use `SceneRouter`.
 
-A playable day does not require perfect first-person movement.
+Do not call Godot scene changing directly from random controllers.
+The router should be the only place that owns scene transition mechanics.
 
-If WASD movement is still broken after the diagnostic pass, implement fallback navigation immediately.
+### Camera activation
 
-Acceptable Fallback Options
+Use `CameraAuthority.request_current(camera, source)`.
 
-Option A: Hotspot Navigation
+Do not set `camera.current = true` manually.
+Do not call `make_current()` manually outside the authority.
+The repo already has a validation script for this.
 
-The store has fixed clickable zones:
+### Input focus
 
-* Entrance
-* Shelf
-* Display Table
-* Register
-* Backroom
+Use `InputFocus`.
 
-Clicking a zone moves the player/camera to that zone.
+Gameplay input should only work when the current context is right.
+UI/modal input should push and pop cleanly.
+The repo already has a validation script that forbids direct process input ownership.
 
-Option B: Keyboard Teleport Debug Navigation
+### Objectives/tutorial/prompts
 
-Temporary keys:
+Use one current owner for what the player should do next.
 
-* 1 = Entrance
-* 2 = Shelf
-* 3 = Display Table
-* 4 = Register
-* 5 = Backroom
+Do not let ObjectiveRail, InteractionPrompt, tutorial cards, bottom ticker, pause menu text, and debug labels all speak at once.
 
-Option C: Fixed Camera + Click Interactions
+---
 
-No movement required for first playable day.
+## Audit Pass 1: Boot And Main Menu
 
-Player can:
+The boot scene should remain boring.
 
-* click shelf
-* click display table
-* click register
-* open inventory
-* place item
+`boot.gd` already loads content, validates key JSON, initializes settings/audio, marks boot complete, emits boot completed, then transitions to main menu.
 
-Recommendation
+This is good.
 
-Use Hotspot Navigation for the next playable pass.
+But the audit needs to verify what happens after boot.
 
-It fits the current game better than broken first-person movement and is enough to test the loop.
+### Required Checks
 
-Acceptance
+From a fresh launch:
 
-Even if WASD fails, I must be able to:
+- Boot does not show content loading errors.
+- Boot does not leave `TitleLabel` or `ErrorPanel` visible after main menu transition.
+- Main menu is the only visible screen.
+- No HUD is visible.
+- No objective rail is visible.
+- No ticker is visible.
+- No store scene is visible behind the menu.
+- No tutorial overlay leaks into the menu.
+- Input focus is `main_menu`.
+- Camera source is either main menu camera or empty if the menu is pure UI.
 
-* enter the store
-* select shelf/display table
-* place item
-* trigger customer/sale loop
-* close day
+### Fail Conditions
 
-No future pass should be blocked by WASD again.
+Fail the pass if:
 
-⸻
+- any gameplay HUD appears on main menu
+- the tutorial appears on main menu
+- the store/mall scene is visible behind main menu by accident
+- clicking options causes overlays to stack permanently
+- returning from options does not restore exact menu state
 
-Phase 3: Fix the Store Camera
+---
 
-Current Problem
+## Audit Pass 2: New Game And Mall Overview
 
-The current store view looks like a bird’s-eye view of a cube or exterior storefront.
+Clicking New Game should put the app in a clean mall overview state.
 
-That is not a playable store.
+This is where earlier builds were already suspicious:
 
-The player is not inside the shop. The player is looking at an exterior/debug model.
+- clicked New Game
+- clicked Sports Memorabilia
+- ended up on a sneakers page or wrong store-ish path
+- overlays/tickers/tutorial text leaked between states
 
-Required Camera Change
+That means the mall overview needs a strict routing audit.
 
-The default store camera must spawn inside the store at human eye level or at a clean isometric interior angle.
+### Required Checks
 
-Pick ONE.
+After New Game:
 
-Do not mix cinematic exterior camera, debug bird’s-eye camera, and play camera.
+- InputFocus is `mall_hub`.
+- UI shows mall overview only.
+- Store cards are generated from the store content/registry path, not a stale hardcoded list.
+- Every clickable store card has a real `store_id` from `StoreRegistry`.
+- Retro Game Store card maps to `retro_games`.
+- Sports Memorabilia card maps to `sports`.
+- No sneaker/sneakers/sneaker citadel fallback route exists unless it is a real registered store.
+- Locked stores look secondary and cannot route to broken scenes.
+- Bottom objective says one clear thing, probably: `Choose Retro Game Store to start Day 1.`
+- HUD is readable and not overlapping.
 
-Preferred Option: Interior First-Person / Over-Shoulder
+### Hard Requirement
 
-Camera:
+Add or run a small diagnostic from the mall card click handler:
 
-* inside the store
-* around human eye height
-* facing inward toward shelf/table/register
-* roof not visible
-* entrance behind or to the side
-* interactable objects clearly visible
+```text
+Mall card clicked: display_name=Retro Game Store store_id=retro_games
+StoreRegistry.resolve(retro_games)=res://game/scenes/stores/retro_games.tscn
+StoreDirector.enter_store(retro_games) requested
+```
 
-Acceptable Option: Fixed Isometric Interior
+For Sports:
 
-Camera:
+```text
+Mall card clicked: display_name=Sports Memorabilia store_id=sports
+StoreRegistry.resolve(sports)=res://game/scenes/stores/sports_memorabilia.tscn
+```
 
-* angled down into the store interior
-* roof removed
-* front wall cut away
-* objects visible and clickable
-* not looking at the outside of a cube
+If clicking Sports ever goes to sneakers, the content/alias/router path is wrong.
 
-Not Acceptable
+### Acceptance
 
-Do not default to:
+New Game is not accepted until clicking a store logs the correct store id and routes through StoreDirector.
 
-* roof view
-* exterior storefront view
-* camera looking at the sign from outside
-* top-down view where labels are doing all the work
-* camera clipped into text/signage
+---
 
-Acceptance
+## Audit Pass 3: StoreDirector / SceneRouter / StoreReady Contract
 
-When entering Retro Game Store, the first view should communicate:
+`StoreDirector` already defines a real state machine:
 
-I am in a small shop.
-There is a shelf.
-There is a display table.
-There is a register.
-I know where to stock an item.
+```text
+IDLE → REQUESTED → LOADING_SCENE → INSTANTIATING → VERIFYING → READY | FAILED
+```
 
-⸻
+This is exactly the right shape.
 
-Phase 4: Rebuild the Store as a Playable Room, Not a Labeled Cube
+The implementation pass should not replace it.
 
-Current Problem
+It should use it and make the runtime path visible.
 
-The store looks like a box with words describing objects.
+### Required Checks
 
-That means the scene is not carrying the gameplay.
+When entering `retro_games`, log or audit each checkpoint:
 
-Labels should help. They should not be the only way to understand the store.
+```text
+director_state_requested store_id=retro_games
+director_state_loading_scene path=res://game/scenes/stores/retro_games.tscn
+director_state_instantiating path=res://game/scenes/stores/retro_games.tscn
+director_state_verifying store_id=retro_games
+director_state_ready store_id=retro_games
+```
 
-Minimum Store Layout
+If it fails, the user should get a fail card, not a grey empty scene.
 
-Build one small room.
+### Important
 
-Required objects:
+Do not count `store_ready` as playable by itself.
 
-* floor
-* back wall
-* left wall
-* right wall
-* open/front cutaway or doorway
-* shelf
-* display table
-* counter
-* register
-* backroom marker or doorway
-* customer entry point
-* customer path to item/register
-* customer exit point
+`StoreReadyContract` can pass while the game is still visually bad or non-interactive.
+So add a Day 1 readiness audit on top of technical store readiness.
 
-Simple Layout
+Call it something like:
 
-          BACK WALL
-   [SHELF]          [BACKROOM]
-      [DISPLAY TABLE]
-   [CUSTOMER PATH / OPEN FLOOR]
-          [COUNTER + REGISTER]
-          FRONT / ENTRANCE
+```text
+day1_playable_ready
+```
 
-Object Requirements
+It should only pass when:
 
-Shelf
+- store scene loaded
+- correct store id active
+- one active playable camera
+- InputFocus is `store_gameplay`
+- fixture zones exist
+- at least one stockable fixture exists
+- inventory has at least one starting item
+- close day starts disabled
+- objective prompt exists
 
-* real visible object
-* placed against wall
-* can hold item
-* has interaction zone
+---
 
-Display Table
+## Audit Pass 4: Camera Ownership And Store View
 
-* real visible table
-* can hold item
-* has interaction zone
+The camera problem is still one of the biggest blockers.
 
-Register
+The player should not enter Retro Game Store and see:
 
-* visible on counter
-* not just text
-* used for sale completion or customer checkout
+- a bird’s-eye view of a cube
+- exterior storefront debug angle
+- roof view
+- camera clipped into signage
+- top-down blockout where labels are doing all the work
 
-Customer Path
+The repo already has `CameraAuthority`, so the fix is not “just set another camera current somewhere.”
 
-* obvious open space
-* customer can spawn, walk, buy, exit
-* if pathfinding is not ready, fake it with a simple tween/animation
+The fix is:
 
-Acceptance
+1. Find which camera is being requested for the store.
+2. Confirm the source passed to CameraAuthority.
+3. Confirm only one camera is current.
+4. Confirm the chosen camera is the playable interior camera.
+5. Confirm the camera angle actually lets the player understand the room.
 
-The store can be ugly.
+### Required Debug Overlay Fields
 
+Add these to the existing audit/debug overlay or dev UI:
+
+```text
+CameraAuthority.current:
+CameraAuthority.source:
+Current camera path:
+Current camera type:
+Camera position:
+Camera rotation:
+Camera FOV/zoom:
+Store camera mode:
+Camera target/follow node:
+```
+
+### Correct Store Camera Options
+
+Pick one. Do not mix both.
+
+#### Option A: Fixed isometric interior camera
+
+This is probably the fastest playable path.
+
+- roof removed / never visible
+- front wall cut away
+- interior visible
+- shelf/table/register visible
+- click/hotspot interactions work
+- player avatar optional
+
+#### Option B: first-person / over-shoulder interior camera
+
+Only use this if movement is truly fixed.
+
+- human-ish eye height
+- starts inside the shop
+- faces inward
+- player can move without UI stealing focus
+
+### Recommendation
+
+Use fixed isometric interior camera plus hotspot navigation for Day 1.
+
+This game does not need perfect first-person movement to prove a retail sim loop.
+
+### Acceptance
+
+When entering Retro Game Store, the first screenshot should clearly say:
+
+```text
+I am inside a small store.
+I can see fixtures.
+I can place inventory.
+I can understand where a customer enters and checks out.
+```
+
+No floating label should be required to understand the room.
+
+---
+
+## Audit Pass 5: Input Focus And Movement
+
+The repo already has `InputFocus`, and its comments say gameplay scripts gate input with:
+
+```gdscript
+InputFocus.current() == &"store_gameplay"
+```
+
+That is good.
+
+But the actual player still could not move.
+
+That means the audit must separate these cases:
+
+1. key input not received
+2. input received but wrong focus context
+3. focus context correct but movement controller inactive
+4. movement controller active but not attached to the visible actor/camera
+5. position changes but camera does not make movement visible
+6. movement blocked by collision/navmesh
+7. movement intentionally replaced by hotspot navigation but UI does not explain that
+
+### Required Movement Diagnostic
+
+Add a dev-only panel that shows:
+
+```text
+InputFocus.current:
+InputFocus.depth:
+Current modal/menu:
+Store gameplay active:
+Movement mode: wasd | hotspot | fixed_camera
+move_forward pressed:
+move_back pressed:
+move_left pressed:
+move_right pressed:
+interact pressed:
+Player node path:
+Player position:
+Player velocity:
+Navigation zone selected:
+Hovered interactable:
+Focused interactable:
+UI mouse captured/blocking:
+```
+
+### Required Logging
+
+When pressing WASD/arrows:
+
+```text
+Input received: move_forward
+Input ignored: current_focus=modal expected=store_gameplay
+Movement applied: old_pos=(...) new_pos=(...)
+Movement not applied: reason=collision_blocked
+Movement not applied: reason=no_player_controller
+Movement not applied: reason=movement_mode_hotspot
+```
+
+Do not log only “movement failed.”
+That does not help.
+
+### Hotspot Fallback Is Not Optional
+
+If WASD is still not reliable after this audit, implement Day 1 hotspot navigation immediately.
+
+Use zones like:
+
+- Entrance
+- Wall Rack / Shelf
+- Display Table / Showcase
+- Register
+- Backroom
+
+The project already has `nav_zone_1` through `nav_zone_5` inputs in `project.godot`.
+Use them intentionally or remove/fix them if they are stale.
+
+Suggested mapping:
+
+```text
+Shift+1 = Entrance
+Shift+2 = Shelf / Wall Rack
+Shift+3 = Display / Glass Case
+Shift+4 = Register
+Shift+5 = Backroom
+```
+
+Also allow click-to-select zones.
+
+### Acceptance
+
+The playable pass accepts either:
+
+- WASD visibly moves the player/camera in the store, or
+- hotspot navigation clearly lets the player select each meaningful store zone
+
+It does not accept “movement is still broken but maybe later.”
+
+---
+
+## Audit Pass 6: Store Room Must Stop Looking Like A Labeled Cube
+
+The store scene can be ugly.
 It cannot be abstract.
 
-A player should understand the store without reading floating labels.
+Right now the issue is not art quality.
+The issue is readability.
 
-⸻
+A box with text labels is not a playable retail space.
 
-Phase 5: Remove or Demote Floating Labels
+### Minimum Retro Game Store Layout
 
-Current Problem
+For Day 1, make exactly one small readable room:
 
-Labels are overwhelming:
+```text
+BACK WALL
+[Cartridge Wall Rack]      [Backroom Door]
 
-* BACKROOM
-* SHELF — Press E / Click to Stock
-* DISPLAY TABLE
-* REGISTER
+       [Display / Glass Case]
 
-They float over the scene and make it look like a wireframe/debug prototype.
+[Open Customer Floor / Path]
 
-Correct Use
+[Counter + Register]       [Entrance]
+```
 
-For the next pass, labels should become contextual prompts.
+### Required Objects
 
-Instead of always showing:
+- floor
+- back wall
+- side walls or clear boundaries
+- front cutaway / entrance
+- cartridge wall rack
+- console shelf or display table
+- counter
+- register
+- backroom marker/door
+- customer spawn point
+- customer checkout point
+- customer exit point
 
+### Fixture Rule
+
+Fixtures should be real nodes with interaction areas.
+
+Do not rely on text labels like:
+
+```text
 SHELF — Press E / Click to Stock
+```
 
-Show only when:
+That can exist as a contextual prompt, but the fixture itself should be visible.
 
-* player is near shelf, or
-* cursor hovers shelf, or
-* shelf is selected hotspot
+### Acceptance
 
-Prompt:
+A screenshot of the default store view should make the room understandable without debug labels.
 
-Shelf
-Press E to stock
+---
 
-Debug Mode Exception
+## Audit Pass 7: Floating Labels, Tutorial Text, HUD, Ticker
 
-It is fine to keep always-on labels behind a debug toggle.
+This has been one of the recurring problems.
 
-Example:
+The game keeps showing too much text at once.
 
-* F3 toggles debug labels
-* default gameplay has labels off or minimal
+The result feels like:
 
-Acceptance
+- tutorial thing leaks into menus
+- overlays on overlays
+- weird text formatting
+- bottom ticker competes with current task
+- top HUD overlaps
+- labels overwhelm the store scene
 
-Default player view should not look like a labeled blockout.
+The fix is not “make every label prettier.”
 
-The scene should look like a store first, debug second.
+The fix is screen ownership.
 
-⸻
-
-Phase 6: Fix Store Sign / Text Overlap
-
-Current Problem
-
-The Retro Games sign and other storefront text overlaps badly.
-
-It looks like multiple text layers are stacked:
-
-* sign text
-* mirrored/backside text
-* possibly world labels
-* UI text clipping through facade
-
-Required Fix
-
-Audit all text in the store scene.
-
-Separate text types:
-
-* world signage
-* interactable prompts
-* HUD
-* tutorial
-* debug labels
-
-Only one store sign should exist.
-
-World signage should:
-
-* face the correct camera direction
-* not render through walls
-* not overlap with interactable labels
-* not be duplicated front/back unless deliberately designed
-
-Acceptance
-
-The front sign should read cleanly:
-
-Retro Games
-
-No duplicated/mirrored/glitched text.
-
-No interaction labels should overlap the sign.
-
-⸻
-
-Phase 7: HUD Cleanup
-
-Current Problem
-
-Top-left HUD still overlaps:
-
-* money
-* day
-* unknown
-* progress
-* milestone button
-
-The HUD is too dense and still fighting screen space.
-
-Required Fix
-
-Simplify Day 1 HUD.
-
-Only show what matters:
-
-$0 | Day 1 - 9:00 AM | Placed: 0 | Customers: 0 | Sold: 0 | Rep: 50 | Close Day
-
-Hide or remove for now:
-
-* Unknown
-* Progress:
-* duplicate day text
-* duplicate money text
-* extra separators
-* destination shop text if it causes crowding
-
-Milestones can stay as a small button, but it must not overlap the HUD.
-
-Acceptance
-
-No HUD text overlaps at any resolution tested.
-
-The far-left money/day area must be clean.
-
-⸻
-
-Phase 8: Bottom Bar / Ticker Cleanup
-
-Current Problem
-
-The bottom ticker and task prompt are competing.
-
-Current examples:
-
-* “Stock your first item and make a sale”
-* “Grand Opening Week kicks off tomorrow…”
-* “Press I to open inventory”
-
-All are fighting the same strip.
-
-Required Fix
-
-Create one bottom action area with priority.
+### Only One Primary Instruction At A Time
 
 Priority order:
 
-1. Active tutorial/action prompt
-2. Critical warning
-3. Current objective
-4. Flavor ticker
+1. blocking modal/fail card
+2. pause/menu overlay
+3. active tutorial step
+4. active interaction prompt
+5. current objective
+6. flavor ticker
 
-If tutorial/action prompt exists, hide ticker.
+If priority 1-4 exists, hide the ticker.
 
-Recommended Day 1 Bottom Prompt
+### Main Menu
 
-On mall overview:
+Visible:
 
-Click Retro Game Store to enter.
+- title
+- start/options/quit buttons
+- maybe version
 
-Inside store:
+Hidden:
 
-Open inventory and place your first item.
+- HUD
+- objective rail
+- interaction prompt
+- ticker
+- tutorial
+- store scene labels
 
-Near shelf/table:
+### Mall Overview
 
-Press E to stock this display.
+Visible:
 
-After item placed:
+- mall/store cards
+- minimal HUD if needed
+- one bottom instruction
 
-Wait for your first customer.
+Hidden:
 
-After sale:
+- store interaction labels
+- store fixtures
+- inventory panel
+- day summary
+- pause overlay
 
-First sale complete. You can close the day.
+### Store View
 
-Acceptance
+Visible:
 
-Only one bottom message is visually dominant at a time.
+- store interior
+- compact HUD
+- one current objective or prompt
+- contextual prompt only when hovering/selecting a fixture
 
-Flavor ticker never blocks gameplay instructions.
+Hidden:
 
-⸻
+- mall overview cards
+- main menu
+- always-on giant labels
+- ticker when tutorial/objective is active
 
-Phase 9: Close Day Rules
+### Inventory Open
 
-Current Problem
+Visible:
 
-The game allows day closing even when nothing happened, or at least the loop is not proven.
+- inventory panel
+- selected fixture/placement target if relevant
 
-That makes testing confusing.
+Hidden or dimmed:
 
-Required Rule
+- unrelated tutorial text
+- flavor ticker
+- movement input if inventory owns focus
 
-For Day 1 only:
+### Pause
+
+Visible:
+
+- pause menu
+- dimmed background
+
+Hidden/blocked:
+
+- gameplay input
+- hover prompts
+- active store clicks
+
+### Day Summary
+
+Visible:
+
+- summary only
+
+Hidden:
+
+- HUD
+- ticker
+- tutorial
+- store input
+- inventory
+
+### Acceptance
+
+At no point should two major overlays compete for the same area.
+At no point should tutorial text leak into options/main menu/day summary.
+
+---
+
+## Audit Pass 8: HUD Simplification
+
+The Day 1 HUD should be brutally simple.
+
+Recommended:
+
+```text
+$800 | Day 1 | 9:00 AM | Placed: 0 | Customers: 0 | Sold: 0 | Rep: 50 | Close Day
+```
+
+Remove or hide for now:
+
+- Unknown
+- Progress
+- duplicate money
+- duplicate day
+- duplicate destination/store text
+- completion percent
+- milestone noise
+- long text in top-left
+
+Milestones can be behind a button or pause menu.
+They should not compete with the Day 1 loop.
+
+### Acceptance
+
+- no overlap at 1920x1080
+- no overlap at a smaller common window size
+- HUD does not cover store fixtures
+- close day button is visible but disabled until valid
+
+---
+
+## Audit Pass 9: Inventory And Placement
+
+Do not overbuild inventory.
+
+For Day 1, it only needs to prove one stocked item.
+
+The Retro Game Store content already has starting inventory ids.
+Use the real content if it is easy.
+If the real item card UI is broken, add a dev/test fallback but do not let it become the main UX forever.
+
+### Required Day 1 Flow
+
+```text
+Press I or click Inventory
+Inventory opens
+Select one item
+Select fixture
+Item appears on fixture
+Placed count increments
+Objective advances
+```
+
+### Fixture Placement Contract
+
+A placed item must connect to sale logic.
+
+Do not allow fake visual placement that does not update state.
+Do not update state without a visible item.
+
+Both must happen.
+
+### Dev Fallback
+
+Add a dev-only button or command:
+
+```text
+Force Place Test Item
+```
+
+It should:
+
+- place one valid item on one valid fixture
+- update placed count
+- make the item eligible for sale
+- log that it used a dev fallback
+
+This prevents the whole playable loop from being blocked by UI polish.
+
+### Acceptance
+
+Placed goes from 0 to 1 and the item is visible in the store.
+
+---
+
+## Audit Pass 10: Customer And First Sale
+
+The first customer does not need advanced AI.
+
+It needs to be reliable.
+
+### Required Scripted Flow
+
+After first item placement:
+
+```text
+2 second delay
+customer appears at entrance
+customer moves or teleports to fixture/display
+short wait
+sale completes
+money increases
+sold count increments
+customer count increments
+customer exits/despawns
+objective updates
+close day becomes enabled
+```
+
+If pathfinding is not reliable, fake it.
+
+Use a tween.
+Use a simple direct movement.
+Use a timed sequence.
+
+Do not block Day 1 on customer AI architecture.
+
+### Sale State Requirements
+
+On first sale:
+
+- item is sold/removed/marked sold
+- money increases by real sale price
+- sold count increments
+- customer count increments
+- revenue for day increments
+- Day Summary sees the same data
+
+### Acceptance
+
+The first sale happens every time after first placement in a fresh Day 1.
+
+---
+
+## Audit Pass 11: Close Day And Summary
+
+Close Day should not be a random escape hatch.
+
+For Day 1, it should be gated.
+
+### Rule
 
 Close Day is disabled until:
 
-* at least one item placed
-* at least one customer served
-* at least one item sold
+- at least one item placed
+- at least one customer served
+- at least one item sold
 
-If clicked too early:
+If clicked early:
 
+```text
 Make your first sale before closing Day 1.
+```
 
-Day Summary Requirements
+### Day Summary Must Be Real
 
-Day Summary must reflect real state:
+After the first sale:
 
-* revenue greater than 0 after sale
-* items sold 1+
-* customers served 1+
-* expenses can be 0 for now
-* net profit can equal revenue for now
-* reputation can stay unchanged unless implemented correctly
+- revenue > 0
+- sold >= 1
+- customers >= 1
+- placed >= 1 or ending placed count is explained if sold item removed
+- expenses can be 0 for now
+- net can equal revenue for now
+- reputation can stay unchanged if not implemented cleanly
 
-Acceptance
+### Acceptance
 
-No more empty Day 1 Summary unless failure mode is intentionally implemented later.
+No empty day summary after a completed first sale.
+No day summary visible behind store gameplay.
+No stale HUD/ticker visible on summary.
 
-⸻
+---
 
-Phase 10: Inventory / Stocking Loop
+## Audit Pass 12: Remove Or Quarantine Dangling Features
 
-Required Day 1 Inventory Behavior
+The repo has many systems that may be useful later but are dangerous now if half-wired.
 
-Start with a small fixed inventory.
+For this pass, anything not needed for Day 1 should be one of:
+
+- fully hidden
+- admin/dev only
+- disabled behind a clean feature flag
+- reachable only from debug menu
+
+Do not let half-wired features appear in the playable path.
+
+### Quarantine Candidates
+
+- advanced milestones
+- completion progress
+- staff management
+- market trends
+- reputation details beyond a number
+- difficulty tuning
+- unlock arcs
+- multiple stores beyond route validation
+- multiple days of economy
+- supplier tiers
+- authentication/refurbishment/testing station mechanics
+- save/load polish
+- grand opening events
+- ticker flavor text
+
+These can exist in code.
+They should not confuse Day 1.
+
+---
+
+## Specific Suspicion List
+
+These are the areas most likely causing the current broken feel.
+
+### 1. Input focus stack is technically valid but wrong for gameplay
+
+`InputFocus` only proves the stack is non-empty.
+It does not prove the current context is the one the active gameplay controller expects.
+
+Add checks for expected context per screen.
+
+```text
+Main Menu expects main_menu
+Mall Overview expects mall_hub
+Store View expects store_gameplay
+Inventory expects inventory/modal or equivalent
+Pause expects modal
+Day Summary expects modal/summary
+```
+
+### 2. CameraAuthority proves one active camera but not the right camera
+
+`camera_single_active` is necessary but not enough.
+
+Add a Day 1 camera check:
+
+```text
+active camera source == retro_games or store_gameplay
+active camera is tagged playable_store_camera
+camera is not exterior/debug/menu camera
+```
+
+### 3. StoreReadyContract may validate code contracts, not playability
+
+Keep it.
+But add a playable Day 1 readiness check.
+
+### 4. Store card routing may still have legacy ids/aliases
+
+Because earlier behavior clicked Sports and got sneakers, audit all store button id mapping.
+
+No card should route by display text.
+No card should use stale hardcoded scene paths.
+No card should use old aliases unless they resolve through the content registry.
+
+### 5. Tutorial/objective systems may not have screen ownership
+
+ObjectiveRail, InteractionPrompt, TutorialContextSystem, bottom ticker, and pause menu need one state matrix.
+
+The issue is not one bad label.
+It is lack of UI ownership.
+
+---
+
+## Implementation Order
+
+Do this in exact order.
+
+### Step 1: Repo wiring audit
+
+Map the current playable path from:
+
+```text
+boot → main menu → new game → mall overview → store card → StoreDirector → SceneRouter → retro_games → store ready
+```
+
+Document the actual files/functions involved in comments or an audit note.
+
+Do not change behavior yet except harmless logging.
+
+### Step 2: Add end-to-end audit checkpoints
+
+Add runtime-visible checkpoints for:
+
+- boot ready
+- main menu ready
+- new game requested
+- mall hub ready
+- store card clicked
+- store registry resolved
+- store director requested/loading/verifying/ready
+- camera playable ready
+- input focus expected context
+- day1 playable ready
+
+### Step 3: Fix store card routing
+
+Make every store card route through `StoreRegistry` and `StoreDirector`.
+
+Remove/bypass any stale direct scene loading.
+
+### Step 4: Fix camera to one playable interior mode
+
+Use fixed isometric interior camera unless WASD is clearly working.
+
+Tag/name the camera clearly.
 
 Example:
 
-Inventory:
-- Used Console
-- Retro Cartridge
-- Strategy Guide
+```text
+PlayableInteriorCamera
+```
 
-Do not overcomplicate item stats yet.
+Activate it only through CameraAuthority.
 
-Stocking Flow
+### Step 5: Fix input focus for store gameplay
 
-1. Press I or click inventory.
-2. Inventory panel opens.
-3. Select item.
-4. Click shelf/display table.
-5. Item appears visibly on shelf/table.
-6. Placed count increments.
+Ensure the store controller pushes `store_gameplay` when the store becomes playable.
+Ensure modals push/pop correctly.
+Ensure closing inventory/pause returns to `store_gameplay`.
 
-Required Debug Backup
+### Step 6: Implement hotspot navigation fallback
 
-Add a dev-only button:
+Use visible/clickable store zones.
+Support Shift+1 through Shift+5 if those inputs remain in `project.godot`.
 
-Force Place Test Item
+### Step 7: Rebuild Retro Game Store readability
 
-This prevents the whole loop from being blocked by inventory UI bugs.
+Make the one room readable.
+Use real fixtures.
+Move labels to contextual prompts.
 
-Acceptance
+### Step 8: Simplify HUD and bottom prompt priority
 
-Placed count must go from 0 to 1.
+One primary instruction at a time.
+No overlay leaks.
 
-The item must be visible in the store.
+### Step 9: Prove inventory placement
 
-The item must be tied to sale logic.
+One item.
+One fixture.
+Visible placement.
+State update.
 
-⸻
+### Step 10: Prove first customer sale
 
-Phase 11: Customer / Sale Loop
+Script it if needed.
+State updates must be real.
 
-Required Minimum
+### Step 11: Gate close day
 
-After first item is placed:
+Disable until first sale.
+Then show real summary.
 
-* spawn one customer
-* customer moves to item or display zone
-* customer waits briefly
-* customer buys item
-* item disappears or marks sold
-* money increases
-* sold count increases
-* customer count increases
-* customer exits or despawns
+### Step 12: Run manual validation from fresh launch
 
-If AI/pathfinding is not ready
+No skipping directly into store unless running a specific debug test.
+The main acceptance path must start from boot.
 
-Fake it.
+---
 
-Use a simple scripted sequence:
+## Manual Validation Script
 
-Item placed
-→ 2 second delay
-→ customer appears at entrance
-→ customer moves to display
-→ 2 second delay
-→ sale complete
-→ customer exits/despawns
+Run this exact test after implementation.
 
-Acceptance
-
-The first sale should happen reliably every time in Day 1.
-
-This is a playability test, not a sophisticated sim test.
-
-⸻
-
-Phase 12: Pause Menu Cleanup
-
-Current State
-
-Pause menu is closer to acceptable.
-
-But it should respect game state.
-
-Required Rules
-
-Pause menu:
-
-* dims background
-* owns input
-* Resume works
-* Quit to Main Menu works
-* Skip Tutorial works
-* View Day Summary disabled until close-day eligible
-* Completion Progress can stay but should not be central
-
-Acceptance
-
-Opening pause should not break store state.
-
-Closing pause should return exactly where the player was.
-
-⸻
-
-Phase 13: Screen State Acceptance Matrix
-
-Use this table to prevent overlay regressions.
-
-State	Visible	Hidden
-Main Menu	title/buttons/version	HUD, ticker, tutorial, store, overview
-Mall Overview	HUD, store cards, bottom objective	store scene, pause, summary
-Store View	store scene, HUD, current objective	mall cards, overview text
-Inventory Open	inventory, dim/disable movement if needed	unrelated modals
-Pause	pause menu, dimmed game	active gameplay input
-Day Summary	summary only	HUD, ticker, tutorial, store input
-
-If this matrix is violated, fix state ownership before moving on.
-
-⸻
-
-Phase 14: Implementation Order
-
-Do not let the agent randomly fix visible symptoms.
-
-Use this exact order:
-
-Step 1
-
-Add movement/debug overlay and logs.
-
-Step 2
-
-Fix or bypass movement with hotspot navigation.
-
-Step 3
-
-Change store camera to interior playable view.
-
-Step 4
-
-Remove roof / expose interior / stop exterior bird’s-eye view.
-
-Step 5
-
-Build simple store room:
-
-* shelf
-* display table
-* register
-* counter
-* entry
-* customer path
-
-Step 6
-
-Replace always-on labels with contextual prompts.
-
-Step 7
-
-Fix HUD overlap.
-
-Step 8
-
-Fix bottom ticker/action prompt priority.
-
-Step 9
-
-Implement one-item placement.
-
-Step 10
-
-Implement one customer sale.
-
-Step 11
-
-Block close day until first sale.
-
-Step 12
-
-Validate Day Summary.
-
-⸻
-
-Phase 15: Manual Validation Script
-
-Run this exact test from a fresh launch.
-
-Test A: Main Menu
+### Test A: Fresh Launch
 
 Expected:
 
-* only main menu visible
-* no HUD
-* no ticker
-* no tutorial
-* no store scene
+- Boot completes.
+- Main menu appears.
+- No HUD.
+- No ticker.
+- No tutorial overlay.
+- No store scene visible.
+- InputFocus is `main_menu`.
 
-Fail if anything else appears.
+Fail if anything leaks into the menu.
 
-Test B: New Game
+### Test B: Options/Menu Overlay
+
+Open options/info if available, then close it.
+
+Expected:
+
+- one modal at a time
+- input focus changes while modal is open
+- input focus returns to `main_menu`
+- no duplicate overlays remain
+
+Fail if overlays stack or tutorial text appears.
+
+### Test C: New Game
 
 Click New Game.
 
 Expected:
 
-* mall overview appears
-* HUD readable
-* Retro Game Store active
-* locked stores visually secondary
-* bottom prompt tells me what to do
+- mall overview appears
+- InputFocus is `mall_hub`
+- store cards are readable
+- Retro Game Store is available
+- bottom prompt is clear
+- HUD does not overlap
 
-Fail if HUD overlaps or bottom text conflicts.
+Fail if store scene or tutorial leaks incorrectly.
 
-Test C: Enter Store
+### Test D: Store Card Routing
 
 Click Retro Game Store.
 
+Expected logs/checkpoints:
+
+```text
+store card clicked retro_games
+store_registry_resolve retro_games
+StoreDirector enter_store retro_games
+director_state_ready retro_games
+```
+
+Fail if wrong store id or scene path is used.
+
+### Test E: Store View
+
 Expected:
 
-* store interior appears
-* not bird’s-eye exterior
-* not roof/cube view
-* shelf/table/register visible
-* player can move OR hotspot navigation works
+- view is inside/readable interior
+- not exterior cube
+- not bird’s-eye roof view
+- shelf/display/register visible
+- current camera is playable store camera
+- InputFocus is `store_gameplay`
 
-Fail if I am looking at the outside of a cube.
+Fail if the first view does not communicate a store.
 
-Test D: Movement / Navigation
+### Test F: Navigation
 
 Try WASD.
-If not working, test hotspot clicks/number keys.
+Try hotspot clicks.
+Try Shift+1 through Shift+5 if enabled.
 
 Expected:
 
-* I can reach/select shelf or display table.
+- at least one navigation method works
+- selected zone is obvious
+- interaction prompt updates
 
-Fail if no navigation path exists.
+Fail if the player cannot reach/select a fixture.
 
-Test E: Inventory
+### Test G: Inventory
 
-Press I.
-
-Expected:
-
-* inventory opens cleanly
-* gameplay input pauses or changes predictably
-* item can be selected
-
-Fail if inventory does nothing or overlays badly.
-
-Test F: Stock Item
-
-Select item and place on shelf/display.
+Open inventory.
 
 Expected:
 
-* item appears in world
-* Placed: 1
-* bottom prompt updates
+- inventory opens cleanly
+- no unrelated overlays appear
+- item can be selected
+- closing inventory returns focus correctly
 
-Fail if placed count does not change.
+Fail if inventory blocks everything with no recovery.
 
-Test G: Customer
+### Test H: Place Item
 
-Wait or trigger customer.
-
-Expected:
-
-* customer appears
-* sale completes
-* money increases
-* customer count increases
-* sold count increases
-
-Fail if customer/sale does not happen.
-
-Test H: Close Day
-
-Click Close Day.
-
-Before sale:
-
-* blocked with clear message
-
-After sale:
-
-* opens Day Summary
-
-Expected summary:
-
-* revenue > 0
-* items sold >= 1
-* customers served >= 1
-
-Fail if summary is empty.
-
-Test I: Next Day
-
-Click Next Day.
+Select one item and place it on a shelf/display.
 
 Expected:
 
-* clean transition
-* no old overlays
-* no duplicated HUD
-* state resets correctly
+- item appears visibly
+- placed count increments
+- objective updates
+- item becomes sellable
 
-⸻
+Fail if visual and state disagree.
 
-Phase 16: What Not To Touch
+### Test I: First Customer / Sale
 
-Do not work on:
+Wait for customer or trigger scripted first customer.
 
-* new stores
-* more item categories
-* negotiation
-* advanced milestones
-* rent balancing
-* grand opening events
-* customer personality
-* multiple days of economy
-* performance grading
-* completion tracking
-* save/load polish
-* better art pass
+Expected:
 
-Those can wait.
+- customer appears
+- sale completes
+- money increases
+- sold count increments
+- customer count increments
+- objective updates
 
-Right now they create noise.
+Fail if customer does nothing or sale state is fake.
 
-⸻
+### Test J: Close Day Blocked Before Sale
 
-Phase 17: What Success Looks Like
+Before sale, click Close Day.
 
-This pass is successful when I can honestly say:
+Expected:
 
-It is ugly, small, and basic, but I can play one day.
+```text
+Make your first sale before closing Day 1.
+```
+
+Fail if empty summary opens.
+
+### Test K: Close Day After Sale
+
+After sale, click Close Day.
+
+Expected:
+
+- Day Summary opens
+- revenue > 0
+- sold >= 1
+- customers >= 1
+- no HUD/ticker/tutorial leaks behind it
+
+Fail if summary is empty or stale.
+
+### Test L: Next Day / Return
+
+Click Next Day or return to main menu depending current UI.
+
+Expected:
+
+- clean transition
+- no duplicate HUD
+- no stale overlays
+- input focus correct for destination
+
+Fail if old store prompts remain.
+
+---
+
+## Automated Validation To Add Or Run
+
+The repo already has shell validation for camera ownership and input focus ownership.
+Keep those.
+
+Also add lightweight checks if they do not already exist:
+
+### Store definition validity
+
+- every store has id/name/scene_path
+- every scene_path exists
+- every starting inventory id exists
+- every fixture id is unique per store
+- `retro_games` exists and resolves
+
+### Store registry routing
+
+- `StoreRegistry.resolve(&"retro_games")` returns `res://game/scenes/stores/retro_games.tscn`
+- `sports` resolves to sports memorabilia scene
+- unknown store fails loud
+
+### Main scene / autoload contract
+
+- main scene is boot
+- required autoloads exist
+- no duplicate store lifecycle owners introduced
+
+### UI state matrix test
+
+At minimum, create debug assertions for:
+
+```text
+main_menu hides gameplay HUD/objectives
+mall_hub hides store labels/inventory
+store_gameplay hides mall cards/main menu
+modal blocks gameplay input
+summary hides gameplay input
+```
+
+### Day 1 smoke test
+
+If possible, create a deterministic smoke scene/test that simulates:
+
+```text
+start new game
+enter retro_games
+force place item
+force first customer sale
+close day
+assert summary numbers
+```
+
+This does not replace manual validation, but it keeps agents from breaking the core loop again.
+
+---
+
+## Do Not Touch List
+
+Do not spend this pass on:
+
+- new stores
+- new item categories
+- advanced pricing
+- staff management
+- supplier systems
+- trend systems
+- store unlock progression
+- achievements
+- save/load polish
+- fancy art
+- advanced customer AI
+- negotiation
+- refurbishment/testing mechanics
+- multiple day balancing
+- music/audio polish
+- localization expansion
+
+These are all distractions until one day is playable.
+
+---
+
+## Definition Of Done
+
+This pass is done when I can launch the game from the normal boot scene and complete this sentence truthfully:
+
+```text
+It is ugly and small, but I can play Day 1.
+```
 
 That means:
 
-* I know where I am
-* I can interact
-* one thing can be stocked
-* one customer can buy it
-* the day can close
-* the summary is true
+- main menu is clean
+- mall overview is clean
+- store card routes correctly
+- Retro Game Store opens to a readable interior
+- one navigation method works
+- one item can be stocked
+- one customer buys it
+- money/sold/customer counts update
+- close day is blocked before sale and allowed after sale
+- day summary is accurate
+- no stale overlays leak across screens
 
-That is the first real milestone.
+That is the milestone.
 
-⸻
+Everything else waits.
 
-Final Agent Instruction
+---
 
-Do not interpret this as a request to improve the whole game.
+## Final Agent Instruction
 
-Interpret this as a rescue pass.
+Treat this repo as having too much partial architecture, not too little.
 
-The current build has UI, economy, milestones, menus, and store concepts, but the playable core is still not proven.
+Respect the existing owners:
 
-Fix the playable core first.
+- StoreDirector for store entry
+- SceneRouter for scene changes
+- StoreRegistry/content for store ids
+- CameraAuthority for active camera
+- InputFocus for input state
+- Objective/Interaction systems for prompts, but only under one clear screen ownership model
 
-If movement is hard, implement hotspot navigation immediately.
+Do not bypass these systems to make a screenshot look better.
 
-If the store art is hard, make a simple readable room.
+Wire them correctly.
+Make the state visible.
+Prove the loop.
 
-If customer AI is hard, fake the first customer with a scripted sequence.
+If movement is hard, ship hotspot navigation.
+If camera is ambiguous, ship fixed isometric interior.
+If customer AI is hard, script the first customer.
+If inventory UI is flaky, add a dev force-place fallback while keeping the real flow working.
 
-If inventory is hard, add a dev/test place-item button.
-
-The player must be able to complete one Day 1 loop before anything else matters.
+The goal is not a bigger game.
+The goal is the first honest playable day.
