@@ -28,7 +28,7 @@ var _item_grades: Dictionary = {}
 ## Maps grade_id → grade entry dict (loaded from grades.json at boot).
 var _grade_table: Dictionary = {}
 
-@onready var _debug_labels: Node3D = $DebugLabels
+@onready var _debug_labels: Node3D = get_node_or_null(^"DebugLabels") as Node3D
 
 
 func _ready() -> void:
