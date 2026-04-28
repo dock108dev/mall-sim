@@ -12,7 +12,6 @@ var customer_system: CustomerSystem
 var mall_customer_spawner: MallCustomerSpawner
 
 var _overlay_visible: bool = false
-var _zone_labels_always_on: bool = false
 
 @onready var _label: Label = $Label
 
@@ -28,11 +27,6 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_debug"):
 		_overlay_visible = not _overlay_visible
 		visible = _overlay_visible
-		return
-
-	if event.is_action_pressed("zone_labels_debug"):
-		_toggle_zone_labels_debug()
-		get_viewport().set_input_as_handled()
 		return
 
 	if not _overlay_visible:
@@ -114,7 +108,6 @@ func _build_display_text() -> String:
 		"",
 		"Ctrl+M: +$100 | Ctrl+C: Spawn customer",
 		"Ctrl+H: +1 hour | Ctrl+D: End day | Ctrl+P: Force-place item",
-		"F3: Toggle zone labels always-on (currently: %s)" % ("ON" if _zone_labels_always_on else "OFF"),
 	])
 	lines.append_array(_build_movement_debug_lines())
 	return "\n".join(lines)
@@ -175,11 +168,6 @@ func _get_input_focus_node() -> Node:
 	if tree == null:
 		return null
 	return tree.root.get_node_or_null("InputFocus")
-
-
-func _toggle_zone_labels_debug() -> void:
-	_zone_labels_always_on = not _zone_labels_always_on
-	EventBus.zone_labels_debug_toggled.emit(_zone_labels_always_on)
 
 
 func _debug_add_cash() -> void:

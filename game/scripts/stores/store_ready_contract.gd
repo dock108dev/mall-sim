@@ -18,7 +18,10 @@
 ##   content_instantiated   — scene has ≥1 direct child that contributes content
 ##                            (anything that isn't pure scaffolding: Camera2D/3D,
 ##                            Light3D, Marker3D, or the player presence anchor)
-##   camera_current         — a `StoreCamera` (Camera2D/3D) exists and .current
+##   camera_current         — at least one Camera2D/Camera3D under the scene
+##                            reports `current=true` (name does not matter;
+##                            CameraAuthority is the single-active source of
+##                            truth)
 ##   player_present         — a presence anchor exists under the scene; accepts
 ##                            `PlayerController` (walking-player stores like
 ##                            retro_games) or `OrbitPivot` (orbit-camera stores)
@@ -164,15 +167,27 @@ static func _is_scaffolding(node: Node) -> bool:
 	return false
 
 
+## Passes when any Camera2D/Camera3D under the scene reports current=true.
+## The contract previously hard-coded the name `StoreCamera`; that broke once
+## stores started spawning a CharacterBody whose own Camera3D becomes the
+## active camera (CameraAuthority `_clear_others` then turns the orbit
+## `StoreCamera.current` off, even though a different camera is now driving
+## the viewport). Walking by current-flag matches CameraAuthority's own
+## single-active assertion semantics.
 static func _camera_current(scene: Node) -> bool:
-	var cam: Node = _find(scene, "StoreCamera")
-	if cam == null:
-		return false
-	# Camera2D and Camera3D both expose `current` — duck-type to avoid a hard
-	# dependency on either class in a contract that must work for both.
-	if not ("current" in cam):
-		return false
-	return cam.get("current") == true
+	return _find_current_camera(scene) != null
+
+
+static func _find_current_camera(node: Node) -> Node:
+	if node is Camera3D and (node as Camera3D).current:
+		return node
+	if node is Camera2D and (node as Camera2D).is_current():
+		return node
+	for child: Node in node.get_children():
+		var found: Node = _find_current_camera(child)
+		if found != null:
+			return found
+	return null
 
 
 static func _input_gameplay(scene: Node) -> bool:

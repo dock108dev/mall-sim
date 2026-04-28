@@ -1,6 +1,6 @@
 ## Verifies that retro_games.tscn ships debug-only geometry hidden by default
-## so a missed _ready() / _apply_debug_label_visibility() call cannot leak
-## debug visuals into normal gameplay.
+## so a missed _ready() / NavZoneInteractable._apply_debug_visibility() call
+## cannot leak debug visuals into normal gameplay.
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
@@ -17,17 +17,14 @@ func _instantiate_without_tree() -> Node3D:
 	return scene.instantiate() as Node3D
 
 
-func test_debug_labels_node_visible_false_in_scene() -> void:
+func test_no_billboard_debug_labels_in_scene() -> void:
 	var root: Node3D = _instantiate_without_tree()
 	if root == null:
 		return
-	var dl: Node3D = root.get_node_or_null("DebugLabels") as Node3D
-	assert_not_null(dl, "DebugLabels Node3D must exist as a child of the scene root")
-	if dl:
-		assert_false(
-			dl.visible,
-			"DebugLabels must default to visible=false in the scene file"
-		)
+	assert_null(
+		root.get_node_or_null("DebugLabels"),
+		"DebugLabels Node3D must not exist — giant floating world labels are removed"
+	)
 	root.free()
 
 
@@ -70,22 +67,16 @@ func test_nav_zone_debug_meshes_visible_false_in_scene() -> void:
 
 
 func test_debug_visuals_show_in_debug_build_after_ready() -> void:
-	# The runtime opt-in path: when the scene is added to the tree in a debug
-	# build (which the test environment is), _apply_debug_label_visibility()
-	# flips DebugLabels and nav-zone DebugMesh nodes to visible=true.
+	# The runtime opt-in path: when each NavZone enters the tree in a debug
+	# build (which the test environment is), NavZoneInteractable._ready() runs
+	# _apply_debug_visibility() and flips its MeshInstance3D children
+	# (the DebugMesh) to visible=true.
 	if not OS.is_debug_build():
 		return
 	var root: Node3D = _instantiate_without_tree()
 	if root == null:
 		return
 	add_child(root)
-	var dl: Node3D = root.get_node_or_null("DebugLabels") as Node3D
-	assert_not_null(dl, "DebugLabels must exist")
-	if dl:
-		assert_true(
-			dl.visible,
-			"DebugLabels must be visible after _ready in a debug build"
-		)
 	var nav_zones: Node = root.get_node_or_null("NavZones")
 	if nav_zones:
 		for zone: Node in nav_zones.get_children():

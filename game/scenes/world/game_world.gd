@@ -101,6 +101,10 @@ const _MOMENTS_LOG_PANEL_SCENE: PackedScene = preload(
 const _DEBUG_OVERLAY_SCENE: PackedScene = preload(
 	"res://game/scenes/debug/debug_overlay.tscn"
 )
+const _STORE_PLAYER_SCENE: PackedScene = preload(
+	"res://game/scenes/player/store_player_body.tscn"
+)
+const _PLAYER_ENTRY_SPAWN_NAME: String = "PlayerEntrySpawn"
 
 var reputation_system: ReputationSystem:
 	get:
@@ -929,7 +933,14 @@ func _inject_store_into_container(
 				instantiated.queue_free()
 			return
 		_store_container.add_child(_hub_active_store_scene)
-		_activate_store_camera(_hub_active_store_scene, canonical)
+		# §F-47: Hide hallway storefronts (z=0.1) so they don't bleed into
+		# the interior camera sightline. `_mall_hallway` is null in shipping
+		# hub mode (walkable_mall=false) — the guard is forward-compat for
+		# a future walkable-mall variant routing through the same injector.
+		if _mall_hallway:
+			_mall_hallway.visible = false
+		if not _spawn_player_in_store(_hub_active_store_scene, canonical):
+			_activate_store_camera(_hub_active_store_scene, canonical)
 		EventBus.store_entered.emit(canonical)
 	)
 	if _hub_active_store_scene == null:
@@ -947,8 +958,71 @@ func _on_hub_exit_store_requested() -> void:
 			_hub_active_store_scene.queue_free()
 			_hub_active_store_scene = null
 		_hub_is_inside_store = false
+		# §F-47 — restore hallway visibility on exit. Same null-guard
+		# rationale as the enter path.
+		if _mall_hallway:
+			_mall_hallway.visible = true
 		EventBus.store_exited.emit(leaving_id)
 	)
+
+
+## Spawns the CharacterBody3D player avatar at the store's `PlayerEntrySpawn`
+## marker, registers its Camera3D as the active viewport camera through
+## `CameraAuthority`, and retires the orbit `PlayerController`'s input handler
+## so WASD doesn't drive both the body and the orbit pivot at once. Returns
+## `true` when the spawn ran (caller must skip orbit-camera activation), and
+## `false` when the store has no spawn marker (caller falls back to the
+## orbit-camera path used by stores that still ship without a body).
+func _spawn_player_in_store(store_root: Node, store_id: StringName) -> bool:
+	var marker: Marker3D = (
+		store_root.get_node_or_null(_PLAYER_ENTRY_SPAWN_NAME) as Marker3D
+	)
+	if marker == null:
+		return false
+	var instantiated: Node = _STORE_PLAYER_SCENE.instantiate()
+	var player: StorePlayerBody = instantiated as StorePlayerBody
+	if player == null:
+		push_error(
+			"GameWorld: failed to instantiate store_player_body for '%s'"
+			% store_id
+		)
+		if instantiated != null:
+			instantiated.queue_free()
+		return false
+	store_root.add_child(player)
+	player.global_position = marker.global_position
+	var body_camera: Camera3D = (
+		player.find_child("Camera3D", false, false) as Camera3D
+	)
+	if body_camera == null:
+		push_error(
+			"GameWorld: store_player_body for '%s' has no Camera3D child"
+			% store_id
+		)
+		player.queue_free()
+		return false
+	CameraAuthority.request_current(body_camera, store_id)
+	_retire_orbit_player_controller(store_root)
+	return true
+
+
+## Disables `PlayerController._input_listening` so its WASD/orbit handler
+## stops competing with the CharacterBody3D's `move_and_slide`. The orbit
+## camera was already deactivated by `CameraAuthority._clear_others` when the
+## body camera became current; this only silences input.
+##
+## §F-46 — silent return when no `PlayerController` child exists is
+## intentional: stores authored without a legacy orbit controller (any store
+## that uses `PlayerEntrySpawn` exclusively) have nothing to retire. The
+## walking-body path runs unimpeded and there is no input contention. A
+## `push_warning` here would fire on every well-formed walking-only store.
+func _retire_orbit_player_controller(store_root: Node) -> void:
+	var orbit: PlayerController = (
+		store_root.get_node_or_null("PlayerController") as PlayerController
+	)
+	if orbit == null:
+		return
+	orbit.set_input_listening(false)
 
 
 ## Activates the store scene's `StoreCamera` through `CameraAuthority` so

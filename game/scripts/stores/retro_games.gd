@@ -28,15 +28,12 @@ var _item_grades: Dictionary = {}
 ## Maps grade_id → grade entry dict (loaded from grades.json at boot).
 var _grade_table: Dictionary = {}
 
-@onready var _debug_labels: Node3D = get_node_or_null(^"DebugLabels") as Node3D
-
 
 func _ready() -> void:
 	initialize()
 	super._ready()
 	_find_testing_station()
 	_connect_slot_signals()
-	_apply_debug_label_visibility()
 
 
 ## Initializes Retro Games lifecycle state and EventBus wiring.
@@ -571,18 +568,3 @@ func _assign_testing_station_slots(fixture: Node) -> void:
 		if child.is_in_group("shelf_slot") or child.get("slot_id") != null:
 			_testing_station_slot = child
 			return
-
-
-## Hides debug zone labels and nav-zone debug meshes in release builds; shows
-## them in debug builds. Scene defaults are `visible = false` so a missed call
-## still leaves no debug geometry leaking into normal play.
-func _apply_debug_label_visibility() -> void:
-	var show_debug: bool = OS.is_debug_build()
-	if _debug_labels:
-		_debug_labels.visible = show_debug
-	var nav_zones: Node = get_node_or_null("NavZones")
-	if nav_zones:
-		for zone: Node in nav_zones.get_children():
-			var debug_mesh: Node3D = zone.get_node_or_null("DebugMesh") as Node3D
-			if debug_mesh:
-				debug_mesh.visible = show_debug

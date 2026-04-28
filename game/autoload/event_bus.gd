@@ -564,9 +564,6 @@ signal interactable_unfocused()
 ## Emitted by NavZoneInteractable when clicked or triggered by keyboard shortcut.
 ## PlayerController subscribes to snap _pivot to zone_position instantly.
 signal nav_zone_selected(zone_position: Vector3)
-## Emitted by the debug overlay (F3) to toggle always-on zone label display.
-## Only meaningful in debug builds; NavZoneInteractable instances subscribe.
-signal zone_labels_debug_toggled(always_on: bool)
 ## Scoped hover and click events tagged with the interactable's stable id and
 ## its owning store_id. Listeners should prefer these over the target-reference
 ## signals above when they need to reason about *which* interactable in *which*

@@ -308,3 +308,213 @@ Expected result after this pass: zero hits for `is_assisted()` and
 variable no longer exists). The `"assisted"` string in UI and test files
 (`_assisted_label`, `test_assisted_badge_*`, `_on_assisted_canceled`) refers
 to the `used_difficulty_downgrade` save-metadata flag and is unaffected.
+
+---
+
+# SSOT Enforcement Report — 2026-04-28 (Pass 2)
+
+Scope: working-tree changes on `main` (11 modified files plus the new
+`tests/gut/test_hub_mall_hallway_visibility.gd`). The branch is shipping
+ISSUE-001 (CharacterBody3D player spawn on store enter), ISSUE-003 (remove
+DebugLabels billboard text from `retro_games.tscn`), ISSUE-004 (storefront
+sign `double_sided=false` so signage doesn't mirror through the wall), and
+ISSUE-005 (hide the mall hallway during in-store sessions) — plus the
+contract-level switch in `store_ready_contract.gd._camera_current` from a
+hard-coded `StoreCamera` lookup to "any current Camera2D/3D under the
+scene" (forced by ISSUE-001's body Camera3D taking over).
+
+This pass deletes the now-orphaned NavZone label-management subsystem
+that lived only to drive the deleted `DebugLabels`, and removes one
+duplicate of the nav-zone debug-mesh visibility toggle.
+
+Method: read every modified file; grep for parallel writers, dormant
+fallbacks, and stale callers; act or justify. Tests run before and after
+the cleanup against the same baseline (133 pre-existing validate-script
+FAILs; **all 4659 GUT tests pass** post-pass — 7 fewer than the 4666
+baseline because the seven label tests in `test_nav_zone_navigation.gd`
+were removed alongside the feature they tested).
+
+---
+
+## Final SSOT Modules per Domain (additions/changes from Pass 1)
+
+| Domain | SSOT |
+|---|---|
+| `camera_current` invariant | `StoreReadyContract._find_current_camera(scene)` walks for any Camera2D/3D with `current=true`. The name `StoreCamera` is no longer load-bearing — `CameraAuthority`'s single-active assertion is the source of truth, and the contract just confirms it. |
+| Hub-mode store entry (player + camera) | `GameWorld._spawn_player_in_store(store_root, store_id)` instantiates `store_player_body.tscn` at `PlayerEntrySpawn`, hands the body Camera3D to `CameraAuthority.request_current`, and disables the orbit `PlayerController._input_listening`. |
+| Mall hallway visibility during store sessions | `GameWorld._inject_store_into_container` sets `_mall_hallway.visible = false`; `GameWorld._on_hub_exit_store_requested` restores `true`. Both guarded with `if _mall_hallway:` so hub mode (`walkable_mall=false`, hallway never instantiated) is a no-op. |
+| Nav-zone debug-mesh visibility | `NavZoneInteractable._apply_debug_visibility()` (per-zone, runs in each `_ready`) — sole owner. |
+| Nav-zone navigation broadcast | `NavZoneInteractable.interact()` emits `EventBus.nav_zone_selected(global_position)`; `PlayerController._on_nav_zone_selected` snaps the orbit pivot. |
+
+---
+
+## Diff-Prioritized Deletions
+
+### 1 — NavZone label-management subsystem (proven dead by `DebugLabels` removal)
+
+**Diff signal.** `retro_games.tscn` deleted the entire `DebugLabels` Node3D
+plus its five `Label3D` children, *and* dropped the five
+`linked_label = NodePath(...)` properties from the `NavZones/Zone*` nodes.
+No other store scene in the repo (`consumer_electronics`, `pocket_creatures`,
+`sports_memorabilia`, `video_rental`) ever shipped a `DebugLabels` group or
+set a `linked_label` on its NavZones. `grep "linked_label" game/scenes/**/*.tscn`
+returns zero hits after the diff. `grep "DebugLabels" game/scenes/**/*.tscn`
+likewise.
+
+The label-management feature on `NavZoneInteractable` only ever ran when
+`linked_label` was non-empty (the entire `_process` body, the
+hover/selected/proximity tracking, and the `zone_labels_debug_toggled`
+session flag exist solely to flip a referenced `Label3D.visible`). With no
+production scene wiring `linked_label`, every byte of that machinery is
+dead code that exists only to satisfy `tests/gut/test_nav_zone_navigation.gd`.
+
+**SSOT replacement.** Hover prompts are owned by the `InteractionPrompt`
+CanvasLayer autoload (per ISSUE-003 description: "The InteractionPrompt
+CanvasLayer autoload already provides contextual '[E] verb' prompts on
+hover"). NavZones now expose only the navigation broadcast — the SSOT for
+"what to call this zone" lives in their existing `display_name` and
+`prompt_text` exports, which `InteractionPrompt` reads on focus.
+
+**Acted: removed all label-management code, the EventBus signal, the
+debug-overlay handler, the InputMap action, and the seven tests that
+exercised the dead behavior.**
+
+| File | Change |
+|---|---|
+| `game/scripts/components/nav_zone_interactable.gd` | Stripped to: `class_name`, `zone_index` export, `_ready` (calls `super._ready()` + `_apply_debug_visibility()`), `interact()` (emits `nav_zone_selected`), and `_apply_debug_visibility()`. Removed: `linked_label`, `proximity_radius` exports; `_label_node`, `_is_hovered`, `_is_selected`, `_is_in_proximity`, `_cached_player` fields; `_debug_always_on_session` static; `register_label`, `_resolve_linked_label`, `_refresh_label_visibility`, `_check_proximity`, `_find_player_controller`, `_on_focused`, `_on_unfocused`, `_on_nav_zone_selected`, `_on_debug_always_on_toggled`, `_get_event_bus` methods; the `_process` body. File shrank from 169 → 32 lines. |
+| `game/autoload/event_bus.gd` | Removed `signal zone_labels_debug_toggled(always_on: bool)` — no remaining emitter or subscriber. |
+| `game/scenes/debug/debug_overlay.gd` | Removed the `_zone_labels_always_on` field, the `_toggle_zone_labels_debug()` method, the `is_action_pressed("zone_labels_debug")` branch in `_input`, and the F3-hint line in `_build_display_text`. |
+| `project.godot` | Removed the `zone_labels_debug` `[input]` action (F3 keybinding). |
+| `tests/gut/test_nav_zone_navigation.gd` | Removed `test_eventbus_has_zone_labels_debug_toggled_signal`, `test_zone_labels_debug_action_registered`, the `before_each` reset of `_debug_always_on_session`, and the seven `test_nav_zone_label_*` tests. Kept the EventBus `nav_zone_selected` signal test, the keyboard-input-action tests, and the two `PlayerController` snap-to-pivot tests. |
+
+**Verification.** `bash tests/run_tests.sh` reports 4659/4659 GUT tests
+passing (down 7 from baseline 4666 — exactly the seven removed label tests).
+133 pre-existing validate-script FAILs are unchanged.
+
+---
+
+### 2 — Duplicate nav-zone debug-mesh toggle in `RetroGames`
+
+**Diff signal.** The diff removed `_apply_debug_label_visibility()` and
+introduced `_apply_nav_zone_debug_visibility()` in `retro_games.gd`, which
+walks `NavZones/Zone*/DebugMesh` and toggles visibility on
+`OS.is_debug_build()`. But `NavZoneInteractable._apply_debug_visibility()`
+already does exactly that: in each zone's `_ready`, it iterates the zone's
+direct `MeshInstance3D` children and toggles them on debug-build state.
+Each `Zone*` node has exactly one MeshInstance3D child (the `DebugMesh`)
+— the two paths are bit-for-bit equivalent.
+
+`NavZoneInteractable._apply_debug_visibility()` runs first (Godot's bottom-up
+`_ready` order — child NavZones init before parent retro_games), so by the
+time `RetroGames._apply_nav_zone_debug_visibility()` fires, every DebugMesh
+is already correctly set. The retro_games path adds zero unique behavior.
+
+**SSOT replacement.** `NavZoneInteractable._apply_debug_visibility()`.
+
+**Acted:** removed `RetroGames._apply_nav_zone_debug_visibility()` and the
+call site in `_ready()`. Updated `tests/gut/test_retro_games_debug_geometry_defaults.gd`'s
+docstring + comment to point at the surviving SSOT. The behavioral test
+(`test_debug_visuals_show_in_debug_build_after_ready`) still passes via the
+NavZone path.
+
+---
+
+### 3 — Stale "looks up `StoreCamera` by name" docstrings
+
+**Diff signal.** `store_ready_contract.gd._camera_current` no longer calls
+`_find(scene, "StoreCamera")` — it walks the descendant tree for any
+Camera2D/3D with `current=true`. The doc on the contract's `camera_current`
+invariant (line 21) and the `_resolve_camera()` docstring on
+`PlayerController` (line 134) both still claimed the name `StoreCamera` was
+the lookup key.
+
+**Acted:**
+
+| File | Change |
+|---|---|
+| `game/scripts/stores/store_ready_contract.gd` | Updated the `camera_current` line in the class docstring: now reads "at least one Camera2D/Camera3D under the scene reports `current=true` (name does not matter; CameraAuthority is the single-active source of truth)". |
+| `game/scripts/player/player_controller.gd` | Rewrote `_resolve_camera()` doc preamble: drops the false "StoreReadyContract invariant 5 looks up `StoreCamera` by name" claim; reframes the `StoreCamera` → `Camera3D` fallback as a per-controller convention for resolving the controller's own child camera. The §F-36 silent-null justification is preserved and rewritten to point at the new walker behavior. |
+
+The internal `_find` helper in `store_ready_contract.gd` is still used by
+`_player_present` (which iterates `_PLAYER_ANCHOR_NAMES`), so it stays.
+
+---
+
+### 4 — `tests/gut/test_retro_games_scene_issue_006.gd::test_store_ready_contract_camera_passes_after_authority_activation`
+
+This test was poking the contract's private `_find` helper to look up
+`StoreCamera` by name and then asserting the camera-current state through
+the helper's return value. After change #3, the contract no longer routes
+camera-current through `_find` — testing through the private helper is
+testing the wrong path.
+
+**Acted:** rewrote the test to call `_camera_current(_root)` directly (the
+public-by-convention static the contract actually uses), once before and
+once after `CameraAuthority.request_current`. Removed the `_find` lookup
+and the duck-typed `"current" in found` assertion; both belonged to the
+old name-keyed contract.
+
+---
+
+## Risk Log: Intentionally Retained Code
+
+### R1 — `NavZoneInteractable._apply_debug_visibility()` retained even though `DebugMesh` is the only client today
+
+The function iterates *all* MeshInstance3D children, not specifically a
+node named `DebugMesh`. Future NavZones in other stores might add
+debug-only mesh children of different names; the generic shape costs
+nothing and the SSOT lives at the zone, not at the store. Diff doesn't
+prove obsolescence; retained.
+
+### R2 — `tests/unit/test_store_ready_contract.gd` cameras still named `StoreCamera`
+
+The fixture (`_make_ready_scene`) builds a Camera3D with `name = "StoreCamera"`
+and `current = true`. The new `_camera_current` walker accepts this
+unchanged (it only looks at the `current` flag, not the name). Renaming the
+fixture would only obscure that the contract used to care about the name
+and now doesn't. Retained — every test in the file still passes against the
+new walker.
+
+### R3 — `EventBus.nav_zone_selected` signal retained
+
+The SSOT pass deleted the `nav_zone_selected` *receiver* in
+`NavZoneInteractable._on_nav_zone_selected` (which only updated the dead
+`_is_selected` label flag). The signal itself is still emitted by
+`NavZoneInteractable.interact()` and consumed by `PlayerController._on_nav_zone_selected`
+to snap the orbit pivot. The orbit camera path is still in production for
+the four orbit-cam stores (`sports_memorabilia`, `video_rental`,
+`pocket_creatures`, `consumer_electronics`); the signal is load-bearing.
+
+### R4 — `RetroGames._apply_day1_quarantine()` not touched
+
+`CLAUDE.md` row 13/14 documents this as the SSOT for hiding the
+`TestingStation` and `RefurbBench` on Day 1. Out of scope for this diff;
+nothing in the working tree contradicts it.
+
+---
+
+## Escalations
+
+None. All findings were either acted on or justified above.
+
+---
+
+## Sanity Check
+
+```
+grep -rn "linked_label\|register_label\|proximity_radius\|_debug_always_on_session\|zone_labels_debug\|DebugLabels\|_apply_debug_label_visibility\|_apply_nav_zone_debug_visibility" game/ project.godot tests/gut tests/unit --include="*.gd" --include="*.tscn" --include="project.godot"
+```
+
+Expected result after this pass:
+- **`game/`**: zero hits.
+- **`project.godot`**: zero hits.
+- **`tests/`**: only negative-assertion guards in
+  `test_retro_games_scene_issue_006.gd` and
+  `test_retro_games_debug_geometry_defaults.gd` (each contains a
+  `assert_null(_root.get_node_or_null("DebugLabels"), ...)` that fires if
+  the deleted node returns).
+
+Append-only audit history (`docs/audits/cleanup-report.md` line 430,
+`docs/audits/error-handling-report.md` line 402) still references the
+removed symbols by design — those files document the state of the world at
+the time of past audits and are not load-bearing on current behavior.

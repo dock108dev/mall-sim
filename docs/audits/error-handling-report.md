@@ -1,6 +1,7 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-04-28 (Pass 5 — Day-1 quarantine + composite readiness audit)  
+**Latest pass:** 2026-04-28 (Pass 6 — ISSUE-001 walking-player spawn + ISSUE-005 hallway hide + nav-zone label feature retirement)  
+**Pass 5:** 2026-04-28 (Day-1 quarantine + composite readiness audit)  
 **Pass 4:** 2026-04-28 (Day-1 inventory loop + StoreReadyContract wiring)  
 **Pass 3:** 2026-04-27 (modified-files deep scan + surrounding context)  
 **Pass 2:** 2026-04-27 (full codebase re-scan)  
@@ -18,8 +19,9 @@ Test files (`tests/`, `game/tests/`) excluded.
 | Critical | 0 | — |
 | High | 3 | 1 Pass 2, 2 Pass 3 (tier cascade, wrong signal dispatch) |
 | Medium | 8 | 3 Pass 1, 2 Pass 2, 2 Pass 3, 1 Pass 4 (registry inconsistency) |
-| Low | 13 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, **1 Pass 5** (Node3D-cast guard) |
-| Note | 22 | Justified — intentional, low-risk, documented (**+5 Pass 5**) |
+| Low | 13 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5 (Node3D-cast guard) |
+| Note | 24 | Justified — intentional, low-risk, documented (**+2 Pass 6**) |
+| Retired | 1 | §F-28 obsoleted by Pass 6 nav-zone label feature removal |
 
 **Overall posture: Prod posture acceptable.**
 
@@ -41,7 +43,22 @@ mirror + `dev_force_place_test_item` debug fallback, and the new
 `InteractionPrompt` / `ObjectiveRail` modal-aware visibility gating. It found
 one Low gap (`_inject_store_into_container` `as Node3D` cast cascading into
 `add_child(null)` on bad scene root) and five Note-level test-seam fallbacks.
-All findings in all passes were acted on in-place.
+
+Pass 6 reviewed the ISSUE-001 walking-player spawn integration in the hub
+injector (`_spawn_player_in_store` + `_retire_orbit_player_controller`), the
+ISSUE-005 hallway-hide visibility toggle on store enter/exit, the
+`StoreReadyContract._camera_current` rewrite (current-flag walk replacing
+the named `StoreCamera` lookup), and the wholesale removal of the F3
+nav-zone label debug toggle (signal, input action, debug-overlay handler,
+NavZoneInteractable label management, retro_games DebugLabels, and seven
+GUT tests, all excised cleanly). It found two new Note-level silent
+fallbacks worth documenting (§F-46 orbit-controller retire when none
+exists, §F-47 hallway null-guard in hub mode), retired §F-28 (the
+`linked_label` push_warning is gone with the feature it guarded), and
+verified that the new `_spawn_player_in_store` push_error paths and the
+`_camera_current` recursive-walk silent-null are already justified by
+docstrings written with this report in mind. All findings in all passes
+were acted on in-place.
 
 ---
 
@@ -95,6 +112,11 @@ All findings in all passes were acted on in-place.
 | F-43 | `store_controller.gd:425–440` | `_on_objective_updated/_changed` silent skip on hidden/empty | Note | **Acted** Pass 5 — §F-43 docstring added |
 | F-44 | `interaction_prompt.gd:59–65`, `objective_rail.gd:145–148` | `InputFocus == null` test-seam fallback | Note | **Acted** Pass 5 — §F-44 docstring added at both sites |
 | F-45 | `seasonal/market_event/meta_shift/trend/haggle` | `_on_day_started` early-return on `day <= 1` | Note | Justified §F-45 — Day-1 quarantine documented in `CLAUDE.md` |
+| F-46 | `game_world.gd:1014–1020` | `_retire_orbit_player_controller` silent return when no `PlayerController` child | Note | **Acted** Pass 6 — §F-46 docstring added |
+| F-47 | `game_world.gd:937–942, 962–968` | `_mall_hallway` null-guard in hub injector / exit handler | Note | **Acted** Pass 6 — §F-47 inline cite added at both sites |
+| F-48 | `game_world.gd:976–1008` | `_spawn_player_in_store` no-marker silent `false` return | Note | Justified §F-48 — docstring already documents fallback contract |
+| F-49 | `store_ready_contract.gd:181–190` | `_find_current_camera` returns null silently on no current camera | Note | Justified §F-49 — failure surfaces via `INV_CAMERA` failures array |
+| F-28 | `nav_zone_interactable.gd` | wrong-type Label3D push_warning | Low (Pass 3) | **Retired** Pass 6 — feature removed; finding obsolete |
 
 ---
 
@@ -750,6 +772,160 @@ guard?), Observability. Severity Note — explicitly documented design.
 
 ---
 
+## Pass 6 Per-Finding Details
+
+### §F-46 — `game_world.gd:1014–1020` — `_retire_orbit_player_controller` silent on missing orbit (Pass 6)
+
+The new walking-player path in `_inject_store_into_container` calls
+`_retire_orbit_player_controller(store_root)` after the body camera is
+activated through `CameraAuthority`. The retirement function looks up a
+child node named `PlayerController` and casts it to the `PlayerController`
+class. If the cast resolves null (no orbit controller in the scene), the
+function silently returns.
+
+This is intentional: stores authored exclusively for the walking body (any
+store that ships a `PlayerEntrySpawn` marker but no legacy
+`PlayerController`) have nothing to retire. The body's `_unhandled_input`
+runs unimpeded; there is no input contention to silence. A `push_warning`
+on the missing-controller branch would fire on every well-formed
+walking-only store, drowning real signal.
+
+The cast-failure case (a node *named* `PlayerController` that is not the
+class — only possible via deliberate scene mis-authoring) folds into the
+same silent return. That is acceptable: the orbit camera would never be
+current anyway (CameraAuthority enforces single-active), and any input
+contention would be visible in the very next play-test.
+
+**Acted:** Added a §F-46 docstring at the function explaining both
+silent-return cases.
+
+**Risk lenses:** Reliability (input contention if a future change makes
+the cast non-trivially fail), Operational. Severity Note —
+CameraAuthority's single-active assertion and the body's own `_ready`
+contract (§F-15 / `_assert_inside_store_scene`) are louder failure
+surfaces.
+
+---
+
+### §F-47 — `game_world.gd:937–942, 962–968` — `_mall_hallway` null-guard in hub injector (Pass 6)
+
+The hub-mode store injector now toggles `_mall_hallway.visible` to hide
+hallway storefronts during a store session and restore them on exit
+(addresses ISSUE-005: storefront geometry at z=0.1 was bleeding into the
+interior camera sightline). Both write sites are guarded with
+`if _mall_hallway:`.
+
+In shipping hub mode (`debug/walkable_mall = false`), `_setup_mall_hallway`
+never instantiates the hallway — `_mall_hallway` stays null and the guard
+is a deliberate no-op. The injector callable itself is only registered when
+`_hub_transition != null`, which is also the hub-only branch. So under
+current configuration the guard never fires either way.
+
+The guard is forward-compatible: a future walkable-mall variant that
+chooses to route through the same injector would benefit from the
+hide/restore behavior without a rewrite. The new test
+`test_hub_mall_hallway_visibility.gd` exercises both the structural check
+(grep for the guard pattern) and a behavioral round-trip against a Node3D
+stand-in, plus the explicit null-guard no-op assertion — so the no-op
+behavior is regression-locked.
+
+**Acted:** Added §F-47 cites at both write sites pointing to this section.
+The pre-existing inline rationale ("Null in hub mode (walkable_mall=false)")
+was promoted to the §F-47 cite so future readers can find the contract in
+this report.
+
+**Risk lenses:** Reliability (silent no-op masking a future regression
+where the hallway is unexpectedly null in walkable_mall mode). Severity
+Note — the test suite covers both paths.
+
+---
+
+### §F-48 — `game_world.gd:976–1008` — `_spawn_player_in_store` no-marker silent false (Pass 6)
+
+`_spawn_player_in_store(store_root, store_id)` returns `false` silently
+when `store_root.get_node_or_null("PlayerEntrySpawn")` is null. The caller
+(`_inject_store_into_container`) treats `false` as the signal to fall back
+to the orbit-camera path (`_activate_store_camera`).
+
+This is intentional: not every store has been refactored to use the
+walking body yet. Stores without a `PlayerEntrySpawn` marker are still
+served by the orbit camera (sports memorabilia, video rental, pocket
+creatures, consumer electronics still ship with `OrbitPivot` per the
+StoreReadyContract `_PLAYER_ANCHOR_NAMES` allow-list). The two non-marker
+internal failure paths inside the function — non-`StorePlayerBody` scene
+root and missing `Camera3D` child — both `push_error` and `queue_free`
+the partial node before returning false, so the silent-false channel is
+reserved exclusively for "this store doesn't use the body path."
+
+**Acted:** No code change — the function's own docstring already says so
+("Returns `true` when the spawn ran (caller must skip orbit-camera
+activation), and `false` when the store has no spawn marker (caller falls
+back to the orbit-camera path)").
+
+**Risk lenses:** Reliability (mistaking a missing marker for a contract
+violation). Severity Note — fallback contract is explicit at both sides.
+
+---
+
+### §F-49 — `store_ready_contract.gd:181–190` — `_find_current_camera` recursive-walk silent null (Pass 6)
+
+The contract's `_camera_current` invariant was rewritten this pass: it
+previously hard-coded the lookup `_find(scene, "StoreCamera")` (named
+camera must be `current=true`). Once stores started spawning a
+`StorePlayerBody` whose own `Camera3D` becomes the active camera through
+CameraAuthority, the orbit `StoreCamera` is automatically deactivated by
+`CameraAuthority._clear_others`, and the contract failed even though a
+different camera was driving the viewport. The new walk visits every node
+under the scene and returns the first `Camera3D.current` (or
+`Camera2D.is_current()`) it finds, matching CameraAuthority's own
+single-active assertion semantics.
+
+`_find_current_camera` returns null when no camera under the scene is
+current. That null is consumed by `_camera_current(scene)` which simply
+appends `INV_CAMERA` to the contract failures array. The full failure
+diagnostic (`failed invariants: [&"camera_current"]`) is surfaced by
+`StoreReadyResult` and routed through `StoreDirector._fail()` →
+`AuditLog.fail_check(&"store_ready_failed")` → `ErrorBanner` (per the
+existing escalation chain documented in §F-37). The recursive walker
+cannot (and should not) `push_error` independently — that would
+double-fire on the same contract violation.
+
+**Acted:** No code change — the in-source docstring already explains the
+"walk by current-flag matches CameraAuthority's own single-active
+assertion semantics" rationale, and the failure surface flows through the
+standard contract pipeline.
+
+**Risk lenses:** Reliability, Observability. Severity Note — existing
+contract escalation path is the louder surface.
+
+---
+
+### §F-28 (RETIRED in Pass 6) — `nav_zone_interactable.gd` linked_label push_warning
+
+Pass 3 added a `push_warning` when `linked_label` resolved to a
+non-`Label3D` node, surfacing a scene-authoring error that would otherwise
+silently disable label management for that zone.
+
+This pass removed the entire label-management feature from
+`NavZoneInteractable`: `linked_label`, `proximity_radius`,
+`_label_node`, the `_resolve_linked_label` helper, the hover/selected/
+proximity tracking in `_process`, the `register_label()` programmatic
+seam, the `_debug_always_on_session` static, and the
+`zone_labels_debug_toggled` EventBus signal subscription. The companion F3
+input action, the `EventBus.zone_labels_debug_toggled` signal,
+`debug_overlay._toggle_zone_labels_debug`, and the seven
+`test_nav_zone_label_*` GUT tests are also gone.
+
+With the feature removed, the §F-28 push_warning is gone with it. The
+finding is retired — there is no remaining call site to warn about, and
+the SSOT report documents the removal completely
+(`docs/audits/ssot-report.md`, "DebugLabels / nav-zone label management"
+section).
+
+**Risk lenses:** Observability. Severity n/a — no code remains.
+
+---
+
 ## Categorization
 
 | Category | Items |
@@ -759,7 +935,9 @@ guard?), Observability. Severity Note — explicitly documented design.
 | Tightened (Pass 3) | §F-27, §F-28, §F-29, §F-30, §F-31 |
 | Tightened (Pass 4) | §F-32, §F-33, §F-35, §F-36 |
 | Tightened (Pass 5) | §F-39, §F-40, §F-41, §F-42, §F-43, §F-44 |
-| Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §J4 |
+| Acted (Pass 6) — docstring justifications | §F-46, §F-47 |
+| Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §F-48, §F-49, §J4 |
+| Retired (feature removed) | §F-28 |
 | Needs telemetry | None — EventBus + AuditLog provide sufficient observability |
 | Hidden failure risk (remaining) | None |
 
@@ -767,7 +945,9 @@ guard?), Observability. Severity Note — explicitly documented design.
 
 ## Escalations
 
-None. All findings across all five passes were either tightened in-place or justified with inline comments.
+None. All findings across all six passes were either tightened in-place,
+justified with inline comments, or retired when the feature itself was
+removed.
 
 ---
 
@@ -775,15 +955,21 @@ None. All findings across all five passes were either tightened in-place or just
 
 **Prod posture acceptable.**
 
-Pass 5 found and fixed one Low gap (§F-39: hub-mode scene-injector cascade
-when scene root is not a Node3D — now null-guarded with explicit error and
-state rollback) and added five Note-level docstrings/cross-references
-(§F-40 composite-audit autoload silent-empty, §F-41 quarantine missing-node
-tolerance, §F-42 has_blocking_modal CTX_MODAL fallback, §F-43 objective
-mirror stable-state skip, §F-44 InputFocus test-seam at two UI sites). The
-five Day-1 system quarantine guards (§F-45) are explicitly documented as
-intentional in `CLAUDE.md` and re-confirmed here. No hidden data-corruption
-paths remain across any pass.
+Pass 6 reviewed the ISSUE-001 / ISSUE-005 / nav-zone-label-removal diff
+against `main` and found two Note-level silent fallbacks worth documenting
+(§F-46 orbit-controller retire when none exists, §F-47 hub-only hallway
+null-guard) and two Note-level paths whose docstrings already justify the
+silent-null contract (§F-48 missing `PlayerEntrySpawn` marker is a
+documented orbit-fallback signal, §F-49 `_find_current_camera` recursive
+walk failure flows through the contract failures array). §F-28 is
+retired: the entire `linked_label` feature it warned about was excised
+this pass. The new `_spawn_player_in_store` push_error paths (non-Node3D
+scene root, missing `Camera3D` child) are well-formed and wire through
+the existing failure surfaces. No hidden data-corruption paths remain
+across any pass.
 
-After Pass 5 the repo's full test suite (`bash tests/run_tests.sh`) reports
-4666 / 4666 GUT tests passing, plus all shell validators green.
+After Pass 5 the repo's full test suite (`bash tests/run_tests.sh`) reported
+4666 / 4666 GUT tests passing. Pass 6 has not yet been validated against
+the suite — the working tree currently has uncommitted changes to scenes
+and scripts that may shift test counts up or down. Re-run the suite before
+relying on the post-Pass-6 number.

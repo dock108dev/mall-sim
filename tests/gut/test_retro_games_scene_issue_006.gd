@@ -42,10 +42,10 @@ func test_player_controller_has_camera3d_child() -> void:
 
 
 func test_store_camera_has_unique_name_in_owner_flag() -> void:
-	# StoreReadyContract invariant 5 first tries `%StoreCamera`; that lookup
-	# only resolves when the node has `unique_name_in_owner = true`. Without it
-	# the contract falls back to a recursive find_child scan, which works but
-	# is slower and less explicit about the design intent.
+	# Scene-authoring convention: the orbit StoreCamera is exposed as
+	# `%StoreCamera` so editor-side lookups and any in-scene cross-references
+	# resolve without a full subtree walk. StoreReadyContract walks all
+	# Camera2D/3D for `current=true` and does not depend on this flag.
 	var unique: Node = _root.get_node_or_null("%StoreCamera")
 	assert_not_null(
 		unique,
@@ -65,16 +65,18 @@ func test_store_ready_contract_camera_passes_after_authority_activation() -> voi
 		return
 	# Invariant 5 fails until CameraAuthority activates the camera.
 	assert_false(cam.current, "precondition: camera ships not-current")
+	var contract: GDScript = load("res://game/scripts/stores/store_ready_contract.gd")
+	assert_false(
+		contract.call("_camera_current", _root),
+		"_camera_current must return false before CameraAuthority activates a camera"
+	)
 	var activated: bool = CameraAuthority.request_current(cam, &"store_director")
 	assert_true(activated, "CameraAuthority.request_current must succeed")
 	assert_true(cam.current, "StoreCamera must report current=true after activation")
-	# Cross-check against the contract helper directly.
-	var contract: GDScript = load("res://game/scripts/stores/store_ready_contract.gd")
-	var found: Node = contract.call("_find", _root, "StoreCamera")
-	assert_eq(found, cam, "contract _find must resolve our StoreCamera")
+	# Contract walks for any current Camera2D/3D — name does not matter.
 	assert_true(
-		"current" in found and found.get("current") == true,
-		"contract must see camera_current=true"
+		contract.call("_camera_current", _root),
+		"_camera_current must return true once any Camera3D under the scene is current"
 	)
 
 
@@ -129,47 +131,33 @@ func test_no_second_camera_in_scene() -> void:
 	assert_eq(cameras.size(), 1, "Scene must have exactly one Camera3D (the PlayerController child)")
 
 
-# ── Debug zone labels ─────────────────────────────────────────────────────────
+# ── Debug zone labels (removed — replaced by InteractionPrompt) ──────────────
 
-func test_debug_labels_node_present() -> void:
-	assert_not_null(
+func test_no_billboard_debug_labels_in_scene() -> void:
+	# The DebugLabels Node3D + 5 billboard Label3D children were removed in
+	# favor of the contextual InteractionPrompt CanvasLayer; verify they did
+	# not regress back into the scene.
+	assert_null(
 		_root.get_node_or_null("DebugLabels"),
-		"DebugLabels Node3D must exist as a child of the scene root"
+		"DebugLabels Node3D must not exist — giant floating world labels are removed"
 	)
-
-
-func test_debug_labels_has_required_zones() -> void:
-	var container: Node = _root.get_node_or_null("DebugLabels")
-	assert_not_null(container, "DebugLabels must exist")
-	if not container:
-		return
-	var texts: Array[String] = []
-	for child: Node in container.get_children():
-		if child is Label3D:
-			texts.append((child as Label3D).text)
-	var required: Array[String] = [
+	var removed_texts: Array[String] = [
 		"SHELF", "REGISTER", "CUSTOMER ENTRY", "BACKROOM", "DISPLAY TABLE"
 	]
-	for zone: String in required:
-		var found: bool = false
-		for t: String in texts:
-			if t.contains(zone):
-				found = true
-				break
-		assert_true(found, "DebugLabels must include a label containing '%s'" % zone)
-
-
-func test_debug_labels_use_billboard_mode() -> void:
-	var container: Node = _root.get_node_or_null("DebugLabels")
-	if not container:
-		return
-	for child: Node in container.get_children():
-		if child is Label3D:
-			var lbl := child as Label3D
-			assert_eq(
-				lbl.billboard,
-				BaseMaterial3D.BILLBOARD_ENABLED,
-				"%s must use billboard mode so it faces camera" % lbl.name
+	var labels: Array[Node] = []
+	_collect_by_class(_root, "Label3D", labels)
+	for node: Node in labels:
+		var lbl := node as Label3D
+		# Allow storefront sign labels through; they are not the giant
+		# yellow zone callouts the issue removed.
+		var path: NodePath = _root.get_path_to(lbl)
+		if String(path).begins_with("Storefront/"):
+			continue
+		for banned: String in removed_texts:
+			assert_false(
+				lbl.text.contains(banned),
+				"Label3D '%s' must not contain banned debug text '%s'"
+				% [lbl.name, banned]
 			)
 
 

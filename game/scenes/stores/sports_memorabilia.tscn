@@ -249,6 +249,7 @@ surface_material_override/0 = SubResource("sign_backing_mat")
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.5, 2.63)
 pixel_size = 0.01
 modulate = Color(1, 0.94, 0.78, 1)
+double_sided = false
 font_size = 56
 text = "Sports Memorabilia"
 outline_size = 7
@@ -258,6 +259,7 @@ shaded = false
 [node name="SignTagline" type="Label3D" parent="Storefront"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.2, 2.63)
 pixel_size = 0.01
+double_sided = false
 font_size = 24
 text = "Cards & Signed Gear"
 modulate = Color(1, 0.95, 0.87, 1)

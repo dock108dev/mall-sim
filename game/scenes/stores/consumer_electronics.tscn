@@ -247,6 +247,7 @@ surface_material_override/0 = SubResource("sign_backing_mat")
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.5, 3.13)
 pixel_size = 0.01
 modulate = Color(0.86, 0.96, 1, 1)
+double_sided = false
 font_size = 56
 text = "Consumer Electronics"
 outline_size = 7
@@ -256,6 +257,7 @@ shaded = false
 [node name="SignTagline" type="Label3D" parent="Geometry/Storefront"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.2, 3.13)
 pixel_size = 0.01
+double_sided = false
 font_size = 24
 text = "Devices & Gadgets"
 modulate = Color(0.95, 0.99, 1, 1)

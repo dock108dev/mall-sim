@@ -1,9 +1,11 @@
 # Security Audit Report — Mallcore Sim
 
-**Latest pass:** 2026-04-28 — Day-1 quarantine / playable-loop branch
-(`main`, working-tree changes prior to commit).
-**Prior pass:** 2026-04-27 — full main-branch sweep (`SR-01..SR-08`,
-preserved verbatim under §B at the bottom of this document).
+**Latest pass:** 2026-04-28 — Pass 2 — ISSUE-001/003/004/005 hardening sweep
+(working-tree changes on `main`, prior to commit). See §C.
+**Prior pass (same day):** 2026-04-28 — Day-1 quarantine / playable-loop
+branch. See §A.
+**Initial pass:** 2026-04-27 — full main-branch sweep (`SR-01..SR-08`).
+See §B.
 
 This report is cumulative. Each pass appends a dated section; resolved or
 superseded findings are kept for historical traceability rather than
@@ -456,3 +458,296 @@ Security-report section references introduced in §B (`§SR-N`) and §A
 | §DR-05 | `retro_games.gd`, `_add_starter_item_by_id()` | Starter-quantity clamp (this pass) |
 | §F1 | `tutorial_system.gd:44` | Tutorial-progress file size cap |
 | §F2 | `tutorial_system.gd:48` | Tutorial dict key cap |
+
+---
+
+## §C — 2026-04-28 Pass 2 (this audit)
+
+Scope: working-tree changes on `main` prior to commit. The branch lands
+ISSUE-001 (CharacterBody3D player spawn on store enter), ISSUE-003
+(remove `DebugLabels` billboard text from `retro_games.tscn`), ISSUE-004
+(`double_sided=false` on storefront sign Label3Ds), ISSUE-005 (hide the
+mall hallway during in-store sessions), plus the contract-level switch
+in `store_ready_contract.gd._camera_current` from a name-keyed
+`StoreCamera` lookup to "any current Camera2D/3D under the scene".
+
+### C.0 — Repo understanding (delta from §A and §B)
+
+The trust-boundary inventory from §B.1 is unchanged. Mallcore Sim is a
+single-player Godot 4.6 desktop game with no network, auth, RPC, IPC,
+plugin loader, or external HTTP/WebSocket surface (verified — see C.4).
+The relevant trust boundaries this branch touches are:
+
+- **`res://` packed scenes** (author-controlled at build time): five
+  store scenes, `store_player_body.tscn`, `debug_overlay.tscn`,
+  `game_world.tscn`. Modifications here are equivalent to source-code
+  edits and ship as part of the binary; no runtime untrusted-input
+  surface is added.
+- **Scene tree mutation** during hub-mode store enter/exit
+  (`game/scenes/world/game_world.gd::_inject_store_into_container` and
+  `_on_hub_exit_store_requested`) — touched by ISSUE-001 (player-body
+  spawn) and ISSUE-005 (hallway hide/show).
+- **Debug build cheats** (`game/scenes/debug/debug_overlay.gd`) —
+  trimmed by removing the F3 `zone_labels_debug` toggle. The remaining
+  cheats stay gated by `if not OS.is_debug_build(): queue_free()`
+  (debug_overlay.gd:20).
+- **Input map** (`project.godot`) — the `zone_labels_debug` action was
+  retired; no new bindings added.
+
+Surfaces explicitly **not touched** this pass: `user://settings.cfg`,
+save slots, content JSON, save migration chain, locale files, CI
+workflows, export presets.
+
+### C.1 — Findings
+
+| ID | Title | Severity | Confidence | Status |
+|---|---|---|---|---|
+| C-01 | Resource leak on `_spawn_player_in_store` failure paths | Info (resource hygiene) | High | **Acted** — fixed inline |
+| C-02 | Recursive scene walkers without depth cap (`_find_first_camera`, `_find_current_camera`) | Info | High | **Justified** — author-controlled scene graphs only |
+| C-03 | `find_child("Camera3D", false, false)` is name-keyed despite branch removing the equivalent `StoreCamera` name-keying | Low (correctness, not security) | Medium | **Justified** — scoped to a single packed scene |
+| C-04 | F3 `zone_labels_debug` debug binding retired cleanly | n/a — verified positive change | High | Confirmed |
+| C-05 | Wall colliders added to `retro_games.tscn` close player-position out-of-bounds gameplay loop | n/a — defensive gameplay change, not a security finding | High | Confirmed |
+| C-06 | New tests don't introduce filesystem writes / external calls | n/a — verified clean | High | Confirmed |
+
+No high/critical findings. No findings touching authentication, input
+validation of untrusted data, file-system traversal, deserialization,
+SSRF, XSS, or any web/transport surface — none of those exist in this
+branch's blast radius.
+
+### C.2 — Detailed findings
+
+#### C-01 — Resource leak on `_spawn_player_in_store` failure paths *(acted)*
+
+**Location.** `game/scenes/world/game_world.gd::_spawn_player_in_store`
+(introduced this branch, line 972 onward).
+
+**Evidence.** The function had two failure branches that returned
+`false` while leaving freshly-instantiated nodes attached to the scene
+or floating in memory:
+
+1. `_STORE_PLAYER_SCENE.instantiate() as StorePlayerBody` returns null
+   when the cast fails (e.g., a future scene-root rename). The
+   instantiate call itself succeeded, so a node existed in memory and
+   would be lost when the local `player` variable went out of scope.
+   Godot does **not** auto-free unparented nodes; this is a real (if
+   tiny) leak per failure.
+2. `body_camera == null` (Camera3D missing under the player body) was
+   logged via `push_error` and the function returned `false`. But the
+   player body had already been added to `store_root` via
+   `add_child(player)`. The caller's logic
+   (`if not _spawn_player_in_store(...): _activate_store_camera(...)`)
+   would then activate the orbit camera *with the orphan player body
+   still in the scene*, producing a phantom CollisionShape3D in the
+   level geometry the orbit camera was now showing.
+
+**Realistic exploit scenario.** None — both branches are unreachable in
+shipping content. They would only fire if (a) a future refactor broke
+the StorePlayerBody class chain, or (b) the `store_player_body.tscn`
+shipped without a Camera3D child. Both are code-review/CI failures, not
+runtime trust-boundary violations.
+
+**Why act anyway.** The `_inject_store_into_container` function in the
+same file already follows this exact "free the orphan on failure"
+pattern for `_hub_active_store_scene`:
+
+```gdscript
+if _hub_active_store_scene == null:
+    push_error("GameWorld: hub injector — scene root for '%s' is not Node3D" % canonical)
+    if instantiated != null:
+        instantiated.queue_free()
+    return
+```
+
+Aligning `_spawn_player_in_store` with the same idiom is a one-line
+change per branch, removes the only resource-management
+inconsistency on the new code path, and prevents a future "phantom
+collision body in store after fallback" bug class — at zero cost to the
+success path.
+
+**Recommended fix (applied this pass).**
+
+```gdscript
+var instantiated: Node = _STORE_PLAYER_SCENE.instantiate()
+var player: StorePlayerBody = instantiated as StorePlayerBody
+if player == null:
+    push_error("GameWorld: failed to instantiate store_player_body for '%s'" % store_id)
+    if instantiated != null:
+        instantiated.queue_free()
+    return false
+store_root.add_child(player)
+player.global_position = marker.global_position
+var body_camera: Camera3D = (
+    player.find_child("Camera3D", false, false) as Camera3D
+)
+if body_camera == null:
+    push_error("GameWorld: store_player_body for '%s' has no Camera3D child" % store_id)
+    player.queue_free()
+    return false
+```
+
+**Status.** Edit applied to `game/scenes/world/game_world.gd::_spawn_player_in_store`.
+
+#### C-02 — Recursive scene walkers without depth cap *(justified)*
+
+**Locations.**
+- `game/scenes/world/game_world.gd::_find_first_camera` (preexisting,
+  not introduced this pass).
+- `game/scripts/stores/store_ready_contract.gd::_find_current_camera`
+  (introduced this pass when the contract switched away from
+  name-keyed `StoreCamera` lookup).
+
+Both walk the scene tree recursively with no explicit depth limit and
+short-circuit on first match.
+
+**Realistic exploit scenario.** None. The scene graphs walked are
+`res://`-loaded packed scenes — content authored by the developers and
+shipped in the binary. Godot's scene-tree depth is bounded by editor
+practicality (we've never observed scenes deeper than ~12 levels);
+Godot's own GDScript stack depth ceiling is well above any plausible
+scene depth. No path here accepts user-supplied scenes (no mod
+loader, no `ResourceLoader.load(user_path)` against
+`user://`-supplied filenames). Adding a depth cap would be speculative
+defensive coding against a threat model that does not exist on this
+project.
+
+**Recommended fix.** None. If a mod-loader or user-supplied scene
+surface is ever added (no such plan in `BRAINDUMP.md` /
+`docs/roadmap.md` as of this pass), revisit both walkers and switch to
+iterative traversal with an explicit depth cap.
+
+**Status.** Justified — kept as-is. Logged here so a future audit that
+sees user-supplied scenes added to the trust boundary will catch this.
+
+#### C-03 — `find_child("Camera3D", false, false)` is name-keyed *(justified)*
+
+**Location.** `game/scenes/world/game_world.gd::_spawn_player_in_store`
+calls `player.find_child("Camera3D", false, false)` to locate the body
+camera before handing it to `CameraAuthority.request_current`.
+
+**Note.** This branch's headline change in
+`store_ready_contract.gd._camera_current` was specifically to *stop*
+keying camera lookup off the name `StoreCamera` (since the contract
+must work for any store, including the body-cam stores). The new
+`_spawn_player_in_store` re-introduces a name-keyed lookup for the
+body camera (`"Camera3D"`), but with key differences:
+
+1. It is scoped to a single packed scene
+   (`res://game/scenes/player/store_player_body.tscn`) which the
+   project owns and CI can validate.
+2. The fallback on miss is loud (`push_error` + `queue_free` after the
+   C-01 fix) and the caller falls back to the orbit-camera path.
+3. The exact match on `"Camera3D"` is the Godot default node name for
+   a `Camera3D`, so renaming would itself be unusual.
+
+**Realistic exploit scenario.** None — the lookup target is a
+build-time asset, not runtime input.
+
+**Recommended fix.** None. If the body scene ever needs multiple
+Camera3D children (cinematic, debug, etc.), switch to a unique-name
+(`%StoreCamera`) or group-tag lookup. Until then, the name-keyed
+lookup is the simplest correct expression.
+
+**Status.** Justified — kept as-is.
+
+#### C-04 — F3 `zone_labels_debug` debug binding retired cleanly *(verified positive)*
+
+The branch removes the `[input] zone_labels_debug` action from
+`project.godot`, the `EventBus.zone_labels_debug_toggled` signal, the
+`_toggle_zone_labels_debug()` method on `debug_overlay.gd`, and the
+seven label-management tests in `test_nav_zone_navigation.gd`.
+
+**Why this matters for security.** Even in a single-player game,
+unused debug bindings that survive into release builds are a small
+surface for "did anyone notice this still exists" debug-only behavior
+leaking into shipping content. The removal is total; `grep -rn
+"zone_labels_debug" game/ project.godot tests/ --include="*.gd"
+--include="*.tscn" --include="project.godot"` returns zero hits
+post-pass.
+
+**Status.** Confirmed clean.
+
+#### C-05 — Wall colliders added to `retro_games.tscn` *(gameplay integrity, not security)*
+
+`BackWall`, `LeftWall`, `RightWall`, `FrontWallLeft`, and
+`FrontWallRight` were promoted from bare `MeshInstance3D` to a
+`StaticBody3D` + `CollisionShape3D` + `MeshInstance3D` triplet. Before
+this change a `CharacterBody3D` player could clip through the walls
+and reach out-of-bounds positions (including the now-hidden mall
+hallway), confusing `CameraAuthority` and the store-ready contract.
+
+**Why this matters here.** Day 1 acceptance requires the player to
+stay inside the store geometry. The colliders close that loop. There
+is no security implication — out-of-bounds positions in a
+single-player game are a gameplay bug, not a privilege escalation —
+but the change *does* harden the Day 1 quarantine surface listed in
+`CLAUDE.md`.
+
+**Status.** Confirmed positive.
+
+#### C-06 — New tests don't introduce filesystem writes / external calls *(verified)*
+
+`tests/gut/test_hub_mall_hallway_visibility.gd` reads
+`game/scenes/world/game_world.gd` via `FileAccess.get_file_as_string`
+(read-only) and asserts substring presence in the function bodies.
+The other modified tests (`test_nav_zone_navigation.gd`,
+`test_retro_games_debug_geometry_defaults.gd`,
+`test_retro_games_scene_issue_006.gd`) are pure assertion-style and do
+not write to disk, open sockets, or shell out.
+
+**Status.** Confirmed clean.
+
+### C.3 — Safe hardening implemented this pass
+
+| Change | File | Reason |
+|---|---|---|
+| Free orphan node when `instantiate() as StorePlayerBody` cast fails; free the player body when its Camera3D child is missing | `game/scenes/world/game_world.gd::_spawn_player_in_store` | C-01 — aligns with the existing `_inject_store_into_container` failure-path idiom; prevents a phantom CollisionShape3D living in the store scene if the orbit-camera fallback path is taken. |
+
+No other inline edits this pass. Documentation in
+`store_ready_contract.gd` and `player_controller.gd` was already
+updated by the branch under audit (see `docs/audits/ssot-report.md`
+Pass 2).
+
+### C.4 — Verifications run for this pass
+
+Cross-checks confirming no external/network/dynamic-execution surface
+was introduced:
+
+```text
+grep results across game/, autoload/, tests/, scripts/:
+  OS.execute        — 0 matches
+  OS.shell_open     — 0 matches
+  JavaScriptBridge  — 0 matches
+  HTTPClient        — 0 matches
+  HTTPRequest       — 0 matches
+  WebSocket         — 0 matches
+  Marshalls.base64  — 0 matches
+  eval(             — 0 matches
+  exec(             — 0 matches
+  JSON.parse_string — 6 matches, all under tests/ (fixture loaders)
+```
+
+`Settings.save_settings()` (game/autoload/settings.gd:186–213) is
+unchanged this pass and remains the sole writer of
+`user://settings.cfg`. No new `user://` writes are introduced.
+
+### C.5 — Remediation roadmap
+
+Nothing carried forward. C-01 is fixed; C-02/C-03 are justified with
+threat-model context tied to the absence of a mod loader / user-scene
+surface.
+
+If a future branch adds any of:
+
+- Mod loading from `user://` or external paths
+- A networked or cloud-save surface (HTTP/WebSocket/etc.)
+- An in-game console or expression evaluator (`Expression.parse(...)`
+  on user-supplied strings)
+- A plugin/script-loading surface that accepts non-`res://` resources
+
+…revisit C-02 (depth-cap the scene walkers) and re-run the C.4 grep
+panel. None of those surfaces exists today.
+
+### C.6 — Escalations
+
+None. All C-series findings were either acted on (C-01) or justified
+inline above (C-02, C-03). No architectural decisions were deferred.
