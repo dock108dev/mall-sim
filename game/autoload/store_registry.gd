@@ -17,6 +17,11 @@ var _entries: Dictionary = {}
 
 func _ready() -> void:
 	_seed_from_content_registry()
+	# Autoload init order seeds StoreRegistry before DataLoader runs, so the
+	# initial pass is empty. Re-seed when DataLoader emits content_loaded.
+	var bus: Node = _autoload("EventBus")
+	if bus != null and bus.has_signal("content_loaded"):
+		bus.content_loaded.connect(_seed_from_content_registry)
 
 
 ## Registers an entry. Asserts on null/empty inputs (programmer error) and
