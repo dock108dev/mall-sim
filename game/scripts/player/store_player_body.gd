@@ -40,6 +40,16 @@ const ACTION_MOVE_BACK: StringName = &"move_back"
 ## Ground movement speed in meters per second.
 @export var move_speed: float = 4.0
 
+## Rectangular footprint clamp applied after `move_and_slide`. Defense in
+## depth: even if a wall collider is missing or misconfigured, the body cannot
+## leave the store footprint. Defaults match the shipping retro_games interior
+## (7×5 floor with 0.3 m margin to the wall surface). When `retro_games.tscn`
+## room geometry is resized these values must be updated in lockstep — they
+## are exported so future store .tscn files can override per-store. Only X and
+## Z are clamped; Y is left to gravity / verticality.
+@export var bounds_min: Vector3 = Vector3(-3.2, 0.0, -2.2)
+@export var bounds_max: Vector3 = Vector3(3.2, 0.0, 2.2)
+
 ## The interaction ray / proximity system writes the hovered interactable here.
 ## Cleared back to `null` when nothing is hoverable. Public so the HUD and the
 ## objective director can render prompts off the same source of truth.
@@ -73,6 +83,14 @@ func _physics_process(_delta: float) -> void:
 	# Leave velocity.y to gravity-free 0 — store floors are flat; a gravity
 	# pass can land when a store introduces verticality.
 	move_and_slide()
+	_clamp_to_store_footprint()
+
+
+func _clamp_to_store_footprint() -> void:
+	var pos: Vector3 = global_position
+	pos.x = clampf(pos.x, bounds_min.x, bounds_max.x)
+	pos.z = clampf(pos.z, bounds_min.z, bounds_max.z)
+	global_position = pos
 
 
 func _unhandled_input(event: InputEvent) -> void:

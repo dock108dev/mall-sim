@@ -41,13 +41,25 @@ func test_scene_does_not_embed_player_controller() -> void:
 	)
 
 
-func test_scene_has_no_camera3d() -> void:
-	# Both the orbit and walking-body camera live outside this .tscn. A
-	# Camera3D in the scene file would race CameraAuthority's single-active
-	# guarantee.
+func test_scene_ships_single_store_camera() -> void:
+	# The diorama view is owned by an in-scene `StoreCamera` Camera3D. The
+	# spawned StorePlayerBody intentionally ships without a Camera3D so
+	# there is no second viewport camera in flight. The .tscn-level
+	# current=false guarantee is covered by `test_store_entry_camera.gd`,
+	# which inspects the packed scene before it enters the tree (Godot
+	# auto-activates the first Camera3D once it's parented to a viewport).
 	var cameras: Array[Node] = []
 	_collect_by_class(_root, "Camera3D", cameras)
-	assert_eq(cameras.size(), 0, "Scene must ship zero Camera3D nodes")
+	assert_eq(cameras.size(), 1, "Scene must ship exactly one Camera3D (StoreCamera)")
+	if cameras.size() != 1:
+		return
+	var cam: Camera3D = cameras[0] as Camera3D
+	assert_eq(cam.name, &"StoreCamera", "the scene Camera3D must be named StoreCamera")
+	# Diorama framing — outside the front wall (z>2.55) and well above the
+	# ceiling (y>3.05) so the camera looks down/back through the front
+	# cutaway without punching through interior geometry.
+	assert_gt(cam.position.z, 2.55, "StoreCamera must sit outside the front wall")
+	assert_gt(cam.position.y, 3.05, "StoreCamera must sit above the ceiling")
 
 
 func test_player_entry_spawn_is_authored() -> void:
@@ -61,6 +73,47 @@ func test_player_entry_spawn_is_authored() -> void:
 	# Spawn must sit inside the navigable footprint, not behind the front wall.
 	assert_lt(marker.global_position.z, 2.55,
 		"PlayerEntrySpawn must be inside the store, not outside the storefront")
+	# At least 1 m of walkable runway between spawn and the doorway barrier
+	# at z=2.6 so the player does not begin gameplay flush against a wall.
+	assert_lte(marker.global_position.z, 1.6,
+		"PlayerEntrySpawn must give the player ≥1 m walkable space before "
+		+ "the doorway threshold (z≈2.6); got z=%.3f" % marker.global_position.z)
+
+
+func test_doorway_barrier_seals_front_gap() -> void:
+	# The 1.5 m front-wall opening (X∈[-0.75, 0.75], z=2.55) has no wall mesh,
+	# so a StaticBody3D barrier must close it physically. Without this the
+	# StorePlayerBody walks straight out of the store on the first forward
+	# input from the spawn marker.
+	var barrier: StaticBody3D = (
+		_root.get_node_or_null("DoorwayBarrierBody") as StaticBody3D
+	)
+	assert_not_null(barrier, "DoorwayBarrierBody StaticBody3D must seal the doorway")
+	if barrier == null:
+		return
+	assert_eq(barrier.collision_layer, 1,
+		"DoorwayBarrierBody must live on collision layer 1 so the player capsule (mask=1) blocks against it")
+	# Centered on the doorway gap and just outside the front wall plane.
+	assert_almost_eq(barrier.global_position.x, 0.0, 0.01,
+		"barrier must be centered on the doorway gap")
+	assert_gte(barrier.global_position.z, 2.55,
+		"barrier must sit at or beyond the front wall plane (z=2.55)")
+	var shape_node: CollisionShape3D = (
+		barrier.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	)
+	assert_not_null(shape_node, "DoorwayBarrierBody must have a CollisionShape3D child")
+	if shape_node == null:
+		return
+	var box: BoxShape3D = shape_node.shape as BoxShape3D
+	assert_not_null(box, "barrier shape must be a BoxShape3D")
+	if box == null:
+		return
+	# The shape must span the full doorway width (1.5 m) and full wall height
+	# (3 m) so the player cannot duck under or strafe around it.
+	assert_gte(box.size.x, 1.5,
+		"barrier must span the full 1.5 m doorway width; got %.3f" % box.size.x)
+	assert_gte(box.size.y, 3.0,
+		"barrier must span the full 3 m wall height; got %.3f" % box.size.y)
 
 
 # ── Debug zone labels (removed — replaced by InteractionPrompt) ──────────────

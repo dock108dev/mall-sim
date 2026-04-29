@@ -939,8 +939,8 @@ func _inject_store_into_container(
 		# a future walkable-mall variant routing through the same injector.
 		if _mall_hallway:
 			_mall_hallway.visible = false
-		if not _spawn_player_in_store(_hub_active_store_scene, canonical):
-			_activate_store_camera(_hub_active_store_scene, canonical)
+		_spawn_player_in_store(_hub_active_store_scene, canonical)
+		_activate_store_camera(_hub_active_store_scene, canonical)
 		EventBus.store_entered.emit(canonical)
 	)
 	if _hub_active_store_scene == null:
@@ -967,12 +967,13 @@ func _on_hub_exit_store_requested() -> void:
 
 
 ## Spawns the CharacterBody3D player avatar at the store's `PlayerEntrySpawn`
-## marker, registers its Camera3D as the active viewport camera through
-## `CameraAuthority`, and retires the orbit `PlayerController`'s input handler
-## so WASD doesn't drive both the body and the orbit pivot at once. Returns
-## `true` when the spawn ran (caller must skip orbit-camera activation), and
-## `false` when the store has no spawn marker (caller falls back to the
-## orbit-camera path used by stores that still ship without a body).
+## marker and retires the orbit `PlayerController`'s input handler so WASD
+## doesn't drive both the body and the orbit pivot at once. Returns `true`
+## when the spawn ran, `false` when the store has no spawn marker (orbit-only
+## stores). Camera activation is owned by `_activate_store_camera`, which the
+## injector calls separately — the body intentionally ships without a
+## Camera3D so the in-scene `StoreCamera` (a fixed diorama angle, authored
+## in the .tscn) is the sole viewport camera per ownership.md row 4.
 func _spawn_player_in_store(store_root: Node, store_id: StringName) -> bool:
 	var marker: Marker3D = (
 		store_root.get_node_or_null(_PLAYER_ENTRY_SPAWN_NAME) as Marker3D
@@ -991,17 +992,6 @@ func _spawn_player_in_store(store_root: Node, store_id: StringName) -> bool:
 		return false
 	store_root.add_child(player)
 	player.global_position = marker.global_position
-	var body_camera: Camera3D = (
-		player.find_child("Camera3D", false, false) as Camera3D
-	)
-	if body_camera == null:
-		push_error(
-			"GameWorld: store_player_body for '%s' has no Camera3D child"
-			% store_id
-		)
-		player.queue_free()
-		return false
-	CameraAuthority.request_current(body_camera, store_id)
 	_retire_orbit_player_controller(store_root)
 	return true
 

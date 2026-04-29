@@ -154,8 +154,12 @@ func test_enter_store_requested_loads_scene_before_hiding_hallway() -> void:
 func test_enter_store_moves_camera_to_store_entry_and_rebinds_camera_users() -> void:
 	EventBus.enter_store_requested.emit(_STORE_ID)
 
+	# `_move_store_camera_to_spawn` walks `_STORE_ENTRY_MARKER_NAMES`
+	# (PlayerEntrySpawn → EntryPoint → OrbitPivot) and pivots the orbit camera
+	# at the first match clamped to the camera's store bounds. The retro_games
+	# scene ships `PlayerEntrySpawn` so that's the marker the system picks up.
 	var entry_marker: Node3D = _system.get_active_store_scene().find_child(
-		"EntryPoint", true, false
+		"PlayerEntrySpawn", true, false
 	) as Node3D
 	assert_not_null(entry_marker)
 	var expected_pivot: Vector3 = entry_marker.global_position.clamp(

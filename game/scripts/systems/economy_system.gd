@@ -405,6 +405,8 @@ func record_store_revenue(store_id: String, amount: float) -> void:
 
 func _on_item_sold(_item_id: String, _price: float, category: String) -> void:
 	_items_sold_today += 1
+	if not GameState.get_flag(&"first_sale_complete"):
+		GameState.set_flag(&"first_sale_complete", true)
 	if category.is_empty():
 		return
 	var current: int = _today_sales.get(category, 0) as int
