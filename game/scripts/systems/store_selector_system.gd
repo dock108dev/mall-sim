@@ -10,6 +10,22 @@ const _STORE_ENTRY_MARKER_NAMES: Array[StringName] = [
 	&"EntryPoint",
 	&"OrbitPivot",
 ]
+# Pivot clamp matches the navigable floor of the shipping store interiors
+# (±3.2 X, ±2.2 Z). The PlayerController scene has no export overrides, so
+# without this the script defaults (±7 X, ±5 Z) let the camera pan far past
+# the store walls. See `docs/audits/error-handling-report.md` §F-50: a
+# future store with a larger nav footprint must override these constants
+# (or the orbit camera will silently over-clamp pan range).
+const _STORE_PIVOT_BOUNDS_MIN: Vector3 = Vector3(-3.2, 0.0, -2.2)
+const _STORE_PIVOT_BOUNDS_MAX: Vector3 = Vector3(3.2, 0.0, 2.2)
+# Zoom radius clamp for store interiors. The script default of zoom_max=15.0
+# pushes the camera ~9 m beyond the storefront wall (z ≈ 11.9 from pivot
+# (0,0,2.3) at pitch=50°), defeating the pivot bounds clamp above. Caps the
+# orbit radius to ~5 m so a 7×5 m store interior is fully framed without the
+# camera escaping into hallway geometry, and ~2 m on the close end so the
+# camera does not punch through floor or fixture meshes. See §F-50.
+const _STORE_ZOOM_MIN: float = 2.0
+const _STORE_ZOOM_MAX: float = 5.0
 
 var _store_state_manager: StoreStateManager
 var _hallway_node: Node3D
@@ -146,6 +162,10 @@ func enter_store(store_id: StringName) -> bool:
 	_is_transitioning = true
 	_store_container.add_child(loaded_scene)
 	loaded_camera.name = "StoreCamera"
+	loaded_camera.store_bounds_min = _STORE_PIVOT_BOUNDS_MIN
+	loaded_camera.store_bounds_max = _STORE_PIVOT_BOUNDS_MAX
+	loaded_camera.zoom_min = _STORE_ZOOM_MIN
+	loaded_camera.zoom_max = _STORE_ZOOM_MAX
 	_store_container.add_child(loaded_camera)
 	_move_store_camera_to_spawn(loaded_scene, loaded_camera)
 	_register_store_camera(canonical, loaded_camera)
@@ -238,6 +258,13 @@ func _on_store_exited(store_id: StringName) -> void:
 	_set_active_store_for_transition(&"")
 
 
+## Moves the orbit camera pivot to the store's entry marker. Silent return
+## when no marker is found is a documented contract (every shipping store
+## ships a `PlayerEntrySpawn`, `EntryPoint`, or `OrbitPivot` Marker3D — see
+## `tests/gut/test_store_entry_camera.gd` and `_STORE_ENTRY_MARKER_NAMES`).
+## The camera defaults to `_pivot = Vector3.ZERO` if this no-ops, which
+## frames the store center for any store whose interior straddles origin.
+## See `docs/audits/error-handling-report.md` §F-51.
 func _move_store_camera_to_spawn(
 	store_scene: Node3D,
 	store_camera: PlayerController
@@ -305,7 +332,7 @@ func _set_hallway_camera_enabled(enabled: bool) -> void:
 		return
 	_hallway_camera.set_process(enabled)
 	# Input gating routes through PlayerController.set_input_listening so the
-	# bypass-detector (`tests/validate_input_focus.sh`, ISSUE-011) stays clean.
+	# bypass-detector (`tests/validate_input_focus.sh`) stays clean.
 	_hallway_camera.set_input_listening(enabled)
 
 

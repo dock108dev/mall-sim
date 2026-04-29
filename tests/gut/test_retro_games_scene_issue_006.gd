@@ -1,8 +1,15 @@
-## Verifies ISSUE-006 acceptance criteria: PlayerController navigation,
-## debug zone labels, shelf interaction wiring, and customer path markers.
+## Verifies retro_games.tscn scene contract: player entry marker, debug zone
+## labels, shelf interaction wiring, and customer path markers. Camera /
+## movement is owned by the externally-instantiated PlayerController
+## (`StoreSelectorSystem._PLAYER_CONTROLLER_SCENE`) or the spawned
+## `StorePlayerBody` (hub-mode injector); neither lives in this scene.
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
+# Navigable footprint authored into this scene — kept in sync with
+# `StoreSelectorSystem._STORE_PIVOT_BOUNDS_*` and the nav mesh extents.
+const _STORE_BOUNDS_MIN: Vector3 = Vector3(-3.2, 0.0, -2.2)
+const _STORE_BOUNDS_MAX: Vector3 = Vector3(3.2, 0.0, 2.2)
 
 var _root: Node3D = null
 
@@ -21,114 +28,39 @@ func after_all() -> void:
 	_root = null
 
 
-# ── Camera / movement ─────────────────────────────────────────────────────────
+# ── Camera / movement (owned externally) ─────────────────────────────────────
 
-func test_player_controller_exists_with_script() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	assert_not_null(pc, "PlayerController node must exist")
-	if pc:
-		assert_not_null(pc.get_script(), "PlayerController must have a script attached")
-
-
-func test_player_controller_has_camera3d_child() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	assert_not_null(pc, "PlayerController must exist")
-	if not pc:
-		return
-	var cam: Camera3D = pc.get_node_or_null("StoreCamera") as Camera3D
-	assert_not_null(cam, "PlayerController must have a Camera3D child named StoreCamera")
-	if cam:
-		assert_false(cam.current, "StoreCamera must ship current=false so CameraAuthority owns activation")
-
-
-func test_store_camera_has_unique_name_in_owner_flag() -> void:
-	# Scene-authoring convention: the orbit StoreCamera is exposed as
-	# `%StoreCamera` so editor-side lookups and any in-scene cross-references
-	# resolve without a full subtree walk. StoreReadyContract walks all
-	# Camera2D/3D for `current=true` and does not depend on this flag.
-	var unique: Node = _root.get_node_or_null("%StoreCamera")
-	assert_not_null(
-		unique,
-		"%StoreCamera unique-name lookup must resolve — "
-		+ "set 'Unique Name in Owner' on the camera node"
+func test_scene_does_not_embed_player_controller() -> void:
+	# The orbit PlayerController is instantiated by StoreSelectorSystem and
+	# parented to the StoreContainer (sibling of the scene). The hub-mode
+	# injector spawns a StorePlayerBody named "Player" instead. Embedding a
+	# PlayerController in the .tscn duplicates WASD input handling.
+	assert_null(
+		_root.get_node_or_null("PlayerController"),
+		"retro_games.tscn must not embed a PlayerController node — input is owned externally"
 	)
 
 
-func test_store_ready_contract_camera_passes_after_authority_activation() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	assert_not_null(pc, "PlayerController must exist")
-	if not pc:
-		return
-	var cam: Camera3D = pc.get_node_or_null("StoreCamera") as Camera3D
-	assert_not_null(cam, "StoreCamera must exist for invariant 5")
-	if cam == null:
-		return
-	# Invariant 5 fails until CameraAuthority activates the camera.
-	assert_false(cam.current, "precondition: camera ships not-current")
-	var contract: GDScript = load("res://game/scripts/stores/store_ready_contract.gd")
-	assert_false(
-		contract.call("_camera_current", _root),
-		"_camera_current must return false before CameraAuthority activates a camera"
-	)
-	var activated: bool = CameraAuthority.request_current(cam, &"store_director")
-	assert_true(activated, "CameraAuthority.request_current must succeed")
-	assert_true(cam.current, "StoreCamera must report current=true after activation")
-	# Contract walks for any current Camera2D/3D — name does not matter.
-	assert_true(
-		contract.call("_camera_current", _root),
-		"_camera_current must return true once any Camera3D under the scene is current"
-	)
-
-
-func test_camera_changed_signal_fires_with_store_camera() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	if not pc:
-		return
-	var cam: Camera3D = pc.get_node_or_null("StoreCamera") as Camera3D
-	if cam == null:
-		return
-	watch_signals(CameraAuthority)
-	CameraAuthority.request_current(cam, &"store_director")
-	assert_signal_emitted_with_parameters(
-		CameraAuthority, "camera_changed", [cam, &"store_director"]
-	)
-
-
-func test_store_bounds_are_tighter_than_defaults() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	assert_not_null(pc, "PlayerController must exist")
-	if not pc:
-		return
-	var max_b: Vector3 = pc.get("store_bounds_max")
-	var min_b: Vector3 = pc.get("store_bounds_min")
-	assert_lt(max_b.x, 7.0, "store_bounds_max.x must be tighter than default 7.0")
-	assert_lt(max_b.z, 5.0, "store_bounds_max.z must be tighter than default 5.0")
-	assert_gt(min_b.x, -7.0, "store_bounds_min.x must be tighter than default -7.0")
-	assert_gt(min_b.z, -5.0, "store_bounds_min.z must be tighter than default -5.0")
-
-
-func test_set_pivot_clamps_to_store_bounds() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	assert_not_null(pc, "PlayerController must exist")
-	if not pc or not pc.has_method("set_pivot"):
-		return
-	var max_b: Vector3 = pc.get("store_bounds_max")
-	pc.call("set_pivot", Vector3(100.0, 0.0, 100.0))
-	var pos: Vector3 = pc.global_position
-	assert_lte(pos.x, max_b.x + 0.001, "Pivot x clamped to store_bounds_max.x")
-	assert_lte(pos.z, max_b.z + 0.001, "Pivot z clamped to store_bounds_max.z")
-
-	var min_b: Vector3 = pc.get("store_bounds_min")
-	pc.call("set_pivot", Vector3(-100.0, 0.0, -100.0))
-	pos = pc.global_position
-	assert_gte(pos.x, min_b.x - 0.001, "Pivot x clamped to store_bounds_min.x")
-	assert_gte(pos.z, min_b.z - 0.001, "Pivot z clamped to store_bounds_min.z")
-
-
-func test_no_second_camera_in_scene() -> void:
+func test_scene_has_no_camera3d() -> void:
+	# Both the orbit and walking-body camera live outside this .tscn. A
+	# Camera3D in the scene file would race CameraAuthority's single-active
+	# guarantee.
 	var cameras: Array[Node] = []
 	_collect_by_class(_root, "Camera3D", cameras)
-	assert_eq(cameras.size(), 1, "Scene must have exactly one Camera3D (the PlayerController child)")
+	assert_eq(cameras.size(), 0, "Scene must ship zero Camera3D nodes")
+
+
+func test_player_entry_spawn_is_authored() -> void:
+	# Hub-mode StorePlayerBody and orbit StoreSelectorSystem both teleport to
+	# this Marker3D. Without it `_spawn_player_in_store` returns false and
+	# falls back to the orbit-only path.
+	var marker: Marker3D = _root.get_node_or_null("PlayerEntrySpawn") as Marker3D
+	assert_not_null(marker, "PlayerEntrySpawn Marker3D must exist for player spawning")
+	if marker == null:
+		return
+	# Spawn must sit inside the navigable footprint, not behind the front wall.
+	assert_lt(marker.global_position.z, 2.55,
+		"PlayerEntrySpawn must be inside the store, not outside the storefront")
 
 
 # ── Debug zone labels (removed — replaced by InteractionPrompt) ──────────────
@@ -243,10 +175,12 @@ func test_ceiling_visible_false() -> void:
 
 
 func test_camera_default_y_below_ceiling() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	assert_not_null(pc, "PlayerController must exist")
-	if not pc:
-		return
+	# Camera framing now lives on the externally-instantiated PlayerController
+	# (`game/scenes/player/player_controller.tscn`). Verify the script's
+	# checked-in defaults still keep the camera below the ceiling bottom (3.0 m).
+	var script: GDScript = load("res://game/scripts/player/player_controller.gd")
+	var pc: Node = script.new()
+	add_child_autofree(pc)
 	var zoom: float = pc.get("zoom_default")
 	var pitch_deg: float = pc.get("pitch_default_deg")
 	var world_y: float = zoom * sin(deg_to_rad(pitch_deg))
@@ -258,10 +192,9 @@ func test_camera_default_y_below_ceiling() -> void:
 
 
 func test_camera_default_z_inside_front_wall() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	assert_not_null(pc, "PlayerController must exist")
-	if not pc:
-		return
+	var script: GDScript = load("res://game/scripts/player/player_controller.gd")
+	var pc: Node = script.new()
+	add_child_autofree(pc)
 	var zoom: float = pc.get("zoom_default")
 	var pitch_deg: float = pc.get("pitch_default_deg")
 	var world_z: float = zoom * cos(deg_to_rad(pitch_deg))
@@ -323,21 +256,16 @@ func test_nav_zones_have_interaction_area_on_layer_2() -> void:
 
 
 func test_nav_zone_positions_within_store_bounds() -> void:
-	var pc: Node = _root.get_node_or_null("PlayerController")
-	if not pc:
-		return
-	var bounds_min: Vector3 = pc.get("store_bounds_min")
-	var bounds_max: Vector3 = pc.get("store_bounds_max")
 	var zones: Array[Node] = _root.get_tree().get_nodes_in_group("nav_zone")
 	for zone: Node in zones:
 		var pos: Vector3 = (zone as Node3D).global_position
-		assert_gte(pos.x, bounds_min.x - 0.01,
+		assert_gte(pos.x, _STORE_BOUNDS_MIN.x - 0.01,
 			"%s.x must be within store bounds min" % zone.name)
-		assert_lte(pos.x, bounds_max.x + 0.01,
+		assert_lte(pos.x, _STORE_BOUNDS_MAX.x + 0.01,
 			"%s.x must be within store bounds max" % zone.name)
-		assert_gte(pos.z, bounds_min.z - 0.01,
+		assert_gte(pos.z, _STORE_BOUNDS_MIN.z - 0.01,
 			"%s.z must be within store bounds min" % zone.name)
-		assert_lte(pos.z, bounds_max.z + 0.01,
+		assert_lte(pos.z, _STORE_BOUNDS_MAX.z + 0.01,
 			"%s.z must be within store bounds max" % zone.name)
 
 
@@ -433,6 +361,41 @@ func test_sign_labels_face_exterior_via_y_rotation() -> void:
 			lbl.transform.basis.z.z,
 			0.0,
 			"%s must have a 180-degree Y rotation (basis.z.z < 0)" % lbl.name
+		)
+
+
+func test_storefront_hidden_during_interior_gameplay() -> void:
+	# Storefront entrance geometry sits on the camera side at z>=2.55 and
+	# fully obstructs the interior view from the orbit camera's default
+	# outside-front position (0, 2.68, 4.55). The hallway camera uses its
+	# own storefront.tscn, so this in-scene Storefront only matters from
+	# inside the store — where it must stay hidden.
+	var storefront: Node3D = _root.get_node_or_null("Storefront") as Node3D
+	assert_not_null(storefront, "Storefront node must exist for visibility check")
+	if storefront == null:
+		return
+	assert_false(
+		storefront.visible,
+		"Storefront must ship visible=false so entrance geometry "
+		+ "(SilhouetteHeaderPanel, SignBacking, frame meshes) does not "
+		+ "block the interior view"
+	)
+	for child_name: String in [
+		"SilhouetteHeaderPanel",
+		"SilhouetteLeftPanel",
+		"SilhouetteRightPanel",
+		"FrameLeft",
+		"FrameRight",
+		"FrameHeader",
+		"SignBacking",
+	]:
+		var child: Node3D = storefront.get_node_or_null(child_name) as Node3D
+		assert_not_null(child, "%s must exist under Storefront" % child_name)
+		if child == null:
+			continue
+		assert_false(
+			child.is_visible_in_tree(),
+			"%s must not render during interior gameplay" % child_name
 		)
 
 

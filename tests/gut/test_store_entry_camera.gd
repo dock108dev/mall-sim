@@ -1,21 +1,29 @@
-## Integration test: every active store scene ships a single `Camera3D` so
+## Integration test: orbit-camera store scenes ship a single `Camera3D` so
 ## the hub-entry path has something to activate via `CameraAuthority`.
 ## Without this, entering a store in hub mode renders the default clear
 ## color (the "brown screen" regression captured in
 ## docs/audits/phase0-ui-integrity.md P0.2).
+##
+## Walking-body stores (those that rely on the spawned `StorePlayerBody` for
+## their viewport camera) ship zero in-scene cameras and are listed in
+## `_BODY_CAMERA_STORE_IDS`. The body's Camera3D becomes current via
+## `_spawn_player_in_store` in hub mode and `StoreSelectorSystem` in the
+## legacy path.
 extends GutTest
 
-const _ACTIVE_STORE_IDS: Array[StringName] = [
+const _ORBIT_CAMERA_STORE_IDS: Array[StringName] = [
 	&"sports",
-	&"retro_games",
 	&"rentals",
 	&"pocket_creatures",
 	&"electronics",
 ]
+const _BODY_CAMERA_STORE_IDS: Array[StringName] = [
+	&"retro_games",
+]
 
 
-func test_every_store_scene_has_exactly_one_camera_3d() -> void:
-	for store_id: StringName in _ACTIVE_STORE_IDS:
+func test_every_orbit_store_scene_has_exactly_one_camera_3d() -> void:
+	for store_id: StringName in _ORBIT_CAMERA_STORE_IDS:
 		var scene_path: String = ContentRegistry.get_scene_path(store_id)
 		assert_false(
 			scene_path.is_empty(),
@@ -50,6 +58,48 @@ func test_every_store_scene_has_exactly_one_camera_3d() -> void:
 					+ "CameraAuthority owns activation"
 				) % store_id
 			)
+		root.free()
+
+
+func test_walking_body_store_scenes_ship_zero_in_scene_cameras() -> void:
+	for store_id: StringName in _BODY_CAMERA_STORE_IDS:
+		var scene_path: String = ContentRegistry.get_scene_path(store_id)
+		assert_false(
+			scene_path.is_empty(),
+			"store '%s' has no scene_path in ContentRegistry" % store_id
+		)
+		var packed: PackedScene = load(scene_path) as PackedScene
+		assert_not_null(
+			packed,
+			"store '%s' scene '%s' failed to load" % [store_id, scene_path]
+		)
+		var root: Node = packed.instantiate()
+		var cameras: Array[Camera3D] = _collect_cameras(root)
+		assert_eq(
+			cameras.size(), 0,
+			(
+				"store '%s' is a walking-body scene — its viewport camera "
+				+ "is owned by the spawned StorePlayerBody, not the .tscn. "
+				+ "Got %d in-scene Camera3D: %s"
+			)
+			% [
+				store_id,
+				cameras.size(),
+				str(cameras.map(
+					func(c: Camera3D) -> String: return c.name
+				)),
+			]
+		)
+		# A PlayerEntrySpawn marker must exist so `_spawn_player_in_store`
+		# can position the body and bring its camera through CameraAuthority.
+		var spawn: Node = root.get_node_or_null("PlayerEntrySpawn")
+		assert_not_null(
+			spawn,
+			(
+				"store '%s' must define a PlayerEntrySpawn Marker3D so the "
+				+ "spawned StorePlayerBody has a position to anchor at"
+			) % store_id
+		)
 		root.free()
 
 

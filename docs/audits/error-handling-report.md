@@ -1,6 +1,7 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-04-28 (Pass 6 — ISSUE-001 walking-player spawn + ISSUE-005 hallway hide + nav-zone label feature retirement)  
+**Latest pass:** 2026-04-29 (Pass 7 — orbit-camera bounds clamp + retro_games scene-camera removal + sign-label authoring split)  
+**Pass 6:** 2026-04-28 (ISSUE-001 walking-player spawn + ISSUE-005 hallway hide + nav-zone label feature retirement)  
 **Pass 5:** 2026-04-28 (Day-1 quarantine + composite readiness audit)  
 **Pass 4:** 2026-04-28 (Day-1 inventory loop + StoreReadyContract wiring)  
 **Pass 3:** 2026-04-27 (modified-files deep scan + surrounding context)  
@@ -20,7 +21,7 @@ Test files (`tests/`, `game/tests/`) excluded.
 | High | 3 | 1 Pass 2, 2 Pass 3 (tier cascade, wrong signal dispatch) |
 | Medium | 8 | 3 Pass 1, 2 Pass 2, 2 Pass 3, 1 Pass 4 (registry inconsistency) |
 | Low | 13 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5 (Node3D-cast guard) |
-| Note | 24 | Justified — intentional, low-risk, documented (**+2 Pass 6**) |
+| Note | 26 | Justified — intentional, low-risk, documented (**+2 Pass 7**) |
 | Retired | 1 | §F-28 obsoleted by Pass 6 nav-zone label feature removal |
 
 **Overall posture: Prod posture acceptable.**
@@ -59,6 +60,25 @@ verified that the new `_spawn_player_in_store` push_error paths and the
 `_camera_current` recursive-walk silent-null are already justified by
 docstrings written with this report in mind. All findings in all passes
 were acted on in-place.
+
+Pass 7 reviewed the working-tree changes that follow Pass 6: the new
+unified orbit-camera bounds clamp in `StoreSelectorSystem.enter_store`
+(camera pivot constrained to ±3.2 X / ±2.2 Z and zoom radius to [2 m, 5 m]
+on every store entered through the orbit path), the removal of the
+embedded `PlayerController` + `StoreCamera` from `retro_games.tscn` (the
+scene now ships zero in-scene cameras and zero PlayerController; the
+walking body / orbit controller is instantiated externally), the
+`Storefront` quarantine flip (`visible = false` ships by default, mirroring
+the §F-41 Day-1 quarantine pattern), and the splitting of store-sign
+authoring (`StoreDecorationBuilder._add_store_sign` no longer creates a
+`Label3D`; the exterior label is now art-controlled per .tscn). Pass 7
+found two new Note-level silent fallbacks worth documenting (§F-50 unified
+camera bounds clamp with no per-store override mechanism — currently dead
+risk because every shipping store fits the ±3.2 / ±2.2 footprint, §F-51
+`_move_store_camera_to_spawn` silent return on missing entry marker —
+currently dead path because every shipping store ships at least one of
+`PlayerEntrySpawn` / `EntryPoint` / `OrbitPivot`). No new
+Critical/High/Medium findings; no findings retired.
 
 ---
 
@@ -116,6 +136,8 @@ were acted on in-place.
 | F-47 | `game_world.gd:937–942, 962–968` | `_mall_hallway` null-guard in hub injector / exit handler | Note | **Acted** Pass 6 — §F-47 inline cite added at both sites |
 | F-48 | `game_world.gd:976–1008` | `_spawn_player_in_store` no-marker silent `false` return | Note | Justified §F-48 — docstring already documents fallback contract |
 | F-49 | `store_ready_contract.gd:181–190` | `_find_current_camera` returns null silently on no current camera | Note | Justified §F-49 — failure surfaces via `INV_CAMERA` failures array |
+| F-50 | `store_selector_system.gd:13–28, 165–168` | Unified orbit-camera bounds/zoom clamp with no per-store override | Note | **Acted** Pass 7 — §F-50 inline cite added |
+| F-51 | `store_selector_system.gd:259–275` | `_move_store_camera_to_spawn` silent return on missing entry marker | Note | **Acted** Pass 7 — §F-51 docstring added |
 | F-28 | `nav_zone_interactable.gd` | wrong-type Label3D push_warning | Low (Pass 3) | **Retired** Pass 6 — feature removed; finding obsolete |
 
 ---
@@ -900,6 +922,84 @@ contract escalation path is the louder surface.
 
 ---
 
+## Pass 7 Per-Finding Details
+
+### §F-50 — `store_selector_system.gd:13–28, 165–168` — unified orbit-camera bounds clamp (Pass 7)
+
+`StoreSelectorSystem.enter_store()` now stamps every loaded orbit camera
+with `store_bounds_min = Vector3(-3.2, 0, -2.2)`, `store_bounds_max =
+Vector3(3.2, 0, 2.2)`, `zoom_min = 2.0`, `zoom_max = 5.0`. The
+`_PLAYER_CONTROLLER_SCENE` ships the script defaults (±7 X / ±5 Z, zoom
+3–15) which would let the camera pan past the store walls and zoom
+several meters beyond the front-of-store geometry, defeating the camera
+framing.
+
+The clamp is applied unconditionally — there is no per-store override
+mechanism. This is correct for the current shipping roster (sports,
+retro_games, video_rental, pocket_creatures, consumer_electronics — all
+five interiors fit within the ±3.2 / ±2.2 navigable footprint and use the
+same zoom envelope). A future store with a larger interior, or a special
+fixture station that wants a tighter zoom-in, would silently be clamped
+to the unified envelope without a warning.
+
+This is not error suppression in the traditional sense — there is no
+failure to log; the camera just renders within the configured envelope.
+But it *is* "validation that warns but accepts" in the sense that the
+clamp masks dimensional mismatches between content authoring and camera
+config. A camera that should pan ±5 X for a wide store would instead
+pan only ±3.2 with no diagnostic, and the only feedback is a playtester
+noticing the framing is wrong.
+
+**Acted:** Added §F-50 cross-references to both the pivot-bounds
+comment block and the zoom-clamp comment block in
+`store_selector_system.gd`. Future authors adding a store outside the
+±3.2 / ±2.2 envelope must override these constants (or refactor to a
+per-store config). The inline comment explicitly names this as the
+maintenance contract.
+
+**Risk lenses:** Operational (silent over-clamping for an
+unanticipated store layout). Severity Note — UX-only failure mode (no
+data integrity, no reliability), and a playtester immediately spots an
+ill-framed camera. The existing `tests/unit/test_store_selector_system.gd`
+exercises the clamp behavior end-to-end so the constants are
+regression-locked against accidental loosening.
+
+---
+
+### §F-51 — `store_selector_system.gd:259–275` — `_move_store_camera_to_spawn` silent return (Pass 7)
+
+`_move_store_camera_to_spawn(store_scene, store_camera)` calls
+`_find_store_entry_spawn(store_scene)` (which walks the scene for a
+child named `PlayerEntrySpawn`, `EntryPoint`, or `OrbitPivot`) and
+silently returns when none is found. The orbit camera then keeps its
+default `_pivot = Vector3.ZERO`, framing the store center.
+
+Every shipping store today has at least one of those marker nodes
+(verified by inspection of the five `.tscn` files and by
+`tests/gut/test_retro_games_scene_issue_006.test_player_entry_spawn_is_authored`
+plus the broader `test_store_entry_camera.gd` cases that assert
+`PlayerEntrySpawn` exists for walking-body stores and accept any
+`OrbitPivot` / `EntryPoint` for orbit stores), so this branch is dead in
+production.
+
+The silent return is intentional: a store interior whose authored
+geometry already centers on origin would frame correctly with the
+default pivot, and pushing a `push_warning` would force every author to
+add a redundant marker even when origin-centered. The contract that
+"every shipping store ships an entry marker" is enforced by the GUT
+tests, not by a runtime warning.
+
+**Acted:** Added a §F-51 docstring at the function explaining the
+silent-return contract, the default-pivot fallback behavior, and the
+test that locks the contract. Future readers see immediately why no
+push_warning fires.
+
+**Risk lenses:** Reliability (incorrect framing on a future origin-off
+store). Severity Note — GUT-level contract enforcement is the louder
+surface; the camera misframe in playtest is the secondary surface.
+
+---
+
 ### §F-28 (RETIRED in Pass 6) — `nav_zone_interactable.gd` linked_label push_warning
 
 Pass 3 added a `push_warning` when `linked_label` resolved to a
@@ -936,6 +1036,7 @@ section).
 | Tightened (Pass 4) | §F-32, §F-33, §F-35, §F-36 |
 | Tightened (Pass 5) | §F-39, §F-40, §F-41, §F-42, §F-43, §F-44 |
 | Acted (Pass 6) — docstring justifications | §F-46, §F-47 |
+| Acted (Pass 7) — inline-cite + docstring justifications | §F-50, §F-51 |
 | Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §F-48, §F-49, §J4 |
 | Retired (feature removed) | §F-28 |
 | Needs telemetry | None — EventBus + AuditLog provide sufficient observability |
@@ -945,7 +1046,7 @@ section).
 
 ## Escalations
 
-None. All findings across all six passes were either tightened in-place,
+None. All findings across all seven passes were either tightened in-place,
 justified with inline comments, or retired when the feature itself was
 removed.
 
@@ -955,21 +1056,26 @@ removed.
 
 **Prod posture acceptable.**
 
-Pass 6 reviewed the ISSUE-001 / ISSUE-005 / nav-zone-label-removal diff
-against `main` and found two Note-level silent fallbacks worth documenting
-(§F-46 orbit-controller retire when none exists, §F-47 hub-only hallway
-null-guard) and two Note-level paths whose docstrings already justify the
-silent-null contract (§F-48 missing `PlayerEntrySpawn` marker is a
-documented orbit-fallback signal, §F-49 `_find_current_camera` recursive
-walk failure flows through the contract failures array). §F-28 is
-retired: the entire `linked_label` feature it warned about was excised
-this pass. The new `_spawn_player_in_store` push_error paths (non-Node3D
-scene root, missing `Camera3D` child) are well-formed and wire through
-the existing failure surfaces. No hidden data-corruption paths remain
-across any pass.
+Pass 7 reviewed the working-tree diff that follows Pass 6 (uniform orbit-
+camera bounds clamp in `StoreSelectorSystem.enter_store`, removal of the
+embedded `PlayerController` + `StoreCamera` from `retro_games.tscn` plus
+the `Storefront` quarantine flip, and the
+`StoreDecorationBuilder._add_store_sign` Label3D excision in favor of
+per-scene art-controlled `SignName` labels) and found two new Note-level
+silent fallbacks worth documenting (§F-50 unified camera bounds clamp
+masks dimensional mismatches with no warning, §F-51
+`_move_store_camera_to_spawn` silent return on missing entry marker). Both
+are dead paths against the current 5-store shipping roster and are now
+inline-cited. The clamp is regression-locked by
+`tests/unit/test_store_selector_system.gd`; the entry-marker contract is
+regression-locked by `tests/gut/test_store_entry_camera.gd`. Pass 6's
+findings stand: §F-46 / §F-47 / §F-48 / §F-49 contracts continue to hold
+under the Pass 7 retro_games.tscn restructure (the contract walks for any
+current camera and finds the externally-instantiated body or orbit
+camera). No hidden data-corruption paths remain across any pass.
 
 After Pass 5 the repo's full test suite (`bash tests/run_tests.sh`) reported
-4666 / 4666 GUT tests passing. Pass 6 has not yet been validated against
-the suite — the working tree currently has uncommitted changes to scenes
-and scripts that may shift test counts up or down. Re-run the suite before
-relying on the post-Pass-6 number.
+4666 / 4666 GUT tests passing. Pass 6 and Pass 7 have not yet been
+validated against the suite — the working tree currently has uncommitted
+changes to scenes and scripts that may shift test counts up or down.
+Re-run the suite before relying on the post-Pass-7 number.

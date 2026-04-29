@@ -158,10 +158,14 @@ func test_enter_store_moves_camera_to_store_entry_and_rebinds_camera_users() -> 
 		"EntryPoint", true, false
 	) as Node3D
 	assert_not_null(entry_marker)
+	var expected_pivot: Vector3 = entry_marker.global_position.clamp(
+		_system._store_camera.store_bounds_min,
+		_system._store_camera.store_bounds_max
+	)
 	assert_eq(
 		_system._store_camera.global_position,
-		entry_marker.global_position,
-		"store camera should move to the interior entry spawn"
+		expected_pivot,
+		"store camera should move to the entry spawn clamped to store bounds"
 	)
 	assert_true(
 		_active_cameras.has(_system._store_camera.get_camera()),
@@ -203,6 +207,57 @@ func test_enter_store_aborts_cleanly_when_scene_load_fails() -> void:
 	assert_eq(_store_entered_ids.size(), 0)
 	assert_eq(_active_store_ids.size(), 0)
 	assert_eq(_store_state.active_store_id, &"")
+
+
+func test_enter_store_clamps_camera_pivot_to_store_footprint() -> void:
+	EventBus.enter_store_requested.emit(_STORE_ID)
+
+	var store_camera: PlayerController = _system._store_camera
+	assert_not_null(store_camera)
+	assert_eq(
+		store_camera.store_bounds_min,
+		Vector3(-3.2, 0.0, -2.2),
+		"store camera min bounds should match navigable floor"
+	)
+	assert_eq(
+		store_camera.store_bounds_max,
+		Vector3(3.2, 0.0, 2.2),
+		"store camera max bounds should match navigable floor"
+	)
+
+	store_camera.set_pivot(Vector3(99.0, 0.0, 99.0))
+	var clamped_max: Vector3 = store_camera._target_pivot
+	assert_almost_eq(clamped_max.x, 3.2, 0.0001)
+	assert_almost_eq(clamped_max.z, 2.2, 0.0001)
+
+	store_camera.set_pivot(Vector3(-99.0, 0.0, -99.0))
+	var clamped_min: Vector3 = store_camera._target_pivot
+	assert_almost_eq(clamped_min.x, -3.2, 0.0001)
+	assert_almost_eq(clamped_min.z, -2.2, 0.0001)
+
+
+func test_enter_store_caps_camera_zoom_to_store_interior() -> void:
+	EventBus.enter_store_requested.emit(_STORE_ID)
+
+	var store_camera: PlayerController = _system._store_camera
+	assert_not_null(store_camera)
+	assert_almost_eq(
+		store_camera.zoom_max,
+		5.0,
+		0.0001,
+		"store camera zoom_max should be capped to fit the store interior"
+	)
+	assert_almost_eq(
+		store_camera.zoom_min,
+		2.0,
+		0.0001,
+		"store camera zoom_min should keep the camera off floor and fixtures"
+	)
+
+	store_camera.set_zoom_distance(99.0)
+	assert_almost_eq(store_camera._target_zoom, 5.0, 0.0001)
+	store_camera.set_zoom_distance(0.1)
+	assert_almost_eq(store_camera._target_zoom, 2.0, 0.0001)
 
 
 func _safe_disconnect(signal_ref: Signal, callable: Callable) -> void:

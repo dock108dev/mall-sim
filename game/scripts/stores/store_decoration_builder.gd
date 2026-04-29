@@ -63,7 +63,7 @@ static func build(parent: Node3D, store_type: String) -> Node3D:
 static func _build_sports(parent: Node3D) -> void:
 	var hw: float = SMALL_STORE_HALF_W
 	var hd: float = SMALL_STORE_HALF_D
-	_add_store_sign(parent, "Sports Memorabilia", hw, hd, _poster_red)
+	_add_store_sign(parent, hw, hd, _poster_red)
 	_add_wall_poster(
 		parent, "PosterBack1",
 		Vector3(-2.0, 2.2, -hd + 0.06), Vector3(0.6, 0.4, 0.02),
@@ -85,7 +85,7 @@ static func _build_sports(parent: Node3D) -> void:
 static func _build_retro(parent: Node3D) -> void:
 	var hw: float = SMALL_STORE_HALF_W
 	var hd: float = SMALL_STORE_HALF_D
-	_add_store_sign(parent, "Retro Games", hw, hd, _poster_purple)
+	_add_store_sign(parent, hw, hd, _poster_purple)
 	_add_wall_poster(
 		parent, "PosterBack1",
 		Vector3(-1.5, 2.2, -hd + 0.06), Vector3(0.5, 0.4, 0.02),
@@ -107,7 +107,7 @@ static func _build_retro(parent: Node3D) -> void:
 static func _build_video(parent: Node3D) -> void:
 	var hw: float = MEDIUM_STORE_HALF_W
 	var hd: float = MEDIUM_STORE_HALF_D
-	_add_store_sign(parent, "Video Rental", hw, hd, _poster_blue)
+	_add_store_sign(parent, hw, hd, _poster_blue)
 	_add_wall_poster(
 		parent, "PosterBack1",
 		Vector3(-3.0, 2.2, -hd + 0.06), Vector3(0.6, 0.45, 0.02),
@@ -130,7 +130,7 @@ static func _build_video(parent: Node3D) -> void:
 static func _build_pocket(parent: Node3D) -> void:
 	var hw: float = MEDIUM_STORE_HALF_W
 	var hd: float = MEDIUM_STORE_HALF_D
-	_add_store_sign(parent, "PocketCreatures", hw, hd, _poster_yellow)
+	_add_store_sign(parent, hw, hd, _poster_yellow)
 	_add_wall_poster(
 		parent, "PosterBack1",
 		Vector3(-2.5, 2.2, -hd + 0.06), Vector3(0.55, 0.4, 0.02),
@@ -152,7 +152,7 @@ static func _build_pocket(parent: Node3D) -> void:
 static func _build_electronics(parent: Node3D) -> void:
 	var hw: float = MEDIUM_STORE_HALF_W
 	var hd: float = MEDIUM_STORE_HALF_D
-	_add_store_sign(parent, "Consumer Electronics", hw, hd, _poster_blue)
+	_add_store_sign(parent, hw, hd, _poster_blue)
 	_add_wall_poster(
 		parent, "PosterBack1",
 		Vector3(-3.0, 2.2, -hd + 0.06), Vector3(0.6, 0.4, 0.02),
@@ -171,9 +171,11 @@ static func _build_electronics(parent: Node3D) -> void:
 	_add_small_plant(parent, Vector3(-hw + 0.4, 0.0, hd - 0.6))
 
 
-## Adds a sign above the store entrance (front wall, visible from hallway).
+## Adds the sign backing mesh above the store entrance. The exterior label
+## itself is authored as a `SignName` Label3D inside each store's .tscn so
+## that orientation and font are art-controlled per scene.
 static func _add_store_sign(
-	parent: Node3D, label: String,
+	parent: Node3D,
 	half_w: float, half_d: float,
 	accent_mat: StandardMaterial3D
 ) -> void:
@@ -185,17 +187,6 @@ static func _add_store_sign(
 	sign_backing.position = Vector3(0.0, 2.75, half_d + 0.1)
 	sign_backing.set_surface_override_material(0, accent_mat)
 	parent.add_child(sign_backing)
-
-	var sign_label := Label3D.new()
-	sign_label.name = "StoreSignLabel"
-	sign_label.text = label
-	sign_label.font_size = 48
-	sign_label.pixel_size = 0.008
-	sign_label.position = Vector3(0.0, 2.75, half_d + 0.15)
-	sign_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
-	sign_label.outline_size = 4
-	sign_label.outline_modulate = Color(0.0, 0.0, 0.0, 1.0)
-	parent.add_child(sign_label)
 
 
 ## Adds a flat wall poster (decorative plane flush against a wall).

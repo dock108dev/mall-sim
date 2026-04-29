@@ -445,3 +445,178 @@ Line-count delta from Pass 4 baseline:
 ### Escalations
 
 None.
+
+---
+
+## Pass 6 — 2026-04-29
+
+Scope: working-tree modified files and the one untracked file
+(`docs/audits/2026-04-29-audit.md`) added since the Pass 5 commit.
+Concretely, the diff scope is the orbit-camera bounds/zoom clamp landing
+in `StoreSelectorSystem`, the embedded `PlayerController` + `Camera3D`
+removal from `retro_games.tscn` (with `Storefront.visible = false`), the
+`StoreDecorationBuilder._add_store_sign` Label3D excision, three test
+files updated to the new contract, the deletion of two top-level meta
+docs (`AIDLC_FUTURES.md`, `CLAUDE.md`), and the regeneration of
+`docs/audits/{2026-04-28-audit,ssot-report,error-handling-report,security-report}.md`.
+Constraint: no behavioral changes, no public API signature changes.
+
+### Dead Code Removed
+
+The branch itself already removed three concrete dead-content surfaces
+before this pass began. They are recorded here so the cleanup-report
+captures the full delta against the Pass 5 baseline; no additional dead
+code was found in this pass:
+
+- **`game/scenes/stores/retro_games.tscn`** — embedded
+  `PlayerController` + `StoreCamera` (Camera3D) child node and the
+  associated `[ext_resource id="23"]` line for
+  `res://game/scripts/player/player_controller.gd`. The orbit camera is
+  now instantiated by `StoreSelectorSystem._PLAYER_CONTROLLER_SCENE`
+  and parented to `StoreContainer`, so the in-scene copy was
+  duplicate WASD handling that raced `CameraAuthority`'s
+  single-active-camera contract. Net: −15 lines in the scene file.
+- **`game/scripts/stores/store_decoration_builder.gd`** — the
+  `label: String` parameter on `_add_store_sign` plus the eight-line
+  `Label3D.new()` block that consumed it. Each shipping store's
+  exterior sign is now authored as a `SignName` Label3D inside its
+  `.tscn` (orientation, font, and z-fighting clearance are
+  art-controlled per scene — see
+  `tests/gut/test_retro_games_scene_issue_006.test_sign_name_text_is_correct`).
+  All five `_build_*` callers were updated to the new
+  three-argument signature in the same diff. Net: −12 lines.
+- **`AIDLC_FUTURES.md`** (42 lines), **`CLAUDE.md`** (50 lines) —
+  top-level meta docs deleted. Pass 5's "untracked files inspected"
+  table noted `CLAUDE.md` as project agent notes; both files are now
+  removed from the repo entirely. No production code referenced them
+  (verified by repo-wide grep: zero non-doc references).
+
+### Comments — Stale Provenance Reference Stripped
+
+**`game/scripts/systems/store_selector_system.gd:335`** —
+`_set_hallway_camera_enabled` ISSUE-011 cite
+
+**Before:**
+```gdscript
+# bypass-detector (`tests/validate_input_focus.sh`, ISSUE-011) stays clean.
+```
+**After:**
+```gdscript
+# bypass-detector (`tests/validate_input_focus.sh`) stays clean.
+```
+
+Same shape as the Pass 2 normalization of the matching comment in
+`game/scripts/player/player_controller.gd:set_input_listening`
+(`(now banned by ISSUE-011 / ...)` → `(enforced by tests/validate_input_focus.sh)`).
+The validator path is the load-bearing reference; the issue number rots
+once the ticket closes. The replacement validator script
+(`tests/validate_input_focus.sh`) is verified to exist on disk. Net:
+−1 char (removes `, ISSUE-011`).
+
+### Comments — Inspected and Left Unchanged
+
+| Location | Finding | Decision |
+|---|---|---|
+| `game/scripts/systems/store_selector_system.gd:13–28` | `_STORE_PIVOT_BOUNDS_*` and `_STORE_ZOOM_*` const blocks each carry a multi-line `Why:` comment + cross-reference to `docs/audits/error-handling-report.md` §F-50 | Accurate, current, load-bearing. The §F-50 cross-reference is the documented enforcement contract for "future store with a larger nav footprint must override these constants." Left as-is. |
+| `game/scripts/systems/store_selector_system.gd:261–267` | `_move_store_camera_to_spawn` docstring cites §F-51 explaining the silent-return-on-missing-marker contract | Accurate cross-reference; the GUT test contract is the loud surface. Left as-is. |
+| `game/scripts/stores/store_decoration_builder.gd:174–176` | Updated `_add_store_sign` docstring explains why the helper no longer creates a Label3D and where the per-scene `SignName` lives | Accurate, written in this branch. Left as-is. |
+| `tests/gut/test_retro_games_scene_issue_006.gd:208` | Section header `# ── Nav zone structure (ISSUE-005) ─────` retains the parenthetical issue id | **Justified** — the test file's own filename (`test_retro_games_scene_issue_006.gd`) embeds an issue id; removing the in-section reference creates internal inconsistency with the filename and with the ~50-other-locations sweep deferred since Pass 2. Left for the dedicated repo-wide sweep. |
+| `tests/gut/test_store_entry_camera.gd` | Class docstring cites the "brown screen" P0.2 regression in `docs/audits/phase0-ui-integrity.md` | Accurate historical regression cite; load-bearing for the reader who finds the test failing in the future. Left as-is. |
+
+### Consistency Changes
+
+None. All five touched code files match each other's surrounding
+formatting — the `StoreSelectorSystem` const block and inline §F-50/§F-51
+docstrings adopt the same `# Why: …` / `## …` shape used elsewhere in
+the file (and in the audit-report-cite pattern from Pass 4 §F-32/§F-33).
+
+### Duplicates — Inspected, Not Consolidated
+
+#### `_collect_cameras` (test_store_entry_camera.gd) vs `_collect_by_class` (test_retro_games_scene_issue_006.gd)
+
+Both helpers walk a `Node` subtree and gather descendants, but they are
+not duplicates:
+
+- `_collect_cameras(node) -> Array[Camera3D]` is hard-typed for
+  `Camera3D` and returns a typed array.
+- `_collect_by_class(node, class_name_str, out)` is generic over any
+  `is_class()` string and uses an out-parameter pattern.
+
+Each helper is local to a single test file and used only in that file.
+Hoisting them to a shared `tests/helpers/` module would couple two
+otherwise-independent integration tests (and the broader test tree has
+no precedent for such a helper module). **Justified: keep separate.**
+
+#### Two test functions in `test_retro_games_scene_issue_006.gd` instantiate `PlayerController` via `script.new()`
+
+`test_camera_default_y_below_ceiling` (lines 177–191) and
+`test_camera_default_z_inside_front_wall` (lines 194–205) both do
+`load(...).new()` + `add_child_autofree(pc)` to read the same export
+defaults (`zoom_default`, `pitch_default_deg`). Three lines of setup
+repeat across the two functions.
+
+A `_make_pc()` helper would save six lines, but the GUT convention here
+favors test-local explicitness — `before_each`/`before_all` is reserved
+for state that *every* test in the file uses, and only these two tests
+need a fresh PlayerController. The repetition is intentional readability,
+not duplication. **Justified: keep separate.**
+
+### ISSUE-XXX References — Sweep Still Deferred
+
+One remaining `(ISSUE-005)` parenthetical in
+`tests/gut/test_retro_games_scene_issue_006.gd:208` (section header) was
+inspected and left as-is — see "Comments — Inspected and Left Unchanged"
+above. The Pass 2/4/5 directive ("Removing only a subset would create
+inconsistency, so the remainder is left for a dedicated sweeping sed
+pass over the full repo") still holds; this pass's one in-place
+normalization (`store_selector_system.gd:335`) was acted on because the
+file was a touched-by-this-branch GDScript source matching the exact
+`(`tests/validate_input_focus.sh`, ISSUE-011)` shape Pass 2 normalized
+in the sibling `player_controller.gd` file.
+
+### Files Still >500 LOC
+
+No file in this pass's scope crossed the 500-LOC bar except the scene
+file (`retro_games.tscn`, 1531 lines, descriptive scene format — not
+code, no extraction applies). Touched-this-branch line counts:
+
+| File | LOC | Disposition |
+|---|---|---|
+| `game/scenes/stores/retro_games.tscn` | 1531 | Scene file. Godot `.tscn` line count is not a code-complexity metric — it scales with node count. No extraction applies; the recently-added `Storefront.visible = false` flip and the removal of the embedded `PlayerController` are net-negative on size. |
+| `game/scripts/systems/store_selector_system.gd` | 420 | +27 vs Pass 5 baseline from the new `_STORE_PIVOT_BOUNDS_*` / `_STORE_ZOOM_*` const block, the four assignments in `enter_store`, and the `_move_store_camera_to_spawn` §F-51 docstring. Under 500. |
+| `game/scripts/stores/store_decoration_builder.gd` | 237 | −11 vs Pass 5 baseline from `_add_store_sign` Label3D removal. Under 500. |
+| `tests/gut/test_retro_games_scene_issue_006.gd` | 450 | Net change vs Pass 5 baseline from removed PlayerController-embedding tests plus the new `test_storefront_hidden_during_interior_gameplay` case. Under 500. |
+| `tests/gut/test_store_entry_camera.gd` | 112 | +42 vs Pass 5 baseline from the new `test_walking_body_store_scenes_ship_zero_in_scene_cameras` case. Under 500. |
+| `tests/unit/test_store_selector_system.gd` | 283 | +59 vs Pass 5 baseline from the two new clamp-coverage tests (`test_enter_store_clamps_camera_pivot_to_store_footprint`, `test_enter_store_caps_camera_zoom_to_store_interior`). Under 500. |
+
+The cumulative >500-LOC roster from Pass 5 (`game_world.gd`,
+`save_manager.gd`, `hud.gd`, `store_controller.gd`, `retro_games.gd`,
+`data_loader.gd`, `customer_system.gd`, `inventory_system.gd`,
+`day_summary.gd`, `event_bus.gd`) is unchanged — none of those files
+were touched in this branch. Pass 1/2 extraction plans and per-file
+justifications still hold.
+
+### Untracked Files — Inspected and Accepted Unchanged
+
+| File | LOC | Finding |
+|---|---|---|
+| `docs/audits/2026-04-29-audit.md` | 12 | Auto-generated checkpoint table (same shape as `2026-04-27-audit.md` / `2026-04-28-audit.md`); no action. |
+
+### Verification
+
+- Full GUT suite: **4658/4658 passed**, 26692 asserts (`tests/run_tests.sh`).
+  Pass 5's run reported 4666; the −8 delta is the eight
+  PlayerController-embedding tests intentionally removed from
+  `test_retro_games_scene_issue_006.gd` plus the additions in
+  `test_store_entry_camera.gd` / `test_store_selector_system.gd`.
+  Net assert count went up, confirming the new clamp/footprint coverage.
+- Static-validator FAILs reported by `run_tests.sh` are pre-existing
+  and unrelated to this pass (ISSUE-239 packs/tournaments JSON parse
+  errors, pre-existing `wrapped_store` tutorial-context warnings) —
+  none touch files modified in this pass. Verified the same
+  `validate_issue_239.sh` failure messages appear in the Pass 5
+  Verification block.
+
+### Escalations
+
+None.

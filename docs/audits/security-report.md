@@ -751,3 +751,398 @@ panel. None of those surfaces exists today.
 
 None. All C-series findings were either acted on (C-01) or justified
 inline above (C-02, C-03). No architectural decisions were deferred.
+
+---
+
+## §D — 2026-04-29 Pass (this audit)
+
+Scope: working-tree diff against `HEAD` on `main`. The branch is small —
+two top-level docs deleted, one store scene refactored to walking-body
+interior, one decoration helper de-parameterized, one loader gains
+runtime camera clamps, three test files updated to the new contract,
+plus regenerated audit/SSOT documents. Full diff inventory:
+
+```text
+D  AIDLC_FUTURES.md
+D  CLAUDE.md
+M  docs/audits/2026-04-28-audit.md          (regenerated timestamp only)
+M  docs/audits/ssot-report.md               (regenerated; doc-only)
+M  game/scenes/stores/retro_games.tscn      (–PlayerController node, –ext_resource id 23, +Storefront.visible=false)
+M  game/scripts/stores/store_decoration_builder.gd  (–`label: String` param + Label3D creation in `_add_store_sign`)
+M  game/scripts/systems/store_selector_system.gd    (+4 const camera bounds + 4 assignments at enter_store)
+?? docs/audits/2026-04-29-audit.md          (new generated report)
+M  tests/gut/test_retro_games_scene_issue_006.gd
+M  tests/gut/test_store_entry_camera.gd
+M  tests/unit/test_store_selector_system.gd
+```
+
+### D.0 — Repo understanding (delta from §A, §B, §C)
+
+The trust-boundary inventory from §B.1 is unchanged. Mallcore Sim
+remains a single-player Godot 4.6 desktop game with no network,
+auth, RPC, IPC, mod loader, or external HTTP/WebSocket surface
+(re-verified — see D.4). The relevant surfaces this branch touches:
+
+- **`res://` packed scenes** (author-controlled at build time):
+  `game/scenes/stores/retro_games.tscn` is the only scene mutation.
+  The change removes a `PlayerController` ext_resource binding and a
+  `Camera3D` from inside the .tscn — both reductions of in-scene
+  attack surface, not additions.
+- **`StoreSelectorSystem.enter_store(store_id)`** — already audited
+  in prior passes as the sole hub-mode store-load path. The branch
+  adds four export-property assignments (`store_bounds_min/max`,
+  `zoom_min/max`) to the freshly-instantiated `PlayerController`
+  *before* it is added to the tree. The values are file-scope `const`
+  Vector3/float literals and never derive from runtime input.
+- **`StoreDecorationBuilder._add_store_sign(...)`** — formerly
+  accepted a `label: String` and constructed a `Label3D` with that
+  text. After this branch the helper takes no string at all; the
+  exterior label text lives in each store's `.tscn` as a static
+  `SignName` Label3D node. This is a **net reduction** in the helper's
+  string-input surface (defense in depth, even though all five call
+  sites were already passing literal author-controlled strings).
+
+Surfaces explicitly **not touched** this pass: `user://settings.cfg`,
+save slots, content JSON, save-migration chain, locale files, CI
+workflows, export presets, debug-overlay cheats, autoload roster,
+input map.
+
+### D.1 — Findings table
+
+| ID | Title | Severity | Confidence | Status |
+|---|---|---|---|---|
+| D-01 | `_add_store_sign` no longer accepts a string parameter | n/a — verified positive change | High | Confirmed |
+| D-02 | `retro_games.tscn` no longer embeds `PlayerController` / `Camera3D` ext_resource | n/a — verified positive change | High | Confirmed |
+| D-03 | Camera `store_bounds_*` and `zoom_*` clamped at loader, not at .tscn | Info | High | Cleared (verified safe) |
+| D-04 | `loaded_camera.name = "StoreCamera"` after instantiate-as-PlayerController cast | Info (correctness) | High | **Justified** — see D.2 |
+| D-05 | Cumulative C-02 walker concern carries into `_find_store_entry_spawn` | Info | High | **Justified** — see D.2 |
+| D-06 | Deleted `CLAUDE.md` previously served as a referenced doc — risk of dangling links | Info (doc hygiene) | High | **Justified** — see D.2 |
+| D-07 | Test `test_retro_games_scene_issue_006.gd` instantiates `PlayerController` script via `script.new()` outside a scene | Info | High | Cleared (verified safe) |
+| D-08 | Generated audit/SSOT regeneration introduces no new strings into runtime paths | n/a — verified clean | High | Confirmed |
+
+No high/critical findings. No findings touching authentication, input
+validation of untrusted data, file-system traversal, deserialization,
+SSRF, XSS, or any web/transport surface — none of those exist in this
+branch's blast radius (or in the project's overall surface — see D.4).
+
+### D.2 — Detailed findings
+
+#### D-01 — `_add_store_sign` no longer accepts a string parameter *(verified positive)*
+
+**Location.** `game/scripts/stores/store_decoration_builder.gd:177–189`.
+
+**Before this branch.** The helper signature was
+`_add_store_sign(parent, label: String, half_w, half_d, accent_mat)` and
+constructed a `Label3D` with `sign_label.text = label`. All five call
+sites passed string literals (`"Sports Memorabilia"`, `"Retro Games"`,
+…), but the helper itself did not enforce that.
+
+**After.** The signature is
+`_add_store_sign(parent, half_w: float, half_d: float, accent_mat)` and
+the `Label3D` instantiation is gone. The exterior text is now an
+artist-authored `SignName` Label3D inside each store's `.tscn`
+(grep: 5/5 store scenes ship a `SignName` Label3D with hardcoded `text`
+field — confirmed in `retro_games.tscn`, `video_rental.tscn`,
+`sports_memorabilia.tscn`, `pocket_creatures.tscn`,
+`consumer_electronics.tscn`).
+
+**Security delta.** The helper's string-input attack surface is gone.
+Even though no caller was ever passing user-controlled strings (and even
+though Godot's `Label3D.text` is rendered as a 3D mesh, not interpreted
+HTML/JS — so the relevant injection surface was always near-zero) the
+elimination of the parameter is defense-in-depth: any future caller
+cannot accidentally route a JSON-derived or save-derived string through
+this helper.
+
+**Status.** Confirmed positive change. No action required.
+
+#### D-02 — `retro_games.tscn` no longer embeds `PlayerController` / `Camera3D` ext_resource *(verified positive)*
+
+**Location.** `game/scenes/stores/retro_games.tscn:1` (load_steps
+67→66, removed `[ext_resource …id="23"]` to `player_controller.gd`)
+and the deleted `[node name="PlayerController" …]` /
+`[node name="StoreCamera" type="Camera3D" …]` block previously at
+`:188–204`.
+
+**What changed.** Before this branch the scene shipped its own embedded
+orbit `PlayerController` with bounds set inline. After, the controller
+is instantiated by `StoreSelectorSystem.enter_store` (or replaced by
+`StorePlayerBody` in hub mode) and parented to the `StoreContainer`,
+which is a *sibling* of the scene root. The scene also adds
+`visible = false` to its `Storefront` subtree so the entrance silhouette
+panels do not render from inside the store.
+
+**Security delta.** Net **reduction** of in-scene script bindings:
+- One fewer `[ext_resource type="Script"]` declaration in the .tscn.
+  Godot resolves ext_resource paths at scene-instantiate time; fewer
+  bindings = fewer resolution sites that would need to be re-validated
+  if the project ever loaded scenes from non-`res://` paths (a surface
+  it does not currently expose — see D.4).
+- One fewer `Camera3D` parented to the scene root, eliminating a
+  collision with `CameraAuthority`'s single-active-camera invariant
+  (audited in §C.2, §C-03 / §C.4 prior pass).
+- The `Storefront` `visible = false` change is a render-flag mutation,
+  not a script binding, and has no security relevance — but it does
+  prevent the storefront silhouette from racing the orbit camera's
+  default outside-front position.
+
+**Status.** Confirmed positive change. The scene file remains
+author-controlled and ships in the engine binary; no new runtime input
+flows through this surface.
+
+#### D-03 — Camera `store_bounds_*` and `zoom_*` clamped at loader, not at .tscn *(cleared)*
+
+**Location.** `game/scripts/systems/store_selector_system.gd:13–26`
+(new constants) and `:163–166` (assignments inside `enter_store`).
+
+**Mechanism.**
+
+```gdscript
+const _STORE_PIVOT_BOUNDS_MIN: Vector3 = Vector3(-3.2, 0.0, -2.2)
+const _STORE_PIVOT_BOUNDS_MAX: Vector3 = Vector3(3.2, 0.0, 2.2)
+const _STORE_ZOOM_MIN: float = 2.0
+const _STORE_ZOOM_MAX: float = 5.0
+…
+loaded_camera.store_bounds_min = _STORE_PIVOT_BOUNDS_MIN
+loaded_camera.store_bounds_max = _STORE_PIVOT_BOUNDS_MAX
+loaded_camera.zoom_min = _STORE_ZOOM_MIN
+loaded_camera.zoom_max = _STORE_ZOOM_MAX
+_store_container.add_child(loaded_camera)
+```
+
+The values flow into `PlayerController.set_pivot()`
+(`game/scripts/player/player_controller.gd:152–156`,
+`pivot_position.clamp(store_bounds_min, store_bounds_max)`) and
+`set_zoom_distance()` (`:170–173`,
+`clampf(zoom_distance, zoom_min, zoom_max)`).
+
+**Trust-boundary check.** The four assigned values are file-scope
+`const` literals — not derivable from JSON, save data, settings, or
+network input. The `enter_store` parameter `store_id` is itself
+sourced only from `EventBus.enter_store_requested` emitters
+(`mall_overview.gd`, `mall_hallway.gd`) which read from
+`ContentRegistry`, which loads from `res://` JSON at boot. None of
+that flow controls the bound constants.
+
+**NaN / Inf / extreme-value robustness.** Vector3.clamp and clampf in
+Godot 4 produce deterministic per-component results even when
+components are NaN or when min > max — they do not crash. The values
+here are well-ordered (`-3.2 < 3.2`, `-2.2 < 2.2`, `2.0 < 5.0`) by
+inspection.
+
+**Status.** Cleared. The constants are correct by inspection and the
+clamping at `set_pivot` / `set_zoom_distance` is unchanged from §C.
+
+#### D-04 — `loaded_camera.name = "StoreCamera"` after instantiate-as-PlayerController cast *(justified)*
+
+**Location.** `game/scripts/systems/store_selector_system.gd:162`.
+
+**Detail.** After
+`_PLAYER_CONTROLLER_SCENE.instantiate() as PlayerController`, the
+loader renames the **PlayerController node itself** (not its child
+camera) to `"StoreCamera"`. `PlayerController._resolve_camera`
+(`player_controller.gd:144–148`) finds the *child* `Camera3D` named
+`"StoreCamera"` first, then falls back to a child named `"Camera3D"`.
+The PlayerController scene (`scenes/player/player_controller.tscn`)
+ships its child camera as `"Camera3D"` (the fallback name). Renaming
+the parent to `"StoreCamera"` does not interfere with the resolver.
+
+**Why this is not a finding.** The lookup target is the
+`PlayerController`'s own child node, which is built into a packed
+scene that the project owns. The naming asymmetry (parent
+`"StoreCamera"`, child `"Camera3D"`) is real but works correctly
+because `_resolve_camera` searches its own children, not its peers.
+The re-introduction of the name `"StoreCamera"` here does not revive
+the §C.0 contract regression (which keyed *camera-current-detection*
+on the name); §C's fix lives in
+`store_ready_contract.gd::_camera_current` and walks for any current
+Camera3D regardless of name.
+
+**Status.** Justified. The naming is intentional and does not regress
+prior audit findings. Inline comment at the assignment site is not
+needed because the call sites — `_register_store_camera` and the
+spawn-marker logic — both use `loaded_camera.get_camera()` which
+routes through `_resolve_camera`, never through node name.
+
+#### D-05 — Cumulative C-02 walker concern carries into `_find_store_entry_spawn` *(justified)*
+
+**Location.** `game/scripts/systems/store_selector_system.gd:281–288`
+(unchanged this branch, but reachable from the changed `enter_store`).
+
+`find_child(name, recursive=true, owned=false)` walks the entire scene
+graph with no depth cap. §C.2 (C-02) already justified the same class
+of scene-walker against author-controlled `res://` scene graphs as
+the only inputs.
+
+**Status.** Carries forward §C-02's justification verbatim. No new
+mod-loader, user-supplied scene, or external scene-source surface has
+been introduced this branch (re-verified by D.4 grep). If any such
+surface is added in a future branch, depth-cap this walker plus the
+two listed in §C-02.
+
+#### D-06 — Deleted `CLAUDE.md` previously served as a referenced doc *(justified)*
+
+**Location.** Repo root — file is now deleted.
+
+**Detail.** §A.0 (line 26) and §C.4's surrounding paragraphs cite
+`CLAUDE.md` as the source of the Day-1 quarantine table. The branch
+deletes that file. Any **inbound** references in code or documentation
+that point at `CLAUDE.md` will now dangle.
+
+**Search.**
+
+```text
+grep -rn 'CLAUDE\.md' game/ scripts/ tests/ docs/
+  → 0 matches in code/scripts/tests
+  → ssot-report.md / cleanup-report.md mention it in prior-pass narratives
+```
+
+No code references; only narrative text in prior audit reports.
+Audit reports are append-only historical records by design (this
+report's preamble: "resolved or superseded findings are kept for
+historical traceability rather than deleted") — re-writing prior
+sections to remove the reference would itself violate that policy.
+Future readers can resolve the reference via `git log -- CLAUDE.md`.
+
+**Status.** Justified — kept as-is. The dangling reference is
+purely narrative in append-only historical documents; there is no
+runtime, link-checked, or build-checked dependency on `CLAUDE.md`.
+
+#### D-07 — Test instantiates `PlayerController` script outside a scene *(cleared)*
+
+**Location.** `tests/gut/test_retro_games_scene_issue_006.gd:178–183`,
+`:194–197`.
+
+```gdscript
+var script: GDScript = load("res://game/scripts/player/player_controller.gd")
+var pc: Node = script.new()
+add_child_autofree(pc)
+```
+
+The test creates a bare PlayerController outside its scene to read its
+exported `zoom_default` / `pitch_default_deg` (so the assertion is
+testing the *script defaults*, not a scene override). Calling `.new()`
+on a `GDScript` produces a stock instance using export defaults; the
+absence of the scene-tree wiring (and of a child `Camera3D`) means
+`_resolve_camera()` returns null and `_update_camera_transform()`
+short-circuits — no crash.
+
+**Trust-boundary check.** Tests run only via `tests/run_tests.sh`
+under developer/CI control. The `load()` path is a hard-coded `res://`
+literal. No untrusted input.
+
+**Status.** Cleared. Standard GUT pattern for headless export-default
+checks.
+
+#### D-08 — Generated audit/SSOT regeneration introduces no new runtime strings *(verified)*
+
+**Locations.** `docs/audits/2026-04-28-audit.md` (timestamp updated),
+`docs/audits/ssot-report.md` (regenerated body),
+`docs/audits/2026-04-29-audit.md` (new file).
+
+These are pure-Markdown documentation artifacts. No code references
+the bodies of these files; the boot path does not load anything from
+`docs/`. Verified by grep: `grep -rn 'docs/audits' game/ scripts/`
+returns zero hits.
+
+**Status.** Confirmed clean.
+
+### D.3 — Safe hardening implemented this pass
+
+**None.** The branch's own diff is the hardening: removing the
+embedded controller from `retro_games.tscn` (D-02), tightening
+`_add_store_sign`'s parameter list (D-01), and clamping camera
+extents at the loader (D-03) are all net-positive
+defense-in-depth changes already authored. No additional inline
+edits were applied this pass because:
+
+- The only candidate (a runtime assertion on
+  `_STORE_*_MIN < _STORE_*_MAX` in `store_selector_system.gd`)
+  would guard a `const` block that is correct by inspection and
+  cannot regress without a code edit. Adding such an assertion is
+  speculative defensive code against a threat model
+  (compile-time-constant tampering inside the engine binary) that
+  does not exist.
+- The PlayerController `_ready` ordering question (export
+  properties set before `add_child`, `_ready` fires after — so the
+  new clamps are in effect when `_zoom = zoom_default` runs) was
+  re-verified by reading
+  `player_controller.gd:50–63`. `zoom_default = 3.5` is inside the
+  new `[2.0, 5.0]` range, so the initial unclamped assignment
+  cannot drift out of bounds. Adding a defensive
+  `_zoom = clampf(zoom_default, zoom_min, zoom_max)` in `_ready`
+  would change a file the branch does not otherwise touch and was
+  rejected to keep the audit pass behavior-preserving.
+
+### D.4 — Verifications run for this pass
+
+Cross-checks confirming no external/network/dynamic-execution surface
+was introduced (or already present):
+
+```text
+grep -rn over game/, autoload/, scripts/, tests/:
+  OS.execute            — 0 matches
+  OS.shell_open         — 0 matches
+  Expression.parse      — 0 matches in game/, scripts/, autoload/
+  JavaScriptBridge      — 0 matches
+  HTTPClient            — 0 matches
+  HTTPRequest           — 0 matches
+  WebSocketPeer         — 0 matches
+  TCPServer             — 0 matches
+  Marshalls.base64      — 0 matches in game/, scripts/, autoload/
+  str_to_var            — 0 matches
+  var_to_str            — 0 matches
+  eval(                 — 0 matches
+  exec(                 — 0 matches
+  JSON.parse_string     — fixture/test loaders only (under tests/)
+  load("res://" + …)    — 0 string-concat patterns; all load() calls
+                          take literal `res://` constants or
+                          `ContentRegistry.get_scene_path(…)` (registry
+                          values seeded from boot-time JSON, validated
+                          via `ResourceLoader.exists()`)
+```
+
+Save format check (re-confirms §C.4 — branch does not modify save
+code): `game/scripts/core/save_manager.gd` uses `JSON.stringify` /
+`JSON.parse` exclusively. No `str_to_var` / `var_to_str` /
+`Marshalls` / `Object` deserialization vector exists in the save
+pipeline.
+
+Branch-touched call sites traced:
+- `EventBus.enter_store_requested` emitters (only legitimate runtime
+  source of `store_id` reaching `enter_store`): `mall_overview.gd`
+  card-click handler, `mall_hallway.gd` storefront-door handler. Both
+  read `store_id` from a `ContentRegistry`-populated UI element, not
+  from user-typed input.
+- `ContentRegistry.get_scene_path(store_id)` → returns a string from
+  a Dictionary keyed by canonical StringName. Values are loaded at
+  boot from `res://game/content/stores/*.json` and are not
+  re-mutable at runtime.
+- `_PLAYER_CONTROLLER_SCENE` is `preload("res://…/player_controller.tscn")` —
+  literal constant.
+
+### D.5 — Remediation roadmap
+
+Nothing acted-on this pass; nothing carried forward. D-04, D-05, and
+D-06 are justified inline with threat-model context. D-01, D-02, D-03,
+D-07, D-08 are confirmation-positive.
+
+If a future branch adds any of:
+
+- Mod loading from `user://` or external paths
+- A networked or cloud-save surface (HTTP/WebSocket/etc.)
+- An in-game console or expression evaluator (`Expression.parse(...)`
+  on user-supplied strings)
+- A plugin/script-loading surface that accepts non-`res://` resources
+- Generated `.tscn` files (e.g., a content-driven scene composer that
+  reads JSON and emits Label3D `text` strings or PackedScene refs)
+
+…revisit D-03 (the camera clamps would need re-validation against
+attacker-supplied bounds), D-05 (depth-cap the scene walker), and
+re-run the D.4 grep panel. None of those surfaces exists today.
+
+### D.6 — Escalations
+
+None. All D-series findings were either confirmation-positive (D-01,
+D-02, D-03, D-07, D-08) or justified inline with a concrete carry-over
+condition (D-04, D-05, D-06). No architectural decisions were deferred.

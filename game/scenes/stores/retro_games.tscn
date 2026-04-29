@@ -1,4 +1,4 @@
-[gd_scene load_steps=67 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=66 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -22,7 +22,6 @@
 [ext_resource type="PackedScene" path="res://game/assets/models/props/prop_crt_monitor.gltf" id="20"]
 [ext_resource type="Texture2D" path="res://game/assets/textures/tex_product_retro_games_albedo.png" id="21"]
 [ext_resource type="ShaderMaterial" path="res://game/assets/materials/mat_crt_screen_static.tres" id="22"]
-[ext_resource type="Script" path="res://game/scripts/player/player_controller.gd" id="23"]
 [ext_resource type="Script" path="res://game/scripts/components/nav_zone_interactable.gd" id="24"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
@@ -189,20 +188,6 @@ size = Vector3(0.51, 0.06, 0.76)
 script = ExtResource("1")
 
 ; ============================================================
-; Orbit camera controller — WASD pan + LMB orbit + scroll zoom
-; bounds match navigable floor: ±3.2 x, ±2.2 z
-; ============================================================
-
-[node name="PlayerController" type="Node3D" parent="."]
-script = ExtResource("23")
-store_bounds_min = Vector3(-3.2, 0.0, -2.2)
-store_bounds_max = Vector3(3.2, 0.0, 2.2)
-
-[node name="StoreCamera" type="Camera3D" parent="PlayerController"]
-unique_name_in_owner = true
-fov = 60.0
-
-; ============================================================
 ; Player Entry Spawn (inside the storefront, in front of the back wall)
 ; ============================================================
 
@@ -324,6 +309,7 @@ surface_material_override/0 = ExtResource("5")
 ; ============================================================
 
 [node name="Storefront" type="Node3D" parent="."]
+visible = false
 
 [node name="SilhouetteLeftPanel" type="MeshInstance3D" parent="Storefront"]
 transform = Transform3D(3.83333, 0, 0, 0, 1, 0, 0, 0, 0.666667, -1.15, 1.5, 2.56)
