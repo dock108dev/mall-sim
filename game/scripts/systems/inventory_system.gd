@@ -579,11 +579,14 @@ func _apply_state(data: Dictionary) -> void:
 		item.instance_id = str(d.get("instance_id", ""))
 		item.condition = str(d.get("condition", "good"))
 		item.acquired_day = int(d.get("acquired_day", 0))
-		item.acquired_price = float(d.get("acquired_price", 0.0))
+		# §SR-09: prices must be finite and non-negative; a hand-edited save
+		# with NaN/Inf would propagate through every price calculation
+		# downstream and lock comparison checks to false.
+		item.acquired_price = _safe_finite_price(d.get("acquired_price", 0.0))
 		item.current_location = str(
 			d.get("current_location", "backroom")
 		)
-		item.player_set_price = float(d.get("player_set_price", 0.0))
+		item.player_set_price = _safe_finite_price(d.get("player_set_price", 0.0))
 		item.tested = bool(d.get("tested", false))
 		item.test_result = str(d.get("test_result", ""))
 		item.is_demo = bool(d.get("is_demo", false))
@@ -875,3 +878,19 @@ func _get_store_id_for_definition(definition: ItemDefinition) -> StringName:
 	if not definition:
 		return &""
 	return _resolve_store_id(definition.store_type)
+
+
+## §SR-09: Coerce a save-loaded price value to a finite, non-negative float.
+## Rejects NaN/Inf and clamps to a 1e9 ceiling so a corrupt/edited save cannot
+## inject a value that breaks downstream arithmetic or comparison logic.
+func _safe_finite_price(value: Variant) -> float:
+	var parsed: float
+	if value is float:
+		parsed = value as float
+	elif value is int:
+		parsed = float(value as int)
+	else:
+		return 0.0
+	if is_nan(parsed) or is_inf(parsed):
+		return 0.0
+	return clampf(parsed, 0.0, 1.0e9)

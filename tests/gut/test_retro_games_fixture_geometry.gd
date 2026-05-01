@@ -153,9 +153,72 @@ func test_glass_case_is_in_center_floor_area() -> void:
 	assert_lt(absf(pos.z), 2.0, "Display table must be on the main sales floor (|z| < 2.0)")
 
 
-# ── Counter: wide across front, register raised on top ───────────────────────
+# ── Glass material: visible from overhead, not near-transparent ──────────────
+#
+# The store uses a fixed isometric/orthographic camera at ~52° pitch (see
+# PlayerController.pitch_default_deg). Glass alpha below ~0.6 reads as
+# near-invisible from that angle, leaving the case as just a floating
+# silhouette of slot meshes. The case must still look like glass (alpha < 1.0),
+# but be opaque enough to register as a solid display surface.
 
-func test_checkout_counter_spans_front_of_store() -> void:
+func test_glass_case_material_is_visible_from_overhead() -> void:
+	var case_node: Node3D = _root.get_node_or_null("GlassCase") as Node3D
+	assert_not_null(case_node, "GlassCase must exist")
+	if not case_node:
+		return
+	var mesh: MeshInstance3D = case_node.get_node_or_null("CaseMesh") as MeshInstance3D
+	assert_not_null(mesh, "GlassCase/CaseMesh must exist")
+	if not mesh:
+		return
+	var mat: StandardMaterial3D = mesh.get_surface_override_material(0) as StandardMaterial3D
+	assert_not_null(mat, "GlassCase/CaseMesh must have a StandardMaterial3D override")
+	if not mat:
+		return
+	assert_gte(
+		mat.albedo_color.a, 0.6,
+		"Glass display alpha must be >= 0.6 so the case reads as a solid surface from the overhead camera"
+	)
+	assert_lt(
+		mat.albedo_color.a, 1.0,
+		"Glass display must remain translucent (alpha < 1.0) to read as glass, not painted wood"
+	)
+
+
+# ── Slot heights: items rest on the case top, not floating above ─────────────
+#
+# CaseMesh is offset by Y=0.425 with BoxMesh height 0.85, so the top surface
+# is at local Y=0.85. Slot Y must sit on that top (within a small tolerance)
+# so spawned item placeholders rest on the case rather than hovering.
+
+func test_glass_case_slots_rest_on_case_top() -> void:
+	var case_node: Node3D = _root.get_node_or_null("GlassCase") as Node3D
+	assert_not_null(case_node, "GlassCase must exist")
+	if not case_node:
+		return
+	var case_mesh: MeshInstance3D = case_node.get_node_or_null("CaseMesh") as MeshInstance3D
+	assert_not_null(case_mesh, "GlassCase/CaseMesh must exist")
+	if not case_mesh or not (case_mesh.mesh is BoxMesh):
+		return
+	var box: BoxMesh = case_mesh.mesh as BoxMesh
+	var case_top_y: float = case_mesh.position.y + box.size.y * 0.5
+	for i: int in range(1, 7):
+		var slot: Node3D = case_node.get_node_or_null("Slot%d" % i) as Node3D
+		assert_not_null(slot, "GlassCase/Slot%d must exist" % i)
+		if not slot:
+			continue
+		assert_almost_eq(
+			slot.position.y, case_top_y, 0.05,
+			"GlassCase/Slot%d Y (%.3f) must sit on the case top (%.3f) so items don't float"
+			% [i, slot.position.y, case_top_y]
+		)
+
+
+# ── Counter: narrow checkout area at front-right, register raised on top ────
+
+func test_checkout_counter_does_not_span_front_of_store() -> void:
+	# The counter must read as a checkout pocket on the right side, not a
+	# barrier wall spanning the storefront. Width is capped at 2.0 m so the
+	# entrance sightline (front opening at x∈[-1.0, 1.0]) stays clear.
 	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
 	assert_not_null(checkout, "Checkout fixture node must exist")
 	if not checkout:
@@ -164,11 +227,88 @@ func test_checkout_counter_spans_front_of_store() -> void:
 	assert_not_null(mesh, "Checkout/CounterMesh must exist")
 	if mesh and mesh.mesh is BoxMesh:
 		var box: BoxMesh = mesh.mesh as BoxMesh
-		assert_gt(box.size.x, 3.0, "Counter must be wide enough to span the front (> 3.0 m)")
+		assert_lte(
+			box.size.x, 2.0,
+			"Counter must be at most 2.0 m wide so it reads as a checkout area, not a barrier"
+		)
+		var counter_left_x: float = checkout.global_position.x - box.size.x * 0.5
+		assert_gte(
+			counter_left_x, 1.0,
+			"Counter left edge x=%.2f must clear the entrance opening (x >= 1.0)"
+			% counter_left_x
+		)
 	assert_gt(
 		checkout.global_position.z,
 		1.0,
 		"Checkout counter must be at the front of the store (z > 1.0)"
+	)
+	assert_gt(
+		checkout.global_position.x, 0.0,
+		"Checkout counter must sit on the front-right side of the store (x > 0)"
+	)
+
+
+func test_counter_top_is_visually_distinct_from_counter_body() -> void:
+	# A contrasting top trim (lighter / different finish) helps the counter
+	# read as a checkout surface rather than a uniform wood block, and gives
+	# the register a clear backdrop from the overhead camera.
+	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
+	if not checkout:
+		return
+	var body: MeshInstance3D = checkout.get_node_or_null("CounterMesh") as MeshInstance3D
+	var top: MeshInstance3D = checkout.get_node_or_null("CounterTop") as MeshInstance3D
+	assert_not_null(top, "Checkout/CounterTop trim mesh must exist")
+	if not body or not top:
+		return
+	var body_mat: StandardMaterial3D = (
+		body.get_surface_override_material(0) as StandardMaterial3D
+	)
+	var top_mat: StandardMaterial3D = (
+		top.get_surface_override_material(0) as StandardMaterial3D
+	)
+	assert_not_null(body_mat, "CounterMesh must carry a StandardMaterial3D override")
+	assert_not_null(top_mat, "CounterTop must carry a StandardMaterial3D override")
+	if body_mat == null or top_mat == null:
+		return
+	var diff: float = (
+		absf(body_mat.albedo_color.r - top_mat.albedo_color.r)
+		+ absf(body_mat.albedo_color.g - top_mat.albedo_color.g)
+		+ absf(body_mat.albedo_color.b - top_mat.albedo_color.b)
+	)
+	assert_gt(
+		diff, 0.3,
+		"Counter top trim must contrast counter body (sum |ΔRGB| > 0.3) so the surface reads as a distinct top, not a single block"
+	)
+
+
+func test_register_is_readable_from_overhead_camera() -> void:
+	# The overhead orthographic camera (~52° pitch) needs the register mesh to
+	# project a footprint at least as large as a small impulse slot so the
+	# checkout point is identifiable without a label.
+	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
+	if not checkout:
+		return
+	var register_mesh: MeshInstance3D = (
+		checkout.get_node_or_null("Register/RegisterMesh") as MeshInstance3D
+	)
+	assert_not_null(register_mesh, "Checkout/Register/RegisterMesh must exist")
+	if register_mesh == null or not (register_mesh.mesh is BoxMesh):
+		return
+	var size: Vector3 = (register_mesh.mesh as BoxMesh).size
+	assert_gte(
+		size.x, 0.5,
+		"Register mesh width (x=%.2f) must be >= 0.5 m so it reads from overhead"
+		% size.x
+	)
+	assert_gte(
+		size.z, 0.4,
+		"Register mesh depth (z=%.2f) must be >= 0.4 m so it reads from overhead"
+		% size.z
+	)
+	assert_gte(
+		size.y, 0.35,
+		"Register mesh height (y=%.2f) must be >= 0.35 m so the silhouette reads at 52° pitch"
+		% size.y
 	)
 
 
@@ -190,6 +330,93 @@ func test_register_sits_at_counter_top() -> void:
 		register.global_position.y,
 		counter_top_y - 0.05,
 		"Register must sit at or above the counter top surface"
+	)
+
+
+# ── Register identity: terminal monitor + glowing screen + checkout sign ─────
+#
+# A bare box with the same finish as the counter reads as generic chrome from
+# the overhead camera. The register has to break that cube silhouette with a
+# raised monitor element, carry an emissive screen so it reads as a powered
+# terminal even under cool fluorescent key lighting, and label the checkout
+# area so the pay point is unmistakable.
+
+func test_register_has_terminal_monitor_silhouette() -> void:
+	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
+	if not checkout:
+		return
+	var base_mesh: MeshInstance3D = (
+		checkout.get_node_or_null("Register/RegisterMesh") as MeshInstance3D
+	)
+	var monitor: MeshInstance3D = (
+		checkout.get_node_or_null("Register/TerminalMonitor") as MeshInstance3D
+	)
+	assert_not_null(
+		monitor,
+		"Checkout/Register/TerminalMonitor must exist so the register reads as a terminal, not a generic box"
+	)
+	if monitor == null or not (monitor.mesh is BoxMesh):
+		return
+	var monitor_size: Vector3 = (monitor.mesh as BoxMesh).size
+	assert_gte(
+		monitor_size.y, 0.20,
+		"TerminalMonitor height (y=%.2f) must be >= 0.20 m so the two-tier register silhouette reads at 52° pitch"
+		% monitor_size.y
+	)
+	if base_mesh and base_mesh.mesh is BoxMesh:
+		var base_top_y: float = base_mesh.position.y + (base_mesh.mesh as BoxMesh).size.y * 0.5
+		var monitor_bottom_y: float = monitor.position.y - monitor_size.y * 0.5
+		assert_almost_eq(
+			monitor_bottom_y, base_top_y, 0.05,
+			"TerminalMonitor must sit on the register base top (monitor bottom %.3f vs base top %.3f)"
+			% [monitor_bottom_y, base_top_y]
+		)
+
+
+func test_register_has_glowing_terminal_screen() -> void:
+	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
+	if not checkout:
+		return
+	var screen: MeshInstance3D = (
+		checkout.get_node_or_null("Register/TerminalScreen") as MeshInstance3D
+	)
+	assert_not_null(
+		screen,
+		"Checkout/Register/TerminalScreen must exist for the checkout to read as a powered terminal"
+	)
+	if screen == null:
+		return
+	var mat: StandardMaterial3D = screen.get_surface_override_material(0) as StandardMaterial3D
+	assert_not_null(mat, "TerminalScreen must carry a StandardMaterial3D override")
+	if mat == null:
+		return
+	assert_true(
+		mat.emission_enabled,
+		"TerminalScreen material must have emission_enabled so the screen glows under store lighting"
+	)
+
+
+func test_checkout_register_has_overhead_label() -> void:
+	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
+	if not checkout:
+		return
+	var sign_label: Label3D = (
+		checkout.get_node_or_null("Register/CheckoutSign") as Label3D
+	)
+	assert_not_null(
+		sign_label,
+		"Checkout/Register/CheckoutSign Label3D must exist so the pay point is unmistakable from overhead"
+	)
+	if sign_label == null:
+		return
+	assert_true(
+		sign_label.text.to_upper().contains("CHECKOUT"),
+		"CheckoutSign text must contain 'CHECKOUT' (current: '%s')" % sign_label.text
+	)
+	assert_gt(
+		sign_label.position.y, 0.5,
+		"CheckoutSign (y=%.2f) must sit above the register so it's visible at 52° pitch"
+		% sign_label.position.y
 	)
 
 

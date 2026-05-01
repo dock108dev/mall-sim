@@ -12,8 +12,8 @@ enum IndicatorState {
 	DISSATISFIED = 7,
 }
 
-const VISIBLE_DISTANCE: float = 8.0
-const FADE_DISTANCE: float = 10.0
+const VISIBLE_DISTANCE: float = 18.0
+const FADE_DISTANCE: float = 22.0
 
 const STATE_COLORS: Dictionary = {
 	IndicatorState.ENTERING: Color(0.55, 0.55, 0.55, 1.0),

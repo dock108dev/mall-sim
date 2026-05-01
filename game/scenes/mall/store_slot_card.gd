@@ -1,14 +1,17 @@
 ## Clickable store card for the mall overview hub.
-## Shows store name, reputation tier, today's revenue, stock count, and an alert
-## badge when stock is low or an event is pending. Locked cards show unlock
-## requirements and block navigation. Emits store_selected on left-click.
+## Shows store name, reputation tier, today's cash, inventory count, and
+## today's sold count. AlertBadge fires only for actionable conditions
+## (depleted stock after operating, or pending event). Locked cards collapse
+## detail rows and surface a single "Requires: Rep N · $M" line. Emits
+## store_selected on left-click when unlocked.
 class_name StoreSlotCard
 extends PanelContainer
 
 signal store_selected(store_id: StringName)
 
 var _store_id: StringName = &""
-var _low_stock: bool = false
+var _stock_count: int = 0
+var _has_been_operating: bool = false
 var _event_pending: bool = false
 var _is_locked: bool = false
 
@@ -16,6 +19,7 @@ var _is_locked: bool = false
 @onready var _rep_badge: Label = $Margin/VBox/RepBadge
 @onready var _revenue_label: Label = $Margin/VBox/RevenueLabel
 @onready var _stock_label: Label = $Margin/VBox/StockLabel
+@onready var _sold_label: Label = $Margin/VBox/SoldLabel
 @onready var _alert_badge: Label = $Margin/VBox/AlertBadge
 @onready var _locked_overlay: Label = $Margin/VBox/LockedOverlay
 
@@ -29,19 +33,32 @@ func setup(store_id: StringName, display_name: String) -> void:
 	_store_id = store_id
 	_name_label.text = display_name
 	_rep_badge.text = ""
-	_revenue_label.text = "$0"
-	_stock_label.text = ""
+	_revenue_label.text = "Cash: $0"
+	_stock_label.text = "Inventory: 0 items"
+	_sold_label.text = "Today: 0 sold"
 	_alert_badge.visible = false
 	_locked_overlay.visible = false
 
 
 func update_revenue(amount: float) -> void:
-	_revenue_label.text = "$%.0f" % amount
+	_revenue_label.text = "Cash: $%s" % UIThemeConstants.format_thousands(
+		int(round(amount))
+	)
 
 
 func update_stock(count: int) -> void:
-	_stock_label.text = "%d items" % count
-	_low_stock = count < 3
+	_stock_count = count
+	_stock_label.text = "Inventory: %d items" % count
+	if count > 0:
+		_has_been_operating = true
+	_refresh_badge()
+
+
+## Update today's sold count for this store.
+func update_today_sold(count: int) -> void:
+	_sold_label.text = "Today: %d sold" % count
+	if count > 0:
+		_has_been_operating = true
 	_refresh_badge()
 
 
@@ -63,14 +80,26 @@ func set_locked(locked: bool, requirements_text: String) -> void:
 	)
 	if locked:
 		_locked_overlay.text = "LOCKED" if requirements_text.is_empty() else (
-			"LOCKED\n" + requirements_text
+			"LOCKED\nRequires: " + requirements_text
 		)
 	_locked_overlay.visible = locked
+	# Locked cards hide the live-state detail rows; the LOCKED + Requires
+	# overlay is the only content. Otherwise show the operational detail rows.
 	_rep_badge.visible = not locked
+	_revenue_label.visible = not locked
+	_stock_label.visible = not locked
+	_sold_label.visible = not locked
+	_refresh_badge()
 
 
 func _refresh_badge() -> void:
-	_alert_badge.visible = _low_stock or _event_pending
+	if _is_locked:
+		_alert_badge.visible = false
+		return
+	var depleted_after_operating: bool = (
+		_stock_count == 0 and _has_been_operating
+	)
+	_alert_badge.visible = depleted_after_operating or _event_pending
 
 
 func _gui_input(event: InputEvent) -> void:

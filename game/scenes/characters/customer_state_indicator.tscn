@@ -11,5 +11,5 @@ script = ExtResource("1")
 [node name="Sprite3D" type="Sprite3D" parent="."]
 billboard = 1
 texture = SubResource("indicator_tex")
-pixel_size = 0.02
+pixel_size = 0.04
 modulate = Color(0.6, 0.6, 0.6, 1.0)

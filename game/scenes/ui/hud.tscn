@@ -1,8 +1,10 @@
-[gd_scene load_steps=4 format=3 uid="uid://hud00001"]
+[gd_scene load_steps=6 format=3 uid="uid://hud00001"]
 
 [ext_resource type="Script" path="res://game/scenes/ui/hud.gd" id="1"]
 [ext_resource type="PackedScene" path="res://game/ui/hud/toast_notification_ui.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://game/scenes/ui/interaction_prompt.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://game/scenes/ui/placement_hint_ui.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://game/scenes/ui/close_day_preview.tscn" id="5"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 30
@@ -39,11 +41,20 @@ text = "Day 1 — 9:00 AM"
 horizontal_alignment = 1
 clip_text = true
 
-[node name="ItemsPlacedLabel" type="Label" parent="TopBar"]
-custom_minimum_size = Vector2(80, 0)
+[node name="StoreLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Placed: 0"
+text = ""
+horizontal_alignment = 1
+clip_text = true
+visible = false
+
+[node name="ItemsPlacedLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "On Shelves: 0"
 horizontal_alignment = 1
 clip_text = true
 
@@ -56,10 +67,10 @@ horizontal_alignment = 1
 clip_text = true
 
 [node name="SalesTodayLabel" type="Label" parent="TopBar"]
-custom_minimum_size = Vector2(80, 0)
+custom_minimum_size = Vector2(130, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Sold: 0"
+text = "Sold Today: 0"
 horizontal_alignment = 1
 clip_text = true
 
@@ -77,19 +88,6 @@ size_flags_horizontal = 10
 text = ""
 horizontal_alignment = 2
 clip_text = true
-
-[node name="StoreLabel" type="Label" parent="."]
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -150.0
-offset_top = 52.0
-offset_right = 150.0
-offset_bottom = 82.0
-grow_horizontal = 2
-text = ""
-horizontal_alignment = 1
-vertical_alignment = 0
 
 [node name="SeasonalEventLabel" type="Label" parent="."]
 anchors_preset = 1
@@ -119,4 +117,8 @@ visible = false
 [node name="ToastNotificationUI" parent="." instance=ExtResource("2")]
 
 [node name="InteractionPrompt" parent="." instance=ExtResource("3")]
+
+[node name="PlacementHintUI" parent="." instance=ExtResource("4")]
+
+[node name="CloseDayPreview" parent="." instance=ExtResource("5")]
 

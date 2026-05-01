@@ -110,16 +110,49 @@ func test_store_slot_card_alert_hidden_when_stock_adequate() -> void:
 	)
 
 
-func test_store_slot_card_alert_visible_when_low_stock() -> void:
+func test_store_slot_card_alert_hidden_on_day1_zero_stock_before_operating() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.update_stock(0)
+	assert_false(
+		card._alert_badge.visible,
+		(
+			"Alert badge must NOT fire on Day 1 with 0 items before any "
+			+ "stocking has occurred"
+		)
+	)
+
+
+func test_store_slot_card_alert_visible_when_depleted_after_operating() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.update_stock(5)
+	card.update_stock(0)
+	assert_true(
+		card._alert_badge.visible,
+		(
+			"Alert badge must fire when stock drops to 0 after the store "
+			+ "has been operating"
+		)
+	)
+
+
+func test_store_slot_card_alert_hidden_when_low_but_nonzero_stock() -> void:
 	var card: StoreSlotCard = (
 		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
 	)
 	add_child_autofree(card)
 	card.setup(&"retro_games", "Retro Games")
 	card.update_stock(2)
-	assert_true(
+	assert_false(
 		card._alert_badge.visible,
-		"Alert badge must be visible when stock < 3"
+		"Alert must not fire merely because stock is low (1 or 2 items)"
 	)
 
 
@@ -159,7 +192,37 @@ func test_store_slot_card_revenue_label_updates() -> void:
 	add_child_autofree(card)
 	card.setup(&"retro_games", "Retro Games")
 	card.update_revenue(123.0)
-	assert_eq(card._revenue_label.text, "$123")
+	assert_eq(card._revenue_label.text, "Cash: $123")
+
+
+func test_store_slot_card_revenue_label_thousands_separator() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.update_revenue(1234.0)
+	assert_eq(card._revenue_label.text, "Cash: $1,234")
+
+
+func test_store_slot_card_stock_label_updates() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.update_stock(7)
+	assert_eq(card._stock_label.text, "Inventory: 7 items")
+
+
+func test_store_slot_card_today_sold_label_updates() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"retro_games", "Retro Games")
+	card.update_today_sold(4)
+	assert_eq(card._sold_label.text, "Today: 4 sold")
 
 
 # ── MallOverview signal behaviour ─────────────────────────────────────────────
@@ -276,10 +339,48 @@ func test_store_slot_card_locked_shows_overlay() -> void:
 	)
 	add_child_autofree(card)
 	card.setup(&"pocket_creatures", "Pocket Creatures")
-	card.set_locked(true, "REP 25 | $500")
+	card.set_locked(true, "Rep 25 · $500")
 	assert_true(card._locked_overlay.visible, "LockedOverlay must be visible when locked")
 	assert_string_contains(card._locked_overlay.text, "LOCKED")
-	assert_string_contains(card._locked_overlay.text, "REP 25")
+	assert_string_contains(card._locked_overlay.text, "Requires:")
+	assert_string_contains(card._locked_overlay.text, "Rep 25")
+
+
+func test_store_slot_card_locked_hides_detail_rows() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"pocket_creatures", "Pocket Creatures")
+	card.set_locked(true, "Rep 25 · $500")
+	assert_false(
+		card._revenue_label.visible,
+		"Locked card must hide the Cash row to avoid '$0 / 0 items / LOCKED' clutter"
+	)
+	assert_false(
+		card._stock_label.visible, "Locked card must hide the Inventory row"
+	)
+	assert_false(
+		card._sold_label.visible, "Locked card must hide the Today sold row"
+	)
+	assert_false(
+		card._alert_badge.visible,
+		"Locked card must never show the AlertBadge"
+	)
+
+
+func test_store_slot_card_locked_alert_suppressed_even_with_event_pending() -> void:
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(&"pocket_creatures", "Pocket Creatures")
+	card.set_event_pending(true)
+	card.set_locked(true, "Rep 25 · $500")
+	assert_false(
+		card._alert_badge.visible,
+		"Locked card must suppress AlertBadge even if an event is pending"
+	)
 
 
 func test_store_slot_card_locked_hides_rep_badge() -> void:
@@ -454,7 +555,110 @@ func test_unlocked_card_click_emits_enter_store_requested() -> void:
 	)
 
 
+# ── Button visibility gates: hide empty/dead buttons ──────────────────────────
+
+func test_moments_log_button_hidden_when_no_panel() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	assert_false(
+		_overview._moments_log_button.visible,
+		"Moments Log button must be hidden when no panel is wired"
+	)
+
+
+func test_completion_button_hidden_when_no_tracker() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	assert_false(
+		_overview._completion_button.visible,
+		(
+			"Completion button must be hidden when CompletionTracker is "
+			+ "unwired or has no progress"
+		)
+	)
+
+
+func test_performance_button_always_visible() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	assert_true(
+		_overview._performance_button.visible,
+		(
+			"Performance button must remain visible regardless of data "
+			+ "availability (BRAINDUMP 'For now' keep list)"
+		)
+	)
+
+
+func test_completion_button_visible_when_tracker_has_progress() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var tracker: CompletionTracker = CompletionTracker.new()
+	add_child_autofree(tracker)
+	# Push a store-leased state directly so we don't have to wire signals via
+	# initialize(). The first criterion (all_5_stores_opened) reads from
+	# _opened_stores; one entry yields current=1 > 0, satisfying the gate.
+	tracker._opened_stores = {"retro_games": true}
+	_overview.set_completion_tracker(tracker)
+	assert_true(
+		_overview._completion_button.visible,
+		"Completion button must show once any criterion has progress"
+	)
+
+
+# ── Per-store today-sold tracking ─────────────────────────────────────────────
+
+func test_customer_purchased_increments_today_sold_label() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var sid: StringName = &"retro_games"
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(sid, "Retro Games")
+	_overview._cards[sid] = card
+	EventBus.customer_purchased.emit(sid, &"item_x", 10.0, &"customer_a")
+	EventBus.customer_purchased.emit(sid, &"item_x", 10.0, &"customer_b")
+	assert_eq(card._sold_label.text, "Today: 2 sold")
+
+
+func test_today_sold_resets_on_day_started() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var sid: StringName = &"retro_games"
+	var card: StoreSlotCard = (
+		load(STORE_SLOT_CARD_SCENE_PATH).instantiate() as StoreSlotCard
+	)
+	add_child_autofree(card)
+	card.setup(sid, "Retro Games")
+	_overview._cards[sid] = card
+	EventBus.customer_purchased.emit(sid, &"item_x", 10.0, &"customer_a")
+	EventBus.day_started.emit(2)
+	assert_eq(card._sold_label.text, "Today: 0 sold")
+
+
+# ── Locked card requirement formatting ────────────────────────────────────────
+
+func test_mall_overview_uses_clean_unlock_format() -> void:
+	# The on-screen check is covered by the StoreSlotCard locked tests above.
+	# Here we lock down the format string the overview itself uses to build
+	# the requirements line — the legacy 'REP N | $M' form is the bug.
+	var src: String = FileAccess.get_file_as_string(
+		"res://game/scenes/mall/mall_overview.gd"
+	)
+	assert_true(
+		src.contains("Rep %d · $%s"),
+		"MallOverview must format unlock requirements as 'Rep N · $M'"
+	)
+	assert_false(
+		src.contains("REP %d | $%d"),
+		"MallOverview must not retain the legacy 'REP N | $M' unlock format"
+	)
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 func _on_day_close_requested() -> void:
 	_day_close_requests += 1

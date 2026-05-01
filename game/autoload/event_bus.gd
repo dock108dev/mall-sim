@@ -227,6 +227,11 @@ signal fixture_upgraded(fixture_id: String, new_tier: int)
 signal fixture_placement_invalid(reason: String)
 signal placement_mode_entered()
 signal placement_mode_exited()
+## Emitted alongside `placement_mode_entered` when a specific item is being
+## placed. `item_name` is the localized display name; consumers render a
+## persistent hint such as "Click a shelf slot to place <item_name>" because
+## `InteractionPrompt` is suppressed by `CTX_MODAL` during placement mode.
+signal placement_hint_requested(item_name: String)
 
 # ── Stocking ──────────────────────────────────────────────────────────────────
 ## Emitted when inventory is open and the player hovers a stockable item.

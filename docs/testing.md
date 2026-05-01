@@ -18,6 +18,14 @@ bash tests/run_tests.sh
 4. Runs `res://game/tests/run_tests.gd` when that file exists.
 5. Writes the combined output stream to `tests/test_run.log`.
 6. Runs every shell validator matching `tests/validate_*.sh`.
+7. Runs the Phase 0.1 SSOT tripwires under `scripts/`
+   (`validate_translations.sh`, `validate_single_store_ui.sh`,
+   `validate_tutorial_single_source.sh`) when present and executable.
+
+If no Godot binary can be resolved and neither `GODOT` nor `GODOT_EXECUTABLE`
+is set, the GUT step is skipped and only the shell validators and tripwires
+run. If either env var is set but does not point at an executable binary, the
+runner exits with an error.
 
 ## GUT configuration
 

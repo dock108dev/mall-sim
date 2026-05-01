@@ -227,7 +227,7 @@ func _build_action_label(target: Interactable) -> String:
 		return "Press E to %s" % verb.to_lower()
 	if verb.is_empty():
 		return target_name
-	return "%s / Press E to %s" % [target_name, verb.to_lower()]
+	return "%s — Press E to %s" % [target_name, verb.to_lower()]
 
 
 func _emit_tooltip_for_target(target: Interactable) -> void:

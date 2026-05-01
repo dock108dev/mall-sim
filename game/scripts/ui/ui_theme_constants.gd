@@ -256,6 +256,20 @@ static func get_semantic_display(state: String) -> String:
 	return "%s %s" % [entry["icon"], entry["label"]]
 
 
+## Returns an integer formatted with thousands separators (e.g. `1234` -> "1,234",
+## `-50000` -> "-50,000"). Cash displays that include cents have their own
+## formatter in `hud.gd:_format_cash` because the cents payload differs.
+static func format_thousands(value: int) -> String:
+	var sign_str: String = "-" if value < 0 else ""
+	var digits: String = str(absi(value))
+	var out := ""
+	for i: int in range(digits.length()):
+		if i > 0 and (digits.length() - i) % 3 == 0:
+			out += ","
+		out += digits[i]
+	return sign_str + out
+
+
 ## Returns a markup text label based on price-to-market ratio.
 static func get_markup_label(ratio: float) -> String:
 	if ratio <= MARKUP_LABEL_FAIR_MAX:

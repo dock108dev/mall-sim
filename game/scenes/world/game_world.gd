@@ -566,11 +566,15 @@ func _setup_deferred_panels() -> void:
 	_day_summary.review_inventory_requested.connect(
 		_on_day_summary_review_inventory
 	)
+	_day_summary.mall_overview_requested.connect(
+		_on_day_summary_mall_overview_requested
+	)
 	day_cycle_controller.set_day_summary(_day_summary)
 
 	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
 	_ui_layer.add_child(_mall_overview)
 	_mall_overview.setup(inventory_system, economy_system)
+	_mall_overview.set_completion_tracker(completion_tracker)
 	# Day Summary hides MallOverview while open and restores on dismiss (P1.4).
 	day_cycle_controller.set_mall_overview(_mall_overview)
 
@@ -816,6 +820,22 @@ func _find_store_controller_recursive(
 func _on_day_summary_review_inventory() -> void:
 	if _inventory_panel:
 		_inventory_panel.open()
+
+
+## Day-summary "Return to Mall" button completes day advancement via
+## `next_day_confirmed` (handled by DayCycleController, which lands the FSM
+## in GAMEPLAY) and then transitions to MALL_OVERVIEW so the hub overview
+## is the explicit foreground state.
+##
+## §F-55 — silent return on GAME_OVER is intentional: when the day cycle has
+## already routed into the game-over flow, the day summary's "Return to Mall"
+## button must not yank the FSM out of the terminal state. The player has the
+## game-over UI for choosing what comes next; logging here would fire on the
+## happy ending path.
+func _on_day_summary_mall_overview_requested() -> void:
+	if GameManager.current_state == GameManager.State.GAME_OVER:
+		return
+	GameManager.change_state(GameManager.State.MALL_OVERVIEW)
 
 
 func _find_nav_region() -> NavigationRegion3D:

@@ -18,9 +18,14 @@ func test_build_mode_enter_dims_hud_children() -> void:
 		PanelAnimator.BUILD_MODE_TRANSITION + 0.05
 	).timeout
 	var top_bar: CanvasItem = _hud.get_node("TopBar")
-	var store_label: CanvasItem = _hud.get_node("StoreLabel")
+	# StoreLabel is now a child of TopBar, so it inherits TopBar's dim
+	# transitively through composite modulate.
+	var store_label: CanvasItem = _hud.get_node("TopBar/StoreLabel")
 	assert_almost_eq(top_bar.modulate.a, 0.5, 0.05)
-	assert_almost_eq(store_label.modulate.a, 0.5, 0.05)
+	assert_eq(
+		store_label.get_parent(), top_bar,
+		"StoreLabel must live under TopBar so dim cascades from the bar"
+	)
 
 
 func test_build_mode_exit_restores_hud_children() -> void:

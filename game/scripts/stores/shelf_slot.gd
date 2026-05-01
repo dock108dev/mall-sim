@@ -162,11 +162,16 @@ func deassign() -> void:
 func set_display_data(item_name: String, condition: String, price: float) -> void:
 	if not _info_label:
 		_info_label = Label3D.new()
-		_info_label.pixel_size = 0.004
+		# Sized for the fixed isometric/orthographic store camera at
+		# pitch=52° / ortho_size_default=10. Smaller values render as a
+		# pixel-soup smudge on the overhead view.
+		_info_label.pixel_size = 0.005
 		_info_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_info_label.no_depth_test = true
-		_info_label.font_size = 28
-		_info_label.position = Vector3(0.0, 0.22, 0.0)
+		_info_label.font_size = 48
+		_info_label.outline_size = 6
+		_info_label.outline_modulate = Color(0.05, 0.07, 0.12, 0.85)
+		_info_label.position = Vector3(0.0, 0.32, 0.0)
 		_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_info_label.modulate = _label_accent
 		add_child(_info_label)

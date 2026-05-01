@@ -30,6 +30,31 @@ extends Node3D
 @export var zoom_default: float = 3.5
 ## Starting pitch angle in degrees from horizontal. Overridable per store.
 @export var pitch_default_deg: float = 50.0
+## When true, the camera renders with PROJECTION_ORTHOGONAL, right-mouse orbit
+## and middle-mouse pan are suppressed, and scroll-wheel zoom adjusts the
+## orthogonal view size (`ortho_size_*`) instead of camera distance.
+@export var is_orthographic: bool = false
+## Default orthogonal view size in world units (vertical extent).
+@export var ortho_size_default: float = 10.0
+## Minimum orthogonal size for scroll zoom (most zoomed-in).
+@export var ortho_size_min: float = 6.0
+## Maximum orthogonal size for scroll zoom (most zoomed-out).
+@export var ortho_size_max: float = 13.0
+## Per-tick step applied to orthogonal size by scroll zoom.
+@export var ortho_size_step: float = 0.5
+## Collision mask used when probing fixture bodies during pivot movement.
+## Defaults to layer 1 — the same layer outer walls and store fixture
+## StaticBody3Ds occupy. Stores that need a different mask can override.
+@export_flags_3d_physics var fixture_collision_mask: int = 1
+## Half-extent of the box probe used to test whether the next pivot position
+## would embed inside a fixture body. Sized so the probe sits between the
+## floor top (Y≈0.05) and the lowest fixture top (GlassCase ≈ Y=0.85).
+@export var fixture_probe_extents: Vector3 = Vector3(0.25, 0.25, 0.25)
+## Vertical offset applied to the probe so it sits above the floor body and
+## inside the fixture bodies. Floor StaticBody3D occupies Y∈[-0.05, 0.05];
+## probe centered at Y=0.4 keeps it clear of the floor while overlapping all
+## standing fixtures.
+@export var fixture_probe_y_offset: float = 0.4
 
 var _yaw: float = 0.0
 var _pitch: float = 0.0
@@ -37,6 +62,8 @@ var _zoom: float = 0.0
 var _target_yaw: float = 0.0
 var _target_pitch: float = 0.0
 var _target_zoom: float = 0.0
+var _ortho_size: float = 0.0
+var _target_ortho_size: float = 0.0
 var _pivot: Vector3 = Vector3.ZERO
 var _target_pivot: Vector3 = Vector3.ZERO
 var _is_orbiting: bool = false
@@ -45,6 +72,12 @@ var _build_mode_active: bool = false
 var _input_listening: bool = true
 
 @onready var _camera: Camera3D = _resolve_camera()
+## Optional floor disc rendered at the pivot. Stores that need a "you are
+## here" marker add a `PlayerIndicator` MeshInstance3D as a child; absence
+## is silent so legacy stores keep their existing layout.
+@onready var _player_indicator: Node3D = (
+	get_node_or_null("PlayerIndicator") as Node3D
+)
 
 
 func _ready() -> void:
@@ -52,11 +85,17 @@ func _ready() -> void:
 	_target_pitch = _pitch
 	_zoom = zoom_default
 	_target_zoom = _zoom
+	_ortho_size = ortho_size_default
+	_target_ortho_size = _ortho_size
 	InputHelper.unlock_cursor()
+	if _camera != null and is_orthographic:
+		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+		_camera.size = _ortho_size
 	_update_camera_transform()
 	if _camera:
 		_camera.current = false
 	add_to_group(&"player_controller")
+	_update_player_indicator_visibility()
 	var eb: Node = _get_event_bus()
 	if eb != null and eb.has_signal("nav_zone_selected"):
 		eb.nav_zone_selected.connect(_on_nav_zone_selected)
@@ -81,10 +120,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			_handle_pan(motion)
 
 	if event.is_action_pressed("camera_zoom_in"):
-		_target_zoom = clampf(_target_zoom - zoom_step, zoom_min, zoom_max)
+		if is_orthographic:
+			_target_ortho_size = clampf(
+				_target_ortho_size - ortho_size_step,
+				ortho_size_min, ortho_size_max
+			)
+		else:
+			_target_zoom = clampf(_target_zoom - zoom_step, zoom_min, zoom_max)
 
 	if event.is_action_pressed("camera_zoom_out"):
-		_target_zoom = clampf(_target_zoom + zoom_step, zoom_min, zoom_max)
+		if is_orthographic:
+			_target_ortho_size = clampf(
+				_target_ortho_size + ortho_size_step,
+				ortho_size_min, ortho_size_max
+			)
+		else:
+			_target_zoom = clampf(_target_zoom + zoom_step, zoom_min, zoom_max)
 
 	for i: int in range(1, 6):
 		if event.is_action_pressed("nav_zone_%d" % i):
@@ -93,6 +144,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_player_indicator_visibility()
 	if _build_mode_active:
 		return
 
@@ -102,6 +154,7 @@ func _process(delta: float) -> void:
 	_yaw = lerp_angle(_yaw, _target_yaw, weight)
 	_pitch = lerpf(_pitch, _target_pitch, weight)
 	_zoom = lerpf(_zoom, _target_zoom, weight)
+	_ortho_size = lerpf(_ortho_size, _target_ortho_size, weight)
 	_pivot = _pivot.lerp(_target_pivot, weight)
 	_update_camera_transform()
 
@@ -184,6 +237,11 @@ func can_move() -> bool:
 
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
+	if is_orthographic:
+		# Fixed angled orthographic camera disables free rotation and pan so
+		# the player cannot reframe the room — see docs/style/visual-grammar.md
+		# 'reinvented camera controller' merge-blocker.
+		return
 	if event.is_action("camera_orbit"):
 		_is_orbiting = event.pressed
 	elif event.is_action("camera_pan"):
@@ -233,8 +291,61 @@ func _apply_keyboard_movement(delta: float) -> void:
 		right * movement_input.x
 		+ forward * -movement_input.y
 	).normalized()
-	_target_pivot += movement_dir * move_speed * delta
-	_target_pivot = _target_pivot.clamp(store_bounds_min, store_bounds_max)
+	var step: Vector3 = movement_dir * move_speed * delta
+	_target_pivot = _resolve_pivot_step(_target_pivot, step)
+
+
+## Returns the next pivot position after applying `step`, sliding around
+## fixture bodies if a full move would embed the pivot inside one. Falls back
+## to single-axis slides (Z then X) when the combined move is blocked, then
+## refuses the move outright if both axes are blocked. Always clamps to the
+## configured store bounds. Public for tests; not part of the input flow.
+func resolve_pivot_step(current: Vector3, step: Vector3) -> Vector3:
+	return _resolve_pivot_step(current, step)
+
+
+func _resolve_pivot_step(current: Vector3, step: Vector3) -> Vector3:
+	var full: Vector3 = (current + step).clamp(
+		store_bounds_min, store_bounds_max
+	)
+	if not _pivot_blocked(full):
+		return full
+	var slide_z: Vector3 = Vector3(current.x, current.y, full.z).clamp(
+		store_bounds_min, store_bounds_max
+	)
+	if not _pivot_blocked(slide_z):
+		return slide_z
+	var slide_x: Vector3 = Vector3(full.x, current.y, current.z).clamp(
+		store_bounds_min, store_bounds_max
+	)
+	if not _pivot_blocked(slide_x):
+		return slide_x
+	return current
+
+
+## Returns true when a probe box at `candidate` overlaps any StaticBody3D on
+## `fixture_collision_mask`. Returns false when no World3D / space state is
+## available (e.g. unit tests without a physics scene), so headless tests
+## without a physics tree see no false-positive blocking.
+func _pivot_blocked(candidate: Vector3) -> bool:
+	var world: World3D = get_world_3d()
+	if world == null:
+		return false
+	var space: PhysicsDirectSpaceState3D = world.direct_space_state
+	if space == null:
+		return false
+	var shape := BoxShape3D.new()
+	shape.size = fixture_probe_extents * 2.0
+	var params := PhysicsShapeQueryParameters3D.new()
+	params.shape = shape
+	params.transform = Transform3D(
+		Basis.IDENTITY,
+		candidate + Vector3(0.0, fixture_probe_y_offset, 0.0)
+	)
+	params.collision_mask = fixture_collision_mask
+	params.collide_with_areas = false
+	params.collide_with_bodies = true
+	return not space.intersect_shape(params, 1).is_empty()
 
 
 ## Returns true when the InputFocus autoload either is absent (test/unit
@@ -264,6 +375,19 @@ func _get_event_bus() -> Node:
 	return tree.root.get_node_or_null("EventBus")
 
 
+## Hides the floor indicator outside the `store_gameplay` InputFocus context
+## and during build mode so the marker reads only while the player is
+## actually walking the store. Returns early when no indicator child is wired.
+func _update_player_indicator_visibility() -> void:
+	if _player_indicator == null:
+		return
+	var should_show: bool = (
+		_input_focus_allows_gameplay() and not _build_mode_active
+	)
+	if _player_indicator.visible != should_show:
+		_player_indicator.visible = should_show
+
+
 ## Snaps pivot to zone_position when nav_zone_selected fires on the EventBus.
 func _on_nav_zone_selected(zone_position: Vector3) -> void:
 	set_pivot(zone_position)
@@ -291,4 +415,6 @@ func _update_camera_transform() -> void:
 	offset.z = _zoom * cos(_pitch) * cos(_yaw)
 	_camera.position = offset
 	_camera.look_at(_pivot)
+	if is_orthographic:
+		_camera.size = _ortho_size
 	global_position = _pivot

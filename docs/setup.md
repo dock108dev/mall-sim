@@ -66,6 +66,9 @@ The runner:
 4. Runs `res://game/tests/run_tests.gd` when that file exists.
 5. Writes combined output to `tests/test_run.log`.
 6. Runs shell validators matching `tests/validate_*.sh`.
+7. Runs the Phase 0.1 SSOT tripwires under `scripts/`
+   (`validate_translations.sh`, `validate_single_store_ui.sh`,
+   `validate_tutorial_single_source.sh`).
 
 ## Repository layout
 

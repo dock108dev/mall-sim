@@ -92,7 +92,11 @@ func test_checkout_testing_and_refurb_nodes_are_interactable() -> void:
 		testing_interactable.interaction_type,
 		Interactable.InteractionType.ITEM
 	)
-	assert_eq(testing_interactable.prompt_text, "Test Console")
+	assert_eq(testing_interactable.prompt_text, "Coming Soon")
+	assert_false(
+		testing_interactable.enabled,
+		"Testing station Interactable must ship disabled until the testing flow is wired up"
+	)
 
 	var refurb_bench: Node3D = _root.get_node("refurb_bench") as Node3D
 	var refurb_interactable := (

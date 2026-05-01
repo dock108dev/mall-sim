@@ -52,7 +52,10 @@ The checked-in integrations documented in this repository are:
 
 - Godot editor/runtime through `project.godot`
 - GUT through `addons/gut/` and `.gutconfig.json`
-- helper scripts in `scripts/` for import and Godot execution
+- helper scripts in `scripts/`: `godot_import.sh` and `godot_exec.sh` plus the
+  SSOT tripwires (`validate_translations.sh`,
+  `validate_single_store_ui.sh`, `validate_tutorial_single_source.sh`,
+  `validate_export_config.sh`) that `tests/run_tests.sh` invokes
 - GitHub Actions workflows for validation and tagged exports
 - `gdtoolkit` linting in CI
 

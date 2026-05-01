@@ -26,7 +26,9 @@ The test runner resolves Godot from `GODOT`, `GODOT_EXECUTABLE`, `godot` on
 `PATH`, or common macOS install paths, imports assets, runs GUT headlessly,
 runs `game/tests/run_tests.gd` when present, writes output to
 `tests/test_run.log`, and then runs shell validators matching
-`tests/validate_*.sh`.
+`tests/validate_*.sh` plus the SSOT tripwires under `scripts/`
+(`validate_translations.sh`, `validate_single_store_ui.sh`,
+`validate_tutorial_single_source.sh`).
 
 ## Deployment basics
 

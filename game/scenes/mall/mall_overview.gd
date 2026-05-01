@@ -26,12 +26,15 @@ var _inventory_system: InventorySystem = null
 var _economy_system: EconomySystem = null
 ## store_id (StringName) -> StoreSlotCard
 var _cards: Dictionary = {}
+## store_id (String) -> int — today's sold count per store, reset on day_started.
+var _store_sold_today: Dictionary = {}
 ## Ordered list matching ContentRegistry.get_all_store_ids() order at setup time.
 var _all_store_ids: Array[StringName] = []
 var _current_day: int = 1
 var _current_hour: int = 0
 var _moments_log_panel: MomentsLogPanel = null
 var _performance_panel: PerformancePanel = null
+var _completion_tracker: CompletionTracker = null
 
 @onready var _store_grid: HBoxContainer = $VBox/StoreGrid
 @onready var _day_close_button: Button = $VBox/BottomRow/DayCloseButton
@@ -51,6 +54,7 @@ func _ready() -> void:
 	_performance_button.pressed.connect(_on_performance_pressed)
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.store_exited.connect(_on_store_exited)
+	_refresh_optional_button_visibility()
 
 
 ## Wire runtime systems and populate store cards.
@@ -83,6 +87,12 @@ func _populate_stores() -> void:
 
 
 func _refresh_card(store_id: StringName) -> void:
+	# Silent return: signals (`inventory_updated`, `customer_purchased`) can
+	# fire for store ids that have not been added to `_cards` yet — for
+	# example before `_populate_stores` runs after `setup()`, or for hub-side
+	# events tied to an unowned/locked store. The card grid is the canonical
+	# render target; if a store has no card we have nothing to redraw and
+	# the call is a no-op. See EH-08.
 	if not _cards.has(store_id):
 		return
 	var card: StoreSlotCard = _cards[store_id] as StoreSlotCard
@@ -93,6 +103,7 @@ func _refresh_card(store_id: StringName) -> void:
 	if _inventory_system:
 		var stock: Array[ItemInstance] = _inventory_system.get_stock(store_id)
 		card.update_stock(stock.size())
+	card.update_today_sold(int(_store_sold_today.get(String(store_id), 0)))
 
 
 func _refresh_all_locked_states() -> void:
@@ -108,7 +119,9 @@ func _refresh_all_locked_states() -> void:
 			if not req.is_empty():
 				var rep: int = int(req.get("reputation", 0))
 				var cost: int = int(req.get("cost", 0))
-				req_text = "REP %d | $%d" % [rep, cost]
+				req_text = "Rep %d · $%s" % [
+					rep, UIThemeConstants.format_thousands(cost)
+				]
 		(_cards[store_id] as StoreSlotCard).set_locked(locked, req_text)
 
 
@@ -149,6 +162,8 @@ func _connect_signals() -> void:
 	EventBus.reputation_tier_changed.connect(_on_reputation_tier_changed)
 	EventBus.owned_slots_restored.connect(_on_owned_slots_restored)
 	EventBus.store_slot_unlocked.connect(_on_store_slot_unlocked)
+	EventBus.ambient_moment_delivered.connect(_on_ambient_moment_delivered)
+	EventBus.item_sold.connect(_on_item_sold_for_buttons)
 
 
 func _on_inventory_updated(store_id: StringName) -> void:
@@ -164,19 +179,29 @@ func _on_customer_purchased(
 	_price: float,
 	_customer_id: StringName,
 ) -> void:
-	if not _economy_system or not _cards.has(store_id):
+	# Increment the per-store sold-today counter even when there is no card
+	# for the store yet: the dict is reset by `_on_day_started` and is read
+	# only through `_cards`, so unknown-store entries are bounded by one day
+	# and never surface to the UI. The silent card-miss return below is
+	# covered by EH-08.
+	var key: String = String(store_id)
+	_store_sold_today[key] = int(_store_sold_today.get(key, 0)) + 1
+	if not _cards.has(store_id):
 		return
-	(_cards[store_id] as StoreSlotCard).update_revenue(
-		_economy_system.get_store_daily_revenue(String(store_id))
-	)
+	var card: StoreSlotCard = _cards[store_id] as StoreSlotCard
+	if _economy_system:
+		card.update_revenue(_economy_system.get_store_daily_revenue(key))
+	card.update_today_sold(int(_store_sold_today[key]))
 
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
+	_store_sold_today.clear()
 	for store_id: StringName in _cards:
 		var card: StoreSlotCard = _cards[store_id] as StoreSlotCard
 		card.update_revenue(0.0)
 		card.set_event_pending(false)
+		card.update_today_sold(0)
 		if _inventory_system:
 			var stock: Array[ItemInstance] = _inventory_system.get_stock(store_id)
 			card.update_stock(stock.size())
@@ -225,6 +250,7 @@ func _on_random_event_triggered(
 
 func _on_milestone_reached(milestone_id: StringName) -> void:
 	_add_feed_entry("Milestone: %s" % String(milestone_id))
+	_refresh_optional_button_visibility()
 
 
 func _on_rental_overdue(_customer_id: String, item_id: String) -> void:
@@ -250,6 +276,24 @@ func _on_owned_slots_restored(_slots: Dictionary) -> void:
 func _on_store_slot_unlocked(_slot_index: int) -> void:
 	_refresh_all_locked_states()
 	_add_feed_entry("New store slot unlocked!")
+	_refresh_optional_button_visibility()
+
+
+func _on_ambient_moment_delivered(
+	_moment_id: StringName,
+	_display_type: StringName,
+	_flavor_text: String,
+	_audio_cue_id: StringName,
+) -> void:
+	_refresh_optional_button_visibility()
+
+
+func _on_item_sold_for_buttons(
+	_item_id: String, _price: float, _category: String
+) -> void:
+	# Sales advance multiple completion criteria; refresh button visibility
+	# so Completion appears once the first criterion gains progress.
+	_refresh_optional_button_visibility()
 
 
 func _on_card_store_selected(store_id: StringName) -> void:
@@ -264,10 +308,59 @@ func _on_card_store_selected(store_id: StringName) -> void:
 
 func set_moments_log_panel(panel: MomentsLogPanel) -> void:
 	_moments_log_panel = panel
+	_refresh_optional_button_visibility()
 
 
 func set_performance_panel(panel: PerformancePanel) -> void:
 	_performance_panel = panel
+
+
+## Wire the CompletionTracker so the Completion button can hide itself when
+## no criterion has any progress yet (otherwise it leads to an all-Locked
+## placeholder list).
+func set_completion_tracker(tracker: CompletionTracker) -> void:
+	_completion_tracker = tracker
+	_refresh_optional_button_visibility()
+
+
+## Hide Moments Log and Completion buttons when they would lead to empty or
+## placeholder content. Performance is always kept visible — it is on the
+## BRAINDUMP "for now" keep list regardless of data availability.
+func _refresh_optional_button_visibility() -> void:
+	if _moments_log_button:
+		_moments_log_button.visible = _moments_log_has_content()
+	if _completion_button:
+		_completion_button.visible = _completion_has_progress()
+	if _performance_button:
+		_performance_button.visible = true
+
+
+## Silent `false` return when the panel/system isn't wired is the documented
+## button-gating contract: an unwired panel cannot have content, so the
+## Moments Log button hides until `set_moments_log_panel` runs and the system
+## reports at least one witnessed entry. See EH-08.
+func _moments_log_has_content() -> bool:
+	if _moments_log_panel == null:
+		return false
+	var system: AmbientMomentsSystem = _moments_log_panel.ambient_moments_system
+	if system == null:
+		return false
+	return not system.get_witnessed_log().is_empty()
+
+
+## Silent `false` return when the tracker isn't wired keeps the Completion
+## button hidden until `set_completion_tracker` runs (called from
+## `game_world._setup_deferred_panels`). The same contract as
+## `_moments_log_has_content`. See EH-08.
+func _completion_has_progress() -> bool:
+	if _completion_tracker == null:
+		return false
+	for criterion: Dictionary in _completion_tracker.get_completion_data():
+		if bool(criterion.get("complete", false)):
+			return true
+		if float(criterion.get("current", 0.0)) > 0.0:
+			return true
+	return false
 
 
 func _on_moments_log_pressed() -> void:

@@ -85,10 +85,11 @@ var _counter_color_tweens: Dictionary = {}
 @onready var _sales_today_label: Label = $TopBar/SalesTodayLabel
 @onready var _speed_button: Button = $TopBar/SpeedButton
 @onready var _reputation_label: Label = $TopBar/ReputationLabel
-@onready var _store_label: Label = $StoreLabel
+@onready var _store_label: Label = $TopBar/StoreLabel
 @onready var _seasonal_event_label: Label = $SeasonalEventLabel
 @onready var _telegraph_card: Label = $TelegraphCard
 @onready var _milestones_button: Button = $TopBar/MilestonesButton
+@onready var _close_day_preview: CanvasLayer = $CloseDayPreview
 
 
 func _ready() -> void:
@@ -136,6 +137,7 @@ func _ready() -> void:
 
 	_create_close_day_button()
 	_create_hub_back_button()
+	_wire_close_day_preview()
 
 	_update_cash_display(_displayed_cash)
 	_update_reputation_display(_last_reputation)
@@ -222,7 +224,49 @@ func _on_close_day_pressed() -> void:
 				"Make your first sale before closing Day 1."
 			)
 			return
+		_open_close_day_preview()
+
+
+## Opens the dry-run preview modal. The preview's Confirm button is the only
+## path that emits day_close_requested from the in-store HUD; the preview
+## script handles the emit itself.
+##
+## The fallback emit (preview missing) is loud on purpose: hud.tscn ships a
+## CloseDayPreview child, so reaching the fallback means the scene was edited
+## without the modal. The day still closes — but the wiring regression is
+## logged so CI catches it. See docs/audits/error-handling-report.md EH-06.
+func _open_close_day_preview() -> void:
+	if not is_instance_valid(_close_day_preview):
+		push_warning(
+			"HUD._open_close_day_preview: CloseDayPreview child missing; "
+			+ "skipping preview modal and closing day directly."
+		)
 		EventBus.day_close_requested.emit()
+		return
+	_close_day_preview.show_preview()
+
+
+func _wire_close_day_preview() -> void:
+	if not is_instance_valid(_close_day_preview):
+		return
+	_close_day_preview.set_snapshot_callback(_get_active_store_snapshot)
+
+
+func _get_active_store_snapshot() -> Array:
+	var inventory: InventorySystem = GameManager.get_inventory_system()
+	if inventory == null:
+		return []
+	var store_id: StringName = GameManager.get_active_store_id()
+	if String(store_id).is_empty():
+		var generic: Array = inventory.get_shelf_items()
+		return generic
+	var typed: Array[ItemInstance] = inventory.get_shelf_items_for_store(
+		String(store_id)
+	)
+	var generic_items: Array = []
+	for item: ItemInstance in typed:
+		generic_items.append(item)
+	return generic_items
 
 
 func _create_hub_back_button() -> void:
@@ -262,7 +306,10 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			visible = false
 		GameManager.State.MALL_OVERVIEW:
 			visible = true
-			_cash_label.visible = true
+			# KPI strip (mall hub overlay) is the canonical cash display in
+			# MALL_OVERVIEW. Hiding the HUD CashLabel here prevents the
+			# duplicate "$0.00$0" artifact when both labels render at once.
+			_cash_label.visible = false
 			_time_label.visible = true
 			_milestones_button.visible = true
 			_close_day_button.visible = false
@@ -271,13 +318,24 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			_items_placed_label.visible = false
 			_customers_label.visible = false
 			_sales_today_label.visible = false
+			# MALL_OVERVIEW retains the reputation label; only STORE_VIEW
+			# hides it. Set explicitly to avoid inheriting the hidden state
+			# when transitioning from STORE_VIEW.
+			_reputation_label.visible = true
+			_speed_button.visible = false
 			_seasonal_event_label.visible = false
 			_telegraph_card.visible = false
 		GameManager.State.STORE_VIEW:
 			visible = true
 			_cash_label.visible = true
 			_time_label.visible = true
-			_reputation_label.visible = true
+			# Reputation, customer count, and time-speed controls are not part
+			# of the Day 1 in-store HUD: reputation has no live source in the
+			# store loop yet, the customer count is redundant with the spawned
+			# NPCs, and the speed control surfaces a feature that is not wired
+			# up here.
+			_reputation_label.visible = false
+			_customers_label.visible = false
 			_speed_button.visible = false
 			# Day 1 quarantine: the centered MilestonesPanel covers store fixtures
 			# while the player is still learning the stock-and-sell loop. Hide the
@@ -288,7 +346,6 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			)
 			_close_day_button.visible = true
 			_items_placed_label.visible = true
-			_customers_label.visible = true
 			_sales_today_label.visible = true
 			_store_label.visible = false
 			_seasonal_event_label.visible = false
@@ -321,7 +378,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			)
 			get_viewport().set_input_as_handled()
 			return
-		EventBus.day_close_requested.emit()
+		_open_close_day_preview()
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action("time_speed_1"):

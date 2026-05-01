@@ -236,11 +236,23 @@ func test_close_day_press_proceeds_when_gate_released() -> void:
 	var on_close: Callable = (func() -> void: close_emits.append(true))
 	EventBus.day_close_requested.connect(on_close)
 	hud._on_close_day_pressed()
+	var preview: CanvasLayer = hud.get_node("CloseDayPreview") as CanvasLayer
+	assert_not_null(
+		preview, "HUD must instance the close-day preview modal"
+	)
+	assert_true(
+		preview.visible,
+		"Pressing Close Day after the gate releases must open the preview"
+	)
+	assert_eq(
+		close_emits.size(), 0,
+		"Press alone must not emit day_close_requested — confirm does"
+	)
+	preview._on_confirm_pressed()
 	EventBus.day_close_requested.disconnect(on_close)
-
 	assert_eq(
 		close_emits.size(), 1,
-		"Pressing Close Day after the gate releases must request day close"
+		"Confirming the preview must emit day_close_requested exactly once"
 	)
 
 

@@ -207,6 +207,8 @@ func _on_customer_ready_to_purchase(
 	var customer: Customer = node as Customer
 	if not _register_queue.try_add(customer):
 		customer.reject_from_queue()
+		return
+	EventBus.queue_advanced.emit(_register_queue.get_size())
 
 
 func _on_customer_left(customer_data: Dictionary) -> void:
@@ -214,6 +216,7 @@ func _on_customer_left(customer_data: Dictionary) -> void:
 	if not _register_queue.has_customer_id(cust_id):
 		return
 	_register_queue.remove_by_id(cust_id)
+	EventBus.queue_advanced.emit(_register_queue.get_size())
 	_reputation_system.add_reputation(
 		"sports_memorabilia", PATIENCE_REP_PENALTY
 	)

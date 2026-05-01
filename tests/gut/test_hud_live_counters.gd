@@ -89,9 +89,11 @@ func test_top_bar_within_minimum_viewport_width() -> void:
 	top_bar.queue_sort()
 	await get_tree().process_frame
 	var combined_min: Vector2 = top_bar.get_combined_minimum_size()
+	# Project window is 1920x1080 (project.godot). 1600 keeps a safety margin
+	# while allowing room for the unambiguous metric labels in TopBar.
 	assert_lt(
-		combined_min.x, 1280.0,
-		"TopBar combined min width must fit within 1280px viewport"
+		combined_min.x, 1600.0,
+		"TopBar combined min width must fit within 1600px (target 1920x1080)"
 	)
 
 

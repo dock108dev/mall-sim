@@ -1,4 +1,4 @@
-[gd_scene load_steps=73 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=75 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -14,7 +14,6 @@
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_slot_marker.tres" id="12"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_door_wood.tres" id="13"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_metal_dark.tres" id="14"]
-[ext_resource type="PackedScene" path="res://game/assets/models/fixtures/placeholder_fixture_shelf_standard.tscn" id="15"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_wood_grain_textured.tres" id="16"]
 [ext_resource type="Script" path="res://game/scripts/stores/store_staff_config.gd" id="17"]
 [ext_resource type="Script" path="res://game/scripts/world/customer_nav_config.gd" id="18"]
@@ -25,6 +24,14 @@
 [ext_resource type="Script" path="res://game/scripts/components/nav_zone_interactable.gd" id="24"]
 [ext_resource type="PackedScene" path="res://game/scenes/player/player_controller.tscn" id="26_retrogames"]
 [ext_resource type="Script" path="res://game/scripts/player/interaction_ray.gd" id="27_retrogames"]
+[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_player_indicator.tres" id="28_player_indicator"]
+
+[sub_resource type="CylinderMesh" id="player_indicator_mesh"]
+top_radius = 0.5
+bottom_radius = 0.5
+height = 0.02
+radial_segments = 24
+rings = 1
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(10, 0.1, 7)
@@ -54,7 +61,16 @@ size = Vector3(0.55, 2.4, 0.8)
 size = Vector3(1.6, 1.0, 0.5)
 
 [sub_resource type="BoxMesh" id="counter_mesh"]
-size = Vector3(4.0, 1.0, 0.65)
+size = Vector3(1.8, 1.0, 0.65)
+
+[sub_resource type="BoxMesh" id="counter_top_mesh"]
+size = Vector3(1.9, 0.06, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="counter_top_mat"]
+resource_name = "Counter Top Trim"
+albedo_color = Color(0.78, 0.7, 0.58, 1)
+metallic = 0.4
+roughness = 0.45
 
 [sub_resource type="BoxMesh" id="slot_marker_mesh"]
 size = Vector3(0.15, 0.15, 0.15)
@@ -69,10 +85,26 @@ size = Vector3(0.8, 2.0, 0.1)
 size = Vector3(0.8, 2.0, 0.1)
 
 [sub_resource type="BoxMesh" id="register_mesh"]
-size = Vector3(0.4, 0.3, 0.3)
+size = Vector3(0.6, 0.45, 0.45)
+
+[sub_resource type="BoxMesh" id="register_screen_mesh"]
+size = Vector3(0.45, 0.3, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="register_screen_mat"]
+resource_name = "Register Screen"
+albedo_color = Color(0.05, 0.18, 0.12, 1)
+emission_enabled = true
+emission = Color(0.32, 1.0, 0.62, 1)
+emission_energy_multiplier = 1.4
 
 [sub_resource type="BoxShape3D" id="register_collision"]
-size = Vector3(0.4, 0.3, 0.3)
+size = Vector3(0.6, 0.45, 0.45)
+
+[sub_resource type="BoxMesh" id="terminal_monitor_mesh"]
+size = Vector3(0.42, 0.32, 0.22)
+
+[sub_resource type="BoxMesh" id="terminal_screen_mesh"]
+size = Vector3(0.34, 0.22, 0.03)
 
 [sub_resource type="NavigationMesh" id="nav_mesh"]
 cell_size = 0.25
@@ -90,7 +122,7 @@ size = Vector3(2.5, 2.0, 2.0)
 size = Vector3(10, 3, 7)
 
 [sub_resource type="BoxShape3D" id="checkout_counter_shape"]
-size = Vector3(2.0, 1.5, 0.6)
+size = Vector3(1.9, 1.5, 0.7)
 
 [sub_resource type="BoxMesh" id="testing_station_mesh"]
 size = Vector3(1.4, 0.8, 0.6)
@@ -163,9 +195,6 @@ emission_enabled = true
 emission = Color(0.32, 1.0, 0.62, 1)
 emission_energy_multiplier = 1.8
 
-[sub_resource type="BoxMesh" id="partition_mesh"]
-size = Vector3(1.8, 2.4, 0.08)
-
 [sub_resource type="BoxShape3D" id="nav_zone_shape"]
 size = Vector3(1.5, 1.5, 1.5)
 
@@ -177,7 +206,7 @@ albedo_color = Color(0.91, 0.647, 0.278, 0.55)
 flags_transparent = true
 
 [sub_resource type="BoxMesh" id="shelf_board_wide_mesh"]
-size = Vector3(2.36, 0.06, 0.41)
+size = Vector3(2.5, 0.1, 0.55)
 
 [sub_resource type="BoxMesh" id="shelf_board_narrow_mesh"]
 size = Vector3(0.51, 0.06, 0.76)
@@ -195,11 +224,42 @@ size = Vector3(0.55, 2.4, 0.8)
 size = Vector3(1.6, 1.0, 0.5)
 
 [sub_resource type="BoxShape3D" id="counter_shape"]
-size = Vector3(4.0, 1.0, 0.65)
+size = Vector3(1.8, 1.0, 0.65)
+
+[sub_resource type="BoxMesh" id="entrance_interior_strip_mesh"]
+size = Vector3(1.96, 0.04, 0.45)
 
 ; ============================================================
 ; Root
 ; ============================================================
+;
+; CANONICAL FLOOR PLAN (BRAINDUMP §"Store Scene Requirements §1"):
+;
+;          BACK WALL (Z = -3.55)
+;   --------------------------------
+;   |  CartRackLeft   CartRackRight |   (back wall shelves)
+;   |   X=-2.0,Z=-3.2   X=2.0,Z=-3.2|
+;   |                                |
+;   |  TestingZone     GlassCase     |   (mid-room: testing left, display center)
+;   |  X=-3.0,Z=-2.5   X=0,Z=-1.0    |
+;   |  (crt_demo_area + testing_station co-located)
+;   |                                |
+;   |  AccessoriesBin       Checkout |   (front: side shelf left, register right)
+;   |   X=-4.7,Z=0.5   X=2.5,Z=2.5   |
+;   |  ConsoleShelf     (right wall)|
+;   |   X=4.5,Z=-1.5                 |
+;   |        EntranceInterior        |
+;   |          (X=0, Z=2.85)         |
+;   --------------------------------
+;          MALL HALLWAY SIDE (Z = +3.55)
+;
+; refurb_bench rotated 90° flush against left wall (X=-4.55, Z=-2.5) so it
+; reads as a back-room work surface and does not block the testing zone.
+; Center walking aisle (X∈[-1.0,1.0]) is unobstructed except for the central
+; display table (GlassCase at X=0), which is the intentional retail focal point.
+; TestingZone is the co-located crt_demo_area (CRT prop + bench + neon panels +
+; "Coming Soon" Label3D) and testing_station (Interactable wrapper, disabled
+; until the testing flow is wired up — see retro_games.gd).
 
 [node name="RetroGames" type="Node3D"]
 script = ExtResource("1")
@@ -223,9 +283,21 @@ pitch_min_deg = 30.0
 pitch_max_deg = 75.0
 store_bounds_min = Vector3(-4.5, 0.0, -3.0)
 store_bounds_max = Vector3(4.5, 0.0, 3.0)
+is_orthographic = true
+ortho_size_default = 10.0
+ortho_size_min = 6.0
+ortho_size_max = 13.0
 
 [node name="InteractionRay" type="Node" parent="PlayerController/StoreCamera"]
 script = ExtResource("27_retrogames")
+
+; Floor-level disc that tracks the camera pivot so the player position is
+; legible from the overhead orthographic view. PlayerController toggles
+; visibility through InputFocus so it only renders during store_gameplay.
+[node name="PlayerIndicator" type="MeshInstance3D" parent="PlayerController"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
+mesh = SubResource("player_indicator_mesh")
+surface_material_override/0 = ExtResource("28_player_indicator")
 
 ; ============================================================
 ; Lighting (fluorescent key light with warm + green neon accent fill)
@@ -238,19 +310,19 @@ light_energy = 0.85
 omni_range = 11.0
 
 [node name="WarmNeonFill" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, 2.1, -2.68)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.1, -2.68)
 light_color = Color(1.0, 0.58, 0.34, 1)
 light_energy = 0.34
 omni_range = 3.0
 
 [node name="GreenNeonFill" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.3, 2.1, -2.68)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 2.1, -2.68)
 light_color = Color(0.32, 1.0, 0.62, 1)
 light_energy = 0.36
 omni_range = 3.0
 
 [node name="CRTDemoSpotlight" type="SpotLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 3.5, 2.7, -2.5)
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -3.0, 2.7, -2.5)
 light_color = Color(0.98, 0.88, 0.72, 1)
 light_energy = 1.0
 shadow_enabled = true
@@ -407,12 +479,58 @@ outline_modulate = Color(0.05, 0.07, 0.16, 1)
 shaded = false
 
 ; ============================================================
+; Entrance Interior — interior-side threshold strip. Sibling of
+; Storefront (not a child) so it stays visible while Storefront
+; remains hidden during interior gameplay.
+; ============================================================
+
+[node name="EntranceInterior" type="Node3D" parent="."]
+
+[node name="FloorStrip" type="MeshInstance3D" parent="EntranceInterior"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 2.85)
+mesh = SubResource("entrance_interior_strip_mesh")
+surface_material_override/0 = ExtResource("7")
+
+; ============================================================
+; Interior signage — zone labels and store branding readable from
+; the overhead camera. Mounted on the back wall above the cart
+; racks (which top out at Y≈2.5) so they do not block any
+; interactable slot zone (slots sit at Y≤1.6).
+; ============================================================
+
+[node name="InteriorSignage" type="Node3D" parent="."]
+
+[node name="StoreNameBanner" type="Label3D" parent="InteriorSignage"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.80, -3.45)
+pixel_size = 0.005
+modulate = Color(0.91, 0.647, 0.278, 1)
+double_sided = false
+font_size = 52
+text = "RETRO GAMES"
+horizontal_alignment = 1
+outline_size = 6
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+[node name="GamesSign" type="Label3D" parent="InteriorSignage"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.50, -3.45)
+pixel_size = 0.005
+modulate = Color(0.91, 0.647, 0.278, 1)
+double_sided = false
+font_size = 28
+text = "GAMES"
+horizontal_alignment = 1
+outline_size = 4
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+; ============================================================
 ; Fixture 1: Cartridge Rack Left (10 slots)
 ; Position: left side of store, against wall
 ; ============================================================
 
 [node name="crt_demo_area" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, -2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -2.5)
 
 [node name="DemoStand" type="MeshInstance3D" parent="crt_demo_area"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
@@ -441,13 +559,25 @@ transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.9, -0.18)
 mesh = SubResource("neon_panel_mesh")
 surface_material_override/0 = SubResource("green_neon_panel_mat")
 
+[node name="ComingSoonLabel" type="Label3D" parent="crt_demo_area"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.55, 0.32)
+pixel_size = 0.006
+modulate = Color(1, 0.85, 0.45, 1)
+double_sided = false
+font_size = 32
+text = "Testing Station — Coming Soon"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.05, 0.04, 0.02, 1)
+shaded = false
+
 [node name="CartRackLeft" type="Node3D" parent="." groups=["fixture"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0, 0, -3.20)
 
 [node name="RackMesh" type="MeshInstance3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 mesh = SubResource("cart_rack_mesh")
-surface_material_override/0 = ExtResource("9")
+surface_material_override/0 = ExtResource("11")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="CartRackLeft"]
 
@@ -456,7 +586,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 shape = SubResource("cart_rack_shape")
 
 [node name="Slot1" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -472,7 +602,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot2" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -488,7 +618,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot3" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -504,7 +634,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot4" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -520,7 +650,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot5" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -536,7 +666,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot6" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -552,7 +682,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot7" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -568,7 +698,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot8" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -584,7 +714,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot9" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -600,7 +730,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot10" type="Area3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -616,19 +746,19 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="ShelfBoard1" type="MeshInstance3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.05)
 mesh = SubResource("shelf_board_wide_mesh")
-surface_material_override/0 = ExtResource("11")
+surface_material_override/0 = ExtResource("10")
 
 [node name="ShelfBoard2" type="MeshInstance3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.05)
 mesh = SubResource("shelf_board_wide_mesh")
-surface_material_override/0 = ExtResource("11")
+surface_material_override/0 = ExtResource("10")
 
 [node name="ShelfBoard3" type="MeshInstance3D" parent="CartRackLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0.05)
 mesh = SubResource("shelf_board_wide_mesh")
-surface_material_override/0 = ExtResource("11")
+surface_material_override/0 = ExtResource("10")
 
 ; ============================================================
 ; Fixture 2: Cartridge Rack Right (10 slots)
@@ -641,7 +771,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 0, -3.20)
 [node name="RackMesh" type="MeshInstance3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 mesh = SubResource("cart_rack_mesh")
-surface_material_override/0 = ExtResource("9")
+surface_material_override/0 = ExtResource("11")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="CartRackRight"]
 
@@ -650,7 +780,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 shape = SubResource("cart_rack_shape")
 
 [node name="Slot1" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -666,7 +796,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot2" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -682,7 +812,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot3" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -698,7 +828,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot4" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -714,7 +844,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot5" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -730,7 +860,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot6" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -746,7 +876,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot7" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -762,7 +892,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot8" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -778,7 +908,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot9" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -794,7 +924,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot10" type="Area3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0.25)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -810,19 +940,19 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="ShelfBoard1" type="MeshInstance3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.05)
 mesh = SubResource("shelf_board_wide_mesh")
-surface_material_override/0 = ExtResource("11")
+surface_material_override/0 = ExtResource("10")
 
 [node name="ShelfBoard2" type="MeshInstance3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.05)
 mesh = SubResource("shelf_board_wide_mesh")
-surface_material_override/0 = ExtResource("11")
+surface_material_override/0 = ExtResource("10")
 
 [node name="ShelfBoard3" type="MeshInstance3D" parent="CartRackRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0.05)
 mesh = SubResource("shelf_board_wide_mesh")
-surface_material_override/0 = ExtResource("11")
+surface_material_override/0 = ExtResource("10")
 
 ; ============================================================
 ; Fixture 3: Glass Display Case (6 slots)
@@ -844,7 +974,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.425, 0)
 shape = SubResource("glass_case_shape")
 
 [node name="Slot1" type="Area3D" parent="GlassCase"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.05, -0.15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.85, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -860,7 +990,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot2" type="Area3D" parent="GlassCase"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.05, -0.15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.85, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -876,7 +1006,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot3" type="Area3D" parent="GlassCase"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, -0.15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.85, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -892,7 +1022,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot4" type="Area3D" parent="GlassCase"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, -0.15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.85, -0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -908,7 +1038,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot5" type="Area3D" parent="GlassCase"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0.15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.85, 0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -924,7 +1054,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot6" type="Area3D" parent="GlassCase"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0.15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.85, 0.15)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -959,7 +1089,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("console_shelf_shape")
 
 [node name="Slot1" type="Area3D" parent="ConsoleShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.25, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 1.05, 0.45)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -976,7 +1106,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot2" type="Area3D" parent="ConsoleShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.25, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 1.05, 0.45)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -993,7 +1123,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot3" type="Area3D" parent="ConsoleShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.25, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 1.05, 0.45)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -1010,7 +1140,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="Slot4" type="Area3D" parent="ConsoleShelf"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.25, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1.05, 0.45)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -1142,16 +1272,21 @@ visible = false
 
 ; ============================================================
 ; Fixture 6: Checkout Counter (register + 3 impulse slots)
-; Position: front-right of store
+; Position: front-right of store (BRAINDUMP floor plan)
 ; ============================================================
 
 [node name="Checkout" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 2.5)
 
 [node name="CounterMesh" type="MeshInstance3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 mesh = SubResource("counter_mesh")
 surface_material_override/0 = ExtResource("11")
+
+[node name="CounterTop" type="MeshInstance3D" parent="Checkout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.03, 0)
+mesh = SubResource("counter_top_mesh")
+surface_material_override/0 = SubResource("counter_top_mat")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Checkout"]
 
@@ -1160,7 +1295,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("counter_shape")
 
 [node name="Register" type="Area3D" parent="Checkout"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.285, -0.08)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("3")
@@ -1176,8 +1311,35 @@ shape = SubResource("register_collision")
 mesh = SubResource("register_mesh")
 surface_material_override/0 = ExtResource("14")
 
+[node name="RegisterScreen" type="MeshInstance3D" parent="Checkout/Register"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.245)
+mesh = SubResource("register_screen_mesh")
+surface_material_override/0 = SubResource("register_screen_mat")
+
+[node name="TerminalMonitor" type="MeshInstance3D" parent="Checkout/Register"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.385, 0.025)
+mesh = SubResource("terminal_monitor_mesh")
+surface_material_override/0 = ExtResource("14")
+
+[node name="TerminalScreen" type="MeshInstance3D" parent="Checkout/Register"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.385, -0.10)
+mesh = SubResource("terminal_screen_mesh")
+surface_material_override/0 = SubResource("register_screen_mat")
+
+[node name="CheckoutSign" type="Label3D" parent="Checkout/Register"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+billboard = 1
+pixel_size = 0.005
+modulate = Color(0.91, 0.647, 0.278, 1)
+double_sided = true
+font_size = 48
+text = "CHECKOUT"
+outline_size = 5
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
 [node name="ImpulseSlot1" type="Area3D" parent="Checkout"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.05, 0.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 1.135, 0.22)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -1194,7 +1356,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="ImpulseSlot2" type="Area3D" parent="Checkout"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.135, 0.22)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -1211,7 +1373,7 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="ImpulseSlot3" type="Area3D" parent="Checkout"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, 0.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1.135, 0.22)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("2")
@@ -1228,29 +1390,12 @@ surface_material_override/0 = ExtResource("12")
 visible = false
 
 [node name="CustomerWaitPosition" type="Marker3D" parent="Checkout/Register"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.15, -1.2)
-
-; ============================================================
-; Fixture 7: Extra Display Shelf (placeholder fixture model)
-; Position: right wall, near back
-; ============================================================
-
-[node name="ExtraShelf" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 4.5, 0, 1.5)
-
-[node name="ShelfModel" parent="ExtraShelf" instance=ExtResource("15")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.285, -1.12)
 
 ; ============================================================
 ; Backroom Access Point
 ; Position: back-right corner of the room (BRAINDUMP zone diagram).
-; BackroomDivider is a cosmetic partition retained on the left
-; mid-back area — it is no longer the door's visual partner.
 ; ============================================================
-
-[node name="BackroomDivider" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 1.2, -1.5)
-mesh = SubResource("partition_mesh")
-surface_material_override/0 = ExtResource("14")
 
 [node name="BackroomDoor" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, -3.45)
@@ -1273,6 +1418,7 @@ collision_mask = 0
 script = ExtResource("3")
 interaction_type = 3
 display_name = "Backroom Door"
+prompt_text = "Open Backstock"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BackroomDoor/BackroomInteractable"]
 shape = SubResource("door_collision")
@@ -1301,7 +1447,7 @@ shape = SubResource("entry_shape")
 ; ============================================================
 
 [node name="RegisterArea" type="Area3D" parent="." groups=["register_area"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1.0, 2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 1.0, 2.5)
 collision_layer = 0
 collision_mask = 2
 
@@ -1317,7 +1463,7 @@ script = ExtResource("17")
 max_staff = 2
 
 [node name="RegisterPoint" type="Marker3D" parent="StoreStaffConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 3.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 3.0)
 
 [node name="BackroomPoint" type="Marker3D" parent="StoreStaffConfig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.0, 0, -3.0)
@@ -1340,7 +1486,7 @@ max_concurrent_customers = 4
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.0)
 
 [node name="BrowseWaypoint01" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.85, 0, 0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -0.5)
 
 [node name="BrowseWaypoint02" type="Marker3D" parent="CustomerNavConfig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
@@ -1349,10 +1495,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.7, 0, -1.5)
 
 [node name="BrowseWaypoint04" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 0, -2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -2.5)
 
 [node name="CheckoutApproach" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 1.7)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 1.7)
 
 [node name="ExitPoint" type="Marker3D" parent="CustomerNavConfig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.3)
@@ -1368,20 +1514,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.3)
 ; ============================================================
 
 [node name="QueueMarker1" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 1.5)
 
 [node name="QueueMarker2" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 0.5)
 
 [node name="QueueMarker3" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -0.5)
 
 ; ============================================================
 ; Checkout Counter — primary checkout interactable
 ; ============================================================
 
 [node name="checkout_counter" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 2.5)
 
 [node name="Interactable" type="Area3D" parent="checkout_counter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
@@ -1396,16 +1542,17 @@ prompt_text = "Checkout"
 shape = SubResource("checkout_counter_shape")
 
 ; ============================================================
-; Testing Station — CRT demo area for console testing (ISSUE-055)
+; Testing Station — Interactable wrapper co-located with crt_demo_area.
+; The visible bench, CRT prop, neon panels, and "Coming Soon" Label3D
+; live under crt_demo_area; this node only carries the Interactable so
+; future testing-flow wiring can flip `enabled` back to true once the
+; flow exists. Today the interaction is a no-op (no listener handles
+; the ITEM-typed event for the testing station), so the Interactable
+; ships disabled to suppress the "[E] Test Console" prompt.
 ; ============================================================
 
 [node name="testing_station" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 0, -1.5)
-
-[node name="BenchMesh" type="MeshInstance3D" parent="testing_station"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
-mesh = SubResource("testing_station_mesh")
-surface_material_override/0 = ExtResource("9")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -2.5)
 
 [node name="Interactable" type="Area3D" parent="testing_station"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
@@ -1414,7 +1561,8 @@ collision_mask = 0
 script = ExtResource("3")
 interaction_type = 2
 display_name = "Testing Station"
-prompt_text = "Test Console"
+prompt_text = "Coming Soon"
+enabled = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="testing_station/Interactable"]
 shape = SubResource("testing_station_shape")
@@ -1424,7 +1572,7 @@ shape = SubResource("testing_station_shape")
 ; ============================================================
 
 [node name="refurb_bench" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -2.5)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -4.55, 0, -2.5)
 
 [node name="BenchMesh" type="MeshInstance3D" parent="refurb_bench"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
@@ -1530,7 +1678,7 @@ collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
 display_name = "Entrance"
-prompt_text = "Go to"
+prompt_text = "Enter Mall"
 zone_index = 1
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavZones/ZoneEntrance"]
@@ -1548,7 +1696,7 @@ collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
 display_name = "Shelf Area"
-prompt_text = "Go to"
+prompt_text = "Stock Games"
 zone_index = 2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavZones/ZoneShelf"]
@@ -1566,7 +1714,7 @@ collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
 display_name = "Display Table"
-prompt_text = "Go to"
+prompt_text = "Stock Item"
 zone_index = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavZones/ZoneDisplayTable"]
@@ -1578,13 +1726,13 @@ surface_material_override/0 = SubResource("nav_zone_debug_mat")
 visible = false
 
 [node name="ZoneRegister" type="Area3D" parent="NavZones" groups=["nav_zone"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 2.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 2.0)
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
 display_name = "Register"
-prompt_text = "Go to"
+prompt_text = "Approach Register"
 zone_index = 4
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavZones/ZoneRegister"]
@@ -1602,7 +1750,7 @@ collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
 display_name = "Backroom"
-prompt_text = "Go to"
+prompt_text = "Open Backstock"
 zone_index = 5
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavZones/ZoneBackroom"]

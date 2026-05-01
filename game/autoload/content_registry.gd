@@ -588,6 +588,10 @@ func _get_scene_path(entry: Dictionary) -> String:
 	return ""
 
 
+## §DR-08: rejects `..` segments and `//` collapse so the prefix lock cannot be
+## bypassed by a content-authoring typo or pasted path. `res://` is sandboxed
+## by the engine, but a `..` makes the resolved path ambiguous in audit grep
+## and would defeat the `STORE_SCENE_PATH_PREFIX` constraint for store entries.
 func _sanitize_scene_path(
 	raw_path: String,
 	content_type: String,
@@ -608,6 +612,15 @@ func _sanitize_scene_path(
 		_emit_error(
 			(
 				"ContentRegistry: scene path '%s' for ID '%s' must reference a .tscn scene"
+				% [scene_path, id]
+			)
+		)
+		return ""
+	var tail: String = scene_path.substr(SCENE_PATH_PREFIX.length())
+	if tail.find("..") != -1 or tail.find("//") != -1:
+		_emit_error(
+			(
+				"ContentRegistry: scene path '%s' for ID '%s' must not contain '..' segments or empty path components"
 				% [scene_path, id]
 			)
 		)

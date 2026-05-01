@@ -40,7 +40,7 @@ func test_focus_emits_action_label_when_target_changes() -> void:
 
 	assert_eq(
 		_focused_labels,
-		["Store / Press E to enter"],
+		["Store — Press E to enter"],
 		"Focusing a target should emit interactable_focused with the built action label"
 	)
 	assert_eq(_unfocused_count, 0, "Focusing should not emit unfocus")
@@ -58,7 +58,7 @@ func test_hovered_action_label_getter_reflects_focus_state() -> void:
 	_ray._set_hovered_target(target)
 	assert_eq(
 		_ray.get_hovered_action_label(),
-		"GlassCase / Press E to inspect",
+		"GlassCase — Press E to inspect",
 		"Hovered action label should match the built action label"
 	)
 

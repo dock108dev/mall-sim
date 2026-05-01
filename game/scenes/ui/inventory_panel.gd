@@ -470,7 +470,7 @@ func _on_context_action(id: int) -> void:
 			# _on_placement_mode_exited.
 			_close_keeping_modal_focus()
 			_selected_item = item_for_placement
-			_shelf_actions.enter_placement_mode()
+			_shelf_actions.enter_placement_mode(item_for_placement)
 		2:
 			_shelf_actions.move_to_backroom(_selected_item)
 			_selected_item = null

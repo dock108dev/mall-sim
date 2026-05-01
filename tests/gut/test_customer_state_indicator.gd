@@ -59,7 +59,7 @@ func test_ignores_other_customer_signals() -> void:
 
 func test_alpha_full_within_visible_distance() -> void:
 	var sprite: Sprite3D = _indicator.get_node("Sprite3D")
-	_camera.global_position = Vector3(5.0, 0.0, 0.0)
+	_camera.global_position = Vector3(15.0, 0.0, 0.0)
 	_indicator.global_position = Vector3.ZERO
 	_indicator._process(0.0)
 	assert_almost_eq(sprite.modulate.a, 1.0, 0.01)
@@ -67,15 +67,15 @@ func test_alpha_full_within_visible_distance() -> void:
 
 func test_alpha_zero_beyond_fade_distance() -> void:
 	var sprite: Sprite3D = _indicator.get_node("Sprite3D")
-	_camera.global_position = Vector3(12.0, 0.0, 0.0)
+	_camera.global_position = Vector3(24.0, 0.0, 0.0)
 	_indicator.global_position = Vector3.ZERO
 	_indicator._process(0.0)
 	assert_almost_eq(sprite.modulate.a, 0.0, 0.01)
 
 
-func test_alpha_fades_between_8_and_10_meters() -> void:
+func test_alpha_fades_between_visible_and_fade_distance() -> void:
 	var sprite: Sprite3D = _indicator.get_node("Sprite3D")
-	_camera.global_position = Vector3(9.0, 0.0, 0.0)
+	_camera.global_position = Vector3(20.0, 0.0, 0.0)
 	_indicator.global_position = Vector3.ZERO
 	_indicator._process(0.0)
 	assert_almost_eq(sprite.modulate.a, 0.5, 0.01)

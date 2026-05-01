@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Player Indicator"
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.357, 0.722, 0.91, 0.55)
+emission_enabled = true
+emission = Color(0.357, 0.722, 0.91, 1)
+emission_energy_multiplier = 1.4
+disable_receive_shadows = true

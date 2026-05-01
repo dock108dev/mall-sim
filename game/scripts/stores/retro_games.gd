@@ -16,6 +16,16 @@ const CONDITION_ORDER: PackedStringArray = [
 ## authoring typo — clamp it before the loop so a stray three-digit value
 ## cannot stall the boot path.
 const _MAX_STARTER_QUANTITY: int = 64
+## Display name on the checkout counter Interactable when a customer is
+## queued; pairs with `_CHECKOUT_PROMPT_VERB_ACTIVE` to read
+## "Checkout Counter — Press E to checkout customer".
+const _CHECKOUT_PROMPT_NAME_ACTIVE: String = "Checkout Counter"
+## Verb on the checkout counter Interactable when a customer is queued.
+const _CHECKOUT_PROMPT_VERB_ACTIVE: String = "checkout customer"
+## Display name on the checkout counter Interactable when no customer is
+## queued. Paired with an empty verb so the InteractionPrompt renders the
+## label without a "Press E" cue.
+const _CHECKOUT_PROMPT_NAME_IDLE: String = "No customer waiting"
 
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
@@ -27,6 +37,13 @@ var _initialized: bool = false
 var _item_grades: Dictionary = {}
 ## Maps grade_id → grade entry dict (loaded from grades.json at boot).
 var _grade_table: Dictionary = {}
+## Reference to the checkout counter Interactable so the prompt can swap
+## between idle and customer-waiting states without recomputing the path.
+var _checkout_counter_interactable: Interactable = null
+## Mirrors the register queue size as observed from EventBus.queue_advanced
+## so the checkout counter prompt can reflect "No customer waiting" vs
+## "Checkout Counter — Press E to checkout customer".
+var _register_queue_size: int = 0
 
 
 func _ready() -> void:
@@ -34,6 +51,19 @@ func _ready() -> void:
 	super._ready()
 	_find_testing_station()
 	_connect_slot_signals()
+	# retro_games.tscn ships `checkout_counter/Interactable`; reaching here
+	# without it indicates a scene edit dropped the node. Warn once at boot
+	# rather than on every queue_advanced refresh — see EH-07.
+	_checkout_counter_interactable = get_node_or_null(
+		"checkout_counter/Interactable"
+	) as Interactable
+	if _checkout_counter_interactable == null:
+		push_warning(
+			"RetroGames: checkout_counter/Interactable not found; "
+			+ "register prompt will not flip between idle and "
+			+ "customer-waiting states."
+		)
+	_connect_checkout_prompt_signals()
 
 
 ## Initializes Retro Games lifecycle state and EventBus wiring.
@@ -286,34 +316,80 @@ func _on_store_entered(store_id: StringName) -> void:
 	_testing_available = has_testing_station()
 	_apply_accent_to_slots(UIThemeConstants.STORE_ACCENT_RETRO_GAMES)
 	_apply_day1_quarantine()
+	_refresh_checkout_prompt()
 	EventBus.store_opened.emit(String(STORE_ID))
 
 
-## Hides testing_station and refurb_bench from the Day 1 store floor so the
-## introductory loop only exposes shelves and the register. They re-enable on
-## Day 2+ or when running a debug build, satisfying the quarantine rule that
-## non-Day-1 surfaces stay behind a debug-build flag or a later-day gate.
+## Subscribes to the EventBus signal that reports register-queue size so the
+## checkout counter prompt can mirror "customer waiting" vs "no customer".
+## PlayerCheckout emits `queue_advanced` whenever the queue grows or shrinks
+## (including the initial customer arrival) so it is the single source of
+## truth for the prompt state.
+func _connect_checkout_prompt_signals() -> void:
+	_connect_store_signal(EventBus.queue_advanced, _on_queue_advanced)
+
+
+func _on_queue_advanced(size: int) -> void:
+	_register_queue_size = maxi(size, 0)
+	_refresh_checkout_prompt()
+
+
+## Updates the checkout counter Interactable's display label based on whether
+## a customer is currently in the register queue. With a customer present the
+## prompt reads "Checkout Counter — Press E to checkout customer"; otherwise
+## it reads "No customer waiting" with no E action.
 ##
-## §F-41 — silent `continue` on a missing node is intentional: future store
-## variants may legitimately omit testing_station or refurb_bench (e.g. an
-## early-game retro_games.tscn before either fixture is authored). The
-## quarantine is moot for missing nodes because nothing is rendered. A missing
-## `Interactable` child on an existing node is also tolerated — toggling the
-## parent's visibility is enough to suppress player interaction.
+## Silent return on null `_checkout_counter_interactable` is paired with the
+## boot-time warning in `_ready` (EH-07): the missing-node case is logged
+## once on entry rather than every queue_advanced tick, which would otherwise
+## flood the log on a busy register.
+func _refresh_checkout_prompt() -> void:
+	if _checkout_counter_interactable == null:
+		return
+	if _register_queue_size > 0:
+		_checkout_counter_interactable.display_name = (
+			_CHECKOUT_PROMPT_NAME_ACTIVE
+		)
+		_checkout_counter_interactable.prompt_text = (
+			_CHECKOUT_PROMPT_VERB_ACTIVE
+		)
+	else:
+		_checkout_counter_interactable.display_name = (
+			_CHECKOUT_PROMPT_NAME_IDLE
+		)
+		_checkout_counter_interactable.prompt_text = ""
+
+
+## Hides refurb_bench from the Day 1 store floor so the introductory loop only
+## exposes shelves and the register. It re-enables on Day 2+ or when running a
+## debug build, satisfying the quarantine rule that non-Day-1 surfaces stay
+## behind a debug-build flag or a later-day gate.
+##
+## testing_station is intentionally excluded: its Interactable ships disabled
+## (the testing flow is not wired up yet) and the visual zone — CRT prop,
+## bench, neon panels, "Coming Soon" Label3D — lives under crt_demo_area, which
+## stays visible so the testing area reads as a deliberate parked feature
+## rather than missing scenery.
+##
+## §F-41 — silent return on a missing node is intentional: future store
+## variants may legitimately omit refurb_bench (e.g. an early-game
+## retro_games.tscn before the fixture is authored). The quarantine is moot
+## for missing nodes because nothing is rendered. A missing `Interactable`
+## child on an existing node is also tolerated — toggling the parent's
+## visibility is enough to suppress player interaction.
 func _apply_day1_quarantine() -> void:
 	var quarantined: bool = (
 		GameManager.get_current_day() <= 1 and not OS.is_debug_build()
 	)
-	for node_name: String in ["testing_station", "refurb_bench"]:
-		var node: Node3D = get_node_or_null(node_name) as Node3D
-		if node == null:
-			continue
-		node.visible = not quarantined
-		var interactable: Interactable = node.get_node_or_null(
-			"Interactable"
-		) as Interactable
-		if interactable:
-			interactable.enabled = not quarantined
+	var bench: Node3D = get_node_or_null("refurb_bench") as Node3D
+	if bench == null:
+		return
+	bench.visible = not quarantined
+	var interactable: Interactable = bench.get_node_or_null(
+		"Interactable"
+	) as Interactable
+	if interactable:
+		interactable.enabled = not quarantined
 
 
 func get_store_actions() -> Array:

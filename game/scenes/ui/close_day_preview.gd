@@ -72,6 +72,19 @@ func show_preview() -> void:
 	var snapshot: Array = []
 	if _get_snapshot.is_valid():
 		snapshot = _get_snapshot.call()
+	else:
+		# Reaching `show_preview` without a wired snapshot callback is a
+		# wiring error — the HUD calls `set_snapshot_callback` from
+		# `_wire_close_day_preview` in `_ready`. Without the callback the
+		# dry-run sees zero shelf inventory and falsely reports "no
+		# customers", which would let the player close a day looking
+		# empty when their shelves are full. Surface the misconfiguration
+		# rather than silently degrading. See
+		# docs/audits/error-handling-report.md EH-05.
+		push_warning(
+			"CloseDayPreview.show_preview: snapshot callback not wired; "
+			+ "dry-run will run against an empty shelf snapshot."
+		)
 
 	var shelf_count: int = 0
 	for item: Variant in snapshot:

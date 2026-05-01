@@ -158,6 +158,11 @@ layout_mode = 2
 custom_minimum_size = Vector2(200, 48)
 text = "Review Inventory"
 
+[node name="MallOverviewButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+text = "Return to Mall"
+
 [node name="ContinueButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(200, 48)

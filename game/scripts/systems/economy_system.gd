@@ -263,18 +263,36 @@ func load_save_data(data: Dictionary) -> void:
 	_apply_state(data)
 
 
+## §SR-09: Reject NaN/Inf and clamp wildly out-of-range numerics from a
+## hand-edited save. Cash/expenses propagate through every economy calculation,
+## and a NaN field locks comparisons to false ("never enough cash") which
+## reads as a process hang to the player. Bounds chosen well above any
+## reachable in-game value so honest saves are unaffected.
 func _apply_state(data: Dictionary) -> void:
-	_current_cash = float(
-		data.get("player_cash", data.get("current_cash", Constants.STARTING_CASH))
+	_current_cash = _safe_finite_float(
+		data.get("player_cash", data.get("current_cash", Constants.STARTING_CASH)),
+		Constants.STARTING_CASH,
+		-1.0e9,
+		1.0e9
 	)
-	_current_time_minutes = int(
-		data.get("current_time_minutes", 0)
+	_current_time_minutes = _safe_finite_int(
+		data.get("current_time_minutes", 0), 0, 0, 1_000_000
 	)
-	_items_sold_today = int(data.get("items_sold_today", 0))
-	_daily_rent = float(data.get("daily_rent", 50.0))
-	_daily_rent_total = float(data.get("daily_rent_total", 0.0))
-	_daily_expenses = float(data.get("daily_expenses", 0.0))
-	_last_injection_day = int(data.get("last_injection_day", -1))
+	_items_sold_today = _safe_finite_int(
+		data.get("items_sold_today", 0), 0, 0, 1_000_000
+	)
+	_daily_rent = _safe_finite_float(
+		data.get("daily_rent", 50.0), 50.0, 0.0, 1.0e9
+	)
+	_daily_rent_total = _safe_finite_float(
+		data.get("daily_rent_total", 0.0), 0.0, 0.0, 1.0e9
+	)
+	_daily_expenses = _safe_finite_float(
+		data.get("daily_expenses", 0.0), 0.0, 0.0, 1.0e9
+	)
+	_last_injection_day = _safe_finite_int(
+		data.get("last_injection_day", -1), -1, -1, 1_000_000
+	)
 	_active_store_id = _resolve_store_id(GameManager.get_active_store_id())
 
 	_daily_transactions = _restore_transactions(
@@ -299,6 +317,41 @@ func _apply_state(data: Dictionary) -> void:
 	_store_daily_revenue = _restore_daily_revenue(data)
 	_daily_revenue = _restore_daily_revenue_total(data)
 	_drift_factors = _restore_dict(data, "drift_factors")
+
+
+## §SR-09: Coerce Variant to a finite, bounded float; fall back to default
+## on NaN/Inf, unsupported types, or out-of-range values from a corrupt save.
+func _safe_finite_float(
+	value: Variant, default_value: float, min_value: float, max_value: float
+) -> float:
+	var parsed: float
+	if value is float:
+		parsed = value as float
+	elif value is int:
+		parsed = float(value as int)
+	else:
+		return default_value
+	if is_nan(parsed) or is_inf(parsed):
+		return default_value
+	return clampf(parsed, min_value, max_value)
+
+
+## §SR-09: Coerce Variant to a bounded int; fall back to default on
+## unsupported types, NaN/Inf, or out-of-range values.
+func _safe_finite_int(
+	value: Variant, default_value: int, min_value: int, max_value: int
+) -> int:
+	var parsed: int
+	if value is int:
+		parsed = value as int
+	elif value is float:
+		var f: float = value as float
+		if is_nan(f) or is_inf(f):
+			return default_value
+		parsed = int(f)
+	else:
+		return default_value
+	return clampi(parsed, min_value, max_value)
 
 
 func _connect_runtime_signals() -> void:

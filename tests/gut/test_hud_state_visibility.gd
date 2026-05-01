@@ -66,16 +66,18 @@ func test_mall_overview_hides_hub_back_button() -> void:
 func test_mall_overview_hides_store_label() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	assert_false(
-		_hud.get_node("StoreLabel").visible,
+		_hud.get_node("TopBar/StoreLabel").visible,
 		"StoreLabel must be hidden in MALL_OVERVIEW"
 	)
 
 
-func test_mall_overview_shows_cash_label() -> void:
+func test_mall_overview_hides_cash_label() -> void:
+	# KPI strip is the canonical cash display in MALL_OVERVIEW; the HUD
+	# CashLabel must be hidden so the two do not render concatenated.
 	_emit_state(GameManager.State.MALL_OVERVIEW)
-	assert_true(
+	assert_false(
 		_hud.get_node("TopBar/CashLabel").visible,
-		"CashLabel must be visible in MALL_OVERVIEW"
+		"CashLabel must be hidden in MALL_OVERVIEW (KPI strip owns cash display)"
 	)
 
 
@@ -110,11 +112,11 @@ func test_store_view_shows_items_placed_label() -> void:
 	)
 
 
-func test_store_view_shows_customers_label() -> void:
+func test_store_view_hides_customers_label() -> void:
 	_emit_state(GameManager.State.STORE_VIEW)
-	assert_true(
+	assert_false(
 		_hud.get_node("TopBar/CustomersLabel").visible,
-		"CustomersLabel must be visible in STORE_VIEW"
+		"CustomersLabel must be hidden in STORE_VIEW — customer count is not part of the Day 1 top bar"
 	)
 
 
@@ -290,7 +292,7 @@ func test_store_view_shows_milestones_button_after_day_one() -> void:
 func test_store_view_hides_store_label_before_store_opened() -> void:
 	_emit_state(GameManager.State.STORE_VIEW)
 	assert_false(
-		_hud.get_node("StoreLabel").visible,
+		_hud.get_node("TopBar/StoreLabel").visible,
 		"StoreLabel must be hidden in STORE_VIEW until store_opened fires"
 	)
 
@@ -311,11 +313,11 @@ func test_store_view_shows_time_label() -> void:
 	)
 
 
-func test_store_view_shows_reputation_label() -> void:
+func test_store_view_hides_reputation_label() -> void:
 	_emit_state(GameManager.State.STORE_VIEW)
-	assert_true(
+	assert_false(
 		_hud.get_node("TopBar/ReputationLabel").visible,
-		"ReputationLabel must be visible in STORE_VIEW"
+		"ReputationLabel must be hidden in STORE_VIEW — reputation is not part of the Day 1 top bar"
 	)
 
 
@@ -327,12 +329,14 @@ func test_store_view_hides_speed_button() -> void:
 	)
 
 
-func test_reputation_label_has_no_placeholder_text_in_store_view() -> void:
+func test_mall_overview_shows_reputation_label() -> void:
+	# MALL_OVERVIEW retains the reputation label even after a transition
+	# from STORE_VIEW (which now hides it).
 	_emit_state(GameManager.State.STORE_VIEW)
-	var label: Label = _hud.get_node("TopBar/ReputationLabel")
-	assert_false(
-		label.text == "Unknown" and label.visible,
-		"ReputationLabel must not display bare 'Unknown' placeholder text in STORE_VIEW"
+	_emit_state(GameManager.State.MALL_OVERVIEW)
+	assert_true(
+		_hud.get_node("TopBar/ReputationLabel").visible,
+		"ReputationLabel must remain visible in MALL_OVERVIEW after returning from STORE_VIEW"
 	)
 
 

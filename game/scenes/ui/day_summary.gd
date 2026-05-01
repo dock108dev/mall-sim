@@ -9,6 +9,7 @@ extends CanvasLayer
 signal continue_pressed
 signal dismissed
 signal review_inventory_requested
+signal mall_overview_requested
 
 const OVERLAY_FADE_DURATION: float = 0.2
 const OVERLAY_TARGET_ALPHA: float = 0.9
@@ -94,6 +95,9 @@ var _prev_report: PerformanceReport = null
 @onready var _review_inventory_button: Button = (
 	$Root/Panel/Margin/VBox/ButtonRow/ReviewInventoryButton
 )
+@onready var _mall_overview_button: Button = (
+	$Root/Panel/Margin/VBox/ButtonRow/MallOverviewButton
+)
 @onready var _continue_button: Button = (
 	$Root/Panel/Margin/VBox/ButtonRow/ContinueButton
 )
@@ -107,6 +111,7 @@ func _ready() -> void:
 	_review_inventory_button.pressed.connect(
 		_on_review_inventory_pressed
 	)
+	_mall_overview_button.pressed.connect(_on_mall_overview_pressed)
 	_create_discrepancy_label()
 	_create_overdue_count_label()
 	_create_narrative_labels()
@@ -799,8 +804,6 @@ func _on_performance_report_ready(
 		)
 	else:
 		_tier_change_label.visible = false
-	# Milestone completions are shown by the standalone `milestone_card`
-	# slide-in notification — no longer rendered inside this summary (P1.5).
 
 
 func _on_continue_pressed() -> void:
@@ -813,3 +816,15 @@ func _on_continue_pressed() -> void:
 func _on_review_inventory_pressed() -> void:
 	hide_summary()
 	review_inventory_requested.emit()
+
+
+## Advances the day and routes the player back to the mall overview
+## (BRAINDUMP North Star step 15 — "Return to mall overview or next day").
+## Mirrors `_on_continue_pressed` so wages, milestones, save, and
+## advance_to_next_day all run, then signals game_world to enter the
+## MALL_OVERVIEW state.
+func _on_mall_overview_pressed() -> void:
+	_emit_day_acknowledged_on_hide = true
+	hide_summary()
+	EventBus.next_day_confirmed.emit()
+	mall_overview_requested.emit()
