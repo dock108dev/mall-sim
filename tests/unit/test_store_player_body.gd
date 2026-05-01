@@ -92,3 +92,68 @@ func test_interact_suppressed_when_no_interactable_hovered() -> void:
 	_player._unhandled_input(_make_interact_event())
 	assert_eq(_received.size(), 0,
 		"interact must NOT fire when current_interactable is null")
+
+
+# ── Store-footprint clamp (defense-in-depth fallback) ────────────────────────
+
+
+func test_clamp_pulls_back_when_position_exceeds_max_z() -> void:
+	# Simulate a wall-collision miss: teleport past the front bound, run a
+	# physics step, and expect the post-clamp position to sit at the bound.
+	_player.global_position = Vector3(0.0, 0.0, 5.0)
+	_player._physics_process(0.016)
+	assert_almost_eq(
+		_player.global_position.z, _player.bounds_max.z, 0.0001,
+		"forward overshoot must be clamped back to bounds_max.z"
+	)
+
+
+func test_clamp_pulls_back_when_position_exceeds_min_z() -> void:
+	_player.global_position = Vector3(0.0, 0.0, -5.0)
+	_player._physics_process(0.016)
+	assert_almost_eq(
+		_player.global_position.z, _player.bounds_min.z, 0.0001,
+		"backward overshoot must be clamped to bounds_min.z"
+	)
+
+
+func test_clamp_pulls_back_when_position_exceeds_x_bounds() -> void:
+	_player.global_position = Vector3(10.0, 0.0, 0.0)
+	_player._physics_process(0.016)
+	assert_almost_eq(
+		_player.global_position.x, _player.bounds_max.x, 0.0001,
+		"sideways overshoot must be clamped to bounds_max.x"
+	)
+	_player.global_position = Vector3(-10.0, 0.0, 0.0)
+	_player._physics_process(0.016)
+	assert_almost_eq(
+		_player.global_position.x, _player.bounds_min.x, 0.0001,
+		"sideways overshoot must be clamped to bounds_min.x"
+	)
+
+
+func test_clamp_leaves_in_bounds_position_untouched() -> void:
+	# A position safely inside the footprint must not be moved by the clamp;
+	# only the velocity-zeroing modal-focus path should affect it (and we are
+	# under store_gameplay focus here).
+	var before := Vector3(1.0, 0.0, 0.5)
+	_player.global_position = before
+	_player._physics_process(0.016)
+	assert_almost_eq(_player.global_position.x, before.x, 0.0001,
+		"in-bounds X must not be modified by the clamp")
+	assert_almost_eq(_player.global_position.z, before.z, 0.0001,
+		"in-bounds Z must not be modified by the clamp")
+
+
+func test_clamp_bounds_match_retro_games_footprint() -> void:
+	# The defaults must keep the body inside the 7×5 retro_games floor with a
+	# safety margin from the wall surface (walls at ±3.5 X, ±2.5 Z). When
+	# room geometry is resized the defaults must be updated alongside.
+	assert_lte(_player.bounds_max.x, 3.5,
+		"bounds_max.x must sit inside the right wall surface (3.5)")
+	assert_gte(_player.bounds_min.x, -3.5,
+		"bounds_min.x must sit inside the left wall surface (-3.5)")
+	assert_lte(_player.bounds_max.z, 2.5,
+		"bounds_max.z must sit inside the front wall surface (2.5)")
+	assert_gte(_player.bounds_min.z, -2.5,
+		"bounds_min.z must sit inside the back wall surface (-2.5)")
