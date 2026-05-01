@@ -156,11 +156,22 @@ func test_enter_store_moves_camera_to_store_entry_and_rebinds_camera_users() -> 
 
 	# `_move_store_camera_to_spawn` walks `_STORE_ENTRY_MARKER_NAMES`
 	# (PlayerEntrySpawn → EntryPoint → OrbitPivot) and pivots the orbit camera
-	# at the first match clamped to the camera's store bounds. The retro_games
-	# scene ships `PlayerEntrySpawn` so that's the marker the system picks up.
-	var entry_marker: Node3D = _system.get_active_store_scene().find_child(
-		"PlayerEntrySpawn", true, false
-	) as Node3D
+	# at the first match clamped to the camera's store bounds. retro_games uses
+	# the embedded orbit PlayerController and authors `CustomerNavConfig/EntryPoint`
+	# rather than `PlayerEntrySpawn`.
+	const MARKERS: Array[StringName] = [
+		&"PlayerEntrySpawn",
+		&"EntryPoint",
+		&"OrbitPivot",
+	]
+	var entry_marker: Node3D = null
+	var scene: Node3D = _system.get_active_store_scene()
+	assert_not_null(scene)
+	for marker_name: StringName in MARKERS:
+		var found: Node = scene.find_child(String(marker_name), true, false)
+		if found is Node3D:
+			entry_marker = found as Node3D
+			break
 	assert_not_null(entry_marker)
 	var expected_pivot: Vector3 = entry_marker.global_position.clamp(
 		_system._store_camera.store_bounds_min,

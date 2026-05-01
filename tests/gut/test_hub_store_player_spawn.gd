@@ -1,15 +1,16 @@
 ## Integration tests for the StorePlayerBody spawn flow contract.
 ##
-## Verifies the body camera structure (cameras group, InteractionRay child)
-## and the CameraAuthority handoff against a MockStoreRoot fixture. Stores
-## that opt into the orbit-camera flow embed their PlayerController directly
-## and bypass this spawn path; the contract here applies only to walking-body
-## stores that author a `PlayerEntrySpawn` marker.
+## Verifies the walking-body scene shape (no embedded Camera3D; InteractionRay
+## on the CharacterBody root), CameraAuthority activation via an in-store
+## `StoreCamera`, and movement focus gating. Orbit-camera stores embed
+## `PlayerController` directly and bypass `StorePlayerBody`.
 extends GutTest
 
 const STORE_PLAYER_SCENE: PackedScene = preload(
 	"res://game/scenes/player/store_player_body.tscn"
 )
+
+const STORE_CAMERA_NAME: StringName = &"StoreCamera"
 
 
 class MockStoreRoot:
@@ -55,40 +56,39 @@ func _spawn_player_in(store_root: Node3D) -> StorePlayerBody:
 	return player
 
 
-func test_player_camera_is_in_cameras_group() -> void:
-	# The body's _ready asserts a store-root ancestor (parent chain has
-	# get_store_id). Wrap in MockStoreRoot so the spawn contract passes; the
-	# .tscn structure (group + Camera3D child) is what we actually verify.
-	var root := MockStoreRoot.new()
-	add_child_autofree(root)
-	var player: StorePlayerBody = (
-		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
-	)
-	root.add_child(player)  # add_child runs _ready; we do not assert focus here
-	var cam: Camera3D = player.find_child("Camera3D", false, false) as Camera3D
-	assert_not_null(cam, "store_player_body.tscn must include a Camera3D child")
-	assert_true(
-		cam.is_in_group(&"cameras"),
-		"Body Camera3D must declare groups=[\"cameras\"] for assert_single_active"
-	)
+func _add_mock_store_camera(store_root: Node3D) -> Camera3D:
+	var cam := Camera3D.new()
+	cam.name = String(STORE_CAMERA_NAME)
+	cam.current = false
+	store_root.add_child(cam)
+	return cam
 
 
-func test_player_camera_has_interaction_ray_child() -> void:
-	# ISSUE-002: body camera owns the InteractionRay so the press-E loop
-	# follows the player's view direction.
+func test_player_body_has_no_embedded_camera() -> void:
 	var root := MockStoreRoot.new()
 	add_child_autofree(root)
 	var player: StorePlayerBody = (
 		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
 	)
 	root.add_child(player)
-	var cam: Camera3D = player.find_child("Camera3D", false, false) as Camera3D
-	assert_not_null(cam, "body must have a Camera3D")
-	if cam == null:
-		return
-	var ray: Node = cam.get_node_or_null("InteractionRay")
+	var cam: Node = player.find_child("Camera3D", false, false)
+	assert_null(
+		cam,
+		"store_player_body.tscn must not embed Camera3D — hub mode uses in-scene StoreCamera"
+	)
+
+
+func test_player_body_has_interaction_ray_on_root() -> void:
+	var root := MockStoreRoot.new()
+	add_child_autofree(root)
+	var player: StorePlayerBody = (
+		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
+	)
+	root.add_child(player)
+	var ray: Node = player.get_node_or_null("InteractionRay")
 	assert_not_null(
-		ray, "Camera3D must have an InteractionRay child for press-E routing"
+		ray,
+		"Player root must own InteractionRay (tracks EventBus.active_camera_changed)",
 	)
 	if ray == null:
 		return
@@ -102,18 +102,19 @@ func test_player_camera_has_interaction_ray_child() -> void:
 		)
 
 
-func test_camera_authority_marks_body_camera_current() -> void:
+func test_camera_authority_marks_store_camera_current() -> void:
 	_store_root = _instantiate_mock_store()
+	_add_mock_store_camera(_store_root)
 	_player = _spawn_player_in(_store_root)
 	var cam: Camera3D = (
-		_player.find_child("Camera3D", false, false) as Camera3D
+		_store_root.get_node_or_null(String(STORE_CAMERA_NAME)) as Camera3D
 	)
-	assert_not_null(cam, "spawned player must have a Camera3D child")
+	assert_not_null(cam, "fixture must expose a StoreCamera Camera3D node")
 	var ok: bool = CameraAuthority.request_current(cam, &"mock_store")
-	assert_true(ok, "CameraAuthority.request_current should accept the body cam")
+	assert_true(ok, "CameraAuthority.request_current should accept the StoreCamera")
 	assert_eq(
 		CameraAuthority.current(), cam,
-		"body camera should be the active camera after request_current"
+		"StoreCamera should be the active camera after request_current"
 	)
 	assert_true(
 		CameraAuthority.assert_single_active(),
@@ -134,17 +135,18 @@ func test_movement_halts_when_modal_steals_focus() -> void:
 	)
 
 
-func test_camera_authority_self_heals_after_player_freed() -> void:
+func test_camera_authority_self_heals_after_store_freed() -> void:
 	_store_root = _instantiate_mock_store()
+	_add_mock_store_camera(_store_root)
 	_player = _spawn_player_in(_store_root)
 	var cam: Camera3D = (
-		_player.find_child("Camera3D", false, false) as Camera3D
+		_store_root.get_node_or_null(String(STORE_CAMERA_NAME)) as Camera3D
 	)
 	CameraAuthority.request_current(cam, &"mock_store")
 	_store_root.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	# After the store (and its child player+camera) is freed, current() must
+	# After the store subtree (including StoreCamera) is freed, current() must
 	# self-heal to null rather than handing back a freed reference.
 	assert_null(
 		CameraAuthority.current(),
