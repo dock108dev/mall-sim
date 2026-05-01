@@ -78,32 +78,32 @@ else
 	fail "StoreController interactable registration missing"
 fi
 
-# AC3: HUD bound to StoreController.current_objective_text via signal.
-if grep -q 'signal objective_text_changed' "$STORE_GD" \
+# AC3: ObjectiveRail is the sole objective display; HUD's duplicate retired.
+if ! grep -q 'signal objective_text_changed' "$STORE_GD" \
 	&& grep -q 'var current_objective_text' "$STORE_GD" \
 	&& grep -q 'func set_objective_text' "$STORE_GD"; then
-	pass "StoreController exposes current_objective_text + set_objective_text"
+	pass "StoreController retains current_objective_text + set_objective_text without local signal mirror"
 else
-	fail "StoreController objective text API missing"
+	fail "StoreController objective text API mismatch (signal mirror must be removed)"
 fi
 
-if grep -q 'signal objective_text_changed' "$EVENTBUS_GD"; then
-	pass "EventBus mirrors objective_text_changed"
+if ! grep -q 'signal objective_text_changed' "$EVENTBUS_GD"; then
+	pass "EventBus.objective_text_changed signal retired"
 else
-	fail "EventBus.objective_text_changed signal missing"
+	fail "EventBus.objective_text_changed signal must be removed"
 fi
 
-if grep -q 'name="ObjectiveLabel"' "$HUD_TSCN"; then
-	pass "hud.tscn contains ObjectiveLabel node"
+if ! grep -q 'name="ObjectiveLabel"' "$HUD_TSCN"; then
+	pass "hud.tscn no longer carries the duplicate ObjectiveLabel node"
 else
-	fail "hud.tscn missing ObjectiveLabel node"
+	fail "hud.tscn ObjectiveLabel node must be removed"
 fi
 
-if grep -q 'EventBus.objective_text_changed.connect' "$HUD_GD" \
-	&& grep -q '_on_objective_text_changed' "$HUD_GD"; then
-	pass "HUD binds ObjectiveLabel to EventBus.objective_text_changed"
+if ! grep -q 'EventBus.objective_text_changed' "$HUD_GD" \
+	&& ! grep -q '_on_objective_text_changed' "$HUD_GD"; then
+	pass "HUD no longer binds the retired objective_text_changed surface"
 else
-	fail "HUD ObjectiveLabel binding missing"
+	fail "HUD must not reference EventBus.objective_text_changed or _on_objective_text_changed"
 fi
 
 # AC4: StoreReadyContract objective_matches_action() lives on controller.

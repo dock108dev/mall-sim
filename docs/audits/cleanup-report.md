@@ -620,3 +620,159 @@ justifications still hold.
 ### Escalations
 
 None.
+
+---
+
+## Pass 7 — 2026-04-30
+
+Scope: working-tree changes that follow the Pass 6 commit
+(`115c54c Overwrite BRAINDUMP with big bang playable room directive`).
+Concretely, the diff scope is the Day-1 first-sale gate backstop in
+`day_cycle_controller.gd` (with paired `test_day_cycle_controller.gd`
+and `test_day_cycle_close_loop.gd` first-sale-flag plumbing), the HUD
+`notification_requested` / `critical_notification_requested` →
+`toast_requested` forwarding shim that retired `PromptLabel` and
+`ObjectiveLabel` (with `EventBus.objective_text_changed` and the local
+`StoreController.objective_text_changed` signal pair), the
+`ObjectiveDirector._on_item_sold` flag-before-emit ordering invariant,
+the `InteractionRay._build_action_label` rewrite ("Press E to <verb>"
+prefix and explicit empty-on-empty branch), the retro_games "Path B"
+scene refactor (10×7 m room with embedded `PlayerController` +
+`StoreCamera` + `InteractionRay`, `PlayerEntrySpawn` retired for this
+store, fixture `StaticBody3D` + `BoxShape3D` solidity), and the
+`tests/validate_issue_017.sh` polarity flip (asserts the absence of
+the retired surfaces). Constraint: no behavioral changes, no public
+API signature changes.
+
+### Changes made this pass
+
+| File | Change | Net |
+|---|---|---|
+| `tests/gut/test_hub_store_player_spawn.gd` | Removed dead `_baseline_focus_depth: int` field and its `before_each` write — last reader was `test_enter_exit_enter_does_not_leak_input_focus_frames`, deleted in `0b32f9a` along with `test_spawn_pushes_store_gameplay_context` | −2 lines |
+
+### Dead Code Removed
+
+**`tests/gut/test_hub_store_player_spawn.gd`** — `_baseline_focus_depth`
+field + `before_each` assignment
+
+The `var _baseline_focus_depth: int` field at module scope and its sole
+write at `before_each` (`_baseline_focus_depth = InputFocus.depth()`)
+had no readers in this file or anywhere else in the repo (verified by
+full-tree grep). The two consumers were
+`test_enter_exit_enter_does_not_leak_input_focus_frames` and
+`test_spawn_pushes_store_gameplay_context`, both deleted in commit
+`0b32f9a` ("Add tests for Day 1 gameplay mechanics and HUD updates")
+when the test re-pivoted from a real `retro_games.tscn` instantiation
+to a `MockStoreRoot` fixture. The field survived as orphaned scaffolding.
+Same shape as the Pass 2 cleanup of the `hud.gd` panel-count tracking
+chain and Pass 4 `tutorial_context_system._on_objective_changed`: write
+side without a reader.
+
+- Removed: field declaration (1 line) + `before_each` assignment (1 line).
+- Net: −2 lines (file 153 → 151 LOC).
+- Verification: full GUT suite — 4662/4662 passed (Pass 6 baseline:
+  4658/4658; the +4 net is the new Day-1 first-sale gate tests in
+  `test_day_cycle_controller.gd` plus the new fixture-solidity tests in
+  `test_retro_games_fixture_geometry.gd` minus the deleted
+  `test_mall_overview_hides_objective_label` and
+  `test_store_view_hides_objective_label_before_objective_text`,
+  matching the working-tree `git diff` line counts).
+
+### Comments — Inspected and Left Unchanged
+
+| Location | Finding | Decision |
+|---|---|---|
+| `game/scripts/systems/day_cycle_controller.gd:86–92` | New §F-52 inline comment block on the Day-1 first-sale gate | Accurate, written this pass; cross-references `docs/audits/error-handling-report.md` §F-52. Left as-is. |
+| `game/scripts/player/interaction_ray.gd:186–194` | New §F-53 docstring on `_build_action_label` justifying the empty-on-empty silent return | Accurate, written this pass; explains the per-hover log-flooding rationale. Left as-is. |
+| `game/scenes/ui/hud.gd:524–537` | New §F-54 docstring on the `_on_notification_requested` / `_on_critical_notification_requested` toast-forwarding pair | Accurate, written this pass; documents the three silent-return paths and the equivalent failure surface vs the prior in-HUD prompt path. Left as-is. |
+| `game/scenes/ui/hud.gd:602–607` | Updated `_refresh_telegraph_card` priority comment ("Overlay priority: tutorial > objective rail > ticker. The interaction prompt lives on a separate CanvasLayer (layer 60)…") | Accurate, written this pass; cross-references the layer separation that lets the ticker stay visible during interactable focus. Left as-is. |
+| `game/autoload/objective_director.gd:73–77` | §F-55 cite explaining flag-before-emit ordering invariant for the Day-1 close gate | Accurate, written this pass. Left as-is. |
+| `game/scripts/stores/store_controller.gd:9–11` | Updated `current_objective_text` docstring after the local `objective_text_changed` signal retirement | Accurate; references StoreReadyContract invariant 10 as the new consumer. Left as-is. |
+| `game/scenes/stores/retro_games.tscn:208–215` | New header comment block explaining the Path B / `_activate_store_camera` fall-through pattern | Accurate; cross-references `GameWorld._on_hub_enter_store_requested`. Left as-is. |
+| `tests/gut/test_day1_quarantine.gd:188–191` | New comment on `test_telegraph_card_persists_during_interactable_focus` explaining the CanvasLayer 60 separation | Accurate, written this pass. Left as-is. |
+| `tests/gut/test_store_entry_camera.gd:64–66` | New comment + tautological `assert_true(arr.size() >= 0, …)` documenting that `_BODY_CAMERA_STORE_IDS` may legitimately be empty | The assertion is vacuous (every array has size ≥ 0), but the user's stated intent is documentation: the comment + asserted-but-tautological pattern is meant to keep the test "meaningful when iterating an empty list" rather than risky. Removing the assert would also remove the explicit signal that the empty-list path was considered. Left as-is. |
+| `tests/gut/test_hub_store_player_spawn.gd:77` | `# ISSUE-002: body camera owns the InteractionRay …` | Pass 2/4/5/6 directive ("Removing only a subset would create inconsistency, so the remainder is left for a dedicated sweeping sed pass over the full repo") still holds; the file's GUT class docstring above no longer carries any ISSUE prefix, but the in-section reference here matches the surviving citations across `~50 other locations` flagged in Pass 2. Left for the dedicated sweep. |
+| `tests/gut/test_retro_games_scene_issue_006.gd:267` | `# ── Nav zone structure (ISSUE-005) ─────` section header | Same justification as Pass 6 ("the file's own filename embeds an issue id; removing the in-section reference creates internal inconsistency"). Left as-is. |
+| `tests/gut/test_store_entry_camera.gd:99–108` | Block claims `PlayerEntrySpawn` must exist for the spawned `StorePlayerBody` to anchor — but this branch iterates the empty `_BODY_CAMERA_STORE_IDS` list, so the assertions never fire | Accurate against the documented contract: the test is forward-compatible scaffolding for any future walking-body store that gets added. The assertions inside the empty loop are unreached today but become live when the array gets populated — same forward-compat shape the user intentionally preserved with the tautological `size() >= 0` assert. Left as-is. |
+
+### Duplicates — Inspected, Not Consolidated
+
+#### `_on_objective_payload` (hud.gd) vs `_on_objective_updated` / `_on_objective_changed` (store_controller.gd)
+
+The HUD's new `_on_objective_payload(payload)` handler subscribes to
+both `EventBus.objective_changed` and `EventBus.objective_updated`
+(see `hud.gd:100–101`) and reads `payload.text` first then falls back
+to `payload.current_objective`. StoreController's two parallel handlers
+each subscribe to one signal and read their preferred key first
+(Pass 4 documented this as parallel signal lineages, "Justified: keep
+separate"). The HUD's choice to fold the two readers into one body is
+internally consistent: HUD is a leaf consumer that only needs the
+text, while StoreController must also gate on `payload.hidden` and
+mirror to `set_objective_text(text)` for `objective_matches_action()`.
+The duplication of the key-fallback pattern (`payload.get("text",
+payload.get("current_objective", ""))`) across the two files is small
+and justified by their different surrounding logic.
+**Justified: keep separate.**
+
+#### `_format_cash` (hud.gd) vs `_format_cash` (kpi_strip.gd)
+
+Pass 2 documented these as semantically different (full precision vs.
+rounded whole-dollar) — still true after the Pass 7 working tree.
+**Justified: keep separate.**
+
+### ISSUE-XXX References — Sweep Still Deferred
+
+Two surviving inline references in this pass's scope:
+
+- `tests/gut/test_hub_store_player_spawn.gd:77`
+  (`# ISSUE-002: body camera owns the InteractionRay …`)
+- `tests/gut/test_retro_games_scene_issue_006.gd:267`
+  (`# ── Nav zone structure (ISSUE-005) ─────` section header)
+
+Per the Pass 2/4/5/6 directive these are out of scope for an in-pass
+surgical edit. Left for the dedicated repo-wide sweep.
+
+### Files Still >500 LOC
+
+Line-count delta from the Pass 6 baseline:
+
+| File | Pass 6 LOC | Now | Disposition |
+|---|---|---|---|
+| `game/scenes/world/game_world.gd` | 1443 | 1443 | Unchanged. Pass 1/2 extraction plan still valid. |
+| `game/scripts/core/save_manager.gd` | 1364 | 1364 | Unchanged. Justified — append-only migration chain (Pass 2). |
+| `game/autoload/data_loader.gd` | 1059 | 1059 | Unchanged. Pass 1 extraction plan still valid. |
+| `game/scripts/systems/customer_system.gd` | 907 | 907 | Unchanged. |
+| `game/scripts/systems/inventory_system.gd` | 877 | 877 | Unchanged. |
+| `game/scenes/ui/day_summary.gd` | 815 | 815 | Unchanged. |
+| `game/scenes/ui/hud.gd` | 849 | 837 | −12 from this branch's `PromptLabel` / `ObjectiveLabel` / `_interactable_focused` retirement; below the Pass 5 baseline (802) is not in reach without the Pass 2 HudCounterAnimator extraction, which still applies. |
+| `game/autoload/event_bus.gd` | 686 | 683 | −3 from `objective_text_changed` signal removal (3 lines including the docstring). Pure signal registry; justification from Pass 2 holds. |
+| `game/scripts/stores/store_controller.gd` | 637 | 632 | −5 from local `objective_text_changed` signal + matching emit lines retirement. Pass 4 justification (StoreReadyContract surface) still holds. |
+| `game/scripts/stores/retro_games.gd` | 588 | 588 | Unchanged in this branch. Pass 4/5 justification holds. |
+| `game/scenes/stores/retro_games.tscn` | 1531 | ~1750 | Scene file. The +219-line growth is the embedded `PlayerController` + `StoreCamera` instance, the five new `BoxShape3D` sub-resources for fixture solidity, and the 10×7 m room expansion with re-positioned lights/decals/walls — all data, not code. Godot `.tscn` line count is not a code-complexity metric (Pass 6). |
+
+No new code files crossed the 500-LOC bar in this pass.
+
+### Untracked Files — Inspected and Accepted Unchanged
+
+No untracked files in scope this pass. The working-tree state is
+modifications-only:
+`git status -s` shows 22 modified files plus the deleted top-level
+`AIDLC_FUTURES.md` (which Pass 6's report already noted; this pass's
+scope re-confirms the deletion landed without leaving stale
+references).
+
+### Verification
+
+- Full GUT suite: **4662/4662 passed** (`tests/run_tests.sh`); 391
+  scripts, 63.56 s. No failures, no regressions vs the Pass 6 4658 baseline.
+- Static-validator FAILs reported by `run_tests.sh` are pre-existing
+  and unrelated to this pass (ISSUE-239 packs/tournaments JSON parse
+  errors, pre-existing `wrapped_store` tutorial-context warnings,
+  RID-leak warnings from the headless dummy renderer + text server) —
+  none touch files modified in this pass.
+- `tests/validate_issue_017.sh` polarity-flipped checks all pass against
+  the actual working-tree state.
+
+### Escalations
+
+None.

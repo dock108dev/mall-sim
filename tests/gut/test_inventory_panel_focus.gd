@@ -208,3 +208,89 @@ func test_reset_for_tests_clears_focus_pushed_without_popping() -> void:
 	# Pair this with InputFocus._reset_for_tests() to fully reset.
 	assert_eq(_focus.current(), InputFocus.CTX_MODAL,
 		"_reset_for_tests must NOT call pop_context")
+
+
+# ── Placement mode retains the CTX_MODAL frame ─────────────────────────────────
+#
+# When the user picks "Move to Shelf" the panel hides itself but placement mode
+# stays active until the player clicks a shelf slot. Overlays must remain
+# suppressed for the whole shelf-selection phase, which means CTX_MODAL must
+# stay on the stack between panel-hide and placement-end.
+
+func test_move_to_shelf_keeps_ctx_modal_on_stack() -> void:
+	var panel: InventoryPanel = _make_panel()
+	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	var baseline: int = _focus.depth()
+	panel.open()
+	assert_eq(_focus.current(), InputFocus.CTX_MODAL)
+	panel._selected_item = ItemInstance.new()
+
+	panel._on_context_action(1)
+
+	assert_false(panel.is_open(),
+		"panel must hide visually so placement input is unobstructed")
+	assert_true(panel._shelf_actions.is_placement_mode,
+		"placement mode must be active after Move to Shelf")
+	assert_eq(_focus.depth(), baseline + 1,
+		"CTX_MODAL frame must be retained during placement mode")
+	assert_eq(_focus.current(), InputFocus.CTX_MODAL,
+		"InputFocus.current() must still be CTX_MODAL during placement mode")
+	assert_true(panel._focus_pushed,
+		"panel must still own the modal frame during placement mode")
+
+	# Ending placement mode (cancel via right-click, escape, or success) must
+	# release the frame so gameplay overlays return.
+	panel._shelf_actions.exit_placement_mode()
+	assert_eq(_focus.depth(), baseline,
+		"placement_mode_exited must release the retained CTX_MODAL frame")
+	assert_eq(_focus.current(), InputFocus.CTX_STORE_GAMEPLAY,
+		"prior context restored after placement mode ends")
+	assert_false(panel._focus_pushed,
+		"panel must release ownership of the modal frame")
+
+
+func test_reopen_after_placement_re_pushes_ctx_modal() -> void:
+	var panel: InventoryPanel = _make_panel()
+	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	var baseline: int = _focus.depth()
+	panel.open()
+	panel._selected_item = ItemInstance.new()
+	panel._on_context_action(1)
+	panel._shelf_actions.exit_placement_mode()
+	assert_eq(_focus.depth(), baseline,
+		"baseline restored after placement ends")
+
+	# Re-opening the panel must push a fresh CTX_MODAL frame.
+	panel.open()
+	assert_eq(_focus.depth(), baseline + 1,
+		"re-open must push a new CTX_MODAL frame")
+	assert_eq(_focus.current(), InputFocus.CTX_MODAL)
+	panel.close(true)
+	assert_eq(_focus.depth(), baseline,
+		"close after re-open must restore baseline")
+
+
+func test_close_during_placement_pops_ctx_modal_exactly_once() -> void:
+	var panel: InventoryPanel = _make_panel()
+	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	var baseline: int = _focus.depth()
+	panel.open()
+	panel._selected_item = ItemInstance.new()
+	panel._on_context_action(1)
+	# Re-open while placement mode is still active. CTX_MODAL is already on
+	# the stack from placement mode; open() must not push a second frame.
+	panel.open()
+	assert_eq(_focus.depth(), baseline + 1,
+		"re-open during placement must not stack a second CTX_MODAL frame")
+
+	# Close the (now-visible) panel. This calls exit_placement_mode internally,
+	# which fires placement_mode_exited — but the handler must not pop because
+	# _is_open is still true at signal time. The pop must come from close()'s
+	# own _pop_modal_focus call.
+	panel.close(true)
+	assert_eq(_focus.depth(), baseline,
+		"close while in placement must pop the frame exactly once")
+	assert_eq(_focus.current(), InputFocus.CTX_STORE_GAMEPLAY)
+	assert_false(panel._focus_pushed)
+	assert_false(panel._shelf_actions.is_placement_mode,
+		"close() must also exit placement mode")

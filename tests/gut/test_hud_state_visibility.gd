@@ -71,14 +71,6 @@ func test_mall_overview_hides_store_label() -> void:
 	)
 
 
-func test_mall_overview_hides_objective_label() -> void:
-	_emit_state(GameManager.State.MALL_OVERVIEW)
-	assert_false(
-		_hud.get_node("ObjectiveLabel").visible,
-		"ObjectiveLabel must be hidden in MALL_OVERVIEW"
-	)
-
-
 func test_mall_overview_shows_cash_label() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	assert_true(
@@ -303,14 +295,6 @@ func test_store_view_hides_store_label_before_store_opened() -> void:
 	)
 
 
-func test_store_view_hides_objective_label_before_objective_text() -> void:
-	_emit_state(GameManager.State.STORE_VIEW)
-	assert_false(
-		_hud.get_node("ObjectiveLabel").visible,
-		"ObjectiveLabel must be hidden in STORE_VIEW until objective text is set"
-	)
-
-
 func test_store_view_shows_cash_label() -> void:
 	_emit_state(GameManager.State.STORE_VIEW)
 	assert_true(
@@ -352,66 +336,94 @@ func test_reputation_label_has_no_placeholder_text_in_store_view() -> void:
 	)
 
 
+var _captured_toasts: Array[Dictionary] = []
+
+
+func _capture_toast(message: String, category: StringName, duration: float) -> void:
+	_captured_toasts.append({
+		"message": message,
+		"category": category,
+		"duration": duration,
+	})
+
+
+func _start_toast_capture() -> void:
+	_captured_toasts.clear()
+	if not EventBus.toast_requested.is_connected(_capture_toast):
+		EventBus.toast_requested.connect(_capture_toast)
+
+
+func _stop_toast_capture() -> void:
+	if EventBus.toast_requested.is_connected(_capture_toast):
+		EventBus.toast_requested.disconnect(_capture_toast)
+
+
 func test_notification_suppressed_during_tutorial_step() -> void:
+	_start_toast_capture()
 	EventBus.tutorial_step_changed.emit("click_store")
 	EventBus.notification_requested.emit("Some flavor message")
-	var prompt: Label = _hud.get_node("PromptLabel")
-	assert_false(
-		prompt.visible,
-		"PromptLabel must stay hidden when notification_requested fires during an active tutorial step"
+	_stop_toast_capture()
+	assert_eq(
+		_captured_toasts.size(), 0,
+		"notification_requested must not produce a toast while a tutorial step is active"
 	)
 
 
 func test_critical_notification_shows_during_tutorial_step() -> void:
+	_start_toast_capture()
 	EventBus.tutorial_step_changed.emit("click_store")
 	EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")
-	var prompt: Label = _hud.get_node("PromptLabel")
-	assert_true(
-		prompt.visible,
-		"PromptLabel must show for critical_notification_requested even during an active tutorial step"
+	_stop_toast_capture()
+	assert_eq(
+		_captured_toasts.size(), 1,
+		"critical_notification_requested must produce a toast even during an active tutorial step"
 	)
 	assert_eq(
-		prompt.text,
+		_captured_toasts[0].get("message", ""),
 		"Make your first sale before closing Day 1.",
-		"Prompt text must match the critical message"
+		"Toast message must match the critical notification payload"
 	)
 
 
 func test_notification_shows_after_tutorial_completed() -> void:
+	_start_toast_capture()
 	EventBus.tutorial_step_changed.emit("click_store")
 	EventBus.tutorial_completed.emit()
 	EventBus.notification_requested.emit("Order delivered.")
-	var prompt: Label = _hud.get_node("PromptLabel")
-	assert_true(
-		prompt.visible,
-		"PromptLabel must show notification_requested messages after tutorial_completed"
+	_stop_toast_capture()
+	assert_eq(
+		_captured_toasts.size(), 1,
+		"notification_requested must produce a toast after tutorial_completed"
 	)
 
 
 func test_notification_shows_after_tutorial_skipped() -> void:
+	_start_toast_capture()
 	EventBus.tutorial_step_changed.emit("click_store")
 	EventBus.tutorial_skipped.emit()
 	EventBus.notification_requested.emit("Order delivered.")
-	var prompt: Label = _hud.get_node("PromptLabel")
-	assert_true(
-		prompt.visible,
-		"PromptLabel must show notification_requested messages after tutorial_skipped"
+	_stop_toast_capture()
+	assert_eq(
+		_captured_toasts.size(), 1,
+		"notification_requested must produce a toast after tutorial_skipped"
 	)
 
 
 func test_notification_shows_with_no_tutorial_active() -> void:
+	_start_toast_capture()
 	EventBus.notification_requested.emit("Game saved.")
-	var prompt: Label = _hud.get_node("PromptLabel")
-	assert_true(
-		prompt.visible,
-		"PromptLabel must show notification_requested when no tutorial step is active"
+	_stop_toast_capture()
+	assert_eq(
+		_captured_toasts.size(), 1,
+		"notification_requested must produce a toast when no tutorial step is active"
 	)
 
 
 func test_critical_notification_shows_with_no_tutorial_active() -> void:
+	_start_toast_capture()
 	EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")
-	var prompt: Label = _hud.get_node("PromptLabel")
-	assert_true(
-		prompt.visible,
-		"PromptLabel must show critical_notification_requested when no tutorial step is active"
+	_stop_toast_capture()
+	assert_eq(
+		_captured_toasts.size(), 1,
+		"critical_notification_requested must produce a toast when no tutorial step is active"
 	)

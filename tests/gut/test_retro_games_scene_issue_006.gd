@@ -1,15 +1,18 @@
-## Verifies retro_games.tscn scene contract: player entry marker, debug zone
-## labels, shelf interaction wiring, and customer path markers. Camera /
-## movement is owned by the externally-instantiated PlayerController
-## (`StoreSelectorSystem._PLAYER_CONTROLLER_SCENE`) or the spawned
-## `StorePlayerBody` (hub-mode injector); neither lives in this scene.
+## Verifies retro_games.tscn scene contract: embedded PlayerController orbit
+## camera (Path B), debug zone labels, shelf interaction wiring, and customer
+## path markers. The orbit PlayerController plus its StoreCamera and
+## InteractionRay are authored directly in this scene; the hub-mode injector
+## falls through to `_activate_store_camera` because no `PlayerEntrySpawn`
+## marker is present.
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
-# Navigable footprint authored into this scene — kept in sync with
-# `StoreSelectorSystem._STORE_PIVOT_BOUNDS_*` and the nav mesh extents.
-const _STORE_BOUNDS_MIN: Vector3 = Vector3(-3.2, 0.0, -2.2)
-const _STORE_BOUNDS_MAX: Vector3 = Vector3(3.2, 0.0, 2.2)
+# Navigable footprint authored into this scene's embedded PlayerController.
+# The 10×7 m room half-extents (5×3.5) tightened to leave a 0.5 m wall margin.
+# StoreSelectorSystem._STORE_PIVOT_BOUNDS_* (legacy orbit path) still uses the
+# tighter shared 7×5 footprint for the other store interiors.
+const _STORE_BOUNDS_MIN: Vector3 = Vector3(-4.5, 0.0, -3.0)
+const _STORE_BOUNDS_MAX: Vector3 = Vector3(4.5, 0.0, 3.0)
 
 var _root: Node3D = null
 
@@ -28,39 +31,95 @@ func after_all() -> void:
 	_root = null
 
 
-# ── Camera / movement (owned externally) ─────────────────────────────────────
+# ── Camera / movement (embedded orbit controller, Path B) ────────────────────
 
-func test_scene_does_not_embed_player_controller() -> void:
-	# The orbit PlayerController is instantiated by StoreSelectorSystem and
-	# parented to the StoreContainer (sibling of the scene). The hub-mode
-	# injector spawns a StorePlayerBody named "Player" instead. Embedding a
-	# PlayerController in the .tscn duplicates WASD input handling.
-	assert_null(
-		_root.get_node_or_null("PlayerController"),
-		"retro_games.tscn must not embed a PlayerController node — input is owned externally"
+func test_scene_embeds_player_controller() -> void:
+	# Path B: the orbit PlayerController is authored directly in this scene so
+	# the hub-mode injector falls through to `_activate_store_camera` and
+	# activates the embedded StoreCamera through CameraAuthority.
+	var controller: Node = _root.get_node_or_null("PlayerController")
+	assert_not_null(
+		controller,
+		"retro_games.tscn must embed a PlayerController node for the orbit camera"
 	)
 
 
-func test_scene_has_no_camera3d() -> void:
-	# Both the orbit and walking-body camera live outside this .tscn. A
-	# Camera3D in the scene file would race CameraAuthority's single-active
-	# guarantee.
+func test_scene_ships_exactly_one_camera_3d_under_player_controller() -> void:
+	# Exactly one Camera3D must exist (the StoreCamera child of
+	# PlayerController) so CameraAuthority's single-active guarantee holds.
 	var cameras: Array[Node] = []
 	_collect_by_class(_root, "Camera3D", cameras)
-	assert_eq(cameras.size(), 0, "Scene must ship zero Camera3D nodes")
-
-
-func test_player_entry_spawn_is_authored() -> void:
-	# Hub-mode StorePlayerBody and orbit StoreSelectorSystem both teleport to
-	# this Marker3D. Without it `_spawn_player_in_store` returns false and
-	# falls back to the orbit-only path.
-	var marker: Marker3D = _root.get_node_or_null("PlayerEntrySpawn") as Marker3D
-	assert_not_null(marker, "PlayerEntrySpawn Marker3D must exist for player spawning")
-	if marker == null:
+	assert_eq(
+		cameras.size(), 1,
+		"Scene must ship exactly one Camera3D (the embedded StoreCamera)"
+	)
+	if cameras.size() != 1:
 		return
-	# Spawn must sit inside the navigable footprint, not behind the front wall.
-	assert_lt(marker.global_position.z, 2.55,
-		"PlayerEntrySpawn must be inside the store, not outside the storefront")
+	var cam := cameras[0] as Camera3D
+	assert_eq(
+		cam.name, &"StoreCamera",
+		"The embedded camera must be named StoreCamera so PlayerController._resolve_camera binds it"
+	)
+	assert_true(
+		cam.is_in_group(&"cameras"),
+		"StoreCamera must be in the 'cameras' group for CameraAuthority lookups"
+	)
+	assert_false(
+		cam.current,
+		"StoreCamera must ship with current=false — CameraAuthority owns activation"
+	)
+
+
+func test_scene_has_no_player_entry_spawn() -> void:
+	# Path B contract: removing PlayerEntrySpawn causes the hub injector
+	# (game_world.gd._spawn_player_in_store) to fall through to
+	# _activate_store_camera, which finds the embedded StoreCamera.
+	assert_null(
+		_root.get_node_or_null("PlayerEntrySpawn"),
+		"retro_games.tscn must not author a PlayerEntrySpawn — Path B uses the embedded orbit camera"
+	)
+
+
+func test_player_controller_pivot_bounds_match_room_footprint() -> void:
+	# The 10×7 room half-extents are 5.0 × 3.5; the bounds tighten that to
+	# 4.5 × 3.0 so the pivot cannot exit through the front-entrance gap or
+	# brush against the side walls.
+	var controller: Node = _root.get_node_or_null("PlayerController")
+	assert_not_null(controller, "PlayerController must be embedded for bounds check")
+	if controller == null:
+		return
+	var min_bound: Vector3 = controller.get("store_bounds_min")
+	var max_bound: Vector3 = controller.get("store_bounds_max")
+	assert_eq(
+		min_bound, Vector3(-4.5, 0.0, -3.0),
+		"store_bounds_min must match the 10×7 room footprint with 0.5 m wall margin"
+	)
+	assert_eq(
+		max_bound, Vector3(4.5, 0.0, 3.0),
+		"store_bounds_max must clamp the pivot inside the front entrance gap (z<=3.0)"
+	)
+
+
+func test_interaction_ray_attached_to_store_camera() -> void:
+	# InteractionRay must live under StoreCamera so its raycast samples the
+	# active camera's transform every frame.
+	var ray: Node = _root.get_node_or_null(
+		"PlayerController/StoreCamera/InteractionRay"
+	)
+	assert_not_null(
+		ray,
+		"InteractionRay must be a child of PlayerController/StoreCamera"
+	)
+	if ray == null:
+		return
+	var script: Script = ray.get_script()
+	assert_not_null(script, "InteractionRay must have a script attached")
+	if script != null:
+		assert_eq(
+			script.resource_path,
+			"res://game/scripts/player/interaction_ray.gd",
+			"InteractionRay must use interaction_ray.gd"
+		)
 
 
 # ── Debug zone labels (removed — replaced by InteractionPrompt) ──────────────

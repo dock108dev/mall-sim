@@ -1,35 +1,30 @@
-## Integration tests for ISSUE-001 — hub-mode StorePlayerBody spawn flow.
+## Integration tests for the StorePlayerBody spawn flow contract.
 ##
-## Verifies the spawn helper in game_world.gd against a real retro_games.tscn
-## instance plus the body camera registering through CameraAuthority. Covers
-## acceptance criteria 1-5 except the visual on-screen movement check.
+## Verifies the body camera structure (cameras group, InteractionRay child)
+## and the CameraAuthority handoff against a MockStoreRoot fixture. Stores
+## that opt into the orbit-camera flow embed their PlayerController directly
+## and bypass this spawn path; the contract here applies only to walking-body
+## stores that author a `PlayerEntrySpawn` marker.
 extends GutTest
 
-const RETRO_GAMES_SCENE: PackedScene = preload(
-	"res://game/scenes/stores/retro_games.tscn"
-)
 const STORE_PLAYER_SCENE: PackedScene = preload(
 	"res://game/scenes/player/store_player_body.tscn"
 )
-
-const PLAYER_ENTRY_SPAWN_NAME: StringName = &"PlayerEntrySpawn"
 
 
 class MockStoreRoot:
 	extends Node3D
 	func get_store_id() -> StringName:
-		return &"retro_games"
+		return &"mock_store"
 
 
 var _store_root: Node3D
 var _player: StorePlayerBody
-var _baseline_focus_depth: int
 
 
 func before_each() -> void:
 	InputFocus._reset_for_tests()
 	CameraAuthority._reset_for_tests()
-	_baseline_focus_depth = InputFocus.depth()
 
 
 func after_each() -> void:
@@ -41,59 +36,23 @@ func after_each() -> void:
 	_player = null
 
 
-func _instantiate_store() -> Node3D:
-	var root: Node3D = RETRO_GAMES_SCENE.instantiate() as Node3D
+func _instantiate_mock_store() -> Node3D:
+	var root := MockStoreRoot.new()
 	add_child_autofree(root)
 	return root
 
 
-func _spawn_player_at_marker(store_root: Node3D) -> StorePlayerBody:
-	var marker: Marker3D = (
-		store_root.get_node_or_null(String(PLAYER_ENTRY_SPAWN_NAME))
-		as Marker3D
-	)
-	assert_not_null(
-		marker,
-		"retro_games.tscn must define a PlayerEntrySpawn Marker3D"
-	)
+func _spawn_player_in(store_root: Node3D) -> StorePlayerBody:
 	var player: StorePlayerBody = (
 		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
 	)
 	store_root.add_child(player)
-	player.global_position = marker.global_position
+	player.global_position = Vector3.ZERO
 	# Production: StoreController pushes CTX_STORE_GAMEPLAY on
-	# EventBus.store_entered. The retro_games scene root extends StoreController
-	# but EventBus.store_entered is not emitted in this fixture, so simulate the
-	# push here.
+	# EventBus.store_entered. The mock fixture does not run that flow, so push
+	# the context manually to mirror the runtime contract.
 	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
 	return player
-
-
-func test_retro_games_scene_has_player_entry_spawn_marker() -> void:
-	_store_root = _instantiate_store()
-	var marker: Marker3D = (
-		_store_root.get_node_or_null(String(PLAYER_ENTRY_SPAWN_NAME))
-		as Marker3D
-	)
-	assert_not_null(marker, "PlayerEntrySpawn must exist in retro_games.tscn")
-	# Marker should sit inside the store, not outside the front wall (z=2.55).
-	assert_lt(
-		marker.global_position.z, 2.55,
-		"PlayerEntrySpawn should be inside the store, not behind the door"
-	)
-
-
-func test_store_controller_exposes_get_store_id() -> void:
-	_store_root = _instantiate_store()
-	assert_true(
-		_store_root.has_method("get_store_id"),
-		"StoreController must expose get_store_id() for spawn assertion"
-	)
-	# RetroGames sets store_type = STORE_ID = "retro_games" in initialize().
-	assert_eq(
-		_store_root.call("get_store_id"), &"retro_games",
-		"get_store_id() should return the canonical store id"
-	)
 
 
 func test_player_camera_is_in_cameras_group() -> void:
@@ -144,13 +103,13 @@ func test_player_camera_has_interaction_ray_child() -> void:
 
 
 func test_camera_authority_marks_body_camera_current() -> void:
-	_store_root = _instantiate_store()
-	_player = _spawn_player_at_marker(_store_root)
+	_store_root = _instantiate_mock_store()
+	_player = _spawn_player_in(_store_root)
 	var cam: Camera3D = (
 		_player.find_child("Camera3D", false, false) as Camera3D
 	)
 	assert_not_null(cam, "spawned player must have a Camera3D child")
-	var ok: bool = CameraAuthority.request_current(cam, &"retro_games")
+	var ok: bool = CameraAuthority.request_current(cam, &"mock_store")
 	assert_true(ok, "CameraAuthority.request_current should accept the body cam")
 	assert_eq(
 		CameraAuthority.current(), cam,
@@ -163,8 +122,8 @@ func test_camera_authority_marks_body_camera_current() -> void:
 
 
 func test_movement_halts_when_modal_steals_focus() -> void:
-	_store_root = _instantiate_store()
-	_player = _spawn_player_at_marker(_store_root)
+	_store_root = _instantiate_mock_store()
+	_player = _spawn_player_in(_store_root)
 	# Simulate any modal pushing its context on top of store_gameplay.
 	InputFocus.push_context(&"modal")
 	_player.velocity = Vector3(2.0, 0.0, 2.0)
@@ -176,12 +135,12 @@ func test_movement_halts_when_modal_steals_focus() -> void:
 
 
 func test_camera_authority_self_heals_after_player_freed() -> void:
-	_store_root = _instantiate_store()
-	_player = _spawn_player_at_marker(_store_root)
+	_store_root = _instantiate_mock_store()
+	_player = _spawn_player_in(_store_root)
 	var cam: Camera3D = (
 		_player.find_child("Camera3D", false, false) as Camera3D
 	)
-	CameraAuthority.request_current(cam, &"retro_games")
+	CameraAuthority.request_current(cam, &"mock_store")
 	_store_root.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame

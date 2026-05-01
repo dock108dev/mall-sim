@@ -1,5 +1,13 @@
 ## Casts a ray from the camera through the mouse cursor to detect interactables.
+##
+## `intersect_ray` returns the closest collider along the ray, so the cursor's
+## hit is inherently nearest-wins even when multiple interactable Area3D
+## volumes overlap under the cursor. Walking near interactables without the
+## cursor over them does not produce hover events: there is no `body_entered`
+## proximity path — focus is cursor-driven only.
 extends Node
+
+const INTERACTION_RAY_GROUP: StringName = &"interaction_ray"
 
 ## Maximum ray distance in meters.
 @export var ray_distance: float = 100.0
@@ -8,12 +16,14 @@ extends Node
 
 var _camera: Camera3D = null
 var _hovered_target: Interactable = null
+var _hovered_action_label: String = ""
 var _inventory_system: InventorySystem = null
 var _open_panel_count: int = 0
 
 
 func _ready() -> void:
 	set_process(false)
+	add_to_group(INTERACTION_RAY_GROUP)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.panel_closed.connect(_on_panel_closed)
 	EventBus.active_camera_changed.connect(_on_active_camera_changed)
@@ -68,6 +78,19 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Returns the currently hovered interactable, or null.
 func get_hovered_target() -> Interactable:
 	return _hovered_target
+
+
+## Returns the action label of the currently hovered target, or "" when none.
+func get_hovered_action_label() -> String:
+	return _hovered_action_label if _hovered_target else ""
+
+
+## Returns the distance from the active camera to the hovered target's origin,
+## or -1.0 when no target is hovered or the camera is unavailable.
+func get_hovered_camera_distance() -> float:
+	if not is_instance_valid(_camera) or not is_instance_valid(_hovered_target):
+		return -1.0
+	return _camera.global_position.distance_to(_hovered_target.global_position)
 
 
 func _on_active_camera_changed(camera: Camera3D) -> void:
@@ -146,6 +169,7 @@ func _set_hovered_target(new_target: Interactable) -> void:
 		_hovered_target.highlight()
 		_hovered_target.focused.emit()
 		var action_label: String = _build_action_label(_hovered_target)
+		_hovered_action_label = action_label
 		EventBus.interactable_focused.emit(action_label)
 		# ISSUE-003: scoped hover event + pointing-hand cursor. The hover
 		# transition runs every physics frame, so the cursor/label update
@@ -158,6 +182,7 @@ func _set_hovered_target(new_target: Interactable) -> void:
 		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND)
 		_emit_tooltip_for_target(_hovered_target)
 	else:
+		_hovered_action_label = ""
 		EventBus.interactable_unfocused.emit()
 		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 		EventBus.item_tooltip_hidden.emit()
@@ -178,19 +203,31 @@ func _on_hovered_target_tree_exiting() -> void:
 			)
 		exiting_target.unfocused.emit()
 	_hovered_target = null
+	_hovered_action_label = ""
 	EventBus.interactable_unfocused.emit()
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	EventBus.item_tooltip_hidden.emit()
 
 
+## Builds the InteractionPrompt label text for the focused target. Both-empty
+## (verb and display_name) is treated as a content-authoring contract violation
+## upstream — Interactable.display_name defaults to "Item" and prompt_text
+## auto-resolves from PROMPT_VERBS in `_ready`, so reaching this branch
+## requires the scene author to deliberately blank both. We return "" here
+## rather than push_warning because this function fires every frame the cursor
+## enters a new interactable; a per-hover warning would flood logs while
+## adding no signal beyond the visibly-empty prompt panel. See
+## docs/audits/error-handling-report.md §F-53.
 func _build_action_label(target: Interactable) -> String:
 	var verb: String = target.prompt_text.strip_edges()
 	var target_name: String = target.display_name.strip_edges()
+	if verb.is_empty() and target_name.is_empty():
+		return ""
+	if target_name.is_empty():
+		return "Press E to %s" % verb.to_lower()
 	if verb.is_empty():
 		return target_name
-	if target_name.is_empty():
-		return verb
-	return "%s %s" % [verb, target_name]
+	return "%s / Press E to %s" % [target_name, verb.to_lower()]
 
 
 func _emit_tooltip_for_target(target: Interactable) -> void:

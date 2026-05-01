@@ -13,6 +13,7 @@ var _perf_report: PerformanceReportSystem
 var _saved_state: int
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
+var _saved_first_sale_flag: bool
 var _bankruptcy_count: int = 0
 var _next_day_count: int = 0
 
@@ -21,6 +22,7 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	_saved_first_sale_flag = GameState.get_flag(&"first_sale_complete")
 	GameManager.current_store_id = &"pocket_creatures"
 	GameManager.owned_stores = []
 
@@ -62,6 +64,7 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
+	GameState.set_flag(&"first_sale_complete", _saved_first_sale_flag)
 	_safe_disconnect(
 		EventBus.bankruptcy_declared, _on_bankruptcy
 	)
@@ -174,4 +177,50 @@ func test_no_advance_if_ending_triggered() -> void:
 	assert_eq(
 		_next_day_count, 0,
 		"Day should not advance when ending is triggered"
+	)
+
+
+# ── Day 1 first-sale gate (backstop) ──────────────────────────────────────────
+
+
+func test_day1_close_blocked_when_first_sale_flag_unset() -> void:
+	GameManager.current_state = GameManager.State.GAMEPLAY
+	_time.current_day = 1
+	GameState.set_flag(&"first_sale_complete", false)
+
+	_controller._on_day_close_requested()
+
+	assert_eq(
+		GameManager.current_state, GameManager.State.GAMEPLAY,
+		"State must remain GAMEPLAY when Day 1 close is gated"
+	)
+	assert_false(
+		_controller._awaiting_acknowledgement,
+		"Controller must not enter day-summary flow when gated"
+	)
+
+
+func test_day1_close_proceeds_when_first_sale_flag_set() -> void:
+	GameManager.current_state = GameManager.State.GAMEPLAY
+	_time.current_day = 1
+	GameState.set_flag(&"first_sale_complete", true)
+
+	_controller._on_day_close_requested()
+
+	assert_eq(
+		GameManager.current_state, GameManager.State.DAY_SUMMARY,
+		"Day 1 close must proceed once first sale flag is set"
+	)
+
+
+func test_day2_close_unaffected_by_first_sale_flag() -> void:
+	GameManager.current_state = GameManager.State.GAMEPLAY
+	_time.current_day = 2
+	GameState.set_flag(&"first_sale_complete", false)
+
+	_controller._on_day_close_requested()
+
+	assert_eq(
+		GameManager.current_state, GameManager.State.DAY_SUMMARY,
+		"Day 2+ close must not be gated by the first-sale flag"
 	)

@@ -97,12 +97,17 @@ func _ready() -> void:
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
 	EventBus.active_store_changed.connect(_on_active_store_changed)
+	EventBus.placement_mode_exited.connect(_on_placement_mode_exited)
 	SceneRouter.scene_ready.connect(_on_scene_ready)
 	_sync_active_store()
 	_setup_modal_backdrop()
 
 
 func _exit_tree() -> void:
+	# Exit placement mode first so the cursor reverts and the
+	# placement_mode_exited signal fires; that handler also pops the frame.
+	if _shelf_actions.is_placement_mode:
+		_shelf_actions.exit_placement_mode()
 	if _focus_pushed:
 		_pop_modal_focus()
 
@@ -196,6 +201,32 @@ func close(immediate: bool = false) -> void:
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
+## Hides the panel like close() but keeps the CTX_MODAL frame on the stack so
+## downstream overlays (InteractionPrompt, ObjectiveRail) remain suppressed
+## during the placement-mode shelf-slot selection phase. The frame is released
+## by _on_placement_mode_exited when placement ends.
+func _close_keeping_modal_focus() -> void:
+	if not _is_open:
+		return
+	PanelAnimator.kill_tween(_anim_tween)
+	_is_open = false
+	_selected_item = null
+	_anim_tween = PanelAnimator.slide_close(
+		_panel, _rest_x, true
+	)
+	_backdrop.visible = false
+	EventBus.item_tooltip_hidden.emit()
+	EventBus.panel_closed.emit(PANEL_NAME)
+
+
+## Releases the retained CTX_MODAL frame when placement mode ends. Only pops
+## when the panel itself is hidden (placement-only state); if the panel is
+## currently open, the close() path will pop the frame instead.
+func _on_placement_mode_exited() -> void:
+	if _focus_pushed and not _is_open:
+		_pop_modal_focus()
+
+
 func _push_modal_focus() -> void:
 	if _focus_pushed:
 		return
@@ -228,9 +259,15 @@ func _pop_modal_focus() -> void:
 func _on_scene_ready(_target: StringName, _payload: Dictionary) -> void:
 	# Modals never survive a scene change. Force-close (popping our frame)
 	# before the new scene's gameplay context becomes the audited top of stack.
-	# Research §4.2.
+	# Research §4.2. Placement mode also retains a CTX_MODAL frame between the
+	# panel-hide and the shelf-slot click; tear that down as well.
 	if _is_open:
 		close(true)
+		return
+	if _shelf_actions.is_placement_mode:
+		_shelf_actions.exit_placement_mode()
+	if _focus_pushed:
+		_pop_modal_focus()
 
 
 ## Test seam — clears _focus_pushed without calling pop_context. Pair with
@@ -426,7 +463,12 @@ func _on_context_action(id: int) -> void:
 			_open_pricing_for_selected_item()
 		1:
 			var item_for_placement := _selected_item
-			close()
+			# Hide the panel visually but RETAIN the CTX_MODAL frame so the
+			# interaction prompt and objective rail stay suppressed during the
+			# shelf-slot selection phase. The frame is released when placement
+			# mode ends (place / cancel / panel close), via
+			# _on_placement_mode_exited.
+			_close_keeping_modal_focus()
 			_selected_item = item_for_placement
 			_shelf_actions.enter_placement_mode()
 		2:

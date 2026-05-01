@@ -54,6 +54,51 @@ func test_overlay_exposes_required_fields() -> void:
 	assert_not_null(AuditOverlay._label_store_id, "store id label missing")
 
 
+func test_focused_readout_reads_none_when_no_ray_present() -> void:
+	# With no InteractionRay registered (test scene has none), the readout
+	# should default to "Focused: NONE" so the overlay never displays stale
+	# state.
+	assert_eq(
+		AuditOverlay._build_focused_readout(),
+		"Focused: NONE",
+		"Readout must report NONE when no InteractionRay is present"
+	)
+
+
+func test_focused_readout_reflects_interaction_ray_hover() -> void:
+	var ray_script: GDScript = preload(
+		"res://game/scripts/player/interaction_ray.gd"
+	)
+	var ray: Node = Node.new()
+	ray.set_script(ray_script)
+	add_child_autofree(ray)
+
+	var target := Interactable.new()
+	target.prompt_text = "Inspect"
+	target.display_name = "GlassCase"
+	add_child_autofree(target)
+
+	ray._set_hovered_target(target)
+	var readout: String = AuditOverlay._build_focused_readout()
+	assert_string_starts_with(
+		readout,
+		"Focused: GlassCase",
+		"Readout should lead with the focused interactable's display name"
+	)
+	assert_string_contains(
+		readout,
+		"Press E to inspect",
+		"Readout should embed the action label tail"
+	)
+
+	ray._set_hovered_target(null)
+	assert_eq(
+		AuditOverlay._build_focused_readout(),
+		"Focused: NONE",
+		"Readout must reset to NONE when the ray clears its hovered target"
+	)
+
+
 func test_overlay_renders_last_audit_entries_with_status_colors() -> void:
 	AuditLog.clear()
 	# Use record_*_for_test seams so the demo entries do not write

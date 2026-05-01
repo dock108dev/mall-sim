@@ -1,6 +1,12 @@
 ## Debug autoload for headless interaction audit. Stripped to no-op in release builds.
 ## Connects to EventBus signals to auto-instrument the five required checkpoints.
 ## F3 (toggle_debug action) toggles visibility; overlay never eats gameplay input.
+##
+## No fixture debug labels found in scene: retro_games.tscn fixtures
+## (ShelfSlot, GlassCase, Checkout, NavZones) carry no Label3D / MeshText
+## children, the Storefront facade is `visible=false`, and NavZone DebugMesh
+## children are also `visible=false`. The only Label3D nodes in store scenes
+## live under hidden Storefront groups used by the mall hub view.
 extends CanvasLayer
 
 const CHECKPOINTS: Array[StringName] = [
@@ -31,6 +37,7 @@ var _label_controller_state: Label
 var _label_focus_owner: Label
 var _label_modal_depth: Label
 var _label_interactable: Label
+var _label_focused_target: Label
 var _label_camera_path: Label
 var _label_input_focus: Label
 var _label_player_path: Label
@@ -176,6 +183,7 @@ func _build_hud() -> void:
 	_label_focus_owner = _make_label(vbox, "focus: —")
 	_label_modal_depth = _make_label(vbox, "modal_depth: 0")
 	_label_interactable = _make_label(vbox, "interactable: none")
+	_label_focused_target = _make_label(vbox, "Focused: NONE")
 	_label_camera_path = _make_label(vbox, "camera: —")
 	_label_input_focus = _make_label(vbox, "input: gameplay")
 	_label_player_path = _make_label(vbox, "player: <none>")
@@ -223,6 +231,7 @@ func _refresh_hud() -> void:
 
 	_label_modal_depth.text = "modal_depth: %d" % _modal_stack.size()
 	_label_interactable.text = "interactable: %s" % _last_interactable
+	_label_focused_target.text = _build_focused_readout()
 
 	var cam_path: String = "<none>"
 	var cam3d: Camera3D = get_viewport().get_camera_3d()
@@ -261,6 +270,29 @@ func _refresh_hud() -> void:
 		else:
 			lbl.text = "%s: —" % key
 			lbl.add_theme_color_override(&"font_color", _COLOR_PENDING)
+
+
+## Reads the cursor-driven hover state from any InteractionRay registered in
+## the `interaction_ray` group and formats the audit readout. Returns
+## "Focused: NONE" when no ray is present or no target is hovered.
+func _build_focused_readout() -> String:
+	var ray: Node = get_tree().get_first_node_in_group(&"interaction_ray")
+	if ray == null:
+		return "Focused: NONE"
+	var target: Interactable = ray.get_hovered_target()
+	if target == null or not is_instance_valid(target):
+		return "Focused: NONE"
+	var target_name: String = target.display_name.strip_edges()
+	if target_name.is_empty():
+		target_name = String(target.name)
+	var distance: float = ray.get_hovered_camera_distance()
+	var distance_text: String = "?"
+	if distance >= 0.0:
+		distance_text = "%.1f" % distance
+	var action_label: String = ray.get_hovered_action_label()
+	if action_label.is_empty():
+		action_label = "—"
+	return "Focused: %s (%sm) / %s" % [target_name, distance_text, action_label]
 
 
 func _refresh_entries() -> void:

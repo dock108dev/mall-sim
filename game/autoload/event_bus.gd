@@ -594,9 +594,6 @@ signal panel_closed(panel_name: String)
 ## payload keys: text (String), action (String), key (String).
 ## When payload contains hidden: true the rail should conceal itself.
 signal objective_changed(payload: Dictionary)
-## Mirror of StoreController.objective_text_changed so the HUD (and any other
-## listener) can bind without a direct controller reference.
-signal objective_text_changed(text: String)
 ## Four-slot variant of objective_changed.
 ## payload keys: current_objective, next_action, input_hint, optional_hint (all String).
 ## hidden: true instructs the rail to conceal itself.

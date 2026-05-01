@@ -1,6 +1,7 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-04-29 (Pass 7 — orbit-camera bounds clamp + retro_games scene-camera removal + sign-label authoring split)  
+**Latest pass:** 2026-04-30 (Pass 8 — Day-1 first-sale gate backstop + HUD notification→toast forwarding + objective_text_changed signal retirement)  
+**Pass 7:** 2026-04-29 (orbit-camera bounds clamp + retro_games scene-camera removal + sign-label authoring split)  
 **Pass 6:** 2026-04-28 (ISSUE-001 walking-player spawn + ISSUE-005 hallway hide + nav-zone label feature retirement)  
 **Pass 5:** 2026-04-28 (Day-1 quarantine + composite readiness audit)  
 **Pass 4:** 2026-04-28 (Day-1 inventory loop + StoreReadyContract wiring)  
@@ -20,8 +21,8 @@ Test files (`tests/`, `game/tests/`) excluded.
 | Critical | 0 | — |
 | High | 3 | 1 Pass 2, 2 Pass 3 (tier cascade, wrong signal dispatch) |
 | Medium | 8 | 3 Pass 1, 2 Pass 2, 2 Pass 3, 1 Pass 4 (registry inconsistency) |
-| Low | 13 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5 (Node3D-cast guard) |
-| Note | 26 | Justified — intentional, low-risk, documented (**+2 Pass 7**) |
+| Low | 14 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5 (Node3D-cast guard), **+1 Pass 8 (Day-1 backstop tightening)** |
+| Note | 29 | Justified — intentional, low-risk, documented (**+2 Pass 7, +3 Pass 8**) |
 | Retired | 1 | §F-28 obsoleted by Pass 6 nav-zone label feature removal |
 
 **Overall posture: Prod posture acceptable.**
@@ -60,6 +61,34 @@ verified that the new `_spawn_player_in_store` push_error paths and the
 `_camera_current` recursive-walk silent-null are already justified by
 docstrings written with this report in mind. All findings in all passes
 were acted on in-place.
+
+Pass 8 reviewed the working-tree changes that follow Pass 7 (Day-1
+first-sale gate backstop on `DayCycleController._on_day_close_requested`,
+HUD `notification_requested` / `critical_notification_requested` forwarding
+to `EventBus.toast_requested` after the in-HUD `PromptLabel` and
+`ObjectiveLabel` were retired with the Issue-017 cleanup, the
+`ObjectiveDirector._on_item_sold` flag-before-emit ordering, and the
+`InteractionRay._build_action_label` rewrite that prefixes "Press E to" and
+returns "" when both verb and display_name are empty). Pass 8 found one
+Low-severity gap (§F-52 silent backstop on the Day-1 close gate — tightened
+to `push_warning`) and three new Note-level silent fallbacks worth
+documenting (§F-53 `_build_action_label` empty-on-empty, §F-54
+HUD→toast forwarding shim, §F-55 ObjectiveDirector flag-before-emit
+ordering invariant). All findings acted on in-place. The
+`objective_text_changed` signal removal (StoreController + EventBus) is
+not a suppression event — it is enforced by `tests/validate_issue_017.sh`
+and verified by GUT.
+
+## Changes made this pass
+
+| File | Change | Disposition |
+|---|---|---|
+| `game/scripts/systems/day_cycle_controller.gd:88-100` | Added `push_warning` when Day-1 close gate rejects (was silent return); inline cite §F-52 | **Tightened** |
+| `game/scripts/player/interaction_ray.gd:186-195` | Added §F-53 docstring on `_build_action_label` explaining the deliberate empty-string return for both-blank Interactables (per-frame hover would flood logs) | **Justified** |
+| `game/scenes/ui/hud.gd:524-545` | Added §F-54 docstring above `_on_notification_requested` / `_on_critical_notification_requested` describing the toast-forwarding shim and equivalent failure surface vs the prior in-HUD prompt path | **Justified** |
+| `game/autoload/objective_director.gd:70-79` | Tightened the inline comment to a §F-55 cite explaining the flag-before-emit invariant the Day-1 close gate (§F-52) depends on | **Justified** |
+
+---
 
 Pass 7 reviewed the working-tree changes that follow Pass 6: the new
 unified orbit-camera bounds clamp in `StoreSelectorSystem.enter_store`
@@ -138,6 +167,10 @@ Critical/High/Medium findings; no findings retired.
 | F-49 | `store_ready_contract.gd:181–190` | `_find_current_camera` returns null silently on no current camera | Note | Justified §F-49 — failure surfaces via `INV_CAMERA` failures array |
 | F-50 | `store_selector_system.gd:13–28, 165–168` | Unified orbit-camera bounds/zoom clamp with no per-store override | Note | **Acted** Pass 7 — §F-50 inline cite added |
 | F-51 | `store_selector_system.gd:259–275` | `_move_store_camera_to_spawn` silent return on missing entry marker | Note | **Acted** Pass 7 — §F-51 docstring added |
+| F-52 | `day_cycle_controller.gd:88–100` | Day-1 first-sale gate silently swallowed `day_close_requested` | Low | **Acted** Pass 8 — push_warning added |
+| F-53 | `interaction_ray.gd:186–195` | `_build_action_label` returns "" silently when verb + display_name both blank | Note | **Acted** Pass 8 — §F-53 docstring added |
+| F-54 | `hud.gd:524–545` | HUD forwards `notification_requested` to `toast_requested`; empty messages swallowed | Note | **Acted** Pass 8 — §F-54 docstring added |
+| F-55 | `objective_director.gd:70–79` | `_on_item_sold` writes `first_sale_complete` flag before emit (ordering invariant for §F-52 gate) | Note | **Acted** Pass 8 — §F-55 cite added |
 | F-28 | `nav_zone_interactable.gd` | wrong-type Label3D push_warning | Low (Pass 3) | **Retired** Pass 6 — feature removed; finding obsolete |
 
 ---
@@ -1000,6 +1033,142 @@ surface; the camera misframe in playtest is the secondary surface.
 
 ---
 
+## Pass 8 Per-Finding Details
+
+### §F-52 — `day_cycle_controller.gd:88–100` — Day-1 close gate silent swallow (Pass 8)
+
+**Was:** The new `_on_day_close_requested` guard rejected the close
+request when `_time_system.current_day == 1` and
+`GameState.get_flag(&"first_sale_complete") == false`, then returned
+silently. The HUD callsite (`hud.gd:217–225`, `hud.gd:312–325`) and the
+MallOverview callsite (`mall_overview.gd:291–301`) both pre-check the same
+condition and emit `EventBus.critical_notification_requested(...)` before
+emitting `day_close_requested`, so the silent swallow is effectively dead
+under those two paths. But two other emitters reach this bus without the
+pre-check: `close_day_preview.gd:162` (the confirmation modal opened from
+the Close-Day preview UI — not currently routed through a gated parent in
+all flows) and any future automation / AI-director / debug caller. A
+silent swallow there would leave the caller with no diagnostic — the day
+just doesn't close, with no log evidence and no UI feedback.
+
+**Now:** Added `push_warning` (citing §F-52) immediately before the
+early return. The HUD/MallOverview paths still surface the
+`critical_notification_requested` toast to the player; the warning
+captures the rejection on the stderr/log side so non-HUD callers can
+diagnose. The push_warning fires only on the gated rejection path, which
+in production cannot be reached from the gated callsites (they don't emit
+when the gate is closed) — so the only callers that trip it are
+non-HUD/MallOverview emitters, which is exactly the population that needs
+the diagnostic. The Pass 8 GUT test
+`test_day1_close_blocked_when_first_sale_flag_unset` invokes this path
+directly and continues to pass (it asserts state, not log output;
+`tests/run_tests.sh` redirects stderr to the log file so per-test warnings
+do not fail the suite — see `tests/run_tests.sh:42–47`).
+
+**Risk lenses:** Reliability (silent gate hides cause of "day won't
+close" symptom), Observability. Severity Low — UX surface is preserved
+for the canonical paths; this just adds the diagnostic for the rest.
+
+---
+
+### §F-53 — `interaction_ray.gd:186–195` — `_build_action_label` empty-on-empty silent return (Pass 8)
+
+`_build_action_label(target)` builds the prompt label shown by
+`InteractionPrompt`. The four-branch decision is:
+
+- both empty → return ""
+- name empty, verb present → "Press E to <verb>"
+- verb empty, name present → name
+- both present → "<name> / Press E to <verb>"
+
+The both-empty case is a content-authoring contract violation upstream:
+`Interactable.display_name` defaults to `"Item"` and `prompt_text` is
+auto-populated from `PROMPT_VERBS[interaction_type]` in
+`Interactable._ready` if blank. Reaching the both-empty branch requires
+the scene author to deliberately blank both — at which point the empty
+prompt panel renders visibly empty, so the failure is its own siren.
+
+A `push_warning` here would fire every time the cursor hovers a new
+interactable (`_set_hovered_target` runs every physics frame the hover
+target changes), spamming hundreds of identical warnings per minute and
+drowning real signal. The same content-authoring constraint is also
+implicitly verified by GUT tests that assert specific Interactable
+display names on shipping store scenes — a both-empty Interactable in a
+shipping scene would surface there.
+
+**Acted:** Added a §F-53 docstring at the function explaining the
+contract and the rationale for the silent return.
+
+**Risk lenses:** Observability (silent authoring drift). Severity Note —
+upstream defaults make the both-empty path nearly unreachable, and the
+visible empty prompt panel is the louder failure surface than a
+log-flooding warning.
+
+---
+
+### §F-54 — `hud.gd:524–545` — HUD `notification_requested`→`toast_requested` forwarding shim (Pass 8)
+
+The Issue-017 cleanup retired the in-HUD `PromptLabel` (which previously
+rendered notification_requested messages directly) and the
+`ObjectiveLabel` (which mirrored objective text). The HUD now forwards
+both `notification_requested` and `critical_notification_requested` to
+`EventBus.toast_requested(message, &"system", 0.0)`, where
+`ToastNotificationUI` (a child of the HUD scene, see
+`hud.tscn:119`) renders the message as a slide-in toast.
+
+Three silent-return paths are present:
+
+1. `_on_notification_requested` returns silently when
+   `_tutorial_step_active` is true. This preserves the prior priority
+   contract (tutorial step text owns the foreground; non-critical
+   notifications wait their turn). The
+   `test_notification_suppressed_during_tutorial_step` GUT test asserts
+   no toast fires on this path.
+2. Both handlers return silently on `message.is_empty()`. An empty
+   notification has no payload to render; the prior in-HUD prompt path
+   used the same convention.
+3. When the HUD scene is unloaded (MAIN_MENU, DAY_SUMMARY), the forwarding
+   handler isn't connected, so `notification_requested` and
+   `toast_requested` both have no listener. This is **the same surface as
+   before**: the prior in-HUD path was also unavailable while HUD was
+   unloaded. The forwarding shim does not introduce a new silent failure
+   mode.
+
+**Acted:** Added a §F-54 docstring above the pair documenting the three
+silent-return paths, the equivalent failure surface vs the prior path,
+and the ToastNotificationUI parent-scene relationship.
+
+**Risk lenses:** Observability (would a refactor that moves
+ToastNotificationUI out of the HUD scene quietly break this contract?).
+Severity Note — the equivalence with the prior path is what keeps this
+from being a regression; the docstring locks the equivalence.
+
+---
+
+### §F-55 — `objective_director.gd:70–79` — flag-before-emit ordering invariant (Pass 8)
+
+`_on_item_sold` writes `GameState.set_flag(&"first_sale_complete", true)`
+**before** emitting `EventBus.first_sale_completed`. The ordering matters
+because the Day-1 close gate (§F-52, plus its HUD and MallOverview
+mirrors) reads this flag at every emission point: a listener to
+`first_sale_completed` that immediately invokes `day_close_requested`
+would race the flag write and fail the gate.
+
+The set_flag → emit ordering is also the invariant that lets HUD's
+`_on_run_state_changed` (see `hud.gd:208–215`) update the close-day
+button tooltip the moment the flag flips, since `GameState.set_flag`
+emits `EventBus.run_state_changed` on every value change.
+
+**Acted:** Replaced the original two-line inline comment with a §F-55
+cite that explicitly names the gate (§F-52) the ordering protects so a
+future refactor that moves the flag write doesn't quietly desync the two
+guards.
+
+**Risk lenses:** Reliability (race between flag and signal). Severity
+Note — the ordering is correct; this finding documents the dependency.
+
+---
+
 ### §F-28 (RETIRED in Pass 6) — `nav_zone_interactable.gd` linked_label push_warning
 
 Pass 3 added a `push_warning` when `linked_label` resolved to a
@@ -1037,6 +1206,8 @@ section).
 | Tightened (Pass 5) | §F-39, §F-40, §F-41, §F-42, §F-43, §F-44 |
 | Acted (Pass 6) — docstring justifications | §F-46, §F-47 |
 | Acted (Pass 7) — inline-cite + docstring justifications | §F-50, §F-51 |
+| Tightened (Pass 8) | §F-52 |
+| Acted (Pass 8) — docstring + cite justifications | §F-53, §F-54, §F-55 |
 | Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §F-48, §F-49, §J4 |
 | Retired (feature removed) | §F-28 |
 | Needs telemetry | None — EventBus + AuditLog provide sufficient observability |
@@ -1055,6 +1226,23 @@ removed.
 ## Final Verdict
 
 **Prod posture acceptable.**
+
+Pass 8 reviewed the working-tree diff that follows Pass 7 (Day-1
+first-sale gate backstop on `DayCycleController._on_day_close_requested`,
+HUD notification/critical_notification forwarding to `toast_requested`
+after `PromptLabel` and `ObjectiveLabel` were retired with the Issue-017
+cleanup, the `ObjectiveDirector._on_item_sold` flag-before-emit ordering,
+and the `InteractionRay._build_action_label` rewrite). It found one Low
+gap (§F-52 silent backstop on the Day-1 close gate — tightened to
+`push_warning`) and three Note-level silent fallbacks documented in
+place (§F-53 `_build_action_label` empty-on-empty per-frame contract,
+§F-54 HUD→toast forwarding shim with equivalent failure surface vs the
+prior in-HUD prompt path, §F-55 `_on_item_sold` flag-before-emit
+ordering invariant the §F-52 gate depends on). Pass 8 also confirms the
+`objective_text_changed` signal removal (StoreController + EventBus) is
+a clean API retirement enforced by `tests/validate_issue_017.sh`, not a
+suppression event. All earlier passes' findings continue to hold under
+the Pass 8 working-tree state.
 
 Pass 7 reviewed the working-tree diff that follows Pass 6 (uniform orbit-
 camera bounds clamp in `StoreSelectorSystem.enter_store`, removal of the
@@ -1075,7 +1263,7 @@ current camera and finds the externally-instantiated body or orbit
 camera). No hidden data-corruption paths remain across any pass.
 
 After Pass 5 the repo's full test suite (`bash tests/run_tests.sh`) reported
-4666 / 4666 GUT tests passing. Pass 6 and Pass 7 have not yet been
-validated against the suite — the working tree currently has uncommitted
-changes to scenes and scripts that may shift test counts up or down.
-Re-run the suite before relying on the post-Pass-7 number.
+4666 / 4666 GUT tests passing. Pass 6, Pass 7, and Pass 8 have not yet
+been validated against the suite — the working tree currently has
+uncommitted changes to scenes and scripts that may shift test counts up
+or down. Re-run the suite before relying on the post-Pass-8 number.

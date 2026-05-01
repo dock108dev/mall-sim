@@ -15,6 +15,7 @@ var _controller: DayCycleController
 var _saved_state: int
 var _saved_store_id: StringName
 var _saved_owned_stores: Array[StringName]
+var _saved_first_sale_flag: bool
 
 # Captured signal payloads
 var _day_closed_payloads: Array[Dictionary] = []
@@ -26,9 +27,13 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
+	_saved_first_sale_flag = GameState.get_flag(&"first_sale_complete")
 	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"pocket_creatures"
 	GameManager.owned_stores = []
+	# These tests exercise day-close mechanics, not the Day 1 first-sale gate.
+	# Pre-satisfy the gate so day_close_requested reaches DayCycleController.
+	GameState.set_flag(&"first_sale_complete", true)
 
 	_time = TimeSystem.new()
 	add_child_autofree(_time)
@@ -72,6 +77,7 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
+	GameState.set_flag(&"first_sale_complete", _saved_first_sale_flag)
 	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.day_closed, _on_day_closed)
 	TEST_SIGNAL_UTILS.safe_disconnect(
 		EventBus.store_day_closed, _on_store_day_closed

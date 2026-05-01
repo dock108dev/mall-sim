@@ -78,20 +78,6 @@ text = ""
 horizontal_alignment = 2
 clip_text = true
 
-[node name="ObjectiveLabel" type="Label" parent="."]
-unique_name_in_owner = true
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -250.0
-offset_top = 88.0
-offset_right = 250.0
-offset_bottom = 118.0
-grow_horizontal = 2
-text = ""
-horizontal_alignment = 1
-vertical_alignment = 0
-
 [node name="StoreLabel" type="Label" parent="."]
 anchors_preset = 5
 anchor_left = 0.5
@@ -129,22 +115,6 @@ grow_horizontal = 0
 text = ""
 horizontal_alignment = 2
 visible = false
-
-[node name="PromptLabel" type="Label" parent="."]
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -150.0
-offset_top = -80.0
-offset_right = 150.0
-offset_bottom = -50.0
-grow_horizontal = 2
-grow_vertical = 0
-text = "Click to Interact"
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="ToastNotificationUI" parent="." instance=ExtResource("2")]
 

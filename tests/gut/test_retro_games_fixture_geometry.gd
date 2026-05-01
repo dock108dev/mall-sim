@@ -213,3 +213,106 @@ func test_open_floor_gap_between_counter_and_display_table() -> void:
 		1.0,
 		"Customer path gap between counter and display table must be > 1.0 m"
 	)
+
+
+# ── Fixture solidity: each fixture body blocks layer-1 traffic ───────────────
+#
+# Required fixtures must carry a StaticBody3D on layer 1 with a BoxShape3D
+# whose extents approximate the visible mesh. Without this, the player camera
+# pivot and any future CharacterBody3D visitor pass straight through the
+# fixture mesh and the store reads as a "debug plane". The Area3D children
+# (shelf slots, register, interactables) stay on layer 2 — those are
+# verified separately in test_retro_games_scene_issue_006.gd.
+
+const _REQUIRED_COLLIDABLE_FIXTURES: Array[String] = [
+	"CartRackLeft",
+	"CartRackRight",
+	"GlassCase",
+	"ConsoleShelf",
+	"AccessoriesBin",
+	"Checkout",
+]
+
+
+func test_required_fixtures_have_static_body_on_layer_1() -> void:
+	for fixture_name: String in _REQUIRED_COLLIDABLE_FIXTURES:
+		var fixture: Node = _root.get_node_or_null(fixture_name)
+		assert_not_null(fixture, "%s must exist" % fixture_name)
+		if fixture == null:
+			continue
+		var body: StaticBody3D = fixture.get_node_or_null("StaticBody3D") as StaticBody3D
+		assert_not_null(
+			body,
+			"%s must have a StaticBody3D child so the player and customers cannot pass through it"
+			% fixture_name
+		)
+		if body == null:
+			continue
+		assert_eq(
+			body.collision_layer, 1,
+			"%s/StaticBody3D.collision_layer must equal 1 (same layer as outer walls)"
+			% fixture_name
+		)
+
+
+func test_required_fixtures_collision_shape_approximates_mesh_bounds() -> void:
+	# Map fixture name → primary visible mesh child name.
+	var mesh_child_by_fixture: Dictionary = {
+		"CartRackLeft": "RackMesh",
+		"CartRackRight": "RackMesh",
+		"GlassCase": "CaseMesh",
+		"ConsoleShelf": "ShelfMesh",
+		"AccessoriesBin": "BinMesh",
+		"Checkout": "CounterMesh",
+	}
+	for fixture_name: String in _REQUIRED_COLLIDABLE_FIXTURES:
+		var fixture: Node = _root.get_node_or_null(fixture_name)
+		if fixture == null:
+			continue
+		var body: StaticBody3D = fixture.get_node_or_null("StaticBody3D") as StaticBody3D
+		if body == null:
+			continue
+		var coll: CollisionShape3D = body.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		assert_not_null(coll, "%s/StaticBody3D must have a CollisionShape3D child" % fixture_name)
+		if coll == null or not (coll.shape is BoxShape3D):
+			assert_true(
+				coll != null and coll.shape is BoxShape3D,
+				"%s collision shape must be BoxShape3D" % fixture_name
+			)
+			continue
+		var box_size: Vector3 = (coll.shape as BoxShape3D).size
+		var mesh_child_name: String = mesh_child_by_fixture[fixture_name]
+		var mesh: MeshInstance3D = fixture.get_node_or_null(mesh_child_name) as MeshInstance3D
+		if mesh == null or not (mesh.mesh is BoxMesh):
+			continue
+		var mesh_size: Vector3 = (mesh.mesh as BoxMesh).size
+		# Collision must approximate mesh bounds: no axis can be more than 25% over
+		# the mesh extent (no large empty collision volumes), and no axis can be
+		# under 50% of the mesh extent (otherwise gaps appear at the silhouette).
+		for axis: int in range(3):
+			assert_lte(
+				box_size[axis], mesh_size[axis] * 1.25,
+				"%s collision %s-axis (%.3f) must not exceed mesh extent (%.3f) by >25%%"
+				% [fixture_name, ["x", "y", "z"][axis], box_size[axis], mesh_size[axis]]
+			)
+			assert_gte(
+				box_size[axis], mesh_size[axis] * 0.5,
+				"%s collision %s-axis (%.3f) must cover at least 50%% of mesh extent (%.3f)"
+				% [fixture_name, ["x", "y", "z"][axis], box_size[axis], mesh_size[axis]]
+			)
+
+
+func test_shelf_slot_areas_remain_on_layer_2() -> void:
+	# Adding fixture-body collision must not steal layer 2 from the
+	# Interactable / shelf slot Area3D children — they must continue to
+	# register hover/click via the InteractionRay raycast.
+	var slots: Array[Node] = _root.get_tree().get_nodes_in_group("shelf_slot")
+	assert_gt(slots.size(), 0, "Scene must have at least one shelf slot to verify layer 2")
+	for slot: Node in slots:
+		var area: Area3D = slot.get_node_or_null("InteractionArea") as Area3D
+		assert_not_null(area, "%s must retain its InteractionArea child" % slot.name)
+		if area:
+			assert_eq(
+				area.collision_layer, 2,
+				"%s/InteractionArea must remain on collision layer 2" % slot.name
+			)

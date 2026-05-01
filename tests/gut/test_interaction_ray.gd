@@ -40,10 +40,41 @@ func test_focus_emits_action_label_when_target_changes() -> void:
 
 	assert_eq(
 		_focused_labels,
-		["Enter Store"],
+		["Store / Press E to enter"],
 		"Focusing a target should emit interactable_focused with the built action label"
 	)
 	assert_eq(_unfocused_count, 0, "Focusing should not emit unfocus")
+
+
+func test_hovered_action_label_getter_reflects_focus_state() -> void:
+	var target: Interactable = _create_target("Inspect", "GlassCase")
+
+	assert_eq(
+		_ray.get_hovered_action_label(),
+		"",
+		"With no hovered target, action label getter should return empty string"
+	)
+
+	_ray._set_hovered_target(target)
+	assert_eq(
+		_ray.get_hovered_action_label(),
+		"GlassCase / Press E to inspect",
+		"Hovered action label should match the built action label"
+	)
+
+	_ray._set_hovered_target(null)
+	assert_eq(
+		_ray.get_hovered_action_label(),
+		"",
+		"After unfocus, action label getter should reset to empty string"
+	)
+
+
+func test_interaction_ray_registers_in_lookup_group() -> void:
+	assert_true(
+		_ray.is_in_group(&"interaction_ray"),
+		"InteractionRay should self-register in the 'interaction_ray' group for AuditOverlay lookup"
+	)
 
 
 func test_unfocus_emits_when_target_cleared() -> void:

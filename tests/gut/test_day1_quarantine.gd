@@ -167,20 +167,28 @@ func test_telegraph_card_hidden_when_objective_active() -> void:
 	var card: Label = hud.get_node("TelegraphCard")
 	assert_true(card.visible, "Telegraph card should appear with no higher priority")
 
-	EventBus.objective_text_changed.emit("Place merchandise on the empty shelves")
+	EventBus.objective_changed.emit({
+		"text": "Place merchandise on the empty shelves",
+		"action": "",
+		"key": "",
+	})
 	assert_false(
 		card.visible,
 		"Telegraph card must hide when ObjectiveRail has active objective text"
 	)
 
-	EventBus.objective_text_changed.emit("")
+	EventBus.objective_changed.emit({"hidden": true})
 	assert_true(
 		card.visible,
-		"Telegraph card must reappear when objective text is cleared"
+		"Telegraph card must reappear when the rail is hidden"
 	)
 
 
-func test_telegraph_card_hidden_when_interactable_focused() -> void:
+func test_telegraph_card_persists_during_interactable_focus() -> void:
+	# The interaction prompt now lives on its own CanvasLayer (layer 60) at
+	# the bottom-center of the screen, while the telegraph card sits in the
+	# top-right of the HUD. The two surfaces no longer overlap, so the HUD
+	# does not suppress the ticker on hover.
 	var hud: CanvasLayer = _HudScene.instantiate()
 	add_child_autofree(hud)
 	GameManager.current_state = GameManager.State.MALL_OVERVIEW
@@ -194,13 +202,10 @@ func test_telegraph_card_hidden_when_interactable_focused() -> void:
 	assert_true(card.visible)
 
 	EventBus.interactable_focused.emit("Stock shelf")
-	assert_false(
+	assert_true(
 		card.visible,
-		"Telegraph card must hide while an interactable is focused"
+		"Telegraph card must remain visible while an interactable is focused"
 	)
 
 	EventBus.interactable_unfocused.emit()
-	assert_true(
-		card.visible,
-		"Telegraph card must reappear after interactable_unfocused"
-	)
+	assert_true(card.visible)

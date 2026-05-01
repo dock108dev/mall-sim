@@ -4,15 +4,11 @@
 class_name StoreController
 extends Node
 
-## Emitted whenever current_objective_text changes. The HUD ObjectiveLabel
-## binds to this (mirrored on EventBus.objective_text_changed for cross-scene
-## wiring) so updates propagate within one frame.
-signal objective_text_changed(text: String)
-
 var store_type: String = ""
 
-## HUD-driving objective text. Set via `set_objective_text()` so the binding
-## signal fires; do not assign directly from outside.
+## Mirrors ObjectiveDirector's day text so StoreReadyContract invariant 10
+## (objective_matches_action) can validate against the same text the player
+## sees on the objective rail. Set via `set_objective_text()`.
 var current_objective_text: String = ""
 
 var _slots: Array[Node] = []
@@ -474,15 +470,12 @@ func count_visible_interactables() -> int:
 	return count
 
 
-## Sets current_objective_text and emits both the local signal and the
-## EventBus mirror so HUDs not parented to this controller update within one frame.
+## Updates current_objective_text so StoreReadyContract invariant 10
+## (objective_matches_action) can validate against the rail's day text.
 func set_objective_text(text: String) -> void:
 	if text == current_objective_text:
 		return
 	current_objective_text = text
-	objective_text_changed.emit(text)
-	if EventBus.has_signal(&"objective_text_changed"):
-		EventBus.objective_text_changed.emit(text)
 
 
 ## StoreReadyContract invariant #10. The objective text references a real
