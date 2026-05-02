@@ -236,24 +236,64 @@ func test_day_close_button_emits_event_bus_signal() -> void:
 	assert_eq(_day_close_requests, 1, "Day close button must emit day_close_requested")
 
 
-# ── Day 1 close gate ──────────────────────────────────────────────────────────
+# ── Day 1 soft confirmation gate ──────────────────────────────────────────────
 
-func test_day_close_gated_on_day1_before_first_sale() -> void:
+func test_day_close_on_day1_before_first_sale_shows_confirm_dialog() -> void:
 	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
 	add_child_autofree(_overview)
 	GameManager.set_current_day(1)
 	GameState.set_flag(&"first_sale_complete", false)
-	watch_signals(EventBus)
 	_overview._day_close_button.pressed.emit()
 	assert_eq(
 		_day_close_requests,
 		0,
-		"Day close must not emit day_close_requested on Day 1 before first sale"
+		"Day close must not emit day_close_requested on Day 1 before "
+		+ "the player confirms via the soft gate"
 	)
-	assert_signal_emitted(
-		EventBus,
-		"critical_notification_requested",
-		"Gate must surface a critical notification on Day 1 before first sale"
+	var dialog: ConfirmationDialog = (
+		_overview.get_node("CloseDayConfirmDialog") as ConfirmationDialog
+	)
+	assert_not_null(
+		dialog,
+		"MallOverview must instance CloseDayConfirmDialog for the soft gate"
+	)
+	assert_true(
+		dialog.visible,
+		"Soft gate must surface the confirm dialog on Day 1 before first sale"
+	)
+
+
+func test_day_close_confirm_dialog_close_anyway_emits_day_close_requested() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", false)
+	_overview._day_close_button.pressed.emit()
+	var dialog: ConfirmationDialog = (
+		_overview.get_node("CloseDayConfirmDialog") as ConfirmationDialog
+	)
+	dialog.confirmed.emit()
+	assert_eq(
+		_day_close_requests,
+		1,
+		"Confirming the soft gate must emit day_close_requested exactly once"
+	)
+
+
+func test_day_close_confirm_dialog_stay_open_does_not_emit() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", false)
+	_overview._day_close_button.pressed.emit()
+	var dialog: ConfirmationDialog = (
+		_overview.get_node("CloseDayConfirmDialog") as ConfirmationDialog
+	)
+	dialog.canceled.emit()
+	assert_eq(
+		_day_close_requests,
+		0,
+		"Cancelling the soft gate must not emit day_close_requested"
 	)
 
 

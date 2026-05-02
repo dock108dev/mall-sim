@@ -13,6 +13,9 @@ const SLOT_PATHS: Dictionary = {
 const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
 )
+const _LOAD_BUTTON_DEFAULT_TEXT: String = "Load Game"
+const _LOAD_BUTTON_NO_SAVE_TEXT: String = "No Save Found"
+const _LOAD_BUTTON_DISABLED_MODULATE: Color = Color(0.6, 0.6, 0.6, 1.0)
 
 var _load_panel_visible: bool = false
 var _settings_panel: SettingsPanel = null
@@ -20,6 +23,7 @@ var _any_saves_exist: bool = false
 var _input_focus_pushed: bool = false
 
 @onready var _continue_button: Button = $VBox/ContinueButton
+@onready var _load_button: Button = $VBox/LoadButton
 @onready var _load_container: PanelContainer = $LoadPanel
 @onready var _slot_list: VBoxContainer = (
 	$LoadPanel/Margin/VBox/SlotContainer
@@ -49,6 +53,7 @@ func _ready() -> void:
 	_quit_dialog.confirmed.connect(_on_quit_confirmed)
 
 	_any_saves_exist = _has_any_saves()
+	_refresh_load_button_state()
 
 	var most_recent: int = _find_most_recent_slot()
 	_continue_button.visible = most_recent >= 0
@@ -63,6 +68,14 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_pop_main_menu_input_focus()
+
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_VISIBILITY_CHANGED:
+		return
+	if not is_inside_tree() or not is_visible_in_tree():
+		return
+	_refresh_load_button_state()
 
 
 func _push_main_menu_input_focus() -> void:
@@ -109,6 +122,11 @@ func _start_new_game() -> void:
 
 
 func _on_load_pressed() -> void:
+	# Belt for the disabled-button contract: refresh the affordance and bail
+	# if the save vanished between _ready and the click. See EH-10.
+	if not _slot_zero_save_exists():
+		_refresh_load_button_state()
+		return
 	if _load_panel_visible:
 		_close_load_panel()
 		return
@@ -217,6 +235,26 @@ func _has_any_saves() -> bool:
 		if FileAccess.file_exists(path):
 			return true
 	return false
+
+
+func _slot_zero_save_exists() -> bool:
+	var path: String = SLOT_PATHS.get(0, "")
+	if path.is_empty():
+		return false
+	return FileAccess.file_exists(path)
+
+
+func _refresh_load_button_state() -> void:
+	if _load_button == null:
+		return
+	var has_save: bool = _slot_zero_save_exists()
+	_load_button.disabled = not has_save
+	if has_save:
+		_load_button.text = _LOAD_BUTTON_DEFAULT_TEXT
+		_load_button.modulate = Color.WHITE
+	else:
+		_load_button.text = _LOAD_BUTTON_NO_SAVE_TEXT
+		_load_button.modulate = _LOAD_BUTTON_DISABLED_MODULATE
 
 
 func _find_most_recent_slot() -> int:

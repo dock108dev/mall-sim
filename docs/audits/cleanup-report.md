@@ -250,3 +250,101 @@ on:
   shifts the AC3 contract surface from `economy_system.gd` to
   `economy_value_calculator.gd` — that's a controlled change worth a
   dedicated PR description rather than burying it in a cleanup pass.
+
+---
+
+## Pass 3 — Day-1 soft-gate working tree comment trim
+
+A third cleanup pass on the same date covers the working-tree changes that
+landed the Day-1 first-sale soft-confirm gate (HUD + MallOverview
+`ConfirmationDialog`), the audit / debug overlay gating contract docstrings,
+the `user://settings.cfg` size-cap probe in `DifficultySystem`, the
+`save_index.cfg` slot-range filter in `SaveManager`, and the main-menu
+load-button disabled-state contract. Those edits are correct, but several
+of them shipped paragraph-length block comments that violate the project
+style ("default to writing no comments; one short line max when intent is
+non-obvious"). Pass 3 trims them. No behavior change. GUT suite remains
+4818/4818 green; validator suite unchanged (pre-existing
+`Some ISSUE-239 checks failed.` is content-data work tracked elsewhere).
+
+### Changes made this pass
+
+#### Comment trims (no behavior change)
+
+| File | What was trimmed | Why |
+|---|---|---|
+| `game/scenes/ui/main_menu.gd:_on_load_pressed` | 7-line paragraph explaining defensive guard + "silence is intentional" rationale → 2-line summary citing EH-10 | The full rationale is in `error-handling-report.md` EH-10. Keeping the WHY short and pointing to the canonical doc avoids in-code prose that rots when the doc is updated. |
+| `game/autoload/audit_overlay.gd` (top-of-file `##` block) | 17-line gating-contract + "no fixture debug labels" essay → 4-line `##` block | The "no SubViewport / minimap" load-bearing fact stays. The fixture-Label3D essay was a historical note from when the question was being answered, not a current-code invariant. |
+| `game/scenes/debug/debug_overlay.gd` (top-of-file `##` block) | 8-line gating-contract block → 3-line `##` block | Same posture as audit_overlay; release-build queue_free + debug-build hidden-by-default + "no SubViewport" are the load-bearing facts. |
+| `game/scenes/ui/hud.gd:_show_close_day_confirm` doc comment + wiring-fallback comment | 3-line `##` doc → 2-line `##` doc; 2-line `# Wiring regression` → 1-line | Behavior of confirm/cancel is self-evident from the code; the wiring-regression branch only needs to record *why* the fall-through path runs, not narrate the call. |
+| `game/scenes/mall/mall_overview.gd:_show_close_day_confirm` doc comment + wiring-fallback comment | Same posture as HUD. | Same reason. |
+| `game/autoload/difficulty_system.gd:_safe_load_config` (function comment + size-cap branch comment) | 6-line function-doc paragraph → 3 lines; 5-line "Distinct signal" branch comment → 2 lines | The §SR-10 reference now carries the long-form rationale; the in-code comment only needs the *because* (DoS-vs-corrupt distinction). |
+| `game/scripts/core/save_manager.gd:get_all_slot_metadata` (slot-range filter comment) | 4-line block → 2-line | "Drop out-of-range slot sections so a hand-crafted index cannot inject unbounded keys" is the full rationale. The downstream-validator note was redundant. |
+| `game/autoload/objective_director.gd:_on_item_sold` (`§F-55` comment) | 5-line block → 3-line block | The race-ordering rationale (set flag *before* emit so handlers see true) is the only load-bearing reason. The "every emission point" tail was historical narration. |
+| `tests/gut/test_day_cycle_close_loop.gd:before_each` | 4-line "no controller-side gating effect" comment → 3-line | Tightened wording; the controller-side-gate disclaimer was a forward reference to the deleted `§F-52` backstop, no longer needed in this many lines. |
+| `tests/gut/test_audit_overlay_toggle.gd::test_overlay_stays_hidden_in_store_view_and_gameplay` | 3-line "Normal-play gating" preamble → 1-line | The test name already says what is being tested; the comment only needs the WHY (state changes alone must not surface the overlay). |
+
+Net: ~50 lines of in-code prose removed across 10 files. No `##` doc strings
+were *deleted* — Godot still surfaces public-API doc text as inspector
+tooltips, so the docstrings on `_show_close_day_confirm` (HUD and
+MallOverview) were trimmed but kept. Block `#` comments inside function
+bodies were the primary trim target.
+
+#### Per-finding outcomes (Act / Justify)
+
+| # | Finding | Outcome | Rationale |
+|---|---|---|---|
+| P3-1 | Paragraph-length block comments in 10 working-tree files | **Act** | Trimmed per project style ("one short line max"). |
+| P3-2 | `_LOAD_BUTTON_DEFAULT_TEXT` / `_LOAD_BUTTON_NO_SAVE_TEXT` / `_LOAD_BUTTON_DISABLED_MODULATE` constants in `main_menu.gd:16-18`, each used exactly once | **Justify** | The constants give names to user-visible strings and a UI-modulate color. `main_menu.gd` already uses constants (`MAX_SAVE_PREVIEW_BYTES`, `_SETTINGS_PANEL_SCENE`) for the same reason — *match the surrounding style*. The matching `test_main_menu.gd` tests assert on the literal strings, so inlining would not simplify the test surface either. Three named single-use constants cost less than three magic literals at the use site. |
+| P3-3 | `_show_close_day_confirm` exists in both `hud.gd` and `mall_overview.gd` with parallel structure but different fallback paths (preview-modal vs direct emit) | **Justify** | The two surfaces have different downstream pipelines: HUD's confirm branch routes through `CloseDayPreview` (per-store dry-run), MallOverview's confirm branch emits directly because the hub view has no per-store payload (J-1, retained from prior pass). Extracting a shared helper would have to take the post-confirm callable as a parameter, and the resulting indirection is *worse* than two short parallel methods. Per the in-tree rule "three similar lines is better than a premature abstraction." |
+| P3-4 | `_close_day_confirm_dialog.confirmed` is wired in both files, but `_wire_close_day_confirm_dialog` exists only in `hud.gd` (mall_overview wires inline in `_ready`) | **Justify** | `hud.gd` factors the wiring out because HUD has a sibling `_wire_close_day_preview` helper (matching style). `mall_overview.gd` has no sibling preview wiring, so wiring inline in `_ready` is the surrounding style there. The asymmetry matches each file's local conventions. |
+| P3-5 | `tests/gut/test_main_menu.gd` `before_all` slot-zero backup helper is new; comment is 2 lines | **Justify** | 2-line comment is on the limit, not over. The "preserve developer's local progress" fact is the WHY for an unusual test-fixture pattern; trimming further would lose context. |
+
+### Files still >500 LOC
+
+This pass touched only files already on the prior-pass list. None were
+split. The prior-pass `## Files still >500 LOC` table covers each — the
+`hud.gd` (840 LOC), `save_manager.gd` (1364 LOC), and `data_loader.gd`
+(1059 LOC) entries continue to apply with their existing extraction plans
+deferred. No new files crossed the 500-LOC threshold this pass.
+
+### Consistency edits (one line per file)
+
+- `game/autoload/audit_overlay.gd` — top-of-file `##` doc block compressed.
+- `game/scenes/debug/debug_overlay.gd` — top-of-file `##` doc block compressed.
+- `game/scenes/ui/main_menu.gd` — `_on_load_pressed` defensive-guard comment compressed.
+- `game/scenes/ui/hud.gd` — `_show_close_day_confirm` docstring + wiring-fallback comment compressed.
+- `game/scenes/mall/mall_overview.gd` — `_show_close_day_confirm` docstring + wiring-fallback comment compressed.
+- `game/autoload/difficulty_system.gd` — `_safe_load_config` function-doc + size-cap branch comments compressed.
+- `game/scripts/core/save_manager.gd` — `get_all_slot_metadata` slot-range filter comment compressed.
+- `game/autoload/objective_director.gd` — `_on_item_sold` `§F-55` race-order comment compressed.
+- `tests/gut/test_day_cycle_close_loop.gd` — `before_each` first-sale-flag comment compressed.
+- `tests/gut/test_audit_overlay_toggle.gd` — preamble inside `test_overlay_stays_hidden_in_store_view_and_gameplay` compressed.
+
+No naming, formatting, or import-order drift was found in the working-tree
+diff outside the comment-block compression listed above. `gdlint` continues
+to apply via CI's `lint-gdscript`.
+
+### Escalations
+
+None. Pass 3 was a pure-comment cleanup; no architectural blocker was
+uncovered. The two prior open Escalations (`pack_opening_system.gd`
+rollback gap, `economy_system.gd` `_get_market_event_multiplier` validator
+coupling) remain as they were after Pass 2 — unchanged by this pass.
+
+### Verification
+
+Headless GUT run after Pass 3:
+
+```
+Scripts           410
+Tests             4818
+  Passing         4818
+Asserts           27324
+---- All tests passed! ----
+```
+
+Validator suite: identical to prior passes. Pre-existing
+`Some ISSUE-239 checks failed.` (PocketCreatures pack-shape and tournament
+count) is upstream of this branch and tracked under separate content-data
+work.

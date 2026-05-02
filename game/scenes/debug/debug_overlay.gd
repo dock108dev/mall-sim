@@ -1,5 +1,6 @@
 ## Debug overlay — shows game state info and provides cheat commands.
-## Toggle with F1 (toggle_debug input action). Only available in debug builds.
+## F1 toggles visibility; release builds queue_free in _ready, debug builds
+## start hidden. Text-only Label child; no SubViewport or minimap.
 extends CanvasLayer
 
 

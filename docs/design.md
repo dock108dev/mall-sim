@@ -26,13 +26,16 @@ At cadence: unlock new store, market/seasonal event fires, reputation tier chang
 
 ## 4. Store roster
 
-| Store | Signature mechanic |
-|---|---|
-| Retro Game Vault | Refurbishment queue: accept → diagnose → repair → relist with condition grade |
-| Pocket Creatures | Pack opening + meta-shift price swings + tournament scheduling |
-| Video Rental Depot | Rental tracking with tape-wear state, overdue detection, late-fee checkout |
-| Digital Horizons | Demo-unit designation + warranty dialog at checkout |
-| Stadium Relics | Multi-state authentication: cost → grading states → partial-information outcome → multiplier |
+Display names below match `game/content/stores/store_definitions.json`.
+Canonical IDs (used in code, save files, and signals) are the second column.
+
+| Store (display name) | Canonical id | Signature mechanic |
+|---|---|---|
+| Retro Game Store | `retro_games` | Refurbishment queue: accept → diagnose → repair → relist with condition grade |
+| PocketCreatures Card Shop | `pocket_creatures` | Pack opening + meta-shift price swings + tournament scheduling |
+| Video Rental | `rentals` | Rental tracking with tape-wear state, overdue detection, late-fee checkout |
+| Consumer Electronics | `electronics` | Demo-unit designation + warranty dialog at checkout |
+| Sports Memorabilia | `sports` | Multi-state authentication: cost → grading states → partial-information outcome → multiplier |
 
 ## 5. Progression model
 

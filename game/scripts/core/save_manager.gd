@@ -1153,7 +1153,11 @@ func get_all_slot_metadata() -> Dictionary:
 	for section: String in config.get_sections():
 		if not section.begins_with("slot_"):
 			continue
+		# Drop out-of-range slot sections so a hand-crafted save_index.cfg
+		# cannot inject unbounded slot keys into the returned dictionary.
 		var slot_num: int = int(section.trim_prefix("slot_"))
+		if slot_num < AUTO_SAVE_SLOT or slot_num > MAX_MANUAL_SLOTS:
+			continue
 		var meta: Dictionary = {}
 		for key: String in config.get_section_keys(section):
 			meta[key] = config.get_value(section, key)

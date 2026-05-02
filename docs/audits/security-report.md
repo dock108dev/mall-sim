@@ -1,13 +1,15 @@
 # Security Audit Report — Mallcore Sim
 
-**Latest pass:** 2026-05-01 — Pass 4 — save-load numeric hardening + scene-path
-sanitiser tightening (working-tree changes on `main`, prior to commit).
-**Prior passes:** 2026-04-28 (§A, §C — Day-1 quarantine and ISSUE-001/003/004/005),
-2026-04-27 (§B — initial main-branch sweep, `SR-01..SR-08`). Prior content was
-removed from the tree alongside an unrelated docs cleanup; the still-actionable
-findings (SR-03 CI hash, SR-04 action SHA pinning, DR-08 scene-path `..`
-segments) are restated below in **§Open from prior passes** so the file
-remains the single canonical source of truth.
+**Latest pass:** 2026-05-01 — Pass 5 — close two `user://` reader gaps that
+prior passes missed: an unbounded `settings.cfg` read in `DifficultySystem`
+and unranged slot keys returned from `save_index.cfg`.
+**Prior passes:** 2026-05-01 Pass 4 (save-load numeric hardening + scene-path
+sanitiser tightening), 2026-04-28 (§A, §C — Day-1 quarantine and
+ISSUE-001/003/004/005), 2026-04-27 (§B — initial main-branch sweep,
+`SR-01..SR-08`). Prior content was removed from the tree alongside an
+unrelated docs cleanup; the still-actionable findings (SR-03 CI hash, SR-04
+action SHA pinning) are restated below in **§Open from prior passes** so
+the file remains the single canonical source of truth.
 
 This file is the only place that tracks open security work. Inline `§F-N` /
 `§SR-N` / `§DR-N` markers in the codebase reference rows in the index at the
@@ -19,31 +21,84 @@ bottom of this document.
 
 Each bullet is a real edit in source. Code paths and rationale follow.
 
-- `game/autoload/content_registry.gd` — `_sanitize_scene_path` now rejects
-  `..` segments and `//` collapse in the `tail` past `SCENE_PATH_PREFIX`.
-  Closes prior-pass DR-08. The check fires only on the path tail, so the
-  legitimate `res://` `//` in the prefix passes; any later `//` or `..` is
-  refused with the existing `_emit_error` channel. (5-line change inside
-  the existing sanitiser; no new constants.)
-- `game/scripts/systems/economy_system.gd` — `_apply_state` now routes
-  every numeric field (cash, time-minutes, items-sold, rent, rent total,
-  daily expenses, last-injection-day) through new private helpers
-  `_safe_finite_float` / `_safe_finite_int` that reject NaN/Inf and clamp
-  to ±1e9 (cash) or 1_000_000 (counter ints). Tagged `§SR-09`.
-- `game/scripts/systems/inventory_system.gd` — `_apply_state` routes
-  `acquired_price` and `player_set_price` through a new `_safe_finite_price`
-  helper that rejects NaN/Inf and clamps to `[0.0, 1.0e9]`. Tagged `§SR-09`.
-- `tests/gut/test_save_load_numeric_hardening.gd` — new GUT regression test
-  covering NaN cash, Inf cash, extreme cash, string cash, NaN prices, and
-  negative prices on `EconomySystem.load_save_data` /
-  `InventorySystem.load_save_data`. Six tests, all green; total suite went
-  4803 → 4808 with no other deltas.
+- `game/autoload/difficulty_system.gd` — `_safe_load_config` now opens a
+  probe `FileAccess`, rejects `user://settings.cfg` larger than
+  `Settings.MAX_SETTINGS_FILE_BYTES` (256 KiB), and reads the file via the
+  probe's `get_as_text()` instead of `FileAccess.get_file_as_string`.
+  Mirrors the existing cap that `Settings.load_settings` applies to the
+  same path; closes the regression where two consumers of the same file
+  enforced different size policies. Tagged `§SR-10`.
+- `game/scripts/core/save_manager.gd` — `get_all_slot_metadata` now
+  drops `slot_<N>` sections from `save_index.cfg` whose `N` falls outside
+  `[AUTO_SAVE_SLOT, MAX_MANUAL_SLOTS]`, so a hand-crafted index with
+  `slot_99999999` cannot inject unbounded slot keys into the dictionary
+  callers iterate. Behavior-preserving for the four shipping slots.
 
-`bash tests/run_tests.sh` was run before and after the changes. GUT result
-is `All tests passed!` for the full 4808-test suite. The pre-existing
-`Some ISSUE-239 checks failed` validator output (parse errors in
-`packs.json` / `tournaments.json`) is unrelated to this branch and is
-covered by separate content-data work — see the SSOT report.
+`bash tests/run_tests.sh` was run after the changes; see §Test results
+below.
+
+---
+
+## §F-10 — 2026-05-01 Pass 5 findings
+
+### F-10.1 — `DifficultySystem._safe_load_config` read `settings.cfg` without a size cap — **Fixed inline**
+
+**Severity:** Low (resource exhaustion via planted `user://settings.cfg`).
+**Confidence:** High.
+**File:** `game/autoload/difficulty_system.gd:181-204` (post-fix).
+
+`DifficultySystem._safe_load_config` and `Settings._safe_load_config` both
+read the same `user://settings.cfg` path, but only `Settings` bounded the
+read by `MAX_SETTINGS_FILE_BYTES` (256 KiB) before calling
+`ConfigFile.parse`. The difficulty-system path used
+`FileAccess.get_file_as_string(path)`, which has no length cap and would
+materialise a multi-megabyte planted file into memory before the parser
+could reject it. The function is invoked on every `_persist_tier` /
+`_restore_persisted_tier`, so the unbounded read could fire repeatedly
+during a session, not just at boot.
+
+The two callsites of the same path enforcing different policies is the
+specific regression we tagged `§SR-01` for in Pass B (slot-index cap), so
+the fix matches that pattern: probe `FileAccess.open`, reject on
+`get_length() > Settings.MAX_SETTINGS_FILE_BYTES`, otherwise read via the
+probe's `get_as_text()` and close it before handing the text to
+`ConfigFile.parse`. Same cap constant as `Settings`, so no new tunable
+introduced.
+
+### F-10.2 — `SaveManager.get_all_slot_metadata` accepted out-of-range slot sections — **Fixed inline**
+
+**Severity:** Info (defence-in-depth; no current consumer trusts the keys).
+**Confidence:** High.
+**File:** `game/scripts/core/save_manager.gd:1140-1164` (post-fix).
+
+`get_all_slot_metadata` returned a dictionary keyed by `int(section.trim_prefix("slot_"))`
+for any section whose name began with `slot_`, with no range check on the
+parsed integer. A hand-crafted `save_index.cfg` containing
+`[slot_99999999]` would surface that key to every caller iterating the
+result. No current caller passes that key to `_get_slot_path` (only test
+code consumes the dictionary today), so the impact is bounded — but the
+slot-index file is already part of the player-controllable surface tracked
+under §SR-01, and downstream UI work would naturally re-use this getter.
+
+The fix filters parsed `slot_num` to `[AUTO_SAVE_SLOT, MAX_MANUAL_SLOTS]`
+before populating the result. `_validate_slot` still gates everything that
+goes back through the file-write path, but trimming the surface here keeps
+the contract tight at the boundary where the untrusted data first becomes
+typed.
+
+---
+
+## Test results — 2026-05-01 Pass 5
+
+`bash tests/run_tests.sh` after the edits. The save-manager and
+settings-load suites that exercise both touched paths
+(`tests/gut/test_save_manager.gd::test_get_all_slot_metadata*`,
+`tests/gut/test_settings_persistence.gd`,
+`tests/gut/test_difficulty_system_persistence.gd`) remain green; no
+existing test relied on the prior unbounded-read or unfiltered-slot
+behaviour. The full GUT result is unchanged from Pass 4 (`All tests
+passed!`). The same pre-existing ISSUE-239 content-validator output noted
+in Pass 4 is still unrelated to this branch.
 
 ---
 
@@ -237,9 +292,10 @@ Inline annotations in the codebase point back at rows here.
 
 | Ref | Location | Description |
 |---|---|---|
-| §SR-01 | `save_manager.gd::_slot_index_size_ok` | Slot-index size cap |
+| §SR-01 | `save_manager.gd::_slot_index_size_ok` + `get_all_slot_metadata` | Slot-index size cap; out-of-range slot sections are now also dropped (Pass 5) |
 | §SR-02 | `difficulty_system.gd::load_save_data` | Bool coercion on load |
-| §SR-09 | `economy_system.gd::_apply_state`, `inventory_system.gd::_apply_state` | NaN/Inf rejection + range clamp on save load (this pass) |
+| §SR-09 | `economy_system.gd::_apply_state`, `inventory_system.gd::_apply_state` | NaN/Inf rejection + range clamp on save load (Pass 4) |
+| §SR-10 | `difficulty_system.gd::_safe_load_config` | Size cap + probe-read mirroring `Settings._safe_load_config` (Pass 5) |
 | §DR-05 | `retro_games.gd::_add_starter_item_by_id` | Starter-quantity clamp |
 | §DR-08 | `content_registry.gd::_sanitize_scene_path` | `..` / `//` rejection in scene-path tail (this pass) |
 | §F1 | `tutorial_system.gd:44` | Tutorial-progress file size cap |
@@ -256,8 +312,7 @@ Inline annotations in the codebase point back at rows here.
 
 ## Escalations
 
-None. Every finding this pass was either acted on inline (F-09.1, F-09.2,
-F-09.3) or cleared with a named reason (09.4..09.8). Prior-pass open items
-SR-03 and SR-04 stay open with a named blocker; bringing them in requires
-a human decision on (a) the trusted SHA-512 fetch, (b) the action-pinning
-tooling trade-off.
+None. Pass 5 acted inline on both findings (F-10.1, F-10.2). Prior-pass
+open items SR-03 and SR-04 stay open with the same named blockers; bringing
+them in still requires a human decision on (a) the trusted SHA-512 fetch,
+(b) the action-pinning tooling trade-off.

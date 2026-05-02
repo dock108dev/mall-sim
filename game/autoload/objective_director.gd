@@ -71,10 +71,8 @@ func _on_item_sold(item_id: String, price: float, _category: String) -> void:
 	if not _sold:
 		_sold = true
 		# §F-55 — set the flag before emitting so listeners that read
-		# `GameState.get_flag(&"first_sale_complete")` from inside a
-		# `first_sale_completed` handler see the already-true value. The Day-1
-		# close gate (HUD button, MallOverview button, DayCycleController
-		# backstop §F-52) reads this flag at every emission point.
+		# `GameState.get_flag(&"first_sale_complete")` from inside the
+		# `first_sale_completed` handler see the already-true value.
 		GameState.set_flag(&"first_sale_complete", true)
 		EventBus.first_sale_completed.emit(&"", item_id, price)
 	_emit_current()

@@ -35,6 +35,27 @@ func test_overlay_starts_hidden() -> void:
 	assert_false(AuditOverlay.visible, "AuditOverlay must be hidden by default")
 
 
+func test_overlay_stays_hidden_in_store_view_and_gameplay() -> void:
+	# Without an explicit F3 toggle, state changes must not surface the overlay.
+	var prior_state: int = GameManager.current_state
+	if AuditOverlay.visible:
+		AuditOverlay.toggle()
+
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	assert_false(
+		AuditOverlay.visible,
+		"AuditOverlay must remain hidden when entering STORE_VIEW"
+	)
+
+	GameManager.current_state = GameManager.State.GAMEPLAY
+	assert_false(
+		AuditOverlay.visible,
+		"AuditOverlay must remain hidden when entering GAMEPLAY"
+	)
+
+	GameManager.current_state = prior_state
+
+
 func test_toggle_changes_visibility() -> void:
 	var was_visible: bool = AuditOverlay.visible
 	AuditOverlay.toggle()

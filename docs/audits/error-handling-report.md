@@ -6,12 +6,23 @@ fallback, defensive duck-typing, and `assert()` tripwire reachable from the
 gameplay surface, with an emphasis on the changed files on the working branch
 (shelf placement hint UI, orthographic camera mode, MALL_OVERVIEW HUD cash
 visibility, retro-games register prompt swap, save-load numeric hardening,
-and content-registry path traversal sanitization) and the in-source
-justifications already cited elsewhere in the tree.
+content-registry path traversal sanitization, and now the Day-1 first-sale
+soft-confirm gate, the `user://settings.cfg` size cap, and the main-menu
+load-button disabled-state contract) and the in-source justifications
+already cited elsewhere in the tree.
 
 This document is the canonical home for every report section ID referenced
 from the codebase via the literal string `error-handling-report.md`. If you
 add a new in-code citation, add the matching section here.
+
+## Changes made this pass (round 3)
+
+| Path | Change | Section |
+|---|---|---|
+| `game/scripts/systems/day_cycle_controller.gd` | Removed the `_on_day_close_requested` Day-1 first-sale backstop (the prior `§F-52` `push_warning` + early return). The Day-1 gate is now a UI-level soft-confirm dialog owned by `HUD` and `MallOverview`; once the player consents, the bus emission carries that consent into the controller and a second-guess at the controller layer would silently drop a player-confirmed action — strictly worse than the prior posture. The controller-side `push_warning` for "before initialize" remains. | EH-09 |
+| `game/scenes/ui/hud.gd`, `game/scenes/mall/mall_overview.gd` | Both surfaces now route the Day-1 close path through `_show_close_day_confirm`. The wiring fallback (dialog node missing) emits a `push_warning` and falls through to the next stage of the close pipeline (preview modal in HUD, direct emit in MallOverview) so a scene-edit regression that drops the dialog is loud in CI/telemetry, but the player is never trapped on Day 1. | EH-09 |
+| `game/autoload/difficulty_system.gd` | `_safe_load_config` now `push_warning`s on the size-cap branch instead of silently returning `ERR_PARSE_ERROR`. The caller's recovery path is unchanged (it still falls back to in-memory state), but a planted oversized `user://settings.cfg` is now distinguishable from a corrupt CFG in telemetry — a security signal, not just a recovery signal. | §SR-10 |
+| `game/scenes/ui/main_menu.gd` | `_on_load_pressed` now refreshes the load-button state when slot 0 is missing, then silently no-ops. Added a paragraph-length comment explaining why silence is intentional here: the disabled-button contract should keep this branch unreachable, so reaching it indicates either a race (save deleted between `_ready` and click) or a direct test/external invocation. The fallthrough refresh keeps the user-visible affordance ("No Save Found") accurate even on a regression. | EH-10 |
 
 ## Changes made this pass (round 2)
 
@@ -40,11 +51,11 @@ already carries an in-source comment that points to its section here.
 
 - **Counts (post-pass).** Critical: 0. High: 0. Medium: 1 (Escalations §E1 —
   pack-open card-loss rollback gap, tracked, not introduced by this pass).
-  Low: 0. Notes (intentional, documented suppressions): 25 (four new this
-  round — EH-07 retro-games register-prompt boot warning, EH-08 mall-overview
-  bounded silent guards, §J4 HUD state-fallthrough default, §DR-08
-  scene-path traversal hardening; plus §SR-09 save-load numeric hardening
-  added in the underlying diff).
+  Low: 0. Notes (intentional, documented suppressions): 25 (round 3 swaps the
+  retired `§F-52` backstop entry for two new entries — EH-09 the Day-1
+  first-sale soft-confirm gate, EH-10 the main-menu load-button disabled
+  contract — plus tightens `§SR-10` to push a distinct warning on the
+  settings-file size cap).
 - **Posture verdict.** Acceptable. Every silent path that survives is paired
   with either a typed return contract (EH-01), a runtime tripwire on the same
   code path (EH-AS-1), or an explicit doc comment that names the boundary
@@ -54,13 +65,24 @@ already carries an in-source comment that points to its section here.
   EH-06); the day-summary `GAME_OVER` guard in `game_world.gd` is documented
   (§F-55). The retro-games register-prompt now warns once at boot when its
   Interactable is missing (EH-07) instead of silently no-op-ing on every
-  queue tick. The save-loading hot path in `economy_system.gd` and
-  `inventory_system.gd` now coerces NaN/Inf and out-of-range numerics on a
+  queue tick. The Day-1 first-sale gate is now a *soft confirm* (HUD +
+  MallOverview ConfirmationDialog) instead of a silent controller-side
+  rejection; the `DayCycleController` no longer second-guesses the player
+  once the bus carries `day_close_requested`, and the dialog-missing
+  wiring-regression branch is `push_warning`-loud (EH-09). The main-menu
+  Load button enforces a disabled-state contract: when slot 0 is missing the
+  button is disabled, and the handler's silent guard refreshes the
+  user-visible affordance on the off-chance the contract was bypassed
+  (EH-10). The save-loading hot path in `economy_system.gd` and
+  `inventory_system.gd` coerces NaN/Inf and out-of-range numerics on a
   hand-edited save (§SR-09); without it, a single corrupt field would lock
   every "do you have enough cash?" comparison to false and read as a process
   hang. `content_registry.gd` rejects `..` and `//` path components in
   registered scene paths (§DR-08) so the prefix sandbox can't be bypassed by
-  an authoring typo.
+  an authoring typo. `difficulty_system.gd._safe_load_config` now logs the
+  oversized-`settings.cfg` branch distinctly so a planted multi-MB file
+  reads as a security event, not as a routine corrupt-CFG recovery
+  (§SR-10).
 - **Lens scoring.** Reliability: ok — no class of error is being swallowed
   end-to-end. Data integrity: ok with one caveat (Escalations §E1, an
   inventory-rollback gap during pack opening that the code now `push_error`s
@@ -204,6 +226,77 @@ bounding assumptions (e.g. a non-day-1 reset of `_store_sold_today`, or a
 store-card lifecycle that allows entries to appear and disappear mid-day)
 can fall back here for the documented contract.
 
+### EH-09 — Day-1 first-sale gate is a soft confirm, not a silent backstop
+
+`game/scenes/ui/hud.gd:223-245`,
+`game/scenes/mall/mall_overview.gd:389-415`,
+`game/scripts/systems/day_cycle_controller.gd:82-86`. Two architectural
+moves in this round:
+
+1. **HUD / MallOverview own the gate.** Pressing Close Day on Day 1 before
+   the first sale flag is set no longer surfaces a `critical_notification`
+   ("Make your first sale before closing Day 1.") that the player cannot
+   dismiss other than by playing on. Each surface now opens a
+   `ConfirmationDialog` ("You haven't made your first sale yet. Close Day
+   1 anyway?") wired in its own scene file. Confirm proceeds — through
+   the standard close pipeline (`HUD` opens the dry-run preview, which
+   itself emits `day_close_requested` on confirm; `MallOverview` emits
+   `day_close_requested` directly). Cancel is a no-op. The button's
+   tooltip text reflects the soft-gate language so the affordance is
+   discoverable before the player commits.
+2. **`DayCycleController` no longer second-guesses the bus.** The prior
+   `§F-52` push_warning in `_on_day_close_requested` rejected the close on
+   Day 1 even after the player had already cleared the UI gate. With the
+   soft-confirm pattern, that rejection silently drops a player-confirmed
+   action — strictly worse than the prior posture, since the player saw
+   their explicit "Close Anyway" click do nothing. The only callers of
+   `EventBus.day_close_requested` that bypass the UI confirm are
+   automation / debug paths, and they should be allowed to advance the
+   day for the same reason that `dev_force_place_test_item` is allowed to
+   bypass placement validation: those paths exist precisely to skip the
+   UX guardrails. The "before initialize" `push_warning` remains, since
+   that would indicate a startup-order regression.
+
+The wiring fallback (dialog node missing) is loud on purpose:
+`mall_overview.tscn` and `hud.tscn` both ship a `CloseDayConfirmDialog`,
+so reaching `_show_close_day_confirm`'s `push_warning` branch means the
+scene was edited without the dialog. We do not block the close — locking
+the only path to advance the day on a tooling regression would be worse
+than skipping the confirm — but the regression shows up in CI and
+telemetry instead of degrading silently to the old hard-gate behavior.
+Three tests cover this: `test_pressing_close_day_on_day1_before_first_sale_shows_confirm_dialog`,
+`test_close_day_confirm_dialog_close_anyway_opens_preview`,
+`test_close_day_confirm_dialog_stay_open_does_not_open_preview` (HUD); a
+matching trio exists in `tests/gut/test_mall_overview.gd`. The
+`DayCycleController` change is covered by
+`test_day1_close_proceeds_even_when_first_sale_flag_unset` and the
+flipped-assertion `test_close_day_on_day1_renders_summary_after_soft_confirm`.
+
+### EH-10 — `MainMenu._on_load_pressed` defensive guard backs the disabled-button contract
+
+`game/scenes/ui/main_menu.gd:124-141`. The Load button now disables itself
+whenever `user://save_slot_0.json` is missing (`_refresh_load_button_state`
+is called from `_ready` and from `_notification(NOTIFICATION_VISIBILITY_CHANGED)`).
+A Godot `Button` does not emit `pressed` while `disabled = true`, so
+`_on_load_pressed` should be unreachable when no save exists. The early
+return is a defensive belt:
+
+- A save file deleted between `_ready`/last-visibility-change and the
+  click (no fs watcher) leaves the button enabled but the file gone.
+- Direct test or external invocation can call `_on_load_pressed` without
+  going through the button.
+
+Silence is intentional in both cases. The user pressed an affordance that
+was either momentarily stale (the file vanished out-from-under) or never
+should have been pressable (test path); pushing a warning would either
+create user-visible noise during a benign delete-then-click race or fire
+on every test run that exercises the helper directly. Instead, the early
+return calls `_refresh_load_button_state` so the user-visible label flips
+back to "No Save Found" — the affordance updates, the regression heals
+itself, and a programmer auditing the menu can read the guard's purpose
+in the comment block at the call site. The `test_on_load_pressed_no_op_when_no_save`
+GUT test pins the silent-no-op contract.
+
 ### EH-AS-1 — `assert()` calls across ownership autoloads are paired tripwires
 
 `game/autoload/audit_log.gd:6-9` and the rest of the autoload roster
@@ -255,15 +348,6 @@ missing, the camera defaults to `_pivot = Vector3.ZERO`, which frames the
 store center for any interior that straddles origin. The silent no-op is
 the documented contract because the test suite catches the marker
 omission before it ships.
-
-### §F-52 — `DayCycleController._on_day_close_requested` Day-1 rejection emits push_warning
-
-`game/scripts/systems/day_cycle_controller.gd:82-101`. HUD / MallOverview
-emit `critical_notification_requested` to the player before the request
-reaches the bus, but non-HUD callers (debug, automation, future AI
-director, `close_day_preview.gd` if reopened outside gated paths) bypass
-that UI. The `push_warning` ensures any unexpected rejection by this
-controller looks like a real signal in logs rather than a no-op.
 
 ### §F-53 — `InteractionRay._build_action_label` returns "" silently
 

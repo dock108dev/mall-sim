@@ -82,6 +82,66 @@ func test_pressing_close_day_opens_preview_after_first_sale() -> void:
 	)
 
 
+func test_pressing_close_day_on_day1_before_first_sale_shows_confirm_dialog() -> void:
+	var hud: CanvasLayer = _HudScene.instantiate()
+	add_child_autofree(hud)
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", false)
+	hud._on_close_day_pressed()
+	var preview: CanvasLayer = hud.get_node("CloseDayPreview")
+	assert_false(
+		preview.visible,
+		"Day 1 Close Day before first sale must not open the preview directly"
+	)
+	var dialog: ConfirmationDialog = (
+		hud.get_node("CloseDayConfirmDialog") as ConfirmationDialog
+	)
+	assert_not_null(
+		dialog, "HUD must instance CloseDayConfirmDialog for the soft gate"
+	)
+	assert_true(
+		dialog.visible,
+		"Day 1 soft gate must surface the confirm dialog before first sale"
+	)
+
+
+func test_close_day_confirm_dialog_close_anyway_opens_preview() -> void:
+	var hud: CanvasLayer = _HudScene.instantiate()
+	add_child_autofree(hud)
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", false)
+	hud._on_close_day_pressed()
+	var dialog: ConfirmationDialog = (
+		hud.get_node("CloseDayConfirmDialog") as ConfirmationDialog
+	)
+	dialog.confirmed.emit()
+	var preview: CanvasLayer = hud.get_node("CloseDayPreview")
+	assert_true(
+		preview.visible,
+		"Confirming Close Anyway on the soft gate must open the dry-run preview"
+	)
+
+
+func test_close_day_confirm_dialog_stay_open_does_not_open_preview() -> void:
+	var hud: CanvasLayer = _HudScene.instantiate()
+	add_child_autofree(hud)
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	GameManager.set_current_day(1)
+	GameState.set_flag(&"first_sale_complete", false)
+	hud._on_close_day_pressed()
+	var dialog: ConfirmationDialog = (
+		hud.get_node("CloseDayConfirmDialog") as ConfirmationDialog
+	)
+	dialog.canceled.emit()
+	var preview: CanvasLayer = hud.get_node("CloseDayPreview")
+	assert_false(
+		preview.visible,
+		"Cancelling the soft gate must not open the dry-run preview"
+	)
+
+
 func test_preview_confirm_emits_day_close_requested_once() -> void:
 	var preview: CanvasLayer = _PreviewScene.instantiate()
 	add_child_autofree(preview)

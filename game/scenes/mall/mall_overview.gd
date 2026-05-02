@@ -44,6 +44,9 @@ var _completion_tracker: CompletionTracker = null
 	$VBox/BottomRow/PerformanceButton
 )
 @onready var _event_feed: VBoxContainer = $VBox/EventFeedScroll/EventFeed
+@onready var _close_day_confirm_dialog: ConfirmationDialog = (
+	$CloseDayConfirmDialog
+)
 
 
 func _ready() -> void:
@@ -52,6 +55,8 @@ func _ready() -> void:
 	_moments_log_button.pressed.connect(_on_moments_log_pressed)
 	_completion_button.pressed.connect(_on_completion_pressed)
 	_performance_button.pressed.connect(_on_performance_pressed)
+	if is_instance_valid(_close_day_confirm_dialog):
+		_close_day_confirm_dialog.confirmed.connect(_emit_day_close_requested)
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.store_exited.connect(_on_store_exited)
 	_refresh_optional_button_visibility()
@@ -386,10 +391,26 @@ func _on_day_close_pressed() -> void:
 		GameManager.get_current_day() == 1
 		and not GameState.get_flag(&"first_sale_complete")
 	):
-		EventBus.critical_notification_requested.emit(
-			"Make your first sale before closing Day 1."
-		)
+		_show_close_day_confirm()
 		return
+	_emit_day_close_requested()
+
+
+## Day 1 soft gate: prompt for consent before closing without a first sale.
+## Confirm calls `_emit_day_close_requested`; cancel is a no-op.
+func _show_close_day_confirm() -> void:
+	if not is_instance_valid(_close_day_confirm_dialog):
+		# Wiring regression — emit directly so the player is not trapped.
+		push_warning(
+			"MallOverview._show_close_day_confirm: CloseDayConfirmDialog "
+			+ "missing; emitting day_close_requested directly."
+		)
+		_emit_day_close_requested()
+		return
+	_close_day_confirm_dialog.popup_centered()
+
+
+func _emit_day_close_requested() -> void:
 	EventBus.day_close_requested.emit()
 
 

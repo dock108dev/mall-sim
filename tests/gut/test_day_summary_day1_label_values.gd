@@ -122,7 +122,7 @@ func test_close_day_renders_live_sale_into_summary_labels() -> void:
 
 	assert_true(
 		_summary_panel.visible,
-		"DaySummary must be visible after a gated Day 1 close"
+		"DaySummary must be visible after a Day 1 close once the first sale is recorded"
 	)
 	assert_string_contains(
 		_summary_panel._day_label.text, "Day 1",
@@ -150,17 +150,18 @@ func test_close_day_renders_live_sale_into_summary_labels() -> void:
 	)
 
 
-## Negative path: the DayCycleController backstop rejects close requests on
-## Day 1 when first_sale_complete is unset. The panel must stay hidden so
-## a stale or empty snapshot is never rendered into Day 1's labels.
-func test_close_day_blocked_on_day1_when_first_sale_not_complete() -> void:
+## Day 1 soft gate: when `day_close_requested` reaches the controller, the
+## player has already cleared the UI confirmation dialog (HUD / MallOverview
+## "Close Anyway"). The controller no longer second-guesses that consent, so
+## the summary renders even with `first_sale_complete` still unset.
+func test_close_day_on_day1_renders_summary_after_soft_confirm() -> void:
 	GameState.set_flag(&"first_sale_complete", false)
 	ObjectiveDirector._sold = false
 
 	EventBus.day_close_requested.emit()
 
-	assert_false(
+	assert_true(
 		_summary_panel.visible,
-		"DaySummary must not show when the Day 1 gate rejects the close "
-		+ "request — guards against rendering an empty Day 1 snapshot"
+		"DaySummary must show once the player consents via the soft gate, "
+		+ "even when first_sale_complete is unset — the UI dialog is the gate"
 	)

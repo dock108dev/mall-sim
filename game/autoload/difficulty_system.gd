@@ -179,13 +179,25 @@ func _restore_persisted_tier() -> void:
 
 
 # Wrapper around ConfigFile.load that pre-validates the file to avoid the
-# engine's internal "ConfigFile parse error" message — which tests trigger
-# intentionally via corrupt fixtures and which would otherwise fail CI's
-# push_error audit.
+# engine's internal "ConfigFile parse error" message and caps the read size
+# (§SR-10) to mirror Settings._safe_load_config.
 func _safe_load_config(config: ConfigFile, path: String) -> Error:
 	if not FileAccess.file_exists(path):
 		return ERR_FILE_NOT_FOUND
-	var text: String = FileAccess.get_file_as_string(path)
+	var probe: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if probe == null:
+		return FileAccess.get_open_error()
+	if probe.get_length() > Settings.MAX_SETTINGS_FILE_BYTES:
+		probe.close()
+		# Distinguishes a planted oversized cfg (security) from a corrupt cfg
+		# (routine recovery) in telemetry. See §SR-10.
+		push_warning(
+			"DifficultySystem: '%s' exceeds %d bytes — refusing to read"
+			% [path, Settings.MAX_SETTINGS_FILE_BYTES]
+		)
+		return ERR_PARSE_ERROR
+	var text: String = probe.get_as_text()
+	probe.close()
 	if not _looks_parseable_cfg(text):
 		return ERR_PARSE_ERROR
 	return config.parse(text)

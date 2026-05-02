@@ -90,6 +90,9 @@ var _counter_color_tweens: Dictionary = {}
 @onready var _telegraph_card: Label = $TelegraphCard
 @onready var _milestones_button: Button = $TopBar/MilestonesButton
 @onready var _close_day_preview: CanvasLayer = $CloseDayPreview
+@onready var _close_day_confirm_dialog: ConfirmationDialog = (
+	$CloseDayConfirmDialog
+)
 
 
 func _ready() -> void:
@@ -138,6 +141,7 @@ func _ready() -> void:
 	_create_close_day_button()
 	_create_hub_back_button()
 	_wire_close_day_preview()
+	_wire_close_day_confirm_dialog()
 
 	_update_cash_display(_displayed_cash)
 	_update_reputation_display(_last_reputation)
@@ -210,7 +214,7 @@ func _is_day1_gate_active() -> bool:
 func _on_run_state_changed() -> void:
 	if is_instance_valid(_close_day_button):
 		_close_day_button.tooltip_text = (
-			"Make your first sale before closing Day 1."
+			"You haven't made your first sale yet. You'll be asked to confirm."
 			if _is_day1_gate_active()
 			else ""
 		)
@@ -220,11 +224,23 @@ func _on_close_day_pressed() -> void:
 	var state := GameManager.current_state
 	if state == GameManager.State.STORE_VIEW or state == GameManager.State.GAMEPLAY:
 		if _is_day1_gate_active():
-			EventBus.critical_notification_requested.emit(
-				"Make your first sale before closing Day 1."
-			)
+			_show_close_day_confirm()
 			return
 		_open_close_day_preview()
+
+
+## Day 1 soft gate: prompt for consent before closing without a first sale.
+## Confirm proceeds to the dry-run preview; cancel is a no-op.
+func _show_close_day_confirm() -> void:
+	if not is_instance_valid(_close_day_confirm_dialog):
+		# Wiring regression — open the preview so the player is not trapped.
+		push_warning(
+			"HUD._show_close_day_confirm: CloseDayConfirmDialog missing; "
+			+ "opening close-day preview directly."
+		)
+		_open_close_day_preview()
+		return
+	_close_day_confirm_dialog.popup_centered()
 
 
 ## Opens the dry-run preview modal. The preview's Confirm button is the only
@@ -250,6 +266,12 @@ func _wire_close_day_preview() -> void:
 	if not is_instance_valid(_close_day_preview):
 		return
 	_close_day_preview.set_snapshot_callback(_get_active_store_snapshot)
+
+
+func _wire_close_day_confirm_dialog() -> void:
+	if not is_instance_valid(_close_day_confirm_dialog):
+		return
+	_close_day_confirm_dialog.confirmed.connect(_open_close_day_preview)
 
 
 func _get_active_store_snapshot() -> Array:
@@ -373,9 +395,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action("close_day"):
 		if _is_day1_gate_active():
-			EventBus.critical_notification_requested.emit(
-				"Make your first sale before closing Day 1."
-			)
+			_show_close_day_confirm()
 			get_viewport().set_input_as_handled()
 			return
 		_open_close_day_preview()

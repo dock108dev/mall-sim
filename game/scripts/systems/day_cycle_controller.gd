@@ -83,22 +83,6 @@ func _on_day_close_requested() -> void:
 	if not _time_system:
 		push_warning("DayCycleController: day_close_requested before initialize")
 		return
-	# Day 1 cannot close until the player completes the first sale. Backstop
-	# for non-HUD callers (automation, debug, future AI director, and
-	# `close_day_preview.gd` if it is ever opened outside the gated paths).
-	# The HUD/MallOverview callsites already emit `critical_notification_requested`
-	# before reaching the bus; this push_warning surfaces the rejection in logs
-	# so an unexpected rejection doesn't look like a no-op to the caller.
-	# See docs/audits/error-handling-report.md §F-52.
-	if (
-		_time_system.current_day == 1
-		and not GameState.get_flag(&"first_sale_complete")
-	):
-		push_warning(
-			"DayCycleController: day_close_requested rejected — "
-			+ "Day 1 first_sale_complete flag is unset"
-		)
-		return
 	_on_day_ended(_time_system.current_day)
 
 

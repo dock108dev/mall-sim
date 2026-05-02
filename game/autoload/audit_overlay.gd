@@ -1,12 +1,7 @@
 ## Debug autoload for headless interaction audit. Stripped to no-op in release builds.
 ## Connects to EventBus signals to auto-instrument the five required checkpoints.
-## F3 (toggle_debug action) toggles visibility; overlay never eats gameplay input.
-##
-## No fixture debug labels found in scene: retro_games.tscn fixtures
-## (ShelfSlot, GlassCase, Checkout, NavZones) carry no Label3D / MeshText
-## children, the Storefront facade is `visible=false`, and NavZone DebugMesh
-## children are also `visible=false`. The only Label3D nodes in store scenes
-## live under hidden Storefront groups used by the mall hub view.
+## F3 toggles visibility; release builds queue_free in _ready, debug builds
+## start hidden. No SubViewport or minimap is created here.
 extends CanvasLayer
 
 const CHECKPOINTS: Array[StringName] = [

@@ -31,8 +31,9 @@ func before_each() -> void:
 	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"pocket_creatures"
 	GameManager.owned_stores = []
-	# These tests exercise day-close mechanics, not the Day 1 first-sale gate.
-	# Pre-satisfy the gate so day_close_requested reaches DayCycleController.
+	# Pre-set the first-sale flag so any future flag-coupled assertion runs
+	# against a "first sale done" session — these tests exercise day-close
+	# mechanics, not the Day 1 soft-confirm gate.
 	GameState.set_flag(&"first_sale_complete", true)
 
 	_time = TimeSystem.new()

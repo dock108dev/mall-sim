@@ -180,10 +180,14 @@ func test_no_advance_if_ending_triggered() -> void:
 	)
 
 
-# ── Day 1 first-sale gate (backstop) ──────────────────────────────────────────
+# ── Day 1 first-sale soft gate ────────────────────────────────────────────────
+# The Day 1 first-sale gate is enforced at the UI layer as a confirmation
+# dialog (HUD / MallOverview). Once the player consents and the bus emits
+# `day_close_requested`, the controller proceeds regardless of the flag — the
+# player has already been warned and chosen to close.
 
 
-func test_day1_close_blocked_when_first_sale_flag_unset() -> void:
+func test_day1_close_proceeds_even_when_first_sale_flag_unset() -> void:
 	GameManager.current_state = GameManager.State.GAMEPLAY
 	_time.current_day = 1
 	GameState.set_flag(&"first_sale_complete", false)
@@ -191,12 +195,9 @@ func test_day1_close_blocked_when_first_sale_flag_unset() -> void:
 	_controller._on_day_close_requested()
 
 	assert_eq(
-		GameManager.current_state, GameManager.State.GAMEPLAY,
-		"State must remain GAMEPLAY when Day 1 close is gated"
-	)
-	assert_false(
-		_controller._awaiting_acknowledgement,
-		"Controller must not enter day-summary flow when gated"
+		GameManager.current_state, GameManager.State.DAY_SUMMARY,
+		"day_close_requested must proceed once the UI soft gate is cleared, "
+		+ "even if the first-sale flag is still unset"
 	)
 
 

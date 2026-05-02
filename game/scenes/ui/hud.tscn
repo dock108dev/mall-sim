@@ -122,3 +122,11 @@ visible = false
 
 [node name="CloseDayPreview" parent="." instance=ExtResource("5")]
 
+[node name="CloseDayConfirmDialog" type="ConfirmationDialog" parent="."]
+title = "Close Day"
+size = Vector2i(420, 160)
+dialog_text = "You haven't made your first sale yet. Close Day 1 anyway?"
+dialog_autowrap = true
+ok_button_text = "Close Anyway"
+cancel_button_text = "Stay Open"
+

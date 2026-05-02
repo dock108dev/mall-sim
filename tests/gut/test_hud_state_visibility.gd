@@ -376,7 +376,7 @@ func test_notification_suppressed_during_tutorial_step() -> void:
 func test_critical_notification_shows_during_tutorial_step() -> void:
 	_start_toast_capture()
 	EventBus.tutorial_step_changed.emit("click_store")
-	EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")
+	EventBus.critical_notification_requested.emit("Save failed — check disk space.")
 	_stop_toast_capture()
 	assert_eq(
 		_captured_toasts.size(), 1,
@@ -384,7 +384,7 @@ func test_critical_notification_shows_during_tutorial_step() -> void:
 	)
 	assert_eq(
 		_captured_toasts[0].get("message", ""),
-		"Make your first sale before closing Day 1.",
+		"Save failed — check disk space.",
 		"Toast message must match the critical notification payload"
 	)
 
@@ -425,7 +425,7 @@ func test_notification_shows_with_no_tutorial_active() -> void:
 
 func test_critical_notification_shows_with_no_tutorial_active() -> void:
 	_start_toast_capture()
-	EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")
+	EventBus.critical_notification_requested.emit("Save failed — check disk space.")
 	_stop_toast_capture()
 	assert_eq(
 		_captured_toasts.size(), 1,

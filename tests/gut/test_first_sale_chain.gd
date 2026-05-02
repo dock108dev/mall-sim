@@ -196,32 +196,34 @@ func test_close_day_gate_releases_after_first_sale_flag_set() -> void:
 	)
 
 
-func test_close_day_press_blocks_when_gate_active() -> void:
+func test_close_day_press_shows_soft_confirm_when_gate_active() -> void:
 	var hud: CanvasLayer = _HudScene.instantiate()
 	add_child_autofree(hud)
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	GameManager.set_current_day(1)
 	GameState.set_flag(&"first_sale_complete", false)
 
-	var blocks: Array[String] = []
 	var close_emits: Array[bool] = []
-	var on_block: Callable = (
-		func(message: String) -> void: blocks.append(message)
-	)
 	var on_close: Callable = (func() -> void: close_emits.append(true))
-	EventBus.critical_notification_requested.connect(on_block)
 	EventBus.day_close_requested.connect(on_close)
 	hud._on_close_day_pressed()
-	EventBus.critical_notification_requested.disconnect(on_block)
 	EventBus.day_close_requested.disconnect(on_close)
 
-	assert_eq(
-		blocks.size(), 1,
-		"Pressing Close Day with the gate active must surface a critical notice"
+	var dialog: ConfirmationDialog = (
+		hud.get_node("CloseDayConfirmDialog") as ConfirmationDialog
+	)
+	assert_true(
+		dialog.visible,
+		"Pressing Close Day with the gate active must surface the confirm dialog"
 	)
 	assert_eq(
 		close_emits.size(), 0,
-		"Pressing Close Day with the gate active must not request day close"
+		"Pressing Close Day with the gate active must not yet request day close"
+	)
+	var preview: CanvasLayer = hud.get_node("CloseDayPreview") as CanvasLayer
+	assert_false(
+		preview.visible,
+		"The dry-run preview must not open until the player confirms"
 	)
 
 
