@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://crosshair001"]
+[gd_scene format=3 uid="uid://crosshair001"]
 
 [ext_resource type="Script" path="res://game/scripts/ui/crosshair.gd" id="1"]
 
