@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" path="res://game/scenes/ui/hud.gd" id="1"]
 [ext_resource type="PackedScene" path="res://game/ui/hud/toast_notification_ui.tscn" id="2"]
-[ext_resource type="PackedScene" path="res://game/scenes/ui/interaction_prompt.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://game/scenes/ui/placement_hint_ui.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://game/scenes/ui/close_day_preview.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://game/scenes/ui/crosshair.tscn" id="6"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 30
@@ -116,7 +116,7 @@ visible = false
 
 [node name="ToastNotificationUI" parent="." instance=ExtResource("2")]
 
-[node name="InteractionPrompt" parent="." instance=ExtResource("3")]
+[node name="Crosshair" parent="." instance=ExtResource("6")]
 
 [node name="PlacementHintUI" parent="." instance=ExtResource("4")]
 

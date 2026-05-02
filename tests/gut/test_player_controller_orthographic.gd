@@ -1,6 +1,6 @@
 ## Verifies the orthographic-mode contract on PlayerController:
 ## projection switch, suppressed orbit/pan, scroll-zoom routing through
-## ortho_size, and retro_games scene defaults that frame the 10×7 m
+## ortho_size, and retro_games scene defaults that frame the 16×20 m
 ## interior at default view.
 extends GutTest
 
@@ -14,12 +14,12 @@ const RetroGamesScene: PackedScene = preload(
 # Pitch the retro_games store ships with for its orthographic camera.
 const _RETRO_PITCH_DEG: float = 52.0
 # Inner-floor footprint exposed by retro_games store_bounds.
-const _STORE_HALF_WIDTH: float = 4.5  # X extent: ±4.5
-const _STORE_HALF_DEPTH: float = 3.0  # Z extent: ±3.0
-# Wall positions and full height (10×7 footprint outer walls).
-const _WALL_HALF_WIDTH: float = 5.05
-const _WALL_HALF_DEPTH: float = 3.55
-const _WALL_HEIGHT: float = 3.0
+const _STORE_HALF_WIDTH: float = 7.5  # X extent: ±7.5
+const _STORE_HALF_DEPTH: float = 9.5  # Z extent: ±9.5
+# Wall positions and full height (16×20 footprint outer walls).
+const _WALL_HALF_WIDTH: float = 8.05
+const _WALL_HALF_DEPTH: float = 10.05
+const _WALL_HEIGHT: float = 3.5
 # 1080p reference aspect ratio (16:9). Godot's orthogonal `size` measures the
 # vertical extent; horizontal extent = size * aspect.
 const _ASPECT_16_9: float = 16.0 / 9.0

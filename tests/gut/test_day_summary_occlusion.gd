@@ -6,7 +6,7 @@
 ## NOTE: layer=12 predates the canonical band table in
 ## docs/research/canvas-layer-z-order-conflicts.md. After ISSUE-007 the
 ## tutorial overlay moved to band 50, so day_summary now renders BELOW
-## tutorial. Tracked in docs/audits/ssot-report.md "Risk log".
+## tutorial.
 extends GutTest
 
 const _DS_TSCN: String = "res://game/scenes/ui/day_summary.tscn"

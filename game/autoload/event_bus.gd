@@ -34,7 +34,7 @@ signal day_close_requested()
 ## Emitted by DayCycleController after all store_day_closed signals have fired.
 ## summary keys: day, total_revenue, total_expenses, net_profit, items_sold,
 ## rent, net_cash, store_revenue, warranty_revenue, warranty_claims,
-## seasonal_impact, discrepancy, staff_wages
+## seasonal_impact, discrepancy, staff_wages, inventory_remaining
 signal day_closed(day: int, summary: Dictionary)
 signal day_phase_changed(new_phase: int)
 signal speed_changed(new_speed: float)

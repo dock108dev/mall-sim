@@ -68,15 +68,17 @@ func test_register_is_on_right_side() -> void:
 
 
 func test_back_wall_shelves_remain_along_back_wall() -> void:
+	# Back wall sits at z=-10.05 in the resized 16×20 interior; cart racks
+	# must hug it within ~2 m so they read as wall-mounted shelving.
 	for fixture_name: String in BACK_FIXTURES:
 		var fixture: Node3D = _root.get_node_or_null(fixture_name) as Node3D
 		assert_not_null(fixture, "%s must exist" % fixture_name)
 		if fixture == null:
 			continue
 		assert_lt(
-			fixture.global_position.z, -2.0,
+			fixture.global_position.z, -8.0,
 			(
-				"%s must remain against the back wall (z < -2.0); found z=%.2f"
+				"%s must remain against the back wall (z < -8.0); found z=%.2f"
 			) % [fixture_name, fixture.global_position.z],
 		)
 
@@ -121,23 +123,23 @@ func test_central_display_remains_in_aisle_center() -> void:
 # ── Testing zone clear: refurb_bench must not block the left-mid area ───────
 
 func test_refurb_bench_clear_of_testing_zone() -> void:
-	# Testing zone target footprint: x∈[-3.7,-2.3], z∈[-2.8,-1.2]. refurb_bench
-	# must sit outside that footprint so the player can approach the testing
-	# station without being blocked.
+	# Testing zone target footprint after the resize: x∈[-5.6,-4.0],
+	# z∈[-7.9,-6.4]. refurb_bench must sit outside that footprint so the
+	# player can approach the testing station without being blocked.
 	var refurb: Node3D = _root.get_node_or_null("refurb_bench") as Node3D
 	assert_not_null(refurb, "refurb_bench must exist")
 	if refurb == null:
 		return
 	var pos: Vector3 = refurb.global_position
 	var inside_zone: bool = (
-		pos.x >= -3.7 and pos.x <= -2.3
-		and pos.z >= -2.8 and pos.z <= -1.2
+		pos.x >= -5.6 and pos.x <= -4.0
+		and pos.z >= -7.9 and pos.z <= -6.4
 	)
 	assert_false(
 		inside_zone,
 		(
 			"refurb_bench at (%.2f, %.2f) must not sit inside the new testing "
-			+ "zone footprint x∈[-3.7,-2.3], z∈[-2.8,-1.2]"
+			+ "zone footprint x∈[-5.6,-4.0], z∈[-7.9,-6.4]"
 		) % [pos.x, pos.z],
 	)
 

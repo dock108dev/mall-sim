@@ -160,10 +160,12 @@ func _refresh_interaction_ray(ray_distance: float) -> void:
 
 func _point_on_camera_ray(distance: float) -> Vector3:
 	var camera := _player.get_camera()
-	var mouse_position := _viewport.get_mouse_position()
+	# The interaction ray casts from screen center, so test mocks must be
+	# placed along the same axis the production code probes.
+	var screen_center: Vector2 = Vector2(_viewport.size) * 0.5
 	return (
-		camera.project_ray_origin(mouse_position)
-		+ camera.project_ray_normal(mouse_position) * distance
+		camera.project_ray_origin(screen_center)
+		+ camera.project_ray_normal(screen_center) * distance
 	)
 
 

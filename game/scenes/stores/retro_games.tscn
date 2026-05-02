@@ -34,19 +34,19 @@ radial_segments = 24
 rings = 1
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
-size = Vector3(10, 0.1, 7)
+size = Vector3(16, 0.1, 20)
 
 [sub_resource type="BoxShape3D" id="floor_shape"]
-size = Vector3(10, 0.1, 7)
+size = Vector3(16, 0.1, 20)
 
 [sub_resource type="BoxMesh" id="wall_long_mesh"]
-size = Vector3(10, 3, 0.1)
+size = Vector3(16, 3.5, 0.1)
 
 [sub_resource type="BoxMesh" id="wall_short_mesh"]
-size = Vector3(0.1, 3, 7)
+size = Vector3(0.1, 3.5, 20)
 
 [sub_resource type="BoxMesh" id="ceiling_mesh"]
-size = Vector3(10, 0.1, 7)
+size = Vector3(16, 0.1, 20)
 
 [sub_resource type="BoxMesh" id="cart_rack_mesh"]
 size = Vector3(2.4, 2.5, 0.45)
@@ -109,7 +109,7 @@ size = Vector3(0.34, 0.22, 0.03)
 [sub_resource type="NavigationMesh" id="nav_mesh"]
 cell_size = 0.25
 geometry_parsed_geometry_type = 2
-vertices = PackedVector3Array(-4.8, 0.05, -3.3, 4.8, 0.05, -3.3, 4.8, 0.05, 3.4, -4.8, 0.05, 3.4)
+vertices = PackedVector3Array(-7.7, 0.05, -9.7, 7.7, 0.05, -9.7, 7.7, 0.05, 9.7, -7.7, 0.05, 9.7)
 polygons = [PackedInt32Array(0, 1, 2, 3)]
 
 [sub_resource type="BoxShape3D" id="entry_shape"]
@@ -119,7 +119,7 @@ size = Vector3(2.0, 2.5, 0.5)
 size = Vector3(2.5, 2.0, 2.0)
 
 [sub_resource type="BoxShape3D" id="audio_zone_shape"]
-size = Vector3(10, 3, 7)
+size = Vector3(16, 3.5, 20)
 
 [sub_resource type="BoxShape3D" id="checkout_counter_shape"]
 size = Vector3(1.9, 1.5, 0.7)
@@ -137,19 +137,19 @@ size = Vector3(1.6, 0.9, 0.7)
 size = Vector3(1.6, 0.9, 0.7)
 
 [sub_resource type="BoxMesh" id="front_wall_segment_mesh"]
-size = Vector3(4.05, 3, 0.1)
+size = Vector3(6.55, 3.5, 0.1)
 
 [sub_resource type="BoxShape3D" id="back_wall_shape"]
-size = Vector3(10, 3, 0.1)
+size = Vector3(16, 3.5, 0.1)
 
 [sub_resource type="BoxShape3D" id="side_wall_shape"]
-size = Vector3(0.1, 3, 7)
+size = Vector3(0.1, 3.5, 20)
 
 [sub_resource type="BoxShape3D" id="front_wall_segment_shape"]
-size = Vector3(4.05, 3, 0.1)
+size = Vector3(6.55, 3.5, 0.1)
 
 [sub_resource type="BoxMesh" id="threshold_mesh"]
-size = Vector3(2.0, 0.05, 0.4)
+size = Vector3(2.9, 0.05, 0.4)
 
 [sub_resource type="StandardMaterial3D" id="threshold_mat"]
 albedo_color = Color(0.75, 0.65, 0.4, 1)
@@ -227,66 +227,66 @@ size = Vector3(1.6, 1.0, 0.5)
 size = Vector3(1.8, 1.0, 0.65)
 
 [sub_resource type="BoxMesh" id="entrance_interior_strip_mesh"]
-size = Vector3(1.96, 0.04, 0.45)
+size = Vector3(2.86, 0.04, 0.45)
 
 ; ============================================================
 ; Root
 ; ============================================================
 ;
-; CANONICAL FLOOR PLAN (BRAINDUMP §"Store Scene Requirements §1"):
+; CANONICAL FLOOR PLAN — first-person retail interior, 16 m × 20 m floor
+; with 3.5 m walls. Layout zones run back-to-front:
 ;
-;          BACK WALL (Z = -3.55)
-;   --------------------------------
-;   |  CartRackLeft   CartRackRight |   (back wall shelves)
-;   |   X=-2.0,Z=-3.2   X=2.0,Z=-3.2|
-;   |                                |
-;   |  TestingZone     GlassCase     |   (mid-room: testing left, display center)
-;   |  X=-3.0,Z=-2.5   X=0,Z=-1.0    |
-;   |  (crt_demo_area + testing_station co-located)
-;   |                                |
-;   |  AccessoriesBin       Checkout |   (front: side shelf left, register right)
-;   |   X=-4.7,Z=0.5   X=2.5,Z=2.5   |
-;   |  ConsoleShelf     (right wall)|
-;   |   X=4.5,Z=-1.5                 |
-;   |        EntranceInterior        |
-;   |          (X=0, Z=2.85)         |
-;   --------------------------------
-;          MALL HALLWAY SIDE (Z = +3.55)
+;          BACK WALL (Z = -10.05)
+;   ----------------------------------------
+;   |  CartRackLeft       CartRackRight     |  (back wall: cart racks)
+;   |   X=-3.5, Z=-8.5     X=+3.5, Z=-8.5   |
+;   |                                        |
+;   |  TestingZone         GlassCase         |  (middle: testing + display island)
+;   |  X=-4.8, Z=-7.14     X=0, Z=-4.0       |
+;   |                          ConsoleShelf  |  (right side: console wall)
+;   |                          X=+7.2, Z=-4.29
+;   |                                        |
+;   |  AccessoriesBin               Checkout |  (front zone: storage left, register right)
+;   |  X=-7.52, Z=+1.43     X=+5.5, Z=+8.0  |
+;   |  RefurbBench                           |
+;   |  X=-7.28, Z=-7.14                      |
+;   |                                        |
+;   |             EntranceInterior           |
+;   |               (X=0, Z=+9.35)           |
+;   ----------------------------------------
+;          MALL HALLWAY SIDE (Z = +10.05, ~3 m entrance gap)
 ;
-; refurb_bench rotated 90° flush against left wall (X=-4.55, Z=-2.5) so it
-; reads as a back-room work surface and does not block the testing zone.
-; Center walking aisle (X∈[-1.0,1.0]) is unobstructed except for the central
-; display table (GlassCase at X=0), which is the intentional retail focal point.
-; TestingZone is the co-located crt_demo_area (CRT prop + bench + neon panels +
-; "Coming Soon" Label3D) and testing_station (Interactable wrapper, disabled
-; until the testing flow is wired up — see retro_games.gd).
+; refurb_bench is rotated 90° flush against the left wall as a back-room
+; work surface. The center walking aisle (X∈[-1.5,+1.5]) is unobstructed
+; except for the GlassCase island at X=0, the intentional retail focal
+; point. TestingZone is the co-located crt_demo_area (CRT prop + bench +
+; neon panels + "Coming Soon" Label3D) and testing_station (Interactable
+; wrapper, disabled until the testing flow is wired — see retro_games.gd).
 
 [node name="RetroGames" type="Node3D"]
 script = ExtResource("1")
 
 ; ============================================================
-; Player Controller — fixed isometric orbit camera over the store
-; floor. Replaces the legacy PlayerEntrySpawn / StorePlayerBody flow:
-; absence of a `PlayerEntrySpawn` Marker3D causes
-; `GameWorld._on_hub_enter_store_requested` to fall through to
-; `_activate_store_camera`, which makes this StoreCamera current.
-; The pivot clamp at z=2.3 closes the front entrance gap so the
-; camera cannot orbit out through the open storefront opening.
+; Player Controller — legacy isometric orbit camera, kept in-scene
+; behind the F3 debug toggle (process_mode set to DISABLED on _ready
+; when PlayerEntrySpawn is present). Bounds expand to the full 16×20
+; interior with a 0.5 m wall margin so the orbit pivot can still
+; survey the room when toggled on.
 ; ============================================================
 
 [node name="PlayerController" parent="." instance=ExtResource("26_retrogames")]
-zoom_default = 9.0
-zoom_min = 4.0
-zoom_max = 16.0
+zoom_default = 14.0
+zoom_min = 6.0
+zoom_max = 22.0
 pitch_default_deg = 52.0
 pitch_min_deg = 30.0
 pitch_max_deg = 75.0
-store_bounds_min = Vector3(-4.5, 0.0, -3.0)
-store_bounds_max = Vector3(4.5, 0.0, 3.0)
+store_bounds_min = Vector3(-7.5, 0.0, -9.5)
+store_bounds_max = Vector3(7.5, 0.0, 9.5)
 is_orthographic = true
-ortho_size_default = 10.0
-ortho_size_min = 6.0
-ortho_size_max = 13.0
+ortho_size_default = 22.0
+ortho_size_min = 14.0
+ortho_size_max = 28.0
 
 [node name="InteractionRay" type="Node" parent="PlayerController/StoreCamera"]
 script = ExtResource("27_retrogames")
@@ -300,29 +300,41 @@ mesh = SubResource("player_indicator_mesh")
 surface_material_override/0 = ExtResource("28_player_indicator")
 
 ; ============================================================
+; Player Entry Spawn — first-person body spawn marker.
+; GameWorld._spawn_player_in_store() instantiates store_player_body.tscn
+; here when the hub injects this scene; the body is not authored in the
+; .tscn so the orbit-camera flow can still load this scene without one.
+; ============================================================
+
+[node name="PlayerEntrySpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9.0)
+metadata/bounds_min = Vector3(-7.7, 0, -9.7)
+metadata/bounds_max = Vector3(7.7, 0, 9.7)
+
+; ============================================================
 ; Lighting (fluorescent key light with warm + green neon accent fill)
 ; ============================================================
 
 [node name="FluorescentKeyLight" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 0)
 light_color = Color(0.98, 0.99, 1.0, 1)
 light_energy = 0.85
-omni_range = 11.0
+omni_range = 18.0
 
 [node name="WarmNeonFill" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.1, -2.68)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.3, 2.1, -7.32)
 light_color = Color(1.0, 0.58, 0.34, 1)
 light_energy = 0.34
 omni_range = 3.0
 
 [node name="GreenNeonFill" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 2.1, -2.68)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.3, 2.1, -7.32)
 light_color = Color(0.32, 1.0, 0.62, 1)
 light_energy = 0.36
 omni_range = 3.0
 
 [node name="CRTDemoSpotlight" type="SpotLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -3.0, 2.7, -2.5)
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -4.8, 2.7, -7.14)
 light_color = Color(0.98, 0.88, 0.72, 1)
 light_energy = 1.0
 shadow_enabled = true
@@ -334,6 +346,8 @@ spot_angle = 36.0
 ; ============================================================
 
 [node name="Floor" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("floor_shape")
@@ -343,7 +357,9 @@ mesh = SubResource("floor_mesh")
 surface_material_override/0 = ExtResource("16")
 
 [node name="BackWallBody" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -3.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, -10.05)
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BackWallBody"]
 shape = SubResource("back_wall_shape")
@@ -354,17 +370,19 @@ surface_material_override/0 = ExtResource("5")
 
 ; Wall poster decals — project onto the back wall surface
 [node name="PosterLeft" type="Decal" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -0.6, 1.6, -3.50)
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -0.96, 1.6, -10.0)
 size = Vector3(0.5, 0.25, 0.7)
 albedo_texture = ExtResource("21")
 
 [node name="PosterRight" type="Decal" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.6, 1.6, -3.50)
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.96, 1.6, -10.0)
 size = Vector3(0.5, 0.25, 0.6)
 albedo_texture = ExtResource("21")
 
 [node name="LeftWallBody" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.05, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.05, 1.75, 0)
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="LeftWallBody"]
 shape = SubResource("side_wall_shape")
@@ -374,7 +392,9 @@ mesh = SubResource("wall_short_mesh")
 surface_material_override/0 = ExtResource("5")
 
 [node name="RightWallBody" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.05, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.05, 1.75, 0)
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="RightWallBody"]
 shape = SubResource("side_wall_shape")
@@ -385,12 +405,14 @@ surface_material_override/0 = ExtResource("5")
 
 [node name="Ceiling" type="MeshInstance3D" parent="."]
 visible = false
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.55, 0)
 mesh = SubResource("ceiling_mesh")
 surface_material_override/0 = ExtResource("6")
 
 [node name="FrontWallLeftBody" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.025, 1.5, 3.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.78, 1.75, 10.05)
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="FrontWallLeftBody"]
 shape = SubResource("front_wall_segment_shape")
@@ -400,7 +422,9 @@ mesh = SubResource("front_wall_segment_mesh")
 surface_material_override/0 = ExtResource("5")
 
 [node name="FrontWallRightBody" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.025, 1.5, 3.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.78, 1.75, 10.05)
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="FrontWallRightBody"]
 shape = SubResource("front_wall_segment_shape")
@@ -417,47 +441,47 @@ surface_material_override/0 = ExtResource("5")
 visible = false
 
 [node name="SilhouetteLeftPanel" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(3.83333, 0, 0, 0, 1, 0, 0, 0, 0.666667, -1.15, 1.5, 2.56)
+transform = Transform3D(3.83333, 0, 0, 0, 1.16667, 0, 0, 0, 0.666667, -1.84, 1.75, 10.06)
 mesh = SubResource("pilaster_mesh")
 surface_material_override/0 = SubResource("silhouette_mat")
 
 [node name="SilhouetteRightPanel" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(3.83333, 0, 0, 0, 1, 0, 0, 0, 0.666667, 1.15, 1.5, 2.56)
+transform = Transform3D(3.83333, 0, 0, 0, 1.16667, 0, 0, 0, 0.666667, 1.84, 1.75, 10.06)
 mesh = SubResource("pilaster_mesh")
 surface_material_override/0 = SubResource("silhouette_mat")
 
 [node name="SilhouetteHeaderPanel" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(1.60465, 0, 0, 0, 2.6, 0, 0, 0, 0.666667, 0, 2.72, 2.56)
+transform = Transform3D(2.5, 0, 0, 0, 3.0, 0, 0, 0, 0.666667, 0, 3.20, 10.06)
 mesh = SubResource("header_mesh")
 surface_material_override/0 = SubResource("silhouette_mat")
 
 [node name="ThresholdStrip" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 2.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 10.25)
 mesh = SubResource("threshold_mesh")
 surface_material_override/0 = SubResource("threshold_mat")
 
 [node name="FrameLeft" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.5, 2.55)
+transform = Transform3D(1, 0, 0, 0, 1.16667, 0, 0, 0, 1, -1.28, 1.75, 10.05)
 mesh = SubResource("pilaster_mesh")
 surface_material_override/0 = SubResource("frame_mat")
 
 [node name="FrameRight" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.5, 2.55)
+transform = Transform3D(1, 0, 0, 0, 1.16667, 0, 0, 0, 1, 1.28, 1.75, 10.05)
 mesh = SubResource("pilaster_mesh")
 surface_material_override/0 = SubResource("frame_mat")
 
 [node name="FrameHeader" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.88, 2.55)
+transform = Transform3D(1.6, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.38, 10.05)
 mesh = SubResource("header_mesh")
 surface_material_override/0 = SubResource("frame_mat")
 
 [node name="SignBacking" type="MeshInstance3D" parent="Storefront"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.20, 2.61)
+transform = Transform3D(1.6, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.70, 10.11)
 mesh = SubResource("sign_backing_mesh")
 surface_material_override/0 = SubResource("sign_backing_mat")
 
 [node name="SignName" type="Label3D" parent="Storefront"]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.48, 2.67)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.98, 10.17)
 pixel_size = 0.008
 modulate = Color(0.76, 1, 0.86, 1)
 double_sided = false
@@ -468,7 +492,7 @@ outline_modulate = Color(0.05, 0.07, 0.16, 1)
 shaded = false
 
 [node name="SignTagline" type="Label3D" parent="Storefront"]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.92, 2.67)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.42, 10.17)
 pixel_size = 0.008
 double_sided = false
 font_size = 24
@@ -487,7 +511,7 @@ shaded = false
 [node name="EntranceInterior" type="Node3D" parent="."]
 
 [node name="FloorStrip" type="MeshInstance3D" parent="EntranceInterior"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 2.85)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 9.35)
 mesh = SubResource("entrance_interior_strip_mesh")
 surface_material_override/0 = ExtResource("7")
 
@@ -501,7 +525,7 @@ surface_material_override/0 = ExtResource("7")
 [node name="InteriorSignage" type="Node3D" parent="."]
 
 [node name="StoreNameBanner" type="Label3D" parent="InteriorSignage"]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.80, -3.45)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 3.20, -10.0)
 pixel_size = 0.005
 modulate = Color(0.91, 0.647, 0.278, 1)
 double_sided = false
@@ -513,7 +537,7 @@ outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
 [node name="GamesSign" type="Label3D" parent="InteriorSignage"]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.50, -3.45)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.85, -10.0)
 pixel_size = 0.005
 modulate = Color(0.91, 0.647, 0.278, 1)
 double_sided = false
@@ -530,7 +554,7 @@ shaded = false
 ; ============================================================
 
 [node name="crt_demo_area" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.8, 0, -7.14)
 
 [node name="DemoStand" type="MeshInstance3D" parent="crt_demo_area"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
@@ -538,6 +562,8 @@ mesh = SubResource("testing_station_mesh")
 surface_material_override/0 = ExtResource("9")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="crt_demo_area"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="crt_demo_area/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
@@ -572,7 +598,7 @@ outline_modulate = Color(0.05, 0.04, 0.02, 1)
 shaded = false
 
 [node name="CartRackLeft" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0, 0, -3.20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -8.5)
 
 [node name="RackMesh" type="MeshInstance3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
@@ -580,14 +606,20 @@ mesh = SubResource("cart_rack_mesh")
 surface_material_override/0 = ExtResource("11")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="CartRackLeft"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CartRackLeft/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 shape = SubResource("cart_rack_shape")
 
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="CartRackLeft/StaticBody3D"]
+radius = 1.3
+height = 2.5
+
 [node name="Slot1" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_1"
@@ -603,7 +635,7 @@ visible = false
 
 [node name="Slot2" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_2"
@@ -619,7 +651,7 @@ visible = false
 
 [node name="Slot3" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_3"
@@ -635,7 +667,7 @@ visible = false
 
 [node name="Slot4" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_4"
@@ -651,7 +683,7 @@ visible = false
 
 [node name="Slot5" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_5"
@@ -667,7 +699,7 @@ visible = false
 
 [node name="Slot6" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_6"
@@ -683,7 +715,7 @@ visible = false
 
 [node name="Slot7" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_7"
@@ -699,7 +731,7 @@ visible = false
 
 [node name="Slot8" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_8"
@@ -715,7 +747,7 @@ visible = false
 
 [node name="Slot9" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_9"
@@ -731,7 +763,7 @@ visible = false
 
 [node name="Slot10" type="Area3D" parent="CartRackLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_left_10"
@@ -766,7 +798,7 @@ surface_material_override/0 = ExtResource("10")
 ; ============================================================
 
 [node name="CartRackRight" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 0, -3.20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, -8.5)
 
 [node name="RackMesh" type="MeshInstance3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
@@ -774,14 +806,20 @@ mesh = SubResource("cart_rack_mesh")
 surface_material_override/0 = ExtResource("11")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="CartRackRight"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CartRackRight/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 shape = SubResource("cart_rack_shape")
 
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="CartRackRight/StaticBody3D"]
+radius = 1.3
+height = 2.5
+
 [node name="Slot1" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_1"
@@ -797,7 +835,7 @@ visible = false
 
 [node name="Slot2" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_2"
@@ -813,7 +851,7 @@ visible = false
 
 [node name="Slot3" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_3"
@@ -829,7 +867,7 @@ visible = false
 
 [node name="Slot4" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_4"
@@ -845,7 +883,7 @@ visible = false
 
 [node name="Slot5" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.45, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_5"
@@ -861,7 +899,7 @@ visible = false
 
 [node name="Slot6" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_6"
@@ -877,7 +915,7 @@ visible = false
 
 [node name="Slot7" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_7"
@@ -893,7 +931,7 @@ visible = false
 
 [node name="Slot8" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_8"
@@ -909,7 +947,7 @@ visible = false
 
 [node name="Slot9" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_9"
@@ -925,7 +963,7 @@ visible = false
 
 [node name="Slot10" type="Area3D" parent="CartRackRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "cart_right_10"
@@ -960,7 +998,7 @@ surface_material_override/0 = ExtResource("10")
 ; ============================================================
 
 [node name="GlassCase" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.0)
 
 [node name="CaseMesh" type="MeshInstance3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.425, 0)
@@ -968,14 +1006,20 @@ mesh = SubResource("glass_case_mesh")
 surface_material_override/0 = ExtResource("8")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="GlassCase"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GlassCase/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.425, 0)
 shape = SubResource("glass_case_shape")
 
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="GlassCase/StaticBody3D"]
+radius = 1.2
+height = 1.5
+
 [node name="Slot1" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.85, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_1"
@@ -991,7 +1035,7 @@ visible = false
 
 [node name="Slot2" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.85, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_2"
@@ -1007,7 +1051,7 @@ visible = false
 
 [node name="Slot3" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.85, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_3"
@@ -1023,7 +1067,7 @@ visible = false
 
 [node name="Slot4" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.85, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_4"
@@ -1039,7 +1083,7 @@ visible = false
 
 [node name="Slot5" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.85, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_5"
@@ -1055,7 +1099,7 @@ visible = false
 
 [node name="Slot6" type="Area3D" parent="GlassCase"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.85, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_6"
@@ -1075,7 +1119,7 @@ visible = false
 ; ============================================================
 
 [node name="ConsoleShelf" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, -1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.2, 0, -4.29)
 
 [node name="ShelfMesh" type="MeshInstance3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
@@ -1083,14 +1127,20 @@ mesh = SubResource("console_shelf_mesh")
 surface_material_override/0 = ExtResource("9")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="ConsoleShelf"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ConsoleShelf/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("console_shelf_shape")
 
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="ConsoleShelf/StaticBody3D"]
+radius = 0.5
+height = 2.5
+
 [node name="Slot1" type="Area3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 1.05, 0.45)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "console_1"
@@ -1107,7 +1157,7 @@ visible = false
 
 [node name="Slot2" type="Area3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 1.05, 0.45)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "console_2"
@@ -1124,7 +1174,7 @@ visible = false
 
 [node name="Slot3" type="Area3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 1.05, 0.45)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "console_3"
@@ -1141,7 +1191,7 @@ visible = false
 
 [node name="Slot4" type="Area3D" parent="ConsoleShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1.05, 0.45)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "console_4"
@@ -1177,7 +1227,7 @@ surface_material_override/0 = ExtResource("11")
 ; ============================================================
 
 [node name="AccessoriesBin" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -4.7, 0, 0.5)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -7.52, 0, 1.43)
 
 [node name="BinMesh" type="MeshInstance3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -1185,14 +1235,20 @@ mesh = SubResource("acc_bin_mesh")
 surface_material_override/0 = ExtResource("10")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="AccessoriesBin"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="AccessoriesBin/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("acc_bin_shape")
 
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="AccessoriesBin/StaticBody3D"]
+radius = 0.85
+height = 1.5
+
 [node name="Slot1" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "acc_1"
@@ -1208,7 +1264,7 @@ visible = false
 
 [node name="Slot2" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 1.05, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "acc_2"
@@ -1224,7 +1280,7 @@ visible = false
 
 [node name="Slot3" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "acc_3"
@@ -1240,7 +1296,7 @@ visible = false
 
 [node name="Slot4" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1.05, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "acc_4"
@@ -1256,7 +1312,7 @@ visible = false
 
 [node name="Slot5" type="Area3D" parent="AccessoriesBin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "acc_5"
@@ -1276,7 +1332,7 @@ visible = false
 ; ============================================================
 
 [node name="Checkout" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 8.0)
 
 [node name="CounterMesh" type="MeshInstance3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -1289,14 +1345,20 @@ mesh = SubResource("counter_top_mesh")
 surface_material_override/0 = SubResource("counter_top_mat")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Checkout"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Checkout/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("counter_shape")
 
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="Checkout/StaticBody3D"]
+radius = 1.0
+height = 1.5
+
 [node name="Register" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.285, -0.08)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 1
@@ -1340,7 +1402,7 @@ shaded = false
 
 [node name="ImpulseSlot1" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 1.135, 0.22)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "impulse_1"
@@ -1357,7 +1419,7 @@ visible = false
 
 [node name="ImpulseSlot2" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.135, 0.22)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "impulse_2"
@@ -1374,7 +1436,7 @@ visible = false
 
 [node name="ImpulseSlot3" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1.135, 0.22)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "impulse_3"
@@ -1398,7 +1460,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.285, -1.12)
 ; ============================================================
 
 [node name="BackroomDoor" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, -3.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.2, 0, -9.86)
 
 [node name="DoorMesh" type="MeshInstance3D" parent="BackroomDoor"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
@@ -1406,6 +1468,8 @@ mesh = SubResource("door_mesh")
 surface_material_override/0 = ExtResource("13")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="BackroomDoor"]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BackroomDoor/StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
@@ -1413,7 +1477,7 @@ shape = SubResource("door_collision")
 
 [node name="BackroomInteractable" type="Area3D" parent="BackroomDoor"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 3
@@ -1435,7 +1499,7 @@ navigation_mesh = SubResource("nav_mesh")
 ; ============================================================
 
 [node name="EntryArea" type="Area3D" parent="." groups=["entry_area"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 3.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 10.05)
 collision_layer = 0
 collision_mask = 2
 
@@ -1447,7 +1511,7 @@ shape = SubResource("entry_shape")
 ; ============================================================
 
 [node name="RegisterArea" type="Area3D" parent="." groups=["register_area"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 1.0, 2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 1.0, 8.0)
 collision_layer = 0
 collision_mask = 2
 
@@ -1463,16 +1527,16 @@ script = ExtResource("17")
 max_staff = 2
 
 [node name="RegisterPoint" type="Marker3D" parent="StoreStaffConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 3.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 8.6)
 
 [node name="BackroomPoint" type="Marker3D" parent="StoreStaffConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.0, 0, -3.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.4, 0, -8.6)
 
 [node name="GreeterPoint" type="Marker3D" parent="StoreStaffConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7.0)
 
 [node name="StaffBreakPoint" type="Marker3D" parent="StoreStaffConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.0, 0, 2.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.4, 0, 5.7)
 
 ; ============================================================
 ; Customer Navigation Configuration
@@ -1483,25 +1547,25 @@ script = ExtResource("18")
 max_concurrent_customers = 4
 
 [node name="EntryPoint" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 9.0)
 
 [node name="BrowseWaypoint01" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0.05, -8.5)
 
 [node name="BrowseWaypoint02" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0.05, -8.5)
 
 [node name="BrowseWaypoint03" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.7, 0, -1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -4.0)
 
 [node name="BrowseWaypoint04" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.0, 0.05, 0)
 
 [node name="CheckoutApproach" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 1.7)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.05, 7.0)
 
 [node name="ExitPoint" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 10.5)
 
 ; ============================================================
 ; NPC Container — parent for spawned NPCs
@@ -1514,24 +1578,24 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.3)
 ; ============================================================
 
 [node name="QueueMarker1" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 7.0)
 
 [node name="QueueMarker2" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 6.0)
 
 [node name="QueueMarker3" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 5.0)
 
 ; ============================================================
 ; Checkout Counter — primary checkout interactable
 ; ============================================================
 
 [node name="checkout_counter" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 8.0)
 
 [node name="Interactable" type="Area3D" parent="checkout_counter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 1
@@ -1552,11 +1616,15 @@ shape = SubResource("checkout_counter_shape")
 ; ============================================================
 
 [node name="testing_station" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, -2.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.8, 0, -7.14)
+
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="testing_station"]
+radius = 0.8
+height = 1.5
 
 [node name="Interactable" type="Area3D" parent="testing_station"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 2
@@ -1572,7 +1640,11 @@ shape = SubResource("testing_station_shape")
 ; ============================================================
 
 [node name="refurb_bench" type="Node3D" parent="."]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -4.55, 0, -2.5)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -7.28, 0, -7.14)
+
+[node name="NavigationObstacle3D" type="NavigationObstacle3D" parent="refurb_bench"]
+radius = 0.9
+height = 1.5
 
 [node name="BenchMesh" type="MeshInstance3D" parent="refurb_bench"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
@@ -1581,7 +1653,7 @@ surface_material_override/0 = ExtResource("9")
 
 [node name="Interactable" type="Area3D" parent="refurb_bench"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 3
@@ -1596,27 +1668,27 @@ shape = SubResource("refurb_bench_shape")
 ; ============================================================
 
 [node name="FixtureZone1" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.0, 0, -1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 0, -4.5)
 metadata/zone_index = 1
 
 [node name="FixtureZone2" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, -1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, -4.5)
 metadata/zone_index = 2
 
 [node name="FixtureZone3" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -4.5)
 metadata/zone_index = 3
 
 [node name="FixtureZone4" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.0, 0, 1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 0, 4.5)
 metadata/zone_index = 4
 
 [node name="FixtureZone5" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 4.5)
 metadata/zone_index = 5
 
 [node name="FixtureZone6" type="Marker3D" parent="." groups=["FixtureZones"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 4.5)
 metadata/zone_index = 6
 
 ; ============================================================
@@ -1624,14 +1696,14 @@ metadata/zone_index = 6
 ; ============================================================
 
 [node name="entrance_marker" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9.0)
 
 ; ============================================================
 ; Audio Zone — retro chiptune/game music blend (ISSUE-103)
 ; ============================================================
 
 [node name="AudioZone" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
 collision_layer = 0
 collision_mask = 2
 
@@ -1643,7 +1715,7 @@ shape = SubResource("audio_zone_shape")
 ; ============================================================
 
 [node name="StoreBleedAudio" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 3.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 10.05)
 script = ExtResource("19")
 max_db = 72.0
 unit_size = 5.0
@@ -1657,10 +1729,10 @@ bus = &"Music"
 ; ============================================================
 
 [node name="CustomerSpawn" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10.5)
 
 [node name="CustomerExit" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 11.5)
 
 ; ============================================================
 ; Nav Zones — clickable pivot teleport targets for orbit camera
@@ -1672,8 +1744,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.0)
 [node name="NavZones" type="Node3D" parent="."]
 
 [node name="ZoneEntrance" type="Area3D" parent="NavZones" groups=["nav_zone"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.5)
-collision_layer = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8.0)
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
@@ -1690,8 +1762,8 @@ surface_material_override/0 = SubResource("nav_zone_debug_mat")
 visible = false
 
 [node name="ZoneShelf" type="Area3D" parent="NavZones" groups=["nav_zone"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0, 0, -2.7)
-collision_layer = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -7.5)
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
@@ -1708,8 +1780,8 @@ surface_material_override/0 = SubResource("nav_zone_debug_mat")
 visible = false
 
 [node name="ZoneDisplayTable" type="Area3D" parent="NavZones" groups=["nav_zone"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.0)
-collision_layer = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.0)
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
@@ -1726,8 +1798,8 @@ surface_material_override/0 = SubResource("nav_zone_debug_mat")
 visible = false
 
 [node name="ZoneRegister" type="Area3D" parent="NavZones" groups=["nav_zone"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 2.0)
-collision_layer = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 6.5)
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2
@@ -1744,8 +1816,8 @@ surface_material_override/0 = SubResource("nav_zone_debug_mat")
 visible = false
 
 [node name="ZoneBackroom" type="Area3D" parent="NavZones" groups=["nav_zone"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.0, 0, -3.0)
-collision_layer = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.4, 0, -8.5)
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("24")
 interaction_type = 2

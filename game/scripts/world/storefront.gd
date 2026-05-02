@@ -387,7 +387,10 @@ func _build_entry_zone() -> void:
 		add_child(_entry_zone)
 
 	_entry_zone.collision_layer = 0
-	_entry_zone.collision_mask = 1
+	# Mask the player layer (named layer 3 -> bit value 4) so the entry-zone
+	# only fires for the player CharacterBody3D, not customer NPCs or store
+	# fixtures. See `project.godot [layer_names]` for the canonical scheme.
+	_entry_zone.collision_mask = 4
 	_entry_zone.monitoring = true
 	_entry_zone.monitorable = false
 

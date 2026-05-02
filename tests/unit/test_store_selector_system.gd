@@ -156,9 +156,9 @@ func test_enter_store_moves_camera_to_store_entry_and_rebinds_camera_users() -> 
 
 	# `_move_store_camera_to_spawn` walks `_STORE_ENTRY_MARKER_NAMES`
 	# (PlayerEntrySpawn → EntryPoint → OrbitPivot) and pivots the orbit camera
-	# at the first match clamped to the camera's store bounds. retro_games uses
-	# the embedded orbit PlayerController and authors `CustomerNavConfig/EntryPoint`
-	# rather than `PlayerEntrySpawn`.
+	# at the first match clamped to the camera's store bounds. retro_games
+	# authors PlayerEntrySpawn at the storefront centerline so the orbit camera
+	# pivots toward the entry-side of the room on entry.
 	const MARKERS: Array[StringName] = [
 		&"PlayerEntrySpawn",
 		&"EntryPoint",

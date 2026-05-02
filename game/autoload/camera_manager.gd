@@ -78,6 +78,14 @@ func _sync_to_camera_authority(camera: Camera3D) -> void:
 	var authority: Node = tree.root.get_node_or_null("CameraAuthority")
 	if authority == null or not authority.has_method("request_current"):
 		return
+	# §F-63 — CameraAuthority is the SSOT for the active-camera source label.
+	# Skip the mirror when it already tracks this exact camera so an explicit
+	# caller (e.g. StorePlayerBody.request_current(_camera, &"player_fp")) keeps
+	# its source token. Without this guard, the next CameraManager._process
+	# tick overwrites the source to &"camera_manager" and Day1ReadinessAudit
+	# rejects the entry as off-allowlist.
+	if authority.has_method("current") and authority.call("current") == camera:
+		return
 	authority.request_current(camera, _AUTHORITY_SOURCE)
 
 

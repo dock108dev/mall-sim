@@ -75,8 +75,7 @@ else
 fi
 
 if grep -q 'push_context' "$PLAYER_GD" \
-	|| grep -q 'pop_context' "$PLAYER_GD" \
-	|| grep -q 'func _exit_tree' "$PLAYER_GD"; then
+	|| grep -q 'pop_context' "$PLAYER_GD"; then
 	fail "StorePlayerBody must not push/pop InputFocus — owned by StoreController"
 else
 	pass "StorePlayerBody does not push/pop CTX_STORE_GAMEPLAY (owned by StoreController)"

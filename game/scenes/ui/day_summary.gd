@@ -60,6 +60,9 @@ var _prev_report: PerformanceReport = null
 @onready var _expenses_label: Label = $Root/Panel/Margin/VBox/ExpensesLabel
 @onready var _profit_label: Label = $Root/Panel/Margin/VBox/ProfitLabel
 @onready var _items_sold_label: Label = $Root/Panel/Margin/VBox/ItemsSoldLabel
+@onready var _inventory_remaining_label: Label = (
+	$Root/Panel/Margin/VBox/InventoryRemainingLabel
+)
 @onready var _top_item_label: Label = (
 	$Root/Panel/Margin/VBox/TopItemLabel
 )
@@ -270,6 +273,7 @@ func _get_stat_row_candidates() -> Array[Control]:
 	var stat_labels: Array[Control] = [
 		_day_label, _revenue_label, _rent_label,
 		_expenses_label, _profit_label, _items_sold_label,
+		_inventory_remaining_label,
 		_top_item_label, _haggle_label, _late_fee_label,
 		_customers_served_label, _satisfaction_label,
 		_reputation_delta_label, _tier_change_label,
@@ -580,10 +584,21 @@ func _update_store_revenue_display(store_revenue: Dictionary) -> void:
 		_store_revenue_labels.append(label)
 
 
-## Receives the day_closed payload to refresh per-store revenue display.
+## Receives the day_closed payload to refresh per-store revenue display
+## and the end-of-day inventory total (shelves + backroom).
+##
+## §F-61 — `summary.get("inventory_remaining", 0)` defaults to `0` when the
+## key is absent. The canonical `day_closed` payload from
+## `DayCycleController._show_day_summary` always includes this key (see §F-60);
+## the default is forward-compat for legacy/test payloads that emit
+## `day_closed` directly without the new field.
 func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
 	_update_store_revenue_display(
 		summary.get("store_revenue", {})
+	)
+	var remaining: int = int(summary.get("inventory_remaining", 0))
+	_inventory_remaining_label.text = (
+		tr("DAY_SUMMARY_INVENTORY_REMAINING") % remaining
 	)
 
 

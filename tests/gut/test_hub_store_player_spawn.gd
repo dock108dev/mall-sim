@@ -1,9 +1,9 @@
 ## Integration tests for the StorePlayerBody spawn flow contract.
 ##
-## Verifies the walking-body scene shape (no embedded Camera3D; InteractionRay
-## on the CharacterBody root), CameraAuthority activation via an in-store
-## `StoreCamera`, and movement focus gating. Orbit-camera stores embed
-## `PlayerController` directly and bypass `StorePlayerBody`.
+## Verifies the walking-body scene shape (embedded eye-level Camera3D;
+## InteractionRay on the CharacterBody root), CameraAuthority activation, and
+## movement focus gating. Orbit-camera stores embed `PlayerController`
+## directly and bypass `StorePlayerBody`.
 extends GutTest
 
 const STORE_PLAYER_SCENE: PackedScene = preload(
@@ -64,17 +64,31 @@ func _add_mock_store_camera(store_root: Node3D) -> Camera3D:
 	return cam
 
 
-func test_player_body_has_no_embedded_camera() -> void:
+func test_player_body_has_embedded_fp_camera() -> void:
 	var root := MockStoreRoot.new()
 	add_child_autofree(root)
 	var player: StorePlayerBody = (
 		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
 	)
 	root.add_child(player)
-	var cam: Node = player.find_child("Camera3D", false, false)
-	assert_null(
+	var cam: Camera3D = player.find_child("Camera3D", false, false) as Camera3D
+	assert_not_null(
 		cam,
-		"store_player_body.tscn must not embed Camera3D — hub mode uses in-scene StoreCamera"
+		"store_player_body.tscn must embed a Camera3D for first-person view"
+	)
+	if cam == null:
+		return
+	assert_almost_eq(
+		cam.position.y, 1.6, 0.0001,
+		"FP camera must sit at ~1.6 m (eye level for the 1.8 m capsule)"
+	)
+	assert_almost_eq(
+		cam.near, 0.05, 0.0001,
+		"FP camera near clip must be 0.05 so close props don't clip"
+	)
+	assert_true(
+		cam.is_in_group(&"cameras"),
+		"FP camera must join the 'cameras' group so CameraAuthority can track it"
 	)
 
 

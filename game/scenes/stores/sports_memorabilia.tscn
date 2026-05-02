@@ -161,6 +161,8 @@ omni_range = 4.0
 ; ============================================================
 
 [node name="Floor" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("floor_shape")
@@ -288,7 +290,7 @@ surface_material_override/0 = ExtResource("7")
 
 [node name="Slot1" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_1"
@@ -303,7 +305,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot2" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_2"
@@ -318,7 +320,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot3" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_3"
@@ -333,7 +335,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot4" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_4"
@@ -348,7 +350,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot5" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_5"
@@ -363,7 +365,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot6" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_6"
@@ -378,7 +380,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot7" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_7"
@@ -393,7 +395,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot8" type="Area3D" parent="CardCaseLeft"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_left_8"
@@ -421,7 +423,7 @@ surface_material_override/0 = ExtResource("7")
 
 [node name="Slot1" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_1"
@@ -436,7 +438,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot2" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_2"
@@ -451,7 +453,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot3" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_3"
@@ -466,7 +468,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot4" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, -0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_4"
@@ -481,7 +483,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot5" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_5"
@@ -496,7 +498,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot6" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_6"
@@ -511,7 +513,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot7" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_7"
@@ -526,7 +528,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot8" type="Area3D" parent="CardCaseRight"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.05, 0.15)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "card_right_8"
@@ -554,7 +556,7 @@ surface_material_override/0 = ExtResource("8")
 
 [node name="Slot1" type="Area3D" parent="SealedShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "sealed_1"
@@ -569,7 +571,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot2" type="Area3D" parent="SealedShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "sealed_2"
@@ -584,7 +586,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot3" type="Area3D" parent="SealedShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "sealed_3"
@@ -599,7 +601,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot4" type="Area3D" parent="SealedShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "sealed_4"
@@ -614,7 +616,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot5" type="Area3D" parent="SealedShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.85, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "sealed_5"
@@ -629,7 +631,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot6" type="Area3D" parent="SealedShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.85, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "sealed_6"
@@ -657,7 +659,7 @@ surface_material_override/0 = ExtResource("8")
 
 [node name="Slot1" type="Area3D" parent="MemorabiliaShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "memo_1"
@@ -673,7 +675,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot2" type="Area3D" parent="MemorabiliaShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "memo_2"
@@ -689,7 +691,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot3" type="Area3D" parent="MemorabiliaShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "memo_3"
@@ -705,7 +707,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot4" type="Area3D" parent="MemorabiliaShelf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.25, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "memo_4"
@@ -733,7 +735,7 @@ surface_material_override/0 = ExtResource("9")
 
 [node name="Slot1" type="Area3D" parent="WallDisplay"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "wall_1"
@@ -748,7 +750,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot2" type="Area3D" parent="WallDisplay"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "wall_2"
@@ -763,7 +765,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot3" type="Area3D" parent="WallDisplay"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "wall_3"
@@ -791,7 +793,7 @@ surface_material_override/0 = ExtResource("9")
 
 [node name="Register" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 1
@@ -806,7 +808,7 @@ surface_material_override/0 = ExtResource("12")
 
 [node name="ImpulseSlot1" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.05, 0.2)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "impulse_1"
@@ -822,7 +824,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="ImpulseSlot2" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, 0.2)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "impulse_2"
@@ -854,7 +856,7 @@ surface_material_override/0 = ExtResource("11")
 
 [node name="BackroomInteractable" type="Area3D" parent="BackroomDoor"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 3
@@ -976,7 +978,7 @@ surface_material_override/0 = ExtResource("9")
 
 [node name="Interactable" type="Area3D" parent="checkout_counter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 1

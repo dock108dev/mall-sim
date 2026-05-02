@@ -43,9 +43,10 @@ extends Node3D
 ## Per-tick step applied to orthogonal size by scroll zoom.
 @export var ortho_size_step: float = 0.5
 ## Collision mask used when probing fixture bodies during pivot movement.
-## Defaults to layer 1 — the same layer outer walls and store fixture
-## StaticBody3Ds occupy. Stores that need a different mask can override.
-@export_flags_3d_physics var fixture_collision_mask: int = 1
+## Defaults to layers 1+2 (`world_geometry` + `store_fixtures`) so the pivot
+## probe rejects positions that would embed inside walls or interior
+## fixtures. See `project.godot [layer_names]` for the canonical scheme.
+@export_flags_3d_physics var fixture_collision_mask: int = 3
 ## Half-extent of the box probe used to test whether the next pivot position
 ## would embed inside a fixture body. Sized so the probe sits between the
 ## floor top (Y≈0.05) and the lowest fixture top (GlassCase ≈ Y=0.85).

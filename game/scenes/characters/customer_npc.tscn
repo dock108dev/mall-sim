@@ -16,6 +16,8 @@ albedo_color = Color(0.6, 0.6, 0.6, 1.0)
 roughness = 0.8
 
 [node name="CustomerNPC" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 3
 script = ExtResource("1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

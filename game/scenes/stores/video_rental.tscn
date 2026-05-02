@@ -196,6 +196,8 @@ omni_range = 3.0
 ; ============================================================
 
 [node name="Floor" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("floor_shape")
@@ -376,7 +378,7 @@ spot_angle = 45.0
 
 [node name="Slot1" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_1"
@@ -391,7 +393,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot2" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_2"
@@ -406,7 +408,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot3" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_3"
@@ -421,7 +423,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot4" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_4"
@@ -436,7 +438,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot5" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_5"
@@ -451,7 +453,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot6" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_6"
@@ -466,7 +468,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot7" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_7"
@@ -481,7 +483,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot8" type="Area3D" parent="ShelfZones/NewReleasesWall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, 0.3, 0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "new_release_8"
@@ -508,7 +510,7 @@ surface_material_override/0 = ExtResource("11")
 
 [node name="Slot1" type="Area3D" parent="ShelfZones/ActionSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "action_1"
@@ -523,7 +525,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot2" type="Area3D" parent="ShelfZones/ActionSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "action_2"
@@ -538,7 +540,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot3" type="Area3D" parent="ShelfZones/ActionSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "action_3"
@@ -553,7 +555,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot4" type="Area3D" parent="ShelfZones/ActionSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "action_4"
@@ -568,7 +570,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot5" type="Area3D" parent="ShelfZones/ActionSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "action_5"
@@ -583,7 +585,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot6" type="Area3D" parent="ShelfZones/ActionSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "action_6"
@@ -610,7 +612,7 @@ surface_material_override/0 = ExtResource("11")
 
 [node name="Slot1" type="Area3D" parent="ShelfZones/ComedySection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "comedy_1"
@@ -625,7 +627,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot2" type="Area3D" parent="ShelfZones/ComedySection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "comedy_2"
@@ -640,7 +642,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot3" type="Area3D" parent="ShelfZones/ComedySection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "comedy_3"
@@ -655,7 +657,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot4" type="Area3D" parent="ShelfZones/ComedySection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "comedy_4"
@@ -670,7 +672,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot5" type="Area3D" parent="ShelfZones/ComedySection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "comedy_5"
@@ -685,7 +687,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot6" type="Area3D" parent="ShelfZones/ComedySection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "comedy_6"
@@ -712,7 +714,7 @@ surface_material_override/0 = ExtResource("8")
 
 [node name="Slot1" type="Area3D" parent="ShelfZones/HorrorSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "horror_1"
@@ -727,7 +729,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot2" type="Area3D" parent="ShelfZones/HorrorSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "horror_2"
@@ -742,7 +744,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot3" type="Area3D" parent="ShelfZones/HorrorSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "horror_3"
@@ -757,7 +759,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot4" type="Area3D" parent="ShelfZones/HorrorSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "horror_4"
@@ -772,7 +774,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot5" type="Area3D" parent="ShelfZones/HorrorSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "horror_5"
@@ -787,7 +789,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot6" type="Area3D" parent="ShelfZones/HorrorSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "horror_6"
@@ -814,7 +816,7 @@ surface_material_override/0 = ExtResource("10")
 
 [node name="Slot1" type="Area3D" parent="ShelfZones/DramaSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "drama_1"
@@ -829,7 +831,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot2" type="Area3D" parent="ShelfZones/DramaSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "drama_2"
@@ -844,7 +846,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot3" type="Area3D" parent="ShelfZones/DramaSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "drama_3"
@@ -859,7 +861,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot4" type="Area3D" parent="ShelfZones/DramaSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "drama_4"
@@ -874,7 +876,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot5" type="Area3D" parent="ShelfZones/DramaSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "drama_5"
@@ -889,7 +891,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot6" type="Area3D" parent="ShelfZones/DramaSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "drama_6"
@@ -916,7 +918,7 @@ surface_material_override/0 = ExtResource("9")
 
 [node name="Slot1" type="Area3D" parent="ShelfZones/SciFiSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "scifi_1"
@@ -931,7 +933,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot2" type="Area3D" parent="ShelfZones/SciFiSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "scifi_2"
@@ -946,7 +948,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot3" type="Area3D" parent="ShelfZones/SciFiSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "scifi_3"
@@ -961,7 +963,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot4" type="Area3D" parent="ShelfZones/SciFiSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.45, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "scifi_4"
@@ -976,7 +978,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot5" type="Area3D" parent="ShelfZones/SciFiSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "scifi_5"
@@ -991,7 +993,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="Slot6" type="Area3D" parent="ShelfZones/SciFiSection"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, -0.1)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "scifi_6"
@@ -1018,7 +1020,7 @@ surface_material_override/0 = ExtResource("12")
 
 [node name="Interactable" type="Area3D" parent="ReturnDesk"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.75, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("4")
 
@@ -1097,7 +1099,7 @@ surface_material_override/0 = ExtResource("12")
 
 [node name="Register" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 1
@@ -1115,7 +1117,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.15, 1.2)
 
 [node name="SnackSlot1" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "snack_1"
@@ -1131,7 +1133,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="SnackSlot2" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "snack_2"
@@ -1147,7 +1149,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="SnackSlot3" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "snack_3"
@@ -1163,7 +1165,7 @@ surface_material_override/0 = ExtResource("13")
 
 [node name="SnackSlot4" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.05, 0.25)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "snack_4"
@@ -1191,7 +1193,7 @@ surface_material_override/0 = ExtResource("14")
 
 [node name="BackroomInteractable" type="Area3D" parent="BackroomDoor"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
-collision_layer = 2
+collision_layer = 16
 collision_mask = 0
 script = ExtResource("3")
 interaction_type = 3

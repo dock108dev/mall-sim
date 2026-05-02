@@ -1,18 +1,24 @@
-## Casts a ray from the camera through the mouse cursor to detect interactables.
+## Casts a ray from the active camera through the screen center to detect
+## interactables.
 ##
-## `intersect_ray` returns the closest collider along the ray, so the cursor's
-## hit is inherently nearest-wins even when multiple interactable Area3D
-## volumes overlap under the cursor. Walking near interactables without the
-## cursor over them does not produce hover events: there is no `body_entered`
-## proximity path — focus is cursor-driven only.
+## `intersect_ray` returns the closest collider along the ray, so the screen
+## center is inherently nearest-wins even when multiple interactable Area3D
+## volumes overlap behind the reticle. The cast uses `viewport.size / 2`
+## explicitly so first-person play with a locked cursor and screen-anchored
+## modes (drawer focus etc.) all aim at the same on-screen point. Walking
+## near interactables off-axis does not produce hover events: there is no
+## `body_entered` proximity path — focus is reticle-driven only.
 extends Node
 
 const INTERACTION_RAY_GROUP: StringName = &"interaction_ray"
 
 ## Maximum ray distance in meters.
 @export var ray_distance: float = 100.0
-## Collision mask for interactable detection (layer bits).
-@export_flags_3d_physics var interaction_mask: int = 2
+## Collision mask for interactable detection. Scans the dedicated
+## `interactable_triggers` layer (named layer 5 in `project.godot` -> bit
+## value 16) only, so walls and store fixtures never occlude an interactable
+## that sits behind them in depth.
+@export_flags_3d_physics var interaction_mask: int = 16
 
 var _camera: Camera3D = null
 var _hovered_target: Interactable = null
@@ -117,9 +123,12 @@ func _update_raycast() -> void:
 	if not world:
 		return
 
-	var mouse_pos: Vector2 = viewport.get_mouse_position()
-	var ray_origin: Vector3 = _camera.project_ray_origin(mouse_pos)
-	var ray_dir: Vector3 = _camera.project_ray_normal(mouse_pos)
+	# Always cast from screen center so first-person play with a locked
+	# cursor (where get_mouse_position() returns the locked center anyway)
+	# and any cursor-visible context produce identical hover hits.
+	var screen_center: Vector2 = Vector2(viewport.size) * 0.5
+	var ray_origin: Vector3 = _camera.project_ray_origin(screen_center)
+	var ray_dir: Vector3 = _camera.project_ray_normal(screen_center)
 	var ray_end: Vector3 = ray_origin + ray_dir * ray_distance
 
 	var space_state: PhysicsDirectSpaceState3D = world.direct_space_state

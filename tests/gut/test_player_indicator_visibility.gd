@@ -12,8 +12,8 @@ const RetroGamesScene: PackedScene = preload(
 # Floor StaticBody3D occupies Y∈[-0.05, 0.05]; the marker must clear that.
 const _FLOOR_TOP_Y: float = 0.05
 # Pivot extents exposed by the retro_games PlayerController override.
-const _STORE_HALF_WIDTH: float = 4.5
-const _STORE_HALF_DEPTH: float = 3.0
+const _STORE_HALF_WIDTH: float = 7.5
+const _STORE_HALF_DEPTH: float = 9.5
 
 var _root: Node3D = null
 var _controller: PlayerController = null

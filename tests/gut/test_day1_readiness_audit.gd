@@ -1,5 +1,5 @@
 ## Verifies the composite Day-1 playable readiness audit that runs above
-## StoreReadyContract: state-driven evaluation of the eight invariants, the
+## StoreReadyContract: state-driven evaluation of the ten invariants, the
 ## signal-driven trigger off StoreDirector.store_ready, and the read-only
 ## guarantee that the check never mutates game state.
 extends GutTest
@@ -34,6 +34,11 @@ class FakeShelfSlot extends Node:
 		return not _occupied
 
 
+class FakePlayerBody extends Node3D:
+	func _ready() -> void:
+		add_to_group("player")
+
+
 var _saved_objective_payload: Dictionary = {}
 
 
@@ -61,9 +66,13 @@ func _setup_pass_state() -> Dictionary:
 	GameState.set_active_store(_STORE_ID)
 	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
 
+	var player: FakePlayerBody = FakePlayerBody.new()
+	player.name = "TestPlayer"
+	add_child_autofree(player)
+
 	var camera: Camera3D = Camera3D.new()
 	add_child_autofree(camera)
-	CameraAuthority.request_current(camera, &"retro_games")
+	CameraAuthority.request_current(camera, &"player_fp")
 
 	var fixture: Node3D = Node3D.new()
 	fixture.name = "TestFixture"
@@ -84,6 +93,7 @@ func _setup_pass_state() -> Dictionary:
 	)
 
 	return {
+		"player": player,
 		"camera": camera,
 		"fixture": fixture,
 		"slot": slot,
@@ -99,7 +109,7 @@ func test_evaluate_returns_empty_when_all_conditions_met() -> void:
 	var failure: Dictionary = Day1ReadinessAudit.evaluate_for_test(_STORE_ID)
 	assert_true(
 		failure.is_empty(),
-		"All 8 conditions must pass on a clean Day-1 entry; got %s" % failure
+		"All 10 conditions must pass on a clean Day-1 entry; got %s" % failure
 	)
 
 
@@ -135,6 +145,20 @@ func test_fail_when_active_store_id_mismatches() -> void:
 	)
 
 
+func test_fail_when_no_player_node_in_scene() -> void:
+	var fixtures: Dictionary = _setup_pass_state()
+	(fixtures["player"] as FakePlayerBody).remove_from_group("player")
+	var failure: Dictionary = Day1ReadinessAudit.evaluate_for_test(_STORE_ID)
+	assert_eq(
+		failure.get("name"), "player_spawned",
+		"missing player-group node must surface player_spawned as the failure"
+	)
+	assert_eq(
+		failure.get("value"), "0",
+		"player_spawned failure must report the observed count of 0"
+	)
+
+
 func test_fail_when_camera_source_not_in_allowlist() -> void:
 	_setup_pass_state()
 	var foreign_cam: Camera3D = Camera3D.new()
@@ -144,6 +168,35 @@ func test_fail_when_camera_source_not_in_allowlist() -> void:
 	assert_eq(
 		failure.get("name"), "camera_source",
 		"camera_source outside the allowlist must surface as the failure"
+	)
+
+
+func test_camera_source_allowlist_accepts_player_fp() -> void:
+	_setup_pass_state()
+	# _setup_pass_state already activates the camera with source=&"player_fp",
+	# so a clean run must not trip the camera_source check.
+	var failure: Dictionary = Day1ReadinessAudit.evaluate_for_test(_STORE_ID)
+	assert_true(
+		failure.is_empty(),
+		"&\"player_fp\" must be in _ALLOWED_CAMERA_SOURCES; got %s" % failure
+	)
+
+
+func test_fail_when_viewport_has_no_current_camera() -> void:
+	var fixtures: Dictionary = _setup_pass_state()
+	# CameraAuthority still reports source=&"player_fp", but the viewport's
+	# active Camera3D becomes null once the camera is cleared. This catches
+	# the gap where the source label is correct but rendering is broken.
+	var camera: Camera3D = fixtures["camera"] as Camera3D
+	camera.clear_current()
+	var failure: Dictionary = Day1ReadinessAudit.evaluate_for_test(_STORE_ID)
+	assert_eq(
+		failure.get("name"), "camera_current",
+		"a null viewport camera must surface camera_current as the failure"
+	)
+	assert_eq(
+		failure.get("value"), "null",
+		"camera_current failure must report the observed value of null"
 	)
 
 

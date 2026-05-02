@@ -63,13 +63,13 @@ func test_testing_zone_sits_in_left_mid_quadrant() -> void:
 	if crt == null:
 		return
 	var pos: Vector3 = crt.global_position
-	# Left-mid per BRAINDUMP floor plan: x in [-3.7, -2.3], z in [-2.8, -1.2].
+	# Left-mid per the resized floor plan: x in [-5.6, -4.0], z in [-7.9, -6.4].
 	assert_between(
-		pos.x, -3.7, -2.3,
+		pos.x, -5.6, -4.0,
 		"Testing zone x=%.2f must sit in the left-mid quadrant" % pos.x,
 	)
 	assert_between(
-		pos.z, -2.8, -1.2,
+		pos.z, -7.9, -6.4,
 		"Testing zone z=%.2f must sit in the left-mid quadrant" % pos.z,
 	)
 

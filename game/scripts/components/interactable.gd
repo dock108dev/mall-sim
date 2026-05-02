@@ -31,8 +31,10 @@ const PROMPT_VERBS: Dictionary = {
 	InteractionType.RETURNS_BIN: "Check",
 }
 
-## Collision layer used exclusively for interactables.
-const INTERACTABLE_LAYER: int = 2
+## Collision layer used exclusively for interactable triggers (named layer 5
+## in `project.godot` -> bit value 16). The interaction ray scans this bit
+## only, so walls and fixtures cannot mask hits behind a wall surface.
+const INTERACTABLE_LAYER: int = 16
 const INTERACTION_AREA_NAME: StringName = &"InteractionArea"
 const INTERACTION_AREA_GROUP: StringName = &"interaction_area"
 const INTERACTION_OWNER_META: StringName = &"interactable_owner"

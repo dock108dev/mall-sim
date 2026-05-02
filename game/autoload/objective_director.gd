@@ -48,6 +48,9 @@ func _load_content() -> void:
 			"text": str(e.get("text", _defaults["text"])),
 			"action": str(e.get("action", _defaults["action"])),
 			"key": str(e.get("key", _defaults["key"])),
+			"post_sale_text": str(e.get("post_sale_text", "")),
+			"post_sale_action": str(e.get("post_sale_action", "")),
+			"post_sale_key": str(e.get("post_sale_key", "")),
 		}
 
 
@@ -100,17 +103,30 @@ func _emit_current() -> void:
 		return
 	var source: Dictionary = _day_objectives.get(_current_day, _defaults)
 	var text_value: String = str(source.get("text", ""))
+	var action_value: String = str(source.get("action", ""))
+	var key_value: String = str(source.get("key", ""))
+	# Once the first sale completes, advance the rail to the day's post-sale
+	# copy when the day entry authors one. Day 1 uses this to flip from
+	# "Stock your first item and make a sale" to "First sale complete. Close
+	# the day when ready." so the rail confirms progress and points at the
+	# next action.
+	if _sold:
+		var post_text: String = str(source.get("post_sale_text", ""))
+		if not post_text.is_empty():
+			text_value = post_text
+			action_value = str(source.get("post_sale_action", ""))
+			key_value = str(source.get("post_sale_key", ""))
 	var payload: Dictionary = {
 		"objective": text_value,
 		"text": text_value,
-		"action": str(source.get("action", "")),
-		"key": str(source.get("key", "")),
+		"action": action_value,
+		"key": key_value,
 	}
 	EventBus.objective_changed.emit(payload)
 	var updated: Dictionary = {
-		"current_objective": str(source.get("text", "")),
-		"next_action": str(source.get("action", "")),
-		"input_hint": str(source.get("key", "")),
+		"current_objective": text_value,
+		"next_action": action_value,
+		"input_hint": key_value,
 		"optional_hint": str(source.get("optional_hint", "")),
 	}
 	EventBus.objective_updated.emit(updated)

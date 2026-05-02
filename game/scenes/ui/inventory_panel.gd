@@ -240,8 +240,7 @@ func _pop_modal_focus() -> void:
 	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
 	# without going through this contract. Surface it via push_error AND skip
 	# the pop so we don't corrupt someone else's frame. assert() alone would
-	# be stripped from release builds and silently double-pop the wrong frame
-	# — see docs/audits/security-report.md §F3.
+	# be stripped from release builds and silently double-pop the wrong frame.
 	if InputFocus.current() != InputFocus.CTX_MODAL:
 		push_error(
 			(

@@ -12,13 +12,13 @@ const PROBE_STEP: float = 1.5
 # starts adjacent and steps toward the body; resolve_pivot_step must refuse
 # to land at the embedded coordinate.
 const FIXTURE_PROBES: Array[Dictionary] = [
-	{"name": "GlassCase", "from": Vector3(0.0, 0.0, 0.0), "into": Vector3(0.0, 0.0, -1.0)},
-	{"name": "CartRackLeft", "from": Vector3(-2.0, 0.0, -2.5), "into": Vector3(-2.0, 0.0, -3.2)},
-	{"name": "CartRackRight", "from": Vector3(2.0, 0.0, -2.5), "into": Vector3(2.0, 0.0, -3.2)},
-	{"name": "Checkout", "from": Vector3(2.5, 0.0, 1.7), "into": Vector3(2.5, 0.0, 2.5)},
-	{"name": "ConsoleShelf", "from": Vector3(3.6, 0.0, -1.5), "into": Vector3(4.5, 0.0, -1.5)},
-	{"name": "crt_demo_area", "from": Vector3(-3.0, 0.0, -1.5), "into": Vector3(-3.0, 0.0, -2.5)},
-	{"name": "AccessoriesBin", "from": Vector3(-4.0, 0.0, 0.5), "into": Vector3(-4.7, 0.0, 0.5)},
+	{"name": "GlassCase", "from": Vector3(0.0, 0.0, -3.0), "into": Vector3(0.0, 0.0, -4.0)},
+	{"name": "CartRackLeft", "from": Vector3(-3.5, 0.0, -7.5), "into": Vector3(-3.5, 0.0, -8.5)},
+	{"name": "CartRackRight", "from": Vector3(3.5, 0.0, -7.5), "into": Vector3(3.5, 0.0, -8.5)},
+	{"name": "Checkout", "from": Vector3(5.5, 0.0, 7.0), "into": Vector3(5.5, 0.0, 8.0)},
+	{"name": "ConsoleShelf", "from": Vector3(6.2, 0.0, -4.29), "into": Vector3(7.2, 0.0, -4.29)},
+	{"name": "crt_demo_area", "from": Vector3(-4.8, 0.0, -6.0), "into": Vector3(-4.8, 0.0, -7.14)},
+	{"name": "AccessoriesBin", "from": Vector3(-6.5, 0.0, 1.43), "into": Vector3(-7.52, 0.0, 1.43)},
 ]
 
 var _root: Node3D = null

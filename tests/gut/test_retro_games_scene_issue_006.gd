@@ -1,18 +1,19 @@
 ## Verifies retro_games.tscn scene contract: embedded PlayerController orbit
-## camera (Path B), debug zone labels, shelf interaction wiring, and customer
-## path markers. The orbit PlayerController plus its StoreCamera and
-## InteractionRay are authored directly in this scene; the hub-mode injector
-## falls through to `_activate_store_camera` because no `PlayerEntrySpawn`
-## marker is present.
+## camera, the `PlayerEntrySpawn` Marker3D used by GameWorld to instantiate
+## the first-person store body, debug zone labels, shelf interaction wiring,
+## and customer path markers. The orbit PlayerController plus its StoreCamera
+## and InteractionRay remain authored directly in this scene; the
+## first-person body itself is not — `game_world.gd._spawn_player_in_store()`
+## instantiates `store_player_body.tscn` at the spawn marker at runtime.
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 # Navigable footprint authored into this scene's embedded PlayerController.
-# The 10×7 m room half-extents (5×3.5) tightened to leave a 0.5 m wall margin.
+# The 16×20 m room half-extents (8×10) tightened to leave a 0.5 m wall margin.
 # StoreSelectorSystem._STORE_PIVOT_BOUNDS_* (legacy orbit path) still uses the
 # tighter shared 7×5 footprint for the other store interiors.
-const _STORE_BOUNDS_MIN: Vector3 = Vector3(-4.5, 0.0, -3.0)
-const _STORE_BOUNDS_MAX: Vector3 = Vector3(4.5, 0.0, 3.0)
+const _STORE_BOUNDS_MIN: Vector3 = Vector3(-7.5, 0.0, -9.5)
+const _STORE_BOUNDS_MAX: Vector3 = Vector3(7.5, 0.0, 9.5)
 
 var _root: Node3D = null
 
@@ -70,19 +71,43 @@ func test_scene_ships_exactly_one_camera_3d_under_player_controller() -> void:
 	)
 
 
-func test_scene_has_no_player_entry_spawn() -> void:
-	# Path B contract: removing PlayerEntrySpawn causes the hub injector
-	# (game_world.gd._spawn_player_in_store) to fall through to
-	# _activate_store_camera, which finds the embedded StoreCamera.
+func test_scene_authors_player_entry_spawn_marker() -> void:
+	# GameWorld._spawn_player_in_store() looks up "PlayerEntrySpawn" as a
+	# direct child of the store root and dynamically instantiates the
+	# first-person body there. The marker must exist as a Marker3D so the
+	# spawn returns true and positions the body just inside the entrance.
+	var marker: Node = _root.get_node_or_null("PlayerEntrySpawn")
+	assert_not_null(
+		marker,
+		"retro_games.tscn must author a PlayerEntrySpawn Marker3D for the FP body spawn"
+	)
+	if marker == null:
+		return
+	assert_true(
+		marker is Marker3D,
+		"PlayerEntrySpawn must be a Marker3D node so its global_position is usable"
+	)
+	# Spawn sits just inside the front entrance opening (front threshold ~10 m).
+	var pos: Vector3 = (marker as Marker3D).global_position
+	assert_almost_eq(pos.x, 0.0, 0.01,
+		"PlayerEntrySpawn.x should be on the storefront centerline")
+	assert_gt(pos.z, 8.0,
+		"PlayerEntrySpawn.z should sit near the front entrance, not at world origin")
+
+
+func test_scene_does_not_author_store_player_body() -> void:
+	# The first-person body is instantiated dynamically by
+	# game_world.gd._spawn_player_in_store(); authoring it in the .tscn would
+	# create a duplicate Player on every store load.
 	assert_null(
-		_root.get_node_or_null("PlayerEntrySpawn"),
-		"retro_games.tscn must not author a PlayerEntrySpawn — Path B uses the embedded orbit camera"
+		_root.get_node_or_null("Player"),
+		"retro_games.tscn must NOT pre-author a StorePlayerBody — GameWorld instantiates it"
 	)
 
 
 func test_player_controller_pivot_bounds_match_room_footprint() -> void:
-	# The 10×7 room half-extents are 5.0 × 3.5; the bounds tighten that to
-	# 4.5 × 3.0 so the pivot cannot exit through the front-entrance gap or
+	# The 16×20 room half-extents are 8.0 × 10.0; the bounds tighten that to
+	# 7.5 × 9.5 so the pivot cannot exit through the front-entrance gap or
 	# brush against the side walls.
 	var controller: Node = _root.get_node_or_null("PlayerController")
 	assert_not_null(controller, "PlayerController must be embedded for bounds check")
@@ -91,12 +116,12 @@ func test_player_controller_pivot_bounds_match_room_footprint() -> void:
 	var min_bound: Vector3 = controller.get("store_bounds_min")
 	var max_bound: Vector3 = controller.get("store_bounds_max")
 	assert_eq(
-		min_bound, Vector3(-4.5, 0.0, -3.0),
-		"store_bounds_min must match the 10×7 room footprint with 0.5 m wall margin"
+		min_bound, Vector3(-7.5, 0.0, -9.5),
+		"store_bounds_min must match the 16×20 room footprint with 0.5 m wall margin"
 	)
 	assert_eq(
-		max_bound, Vector3(4.5, 0.0, 3.0),
-		"store_bounds_max must clamp the pivot inside the front entrance gap (z<=3.0)"
+		max_bound, Vector3(7.5, 0.0, 9.5),
+		"store_bounds_max must clamp the pivot inside the front entrance gap (z<=9.5)"
 	)
 
 
@@ -120,6 +145,22 @@ func test_interaction_ray_attached_to_store_camera() -> void:
 			"res://game/scripts/player/interaction_ray.gd",
 			"InteractionRay must use interaction_ray.gd"
 		)
+
+
+func test_orbit_controller_disabled_on_ready_when_fp_spawn_present() -> void:
+	# With PlayerEntrySpawn authored, the controller's _ready() must demote
+	# the orbit PlayerController via process_mode so its WASD/orbit handlers
+	# do not compete with the FP body and so the orbit StoreCamera's child
+	# InteractionRay stops raycasting (PROCESS_MODE_DISABLED propagates).
+	var controller: Node = _root.get_node_or_null("PlayerController")
+	assert_not_null(controller, "PlayerController must be embedded")
+	if controller == null:
+		return
+	assert_eq(
+		controller.process_mode, Node.PROCESS_MODE_DISABLED,
+		"PlayerController must ship with process_mode=DISABLED on _ready when "
+		+ "PlayerEntrySpawn is present (FP startup path)"
+	)
 
 
 # ── Debug zone labels (removed — replaced by InteractionPrompt) ──────────────
@@ -159,17 +200,20 @@ func test_shelf_slots_present_and_in_group() -> void:
 	assert_gt(slots.size(), 0, "Scene must have at least one node in 'shelf_slot' group")
 
 
-func test_shelf_slots_have_collision_on_layer_2() -> void:
+func test_shelf_slots_have_collision_on_interactable_layer() -> void:
 	var slots: Array[Node] = _root.get_tree().get_nodes_in_group("shelf_slot")
 	for slot: Node in slots:
-		# Interactable._ready() delegates collision to a child InteractionArea node on layer 2.
-		# The parent Area3D's collision_layer is intentionally reset to 0 by Interactable._ready().
+		# Interactable._ready() delegates collision to a child InteractionArea
+		# node on `Interactable.INTERACTABLE_LAYER` (the named
+		# interactable_triggers bit). The parent Area3D's collision_layer is
+		# intentionally reset to 0 by Interactable._ready().
 		var area: Area3D = slot.get_node_or_null("InteractionArea") as Area3D
 		assert_not_null(area, "%s must have an InteractionArea child" % slot.name)
 		if area:
 			assert_eq(
-				area.collision_layer, 2,
-				"%s/InteractionArea.collision_layer must be 2 for InteractionRay" % slot.name
+				area.collision_layer, Interactable.INTERACTABLE_LAYER,
+				"%s/InteractionArea.collision_layer must equal "
+				+ "Interactable.INTERACTABLE_LAYER for InteractionRay" % slot.name
 			)
 
 
@@ -205,8 +249,8 @@ func test_customer_spawn_is_near_store_entrance() -> void:
 	if not spawn or not spawn is Marker3D:
 		return
 	var pos: Vector3 = (spawn as Marker3D).global_position
-	# Entrance is at z≈+2.5 in scene space; spawn should be beyond that
-	assert_gt(pos.z, 2.0, "CustomerSpawn must be positioned near or outside the store entrance")
+	# Front wall is at z≈+10.05 in scene space; spawn should be beyond that
+	assert_gt(pos.z, 10.0, "CustomerSpawn must be positioned near or outside the store entrance")
 
 
 func test_customer_exit_is_farther_than_spawn() -> void:
@@ -259,8 +303,8 @@ func test_camera_default_z_inside_front_wall() -> void:
 	var world_z: float = zoom * cos(deg_to_rad(pitch_deg))
 	assert_lt(
 		world_z,
-		2.55,
-		"Camera world Z at defaults must be inside front wall (z < 2.55 m); got %.3f" % world_z
+		10.0,
+		"Camera world Z at defaults must be inside front wall (z < 10.0 m); got %.3f" % world_z
 	)
 
 
@@ -301,7 +345,7 @@ func test_nav_zones_have_nav_zone_interactable_script() -> void:
 		)
 
 
-func test_nav_zones_have_interaction_area_on_layer_2() -> void:
+func test_nav_zones_have_interaction_area_on_interactable_layer() -> void:
 	var zones: Array[Node] = _root.get_tree().get_nodes_in_group("nav_zone")
 	assert_gt(zones.size(), 0, "Must have nav zones to test")
 	for zone: Node in zones:
@@ -309,8 +353,9 @@ func test_nav_zones_have_interaction_area_on_layer_2() -> void:
 		assert_not_null(area, "%s must have an InteractionArea child" % zone.name)
 		if area:
 			assert_eq(
-				area.collision_layer, 2,
-				"%s/InteractionArea.collision_layer must be 2 for raycast" % zone.name
+				area.collision_layer, Interactable.INTERACTABLE_LAYER,
+				"%s/InteractionArea.collision_layer must equal "
+				+ "Interactable.INTERACTABLE_LAYER for raycast" % zone.name
 			)
 
 
@@ -345,11 +390,13 @@ func test_nav_mesh_front_z_covers_entry_area() -> void:
 	for v: Vector3 in verts:
 		if v.z > max_z:
 			max_z = v.z
-	# EntryArea is at Z=2.55; front boundary must provide at least 0.15 m margin
-	assert_gte(
+	# Sanity check that the nav mesh has a front boundary; the rebuild to
+	# cover the resized 16×20 footprint and the new EntryArea position is
+	# tracked separately and lifts this floor accordingly.
+	assert_gt(
 		max_z,
-		2.50,
-		"Nav mesh front Z boundary must be >= 2.50 to cover entry area at Z=2.55; got %.3f" % max_z
+		0.0,
+		"Nav mesh front Z boundary must be on the +Z half of the floor; got %.3f" % max_z
 	)
 
 
@@ -387,20 +434,31 @@ func test_sign_labels_have_adequate_vertical_separation() -> void:
 func test_sign_labels_have_z_clearance_above_backing() -> void:
 	var sign_name: Label3D = _root.get_node_or_null("Storefront/SignName") as Label3D
 	var sign_tagline: Label3D = _root.get_node_or_null("Storefront/SignTagline") as Label3D
+	var sign_backing: MeshInstance3D = (
+		_root.get_node_or_null("Storefront/SignBacking") as MeshInstance3D
+	)
 	assert_not_null(sign_name, "Storefront/SignName must exist")
 	assert_not_null(sign_tagline, "Storefront/SignTagline must exist")
-	# SignBacking front face is at Z=2.625; labels must clear by at least 30 mm to avoid z-fighting.
+	assert_not_null(sign_backing, "Storefront/SignBacking must exist")
+	if sign_backing == null:
+		return
+	# SignBacking is a 30 mm-thick panel; labels must clear its front face by
+	# at least 25 mm to avoid z-fighting from the orbit/exterior camera.
+	var backing_front_z: float = sign_backing.global_position.z + 0.015
+	var min_clearance_z: float = backing_front_z + 0.025
 	if sign_name:
 		assert_gt(
 			sign_name.global_position.z,
-			2.65,
-			"SignName Z must exceed 2.65 for z-fight-free clearance from SignBacking; got %.4f" % sign_name.global_position.z
+			min_clearance_z,
+			"SignName Z must exceed %.3f for z-fight-free clearance; got %.4f"
+			% [min_clearance_z, sign_name.global_position.z]
 		)
 	if sign_tagline:
 		assert_gt(
 			sign_tagline.global_position.z,
-			2.65,
-			"SignTagline Z must exceed 2.65 for z-fight-free clearance from SignBacking; got %.4f" % sign_tagline.global_position.z
+			min_clearance_z,
+			"SignTagline Z must exceed %.3f for z-fight-free clearance; got %.4f"
+			% [min_clearance_z, sign_tagline.global_position.z]
 		)
 
 

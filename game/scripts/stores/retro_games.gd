@@ -26,6 +26,22 @@ const _CHECKOUT_PROMPT_VERB_ACTIVE: String = "checkout customer"
 ## queued. Paired with an empty verb so the InteractionPrompt renders the
 ## label without a "Press E" cue.
 const _CHECKOUT_PROMPT_NAME_IDLE: String = "No customer waiting"
+## NodePath to the orbit camera controller authored in retro_games.tscn. Held
+## as a constant so the F3 debug toggle and the FP-startup disable share one
+## source of truth for the lookup.
+const _ORBIT_CONTROLLER_PATH: NodePath = ^"PlayerController"
+## Marker3D that triggers `GameWorld._spawn_player_in_store`. Presence of this
+## node means the store opens in first-person, so the orbit controller must
+## ship disabled (process_mode propagates to the orbit camera's
+## `InteractionRay`, eliminating the duplicate raycast under E-press).
+const _PLAYER_ENTRY_SPAWN_PATH: NodePath = ^"PlayerEntrySpawn"
+## Name of the FP body GameWorld spawns under the store root.
+const _FP_BODY_NAME: StringName = &"Player"
+## Action that toggles the debug overhead orbit view. Bound to F3 in the
+## project InputMap; see project.godot.
+const _ACTION_TOGGLE_DEBUG: StringName = &"toggle_debug"
+const _CAMERA_SOURCE_DEBUG_OVERHEAD: StringName = &"debug_overhead"
+const _CAMERA_SOURCE_PLAYER_FP: StringName = &"player_fp"
 
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
@@ -44,6 +60,10 @@ var _checkout_counter_interactable: Interactable = null
 ## so the checkout counter prompt can reflect "No customer waiting" vs
 ## "Checkout Counter — Press E to checkout customer".
 var _register_queue_size: int = 0
+## True while the F3 debug overhead orbit view is the active camera. Tracks
+## the toggle so a second F3 press restores first-person without needing to
+## inspect CameraAuthority state.
+var _debug_overhead_active: bool = false
 
 
 func _ready() -> void:
@@ -64,6 +84,7 @@ func _ready() -> void:
 			+ "customer-waiting states."
 		)
 	_connect_checkout_prompt_signals()
+	_disable_orbit_controller_for_fp_startup()
 
 
 ## Initializes Retro Games lifecycle state and EventBus wiring.
@@ -644,3 +665,101 @@ func _assign_testing_station_slots(fixture: Node) -> void:
 		if child.is_in_group("shelf_slot") or child.get("slot_id") != null:
 			_testing_station_slot = child
 			return
+
+
+## Disables the legacy orbit `PlayerController` so it no longer ticks while
+## the first-person body owns the camera. `PROCESS_MODE_DISABLED` propagates
+## to children, which is the point — without it the orbit
+## `PlayerController/StoreCamera/InteractionRay` keeps polling and fires a
+## second interaction on every E-press alongside the FP body's own ray.
+##
+## §F-55 — Silent return when `PlayerEntrySpawn` is absent matches the
+## orbit-only fallback in `GameWorld._spawn_player_in_store`: stores authored
+## without an FP entry marker keep the orbit controller live as their sole
+## camera. When `PlayerEntrySpawn` IS present but the orbit `PlayerController`
+## is missing the scene contract is broken (the .tscn shipped without the
+## debug-toggle target), so we surface the mismatch via `push_warning` so the
+## F3 toggle's later `_toggle_debug_overhead_camera` warning is not the first
+## signal of the authoring bug.
+func _disable_orbit_controller_for_fp_startup() -> void:
+	if get_node_or_null(_PLAYER_ENTRY_SPAWN_PATH) == null:
+		return
+	var orbit: Node = get_node_or_null(_ORBIT_CONTROLLER_PATH)
+	if orbit == null:
+		push_warning(
+			"RetroGames: PlayerEntrySpawn present but %s missing — F3 debug toggle disabled"
+			% String(_ORBIT_CONTROLLER_PATH)
+		)
+		return
+	orbit.process_mode = Node.PROCESS_MODE_DISABLED
+	_debug_overhead_active = false
+
+
+## §F-58 — Gated on `OS.is_debug_build()` to match the established pattern for
+## debug surfaces (`debug_overlay.gd`, `audit_overlay.gd`,
+## `accent_budget_overlay.gd`, `store_controller.dev_force_place_test_item`).
+## Release players who hit F3 by accident would otherwise unlock the cursor and
+## reveal a top-down orbit view that bypasses the FP camera contract; the
+## release-build short-circuit removes that surface entirely.
+func _unhandled_input(event: InputEvent) -> void:
+	if not OS.is_debug_build():
+		return
+	if event.is_action_pressed(_ACTION_TOGGLE_DEBUG):
+		_toggle_debug_overhead_camera()
+
+
+## Flips between the first-person camera and the legacy overhead orbit camera
+## as a debug aid. The orbit controller is re-enabled (process_mode INHERIT)
+## so its WASD/orbit handlers tick again, the cursor is unlocked for orbit
+## drag, and the orbit `StoreCamera` is made current via `CameraAuthority`.
+## A second press reverses all three so the FP body resumes ownership.
+##
+## §F-65 — Silent return when either camera cannot be resolved keeps the F3
+## toggle from crashing if the scene is partially loaded; the `push_warning`
+## paths surface the missing node without aborting input handling. The
+## debug-only F3 surface (§F-58) means a release player cannot reach these
+## warnings; in debug builds the warning is the diagnostic.
+func _toggle_debug_overhead_camera() -> void:
+	var orbit: Node = get_node_or_null(_ORBIT_CONTROLLER_PATH)
+	if orbit == null:
+		push_warning(
+			"RetroGames: PlayerController missing; cannot toggle debug camera"
+		)
+		return
+	if not _debug_overhead_active:
+		_enter_debug_overhead(orbit)
+	else:
+		_exit_debug_overhead(orbit)
+
+
+func _enter_debug_overhead(orbit: Node) -> void:
+	var orbit_cam: Camera3D = orbit.get_node_or_null("StoreCamera") as Camera3D
+	if orbit_cam == null:
+		push_warning("RetroGames: orbit StoreCamera missing; debug toggle aborted")
+		return
+	orbit.process_mode = Node.PROCESS_MODE_INHERIT
+	if orbit.has_method("set_input_listening"):
+		orbit.set_input_listening(true)
+	CameraAuthority.request_current(orbit_cam, _CAMERA_SOURCE_DEBUG_OVERHEAD)
+	InputHelper.unlock_cursor()
+	_debug_overhead_active = true
+
+
+func _exit_debug_overhead(orbit: Node) -> void:
+	var fp_cam: Camera3D = _resolve_fp_camera()
+	if fp_cam == null:
+		push_warning(
+			"RetroGames: FP body camera missing; staying in debug overhead"
+		)
+		return
+	orbit.process_mode = Node.PROCESS_MODE_DISABLED
+	CameraAuthority.request_current(fp_cam, _CAMERA_SOURCE_PLAYER_FP)
+	InputHelper.lock_cursor()
+	_debug_overhead_active = false
+
+
+func _resolve_fp_camera() -> Camera3D:
+	var body: Node = get_node_or_null(NodePath(_FP_BODY_NAME))
+	if body == null:
+		return null
+	return body.get_node_or_null("Camera3D") as Camera3D

@@ -463,7 +463,7 @@ func _apply_state(data: Dictionary) -> void:
 		data.get("tutorial_completed", false)
 	)
 	# Out-of-range ints from a hand-edited user:// blob are clamped by
-	# _resolve_resume_step below; see docs/audits/security-report.md §3 finding 1.
+	# _resolve_resume_step below.
 	current_step = int(
 		data.get("current_step", TutorialStep.WELCOME)
 	) as TutorialStep

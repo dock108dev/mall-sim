@@ -4,6 +4,8 @@
 [ext_resource type="Script" path="res://game/scripts/characters/mall_waypoint_agent.gd" id="2_agent"]
 
 [node name="ShopperAI" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 3
 script = ExtResource("1_shopper")
 
 [node name="MallWaypointAgent" type="Node" parent="."]

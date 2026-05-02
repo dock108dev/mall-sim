@@ -1,8 +1,9 @@
 ## ISSUE-003: ensures every clickable Area3D in active store scenes uses the
 ## shared `Interactable` component (directly or via a subclass such as
 ## `ShelfSlot`). The raycast in `interaction_ray.gd` hits anything on
-## INTERACTABLE_LAYER (2), so a layer-2 Area3D without the component would
-## fire no scoped EventBus signal — the exact failure mode this issue fixes.
+## `Interactable.INTERACTABLE_LAYER`, so an Area3D on that bit without the
+## component would fire no scoped EventBus signal — the exact failure mode
+## this issue fixes.
 extends GutTest
 
 
@@ -12,13 +13,13 @@ const _SCENES: Array[String] = [
 ]
 
 
-func _collect_layer2_areas(node: Node, out: Array[Area3D]) -> void:
+func _collect_interactable_areas(node: Node, out: Array[Area3D]) -> void:
 	if node is Area3D:
 		var area := node as Area3D
 		if (area.collision_layer & Interactable.INTERACTABLE_LAYER) != 0:
 			out.append(area)
 	for child: Node in node.get_children():
-		_collect_layer2_areas(child, out)
+		_collect_interactable_areas(child, out)
 
 
 func _area_is_covered(area: Area3D) -> bool:
@@ -44,10 +45,10 @@ func test_every_clickable_area_is_interactable() -> void:
 		add_child_autofree(root)
 
 		var areas: Array[Area3D] = []
-		_collect_layer2_areas(root, areas)
+		_collect_interactable_areas(root, areas)
 		assert_gt(
 			areas.size(), 0,
-			"Scene %s should register at least one layer-2 Area3D" % scene_path
+			"Scene %s should register at least one interactable Area3D" % scene_path
 		)
 
 		var uncovered: Array[String] = []

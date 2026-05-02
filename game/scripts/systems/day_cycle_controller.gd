@@ -160,6 +160,19 @@ func _show_day_summary(day: int) -> void:
 	var store_revenue: Dictionary = (
 		_economy_system.get_day_end_summary(day).get("store_daily_revenue", {})
 	)
+	# §F-60 — `inventory_remaining = 0` when InventorySystem is unresolved
+	# matches the surrounding null-system fallbacks in this function (`wages`,
+	# `warranty_rev`, `seasonal_impact` all default-to-zero on missing systems).
+	# In production the system is always live by day-close (gameplay has been
+	# running long enough to record sales); the null arm fires only in
+	# unit-test fixtures that drive `_show_day_summary` without a full GameWorld.
+	var inventory_remaining: int = 0
+	var inventory_system: InventorySystem = GameManager.get_inventory_system()
+	if inventory_system != null:
+		inventory_remaining = (
+			inventory_system.get_shelf_items().size()
+			+ inventory_system.get_backroom_items().size()
+		)
 	var payload: Dictionary = {
 		"day": day,
 		"total_revenue": summary.get("total_revenue", 0.0),
@@ -174,6 +187,7 @@ func _show_day_summary(day: int) -> void:
 		"seasonal_impact": seasonal_impact,
 		"discrepancy": discrepancy,
 		"staff_wages": wages,
+		"inventory_remaining": inventory_remaining,
 	}
 	EventBus.day_closed.emit(day, payload)
 	EventBus.publish_day_end_summary(payload)

@@ -142,8 +142,7 @@ func _execute_deferred_save() -> void:
 ## but is gated by the user-facing `crt_enabled` setting rather than the
 ## Retro Games drawer state. Layer is intentionally one band below
 ## crt_overlay.tscn (POST_FX 110) so that, when both are visible, the
-## drawer-driven scene wins; see docs/audits/ssot-report.md "Risk log" for the
-## known parallel-CRT divergence this leaves behind.
+## drawer-driven scene wins (parallel-CRT divergence is a known limitation).
 func _setup_crt_overlay() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
@@ -336,7 +335,7 @@ func _restore_defaults_after_failed_load() -> void:
 # intentionally via corrupt fixtures and which would otherwise fail CI's
 # push_error audit. The size cap re-check is defense-in-depth: load_settings
 # already gates on MAX_SETTINGS_FILE_BYTES, but this function is reusable and
-# closes the open/check/reopen TOCTOU window. See security-report.md §F4.
+# closes the open/check/reopen TOCTOU window.
 func _safe_load_config(config: ConfigFile, path: String) -> Error:
 	if not FileAccess.file_exists(path):
 		return ERR_FILE_NOT_FOUND

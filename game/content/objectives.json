@@ -5,7 +5,10 @@
       "day": 1,
       "text": "Stock your first item and make a sale",
       "action": "Press I to open inventory",
-      "key": "I"
+      "key": "I",
+      "post_sale_text": "First sale complete. Close the day when ready.",
+      "post_sale_action": "Click Close Day in the HUD",
+      "post_sale_key": ""
     },
     {
       "day": 2,

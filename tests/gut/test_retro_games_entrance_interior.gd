@@ -7,12 +7,13 @@ extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 
-# Front wall segments sit at z=3.55 with width 4.05, leaving a gap from
-# x=-1 to x=+1. Interior threshold should be inside the store (positive z
-# but well clear of the wall plane) and within the gap horizontally.
-const ENTRANCE_GAP_HALF_WIDTH: float = 1.0
-const ENTRANCE_Z_MIN: float = 2.5
-const ENTRANCE_Z_MAX: float = 3.5
+# Front wall segments sit at z=10.05 with width 6.55, leaving a ~3 m gap
+# from x≈-1.5 to x≈+1.5. Interior threshold should be inside the store
+# (positive z but well clear of the wall plane) and within the gap
+# horizontally.
+const ENTRANCE_GAP_HALF_WIDTH: float = 1.5
+const ENTRANCE_Z_MIN: float = 8.5
+const ENTRANCE_Z_MAX: float = 10.0
 const FLOOR_TOP_Y: float = 0.05
 
 var _root: Node3D = null

@@ -9,12 +9,12 @@ extends GutTest
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 const PARTITION_NODE: String = "BackroomDivider"
 
-# Room walls live at x = ±5.05 (left/right) and z = -3.55 (back). A node is
+# Room walls live at x = ±8.05 (left/right) and z = -10.05 (back). A node is
 # considered "flush" when its origin sits within ~0.6 m of a wall plane.
 const WALL_PROXIMITY: float = 0.6
-const LEFT_WALL_X: float = -5.05
-const RIGHT_WALL_X: float = 5.05
-const BACK_WALL_Z: float = -3.55
+const LEFT_WALL_X: float = -8.05
+const RIGHT_WALL_X: float = 8.05
+const BACK_WALL_Z: float = -10.05
 const FLOOR_TOLERANCE: float = 0.1
 
 var _root: Node3D = null

@@ -19,6 +19,8 @@ store_id = ""
 store_name = ""
 
 [node name="FacadeBody" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
 
 [node name="FacadeMesh" type="MeshInstance3D" parent="FacadeBody"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
@@ -46,7 +48,7 @@ billboard = 0
 [node name="EntryZone" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.7)
 collision_layer = 0
-collision_mask = 1
+collision_mask = 4
 monitorable = false
 
 [node name="EntryZoneCollision" type="CollisionShape3D" parent="EntryZone"]

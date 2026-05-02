@@ -137,6 +137,7 @@ func _ready() -> void:
 	EventBus.tutorial_completed.connect(_on_tutorial_hint_ended)
 	EventBus.tutorial_skipped.connect(_on_tutorial_hint_ended)
 	EventBus.run_state_changed.connect(_on_run_state_changed)
+	EventBus.first_sale_completed.connect(_on_first_sale_completed_hud)
 
 	_create_close_day_button()
 	_create_hub_back_button()
@@ -197,8 +198,11 @@ func _on_reputation_changed(
 func _create_close_day_button() -> void:
 	_close_day_button = Button.new()
 	_close_day_button.name = "CloseDayButton"
-	_close_day_button.text = "Close Day"
-	_close_day_button.custom_minimum_size.x = 80
+	_close_day_button.text = tr("HUD_CLOSE_DAY_LABEL")
+	# Wider min-size accommodates the keybinding hint without wrapping in either
+	# locale; the keybinding makes the close-day affordance discoverable to a
+	# new player after the first-sale objective points at it.
+	_close_day_button.custom_minimum_size.x = 160
 	_close_day_button.clip_text = false
 	_close_day_button.pressed.connect(_on_close_day_pressed)
 	_top_bar.add_child(_close_day_button)
@@ -218,6 +222,30 @@ func _on_run_state_changed() -> void:
 			if _is_day1_gate_active()
 			else ""
 		)
+
+
+## Pulses the Close Day button once the first sale lands so the affordance
+## stands out at the moment the post-sale objective rail points at it.
+##
+## §F-62 — `is_instance_valid(_close_day_button)` silent return covers the
+## window where `EventBus.first_sale_completed` fires while the HUD is mid-
+## teardown (run reset, scene swap to mall hub, etc.). The button is created
+## in `_create_close_day_button` during `_ready` and lives for the lifetime
+## of the HUD; missing instance means we are already shutting down and
+## animating it would be wasted work, not a missed signal.
+func _on_first_sale_completed_hud(
+	_store_id: StringName, _item_id: String, _price: float
+) -> void:
+	if not is_instance_valid(_close_day_button):
+		return
+	PanelAnimator.pulse_scale(
+		_close_day_button, _COUNTER_PULSE_SCALE, _COUNTER_PULSE_DURATION
+	)
+	PanelAnimator.flash_color(
+		_close_day_button,
+		UIThemeConstants.get_positive_color(),
+		_COUNTER_PULSE_DURATION
+	)
 
 
 func _on_close_day_pressed() -> void:
@@ -788,6 +816,8 @@ func _on_locale_changed(_new_locale: String) -> void:
 	_update_items_placed_display(_items_placed_count)
 	_update_customers_display(_customers_active_count)
 	_update_sales_today_display(_sales_today_count)
+	if is_instance_valid(_close_day_button):
+		_close_day_button.text = tr("HUD_CLOSE_DAY_LABEL")
 
 
 func _on_build_mode_entered() -> void:

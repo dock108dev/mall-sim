@@ -1,17 +1,19 @@
 ## Verifies placed item props (cartridges, consoles, glass-case items) are
-## visible from the fixed isometric/orthographic store camera at pitch=52°,
-## ortho_size_default=10. Slots must sit outside fixture body silhouettes so
-## spawned props are not occluded by the rack/shelf body, the Label3D must be
-## large enough to read at default zoom, and the cartridge placeholder must
-## be scaled enough to register at overhead distance.
+## visible from the fixed isometric/orthographic store camera at pitch=52°.
+## Slots must sit outside fixture body silhouettes so spawned props are not
+## occluded by the rack/shelf body, the Label3D must be large enough to read
+## at default zoom, and the cartridge placeholder must be scaled enough to
+## register at overhead distance.
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 const CARTRIDGE_PROP_PATH: String = (
 	"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
 )
-const ROOM_X_MIN: float = -4.95
-const ROOM_X_MAX: float = 4.95
+# Room interior wall surfaces sit at ±8.05 X; clamp slots to ±7.95 to keep
+# spawned props 10 cm clear of the wall.
+const ROOM_X_MIN: float = -7.95
+const ROOM_X_MAX: float = 7.95
 const Z_FRONT_TOLERANCE: float = 0.01
 const MIN_LABEL_FONT_SIZE: int = 36
 const MIN_LABEL_PIXEL_SIZE: float = 0.0045

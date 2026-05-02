@@ -112,6 +112,53 @@ func test_second_item_sold_does_not_re_emit_first_sale_completed() -> void:
 		EventBus.item_sold.connect(autoload_handler)
 
 
+# ── Post-sale rail copy: Day 1 confirms progress after first sale ─────────────
+
+func test_day1_post_sale_text_replaces_default_after_first_sale() -> void:
+	var director := _make_director()
+	var received: Array[Dictionary] = []
+	EventBus.objective_changed.connect(
+		func(p: Dictionary) -> void: received.append(p)
+	)
+	EventBus.day_started.emit(1)
+	# Default Day 1 copy on store entry, before any sale.
+	EventBus.store_entered.emit(&"retro_games")
+	assert_eq(
+		received[received.size() - 1].get("text", ""),
+		"Stock your first item and make a sale",
+		"Pre-sale Day 1 rail must show the stock-and-sell objective"
+	)
+	# After the first item_sold, rail must flip to the post-sale copy.
+	EventBus.item_sold.emit("item_001", 20.0, "retro")
+	var post: Dictionary = received[received.size() - 1]
+	assert_eq(
+		post.get("text", ""),
+		"First sale complete. Close the day when ready.",
+		"Post-sale Day 1 rail must confirm the sale and point at close-day"
+	)
+	assert_eq(
+		post.get("action", ""),
+		"Click Close Day in the HUD",
+		"Post-sale action must direct the player to the Close Day control"
+	)
+
+
+func test_day_without_post_sale_copy_keeps_default_text_after_sale() -> void:
+	var director := _make_director()
+	var received: Array[Dictionary] = []
+	EventBus.objective_changed.connect(
+		func(p: Dictionary) -> void: received.append(p)
+	)
+	EventBus.day_started.emit(2)
+	EventBus.item_sold.emit("item_002", 30.0, "retro")
+	var latest: Dictionary = received[received.size() - 1]
+	assert_eq(
+		latest.get("text", ""),
+		"Find your pricing sweet spot",
+		"Days without post_sale_text must keep emitting their default copy"
+	)
+
+
 # ── Auto-hide: loop complete + day > 3 ────────────────────────────────────────
 
 func test_no_auto_hide_before_day_4() -> void:

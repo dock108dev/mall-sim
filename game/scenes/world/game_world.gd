@@ -959,8 +959,15 @@ func _inject_store_into_container(
 		# a future walkable-mall variant routing through the same injector.
 		if _mall_hallway:
 			_mall_hallway.visible = false
-		_spawn_player_in_store(_hub_active_store_scene, canonical)
-		_activate_store_camera(_hub_active_store_scene, canonical)
+		var fp_spawned: bool = _spawn_player_in_store(
+			_hub_active_store_scene, canonical
+		)
+		# Skip orbit-camera activation when an FP body spawned — its embedded
+		# Camera3D is already current via CameraAuthority.request_current
+		# (StorePlayerBody._ready). Activating the orbit StoreCamera here would
+		# clear the FP camera and revert the viewport to overhead on entry.
+		if not fp_spawned:
+			_activate_store_camera(_hub_active_store_scene, canonical)
 		EventBus.store_entered.emit(canonical)
 	)
 	if _hub_active_store_scene == null:
@@ -990,10 +997,12 @@ func _on_hub_exit_store_requested() -> void:
 ## marker and retires the orbit `PlayerController`'s input handler so WASD
 ## doesn't drive both the body and the orbit pivot at once. Returns `true`
 ## when the spawn ran, `false` when the store has no spawn marker (orbit-only
-## stores). Camera activation is owned by `_activate_store_camera`, which the
-## injector calls separately — the body intentionally ships without a
-## Camera3D so the in-scene `StoreCamera` (a fixed diorama angle, authored
-## in the .tscn) is the sole viewport camera per ownership.md row 4.
+## stores). When the spawn runs, `StorePlayerBody._ready` registers the
+## body's embedded eye-level Camera3D with `CameraAuthority` as the current
+## camera (source `&"player_fp"`), so the injector intentionally skips
+## `_activate_store_camera` to keep the FP camera current. Orbit-only stores
+## fall through to `_activate_store_camera`, which makes the in-scene
+## `StoreCamera` current per ownership.md row 4.
 func _spawn_player_in_store(store_root: Node, store_id: StringName) -> bool:
 	var marker: Marker3D = (
 		store_root.get_node_or_null(_PLAYER_ENTRY_SPAWN_NAME) as Marker3D
@@ -1012,8 +1021,39 @@ func _spawn_player_in_store(store_root: Node, store_id: StringName) -> bool:
 		return false
 	store_root.add_child(player)
 	player.global_position = marker.global_position
+	_apply_marker_bounds_override(player, marker)
 	_retire_orbit_player_controller(store_root)
 	return true
+
+
+## Applies per-store footprint clamps from `PlayerEntrySpawn` marker metadata
+## (`bounds_min` / `bounds_max`). Stores that omit the metadata fall through
+## to the script's defaults — the default already targets the canonical
+## 16×20 retail interior, so a missing override is not an error.
+##
+## §F-56 — Wrong-type metadata is a content-authoring bug (the marker carries a
+## `bounds_min` key but the value isn't a `Vector3`). Falling silently through
+## to the default footprint can let the player walk through walls in a store
+## whose interior is smaller than the default bounds, so the type mismatch is
+## escalated via `push_warning` per side instead of an unconditional silent
+## fallback. `null` (key absent) is the documented opt-out and stays silent.
+func _apply_marker_bounds_override(player: StorePlayerBody, marker: Marker3D) -> void:
+	var bmin: Variant = marker.get_meta(&"bounds_min", null)
+	if bmin is Vector3:
+		player.bounds_min = bmin
+	elif bmin != null:
+		push_warning(
+			"GameWorld: PlayerEntrySpawn.bounds_min is %s, expected Vector3 — using default"
+			% type_string(typeof(bmin))
+		)
+	var bmax: Variant = marker.get_meta(&"bounds_max", null)
+	if bmax is Vector3:
+		player.bounds_max = bmax
+	elif bmax != null:
+		push_warning(
+			"GameWorld: PlayerEntrySpawn.bounds_max is %s, expected Vector3 — using default"
+			% type_string(typeof(bmax))
+		)
 
 
 ## Disables `PlayerController._input_listening` so its WASD/orbit handler

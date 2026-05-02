@@ -7,27 +7,33 @@
 ## deterministic pass/fail signal for the golden Day 1 entry path.
 ##
 ## Subscribes to StoreDirector.store_ready (signal-driven, never polled). On
-## emission it runs eight read-only checks; passing all eight emits
+## emission it runs ten read-only checks; passing all ten emits
 ## `AuditLog.pass_check(&"day1_playable_ready", …)`, otherwise the first
 ## failing condition is reported via
 ## `AuditLog.fail_check(&"day1_playable_failed", "<name>=<value>")`.
 ##
 ## The check never mutates game state. Any non-Day-1 entry will naturally fail
-## condition 7 (`first_sale_complete` becomes true after a sale) — that is the
-## intended behaviour: this audit only reports green for a clean Day 1 state.
+## the `first_sale_complete` condition (it becomes true after a sale) — that is
+## the intended behaviour: this audit only reports green for a clean Day 1 state.
 extends Node
 
 const CHECKPOINT_PASS: StringName = &"day1_playable_ready"
 const CHECKPOINT_FAIL: StringName = &"day1_playable_failed"
 
+## First-person store entry registers `&"player_fp"` (StorePlayerBody) and may
+## switch to `&"debug_overhead"` via the F3 toggle. `&"retro_games"` covers the
+## orbit-only fallback path in `GameWorld._activate_store_camera` for stores
+## without a `PlayerEntrySpawn` marker.
 const _ALLOWED_CAMERA_SOURCES: Array[StringName] = [
-	&"store_director",
-	&"store_gameplay",
+	&"player_fp",
+	&"debug_overhead",
 	&"retro_games",
 ]
 
 const _COND_ACTIVE_STORE: StringName = &"active_store_id"
+const _COND_PLAYER_SPAWNED: StringName = &"player_spawned"
 const _COND_CAMERA_SOURCE: StringName = &"camera_source"
+const _COND_CAMERA_CURRENT: StringName = &"camera_current"
 const _COND_INPUT_FOCUS: StringName = &"input_focus"
 const _COND_FIXTURE_COUNT: StringName = &"fixture_count"
 const _COND_STOCKABLE_SLOTS: StringName = &"stockable_shelf_slots"
@@ -71,9 +77,16 @@ func _evaluate(store_id: StringName) -> Dictionary:
 		return _fail_dict(_COND_ACTIVE_STORE,
 			"%s (expected %s)" % [String(active_id), String(store_id)])
 
+	var player_count: int = _count_players_in_scene()
+	if player_count < 1:
+		return _fail_dict(_COND_PLAYER_SPAWNED, str(player_count))
+
 	var camera_source: StringName = _resolve_camera_source()
 	if not _ALLOWED_CAMERA_SOURCES.has(camera_source):
 		return _fail_dict(_COND_CAMERA_SOURCE, String(camera_source))
+
+	if not _viewport_has_current_camera():
+		return _fail_dict(_COND_CAMERA_CURRENT, "null")
 
 	var input_ctx: StringName = _resolve_input_context()
 	if input_ctx != &"store_gameplay":
@@ -125,6 +138,30 @@ func _resolve_input_context() -> StringName:
 	if focus == null or not focus.has_method("current"):
 		return &""
 	return focus.call("current")
+
+
+## §F-59 — `tree == null` returning `0` falls through to the
+## `_COND_PLAYER_SPAWNED` `_fail_dict` branch, so the audit reports
+## `player_spawned=0` rather than crashing. Production boot always has a
+## SceneTree by the time `store_ready` fires; the null arm is the same
+## test-seam pattern documented in §F-40 for autoload-missing fallbacks.
+func _count_players_in_scene() -> int:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return 0
+	# StorePlayerBody (and the legacy PlayerController) joins the "player" group
+	# via its scene file. The check guards against an FP store entry where the
+	# scene loaded but the player body never spawned.
+	return tree.get_nodes_in_group(&"player").size()
+
+
+## §F-59 — Same test-seam pattern as `_count_players_in_scene`: viewport-null
+## returns false, the audit reports `camera_current=null` via `_fail_dict`.
+func _viewport_has_current_camera() -> bool:
+	var vp: Viewport = get_viewport()
+	if vp == null:
+		return false
+	return vp.get_camera_3d() != null
 
 
 func _count_fixtures_in_store() -> int:

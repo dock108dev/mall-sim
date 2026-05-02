@@ -36,8 +36,8 @@ func test_cart_rack_left_is_tall_and_against_back_wall() -> void:
 		assert_gt(box.size.y, box.size.z, "CartRackLeft height must exceed depth (shelf silhouette)")
 	assert_lt(
 		rack.global_position.z,
-		-2.0,
-		"CartRackLeft must be positioned against back wall (z < -2.0)"
+		-8.0,
+		"CartRackLeft must be positioned against back wall (z < -8.0)"
 	)
 
 
@@ -54,8 +54,8 @@ func test_cart_rack_right_is_tall_and_against_back_wall() -> void:
 		assert_gt(box.size.y, box.size.z, "CartRackRight height must exceed depth (shelf silhouette)")
 	assert_lt(
 		rack.global_position.z,
-		-2.0,
-		"CartRackRight must be positioned against back wall (z < -2.0)"
+		-8.0,
+		"CartRackRight must be positioned against back wall (z < -8.0)"
 	)
 
 
@@ -72,8 +72,8 @@ func test_console_shelf_is_tall_and_against_side_wall() -> void:
 		assert_gt(box.size.y, box.size.x, "ConsoleShelf height must exceed width (narrow tower)")
 	assert_gt(
 		shelf.global_position.x,
-		2.5,
-		"ConsoleShelf must be positioned against right wall (x > 2.5)"
+		5.0,
+		"ConsoleShelf must be positioned against right wall (x > 5.0)"
 	)
 
 
@@ -150,7 +150,7 @@ func test_glass_case_is_in_center_floor_area() -> void:
 		return
 	var pos: Vector3 = case_node.global_position
 	assert_lt(absf(pos.x), 1.5, "Display table must be near store center (|x| < 1.5)")
-	assert_lt(absf(pos.z), 2.0, "Display table must be on the main sales floor (|z| < 2.0)")
+	assert_lt(absf(pos.z), 6.0, "Display table must be on the main sales floor (|z| < 6.0)")
 
 
 # ── Glass material: visible from overhead, not near-transparent ──────────────
@@ -218,7 +218,7 @@ func test_glass_case_slots_rest_on_case_top() -> void:
 func test_checkout_counter_does_not_span_front_of_store() -> void:
 	# The counter must read as a checkout pocket on the right side, not a
 	# barrier wall spanning the storefront. Width is capped at 2.0 m so the
-	# entrance sightline (front opening at x∈[-1.0, 1.0]) stays clear.
+	# entrance sightline (front opening at x∈[-1.5, 1.5]) stays clear.
 	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
 	assert_not_null(checkout, "Checkout fixture node must exist")
 	if not checkout:
@@ -233,14 +233,14 @@ func test_checkout_counter_does_not_span_front_of_store() -> void:
 		)
 		var counter_left_x: float = checkout.global_position.x - box.size.x * 0.5
 		assert_gte(
-			counter_left_x, 1.0,
-			"Counter left edge x=%.2f must clear the entrance opening (x >= 1.0)"
+			counter_left_x, 1.5,
+			"Counter left edge x=%.2f must clear the entrance opening (x >= 1.5)"
 			% counter_left_x
 		)
 	assert_gt(
 		checkout.global_position.z,
-		1.0,
-		"Checkout counter must be at the front of the store (z > 1.0)"
+		3.0,
+		"Checkout counter must be at the front of the store (z > 3.0)"
 	)
 	assert_gt(
 		checkout.global_position.x, 0.0,
@@ -442,14 +442,15 @@ func test_open_floor_gap_between_counter_and_display_table() -> void:
 	)
 
 
-# ── Fixture solidity: each fixture body blocks layer-1 traffic ───────────────
+# ── Fixture solidity: each fixture body blocks the player ──────────────────
 #
-# Required fixtures must carry a StaticBody3D on layer 1 with a BoxShape3D
-# whose extents approximate the visible mesh. Without this, the player camera
-# pivot and any future CharacterBody3D visitor pass straight through the
-# fixture mesh and the store reads as a "debug plane". The Area3D children
-# (shelf slots, register, interactables) stay on layer 2 — those are
-# verified separately in test_retro_games_scene_issue_006.gd.
+# Required fixtures must carry a StaticBody3D on the `store_fixtures` layer
+# (named layer 2 in `project.godot` -> bit value 2) with a BoxShape3D whose
+# extents approximate the visible mesh. Without this, the player camera
+# pivot and any CharacterBody3D visitor pass straight through the fixture
+# mesh and the store reads as a "debug plane". The Area3D children (shelf
+# slots, register, interactables) live on `Interactable.INTERACTABLE_LAYER`
+# — those are verified separately in test_retro_games_scene_issue_006.gd.
 
 const _REQUIRED_COLLIDABLE_FIXTURES: Array[String] = [
 	"CartRackLeft",
@@ -461,7 +462,7 @@ const _REQUIRED_COLLIDABLE_FIXTURES: Array[String] = [
 ]
 
 
-func test_required_fixtures_have_static_body_on_layer_1() -> void:
+func test_required_fixtures_have_static_body_on_store_fixtures_layer() -> void:
 	for fixture_name: String in _REQUIRED_COLLIDABLE_FIXTURES:
 		var fixture: Node = _root.get_node_or_null(fixture_name)
 		assert_not_null(fixture, "%s must exist" % fixture_name)
@@ -476,8 +477,8 @@ func test_required_fixtures_have_static_body_on_layer_1() -> void:
 		if body == null:
 			continue
 		assert_eq(
-			body.collision_layer, 1,
-			"%s/StaticBody3D.collision_layer must equal 1 (same layer as outer walls)"
+			body.collision_layer, 2,
+			"%s/StaticBody3D.collision_layer must equal 2 (store_fixtures layer)"
 			% fixture_name
 		)
 
@@ -529,17 +530,21 @@ func test_required_fixtures_collision_shape_approximates_mesh_bounds() -> void:
 			)
 
 
-func test_shelf_slot_areas_remain_on_layer_2() -> void:
-	# Adding fixture-body collision must not steal layer 2 from the
-	# Interactable / shelf slot Area3D children — they must continue to
-	# register hover/click via the InteractionRay raycast.
+func test_shelf_slot_areas_remain_on_interactable_layer() -> void:
+	# Adding fixture-body collision must not steal the interactable_triggers
+	# bit from the Interactable / shelf slot Area3D children — they must
+	# continue to register hover/click via the InteractionRay raycast.
 	var slots: Array[Node] = _root.get_tree().get_nodes_in_group("shelf_slot")
-	assert_gt(slots.size(), 0, "Scene must have at least one shelf slot to verify layer 2")
+	assert_gt(
+		slots.size(), 0,
+		"Scene must have at least one shelf slot to verify interactable layer"
+	)
 	for slot: Node in slots:
 		var area: Area3D = slot.get_node_or_null("InteractionArea") as Area3D
 		assert_not_null(area, "%s must retain its InteractionArea child" % slot.name)
 		if area:
 			assert_eq(
-				area.collision_layer, 2,
-				"%s/InteractionArea must remain on collision layer 2" % slot.name
+				area.collision_layer, Interactable.INTERACTABLE_LAYER,
+				"%s/InteractionArea must remain on Interactable.INTERACTABLE_LAYER"
+				% slot.name
 			)

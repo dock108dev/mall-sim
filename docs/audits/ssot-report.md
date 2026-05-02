@@ -1,214 +1,81 @@
-# SSOT Enforcement Report — 2026-05-01 (Day 1 soft-gate pass)
+# SSOT Enforcement Pass — 2026-05-02
 
-**Pass scope.** Working-tree changes vs HEAD on `main` (no feature-branch
-delta — all delta is uncommitted). The diff converts three behaviors that
-previously had silent / split owners into single-owner contracts:
+**Scope:** SSOT enforcement against the working-tree diff that completes the
+first-person store-entry feature on top of Pass 8 (`error-handling-report.md`).
+The diff introduces named physics layers, a first-person walking body with an
+embedded eye-level camera, an F3 debug-overhead toggle, a screen-center
+`Crosshair`, the `Day1ReadinessAudit` v2 condition set, and the bit-5
+`interaction_mask` migration. The pass scans for code, comments, and
+documentation that still reflect the pre-FP / pre-named-layer SSOT and either
+removes/rewrites the contradiction in place or justifies it with a concrete
+reason.
 
-1. **Day 1 first-sale "you cannot close" gate** moves from a *hard rejection*
-   (HUD + MallOverview emit `critical_notification_requested`,
-   `DayCycleController._on_day_close_requested` rejects with `push_warning`)
-   to a *soft confirmation dialog* owned by the in-store HUD and the mall
-   hub overview. Once the player confirms, the close request flows through
-   the same modal pipeline as any other day close.
-2. **Audit / Debug overlay visibility in normal play** — both autoloads now
-   carry an explicit gating contract: `queue_free()` in non-debug builds, and
-   `visible = false` until an explicit F1 / F3 toggle in debug builds. They
-   are no longer allowed to render incidentally during MAIN_MENU,
-   MALL_OVERVIEW, STORE_VIEW, or GAMEPLAY.
-3. **Main-menu Load Game button** disables itself when no slot 0 save
-   exists, with `"No Save Found"` text and a dimmed modulate.
-
-The diff itself does most of the SSOT moves. This pass adds the destructive
-tail: removing the dead error-handling note that documented the now-deleted
-`DayCycleController` backstop, scrubbing the in-source `§F-52` reference,
-replacing the dead-string payload in two tutorial-gate tests with a real
-critical-notification example, and tightening two stale gate comments in
-test files that used the old "controller-side gate" framing.
+**Verification:** `bash tests/run_tests.sh` after edits — **4858/4858 GUT
+tests pass, 0 failures**, all SSOT tripwires green
+(`validate_translations.sh`, `validate_single_store_ui.sh`,
+`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter sole-owner check).
+ISSUE-154 / ISSUE-239 baseline failures are pre-existing on `main` and outside
+this pass's scope.
 
 ---
 
 ## Changes made this pass
 
-| Path | Change | Reason |
-|---|---|---|
-| `docs/audits/error-handling-report.md` | Deleted §F-52 entry (`DayCycleController._on_day_close_requested` Day-1 rejection emits push_warning). Updated executive-summary note count from 25 → 24. | The diff removes the controller backstop entirely. The §F-52 entry described code that no longer exists. |
-| `game/autoload/objective_director.gd` | Replaced the §F-52 reference in the comment above `GameState.set_flag(&"first_sale_complete", true)` with a description of the new readers (HUD + MallOverview soft-confirm gate). | The "DayCycleController backstop" referenced by the comment was deleted in the diff. The flag is still read by the UI gates, so the rest of the comment is still load-bearing. |
-| `tests/gut/test_hud_state_visibility.gd` | Replaced two `EventBus.critical_notification_requested.emit("Make your first sale before closing Day 1.")` payloads (and the matching `assert_eq` string) with `"Save failed — check disk space."` — a payload that is still a plausible critical notification. | The "Make your first sale" string was the literal payload of the now-deleted hard-gate emitters. Reusing a dead UX string in a test fixture invites a future maintainer to revive it. The replaced string mirrors the only actual save-failure user-facing message in the codebase (`game/scripts/core/save_manager.gd:308`). The tests themselves still validate the real behavior they're for: tutorial-step suppression rules for the `critical_notification_requested` → `toast_requested` forwarder. |
-| `tests/gut/test_day_summary_day1_label_values.gd` | Reworded the assertion message "DaySummary must be visible after a gated Day 1 close" → "DaySummary must be visible after a Day 1 close once the first sale is recorded". | "Gated Day 1 close" implies the controller is gating the close. Under the new SSOT the controller does not gate; the UI does. The assertion's actual subject is "first sale completed → close → summary visible", so the new wording matches what is being tested. |
-| `tests/gut/test_day_cycle_close_loop.gd` | Updated the `before_each` comment that explained why the test pre-sets `first_sale_complete = true`. The old comment said "Pre-satisfy the gate so day_close_requested reaches DayCycleController" — under the new SSOT there is no controller-side gate to satisfy. Comment now describes the flag set as forward-defensive consistency, not a gate-satisfier. | The behavior is unchanged (flag is still set), but the *reason* changed when the controller backstop was deleted. Without this fix a future reader would search for the controller-side gate the comment promised and not find it. |
-
-### Files intentionally not touched (justify, with on-file rationale)
-
-| Path | What was kept | Why this pass did not touch it |
-|---|---|---|
-| `game/autoload/event_bus.gd:593` (`signal critical_notification_requested`) | Signal definition retained even though it now has zero production emitters. | The HUD's forwarding shim (`_on_critical_notification_requested` → `toast_requested`) is the documented EH-54 contract for "must-show toast that bypasses tutorial-step suppression". The signal is the API surface for that contract. Removing it would also require deleting the HUD listener, the §F-54 docstring on the listener, and the two GUT tests in `test_hud_state_visibility.gd` that exercise the tutorial-bypass behavior — none of which the *diff* proves obsolete. The diff only proves the Day-1 caller is gone; the API surface itself is intentionally reserved for the next critical alert (e.g. save-failure escalation, bankruptcy banner). Deletion is a separate decision, escalated below. |
-| `tests/gut/test_first_sale_chain.gd::test_close_day_gate_active_on_day_1_without_first_sale` and `test_close_day_gate_releases_after_first_sale_flag_set` | Kept as-is. | These tests exercise `HUD._is_day1_gate_active()`, the boolean predicate the soft confirmation dialog still consults (`hud.gd:209-213`). The predicate is still load-bearing; the test names already use "gate" in the soft-confirm sense. |
-| `tests/gut/test_day1_core_loop.gd::test_flag_*_on_day*_means_gate_*` (3 tests) | Kept as-is. | Same predicate test as above, against the inline `Day == 1 and not first_sale_complete` expression. The flag still gates the *dialog*, just not the *bus rejection*. The test contract is unchanged. |
-| `game/autoload/audit_log.gd` (and the rest of the autoload roster's documented assert pairings) | No change. | Out of scope of this diff — the audit overlay gating change is about visibility, not the underlying log autoload's contract. |
-
----
-
-## SSOT contracts established or reaffirmed by this pass
-
-| # | Domain | Single Owner | Forbidden patterns (rejection rule) |
+| Path | Change | Rationale | Disposition |
 |---|---|---|---|
-| 1 | **Day 1 first-sale "must close" gate** | `HUD.CloseDayConfirmDialog` (in-store) and `MallOverview.CloseDayConfirmDialog` (mall hub) — the same `_is_day1_gate_active()` check guards both. The dialog's `confirmed` signal is the only path that releases the close. Cancel is a no-op. | (a) Re-introducing the `DayCycleController` controller-side rejection that emits `push_warning` and silently drops `day_close_requested`. The controller now trusts that any `day_close_requested` it sees has already cleared the UI gate. (b) Re-introducing the `EventBus.critical_notification_requested.emit("Make your first sale …")` toast in place of the dialog. (c) Adding a third surface that emits `day_close_requested` on Day 1 without consulting `_is_day1_gate_active()`. |
-| 2 | **`day_close_requested` emission paths** | Two surfaces, both gated by the soft-confirm dialog: `HUD._open_close_day_preview()` (in-store) drives `CloseDayPreview`, whose `_on_confirm_pressed` emits; `MallOverview._emit_day_close_requested()` (mall hub) emits directly because the per-store dry-run preview UX has no payload from the hub. The HUD also has the documented EH-06 fallback emit when the preview child is missing. | Direct `EventBus.day_close_requested.emit()` from any in-store UI surface that bypasses the preview. The mall hub's direct emit is the documented exception (J-1, retained from prior pass). |
-| 3 | **Audit / Debug overlay rendering during normal play** | `AuditOverlay` (autoload) and `DebugOverlay` (`game/scenes/debug/debug_overlay.gd`) self-gate. In non-debug builds both call `queue_free()` in `_ready` so they never enter the tree. In debug builds they start `visible = false` and only render after an explicit F3 / F1 toggle. | Any code path that flips `AuditOverlay.visible = true` (or `DebugOverlay.visible = true`) without an explicit user action. Any new SubViewport / second-viewport / minimap-style overlay added under `game/autoload/` or `game/scenes/debug/` without the same gating contract. (`tests/gut/test_audit_overlay_toggle.gd::test_overlay_stays_hidden_in_store_view_and_gameplay` is the negative test that fails if either gate regresses.) |
-| 4 | **Main-menu "Load Game" button enable state** | `MainMenu._refresh_load_button_state()` (`game/scenes/ui/main_menu.gd:248`) is the sole writer of `_load_button.disabled` / `.text` / `.modulate`. It runs in `_ready` and on `NOTIFICATION_VISIBILITY_CHANGED`. The truth source is `FileAccess.file_exists("user://save_slot_0.json")` via `_slot_zero_save_exists()`. | Other menu code flipping `_load_button.disabled` directly. Any call to `_on_load_pressed` that bypasses the early-return when no slot 0 save exists — opening the load panel against an empty save dir is a dead-end UI surface. |
+| `game/autoload/camera_manager.gd` (`_sync_to_camera_authority`) | Added an idempotency guard — when `CameraAuthority.current()` already returns the camera being mirrored, the mirror skips and the explicit source label is preserved. Without the guard, the next `_process` tick after `StorePlayerBody._register_camera` (which calls `CameraAuthority.request_current(_camera, &"player_fp")`) overwrote the source to `&"camera_manager"`, putting it outside `Day1ReadinessAudit._ALLOWED_CAMERA_SOURCES = [&"player_fp", &"debug_overhead", &"retro_games"]` and forcing the composite checkpoint to fail on every clean store entry. | **CameraAuthority is the SSOT for the active-camera source label** (autoload row 4, `docs/architecture/ownership.md`). `CameraManager` is documented as the read-only viewport observer; the auto-mirror exists to cover the "auto-current on tree-add" case where no caller routed through `request_current`. The guard restores that boundary: mirror only when the source is ambiguous, never when an explicit caller has set it. | **Acted (tighten)** |
+| `docs/audits/error-handling-report.md` §F-57 + executive summary cross-references (lines 5, 28, 66–67, 188, 904–929, 985, 1017) | Rewrote the §F-57 entry to reflect the actual code state: the bit-5 migration was **completed in this pass**, not deferred. Updated the §F-57 detail body, the Pass-8 summary paragraph, the findings table row, the disposition table, and the final-verdict paragraph; the prior text characterized §F-57 as "deferred until project-wide named-physics-layer pass lands" but the pass shipped `project.godot [layer_names]` declarations, flipped `Interactable.INTERACTABLE_LAYER` and `InteractionRay.interaction_mask` from `2` to `16`, migrated every shelf-slot Area3D in the four ship-touched store scenes, and added `tests/gut/test_physics_layer_scheme.gd` to pin the contract. | **The code is the SSOT** for whether the migration shipped. The report's prior "deferred" framing contradicted the actual `interaction_mask = 16` / `INTERACTABLE_LAYER = 16` / `[layer_names]` / shelf-slot `collision_layer = 16` state. Documentation that disagrees with code is removed or rewritten, never left to drift. | **Acted (tighten)** |
+| `tests/gut/test_day1_readiness_audit.gd:2`, `tests/gut/test_day1_readiness_audit.gd:112` | Updated docstring header from "eight invariants" to "ten invariants" and assertion message from "All 8 conditions" to "All 10 conditions" to match the audit's new condition set (the original 8 plus `_COND_PLAYER_SPAWNED` and `_COND_CAMERA_CURRENT` introduced in this pass). | **`Day1ReadinessAudit._evaluate` is the SSOT** for the condition count; the test docstring is the audited contract. The 8/10 mismatch was stale documentation. | **Acted (tighten)** |
 
-These join the SSOT contracts already established in prior passes (preserved
-in the table below for cross-reference; line numbers updated where the
-working-tree diff moved them).
-
-| # (legacy) | Domain | Owner | Notes |
-|---|---|---|---|
-| L-1 | In-store close-day modal pipeline | `HUD._open_close_day_preview` → `CloseDayPreview.show_preview` → confirm emits | Still canonical. The new soft-confirm dialog sits *in front* of this; once dismissed with "Close Anyway", the same modal pipeline runs. |
-| L-2 | Placement-mode hint banner | `PlacementHintUI` listening to `EventBus.placement_hint_requested` | Unchanged. |
-| L-3 | MALL_OVERVIEW cash display | KPI strip in `mall_overview.gd`; HUD `_cash_label` is forced hidden in MALL_OVERVIEW (`hud.gd:312`) | Unchanged. |
-| L-4 | Fixture-collision blocking during pivot movement | `PlayerController._pivot_blocked()` / `_resolve_pivot_step` | Unchanged. |
-| L-5 | Orthographic camera mode | `PlayerController.is_orthographic` export, only `retro_games.tscn` sets true | Unchanged. |
-| L-6 | Day Summary "Return to Mall" routing | `DaySummary._on_mall_overview_pressed` → GameWorld → MALL_OVERVIEW | Unchanged. |
-| L-7 | Retro Games checkout-counter prompt state | `RetroGames._refresh_checkout_prompt()` | Unchanged. |
-| L-8 | Day 1 quarantine surface | `RetroGames._apply_day1_quarantine()` (`refurb_bench` only) | Unchanged. |
-| L-9 | MALL_OVERVIEW optional buttons | `MallOverview._refresh_optional_button_visibility()` | Unchanged. |
+All three edits were validated against `bash tests/run_tests.sh` — full suite
+green: **4858/4858 GUT tests, 0 failures**, all SSOT tripwires green.
 
 ---
 
-## Risk log — items intentionally retained (act-or-justify)
+## Final SSOT modules per domain (post-edit)
 
-### J-1. `EventBus.day_close_requested.emit()` direct call in `mall_overview.gd:_emit_day_close_requested`
-
-**Decision:** keep.
-
-**Why:** `CloseDayPreview` shows a per-store shelf snapshot dry-run. The
-mall hub view has no specific store under it — the preview UX (shelf-by-shelf
-reveal) has no payload from this surface and would render "0 items on the
-shelf, no customers today" misleadingly. The mall-hub close button has its
-own Day-1 soft-confirm gate (`first_sale_complete` flag check at
-`mall_overview.gd:390-394`), so the gate-rule symmetry with the HUD is
-preserved; only the preview is skipped.
-
-**How a future change would invalidate this:** if `CloseDayPreview` is
-generalized to render an aggregated all-stores snapshot, the mall hub close
-button should also route through it.
-
-### J-2. `critical_notification_requested` signal retained with zero production emitters
-
-**Decision:** keep.
-
-**Why:** The signal is the API surface for the EH-54 forwarding contract
-("must-show toast that bypasses tutorial-step suppression"). The diff
-proves the Day-1 caller is obsolete, but does not prove the *contract* is
-obsolete — the next critical alert (save failure, bankruptcy, content-load
-failure) is the natural caller. The signal also still has two GUT tests
-that pin the bypass behavior, so deleting the signal would require deleting
-those tests, the HUD handler, and the §F-54 docstring. That is a wider
-refactor than this SSOT pass should swallow.
-
-**How a future change would invalidate this:** if a code review establishes
-that no future critical alert will use the signal (e.g. save failures move
-to a dedicated modal), delete the signal, the HUD listener, the §F-54
-section, and the two `test_critical_notification_*` tests in one PR.
-
-### J-3. `CloseDayPreview` confirm path bypasses the soft-confirm dialog after first sale
-
-**Decision:** keep.
-
-**Why:** Once `first_sale_complete` is true, `_is_day1_gate_active()`
-returns false and the HUD opens `CloseDayPreview` directly. The confirm
-dialog is *only* the Day 1 / no-first-sale soft gate. There is no need to
-wrap the preview's own confirm step in another modal — the preview is
-already a confirmation surface ("review the dry-run, then commit").
-
-**How a future change would invalidate this:** if a separate "are you sure?"
-prompt is wanted on every close (not just Day 1 / no-sale), wire it into
-`CloseDayPreview._on_confirm_pressed` rather than re-opening the
-`CloseDayConfirmDialog`.
-
-### J-4. `DayCycleController` no longer self-defends against double-close on Day 1
-
-**Decision:** keep — controller's existing `_awaiting_acknowledgement`
-guard and the `double_close_ignored` test cover the only realistic
-double-emit pattern.
-
-**Why:** With the controller backstop removed, the only protection against
-"player spams Close Day on Day 1" is the soft-confirm dialog itself
-(modal-blocking the underlying button) plus the controller's pre-existing
-`_awaiting_acknowledgement` flag. The dialog is modal at the engine level —
-Godot's `ConfirmationDialog.popup_centered()` blocks input to the rest of
-the tree until dismissed — so a second press cannot reach the bus while
-the dialog is open. Adding controller-side rejection back would just
-shadow the modal contract.
-
-**How a future change would invalidate this:** if `CloseDayConfirmDialog`
-is converted to a non-modal banner / toast, restore a controller-side
-de-dupe guard that checks an in-flight flag.
+| Domain | SSOT (write side) | Read-only consumers |
+|---|---|---|
+| Active-camera source label / single-current invariant | **`CameraAuthority.request_current(cam, source)`** (autoload row 4). After this pass: `CameraManager._sync_to_camera_authority` is a no-op when `CameraAuthority.current() == camera`, so the explicit source set by a caller (e.g. `&"player_fp"` from `StorePlayerBody`) survives subsequent viewport-change observation. | `CameraManager` (viewport tracker / event emitter), `Day1ReadinessAudit._resolve_camera_source` (allowlist check), `StoreReadyContract._camera_current` (single-current walk). |
+| Player avatar / first-person camera in store interiors | **`StorePlayerBody`** (`game/scripts/player/store_player_body.gd` + `game/scenes/player/store_player_body.tscn`). Owns walk + sprint + mouse-look (yaw on body, pitch on `$Camera3D`), embedded eye-level Camera3D, FP camera registration with source `&"player_fp"`, footprint clamp, cursor lock/unlock under InputFocus. | `Day1ReadinessAudit._count_players_in_scene` (player-group count), `tests/gut/test_hub_store_player_spawn.gd`, `tests/unit/test_store_player_body.gd`. |
+| Orbit/overhead debug camera in retro_games | **`RetroGames._toggle_debug_overhead_camera` / `_enter_debug_overhead` / `_exit_debug_overhead`** (`game/scripts/stores/retro_games.gd`), bound to F3 via the new `toggle_debug` action in `project.godot`. The orbit `PlayerController` ships disabled (`PROCESS_MODE_DISABLED`) when `PlayerEntrySpawn` is present and only re-enables under the F3 toggle. | `Day1ReadinessAudit._ALLOWED_CAMERA_SOURCES` accepts `&"debug_overhead"` for this path. |
+| Screen-center reticle (FP gameplay) | **`Crosshair`** (`game/scenes/ui/crosshair.tscn` + `game/scripts/ui/crosshair.gd`). Visibility tracks `InputFocus.current() == &"store_gameplay"`. Embedded once in `hud.tscn` (replacing the duplicated `InteractionPrompt` scene; `InteractionPrompt` remains the autoload at row 18 — single source for the contextual prompt). | `tests/gut/test_crosshair.gd`. |
+| Physics-layer scheme | **`project.godot [layer_names]`** declares `1=world_geometry, 2=store_fixtures, 3=player, 4=customers, 5=interactable_triggers`. **`Interactable.INTERACTABLE_LAYER = 16`** is the canonical bit value for interactable triggers; `InteractionRay.interaction_mask = 16` reads the same bit. Pinned by `tests/gut/test_physics_layer_scheme.gd`. | All `.tscn` Area3D `collision_layer` declarations on interactable triggers (`16`); player root (`collision_layer = 4`, `mask = 3`); customer roots (`8` / `3`); store fixtures (`2`); world geometry (`1`); storefront `EntryZone` (`mask = 4`). |
+| Day-1 playable-readiness composite | **`Day1ReadinessAudit._evaluate`** runs **ten** ordered conditions: `active_store_id`, `player_spawned` (new), `camera_source` (allowlist tightened to `[&"player_fp", &"debug_overhead", &"retro_games"]` — old `&"store_director"` / `&"store_gameplay"` removed because nothing now emits them), `camera_current` (new), `input_focus`, `fixture_count`, `stockable_shelf_slots`, `backroom_count`, `first_sale_complete`, `objective_active`. | `tests/gut/test_day1_readiness_audit.gd` per-condition coverage. |
+| Store interior dimensions (Retro Games shipping interior) | **`game/scenes/stores/retro_games.tscn`** floor + walls + ceiling + nav-mesh + audio-zone all sized at 16 m × 20 m × 3.5 m. **`StorePlayerBody.bounds_min/bounds_max`** defaults `Vector3(±7.7, 0, ±9.7)` are the canonical first-person footprint (0.3 m margin from wall surfaces at ±8.0 X / ±10.0 Z); per-store overrides come from `PlayerEntrySpawn` marker metadata applied by `GameWorld._apply_marker_bounds_override`. | `tests/unit/test_store_player_body.gd::test_clamp_bounds_match_retro_games_footprint`. |
+| Day-1 objective rail (Stock first item → make sale → close day) | **`game/content/objectives.json`** day-1 entry now carries `text` / `action` / `key` plus `post_sale_text` / `post_sale_action` / `post_sale_key`. **`ObjectiveDirector._emit_current`** is the sole writer that flips between pre- and post-sale copy when `_sold == true`. | `ObjectiveRail` (read), `HUD._on_first_sale_completed_hud` (Close Day pulse). |
+| End-of-day inventory total | **`DayCycleController._show_day_summary`** computes `inventory_remaining = shelf_items + backroom_items` and includes it in the `EventBus.day_closed` payload, documented in the signal docstring on `EventBus.day_closed`. | `DaySummary._on_day_closed_payload` renders the new label; the inventory systems remain the read-side source for the actual item list. |
 
 ---
 
-## Sanity check — no dangling references
+## Risk log — intentionally retained
 
-After the deletions and edits:
-
-- `git grep "F-52"` → 0 hits.
-- `git grep "Make your first sale"` → 0 hits (was 3 in `test_hud_state_visibility.gd`).
-- `git grep "DayCycleController.*backstop"` → 0 hits.
-- `git grep "Day 1 cannot close"` → 0 hits.
-- `git grep critical_notification_requested.emit` → 2 hits, both in
-  `tests/gut/test_hud_state_visibility.gd`, with the `"Save failed —
-  check disk space."` payload that mirrors the only realistic future caller.
-- `git grep "first_sale_complete"` → 49 hits, all in production-relevant
-  paths: gate predicate (HUD + MallOverview), reader (DayManager,
-  ObjectiveDirector, EconomySystem, Day1ReadinessAudit), test setup. No
-  hard-gate rejection callsites remain.
-- `bash tests/run_tests.sh` — see "Test verification" below.
+| Item | Why retained | Concrete trigger to remove |
+|---|---|---|
+| `CameraManager._sync_to_camera_authority` itself (the entire mirror function, not just the new guard) | The mirror covers the case where a Camera3D becomes current via Godot's auto-current behavior (e.g. tree-add) without routing through `CameraAuthority.request_current`. Removing it would let `CameraAuthority._active` go stale relative to the viewport. The new guard reduces the blast radius without removing the safety net. | A scene-tree-wide audit confirming every `current = true` flip in `.tscn` and `.gd` is gated through `CameraAuthority.request_current`. `tests/validate_camera_ownership.sh` already enforces that for `.gd` writes; extending the script to `.tscn` `current = true` would close the gap and let the mirror be deleted. |
+| Orbit `PlayerController` and embedded `StoreCamera` in `retro_games.tscn` | F3 debug-overhead toggle is the only consumer. Removing it would lose the dev-only top-down view that `RetroGames._toggle_debug_overhead_camera` / `_enter_debug_overhead` / `_exit_debug_overhead` switch into. The legacy controller is `PROCESS_MODE_DISABLED` at `_ready` so it does not race the FP body. | A decision to drop the F3 debug overhead (no longer needed for QA / playtesting on the shipping interiors). At that point the orbit `PlayerController/StoreCamera` subtree can be deleted from `retro_games.tscn` along with `RetroGames._disable_orbit_controller_for_fp_startup` and the four `_*_debug_overhead*` methods. |
+| `_resolve_store_id` duplicated across 5 files (`inventory_system.gd:35`, `economy_system.gd:570`, `store_selector_system.gd:404`, `order_system.gd:677`, `reputation_system.gd:326`) | Each instance has subtly different fallback semantics (registry-gate, raw-resolve, cached-active, GameManager-fallback, String vs StringName return). Documented in `docs/audits/cleanup-report.md`. Consolidating without changing those semantics would require a `StoreIdResolver` static helper that exposes one named function per policy — out of scope for this pass since SSOT enforcement here would be a behavioural-change refactor, not a deletion. | A green-light to introduce `StoreIdResolver` with explicit per-policy entry points; then each call site can opt into a named policy and the local helper is deleted. |
+| `StorePlayerBody.set_current_interactable` test seam | Public method with zero callers (production or tests). Removing a public method is a behaviour-surface change; documented as a contract aid for tests in §F-54. The cost of removal is non-zero (touching `tests/unit/test_store_player_body.gd` if a future test starts using it as documented), the cost of keeping is one method body. | A pass with explicit license to drop unused public methods (and the corresponding "delete unused public surface" entry in the cleanup-report). |
+| `ProvenancePanel` (`game/scenes/ui/provenance_panel.gd` + `.tscn`) | Not instantiated from any production scene; only referenced by `tests/gut/test_provenance_panel.gd`. Documented in `docs/audits/cleanup-report.md` as "design-intent unconfirmed" — the panel content (acquisition / condition / grade history) is referenced from the design docs as a planned in-game surface. | Confirmation from the design doc owner that the panel is no longer planned; then panel + test + any ContentRegistry hooks can be deleted. |
+| `error-handling-report.md` historical references to prior pass names (`security-report.md`, `ssot-report.md`, `docs-consolidation.md`, `cleanup-report.md`) | The references appear inside the consolidated report itself as a record of which prior reports were folded in. Removing them would erase the provenance trail. The same names also appear in `docs/index.md` under "Audit notes" as an explanatory footnote — also intentional and historical. The `cleanup-report.md` already swept every *live* code-side citation of those filenames. (Of those four reports, only `security-report.md`, `ssot-report.md`, `cleanup-report.md`, and `docs-consolidation.md` are currently present; `cleanup-report.md`, `security-report.md`, and `ssot-report.md` were never absent in this branch's working tree.) | Routine — leave intact as historical context. |
 
 ---
 
-## Test verification
+## Sanity check — dangling references
 
-Re-ran `bash tests/run_tests.sh` after edits. Result: **4818 / 4818 GUT
-tests passing** (27,324 asserts), `---- All tests passed! ----`. The three
-test files modified by this pass (`test_hud_state_visibility.gd`,
-`test_day_summary_day1_label_values.gd`, `test_day_cycle_close_loop.gd`)
-only had string / comment edits; their assertion logic was not changed.
-The diff's own test additions (`test_close_day_preview.gd`,
-`test_first_sale_chain.gd`, `test_mall_overview.gd`,
-`test_day_cycle_controller.gd`, `test_audit_overlay_toggle.gd`,
-`test_main_menu.gd`,
-`test_day_summary_day1_label_values.gd::test_close_day_on_day1_renders_summary_after_soft_confirm`)
-are the negative tests that pin the new SSOT — re-introducing the deleted
-backstop or hard-gate would break them.
-
-The pre-existing `test_day_summary_mall_overview_button.gd::test_mall_overview_press_emits_request_and_advances_day`
-flakes as "Risky" with a `mall_overview_requested` access error, and the
-ISSUE-239 validator (PocketCreatures pack shape, tournament count) reports
-failures. Both predate this branch and reproduce on clean `main`; out of
-scope for this pass.
+| Check | Result |
+|---|---|
+| Any code citing `&"store_director"` / `&"store_gameplay"` as a CameraAuthority source? | None. `grep request_current.*store_director\|request_current.*store_gameplay` returns zero hits. The removal of those tokens from `Day1ReadinessAudit._ALLOWED_CAMERA_SOURCES` is consistent with code state. |
+| Any `interaction_mask = 2` or `INTERACTABLE_LAYER = 2` left over? | None. `Interactable.INTERACTABLE_LAYER = 16`, `InteractionRay.interaction_mask = 16`. Every shelf-slot `Area3D` in the four touched store scenes (`retro_games`, `consumer_electronics`, `pocket_creatures`, `video_rental`, `sports_memorabilia`) reads `collision_layer = 16`. The remaining `collision_layer = 2` lines belong to `StaticBody3D` fixtures (cart racks, glass cases, register collision, doors), correctly mapped to `layer_2 = store_fixtures`. |
+| Any code citing audit-report filenames (`security-report.md`, `ssot-report.md`, `docs-consolidation.md`, `cleanup-report.md`) as if those reports were deleted? | None remaining in code/tests. Surviving references are confined to `docs/index.md` (intentional, explanatory), `docs/audits/error-handling-report.md` (historical, inside the consolidated report), and `docs/audits/cleanup-report.md` (sweep record). The `cleanup-report.md` Pass already handled this. |
+| Any `bounds_min`/`bounds_max` defaults still tied to the old 7×5 retro_games footprint? | None. `StorePlayerBody.bounds_*` defaults are `Vector3(±7.7, 0, ±9.7)` matching the new 16×20 interior. `tests/unit/test_store_player_body.gd::test_clamp_bounds_match_retro_games_footprint` pins the assertion against `±8.0 X / ±10.0 Z` walls. |
+| `CameraManager._sync_to_camera_authority` after the new guard — does any test directly assert the post-mirror source label is `&"camera_manager"`? | No. `tests/unit/test_camera_manager.gd` and `tests/gut/test_camera_manager.gd` only inspect `active_camera` and the `EventBus.active_camera_changed` payload, never `CameraAuthority.current_source()`. The guard is behaviorally invisible in unit tests but corrects the production race. |
+| `Day1ReadinessAudit` allowlist drift after the source-label tightening | `_ALLOWED_CAMERA_SOURCES = [&"player_fp", &"debug_overhead", &"retro_games"]` — all three sources are emitted by code in the tree (`StorePlayerBody.CAMERA_SOURCE`, `RetroGames._CAMERA_SOURCE_DEBUG_OVERHEAD` / `_CAMERA_SOURCE_PLAYER_FP`, `GameWorld._activate_store_camera` orbit-fallback path passing the canonical store id). No allowlist entry is unreachable. |
 
 ---
 
 ## Escalations
 
-### §E-SSOT-1. `HintOverlayUI` has no production consumer (carried over)
-
-**File:** `game/scripts/ui/hint_overlay_ui.gd`,
-`game/scenes/ui/hint_overlay_ui.tscn`.
-
-**Status:** unchanged from the prior SSOT pass. The Day-1 soft-gate
-diff does not touch this code path. Carrying the escalation forward so it
-is not lost. See the prior pass entry (commit `ecb7011` and earlier) for
-the full rationale; smallest concrete next action is unchanged: pick
-"ship-with-onboarding-hints" or "rip-the-system" before either side can
-be cleaned up.
-
-### §E-SSOT-2. `prop_counter_register.gltf` orphan (carried over)
-
-**File:** `game/assets/models/fixtures/prop_counter_register.gltf` (+
-`.import`).
-
-**Status:** unchanged. The asset is now ~6 days old, still no consumer
-in `retro_games.tscn` or any other scene. Same reasoning to defer (an
-in-progress asset is more likely than legacy chaff). Owner check still
-pending.
+None. Every finding was either acted on in source or carried explicit
+justification with a concrete trigger to revisit. No SSOT decision was left
+blocked.
