@@ -14,12 +14,14 @@ extends PanelContainer
 
 
 const _DEFAULT_PROMPT: String = "Walk to a shelf and press E to stock — Right-click to cancel"
-const _ITEM_PROMPT_FORMAT: String = "Walk to a shelf and press E to stock %s — Right-click to cancel"
-
-@onready var _message_label: Label = $Margin/MessageLabel
+const _ITEM_PROMPT_FORMAT: String = (
+	"Walk to a shelf and press E to stock %s — Right-click to cancel"
+)
 
 var _placement_active: bool = false
 var _selected_item_name: String = ""
+
+@onready var _message_label: Label = $Margin/MessageLabel
 
 
 func _ready() -> void:

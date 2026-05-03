@@ -87,10 +87,22 @@ jobs:
       - name: Run GUT tests
         run: |
           GUT_OUTPUT_FILE="$(mktemp)"
+
+          # Strip engine-shutdown noise emitted *after* GUT finishes, before
+          # it reaches the log or the CI display. In headless mode the
+          # renderer-cleanup pass runs while autoload-held UI (AuditOverlay,
+          # ErrorBanner, ObjectiveRail, InteractionPrompt, FailCard) is still
+          # alive, so RIDs for Canvas / CanvasItem / DummyTexture / Font /
+          # cached resources are reported as "leaked at exit." These messages
+          # do not indicate test failures and are not actionable from
+          # GDScript — filter both the headers and their `     at: ...`
+          # continuation lines so the log shows test signal only.
+          SHUTDOWN_NOISE_RE='^WARNING: [0-9]+ RIDs? of type "[^"]+" (was|were) leaked\.$|^WARNING: ObjectDB instances leaked at exit|^ERROR: [0-9]+ RID allocations of type .+ were leaked at exit\.$|^ERROR: [0-9]+ resources still in use at exit|^ +at: _free_rids \(servers/rendering/renderer_canvas_cull|^ +at: cleanup \(core/object/object\.cpp|^ +at: clear \(core/io/resource\.cpp'
+
           godot --path "$GITHUB_WORKSPACE" --headless \
             --script res://addons/gut/gut_cmdln.gd -- \
             -gconfig=res://.gutconfig.json -gexit \
-            2>&1 | tee "$GUT_OUTPUT_FILE" || true
+            2>&1 | grep -vE "$SHUTDOWN_NOISE_RE" | tee "$GUT_OUTPUT_FILE" || true
 
           # Trust GUT's own summary for pass/fail. On Linux, headless Godot
           # exits non-zero whenever autoload-held resources leak at shutdown
@@ -101,18 +113,18 @@ jobs:
           fi
 
           # Catch push_error() calls which GDScript emits as "ERROR:" lines but
-          # don't fail assertions. The exclusion regex covers:
-          #   1. Engine-shutdown cleanup errors (RID/resource leaks emitted
-          #      after GUT finishes) — unavoidable in headless runs.
-          #   2. Errors emitted by tests that intentionally exercise fail-loud
+          # don't fail assertions. Engine-shutdown ERROR: noise is already
+          # stripped by SHUTDOWN_NOISE_RE above, so the exclusion regex below
+          # only needs to cover:
+          #   1. Errors emitted by tests that intentionally exercise fail-loud
           #      paths whose `push_error` is a documented production behavior
           #      (and is itself asserted by the validate_issue_*.sh scripts:
           #      ISSUE-008 StoreDirector, ISSUE-010 ContentRegistry uniqueness
           #      / CameraAuthority, ISSUE-019 StoreRegistry).
-          #   3. Engine-internal teardown noise that fires after a passing
+          #   2. Engine-internal teardown noise that fires after a passing
           #      assertion (autofree race on await-suspended tests, settings
           #      lambda capture during malformed-config reload).
-          EXPECTED_ERROR_RE='RID allocations of type .* were leaked at exit\.|resources still in use at exit|ContentRegistry: duplicate (resource|entry) ID|ContentRegistry: alias .* maps to both|\[StoreRegistry\] (unknown store_id|empty store_id|duplicate register store_id)|\[StoreDirector\] .* — unknown store_id|\[CameraAuthority\] (invalid camera|not a Camera2D/Camera3D|expected exactly 1 current camera)|Object is locked and can.t be freed\.|Lambda capture at index 0 was freed\.'
+          EXPECTED_ERROR_RE='ContentRegistry: duplicate (resource|entry) ID|ContentRegistry: alias .* maps to both|\[StoreRegistry\] (unknown store_id|empty store_id|duplicate register store_id)|\[StoreDirector\] .* — unknown store_id|\[CameraAuthority\] (invalid camera|not a Camera2D/Camera3D|expected exactly 1 current camera)|Object is locked and can.t be freed\.|Lambda capture at index 0 was freed\.'
           UNEXPECTED_ERRORS=$(grep "^ERROR:" "$GUT_OUTPUT_FILE" | grep -vE "$EXPECTED_ERROR_RE" || true)
           if [ -n "$UNEXPECTED_ERRORS" ]; then
             ERROR_COUNT=$(echo "$UNEXPECTED_ERRORS" | wc -l | tr -d ' ')
