@@ -48,9 +48,9 @@ func after_all() -> void:
 	_root = null
 
 
-# ── Navigation mesh covers the resized 16×20 floor ──────────────────────────
+# ── Baked navigation mesh has obstacle cutouts and covers the floor ─────────
 
-func test_navigation_mesh_spans_resized_floor() -> void:
+func test_navigation_mesh_is_baked_with_obstacle_cutouts() -> void:
 	var region: NavigationRegion3D = (
 		_root.get_node_or_null("NavigationRegion3D") as NavigationRegion3D
 	)
@@ -61,26 +61,56 @@ func test_navigation_mesh_spans_resized_floor() -> void:
 	assert_not_null(nav_mesh, "NavigationRegion3D must carry a NavigationMesh")
 	if nav_mesh == null:
 		return
+	# A baked mesh with furniture cutouts must contain many polygons rather
+	# than the prior single-quad stub that let customers walk through fixtures.
+	assert_gt(
+		nav_mesh.get_polygon_count(), 1,
+		"Baked nav mesh must have more than one polygon (got %d)"
+		% nav_mesh.get_polygon_count()
+	)
 	var vertices: PackedVector3Array = nav_mesh.vertices
-	assert_eq(vertices.size(), 4, "Nav mesh quad must have 4 corner vertices")
-	if vertices.size() != 4:
-		return
-	# Bounds: ±7.7 X, ±9.7 Z, Y=0.05 — leaves a small margin inside the walls
-	# at ±8.05 / ±10.05 so agents do not clip through the geometry.
+	assert_gt(
+		vertices.size(), 4,
+		"Baked nav mesh must have more than 4 vertices (got %d)"
+		% vertices.size()
+	)
+	# The bake walks just above the floor (Y ≈ 0.20 with cell_height = 0.1).
+	# Confirm the surface is at ground level rather than sitting on the
+	# ceiling slab or a floating platform.
 	var min_x: float = INF
 	var max_x: float = -INF
+	var min_y: float = INF
+	var max_y: float = -INF
 	var min_z: float = INF
 	var max_z: float = -INF
 	for v: Vector3 in vertices:
-		assert_almost_eq(v.y, 0.05, 0.001, "Nav vertex Y should be 0.05")
 		min_x = minf(min_x, v.x)
 		max_x = maxf(max_x, v.x)
+		min_y = minf(min_y, v.y)
+		max_y = maxf(max_y, v.y)
 		min_z = minf(min_z, v.z)
 		max_z = maxf(max_z, v.z)
-	assert_almost_eq(min_x, -7.7, 0.001, "Nav mesh min X")
-	assert_almost_eq(max_x, 7.7, 0.001, "Nav mesh max X")
-	assert_almost_eq(min_z, -9.7, 0.001, "Nav mesh min Z")
-	assert_almost_eq(max_z, 9.7, 0.001, "Nav mesh max Z")
+	assert_lt(min_y, 1.0, "Nav mesh min Y must be near ground (got %f)" % min_y)
+	assert_lt(max_y, 2.0, "Nav mesh max Y must stay below ceiling (got %f)" % max_y)
+	# The bake covers the full ±7.7 × ±9.7 footprint, allowing a small inset
+	# from the agent radius (0.4m) and walkable region pull-in.
+	assert_lt(min_x, -6.5, "Nav mesh must extend toward left wall")
+	assert_gt(max_x, 6.5, "Nav mesh must extend toward right wall")
+	assert_lt(min_z, -8.5, "Nav mesh must extend toward back wall")
+	assert_gt(max_z, 8.5, "Nav mesh must extend toward front wall")
+
+
+func test_navigation_mesh_is_external_resource() -> void:
+	var scene_text: String = FileAccess.get_file_as_string(SCENE_PATH)
+	assert_string_contains(
+		scene_text,
+		"path=\"res://game/navigation/retro_games_navmesh.tres\"",
+		"retro_games.tscn must reference the external baked nav mesh"
+	)
+	assert_false(
+		scene_text.contains("sub_resource type=\"NavigationMesh\""),
+		"retro_games.tscn must not embed the nav mesh inline"
+	)
 
 
 # ── Customer waypoints ──────────────────────────────────────────────────────

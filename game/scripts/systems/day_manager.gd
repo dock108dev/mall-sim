@@ -99,6 +99,12 @@ func _on_day_started(day: int) -> void:
 		_seed_day_one_inventory()
 
 
+## Day 1 safety net for backroom inventory. The deterministic bootstrap path
+## (`GameWorld.bootstrap_new_game_state` → `DataLoader.create_starting_inventory`)
+## seeds before this fires, so `seed_starting_items` typically no-ops on top-up.
+## When `active_store_id` is still empty (Day 1 fires before `set_active_store`
+## runs in the hub-mode async crossfade), fall back to the first owned store so
+## the safety net targets the right inventory rather than skipping silently.
 func _seed_day_one_inventory() -> void:
 	var inv: InventorySystem = GameManager.get_inventory_system()
 	if not inv:
@@ -106,6 +112,10 @@ func _seed_day_one_inventory() -> void:
 	var store_id: StringName = GameManager.get_active_store_id()
 	if store_id.is_empty():
 		store_id = GameManager.current_store_id
+	if store_id.is_empty():
+		var owned: Array[StringName] = GameManager.get_owned_store_ids()
+		if not owned.is_empty():
+			store_id = owned[0]
 	if store_id.is_empty():
 		push_warning("DayManager: no active store — skipping Day 1 inventory seed")
 		return

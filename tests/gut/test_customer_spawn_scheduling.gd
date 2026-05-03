@@ -428,12 +428,15 @@ func test_day_started_resets_archetype_weights() -> void:
 # --- Mall close behavior ---
 
 
-func test_spawn_target_zero_at_close_hour() -> void:
-	_system._current_hour = TimeSystem.MALL_CLOSE_HOUR
+func test_spawn_target_zero_at_post_close_hour() -> void:
+	# HOUR_DENSITY[21] = 0.0 caps the density curve. The day ends at
+	# MALL_CLOSE_HOUR (17) before this hour is reachable in normal play,
+	# but the table entry still drives the AFTERNOON tail-off.
+	_system._current_hour = 21
 	_system._hour_elapsed = 0.0
 	_system._current_day_of_week = 5
 	var target: int = _system.get_spawn_target()
-	assert_eq(target, 0, "Target should be 0 at closing hour")
+	assert_eq(target, 0, "Target should be 0 when HOUR_DENSITY caps at 0")
 
 
 func test_second_peak_at_17() -> void:
@@ -544,7 +547,9 @@ func test_live_shopper_nodes_enforce_hard_cap_when_count_stale() -> void:
 func test_over_target_removes_one_leaving_shopper() -> void:
 	_system.max_customers_in_mall = 30
 	_system._active_mall_shopper_count = 1
-	_system._current_hour = TimeSystem.MALL_CLOSE_HOUR
+	# Hour 21 has HOUR_DENSITY = 0, forcing the spawn target to 0 so the
+	# active count of 1 trips the over-target despawn branch.
+	_system._current_hour = 21
 	_system._current_day_of_week = 0
 	var shopper: ShopperAI = preload(
 		"res://game/scenes/characters/shopper_ai.tscn"

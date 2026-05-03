@@ -416,3 +416,176 @@ func test_move_to_shelf_does_nothing_when_no_item_selected() -> void:
 		panel._shelf_actions.is_placement_mode,
 		"Placement mode must not activate without a selected item"
 	)
+
+
+func _find_label_by_name(parent: Node, target_name: String) -> Label:
+	if parent is Label and parent.name == target_name:
+		return parent as Label
+	for child: Node in parent.get_children():
+		var found: Label = _find_label_by_name(child, target_name)
+		if found != null:
+			return found
+	return null
+
+
+func test_row_renders_backroom_and_shelf_quantity_labels() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions loaded — skip")
+		return
+	var def: ItemDefinition = items[0]
+	_create_test_item(def.id, "good", "backroom")
+	_create_test_item(def.id, "good", "backroom")
+	_create_test_item(def.id, "fair", "shelf:slot_01")
+	var quantities: Dictionary = {
+		def.id: {"backroom": 2, "on_shelf": 1},
+	}
+	var any_item: ItemInstance = _inventory_system.get_items_for_store(
+		def.store_type
+	)[0]
+	var row: PanelContainer = InventoryRowBuilder.build(
+		any_item, null, quantities
+	)
+	var backroom_label: Label = _find_label_by_name(row, "BackroomQtyLabel")
+	var shelf_label: Label = _find_label_by_name(row, "ShelfQtyLabel")
+	assert_not_null(
+		backroom_label,
+		"Row must include a Backroom quantity label"
+	)
+	assert_not_null(shelf_label, "Row must include a Shelf quantity label")
+	assert_string_contains(
+		backroom_label.text, "2", "Backroom qty label must show count"
+	)
+	assert_string_contains(
+		shelf_label.text, "1", "Shelf qty label must show count"
+	)
+
+
+func test_row_quantity_labels_default_to_zero_when_missing() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions loaded — skip")
+		return
+	var def: ItemDefinition = items[0]
+	var item: ItemInstance = _create_test_item(def.id, "good", "backroom")
+	# No quantities map — the row builder must fall back to zero.
+	var row: PanelContainer = InventoryRowBuilder.build(item)
+	var backroom_label: Label = _find_label_by_name(row, "BackroomQtyLabel")
+	var shelf_label: Label = _find_label_by_name(row, "ShelfQtyLabel")
+	assert_string_contains(
+		backroom_label.text, "0", "Missing entry must render Backroom: 0"
+	)
+	assert_string_contains(
+		shelf_label.text, "0", "Missing entry must render Shelf: 0"
+	)
+
+
+func test_quantity_map_aggregates_per_definition() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.size() < 2:
+		pass_test("Need at least 2 item defs — skip")
+		return
+	var def_a: ItemDefinition = items[0]
+	var def_b: ItemDefinition = null
+	for candidate: ItemDefinition in items:
+		if candidate.store_type == def_a.store_type and candidate.id != def_a.id:
+			def_b = candidate
+			break
+	if def_b == null:
+		pass_test("Need two item defs in the same store — skip")
+		return
+	_create_test_item(def_a.id, "good", "backroom")
+	_create_test_item(def_a.id, "good", "backroom")
+	_create_test_item(def_a.id, "good", "shelf:slot_01")
+	_create_test_item(def_b.id, "good", "shelf:slot_02")
+	var rows: Array[Dictionary] = _inventory_system.get_store_inventory(
+		StringName(def_a.store_type)
+	)
+	var qty_map: Dictionary = InventoryPanel._build_quantity_map(rows)
+	assert_true(qty_map.has(def_a.id), "Map must include def A")
+	assert_true(qty_map.has(def_b.id), "Map must include def B")
+	assert_eq(int(qty_map[def_a.id]["backroom"]), 2)
+	assert_eq(int(qty_map[def_a.id]["on_shelf"]), 1)
+	assert_eq(int(qty_map[def_b.id]["backroom"]), 0)
+	assert_eq(int(qty_map[def_b.id]["on_shelf"]), 1)
+
+
+func test_select_button_triggers_placement_mode_for_backroom_item() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var item: ItemInstance = _create_test_item(items[0].id, "good", "backroom")
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	add_child_autofree(panel)
+	panel._is_open = true
+
+	panel._on_select_for_placement(item, PanelContainer.new())
+
+	assert_false(panel.is_open(), "Select must close the panel")
+	assert_true(
+		panel._shelf_actions.is_placement_mode,
+		"Select must enter placement mode"
+	)
+	assert_eq(
+		panel._selected_item, item,
+		"Selected item must persist into placement mode"
+	)
+	panel._shelf_actions.exit_placement_mode()
+
+
+func test_refresh_with_empty_store_id_falls_back_safely() -> void:
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	add_child_autofree(panel)
+	panel.store_id = ""
+	# Should emit push_warning and render the empty state without crashing.
+	panel._refresh_grid()
+	assert_eq(
+		panel._footer_count.text, "No active store",
+		"Empty store must surface the no-store footer"
+	)
+
+
+func test_select_button_only_added_for_backroom_items() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var def: ItemDefinition = items[0]
+	var backroom_item: ItemInstance = _create_test_item(
+		def.id, "good", "backroom"
+	)
+	var shelf_item: ItemInstance = _create_test_item(
+		def.id, "good", "shelf:slot_01"
+	)
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	panel.store_id = def.store_type
+	add_child_autofree(panel)
+	panel._add_item_row(backroom_item)
+	panel._add_item_row(shelf_item)
+
+	# Each row's overlay button is the second child of the PanelContainer.
+	# A Select button, when added, parents under that overlay.
+	var rows: Array[Node] = panel._grid.get_children()
+	assert_eq(rows.size(), 2, "Both rows must render")
+	var backroom_row: PanelContainer = rows[0] as PanelContainer
+	var shelf_row: PanelContainer = rows[1] as PanelContainer
+	var backroom_overlay: Button = backroom_row.get_child(1) as Button
+	var shelf_overlay: Button = shelf_row.get_child(1) as Button
+	assert_true(
+		backroom_overlay.get_child_count() >= 1,
+		"Backroom row's overlay must host a Select button child"
+	)
+	assert_eq(
+		shelf_overlay.get_child_count(), 0,
+		"Shelf row must not show a Select button"
+	)

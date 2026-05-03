@@ -67,14 +67,29 @@ func place_item(
 			tr("INVENTORY_NOT_IN_LOCATION") % "backroom"
 		)
 		return false
+	var category: String = ""
+	var item_name: String = ""
+	if item.definition:
+		category = item.definition.category
+		item_name = item.definition.item_name
+	# Reject before any state mutation if the slot enforces a category that
+	# does not match the item — keeps the inventory in `backroom` and the slot
+	# empty so the caller's idempotency contract holds (see EH-04 and the
+	# duplicate-press regression covered by test_press_e_emits_item_stocked_exactly_once).
+	if not slot.accepts_category(category):
+		EventBus.notification_requested.emit(
+			tr("INVENTORY_WRONG_CATEGORY") % slot.accepted_category
+		)
+		return false
 	inventory_system.move_item(
 		item.instance_id, "shelf:%s" % slot.slot_id
 	)
-	var category: String = ""
-	if item.definition:
-		category = item.definition.category
 	slot.place_item(item.instance_id, category)
 	EventBus.item_stocked.emit(item.instance_id, slot.slot_id)
+	if not item_name.is_empty():
+		EventBus.notification_requested.emit(
+			tr("INVENTORY_STOCKED") % item_name
+		)
 	exit_placement_mode()
 	return true
 

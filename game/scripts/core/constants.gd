@@ -5,7 +5,7 @@ class_name Constants
 const SECONDS_PER_GAME_MINUTE := 1.0
 const MINUTES_PER_HOUR := 60
 const STORE_OPEN_HOUR := 9
-const STORE_CLOSE_HOUR := 21
+const STORE_CLOSE_HOUR := 17
 
 # Economy
 const STARTING_CASH := 750.0

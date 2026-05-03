@@ -37,44 +37,39 @@ func test_step_progression_advances_three_sequential_steps() -> void:
 	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
-		"Welcome timeout should advance to MOVE_TO_SHELF"
-	)
-
-	var fake_player: Node3D = Node3D.new()
-	add_child_autofree(fake_player)
-	fake_player.global_position = Vector3.ZERO
-	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
-	fake_player.global_position = Vector3(2.0, 0.0, 0.0)
-	_tutorial._process(0.01)
-	assert_eq(
-		_tutorial.current_step,
 		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"Walking past the move-to-shelf threshold should advance to OPEN_INVENTORY"
+		"Welcome timeout should advance to OPEN_INVENTORY"
 	)
 
 	EventBus.panel_opened.emit("inventory")
 	assert_eq(
 		_tutorial.current_step,
+		TutorialSystem.TutorialStep.SELECT_ITEM,
+		"Inventory panel open should advance to SELECT_ITEM"
+	)
+
+	EventBus.placement_mode_entered.emit()
+	assert_eq(
+		_tutorial.current_step,
 		TutorialSystem.TutorialStep.PLACE_ITEM,
-		"Inventory panel open should advance to PLACE_ITEM"
+		"placement_mode_entered should advance to PLACE_ITEM"
 	)
 
 	assert_eq(completed_steps.size(), 3, "Three steps should complete in sequence")
 	assert_eq(completed_steps[0], "welcome", "First completed step should be welcome")
 	assert_eq(
 		completed_steps[1],
-		"move_to_shelf",
-		"Second completed step should be move_to_shelf"
+		"open_inventory",
+		"Second completed step should be open_inventory"
 	)
 	assert_eq(
 		completed_steps[2],
-		"open_inventory",
-		"Third completed step should be open_inventory"
+		"select_item",
+		"Third completed step should be select_item"
 	)
 	assert_eq(changed_steps.size(), 3, "Each advancement should emit a changed step")
-	assert_eq(changed_steps[0], "move_to_shelf", "First changed step should be move_to_shelf")
-	assert_eq(changed_steps[1], "open_inventory", "Second changed step should be open_inventory")
+	assert_eq(changed_steps[0], "open_inventory", "First changed step should be open_inventory")
+	assert_eq(changed_steps[1], "select_item", "Second changed step should be select_item")
 	assert_eq(
 		changed_steps[2],
 		"place_item",
@@ -144,7 +139,7 @@ func test_gameplay_ready_completes_welcome_step() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		TutorialSystem.TutorialStep.OPEN_INVENTORY,
 		"gameplay_ready should complete the welcome step"
 	)
 	assert_true(
@@ -164,6 +159,39 @@ func test_load_progress_without_file_starts_first_step() -> void:
 		_tutorial.current_step,
 		TutorialSystem.TutorialStep.WELCOME,
 		"Missing persisted progress should start at WELCOME"
+	)
+
+
+func test_stale_schema_version_resets_progress() -> void:
+	# Hand-craft a cfg that mimics a v1 save: ordinals reference the old
+	# enum (e.g. PLACE_ITEM was index 3 in v1, an unrelated ID in v2).
+	var stale := ConfigFile.new()
+	stale.set_value("tutorial", "schema_version", 1)
+	stale.set_value("tutorial", "completed", false)
+	stale.set_value("tutorial", "active", true)
+	stale.set_value("tutorial", "current_step", 3)
+	stale.set_value(
+		"tutorial", "completed_steps",
+		{"welcome": true, "move_to_shelf": true, "open_inventory": true}
+	)
+	stale.set_value("tutorial", "tips_shown", {})
+	var save_err: Error = stale.save(_PROGRESS_PATH)
+	assert_eq(save_err, OK, "Setup: stale cfg must be writable")
+
+	_tutorial.initialize(false)
+
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.WELCOME,
+		"Stale schema_version must reset progress to WELCOME"
+	)
+	assert_false(
+		_tutorial.tutorial_completed,
+		"Stale schema_version must clear tutorial_completed"
+	)
+	assert_eq(
+		_tutorial._completed_steps.size(), 0,
+		"Stale schema_version must drop persisted completed_steps"
 	)
 
 

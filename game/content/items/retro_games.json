@@ -551,6 +551,72 @@
       "rarity": "common",
       "base_price": 15.0,
       "description": "A blistering side-scroller starring a cobalt speedster and a soundtrack that still powers high scores."
+    },
+    {
+      "id": "used_cartridge_game_common",
+      "item_name": "Used Cartridge Game",
+      "store_type": "retro_games",
+      "category": "cartridges",
+      "console": "SuperVec 16",
+      "condition_grades": [
+        "Loose",
+        "CIB",
+        "Sealed"
+      ],
+      "condition_range": [
+        "poor",
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "rarity": "common",
+      "base_price": 15.0,
+      "description": "A label-faded cartridge pulled from a flea-market bin. Untested but blows-the-dust-off playable."
+    },
+    {
+      "id": "retro_controller_common",
+      "item_name": "Retro Controller",
+      "store_type": "retro_games",
+      "category": "accessories",
+      "console": "Canopy 64",
+      "condition_grades": [
+        "Loose",
+        "CIB",
+        "Sealed"
+      ],
+      "condition_range": [
+        "poor",
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "rarity": "common",
+      "base_price": 22.0,
+      "description": "A generic third-party gamepad with a slightly grimy grip and buttons that still respond like new."
+    },
+    {
+      "id": "loose_disc_game_common",
+      "item_name": "Loose Disc Game",
+      "store_type": "retro_games",
+      "category": "cartridges",
+      "console": "Neo Spark",
+      "condition_grades": [
+        "Loose",
+        "CIB",
+        "Sealed"
+      ],
+      "condition_range": [
+        "poor",
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "rarity": "common",
+      "base_price": 15.0,
+      "description": "A scratch-marked disc rescued from a sleeve — buffed up and ready for one more playthrough."
     }
   ]
 }

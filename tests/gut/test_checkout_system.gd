@@ -16,6 +16,7 @@ var _profile: CustomerTypeDefinition
 var _sold_signals: Array[Dictionary] = []
 var _purchased_signals: Array[Dictionary] = []
 var _queue_signals: Array[int] = []
+var _toast_signals: Array[Dictionary] = []
 
 
 func before_each() -> void:
@@ -75,10 +76,12 @@ func before_each() -> void:
 	_sold_signals = []
 	_purchased_signals = []
 	_queue_signals = []
+	_toast_signals = []
 
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.customer_purchased.connect(_on_customer_purchased)
 	EventBus.queue_advanced.connect(_on_queue_advanced)
+	EventBus.toast_requested.connect(_on_toast_requested)
 
 
 func after_each() -> void:
@@ -87,6 +90,7 @@ func after_each() -> void:
 		EventBus.customer_purchased, _on_customer_purchased
 	)
 	_safe_disconnect(EventBus.queue_advanced, _on_queue_advanced)
+	_safe_disconnect(EventBus.toast_requested, _on_toast_requested)
 
 
 func _safe_disconnect(sig: Signal, callable: Callable) -> void:
@@ -123,6 +127,16 @@ func _on_customer_purchased(
 
 func _on_queue_advanced(queue_size: int) -> void:
 	_queue_signals.append(queue_size)
+
+
+func _on_toast_requested(
+	message: String, category: StringName, duration: float
+) -> void:
+	_toast_signals.append({
+		"message": message,
+		"category": category,
+		"duration": duration,
+	})
 
 
 ## Stops the checkout timer and fires its callback to complete the sale
@@ -195,6 +209,38 @@ func test_successful_sale_emits_customer_purchased() -> void:
 		_purchased_signals[0]["price"] as float, sale_price, 0.01,
 		"customer_purchased should carry the agreed price"
 	)
+
+
+func test_successful_sale_emits_sold_toast() -> void:
+	var customer: Customer = _make_customer()
+	_checkout.initiate_sale(customer, _item, 80.0)
+	_force_complete_checkout()
+	var sold_toasts: Array[Dictionary] = []
+	for toast: Dictionary in _toast_signals:
+		if String(toast.get("message", "")).begins_with("Sold "):
+			sold_toasts.append(toast)
+	assert_eq(
+		sold_toasts.size(), 1,
+		"_execute_sale must emit exactly one 'Sold ...' toast"
+	)
+	assert_eq(
+		sold_toasts[0]["message"], "Sold Test Item for $80.00",
+		"Sale toast must include item name and formatted price"
+	)
+
+
+func test_sale_toast_skipped_when_item_name_blank() -> void:
+	# Defensive: an ItemDefinition that ships without item_name is a content
+	# authoring hole. We skip the toast rather than emit "Sold  for $X.XX".
+	_definition.item_name = ""
+	var customer: Customer = _make_customer()
+	_checkout.initiate_sale(customer, _item, 80.0)
+	_force_complete_checkout()
+	for toast: Dictionary in _toast_signals:
+		assert_false(
+			String(toast.get("message", "")).begins_with("Sold "),
+			"No 'Sold ...' toast must fire when item_name is blank"
+		)
 
 
 # --- Declined / failed sale ---

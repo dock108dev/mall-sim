@@ -194,7 +194,7 @@ func test_non_suppressing_step_lifts_suppression() -> void:
 	EventBus.tutorial_step_changed.emit("place_item")
 	EventBus.store_entered.emit(&"retro_games")
 	assert_false(_overlay.visible, "Precondition: suppressed")
-	EventBus.tutorial_step_changed.emit("set_price")
+	EventBus.tutorial_step_changed.emit("wait_for_customer")
 	assert_true(
 		_overlay.visible,
 		"Cue should appear once tutorial advances past the suppressing steps"

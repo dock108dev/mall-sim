@@ -150,6 +150,10 @@ signal queue_advanced(queue_size: int)
 signal queue_changed(queue_size: int)
 signal customer_abandoned_queue(customer: Node)
 signal customer_state_changed(customer: Node, new_state: int)
+## Emitted by Customer when _evaluate_current_shelf assigns or upgrades the
+## desired item. Carries both the customer and the item so listeners can post
+## browsing feedback without holding per-customer references.
+signal customer_item_spotted(customer: Customer, item: ItemInstance)
 signal spawn_npc_requested(archetype_id: StringName, entry_position: Vector3)
 ## Emitted by NPCSpawnerSystem when an NPC is explicitly removed from the active pool.
 signal npc_despawned(npc_id: StringName)

@@ -138,6 +138,48 @@ func test_set_active_store_emits_exited_on_switch() -> void:
 	assert_eq(_store_entered[0], &"retro_games")
 
 
+func test_set_active_store_with_emit_false_suppresses_entered() -> void:
+	# Hub auto-enter path: GameWorld._on_store_entered calls
+	# set_active_store(id, false) after the store_entered signal already
+	# fired upstream. The flag must suppress a second store_entered emission
+	# while still updating active_store_id and emitting active_store_changed.
+	_manager.set_active_store(&"sports", false)
+	assert_eq(
+		_store_entered.size(), 0,
+		"set_active_store(_, false) must not emit store_entered"
+	)
+	assert_eq(
+		_store_changed.size(), 1,
+		"set_active_store(_, false) must still emit active_store_changed once"
+	)
+	assert_eq(_store_changed[0], &"sports")
+	assert_eq(
+		_manager.active_store_id, &"sports",
+		"active_store_id must be set even when transition events are suppressed"
+	)
+
+
+func test_set_active_store_with_emit_false_suppresses_exited_on_switch() -> void:
+	_manager.set_active_store(&"sports")
+	_store_entered.clear()
+	_store_exited.clear()
+	_store_changed.clear()
+
+	_manager.set_active_store(&"retro_games", false)
+	assert_eq(
+		_store_exited.size(), 0,
+		"set_active_store(_, false) must not emit store_exited on switch"
+	)
+	assert_eq(
+		_store_entered.size(), 0,
+		"set_active_store(_, false) must not emit store_entered on switch"
+	)
+	assert_eq(
+		_manager.active_store_id, &"retro_games",
+		"active_store_id must update to the new store"
+	)
+
+
 func test_set_active_store_empty_emits_exited() -> void:
 	_manager.set_active_store(&"sports")
 	_store_exited.clear()

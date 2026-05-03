@@ -50,6 +50,9 @@ const HIGHLIGHT_EMPTY := Color(0.2, 0.8, 0.2)
 const HIGHLIGHT_OCCUPIED := Color(0.9, 0.2, 0.2)
 # accent_interact #5BB8E8 at alpha 0.35 — shown only when stocking cursor matches
 const STOCKING_TINT := Color(91.0 / 255.0, 184.0 / 255.0, 232.0 / 255.0, 0.35)
+const PROMPT_NO_ITEM_SELECTED: String = "Select an inventory item first"
+const PROMPT_SHELF_FULL: String = "Shelf full"
+const STOCK_VERB_FORMAT: String = "stock %s"
 
 @export var slot_id: String = ""
 @export var fixture_id: String = ""
@@ -64,6 +67,9 @@ var _placement_active: bool = false
 var _info_label: Label3D = null
 var _label_accent: Color = Color.WHITE
 var _label_focus_active: bool = false
+var _authored_display_name: String = ""
+var _authored_prompt_text: String = ""
+var _pending_item_name: String = ""
 
 @onready var _empty_mesh: MeshInstance3D = _resolve_empty_mesh()
 
@@ -79,9 +85,15 @@ func _ready() -> void:
 		action_verb = "Stock"
 	add_to_group("shelf_slot")
 	super._ready()
+	# Capture authored prompt fields AFTER super._ready() so the base resolves
+	# the verb default. _refresh_prompt_state() restores these whenever the slot
+	# is in the "default" state (occupied + not in placement mode).
+	_authored_display_name = display_name
+	_authored_prompt_text = prompt_text
 	_update_empty_indicator()
 	EventBus.placement_mode_entered.connect(_on_placement_entered)
 	EventBus.placement_mode_exited.connect(_on_placement_exited)
+	EventBus.placement_hint_requested.connect(_on_placement_hint_requested)
 	EventBus.stocking_cursor_active.connect(_on_stocking_cursor_active)
 	EventBus.stocking_cursor_inactive.connect(_on_stocking_cursor_inactive)
 	# Label3D shows only while the interaction ray is focused on this slot.
@@ -90,6 +102,8 @@ func _ready() -> void:
 	# readable when the player aims at the item and silent otherwise.
 	focused.connect(_on_label_focused)
 	unfocused.connect(_on_label_unfocused)
+	slot_changed.connect(_on_self_slot_changed)
+	_refresh_prompt_state()
 
 
 ## Returns whether an item is currently placed in this slot.
@@ -234,13 +248,57 @@ func _resolve_empty_mesh() -> MeshInstance3D:
 	return get_node_or_null("Marker") as MeshInstance3D
 
 
-## ISSUE-005: state-aware prompt label. During placement mode an occupied slot
-## reads "Slot occupied" so the InteractionPrompt HUD warns the player before
-## press-E is wasted; otherwise the base "Stock <name>" cue applies.
+## State-aware prompt label that mirrors the player-facing HUD label. Format
+## matches InteractionRay._build_action_label so this method and the runtime
+## label stay in lockstep. State is driven by display_name and prompt_text,
+## which _refresh_prompt_state() rewrites whenever placement / occupancy /
+## pending-item-name change.
 func get_prompt_label() -> String:
+	var verb: String = prompt_text.strip_edges()
+	var target_name: String = display_name.strip_edges()
+	if verb.is_empty() and target_name.is_empty():
+		return ""
+	if target_name.is_empty():
+		return "Press E to %s" % verb.to_lower()
+	if verb.is_empty():
+		return target_name
+	return "%s — Press E to %s" % [target_name, verb.to_lower()]
+
+
+## Returns true when the slot would accept the given category. Empty
+## accepted_category accepts any item (unfiltered counter / impulse slots).
+func accepts_category(item_category: String) -> bool:
+	if accepted_category.is_empty():
+		return true
+	return accepted_category == item_category
+
+
+## Recomputes display_name and prompt_text for the current state so the
+## InteractionPrompt and PlacementHintUI HUD reflect the slot accurately.
+func _refresh_prompt_state() -> void:
 	if _placement_active and _occupied:
-		return "Slot occupied"
-	return super.get_prompt_label()
+		display_name = PROMPT_SHELF_FULL
+		prompt_text = ""
+		return
+	if _placement_active and not _pending_item_name.is_empty():
+		display_name = _authored_display_name
+		prompt_text = STOCK_VERB_FORMAT % _pending_item_name
+		return
+	if not _occupied:
+		display_name = PROMPT_NO_ITEM_SELECTED
+		prompt_text = ""
+		return
+	display_name = _authored_display_name
+	prompt_text = _authored_prompt_text
+
+
+func _on_self_slot_changed(_slot: ShelfSlot) -> void:
+	_refresh_prompt_state()
+
+
+func _on_placement_hint_requested(item_name: String) -> void:
+	_pending_item_name = item_name
+	_refresh_prompt_state()
 
 
 ## Overrides base highlight to use green/red during placement mode.
@@ -271,31 +329,28 @@ func _on_label_unfocused() -> void:
 func _on_placement_entered() -> void:
 	_placement_active = true
 	_update_empty_indicator()
+	_refresh_prompt_state()
 
 
 func _on_placement_exited() -> void:
 	_placement_active = false
+	_pending_item_name = ""
 	if _highlight_active:
 		unhighlight()
 	_update_empty_indicator()
+	_refresh_prompt_state()
 
 
 func _on_stocking_cursor_active(item_category: StringName) -> void:
 	if _occupied or _empty_mesh == null:
 		return
-	if not _accepts_stocking_category(item_category):
+	if not accepts_category(String(item_category)):
 		return
 	_apply_stocking_highlight()
 
 
 func _on_stocking_cursor_inactive() -> void:
 	_clear_stocking_highlight()
-
-
-func _accepts_stocking_category(item_category: StringName) -> bool:
-	if accepted_category.is_empty():
-		return true
-	return accepted_category == String(item_category)
 
 
 func _apply_stocking_highlight() -> void:

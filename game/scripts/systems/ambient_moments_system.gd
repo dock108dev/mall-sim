@@ -11,6 +11,17 @@ const MAX_QUEUE_SIZE: int = 3
 const MAX_ACTIVE_SLOTS: int = 3
 const MAX_WITNESSED_LOG: int = 20
 
+## Toast duration (seconds) for customer-browsing notifications.
+const CUSTOMER_BROWSING_TOAST_DURATION: float = 3.0
+## Soft cap on `_last_spotted` entries. Sized well above MAX_CUSTOMERS so the
+## production dedup window covers every concurrent customer; the cap is the
+## defense-in-depth ceiling for code paths that free a customer without
+## emitting `customer_left` (test fixtures, scene swap mid-shop). When the
+## cap is exceeded the oldest insertion is evicted so the dict — which holds
+## a live ItemInstance Resource ref per customer — cannot grow unbounded
+## across a long session. See docs/audits/security-report.md §F-87.
+const MAX_LAST_SPOTTED_ENTRIES: int = 64
+
 var _state: int = State.IDLE
 var _moment_definitions: Array[AmbientMomentDefinition] = []
 var _definition_cache: Dictionary = {}
@@ -27,6 +38,10 @@ var _current_hour_context: int = 0
 var _suspend_count: int = 0
 var _witnessed_log: Array[Dictionary] = []
 var _current_phase: int = 0
+## Tracks the last item each customer was spotted browsing so repeat
+## emissions for the same (customer, item) pair don't post duplicate toasts.
+## Keyed by Customer.get_instance_id() (int); value is the ItemInstance ref.
+var _last_spotted: Dictionary = {}
 
 
 func _ready() -> void:
@@ -93,6 +108,12 @@ func _connect_signals() -> void:
 		EventBus.active_store_changed.connect(_on_active_store_changed)
 	if not EventBus.day_phase_changed.is_connected(_on_day_phase_changed):
 		EventBus.day_phase_changed.connect(_on_day_phase_changed)
+	if not EventBus.customer_item_spotted.is_connected(
+		_on_customer_item_spotted
+	):
+		EventBus.customer_item_spotted.connect(_on_customer_item_spotted)
+	if not EventBus.customer_left.is_connected(_on_customer_left):
+		EventBus.customer_left.connect(_on_customer_left)
 
 
 func _process(delta: float) -> void:
@@ -214,6 +235,59 @@ func _on_store_entered(store_id: StringName) -> void:
 
 func _on_active_store_changed(store_id: StringName) -> void:
 	_active_store_id = store_id
+
+
+## Posts a "Customer browsing: <ItemName>" toast on first sight or upgrade.
+## Deduplicates so repeat evaluations against the same (customer, item) pair
+## don't spam — but a customer upgrading to a different item posts again.
+##
+## §F-86 — Pass 12: the leading null guard is defensive against fuzzed test
+## emissions; production `Customer._evaluate_current_shelf` filters via
+## `_is_item_desirable`, which already rejects `item.definition == null`, so
+## the production path always reaches the dedup branch with a fully-formed
+## payload. Empty `item_name` is a content-authoring hole — skipping the
+## toast (rather than emitting "Customer browsing: ") is the documented
+## fallback (mirrors `checkout_system.gd:_emit_sale_toast`).
+func _on_customer_item_spotted(
+	customer: Customer, item: ItemInstance,
+) -> void:
+	if customer == null or item == null or item.definition == null:
+		return
+	var key: int = customer.get_instance_id()
+	if _last_spotted.get(key) == item:
+		return
+	_last_spotted[key] = item
+	# §F-87 — Bound the dedup map so a leaked customer (freed without a
+	# `customer_left` payload) cannot grow the dict across a long session.
+	# Dictionary preserves insertion order in GDScript; evicting the front
+	# key approximates FIFO and drops the oldest stale entry first.
+	while _last_spotted.size() > MAX_LAST_SPOTTED_ENTRIES:
+		var oldest_key: Variant = _last_spotted.keys()[0]
+		_last_spotted.erase(oldest_key)
+	var item_name: String = item.definition.item_name
+	if item_name.is_empty():
+		return
+	EventBus.toast_requested.emit(
+		"Customer browsing: %s" % item_name,
+		&"customer",
+		CUSTOMER_BROWSING_TOAST_DURATION,
+	)
+
+
+## Drops the dedup entry for a customer that has left so a future spawn with
+## a recycled instance_id (Godot reuses ids over time) starts clean.
+##
+## §F-86 — Pass 12: silent return on missing `customer_id` is the documented
+## contract for the `customer_left` payload. Production CustomerSystem always
+## populates the key (see `customer_system.gd:_on_customer_left`); test
+## fixtures that emit a bare Dictionary reach this fallback. The worst-case
+## effect is one stale dedup entry that is overwritten on the next sighting
+## or cleared by `_apply_state` (save load) / scene swap.
+func _on_customer_left(customer_data: Dictionary) -> void:
+	var raw_id: Variant = customer_data.get("customer_id", null)
+	if raw_id == null:
+		return
+	_last_spotted.erase(int(raw_id))
 
 
 func _suspend() -> void:
@@ -561,6 +635,7 @@ func _apply_state(data: Dictionary) -> void:
 	_active_moments.clear()
 	_recent_item_categories.clear()
 	_recent_store_entries.clear()
+	_last_spotted.clear()
 	var queue_data: Variant = data.get("delivery_queue", [])
 	if queue_data is Array:
 		for entry: Variant in queue_data:

@@ -24,7 +24,7 @@ func test_initial_state() -> void:
 func test_constants() -> void:
 	assert_eq(TimeSystem.GAME_MINUTES_PER_REAL_SECOND_NORMAL, 1.0)
 	assert_eq(TimeSystem.MALL_OPEN_HOUR, 9)
-	assert_eq(TimeSystem.MALL_CLOSE_HOUR, 21)
+	assert_eq(TimeSystem.MALL_CLOSE_HOUR, 17)
 
 
 func test_speed_tiers() -> void:
@@ -128,8 +128,8 @@ func test_day_ended_emitted() -> void:
 	EventBus.day_ended.connect(
 		func(d: int) -> void: ended_days.append(d)
 	)
-	_ts.game_time_minutes = 1259.0
-	_ts._last_emitted_hour = 20
+	_ts.game_time_minutes = 1019.0
+	_ts._last_emitted_hour = 16
 	_ts._process(2.0)
 	assert_eq(ended_days.size(), 1)
 	assert_eq(ended_days[0], 1)

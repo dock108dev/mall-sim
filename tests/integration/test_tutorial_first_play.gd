@@ -35,7 +35,7 @@ func test_new_game_start_activates_tutorial_at_welcome() -> void:
 	)
 
 
-func test_after_welcome_step_move_to_shelf_is_active() -> void:
+func test_after_welcome_step_open_inventory_is_active() -> void:
 	_tutorial.initialize(true)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -43,13 +43,13 @@ func test_after_welcome_step_move_to_shelf_is_active() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
-		"After WELCOME expires, current step should be MOVE_TO_SHELF"
+		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		"After WELCOME expires, current step should be OPEN_INVENTORY"
 	)
 	var step_id: String = TutorialSystem.STEP_IDS[_tutorial.current_step]
 	assert_eq(
-		step_id, "move_to_shelf",
-		"Move-to-shelf step ID should be move_to_shelf"
+		step_id, "open_inventory",
+		"Step ID for the open-inventory milestone should be open_inventory"
 	)
 
 
@@ -61,7 +61,7 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 
 	var step: int = int(_tutorial.current_step)
 
-	# WELCOME → MOVE_TO_SHELF (welcome timer expires)
+	# WELCOME → OPEN_INVENTORY (welcome timer expires)
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 	step += 1
@@ -70,15 +70,7 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 		"Step index should advance after WELCOME timer expires"
 	)
 
-	# MOVE_TO_SHELF → OPEN_INVENTORY (player walks > 1m from spawn)
-	_drive_move_to_shelf_advance()
-	step += 1
-	assert_eq(
-		int(_tutorial.current_step), step,
-		"Step index should advance after walking past the move-to-shelf threshold"
-	)
-
-	# OPEN_INVENTORY → PLACE_ITEM (panel_opened "inventory")
+	# OPEN_INVENTORY → SELECT_ITEM (panel_opened "inventory")
 	EventBus.panel_opened.emit("inventory")
 	step += 1
 	assert_eq(
@@ -86,7 +78,15 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 		"Step index should advance after panel_opened inventory"
 	)
 
-	# PLACE_ITEM → SET_PRICE (item_stocked)
+	# SELECT_ITEM → PLACE_ITEM (placement_mode_entered)
+	EventBus.placement_mode_entered.emit()
+	step += 1
+	assert_eq(
+		int(_tutorial.current_step), step,
+		"Step index should advance after placement_mode_entered"
+	)
+
+	# PLACE_ITEM → WAIT_FOR_CUSTOMER (item_stocked)
 	EventBus.item_stocked.emit("test_item", "shelf_1")
 	step += 1
 	assert_eq(
@@ -94,15 +94,34 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 		"Step index should advance after item_stocked"
 	)
 
-	# SET_PRICE → WAIT_FOR_CUSTOMER (price_set)
-	EventBus.price_set.emit("test_item", 9.99)
+	# WAIT_FOR_CUSTOMER → CUSTOMER_BROWSING (customer_entered)
+	EventBus.customer_entered.emit({"customer_id": "c1"})
 	step += 1
 	assert_eq(
 		int(_tutorial.current_step), step,
-		"Step index should advance after price_set"
+		"Step index should advance after customer_entered"
 	)
 
-	# WAIT_FOR_CUSTOMER → CLOSE_DAY (customer_purchased)
+	# CUSTOMER_BROWSING → CUSTOMER_AT_CHECKOUT (customer_item_spotted)
+	var customer: Customer = Customer.new()
+	add_child_autofree(customer)
+	var item: ItemInstance = _make_item("test_item", 9.99)
+	EventBus.customer_item_spotted.emit(customer, item)
+	step += 1
+	assert_eq(
+		int(_tutorial.current_step), step,
+		"Step index should advance after customer_item_spotted"
+	)
+
+	# CUSTOMER_AT_CHECKOUT → COMPLETE_SALE (customer_ready_to_purchase)
+	EventBus.customer_ready_to_purchase.emit({"customer_id": "c1"})
+	step += 1
+	assert_eq(
+		int(_tutorial.current_step), step,
+		"Step index should advance after customer_ready_to_purchase"
+	)
+
+	# COMPLETE_SALE → CLOSE_DAY (customer_purchased)
 	EventBus.customer_purchased.emit(
 		&"test_store", &"test_item", 9.99, &"customer_1"
 	)
@@ -169,8 +188,8 @@ func test_tutorial_completed_signal_emitted_exactly_once() -> void:
 
 	_drive_full_sequence()
 
-	# Emit triggers again — must not fire tutorial_completed a second time
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	# Emit triggers again — must not fire tutorial_completed a second time.
+	EventBus.panel_opened.emit("inventory")
 	EventBus.item_stocked.emit("test_item", "shelf_1")
 	EventBus.customer_purchased.emit(
 		&"test_store", &"test_item", 9.99, &"customer_1"
@@ -200,7 +219,7 @@ func test_no_tutorial_signals_after_completion() -> void:
 	EventBus.tutorial_step_completed.connect(on_step_completed)
 	EventBus.tutorial_completed.connect(on_completed)
 
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	EventBus.panel_opened.emit("inventory")
 	EventBus.item_stocked.emit("test_item", "shelf_1")
 	EventBus.customer_purchased.emit(
 		&"test_store", &"test_item", 9.99, &"customer_1"
@@ -234,32 +253,40 @@ func test_step_completed_signal_fires_for_each_step() -> void:
 	)
 	assert_eq(completed_ids[0], "welcome", "Step 0 completed: welcome")
 	assert_eq(
-		completed_ids[1], "move_to_shelf",
-		"Step 1 completed: move_to_shelf"
+		completed_ids[1], "open_inventory",
+		"Step 1 completed: open_inventory"
 	)
 	assert_eq(
-		completed_ids[2], "open_inventory",
-		"Step 2 completed: open_inventory"
+		completed_ids[2], "select_item",
+		"Step 2 completed: select_item"
 	)
 	assert_eq(
 		completed_ids[3], "place_item",
 		"Step 3 completed: place_item"
 	)
 	assert_eq(
-		completed_ids[4], "set_price",
-		"Step 4 completed: set_price"
+		completed_ids[4], "wait_for_customer",
+		"Step 4 completed: wait_for_customer"
 	)
 	assert_eq(
-		completed_ids[5], "wait_for_customer",
-		"Step 5 completed: wait_for_customer"
+		completed_ids[5], "customer_browsing",
+		"Step 5 completed: customer_browsing"
 	)
 	assert_eq(
-		completed_ids[6], "close_day",
-		"Step 6 completed: close_day"
+		completed_ids[6], "customer_at_checkout",
+		"Step 6 completed: customer_at_checkout"
 	)
 	assert_eq(
-		completed_ids[7], "day_summary",
-		"Step 7 completed: day_summary"
+		completed_ids[7], "complete_sale",
+		"Step 7 completed: complete_sale"
+	)
+	assert_eq(
+		completed_ids[8], "close_day",
+		"Step 8 completed: close_day"
+	)
+	assert_eq(
+		completed_ids[9], "day_summary",
+		"Step 9 completed: day_summary"
 	)
 
 	EventBus.tutorial_step_completed.disconnect(on_step_completed)
@@ -268,22 +295,30 @@ func test_step_completed_signal_fires_for_each_step() -> void:
 # --- Helpers ---
 
 
-func _drive_move_to_shelf_advance() -> void:
-	var fake_player: Node3D = Node3D.new()
-	add_child_autofree(fake_player)
-	fake_player.global_position = Vector3.ZERO
-	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
-	fake_player.global_position = Vector3(2.0, 0.0, 0.0)
-	_tutorial._process(0.01)
+func _make_item(item_id: String, price: float) -> ItemInstance:
+	var def := ItemDefinition.new()
+	def.id = item_id
+	def.item_name = "Test %s" % item_id
+	def.category = "games"
+	def.base_price = price
+	def.rarity = "common"
+	def.tags = PackedStringArray([])
+	def.condition_range = PackedStringArray(["good"])
+	return ItemInstance.create_from_definition(def, "good")
 
 
 func _drive_full_sequence() -> void:
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
-	_drive_move_to_shelf_advance()
 	EventBus.panel_opened.emit("inventory")
+	EventBus.placement_mode_entered.emit()
 	EventBus.item_stocked.emit("test_item", "shelf_1")
-	EventBus.price_set.emit("test_item", 9.99)
+	EventBus.customer_entered.emit({"customer_id": "c1"})
+	var customer: Customer = Customer.new()
+	add_child_autofree(customer)
+	var item: ItemInstance = _make_item("test_item", 9.99)
+	EventBus.customer_item_spotted.emit(customer, item)
+	EventBus.customer_ready_to_purchase.emit({"customer_id": "c1"})
 	EventBus.customer_purchased.emit(
 		&"test_store", &"test_item", 9.99, &"customer_1"
 	)

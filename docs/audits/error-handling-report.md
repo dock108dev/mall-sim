@@ -1,6 +1,37 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-05-02 (Pass 11 — modal-focus + FP HUD + tutorial
+**Latest pass:** 2026-05-03 (Pass 13 — content-authoring symmetry + Pass-12
+post-sweep cite roll-up: tightened
+`DataLoader.create_starting_inventory` unknown-`item_id` silent skip to
+`push_warning` (§F-88 — symmetry with the existing category-mismatch
+warning right below; a typo in `starting_inventory` no longer shrinks the
+Day-1 backroom one entry at a time), justified
+`CheckoutSystem._emit_sale_toast` empty-`item_name` silent skip (§F-89 —
+content-authoring fallback; surrounding sale still completes, only the
+cosmetic toast is suppressed), justified
+`GameWorld._on_store_entered` `if store_state_manager:` Tier-2 init guard
+(§F-90 — mirrors §J2 / §F-30; readers of `active_store_id` already
+escalate loudly), justified `DayCycleController._on_day_summary_dismissed`
+`is_instance_valid(_mall_overview)` early return (§F-91 — Tier-5 init
+pattern, symmetric with the producer-side guard in `_show_day_summary`).)
+**Pass 12:** 2026-05-03 (Day-1 starter inventory + tutorial
+re-sequence + customer browse-toast roll-up: tightened
+`DataLoader.create_starting_inventory` three "store missing" silent
+returns to `push_warning` (§F-83 — content-authoring regressions on the
+Day-1 critical path are now surfaced at the source rather than masquerading
+as an empty backroom), tightened `GameWorld._create_default_store_inventory`
+to `push_warning` when the resolved starter inventory is empty (§F-83 —
+caller-side companion warning), justified
+`CustomerSystem._is_day1_spawn_blocked` `_inventory_system == null` test
+seam (§F-84 — same family as §F-44 / §F-54), justified
+`TutorialSystem._load_progress` schema-version reset (§F-85 — paired with
+§F-20 reset-on-corruption stance, push_warning + re-save makes the warning
+one-shot), justified the new `customer_item_spotted` emit + receivers
+across `Customer._evaluate_current_shelf` and
+`AmbientMomentsSystem._on_customer_item_spotted` / `_on_customer_left`
+(§F-86 — emits are already filtered by `_is_item_desirable`; receivers'
+silent guards are documented test-seams).
+**Pass 11:** 2026-05-02 (modal-focus + FP HUD + tutorial
 move-step seam roll-up: justified `TutorialSystem._capture_player_spawn`
 / `_check_move_to_shelf_distance` test-seam fallbacks (§F-79 — production
 guarantees `StoreDirector` spawns the player before `store_entered` fires,
@@ -19,6 +50,7 @@ auto-enter `_hub_transition` test-seam (§F-67), justified HUD
 `_wire_close_day_*` / `_get_active_store_snapshot` Tier-5 init fallbacks
 (§F-68, §F-69), justified StorePlayerBody `_lock_cursor_and_track_focus`
 EventBus arm (§F-70).)
+
 **Pass 9:** 2026-05-02 (Day-1 close gate + post-sale objective
 flip + inventory-remaining surface + reticle/HUD ergonomics: cite-correctness
 sweep on retro_games F3 toggle, day1_readiness `_count_players` /
@@ -45,6 +77,65 @@ Test files (`tests/`, `game/tests/`) excluded.
 ---
 
 ## Changes made this pass
+
+Pass 13 swept the post-Pass-12 working tree for silent-swallow holes that
+the Pass-12 inventory missed. Pass 12 had already covered the
+`DataLoader.create_starting_inventory` "store missing" trio (§F-83), the
+`GameWorld._create_default_store_inventory` empty-result caller warning
+(§F-83), and the `customer_item_spotted` emit/receivers (§F-86), so this
+pass focused on three adjacent surfaces: the unknown-`item_id` silent skip
+inside the same `for item_id` loop, the new `_emit_sale_toast`
+empty-`item_name` skip (cosmetic-only, but no cite), the new
+`GameWorld._on_store_entered` `set_active_store` hub-mode bookkeeping
+guard, and the new `DayCycleController._on_day_summary_dismissed` MallOverview
+restore guard.
+
+One Low silent-swallow hole was tightened (§F-88 — content-authoring
+symmetry inside `create_starting_inventory`). Three Note-level
+defensive-or-test-seam patterns were justified inline (§F-89, §F-90, §F-91).
+No Critical / High / Medium gaps were found.
+
+| Path | Change | Disposition |
+|---|---|---|
+| `game/autoload/data_loader.gd:1022–1037` | Tightened the unknown-`item_id` silent skip in `create_starting_inventory` to `push_warning`. Pass 12 raised three "store missing" silent returns to warnings (§F-83) and added a `push_warning` for the "store known but allowed_categories filtered everything out" case below — but the symmetric branch where a single item_id was a typo / unloaded definition was still a silent `continue`. A typo'd `starting_inventory` entry would otherwise shrink the Day-1 backroom one item at a time and only the empty-result warning at the caller would fire (and only if every entry was a typo). The function still returns `[]` / a partial Array so the caller's contract is unchanged. | **Acted (tighten)** §F-88 |
+| `game/scripts/systems/checkout_system.gd:561–582` | Added §F-89 cite to `_emit_sale_toast` documenting the empty-`item_name` silent skip. The function is the BRAINDUMP "see the sale happen" feedback toast; an ItemDefinition without `item_name` is a content-authoring hole that the wider `tests/validate_*.sh` content suite already catches at CI time. Skipping the toast (rather than emitting "Sold  for $X.XX") matches the documented fallback in `ambient_moments_system._on_customer_item_spotted`; the surrounding sale still completes — only the cosmetic toast is suppressed. | **Acted (justify)** §F-89 |
+| `game/scenes/world/game_world.gd:1144–1156` | Added §F-90 cite to the new `if store_state_manager:` guard around `set_active_store(store_id, false)` inside `_on_store_entered`. The hub auto-enter path emits `EventBus.store_entered` directly without routing through `StoreStateManager`, so this line bookkeeps `active_store_id` for downstream readers (InventoryPanel, tutorial gates). The silent skip on null `store_state_manager` is the Tier-2 init pattern (mirrors §J2 / §F-30); the only readers that depend on the bookkeeping already escalate loudly when `active_store_id` is empty (e.g. `InventoryPanel._refresh_grid` push_warning). | **Acted (justify)** §F-90 |
+| `game/scripts/systems/day_cycle_controller.gd:57–72` | Added §F-91 cite to `_on_day_summary_dismissed` documenting the `is_instance_valid(_mall_overview)` early return. `DayCycleController` runs in Tier 5; `_mall_overview` is injected by `MallHub` via `set_mall_overview`. The dismissal-side restore is symmetric with the producer-side guard at line 220 in `_show_day_summary` — if the open path took the no-op (no MallOverview to hide), the close path skipping the restore is the consistent contract. Production wiring guarantees both fire. | **Acted (justify)** §F-91 |
+
+### Pass 12 changes (rolled forward into Pass 13 baseline)
+
+Pass 12 reviewed the working-tree changes layered on top of the committed
+Pass 11 baseline. The post-Pass-11 working tree introduces a deterministic
+Day-1 starter inventory pipeline (`DataLoader.create_starting_inventory`),
+the customer-stocking spawn gate (`CustomerSystem._is_day1_spawn_blocked`),
+the re-sequenced tutorial step enum (`SELECT_ITEM`, `CUSTOMER_BROWSING`,
+`CUSTOMER_AT_CHECKOUT`, `COMPLETE_SALE`) with a persisted `SCHEMA_VERSION`
+gate, the new `EventBus.customer_item_spotted` signal and its
+`AmbientMomentsSystem` "Customer browsing" toast handler, the
+`CheckoutSystem._emit_sale_toast` "Sold X for $Y" feedback toast, the
+in-row Select shortcut on `InventoryPanel` (with `_close_keeping_modal_focus`
++ `_on_placement_mode_exited` modal-focus retention), the
+state-aware `ShelfSlot` prompt label (`PROMPT_NO_ITEM_SELECTED` /
+`PROMPT_SHELF_FULL` / authored-name + verb), the
+`InventoryShelfActions.place_item` wrong-category rejection guard, the
+`PlacementHintUI` `interactable_focused` mirror, and the
+`game_world.gd:_create_default_store_inventory` switch from
+`generate_starter_inventory` to `create_starting_inventory`.
+
+The pass tightened two Low silent-swallow holes — both on the Day-1
+critical path — and justified three Note-level test-seam / defensive
+patterns inline. No Critical/High/Medium gaps were found.
+
+| Path | Change | Disposition |
+|---|---|---|
+| `game/autoload/data_loader.gd:984–1015` | Tightened the three "store missing" silent returns in `create_starting_inventory` (`not ContentRegistry.exists`, empty canonical, missing `StoreDefinition`) to `push_warning` so a content-authoring regression on the Day-1 critical path is surfaced at the source. The function still returns `[]` so the caller's contract is unchanged — but a downstream empty backroom is no longer a silent failure. | **Acted (tighten)** §F-83 |
+| `game/scenes/world/game_world.gd:1419–1440` | Added a caller-side `push_warning` in `_create_default_store_inventory` when `create_starting_inventory` returns an empty `Array`. Catches the case where the store id is known but `starting_inventory` is empty (or every entry was filtered out by the new `allowed_categories` guard). The Day-1 tutorial loop is unreachable with an empty backroom; this warning makes the data-integrity hole visible in CI / playtest. | **Acted (tighten)** §F-83 |
+| `game/scripts/systems/customer_system.gd:652–674` | Added §F-84 docstring on `_is_day1_spawn_blocked` documenting the `_inventory_system == null` test-seam silent yield. Same family as the §F-44 / §F-54 autoload-test-seam contract: production code wires `_inventory_system` via `initialize()` / `set_inventory_system()` before any spawn can fire, so the branch is unreachable at runtime. | **Acted (justify)** §F-84 |
+| `game/scripts/systems/tutorial_system.gd:440–460` | Replaced the bare comment on the `_load_progress` schema-version mismatch with the §F-85 cite. The path already escalates with `push_warning`, resets to a fresh tutorial, and re-saves with the current schema_version (so the warning is one-shot). Pairs with §F-20 (reset-on-corruption is acceptable for this quality-of-life feature). | **Acted (justify)** §F-85 |
+| `game/scripts/characters/customer.gd:381–395` | Added §F-86 cite on the new `customer_item_spotted` emit sites in `_evaluate_current_shelf`. `_is_item_desirable` already filters `item.definition == null` and null `profile`, so subscribers (`AmbientMomentsSystem`, `TutorialSystem`) can rely on a fully-formed `(Customer, ItemInstance)` payload. | **Acted (justify)** §F-86 |
+| `game/scripts/systems/ambient_moments_system.gd:232–270` | Added §F-86 docstring to `_on_customer_item_spotted` (defensive null guard against fuzzed test emissions; production payloads are guaranteed by §F-86 upstream) and `_on_customer_left` (silent erase on missing `customer_id` is the documented test-seam fallback; worst case is one stale dedup entry that is overwritten on the next sighting). | **Acted (justify)** §F-86 |
+
+### Pass 11 changes (rolled forward into Pass 12 baseline)
 
 Pass 11 reviewed the working-tree changes layered on top of the committed
 Pass 10 baseline. The post-Pass-10 working tree introduces the
@@ -97,13 +188,15 @@ to those defenders so the code reads as designed rather than accidental.
 | `game/scenes/ui/hud.gd:227–243` | Added `## §F-62 —` docstring to `_on_first_sale_completed_hud` documenting the `is_instance_valid(_close_day_button)` defensive guard. Covers the window where `EventBus.first_sale_completed` fires while the HUD is mid-teardown (run reset, scene swap to mall hub). | **Acted (justify)** |
 | `game/scripts/player/store_player_body.gd:143–157` | Added `## §F-64 —` docstring to `_apply_mouse_look` documenting that yaw rotates the body unconditionally while pitch needs the embedded `Camera3D`. The `_camera == null` arm is the same test-seam fallback documented in §F-54. | **Acted (justify)** |
 
-All Pass 11 edits validated against `bash tests/run_tests.sh`:
-**4927 / 4927 GUT tests pass**, 0 failures, no new stderr `push_error` lines
-(pre-existing validator failures under ISSUE-154 / ISSUE-239 are unrelated
-content-completeness checks for trade-panel and pack/tournament feature
-work that lives outside this branch's scope). The Pass 10 edits
-(§F-66 through §F-70), Pass 9 edits (§F-58 through §F-65), and Pass 8 edits
-(§F-54 / §F-55 / §F-56 / §F-57) were re-checked and remain in place.
+All Pass 13 edits validated against `bash tests/run_tests.sh`: GUT suite
+reports `---- All tests passed! ----`, 0 failures, no new stderr
+`push_error` lines (pre-existing validator failures under ISSUE-154 /
+ISSUE-239 are unrelated content-completeness checks for trade-panel and
+pack/tournament feature work that lives outside this branch's scope). Pass
+12 edits (§F-83 through §F-86), Pass 11 edits (§F-79 through §F-82), Pass
+10 edits (§F-66 through §F-70), Pass 9 edits (§F-58 through §F-65), and
+Pass 8 edits (§F-54 / §F-55 / §F-56 / §F-57) were re-checked and remain in
+place.
 
 ---
 
@@ -114,11 +207,50 @@ work that lives outside this branch's scope). The Pass 10 edits
 | Critical | 0 | — |
 | High | 3 | 1 Pass 2, 2 Pass 3 (tier cascade, wrong signal dispatch) |
 | Medium | 8 | 3 Pass 1, 2 Pass 2, 2 Pass 3, 1 Pass 4 (registry inconsistency) |
-| Low | 15 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5, 1 Pass 8, 1 Pass 10 (CheckoutPanel non-Dict drop) |
-| Note | 45 | Justified — intentional, low-risk, documented (**+2 Pass 7, +2 Pass 8, +7 Pass 9, +4 Pass 10, +6 Pass 11**) |
+| Low | 18 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5, 1 Pass 8, 1 Pass 10 (CheckoutPanel non-Dict drop), 2 Pass 12 (DataLoader 3-branch silent return + GameWorld empty-inventory caller warning), **+1 Pass 13 (DataLoader unknown-`item_id` skip-symmetry warning)** |
+| Note | 52 | Justified — intentional, low-risk, documented (+2 Pass 7, +2 Pass 8, +7 Pass 9, +4 Pass 10, +6 Pass 11, +4 Pass 12, **+3 Pass 13**) |
 | Retired | 1 | §F-28 obsoleted by Pass 6 nav-zone label feature removal |
 
 **Overall posture: Prod posture acceptable.**
+
+Pass 13 swept the surfaces Pass 12 left unaudited inside the same
+working-tree change set: the unknown-`item_id` silent `continue` inside
+`DataLoader.create_starting_inventory` (sibling branch to the §F-83
+"store missing" warnings; tightened in this pass for content-authoring
+symmetry), the new `CheckoutSystem._emit_sale_toast` empty-`item_name`
+silent skip (cosmetic-only fallback; documented), the new hub-mode
+`GameWorld._on_store_entered` `if store_state_manager:` Tier-2 guard, and
+the new `DayCycleController._on_day_summary_dismissed` MallOverview
+restore guard.
+
+One Low silent-swallow hole was tightened (§F-88 — `DataLoader`
+content-authoring symmetry inside the existing Pass-12 `for item_id`
+loop). Three Note-level defensive-or-test-seam patterns were justified
+inline (§F-89 cosmetic toast fallback, §F-90 hub auto-enter Tier-2 guard,
+§F-91 day-summary dismissal MallOverview Tier-5 fallback).
+
+Pass 12 reviewed the post-Pass-11 working tree: the new
+`DataLoader.create_starting_inventory` deterministic Day-1 starter pipeline
+(replacing the random `generate_starter_inventory` for the bootstrap path),
+the customer-stocking spawn gate `CustomerSystem._is_day1_spawn_blocked`,
+the re-sequenced tutorial step enum with `SCHEMA_VERSION` reset gate, the
+new `EventBus.customer_item_spotted` signal and its
+`AmbientMomentsSystem` "Customer browsing" toast handler, the
+`CheckoutSystem._emit_sale_toast` "Sold X for $Y" feedback toast, the
+in-row Select shortcut on `InventoryPanel`, the state-aware `ShelfSlot`
+prompt label, the `InventoryShelfActions.place_item` wrong-category
+rejection, and the `PlacementHintUI` `interactable_focused` mirror.
+
+Two Low silent-swallow holes were tightened (§F-83 — Day-1 starter
+inventory content-authoring regressions surfaced at both the
+`DataLoader.create_starting_inventory` source and the
+`GameWorld._create_default_store_inventory` caller). Four Note-level
+test-seam / defensive patterns were justified inline (§F-84 customer
+spawn-gate `_inventory_system` test-seam, §F-85 tutorial
+`SCHEMA_VERSION` reset paired with §F-20, §F-86 covering both the new
+emit and the two receiver guards).
+
+No new Critical/High/Medium findings.
 
 Pass 11 reviewed the post-Pass-10 working tree: the new
 `TutorialSystem._capture_player_spawn` / `_check_move_to_shelf_distance`
@@ -327,10 +459,18 @@ Pass 1 corrected three medium log-level mismatches.
 | F-68 | `hud.gd:302–311` | `_wire_close_day_preview` / `_wire_close_day_confirm_dialog` silent return on missing children | Note | **Acted** Pass 10 — §F-68 docstring added (follow-up `push_warning` already lives on `_open_close_day_preview`) |
 | F-69 | `hud.gd:319–328` | `_get_active_store_snapshot` empty-array fallback on null `InventorySystem` (Tier-5 init) | Note | **Acted** Pass 10 — §F-69 docstring added (mirrors §J2 pattern) |
 | F-70 | `store_player_body.gd:215–238` | `_lock_cursor_and_track_focus` `EventBus`-missing arm (`bus == null or not has_signal`) | Note | **Acted** Pass 10 — §F-70 docstring added (test-seam, mirrors §F-54 InputFocus arm) |
-| F-79 | `tutorial_system.gd:346–368` | `_capture_player_spawn` (`tree == null`, missing-`Node3D`-in-`_PLAYER_GROUP`) and `_check_move_to_shelf_distance` (`is_instance_valid` invalidation) silent returns | Note | **Acted** Pass 11 — §F-79 docstrings added (production `StoreDirector` spawn guarantee + `bind_player_for_move_step` test seam) |
+| F-79 | ~~`tutorial_system.gd:346–368`~~ | ~~`_capture_player_spawn` / `_check_move_to_shelf_distance` silent returns~~ | Retired | **Retired (feature removed)** Pass 12 working tree dropped the `MOVE_TO_SHELF` step and every backing surface (`_capture_player_spawn`, `_check_move_to_shelf_distance`, `bind_player_for_move_step`, `_PLAYER_GROUP`, `_move_*` members). Pass 11 cite no longer points at live code — moved to "Retired (feature removed)" disposition by SSOT pass. |
 | F-80 | `store_player_body.gd:367–377` | `_set_hud_fp_mode` triple silent returns (`tree`, `scene_root`, `hud == null or no method`) | Note | **Acted** Pass 11 — §F-80 docstring added (headless-test seam; `GameWorld._setup_ui` creates HUD before any store) |
 | F-81 | `store_player_body.gd:393–415` | `_enter_debug_view` `push_warning` paths on missing orbit `PlayerController` / `StoreCamera` siblings | Note | **Acted** Pass 11 — §F-81 docstring added (F1 dev-only contract; gated by §F-73 `OS.is_debug_build()`) |
 | F-82 | `checkout_panel.gd:86–89`, `close_day_preview.gd:192–195`, `day_summary.gd:235–237` | Modal `_exit_tree` defensive CTX_MODAL pop without escalation | Note | **Acted** Pass 11 — §F-82 docstrings added (`_pop_modal_focus` itself escalates with `push_error` on stack corruption per §F-74) |
+| F-83 | `data_loader.gd:984–1015`, `game_world.gd:1419–1440` | `create_starting_inventory` three "store missing" silent returns + `_create_default_store_inventory` empty-result silent fall-through | Low | **Acted** Pass 12 — `push_warning` added at all four sites (Day-1 critical path content-authoring regressions surfaced at source + caller) |
+| F-84 | `customer_system.gd:652–674` | `_is_day1_spawn_blocked` `_inventory_system == null` test-seam silent yield | Note | **Acted** Pass 12 — §F-84 docstring added (mirrors §F-44 / §F-54 autoload-test-seam contract) |
+| F-85 | `tutorial_system.gd:440–460` | `_load_progress` `SCHEMA_VERSION` mismatch reset path | Note | **Acted** Pass 12 — §F-85 cite added (already escalates with `push_warning` + reset + re-save; pairs with §F-20 reset-on-corruption stance) |
+| F-86 | `customer.gd:381–395`, `ambient_moments_system.gd:232–270` | New `customer_item_spotted` emit + receivers (`AmbientMomentsSystem._on_customer_item_spotted` / `_on_customer_left`) | Note | **Acted** Pass 12 — §F-86 cites added (emit is filtered upstream by `_is_item_desirable`; receiver guards are defensive against fuzzed test payloads) |
+| F-88 | `data_loader.gd:1022–1037` | `create_starting_inventory` unknown-`item_id` silent `continue` (sibling to §F-83 store-missing trio) | Low | **Acted** Pass 13 — `push_warning` added on `if not def: continue` (content-authoring symmetry with category-mismatch warning right below) |
+| F-89 | `checkout_system.gd:561–582` | `_emit_sale_toast` empty-`item_name` silent skip on the BRAINDUMP "see the sale happen" toast | Note | **Acted** Pass 13 — §F-89 cite added (cosmetic-only fallback; surrounding sale still completes; ItemDefinition validator catches missing `item_name` in CI) |
+| F-90 | `game_world.gd:1144–1156` | `_on_store_entered` new `if store_state_manager:` guard around `set_active_store(store_id, false)` | Note | **Acted** Pass 13 — §F-90 cite added (Tier-2 init pattern, mirrors §J2 / §F-30; downstream readers of `active_store_id` already escalate loudly when empty) |
+| F-91 | `day_cycle_controller.gd:57–72` | `_on_day_summary_dismissed` `is_instance_valid(_mall_overview)` early return | Note | **Acted** Pass 13 — §F-91 cite added (Tier-5 init pattern, symmetric with the producer-side guard at line 220 in `_show_day_summary`) |
 | EH-AS-1 | (policy) | `assert()` in autoload bodies paired with runtime escalation | Note | Documented — see policy section |
 
 ---
@@ -510,15 +650,16 @@ Inline comment §F-21 present.
 
 ---
 
-### §F-22 — `hud.gd:773` — `_refresh_customers_active` undocumented silent return (Pass 2)
+### §F-22 — `hud.gd:773` — `_refresh_customers_active` undocumented silent return (Pass 2) — **RETIRED (feature removed)**
 
-**Acted:** Added §J2 comment matching the existing `_refresh_items_placed`
-pattern.
-
-The HUD is instantiated in `_setup_ui()` before `initialize_systems()` runs.
-`CustomerSystem` may be null on the first frame and in headless test setups.
-The HUD re-polls on every `customer_entered` / `customer_left` signal so
-stale-zero state self-corrects within one frame once systems are live.
+The Pass-12 working tree renamed the HUD's customer counter from concurrent
+("customers in store right now") to cumulative ("customers served today")
+and deleted `_refresh_customers_active`, `_on_customer_entered`, and
+`_on_customer_left` along with it. The customer counter is now driven by
+`_on_customer_purchased_hud` (one increment per completed sale) and reset on
+`day_started`. There is no longer a CustomerSystem null path on the HUD
+counter side, so the §J2-pattern silent return this entry justified does not
+exist on disk anymore. Retained as historical context; no live citation.
 
 ---
 
@@ -569,14 +710,17 @@ the failure to the HUD prompt.
 
 ## §J2 — HUD Tier-5 init null guards
 
-Applies to: `_refresh_items_placed` (L744), `_refresh_customers_active` (L773)
+Applies to: `_refresh_items_placed`
 
 The HUD is instantiated in `_setup_ui()` during `_ready`, before the five
-initialization tiers run. Both `InventorySystem` and `CustomerSystem` may
-legitimately be null on the first frame and during headless test setup.
-Both functions re-poll on every relevant signal (`inventory_changed`,
-`customer_entered`, `customer_left`) so stale zeros self-correct within one
+initialization tiers run. `InventorySystem` may legitimately be null on the
+first frame and during headless test setup. `_refresh_items_placed` re-polls
+on every `inventory_changed` signal so stale zeros self-correct within one
 frame once systems are live.
+
+The customers-served-today counter resets on `day_started` and increments on
+`customer_purchased` — there is no system getter to seed from, so the Tier-5
+race window does not apply.
 
 ---
 
@@ -1333,46 +1477,28 @@ pattern as §F-54.
 
 ---
 
-### §F-79 — `tutorial_system.gd:346–368` — MOVE_TO_SHELF spawn capture / distance check test seam (Pass 11)
+### §F-79 — `tutorial_system.gd` — MOVE_TO_SHELF spawn capture / distance check test seam (Pass 11) — **RETIRED (feature removed)**
 
-The first-person tutorial's `MOVE_TO_SHELF` step needs a snapshot of the
-player's spawn position so the per-frame distance check
-(`_check_move_to_shelf_distance`) can advance the step once the player has
-walked a meter from the spawn marker. Production captures the snapshot in
-`_capture_player_spawn` from `_on_store_entered` after
-`StoreDirector.enter_store(TUTORIAL_STORE_ID)` has already spawned a
-`StorePlayerBody` and registered it in the `&"player"` group via
-`_PLAYER_GROUP`.
+The Pass-12 working tree dropped the `MOVE_TO_SHELF` tutorial step and
+every member that backed the §F-79 contract: `_capture_player_spawn`,
+`_check_move_to_shelf_distance`, `bind_player_for_move_step`,
+`_PLAYER_GROUP`, `_move_player_node`, `_move_spawn_position`,
+`_move_spawn_captured`, and the matching `EventBus.store_entered` /
+`EventBus.price_set` connections in `_connect_signals`. The tutorial flow
+re-sequence (WELCOME → OPEN_INVENTORY → SELECT_ITEM → PLACE_ITEM →
+WAIT_FOR_CUSTOMER → CUSTOMER_BROWSING → CUSTOMER_AT_CHECKOUT →
+COMPLETE_SALE → CLOSE_DAY → DAY_SUMMARY) no longer needs a player-position
+snapshot to advance, so the silent-return test-seam family this section
+documented does not exist on disk anymore.
 
-`_capture_player_spawn` has two silent returns:
+`tutorial_system.gd` schema-version migration handles the cfg-skew case
+(see §F-85): old saves with `MOVE_TO_SHELF=1` are reset rather than
+replayed against the new ordinals.
 
-- `tree == null` — autoload-out-of-tree fallback, identical to the §F-44
-  family. Reachable only under unit-test isolation that frees the system
-  from the scene tree.
-- `player_node == null or not (player_node is Node3D)` — production
-  `StoreDirector.enter_store` always spawns the body before
-  `EventBus.store_entered` fires, so this branch is unreachable at
-  runtime. Tests that emit `store_entered` directly (e.g.
-  `test_store_entered_does_not_auto_advance_move_to_shelf` in
-  `tests/unit/test_tutorial_system.gd`) deliberately do not stage a
-  player; they bind one via `bind_player_for_move_step` instead, which is
-  the documented test seam (see the docstring on
-  `bind_player_for_move_step` in `tutorial_system.gd`).
+Retained as historical context; no live citation. Pass 11's cite-and-
+docstring work is preserved in source-tree git history.
 
-`_check_move_to_shelf_distance` has a parallel `is_instance_valid` arm:
-when a fake player bound via `bind_player_for_move_step` is freed before
-tutorial teardown (test cleanup order), `is_instance_valid` returns false
-and the distance check stops without advancing. Production has no
-equivalent code path because the body lives for the lifetime of the store
-scene.
-
-Adding `push_warning` on either arm would flood the test suite — the
-move-step test family above relies on the silent return as part of the
-contract. The cite makes the intent explicit so a future reader doesn't
-mistake the silent path for a forgotten escalation.
-
-**Risk lenses:** Reliability (test-seam path). Severity Note — same family
-as §F-44 / §F-54 / §F-59.
+**Status:** Retired (feature removed in Pass-12 working tree).
 
 ---
 
@@ -1441,6 +1567,304 @@ rather than silently degrading the dev experience.
 
 **Risk lenses:** Observability (debug surface). Severity Note —
 debug-only path, already escalates loudly, contract cite added.
+
+---
+
+## Pass 12 Per-Finding Details
+
+### §F-83 — `data_loader.gd:984–1015` + `game_world.gd:1419–1440` — Day-1 starter inventory silent returns (Pass 12)
+
+`DataLoader.create_starting_inventory(store_id)` is the deterministic Day-1
+backroom-seeding entry point introduced for the BRAINDUMP "see the sale
+happen" loop. It replaces the older random `generate_starter_inventory`
+for the bootstrap path: stable item set, fixed "good" condition, filtered
+through the store's `allowed_categories` so a content typo cannot push
+items onto a fixture that does not exist. The single production caller is
+`GameWorld._create_default_store_inventory(store_id)`, invoked from
+`bootstrap_new_game_state` before the player ever sees the hallway.
+
+The pre-Pass-12 code had three silent `return []` arms:
+
+```gdscript
+if not ContentRegistry.exists(store_id):
+    return []
+var canonical: StringName = ContentRegistry.resolve(store_id)
+if canonical.is_empty():
+    return []
+var store: StoreDefinition = get_store(String(canonical))
+if not store:
+    return []
+```
+
+All three are content-authoring failure modes (unknown ID, ID resolves to
+empty canonical, ID resolves but no `StoreDefinition` was built). The
+caller then iterated over `items` and added each to the inventory; an
+empty `items` array was indistinguishable from "store has no starting
+inventory" and produced an empty backroom. Day 1 is the tutorial loop —
+an empty backroom there means the player has nothing to stock, the
+tutorial silently stalls on `OPEN_INVENTORY`, and the test for the loop
+("4969 GUT tests pass") would still be green because the regression is
+content-shaped rather than code-shaped.
+
+**Fix.** Three `push_warning` lines on `data_loader.gd` plus a fourth
+`push_warning` on the caller in `game_world.gd` when `items.is_empty()`.
+Each warning names the offending store id (and the canonical id where
+known), so a future content-authoring slip surfaces immediately in the
+editor / CI / playtest console rather than as a "the player has no items
+today" bug report.
+
+The function still returns `[]` so the contract with the caller is
+unchanged — the change is observability, not behavior. The caller-side
+warning is intentionally separate so a known store with an empty
+`starting_inventory` array (a different content-authoring case) is also
+caught even though the source-side guards all pass.
+
+**Risk lenses:** Data integrity (Day-1 backroom emptiness) + observability
+(silent content regression). Severity Low — tightened in source.
+
+---
+
+### §F-84 — `customer_system.gd:652–674` — `_is_day1_spawn_blocked` `_inventory_system == null` test-seam (Pass 12)
+
+The Day-1 stocking gate is the new "no customers walk in until you've put
+something on a shelf" guard. The flag `_day1_spawn_unlocked` is sticky for
+the run — once any item is stocked (`_on_item_stocked`), or any shelf has
+content (`get_shelf_items().is_empty() == false`), or the day is past 1,
+the gate yields permanently for that session. The function:
+
+```gdscript
+func _is_day1_spawn_blocked() -> bool:
+    if _day1_spawn_unlocked:
+        return false
+    if _inventory_system == null:
+        return false
+    if GameManager.get_current_day() != 1:
+        _day1_spawn_unlocked = true
+        return false
+    if not _inventory_system.get_shelf_items().is_empty():
+        _day1_spawn_unlocked = true
+        return false
+    return true
+```
+
+The `_inventory_system == null` arm is the documented unit-test seam:
+tests in `tests/gut/test_customer_system_*` exercise `spawn_customer`
+directly without wiring an InventorySystem. Production code wires
+`_inventory_system` via `initialize()` / `set_inventory_system()` before
+`day_started` ever fires for day 1, so the branch is unreachable at
+runtime. Adding a `push_warning` would generate noise from every legitimate
+test fixture without surfacing any real production failure.
+
+**Risk lenses:** Reliability (test-seam path). Severity Note — same
+family as §F-44 / §F-54 / §F-59 (autoload-/system-stub silent
+fallback contract).
+
+---
+
+### §F-85 — `tutorial_system.gd:440–460` — `_load_progress` `SCHEMA_VERSION` reset (Pass 12)
+
+The tutorial step enum was re-sequenced in this branch (added
+`SELECT_ITEM`, `CUSTOMER_BROWSING`, `CUSTOMER_AT_CHECKOUT`,
+`COMPLETE_SALE`; dropped `MOVE_TO_SHELF` and `SET_PRICE`). A persisted
+progress file written before the re-sequence has the old ordinals — for
+example, the old `MOVE_TO_SHELF=1` would now land on the new
+`OPEN_INVENTORY=1`, replaying the wrong step. To prevent that:
+
+```gdscript
+const SCHEMA_VERSION: int = 2
+...
+var loaded_version: int = int(
+    config.get_value("tutorial", "schema_version", 0)
+)
+if loaded_version != SCHEMA_VERSION:
+    push_warning(...)
+    _apply_state({...fresh...})
+    _save_progress()
+    return
+```
+
+The path is already loud (`push_warning` with both versions in the
+message). It pairs with §F-20 (the long-standing reset-on-corruption
+stance — tutorial progress is a quality-of-life feature, not a savefile,
+so a reset is acceptable in the schema-skew case too). The immediate
+re-save with the current schema_version makes the warning one-shot rather
+than every-boot; the next load sees a matching version and falls through
+to the normal path. The cite formalizes the contract so a future reader
+recognizes the reset as designed rather than accidental.
+
+**Risk lenses:** Data integrity (tutorial progress) + observability
+(version skew warning). Severity Note — already escalates loudly,
+contract cite added.
+
+---
+
+### §F-86 — `customer.gd:381–395` + `ambient_moments_system.gd:232–270` — `customer_item_spotted` signal emit + receivers (Pass 12)
+
+The new `EventBus.customer_item_spotted(Customer, ItemInstance)` signal
+is emitted by `Customer._evaluate_current_shelf` when the customer assigns
+or upgrades the desired item. It drives the
+`AmbientMomentsSystem._on_customer_item_spotted` "Customer browsing: X"
+toast and the `TutorialSystem._on_customer_item_spotted` `CUSTOMER_BROWSING`
+step advance.
+
+**Emit side (customer.gd):** the loop walks `items` from
+`get_items_at_location("shelf:%s")` and calls `_is_item_desirable(item)`
+for each — that helper rejects `item.definition == null` or `profile == null`
+before any candidate reaches the desired-item assignment. Subscribers can
+therefore rely on a fully-formed `(Customer, ItemInstance)` payload. The
+in-source cite documents the upstream filter so a future reader doesn't
+mistake the unguarded `emit` for a missing null check.
+
+**Receiver guards (ambient_moments_system.gd):**
+
+- `_on_customer_item_spotted` keeps the defensive null guard
+  (`customer == null or item == null or item.definition == null`) as
+  defense-in-depth against fuzzed test payloads. Production payloads are
+  guaranteed by the upstream filter.
+- `_on_customer_item_spotted` skips the toast on empty `item_name` —
+  a content-authoring hole (`ItemDefinition.item_name` not set). Skipping
+  is the documented fallback (mirrors `checkout_system.gd:_emit_sale_toast`
+  per Pass 10 patterns); emitting "Customer browsing: " would be worse.
+- `_on_customer_left` silent-erases on missing `customer_id`. Production
+  CustomerSystem always populates the key in the `customer_left` payload
+  (see `customer_system.gd:_on_customer_left`); test fixtures that emit a
+  bare Dictionary reach this fallback. The worst-case effect is one stale
+  dedup entry that is overwritten on the next sighting or cleared by
+  `_apply_state` (save load) / scene swap.
+
+**Risk lenses:** Reliability (test-seam path) + observability (null
+guard documentation). Severity Note — cites added to attribute silent
+arms back to upstream filters / documented fallbacks.
+
+---
+
+### §F-88 — `data_loader.gd:1022–1037` — `create_starting_inventory` unknown-`item_id` skip-symmetry warning (Pass 13)
+
+Pass 12 raised three "store not found" branches in
+`DataLoader.create_starting_inventory` to `push_warning` (§F-83) and added
+a `push_warning` for the "store known but `allowed_categories` filtered
+everything out" case below. The same `for item_id` loop, however, still had
+a silent `continue` for the case where `get_item(item_id)` returned null —
+i.e. a typo in `starting_inventory` or an item that hadn't been registered:
+
+```gdscript
+for item_id: String in store.starting_inventory:
+    var def: ItemDefinition = get_item(item_id)
+    if not def:
+        continue  # silent — Pass 13 raised this to push_warning
+    if not allowed.is_empty() and not allowed.has(def.category):
+        push_warning(...)  # already loud since Pass 12
+        continue
+    ...
+```
+
+**Was:** Bare `continue` on missing definition. A typo'd id silently
+shrunk the Day-1 backroom one entry at a time. The `push_warning` for an
+empty result at the caller (`game_world.gd:_create_default_store_inventory`,
+§F-83) only fired when **every** entry was a typo — partial regressions
+were invisible.
+
+**Now:** `push_warning` naming the missing id with a
+"typo or unloaded?" hint, mirroring the symmetric format of the
+category-mismatch warning right below it. The function still returns a
+partial Array so the caller's contract is unchanged.
+
+**Risk lenses:** Data integrity (Day-1 critical path) + observability.
+Severity Low — same surface as §F-83 but for a different sub-branch.
+
+---
+
+### §F-89 — `checkout_system.gd:561–582` — `_emit_sale_toast` empty-`item_name` cosmetic-only skip (Pass 13)
+
+Pass 12 introduced `_emit_sale_toast(item_name, price)` for the BRAINDUMP
+"see the sale happen" feedback toast on the Day-1 loop. The function is
+called from `_execute_sale` and `_execute_rental` — the only call sites
+that still hold the live `ItemDefinition` (by the time
+`customer_purchased` fires, `inventory.remove_item` has wiped the lookup).
+Empty `item_name` is silent-skipped:
+
+```gdscript
+func _emit_sale_toast(item_name: String, price: float) -> void:
+    if item_name.is_empty():
+        return  # Pass 13: cite added — see §F-89
+    EventBus.toast_requested.emit(...)
+```
+
+**Disposition:** Justify. Empty `item_name` is a content-authoring hole
+(the `ItemDefinition` lacked an `item_name`). The wider content validator
+suite under `tests/validate_*.sh` already catches missing display names at
+CI time; surfacing the hole at runtime on the toast emit would be both
+redundant and noisy. Skipping the toast (rather than emitting "Sold  for
+$X.XX") matches the documented fallback in
+`ambient_moments_system._on_customer_item_spotted`. The surrounding sale
+still completes — `EventBus.item_sold` and `EventBus.customer_purchased`
+fire as normal — only the cosmetic toast is suppressed.
+
+**Risk lenses:** Observability (cosmetic-only). Severity Note — content
+hole is loud at CI time, fallback at runtime is the documented contract.
+
+---
+
+### §F-90 — `game_world.gd:1144–1156` — `_on_store_entered` Tier-2 `set_active_store` guard (Pass 13)
+
+Pass 12 added a new bookkeeping line inside `_on_store_entered` to bridge
+the hub auto-enter path: that path emits `EventBus.store_entered` directly
+without routing through `StoreStateManager.set_active_store`, leaving
+`active_store_id` empty. The new line backfills the bookkeeping:
+
+```gdscript
+# Hub auto-enter emits EventBus.store_entered directly without routing
+# through StoreStateManager.set_active_store, leaving active_store_id empty.
+if store_state_manager:
+    store_state_manager.set_active_store(store_id, false)
+```
+
+**Disposition:** Justify. `store_state_manager` is constructed in
+`initialize_tier_2_state` (per `docs/architecture.md`); production paths
+always run Tier 2 before any `store_entered` can fire (boot → bootstrap →
+Tier 1 → Tier 2 → ... → store load). Headless / unit fixtures that emit
+the signal without staging Tier 2 take the silent path. Crucially, the
+only readers that depend on the bookkeeping already escalate loudly when
+`active_store_id` is empty: `InventoryPanel._refresh_grid` raises
+`push_warning` ("expected active_store_changed to have fired before
+open()"), and tutorial gates short-circuit on the empty StringName. So
+the cite ties the silent skip back to existing loud defenders rather than
+introducing new noise. Same pattern as §F-30 (Tier-2 cascade) and §J2
+(Tier-5 init fallback).
+
+**Risk lenses:** Reliability (Tier-2 init pattern). Severity Note —
+downstream readers already escalate.
+
+---
+
+### §F-91 — `day_cycle_controller.gd:57–72` — `_on_day_summary_dismissed` MallOverview Tier-5 fallback (Pass 13)
+
+Pass 12 reworked `_on_day_summary_dismissed` to drive `_mall_overview`
+visibility from the post-acknowledgement FSM state (`MALL_OVERVIEW` →
+show, anything else → hide). The leading guard short-circuits on null:
+
+```gdscript
+func _on_day_summary_dismissed() -> void:
+    if not is_instance_valid(_mall_overview):
+        return  # Pass 13: cite added — see §F-91
+    var should_show: bool = (
+        GameManager.current_state == GameManager.State.MALL_OVERVIEW
+    )
+    _mall_overview.visible = should_show
+```
+
+**Disposition:** Justify. `DayCycleController` runs in Tier 5; the
+`_mall_overview` ref is injected by `MallHub` via `set_mall_overview`.
+Production wiring sets it during hub mount before any day can close.
+Headless tests and pre-hub-mount frames take the silent path. The
+dismissal-side restore is symmetric with the producer-side guard at line
+220 in `_show_day_summary` (the open call also bails when `_mall_overview`
+is null) — if the open path took the no-op (no MallOverview to hide),
+the close path skipping the restore is the consistent contract. There is
+nothing for the dismissal to repair on its own.
+
+**Risk lenses:** Reliability (Tier-5 init pattern). Severity Note —
+symmetric guard pattern, no production gap.
 
 ---
 
@@ -1524,9 +1948,13 @@ site has either an inline cite or a class-level docstring pointing here.
 | Acted (Pass 9) — justified inline | §F-59 (Day-1 audit test-seams), §F-60 (day-close inventory null fallback), §F-61 (day_summary forward-compat default), §F-62 (HUD pulse defensive guard), §F-63 (CameraManager SSOT skip-if-tracked), §F-64 (mouse-look camera-null fallback), §F-65 (F3 debug toggle push_warning paths) |
 | Acted (Pass 10) — tightened | §F-66 (`CheckoutPanel` non-Dictionary item drop → `push_warning`) |
 | Acted (Pass 10) — justified inline | §F-67 (`GameWorld._auto_enter_default_store_in_hub` test-seam), §F-68 (HUD `_wire_close_day_*` test-seam), §F-69 (HUD `_get_active_store_snapshot` Tier-5 init), §F-70 (`StorePlayerBody` EventBus arm) |
-| Acted (Pass 11) — justified inline | §F-79 (`TutorialSystem` MOVE_TO_SHELF spawn-capture + distance test seams), §F-80 (`StorePlayerBody._set_hud_fp_mode` headless-test seam), §F-81 (`StorePlayerBody._enter_debug_view` push_warning paths cite), §F-82 (modal `_exit_tree` defensive CTX_MODAL cleanup — `CheckoutPanel`, `CloseDayPreview`, `DaySummary`) |
+| Acted (Pass 11) — justified inline | §F-80 (`StorePlayerBody._set_hud_fp_mode` headless-test seam), §F-81 (`StorePlayerBody._enter_debug_view` push_warning paths cite), §F-82 (modal `_exit_tree` defensive CTX_MODAL cleanup — `CheckoutPanel`, `CloseDayPreview`, `DaySummary`). §F-79 (`TutorialSystem` MOVE_TO_SHELF spawn-capture + distance test seams) was retired in Pass 12 along with the surface it justified — see the "Retired (feature removed)" row below. |
+| Acted (Pass 12) — tightened | §F-83 (`DataLoader.create_starting_inventory` 3 silent returns + `GameWorld._create_default_store_inventory` empty-result silent fall-through → 4 `push_warning` lines on the Day-1 critical path) |
+| Acted (Pass 12) — justified inline | §F-84 (`CustomerSystem._is_day1_spawn_blocked` test-seam silent yield), §F-85 (`TutorialSystem._load_progress` `SCHEMA_VERSION` reset paired with §F-20), §F-86 (`Customer._evaluate_current_shelf` emit + `AmbientMomentsSystem` receivers — emit filtered upstream by `_is_item_desirable`, receiver guards documented) |
+| Acted (Pass 13) — tightened | §F-88 (`DataLoader.create_starting_inventory` unknown-`item_id` silent `continue` → `push_warning` for content-authoring symmetry with the §F-83 store-missing trio and the category-mismatch warning right below) |
+| Acted (Pass 13) — justified inline | §F-89 (`CheckoutSystem._emit_sale_toast` empty-`item_name` cosmetic-only skip — content validator catches missing display names at CI time), §F-90 (`GameWorld._on_store_entered` Tier-2 `set_active_store` guard — downstream readers already escalate on empty `active_store_id`), §F-91 (`DayCycleController._on_day_summary_dismissed` MallOverview Tier-5 fallback — symmetric with the producer-side guard at line 220 in `_show_day_summary`) |
 | Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §F-48, §F-49, §J4 |
-| Retired (feature removed) | §F-28 |
+| Retired (feature removed) | §F-22 (`hud.gd::_refresh_customers_active` — superseded by `_on_customer_purchased_hud` in Pass 12), §F-28, §F-79 (`TutorialSystem` MOVE_TO_SHELF surface — removed in Pass 12 step re-sequence) |
 | Needs telemetry | None — EventBus + AuditLog provide sufficient observability |
 | Hidden failure risk (remaining) | None |
 
@@ -1534,15 +1962,74 @@ site has either an inline cite or a class-level docstring pointing here.
 
 ## Escalations
 
-None. All findings across all eight passes were either tightened in-place,
-justified with inline comments, or retired when the feature itself was
-removed.
+None. All findings across all thirteen passes were either tightened
+in-place, justified with inline comments, or retired when the feature
+itself was removed.
 
 ---
 
 ## Final Verdict
 
 **Prod posture acceptable.**
+
+Pass 13 swept the surfaces Pass 12 left unaudited inside the same
+working-tree change set. Pass 12 covered the `DataLoader` "store missing"
+trio and the caller-side empty-result warning (§F-83), the Day-1 spawn
+gate test seam (§F-84), the `TutorialSystem` schema_version reset
+(§F-85), and the `customer_item_spotted` emit/receivers (§F-86). Pass 13
+filled four adjacent gaps: the unknown-`item_id` silent skip inside the
+same `for item_id` loop (§F-88, tightened to `push_warning` for
+content-authoring symmetry), the new `_emit_sale_toast` empty-`item_name`
+cosmetic-only skip (§F-89, justified — content validator catches missing
+display names at CI time), the new hub-mode `_on_store_entered`
+`set_active_store` Tier-2 guard (§F-90, justified — readers escalate
+loudly when `active_store_id` is empty), and the new
+`_on_day_summary_dismissed` MallOverview Tier-5 fallback (§F-91,
+justified — symmetric with the producer-side guard at line 220 in
+`_show_day_summary`).
+
+After Pass 13 the repo's full GUT suite (`bash tests/run_tests.sh`)
+reports `---- All tests passed! ----`, 0 failures, and no new stderr
+`push_error` lines from the Pass 13 edits. Pre-existing validator
+failures under ISSUE-154 / ISSUE-239 are unrelated content-completeness
+checks for trade-panel and pack/tournament features that live outside
+this branch's scope. All thirteen passes' findings are accounted for;
+no hidden data-corruption paths remain.
+
+Pass 12 reviewed the post-Pass-11 working tree: the new
+`DataLoader.create_starting_inventory` deterministic Day-1 starter pipeline,
+the customer-stocking spawn gate `CustomerSystem._is_day1_spawn_blocked`,
+the re-sequenced tutorial step enum (`SELECT_ITEM`, `CUSTOMER_BROWSING`,
+`CUSTOMER_AT_CHECKOUT`, `COMPLETE_SALE`) with `SCHEMA_VERSION` reset gate,
+the new `EventBus.customer_item_spotted` signal with its
+`AmbientMomentsSystem` "Customer browsing" toast handler, the
+`CheckoutSystem._emit_sale_toast` "Sold X for $Y" feedback toast, the
+`InventoryPanel` in-row Select shortcut with `_close_keeping_modal_focus`
++ `_on_placement_mode_exited` modal-focus retention, the state-aware
+`ShelfSlot` prompt label, the `InventoryShelfActions.place_item`
+wrong-category rejection, and the `PlacementHintUI`
+`interactable_focused` mirror.
+
+Pass 12 tightened two Low silent-swallow holes — both on the Day-1
+critical path — by adding four `push_warning` lines (§F-83): three at the
+source in `DataLoader.create_starting_inventory` (unknown ID, empty
+canonical, missing StoreDefinition), one at the caller in
+`GameWorld._create_default_store_inventory` (resolved-but-empty inventory).
+A content-authoring regression that previously masqueraded as "the player
+has no items today" now surfaces in the editor / CI / playtest console at
+the source. Four Note-level test-seam / defensive patterns were justified
+inline (§F-84 customer spawn-gate `_inventory_system` test seam, §F-85
+tutorial `SCHEMA_VERSION` reset paired with §F-20, §F-86 covering both
+the new emit site and the two receiver guards).
+
+After Pass 12 the repo's full GUT suite (`bash tests/run_tests.sh`)
+reports **4969 / 4969 passing**, 0 failures, and no new stderr
+`push_warning` / `push_error` lines from the Pass 12 edits (verified by
+greping the test log for the new warning strings — all clean).
+Pre-existing validator failures under ISSUE-154 / ISSUE-239 are unrelated
+content-completeness checks for trade-panel and pack/tournament features
+that live outside this branch's scope. All twelve passes' findings are
+accounted for; no hidden data-corruption paths remain.
 
 Pass 11 reviewed the post-Pass-10 working tree: the new
 `TutorialSystem._capture_player_spawn` / `_check_move_to_shelf_distance`

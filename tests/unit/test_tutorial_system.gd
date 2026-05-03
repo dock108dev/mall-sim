@@ -45,8 +45,8 @@ func test_advance_step_moves_forward_and_emits_step_completed() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
-		"Step should advance from WELCOME to MOVE_TO_SHELF"
+		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		"Step should advance from WELCOME to OPEN_INVENTORY"
 	)
 	assert_eq(
 		completed_id[0], "welcome",
@@ -63,15 +63,7 @@ func test_advance_on_final_step_emits_tutorial_completed() -> void:
 		tutorial_done[0] = true
 	EventBus.tutorial_completed.connect(on_done)
 
-	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
-	_tutorial._process(0.01)
-	_drive_move_to_shelf_advance()
-	EventBus.panel_opened.emit("inventory")
-	EventBus.item_stocked.emit("item_1", "shelf_1")
-	EventBus.price_set.emit("item_1", 9.99)
-	EventBus.customer_purchased.emit(&"", &"item_1", 9.99, &"")
-	EventBus.day_close_requested.emit()
-	EventBus.day_acknowledged.emit()
+	_drive_full_sequence()
 
 	assert_eq(
 		_tutorial.current_step,
@@ -109,8 +101,8 @@ func test_advance_after_completion_is_noop() -> void:
 	EventBus.tutorial_step_completed.connect(on_completed)
 	EventBus.tutorial_completed.connect(on_done)
 
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
 	EventBus.panel_opened.emit("inventory")
+	EventBus.placement_mode_entered.emit()
 	EventBus.item_stocked.emit("item_1", "shelf_1")
 	EventBus.day_close_requested.emit()
 
@@ -161,8 +153,8 @@ func test_save_state_serializes_step_and_completion() -> void:
 	)
 	assert_eq(
 		int(data["current_step"]),
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
-		"Serialized step should be MOVE_TO_SHELF"
+		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		"Serialized step should be OPEN_INVENTORY"
 	)
 	assert_false(
 		data["tutorial_completed"] as bool,
@@ -212,7 +204,6 @@ func test_load_state_restores_mid_tutorial() -> void:
 		"current_step": TutorialSystem.TutorialStep.OPEN_INVENTORY,
 		"completed_steps": {
 			"welcome": true,
-			"move_to_shelf": true,
 		},
 		"tips_shown": {},
 	}
@@ -233,7 +224,7 @@ func test_load_state_restores_mid_tutorial() -> void:
 		"Tutorial should be active for mid-tutorial state"
 	)
 	assert_true(
-		_tutorial._completed_steps.get("move_to_shelf", false) as bool,
+		_tutorial._completed_steps.get("welcome", false) as bool,
 		"Mid-tutorial completed step IDs should be restored"
 	)
 
@@ -245,7 +236,7 @@ func test_load_state_resumes_last_incomplete_step() -> void:
 		"current_step": TutorialSystem.TutorialStep.WELCOME,
 		"completed_steps": {
 			"welcome": true,
-			"move_to_shelf": true,
+			"open_inventory": true,
 		},
 		"tips_shown": {},
 	}
@@ -254,7 +245,7 @@ func test_load_state_resumes_last_incomplete_step() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		TutorialSystem.TutorialStep.SELECT_ITEM,
 		"Loaded progress should resume at the first incomplete step"
 	)
 
@@ -272,11 +263,11 @@ func test_eventbus_step_completed_has_correct_step_id() -> void:
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 
-	_drive_move_to_shelf_advance()
+	EventBus.panel_opened.emit("inventory")
 
 	assert_eq(emitted_ids.size(), 2, "Two steps should have completed")
 	assert_eq(emitted_ids[0], "welcome", "First: welcome")
-	assert_eq(emitted_ids[1], "move_to_shelf", "Second: move_to_shelf")
+	assert_eq(emitted_ids[1], "open_inventory", "Second: open_inventory")
 
 	EventBus.tutorial_step_completed.disconnect(on_completed)
 
@@ -292,154 +283,140 @@ func test_eventbus_step_changed_emits_new_step_id() -> void:
 	_tutorial._process(0.01)
 
 	assert_true(
-		changed_ids.has("move_to_shelf"),
-		"tutorial_step_changed should emit move_to_shelf after advancing"
+		changed_ids.has("open_inventory"),
+		"tutorial_step_changed should emit open_inventory after advancing"
 	)
 
 	EventBus.tutorial_step_changed.disconnect(on_changed)
 
 
-func test_move_to_shelf_advances_only_when_player_walks_far_enough() -> void:
+# --- Per-milestone trigger gates ---
+
+
+func test_panel_opened_advances_only_at_open_inventory() -> void:
 	_tutorial.initialize(true)
+	# Drive past WELCOME so OPEN_INVENTORY is the active step.
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
-	assert_eq(
-		_tutorial.current_step,
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
-		"Should be on MOVE_TO_SHELF after WELCOME"
-	)
 
-	var fake_player: Node3D = Node3D.new()
-	add_child_autofree(fake_player)
-	fake_player.global_position = Vector3.ZERO
-	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
-
-	# A nudge under the 1m threshold must not advance the step.
-	fake_player.global_position = Vector3(0.5, 0.0, 0.0)
-	_tutorial._process(0.01)
-	assert_eq(
-		_tutorial.current_step,
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
-		"Sub-threshold movement must not advance MOVE_TO_SHELF"
-	)
-
-	# Crossing the 1m threshold advances to OPEN_INVENTORY.
-	fake_player.global_position = Vector3(1.5, 0.0, 0.0)
-	_tutorial._process(0.01)
+	# A non-inventory panel must not advance.
+	EventBus.panel_opened.emit("orders")
 	assert_eq(
 		_tutorial.current_step,
 		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"Crossing the move-to-shelf threshold should advance to OPEN_INVENTORY"
+		"Non-inventory panel must not advance OPEN_INVENTORY"
 	)
 
-
-func test_store_entered_does_not_auto_advance_move_to_shelf() -> void:
-	_tutorial.initialize(true)
-	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
-	_tutorial._process(0.01)
-
-	EventBus.store_entered.emit(&"electronics")
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
-	assert_eq(
-		_tutorial.current_step,
-		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
-		"store_entered must not advance MOVE_TO_SHELF — only player walking does"
-	)
-
-
-# --- Helpers / ISSUE-010: SET_PRICE grace-timer auto-advance ---
-
-
-func _drive_move_to_shelf_advance() -> void:
-	var fake_player: Node3D = Node3D.new()
-	add_child_autofree(fake_player)
-	fake_player.global_position = Vector3.ZERO
-	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
-	fake_player.global_position = Vector3(2.0, 0.0, 0.0)
-	_tutorial._process(0.01)
-
-
-func _drive_to_place_item_step() -> void:
-	_tutorial.initialize(true)
-	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
-	_tutorial._process(0.01)
-	_drive_move_to_shelf_advance()
 	EventBus.panel_opened.emit("inventory")
 	assert_eq(
 		_tutorial.current_step,
+		TutorialSystem.TutorialStep.SELECT_ITEM,
+		"inventory panel should advance OPEN_INVENTORY → SELECT_ITEM"
+	)
+
+
+func test_placement_mode_entered_advances_select_item() -> void:
+	_drive_to_select_item()
+	EventBus.placement_mode_entered.emit()
+	assert_eq(
+		_tutorial.current_step,
 		TutorialSystem.TutorialStep.PLACE_ITEM,
-		"Pre-condition: should be at PLACE_ITEM"
+		"placement_mode_entered should advance SELECT_ITEM → PLACE_ITEM"
 	)
 
 
-func test_item_stocked_arms_set_price_grace_timer() -> void:
-	_drive_to_place_item_step()
+func test_item_stocked_advances_place_item() -> void:
+	_drive_to_place_item()
 	EventBus.item_stocked.emit("item_1", "shelf_1")
-	assert_eq(
-		_tutorial.current_step,
-		TutorialSystem.TutorialStep.SET_PRICE,
-		"item_stocked should advance PLACE_ITEM → SET_PRICE"
-	)
-	assert_not_null(
-		_tutorial._set_price_grace_timer,
-		"Grace timer should be armed at PLACE_ITEM → SET_PRICE transition"
-	)
-
-
-func test_set_price_grace_timeout_advances_to_wait_for_customer() -> void:
-	_drive_to_place_item_step()
-	EventBus.item_stocked.emit("item_1", "shelf_1")
-	var armed_timer: SceneTreeTimer = _tutorial._set_price_grace_timer
-
-	_tutorial._on_set_price_grace_timeout(armed_timer)
-
 	assert_eq(
 		_tutorial.current_step,
 		TutorialSystem.TutorialStep.WAIT_FOR_CUSTOMER,
-		"Grace timeout should advance SET_PRICE → WAIT_FOR_CUSTOMER"
-	)
-	assert_null(
-		_tutorial._set_price_grace_timer,
-		"Grace timer reference should clear after timeout fires"
+		"item_stocked should advance PLACE_ITEM → WAIT_FOR_CUSTOMER"
 	)
 
 
-func test_price_set_fast_path_clears_grace_timer_no_double_advance() -> void:
-	_drive_to_place_item_step()
+func test_customer_entered_advances_wait_for_customer() -> void:
+	_drive_to_wait_for_customer()
+	EventBus.customer_entered.emit({"customer_id": "c1"})
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.CUSTOMER_BROWSING,
+		"customer_entered should advance WAIT_FOR_CUSTOMER → CUSTOMER_BROWSING"
+	)
+
+
+func test_customer_ready_to_purchase_advances_at_checkout_step() -> void:
+	_drive_to_customer_at_checkout()
+	EventBus.customer_ready_to_purchase.emit({"customer_id": "c1"})
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.COMPLETE_SALE,
+		"customer_ready_to_purchase should advance CUSTOMER_AT_CHECKOUT → COMPLETE_SALE"
+	)
+
+
+func test_customer_purchased_advances_complete_sale() -> void:
+	_drive_to_complete_sale()
+	EventBus.customer_purchased.emit(&"store", &"item_1", 9.99, &"c1")
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.CLOSE_DAY,
+		"customer_purchased should advance COMPLETE_SALE → CLOSE_DAY"
+	)
+
+
+# --- Helpers ---
+
+
+func _drive_to_open_inventory() -> void:
+	_tutorial.initialize(true)
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
+	_tutorial._process(0.01)
+
+
+func _drive_to_select_item() -> void:
+	_drive_to_open_inventory()
+	EventBus.panel_opened.emit("inventory")
+
+
+func _drive_to_place_item() -> void:
+	_drive_to_select_item()
+	EventBus.placement_mode_entered.emit()
+
+
+func _drive_to_wait_for_customer() -> void:
+	_drive_to_place_item()
 	EventBus.item_stocked.emit("item_1", "shelf_1")
-	var armed_timer: SceneTreeTimer = _tutorial._set_price_grace_timer
-	assert_not_null(armed_timer, "Grace timer should be armed")
-
-	EventBus.price_set.emit("item_1", 9.99)
-	assert_eq(
-		_tutorial.current_step,
-		TutorialSystem.TutorialStep.WAIT_FOR_CUSTOMER,
-		"price_set fast path should advance SET_PRICE → WAIT_FOR_CUSTOMER"
-	)
-	assert_null(
-		_tutorial._set_price_grace_timer,
-		"price_set should clear the grace timer reference"
-	)
-
-	# Late timeout from the now-stale timer must be a no-op.
-	_tutorial._on_set_price_grace_timeout(armed_timer)
-	assert_eq(
-		_tutorial.current_step,
-		TutorialSystem.TutorialStep.WAIT_FOR_CUSTOMER,
-		"Stale grace timeout must not double-advance past WAIT_FOR_CUSTOMER"
-	)
 
 
-func test_grace_timeout_does_not_fire_after_completion() -> void:
-	_drive_to_place_item_step()
-	EventBus.item_stocked.emit("item_1", "shelf_1")
-	var armed_timer: SceneTreeTimer = _tutorial._set_price_grace_timer
+func _drive_to_customer_browsing() -> void:
+	_drive_to_wait_for_customer()
+	EventBus.customer_entered.emit({"customer_id": "c1"})
 
-	_tutorial.skip_tutorial()
-	_tutorial._on_set_price_grace_timeout(armed_timer)
 
-	assert_eq(
-		_tutorial.current_step,
-		TutorialSystem.TutorialStep.FINISHED,
-		"Skipped tutorial should remain FINISHED after a stale grace timeout"
-	)
+func _drive_to_customer_at_checkout() -> void:
+	_drive_to_customer_browsing()
+	var customer: Customer = Customer.new()
+	add_child_autofree(customer)
+	var def := ItemDefinition.new()
+	def.id = "item_1"
+	def.item_name = "Item 1"
+	def.category = "games"
+	def.base_price = 9.99
+	def.rarity = "common"
+	def.tags = PackedStringArray([])
+	def.condition_range = PackedStringArray(["good"])
+	var item: ItemInstance = ItemInstance.create_from_definition(def, "good")
+	EventBus.customer_item_spotted.emit(customer, item)
+
+
+func _drive_to_complete_sale() -> void:
+	_drive_to_customer_at_checkout()
+	EventBus.customer_ready_to_purchase.emit({"customer_id": "c1"})
+
+
+func _drive_full_sequence() -> void:
+	_drive_to_complete_sale()
+	EventBus.customer_purchased.emit(&"store", &"item_1", 9.99, &"c1")
+	EventBus.day_close_requested.emit()
+	EventBus.day_acknowledged.emit()

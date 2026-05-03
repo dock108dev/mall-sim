@@ -9,9 +9,14 @@ enum SpeedTier { PAUSED = 0, NORMAL = 1, FAST = 3, ULTRA = 6 }
 
 const GAME_MINUTES_PER_REAL_SECOND_NORMAL: float = 1.0
 const MALL_OPEN_HOUR: int = 9
-const MALL_CLOSE_HOUR: int = 21
+const MALL_CLOSE_HOUR: int = 17
 const DAYS_PER_MONTH: int = 30
 
+# EVENING (1080) and LATE_EVENING (1260) boundaries are unreachable on a
+# default-day cycle: the day ends at MALL_CLOSE_HOUR (1020 min) before either
+# boundary is crossed. They remain to support the LATE_EVENING extended-hours
+# unlock path (`_LATE_EVENING_END_MINUTES = 1440`), which still drives the
+# AFTERNOON → EVENING → LATE_EVENING transitions when the unlock is active.
 const _PHASE_BOUNDARIES_MINUTES: Dictionary = {
 	DayPhase.PRE_OPEN: 420,
 	DayPhase.MORNING_RAMP: 540,
@@ -22,7 +27,7 @@ const _PHASE_BOUNDARIES_MINUTES: Dictionary = {
 }
 
 const _DAY_START_MINUTES: float = 420.0
-const _DAY_END_MINUTES: float = 1260.0
+const _DAY_END_MINUTES: float = 1020.0
 const _LATE_EVENING_END_MINUTES: float = 1440.0
 
 const _VALID_SPEED_VALUES: Array[int] = [

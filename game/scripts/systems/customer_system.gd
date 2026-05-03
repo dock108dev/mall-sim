@@ -27,6 +27,12 @@ const VIP_UNLOCK_ID: StringName = &"vip_customer_events"
 const CROSS_STORE_REP_THRESHOLD: float = 1.2
 const CROSS_STORE_BROWSE_BONUS: float = 0.15
 
+# Hours 17–21 are unreachable on a default-day cycle: the day ends at
+# STORE_CLOSE_HOUR (17), so spawn-target lookups for hours past 16 never
+# happen in normal play. The entries are kept so the existing LERP from
+# HOUR_DENSITY[16] toward HOUR_DENSITY[17] still drives the closing-hour
+# ramp, and so the LATE_EVENING extended-hours unlock (which extends the
+# day to hour 24) can still consume hours 17–21 if it ships.
 const HOUR_DENSITY: Dictionary = {
 	9: 0.1,
 	10: 0.25,
@@ -85,6 +91,11 @@ var _active_event_modifiers: Dictionary = {}
 var _adjacent_store_ids: Array[String] = []
 ## Prevents spawning more than one Day 1 trigger customer per day.
 var _day1_customer_spawned: bool = false
+## Day 1 spawn gate: blocks all customer spawns on Day 1 until at least one
+## item has been stocked on a shelf. Set by `_on_item_stocked` and re-derived
+## from InventorySystem on first spawn attempt so loaded saves where stocking
+## already happened do not re-block spawns.
+var _day1_spawn_unlocked: bool = false
 
 
 func initialize(
@@ -154,6 +165,8 @@ func _physics_process(_delta: float) -> void:
 func spawn_customer(
 	profile: CustomerTypeDefinition, store_id: String = ""
 ) -> void:
+	if _is_day1_spawn_blocked():
+		return
 	if _active_customers.size() >= _max_customers:
 		push_warning(
 			"CustomerSystem: max customers reached, ignoring spawn"
@@ -625,6 +638,10 @@ func _on_day_ended(_day: int) -> void:
 
 
 func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
+	# Open the Day 1 spawn gate the moment any item lands on a shelf. Once set
+	# the flag is sticky for the run — subsequent unstock/sale events do not
+	# re-block spawns.
+	_day1_spawn_unlocked = true
 	if GameManager.get_current_day() != 1:
 		return
 	if _day1_customer_spawned:
@@ -638,8 +655,38 @@ func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
 	spawn_customer(pool.pick_random(), _store_id)
 
 
+## Returns true when the Day 1 stocking gate should suppress this spawn.
+##
+## The gate is sticky: once unlocked it never re-locks for the run, so a sold
+## item later in Day 1 does not re-block spawns. On a Day 1 save reloaded with
+## items already on shelves, the InventorySystem inspection re-derives the
+## unlocked state on the first spawn attempt without needing schema changes.
+##
+## §F-84 — Pass 12: the `_inventory_system == null` arm yields silently
+## because it is the documented unit-test seam (mirrors §F-44 / §F-54
+## autoload-test-seam pattern). Tests that drive `spawn_customer` directly
+## without wiring `_inventory_system` rely on this fall-through; production
+## code wires it via `initialize()` / `set_inventory_system()` before any
+## customer can spawn, so the branch is unreachable at runtime. Adding a
+## warning here would only generate noise from the legitimate fixtures.
+func _is_day1_spawn_blocked() -> bool:
+	if _day1_spawn_unlocked:
+		return false
+	if _inventory_system == null:
+		return false
+	if GameManager.get_current_day() != 1:
+		_day1_spawn_unlocked = true
+		return false
+	if not _inventory_system.get_shelf_items().is_empty():
+		_day1_spawn_unlocked = true
+		return false
+	return true
+
+
 func _on_day_started(day: int) -> void:
 	_day1_customer_spawned = false
+	if day > 1:
+		_day1_spawn_unlocked = true
 	_active_mall_shopper_count = 0
 	_current_hour = Constants.STORE_OPEN_HOUR
 	_hour_elapsed = 0.0

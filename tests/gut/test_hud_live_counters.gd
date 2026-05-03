@@ -28,24 +28,34 @@ func test_sales_today_label_present() -> void:
 	assert_not_null(label, "SalesTodayLabel must exist in TopBar")
 
 
-func test_customer_entered_increments_count() -> void:
-	_hud._customers_active_count = 0
-	EventBus.customer_entered.emit({"customer_id": "c1"})
-	assert_eq(_hud._customers_active_count, 1)
+func test_customer_purchased_increments_served_today() -> void:
+	_hud._customers_served_today_count = 0
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_a", 12.0, &"c1"
+	)
+	assert_eq(_hud._customers_served_today_count, 1)
 
 
-func test_customer_left_decrements_count() -> void:
-	_hud._customers_active_count = 2
-	EventBus.customer_left.emit({"customer_id": "c1"})
-	assert_eq(_hud._customers_active_count, 1)
-
-
-func test_customer_count_floored_at_zero() -> void:
-	_hud._customers_active_count = 0
-	EventBus.customer_left.emit({"customer_id": "stray"})
+func test_customer_purchased_accumulates_served_today() -> void:
+	_hud._customers_served_today_count = 0
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_a", 12.0, &"c1"
+	)
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_b", 5.0, &"c2"
+	)
 	assert_eq(
-		_hud._customers_active_count, 0,
-		"customer_left must never push count below zero"
+		_hud._customers_served_today_count, 2,
+		"each customer_purchased must add one served-today increment"
+	)
+
+
+func test_day_started_resets_customers_served_today() -> void:
+	_hud._customers_served_today_count = 5
+	EventBus.day_started.emit(3)
+	assert_eq(
+		_hud._customers_served_today_count, 0,
+		"day_started must reset the cumulative customers-served-today counter"
 	)
 
 
@@ -63,8 +73,10 @@ func test_day_started_resets_sales_today() -> void:
 
 
 func test_customer_label_text_updates() -> void:
-	_hud._customers_active_count = 0
-	EventBus.customer_entered.emit({"customer_id": "c1"})
+	_hud._customers_served_today_count = 0
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_a", 12.0, &"c1"
+	)
 	var label: Label = _hud.get_node("TopBar/CustomersLabel")
 	assert_string_contains(label.text, "1")
 
@@ -143,11 +155,14 @@ func test_sales_today_display_zero_produces_valid_text() -> void:
 	assert_string_contains(label.text, "0")
 
 
-func test_customer_left_decrements_label_text() -> void:
-	_hud._customers_active_count = 3
-	EventBus.customer_left.emit({"customer_id": "c2"})
+func test_day_started_resets_customers_label_text() -> void:
+	_hud._customers_served_today_count = 5
+	EventBus.day_started.emit(2)
 	var label: Label = _hud.get_node("TopBar/CustomersLabel")
-	assert_string_contains(label.text, "2")
+	assert_string_contains(
+		label.text, "0",
+		"CustomersLabel must reflect the day-reset count"
+	)
 
 
 func test_item_sold_signal_connectable_with_checkout_signature() -> void:

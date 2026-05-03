@@ -379,15 +379,22 @@ func _evaluate_current_shelf() -> void:
 	var items: Array[ItemInstance] = (
 		_inventory_system.get_items_at_location(location)
 	)
+	# §F-86 — Pass 12: emits are guarded upstream by `_is_item_desirable`,
+	# which rejects `item.definition == null` / null profile, so subscribers
+	# (`AmbientMomentsSystem._on_customer_item_spotted`,
+	# `TutorialSystem._on_customer_item_spotted`) can rely on a fully-formed
+	# (Customer, ItemInstance) payload.
 	for item: ItemInstance in items:
 		if not _is_item_desirable(item):
 			continue
 		if not _desired_item:
 			_desired_item = item
 			_desired_item_slot = _current_target_slot
+			EventBus.customer_item_spotted.emit(self, item)
 		elif _score_item(item) > _score_item(_desired_item):
 			_desired_item = item
 			_desired_item_slot = _current_target_slot
+			EventBus.customer_item_spotted.emit(self, item)
 
 
 # gdlint:disable=max-returns

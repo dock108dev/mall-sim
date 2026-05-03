@@ -139,15 +139,17 @@ func test_hud_cash_label_updates_on_money_changed() -> void:
 	assert_not_null(label, "CashLabel node must exist on the HUD")
 
 
-func test_hud_customers_label_increments_on_customer_entered() -> void:
+func test_hud_customers_label_increments_on_customer_purchased() -> void:
 	var hud: CanvasLayer = _HudScene.instantiate()
 	add_child_autofree(hud)
 	var label: Label = hud.get_node("TopBar/CustomersLabel")
-	hud._customers_active_count = 0
-	EventBus.customer_entered.emit({"customer_id": 1})
+	hud._customers_served_today_count = 0
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_a", 12.0, &"c1"
+	)
 	assert_eq(
-		hud._customers_active_count, 1,
-		"customer_entered must increment HUD active customer count"
+		hud._customers_served_today_count, 1,
+		"customer_purchased must increment HUD customers-served-today count"
 	)
 	assert_string_contains(
 		label.text, "1",

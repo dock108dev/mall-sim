@@ -57,7 +57,15 @@ func test_nav_mesh_covers_fixture_and_work_nodes() -> void:
 		"NavigationRegion3D should have baked polygons"
 	)
 
-	var bounds: Rect2 = _get_nav_xz_bounds(nav_region.navigation_mesh)
+	# Baked nav mesh inserts a 0.4m agent radius inset around walls and
+	# obstacles, so fixtures placed flush against walls (AccessoriesBin,
+	# refurb_bench) sit just past the baked surface. Allow a 1.0m tolerance
+	# so the bounds sanity check remains meaningful for fixtures floating
+	# in the middle of the room without flagging the deliberate insets.
+	const FIXTURE_BOUNDS_TOLERANCE: float = 1.0
+	var bounds: Rect2 = _get_nav_xz_bounds(nav_region.navigation_mesh).grow(
+		FIXTURE_BOUNDS_TOLERANCE
+	)
 	var targets: Array[Node3D] = []
 	for zone: Marker3D in _get_fixture_zones():
 		targets.append(zone)

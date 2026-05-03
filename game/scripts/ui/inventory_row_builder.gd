@@ -5,10 +5,13 @@ extends RefCounted
 
 ## Creates a single item row PanelContainer with all display elements.
 ## When rental_controller is supplied and the item is a rental tape, a wear
-## badge and tooltip are added.
+## badge and tooltip are added. `quantities` maps definition_id -> {
+## "backroom": int, "on_shelf": int } and is rendered into the per-row
+## quantity column. Missing entries default to zero.
 static func build(
 	item: ItemInstance,
 	rental_controller: VideoRentalStoreController = null,
+	quantities: Dictionary = {},
 ) -> PanelContainer:
 	var row := PanelContainer.new()
 	row.custom_minimum_size = Vector2(0, 48)
@@ -20,18 +23,24 @@ static func build(
 	hbox.add_child(_build_rarity_stripe(rarity_key))
 	hbox.add_child(_build_icon(item))
 	hbox.add_child(_build_info_column(item, rarity_key, rental_controller))
+	hbox.add_child(_build_quantity_column(item, quantities))
 	hbox.add_child(_build_price_column(item))
+	# Reserved width on the right edge so the Select button (when added by
+	# `add_select_button`) sits cleanly without clipping price/qty columns.
+	hbox.add_child(_build_select_spacer())
 	row.add_child(hbox)
 	return row
 
 
-## Adds an invisible overlay button for click/hover detection.
+## Adds an invisible overlay button for click/hover detection across the row.
+## Returns the button so optional child controls (e.g. the Select button) can
+## be parented under it and stay on top of the input stack.
 static func add_overlay_button(
 	row: PanelContainer,
 	on_pressed: Callable,
 	on_mouse_entered: Callable,
 	on_mouse_exited: Callable,
-) -> void:
+) -> Button:
 	var btn := Button.new()
 	btn.flat = true
 	btn.anchors_preset = Control.PRESET_FULL_RECT
@@ -39,6 +48,32 @@ static func add_overlay_button(
 	btn.mouse_entered.connect(on_mouse_entered)
 	btn.mouse_exited.connect(on_mouse_exited)
 	row.add_child(btn)
+	return btn
+
+
+## Adds a labelled "Select" Button anchored to the right edge of the row.
+## Parented under `overlay_button` so it sits above the full-rect overlay in
+## input order — clicks on Select fire only `on_pressed`, while clicks
+## elsewhere on the row still reach the overlay button. Button is a Control
+## (not a Container) so its children keep their own anchors.
+static func add_select_button(
+	overlay_button: Button,
+	on_pressed: Callable,
+) -> Button:
+	var btn := Button.new()
+	btn.text = "Select"
+	btn.custom_minimum_size = Vector2(56, 32)
+	btn.set_anchor(SIDE_LEFT, 1.0)
+	btn.set_anchor(SIDE_TOP, 0.5)
+	btn.set_anchor(SIDE_RIGHT, 1.0)
+	btn.set_anchor(SIDE_BOTTOM, 0.5)
+	btn.offset_left = -64.0
+	btn.offset_right = -8.0
+	btn.offset_top = -16.0
+	btn.offset_bottom = 16.0
+	btn.pressed.connect(on_pressed)
+	overlay_button.add_child(btn)
+	return btn
 
 
 static func _get_rarity(item: ItemInstance) -> String:
@@ -118,6 +153,53 @@ static func _build_info_column(
 
 	vbox.add_child(badge_row)
 	return vbox
+
+
+static func _build_quantity_column(
+	item: ItemInstance,
+	quantities: Dictionary,
+) -> VBoxContainer:
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 0)
+	vbox.custom_minimum_size = Vector2(70, 0)
+
+	var def_id: String = ""
+	if item.definition:
+		def_id = item.definition.id
+	var entry: Dictionary = {}
+	if not def_id.is_empty() and quantities.has(def_id):
+		entry = quantities[def_id]
+	var backroom_qty: int = int(entry.get("backroom", 0))
+	var shelf_qty: int = int(entry.get("on_shelf", 0))
+
+	var backroom_label := Label.new()
+	backroom_label.name = "BackroomQtyLabel"
+	backroom_label.text = "Backroom: %d" % backroom_qty
+	backroom_label.add_theme_font_size_override("font_size", 11)
+	backroom_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	vbox.add_child(backroom_label)
+
+	var shelf_label := Label.new()
+	shelf_label.name = "ShelfQtyLabel"
+	shelf_label.text = "Shelf: %d" % shelf_qty
+	shelf_label.add_theme_font_size_override("font_size", 11)
+	shelf_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	if shelf_qty > 0:
+		shelf_label.add_theme_color_override(
+			"font_color", UIThemeConstants.get_positive_color()
+		)
+	vbox.add_child(shelf_label)
+	return vbox
+
+
+## Reserves width at the right edge for the floating Select button. The
+## button itself parents under the overlay (not the HBox), so this spacer
+## keeps the price/qty columns from being painted over.
+static func _build_select_spacer() -> Control:
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(60, 0)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return spacer
 
 
 static func _build_wear_badge(

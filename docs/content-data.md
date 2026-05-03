@@ -136,8 +136,8 @@ rent, fixtures, unique mechanics) lives there.
   the store-contract conventions (Camera3D at root for hub-mode entry, an
   `OrbitPivot` marker, a store controller script attached to the root).
 
-Shipping roster (per ADR 0007 and `store_definitions.json`): `sports`
-(aliased `sports_memorabilia`), `retro_games`, `rentals` (aliased
+Shipping roster (per `store_definitions.json`): `sports` (aliased
+`sports_memorabilia`), `retro_games`, `rentals` (aliased
 `video_rental`), `pocket_creatures`, `electronics` (aliased
 `consumer_electronics`).
 

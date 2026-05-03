@@ -10,11 +10,13 @@ const SLIDE_OFFSET: float = 100.0
 ## Game states each tutorial step requires before its prompt may appear.
 ## Steps absent from this map have no state restriction.
 const _STEP_REQUIRED_STATES: Dictionary = {
-	"move_to_shelf": GameManager.State.STORE_VIEW,
 	"open_inventory": GameManager.State.STORE_VIEW,
+	"select_item": GameManager.State.STORE_VIEW,
 	"place_item": GameManager.State.STORE_VIEW,
-	"set_price": GameManager.State.STORE_VIEW,
 	"wait_for_customer": GameManager.State.STORE_VIEW,
+	"customer_browsing": GameManager.State.STORE_VIEW,
+	"customer_at_checkout": GameManager.State.STORE_VIEW,
+	"complete_sale": GameManager.State.STORE_VIEW,
 	"close_day": GameManager.State.STORE_VIEW,
 }
 

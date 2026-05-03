@@ -248,7 +248,7 @@ func test_tutorial_step_suppresses_telegraph_card() -> void:
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_true(card.visible, "TelegraphCard should appear before tutorial starts")
 
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	assert_false(
 		card.visible,
 		"TelegraphCard must be hidden when tutorial hint is active"
@@ -257,7 +257,7 @@ func test_tutorial_step_suppresses_telegraph_card() -> void:
 
 func test_tutorial_step_suppresses_new_telegraph_events() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	# Event fires while tutorial is active — card must stay hidden.
 	EventBus.event_telegraphed.emit("winter_sale", 3)
 	var card: Label = _hud.get_node("TelegraphCard")
@@ -270,7 +270,7 @@ func test_tutorial_step_suppresses_new_telegraph_events() -> void:
 func test_tutorial_hint_ended_restores_telegraph_card() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	EventBus.event_telegraphed.emit("summer_sale", 2)
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_false(card.visible, "Card must be hidden during tutorial")
 
@@ -375,7 +375,7 @@ func _stop_toast_capture() -> void:
 
 func test_notification_suppressed_during_tutorial_step() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	EventBus.notification_requested.emit("Some flavor message")
 	_stop_toast_capture()
 	assert_eq(
@@ -386,7 +386,7 @@ func test_notification_suppressed_during_tutorial_step() -> void:
 
 func test_critical_notification_shows_during_tutorial_step() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	EventBus.critical_notification_requested.emit("Save failed — check disk space.")
 	_stop_toast_capture()
 	assert_eq(
@@ -402,7 +402,7 @@ func test_critical_notification_shows_during_tutorial_step() -> void:
 
 func test_notification_shows_after_tutorial_completed() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	EventBus.tutorial_completed.emit()
 	EventBus.notification_requested.emit("Order delivered.")
 	_stop_toast_capture()
@@ -414,7 +414,7 @@ func test_notification_shows_after_tutorial_completed() -> void:
 
 func test_notification_shows_after_tutorial_skipped() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	EventBus.tutorial_skipped.emit()
 	EventBus.notification_requested.emit("Order delivered.")
 	_stop_toast_capture()

@@ -66,6 +66,7 @@ func test_continue_buttons_wait_for_stat_sequence() -> void:
 	_day_summary._rent_label.visible = false
 	_day_summary._expenses_label.visible = false
 	_day_summary._items_sold_label.visible = false
+	_day_summary._cash_balance_label.visible = false
 	_day_summary._top_item_label.visible = false
 	_day_summary._customers_served_label.visible = false
 	_day_summary._satisfaction_label.visible = false

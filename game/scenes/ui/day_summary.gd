@@ -72,6 +72,9 @@ var _focus_pushed: bool = false
 @onready var _inventory_remaining_label: Label = (
 	$Root/Panel/Margin/VBox/InventoryRemainingLabel
 )
+@onready var _cash_balance_label: Label = (
+	$Root/Panel/Margin/VBox/CashBalanceLabel
+)
 @onready var _top_item_label: Label = (
 	$Root/Panel/Margin/VBox/TopItemLabel
 )
@@ -332,6 +335,7 @@ func _get_stat_row_candidates() -> Array[Control]:
 		_day_label, _revenue_label, _rent_label,
 		_expenses_label, _profit_label, _items_sold_label,
 		_inventory_remaining_label,
+		_cash_balance_label,
 		_top_item_label, _haggle_label, _late_fee_label,
 		_customers_served_label, _satisfaction_label,
 		_reputation_delta_label, _tier_change_label,
@@ -657,6 +661,13 @@ func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
 	var remaining: int = int(summary.get("inventory_remaining", 0))
 	_inventory_remaining_label.text = (
 		tr("DAY_SUMMARY_INVENTORY_REMAINING") % remaining
+	)
+	# `net_cash` defaults to 0.0 when absent so legacy/test payloads that emit
+	# `day_closed` without the field render a defined value rather than crash on
+	# a missing key.
+	var cash_balance: float = float(summary.get("net_cash", 0.0))
+	_cash_balance_label.text = (
+		tr("DAY_SUMMARY_CASH_BALANCE") % cash_balance
 	)
 
 

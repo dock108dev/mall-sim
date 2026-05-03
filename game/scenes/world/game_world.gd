@@ -1141,6 +1141,20 @@ func _on_store_entered(store_id: StringName) -> void:
 		store_state_manager.restore_store_state(
 			String(store_id), store_ctrl
 		)
+	# Hub auto-enter emits `EventBus.store_entered` directly without routing
+	# through `StoreStateManager.set_active_store`, leaving `active_store_id`
+	# empty. Set it here so readers (InventoryPanel, tutorial gates, etc.)
+	# observe the active store. Pass `false` so `set_active_store` does not
+	# re-emit `store_entered` / `store_exited`.
+	# §F-90 — Pass 13: silent skip on null `store_state_manager` is the
+	# Tier-2 init pattern (mirrors §J2 / §F-30). `store_state_manager` is
+	# created in `initialize_tier_2_state`; production paths always run
+	# Tier 2 before any `store_entered` can fire. Headless/unit fixtures
+	# that emit the signal without staging Tier 2 take the silent path,
+	# and any reader of `active_store_id` already handles the empty case
+	# loudly (e.g. `InventoryPanel._refresh_grid` push_warning).
+	if store_state_manager:
+		store_state_manager.set_active_store(store_id, false)
 
 	if store_ctrl:
 		_wire_base_store_controller(store_ctrl)
@@ -1417,10 +1431,21 @@ func _create_default_store_inventory(store_id: StringName) -> void:
 		)
 		return
 	var items: Array[ItemInstance] = (
-		GameManager.data_loader.generate_starter_inventory(
+		GameManager.data_loader.create_starting_inventory(
 			String(store_id)
 		)
 	)
+	# §F-83 — Pass 12: surface a content-authoring regression at the call
+	# site too. `create_starting_inventory` already warns when the store id
+	# is unknown, but a known store whose `starting_inventory` is empty (or
+	# whose every entry was filtered out by the category guard) would
+	# otherwise reach Day 1 with nothing in the backroom — i.e. the tutorial
+	# loop would have nothing to stock and silently stall.
+	if items.is_empty():
+		push_warning(
+			"GameWorld: starter inventory for '%s' is empty — Day 1 backroom will be empty"
+			% store_id
+		)
 	for item: ItemInstance in items:
 		inventory_system.add_item(store_id, item)
 

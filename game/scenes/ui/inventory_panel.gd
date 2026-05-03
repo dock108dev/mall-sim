@@ -29,6 +29,7 @@ var _focus_pushed: bool = false
 var _backdrop: ColorRect
 var _cell_map: Dictionary = {}
 var _store_inventory: Array[Dictionary] = []
+var _quantity_map: Dictionary = {}
 var _active_tab: Tab = Tab.BACKROOM
 var _anim_tween: Tween
 var _rest_x: float = 0.0
@@ -372,6 +373,14 @@ func _get_filtered_items() -> Array[ItemInstance]:
 func _refresh_grid() -> void:
 	_clear_grid()
 	if store_id.is_empty():
+		# Day-1 contract: ISSUE-001 wires `active_store_changed` so that by the
+		# time the panel can be opened, GameManager has an active store. Hitting
+		# this path is a regression of that wiring — surface it loudly so it
+		# shows up in CI rather than silently degrading to an empty panel.
+		push_warning(
+			"InventoryPanel: refresh requested with no active store; "
+			+ "expected active_store_changed to have fired before open()."
+		)
 		_empty_label.text = "No active store selected"
 		_empty_label.visible = true
 		_scroll.visible = false
@@ -379,6 +388,7 @@ func _refresh_grid() -> void:
 		_footer_value.text = "Value: $0.00"
 		return
 	var items: Array[ItemInstance] = _get_filtered_items()
+	_quantity_map = _build_quantity_map(_store_inventory)
 	_empty_label.text = "No items found"
 	_empty_label.visible = items.is_empty()
 	_scroll.visible = not items.is_empty()
@@ -390,6 +400,28 @@ func _refresh_grid() -> void:
 	)
 
 
+## Aggregates per-definition counts of backroom and on-shelf instances over
+## the active store's inventory rows. Returns a Dictionary keyed by
+## definition_id (String) -> { "backroom": int, "on_shelf": int }.
+static func _build_quantity_map(
+	store_inventory: Array[Dictionary]
+) -> Dictionary:
+	var map: Dictionary = {}
+	for entry: Dictionary in store_inventory:
+		var item: ItemInstance = entry.get("item", null) as ItemInstance
+		if item == null or item.definition == null:
+			continue
+		var def_id: String = item.definition.id
+		if not map.has(def_id):
+			map[def_id] = {"backroom": 0, "on_shelf": 0}
+		var loc: String = str(entry.get("location", ""))
+		if loc == "backroom":
+			map[def_id]["backroom"] = int(map[def_id]["backroom"]) + 1
+		elif loc.begins_with("shelf:"):
+			map[def_id]["on_shelf"] = int(map[def_id]["on_shelf"]) + 1
+	return map
+
+
 func _clear_grid() -> void:
 	_cell_map.clear()
 	for child: Node in _grid.get_children():
@@ -398,16 +430,44 @@ func _clear_grid() -> void:
 
 func _add_item_row(item: ItemInstance) -> void:
 	var row: PanelContainer = InventoryRowBuilder.build(
-		item, rental_controller
+		item, rental_controller, _quantity_map
 	)
-	InventoryRowBuilder.add_overlay_button(
+	var overlay: Button = InventoryRowBuilder.add_overlay_button(
 		row,
 		_on_item_clicked.bind(item, row),
 		_on_cell_mouse_entered.bind(item),
 		_on_cell_mouse_exited,
 	)
+	# Direct shortcut to placement mode for backroom items. Mirrors the
+	# context-menu "Move to Shelf" action but without the extra click.
+	if item.current_location == "backroom":
+		InventoryRowBuilder.add_select_button(
+			overlay,
+			_on_select_for_placement.bind(item, row),
+		)
 	_grid.add_child(row)
 	_cell_map[row] = item
+
+
+func _on_select_for_placement(
+	item: ItemInstance, row: PanelContainer
+) -> void:
+	_highlight_selected(row)
+	_begin_placement_mode(item)
+
+
+## Hides the panel visually but RETAINS the CTX_MODAL frame so the
+## InteractionPrompt and ObjectiveRail stay suppressed during the shelf-slot
+## selection phase. The frame is released when placement mode ends (place /
+## cancel / panel close), via _on_placement_mode_exited.
+##
+## `_close_keeping_modal_focus` clears `_selected_item`; the field is
+## re-assigned afterwards so consumers reading panel state during placement
+## see the in-flight selection.
+func _begin_placement_mode(item: ItemInstance) -> void:
+	_close_keeping_modal_focus()
+	_selected_item = item
+	_shelf_actions.enter_placement_mode(item)
 
 
 func _on_item_clicked(
@@ -461,15 +521,7 @@ func _on_context_action(id: int) -> void:
 		0:
 			_open_pricing_for_selected_item()
 		1:
-			var item_for_placement := _selected_item
-			# Hide the panel visually but RETAIN the CTX_MODAL frame so the
-			# interaction prompt and objective rail stay suppressed during the
-			# shelf-slot selection phase. The frame is released when placement
-			# mode ends (place / cancel / panel close), via
-			# _on_placement_mode_exited.
-			_close_keeping_modal_focus()
-			_selected_item = item_for_placement
-			_shelf_actions.enter_placement_mode(item_for_placement)
+			_begin_placement_mode(_selected_item)
 		2:
 			_shelf_actions.move_to_backroom(_selected_item)
 			_selected_item = null

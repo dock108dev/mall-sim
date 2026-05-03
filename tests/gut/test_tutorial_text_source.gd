@@ -33,11 +33,13 @@ func test_objective_director_has_no_tutorial_branch() -> void:
 func test_tutorial_keys_resolve_to_non_raw_strings() -> void:
 	var keys: Array[String] = [
 		"TUTORIAL_WELCOME",
-		"TUTORIAL_MOVE_TO_SHELF",
 		"TUTORIAL_OPEN_INVENTORY",
+		"TUTORIAL_SELECT_ITEM",
 		"TUTORIAL_PLACE_ITEM",
-		"TUTORIAL_SET_PRICE",
 		"TUTORIAL_WAIT_CUSTOMER",
+		"TUTORIAL_CUSTOMER_BROWSING",
+		"TUTORIAL_CUSTOMER_AT_CHECKOUT",
+		"TUTORIAL_COMPLETE_SALE",
 		"TUTORIAL_CLOSE_DAY",
 		"TUTORIAL_DAY_SUMMARY",
 	]

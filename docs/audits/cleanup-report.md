@@ -1,25 +1,25 @@
-# Cleanup Report — 2026-05-02
+# Cleanup Report — 2026-05-03
 
 **Scope:** code-quality cleanup pass on the working-tree state ahead of
-commit. Four passes have run on this date:
+commit. Six passes have run across the 2026-05-02 / 2026-05-03 work:
 
-* **Pass 1** — initial dead-code sweep + first attempt at "broken-link"
-  cleanup after the audit-report consolidation.
-* **Pass 2** — citation-consistency repair after re-reading the
-  audit-report set. Pass 1 stripped citations under the assumption that
-  `security-report.md` and `ssot-report.md` had been deleted, but both
-  still exist as active reports (modified, not deleted) and still carry
-  §F-NN / "Risk log" indexes that link back to source. Pass 2 restored
-  the bidirectional links that Pass 1 over-trimmed and corrected one
-  wrong repoint to a different report.
-* **Pass 3** — dead-reference cleanup over the in-flight first-person
-  retail transition. The working tree deletes the legacy orbit-camera
-  surface (`mall_camera_controller.gd`, `player.gd/.tscn`,
+* **Pass 1** (2026-05-02) — initial dead-code sweep + first attempt at
+  "broken-link" cleanup after the audit-report consolidation.
+* **Pass 2** (2026-05-02) — citation-consistency repair after re-reading
+  the audit-report set. Pass 1 stripped citations under the assumption
+  that `security-report.md` and `ssot-report.md` had been deleted, but
+  both still exist as active reports (modified, not deleted) and still
+  carry §F-NN / "Risk log" indexes that link back to source. Pass 2
+  restored the bidirectional links that Pass 1 over-trimmed and
+  corrected one wrong repoint to a different report.
+* **Pass 3** (2026-05-02) — dead-reference cleanup over the in-flight
+  first-person retail transition. The working tree deletes the legacy
+  orbit-camera surface (`mall_camera_controller.gd`, `player.gd/.tscn`,
   `test_player_indicator_visibility.gd`), strips orbit/pan/zoom input
   actions from `project.godot`, and renames the FP body's camera child
   from `Camera3D` to `StoreCamera`. Pass 3 swept for stragglers and
   found one stale node-path lookup plus two stale doc-comments.
-* **Pass 4** (this pass) — orphan-asset sweep after Pass 3, plus a
+* **Pass 4** (2026-05-02) — orphan-asset sweep after Pass 3, plus a
   reconciliation of three Pass 3 "Considered but not changed" entries
   that the working tree had in fact already removed (the dead-but-equal
   yaw / pitch / zoom / ortho-size lerp infrastructure on
@@ -28,18 +28,269 @@ commit. Four passes have run on this date:
   `Camera3D` fallback inside `_resolve_camera`). Pass 4 deletes the
   orphan `mat_player_indicator.tres` and updates the per-pass running
   log so it matches the actual code state.
+* **Pass 5** (2026-05-03) — dead-code + stale-comment sweep over the
+  Pass-12 working-tree change set (tutorial step re-sequence to
+  `WELCOME → OPEN_INVENTORY → SELECT_ITEM → PLACE_ITEM →
+  WAIT_FOR_CUSTOMER → CUSTOMER_BROWSING → CUSTOMER_AT_CHECKOUT →
+  COMPLETE_SALE → CLOSE_DAY → DAY_SUMMARY`, the new
+  `customer_item_spotted` signal + `AmbientMomentsSystem` /
+  `TutorialSystem` receivers, the Day-1 spawn gate on `CustomerSystem`,
+  the deterministic `DataLoader.create_starting_inventory` Day-1
+  starter path, the `inventory_panel.gd` "Select" button + per-row
+  quantity columns, the state-aware `ShelfSlot` prompt with category
+  gating, and the baked `retro_games_navmesh.tres` + the
+  `tools/bake_retro_games_navmesh.gd` tool that produced it). The Pass
+  12 set was clean: no orphaned constants/members/methods left from the
+  removed `MOVE_TO_SHELF` / `SET_PRICE` step infrastructure, no debug
+  prints, no stale TODOs. Two minor edits found and applied.
+* **Pass 6** (this pass, 2026-05-03) — duplicate-utility consolidation
+  in `inventory_panel.gd`. Pass 5's audit had verified the change set
+  was free of dead constants/members and stale comments but left in
+  place a near-identical 3-line "begin shelf placement" sequence
+  duplicated across the new "Select" button handler
+  (`_on_select_for_placement`) and the existing context-menu "Move to
+  Shelf" branch (`_on_context_action` case 1). Pass 6 extracts a single
+  private `_begin_placement_mode(item)` helper that owns the
+  close-keep-modal + restore-selection + enter-placement sequence; both
+  callers reduce to one-liners and the comment explaining the
+  CTX_MODAL retention now lives at the helper. No behavioral change —
+  the helper preserves call ordering, and `_selected_item` is still
+  re-assigned after the close-helper nulls it so consumers reading
+  panel state during placement see the in-flight selection.
 
-**Verification:** `bash tests/run_tests.sh` after Pass 4 — **4927 GUT
-tests, 4927 passing, 0 failures, 27872 asserts**. All SSOT tripwires
-green (`validate_translations.sh`, `validate_single_store_ui.sh`,
-`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter sole-owner,
-ISSUE-016 15/15). Pre-existing validator failures (ISSUE-018, ISSUE-023,
-ISSUE-024, ISSUE-154, ISSUE-239) are on `main` ahead of this branch and
-do not touch the files edited in any pass.
+**Verification:** `bash tests/run_tests.sh` after Pass 6 — **4980 GUT
+tests, 4980 passing, 0 failures, 28227 asserts** (Pass 5 baseline was
+4969 / 27995; the +11 tests / +232 asserts come from the
+tracked-but-untracked test files added by the working tree after Pass 5
+closed: `test_day_cycle_mall_overview_restore.gd`,
+`test_day_summary_cash_balance.gd`, `test_store_visual_readability.gd`,
+plus newly added cases in `test_inventory_panel.gd`,
+`test_hud_fp_mode.gd`, etc. — none of which are touched by Pass 6's
+helper extraction). All SSOT tripwires green
+(`validate_translations.sh`, `validate_single_store_ui.sh`,
+`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter
+sole-owner). Pre-existing validator failures (ISSUE-018, ISSUE-023,
+ISSUE-024, ISSUE-154, ISSUE-239) are on `main` ahead of this branch
+and do not touch the files edited in any pass.
 
 ---
 
 ## Changes made this pass
+
+### Duplicate consolidation
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/scenes/ui/inventory_panel.gd` `_on_select_for_placement` (around line 452) and `_on_context_action` case 1 (around line 517) | Extracted shared body into a new private `_begin_placement_mode(item: ItemInstance)` helper. `_on_select_for_placement` now reads `_highlight_selected(row); _begin_placement_mode(item)`; the context-menu case 1 reads `_begin_placement_mode(_selected_item)`. The CTX_MODAL retention docstring + the rationale for the post-close `_selected_item` re-assignment moved from the two call sites onto the helper itself. | Both call sites previously held the same three-line sequence — `_close_keeping_modal_focus(); _selected_item = item; _shelf_actions.enter_placement_mode(item)` — wrapped in identical six-line comment blocks. Two callers, identical core logic, identical justification: per the cleanup contract this is a real consolidation rather than premature abstraction. The helper preserves the original call order so the close-helper still nulls `_selected_item` before the field is re-assigned, matching the contract that consumers reading panel state during placement see the in-flight selection. The context-menu case can read `_selected_item` directly (rather than stashing it to a local first as the original did) because GDScript passes the value at call time and the helper's `item` parameter holds the reference even after `_close_keeping_modal_focus` nulls the member. |
+
+### Pass 12 / Pass 13 surfaces re-verified clean (no edits required)
+
+Pass 6 re-ran the Pass 5 verification matrix against the working tree
+to confirm no new orphans landed during the Pass-13-class additions
+that arrived after Pass 5 closed (`day_cycle_controller.gd` mall-
+overview restore branch, `day_summary.gd` cash-balance row,
+`day_manager.gd` owned-store fallback, `time_system.gd`
+`MALL_CLOSE_HOUR=17` re-aim, `data_loader.gd` per-entry warning lines,
+the new `_emit_sale_toast` helper in `checkout_system.gd`). Each addition
+is cohesive within its host file:
+
+* **`time_system.gd` / `customer_system.gd`** — `MALL_CLOSE_HOUR` /
+  `STORE_CLOSE_HOUR` cut from 21 → 17 and `_DAY_END_MINUTES` cut from
+  1260 → 1020 in lockstep. The `_PHASE_BOUNDARIES_MINUTES` EVENING /
+  LATE_EVENING entries and the `HOUR_DENSITY[17..21]` entries are no
+  longer reachable on a default-day cycle but remain wired to the
+  `LATE_EVENING` extended-hours unlock path — both already carry a
+  Pass-13 inline comment naming the unlock as the consumer.
+  **Justified, not removed.**
+* **`day_cycle_controller.gd:_on_day_summary_dismissed`** — the
+  post-acknowledgement FSM check (`MALL_OVERVIEW` vs `GAMEPLAY`) is the
+  single new branch; the `is_instance_valid(_mall_overview)` early-return
+  is the documented Tier-5 init pattern (§F-91) symmetric with the
+  producer's own guard at `_show_day_summary` line ~220. No orphaned
+  members or duplicated visibility logic.
+* **`checkout_system.gd:_emit_sale_toast`** — distinct from the
+  `ambient_moments_system._on_customer_item_spotted` toast emission per
+  Pass 5's "Considered but not changed" entry (different message
+  template, category, duration, and empty-name guard). Pass 6
+  re-confirms: still three differences across two call sites — too
+  small a shared surface to justify extraction.
+* **`tools/bake_retro_games_navmesh.gd`** — one-shot editor tool with
+  its own invocation docstring; not autoloaded, not referenced from any
+  `.tscn`, and intentionally excluded from the test runner. The single
+  output `game/navigation/retro_games_navmesh.tres` is referenced from
+  `retro_games.tscn:27` and from `test_retro_games_navigation.gd`.
+  Both files retained.
+
+### Stale-comment cleanup
+
+None this pass. Pass 5 already tightened the one stale "legacy / test
+invocation path" wording in `placement_hint_ui.gd`; Pass 6 re-greps for
+`legacy` / `deprecated` / `MOVE_TO_SHELF` / `SET_PRICE` / `_player_indicator`
+/ `mat_player_indicator` and finds zero residual matches outside this
+report's history sections. All `push_warning` / `push_error` lines
+added by the working tree carry §F-NN cite-back comments to the
+audit-report sections that justify them.
+
+### Files still >500 LOC
+
+Pass 6 makes no splits. Snapshot of the working-tree LOC for files in
+this size class, with the Pass 5 baseline column carried forward so
+delta is visible at a glance:
+
+| LOC (Pass 5 → Pass 6) | File | Notes |
+|---|---|---|
+| 1217 → 1217 | `game/scenes/ui/hud.gd` | Unchanged. The `_customers_served_today_count` rewire and the `_fp_inventory_hint` pair are the cohesive HUD widgets that drove the Pass 5 jump. Pass 4's `GameWorldPanelLoader` extraction proposal remains the cleanest first split when a future pass is permitted to introduce a helper. **Justify.** |
+| 1059 → 1102 | `game/autoload/data_loader.gd` | +43 LOC since Pass 5: per-entry `push_warning` lines and the category-mismatch guard inside `create_starting_inventory` (§F-83 / §F-88) plus the symmetric "store not found" three-arm doc-block. Each line ties to a §F-NN audit citation; no new top-level method. **Justify.** |
+| 948 → 954 | `game/scripts/systems/customer_system.gd` | +6 LOC: the new HOUR_DENSITY justification comment naming the LATE_EVENING extended-hours unlock as the sole consumer of hours 17..21 after `STORE_CLOSE_HOUR=17`. Cohesive — single new comment block on the existing constant. **Justify.** |
+| 768 → 783 | `game/scripts/systems/ambient_moments_system.gd` | +15 LOC: `MAX_LAST_SPOTTED_ENTRIES` defense-in-depth cap with §F-87 cite-back, plus the FIFO eviction loop in `_on_customer_item_spotted`. Single security-hardening addition on the existing dedup path. **Justify.** |
+| 689 → 689 | `game/autoload/event_bus.gd` | Unchanged. The file is the project's signal hub by design (architecture row 3). **Justify.** |
+| 780 → 782 | `game/scenes/ui/inventory_panel.gd` | Net +2 LOC since Pass 5: Pass 6's `_begin_placement_mode` extraction trims one call site (case 1 collapses 5→1 line) and replaces another (the Select-handler), but the helper itself adds the consolidated docstring; net flat-ish. **Justify.** |
+| 1609 → 1616 | `game/scenes/world/game_world.gd` | +7 LOC since Pass 5: the §F-90 Tier-2 silent-skip docstring on the hub-mode `set_active_store` reconciliation. Cohesive with the surrounding `_on_store_entered` block. **Justify.** |
+| 903 → 914 | `game/scenes/ui/day_summary.gd` | +11 LOC: the new `_cash_balance_label` `@onready`, its append to `_get_stat_row_candidates`, and the `tr("DAY_SUMMARY_CASH_BALANCE")` write in `_on_day_closed_payload`. Single new stat row threaded through the existing render pipeline. **Justify.** |
+
+`tutorial_system.gd` is unchanged at 580 LOC. All other modified files
+remain below the 500 LOC threshold and are not on the size watchlist.
+
+---
+
+## Considered but not changed
+
+* **`DataLoader.create_starting_inventory` vs `DataLoader.generate_starter_inventory`** —
+  two functions covering "produce ItemInstances for a store" with
+  meaningfully different selection semantics. `create_starting_inventory`
+  reads `store.starting_inventory` from the StoreDefinition deterministically
+  (every run gets the same items at "good" condition); `generate_starter_inventory`
+  randomly picks 6–10 items from the registered commons whose `store_type`
+  resolves to the canonical id. Used at distinct call sites:
+  `game_world.gd:1427` (Day-1 bootstrap) for the new path, and
+  `mall_hallway.gd:423` for hallway-card seeding (plus
+  `tests/gut/test_store_setup_flow.gd`, `test_inventory_store_id_normalization.gd`,
+  `test_retro_games_starter_inventory_issue_003.gd`). Consolidation
+  would either drop the deterministic-from-content path (regressing the
+  Day-1 fix this working-tree change set introduces) or drop the
+  random-commons path (changing every existing caller's behavior). **Out
+  of scope for this no-behavior-change pass.** A future cleanup with
+  license to introduce a strategy parameter (`create_starting_inventory(store_id, mode)`
+  with `mode ∈ {"deterministic", "random_commons"}`) could collapse
+  them into a single callable; until then both stay with their current
+  call sites.
+* **`game/scripts/systems/checkout_system.gd:_emit_sale_toast` and
+  `game/scripts/systems/ambient_moments_system.gd:_on_customer_item_spotted`
+  toast emission** — both build a string and call
+  `EventBus.toast_requested.emit(text, category, duration)`. Distinct
+  message templates ("Sold X for $Y" vs "Customer browsing: X"),
+  categories (`&"system"` vs `&"customer"`), durations (`0.0` for
+  default vs `CUSTOMER_BROWSING_TOAST_DURATION = 3.0`), and an
+  empty-name guard each — three differences across two call sites does
+  not justify a shared helper. The pattern is direct EventBus.emit and
+  matches every other toast emitter in the tree. **Justified, not
+  extracted.**
+* **`time_system.gd` `_PHASE_BOUNDARIES_MINUTES` EVENING /
+  LATE_EVENING entries and `customer_system.gd` `HOUR_DENSITY[17..21]`
+  entries** — unreachable on a default-day cycle after the
+  `STORE_CLOSE_HOUR=17` re-aim, but both files now carry the inline
+  comment naming the `LATE_EVENING` extended-hours unlock as the
+  intended future consumer. Removing them would be a behavioral commit
+  to "no late-evening unlock"; that decision is outside this pass.
+  **Justified, not removed.**
+* **All Pass 4 / Pass 5 entries under "Considered but not changed"**
+  (the duplicate `_resolve_store_id` helper across five files, the
+  `StorePlayerBody.set_current_interactable` test seam, the
+  `ProvenancePanel` standalone scene, the F1/F3 debug-camera toggle
+  duplication, the audit-log `print()` lines, the
+  `dev_force_place_test_item` debug-build print) remain in their
+  documented states; nothing in the Pass 6 working-tree delta alters
+  their disposition. See the Pass 2 / Pass 4 entries below for the full
+  per-item rationale.
+
+## Escalations
+
+None. Pass 6 acted on the one duplicate-utility finding (the shared
+shelf-placement begin-sequence in `inventory_panel.gd`, now consolidated
+into `_begin_placement_mode`) and justified the remaining items inline
+above. Pass 5 / Pass 4 history below is preserved verbatim.
+
+---
+
+## Pass 5 — Dead-code + stale-comment sweep over Pass 12 (history)
+
+### Dead-code removal
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/scenes/ui/inventory_panel.gd` `_on_select_for_placement` (around line 452) | Removed the leading `_selected_item = item` assignment. | The function previously read: `_selected_item = item; _highlight_selected(row); _close_keeping_modal_focus(); _selected_item = item; _shelf_actions.enter_placement_mode(item)`. `_close_keeping_modal_focus` is synchronous and sets `_selected_item = null` on line 214 before returning, then the trailing assignment restores it — so the leading assignment was a no-op write that the close-helper immediately overwrote. `_highlight_selected(row)` only modulates the visual children of `_grid` and does not read `_selected_item`. The mirror call site in the context-menu "Move to Shelf" branch (post-edit lines 524–525) already uses the `_close_keeping_modal_focus(); _selected_item = item_for_placement` shape and is the intended pattern. Added a one-line WHY comment naming the close-helper's null-out so a future reader does not re-introduce the dead pre-assign. |
+
+(Pass 6 note: the WHY comment Pass 5 added has since moved onto the
+new `_begin_placement_mode` helper docstring; the helper is the single
+canonical home for the close-helper-nulls-then-restore pattern.)
+
+### Stale-comment cleanup
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/scripts/ui/placement_hint_ui.gd:34` | Tightened `_on_placement_hint_requested` docstring: "the legacy / test invocation path (`enter_placement_mode()` with no arg)" → "the test invocation path (`enter_placement_mode()` with no arg)". | Tree-wide search for `enter_placement_mode()` (no arg) shows the only callers are GUT fixtures (`test_press_e_interaction_routing.gd:61,107`); production callers (`inventory_panel.gd:462,524`) always pass an `ItemInstance`. The "legacy" half of the wording predates the panel-Select-button change set in this working tree, which removed the last production no-arg path. Cite to `error-handling-report.md` EH-02 preserved. |
+
+### Pass 12 surfaces verified clean (no edits required)
+
+Pass 5 verified that the Pass 12 working-tree change set did not leave
+dead code behind. None did. The audit:
+
+* **`tutorial_system.gd`** — the diff removes `MOVE_TO_SHELF` /
+  `SET_PRICE` enum entries and every constant, member, helper, and
+  signal handler that referenced them (`SET_PRICE_GRACE_DURATION`,
+  `MOVE_TO_SHELF_DISTANCE` / `_SQ`, `_PLAYER_GROUP`,
+  `_set_price_grace_timer`, `_move_player_node`, `_move_spawn_position`,
+  `_move_spawn_captured`, `_arm_set_price_grace_timer`,
+  `_on_set_price_grace_timeout`, `bind_player_for_move_step`,
+  `_capture_player_spawn`, `_check_move_to_shelf_distance`,
+  `_on_store_entered`, `_on_price_set`). The current 580-LOC file is
+  step-FSM-only with no orphaned surfaces. The `STEP_COUNT ≈ 10` comment
+  on line 52 is correct (`TutorialStep.FINISHED == 10` after the
+  re-sequence). The `SCHEMA_VERSION = 2` const + `_load_progress`
+  schema-version reset path is documented inline (§F-85) and exercised
+  by the new `test_stale_schema_version_resets_progress` GUT case.
+* **`hud.gd`** — the rename from `_customers_active_count` (concurrent)
+  to `_customers_served_today_count` (cumulative) deletes the matching
+  `_on_customer_entered` / `_on_customer_left` /
+  `_refresh_customers_active` trio and replaces them with
+  `_on_customer_purchased_hud`. No stale references remain; the locale-
+  changed and `_seed_counters_from_systems` paths both read the new
+  member.
+* **`shelf_slot.gd`** — the new `accepts_category(item_category: String)`
+  helper is the consolidation point for what was previously the
+  duplicated `_accepts_stocking_category` / inline check pattern. The
+  diff updates `_accepts_stocking_category` to delegate to it
+  (line 354–355), and `inventory_shelf_actions.gd:79` is the second
+  caller. No third inline check left in the tree.
+* **`ambient_moments_system.gd` / `customer.gd` / `event_bus.gd`** —
+  the new `customer_item_spotted` signal has exactly one emitter
+  (`Customer._evaluate_current_shelf`, two emit sites for the
+  first-sight and upgrade paths) and exactly two receivers
+  (`AmbientMomentsSystem._on_customer_item_spotted`,
+  `TutorialSystem._on_customer_item_spotted`). Both receivers' silent
+  guards are documented (§F-86) and exercised by the new
+  `test_customer_item_spotted.gd` GUT case.
+* **`data_loader.gd`** — the new `create_starting_inventory` (Day-1
+  deterministic, reads `store.starting_inventory`) lives next to the
+  existing `generate_starter_inventory` (random-common selection of
+  6–10 items by store_type). They have meaningfully different selection
+  semantics (deterministic-from-content vs random) and different call
+  sites (`game_world.gd:1427` for Day-1 bootstrap vs
+  `mall_hallway.gd:423` for hallway-card preview/seeding). Consolidating
+  would be a behavioral change. **Justified, not consolidated.** See
+  "Considered but not changed" above.
+* **`tools/bake_retro_games_navmesh.gd`** + the
+  `game/navigation/retro_games_navmesh.tres` it produced — the script
+  is a one-shot editor tool referenced from its own docstring with the
+  invocation command. It is not imported as an autoload, not referenced
+  from any `.tscn`, and not on the test runner's path. The output
+  `.tres` is referenced from `retro_games.tscn:27` (`ext_resource id =
+  "28_retrogames"`) and from `test_retro_games_navigation.gd` (literal
+  path assertion). Both files are intentionally retained.
+
+---
+
+## Pass 4 — Orphan-asset sweep + Pass 3 reconciliation (history)
 
 ### Orphan resource removal
 

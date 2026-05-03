@@ -24,6 +24,7 @@
 [ext_resource type="Script" path="res://game/scripts/components/nav_zone_interactable.gd" id="24"]
 [ext_resource type="PackedScene" path="res://game/scenes/player/player_controller.tscn" id="26_retrogames"]
 [ext_resource type="Script" path="res://game/scripts/player/interaction_ray.gd" id="27_retrogames"]
+[ext_resource type="NavigationMesh" path="res://game/navigation/retro_games_navmesh.tres" id="28_retrogames"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(16, 0.1, 20)
@@ -97,12 +98,6 @@ size = Vector3(0.42, 0.32, 0.22)
 
 [sub_resource type="BoxMesh" id="terminal_screen_mesh"]
 size = Vector3(0.34, 0.22, 0.03)
-
-[sub_resource type="NavigationMesh" id="nav_mesh"]
-cell_size = 0.25
-geometry_parsed_geometry_type = 2
-vertices = PackedVector3Array(-7.7, 0.05, -9.7, 7.7, 0.05, -9.7, 7.7, 0.05, 9.7, -7.7, 0.05, 9.7)
-polygons = [PackedInt32Array(0, 1, 2, 3)]
 
 [sub_resource type="BoxShape3D" id="entry_shape"]
 size = Vector3(2.0, 2.5, 0.5)
@@ -1065,6 +1060,8 @@ collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_1"
+fixture_id = "cib_display"
+accepted_category = "cartridges"
 display_name = "Display Case Slot"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GlassCase/Slot1"]
@@ -1081,6 +1078,8 @@ collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_2"
+fixture_id = "cib_display"
+accepted_category = "cartridges"
 display_name = "Display Case Slot"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GlassCase/Slot2"]
@@ -1097,6 +1096,8 @@ collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_3"
+fixture_id = "cib_display"
+accepted_category = "cartridges"
 display_name = "Display Case Slot"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GlassCase/Slot3"]
@@ -1113,6 +1114,8 @@ collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_4"
+fixture_id = "cib_display"
+accepted_category = "cartridges"
 display_name = "Display Case Slot"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GlassCase/Slot4"]
@@ -1129,6 +1132,8 @@ collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_5"
+fixture_id = "cib_display"
+accepted_category = "cartridges"
 display_name = "Display Case Slot"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GlassCase/Slot5"]
@@ -1145,6 +1150,8 @@ collision_layer = 16
 collision_mask = 0
 script = ExtResource("2")
 slot_id = "glass_6"
+fixture_id = "cib_display"
+accepted_category = "cartridges"
 display_name = "Display Case Slot"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GlassCase/Slot6"]
@@ -1433,10 +1440,10 @@ surface_material_override/0 = SubResource("register_screen_mat")
 [node name="CheckoutSign" type="Label3D" parent="Checkout/Register"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
 billboard = 1
-pixel_size = 0.005
+pixel_size = 0.003
 modulate = Color(0.91, 0.647, 0.278, 1)
 double_sided = true
-font_size = 48
+font_size = 40
 text = "CHECKOUT"
 outline_size = 5
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -1534,7 +1541,7 @@ shape = SubResource("door_collision")
 ; ============================================================
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
-navigation_mesh = SubResource("nav_mesh")
+navigation_mesh = ExtResource("28_retrogames")
 
 ; ============================================================
 ; Entry / Exit zone (front of store)

@@ -83,6 +83,40 @@ func test_visible_when_ctx_modal_active() -> void:
 	InputFocus.pop_context()
 
 
+func test_focused_slot_label_replaces_hint_during_placement() -> void:
+	# During placement the InteractionRay still emits interactable_focused
+	# while the InteractionPrompt overlay is suppressed by CTX_MODAL. The
+	# banner must surface the slot-specific label so the player still reads
+	# slot-state feedback (Stock/Shelf full/Wrong category).
+	EventBus.placement_hint_requested.emit("Wonder Cartridge")
+	EventBus.interactable_focused.emit("Cartridge Slot — Press E to stock wonder cartridge")
+	assert_eq(
+		_hint._message_label.text,
+		"Cartridge Slot — Press E to stock wonder cartridge",
+		"Banner must show the focused slot's HUD label during placement"
+	)
+
+
+func test_focused_slot_label_ignored_outside_placement() -> void:
+	# Outside placement mode the banner must stay hidden — InteractionPrompt
+	# owns the focus-target prompt in normal play.
+	EventBus.interactable_focused.emit("Cartridge Slot — Press E to stock")
+	assert_false(
+		_hint.visible,
+		"Banner must remain hidden when no placement is in flight"
+	)
+
+
+func test_unfocus_during_placement_restores_default_message() -> void:
+	EventBus.placement_hint_requested.emit("Wonder Cartridge")
+	EventBus.interactable_focused.emit("Shelf full")
+	EventBus.interactable_unfocused.emit()
+	assert_string_contains(
+		_hint._message_label.text, "Wonder Cartridge",
+		"Banner must revert to the item-aware default after focus clears"
+	)
+
+
 func test_shelf_actions_emits_hint_with_item_name() -> void:
 	# The shelf actions helper is the integration boundary between the
 	# inventory panel and this banner; verify it forwards the item name.

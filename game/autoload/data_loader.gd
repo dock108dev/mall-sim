@@ -981,24 +981,67 @@ func get_all_ambient_moments() -> Array[AmbientMomentDefinition]:
 	return r
 
 
+## Returns deterministic starter inventory from `starting_inventory` in
+## store_definitions.json. Each item is built at "good" condition so Day 1
+## prices, customer desirability checks, and tutorial state stay stable across
+## runs. Skips entries whose category is not in the store's `allowed_categories`
+## so a content typo cannot push items onto a fixture that does not exist.
+##
+## §F-83 — Pass 12: the three "store not found" branches `push_warning` and
+## return `[]`. Caller `GameWorld._create_default_store_inventory` is the
+## Day-1 critical path; a silent empty Array there cascades into an empty
+## backroom and makes the tutorial loop unreachable. Surfacing the cause
+## (unknown ID, unresolved canonical, missing StoreDefinition) at the source
+## is required so a content-authoring regression is caught in CI / playtest
+## rather than masquerading as "the player has no items today".
 func create_starting_inventory(
 	store_id: String
 ) -> Array[ItemInstance]:
 	if not ContentRegistry.exists(store_id):
+		push_warning(
+			"DataLoader.create_starting_inventory: unknown store id '%s'"
+			% store_id
+		)
 		return []
 	var canonical: StringName = ContentRegistry.resolve(store_id)
 	if canonical.is_empty():
+		push_warning(
+			"DataLoader.create_starting_inventory: '%s' resolved to empty canonical id"
+			% store_id
+		)
 		return []
 	var store: StoreDefinition = get_store(String(canonical))
 	if not store:
+		push_warning(
+			"DataLoader.create_starting_inventory: no StoreDefinition for '%s' (canonical '%s')"
+			% [store_id, canonical]
+		)
 		return []
+	var allowed: PackedStringArray = store.allowed_categories
 	var instances: Array[ItemInstance] = []
 	for item_id: String in store.starting_inventory:
 		var def: ItemDefinition = get_item(item_id)
-		if def:
-			instances.append(
-				ItemInstance.create_from_definition(def)
+		if not def:
+			# §F-88 — Pass 13: symmetry with the category-mismatch warning
+			# below. A typo'd id in `starting_inventory` would otherwise
+			# silently shrink the Day-1 backroom one item at a time and
+			# the empty-result `push_warning` from the caller (§F-83)
+			# would only fire if every entry was a typo. Surface each
+			# missing definition at the source instead.
+			push_warning(
+				"DataLoader: skipping starter '%s' — no ItemDefinition (typo or unloaded?)"
+				% item_id
 			)
+			continue
+		if not allowed.is_empty() and not allowed.has(def.category):
+			push_warning(
+				"DataLoader: skipping starter '%s' — category '%s' not in '%s' allowed_categories"
+				% [item_id, def.category, canonical]
+			)
+			continue
+		instances.append(
+			ItemInstance.create_from_definition(def, "good")
+		)
 	return instances
 
 

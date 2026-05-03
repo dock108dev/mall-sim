@@ -4,11 +4,13 @@ extends Node
 
 enum TutorialStep {
 	WELCOME,
-	MOVE_TO_SHELF,
 	OPEN_INVENTORY,
+	SELECT_ITEM,
 	PLACE_ITEM,
-	SET_PRICE,
 	WAIT_FOR_CUSTOMER,
+	CUSTOMER_BROWSING,
+	CUSTOMER_AT_CHECKOUT,
+	COMPLETE_SALE,
 	CLOSE_DAY,
 	DAY_SUMMARY,
 	FINISHED,
@@ -16,11 +18,13 @@ enum TutorialStep {
 
 const STEP_IDS: Dictionary = {
 	TutorialStep.WELCOME: "welcome",
-	TutorialStep.MOVE_TO_SHELF: "move_to_shelf",
 	TutorialStep.OPEN_INVENTORY: "open_inventory",
+	TutorialStep.SELECT_ITEM: "select_item",
 	TutorialStep.PLACE_ITEM: "place_item",
-	TutorialStep.SET_PRICE: "set_price",
 	TutorialStep.WAIT_FOR_CUSTOMER: "wait_for_customer",
+	TutorialStep.CUSTOMER_BROWSING: "customer_browsing",
+	TutorialStep.CUSTOMER_AT_CHECKOUT: "customer_at_checkout",
+	TutorialStep.COMPLETE_SALE: "complete_sale",
 	TutorialStep.CLOSE_DAY: "close_day",
 	TutorialStep.DAY_SUMMARY: "day_summary",
 	TutorialStep.FINISHED: "finished",
@@ -28,11 +32,13 @@ const STEP_IDS: Dictionary = {
 
 const STEP_TEXT_KEYS: Dictionary = {
 	TutorialStep.WELCOME: "TUTORIAL_WELCOME",
-	TutorialStep.MOVE_TO_SHELF: "TUTORIAL_MOVE_TO_SHELF",
 	TutorialStep.OPEN_INVENTORY: "TUTORIAL_OPEN_INVENTORY",
+	TutorialStep.SELECT_ITEM: "TUTORIAL_SELECT_ITEM",
 	TutorialStep.PLACE_ITEM: "TUTORIAL_PLACE_ITEM",
-	TutorialStep.SET_PRICE: "TUTORIAL_SET_PRICE",
 	TutorialStep.WAIT_FOR_CUSTOMER: "TUTORIAL_WAIT_CUSTOMER",
+	TutorialStep.CUSTOMER_BROWSING: "TUTORIAL_CUSTOMER_BROWSING",
+	TutorialStep.CUSTOMER_AT_CHECKOUT: "TUTORIAL_CUSTOMER_AT_CHECKOUT",
+	TutorialStep.COMPLETE_SALE: "TUTORIAL_COMPLETE_SALE",
 	TutorialStep.CLOSE_DAY: "TUTORIAL_CLOSE_DAY",
 	TutorialStep.DAY_SUMMARY: "TUTORIAL_DAY_SUMMARY",
 	TutorialStep.FINISHED: "",
@@ -43,7 +49,7 @@ const PROGRESS_PATH: String = "user://tutorial_progress.cfg"
 # multi-GB file can't wedge boot. See docs/audits/security-report.md §F1.
 const MAX_PROGRESS_FILE_BYTES: int = 65536
 # Bounds for completed_steps / tips_shown dicts loaded from the cfg. Both keysets
-# are small in practice (STEP_COUNT ≈ 9, three contextual tips); a hostile cfg
+# are small in practice (STEP_COUNT ≈ 10, three contextual tips); a hostile cfg
 # with millions of keys would otherwise bloat memory before any validation. See
 # docs/audits/security-report.md §F2.
 const MAX_PERSISTED_DICT_KEYS: int = 1024
@@ -51,16 +57,10 @@ const WELCOME_DURATION: float = 5.0
 const CONTEXTUAL_TIP_DAYS: int = 3
 const STEP_COUNT: int = TutorialStep.FINISHED
 const TUTORIAL_STORE_ID: StringName = &"retro_games"
-# ISSUE-010: grace window so the SET_PRICE step never strands an unpriced
-# playthrough — pricing is optional per BRAINDUMP minimum loop.
-const SET_PRICE_GRACE_DURATION: float = 4.0
-# Player must walk this many meters from the spawn marker for the
-# MOVE_TO_SHELF step to advance. Stored as squared to avoid sqrt per frame.
-const MOVE_TO_SHELF_DISTANCE: float = 1.0
-const MOVE_TO_SHELF_DISTANCE_SQ: float = (
-	MOVE_TO_SHELF_DISTANCE * MOVE_TO_SHELF_DISTANCE
-)
-const _PLAYER_GROUP: StringName = &"player"
+# Bumped when the TutorialStep enum ordinals change. Persisted progress with a
+# different version is treated as incompatible and reset to a fresh tutorial so
+# a player's old cfg can't replay the wrong step IDs after a re-sequence.
+const SCHEMA_VERSION: int = 2
 
 const CONTEXTUAL_TIP_KEYS: Dictionary = {
 	"ordering": "TIP_ORDERING",
@@ -74,14 +74,6 @@ var current_step: TutorialStep = TutorialStep.WELCOME
 var _tips_shown: Dictionary = {}
 var _completed_steps: Dictionary = {}
 var _welcome_timer: float = 0.0
-var _set_price_grace_timer: SceneTreeTimer = null
-# Spawn snapshot used by the MOVE_TO_SHELF distance check. Captured the first
-# time `store_entered` fires for `TUTORIAL_STORE_ID` after the tutorial begins,
-# or supplied directly via `bind_player_for_move_step` in unit tests that don't
-# stage a full store scene.
-var _move_player_node: Node3D = null
-var _move_spawn_position: Vector3 = Vector3.ZERO
-var _move_spawn_captured: bool = false
 
 
 ## Starts a new tutorial session or resumes persisted first-play progress.
@@ -102,29 +94,33 @@ func initialize(is_new_game: bool) -> void:
 func _connect_signals() -> void:
 	if not EventBus.gameplay_ready.is_connected(_on_gameplay_ready):
 		EventBus.gameplay_ready.connect(_on_gameplay_ready)
-	if not EventBus.skip_tutorial_requested.is_connected(
-		skip_tutorial
-	):
+	if not EventBus.skip_tutorial_requested.is_connected(skip_tutorial):
 		EventBus.skip_tutorial_requested.connect(skip_tutorial)
-	if not EventBus.store_entered.is_connected(_on_store_entered):
-		EventBus.store_entered.connect(_on_store_entered)
 	if not EventBus.panel_opened.is_connected(_on_panel_opened):
 		EventBus.panel_opened.connect(_on_panel_opened)
+	if not EventBus.placement_mode_entered.is_connected(
+		_on_placement_mode_entered
+	):
+		EventBus.placement_mode_entered.connect(_on_placement_mode_entered)
 	if not EventBus.item_stocked.is_connected(_on_item_stocked):
 		EventBus.item_stocked.connect(_on_item_stocked)
-	if not EventBus.price_set.is_connected(_on_price_set):
-		EventBus.price_set.connect(_on_price_set)
-	if not EventBus.customer_purchased.is_connected(
-		_on_customer_purchased
+	if not EventBus.customer_entered.is_connected(_on_customer_entered):
+		EventBus.customer_entered.connect(_on_customer_entered)
+	if not EventBus.customer_item_spotted.is_connected(
+		_on_customer_item_spotted
 	):
+		EventBus.customer_item_spotted.connect(_on_customer_item_spotted)
+	if not EventBus.customer_ready_to_purchase.is_connected(
+		_on_customer_ready_to_purchase
+	):
+		EventBus.customer_ready_to_purchase.connect(
+			_on_customer_ready_to_purchase
+		)
+	if not EventBus.customer_purchased.is_connected(_on_customer_purchased):
 		EventBus.customer_purchased.connect(_on_customer_purchased)
-	if not EventBus.day_close_requested.is_connected(
-		_on_day_close_requested
-	):
+	if not EventBus.day_close_requested.is_connected(_on_day_close_requested):
 		EventBus.day_close_requested.connect(_on_day_close_requested)
-	if not EventBus.day_acknowledged.is_connected(
-		_on_day_acknowledged
-	):
+	if not EventBus.day_acknowledged.is_connected(_on_day_acknowledged):
 		EventBus.day_acknowledged.connect(_on_day_acknowledged)
 	_ensure_day_started_connected()
 
@@ -132,33 +128,33 @@ func _connect_signals() -> void:
 func _disconnect_step_signals() -> void:
 	if EventBus.gameplay_ready.is_connected(_on_gameplay_ready):
 		EventBus.gameplay_ready.disconnect(_on_gameplay_ready)
-	if EventBus.skip_tutorial_requested.is_connected(
-		skip_tutorial
-	):
+	if EventBus.skip_tutorial_requested.is_connected(skip_tutorial):
 		EventBus.skip_tutorial_requested.disconnect(skip_tutorial)
-	if EventBus.store_entered.is_connected(_on_store_entered):
-		EventBus.store_entered.disconnect(_on_store_entered)
 	if EventBus.panel_opened.is_connected(_on_panel_opened):
 		EventBus.panel_opened.disconnect(_on_panel_opened)
+	if EventBus.placement_mode_entered.is_connected(
+		_on_placement_mode_entered
+	):
+		EventBus.placement_mode_entered.disconnect(_on_placement_mode_entered)
 	if EventBus.item_stocked.is_connected(_on_item_stocked):
 		EventBus.item_stocked.disconnect(_on_item_stocked)
-	if EventBus.price_set.is_connected(_on_price_set):
-		EventBus.price_set.disconnect(_on_price_set)
-	if EventBus.customer_purchased.is_connected(
-		_on_customer_purchased
+	if EventBus.customer_entered.is_connected(_on_customer_entered):
+		EventBus.customer_entered.disconnect(_on_customer_entered)
+	if EventBus.customer_item_spotted.is_connected(
+		_on_customer_item_spotted
 	):
-		EventBus.customer_purchased.disconnect(
-			_on_customer_purchased
+		EventBus.customer_item_spotted.disconnect(_on_customer_item_spotted)
+	if EventBus.customer_ready_to_purchase.is_connected(
+		_on_customer_ready_to_purchase
+	):
+		EventBus.customer_ready_to_purchase.disconnect(
+			_on_customer_ready_to_purchase
 		)
-	if EventBus.day_close_requested.is_connected(
-		_on_day_close_requested
-	):
-		EventBus.day_close_requested.disconnect(
-			_on_day_close_requested
-		)
-	if EventBus.day_acknowledged.is_connected(
-		_on_day_acknowledged
-	):
+	if EventBus.customer_purchased.is_connected(_on_customer_purchased):
+		EventBus.customer_purchased.disconnect(_on_customer_purchased)
+	if EventBus.day_close_requested.is_connected(_on_day_close_requested):
+		EventBus.day_close_requested.disconnect(_on_day_close_requested)
+	if EventBus.day_acknowledged.is_connected(_on_day_acknowledged):
 		EventBus.day_acknowledged.disconnect(_on_day_acknowledged)
 
 
@@ -169,9 +165,6 @@ func _process(delta: float) -> void:
 		_welcome_timer += delta
 		if _welcome_timer >= WELCOME_DURATION:
 			_advance_step()
-		return
-	if current_step == TutorialStep.MOVE_TO_SHELF:
-		_check_move_to_shelf_distance()
 
 
 ## Marks every tutorial step complete and permanently disables prompts.
@@ -221,9 +214,7 @@ func load_save_data(data: Dictionary) -> void:
 func _advance_step() -> void:
 	if not tutorial_active or tutorial_completed:
 		return
-	var old_step_id: String = STEP_IDS.get(
-		current_step, "unknown"
-	)
+	var old_step_id: String = STEP_IDS.get(current_step, "unknown")
 	_completed_steps[old_step_id] = true
 	EventBus.tutorial_step_completed.emit(old_step_id)
 
@@ -265,17 +256,6 @@ func _on_gameplay_ready() -> void:
 		_advance_step()
 
 
-func _on_store_entered(store_id: StringName) -> void:
-	if not tutorial_active:
-		return
-	if store_id != TUTORIAL_STORE_ID:
-		return
-	# The player has been spawned into the tutorial store; cache the spawn
-	# position so the MOVE_TO_SHELF distance check can compare against it.
-	# The step itself doesn't advance here — only the WASD walk does.
-	_capture_player_spawn()
-
-
 func _on_panel_opened(panel_name: String) -> void:
 	if not tutorial_active:
 		return
@@ -286,111 +266,59 @@ func _on_panel_opened(panel_name: String) -> void:
 		_advance_step()
 
 
-func _on_item_stocked(
-	_item_id: String, _shelf_id: String
-) -> void:
+## M2 (Select item): the player has chosen an item to stock and entered
+## placement mode. The shelf-actions controller is the sole emitter.
+func _on_placement_mode_entered() -> void:
+	if not tutorial_active:
+		return
+	if current_step == TutorialStep.SELECT_ITEM:
+		_advance_step()
+
+
+func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
 	if not tutorial_active:
 		return
 	if current_step == TutorialStep.PLACE_ITEM:
 		_advance_step()
-		_arm_set_price_grace_timer()
 
 
-func _on_price_set(
-	_item_id: String, _price: float
+## M4 (Wait for customer): a customer has entered the store. The
+## CustomerSystem-side `customer_entered` signal carries the spawn payload.
+func _on_customer_entered(_customer_data: Dictionary) -> void:
+	if not tutorial_active:
+		return
+	if current_step == TutorialStep.WAIT_FOR_CUSTOMER:
+		_advance_step()
+
+
+## M5 (Customer browsing): a customer has spotted a desirable item on the
+## shelves. Emitted by `Customer._evaluate_current_shelf`.
+func _on_customer_item_spotted(
+	_customer: Customer, _item: ItemInstance,
 ) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.SET_PRICE:
-		_set_price_grace_timer = null
+	if current_step == TutorialStep.CUSTOMER_BROWSING:
 		_advance_step()
 
 
-# ISSUE-010: arm a one-shot timer at the PLACE_ITEM → SET_PRICE transition so
-# unpriced playthroughs (BRAINDUMP minimum loop) advance past SET_PRICE on
-# their own. The price_set fast path still wins when it fires; the timeout
-# handler guards on current_step so a late firing is a no-op.
-func _arm_set_price_grace_timer() -> void:
-	if not is_inside_tree():
+## M6 (Customer at checkout): a customer has decided to purchase and arrived
+## at the register. CheckoutSystem listens to the same signal.
+func _on_customer_ready_to_purchase(_customer_data: Dictionary) -> void:
+	if not tutorial_active:
 		return
-	var timer: SceneTreeTimer = get_tree().create_timer(
-		SET_PRICE_GRACE_DURATION
-	)
-	_set_price_grace_timer = timer
-	timer.timeout.connect(
-		func() -> void: _on_set_price_grace_timeout(timer)
-	)
-
-
-func _on_set_price_grace_timeout(timer: SceneTreeTimer) -> void:
-	if _set_price_grace_timer != timer:
-		return
-	_set_price_grace_timer = null
-	if not tutorial_active or tutorial_completed:
-		return
-	if current_step == TutorialStep.SET_PRICE:
+	if current_step == TutorialStep.CUSTOMER_AT_CHECKOUT:
 		_advance_step()
 
 
-## Test seam — supplies a player node and spawn position so the MOVE_TO_SHELF
-## distance check can be driven without staging a full GameWorld scene. The
-## production path captures both via `_capture_player_spawn` on `store_entered`.
-func bind_player_for_move_step(
-	player: Node3D, spawn_position: Vector3
-) -> void:
-	_move_player_node = player
-	_move_spawn_position = spawn_position
-	_move_spawn_captured = true
-
-
-## §F-79 — Both silent returns are test seams. `tree == null` mirrors the
-## standard autoload-out-of-tree fallback (§F-44). The missing-`Node3D`-in-
-## `_PLAYER_GROUP` arm is the documented contract for unit tests that emit
-## `EventBus.store_entered` directly without staging a player; those tests
-## drive `MOVE_TO_SHELF` via `bind_player_for_move_step` instead. Production
-## `StoreDirector.enter_store` always spawns a `StorePlayerBody` in the
-## `&"player"` group before `store_entered` fires, so the missing-player
-## branch is unreachable at runtime — adding `push_warning` here would only
-## generate noise from the legitimate test fixtures (e.g.
-## `test_store_entered_does_not_auto_advance_move_to_shelf`).
-func _capture_player_spawn() -> void:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return
-	var player_node: Node = tree.get_first_node_in_group(_PLAYER_GROUP)
-	if player_node == null or not (player_node is Node3D):
-		return
-	_move_player_node = player_node as Node3D
-	_move_spawn_position = (player_node as Node3D).global_position
-	_move_spawn_captured = true
-
-
-## §F-79 — The invalidation arm is the test-cleanup seam: when a fake player
-## node bound via `bind_player_for_move_step` is freed before tutorial
-## teardown, `is_instance_valid` returns false and the distance check stops.
-## In production the player lives for the lifetime of the store scene; the
-## guard is defensive against re-entry during scene swap rather than a real
-## production failure mode.
-func _check_move_to_shelf_distance() -> void:
-	if not _move_spawn_captured:
-		return
-	if _move_player_node == null or not is_instance_valid(_move_player_node):
-		return
-	var distance_sq: float = (
-		_move_player_node.global_position
-		.distance_squared_to(_move_spawn_position)
-	)
-	if distance_sq >= MOVE_TO_SHELF_DISTANCE_SQ:
-		_advance_step()
-
-
+## M7 (Complete sale): the transaction has cleared.
 func _on_customer_purchased(
 	_store_id: StringName, _item_id: StringName,
 	_price: float, _customer_id: StringName
 ) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.WAIT_FOR_CUSTOMER:
+	if current_step == TutorialStep.COMPLETE_SALE:
 		_advance_step()
 
 
@@ -452,6 +380,7 @@ func _ensure_day_started_connected() -> void:
 
 func _save_progress() -> void:
 	var config := ConfigFile.new()
+	config.set_value("tutorial", "schema_version", SCHEMA_VERSION)
 	config.set_value("tutorial", "completed", tutorial_completed)
 	config.set_value("tutorial", "current_step", current_step)
 	config.set_value("tutorial", "active", tutorial_active)
@@ -507,6 +436,32 @@ func _load_progress() -> void:
 			"current_step": TutorialStep.WELCOME,
 			"completed_steps": {},
 		})
+		return
+	# §F-85 — Pass 12: a schema_version mismatch means the persisted ordinals
+	# predate the current TutorialStep enum and resuming would replay the
+	# wrong step IDs (e.g. an old `MOVE_TO_SHELF=1` would land on the new
+	# `OPEN_INVENTORY=1`). Treat it the same as a corrupt file (§F-20 already
+	# justifies the reset-on-corruption stance for this quality-of-life
+	# feature): warn loudly so the player and CI see the version skew, reset
+	# to a fresh tutorial, and re-save with the current schema_version so the
+	# warning is one-shot rather than every boot.
+	var loaded_version: int = int(
+		config.get_value("tutorial", "schema_version", 0)
+	)
+	if loaded_version != SCHEMA_VERSION:
+		push_warning(
+			(
+				"TutorialSystem: '%s' schema_version=%d != %d — "
+				+ "resetting progress"
+			)
+			% [PROGRESS_PATH, loaded_version, SCHEMA_VERSION]
+		)
+		_apply_state({
+			"tutorial_completed": false,
+			"current_step": TutorialStep.WELCOME,
+			"completed_steps": {},
+		})
+		_save_progress()
 		return
 	var data: Dictionary = {
 		"tutorial_completed": config.get_value(

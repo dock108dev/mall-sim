@@ -489,8 +489,10 @@ func _execute_sale() -> void:
 	if slot and slot.has_method("remove_item"):
 		slot.remove_item()
 	var category: String = ""
+	var item_name: String = ""
 	if _active_item.definition:
 		category = _active_item.definition.category
+		item_name = _active_item.definition.item_name
 	_inventory_system.remove_item(item_id)
 	_apply_sale_reputation(market_value)
 	EventBus.item_sold.emit(item_id, _active_offer, category)
@@ -503,6 +505,7 @@ func _execute_sale() -> void:
 	var cust_id: StringName = &""
 	if _active_customer:
 		cust_id = StringName(str(_active_customer.get_instance_id()))
+	_emit_sale_toast(item_name, _active_offer)
 	EventBus.customer_purchased.emit(
 		store_id, StringName(item_id), _active_offer, cust_id
 	)
@@ -548,9 +551,35 @@ func _execute_rental() -> void:
 	var store_id: StringName = ContentRegistry.resolve(
 		_active_item.definition.store_type
 	)
+	_emit_sale_toast(_active_item.definition.item_name, rental_fee)
 	EventBus.customer_purchased.emit(
 		store_id, StringName(item_id), rental_fee,
 		StringName(cust_id),
+	)
+
+
+## Posts the "Sold <item> for $<price>" feedback toast for the BRAINDUMP Day-1
+## "see the sale happen" loop. Emitted from `_execute_sale` / `_execute_rental`
+## (rather than from a `customer_purchased` listener elsewhere) because those
+## are the only call sites that still hold the live `ItemDefinition` — by the
+## time `customer_purchased` fires, `inventory.remove_item` has already wiped
+## the instance from the lookup, so a downstream listener cannot recover the
+## display name from the instance_id alone.
+##
+## §F-89 — Pass 13: empty `item_name` is a content-authoring hole (the
+## ItemDefinition lacked `item_name`). Skipping the toast rather than emitting
+## "Sold  for $X.XX" is the documented fallback (mirrors
+## `ambient_moments_system._on_customer_item_spotted`); the surrounding sale
+## still completes — only the cosmetic toast is suppressed. The wider
+## ItemDefinition validator runs in `tests/validate_*.sh` and CI surfaces the
+## missing display name there rather than at runtime.
+func _emit_sale_toast(item_name: String, price: float) -> void:
+	if item_name.is_empty():
+		return
+	EventBus.toast_requested.emit(
+		"Sold %s for $%.2f" % [item_name, price],
+		&"system",
+		0.0,
 	)
 
 

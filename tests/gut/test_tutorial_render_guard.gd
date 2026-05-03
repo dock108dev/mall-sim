@@ -90,7 +90,7 @@ func test_can_show_returns_true_in_store_view() -> void:
 
 func test_no_tutorial_text_in_main_menu() -> void:
 	GameManager.current_state = GameManager.State.MAIN_MENU
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_false(
 		bar.visible,
@@ -100,7 +100,7 @@ func test_no_tutorial_text_in_main_menu() -> void:
 
 func test_no_tutorial_text_in_day_summary() -> void:
 	GameManager.current_state = GameManager.State.DAY_SUMMARY
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_false(
 		bar.visible,
@@ -111,7 +111,7 @@ func test_no_tutorial_text_in_day_summary() -> void:
 func test_no_tutorial_text_when_modal_open() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	InputFocus.push_context(InputFocus.CTX_MODAL)
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_false(
 		bar.visible,
@@ -120,32 +120,32 @@ func test_no_tutorial_text_when_modal_open() -> void:
 	InputFocus.pop_context()
 
 
-func test_move_to_shelf_step_visible_in_store_view() -> void:
+func test_open_inventory_step_visible_in_store_view() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(
 		bar.visible,
-		"Tutorial step 1 (move_to_shelf) must be visible in STORE_VIEW"
+		"Tutorial step 1 (open_inventory) must be visible in STORE_VIEW"
 	)
 
 
-func test_move_to_shelf_step_not_visible_in_mall_overview() -> void:
-	# FP tutorial steps live inside the store; MALL_OVERVIEW must not
-	# render the move_to_shelf prompt even though the state is otherwise
-	# permissive for overlays.
+func test_open_inventory_step_not_visible_in_mall_overview() -> void:
+	# FP tutorial steps live inside the store; MALL_OVERVIEW must not render
+	# the open_inventory prompt even though the state is otherwise permissive
+	# for overlays.
 	GameManager.current_state = GameManager.State.MALL_OVERVIEW
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_false(
 		bar.visible,
-		"Tutorial step 1 (move_to_shelf) must not show in MALL_OVERVIEW"
+		"Tutorial step 1 (open_inventory) must not show in MALL_OVERVIEW"
 	)
 
 
 func test_bar_hides_when_transitioning_to_day_summary() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(bar.visible, "Bar should be showing in STORE_VIEW before transition")
 
@@ -158,19 +158,19 @@ func test_bar_hides_when_transitioning_to_day_summary() -> void:
 
 func test_bar_reshows_after_returning_from_day_summary() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	_emit_state(GameManager.State.DAY_SUMMARY)
 	_emit_state(GameManager.State.STORE_VIEW)
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(
 		bar.visible,
-		"Tutorial bar must re-show when returning to STORE_VIEW with move_to_shelf pending"
+		"Tutorial bar must re-show when returning to STORE_VIEW with open_inventory pending"
 	)
 
 
 func test_bar_hides_when_modal_opens_mid_session() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(bar.visible, "Bar should be visible before modal opens")
 
@@ -184,7 +184,7 @@ func test_bar_hides_when_modal_opens_mid_session() -> void:
 
 func test_bar_reshows_after_modal_closed() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	InputFocus.push_context(InputFocus.CTX_MODAL)
 	InputFocus.pop_context()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
@@ -194,22 +194,21 @@ func test_bar_reshows_after_modal_closed() -> void:
 	)
 
 
-func test_open_inventory_step_visible_in_store_view() -> void:
-	# Advance to MOVE_TO_SHELF then to OPEN_INVENTORY by walking past
-	# the spawn distance threshold.
+func test_select_item_step_visible_in_store_view() -> void:
+	# Advance WELCOME → OPEN_INVENTORY → SELECT_ITEM via the inventory panel.
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
-	_drive_player_walk_to_advance()
+	_advance_to_open_inventory()
+	EventBus.panel_opened.emit("inventory")
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"Tutorial should advance to OPEN_INVENTORY after walking to a shelf"
+		TutorialSystem.TutorialStep.SELECT_ITEM,
+		"Tutorial should advance to SELECT_ITEM after the inventory panel opens"
 	)
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(
 		bar.visible,
-		"Tutorial step 2 (open_inventory) must be visible in STORE_VIEW"
+		"Tutorial step 2 (select_item) must be visible in STORE_VIEW"
 	)
 
 
@@ -223,8 +222,11 @@ func test_skip_tutorial_sets_skipped_flag() -> void:
 
 func test_skip_tutorial_clears_pending_step() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
-	assert_eq(_overlay._pending_step_id, "move_to_shelf", "Pending step should be set")
+	_advance_to_open_inventory()
+	assert_eq(
+		_overlay._pending_step_id, "open_inventory",
+		"Pending step should be set"
+	)
 
 	_tutorial.skip_tutorial()
 	assert_eq(
@@ -237,7 +239,7 @@ func test_skipped_flag_suppresses_future_step_renders() -> void:
 	GameState.set_flag(&"tutorial_skipped", true)
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	# Force a step-changed emission as if the system fired
-	EventBus.tutorial_step_changed.emit("move_to_shelf")
+	EventBus.tutorial_step_changed.emit("open_inventory")
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_false(
 		bar.visible,
@@ -247,7 +249,7 @@ func test_skipped_flag_suppresses_future_step_renders() -> void:
 
 func test_bar_hides_on_tutorial_context_cleared() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	_advance_to_move_to_shelf()
+	_advance_to_open_inventory()
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(bar.visible, "Bar should be visible before tutorial_context_cleared fires")
 
@@ -261,17 +263,8 @@ func test_bar_hides_on_tutorial_context_cleared() -> void:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-func _advance_to_move_to_shelf() -> void:
+func _advance_to_open_inventory() -> void:
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
-	_tutorial._process(0.01)
-
-
-func _drive_player_walk_to_advance() -> void:
-	var fake_player: Node3D = Node3D.new()
-	add_child_autofree(fake_player)
-	fake_player.global_position = Vector3.ZERO
-	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
-	fake_player.global_position = Vector3(2.0, 0.0, 0.0)
 	_tutorial._process(0.01)
 
 

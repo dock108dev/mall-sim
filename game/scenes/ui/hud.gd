@@ -73,7 +73,11 @@ var _dim_tween: Tween
 var _close_day_button: Button
 var _hub_back_button: Button
 var _items_placed_count: int = 0
-var _customers_active_count: int = 0
+## Cumulative count of customers served (i.e. completed a sale) today. Resets
+## on `EventBus.day_started` and increments on `EventBus.customer_purchased`.
+## This is intentionally distinct from "active customers in store" — the HUD
+## reports the throughput metric the BRAINDUMP Day-1 loop calls for.
+var _customers_served_today_count: int = 0
 var _sales_today_count: int = 0
 var _counter_scale_tweens: Dictionary = {}
 var _counter_color_tweens: Dictionary = {}
@@ -86,6 +90,7 @@ var _counter_color_tweens: Dictionary = {}
 var _fp_mode: bool = false
 var _fp_orig_indices: Dictionary = {}
 var _fp_close_day_hint: Label
+var _fp_inventory_hint: Label
 ## Tracks whether the Day-1 soft-gate ConfirmationDialog pushed CTX_MODAL on
 ## InputFocus. Mirrors the InventoryPanel / CheckoutPanel modal-focus contract
 ## so the FP cursor releases while the dialog is up and recaptures on dismiss.
@@ -141,8 +146,7 @@ func _ready() -> void:
 	EventBus.store_entered.connect(_on_store_entered_hub)
 	EventBus.store_exited.connect(_on_store_exited_hub)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
-	EventBus.customer_entered.connect(_on_customer_entered)
-	EventBus.customer_left.connect(_on_customer_left)
+	EventBus.customer_purchased.connect(_on_customer_purchased_hud)
 	EventBus.item_sold.connect(_on_item_sold)
 	_milestones_button.pressed.connect(_on_milestones_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
@@ -170,10 +174,11 @@ func _on_day_started(day: int) -> void:
 	_current_day = day
 	_random_event_telegraph = ""
 	_sales_today_count = 0
+	_customers_served_today_count = 0
 	_update_sales_today_display(_sales_today_count)
+	_update_customers_display(_customers_served_today_count)
 	_refresh_time_display()
 	_refresh_items_placed()
-	_refresh_customers_active()
 	_apply_state_visibility(GameManager.current_state)
 
 
@@ -900,7 +905,7 @@ func _on_locale_changed(_new_locale: String) -> void:
 	_update_reputation_display(_last_reputation)
 	_update_speed_display(_current_speed)
 	_update_items_placed_display(_items_placed_count)
-	_update_customers_display(_customers_active_count)
+	_update_customers_display(_customers_served_today_count)
 	_update_sales_today_display(_sales_today_count)
 	if is_instance_valid(_close_day_button):
 		_close_day_button.text = tr("HUD_CLOSE_DAY_LABEL")
@@ -927,12 +932,16 @@ func _tween_children_alpha(target: float, tween_ease: int) -> void:
 			)
 
 
-## Seeds Items Placed / Customers / Sales Today counters from authoritative
-## system getters so save/load and scene reload do not start from zero while
-## system state is already populated.
+## Seeds Items Placed / Customers Served Today / Sales Today counters from
+## authoritative system getters so save/load and scene reload do not start
+## from zero while system state is already populated.
+##
+## Customers-served-today has no persistent backing system — it is reset on
+## `day_started` and incremented on `customer_purchased`. The Day-1 loop never
+## reloads mid-day, so seeding from zero matches the contract.
 func _seed_counters_from_systems() -> void:
 	_refresh_items_placed()
-	_refresh_customers_active()
+	_update_customers_display(_customers_served_today_count)
 	var economy: EconomySystem = GameManager.get_economy_system()
 	if economy != null:
 		_sales_today_count = economy.get_items_sold_today()
@@ -960,28 +969,16 @@ func _refresh_items_placed() -> void:
 	_pulse_counter(_items_placed_label, delta > 0)
 
 
-func _on_customer_entered(_data: Dictionary) -> void:
-	_customers_active_count += 1
-	_update_customers_display(_customers_active_count)
+## Increments the customers-served-today counter when a sale completes. Driven
+## by `EventBus.customer_purchased` so warranty-only paths and refund paths
+## that do not produce a sale do not double-count. Resets on `day_started`.
+func _on_customer_purchased_hud(
+	_store_id: StringName, _item_id: StringName,
+	_price: float, _customer_id: StringName,
+) -> void:
+	_customers_served_today_count += 1
+	_update_customers_display(_customers_served_today_count)
 	_pulse_counter(_customers_label, true)
-
-
-func _on_customer_left(_data: Dictionary) -> void:
-	_customers_active_count = maxi(_customers_active_count - 1, 0)
-	_update_customers_display(_customers_active_count)
-	_pulse_counter(_customers_label, false)
-
-
-func _refresh_customers_active() -> void:
-	# Silent return: HUD is Tier-5 init (per docs/architecture.md), so
-	# customer_system may legitimately be null on the first frame and during
-	# headless test setup. Re-polls on every customer_entered/left signal.
-	# See docs/audits/error-handling-report.md §J2.
-	var customers: CustomerSystem = GameManager.get_customer_system()
-	if customers == null:
-		return
-	_customers_active_count = customers.get_active_customer_count()
-	_update_customers_display(_customers_active_count)
 
 
 func _on_item_sold(
@@ -1063,12 +1060,15 @@ func _enter_fp_mode() -> void:
 	_apply_fp_anchors(_customers_label, 1.0, 1.0, -200.0, 40.0, -8.0, 68.0)
 	_apply_fp_anchors(_sales_today_label, 1.0, 1.0, -200.0, 72.0, -8.0, 100.0)
 	_ensure_fp_close_day_hint()
+	_ensure_fp_inventory_hint()
 	_apply_fp_visibility_overrides()
 
 
 func _exit_fp_mode() -> void:
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.hide()
+	if is_instance_valid(_fp_inventory_hint):
+		_fp_inventory_hint.hide()
 	_restore_from_hud_root(_cash_label)
 	_restore_from_hud_root(_time_label)
 	_restore_from_hud_root(_items_placed_label)
@@ -1130,6 +1130,14 @@ func _apply_fp_anchors(
 		label.grow_horizontal = Control.GROW_DIRECTION_END
 
 
+## Bottom-right key hints stack above the ObjectiveRail (autoload CanvasLayer
+## at layer 40, content strip y ∈ [H−68, H]). The HUD CanvasLayer is at layer
+## 30, so anchoring a hint inside the rail's pixel band leaves it z-buried by
+## the rail when an objective is active. Both FP key hints offset their bottom
+## edge to ≤ −72 so they always sit above the rail's 68 px footprint, with a
+## 4 px gap above the accent band. The right-cluster x range (W−200..W−8)
+## stays clear of the centered InteractionPrompt (W/2 ± 120) at 1280 px wide
+## and above.
 func _ensure_fp_close_day_hint() -> void:
 	if is_instance_valid(_fp_close_day_hint):
 		return
@@ -1142,10 +1150,28 @@ func _ensure_fp_close_day_hint() -> void:
 	_fp_close_day_hint.anchor_top = 1.0
 	_fp_close_day_hint.anchor_bottom = 1.0
 	_fp_close_day_hint.offset_left = -200.0
-	_fp_close_day_hint.offset_top = -40.0
+	_fp_close_day_hint.offset_top = -104.0
 	_fp_close_day_hint.offset_right = -8.0
-	_fp_close_day_hint.offset_bottom = -8.0
+	_fp_close_day_hint.offset_bottom = -72.0
 	add_child(_fp_close_day_hint)
+
+
+func _ensure_fp_inventory_hint() -> void:
+	if is_instance_valid(_fp_inventory_hint):
+		return
+	_fp_inventory_hint = Label.new()
+	_fp_inventory_hint.name = "FpInventoryHint"
+	_fp_inventory_hint.text = "I — Inventory"
+	_fp_inventory_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_fp_inventory_hint.anchor_left = 1.0
+	_fp_inventory_hint.anchor_right = 1.0
+	_fp_inventory_hint.anchor_top = 1.0
+	_fp_inventory_hint.anchor_bottom = 1.0
+	_fp_inventory_hint.offset_left = -200.0
+	_fp_inventory_hint.offset_top = -140.0
+	_fp_inventory_hint.offset_right = -8.0
+	_fp_inventory_hint.offset_bottom = -108.0
+	add_child(_fp_inventory_hint)
 
 
 func _apply_fp_visibility_overrides() -> void:
@@ -1166,6 +1192,8 @@ func _apply_fp_visibility_overrides() -> void:
 	_sales_today_label.show()
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.show()
+	if is_instance_valid(_fp_inventory_hint):
+		_fp_inventory_hint.show()
 
 
 ## Resets transient display state for test isolation. Called by GUT tests that

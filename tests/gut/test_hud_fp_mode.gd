@@ -230,6 +230,79 @@ func test_fp_mode_hint_anchored_bottom_right() -> void:
 	assert_eq(hint.anchor_top, 1.0, "Close-day hint anchored to bottom edge")
 
 
+## Regression guard: ObjectiveRail (autoload CanvasLayer, layer 40) draws on
+## top of the HUD (layer 30) and fills the bottom 68 px of the viewport. The
+## F4 close-day hint must offset its bottom edge to ≤ −72 so it always sits
+## above the rail's accent band, otherwise the rail buries the hint whenever
+## an objective is active.
+func test_fp_mode_close_day_hint_above_objective_rail() -> void:
+	_hud.set_fp_mode(true)
+	var hint: Label = _hud.get_node_or_null("FpCloseDayHint") as Label
+	assert_not_null(hint)
+	if hint == null:
+		return
+	assert_lt(
+		hint.offset_bottom, -68.0,
+		"Close-day hint bottom edge must sit above the ObjectiveRail's 68 px footprint"
+	)
+
+
+func test_fp_mode_creates_inventory_hint() -> void:
+	_hud.set_fp_mode(true)
+	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
+	assert_not_null(hint, "FP mode must add an I-key inventory hint label to HUD")
+	if hint == null:
+		return
+	assert_true(hint.visible, "Inventory hint must be visible in FP mode")
+	assert_string_contains(
+		hint.text, "I",
+		"Inventory hint must surface the I keybinding"
+	)
+	assert_string_contains(
+		hint.text, "Inventory",
+		"Inventory hint text must reference the inventory affordance"
+	)
+
+
+func test_fp_mode_inventory_hint_anchored_bottom_right() -> void:
+	_hud.set_fp_mode(true)
+	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
+	assert_not_null(hint)
+	if hint == null:
+		return
+	assert_eq(hint.anchor_left, 1.0, "Inventory hint anchored to right edge")
+	assert_eq(hint.anchor_top, 1.0, "Inventory hint anchored to bottom edge")
+
+
+func test_fp_mode_inventory_hint_above_objective_rail() -> void:
+	_hud.set_fp_mode(true)
+	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
+	assert_not_null(hint)
+	if hint == null:
+		return
+	assert_lt(
+		hint.offset_bottom, -68.0,
+		"Inventory hint bottom edge must sit above the ObjectiveRail's 68 px footprint"
+	)
+
+
+## Stacks vertically so neither hint covers the other in the bottom-right
+## cluster. The inventory hint is the upper of the two; F4 stays at the
+## corner where the close-day affordance was previously docked.
+func test_fp_mode_inventory_hint_stacked_above_close_day_hint() -> void:
+	_hud.set_fp_mode(true)
+	var inv_hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
+	var close_hint: Label = _hud.get_node_or_null("FpCloseDayHint") as Label
+	assert_not_null(inv_hint)
+	assert_not_null(close_hint)
+	if inv_hint == null or close_hint == null:
+		return
+	assert_lt(
+		inv_hint.offset_bottom, close_hint.offset_top + 0.001,
+		"Inventory hint must sit fully above the close-day hint with no overlap"
+	)
+
+
 func test_fp_mode_cash_signal_still_updates_label() -> void:
 	_hud.set_fp_mode(true)
 	EventBus.money_changed.emit(0.0, 25.50)
@@ -262,11 +335,26 @@ func test_fp_mode_items_placed_signal_still_updates_label() -> void:
 
 func test_fp_mode_customers_signal_still_updates_label() -> void:
 	_hud.set_fp_mode(true)
-	_hud._customers_active_count = 0
-	EventBus.customer_entered.emit({"customer_id": "c1"})
+	_hud._customers_served_today_count = 0
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_a", 12.0, &"c1"
+	)
 	assert_string_contains(
 		_hud._customers_label.text, "1",
-		"CustomersLabel must still update via customer_entered after FP reparent"
+		"CustomersLabel must still update via customer_purchased after FP reparent"
+	)
+
+
+func test_fp_mode_customers_label_visible() -> void:
+	# BRAINDUMP Day-1 HUD calls for "Customers: N" in the FP corner cluster.
+	# The non-FP STORE_VIEW path hides _customers_label (it shipped as the old
+	# active-in-store metric); FP mode must override that and surface the
+	# customers-served-today readout so the player can see the throughput grow.
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	assert_true(
+		_hud._customers_label.visible,
+		"CustomersLabel must be visible in FP mode (served-today readout)"
 	)
 
 
@@ -335,6 +423,18 @@ func test_disable_fp_mode_hides_close_day_hint() -> void:
 	assert_false(
 		hint.visible,
 		"FP close-day hint must be hidden after set_fp_mode(false)"
+	)
+
+
+func test_disable_fp_mode_hides_inventory_hint() -> void:
+	_hud.set_fp_mode(true)
+	_hud.set_fp_mode(false)
+	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
+	if hint == null:
+		return
+	assert_false(
+		hint.visible,
+		"FP inventory hint must be hidden after set_fp_mode(false)"
 	)
 
 

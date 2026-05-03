@@ -2,8 +2,8 @@
 ##
 ## Verifies that DataLoaderSingleton.generate_starter_inventory("retro_games")
 ## (called from game_world._create_default_store_inventory during
-## bootstrap_new_game_state) yields ≥3 ItemInstances that satisfy the BRAINDUMP
-## Validation Loop tutorial steps PLACE_ITEM / SET_PRICE / WAIT_FOR_CUSTOMER.
+## bootstrap_new_game_state) yields ≥3 ItemInstances suitable for the BRAINDUMP
+## Validation Loop tutorial steps PLACE_ITEM / WAIT_FOR_CUSTOMER / COMPLETE_SALE.
 extends GutTest
 
 const STORE_ID: String = "retro_games"
@@ -41,7 +41,7 @@ func test_starter_items_default_to_backroom_with_zero_player_price() -> void:
 		assert_eq(
 			item.player_set_price,
 			0.0,
-			"Item '%s' must have player_set_price == 0.0 so SET_PRICE is teachable"
+			"Item '%s' must have player_set_price == 0.0 so haggle has price headroom"
 				% item.instance_id
 		)
 

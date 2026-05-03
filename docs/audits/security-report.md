@@ -1,11 +1,18 @@
 # Security Audit Report — Mallcore Sim
 
-**Latest pass:** 2026-05-02 — Pass 6 — entrance-door state guard +
-documentation of in-branch hardening (FP modal-focus contracts,
-interaction-ray narrowing, F1 debug-camera gate, shelf-label hover-only).
-**Prior passes:** 2026-05-02 Pass 5 (§F-57 — F3 debug-toggle release gate),
-2026-05-01 (§F-09 — save-load numeric hardening + scene-path sanitiser
-tightening), 2026-04-28 (§A, §C — Day-1 quarantine and
+**Latest pass:** 2026-05-03 — Pass 7 — bound the new
+`AmbientMomentsSystem._last_spotted` dedup map so a customer leaked without
+emitting `customer_left` cannot grow the dict (which holds a live
+`ItemInstance` Resource ref per customer) across a long session. Walked the
+Pass-12 working-tree diff (Day-1 visible-loop work — toast feedback chain,
+`customer_item_spotted` signal, shelf-slot state-aware prompt label, Day-1
+spawn gate, tutorial step re-sequence + schema versioning, hub-mode
+`active_store` reconciliation, deterministic starter-inventory pipeline) and
+re-verified the trust boundaries below.
+**Prior passes:** 2026-05-02 Pass 6 (entrance-door state guard + FP modal /
+interaction-ray hardening documentation), 2026-05-02 Pass 5 (§F-57 — F3
+debug-toggle release gate), 2026-05-01 (§F-09 — save-load numeric hardening +
+scene-path sanitiser tightening), 2026-04-28 (§A, §C — Day-1 quarantine and
 ISSUE-001/003/004/005), 2026-04-27 (§B — initial main-branch sweep,
 `SR-01..SR-08`). Pass-4 content was removed alongside an unrelated docs
 cleanup; the still-actionable findings (SR-03 CI hash, SR-04 action SHA
@@ -22,28 +29,64 @@ bottom of this document.
 
 Each bullet is a real edit in source. Code paths and rationale follow.
 
-- `game/scripts/stores/retro_games.gd::_on_entrance_door_interacted` —
-  added a `GameManager.current_state != State.GAMEPLAY` early-return guard
-  at the top of the handler. Tagged `§F-71`. The new entrance glass-door
-  Interactable (introduced this branch) routes pressing E into
-  `InputHelper.unlock_cursor()` + `GameManager.change_state(MALL_OVERVIEW)`.
-  The Interactable's `interacted` signal is already gated upstream by
-  `store_player_body._unhandled_input::_gameplay_allowed()` (CTX_STORE_GAMEPLAY
-  on top of InputFocus) and by `interaction_ray._open_panel_count == 0`,
-  but a future modal that bypasses CTX_MODAL would otherwise let an E-press
-  unlock the cursor without successfully transitioning state (the FSM
-  `push_warning("Invalid transition")`s for non-GAMEPLAY → MALL_OVERVIEW),
-  leaving the cursor visible and gameplay context still claimed but
-  pointer-less. The guard short-circuits before the cursor unlock so the
-  pre-existing focus contract is the single source of truth.
+- `game/scripts/systems/ambient_moments_system.gd` — added
+  `MAX_LAST_SPOTTED_ENTRIES: int = 64` and a FIFO eviction loop in
+  `_on_customer_item_spotted` so the new `_last_spotted` dedup map (added
+  this branch alongside the `customer_item_spotted` signal) cannot grow
+  without bound. Tagged `§F-87`. Each entry is `int → ItemInstance` (a live
+  Resource ref); the cleanup path is `_on_customer_left` keyed off
+  `customer_id`, but `ShopperAI._despawn` (a sibling despawn path used by
+  the mall hallway shopper system) emits `customer_left` *without* a
+  `customer_id` field — the silent-return on missing key is documented
+  contract. With the cap in place, even a sequence of customers freed
+  through a key-less path (test fixtures, scene swap mid-shop, future
+  emitters that omit the field) is bounded by the cap rather than leaking
+  ItemInstance refs across a long session. Capacity is sized well above the
+  10–20 simultaneous customers in production so the production dedup window
+  is never trimmed; the cap is purely defense-in-depth. Eviction uses
+  `_last_spotted.keys()[0]` because GDScript `Dictionary` preserves
+  insertion order, so the front key approximates FIFO.
+
+- `docs/audits/security-report.md` — updated header to describe Pass 7
+  scope, added §F-87 to the "Changes made this pass" log, refreshed the
+  re-verification section for Pass-12 working-tree surfaces (toast feedback
+  chain, `customer_item_spotted`, shelf-slot prompt-state, Day-1 spawn
+  gate, tutorial schema_version, hub-mode `set_active_store`
+  reconciliation, deterministic starter-inventory pipeline), added the new
+  §F-87 row to the reference index.
 
 `bash tests/run_tests.sh` was run after the change. GUT result is
-`All tests passed!` for the full 4927-test suite (prior pass: 4858). The
-pre-existing `Some ISSUE-239 checks failed` validator output (parse
-errors in `pocket_creatures/packs.json` / `tournaments.json`) is
-unrelated to this branch and is covered by separate content-data work —
-see the SSOT report. The pre-existing `Some ISSUE-154 checks failed`
-validator is similarly untouched by this pass.
+`All tests passed!` for the full 4980-test suite (prior pass: 4927;
+the new tests are the Pass-12 working-tree additions
+`test_customer_item_spotted` (7), `test_day1_customer_spawn_gate`,
+`test_day_cycle_mall_overview_restore`, `test_day_summary_cash_balance`,
+`test_inventory_shelf_actions_stocking`, `test_store_visual_readability`).
+The pre-existing `Some ISSUE-239 checks failed` validator output (parse
+errors in `pocket_creatures/packs.json` / `tournaments.json`) is unrelated
+to this branch and is covered by separate content-data work — see the
+SSOT report. The pre-existing `Some ISSUE-154 checks failed` validator is
+similarly untouched by this pass.
+
+### Pass-12 working-tree surfaces re-verified (no code change needed)
+
+These surfaces were introduced or modified by the Pass-12 visible-loop
+work. Each was walked this pass for hostile-input, log-leak, and
+trust-crossing concerns; the security posture is **unchanged** and no
+edit was required. Brief justifications follow so a future reviewer
+does not re-derive the analysis.
+
+| Surface | Touched this branch | Why no code change |
+|---|---|---|
+| `EventBus.customer_item_spotted(customer: Customer, item: ItemInstance)` (new signal) | Emitted from `Customer._evaluate_current_shelf` after `_is_item_desirable` filters out `null definition`. Subscribers: `AmbientMomentsSystem._on_customer_item_spotted`, `TutorialSystem._on_customer_item_spotted`. | Typed Object payload (no string format / interpolation). Receivers null-guard the customer/item/definition triple. The toast subscriber renders via plain `Label.text` (`ToastNotificationUI._create_toast_panel:114`), so item names from packed JSON cannot inject markup. Save data only references items by `definition_id` — `item_name` is always packed-content-controlled. |
+| `CheckoutSystem._emit_sale_toast(item_name, price)` and `AmbientMomentsSystem._on_customer_item_spotted` toast emit | New toast emit paths added this branch. Format strings: `"Sold %s for $%.2f"`, `"Customer browsing: %s"`. | `%` operator does not re-parse the substituted right-operand value (Godot semantics), so a `%`-laden item name is rendered literally. `item_name` traces to `ItemDefinition.item_name` from packed JSON, not save data. Empty-name short-circuit prevents "Sold  for $X.XX" placeholder leakage and matches the documented content-authoring fallback. |
+| `ShelfSlot._refresh_prompt_state` / `_on_placement_hint_requested(item_name)` | New state-aware HUD label. `STOCK_VERB_FORMAT % _pending_item_name` writes a substituted string into `prompt_text` which `get_prompt_label` then `to_lower()`s before interpolating into the HUD label. | Format-string substitution is non-recursive in GDScript (`"stock %s" % "evil %d"` produces literal `"stock evil %d"`, no second-pass parse). Both the `Label3D` price tag and the `InteractionPrompt` overlay use plain text rendering; no BBCode/markup parsing. `_pending_item_name` traces back to packed JSON. |
+| `InventoryShelfActions.place_item` category-mismatch reject + `INVENTORY_WRONG_CATEGORY` toast | Pre-mutation reject path; emits `tr("INVENTORY_WRONG_CATEGORY") % slot.accepted_category`. | The `slot.accepts_category(category)` early return for `accepted_category.is_empty()` ensures the format-substitution path is unreachable when `accepted_category` is empty (so `% ""` cannot produce a confusing toast). Notification UI is `Label`, not RichTextLabel. |
+| `TutorialSystem.SCHEMA_VERSION` + version-mismatch reset | New schema versioning for `user://tutorial_progress.cfg`. Mismatch warns, calls `_apply_state` with empty progress, and re-saves at the current version. | Defense in depth that prevents a stale persisted ordinal from landing on the wrong step ID after a re-sequence. Cap (`MAX_PROGRESS_FILE_BYTES`) and key cap (`MAX_PERSISTED_DICT_KEYS`) from prior passes still apply. `current_step` is clamped to a valid enum range by `_resolve_resume_step`'s loop walk over `STEP_COUNT` regardless of what the cfg supplies. |
+| `CustomerSystem._is_day1_spawn_blocked` Day-1 spawn gate | New sticky-bool gate that checks `_inventory_system.get_shelf_items().is_empty()` on the first spawn attempt. | Bool only flips one direction (sticky once set). The shelf-items lookup is bounded by save-file caps (`MAX_SAVE_FILE_BYTES`). The `_inventory_system == null` test-seam fall-through is documented (mirrors `§F-44 / §F-54` autoload-test-seam pattern). |
+| `GameWorld._on_store_entered::set_active_store(store_id, false)` reconciliation | Hub auto-enter previously emitted `EventBus.store_entered` directly without setting `active_store_id`; this pass sets it explicitly. | `store_id` is sourced from the engine signal payload, which itself originates from `StoreDirector.enter_store(store_id)` after `ContentRegistry` validation. The `false` arg suppresses re-emit (no signal loop). |
+| `DataLoader.create_starting_inventory` `allowed_categories` filter + three `push_warning` lines | New deterministic starter-inventory pipeline. Warns on unknown / unresolved / missing-StoreDefinition store IDs and skips items whose category is outside `allowed_categories`. | `store_id` comes from `GameManager.DEFAULT_STARTING_STORE` (a hard-coded const) at the production call site. The `push_warning` strings interpolate the store id and category — packed-content-controlled strings, no PII. |
+| `tools/bake_retro_games_navmesh.gd` (new dev tool) | One-shot SceneTree script that loads `res://game/scenes/stores/retro_games.tscn`, bakes the NavigationMesh, and saves to `res://game/navigation/retro_games_navmesh.tres`. Uses `FileAccess.open` + `text.replace` to inject the two compile-time-default fields (`cell_size`, `geometry_parsed_geometry_type`) that `ResourceSaver.save` strips. | All paths are hard-coded `res://` constants — no traversal surface. The `replace("[resource]\\n", ...)` operations are guarded by `not injected.contains("cell_size = ")` / `... "geometry_parsed_geometry_type = "` short-circuits, so they're idempotent. Tool is in `tools/` and is not loaded by the runtime — it is invoked manually by the developer via `bash scripts/godot_exec.sh --headless --script tools/bake_retro_games_navmesh.gd` and is not packaged in shipped builds. The output `retro_games_navmesh.tres` lives under `res://game/navigation/` and is loaded as a packed resource at runtime. |
+| `EventBus.customer_item_spotted` Customer ref retention | The signal payload includes a live `Customer` Node reference. Receivers don't store the ref directly. | `AmbientMomentsSystem` stores only `customer.get_instance_id()` (an int) as the dedup key, never the Node. `TutorialSystem._on_customer_item_spotted` ignores the customer arg entirely. No dangling-pointer surface across signal teardown. |
 
 ### In-branch hardening already in place (re-verified)
 
@@ -155,8 +198,8 @@ Surfaces explicitly **re-verified** this pass:
 | F-09.19 | Cheat hotkeys in `debug_overlay.gd` (Ctrl+M/C/H/D/P) | Verified: overlay node `queue_free()`s when `OS.is_debug_build()` is false, and each cheat target is either debug-only by signature or reachable from non-debug code with the same intent (e.g. `add_cash` for `emergency_cash_injection`). No leak path. |
 | F-09.20 | `EntranceDoor` glass-door StaticBody3D + Interactable in `retro_games.tscn` | StaticBody on `collision_layer=2` (store_fixtures) blocks the FP body (mask=3); Interactable Area3D on bit-16 `interactable_triggers` is reticle-routed by §F-72. The `interacted` signal handler (§F-71 above) carries the new state-change guard. Door geometry sits at `z=10.0`, beyond the customer NavigationMesh `z=±9.7` (verified by `tests/gut/test_retro_games_entrance_door.gd`), so customer pathfinding is unaffected. |
 | F-09.21 | `_auto_enter_default_store_in_hub` (`game_world.gd`) emits `EventBus.enter_store_requested(GameManager.DEFAULT_STARTING_STORE)` | The store ID is a hard-coded const, not derived from save data or user input. The signal flows through `StoreDirector.enter_store(store_id)`, which validates the ID against `ContentRegistry`. Trust path equivalent to the mall card click. |
-| F-09.22 | `tutorial_system.gd::_capture_player_spawn` reads `tree.get_first_node_in_group(_PLAYER_GROUP)` | `_PLAYER_GROUP = &"player"` is set in `store_player_body.tscn` at design time; the captured `global_position` is read once and used only as a distance reference for the MOVE_TO_SHELF advance check. No save/load path. |
-| F-09.23 | `tutorial_system.gd::bind_player_for_move_step(player, spawn)` is a public test seam | Single-player offline; no untrusted caller. The autoload is reachable only by other scripts in the same trust domain. Marked test-seam in the docstring. |
+| F-09.22 | ~~`tutorial_system.gd::_capture_player_spawn` reads `tree.get_first_node_in_group(_PLAYER_GROUP)`~~ | **Retired — surface removed.** The Pass-12 working tree dropped the `MOVE_TO_SHELF` step and every member that backed it (`_capture_player_spawn`, `_PLAYER_GROUP`, `_move_player_node`, `_move_spawn_position`, `_check_move_to_shelf_distance`). No production read of the player group remains in `tutorial_system.gd`. SSOT-pass reconciliation. |
+| F-09.23 | ~~`tutorial_system.gd::bind_player_for_move_step(player, spawn)` is a public test seam~~ | **Retired — surface removed.** The same Pass-12 deletion took `bind_player_for_move_step` with it; the public surface is gone, the trust-domain note is moot. SSOT-pass reconciliation. |
 | F-09.24 | `crosshair.gd` connects `EventBus.interactable_focused/unfocused` and never disconnects | CanvasLayer free-on-quit auto-disconnects all signal connections; no leak path under scene churn. |
 | F-09.25 | `shelf_slot.gd::set_display_data` writes `"%s\n%s  $%.2f" % [item_name, condition.capitalize(), price]` to `Label3D.text` | `Label3D.text` is plain text (no BBCode/markup parsing). `item_name` and `condition` come from `ItemInstance` which is itself bounded by save-file caps and registry validation. The `%` format substitutions apply to the format string positions, not the input strings, so a `%`-laden item name does not re-parse. No hardening required. |
 
@@ -234,14 +277,14 @@ Inline annotations in the codebase point back at rows here.
 | §F-76 | `store_player_body.gd::_apply_mouse_look` | ±80° pitch clamp on FP camera |
 | §F-77 | `store_player_body.gd::_clamp_to_store_footprint` | Post-move X/Z bounds clamp |
 | §F-78 | `interaction_ray.gd::interaction_mask` | Bit-16 `interactable_triggers` mask narrowing |
+| §F-87 | `ambient_moments_system.gd::_on_customer_item_spotted` | FIFO eviction loop bounding `_last_spotted` to `MAX_LAST_SPOTTED_ENTRIES = 64` so a customer freed without a `customer_left` payload cannot grow the dedup map (which holds a live ItemInstance Resource ref per customer) across a long session |
 
 ---
 
 ## Escalations
 
-None. The single new in-scope finding this pass (entrance-door state
-guard, §F-71) was acted on inline. Pass 6 also documents seven existing
-in-branch hardenings (§F-72..§F-78) that were already in source but
-lacked report rows. Prior-pass open items SR-03 and SR-04 stay open
-with a named blocker; bringing them in requires a human decision on
-(a) the trusted SHA-512 fetch, (b) the action-pinning tooling trade-off.
+None. The single new in-scope finding this pass (unbounded
+`_last_spotted` map, §F-87) was acted on inline. Prior-pass open items
+SR-03 and SR-04 stay open with a named blocker; bringing them in
+requires a human decision on (a) the trusted SHA-512 fetch, (b) the
+action-pinning tooling trade-off.

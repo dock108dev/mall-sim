@@ -1,0 +1,186 @@
+## InventoryShelfActions.place_item — category guard, Stocked toast, and the
+## downstream contract InventoryPanel relies on after a successful press-E
+## bridge.
+##
+## These tests pin the runtime contract for shelf stocking:
+##   - mismatched item.category vs slot.accepted_category is rejected with a
+##     localized "wrong category" notification AND no inventory mutation
+##   - successful placement emits a "Stocked <item>" notification so the
+##     player gets toast confirmation in the HUD
+##   - mismatched stocking does NOT consume the item from backroom (the slot
+##     remains empty, the item stays in backroom, no item_stocked fires)
+extends GutTest
+
+
+const _ShelfSlotScript: GDScript = preload(
+	"res://game/scripts/stores/shelf_slot.gd"
+)
+
+
+var _data_loader: DataLoader
+var _inventory_system: InventorySystem
+var _previous_data_loader: DataLoader
+
+var _stocked_events: Array = []
+var _notifications: Array[String] = []
+
+
+func before_each() -> void:
+	_stocked_events.clear()
+	_notifications.clear()
+	_data_loader = DataLoader.new()
+	_data_loader.load_all_content()
+	_previous_data_loader = GameManager.data_loader
+	GameManager.data_loader = _data_loader
+	_inventory_system = InventorySystem.new()
+	add_child_autofree(_inventory_system)
+	_inventory_system.initialize(_data_loader)
+	EventBus.item_stocked.connect(_on_item_stocked)
+	EventBus.notification_requested.connect(_on_notification_requested)
+
+
+func after_each() -> void:
+	if EventBus.item_stocked.is_connected(_on_item_stocked):
+		EventBus.item_stocked.disconnect(_on_item_stocked)
+	if EventBus.notification_requested.is_connected(_on_notification_requested):
+		EventBus.notification_requested.disconnect(_on_notification_requested)
+	GameManager.data_loader = _previous_data_loader
+
+
+func _create_backroom_item_for_category(category: String) -> ItemInstance:
+	var defs: Array[ItemDefinition] = _data_loader.get_all_items()
+	for def: ItemDefinition in defs:
+		if def.category == category:
+			var item: ItemInstance = ItemInstance.create(
+				def, "good", 0, def.base_price
+			)
+			item.current_location = "backroom"
+			_inventory_system.register_item(item)
+			return item
+	return null
+
+
+func _make_slot(id: String, accepted_category: String = "") -> ShelfSlot:
+	var slot: ShelfSlot = _ShelfSlotScript.new()
+	slot.slot_id = id
+	slot.accepted_category = accepted_category
+	add_child_autofree(slot)
+	return slot
+
+
+func test_successful_place_emits_stocked_notification() -> void:
+	var item: ItemInstance = _create_backroom_item_for_category("cartridges")
+	if item == null:
+		pass_test("No cartridge items in content — skip")
+		return
+	var slot: ShelfSlot = _make_slot("cib_test_1", "cartridges")
+	var actions := InventoryShelfActions.new()
+	actions.inventory_system = _inventory_system
+	actions.enter_placement_mode(item)
+
+	var placed: bool = actions.place_item(item, slot)
+	assert_true(placed, "place_item should succeed for matching category")
+
+	# Notification body must reference the item's display name.
+	var stocked_msg_seen: bool = false
+	for msg: String in _notifications:
+		if msg.begins_with("Stocked ") and msg.find(item.definition.item_name) != -1:
+			stocked_msg_seen = true
+			break
+	assert_true(
+		stocked_msg_seen,
+		"successful place_item must emit a 'Stocked <item>' notification"
+	)
+
+
+func test_wrong_category_is_rejected_without_consuming_inventory() -> void:
+	var cartridge_item: ItemInstance = _create_backroom_item_for_category(
+		"cartridges"
+	)
+	if cartridge_item == null:
+		pass_test("No cartridge items in content — skip")
+		return
+	# Slot only accepts consoles — placing a cartridge there must fail.
+	var slot: ShelfSlot = _make_slot("console_only_1", "consoles")
+	var actions := InventoryShelfActions.new()
+	actions.inventory_system = _inventory_system
+	actions.enter_placement_mode(cartridge_item)
+
+	var placed: bool = actions.place_item(cartridge_item, slot)
+	assert_false(
+		placed,
+		"place_item must reject when slot.accepted_category does not match"
+	)
+	assert_false(
+		slot.is_occupied(),
+		"slot must remain empty when rejection fires"
+	)
+	assert_eq(
+		cartridge_item.current_location, "backroom",
+		"item must remain in backroom when rejection fires"
+	)
+	assert_eq(
+		_stocked_events.size(), 0,
+		"item_stocked must not fire on a wrong-category rejection"
+	)
+	# A user-facing notification must be emitted so the player gets feedback.
+	var rejection_seen: bool = false
+	for msg: String in _notifications:
+		if msg.findn("only accepts") != -1 or msg.findn("solo acepta") != -1:
+			rejection_seen = true
+			break
+	assert_true(
+		rejection_seen,
+		"wrong-category rejection must surface a user-facing notification"
+	)
+
+
+func test_placement_mode_stays_armed_on_wrong_category() -> void:
+	# A wrong-category click is a misclick — the player should stay in
+	# placement mode so they can aim at a valid slot without re-entering
+	# placement from the inventory panel.
+	var cartridge_item: ItemInstance = _create_backroom_item_for_category(
+		"cartridges"
+	)
+	if cartridge_item == null:
+		pass_test("No cartridge items in content — skip")
+		return
+	var slot: ShelfSlot = _make_slot("console_only_2", "consoles")
+	var actions := InventoryShelfActions.new()
+	actions.inventory_system = _inventory_system
+	actions.enter_placement_mode(cartridge_item)
+	actions.place_item(cartridge_item, slot)
+	assert_true(
+		actions.is_placement_mode,
+		"placement mode must stay armed after a wrong-category misclick"
+	)
+
+
+func test_unfiltered_slot_accepts_any_category() -> void:
+	# Empty accepted_category (e.g. checkout impulse slots) must accept any
+	# category — the existing checkout/accessories layout depends on this.
+	var item: ItemInstance = _create_backroom_item_for_category("cartridges")
+	if item == null:
+		pass_test("No cartridge items in content — skip")
+		return
+	var slot: ShelfSlot = _make_slot("impulse_unfiltered", "")
+	var actions := InventoryShelfActions.new()
+	actions.inventory_system = _inventory_system
+	actions.enter_placement_mode(item)
+
+	var placed: bool = actions.place_item(item, slot)
+	assert_true(
+		placed,
+		"slots without an accepted_category should accept any category"
+	)
+
+
+func _on_item_stocked(instance_id: String, slot_id: String) -> void:
+	_stocked_events.append({
+		"instance_id": instance_id,
+		"slot_id": slot_id,
+	})
+
+
+func _on_notification_requested(message: String) -> void:
+	_notifications.append(message)
