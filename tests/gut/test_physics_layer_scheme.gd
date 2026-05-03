@@ -148,8 +148,10 @@ func test_retro_games_walls_explicit_on_world_geometry_layer() -> void:
 		)
 		assert_eq(
 			wall.collision_mask, 0,
-			"%s.collision_mask must equal 0 — static world geometry is "
-			+ "scanned by other bodies but never scans itself" % wall_name
+			(
+				"%s.collision_mask must equal 0 — static world geometry is "
+				+ "scanned by other bodies but never scans itself"
+			) % wall_name
 		)
 
 

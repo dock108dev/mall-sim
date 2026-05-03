@@ -620,9 +620,10 @@ func _sanitize_scene_path(
 	if tail.find("..") != -1 or tail.find("//") != -1:
 		_emit_error(
 			(
-				"ContentRegistry: scene path '%s' for ID '%s' must not contain '..' segments or empty path components"
-				% [scene_path, id]
+				"ContentRegistry: scene path '%s' for ID '%s' must not "
+				+ "contain '..' segments or empty path components"
 			)
+			% [scene_path, id]
 		)
 		return ""
 	if content_type == "store" and not scene_path.begins_with(STORE_SCENE_PATH_PREFIX):

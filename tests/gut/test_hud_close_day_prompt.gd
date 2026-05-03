@@ -46,8 +46,10 @@ func test_close_day_button_text_includes_keybinding_hint() -> void:
 	)
 	assert_true(
 		btn.text.length() > "Close Day".length(),
-		"CloseDayButton text must extend the bare 'Close Day' label with a "
-		+ "keybinding hint so the shortcut is discoverable (got: %s)" % btn.text
+		(
+			"CloseDayButton text must extend the bare 'Close Day' label with a "
+			+ "keybinding hint so the shortcut is discoverable (got: %s)"
+		) % btn.text
 	)
 
 

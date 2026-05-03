@@ -95,8 +95,10 @@ func test_entrance_interior_has_distinct_floor_strip() -> void:
 		var strip_mat: Material = mesh_inst.get_surface_override_material(0)
 		assert_not_null(
 			strip_mat,
-			"%s must declare a surface material override so it reads "
-			+ "distinctly from the floor" % mesh_inst.name
+			(
+				"%s must declare a surface material override so it reads "
+				+ "distinctly from the floor"
+			) % mesh_inst.name
 		)
 		if floor_mat != null:
 			assert_ne(
@@ -128,13 +130,17 @@ func test_entrance_interior_has_distinct_floor_strip() -> void:
 		)
 		assert_true(
 			aabb.position.y >= FLOOR_TOP_Y - 0.001,
-			"%s must sit at or above the floor top (y=%.2f) to avoid "
-			+ "z-fighting" % [mesh_inst.name, FLOOR_TOP_Y]
+			(
+				"%s must sit at or above the floor top (y=%.2f) to avoid "
+				+ "z-fighting"
+			) % [mesh_inst.name, FLOOR_TOP_Y]
 		)
 		assert_true(
 			aabb.size.y <= 0.15,
-			"%s must stay low-profile (<=15 cm tall) so it does not "
-			+ "occlude the walking path" % mesh_inst.name
+			(
+				"%s must stay low-profile (<=15 cm tall) so it does not "
+				+ "occlude the walking path"
+			) % mesh_inst.name
 		)
 		found_strip = true
 

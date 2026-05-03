@@ -1,3 +1,4 @@
+# gdlint:disable=max-file-lines
 ## In-game HUD — persistent top bar with cash, day/time, speed, and reputation.
 extends CanvasLayer
 

@@ -13,9 +13,9 @@ extends CanvasLayer
 const _IDLE_COLOR := Color(0.957, 0.914, 0.831, 0.85)
 const _HOVER_COLOR := Color(1.0, 0.804, 0.31, 1.0)
 
-@onready var _label: Label = $CenterContainer/Label
-
 var _hovering: bool = false
+
+@onready var _label: Label = $CenterContainer/Label
 
 
 func _ready() -> void:

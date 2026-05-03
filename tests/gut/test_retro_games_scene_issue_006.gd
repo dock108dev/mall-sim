@@ -212,8 +212,10 @@ func test_shelf_slots_have_collision_on_interactable_layer() -> void:
 		if area:
 			assert_eq(
 				area.collision_layer, Interactable.INTERACTABLE_LAYER,
-				"%s/InteractionArea.collision_layer must equal "
-				+ "Interactable.INTERACTABLE_LAYER for InteractionRay" % slot.name
+				(
+					"%s/InteractionArea.collision_layer must equal "
+					+ "Interactable.INTERACTABLE_LAYER for InteractionRay"
+				) % slot.name
 			)
 
 
@@ -354,8 +356,10 @@ func test_nav_zones_have_interaction_area_on_interactable_layer() -> void:
 		if area:
 			assert_eq(
 				area.collision_layer, Interactable.INTERACTABLE_LAYER,
-				"%s/InteractionArea.collision_layer must equal "
-				+ "Interactable.INTERACTABLE_LAYER for raycast" % zone.name
+				(
+					"%s/InteractionArea.collision_layer must equal "
+					+ "Interactable.INTERACTABLE_LAYER for raycast"
+				) % zone.name
 			)
 
 

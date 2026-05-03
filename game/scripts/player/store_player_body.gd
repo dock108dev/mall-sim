@@ -76,17 +76,17 @@ const PITCH_LIMIT_RAD: float = deg_to_rad(80.0)
 @export var bounds_min: Vector3 = Vector3(-7.7, 0.0, -9.7)
 @export var bounds_max: Vector3 = Vector3(7.7, 0.0, 9.7)
 
+## The interaction ray / proximity system writes the hovered interactable here.
+## Cleared back to `null` when nothing is hoverable. Public so the HUD and the
+## objective director can render prompts off the same source of truth.
+var current_interactable: Node = null
+
 ## Cached project-wide gravity magnitude. Read once at construction so the
 ## physics step never pays the ProjectSettings lookup cost. Falls back to 9.8
 ## m/s² when the setting is missing (test fixtures without a project loaded).
 var _gravity: float = float(
 	ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 )
-
-## The interaction ray / proximity system writes the hovered interactable here.
-## Cleared back to `null` when nothing is hoverable. Public so the HUD and the
-## objective director can render prompts off the same source of truth.
-var current_interactable: Node = null
 
 ## True while the F1 debug orbit/top-down view is the active camera. The body
 ## stops driving movement and mouse-look while this is set so the orbit
