@@ -71,16 +71,16 @@ func test_player_body_has_embedded_fp_camera() -> void:
 		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
 	)
 	root.add_child(player)
-	var cam: Camera3D = player.find_child("Camera3D", false, false) as Camera3D
+	var cam: Camera3D = player.find_child("StoreCamera", false, false) as Camera3D
 	assert_not_null(
 		cam,
-		"store_player_body.tscn must embed a Camera3D for first-person view"
+		"store_player_body.tscn must embed a StoreCamera for first-person view"
 	)
 	if cam == null:
 		return
 	assert_almost_eq(
-		cam.position.y, 1.6, 0.0001,
-		"FP camera must sit at ~1.6 m (eye level for the 1.8 m capsule)"
+		cam.position.y, 1.7, 0.0001,
+		"FP camera must sit at ~1.7 m (eye level for the 1.8 m capsule)"
 	)
 	assert_almost_eq(
 		cam.near, 0.05, 0.0001,

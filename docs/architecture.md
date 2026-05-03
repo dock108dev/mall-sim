@@ -135,12 +135,16 @@ exception applies.
 
 | Need | Use this | File |
 |---|---|---|
-| Orbit / pan / zoom camera with Tween transitions | `BuildModeCamera` | `game/scripts/world/build_mode_camera.gd` |
+| First-person in-store player body (WASD, mouse-look, sprint, interact) | `StorePlayerBody` spawned at `PlayerEntrySpawn` by `GameWorld._spawn_player_in_store` | `game/scripts/player/store_player_body.gd` |
+| Eye-level interaction ray cast from the FP camera | `InteractionRay` parented to the `StoreCamera` node | `game/scripts/player/interaction_ray.gd` |
+| Debug overhead/orbit camera (F1 dev toggle) | `PlayerController` (orbit pivot + ortho framing) | `game/scripts/player/player_controller.gd` |
+| Build-mode orbit / pan / zoom camera with Tween transitions | `BuildModeCamera` | `game/scripts/world/build_mode_camera.gd` |
 | Camera ownership / single-current assertion | `CameraAuthority.request_current(cam, source)` | `game/autoload/camera_authority.gd` |
 | Hover highlight shader on 3D interactable | `Interactable.highlight()` + `mat_outline_highlight.tres` | `game/scripts/components/interactable.gd` |
 | Hover tint on 2D Controls | `InteractableHover` (`self_modulate` → `ACCENT_INTERACT`) | `game/scripts/ui/interactable_hover.gd` |
 | Delayed hover tooltip at cursor | `TooltipManager.show_tooltip(text, pos)` + `TooltipTrigger` | `game/autoload/tooltip_manager.gd` |
 | `[E] to interact` contextual hint | `InteractionPrompt` listening to `EventBus.interactable_focused` | `game/scenes/ui/interaction_prompt.tscn` |
+| Screen-center reticle for the FP camera | `Crosshair` CanvasLayer | `game/scenes/ui/crosshair.tscn` |
 | One-unit shelf slot with empty→stocked mesh swap | `ShelfSlot` (extends `Interactable`) | `game/scripts/stores/shelf_slot.gd` |
 | Day/night light interpolation | `DayPhaseLighting` tweening `DirectionalLight3D` | `game/scripts/world/day_phase_lighting.gd` |
 | CRT scanline post-process shader (2D UI) | `crt_overlay.gdshader` | `game/resources/shaders/crt_overlay.gdshader` |

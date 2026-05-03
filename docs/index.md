@@ -44,6 +44,9 @@ This is the active project documentation set for Mallcore Sim.
     SSOT modules per domain, and a risk log for retained items.
   - `cleanup-report.md` — most-recent code-quality cleanup pass (dead-code
     removal and citation-consistency sweep across the audit reports).
+  - `docs-consolidation.md` — most-recent documentation review pass
+    (records edits applied to `README.md` and `docs/`, statements removed
+    as unverifiable, and intentional gaps with rationale).
 
 ## Boundary
 

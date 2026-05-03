@@ -35,7 +35,7 @@ func test_new_game_start_activates_tutorial_at_welcome() -> void:
 	)
 
 
-func test_after_welcome_step_click_store_is_active() -> void:
+func test_after_welcome_step_move_to_shelf_is_active() -> void:
 	_tutorial.initialize(true)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -43,13 +43,13 @@ func test_after_welcome_step_click_store_is_active() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.CLICK_STORE,
-		"After WELCOME expires, current step should be CLICK_STORE"
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"After WELCOME expires, current step should be MOVE_TO_SHELF"
 	)
 	var step_id: String = TutorialSystem.STEP_IDS[_tutorial.current_step]
 	assert_eq(
-		step_id, "click_store",
-		"Click-store step ID should be click_store"
+		step_id, "move_to_shelf",
+		"Move-to-shelf step ID should be move_to_shelf"
 	)
 
 
@@ -61,7 +61,7 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 
 	var step: int = int(_tutorial.current_step)
 
-	# WELCOME → CLICK_STORE (welcome timer expires)
+	# WELCOME → MOVE_TO_SHELF (welcome timer expires)
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 	step += 1
@@ -70,12 +70,12 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 		"Step index should advance after WELCOME timer expires"
 	)
 
-	# CLICK_STORE → OPEN_INVENTORY (store_entered for retro_games)
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	# MOVE_TO_SHELF → OPEN_INVENTORY (player walks > 1m from spawn)
+	_drive_move_to_shelf_advance()
 	step += 1
 	assert_eq(
 		int(_tutorial.current_step), step,
-		"Step index should advance after store_entered (retro_games)"
+		"Step index should advance after walking past the move-to-shelf threshold"
 	)
 
 	# OPEN_INVENTORY → PLACE_ITEM (panel_opened "inventory")
@@ -234,8 +234,8 @@ func test_step_completed_signal_fires_for_each_step() -> void:
 	)
 	assert_eq(completed_ids[0], "welcome", "Step 0 completed: welcome")
 	assert_eq(
-		completed_ids[1], "click_store",
-		"Step 1 completed: click_store"
+		completed_ids[1], "move_to_shelf",
+		"Step 1 completed: move_to_shelf"
 	)
 	assert_eq(
 		completed_ids[2], "open_inventory",
@@ -268,10 +268,19 @@ func test_step_completed_signal_fires_for_each_step() -> void:
 # --- Helpers ---
 
 
+func _drive_move_to_shelf_advance() -> void:
+	var fake_player: Node3D = Node3D.new()
+	add_child_autofree(fake_player)
+	fake_player.global_position = Vector3.ZERO
+	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
+	fake_player.global_position = Vector3(2.0, 0.0, 0.0)
+	_tutorial._process(0.01)
+
+
 func _drive_full_sequence() -> void:
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	_drive_move_to_shelf_advance()
 	EventBus.panel_opened.emit("inventory")
 	EventBus.item_stocked.emit("test_item", "shelf_1")
 	EventBus.price_set.emit("test_item", 9.99)

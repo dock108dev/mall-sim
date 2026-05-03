@@ -1352,6 +1352,30 @@ func apply_pending_session_state() -> void:
 	else:
 		tutorial_system.initialize(true)
 		EventBus.day_started.emit(1)
+		_auto_enter_default_store_in_hub()
+
+
+## BRAINDUMP Phase 1: a new game must drop the player inside the starter
+## store immediately rather than parking them in the mall overview UI.
+## Routes through the same `enter_store_requested` signal a card click would
+## emit so the StoreDirector state machine, AuditLog checkpoints, and
+## StoreReadyContract verification all run unmodified. Hub mode is the only
+## mode where this auto-entry applies — the walkable-mall variant routes
+## through `MallHallway` and is opt-in via `debug/walkable_mall`.
+##
+## §F-67 — `_hub_transition == null` silent return is the test-seam fallback
+## for unit fixtures that drive `apply_pending_session_state` without
+## staging the hub's `HubTransition` child. Production `GameWorld._setup_ui`
+## creates `_hub_transition` before this code path can run. The
+## `_hub_is_inside_store` short-circuit covers the legitimate case where a
+## prior load already entered a store (rentry guard); silent is correct
+## because the existing store session is the desired state.
+func _auto_enter_default_store_in_hub() -> void:
+	if _hub_transition == null:
+		return
+	if _hub_is_inside_store:
+		return
+	EventBus.enter_store_requested.emit(GameManager.DEFAULT_STARTING_STORE)
 
 
 ## Populates and validates the default store before the player sees the hallway.

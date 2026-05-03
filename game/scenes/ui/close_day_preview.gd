@@ -24,6 +24,11 @@ var _pending_events: Array[Dictionary] = []
 var _reveal_index: int = 0
 var _sold_count: int = 0
 var _walked_count: int = 0
+## Tracks whether this preview pushed CTX_MODAL on InputFocus so the cursor is
+## released for FP play; mirrors InventoryPanel / CheckoutPanel. Push/pop must
+## stay balanced even when the player cancels mid-reveal or a sibling modal
+## force-closes the preview.
+var _focus_pushed: bool = false
 
 @onready var _overlay: ColorRect = $Control/Overlay
 @onready var _panel: PanelContainer = $Control/Panel
@@ -61,6 +66,7 @@ func set_snapshot_callback(callback: Callable) -> void:
 func show_preview() -> void:
 	_reset_state()
 	visible = true
+	_push_modal_focus()
 	var store_id: StringName = GameManager.get_active_store_id()
 	var day: int = GameManager.get_current_day()
 	_title_label.text = "End of Day — Day %d" % day
@@ -167,10 +173,62 @@ func _finish_reveal() -> void:
 
 func _on_cancel_pressed() -> void:
 	visible = false
+	_pop_modal_focus()
 	cancelled.emit()
 
 
+## Confirm hands off to the day-close pipeline. The CTX_MODAL frame is popped
+## here so DayCycleController's state transition into DAY_SUMMARY runs from
+## the gameplay context the player started in; DaySummary pushes its own
+## CTX_MODAL when its overlay opens so the cursor stays released across the
+## hand-off.
 func _on_confirm_pressed() -> void:
 	visible = false
+	_pop_modal_focus()
 	EventBus.day_close_requested.emit()
 	confirmed.emit()
+
+
+## §F-82 — Defensive cleanup so a preview removed mid-display does not
+## strand a CTX_MODAL frame on InputFocus. `_pop_modal_focus` escalates with
+## `push_error` if the stack is corrupt (§F-74 contract); the silent skip
+## here is only the well-behaved no-op path.
+func _exit_tree() -> void:
+	if _focus_pushed:
+		_pop_modal_focus()
+
+
+func _push_modal_focus() -> void:
+	if _focus_pushed:
+		return
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	_focus_pushed = true
+
+
+func _pop_modal_focus() -> void:
+	if not _focus_pushed:
+		return
+	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
+	# without going through this contract. Surface it via push_error AND skip
+	# the pop so we don't corrupt someone else's frame. Mirrors InventoryPanel
+	# / CheckoutPanel.
+	if InputFocus.current() != InputFocus.CTX_MODAL:
+		push_error(
+			(
+				"CloseDayPreview._on_*_pressed: expected CTX_MODAL on top, "
+				+ "got %s — leaving stack untouched to avoid corrupting "
+				+ "sibling frame"
+			)
+			% String(InputFocus.current())
+		)
+		_focus_pushed = false
+		return
+	InputFocus.pop_context()
+	_focus_pushed = false
+
+
+## Test seam — clears _focus_pushed without calling pop_context. Pair with
+## InputFocus._reset_for_tests() so test harnesses that wipe the focus stack
+## don't leave the preview believing it still owns a frame.
+func _reset_for_tests() -> void:
+	_focus_pushed = false

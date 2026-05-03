@@ -42,6 +42,11 @@ const _FP_BODY_NAME: StringName = &"Player"
 const _ACTION_TOGGLE_DEBUG: StringName = &"toggle_debug"
 const _CAMERA_SOURCE_DEBUG_OVERHEAD: StringName = &"debug_overhead"
 const _CAMERA_SOURCE_PLAYER_FP: StringName = &"player_fp"
+## Path to the entrance glass-door Interactable. Pressing E on the door
+## releases the cursor and routes the FSM to MALL_OVERVIEW so the player
+## leaves the store interior in the same way the day-summary "Return to
+## Mall" button does (see GameWorld._on_day_summary_mall_overview_requested).
+const _ENTRANCE_DOOR_INTERACTABLE_PATH: NodePath = ^"EntranceDoor/Interactable"
 
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
@@ -64,6 +69,9 @@ var _register_queue_size: int = 0
 ## the toggle so a second F3 press restores first-person without needing to
 ## inspect CameraAuthority state.
 var _debug_overhead_active: bool = false
+## Reference to the entrance glass-door Interactable so the connect/disconnect
+## stays single-source in `_ready` and `_exit_tree`.
+var _entrance_door_interactable: Interactable = null
 
 
 func _ready() -> void:
@@ -84,6 +92,7 @@ func _ready() -> void:
 			+ "customer-waiting states."
 		)
 	_connect_checkout_prompt_signals()
+	_connect_entrance_door()
 	_disable_orbit_controller_for_fp_startup()
 
 
@@ -379,6 +388,49 @@ func _refresh_checkout_prompt() -> void:
 			_CHECKOUT_PROMPT_NAME_IDLE
 		)
 		_checkout_counter_interactable.prompt_text = ""
+
+
+## Subscribes to the entrance-door Interactable so pressing E on the glass
+## door releases the cursor and changes GameManager state to MALL_OVERVIEW.
+## Silent return on a missing node mirrors the checkout-counter handling
+## above: a missing scene node is logged once at boot via `push_warning` so
+## the failure surfaces without flooding logs.
+func _connect_entrance_door() -> void:
+	_entrance_door_interactable = get_node_or_null(
+		_ENTRANCE_DOOR_INTERACTABLE_PATH
+	) as Interactable
+	if _entrance_door_interactable == null:
+		push_warning(
+			"RetroGames: %s not found; 'Exit to Mall' interaction disabled."
+			% String(_ENTRANCE_DOOR_INTERACTABLE_PATH)
+		)
+		return
+	if not _entrance_door_interactable.interacted.is_connected(
+		_on_entrance_door_interacted
+	):
+		_entrance_door_interactable.interacted.connect(
+			_on_entrance_door_interacted
+		)
+
+
+## Releases the cursor and transitions the FSM to MALL_OVERVIEW. Mirrors the
+## `_on_day_summary_mall_overview_requested` path in `GameWorld` so the door
+## and the day-summary button leave the store the same way.
+##
+## §F-71 — Defense in depth: only run the cursor unlock + state transition
+## while GameManager is in GAMEPLAY. The Interactable.interacted signal is
+## already gated upstream by InputFocus (`_gameplay_allowed()` in
+## `store_player_body.gd`) and by `interaction_ray._open_panel_count == 0`,
+## so reaching this handler outside GAMEPLAY would require a future modal
+## that bypasses both gates. Without this guard, an E-press in such a state
+## would unlock the cursor without successfully changing state (the FSM
+## would `push_warning("Invalid transition")`) — leaving the cursor visible
+## and gameplay context still claimed but pointer-less.
+func _on_entrance_door_interacted() -> void:
+	if GameManager.current_state != GameManager.State.GAMEPLAY:
+		return
+	InputHelper.unlock_cursor()
+	GameManager.change_state(GameManager.State.MALL_OVERVIEW)
 
 
 ## Hides refurb_bench from the Day 1 store floor so the introductory loop only
@@ -710,9 +762,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Flips between the first-person camera and the legacy overhead orbit camera
 ## as a debug aid. The orbit controller is re-enabled (process_mode INHERIT)
-## so its WASD/orbit handlers tick again, the cursor is unlocked for orbit
-## drag, and the orbit `StoreCamera` is made current via `CameraAuthority`.
-## A second press reverses all three so the FP body resumes ownership.
+## so its WASD pivot handler ticks again, the cursor is unlocked, and the
+## orbit `StoreCamera` is made current via `CameraAuthority`. A second press
+## reverses all three so the FP body resumes ownership.
 ##
 ## §F-65 — Silent return when either camera cannot be resolved keeps the F3
 ## toggle from crashing if the scene is partially loaded; the `push_warning`
@@ -762,4 +814,4 @@ func _resolve_fp_camera() -> Camera3D:
 	var body: Node = get_node_or_null(NodePath(_FP_BODY_NAME))
 	if body == null:
 		return null
-	return body.get_node_or_null("Camera3D") as Camera3D
+	return body.get_node_or_null("StoreCamera") as Camera3D

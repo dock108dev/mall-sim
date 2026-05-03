@@ -4,7 +4,7 @@ extends Node
 
 enum TutorialStep {
 	WELCOME,
-	CLICK_STORE,
+	MOVE_TO_SHELF,
 	OPEN_INVENTORY,
 	PLACE_ITEM,
 	SET_PRICE,
@@ -16,7 +16,7 @@ enum TutorialStep {
 
 const STEP_IDS: Dictionary = {
 	TutorialStep.WELCOME: "welcome",
-	TutorialStep.CLICK_STORE: "click_store",
+	TutorialStep.MOVE_TO_SHELF: "move_to_shelf",
 	TutorialStep.OPEN_INVENTORY: "open_inventory",
 	TutorialStep.PLACE_ITEM: "place_item",
 	TutorialStep.SET_PRICE: "set_price",
@@ -28,7 +28,7 @@ const STEP_IDS: Dictionary = {
 
 const STEP_TEXT_KEYS: Dictionary = {
 	TutorialStep.WELCOME: "TUTORIAL_WELCOME",
-	TutorialStep.CLICK_STORE: "TUTORIAL_CLICK_STORE",
+	TutorialStep.MOVE_TO_SHELF: "TUTORIAL_MOVE_TO_SHELF",
 	TutorialStep.OPEN_INVENTORY: "TUTORIAL_OPEN_INVENTORY",
 	TutorialStep.PLACE_ITEM: "TUTORIAL_PLACE_ITEM",
 	TutorialStep.SET_PRICE: "TUTORIAL_SET_PRICE",
@@ -54,6 +54,13 @@ const TUTORIAL_STORE_ID: StringName = &"retro_games"
 # ISSUE-010: grace window so the SET_PRICE step never strands an unpriced
 # playthrough — pricing is optional per BRAINDUMP minimum loop.
 const SET_PRICE_GRACE_DURATION: float = 4.0
+# Player must walk this many meters from the spawn marker for the
+# MOVE_TO_SHELF step to advance. Stored as squared to avoid sqrt per frame.
+const MOVE_TO_SHELF_DISTANCE: float = 1.0
+const MOVE_TO_SHELF_DISTANCE_SQ: float = (
+	MOVE_TO_SHELF_DISTANCE * MOVE_TO_SHELF_DISTANCE
+)
+const _PLAYER_GROUP: StringName = &"player"
 
 const CONTEXTUAL_TIP_KEYS: Dictionary = {
 	"ordering": "TIP_ORDERING",
@@ -68,6 +75,13 @@ var _tips_shown: Dictionary = {}
 var _completed_steps: Dictionary = {}
 var _welcome_timer: float = 0.0
 var _set_price_grace_timer: SceneTreeTimer = null
+# Spawn snapshot used by the MOVE_TO_SHELF distance check. Captured the first
+# time `store_entered` fires for `TUTORIAL_STORE_ID` after the tutorial begins,
+# or supplied directly via `bind_player_for_move_step` in unit tests that don't
+# stage a full store scene.
+var _move_player_node: Node3D = null
+var _move_spawn_position: Vector3 = Vector3.ZERO
+var _move_spawn_captured: bool = false
 
 
 ## Starts a new tutorial session or resumes persisted first-play progress.
@@ -155,6 +169,9 @@ func _process(delta: float) -> void:
 		_welcome_timer += delta
 		if _welcome_timer >= WELCOME_DURATION:
 			_advance_step()
+		return
+	if current_step == TutorialStep.MOVE_TO_SHELF:
+		_check_move_to_shelf_distance()
 
 
 ## Marks every tutorial step complete and permanently disables prompts.
@@ -251,11 +268,12 @@ func _on_gameplay_ready() -> void:
 func _on_store_entered(store_id: StringName) -> void:
 	if not tutorial_active:
 		return
-	if (
-		current_step == TutorialStep.CLICK_STORE
-		and store_id == TUTORIAL_STORE_ID
-	):
-		_advance_step()
+	if store_id != TUTORIAL_STORE_ID:
+		return
+	# The player has been spawned into the tutorial store; cache the spawn
+	# position so the MOVE_TO_SHELF distance check can compare against it.
+	# The step itself doesn't advance here — only the WASD walk does.
+	_capture_player_spawn()
 
 
 func _on_panel_opened(panel_name: String) -> void:
@@ -311,6 +329,58 @@ func _on_set_price_grace_timeout(timer: SceneTreeTimer) -> void:
 	if not tutorial_active or tutorial_completed:
 		return
 	if current_step == TutorialStep.SET_PRICE:
+		_advance_step()
+
+
+## Test seam — supplies a player node and spawn position so the MOVE_TO_SHELF
+## distance check can be driven without staging a full GameWorld scene. The
+## production path captures both via `_capture_player_spawn` on `store_entered`.
+func bind_player_for_move_step(
+	player: Node3D, spawn_position: Vector3
+) -> void:
+	_move_player_node = player
+	_move_spawn_position = spawn_position
+	_move_spawn_captured = true
+
+
+## §F-79 — Both silent returns are test seams. `tree == null` mirrors the
+## standard autoload-out-of-tree fallback (§F-44). The missing-`Node3D`-in-
+## `_PLAYER_GROUP` arm is the documented contract for unit tests that emit
+## `EventBus.store_entered` directly without staging a player; those tests
+## drive `MOVE_TO_SHELF` via `bind_player_for_move_step` instead. Production
+## `StoreDirector.enter_store` always spawns a `StorePlayerBody` in the
+## `&"player"` group before `store_entered` fires, so the missing-player
+## branch is unreachable at runtime — adding `push_warning` here would only
+## generate noise from the legitimate test fixtures (e.g.
+## `test_store_entered_does_not_auto_advance_move_to_shelf`).
+func _capture_player_spawn() -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var player_node: Node = tree.get_first_node_in_group(_PLAYER_GROUP)
+	if player_node == null or not (player_node is Node3D):
+		return
+	_move_player_node = player_node as Node3D
+	_move_spawn_position = (player_node as Node3D).global_position
+	_move_spawn_captured = true
+
+
+## §F-79 — The invalidation arm is the test-cleanup seam: when a fake player
+## node bound via `bind_player_for_move_step` is freed before tutorial
+## teardown, `is_instance_valid` returns false and the distance check stops.
+## In production the player lives for the lifetime of the store scene; the
+## guard is defensive against re-entry during scene swap rather than a real
+## production failure mode.
+func _check_move_to_shelf_distance() -> void:
+	if not _move_spawn_captured:
+		return
+	if _move_player_node == null or not is_instance_valid(_move_player_node):
+		return
+	var distance_sq: float = (
+		_move_player_node.global_position
+		.distance_squared_to(_move_spawn_position)
+	)
+	if distance_sq >= MOVE_TO_SHELF_DISTANCE_SQ:
 		_advance_step()
 
 

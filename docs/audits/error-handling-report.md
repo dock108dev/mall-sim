@@ -1,6 +1,25 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-05-02 (Pass 9 — Day-1 close gate + post-sale objective
+**Latest pass:** 2026-05-02 (Pass 11 — modal-focus + FP HUD + tutorial
+move-step seam roll-up: justified `TutorialSystem._capture_player_spawn`
+/ `_check_move_to_shelf_distance` test-seam fallbacks (§F-79 — production
+guarantees `StoreDirector` spawns the player before `store_entered` fires,
+silent return is the unit-test contract that pairs with
+`bind_player_for_move_step`), justified `StorePlayerBody._set_hud_fp_mode`
+HUD-missing test seam (§F-80), justified `StorePlayerBody._enter_debug_view`
+`push_warning` paths on missing orbit `PlayerController` / `StoreCamera`
+siblings (§F-81 — already escalates loudly, cite added for traceability),
+justified `_exit_tree` defensive CTX_MODAL cleanup in `CheckoutPanel`,
+`CloseDayPreview`, `DaySummary` (§F-82 — `_pop_modal_focus` itself raises
+`push_error` on stack-corruption per §F-74).)
+**Pass 10:** 2026-05-02 (checkout panel + auto-enter starter store + FP HUD
+mode wire-up: tightened CheckoutPanel non-Dictionary item silent-drop to
+`push_warning` (§F-66 — data-integrity hardening), justified GameWorld
+auto-enter `_hub_transition` test-seam (§F-67), justified HUD
+`_wire_close_day_*` / `_get_active_store_snapshot` Tier-5 init fallbacks
+(§F-68, §F-69), justified StorePlayerBody `_lock_cursor_and_track_focus`
+EventBus arm (§F-70).)
+**Pass 9:** 2026-05-02 (Day-1 close gate + post-sale objective
 flip + inventory-remaining surface + reticle/HUD ergonomics: cite-correctness
 sweep on retro_games F3 toggle, day1_readiness `_count_players` /
 `_viewport_has_current_camera` test-seams, day_cycle inventory_remaining null
@@ -27,17 +46,45 @@ Test files (`tests/`, `game/tests/`) excluded.
 
 ## Changes made this pass
 
-Pass 9 reviewed the next layer of working-tree changes on top of Pass 8: the
-new `_count_players_in_scene` / `_viewport_has_current_camera` checks in
-`Day1ReadinessAudit`, the `inventory_remaining` summary surface introduced
-through `DayCycleController._show_day_summary` and consumed by
-`DaySummary._on_day_closed_payload`, the new `_on_first_sale_completed_hud`
-pulse animation in the HUD, the `CameraManager._sync_to_camera_authority`
-skip-if-tracked guard added to keep the FP `&"player_fp"` source token from
-being clobbered, the new `_apply_mouse_look` body-yaw / camera-pitch path on
-`StorePlayerBody`, and a cite-correctness sweep on `retro_games.gd` (the F3
-debug-only `_unhandled_input` gate had been mis-labelled `§F-57` —
-§F-57 in this report is the interaction-mask migration).
+Pass 11 reviewed the working-tree changes layered on top of the committed
+Pass 10 baseline. The post-Pass-10 working tree introduces the
+`MOVE_TO_SHELF` distance check in `TutorialSystem._capture_player_spawn` /
+`_check_move_to_shelf_distance` (with the `bind_player_for_move_step` test
+seam), three new `_exit_tree` CTX_MODAL cleanup arms in `CheckoutPanel`,
+`CloseDayPreview`, and `DaySummary` (`_pop_modal_focus` is the contract
+defender — see §F-74 in the security report), the
+`StorePlayerBody._set_hud_fp_mode` HUD-flip helper (with three tier-of-
+test-seam silent returns), and the F1 dev-only orbit toggle's
+`_enter_debug_view` `push_warning` paths on missing orbit
+`PlayerController` / orbit `StoreCamera` siblings.
+
+The pass found no Critical/High/Medium silent-swallow holes. Five new
+test-seam / defensive-cleanup patterns are justified inline (§F-79 — §F-82),
+each anchored to the established autoload-test-seam (§F-44 / §F-54) and
+modal-focus (§F-74) contracts. No code was tightened to a louder error
+level this pass — the existing escalations on the surrounding paths
+(`_pop_modal_focus`'s `push_error` on stack corruption, `_open_close_day_preview`'s
+click-time `push_warning`, `_enter_debug_view`'s own `push_warning`s) already
+defend the runtime contract; the new cites attribute the silent arms back
+to those defenders so the code reads as designed rather than accidental.
+
+| Path | Change | Disposition |
+|---|---|---|
+| `game/scripts/systems/tutorial_system.gd:346–368` | Added §F-79 docstrings on `_capture_player_spawn` (both `tree == null` and missing-`Node3D`-in-`_PLAYER_GROUP` arms) and `_check_move_to_shelf_distance` (`is_instance_valid` invalidation arm). Production `StoreDirector.enter_store` always spawns a `StorePlayerBody` in the `&"player"` group before `store_entered` fires; the silent returns are the unit-test contract that pairs with `bind_player_for_move_step` for tests like `test_store_entered_does_not_auto_advance_move_to_shelf` which deliberately drive the signal without staging the player. Adding `push_warning` here would only generate noise from those legitimate fixtures. | **Acted (justify)** §F-79 |
+| `game/scripts/player/store_player_body.gd:367–377` | Added §F-80 docstring on `_set_hud_fp_mode`. Three silent returns (`tree == null`, `scene_root == null`, `hud == null or not hud.has_method("set_fp_mode")`) all collapse to the same headless-test seam — `GameWorld._setup_ui` creates the HUD before any store is injected, so production paths always reach the `set_fp_mode` dispatch. Bodies free-instanced in unit tests without GameWorld take the silent path. | **Acted (justify)** §F-80 |
+| `game/scripts/player/store_player_body.gd:393–415` | Added §F-81 cite to `_enter_debug_view`. Both branches already escalate via `push_warning` (`orbit == null`, `orbit_cam == null`); the cite formalizes the F1 dev-only contract — F1 is gated by `OS.is_debug_build()` in `_unhandled_input` (§F-73 in the security report), so a production player who hits F1 by accident sees no observable effect. Stores without the orbit sibling surface the regression at toggle time rather than silently failing. | **Acted (justify)** §F-81 |
+| `game/scenes/ui/checkout_panel.gd:86–89`, `game/scenes/ui/close_day_preview.gd:192–195`, `game/scenes/ui/day_summary.gd:235–237` | Added §F-82 cites on the three modal `_exit_tree` defensive-cleanup arms. `_pop_modal_focus` itself raises `push_error` if the topmost frame is not CTX_MODAL (the §F-74 contract from the security report); the silent path here is only the well-behaved no-op when the modal still owns its frame and is being torn down cleanly (scene swap, run reset, panel `queue_free`). | **Acted (justify)** §F-82 |
+
+### Pass 10 changes (rolled forward into Pass 11 baseline)
+
+| Path | Change | Disposition |
+|---|---|---|
+| `game/scenes/ui/checkout_panel.gd:173–187` | Tightened the silent skip of non-Dictionary entries in `_on_checkout_started` to a `push_warning` (`type_string(typeof(item))`). The two `push_error` returns on empty items / null customer were already in place; the variadic-Array skip was the remaining silent-drop hole — a malformed payload would otherwise drop line items from the player's checkout (data-integrity: missing revenue) without any signal. The well-formed remainder of the cart still proceeds. | **Acted (tighten)** §F-66 |
+| `game/scenes/world/game_world.gd:1358–1377` | Added §F-67 docstring to `_auto_enter_default_store_in_hub` documenting both silent guards: `_hub_transition == null` is a unit-test fixture seam; `_hub_is_inside_store` is the legitimate re-entry guard for an already-active session. | **Acted (justify)** §F-67 |
+| `game/scenes/ui/hud.gd:302–328` | Added §F-68 docstring to the close-day `_wire_*` methods documenting that `_open_close_day_preview` already escalates with `push_warning` at click time, so a silently-unwired modal still surfaces at use; an extra warning here would double-fire on every test fixture. Added §F-69 docstring to `_get_active_store_snapshot` documenting the empty-array fallback on null `InventorySystem` (Tier-5 init pattern, mirrors §J2). | **Acted (justify)** §F-68 / §F-69 |
+| `game/scripts/player/store_player_body.gd:215–238` | Added §F-70 docstring on the new `_lock_cursor_and_track_focus` `EventBus` arm (`bus == null or not bus.has_signal("game_state_changed")`). Same test-seam pattern as the existing InputFocus arm (autoload guarantees in production, stubs in tests). | **Acted (justify)** §F-70 |
+
+### Pass 9 changes (rolled forward into Pass 10 baseline)
 
 | Path | Change | Disposition |
 |---|---|---|
@@ -50,8 +97,12 @@ debug-only `_unhandled_input` gate had been mis-labelled `§F-57` —
 | `game/scenes/ui/hud.gd:227–243` | Added `## §F-62 —` docstring to `_on_first_sale_completed_hud` documenting the `is_instance_valid(_close_day_button)` defensive guard. Covers the window where `EventBus.first_sale_completed` fires while the HUD is mid-teardown (run reset, scene swap to mall hub). | **Acted (justify)** |
 | `game/scripts/player/store_player_body.gd:143–157` | Added `## §F-64 —` docstring to `_apply_mouse_look` documenting that yaw rotates the body unconditionally while pitch needs the embedded `Camera3D`. The `_camera == null` arm is the same test-seam fallback documented in §F-54. | **Acted (justify)** |
 
-All eight edits validated against `bash tests/run_tests.sh`: 4858 / 4858 GUT
-tests pass, 0 failures, no new stderr `push_error` lines. The Pass 8 edits
+All Pass 11 edits validated against `bash tests/run_tests.sh`:
+**4927 / 4927 GUT tests pass**, 0 failures, no new stderr `push_error` lines
+(pre-existing validator failures under ISSUE-154 / ISSUE-239 are unrelated
+content-completeness checks for trade-panel and pack/tournament feature
+work that lives outside this branch's scope). The Pass 10 edits
+(§F-66 through §F-70), Pass 9 edits (§F-58 through §F-65), and Pass 8 edits
 (§F-54 / §F-55 / §F-56 / §F-57) were re-checked and remain in place.
 
 ---
@@ -63,11 +114,48 @@ tests pass, 0 failures, no new stderr `push_error` lines. The Pass 8 edits
 | Critical | 0 | — |
 | High | 3 | 1 Pass 2, 2 Pass 3 (tier cascade, wrong signal dispatch) |
 | Medium | 8 | 3 Pass 1, 2 Pass 2, 2 Pass 3, 1 Pass 4 (registry inconsistency) |
-| Low | 14 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5, **+1 Pass 8** (bounds-meta wrong-type) |
-| Note | 35 | Justified — intentional, low-risk, documented (**+2 Pass 7, +2 Pass 8, +7 Pass 9**) |
+| Low | 15 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5, 1 Pass 8, 1 Pass 10 (CheckoutPanel non-Dict drop) |
+| Note | 45 | Justified — intentional, low-risk, documented (**+2 Pass 7, +2 Pass 8, +7 Pass 9, +4 Pass 10, +6 Pass 11**) |
 | Retired | 1 | §F-28 obsoleted by Pass 6 nav-zone label feature removal |
 
 **Overall posture: Prod posture acceptable.**
+
+Pass 11 reviewed the post-Pass-10 working tree: the new
+`TutorialSystem._capture_player_spawn` / `_check_move_to_shelf_distance`
+distance gate (with the `bind_player_for_move_step` test seam), the three
+modal `_exit_tree` defensive-cleanup arms in `CheckoutPanel`,
+`CloseDayPreview`, and `DaySummary`, the new
+`StorePlayerBody._set_hud_fp_mode` HUD-flip helper, and the F1 dev-only
+`_enter_debug_view` `push_warning` paths on missing orbit
+`PlayerController` / `StoreCamera` siblings. All five new patterns are
+Note-level test-seams or defensive cleanups whose loud counterparts
+already live on the same code paths (`_pop_modal_focus`'s `push_error` on
+stack corruption per §F-74; `_open_close_day_preview`'s click-time
+`push_warning`; `_enter_debug_view`'s own `push_warning`s; the
+`StoreDirector`-spawns-the-player production guarantee for the tutorial).
+Six new cites were added in source (§F-79 — §F-82, with §F-79/§F-80
+covering two locations each); none required tightening to a louder
+diagnostic.
+
+No new Critical/High/Medium/Low findings.
+
+Pass 10 reviewed the working-tree changes that introduce the in-store
+`CheckoutPanel` (the new modal that replaces the previous in-HUD checkout
+button), the `HUD.set_fp_mode` corner-overlay layout, the FP-mode hook on
+`StorePlayerBody._apply_fp_hud_mode`, the close-day preview/confirm wiring
+on the HUD, the `EventBus.game_state_changed` arm of
+`StorePlayerBody._lock_cursor_and_track_focus`, the
+`GameWorld._auto_enter_default_store_in_hub` post-tutorial auto-entry, and
+the `ShelfSlot` hover-gated `Label3D` flip. The pass found one Low silent-
+drop in `CheckoutPanel._on_checkout_started` (non-Dictionary entries
+dropped without diagnostic — now `push_warning`s while preserving the
+well-formed remainder), and four Note-level test-seam silent returns
+(§F-67 / §F-68 / §F-69 / §F-70) — all justified inline against the
+established autoload-test-seam contract anchored by §F-44 / §F-54.
+
+No new Critical/High/Medium findings. The CheckoutPanel modal-focus
+contract (push CTX_MODAL on show, pop before emitting `panel_closed`) is
+defended by the existing `tests/gut/test_checkout_panel_focus.gd` suite.
 
 Pass 9 reviewed the post-FP-entry working-tree layer: the new
 `Day1ReadinessAudit` `_count_players_in_scene` / `_viewport_has_current_camera`
@@ -234,6 +322,15 @@ Pass 1 corrected three medium log-level mismatches.
 | F-63 | `camera_manager.gd:81–88` | `_sync_to_camera_authority` skip-if-already-tracked SSOT-preservation guard | Note | **Acted** Pass 9 — §F-63 inline cite added |
 | F-64 | `store_player_body.gd:143–157` | `_apply_mouse_look` `_camera == null` partial-yaw fallback (yaw rotates body, pitch needs camera) | Note | **Acted** Pass 9 — §F-64 docstring added |
 | F-65 | `retro_games.gd:711–730` | `_toggle_debug_overhead_camera` / `_enter_debug_overhead` / `_exit_debug_overhead` `push_warning` paths on missing nodes | Note | **Acted** Pass 9 — §F-65 docstring added (debug-only surface per §F-58) |
+| F-66 | `checkout_panel.gd:173–187` | `_on_checkout_started` silently dropped non-Dictionary entries from the cart | Low | **Acted** Pass 10 — `push_warning` with offending type; well-formed entries preserved |
+| F-67 | `game_world.gd:1358–1377` | `_auto_enter_default_store_in_hub` `_hub_transition == null` test-seam silent return | Note | **Acted** Pass 10 — §F-67 docstring added |
+| F-68 | `hud.gd:302–311` | `_wire_close_day_preview` / `_wire_close_day_confirm_dialog` silent return on missing children | Note | **Acted** Pass 10 — §F-68 docstring added (follow-up `push_warning` already lives on `_open_close_day_preview`) |
+| F-69 | `hud.gd:319–328` | `_get_active_store_snapshot` empty-array fallback on null `InventorySystem` (Tier-5 init) | Note | **Acted** Pass 10 — §F-69 docstring added (mirrors §J2 pattern) |
+| F-70 | `store_player_body.gd:215–238` | `_lock_cursor_and_track_focus` `EventBus`-missing arm (`bus == null or not has_signal`) | Note | **Acted** Pass 10 — §F-70 docstring added (test-seam, mirrors §F-54 InputFocus arm) |
+| F-79 | `tutorial_system.gd:346–368` | `_capture_player_spawn` (`tree == null`, missing-`Node3D`-in-`_PLAYER_GROUP`) and `_check_move_to_shelf_distance` (`is_instance_valid` invalidation) silent returns | Note | **Acted** Pass 11 — §F-79 docstrings added (production `StoreDirector` spawn guarantee + `bind_player_for_move_step` test seam) |
+| F-80 | `store_player_body.gd:367–377` | `_set_hud_fp_mode` triple silent returns (`tree`, `scene_root`, `hud == null or no method`) | Note | **Acted** Pass 11 — §F-80 docstring added (headless-test seam; `GameWorld._setup_ui` creates HUD before any store) |
+| F-81 | `store_player_body.gd:393–415` | `_enter_debug_view` `push_warning` paths on missing orbit `PlayerController` / `StoreCamera` siblings | Note | **Acted** Pass 11 — §F-81 docstring added (F1 dev-only contract; gated by §F-73 `OS.is_debug_build()`) |
+| F-82 | `checkout_panel.gd:86–89`, `close_day_preview.gd:192–195`, `day_summary.gd:235–237` | Modal `_exit_tree` defensive CTX_MODAL pop without escalation | Note | **Acted** Pass 11 — §F-82 docstrings added (`_pop_modal_focus` itself escalates with `push_error` on stack corruption per §F-74) |
 | EH-AS-1 | (policy) | `assert()` in autoload bodies paired with runtime escalation | Note | Documented — see policy section |
 
 ---
@@ -1131,6 +1228,251 @@ the toggle from cascading into a hard crash.
 
 ---
 
+## Pass 10 Per-Finding Details
+
+### §F-66 — `checkout_panel.gd:173–187` — non-Dictionary entries silently dropped (Pass 10)
+
+**Was:** `_on_checkout_started` filtered the variadic-Array payload of
+`EventBus.checkout_started` with a single `if item is Dictionary:` arm and
+no else-branch. The two preceding guards already escalate with `push_error`
+on empty-cart / null-customer (in place from the new file's first commit),
+but the per-item type filter quietly discarded malformed entries. A bug
+upstream that emits a `Variant` other than `Dictionary` (e.g. an
+`ItemInstance` resource not yet projected to the panel's `{item_name,
+condition, price}` shape) would silently drop those line items from the
+checkout — the player pays for fewer items than they hold, store revenue
+under-counts, and the only signal would be an end-of-day cash mismatch.
+
+**Now:** Non-Dictionary entries `push_warning` with the offending
+`type_string()` while the well-formed remainder of the cart is preserved
+and the sale is allowed to proceed. The canonical emitter
+(`CheckoutSystem._show_checkout_panel`, `checkout_system.gd:310`) emits
+`Array[Dictionary]`; reaching the warning arm is a caller-contract bug
+upstream, not a runtime-routine condition.
+
+**Risk lenses:** Data integrity (silent revenue loss on malformed cart),
+Observability (signal-shape regressions go unflagged). Severity Low —
+shipping callers all emit `Array[Dictionary]`, but the silent drop was the
+fragile arm of a brand-new modal.
+
+---
+
+### §F-67 — `game_world.gd:1358–1377` — `_auto_enter_default_store_in_hub` test-seam silent guards (Pass 10)
+
+`apply_pending_session_state` calls `_auto_enter_default_store_in_hub` at
+the end of the new-game branch (no save slot to load). The function's two
+silent returns are the test-seam pattern documented in §F-44 / §F-54:
+
+- `_hub_transition == null` covers unit fixtures that drive
+  `apply_pending_session_state` directly without staging the
+  `HubTransition` child. Production `GameWorld._setup_ui` constructs the
+  transition node before this code path can run.
+- `_hub_is_inside_store` is the legitimate re-entry guard for an already-
+  active session (e.g. a save-load that landed inside a store, then a
+  duplicate `apply_pending_session_state` call); silent is correct because
+  the desired state already holds.
+
+**Risk lenses:** Reliability (test-seam path). Severity Note — the auto-
+entry signal is itself observable through the `StoreDirector` /
+`AuditLog` pipeline, so a mis-wired call surface is caught downstream.
+
+---
+
+### §F-68 — `hud.gd:302–311` — `_wire_close_day_*` silent return on missing children (Pass 10)
+
+`hud.tscn` ships `CloseDayPreview` and `CloseDayConfirmDialog` as
+children. A unit test that constructs the HUD without the packed scene
+(or a future scene variant that omits one) hits the silent return, which
+keeps the close-day UX path idempotent — the second call ladder
+(`_open_close_day_preview` / `_show_close_day_confirm`) already
+escalates with `push_warning` when the preview / dialog is missing at
+click time and falls back to the direct emit path so the player is never
+trapped. An extra warning on `_wire_*` would double-fire on every test
+fixture and drown the click-time signal.
+
+**Risk lenses:** Observability. Severity Note — `_open_close_day_preview`
+already surfaces the regression at use.
+
+---
+
+### §F-69 — `hud.gd:319–328` — `_get_active_store_snapshot` empty-array null fallback (Pass 10)
+
+The `CloseDayPreview` snapshot callback walks the inventory for the
+"items remaining at close" panel. The HUD is constructed in
+`GameWorld._setup_ui` before the five-tier init sequence runs (per
+`docs/architecture.md`), so `GameManager.get_inventory_system()` may
+legitimately be null on the first frame and during headless tests. The
+empty-array fallback renders the preview as "no items remaining" in that
+window; once the inventory is live the next preview open reads the
+authoritative snapshot. Mirrors the established §J2 / `_refresh_*`
+counter pattern.
+
+**Risk lenses:** Reliability (Tier-5 init seam). Severity Note —
+documented project pattern.
+
+---
+
+### §F-70 — `store_player_body.gd:215–238` — `_lock_cursor_and_track_focus` EventBus-missing arm (Pass 10)
+
+The new `EventBus.game_state_changed` listener relocks the cursor when
+gameplay resumes (e.g. `PauseMenu` closing). PauseMenu unlocks the cursor
+on open but does not push to InputFocus, so the existing
+`context_changed` listener cannot relock on resume — `game_state_changed`
+is the canonical signal for the resume edge.
+
+The `bus == null or not bus.has_signal("game_state_changed")` arm is the
+same test-seam fallback as the InputFocus arm (`ifocus == null` —
+documented in §F-54). `EventBus` is an autoload
+(`docs/architecture/ownership.md` row 3) and ships `game_state_changed`
+by contract; production paths never hit the silent return. Skipping the
+connect under unit-test isolation keeps cursor-tracking partial (the
+focus-stack listener still runs) without crashing on a stub `/root`.
+
+**Risk lenses:** Reliability (test-seam path). Severity Note — same
+pattern as §F-54.
+
+---
+
+### §F-79 — `tutorial_system.gd:346–368` — MOVE_TO_SHELF spawn capture / distance check test seam (Pass 11)
+
+The first-person tutorial's `MOVE_TO_SHELF` step needs a snapshot of the
+player's spawn position so the per-frame distance check
+(`_check_move_to_shelf_distance`) can advance the step once the player has
+walked a meter from the spawn marker. Production captures the snapshot in
+`_capture_player_spawn` from `_on_store_entered` after
+`StoreDirector.enter_store(TUTORIAL_STORE_ID)` has already spawned a
+`StorePlayerBody` and registered it in the `&"player"` group via
+`_PLAYER_GROUP`.
+
+`_capture_player_spawn` has two silent returns:
+
+- `tree == null` — autoload-out-of-tree fallback, identical to the §F-44
+  family. Reachable only under unit-test isolation that frees the system
+  from the scene tree.
+- `player_node == null or not (player_node is Node3D)` — production
+  `StoreDirector.enter_store` always spawns the body before
+  `EventBus.store_entered` fires, so this branch is unreachable at
+  runtime. Tests that emit `store_entered` directly (e.g.
+  `test_store_entered_does_not_auto_advance_move_to_shelf` in
+  `tests/unit/test_tutorial_system.gd`) deliberately do not stage a
+  player; they bind one via `bind_player_for_move_step` instead, which is
+  the documented test seam (see the docstring on
+  `bind_player_for_move_step` in `tutorial_system.gd`).
+
+`_check_move_to_shelf_distance` has a parallel `is_instance_valid` arm:
+when a fake player bound via `bind_player_for_move_step` is freed before
+tutorial teardown (test cleanup order), `is_instance_valid` returns false
+and the distance check stops without advancing. Production has no
+equivalent code path because the body lives for the lifetime of the store
+scene.
+
+Adding `push_warning` on either arm would flood the test suite — the
+move-step test family above relies on the silent return as part of the
+contract. The cite makes the intent explicit so a future reader doesn't
+mistake the silent path for a forgotten escalation.
+
+**Risk lenses:** Reliability (test-seam path). Severity Note — same family
+as §F-44 / §F-54 / §F-59.
+
+---
+
+### §F-80 — `store_player_body.gd:367–377` — `_set_hud_fp_mode` HUD-missing test seam (Pass 11)
+
+The first-person body switches the in-store HUD between the corner-overlay
+FP layout and the legacy top-bar by calling `HUD.set_fp_mode(true|false)`
+during `_ready` and around the F1 dev orbit toggle. The HUD lookup walks
+the current scene's child tree:
+
+```gdscript
+var hud: Node = scene_root.find_child("HUD", true, false)
+if hud == null or not hud.has_method("set_fp_mode"):
+    return
+hud.call("set_fp_mode", enabled)
+```
+
+Three silent returns (`tree == null`, `scene_root == null`,
+`hud == null or no method`) all collapse to the same headless-test seam.
+Production `GameWorld._setup_ui` instantiates the HUD before any store is
+injected (see `docs/architecture.md#gameworld-init-tiers`), so the
+`set_fp_mode` dispatch is a guaranteed call at runtime; bodies
+free-instanced in unit tests without staging GameWorld take the silent
+path, which is the documented contract for the focused-isolation tests
+in `tests/unit/test_store_player_body.gd`.
+
+The `has_method` check is defense-in-depth against a stub HUD `Control`
+in tests that wants to swallow the call instead of crashing on a missing
+method.
+
+**Risk lenses:** Reliability (test-seam path). Severity Note — same
+pattern as §F-54 / §F-70 (autoload-/scene-stub silent fallback).
+
+---
+
+### §F-81 — `store_player_body.gd:393–415` — `_enter_debug_view` push_warning on missing orbit siblings (Pass 11)
+
+F1 toggles between the FP body camera and a sibling orbit
+`PlayerController` for dev/debug viewing. The toggle is gated by
+`OS.is_debug_build()` in `_unhandled_input` (the §F-73 contract in
+`docs/audits/security-report.md` — release players cannot reach this
+function). Within `_enter_debug_view`:
+
+```gdscript
+var orbit: Node = get_node_or_null(_ORBIT_CONTROLLER_SIBLING_PATH)
+if orbit == null:
+    push_warning(
+        "StorePlayerBody: orbit PlayerController missing at %s; F1 toggle ignored"
+        % String(_ORBIT_CONTROLLER_SIBLING_PATH)
+    )
+    return
+var orbit_cam: Camera3D = orbit.get_node_or_null("StoreCamera") as Camera3D
+if orbit_cam == null:
+    push_warning(
+        "StorePlayerBody: orbit StoreCamera missing; F1 toggle aborted"
+    )
+    return
+```
+
+Both branches already escalate via `push_warning` rather than failing
+silently; the cite formalizes the contract that stores opting into the
+dev orbit view (currently `retro_games.tscn`) must author the orbit
+controller as a sibling at `_ORBIT_CONTROLLER_SIBLING_PATH`. A future
+store that drops the orbit child surfaces the regression at toggle time
+rather than silently degrading the dev experience.
+
+**Risk lenses:** Observability (debug surface). Severity Note —
+debug-only path, already escalates loudly, contract cite added.
+
+---
+
+### §F-82 — `checkout_panel.gd:86–89`, `close_day_preview.gd:192–195`, `day_summary.gd:235–237` — modal `_exit_tree` defensive CTX_MODAL cleanup (Pass 11)
+
+Three modal panels (`CheckoutPanel`, `CloseDayPreview`, `DaySummary`)
+push `InputFocus.CTX_MODAL` when shown so the FP cursor is released for
+mouse interaction. Each tracks ownership via a `_focus_pushed: bool` and
+must pop the frame before the modal goes out of scope. The pattern:
+
+```gdscript
+func _exit_tree() -> void:
+    if _focus_pushed:
+        _pop_modal_focus()
+```
+
+The cite covers the silent skip path: if `_focus_pushed` is false
+(modal already cleanly closed via its own button handler), the
+`_exit_tree` is a no-op, which is correct. If `_focus_pushed` is true and
+the topmost frame is no longer CTX_MODAL (some sibling pushed without
+going through this contract), `_pop_modal_focus` itself raises
+`push_error` and skips the pop to avoid corrupting the sibling's frame —
+this is the §F-74 contract documented in `docs/audits/security-report.md`.
+So the silent path on the `_exit_tree` line is only the well-behaved
+no-op; corruption is escalated by the callee.
+
+**Risk lenses:** Reliability (focus stack integrity). Severity Note —
+loud counterpart in `_pop_modal_focus` already defends the contract;
+the cite ties the cleanup arm back to that defender.
+
+---
+
 ## Policy: EH-AS-1 — `assert()` in autoload bodies
 
 **Rule.** `assert()` calls in autoload script bodies (and in ownership
@@ -1180,6 +1522,9 @@ site has either an inline cite or a class-level docstring pointing here.
 | Acted (Pass 8) — justified inline | §F-52 (codified), §F-53 (codified), §F-54 (test-seam docstrings) |
 | Acted (Pass 9) — cite-correctness | §F-58 (renumbered from mislabelled `§F-57` in `retro_games.gd`) |
 | Acted (Pass 9) — justified inline | §F-59 (Day-1 audit test-seams), §F-60 (day-close inventory null fallback), §F-61 (day_summary forward-compat default), §F-62 (HUD pulse defensive guard), §F-63 (CameraManager SSOT skip-if-tracked), §F-64 (mouse-look camera-null fallback), §F-65 (F3 debug toggle push_warning paths) |
+| Acted (Pass 10) — tightened | §F-66 (`CheckoutPanel` non-Dictionary item drop → `push_warning`) |
+| Acted (Pass 10) — justified inline | §F-67 (`GameWorld._auto_enter_default_store_in_hub` test-seam), §F-68 (HUD `_wire_close_day_*` test-seam), §F-69 (HUD `_get_active_store_snapshot` Tier-5 init), §F-70 (`StorePlayerBody` EventBus arm) |
+| Acted (Pass 11) — justified inline | §F-79 (`TutorialSystem` MOVE_TO_SHELF spawn-capture + distance test seams), §F-80 (`StorePlayerBody._set_hud_fp_mode` headless-test seam), §F-81 (`StorePlayerBody._enter_debug_view` push_warning paths cite), §F-82 (modal `_exit_tree` defensive CTX_MODAL cleanup — `CheckoutPanel`, `CloseDayPreview`, `DaySummary`) |
 | Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §F-48, §F-49, §J4 |
 | Retired (feature removed) | §F-28 |
 | Needs telemetry | None — EventBus + AuditLog provide sufficient observability |
@@ -1198,6 +1543,54 @@ removed.
 ## Final Verdict
 
 **Prod posture acceptable.**
+
+Pass 11 reviewed the post-Pass-10 working tree: the new
+`TutorialSystem._capture_player_spawn` / `_check_move_to_shelf_distance`
+distance-gate (paired with `bind_player_for_move_step` as the explicit test
+seam), the three modal `_exit_tree` defensive CTX_MODAL cleanup arms in
+`CheckoutPanel`, `CloseDayPreview`, and `DaySummary`, the
+`StorePlayerBody._set_hud_fp_mode` HUD-flip helper, and the F1 dev-only
+`_enter_debug_view` `push_warning` paths on missing orbit
+`PlayerController` / `StoreCamera` siblings.
+
+Pass 11 added six new in-source cites (§F-79 — §F-82, with §F-79 / §F-80
+covering two locations each) and tightened nothing — every new pattern is
+already defended by a louder counterpart on the same code path
+(`_pop_modal_focus`'s `push_error` on stack corruption per §F-74,
+`_open_close_day_preview`'s click-time `push_warning`, `_enter_debug_view`'s
+own `push_warning`s, the `StoreDirector`-spawns-the-player production
+guarantee for the tutorial). The cites attribute the silent arms back to
+those defenders so the code reads as designed rather than accidental.
+
+After Pass 11 the repo's full GUT suite (`bash tests/run_tests.sh`) reports
+**4927 / 4927 passing**, 0 failures (pre-existing validator failures under
+ISSUE-154 / ISSUE-239 are unrelated content-completeness checks for trade
+panel and pack/tournament content that lives outside this branch). All
+eleven passes' findings are accounted for; no hidden data-corruption paths
+remain.
+
+Pass 10 reviewed the working-tree changes layered on top of Pass 9: the new
+in-store `CheckoutPanel` modal (`game/scenes/ui/checkout_panel.gd`), the
+`HUD.set_fp_mode` corner-overlay layout and the
+`StorePlayerBody._apply_fp_hud_mode` hook that flips it on at body-spawn,
+the `HUD._wire_close_day_preview` / `_wire_close_day_confirm_dialog` /
+`_get_active_store_snapshot` close-day plumbing, the
+`StorePlayerBody._lock_cursor_and_track_focus`
+`EventBus.game_state_changed` re-lock arm, the
+`StorePlayerBody._physics_process` gravity pass, the
+`GameWorld._auto_enter_default_store_in_hub` post-tutorial auto-entry, and
+the `ShelfSlot` hover-gated `Label3D` flip.
+
+The pass tightened one Low silent-drop in `CheckoutPanel._on_checkout_started`
+(non-Dictionary entries silently dropped from the cart → `push_warning` with
+the offending type, well-formed remainder preserved — §F-66) and justified
+four Note-level test-seam fallbacks inline (§F-67 / §F-68 / §F-69 / §F-70).
+No new Critical/High/Medium findings.
+
+After Pass 10 the repo's full test suite (`bash tests/run_tests.sh`) reports
+**4890 / 4890 GUT tests passing**, 0 failures, 1 warning (pre-existing
+canvas RID leak unrelated to this branch). All ten passes' findings are
+accounted for; no hidden data-corruption paths remain.
 
 Pass 9 reviewed the post-FP-entry working-tree layer: the new
 `Day1ReadinessAudit` `_count_players_in_scene` / `_viewport_has_current_camera`

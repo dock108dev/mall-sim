@@ -1,27 +1,32 @@
 ## Phase 0.1 P1.4 regression test: Day Summary covers the mall cleanly. Verifies
-## the tscn ships as a CanvasLayer at layer=12, the Overlay alpha target is
-## ≥ 0.9, the Panel has a solid StyleBoxFlat background, and the
-## responsive-modal margins replace the broken 400/200 hardcoded margins.
+## the tscn ships as a CanvasLayer at the canonical MODAL band, the Overlay
+## alpha target is ≥ 0.9, the Panel has a solid StyleBoxFlat background, and
+## the responsive-modal margins replace the broken 400/200 hardcoded margins.
 ##
-## NOTE: layer=12 predates the canonical band table in
-## docs/research/canvas-layer-z-order-conflicts.md. After ISSUE-007 the
-## tutorial overlay moved to band 50, so day_summary now renders BELOW
-## tutorial.
+## DaySummary lives at the canonical MODAL band (`UILayers.MODAL = 80`) so it
+## renders above the FP HUD (layer=30), the objective rail (layer=40), and
+## the tutorial overlay (layer=50). The previous layer=12 placement was a
+## pre-band-table value that left the summary below the HUD — the FP corner
+## labels and close-day hint would punch through the modal during end-of-day.
 extends GutTest
 
 const _DS_TSCN: String = "res://game/scenes/ui/day_summary.tscn"
 const _DS_GD: String = "res://game/scenes/ui/day_summary.gd"
 
 
-func test_day_summary_is_canvas_layer_at_layer_12() -> void:
+func test_day_summary_is_canvas_layer_above_hud() -> void:
 	var src: String = FileAccess.get_file_as_string(_DS_TSCN)
 	assert_true(
 		src.contains('[node name="DaySummary" type="CanvasLayer"]'),
 		"DaySummary root must be a CanvasLayer for explicit z-ordering"
 	)
 	assert_true(
-		src.contains("layer = 12"),
-		"DaySummary CanvasLayer must be at layer=12 (pre-band-table value)"
+		src.contains("layer = %d" % UILayers.MODAL),
+		(
+			"DaySummary CanvasLayer must sit at the canonical MODAL band "
+			+ "(UILayers.MODAL=%d) so it renders above the HUD (layer=%d)"
+		)
+		% [UILayers.MODAL, UILayers.HUD]
 	)
 
 

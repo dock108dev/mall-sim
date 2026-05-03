@@ -1,5 +1,14 @@
 # SSOT Enforcement Pass — 2026-05-02
 
+> **Pass 2 (2026-05-03)** — destructive cleanup against the working-tree diff
+> that completes the first-person pivot. Pass 2 goes further than Pass 1:
+> the *cleanup-report.md* Pass-3 stance was "no-behavior-change" and
+> intentionally left dead-but-equal lerp infrastructure, an unreachable
+> `Camera3D` legacy fallback, unused `ortho_size_min/max` exports, and the
+> `_player_indicator` floor-disc hooks in place. The SSOT pass operates with
+> the rule "if production usage cannot be proven, default to removal" and
+> drops them. See [Pass 2 changes](#pass-2-changes-2026-05-03) below.
+
 **Scope:** SSOT enforcement against the working-tree diff that completes the
 first-person store-entry feature on top of Pass 8 (`error-handling-report.md`).
 The diff introduces named physics layers, a first-person walking body with an
@@ -79,3 +88,70 @@ green: **4858/4858 GUT tests, 0 failures**, all SSOT tripwires green.
 None. Every finding was either acted on in source or carried explicit
 justification with a concrete trigger to revisit. No SSOT decision was left
 blocked.
+
+---
+
+## Pass 2 changes (2026-05-03)
+
+**Driver:** the working-tree diff has irreversibly pivoted to the first-person
+SSOT — `game/scenes/player/player.gd` (the blue-circle `PlayerIndicator`
+script), `game/scenes/player/player.tscn`,
+`game/scripts/player/mall_camera_controller.gd`, and
+`tests/gut/test_player_indicator_visibility.gd` are all `D` in `git status`;
+the orbit-input actions (`orbit_left`, `orbit_right`, `camera_orbit`,
+`camera_pan`, `camera_zoom_in`, `camera_zoom_out`) are gone from
+`project.godot`; `BRAINDUMP.md` mandates "no visible blue-circle player
+avatar". Pass 1 / Pass 3 of `cleanup-report.md` was "no-behavior-change" and
+recorded the surviving dead-code list as "considered-but-not-changed". This
+pass deletes those items.
+
+### Changes made this pass
+
+| Path | Change | Rationale |
+|---|---|---|
+| `game/scripts/player/player_controller.gd` | Removed the `_player_indicator` `@onready` declaration, the two `_update_player_indicator_visibility()` call sites in `_ready` and `_process`, and the entire `_update_player_indicator_visibility()` function body (was lines 65-70, 88, 109, 302-312). | The blue-circle floor disc was the `PlayerIndicator` MeshInstance3D rendered by the now-deleted `game/scenes/player/player.tscn`. **No shipping scene authors a `PlayerIndicator` child** of `PlayerController` (`grep PlayerIndicator --include='*.tscn'` returns zero hits). The hooks were dead under the new FP SSOT and the BRAINDUMP "no visible blue-circle avatar" mandate. SSOT rule: "If production usage cannot be proven, default to removal." |
+| `game/scripts/player/player_controller.gd` | Removed `ortho_size_min` and `ortho_size_max` `@export` declarations. | `cleanup-report.md` Pass 3 already documented these as "for callers that adjust ortho size programmatically — but no caller exists." Scroll-zoom inputs are gone (the only mutator). With the dead exports removed, `ortho_size_default` is the single source for the orthogonal view size. |
+| `game/scripts/player/player_controller.gd` | Removed `_target_yaw`, `_target_pitch`, `_target_zoom`, `_target_ortho_size` member vars + their initializations + the four dead-equal `lerp_angle` / `lerpf` calls in `_process`; `set_camera_angles` and `set_zoom_distance` now write directly to `_yaw` / `_pitch` / `_zoom`; `_apply_keyboard_movement` reads `_yaw` instead of the duplicate `_target_yaw`. `_pivot` / `_target_pivot` are kept separate (the keyboard step writes the target while the lerp interpolates the canonical pivot — a real producer/consumer split, not a duplicate). | Two-variables-with-the-same-value is by definition an SSOT violation. With orbit/pan/scroll-zoom inputs deleted, every caller of `set_camera_angles` / `set_zoom_distance` was writing both halves to identical values; `lerpf(x, x, w) = x`. `cleanup-report.md` Pass 3 explicitly considered and deferred this on no-behavior-change grounds; the SSOT pass is destructive and lands the collapse. |
+| `game/scripts/player/player_controller.gd` (`_resolve_camera()`) | Dropped the `Camera3D` legacy-name fallback below the `StoreCamera` lookup. The function is now a one-liner that returns `get_node_or_null("StoreCamera") as Camera3D`. | `cleanup-report.md` Pass 3 confirmed "no shipping scene authors a `Camera3D` child of `PlayerController` today" and kept the fallback only because removing it was "a public-surface change to the documented §F-36 contract." The §F-36 docstring is preserved; only the unreachable fallback line is removed. The two scenes that instantiate `PlayerController` (`game/scenes/player/player_controller.tscn` and `retro_games.tscn` via that pack) ship `StoreCamera` exclusively. |
+| `game/scripts/player/player_controller.gd` (`set_build_mode` doc) | Tightened: "Suspends pivot updates and the player indicator while build mode is active." → "Suspends pivot updates while build mode is active." | The "and the player indicator" clause is now wrong because the indicator hooks were just deleted. |
+| `game/scenes/stores/retro_games.tscn:296-297` | Removed the `ortho_size_min = 14.0` and `ortho_size_max = 28.0` overrides on the `PlayerController` instance. | Forced by the export removal above; nothing reads these values either. The retained `ortho_size_default = 22.0` is the only ortho-size SSOT. |
+| `tests/unit/test_store_selector_system.gd:273,275` | `store_camera._target_zoom` → `store_camera._zoom`. | Forced by the `_target_zoom` removal above; the assertion now reads the single canonical zoom value rather than the deleted duplicate. Behaviorally identical. |
+| `game/scripts/world/mall_hallway.gd:153` | Renamed the instantiated `PlayerController` node from `"MallCameraController"` to `"PlayerController"`. | The `MallCameraController` class (`game/scripts/player/mall_camera_controller.gd`) was deleted in this branch. The scene-tree node name was the last surviving reference to the dead class name; future `find_child("MallCameraController", ...)` lookups would silently return null. The new name matches the actual `class_name PlayerController` of the script attached to the instantiated scene (`game/scenes/player/player_controller.tscn`). |
+
+**Verification:** `bash tests/run_tests.sh` after edits — **4927/4927 GUT
+tests pass, 0 failures**, all SSOT tripwires green
+(`validate_translations.sh`, `validate_single_store_ui.sh`,
+`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter sole-owner
+check). Pre-existing validator failures (ISSUE-018, ISSUE-023, ISSUE-024,
+ISSUE-154, ISSUE-239) are on `main` ahead of this branch and do not touch
+the files edited in this pass.
+
+### SSOT modules per domain (Pass 2 deltas)
+
+| Domain | Pass 1 SSOT | Pass 2 update |
+|---|---|---|
+| Camera angle / zoom / ortho-size internal state on `PlayerController` | (not enumerated — Pass 1 focused on FP body) | **Pass 2: collapsed to one variable per axis.** `_yaw` / `_pitch` / `_zoom` / `_ortho_size` are the canonical state. `_pivot` / `_target_pivot` are kept as a producer/consumer split because `_apply_keyboard_movement` writes the target each frame while the lerp interpolates the canonical pivot. |
+| Orthogonal view size for `PlayerController` (when `is_orthographic = true`) | (not enumerated) | **Pass 2: `ortho_size_default` is the single source.** `ortho_size_min` / `ortho_size_max` exports were deleted (no caller adjusted ortho size after scroll-zoom went away). |
+| First-person camera child name on `StorePlayerBody` | (not enumerated) | `StoreCamera` is the only convention — verified by `_resolve_camera()` collapse and by `store_player_body.tscn` rename `Camera3D` → `StoreCamera` from the working-tree diff. |
+| Indicator-disc rendering at the camera pivot | (not enumerated) | **Pass 2: removed.** The blue-circle floor disc is gone from gameplay per BRAINDUMP §"Camera is wrong"; no `PlayerIndicator` child is authored anywhere; the controller no longer carries a hook for it. |
+
+### Risk log — Pass 2 retained items
+
+| Item | Why retained | Concrete trigger to remove |
+|---|---|---|
+| Orbit-named identifiers in `retro_games.gd` (`_ORBIT_CONTROLLER_PATH`, `_disable_orbit_controller_for_fp_startup`, local `var orbit:` blocks in `_toggle_debug_overhead_camera` / `_enter_debug_overhead` / `_exit_debug_overhead`) | These names accurately describe the F3 debug-overhead surface ("the thing that used to be the orbit controller and is now the WASD-pivot debug view"). They name a real behavioral role, not a deleted one — orbiting may be gone, but the controller node and the F3 toggle hookup are alive and shipping. Misnomer ≠ dead code. Renaming would touch ~10 sites and is a polish refactor with no SSOT payoff. | A pass that explicitly takes "rename for accuracy" as scope (e.g. a docstring/identifier polish pass), or the F3 debug surface itself being deleted. |
+| `_pivot` / `_target_pivot` two-variable split | Real producer/consumer relationship: `_apply_keyboard_movement` writes `_target_pivot` each frame, `_process` lerps `_pivot` toward it for smoothing. Collapsing them would remove the smoothing, which is a behavior change, not an SSOT cleanup. | Decision to drop the lerp smoothing entirely (e.g. instant pivot snapping for a deterministic-replay pass). |
+| Orbit `PlayerController` and embedded `StoreCamera` in `retro_games.tscn` | Same Pass-1 rationale stands — the F3 debug-overhead toggle is the consumer. Pass 2 cleaned the dead-code internals of `PlayerController` but did not delete the F3 surface. | Same trigger as Pass 1: a decision to drop the F3 debug overhead. |
+| `set_input_listening` doc reference to `tests/validate_input_focus.sh` | The validator script is the SSOT for the rule "owners must route through `set_input_listening` instead of `set_process_unhandled_input`." Pass 2 did not touch the function or the validator. | None planned — this is the canonical contract pointer. |
+| `MallCameraController` mentions in `.aidlc/research/crosshair-fp-scene.md` and `.aidlc/runs/aidlc_20260502_213623/claude_outputs/research_crosshair-fp-scene.md` | These are frozen research-run snapshots, not living docs. Editing them would falsify the research history (timestamped run artifacts). | None — leave intact as historical context. |
+
+### Sanity check — Pass 2 dangling references
+
+| Check | Result |
+|---|---|
+| Any code citing `_target_yaw` / `_target_pitch` / `_target_zoom` / `_target_ortho_size` after the collapse? | None. `grep` returns the prior-pass mention in `cleanup-report.md` only (historical). |
+| Any code citing `ortho_size_min` / `ortho_size_max` after the export + override removal? | None outside `cleanup-report.md` historical text. The only live read was `retro_games.tscn`, also removed. |
+| Any code citing `PlayerIndicator` after the hook removal? | None. `grep PlayerIndicator` returns zero matches in `*.tscn`, `*.gd`, `*.cfg`. |
+| Any `body.get_node_or_null("Camera3D")` lookups left after the FP camera rename? | None. `cleanup-report.md` Pass 3 already migrated `retro_games.gd:_resolve_fp_camera`; `_resolve_camera()` in `player_controller.gd` was the second site, fixed in Pass 2. |
+| Any scene tree node still named `MallCameraController`? | None. `mall_hallway.gd:153` was the only emitter; renamed to `"PlayerController"`. The deleted `mall_camera_controller.gd` script class is unreferenced anywhere in the working tree. |
+| Any test still asserting against `_player_indicator` visibility or against the deleted `player.tscn`? | None. `tests/gut/test_player_indicator_visibility.gd` was deleted in this branch; no other test references the symbol. |

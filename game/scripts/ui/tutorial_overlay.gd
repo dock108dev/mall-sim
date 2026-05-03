@@ -10,7 +10,7 @@ const SLIDE_OFFSET: float = 100.0
 ## Game states each tutorial step requires before its prompt may appear.
 ## Steps absent from this map have no state restriction.
 const _STEP_REQUIRED_STATES: Dictionary = {
-	"click_store": GameManager.State.MALL_OVERVIEW,
+	"move_to_shelf": GameManager.State.STORE_VIEW,
 	"open_inventory": GameManager.State.STORE_VIEW,
 	"place_item": GameManager.State.STORE_VIEW,
 	"set_price": GameManager.State.STORE_VIEW,
@@ -51,11 +51,12 @@ func _ready() -> void:
 
 ## Returns false when tutorial UI must not render:
 ## blocked in MAIN_MENU or DAY_SUMMARY states, when a modal has input focus,
-## or when the tutorial_skipped flag is set. NOTE: MALL_OVERVIEW must remain
-## allowed here because the click_store tutorial step renders during mall
-## overview. TutorialContextSystem.is_tutorial_rendering_allowed() additionally
-## blocks MALL_OVERVIEW for autoload-level context-entry decisions, which is
-## a separate concern from overlay rendering.
+## or when the tutorial_skipped flag is set. All FP tutorial steps render
+## inside STORE_VIEW; MALL_OVERVIEW is left permissive here because contextual
+## tips can still surface there after the tutorial completes.
+## TutorialContextSystem.is_tutorial_rendering_allowed() additionally blocks
+## MALL_OVERVIEW for autoload-level context-entry decisions, which is a
+## separate concern from overlay rendering.
 func _can_show_tutorial() -> bool:
 	if GameState.get_flag(&"tutorial_skipped"):
 		return false

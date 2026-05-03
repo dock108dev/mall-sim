@@ -150,7 +150,7 @@ func _setup_camera() -> void:
 	_camera_controller = (
 		_PLAYER_CONTROLLER_SCENE.instantiate() as PlayerController
 	)
-	_camera_controller.name = "MallCameraController"
+	_camera_controller.name = "PlayerController"
 	_camera_controller.store_bounds_min = Vector3(-20.0, 0.0, -2.0)
 	_camera_controller.store_bounds_max = Vector3(20.0, 0.0, 8.0)
 	_camera_controller.move_speed = 8.0

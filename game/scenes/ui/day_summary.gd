@@ -1,7 +1,12 @@
 ## Full-screen day summary overlay shown at end of each day.
-## Rendered on its own CanvasLayer at layer=12 so it sits above
-## tutorial_overlay (layer=10) and the hub/game_world UI (layer=5/10).
-## See docs/audits/phase0-ui-integrity.md P1.4.
+## Rendered on its own CanvasLayer at the canonical MODAL band (layer=80,
+## see `UILayers.MODAL`) so it sits above the FP HUD (layer=30), the objective
+## rail (layer=40), and the tutorial overlay (layer=50). The previous
+## layer=12 placement predated the band table and rendered the summary
+## *below* the HUD — the FP corner labels and the close-day hint would punch
+## through the modal during the end-of-day flow.
+## See docs/audits/phase0-ui-integrity.md P1.4 and
+## game/scripts/ui/ui_layers.gd.
 class_name DaySummary
 extends CanvasLayer
 
@@ -51,6 +56,10 @@ var _previous_day_revenue: float = -1.0
 var _has_previous_day_revenue: bool = false
 var _last_report: PerformanceReport = null
 var _prev_report: PerformanceReport = null
+## Tracks whether this summary pushed CTX_MODAL on InputFocus so the cursor
+## stays released across the close-day → DaySummary hand-off. Mirrors the
+## InventoryPanel / CheckoutPanel modal-focus contract.
+var _focus_pushed: bool = false
 
 @onready var _overlay: ColorRect = $Root/Overlay
 @onready var _panel: PanelContainer = $Root/Panel
@@ -177,6 +186,7 @@ func show_summary(
 	if _grading_label:
 		_grading_label.visible = false
 	_apply_record_highlights(revenue, net_profit, items_sold)
+	_push_modal_focus()
 	_animate_open()
 
 
@@ -199,8 +209,12 @@ func show_last() -> void:
 	)
 
 
-## Hides the summary panel with close animation.
+## Hides the summary panel with close animation. Pops the CTX_MODAL frame
+## immediately so the FP cursor recapture (or mall-overview cursor mode)
+## fires the moment the player clicks Continue / Mall Overview, instead of
+## waiting on the close animation.
 func hide_summary() -> void:
+	_pop_modal_focus()
 	_kill_all_tweens()
 	_anim_tween = PanelAnimator.modal_close(_panel)
 	_overlay_tween = _panel.create_tween()
@@ -216,6 +230,50 @@ func hide_summary() -> void:
 			_emit_day_acknowledged_on_hide = false
 			EventBus.day_acknowledged.emit()
 	)
+
+
+## §F-82 — Defensive cleanup so a summary removed mid-display does not
+## strand a CTX_MODAL frame on InputFocus. `_pop_modal_focus` escalates with
+## `push_error` if the stack is corrupt (§F-74 contract); the silent skip
+## here is only the well-behaved no-op path.
+func _exit_tree() -> void:
+	if _focus_pushed:
+		_pop_modal_focus()
+
+
+func _push_modal_focus() -> void:
+	if _focus_pushed:
+		return
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	_focus_pushed = true
+
+
+func _pop_modal_focus() -> void:
+	if not _focus_pushed:
+		return
+	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
+	# without going through this contract. Surface it via push_error AND skip
+	# the pop so we don't corrupt someone else's frame. Mirrors InventoryPanel
+	# / CheckoutPanel.
+	if InputFocus.current() != InputFocus.CTX_MODAL:
+		push_error(
+			(
+				"DaySummary.hide_summary: expected CTX_MODAL on top, got %s — "
+				+ "leaving stack untouched to avoid corrupting sibling frame"
+			)
+			% String(InputFocus.current())
+		)
+		_focus_pushed = false
+		return
+	InputFocus.pop_context()
+	_focus_pushed = false
+
+
+## Test seam — clears _focus_pushed without calling pop_context. Pair with
+## InputFocus._reset_for_tests() so test harnesses that wipe the focus stack
+## don't leave the panel believing it still owns a frame.
+func _reset_for_tests() -> void:
+	_focus_pushed = false
 
 
 func _animate_open() -> void:

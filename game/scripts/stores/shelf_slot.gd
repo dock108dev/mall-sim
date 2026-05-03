@@ -63,6 +63,7 @@ var _item_node: Node3D = null
 var _placement_active: bool = false
 var _info_label: Label3D = null
 var _label_accent: Color = Color.WHITE
+var _label_focus_active: bool = false
 
 @onready var _empty_mesh: MeshInstance3D = _resolve_empty_mesh()
 
@@ -83,6 +84,12 @@ func _ready() -> void:
 	EventBus.placement_mode_exited.connect(_on_placement_exited)
 	EventBus.stocking_cursor_active.connect(_on_stocking_cursor_active)
 	EventBus.stocking_cursor_inactive.connect(_on_stocking_cursor_inactive)
+	# Label3D shows only while the interaction ray is focused on this slot.
+	# At FP eye height a permanently-visible label renders ~30–40 cm wide and
+	# clutters the view; hover-gated visibility keeps the in-world price tag
+	# readable when the player aims at the item and silent otherwise.
+	focused.connect(_on_label_focused)
+	unfocused.connect(_on_label_unfocused)
 
 
 ## Returns whether an item is currently placed in this slot.
@@ -176,7 +183,7 @@ func set_display_data(item_name: String, condition: String, price: float) -> voi
 		_info_label.modulate = _label_accent
 		add_child(_info_label)
 	_info_label.text = "%s\n%s  $%.2f" % [item_name, condition.capitalize(), price]
-	_info_label.visible = true
+	_info_label.visible = _label_focus_active
 
 
 ## Sets the accent color used for the info label text. Applies immediately if
@@ -247,6 +254,18 @@ func highlight() -> void:
 ## Overrides base unhighlight to clear placement highlights too.
 func unhighlight() -> void:
 	super.unhighlight()
+
+
+func _on_label_focused() -> void:
+	_label_focus_active = true
+	if _info_label:
+		_info_label.visible = true
+
+
+func _on_label_unfocused() -> void:
+	_label_focus_active = false
+	if _info_label:
+		_info_label.visible = false
 
 
 func _on_placement_entered() -> void:

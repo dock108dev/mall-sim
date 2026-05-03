@@ -65,12 +65,46 @@ func test_set_display_data_creates_label3d_child() -> void:
 	assert_not_null(label, "set_display_data must add a Label3D child")
 
 
-func test_set_display_data_label_is_visible() -> void:
+func test_set_display_data_label_hidden_until_focused() -> void:
 	var slot := _make_slot()
 	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
 	var label: Label3D = _find_label3d(slot)
 	assert_not_null(label, "Label3D child must exist")
-	assert_true(label.visible, "Label3D must be visible after set_display_data")
+	assert_false(
+		label.visible,
+		"Label3D stays hidden after set_display_data until the slot is focused"
+	)
+
+
+func test_focused_signal_shows_label() -> void:
+	var slot := _make_slot()
+	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	slot.focused.emit()
+	var label: Label3D = _find_label3d(slot)
+	assert_not_null(label, "Label3D child must exist")
+	assert_true(label.visible, "focused() must reveal the Label3D")
+
+
+func test_unfocused_signal_hides_label() -> void:
+	var slot := _make_slot()
+	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	slot.focused.emit()
+	slot.unfocused.emit()
+	var label: Label3D = _find_label3d(slot)
+	assert_not_null(label, "Label3D child must exist")
+	assert_false(label.visible, "unfocused() must hide the Label3D again")
+
+
+func test_set_display_data_visible_when_already_focused() -> void:
+	var slot := _make_slot()
+	slot.focused.emit()
+	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	var label: Label3D = _find_label3d(slot)
+	assert_not_null(label, "Label3D child must exist")
+	assert_true(
+		label.visible,
+		"set_display_data while focused must keep the Label3D visible"
+	)
 
 
 func test_set_display_data_text_contains_item_name() -> void:

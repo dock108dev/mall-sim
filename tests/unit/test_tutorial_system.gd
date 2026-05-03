@@ -45,8 +45,8 @@ func test_advance_step_moves_forward_and_emits_step_completed() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.CLICK_STORE,
-		"Step should advance from WELCOME to CLICK_STORE"
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"Step should advance from WELCOME to MOVE_TO_SHELF"
 	)
 	assert_eq(
 		completed_id[0], "welcome",
@@ -65,7 +65,7 @@ func test_advance_on_final_step_emits_tutorial_completed() -> void:
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	_drive_move_to_shelf_advance()
 	EventBus.panel_opened.emit("inventory")
 	EventBus.item_stocked.emit("item_1", "shelf_1")
 	EventBus.price_set.emit("item_1", 9.99)
@@ -161,8 +161,8 @@ func test_save_state_serializes_step_and_completion() -> void:
 	)
 	assert_eq(
 		int(data["current_step"]),
-		TutorialSystem.TutorialStep.CLICK_STORE,
-		"Serialized step should be CLICK_STORE"
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"Serialized step should be MOVE_TO_SHELF"
 	)
 	assert_false(
 		data["tutorial_completed"] as bool,
@@ -212,7 +212,7 @@ func test_load_state_restores_mid_tutorial() -> void:
 		"current_step": TutorialSystem.TutorialStep.OPEN_INVENTORY,
 		"completed_steps": {
 			"welcome": true,
-			"click_store": true,
+			"move_to_shelf": true,
 		},
 		"tips_shown": {},
 	}
@@ -233,7 +233,7 @@ func test_load_state_restores_mid_tutorial() -> void:
 		"Tutorial should be active for mid-tutorial state"
 	)
 	assert_true(
-		_tutorial._completed_steps.get("click_store", false) as bool,
+		_tutorial._completed_steps.get("move_to_shelf", false) as bool,
 		"Mid-tutorial completed step IDs should be restored"
 	)
 
@@ -245,7 +245,7 @@ func test_load_state_resumes_last_incomplete_step() -> void:
 		"current_step": TutorialSystem.TutorialStep.WELCOME,
 		"completed_steps": {
 			"welcome": true,
-			"click_store": true,
+			"move_to_shelf": true,
 		},
 		"tips_shown": {},
 	}
@@ -272,11 +272,11 @@ func test_eventbus_step_completed_has_correct_step_id() -> void:
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	_drive_move_to_shelf_advance()
 
 	assert_eq(emitted_ids.size(), 2, "Two steps should have completed")
 	assert_eq(emitted_ids[0], "welcome", "First: welcome")
-	assert_eq(emitted_ids[1], "click_store", "Second: click_store")
+	assert_eq(emitted_ids[1], "move_to_shelf", "Second: move_to_shelf")
 
 	EventBus.tutorial_step_completed.disconnect(on_completed)
 
@@ -292,46 +292,78 @@ func test_eventbus_step_changed_emits_new_step_id() -> void:
 	_tutorial._process(0.01)
 
 	assert_true(
-		changed_ids.has("click_store"),
-		"tutorial_step_changed should emit click_store after advancing"
+		changed_ids.has("move_to_shelf"),
+		"tutorial_step_changed should emit move_to_shelf after advancing"
 	)
 
 	EventBus.tutorial_step_changed.disconnect(on_changed)
 
 
-func test_click_store_ignores_non_retro_games_store() -> void:
+func test_move_to_shelf_advances_only_when_player_walks_far_enough() -> void:
 	_tutorial.initialize(true)
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.CLICK_STORE,
-		"Should be on CLICK_STORE after WELCOME"
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"Should be on MOVE_TO_SHELF after WELCOME"
 	)
 
-	EventBus.store_entered.emit(&"electronics")
+	var fake_player: Node3D = Node3D.new()
+	add_child_autofree(fake_player)
+	fake_player.global_position = Vector3.ZERO
+	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
+
+	# A nudge under the 1m threshold must not advance the step.
+	fake_player.global_position = Vector3(0.5, 0.0, 0.0)
+	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.CLICK_STORE,
-		"Non-retro_games store entry should not advance CLICK_STORE"
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"Sub-threshold movement must not advance MOVE_TO_SHELF"
 	)
 
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	# Crossing the 1m threshold advances to OPEN_INVENTORY.
+	fake_player.global_position = Vector3(1.5, 0.0, 0.0)
+	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
 		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"retro_games entry should advance to OPEN_INVENTORY"
+		"Crossing the move-to-shelf threshold should advance to OPEN_INVENTORY"
 	)
 
 
-# --- ISSUE-010: SET_PRICE grace-timer auto-advance ---
+func test_store_entered_does_not_auto_advance_move_to_shelf() -> void:
+	_tutorial.initialize(true)
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
+	_tutorial._process(0.01)
+
+	EventBus.store_entered.emit(&"electronics")
+	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	assert_eq(
+		_tutorial.current_step,
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"store_entered must not advance MOVE_TO_SHELF — only player walking does"
+	)
+
+
+# --- Helpers / ISSUE-010: SET_PRICE grace-timer auto-advance ---
+
+
+func _drive_move_to_shelf_advance() -> void:
+	var fake_player: Node3D = Node3D.new()
+	add_child_autofree(fake_player)
+	fake_player.global_position = Vector3.ZERO
+	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
+	fake_player.global_position = Vector3(2.0, 0.0, 0.0)
+	_tutorial._process(0.01)
 
 
 func _drive_to_place_item_step() -> void:
 	_tutorial.initialize(true)
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
-	EventBus.store_entered.emit(TutorialSystem.TUTORIAL_STORE_ID)
+	_drive_move_to_shelf_advance()
 	EventBus.panel_opened.emit("inventory")
 	assert_eq(
 		_tutorial.current_step,

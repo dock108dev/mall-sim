@@ -38,8 +38,8 @@ func test_overlay_hidden_on_ready() -> void:
 
 
 func test_prompt_updates_on_step_changed() -> void:
-	# CLICK_STORE step requires MALL_OVERVIEW state to be visible.
-	GameManager.current_state = GameManager.State.MALL_OVERVIEW
+	# MOVE_TO_SHELF step requires STORE_VIEW state to be visible.
+	GameManager.current_state = GameManager.State.STORE_VIEW
 	_tutorial.initialize(true)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -51,17 +51,17 @@ func test_prompt_updates_on_step_changed() -> void:
 	var bar: PanelContainer = _overlay.get_node("BottomBar")
 	assert_true(
 		bar.visible,
-		"BottomBar should be visible after step change in MALL_OVERVIEW"
+		"BottomBar should be visible after step change in STORE_VIEW"
 	)
 	assert_ne(
 		label.text, "",
 		"PromptLabel should have text after step change"
 	)
-	# Tutorial moved from WELCOME → CLICK_STORE; the label reflects the new step.
+	# Tutorial moved from WELCOME → MOVE_TO_SHELF; the label reflects the new step.
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.CLICK_STORE,
-		"Tutorial should be on CLICK_STORE after WELCOME timer expires"
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"Tutorial should be on MOVE_TO_SHELF after WELCOME timer expires"
 	)
 
 

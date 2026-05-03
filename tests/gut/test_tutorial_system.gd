@@ -37,15 +37,20 @@ func test_step_progression_advances_three_sequential_steps() -> void:
 	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.CLICK_STORE,
-		"Welcome timeout should advance to CLICK_STORE"
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
+		"Welcome timeout should advance to MOVE_TO_SHELF"
 	)
 
-	_tutorial._on_store_entered(TutorialSystem.TUTORIAL_STORE_ID)
+	var fake_player: Node3D = Node3D.new()
+	add_child_autofree(fake_player)
+	fake_player.global_position = Vector3.ZERO
+	_tutorial.bind_player_for_move_step(fake_player, Vector3.ZERO)
+	fake_player.global_position = Vector3(2.0, 0.0, 0.0)
+	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
 		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"retro_games store entry should advance to OPEN_INVENTORY"
+		"Walking past the move-to-shelf threshold should advance to OPEN_INVENTORY"
 	)
 
 	EventBus.panel_opened.emit("inventory")
@@ -59,8 +64,8 @@ func test_step_progression_advances_three_sequential_steps() -> void:
 	assert_eq(completed_steps[0], "welcome", "First completed step should be welcome")
 	assert_eq(
 		completed_steps[1],
-		"click_store",
-		"Second completed step should be click_store"
+		"move_to_shelf",
+		"Second completed step should be move_to_shelf"
 	)
 	assert_eq(
 		completed_steps[2],
@@ -68,7 +73,7 @@ func test_step_progression_advances_three_sequential_steps() -> void:
 		"Third completed step should be open_inventory"
 	)
 	assert_eq(changed_steps.size(), 3, "Each advancement should emit a changed step")
-	assert_eq(changed_steps[0], "click_store", "First changed step should be click_store")
+	assert_eq(changed_steps[0], "move_to_shelf", "First changed step should be move_to_shelf")
 	assert_eq(changed_steps[1], "open_inventory", "Second changed step should be open_inventory")
 	assert_eq(
 		changed_steps[2],
@@ -139,7 +144,7 @@ func test_gameplay_ready_completes_welcome_step() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.CLICK_STORE,
+		TutorialSystem.TutorialStep.MOVE_TO_SHELF,
 		"gameplay_ready should complete the welcome step"
 	)
 	assert_true(

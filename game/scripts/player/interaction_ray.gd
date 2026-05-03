@@ -12,8 +12,10 @@ extends Node
 
 const INTERACTION_RAY_GROUP: StringName = &"interaction_ray"
 
-## Maximum ray distance in meters.
-@export var ray_distance: float = 100.0
+## Maximum ray distance in meters. Sized for first-person store gameplay so
+## the player must walk up to a fixture (counter-depth ~1m, aisle reach ~2m)
+## to focus it; preserves the gaze-based feel inside the 16x20m store volume.
+@export var ray_distance: float = 2.5
 ## Collision mask for interactable detection. Scans the dedicated
 ## `interactable_triggers` layer (named layer 5 in `project.godot` -> bit
 ## value 16) only, so walls and store fixtures never occlude an interactable

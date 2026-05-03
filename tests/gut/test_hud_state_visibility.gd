@@ -211,6 +211,17 @@ func test_top_bar_labels_have_clip_text() -> void:
 		)
 
 
+func test_top_bar_time_label_does_not_expand() -> void:
+	# Ultrawide guard: TimeLabel must not carry SIZE_EXPAND, otherwise it acts
+	# as an infinite elastic spacer inside the full-width TopBar HBoxContainer
+	# and stretches the bar's center across 21:9 / 32:9 displays.
+	var time_label: Label = _hud.get_node("TopBar/TimeLabel")
+	assert_eq(
+		time_label.size_flags_horizontal & Control.SIZE_EXPAND, 0,
+		"TopBar TimeLabel must not have SIZE_EXPAND so it stops acting as the elastic spacer on ultrawide"
+	)
+
+
 func test_close_day_button_has_min_width() -> void:
 	_emit_state(GameManager.State.STORE_VIEW)
 	var btn: Button = _hud.get_node_or_null("TopBar/CloseDayButton")
@@ -237,7 +248,7 @@ func test_tutorial_step_suppresses_telegraph_card() -> void:
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_true(card.visible, "TelegraphCard should appear before tutorial starts")
 
-	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_step_changed.emit("move_to_shelf")
 	assert_false(
 		card.visible,
 		"TelegraphCard must be hidden when tutorial hint is active"
@@ -246,7 +257,7 @@ func test_tutorial_step_suppresses_telegraph_card() -> void:
 
 func test_tutorial_step_suppresses_new_telegraph_events() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
-	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_step_changed.emit("move_to_shelf")
 	# Event fires while tutorial is active — card must stay hidden.
 	EventBus.event_telegraphed.emit("winter_sale", 3)
 	var card: Label = _hud.get_node("TelegraphCard")
@@ -259,7 +270,7 @@ func test_tutorial_step_suppresses_new_telegraph_events() -> void:
 func test_tutorial_hint_ended_restores_telegraph_card() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	EventBus.event_telegraphed.emit("summer_sale", 2)
-	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_step_changed.emit("move_to_shelf")
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_false(card.visible, "Card must be hidden during tutorial")
 
@@ -364,7 +375,7 @@ func _stop_toast_capture() -> void:
 
 func test_notification_suppressed_during_tutorial_step() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_step_changed.emit("move_to_shelf")
 	EventBus.notification_requested.emit("Some flavor message")
 	_stop_toast_capture()
 	assert_eq(
@@ -375,7 +386,7 @@ func test_notification_suppressed_during_tutorial_step() -> void:
 
 func test_critical_notification_shows_during_tutorial_step() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_step_changed.emit("move_to_shelf")
 	EventBus.critical_notification_requested.emit("Save failed — check disk space.")
 	_stop_toast_capture()
 	assert_eq(
@@ -391,7 +402,7 @@ func test_critical_notification_shows_during_tutorial_step() -> void:
 
 func test_notification_shows_after_tutorial_completed() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_step_changed.emit("move_to_shelf")
 	EventBus.tutorial_completed.emit()
 	EventBus.notification_requested.emit("Order delivered.")
 	_stop_toast_capture()
@@ -403,7 +414,7 @@ func test_notification_shows_after_tutorial_completed() -> void:
 
 func test_notification_shows_after_tutorial_skipped() -> void:
 	_start_toast_capture()
-	EventBus.tutorial_step_changed.emit("click_store")
+	EventBus.tutorial_step_changed.emit("move_to_shelf")
 	EventBus.tutorial_skipped.emit()
 	EventBus.notification_requested.emit("Order delivered.")
 	_stop_toast_capture()

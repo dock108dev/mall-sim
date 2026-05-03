@@ -77,6 +77,19 @@ func test_interaction_ray_registers_in_lookup_group() -> void:
 	)
 
 
+func test_default_ray_distance_capped_for_first_person() -> void:
+	# FP gameplay must require walking up to a fixture; a long default would
+	# let the player interact across the 16x20m store from the entrance.
+	assert_lt(
+		_ray.ray_distance, 2.51,
+		"Default ray_distance must be <= 2.5m to preserve gaze-based FP interaction"
+	)
+	assert_gt(
+		_ray.ray_distance, 0.0,
+		"Default ray_distance must be positive"
+	)
+
+
 func test_unfocus_emits_when_target_cleared() -> void:
 	var target: Interactable = _create_target("Inspect", "Item")
 	_ray._set_hovered_target(target)

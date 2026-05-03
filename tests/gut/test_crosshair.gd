@@ -92,3 +92,22 @@ func test_does_not_block_mouse_input() -> void:
 		label.mouse_filter, Control.MOUSE_FILTER_IGNORE,
 		"Label must ignore mouse so it never blocks gameplay clicks"
 	)
+
+
+func test_hover_state_brightens_glyph_color() -> void:
+	var label: Label = _crosshair.get_node("CenterContainer/Label")
+	var idle_color: Color = label.get_theme_color(&"font_color")
+
+	EventBus.interactable_focused.emit("Test — Press E to inspect")
+	var hover_color: Color = label.get_theme_color(&"font_color")
+	assert_ne(
+		hover_color, idle_color,
+		"Crosshair color must change when an interactable is focused"
+	)
+
+	EventBus.interactable_unfocused.emit()
+	var cleared_color: Color = label.get_theme_color(&"font_color")
+	assert_eq(
+		cleared_color, idle_color,
+		"Crosshair color must restore the idle tint when focus clears"
+	)

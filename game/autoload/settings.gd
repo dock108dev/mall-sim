@@ -40,8 +40,6 @@ const REBINDABLE_ACTIONS: Array[String] = [
 	"toggle_orders",
 	"toggle_staff",
 	"rotate_fixture",
-	"orbit_left",
-	"orbit_right",
 ]
 
 const FONT_SIZE_VALUES: Array[int] = [12, 14, 18, 22]

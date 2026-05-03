@@ -20,14 +20,22 @@ The autoload list is documented in [Architecture](architecture.md).
 
 `project.godot` currently defines action groups for:
 
-- movement and interaction
-- debug toggle
-- inventory, orders, staff, and pricing panel toggles
-- camera orbit, pan, and zoom
-- build mode toggle and fixture rotation
-- time speed changes and pause
+- in-store movement (`move_forward`, `move_back`, `move_left`, `move_right`,
+  `sprint`) and interaction (`interact`)
+- debug overlay (`toggle_debug`, F3) and the debug overhead/orbit camera
+  toggle (`toggle_debug_camera`, F1)
+- panel toggles for inventory, orders, staff, and pricing
+  (`toggle_inventory`, `toggle_orders`, `toggle_staff`, `toggle_pricing`)
+- build mode (`toggle_build_mode`) and fixture rotation (`rotate_fixture`)
+- time speed (`time_speed_1`, `time_speed_2`, `time_speed_4`) and pause
+  (`time_toggle_pause`)
+- end-of-day close (`close_day`), pause menu (`pause_menu`), and overview
+  toggle (`toggle_overview`)
+- mall navigation zone shortcuts (`nav_zone_1` … `nav_zone_5`)
 
-Use `project.godot` as the source of truth for exact bindings.
+Use `project.godot` as the source of truth for exact bindings. The
+`debug/walkable_mall` flag (default `false`) gates the optional walkable mall
+hub variant; the shipping configuration is hub/card-based.
 
 ## User data and persistence
 
@@ -68,7 +76,7 @@ The checked-in integrations documented in this repository are:
 | --- | --- | --- |
 | `Windows Desktop` | `exports/windows/MallcoreSim.exe` | x86_64, embedded PCK, built-in code signing disabled. |
 | `macOS` | `exports/macos/MallcoreSim.zip` | universal architecture, minimum macOS `10.15`, built-in code signing disabled. |
-| `Linux/X11` | `exports/linux/MallcoreSim.x86_64` | Linux desktop preset checked in for local export use. |
+| `Linux/X11` | `exports/linux/MallcoreSim.x86_64` | Linux desktop preset, embedded PCK. |
 
 All current presets exclude `.aidlc`, `docs`, `tests`, `game/tests`,
 `addons/gut`, `game/addons/gut`, `.godot`, Markdown, text files, `.gitignore`,

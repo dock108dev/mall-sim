@@ -3,17 +3,42 @@
 ## in. Visibility tracks `InputFocus.current()`: visible only when the topmost
 ## context is `&"store_gameplay"` (cursor locked, gameplay input active);
 ## hidden for modals, mall hub, and main menu.
+##
+## Hover state mirrors `EventBus.interactable_focused/unfocused` so the glyph
+## brightens to a saturated accent color when the InteractionRay is aimed at
+## an interactable, restoring the parchment idle tint when focus clears.
 extends CanvasLayer
 
 
+const _IDLE_COLOR := Color(0.957, 0.914, 0.831, 0.85)
+const _HOVER_COLOR := Color(1.0, 0.804, 0.31, 1.0)
+
+@onready var _label: Label = $CenterContainer/Label
+
+var _hovering: bool = false
+
+
 func _ready() -> void:
+	_apply_hover_color()
 	_refresh_visibility()
 	if InputFocus != null:
 		InputFocus.context_changed.connect(_on_input_focus_changed)
+	EventBus.interactable_focused.connect(_on_interactable_focused)
+	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
 
 
 func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void:
 	_refresh_visibility()
+
+
+func _on_interactable_focused(_action_label: String) -> void:
+	_hovering = true
+	_apply_hover_color()
+
+
+func _on_interactable_unfocused() -> void:
+	_hovering = false
+	_apply_hover_color()
 
 
 func _refresh_visibility() -> void:
@@ -27,3 +52,11 @@ func _should_show() -> bool:
 	if InputFocus == null:
 		return false
 	return InputFocus.current() == InputFocus.CTX_STORE_GAMEPLAY
+
+
+func _apply_hover_color() -> void:
+	if _label == null:
+		return
+	_label.add_theme_color_override(
+		&"font_color", _HOVER_COLOR if _hovering else _IDLE_COLOR
+	)

@@ -20,7 +20,7 @@ At cadence: unlock new store, market/seasonal event fires, reputation tier chang
 
 1. **Legibility before depth** — if the player cannot answer "what can I do now?" in 3 seconds, the screen is broken.
 2. **One complete loop before five partial ones** — vertical slice wins over breadth; no new mechanics while `return false` / `return null` stubs exist in active store controllers.
-3. **Management hub, not walkable world** — player-controller movement is behind a debug flag only; the mall is navigated by clicking store cards.
+3. **Card-based mall hub, first-person store interiors.** The mall hub is navigated by clicking store cards in `mall_overview`; the walkable mall hallway is gated by `debug/walkable_mall` (default `false`). Inside a store, the player walks the interior in first person via `StorePlayerBody` (`game/scripts/player/store_player_body.gd`). The orbit overhead camera (`PlayerController` in `game/scripts/player/player_controller.gd`) is a debug-only view toggled by `toggle_debug_camera` (F1).
 4. **Content is data** — stores, items, milestones, and customers are JSON files loaded via `DataLoaderSingleton` into `ContentRegistry`; no hardcoded content in scripts.
 5. **No trademarks** — all store names, console names, game titles, team names, athlete names, and flavor text must be original parody; boot-time content validator is the enforcement mechanism.
 

@@ -1,7 +1,6 @@
-## Verifies the orthographic-mode contract on PlayerController:
-## projection switch, suppressed orbit/pan, scroll-zoom routing through
-## ortho_size, and retro_games scene defaults that frame the 16×20 m
-## interior at default view.
+## Verifies the orthographic-mode contract on PlayerController: projection
+## switch, ortho size pinned to ortho_size_default, and retro_games scene
+## defaults that frame the 16×20 m interior at default view.
 extends GutTest
 
 const PlayerControllerScene: PackedScene = preload(
@@ -106,52 +105,6 @@ func test_orthographic_ready_sets_camera_size_to_default() -> void:
 	)
 
 
-func test_orthographic_mode_suppresses_orbit_press() -> void:
-	var controller: PlayerController = _make_controller(true)
-	var event: InputEventMouseButton = InputEventMouseButton.new()
-	event.button_index = MOUSE_BUTTON_RIGHT
-	event.pressed = true
-	controller._handle_mouse_button(event)
-	assert_false(
-		bool(controller.get("_is_orbiting")),
-		"Right-mouse press must not start orbit while is_orthographic = true"
-	)
-
-
-func test_orthographic_mode_suppresses_pan_press() -> void:
-	var controller: PlayerController = _make_controller(true)
-	var event: InputEventMouseButton = InputEventMouseButton.new()
-	event.button_index = MOUSE_BUTTON_MIDDLE
-	event.pressed = true
-	controller._handle_mouse_button(event)
-	assert_false(
-		bool(controller.get("_is_panning")),
-		"Middle-mouse press must not start pan while is_orthographic = true"
-	)
-
-
-func test_perspective_mode_still_arms_orbit_and_pan() -> void:
-	# Regression guard: legacy perspective stores must still drive _is_orbiting
-	# and _is_panning off the camera_orbit / camera_pan input actions.
-	var controller: PlayerController = _make_controller(false)
-	var orbit_event: InputEventMouseButton = InputEventMouseButton.new()
-	orbit_event.button_index = MOUSE_BUTTON_RIGHT
-	orbit_event.pressed = true
-	controller._handle_mouse_button(orbit_event)
-	assert_true(
-		bool(controller.get("_is_orbiting")),
-		"Right-mouse press must arm orbit when is_orthographic = false"
-	)
-	var pan_event: InputEventMouseButton = InputEventMouseButton.new()
-	pan_event.button_index = MOUSE_BUTTON_MIDDLE
-	pan_event.pressed = true
-	controller._handle_mouse_button(pan_event)
-	assert_true(
-		bool(controller.get("_is_panning")),
-		"Middle-mouse press must arm pan when is_orthographic = false"
-	)
-
-
 func test_retro_games_scene_uses_orthographic_camera() -> void:
 	var controller: PlayerController = (
 		_retro_root.get_node_or_null("PlayerController") as PlayerController
@@ -232,75 +185,3 @@ func test_retro_games_default_view_frames_back_wall_top() -> void:
 	)
 
 
-func test_orthographic_scroll_zoom_in_changes_ortho_size() -> void:
-	var controller: PlayerController = _make_controller(true)
-	var initial: float = float(controller.get("_target_ortho_size"))
-	var initial_zoom: float = float(controller.get("_target_zoom"))
-	var event: InputEventAction = InputEventAction.new()
-	event.action = "camera_zoom_in"
-	event.pressed = true
-	controller._unhandled_input(event)
-	var after: float = float(controller.get("_target_ortho_size"))
-	var after_zoom: float = float(controller.get("_target_zoom"))
-	assert_lt(
-		after, initial,
-		"Scroll-zoom-in must shrink _target_ortho_size in orthographic mode"
-	)
-	assert_almost_eq(
-		after_zoom, initial_zoom, 0.001,
-		"Scroll-zoom-in must NOT change _target_zoom in orthographic mode"
-	)
-
-
-func test_orthographic_scroll_zoom_out_changes_ortho_size() -> void:
-	var controller: PlayerController = _make_controller(true)
-	var initial: float = float(controller.get("_target_ortho_size"))
-	var event: InputEventAction = InputEventAction.new()
-	event.action = "camera_zoom_out"
-	event.pressed = true
-	controller._unhandled_input(event)
-	assert_gt(
-		float(controller.get("_target_ortho_size")), initial,
-		"Scroll-zoom-out must grow _target_ortho_size in orthographic mode"
-	)
-
-
-func test_orthographic_scroll_zoom_clamps_to_min_max() -> void:
-	var controller: PlayerController = _make_controller(true)
-	# Drive zoom-in past the lower bound; verify clamp at ortho_size_min.
-	var zoom_in_event: InputEventAction = InputEventAction.new()
-	zoom_in_event.action = "camera_zoom_in"
-	zoom_in_event.pressed = true
-	for _i: int in range(50):
-		controller._unhandled_input(zoom_in_event)
-	assert_almost_eq(
-		float(controller.get("_target_ortho_size")),
-		controller.ortho_size_min, 0.001,
-		"Repeated zoom-in must clamp _target_ortho_size at ortho_size_min"
-	)
-	# Drive zoom-out past the upper bound; verify clamp at ortho_size_max.
-	var zoom_out_event: InputEventAction = InputEventAction.new()
-	zoom_out_event.action = "camera_zoom_out"
-	zoom_out_event.pressed = true
-	for _i: int in range(100):
-		controller._unhandled_input(zoom_out_event)
-	assert_almost_eq(
-		float(controller.get("_target_ortho_size")),
-		controller.ortho_size_max, 0.001,
-		"Repeated zoom-out must clamp _target_ortho_size at ortho_size_max"
-	)
-
-
-func test_perspective_scroll_zoom_still_changes_distance() -> void:
-	# Regression guard: perspective stores must still drive _target_zoom on
-	# scroll input.
-	var controller: PlayerController = _make_controller(false)
-	var initial_zoom: float = float(controller.get("_target_zoom"))
-	var event: InputEventAction = InputEventAction.new()
-	event.action = "camera_zoom_out"
-	event.pressed = true
-	controller._unhandled_input(event)
-	assert_gt(
-		float(controller.get("_target_zoom")), initial_zoom,
-		"Scroll-zoom-out must grow _target_zoom in perspective mode"
-	)

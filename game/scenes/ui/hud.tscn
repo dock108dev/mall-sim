@@ -36,7 +36,7 @@ clip_text = true
 [node name="TimeLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
-size_flags_horizontal = 6
+size_flags_horizontal = 4
 text = "Day 1 — 9:00 AM"
 horizontal_alignment = 1
 clip_text = true

@@ -270,9 +270,9 @@ func test_enter_store_caps_camera_zoom_to_store_interior() -> void:
 	)
 
 	store_camera.set_zoom_distance(99.0)
-	assert_almost_eq(store_camera._target_zoom, 5.0, 0.0001)
+	assert_almost_eq(store_camera._zoom, 5.0, 0.0001)
 	store_camera.set_zoom_distance(0.1)
-	assert_almost_eq(store_camera._target_zoom, 2.0, 0.0001)
+	assert_almost_eq(store_camera._zoom, 2.0, 0.0001)
 
 
 func _safe_disconnect(signal_ref: Signal, callable: Callable) -> void:

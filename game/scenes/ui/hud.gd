@@ -77,6 +77,19 @@ var _sales_today_count: int = 0
 var _counter_scale_tweens: Dictionary = {}
 var _counter_color_tweens: Dictionary = {}
 
+# First-person HUD mode — set via `set_fp_mode(true)` by `StorePlayerBody._ready`.
+# When enabled, the heavy `TopBar` HBoxContainer is hidden and the four core
+# readouts (cash, time, on-shelves, customers, sold-today) are reparented as
+# compact corner overlays directly on the HUD CanvasLayer. A bottom-right F4
+# key-hint label exposes the close-day affordance without the TopBar button.
+var _fp_mode: bool = false
+var _fp_orig_indices: Dictionary = {}
+var _fp_close_day_hint: Label
+## Tracks whether the Day-1 soft-gate ConfirmationDialog pushed CTX_MODAL on
+## InputFocus. Mirrors the InventoryPanel / CheckoutPanel modal-focus contract
+## so the FP cursor releases while the dialog is up and recaptures on dismiss.
+var _confirm_dialog_focus_pushed: bool = false
+
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
 @onready var _time_label: Label = $TopBar/TimeLabel
@@ -259,6 +272,13 @@ func _on_close_day_pressed() -> void:
 
 ## Day 1 soft gate: prompt for consent before closing without a first sale.
 ## Confirm proceeds to the dry-run preview; cancel is a no-op.
+##
+## The CTX_MODAL push releases the FP cursor while the dialog is up so the
+## player can click "Close Anyway" / "Stay Open" without a captured cursor;
+## the matching pop fires from the dialog's `confirmed` / `canceled` signals
+## (`_on_close_day_confirm_confirmed` / `_on_close_day_confirm_canceled`) so
+## hand-off to either the preview or back to gameplay leaves the focus stack
+## balanced.
 func _show_close_day_confirm() -> void:
 	if not is_instance_valid(_close_day_confirm_dialog):
 		# Wiring regression — open the preview so the player is not trapped.
@@ -268,6 +288,7 @@ func _show_close_day_confirm() -> void:
 		)
 		_open_close_day_preview()
 		return
+	_push_confirm_dialog_modal_focus()
 	_close_day_confirm_dialog.popup_centered()
 
 
@@ -290,6 +311,14 @@ func _open_close_day_preview() -> void:
 	_close_day_preview.show_preview()
 
 
+## §F-68 — `_wire_close_day_preview` / `_wire_close_day_confirm_dialog`:
+## the preview and confirm-dialog children ship with `hud.tscn`, but a unit
+## test that constructs the HUD without the packed scene (or a future scene
+## variant that omits one) would otherwise crash on the connect/setter call.
+## `_open_close_day_preview` already escalates with `push_warning` when the
+## preview child is missing at click time (see `_open_close_day_preview`),
+## so a silently-unwired modal still raises a visible signal at use; an
+## extra warning here would double-fire on every test fixture.
 func _wire_close_day_preview() -> void:
 	if not is_instance_valid(_close_day_preview):
 		return
@@ -299,9 +328,59 @@ func _wire_close_day_preview() -> void:
 func _wire_close_day_confirm_dialog() -> void:
 	if not is_instance_valid(_close_day_confirm_dialog):
 		return
-	_close_day_confirm_dialog.confirmed.connect(_open_close_day_preview)
+	_close_day_confirm_dialog.confirmed.connect(_on_close_day_confirm_confirmed)
+	_close_day_confirm_dialog.canceled.connect(_on_close_day_confirm_canceled)
 
 
+## Confirmed → release the dialog's CTX_MODAL frame, then open the preview.
+## The preview pushes its own CTX_MODAL when shown so the cursor stays
+## released across the hand-off; popping here keeps the stack balanced for
+## test harnesses that drive the dialog signals directly.
+func _on_close_day_confirm_confirmed() -> void:
+	_pop_confirm_dialog_modal_focus()
+	_open_close_day_preview()
+
+
+func _on_close_day_confirm_canceled() -> void:
+	_pop_confirm_dialog_modal_focus()
+
+
+func _push_confirm_dialog_modal_focus() -> void:
+	if _confirm_dialog_focus_pushed:
+		return
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	_confirm_dialog_focus_pushed = true
+
+
+func _pop_confirm_dialog_modal_focus() -> void:
+	if not _confirm_dialog_focus_pushed:
+		return
+	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
+	# without going through this contract. Surface it via push_error AND skip
+	# the pop so we don't corrupt someone else's frame. Mirrors the InventoryPanel
+	# / CheckoutPanel pattern.
+	if InputFocus.current() != InputFocus.CTX_MODAL:
+		push_error(
+			(
+				"HUD._pop_confirm_dialog_modal_focus: expected CTX_MODAL on top, "
+				+ "got %s — leaving stack untouched to avoid corrupting "
+				+ "sibling frame"
+			)
+			% String(InputFocus.current())
+		)
+		_confirm_dialog_focus_pushed = false
+		return
+	InputFocus.pop_context()
+	_confirm_dialog_focus_pushed = false
+
+
+## §F-69 — Empty-array fallback when `InventorySystem` is null mirrors the
+## Tier-5 init pattern documented in §J2: the HUD is constructed before the
+## five-tier init sequence runs, so the inventory autoload may legitimately
+## be null on the first frame and during headless tests. The CloseDayPreview
+## consumer renders an empty list ("no items remaining") in that window;
+## once the inventory is live the preview reads the live snapshot the next
+## time it is opened.
 func _get_active_store_snapshot() -> Array:
 	var inventory: InventorySystem = GameManager.get_inventory_system()
 	if inventory == null:
@@ -407,6 +486,12 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			# DAY_SUMMARY → hidden). New GameManager.State values must be
 			# added explicitly here if they need distinct HUD visibility.
 			pass
+	# FP mode rewrites the in-store HUD to a compact corner layout. The state
+	# branches above tune TopBar children for the desktop manager view; once FP
+	# mode is on, any state transition that leaves the HUD visible must re-
+	# assert the FP overrides so the heavy TopBar does not leak back in.
+	if _fp_mode and visible:
+		_apply_fp_visibility_overrides()
 
 
 func _on_speed_button_pressed() -> void:
@@ -933,6 +1018,155 @@ func _pulse_counter(label: Label, positive: bool) -> void:
 	)
 
 
+## Switches the HUD between the legacy desktop TopBar layout (`enabled = false`)
+## and the first-person corner overlay (`enabled = true`).
+##
+## In FP mode the heavy `TopBar` HBoxContainer is hidden, the five Day-1
+## readouts (cash, time, on-shelves, customers, sold-today) are reparented to
+## the HUD CanvasLayer with compact anchored offsets, and the close-day
+## affordance moves to a bottom-right `F4 — Close Day` hint label. The labels
+## remain the same `Label` instances, so every signal handler that already
+## drives them (`_on_money_changed`, `_on_hour_changed`,
+## `_update_items_placed_display`, `_update_customers_display`,
+## `_update_sales_today_display`, etc.) keeps working untouched.
+##
+## Call from `StorePlayerBody._ready` after the body spawns so the HUD shifts
+## into FP layout the moment the player camera is current.
+func set_fp_mode(enabled: bool) -> void:
+	if _fp_mode == enabled:
+		return
+	_fp_mode = enabled
+	if enabled:
+		_enter_fp_mode()
+	else:
+		_exit_fp_mode()
+		_apply_state_visibility(GameManager.current_state)
+
+
+func _enter_fp_mode() -> void:
+	_fp_orig_indices = {
+		_cash_label: _cash_label.get_index(),
+		_time_label: _time_label.get_index(),
+		_items_placed_label: _items_placed_label.get_index(),
+		_customers_label: _customers_label.get_index(),
+		_sales_today_label: _sales_today_label.get_index(),
+	}
+	_reparent_to_hud_root(_cash_label)
+	_reparent_to_hud_root(_time_label)
+	_reparent_to_hud_root(_items_placed_label)
+	_reparent_to_hud_root(_customers_label)
+	_reparent_to_hud_root(_sales_today_label)
+	_apply_fp_anchors(_cash_label, 0.0, 0.0, 8.0, 8.0, 200.0, 36.0)
+	_apply_fp_anchors(_time_label, 0.5, 0.5, -150.0, 8.0, 150.0, 36.0)
+	_apply_fp_anchors(_items_placed_label, 1.0, 1.0, -200.0, 8.0, -8.0, 36.0)
+	_apply_fp_anchors(_customers_label, 1.0, 1.0, -200.0, 40.0, -8.0, 68.0)
+	_apply_fp_anchors(_sales_today_label, 1.0, 1.0, -200.0, 72.0, -8.0, 100.0)
+	_ensure_fp_close_day_hint()
+	_apply_fp_visibility_overrides()
+
+
+func _exit_fp_mode() -> void:
+	if is_instance_valid(_fp_close_day_hint):
+		_fp_close_day_hint.hide()
+	_restore_from_hud_root(_cash_label)
+	_restore_from_hud_root(_time_label)
+	_restore_from_hud_root(_items_placed_label)
+	_restore_from_hud_root(_customers_label)
+	_restore_from_hud_root(_sales_today_label)
+	_fp_orig_indices.clear()
+	_top_bar.show()
+
+
+func _reparent_to_hud_root(label: Label) -> void:
+	var current_parent: Node = label.get_parent()
+	if current_parent == self:
+		return
+	if current_parent != null:
+		current_parent.remove_child(label)
+	add_child(label)
+
+
+func _restore_from_hud_root(label: Label) -> void:
+	if label.get_parent() == _top_bar:
+		return
+	if label.get_parent() != null:
+		label.get_parent().remove_child(label)
+	_top_bar.add_child(label)
+	var idx: int = int(_fp_orig_indices.get(label, _top_bar.get_child_count() - 1))
+	idx = clampi(idx, 0, _top_bar.get_child_count() - 1)
+	_top_bar.move_child(label, idx)
+
+
+func _apply_fp_anchors(
+	label: Label,
+	anchor_left: float,
+	anchor_right: float,
+	off_left: float,
+	off_top: float,
+	off_right: float,
+	off_bottom: float,
+) -> void:
+	label.anchor_left = anchor_left
+	label.anchor_right = anchor_right
+	label.anchor_top = 0.0
+	label.anchor_bottom = 0.0
+	label.offset_left = off_left
+	label.offset_top = off_top
+	label.offset_right = off_right
+	label.offset_bottom = off_bottom
+	# Grow direction is computed from the horizontal anchors so the label
+	# stays inside its corner / center band when content forces a wider
+	# minimum size: right-anchored labels grow leftward, center-anchored
+	# labels grow symmetrically, left-anchored labels grow rightward.
+	# Without this, an ultrawide viewport plus a long localized string
+	# could push a centered label off the right edge or a right-cluster
+	# label off-screen past the viewport edge.
+	if is_equal_approx(anchor_left, 0.5) and is_equal_approx(anchor_right, 0.5):
+		label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	elif is_equal_approx(anchor_left, 1.0) and is_equal_approx(anchor_right, 1.0):
+		label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	else:
+		label.grow_horizontal = Control.GROW_DIRECTION_END
+
+
+func _ensure_fp_close_day_hint() -> void:
+	if is_instance_valid(_fp_close_day_hint):
+		return
+	_fp_close_day_hint = Label.new()
+	_fp_close_day_hint.name = "FpCloseDayHint"
+	_fp_close_day_hint.text = "F4 — Close Day"
+	_fp_close_day_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_fp_close_day_hint.anchor_left = 1.0
+	_fp_close_day_hint.anchor_right = 1.0
+	_fp_close_day_hint.anchor_top = 1.0
+	_fp_close_day_hint.anchor_bottom = 1.0
+	_fp_close_day_hint.offset_left = -200.0
+	_fp_close_day_hint.offset_top = -40.0
+	_fp_close_day_hint.offset_right = -8.0
+	_fp_close_day_hint.offset_bottom = -8.0
+	add_child(_fp_close_day_hint)
+
+
+func _apply_fp_visibility_overrides() -> void:
+	_top_bar.hide()
+	_seasonal_event_label.hide()
+	_telegraph_card.hide()
+	# Hide management-view TopBar children explicitly (not just via the parent
+	# `_top_bar.hide()`) so callers reading the per-child `visible` flag observe
+	# the FP-mode contract directly. is_visible_in_tree honors the parent, but
+	# acceptance criteria are checked against the child's own visibility.
+	_milestones_button.hide()
+	_reputation_label.hide()
+	_speed_button.hide()
+	_cash_label.show()
+	_time_label.show()
+	_items_placed_label.show()
+	_customers_label.show()
+	_sales_today_label.show()
+	if is_instance_valid(_fp_close_day_hint):
+		_fp_close_day_hint.show()
+
+
 ## Resets transient display state for test isolation. Called by GUT tests that
 ## share a single HUD instance across multiple test functions via before_all().
 func _reset_for_tests() -> void:
@@ -942,3 +1176,13 @@ func _reset_for_tests() -> void:
 	_objective_active = false
 	_telegraph_card.visible = false
 	_seasonal_event_label.visible = false
+	# Clear the modal-focus ownership flag without touching the InputFocus
+	# stack — pair with InputFocus._reset_for_tests() in test harnesses.
+	_confirm_dialog_focus_pushed = false
+
+
+func _exit_tree() -> void:
+	# Free-on-quit / scene-swap path — release the dialog's CTX_MODAL frame so
+	# the stack doesn't leak across tests or scene transitions.
+	if _confirm_dialog_focus_pushed:
+		_pop_confirm_dialog_modal_focus()

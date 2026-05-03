@@ -153,7 +153,7 @@ func test_clamp_leaves_in_bounds_position_untouched() -> void:
 
 
 func test_ready_registers_fp_camera_with_camera_authority() -> void:
-	var cam: Camera3D = _player.get_node("Camera3D")
+	var cam: Camera3D = _player.get_node("StoreCamera")
 	assert_eq(
 		CameraAuthority.current(), cam,
 		"_ready must call CameraAuthority.request_current with the FP camera"
@@ -165,7 +165,7 @@ func test_ready_registers_fp_camera_with_camera_authority() -> void:
 
 
 func test_mouse_motion_yaws_body_and_pitches_camera() -> void:
-	var cam: Camera3D = _player.get_node("Camera3D")
+	var cam: Camera3D = _player.get_node("StoreCamera")
 	var initial_yaw: float = _player.rotation.y
 	var initial_pitch: float = cam.rotation.x
 
@@ -189,7 +189,7 @@ func test_mouse_motion_yaws_body_and_pitches_camera() -> void:
 
 
 func test_pitch_clamped_to_eighty_degrees() -> void:
-	var cam: Camera3D = _player.get_node("Camera3D")
+	var cam: Camera3D = _player.get_node("StoreCamera")
 	var ev := InputEventMouseMotion.new()
 	# A huge negative dy would otherwise drive pitch past +90° and flip view.
 	ev.relative = Vector2(0.0, -100000.0)
@@ -208,7 +208,7 @@ func test_pitch_clamped_to_eighty_degrees() -> void:
 
 
 func test_mouse_motion_ignored_when_modal_steals_focus() -> void:
-	var cam: Camera3D = _player.get_node("Camera3D")
+	var cam: Camera3D = _player.get_node("StoreCamera")
 	var initial_yaw: float = _player.rotation.y
 	var initial_pitch: float = cam.rotation.x
 	InputFocus.push_context(&"modal")
@@ -236,6 +236,241 @@ func test_player_node_in_player_group() -> void:
 	assert_true(
 		_player.is_in_group(&"player"),
 		"StorePlayerBody scene must add the root to the 'player' group"
+	)
+
+
+func test_gravity_accumulates_when_airborne() -> void:
+	# Without a floor under the test body `is_on_floor()` stays false, so the
+	# gravity term must drag velocity.y negative each physics step.
+	_player.global_position = Vector3(0.0, 5.0, 0.0)
+	_player.velocity = Vector3.ZERO
+	_player._physics_process(0.1)
+	assert_lt(
+		_player.velocity.y, 0.0,
+		"gravity must drive velocity.y negative each step when airborne"
+	)
+
+
+func test_gravity_zeroed_under_modal_focus() -> void:
+	# The early-return path when focus is stolen must wipe velocity.y as well
+	# so a paused player does not silently gain falling speed.
+	InputFocus.push_context(&"modal")
+	_player.velocity = Vector3(0.0, -3.0, 0.0)
+	_player._physics_process(0.1)
+	assert_eq(
+		_player.velocity, Vector3.ZERO,
+		"velocity must be fully cleared while a modal owns focus"
+	)
+
+
+func test_cursor_relocks_on_gameplay_resume() -> void:
+	# Simulate the pause-menu flow: cursor unlocked while paused, then a state
+	# transition back to GAMEPLAY (PauseMenu close) must recapture it.
+	InputHelper.unlock_cursor()
+	_player._on_game_state_changed(
+		GameManager.State.PAUSED, GameManager.State.GAMEPLAY
+	)
+	assert_true(
+		InputHelper.is_cursor_locked(),
+		"cursor must recapture when gameplay resumes under store_gameplay focus"
+	)
+
+
+func test_cursor_does_not_relock_on_non_gameplay_state() -> void:
+	InputHelper.unlock_cursor()
+	_player._on_game_state_changed(
+		GameManager.State.GAMEPLAY, GameManager.State.PAUSED
+	)
+	assert_false(
+		InputHelper.is_cursor_locked(),
+		"cursor must not lock on transitions away from GAMEPLAY"
+	)
+
+
+func test_cursor_does_not_relock_when_modal_still_active() -> void:
+	# If a modal still owns focus when the FSM happens to flip to GAMEPLAY, the
+	# body must not silently steal the cursor back from the modal.
+	InputFocus.push_context(&"modal")
+	InputHelper.unlock_cursor()
+	_player._on_game_state_changed(
+		GameManager.State.PAUSED, GameManager.State.GAMEPLAY
+	)
+	assert_false(
+		InputHelper.is_cursor_locked(),
+		"cursor must stay free while a modal still owns focus"
+	)
+
+
+func test_player_has_navigation_obstacle_for_customer_avoidance() -> void:
+	# Customers route via NavigationAgent3D RVO avoidance. The FP body is a
+	# CharacterBody3D and not itself an agent, so without a NavigationObstacle3D
+	# child the agents plan paths through the player and oscillate against the
+	# capsule collider. The obstacle radius should match the capsule footprint.
+	var obstacle: NavigationObstacle3D = (
+		_player.get_node_or_null("NavigationObstacle3D") as NavigationObstacle3D
+	)
+	assert_not_null(
+		obstacle,
+		"StorePlayerBody scene must include a NavigationObstacle3D child"
+	)
+	assert_true(
+		obstacle.avoidance_enabled,
+		"NavigationObstacle3D must have avoidance_enabled=true"
+	)
+	assert_almost_eq(
+		obstacle.radius, 0.4, 0.05,
+		"NavigationObstacle3D radius should match the capsule footprint (~0.4)"
+	)
+
+
+## ── F1 debug-camera dev toggle ──────────────────────────────────────────────
+
+
+func _attach_mock_orbit_controller() -> Node3D:
+	# Sibling of the FP body under `_root`, named `PlayerController`, with a
+	# child `StoreCamera`. Mirrors the retro_games scene shape so the body's
+	# `^"../PlayerController"` lookup resolves.
+	var orbit: Node3D = Node3D.new()
+	orbit.name = &"PlayerController"
+	orbit.process_mode = Node.PROCESS_MODE_DISABLED
+	var orbit_cam: Camera3D = Camera3D.new()
+	orbit_cam.name = &"StoreCamera"
+	orbit.add_child(orbit_cam)
+	_root.add_child(orbit)
+	return orbit
+
+
+func _make_toggle_debug_camera_event() -> InputEventAction:
+	var ev := InputEventAction.new()
+	ev.action = &"toggle_debug_camera"
+	ev.pressed = true
+	return ev
+
+
+func test_default_view_is_first_person() -> void:
+	# Acceptance: "Default on game start is FP mode (orbit debug is opt-in)."
+	assert_false(
+		_player._debug_view,
+		"new StorePlayerBody must start in FP mode (_debug_view = false)"
+	)
+
+
+func test_f1_swaps_fp_to_orbit_debug_view() -> void:
+	# Acceptance: F1 in FP store mode switches to orbit/top-down debug view,
+	# the cursor is released, and CameraAuthority flips to the orbit camera.
+	var orbit: Node3D = _attach_mock_orbit_controller()
+	var orbit_cam: Camera3D = orbit.get_node("StoreCamera") as Camera3D
+	InputHelper.lock_cursor()
+
+	_player._unhandled_input(_make_toggle_debug_camera_event())
+
+	assert_true(_player._debug_view, "F1 in FP must enable _debug_view")
+	assert_eq(
+		orbit.process_mode, Node.PROCESS_MODE_INHERIT,
+		"orbit PlayerController must be process-enabled in debug view"
+	)
+	assert_eq(
+		CameraAuthority.current(), orbit_cam,
+		"CameraAuthority must point at the orbit StoreCamera in debug view"
+	)
+	assert_eq(
+		CameraAuthority.current_source(), &"debug_overhead",
+		"orbit camera registration must use the &\"debug_overhead\" source token"
+	)
+	assert_false(
+		InputHelper.is_cursor_locked(),
+		"F1 must release the cursor when entering debug view"
+	)
+
+
+func test_f1_again_returns_to_first_person() -> void:
+	# Acceptance: F1 again switches back to FP mode; mouse capture, camera,
+	# and orbit-controller state all reverse.
+	var orbit: Node3D = _attach_mock_orbit_controller()
+	var fp_cam: Camera3D = _player.get_node("StoreCamera") as Camera3D
+
+	_player._unhandled_input(_make_toggle_debug_camera_event())  # FP → debug
+	_player._unhandled_input(_make_toggle_debug_camera_event())  # debug → FP
+
+	assert_false(_player._debug_view, "second F1 must clear _debug_view")
+	assert_eq(
+		orbit.process_mode, Node.PROCESS_MODE_DISABLED,
+		"returning to FP must disable the orbit PlayerController"
+	)
+	assert_eq(
+		CameraAuthority.current(), fp_cam,
+		"CameraAuthority must point at the FP StoreCamera after F1 returns"
+	)
+	assert_eq(
+		CameraAuthority.current_source(), &"player_fp",
+		"FP camera re-registration must use the &\"player_fp\" source token"
+	)
+	assert_true(
+		InputHelper.is_cursor_locked(),
+		"second F1 must recapture the cursor when returning to FP"
+	)
+
+
+func test_movement_suspended_in_debug_view() -> void:
+	# While the orbit controller drives input, the FP body must not
+	# accumulate velocity from gravity or WASD.
+	_attach_mock_orbit_controller()
+	_player._unhandled_input(_make_toggle_debug_camera_event())
+	_player.global_position = Vector3(0.0, 5.0, 0.0)
+	_player.velocity = Vector3(2.0, -3.0, 1.0)
+	_player._physics_process(0.1)
+	assert_eq(
+		_player.velocity, Vector3.ZERO,
+		"velocity must be zeroed every physics step while in debug view"
+	)
+
+
+func test_mouse_look_suppressed_in_debug_view() -> void:
+	# Mouse motion must not yaw the FP body or pitch its camera while the
+	# orbit dev view owns input.
+	_attach_mock_orbit_controller()
+	var cam: Camera3D = _player.get_node("StoreCamera")
+	_player._unhandled_input(_make_toggle_debug_camera_event())
+	var initial_yaw: float = _player.rotation.y
+	var initial_pitch: float = cam.rotation.x
+
+	var ev := InputEventMouseMotion.new()
+	ev.relative = Vector2(100.0, 50.0)
+	_player._unhandled_input(ev)
+
+	assert_eq(
+		_player.rotation.y, initial_yaw,
+		"yaw must NOT change while the orbit debug view owns input"
+	)
+	assert_eq(
+		cam.rotation.x, initial_pitch,
+		"pitch must NOT change while the orbit debug view owns input"
+	)
+
+
+func test_f1_silent_no_op_when_orbit_controller_missing() -> void:
+	# Stores without a sibling orbit `PlayerController` must not crash on F1
+	# and must stay in FP mode (the dev toggle is opt-in per scene shape).
+	_player._unhandled_input(_make_toggle_debug_camera_event())
+	assert_false(
+		_player._debug_view,
+		"missing orbit controller must leave _debug_view unchanged"
+	)
+
+
+func test_focus_listener_does_not_relock_cursor_in_debug_view() -> void:
+	# A modal closing on top of the debug view must not steal the unlocked
+	# cursor back; the orbit dev view continues to own mouse mode.
+	_attach_mock_orbit_controller()
+	_player._unhandled_input(_make_toggle_debug_camera_event())
+	assert_false(InputHelper.is_cursor_locked(), "debug view unlocks cursor")
+
+	# Simulate a modal pushing then popping focus while in debug view.
+	_player._on_input_focus_changed(&"modal", InputFocus.CTX_STORE_GAMEPLAY)
+	_player._on_input_focus_changed(InputFocus.CTX_STORE_GAMEPLAY, &"modal")
+	assert_false(
+		InputHelper.is_cursor_locked(),
+		"focus restoring to store_gameplay must NOT relock the cursor while debug view is active"
 	)
 
 

@@ -20,6 +20,11 @@ var _total: float = 0.0
 var _anim_tween: Tween
 var _rest_x: float = 0.0
 var _receipt_timer: Timer
+## Tracks whether this panel pushed CTX_MODAL on InputFocus so the cursor is
+## released for FP play; mirrors InventoryPanel's contract so the StorePlayerBody
+## context_changed listener flips MOUSE_MODE_CAPTURED → MOUSE_MODE_VISIBLE while
+## a sale is being rung up. Push/pop must stay balanced.
+var _focus_pushed: bool = false
 
 @onready var _panel: PanelContainer = $PanelRoot
 @onready var _item_list: VBoxContainer = (
@@ -75,6 +80,17 @@ func _ready() -> void:
 		_on_transaction_completed
 	)
 	EventBus.panel_opened.connect(_on_panel_opened)
+	SceneRouter.scene_ready.connect(_on_scene_ready)
+
+
+## §F-82 — Defensive cleanup so a modal removed mid-display (scene swap, run
+## reset, panel queue_free) does not strand a CTX_MODAL frame on InputFocus.
+## `_pop_modal_focus` itself escalates with `push_error` if the topmost frame
+## is not CTX_MODAL (§F-74 contract), so a corrupted stack is still surfaced
+## loudly — the silent skip here is only the well-behaved no-op path.
+func _exit_tree() -> void:
+	if _focus_pushed:
+		_pop_modal_focus()
 
 
 ## Opens the panel with a list of items for sale.
@@ -99,7 +115,11 @@ func show_checkout(
 	_anim_tween = PanelAnimator.slide_open(
 		_panel, _rest_x, false
 	)
+	# Emit FIRST so any sibling panels' mutual-exclusion handlers run their
+	# hide and pop their own frames, THEN claim modal focus on top of whatever
+	# world context was current. Mirrors InventoryPanel.open().
 	EventBus.panel_opened.emit(PANEL_NAME)
+	_push_modal_focus()
 
 
 ## Closes the checkout panel with optional immediate hide.
@@ -118,6 +138,9 @@ func hide_checkout(immediate: bool = false) -> void:
 		_anim_tween = PanelAnimator.slide_close(
 			_panel, _rest_x, false
 		)
+	# Pop FIRST while CTX_MODAL is still on top, THEN broadcast close. Mirrors
+	# InventoryPanel.close().
+	_pop_modal_focus()
 	EventBus.panel_closed.emit(PANEL_NAME)
 
 
@@ -152,10 +175,22 @@ func _on_checkout_started(
 			"CheckoutPanel: checkout_started with null customer"
 		)
 		return
+	# §F-66 — `checkout_started` is emitted by `CheckoutSystem._show_checkout_panel`
+	# with `Array[Dictionary]` cast to `Array` for the variadic signal; any
+	# non-Dictionary entry reaching this loop is a caller bug that would
+	# silently drop items from the player's checkout (data integrity:
+	# missing line-item revenue). `push_warning` surfaces the offending type
+	# while keeping the well-formed remainder of the cart intact so the sale
+	# isn't blocked outright.
 	var item_dicts: Array[Dictionary] = []
 	for item: Variant in items:
 		if item is Dictionary:
 			item_dicts.append(item as Dictionary)
+		else:
+			push_warning(
+				"CheckoutPanel: dropping non-Dictionary item in checkout_started — got %s"
+				% type_string(typeof(item))
+			)
 	show_checkout(item_dicts)
 
 
@@ -312,3 +347,48 @@ static func _format_price(amount: float) -> String:
 	return "%s%.2f" % [
 		UIThemeConstants.CURRENCY_SYMBOL, amount,
 	]
+
+
+func _push_modal_focus() -> void:
+	if _focus_pushed:
+		return
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	_focus_pushed = true
+
+
+func _pop_modal_focus() -> void:
+	if not _focus_pushed:
+		return
+	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
+	# without going through this contract. Surface it via push_error AND skip
+	# the pop so we don't corrupt someone else's frame.
+	if InputFocus.current() != InputFocus.CTX_MODAL:
+		push_error(
+			(
+				"CheckoutPanel.hide_checkout: expected CTX_MODAL on top, "
+				+ "got %s — leaving stack untouched to avoid corrupting "
+				+ "sibling frame"
+			)
+			% String(InputFocus.current())
+		)
+		_focus_pushed = false
+		return
+	InputFocus.pop_context()
+	_focus_pushed = false
+
+
+func _on_scene_ready(_target: StringName, _payload: Dictionary) -> void:
+	# Modals never survive a scene change. Force-close (popping our frame)
+	# before the new scene's gameplay context becomes the audited top of stack.
+	if _is_open:
+		hide_checkout(true)
+		return
+	if _focus_pushed:
+		_pop_modal_focus()
+
+
+## Test seam — clears _focus_pushed without calling pop_context. Pair with
+## InputFocus._reset_for_tests() so test harnesses that wipe the focus stack
+## don't leave the panel believing it still owns a frame.
+func _reset_for_tests() -> void:
+	_focus_pushed = false

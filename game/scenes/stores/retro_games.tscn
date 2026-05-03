@@ -1,4 +1,4 @@
-[gd_scene load_steps=75 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=77 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -24,14 +24,6 @@
 [ext_resource type="Script" path="res://game/scripts/components/nav_zone_interactable.gd" id="24"]
 [ext_resource type="PackedScene" path="res://game/scenes/player/player_controller.tscn" id="26_retrogames"]
 [ext_resource type="Script" path="res://game/scripts/player/interaction_ray.gd" id="27_retrogames"]
-[ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_player_indicator.tres" id="28_player_indicator"]
-
-[sub_resource type="CylinderMesh" id="player_indicator_mesh"]
-top_radius = 0.5
-bottom_radius = 0.5
-height = 0.02
-radial_segments = 24
-rings = 1
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(16, 0.1, 20)
@@ -229,6 +221,22 @@ size = Vector3(1.8, 1.0, 0.65)
 [sub_resource type="BoxMesh" id="entrance_interior_strip_mesh"]
 size = Vector3(2.86, 0.04, 0.45)
 
+[sub_resource type="BoxMesh" id="entrance_door_glass_mesh"]
+size = Vector3(2.8, 3.5, 0.04)
+
+[sub_resource type="BoxShape3D" id="entrance_door_collision_shape"]
+size = Vector3(2.8, 3.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="entrance_door_interactable_shape"]
+size = Vector3(2.8, 3.0, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="entrance_door_glass_mat"]
+resource_name = "Entrance Glass Door"
+transparency = 4
+albedo_color = Color(0.8, 0.95, 1, 0.4)
+metallic = 0.1
+roughness = 0.05
+
 ; ============================================================
 ; Root
 ; ============================================================
@@ -285,19 +293,9 @@ store_bounds_min = Vector3(-7.5, 0.0, -9.5)
 store_bounds_max = Vector3(7.5, 0.0, 9.5)
 is_orthographic = true
 ortho_size_default = 22.0
-ortho_size_min = 14.0
-ortho_size_max = 28.0
 
 [node name="InteractionRay" type="Node" parent="PlayerController/StoreCamera"]
 script = ExtResource("27_retrogames")
-
-; Floor-level disc that tracks the camera pivot so the player position is
-; legible from the overhead orthographic view. PlayerController toggles
-; visibility through InputFocus so it only renders during store_gameplay.
-[node name="PlayerIndicator" type="MeshInstance3D" parent="PlayerController"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
-mesh = SubResource("player_indicator_mesh")
-surface_material_override/0 = ExtResource("28_player_indicator")
 
 ; ============================================================
 ; Player Entry Spawn — first-person body spawn marker.
@@ -514,6 +512,50 @@ shaded = false
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 9.35)
 mesh = SubResource("entrance_interior_strip_mesh")
 surface_material_override/0 = ExtResource("7")
+
+; ============================================================
+; EntranceDoor — semi-transparent glass door filling the 2.9 m
+; entrance gap. The StaticBody3D blocks the FP CharacterBody3D from
+; walking out into void (collision_layer 2 / store_fixtures, masked
+; by the player CharacterBody3D's mask=3). The Interactable child
+; shows an "Exit to Mall" prompt within the player's reticle range
+; and routes the interaction back to the store controller, which
+; releases the cursor and changes GameManager state to MALL_OVERVIEW.
+; The door sits at Z=10.0, just inside the front wall plane at
+; Z=10.05; the X gap (2.9 m at X=0) is disjoint from the front wall
+; segments at X=±4.78 so colliders never overlap geometrically.
+; The Interactable trigger volume (2.8 × 3.0 × 0.8) extends inward
+; to Z=9.6 so the prompt shows from the player's bound z<=9.7.
+; ============================================================
+
+[node name="EntranceDoor" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10.0)
+
+[node name="DoorMesh" type="MeshInstance3D" parent="EntranceDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("entrance_door_glass_mesh")
+surface_material_override/0 = SubResource("entrance_door_glass_mat")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="EntranceDoor"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EntranceDoor/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+shape = SubResource("entrance_door_collision_shape")
+
+[node name="Interactable" type="Area3D" parent="EntranceDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -0.4)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 5
+display_name = "Glass Door"
+action_verb = "Exit to Mall"
+prompt_text = "Exit to Mall"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EntranceDoor/Interactable"]
+shape = SubResource("entrance_door_interactable_shape")
 
 ; ============================================================
 ; Interior signage — zone labels and store branding readable from
