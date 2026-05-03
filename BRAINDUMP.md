@@ -1,1303 +1,1342 @@
-# MALLCORE SIM — NEXT FULL PASS BRAINDUMP
+# Mallcore Sim BRAINDUMP — Stop “Big Passes”, Build the Day-1 Playable Loop
 
-## Goal: make the first store 100% playable for one full demo day
-We are finally in a better place visually. This is no longer just a flat bird’s-eye GTA-looking floorplan. We have a first-person/over-the-shoulder-ish store view, movement/camera, a room, shelves, checkout, inventory UI, and the general idea is starting to show up.
-But right now it is still basically “walking around a room with cubes.”
-That is fine for where we are in the build, but the next pass needs to stop treating this like a tech demo and start treating it like a playable slice.
-The goal is not “build the entire game.”
+## The honest state
+
+We are not failing because the room needs one more art pass.
+
+We are failing because the game does not have a locked playable loop yet.
+
+Right now it is mostly:
+
+- walking/camera inside a box
+- low-poly geometric placeholders
+- a few labeled objects
+- UI counters that look like they should mean something
+- inventory/store screens that sometimes open but do not actually connect to the world
+- prompts that imply actions exist, but the actions either do nothing or are unclear
+- no real customer loop
+- no clear “what do I do next”
+- no reliable start → stock → customer → sale → close day flow
+
+The store looking better helps, but it does not matter if the player still cannot complete one clean day.
+
+This next pass should not be another broad “make it better” pass. It needs to be a focused vertical-slice stabilization pass.
+
+The goal is not “make the whole game.”
 The goal is:
-> I can start a new game, enter the Retro Game Store, stock items, customers walk in, browse, buy or leave, I can close the day, and the game gives me enough feedback that it feels like a real first-day loop.
-No compliance, no change tickets, no enterprise process, no giant architecture ceremony. This is a side project game. Keep it practical.
+
+> I can start a new game, enter my first store, stock shelves, get customers, sell items, make money, close the day, and understand what happened.
+
+If that is not working, nothing else matters.
 
 ---
 
-# Current State
-Based on the latest screenshots:
-## What is better now
-- We are in a 3D room.
-- The camera can pan/turn.
-- The store is at least navigable.
-- There is a visible checkout counter.
-- There are shelves.
-- There are placeholder objects/items.
-- There is an inventory panel.
-- The HUD exists.
-- Main menu exists.
-- Save/load state seems partially present.
-- There is some tutorial/status text.
-- “Close Day” exists.
-- We have a minimap or small preview window showing the room.
-This is a major improvement from the earlier bird’s-eye/static-store problem.
-## What is still not good enough
-The game still does not feel playable yet.
-Right now it feels like:
-- a room made of simple blocks
-- no clear customer loop
-- no clear item placement loop
-- no clear shopping behavior
-- no clear sale feedback
-- no clear “what do I do next” path
-- no real proof that a day can be played start to finish
-- inventory opens, but appears empty / detached from active store state
-- UI overlaps and bottom text is still messy
-- the player/camera/body may still be weird
-- store objects are still too abstract
-- there is not enough visual hierarchy between walls, shelves, counter, door, products, interactables, and customers
-The next pass should be about making the first day work. Not making everything pretty forever. Not adding ten systems. Not expanding the mall. Not adding five stores. Just make this playable.
+# North Star for This Pass
 
----
+## Build one fully playable Day 1
 
-# Absolute Priority
-## Make the Retro Game Store a complete playable demo slice
-Everything should be scoped around one store:
-**Retro Game Store / Destination Shop**
-By the end of this pass, the player should be able to:
-1. Start a new game.
-2. Spawn in or enter the Retro Game Store.
-3. Understand the day-one objective.
-4. Open inventory.
-5. See actual starting items.
-6. Place items onto shelves/displays.
-7. See the shelves visually update.
-8. Have customers enter the store.
-9. Watch customers browse.
-10. See customers select an item.
-11. Have customers go to checkout.
-12. Complete the transaction.
-13. See cash, on-shelf count, customer count, and sold today update.
-14. Close the day.
-15. See a simple day summary.
-16. Return to the next day or main loop without breaking.
-That is the pass.
-If something does not support that loop, it is secondary.
+Day 1 should be small, obvious, and testable.
 
----
+The player should be able to complete this exact flow:
 
-# Product Direction
-The game should feel like:
-> A cozy, slightly weird mall store management sim where you physically walk around your store, stock shelves, watch customers browse, and slowly build up from a tiny retro game shop into other mall stores.
-Not a first-person shooter.
-Not a generic walking sim.
-Not a spreadsheet with a camera.
-Not a room full of unlabeled cubes.
-Not a mall tycoon menu game.
-The store needs to be physical and readable.
-The player should feel like:
-- “This is my store.”
-- “Those are my shelves.”
-- “Those are items I stocked.”
-- “That customer is looking at something.”
-- “They are buying it.”
-- “I made money.”
-- “I can make tomorrow better.”
-That is the playable core.
-
----
-
-# The First Day Loop
-## Day 1 should be extremely guided
-Day 1 should not assume the player knows what to do.
-The bottom objective currently says:
-> Stock your first item and make a sale
-That is the right idea, but the game needs to actually support that with clear interactions.
-### Day 1 flow
 1. Start New Game
-2. Load into mall/store context
-3. Store opens at 8:00 or 9:00 AM
-4. Player is told:
-   - “Open inventory”
-   - “Place an item on a shelf”
-   - “Wait for a customer”
-   - “Ring up the customer”
-   - “Close the day”
-5. Each objective should advance only when the actual game state confirms it happened.
-### Day 1 milestones
-Use simple milestone progression:
-```text
-Milestone 1: Open inventory
-Milestone 2: Select a starting item
-Milestone 3: Place item on shelf
-Milestone 4: Wait for customer
-Milestone 5: Customer browsing
-Milestone 6: Customer ready at checkout
-Milestone 7: Complete sale
-Milestone 8: Close the day
-```
+2. Spawn in or enter the unlocked first store
+3. Understand the current objective
+4. Open inventory
+5. See starting inventory
+6. Select an item
+7. Place/stock it on a shelf
+8. See `On Shelves` update
+9. Customers spawn
+10. Customers walk to shelves
+11. Customers consider/buy items
+12. Customers walk to checkout
+13. Checkout completes sale
+14. Cash increases
+15. `Sold Today` increases
+16. Optional: customer leaves
+17. Player closes day
+18. End-of-day summary shows sales, cash, inventory, customers served
+19. Day 2 can begin or at least the game returns to a stable overview
 
-### Milestone integrity
+That is the demo.
 
-The milestone text should always match the current actual state.
+Not five stores.
+Not mall progression.
+Not unlock balancing.
+Not fancy customer personality.
+Not a giant economy sim.
+Not a “visual vibe” pass.
 
-Do not show vague text if the needed system is not working.
-
----
-
-## Starting Inventory
-
-The player needs actual starting inventory.
-
-Right now the inventory panel is opening but says no active store selected / appears empty. That kills the loop immediately.
-
-### Required starting state
-
-On a new game:
-
-Store: Retro Game Store
-Cash: $0 or small starting cash, depending current intended balance
-Inventory:
-- Used Cartridge Game x3
-- Retro Controller x2
-- Strategy Guide x2
-- Loose Disc Game x3
-
-These can be placeholder items, but they must be real game objects in state.
-
-### Each item should have:
-
-- id
-- name
-- category
-- condition
-- rarity
-- costBasis
-- salePrice
-- quantityBackroom
-- quantityOnShelf
-- shelfSlotId | null
-
-### Example:
-
-```json
-{
-  "id": "used_cartridge_game_common",
-  "name": "Used Cartridge Game",
-  "category": "Games",
-  "condition": "Good",
-  "rarity": "Common",
-  "costBasis": 4,
-  "salePrice": 12,
-  "quantityBackroom": 3,
-  "quantityOnShelf": 0
-}
-```
-
-Do not overbuild item systems yet.
-
-This pass needs maybe 4 to 8 item types total.
+One store. One day. One working loop.
 
 ---
 
-## Inventory UI Requirements
+# Core Problem
 
-The inventory panel needs to become usable immediately.
+The current implementation seems to have pieces of systems, but they are not wired into a single source of truth.
 
-### Current issues
+Examples from the screenshots:
 
-* It says “No active store selected.”
-* It may not be connected to the Retro Game Store.
-* It has filters/search but no actual visible inventory.
-* It looks like a full feature panel before the basic loop works.
+- UI says `On Shelves: 0`, `Cust: 0`, `Sold Today: 0`
+- Inventory opens but says `No active store selected`
+- Mall overview says Retro Game Store has inventory and cash, but the first-person store view does not seem connected to active store state
+- Checkout has a label but no obvious working sale flow
+- Door prompt exists but interaction flow is odd
+- The objective says “Stock your first item and make a sale,” but the player cannot actually complete that reliably
+- Objects exist in world but do not clearly expose interactions
+- Shelves visually exist but do not clearly accept stock
+- The player can move around, but the game does not yet feel like it has verbs
 
-### Required behavior
-
-When player is inside the Retro Game Store:
-
-* Inventory panel knows active store.
-* Backroom tab shows starting items.
-* Shelves tab shows stocked items.
-* All tab shows everything.
-* Clicking/selecting an item should prepare it for placement.
-* The UI should explain the next action.
-
-### Example:
-
-Selected: Used Cartridge Game
-Walk to a shelf and press E to stock 1 item.
-
-or:
-
-Select an item to stock.
-
-### Minimum inventory item card
-
-Each item row/card should show:
-
-Used Cartridge Game
-Good · Common
-Backroom: 3
-On Shelves: 0
-Price: $12
-[Select]
-
-Once selected, it should be visually obvious.
-
-### Inventory should not block the whole game in a confusing way
-
-Opening inventory can pause movement if that is easier, but it should not leave the camera in a weird wall state or hide the world in a brown fog without clear intent.
-
-If inventory overlays the game:
-
-* dim the world lightly
-* keep UI readable
-* prevent accidental camera weirdness
-* close with I or X
-* never leave the screen in a stuck semi-overlay state
+The actual task is to turn disconnected systems into one coherent Day 1 simulation.
 
 ---
 
-## Shelf Stocking
+# Hard Rule for This Pass
 
-This is the most important physical interaction after movement.
+Do not add new stores, new categories, new art sets, extra menus, extra lore, or more mall scope until the Day 1 loop works.
 
-### Required behavior
+Everything should serve the first playable day.
 
-Shelves/displays need interaction zones.
-
-When the player looks at or stands near a shelf:
-
-Shelf A — Press E to stock selected item
-
-If no item selected:
-
-Shelf A — Select an inventory item first
-
-If selected item has quantity:
-
-* pressing E moves 1 item from backroom to shelf
-* updates inventory state
-* updates HUD “On Shelves”
-* creates or reveals a visible item object on that shelf
-
-If shelf is full:
-
-Shelf full
-
-### Shelf slots
-
-Do not make shelf stocking freeform physics placement yet.
-
-Use fixed shelf slots.
-
-### Example:
-
-```text
-Shelf {
-  id: "left_wall_shelf_1",
-  displayName: "Left Wall Shelf",
-  capacity: 6,
-  slots: [
-    { id: "slot_1", position, occupiedByItemId: null },
-    ...
-  ]
-}
-```
-
-This avoids random object chaos.
-
-### Visual feedback
-
-When an item is stocked:
-
-* small item cube/model appears on shelf
-* shelf count updates
-* sound effect or small text pop:
-    * “Stocked Used Cartridge Game”
-* objective advances if first item stocked
-
-Even if items are placeholder shapes, they need to look intentionally placed, not random blocks floating around.
+If a piece of code does not help with Day 1, leave it alone unless it is actively breaking Day 1.
 
 ---
 
-## Store Layout Cleanup
+# What the Game Should Be, at Minimum
 
-The store is much better than before, but it still reads as an empty box room with objects.
+Mallcore Sim is supposed to be a small store-management sim where I run a weird little mall store.
 
-This pass should make the room readable.
+The fantasy is:
 
-### Required zones
+- I have a store
+- I have some starting inventory
+- I put items on shelves
+- customers come in
+- they browse
+- they buy or don’t buy
+- I make a little money
+- I close the day
+- I get a performance summary
+- over time, the store improves/unlocks/expands
 
-The Retro Game Store needs these clear zones:
+The current version has the shell of that, but the actual verbs are not there yet.
 
-1. Entrance
-    * obvious door / mall-facing opening
-    * customers enter from here
-    * player can tell where store begins
-2. Checkout Counter
-    * clear register
-    * customer queue point
-    * label can remain for now but should not be giant or floating weirdly
-3. Wall Shelves
-    * at least 2 stocked shelves
-    * collision works
-    * interaction prompts work
-4. Center Display Table
-    * one display table for featured items
-    * can stock items there too
-5. Backroom / Stock Area
-    * optional for this pass, but if shown it should be clear
-    * if not functional, do not make it look interactable
-6. Customer Path
-    * customers can enter, browse shelves, walk to checkout, leave
+The game should feel playable even with cubes.
 
-### Visual readability
+Cubes are fine for now if the loop works.
 
-The player should be able to tell the difference between:
-
-* wall
-* floor
-* shelf
-* product
-* customer
-* checkout
-* entrance
-* interactable zone
-* decorative object
-
-Right now too many objects are just brown boxes.
-
-Use simple but distinct shapes/colors:
-
-* shelves: dark wood with lighter shelf planks
-* checkout: counter + register + glowing screen
-* products: small colored cases/carts/discs
-* customer: simple capsule/person shape, not a random cube
-* entrance: framed doorway or open mall gate
-* interactables: subtle outline or prompt, not giant floating labels everywhere
+A store full of beautiful props is useless if I cannot stock one item and sell it.
 
 ---
 
-## Customers
+# Priority 1 — Single Source of Truth for Game State
 
-This pass needs actual customers.
+Before fixing random UI bugs, define the actual runtime state model.
 
-Not advanced AI. Not perfect nav. Just enough to prove the store works.
+There should be one authoritative game/session state that drives:
 
-### Customer lifecycle
-
-A customer should:
-
-1. Spawn outside/near entrance.
-2. Enter store.
-3. Walk to a shelf/display with stocked items.
-4. Browse for a few seconds.
-5. Decide to buy or leave.
-6. If buying, walk to checkout.
-7. Wait for player/register.
-8. Complete sale.
-9. Leave store.
-10. Update stats.
-
-### Minimal customer state machine
-
-```ts
-type CustomerState =
-  | "entering"
-  | "browsing"
-  | "deciding"
-  | "going_to_checkout"
-  | "waiting_checkout"
-  | "leaving";
-```
-
-### Customer spawn rules for Day 1
-
-Keep it controlled:
-
-* No customers until player stocks first item.
-* After first stocked item, spawn first customer within 10 to 20 in-game minutes.
-* Day 1 should have maybe 3 to 6 customers total.
-* At least one customer should buy something if shelves have items.
-* Customers should not spawn if no products are on shelves unless this is intentional feedback.
-
-### Customer buy chance
-
-Simple first pass:
-
-Base buy chance: 60%
-If item is common/cheap: +10%
-If shelf has multiple items: +5%
-If price is too high later: reduce chance
-
-For now, since pricing may not exist yet, just use fixed sale price and fixed chance.
-
-### Customer visual requirements
-
-Customers cannot just be cubes.
-
-They can still be primitive shapes, but they need a humanoid/prototype read:
-
-* capsule body
-* head sphere
-* simple legs/feet optional
-* random shirt color
-* name or small label optional
-* simple walking movement
-
-Do not spend the pass on character art. Just make them clearly customers.
-
-### Customer feedback
-
-When customer is browsing:
-
-Customer is browsing Used Cartridge Game
-
-When customer goes to checkout:
-
-Customer ready at checkout
-
-When sale completes:
-
-Sold Used Cartridge Game for $12
-
-When customer leaves without buying:
-
-Customer left without buying
-
-These can go to recent events, bottom feed, or small toast.
-
----
-
-## Checkout
-
-The checkout needs to work.
-
-### Required behavior
-
-When a customer is waiting at checkout:
-
-* HUD/customer count shows it
-* checkout prompt appears when player is near register
-
-### Prompt:
-
-Customer waiting — Press E to ring up
-
-On press E:
-
-* sale completes
-* item quantity on shelf decreases
-* cash increases
-* sold today increases
-* customer leaves
-* event log updates
-
-### Do not overbuild checkout yet
-
-No barcode scanning minigame.
-No payment types.
-No customer impatience unless already easy.
-No advanced queueing yet.
-
-One waiting customer at a time is enough for this pass.
-
----
-
-## Day Timer
-
-The timer exists but needs to support the loop.
-
-### Required
-
-Day 1 should run from something like:
-
-9:00 AM → 5:00 PM
-
-For demo, the time scale can be accelerated.
-
-### Suggested:
-
-1 real second = 5 in-game minutes
-
-Or tune so a full day takes 5 to 8 real minutes.
-
-### Close Day
-
-Close Day should be available, but the game should warn if used early:
-
-Close the store for the day?
-You sold 1 item for $12.
-
-For this pass, close day can be simple.
-
-### End of day summary
-
-Show:
-
-Day 1 Summary
-Cash Earned: $36
-Items Sold: 3
-Customers: 5
-Conversion: 60%
-Inventory Remaining: 5
-Reputation Change: +1
-
-Then buttons:
-
-Next Day
-Main Menu
-
-If “Next Day” is not ready, still show the summary and allow returning to main menu. But ideally next day should reset daily counters and continue.
-
----
-
-## HUD Cleanup
-
-The HUD is currently present but messy.
-
-Some text overlaps at the bottom. “Press I to open inventory” and “F4 close day” appear on top of each other. The minimap/preview also competes with the bottom UI.
-
-### Required HUD layout
-
-Keep it simple:
-
-**Top left**
-
-- Cash: $0.00
-- Rep: Local Fav
-
-**Top center**
-
-- Day 1 — 9:00 AM
-- Retro Game Store
-
-**Top right**
-
-- On Shelves: 0
-- Customers: 0
-- Sold Today: 0
-
-**Bottom left**
-
-- Objective: Stock your first item and make a sale
-
-**Bottom center**
-
-- Context prompt only when needed
-- Press E to stock shelf
-- Press E to ring up customer
-- Press E to enter store
-
-**Bottom right**
-
-- I Inventory
-- F4 Close Day
-
-Do not let these overlap.
-
-### Minimap / preview window
-
-The minimap/preview is not a priority for this pass.
-
-If it is causing UI clutter:
-
-* shrink it
-* move it cleanly
-* or disable it for now
-
-The player needs the main game view and inventory/customer loop more than a tiny recursive camera window.
-
----
-
-## Camera and Movement
-
-Movement is better, but this pass should make it feel stable.
-
-### Required
-
-* WASD movement works.
-* Mouse/camera turn works.
-* No uncontrolled camera drift.
-* No panning into walls where the whole screen becomes a brown wall.
-* No clipping through shelves/counters/walls.
-* No getting stuck on small objects.
-* Camera height feels like a person, not a drone or floor crawler.
-* Player body/green head should not block half the screen.
-* Crosshair or center reticle can stay if needed for interactions.
-
-### Camera mode decision
-
-Pick one and make it clean:
-
-Option A: First-person
-
-* No visible player body except maybe hands later.
-* Clear crosshair.
-* Interact with objects by looking at them.
-
-Option B: Third-person shoulder
-
-* Player visible but not blocking screen.
-* Camera follows behind and above.
-* Interaction based on proximity + facing.
-
-Right now it looks like a hybrid where the player object sometimes appears in the bottom frame and makes the view odd.
-
-For this pass, I would probably prefer:
-
-First-person or very light over-the-shoulder, but not a big visible ball/head blocking the camera.
-
-Do not spend a week inventing camera systems. Just make it comfortable and readable.
-
----
-
-## Interaction System
-
-There needs to be one consistent interaction model.
-
-### Required interaction priority
-
-When pressing E, resolve in this order:
-
-1. If customer waiting at checkout and player near checkout:
-    * ring up customer
-2. Else if player near shelf/display and has selected inventory item:
-    * stock item
-3. Else if player near shelf/display and no item selected:
-    * show “select inventory item first”
-4. Else if player near entrance/door:
-    * enter/exit store if applicable
-5. Else:
-    * no action / no prompt
-
-The game should not randomly trigger the wrong thing.
-
-### Interaction prompts
-
-Only show one context prompt at a time.
-
-### Examples:
-
-Press E to stock Used Cartridge Game
-Press E to ring up customer
-Press E to browse shelf
-Press E to enter mall
-
-No overlapping prompts.
-
----
-
-## Active Store State
-
-A big issue seems to be active store detection.
-
-Inventory says no active store selected even though the player is clearly in the store.
-
-Fix this as part of the core pass.
-
-### Required
-
-There should be a single source of truth for active store:
-
-activeStoreId: "retro_game_store"
-
-When the player enters the Retro Game Store, active store is set.
-
-When inventory opens, it reads from activeStoreId.
-
-When stocking, it writes to activeStoreId inventory/shelves.
-
-When closing day, it summarizes activeStoreId.
-
-Avoid each system inventing its own store detection.
-
-### New game default
-
-For now, new game can default directly into:
-
-activeStoreId = "retro_game_store"
-currentLocation = "retro_game_store"
-
-Do not make the player unlock or select stores yet if that breaks the basic loop.
-
-The mall overview/unlocked stores can exist, but first-day demo should not depend on it.
-
----
-
-## Save / Load
-
-Save/load exists visually but should not distract.
-
-For this pass:
-
-### Required
-
-* New Game starts a clean valid state.
-* Load Game should be disabled if no save exists.
-* Save should happen at least on close day.
-* If save/load is incomplete, disable load clearly:
-    * “No Save Found”
-
-That part looks like it may already be happening.
-
-### State to save
-
-Minimum:
-
-- day
-- time
+- active store
+- current day
+- current time
 - cash
-- rep
-- activeStoreId
-- inventory quantities
-- shelf quantities
-- sold today or historical sales
-- unlocked stores
-
-Do not block the first day loop on perfect save architecture.
-
----
-
-## Mall Overview
-
-The mall overview exists, but the playable slice should not get stuck there.
-
-### Current issue
-
-The mall overview showed stores and locks, but we need the first store to be playable.
-
-### Required
-
-Mall overview should show:
-
-Retro Game Store
-Open
-Cash: $0
-Inventory: 8 items
-Today: 0 sold
-[Enter Store]
-
-Locked stores can remain:
-
-Sports Memorabilia — Locked
-Video Rental — Locked
-PocketCreatures Card Shop — Locked
-Consumer Electronics — Locked
-
-Do not let locked stores or mall progression distract from the first store demo.
-
-If the player clicks Retro Game Store, enter the store.
-
-If the player starts New Game, either:
-
-* load directly into Retro Game Store, or
-* load Mall Overview with a big “Enter Retro Game Store” button
-
-No ambiguity.
-
----
-
-## Store Objects Need Labels / Identity
-
-The store needs readable objects.
-
-Not everything needs a floating label, but the player must understand the space.
-
-### Required interactables
-
-* Checkout Counter
-* Left Wall Shelf
-* Right Wall Shelf
-* Center Display
-* Entrance
-
-When the player looks at or approaches one, show a small prompt.
-
-### Remove or reduce random unlabeled cubes
-
-If a cube is decorative, make it look like something:
-
-* box
-* poster
-* product stack
-* shelf
-* display case
-* trash/cardboard
-* sign
-
-If it does not serve a visual or gameplay purpose, remove it.
-
-The store currently has too many primitive shapes that feel like debug blocks.
-
----
-
-## Visual Pass: Prototype but Intentional
-
-We do not need final art.
-
-But the scene should look intentional.
-
-### Required visual improvements
-
-* Better lighting balance: less giant dark ceiling swallowing the screen.
-* Walls should not feel like huge blank planes.
-* Add simple posters/signage on walls.
-* Shelves should have depth and visible shelf levels.
-* Checkout should look like a checkout.
-* Products should be small and arranged on shelves.
-* Entrance should look like an entrance, not just a blue wall panel.
-* Floor should be less overwhelmingly repetitive.
-* Player should not see through/inside walls.
-* Reduce giant empty room feeling.
-
-### Suggested cheap wins
-
-Use simple primitive kits:
-
-#### Game cases
-
-Thin colored boxes on shelf.
-
-#### Cartridges
-
-Small dark rectangles with colored labels.
-
-#### Discs
-
-Flat cylinders or thin squares.
-
-#### Posters
-
-Flat colored rectangles on walls.
-
-#### Register
-
-Small black box with glowing green/blue screen.
-
-#### Customer
-
-Capsule body + sphere head.
-
-#### Shelf
-
-Brown frame + lighter shelf planks + item slots.
-
-This is enough.
-
----
-
-## Audio / Feedback
-
-Not required but helpful if easy.
-
-Minimum UI feedback is more important.
-
-If adding sound:
-
-* stock item click
-* sale chime
-* door/customer enter
-* day close sound
-
-Do not spend too much time here.
-
----
-
-## Event Log
-
-There is a “Recent Events” section on the mall overview, but events should also be visible during gameplay or end-of-day.
-
-### Required event examples
-
-9:10 AM — Stocked Used Cartridge Game on Left Wall Shelf
-9:25 AM — Customer entered Retro Game Store
-9:35 AM — Customer bought Used Cartridge Game for $12
-10:15 AM — Customer left without buying
-5:00 PM — Store closed
-
-This can be a small feed, summary panel, or debug-style log.
-
-The goal is to make the sim legible.
-
----
-
-## First-Day Balance
-
-Do not overbalance. Just make the day satisfying.
-
-### Suggested Day 1 values:
-
-Starting cash: $0
-Starting inventory value: already owned
-Used Cartridge Game sale price: $12
-Retro Controller sale price: $18
-Strategy Guide sale price: $8
-Loose Disc Game sale price: $10
-Customers Day 1: 3 to 6
-Buy chance: 60%
-Goal: sell at least 1 item
-
-### Day 1 success condition:
-
-Make 1 sale
-
-### Optional stretch success:
-
-Sell 3 items
-
-Do not punish the player on Day 1.
-
----
-
-## What Not To Build In This Pass
-
-Do not add:
-
-* multiple playable stores
-* full mall economy
-* advanced pricing strategy
-* staff hiring
-* rent
-* loans
-* marketing
-* complex reputation model
-* multiple customer personalities
-* theft
-* negotiation
-* full procedural store layouts
-* full art asset pipeline
-* advanced save slots
-* settings overhaul
-* controller support unless already trivial
-
-Those are later.
-
-This pass is about making the core loop real.
-
----
-
-## Technical Implementation Plan
-
-1. Add / verify single game state model
-
-Create or clean up a single game state structure.
-
-Minimum:
+- reputation/progress
+- inventory
+- shelf stock
+- customers
+- sales today
+- current objective
+- store unlocks
+- end-of-day results
+
+No UI should be inventing its own version.
+No scene object should have hidden state that does not sync back.
+No mall overview should show one thing while the store scene shows another.
+
+## Required state shape conceptually
 
 ```ts
 GameState {
   day: number
   timeMinutes: number
   cash: number
-  reputation: number
   activeStoreId: string | null
-  stores: Record<string, StoreState>
+  stores: Record<StoreId, StoreState>
   currentObjectiveId: string
-  events: GameEvent[]
+  dailyStats: DailyStats
 }
-
-Store:
 
 StoreState {
   id: string
   name: string
   unlocked: boolean
-  inventory: InventoryItem[]
-  shelves: ShelfState[]
-  customersToday: number
-  soldToday: number
-  revenueToday: number
+  cashGenerated: number
+  reputation: number
+  backroomInventory: InventoryStack[]
+  shelfInventory: ShelfInventorySlot[]
+  todaySoldCount: number
+  todayRevenue: number
 }
 
-Shelf:
-
-ShelfState {
-  id: string
+InventoryStack {
+  itemId: string
   name: string
-  capacity: number
-  slots: ShelfSlot[]
+  quantity: number
+  costBasis?: number
+  salePrice: number
+  condition?: string
+  rarity?: string
 }
 
-Slot:
-
-ShelfSlot {
-  id: string
+ShelfInventorySlot {
+  shelfId: string
   itemId: string | null
+  quantity: number
+  capacity: number
 }
 
-Customer:
-
-Customer {
+CustomerState {
   id: string
-  state: CustomerState
+  phase: "entering" | "browsing" | "deciding" | "checkout" | "leaving"
   targetShelfId?: string
   selectedItemId?: string
-  patience?: number
+  patience: number
 }
 ```
 
-2. Fix active store
+The exact implementation can vary, but the point is mandatory:
 
-On New Game:
-
-activeStoreId = "retro_game_store"
-
-When entering Retro Game Store:
-
-activeStoreId = "retro_game_store"
-
-Inventory must read from that.
-
-If no active store exists, that should only happen in main menu/mall overview, not while standing in the store.
-
-3. Seed starting inventory
-
-Add deterministic starting inventory for the Retro Game Store.
-
-This needs to happen every new game.
-
-Do not rely on a random generation flow for Day 1.
-
-4. Implement shelf stocking
-
-* selected inventory item state
-* shelf interact zones
-* stock action
-* quantity updates
-* shelf visual update
-* event log update
-* objective update
-
-5. Implement customer spawner
-
-After first item stocked:
-
-* schedule first customer
-* spawn customer
-* send to stocked shelf
-* browse
-* decide
-* checkout or leave
-
-6. Implement checkout
-
-* customer waits at checkout
-* player presses E near checkout
-* sale resolves
-* item removed from shelf
-* cash/sold counts update
-* customer exits
-* event log update
-* objective update
-
-7. Implement close day
-
-* button/key opens confirmation or directly closes
-* show summary
-* save state
-* reset daily counters if next day
-
-8. Clean HUD
-
-* remove overlapping text
-* align top/left/right/bottom areas
-* keep one active prompt
-* make objective readable
-
-9. Visual cleanup
-
-* reduce random blocks
-* make shelves/checkout/items/customers readable
-* fix camera clipping
-* improve light/ceiling/wall balance
-
-10. Add validation/demo route
-
-Add a simple internal test/demo checklist or debug mode that can verify:
-
-* new game state seeded
-* inventory has items
-* shelf stocking works
-* customer spawns
-* checkout works
-* close day works
+> Inventory, shelves, customers, sales, and UI must read/write the same state.
 
 ---
 
-## Acceptance Criteria
+# Priority 2 — Fix Active Store Selection
 
-This pass is done only when the following can be recorded in one uninterrupted play session.
+This is probably one of the biggest blockers.
 
-### New game
+The inventory UI saying `No active store selected` while I am physically inside the store is a major state bug.
 
-* Main menu loads.
-* New Game starts without errors.
-* Player enters Retro Game Store or starts inside it.
-* Active store is Retro Game Store.
-* HUD shows Day 1 and correct starting stats.
+## Expected behavior
 
-### Inventory
+When the player enters the first unlocked store:
 
-* Pressing I opens inventory.
-* Inventory shows starting items.
-* Inventory does not say “No active store selected” while inside the store.
-* Player can select an item.
-* Inventory can close cleanly.
+- `activeStoreId` is set
+- inventory knows which store it belongs to
+- HUD knows which store it is displaying
+- shelf interactions know which store to stock
+- mall overview reads from the same store state
+- closing the day uses that active store/day state
 
-### Stocking
+## Acceptance criteria
 
-* Player can approach shelf/display.
-* Prompt appears.
-* Pressing E stocks selected item.
-* Backroom quantity decreases.
-* On-shelf quantity increases.
-* Visual item appears on shelf.
-* HUD “On Shelves” updates.
-* Objective advances.
+- Start New Game creates at least one unlocked store
+- Entering that store sets it active
+- Inventory panel never says `No active store selected` while the player is inside a valid store
+- If no active store exists, the player should not be in a store scene
+- Debug overlay/log should show active store id
 
-### Customers
+Add a temporary debug display if needed:
 
-* At least one customer spawns after item is stocked.
-* Customer enters from entrance.
-* Customer walks to shelf/display.
-* Customer browses.
-* Customer either buys or leaves.
-* At least one Day 1 customer buys if product exists.
+```txt
+DEBUG
+Scene: StoreInterior
+ActiveStore: retro_game_store
+Inventory: 8 backroom / 0 shelf
+Customers: 0 active
+```
 
-### Checkout
-
-* Customer walks to checkout.
-* Prompt appears.
-* Pressing E completes sale.
-* Cash increases.
-* Sold Today increases.
-* Item is removed from shelf count.
-* Customer leaves.
-
-### Close Day
-
-* Player can close day.
-* Summary appears.
-* Summary shows revenue, customers, sold items.
-* Player can continue or return to menu.
-* No soft lock.
-
-### UI
-
-* No overlapping HUD text.
-* No stuck overlays.
-* No inventory panel blocking forever.
-* No random prompt spam.
-* Context prompt matches the thing the player can actually do.
-
-### Camera / Movement
-
-* Player can move around the store comfortably.
-* Camera does not clip into wall/floor constantly.
-* Player does not get stuck on shelves/items.
-* Player view is not blocked by the player body.
-* Store remains readable from normal walking view.
+This can be hidden later, but for now it will save time.
 
 ---
 
-## Demo Script To Validate The Pass
+# Priority 3 — Define the Actual Day 1 Script
 
-After implementation, run this exact script manually.
+Day 1 should not be an open-ended sim yet.
 
-### Steps
+Day 1 should be a guided scripted vertical slice that proves the systems work.
 
-1. Launch game.
-2. Click New Game.
-3. Confirm Retro Game Store loads.
-4. Walk around for 20 seconds.
-5. Open inventory with I.
-6. Confirm starting items appear.
-7. Select Used Cartridge Game.
-8. Close inventory.
-9. Walk to left wall shelf.
-10. Press E to stock item.
-11. Confirm item appears on shelf.
-12. Confirm On Shelves changes from 0 to 1.
-13. Wait for customer.
-14. Watch customer enter and browse.
-15. If customer goes to checkout, walk to register.
-16. Press E to ring up.
-17. Confirm cash increases.
-18. Confirm Sold Today increases.
-19. Stock another item.
-20. Let at least one more customer enter.
-21. Close day.
-22. Confirm day summary.
-23. Return to menu or start next day.
+## Starting state
 
-If any of those steps fail, the pass is not done.
+Use only one unlocked store.
+
+Recommended:
+
+```txt
+Store: Retro Game Store Destination Shop
+Day: 1
+Cash: $0 or small starting amount
+Backroom Inventory: 8 items
+Shelf Inventory: 0
+Customers: 0
+Objective: Stock your first item and make a sale
+```
+
+Starting inventory should have simple readable names:
+
+```txt
+Used Console Controller — Qty 2 — Price $12
+Loose Space Cartridge — Qty 2 — Price $18
+Strategy Guide — Qty 2 — Price $9
+Old Handheld Game — Qty 1 — Price $35
+Mystery Cable Bin — Qty 1 — Price $6
+```
+
+Do not make the first loop depend on rarity, condition, pricing complexity, demand curves, or multi-store balancing.
+
+That can come later.
+
+## Objective chain
+
+Use a simple objective state machine.
+
+```txt
+Objective 1:
+Open inventory
+
+Objective 2:
+Select an item from Backroom
+
+Objective 3:
+Stock item on a shelf
+
+Objective 4:
+Wait for customer
+
+Objective 5:
+Customer is browsing
+
+Objective 6:
+Customer is checking out
+
+Objective 7:
+Sale complete
+
+Objective 8:
+Close the day
+```
+
+Each objective should have a validator function.
+
+Do not just display text.
+
+Example:
+
+```ts
+objective.completeWhen = state =>
+  state.stores[state.activeStoreId].shelfInventory.some(slot => slot.quantity > 0)
+```
 
 ---
 
-## Debug Helpers That Are Allowed
+# Priority 4 — Inventory Must Actually Work
 
-Because this is still a prototype, add debug helpers if useful.
+The inventory panel currently looks like a real system, but it does not appear to function as a real game verb.
 
-### Examples:
+For Day 1, make it simple.
 
+## Required inventory behavior
+
+When pressing `I`:
+
+- Inventory opens
+- Mouse/UI focus works
+- Player movement/camera should pause or lock appropriately
+- Backroom tab shows available items
+- Shelves tab shows stocked items
+- All tab shows both
+- Item rows/cards are visible
+- Clicking/selecting an item allows stocking
+- Player can close inventory and return to movement
+
+## Minimum item card
+
+Each item should show:
+
+```txt
+Item Name
+Qty in Backroom
+Qty on Shelves
+Price
+[Stock 1] [Stock Max]
+```
+
+Do not require dragging yet unless drag/drop already works perfectly.
+
+Buttons are fine.
+
+## Stocking behavior
+
+For this pass, the player should be able to stock items two ways:
+
+### Preferred simple version
+
+From inventory:
+
+- Click item
+- Click `Stock 1`
+- Item moves from backroom to first available shelf slot
+
+### Optional world version
+
+From world:
+
+- Look at shelf
+- Prompt appears: `Press E to stock shelf`
+- Opens a small stock picker for that shelf
+- Select item
+- Item appears on shelf
+
+Do not depend on world placement precision yet. It is probably too much surface area.
+
+## Acceptance criteria
+
+- Inventory opens every time with `I`
+- Inventory closes every time with `I` or `Esc`
+- Backroom items display
+- Stocking an item decrements backroom qty
+- Stocking an item increments shelf qty
+- HUD `On Shelves` updates immediately
+- Objective advances after first stocked item
+- No “No active store selected” while in store
+
+---
+
+# Priority 5 — Shelves Need Functional Interaction Before Visual Polish
+
+The shelves can still be cubes, but they need to be game objects.
+
+Each shelf needs:
+
+- unique shelf id
+- capacity
+- stock quantity
+- stocked item id
+- interaction collider/hit area
+- optional label
+- optional visual indicator when stocked
+
+## Minimum shelf behavior
+
+If shelf is empty:
+
+```txt
+Shelf Empty
+Press E to stock
+```
+
+If shelf has item:
+
+```txt
+Loose Space Cartridge
+Qty: 2
+Price: $18
+```
+
+## Visual stock placeholder
+
+Do not build detailed item models yet.
+
+When a shelf has stock, spawn simple small boxes/cards on the shelf.
+
+Examples:
+
+- 1 item = one small colored cube
+- 2-3 items = two/three small cubes
+- quantity > 3 = stacked display marker with text
+
+The point is that the player should physically see that the shelf is no longer empty.
+
+## Acceptance criteria
+
+- Looking at shelf shows prompt
+- Empty shelf can be stocked
+- Stocked shelf shows item info
+- Customer AI can find stocked shelves
+- Stock remains visible until sold
+- Sold item reduces shelf visual quantity
+
+---
+
+# Priority 6 — Customers Need to Exist and Complete One Sale
+
+This is the actual demo.
+
+A management sim without customers is just walking around in a storage room.
+
+For Day 1, customers can be simple.
+
+## Customer spawn rules for Day 1
+
+Once at least one item is stocked:
+
+- spawn first customer within 10-20 seconds
+- customer enters from door
+- walks to a stocked shelf
+- waits/browses for 3-6 seconds
+- decides to buy with high probability, like 80-100% for first tutorial sale
+- walks to checkout
+- sale completes
+- customer exits
+- counters update
+
+The first sale should basically be guaranteed.
+
+Do not make Day 1 fail because of a complex demand model.
+
+## Customer phases
+
+```txt
+Entering
+Browsing
+Buying
+Checkout
+Leaving
+Despawned
+```
+
+## Minimum customer visual
+
+A capsule, cylinder, or simple humanoid is fine.
+
+Better than nothing:
+
+- body capsule
+- head sphere
+- different color shirt
+- simple name/label optional
+
+## Customer movement
+
+Use navmesh if already available.
+
+If navmesh is unreliable, use simple waypoint movement for the first pass:
+
+```txt
+spawn point -> shelf point -> checkout point -> exit point
+```
+
+Do not let navmesh complexity block the vertical slice.
+
+## Sale completion
+
+At checkout:
+
+- remove 1 quantity from shelf
+- add item price to cash
+- increment sold today
+- increment customer count
+- append event log entry
+- update objective
+
+Example event:
+
+```txt
+9:17 AM — Customer bought Loose Space Cartridge for $18.
+```
+
+## Acceptance criteria
+
+- Customer appears after shelf is stocked
+- Customer visibly moves
+- Customer targets stocked shelf
+- Customer buys item
+- Cash increases
+- `Sold Today` increases
+- `Cust` increases
+- `On Shelves` decreases or remains accurate
+- Customer leaves/despawns
+- Event appears in recent events or a simple toast/log
+
+---
+
+# Priority 7 — HUD and UI Need to Stop Contradicting Each Other
+
+The HUD should be boring and accurate.
+
+Current HUD has values, but the player cannot trust them yet.
+
+## HUD should show
+
+```txt
+Cash: $18
+Day 1 — 9:17 AM
+On Shelves: 4
+Customers: 1
+Sold Today: 1
+Objective: Close the day when ready
+Controls: I Inventory | F4 Close Day
+```
+
+## Fix text overlap
+
+Some screenshots show bottom-right prompt text colliding or repeating.
+
+Clean this up.
+
+Rules:
+
+- one controls block only
+- no duplicate `I`
+- no bottom text clipping
+- objective text stays left/bottom
+- interaction prompt appears center-bottom or near crosshair, but not both everywhere
+- mini preview/window should not cover important prompts unless intentionally enabled
+
+## Acceptance criteria
+
+- No duplicate control text
+- No overlapping interaction text
+- Objective always readable
+- HUD values update from state
+- Mall overview and in-store HUD show same cash/sold/inventory values
+
+---
+
+# Priority 8 — The Mall Overview Needs to Be Either Useful or Removed from Day 1
+
+The Mall Overview screen looks more coherent than the store, but it may be pulling from different state.
+
+For Day 1, it should be simple.
+
+## Day 1 Mall Overview requirements
+
+It should show:
+
+```txt
+Retro Game Store
+Unlocked
+Cash: $18
+Backroom: 7 items
+On Shelves: 0-7 items
+Today: 1 sold
+```
+
+Locked stores can stay visible, but they should not distract.
+
+Maybe show them as disabled cards below or to the side.
+
+Do not make this screen imply a broader game is ready if it is not.
+
+## Recent Events
+
+Recent Events should populate.
+
+Example:
+
+```txt
+9:05 AM — Stocked Loose Space Cartridge.
+9:12 AM — Customer entered Retro Game Store.
+9:17 AM — Sold Loose Space Cartridge for $18.
+```
+
+## Acceptance criteria
+
+- Recent Events are not blank after player actions
+- Store card reflects real state
+- Close Day works
+- Performance button works or is hidden until it does
+
+---
+
+# Priority 9 — Close Day Must Work
+
+Closing day is the end of the vertical slice.
+
+Right now `F4 - Close Day` appears, but the game needs a clean result.
+
+## Close Day behavior
+
+When pressing F4:
+
+- if no sale has happened, warn player but allow close
+- if sale happened, show Day Summary
+- pause gameplay
+- summarize results
+- provide next action
+
+## Day Summary should show
+
+```txt
+Day 1 Complete
+
+Revenue: $18
+Items Sold: 1
+Customers Served: 1
+Remaining Backroom Inventory: 7
+Remaining Shelf Inventory: 0
+Cash: $18
+
+Result: First sale complete.
+```
+
+Buttons:
+
+```txt
+Continue to Day 2
+Return to Mall Overview
+Main Menu
+```
+
+For now, `Continue to Day 2` can reset to a stable Day 2 state. It does not need a full game yet.
+
+## Acceptance criteria
+
+- F4 works
+- Summary values are accurate
+- Game does not crash or soft-lock
+- Returning to mall/store preserves state
+- Save/load can be deferred only if explicitly disabled/hidden
+
+---
+
+# Priority 10 — Interaction System Audit
+
+A lot of the frustration is “the game says there are interactions, but half of them do nothing.”
+
+This pass needs an interaction audit.
+
+## Every interactable needs this contract
+
+```ts
+Interactable {
+  id: string
+  label: string
+  prompt: string
+  enabled: boolean
+  canInteract(state): boolean
+  onInteract(state): void
+}
+```
+
+Examples:
+
+```txt
+Shelf
+Prompt: Press E to stock shelf / View shelf
+Action: opens stock panel or shows shelf details
+
+Checkout
+Prompt: Checkout
+Action: maybe no direct player action yet unless customer present
+
+Door
+Prompt: Press E to exit to mall
+Action: changes scene/state
+
+Inventory Item
+Prompt: Stock 1
+Action: moves item to shelf
+
+Close Day
+Prompt: F4 Close Day
+Action: opens summary
+```
+
+## Add debug logging for every interaction
+
+When E is pressed:
+
+```txt
+[Interaction] Player pressed E
+[Interaction] Target: shelf_01
+[Interaction] Action: openStockPanel
+[Interaction] Result: success
+```
+
+If no target:
+
+```txt
+[Interaction] Player pressed E
+[Interaction] Target: none
+```
+
+If disabled:
+
+```txt
+[Interaction] Target checkout disabled: no customer at checkout
+```
+
+This is extremely important. Otherwise we are guessing from screenshots forever.
+
+## Acceptance criteria
+
+- Pressing E on every prompted object does something or gives a clear reason why not
+- No prompt appears for a broken/nonfunctional action
+- Interaction failures are logged
+- Player cannot get stuck in UI/movement mode
+
+---
+
+# Priority 11 — Camera and Movement Are “Good Enough” But Need Guardrails
+
+Movement is better now, but there are still camera/position issues.
+
+The player appears to clip or stare into glass/doors/walls too easily.
+
+## Fixes
+
+- Add proper collision to walls, shelves, checkout, glass door
+- Prevent camera from clipping into large objects
+- Add simple player capsule collision
+- Add clear spawn point facing into the store
+- Add door trigger zone that does not trap the player
+- Prevent player from spawning too close to objects
+
+## Movement acceptance criteria
+
+- WASD movement works
+- Mouse look works
+- Player cannot walk through walls
+- Player cannot get stuck behind checkout/shelves
+- Door interaction does not shove player into geometry
+- Entering/exiting store returns player to reasonable positions
+- UI mode releases mouse/camera correctly when closed
+
+---
+
+# Priority 12 — Store Visuals Should Support Gameplay, Not Replace It
+
+The store still looks like a room with cubes. That is acceptable for now, but the layout should communicate purpose.
+
+## Minimum useful visual improvements
+
+Add obvious zones:
+
+```txt
+Front Door / Mall Exit
+Checkout Counter
+Backroom / Storage Area
+Shelf Row 1
+Shelf Row 2
+Featured Display Table
+Customer Path
+```
+
+Use labels only where needed, but the store should be understandable without floating labels everywhere.
+
+## Replace random-feeling cubes with readable placeholders
+
+Examples:
+
+- shelves should actually look like shelves
+- checkout should look like a counter/register
+- storage boxes should be in a backroom/storage zone
+- door should look like a door, not a blue wall portal
+- floor markings can show stock/customer path temporarily
+
+Do not spend time making every object pretty.
+Spend time making every object understandable and interactive.
+
+## Acceptance criteria
+
+- I can tell where the shelf is
+- I can tell where checkout is
+- I can tell where the door is
+- I can tell where stock/backroom is
+- Customers use those same zones
+
+---
+
+# Priority 13 — Remove or Hide Fake Scope
+
+A major issue is the game is showing systems that look bigger than what actually works.
+
+That creates confusion.
+
+## Hide until functional
+
+Hide or disable:
+
+- locked store complexity beyond simple display
+- advanced filters if inventory items are basic
+- condition/rarity filters if they are not meaningful yet
+- performance screen if blank
+- save/load button if save/load does not work
+- progress bars if they do not update
+- inactive store screens if there is only one playable store
+
+## Rule
+
+If a button is visible, it should work.
+
+If a stat is visible, it should update.
+
+If a prompt appears, it should do something.
+
+If a system is not wired, hide it.
+
+---
+
+# Priority 14 — Build a Demo Mode / Test Harness
+
+We need a deterministic way to validate the day loop without guessing.
+
+Add a dev-only test mode or keyboard shortcut.
+
+## Suggested dev shortcuts
+
+```txt
 F8 — Spawn test customer
 F9 — Add test inventory
-F10 — Fast forward 1 hour
-F11 — Toggle interaction debug
+F10 — Auto-stock first item
+F11 — Force sale
+```
 
-But debug helpers must not be required for normal day-one play.
+Only in dev builds.
 
-Also, keep debug labels out of the normal player view unless debug mode is on.
+## Automated test scenario
 
----
+Create a test or scripted validation:
 
-## Known Problems To Specifically Watch
+```txt
+Given a new game
+When the first store loads
+Then activeStoreId is set
 
-### Inventory active store bug
+When item is stocked
+Then backroom quantity decreases
+And shelf quantity increases
+And On Shelves updates
 
-If inventory says no active store while inside Retro Game Store, fix that before anything else.
+When customer spawns
+Then customer targets stocked shelf
 
-### Camera wall bug
+When customer buys
+Then shelf quantity decreases
+And cash increases
+And soldToday increases
+And event log receives sale event
 
-The screenshots show times where the whole screen is basically a wall/floor plane. That likely means camera clipping or bad positioning.
+When day closes
+Then summary values match state
+```
 
-Fix enough that normal movement does not constantly hit that.
-
-### HUD overlap
-
-Bottom-right text is overlapping. Clean this.
-
-### Empty room feeling
-
-Even with 3D, the room is too empty and too primitive. Add enough product/shelf/customer detail that it reads like a store.
-
-### Customer absence
-
-No customer loop means no game. This is the biggest functional gap.
-
-### Placeholder object confusion
-
-Random cubes need identity. If it is an item, shelf, register, display, box, poster, or door, make it visually read that way.
+This should be the validation loop after every implementation pass.
 
 ---
 
-## Desired End Result
+# Priority 15 — Save/Load Decision
 
-After this pass, I should be able to say:
+The main menu says `No Save Found`.
 
-It is ugly, but it is a game now.
+That is fine if save/load is not ready, but then do not let it become confusing.
 
-That is the bar.
+For this pass:
 
-Not final graphics.
-Not final systems.
-Not every store.
-Not perfect balance.
+- either implement a basic local save after Day 1
+- or explicitly leave save disabled and do not spend time on it
 
-But a real playable day.
+Do not half-wire it.
 
-A player should be able to understand:
+## If implementing minimum save
 
-* where they are
-* what store they own
-* what items they have
-* where to stock them
-* when customers arrive
-* what customers are doing
-* how to make a sale
-* how the day ends
+Save:
 
-If that loop works, then future passes can make it prettier, deeper, weirder, more mallcore, and more replayable.
+```txt
+day
+cash
+active/unlocked stores
+inventory
+shelf stock
+sales stats
+```
 
-Right now the next pass is simple:
+Load:
 
-Make the Retro Game Store one-day demo fully playable from New Game to Day Summary.
+```txt
+returns to mall overview or active store
+```
+
+But I would not prioritize this above the Day 1 loop.
+
+---
+
+# Implementation Order
+
+Do this in order. Do not jump to visuals first.
+
+## Phase 1 — State and Active Store
+
+- define/clean game state
+- ensure new game creates first store
+- ensure entering store sets active store
+- ensure inventory/HUD/mall read same active store
+- add debug state overlay/logging
+
+Done when inventory no longer says no active store while inside the store.
+
+---
+
+## Phase 2 — Inventory and Stocking
+
+- create starting inventory
+- make inventory UI show items
+- add Stock 1 button
+- wire stock to shelf state
+- update HUD counters
+- add simple shelf visuals
+
+Done when I can stock one item and see `On Shelves` update.
+
+---
+
+## Phase 3 — Customer/Sale Loop
+
+- spawn first tutorial customer after stocking
+- move customer to shelf
+- customer buys
+- customer checks out
+- update cash/sold/customer counters
+- add event log entry
+
+Done when I can make one sale.
+
+---
+
+## Phase 4 — Close Day
+
+- F4 opens day summary
+- summary reads real state
+- return to mall overview
+- no crashes/soft locks
+
+Done when I can complete Day 1.
+
+---
+
+## Phase 5 — Cleanup and UX
+
+- remove broken prompts
+- hide nonfunctional UI
+- clean overlap
+- improve store readability
+- add basic customer/store labels where useful
+- stabilize movement/collision
+
+Done when the game feels intentionally small instead of accidentally unfinished.
+
+---
+
+# Specific Bugs / Issues Visible From Screenshots
+
+## Inventory says no active store
+
+This is a blocker.
+
+The player is inside the store. Inventory must know the active store.
+
+Likely causes:
+
+- active store state not set on scene load
+- mall overview selected store not passed into store scene
+- inventory UI mounted outside store context
+- store id mismatch between overview and scene
+- state reset on scene transition
+- store scene has local placeholder data instead of real store id
+
+Fix before anything else.
+
+---
+
+## HUD counters stay zero
+
+`On Shelves`, `Cust`, and `Sold Today` stay zero.
+
+That probably means:
+
+- no shelf state updates
+- no customer manager running
+- HUD reads stale/default state
+- sale events are not firing
+- active store is null
+
+Fix through shared state and event logging.
+
+---
+
+## Door interaction works visually but feels weird
+
+The glass door prompt appears, but the camera is pressed into the door/glass.
+
+Need:
+
+- better trigger volume
+- better collision
+- fade/transition maybe later
+- spawn points inside/outside door
+- no camera clipping into the glass
+
+---
+
+## Mall overview has more coherent data than store scene
+
+The overview says the retro game store has inventory and cash.
+The store scene says nothing is active.
+
+This suggests two separate state paths.
+
+Unify them.
+
+---
+
+## Customer count never changes
+
+There is no visible customer loop yet.
+
+Do not spend time on store art until one customer can spawn, browse, buy, and leave.
+
+---
+
+## “Progress” is blank or meaningless
+
+Top bar has `Progress:` but no value.
+
+Either wire it or hide it for Day 1.
+
+---
+
+## Recent Events is blank
+
+This should become the easiest way to confirm systems are working.
+
+Every major action should append an event.
+
+---
+
+# Day 1 Expected User Experience
+
+When I launch the game:
+
+```txt
+Main Menu
+New Game
+```
+
+Then:
+
+```txt
+Mall Overview
+Retro Game Store is unlocked
+Other stores locked
+Click/enter Retro Game Store
+```
+
+Or spawn directly in the store for Day 1.
+
+Inside store:
+
+```txt
+Objective: Open inventory and stock your first item.
+```
+
+I press `I`.
+
+Inventory opens:
+
+```txt
+Backroom
+- Loose Space Cartridge x2 — $18 — [Stock 1]
+- Used Controller x2 — $12 — [Stock 1]
+- Strategy Guide x2 — $9 — [Stock 1]
+```
+
+I click `Stock 1`.
+
+Then:
+
+```txt
+On Shelves: 1
+Objective: Wait for a customer.
+Recent Event: 9:02 AM — Stocked Loose Space Cartridge.
+```
+
+Customer enters.
+
+```txt
+Customer walks to shelf.
+Customer browses.
+Customer walks to checkout.
+Sale completes.
+```
+
+HUD updates:
+
+```txt
+Cash: $18
+On Shelves: 0
+Cust: 1
+Sold Today: 1
+Objective: First sale complete. Close the day when ready.
+```
+
+I press F4.
+
+Day summary:
+
+```txt
+Day 1 Complete
+Revenue: $18
+Items Sold: 1
+Customers Served: 1
+Cash: $18
+```
+
+That is the whole pass.
+
+---
+
+# Do Not Do This Pass
+
+Do not do these yet:
+
+- new stores
+- full mall walking experience
+- detailed item economy
+- advanced customer personalities
+- complex reputation system
+- pricing optimization
+- rare item generation
+- fancy models
+- large UI redesign
+- save/load unless it is trivial
+- procedural store layouts
+- multi-day balancing
+- unlock progression
+- tutorial writing beyond simple objective text
+
+All of that is downstream.
+
+This pass is Day 1.
+
+---
+
+# Validation Loop
+
+After implementation, run through this manually and record results.
+
+## Test 1 — New Game
+
+- Start new game
+- Confirm first store exists
+- Confirm active store is set when entering
+- Confirm HUD shows Day 1 and $0
+- Confirm inventory opens
+
+Pass/fail:
+
+```txt
+New Game:
+Active Store:
+Inventory Opens:
+HUD Accurate:
+```
+
+---
+
+## Test 2 — Inventory
+
+- Open inventory
+- Confirm backroom has items
+- Click Stock 1
+- Confirm quantity moves
+- Confirm shelf visual changes
+- Confirm On Shelves updates
+
+Pass/fail:
+
+```txt
+Backroom Items Visible:
+Stock Button Works:
+Shelf State Updates:
+Shelf Visual Updates:
+HUD Updates:
+```
+
+---
+
+## Test 3 — Customer
+
+- Wait after stocking
+- Confirm customer spawns
+- Confirm customer walks to shelf
+- Confirm customer buys
+- Confirm sale completes
+- Confirm cash/sold/customer counters update
+
+Pass/fail:
+
+```txt
+Customer Spawned:
+Customer Browsed:
+Customer Checked Out:
+Cash Updated:
+Sold Today Updated:
+Customer Count Updated:
+```
+
+---
+
+## Test 4 — Close Day
+
+- Press F4
+- Confirm day summary opens
+- Confirm numbers match HUD/state
+- Confirm no soft lock
+- Confirm can return/continue
+
+Pass/fail:
+
+```txt
+F4 Works:
+Summary Accurate:
+Return Works:
+No Soft Lock:
+```
+
+---
+
+## Test 5 — Interaction Audit
+
+Walk to every object with a prompt.
+
+For each:
+
+```txt
+Object:
+Prompt:
+Expected Action:
+Actual Action:
+Works?:
+```
+
+No fake prompts allowed.
+
+---
+
+# Definition of Done
+
+This pass is done when I can play one day without developer imagination filling in the blanks.
+
+Minimum definition:
+
+- New Game works
+- First store is active
+- Inventory opens and shows real items
+- Stocking works
+- Shelf state and visuals update
+- Customer spawns after stock exists
+- Customer buys one item
+- Checkout completes sale
+- Cash increases
+- Sold Today increases
+- Customer count increases
+- Event log updates
+- Close Day works
+- Day summary is accurate
+- No major UI overlap
+- No dead prompts
+- No soft locks
+- No “No active store selected” while inside the store
+
+If all of that works with cubes, we have a game prototype.
+
+If that does not work, more visual passes are just painting the box we are walking around in.
