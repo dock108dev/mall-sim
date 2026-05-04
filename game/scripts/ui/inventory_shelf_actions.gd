@@ -94,6 +94,108 @@ func place_item(
 	return true
 
 
+## Auto-stocks one unit by routing place_item to the first compatible empty
+## slot in `slots`. Returns true on success, false when no compatible slot
+## exists or the underlying place_item call rejected. Bypasses placement
+## mode — caller is responsible for surfacing the failure to the player when
+## false is returned.
+func stock_one(item: ItemInstance, slots: Array) -> bool:
+	# Null `item` is a legitimate caller no-op (button gating in InventoryPanel
+	# guards this); silent return matches `place_item`. See §F-92.
+	if item == null:
+		return false
+	# Same wiring contract as `place_item` / `remove_item_from_shelf` (§F-04 /
+	# EH-04): reaching here without `inventory_system` means a caller skipped
+	# the `InventoryPanel._prep_row_action` mirror. Warn rather than swallow.
+	if inventory_system == null:
+		push_warning(
+			"InventoryShelfActions.stock_one: inventory_system not wired; "
+			+ "rejecting one-click stock."
+		)
+		return false
+	var slot: ShelfSlot = _find_compatible_empty_slot(item, slots)
+	if slot == null:
+		return false
+	return place_item(item, slot)
+
+
+## Iterates compatible empty `slots` and places `item` plus matching backroom
+## copies (same definition_id) up to capacity. Returns the number of items
+## placed. Zero indicates either no compatible slots or no matching backroom
+## stock; caller decides how to surface that to the player.
+func stock_max(item: ItemInstance, slots: Array) -> int:
+	# Null `item` / null definition mirror the `stock_one` / `place_item`
+	# silent no-ops (legitimate caller paths under button gating). §F-92.
+	if item == null:
+		return 0
+	# §F-04 / EH-04 wiring contract — same as `stock_one` / `place_item`.
+	if inventory_system == null:
+		push_warning(
+			"InventoryShelfActions.stock_max: inventory_system not wired; "
+			+ "rejecting bulk stock."
+		)
+		return 0
+	if item.definition == null:
+		return 0
+	var def_id: String = item.definition.id
+	if def_id.is_empty():
+		return 0
+	var queue: Array[ItemInstance] = _collect_backroom_matches(def_id, item)
+	if queue.is_empty():
+		return 0
+	var category: String = item.definition.category
+	var placed: int = 0
+	for node: Node in slots:
+		if queue.is_empty():
+			break
+		if not (node is ShelfSlot):
+			continue
+		var slot := node as ShelfSlot
+		if slot.is_occupied():
+			continue
+		if not slot.accepts_category(category):
+			continue
+		var next_item: ItemInstance = queue.pop_front()
+		if place_item(next_item, slot):
+			placed += 1
+	return placed
+
+
+func _collect_backroom_matches(
+	def_id: String, primary: ItemInstance
+) -> Array[ItemInstance]:
+	var queue: Array[ItemInstance] = [primary]
+	for inv_item: ItemInstance in inventory_system.get_backroom_items():
+		if inv_item == null or inv_item.definition == null:
+			continue
+		if inv_item.instance_id == primary.instance_id:
+			continue
+		if inv_item.definition.id != def_id:
+			continue
+		queue.append(inv_item)
+	return queue
+
+
+static func _find_compatible_empty_slot(
+	item: ItemInstance, slots: Array
+) -> ShelfSlot:
+	if item == null:
+		return null
+	var category: String = ""
+	if item.definition:
+		category = item.definition.category
+	for node: Node in slots:
+		if not (node is ShelfSlot):
+			continue
+		var slot := node as ShelfSlot
+		if slot.is_occupied():
+			continue
+		if not slot.accepts_category(category):
+			continue
+		return slot
+	return null
+
+
 func remove_item_from_shelf(slot: ShelfSlot) -> void:
 	# Same wiring contract as `place_item` (EH-04): if we reach this path
 	# without `inventory_system`, surface it rather than swallow.

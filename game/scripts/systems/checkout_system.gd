@@ -748,6 +748,55 @@ func _on_staff_morale_changed(_staff_id: String, _new_morale: float) -> void:
 	_refresh_cashier()
 
 
+## §F-112 — Dev-only fallback that completes the next pending checkout
+## immediately, bypassing the panel/haggle wait and the checkout timer.
+## Routes through the normal `_execute_sale` / `_complete_checkout` path so
+## item_sold, transaction_completed, customer_purchased and checkout_completed
+## fire exactly as they would for a player-driven accept. Returns true on
+## success.
+##
+## Guarded by `OS.is_debug_build()` — release builds short-circuit and return
+## false. Intended to unblock the Day-1 checkout loop when the panel UI is
+## not surfacing or the customer is stalled at the register. The cascade of
+## silent `return false` paths inside (no inventory system, no waiting
+## customer, no desired item, item not in inventory) are precondition checks
+## for a dev shortcut; warning at every branch would spam the console for
+## harmless rejections (e.g. F11 pressed before any customer arrives). The
+## single diagnostic surface is the caller's `push_warning` in
+## `debug_overlay._debug_force_complete_sale` ("no pending sale to
+## force-complete"), see §F-100.
+func dev_force_complete_sale() -> bool:
+	if not OS.is_debug_build():
+		return false
+	if _active_customer and is_instance_valid(_active_customer) \
+			and _active_item:
+		if _is_processing:
+			_checkout_timer.stop()
+			_on_checkout_timer_timeout()
+			return true
+		if _active_offer > 0.0:
+			initiate_sale(_active_customer, _active_item, _active_offer)
+			_checkout_timer.stop()
+			_on_checkout_timer_timeout()
+			return true
+	if _inventory_system == null:
+		return false
+	var customer: Customer = _find_waiting_customer()
+	if customer == null:
+		return false
+	var item: ItemInstance = customer.get_desired_item()
+	if item == null or item.definition == null:
+		return false
+	if not _inventory_system._items.has(item.instance_id):
+		return false
+	var price: float = _calculate_offer(item, customer)
+	initiate_sale(customer, item, price)
+	if _is_processing:
+		_checkout_timer.stop()
+		_on_checkout_timer_timeout()
+	return true
+
+
 func _cancel_active_checkout() -> void:
 	if _is_haggling and _haggle_system and _haggle_system.is_active():
 		_haggle_system.decline_offer()

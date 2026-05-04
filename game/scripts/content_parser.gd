@@ -234,7 +234,6 @@ static func parse_store(data: Dictionary) -> StoreDefinition:
 	store.max_employees = int(data.get("max_employees", 2))
 	store.shelf_capacity = int(data.get("shelf_capacity", 0))
 	store.backroom_capacity = int(data.get("backroom_capacity", 0))
-	store.starting_cash = float(data.get("starting_cash", 0.0))
 	store.daily_rent = float(data.get("daily_rent", 0.0))
 	store.base_foot_traffic = float(data.get("base_foot_traffic", 0.0))
 	store.ambient_sound = str(data.get("ambient_sound", ""))

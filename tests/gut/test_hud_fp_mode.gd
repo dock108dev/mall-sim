@@ -247,59 +247,20 @@ func test_fp_mode_close_day_hint_above_objective_rail() -> void:
 	)
 
 
-func test_fp_mode_creates_inventory_hint() -> void:
+## Regression guard: the inventory affordance is owned by the ObjectiveRail
+## (Day 1 step 0 emits the "Press I to open the inventory panel" payload with
+## a key chip). A persistent corner hint here would render the same I-key
+## reminder twice on Day 1 — the BRAINDUMP layout spec allows only one
+## controls block per screen. The Day 1 store-entry FirstRunCueOverlay is the
+## third surface that already covers the same cue when the tutorial is
+## inactive. Dropping the corner hint leaves close-day as the only persistent
+## bottom-right affordance.
+func test_fp_mode_does_not_render_duplicate_inventory_hint() -> void:
 	_hud.set_fp_mode(true)
-	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
-	assert_not_null(hint, "FP mode must add an I-key inventory hint label to HUD")
-	if hint == null:
-		return
-	assert_true(hint.visible, "Inventory hint must be visible in FP mode")
-	assert_string_contains(
-		hint.text, "I",
-		"Inventory hint must surface the I keybinding"
-	)
-	assert_string_contains(
-		hint.text, "Inventory",
-		"Inventory hint text must reference the inventory affordance"
-	)
-
-
-func test_fp_mode_inventory_hint_anchored_bottom_right() -> void:
-	_hud.set_fp_mode(true)
-	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
-	assert_not_null(hint)
-	if hint == null:
-		return
-	assert_eq(hint.anchor_left, 1.0, "Inventory hint anchored to right edge")
-	assert_eq(hint.anchor_top, 1.0, "Inventory hint anchored to bottom edge")
-
-
-func test_fp_mode_inventory_hint_above_objective_rail() -> void:
-	_hud.set_fp_mode(true)
-	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
-	assert_not_null(hint)
-	if hint == null:
-		return
-	assert_lt(
-		hint.offset_bottom, -68.0,
-		"Inventory hint bottom edge must sit above the ObjectiveRail's 68 px footprint"
-	)
-
-
-## Stacks vertically so neither hint covers the other in the bottom-right
-## cluster. The inventory hint is the upper of the two; F4 stays at the
-## corner where the close-day affordance was previously docked.
-func test_fp_mode_inventory_hint_stacked_above_close_day_hint() -> void:
-	_hud.set_fp_mode(true)
-	var inv_hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
-	var close_hint: Label = _hud.get_node_or_null("FpCloseDayHint") as Label
-	assert_not_null(inv_hint)
-	assert_not_null(close_hint)
-	if inv_hint == null or close_hint == null:
-		return
-	assert_lt(
-		inv_hint.offset_bottom, close_hint.offset_top + 0.001,
-		"Inventory hint must sit fully above the close-day hint with no overlap"
+	var hint: Node = _hud.get_node_or_null("FpInventoryHint")
+	assert_null(
+		hint,
+		"FP mode must not duplicate the ObjectiveRail's I-Inventory affordance with a corner hint"
 	)
 
 
@@ -423,18 +384,6 @@ func test_disable_fp_mode_hides_close_day_hint() -> void:
 	assert_false(
 		hint.visible,
 		"FP close-day hint must be hidden after set_fp_mode(false)"
-	)
-
-
-func test_disable_fp_mode_hides_inventory_hint() -> void:
-	_hud.set_fp_mode(true)
-	_hud.set_fp_mode(false)
-	var hint: Label = _hud.get_node_or_null("FpInventoryHint") as Label
-	if hint == null:
-		return
-	assert_false(
-		hint.visible,
-		"FP inventory hint must be hidden after set_fp_mode(false)"
 	)
 
 

@@ -78,7 +78,7 @@ func before_each() -> void:
 	_customer_system.set_store_id(STORE_ID)
 	_prime_customer_pool()
 	# prevent Day-1 auto-spawn from polluting active count
-	_customer_system._day1_customer_spawned = true
+	_customer_system._day1_first_customer_spawned = true
 
 	_spawner = MallCustomerSpawner.new()
 	add_child_autofree(_spawner)

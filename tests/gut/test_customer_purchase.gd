@@ -97,6 +97,9 @@ func test_fair_price_threshold_matches_decision_boundary() -> void:
 
 
 func test_conversion_rate_matches_expected_probability() -> void:
+	# Bypass the Day 1 tutorial guarantee in Customer._process_deciding so this
+	# test exercises the standard profile/match-quality formula it asserts on.
+	GameState.set_flag(&"first_sale_complete", true)
 	_profile.purchase_probability_base = 0.4
 	_profile.price_sensitivity = 0.75
 	_item.player_set_price = 40.0

@@ -61,6 +61,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _is_keyboard_captured_by_ui():
 			return
 		if _hovered_target:
+			_log_interaction_dispatch(_hovered_target)
 			_hovered_target.interact()
 			EventBus.player_interacted.emit(_hovered_target)
 		return
@@ -74,6 +75,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if mb_event.button_index == MOUSE_BUTTON_LEFT:
 		if _hovered_target:
+			_log_interaction_dispatch(_hovered_target)
 			_hovered_target.interact()
 			EventBus.player_interacted.emit(_hovered_target)
 	elif mb_event.button_index == MOUSE_BUTTON_RIGHT:
@@ -181,6 +183,7 @@ func _set_hovered_target(new_target: Interactable) -> void:
 		_hovered_target.focused.emit()
 		var action_label: String = _build_action_label(_hovered_target)
 		_hovered_action_label = action_label
+		_log_interaction_focus(_hovered_target)
 		EventBus.interactable_focused.emit(action_label)
 		# ISSUE-003: scoped hover event + pointing-hand cursor. The hover
 		# transition runs every physics frame, so the cursor/label update
@@ -286,3 +289,27 @@ func _is_pointer_over_blocking_ui() -> bool:
 			return true
 		node = node.get_parent_control()
 	return false
+
+
+## §F-108 — Debug-build interaction telemetry. Mirrors the dead-prompt audit
+## in docs/audits: every prompt that fires and every interaction the player
+## dispatches gets a "[Interaction] <name>: <verb>" line so scene-edit
+## regressions (a dead E-prompt, a misnamed verb, a stale display_name) show
+## up in `tests/test_run.log` and dev consoles without needing to attach a
+## debugger. `OS.is_debug_build()` short-circuits before any string formatting
+## so release builds carry zero cost. Same gate family as §F-106 customer FSM
+## trace and §F-58 retro_games F3 toggle.
+func _log_interaction_focus(target: Interactable) -> void:
+	if not OS.is_debug_build():
+		return
+	var verb: String = target.prompt_text.strip_edges()
+	var display: String = target.display_name.strip_edges()
+	print("[Interaction] %s: %s" % [display, verb])
+
+
+func _log_interaction_dispatch(target: Interactable) -> void:
+	if not OS.is_debug_build():
+		return
+	var verb: String = target.action_verb.strip_edges()
+	var display: String = target.display_name.strip_edges()
+	print("[Interaction] %s: %s (dispatched)" % [display, verb])

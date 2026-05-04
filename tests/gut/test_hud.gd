@@ -299,3 +299,184 @@ func test_simultaneous_cash_and_reputation_effects() -> void:
 	EventBus.reputation_changed.emit("test_store", 0.0, 60.0)
 	assert_not_null(_hud._cash_scale_tween, "Cash tween active")
 	assert_not_null(_hud._rep_arrow_tween, "Rep tween active")
+
+
+# Day 1 starting-cash seed: EconomySystem.initialize() writes player_cash
+# via _apply_state and does not emit money_changed, so a HUD that only
+# listens on money_changed would show $0.00 until the first transaction.
+# day_started must seed the display from EconomySystem.get_cash().
+
+
+func test_day_started_seeds_cash_from_economy_system() -> void:
+	var economy: EconomySystem = EconomySystem.new()
+	economy.name = "EconomySystem"
+	add_child_autofree(economy)
+	economy.initialize(500.0)
+	# Pre-condition: HUD has not seen money_changed yet.
+	assert_eq(_hud._displayed_cash, 0.0, "HUD starts with displayed cash $0")
+	assert_eq(_hud._target_cash, 0.0, "HUD starts with target cash $0")
+	EventBus.day_started.emit(1)
+	var label: Label = _hud.get_node("TopBar/CashLabel")
+	assert_string_contains(
+		label.text, "500",
+		"CashLabel must reflect EconomySystem.get_cash() after day_started"
+	)
+	assert_eq(
+		_hud._target_cash, 500.0,
+		"day_started must seed _target_cash from EconomySystem"
+	)
+	assert_eq(
+		_hud._displayed_cash, 500.0,
+		"day_started must snap _displayed_cash so no 0 → 500 tween shows"
+	)
+
+
+func test_day_started_seed_does_not_break_subsequent_money_changed() -> void:
+	var economy: EconomySystem = EconomySystem.new()
+	economy.name = "EconomySystem"
+	add_child_autofree(economy)
+	economy.initialize(500.0)
+	EventBus.day_started.emit(1)
+	# Live update path must keep working after the seed.
+	EventBus.money_changed.emit(500.0, 525.50)
+	assert_eq(
+		_hud._target_cash, 525.50,
+		"money_changed must still set _target_cash after a day_started seed"
+	)
+
+
+func test_day_started_seed_silent_when_economy_system_missing() -> void:
+	# In unit-test scope without an EconomySystem in the tree, day_started
+	# must not crash and the cash display must remain untouched.
+	_hud._displayed_cash = 0.0
+	_hud._target_cash = 0.0
+	EventBus.day_started.emit(1)
+	assert_eq(_hud._displayed_cash, 0.0)
+	assert_eq(_hud._target_cash, 0.0)
+
+
+# ── Day-1 counter accuracy (On Shelves / Cust / Sold Today) ────────────────
+# These assertions cover the three throughput readouts the in-store HUD shows
+# during Day 1: increments fire on the right signals, the On Shelves count
+# decrements when stock leaves inventory (sale path), and all three counters
+# zero out when day_started fires for Day 2.
+
+
+func test_items_placed_decrements_when_inventory_changes() -> void:
+	# Simulate an On-Shelves count that already reflects two items, then have
+	# inventory drop to one (the sale path: CheckoutSystem._execute_sale calls
+	# InventorySystem.remove_item, which emits inventory_changed).
+	var inventory: InventorySystem = InventorySystem.new()
+	inventory.name = "InventorySystem"
+	add_child_autofree(inventory)
+	var def: ItemDefinition = ItemDefinition.new()
+	def.id = "decrement_item_a"
+	def.item_name = "Decrement Item A"
+	def.category = "cartridges"
+	def.base_price = 10.0
+	def.store_type = "retro_games"
+	var def_b: ItemDefinition = ItemDefinition.new()
+	def_b.id = "decrement_item_b"
+	def_b.item_name = "Decrement Item B"
+	def_b.category = "cartridges"
+	def_b.base_price = 10.0
+	def_b.store_type = "retro_games"
+	var item_a: ItemInstance = ItemInstance.create(def, "good", 0, def.base_price)
+	item_a.current_location = "backroom"
+	var item_b: ItemInstance = ItemInstance.create(def_b, "good", 0, def_b.base_price)
+	item_b.current_location = "backroom"
+	inventory.add_item(&"retro_games", item_a)
+	inventory.add_item(&"retro_games", item_b)
+	inventory.assign_to_shelf(
+		&"retro_games", StringName(item_a.instance_id), &"slot_a"
+	)
+	inventory.assign_to_shelf(
+		&"retro_games", StringName(item_b.instance_id), &"slot_b"
+	)
+	assert_eq(
+		_hud._items_placed_count, 2,
+		"On Shelves must reflect both stocked items after assign_to_shelf"
+	)
+	inventory.remove_item(item_a.instance_id)
+	assert_eq(
+		_hud._items_placed_count, 1,
+		"On Shelves must decrement when inventory.remove_item is called"
+	)
+
+
+func test_day_started_resets_all_three_day_counters_to_zero() -> void:
+	# Simulate end-of-day-1 state: counters hold yesterday's totals.
+	_hud._items_placed_count = 4
+	_hud._customers_served_today_count = 3
+	_hud._sales_today_count = 5
+	_hud._update_items_placed_display(4)
+	_hud._update_customers_display(3)
+	_hud._update_sales_today_display(5)
+	# Day 2 start. The Cust and Sold Today counters reset unconditionally; the
+	# On Shelves count re-reads inventory and reports zero when no inventory
+	# system is in the tree (Tier-5 init silent return — the next
+	# inventory_changed re-populates it).
+	EventBus.day_started.emit(2)
+	assert_eq(
+		_hud._customers_served_today_count, 0,
+		"Cust must reset to 0 at the start of Day 2"
+	)
+	assert_eq(
+		_hud._sales_today_count, 0,
+		"Sold Today must reset to 0 at the start of Day 2"
+	)
+	var customers_label: Label = _hud.get_node("TopBar/CustomersLabel")
+	var sales_label: Label = _hud.get_node("TopBar/SalesTodayLabel")
+	assert_string_contains(
+		customers_label.text, "0",
+		"CustomersLabel text must show 0 after Day 2 reset"
+	)
+	assert_string_contains(
+		sales_label.text, "0",
+		"SalesTodayLabel text must show 0 after Day 2 reset"
+	)
+
+
+func test_items_placed_pulses_green_on_increment() -> void:
+	var inventory: InventorySystem = InventorySystem.new()
+	inventory.name = "InventorySystem"
+	add_child_autofree(inventory)
+	var def: ItemDefinition = ItemDefinition.new()
+	def.id = "pulse_item_inc"
+	def.item_name = "Pulse Item Inc"
+	def.category = "cartridges"
+	def.base_price = 10.0
+	def.store_type = "retro_games"
+	var item: ItemInstance = ItemInstance.create(def, "good", 0, def.base_price)
+	item.current_location = "backroom"
+	inventory.add_item(&"retro_games", item)
+	inventory.assign_to_shelf(
+		&"retro_games", StringName(item.instance_id), &"slot_inc"
+	)
+	var label: Label = _hud.get_node("TopBar/ItemsPlacedLabel")
+	assert_true(
+		_hud._counter_scale_tweens.has(label),
+		"On Shelves increment must create a scale-pulse tween"
+	)
+
+
+func test_customers_pulses_on_customer_purchased() -> void:
+	_hud._customers_served_today_count = 0
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_a", 12.0, &"c_pulse"
+	)
+	var label: Label = _hud.get_node("TopBar/CustomersLabel")
+	assert_true(
+		_hud._counter_scale_tweens.has(label),
+		"Cust increment must create a scale-pulse tween"
+	)
+
+
+func test_sales_today_pulses_on_item_sold() -> void:
+	_hud._sales_today_count = 0
+	EventBus.item_sold.emit("item_pulse", 25.0, "cartridges")
+	var label: Label = _hud.get_node("TopBar/SalesTodayLabel")
+	assert_true(
+		_hud._counter_scale_tweens.has(label),
+		"Sold Today increment must create a scale-pulse tween"
+	)

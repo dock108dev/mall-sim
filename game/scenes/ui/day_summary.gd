@@ -15,6 +15,7 @@ signal continue_pressed
 signal dismissed
 signal review_inventory_requested
 signal mall_overview_requested
+signal main_menu_requested
 
 const OVERLAY_FADE_DURATION: float = 0.2
 const OVERLAY_TARGET_ALPHA: float = 0.9
@@ -72,6 +73,12 @@ var _focus_pushed: bool = false
 @onready var _inventory_remaining_label: Label = (
 	$Root/Panel/Margin/VBox/InventoryRemainingLabel
 )
+@onready var _backroom_inventory_label: Label = (
+	$Root/Panel/Margin/VBox/BackroomInventoryLabel
+)
+@onready var _shelf_inventory_label: Label = (
+	$Root/Panel/Margin/VBox/ShelfInventoryLabel
+)
 @onready var _cash_balance_label: Label = (
 	$Root/Panel/Margin/VBox/CashBalanceLabel
 )
@@ -113,6 +120,9 @@ var _focus_pushed: bool = false
 @onready var _mall_overview_button: Button = (
 	$Root/Panel/Margin/VBox/ButtonRow/MallOverviewButton
 )
+@onready var _main_menu_button: Button = (
+	$Root/Panel/Margin/VBox/ButtonRow/MainMenuButton
+)
 @onready var _continue_button: Button = (
 	$Root/Panel/Margin/VBox/ButtonRow/ContinueButton
 )
@@ -127,6 +137,7 @@ func _ready() -> void:
 		_on_review_inventory_pressed
 	)
 	_mall_overview_button.pressed.connect(_on_mall_overview_pressed)
+	_main_menu_button.pressed.connect(_on_main_menu_pressed)
 	_create_discrepancy_label()
 	_create_overdue_count_label()
 	_create_narrative_labels()
@@ -335,6 +346,7 @@ func _get_stat_row_candidates() -> Array[Control]:
 		_day_label, _revenue_label, _rent_label,
 		_expenses_label, _profit_label, _items_sold_label,
 		_inventory_remaining_label,
+		_backroom_inventory_label, _shelf_inventory_label,
 		_cash_balance_label,
 		_top_item_label, _haggle_label, _late_fee_label,
 		_customers_served_label, _satisfaction_label,
@@ -662,6 +674,34 @@ func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
 	_inventory_remaining_label.text = (
 		tr("DAY_SUMMARY_INVENTORY_REMAINING") % remaining
 	)
+	# §F-102 — Split backroom / shelf counts default to 0 when absent so
+	# legacy / unit-test payloads that emit `day_closed` without the keys
+	# render a defined value rather than crash. Forward-compat default mirrors
+	# the §F-61 `inventory_remaining` and the `net_cash` fallback below;
+	# canonical payloads from `DayCycleController` always carry both keys.
+	var backroom_remaining: int = int(
+		summary.get("backroom_inventory_remaining", 0)
+	)
+	_backroom_inventory_label.text = (
+		tr("DAY_SUMMARY_BACKROOM_INVENTORY") % backroom_remaining
+	)
+	var shelf_remaining: int = int(
+		summary.get("shelf_inventory_remaining", 0)
+	)
+	_shelf_inventory_label.text = (
+		tr("DAY_SUMMARY_SHELF_INVENTORY") % shelf_remaining
+	)
+	# §F-102 — `customers_served` is published in the payload by
+	# DayCycleController (see §F-114) so the summary can render the count
+	# without waiting on the `performance_report_ready` signal.
+	# PerformanceReport still wins when it arrives (it carries the day-vs-day
+	# delta string), but the payload value is the primary source for the
+	# BRAINDUMP "Customers Served: N" field. The `has()` gate is the
+	# legacy-payload fallback — when missing, the label keeps its prior text
+	# rather than rendering a misleading "0".
+	if summary.has("customers_served"):
+		var served: int = int(summary["customers_served"])
+		_customers_served_label.text = _build_customers_text(served)
 	# `net_cash` defaults to 0.0 when absent so legacy/test payloads that emit
 	# `day_closed` without the field render a defined value rather than crash on
 	# a missing key.
@@ -912,3 +952,13 @@ func _on_mall_overview_pressed() -> void:
 	hide_summary()
 	EventBus.next_day_confirmed.emit()
 	mall_overview_requested.emit()
+
+
+## Routes the player back to the main menu without advancing the day. The
+## host scene (game_world.gd) listens on `main_menu_requested` and calls
+## `GameManager.go_to_main_menu()`. We intentionally skip the
+## `next_day_confirmed` emit — the player is leaving the run, so wages /
+## milestones / save / advance_to_next_day must NOT fire.
+func _on_main_menu_pressed() -> void:
+	hide_summary()
+	main_menu_requested.emit()

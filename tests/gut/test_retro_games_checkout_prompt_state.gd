@@ -1,9 +1,12 @@
-## Verifies the retro games checkout counter shows a state-based prompt
-## rather than always advertising "Press E to checkout". When no customer
-## is queued at the register the label reads "No customer waiting" with
-## no E action; when a customer arrives the prompt switches to the
-## "Checkout Counter — Press E to checkout customer" verb pair so the
-## InteractionRay/InteractionPrompt renders the correct cue.
+## Verifies the retro games checkout counter advertises only an
+## informational label rather than a player-driven verb. Day 1 customers
+## auto-complete checkout via PlayerCheckout.process_transaction(); the
+## counter has no E-press handler, so any "Press E to checkout customer"
+## cue would be a dead prompt. The display_name still mirrors register
+## queue size ("Customer at checkout" vs "No customer waiting") so the
+## player can still tell the counter is busy, but prompt_text stays empty
+## in both states so InteractionRay._build_action_label renders the bare
+## label without an "Press E" hint.
 extends GutTest
 
 
@@ -64,28 +67,29 @@ func test_idle_register_label_drops_press_e_cue() -> void:
 # ── Customer-waiting state ────────────────────────────────────────────────
 
 
-func test_customer_arrival_switches_prompt_to_checkout_verb() -> void:
+func test_customer_arrival_swaps_label_without_press_e_cue() -> void:
 	EventBus.store_entered.emit(_STORE_ID)
 	EventBus.queue_advanced.emit(1)
 	var counter: Interactable = _checkout_counter_interactable()
 	assert_eq(
-		counter.display_name, "Checkout Counter",
-		"Active register must show 'Checkout Counter' when a customer queues"
+		counter.display_name, "Customer at checkout",
+		"Active register must show 'Customer at checkout' when a customer queues"
 	)
 	assert_eq(
-		counter.prompt_text, "checkout customer",
-		"Active register must use the 'checkout customer' verb"
+		counter.prompt_text, "",
+		"Active register must keep prompt_text empty (no player-driven verb)"
 	)
 
 
-func test_customer_waiting_label_renders_press_e_cue() -> void:
+func test_customer_waiting_label_renders_without_press_e_cue() -> void:
 	EventBus.store_entered.emit(_STORE_ID)
 	EventBus.queue_advanced.emit(1)
 	var counter: Interactable = _checkout_counter_interactable()
 	var label: String = _build_action_label(counter)
 	assert_eq(
-		label, "Checkout Counter — Press E to checkout customer",
-		"Active prompt must include the 'Press E to checkout customer' cue"
+		label, "Customer at checkout",
+		"Active prompt must render the bare label — no 'Press E' cue, "
+		+ "since Day 1 customers auto-complete checkout"
 	)
 
 
@@ -111,10 +115,10 @@ func test_prompt_remains_active_while_queue_not_empty() -> void:
 	EventBus.queue_advanced.emit(2)
 	var counter: Interactable = _checkout_counter_interactable()
 	assert_eq(
-		counter.display_name, "Checkout Counter",
+		counter.display_name, "Customer at checkout",
 		"Prompt must stay active while the queue still has customers"
 	)
-	assert_eq(counter.prompt_text, "checkout customer")
+	assert_eq(counter.prompt_text, "")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────

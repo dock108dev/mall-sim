@@ -17,11 +17,11 @@ const CONDITION_ORDER: PackedStringArray = [
 ## cannot stall the boot path.
 const _MAX_STARTER_QUANTITY: int = 64
 ## Display name on the checkout counter Interactable when a customer is
-## queued; pairs with `_CHECKOUT_PROMPT_VERB_ACTIVE` to read
-## "Checkout Counter — Press E to checkout customer".
-const _CHECKOUT_PROMPT_NAME_ACTIVE: String = "Checkout Counter"
-## Verb on the checkout counter Interactable when a customer is queued.
-const _CHECKOUT_PROMPT_VERB_ACTIVE: String = "checkout customer"
+## queued. Paired with an empty verb so the InteractionPrompt renders an
+## informational label without a "Press E" cue — Day 1 customers
+## auto-complete checkout via PlayerCheckout.process_transaction(), so the
+## counter has no player-driven verb to advertise.
+const _CHECKOUT_PROMPT_NAME_ACTIVE: String = "Customer at checkout"
 ## Display name on the checkout counter Interactable when no customer is
 ## queued. Paired with an empty verb so the InteractionPrompt renders the
 ## label without a "Press E" cue.
@@ -63,7 +63,8 @@ var _grade_table: Dictionary = {}
 var _checkout_counter_interactable: Interactable = null
 ## Mirrors the register queue size as observed from EventBus.queue_advanced
 ## so the checkout counter prompt can reflect "No customer waiting" vs
-## "Checkout Counter — Press E to checkout customer".
+## "Customer at checkout" with no Press-E verb (Day 1 customers
+## auto-complete checkout via PlayerCheckout.process_transaction()).
 var _register_queue_size: int = 0
 ## True while the F3 debug overhead orbit view is the active camera. Tracks
 ## the toggle so a second F3 press restores first-person without needing to
@@ -364,10 +365,13 @@ func _on_queue_advanced(size: int) -> void:
 	_refresh_checkout_prompt()
 
 
-## Updates the checkout counter Interactable's display label based on whether
-## a customer is currently in the register queue. With a customer present the
-## prompt reads "Checkout Counter — Press E to checkout customer"; otherwise
-## it reads "No customer waiting" with no E action.
+## §F-109 — Updates the checkout counter Interactable's display label based on
+## whether a customer is currently in the register queue. The prompt is
+## purely informational ("Customer at checkout" / "No customer waiting") with
+## an empty verb so the InteractionPrompt never renders a dead "Press E" cue —
+## Day 1 customers auto-complete checkout via PlayerCheckout, so a player-
+## driven verb on the counter would advertise an action that does nothing.
+## Same dead-prompt removal contract as §F-111 shelf_slot empty-verb path.
 ##
 ## Silent return on null `_checkout_counter_interactable` is paired with the
 ## boot-time warning in `_ready` (EH-07): the missing-node case is logged
@@ -380,14 +384,11 @@ func _refresh_checkout_prompt() -> void:
 		_checkout_counter_interactable.display_name = (
 			_CHECKOUT_PROMPT_NAME_ACTIVE
 		)
-		_checkout_counter_interactable.prompt_text = (
-			_CHECKOUT_PROMPT_VERB_ACTIVE
-		)
 	else:
 		_checkout_counter_interactable.display_name = (
 			_CHECKOUT_PROMPT_NAME_IDLE
 		)
-		_checkout_counter_interactable.prompt_text = ""
+	_checkout_counter_interactable.prompt_text = ""
 
 
 ## Subscribes to the entrance-door Interactable so pressing E on the glass

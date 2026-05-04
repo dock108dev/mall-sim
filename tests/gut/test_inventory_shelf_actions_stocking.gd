@@ -175,6 +175,89 @@ func test_unfiltered_slot_accepts_any_category() -> void:
 	)
 
 
+func test_stock_one_places_into_first_compatible_empty_slot() -> void:
+	var item: ItemInstance = _create_backroom_item_for_category("cartridges")
+	if item == null:
+		pass_test("No cartridge items in content — skip")
+		return
+	var occupied_slot: ShelfSlot = _make_slot("cib_occupied", "cartridges")
+	# Pre-occupy the first slot so stock_one is forced past it.
+	occupied_slot.place_item("placeholder_item", "cartridges")
+	var wrong_category_slot: ShelfSlot = _make_slot(
+		"cib_wrong_cat", "consoles"
+	)
+	var empty_slot: ShelfSlot = _make_slot("cib_empty", "cartridges")
+	var actions := InventoryShelfActions.new()
+	actions.inventory_system = _inventory_system
+
+	var slots: Array = [occupied_slot, wrong_category_slot, empty_slot]
+	var placed: bool = actions.stock_one(item, slots)
+	assert_true(placed, "stock_one must place into first compatible empty slot")
+	assert_true(empty_slot.is_occupied(), "empty slot must now be occupied")
+	assert_false(
+		wrong_category_slot.is_occupied(),
+		"wrong-category slot must remain empty"
+	)
+	assert_eq(
+		item.current_location, "shelf:cib_empty",
+		"item must be moved to the matched slot"
+	)
+
+
+func test_stock_one_returns_false_when_no_compatible_slot() -> void:
+	var item: ItemInstance = _create_backroom_item_for_category("cartridges")
+	if item == null:
+		pass_test("No cartridge items in content — skip")
+		return
+	var actions := InventoryShelfActions.new()
+	actions.inventory_system = _inventory_system
+
+	# Only wrong-category slots — stock_one cannot place anywhere.
+	var slots: Array = [
+		_make_slot("only_consoles_a", "consoles"),
+		_make_slot("only_consoles_b", "consoles"),
+	]
+	var placed: bool = actions.stock_one(item, slots)
+	assert_false(
+		placed, "stock_one must return false when no compatible slot exists"
+	)
+	assert_eq(
+		item.current_location, "backroom",
+		"item must remain in backroom on failure"
+	)
+
+
+func test_stock_max_fills_compatible_capacity() -> void:
+	var first: ItemInstance = _create_backroom_item_for_category("cartridges")
+	if first == null:
+		pass_test("No cartridge items in content — skip")
+		return
+	var second: ItemInstance = _create_backroom_item_for_category("cartridges")
+	var third: ItemInstance = _create_backroom_item_for_category("cartridges")
+	if second == null or third == null:
+		pass_test("Could not seed multiple cartridge items — skip")
+		return
+	# Pin to the same definition as `first` so stock_max counts them.
+	second.definition = first.definition
+	third.definition = first.definition
+	var slot_a: ShelfSlot = _make_slot("cib_max_a", "cartridges")
+	var slot_b: ShelfSlot = _make_slot("cib_max_b", "cartridges")
+	var slot_wrong: ShelfSlot = _make_slot("cib_max_wrong", "consoles")
+	var actions := InventoryShelfActions.new()
+	actions.inventory_system = _inventory_system
+
+	var placed: int = actions.stock_max(
+		first, [slot_a, slot_wrong, slot_b]
+	)
+	assert_eq(placed, 2, "stock_max must fill all compatible empty slots")
+	assert_true(slot_a.is_occupied(), "slot A must be filled")
+	assert_true(slot_b.is_occupied(), "slot B must be filled")
+	assert_false(
+		slot_wrong.is_occupied(),
+		"wrong-category slot must remain empty"
+	)
+
+
 func _on_item_stocked(instance_id: String, slot_id: String) -> void:
 	_stocked_events.append({
 		"instance_id": instance_id,

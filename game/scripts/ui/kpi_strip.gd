@@ -12,7 +12,9 @@ var _milestones_total: int = 1
 @onready var _day_label: Label = $MarginContainer/Row/DayLabel
 @onready var _cash_label: Label = $MarginContainer/Row/CashLabel
 @onready var _rep_label: Label = $MarginContainer/Row/RepLabel
+@onready var _milestone_row: HBoxContainer = $MarginContainer/Row/MilestoneRow
 @onready var _milestone_bar: ProgressBar = $MarginContainer/Row/MilestoneRow/MilestoneBar
+@onready var _milestone_separator: VSeparator = $MarginContainer/Row/Sep3
 
 
 func _ready() -> void:
@@ -24,17 +26,41 @@ func _ready() -> void:
 	EventBus.milestone_reached.connect(_on_milestone_reached)
 	EventBus.gameplay_ready.connect(_on_gameplay_ready)
 	_try_load_milestone_total()
+	_seed_cash_from_economy()
 	_refresh_all()
 
 
 func _on_gameplay_ready() -> void:
 	_try_load_milestone_total()
+	_seed_cash_from_economy()
 	_refresh_all()
 
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
 	_day_label.text = "Day %d" % _current_day
+	# EconomySystem.initialize() writes player_cash via _apply_state and does
+	# not emit money_changed, so a strip that only listens on money_changed
+	# would stay at $0 until the first transaction. Seed here so the mall hub
+	# KPI matches the in-store HUD cash readout from the first frame.
+	_seed_cash_from_economy()
+
+
+## §F-115 — Snaps the displayed cash to EconomySystem.get_cash() when
+## available. Mirrors the §F-103 HUD seeding contract so the mall hub KPI
+## strip and the in-store HUD render the same starting cash from the first
+## frame after Tier-1 init. Both silent returns are Tier-init test seams
+## (autoload-missing GameManager, pre-Tier-1 EconomySystem); production paths
+## always have the autoload set, and `_on_money_changed` re-populates the
+## label the first time a transaction fires regardless.
+func _seed_cash_from_economy() -> void:
+	if GameManager == null:
+		return
+	var economy: EconomySystem = GameManager.get_economy_system()
+	if economy == null:
+		return
+	_current_cash = economy.get_cash()
+	_cash_label.text = _format_cash(_current_cash)
 
 
 func _on_day_closed(_day: int, _summary: Dictionary) -> void:
@@ -64,7 +90,16 @@ func _refresh_all() -> void:
 	_refresh_milestone_bar()
 
 
+## Day 1 has no completed milestones by definition; an empty "Progress: ____"
+## bar reads as a dead UI element. Hide the row (and its separator) on Day 1
+## and show it once the player has shipped their first day, at which point
+## milestone progress can begin to accrue.
 func _refresh_milestone_bar() -> void:
+	var show_row: bool = _current_day > 1
+	if _milestone_row != null:
+		_milestone_row.visible = show_row
+	if _milestone_separator != null:
+		_milestone_separator.visible = show_row
 	_milestone_bar.value = (
 		float(_milestones_completed) / float(_milestones_total)
 		if _milestones_total > 0

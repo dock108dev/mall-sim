@@ -8,6 +8,7 @@ func _make_director() -> Node:
 	ObjectiveDirector._sold = false
 	ObjectiveDirector._current_day = 0
 	ObjectiveDirector._loop_completed = false
+	ObjectiveDirector._day1_step_index = -1
 	var director: Node = preload(
 		"res://game/autoload/objective_director.gd"
 	).new() as Node
@@ -44,7 +45,8 @@ func test_day_started_day1_objective_text() -> void:
 	EventBus.day_started.emit(1)
 	assert_eq(
 		received[0].get("objective", ""),
-		"Stock your first item and make a sale"
+		"Open your inventory",
+		"Day 1 chain must surface step 1 (open inventory) on day_started"
 	)
 
 
@@ -70,8 +72,8 @@ func test_store_entered_emits_objective_changed() -> void:
 	EventBus.store_entered.emit(&"retro_games")
 	assert_gt(received.size(), 0, "objective_changed must fire")
 	var payload: Dictionary = received[received.size() - 1]
-	assert_eq(payload.get("objective", ""), "Stock your first item and make a sale")
-	assert_eq(payload.get("action", ""), "Press I to open inventory")
+	assert_eq(payload.get("objective", ""), "Open your inventory")
+	assert_eq(payload.get("action", ""), "Press I to open the inventory panel")
 	assert_eq(payload.get("key", ""), "I")
 
 
@@ -112,36 +114,193 @@ func test_second_item_sold_does_not_re_emit_first_sale_completed() -> void:
 		EventBus.item_sold.connect(autoload_handler)
 
 
-# ── Post-sale rail copy: Day 1 confirms progress after first sale ─────────────
+# ── Day 1 chain: signal-driven step advancement ──────────────────────────────
 
-func test_day1_post_sale_text_replaces_default_after_first_sale() -> void:
+func test_day1_initial_step_is_open_inventory() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(1)
+	assert_eq(
+		ObjectiveDirector._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_OPEN_INVENTORY,
+		"Day 1 chain must start at step 1 (open inventory) on day_started"
+	)
+
+
+func test_day1_chain_advances_through_each_signal_in_order() -> void:
 	var director := _make_director()
 	var received: Array[Dictionary] = []
 	EventBus.objective_changed.connect(
 		func(p: Dictionary) -> void: received.append(p)
 	)
 	EventBus.day_started.emit(1)
-	# Default Day 1 copy on store entry, before any sale.
-	EventBus.store_entered.emit(&"retro_games")
-	assert_eq(
-		received[received.size() - 1].get("text", ""),
-		"Stock your first item and make a sale",
-		"Pre-sale Day 1 rail must show the stock-and-sell objective"
+	# Step 1 → 2: opening the inventory panel.
+	EventBus.panel_opened.emit("inventory")
+	assert_eq(received[received.size() - 1].get("text", ""),
+		"Select an item from the Backroom",
+		"panel_opened(inventory) must advance to step 2 (select item)")
+	# Step 2 → 3: the player enters placement mode.
+	EventBus.placement_mode_entered.emit()
+	assert_eq(received[received.size() - 1].get("text", ""),
+		"Stock the item on a shelf",
+		"placement_mode_entered must advance to step 3 (stock item)")
+	# Step 3 → 4: the item lands on a shelf.
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	assert_eq(received[received.size() - 1].get("text", ""),
+		"Wait for a customer to arrive",
+		"item_stocked must advance to step 4 (wait for customer)")
+	# Step 4 → 5: a customer FSM entered BROWSING.
+	EventBus.customer_state_changed.emit(null, Customer.State.BROWSING)
+	assert_eq(received[received.size() - 1].get("text", ""),
+		"A customer is browsing your shelves",
+		"customer_state_changed BROWSING must advance to step 5")
+	# Step 5 → 6: the customer reaches the register.
+	EventBus.customer_ready_to_purchase.emit({})
+	assert_eq(received[received.size() - 1].get("text", ""),
+		"Customer is heading to checkout",
+		"customer_ready_to_purchase must advance to step 6")
+	# Step 6 → 7: the sale closes.
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_001", 20.0, &"customer_1"
 	)
-	# After the first item_sold, rail must flip to the post-sale copy.
-	EventBus.item_sold.emit("item_001", 20.0, "retro")
-	var post: Dictionary = received[received.size() - 1]
+	assert_eq(received[received.size() - 1].get("text", ""),
+		"Sale complete!",
+		"customer_purchased must advance to step 7 (sale complete)")
+
+
+func test_day1_close_day_step_reached_after_sale_complete_timer() -> void:
+	var director := _make_director()
+	var received: Array[Dictionary] = []
+	EventBus.objective_changed.connect(
+		func(p: Dictionary) -> void: received.append(p)
+	)
+	EventBus.day_started.emit(1)
+	EventBus.panel_opened.emit("inventory")
+	EventBus.placement_mode_entered.emit()
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	EventBus.customer_state_changed.emit(null, Customer.State.BROWSING)
+	EventBus.customer_ready_to_purchase.emit({})
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_001", 20.0, &"customer_1"
+	)
+	# Skip past the sale-complete display window. Both the test director and
+	# the production autoload reach step 6 (SALE_COMPLETE) on customer_purchased
+	# above; advance both so the rail and any production listeners see the
+	# close-day prompt.
+	director._advance_to_close_day_step()
+	ObjectiveDirector._advance_to_close_day_step()
+	var final_payload: Dictionary = received[received.size() - 1]
 	assert_eq(
-		post.get("text", ""),
-		"First sale complete. Close the day when ready.",
-		"Post-sale Day 1 rail must confirm the sale and point at close-day"
+		final_payload.get("text", ""),
+		"Close the day when ready",
+		"After step 7, rail must surface the close-day prompt"
 	)
 	assert_eq(
-		post.get("action", ""),
-		"Click Close Day in the HUD",
-		"Post-sale action must direct the player to the Close Day control"
+		final_payload.get("key", ""),
+		"F4",
+		"Close-day step must publish the F4 hint badge"
+	)
+	assert_eq(
+		director._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_CLOSE_DAY,
+		"Director must terminate at the close-day step"
 	)
 
+
+func test_day1_chain_ignores_out_of_order_signals() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(1)
+	# customer_purchased fired before any earlier step must not skip ahead.
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_001", 20.0, &"customer_1"
+	)
+	assert_eq(
+		ObjectiveDirector._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_OPEN_INVENTORY,
+		"Out-of-order customer_purchased must not skip past step 1"
+	)
+
+
+func test_day1_chain_ignores_duplicate_triggers() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(1)
+	EventBus.panel_opened.emit("inventory")
+	assert_eq(
+		ObjectiveDirector._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_SELECT_ITEM,
+		"First panel_opened must advance to step 2"
+	)
+	# A duplicate must not jump again.
+	EventBus.panel_opened.emit("inventory")
+	assert_eq(
+		ObjectiveDirector._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_SELECT_ITEM,
+		"Duplicate panel_opened must not advance further"
+	)
+
+
+func test_day1_customer_state_changed_ignores_non_browsing_states() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(1)
+	EventBus.panel_opened.emit("inventory")
+	EventBus.placement_mode_entered.emit()
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	# ENTERING is emitted on customer.initialize before BROWSING; it must not
+	# advance the chain.
+	EventBus.customer_state_changed.emit(null, Customer.State.ENTERING)
+	assert_eq(
+		ObjectiveDirector._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_WAIT_FOR_CUSTOMER,
+		"Non-BROWSING customer_state_changed must not advance the chain"
+	)
+	EventBus.customer_state_changed.emit(null, Customer.State.BROWSING)
+	assert_eq(
+		ObjectiveDirector._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_CUSTOMER_BROWSING,
+		"BROWSING transition must advance to step 5"
+	)
+
+
+func test_day1_panel_opened_other_panels_do_not_advance() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(1)
+	EventBus.panel_opened.emit("staff")
+	assert_eq(
+		ObjectiveDirector._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_OPEN_INVENTORY,
+		"Opening unrelated panels must not satisfy the inventory step"
+	)
+
+
+func test_day1_chain_does_not_run_on_other_days() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(2)
+	assert_eq(
+		ObjectiveDirector._day1_step_index, -1,
+		"Day 2 must not initialize the Day 1 step chain"
+	)
+	EventBus.panel_opened.emit("inventory")
+	assert_eq(
+		ObjectiveDirector._day1_step_index, -1,
+		"Day 2 panel_opened must leave the chain dormant"
+	)
+
+
+func test_item_sold_still_emits_first_sale_completed_with_chain_active() -> void:
+	# The legacy first_sale_completed wiring must remain intact when the Day 1
+	# chain is running so HUD/DayManager listeners still receive the signal.
+	var autoload_handler: Callable = ObjectiveDirector._on_item_sold
+	if EventBus.item_sold.is_connected(autoload_handler):
+		EventBus.item_sold.disconnect(autoload_handler)
+	var director := _make_director()
+	EventBus.day_started.emit(1)
+	watch_signals(EventBus)
+	EventBus.item_sold.emit("item_001", 20.0, "retro")
+	assert_signal_emitted(EventBus, "first_sale_completed")
+	if not EventBus.item_sold.is_connected(autoload_handler):
+		EventBus.item_sold.connect(autoload_handler)
+
+
+# ── Post-sale rail copy: days without a steps array still flip text ───────────
 
 func test_day_without_post_sale_copy_keeps_default_text_after_sale() -> void:
 	var director := _make_director()

@@ -523,6 +523,93 @@ func test_event_feed_caps_at_ten_entries() -> void:
 	)
 
 
+func test_event_feed_appends_entry_on_item_stocked() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var feed: VBoxContainer = _overview._event_feed
+	var before: int = feed.get_child_count()
+	EventBus.item_stocked.emit("loose_space_cartridge", "shelf_a")
+	assert_gt(
+		feed.get_child_count(), before,
+		"Feed must grow after item_stocked"
+	)
+	var top: Label = feed.get_child(0) as Label
+	assert_string_contains(
+		top.text, "Stocked",
+		"Newest stocked entry must contain 'Stocked'"
+	)
+
+
+func test_event_feed_appends_entry_on_customer_entered() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var feed: VBoxContainer = _overview._event_feed
+	var before: int = feed.get_child_count()
+	EventBus.customer_entered.emit({
+		"customer_id": 1,
+		"profile_id": "regular",
+		"profile_name": "Test",
+		"store_id": "retro_games",
+	})
+	assert_gt(
+		feed.get_child_count(), before,
+		"Feed must grow after customer_entered"
+	)
+	var top: Label = feed.get_child(0) as Label
+	assert_string_contains(
+		top.text, "Customer entered",
+		"Newest customer entry must contain 'Customer entered'"
+	)
+
+
+func test_event_feed_appends_entry_on_customer_purchased() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	var feed: VBoxContainer = _overview._event_feed
+	var before: int = feed.get_child_count()
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"loose_space_cartridge", 18.0, &"customer_a"
+	)
+	assert_gt(
+		feed.get_child_count(), before,
+		"Feed must grow after customer_purchased"
+	)
+	var top: Label = feed.get_child(0) as Label
+	assert_string_contains(
+		top.text, "Sold",
+		"Newest sale entry must contain 'Sold'"
+	)
+	assert_string_contains(
+		top.text, "$18",
+		"Sale entry must include the price"
+	)
+
+
+func test_event_feed_entries_persist_across_actions() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	EventBus.item_stocked.emit("loose_space_cartridge", "shelf_a")
+	EventBus.customer_entered.emit({"store_id": "retro_games"})
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"loose_space_cartridge", 18.0, &"customer_a"
+	)
+	assert_gte(
+		_overview._event_feed.get_child_count(),
+		3,
+		"Three Day-1 actions must each produce a persistent entry"
+	)
+
+
+func test_event_feed_timestamp_format_is_12_hour_ampm() -> void:
+	_overview = load(MALL_OVERVIEW_SCENE_PATH).instantiate() as MallOverview
+	add_child_autofree(_overview)
+	EventBus.hour_changed.emit(9)
+	EventBus.item_stocked.emit("loose_space_cartridge", "shelf_a")
+	var top: Label = _overview._event_feed.get_child(0) as Label
+	assert_string_contains(top.text, "9:00 AM", "Timestamp must use 12-hour AM format")
+	assert_string_contains(top.text, "—", "Timestamp must be separated by an em dash")
+
+
 # ── Completion button (ISSUE-019) ─────────────────────────────────────────────
 
 func test_mall_overview_has_completion_button() -> void:

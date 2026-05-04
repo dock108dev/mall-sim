@@ -9,7 +9,9 @@
 ##   - Empty slot in placement mode without a selected item name →
 ##     "Select an inventory item first" (legacy/test entry without an item)
 ##   - Occupied slot in placement mode → "Shelf full" (no E cue)
-##   - Occupied slot, no placement mode → "<slot> — Press E to stock"
+##   - Occupied slot, no placement mode → "<slot>" with no E cue (E on
+##     an occupied slot is a no-op in InventoryPanel, so the prompt drops
+##     the dead "Press E to stock" hint)
 ##
 ## The Cash Register interactable in retro_games.tscn ships
 ## display_name="Cash Register" + prompt_text="Checkout" so the base
@@ -84,14 +86,23 @@ func test_occupied_slot_in_placement_mode_label_is_shelf_full() -> void:
 	)
 
 
-func test_occupied_slot_outside_placement_mode_uses_authored_label() -> void:
+func test_occupied_slot_outside_placement_mode_drops_press_e_cue() -> void:
 	var slot: ShelfSlot = _make_slot("Cartridge Slot")
 	slot.place_item("test_item_002", "cartridges")
-	# Not in placement mode — the slot reverts to the authored stock prompt.
+	# Not in placement mode — pressing E on an occupied slot is a no-op in
+	# InventoryPanel._on_interactable_interacted (the open() branch is gated
+	# on `not slot.is_occupied()`), so the prompt must drop the verb and
+	# render the bare slot name without a "Press E" cue.
 	assert_eq(
 		slot.get_prompt_label(),
-		"Cartridge Slot — Press E to stock",
-		"Occupied slot outside placement mode should fall back to the authored label"
+		"Cartridge Slot",
+		"Occupied slot outside placement mode must show the bare slot name "
+		+ "without a dead 'Press E to stock' cue"
+	)
+	assert_eq(
+		slot.prompt_text, "",
+		"Occupied slot outside placement mode must clear prompt_text so "
+		+ "InteractionRay._build_action_label suppresses the E cue"
 	)
 
 

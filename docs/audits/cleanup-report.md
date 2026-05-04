@@ -1,7 +1,8 @@
-# Cleanup Report — 2026-05-03
+# Cleanup Report — 2026-05-04
 
 **Scope:** code-quality cleanup pass on the working-tree state ahead of
-commit. Six passes have run across the 2026-05-02 / 2026-05-03 work:
+commit. Eight passes have run across the 2026-05-02 / 2026-05-03 / 2026-05-04
+work:
 
 * **Pass 1** (2026-05-02) — initial dead-code sweep + first attempt at
   "broken-link" cleanup after the audit-report consolidation.
@@ -43,7 +44,7 @@ commit. Six passes have run across the 2026-05-02 / 2026-05-03 work:
   12 set was clean: no orphaned constants/members/methods left from the
   removed `MOVE_TO_SHELF` / `SET_PRICE` step infrastructure, no debug
   prints, no stale TODOs. Two minor edits found and applied.
-* **Pass 6** (this pass, 2026-05-03) — duplicate-utility consolidation
+* **Pass 6** (2026-05-03) — duplicate-utility consolidation
   in `inventory_panel.gd`. Pass 5's audit had verified the change set
   was free of dead constants/members and stale comments but left in
   place a near-identical 3-line "begin shelf placement" sequence
@@ -57,27 +58,287 @@ commit. Six passes have run across the 2026-05-02 / 2026-05-03 work:
   the helper preserves call ordering, and `_selected_item` is still
   re-assigned after the close-helper nulls it so consumers reading
   panel state during placement see the in-flight selection.
+* **Pass 7** (2026-05-03) — duplicate-utility consolidation + dead-return
+  drop over the Pass-14 working tree (BRAINDUMP "Day-1 fully playable"
+  change set). Pass 7 found a 3-line preamble duplicated across the new
+  `inventory_panel.gd` row-button handlers (`_on_stock_one`,
+  `_on_stock_max`, `_on_remove_from_shelf`) plus a 3-line companion
+  helper (`_sync_shelf_actions_inventory`); extracted a single
+  `_prep_row_action(item, row)` helper that owns
+  `_highlight_selected → _selected_item = item → mirror inventory_system`,
+  inlined the companion, and tidied the remaining
+  `_get_active_store_shelf_slots` copy-loop into a direct
+  `tree.get_nodes_in_group` return. Also dropped the unused return
+  values on `InventoryRowBuilder.add_stock_buttons` (Dictionary) and
+  `add_remove_button` (Button) since neither call site reads them and
+  the doc comment "Returns the two buttons so callers can wire
+  focus/state if needed" was a hypothetical-future justification ruled
+  out by the cleanup contract. Net code reduction with no behavioral
+  change.
+* **Pass 8** (this pass, 2026-05-04) — dead-member sweep against the
+  Pass-15 working-tree change set (the `shelf_slot.gd` state-aware
+  prompt rewrite, the `customer.gd` `_set_state` consolidation +
+  navmesh-fallback path, the `customer_system.gd` Day-1 forced-spawn
+  fallback timer, the `mall_overview.gd` `set_time_system` injection +
+  AM/PM feed timestamps, the `day_summary.gd` MainMenuButton +
+  per-shelf/backroom split + `customers_served` payload, the new
+  `kpi_strip.gd` / `hud.gd` `_seed_cash_from_economy` seeding contract,
+  `interaction_ray.gd` debug-build interaction telemetry,
+  `objective_director.gd` Day-1 step chain + content-load warnings,
+  `checkout_system.gd` `dev_force_complete_sale`, the `debug_overlay.gd`
+  F8/F9/F10/F11 dev-shortcut block, and the `retro_games.gd` checkout-
+  counter empty-verb path). Pass 8 found one residual dead member from
+  the prompt rewrite (`_authored_prompt_text` captured at `_ready` but
+  never read after `_refresh_prompt_state` stopped restoring it) and
+  removed the field, its assignment, and rewrote the surrounding
+  comment to drop the now-singular reference.
 
-**Verification:** `bash tests/run_tests.sh` after Pass 6 — **4980 GUT
-tests, 4980 passing, 0 failures, 28227 asserts** (Pass 5 baseline was
-4969 / 27995; the +11 tests / +232 asserts come from the
-tracked-but-untracked test files added by the working tree after Pass 5
-closed: `test_day_cycle_mall_overview_restore.gd`,
-`test_day_summary_cash_balance.gd`, `test_store_visual_readability.gd`,
-plus newly added cases in `test_inventory_panel.gd`,
-`test_hud_fp_mode.gd`, etc. — none of which are touched by Pass 6's
-helper extraction). All SSOT tripwires green
+**Verification:** `bash tests/run_tests.sh` after Pass 8 — **5076 GUT
+tests, 5076 passing, 0 failing, 28697 asserts** (the Pass-7-baseline
+flaky `test_pocket_creatures_controller.gd::test_rarity_draw_within_spec`
+case has stabilized in this run; Pass 8 did not touch its dependencies
+and the win is incidental). All SSOT tripwires remain green
 (`validate_translations.sh`, `validate_single_store_ui.sh`,
-`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter
-sole-owner). Pre-existing validator failures (ISSUE-018, ISSUE-023,
-ISSUE-024, ISSUE-154, ISSUE-239) are on `main` ahead of this branch
-and do not touch the files edited in any pass.
+`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter sole-owner,
+the regulars-log audit's 32 checks). Pre-existing validator failures
+(ISSUE-018, ISSUE-023, ISSUE-024, ISSUE-026, ISSUE-032, ISSUE-154,
+ISSUE-239) are on `main` ahead of this branch and do not touch the
+files edited in any pass.
 
 ---
 
 ## Changes made this pass
 
-### Duplicate consolidation
+### Dead-member removal (Pass 8)
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/scripts/stores/shelf_slot.gd:96` (declaration) and `:118` (assignment in `_ready`) | Deleted `var _authored_prompt_text: String = ""` and the matching `_authored_prompt_text = prompt_text` capture line. | The Pass-15 `_refresh_prompt_state` rewrite (working-tree diff) replaced the final `prompt_text = _authored_prompt_text` reader with `prompt_text = ""` on every default-state arm. After that change the field was assigned once at `_ready` and never read again — a real residual member rather than a future-use stash (the empty `prompt_text` is the new contract; the §F-109 / §F-111 dead-prompt removal docstrings explicitly call it out). The capture-comment block on `_ready` has been retightened from "Capture authored prompt fields … restores these" (plural / pointing at both fields) to "Capture the authored display name … restores it" (singular and accurate against the surviving `_authored_display_name` reads in `_refresh_prompt_state`). |
+
+### Pass 15 surfaces re-verified clean (no edits required)
+
+Pass 8 swept the Pass-15 working tree for orphans / dead prints / stale
+comments / duplicate utilities and found none requiring an edit beyond
+the dead-member removal above. Each addition is cohesive within its
+host file:
+
+* **`hud.gd:_seed_cash_from_economy` and `kpi_strip.gd:_seed_cash_from_economy`** —
+  superficially similar names, but they drive distinct display state
+  machines: HUD kills the active count-up tween + writes
+  `_displayed_cash` / `_target_cash` / calls `_update_cash_display`,
+  whereas `kpi_strip` writes `_current_cash` and the label text
+  directly. The only shared surface is the `EconomySystem.get_cash()`
+  call and the silent-return guard family — too small a footprint to
+  justify a third-file helper that would re-introduce the
+  cross-scene reference each currently sidesteps. The §F-103 /
+  §F-115 docstrings already cross-cite each other so a future reader
+  knows both seeds exist and why. **Justified, not extracted.**
+* **`interaction_ray.gd:_log_interaction_focus` /
+  `_log_interaction_dispatch`** — both gated on `OS.is_debug_build()`
+  with the same gate-and-format pattern, but they read different
+  `Interactable` fields (`prompt_text` vs `action_verb`) and emit
+  different output suffixes (no suffix vs `(dispatched)`). Pass 7
+  documented the same disposition; the Pass-15 §F-108 docstring
+  consolidates the rationale onto the focus-helper. Three differences
+  across two call sites is below the consolidation threshold the
+  cleanup contract uses elsewhere in this report (e.g. the
+  `checkout_system._emit_sale_toast` vs `ambient_moments_system`
+  toast emission entry). **Justified, not extracted.**
+* **`customer_system.gd:_on_item_stocked` /
+  `_on_day1_forced_spawn_timer_timeout`** — both are race-guard
+  cascades around the Day-1 forced-spawn timer, but they sit on
+  different sides of the schedule/fire boundary: the first decides
+  whether to *start* the timer (gates on stocked-flag, day == 1, no
+  active customers, timer not already running, timer node alive); the
+  second decides whether the *firing* should still produce a spawn
+  (gates on first-customer-spawned, gate-unlocked, day == 1, no
+  active customers, non-empty pool). Their guard sets overlap by 50%
+  but the operations they protect are not the same callable. The
+  §F-113 docstrings on each documents that overlap. **Justified, not
+  extracted.**
+* **`customer.gd:_set_state` consolidation** — the working tree's own
+  consolidation (the three call sites at `initialize`, `enter_queue`,
+  `advance_to_register`, plus `_transition_to`, all collapsed into the
+  single `_set_state(new_state)` writer with the §F-106 debug-build
+  trace) is already a real consolidation and Pass 7's sweep
+  pre-confirmed it. Pass 8 re-greps for `current_state =` outside
+  `_set_state`: zero hits in `customer.gd`. The matching
+  `EventBus.customer_state_changed.emit` calls outside `_set_state`
+  are also gone. Clean.
+* **`debug_overlay.gd:_debug_force_complete_sale` /
+  `_debug_add_test_inventory` / F8 / F9 / F10 / F11 block** — every
+  branch carries a §F-100 `push_warning` cite-back; the gate at
+  `_ready` queue_free's the overlay on release builds so the
+  unmodified-key shortcuts are debug-build-only by construction. No
+  duplication with the existing Ctrl+M / Ctrl+C / Ctrl+H / Ctrl+D /
+  Ctrl+P shortcuts (the Ctrl-block keeps the visibility gate; the
+  unmodified F-keys deliberately do not, per the §F-100 docstring).
+* **`mall_overview.gd:_format_timestamp` and `_resolve_item_name`** —
+  both are single-purpose helpers consumed by `_add_feed_entry`
+  (timestamp prefix) and `_on_item_stocked` / `_on_customer_purchased`
+  (item-name resolution) respectively. Each is the canonical home
+  for its responsibility; the §F-95 / §F-101 cite-back comments
+  document the cosmetic-seam fallbacks. Removing either would
+  re-inline duplicate string-formatting at three sites.
+* **`objective_director.gd:_advance_day1_step_if`** — the consolidator
+  Pass 7 already verified. Pass 8 re-greps for direct
+  `_day1_step_index = … ; _emit_current()` writes outside the
+  helper: zero hits. The `_schedule_close_day_step` /
+  `_advance_to_close_day_step` pair is the single auto-advance path
+  (no parallel timer in the tree), and the §F-98 / §F-99 docstrings
+  document the test-seam contract.
+* **`day_summary.gd:_seed_cash_from_economy` peer (the new
+  `customers_served` payload field)** — the §F-102 `has()` gate is the
+  legacy-payload fallback documented in the same docstring as the
+  backroom / shelf split; PerformanceReport still wins when it
+  arrives. Single new responsibility threaded through the existing
+  render pipeline. Cohesive.
+* **`game_world.gd:_on_day_summary_main_menu_requested`** — symmetric
+  with `_on_day_summary_mall_overview_requested` (the §F-105 cite-back
+  on the GAME_OVER guard ties them together); no duplication of the
+  `next_day_confirmed` emit (the menu-bound handler intentionally
+  skips it). Five lines, clean.
+
+### Stale-comment cleanup (Pass 8)
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/scripts/stores/shelf_slot.gd:114–116` (capture-fields comment in `_ready`) | "Capture authored prompt fields AFTER super._ready() so the base resolves the verb default. _refresh_prompt_state() restores these whenever the slot is in the 'default' state (occupied + not in placement mode)." → "Capture the authored display name AFTER super._ready() so _refresh_prompt_state can restore it whenever the slot is in the 'default' state (occupied + not in placement mode + set_display_data has not yet populated _stocked_item_name)." | The plural ("these") and the "verb default" reference no longer match the post-Pass-15 contract. `_refresh_prompt_state` restores `display_name` only; `prompt_text` is hard-set to `""` on every default-state arm per §F-111 (the dead-prompt removal contract). The new wording also names the `_stocked_item_name` precondition that gates whether the authored name is restored vs the "%s ×%d" stocked-item rendering — explicit so a future reader does not re-introduce a `prompt_text = …` line on the assumption that the captured field is still the recovery source. |
+
+### Files still >500 LOC (Pass 8)
+
+Pass 8 makes no splits. Snapshot of the working-tree LOC for files in
+this size class with the Pass 7 baseline carried forward (deltas
+reflect the working-tree state at the time of measurement, with Pass
+8's two-line shelf-slot trim):
+
+| LOC (Pass 7 → Pass 8) | File | Notes |
+|---|---|---|
+| 1247 → 1230 | `game/scenes/ui/hud.gd` | -17 LOC: removal of the now-redundant `_fp_inventory_hint` Label + its `_ensure_fp_inventory_hint` factory + the `_fp_inventory_hint.show()` / `.hide()` calls (the Day-1 ObjectiveRail step chain renders the "Press I" affordance, so the always-on FP corner hint duplicated the rail per the §F-NN BRAINDUMP layout spec — landed in the working tree, not added by Pass 8). The §F-103 `_seed_cash_from_economy` is the cohesive single-purpose seeding addition; not a split candidate. **Justify.** |
+| 1102 → 1102 | `game/autoload/data_loader.gd` | Unchanged. **Justify.** |
+| 954 → 1019 | `game/scripts/systems/customer_system.gd` | +65 LOC: the new `_day1_first_customer_spawned` flag rename + the `_day1_forced_spawn_timer` Timer + `_on_day1_forced_spawn_timer_timeout` handler + the §F-113 / §F-114 docstrings. Single cohesive Day-1 reliability addition on the existing spawn loop; the timer is owned and freed by the system itself (no cross-cutting). **Justify.** |
+| 783 → 783 | `game/scripts/systems/ambient_moments_system.gd` | Unchanged. **Justify.** |
+| 689 → 689 | `game/autoload/event_bus.gd` | Unchanged. **Justify.** |
+| 845 → 902 | `game/scenes/ui/inventory_panel.gd` | +57 LOC since Pass 7: the new `_refresh_filter_visibility`, `_get_active_store_shelf_slots`, and `_find_shelf_slot_by_id` helpers + the §F-96 / §F-97 / §F-104 docstrings. Cohesive single-panel additions; the Pass 4 `GameWorldPanelLoader`-style split proposal still applies but only when behavioral-change passes are permitted. **Justify.** |
+| 1631 → 1638 | `game/scenes/world/game_world.gd` | +7 LOC: the new `_on_day_summary_main_menu_requested` handler + the `set_time_system` MallOverview injection + the `checkout_system` debug overlay wire + the marker `global_transform` (vs `global_position`) spawn fix. Each is a one- to four-line addition on its existing call site. **Justify.** |
+| 958 → 964 | `game/scenes/ui/day_summary.gd` | +6 LOC: the MainMenuButton signal wiring + the `_main_menu_requested` signal + the `_on_main_menu_pressed` handler. Cohesive button-row addition. **Justify.** |
+| 808 → 812 | `game/scripts/characters/customer.gd` | +4 LOC: the `_set_state` debug-build trace docstring (§F-106) and the WAYPOINT_ARRIVAL_DIST_SQ constant docstring. Already on the size watchlist (Pass 7 disposition stands). **Justify.** |
+| (new entry) 818 | `game/scripts/stores/retro_games.gd` | The Pass 4 baseline measurement was 817; one-line drift from the §F-109 docstring rewrite. Per-store controller — same rationale as sports/rentals/electronics; the working-tree change set replaces a `prompt_text` literal pair with the empty-verb path and tightens the §F-109 docstring. **Justify.** |
+| (new entry) 811 | `game/scripts/systems/checkout_system.gd` | Working-tree net +49 LOC: the §F-112 `dev_force_complete_sale` debug-build dev shortcut + its docstring. Single new debug-only entry point on the existing checkout pipeline; no parallel hot-path code. **Justify.** |
+| 501 → 499 | `game/scripts/stores/shelf_slot.gd` | Pass 8 trims one declaration, one assignment, and rewrites a multi-line comment block (net -2 LOC), bringing the file just below the 500-LOC watchlist threshold. The Pass-15 working tree adds the §F-110 / §F-111 docstrings + the `CATEGORY_COLORS` constants + the `_apply_category_color` / `_find_first_mesh_instance` helpers + the `_held_category` / `_stocked_item_name` members. Single cohesive shelf-slot widget; no longer on the >500 LOC watchlist after Pass 8 but logged here for delta tracking. |
+
+### Considered but not changed (Pass 8)
+
+* **All Pass 7 / Pass 6 / Pass 5 / Pass 4 / Pass 3 / Pass 2 entries
+  under "Considered but not changed"** (the duplicate `_resolve_store_id`
+  helper across five files, the `StorePlayerBody.set_current_interactable`
+  test seam, the `ProvenancePanel` standalone scene, the F1 / F3
+  debug-camera toggle duplication, the audit-log `print()` lines, the
+  `dev_force_place_test_item` debug-build print, the
+  `DataLoader.create_starting_inventory` vs `generate_starter_inventory`
+  pair, the `time_system.gd` / `customer_system.gd` `_PHASE_BOUNDARIES_MINUTES`
+  / `HOUR_DENSITY[17..21]` LATE_EVENING entries, the
+  `checkout_system._emit_sale_toast` vs `ambient_moments_system`
+  toast-emission pair) remain in their documented states; nothing in
+  the Pass-15 working-tree delta alters their disposition. See the
+  Pass 7 / Pass 6 / Pass 4 / Pass 2 entries below for the full
+  per-item rationale.
+
+## Escalations (Pass 8)
+
+None. Pass 8 acted on the one dead-member finding
+(`_authored_prompt_text` in `shelf_slot.gd`, now removed alongside its
+capture line and the surrounding comment) and justified the rest
+inline above. Pass 7 / Pass 6 / Pass 5 history is preserved verbatim
+below.
+
+---
+
+## Pass 7 — Duplicate consolidation + dead-return drop (history)
+
+### Duplicate consolidation (Pass 7)
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/scenes/ui/inventory_panel.gd:459–501` | Extracted shared 3-line preamble `_highlight_selected(row); _selected_item = item; <mirror inventory_system>` from `_on_stock_one`, `_on_stock_max`, and `_on_remove_from_shelf` into a new `_prep_row_action(item, row)` helper. The previously-named `_sync_shelf_actions_inventory` helper that the three handlers all called is inlined into `_prep_row_action` (one-line `if inventory_system != null: _shelf_actions.inventory_system = inventory_system`). | Three callers, identical 3-line core, identical justification (mirror onto helper before invoking action). The Pass-14 change set added these three handlers in lockstep, so the duplication landed all at once and is a clean consolidation rather than premature abstraction. The doc comment that previously lived on `_sync_shelf_actions_inventory` (open() also wires the helper, the explicit sync covers paths where the row button fires without prior open() — unit tests, state-restored panels) is preserved on the new helper. |
+| `game/scenes/ui/inventory_panel.gd:506–510` | Trimmed `_get_active_store_shelf_slots` from a `for node in tree.get_nodes_in_group; matches.append(node); return matches` copy-loop into a direct `return tree.get_nodes_in_group(&"shelf_slot")` (the null-tree guard is preserved). | The original was building a fresh Array by re-appending every entry from the engine's already-allocated Array — a wasted copy. Saves an N-element allocation per row-button click. |
+| `game/scripts/ui/inventory_row_builder.gd:60–89` | Dropped the unused `Dictionary` return on `add_stock_buttons` and the unused `Button` return on `add_remove_button` (now both `-> void`). The single call site in `inventory_panel.gd:_add_item_row` discards the return; no test exercises it. | "Returns the two buttons so callers can wire focus/state if needed" was a design-for-hypothetical-future justification flagged by the cleanup contract. Removing the Dictionary alloc skips a per-row hash-table allocation. |
+| `game/scripts/ui/inventory_shelf_actions.gd:107–109` | Updated the EH-04 / §F-04 wiring-contract doc comment to reference the new `_prep_row_action` helper instead of the renamed-away `_sync_shelf_actions_inventory`. | Pass-7 inlining renamed the shared mirror helper; the cite-back comment in `stock_one` would otherwise point at a method that no longer exists. |
+
+### Pass 14 surfaces re-verified clean (no edits required)
+
+Pass 7 swept the rest of the Pass-14 change set for orphans / dead
+prints / stale comments and found none requiring an edit:
+
+* **`game/scripts/characters/customer.gd:_set_state`** — debug-build
+  `print(...)` line is gated on `OS.is_debug_build()` (release builds
+  short-circuit), the cite-back comment names BRAINDUMP Priority 14 as
+  the rationale, and the `_set_state` rewrite eliminates three
+  duplicated `current_state = X; EventBus.customer_state_changed.emit(self, X)`
+  pairs at `initialize`, `enter_queue`, and `advance_to_register`.
+  Already a consolidation — no further work.
+* **`game/scripts/characters/customer.gd:_detect_navmesh_or_fallback`**
+  — three engagement branches each emit a §F-94-cited `push_warning`
+  with a unique reason string. Not duplication; each branch reports a
+  different wiring failure mode.
+* **`game/autoload/objective_director.gd`** — `DAY1_STEP_*` constants
+  align 1-1 with the `objectives.json` `steps` array (length 8). The
+  `_advance_day1_step_if(expected_step)` guard collapses what would
+  otherwise be 6 near-identical signal handlers into one shared
+  advancement primitive.
+* **`game/scripts/player/interaction_ray.gd:_log_interaction_focus` /
+  `_log_interaction_dispatch`** — both gated on
+  `OS.is_debug_build()`, both produce a different output line ("focus"
+  vs "dispatched"), too small a shared surface to extract.
+* **`game/scenes/mall/mall_overview.gd:_format_timestamp`** — single
+  helper centralizes the 12-hour AM/PM conversion that all three new
+  feed handlers (`_on_item_stocked`, `_on_customer_entered`,
+  `_on_customer_purchased`) implicitly read through `_add_feed_entry`.
+* **`game/scenes/ui/day_summary.gd:_seed_cash_from_economy`** —
+  Pass-14 docstring already documents BRAINDUMP rationale + null-economy
+  silent-return symmetry with `_seed_counters_from_systems`.
+* **`game/content/economy/pricing_config.json`** — the `_comment` key
+  was added to keep the JSON authoritative-source declaration close to
+  the value; verified that no parser path enforces unknown-key
+  rejection (`ContentParser.parse_economy_config` ignores unknown keys
+  via `data.get(...)`). Retained.
+* **`game/resources/store_definition.gd:starting_cash` deletion** —
+  every remaining repository reference resolves to
+  `EconomyConfig.starting_cash` (a separate field). The five entries
+  in `store_definitions.json` were also stripped in lockstep. No tests
+  reference `StoreDefinition.starting_cash`.
+
+### Files still >500 LOC (Pass 7)
+
+Pass 7 makes no splits. Snapshot of the working-tree LOC for files in
+this size class with the Pass 6 baseline carried forward:
+
+| LOC (Pass 6 → Pass 7) | File | Notes |
+|---|---|---|
+| 1217 → 1247 | `game/scenes/ui/hud.gd` | +30 LOC: the new `_seed_cash_from_economy` helper + its docstring. Cohesive single-purpose addition on the existing day-started cash-display pipeline; not a split candidate. **Justify.** |
+| 1102 → 1102 | `game/autoload/data_loader.gd` | Unchanged. **Justify.** |
+| 954 → 954 | `game/scripts/systems/customer_system.gd` | Unchanged. **Justify.** |
+| 783 → 783 | `game/scripts/systems/ambient_moments_system.gd` | Unchanged. **Justify.** |
+| 689 → 689 | `game/autoload/event_bus.gd` | Unchanged signal hub. **Justify.** |
+| 782 → 845 | `game/scenes/ui/inventory_panel.gd` | +63 LOC since Pass 6: Pass 14 added `_on_stock_one` / `_on_stock_max` / `_on_remove_from_shelf` row handlers + the `_get_active_store_shelf_slots` / `_find_shelf_slot_by_id` helpers. Pass 7's `_prep_row_action` extraction trims the duplicate preamble (-9 LOC) and the `_get_active_store_shelf_slots` copy-loop (-3 LOC) but the new feature surface still net-grows the file. Single cohesive panel; the Pass 4 GameWorldPanelLoader-style split proposal still applies but only when behavioral-change passes are permitted. **Justify.** |
+| 1616 → 1631 | `game/scenes/world/game_world.gd` | +15 LOC since Pass 6: the new `_on_day_summary_main_menu_requested` handler + `set_time_system` injection on MallOverview. **Justify.** |
+| 914 → 958 | `game/scenes/ui/day_summary.gd` | +44 LOC: BackroomInventoryLabel / ShelfInventoryLabel rendering, MainMenuButton signal wiring, customers_served payload field. Each addition extends the existing `_on_day_closed_payload` rendering pipeline rather than introducing new responsibilities. **Justify.** |
+| (new entry) 808 | `game/scripts/characters/customer.gd` | Working-tree net +160 LOC: `_set_state` debug-build trace + the waypoint-fallback navigation set (`_use_waypoint_fallback`, `_fallback_target`, `_fallback_arrived`, `_move_waypoint_fallback`, `enable_waypoint_fallback`, `_detect_navmesh_or_fallback`, `_find_navigation_region`) + the Day-1 first-sale guarantee path. The file is the per-NPC FSM; a split that pushed the navigation primitives out would force every consumer through a new public API and is a behavioral-impact pass. **Justify (out of scope for no-behavior-change pass).** |
+
+### Stale-comment cleanup (Pass 7)
+
+None this pass beyond the §F-04 / EH-04 wiring-contract repoint in
+`inventory_shelf_actions.gd:107–109` (covered above). Re-greps for
+`_on_select_for_placement` / `add_select_button` / `_build_select_spacer`
+return zero hits inside the working tree (matches in `cleanup-report.md`
+itself are historical) and `_sync_shelf_actions_inventory` is gone
+outside the now-updated comment.
+
+---
+
+## Pass 6 — Duplicate consolidation in inventory_panel (history)
+
+### Duplicate consolidation (Pass 6)
 
 | Path | Edit | Why |
 |---|---|---|
@@ -151,9 +412,7 @@ delta is visible at a glance:
 `tutorial_system.gd` is unchanged at 580 LOC. All other modified files
 remain below the 500 LOC threshold and are not on the size watchlist.
 
----
-
-## Considered but not changed
+### Considered but not changed (Pass 6)
 
 * **`DataLoader.create_starting_inventory` vs `DataLoader.generate_starter_inventory`** —
   two functions covering "produce ItemInstances for a store" with
@@ -203,7 +462,7 @@ remain below the 500 LOC threshold and are not on the size watchlist.
   their disposition. See the Pass 2 / Pass 4 entries below for the full
   per-item rationale.
 
-## Escalations
+### Escalations (Pass 6)
 
 None. Pass 6 acted on the one duplicate-utility finding (the shared
 shelf-placement begin-sequence in `inventory_panel.gd`, now consolidated
@@ -530,7 +789,9 @@ entry is cohesive enough that a split would split logic, not file size.
 
 ---
 
-## Considered but not changed (with reason)
+## Pass 1 — Initial dead-code sweep (history)
+
+### Considered but not changed (Pass 1, with reason)
 
 - **Pass 1 dead-code edit (`crosshair.gd:8` unused `_label`).** Already
   removed by Pass 1; verified the file (now 30 lines) reads the
@@ -572,7 +833,7 @@ entry is cohesive enough that a split would split logic, not file size.
   `OS.is_debug_build()` at line 553 and exists specifically as a
   development unblock. Not stale.
 
-## Escalations
+### Escalations (Pass 4)
 
 None. Every Pass 4 finding acted (orphan `mat_player_indicator.tres`
 deleted, three Pass 3 "Considered but not changed" entries reconciled

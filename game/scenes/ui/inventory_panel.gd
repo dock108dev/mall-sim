@@ -48,6 +48,9 @@ var _shelf_actions := InventoryShelfActions.new()
 @onready var _search_field: LineEdit = (
 	$PanelRoot/Margin/VBox/SearchField
 )
+@onready var _filter_row: HBoxContainer = (
+	$PanelRoot/Margin/VBox/FilterRow
+)
 @onready var _condition_filter: OptionButton = (
 	$PanelRoot/Margin/VBox/FilterRow/ConditionFilter
 )
@@ -389,6 +392,7 @@ func _refresh_grid() -> void:
 		return
 	var items: Array[ItemInstance] = _get_filtered_items()
 	_quantity_map = _build_quantity_map(_store_inventory)
+	_refresh_filter_visibility()
 	_empty_label.text = "No items found"
 	_empty_label.visible = items.is_empty()
 	_scroll.visible = not items.is_empty()
@@ -398,6 +402,40 @@ func _refresh_grid() -> void:
 	_footer_value.text = (
 		"Value: $%.2f" % InventoryFilter.total_value(items)
 	)
+
+
+## Hides condition / rarity dropdowns when the underlying store inventory has
+## only a single distinct value for that axis — a filter that can only select
+## "All" reads as a dead control. Day 1 starter inventories collapse to a
+## single condition + rarity, so the filter row hides entirely until a later
+## day brings in items that actually vary. The whole row hides when both
+## individual filters are hidden.
+func _refresh_filter_visibility() -> void:
+	# §F-104 — `@onready var _filter_row` only resolves once the panel is
+	# in-tree; bare-Control unit-test fixtures hit this guard. The
+	# `_get_active_store_shelf_slots` SceneTree-null guard below shares the
+	# same Tier-5 onready/test-seam contract.
+	if _filter_row == null:
+		return
+	var conditions: Dictionary = {}
+	var rarities: Dictionary = {}
+	for entry: Dictionary in _store_inventory:
+		var item: ItemInstance = entry.get("item", null) as ItemInstance
+		if item == null or item.definition == null:
+			continue
+		conditions[item.condition] = true
+		rarities[item.definition.rarity] = true
+	var show_condition: bool = conditions.size() > 1
+	var show_rarity: bool = rarities.size() > 1
+	_condition_filter.visible = show_condition
+	_rarity_filter.visible = show_rarity
+	# Reset a hidden filter to "All" so a stale selection cannot suppress
+	# items the user can no longer see in the dropdown.
+	if not show_condition:
+		_condition_filter.selected = 0
+	if not show_rarity:
+		_rarity_filter.selected = 0
+	_filter_row.visible = show_condition or show_rarity
 
 
 ## Aggregates per-definition counts of backroom and on-shelf instances over
@@ -438,22 +476,106 @@ func _add_item_row(item: ItemInstance) -> void:
 		_on_cell_mouse_entered.bind(item),
 		_on_cell_mouse_exited,
 	)
-	# Direct shortcut to placement mode for backroom items. Mirrors the
-	# context-menu "Move to Shelf" action but without the extra click.
+	# One-click stocking on backroom items, one-click unstocking on shelf items.
+	# The placement-mode (aim-and-click in the world) flow remains accessible
+	# via the context-menu "Move to Shelf" action.
 	if item.current_location == "backroom":
-		InventoryRowBuilder.add_select_button(
+		InventoryRowBuilder.add_stock_buttons(
 			overlay,
-			_on_select_for_placement.bind(item, row),
+			_on_stock_one.bind(item, row),
+			_on_stock_max.bind(item, row),
+		)
+	elif item.current_location.begins_with("shelf:"):
+		InventoryRowBuilder.add_remove_button(
+			overlay,
+			_on_remove_from_shelf.bind(item, row),
 		)
 	_grid.add_child(row)
 	_cell_map[row] = item
 
 
-func _on_select_for_placement(
+func _on_stock_one(item: ItemInstance, row: PanelContainer) -> void:
+	_prep_row_action(item, row)
+	if not _shelf_actions.stock_one(item, _get_active_store_shelf_slots()):
+		EventBus.notification_requested.emit(tr("INVENTORY_NO_AVAILABLE_SLOT"))
+
+
+func _on_stock_max(item: ItemInstance, row: PanelContainer) -> void:
+	_prep_row_action(item, row)
+	var placed: int = _shelf_actions.stock_max(
+		item, _get_active_store_shelf_slots()
+	)
+	if placed <= 0:
+		EventBus.notification_requested.emit(tr("INVENTORY_NO_AVAILABLE_SLOT"))
+
+
+func _on_remove_from_shelf(
 	item: ItemInstance, row: PanelContainer
 ) -> void:
+	_prep_row_action(item, row)
+	if not item.current_location.begins_with("shelf:"):
+		# §F-97 — UI invariant: the per-row Remove button is only built when
+		# `item.current_location` starts with `shelf:` (see
+		# `inventory_row_builder.add_remove_button` gating in `_populate_grid`).
+		# Reaching this branch means a button was offered for a non-shelf item,
+		# which is a row-builder regression rather than a legitimate state.
+		push_warning(
+			(
+				"InventoryPanel._on_remove_from_shelf: row built for non-shelf "
+				+ "item (instance_id=%s, location=%s); ignoring."
+			)
+			% [item.instance_id, item.current_location]
+		)
+		return
+	var slot_id: String = item.current_location.substr(6)
+	var slot: ShelfSlot = _find_shelf_slot_by_id(slot_id)
+	if slot != null:
+		_shelf_actions.remove_item_from_shelf(slot)
+		return
+	# No matching world slot (e.g. headless test, hub-mode reconciliation):
+	# fall back to the inventory-side move so backroom qty still updates.
+	_shelf_actions.move_to_backroom(item)
+
+
+## Shared preamble for the row-button handlers (`_on_stock_one`,
+## `_on_stock_max`, `_on_remove_from_shelf`): highlight the row, latch the
+## selection, and mirror `inventory_system` onto `_shelf_actions`. `open()`
+## also wires the helper, so the explicit sync covers paths where the row
+## button fires without a prior `open()` (unit tests, state-restored panels).
+func _prep_row_action(item: ItemInstance, row: PanelContainer) -> void:
 	_highlight_selected(row)
-	_begin_placement_mode(item)
+	_selected_item = item
+	if inventory_system != null:
+		_shelf_actions.inventory_system = inventory_system
+
+
+func _get_active_store_shelf_slots() -> Array:
+	# §F-104 — Same Tier-5 SceneTree-null test-seam as the filter-row guard
+	# above. Helper callers (`_on_stock_one`, `_on_stock_max`) surface failure
+	# via `EventBus.notification_requested`, so the empty array is the
+	# documented "no slots available" path that the UX layer handles.
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return []
+	return tree.get_nodes_in_group(&"shelf_slot")
+
+
+## §F-96 — Empty `slot_id` is rejected. `slot.slot_id` defaults to `""` on
+## `ShelfSlot` (see `shelf_slot.gd:81`); the `&"shelf_slot"` group walks every
+## slot in the tree (potentially across multiple stores or test fixtures), so
+## a hand-edited save with `current_location = "shelf:"` would otherwise match
+## the first empty-id slot and trigger a wrong-slot remove. Caller-side fall-
+## through to `move_to_backroom(item)` covers the rejection.
+func _find_shelf_slot_by_id(slot_id: String) -> ShelfSlot:
+	if slot_id.is_empty():
+		return null
+	for node: Node in _get_active_store_shelf_slots():
+		if not (node is ShelfSlot):
+			continue
+		var slot := node as ShelfSlot
+		if slot.slot_id == slot_id:
+			return slot
+	return null
 
 
 ## Hides the panel visually but RETAINS the CTX_MODAL frame so the

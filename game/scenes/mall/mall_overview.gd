@@ -24,6 +24,7 @@ const _PHASE_NAMES: Dictionary = {
 
 var _inventory_system: InventorySystem = null
 var _economy_system: EconomySystem = null
+var _time_system: TimeSystem = null
 ## store_id (StringName) -> StoreSlotCard
 var _cards: Dictionary = {}
 ## store_id (String) -> int — today's sold count per store, reset on day_started.
@@ -31,7 +32,7 @@ var _store_sold_today: Dictionary = {}
 ## Ordered list matching ContentRegistry.get_all_store_ids() order at setup time.
 var _all_store_ids: Array[StringName] = []
 var _current_day: int = 1
-var _current_hour: int = 0
+var _current_hour: int = TimeSystem.MALL_OPEN_HOUR
 var _moments_log_panel: MomentsLogPanel = null
 var _performance_panel: PerformancePanel = null
 var _completion_tracker: CompletionTracker = null
@@ -140,9 +141,8 @@ func _refresh_all_reputation_tiers() -> void:
 
 ## Append a timestamped entry to the event feed, capped at _MAX_FEED_ENTRIES.
 func _add_feed_entry(text: String) -> void:
-	var timestamp: String = "D%d %02dh" % [_current_day, _current_hour]
 	var entry: Label = Label.new()
-	entry.text = "[%s] %s" % [timestamp, text]
+	entry.text = "%s — %s" % [_format_timestamp(), text]
 	entry.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_event_feed.add_child(entry)
 	_event_feed.move_child(entry, 0)
@@ -153,8 +153,43 @@ func _add_feed_entry(text: String) -> void:
 		oldest.queue_free()
 
 
+## Returns a 12-hour AM/PM timestamp like "9:02 AM". When `_time_system` is
+## injected via `set_time_system`, minutes track game_time_minutes; otherwise
+## the format degrades to ":00" using the last `hour_changed` value.
+## §F-101 — Cosmetic-precision seam (paired with §F-95 mall-overview feed
+## fallbacks). `set_time_system` is documented as optional; the hub remains
+## operational with hour-only precision in headless tests / pre-Tier-1 frames
+## that drive `EventBus.hour_changed` without a TimeSystem.
+func _format_timestamp() -> String:
+	var hour: int = _current_hour
+	var minute: int = 0
+	if _time_system != null:
+		var total_minutes: int = int(_time_system.game_time_minutes)
+		hour = int(total_minutes / 60)
+		minute = total_minutes % 60
+	var period: String = "AM" if hour < 12 else "PM"
+	var display_hour: int = hour % 12
+	if display_hour == 0:
+		display_hour = 12
+	return "%d:%02d %s" % [display_hour, minute, period]
+
+
+## Resolve a display-friendly item name from a canonical or alias item ID.
+## Falls back to the registry's display-name resolution (which itself echoes
+## the raw id when unknown), so an unregistered id surfaces as a string.
+func _resolve_item_name(item_id: StringName) -> String:
+	if item_id.is_empty():
+		return ""
+	var def: ItemDefinition = ContentRegistry.get_item_definition(item_id)
+	if def != null and not def.item_name.is_empty():
+		return def.item_name
+	return ContentRegistry.get_display_name(item_id)
+
+
 func _connect_signals() -> void:
 	EventBus.inventory_updated.connect(_on_inventory_updated)
+	EventBus.item_stocked.connect(_on_item_stocked)
+	EventBus.customer_entered.connect(_on_customer_entered)
 	EventBus.customer_purchased.connect(_on_customer_purchased)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.hour_changed.connect(_on_hour_changed)
@@ -171,6 +206,13 @@ func _connect_signals() -> void:
 	EventBus.item_sold.connect(_on_item_sold_for_buttons)
 
 
+## Inject the runtime TimeSystem so feed timestamps reflect in-game minutes
+## instead of degrading to the last-emitted hour boundary. Optional — feed
+## entries still render with hour-only precision when no TimeSystem is wired.
+func set_time_system(time_system: TimeSystem) -> void:
+	_time_system = time_system
+
+
 func _on_inventory_updated(store_id: StringName) -> void:
 	if not _inventory_system or not _cards.has(store_id):
 		return
@@ -178,10 +220,36 @@ func _on_inventory_updated(store_id: StringName) -> void:
 	(_cards[store_id] as StoreSlotCard).update_stock(stock.size())
 
 
+## §F-95 — Empty `item_name` fallback to the literal "item" mirrors the
+## §F-89 fallback in `CheckoutSystem._emit_sale_toast`: the feed entry is
+## informational and a content-authoring hole (item registered without an
+## `item_name`) is already caught by `tests/validate_*.sh` content suite at
+## CI time. ContentRegistry.get_display_name itself echoes the raw id once
+## per unknown id (warning-suppressed via `_warn_helper_fallback_once`), so
+## the fallback word here is the cosmetic seam, not the diagnostic surface.
+func _on_item_stocked(item_id: String, _shelf_id: String) -> void:
+	var item_name: String = _resolve_item_name(StringName(item_id))
+	if item_name.is_empty():
+		item_name = "item"
+	_add_feed_entry("Stocked %s" % item_name)
+
+
+## §F-95 — Empty `store_id` from the customer payload falls back to the
+## literal "the mall". `EventBus.customer_entered` is also emitted for
+## hub-mode wanderers with no specific store target, so the empty case is a
+## legitimate non-error path; the literal is the cosmetic seam.
+func _on_customer_entered(customer_data: Dictionary) -> void:
+	var store_id_raw: String = String(customer_data.get("store_id", ""))
+	var store_name: String = "the mall"
+	if not store_id_raw.is_empty():
+		store_name = ContentRegistry.get_display_name(StringName(store_id_raw))
+	_add_feed_entry("Customer entered %s" % store_name)
+
+
 func _on_customer_purchased(
 	store_id: StringName,
-	_item_id: StringName,
-	_price: float,
+	item_id: StringName,
+	price: float,
 	_customer_id: StringName,
 ) -> void:
 	# Increment the per-store sold-today counter even when there is no card
@@ -191,6 +259,12 @@ func _on_customer_purchased(
 	# covered by EH-08.
 	var key: String = String(store_id)
 	_store_sold_today[key] = int(_store_sold_today.get(key, 0)) + 1
+	# §F-95 — same cosmetic-seam fallback as `_on_item_stocked` above.
+	var item_name: String = _resolve_item_name(item_id)
+	if item_name.is_empty():
+		item_name = "item"
+	var price_text: String = UIThemeConstants.format_thousands(int(round(price)))
+	_add_feed_entry("Sold %s for $%s" % [item_name, price_text])
 	if not _cards.has(store_id):
 		return
 	var card: StoreSlotCard = _cards[store_id] as StoreSlotCard

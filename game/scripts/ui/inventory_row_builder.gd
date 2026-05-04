@@ -25,9 +25,10 @@ static func build(
 	hbox.add_child(_build_info_column(item, rarity_key, rental_controller))
 	hbox.add_child(_build_quantity_column(item, quantities))
 	hbox.add_child(_build_price_column(item))
-	# Reserved width on the right edge so the Select button (when added by
-	# `add_select_button`) sits cleanly without clipping price/qty columns.
-	hbox.add_child(_build_select_spacer())
+	# Reserved width on the right edge so the floating action buttons (added
+	# by `add_stock_buttons` / `add_remove_button`) sit cleanly without
+	# clipping the price/qty columns.
+	hbox.add_child(_build_action_spacer())
 	row.add_child(hbox)
 	return row
 
@@ -51,28 +52,53 @@ static func add_overlay_button(
 	return btn
 
 
-## Adds a labelled "Select" Button anchored to the right edge of the row.
-## Parented under `overlay_button` so it sits above the full-rect overlay in
-## input order — clicks on Select fire only `on_pressed`, while clicks
-## elsewhere on the row still reach the overlay button. Button is a Control
-## (not a Container) so its children keep their own anchors.
-static func add_select_button(
+## Adds stacked "Stock 1" and "Stock Max" buttons anchored to the right edge
+## of the row. Parented under `overlay_button` so they sit above the full-rect
+## overlay in input order — clicks on either button fire only their own
+## handler, while clicks elsewhere on the row still reach the overlay.
+static func add_stock_buttons(
+	overlay_button: Button,
+	on_stock_one: Callable,
+	on_stock_max: Callable,
+) -> void:
+	var stock_one := _build_action_button("Stock 1", on_stock_one)
+	stock_one.offset_top = -23.0
+	stock_one.offset_bottom = -1.0
+	overlay_button.add_child(stock_one)
+
+	var stock_max := _build_action_button("Stock Max", on_stock_max)
+	stock_max.offset_top = 1.0
+	stock_max.offset_bottom = 23.0
+	overlay_button.add_child(stock_max)
+
+
+## Adds a single "Remove" Button anchored to the right edge of the row for
+## shelf items. Mirrors `add_stock_buttons` parenting so the click does not
+## bubble to the overlay context-menu handler.
+static func add_remove_button(
 	overlay_button: Button,
 	on_pressed: Callable,
+) -> void:
+	var btn := _build_action_button("Remove", on_pressed)
+	btn.offset_top = -16.0
+	btn.offset_bottom = 16.0
+	overlay_button.add_child(btn)
+
+
+static func _build_action_button(
+	label: String, on_pressed: Callable
 ) -> Button:
 	var btn := Button.new()
-	btn.text = "Select"
-	btn.custom_minimum_size = Vector2(56, 32)
+	btn.text = label
+	btn.custom_minimum_size = Vector2(82, 22)
+	btn.add_theme_font_size_override("font_size", 11)
 	btn.set_anchor(SIDE_LEFT, 1.0)
 	btn.set_anchor(SIDE_TOP, 0.5)
 	btn.set_anchor(SIDE_RIGHT, 1.0)
 	btn.set_anchor(SIDE_BOTTOM, 0.5)
-	btn.offset_left = -64.0
+	btn.offset_left = -90.0
 	btn.offset_right = -8.0
-	btn.offset_top = -16.0
-	btn.offset_bottom = 16.0
 	btn.pressed.connect(on_pressed)
-	overlay_button.add_child(btn)
 	return btn
 
 
@@ -192,12 +218,13 @@ static func _build_quantity_column(
 	return vbox
 
 
-## Reserves width at the right edge for the floating Select button. The
-## button itself parents under the overlay (not the HBox), so this spacer
-## keeps the price/qty columns from being painted over.
-static func _build_select_spacer() -> Control:
+## Reserves width at the right edge for the floating action buttons (Stock 1 /
+## Stock Max / Remove). The buttons themselves parent under the overlay (not
+## the HBox), so this spacer keeps the price/qty columns from being painted
+## over.
+static func _build_action_spacer() -> Control:
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(60, 0)
+	spacer.custom_minimum_size = Vector2(94, 0)
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return spacer
 
@@ -295,12 +322,13 @@ static func _build_price_column(item: ItemInstance) -> VBoxContainer:
 	vbox.add_child(price_label)
 
 	var loc_label := Label.new()
+	loc_label.name = "LocationLabel"
 	loc_label.add_theme_font_size_override("font_size", 11)
 	loc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	if item.current_location == "backroom":
 		loc_label.text = "Backroom"
 	elif item.current_location.begins_with("shelf:"):
-		loc_label.text = "Shelf"
+		loc_label.text = "Shelf: %s" % item.current_location.substr(6)
 		loc_label.add_theme_color_override(
 			"font_color", UIThemeConstants.get_positive_color()
 		)

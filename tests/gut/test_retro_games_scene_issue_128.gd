@@ -90,7 +90,19 @@ func test_checkout_testing_and_refurb_nodes_are_interactable() -> void:
 		checkout_interactable.interaction_type,
 		Interactable.InteractionType.REGISTER
 	)
-	assert_eq(checkout_interactable.prompt_text, "Checkout")
+	# checkout_counter ships an empty authored prompt_text so the
+	# InteractionPrompt never advertises a "Press E to checkout" cue —
+	# Day 1 customers auto-complete checkout via PlayerCheckout, so a
+	# player-driven verb on the counter would be a dead prompt. The base
+	# Interactable._ready fills empty prompt_text from PROMPT_VERBS, so the
+	# runtime value is the REGISTER default ("Use"); RetroGames overwrites
+	# it back to "" via _refresh_checkout_prompt() on store_entered.
+	assert_eq(
+		checkout_interactable.prompt_text,
+		Interactable.PROMPT_VERBS[Interactable.InteractionType.REGISTER],
+		"Authored prompt_text is empty; Interactable._ready resolves to the "
+		+ "REGISTER default until RetroGames._refresh_checkout_prompt clears it"
+	)
 
 	var testing_station: Node3D = _root.get_node("testing_station") as Node3D
 	var testing_interactable := (

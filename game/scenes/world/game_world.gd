@@ -569,11 +569,15 @@ func _setup_deferred_panels() -> void:
 	_day_summary.mall_overview_requested.connect(
 		_on_day_summary_mall_overview_requested
 	)
+	_day_summary.main_menu_requested.connect(
+		_on_day_summary_main_menu_requested
+	)
 	day_cycle_controller.set_day_summary(_day_summary)
 
 	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
 	_ui_layer.add_child(_mall_overview)
 	_mall_overview.setup(inventory_system, economy_system)
+	_mall_overview.set_time_system(time_system)
 	_mall_overview.set_completion_tracker(completion_tracker)
 	# Day Summary hides MallOverview while open and restores on dismiss (P1.4).
 	day_cycle_controller.set_mall_overview(_mall_overview)
@@ -723,6 +727,7 @@ func _setup_debug_overlay() -> void:
 	overlay.inventory_system = inventory_system
 	overlay.customer_system = customer_system
 	overlay.mall_customer_spawner = mall_customer_spawner
+	overlay.checkout_system = checkout_system
 	add_child(overlay)
 
 
@@ -836,6 +841,19 @@ func _on_day_summary_mall_overview_requested() -> void:
 	if GameManager.current_state == GameManager.State.GAME_OVER:
 		return
 	GameManager.change_state(GameManager.State.MALL_OVERVIEW)
+
+
+## Routes back to the main menu from the day summary screen. Mirrors the
+## pause-menu "Return to Menu" path so the run is exited cleanly without
+## advancing the day or running wages/milestones (the player is leaving).
+## §F-105 — Silent return on GAME_OVER matches
+## `_on_day_summary_mall_overview_requested`: the terminal state owns its own
+## routing (the GameOver UI flow drives the return-to-menu transition itself),
+## and a duplicate `go_to_main_menu()` call here would race with that routing.
+func _on_day_summary_main_menu_requested() -> void:
+	if GameManager.current_state == GameManager.State.GAME_OVER:
+		return
+	GameManager.go_to_main_menu()
 
 
 func _find_nav_region() -> NavigationRegion3D:
@@ -1020,7 +1038,11 @@ func _spawn_player_in_store(store_root: Node, store_id: StringName) -> bool:
 			instantiated.queue_free()
 		return false
 	store_root.add_child(player)
-	player.global_position = marker.global_position
+	# Apply the marker's global_transform — not just its origin — so the
+	# spawn marker drives orientation. Marker3D's identity basis already
+	# faces -Z (into the store from the front entrance) so authoring a
+	# rotated marker for a future store will Just Work.
+	player.global_transform = marker.global_transform
 	_apply_marker_bounds_override(player, marker)
 	_retire_orbit_player_controller(store_root)
 	return true

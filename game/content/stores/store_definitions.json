@@ -17,7 +17,6 @@
       "size_category": "small",
       "shelf_capacity": 31,
       "backroom_capacity": 100,
-      "starting_cash": 750.0,
       "daily_rent": 50.0,
       "starting_inventory": [
         "sports_duvall_hr_common",
@@ -118,17 +117,16 @@
       "size_category": "small",
       "shelf_capacity": 33,
       "backroom_capacity": 120,
-      "starting_cash": 800.0,
       "daily_rent": 55.0,
       "starting_inventory": [
-        "used_cartridge_game_common",
-        "used_cartridge_game_common",
-        "used_cartridge_game_common",
-        "loose_disc_game_common",
-        "loose_disc_game_common",
-        "loose_disc_game_common",
         "retro_controller_common",
-        "retro_controller_common"
+        "retro_controller_common",
+        "loose_disc_game_common",
+        "loose_disc_game_common",
+        "strategy_guide_common",
+        "strategy_guide_common",
+        "used_cartridge_game_common",
+        "mystery_cable_bin_common"
       ],
       "allowed_categories": [
         "cartridges",
@@ -222,7 +220,6 @@
       "size_category": "medium",
       "shelf_capacity": 50,
       "backroom_capacity": 150,
-      "starting_cash": 900.0,
       "daily_rent": 55.0,
       "starting_inventory": [
         "rental_cosmic_battles_5_vhs",
@@ -335,7 +332,6 @@
       "size_category": "medium",
       "shelf_capacity": 63,
       "backroom_capacity": 130,
-      "starting_cash": 850.0,
       "daily_rent": 50.0,
       "starting_inventory": [
         "pc_booster_base_set",
@@ -462,7 +458,6 @@
       "size_category": "medium",
       "shelf_capacity": 48,
       "backroom_capacity": 120,
-      "starting_cash": 1000.0,
       "starting_inventory": [
         "elec_zunewave_128",
         "elec_zunewave_256",

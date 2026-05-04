@@ -71,6 +71,8 @@ func test_continue_buttons_wait_for_stat_sequence() -> void:
 	_day_summary._customers_served_label.visible = false
 	_day_summary._satisfaction_label.visible = false
 	_day_summary._reputation_delta_label.visible = false
+	_day_summary._backroom_inventory_label.visible = false
+	_day_summary._shelf_inventory_label.visible = false
 	_day_summary.show_summary(1, 100.0, 25.0, 75.0, 4)
 	assert_eq(_day_summary._button_row.modulate.a, 0.0)
 	await get_tree().create_timer(0.8).timeout

@@ -90,7 +90,6 @@ var _counter_color_tweens: Dictionary = {}
 var _fp_mode: bool = false
 var _fp_orig_indices: Dictionary = {}
 var _fp_close_day_hint: Label
-var _fp_inventory_hint: Label
 ## Tracks whether the Day-1 soft-gate ConfirmationDialog pushed CTX_MODAL on
 ## InputFocus. Mirrors the InventoryPanel / CheckoutPanel modal-focus contract
 ## so the FP cursor releases while the dialog is up and recaptures on dismiss.
@@ -179,7 +178,39 @@ func _on_day_started(day: int) -> void:
 	_update_customers_display(_customers_served_today_count)
 	_refresh_time_display()
 	_refresh_items_placed()
+	_seed_cash_from_economy()
 	_apply_state_visibility(GameManager.current_state)
+
+
+## Snaps the cash display to `EconomySystem.get_cash()` when available.
+##
+## Day 1 entry path: `EconomySystem.initialize()` writes player_cash via
+## `_apply_state` and does not emit `money_changed`, so a HUD that listens
+## only on `money_changed` would stay at $0.00 until the first transaction.
+## `day_started(1)` fires after Tier-1 init in `apply_pending_session_state`,
+## so seeding here guarantees the cash readout reflects starting_cash before
+## the player sees the store. The snap (no count-up tween) avoids a
+## misleading `0 → starting_cash` crawl every time a new day begins.
+##
+## §F-103 — Silent return on null EconomySystem matches the
+## `_seed_counters_from_systems` Tier-5 init pattern (mirrors §J2 / §F-69):
+## unit test fixtures construct the HUD without a world scene and
+## `money_changed` is the only path they exercise. The kpi_strip seeding
+## helper §F-115 mirrors this pattern.
+func _seed_cash_from_economy() -> void:
+	var economy: EconomySystem = GameManager.get_economy_system()
+	if economy == null:
+		return
+	var cash: float = economy.get_cash()
+	if (
+		is_equal_approx(_displayed_cash, cash)
+		and is_equal_approx(_target_cash, cash)
+	):
+		return
+	PanelAnimator.kill_tween(_cash_count_tween)
+	_displayed_cash = cash
+	_target_cash = cash
+	_update_cash_display(cash)
 
 
 func _on_hour_changed(hour: int) -> void:
@@ -1060,15 +1091,12 @@ func _enter_fp_mode() -> void:
 	_apply_fp_anchors(_customers_label, 1.0, 1.0, -200.0, 40.0, -8.0, 68.0)
 	_apply_fp_anchors(_sales_today_label, 1.0, 1.0, -200.0, 72.0, -8.0, 100.0)
 	_ensure_fp_close_day_hint()
-	_ensure_fp_inventory_hint()
 	_apply_fp_visibility_overrides()
 
 
 func _exit_fp_mode() -> void:
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.hide()
-	if is_instance_valid(_fp_inventory_hint):
-		_fp_inventory_hint.hide()
 	_restore_from_hud_root(_cash_label)
 	_restore_from_hud_root(_time_label)
 	_restore_from_hud_root(_items_placed_label)
@@ -1130,14 +1158,16 @@ func _apply_fp_anchors(
 		label.grow_horizontal = Control.GROW_DIRECTION_END
 
 
-## Bottom-right key hints stack above the ObjectiveRail (autoload CanvasLayer
-## at layer 40, content strip y ∈ [H−68, H]). The HUD CanvasLayer is at layer
-## 30, so anchoring a hint inside the rail's pixel band leaves it z-buried by
-## the rail when an objective is active. Both FP key hints offset their bottom
-## edge to ≤ −72 so they always sit above the rail's 68 px footprint, with a
-## 4 px gap above the accent band. The right-cluster x range (W−200..W−8)
+## The FP close-day hint is the sole bottom-right "controls block" allowed by
+## the BRAINDUMP layout spec. The ObjectiveRail (autoload CanvasLayer at layer
+## 40, content strip y ∈ [H−68, H]) carries the per-step input affordance for
+## every other action — including "Press I to open the inventory panel" on
+## Day 1 — so an always-on Inventory hint here would duplicate the rail's
+## key chip. The hint's bottom edge sits at −72 to leave a 4 px gap above
+## the rail's 68 px footprint, and the right-cluster x range (W−200..W−8)
 ## stays clear of the centered InteractionPrompt (W/2 ± 120) at 1280 px wide
-## and above.
+## and above. Close-day stays here because no rail step on days other than
+## Day 1's terminal step references F4.
 func _ensure_fp_close_day_hint() -> void:
 	if is_instance_valid(_fp_close_day_hint):
 		return
@@ -1153,25 +1183,10 @@ func _ensure_fp_close_day_hint() -> void:
 	_fp_close_day_hint.offset_top = -104.0
 	_fp_close_day_hint.offset_right = -8.0
 	_fp_close_day_hint.offset_bottom = -72.0
+	# clip_text guards against narrow viewports or future longer localized
+	# strings pushing the right edge off-screen past the W−8 anchor.
+	_fp_close_day_hint.clip_text = true
 	add_child(_fp_close_day_hint)
-
-
-func _ensure_fp_inventory_hint() -> void:
-	if is_instance_valid(_fp_inventory_hint):
-		return
-	_fp_inventory_hint = Label.new()
-	_fp_inventory_hint.name = "FpInventoryHint"
-	_fp_inventory_hint.text = "I — Inventory"
-	_fp_inventory_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_fp_inventory_hint.anchor_left = 1.0
-	_fp_inventory_hint.anchor_right = 1.0
-	_fp_inventory_hint.anchor_top = 1.0
-	_fp_inventory_hint.anchor_bottom = 1.0
-	_fp_inventory_hint.offset_left = -200.0
-	_fp_inventory_hint.offset_top = -140.0
-	_fp_inventory_hint.offset_right = -8.0
-	_fp_inventory_hint.offset_bottom = -108.0
-	add_child(_fp_inventory_hint)
 
 
 func _apply_fp_visibility_overrides() -> void:
@@ -1192,8 +1207,6 @@ func _apply_fp_visibility_overrides() -> void:
 	_sales_today_label.show()
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.show()
-	if is_instance_valid(_fp_inventory_hint):
-		_fp_inventory_hint.show()
 
 
 ## Resets transient display state for test isolation. Called by GUT tests that

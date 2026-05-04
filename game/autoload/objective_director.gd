@@ -4,9 +4,29 @@
 ## `tr()`), not by this director — the two-source overlap was removed per
 ## docs/audits/phase0-ui-integrity.md P1.3.
 ## Tracks the first full stock→sell→close loop to trigger auto-hide after day 3.
+##
+## Day 1 supports an optional `steps` array on the Day 1 entry. When present,
+## the director walks the player through the chain in order, advancing on the
+## matching gameplay signal for each step. Other days fall back to the legacy
+## pre-sale / post-sale text swap.
 extends Node
 
 const CONTENT_PATH := "res://game/content/objectives.json"
+
+## Day 1 step indices (must align with the order of `steps` in objectives.json).
+const DAY1_STEP_OPEN_INVENTORY: int = 0
+const DAY1_STEP_SELECT_ITEM: int = 1
+const DAY1_STEP_STOCK_ITEM: int = 2
+const DAY1_STEP_WAIT_FOR_CUSTOMER: int = 3
+const DAY1_STEP_CUSTOMER_BROWSING: int = 4
+const DAY1_STEP_CUSTOMER_AT_CHECKOUT: int = 5
+const DAY1_STEP_SALE_COMPLETE: int = 6
+const DAY1_STEP_CLOSE_DAY: int = 7
+const DAY1_STEP_COUNT: int = 8
+
+## "Sale complete!" is shown briefly before the rail flips to the close-day
+## prompt so the player registers the success beat before being asked to act.
+const SALE_COMPLETE_DURATION: float = 2.0
 
 var _day_objectives: Dictionary = {}
 var _defaults: Dictionary = {}
@@ -15,6 +35,9 @@ var _current_day: int = 0
 var _stocked: bool = false
 var _sold: bool = false
 var _loop_completed: bool = false
+## Active Day 1 step index, or -1 when the chain is not running. Set to 0 by
+## day_started(1); incremented in lockstep with the chain's gameplay signals.
+var _day1_step_index: int = -1
 
 
 func _ready() -> void:
@@ -25,6 +48,11 @@ func _ready() -> void:
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.day_closed.connect(_on_day_closed)
 	EventBus.preference_changed.connect(_on_preference_changed)
+	EventBus.panel_opened.connect(_on_panel_opened)
+	EventBus.placement_mode_entered.connect(_on_placement_mode_entered)
+	EventBus.customer_state_changed.connect(_on_customer_state_changed)
+	EventBus.customer_ready_to_purchase.connect(_on_customer_ready_to_purchase)
+	EventBus.customer_purchased.connect(_on_customer_purchased)
 
 
 func _load_content() -> void:
@@ -44,13 +72,60 @@ func _load_content() -> void:
 		var e := entry as Dictionary
 		if not e.has("day"):
 			continue
-		_day_objectives[int(e["day"])] = {
+		var day_int: int = int(e["day"])
+		var steps_raw: Variant = e.get("steps", [])
+		var steps_typed: Array = []
+		if steps_raw is Array:
+			var steps_array: Array = steps_raw as Array
+			for step_entry: Variant in steps_array:
+				if step_entry is Dictionary:
+					steps_typed.append(step_entry)
+				else:
+					# §F-93 — A non-Dictionary entry inside `steps` is a
+					# content-authoring regression on the Day-1 critical path.
+					# A typo'd step would otherwise shrink the parsed array
+					# below DAY1_STEP_COUNT, silently disabling the whole
+					# tutorial chain via `_day1_steps_available`.
+					push_warning(
+						(
+							"ObjectiveDirector: day %d has non-Dictionary "
+							+ "step entry (%s); skipped."
+						)
+						% [day_int, type_string(typeof(step_entry))]
+					)
+		elif e.has("steps"):
+			# §F-93 — `steps` present but not an Array. Same content-authoring
+			# regression as above; warn so the bad payload is visible.
+			push_warning(
+				(
+					"ObjectiveDirector: day %d has non-Array `steps` field "
+					+ "(%s); ignored."
+				)
+				% [day_int, type_string(typeof(steps_raw))]
+			)
+		# §F-93 — Day 1 expects a steps array of exactly DAY1_STEP_COUNT
+		# entries. A short / over-long chain disables the Day-1 step path
+		# silently (`_day1_steps_available` returns false), so surface the
+		# mismatch at load time. Days other than 1 may legitimately omit
+		# `steps`.
+		if day_int == 1 and steps_typed.size() != DAY1_STEP_COUNT:
+			push_warning(
+				(
+					"ObjectiveDirector: day 1 `steps` count is %d; "
+					+ "expected %d. Day-1 step chain will be disabled "
+					+ "and the rail will fall back to pre-sale / "
+					+ "post-sale text."
+				)
+				% [steps_typed.size(), DAY1_STEP_COUNT]
+			)
+		_day_objectives[day_int] = {
 			"text": str(e.get("text", _defaults["text"])),
 			"action": str(e.get("action", _defaults["action"])),
 			"key": str(e.get("key", _defaults["key"])),
 			"post_sale_text": str(e.get("post_sale_text", "")),
 			"post_sale_action": str(e.get("post_sale_action", "")),
 			"post_sale_key": str(e.get("post_sale_key", "")),
+			"steps": steps_typed,
 		}
 
 
@@ -58,6 +133,9 @@ func _on_day_started(day: int) -> void:
 	_current_day = day
 	_stocked = false
 	_sold = false
+	_day1_step_index = -1
+	if day == 1 and _day1_steps_available():
+		_day1_step_index = DAY1_STEP_OPEN_INVENTORY
 	_emit_current()
 
 
@@ -67,6 +145,7 @@ func _on_store_entered(_store_id: StringName) -> void:
 
 func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
 	_stocked = true
+	_advance_day1_step_if(DAY1_STEP_STOCK_ITEM)
 	_emit_current()
 
 
@@ -91,6 +170,87 @@ func _on_preference_changed(key: String, _value: Variant) -> void:
 		_emit_current()
 
 
+func _on_panel_opened(panel_name: String) -> void:
+	if panel_name == "inventory":
+		_advance_day1_step_if(DAY1_STEP_OPEN_INVENTORY)
+
+
+func _on_placement_mode_entered() -> void:
+	_advance_day1_step_if(DAY1_STEP_SELECT_ITEM)
+
+
+func _on_customer_state_changed(_customer: Node, new_state: int) -> void:
+	if new_state == Customer.State.BROWSING:
+		_advance_day1_step_if(DAY1_STEP_WAIT_FOR_CUSTOMER)
+
+
+func _on_customer_ready_to_purchase(_customer_data: Dictionary) -> void:
+	_advance_day1_step_if(DAY1_STEP_CUSTOMER_BROWSING)
+
+
+func _on_customer_purchased(
+	_store_id: StringName, _item_id: StringName,
+	_price: float, _customer_id: StringName,
+) -> void:
+	_advance_day1_step_if(DAY1_STEP_CUSTOMER_AT_CHECKOUT)
+
+
+## Advances the Day 1 chain when the player is sitting on `expected_step`.
+## Out-of-order signals (a duplicate trigger, a customer arriving before the
+## player has stocked, etc.) are no-ops by design.
+## §F-98 — The two silent returns are state-machine race-guards. Wrong-day /
+## wrong-step is the documented out-of-order contract above; the
+## `_day1_steps_available()` false-arm is a downstream consequence of the
+## §F-93 content-authoring warning that already fired at load time, so adding
+## a per-emit warning here would only echo the load-time diagnostic on every
+## signal received.
+func _advance_day1_step_if(expected_step: int) -> void:
+	if _current_day != 1 or _day1_step_index != expected_step:
+		return
+	if not _day1_steps_available():
+		return
+	_day1_step_index = expected_step + 1
+	_emit_current()
+	if _day1_step_index == DAY1_STEP_SALE_COMPLETE:
+		_schedule_close_day_step()
+
+
+## Auto-advances from "Sale complete!" to "Close the day when ready" after a
+## brief display window so the success beat lands before the next prompt.
+## §F-99 — `tree == null` test-seam mirrors the §F-44 / §F-54 contract for
+## autoload-test-seam patterns: production paths always have a SceneTree
+## (autoload + scene); bare-Node unit-test fixtures hit the silent path and
+## still terminate the chain by jumping directly to the advancer. The §F-98
+## state-machine guard inside `_advance_to_close_day_step` defends against
+## the timer firing after a day rollover.
+func _schedule_close_day_step() -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		_advance_to_close_day_step()
+		return
+	tree.create_timer(SALE_COMPLETE_DURATION).timeout.connect(
+		_advance_to_close_day_step
+	)
+
+
+func _advance_to_close_day_step() -> void:
+	# §F-98 — Same race-guard pattern as `_advance_day1_step_if`: a delayed
+	# timer firing after the day rolled over (or after a duplicate trigger
+	# already advanced past `DAY1_STEP_SALE_COMPLETE`) is a no-op by design.
+	if _current_day != 1 or _day1_step_index != DAY1_STEP_SALE_COMPLETE:
+		return
+	_day1_step_index = DAY1_STEP_CLOSE_DAY
+	_emit_current()
+
+
+func _day1_steps_available() -> bool:
+	var entry: Dictionary = _day_objectives.get(1, {})
+	var steps_variant: Variant = entry.get("steps", [])
+	if not (steps_variant is Array):
+		return false
+	return (steps_variant as Array).size() == DAY1_STEP_COUNT
+
+
 ## Builds and emits the current payload from the day objective for the active
 ## day. Sends {hidden: true} when the auto-hide condition is met. Tutorial
 ## text is owned by `TutorialOverlay` and does not flow through this payload.
@@ -105,12 +265,21 @@ func _emit_current() -> void:
 	var text_value: String = str(source.get("text", ""))
 	var action_value: String = str(source.get("action", ""))
 	var key_value: String = str(source.get("key", ""))
-	# Once the first sale completes, advance the rail to the day's post-sale
-	# copy when the day entry authors one. Day 1 uses this to flip from
-	# "Stock your first item and make a sale" to "First sale complete. Close
-	# the day when ready." so the rail confirms progress and points at the
-	# next action.
-	if _sold:
+	if (
+		_current_day == 1
+		and _day1_step_index >= 0
+		and _day1_steps_available()
+	):
+		var steps: Array = source.get("steps", []) as Array
+		var step: Dictionary = steps[_day1_step_index] as Dictionary
+		text_value = str(step.get("text", text_value))
+		action_value = str(step.get("action", action_value))
+		key_value = str(step.get("key", key_value))
+	elif _sold:
+		# Once the first sale completes, advance the rail to the day's
+		# post-sale copy when the day entry authors one. Day 1 reaches its
+		# close-day prompt through the steps chain instead, so this branch
+		# only kicks in for days without a steps array.
 		var post_text: String = str(source.get("post_sale_text", ""))
 		if not post_text.is_empty():
 			text_value = post_text

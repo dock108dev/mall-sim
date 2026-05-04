@@ -8,7 +8,57 @@
       "key": "I",
       "post_sale_text": "First sale complete. Close the day when ready.",
       "post_sale_action": "Click Close Day in the HUD",
-      "post_sale_key": ""
+      "post_sale_key": "",
+      "steps": [
+        {
+          "id": "open_inventory",
+          "text": "Open your inventory",
+          "action": "Press I to open the inventory panel",
+          "key": "I"
+        },
+        {
+          "id": "select_item",
+          "text": "Select an item from the Backroom",
+          "action": "Click an item, then choose Move to Shelf",
+          "key": ""
+        },
+        {
+          "id": "stock_item",
+          "text": "Stock the item on a shelf",
+          "action": "Click a highlighted shelf slot",
+          "key": ""
+        },
+        {
+          "id": "wait_for_customer",
+          "text": "Wait for a customer to arrive",
+          "action": "Customers will spawn shortly",
+          "key": ""
+        },
+        {
+          "id": "customer_browsing",
+          "text": "A customer is browsing your shelves",
+          "action": "Watch them shop",
+          "key": ""
+        },
+        {
+          "id": "customer_at_checkout",
+          "text": "Customer is heading to checkout",
+          "action": "Wait at the register",
+          "key": ""
+        },
+        {
+          "id": "sale_complete",
+          "text": "Sale complete!",
+          "action": "First sale of the day",
+          "key": ""
+        },
+        {
+          "id": "close_day",
+          "text": "Close the day when ready",
+          "action": "Press F4 to end the day",
+          "key": "F4"
+        }
+      ]
     },
     {
       "day": 2,

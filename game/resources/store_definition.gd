@@ -55,7 +55,6 @@ extends Resource
 @export var max_employees: int = 2
 @export var shelf_capacity: int = 0
 @export var backroom_capacity: int = 0
-@export var starting_cash: float = 0.0
 @export var daily_rent: float = 0.0
 @export var starting_inventory: PackedStringArray = []:
 	set(value):

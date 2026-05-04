@@ -11,6 +11,7 @@ var economy_system: EconomySystem
 var inventory_system: InventorySystem
 var customer_system: CustomerSystem
 var mall_customer_spawner: MallCustomerSpawner
+var checkout_system: PlayerCheckout
 
 var _overlay_visible: bool = false
 
@@ -30,13 +31,38 @@ func _input(event: InputEvent) -> void:
 		visible = _overlay_visible
 		return
 
-	if not _overlay_visible:
-		return
-
 	if not event is InputEventKey:
 		return
 	var key_event: InputEventKey = event as InputEventKey
 	if not key_event.pressed or key_event.echo:
+		return
+
+	# F8–F11 are unmodified single-key shortcuts intended to validate the
+	# Day-1 loop deterministically. They run whenever the overlay node is
+	# alive — release builds queue_free in _ready so they are no-ops there
+	# — and do not require the overlay to be visible (devs should not have
+	# to toggle F3 first to advance a stuck loop).
+	if not key_event.ctrl_pressed and not key_event.shift_pressed \
+			and not key_event.alt_pressed and not key_event.meta_pressed:
+		match key_event.keycode:
+			KEY_F8:
+				_debug_spawn_customer()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_F9:
+				_debug_add_test_inventory()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_F10:
+				_debug_force_place_test_item()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_F11:
+				_debug_force_complete_sale()
+				get_viewport().set_input_as_handled()
+				return
+
+	if not _overlay_visible:
 		return
 	if not key_event.ctrl_pressed:
 		return
@@ -95,6 +121,11 @@ func _build_display_text() -> String:
 		day_text = str(time_system.current_day)
 		hour_text = str(time_system.current_hour) + ":00"
 
+	var active_store: StringName = GameManager.get_active_store_id()
+	var active_store_text: String = (
+		"none" if active_store.is_empty() else String(active_store)
+	)
+
 	var lines: PackedStringArray = PackedStringArray([
 		"=== DEBUG ===",
 		"FPS: %d | State: %s" % [fps, state_name],
@@ -103,12 +134,15 @@ func _build_display_text() -> String:
 		],
 		"Cash: %s" % cash_text,
 		"Customers: %s" % customer_text,
+		"ActiveStore: %s" % active_store_text,
 		"Inventory — Backroom: %s | Shelf: %s" % [
 			inv_backroom, inv_shelf
 		],
 		"",
 		"Ctrl+M: +$100 | Ctrl+C: Spawn customer",
 		"Ctrl+H: +1 hour | Ctrl+D: End day | Ctrl+P: Force-place item",
+		"F8: Spawn customer | F9: Add test inventory",
+		"F10: Auto-stock first item | F11: Force sale",
 	])
 	lines.append_array(_build_movement_debug_lines())
 	return "\n".join(lines)
@@ -210,6 +244,58 @@ func _debug_force_place_test_item() -> void:
 		)
 		return
 	controller.dev_force_place_test_item()
+
+
+## §F-100 — Dev-shortcut diagnostic pattern. The F8/F9/F10/F11 unmodified-key
+## shortcuts are gated by `_ready` queue_free in release builds, so this code
+## only runs in debug builds. Each precondition emits `push_warning` (rather
+## than `push_error` or asserting) because dev shortcuts should report what
+## blocked them and stay alive — devs need to keep poking at the loop. The
+## level mirrors `_debug_force_place_test_item` above.
+func _debug_add_test_inventory() -> void:
+	if inventory_system == null:
+		push_warning("DebugOverlay: InventorySystem not available")
+		return
+	var store_id: StringName = GameManager.get_active_store_id()
+	if store_id.is_empty():
+		push_warning("DebugOverlay: no active store for test inventory")
+		return
+	var loader: DataLoader = GameManager.data_loader
+	if loader == null:
+		loader = DataLoaderSingleton
+	if loader == null:
+		push_warning("DebugOverlay: DataLoader not available")
+		return
+	var instances: Array[ItemInstance] = loader.create_starting_inventory(
+		String(store_id)
+	)
+	if instances.is_empty():
+		push_warning(
+			"DebugOverlay: create_starting_inventory returned no items for '%s'"
+			% store_id
+		)
+		return
+	for item: ItemInstance in instances:
+		item.current_location = "backroom"
+		inventory_system.add_item(store_id, item)
+	print(
+		"[dev-fallback] added %d test inventory items to '%s' backroom"
+		% [instances.size(), store_id]
+	)
+
+
+## §F-100 — Same dev-shortcut warning pattern. The downstream
+## `dev_force_complete_sale` (see §F-112) returns `false` from a cascade of
+## precondition silent-returns; the caller-side `push_warning` here is the
+## single diagnostic surface so the inner cascade can stay quiet.
+func _debug_force_complete_sale() -> void:
+	if checkout_system == null:
+		push_warning("DebugOverlay: CheckoutSystem not available")
+		return
+	if not checkout_system.dev_force_complete_sale():
+		push_warning(
+			"DebugOverlay: no pending sale to force-complete"
+		)
 
 
 func _find_active_store_controller() -> StoreController:

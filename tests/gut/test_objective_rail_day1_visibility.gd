@@ -1,13 +1,13 @@
-## Verifies the Day 1 ObjectiveRail surfaces the canonical "Stock your first
-## item and make a sale" guidance with the "Press I to open inventory" action
-## and an "I" key badge, that the rail occupies a different screen zone than
-## the InteractionPrompt, and that the Day1ReadinessAudit objective check
-## passes once the day starts and the player enters the store.
+## Verifies the Day 1 ObjectiveRail surfaces the first step of the chain
+## ("Open your inventory") with a "Press I" action and an "I" key badge, that
+## the rail occupies a different screen zone than the InteractionPrompt, and
+## that the Day1ReadinessAudit objective check passes once the day starts and
+## the player enters the store.
 extends GutTest
 
 
-const _OBJECTIVE_TEXT: String = "Stock your first item and make a sale"
-const _ACTION_TEXT: String = "Press I to open inventory"
+const _OBJECTIVE_TEXT: String = "Open your inventory"
+const _ACTION_TEXT: String = "Press I to open the inventory panel"
 const _KEY_TEXT: String = "I"
 
 const _RAIL_SCENE: String = "res://game/scenes/ui/objective_rail.tscn"
@@ -19,6 +19,7 @@ var _saved_director_day: int
 var _saved_director_stocked: bool
 var _saved_director_sold: bool
 var _saved_director_loop: bool
+var _saved_director_step: int
 var _saved_first_sale_flag: bool
 
 
@@ -29,6 +30,7 @@ func before_each() -> void:
 	_saved_director_stocked = ObjectiveDirector._stocked
 	_saved_director_sold = ObjectiveDirector._sold
 	_saved_director_loop = ObjectiveDirector._loop_completed
+	_saved_director_step = ObjectiveDirector._day1_step_index
 	_saved_first_sale_flag = bool(GameState.get_flag(&"first_sale_complete"))
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	Settings.show_objective_rail = true
@@ -36,6 +38,7 @@ func before_each() -> void:
 	ObjectiveDirector._stocked = false
 	ObjectiveDirector._sold = false
 	ObjectiveDirector._loop_completed = false
+	ObjectiveDirector._day1_step_index = -1
 	GameState.set_flag(&"first_sale_complete", false)
 
 
@@ -46,6 +49,7 @@ func after_each() -> void:
 	ObjectiveDirector._stocked = _saved_director_stocked
 	ObjectiveDirector._sold = _saved_director_sold
 	ObjectiveDirector._loop_completed = _saved_director_loop
+	ObjectiveDirector._day1_step_index = _saved_director_step
 	GameState.set_flag(&"first_sale_complete", _saved_first_sale_flag)
 	if InputFocus != null:
 		InputFocus._reset_for_tests()

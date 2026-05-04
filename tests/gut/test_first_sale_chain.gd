@@ -1,8 +1,9 @@
 ## Verifies the Day 1 scripted first-customer → first-sale → HUD update chain.
 ##
 ## Three layers are exercised:
-##   1. `CustomerSystem._on_item_stocked` — the scripted Day 1 trigger guarded by
-##      `_day1_customer_spawned`, independent of clock-driven HOUR_DENSITY.
+##   1. `CustomerSystem._on_item_stocked` — the scripted Day 1 trigger that arms
+##      a fallback Timer; the timeout handler force-spawns a customer if the
+##      hour-density loop has not produced one.
 ##   2. HUD label handlers — `CashLabel`, `CustomersLabel`, `SalesTodayLabel`
 ##      update synchronously from `money_changed` / `customer_entered` /
 ##      `item_sold`.
@@ -49,18 +50,36 @@ func after_each() -> void:
 # ── CustomerSystem._on_item_stocked: scripted Day 1 spawn ─────────────────────
 
 
-func test_on_item_stocked_spawns_one_customer_on_day_1() -> void:
+func test_on_item_stocked_arms_forced_spawn_timer_on_day_1() -> void:
 	var system: CustomerSystem = _make_customer_system()
 	GameManager.set_current_day(1)
 	system._on_item_stocked("item_x", "slot_a")
 	assert_true(
-		system._day1_customer_spawned,
-		"Day 1 first item_stocked must flip _day1_customer_spawned to true"
+		system._day1_spawn_unlocked,
+		"Day 1 first item_stocked must open the spawn gate"
+	)
+	assert_false(
+		system._day1_first_customer_spawned,
+		"Spawn flag must remain false until the timer fires or the loop spawns"
+	)
+	assert_false(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"item_stocked must arm the Day 1 forced-spawn fallback timer"
 	)
 	assert_eq(
 		system.get_active_customer_count(),
+		0,
+		"Customer must not spawn until the timer fires"
+	)
+	system._on_day1_forced_spawn_timer_timeout()
+	assert_eq(
+		system.get_active_customer_count(),
 		1,
-		"Day 1 first item_stocked must spawn exactly one active customer"
+		"Timer fallback must force-spawn exactly one Day 1 customer"
+	)
+	assert_true(
+		system._day1_first_customer_spawned,
+		"spawn_customer must mark the first Day 1 customer as spawned"
 	)
 
 
@@ -69,8 +88,12 @@ func test_on_item_stocked_skipped_after_day_1() -> void:
 	GameManager.set_current_day(2)
 	system._on_item_stocked("item_x", "slot_a")
 	assert_false(
-		system._day1_customer_spawned,
+		system._day1_first_customer_spawned,
 		"Scripted spawn must not fire on Day 2"
+	)
+	assert_true(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"Forced-spawn timer must not arm outside Day 1"
 	)
 	assert_eq(
 		system.get_active_customer_count(),
@@ -83,11 +106,17 @@ func test_on_item_stocked_one_shot_within_day_1() -> void:
 	var system: CustomerSystem = _make_customer_system()
 	GameManager.set_current_day(1)
 	system._on_item_stocked("item_a", "slot_a")
+	system._on_day1_forced_spawn_timer_timeout()
 	# Despawn the spawned customer so the `_active_customers.is_empty()`
 	# guard does not mask the second-call check.
 	for c: Customer in system.get_active_customers().duplicate():
 		system.despawn_customer(c)
 	system._on_item_stocked("item_b", "slot_b")
+	assert_true(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"Second item_stocked must not re-arm the timer once a Day 1 customer spawned"
+	)
+	system._on_day1_forced_spawn_timer_timeout()
 	assert_eq(
 		system.get_active_customer_count(),
 		0,
@@ -97,18 +126,62 @@ func test_on_item_stocked_one_shot_within_day_1() -> void:
 
 func test_day_started_resets_day1_spawn_flag() -> void:
 	var system: CustomerSystem = _make_customer_system()
-	system._day1_customer_spawned = true
+	system._day1_first_customer_spawned = true
+	system._day1_forced_spawn_timer.start(99.0)
 	system._on_day_started(1)
 	assert_false(
-		system._day1_customer_spawned,
-		"day_started must clear _day1_customer_spawned so the next day re-arms"
+		system._day1_first_customer_spawned,
+		"day_started must clear _day1_first_customer_spawned so the next day re-arms"
+	)
+	assert_true(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"day_started must stop any in-flight forced-spawn timer"
+	)
+
+
+func test_organic_spawn_before_timeout_cancels_forced_spawn_timer() -> void:
+	var system: CustomerSystem = _make_customer_system()
+	GameManager.set_current_day(1)
+	system._on_item_stocked("item_a", "slot_a")
+	assert_false(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"Pre-condition: timer is armed by item_stocked"
+	)
+	# Simulate an hour-density loop spawn arriving before the fallback fires.
+	system.spawn_customer(_make_profile(), system._store_id)
+	assert_eq(
+		system.get_active_customer_count(),
+		1,
+		"Organic spawn must succeed once the gate is unlocked"
+	)
+	assert_true(
+		system._day1_first_customer_spawned,
+		"First Day 1 spawn must mark _day1_first_customer_spawned"
+	)
+	assert_true(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"Organic spawn must cancel the pending forced-spawn timer"
+	)
+
+
+func test_forced_spawn_timer_does_not_double_spawn_after_organic() -> void:
+	var system: CustomerSystem = _make_customer_system()
+	GameManager.set_current_day(1)
+	system._on_item_stocked("item_a", "slot_a")
+	system.spawn_customer(_make_profile(), system._store_id)
+	# Manually invoke timeout — the guard must keep the count at one.
+	system._on_day1_forced_spawn_timer_timeout()
+	assert_eq(
+		system.get_active_customer_count(),
+		1,
+		"Late timer fire must not spawn a second customer after an organic one"
 	)
 
 
 func test_on_item_stocked_signal_wired_through_initialize() -> void:
-	# Direct signal-emission path: verify `initialize()` connects the handler so
-	# the scripted spawn is reachable from EventBus.item_stocked, not just from
-	# direct method calls. Uses a synchronous emit; spawn runs in the same frame.
+	# Direct signal-emission path: verify `_connect_signals()` connects the
+	# handler so the scripted spawn is reachable from EventBus.item_stocked,
+	# not just from direct method calls. The handler arms the fallback timer.
 	var system: CustomerSystem = CustomerSystem.new()
 	add_child_autofree(system)
 	system._customer_scene = preload(
@@ -118,8 +191,12 @@ func test_on_item_stocked_signal_wired_through_initialize() -> void:
 	GameManager.set_current_day(1)
 	EventBus.item_stocked.emit("item_x", "slot_a")
 	assert_true(
-		system._day1_customer_spawned,
+		system._day1_spawn_unlocked,
 		"item_stocked signal must reach _on_item_stocked via _connect_signals()"
+	)
+	assert_false(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"item_stocked signal must arm the Day 1 forced-spawn timer"
 	)
 
 
@@ -267,7 +344,8 @@ func _make_customer_system() -> CustomerSystem:
 	# Constructs a CustomerSystem ready to exercise the Day 1 scripted spawn.
 	# `initialize()` would call `_despawn_all_customers` which depends on full
 	# scene-tree wiring; instead we load the Customer scene directly and hook
-	# only what `_on_item_stocked` needs.
+	# only what `_on_item_stocked` needs. add_child_autofree triggers `_ready`
+	# so the forced-spawn timer is created before tests interact with it.
 	var system: CustomerSystem = CustomerSystem.new()
 	add_child_autofree(system)
 	system._customer_scene = preload(
@@ -275,3 +353,20 @@ func _make_customer_system() -> CustomerSystem:
 	)
 	system._store_id = _STORE_ID
 	return system
+
+
+func _make_profile() -> CustomerTypeDefinition:
+	var p: CustomerTypeDefinition = CustomerTypeDefinition.new()
+	p.id = "first_sale_chain_test_customer"
+	p.customer_name = "Chain Test Customer"
+	p.budget_range = [10.0, 100.0]
+	p.patience = 0.5
+	p.price_sensitivity = 0.5
+	p.preferred_categories = PackedStringArray([])
+	p.preferred_tags = PackedStringArray([])
+	p.condition_preference = "good"
+	p.browse_time_range = [1.0, 2.0]
+	p.purchase_probability_base = 0.9
+	p.impulse_buy_chance = 0.1
+	p.mood_tags = PackedStringArray([])
+	return p

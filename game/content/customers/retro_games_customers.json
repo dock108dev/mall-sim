@@ -84,7 +84,7 @@
         "retro_games"
       ],
       "budget_range": [
-        20.0,
+        5.0,
         50.0
       ],
       "patience": 0.8,
@@ -92,7 +92,8 @@
       "preferred_categories": [
         "consoles",
         "cartridges",
-        "accessories"
+        "accessories",
+        "guides"
       ],
       "preferred_tags": [
         "starter",

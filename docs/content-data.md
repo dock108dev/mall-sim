@@ -69,11 +69,11 @@ loads only from `res://game/content/` with no fallback paths, and
 
 ## Type detection
 
-Per ISSUE-021, every content JSON must declare a root `"type"` field. The
-loader looks the value up in `DataLoader._TYPE_ROUTES`; a missing field, a
-non-Dictionary root, or an unknown type produces a per-file load error and
-fails boot via the in-scene error panel. There is no heuristic detection by
-filename or directory.
+Every content JSON must declare a root `"type"` field. The loader looks the
+value up in `DataLoader._TYPE_ROUTES`; a missing field, a non-Dictionary root,
+or an unknown type produces a per-file load error and fails boot via the
+in-scene error panel. There is no heuristic detection by filename or
+directory.
 
 Routes fall into three buckets in `_TYPE_ROUTES`:
 

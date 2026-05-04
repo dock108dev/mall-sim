@@ -69,16 +69,12 @@ func test_day1_spawn_blocked_when_no_items_on_shelf() -> void:
 func test_day1_spawn_unblocked_after_item_stocked_signal() -> void:
 	GameManager.set_current_day(1)
 	_system._on_item_stocked("item_x", "slot_a")
-	# `_on_item_stocked` itself triggers the scripted Day 1 spawn, so the gate
-	# is exercised end-to-end. After the signal, the gate flag is open.
+	# `_on_item_stocked` arms the Day 1 forced-spawn fallback timer; the gate
+	# itself flips open immediately so subsequent direct spawns succeed.
 	assert_true(
 		_system._day1_spawn_unlocked,
 		"item_stocked must flip the spawn gate to unlocked"
 	)
-	# Despawn whatever scripted customer spawned, then verify a follow-up
-	# spawn_customer call now passes the gate.
-	for c: Customer in _system.get_active_customers().duplicate():
-		_system.despawn_customer(c)
 	_system.spawn_customer(_profile, _STORE_ID)
 	assert_eq(
 		_system.get_active_customer_count(),

@@ -138,6 +138,9 @@ func test_day_closed_payload_has_required_keys() -> void:
 		"day", "total_revenue", "total_expenses",
 		"net_profit", "items_sold", "rent",
 		"net_cash", "store_revenue",
+		"customers_served",
+		"backroom_inventory_remaining",
+		"shelf_inventory_remaining",
 	]:
 		assert_true(
 			summary.has(key),

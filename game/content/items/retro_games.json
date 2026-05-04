@@ -554,10 +554,10 @@
     },
     {
       "id": "used_cartridge_game_common",
-      "item_name": "Used Cartridge Game",
+      "item_name": "Old Handheld Game",
       "store_type": "retro_games",
       "category": "cartridges",
-      "console": "SuperVec 16",
+      "console": "PC Booster Canopy",
       "condition_grades": [
         "Loose",
         "CIB",
@@ -571,12 +571,12 @@
         "mint"
       ],
       "rarity": "common",
-      "base_price": 15.0,
-      "description": "A label-faded cartridge pulled from a flea-market bin. Untested but blows-the-dust-off playable."
+      "base_price": 35.0,
+      "description": "A scuffed handheld cartridge with a worn label. Boots fine when you blow on it."
     },
     {
       "id": "retro_controller_common",
-      "item_name": "Retro Controller",
+      "item_name": "Used Console Controller",
       "store_type": "retro_games",
       "category": "accessories",
       "console": "Canopy 64",
@@ -593,12 +593,12 @@
         "mint"
       ],
       "rarity": "common",
-      "base_price": 22.0,
-      "description": "A generic third-party gamepad with a slightly grimy grip and buttons that still respond like new."
+      "base_price": 12.0,
+      "description": "A scuffed third-party gamepad with a grimy grip and buttons that still respond like new."
     },
     {
       "id": "loose_disc_game_common",
-      "item_name": "Loose Disc Game",
+      "item_name": "Loose Space Cartridge",
       "store_type": "retro_games",
       "category": "cartridges",
       "console": "Neo Spark",
@@ -615,8 +615,52 @@
         "mint"
       ],
       "rarity": "common",
-      "base_price": 15.0,
-      "description": "A scratch-marked disc rescued from a sleeve — buffed up and ready for one more playthrough."
+      "base_price": 18.0,
+      "description": "A loose space-themed cartridge pulled from a flea-market bin. Untested but blows-the-dust-off playable."
+    },
+    {
+      "id": "strategy_guide_common",
+      "item_name": "Strategy Guide",
+      "store_type": "retro_games",
+      "category": "guides",
+      "console": "SuperVec 16",
+      "condition_grades": [
+        "Loose",
+        "CIB",
+        "Sealed"
+      ],
+      "condition_range": [
+        "poor",
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "rarity": "common",
+      "base_price": 9.0,
+      "description": "A dog-eared paperback strategy guide with hand-scribbled notes in the margins."
+    },
+    {
+      "id": "mystery_cable_bin_common",
+      "item_name": "Mystery Cable Bin",
+      "store_type": "retro_games",
+      "category": "accessories",
+      "console": "Canopy 64",
+      "condition_grades": [
+        "Loose",
+        "CIB",
+        "Sealed"
+      ],
+      "condition_range": [
+        "poor",
+        "fair",
+        "good",
+        "near_mint",
+        "mint"
+      ],
+      "rarity": "common",
+      "base_price": 6.0,
+      "description": "A tangled assortment of unlabeled AV and power cables. Probably has the one you need."
     }
   ]
 }

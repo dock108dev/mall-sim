@@ -1,5 +1,29 @@
 # SSOT Enforcement Pass — 2026-05-02
 
+> **Pass 4 (2026-05-04)** — destructive cleanup against the working-tree
+> diff that ships the BRAINDUMP "Day-1 fully playable" change set:
+> Day-1 starting cash moves from `StoreDefinition.starting_cash` (deleted)
+> to a single `EconomyConfig.starting_cash` source loaded from
+> `pricing_config.json`; the Day-1 objective rail's flat
+> `text/post_sale_text` payload is replaced by an 8-step `steps[]` chain
+> that walks signal-by-signal; the Day-1 first-customer scripted spawn
+> grows a 12-second forced-spawn fallback timer; `Customer.current_state`
+> writes funnel through a single `_set_state` observer with a debug-build
+> trace; one-click "Stock 1" / "Stock Max" / "Remove" inventory row
+> buttons replace the prior "Select → placement-mode" entry; the day
+> summary payload splits inventory into `backroom_inventory_remaining` /
+> `shelf_inventory_remaining` and adds `customers_served`; the in-store
+> HUD seeds cash from `EconomySystem.get_cash()` on `day_started`; and
+> the FP `Inventory` corner hint is removed because the ObjectiveRail
+> now owns that affordance. The companion *cleanup-report.md* Pass 7 and
+> *error-handling-report.md* Pass 14 (already merged into the working
+> tree) verified the code-side change set was free of dead
+> constants/methods/handlers and that all silent-swallow holes were
+> covered with `push_warning`. This SSOT pass tightens one stale doc
+> comment that survived in `retro_games.gd` and records the new SSOT
+> assignments for every domain the branch touched. See
+> [Pass 4 changes](#pass-4-changes-2026-05-04) below.
+
 > **Pass 3 (2026-05-03)** — destructive cleanup against the working-tree
 > diff that re-sequences the tutorial flow (`MOVE_TO_SHELF` / `SET_PRICE`
 > deleted; `SELECT_ITEM` / `CUSTOMER_BROWSING` / `CUSTOMER_AT_CHECKOUT` /
@@ -22,6 +46,146 @@
 > `_player_indicator` floor-disc hooks in place. The SSOT pass operates with
 > the rule "if production usage cannot be proven, default to removal" and
 > drops them. See [Pass 2 changes](#pass-2-changes-2026-05-03) below.
+
+## Pass 4 changes (2026-05-04)
+
+**Scope:** SSOT enforcement against the working-tree diff that lands the
+BRAINDUMP "Day-1 fully playable" change set on top of Pass 13/14 of
+`error-handling-report.md` and Pass 7 of `cleanup-report.md`. The diff
+deletes `StoreDefinition.starting_cash` (and the five `store_definitions.json`
+entries that authored it), introduces the `objectives.json` Day-1 `steps[]`
+chain plus the corresponding `ObjectiveDirector._day1_step_index` machinery,
+arms a 12-second forced-spawn fallback Timer in `CustomerSystem`,
+funnels every `Customer.current_state` write through a single
+`_set_state` observer, replaces the `InventoryPanel` "Select" row button
+with one-click `Stock 1` / `Stock Max` / `Remove` buttons (each backed by
+new `InventoryShelfActions.stock_one` / `stock_max` helpers), splits the
+`day_closed` payload's `inventory_remaining` into backroom / shelf
+fields, adds the `customers_served` payload field plus a `MainMenuButton`
+to `DaySummary`, and seeds the HUD / KPI cash readout from
+`EconomySystem.get_cash()` on `day_started`. The pass scans for code,
+comments, and documentation that still reflect the pre-Pass-4 SSOT and
+either removes/rewrites the contradiction in place or justifies it with
+a concrete reason.
+
+**Verification:** `bash tests/run_tests.sh` after edits — **5076/5076 GUT
+tests pass, 0 failures**, all SSOT tripwires green
+(`validate_translations.sh`, `validate_single_store_ui.sh`,
+`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter
+sole-owner check). Pre-existing validator failures (ISSUE-018,
+ISSUE-023, ISSUE-024, ISSUE-026, ISSUE-032, ISSUE-154, ISSUE-239) are
+on `main` ahead of this branch and do not touch the files edited in
+this pass.
+
+### Edits applied
+
+| Path | Change | Rationale | Disposition |
+|---|---|---|---|
+| `game/scripts/stores/retro_games.gd` lines 64–67 (`_register_queue_size` doc comment) | Rewrote the doc comment from "checkout counter prompt can reflect 'No customer waiting' vs 'Checkout Counter — Press E to checkout customer'" to "'No customer waiting' vs 'Customer at checkout' with no Press-E verb (Day 1 customers auto-complete checkout via `PlayerCheckout.process_transaction()`)". | The Pass-4 working-tree edit at `retro_games.gd:24` already deleted `_CHECKOUT_PROMPT_VERB_ACTIVE` and reset the active-state `display_name` to `"Customer at checkout"`, and `_refresh_checkout_prompt` now writes `prompt_text = ""` unconditionally. The doc comment 60 lines above continued to describe the old "Press E to checkout customer" verb-bearing prompt. **The code is the SSOT** — the comment was stale and would mislead a reader of `_register_queue_size`'s purpose. | **Acted (tighten)** |
+
+### What did not require a Pass-4 code edit
+
+The working-tree diff already drops the SSOT contradictions for every
+other domain Pass 4 audited; the pre-Pass-4 cleanup-report Pass 7 and
+error-handling-report Pass 14 sweeps verified zero dead constants /
+methods / orphans / silent-swallow holes survived. Specifically:
+
+* **`StoreDefinition.starting_cash` field + `store_definitions.json`
+  per-store overrides + `tests/validate_issue_013.sh`** — all deleted in
+  the diff. `EconomyConfig.starting_cash` (loaded from
+  `pricing_config.json`) is now the sole authoritative value;
+  `Constants.STARTING_CASH = 500.0` is an explicit fallback for tests
+  that bypass `DataLoader`. A grep for `StoreDefinition.starting_cash` /
+  `store_definitions.*starting_cash` returns zero hits; `parse_store` no
+  longer reads the field.
+* **`CustomerSystem._day1_customer_spawned` (renamed to
+  `_day1_first_customer_spawned`)** — every reader was updated in
+  lockstep (`_on_item_stocked`, `spawn_customer`, `_on_day_started`,
+  `_is_day1_spawn_blocked`, `tests/gut/test_first_sale_chain.gd`,
+  `game/tests/test_day_cycle_integration.gd`). A grep for the old name
+  returns zero hits.
+* **`InventoryPanel._on_select_for_placement` /
+  `InventoryRowBuilder.add_select_button` /
+  `InventoryRowBuilder._build_select_spacer`** — all deleted in the
+  diff. The single context-menu placement-mode entry survives via
+  `_on_context_action` case 1 → `_begin_placement_mode`, which is the
+  SSOT for the world-aim flow. Greps for the old names return zero hits
+  outside the cleanup-report's historical Pass-6 narrative.
+* **`HUD._fp_inventory_hint` / `_ensure_fp_inventory_hint` /
+  `FpInventoryHint` node** — all deleted in the diff.
+  `tests/gut/test_hud_fp_mode.gd::test_fp_mode_does_not_render_duplicate_inventory_hint`
+  is a regression guard that fails if the hint is reintroduced. The
+  ObjectiveRail's Day-1 step 1 (`open_inventory`) is now the sole
+  surface that carries the "Press I to open the inventory panel" key
+  affordance.
+* **Day-1 `objectives.json` post-sale fields** — kept as defensive
+  fallback when `_day1_steps_available()` returns false (e.g. corrupted
+  load, content-authoring regression). `ObjectiveDirector._load_content`
+  also push_warns on step-array shape mismatch (§F-93), so a corrupted
+  load is visible at boot. Removing `post_sale_text` / `post_sale_action`
+  / `post_sale_key` from the Day-1 entry would crash the rail on a
+  corrupted load by emitting the day's pre-sale copy after the sale
+  closes. Risk-logged below; intentionally retained.
+
+---
+
+## Final SSOT modules per domain (Pass 4 deltas)
+
+| Domain | Pass 1–3 SSOT | Pass 4 update |
+|---|---|---|
+| Day-1 starting cash | (Pass 1–3: not enumerated; the value flowed through `Constants.STARTING_CASH = 750.0` overridden by `StoreDefinition.starting_cash` per store.) | **Pass 4:** `EconomyConfig.starting_cash` (loaded from `game/content/economy/pricing_config.json`, value `500.0`) is the sole authoritative source. `game_world.gd::_get_configured_starting_cash` reads it; `_get_effective_starting_cash` multiplies by `DifficultySystem.get_modifier(&"starting_cash_multiplier")`. `Constants.STARTING_CASH = 500.0` is an explicit fallback for tests that bypass `DataLoader` (matches the config value so `test_starting_cash_equals_constant` continues to pass). `StoreDefinition.starting_cash` field is **deleted**; `parse_store` no longer reads it; the five entries in `store_definitions.json` are **deleted**; `tests/validate_issue_013.sh` (which pinned the now-removed per-store overrides) is **deleted**. |
+| Day-1 objective rail (Stock first item → make sale → close day) | **Pass 3:** `objectives.json` day-1 entry carried `text` / `action` / `key` plus `post_sale_text` / `post_sale_action` / `post_sale_key`; `ObjectiveDirector._emit_current` was the sole writer that flipped between pre- and post-sale copy when `_sold == true`. | **Pass 4:** `objectives.json` day-1 entry now carries an 8-entry `steps[]` array (`open_inventory`, `select_item`, `stock_item`, `wait_for_customer`, `customer_browsing`, `customer_at_checkout`, `sale_complete`, `close_day`). `ObjectiveDirector._day1_step_index` is the single sticky step pointer (initialized to 0 by `day_started(1)`, advanced by `_advance_day1_step_if(expected)` on the matching gameplay signal, terminated by the `SALE_COMPLETE_DURATION = 2.0` timer that flips step 6 → step 7). `_emit_current` walks the chain when `_day1_step_index >= 0 and _day1_steps_available()`; `post_sale_text` / `post_sale_action` / `post_sale_key` are reduced to a defensive fallback that fires only when the steps chain is unavailable on Day 1 (corrupted load) or on days 2+ that don't author a `steps` array. Receivers: `EventBus.panel_opened("inventory")`, `EventBus.placement_mode_entered`, `EventBus.item_stocked`, `EventBus.customer_state_changed(_, BROWSING)`, `EventBus.customer_ready_to_purchase`, `EventBus.customer_purchased`. |
+| Day-1 customer-spawn entry gate + first-customer reliability | **Pass 3:** `CustomerSystem._is_day1_spawn_blocked` is the sole spawn gate; `_day1_spawn_unlocked` is the sticky boolean opened by `_on_item_stocked` and self-healing via `InventorySystem.get_shelf_items()` on save reload. The original `_day1_customer_spawned` flag tracked the "scripted single-shot" spawn fired directly from `_on_item_stocked`. | **Pass 4:** `_day1_customer_spawned` is renamed to `_day1_first_customer_spawned` and now tracks "any-path first Day-1 customer" — flipped by `spawn_customer` itself rather than the scripted handler. `_on_item_stocked` arms a one-shot `_day1_forced_spawn_timer` (`DAY1_FORCED_SPAWN_FALLBACK_SECONDS = 12.0`) instead of force-spawning inline; the `_on_day1_forced_spawn_timer_timeout` handler is the new fallback emitter that runs only when no organic spawn has landed first. The timer is canceled by an organic `spawn_customer` and reset by `_on_day_started`. **Single SSOT for the "Day-1 first customer" guarantee:** the timer + the `spawn_customer`-side flip; `_on_item_stocked` is now an arm-only path that does not directly spawn. |
+| Day-1 first-sale demand override | (new) | **Pass 4:** `Constants.DAY1_PURCHASE_PROBABILITY = 0.95`. `Customer._is_first_sale_guarantee_active()` returns true on Day 1 while `GameState.get_flag(&"first_sale_complete")` is false; in that window `_process_deciding` bypasses the standard `purchase_probability_base × match_quality × tested/demo/rental` formula and rolls against the constant directly. The price-ceiling check (`item_price > willing_to_pay`) still applies — an absurd markup loses the sale. After the flag flips, the standard formula resumes for every subsequent transaction. |
+| Customer FSM state-write site | (new — pre-Pass-4 had three duplicated `current_state = X; EventBus.customer_state_changed.emit(self, X)` pairs at `initialize`, `enter_queue`, `advance_to_register`, plus one in `_transition_to`.) | **Pass 4:** `Customer._set_state(new_state)` is the sole write site. All four prior call sites (`initialize`, `enter_queue`, `advance_to_register`, `_transition_to`) route through it. Debug builds emit a `[Customer N] OLD → NEW` print line per transition (gated on `OS.is_debug_build()`). **Single SSOT** — adding a new state-emit site outside `_set_state` is a code-review smell. |
+| Customer navigation fallback (navmesh-missing path) | (new) | **Pass 4:** `Customer._use_waypoint_fallback` is the sticky boolean owned by `_detect_navmesh_or_fallback` (called once from `initialize`); flipping it to true puts the customer on direct-line `move_and_slide` toward `_fallback_target` via `_move_waypoint_fallback`. `_set_navigation_target` is the single seam — every caller (`_navigate_to_random_shelf`, `enter_queue`, `advance_to_register`, `_navigate_to_exit`) routes through it; the fallback path uses the same target value the agent path would have. `enable_waypoint_fallback()` is the public force-on entry for fixtures that ship without a navmesh. Each engagement push_warns per-customer (§F-94) so a wiring regression is visible. **Single SSOT for "where is this customer headed?"** — `_fallback_target` and the agent's target stay in lockstep. |
+| Inventory row stocking buttons | **Pass 3:** `InventoryRowBuilder.add_select_button` added a single "Select" button on backroom rows that routed to placement-mode (`_on_select_for_placement` → `_begin_placement_mode` → `_shelf_actions.enter_placement_mode`). | **Pass 4:** Backroom rows expose two buttons (`Stock 1`, `Stock Max`) added by `InventoryRowBuilder.add_stock_buttons`; shelf rows expose one button (`Remove`) added by `add_remove_button`. The `_build_select_spacer` is renamed to `_build_action_spacer` and widened to 94px to accommodate the longer labels. Handlers: `_on_stock_one` → `InventoryShelfActions.stock_one(item, slots)` (places into first compatible empty slot); `_on_stock_max` → `stock_max(item, slots)` (fills compatible capacity from same-definition backroom matches); `_on_remove_from_shelf` → `_shelf_actions.remove_item_from_shelf(slot)` (or `move_to_backroom` fallback when no world slot). The placement-mode flow (aim-and-click in the world) remains the single alternative path, reachable only via context-menu "Move to Shelf" (`_on_context_action` case 1 → `_begin_placement_mode`). The shared row-action preamble (`_highlight_selected → _selected_item = item → mirror inventory_system`) lives in `_prep_row_action(item, row)`. **Single SSOT per stocking flow:** one-click via row buttons; aim-and-click via context-menu. |
+| Day-summary inventory readout | **Pass 1–2:** `DayCycleController._show_day_summary` computed `inventory_remaining = shelf_items + backroom_items` and emitted it as a single field on `EventBus.day_closed`. | **Pass 4:** Payload now carries three fields: `inventory_remaining` (preserved for legacy/test consumers), plus `backroom_inventory_remaining` and `shelf_inventory_remaining` (split). `DayCycleController` is still the sole writer. `DaySummary._on_day_closed_payload` renders all three labels via the new `BackroomInventoryLabel` / `ShelfInventoryLabel` Label nodes; both default to 0 on missing keys so legacy payloads still render. |
+| Day-summary customers-served readout | (Pass 1–3: pulled from `PerformanceReportSystem` via the `performance_report_ready` signal.) | **Pass 4:** `DayCycleController._show_day_summary` writes `customers_served` directly into the `EventBus.day_closed` payload (sourced from `PerformanceReportSystem.get_daily_customers_served()`). `DaySummary._on_day_closed_payload` renders it on receipt; `PerformanceReport` is still consulted when it arrives (it carries the day-vs-day delta string), but the payload is the primary source. **Single SSOT for the cumulative customers-served-today count:** `PerformanceReportSystem.get_daily_customers_served()`. |
+| HUD cash readout (Day-1 starting-cash seed) | (Pre-Pass-4: HUD listened on `EventBus.money_changed` only; on Day 1 the readout stayed at $0 until the first transaction because `EconomySystem.initialize()` writes `player_cash` via `_apply_state` and does not emit `money_changed`.) | **Pass 4:** `HUD._seed_cash_from_economy()` (called from `_on_day_started`) snaps `_displayed_cash` / `_target_cash` to `EconomySystem.get_cash()` and updates the label, killing any in-flight count-up tween so no `0 → 500` crawl shows. The same seed is mirrored in `KpiStrip._seed_cash_from_economy()` (called from `_on_day_started` and `_on_gameplay_ready`) so the mall-hub strip and the in-store HUD agree from the first frame. Both seeds silently no-op when no `EconomySystem` autoload is in the tree (unit-test fixtures). |
+| FP HUD persistent corner controls | **Pass 1–2:** Two persistent FP-mode bottom-right hints — `FpCloseDayHint` (`F4 — Close Day`) and `FpInventoryHint` (`I — Inventory`). | **Pass 4:** `FpInventoryHint` / `_fp_inventory_hint` / `_ensure_fp_inventory_hint` are **deleted**. The ObjectiveRail's per-step input affordance is now the sole surface for the I-key prompt (Day 1 step 1 (`open_inventory`) emits `key = "I"`). `FpCloseDayHint` is retained because no rail step on days other than Day 1's terminal step references F4. Regression guard: `tests/gut/test_hud_fp_mode.gd::test_fp_mode_does_not_render_duplicate_inventory_hint` asserts the node is absent. |
+| Mall-overview event feed | **Pass 1–3:** `_add_feed_entry(text)` prefixed entries with `"[D%d %02dh] %s"` using `_current_hour`. | **Pass 4:** `_add_feed_entry` now formats as `"%s — %s"` with `_format_timestamp()` providing a 12-hour AM/PM string. When `set_time_system(time_system)` has been called by `GameWorld._setup_deferred_panels`, the timestamp tracks `TimeSystem.game_time_minutes` for minute precision; otherwise it degrades to `:00` using the last `hour_changed` value. `_resolve_item_name(item_id)` is the single helper for display-name resolution across the three new feed handlers (`_on_item_stocked`, `_on_customer_entered`, `_on_customer_purchased`). **Single SSOT for feed timestamps:** `_format_timestamp()`. |
+| Checkout counter prompt (retro_games) | **Pass 1–2:** `_CHECKOUT_PROMPT_NAME_ACTIVE = "Checkout Counter"` + `_CHECKOUT_PROMPT_VERB_ACTIVE = "checkout customer"` rendered as `"Checkout Counter — Press E to checkout customer"` when a customer was queued. | **Pass 4:** `_CHECKOUT_PROMPT_VERB_ACTIVE` is **deleted**. `_CHECKOUT_PROMPT_NAME_ACTIVE = "Customer at checkout"` is the active-state label; `_CHECKOUT_PROMPT_NAME_IDLE = "No customer waiting"` is the idle label. `_refresh_checkout_prompt` writes `prompt_text = ""` unconditionally — Day 1 customers auto-complete checkout via `PlayerCheckout.process_transaction()`, so the counter has no player-driven verb to advertise. `retro_games.tscn`'s authored `display_name = "Checkout Counter"` / `prompt_text = "Checkout"` is rewritten in lockstep to `"No customer waiting"` / `""`. |
+| ShelfSlot occupied prompt + visual sync | **Pass 1–3:** `_refresh_prompt_state` rendered authored `display_name` / `prompt_text` for occupied slots; `place_item` / `remove_item` directly called `_spawn_item_mesh` / `_free_item_mesh` and `_update_empty_indicator`. | **Pass 4:** `_update_visual(quantity)` is the single SSOT entry point that synchronizes the placeholder mesh + empty indicator with current occupancy; `place_item` and `remove_item` route through it instead of touching the mesh helpers directly. Per-category placeholder tinting via `CATEGORY_COLORS` table + `_apply_category_color` so different stocked items read as visually distinct cubes. Prompt rendering for occupied non-placement slots now reads `"<item_name> ×<quantity>"` (verb empty) using the new `_stocked_item_name` member set by `set_display_data`. |
+| Debug-overlay dev fallbacks (Day-1 unblock keys) | (new) | **Pass 4:** `DebugOverlay._input` adds four single-key (no modifier) shortcuts that run whenever the overlay node is alive (release builds `queue_free` in `_ready` so they are no-ops there): `F8` → `_debug_spawn_customer`, `F9` → `_debug_add_test_inventory` (routes through `DataLoader.create_starting_inventory` and adds to backroom), `F10` → `_debug_force_place_test_item` (routes through `StoreController.dev_force_place_test_item`), `F11` → `_debug_force_complete_sale` (routes through `CheckoutSystem.dev_force_complete_sale`, which is gated on `OS.is_debug_build()` and short-circuits to false in release builds). The display block now also shows `ActiveStore: <id>`. **Single SSOT for "unblock the Day-1 loop":** the four debug-overlay handlers + the corresponding `dev_*` entries on the underlying systems. |
+| Interaction telemetry (debug builds) | (new) | **Pass 4:** `InteractionRay._log_interaction_focus(target)` and `_log_interaction_dispatch(target)` print `"[Interaction] <display>: <verb>"` and `"[Interaction] <display>: <verb> (dispatched)"` lines respectively, gated on `OS.is_debug_build()`. Wired into `_set_hovered_target` (focus emit) and the two `_unhandled_input` interact paths (E-key + left mouse). Single SSOT for the dev-time interaction trace; release builds short-circuit before the print so the player log stays clean. |
+
+---
+
+## Pass 4 risk log — intentionally retained
+
+| Item | Why retained | Concrete trigger to remove |
+|---|---|---|
+| Day-1 `objectives.json` `post_sale_text` / `post_sale_action` / `post_sale_key` fields | The new `steps[]` chain is the primary path on Day 1, but `_emit_current` falls back to the post-sale copy when `_day1_steps_available()` returns false (steps array missing or count != `DAY1_STEP_COUNT`). Removing the post-sale fields would crash the rail on a corrupted Day-1 load by emitting the day's pre-sale copy after the sale closes — worse UX than the current defensive fallback. The §F-93 push_warning at `_load_content` makes the corrupted-load case visible at boot. **Justified, not removed.** | A pass that decides corrupted Day-1 content should hard-fail boot instead of falling back. At that point the post-sale Day-1 entry can be removed and `_load_content` can `push_error` instead of `push_warning` on step-array shape mismatch. |
+| `Constants.STARTING_CASH = 500.0` (alongside `EconomyConfig.starting_cash = 500.0` in `pricing_config.json`) | The constant is the documented fallback for tests that bypass `DataLoader` (`test_starting_cash_equals_constant`, `test_economy_difficulty_wiring`, `test_progression_system`, etc.) and the parameter default on `EconomySystem.initialize(starting_cash := Constants.STARTING_CASH)`. Removing it would force every such test to construct an `EconomyConfig` resource just to drive `EconomySystem`. The two values matching by hand is a maintenance burden, but the value rarely changes (only at major-balance milestones); `tests/gut/test_pricing_config.gd::test_starting_cash_is_500` pins the config side and would surface a divergence. **Justified, not consolidated.** | A consolidation pass that introduces `EconomyConfig.STARTING_CASH_DEFAULT` static / constant on the resource class itself, shared by `pricing_config.json` parsing and the `EconomySystem.initialize` default. At that point `Constants.STARTING_CASH` can be deleted and the tests rewritten to read the resource constant. |
+| `Customer._is_navigation_finished()` short-circuit on `_use_waypoint_fallback` | The check returns `_fallback_arrived` instead of asking the agent — necessary because the agent's `is_navigation_finished()` returns true the moment a path can't be resolved (which is exactly the condition that triggered the fallback). Without the short-circuit, every `_process_*` state handler would think the customer had arrived before they ever moved. **Justified, by design.** | A future where `_detect_navmesh_or_fallback` is removed (every store ships with a baked navmesh and an authored NavigationRegion3D + NavigationAgent3D pair). At that point `_use_waypoint_fallback` and the entire fallback subtree can be deleted in lockstep. |
+| `_register_queue_size` member in `retro_games.gd` (reads from `EventBus.queue_advanced` and gates `_refresh_checkout_prompt`'s active-vs-idle label swap) | After the Pass-4 prompt-text-empty rewrite, `_register_queue_size > 0` no longer drives a verb difference (the prompt is always informational). The member still gates the `display_name` swap between "Customer at checkout" and "No customer waiting", which is the player-visible cue Day 1 relies on. **Justified, retained.** | A future where the checkout counter loses its informational label entirely (e.g. the customer body itself surfaces a floor sign that handles the cue). At that point `_register_queue_size`, `_on_queue_advanced`, and `_refresh_checkout_prompt` can all be removed. |
+| All Pass 1 / Pass 2 / Pass 3 retained items (CameraManager mirror function, `_resolve_store_id` 5-way duplication, `StorePlayerBody.set_current_interactable` test seam, `ProvenancePanel`, audit-report historical filenames, `DataLoader.create_starting_inventory` vs `generate_starter_inventory` coexistence, `LATE_EVENING` extended-hours-unlock retention, `_emit_sale_toast` vs `_on_customer_item_spotted` toast emission) | Nothing in the Pass-4 working-tree change set alters their disposition; the rationales above (Pass 1 / Pass 2 / Pass 3 risk logs) still hold. | Same triggers as the original entries. |
+
+---
+
+## Pass 4 sanity check — dangling references
+
+| Check | Result |
+|---|---|
+| Any code still reading `StoreDefinition.starting_cash`? | None. Greps for `StoreDefinition\..*starting_cash` and `\.starting_cash\s*=` (assignment to the field) return zero hits in `*.gd`/`*.tscn`/`*.json`. `parse_store` no longer reads the key; `parse_economy_config` reads `EconomyConfig.starting_cash` (a different resource class). |
+| Any code still citing `_day1_customer_spawned` (the old flag name)? | None. `grep _day1_customer_spawned` returns zero hits. Every reader (`spawn_customer`, `_on_item_stocked`, `_on_day_started`, `_on_day1_forced_spawn_timer_timeout`, two test files) now reads `_day1_first_customer_spawned`. |
+| Any code citing `_on_select_for_placement` / `add_select_button` / `_build_select_spacer`? | None outside `docs/audits/cleanup-report.md` historical Pass-6 narrative. The unrelated `difficulty_selection_panel.gd::_add_select_button` is a different method on a different class. |
+| Any `FpInventoryHint` node creation outside the Pass-4 regression-guard test? | None. `hud.gd` no longer creates the node; `tests/gut/test_hud_fp_mode.gd:260` calls `get_node_or_null("FpInventoryHint")` and asserts `null` — that is the regression guard, not a creation site. |
+| Any `_CHECKOUT_PROMPT_VERB_ACTIVE` / "Press E to checkout customer" verb string left behind? | None. `_CHECKOUT_PROMPT_VERB_ACTIVE` constant is deleted; the only "Press E to checkout customer" mention in the tree is the now-rewritten doc comment in `retro_games.gd:64–67` (this pass) and a historical mention in `tests/gut/test_retro_games_checkout_prompt_state.gd` docstring describing what the test pins (which is the absence of that verb). |
+| Any code citing `STARTING_CASH := 750.0` or `starting_cash: 750.0` / `800.0` / `850.0` / `900.0` / `1000.0`? | None. `Constants.STARTING_CASH = 500.0`; `pricing_config.json::starting_cash = 500.0`. The five per-store overrides (sports_memorabilia 750, retro_games 800, video_rental 900, pocket_creatures 850, consumer_electronics 1000) are deleted; `tests/validate_issue_013.sh` (which pinned them) is deleted. |
+| Any test still asserting against the removed Day-1 objective `text` "Stock your first item and make a sale" as the *initial* rail copy? | None. `tests/gut/test_objective_rail_day1_visibility.gd` and `tests/gut/test_objective_director.gd` were rewritten in this branch to assert against the steps-chain copy ("Open your inventory" / "Press I to open the inventory panel"). The removed string survives only in `objectives.json` Day-1 `text` field as the steps-chain-disabled fallback (intentional, risk-logged). |
+| Any audit report still presenting the Pass-3 Day-1 SSOT (`text` + `post_sale_text` flat payload as the sole writer) as the live state? | None after this pass. The Pass-4 SSOT-modules table above supersedes the Pass-3 table; the historical Pass-3 entry at line 69 is preserved as record. |
+
+---
+
+## Pass 4 escalations
+
+None. Every Pass 4 finding either acted (one stale doc comment
+rewritten in `retro_games.gd:64–67`) or was justified inline with the
+rationale in the Risk Log above. No SSOT decision was left blocked.
+
+---
 
 **Scope:** SSOT enforcement against the working-tree diff that completes the
 first-person store-entry feature on top of Pass 8 (`error-handling-report.md`).

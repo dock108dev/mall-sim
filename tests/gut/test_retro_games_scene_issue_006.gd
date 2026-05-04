@@ -550,15 +550,16 @@ func test_root_exposes_has_blocking_modal() -> void:
 
 
 func test_objective_matches_action_passes_for_day_one_text() -> void:
-	# Day 1 objective from res://game/content/objectives.json. Verifies that at
-	# least one registered Interactable in the live retro_games scene satisfies
-	# StoreReadyContract invariant 10 against the canonical day-one text.
-	_root.set_objective_text("Stock your first item and make a sale")
+	# Day 1 objective step from res://game/content/objectives.json (step 3 of
+	# the chain). Verifies that at least one registered Interactable in the
+	# live retro_games scene satisfies StoreReadyContract invariant 10 against
+	# the canonical stock-the-item prompt.
+	_root.set_objective_text("Stock the item on a shelf")
 	assert_true(
 		_root.objective_matches_action(),
-		"Day 1 objective text must match at least one registered interactable; "
-		+ "shelf slots ship with action_verb='Stock' and at least one slot "
-		+ "carries an 'Item' display token"
+		"Day 1 stock-the-item objective must match at least one registered "
+		+ "interactable; shelf slots ship with action_verb='Stock' and at "
+		+ "least one slot carries an 'Item' display token"
 	)
 
 

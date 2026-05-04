@@ -20,6 +20,8 @@ const TESTED_BONUS: float = 0.25
 const DISAPPOINTED_CHANCE: float = 0.05
 ## Navigation path recalculation interval in seconds.
 const NAV_RECALC_INTERVAL: float = 0.2
+## Squared arrival radius for direct waypoint-fallback movement (≈0.6m).
+const WAYPOINT_ARRIVAL_DIST_SQ: float = 0.36
 const CONDITION_RANKS: Dictionary = {
 	"poor": 0,
 	"fair": 1,
@@ -57,6 +59,12 @@ var _time_paused: bool = false
 var _nav_recalc_timer: float = 0.0
 var _cached_preferred_slots: Array[Node] = []
 var _preferred_slots_dirty: bool = true
+## Direct-movement fallback used when NavigationAgent3D / navmesh cannot resolve
+## a path. Covers the BRAINDUMP Day-1 spawn → shelf → checkout → exit chain by
+## driving move_and_slide toward the last target set by `_set_navigation_target`.
+var _use_waypoint_fallback: bool = false
+var _fallback_target: Vector3 = Vector3.ZERO
+var _fallback_arrived: bool = true
 
 @onready var _navigation_agent: NavigationAgent3D = (
 	get_node_or_null("NavigationAgent3D") as NavigationAgent3D
@@ -102,8 +110,7 @@ func initialize(
 	_browse_min_multiplier = browse_min_multiplier
 	patience_timer = p_profile.patience * 120.0
 	_reset_browse_timer()
-	current_state = State.ENTERING
-	EventBus.customer_state_changed.emit(self, State.ENTERING)
+	_set_state(State.ENTERING)
 	_nav_recalc_timer = stagger_offset * NAV_RECALC_INTERVAL
 	_preferred_slots_dirty = true
 	_cached_preferred_slots.clear()
@@ -114,6 +121,7 @@ func initialize(
 	_made_purchase = false
 	_leave_reason = &"patience_expired"
 	_cache_navigation_targets()
+	_detect_navmesh_or_fallback()
 	_navigate_to_random_shelf()
 	if _animator != null:
 		_animator.initialize(_animation_player)
@@ -176,8 +184,7 @@ func complete_purchase() -> void:
 
 ## Called by RegisterQueue to place this customer in a queue position.
 func enter_queue(queue_position: Vector3) -> void:
-	current_state = State.WAITING_IN_QUEUE
-	EventBus.customer_state_changed.emit(self, State.WAITING_IN_QUEUE)
+	_set_state(State.WAITING_IN_QUEUE)
 	if _animator != null:
 		_animator.play_for_state(State.WAITING_IN_QUEUE)
 	_set_navigation_target(queue_position)
@@ -185,8 +192,7 @@ func enter_queue(queue_position: Vector3) -> void:
 
 ## Called by RegisterQueue when this customer advances to register.
 func advance_to_register() -> void:
-	current_state = State.PURCHASING
-	EventBus.customer_state_changed.emit(self, State.PURCHASING)
+	_set_state(State.PURCHASING)
 	if _animator != null:
 		_animator.play_for_state(State.PURCHASING)
 	_set_navigation_target(_register_position)
@@ -235,6 +241,12 @@ func _process_deciding() -> void:
 	if item_price > willing_to_pay:
 		_leave_with(&"price_too_high")
 		return
+	if _is_first_sale_guarantee_active():
+		if randf() < Constants.DAY1_PURCHASE_PROBABILITY:
+			_transition_to(State.PURCHASING)
+		else:
+			_leave_with(&"no_matching_item")
+		return
 	var match_quality: float = _calculate_match_quality(_desired_item)
 	var buy_chance: float = profile.purchase_probability_base * match_quality
 	if _desired_item.tested:
@@ -248,6 +260,17 @@ func _process_deciding() -> void:
 		_leave_with(&"no_matching_item")
 		return
 	_transition_to(State.PURCHASING)
+
+
+# The Day 1 tutorial loop must basically guarantee the first sale (BRAINDUMP
+# Priority 6). The price ceiling above still applies — an absurd markup loses
+# the sale — but the normal profile / match-quality / tested / demo / rental
+# multipliers are bypassed so the player isn't randomly punished by a 0.7-base
+# customer rolling against a low match score on the very first transaction.
+func _is_first_sale_guarantee_active() -> bool:
+	if GameManager.get_current_day() != 1:
+		return false
+	return not GameState.get_flag(&"first_sale_complete")
 
 
 func _process_purchasing(delta: float) -> void:
@@ -269,8 +292,7 @@ func _process_leaving() -> void:
 
 
 func _transition_to(new_state: State) -> void:
-	current_state = new_state
-	EventBus.customer_state_changed.emit(self, new_state)
+	_set_state(new_state)
 	if new_state == State.LEAVING and _animator != null:
 		_animator.set_satisfied(_made_purchase)
 	if _animator != null:
@@ -282,6 +304,24 @@ func _transition_to(new_state: State) -> void:
 			EventBus.customer_ready_to_purchase.emit(data)
 		State.LEAVING:
 			_navigate_to_exit()
+
+
+## Single write site for FSM state. Logs every transition in debug builds so the
+## customer loop is observable without a UI change (per BRAINDUMP Priority 14).
+## §F-106 — `OS.is_debug_build()` gate is the standard production-noise floor:
+## release builds skip the print entirely (no string formatting / no IO), so
+## the diagnostic carries zero cost in shipped builds. Same gate as §F-108
+## interaction-ray telemetry and §F-58 retro_games F3 toggle.
+func _set_state(new_state: State) -> void:
+	var old_state: State = current_state
+	current_state = new_state
+	if OS.is_debug_build():
+		print("[Customer %d] %s → %s" % [
+			get_instance_id(),
+			State.keys()[old_state],
+			State.keys()[new_state],
+		])
+	EventBus.customer_state_changed.emit(self, new_state)
 
 
 func _transition_to_deciding_or_leaving() -> void:
@@ -297,6 +337,9 @@ func _leave_with(reason: StringName) -> void:
 
 
 func _move_along_path(delta: float) -> void:
+	if _use_waypoint_fallback:
+		_move_waypoint_fallback()
+		return
 	if _navigation_agent == null or _is_navigation_finished():
 		velocity = Vector3.ZERO
 		_update_animator_movement(velocity)
@@ -324,6 +367,103 @@ func _move_along_path(delta: float) -> void:
 		velocity = desired
 		move_and_slide()
 	_update_animator_movement(velocity)
+
+
+## Drives a customer through `_fallback_target` directly via move_and_slide,
+## bypassing NavigationAgent3D when the navmesh is missing or cannot resolve a
+## path. Each consecutive `_set_navigation_target` call advances the spawn →
+## shelf → checkout → exit chain expected by the Day-1 vertical slice.
+func _move_waypoint_fallback() -> void:
+	if _fallback_arrived:
+		velocity = Vector3.ZERO
+		_update_animator_movement(velocity)
+		return
+	var to_target: Vector3 = _fallback_target - global_position
+	to_target.y = 0.0
+	var dist_sq: float = to_target.length_squared()
+	if dist_sq < WAYPOINT_ARRIVAL_DIST_SQ:
+		_fallback_arrived = true
+		velocity = Vector3.ZERO
+		_update_animator_movement(velocity)
+		return
+	velocity = to_target.normalized() * MOVE_SPEED
+	move_and_slide()
+	_update_animator_movement(velocity)
+
+
+## Forces the customer onto the direct waypoint chain regardless of nav state.
+## Call this when authoring a fixture without a navmesh, or when a runtime check
+## proves the bake cannot reach the gameplay-critical targets.
+func enable_waypoint_fallback() -> void:
+	_use_waypoint_fallback = true
+	_fallback_arrived = global_position.distance_squared_to(
+		_fallback_target
+	) < WAYPOINT_ARRIVAL_DIST_SQ
+
+
+## Engages waypoint fallback when no NavigationAgent3D / NavigationRegion3D with
+## a baked mesh is reachable from the current scene tree. Resolves the "navmesh
+## absent or broken" gate from the BRAINDUMP Day-1 priority.
+##
+## §F-94 — Each fallback engagement emits a push_warning so a scene-wiring
+## regression (missing NavigationAgent child, missing NavigationRegion sibling,
+## empty navmesh after a bad bake) is visible in CI / dev console rather than
+## silently degrading every customer in the store to direct-line movement.
+## The warning is per-customer rather than once-per-scene because a partial
+## regression (e.g. some customers fail to register an agent) would otherwise
+## be hidden by the first emission.
+func _detect_navmesh_or_fallback() -> void:
+	if _navigation_agent == null:
+		push_warning(
+			(
+				"Customer %d: NavigationAgent3D child missing; engaging "
+				+ "direct-line waypoint fallback. Scene wiring regression "
+				+ "(see §F-94)."
+			)
+			% get_instance_id()
+		)
+		enable_waypoint_fallback()
+		return
+	var region: NavigationRegion3D = _find_navigation_region()
+	if region == null:
+		push_warning(
+			(
+				"Customer %d: no NavigationRegion3D ancestor found; "
+				+ "engaging direct-line waypoint fallback. Scene wiring "
+				+ "regression (see §F-94)."
+			)
+			% get_instance_id()
+		)
+		enable_waypoint_fallback()
+		return
+	var nav_mesh: NavigationMesh = region.navigation_mesh
+	if nav_mesh == null or nav_mesh.get_polygon_count() == 0:
+		push_warning(
+			(
+				"Customer %d: NavigationRegion3D has %s; engaging "
+				+ "direct-line waypoint fallback. Re-bake the navmesh "
+				+ "(see §F-94)."
+			)
+			% [
+				get_instance_id(),
+				(
+					"no NavigationMesh resource"
+					if nav_mesh == null
+					else "navmesh with 0 polygons"
+				),
+			]
+		)
+		enable_waypoint_fallback()
+
+
+func _find_navigation_region() -> NavigationRegion3D:
+	var node: Node = get_parent()
+	while node != null:
+		for child: Node in node.get_children():
+			if child is NavigationRegion3D:
+				return child as NavigationRegion3D
+		node = node.get_parent()
+	return null
 
 
 func _cache_navigation_targets() -> void:
@@ -643,13 +783,19 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 
 
 func _is_navigation_finished() -> bool:
+	if _use_waypoint_fallback:
+		return _fallback_arrived
 	if _navigation_agent == null:
 		return true
 	return _navigation_agent.is_navigation_finished()
 
 
 func _set_navigation_target(target_position: Vector3) -> void:
-	if _navigation_agent == null:
+	_fallback_target = target_position
+	_fallback_arrived = global_position.distance_squared_to(
+		target_position
+	) < WAYPOINT_ARRIVAL_DIST_SQ
+	if _use_waypoint_fallback or _navigation_agent == null:
 		return
 	_navigation_agent.target_position = target_position
 

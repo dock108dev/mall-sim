@@ -1,5 +1,6 @@
 {
   "type": "economy_config",
+  "_comment": "Authoritative source for Day 1 starting cash. Loaded into EconomyConfig and consumed by game_world.gd::_get_configured_starting_cash(). Constants.STARTING_CASH is a fallback only; do not duplicate this value into store_definitions.json.",
   "starting_cash": 500.0,
   "daily_rent_base": 30.0,
   "rarity_multipliers": [1.0, 1.5, 3.0, 8.0, 20.0],

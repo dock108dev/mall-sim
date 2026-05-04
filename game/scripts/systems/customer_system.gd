@@ -89,13 +89,30 @@ var _active_event_intent_modifier: float = 1.0
 ## Tracks per-event modifiers so multiple concurrent events compose correctly.
 var _active_event_modifiers: Dictionary = {}
 var _adjacent_store_ids: Array[String] = []
-## Prevents spawning more than one Day 1 trigger customer per day.
-var _day1_customer_spawned: bool = false
+## Tracks whether the first Day 1 customer (any path: forced-spawn timer or
+## hour-density loop) has spawned. Reset on day_started.
+var _day1_first_customer_spawned: bool = false
 ## Day 1 spawn gate: blocks all customer spawns on Day 1 until at least one
 ## item has been stocked on a shelf. Set by `_on_item_stocked` and re-derived
 ## from InventorySystem on first spawn attempt so loaded saves where stocking
 ## already happened do not re-block spawns.
 var _day1_spawn_unlocked: bool = false
+## Day 1 reliability: after the gate opens we start a one-shot fallback timer
+## so the player sees a customer within DAY1_FORCED_SPAWN_FALLBACK_SECONDS
+## even when the hour-density loop rolls poorly.
+const DAY1_FORCED_SPAWN_FALLBACK_SECONDS: float = 12.0
+var _day1_forced_spawn_timer: Timer = null
+
+
+func _ready() -> void:
+	_day1_forced_spawn_timer = Timer.new()
+	_day1_forced_spawn_timer.name = "Day1ForcedSpawnTimer"
+	_day1_forced_spawn_timer.one_shot = true
+	_day1_forced_spawn_timer.wait_time = DAY1_FORCED_SPAWN_FALLBACK_SECONDS
+	_day1_forced_spawn_timer.timeout.connect(
+		_on_day1_forced_spawn_timer_timeout
+	)
+	add_child(_day1_forced_spawn_timer)
 
 
 func initialize(
@@ -225,6 +242,17 @@ func spawn_customer(
 	)
 	customer.despawn_requested.connect(_on_customer_despawn_requested)
 	_active_customers.append(customer)
+
+	if (
+		GameManager.get_current_day() == 1
+		and not _day1_first_customer_spawned
+	):
+		_day1_first_customer_spawned = true
+		if (
+			_day1_forced_spawn_timer != null
+			and not _day1_forced_spawn_timer.is_stopped()
+		):
+			_day1_forced_spawn_timer.stop()
 
 	var customer_data: Dictionary = {
 		"customer_id": customer.get_instance_id(),
@@ -637,21 +665,53 @@ func _on_day_ended(_day: int) -> void:
 	_hour_elapsed = 0.0
 
 
+## §F-113 — Open the Day 1 spawn gate the moment any item lands on a shelf.
+## Once set the flag is sticky for the run — subsequent unstock/sale events do
+## not re-block spawns. The five silent-return guards below are race-condition
+## checks for a one-shot timer schedule: a duplicate stock event, a customer
+## already spawned, an active customer present, or a timer already running.
+## All of these are legitimate "no-op, the system is already in the desired
+## state" branches; warning would spam every stock action. The
+## `_day1_forced_spawn_timer == null` arm is Tier-1 init paranoia (the timer
+## is added in `_ready`); only headless test fixtures that bypass `_ready`
+## would hit it, and they have no expectation of the forced-spawn fallback.
 func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
-	# Open the Day 1 spawn gate the moment any item lands on a shelf. Once set
-	# the flag is sticky for the run — subsequent unstock/sale events do not
-	# re-block spawns.
 	_day1_spawn_unlocked = true
 	if GameManager.get_current_day() != 1:
 		return
-	if _day1_customer_spawned:
+	if _day1_first_customer_spawned:
+		return
+	if not _active_customers.is_empty():
+		return
+	if _day1_forced_spawn_timer == null:
+		return
+	if not _day1_forced_spawn_timer.is_stopped():
+		return
+	_day1_forced_spawn_timer.start(DAY1_FORCED_SPAWN_FALLBACK_SECONDS)
+
+
+## §F-113 — Day 1 fallback: if no customer has shown up via the hour-density
+## loop within DAY1_FORCED_SPAWN_FALLBACK_SECONDS of the spawn gate opening,
+## force one spawn so the demo loop is reliable. Cancelled by `spawn_customer`
+## when an organic spawn lands first. Same race-guard rationale as
+## `_on_item_stocked` above: each silent-return guards the timer-callback
+## arrival from racing against the state it was scheduled to address (a sale
+## already happened, day rolled over, a customer arrived organically). The
+## `pool.is_empty()` arm is upstream-detected at content-load (CustomerTypes
+## validator); reaching it here means a content-config regression that the
+## boot validator already failed.
+func _on_day1_forced_spawn_timer_timeout() -> void:
+	if _day1_first_customer_spawned:
+		return
+	if not _day1_spawn_unlocked:
+		return
+	if GameManager.get_current_day() != 1:
 		return
 	if not _active_customers.is_empty():
 		return
 	var pool: Array[CustomerTypeDefinition] = get_spawn_pool()
 	if pool.is_empty():
 		return
-	_day1_customer_spawned = true
 	spawn_customer(pool.pick_random(), _store_id)
 
 
@@ -684,7 +744,12 @@ func _is_day1_spawn_blocked() -> bool:
 
 
 func _on_day_started(day: int) -> void:
-	_day1_customer_spawned = false
+	_day1_first_customer_spawned = false
+	if (
+		_day1_forced_spawn_timer != null
+		and not _day1_forced_spawn_timer.is_stopped()
+	):
+		_day1_forced_spawn_timer.stop()
 	if day > 1:
 		_day1_spawn_unlocked = true
 	_active_mall_shopper_count = 0

@@ -149,6 +149,42 @@ func test_movement_halts_when_modal_steals_focus() -> void:
 	)
 
 
+func test_spawn_player_applies_marker_basis() -> void:
+	# Production: GameWorld._spawn_player_in_store sets the player's
+	# global_transform from the spawn marker — not just the origin — so a
+	# rotated marker steers the body's facing direction. Verify by mirroring
+	# the contract here: after assigning marker.global_transform onto the
+	# player, the body's forward axis matches the marker's.
+	_store_root = _instantiate_mock_store()
+	var marker := Marker3D.new()
+	marker.name = "PlayerEntrySpawn"
+	# Yaw 90° around Y so forward (-Z) rotates to -X.
+	var basis := Basis(Vector3.UP, deg_to_rad(90.0))
+	marker.global_transform = Transform3D(basis, Vector3(1.5, 0.0, 2.5))
+	_store_root.add_child(marker)
+	_player = STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
+	_store_root.add_child(_player)
+	_player.global_transform = marker.global_transform
+	assert_almost_eq(
+		_player.global_position.x, 1.5, 0.001,
+		"Player origin must follow marker.x"
+	)
+	assert_almost_eq(
+		_player.global_position.z, 2.5, 0.001,
+		"Player origin must follow marker.z"
+	)
+	var player_forward: Vector3 = -_player.global_transform.basis.z
+	var marker_forward: Vector3 = -marker.global_transform.basis.z
+	assert_almost_eq(
+		player_forward.x, marker_forward.x, 0.001,
+		"Player forward.x must match marker forward.x"
+	)
+	assert_almost_eq(
+		player_forward.z, marker_forward.z, 0.001,
+		"Player forward.z must match marker forward.z"
+	)
+
+
 func test_camera_authority_self_heals_after_store_freed() -> void:
 	_store_root = _instantiate_mock_store()
 	_add_mock_store_camera(_store_root)

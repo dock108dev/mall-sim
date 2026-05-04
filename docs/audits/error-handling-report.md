@@ -1,6 +1,64 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-05-03 (Pass 13 — content-authoring symmetry + Pass-12
+**Latest pass:** 2026-05-04 (Pass 15 — Day-1 vertical-slice working-tree
+sweep: tightened `InventoryPanel._on_remove_from_shelf` non-shelf-prefix
+silent return to `push_warning` (§F-97 — UI-invariant violation; the per-row
+Remove button is only built when `item.current_location.begins_with("shelf:")`
+in `_populate_grid`, so reaching the prefix-guard branch is a row-builder
+regression rather than a legitimate state). Justified eighteen Note-level
+test-seam / Tier-init / debug-build-gated / cosmetic-seam / race-guard
+patterns inline (§F-98 ObjectiveDirector state-machine race-guards on
+`_advance_day1_step_if` / `_advance_to_close_day_step`; §F-99 ObjectiveDirector
+`_schedule_close_day_step` `tree==null` test-seam pairing with §F-44 / §F-54;
+§F-100 DebugOverlay dev-shortcut `push_warning` pattern across F8/F9/F10/F11
+debug-build-only entry points; §F-101 MallOverview `_format_timestamp`
+optional-`_time_system` cosmetic-precision seam paired with §F-95; §F-102
+DaySummary `backroom_inventory_remaining` / `shelf_inventory_remaining` /
+`customers_served` legacy-payload defaults paired with §F-61 forward-compat
+contract; §F-103 HUD `_seed_cash_from_economy` Tier-5 init mirrored by
+§F-115 in `kpi_strip`; §F-104 InventoryPanel `_refresh_filter_visibility`
+onready-null guard + `_get_active_store_shelf_slots` SceneTree-null
+test-seam; §F-105 GameWorld `_on_day_summary_main_menu_requested` GAME_OVER
+silent return — terminal state owns its own routing; §F-106 Customer
+`_set_state` debug-build FSM trace `OS.is_debug_build()` gate; §F-107
+Constants `STARTING_CASH` SSoT-fallback constant doc; §F-108 InteractionRay
+`_log_interaction_focus` / `_log_interaction_dispatch` debug-build telemetry
+gate; §F-109 RetroGames `_refresh_checkout_prompt` empty-verb dead-prompt
+removal contract; §F-110 ShelfSlot `_apply_category_color` cosmetic null +
+default-color fallback; §F-111 ShelfSlot `_refresh_prompt_state` empty-verb
++ `_authored_display_name` fallback paired with §F-109; §F-112 CheckoutSystem
+`dev_force_complete_sale` precondition cascade — diagnostic surface lives
+caller-side at §F-100; §F-113 CustomerSystem `_on_item_stocked` /
+`_on_day1_forced_spawn_timer_timeout` race-guard family; §F-114
+DayCycleController `_performance_report_system != null` Tier-3 init guard
+paired with §F-102; §F-115 KPIStrip `_seed_cash_from_economy` Tier-init
+mirror of §F-103). One §F-96 cite (`InventoryPanel._find_shelf_slot_by_id`
+empty-`slot_id` data-integrity reject against hand-edited save loads) was
+pre-claimed in the working tree before this pass and is acknowledged here as
+the canonical Pass-15 numbering anchor.)
+**Pass 14:** 2026-05-03 (Day-1 step-chain content guard +
+inventory-stocking helper wiring contract + customer waypoint-fallback
+visibility + mall-overview feed cosmetic-seam cites: tightened
+`InventoryShelfActions.stock_one` / `stock_max` to `push_warning` on null
+`inventory_system` (§F-92 — same EH-04 / §F-04 wiring contract that
+`place_item` / `remove_item_from_shelf` / `move_to_backroom` already enforce;
+the Pass-12 one-click stock buttons silently rejected when the helper hadn't
+been mirrored), tightened `ObjectiveDirector._load_content` step-array
+parsing to `push_warning` on non-Dictionary step entries / non-Array `steps`
+field / Day-1 step-count mismatch (§F-93 — a typo'd Day-1 step would
+otherwise silently disable the entire step chain via
+`_day1_steps_available`), tightened `Customer._detect_navmesh_or_fallback`
+to `push_warning` per fallback engagement (§F-94 — silently routing every
+customer in the store off the navmesh on a wiring regression is a
+production-visibility hole; missing NavigationAgent3D, missing
+NavigationRegion3D ancestor, and zero-polygon navmesh each emit their own
+diagnostic), justified the cosmetic empty-name fallbacks in
+`MallOverview._on_item_stocked` / `_on_customer_entered` /
+`_on_customer_purchased` feed entries (§F-95 — paired with §F-89 toast
+fallback; ContentRegistry already warns once per unknown id via
+`_warn_helper_fallback_once` and `validate_*.sh` content suite catches
+authoring holes at CI time).)
+**Pass 13:** 2026-05-03 (content-authoring symmetry + Pass-12
 post-sweep cite roll-up: tightened
 `DataLoader.create_starting_inventory` unknown-`item_id` silent skip to
 `push_warning` (§F-88 — symmetry with the existing category-mismatch
@@ -14,6 +72,8 @@ cosmetic toast is suppressed), justified
 escalate loudly), justified `DayCycleController._on_day_summary_dismissed`
 `is_instance_valid(_mall_overview)` early return (§F-91 — Tier-5 init
 pattern, symmetric with the producer-side guard in `_show_day_summary`).)
+
+
 **Pass 12:** 2026-05-03 (Day-1 starter inventory + tutorial
 re-sequence + customer browse-toast roll-up: tightened
 `DataLoader.create_starting_inventory` three "store missing" silent
@@ -77,6 +137,105 @@ Test files (`tests/`, `game/tests/`) excluded.
 ---
 
 ## Changes made this pass
+
+Pass 15 swept the post-Pass-14 working tree (Pass 14 was authored against
+the same BRAINDUMP "Day-1 fully playable" surface but additional working-
+tree code landed before this pass closed). The new code under audit is the
+Day-1 vertical-slice scaffolding that wires `ObjectiveDirector` step
+machinery (`_advance_day1_step_if`, `_schedule_close_day_step`,
+`_advance_to_close_day_step`, `_day1_steps_available`), the `DebugOverlay`
+F8/F9/F10/F11 dev shortcuts (`_debug_add_test_inventory`,
+`_debug_force_complete_sale` calling into `CheckoutSystem.dev_force_complete_sale`),
+the `MallOverview._format_timestamp` `_time_system`-injected minute
+precision, the `DaySummary` backroom/shelf inventory split + customers-
+served payload field, the `HUD._seed_cash_from_economy` and `KPIStrip._seed_cash_from_economy`
+Day-1 cash snap helpers, the `InventoryPanel` per-row Stock 1 / Stock Max /
+Remove buttons (with `_refresh_filter_visibility`,
+`_get_active_store_shelf_slots`, `_find_shelf_slot_by_id`,
+`_on_remove_from_shelf`, `_prep_row_action`), the
+`GameWorld._on_day_summary_main_menu_requested` GAME_OVER guard, the
+`Customer._set_state` debug-build FSM trace, the `STARTING_CASH` SSoT-
+fallback constant doc, the `InteractionRay` debug-build telemetry pair, the
+`RetroGames._refresh_checkout_prompt` empty-verb dead-prompt removal, the
+`ShelfSlot._apply_category_color` cosmetic null-guard and
+`_refresh_prompt_state` empty-verb arm, the
+`CustomerSystem._on_item_stocked` / `_on_day1_forced_spawn_timer_timeout`
+race-guard family, and the `DayCycleController._performance_report_system`
+Tier-3 init guard.
+
+The pass tightened one Low silent-swallow hole (§F-97 — the
+`InventoryPanel._on_remove_from_shelf` non-shelf-prefix silent return is now
+`push_warning` because reaching that branch implies a row-builder regression
+rather than a legitimate state) and justified eighteen Note-level test-seam
+/ Tier-init / debug-build-gated / cosmetic-seam / race-guard patterns
+inline (§F-98 through §F-115). The §F-96 cite anchor was pre-claimed by the
+working-tree author at `InventoryPanel._find_shelf_slot_by_id` (an empty-
+`slot_id` data-integrity reject against hand-edited save loads where
+`current_location = "shelf:"` would otherwise match the first empty-id slot
+in the `&"shelf_slot"` group); Pass 15 acknowledges that cite as the
+canonical numbering anchor and resumes at §F-97.
+
+No Critical / High / Medium gaps were found. The Pass-15 surface is
+dominated by Tier-init / test-seam / debug-build-only patterns whose
+production paths always have the autoload set, the SceneTree present, or
+the OS.is_debug_build()-only entry point gated.
+
+| Path | Change | Disposition |
+|---|---|---|
+| `game/scenes/ui/inventory_panel.gd:512–522` | Tightened `_on_remove_from_shelf` non-shelf-prefix silent return to `push_warning` (UI-invariant violation: the per-row Remove button is only built when `item.current_location.begins_with("shelf:")` in `_populate_grid:484`, so reaching the prefix-guard branch is a row-builder regression rather than a legitimate state). The fallback to `_shelf_actions.move_to_backroom(item)` for the legitimate "no matching world slot" case (headless test, hub-mode reconciliation) below the prefix-guard is preserved with its existing inline doc. | **Acted (tighten)** §F-97 |
+| `game/scenes/ui/inventory_panel.gd:543–550` | §F-96 cite acknowledged — pre-claimed by working-tree author at `_find_shelf_slot_by_id` empty-`slot_id` rejection (data-integrity guard against hand-edited save where `current_location = "shelf:"` would match the first empty-id slot in the `&"shelf_slot"` group walk). | **Acted (justify)** §F-96 (pre-claimed) |
+| `game/autoload/objective_director.gd:198–209` (`_advance_day1_step_if`), `:226–231` (`_advance_to_close_day_step`) | Added §F-98 docstring to `_advance_day1_step_if` documenting the two silent-return state-machine race-guards. The `_day1_steps_available()` false-arm is a downstream consequence of the §F-93 content-authoring warning that already fired at load time, so adding a per-emit warning here would only echo the load-time diagnostic. Same cite applied to `_advance_to_close_day_step`'s timer-arrival race-guard. | **Acted (justify)** §F-98 |
+| `game/autoload/objective_director.gd:212–224` | Added §F-99 docstring to `_schedule_close_day_step` documenting the `tree == null` test-seam (mirrors §F-44 / §F-54 contract for autoload-test-seam patterns). Production paths always have a SceneTree; bare-Node unit-test fixtures hit the silent path and still terminate the chain by jumping directly to `_advance_to_close_day_step`. | **Acted (justify)** §F-99 |
+| `game/scenes/debug/debug_overlay.gd:249–271` (`_debug_add_test_inventory`), `:281–295` (`_debug_force_complete_sale`) | Added §F-100 docstrings documenting the dev-shortcut `push_warning` pattern. F8/F9/F10/F11 unmodified-key shortcuts are gated by `_ready` queue_free in release builds, so this code only runs in debug builds. Each precondition emits `push_warning` (rather than `push_error` or asserting) because dev shortcuts should report what blocked them and stay alive. The downstream `dev_force_complete_sale` (§F-112) returns `false` from a cascade of precondition silent-returns; the caller-side `push_warning` is the single diagnostic surface so the inner cascade can stay quiet. | **Acted (justify)** §F-100 |
+| `game/scenes/mall/mall_overview.gd:156–170` | Added §F-101 docstring to `_format_timestamp` documenting the cosmetic-precision seam (paired with §F-95). `set_time_system` is documented as optional; the hub remains operational with hour-only precision in headless tests / pre-Tier-1 frames that drive `EventBus.hour_changed` without a TimeSystem. | **Acted (justify)** §F-101 |
+| `game/scenes/ui/day_summary.gd:677–698` | Added §F-102 cite to the backroom/shelf split + customers-served fallback block. Forward-compat default mirrors §F-61 `inventory_remaining` and the `net_cash` fallback below; canonical payloads from `DayCycleController` always carry the keys. The `customers_served` `has()` gate is the legacy-payload fallback — when missing, the label keeps its prior text rather than rendering a misleading "0" (paired with §F-114 producer-side guard). | **Acted (justify)** §F-102 |
+| `game/scenes/ui/hud.gd:185–201` | Added §F-103 cite to `_seed_cash_from_economy` documenting the Tier-5 init test-seam (mirrors §J2 / §F-69). Unit test fixtures construct the HUD without a world scene; `money_changed` is the only path they exercise. The `kpi_strip` seeding helper §F-115 mirrors this pattern. | **Acted (justify)** §F-103 |
+| `game/scenes/ui/inventory_panel.gd:413–417` (`_refresh_filter_visibility`), `:536–542` (`_get_active_store_shelf_slots`) | Added §F-104 cites to two paired Tier-5 onready / SceneTree-null test-seam guards. The first defends the `@onready var _filter_row` binding for bare-Control unit-test fixtures; the second defends the `tree.get_nodes_in_group(&"shelf_slot")` call against the same fixture pattern. Helper callers (`_on_stock_one`, `_on_stock_max`) surface failure via `EventBus.notification_requested`, so the empty-array path is the documented "no slots available" UX response. | **Acted (justify)** §F-104 |
+| `game/scenes/world/game_world.gd:846–854` | Added §F-105 cite to `_on_day_summary_main_menu_requested` documenting the `GAME_OVER` silent return: the terminal state owns its own routing (the GameOver UI flow drives the return-to-menu transition itself), and a duplicate `go_to_main_menu()` call here would race with that routing. | **Acted (justify)** §F-105 |
+| `game/scripts/characters/customer.gd:309–321` | Added §F-106 cite to `_set_state` documenting the `OS.is_debug_build()`-gated FSM trace. Release builds skip the print entirely (no string formatting / no IO), so the diagnostic carries zero cost in shipped builds. Same gate as §F-108 interaction-ray telemetry and §F-58 retro_games F3 toggle. | **Acted (justify)** §F-106 |
+| `game/scripts/core/constants.gd:10–18` | Promoted the `STARTING_CASH` SSoT-fallback comment to §F-107 cite. Authoritative value lives in `pricing_config.json::starting_cash` (loaded via `EconomyConfig`); the constant remains as a deterministic test-fixture default and a save-load fallback. Data-integrity diagnostics on a missing/malformed `pricing_config.json` belong upstream in the loader (already escalated via boot validation). | **Acted (justify)** §F-107 |
+| `game/scripts/player/interaction_ray.gd:294–306` | Added §F-108 cite to `_log_interaction_focus` / `_log_interaction_dispatch` debug-build telemetry. `OS.is_debug_build()` short-circuits before any string formatting so release builds carry zero cost. Mirrors the dead-prompt audit in `docs/audits` — every prompt that fires and every interaction the player dispatches gets a `[Interaction] <name>: <verb>` line. | **Acted (justify)** §F-108 |
+| `game/scripts/stores/retro_games.gd:368–390` | Added §F-109 cite to `_refresh_checkout_prompt` empty-verb dead-prompt removal contract. Day 1 customers auto-complete checkout via PlayerCheckout, so a player-driven verb on the counter would advertise an action that does nothing. Same dead-prompt removal as §F-111 shelf_slot empty-verb path. The pre-existing EH-07 boot-time warning still covers the missing-node case. | **Acted (justify)** §F-109 |
+| `game/scripts/stores/shelf_slot.gd:283–301` | Added §F-110 cite to `_apply_category_color` cosmetic-only null-guard + default-color fallback. Failure (no MeshInstance3D in the placeholder subtree) means a placeholder won't be tinted, not a gameplay break. All current `CATEGORY_SCENES` entries contain a mesh; the null-guard is paranoia for future scene authoring. The `CATEGORY_COLORS.get(category, DEFAULT_PLACEHOLDER_COLOR)` fallback is the legitimate empty-category case for `place_item(instance_id, category="")` from legacy callers. | **Acted (justify)** §F-110 |
+| `game/scripts/stores/shelf_slot.gd:355–383` | Added §F-111 cite to `_refresh_prompt_state` empty-verb + `_authored_display_name` fallback. Verb stays empty: pressing E on an already-stocked slot is a no-op in `InventoryPanel._on_interactable_interacted` (the `open()` branch is gated on `not slot.is_occupied()`), so the prompt drops the dead "Press E" cue while still surfacing what the player is looking at. Same dead-prompt removal contract as §F-109 retro_games checkout-counter empty verb. | **Acted (justify)** §F-111 |
+| `game/scripts/systems/checkout_system.gd:751–789` | Added §F-112 cite to `dev_force_complete_sale`. The cascade of silent `return false` paths inside (no inventory system, no waiting customer, no desired item, item not in inventory) are precondition checks for a dev shortcut; warning at every branch would spam the console for harmless rejections (e.g. F11 pressed before any customer arrives). The single diagnostic surface is the caller's `push_warning` in `debug_overlay._debug_force_complete_sale` (§F-100). | **Acted (justify)** §F-112 |
+| `game/scripts/systems/customer_system.gd:668–700` | Added §F-113 cite to `_on_item_stocked` and `_on_day1_forced_spawn_timer_timeout`. The five silent-return guards in the first method are race-condition checks for a one-shot timer schedule (a duplicate stock event, a customer already spawned, an active customer present, or a timer already running — all legitimate "no-op, the system is already in the desired state" branches). The `_day1_forced_spawn_timer == null` arm is Tier-1 init paranoia. The timer-callback method's `pool.is_empty()` arm is upstream-detected at content-load (CustomerTypes validator). | **Acted (justify)** §F-113 |
+| `game/scripts/systems/day_cycle_controller.gd:195–203` | Added §F-114 cite to `customers_served` Tier-3 init guard. Matches the surrounding `_inventory_system` / `_staff_system` guards in this function: production day-close cannot reach this branch (the system is always live by then), and the default-to-0 emit means `day_summary.gd` either renders 0 (test fixture) or the real value (production), both of which are valid render states gated by the §F-102 `has()` check on the consumer side. | **Acted (justify)** §F-114 |
+| `game/scripts/ui/kpi_strip.gd:49–60` | Added §F-115 cite to `_seed_cash_from_economy` documenting the Tier-init test-seam (mirrors §F-103 HUD seeding contract). Both silent returns are Tier-init test seams (autoload-missing GameManager, pre-Tier-1 EconomySystem); production paths always have the autoload set, and `_on_money_changed` re-populates the label the first time a transaction fires regardless. | **Acted (justify)** §F-115 |
+
+### Pass 14 changes (rolled forward into Pass 15 baseline)
+
+Pass 14 swept the post-Pass-13 working tree for silent-swallow holes
+introduced by the BRAINDUMP "Day-1 fully playable" change set: the new
+`ObjectiveDirector` Day-1 step-chain machinery (`steps` array + per-signal
+advance), the `InventoryPanel` one-click `Stock 1` / `Stock Max` / `Remove`
+row buttons (with the new `InventoryShelfActions.stock_one` / `stock_max`
+helpers), the `Customer` direct-line waypoint-fallback navigation (drives
+move_and_slide when navmesh is missing or unbaked), the `MallOverview`
+event-feed timestamp / item-name / store-name resolution, the `HUD`
+`_seed_cash_from_economy` Day-1 cash snap, the `DaySummary` backroom/shelf
+inventory split + customers-served payload field + `MainMenuButton`, the
+`DayCycleController` payload split, the `Customer._set_state` debug-build
+FSM trace, the `InteractionRay` debug-build interaction telemetry, the
+`ShelfSlot` / `RetroGames` empty-`prompt_text` symmetry (no "Press E" cue
+on already-stocked slots / customer-at-checkout counter), the
+`DebugOverlay` `ActiveStore` line, and the new `Customer._is_first_sale_guarantee_active`
+Day-1 purchase-probability override.
+
+The pass tightened three Low silent-swallow holes (§F-92 stock helper
+wiring contract, §F-93 Day-1 step-chain content guard, §F-94 customer
+waypoint-fallback engagement visibility) and justified one Note-level
+cosmetic-seam pattern inline (§F-95 mall-overview feed empty-name
+fallbacks). No Critical / High / Medium gaps were found.
+
+| Path | Change | Disposition |
+|---|---|---|
+| `game/scripts/ui/inventory_shelf_actions.gd:97–141` | Tightened `stock_one` / `stock_max` to `push_warning` on null `inventory_system`, mirroring the existing EH-04 / §F-04 wiring contract on `place_item`, `remove_item_from_shelf`, and `move_to_backroom`. The Pass-12 one-click buttons (Stock 1 / Stock Max / Remove on each `InventoryPanel` row) added two new entry points to the helper that bypassed `InventoryPanel.open()` (the original wiring path); a unit test that constructed the helper without `InventoryPanel._sync_shelf_actions_inventory` would silently get `false` / `0` returns instead of the standard wiring-contract diagnostic. The legitimate `item == null` no-op path is preserved (button gating in `InventoryPanel` guards it). | **Acted (tighten)** §F-92 |
+| `game/autoload/objective_director.gd:69–112` | Tightened `_load_content` step-array parsing. The Pass-12 `objectives.json` Day-1 entry adds a `steps` array of exactly `DAY1_STEP_COUNT` (8) entries and the rail-emit code branches on `_day1_steps_available()` returning true. Previously, a non-Dictionary step entry was silently dropped (a typo'd entry would shrink the array below 8 and disable the entire step chain), a non-Array `steps` field was silently coerced to `[]` (same end result), and a count mismatch surfaced only at runtime as the rail falling back to pre-sale / post-sale text. Each branch now `push_warning`s with the offending type / count so the content-authoring regression is visible at boot. | **Acted (tighten)** §F-93 |
+| `game/scripts/characters/customer.gd:400–446` | Tightened `_detect_navmesh_or_fallback` to `push_warning` per fallback engagement. The Pass-13 working tree introduces direct-line waypoint movement (`move_and_slide` to the last `_set_navigation_target`) that bypasses `NavigationAgent3D` when the navmesh is missing or unbaked. Each of the three engagement branches (no NavigationAgent3D child, no NavigationRegion3D ancestor, zero-polygon NavigationMesh) silently flipped `_use_waypoint_fallback = true` for every customer in the store — a wiring regression (failed nav bake, removed NavigationRegion sibling) would otherwise route every NPC through direct-line motion with no signal to the dev console / CI log. The warning is per-customer (not once-per-scene) so a partial regression — e.g. some customers fail to register their agent — surfaces every instance rather than being hidden by the first. | **Acted (tighten)** §F-94 |
+| `game/scenes/mall/mall_overview.gd:219–251` | Added §F-95 cite to the three feed-entry empty-name fallbacks: `_on_item_stocked` (`item_name = "item"`), `_on_customer_entered` (`store_name = "the mall"`), `_on_customer_purchased` (`item_name = "item"`). All three are cosmetic seams paired with `ContentRegistry`'s existing `_warn_helper_fallback_once` (one-time warning per unknown id) and the `tests/validate_*.sh` content suite (which catches missing `item_name` / unknown id at CI time). The `customer_entered` path is also a legitimate empty-payload case for hub-mode wanderers with no store target, so a literal "the mall" fallback is the documented non-error path. | **Acted (justify)** §F-95 |
+
+### Pass 13 changes (rolled forward into Pass 14 baseline)
 
 Pass 13 swept the post-Pass-12 working tree for silent-swallow holes that
 the Pass-12 inventory missed. Pass 12 had already covered the
@@ -188,15 +347,25 @@ to those defenders so the code reads as designed rather than accidental.
 | `game/scenes/ui/hud.gd:227–243` | Added `## §F-62 —` docstring to `_on_first_sale_completed_hud` documenting the `is_instance_valid(_close_day_button)` defensive guard. Covers the window where `EventBus.first_sale_completed` fires while the HUD is mid-teardown (run reset, scene swap to mall hub). | **Acted (justify)** |
 | `game/scripts/player/store_player_body.gd:143–157` | Added `## §F-64 —` docstring to `_apply_mouse_look` documenting that yaw rotates the body unconditionally while pitch needs the embedded `Camera3D`. The `_camera == null` arm is the same test-seam fallback documented in §F-54. | **Acted (justify)** |
 
-All Pass 13 edits validated against `bash tests/run_tests.sh`: GUT suite
-reports `---- All tests passed! ----`, 0 failures, no new stderr
-`push_error` lines (pre-existing validator failures under ISSUE-154 /
-ISSUE-239 are unrelated content-completeness checks for trade-panel and
-pack/tournament feature work that lives outside this branch's scope). Pass
-12 edits (§F-83 through §F-86), Pass 11 edits (§F-79 through §F-82), Pass
-10 edits (§F-66 through §F-70), Pass 9 edits (§F-58 through §F-65), and
-Pass 8 edits (§F-54 / §F-55 / §F-56 / §F-57) were re-checked and remain in
-place.
+All Pass 15 edits validated against `bash tests/run_tests.sh`: GUT suite
+reports **Tests 5076 / Passing 5075 / Failing 1** with the single failure
+being a pre-existing content-completeness check (`condition_range` field
+missing on five `retro_games.json` item entries) that predates this branch
+and lives outside the error-handling scope. `validate_tutorial_single_source.sh`,
+`validate_translations.sh`, `validate_single_store_ui.sh`, and the
+ISSUE-009 SceneRouter sole-owner check all PASS. Pre-existing validator
+failures under ISSUE-018 / ISSUE-023 / ISSUE-024 / ISSUE-026 / ISSUE-032 /
+ISSUE-154 / ISSUE-239 are unrelated content-completeness checks for
+trade-panel, pack/tournament, and items-catalog feature work that lives
+outside this branch's scope and were already documented as out-of-scope in
+the Pass-13 / Pass-14 footers. The §F-97 `push_warning` is not fired by
+any GUT test (verified by greping the test log for the warning string) —
+the UI invariant in `_populate_grid:484` keeps the prefix-guard branch
+unreachable in normal operation. Pass 14 edits (§F-92 through §F-95),
+Pass 13 edits (§F-88 through §F-91), Pass 12 edits (§F-83 through §F-86),
+Pass 11 edits (§F-79 through §F-82), Pass 10 edits (§F-66 through §F-70),
+Pass 9 edits (§F-58 through §F-65), and Pass 8 edits (§F-54 / §F-55 /
+§F-56 / §F-57) were re-checked and remain in place.
 
 ---
 
@@ -207,11 +376,72 @@ place.
 | Critical | 0 | — |
 | High | 3 | 1 Pass 2, 2 Pass 3 (tier cascade, wrong signal dispatch) |
 | Medium | 8 | 3 Pass 1, 2 Pass 2, 2 Pass 3, 1 Pass 4 (registry inconsistency) |
-| Low | 18 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5, 1 Pass 8, 1 Pass 10 (CheckoutPanel non-Dict drop), 2 Pass 12 (DataLoader 3-branch silent return + GameWorld empty-inventory caller warning), **+1 Pass 13 (DataLoader unknown-`item_id` skip-symmetry warning)** |
-| Note | 52 | Justified — intentional, low-risk, documented (+2 Pass 7, +2 Pass 8, +7 Pass 9, +4 Pass 10, +6 Pass 11, +4 Pass 12, **+3 Pass 13**) |
+| Low | 23 | 5 acted, 3 justified, 1 Pass 3, 3 Pass 4, 1 Pass 5, 1 Pass 8, 1 Pass 10 (CheckoutPanel non-Dict drop), 2 Pass 12 (DataLoader 3-branch silent return + GameWorld empty-inventory caller warning), 1 Pass 13 (DataLoader unknown-`item_id` skip-symmetry warning), 3 Pass 14 (stock helper wiring contract §F-92, ObjectiveDirector step-chain content guard §F-93, Customer waypoint-fallback engagement visibility §F-94), **+1 Pass 15 (`InventoryPanel._on_remove_from_shelf` non-shelf-prefix UI-invariant tighten §F-97) and +1 Pass 15 (`InventoryPanel._find_shelf_slot_by_id` empty-`slot_id` data-integrity reject §F-96 — pre-claimed in working tree before this pass)** |
+| Note | 71 | Justified — intentional, low-risk, documented (+2 Pass 7, +2 Pass 8, +7 Pass 9, +4 Pass 10, +6 Pass 11, +4 Pass 12, +3 Pass 13, +1 Pass 14 — §F-95 mall-overview feed cosmetic seams, **+18 Pass 15 — §F-98 ObjectiveDirector state-machine race-guards, §F-99 ObjectiveDirector tree==null test-seam, §F-100 DebugOverlay dev-shortcut warning pattern, §F-101 MallOverview optional-time_system cosmetic seam, §F-102 DaySummary backroom/shelf/customers_served legacy-payload defaults, §F-103 HUD Tier-5 cash seed, §F-104 InventoryPanel onready/SceneTree guards, §F-105 GameWorld GAME_OVER terminal-routing return, §F-106 Customer debug-build FSM trace, §F-107 Constants STARTING_CASH SSoT-fallback doc, §F-108 InteractionRay debug-build telemetry, §F-109 RetroGames empty-verb dead-prompt removal, §F-110 ShelfSlot cosmetic null-guard, §F-111 ShelfSlot empty-verb + authored-name fallback, §F-112 CheckoutSystem dev_force_complete_sale precondition cascade, §F-113 CustomerSystem Day-1 forced-spawn race-guard family, §F-114 DayCycleController _performance_report_system Tier-3 init guard, §F-115 KPIStrip Tier-init mirror of §F-103**) |
 | Retired | 1 | §F-28 obsoleted by Pass 6 nav-zone label feature removal |
 
 **Overall posture: Prod posture acceptable.**
+
+Pass 15 swept the post-Pass-14 working tree (the BRAINDUMP "Day-1 fully
+playable" change set continued to expand after Pass 14 closed, layering in
+the `ObjectiveDirector` step-machinery `_advance_*` helpers, the
+`DebugOverlay` F8/F9/F10/F11 dev shortcuts, the `MallOverview`
+`_format_timestamp` minute-precision injection, the `DaySummary` backroom/
+shelf inventory split + `customers_served` payload field, the `HUD` /
+`KPIStrip` `_seed_cash_from_economy` Day-1 cash snap helpers, the
+`InventoryPanel` per-row Stock 1 / Stock Max / Remove buttons with the
+`_refresh_filter_visibility` / `_get_active_store_shelf_slots` /
+`_find_shelf_slot_by_id` / `_on_remove_from_shelf` / `_prep_row_action`
+support, the `Customer._set_state` debug-build FSM trace, the
+`InteractionRay` debug-build telemetry pair, the `RetroGames`
+`_refresh_checkout_prompt` empty-verb dead-prompt removal, the `ShelfSlot`
+`_apply_category_color` cosmetic null-guard and `_refresh_prompt_state`
+empty-verb arm, the `CustomerSystem` Day-1 forced-spawn timer race-guard
+family, the `DayCycleController._performance_report_system` Tier-3 init
+guard, and the `Constants.STARTING_CASH` SSoT-fallback constant doc).
+
+One Low silent-swallow hole was tightened (§F-97 — the
+`InventoryPanel._on_remove_from_shelf` non-shelf-prefix silent return is now
+a `push_warning` because reaching that branch implies a row-builder
+regression rather than a legitimate state). The §F-96 cite anchor was
+pre-claimed by the working-tree author at
+`InventoryPanel._find_shelf_slot_by_id` (an empty-`slot_id` data-integrity
+reject against hand-edited save loads); Pass 15 acknowledges that cite as
+the canonical numbering anchor and resumes at §F-97.
+
+Eighteen Note-level test-seam / Tier-init / debug-build-gated /
+cosmetic-seam / race-guard patterns were justified inline (§F-98 through
+§F-115). All eighteen are anchored either to an upstream diagnostic surface
+that already escalates (§F-93 content-authoring warning at load,
+`debug_overlay._debug_force_complete_sale` `push_warning` at click time,
+loader content-validator at CI), to a Tier-init contract that production
+paths cannot reach (§F-44 / §F-54 autoload-test-seam family, §J2 Tier-5
+init pattern), or to an `OS.is_debug_build()` gate that short-circuits
+release builds before any cost (§F-58 family).
+
+No new Critical / High / Medium findings.
+
+Pass 14 swept the post-Pass-13 working tree introducing the BRAINDUMP
+"Day-1 fully playable" feature set: the `ObjectiveDirector` Day-1
+step-chain machinery, the `InventoryPanel` one-click stocking buttons (and
+the `InventoryShelfActions.stock_one` / `stock_max` helpers behind them),
+the `Customer` waypoint-fallback navigation that bypasses
+`NavigationAgent3D` when the navmesh is missing or unbaked, and the
+`MallOverview` event-feed timestamp / item-name resolution.
+
+Three Low silent-swallow holes were tightened: §F-92 (stock helper wiring
+contract symmetry with the existing EH-04 / §F-04 contract on `place_item`
+/ `remove_item_from_shelf` / `move_to_backroom`), §F-93 (Day-1 step-chain
+content-authoring guard inside `_load_content`; a typo'd step entry no
+longer silently disables the entire chain), §F-94 (per-customer
+`push_warning` on every waypoint-fallback engagement so a wiring regression
+in the navmesh bake / scene tree shows up in dev console / CI log instead
+of routing every NPC through direct-line motion silently). One Note-level
+cosmetic-seam pattern was justified inline (§F-95 mall-overview feed empty
+item / store name fallbacks; paired with §F-89 toast fallback and
+ContentRegistry's existing one-time-per-id warning).
+
+No new Critical / High / Medium findings.
 
 Pass 13 swept the surfaces Pass 12 left unaudited inside the same
 working-tree change set: the unknown-`item_id` silent `continue` inside
@@ -471,6 +701,30 @@ Pass 1 corrected three medium log-level mismatches.
 | F-89 | `checkout_system.gd:561–582` | `_emit_sale_toast` empty-`item_name` silent skip on the BRAINDUMP "see the sale happen" toast | Note | **Acted** Pass 13 — §F-89 cite added (cosmetic-only fallback; surrounding sale still completes; ItemDefinition validator catches missing `item_name` in CI) |
 | F-90 | `game_world.gd:1144–1156` | `_on_store_entered` new `if store_state_manager:` guard around `set_active_store(store_id, false)` | Note | **Acted** Pass 13 — §F-90 cite added (Tier-2 init pattern, mirrors §J2 / §F-30; downstream readers of `active_store_id` already escalate loudly when empty) |
 | F-91 | `day_cycle_controller.gd:57–72` | `_on_day_summary_dismissed` `is_instance_valid(_mall_overview)` early return | Note | **Acted** Pass 13 — §F-91 cite added (Tier-5 init pattern, symmetric with the producer-side guard at line 220 in `_show_day_summary`) |
+| F-92 | `inventory_shelf_actions.gd:97–141` | `stock_one` / `stock_max` silent rejection on null `inventory_system` (Pass-12 one-click stock buttons bypassed `InventoryPanel.open()` wiring) | Low | **Acted** Pass 14 — `push_warning` added at both helper entry points (mirrors §F-04 / EH-04 wiring contract on `place_item` / `remove_item_from_shelf` / `move_to_backroom`) |
+| F-93 | `objective_director.gd:69–112` | `_load_content` step-array parsing silent drops (non-Dictionary step entry, non-Array `steps` field, Day-1 step-count mismatch) — typo'd Day-1 step would otherwise silently disable the entire chain via `_day1_steps_available` | Low | **Acted** Pass 14 — `push_warning` per offending branch (each with offending type / count) |
+| F-94 | `customer.gd:400–446` | `_detect_navmesh_or_fallback` silent fallback engagement (no NavigationAgent3D, no NavigationRegion3D ancestor, zero-polygon NavigationMesh) — wiring regression would otherwise route every customer through direct-line motion | Low | **Acted** Pass 14 — `push_warning` per engagement (per-customer rather than once-per-scene so partial regressions still surface every instance) |
+| F-95 | `mall_overview.gd:219–251` | `_on_item_stocked` / `_on_customer_entered` / `_on_customer_purchased` cosmetic empty-name fallbacks (`"item"` / `"the mall"` / `"item"`) | Note | **Acted (justify)** Pass 14 — §F-95 cite added (paired with §F-89 toast fallback; ContentRegistry already warns once per unknown id; `validate_*.sh` content suite catches authoring holes at CI) |
+| F-96 | `inventory_panel.gd:543–550` | `_find_shelf_slot_by_id` empty-`slot_id` rejection (data-integrity guard against hand-edited save where `current_location = "shelf:"` would match the first empty-id slot in `&"shelf_slot"` group walk) | Low | **Acted (justify)** Pass 15 — §F-96 cite pre-claimed in working tree by author; acknowledged as canonical Pass-15 numbering anchor |
+| F-97 | `inventory_panel.gd:512–522` | `_on_remove_from_shelf` non-shelf-prefix silent return — UI invariant (Remove button only built when `current_location.begins_with("shelf:")` in `_populate_grid:484`) | Low | **Acted (tighten)** Pass 15 — `push_warning` with offending instance_id / location; row-builder regression now visible in dev console / CI log |
+| F-98 | `objective_director.gd:198–231` | `_advance_day1_step_if` / `_advance_to_close_day_step` state-machine race-guard silent returns (wrong-day, wrong-step, post-rollover timer arrival) | Note | **Acted (justify)** Pass 15 — §F-98 docstrings added (downstream consequence of §F-93 load-time warning; per-emit warning would echo upstream diagnostic on every signal) |
+| F-99 | `objective_director.gd:212–224` | `_schedule_close_day_step` `tree == null` test-seam (chain still terminates by jumping directly to `_advance_to_close_day_step`) | Note | **Acted (justify)** Pass 15 — §F-99 docstring added (mirrors §F-44 / §F-54 autoload-test-seam contract) |
+| F-100 | `debug_overlay.gd:249–271, 281–295` | F8/F9/F10/F11 dev-shortcut `push_warning` pattern across `_debug_add_test_inventory`, `_debug_force_complete_sale` precondition checks (debug-build-only entry points, queue_free in release) | Note | **Acted (justify)** Pass 15 — §F-100 docstrings added (single diagnostic surface for the §F-112 inner cascade) |
+| F-101 | `mall_overview.gd:156–170` | `_format_timestamp` cosmetic-precision seam — optional `_time_system` injection; hub remains operational with hour-only precision in headless tests / pre-Tier-1 frames | Note | **Acted (justify)** Pass 15 — §F-101 docstring added (paired with §F-95 mall-overview feed fallbacks) |
+| F-102 | `day_summary.gd:677–698` | `_on_day_closed_payload` legacy-payload defaults: `backroom_inventory_remaining` / `shelf_inventory_remaining` default to 0; `customers_served` `has()` gate keeps prior label text when missing | Note | **Acted (justify)** Pass 15 — §F-102 cite added (forward-compat default mirrors §F-61; producer side at §F-114) |
+| F-103 | `hud.gd:185–201` | `_seed_cash_from_economy` Tier-5 init silent return on null EconomySystem (matches `_seed_counters_from_systems` Tier-5 init pattern) | Note | **Acted (justify)** Pass 15 — §F-103 docstring tightened with cite (mirrors §J2 / §F-69; mirrored by §F-115 in `kpi_strip`) |
+| F-104 | `inventory_panel.gd:413–417, 536–542` | `_refresh_filter_visibility` onready-null guard + `_get_active_store_shelf_slots` SceneTree-null test-seam (Tier-5 onready / bare-Control unit-test fixtures) | Note | **Acted (justify)** Pass 15 — §F-104 docstrings added at both sites (helper callers surface failure via `EventBus.notification_requested`) |
+| F-105 | `game_world.gd:846–854` | `_on_day_summary_main_menu_requested` GAME_OVER silent return — terminal state owns its own routing | Note | **Acted (justify)** Pass 15 — §F-105 docstring tightened with cite (parallel to `_on_day_summary_mall_overview_requested`; duplicate `go_to_main_menu()` would race) |
+| F-106 | `customer.gd:309–321` | `_set_state` debug-build FSM trace `OS.is_debug_build()` gate (per BRAINDUMP Priority 14 customer-loop observability) | Note | **Acted (justify)** Pass 15 — §F-106 cite added (release builds skip print; same gate as §F-108 / §F-58) |
+| F-107 | `constants.gd:10–18` | `STARTING_CASH := 500.0` SSoT-fallback constant — authoritative value lives in `pricing_config.json::starting_cash` loaded via `EconomyConfig` | Note | **Acted (justify)** Pass 15 — §F-107 cite added (deterministic test-fixture default + save-load fallback; loader escalates malformed JSON via boot validation) |
+| F-108 | `interaction_ray.gd:294–306` | `_log_interaction_focus` / `_log_interaction_dispatch` debug-build interaction telemetry (dead-prompt audit trail) | Note | **Acted (justify)** Pass 15 — §F-108 docstring added (release builds short-circuit before string formatting; same gate family as §F-106 / §F-58) |
+| F-109 | `retro_games.gd:368–390` | `_refresh_checkout_prompt` empty-verb dead-prompt removal — Day 1 customers auto-complete checkout via PlayerCheckout, so player-driven verb on counter would advertise no-op action | Note | **Acted (justify)** Pass 15 — §F-109 cite added (same dead-prompt removal contract as §F-111; pre-existing EH-07 boot warning still covers missing-node case) |
+| F-110 | `shelf_slot.gd:283–301` | `_apply_category_color` cosmetic-only null-guard + `CATEGORY_COLORS.get(category, DEFAULT_PLACEHOLDER_COLOR)` empty-category fallback | Note | **Acted (justify)** Pass 15 — §F-110 docstring added (failure means a placeholder is untinted, not a gameplay break) |
+| F-111 | `shelf_slot.gd:355–383` | `_refresh_prompt_state` empty-verb arm + `_authored_display_name` fallback when `set_display_data` hasn't been called | Note | **Acted (justify)** Pass 15 — §F-111 docstring added (same dead-prompt removal contract as §F-109; `InventoryPanel._on_interactable_interacted` gates `open()` on `not slot.is_occupied()`) |
+| F-112 | `checkout_system.gd:751–789` | `dev_force_complete_sale` precondition cascade silent returns (`OS.is_debug_build()` gate, no inventory system, no waiting customer, no desired item, item not in inventory) | Note | **Acted (justify)** Pass 15 — §F-112 docstring added (single diagnostic surface lives caller-side at §F-100 `debug_overlay._debug_force_complete_sale` "no pending sale to force-complete") |
+| F-113 | `customer_system.gd:668–700` | `_on_item_stocked` + `_on_day1_forced_spawn_timer_timeout` Day-1 forced-spawn race-guard family (duplicate stock event, customer already spawned, active customer present, timer already running, day rolled over) | Note | **Acted (justify)** Pass 15 — §F-113 docstrings added at both sites (timer-callback race-guards; `pool.is_empty()` is upstream-detected by content-load CustomerTypes validator) |
+| F-114 | `day_cycle_controller.gd:195–203` | `customers_served = 0` Tier-3 init guard when `_performance_report_system` is null (matches surrounding `_inventory_system` / `_staff_system` null-system fallbacks) | Note | **Acted (justify)** Pass 15 — §F-114 cite added (paired with consumer-side §F-102 `has()` check; production day-close cannot reach this branch) |
+| F-115 | `kpi_strip.gd:49–60` | `_seed_cash_from_economy` Tier-init test-seam silent returns (autoload-missing `GameManager`, pre-Tier-1 `EconomySystem`) | Note | **Acted (justify)** Pass 15 — §F-115 docstring added (mirrors §F-103 HUD seeding contract; `_on_money_changed` re-populates label on first transaction) |
 | EH-AS-1 | (policy) | `assert()` in autoload bodies paired with runtime escalation | Note | Documented — see policy section |
 
 ---
@@ -1868,6 +2122,299 @@ symmetric guard pattern, no production gap.
 
 ---
 
+## Pass 15 Per-Finding Details
+
+### §F-97 — `inventory_panel.gd:512–522` — `_on_remove_from_shelf` non-shelf-prefix UI invariant (Pass 15)
+
+The Pass-12 / Pass-14 working tree introduces per-row `Stock 1` /
+`Stock Max` / `Remove` buttons on `InventoryPanel`. The row builder gates
+which buttons appear based on `item.current_location`:
+
+```gdscript
+if item.current_location == "backroom":
+    InventoryRowBuilder.add_stock_buttons(...)
+elif item.current_location.begins_with("shelf:"):
+    InventoryRowBuilder.add_remove_button(
+        overlay,
+        _on_remove_from_shelf.bind(item, row),
+    )
+```
+
+Inside `_on_remove_from_shelf`, the original code re-checked the prefix
+and silently returned on mismatch:
+
+```gdscript
+func _on_remove_from_shelf(item: ItemInstance, row: PanelContainer) -> void:
+    _prep_row_action(item, row)
+    if not item.current_location.begins_with("shelf:"):
+        return
+    var slot_id: String = item.current_location.substr(6)
+    …
+```
+
+The `if not …: return` was a paranoia guard against a row-builder bug
+that wires the Remove handler onto a non-shelf row. Reaching that branch
+implies the row builder offered a Remove action for a backroom item — a
+UI invariant violation that should be observable in dev console / CI log
+rather than silently failing.
+
+Pass 15 tightened the silent return to a `push_warning` that names both
+the offending instance_id and the unexpected location, while preserving
+the legitimate fallback path further down (no matching world slot →
+`move_to_backroom` for headless tests / hub-mode reconciliation):
+
+```gdscript
+if not item.current_location.begins_with("shelf:"):
+    # §F-97 — UI invariant: the per-row Remove button is only built when
+    # `item.current_location` starts with `shelf:` (see
+    # `inventory_row_builder.add_remove_button` gating in `_populate_grid`).
+    # Reaching this branch means a button was offered for a non-shelf item,
+    # which is a row-builder regression rather than a legitimate state.
+    push_warning(
+        "InventoryPanel._on_remove_from_shelf: row built for non-shelf "
+        + "item (instance_id=%s, location=%s); ignoring."
+        % [item.instance_id, item.current_location]
+    )
+    return
+```
+
+**Risk lenses:** Reliability (UI invariant violation goes unnoticed).
+Observability (CI / dev console misses a row-builder regression).
+
+**Severity:** Low. The UI invariant is enforced by the row-builder gate
+in `_populate_grid:484`, so production paths cannot reach the
+prefix-guard branch. The warning is dev-fidelity insurance against a
+future row-builder edit dropping the prefix gate.
+
+**Tests:** Full GUT suite passes — 5076 / 5075 / 1 (the 1 failure is the
+pre-existing `condition_range` content-completeness check on five
+`retro_games.json` items, unrelated to this branch). The §F-97
+`push_warning` does not fire in any test (verified by greping the test
+log for the warning string), confirming the UI invariant holds.
+
+---
+
+## Pass 14 Per-Finding Details
+
+### §F-92 — `inventory_shelf_actions.gd:97–141` — `stock_one` / `stock_max` `inventory_system` wiring contract (Pass 14)
+
+The Pass-13 working tree introduces one-click `Stock 1` / `Stock Max` row
+buttons on `InventoryPanel` (per BRAINDUMP "Day-1 fully playable") and two
+new helper methods `InventoryShelfActions.stock_one(item, slots) -> bool`
+and `stock_max(item, slots) -> int`. Both helpers internally route to the
+existing `place_item` for the actual mutation, but their original guard:
+
+```gdscript
+if item == null or inventory_system == null:
+    return false
+```
+
+silently collapses two distinct call paths — "no item to stock" (a
+legitimate caller no-op gated upstream by the `InventoryPanel` button
+state) and "helper was constructed without a parent panel
+synchronizing `inventory_system`" (a wiring regression). The latter is
+the case `place_item` / `remove_item_from_shelf` / `move_to_backroom`
+already escalate via `push_warning` per the EH-04 / §F-04 contract,
+documented in this report at the original finding and in inline cites on
+each method.
+
+Pass 14 split the guard so the null-`item` arm preserves the silent
+no-op contract (button gating is still the trustworthy upstream) and the
+null-`inventory_system` arm `push_warning`s with a method-specific
+message:
+
+```gdscript
+func stock_one(item: ItemInstance, slots: Array) -> bool:
+    if item == null:
+        return false
+    if inventory_system == null:
+        push_warning(
+            "InventoryShelfActions.stock_one: inventory_system not "
+            + "wired; rejecting one-click stock."
+        )
+        return false
+    …
+```
+
+The same pattern is applied to `stock_max`. `_collect_backroom_matches`
+inside `stock_max` then dereferences `inventory_system` directly; with
+the early warn-and-return, the rest of the function is reached only
+when wiring is sound.
+
+**Risk lenses:** Reliability (stock helpers silently failing on broken
+wiring). Observability (CI / playtest log misses the regression).
+
+**Severity:** Low (button gating in `InventoryPanel` makes the broken
+path test-only in production; the warning is for fidelity with the
+existing helper contract).
+
+**Tests:** All `tests/gut/test_inventory_shelf_actions_stocking.gd` cases
+pass (5037 / 5037 GUT total) — the suite drives the helper directly
+with valid wiring; the wiring-violation paths are exercised only by the
+push_warning emitted on misuse.
+
+---
+
+### §F-93 — `objective_director.gd:69–112` — `_load_content` Day-1 step-chain content guard (Pass 14)
+
+The Pass-12 working tree adds a `steps` array (length `DAY1_STEP_COUNT`
+= 8) to the Day-1 entry of `game/content/objectives.json`. The
+`ObjectiveDirector` walks the chain in order, advancing on each
+gameplay signal (`panel_opened` "inventory", `placement_mode_entered`,
+`item_stocked`, `customer_state_changed` BROWSING,
+`customer_ready_to_purchase`, `customer_purchased`, sale-complete
+delay, `close_day`). The active step's `text` / `action` / `key` fields
+override the day's pre-sale text on `_emit_current` *only when*
+`_day1_steps_available()` returns true, gated on the parsed array's
+length matching `DAY1_STEP_COUNT` exactly.
+
+The original `_load_content` parser had three silent-degrade arms:
+
+1. A non-Dictionary entry inside `steps` was skipped via
+   `if step_entry is Dictionary:` with no `else`. A typo (e.g. an `int`
+   or a `null` smuggled through schema relaxation) shrunk the array
+   below 8 → `_day1_steps_available()` returned false → Day-1 reverted
+   silently to the legacy pre-sale text.
+2. A `steps` field that was present but not an `Array` was coerced via
+   `if steps_raw is Array:` with no `else`. Same end result.
+3. The `steps_typed.size() != DAY1_STEP_COUNT` mismatch surfaced only
+   indirectly at runtime — the rail flipped to the wrong copy with no
+   diagnostic.
+
+Pass 14 adds explicit `push_warning` calls to each arm, citing the
+offending type / count. Days other than 1 may legitimately omit `steps`
+or carry a different count, so the size guard fires only for `day == 1`.
+
+```gdscript
+elif e.has("steps"):
+    push_warning(
+        "ObjectiveDirector: day %d has non-Array `steps` field (%s); "
+        + "ignored."
+        % [day_int, type_string(typeof(steps_raw))]
+    )
+…
+if day_int == 1 and steps_typed.size() != DAY1_STEP_COUNT:
+    push_warning(
+        "ObjectiveDirector: day 1 `steps` count is %d; "
+        + "expected %d. Day-1 step chain will be disabled and the "
+        + "rail will fall back to pre-sale / post-sale text."
+        % [steps_typed.size(), DAY1_STEP_COUNT]
+    )
+```
+
+(The literal word "tutorial" is intentionally avoided in the warning
+strings: `scripts/validate_tutorial_single_source.sh` is a tripwire that
+forbids the token outside comments in this file, per Phase 0.1 P1.3.)
+
+**Risk lenses:** Reliability (Day-1 critical-path content silently
+disabled). Observability (regression invisible in CI / playtest log).
+
+**Severity:** Low (only fires on a content-authoring regression in
+`objectives.json`; the surrounding pre-sale fallback still leaves the
+rail readable).
+
+**Tests:** All `tests/gut/test_objective_director.gd` cases pass; the
+existing GUT fixture seeds a valid 8-step Day-1 chain so the warnings
+do not fire under test.
+
+---
+
+### §F-94 — `customer.gd:400–446` — `_detect_navmesh_or_fallback` waypoint-fallback engagement visibility (Pass 14)
+
+The Pass-13 working tree adds a direct-line waypoint-fallback movement
+mode to `Customer` (per BRAINDUMP "navmesh absent or broken" gate). When
+no `NavigationAgent3D` child is found, no `NavigationRegion3D` ancestor
+is reachable, or the resolved `NavigationMesh` has zero polygons,
+`_detect_navmesh_or_fallback` flips `_use_waypoint_fallback = true`,
+and `_move_along_path` / `_is_navigation_finished` /
+`_set_navigation_target` route through `_move_waypoint_fallback`,
+calling `move_and_slide` directly toward the last target instead of
+querying the agent.
+
+The fallback is a real production safety net for the BRAINDUMP Day-1
+slice (a missing or unbaked navmesh would otherwise leave every
+customer immobile and break the sale loop). But the original
+implementation flipped the fallback flag silently on each of the three
+engagement paths, which makes the fallback indistinguishable from the
+"navmesh works" state in CI / dev console — a wiring regression
+(NavigationRegion sibling deleted from a store .tscn, navmesh bake
+failed, NavigationAgent3D child missing from `customer.tscn`) would
+silently route every NPC through direct-line motion, masking a
+gameplay-critical authoring hole.
+
+Pass 14 emits a `push_warning` for each engagement path, including the
+specific failure (`NavigationAgent3D child missing`, `no NavigationRegion3D
+ancestor found`, `no NavigationMesh resource` / `navmesh with 0
+polygons`) and the customer instance id. The warning is per-customer
+rather than once-per-scene because a partial regression — e.g. some
+customers fail to register their agent in a child-instantiation race —
+would otherwise be hidden by the first engagement's emit.
+
+```gdscript
+func _detect_navmesh_or_fallback() -> void:
+    if _navigation_agent == null:
+        push_warning("Customer %d: NavigationAgent3D child missing; "
+            + "engaging direct-line waypoint fallback. Scene wiring "
+            + "regression (see §F-94)." % get_instance_id())
+        enable_waypoint_fallback()
+        return
+    …
+```
+
+`tests/gut/test_customer_waypoint_fallback.gd` deliberately drives all
+three engagement paths to validate the fallback behavior; the warnings
+emitted by those tests land in the `tests/test_run.log` stderr file
+(per the `2>>"$LOG_FILE"` redirect in `tests/run_tests.sh`) without
+failing the suite — `push_warning` does not raise.
+
+**Risk lenses:** Reliability (silent navmesh regression). Observability
+(no signal in dev console / CI when the fallback engages).
+
+**Severity:** Low (fallback is a real safety net, the gap is the lack
+of a diagnostic when it engages; a regression that triggers the fallback
+in production still keeps the sale loop functional, just less reliably
+than baked navigation).
+
+---
+
+### §F-95 — `mall_overview.gd:219–251` — feed-entry empty-name cosmetic seam fallbacks (Pass 14)
+
+The Pass-13 working tree adds three new `EventBus` subscribers on
+`MallOverview` for the event feed (BRAINDUMP "see the sale happen"
+visibility): `_on_item_stocked`, `_on_customer_entered`,
+`_on_customer_purchased`. Each one resolves a display-friendly name
+(item name or store name) and falls back to a literal English word
+when the lookup returns empty:
+
+```gdscript
+func _on_item_stocked(item_id, _shelf_id) -> void:
+    var item_name := _resolve_item_name(StringName(item_id))
+    if item_name.is_empty():
+        item_name = "item"
+    _add_feed_entry("Stocked %s" % item_name)
+```
+
+The pattern is the same cosmetic seam that §F-89 covers for
+`CheckoutSystem._emit_sale_toast`: `ContentRegistry.get_display_name`
+itself already echoes the raw id once per unknown id (warning-suppressed
+via `_warn_helper_fallback_once`), and `tests/validate_*.sh` content
+suite catches a registered `ItemDefinition` with an empty `item_name`
+at CI time. The literal fallback word (`"item"`, `"the mall"`) is the
+cosmetic seam, not the diagnostic surface.
+
+`_on_customer_entered`'s empty-`store_id` fallback is also the
+documented non-error path for hub-mode wanderers whose payload omits a
+store target — `EventBus.customer_entered` is emitted without a
+specific store in that case, so a literal "the mall" rendering is the
+correct degraded form.
+
+**Risk lenses:** Observability (cosmetic only; primary diagnostic lives
+in ContentRegistry and validate scripts).
+
+**Severity:** Note — intentional, low-risk, documented.
+
+---
+
 ### §F-82 — `checkout_panel.gd:86–89`, `close_day_preview.gd:192–195`, `day_summary.gd:235–237` — modal `_exit_tree` defensive CTX_MODAL cleanup (Pass 11)
 
 Three modal panels (`CheckoutPanel`, `CloseDayPreview`, `DaySummary`)
@@ -1953,6 +2500,10 @@ site has either an inline cite or a class-level docstring pointing here.
 | Acted (Pass 12) — justified inline | §F-84 (`CustomerSystem._is_day1_spawn_blocked` test-seam silent yield), §F-85 (`TutorialSystem._load_progress` `SCHEMA_VERSION` reset paired with §F-20), §F-86 (`Customer._evaluate_current_shelf` emit + `AmbientMomentsSystem` receivers — emit filtered upstream by `_is_item_desirable`, receiver guards documented) |
 | Acted (Pass 13) — tightened | §F-88 (`DataLoader.create_starting_inventory` unknown-`item_id` silent `continue` → `push_warning` for content-authoring symmetry with the §F-83 store-missing trio and the category-mismatch warning right below) |
 | Acted (Pass 13) — justified inline | §F-89 (`CheckoutSystem._emit_sale_toast` empty-`item_name` cosmetic-only skip — content validator catches missing display names at CI time), §F-90 (`GameWorld._on_store_entered` Tier-2 `set_active_store` guard — downstream readers already escalate on empty `active_store_id`), §F-91 (`DayCycleController._on_day_summary_dismissed` MallOverview Tier-5 fallback — symmetric with the producer-side guard at line 220 in `_show_day_summary`) |
+| Acted (Pass 14) — tightened | §F-92 (`InventoryShelfActions.stock_one` / `stock_max` null-`inventory_system` rejection → `push_warning`; same EH-04 / §F-04 wiring contract on `place_item` / `remove_item_from_shelf` / `move_to_backroom`), §F-93 (`ObjectiveDirector._load_content` step-array parsing → `push_warning` per non-Dictionary entry / non-Array steps / Day-1 count mismatch), §F-94 (`Customer._detect_navmesh_or_fallback` per-engagement `push_warning` for missing NavigationAgent3D / NavigationRegion3D / zero-polygon NavigationMesh) |
+| Acted (Pass 14) — justified inline | §F-95 (`MallOverview._on_item_stocked` / `_on_customer_entered` / `_on_customer_purchased` cosmetic empty-name fallbacks — paired with §F-89 toast fallback; ContentRegistry already warns once per unknown id) |
+| Acted (Pass 15) — tightened | §F-97 (`InventoryPanel._on_remove_from_shelf` non-shelf-prefix silent return → `push_warning` with offending instance_id / location; UI-invariant violation since the row's Remove button is only built for shelf items in `_populate_grid:484`) |
+| Acted (Pass 15) — justified inline | §F-96 (`InventoryPanel._find_shelf_slot_by_id` empty-`slot_id` data-integrity reject — pre-claimed in working tree before this pass), §F-98 (ObjectiveDirector state-machine race-guards on `_advance_day1_step_if` / `_advance_to_close_day_step`), §F-99 (ObjectiveDirector `_schedule_close_day_step` `tree==null` test-seam), §F-100 (DebugOverlay dev-shortcut `push_warning` pattern across F8–F11 debug-build entry points), §F-101 (MallOverview `_format_timestamp` optional-`_time_system` cosmetic-precision seam paired with §F-95), §F-102 (DaySummary backroom/shelf/customers_served legacy-payload defaults paired with §F-61 forward-compat contract), §F-103 (HUD `_seed_cash_from_economy` Tier-5 init mirrored by §F-115), §F-104 (InventoryPanel `_refresh_filter_visibility` onready-null + `_get_active_store_shelf_slots` SceneTree-null test-seam), §F-105 (GameWorld `_on_day_summary_main_menu_requested` GAME_OVER terminal-routing return), §F-106 (Customer `_set_state` debug-build FSM trace `OS.is_debug_build()` gate), §F-107 (Constants `STARTING_CASH` SSoT-fallback constant doc), §F-108 (InteractionRay `_log_interaction_focus` / `_log_interaction_dispatch` debug-build telemetry), §F-109 (RetroGames `_refresh_checkout_prompt` empty-verb dead-prompt removal), §F-110 (ShelfSlot `_apply_category_color` cosmetic null-guard + default-color fallback), §F-111 (ShelfSlot `_refresh_prompt_state` empty-verb + `_authored_display_name` fallback paired with §F-109), §F-112 (CheckoutSystem `dev_force_complete_sale` precondition cascade — diagnostic surface lives caller-side at §F-100), §F-113 (CustomerSystem `_on_item_stocked` / `_on_day1_forced_spawn_timer_timeout` race-guard family), §F-114 (DayCycleController `_performance_report_system != null` Tier-3 init guard paired with §F-102), §F-115 (KPIStrip `_seed_cash_from_economy` Tier-init mirror of §F-103) |
 | Acceptable prod notes (justified) | §F-04–§F-21, §F-34, §F-37, §F-38, §F-45, §F-48, §F-49, §J4 |
 | Retired (feature removed) | §F-22 (`hud.gd::_refresh_customers_active` — superseded by `_on_customer_purchased_hud` in Pass 12), §F-28, §F-79 (`TutorialSystem` MOVE_TO_SHELF surface — removed in Pass 12 step re-sequence) |
 | Needs telemetry | None — EventBus + AuditLog provide sufficient observability |
@@ -1962,7 +2513,7 @@ site has either an inline cite or a class-level docstring pointing here.
 
 ## Escalations
 
-None. All findings across all thirteen passes were either tightened
+None. All findings across all fifteen passes were either tightened
 in-place, justified with inline comments, or retired when the feature
 itself was removed.
 
@@ -1971,6 +2522,72 @@ itself was removed.
 ## Final Verdict
 
 **Prod posture acceptable.**
+
+Pass 15 swept the post-Pass-14 working tree as the BRAINDUMP "Day-1 fully
+playable" change set continued to expand. The surface under audit included
+the `ObjectiveDirector` step-machinery `_advance_*` helpers, the
+`DebugOverlay` F8/F9/F10/F11 dev shortcuts (`_debug_add_test_inventory`,
+`_debug_force_complete_sale`), the `MallOverview._format_timestamp` minute-
+precision injection, the `DaySummary` backroom/shelf inventory split +
+`customers_served` payload, the `HUD` / `KPIStrip` `_seed_cash_from_economy`
+helpers, the `InventoryPanel` per-row Stock 1 / Stock Max / Remove buttons
+(plus the `_refresh_filter_visibility` / `_get_active_store_shelf_slots` /
+`_find_shelf_slot_by_id` / `_on_remove_from_shelf` / `_prep_row_action`
+support), the `GameWorld._on_day_summary_main_menu_requested` GAME_OVER
+guard, the `Customer._set_state` debug-build FSM trace, the
+`STARTING_CASH` SSoT-fallback constant doc, the `InteractionRay`
+debug-build telemetry pair, the `RetroGames._refresh_checkout_prompt`
+empty-verb dead-prompt removal, the `ShelfSlot._apply_category_color` and
+`_refresh_prompt_state` cosmetic / dead-prompt arms, the `CustomerSystem`
+Day-1 forced-spawn race-guard family, the
+`DayCycleController._performance_report_system` Tier-3 init guard, and the
+`Constants.STARTING_CASH` SSoT-fallback constant.
+
+One Low silent-swallow hole was tightened (§F-97 — the
+`InventoryPanel._on_remove_from_shelf` non-shelf-prefix silent return is
+now `push_warning` because reaching that branch implies a row-builder
+regression rather than a legitimate state). The §F-96 cite anchor was
+pre-claimed by the working-tree author at
+`InventoryPanel._find_shelf_slot_by_id` (an empty-`slot_id` data-integrity
+reject against hand-edited save loads); Pass 15 acknowledges that cite as
+the canonical numbering anchor.
+
+Eighteen Note-level test-seam / Tier-init / debug-build-gated /
+cosmetic-seam / race-guard patterns were justified inline (§F-98 through
+§F-115). All eighteen are anchored either to an upstream diagnostic
+surface that already escalates (§F-93 content-authoring warning at load,
+`debug_overlay._debug_force_complete_sale` `push_warning` at click time,
+loader content-validator at CI), to a Tier-init contract that production
+paths cannot reach (§F-44 / §F-54 autoload-test-seam family, §J2 Tier-5
+init pattern), or to an `OS.is_debug_build()` gate that short-circuits
+release builds before any cost (§F-58 family). The surface is
+predominantly Tier-init / test-seam patterns whose production paths always
+have the autoload set, the SceneTree present, or the
+`OS.is_debug_build()`-only entry point gated.
+
+After Pass 15 the repo's full GUT suite (`bash tests/run_tests.sh`)
+reports **5076 / 5075 passing**, 1 pre-existing failure (the
+`condition_range` content-completeness check on five `retro_games.json`
+items — unrelated to error-handling work; lives in the broader
+content-authoring scope tracked under ISSUE-018 family). The §F-97
+`push_warning` does not fire in any test (verified by greping the test log
+for the warning string) — the UI-invariant guarantee (the row's Remove
+button is only built when `current_location.begins_with("shelf:")`) means
+no test reaches the prefix-guard branch under normal operation. All
+fifteen passes' findings are accounted for; no hidden data-corruption
+paths remain.
+
+Pass 14 swept the same BRAINDUMP "Day-1 fully playable" surface that Pass
+15 expanded on: the `ObjectiveDirector` Day-1 step-chain machinery, the
+`InventoryPanel` one-click stocking buttons (and the
+`InventoryShelfActions.stock_one` / `stock_max` helpers behind them), the
+`Customer` waypoint-fallback navigation that bypasses `NavigationAgent3D`
+when the navmesh is missing or unbaked, and the `MallOverview` event-feed
+timestamp / item-name / store-name resolution. Three Low silent-swallow
+holes were tightened (§F-92 stock helper wiring contract, §F-93 Day-1
+step-chain content guard, §F-94 customer waypoint-fallback engagement
+visibility) and one Note-level cosmetic-seam pattern was justified inline
+(§F-95 mall-overview feed empty-name fallbacks).
 
 Pass 13 swept the surfaces Pass 12 left unaudited inside the same
 working-tree change set. Pass 12 covered the `DataLoader` "store missing"

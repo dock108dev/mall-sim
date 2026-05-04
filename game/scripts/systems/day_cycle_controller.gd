@@ -185,12 +185,27 @@ func _show_day_summary(day: int) -> void:
 	# In production the system is always live by day-close (gameplay has been
 	# running long enough to record sales); the null arm fires only in
 	# unit-test fixtures that drive `_show_day_summary` without a full GameWorld.
-	var inventory_remaining: int = 0
+	var backroom_remaining: int = 0
+	var shelf_remaining: int = 0
 	var inventory_system: InventorySystem = GameManager.get_inventory_system()
 	if inventory_system != null:
-		inventory_remaining = (
-			inventory_system.get_shelf_items().size()
-			+ inventory_system.get_backroom_items().size()
+		shelf_remaining = inventory_system.get_shelf_items().size()
+		backroom_remaining = inventory_system.get_backroom_items().size()
+	var inventory_remaining: int = shelf_remaining + backroom_remaining
+	# §F-114 — Day-summary "Customers Served" pulls from the cumulative day
+	# counter so the payload is self-contained — readers of `day_closed` no
+	# longer need to also subscribe to `performance_report_ready` to fill the
+	# label. The null-system arm is the Tier-3 init test-seam (matches the
+	# surrounding `_inventory_system` / `_staff_system` guards in this
+	# function): production day-close cannot reach this branch (the system is
+	# always live by then), and the default-to-0 emit means `day_summary.gd`
+	# either renders 0 (test fixture) or the real value (production), both of
+	# which are valid render states gated by the §F-102 `has()` check on the
+	# consumer side.
+	var customers_served: int = 0
+	if _performance_report_system != null:
+		customers_served = (
+			_performance_report_system.get_daily_customers_served()
 		)
 	var payload: Dictionary = {
 		"day": day,
@@ -198,6 +213,7 @@ func _show_day_summary(day: int) -> void:
 		"total_expenses": summary.get("total_expenses", 0.0),
 		"net_profit": summary.get("net_profit", 0.0),
 		"items_sold": summary.get("items_sold", 0),
+		"customers_served": customers_served,
 		"rent": summary.get("rent", 0.0),
 		"net_cash": _economy_system.get_cash(),
 		"store_revenue": store_revenue,
@@ -207,6 +223,8 @@ func _show_day_summary(day: int) -> void:
 		"discrepancy": discrepancy,
 		"staff_wages": wages,
 		"inventory_remaining": inventory_remaining,
+		"backroom_inventory_remaining": backroom_remaining,
+		"shelf_inventory_remaining": shelf_remaining,
 	}
 	EventBus.day_closed.emit(day, payload)
 	EventBus.publish_day_end_summary(payload)
