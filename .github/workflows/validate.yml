@@ -124,7 +124,15 @@ jobs:
           #   2. Engine-internal teardown noise that fires after a passing
           #      assertion (autofree race on await-suspended tests, settings
           #      lambda capture during malformed-config reload).
-          EXPECTED_ERROR_RE='ContentRegistry: duplicate (resource|entry) ID|ContentRegistry: alias .* maps to both|\[StoreRegistry\] (unknown store_id|empty store_id|duplicate register store_id)|\[StoreDirector\] .* — unknown store_id|\[CameraAuthority\] (invalid camera|not a Camera2D/Camera3D|expected exactly 1 current camera)|Object is locked and can.t be freed\.|Lambda capture at index 0 was freed\.'
+          #   3. ReturnsSystem _debit_store_account fail-loud — the refund
+          #      trust-delta fixture (test_returns_system.gd) intentionally
+          #      omits EconomySystem, exercising the documented Tier-1 init
+          #      regression guard at game/autoload/returns_system.gd:393.
+          #   4. Dummy-renderer "Parameter material is null" — the headless
+          #      renderer emits this from material_storage.cpp during autofree
+          #      of 3D scenes (mesh nodes without materials). Engine-internal,
+          #      not actionable from GDScript.
+          EXPECTED_ERROR_RE='ContentRegistry: duplicate (resource|entry) ID|ContentRegistry: alias .* maps to both|\[StoreRegistry\] (unknown store_id|empty store_id|duplicate register store_id)|\[StoreDirector\] .* — unknown store_id|\[CameraAuthority\] (invalid camera|not a Camera2D/Camera3D|expected exactly 1 current camera)|Object is locked and can.t be freed\.|Lambda capture at index 0 was freed\.|ReturnsSystem: _debit_store_account skipped|Parameter "material" is null\.'
           UNEXPECTED_ERRORS=$(grep "^ERROR:" "$GUT_OUTPUT_FILE" | grep -vE "$EXPECTED_ERROR_RE" || true)
           if [ -n "$UNEXPECTED_ERRORS" ]; then
             ERROR_COUNT=$(echo "$UNEXPECTED_ERRORS" | wc -l | tr -d ' ')

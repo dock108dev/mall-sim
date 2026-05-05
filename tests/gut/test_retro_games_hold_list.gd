@@ -254,7 +254,7 @@ func test_save_load_round_trip_restores_holds() -> void:
 	var fresh := RetroGames.new()
 	add_child_autofree(fresh)
 	fresh.load_save_data(snapshot)
-	assert_eq(fresh.get_hold_list().get_all_slips().size(), 2)
+	assert_eq(fresh.holds.get_hold_list().get_all_slips().size(), 2)
 
 
 func test_pending_holds_drop_off_after_fulfill() -> void:

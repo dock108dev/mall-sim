@@ -201,6 +201,22 @@ func _update_shopper_lod() -> void:
 		_mall_shoppers.update_lod()
 
 
+func _try_spawn_mall_shopper(spawn_capacity: int = -1) -> void:
+	if _mall_shoppers != null:
+		_mall_shoppers._try_spawn_mall_shopper(spawn_capacity)
+
+
+func _spawn_shopper_group(
+	archetype: PersonalityData.PersonalityType,
+	spawn_pos: Vector3,
+	spawn_capacity: int,
+) -> void:
+	if _mall_shoppers != null:
+		_mall_shoppers._spawn_shopper_group(
+			archetype, spawn_pos, spawn_capacity
+		)
+
+
 func _physics_process(_delta: float) -> void:
 	if not _performance_manager or _active_customers.is_empty():
 		return

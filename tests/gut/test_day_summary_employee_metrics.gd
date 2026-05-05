@@ -112,11 +112,11 @@ func test_hidden_thread_empty_keeps_label_hidden() -> void:
 
 
 func test_qualitative_label_thresholds() -> void:
-	assert_eq(_day_summary._qualitative_label(0.0), "Poor")
-	assert_eq(_day_summary._qualitative_label(0.30), "Strained")
-	assert_eq(_day_summary._qualitative_label(0.50), "Neutral")
-	assert_eq(_day_summary._qualitative_label(0.70), "Steady")
-	assert_eq(_day_summary._qualitative_label(0.90), "Strong")
+	assert_eq(DaySummaryMetrics.qualitative_label(0.0), "Poor")
+	assert_eq(DaySummaryMetrics.qualitative_label(0.30), "Strained")
+	assert_eq(DaySummaryMetrics.qualitative_label(0.50), "Neutral")
+	assert_eq(DaySummaryMetrics.qualitative_label(0.70), "Steady")
+	assert_eq(DaySummaryMetrics.qualitative_label(0.90), "Strong")
 
 
 func test_panel_layout_has_no_grid_or_table_container() -> void:
