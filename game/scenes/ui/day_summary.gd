@@ -21,11 +21,6 @@ const RECORD_PULSE_SCALE: float = 1.05
 const HIDDEN_THREAD_DELAY: float = 1.0
 const HIDDEN_THREAD_COLOR: Color = Color(0.78, 0.72, 0.62, 0.85)
 const TIER_CHANGE_COLOR := Color(1.0, 0.84, 0.0)
-const NET_PROFIT_POSITIVE_COLOR := Color(0.2, 0.8, 0.2)
-const NET_PROFIT_NEGATIVE_COLOR := Color(0.9, 0.2, 0.2)
-const NET_PROFIT_ZERO_COLOR := Color(1.0, 1.0, 1.0)
-const REVENUE_DELTA_POSITIVE_COLOR := Color(0.35, 0.85, 0.35)
-const REVENUE_DELTA_NEGATIVE_COLOR := Color(0.9, 0.45, 0.45)
 const SECONDARY_BUTTON_MODULATE := Color(1.0, 1.0, 1.0, 0.65)
 
 var _anim_tween: Tween
@@ -435,15 +430,15 @@ func _reset_stat_colors() -> void:
 func _apply_net_profit_color() -> void:
 	if _last_net_profit > 0.0:
 		_profit_label.add_theme_color_override(
-			"font_color", NET_PROFIT_POSITIVE_COLOR
+			"font_color", DaySummaryContent.NET_PROFIT_POSITIVE_COLOR
 		)
 	elif _last_net_profit < 0.0:
 		_profit_label.add_theme_color_override(
-			"font_color", NET_PROFIT_NEGATIVE_COLOR
+			"font_color", DaySummaryContent.NET_PROFIT_NEGATIVE_COLOR
 		)
 	else:
 		_profit_label.add_theme_color_override(
-			"font_color", NET_PROFIT_ZERO_COLOR
+			"font_color", DaySummaryContent.NET_PROFIT_ZERO_COLOR
 		)
 
 
@@ -460,25 +455,10 @@ func _build_customers_text(served: int) -> String:
 
 
 func _apply_revenue_headline(revenue: float) -> void:
-	var base: String = tr("DAY_SUMMARY_REVENUE") % revenue
-	if not _has_previous_day_revenue:
-		_revenue_label.text = base
-		_revenue_label.remove_theme_color_override("font_color")
-		return
-	var delta: float = revenue - _previous_day_revenue
-	var delta_text: String
-	var delta_color: Color
-	if delta > 0.0:
-		delta_text = "  (+$%.2f vs yesterday)" % delta
-		delta_color = REVENUE_DELTA_POSITIVE_COLOR
-	elif delta < 0.0:
-		delta_text = "  (-$%.2f vs yesterday)" % absf(delta)
-		delta_color = REVENUE_DELTA_NEGATIVE_COLOR
-	else:
-		delta_text = "  (flat vs yesterday)"
-		delta_color = NET_PROFIT_ZERO_COLOR
-	_revenue_label.text = base + delta_text
-	_revenue_label.add_theme_color_override("font_color", delta_color)
+	DaySummaryContent.apply_revenue_headline(
+		_revenue_label, revenue,
+		_previous_day_revenue, _has_previous_day_revenue,
+	)
 
 
 ## Hoist top-seller and forward-hook above the detail dump so headline
@@ -520,38 +500,16 @@ func _reset_animated_controls() -> void:
 
 func _set_net_profit_display(net_profit: float) -> void:
 	_last_net_profit = net_profit
-	if net_profit > 0.0:
-		_profit_label.text = "NET PROFIT: +$%.2f" % net_profit
-		_profit_label.add_theme_color_override(
-			"font_color", UIThemeConstants.get_positive_color()
-		)
-	elif net_profit < 0.0:
-		_profit_label.text = "NET LOSS: -$%.2f" % absf(net_profit)
-		_profit_label.add_theme_color_override(
-			"font_color", NET_PROFIT_NEGATIVE_COLOR
-		)
-	else:
-		_profit_label.text = "NET PROFIT: $0.00"
-		_profit_label.add_theme_color_override(
-			"font_color", NET_PROFIT_ZERO_COLOR
-		)
+	DaySummaryContent.set_net_profit(_profit_label, net_profit)
 
 
 func _set_warranty_display(
 	warranty_revenue: float, warranty_claims: float
 ) -> void:
-	var has_warranty_data: bool = (
-		warranty_revenue > 0.0 or warranty_claims > 0.0
+	DaySummaryContent.set_warranty(
+		_warranty_revenue_label, _warranty_claims_label,
+		warranty_revenue, warranty_claims,
 	)
-	_warranty_revenue_label.visible = has_warranty_data
-	_warranty_claims_label.visible = has_warranty_data
-	if has_warranty_data:
-		_warranty_revenue_label.text = (
-			tr("DAY_SUMMARY_WARRANTY_REV") % warranty_revenue
-		)
-		_warranty_claims_label.text = (
-			tr("DAY_SUMMARY_WARRANTY_CLAIMS") % warranty_claims
-		)
 
 
 func _set_seasonal_display(seasonal_impact: String) -> void:
@@ -680,18 +638,7 @@ func _create_discrepancy_label() -> void:
 
 
 func _set_discrepancy_display(discrepancy: float) -> void:
-	if not _discrepancy_label:
-		return
-	var has_discrepancy: bool = absf(discrepancy) > 0.001
-	_discrepancy_label.visible = has_discrepancy
-	if has_discrepancy:
-		var sign_str: String = "+" if discrepancy > 0.0 else ""
-		_discrepancy_label.text = (
-			tr("DAY_SUMMARY_UNACCOUNTED") % [sign_str, discrepancy]
-		)
-		_discrepancy_label.add_theme_color_override(
-			"font_color", Color(0.9, 0.7, 0.3)
-		)
+	DaySummaryContent.set_discrepancy(_discrepancy_label, discrepancy)
 
 
 func _create_electronics_labels() -> void:
@@ -745,29 +692,13 @@ func _set_customer_breakdown_display(shift_summary: Dictionary) -> void:
 
 
 func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void:
-	var has_attach: bool = attach_rate > 0.0
-	_warranty_attach_label.visible = has_attach
-	if has_attach:
-		_warranty_attach_label.text = (
-			"Warranty Attach Rate: %.0f%%" % (attach_rate * 100.0)
-		)
-	_demo_status_label.visible = true
-	if demo_active:
-		var contribution: float = float(
-			_last_summary_args.get("demo_contribution_revenue", 0.0)
-		)
-		if contribution > 0.0:
-			_demo_status_label.text = (
-				"Demo Unit: Active — Contribution: +$%.2f" % contribution
-			)
-		else:
-			_demo_status_label.text = "Demo Unit: Active"
-		_demo_status_label.add_theme_color_override(
-			"font_color", UIThemeConstants.get_positive_color()
-		)
-	else:
-		_demo_status_label.text = "Demo Unit: Inactive"
-		_demo_status_label.remove_theme_color_override("font_color")
+	var contribution: float = float(
+		_last_summary_args.get("demo_contribution_revenue", 0.0)
+	)
+	DaySummaryContent.set_warranty_attach(
+		_warranty_attach_label, _demo_status_label,
+		attach_rate, demo_active, contribution,
+	)
 
 
 func _create_grading_label() -> void:
@@ -775,32 +706,7 @@ func _create_grading_label() -> void:
 
 
 func _set_grading_display(pending_count: int, returned: Array) -> void:
-	var lines: Array[String] = []
-	for entry: Variant in returned:
-		if entry is Dictionary:
-			var d: Dictionary = entry as Dictionary
-			lines.append(
-				"ACC Grade: %s — %d (%s)"
-				% [
-					str(d.get("card_name", d.get("card_id", "?"))),
-					int(d.get("grade", 0)),
-					str(d.get("grade_label", "")),
-				]
-			)
-	if pending_count > 0:
-		lines.append(
-			"%d card%s pending ACC grading" % [
-				pending_count,
-				"s" if pending_count != 1 else "",
-			]
-		)
-	if lines.is_empty():
-		if _grading_label:
-			_grading_label.visible = false
-		return
-	if _grading_label:
-		_grading_label.text = "\n".join(lines)
-		_grading_label.visible = true
+	DaySummaryContent.set_grading(_grading_label, pending_count, returned)
 
 
 func _on_grading_day_summary(pending_count: int, returned: Array) -> void:

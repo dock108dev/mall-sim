@@ -18,12 +18,9 @@ const LOD_UPDATE_INTERVAL: float = 1.0
 const BASE_ENTRY_CONVERSION: float = 0.85
 const GREETER_ENTRY_BONUS: float = 0.2
 const GREETER_BROWSE_BONUS: float = 0.15
-const VIP_CUSTOMER_ID: StringName = &"vip_customer"
-const VIP_UNLOCK_ID: StringName = &"vip_customer_events"
 ## Cross-store traffic formula: for each adjacent store whose budget_multiplier
 ## (from ReputationSystem) exceeds CROSS_STORE_REP_THRESHOLD (1.2 = REPUTABLE tier),
 ## add CROSS_STORE_BROWSE_BONUS to the spawned customer's browse_mult.
-## Adjacent store IDs are set via set_adjacent_store_ids() during GameWorld init.
 const CROSS_STORE_REP_THRESHOLD: float = 1.2
 const CROSS_STORE_BROWSE_BONUS: float = 0.15
 
@@ -57,16 +54,6 @@ const DAY_OF_WEEK_MODIFIERS: Array[float] = [
 ## so the player sees a customer within DAY1_FORCED_SPAWN_FALLBACK_SECONDS
 ## even when the hour-density loop rolls poorly.
 const DAY1_FORCED_SPAWN_FALLBACK_SECONDS: float = 12.0
-
-## Archetype IDs used by conditional spawn rules. These match the
-## `archetype_id` field on customer profiles in retro_games_customers.json.
-const ARCHETYPE_ANGRY_RETURN: StringName = &"angry_return_customer"
-const ARCHETYPE_SHADY_REGULAR: StringName = &"shady_regular"
-## Per-day cap for shady_regular spawns at this store.
-const SHADY_REGULAR_DAILY_CAP: int = 1
-## Multiplier applied to shady_regular spawn weight in the AFTERNOON DayPhase
-## (the closing-hour "low traffic, staff distracted" window).
-const SHADY_REGULAR_LATE_AFTERNOON_WEIGHT: float = 3.0
 
 @export var max_customers_in_mall: int = 30
 
@@ -135,10 +122,14 @@ var _current_day_phase: int = 0
 ## and graceful-exit flows. Constructed in `_ready` so the helper sees the
 ## fully-built CustomerSystem state.
 var _mall_shoppers: CustomerMallShoppers = null
+## Spawn-pool / archetype-gate / weight helper. Owns the per-roll eligibility
+## math; constructed in `_ready` so it can read the fully-built state.
+var _eligibility: CustomerSpawnEligibility = null
 
 
 func _ready() -> void:
 	_mall_shoppers = CustomerMallShoppers.new(self)
+	_eligibility = CustomerSpawnEligibility.new(self)
 	_day1_forced_spawn_timer = Timer.new()
 	_day1_forced_spawn_timer.name = "Day1ForcedSpawnTimer"
 	_day1_forced_spawn_timer.one_shot = true
@@ -155,7 +146,7 @@ func initialize(
 	reputation_system: ReputationSystem = null
 ) -> void:
 	_despawn_all_customers()
-	clear_pool()
+	_clear_pool()
 
 	_store_controller = store_controller
 	_inventory_system = inventory_system
@@ -175,7 +166,8 @@ func initialize(
 	_spawn_pool_cache = []
 	_spawn_pool_dirty = true
 	_vip_type_valid = false
-	_validate_vip_type()
+	if _eligibility != null:
+		_eligibility.validate_vip_type()
 
 
 func set_performance_manager(manager: PerformanceManager) -> void:
@@ -247,7 +239,7 @@ func spawn_customer(
 ) -> void:
 	if _is_day1_spawn_blocked():
 		return
-	if profile != null and not is_profile_currently_spawnable(profile):
+	if profile != null and not _eligibility.is_profile_currently_spawnable(profile):
 		return
 	if _active_customers.size() >= _max_customers:
 		push_warning(
@@ -307,7 +299,7 @@ func spawn_customer(
 	)
 	customer.despawn_requested.connect(_on_customer_despawn_requested)
 	_active_customers.append(customer)
-	_record_archetype_spawn(profile)
+	_eligibility.record_archetype_spawn(profile)
 
 	if (
 		GameManager.get_current_day() == 1
@@ -423,136 +415,12 @@ func _increment_leave_count(reason: StringName) -> void:
 	_leave_counts[bucket] = int(_leave_counts.get(bucket, 0)) + 1
 
 
-func set_store_controller(controller: StoreController) -> void:
-	_store_controller = controller
-
-
-func set_inventory_system(system: InventorySystem) -> void:
-	_inventory_system = system
-
-
-func set_reputation_system(system: ReputationSystem) -> void:
-	_reputation_system = system
-	_update_max_customers()
-
-
-func set_adjacent_store_ids(ids: Array[String]) -> void:
-	_adjacent_store_ids = ids.duplicate()
-
-
-func set_market_event_system(system: MarketEventSystem) -> void:
-	_market_event_system = system
-
-
-## Returns the current pool of spawnable customer profiles.
-## VIP_CUSTOMER is included only when vip_customer_events is unlocked.
-func get_spawn_pool() -> Array[CustomerTypeDefinition]:
-	if _spawn_pool_dirty:
-		_rebuild_spawn_pool()
-	return _spawn_pool_cache
-
-
-## Returns true when the supplied profile may currently spawn at this store.
-## Applies the per-day archetype gates:
-##   - angry_return_customer: requires defective_sale_occurred earlier today.
-##   - shady_regular: capped at SHADY_REGULAR_DAILY_CAP per day.
-## Profiles without an archetype_id (or with an unrecognized one) always pass.
-func is_profile_currently_spawnable(
-	profile: CustomerTypeDefinition
-) -> bool:
-	if profile == null:
-		return false
-	var archetype: StringName = profile.archetype_id
-	if archetype == ARCHETYPE_ANGRY_RETURN:
-		return _defective_sale_today
-	if archetype == ARCHETYPE_SHADY_REGULAR:
-		var spawned: int = int(
-			_archetype_spawn_count_today.get(archetype, 0)
-		)
-		return spawned < SHADY_REGULAR_DAILY_CAP
-	return true
-
-
-## Returns the spawn-weight multiplier for the supplied profile under current
-## conditions. Combines:
-##   - PlatformSystem shortage boost (driven by platform_affinities).
-##   - shady_regular phase bias (3× during AFTERNOON, the closing-hour window).
-## Always returns >= 0.0; profiles that are gate-rejected return 0.0.
-func get_profile_spawn_weight(
-	profile: CustomerTypeDefinition
-) -> float:
-	if profile == null:
-		return 0.0
-	if not is_profile_currently_spawnable(profile):
-		return 0.0
-	var weight: float = profile.spawn_weight
-	if weight <= 0.0:
-		weight = 1.0
-	var platform_system: Node = get_node_or_null(
-		"/root/PlatformSystem"
-	)
-	if platform_system != null and platform_system.has_method(
-		"get_spawn_weight_modifier"
-	):
-		weight *= float(
-			platform_system.get_spawn_weight_modifier(profile)
-		)
-	var customization: Node = get_node_or_null(
-		"/root/StoreCustomizationSystem"
-	)
-	if customization != null and customization.has_method(
-		"get_spawn_weight_bonus"
-	):
-		weight *= float(
-			customization.call("get_spawn_weight_bonus", profile.archetype_id)
-		)
-	if (
-		profile.archetype_id == ARCHETYPE_SHADY_REGULAR
-		and _current_day_phase == int(TimeSystem.DayPhase.AFTERNOON)
-	):
-		weight *= SHADY_REGULAR_LATE_AFTERNOON_WEIGHT
-	return weight
-
-
 ## Picks a profile from the supplied list using current spawn weights and
 ## archetype gates. Returns null if no candidate is currently eligible.
 func pick_spawn_profile(
 	profiles: Array
 ) -> CustomerTypeDefinition:
-	var candidates: Array[CustomerTypeDefinition] = []
-	var weights: Array[float] = []
-	var total: float = 0.0
-	for entry: Variant in profiles:
-		var profile: CustomerTypeDefinition = (
-			entry as CustomerTypeDefinition
-		)
-		if profile == null:
-			continue
-		var weight: float = get_profile_spawn_weight(profile)
-		if weight <= 0.0:
-			continue
-		candidates.append(profile)
-		weights.append(weight)
-		total += weight
-	if candidates.is_empty() or total <= 0.0:
-		return null
-	var roll: float = randf() * total
-	var running: float = 0.0
-	for index: int in range(candidates.size()):
-		running += weights[index]
-		if roll <= running:
-			return candidates[index]
-	return candidates[candidates.size() - 1]
-
-
-func _record_archetype_spawn(profile: CustomerTypeDefinition) -> void:
-	if profile == null or profile.archetype_id == &"":
-		return
-	var archetype: StringName = profile.archetype_id
-	var count: int = int(
-		_archetype_spawn_count_today.get(archetype, 0)
-	)
-	_archetype_spawn_count_today[archetype] = count + 1
+	return _eligibility.pick_spawn_profile(profiles)
 
 
 ## Returns purchase intent for a category, incorporating market event bonuses
@@ -599,7 +467,7 @@ func get_spawn_target() -> int:
 	return mini(roundi(raw_target), max_customers_in_mall)
 
 
-func clear_pool() -> void:
+func _clear_pool() -> void:
 	for customer: Customer in _customer_pool:
 		if is_instance_valid(customer):
 			customer.queue_free()
@@ -775,10 +643,10 @@ func _on_day1_forced_spawn_timer_timeout() -> void:
 		return
 	if not _active_customers.is_empty():
 		return
-	var pool: Array[CustomerTypeDefinition] = get_spawn_pool()
+	var pool: Array[CustomerTypeDefinition] = _eligibility.get_spawn_pool()
 	if pool.is_empty():
 		return
-	var profile: CustomerTypeDefinition = pick_spawn_profile(pool)
+	var profile: CustomerTypeDefinition = _eligibility.pick_spawn_profile(pool)
 	if profile == null:
 		return
 	spawn_customer(profile, _store_id)
@@ -795,9 +663,9 @@ func _on_day1_forced_spawn_timer_timeout() -> void:
 ## because it is the documented unit-test seam (mirrors §F-44 / §F-54
 ## autoload-test-seam pattern). Tests that drive `spawn_customer` directly
 ## without wiring `_inventory_system` rely on this fall-through; production
-## code wires it via `initialize()` / `set_inventory_system()` before any
-## customer can spawn, so the branch is unreachable at runtime. Adding a
-## warning here would only generate noise from the legitimate fixtures.
+## code wires it via `initialize()` before any customer can spawn, so the
+## branch is unreachable at runtime. Adding a warning here would only
+## generate noise from the legitimate fixtures.
 func _is_day1_spawn_blocked() -> bool:
 	if _day1_spawn_unlocked:
 		return false
@@ -1011,49 +879,15 @@ func _recalculate_event_modifiers() -> void:
 	_active_event_intent_modifier = intent_mult
 
 
-func _rebuild_spawn_pool() -> void:
-	_spawn_pool_cache = []
-	if not GameManager.data_loader:
-		_spawn_pool_dirty = false
-		return
-	var vip_included: bool = (
-		_vip_type_valid and UnlockSystemSingleton.is_unlocked(VIP_UNLOCK_ID)
-	)
-	for profile: CustomerTypeDefinition in (
-		GameManager.data_loader.get_all_customers()
-	):
-		if StringName(profile.id) == VIP_CUSTOMER_ID:
-			if vip_included:
-				_spawn_pool_cache.append(profile)
-		else:
-			_spawn_pool_cache.append(profile)
-	_spawn_pool_dirty = false
-
-
 func _refresh_current_archetype_weights() -> void:
 	_current_archetype_weights = (
 		ShopperArchetypeConfig.get_weights_for_hour(_current_hour)
 	)
 
 
-func _validate_vip_type() -> void:
-	if not GameManager.data_loader:
-		return
-	for profile: CustomerTypeDefinition in (
-		GameManager.data_loader.get_all_customers()
-	):
-		if StringName(profile.id) == VIP_CUSTOMER_ID:
-			_vip_type_valid = true
-			return
-	push_warning(
-		"CustomerSystem: VIP customer type '%s' not found in registry"
-		% VIP_CUSTOMER_ID
-	)
-
-
 func _on_unlock_granted(unlock_id: StringName) -> void:
-	if unlock_id == VIP_UNLOCK_ID:
-		_spawn_pool_dirty = true
+	if unlock_id == CustomerSpawnEligibility.VIP_UNLOCK_ID:
+		_eligibility.mark_pool_dirty()
 
 
 func _acquire_customer() -> Customer:

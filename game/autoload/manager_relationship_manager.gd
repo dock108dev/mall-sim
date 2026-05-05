@@ -399,13 +399,18 @@ func _end_of_day_comment(tier: StringName, condition: StringName) -> Dictionary:
 	# for `_load_notes`: every missing-block path silently disables Vic's
 	# end-of-day commentary feature for the rest of the run. The `normal`
 	# fallback further down already covers the legitimate case of an unknown
-	# *condition* key, so reaching the structural-break paths means the entire
-	# `end_of_day_comments` block, the requested tier, or both the condition
-	# and its `normal` fallback are missing — content-authoring regressions
-	# that must surface as `push_error`, not as a silently empty Dictionary.
+	# *condition* key, so reaching the structural-break paths means the
+	# requested tier or both the condition and its `normal` fallback are
+	# missing — content-authoring regressions that must surface as
+	# `push_error`, not as a silently empty Dictionary. The whole-block
+	# missing case (`eod_block is not Dictionary`) is downgraded to a warning
+	# because production JSON always carries the block; it only fires from
+	# legacy test fixtures that call `_set_notes_for_testing` with a partial
+	# dict, and the documented contract for those is "must not crash"
+	# (see test_no_emission_when_eod_block_missing).
 	var eod_block: Variant = _notes.get("end_of_day_comments", null)
 	if eod_block is not Dictionary:
-		push_error(
+		push_warning(
 			(
 				"ManagerRelationshipManager: `end_of_day_comments` block is "
 				+ "missing or not a Dictionary in %s (got %s); end-of-day "
