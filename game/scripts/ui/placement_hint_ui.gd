@@ -30,6 +30,13 @@ func _ready() -> void:
 	EventBus.placement_hint_requested.connect(_on_placement_hint_requested)
 	EventBus.placement_mode_exited.connect(_on_placement_mode_exited)
 	EventBus.interactable_focused.connect(_on_interactable_focused)
+	# Disabled-state hovers (e.g. "Shelf full" while in placement mode)
+	# must surface in the same banner so the player still reads
+	# slot-specific feedback when can_interact() is false. Same handler as
+	# the active path; the empty-string fallback in
+	# `_on_interactable_focused` already restores the default prompt when
+	# the disabled reason is empty.
+	EventBus.interactable_focused_disabled.connect(_on_interactable_focused)
 	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
 
 

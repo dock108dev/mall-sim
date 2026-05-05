@@ -3,6 +3,9 @@
 ##     each have a Label3D in the "zone_label" group
 ##   - labels sit above slot height (Y >= 2.0) so they do not occlude
 ##     interactable slot zones beneath them
+##   - the Day-1 navigation labels (Used Shelves + Checkout) carry a
+##     pixel_size large enough to remain legible from the entrance approach
+##     and use wording that aligns with the Day-1 objective steps
 ##   - the group acts as a bulk-hide handle so a future polish pass can
 ##     toggle all zone markers off in one call
 extends GutTest
@@ -13,6 +16,13 @@ const REQUIRED_KEYWORDS: Array[String] = [
 	"shelves", "checkout", "exit", "backroom",
 ]
 const MIN_LABEL_HEIGHT: float = 2.0
+# The Day-1 labels must remain legible from across the room (~17m from the
+# entrance). pixel_size 0.005 produced 0.18m letters at 36pt — sub-1° at
+# entrance distance and unreadable on first approach. The current floor of
+# 0.007 keeps letter angular size above 1° from anywhere a player can stand.
+const MIN_DAY1_NAV_PIXEL_SIZE: float = 0.007
+const SHELVES_LABEL_PATH: String = "ZoneLabels/ShelvesLabel"
+const CHECKOUT_LABEL_PATH: String = "ZoneLabels/CheckoutLabel"
 
 var _root: Node3D = null
 
@@ -67,6 +77,83 @@ func test_zone_labels_clear_slot_height() -> void:
 				+ "not occlude interactable slot zones (slots top at Y≈1.6)"
 			) % [label.text, y, MIN_LABEL_HEIGHT],
 		)
+
+
+func test_day1_nav_labels_match_objective_wording() -> void:
+	# AC: zone label text exactly matches wording in objectives.json so the
+	# spatial label and the tutorial instruction line up.
+	var shelves: Label3D = _root.get_node_or_null(SHELVES_LABEL_PATH) as Label3D
+	assert_not_null(shelves, "ZoneLabels/ShelvesLabel must exist")
+	var checkout: Label3D = _root.get_node_or_null(CHECKOUT_LABEL_PATH) as Label3D
+	assert_not_null(checkout, "ZoneLabels/CheckoutLabel must exist")
+	var stock_text: String = _objective_step_text("stock_item")
+	var checkout_text: String = _objective_step_text("customer_at_checkout")
+	if shelves != null:
+		assert_true(
+			stock_text.to_lower().contains(shelves.text.to_lower()),
+			(
+				"ShelvesLabel text '%s' must appear in objectives.json "
+				+ "stock_item.text '%s'"
+			) % [shelves.text, stock_text],
+		)
+	if checkout != null:
+		assert_true(
+			checkout_text.to_lower().contains(checkout.text.to_lower()),
+			(
+				"CheckoutLabel text '%s' must appear in objectives.json "
+				+ "customer_at_checkout.text '%s'"
+			) % [checkout.text, checkout_text],
+		)
+
+
+func test_day1_nav_labels_meet_pixel_size_floor() -> void:
+	# AC: readable from 3m approach. pixel_size below the floor pushed the
+	# letter angular size below 1° at the typical 15m+ entrance-approach view,
+	# making the label illegible until the player was already next to the
+	# zone.
+	for path: String in [SHELVES_LABEL_PATH, CHECKOUT_LABEL_PATH]:
+		var label: Label3D = _root.get_node_or_null(path) as Label3D
+		assert_not_null(label, "%s must exist" % path)
+		if label == null:
+			continue
+		assert_gte(
+			label.pixel_size, MIN_DAY1_NAV_PIXEL_SIZE,
+			(
+				"%s pixel_size=%.4f must be >= %.4f so letters remain legible "
+				+ "on entrance approach (~17m line-of-sight)."
+			) % [path, label.pixel_size, MIN_DAY1_NAV_PIXEL_SIZE],
+		)
+
+
+func _objective_step_text(step_id: String) -> String:
+	var path: String = "res://game/content/objectives.json"
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	assert_not_null(file, "objectives.json must open")
+	if file == null:
+		return ""
+	var raw: String = file.get_as_text()
+	file.close()
+	var parsed: Variant = JSON.parse_string(raw)
+	if not parsed is Dictionary:
+		fail_test("objectives.json must parse as a Dictionary")
+		return ""
+	var dict: Dictionary = parsed
+	var entries: Array = dict.get("objectives", []) as Array
+	for entry: Variant in entries:
+		if not entry is Dictionary:
+			continue
+		var day_entry: Dictionary = entry
+		if int(day_entry.get("day", 0)) != 1:
+			continue
+		var steps: Array = day_entry.get("steps", []) as Array
+		for step: Variant in steps:
+			if not step is Dictionary:
+				continue
+			var step_dict: Dictionary = step
+			if String(step_dict.get("id", "")) == step_id:
+				return String(step_dict.get("text", ""))
+	fail_test("objectives.json has no Day-1 step '%s'" % step_id)
+	return ""
 
 
 func test_zone_labels_bulk_hide_via_group() -> void:

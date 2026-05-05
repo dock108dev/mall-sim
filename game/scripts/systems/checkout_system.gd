@@ -494,7 +494,9 @@ func _on_sale_accepted() -> void:
 func _on_sale_declined() -> void:
 	if not _active_customer:
 		return
+	var declined_customer: Customer = _active_customer
 	_complete_checkout()
+	EventBus.checkout_declined.emit(declined_customer)
 
 
 ## Bundle press: treat as accept with the bundle accessory's price added on

@@ -20,6 +20,7 @@ var _saved_director_stocked: bool
 var _saved_director_sold: bool
 var _saved_director_loop: bool
 var _saved_director_step: int
+var _saved_director_waiting: bool
 var _saved_first_sale_flag: bool
 
 
@@ -31,6 +32,7 @@ func before_each() -> void:
 	_saved_director_sold = ObjectiveDirector._sold
 	_saved_director_loop = ObjectiveDirector._loop_completed
 	_saved_director_step = ObjectiveDirector._day1_step_index
+	_saved_director_waiting = ObjectiveDirector._waiting_for_note_dismiss
 	_saved_first_sale_flag = bool(GameState.get_flag(&"first_sale_complete"))
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	Settings.show_objective_rail = true
@@ -39,6 +41,7 @@ func before_each() -> void:
 	ObjectiveDirector._sold = false
 	ObjectiveDirector._loop_completed = false
 	ObjectiveDirector._day1_step_index = -1
+	ObjectiveDirector._waiting_for_note_dismiss = false
 	GameState.set_flag(&"first_sale_complete", false)
 
 
@@ -50,9 +53,17 @@ func after_each() -> void:
 	ObjectiveDirector._sold = _saved_director_sold
 	ObjectiveDirector._loop_completed = _saved_director_loop
 	ObjectiveDirector._day1_step_index = _saved_director_step
+	ObjectiveDirector._waiting_for_note_dismiss = _saved_director_waiting
 	GameState.set_flag(&"first_sale_complete", _saved_first_sale_flag)
 	if InputFocus != null:
 		InputFocus._reset_for_tests()
+
+
+## Drives the production handshake for tests that exercise post-dismiss state:
+## day_started fires the pre-chain gate, then the player dismisses the note.
+func _start_day1_after_note_dismiss() -> void:
+	EventBus.day_started.emit(1)
+	EventBus.manager_note_dismissed.emit("")
 
 
 func _make_rail() -> CanvasLayer:
@@ -77,19 +88,19 @@ func test_rail_visible_on_day1_after_day_started_and_store_entered() -> void:
 
 func test_objective_label_shows_stock_first_item_text_on_day1() -> void:
 	var rail := _make_rail()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	assert_eq(rail._objective_label.text, _OBJECTIVE_TEXT)
 
 
 func test_action_label_shows_press_i_on_day1() -> void:
 	var rail := _make_rail()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	assert_eq(rail._action_label.text, _ACTION_TEXT)
 
 
 func test_hint_badge_shows_letter_i_on_day1() -> void:
 	var rail := _make_rail()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	assert_eq(rail._hint_label.text, _KEY_TEXT)
 	assert_true(
 		rail._hint_label.visible,
@@ -205,7 +216,7 @@ func test_interaction_prompt_zone_does_not_overlap_objective_rail_zone() -> void
 
 func test_item_stocked_triggers_rail_update_after_day_started() -> void:
 	var rail := _make_rail()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	# Mutate label texts so we can detect the re-emission.
 	rail._objective_label.text = ""
 	rail._action_label.text = ""

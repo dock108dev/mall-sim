@@ -61,6 +61,43 @@ static func create_grading(vbox: VBoxContainer) -> Label:
 	return label
 
 
+## Returns [total_customers_label, breakdown_label] inserted directly after
+## `after_label`. The breakdown label uses autowrap so multiple reason rows
+## render readably in narrow viewports.
+static func create_customer_breakdown(
+	vbox: VBoxContainer, after_label: Label
+) -> Array:
+	var total := Label.new()
+	total.name = "TotalCustomersLabel"
+	total.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	total.visible = false
+	vbox.add_child(total)
+	vbox.move_child(total, after_label.get_index() + 1)
+	var breakdown := Label.new()
+	breakdown.name = "CustomerBreakdownLabel"
+	breakdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	breakdown.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	breakdown.visible = false
+	vbox.add_child(breakdown)
+	vbox.move_child(breakdown, total.get_index() + 1)
+	return [total, breakdown]
+
+
+## Italic, attribution-styled label for Vic's metric-driven end-of-day comment.
+## Distinct from the hidden-thread label so the manager voice keeps its own
+## visual slot above the financial detail dump.
+static func create_vic_comment(vbox: VBoxContainer) -> Label:
+	var label := Label.new()
+	label.name = "VicCommentLabel"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_color_override("font_color", Color(0.78, 0.72, 0.62, 0.95))
+	label.add_theme_constant_override("outline_size", 0)
+	label.visible = false
+	vbox.add_child(label)
+	return label
+
+
 ## Returns [story_beat_label, forward_hook_label].
 static func create_narrative(vbox: VBoxContainer) -> Array:
 	var story_beat := Label.new()

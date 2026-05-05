@@ -8,18 +8,21 @@ const _InteractionRayScript: GDScript = preload(
 
 var _ray: Node
 var _focused_labels: Array[String] = []
+var _disabled_reasons: Array[String] = []
 var _unfocused_count: int = 0
 var _notifications: Array[String] = []
 
 
 func before_each() -> void:
 	_focused_labels.clear()
+	_disabled_reasons.clear()
 	_unfocused_count = 0
 	_notifications.clear()
 	_ray = Node.new()
 	_ray.set_script(_InteractionRayScript)
 	add_child_autofree(_ray)
 	EventBus.interactable_focused.connect(_on_interactable_focused)
+	EventBus.interactable_focused_disabled.connect(_on_interactable_focused_disabled)
 	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
 	EventBus.notification_requested.connect(_on_notification_requested)
 
@@ -27,6 +30,8 @@ func before_each() -> void:
 func after_each() -> void:
 	if EventBus.interactable_focused.is_connected(_on_interactable_focused):
 		EventBus.interactable_focused.disconnect(_on_interactable_focused)
+	if EventBus.interactable_focused_disabled.is_connected(_on_interactable_focused_disabled):
+		EventBus.interactable_focused_disabled.disconnect(_on_interactable_focused_disabled)
 	if EventBus.interactable_unfocused.is_connected(_on_interactable_unfocused):
 		EventBus.interactable_unfocused.disconnect(_on_interactable_unfocused)
 	if EventBus.notification_requested.is_connected(_on_notification_requested):
@@ -126,6 +131,78 @@ func test_hover_changes_do_not_emit_legacy_notifications() -> void:
 	)
 
 
+func test_disabled_focus_emits_disabled_signal_with_reason() -> void:
+	var target: _DisabledTarget = _DisabledTarget.new()
+	target.prompt_text = "Use"
+	target.display_name = "Counter"
+	target.disabled_reason = "No customer waiting"
+	add_child_autofree(target)
+
+	_ray._set_hovered_target(target)
+
+	assert_true(
+		_focused_labels.is_empty(),
+		"Disabled targets must not emit interactable_focused — that path is reserved for actionable focus"
+	)
+	assert_eq(
+		_disabled_reasons,
+		["No customer waiting"],
+		"Disabled focus must route through interactable_focused_disabled with the reason text"
+	)
+
+
+func test_disabled_focus_caches_can_interact_for_e_press_guard() -> void:
+	var target: _DisabledTarget = _DisabledTarget.new()
+	target.disabled_reason = "Shelf full"
+	add_child_autofree(target)
+
+	_ray._set_hovered_target(target)
+
+	assert_false(
+		_ray._hovered_can_interact,
+		"InteractionRay must cache can_interact()=false so E-press dispatch can short-circuit"
+	)
+
+
+func test_active_focus_caches_can_interact_true() -> void:
+	var target: Interactable = _create_target("Use", "Register")
+
+	_ray._set_hovered_target(target)
+
+	assert_true(
+		_ray._hovered_can_interact,
+		"InteractionRay must cache can_interact()=true for actionable targets"
+	)
+
+
+func test_clearing_target_resets_can_interact_cache() -> void:
+	var target: _DisabledTarget = _DisabledTarget.new()
+	target.disabled_reason = "Shelf full"
+	add_child_autofree(target)
+
+	_ray._set_hovered_target(target)
+	_ray._set_hovered_target(null)
+
+	assert_false(
+		_ray._hovered_can_interact,
+		"Clearing the hovered target must reset the can_interact cache"
+	)
+
+
+func test_hovered_action_label_returns_disabled_reason() -> void:
+	var target: _DisabledTarget = _DisabledTarget.new()
+	target.disabled_reason = "Shelf full"
+	add_child_autofree(target)
+
+	_ray._set_hovered_target(target)
+
+	assert_eq(
+		_ray.get_hovered_action_label(),
+		"Shelf full",
+		"Disabled-state focus should still expose the reason via get_hovered_action_label() so AuditOverlay reflects it"
+	)
+
+
 func _create_target(prompt_text: String, display_name: String) -> Interactable:
 	var target := Interactable.new()
 	target.prompt_text = prompt_text
@@ -138,9 +215,26 @@ func _on_interactable_focused(action_label: String) -> void:
 	_focused_labels.append(action_label)
 
 
+func _on_interactable_focused_disabled(reason: String) -> void:
+	_disabled_reasons.append(reason)
+
+
 func _on_interactable_unfocused() -> void:
 	_unfocused_count += 1
 
 
 func _on_notification_requested(message: String) -> void:
 	_notifications.append(message)
+
+
+## Test stub that returns false from `can_interact()` and exposes a settable
+## `disabled_reason` field. Mirrors the production override pattern used by
+## the retro-games checkout counter and ShelfSlot empty-state migrations.
+class _DisabledTarget extends Interactable:
+	var disabled_reason: String = ""
+
+	func can_interact(_actor: Node = null) -> bool:
+		return false
+
+	func get_disabled_reason(_actor: Node = null) -> String:
+		return disabled_reason

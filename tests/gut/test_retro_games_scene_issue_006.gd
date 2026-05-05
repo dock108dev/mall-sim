@@ -553,8 +553,9 @@ func test_objective_matches_action_passes_for_day_one_text() -> void:
 	# Day 1 objective step from res://game/content/objectives.json (step 3 of
 	# the chain). Verifies that at least one registered Interactable in the
 	# live retro_games scene satisfies StoreReadyContract invariant 10 against
-	# the canonical stock-the-item prompt.
-	_root.set_objective_text("Stock the item on a shelf")
+	# the canonical stock-the-item prompt. The plural "Shelves" must match
+	# ShelfSlot subject token "shelf" via the matcher's prefix fallback.
+	_root.set_objective_text("Stock the item on the Used Shelves")
 	assert_true(
 		_root.objective_matches_action(),
 		"Day 1 stock-the-item objective must match at least one registered "

@@ -313,11 +313,19 @@ static func _build_price_column(item: ItemInstance) -> VBoxContainer:
 	vbox.add_theme_constant_override("separation", 0)
 
 	var price_label := Label.new()
-	var price: float = (
-		item.player_set_price if item.player_set_price > 0.0
-		else item.get_current_value()
-	)
-	price_label.text = "$%.2f" % price
+	price_label.name = "PriceLabel"
+	# Distinguish "player has not yet priced this item" from a real $0.00 price:
+	# rendering "$0.00" implies the player has chosen to sell for zero (a
+	# legitimate-looking value), so unpriced items get a textual "Not set"
+	# indicator instead. Once PricingPanel writes a non-zero player_set_price
+	# the inventory row picks it up on the next refresh (price_set signal).
+	if item.player_set_price > 0.0:
+		price_label.text = "$%.2f" % item.player_set_price
+	else:
+		price_label.text = "Not set"
+		price_label.add_theme_color_override(
+			"font_color", UIThemeConstants.get_warning_color()
+		)
 	price_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	vbox.add_child(price_label)
 

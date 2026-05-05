@@ -25,6 +25,11 @@ const INTERACTION_RAY_GROUP: StringName = &"interaction_ray"
 var _camera: Camera3D = null
 var _hovered_target: Interactable = null
 var _hovered_action_label: String = ""
+## Tracks whether the currently hovered target is actionable. Mirrors
+## `target.can_interact()` at the moment focus was applied so the E-press
+## dispatch in `_unhandled_input` can short-circuit without re-querying the
+## subclass override (and so unit tests can observe the cached value).
+var _hovered_can_interact: bool = false
 var _inventory_system: InventorySystem = null
 var _open_panel_count: int = 0
 
@@ -60,7 +65,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):
 		if _is_keyboard_captured_by_ui():
 			return
-		if _hovered_target:
+		if _hovered_target and _hovered_can_interact:
 			_log_interaction_dispatch(_hovered_target)
 			_hovered_target.interact()
 			EventBus.player_interacted.emit(_hovered_target)
@@ -74,7 +79,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not mb_event.pressed:
 		return
 	if mb_event.button_index == MOUSE_BUTTON_LEFT:
-		if _hovered_target:
+		if _hovered_target and _hovered_can_interact:
 			_log_interaction_dispatch(_hovered_target)
 			_hovered_target.interact()
 			EventBus.player_interacted.emit(_hovered_target)
@@ -181,10 +186,22 @@ func _set_hovered_target(new_target: Interactable) -> void:
 			)
 		_hovered_target.highlight()
 		_hovered_target.focused.emit()
-		var action_label: String = _build_action_label(_hovered_target)
+		# Branch on the runtime `can_interact()` gate so the HUD layer can
+		# render an active "Press E" prompt vs. a muted disabled-reason
+		# info label without each consumer re-querying the subclass. The
+		# cached `_hovered_can_interact` flag is also what the E-press
+		# dispatch in `_unhandled_input` reads to short-circuit phantom
+		# `interact()` calls between hover frames.
+		_hovered_can_interact = _hovered_target.can_interact()
+		var action_label: String
+		if _hovered_can_interact:
+			action_label = _build_action_label(_hovered_target)
+			EventBus.interactable_focused.emit(action_label)
+		else:
+			action_label = _hovered_target.get_disabled_reason()
+			EventBus.interactable_focused_disabled.emit(action_label)
 		_hovered_action_label = action_label
 		_log_interaction_focus(_hovered_target)
-		EventBus.interactable_focused.emit(action_label)
 		# ISSUE-003: scoped hover event + pointing-hand cursor. The hover
 		# transition runs every physics frame, so the cursor/label update
 		# well inside the 100ms budget.
@@ -197,6 +214,7 @@ func _set_hovered_target(new_target: Interactable) -> void:
 		_emit_tooltip_for_target(_hovered_target)
 	else:
 		_hovered_action_label = ""
+		_hovered_can_interact = false
 		EventBus.interactable_unfocused.emit()
 		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 		EventBus.item_tooltip_hidden.emit()
@@ -218,6 +236,7 @@ func _on_hovered_target_tree_exiting() -> void:
 		exiting_target.unfocused.emit()
 	_hovered_target = null
 	_hovered_action_label = ""
+	_hovered_can_interact = false
 	EventBus.interactable_unfocused.emit()
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	EventBus.item_tooltip_hidden.emit()

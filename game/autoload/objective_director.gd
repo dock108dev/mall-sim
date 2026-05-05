@@ -38,6 +38,10 @@ var _loop_completed: bool = false
 ## Active Day 1 step index, or -1 when the chain is not running. Set to 0 by
 ## day_started(1); incremented in lockstep with the chain's gameplay signals.
 var _day1_step_index: int = -1
+## True between day_started(1) and the first manager_note_dismissed of Day 1.
+## While true the rail surfaces the pre-chain `pre_step` payload and the step
+## chain itself is not yet armed (`_day1_step_index` stays -1).
+var _waiting_for_note_dismiss: bool = false
 
 
 func _ready() -> void:
@@ -53,6 +57,8 @@ func _ready() -> void:
 	EventBus.customer_state_changed.connect(_on_customer_state_changed)
 	EventBus.customer_ready_to_purchase.connect(_on_customer_ready_to_purchase)
 	EventBus.customer_purchased.connect(_on_customer_purchased)
+	EventBus.checkout_declined.connect(_on_checkout_declined)
+	EventBus.manager_note_dismissed.connect(_on_manager_note_dismissed)
 
 
 func _load_content() -> void:
@@ -118,6 +124,25 @@ func _load_content() -> void:
 				)
 				% [steps_typed.size(), DAY1_STEP_COUNT]
 			)
+		var pre_step_raw: Variant = e.get("pre_step", {})
+		var pre_step_dict: Dictionary = {}
+		if pre_step_raw is Dictionary:
+			pre_step_dict = pre_step_raw as Dictionary
+		elif e.has("pre_step"):
+			# §F-148 — `pre_step` is documented as optional in objectives.json,
+			# so an absent key is fine. But if it is *present* and not a
+			# Dictionary, the rail will silently render an empty pre-chain
+			# payload (text/action/key all "") on Day 1 — the player sees the
+			# objective rail blank between day_started and the first
+			# manager_note_dismissed. Warn at load so the bad payload is
+			# visible at boot rather than as a UX bug.
+			push_warning(
+				(
+					"ObjectiveDirector: day %d has non-Dictionary `pre_step` "
+					+ "field (%s); ignored."
+				)
+				% [day_int, type_string(typeof(pre_step_raw))]
+			)
 		_day_objectives[day_int] = {
 			"text": str(e.get("text", _defaults["text"])),
 			"action": str(e.get("action", _defaults["action"])),
@@ -126,6 +151,7 @@ func _load_content() -> void:
 			"post_sale_action": str(e.get("post_sale_action", "")),
 			"post_sale_key": str(e.get("post_sale_key", "")),
 			"steps": steps_typed,
+			"pre_step": pre_step_dict,
 		}
 
 
@@ -134,7 +160,20 @@ func _on_day_started(day: int) -> void:
 	_stocked = false
 	_sold = false
 	_day1_step_index = -1
+	_waiting_for_note_dismiss = false
 	if day == 1 and _day1_steps_available():
+		# The Day 1 step chain is held until the player dismisses Vic's
+		# morning note. _on_manager_note_dismissed advances _day1_step_index
+		# to OPEN_INVENTORY when the note clears.
+		_waiting_for_note_dismiss = true
+	_emit_current()
+
+
+func _on_manager_note_dismissed(_note_id: String) -> void:
+	if _current_day != 1 or not _waiting_for_note_dismiss:
+		return
+	_waiting_for_note_dismiss = false
+	if _day1_steps_available():
 		_day1_step_index = DAY1_STEP_OPEN_INVENTORY
 	_emit_current()
 
@@ -193,6 +232,25 @@ func _on_customer_purchased(
 	_price: float, _customer_id: StringName,
 ) -> void:
 	_advance_day1_step_if(DAY1_STEP_CUSTOMER_AT_CHECKOUT)
+
+
+## Day 1 only: when the player presses Pass at the register before the first
+## sale, roll the rail back to "wait for a customer" so the prompt matches the
+## actual game state. Without this the rail keeps showing "Customer at
+## checkout" with no customer present until the next forced spawn arrives —
+## the player has no signal that a new customer is coming.
+func _on_checkout_declined(_customer: Node) -> void:
+	if _current_day != 1 or _sold:
+		return
+	if not _day1_steps_available():
+		return
+	if (
+		_day1_step_index < DAY1_STEP_CUSTOMER_BROWSING
+		or _day1_step_index > DAY1_STEP_CUSTOMER_AT_CHECKOUT
+	):
+		return
+	_day1_step_index = DAY1_STEP_WAIT_FOR_CUSTOMER
+	_emit_current()
 
 
 ## Advances the Day 1 chain when the player is sitting on `expected_step`.
@@ -261,6 +319,16 @@ func _emit_current() -> void:
 		EventBus.objective_changed.emit(hidden)
 		EventBus.objective_updated.emit(hidden)
 		return
+	if _current_day == 1 and _waiting_for_note_dismiss:
+		var pre_entry: Dictionary = _day_objectives.get(1, {})
+		var pre: Dictionary = pre_entry.get("pre_step", {}) as Dictionary
+		_emit_objective_payload(
+			str(pre.get("text", "")),
+			str(pre.get("action", "")),
+			str(pre.get("key", "")),
+			"",
+		)
+		return
 	var source: Dictionary = _day_objectives.get(_current_day, _defaults)
 	var text_value: String = str(source.get("text", ""))
 	var action_value: String = str(source.get("action", ""))
@@ -285,17 +353,32 @@ func _emit_current() -> void:
 			text_value = post_text
 			action_value = str(source.get("post_sale_action", ""))
 			key_value = str(source.get("post_sale_key", ""))
-	var payload: Dictionary = {
+	_emit_objective_payload(
+		text_value,
+		action_value,
+		key_value,
+		str(source.get("optional_hint", "")),
+	)
+
+
+## Single emit point for the rail's `objective_changed` + `objective_updated`
+## payload pair so the pre-step path and the main step/post-sale path cannot
+## drift in shape.
+func _emit_objective_payload(
+	text_value: String,
+	action_value: String,
+	key_value: String,
+	optional_hint: String,
+) -> void:
+	EventBus.objective_changed.emit({
 		"objective": text_value,
 		"text": text_value,
 		"action": action_value,
 		"key": key_value,
-	}
-	EventBus.objective_changed.emit(payload)
-	var updated: Dictionary = {
+	})
+	EventBus.objective_updated.emit({
 		"current_objective": text_value,
 		"next_action": action_value,
 		"input_hint": key_value,
-		"optional_hint": str(source.get("optional_hint", "")),
-	}
-	EventBus.objective_updated.emit(updated)
+		"optional_hint": optional_hint,
+	})

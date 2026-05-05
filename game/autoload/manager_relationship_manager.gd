@@ -14,6 +14,10 @@
 ##   - At day_started, pick a note (Day 1 / Day 10 / Day 20 / unlock-override
 ##     mornings → fixed override; otherwise tier×top-category) and emit
 ##     EventBus.manager_note_shown(note_id, body, allow_auto_dismiss).
+##   - At day_closed, evaluate the metric payload (items_sold, inventory,
+##     stockout / queue counters under shift_summary), pick a tier×condition
+##     comment from end_of_day_comments and emit
+##     EventBus.manager_end_of_day_comment(id, body).
 ##
 ## Note selection contract (acceptance criteria):
 ##   - Day 1 → date override "note_override_day_1", manual dismiss only.
@@ -46,6 +50,20 @@ const WARM_MAX: float = 0.75
 const CATEGORY_OPERATIONAL: StringName = &"operational"
 const CATEGORY_SALES: StringName = &"sales"
 const CATEGORY_STAFF: StringName = &"staff"
+
+# End-of-day comment conditions, in priority order (highest first). Listed as
+# constants so tests and external callers can refer to them without string
+# literals scattered through the codebase.
+const EOD_CONDITION_ZERO_SALES: StringName = &"zero_sales"
+const EOD_CONDITION_EMPTY_SHELVES: StringName = &"empty_shelves"
+const EOD_CONDITION_STOCKOUT_WALKOUTS: StringName = &"stockout_walkouts"
+const EOD_CONDITION_QUEUE_TIMEOUT: StringName = &"queue_timeout"
+const EOD_CONDITION_NORMAL: StringName = &"normal"
+
+# Thresholds for the metric-driven conditions. Comments with counts at or
+# below these floors fall through to lower-priority conditions or `normal`.
+const EOD_STOCKOUT_THRESHOLD: int = 2
+const EOD_QUEUE_TIMEOUT_THRESHOLD: int = 3
 
 ## Per-event trust deltas (issue spec).
 const DELTA_TASK_COMPLETED: float = 0.06
@@ -171,6 +189,44 @@ func reset_for_testing() -> void:
 
 # ── Note selection ────────────────────────────────────────────────────────────
 
+## Selects the metric-driven end-of-day comment for the given day and payload
+## and returns {id: String, body: String}. Public so tests can exercise the
+## selection contract without going through the day_closed signal flow.
+##
+## Priority order (highest → lowest): zero_sales > empty_shelves >
+## stockout_walkouts > queue_timeout > normal. The stockout / queue counters
+## live under payload["shift_summary"] and are sourced from
+## `CustomerSystem.get_leave_counts()` via `DayCycleController._show_day_summary`
+## (the SSOT for per-day leave reasons): `customers_no_stock` is the count of
+## customers that left because no matching item was on the shelf;
+## `customers_timeout` is the count of customers whose patience expired
+## (queue or browse). Absent fields default to 0 so the condition resolves
+## to `normal` without error.
+func select_end_of_day_comment(_day: int, payload: Dictionary) -> Dictionary:
+	var items_sold: int = int(payload.get("items_sold", 0))
+	var inventory_remaining: int = int(payload.get("inventory_remaining", 0))
+	var shift_summary_raw: Variant = payload.get("shift_summary", {})
+	var shift_summary: Dictionary = (
+		shift_summary_raw if shift_summary_raw is Dictionary else {}
+	)
+	var stockout_walkouts: int = int(
+		shift_summary.get("customers_no_stock", 0)
+	)
+	var queue_timeouts: int = int(shift_summary.get("customers_timeout", 0))
+	var condition: StringName
+	if items_sold == 0:
+		condition = EOD_CONDITION_ZERO_SALES
+	elif stockout_walkouts > 0 and inventory_remaining == 0:
+		condition = EOD_CONDITION_EMPTY_SHELVES
+	elif stockout_walkouts > EOD_STOCKOUT_THRESHOLD:
+		condition = EOD_CONDITION_STOCKOUT_WALKOUTS
+	elif queue_timeouts > EOD_QUEUE_TIMEOUT_THRESHOLD:
+		condition = EOD_CONDITION_QUEUE_TIMEOUT
+	else:
+		condition = EOD_CONDITION_NORMAL
+	return _end_of_day_comment(manager_tier, condition)
+
+
 ## Selects the note for the given day and returns
 ## {id: String, body: String, allow_auto_dismiss: bool}. Public so tests can
 ## exercise the selection contract without going through the day_started
@@ -195,7 +251,7 @@ func select_note_for_day(day: int) -> Dictionary:
 
 func _connect_event_bus() -> void:
 	_connect_signal(EventBus.day_started, _on_day_started)
-	_connect_signal(EventBus.day_ended, _on_day_ended)
+	_connect_signal(EventBus.day_closed, _on_day_closed)
 	_connect_signal(EventBus.task_completed, _on_task_completed)
 	_connect_signal(EventBus.staff_quit, _on_staff_quit)
 	_connect_signal(EventBus.staff_not_paid, _on_staff_not_paid)
@@ -224,10 +280,14 @@ func _on_day_started(day: int) -> void:
 	)
 
 
-func _on_day_ended(_day: int) -> void:
-	# No-op for now; placeholder for future end-of-day trust evaluations
-	# (e.g. shelf-empty check). The base trust-delta surface is event-driven.
-	pass
+func _on_day_closed(day: int, payload: Dictionary) -> void:
+	var comment: Dictionary = select_end_of_day_comment(day, payload)
+	if comment.is_empty():
+		return
+	EventBus.manager_end_of_day_comment.emit(
+		String(comment.get("id", "")),
+		String(comment.get("body", "")),
+	)
 
 
 func _on_task_completed(_task_id: StringName) -> void:
@@ -331,6 +391,85 @@ func _tier_category_note(tier: StringName, category: StringName) -> Dictionary:
 		"id": str(dict.get("id", "")),
 		"body": str(dict.get("body", "")),
 		"allow_auto_dismiss": true,
+	}
+
+
+func _end_of_day_comment(tier: StringName, condition: StringName) -> Dictionary:
+	# §F-147 — Structural fallthroughs in this lookup mirror §F-116's reasoning
+	# for `_load_notes`: every missing-block path silently disables Vic's
+	# end-of-day commentary feature for the rest of the run. The `normal`
+	# fallback further down already covers the legitimate case of an unknown
+	# *condition* key, so reaching the structural-break paths means the entire
+	# `end_of_day_comments` block, the requested tier, or both the condition
+	# and its `normal` fallback are missing — content-authoring regressions
+	# that must surface as `push_error`, not as a silently empty Dictionary.
+	var eod_block: Variant = _notes.get("end_of_day_comments", null)
+	if eod_block is not Dictionary:
+		push_error(
+			(
+				"ManagerRelationshipManager: `end_of_day_comments` block is "
+				+ "missing or not a Dictionary in %s (got %s); end-of-day "
+				+ "Vic commentary disabled."
+			)
+			% [NOTES_PATH, type_string(typeof(eod_block))]
+		)
+		return {}
+	var eod: Dictionary = eod_block as Dictionary
+	var tier_block: Variant = eod.get(String(tier), null)
+	if tier_block is not Dictionary:
+		push_error(
+			(
+				"ManagerRelationshipManager: `end_of_day_comments.%s` block is "
+				+ "missing or not a Dictionary in %s (got %s)."
+			)
+			% [String(tier), NOTES_PATH, type_string(typeof(tier_block))]
+		)
+		return {}
+	var tier_dict: Dictionary = tier_block as Dictionary
+	var candidates: Variant = tier_dict.get(String(condition), null)
+	if candidates is not Array or (candidates as Array).is_empty():
+		# Fall back to `normal` so an unknown condition key still surfaces a
+		# comment rather than silently dropping the panel slot. (Unknown
+		# conditions are a legitimate runtime path — new conditions can be
+		# added in code before content is updated.)
+		candidates = tier_dict.get(String(EOD_CONDITION_NORMAL), null)
+	if candidates is not Array or (candidates as Array).is_empty():
+		# §F-147 — Both the requested condition AND the `normal` fallback are
+		# missing / empty; the tier has no comments at all. Treat as
+		# content-authoring break.
+		push_error(
+			(
+				"ManagerRelationshipManager: tier `%s` has no candidates for "
+				+ "condition `%s` and no `%s` fallback in %s; "
+				+ "comment dropped."
+			)
+			% [
+				String(tier), String(condition),
+				String(EOD_CONDITION_NORMAL), NOTES_PATH,
+			]
+		)
+		return {}
+	var arr: Array = candidates as Array
+	var entry: Variant = arr[_rng.randi() % arr.size()]
+	if entry is not Dictionary:
+		# §F-147 — Single malformed entry inside an otherwise-valid array.
+		# Warn (not push_error) since the rest of the candidates may be
+		# fine; the random pick will land on a valid entry on the next call.
+		push_warning(
+			(
+				"ManagerRelationshipManager: malformed candidate at "
+				+ "`end_of_day_comments.%s.%s` (%s); comment dropped."
+			)
+			% [
+				String(tier), String(condition),
+				type_string(typeof(entry)),
+			]
+		)
+		return {}
+	var dict: Dictionary = entry as Dictionary
+	return {
+		"id": str(dict.get("id", "")),
+		"body": str(dict.get("body", "")),
 	}
 
 

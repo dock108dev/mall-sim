@@ -9,11 +9,20 @@ func _make_director() -> Node:
 	ObjectiveDirector._current_day = 0
 	ObjectiveDirector._loop_completed = false
 	ObjectiveDirector._day1_step_index = -1
+	ObjectiveDirector._waiting_for_note_dismiss = false
 	var director: Node = preload(
 		"res://game/autoload/objective_director.gd"
 	).new() as Node
 	add_child_autofree(director)
 	return director
+
+
+## Drives the production handshake: day_started fires the pre-chain gate, then
+## the player dismisses Vic's morning note to release the chain at OPEN_INVENTORY.
+## Tests that exercise step-chain advancement go through this helper.
+func _start_day1_after_note_dismiss() -> void:
+	EventBus.day_started.emit(1)
+	EventBus.manager_note_dismissed.emit("")
 
 
 # ── Signal connection: day_started ────────────────────────────────────────────
@@ -36,7 +45,7 @@ func test_day_started_payload_has_objective_key() -> void:
 	assert_true(received[0].has("objective"), "payload must have 'objective' key")
 
 
-func test_day_started_day1_objective_text() -> void:
+func test_day_started_day1_pre_chain_surfaces_read_vic_note() -> void:
 	var director := _make_director()
 	var received: Array[Dictionary] = []
 	EventBus.objective_changed.connect(
@@ -45,8 +54,23 @@ func test_day_started_day1_objective_text() -> void:
 	EventBus.day_started.emit(1)
 	assert_eq(
 		received[0].get("objective", ""),
+		"Read Vic's morning note",
+		"Day 1 must surface the pre-chain READ_VIC_NOTE prompt before any step"
+	)
+
+
+func test_note_dismiss_advances_day1_chain_to_open_inventory() -> void:
+	var director := _make_director()
+	var received: Array[Dictionary] = []
+	EventBus.objective_changed.connect(
+		func(p: Dictionary) -> void: received.append(p)
+	)
+	EventBus.day_started.emit(1)
+	EventBus.manager_note_dismissed.emit("")
+	assert_eq(
+		received[received.size() - 1].get("objective", ""),
 		"Open your inventory",
-		"Day 1 chain must surface step 1 (open inventory) on day_started"
+		"Note dismissal must advance the rail to step 1 (open inventory)"
 	)
 
 
@@ -68,7 +92,7 @@ func test_store_entered_emits_objective_changed() -> void:
 	EventBus.objective_changed.connect(
 		func(p: Dictionary) -> void: received.append(p)
 	)
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	EventBus.store_entered.emit(&"retro_games")
 	assert_gt(received.size(), 0, "objective_changed must fire")
 	var payload: Dictionary = received[received.size() - 1]
@@ -116,13 +140,26 @@ func test_second_item_sold_does_not_re_emit_first_sale_completed() -> void:
 
 # ── Day 1 chain: signal-driven step advancement ──────────────────────────────
 
-func test_day1_initial_step_is_open_inventory() -> void:
+func test_day1_initial_step_is_open_inventory_after_note_dismiss() -> void:
 	var director := _make_director()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	assert_eq(
 		ObjectiveDirector._day1_step_index,
 		ObjectiveDirector.DAY1_STEP_OPEN_INVENTORY,
-		"Day 1 chain must start at step 1 (open inventory) on day_started"
+		"Day 1 chain must arm at step 1 once the morning note is dismissed"
+	)
+
+
+func test_day1_chain_is_gated_until_note_dismissed() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(1)
+	assert_eq(
+		ObjectiveDirector._day1_step_index, -1,
+		"Day 1 chain must not arm until the morning note is dismissed"
+	)
+	assert_true(
+		ObjectiveDirector._waiting_for_note_dismiss,
+		"day_started(1) must enter the pre-chain note-wait state"
 	)
 
 
@@ -132,7 +169,7 @@ func test_day1_chain_advances_through_each_signal_in_order() -> void:
 	EventBus.objective_changed.connect(
 		func(p: Dictionary) -> void: received.append(p)
 	)
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	# Step 1 → 2: opening the inventory panel.
 	EventBus.panel_opened.emit("inventory")
 	assert_eq(received[received.size() - 1].get("text", ""),
@@ -141,7 +178,7 @@ func test_day1_chain_advances_through_each_signal_in_order() -> void:
 	# Step 2 → 3: the player enters placement mode.
 	EventBus.placement_mode_entered.emit()
 	assert_eq(received[received.size() - 1].get("text", ""),
-		"Stock the item on a shelf",
+		"Stock the item on the Used Shelves",
 		"placement_mode_entered must advance to step 3 (stock item)")
 	# Step 3 → 4: the item lands on a shelf.
 	EventBus.item_stocked.emit("item_001", "shelf_a")
@@ -173,7 +210,7 @@ func test_day1_close_day_step_reached_after_sale_complete_timer() -> void:
 	EventBus.objective_changed.connect(
 		func(p: Dictionary) -> void: received.append(p)
 	)
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	EventBus.panel_opened.emit("inventory")
 	EventBus.placement_mode_entered.emit()
 	EventBus.item_stocked.emit("item_001", "shelf_a")
@@ -208,7 +245,7 @@ func test_day1_close_day_step_reached_after_sale_complete_timer() -> void:
 
 func test_day1_chain_ignores_out_of_order_signals() -> void:
 	var director := _make_director()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	# customer_purchased fired before any earlier step must not skip ahead.
 	EventBus.customer_purchased.emit(
 		&"retro_games", &"item_001", 20.0, &"customer_1"
@@ -222,7 +259,7 @@ func test_day1_chain_ignores_out_of_order_signals() -> void:
 
 func test_day1_chain_ignores_duplicate_triggers() -> void:
 	var director := _make_director()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	EventBus.panel_opened.emit("inventory")
 	assert_eq(
 		ObjectiveDirector._day1_step_index,
@@ -240,7 +277,7 @@ func test_day1_chain_ignores_duplicate_triggers() -> void:
 
 func test_day1_customer_state_changed_ignores_non_browsing_states() -> void:
 	var director := _make_director()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	EventBus.panel_opened.emit("inventory")
 	EventBus.placement_mode_entered.emit()
 	EventBus.item_stocked.emit("item_001", "shelf_a")
@@ -262,7 +299,7 @@ func test_day1_customer_state_changed_ignores_non_browsing_states() -> void:
 
 func test_day1_panel_opened_other_panels_do_not_advance() -> void:
 	var director := _make_director()
-	EventBus.day_started.emit(1)
+	_start_day1_after_note_dismiss()
 	EventBus.panel_opened.emit("staff")
 	assert_eq(
 		ObjectiveDirector._day1_step_index,
@@ -298,6 +335,82 @@ func test_item_sold_still_emits_first_sale_completed_with_chain_active() -> void
 	assert_signal_emitted(EventBus, "first_sale_completed")
 	if not EventBus.item_sold.is_connected(autoload_handler):
 		EventBus.item_sold.connect(autoload_handler)
+
+
+# ── Day 1 Pass recovery: rail rolls back to wait_for_customer ─────────────────
+
+func test_pass_at_checkout_rolls_back_day1_chain_to_wait_for_customer() -> void:
+	var director := _make_director()
+	_start_day1_after_note_dismiss()
+	EventBus.panel_opened.emit("inventory")
+	EventBus.placement_mode_entered.emit()
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	EventBus.customer_state_changed.emit(null, Customer.State.BROWSING)
+	EventBus.customer_ready_to_purchase.emit({})
+	assert_eq(
+		director._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_CUSTOMER_AT_CHECKOUT,
+		"precondition: chain must reach the at-checkout step before Pass"
+	)
+	EventBus.checkout_declined.emit(null)
+	assert_eq(
+		director._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_WAIT_FOR_CUSTOMER,
+		"Pass at the register must roll the rail back to wait-for-customer"
+	)
+
+
+func test_pass_at_browsing_step_also_rolls_back_to_wait_for_customer() -> void:
+	# Edge case: a panel-opened mutex on `CheckoutPanel` can fire sale_declined
+	# while the customer is still BROWSING. Rollback must still land at step 3.
+	var director := _make_director()
+	_start_day1_after_note_dismiss()
+	EventBus.panel_opened.emit("inventory")
+	EventBus.placement_mode_entered.emit()
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	EventBus.customer_state_changed.emit(null, Customer.State.BROWSING)
+	assert_eq(
+		director._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_CUSTOMER_BROWSING,
+		"precondition: chain must be on the browsing step"
+	)
+	EventBus.checkout_declined.emit(null)
+	assert_eq(
+		director._day1_step_index,
+		ObjectiveDirector.DAY1_STEP_WAIT_FOR_CUSTOMER,
+		"Pass during browsing must also roll back to wait-for-customer"
+	)
+
+
+func test_pass_after_first_sale_does_not_roll_back() -> void:
+	var director := _make_director()
+	_start_day1_after_note_dismiss()
+	EventBus.panel_opened.emit("inventory")
+	EventBus.placement_mode_entered.emit()
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	EventBus.customer_state_changed.emit(null, Customer.State.BROWSING)
+	EventBus.customer_ready_to_purchase.emit({})
+	EventBus.customer_purchased.emit(
+		&"retro_games", &"item_001", 20.0, &"customer_1"
+	)
+	EventBus.item_sold.emit("item_001", 20.0, "retro")
+	var step_after_sale: int = director._day1_step_index
+	EventBus.checkout_declined.emit(null)
+	assert_eq(
+		director._day1_step_index, step_after_sale,
+		"Pass after first sale completed must not rewind the chain"
+	)
+
+
+func test_pass_outside_day1_is_a_noop() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(2)
+	var step_before: int = director._day1_step_index
+	EventBus.checkout_declined.emit(null)
+	assert_eq(
+		director._day1_step_index, step_before,
+		"checkout_declined must not touch the step index outside Day 1"
+	)
 
 
 # ── Post-sale rail copy: days without a steps array still flip text ───────────
@@ -377,3 +490,77 @@ func test_show_objective_rail_setting_overrides_auto_hide() -> void:
 func after_each() -> void:
 	# Restore Settings default so tests don't bleed
 	Settings.show_objective_rail = false
+	ObjectiveDirector._waiting_for_note_dismiss = false
+
+
+# ── Pre-chain READ_VIC_NOTE gate ──────────────────────────────────────────────
+
+func test_pre_chain_payload_carries_pre_step_action_and_key() -> void:
+	var director := _make_director()
+	var received: Array[Dictionary] = []
+	EventBus.objective_changed.connect(
+		func(p: Dictionary) -> void: received.append(p)
+	)
+	EventBus.day_started.emit(1)
+	var payload: Dictionary = received[received.size() - 1]
+	assert_eq(
+		payload.get("text", ""), "Read Vic's morning note",
+		"Pre-chain payload must publish the read-vic-note text"
+	)
+	assert_eq(
+		payload.get("action", ""), "Press E to dismiss the note",
+		"Pre-chain payload must publish the dismiss action prompt"
+	)
+	assert_eq(
+		payload.get("key", ""), "E",
+		"Pre-chain payload must publish the E key badge"
+	)
+
+
+func test_note_dismissed_on_day_2_is_a_noop() -> void:
+	var director := _make_director()
+	EventBus.day_started.emit(2)
+	var step_before: int = director._day1_step_index
+	var waiting_before: bool = director._waiting_for_note_dismiss
+	EventBus.manager_note_dismissed.emit("day_2_morning")
+	assert_eq(
+		director._day1_step_index, step_before,
+		"manager_note_dismissed must not touch the step index outside Day 1"
+	)
+	assert_eq(
+		director._waiting_for_note_dismiss, waiting_before,
+		"manager_note_dismissed must not flip the gate flag outside Day 1"
+	)
+
+
+func test_duplicate_note_dismiss_is_a_noop() -> void:
+	var director := _make_director()
+	_start_day1_after_note_dismiss()
+	EventBus.panel_opened.emit("inventory")
+	var step_after_advance: int = director._day1_step_index
+	# A second dismiss while the chain is mid-flight must not roll the chain
+	# back to OPEN_INVENTORY or re-arm the gate.
+	EventBus.manager_note_dismissed.emit("")
+	assert_eq(
+		director._day1_step_index, step_after_advance,
+		"Late manager_note_dismissed must not rewind the chain"
+	)
+	assert_false(
+		director._waiting_for_note_dismiss,
+		"Late manager_note_dismissed must not re-arm the pre-chain gate"
+	)
+
+
+func test_store_entered_during_pre_chain_re_emits_pre_step_payload() -> void:
+	var director := _make_director()
+	var received: Array[Dictionary] = []
+	EventBus.objective_changed.connect(
+		func(p: Dictionary) -> void: received.append(p)
+	)
+	EventBus.day_started.emit(1)
+	EventBus.store_entered.emit(&"retro_games")
+	var payload: Dictionary = received[received.size() - 1]
+	assert_eq(
+		payload.get("objective", ""), "Read Vic's morning note",
+		"store_entered while waiting for note dismiss must keep the rail on the pre-step"
+	)

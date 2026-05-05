@@ -245,6 +245,13 @@ func _show_day_summary(day: int) -> void:
 	var shift: Node = get_node_or_null("/root/ShiftSystem")
 	if shift != null and shift.has_method("get_shift_summary"):
 		shift_summary = shift.call("get_shift_summary")
+	var customer_system: CustomerSystem = GameManager.get_customer_system()
+	if customer_system != null:
+		var leave_counts: Dictionary = customer_system.get_leave_counts()
+		shift_summary["customers_happy"] = int(leave_counts.get("happy", 0))
+		shift_summary["customers_no_stock"] = int(leave_counts.get("no_stock", 0))
+		shift_summary["customers_timeout"] = int(leave_counts.get("timeout", 0))
+		shift_summary["customers_price"] = int(leave_counts.get("price", 0))
 
 	var payload: Dictionary = {
 		"day": day,
@@ -268,6 +275,28 @@ func _show_day_summary(day: int) -> void:
 	}
 	EventBus.day_closed.emit(day, payload)
 	EventBus.publish_day_end_summary(payload)
+
+	# §F-141 — LedgerSystem reconciliation runs in every build (the
+	# anchor mismatch is a data-integrity check), but the verbose
+	# per-entry dump is gated on `OS.is_debug_build()` so shipping
+	# builds do not flood stdout with the per-day timeline. Direct
+	# typed calls on the autoload (vs. the prior `get_node_or_null`
+	# + `.call()`) so a signature regression on `get_debug_dump` /
+	# `validate_against_anchor` fails at parse time instead of being
+	# silently masked by a runtime "method not found".
+	if OS.is_debug_build():
+		print(LedgerSystem.get_debug_dump(day))
+	var ledger_check: Dictionary = LedgerSystem.validate_against_anchor(day)
+	if not bool(ledger_check.get("match", false)):
+		push_warning(
+			"LedgerSystem: revenue delta %.2f for day %d (ledger=%.2f anchor=%.2f)"
+			% [
+				float(ledger_check.get("delta", 0.0)),
+				day,
+				float(ledger_check.get("ledger_revenue", 0.0)),
+				float(ledger_check.get("anchor_revenue", -1.0)),
+			]
+		)
 
 	if not _day_summary:
 		return

@@ -65,7 +65,7 @@ func test_focus_fade_reaches_full_alpha() -> void:
 
 func test_label_text_driven_by_action_label() -> void:
 	EventBus.interactable_focused.emit("Examine Item")
-	var label: Label = _prompt.get_node("PanelContainer/Label")
+	var label: Label = _prompt.get_node("PanelContainer/HBox/Label")
 	assert_eq(
 		label.text, "Examine Item",
 		"Label should display the action_label verbatim (callers include key prefix)"
@@ -74,7 +74,7 @@ func test_label_text_driven_by_action_label() -> void:
 
 func test_label_displays_click_prefix() -> void:
 	EventBus.interactable_focused.emit("[Click] Enter Store")
-	var label: Label = _prompt.get_node("PanelContainer/Label")
+	var label: Label = _prompt.get_node("PanelContainer/HBox/Label")
 	assert_eq(
 		label.text, "[Click] Enter Store",
 		"Label must preserve caller-supplied key prefix"
@@ -84,7 +84,7 @@ func test_label_displays_click_prefix() -> void:
 func test_label_updates_on_new_focus() -> void:
 	EventBus.interactable_focused.emit("[E] Enter Store")
 	EventBus.interactable_focused.emit("[E] Stock Shelf")
-	var label: Label = _prompt.get_node("PanelContainer/Label")
+	var label: Label = _prompt.get_node("PanelContainer/HBox/Label")
 	assert_eq(
 		label.text, "[E] Stock Shelf",
 		"Label should update when a new interactable is focused"
@@ -184,4 +184,111 @@ func test_does_not_show_when_focus_arrives_during_modal() -> void:
 	assert_false(
 		panel.visible,
 		"Prompt must not become visible when focus arrives while modal is active"
+	)
+
+
+# ── Active vs. disabled prompt styling ─────────────────────────────────────
+
+func test_active_focus_shows_e_key_badge() -> void:
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	var badge: PanelContainer = _prompt.get_node("PanelContainer/HBox/KeyBadge")
+	assert_true(
+		badge.visible,
+		"E-key badge must be visible during active (can_interact=true) focus"
+	)
+
+
+func test_active_focus_label_uses_full_opacity() -> void:
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	var label: Label = _prompt.get_node("PanelContainer/HBox/Label")
+	assert_almost_eq(
+		label.modulate.a, 1.0, 0.001,
+		"Active prompt's action label must render at full opacity"
+	)
+
+
+func test_disabled_focus_hides_e_key_badge() -> void:
+	EventBus.interactable_focused_disabled.emit("No customer waiting")
+	var badge: PanelContainer = _prompt.get_node("PanelContainer/HBox/KeyBadge")
+	assert_false(
+		badge.visible,
+		"E-key badge must be hidden during disabled focus so the player can tell at a glance E will not act"
+	)
+
+
+func test_disabled_focus_label_uses_muted_modulate() -> void:
+	EventBus.interactable_focused_disabled.emit("No customer waiting")
+	var label: Label = _prompt.get_node("PanelContainer/HBox/Label")
+	assert_lt(
+		label.modulate.a, 0.85,
+		"Disabled-reason text must render with reduced alpha so it does not compete with active prompts"
+	)
+
+
+func test_disabled_focus_label_text_matches_reason() -> void:
+	EventBus.interactable_focused_disabled.emit("Shelf full")
+	var label: Label = _prompt.get_node("PanelContainer/HBox/Label")
+	assert_eq(
+		label.text, "Shelf full",
+		"Disabled-state label must display the get_disabled_reason() text verbatim"
+	)
+
+
+func test_disabled_focus_with_empty_reason_hides_panel() -> void:
+	EventBus.interactable_focused_disabled.emit("")
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	await get_tree().create_timer(0.2).timeout
+	assert_false(
+		panel.visible,
+		"An empty get_disabled_reason() must produce no visible prompt"
+	)
+
+
+func test_active_focus_after_disabled_restores_badge_and_full_opacity() -> void:
+	EventBus.interactable_focused_disabled.emit("Shelf full")
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	var badge: PanelContainer = _prompt.get_node("PanelContainer/HBox/KeyBadge")
+	var label: Label = _prompt.get_node("PanelContainer/HBox/Label")
+	assert_true(
+		badge.visible,
+		"Switching back to an active focus must re-show the E-key badge"
+	)
+	assert_almost_eq(
+		label.modulate.a, 1.0, 0.001,
+		"Switching back to an active focus must restore full label opacity"
+	)
+
+
+func test_panel_anchor_does_not_move_between_states() -> void:
+	# Regression guard for the AC "active prompt and disabled reason render
+	# at the same screen position." The panel itself is bottom-center
+	# anchored; toggling KeyBadge.visible re-centres the HBox children
+	# inside that panel, but the panel's anchor offsets must not shift.
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	var initial_offset_left: float = panel.offset_left
+	var initial_offset_right: float = panel.offset_right
+	var initial_offset_bottom: float = panel.offset_bottom
+
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	assert_eq(
+		panel.offset_left, initial_offset_left,
+		"Active focus must not shift the prompt panel's left anchor offset"
+	)
+	assert_eq(
+		panel.offset_right, initial_offset_right,
+		"Active focus must not shift the prompt panel's right anchor offset"
+	)
+
+	EventBus.interactable_focused_disabled.emit("Shelf full")
+	assert_eq(
+		panel.offset_left, initial_offset_left,
+		"Disabled focus must not shift the prompt panel's left anchor offset"
+	)
+	assert_eq(
+		panel.offset_right, initial_offset_right,
+		"Disabled focus must not shift the prompt panel's right anchor offset"
+	)
+	assert_eq(
+		panel.offset_bottom, initial_offset_bottom,
+		"Disabled focus must not shift the prompt panel's bottom anchor offset"
 	)

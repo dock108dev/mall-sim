@@ -119,6 +119,15 @@ var _day1_forced_spawn_timer: Timer = null
 var _defective_sale_today: bool = false
 ## Per-archetype spawn counters for the current day. Resets on day_started.
 var _archetype_spawn_count_today: Dictionary = {}
+## Per-day leave-reason counters keyed by reason bucket name. Reset on
+## day_started, incremented in despawn_customer. Surfaces via get_leave_counts()
+## for the day-summary "failed customer reasons" breakdown.
+var _leave_counts: Dictionary = {
+	"happy": 0,
+	"no_stock": 0,
+	"timeout": 0,
+	"price": 0,
+}
 ## Cached current day phase (TimeSystem.DayPhase int) so spawn-weight rules can
 ## consult phase without re-fetching from TimeSystem every roll.
 var _current_day_phase: int = 0
@@ -353,6 +362,7 @@ func despawn_customer(customer_node: Node) -> void:
 			_on_customer_despawn_requested
 		)
 	_active_customers.erase(customer)
+	_increment_leave_count(customer.get_leave_reason())
 	_release_customer(customer)
 	EventBus.customer_left.emit(customer_data)
 
@@ -367,6 +377,50 @@ func get_active_customer_count() -> int:
 
 func get_active_mall_shopper_count() -> int:
 	return _active_mall_shopper_count
+
+
+## Returns a copy of the per-day leave-reason counters keyed by reason bucket
+## ("happy", "no_stock", "timeout", "price"). Drives the day-summary
+## "failed customer reasons" breakdown and the derived "total customers"
+## label. Resets on day_started.
+func get_leave_counts() -> Dictionary:
+	return _leave_counts.duplicate()
+
+
+func _reset_leave_counts() -> void:
+	_leave_counts = {
+		"happy": 0,
+		"no_stock": 0,
+		"timeout": 0,
+		"price": 0,
+	}
+
+
+func _increment_leave_count(reason: StringName) -> void:
+	var bucket: String = ""
+	match reason:
+		&"purchase_complete":
+			bucket = "happy"
+		&"no_matching_item":
+			bucket = "no_stock"
+		&"patience_expired":
+			bucket = "timeout"
+		&"price_too_high":
+			bucket = "price"
+	if bucket.is_empty():
+		# §F-149 — The four cases above mirror every value `Customer._leave_with`
+		# can stamp on `_leave_reason`; an unknown reason here means a new code
+		# path in `customer.gd` introduced a leave reason without updating this
+		# match. Silently dropping it would leave the day-summary "failed
+		# customer reasons" breakdown under-counted (and the derived total
+		# customers count off), so surface the regression as a warning instead
+		# of letting the bucket disappear.
+		push_warning(
+			"CustomerSystem: unmapped leave reason `%s` — day-summary breakdown will undercount."
+			% String(reason)
+		)
+		return
+	_leave_counts[bucket] = int(_leave_counts.get(bucket, 0)) + 1
 
 
 func set_store_controller(controller: StoreController) -> void:
@@ -605,6 +659,8 @@ func _connect_signals() -> void:
 		_on_defective_sale_occurred
 	):
 		EventBus.defective_sale_occurred.connect(_on_defective_sale_occurred)
+	if not EventBus.checkout_declined.is_connected(_on_checkout_declined):
+		EventBus.checkout_declined.connect(_on_checkout_declined)
 
 
 func _get_fractional_hour() -> float:
@@ -773,6 +829,7 @@ func _on_day_started(day: int) -> void:
 	_current_day_of_week = (day - 1) % 7
 	_defective_sale_today = false
 	_archetype_spawn_count_today.clear()
+	_reset_leave_counts()
 	_refresh_current_archetype_weights()
 
 
@@ -851,6 +908,36 @@ func _on_day_phase_changed(new_phase: int) -> void:
 
 func _on_defective_sale_occurred(_item_id: String, _reason: String) -> void:
 	_defective_sale_today = true
+
+
+## Day 1 recovery: the player declined the sale at the register before the
+## first sale completed. Re-open the spawn slot and re-arm the forced-spawn
+## fallback so the next customer arrives within the documented window even
+## when the hour-density loop has already burned its scripted slot. The first
+## customer's despawn animation runs in parallel; the timer's existing
+## `_active_customers.is_empty()` guard defers spawning until they have left.
+func _on_checkout_declined(_customer: Node) -> void:
+	if GameManager.get_current_day() != 1:
+		return
+	if GameState.get_flag(&"first_sale_complete"):
+		return
+	if _day1_forced_spawn_timer == null:
+		# §F-144 — Reaching this branch on Day 1 pre-first-sale means the
+		# forced-spawn timer was never instantiated by `_ready` /
+		# `initialize`. The player just declined a sale and the rail is
+		# rolling back to "wait for a customer" (ObjectiveDirector
+		# §_on_checkout_declined), but no fallback timer will arm. Without
+		# a log line the bug presents as "Day 1 stalls after declining the
+		# first customer" — surface the Tier-3 init regression instead.
+		push_warning(
+			"CustomerSystem: Day-1 forced-spawn timer missing on "
+			+ "checkout_declined; next customer will not auto-spawn."
+		)
+		return
+	_day1_first_customer_spawned = false
+	if not _day1_forced_spawn_timer.is_stopped():
+		_day1_forced_spawn_timer.stop()
+	_day1_forced_spawn_timer.start(DAY1_FORCED_SPAWN_FALLBACK_SECONDS)
 
 
 func _despawn_all_customers() -> void:

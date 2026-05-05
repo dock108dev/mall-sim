@@ -1,6 +1,33 @@
-[gd_scene load_steps=2 format=3 uid="uid://intprompt1"]
+[gd_scene load_steps=4 format=3 uid="uid://intprompt1"]
 
 [ext_resource type="Script" path="res://game/scripts/ui/interaction_prompt.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="KeyBadgeStyle"]
+bg_color = Color(0.957, 0.914, 0.831, 1.0)
+border_color = Color(0.169, 0.114, 0.071, 1.0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 8.0
+content_margin_top = 2.0
+content_margin_right = 8.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxFlat" id="PromptPanelStyle"]
+bg_color = Color(0.122, 0.102, 0.086, 0.78)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
 
 [node name="InteractionPrompt" type="CanvasLayer"]
 layer = 60
@@ -12,16 +39,36 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -120.0
-offset_top = -102.0
-offset_right = 120.0
-offset_bottom = -72.0
+offset_left = -180.0
+offset_top = -110.0
+offset_right = 180.0
+offset_bottom = -70.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
+theme_override_styles/panel = SubResource("PromptPanelStyle")
 
-[node name="Label" type="Label" parent="PanelContainer"]
+[node name="HBox" type="HBoxContainer" parent="PanelContainer"]
 layout_mode = 2
-text = "[E] Interact"
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="KeyBadge" type="PanelContainer" parent="PanelContainer/HBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("KeyBadgeStyle")
+
+[node name="KeyLabel" type="Label" parent="PanelContainer/HBox/KeyBadge"]
+layout_mode = 2
+text = "E"
 horizontal_alignment = 1
 vertical_alignment = 1
+theme_override_colors/font_color = Color(0.169, 0.114, 0.071, 1.0)
+theme_override_font_sizes/font_size = 16
+
+[node name="Label" type="Label" parent="PanelContainer/HBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.957, 0.914, 0.831, 1.0)

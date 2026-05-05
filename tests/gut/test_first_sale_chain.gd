@@ -178,6 +178,95 @@ func test_forced_spawn_timer_does_not_double_spawn_after_organic() -> void:
 	)
 
 
+func test_checkout_declined_re_arms_forced_spawn_timer_before_first_sale() -> void:
+	var system: CustomerSystem = _make_customer_system()
+	GameManager.set_current_day(1)
+	system._on_item_stocked("item_a", "slot_a")
+	# Drive the scripted spawn to consume the one-shot.
+	system._on_day1_forced_spawn_timer_timeout()
+	for c: Customer in system.get_active_customers().duplicate():
+		system.despawn_customer(c)
+	assert_true(
+		system._day1_first_customer_spawned,
+		"precondition: first customer was spawned"
+	)
+	assert_true(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"precondition: timer is idle after the one-shot fired"
+	)
+	GameState.set_flag(&"first_sale_complete", false)
+	system._on_checkout_declined(null)
+	assert_false(
+		system._day1_first_customer_spawned,
+		"checkout_declined before first sale must clear the one-shot guard"
+	)
+	assert_false(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"checkout_declined before first sale must re-arm the forced-spawn timer"
+	)
+	system._on_day1_forced_spawn_timer_timeout()
+	assert_eq(
+		system.get_active_customer_count(), 1,
+		"Re-armed timer must spawn a recovery customer when it fires"
+	)
+
+
+func test_checkout_declined_after_first_sale_does_not_re_arm() -> void:
+	var system: CustomerSystem = _make_customer_system()
+	GameManager.set_current_day(1)
+	system._day1_first_customer_spawned = true
+	GameState.set_flag(&"first_sale_complete", true)
+	system._on_checkout_declined(null)
+	assert_true(
+		system._day1_first_customer_spawned,
+		"first_sale_complete=true must keep the one-shot guard intact"
+	)
+	assert_true(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"first_sale_complete=true must not re-arm the timer on Pass"
+	)
+
+
+func test_checkout_declined_outside_day1_is_a_noop() -> void:
+	var system: CustomerSystem = _make_customer_system()
+	GameManager.set_current_day(2)
+	system._day1_first_customer_spawned = true
+	system._on_checkout_declined(null)
+	assert_true(
+		system._day1_first_customer_spawned,
+		"Day > 1 checkout_declined must leave the spawn flag untouched"
+	)
+	assert_true(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"Day > 1 checkout_declined must not arm the Day 1 forced-spawn timer"
+	)
+
+
+func test_checkout_declined_signal_wired_through_initialize() -> void:
+	# Ensures the EventBus connection is established by `_connect_signals`,
+	# not just by direct method calls. Without this wiring, the live system
+	# would never see `EventBus.checkout_declined` from the production
+	# PlayerCheckout path.
+	var system: CustomerSystem = CustomerSystem.new()
+	add_child_autofree(system)
+	system._customer_scene = preload(
+		"res://game/scenes/characters/customer.tscn"
+	)
+	system._connect_signals()
+	GameManager.set_current_day(1)
+	system._day1_first_customer_spawned = true
+	GameState.set_flag(&"first_sale_complete", false)
+	EventBus.checkout_declined.emit(null)
+	assert_false(
+		system._day1_first_customer_spawned,
+		"checkout_declined signal must reach _on_checkout_declined via _connect_signals()"
+	)
+	assert_false(
+		system._day1_forced_spawn_timer.is_stopped(),
+		"checkout_declined signal must arm the forced-spawn timer"
+	)
+
+
 func test_on_item_stocked_signal_wired_through_initialize() -> void:
 	# Direct signal-emission path: verify `_connect_signals()` connects the
 	# handler so the scripted spawn is reachable from EventBus.item_stocked,

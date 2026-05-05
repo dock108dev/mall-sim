@@ -192,6 +192,42 @@ func test_create_starting_inventory() -> void:
 		break
 
 
+func test_create_starting_inventory_pre_prices_items() -> void:
+	# Day 1 starter items must ship with a non-zero player_set_price so the
+	# inventory panel shows a real $value instead of "Not set" and so the
+	# first checkout settles at a number the player has already seen.
+	var stores: Array[StoreDefinition] = (
+		DataLoaderSingleton.get_all_stores()
+	)
+	var checked_any: bool = false
+	for store: StoreDefinition in stores:
+		if store.starting_inventory.is_empty():
+			continue
+		var inv: Array[ItemInstance] = (
+			DataLoaderSingleton.create_starting_inventory(store.id)
+		)
+		for item: ItemInstance in inv:
+			checked_any = true
+			assert_gt(
+				item.player_set_price, 0.0,
+				"Starter '%s' (store '%s') must have player_set_price > 0"
+				% [item.definition.id, store.id]
+			)
+			var def: ItemDefinition = item.definition
+			var expected: float = (
+				def.used_price if def.used_price > 0.0 else def.base_price
+			)
+			assert_eq(
+				item.player_set_price, expected,
+				"Starter '%s' price should match used_price (or base_price fallback)"
+				% def.id
+			)
+	assert_true(
+		checked_any,
+		"At least one store should have a non-empty starting_inventory"
+	)
+
+
 func test_generate_starter_inventory() -> void:
 	var stores: Array[StoreDefinition] = (
 		DataLoaderSingleton.get_all_stores()

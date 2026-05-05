@@ -170,13 +170,48 @@ func unhighlight() -> void:
 ## Triggers the interaction, emitting both local and global signals.
 ## `by` (ISSUE-017) identifies the actor that triggered the interaction so
 ## listeners can attribute it; defaults to null for the legacy callsites.
+##
+## `can_interact(by)` is checked at the source so programmatic callers
+## (anything calling `.interact()` directly, including the InteractionRay
+## E-press dispatch) are protected by the same gate that the HUD reads. A
+## subclass that returns `false` cannot fire the `interacted` /
+## `interactable_interacted` / `interactable_clicked` signals — there are no
+## phantom emissions to ignore downstream.
 func interact(by: Node = null) -> void:
 	if not enabled:
+		return
+	if not can_interact(by):
 		return
 	interacted.emit()
 	interacted_by.emit(by)
 	EventBus.interactable_interacted.emit(self, interaction_type)
 	EventBus.interactable_clicked.emit(resolve_interactable_id(), store_id)
+
+
+## Returns whether `actor` can currently trigger this interaction.
+##
+## Default `true` preserves backwards compatibility for every existing
+## subclass and scene-authored Interactable. Subclasses override to gate on
+## runtime state (stock level, queue size, role check, …) so dead E-prompts
+## disappear without resorting to the legacy empty-`prompt_text` convention.
+##
+## The HUD uses this to choose between an active "Press E to …" prompt and
+## a `get_disabled_reason()` info label (no E-key badge); `interact()` uses
+## it to refuse phantom signal emission.
+func can_interact(_actor: Node = null) -> bool:
+	return true
+
+
+## Human-readable explanation shown when `can_interact(actor)` returns false
+## and the player is focused on this object. Empty string means the HUD
+## suppresses the prompt entirely.
+##
+## Subclasses override to surface state-specific messages
+## ("No customer waiting", "Shelf full"). The HUD renders this text muted
+## and without an E-key badge so the player can tell at a glance that E
+## will not do anything here.
+func get_disabled_reason(_actor: Node = null) -> String:
+	return ""
 
 
 ## ISSUE-003: resolves the stable id used for scoped EventBus routing. Falls

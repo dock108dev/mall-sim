@@ -218,6 +218,63 @@ func test_hard_difficulty_reduces_spawn_target_versus_normal_at_peak_hour() -> v
 	)
 
 
+# --- Leave-reason counters ---
+
+
+func test_leave_counts_initialize_to_zero() -> void:
+	var counts: Dictionary = _system.get_leave_counts()
+	assert_eq(int(counts.get("happy", -1)), 0, "happy bucket starts at 0")
+	assert_eq(int(counts.get("no_stock", -1)), 0, "no_stock bucket starts at 0")
+	assert_eq(int(counts.get("timeout", -1)), 0, "timeout bucket starts at 0")
+	assert_eq(int(counts.get("price", -1)), 0, "price bucket starts at 0")
+
+
+func test_increment_leave_count_buckets_each_reason() -> void:
+	_system._increment_leave_count(&"purchase_complete")
+	_system._increment_leave_count(&"purchase_complete")
+	_system._increment_leave_count(&"no_matching_item")
+	_system._increment_leave_count(&"patience_expired")
+	_system._increment_leave_count(&"price_too_high")
+	var counts: Dictionary = _system.get_leave_counts()
+	assert_eq(int(counts["happy"]), 2, "purchase_complete maps to happy bucket")
+	assert_eq(int(counts["no_stock"]), 1, "no_matching_item maps to no_stock")
+	assert_eq(int(counts["timeout"]), 1, "patience_expired maps to timeout")
+	assert_eq(int(counts["price"]), 1, "price_too_high maps to price bucket")
+
+
+func test_increment_leave_count_ignores_unknown_reason() -> void:
+	_system._increment_leave_count(&"unrecognized_reason")
+	var counts: Dictionary = _system.get_leave_counts()
+	var total: int = (
+		int(counts["happy"])
+		+ int(counts["no_stock"])
+		+ int(counts["timeout"])
+		+ int(counts["price"])
+	)
+	assert_eq(total, 0, "unknown reasons must not corrupt any bucket")
+
+
+func test_day_started_resets_leave_counts() -> void:
+	_system._increment_leave_count(&"purchase_complete")
+	_system._increment_leave_count(&"no_matching_item")
+	_system._on_day_started(2)
+	var counts: Dictionary = _system.get_leave_counts()
+	assert_eq(int(counts["happy"]), 0, "happy bucket resets on day_started")
+	assert_eq(int(counts["no_stock"]), 0, "no_stock resets on day_started")
+
+
+func test_get_leave_counts_returns_copy() -> void:
+	_system._increment_leave_count(&"purchase_complete")
+	var counts: Dictionary = _system.get_leave_counts()
+	counts["happy"] = 999
+	var fresh: Dictionary = _system.get_leave_counts()
+	assert_eq(
+		int(fresh["happy"]), 1,
+		"get_leave_counts must return a copy so external mutation cannot "
+		+ "corrupt the internal counters"
+	)
+
+
 # --- Helpers ---
 
 

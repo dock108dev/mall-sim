@@ -427,6 +427,8 @@ func initialize_tier_5_meta() -> void:
 
 	completion_tracker.initialize(GameManager.data_loader)
 
+	LedgerSystem.initialize(time_system)
+
 	day_cycle_controller.initialize(
 		time_system,
 		economy_system,

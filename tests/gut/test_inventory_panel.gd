@@ -793,3 +793,145 @@ func test_all_tab_renders_backroom_in_location_label() -> void:
 		loc_label.text, "Backroom",
 		"Backroom items must surface 'Backroom' in the Location label"
 	)
+
+
+func test_price_label_shows_player_price_when_set() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var def: ItemDefinition = items[0]
+	var item: ItemInstance = _create_test_item(def.id, "good", "backroom")
+	item.player_set_price = 4.99
+	var row: PanelContainer = InventoryRowBuilder.build(item)
+	var price_label: Label = _find_label_by_name(row, "PriceLabel")
+	assert_not_null(price_label, "Row must include a PriceLabel")
+	assert_eq(
+		price_label.text, "$4.99",
+		"Set player price must render as a formatted currency chip"
+	)
+
+
+func test_price_label_shows_not_set_when_player_price_zero() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var def: ItemDefinition = items[0]
+	var item: ItemInstance = _create_test_item(def.id, "good", "backroom")
+	item.player_set_price = 0.0
+	var row: PanelContainer = InventoryRowBuilder.build(item)
+	var price_label: Label = _find_label_by_name(row, "PriceLabel")
+	assert_not_null(price_label)
+	assert_eq(
+		price_label.text, "Not set",
+		"Unpriced items must display 'Not set' rather than '$0.00'"
+	)
+	assert_false(
+		price_label.text.contains("$0.00"),
+		"Zero player price must never render as a real currency value"
+	)
+
+
+func test_price_set_signal_refreshes_open_panel() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var def: ItemDefinition = items[0]
+	var item: ItemInstance = _create_test_item(def.id, "good", "backroom")
+	item.player_set_price = 0.0
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	add_child_autofree(panel)
+	panel.store_id = def.store_type
+	panel._is_open = true
+	panel._refresh_grid()
+	# Lets the queue_free() from any prior refresh finalize before snapshotting.
+	await get_tree().process_frame
+
+	var first_row: PanelContainer = panel._grid.get_child(0) as PanelContainer
+	var label_before: Label = _find_label_by_name(first_row, "PriceLabel")
+	assert_eq(
+		label_before.text, "Not set",
+		"Initial render must show 'Not set' for unpriced item"
+	)
+
+	# Mirror what PricingPanel._on_apply does: write the price and emit price_set.
+	item.player_set_price = 7.50
+	EventBus.price_set.emit(item.instance_id, 7.50)
+	await get_tree().process_frame
+
+	var refreshed_row: PanelContainer = panel._grid.get_child(0) as PanelContainer
+	var label_after: Label = _find_label_by_name(refreshed_row, "PriceLabel")
+	assert_eq(
+		label_after.text, "$7.50",
+		"Open panel must refresh the price chip when price_set fires"
+	)
+
+
+func test_quick_stock_action_stocks_first_backroom_item() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var def: ItemDefinition = items[0]
+	var item: ItemInstance = _create_test_item(def.id, "good", "backroom")
+	var slot: ShelfSlot = _make_shelf_slot("quick_stock_slot", def.category)
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	add_child_autofree(panel)
+	# _sync_active_store() during _ready clobbers store_id from GameManager;
+	# overwrite after add_child so the test owns the active-store contract.
+	panel.store_id = def.store_type
+	panel._is_open = true
+
+	panel._quick_stock_first_backroom_item()
+
+	assert_true(
+		slot.is_occupied(),
+		"Q quick-stock must place the first backroom item into a compatible slot"
+	)
+	assert_eq(
+		item.current_location, "shelf:quick_stock_slot",
+		"Quick-stocked item must land in the matched slot"
+	)
+
+
+func test_quick_stock_warns_when_backroom_empty() -> void:
+	var items: Array[ItemDefinition] = _data_loader.get_all_items()
+	if items.is_empty():
+		pass_test("No item definitions — skip")
+		return
+	var def: ItemDefinition = items[0]
+	# Only a shelf item exists — backroom view is empty.
+	var shelf_item: ItemInstance = _create_test_item(
+		def.id, "good", "shelf:already_full"
+	)
+	assert_not_null(shelf_item)
+	var panel: InventoryPanel = (
+		_INVENTORY_PANEL_SCENE.instantiate() as InventoryPanel
+	)
+	panel.inventory_system = _inventory_system
+	add_child_autofree(panel)
+	panel.store_id = def.store_type
+	panel._is_open = true
+
+	var notifications: Array[String] = []
+	var on_notify: Callable = (
+		func(msg: String) -> void: notifications.append(msg)
+	)
+	EventBus.notification_requested.connect(on_notify)
+
+	panel._quick_stock_first_backroom_item()
+
+	EventBus.notification_requested.disconnect(on_notify)
+
+	assert_true(
+		notifications.size() >= 1,
+		"Quick-stock with empty backroom must surface a notification"
+	)

@@ -283,6 +283,28 @@ func test_declined_sale_does_not_emit_item_sold() -> void:
 	)
 
 
+func test_declined_sale_emits_checkout_declined_signal() -> void:
+	# Day 1 recovery (rail rollback + forced-spawn re-arm) listens for
+	# checkout_declined to distinguish Pass from a successful sale's
+	# checkout_completed. Both signals fire on Pass; only checkout_declined
+	# is unique to the no-sale path.
+	var customer: Customer = _make_customer()
+	_checkout._active_customer = customer
+	_checkout._active_item = _item
+	_checkout._active_offer = 999.0
+	var declined_count: Array[int] = [0]
+	var on_decline: Callable = (
+		func(_c: Node) -> void: declined_count[0] += 1
+	)
+	EventBus.checkout_declined.connect(on_decline)
+	_checkout._on_sale_declined()
+	EventBus.checkout_declined.disconnect(on_decline)
+	assert_eq(
+		declined_count[0], 1,
+		"_on_sale_declined must emit checkout_declined exactly once"
+	)
+
+
 # --- Race condition guards ---
 
 

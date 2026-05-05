@@ -185,6 +185,116 @@
       "body": "You're on close tonight. Checklist is behind the register.\n\n— Vic"
     }
   },
+  "end_of_day_comments": {
+    "cold": {
+      "zero_sales": [
+        {"id": "eod_cold_zero_sales_0", "body": "I checked the register tape. Zero. Not one transaction. Whatever you were doing back there, it wasn't selling."},
+        {"id": "eod_cold_zero_sales_1", "body": "You ran a store today. Zero sales. I'd say something, but I'm not sure it'd land."},
+        {"id": "eod_cold_zero_sales_2", "body": "Empty register at close. The mall doesn't run on ambiance."}
+      ],
+      "empty_shelves": [
+        {"id": "eod_cold_empty_shelves_0", "body": "Customers came in and left with nothing because you had nothing to sell them. That's the whole problem in one sentence."},
+        {"id": "eod_cold_empty_shelves_1", "body": "Empty shelves at close. People don't come back to a store that can't be bothered to stock itself."},
+        {"id": "eod_cold_empty_shelves_2", "body": "You turned customers away today. With empty shelves. The backroom situation needs to be your first problem tomorrow."}
+      ],
+      "stockout_walkouts": [
+        {"id": "eod_cold_stockout_walkouts_0", "body": "Multiple customers left because you didn't have what they wanted. That's not bad luck — that's a stocking problem."},
+        {"id": "eod_cold_stockout_walkouts_1", "body": "People walked out today because there was nothing on the shelf for them. They don't give second chances, usually."},
+        {"id": "eod_cold_stockout_walkouts_2", "body": "Walkouts on record. Three separate customers came in, found nothing, and left. Figure out what they came for."}
+      ],
+      "queue_timeout": [
+        {"id": "eod_cold_queue_timeout_0", "body": "Customers waited, gave up, and left. That's the checkout line making decisions for you."},
+        {"id": "eod_cold_queue_timeout_1", "body": "Four-plus queue timeouts today. Customers aren't paid to wait. Your line is losing you business."},
+        {"id": "eod_cold_queue_timeout_2", "body": "Wait times pushed people out the door. Whatever is slowing down checkout needs to be looked at seriously."}
+      ],
+      "normal": [
+        {"id": "eod_cold_normal_0", "body": "Numbers are what they are. Be here tomorrow."},
+        {"id": "eod_cold_normal_1", "body": "Day's done. Margin is thin. Do better with the floor tomorrow."},
+        {"id": "eod_cold_normal_2", "body": "Closed out. Nothing remarkable. That's either consistent or stagnant — depends which way you're moving."}
+      ]
+    },
+    "neutral": {
+      "zero_sales": [
+        {"id": "eod_neutral_zero_sales_0", "body": "Tough day — nothing moved. Worth taking a look at what you were priced at and whether anyone could actually find what they needed."},
+        {"id": "eod_neutral_zero_sales_1", "body": "No sales today. Could be foot traffic, could be inventory, could be a dozen other things. Think about what was different."},
+        {"id": "eod_neutral_zero_sales_2", "body": "Zero on the board. It happens. Less so when things are stocked and prices are reasonable, but it happens."}
+      ],
+      "empty_shelves": [
+        {"id": "eod_neutral_empty_shelves_0", "body": "You ran dry and it cost you sales. Restock protocols need attention — backroom items should be hitting shelves before customers arrive, not after they leave."},
+        {"id": "eod_neutral_empty_shelves_1", "body": "Sold out is a nice problem to have once in a while. Every day is not once in a while. Look at your reorder timing."},
+        {"id": "eod_neutral_empty_shelves_2", "body": "Clean shelves look great in a photo. In practice it means you ran out of things to sell. Get ahead of that."}
+      ],
+      "stockout_walkouts": [
+        {"id": "eod_neutral_stockout_walkouts_0", "body": "A few customers walked today over stock gaps. That's recoverable if you treat it as a signal about what to carry."},
+        {"id": "eod_neutral_stockout_walkouts_1", "body": "Walkouts this shift — not a crisis, but worth noting the pattern. What were the gaps and can you fill them?"},
+        {"id": "eod_neutral_stockout_walkouts_2", "body": "Some traffic came in and left empty-handed. Better availability tomorrow would convert at least some of those."}
+      ],
+      "queue_timeout": [
+        {"id": "eod_neutral_queue_timeout_0", "body": "Checkout backed up enough today that people bailed before they got to the register. That's a flow problem worth solving before it becomes a reputation problem."},
+        {"id": "eod_neutral_queue_timeout_1", "body": "Queue timeouts this shift. If it's staffing, fix staffing. If it's layout, fix layout. People won't wait indefinitely."},
+        {"id": "eod_neutral_queue_timeout_2", "body": "A few customers timed out in the queue today. Not a catastrophe, but it signals something is bottlenecking at close of the sale loop."}
+      ],
+      "normal": [
+        {"id": "eod_neutral_normal_0", "body": "Day is logged. Keep the floor moving and the stock visible."},
+        {"id": "eod_neutral_normal_1", "body": "Close is done. Standard day — nothing that breaks the run in either direction."},
+        {"id": "eod_neutral_normal_2", "body": "Wrapped up. Inventory and price points are the two things most in your control. Worth reviewing."}
+      ]
+    },
+    "warm": {
+      "zero_sales": [
+        {"id": "eod_warm_zero_sales_0", "body": "Rough one today — nothing rang up. You've had better days. Figure out what the bottleneck was and you'll bounce back."},
+        {"id": "eod_warm_zero_sales_1", "body": "Zero sales. I know you've been putting in the work, so something specific went sideways — worth tracking down."},
+        {"id": "eod_warm_zero_sales_2", "body": "Not your best day, but the pattern has been solid. One goose egg doesn't define a run."}
+      ],
+      "empty_shelves": [
+        {"id": "eod_warm_empty_shelves_0", "body": "Ran out of shelf stock today — I can see you're moving product, which is the good news. The bad news is people walked who might have bought. Tighten up the restock window."},
+        {"id": "eod_warm_empty_shelves_1", "body": "High sell-through, zero backfill — the backroom–shelf pipeline needs work. You're leaving sales on the table."},
+        {"id": "eod_warm_empty_shelves_2", "body": "Burned through everything and had nothing to show at close. That's a hustle problem, not a demand problem. Fix the flow."}
+      ],
+      "stockout_walkouts": [
+        {"id": "eod_warm_stockout_walkouts_0", "body": "A handful of walkouts today — I know you're managing a lot of moving pieces, but availability is the floor. What slipped through?"},
+        {"id": "eod_warm_stockout_walkouts_1", "body": "Some people left without buying because the thing they wanted wasn't there. You've been running a tight ship otherwise — what happened on the stock side today?"},
+        {"id": "eod_warm_stockout_walkouts_2", "body": "Walkouts flagged in the system. If it's a one-off, fine. If it's a pattern, it's worth building a checklist around."}
+      ],
+      "queue_timeout": [
+        {"id": "eod_warm_queue_timeout_0", "body": "Longer waits than ideal today — I can see volume was up, which explains part of it. But the queue abandonment is worth watching as you scale."},
+        {"id": "eod_warm_queue_timeout_1", "body": "Some checkout friction today — people getting stuck in the line. You've handled higher volume before. What was different about the flow?"},
+        {"id": "eod_warm_queue_timeout_2", "body": "Queue timeouts flagged. High demand is a good problem, but not if we lose the sale anyway at the register. Think about throughput at peak hours."}
+      ],
+      "normal": [
+        {"id": "eod_warm_normal_0", "body": "Good close. The trend line is holding — keep doing what's working."},
+        {"id": "eod_warm_normal_1", "body": "Solid day. Appreciate the consistency you're bringing to the floor."},
+        {"id": "eod_warm_normal_2", "body": "End of day looks reasonable. You know what to tune — trust your read on it."}
+      ]
+    },
+    "trusted": {
+      "zero_sales": [
+        {"id": "eod_trusted_zero_sales_0", "body": "Dead day. Genuinely surprised given where things have been — something unusual happened. Talk me through it when you get a chance."},
+        {"id": "eod_trusted_zero_sales_1", "body": "Zero moves me to want to understand, not judge. What was the floor like? What were you stocked with?"},
+        {"id": "eod_trusted_zero_sales_2", "body": "Not your day. But after everything we've built here, I'm treating this as an outlier until I see otherwise."}
+      ],
+      "empty_shelves": [
+        {"id": "eod_trusted_empty_shelves_0", "body": "You had demand and no supply to meet it. That's a painful gap to close after the fact. The sell-through rate looks great — just need the refill cycle to keep up with it."},
+        {"id": "eod_trusted_empty_shelves_1", "body": "Shelves empty, walkouts on the clock. The sales engine is running, but the inventory side isn't keeping pace. This is a solvable problem and you know this store."},
+        {"id": "eod_trusted_empty_shelves_2", "body": "High velocity, low supply. The good version of a hard day. Demand is clearly there — now make sure product is too."}
+      ],
+      "stockout_walkouts": [
+        {"id": "eod_trusted_stockout_walkouts_0", "body": "Caught some walkouts in the log today — unusual for you. Something must have hit the supply chain differently this shift. I'm not worried, but I wanted to flag it."},
+        {"id": "eod_trusted_stockout_walkouts_1", "body": "A few left without buying. Given your track record I'm guessing it wasn't for lack of trying. What's the read?"},
+        {"id": "eod_trusted_stockout_walkouts_2", "body": "Walkouts on an otherwise solid shift. Probably a gap in a specific category — worth checking what got missed."}
+      ],
+      "queue_timeout": [
+        {"id": "eod_trusted_queue_timeout_0", "body": "Busy day turned into wait-time losses — you had the customers, just not quite the throughput to cash them out. That's a capacity question, not a hustle question."},
+        {"id": "eod_trusted_queue_timeout_1", "body": "The queue backed up past the patience threshold today. With volume like this, it might be time to think about checkout staffing at peak. You'd know better than I would."},
+        {"id": "eod_trusted_queue_timeout_2", "body": "Timeouts at the register today. Given how consistently you've run this floor, I'm guessing it was a volume spike rather than a process breakdown. Worth a postmortem."}
+      ],
+      "normal": [
+        {"id": "eod_trusted_normal_0", "body": "Nice work today. This place runs differently when someone's paying attention, and it shows."},
+        {"id": "eod_trusted_normal_1", "body": "Strong close. You've earned the trust of this floor — it's showing in the numbers."},
+        {"id": "eod_trusted_normal_2", "body": "Day's done and it shows in the right way. We're building something here."}
+      ]
+    }
+  },
   "fallback": {
     "id": "note_fallback_default",
     "body": "Walk the floor, run the register, keep the shelves honest. I'll be in the back if you need me.\n\n— Vic"

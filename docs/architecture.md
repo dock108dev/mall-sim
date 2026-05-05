@@ -32,7 +32,7 @@ boot script above.
 | 2 — state | `initialize_tier_2_state` | `inventory_system`, `store_state_manager`, `trend_system`, `market_event_system`, `seasonal_event_system`, `market_value_system` |
 | 3 — operational | `initialize_tier_3_operational` | per-store `ReputationSystemSingleton`, `customer_system`, `mall_customer_spawner`, `npc_spawner_system`, `haggle_system`, `checkout_system`, `queue_system`, `progression_system`, `milestone_system`, `order_system`, `staff_system`, `meta_shift_system` |
 | 4 — world | `initialize_tier_4_world` | `store_selector_system`, build mode, `tournament_system`, `day_phase_lighting` |
-| 5 — meta | `initialize_tier_5_meta` | `performance_manager`, `performance_report_system`, `random_event_system`, `ambient_moments_system`, `regulars_log_system`, `ending_evaluator`, `DayManager` (instantiated and added as a child here), `store_upgrade_system`, `completion_tracker`, `day_cycle_controller` |
+| 5 — meta | `initialize_tier_5_meta` | `performance_manager`, `performance_report_system`, `random_event_system`, `ambient_moments_system`, `regulars_log_system`, `ending_evaluator`, `DayManager` (instantiated and added as a child here), `store_upgrade_system`, `completion_tracker`, `LedgerSystem`, `day_cycle_controller` |
 
 These tier functions are scene nodes' `initialize(...)` calls — not
 autoloads. The autoload roster below is initialized earlier by Godot before
@@ -67,26 +67,28 @@ earlier ones. Five entries are scenes (`ObjectiveRail`, `InteractionPrompt`,
 | 19 | `ObjectiveDirector` | `game/autoload/objective_director.gd` |
 | 20 | `AuditOverlay` | `game/autoload/audit_overlay.gd` |
 | 21 | `AuditLog` | `game/autoload/audit_log.gd` |
-| 22 | `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
-| 23 | `ErrorBanner` | `game/autoload/error_banner.gd` |
-| 24 | `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |
-| 25 | `InputFocus` | `game/autoload/input_focus.gd` — modal/context stack |
-| 26 | `StoreRegistry` | `game/autoload/store_registry.gd` — runtime cache seeded from `ContentRegistry` |
-| 27 | `StoreDirector` | `game/autoload/store_director.gd` |
-| 28 | `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
-| 29 | `EmploymentSystem` | `game/autoload/employment_system.gd` — seasonal-employee state (trust, approval, hours, status), daily wages, and end-of-season retention/firing evaluation |
-| 30 | `PlatformSystem` | `game/scripts/systems/platform_system.gd` — per-platform supply/demand/hype, daily price ticks, and platform-affinity spawn weighting |
-| 31 | `StoreCustomizationSystem` | `game/scripts/systems/store_customization_system.gd` — per-day featured-display and promotional-poster choices, spawn-weight and demand multipliers, and trust/hidden-thread linkage |
-| 32 | `ShiftSystem` | `game/scripts/systems/shift_system.gd` — daily clock-in/clock-out state, including 08:55 auto clock-in and trust penalties for late or missing punches |
-| 33 | `ManagerRelationshipManager` | `game/autoload/manager_relationship_manager.gd` — player↔manager trust scalar/tier and morning-note selection on `day_started` |
-| 34 | `MorningNotePanel` | `game/scenes/ui/morning_note_panel.tscn` (scene) — paper-memo overlay listening for `manager_note_shown` |
-| 35 | `MiddayEventSystem` | `game/scripts/systems/midday_event_system.gd` — midday decision-beat queue (two beats/day), pauses time on pending beat, applies resolved structured effects |
-| 36 | `MiddayEventCard` | `game/scenes/ui/midday_event_card.tscn` (scene) — modal "STORE EVENT" decision card emitted on `midday_event_fired` / `midday_event_resolved` |
-| 37 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
-| 38 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
-| 39 | `Day1ReadinessAudit` | `game/autoload/day1_readiness_audit.gd` — composite Day 1 playable check that subscribes to `StoreDirector.store_ready` and emits `AuditLog.pass_check(&"day1_playable_ready", …)` / `fail_check(&"day1_playable_failed", …)` |
-| 40 | `HiddenThreadSystemSingleton` | `game/autoload/hidden_thread_system.gd` — cumulative awareness / paper-trail / scapegoat-risk stats and Tier 1/2/3 trigger evaluation across the 30-day run |
-| 41 | `ReturnsSystem` | `game/autoload/returns_system.gd` — post-sale returns/exchanges flow pairing defective sales with later angry-return customers |
+| 22 | `LedgerSystem` | `game/autoload/ledger_system.gd` — per-transaction event log plus `day_closed` anchor records used for daily revenue reconciliation; initialized with `time_system` in Tier 5 |
+| 23 | `EventLog` | `game/autoload/event_log.gd` — debug-build-only structured per-event timeline (ring buffer of inventory mutations and customer FSM transitions); `queue_free`s itself in release builds |
+| 24 | `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
+| 25 | `ErrorBanner` | `game/autoload/error_banner.gd` |
+| 26 | `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |
+| 27 | `InputFocus` | `game/autoload/input_focus.gd` — modal/context stack |
+| 28 | `StoreRegistry` | `game/autoload/store_registry.gd` — runtime cache seeded from `ContentRegistry` |
+| 29 | `StoreDirector` | `game/autoload/store_director.gd` |
+| 30 | `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
+| 31 | `EmploymentSystem` | `game/autoload/employment_system.gd` — seasonal-employee state (trust, approval, hours, status), daily wages, and end-of-season retention/firing evaluation |
+| 32 | `PlatformSystem` | `game/scripts/systems/platform_system.gd` — per-platform supply/demand/hype, daily price ticks, and platform-affinity spawn weighting |
+| 33 | `StoreCustomizationSystem` | `game/scripts/systems/store_customization_system.gd` — per-day featured-display and promotional-poster choices, spawn-weight and demand multipliers, and trust/hidden-thread linkage |
+| 34 | `ShiftSystem` | `game/scripts/systems/shift_system.gd` — daily clock-in/clock-out state, including 08:55 auto clock-in and trust penalties for late or missing punches |
+| 35 | `ManagerRelationshipManager` | `game/autoload/manager_relationship_manager.gd` — player↔manager trust scalar/tier and morning-note selection on `day_started` |
+| 36 | `MorningNotePanel` | `game/scenes/ui/morning_note_panel.tscn` (scene) — paper-memo overlay listening for `manager_note_shown` |
+| 37 | `MiddayEventSystem` | `game/scripts/systems/midday_event_system.gd` — midday decision-beat queue (two beats/day), pauses time on pending beat, applies resolved structured effects |
+| 38 | `MiddayEventCard` | `game/scenes/ui/midday_event_card.tscn` (scene) — modal "STORE EVENT" decision card emitted on `midday_event_fired` / `midday_event_resolved` |
+| 39 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
+| 40 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
+| 41 | `Day1ReadinessAudit` | `game/autoload/day1_readiness_audit.gd` — composite Day 1 playable check that subscribes to `StoreDirector.store_ready` and emits `AuditLog.pass_check(&"day1_playable_ready", …)` / `fail_check(&"day1_playable_failed", …)` |
+| 42 | `HiddenThreadSystemSingleton` | `game/autoload/hidden_thread_system.gd` — cumulative awareness / paper-trail / scapegoat-risk stats and Tier 1/2/3 trigger evaluation across the 30-day run |
+| 43 | `ReturnsSystem` | `game/autoload/returns_system.gd` — post-sale returns/exchanges flow pairing defective sales with later angry-return customers |
 
 Single-owner responsibilities for the ownership-enforcing subset are tracked
 in [`docs/architecture/ownership.md`](architecture/ownership.md).

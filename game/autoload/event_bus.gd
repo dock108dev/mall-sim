@@ -176,6 +176,11 @@ signal customer_reached_checkout(customer: Node)
 signal checkout_started(items: Array, customer_node: Node)
 signal checkout_queue_ready(customer: Node)
 signal checkout_completed(customer: Node)
+## Player pressed Pass at the register before any sale fired. Distinct from
+## `checkout_completed` (which fires for both accept and decline) so listeners
+## can drive recovery flows — Day 1 rail rollback, forced-spawn re-arm — that
+## should not run after a successful sale.
+signal checkout_declined(customer: Node)
 
 # ── Haggling ──────────────────────────────────────────────────────────────────
 signal haggle_requested(item_id: String, customer_id: int)
@@ -602,6 +607,12 @@ signal player_interacted(target: Node)
 signal interactable_interacted(target: Interactable, type: int)
 signal interactable_right_clicked(target: Interactable, type: int)
 signal interactable_focused(action_label: String)
+## Emitted when the InteractionRay focuses an Interactable whose
+## `can_interact()` returns false. `reason` is the `get_disabled_reason()`
+## text — may be empty when the override returns "". Listeners (HUD, hint
+## banner) render this without an E-key affordance and with a visually
+## muted treatment, distinguishing it from the active focus signal.
+signal interactable_focused_disabled(reason: String)
 signal interactable_unfocused()
 ## Emitted by NavZoneInteractable when clicked or triggered by keyboard shortcut.
 ## PlayerController subscribes to snap _pivot to zone_position instantly.
@@ -873,12 +884,23 @@ signal display_exposes_weird_inventory(store_id: StringName)
 signal manager_note_shown(
 	note_id: String, body_text: String, allow_auto_dismiss: bool
 )
+## Emitted by MorningNotePanel when the player explicitly dismisses the note
+## (E-key, click on the panel, or auto-dismiss timer). note_id matches the id
+## passed to manager_note_shown so listeners can scope reactions to a specific
+## note.
+signal manager_note_dismissed(note_id: String)
 ## Emitted by ManagerRelationshipManager after every manager_trust mutation.
 ## delta is the post-clamp change applied; reason is a short cause label.
 signal manager_trust_changed(delta: float, reason: String)
 ## Emitted when a manager-side confrontation is triggered (low trust or a
 ## major violation). Listeners may render a confrontation panel or beat.
 signal manager_confrontation_triggered(reason: String)
+## Emitted by ManagerRelationshipManager at day_closed after the metric-driven
+## end-of-day comment has been selected. comment_id matches an entry id in
+## manager_notes.json under end_of_day_comments[tier][condition]; body is the
+## display string DaySummary renders attributed to Vic. Fires before
+## DaySummary.show_summary() so the panel can cache the text in advance.
+signal manager_end_of_day_comment(comment_id: String, body: String)
 
 var _latest_day_end_summary: Dictionary = {}
 

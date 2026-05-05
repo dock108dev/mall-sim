@@ -100,6 +100,7 @@ func _ready() -> void:
 	)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
+	EventBus.price_set.connect(_on_price_set)
 	EventBus.active_store_changed.connect(_on_active_store_changed)
 	EventBus.placement_mode_exited.connect(_on_placement_mode_exited)
 	SceneRouter.scene_ready.connect(_on_scene_ready)
@@ -141,6 +142,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if key_event.is_action_pressed("toggle_inventory"):
 		_toggle()
+		get_viewport().set_input_as_handled()
+	elif key_event.is_action_pressed("quick_stock") and _is_open:
+		_quick_stock_first_backroom_item()
 		get_viewport().set_input_as_handled()
 	elif key_event.is_action_pressed("ui_cancel"):
 		if _shelf_actions.is_placement_mode:
@@ -494,6 +498,50 @@ func _add_item_row(item: ItemInstance) -> void:
 	_cell_map[row] = item
 
 
+## Quick-stock shortcut bound to the `quick_stock` action (Q). Routes the first
+## backroom item in the active store to the first compatible empty shelf slot,
+## skipping the per-row Stock 1 click. Falls back to a notification when the
+## backroom is empty or no compatible slot exists. Goes through the same
+## `stock_one` path as the row button so item_stocked / inventory_changed fire
+## normally and downstream listeners (PricingPanel, ObjectiveDirector) react
+## without needing a separate signal contract.
+func _quick_stock_first_backroom_item() -> void:
+	if not inventory_system:
+		# §F-143 — The panel is open (gated by `_is_open` in
+		# `_unhandled_input`) and the player pressed Q expecting an action.
+		# A null `inventory_system` here means the Tier-3 wiring
+		# (`set_inventory_system` from the store controller) never ran for
+		# the active store — a production regression, not a normal state.
+		# Surface it so the silent shortcut failure has a paper trail.
+		push_warning(
+			"InventoryPanel: quick_stock pressed with no inventory_system wired"
+		)
+		return
+	var first: ItemInstance = _first_backroom_item()
+	if first == null:
+		EventBus.notification_requested.emit(tr("INVENTORY_NO_AVAILABLE_SLOT"))
+		return
+	_shelf_actions.inventory_system = inventory_system
+	if not _shelf_actions.stock_one(first, _get_active_store_shelf_slots()):
+		EventBus.notification_requested.emit(tr("INVENTORY_NO_AVAILABLE_SLOT"))
+
+
+## Returns the first backroom item for the active store. Bypasses the UI filter
+## (search/condition/rarity dropdowns) on purpose: the quick-stock shortcut is a
+## skip-the-list affordance, so it always targets the next available unit
+## regardless of what the player has typed into the search box. Returns null
+## when the backroom view is empty.
+func _first_backroom_item() -> ItemInstance:
+	if inventory_system == null or store_id.is_empty():
+		return null
+	var items: Array[ItemInstance] = (
+		inventory_system.get_backroom_items_for_store(store_id)
+	)
+	if items.is_empty():
+		return null
+	return items[0]
+
+
 func _on_stock_one(item: ItemInstance, row: PanelContainer) -> void:
 	_prep_row_action(item, row)
 	if not _shelf_actions.stock_one(item, _get_active_store_shelf_slots()):
@@ -727,6 +775,16 @@ func _on_inventory_changed() -> void:
 			_selected_item.instance_id
 		):
 			_selected_item = null
+	_refresh_grid()
+
+
+## PricingPanel writes player_set_price directly on the ItemInstance and emits
+## price_set without going through inventory_system.move_item, so the
+## inventory_changed handler above does not fire. Refresh the grid here so the
+## per-row price column reflects the new value with no stale display.
+func _on_price_set(_item_id: String, _price: float) -> void:
+	if not _is_open:
+		return
 	_refresh_grid()
 
 

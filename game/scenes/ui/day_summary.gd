@@ -40,6 +40,8 @@ var _story_beat_label: Label
 var _forward_hook_label: Label
 var _warranty_attach_label: Label
 var _demo_status_label: Label
+var _total_customers_label: Label
+var _customer_breakdown_label: Label
 var _record_high_revenue: float = 0.0
 var _record_high_profit: float = 0.0
 var _record_high_items: int = 0
@@ -57,6 +59,8 @@ var _focus_pushed: bool = false
 var _hidden_thread_timer: Timer
 var _auto_advance: DaySummaryAutoAdvance = null
 var _pending_hidden_thread_text: String = ""
+var _vic_comment_label: Label
+var _pending_vic_comment: String = ""
 
 @onready var _overlay: ColorRect = $Root/Overlay
 @onready var _panel: PanelContainer = $Root/Panel
@@ -120,6 +124,7 @@ func _ready() -> void:
 	_create_overdue_count_label()
 	_create_narrative_labels()
 	_create_electronics_labels()
+	_create_customer_breakdown_labels()
 	_apply_headline_order()
 	_style_secondary_actions()
 	_init_auto_advance_timers()
@@ -134,6 +139,9 @@ func _ready() -> void:
 	)
 	EventBus.day_closed.connect(_on_day_closed_payload)
 	EventBus.grading_day_summary.connect(_on_grading_day_summary)
+	EventBus.manager_end_of_day_comment.connect(
+		_on_manager_end_of_day_comment
+	)
 
 
 ## Populates the summary with daily stats and shows the panel.
@@ -184,6 +192,7 @@ func show_summary(
 		_overdue_count_label.visible = false
 	if _grading_label:
 		_grading_label.visible = false
+	_apply_vic_comment_display()
 	_apply_record_highlights(revenue, net_profit, items_sold)
 	_push_modal_focus()
 	_start_auto_advance(day)
@@ -346,6 +355,8 @@ func _get_stat_row_candidates() -> Array[Control]:
 		_employee_trust_label, _employee_trust_bar,
 		_manager_trust_label, _manager_trust_bar,
 		_mistakes_label, _inventory_variance_label, _discrepancies_label,
+		_total_customers_label, _customer_breakdown_label,
+		_vic_comment_label,
 	]
 	for control: Control in optional:
 		if control:
@@ -658,6 +669,8 @@ func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
 	_cash_balance_label.text = (
 		tr("DAY_SUMMARY_CASH_BALANCE") % cash_balance
 	)
+	var shift_summary: Dictionary = summary.get("shift_summary", {})
+	_set_customer_breakdown_display(shift_summary)
 
 
 func _create_discrepancy_label() -> void:
@@ -687,6 +700,48 @@ func _create_electronics_labels() -> void:
 	)
 	_warranty_attach_label = labels[0]
 	_demo_status_label = labels[1]
+
+
+func _create_customer_breakdown_labels() -> void:
+	var labels: Array = DaySummaryLabels.create_customer_breakdown(
+		$Root/Panel/Margin/VBox, _customers_served_label
+	)
+	_total_customers_label = labels[0]
+	_customer_breakdown_label = labels[1]
+
+
+## Populates the total-customers label and the per-reason breakdown from a
+## shift_summary sub-dict carrying the customers_happy / customers_no_stock /
+## customers_timeout / customers_price keys. Hides both labels when no
+## customers were tracked so legacy/test payloads still render cleanly.
+func _set_customer_breakdown_display(shift_summary: Dictionary) -> void:
+	if _total_customers_label == null or _customer_breakdown_label == null:
+		return
+	var happy: int = int(shift_summary.get("customers_happy", 0))
+	var no_stock: int = int(shift_summary.get("customers_no_stock", 0))
+	var timeout: int = int(shift_summary.get("customers_timeout", 0))
+	var price: int = int(shift_summary.get("customers_price", 0))
+	var total: int = happy + no_stock + timeout + price
+	if total <= 0:
+		_total_customers_label.visible = false
+		_customer_breakdown_label.visible = false
+		return
+	_total_customers_label.visible = true
+	_total_customers_label.text = "Total Customers: %d" % total
+	var lines: Array[String] = []
+	if happy > 0:
+		lines.append("  Happy (purchased): %d" % happy)
+	if no_stock > 0:
+		lines.append("  Walked — no stock: %d" % no_stock)
+	if timeout > 0:
+		lines.append("  Walked — out of patience: %d" % timeout)
+	if price > 0:
+		lines.append("  Walked — price too high: %d" % price)
+	if lines.is_empty():
+		_customer_breakdown_label.visible = false
+		return
+	_customer_breakdown_label.visible = true
+	_customer_breakdown_label.text = "\n".join(lines)
 
 
 func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void:
@@ -752,8 +807,26 @@ func _on_grading_day_summary(pending_count: int, returned: Array) -> void:
 	_set_grading_display(pending_count, returned)
 
 
+func _on_manager_end_of_day_comment(_id: String, body: String) -> void:
+	_pending_vic_comment = body
+
+
+func _apply_vic_comment_display() -> void:
+	if _vic_comment_label == null:
+		return
+	if _pending_vic_comment.is_empty():
+		_vic_comment_label.visible = false
+		return
+	_vic_comment_label.text = "— Vic: \"%s\"" % _pending_vic_comment
+	_vic_comment_label.visible = true
+	_pending_vic_comment = ""
+
+
 func _create_narrative_labels() -> void:
 	_create_grading_label()
+	_vic_comment_label = DaySummaryLabels.create_vic_comment(
+		$Root/Panel/Margin/VBox
+	)
 	var labels: Array = DaySummaryLabels.create_narrative(
 		$Root/Panel/Margin/VBox
 	)

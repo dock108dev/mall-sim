@@ -1052,9 +1052,15 @@ func create_starting_inventory(
 				% [item_id, def.category, canonical]
 			)
 			continue
-		instances.append(
-			ItemInstance.create_from_definition(def, "good")
-		)
+		var inst: ItemInstance = ItemInstance.create_from_definition(def, "good")
+		# Pre-price starter stock at the definition's suggested used sell
+		# price (or base_price when used_price is unset) so the inventory
+		# panel shows a real $value on Day 1 instead of "Not set" — and so
+		# the first checkout settles at a number the player has already seen.
+		var seed_price: float = def.used_price if def.used_price > 0.0 else def.base_price
+		if seed_price > 0.0:
+			inst.player_set_price = seed_price
+		instances.append(inst)
 	return instances
 
 

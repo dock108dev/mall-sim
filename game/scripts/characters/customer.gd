@@ -30,8 +30,14 @@ const CONDITION_RANKS: Dictionary = {
 	"mint": 4,
 }
 
+## Sequential debug counter so the head-of-customer indicator can show a short
+## "#3" instead of the 18-digit `get_instance_id()`. Reset by tests via
+## `reset_debug_id_counter()`.
+static var _next_debug_id: int = 0
+
 var profile: CustomerTypeDefinition = null
 var current_state: State = State.ENTERING
+var debug_id: int = -1
 var patience_timer: float = 0.0
 var browse_timer: float = 0.0
 ## Frame stagger offset assigned by CustomerSystem (0.0 to 1.0).
@@ -108,6 +114,9 @@ func initialize(
 	_inventory_system = inventory_system
 	_budget_multiplier = budget_multiplier
 	_browse_min_multiplier = browse_min_multiplier
+	if debug_id < 0:
+		debug_id = _next_debug_id
+		_next_debug_id += 1
 	patience_timer = p_profile.patience * 120.0
 	_reset_browse_timer()
 	_set_state(State.ENTERING)
@@ -156,6 +165,23 @@ func _physics_process(delta: float) -> void:
 	# Animation cost is driven by AnimationPlayer internally per frame;
 	# approximate from the animation update call inside _move_along_path.
 	last_anim_time_ms = last_nav_time_ms * 0.15
+
+
+## Resets the static debug-id counter; intended for tests so labels are
+## deterministic across runs.
+static func reset_debug_id_counter() -> void:
+	_next_debug_id = 0
+
+
+## Returns the `State` enum key as a String for the given int, or "" when
+## `state` is out of range. Single canonical lookup shared by debug consumers
+## (`EventLog`, `CustomerStateIndicator`) so the index→name mapping cannot
+## drift if a future enum reorder lands.
+static func state_name(state: int) -> String:
+	var keys: Array = State.keys()
+	if state >= 0 and state < keys.size():
+		return String(keys[state])
+	return ""
 
 
 ## Returns the item the customer wants to buy, or null.

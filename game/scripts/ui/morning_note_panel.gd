@@ -95,6 +95,7 @@ func dismiss() -> void:
 		return
 	_showing = false
 	_root.visible = false
+	EventBus.manager_note_dismissed.emit(_current_note_id)
 
 
 ## Hides the panel without firing dismiss state. Used at scene init.

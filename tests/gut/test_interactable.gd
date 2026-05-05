@@ -325,3 +325,55 @@ func test_re_enable_allows_interaction() -> void:
 	_interactable.enabled = true
 	_interactable.interact()
 	assert_eq(_interacted_count, 1, "Should work after re-enabling")
+
+
+func test_can_interact_default_returns_true() -> void:
+	assert_true(
+		_interactable.can_interact(),
+		"Base Interactable should default to actionable so existing scenes are unaffected"
+	)
+
+
+func test_get_disabled_reason_default_returns_empty() -> void:
+	assert_eq(
+		_interactable.get_disabled_reason(),
+		"",
+		"Base Interactable should default to no disabled reason text"
+	)
+
+
+func test_interact_blocked_when_can_interact_returns_false() -> void:
+	var dead := _DeadInteractable.new()
+	add_child_autofree(dead)
+	var local_count: int = 0
+	var bus_count: int = 0
+	var local_handler := func() -> void: local_count += 1
+	var bus_handler := func(_t: Interactable, _ty: int) -> void: bus_count += 1
+	dead.interacted.connect(local_handler)
+	EventBus.interactable_interacted.connect(bus_handler)
+
+	dead.interact()
+
+	dead.interacted.disconnect(local_handler)
+	EventBus.interactable_interacted.disconnect(bus_handler)
+	assert_eq(
+		local_count, 0,
+		"interact() must not emit local signal when can_interact() returns false"
+	)
+	assert_eq(
+		bus_count, 0,
+		"interact() must not emit EventBus signal when can_interact() returns false"
+	)
+
+
+## Subclass stub used to verify the can_interact()/get_disabled_reason()
+## guard wired into Interactable.interact(). Returning false from
+## can_interact() must short-circuit signal emission at the source so the
+## InteractionRay's E-press dispatch and any programmatic .interact() call
+## share one gate.
+class _DeadInteractable extends Interactable:
+	func can_interact(_actor: Node = null) -> bool:
+		return false
+
+	func get_disabled_reason(_actor: Node = null) -> String:
+		return "No customer waiting"

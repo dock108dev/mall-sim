@@ -749,22 +749,22 @@ shaded = false
 [node name="ZoneLabels" type="Node3D" parent="."]
 
 [node name="ShelvesLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, -8.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -7.5)
 billboard = 1
-pixel_size = 0.005
+pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "Shelves"
+text = "Used Shelves"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
 [node name="CheckoutLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.7, 8.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.85, 7.5)
 billboard = 1
-pixel_size = 0.005
+pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36

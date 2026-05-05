@@ -1032,19 +1032,53 @@ func _update_sales_today_display(count: int) -> void:
 	_sales_today_label.text = tr("HUD_SOLD_FORMAT") % count
 
 
+## Plays the counter-change feedback animation: a brief scale pulse and a
+## same-duration color flash, run in parallel via two independent Tweens.
+##
+## Two Tweens (instead of `PanelAnimator.pulse_scale` + `PanelAnimator.flash_color`)
+## are required: those helpers register themselves under a shared meta key on
+## the target node, so calling them back-to-back makes the second helper kill
+## the first before it ticks. Two `label.create_tween()` calls bypass the meta
+## entirely and animate disjoint properties (`scale` vs. `modulate`), so they
+## coexist for the full pulse window.
+##
+## The scale/modulate identity reset before each pulse covers the rapid-
+## successive-update path (multiple sales within the pulse duration): killing
+## a mid-flight Tween otherwise leaves the label at an intermediate scale or
+## tinted modulate, which over many updates would visibly drift.
 func _pulse_counter(label: Label, positive: bool) -> void:
-	PanelAnimator.kill_tween(_counter_scale_tweens.get(label))
-	PanelAnimator.kill_tween(_counter_color_tweens.get(label))
+	var prev_scale: Tween = _counter_scale_tweens.get(label) as Tween
+	if prev_scale and prev_scale.is_valid():
+		prev_scale.kill()
+	var prev_color: Tween = _counter_color_tweens.get(label) as Tween
+	if prev_color and prev_color.is_valid():
+		prev_color.kill()
+	label.pivot_offset = label.size / 2.0
+	label.scale = Vector2.ONE
+	label.modulate = Color.WHITE
 	var color: Color = (
 		UIThemeConstants.get_positive_color() if positive
 		else UIThemeConstants.get_negative_color()
 	)
-	_counter_scale_tweens[label] = PanelAnimator.pulse_scale(
-		label, _COUNTER_PULSE_SCALE, _COUNTER_PULSE_DURATION
-	)
-	_counter_color_tweens[label] = PanelAnimator.flash_color(
-		label, color, _COUNTER_PULSE_DURATION
-	)
+	var dur: float = _COUNTER_PULSE_DURATION
+	var scale_tween: Tween = label.create_tween()
+	scale_tween.tween_property(
+		label, "scale",
+		Vector2(_COUNTER_PULSE_SCALE, _COUNTER_PULSE_SCALE),
+		dur * 0.4,
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	scale_tween.tween_property(
+		label, "scale", Vector2.ONE, dur * 0.6,
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_counter_scale_tweens[label] = scale_tween
+	var color_tween: Tween = label.create_tween()
+	color_tween.tween_property(
+		label, "modulate", color, dur * 0.3,
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	color_tween.tween_property(
+		label, "modulate", Color.WHITE, dur * 0.7,
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	_counter_color_tweens[label] = color_tween
 
 
 ## Switches the HUD between the legacy desktop TopBar layout (`enabled = false`)
