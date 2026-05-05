@@ -55,6 +55,13 @@ const DAY_OF_WEEK_MODIFIERS: Array[float] = [
 ## even when the hour-density loop rolls poorly.
 const DAY1_FORCED_SPAWN_FALLBACK_SECONDS: float = 12.0
 
+## Mirrors `CustomerSpawnEligibility.SHADY_REGULAR_LATE_AFTERNOON_WEIGHT` so
+## callers (tests + balance tuning) can keep referring to
+## `CustomerSystem.SHADY_REGULAR_LATE_AFTERNOON_WEIGHT` while the runtime
+## implementation lives in the spawn-eligibility helper. Keep these two
+## values in sync.
+const SHADY_REGULAR_LATE_AFTERNOON_WEIGHT: float = 3.0
+
 @export var max_customers_in_mall: int = 30
 
 var _active_customers: Array[Customer] = []
@@ -413,6 +420,36 @@ func _increment_leave_count(reason: StringName) -> void:
 		)
 		return
 	_leave_counts[bucket] = int(_leave_counts.get(bucket, 0)) + 1
+
+
+func set_inventory_system(system: InventorySystem) -> void:
+	_inventory_system = system
+
+
+func set_market_event_system(system: MarketEventSystem) -> void:
+	_market_event_system = system
+
+
+## Returns the current pool of spawnable customer profiles. Thin delegate to
+## CustomerSpawnEligibility so callers (tests, mall spawner) keep their
+## existing entry point.
+func get_spawn_pool() -> Array[CustomerTypeDefinition]:
+	return _eligibility.get_spawn_pool()
+
+
+## Returns true when the supplied profile may currently spawn at this store.
+func is_profile_currently_spawnable(
+	profile: CustomerTypeDefinition
+) -> bool:
+	return _eligibility.is_profile_currently_spawnable(profile)
+
+
+## Returns the spawn-weight multiplier for the supplied profile under current
+## conditions.
+func get_profile_spawn_weight(
+	profile: CustomerTypeDefinition
+) -> float:
+	return _eligibility.get_profile_spawn_weight(profile)
 
 
 ## Picks a profile from the supplied list using current spawn weights and

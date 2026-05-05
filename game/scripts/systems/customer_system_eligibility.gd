@@ -157,8 +157,9 @@ func validate_vip_type() -> void:
 
 
 func _rebuild_spawn_pool() -> void:
-	_cs._spawn_pool_cache = []
+	var pool: Array[CustomerTypeDefinition] = []
 	if not GameManager.data_loader:
+		_cs._spawn_pool_cache = pool
 		_cs._spawn_pool_dirty = false
 		return
 	var vip_included: bool = (
@@ -169,7 +170,8 @@ func _rebuild_spawn_pool() -> void:
 	):
 		if StringName(profile.id) == VIP_CUSTOMER_ID:
 			if vip_included:
-				_cs._spawn_pool_cache.append(profile)
+				pool.append(profile)
 		else:
-			_cs._spawn_pool_cache.append(profile)
+			pool.append(profile)
+	_cs._spawn_pool_cache = pool
 	_cs._spawn_pool_dirty = false
