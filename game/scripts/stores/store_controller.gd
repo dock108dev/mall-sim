@@ -11,6 +11,12 @@ var store_type: String = ""
 ## sees on the objective rail. Set via `set_objective_text()`.
 var current_objective_text: String = ""
 
+## Mirrors the input-key hint from the objective payload (e.g. "I", "F4",
+## "TAB"). A non-empty value means the objective is satisfiable via a keyboard
+## shortcut even if no on-stage Interactable carries a matching verb. Captured
+## from `objective_changed` / `objective_updated` payloads.
+var current_objective_key: String = ""
+
 var _slots: Array[Node] = []
 var _fixtures: Array[Node] = []
 var _register_area: Area3D = null
@@ -431,6 +437,7 @@ func _on_objective_updated(payload: Dictionary) -> void:
 	if text.is_empty():
 		return
 	set_objective_text(text)
+	current_objective_key = str(payload.get("input_hint", payload.get("key", "")))
 
 
 func _on_objective_changed(payload: Dictionary) -> void:
@@ -440,6 +447,7 @@ func _on_objective_changed(payload: Dictionary) -> void:
 	if text.is_empty():
 		return
 	set_objective_text(text)
+	current_objective_key = str(payload.get("key", ""))
 
 
 ## Registers an Interactable with this controller. Idempotent.
@@ -479,13 +487,21 @@ func set_objective_text(text: String) -> void:
 
 
 ## StoreReadyContract invariant #10. The objective text references a real
-## action when at least one registered, visible Interactable has an
-## action_verb that appears as a token in the objective text AND a
-## display_name token also appears in the text. Empty objective text is
-## treated as a contract violation (no action to verify against).
+## action when EITHER:
+##   1. at least one registered, visible Interactable has an action_verb that
+##      appears as a token in the objective text AND a display_name token
+##      also appears in the text, OR
+##   2. the objective payload carried a non-empty `key` (keyboard shortcut),
+##      meaning the player has a clear actionable input even when no on-stage
+##      Interactable is the focal point (e.g. Day 1 step 0 "Open your
+##      inventory" / key="I", Day 1 step 7 "Close the day" / key="F4").
+## Empty objective text is treated as a contract violation (no action to
+## verify against).
 func objective_matches_action() -> bool:
 	if current_objective_text.strip_edges().is_empty():
 		return false
+	if not current_objective_key.strip_edges().is_empty():
+		return true
 	var lowered: String = current_objective_text.to_lower()
 	for node: Interactable in _registered_interactables:
 		if not is_instance_valid(node):

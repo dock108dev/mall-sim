@@ -204,3 +204,34 @@ func test_hidden_objective_payload_does_not_clear_text() -> void:
 		"existing text",
 		"hidden=true payload must not overwrite current_objective_text"
 	)
+
+
+func test_objective_matches_action_passes_when_key_present() -> void:
+	_controller._ready()
+	# Day 1 step 0 — text has no Interactable verb match ("open"+"inventory"
+	# is not a registered Interactable in the bare controller fixture), but
+	# key="I" makes it a valid actionable input.
+	EventBus.objective_changed.emit({
+		"text": "Open your inventory",
+		"action": "Press I to open the inventory panel",
+		"key": "I",
+	})
+	assert_true(
+		_controller.objective_matches_action(),
+		"keyboard-shortcut objectives must satisfy invariant 10 even when "
+		+ "no on-stage Interactable verb matches"
+	)
+
+
+func test_objective_matches_action_fails_without_key_or_match() -> void:
+	_controller._ready()
+	EventBus.objective_changed.emit({
+		"text": "Wait for a customer to arrive",
+		"action": "Customers will spawn shortly",
+		"key": "",
+	})
+	assert_false(
+		_controller.objective_matches_action(),
+		"objectives without a key and without a matching Interactable should "
+		+ "still fail invariant 10"
+	)
