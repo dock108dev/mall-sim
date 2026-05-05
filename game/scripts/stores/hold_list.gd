@@ -21,6 +21,24 @@ class_name HoldList
 extends Resource
 
 
+signal hold_added(slip: HoldSlip)
+signal hold_fulfilled(slip: HoldSlip, reason: String)
+signal hold_expired(slip: HoldSlip)
+signal duplicate_detected(
+	new_slip: HoldSlip, existing_slip: HoldSlip, conflict_field: StringName
+)
+signal shady_request_received(slip: HoldSlip)
+signal hold_conflict_bypassed(item_id: StringName, disputed_slips: Array)
+
+## Conflict resolution outcomes returned by the resolve_* methods. Treat as a
+## frozen contract for callers that mirror the result onto trust deltas and
+## EventBus signals.
+enum ConflictChoice {
+	HONOR_EARLIEST = 0,
+	ESCALATE_TO_MANAGER = 1,
+	GIVE_TO_WALK_IN = 2,
+}
+
 const DEFAULT_HOLD_DURATION_DAYS: int = 3
 const _ID_PREFIX: String = "HOLD-"
 # §F-126 — save-load clamps. _next_id allocates "HOLD-####" identifiers via
@@ -34,24 +52,6 @@ const _MIN_NEXT_ID: int = 1
 const _MAX_NEXT_ID: int = 1_000_000
 const _MIN_HOLD_DURATION_DAYS: int = 1
 const _MAX_HOLD_DURATION_DAYS: int = 365
-
-## Conflict resolution outcomes returned by the resolve_* methods. Treat as a
-## frozen contract for callers that mirror the result onto trust deltas and
-## EventBus signals.
-enum ConflictChoice {
-	HONOR_EARLIEST = 0,
-	ESCALATE_TO_MANAGER = 1,
-	GIVE_TO_WALK_IN = 2,
-}
-
-signal hold_added(slip: HoldSlip)
-signal hold_fulfilled(slip: HoldSlip, reason: String)
-signal hold_expired(slip: HoldSlip)
-signal duplicate_detected(
-	new_slip: HoldSlip, existing_slip: HoldSlip, conflict_field: StringName
-)
-signal shady_request_received(slip: HoldSlip)
-signal hold_conflict_bypassed(item_id: StringName, disputed_slips: Array)
 
 
 @export var hold_duration_days: int = DEFAULT_HOLD_DURATION_DAYS

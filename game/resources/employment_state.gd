@@ -8,6 +8,12 @@
 class_name EmploymentState
 extends Resource
 
+## Setter contract: clamp to [0,100]; emit only when the *clamped* value
+## differs from the stored one. A delta that pushes against an already-saturated
+## boundary is a no-op (no signal). Same contract for manager_approval.
+signal trust_changed(new_trust: float)
+signal manager_approval_changed(new_approval: float)
+
 
 const STATUS_ACTIVE: StringName = &"active"
 const STATUS_PROBATION: StringName = &"probation"
@@ -24,12 +30,6 @@ const DEFAULT_TRUST: float = 50.0
 const DEFAULT_APPROVAL: float = 0.5
 const DEFAULT_STATUS: StringName = STATUS_ACTIVE
 const DEFAULT_HOURLY_WAGE: float = 10.0
-
-## Setter contract: clamp to [0,100]; emit only when the *clamped* value
-## differs from the stored one. A delta that pushes against an already-saturated
-## boundary is a no-op (no signal). Same contract for manager_approval.
-signal trust_changed(new_trust: float)
-signal manager_approval_changed(new_approval: float)
 
 
 @export var employer_store_id: StringName = &""

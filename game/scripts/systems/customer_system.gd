@@ -53,6 +53,21 @@ const DAY_OF_WEEK_MODIFIERS: Array[float] = [
 	0.7, 0.75, 0.8, 0.85, 1.1, 1.3, 1.0,
 ]
 
+## Day 1 reliability: after the gate opens we start a one-shot fallback timer
+## so the player sees a customer within DAY1_FORCED_SPAWN_FALLBACK_SECONDS
+## even when the hour-density loop rolls poorly.
+const DAY1_FORCED_SPAWN_FALLBACK_SECONDS: float = 12.0
+
+## Archetype IDs used by conditional spawn rules. These match the
+## `archetype_id` field on customer profiles in retro_games_customers.json.
+const ARCHETYPE_ANGRY_RETURN: StringName = &"angry_return_customer"
+const ARCHETYPE_SHADY_REGULAR: StringName = &"shady_regular"
+## Per-day cap for shady_regular spawns at this store.
+const SHADY_REGULAR_DAILY_CAP: int = 1
+## Multiplier applied to shady_regular spawn weight in the AFTERNOON DayPhase
+## (the closing-hour "low traffic, staff distracted" window).
+const SHADY_REGULAR_LATE_AFTERNOON_WEIGHT: float = 3.0
+
 @export var max_customers_in_mall: int = 30
 
 var _active_customers: Array[Customer] = []
@@ -97,21 +112,8 @@ var _day1_first_customer_spawned: bool = false
 ## from InventorySystem on first spawn attempt so loaded saves where stocking
 ## already happened do not re-block spawns.
 var _day1_spawn_unlocked: bool = false
-## Day 1 reliability: after the gate opens we start a one-shot fallback timer
-## so the player sees a customer within DAY1_FORCED_SPAWN_FALLBACK_SECONDS
-## even when the hour-density loop rolls poorly.
-const DAY1_FORCED_SPAWN_FALLBACK_SECONDS: float = 12.0
 var _day1_forced_spawn_timer: Timer = null
 
-## Archetype IDs used by conditional spawn rules. These match the
-## `archetype_id` field on customer profiles in retro_games_customers.json.
-const ARCHETYPE_ANGRY_RETURN: StringName = &"angry_return_customer"
-const ARCHETYPE_SHADY_REGULAR: StringName = &"shady_regular"
-## Per-day cap for shady_regular spawns at this store.
-const SHADY_REGULAR_DAILY_CAP: int = 1
-## Multiplier applied to shady_regular spawn weight in the AFTERNOON DayPhase
-## (the closing-hour "low traffic, staff distracted" window).
-const SHADY_REGULAR_LATE_AFTERNOON_WEIGHT: float = 3.0
 ## Tracks whether at least one defective sale has been observed earlier in the
 ## current day. Gates angry_return_customer spawns. Reset on day_started.
 var _defective_sale_today: bool = false
@@ -120,9 +122,14 @@ var _archetype_spawn_count_today: Dictionary = {}
 ## Cached current day phase (TimeSystem.DayPhase int) so spawn-weight rules can
 ## consult phase without re-fetching from TimeSystem every roll.
 var _current_day_phase: int = 0
+## Mall-hallway ShopperAI manager. Owns LOD updates, spawn-target tracking,
+## and graceful-exit flows. Constructed in `_ready` so the helper sees the
+## fully-built CustomerSystem state.
+var _mall_shoppers: CustomerMallShoppers = null
 
 
 func _ready() -> void:
+	_mall_shoppers = CustomerMallShoppers.new(self)
 	_day1_forced_spawn_timer = Timer.new()
 	_day1_forced_spawn_timer.name = "Day1ForcedSpawnTimer"
 	_day1_forced_spawn_timer.one_shot = true
@@ -179,6 +186,19 @@ func _process(delta: float) -> void:
 	if _lod_timer >= LOD_UPDATE_INTERVAL:
 		_lod_timer -= LOD_UPDATE_INTERVAL
 		_update_shopper_lod()
+
+
+## Proxy hooks so test subclasses can override and instrument the per-tick
+## mall-shopper / LOD work. The helper holds the implementation; these methods
+## are the dispatch points _process calls each frame.
+func _update_mall_shoppers() -> void:
+	if _mall_shoppers != null:
+		_mall_shoppers.update_mall_shoppers()
+
+
+func _update_shopper_lod() -> void:
+	if _mall_shoppers != null:
+		_mall_shoppers.update_lod()
 
 
 func _physics_process(_delta: float) -> void:
@@ -571,160 +591,6 @@ func _connect_signals() -> void:
 		EventBus.defective_sale_occurred.connect(_on_defective_sale_occurred)
 
 
-func _update_shopper_lod() -> void:
-	var lod_origin: Node3D = _get_shopper_lod_origin()
-	if lod_origin == null:
-		return
-	var player_pos: Vector3 = lod_origin.global_position
-	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
-		"shoppers"
-	)
-	for node: Node in shoppers:
-		var shopper: ShopperAI = node as ShopperAI
-		if not shopper or not is_instance_valid(shopper):
-			continue
-		var dist: float = player_pos.distance_to(
-			shopper.global_position
-		)
-		var new_detail: ShopperAI.AIDetail
-		if dist < ShopperAI.FULL_AI_RADIUS:
-			new_detail = ShopperAI.AIDetail.FULL
-		elif dist < ShopperAI.SIMPLE_AI_RADIUS:
-			new_detail = ShopperAI.AIDetail.SIMPLE
-		else:
-			new_detail = ShopperAI.AIDetail.MINIMAL
-		shopper.ai_detail = new_detail
-
-
-func _get_shopper_lod_origin() -> Node3D:
-	var active_camera: Camera3D = CameraManager.get_active_camera()
-	if active_camera == null:
-		return null
-	var camera_parent: Node = active_camera.get_parent()
-	if camera_parent is Node3D:
-		return camera_parent as Node3D
-	return active_camera
-
-
-func _update_mall_shoppers() -> void:
-	if not _in_mall_hallway:
-		return
-	var target: int = get_spawn_target()
-	if _active_mall_shopper_count < target:
-		_try_spawn_mall_shopper(target - _active_mall_shopper_count)
-	elif _active_mall_shopper_count > target:
-		if not _despawn_one_leaving_shopper():
-			_request_one_shopper_leave()
-
-
-func _try_spawn_mall_shopper(spawn_capacity: int = -1) -> void:
-	var tracked_count: int = maxi(
-		_active_mall_shopper_count, _get_live_mall_shopper_count()
-	)
-	var remaining_capacity: int = max_customers_in_mall - tracked_count
-	if spawn_capacity >= 0:
-		remaining_capacity = mini(remaining_capacity, spawn_capacity)
-	if remaining_capacity <= 0:
-		return
-	if not _shopper_scene:
-		return
-	var spawn_pos: Vector3 = _find_exit_waypoint_position()
-	if spawn_pos == Vector3.ZERO:
-		return
-	var weights: Dictionary = _current_archetype_weights
-	var archetype: PersonalityData.PersonalityType = (
-		ShopperArchetypeConfig.weighted_random_select(weights)
-	)
-	if ShopperArchetypeConfig.is_group_archetype(archetype):
-		_spawn_shopper_group(archetype, spawn_pos, remaining_capacity)
-	else:
-		_spawn_solo_shopper(archetype, spawn_pos)
-
-
-func _spawn_solo_shopper(
-	archetype: PersonalityData.PersonalityType,
-	spawn_pos: Vector3,
-) -> void:
-	var shopper: ShopperAI = _shopper_scene.instantiate() as ShopperAI
-	if not shopper:
-		push_error("CustomerSystem: failed to instantiate ShopperAI")
-		return
-	shopper.personality = (
-		ShopperArchetypeConfig.create_personality(archetype)
-	)
-	add_child(shopper)
-	shopper.initialize(spawn_pos)
-	_active_mall_shopper_count += 1
-
-
-func _spawn_shopper_group(
-	archetype: PersonalityData.PersonalityType,
-	spawn_pos: Vector3,
-	spawn_capacity: int,
-) -> void:
-	var size_range: Vector2i = (
-		ShopperArchetypeConfig.get_group_size_range(archetype)
-	)
-	var group_size: int = randi_range(size_range.x, size_range.y)
-	var remaining_capacity: int = (
-		max_customers_in_mall - _active_mall_shopper_count
-	)
-	remaining_capacity = mini(remaining_capacity, spawn_capacity)
-	group_size = mini(group_size, remaining_capacity)
-	if group_size < 2:
-		return
-	var group: ShopperGroup = ShopperGroup.new()
-	for i: int in range(group_size):
-		var shopper: ShopperAI = (
-			_shopper_scene.instantiate() as ShopperAI
-		)
-		if not shopper:
-			push_error(
-				"CustomerSystem: failed to instantiate group member"
-			)
-			continue
-		shopper.personality = (
-			ShopperArchetypeConfig.create_personality(archetype)
-		)
-		var offset: Vector3 = Vector3(
-			randf_range(-0.5, 0.5), 0.0, randf_range(-0.5, 0.5)
-		)
-		add_child(shopper)
-		group.add_member(shopper)
-		shopper.shopper_group = group
-		shopper.initialize(spawn_pos + offset)
-		_active_mall_shopper_count += 1
-	group.assign_leader()
-
-
-func _find_exit_waypoint_position() -> Vector3:
-	var waypoints: Array[Node] = get_tree().get_nodes_in_group(
-		"mall_waypoints"
-	)
-	var exits: Array[MallWaypoint] = []
-	for node: Node in waypoints:
-		var wp: MallWaypoint = node as MallWaypoint
-		if wp and wp.waypoint_type == MallWaypoint.WaypointType.EXIT:
-			exits.append(wp)
-	if exits.is_empty():
-
-		push_warning(
-			"CustomerSystem: No EXIT waypoints found for spawning"
-		)
-		return Vector3.ZERO
-	return exits.pick_random().global_position
-
-
-func _get_live_mall_shopper_count() -> int:
-	if not is_inside_tree():
-		return 0
-	var count: int = 0
-	for node: Node in get_tree().get_nodes_in_group("shoppers"):
-		if is_instance_valid(node):
-			count += 1
-	return count
-
-
 func _get_fractional_hour() -> float:
 	var seconds_per_hour: float = (
 		Constants.SECONDS_PER_GAME_MINUTE * Constants.MINUTES_PER_HOUR
@@ -786,7 +652,7 @@ func _on_reputation_changed(
 
 func _on_day_ended(_day: int) -> void:
 	_despawn_all_customers()
-	_despawn_all_mall_shoppers()
+	_mall_shoppers.despawn_all_mall_shoppers()
 	_active_mall_shopper_count = 0
 	_spawn_check_timer = 0.0
 	_lod_timer = 0.0
@@ -899,7 +765,7 @@ func _on_hour_changed(hour: int) -> void:
 	_hour_elapsed = 0.0
 	_refresh_current_archetype_weights()
 	if hour >= Constants.STORE_CLOSE_HOUR:
-		_request_all_shoppers_leave()
+		_mall_shoppers.request_all_shoppers_leave()
 
 
 func _on_store_entered(_entered_store_id: StringName) -> void:
@@ -971,62 +837,10 @@ func _on_defective_sale_occurred(_item_id: String, _reason: String) -> void:
 	_defective_sale_today = true
 
 
-func _request_one_shopper_leave() -> void:
-	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
-		"shoppers"
-	)
-	for node: Node in shoppers:
-		var shopper: ShopperAI = node as ShopperAI
-		if not shopper or not is_instance_valid(shopper):
-			continue
-		if shopper.current_state == ShopperAI.ShopperState.LEAVING:
-			continue
-		shopper.request_leave()
-		return
-
-
-func _despawn_one_leaving_shopper() -> bool:
-	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
-		"shoppers"
-	)
-	for node: Node in shoppers:
-		var shopper: ShopperAI = node as ShopperAI
-		if not shopper or not is_instance_valid(shopper):
-			continue
-		if shopper.current_state != ShopperAI.ShopperState.LEAVING:
-			continue
-		shopper.queue_free()
-		_decrement_active_mall_shopper_count()
-		return true
-	return false
-
-
-func _request_all_shoppers_leave() -> void:
-	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
-		"shoppers"
-	)
-	for node: Node in shoppers:
-		var shopper: ShopperAI = node as ShopperAI
-		if not shopper or not is_instance_valid(shopper):
-			continue
-		if shopper.current_state == ShopperAI.ShopperState.LEAVING:
-			continue
-		shopper.request_leave()
-
-
 func _despawn_all_customers() -> void:
 	var to_remove: Array[Customer] = _active_customers.duplicate()
 	for customer: Customer in to_remove:
 		despawn_customer(customer)
-
-
-func _despawn_all_mall_shoppers() -> void:
-	var shoppers: Array[Node] = get_tree().get_nodes_in_group(
-		"shoppers"
-	)
-	for node: Node in shoppers:
-		if is_instance_valid(node):
-			node.queue_free()
 
 
 func _refresh_cached_greeter() -> void:

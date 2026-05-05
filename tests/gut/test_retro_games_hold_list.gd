@@ -29,8 +29,8 @@ func after_each() -> void:
 
 
 func test_get_hold_list_returns_owned_instance() -> void:
-	assert_not_null(_controller.get_hold_list())
-	assert_true(_controller.get_hold_list() is HoldList)
+	assert_not_null(_controller.holds.get_hold_list())
+	assert_true(_controller.holds.get_hold_list() is HoldList)
 
 
 func test_add_customer_hold_emits_event_bus_hold_added() -> void:
@@ -48,7 +48,7 @@ func test_add_customer_hold_emits_event_bus_hold_added() -> void:
 			"customer_name": customer_name,
 		})
 	EventBus.hold_added.connect(capture)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"T. Morrow",
 		"SER-1",
 		_ITEM_ID,
@@ -76,7 +76,7 @@ func test_shady_request_forwarded_onto_event_bus() -> void:
 			"tier": tier,
 		})
 	EventBus.hold_shady_request_received.connect(capture)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"Mystery",
 		"SER-X",
 		_ITEM_ID,
@@ -93,7 +93,7 @@ func test_anonymous_tier_emits_shady_request_signal() -> void:
 	var capture: Callable = func(_a: StringName, _b: String, _c: StringName, d: int) -> void:
 		emitted.append(d)
 	EventBus.hold_shady_request_received.connect(capture)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"",
 		"SER-Z",
 		_ITEM_ID,
@@ -121,10 +121,10 @@ func test_duplicate_serial_emits_event_bus_duplicate_detected() -> void:
 			"field": field,
 		})
 	EventBus.hold_duplicate_detected.connect(capture)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
 	EventBus.hold_duplicate_detected.disconnect(capture)
@@ -134,26 +134,26 @@ func test_duplicate_serial_emits_event_bus_duplicate_detected() -> void:
 
 func test_terminal_access_locked_by_default() -> void:
 	# UnlockSystem starts with no granted unlocks at test boot.
-	assert_false(_controller.has_hold_terminal_access())
+	assert_false(_controller.holds.has_hold_terminal_access())
 
 
 func test_terminal_access_granted_after_unlock() -> void:
 	UnlockSystemSingleton._granted[_UNLOCK_ID] = true
-	assert_true(_controller.has_hold_terminal_access())
+	assert_true(_controller.holds.has_hold_terminal_access())
 	UnlockSystemSingleton._granted.erase(_UNLOCK_ID)
 
 
 func test_resolve_conflict_honor_earliest_applies_manager_trust() -> void:
-	var slip_a: HoldSlip = _controller.add_customer_hold(
+	var slip_a: HoldSlip = _controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-2", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
 	slip_a.expiry_day = slip_a.creation_day + 1  # earliest
 
 	var before_trust: float = ManagerRelationshipManager.manager_trust
-	_controller.resolve_fulfillment_conflict(
+	_controller.holds.resolve_fulfillment_conflict(
 		_ITEM_ID, HoldList.ConflictChoice.HONOR_EARLIEST
 	)
 	var delta: float = ManagerRelationshipManager.manager_trust - before_trust
@@ -161,16 +161,16 @@ func test_resolve_conflict_honor_earliest_applies_manager_trust() -> void:
 
 
 func test_resolve_conflict_escalate_applies_higher_manager_trust() -> void:
-	var slip_a: HoldSlip = _controller.add_customer_hold(
+	var slip_a: HoldSlip = _controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-2", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
 	slip_a.expiry_day = slip_a.creation_day + 1
 
 	var before_trust: float = ManagerRelationshipManager.manager_trust
-	var result: Dictionary = _controller.resolve_fulfillment_conflict(
+	var result: Dictionary = _controller.holds.resolve_fulfillment_conflict(
 		_ITEM_ID, HoldList.ConflictChoice.ESCALATE_TO_MANAGER
 	)
 	var delta: float = ManagerRelationshipManager.manager_trust - before_trust
@@ -181,10 +181,10 @@ func test_resolve_conflict_escalate_applies_higher_manager_trust() -> void:
 
 
 func test_resolve_conflict_walk_in_emits_bypass_signal() -> void:
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-2", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
 
@@ -198,7 +198,7 @@ func test_resolve_conflict_walk_in_emits_bypass_signal() -> void:
 			"disputed": disputed,
 		})
 	EventBus.hold_conflict_bypassed.connect(capture)
-	_controller.resolve_fulfillment_conflict(
+	_controller.holds.resolve_fulfillment_conflict(
 		_ITEM_ID, HoldList.ConflictChoice.GIVE_TO_WALK_IN
 	)
 	EventBus.hold_conflict_bypassed.disconnect(capture)
@@ -210,10 +210,10 @@ func test_resolve_conflict_walk_in_emits_bypass_signal() -> void:
 
 
 func test_resolve_conflict_walk_in_applies_negative_trust_deltas() -> void:
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-2", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
 
@@ -222,7 +222,7 @@ func test_resolve_conflict_walk_in_applies_negative_trust_deltas() -> void:
 	EmploymentSystem._employed = true
 	var employee_before: float = EmploymentSystem.state.employee_trust
 
-	_controller.resolve_fulfillment_conflict(
+	_controller.holds.resolve_fulfillment_conflict(
 		_ITEM_ID, HoldList.ConflictChoice.GIVE_TO_WALK_IN
 	)
 
@@ -238,14 +238,14 @@ func test_resolve_conflict_walk_in_applies_negative_trust_deltas() -> void:
 
 
 func test_units_in_stock_zero_without_inventory_system() -> void:
-	assert_eq(_controller.units_in_stock(_ITEM_ID), 0)
+	assert_eq(_controller.holds.units_in_stock(_ITEM_ID), 0)
 
 
 func test_save_load_round_trip_restores_holds() -> void:
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-2", _ITEM_ID, "X", HoldSlip.RequestorTier.SHADY
 	)
 	var snapshot: Dictionary = _controller.get_save_data()
@@ -258,19 +258,19 @@ func test_save_load_round_trip_restores_holds() -> void:
 
 
 func test_pending_holds_drop_off_after_fulfill() -> void:
-	var slip_a: HoldSlip = _controller.add_customer_hold(
+	var slip_a: HoldSlip = _controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-2", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	assert_eq(_controller.get_hold_list().pending_holds_for(_ITEM_ID).size(), 2)
-	_controller.get_hold_list().fulfill(slip_a.id)
-	assert_eq(_controller.get_hold_list().pending_holds_for(_ITEM_ID).size(), 1)
+	assert_eq(_controller.holds.get_hold_list().pending_holds_for(_ITEM_ID).size(), 2)
+	_controller.holds.get_hold_list().fulfill(slip_a.id)
+	assert_eq(_controller.holds.get_hold_list().pending_holds_for(_ITEM_ID).size(), 1)
 
 
 func test_day_started_expires_stale_slips() -> void:
-	var slip: HoldSlip = _controller.add_customer_hold(
+	var slip: HoldSlip = _controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
 	slip.expiry_day = 1
@@ -296,10 +296,10 @@ func test_day_started_expires_stale_slips() -> void:
 func test_has_fulfillment_conflict_false_without_supply_constraint() -> void:
 	# Without an inventory system or platform shortage, the supply-constraint
 	# branch returns false and the conflict panel is suppressed.
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"A", "SER-1", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	_controller.add_customer_hold(
+	_controller.holds.add_customer_hold(
 		"B", "SER-2", _ITEM_ID, "X", HoldSlip.RequestorTier.NORMAL
 	)
-	assert_false(_controller.has_fulfillment_conflict(_ITEM_ID))
+	assert_false(_controller.holds.has_fulfillment_conflict(_ITEM_ID))

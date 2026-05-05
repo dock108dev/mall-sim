@@ -941,17 +941,27 @@ func _on_staff_morale_changed(_staff_id: String, _new_morale: float) -> void:
 func dev_force_complete_sale() -> bool:
 	if not OS.is_debug_build():
 		return false
-	if _active_customer and is_instance_valid(_active_customer) \
-			and _active_item:
-		if _is_processing:
-			_checkout_timer.stop()
-			_on_checkout_timer_timeout()
-			return true
-		if _active_offer > 0.0:
-			initiate_sale(_active_customer, _active_item, _active_offer)
-			_checkout_timer.stop()
-			_on_checkout_timer_timeout()
-			return true
+	if _try_force_complete_active():
+		return true
+	return _try_force_complete_pending()
+
+
+func _try_force_complete_active() -> bool:
+	if not (_active_customer and is_instance_valid(_active_customer) and _active_item):
+		return false
+	if _is_processing:
+		_checkout_timer.stop()
+		_on_checkout_timer_timeout()
+		return true
+	if _active_offer > 0.0:
+		initiate_sale(_active_customer, _active_item, _active_offer)
+		_checkout_timer.stop()
+		_on_checkout_timer_timeout()
+		return true
+	return false
+
+
+func _try_force_complete_pending() -> bool:
 	if _inventory_system == null:
 		return false
 	var customer: Customer = _find_waiting_customer()

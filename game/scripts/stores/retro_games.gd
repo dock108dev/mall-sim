@@ -11,11 +11,6 @@ const GRADES_PATH: String = "res://game/content/stores/retro_games/grades.json"
 const CONDITION_ORDER: PackedStringArray = [
 	"poor", "fair", "good", "near_mint", "mint",
 ]
-## Upper bound on starter-inventory `quantity` per entry. Per-store shelf
-## footprint tops out near 30 slots, so anything beyond this is a content
-## authoring typo — clamp it before the loop so a stray three-digit value
-## cannot stall the boot path.
-const _MAX_STARTER_QUANTITY: int = 64
 ## Display name on the checkout counter Interactable when a customer is
 ## queued. Paired with an empty verb so the InteractionPrompt renders an
 ## informational label without a "Press E" cue — Day 1 customers
@@ -67,9 +62,27 @@ const _NEW_CONSOLE_LABEL_PATH: NodePath = ^"new_console_display/ShortageLabel"
 ## StoreCustomizationSystem.FEATURED_CATEGORY_NEW_CONSOLE_HYPE so we don't
 ## reach across the autoload tree at static-init time.
 const _NEW_CONSOLE_HYPE_CATEGORY: StringName = &"new_console_hype"
-const _BACK_ROOM_INVENTORY_PANEL_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/back_room_inventory_panel.tscn"
-)
+
+const _POSTER_DISPLAY_NAMES: Dictionary = {
+	&"new_releases": "New Releases",
+	&"retro_revival": "Retro Revival",
+	&"sports_season": "Sports Season",
+	&"family_fun": "Family Fun",
+}
+
+const _FEATURED_DISPLAY_NAMES: Dictionary = {
+	&"new_console_hype": "New Console Hype",
+	&"old_gen_clearance": "Old-Gen Clearance",
+	&"used_bundles": "Used Bundles",
+	&"sports_games": "Sports Games",
+	&"accessories": "Accessories",
+	&"family_friendly": "Family-Friendly Games",
+}
+
+## Hold-list / reservation manager. Addressed externally as `controller.holds`.
+var holds: RetroGamesHolds = null
+## Inventory-variance / discrepancy tracker. Addressed as `controller.audit`.
+var audit: RetroGamesAudit = null
 
 var _testing_station_slot: Node = null
 var _refurbishment_system: RefurbishmentSystem = null
@@ -96,53 +109,14 @@ var _debug_overhead_active: bool = false
 ## Reference to the entrance glass-door Interactable so the connect/disconnect
 ## stays single-source in `_ready` and `_exit_tree`.
 var _entrance_door_interactable: Interactable = null
-## Set of item_ids the player has already flagged as a discrepancy on the
-## current day. Cleared on EventBus.day_started. Used to make
-## `flag_discrepancy()` idempotent per SKU per day so repeated presses on the
-## same row do not re-emit `inventory_variance_noted` or double-count.
-var _flagged_skus_today: Dictionary = {}
-## Running total of distinct SKUs flagged on the current day. Surfaced via
-## `get_discrepancies_flagged_today()` for the closing summary.
-var _discrepancies_flagged_count: int = 0
-## Tracks whether the delivery manifest has been examined today so the
-## `delivery_manifest_examined` signal fires at most once per day.
-var _delivery_manifest_examined_today: bool = false
-## Active back-room inventory audit panel (instantiated on demand).
-var _back_room_inventory_panel: Control = null
-## Store-local hold/reservation list. Owned by this controller so slips do
-## not leak across stores. Forwarded onto EventBus for cross-system
-## listeners (HiddenThreadSystem, terminal UI).
-var _hold_list: HoldList = HoldList.new()
-## Maps HOLD-#### id → spawned MeshInstance3D representing the physical
-## paper slip on hold_shelf/HoldSlipContainer. Cleared on store entry; nodes
-## are queue_freed when slips reach a terminal state.
-var _hold_slip_props: Dictionary = {}
-## Unlock id that gates the terminal access flow. Before this unlock the
-## hold panel does not open and the manager handles allocation silently —
-## `_open_hold_terminal` short-circuits without UI.
-const _HOLD_TERMINAL_UNLOCK_ID: StringName = &"employee_holdlist_access"
-## Material colors for the spawned paper slip props. Flagged slips render
-## with a red emissive tint so the player can pick them out at a glance on
-## the hold shelf; unflagged slips use the default cream paper color.
-const _HOLD_SLIP_MAT_COLOR_NORMAL: Color = Color(0.96, 0.92, 0.78)
-const _HOLD_SLIP_MAT_COLOR_FLAGGED: Color = Color(0.95, 0.30, 0.25)
-const _HOLD_SLIP_EMISSION_FLAGGED: Color = Color(0.85, 0.10, 0.10)
-## Per-slip prop dimensions (paper-thin box on the hold shelf). The shelf
-## surface is at Y≈1.6 in scene-local space; slips are stacked along the
-## shelf's local +X axis with this spacing.
-const _HOLD_SLIP_BOX_SIZE := Vector3(0.18, 0.02, 0.12)
-const _HOLD_SLIP_X_SPACING: float = 0.22
-## Trust deltas for the three Fulfillment Conflict resolution choices.
-const _HOLD_CONFLICT_HONOR_MANAGER_TRUST_DELTA: float = 0.02
-const _HOLD_CONFLICT_ESCALATE_MANAGER_TRUST_DELTA: float = 0.03
-const _HOLD_CONFLICT_WALK_IN_MANAGER_TRUST_DELTA: float = -0.05
-const _HOLD_CONFLICT_WALK_IN_EMPLOYEE_TRUST_DELTA: float = -3.0
-const _HOLD_REASON_HONOR: String = "complaint_handled"
-const _HOLD_REASON_ESCALATE: String = "manager_escalation"
-const _HOLD_REASON_WALK_IN: String = "hold_conflict_bypass"
+## True after we've already emitted display_exposes_weird_inventory for the
+## current day so toggling featured back to new-console-hype doesn't double-up.
+var _weird_inventory_signal_fired_today: bool = false
 
 
 func _ready() -> void:
+	holds = RetroGamesHolds.new(self)
+	audit = RetroGamesAudit.new(self)
 	initialize()
 	super._ready()
 	_find_testing_station()
@@ -166,7 +140,6 @@ func _ready() -> void:
 	_wire_zone_artifacts()
 	_connect_platform_shortage_signals()
 	_refresh_new_console_display_label()
-	_connect_hold_list_signals()
 	_connect_store_customization_signals()
 
 
@@ -376,7 +349,7 @@ func get_save_data() -> Dictionary:
 	return {
 		"testing_available": _testing_available,
 		"item_grades": _item_grades.duplicate(),
-		"hold_list": _hold_list.get_save_data(),
+		"hold_list": holds.get_save_data(),
 	}
 
 
@@ -388,8 +361,7 @@ func load_save_data(data: Dictionary) -> void:
 		_item_grades = grades_data as Dictionary
 	var hold_data: Variant = data.get("hold_list", null)
 	if hold_data is Dictionary:
-		_hold_list.load_save_data(hold_data as Dictionary)
-		_resync_hold_slip_props()
+		holds.load_save_data(hold_data as Dictionary)
 
 
 func _load_grades() -> void:
@@ -662,122 +634,11 @@ func _connect_store_signal(sig: Signal, callable: Callable) -> void:
 
 
 func _seed_starter_inventory() -> void:
-	if not _inventory_system:
+	if _inventory_system == null:
 		return
-	var existing: Array[ItemInstance] = (
-		_inventory_system.get_items_for_store(String(STORE_ID))
-	)
-	if not existing.is_empty():
-		return
-	var entry: Dictionary = _store_definition
-	if entry.is_empty():
-		entry = ContentRegistry.get_entry(STORE_ID)
-		_store_definition = entry
-	if entry.is_empty():
-		push_error(
-			"RetroGames: no ContentRegistry entry for %s" % STORE_ID
-		)
-		return
-	var starter_items: Variant = entry.get("starting_inventory", [])
-	if starter_items is not Array:
-		# §F-32 — non-Array `starting_inventory` is a content-authoring error;
-		# warn so the typo surfaces in CI/dev logs rather than silently
-		# shipping a store with no starter inventory.
-		push_warning(
-			"RetroGames: starting_inventory for %s is %s, expected Array"
-			% [STORE_ID, type_string(typeof(starter_items))]
-		)
-		return
-	# `starting_inventory` accepts either bare item-id strings (the canonical
-	# JSON form in store_definitions.json) or `{item_id, quantity, condition}`
-	# dictionaries (legacy form retained for save-data compatibility).
-	for item_data: Variant in starter_items as Array:
-		if item_data is String:
-			_add_starter_item_by_id(item_data as String, 1, "")
-		elif item_data is Dictionary:
-			var dict := item_data as Dictionary
-			var raw_id: Variant = dict.get("item_id", "")
-			if not raw_id is String:
-				# §F-32 — non-String `item_id` in dict form is a content
-				# authoring error; warn instead of silent skip.
-				push_warning(
-					(
-						"RetroGames: starting_inventory entry has non-String "
-						+ "item_id %s for %s"
-					)
-					% [type_string(typeof(raw_id)), STORE_ID]
-				)
-				continue
-			_add_starter_item_by_id(
-				raw_id as String,
-				int(dict.get("quantity", 1)),
-				str(dict.get("condition", "")),
-			)
-		else:
-			# §F-32 — neither String nor Dictionary; warn for any other shape.
-			push_warning(
-				(
-					"RetroGames: starting_inventory entry is %s, expected "
-					+ "String or Dictionary (store=%s)"
-				)
-				% [type_string(typeof(item_data)), STORE_ID]
-			)
-
-
-func _add_starter_item_by_id(
-	raw_id: String, quantity: int, condition: String
-) -> void:
-	if raw_id.is_empty() or quantity <= 0:
-		return
-	if quantity > _MAX_STARTER_QUANTITY:
-		push_warning(
-			(
-				"RetroGames: starter quantity %d for '%s' exceeds cap %d; "
-				+ "clamping (likely content authoring typo)"
-			)
-			% [quantity, raw_id, _MAX_STARTER_QUANTITY]
-		)
-		quantity = _MAX_STARTER_QUANTITY
-	var canonical: StringName = ContentRegistry.resolve(raw_id)
-	if canonical.is_empty():
-		push_error("RetroGames: unknown item_id '%s'" % raw_id)
-		return
-	var entry: Dictionary = ContentRegistry.get_entry(canonical)
-	if entry.is_empty():
-		# §F-33 — `resolve()` succeeded so the alias map knows the id, but
-		# the entry table doesn't. That's a registry inconsistency, not a
-		# normal "unknown id" case; promote to push_error so CI catches it.
-		push_error(
-			"RetroGames: registry inconsistency — '%s' resolves to '%s' but has no entry"
-			% [raw_id, canonical]
-		)
-		return
-	var def: ItemDefinition = _build_definition_from_entry(
-		canonical, entry
-	)
-	for i: int in range(quantity):
-		var instance: ItemInstance = (
-			ItemInstance.create_from_definition(def, condition)
-		)
-		_inventory_system.add_item(STORE_ID, instance)
-
-
-func _build_definition_from_entry(
-	canonical_id: StringName, data: Dictionary
-) -> ItemDefinition:
-	var def: ItemDefinition = ItemDefinition.new()
-	def.id = String(canonical_id)
-	if data.has("item_name"):
-		def.item_name = str(data["item_name"])
-	if data.has("base_price"):
-		def.base_price = float(data["base_price"])
-	if data.has("category"):
-		def.category = str(data["category"])
-	if data.has("rarity"):
-		def.rarity = str(data["rarity"])
-	if data.has("store_type"):
-		def.store_type = str(data["store_type"])
-	return def
+	if _store_definition.is_empty():
+		_store_definition = ContentRegistry.get_entry(STORE_ID)
+	RetroGamesStarterSeed.seed(STORE_ID, _store_definition, _inventory_system)
 
 
 func _find_testing_station() -> void:
@@ -949,7 +810,7 @@ func _wire_zone_artifacts() -> void:
 		"back_room/back_room_inventory_shelf/Interactable",
 		_on_back_room_inventory_shelf_interacted,
 	)
-	_connect_artifact("hold_shelf/Interactable", _on_hold_shelf_interacted)
+	_connect_artifact("hold_shelf/Interactable", holds.on_hold_shelf_interacted)
 
 
 func _connect_artifact(path: String, callable: Callable) -> void:
@@ -981,13 +842,11 @@ func _has_platform_system() -> bool:
 
 
 func _on_zone_day_started(day: int) -> void:
-	_flagged_skus_today.clear()
-	_discrepancies_flagged_count = 0
-	_delivery_manifest_examined_today = false
+	audit.reset_for_new_day()
 	# Walk holds list and expire any past-expiry slips so the morning props
 	# render in the crumpled state. expire_stale emits hold_expired per slip,
 	# which the prop-spawning listener consumes.
-	_hold_list.expire_stale(day)
+	holds.get_hold_list().expire_stale(day)
 
 
 func _on_platform_shortage_changed(_platform_id: StringName) -> void:
@@ -1028,9 +887,8 @@ func _refresh_new_console_display_label() -> void:
 # ── Zone artifact handlers ───────────────────────────────────────────────────
 
 func _on_delivery_manifest_examined() -> void:
-	if _delivery_manifest_examined_today:
+	if not audit.consume_delivery_manifest_examined():
 		return
-	_delivery_manifest_examined_today = true
 	var day: int = GameManager.get_current_day()
 	EventBus.delivery_manifest_examined.emit(STORE_ID, day)
 
@@ -1072,35 +930,11 @@ func _get_store_customization_system() -> Node:
 
 
 func _poster_display_name(poster_id: StringName) -> String:
-	match poster_id:
-		&"new_releases":
-			return "New Releases"
-		&"retro_revival":
-			return "Retro Revival"
-		&"sports_season":
-			return "Sports Season"
-		&"family_fun":
-			return "Family Fun"
-		_:
-			return "(none)"
+	return String(_POSTER_DISPLAY_NAMES.get(poster_id, "(none)"))
 
 
 func _featured_category_display_name(category: StringName) -> String:
-	match category:
-		&"new_console_hype":
-			return "New Console Hype"
-		&"old_gen_clearance":
-			return "Old-Gen Clearance"
-		&"used_bundles":
-			return "Used Bundles"
-		&"sports_games":
-			return "Sports Games"
-		&"accessories":
-			return "Accessories"
-		&"family_friendly":
-			return "Family-Friendly Games"
-		_:
-			return "(none)"
+	return String(_FEATURED_DISPLAY_NAMES.get(category, "(none)"))
 
 
 func _on_release_notes_clipboard_interacted() -> void:
@@ -1108,14 +942,10 @@ func _on_release_notes_clipboard_interacted() -> void:
 
 
 func _on_back_room_inventory_shelf_interacted() -> void:
-	_open_back_room_inventory_panel()
+	audit.open_back_room_inventory_panel()
 
 
 # ── Store customization wiring ───────────────────────────────────────────────
-
-## True after we've already emitted display_exposes_weird_inventory for the
-## current day so toggling featured back to new-console-hype doesn't double-up.
-var _weird_inventory_signal_fired_today: bool = false
 
 
 func _connect_store_customization_signals() -> void:
@@ -1142,484 +972,7 @@ func _on_featured_category_changed(category: StringName) -> void:
 		return
 	if category != _NEW_CONSOLE_HYPE_CATEGORY:
 		return
-	if not _has_suspicious_vecforce_hd_hold():
+	if not holds.has_suspicious_vecforce_hd_hold():
 		return
 	EventBus.display_exposes_weird_inventory.emit(STORE_ID)
 	_weird_inventory_signal_fired_today = true
-
-
-## Walks the store hold list for a non-terminal slip whose item is on the
-## VecForce HD platform AND is either flagged or carries a non-NORMAL
-## requestor tier.
-func _has_suspicious_vecforce_hd_hold() -> bool:
-	var statuses: Array[int] = [
-		HoldSlip.Status.ACTIVE, HoldSlip.Status.FLAGGED
-	]
-	for status: int in statuses:
-		for slip: HoldSlip in _hold_list.get_slips_by_status(status):
-			if not _slip_targets_vecforce_hd(slip):
-				continue
-			if status == HoldSlip.Status.FLAGGED:
-				return true
-			if slip.requestor_tier != HoldSlip.RequestorTier.NORMAL:
-				return true
-	return false
-
-
-func _slip_targets_vecforce_hd(slip: HoldSlip) -> bool:
-	if slip == null or slip.item_id == &"":
-		return false
-	var item_def: ItemDefinition = ContentRegistry.get_item_definition(
-		slip.item_id
-	)
-	if item_def == null:
-		return false
-	return item_def.platform_id == _NEW_CONSOLE_PLATFORM_ID
-
-
-# ── Discrepancy tracking ─────────────────────────────────────────────────────
-
-## Builds the audit rows the back-room inventory panel renders. Each row keys
-## an item_id to the expected count (from the last delivery manifest snapshot)
-## and the actual count (from InventorySystem). Until the delivery-manifest
-## persistence layer lands (ISSUE-014/015), expected mirrors actual so a fresh
-## floor reads zero discrepancies; downstream systems can override
-## `_inventory_audit_expected` via tests or future hooks to inject mismatches.
-func get_inventory_audit_rows() -> Array:
-	var rows: Array = []
-	if _inventory_system == null:
-		return rows
-	var expected_map: Dictionary = _resolve_expected_inventory()
-	var actual_map: Dictionary = _resolve_actual_inventory()
-	var seen_ids: Dictionary = {}
-	for raw_key: Variant in expected_map:
-		var item_id: StringName = StringName(str(raw_key))
-		seen_ids[item_id] = true
-	for raw_key: Variant in actual_map:
-		var item_id: StringName = StringName(str(raw_key))
-		seen_ids[item_id] = true
-	for item_id: StringName in seen_ids:
-		var expected: int = int(expected_map.get(item_id, 0))
-		var actual: int = int(actual_map.get(item_id, 0))
-		var name_for_row: String = _resolve_item_display_name(item_id)
-		rows.append({
-			"item_id": item_id,
-			"item_name": name_for_row,
-			"expected": expected,
-			"actual": actual,
-			"flagged": _flagged_skus_today.has(item_id),
-			"mismatched": expected != actual,
-		})
-	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return String(a.get("item_name", "")) < String(b.get("item_name", ""))
-	)
-	return rows
-
-
-## Per-day-flagged SKU set, exposed for tests and future closing-summary
-## consumers (ISSUE-007 closing summary card).
-func get_flagged_skus_today() -> Array:
-	var keys: Array = []
-	for raw_key: Variant in _flagged_skus_today:
-		keys.append(StringName(str(raw_key)))
-	return keys
-
-
-## Total distinct SKUs flagged today; mirrors the closing-summary key.
-func get_discrepancies_flagged_today() -> int:
-	return _discrepancies_flagged_count
-
-
-## Records a player-flagged inventory variance. Idempotent per item per day:
-## flagging the same SKU twice on the same day is a no-op (no double-emit, no
-## counter increment). Returns true when the flag was newly recorded.
-func flag_discrepancy(
-	item_id: StringName, expected: int, actual: int
-) -> bool:
-	if item_id == &"":
-		push_warning("RetroGames.flag_discrepancy: empty item_id")
-		return false
-	if _flagged_skus_today.has(item_id):
-		return false
-	_flagged_skus_today[item_id] = true
-	_discrepancies_flagged_count += 1
-	EventBus.inventory_variance_noted.emit(STORE_ID, item_id, expected, actual)
-	return true
-
-
-## Returns true when `flag_discrepancy(item_id, …)` would be a fresh flag.
-## Mirrors the panel's per-row Flag-button enabled state.
-func can_flag_discrepancy(item_id: StringName) -> bool:
-	if item_id == &"":
-		return false
-	return not _flagged_skus_today.has(item_id)
-
-
-func _resolve_expected_inventory() -> Dictionary:
-	# Until the delivery manifest persistence lands the expected counts mirror
-	# the actual current inventory. Future ISSUE-014/015 work will inject the
-	# manifest snapshot taken at start-of-day and inflate variance.
-	return _resolve_actual_inventory()
-
-
-func _resolve_actual_inventory() -> Dictionary:
-	var counts: Dictionary = {}
-	var items: Array[ItemInstance] = _inventory_system.get_items_for_store(
-		String(STORE_ID)
-	)
-	for item: ItemInstance in items:
-		if item == null or item.definition == null:
-			continue
-		var key: StringName = StringName(item.definition.id)
-		counts[key] = int(counts.get(key, 0)) + 1
-	return counts
-
-
-func _resolve_item_display_name(item_id: StringName) -> String:
-	if _inventory_system == null:
-		return String(item_id)
-	var entry: Dictionary = ContentRegistry.get_entry(item_id)
-	if entry.has("item_name"):
-		return str(entry["item_name"])
-	return String(item_id)
-
-
-func _open_back_room_inventory_panel() -> void:
-	if _BACK_ROOM_INVENTORY_PANEL_SCENE == null:
-		return
-	if is_instance_valid(_back_room_inventory_panel):
-		_back_room_inventory_panel.queue_free()
-		_back_room_inventory_panel = null
-	var panel_root: Node = _BACK_ROOM_INVENTORY_PANEL_SCENE.instantiate()
-	if panel_root == null:
-		return
-	if panel_root.has_method("set_controller"):
-		panel_root.call("set_controller", self)
-	var ui_host: Node = _resolve_panel_host()
-	if ui_host == null:
-		return
-	ui_host.add_child(panel_root)
-	_back_room_inventory_panel = panel_root as Control
-
-
-func _resolve_panel_host() -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var current_scene: Node = tree.current_scene
-	if current_scene == null:
-		return tree.root
-	return current_scene
-
-
-# ── Hold list / reservation ──────────────────────────────────────────────────
-
-## Returns the store-local HoldList. Exposed for tests, terminal UI, and
-## external systems that need to inspect slip state without going through the
-## EventBus signal feed.
-func get_hold_list() -> HoldList:
-	return _hold_list
-
-
-## Adds a hold slip on behalf of a customer interaction. Wraps HoldList.add_hold
-## so callers don't need to compute creation_day or carry the StoreController
-## reference. Returns the new slip; never null.
-func add_customer_hold(
-	customer_name: String,
-	serial: String,
-	item_id: StringName,
-	item_label: String,
-	tier: int,
-	thread_id: String = "",
-) -> HoldSlip:
-	var day: int = GameManager.get_current_day()
-	return _hold_list.add_hold(
-		customer_name, serial, item_id, item_label, tier, day, thread_id
-	)
-
-
-## Returns true when the player has been granted the terminal access unlock.
-## Before the unlock the manager handles allocation silently — the player
-## cannot open the terminal panel, so the Fulfillment Conflict flow is not
-## reachable.
-func has_hold_terminal_access() -> bool:
-	var tree: SceneTree = get_tree()
-	if tree == null or tree.root == null:
-		return false
-	var unlocks: Node = tree.root.get_node_or_null("UnlockSystemSingleton")
-	if unlocks == null:
-		return false
-	if not unlocks.has_method("is_unlocked"):
-		return false
-	return bool(unlocks.call("is_unlocked", _HOLD_TERMINAL_UNLOCK_ID))
-
-
-## Returns the count of in-stock units for a given item_id, regardless of
-## location (shelf or backroom). Used by the conflict-detection rule
-## `pending_holds_for(item_id).size() > units_in_stock(item_id)`.
-func units_in_stock(item_id: StringName) -> int:
-	if _inventory_system == null:
-		return 0
-	var stock: Array[ItemInstance] = _inventory_system.get_items_for_store(
-		String(STORE_ID)
-	)
-	var count: int = 0
-	for item: ItemInstance in stock:
-		if item == null or item.definition == null:
-			continue
-		if StringName(item.definition.id) == item_id:
-			count += 1
-	return count
-
-
-## Returns true when the item's platform is supply-constrained (PlatformSystem
-## reports a current shortage) OR when the ItemDefinition itself is flagged
-## supply_constrained. The terminal only surfaces the Fulfillment Conflict
-## panel for items where this is true.
-func is_item_supply_constrained(item_id: StringName) -> bool:
-	if _inventory_system == null:
-		return false
-	# Resolve the platform_id from any in-stock instance of the item, then
-	# fall back to the ContentRegistry entry's `supply_constrained` flag.
-	var platform_id: StringName = &""
-	var fallback_constrained: bool = false
-	var stock: Array[ItemInstance] = _inventory_system.get_items_for_store(
-		String(STORE_ID)
-	)
-	for item: ItemInstance in stock:
-		if item == null or item.definition == null:
-			continue
-		if StringName(item.definition.id) != item_id:
-			continue
-		platform_id = item.definition.platform_id
-		fallback_constrained = item.definition.supply_constrained
-		break
-	if platform_id != &"" and _has_platform_system():
-		var ps: Node = get_tree().root.get_node("PlatformSystem")
-		if ps.has_method("is_shortage"):
-			return bool(ps.call("is_shortage", platform_id))
-	return fallback_constrained
-
-
-## Returns true when the terminal should render a CONFLICT badge on the row
-## for `item_id`. Combines the supply-constrained check with the
-## pending-holds vs units-in-stock comparison.
-func has_fulfillment_conflict(item_id: StringName) -> bool:
-	if not is_item_supply_constrained(item_id):
-		return false
-	return _hold_list.has_conflict(item_id, units_in_stock(item_id))
-
-
-## Resolves a Fulfillment Conflict using the player's chosen action. choice
-## is HoldList.ConflictChoice. Applies the documented manager_trust /
-## employee_trust deltas and forwards the bypass case onto EventBus so
-## hidden-thread listeners consume it as a Tier 2 trigger.
-func resolve_fulfillment_conflict(
-	item_id: StringName, choice: int
-) -> Dictionary:
-	var result: Dictionary = _hold_list.resolve_conflict(item_id, choice)
-	match choice:
-		HoldList.ConflictChoice.HONOR_EARLIEST:
-			_apply_manager_trust_delta(
-				_HOLD_CONFLICT_HONOR_MANAGER_TRUST_DELTA, _HOLD_REASON_HONOR
-			)
-		HoldList.ConflictChoice.ESCALATE_TO_MANAGER:
-			_apply_manager_trust_delta(
-				_HOLD_CONFLICT_ESCALATE_MANAGER_TRUST_DELTA,
-				_HOLD_REASON_ESCALATE,
-			)
-		HoldList.ConflictChoice.GIVE_TO_WALK_IN:
-			_apply_manager_trust_delta(
-				_HOLD_CONFLICT_WALK_IN_MANAGER_TRUST_DELTA,
-				_HOLD_REASON_WALK_IN,
-			)
-			_apply_employee_trust_delta(
-				_HOLD_CONFLICT_WALK_IN_EMPLOYEE_TRUST_DELTA,
-				_HOLD_REASON_WALK_IN,
-			)
-			EventBus.hold_conflict_bypassed.emit(
-				STORE_ID, item_id, result.get("disputed_slip_ids", [])
-			)
-	return result
-
-
-# ── Hold list internals ──────────────────────────────────────────────────────
-
-func _connect_hold_list_signals() -> void:
-	if not _hold_list.hold_added.is_connected(_on_hold_added):
-		_hold_list.hold_added.connect(_on_hold_added)
-	if not _hold_list.hold_fulfilled.is_connected(_on_hold_fulfilled):
-		_hold_list.hold_fulfilled.connect(_on_hold_fulfilled)
-	if not _hold_list.hold_expired.is_connected(_on_hold_expired):
-		_hold_list.hold_expired.connect(_on_hold_expired)
-	if not _hold_list.duplicate_detected.is_connected(_on_hold_duplicate_detected):
-		_hold_list.duplicate_detected.connect(_on_hold_duplicate_detected)
-	if not _hold_list.shady_request_received.is_connected(
-		_on_hold_shady_request_received
-	):
-		_hold_list.shady_request_received.connect(
-			_on_hold_shady_request_received
-		)
-
-
-func _on_hold_added(slip: HoldSlip) -> void:
-	_spawn_hold_slip_prop(slip)
-	EventBus.hold_added.emit(
-		STORE_ID, slip.id, slip.item_id, slip.customer_name
-	)
-
-
-func _on_hold_fulfilled(slip: HoldSlip, reason: String) -> void:
-	_remove_hold_slip_prop(slip.id)
-	EventBus.hold_fulfilled.emit(STORE_ID, slip.id, slip.item_id, reason)
-
-
-func _on_hold_expired(slip: HoldSlip) -> void:
-	_apply_crumpled_visual(slip.id)
-	EventBus.hold_expired.emit(STORE_ID, slip.id, slip.item_id)
-
-
-func _on_hold_duplicate_detected(
-	new_slip: HoldSlip, existing_slip: HoldSlip, conflict_field: StringName
-) -> void:
-	# Both slips were promoted to FLAGGED inside HoldList.add_hold; refresh
-	# the existing prop's material so the player sees the red emissive on
-	# both papers without waiting for a terminal action.
-	_refresh_hold_slip_prop_material(existing_slip)
-	EventBus.hold_duplicate_detected.emit(
-		STORE_ID, new_slip.id, existing_slip.id, conflict_field
-	)
-
-
-func _on_hold_shady_request_received(slip: HoldSlip) -> void:
-	EventBus.hold_shady_request_received.emit(
-		STORE_ID, slip.id, slip.item_id, slip.requestor_tier
-	)
-
-
-func _on_hold_shelf_interacted() -> void:
-	_open_hold_terminal()
-
-
-## Opens the hold terminal panel when the player has the unlock; otherwise
-## emits a notification explaining the manager handles allocation silently.
-## The terminal UI scene is not authored as a separate .tscn — terminal
-## rendering is left to the issue-015/UI follow-up; this hook is the
-## single canonical entry point that the future UI panel will call into.
-func _open_hold_terminal() -> void:
-	if not has_hold_terminal_access():
-		EventBus.notification_requested.emit(
-			"Vic handles the hold list — you'll get terminal access later."
-		)
-		return
-	EventBus.notification_requested.emit(
-		"Hold list — %d active." % _hold_list.get_slips_by_status(
-			HoldSlip.Status.ACTIVE
-		).size()
-	)
-
-
-func _spawn_hold_slip_prop(slip: HoldSlip) -> void:
-	var container: Node3D = _get_hold_slip_container()
-	if container == null:
-		return
-	var node := MeshInstance3D.new()
-	node.name = StringName(slip.id.replace("-", "_"))
-	var mesh := BoxMesh.new()
-	mesh.size = _HOLD_SLIP_BOX_SIZE
-	node.mesh = mesh
-	var x_offset: float = float(_hold_slip_props.size()) * _HOLD_SLIP_X_SPACING
-	node.position = Vector3(x_offset - 0.4, 0.0, 0.0)
-	node.set_meta("slip_id", slip.id)
-	_apply_hold_slip_material(node, slip)
-	container.add_child(node)
-	_hold_slip_props[slip.id] = node
-
-
-func _refresh_hold_slip_prop_material(slip: HoldSlip) -> void:
-	var node: Variant = _hold_slip_props.get(slip.id, null)
-	if node == null or not is_instance_valid(node):
-		return
-	_apply_hold_slip_material(node as MeshInstance3D, slip)
-
-
-func _apply_hold_slip_material(
-	node: MeshInstance3D, slip: HoldSlip
-) -> void:
-	if node == null:
-		return
-	var mat := StandardMaterial3D.new()
-	if slip.is_flagged():
-		mat.albedo_color = _HOLD_SLIP_MAT_COLOR_FLAGGED
-		mat.emission_enabled = true
-		mat.emission = _HOLD_SLIP_EMISSION_FLAGGED
-		mat.emission_energy_multiplier = 0.7
-	else:
-		mat.albedo_color = _HOLD_SLIP_MAT_COLOR_NORMAL
-	node.material_override = mat
-
-
-func _apply_crumpled_visual(slip_id: String) -> void:
-	var node: Variant = _hold_slip_props.get(slip_id, null)
-	if node == null or not is_instance_valid(node):
-		return
-	var mesh_node := node as MeshInstance3D
-	mesh_node.scale = Vector3(0.65, 0.65, 0.65)
-	mesh_node.rotation = Vector3(0.0, 0.0, deg_to_rad(18.0))
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.55, 0.52, 0.48)
-	mesh_node.material_override = mat
-
-
-func _remove_hold_slip_prop(slip_id: String) -> void:
-	var node: Variant = _hold_slip_props.get(slip_id, null)
-	if node != null and is_instance_valid(node):
-		(node as Node).queue_free()
-	_hold_slip_props.erase(slip_id)
-
-
-func _resync_hold_slip_props() -> void:
-	# Rebuilds the prop nodes from the current HoldList state. Called after
-	# load_save_data so a save-restore puts the visible papers back on the
-	# shelf without forcing the player to re-enter the store.
-	var container: Node3D = _get_hold_slip_container()
-	if container == null:
-		return
-	for child: Node in container.get_children():
-		if child.has_meta("slip_id"):
-			child.queue_free()
-	_hold_slip_props.clear()
-	for slip: HoldSlip in _hold_list.get_all_slips():
-		if slip.is_active() or slip.is_flagged():
-			_spawn_hold_slip_prop(slip)
-		elif slip.status == HoldSlip.Status.EXPIRED:
-			_spawn_hold_slip_prop(slip)
-			_apply_crumpled_visual(slip.id)
-
-
-func _get_hold_slip_container() -> Node3D:
-	return get_node_or_null(
-		"hold_shelf/HoldSlipContainer"
-	) as Node3D
-
-
-func _apply_manager_trust_delta(delta: float, reason: String) -> void:
-	var tree: SceneTree = get_tree()
-	if tree == null or tree.root == null:
-		return
-	var mrm: Node = tree.root.get_node_or_null(
-		"ManagerRelationshipManager"
-	)
-	if mrm == null or not mrm.has_method("apply_trust_delta"):
-		return
-	mrm.call("apply_trust_delta", delta, reason)
-
-
-func _apply_employee_trust_delta(delta: float, reason: String) -> void:
-	var tree: SceneTree = get_tree()
-	if tree == null or tree.root == null:
-		return
-	var emp: Node = tree.root.get_node_or_null("EmploymentSystem")
-	if emp == null or not emp.has_method("apply_trust_delta"):
-		return
-	emp.call("apply_trust_delta", delta, reason)

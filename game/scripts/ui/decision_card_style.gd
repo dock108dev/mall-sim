@@ -12,6 +12,13 @@ class_name DecisionCardStyle
 extends Object
 
 
+enum ConflictLevel {
+	LOW,
+	NEUTRAL,
+	TENSION,
+}
+
+
 const CARD_WIDTH: int = 460
 const CARD_MIN_HEIGHT: int = 240
 const CARD_BORDER_WIDTH: int = 2
@@ -44,12 +51,6 @@ const CARD_RESULT_BG_COLOR: Color = Color(0.10, 0.10, 0.12, 0.96)
 const ARCHETYPE_COLOR_LOW: Color = Color(0.30, 0.62, 0.34, 1.0)
 const ARCHETYPE_COLOR_NEUTRAL: Color = Color(0.85, 0.62, 0.20, 1.0)
 const ARCHETYPE_COLOR_TENSION: Color = Color(0.78, 0.32, 0.24, 1.0)
-
-enum ConflictLevel {
-	LOW,
-	NEUTRAL,
-	TENSION,
-}
 
 ## Map archetype_id → ConflictLevel. Low: gift-givers and casual browsers.
 ## Neutral: collectors and value-seekers (transactional, not adversarial).

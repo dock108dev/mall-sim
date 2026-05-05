@@ -1,12 +1,6 @@
-## Full-screen day summary overlay shown at end of each day.
-## Rendered on its own CanvasLayer at the canonical MODAL band (layer=80,
-## see `UILayers.MODAL`) so it sits above the FP HUD (layer=30), the objective
-## rail (layer=40), and the tutorial overlay (layer=50). The previous
-## layer=12 placement predated the band table and rendered the summary
-## *below* the HUD — the FP corner labels and the close-day hint would punch
-## through the modal during the end-of-day flow.
-## See docs/audits/phase0-ui-integrity.md P1.4 and
-## game/scripts/ui/ui_layers.gd.
+## Full-screen day summary overlay shown at end of each day. Rendered on the
+## canonical MODAL band (UILayers.MODAL = 80) so it sits above the FP HUD,
+## objective rail, and tutorial overlay. See docs/audits/phase0-ui-integrity.md.
 class_name DaySummary
 extends CanvasLayer
 
@@ -24,13 +18,7 @@ const STAT_STAGGER_DELAY: float = 0.05
 const CONTINUE_FADE_DELAY: float = 0.2
 const CONTINUE_FADE_DURATION: float = 0.15
 const RECORD_PULSE_SCALE: float = 1.05
-const AUTO_ADVANCE_SECONDS: float = 12.0
 const HIDDEN_THREAD_DELAY: float = 1.0
-const FINAL_DAY: int = 30
-const BAR_COLOR_LOW: Color = Color(0.85, 0.30, 0.30)
-const BAR_COLOR_MID: Color = Color(0.95, 0.75, 0.30)
-const BAR_COLOR_HIGH: Color = Color(0.35, 0.80, 0.40)
-const BAR_BG_COLOR: Color = Color(0.18, 0.16, 0.20)
 const HIDDEN_THREAD_COLOR: Color = Color(0.78, 0.72, 0.62, 0.85)
 const TIER_CHANGE_COLOR := Color(1.0, 0.84, 0.0)
 const NET_PROFIT_POSITIVE_COLOR := Color(0.2, 0.8, 0.2)
@@ -65,16 +53,9 @@ var _previous_day_revenue: float = -1.0
 var _has_previous_day_revenue: bool = false
 var _last_report: PerformanceReport = null
 var _prev_report: PerformanceReport = null
-## Tracks whether this summary pushed CTX_MODAL on InputFocus so the cursor
-## stays released across the close-day → DaySummary hand-off. Mirrors the
-## InventoryPanel / CheckoutPanel modal-focus contract.
 var _focus_pushed: bool = false
-var _auto_advance_timer: Timer
 var _hidden_thread_timer: Timer
-var _auto_advance_remaining: float = 0.0
-var _auto_advance_running: bool = false
-var _auto_advance_paused: bool = false
-var _auto_advance_disabled: bool = false
+var _auto_advance: DaySummaryAutoAdvance = null
 var _pending_hidden_thread_text: String = ""
 
 @onready var _overlay: ColorRect = $Root/Overlay
@@ -85,104 +66,44 @@ var _pending_hidden_thread_text: String = ""
 @onready var _expenses_label: Label = $Root/Panel/Margin/VBox/ExpensesLabel
 @onready var _profit_label: Label = $Root/Panel/Margin/VBox/ProfitLabel
 @onready var _items_sold_label: Label = $Root/Panel/Margin/VBox/ItemsSoldLabel
-@onready var _inventory_remaining_label: Label = (
-	$Root/Panel/Margin/VBox/InventoryRemainingLabel
-)
-@onready var _backroom_inventory_label: Label = (
-	$Root/Panel/Margin/VBox/BackroomInventoryLabel
-)
-@onready var _shelf_inventory_label: Label = (
-	$Root/Panel/Margin/VBox/ShelfInventoryLabel
-)
-@onready var _cash_balance_label: Label = (
-	$Root/Panel/Margin/VBox/CashBalanceLabel
-)
-@onready var _top_item_label: Label = (
-	$Root/Panel/Margin/VBox/TopItemLabel
-)
+@onready var _inventory_remaining_label: Label = $Root/Panel/Margin/VBox/InventoryRemainingLabel
+@onready var _backroom_inventory_label: Label = $Root/Panel/Margin/VBox/BackroomInventoryLabel
+@onready var _shelf_inventory_label: Label = $Root/Panel/Margin/VBox/ShelfInventoryLabel
+@onready var _cash_balance_label: Label = $Root/Panel/Margin/VBox/CashBalanceLabel
+@onready var _top_item_label: Label = $Root/Panel/Margin/VBox/TopItemLabel
 @onready var _haggle_label: Label = $Root/Panel/Margin/VBox/HaggleLabel
 @onready var _late_fee_label: Label = $Root/Panel/Margin/VBox/LateFeeLabel
-@onready var _warranty_revenue_label: Label = (
-	$Root/Panel/Margin/VBox/WarrantyRevenueLabel
-)
-@onready var _warranty_claims_label: Label = (
-	$Root/Panel/Margin/VBox/WarrantyClaimsLabel
-)
-@onready var _customers_served_label: Label = (
-	$Root/Panel/Margin/VBox/CustomersServedLabel
-)
-@onready var _satisfaction_label: Label = (
-	$Root/Panel/Margin/VBox/SatisfactionLabel
-)
-@onready var _reputation_delta_label: Label = (
-	$Root/Panel/Margin/VBox/ReputationDeltaLabel
-)
-@onready var _tier_change_label: Label = (
-	$Root/Panel/Margin/VBox/TierChangeLabel
-)
-@onready var _staff_wages_label: Label = (
-	$Root/Panel/Margin/VBox/StaffWagesLabel
-)
-@onready var _seasonal_event_label: Label = (
-	$Root/Panel/Margin/VBox/SeasonalEventLabel
-)
-@onready var _employee_metrics_header: Label = (
-	$Root/Panel/Margin/VBox/EmployeeMetricsHeader
-)
-@onready var _customer_satisfaction_label: Label = (
-	$Root/Panel/Margin/VBox/CustomerSatisfactionLabel
-)
+@onready var _warranty_revenue_label: Label = $Root/Panel/Margin/VBox/WarrantyRevenueLabel
+@onready var _warranty_claims_label: Label = $Root/Panel/Margin/VBox/WarrantyClaimsLabel
+@onready var _customers_served_label: Label = $Root/Panel/Margin/VBox/CustomersServedLabel
+@onready var _satisfaction_label: Label = $Root/Panel/Margin/VBox/SatisfactionLabel
+@onready var _reputation_delta_label: Label = $Root/Panel/Margin/VBox/ReputationDeltaLabel
+@onready var _tier_change_label: Label = $Root/Panel/Margin/VBox/TierChangeLabel
+@onready var _staff_wages_label: Label = $Root/Panel/Margin/VBox/StaffWagesLabel
+@onready var _seasonal_event_label: Label = $Root/Panel/Margin/VBox/SeasonalEventLabel
+@onready var _employee_metrics_header: Label = $Root/Panel/Margin/VBox/EmployeeMetricsHeader
+@onready var _customer_satisfaction_label: Label = $Root/Panel/Margin/VBox/CustomerSatisfactionLabel
 @onready var _customer_satisfaction_bar: ProgressBar = (
 	$Root/Panel/Margin/VBox/CustomerSatisfactionBar
 )
-@onready var _employee_trust_label: Label = (
-	$Root/Panel/Margin/VBox/EmployeeTrustLabel
-)
-@onready var _employee_trust_bar: ProgressBar = (
-	$Root/Panel/Margin/VBox/EmployeeTrustBar
-)
-@onready var _manager_trust_label: Label = (
-	$Root/Panel/Margin/VBox/ManagerTrustLabel
-)
-@onready var _manager_trust_bar: ProgressBar = (
-	$Root/Panel/Margin/VBox/ManagerTrustBar
-)
-@onready var _mistakes_label: Label = (
-	$Root/Panel/Margin/VBox/MistakesLabel
-)
-@onready var _inventory_variance_label: Label = (
-	$Root/Panel/Margin/VBox/InventoryVarianceLabel
-)
-@onready var _discrepancies_label: Label = (
-	$Root/Panel/Margin/VBox/DiscrepanciesLabel
-)
-@onready var _hidden_thread_separator: HSeparator = (
-	$Root/Panel/Margin/VBox/HiddenThreadSeparator
-)
-@onready var _hidden_thread_label: Label = (
-	$Root/Panel/Margin/VBox/HiddenThreadLabel
-)
-@onready var _auto_advance_bar: ProgressBar = (
-	$Root/Panel/Margin/VBox/AutoAdvanceBar
-)
-@onready var _auto_advance_label: Label = (
-	$Root/Panel/Margin/VBox/AutoAdvanceLabel
-)
-@onready var _button_row: HBoxContainer = (
-	$Root/Panel/Margin/VBox/ButtonRow
-)
+@onready var _employee_trust_label: Label = $Root/Panel/Margin/VBox/EmployeeTrustLabel
+@onready var _employee_trust_bar: ProgressBar = $Root/Panel/Margin/VBox/EmployeeTrustBar
+@onready var _manager_trust_label: Label = $Root/Panel/Margin/VBox/ManagerTrustLabel
+@onready var _manager_trust_bar: ProgressBar = $Root/Panel/Margin/VBox/ManagerTrustBar
+@onready var _mistakes_label: Label = $Root/Panel/Margin/VBox/MistakesLabel
+@onready var _inventory_variance_label: Label = $Root/Panel/Margin/VBox/InventoryVarianceLabel
+@onready var _discrepancies_label: Label = $Root/Panel/Margin/VBox/DiscrepanciesLabel
+@onready var _hidden_thread_separator: HSeparator = $Root/Panel/Margin/VBox/HiddenThreadSeparator
+@onready var _hidden_thread_label: Label = $Root/Panel/Margin/VBox/HiddenThreadLabel
+@onready var _auto_advance_bar: ProgressBar = $Root/Panel/Margin/VBox/AutoAdvanceBar
+@onready var _auto_advance_label: Label = $Root/Panel/Margin/VBox/AutoAdvanceLabel
+@onready var _button_row: HBoxContainer = $Root/Panel/Margin/VBox/ButtonRow
 @onready var _review_inventory_button: Button = (
 	$Root/Panel/Margin/VBox/ButtonRow/ReviewInventoryButton
 )
-@onready var _mall_overview_button: Button = (
-	$Root/Panel/Margin/VBox/ButtonRow/MallOverviewButton
-)
-@onready var _main_menu_button: Button = (
-	$Root/Panel/Margin/VBox/ButtonRow/MainMenuButton
-)
-@onready var _continue_button: Button = (
-	$Root/Panel/Margin/VBox/ButtonRow/ContinueButton
-)
+@onready var _mall_overview_button: Button = $Root/Panel/Margin/VBox/ButtonRow/MallOverviewButton
+@onready var _main_menu_button: Button = $Root/Panel/Margin/VBox/ButtonRow/MainMenuButton
+@onready var _continue_button: Button = $Root/Panel/Margin/VBox/ButtonRow/ContinueButton
 
 
 func _ready() -> void:
@@ -206,9 +127,7 @@ func _ready() -> void:
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel.mouse_entered.connect(_on_panel_mouse_entered)
 	_panel.mouse_exited.connect(_on_panel_mouse_exited)
-	# Reset metric labels / bars to neutral defaults so a summary that opens
-	# without a PerformanceReport (e.g. headless test path) still renders a
-	# defined state rather than the .tscn placeholder text.
+	# Defaults so headless test paths render a defined state.
 	_apply_employee_metrics_defaults()
 	EventBus.performance_report_ready.connect(
 		_on_performance_report_ready
@@ -290,10 +209,8 @@ func show_last() -> void:
 	)
 
 
-## Hides the summary panel with close animation. Pops the CTX_MODAL frame
-## immediately so the FP cursor recapture (or mall-overview cursor mode)
-## fires the moment the player clicks Continue / Mall Overview, instead of
-## waiting on the close animation.
+## Hides the summary panel and pops CTX_MODAL immediately so the FP cursor
+## recapture fires before the close animation completes.
 func hide_summary() -> void:
 	_pop_modal_focus()
 	_stop_auto_advance()
@@ -316,10 +233,8 @@ func hide_summary() -> void:
 	)
 
 
-## §F-82 — Defensive cleanup so a summary removed mid-display does not
-## strand a CTX_MODAL frame on InputFocus. `_pop_modal_focus` escalates with
-## `push_error` if the stack is corrupt (§F-74 contract); the silent skip
-## here is only the well-behaved no-op path.
+## Defensive cleanup so a summary removed mid-display does not strand a
+## CTX_MODAL frame on InputFocus.
 func _exit_tree() -> void:
 	if _focus_pushed:
 		_pop_modal_focus()
@@ -353,9 +268,7 @@ func _pop_modal_focus() -> void:
 	_focus_pushed = false
 
 
-## Test seam — clears _focus_pushed without calling pop_context. Pair with
-## InputFocus._reset_for_tests() so test harnesses that wipe the focus stack
-## don't leave the panel believing it still owns a frame.
+## Test seam — clears _focus_pushed without calling pop_context.
 func _reset_for_tests() -> void:
 	_focus_pushed = false
 
@@ -425,40 +338,18 @@ func _get_stat_row_candidates() -> Array[Control]:
 		_warranty_revenue_label, _warranty_claims_label,
 		_seasonal_event_label,
 	]
-	if _discrepancy_label:
-		stat_labels.append(_discrepancy_label)
-	if _overdue_count_label:
-		stat_labels.append(_overdue_count_label)
-	if _warranty_attach_label:
-		stat_labels.append(_warranty_attach_label)
-	if _demo_status_label:
-		stat_labels.append(_demo_status_label)
-	if _grading_label:
-		stat_labels.append(_grading_label)
-	if _story_beat_label:
-		stat_labels.append(_story_beat_label)
-	if _forward_hook_label:
-		stat_labels.append(_forward_hook_label)
-	if _employee_metrics_header:
-		stat_labels.append(_employee_metrics_header)
-	if _customer_satisfaction_label:
-		stat_labels.append(_customer_satisfaction_label)
-	if _customer_satisfaction_bar:
-		stat_labels.append(_customer_satisfaction_bar)
-	if _employee_trust_label:
-		stat_labels.append(_employee_trust_label)
-	if _employee_trust_bar:
-		stat_labels.append(_employee_trust_bar)
-	if _manager_trust_label:
-		stat_labels.append(_manager_trust_label)
-	if _manager_trust_bar:
-		stat_labels.append(_manager_trust_bar)
-	if _mistakes_label:
-		stat_labels.append(_mistakes_label)
-	if _inventory_variance_label:
-		stat_labels.append(_inventory_variance_label)
-	if _discrepancies_label:
-		stat_labels.append(_discrepancies_label)
+	var optional: Array = [
+		_discrepancy_label, _overdue_count_label, _warranty_attach_label,
+		_demo_status_label, _grading_label, _story_beat_label,
+		_forward_hook_label, _employee_metrics_header,
+		_customer_satisfaction_label, _customer_satisfaction_bar,
+		_employee_trust_label, _employee_trust_bar,
+		_manager_trust_label, _manager_trust_bar,
+		_mistakes_label, _inventory_variance_label, _discrepancies_label,
+	]
+	for control: Control in optional:
+		if control:
+			stat_labels.append(control)
 	return stat_labels
 
 
@@ -579,9 +470,8 @@ func _apply_revenue_headline(revenue: float) -> void:
 	_revenue_label.add_theme_color_override("font_color", delta_color)
 
 
-## Hoist the top-seller and forward-hook rows above the detail dump
-## (rent / expenses / profit / etc.) so headline signals are visible
-## without scrolling (ISSUE-012). Anchor right after the revenue row.
+## Hoist top-seller and forward-hook above the detail dump so headline
+## signals are visible without scrolling.
 func _apply_headline_order() -> void:
 	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
 	var anchor_index: int = _revenue_label.get_index() + 1
@@ -592,8 +482,8 @@ func _apply_headline_order() -> void:
 		vbox.move_child(_forward_hook_label, anchor_index)
 
 
-## Visually de-emphasize the review-inventory action so the
-## Continue CTA reads as the single primary action (ISSUE-012).
+## Visually de-emphasize the review-inventory action so Continue reads
+## as the single primary CTA.
 func _style_secondary_actions() -> void:
 	_review_inventory_button.custom_minimum_size = Vector2(160, 36)
 	_review_inventory_button.flat = true
@@ -677,14 +567,8 @@ func _set_late_fee_display(amount: float) -> void:
 
 
 func _create_overdue_count_label() -> void:
-	_overdue_count_label = Label.new()
-	_overdue_count_label.name = "OverdueCountLabel"
-	_overdue_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_overdue_count_label.visible = false
-	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
-	vbox.add_child(_overdue_count_label)
-	vbox.move_child(
-		_overdue_count_label, _late_fee_label.get_index() + 1
+	_overdue_count_label = DaySummaryLabels.create_overdue_count(
+		$Root/Panel/Margin/VBox, _late_fee_label
 	)
 
 
@@ -749,52 +633,27 @@ func _update_store_revenue_display(store_revenue: Dictionary) -> void:
 
 
 ## Receives the day_closed payload to refresh per-store revenue display
-## and the end-of-day inventory total (shelves + backroom).
-##
-## §F-61 — `summary.get("inventory_remaining", 0)` defaults to `0` when the
-## key is absent. The canonical `day_closed` payload from
-## `DayCycleController._show_day_summary` always includes this key (see §F-60);
-## the default is forward-compat for legacy/test payloads that emit
-## `day_closed` directly without the new field.
+## and the end-of-day inventory total. Missing keys fall back to safe
+## defaults so legacy/test payloads that omit fields render without crashing.
 func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
-	_update_store_revenue_display(
-		summary.get("store_revenue", {})
-	)
+	_update_store_revenue_display(summary.get("store_revenue", {}))
 	var remaining: int = int(summary.get("inventory_remaining", 0))
 	_inventory_remaining_label.text = (
 		tr("DAY_SUMMARY_INVENTORY_REMAINING") % remaining
 	)
-	# §F-102 — Split backroom / shelf counts default to 0 when absent so
-	# legacy / unit-test payloads that emit `day_closed` without the keys
-	# render a defined value rather than crash. Forward-compat default mirrors
-	# the §F-61 `inventory_remaining` and the `net_cash` fallback below;
-	# canonical payloads from `DayCycleController` always carry both keys.
 	var backroom_remaining: int = int(
 		summary.get("backroom_inventory_remaining", 0)
 	)
 	_backroom_inventory_label.text = (
 		tr("DAY_SUMMARY_BACKROOM_INVENTORY") % backroom_remaining
 	)
-	var shelf_remaining: int = int(
-		summary.get("shelf_inventory_remaining", 0)
-	)
+	var shelf_remaining: int = int(summary.get("shelf_inventory_remaining", 0))
 	_shelf_inventory_label.text = (
 		tr("DAY_SUMMARY_SHELF_INVENTORY") % shelf_remaining
 	)
-	# §F-102 — `customers_served` is published in the payload by
-	# DayCycleController (see §F-114) so the summary can render the count
-	# without waiting on the `performance_report_ready` signal.
-	# PerformanceReport still wins when it arrives (it carries the day-vs-day
-	# delta string), but the payload value is the primary source for the
-	# BRAINDUMP "Customers Served: N" field. The `has()` gate is the
-	# legacy-payload fallback — when missing, the label keeps its prior text
-	# rather than rendering a misleading "0".
 	if summary.has("customers_served"):
 		var served: int = int(summary["customers_served"])
 		_customers_served_label.text = _build_customers_text(served)
-	# `net_cash` defaults to 0.0 when absent so legacy/test payloads that emit
-	# `day_closed` without the field render a defined value rather than crash on
-	# a missing key.
 	var cash_balance: float = float(summary.get("net_cash", 0.0))
 	_cash_balance_label.text = (
 		tr("DAY_SUMMARY_CASH_BALANCE") % cash_balance
@@ -802,17 +661,9 @@ func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
 
 
 func _create_discrepancy_label() -> void:
-	_discrepancy_label = Label.new()
-	_discrepancy_label.name = "DiscrepancyLabel"
-	_discrepancy_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_discrepancy_label.visible = false
-	_discrepancy_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	_discrepancy_label.tooltip_text = tr("DAY_SUMMARY_CLICK_REPORT")
-	_discrepancy_label.gui_input.connect(_on_discrepancy_input)
-	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
-	var idx: int = _seasonal_event_label.get_index() + 1
-	vbox.add_child(_discrepancy_label)
-	vbox.move_child(_discrepancy_label, idx)
+	_discrepancy_label = DaySummaryLabels.create_discrepancy(
+		$Root/Panel/Margin/VBox, _seasonal_event_label, _on_discrepancy_input
+	)
 
 
 func _set_discrepancy_display(discrepancy: float) -> void:
@@ -831,18 +682,11 @@ func _set_discrepancy_display(discrepancy: float) -> void:
 
 
 func _create_electronics_labels() -> void:
-	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
-	_warranty_attach_label = Label.new()
-	_warranty_attach_label.name = "WarrantyAttachLabel"
-	_warranty_attach_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_warranty_attach_label.visible = false
-	vbox.add_child(_warranty_attach_label)
-
-	_demo_status_label = Label.new()
-	_demo_status_label.name = "DemoStatusLabel"
-	_demo_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_demo_status_label.visible = false
-	vbox.add_child(_demo_status_label)
+	var labels: Array = DaySummaryLabels.create_electronics(
+		$Root/Panel/Margin/VBox
+	)
+	_warranty_attach_label = labels[0]
+	_demo_status_label = labels[1]
 
 
 func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void:
@@ -872,16 +716,7 @@ func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void
 
 
 func _create_grading_label() -> void:
-	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
-	_grading_label = Label.new()
-	_grading_label.name = "GradingLabel"
-	_grading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_grading_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_grading_label.add_theme_color_override(
-		"font_color", Color(0.78, 0.85, 0.60)
-	)
-	_grading_label.visible = false
-	vbox.add_child(_grading_label)
+	_grading_label = DaySummaryLabels.create_grading($Root/Panel/Margin/VBox)
 
 
 func _set_grading_display(pending_count: int, returned: Array) -> void:
@@ -919,26 +754,11 @@ func _on_grading_day_summary(pending_count: int, returned: Array) -> void:
 
 func _create_narrative_labels() -> void:
 	_create_grading_label()
-	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
-	_story_beat_label = Label.new()
-	_story_beat_label.name = "StoryBeatLabel"
-	_story_beat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_story_beat_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_story_beat_label.add_theme_color_override(
-		"font_color", Color(0.85, 0.80, 0.70)
+	var labels: Array = DaySummaryLabels.create_narrative(
+		$Root/Panel/Margin/VBox
 	)
-	_story_beat_label.visible = false
-	vbox.add_child(_story_beat_label)
-
-	_forward_hook_label = Label.new()
-	_forward_hook_label.name = "ForwardHookLabel"
-	_forward_hook_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_forward_hook_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_forward_hook_label.add_theme_color_override(
-		"font_color", Color(0.60, 0.80, 0.95)
-	)
-	_forward_hook_label.visible = false
-	vbox.add_child(_forward_hook_label)
+	_story_beat_label = labels[0]
+	_forward_hook_label = labels[1]
 
 
 func _set_narrative_display(
@@ -1033,11 +853,8 @@ func _on_review_inventory_pressed() -> void:
 	review_inventory_requested.emit()
 
 
-## Advances the day and routes the player back to the mall overview
-## (BRAINDUMP North Star step 15 — "Return to mall overview or next day").
-## Mirrors `_on_continue_pressed` so wages, milestones, save, and
-## advance_to_next_day all run, then signals game_world to enter the
-## MALL_OVERVIEW state.
+## Advances the day and routes the player back to the mall overview.
+## Mirrors `_on_continue_pressed` so wages/milestones/save/advance fire.
 func _on_mall_overview_pressed() -> void:
 	_emit_day_acknowledged_on_hide = true
 	hide_summary()
@@ -1045,22 +862,17 @@ func _on_mall_overview_pressed() -> void:
 	mall_overview_requested.emit()
 
 
-## Routes the player back to the main menu without advancing the day. The
-## host scene (game_world.gd) listens on `main_menu_requested` and calls
-## `GameManager.go_to_main_menu()`. We intentionally skip the
-## `next_day_confirmed` emit — the player is leaving the run, so wages /
-## milestones / save / advance_to_next_day must NOT fire.
+## Routes the player back to the main menu without advancing the day.
+## Skips next_day_confirmed — wages/milestones/save must NOT fire on quit.
 func _on_main_menu_pressed() -> void:
 	hide_summary()
 	main_menu_requested.emit()
 
 
 func _init_auto_advance_timers() -> void:
-	_auto_advance_timer = Timer.new()
-	_auto_advance_timer.one_shot = false
-	_auto_advance_timer.wait_time = 0.1
-	_auto_advance_timer.timeout.connect(_on_auto_advance_tick)
-	add_child(_auto_advance_timer)
+	_auto_advance = DaySummaryAutoAdvance.new()
+	_auto_advance.setup(self, _auto_advance_bar, _auto_advance_label)
+	_auto_advance.triggered.connect(_on_continue_pressed)
 	_hidden_thread_timer = Timer.new()
 	_hidden_thread_timer.one_shot = true
 	_hidden_thread_timer.wait_time = HIDDEN_THREAD_DELAY
@@ -1074,78 +886,23 @@ func _style_metric_bars() -> void:
 		_employee_trust_bar,
 		_manager_trust_bar,
 	]:
-		_apply_bar_style(bar, 0.0)
+		DaySummaryMetrics.apply_bar_style(bar, 0.0)
 	_auto_advance_bar.add_theme_color_override(
 		"font_color", Color.TRANSPARENT
 	)
 
 
-## Builds a flat StyleBoxFlat for the bar fill in the value-coded color,
-## plus a neutral background. Replacing fill / background each call avoids
-## leaking previous-day color overrides into the current frame.
-func _apply_bar_style(bar: ProgressBar, value: float) -> void:
-	if bar == null:
-		return
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = _bar_color_for_value(value)
-	fill.corner_radius_top_left = 4
-	fill.corner_radius_top_right = 4
-	fill.corner_radius_bottom_left = 4
-	fill.corner_radius_bottom_right = 4
-	bar.add_theme_stylebox_override("fill", fill)
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = BAR_BG_COLOR
-	bg.corner_radius_top_left = 4
-	bg.corner_radius_top_right = 4
-	bg.corner_radius_bottom_left = 4
-	bg.corner_radius_bottom_right = 4
-	bar.add_theme_stylebox_override("background", bg)
-
-
-func _bar_color_for_value(value: float) -> Color:
-	var v: float = clampf(value, 0.0, 1.0)
-	if v < 0.34:
-		return BAR_COLOR_LOW
-	if v < 0.67:
-		return BAR_COLOR_MID
-	return BAR_COLOR_HIGH
-
-
-func _qualitative_label(value: float) -> String:
-	var v: float = clampf(value, 0.0, 1.0)
-	if v < 0.20:
-		return "Poor"
-	if v < 0.40:
-		return "Strained"
-	if v < 0.60:
-		return "Neutral"
-	if v < 0.80:
-		return "Steady"
-	return "Strong"
-
-
-func _set_metric_bar(
-	label: Label, bar: ProgressBar, prefix: String, value: float
-) -> void:
-	if not is_instance_valid(label) or not is_instance_valid(bar):
-		return
-	var clamped: float = clampf(value, 0.0, 1.0)
-	bar.value = clamped
-	_apply_bar_style(bar, clamped)
-	label.text = "%s — %s" % [prefix, _qualitative_label(clamped)]
-
-
 func _apply_employee_metrics_defaults() -> void:
-	_set_metric_bar(
+	DaySummaryMetrics.set_metric_bar(
 		_customer_satisfaction_label,
 		_customer_satisfaction_bar,
 		"Customer Satisfaction",
 		1.0,
 	)
-	_set_metric_bar(
+	DaySummaryMetrics.set_metric_bar(
 		_employee_trust_label, _employee_trust_bar, "Employee Trust", 0.0
 	)
-	_set_metric_bar(
+	DaySummaryMetrics.set_metric_bar(
 		_manager_trust_label, _manager_trust_bar, "Manager Trust", 0.0
 	)
 	_mistakes_label.text = "Mistakes: 0"
@@ -1160,19 +917,19 @@ func _apply_employee_metrics_defaults() -> void:
 
 
 func _apply_employee_metrics(report: PerformanceReport) -> void:
-	_set_metric_bar(
+	DaySummaryMetrics.set_metric_bar(
 		_customer_satisfaction_label,
 		_customer_satisfaction_bar,
 		"Customer Satisfaction",
 		report.customer_satisfaction,
 	)
-	_set_metric_bar(
+	DaySummaryMetrics.set_metric_bar(
 		_employee_trust_label,
 		_employee_trust_bar,
 		"Employee Trust",
 		report.employee_trust,
 	)
-	_set_metric_bar(
+	DaySummaryMetrics.set_metric_bar(
 		_manager_trust_label,
 		_manager_trust_bar,
 		"Manager Trust",
@@ -1210,76 +967,23 @@ func _on_hidden_thread_timeout() -> void:
 
 
 func _start_auto_advance(day: int) -> void:
-	_auto_advance_disabled = day >= FINAL_DAY
-	_auto_advance_paused = false
-	_auto_advance_running = false
-	_auto_advance_remaining = AUTO_ADVANCE_SECONDS
-	if _auto_advance_timer != null:
-		_auto_advance_timer.stop()
-	if _auto_advance_disabled:
-		_auto_advance_bar.visible = false
-		_auto_advance_label.visible = true
-		_auto_advance_label.text = "Confirm to view ending"
-		return
-	_auto_advance_bar.visible = true
-	_auto_advance_bar.value = 1.0
-	_auto_advance_label.visible = true
-	_auto_advance_label.text = (
-		"Auto-advancing in %ds" % int(AUTO_ADVANCE_SECONDS)
-	)
-	_auto_advance_running = true
-	if _auto_advance_timer != null:
-		_auto_advance_timer.start()
-
-
-func _on_auto_advance_tick() -> void:
-	if not _auto_advance_running or _auto_advance_paused:
-		return
-	_auto_advance_remaining = max(
-		0.0, _auto_advance_remaining - _auto_advance_timer.wait_time
-	)
-	var ratio: float = (
-		_auto_advance_remaining / AUTO_ADVANCE_SECONDS
-		if AUTO_ADVANCE_SECONDS > 0.0 else 0.0
-	)
-	_auto_advance_bar.value = ratio
-	var seconds_left: int = int(ceil(_auto_advance_remaining))
-	_auto_advance_label.text = (
-		"Auto-advancing in %ds" % max(seconds_left, 0)
-	)
-	if _auto_advance_remaining <= 0.0:
-		_trigger_auto_advance()
-
-
-func _trigger_auto_advance() -> void:
-	_auto_advance_running = false
-	if _auto_advance_timer != null:
-		_auto_advance_timer.stop()
-	_on_continue_pressed()
+	if _auto_advance != null:
+		_auto_advance.start(day)
 
 
 func _on_panel_mouse_entered() -> void:
-	if _auto_advance_disabled:
-		return
-	_auto_advance_paused = true
-	_auto_advance_label.text = "Reading… auto-advance paused"
+	if _auto_advance != null:
+		_auto_advance.pause()
 
 
 func _on_panel_mouse_exited() -> void:
-	if _auto_advance_disabled or not _auto_advance_running:
-		return
-	_auto_advance_paused = false
-	var seconds_left: int = int(ceil(_auto_advance_remaining))
-	_auto_advance_label.text = (
-		"Auto-advancing in %ds" % max(seconds_left, 0)
-	)
+	if _auto_advance != null:
+		_auto_advance.resume()
 
 
 func _stop_auto_advance() -> void:
-	_auto_advance_running = false
-	_auto_advance_paused = false
-	if _auto_advance_timer != null:
-		_auto_advance_timer.stop()
+	if _auto_advance != null:
+		_auto_advance.stop()
 
 
 func _input(event: InputEvent) -> void:

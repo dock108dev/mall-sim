@@ -10,6 +10,22 @@
 class_name TradeInSystem
 extends Node
 
+signal state_changed(old_state: int, new_state: int)
+
+enum State {
+	LOCKED,
+	IDLE,
+	CUSTOMER_APPROACHES,
+	ITEM_INSPECT,
+	PLATFORM_CONFIRM,
+	CONDITION_CHECK,
+	VALUE_OFFER,
+	AWAITING_PLAYER_DECISION,
+	ACCEPT_PATH,
+	REJECT_PATH,
+	RECEIPT_SHOWN,
+}
+
 const UNLOCK_ID: StringName = &"employee_tradein_certified"
 
 ## Per-condition multipliers applied to base_price. The standard 40–55% buy
@@ -32,21 +48,9 @@ const TRUST_TIER_80_BONUS: float = 0.10
 const OFFER_FLOOR: float = 0.25
 const OFFER_STEP: float = 0.25
 
-enum State {
-	LOCKED,
-	IDLE,
-	CUSTOMER_APPROACHES,
-	ITEM_INSPECT,
-	PLATFORM_CONFIRM,
-	CONDITION_CHECK,
-	VALUE_OFFER,
-	AWAITING_PLAYER_DECISION,
-	ACCEPT_PATH,
-	REJECT_PATH,
-	RECEIPT_SHOWN,
-}
-
-signal state_changed(old_state: int, new_state: int)
+const _NEW_EDITION_DIALOGUE: String = (
+	"Yeah, I know — the new one's out. Whatever you can do."
+)
 
 var current_state: int = State.LOCKED
 var current_customer_id: String = ""
@@ -295,11 +299,6 @@ func _read_trust() -> float:
 	if not reputation_system.has_method("get_reputation"):
 		return 0.0
 	return float(reputation_system.get_reputation(String(current_store_id)))
-
-
-const _NEW_EDITION_DIALOGUE: String = (
-	"Yeah, I know — the new one's out. Whatever you can do."
-)
 
 
 ## Returns a one-line customer remark for the current interaction, or "" when

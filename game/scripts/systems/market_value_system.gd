@@ -186,19 +186,20 @@ func get_time_modifier(
 	var profile: String = String(def.decay_profile)
 	if profile == "annual_sports":
 		return _get_annual_sports_decay(def)
-	if profile != "" and profile != "standard" and profile != "electronics":
-		return 1.0
-	if not def.depreciates:
-		return 1.0
-	if def.depreciation_rate <= 0.0:
-		return 1.0
-	if def.launch_day <= 0:
+	var supported: bool = (
+		profile == "" or profile == "standard" or profile == "electronics"
+	)
+	var disqualified: bool = (
+		not supported
+		or not def.depreciates
+		or def.depreciation_rate <= 0.0
+		or def.launch_day <= 0
+		or current_day < def.launch_day
+	)
+	if disqualified:
 		return 1.0
 
 	var days_since_launch: int = current_day - def.launch_day
-	if days_since_launch < 0:
-		return 1.0
-
 	var depreciation: float = maxf(
 		def.min_value_ratio,
 		1.0 - float(days_since_launch) * def.depreciation_rate

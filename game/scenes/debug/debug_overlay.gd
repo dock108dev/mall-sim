@@ -37,34 +37,10 @@ func _input(event: InputEvent) -> void:
 	if not key_event.pressed or key_event.echo:
 		return
 
-	# F8–F11 are unmodified single-key shortcuts intended to validate the
-	# Day-1 loop deterministically. They run whenever the overlay node is
-	# alive — release builds queue_free in _ready so they are no-ops there
-	# — and do not require the overlay to be visible (devs should not have
-	# to toggle F3 first to advance a stuck loop).
-	if not key_event.ctrl_pressed and not key_event.shift_pressed \
-			and not key_event.alt_pressed and not key_event.meta_pressed:
-		match key_event.keycode:
-			KEY_F8:
-				_debug_spawn_customer()
-				get_viewport().set_input_as_handled()
-				return
-			KEY_F9:
-				_debug_add_test_inventory()
-				get_viewport().set_input_as_handled()
-				return
-			KEY_F10:
-				_debug_force_place_test_item()
-				get_viewport().set_input_as_handled()
-				return
-			KEY_F11:
-				_debug_force_complete_sale()
-				get_viewport().set_input_as_handled()
-				return
-
-	if not _overlay_visible:
+	if _try_handle_function_key(key_event):
 		return
-	if not key_event.ctrl_pressed:
+
+	if not _overlay_visible or not key_event.ctrl_pressed:
 		return
 
 	match key_event.keycode:
@@ -83,6 +59,30 @@ func _input(event: InputEvent) -> void:
 		KEY_P:
 			_debug_force_place_test_item()
 			get_viewport().set_input_as_handled()
+
+
+# F8–F11 are unmodified single-key shortcuts intended to validate the Day-1
+# loop deterministically. They run whenever the overlay node is alive — release
+# builds queue_free in _ready so they are no-ops there — and do not require the
+# overlay to be visible (devs should not have to toggle F3 first to advance a
+# stuck loop). Returns true when a function key was handled.
+func _try_handle_function_key(key_event: InputEventKey) -> bool:
+	if key_event.ctrl_pressed or key_event.shift_pressed \
+			or key_event.alt_pressed or key_event.meta_pressed:
+		return false
+	match key_event.keycode:
+		KEY_F8:
+			_debug_spawn_customer()
+		KEY_F9:
+			_debug_add_test_inventory()
+		KEY_F10:
+			_debug_force_place_test_item()
+		KEY_F11:
+			_debug_force_complete_sale()
+		_:
+			return false
+	get_viewport().set_input_as_handled()
+	return true
 
 
 func _process(_delta: float) -> void:

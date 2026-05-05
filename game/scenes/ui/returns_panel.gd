@@ -9,9 +9,9 @@
 class_name ReturnsPanel
 extends CanvasLayer
 
-const PANEL_NAME: String = "returns"
-
 signal decision_chosen(choice: String)
+
+const PANEL_NAME: String = "returns"
 
 var _active_record: ReturnRecord = null
 var _root_panel: PanelContainer = null

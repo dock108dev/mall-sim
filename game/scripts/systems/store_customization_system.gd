@@ -25,6 +25,12 @@
 extends Node
 
 
+# ── Signals ──────────────────────────────────────────────────────────────────
+
+signal featured_category_changed(category: StringName)
+signal poster_changed(poster_id: StringName)
+
+
 # ── Featured category catalog ────────────────────────────────────────────────
 
 const FEATURED_CATEGORY_NONE: StringName = &""
@@ -116,12 +122,6 @@ var current_poster_id: StringName = POSTER_NONE
 
 var _morning_note_hint: StringName = &""
 var _hint_match_applied_this_day: bool = false
-
-
-# ── Signals ──────────────────────────────────────────────────────────────────
-
-signal featured_category_changed(category: StringName)
-signal poster_changed(poster_id: StringName)
 
 
 func _ready() -> void:

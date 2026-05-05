@@ -228,32 +228,33 @@ func apply_decision(
 			% [record.item_id, record.resolution]
 		)
 		return false
+	var result: bool = false
 	match choice:
 		RESOLUTION_REFUND:
-			return _accept_refund(record)
+			result = _accept_refund(record)
 		RESOLUTION_EXCHANGE:
 			if not is_exchange_choice_available():
 				push_warning(
 					"ReturnsSystem: exchange choice unavailable; "
 					+ "employee_stocking_trained not granted"
 				)
-				return false
-			return _accept_exchange(record)
+			else:
+				result = _accept_exchange(record)
 		RESOLUTION_DENY:
 			if is_condition_defective(record.item_condition):
 				push_warning(
 					"ReturnsSystem: cannot deny defective return for %s"
 					% record.item_id
 				)
-				return false
-			return _deny(record)
+			else:
+				result = _deny(record)
 		RESOLUTION_ESCALATE:
-			return _escalate(record)
+			result = _escalate(record)
 		_:
 			push_warning(
 				"ReturnsSystem: unknown decision choice '%s'" % choice
 			)
-			return false
+	return result
 
 
 ## Walks the InventorySystem damaged-bin and emits inventory_variance_noted

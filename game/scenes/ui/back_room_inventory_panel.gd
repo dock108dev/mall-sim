@@ -61,8 +61,9 @@ func _refresh() -> void:
 	for child: Node in _grid.get_children():
 		child.queue_free()
 	var rows: Array = []
-	if _controller != null and _controller.has_method("get_inventory_audit_rows"):
-		rows = _controller.call("get_inventory_audit_rows")
+	var auditor: Object = _resolve_audit()
+	if auditor != null:
+		rows = auditor.call("get_inventory_audit_rows")
 	if rows.is_empty():
 		_empty_label.visible = true
 		return
@@ -128,13 +129,25 @@ func _on_flag_pressed(item_id: StringName, expected: int, actual: int) -> void:
 	# _refresh call after set_controller). flagged_now == false is a normal
 	# de-dupe outcome from RetroGames.flag_discrepancy (already-flagged this
 	# day for this item), not an error path.
-	if _controller == null or not _controller.has_method("flag_discrepancy"):
+	var auditor: Object = _resolve_audit()
+	if auditor == null:
 		return
-	var flagged_now: bool = bool(_controller.call(
+	var flagged_now: bool = bool(auditor.call(
 		"flag_discrepancy", item_id, expected, actual,
 	))
 	if flagged_now:
 		_refresh()
+
+
+func _resolve_audit() -> Object:
+	if _controller == null:
+		return null
+	var auditor: Variant = _controller.get("audit")
+	if auditor == null or not (auditor is Object):
+		return null
+	if not (auditor as Object).has_method("flag_discrepancy"):
+		return null
+	return auditor as Object
 
 
 func _on_close() -> void:
