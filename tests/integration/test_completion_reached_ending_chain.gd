@@ -165,6 +165,7 @@ func test_ending_id_matches_broke_even_threshold() -> void:
 	stats["days_survived"] = 30.0
 	stats["final_cash"] = 200.0
 	stats["cumulative_revenue"] = 500.0
+	stats["hidden_thread_interactions"] = 1.0
 	_system.load_state({"stats": stats})
 
 	var triggered_id: Array = [&""]

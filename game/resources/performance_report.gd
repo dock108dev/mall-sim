@@ -35,6 +35,23 @@ extends Resource
 @export var record_flags: Dictionary = {}
 ## Per-store daily revenue breakdown; populated from day_closed signal.
 @export var store_revenue: Dictionary = {}
+## Customer-resolution satisfaction ratio for the day (0.0–1.0). Defaults to
+## 1.0 when no customer interactions occurred.
+@export var customer_satisfaction: float = 1.0
+## Average employee trust at end of day (0.0–1.0). Snapshotted from
+## EmploymentSystem; defaults to 0.0 when source absent.
+@export var employee_trust: float = 0.0
+## Manager trust at end of day (0.0–1.0). Snapshotted from
+## ManagerRelationshipManager; defaults to 0.0 when source absent.
+@export var manager_trust: float = 0.0
+## Player mistakes accumulated for the day; reset at day_started.
+@export var mistakes_count: int = 0
+## Aggregate inventory variance ratio for the day. 0.0 when source absent.
+@export var inventory_variance: float = 0.0
+## Count of inventory discrepancies flagged during closing checklist.
+@export var discrepancies_flagged: int = 0
+## Single-line narrative consequence text for the day. Empty when none.
+@export var hidden_thread_consequence_text: String = ""
 
 
 func to_dict() -> Dictionary:
@@ -69,6 +86,13 @@ func to_dict() -> Dictionary:
 		"demo_contribution_revenue": demo_contribution_revenue,
 		"record_flags": record_flags.duplicate(),
 		"store_revenue": store_revenue.duplicate(),
+		"customer_satisfaction": customer_satisfaction,
+		"employee_trust": employee_trust,
+		"manager_trust": manager_trust,
+		"mistakes_count": mistakes_count,
+		"inventory_variance": inventory_variance,
+		"discrepancies_flagged": discrepancies_flagged,
+		"hidden_thread_consequence_text": hidden_thread_consequence_text,
 	}
 
 
@@ -129,4 +153,15 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 	var store_rev: Variant = data.get("store_revenue", {})
 	if store_rev is Dictionary:
 		report.store_revenue = (store_rev as Dictionary).duplicate()
+	report.customer_satisfaction = float(
+		data.get("customer_satisfaction", 1.0)
+	)
+	report.employee_trust = float(data.get("employee_trust", 0.0))
+	report.manager_trust = float(data.get("manager_trust", 0.0))
+	report.mistakes_count = int(data.get("mistakes_count", 0))
+	report.inventory_variance = float(data.get("inventory_variance", 0.0))
+	report.discrepancies_flagged = int(data.get("discrepancies_flagged", 0))
+	report.hidden_thread_consequence_text = str(
+		data.get("hidden_thread_consequence_text", "")
+	)
 	return report

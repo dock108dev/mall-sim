@@ -1,1342 +1,1239 @@
-# Mallcore Sim BRAINDUMP — Stop “Big Passes”, Build the Day-1 Playable Loop
-
-## The honest state
-
-We are not failing because the room needs one more art pass.
-
-We are failing because the game does not have a locked playable loop yet.
-
-Right now it is mostly:
-
-- walking/camera inside a box
-- low-poly geometric placeholders
-- a few labeled objects
-- UI counters that look like they should mean something
-- inventory/store screens that sometimes open but do not actually connect to the world
-- prompts that imply actions exist, but the actions either do nothing or are unclear
-- no real customer loop
-- no clear “what do I do next”
-- no reliable start → stock → customer → sale → close day flow
-
-The store looking better helps, but it does not matter if the player still cannot complete one clean day.
-
-This next pass should not be another broad “make it better” pass. It needs to be a focused vertical-slice stabilization pass.
-
-The goal is not “make the whole game.”
-The goal is:
-
-> I can start a new game, enter my first store, stock shelves, get customers, sell items, make money, close the day, and understand what happened.
-
-If that is not working, nothing else matters.
-
+# BRAINDUMP.md — Beta Game Scope: Holiday 2005 Mall Game Store Sim
+## Core concept
+The beta is not a mall sim.
+The beta is one playable fake EB Games / GameStop-style mall game store during the 2005 holiday rush.
+The player is a 19-year-old seasonal stock/register employee hired around Thanksgiving. The beta covers the 30 days from Thanksgiving through Christmas.
+The surface game is:
+- work the store
+- help customers
+- stock shelves
+- handle basic register tasks
+- learn trade-ins
+- survive holiday retail
+- deal with fake console-war chaos
+The hidden game is:
+- the store has off-book inventory weirdness
+- someone is manipulating holds, launch stock, returns, or trade-ins
+- the player is new, temporary, and easy to blame
+- if the player notices absolutely nothing, they get framed and fired after Christmas
+This should feel like a light business / retail sim with a secret thread running underneath it.
+Not a crime game.
+Not a full corporate quota sim.
+Not a giant mall game.
+Not a hyper-detailed retail spreadsheet.
+One store.
+Thirty days.
+Fake 2005 console war.
+Holiday pressure.
+Retail comedy.
+Optional shady thread.
+Replay hooks.
 ---
-
-# North Star for This Pass
-
-## Build one fully playable Day 1
-
-Day 1 should be small, obvious, and testable.
-
-The player should be able to complete this exact flow:
-
-1. Start New Game
-2. Spawn in or enter the unlocked first store
-3. Understand the current objective
-4. Open inventory
-5. See starting inventory
-6. Select an item
-7. Place/stock it on a shelf
-8. See `On Shelves` update
-9. Customers spawn
-10. Customers walk to shelves
-11. Customers consider/buy items
-12. Customers walk to checkout
-13. Checkout completes sale
-14. Cash increases
-15. `Sold Today` increases
-16. Optional: customer leaves
-17. Player closes day
-18. End-of-day summary shows sales, cash, inventory, customers served
-19. Day 2 can begin or at least the game returns to a stable overview
-
-That is the demo.
-
-Not five stores.
-Not mall progression.
-Not unlock balancing.
-Not fancy customer personality.
-Not a giant economy sim.
-Not a “visual vibe” pass.
-
-One store. One day. One working loop.
-
+# High-level fantasy
+The player fantasy is a mix of:
+## B — Corporate mall game store chaos
+You work in a corporate game store during the holiday rush.
+You are not the owner.
+You are not a full manager.
+You are the new seasonal kid.
+You do:
+- stocking
+- register
+- customer help
+- trade-in intake once trusted
+- simple shelf/display choices
+- launch/shortage handling
+- returns/exchanges
+- closing tasks
+The store has rules, coworkers, a manager, customers, and holiday nonsense.
+## D — Survive the console-war retail mess
+The fake console market is changing fast.
+Old systems are still selling.
+New systems are launching.
+Parents are confused.
+Teenagers are arguing about specs.
+Sports games are dropping in value.
+Accessories are high-margin.
+Used inventory matters.
+Launch stock is scarce.
+Everyone wants something the store may or may not have.
+The beta should feel like being in the middle of a specific retail moment.
 ---
-
-# Core Problem
-
-The current implementation seems to have pieces of systems, but they are not wired into a single source of truth.
-
-Examples from the screenshots:
-
-- UI says `On Shelves: 0`, `Cust: 0`, `Sold Today: 0`
-- Inventory opens but says `No active store selected`
-- Mall overview says Retro Game Store has inventory and cash, but the first-person store view does not seem connected to active store state
-- Checkout has a label but no obvious working sale flow
-- Door prompt exists but interaction flow is odd
-- The objective says “Stock your first item and make a sale,” but the player cannot actually complete that reliably
-- Objects exist in world but do not clearly expose interactions
-- Shelves visually exist but do not clearly accept stock
-- The player can move around, but the game does not yet feel like it has verbs
-
-The actual task is to turn disconnected systems into one coherent Day 1 simulation.
-
+# Era and timeline
+## Timeframe
+Thanksgiving to Christmas 2005.
+The beta is a compressed 30-day playable season.
+Do not simulate all of 2004–2009 in the beta.
+The broader 2004–2009 console-war era can exist through:
+- product catalog
+- rumors
+- customer dialogue
+- upcoming launch references
+- posters/signage
+- employee chatter
+- corporate memos
+- ending hooks for the full game
+## Why 2005
+2005 is a great middle point because:
+- old consoles still matter
+- a new entrant / next-gen machine can be hot and scarce
+- established console sequels can be rumored or pending
+- sports annuals have obvious value decay
+- used games are central
+- holiday retail pressure is believable
+- parents are confused by platform compatibility
+- store staff knows more than customers
+This gives us a clean beta without needing a five-year campaign.
 ---
-
-# Hard Rule for This Pass
-
-Do not add new stores, new categories, new art sets, extra menus, extra lore, or more mall scope until the Day 1 loop works.
-
-Everything should serve the first playable day.
-
-If a piece of code does not help with Day 1, leave it alone unless it is actively breaking Day 1.
-
+# Fake console market
+No real brands. No real product names.
+Absolutely avoid PlayStation, Xbox, Nintendo, GameCube, Wii, Halo, Madden, NCAA, etc.
+Use fake-but-recognizable patterns.
+## Market structure
+### Old generation
+Two successful older console families are still in-market and selling.
+Example placeholders:
+- `GameStation 2` equivalent
+- `FunCube` equivalent
+These are not final names. The agent should create a consistent fake product naming scheme.
+Behavior:
+- large existing install base
+- lots of used inventory
+- many parents buying games for kids
+- sports titles and family titles sell steadily
+- older titles slowly decay
+- evergreen hits hold value better
+- accessories still matter
+### New outsider console
+A new entrant jumps into the market before the two successful incumbents release sequels.
+Example placeholder:
+- `Titan X` equivalent
+Behavior:
+- hot launch product
+- limited availability
+- teen/young adult hype
+- online/spec arguments
+- strong accessory attach
+- early games sell well but catalog is small
+- shortage pressure creates customer drama
+- hold/reservation weirdness can feed the hidden thread
+### Upcoming sequel systems
+The established console families have new machines rumored or coming later.
+Behavior in beta:
+- mostly rumors, signage, customer questions, corporate memos
+- not the main simulation yet
+- used as full-game tease
+One may be:
+- expensive/powerful/hyped
+- slower adoption early
+The other may be:
+- cheaper/weirder/family-facing
+- likely to create future shortages
+Keep these as future hooks unless implementing them is trivial.
 ---
-
-# What the Game Should Be, at Minimum
-
-Mallcore Sim is supposed to be a small store-management sim where I run a weird little mall store.
-
-The fantasy is:
-
-- I have a store
-- I have some starting inventory
-- I put items on shelves
-- customers come in
-- they browse
-- they buy or don’t buy
-- I make a little money
-- I close the day
-- I get a performance summary
-- over time, the store improves/unlocks/expands
-
-The current version has the shell of that, but the actual verbs are not there yet.
-
-The game should feel playable even with cubes.
-
-Cubes are fine for now if the loop works.
-
-A store full of beautiful props is useless if I cannot stock one item and sell it.
-
+# Player role
+The player is a 19-year-old seasonal employee.
+They start as:
+- stock boy
+- checkout/register help
+- basic floor associate
+They are not initially trusted with:
+- trade-in value overrides
+- hold list changes
+- inventory adjustments
+- launch allocations
+- display strategy
+- closing responsibility
+They earn access gradually through useful tutorialized progression.
+## Player progression
+### Early days
+Unlocked:
+- movement
+- clock in/out
+- shelf stocking
+- basic customer help
+- register
+- platform matching
+- simple product lookup
+- back room inventory check
+### Middle days
+Unlocked:
+- trade-in intake
+- condition checks
+- used game pricing basics
+- simple bundle suggestions
+- handling confused parents
+- handling annual sports depreciation
+- returns/exchanges
+### Later days
+Unlocked:
+- featured shelf/display choices
+- limited stock decisions
+- hold list lookup
+- launch-day handling
+- more difficult customer cards
+- closing checklist
+- documenting discrepancies
+- manager/coworker trust consequences
+The unlocks should feel like being trained on the job, not artificial RPG powers.
 ---
-
-# Priority 1 — Single Source of Truth for Game State
-
-Before fixing random UI bugs, define the actual runtime state model.
-
-There should be one authoritative game/session state that drives:
-
-- active store
-- current day
-- current time
-- cash
-- reputation/progress
-- inventory
-- shelf stock
+# Tutorial philosophy
+The tutorial must be useful and embedded into real gameplay.
+Do not make a detached tutorial level.
+Every tutorial event should:
+- happen during an actual store day
+- teach a mechanic through a real customer/task
+- affect the day’s results
+- be short
+- be replayable without being annoying
+- introduce one thing at a time
+Examples:
+- First parent customer teaches platform matching.
+- First shelf task teaches stocking.
+- First scratched disc teaches condition/return risk.
+- First sports trade-in teaches value decay.
+- First console shortage teaches hold/allocation pressure.
+- First suspicious inventory mismatch teaches the hidden thread without announcing it.
+- First display task teaches simple store customization.
+Avoid:
+- giant modal text walls
+- “press W to move” for five minutes
+- tutorial popups blocking gameplay constantly
+- explaining every system before it matters
+- fake tasks that do not count toward the day
+---
+# Core beta loop
+Each playable day should have a simple structure.
+## Morning / pre-open
+Player may:
+- clock in
+- receive one short manager/coworker note
+- check day objective
+- inspect delivery or inventory update
+- restock shelves
+- choose one small display/signage emphasis if unlocked
+- review upcoming release/launch notes
+## Store open
+Player handles:
 - customers
-- sales today
-- current objective
-- store unlocks
-- end-of-day results
-
-No UI should be inventing its own version.
-No scene object should have hidden state that does not sync back.
-No mall overview should show one thing while the store scene shows another.
-
-## Required state shape conceptually
-
-```ts
-GameState {
-  day: number
-  timeMinutes: number
-  cash: number
-  activeStoreId: string | null
-  stores: Record<StoreId, StoreState>
-  currentObjectiveId: string
-  dailyStats: DailyStats
-}
-
-StoreState {
-  id: string
-  name: string
-  unlocked: boolean
-  cashGenerated: number
-  reputation: number
-  backroomInventory: InventoryStack[]
-  shelfInventory: ShelfInventorySlot[]
-  todaySoldCount: number
-  todayRevenue: number
-}
-
-InventoryStack {
-  itemId: string
-  name: string
-  quantity: number
-  costBasis?: number
-  salePrice: number
-  condition?: string
-  rarity?: string
-}
-
-ShelfInventorySlot {
-  shelfId: string
-  itemId: string | null
-  quantity: number
-  capacity: number
-}
-
-CustomerState {
-  id: string
-  phase: "entering" | "browsing" | "deciding" | "checkout" | "leaving"
-  targetShelfId?: string
-  selectedItemId?: string
-  patience: number
-}
-```
-
-The exact implementation can vary, but the point is mandatory:
-
-> Inventory, shelves, customers, sales, and UI must read/write the same state.
-
+- register
+- shelf restock
+- basic product lookup
+- trade-ins once unlocked
+- back room checks
+- returns
+- decision-card interactions
+- occasional suspicious/hidden-thread interactions
+## Midday / event beat
+One or two notable things max per day:
+- angry parent
+- shipment shortage
+- collector request
+- sports game trade-in flood
+- suspicious hold slip
+- manager asks for something odd
+- coworker covers badly
+- new console rumor
+- launch reservation conflict
+## Close
+Player sees a short closing summary:
+- sales
+- used profit
+- customer satisfaction
+- mistakes
+- employee trust
+- inventory variance
+- notes/discrepancies flagged if any
+- maybe vague hidden-thread consequence if relevant
+Keep the close summary readable. Do not make it a spreadsheet.
 ---
-
-# Priority 2 — Fix Active Store Selection
-
-This is probably one of the biggest blockers.
-
-The inventory UI saying `No active store selected` while I am physically inside the store is a major state bug.
-
-## Expected behavior
-
-When the player enters the first unlocked store:
-
-- `activeStoreId` is set
-- inventory knows which store it belongs to
-- HUD knows which store it is displaying
-- shelf interactions know which store to stock
-- mall overview reads from the same store state
-- closing the day uses that active store/day state
-
-## Acceptance criteria
-
-- Start New Game creates at least one unlocked store
-- Entering that store sets it active
-- Inventory panel never says `No active store selected` while the player is inside a valid store
-- If no active store exists, the player should not be in a store scene
-- Debug overlay/log should show active store id
-
-Add a temporary debug display if needed:
-
-```txt
-DEBUG
-Scene: StoreInterior
-ActiveStore: retro_game_store
-Inventory: 8 backroom / 0 shelf
-Customers: 0 active
-```
-
-This can be hidden later, but for now it will save time.
-
+# One-store requirement
+The beta is one real store.
+Do not build the whole mall.
+The store should be first-person and walkable.
+The player must be able to move around as the employee in FPV.
+The store needs to feel like a store, not:
+- a static image
+- a bird’s-eye cube
+- a menu with labels pretending to be a store
+- a giant empty room
+- a mall hallway
+- a placeholder grid full of text
+## Required store zones
+Minimum:
+- entrance
+- front counter/register
+- used game wall
+- new release wall
+- old-gen shelf
+- new console display
+- accessories rack
+- bargain bin
+- back room
+- hold/reservation shelf or cabinet
+- small employee/manager area
+## Interactable store objects
+Keep this manageable.
+Use interactable zones instead of thousands of individual products.
+Examples:
+- `Used Game Wall`
+- `New Release Shelf`
+- `Sports Shelf`
+- `Family Games Shelf`
+- `Accessories Rack`
+- `Console Display Case`
+- `Bargain Bin`
+- `Back Room Inventory Shelf`
+- `Register`
+- `Hold List Clipboard`
+- `Delivery Manifest`
+- `Poster Slot`
+- `Featured Display`
+Each zone can show inventory and actions through simple interaction panels/cards.
 ---
-
-# Priority 3 — Define the Actual Day 1 Script
-
-Day 1 should not be an open-ended sim yet.
-
-Day 1 should be a guided scripted vertical slice that proves the systems work.
-
-## Starting state
-
-Use only one unlocked store.
-
-Recommended:
-
-```txt
-Store: Retro Game Store Destination Shop
-Day: 1
-Cash: $0 or small starting amount
-Backroom Inventory: 8 items
-Shelf Inventory: 0
-Customers: 0
-Objective: Stock your first item and make a sale
-```
-
-Starting inventory should have simple readable names:
-
-```txt
-Used Console Controller — Qty 2 — Price $12
-Loose Space Cartridge — Qty 2 — Price $18
-Strategy Guide — Qty 2 — Price $9
-Old Handheld Game — Qty 1 — Price $35
-Mystery Cable Bin — Qty 1 — Price $6
-```
-
-Do not make the first loop depend on rarity, condition, pricing complexity, demand curves, or multi-store balancing.
-
-That can come later.
-
-## Objective chain
-
-Use a simple objective state machine.
-
-```txt
-Objective 1:
-Open inventory
-
-Objective 2:
-Select an item from Backroom
-
-Objective 3:
-Stock item on a shelf
-
-Objective 4:
-Wait for customer
-
-Objective 5:
-Customer is browsing
-
-Objective 6:
-Customer is checking out
-
-Objective 7:
-Sale complete
-
-Objective 8:
-Close the day
-```
-
-Each objective should have a validator function.
-
-Do not just display text.
-
-Example:
-
-```ts
-objective.completeWhen = state =>
-  state.stores[state.activeStoreId].shelfInventory.some(slot => slot.quantity > 0)
-```
-
+# Store customization
+Store customization should exist but stay simple.
+Do not build a full interior design game.
+Allow:
+- poster/signage changes
+- featured shelf selection
+- display emphasis
+- moving limited major zones if easy
+- choosing what product category gets front placement
+- maybe changing one or two promotional signs per day
+Examples:
+- feature new console hype
+- feature old-gen clearance
+- feature used bundles
+- feature sports games
+- feature accessories
+- feature family-friendly games
+Effects should be light:
+- small demand shifts
+- customer satisfaction changes
+- better sell-through for specific categories
+- possible manager approval/disapproval
+- possible hidden-thread visibility if a display exposes weird inventory
+Do not require 1000 products on screen.
 ---
-
-# Priority 4 — Inventory Must Actually Work
-
-The inventory panel currently looks like a real system, but it does not appear to function as a real game verb.
-
-For Day 1, make it simple.
-
-## Required inventory behavior
-
-When pressing `I`:
-
-- Inventory opens
-- Mouse/UI focus works
-- Player movement/camera should pause or lock appropriately
-- Backroom tab shows available items
-- Shelves tab shows stocked items
-- All tab shows both
-- Item rows/cards are visible
-- Clicking/selecting an item allows stocking
-- Player can close inventory and return to movement
-
-## Minimum item card
-
-Each item should show:
-
-```txt
-Item Name
-Qty in Backroom
-Qty on Shelves
-Price
-[Stock 1] [Stock Max]
-```
-
-Do not require dragging yet unless drag/drop already works perfectly.
-
-Buttons are fine.
-
-## Stocking behavior
-
-For this pass, the player should be able to stock items two ways:
-
-### Preferred simple version
-
-From inventory:
-
-- Click item
-- Click `Stock 1`
-- Item moves from backroom to first available shelf slot
-
-### Optional world version
-
-From world:
-
-- Look at shelf
-- Prompt appears: `Press E to stock shelf`
-- Opens a small stock picker for that shelf
-- Select item
-- Item appears on shelf
-
-Do not depend on world placement precision yet. It is probably too much surface area.
-
-## Acceptance criteria
-
-- Inventory opens every time with `I`
-- Inventory closes every time with `I` or `Esc`
-- Backroom items display
-- Stocking an item decrements backroom qty
-- Stocking an item increments shelf qty
-- HUD `On Shelves` updates immediately
-- Objective advances after first stocked item
-- No “No active store selected” while in store
-
+# Customer system
+Use decision cards with explanation and consequences.
+Customers can appear physically in the store, but interactions should resolve through clear cards.
+The card should include:
+- customer archetype
+- what they want
+- context
+- available choices
+- likely reasoning
+- consequence after selection
+Do not make every interaction a long dialogue tree.
+## Core customer archetypes
+Use 5–7 strong stereotypes.
+### 1. Confused Parent
+Wants “the game my kid asked for.”
+Problems:
+- wrong platform
+- mature content concern
+- price sensitivity
+- accessory confusion
+- may buy bundle if explained clearly
+Good mechanics:
+- platform matching
+- recommendation
+- policy explanation
+- satisfaction impact
+### 2. Hype Teen
+Wants the new console / new release.
+Problems:
+- shortage frustration
+- rumor arguments
+- launch-date obsession
+- wants to know what is “better”
+- may ask about hold lists or early copies
+Good mechanics:
+- limited stock
+- hype demand
+- customer patience
+- hidden-thread clue potential
+### 3. Sports Regular
+Buys annual sports games and trades old ones.
+Problems:
+- last year’s version value is collapsing
+- player expects more trade-in value
+- new season/title drives demand
+- bundles possible
+Good mechanics:
+- depreciation
+- trade-in education
+- used margin
+- repeat customer value
+### 4. Collector
+Looks for odd, older, limited, or accessory items.
+Problems:
+- condition matters
+- rare-ish accessories
+- weird value edge cases
+- may notice inventory weirdness before player does
+Good mechanics:
+- collectible/accessory rules
+- condition checks
+- back room search
+- hidden-thread clue potential
+### 5. Bargain Hunter
+Wants cheap used games and bundles.
+Problems:
+- wants too much for too little
+- good opportunity to move stale inventory
+- can improve used sell-through
+Good mechanics:
+- bundle creation
+- used margin
+- shelf placement
+### 6. Angry Return Customer
+Brings back scratched disc, wrong version, broken controller, or regret purchase.
+Problems:
+- policy vs satisfaction
+- fraud risk
+- manager trust
+- replacement inventory
+- condition validation
+Good mechanics:
+- return policy
+- customer satisfaction
+- inventory risk
+- hidden-thread clue potential if serial numbers/receipts mismatch
+### 7. Shady Regular
+The person who hints at the secret thread.
+Problems:
+- asks about modified hardware
+- asks if “the other guy” is working
+- asks about after-close pickup
+- asks about hold list
+- asks about stock not on the shelf
+- asks for a favor that sounds minor
+Good mechanics:
+- optional hidden-thread interaction
+- paper trail
+- manager/coworker relationship
+- scapegoat risk
 ---
-
-# Priority 5 — Shelves Need Functional Interaction Before Visual Polish
-
-The shelves can still be cubes, but they need to be game objects.
-
-Each shelf needs:
-
-- unique shelf id
-- capacity
+# Product and inventory simulation
+Keep it light but real enough to feel like a store.
+The game should track:
+- product name
+- fake platform
+- category
+- new/used
+- condition
+- base demand
+- current demand
+- trade-in value
+- resale value
 - stock quantity
-- stocked item id
-- interaction collider/hit area
-- optional label
-- optional visual indicator when stocked
-
-## Minimum shelf behavior
-
-If shelf is empty:
-
-```txt
-Shelf Empty
-Press E to stock
-```
-
-If shelf has item:
-
-```txt
-Loose Space Cartridge
-Qty: 2
-Price: $18
-```
-
-## Visual stock placeholder
-
-Do not build detailed item models yet.
-
-When a shelf has stock, spawn simple small boxes/cards on the shelf.
-
-Examples:
-
-- 1 item = one small colored cube
-- 2-3 items = two/three small cubes
-- quantity > 3 = stacked display marker with text
-
-The point is that the player should physically see that the shelf is no longer empty.
-
-## Acceptance criteria
-
-- Looking at shelf shows prompt
-- Empty shelf can be stocked
-- Stocked shelf shows item info
-- Customer AI can find stocked shelves
-- Stock remains visible until sold
-- Sold item reduces shelf visual quantity
-
+- age/era
+- special flags
+## Product categories
+Minimum:
+- consoles
+- games
+- accessories
+- used games
+- annual sports games
+- family/kids games
+- action/shooter games
+- RPG/adventure equivalents
+- collectibles/peripherals
+## Value logic
+Implement simple rules.
+### Annual sports depreciation
+This matters.
+A fake college football 2004 game should still have value in 2005, but by 2007 it should be worth much less.
+In beta timeframe:
+- current-year sports game holds demand
+- previous-year sports game drops
+- two-year-old sports game drops hard
+- old annual sports games are bargain-bin unless special
+### Launch demand
+New console launch titles:
+- high demand near launch
+- limited catalog
+- shortage affects sales
+- accessories attach well
+### Used margin
+Used games should generally be more profitable than new games.
+The player should learn:
+- trade-ins are annoying but valuable
+- condition matters
+- bundles move stale stock
+- not every trade-in is worth taking
+### Accessories
+Accessories should:
+- sell steadily
+- have good margin
+- pair well with console sales
+- create customer recommendation choices
+### Collectibles/accessories
+Keep this light.
+A few odd items can behave differently:
+- old memory cards
+- special controllers
+- link cables
+- import adapters
+- strategy guides
+- demo discs
+- weird peripherals
+These can support collector interactions and hidden-thread clues.
 ---
-
-# Priority 6 — Customers Need to Exist and Complete One Sale
-
-This is the actual demo.
-
-A management sim without customers is just walking around in a storage room.
-
-For Day 1, customers can be simple.
-
-## Customer spawn rules for Day 1
-
-Once at least one item is stocked:
-
-- spawn first customer within 10-20 seconds
-- customer enters from door
-- walks to a stocked shelf
-- waits/browses for 3-6 seconds
-- decides to buy with high probability, like 80-100% for first tutorial sale
-- walks to checkout
-- sale completes
-- customer exits
-- counters update
-
-The first sale should basically be guaranteed.
-
-Do not make Day 1 fail because of a complex demand model.
-
-## Customer phases
-
-```txt
-Entering
-Browsing
-Buying
-Checkout
-Leaving
-Despawned
-```
-
-## Minimum customer visual
-
-A capsule, cylinder, or simple humanoid is fine.
-
-Better than nothing:
-
-- body capsule
-- head sphere
-- different color shirt
-- simple name/label optional
-
-## Customer movement
-
-Use navmesh if already available.
-
-If navmesh is unreliable, use simple waypoint movement for the first pass:
-
-```txt
-spawn point -> shelf point -> checkout point -> exit point
-```
-
-Do not let navmesh complexity block the vertical slice.
-
-## Sale completion
-
-At checkout:
-
-- remove 1 quantity from shelf
-- add item price to cash
-- increment sold today
-- increment customer count
-- append event log entry
-- update objective
-
-Example event:
-
-```txt
-9:17 AM — Customer bought Loose Space Cartridge for $18.
-```
-
-## Acceptance criteria
-
-- Customer appears after shelf is stocked
-- Customer visibly moves
-- Customer targets stocked shelf
-- Customer buys item
-- Cash increases
-- `Sold Today` increases
-- `Cust` increases
-- `On Shelves` decreases or remains accurate
-- Customer leaves/despawns
-- Event appears in recent events or a simple toast/log
-
+# Trade-in system
+Trade-ins unlock after the player earns trust.
+Start simple:
+- inspect item
+- confirm platform/category
+- check condition
+- offer trade value
+- accept/reject
+- item enters used inventory
+- later resale creates margin
+Add light nuance:
+- condition affects value
+- annual sports depreciation
+- demand affects resale value
+- overpaying hurts profit
+- underpaying hurts satisfaction/reputation
+- suspicious items may trigger hidden-thread opportunities
+Do not overcomplicate with hundreds of price rules.
+The trade-in UI/data can be simple as long as the decisions feel logical.
 ---
-
-# Priority 7 — HUD and UI Need to Stop Contradicting Each Other
-
-The HUD should be boring and accurate.
-
-Current HUD has values, but the player cannot trust them yet.
-
-## HUD should show
-
-```txt
-Cash: $18
-Day 1 — 9:17 AM
-On Shelves: 4
-Customers: 1
-Sold Today: 1
-Objective: Close the day when ready
-Controls: I Inventory | F4 Close Day
-```
-
-## Fix text overlap
-
-Some screenshots show bottom-right prompt text colliding or repeating.
-
-Clean this up.
-
-Rules:
-
-- one controls block only
-- no duplicate `I`
-- no bottom text clipping
-- objective text stays left/bottom
-- interaction prompt appears center-bottom or near crosshair, but not both everywhere
-- mini preview/window should not cover important prompts unless intentionally enabled
-
-## Acceptance criteria
-
-- No duplicate control text
-- No overlapping interaction text
-- Objective always readable
-- HUD values update from state
-- Mall overview and in-store HUD show same cash/sold/inventory values
-
+# Business simulation
+Keep the beta low-key and playable.
+Track core resources:
+- cash / store performance
+- inventory
+- customer satisfaction
+- employee trust
+- manager trust
+- used inventory health
+- mistake count
+- inventory variance
+- hidden-thread awareness / paper trail
+- scapegoat risk
+Avoid:
+- credit card hawking
+- magazine subscription quota hell
+- heavy corporate KPI dashboard
+- constant pressure to hit arbitrary quotas
+- making the player check spreadsheets
+Manager pressure can exist through:
+- feedback
+- trust
+- access unlocks
+- getting yelled at for mistakes
+- end-of-day notes
+- event cards
+But do not make the game about annoying quotas.
 ---
+# Hidden thread / secret system
+This is important.
+The hidden thread is optional and subtle during play, but it affects the ending.
+The store has some off-book or morally gray inventory behavior.
+Possible shady activity:
+- launch consoles being held off-list
+- duplicate hold slips
+- modified consoles
+- early-release inventory being moved
+- weird return serial numbers
+- manager/coworker moving stock without logging
+- special customer pickups
+- trade-ins that bypass normal intake
+- back-room boxes with broken seals
+- inventory counts that do not match
+For beta, keep the player’s direct involvement morally gray and low-level.
+The player should not become a criminal mastermind.
+The player may:
+- notice something
+- ask a question
+- write it down
+- ignore it
+- move an item
+- honor a questionable request
+- refuse a questionable request
+- accidentally create a paper trail
+- accidentally remove their own protection
+## Hidden-thread purpose
+The player does not need to solve the mystery.
+The player needs to notice enough that they cannot be cleanly framed.
+The secret system is really about:
+```txt id="czoj3k"
+Did the player create enough awareness / paper trail to avoid being the easiest scapegoat?
 
-# Priority 8 — The Mall Overview Needs to Be Either Useful or Removed from Day 1
+If the player notices zero things
 
-The Mall Overview screen looks more coherent than the store, but it may be pulling from different state.
+If the player completes all 30 days with zero hidden-thread interactions, they get framed and fired after Christmas.
 
-For Day 1, it should be simple.
+This is the intended joke/failure ending.
 
-## Day 1 Mall Overview requirements
+They may have performed well as a normal employee, but they were too oblivious to protect themselves.
 
-It should show:
+The store’s shady people use them as the fall guy.
 
-```txt
-Retro Game Store
-Unlocked
-Cash: $18
-Backroom: 7 items
-On Shelves: 0-7 items
-Today: 1 sold
-```
+What counts as a hidden-thread interaction
 
-Locked stores can stay visible, but they should not distract.
+Any of these should count:
 
-Maybe show them as disabled cards below or to the side.
+* inspecting weird back-room box
+* clicking suspicious hold slip
+* asking coworker about missing console
+* reading delivery manifest discrepancy
+* checking a mismatched serial number
+* logging odd trade-in
+* noticing modified console
+* refusing questionable hold request
+* accepting questionable hold request
+* asking manager about off-list inventory
+* interacting with shady regular
+* checking after-close pickup note
+* flagging return receipt mismatch
+* documenting inventory count mismatch
 
-Do not make this screen imply a broader game is ready if it is not.
+The player does not need to know this is a hidden-thread score.
 
-## Recent Events
+Internal hidden values
 
-Recent Events should populate.
+Use internal values like:
 
-Example:
+* hiddenThreadInteractions
+* awarenessScore
+* paperTrailScore
+* scapegoatRisk
+* managerSuspicion
+* corporateAttention
+* shadyAlignment
 
-```txt
-9:05 AM — Stocked Loose Space Cartridge.
-9:12 AM — Customer entered Retro Game Store.
-9:17 AM — Sold Loose Space Cartridge for $18.
-```
+Do not show a blunt “secret mystery meter.”
 
-## Acceptance criteria
+The player may see natural notes like:
 
-- Recent Events are not blank after player actions
-- Store card reflects real state
-- Close Day works
-- Performance button works or is hidden until it does
+* “You flagged the mismatched hold slip.”
+* “You asked Sam about the unlisted console.”
+* “You wrote down the after-close pickup.”
+* “You ignored the damaged seal.”
 
----
+Internally those reduce or increase risk.
 
-# Priority 9 — Close Day Must Work
+⸻
 
-Closing day is the end of the vertical slice.
+Hidden thread subtlety
 
-Right now `F4 - Close Day` appears, but the game needs a clean result.
+First playthrough:
 
-## Close Day behavior
+* hidden thread should be easy to miss if the player only does obvious required tasks
+* but normal curiosity should trigger at least one interaction
+* around 80% of players should hit at least one hidden-thread item inadvertently
+* no forced explanation
+* no quest marker screaming “mystery clue”
 
-When pressing F4:
+Replay:
 
-- if no sale has happened, warn player but allow close
-- if sale happened, show Day Summary
-- pause gameplay
-- summarize results
-- provide next action
+* if the player gets framed for noticing zero things, unlock a joke replay modifier
+* suspicious objects get very subtle extra highlighting
+* some dialogue becomes slightly more obvious
+* maybe a journal note nudges them toward paying attention
 
-## Day Summary should show
+Example modifier:
 
-```txt
-Day 1 Complete
+New Run Modifier Unlocked:
+“Maybe Look Around This Time”
+Suspicious objects now get a tiny highlight because apparently the missing consoles needed to file their own report.
 
-Revenue: $18
-Items Sold: 1
-Customers Served: 1
-Remaining Backroom Inventory: 7
-Remaining Shelf Inventory: 0
-Cash: $18
+⸻
 
-Result: First sale complete.
-```
+Endings
 
-Buttons:
+The beta should conclude after Christmas with outcome categories.
 
-```txt
-Continue to Day 2
-Return to Mall Overview
-Main Menu
-```
+Use a combination of:
 
-For now, `Continue to Day 2` can reset to a stable Day 2 state. It does not need a full game yet.
+* store performance
+* player employment outcome
+* hidden-thread outcome
 
-## Acceptance criteria
+Store performance outcomes
 
-- F4 works
-- Summary values are accurate
-- Game does not crash or soft-lock
-- Returning to mall/store preserves state
-- Save/load can be deferred only if explicitly disabled/hidden
+Possible:
 
----
+* Holiday Disaster
+* Barely Survived
+* Solid Season
+* Top Holiday Run
 
-# Priority 10 — Interaction System Audit
+Based on:
 
-A lot of the frustration is “the game says there are interactions, but half of them do nothing.”
+* sales
+* customer satisfaction
+* inventory health
+* used margin
+* mistakes
+* launch handling
 
-This pass needs an interaction audit.
+Player outcomes
 
-## Every interactable needs this contract
+Possible:
 
-```ts
-Interactable {
-  id: string
-  label: string
-  prompt: string
-  enabled: boolean
-  canInteract(state): boolean
-  onInteract(state): void
+* fired for normal poor performance
+* seasonal cut
+* kept on part-time
+* promoted path / more responsibility
+* framed and fired
+* retained but under suspicion
+* pulled deeper after noticing enough
+
+Hidden-thread outcomes
+
+Possible:
+
+* zero noticed: framed and fired
+* one or two clues: suspicious but not defenseless
+* several clues: noticed pattern
+* helped shady activity: protected by wrong people
+* reported too much too early: manager targets you
+* balanced awareness: corporate wants a conversation
+
+Important ending rule
+
+The special framed ending happens when:
+
+days_completed = 30
+hiddenThreadInteractions = 0
+
+This can override otherwise good store performance.
+
+The joke is:
+
+* you were not fired because you were bad at retail
+* you were fired because you were the cleanest scapegoat
+
+Framed ending example
+
+DECEMBER 26 — SEASONAL REVIEW
+Store Performance: Solid
+Customer Satisfaction: Good
+Register Accuracy: Acceptable
+Inventory Variance: Catastrophic
+Three launch consoles are missing from the back room.
+The hold slips have your initials.
+The delivery sheet has your login.
+Your manager says you were the last one assigned to inventory count.
+Your coworker says he assumed you knew.
+You have no notes.
+No questions logged.
+No flagged transactions.
+No witnesses.
+No reason anyone should believe you noticed anything was wrong.
+Seasonal employment terminated.
+Reason: Inventory misconduct.
+Actual reason: You were the easiest person in the building to blame.
+
+Aware ending example
+
+JANUARY 3
+Corporate asks if you can come in before open.
+Not for a shift.
+For a conversation.
+
+Shady-aware ending example
+
+JANUARY 3
+The manager calls first.
+He says corporate is asking questions.
+Then he says your name never came up.
+Then he asks if you want more hours.
+
+Framed full-game hook
+
+JANUARY 3
+You are unemployed.
+Your last paycheck is short.
+Your employee discount is dead.
+And someone just slid a copy of the missing hold slip under your apartment door.
+Your initials are on it.
+They are not your initials.
+
+This should make the player want to replay or buy the full game.
+
+⸻
+
+Replay value
+
+Replay value should come from:
+
+* different store performance outcomes
+* different employee outcomes
+* different hidden-thread seed
+* different customer event order
+* different launch shortage severity
+* different display/signage choices
+* different trade-in decisions
+* getting framed vs avoiding it
+* spotting clues missed on previous runs
+
+Do not build a huge procedural sim for beta.
+
+Just make enough variation that a second 30-day run can feel meaningfully different.
+
+⸻
+
+Story and tone
+
+Tone should be:
+
+* nostalgic
+* retail-chaotic
+* funny
+* lightly sarcastic
+* grounded enough to feel like a sim
+* weird underneath the surface
+
+Not:
+
+* overly cozy
+* wacky cartoon
+* full crime thriller
+* corporate KPI simulator
+* pure parody
+* too legally close to real brands
+
+The humor should come from:
+
+* customers
+* employee dialogue
+* retail absurdity
+* fake product names
+* console-war arguments
+* parent confusion
+* store policy nonsense
+* the player being new and slightly disposable
+* the framed ending if they are oblivious
+
+⸻
+
+Data/content needed
+
+The agent can research the real era for inspiration but must not use real names.
+
+Research goals:
+
+* 2005 game retail store layout and categories
+* holiday console launch dynamics
+* used game economics
+* trade-in patterns
+* sports game annual depreciation
+* common retail customer issues
+* common game store employee tasks
+* console-war talking points of the era
+* mall store vibes
+* launch shortages and reservation culture
+
+Then translate into fictional equivalents.
+
+Do not copy real product names or protected IP.
+
+⸻
+
+Technical implementation principles
+
+Build playable first
+
+The beta must be playable as one day, then 30 days.
+
+Priority:
+
+1. first-person movement works
+2. store is readable
+3. interactable zones work
+4. day loop works
+5. customer cards work
+6. inventory changes persist
+7. closing summary works
+8. progression unlocks work
+9. hidden-thread interactions track
+10. endings work
+
+Do not start with giant content generation before the store/day loop works.
+
+Keep systems simple
+
+Use data-driven JSON/config where possible:
+
+* products
+* platforms
+* customers
+* daily events
+* hidden-thread clues
+* endings
+* tutorial beats
+* display options
+
+Avoid hardcoding one-off logic everywhere.
+
+Avoid placeholder trap
+
+Do not build:
+
+* a static store image
+* non-working movement
+* fake objects that cannot be interacted with
+* menus that layer over each other
+* walls of unformatted text
+* placeholder cube store with labels
+* inaccessible back room
+* customers that only exist as floating text
+
+The beta needs to feel like a real small game store.
+
+⸻
+
+Suggested data model
+
+Platform
+
+{
+  "id": "titan_x",
+  "name": "Titan X",
+  "generation": "new",
+  "marketPosition": "new_entrant",
+  "demand": 0.9,
+  "supply": 0.25,
+  "launchWindow": true,
+  "customerSegments": ["hype_teen", "sports_regular", "shady_regular"]
 }
-```
 
-Examples:
+Product
+
+{
+  "id": "college_gridiron_05",
+  "name": "College Gridiron 05",
+  "platformId": "gamestation_2",
+  "category": "annual_sports",
+  "condition": "new",
+  "basePrice": 49.99,
+  "tradeInBase": 18,
+  "usedPrice": 34.99,
+  "releaseYear": 2005,
+  "demand": 0.7,
+  "decayProfile": "annual_sports",
+  "stock": 8
+}
+
+Customer event
+
+{
+  "id": "confused_parent_wrong_platform",
+  "archetype": "confused_parent",
+  "dayRange": [1, 8],
+  "requiresUnlock": "basic_sales",
+  "text": "A parent is holding a game for the wrong console and insists it is the one their kid asked for.",
+  "choices": [
+    {
+      "id": "explain_platforms",
+      "label": "Explain the platform mismatch and find the right version.",
+      "effects": {
+        "customerSatisfaction": 2,
+        "sales": 1,
+        "managerTrust": 1
+      }
+    },
+    {
+      "id": "sell_anyway",
+      "label": "Ring it up and move the line.",
+      "effects": {
+        "sales": 1,
+        "customerSatisfaction": -2,
+        "returnRisk": 2,
+        "mistakes": 1
+      }
+    }
+  ]
+}
+
+Hidden-thread event
+
+{
+  "id": "duplicate_hold_slip",
+  "dayRange": [7, 20],
+  "location": "hold_shelf",
+  "visibility": "subtle",
+  "text": "Two hold slips list the same console serial number under different customer names.",
+  "choices": [
+    {
+      "id": "flag_it",
+      "label": "Write down the mismatch.",
+      "effects": {
+        "hiddenThreadInteractions": 1,
+        "paperTrailScore": 2,
+        "managerSuspicion": 1,
+        "scapegoatRisk": -2
+      }
+    },
+    {
+      "id": "ignore_it",
+      "label": "Leave it alone.",
+      "effects": {
+        "scapegoatRisk": 1
+      }
+    }
+  ]
+}
+
+Ending condition
+
+{
+  "id": "framed_and_fired",
+  "priority": 100,
+  "conditions": {
+    "daysCompleted": 30,
+    "hiddenThreadInteractions": 0
+  },
+  "title": "Framed and Fired",
+  "summary": "You finished the season without noticing anything weird, which made you the easiest person to blame."
+}
+
+⸻
+
+Milestone plan
+
+Milestone 1 — Playable store shell
+
+Deliver:
+
+* FPV movement
+* one store map
+* interactable register
+* interactable shelves
+* interactable back room
+* basic clock-in / clock-out
+* one day can start and end
 
-```txt
-Shelf
-Prompt: Press E to stock shelf / View shelf
-Action: opens stock panel or shows shelf details
+Acceptance:
 
-Checkout
-Prompt: Checkout
-Action: maybe no direct player action yet unless customer present
+* player can walk around the store
+* player can interact with core zones
+* no overlapping unusable menus
+* store visually reads as a game store
 
-Door
-Prompt: Press E to exit to mall
-Action: changes scene/state
+Milestone 2 — Day loop and customer cards
 
-Inventory Item
-Prompt: Stock 1
-Action: moves item to shelf
+Deliver:
 
-Close Day
-Prompt: F4 Close Day
-Action: opens summary
-```
+* 30-day calendar shell
+* opening note
+* customer card system
+* basic effects
+* closing summary
 
-## Add debug logging for every interaction
+Acceptance:
 
-When E is pressed:
+* one full day can be played
+* choices affect stats
+* day advances cleanly
+* summary reflects choices
 
-```txt
-[Interaction] Player pressed E
-[Interaction] Target: shelf_01
-[Interaction] Action: openStockPanel
-[Interaction] Result: success
-```
+Milestone 3 — Inventory and products
 
-If no target:
+Deliver:
 
-```txt
-[Interaction] Player pressed E
-[Interaction] Target: none
-```
+* fake platforms
+* fake products
+* stock quantities
+* sales changes inventory
+* trade-ins add used inventory
+* simple pricing/value logic
 
-If disabled:
+Acceptance:
 
-```txt
-[Interaction] Target checkout disabled: no customer at checkout
-```
+* customer purchases reduce stock
+* trade-ins create used items
+* sports depreciation rule exists
+* accessories/bundles have margin behavior
 
-This is extremely important. Otherwise we are guessing from screenshots forever.
+Milestone 4 — Employee progression/tutorial
 
-## Acceptance criteria
+Deliver:
 
-- Pressing E on every prompted object does something or gives a clear reason why not
-- No prompt appears for a broken/nonfunctional action
-- Interaction failures are logged
-- Player cannot get stuck in UI/movement mode
+* unlock schedule
+* useful tutorial events
+* register first
+* stocking first
+* trade-ins later
+* displays/holds later
 
----
+Acceptance:
 
-# Priority 11 — Camera and Movement Are “Good Enough” But Need Guardrails
+* mechanics unlock over time
+* tutorial beats are real gameplay
+* player is not overwhelmed on day 1
 
-Movement is better now, but there are still camera/position issues.
+Milestone 5 — Hidden thread
 
-The player appears to clip or stare into glass/doors/walls too easily.
+Deliver:
 
-## Fixes
+* hidden-thread events
+* awareness/paper trail/scapegoat tracking
+* subtle interactables
+* event seed variation
+* zero-interaction framed ending
 
-- Add proper collision to walls, shelves, checkout, glass door
-- Prevent camera from clipping into large objects
-- Add simple player capsule collision
-- Add clear spawn point facing into the store
-- Add door trigger zone that does not trap the player
-- Prevent player from spawning too close to objects
+Acceptance:
 
-## Movement acceptance criteria
+* hidden interactions can be missed
+* normal curiosity triggers at least one
+* zero hidden interactions causes framed ending
+* hidden outcomes vary
 
-- WASD movement works
-- Mouse look works
-- Player cannot walk through walls
-- Player cannot get stuck behind checkout/shelves
-- Door interaction does not shove player into geometry
-- Entering/exiting store returns player to reasonable positions
-- UI mode releases mouse/camera correctly when closed
+Milestone 6 — Endings and replay hook
 
----
+Deliver:
 
-# Priority 12 — Store Visuals Should Support Gameplay, Not Replace It
+* store performance endings
+* player employment endings
+* hidden-thread endings
+* replay modifier after framed ending
+* full-game teaser text
 
-The store still looks like a room with cubes. That is acceptable for now, but the layout should communicate purpose.
+Acceptance:
 
-## Minimum useful visual improvements
+* day 30 produces coherent ending
+* framed ending works
+* aware endings work
+* replay modifier/nudge exists
 
-Add obvious zones:
+Milestone 7 — Polish pass
 
-```txt
-Front Door / Mall Exit
-Checkout Counter
-Backroom / Storage Area
-Shelf Row 1
-Shelf Row 2
-Featured Display Table
-Customer Path
-```
+Deliver:
 
-Use labels only where needed, but the store should be understandable without floating labels everywhere.
+* reduce text clutter
+* clean interaction panels
+* make store visually legible
+* add ambient mall/game-store flavor
+* validate no real brand names
+* bug fix movement/interactions/day loop
 
-## Replace random-feeling cubes with readable placeholders
+Acceptance:
 
-Examples:
+* beta supports a full 30-day playthrough
+* no blocking bugs
+* store feels like one coherent place
+* all mechanics are understandable without a manual
 
-- shelves should actually look like shelves
-- checkout should look like a counter/register
-- storage boxes should be in a backroom/storage zone
-- door should look like a door, not a blue wall portal
-- floor markings can show stock/customer path temporarily
+⸻
 
-Do not spend time making every object pretty.
-Spend time making every object understandable and interactive.
+Validation checklist
 
-## Acceptance criteria
+Before calling beta complete, test:
 
-- I can tell where the shelf is
-- I can tell where checkout is
-- I can tell where the door is
-- I can tell where stock/backroom is
-- Customers use those same zones
+Movement/store
 
----
+* can walk everywhere intended
+* cannot get stuck behind shelves
+* register works
+* shelves work
+* back room works
+* hold shelf works
+* signage/display interactions work
 
-# Priority 13 — Remove or Hide Fake Scope
+Day loop
 
-A major issue is the game is showing systems that look bigger than what actually works.
+* day starts
+* day objectives load
+* customers appear
+* cards resolve
+* stats update
+* day closes
+* calendar advances
+* day 30 triggers ending
 
-That creates confusion.
+Inventory
 
-## Hide until functional
+* stock decreases on sales
+* used inventory increases from trade-ins
+* products have platform/category
+* sports value decay works
+* console shortages work
+* accessories attach/bundle logic works
 
-Hide or disable:
+Progression
 
-- locked store complexity beyond simple display
-- advanced filters if inventory items are basic
-- condition/rarity filters if they are not meaningful yet
-- performance screen if blank
-- save/load button if save/load does not work
-- progress bars if they do not update
-- inactive store screens if there is only one playable store
+* starting mechanics limited
+* trade-ins unlock later
+* displays/holds unlock later
+* tutorials trigger when mechanics unlock
+* tutorial events are not dead popups
 
-## Rule
+Hidden thread
 
-If a button is visible, it should work.
+* hidden events spawn
+* interactions increment hiddenThreadInteractions
+* paperTrailScore/scapegoatRisk update
+* ignoring everything leaves hiddenThreadInteractions at zero
+* zero hidden interactions triggers framed ending
+* one or more hidden interactions avoids that specific ending
+* replay nudge unlocks after framed ending
 
-If a stat is visible, it should update.
+Endings
 
-If a prompt appears, it should do something.
+* poor performance can fire player
+* good performance can keep/promote player
+* zero clues frames player
+* aware endings exist
+* shady-aware endings exist
+* final text teases full game
 
-If a system is not wired, hide it.
+Content
 
----
+* no real console/game/company names
+* fake names are consistent
+* customer stereotypes are funny but not hateful
+* text is readable
+* no walls of UI text
+* tone fits retail chaos + subtle secret thread
 
-# Priority 14 — Build a Demo Mode / Test Harness
+⸻
 
-We need a deterministic way to validate the day loop without guessing.
+Strong guardrails for the coding agent
 
-Add a dev-only test mode or keyboard shortcut.
+Do not expand scope.
 
-## Suggested dev shortcuts
+Do not build:
 
-```txt
-F8 — Spawn test customer
-F9 — Add test inventory
-F10 — Auto-stock first item
-F11 — Force sale
-```
+* full mall
+* multiple stores
+* real brands
+* full 2004–2009 campaign
+* deep accounting sim
+* complicated employee scheduling
+* complex criminal enterprise
+* huge product database
+* 1000 object placement system
+* fully voiced dialogue
+* photorealistic visuals
 
-Only in dev builds.
+Build:
 
-## Automated test scenario
+* one good store
+* one playable 30-day beta
+* clear fake product economy
+* useful customer cards
+* slow employee progression
+* subtle hidden-thread system
+* framed ending if totally oblivious
 
-Create a test or scripted validation:
+The goal is not breadth.
 
-```txt
-Given a new game
-When the first store loads
-Then activeStoreId is set
+The goal is a beta someone can play and immediately understand:
 
-When item is stocked
-Then backroom quantity decreases
-And shelf quantity increases
-And On Shelves updates
+I work in this store.
+The holiday rush is messy.
+The console market is changing.
+Used games matter.
+Something weird is happening in the back room.
+If I never notice anything, I might be the easiest person to blame.
 
-When customer spawns
-Then customer targets stocked shelf
-
-When customer buys
-Then shelf quantity decreases
-And cash increases
-And soldToday increases
-And event log receives sale event
-
-When day closes
-Then summary values match state
-```
-
-This should be the validation loop after every implementation pass.
-
----
-
-# Priority 15 — Save/Load Decision
-
-The main menu says `No Save Found`.
-
-That is fine if save/load is not ready, but then do not let it become confusing.
-
-For this pass:
-
-- either implement a basic local save after Day 1
-- or explicitly leave save disabled and do not spend time on it
-
-Do not half-wire it.
-
-## If implementing minimum save
-
-Save:
-
-```txt
-day
-cash
-active/unlocked stores
-inventory
-shelf stock
-sales stats
-```
-
-Load:
-
-```txt
-returns to mall overview or active store
-```
-
-But I would not prioritize this above the Day 1 loop.
-
----
-
-# Implementation Order
-
-Do this in order. Do not jump to visuals first.
-
-## Phase 1 — State and Active Store
-
-- define/clean game state
-- ensure new game creates first store
-- ensure entering store sets active store
-- ensure inventory/HUD/mall read same active store
-- add debug state overlay/logging
-
-Done when inventory no longer says no active store while inside the store.
-
----
-
-## Phase 2 — Inventory and Stocking
-
-- create starting inventory
-- make inventory UI show items
-- add Stock 1 button
-- wire stock to shelf state
-- update HUD counters
-- add simple shelf visuals
-
-Done when I can stock one item and see `On Shelves` update.
-
----
-
-## Phase 3 — Customer/Sale Loop
-
-- spawn first tutorial customer after stocking
-- move customer to shelf
-- customer buys
-- customer checks out
-- update cash/sold/customer counters
-- add event log entry
-
-Done when I can make one sale.
-
----
-
-## Phase 4 — Close Day
-
-- F4 opens day summary
-- summary reads real state
-- return to mall overview
-- no crashes/soft locks
-
-Done when I can complete Day 1.
-
----
-
-## Phase 5 — Cleanup and UX
-
-- remove broken prompts
-- hide nonfunctional UI
-- clean overlap
-- improve store readability
-- add basic customer/store labels where useful
-- stabilize movement/collision
-
-Done when the game feels intentionally small instead of accidentally unfinished.
-
----
-
-# Specific Bugs / Issues Visible From Screenshots
-
-## Inventory says no active store
-
-This is a blocker.
-
-The player is inside the store. Inventory must know the active store.
-
-Likely causes:
-
-- active store state not set on scene load
-- mall overview selected store not passed into store scene
-- inventory UI mounted outside store context
-- store id mismatch between overview and scene
-- state reset on scene transition
-- store scene has local placeholder data instead of real store id
-
-Fix before anything else.
-
----
-
-## HUD counters stay zero
-
-`On Shelves`, `Cust`, and `Sold Today` stay zero.
-
-That probably means:
-
-- no shelf state updates
-- no customer manager running
-- HUD reads stale/default state
-- sale events are not firing
-- active store is null
-
-Fix through shared state and event logging.
-
----
-
-## Door interaction works visually but feels weird
-
-The glass door prompt appears, but the camera is pressed into the door/glass.
-
-Need:
-
-- better trigger volume
-- better collision
-- fade/transition maybe later
-- spawn points inside/outside door
-- no camera clipping into the glass
-
----
-
-## Mall overview has more coherent data than store scene
-
-The overview says the retro game store has inventory and cash.
-The store scene says nothing is active.
-
-This suggests two separate state paths.
-
-Unify them.
-
----
-
-## Customer count never changes
-
-There is no visible customer loop yet.
-
-Do not spend time on store art until one customer can spawn, browse, buy, and leave.
-
----
-
-## “Progress” is blank or meaningless
-
-Top bar has `Progress:` but no value.
-
-Either wire it or hide it for Day 1.
-
----
-
-## Recent Events is blank
-
-This should become the easiest way to confirm systems are working.
-
-Every major action should append an event.
-
----
-
-# Day 1 Expected User Experience
-
-When I launch the game:
-
-```txt
-Main Menu
-New Game
-```
-
-Then:
-
-```txt
-Mall Overview
-Retro Game Store is unlocked
-Other stores locked
-Click/enter Retro Game Store
-```
-
-Or spawn directly in the store for Day 1.
-
-Inside store:
-
-```txt
-Objective: Open inventory and stock your first item.
-```
-
-I press `I`.
-
-Inventory opens:
-
-```txt
-Backroom
-- Loose Space Cartridge x2 — $18 — [Stock 1]
-- Used Controller x2 — $12 — [Stock 1]
-- Strategy Guide x2 — $9 — [Stock 1]
-```
-
-I click `Stock 1`.
-
-Then:
-
-```txt
-On Shelves: 1
-Objective: Wait for a customer.
-Recent Event: 9:02 AM — Stocked Loose Space Cartridge.
-```
-
-Customer enters.
-
-```txt
-Customer walks to shelf.
-Customer browses.
-Customer walks to checkout.
-Sale completes.
-```
-
-HUD updates:
-
-```txt
-Cash: $18
-On Shelves: 0
-Cust: 1
-Sold Today: 1
-Objective: First sale complete. Close the day when ready.
-```
-
-I press F4.
-
-Day summary:
-
-```txt
-Day 1 Complete
-Revenue: $18
-Items Sold: 1
-Customers Served: 1
-Cash: $18
-```
-
-That is the whole pass.
-
----
-
-# Do Not Do This Pass
-
-Do not do these yet:
-
-- new stores
-- full mall walking experience
-- detailed item economy
-- advanced customer personalities
-- complex reputation system
-- pricing optimization
-- rare item generation
-- fancy models
-- large UI redesign
-- save/load unless it is trivial
-- procedural store layouts
-- multi-day balancing
-- unlock progression
-- tutorial writing beyond simple objective text
-
-All of that is downstream.
-
-This pass is Day 1.
-
----
-
-# Validation Loop
-
-After implementation, run through this manually and record results.
-
-## Test 1 — New Game
-
-- Start new game
-- Confirm first store exists
-- Confirm active store is set when entering
-- Confirm HUD shows Day 1 and $0
-- Confirm inventory opens
-
-Pass/fail:
-
-```txt
-New Game:
-Active Store:
-Inventory Opens:
-HUD Accurate:
-```
-
----
-
-## Test 2 — Inventory
-
-- Open inventory
-- Confirm backroom has items
-- Click Stock 1
-- Confirm quantity moves
-- Confirm shelf visual changes
-- Confirm On Shelves updates
-
-Pass/fail:
-
-```txt
-Backroom Items Visible:
-Stock Button Works:
-Shelf State Updates:
-Shelf Visual Updates:
-HUD Updates:
-```
-
----
-
-## Test 3 — Customer
-
-- Wait after stocking
-- Confirm customer spawns
-- Confirm customer walks to shelf
-- Confirm customer buys
-- Confirm sale completes
-- Confirm cash/sold/customer counters update
-
-Pass/fail:
-
-```txt
-Customer Spawned:
-Customer Browsed:
-Customer Checked Out:
-Cash Updated:
-Sold Today Updated:
-Customer Count Updated:
-```
-
----
-
-## Test 4 — Close Day
-
-- Press F4
-- Confirm day summary opens
-- Confirm numbers match HUD/state
-- Confirm no soft lock
-- Confirm can return/continue
-
-Pass/fail:
-
-```txt
-F4 Works:
-Summary Accurate:
-Return Works:
-No Soft Lock:
-```
-
----
-
-## Test 5 — Interaction Audit
-
-Walk to every object with a prompt.
-
-For each:
-
-```txt
-Object:
-Prompt:
-Expected Action:
-Actual Action:
-Works?:
-```
-
-No fake prompts allowed.
-
----
-
-# Definition of Done
-
-This pass is done when I can play one day without developer imagination filling in the blanks.
-
-Minimum definition:
-
-- New Game works
-- First store is active
-- Inventory opens and shows real items
-- Stocking works
-- Shelf state and visuals update
-- Customer spawns after stock exists
-- Customer buys one item
-- Checkout completes sale
-- Cash increases
-- Sold Today increases
-- Customer count increases
-- Event log updates
-- Close Day works
-- Day summary is accurate
-- No major UI overlap
-- No dead prompts
-- No soft locks
-- No “No active store selected” while inside the store
-
-If all of that works with cubes, we have a game prototype.
-
-If that does not work, more visual passes are just painting the box we are walking around in.

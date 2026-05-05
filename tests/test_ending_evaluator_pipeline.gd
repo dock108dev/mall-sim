@@ -97,6 +97,7 @@ func test_partial_stores_moderate_revenue_selects_comfortable_middle() -> void:
 	_evaluator._stats["days_survived"] = 30.0
 	_evaluator._stats["cumulative_revenue"] = 5000.0
 	_evaluator._stats["final_cash"] = 100.0
+	_evaluator._stats["hidden_thread_interactions"] = 1.0
 
 	EventBus.ending_requested.emit("time_limit")
 

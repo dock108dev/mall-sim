@@ -3,7 +3,7 @@ extends GutTest
 
 const STORE_ID: StringName = &"retro_games"
 ## Common-rarity item available at SPECIALTY tier catalog.
-const ITEM_ID: StringName = &"retro_plumber_world_ss_loose"
+const ITEM_ID: StringName = &"neo_ignite_motorway_kings_loose"
 const STARTING_CASH: float = 5000.0
 const SPECIALTY_TIER: OrderSystem.SupplierTier = OrderSystem.SupplierTier.SPECIALTY
 ## Normal (1.0×): roundi(2 × 1.00) = 2 days.

@@ -109,6 +109,22 @@ func credit(amount: float, source: StringName) -> void:
 	_apply_credit(amount, String(source), _get_active_store_id())
 
 
+## Pays the player a wage for time worked. In the seasonal-employee model the
+## player earns income from their employer rather than from store revenue, so
+## the credit is recorded against player cash but not attributed to any store's
+## daily revenue. Emits EventBus.wage_issued so listeners can update HUDs and
+## ProgressionSystem can track cumulative wages earned.
+func credit_wage(amount: float, reason: String = "Daily wage") -> void:
+	if amount <= 0.0:
+		push_warning(
+			"EconomySystem: credit_wage called with non-positive amount: %s"
+			% amount
+		)
+		return
+	_apply_credit(amount, reason)
+	EventBus.wage_issued.emit(amount)
+
+
 ## Resolves a single customer sale attempt using the full multiplier chain via
 ## CustomerSimulator.simulate_single(). Emits item_sold / customer_purchased on
 ## acceptance and customer_walked on rejection.

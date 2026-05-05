@@ -1,6 +1,8 @@
 ## Processes NPC purchase transactions and emits results via EventBus.
 extends Node
 
+const DEFECTIVE_CONDITIONS: Array[String] = ["poor", "damaged"]
+
 var _market_value_system: MarketValueSystem = null
 var _inventory_system: InventorySystem = null
 var _difficulty_system: DifficultySystem = null
@@ -64,6 +66,10 @@ func process_transaction(npc: Customer) -> bool:
 	EventBus.customer_purchased.emit(
 		store_id, item_id, price, customer_id
 	)
+	if desired_item.condition in DEFECTIVE_CONDITIONS:
+		EventBus.defective_sale_occurred.emit(
+			String(item_id), desired_item.condition
+		)
 	_processing_ids.erase(customer_id)
 	return true
 

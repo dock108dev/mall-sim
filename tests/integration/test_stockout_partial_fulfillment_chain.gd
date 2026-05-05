@@ -4,7 +4,7 @@ extends GutTest
 
 
 const STORE_ID: StringName = &"retro_games"
-const ITEM_ID: StringName = &"retro_plumber_world_ss_loose"
+const ITEM_ID: StringName = &"neo_ignite_motorway_kings_loose"
 const STARTING_CASH: float = 2000.0
 const ORDER_QUANTITY: int = 10
 const BASIC_TIER: OrderSystem.SupplierTier = OrderSystem.SupplierTier.BASIC

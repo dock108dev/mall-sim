@@ -4,13 +4,12 @@ extends Node
 
 enum TutorialStep {
 	WELCOME,
-	OPEN_INVENTORY,
-	SELECT_ITEM,
-	PLACE_ITEM,
-	WAIT_FOR_CUSTOMER,
-	CUSTOMER_BROWSING,
-	CUSTOMER_AT_CHECKOUT,
-	COMPLETE_SALE,
+	PLATFORM_MATCH,
+	STOCK_SHELF,
+	CONDITION_RISK,
+	SPORTS_DEPRECIATION,
+	HOLD_PRESSURE,
+	HIDDEN_THREAD,
 	CLOSE_DAY,
 	DAY_SUMMARY,
 	FINISHED,
@@ -18,13 +17,12 @@ enum TutorialStep {
 
 const STEP_IDS: Dictionary = {
 	TutorialStep.WELCOME: "welcome",
-	TutorialStep.OPEN_INVENTORY: "open_inventory",
-	TutorialStep.SELECT_ITEM: "select_item",
-	TutorialStep.PLACE_ITEM: "place_item",
-	TutorialStep.WAIT_FOR_CUSTOMER: "wait_for_customer",
-	TutorialStep.CUSTOMER_BROWSING: "customer_browsing",
-	TutorialStep.CUSTOMER_AT_CHECKOUT: "customer_at_checkout",
-	TutorialStep.COMPLETE_SALE: "complete_sale",
+	TutorialStep.PLATFORM_MATCH: "platform_match",
+	TutorialStep.STOCK_SHELF: "stock_shelf",
+	TutorialStep.CONDITION_RISK: "condition_risk",
+	TutorialStep.SPORTS_DEPRECIATION: "sports_depreciation",
+	TutorialStep.HOLD_PRESSURE: "hold_pressure",
+	TutorialStep.HIDDEN_THREAD: "hidden_thread",
 	TutorialStep.CLOSE_DAY: "close_day",
 	TutorialStep.DAY_SUMMARY: "day_summary",
 	TutorialStep.FINISHED: "finished",
@@ -32,13 +30,12 @@ const STEP_IDS: Dictionary = {
 
 const STEP_TEXT_KEYS: Dictionary = {
 	TutorialStep.WELCOME: "TUTORIAL_WELCOME",
-	TutorialStep.OPEN_INVENTORY: "TUTORIAL_OPEN_INVENTORY",
-	TutorialStep.SELECT_ITEM: "TUTORIAL_SELECT_ITEM",
-	TutorialStep.PLACE_ITEM: "TUTORIAL_PLACE_ITEM",
-	TutorialStep.WAIT_FOR_CUSTOMER: "TUTORIAL_WAIT_CUSTOMER",
-	TutorialStep.CUSTOMER_BROWSING: "TUTORIAL_CUSTOMER_BROWSING",
-	TutorialStep.CUSTOMER_AT_CHECKOUT: "TUTORIAL_CUSTOMER_AT_CHECKOUT",
-	TutorialStep.COMPLETE_SALE: "TUTORIAL_COMPLETE_SALE",
+	TutorialStep.PLATFORM_MATCH: "TUTORIAL_PLATFORM_MATCH",
+	TutorialStep.STOCK_SHELF: "TUTORIAL_STOCK_SHELF",
+	TutorialStep.CONDITION_RISK: "TUTORIAL_CONDITION_RISK",
+	TutorialStep.SPORTS_DEPRECIATION: "TUTORIAL_SPORTS_DEPRECIATION",
+	TutorialStep.HOLD_PRESSURE: "TUTORIAL_HOLD_PRESSURE",
+	TutorialStep.HIDDEN_THREAD: "TUTORIAL_HIDDEN_THREAD",
 	TutorialStep.CLOSE_DAY: "TUTORIAL_CLOSE_DAY",
 	TutorialStep.DAY_SUMMARY: "TUTORIAL_DAY_SUMMARY",
 	TutorialStep.FINISHED: "",
@@ -60,7 +57,7 @@ const TUTORIAL_STORE_ID: StringName = &"retro_games"
 # Bumped when the TutorialStep enum ordinals change. Persisted progress with a
 # different version is treated as incompatible and reset to a fresh tutorial so
 # a player's old cfg can't replay the wrong step IDs after a re-sequence.
-const SCHEMA_VERSION: int = 2
+const SCHEMA_VERSION: int = 3
 
 const CONTEXTUAL_TIP_KEYS: Dictionary = {
 	"ordering": "TIP_ORDERING",
@@ -96,28 +93,34 @@ func _connect_signals() -> void:
 		EventBus.gameplay_ready.connect(_on_gameplay_ready)
 	if not EventBus.skip_tutorial_requested.is_connected(skip_tutorial):
 		EventBus.skip_tutorial_requested.connect(skip_tutorial)
-	if not EventBus.panel_opened.is_connected(_on_panel_opened):
-		EventBus.panel_opened.connect(_on_panel_opened)
-	if not EventBus.placement_mode_entered.is_connected(
-		_on_placement_mode_entered
+	if not EventBus.customer_platform_identified.is_connected(
+		_on_customer_platform_identified
 	):
-		EventBus.placement_mode_entered.connect(_on_placement_mode_entered)
+		EventBus.customer_platform_identified.connect(
+			_on_customer_platform_identified
+		)
 	if not EventBus.item_stocked.is_connected(_on_item_stocked):
 		EventBus.item_stocked.connect(_on_item_stocked)
-	if not EventBus.customer_entered.is_connected(_on_customer_entered):
-		EventBus.customer_entered.connect(_on_customer_entered)
-	if not EventBus.customer_item_spotted.is_connected(
-		_on_customer_item_spotted
+	if not EventBus.trade_in_condition_graded.is_connected(
+		_on_trade_in_condition_graded
 	):
-		EventBus.customer_item_spotted.connect(_on_customer_item_spotted)
-	if not EventBus.customer_ready_to_purchase.is_connected(
-		_on_customer_ready_to_purchase
-	):
-		EventBus.customer_ready_to_purchase.connect(
-			_on_customer_ready_to_purchase
+		EventBus.trade_in_condition_graded.connect(
+			_on_trade_in_condition_graded
 		)
-	if not EventBus.customer_purchased.is_connected(_on_customer_purchased):
-		EventBus.customer_purchased.connect(_on_customer_purchased)
+	if not EventBus.trade_in_price_confirmed.is_connected(
+		_on_trade_in_price_confirmed
+	):
+		EventBus.trade_in_price_confirmed.connect(
+			_on_trade_in_price_confirmed
+		)
+	if not EventBus.hold_decision_made.is_connected(_on_hold_decision_made):
+		EventBus.hold_decision_made.connect(_on_hold_decision_made)
+	if not EventBus.hidden_clue_acknowledged.is_connected(
+		_on_hidden_clue_acknowledged
+	):
+		EventBus.hidden_clue_acknowledged.connect(
+			_on_hidden_clue_acknowledged
+		)
 	if not EventBus.day_close_requested.is_connected(_on_day_close_requested):
 		EventBus.day_close_requested.connect(_on_day_close_requested)
 	if not EventBus.day_acknowledged.is_connected(_on_day_acknowledged):
@@ -130,28 +133,34 @@ func _disconnect_step_signals() -> void:
 		EventBus.gameplay_ready.disconnect(_on_gameplay_ready)
 	if EventBus.skip_tutorial_requested.is_connected(skip_tutorial):
 		EventBus.skip_tutorial_requested.disconnect(skip_tutorial)
-	if EventBus.panel_opened.is_connected(_on_panel_opened):
-		EventBus.panel_opened.disconnect(_on_panel_opened)
-	if EventBus.placement_mode_entered.is_connected(
-		_on_placement_mode_entered
+	if EventBus.customer_platform_identified.is_connected(
+		_on_customer_platform_identified
 	):
-		EventBus.placement_mode_entered.disconnect(_on_placement_mode_entered)
+		EventBus.customer_platform_identified.disconnect(
+			_on_customer_platform_identified
+		)
 	if EventBus.item_stocked.is_connected(_on_item_stocked):
 		EventBus.item_stocked.disconnect(_on_item_stocked)
-	if EventBus.customer_entered.is_connected(_on_customer_entered):
-		EventBus.customer_entered.disconnect(_on_customer_entered)
-	if EventBus.customer_item_spotted.is_connected(
-		_on_customer_item_spotted
+	if EventBus.trade_in_condition_graded.is_connected(
+		_on_trade_in_condition_graded
 	):
-		EventBus.customer_item_spotted.disconnect(_on_customer_item_spotted)
-	if EventBus.customer_ready_to_purchase.is_connected(
-		_on_customer_ready_to_purchase
-	):
-		EventBus.customer_ready_to_purchase.disconnect(
-			_on_customer_ready_to_purchase
+		EventBus.trade_in_condition_graded.disconnect(
+			_on_trade_in_condition_graded
 		)
-	if EventBus.customer_purchased.is_connected(_on_customer_purchased):
-		EventBus.customer_purchased.disconnect(_on_customer_purchased)
+	if EventBus.trade_in_price_confirmed.is_connected(
+		_on_trade_in_price_confirmed
+	):
+		EventBus.trade_in_price_confirmed.disconnect(
+			_on_trade_in_price_confirmed
+		)
+	if EventBus.hold_decision_made.is_connected(_on_hold_decision_made):
+		EventBus.hold_decision_made.disconnect(_on_hold_decision_made)
+	if EventBus.hidden_clue_acknowledged.is_connected(
+		_on_hidden_clue_acknowledged
+	):
+		EventBus.hidden_clue_acknowledged.disconnect(
+			_on_hidden_clue_acknowledged
+		)
 	if EventBus.day_close_requested.is_connected(_on_day_close_requested):
 		EventBus.day_close_requested.disconnect(_on_day_close_requested)
 	if EventBus.day_acknowledged.is_connected(_on_day_acknowledged):
@@ -256,69 +265,53 @@ func _on_gameplay_ready() -> void:
 		_advance_step()
 
 
-func _on_panel_opened(panel_name: String) -> void:
+func _on_customer_platform_identified(
+	_customer_id: StringName, _platform_id: StringName, _correct: bool
+) -> void:
 	if not tutorial_active:
 		return
-	if (
-		current_step == TutorialStep.OPEN_INVENTORY
-		and panel_name == "inventory"
-	):
-		_advance_step()
-
-
-## M2 (Select item): the player has chosen an item to stock and entered
-## placement mode. The shelf-actions controller is the sole emitter.
-func _on_placement_mode_entered() -> void:
-	if not tutorial_active:
-		return
-	if current_step == TutorialStep.SELECT_ITEM:
+	if current_step == TutorialStep.PLATFORM_MATCH:
 		_advance_step()
 
 
 func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.PLACE_ITEM:
+	if current_step == TutorialStep.STOCK_SHELF:
 		_advance_step()
 
 
-## M4 (Wait for customer): a customer has entered the store. The
-## CustomerSystem-side `customer_entered` signal carries the spawn payload.
-func _on_customer_entered(_customer_data: Dictionary) -> void:
-	if not tutorial_active:
-		return
-	if current_step == TutorialStep.WAIT_FOR_CUSTOMER:
-		_advance_step()
-
-
-## M5 (Customer browsing): a customer has spotted a desirable item on the
-## shelves. Emitted by `Customer._evaluate_current_shelf`.
-func _on_customer_item_spotted(
-	_customer: Customer, _item: ItemInstance,
+func _on_trade_in_condition_graded(
+	_item_id: StringName, _grade: String
 ) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.CUSTOMER_BROWSING:
+	if current_step == TutorialStep.CONDITION_RISK:
 		_advance_step()
 
 
-## M6 (Customer at checkout): a customer has decided to purchase and arrived
-## at the register. CheckoutSystem listens to the same signal.
-func _on_customer_ready_to_purchase(_customer_data: Dictionary) -> void:
-	if not tutorial_active:
-		return
-	if current_step == TutorialStep.CUSTOMER_AT_CHECKOUT:
-		_advance_step()
-
-
-## M7 (Complete sale): the transaction has cleared.
-func _on_customer_purchased(
-	_store_id: StringName, _item_id: StringName,
-	_price: float, _customer_id: StringName
+func _on_trade_in_price_confirmed(
+	_item_id: StringName, _offered_price: float
 ) -> void:
 	if not tutorial_active:
 		return
-	if current_step == TutorialStep.COMPLETE_SALE:
+	if current_step == TutorialStep.SPORTS_DEPRECIATION:
+		_advance_step()
+
+
+func _on_hold_decision_made(
+	_item_id: StringName, _honored: bool
+) -> void:
+	if not tutorial_active:
+		return
+	if current_step == TutorialStep.HOLD_PRESSURE:
+		_advance_step()
+
+
+func _on_hidden_clue_acknowledged(_clue_id: StringName) -> void:
+	if not tutorial_active:
+		return
+	if current_step == TutorialStep.HIDDEN_THREAD:
 		_advance_step()
 
 
@@ -439,8 +432,8 @@ func _load_progress() -> void:
 		return
 	# §F-85 — Pass 12: a schema_version mismatch means the persisted ordinals
 	# predate the current TutorialStep enum and resuming would replay the
-	# wrong step IDs (e.g. an old `MOVE_TO_SHELF=1` would land on the new
-	# `OPEN_INVENTORY=1`). Treat it the same as a corrupt file (§F-20 already
+	# wrong step IDs (e.g. a v2 `OPEN_INVENTORY=1` would land on the v3
+	# `PLATFORM_MATCH=1`). Treat it the same as a corrupt file (§F-20 already
 	# justifies the reset-on-corruption stance for this quality-of-life
 	# feature): warn loudly so the player and CI see the version skew, reset
 	# to a fresh tutorial, and re-save with the current schema_version so the

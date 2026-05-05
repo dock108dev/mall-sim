@@ -23,6 +23,19 @@ const CONDITION_MULTIPLIERS: Dictionary = {
 const CACHE_LIFETIME_HOURS: int = 1
 const MINIMUM_ITEM_PRICE: float = 0.01
 
+## Annual-sports decay constants. Step-function: when a newer edition exists
+## in the catalog the active rate / fresh floor apply (a 1-year-old title hits
+## ~70% of base price); otherwise the standard year-over-year rate / old floor.
+## Editions older than COLLECTIBLE_AGE_THRESHOLD years receive a nostalgia
+## recovery bump.
+const ANNUAL_SPORTS_RATE_STANDARD: float = 0.18
+const ANNUAL_SPORTS_RATE_ACTIVE: float = 0.30
+const ANNUAL_SPORTS_FLOOR_FRESH: float = 0.40
+const ANNUAL_SPORTS_FLOOR_OLD: float = 0.15
+const COLLECTIBLE_AGE_THRESHOLD: int = 5
+const COLLECTIBLE_RECOVERY_MULT: float = 1.35
+const DAYS_PER_YEAR: int = 365
+
 var _inventory_system: InventorySystem = null
 var _market_event_system: MarketEventSystem = null
 var _seasonal_event_system: SeasonalEventSystem = null
@@ -30,11 +43,15 @@ var _testing_system: TestingSystem = null
 var _cache: Dictionary = {}
 var _cache_hour: int = -1
 var _current_day: int = 1
+var _current_year: int = 1
 var _calendar_seasonal_multipliers: Dictionary = {}
 ## Per-category trend multipliers updated via EventBus.trend_updated.
 var _trend_multipliers: Dictionary = {}
 ## Per-store price caps. 0.0 means no cap. Missing key means unknown store.
 var _store_price_caps: Dictionary = {}
+## series (StringName) → most-recent edition_year (int) seen in the catalog.
+## Drives `_new_edition_released_this_year` for the annual_sports profile.
+var _latest_edition_year: Dictionary = {}
 
 
 func initialize(
@@ -62,6 +79,7 @@ func initialize(
 	EventBus.seasonal_multipliers_updated.connect(
 		_on_seasonal_multipliers_updated
 	)
+	_hydrate_edition_registry()
 
 
 func get_market_value(item_id: StringName) -> float:
@@ -153,13 +171,24 @@ func calculate_item_value(item: ItemInstance) -> float:
 	return maxf(result, base * 0.5 * floor_mult)
 
 
-## Returns the time-based depreciation/launch modifier for an electronics item.
-## Formula: max(min_value_ratio, 1.0 - (current_day - launch_day) * rate).
-## Items within launch_spike_days of launch_day get a demand bonus.
+## Returns the time-based depreciation/launch modifier.
+## Dispatches on `def.decay_profile`:
+##   - "annual_sports": step-function on new-edition release in same series.
+##   - "standard"/"" (or `electronics` legacy): linear decay from launch_day,
+##      gated on `depreciates` + `depreciation_rate` + `launch_day`.
+##      Items within launch_spike_days of launch_day get a demand bonus.
+##   - any other profile: 1.0 (handled elsewhere or no decay).
 func get_time_modifier(
 	def: ItemDefinition, current_day: int
 ) -> float:
-	if not def or not def.depreciates:
+	if not def:
+		return 1.0
+	var profile: String = String(def.decay_profile)
+	if profile == "annual_sports":
+		return _get_annual_sports_decay(def)
+	if profile != "" and profile != "standard" and profile != "electronics":
+		return 1.0
+	if not def.depreciates:
 		return 1.0
 	if def.depreciation_rate <= 0.0:
 		return 1.0
@@ -179,6 +208,65 @@ func get_time_modifier(
 		depreciation *= def.launch_demand_multiplier
 
 	return depreciation
+
+
+## Returns the trade-in market factor for `def`. Currently this is the
+## time/decay modifier (annual_sports step-function or electronics linear
+## decay). Trade-in offers multiply this in alongside the per-condition cut
+## so the offered credit reflects current market value, not face value.
+func get_trade_in_market_factor(def: ItemDefinition) -> float:
+	return get_time_modifier(def, _current_day)
+
+
+## Step-function decay for annual sports titles. Returns 1.0 for current/future
+## editions; applies the active-year rate (with the fresh floor) when a newer
+## edition exists in the catalog, otherwise standard yearly decay with a
+## collector recovery bump for editions ≥ COLLECTIBLE_AGE_THRESHOLD years old.
+func _get_annual_sports_decay(def: ItemDefinition) -> float:
+	if def.edition_year <= 0:
+		return 1.0
+	var age: int = _current_year - def.edition_year
+	if age <= 0:
+		return 1.0
+	var newer_exists: bool = _newer_edition_exists(
+		def.edition_series, def.edition_year
+	)
+	var rate: float = ANNUAL_SPORTS_RATE_ACTIVE if newer_exists else ANNUAL_SPORTS_RATE_STANDARD
+	var floor_v: float = ANNUAL_SPORTS_FLOOR_FRESH if newer_exists else ANNUAL_SPORTS_FLOOR_OLD
+	var decay: float = maxf(floor_v, 1.0 - float(age) * rate)
+	if age >= COLLECTIBLE_AGE_THRESHOLD:
+		decay *= COLLECTIBLE_RECOVERY_MULT
+	return decay
+
+
+## Records the most-recent edition year seen for `series`. Idempotent for
+## older years so out-of-order item loads converge on the true latest.
+## Empty series is ignored (item is not part of a tracked franchise).
+func register_edition(series: StringName, year: int) -> void:
+	if series.is_empty() or year <= 0:
+		return
+	var current: int = int(_latest_edition_year.get(series, 0))
+	if year > current:
+		_latest_edition_year[series] = year
+		invalidate_cache()
+
+
+## Returns true when the catalog contains an edition of `series` strictly
+## newer than `edition_year`. Empty series cannot have peers.
+func _newer_edition_exists(series: StringName, edition_year: int) -> bool:
+	if series.is_empty():
+		return false
+	var latest: int = int(_latest_edition_year.get(series, 0))
+	return latest > edition_year
+
+
+func _hydrate_edition_registry() -> void:
+	if not GameManager.data_loader:
+		return
+	var all_items: Array[ItemDefinition] = GameManager.data_loader.get_all_items()
+	for def: ItemDefinition in all_items:
+		if def != null:
+			register_edition(def.edition_series, def.edition_year)
 
 
 func set_testing_system(system: TestingSystem) -> void:
@@ -268,11 +356,17 @@ func get_item_multipliers(item: ItemInstance) -> Array:
 			"detail": item.test_result if item.tested else "untested",
 		})
 	if time_mod != 1.0:
+		var detail: String = "day=%d" % _current_day
+		if String(item.definition.decay_profile) == "annual_sports" \
+				and item.definition.edition_year > 0:
+			detail = "edition_age=%d yr" % maxi(
+				_current_year - item.definition.edition_year, 0
+			)
 		multipliers.append({
 			"slot": "depreciation",
 			"label": "Depreciation",
 			"factor": time_mod,
-			"detail": "day=%d" % _current_day,
+			"detail": detail,
 		})
 	return multipliers
 
@@ -400,6 +494,9 @@ func _on_seasonal_multipliers_updated(
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
+	var year: int = 1 + maxi(day - 1, 0) / DAYS_PER_YEAR
+	if year != _current_year:
+		_current_year = year
 	invalidate_cache()
 
 

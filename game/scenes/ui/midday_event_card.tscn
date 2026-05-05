@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://cmrnmiddayec01"]
+
+[ext_resource type="Script" path="res://game/scripts/ui/midday_event_card.gd" id="1_mecscr"]
+
+[node name="MiddayEventCard" type="CanvasLayer"]
+layer = 80
+script = ExtResource("1_mecscr")

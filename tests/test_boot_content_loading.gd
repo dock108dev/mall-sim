@@ -20,8 +20,8 @@ const EXPECTED_STORE_RESOLUTIONS: Dictionary = {
 const SAMPLE_ITEM_IDS: Array[String] = [
 	"sports_duvall_hr_common",
 	"sports_okoro_hoops_common",
-	"retro_plumber_world_ss_loose",
-	"retro_hedgehog_rush_md_loose",
+	"neo_ignite_motorway_kings_loose",
+	"vecforce_hd_warfront_valor_loose",
 	"rental_cosmic_battles_4_vhs",
 	"rental_velociraptor_gardens_vhs",
 	"pc_booster_base_set",

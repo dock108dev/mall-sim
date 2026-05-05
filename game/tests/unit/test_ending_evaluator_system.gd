@@ -274,6 +274,7 @@ func test_ending_broke_even() -> void:
 	_load_stats({
 		"days_survived": 30.0, "final_cash": 100.0,
 		"cumulative_revenue": 1000.0,
+		"hidden_thread_interactions": 1.0,
 	})
 	assert_eq(_system.evaluate(), &"broke_even")
 
@@ -281,6 +282,7 @@ func test_ending_broke_even() -> void:
 func test_ending_the_comfortable_middle() -> void:
 	_load_stats({
 		"days_survived": 30.0, "cumulative_revenue": 5000.0,
+		"hidden_thread_interactions": 1.0,
 	})
 	assert_eq(_system.evaluate(), &"the_comfortable_middle")
 
@@ -289,8 +291,74 @@ func test_ending_crisis_operator() -> void:
 	_load_stats({
 		"days_near_bankruptcy": 10.0, "days_survived": 30.0,
 		"final_cash": 100.0, "cumulative_revenue": 15000.0,
+		"hidden_thread_interactions": 1.0,
 	})
 	assert_eq(_system.evaluate(), &"crisis_operator")
+
+
+## the_uninitiated fires when the player completes 30 days with zero
+## hidden_thread_interactions and is not bankrupt.
+func test_ending_the_uninitiated_zero_hidden_interactions() -> void:
+	_load_stats({
+		"days_survived": 30.0, "final_cash": 100.0,
+		"hidden_thread_interactions": 0.0,
+	})
+	assert_eq(
+		_system.evaluate(), &"the_uninitiated",
+		"30 days + zero hidden_thread_interactions = the_uninitiated"
+	)
+
+
+## the_uninitiated is blocked when at least one hidden_thread_interacted
+## signal has fired during the run.
+func test_the_uninitiated_blocked_by_one_interaction() -> void:
+	_load_stats({
+		"days_survived": 30.0, "final_cash": 100.0,
+		"hidden_thread_interactions": 1.0,
+	})
+	assert_ne(
+		_system.evaluate(), &"the_uninitiated",
+		"≥1 hidden_thread_interactions must block the_uninitiated"
+	)
+
+
+## the_uninitiated is blocked by trigger_type_bankruptcy via forbidden_all.
+func test_the_uninitiated_blocked_by_bankruptcy() -> void:
+	_load_stats({
+		"trigger_type_bankruptcy": 1.0, "days_survived": 30.0,
+		"hidden_thread_interactions": 0.0,
+	})
+	assert_ne(
+		_system.evaluate(), &"the_uninitiated",
+		"Bankruptcy must block the_uninitiated via forbidden_all"
+	)
+
+
+## EventBus.hidden_thread_interacted increments hidden_thread_interactions
+## by 1.0 each time it fires.
+func test_hidden_thread_interacted_increments_stat_by_one() -> void:
+	assert_eq(
+		_system.get_tracked_stat(&"hidden_thread_interactions"), 0.0,
+		"hidden_thread_interactions should default to 0.0"
+	)
+	EventBus.hidden_thread_interacted.emit(&"thread_a")
+	EventBus.hidden_thread_interacted.emit(&"thread_b")
+	EventBus.hidden_thread_interacted.emit(&"thread_c")
+	assert_eq(
+		_system.get_tracked_stat(&"hidden_thread_interactions"), 3.0,
+		"Three signal emissions should yield 3.0"
+	)
+
+
+## hidden_clue_acknowledged is a tutorial-side signal and must NOT increment
+## hidden_thread_interactions — only EventBus.hidden_thread_interacted does.
+func test_hidden_clue_acknowledged_does_not_increment_stat() -> void:
+	EventBus.hidden_clue_acknowledged.emit(&"void_protocols_red_label")
+	EventBus.hidden_clue_acknowledged.emit(&"another_clue")
+	assert_eq(
+		_system.get_tracked_stat(&"hidden_thread_interactions"), 0.0,
+		"hidden_clue_acknowledged must not increment hidden_thread_interactions"
+	)
 
 
 func test_secret_ending_priority_over_overlapping_success_endings() -> void:
@@ -388,7 +456,7 @@ func test_ending_stats_snapshot_emitted_before_ending_triggered() -> void:
 # ── 5. Save/load symmetry ──
 
 
-func test_save_data_contains_all_22_stat_keys_and_ending_triggered() -> void:
+func test_save_data_contains_all_stat_keys_and_ending_triggered() -> void:
 	var data: Dictionary = _system.get_save_data()
 	assert_true(data.has("stats"), "save data must have 'stats'")
 	assert_true(data.has("ending_triggered"), "save data must have 'ending_triggered'")
@@ -402,6 +470,7 @@ func test_save_data_contains_all_22_stat_keys_and_ending_triggered() -> void:
 		"haggle_attempts", "haggle_never_used",
 		"days_near_bankruptcy", "rare_items_sold", "market_events_survived",
 		"unique_store_types_owned", "trigger_type_bankruptcy",
+		"hidden_thread_interactions",
 	]
 	for key: String in expected_keys:
 		assert_true(stats.has(key), "stats must include key: %s" % key)

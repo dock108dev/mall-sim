@@ -22,6 +22,12 @@ signal changed()
 
 const DEFAULT_DAY: int = 0
 const DEFAULT_MONEY: int = 0
+const DEFAULT_EMPLOYEE_TRUST: float = 50.0
+const DEFAULT_MANAGER_APPROVAL: float = 0.5
+const TRUST_MIN: float = 0.0
+const TRUST_MAX: float = 100.0
+const APPROVAL_MIN: float = 0.0
+const APPROVAL_MAX: float = 100.0
 
 var active_store_id: StringName = &"":
 	set(value):
@@ -44,6 +50,30 @@ var money: int = DEFAULT_MONEY:
 		money = value
 		_emit_changed()
 
+## Employee trust score (0–100). Mirrored from EmploymentSystem so HUD can
+## read trust through the same GameState contract used for `money` and `day`.
+## Defaults to 50.0 so a fresh GameState (e.g. tests) sits above the 15.0
+## firing floor; EmploymentSystem.start_employment() also seeds 50.0 explicitly.
+var employee_trust: float = DEFAULT_EMPLOYEE_TRUST:
+	set(value):
+		var clamped: float = clampf(value, TRUST_MIN, TRUST_MAX)
+		if is_equal_approx(clamped, employee_trust):
+			return
+		employee_trust = clamped
+		_emit_changed()
+
+## Manager approval score (0–100). Initial value 0.5 matches the issue spec —
+## a low neutral placeholder before any manager event has fired. Distinct from
+## employee_trust: trust is earned through customer interactions, approval
+## through explicit manager-triggered events.
+var manager_approval: float = DEFAULT_MANAGER_APPROVAL:
+	set(value):
+		var clamped: float = clampf(value, APPROVAL_MIN, APPROVAL_MAX)
+		if is_equal_approx(clamped, manager_approval):
+			return
+		manager_approval = clamped
+		_emit_changed()
+
 var flags: Dictionary = {}
 
 # Suppression flag — when true, individual field setters skip emitting so that
@@ -58,6 +88,8 @@ func reset_new_game() -> void:
 	active_store_id = &""
 	day = DEFAULT_DAY
 	money = DEFAULT_MONEY
+	employee_trust = DEFAULT_EMPLOYEE_TRUST
+	manager_approval = DEFAULT_MANAGER_APPROVAL
 	flags.clear()
 	_suppress_emit = false
 	_emit_changed()

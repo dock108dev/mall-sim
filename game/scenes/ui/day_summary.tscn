@@ -167,6 +167,68 @@ layout_mode = 2
 text = ""
 horizontal_alignment = 1
 
+[node name="EmployeeMetricsHeader" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "End of Shift"
+
+[node name="CustomerSatisfactionLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Customer Satisfaction — Steady"
+
+[node name="CustomerSatisfactionBar" type="ProgressBar" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 12)
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+show_percentage = false
+
+[node name="EmployeeTrustLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Employee Trust — Neutral"
+
+[node name="EmployeeTrustBar" type="ProgressBar" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 12)
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+show_percentage = false
+
+[node name="ManagerTrustLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Manager Trust — Neutral"
+
+[node name="ManagerTrustBar" type="ProgressBar" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 12)
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+show_percentage = false
+
+[node name="MistakesLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Mistakes: 0"
+
+[node name="InventoryVarianceLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Inventory Variance: 0.0%"
+
+[node name="DiscrepanciesLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Discrepancies Flagged: 0"
+
+[node name="HiddenThreadSeparator" type="HSeparator" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+visible = false
+
+[node name="HiddenThreadLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+visible = false
+autowrap_mode = 2
+
 [node name="ButtonRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
 layout_mode = 2
 size_flags_horizontal = 4
@@ -191,4 +253,17 @@ text = "Main Menu"
 [node name="ContinueButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(200, 48)
-text = "Next Day"
+text = "Next Day →"
+
+[node name="AutoAdvanceBar" type="ProgressBar" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+show_percentage = false
+
+[node name="AutoAdvanceLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Auto-advancing in 12s"
+horizontal_alignment = 1

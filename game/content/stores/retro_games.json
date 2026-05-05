@@ -18,5 +18,22 @@
     "near_mint",
     "mint"
   ],
-  "untested_badge_label": "Untested"
+  "untested_badge_label": "Untested",
+  "bargain_bin_price_multiplier": 0.35,
+  "new_release_premium_multiplier": 1.15,
+  "max_hold_slots": 5,
+  "hold_duration_days": 3,
+  "zone_slot_ids": {
+    "used_game_wall": [
+      "cart_left_1", "cart_left_2", "cart_left_3", "cart_left_4", "cart_left_5",
+      "cart_left_6", "cart_left_7", "cart_left_8", "cart_left_9", "cart_left_10",
+      "cart_right_1", "cart_right_2", "cart_right_3", "cart_right_4", "cart_right_5",
+      "cart_right_6", "cart_right_7", "cart_right_8", "cart_right_9", "cart_right_10"
+    ],
+    "new_release_wall": ["new_release_1", "new_release_2", "new_release_3"],
+    "old_gen_shelf": ["old_gen_1", "old_gen_2", "old_gen_3", "old_gen_4"],
+    "bargain_bin": ["bargain_1", "bargain_2"],
+    "accessories_rack": ["acc_1", "acc_2", "acc_3", "acc_4", "acc_5"],
+    "new_console_display": ["console_1", "console_2", "console_3", "console_4"]
+  }
 }

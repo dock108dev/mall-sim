@@ -360,7 +360,7 @@ func accepts_category(item_category: String) -> bool:
 ## InteractionPrompt and PlacementHintUI HUD reflect the slot accurately.
 ##
 ## §F-111 — Occupied + outside placement mode renders the stocked item name
-## with the current quantity (e.g. "Sonic the Hedgehog ×1") when
+## with the current quantity (e.g. "Motorway Kings ×1") when
 ## set_display_data has populated _stocked_item_name; otherwise falls back to
 ## the authored slot name. Verb stays empty: pressing E on an already-stocked
 ## slot is a no-op in InventoryPanel._on_interactable_interacted (the open()

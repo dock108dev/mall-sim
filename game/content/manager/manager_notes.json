@@ -1,0 +1,192 @@
+{
+  "type": "manager_notes_data",
+  "manager_name": "Vic Harlow",
+  "trust_tiers": {
+    "cold": {"min": 0.00, "max": 0.24},
+    "neutral": {"min": 0.25, "max": 0.49},
+    "warm": {"min": 0.50, "max": 0.74},
+    "trusted": {"min": 0.75, "max": 1.00}
+  },
+  "tier_notes": {
+    "cold": {
+      "operational": [
+        {
+          "id": "cold_operational_a",
+          "body": "Morning. The floor was a wreck at close — boxes in the aisles, two unfinished price stickers on used carts. Fix the basics or we have a longer conversation."
+        },
+        {
+          "id": "cold_operational_b",
+          "body": "I left the open list on the register. Get it done before we unlock. Twelve years this store has been here; I'm not watching it slide on a clipboard."
+        }
+      ],
+      "sales": [
+        {
+          "id": "cold_sales_a",
+          "body": "Sales were thin yesterday. Either you reset the floor today or I rewrite the schedule. Your call."
+        },
+        {
+          "id": "cold_sales_b",
+          "body": "Numbers are not moving. Reprice the used wall, run someone at the door, do something visible. I'm watching."
+        }
+      ],
+      "staff": [
+        {
+          "id": "cold_staff_a",
+          "body": "Heard you ran someone off again. We don't have benches deep enough for that. Whoever's left covers the gap — make sure they actually do."
+        },
+        {
+          "id": "cold_staff_b",
+          "body": "Two complaints from the back. I don't care who's right. You're the one on the floor. Sort it before open."
+        }
+      ]
+    },
+    "neutral": {
+      "operational": [
+        {
+          "id": "neutral_operational_a",
+          "body": "Yesterday was fine. Not great, not bad. Pull from the back early, sweep the entry mat, and we'll see how today reads."
+        },
+        {
+          "id": "neutral_operational_b",
+          "body": "I logged the safe at 6:40. Float looked right. Keep the open list on the wall — saves us both a conversation later."
+        }
+      ],
+      "sales": [
+        {
+          "id": "neutral_sales_a",
+          "body": "Decent ring count yesterday. The used cart near the door is doing work — keep it stocked all day."
+        },
+        {
+          "id": "neutral_sales_b",
+          "body": "Light on sales. Check the pricing on the older inventory. Sometimes that's all it is."
+        }
+      ],
+      "staff": [
+        {
+          "id": "neutral_staff_a",
+          "body": "Coverage looked thin during the lunch hour. Talk to whoever's on next so we don't run that gap again."
+        },
+        {
+          "id": "neutral_staff_b",
+          "body": "Payroll cleared. People notice when checks land on time — keep doing that."
+        }
+      ]
+    },
+    "warm": {
+      "operational": [
+        {
+          "id": "warm_operational_a",
+          "body": "Floor looked sharp at close. I appreciate that you're staying on top of the resets. Keep it loose today — Tuesday's usually slow."
+        },
+        {
+          "id": "warm_operational_b",
+          "body": "Receiving dock said our order's bumped to before noon. That should buy you a clean afternoon. Use it."
+        }
+      ],
+      "sales": [
+        {
+          "id": "warm_sales_a",
+          "body": "Strong day yesterday. The retro cart by the entrance is paying off. If you need a 10% markdown on the older stock, I'll authorize it."
+        },
+        {
+          "id": "warm_sales_b",
+          "body": "Slow Tuesday. Happens. Try a bundle on the stuff that's been sitting — your call on what."
+        }
+      ],
+      "staff": [
+        {
+          "id": "warm_staff_a",
+          "body": "Crew read good yesterday. Whoever closed left the back tidy — pass that along. Small things matter."
+        },
+        {
+          "id": "warm_staff_b",
+          "body": "If we lose anyone this week I'll put two new candidates in the pool. Don't burn yourself out trying to cover both shifts."
+        }
+      ]
+    },
+    "trusted": {
+      "operational": [
+        {
+          "id": "trusted_operational_a",
+          "body": "I'm at the area meeting all morning. You've got the floor. Open list is the same as Monday's — handle it your way."
+        },
+        {
+          "id": "trusted_operational_b",
+          "body": "Don't bother with the open checklist today. You know the floor better than the form does. Just get us to noon."
+        }
+      ],
+      "sales": [
+        {
+          "id": "trusted_sales_a",
+          "body": "Best week in months. I told the area director about the front-cart approach. They want to talk. Keep going."
+        },
+        {
+          "id": "trusted_sales_b",
+          "body": "Slow day yesterday — happens to every store. I trust your read on what to push today. Don't second-guess yourself."
+        }
+      ],
+      "staff": [
+        {
+          "id": "trusted_staff_a",
+          "body": "Crew likes working your shifts. I notice that. If you need a hand from the pool for the weekend, say the word."
+        },
+        {
+          "id": "trusted_staff_b",
+          "body": "Three weeks straight, payroll clean, no walkouts. That's real management. I've flagged you for the next review cycle."
+        }
+      ]
+    }
+  },
+  "date_overrides": {
+    "day_1": {
+      "id": "note_override_day_1",
+      "body": "First day. RetroVault's been here twelve years and I plan to keep it that way. Punch in at the back, walk the aisles, get a feel for the floor. The clipboard at the register has the open list. I'll check in around lunch.\n\nDon't try to be heroic — just keep customers moving and the shelves honest. We'll talk specifics at the end of the day.\n\n— Vic"
+    },
+    "day_10": {
+      "id": "note_override_day_10",
+      "body": "Ten days in. The mall office sent over the quarterly sales report — we're middle of the pack, which is better than this store has read in a year. Don't get comfortable. The next stretch is where most fill-ins crack. Just keep doing what's working.\n\n— Vic"
+    },
+    "day_20": {
+      "id": "note_override_day_20",
+      "body": "Twenty down, ten to go. Area director swung by the dock last night and asked about you by name — that doesn't happen often. Whatever you're doing on the floor, keep doing it. The last week is where we get evaluated, so don't slack now.\n\n— Vic"
+    }
+  },
+  "unlock_overrides": {
+    "trade_in_intake": {
+      "id": "note_override_unlock_trade_in",
+      "body": "Mall office cleared us for trade-in intake. There's a new station at the counter — used carts, used handhelds, whatever the customer drags in. Quote fair, log it, hold it 24 hours before it hits the floor.\n\nDon't overpay. The margin lives in the back room.\n\n— Vic"
+    },
+    "tournament_events": {
+      "id": "note_override_unlock_tournament",
+      "body": "We're cleared to run weekend tournaments. The schedule rack is on the side of the back office — fill in the slots and the front kiosk will take signups. Tournaments are loss leaders, so don't price the entry like a sale; the win is the foot traffic.\n\n— Vic"
+    },
+    "pricing_authority": {
+      "id": "note_override_unlock_pricing",
+      "body": "You've got pricing authority on used inventory now. That means real authority — if you bury a sticker, it's on you, not me. Use the resolver, watch the trend board, and don't run promotions past close without flagging me.\n\n— Vic"
+    },
+    "supplier_tier_2": {
+      "id": "note_override_unlock_supplier",
+      "body": "Distributor moved us up a tier. New SKUs in the catalog this morning — better margins, but minimum-order rules apply. Read the order screen carefully before you commit. We don't eat dead stock cleanly.\n\n— Vic"
+    },
+    "employee_tradein_certified": {
+      "id": "note_override_unlock_employee_tradein",
+      "body": "By the way — trade-in terminal is yours now. Don't undervalue anything.\n\n— Vic"
+    },
+    "employee_holdlist_access": {
+      "id": "note_override_unlock_employee_holdlist",
+      "body": "Hold list terminal is open to you. Don't move anyone's reservation without asking me first.\n\n— Vic"
+    },
+    "employee_display_authority": {
+      "id": "note_override_unlock_employee_display",
+      "body": "You can set the featured display. Use it.\n\n— Vic"
+    },
+    "employee_closing_certified": {
+      "id": "note_override_unlock_employee_closing",
+      "body": "You're on close tonight. Checklist is behind the register.\n\n— Vic"
+    }
+  },
+  "fallback": {
+    "id": "note_fallback_default",
+    "body": "Walk the floor, run the register, keep the shelves honest. I'll be in the back if you need me.\n\n— Vic"
+  }
+}

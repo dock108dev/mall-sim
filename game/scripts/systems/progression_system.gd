@@ -12,11 +12,19 @@ const CONDITION_ITEMS_SOLD := "customer_purchased_count"
 const CONDITION_REFURB := "refurb_completed_count"
 const CONDITION_HAGGLE := "haggle_completed_count"
 const CONDITION_STORE_SLOTS := "unlocked_store_slots"
+const CONDITION_TRUST := "employee_trust"
+const CONDITION_MANAGER_APPROVAL := "manager_approval"
+const CONDITION_DAYS_WORKED := "days_worked"
+const CONDITION_CLOCK_IN := "clock_in_completed_count"
+const CONDITION_FIRST_RESTOCK := "first_restock_completed_count"
+const CONDITION_MANAGER_TRUST_TIER := "manager_trust_tier_index"
 
 const REWARD_CASH_BONUS := "cash"
 const REWARD_STORE_SLOT := "store_slot"
 const REWARD_FIXTURE_UNLOCK := "fixture_unlock"
 const REWARD_SUPPLIER_TIER := "supplier_tier"
+const REWARD_WAGE_INCREASE := "wage_increase"
+const REWARD_PROMOTION := "promotion"
 
 const STORE_UNLOCK_THRESHOLDS: Array[Dictionary] = [
 	{},
@@ -42,6 +50,12 @@ var _mall_reputation: float = 0.0
 var _unlocked_slot_indices: Dictionary = {}
 var _refurb_count: int = 0
 var _haggle_count: int = 0
+var _days_worked: int = 0
+var _current_trust: float = EmploymentState.DEFAULT_TRUST
+var _current_manager_approval: float = EmploymentState.DEFAULT_APPROVAL
+var _clock_in_count: int = 0
+var _first_restock_count: int = 0
+var _manager_trust_tier_index: int = 0
 
 
 func initialize(
@@ -288,6 +302,22 @@ func _connect_event_bus() -> void:
 		EventBus.refurbishment_completed.connect(_on_refurb_completed)
 	if not EventBus.haggle_completed.is_connected(_on_haggle_done):
 		EventBus.haggle_completed.connect(_on_haggle_done)
+	if not EventBus.trust_changed.is_connected(_on_trust_changed):
+		EventBus.trust_changed.connect(_on_trust_changed)
+	if not EventBus.manager_approval_changed.is_connected(
+		_on_manager_approval_changed
+	):
+		EventBus.manager_approval_changed.connect(_on_manager_approval_changed)
+	if not EventBus.day_ended.is_connected(_on_day_ended_for_employment):
+		EventBus.day_ended.connect(_on_day_ended_for_employment)
+	if not EventBus.shift_started.is_connected(_on_shift_started):
+		EventBus.shift_started.connect(_on_shift_started)
+	if not EventBus.item_stocked.is_connected(_on_item_stocked):
+		EventBus.item_stocked.connect(_on_item_stocked)
+	if not EventBus.manager_trust_changed.is_connected(
+		_on_manager_trust_changed
+	):
+		EventBus.manager_trust_changed.connect(_on_manager_trust_changed)
 
 
 func _load_milestone_definitions() -> void:
@@ -327,6 +357,18 @@ func _get_current_value_for(condition_type: String) -> float:
 			return float(_haggle_count)
 		CONDITION_STORE_SLOTS:
 			return float(_unlocked_store_slots)
+		CONDITION_TRUST:
+			return _current_trust
+		CONDITION_MANAGER_APPROVAL:
+			return _current_manager_approval
+		CONDITION_DAYS_WORKED:
+			return float(_days_worked)
+		CONDITION_CLOCK_IN:
+			return float(_clock_in_count)
+		CONDITION_FIRST_RESTOCK:
+			return float(_first_restock_count)
+		CONDITION_MANAGER_TRUST_TIER:
+			return float(_manager_trust_tier_index)
 	return 0.0
 
 
@@ -345,8 +387,23 @@ func _evaluate_milestones() -> void:
 		)
 		var current: float = _get_current_value_for(condition)
 
-		if current >= threshold:
-			_complete_milestone(milestone)
+		if current < threshold:
+			continue
+		if not _passes_optional_gates(milestone):
+			continue
+		_complete_milestone(milestone)
+
+
+func _passes_optional_gates(milestone: Dictionary) -> bool:
+	var min_day: int = int(milestone.get("min_day", 0))
+	if min_day > 0 and _current_day < min_day:
+		return false
+	var min_tier_index: int = int(
+		milestone.get("min_manager_trust_tier_index", 0)
+	)
+	if min_tier_index > 0 and _manager_trust_tier_index < min_tier_index:
+		return false
+	return true
 
 
 func _complete_milestone(milestone: Dictionary) -> void:
@@ -361,6 +418,14 @@ func _complete_milestone(milestone: Dictionary) -> void:
 	var mdesc: String = str(milestone.get("description", ""))
 	EventBus.milestone_completed.emit(mid, mname, mdesc)
 	EventBus.milestone_reached.emit(StringName(mid))
+	# Forward unlock-type milestones into the unlock-grant pipeline so they
+	# reach UnlockSystem. Cash / reputation / store-slot / supplier-tier
+	# rewards are already applied by _grant_reward above and have their own
+	# downstream consumers — re-emitting milestone_unlocked for those would
+	# double-grant, so the bridge is scoped to unlock-shaped rewards.
+	var reward_type: String = str(milestone.get("reward_type", ""))
+	if reward_type == "unlock" or reward_type == "fixture_unlock":
+		EventBus.milestone_unlocked.emit(StringName(mid), milestone)
 
 
 func _grant_reward(milestone: Dictionary) -> void:
@@ -376,6 +441,10 @@ func _grant_reward(milestone: Dictionary) -> void:
 			_grant_fixture_unlock(str(reward_value))
 		REWARD_SUPPLIER_TIER:
 			_grant_supplier_tier(int(reward_value))
+		REWARD_WAGE_INCREASE:
+			_grant_wage_increase(float(reward_value))
+		REWARD_PROMOTION:
+			_grant_promotion()
 
 
 func _grant_cash_bonus(amount: float) -> void:
@@ -394,6 +463,22 @@ func _grant_fixture_unlock(fixture_id: String) -> void:
 
 func _grant_supplier_tier(tier: int) -> void:
 	_unlocked_supplier_tier = maxi(_unlocked_supplier_tier, tier)
+
+
+func _grant_wage_increase(delta: float) -> void:
+	if delta <= 0.0:
+		return
+	if EmploymentSystem == null or EmploymentSystem.state == null:
+		return
+	EmploymentSystem.state.hourly_wage = max(
+		EmploymentSystem.state.hourly_wage + delta, 0.0
+	)
+
+
+func _grant_promotion() -> void:
+	if EmploymentSystem == null:
+		return
+	EmploymentSystem.end_employment(EmploymentState.STATUS_RETAINED)
 
 
 func _recalculate_mall_reputation() -> void:
@@ -487,3 +572,46 @@ func _on_haggle_done(
 ) -> void:
 	_haggle_count += 1
 	_evaluate_milestones()
+
+
+func _on_trust_changed(delta: float, _reason: String) -> void:
+	_current_trust = clampf(_current_trust + delta, 0.0, 100.0)
+	_evaluate_milestones()
+
+
+func _on_manager_approval_changed(delta: float, _reason: String) -> void:
+	_current_manager_approval = clampf(
+		_current_manager_approval + delta, 0.0, 100.0
+	)
+	_evaluate_milestones()
+
+
+func _on_day_ended_for_employment(_day: int) -> void:
+	_days_worked += 1
+
+
+func _on_shift_started(
+	_store_id: StringName, _timestamp: float, _late: bool
+) -> void:
+	_clock_in_count += 1
+	_evaluate_milestones()
+
+
+func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
+	if _first_restock_count == 0:
+		_first_restock_count = 1
+		_evaluate_milestones()
+
+
+func _on_manager_trust_changed(_delta: float, _reason: String) -> void:
+	_manager_trust_tier_index = _resolve_manager_trust_tier_index()
+	_evaluate_milestones()
+
+
+func _resolve_manager_trust_tier_index() -> int:
+	# Headless test paths boot without /root/ManagerRelationshipManager —
+	# return 0 (cold) when the autoload is absent or pre-Pass-10 binary.
+	var manager: Node = get_node_or_null("/root/ManagerRelationshipManager")
+	if manager == null or not manager.has_method("get_tier_index"):
+		return 0
+	return int(manager.call("get_tier_index"))

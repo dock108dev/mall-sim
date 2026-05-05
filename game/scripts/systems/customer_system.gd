@@ -103,6 +103,24 @@ var _day1_spawn_unlocked: bool = false
 const DAY1_FORCED_SPAWN_FALLBACK_SECONDS: float = 12.0
 var _day1_forced_spawn_timer: Timer = null
 
+## Archetype IDs used by conditional spawn rules. These match the
+## `archetype_id` field on customer profiles in retro_games_customers.json.
+const ARCHETYPE_ANGRY_RETURN: StringName = &"angry_return_customer"
+const ARCHETYPE_SHADY_REGULAR: StringName = &"shady_regular"
+## Per-day cap for shady_regular spawns at this store.
+const SHADY_REGULAR_DAILY_CAP: int = 1
+## Multiplier applied to shady_regular spawn weight in the AFTERNOON DayPhase
+## (the closing-hour "low traffic, staff distracted" window).
+const SHADY_REGULAR_LATE_AFTERNOON_WEIGHT: float = 3.0
+## Tracks whether at least one defective sale has been observed earlier in the
+## current day. Gates angry_return_customer spawns. Reset on day_started.
+var _defective_sale_today: bool = false
+## Per-archetype spawn counters for the current day. Resets on day_started.
+var _archetype_spawn_count_today: Dictionary = {}
+## Cached current day phase (TimeSystem.DayPhase int) so spawn-weight rules can
+## consult phase without re-fetching from TimeSystem every roll.
+var _current_day_phase: int = 0
+
 
 func _ready() -> void:
 	_day1_forced_spawn_timer = Timer.new()
@@ -184,6 +202,8 @@ func spawn_customer(
 ) -> void:
 	if _is_day1_spawn_blocked():
 		return
+	if profile != null and not is_profile_currently_spawnable(profile):
+		return
 	if _active_customers.size() >= _max_customers:
 		push_warning(
 			"CustomerSystem: max customers reached, ignoring spawn"
@@ -242,6 +262,7 @@ func spawn_customer(
 	)
 	customer.despawn_requested.connect(_on_customer_despawn_requested)
 	_active_customers.append(customer)
+	_record_archetype_spawn(profile)
 
 	if (
 		GameManager.get_current_day() == 1
@@ -339,6 +360,109 @@ func get_spawn_pool() -> Array[CustomerTypeDefinition]:
 	if _spawn_pool_dirty:
 		_rebuild_spawn_pool()
 	return _spawn_pool_cache
+
+
+## Returns true when the supplied profile may currently spawn at this store.
+## Applies the per-day archetype gates:
+##   - angry_return_customer: requires defective_sale_occurred earlier today.
+##   - shady_regular: capped at SHADY_REGULAR_DAILY_CAP per day.
+## Profiles without an archetype_id (or with an unrecognized one) always pass.
+func is_profile_currently_spawnable(
+	profile: CustomerTypeDefinition
+) -> bool:
+	if profile == null:
+		return false
+	var archetype: StringName = profile.archetype_id
+	if archetype == ARCHETYPE_ANGRY_RETURN:
+		return _defective_sale_today
+	if archetype == ARCHETYPE_SHADY_REGULAR:
+		var spawned: int = int(
+			_archetype_spawn_count_today.get(archetype, 0)
+		)
+		return spawned < SHADY_REGULAR_DAILY_CAP
+	return true
+
+
+## Returns the spawn-weight multiplier for the supplied profile under current
+## conditions. Combines:
+##   - PlatformSystem shortage boost (driven by platform_affinities).
+##   - shady_regular phase bias (3× during AFTERNOON, the closing-hour window).
+## Always returns >= 0.0; profiles that are gate-rejected return 0.0.
+func get_profile_spawn_weight(
+	profile: CustomerTypeDefinition
+) -> float:
+	if profile == null:
+		return 0.0
+	if not is_profile_currently_spawnable(profile):
+		return 0.0
+	var weight: float = profile.spawn_weight
+	if weight <= 0.0:
+		weight = 1.0
+	var platform_system: Node = get_node_or_null(
+		"/root/PlatformSystem"
+	)
+	if platform_system != null and platform_system.has_method(
+		"get_spawn_weight_modifier"
+	):
+		weight *= float(
+			platform_system.get_spawn_weight_modifier(profile)
+		)
+	var customization: Node = get_node_or_null(
+		"/root/StoreCustomizationSystem"
+	)
+	if customization != null and customization.has_method(
+		"get_spawn_weight_bonus"
+	):
+		weight *= float(
+			customization.call("get_spawn_weight_bonus", profile.archetype_id)
+		)
+	if (
+		profile.archetype_id == ARCHETYPE_SHADY_REGULAR
+		and _current_day_phase == int(TimeSystem.DayPhase.AFTERNOON)
+	):
+		weight *= SHADY_REGULAR_LATE_AFTERNOON_WEIGHT
+	return weight
+
+
+## Picks a profile from the supplied list using current spawn weights and
+## archetype gates. Returns null if no candidate is currently eligible.
+func pick_spawn_profile(
+	profiles: Array
+) -> CustomerTypeDefinition:
+	var candidates: Array[CustomerTypeDefinition] = []
+	var weights: Array[float] = []
+	var total: float = 0.0
+	for entry: Variant in profiles:
+		var profile: CustomerTypeDefinition = (
+			entry as CustomerTypeDefinition
+		)
+		if profile == null:
+			continue
+		var weight: float = get_profile_spawn_weight(profile)
+		if weight <= 0.0:
+			continue
+		candidates.append(profile)
+		weights.append(weight)
+		total += weight
+	if candidates.is_empty() or total <= 0.0:
+		return null
+	var roll: float = randf() * total
+	var running: float = 0.0
+	for index: int in range(candidates.size()):
+		running += weights[index]
+		if roll <= running:
+			return candidates[index]
+	return candidates[candidates.size() - 1]
+
+
+func _record_archetype_spawn(profile: CustomerTypeDefinition) -> void:
+	if profile == null or profile.archetype_id == &"":
+		return
+	var archetype: StringName = profile.archetype_id
+	var count: int = int(
+		_archetype_spawn_count_today.get(archetype, 0)
+	)
+	_archetype_spawn_count_today[archetype] = count + 1
 
 
 ## Returns purchase intent for a category, incorporating market event bonuses
@@ -441,6 +565,10 @@ func _connect_signals() -> void:
 		EventBus.market_event_expired.connect(_on_market_event_expired)
 	if not EventBus.item_stocked.is_connected(_on_item_stocked):
 		EventBus.item_stocked.connect(_on_item_stocked)
+	if not EventBus.defective_sale_occurred.is_connected(
+		_on_defective_sale_occurred
+	):
+		EventBus.defective_sale_occurred.connect(_on_defective_sale_occurred)
 
 
 func _update_shopper_lod() -> void:
@@ -712,7 +840,10 @@ func _on_day1_forced_spawn_timer_timeout() -> void:
 	var pool: Array[CustomerTypeDefinition] = get_spawn_pool()
 	if pool.is_empty():
 		return
-	spawn_customer(pool.pick_random(), _store_id)
+	var profile: CustomerTypeDefinition = pick_spawn_profile(pool)
+	if profile == null:
+		return
+	spawn_customer(profile, _store_id)
 
 
 ## Returns true when the Day 1 stocking gate should suppress this spawn.
@@ -758,6 +889,8 @@ func _on_day_started(day: int) -> void:
 	_spawn_check_timer = 0.0
 	_lod_timer = 0.0
 	_current_day_of_week = (day - 1) % 7
+	_defective_sale_today = false
+	_archetype_spawn_count_today.clear()
 	_refresh_current_archetype_weights()
 
 
@@ -828,9 +961,14 @@ func _on_speed_changed(new_speed: float) -> void:
 
 
 func _on_day_phase_changed(new_phase: int) -> void:
+	_current_day_phase = new_phase
 	_current_archetype_weights = (
 		ShopperArchetypeConfig.get_weights_for_phase(new_phase)
 	)
+
+
+func _on_defective_sale_occurred(_item_id: String, _reason: String) -> void:
+	_defective_sale_today = true
 
 
 func _request_one_shopper_leave() -> void:

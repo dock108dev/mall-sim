@@ -1,4 +1,4 @@
-## Tracks 22 game statistics and evaluates ending eligibility via priority-ordered scan.
+## Tracks 23 game statistics and evaluates ending eligibility via priority-ordered scan.
 class_name EndingEvaluatorSystem
 extends Node
 
@@ -127,6 +127,8 @@ func _reset_stats() -> void:
 		"market_events_survived": 0.0,
 		"unique_store_types_owned": 0.0,
 		"trigger_type_bankruptcy": 0.0,
+		"mystery_artifacts_collected": 0.0,
+		"hidden_thread_interactions": 0.0,
 	}
 
 
@@ -146,6 +148,26 @@ func _connect_signals() -> void:
 	EventBus.bankruptcy_declared.connect(_on_bankruptcy_declared)
 	EventBus.player_quit_to_end.connect(_on_player_quit_to_end)
 	EventBus.completion_reached.connect(_on_completion_reached)
+	EventBus.hidden_thread_interacted.connect(_on_hidden_thread_interacted)
+
+
+func _on_hidden_thread_interacted(_thread_id: StringName) -> void:
+	_stats["hidden_thread_interactions"] = (
+		float(_stats.get("hidden_thread_interactions", 0.0)) + 1.0
+	)
+	var system: Node = _get_hidden_thread_system()
+	if system == null:
+		return
+	_stats["mystery_artifacts_collected"] = float(
+		system.get_mystery_artifacts_count()
+	)
+
+
+func _get_hidden_thread_system() -> Node:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null:
+		return null
+	return tree.root.get_node_or_null("HiddenThreadSystemSingleton")
 
 
 func _on_customer_purchased(
@@ -402,9 +424,9 @@ func _load_config() -> void:
 			continue
 		_ending_definitions.append(entry.duplicate())
 	_ending_definitions.sort_custom(_sort_by_priority)
-	if _ending_definitions.size() != 13:
+	if _ending_definitions.size() != 14:
 		push_error(
-			"EndingEvaluatorSystem: expected 13 ending definitions, found %d"
+			"EndingEvaluatorSystem: expected 14 ending definitions, found %d"
 			% _ending_definitions.size()
 		)
 

@@ -1,18 +1,17 @@
-## GUT integration test: Retro Games item catalog (ISSUE-011).
-## Verifies the catalog has exactly 20 entries, all required fields present,
-## 5 distinct console families, no duplicate IDs, and all items belong to
-## the retro_games store type.
+## GUT integration test: Retro Games item catalog.
+## Verifies the catalog has the expected size, all required fields present,
+## the canonical 2005-era console families, no duplicate IDs, and all items
+## belong to the retro_games store type.
 extends GutTest
 
 const CATALOG_PATH := "res://game/content/items/retro_games.json"
-const MIN_ITEM_COUNT := 25
+const MIN_ITEM_COUNT := 50
 const EXPECTED_CONSOLE_FAMILIES: Array[String] = [
-	"Canopy 64",
-	"Neo Spark",
-	"PC Booster Canopy",
-	"PC Booster Neo Spark",
-	"SuperVec 16",
-	"Meteor Drive",
+	"Neo Ignite",
+	"Canopy Wave",
+	"VecForce HD",
+	"Wave Pocket",
+	"Ignite Go",
 ]
 const REQUIRED_FIELDS: Array[String] = [
 	"id", "item_name", "store_type", "category",

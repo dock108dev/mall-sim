@@ -101,6 +101,33 @@ const CONDITION_ORDER: PackedStringArray = [
 @export var launch_spike_multiplier: float = 1.0
 @export var supplier_tier: int = 0
 @export var platform: String = ""
+## Canonical platform enum identifier (links to PlatformDefinition). Distinct
+## from the loose `platform` display label.
+@export var platform_id: StringName = &""
+## First game-day of the launch pricing window (0 = no launch window).
+@export var launch_window_start_day: int = 0
+## Last game-day of the launch pricing window (0 = no launch window).
+@export var launch_window_end_day: int = 0
+## Whether this item has constrained supply at launch (drives spawn/restock).
+@export var supply_constrained: bool = false
+## Named decay profile key. Used by pricing system to select a price curve.
+## Valid values: "standard", "annual_sports", "evergreen",
+##               "launch_spike", "launch_spike_hardware", "collector_market".
+@export var decay_profile: StringName = &"standard"
+## In-game year this edition represents. Required by `annual_sports` decay
+## profile to compute `age = current_year - edition_year`. 0 means unset.
+@export var edition_year: int = 0
+## Groups same franchise across years for `annual_sports` step-function
+## detection ("a newer edition exists in catalog"). Empty = not part of a
+## tracked series.
+@export var edition_series: StringName = &""
+## ID of the predecessor title this item is a direct sequel to. Drives the
+## anticipation multiplier when a successor is announced in-game.
+@export var sequel_of: String = ""
+## Default trade-in offer price (what the store pays a customer for this item).
+@export var trade_in_base: float = 0.0
+## Suggested used (pre-owned) sell price; 0.0 = derive from base_price.
+@export var used_price: float = 0.0
 @export var region: String = ""
 @export var suspicious_chance: float = 0.0
 ## Array of warranty tier Dictionaries ({id, label, margin_percent, acceptance_probability}).

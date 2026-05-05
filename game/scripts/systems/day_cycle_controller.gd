@@ -4,6 +4,8 @@ class_name DayCycleController
 extends Node
 
 
+const CLOSING_CERT_UNLOCK_ID: StringName = &"employee_closing_certified"
+
 var _time_system: TimeSystem
 var _economy_system: EconomySystem
 var _staff_system: StaffSystem
@@ -12,12 +14,14 @@ var _ending_evaluator: EndingEvaluatorSystem
 var _performance_report_system: PerformanceReportSystem
 var _day_manager: DayManager
 var _day_summary: DaySummary
+var _closing_checklist: ClosingChecklist
 var _mall_overview: Control
 var _seasonal_event_system: SeasonalEventSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _pending_report: PerformanceReport
 var _awaiting_acknowledgement: bool = false
 var _last_closed_day: int = 0
+var _pending_checklist_day: int = 0
 var _ensure_panels_callback: Callable
 var _save_manager: SaveManager = null
 
@@ -46,6 +50,12 @@ func set_day_summary(panel: DaySummary) -> void:
 	_day_summary = panel
 	if is_instance_valid(panel):
 		panel.dismissed.connect(_on_day_summary_dismissed)
+
+
+func set_closing_checklist(panel: ClosingChecklist) -> void:
+	_closing_checklist = panel
+	if is_instance_valid(panel):
+		panel.completed.connect(_on_closing_checklist_completed)
 
 
 ## The hub's MallOverview Control is hidden while the Day Summary modal is
@@ -119,6 +129,30 @@ func _on_day_ended(day: int) -> void:
 
 	GameManager.change_state(GameManager.State.DAY_SUMMARY)
 	_awaiting_acknowledgement = true
+
+	if _should_run_closing_checklist():
+		_pending_checklist_day = day
+		_closing_checklist.open_for_day(day)
+		return
+	_show_day_summary(day)
+
+
+## Returns true when the player has earned the closing-certification unlock
+## AND the runtime checklist panel is mounted. Without the unlock, the day
+## flows straight to the summary as before.
+func _should_run_closing_checklist() -> bool:
+	if not is_instance_valid(_closing_checklist):
+		return false
+	var unlocks: Node = get_node_or_null("/root/UnlockSystemSingleton")
+	if unlocks == null or not unlocks.has_method("is_unlocked"):
+		return false
+	return bool(unlocks.call("is_unlocked", CLOSING_CERT_UNLOCK_ID))
+
+
+func _on_closing_checklist_completed(day: int) -> void:
+	if day != _pending_checklist_day:
+		return
+	_pending_checklist_day = 0
 	_show_day_summary(day)
 
 
@@ -207,6 +241,11 @@ func _show_day_summary(day: int) -> void:
 		customers_served = (
 			_performance_report_system.get_daily_customers_served()
 		)
+	var shift_summary: Dictionary = {}
+	var shift: Node = get_node_or_null("/root/ShiftSystem")
+	if shift != null and shift.has_method("get_shift_summary"):
+		shift_summary = shift.call("get_shift_summary")
+
 	var payload: Dictionary = {
 		"day": day,
 		"total_revenue": summary.get("total_revenue", 0.0),
@@ -225,6 +264,7 @@ func _show_day_summary(day: int) -> void:
 		"inventory_remaining": inventory_remaining,
 		"backroom_inventory_remaining": backroom_remaining,
 		"shelf_inventory_remaining": shelf_remaining,
+		"shift_summary": shift_summary,
 	}
 	EventBus.day_closed.emit(day, payload)
 	EventBus.publish_day_end_summary(payload)

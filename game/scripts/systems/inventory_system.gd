@@ -3,6 +3,11 @@
 class_name InventorySystem
 extends Node
 
+## Location string for items returned by customers and accepted into the
+## back-room damaged bin. Damaged-bin items are not resold; the bin is the
+## terminal location for a returned defective copy.
+const DAMAGED_BIN_LOCATION: String = "back_room_damaged_bin"
+
 var _items: Dictionary = {}
 var _stock: Dictionary = {}
 var _item_store_ids: Dictionary = {}
@@ -419,6 +424,40 @@ func get_backroom_items() -> Array[ItemInstance]:
 				_backroom_cache.append(item)
 		_backroom_cache_dirty = false
 	return _backroom_cache
+
+
+## Returns every item currently sitting in the back-room damaged bin. Damaged
+## bin items are excluded from resale paths (no shelf placement, no checkout
+## stock lookup); ReturnsSystem reconciles the bin contents against its
+## resolved-return ledger to surface inventory_variance_noted when the two
+## diverge.
+func get_damaged_bin_items() -> Array[ItemInstance]:
+	var result: Array[ItemInstance] = []
+	for item: ItemInstance in _items.values():
+		if item.current_location == DAMAGED_BIN_LOCATION:
+			result.append(item)
+	return result
+
+
+## Moves an existing item into the damaged bin. Returns false when the
+## instance is unknown so callers can surface the integrity error.
+func move_to_damaged_bin(instance_id: String) -> bool:
+	if not _items.has(instance_id):
+		push_warning(
+			"InventorySystem: move_to_damaged_bin missing instance '%s'"
+			% instance_id
+		)
+		return false
+	var item: ItemInstance = _items[instance_id]
+	if item.current_location.begins_with("shelf:"):
+		_remove_shelf_assignment_for_item(instance_id)
+	item.current_location = DAMAGED_BIN_LOCATION
+	_invalidate_caches()
+	EventBus.inventory_changed.emit()
+	var sid: StringName = _get_store_id_for_item(item)
+	if not sid.is_empty():
+		EventBus.inventory_updated.emit(sid)
+	return true
 
 
 func get_shelf_items() -> Array[ItemInstance]:

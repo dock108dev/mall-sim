@@ -11,12 +11,14 @@ const SLIDER_STEP: float = 0.25
 const STICKER_MAX_MULTIPLIER: float = 1.5
 const OUTCOME_FLASH_DURATION: float = 0.4
 const OUTCOME_HOLD_DURATION: float = 0.6
+const RESULT_DISPLAY_DURATION: float = 3.0
 
 var _is_open: bool = false
 var _anim_tween: Tween
 var _feedback_tween: Tween
 var _close_tween: Tween
 var _timer_active: bool = false
+var _showing_result: bool = false
 var _time_remaining: float = 0.0
 var _time_per_turn: float = 10.0
 var _sticker_price: float = 0.0
@@ -24,6 +26,8 @@ var _item_cost: float = 0.0
 var _current_customer_offer: float = 0.0
 var _haggle_system: HaggleSystem = null
 var _relay_actions_to_system: bool = false
+var _result_timer: Timer = null
+var _card_populated: bool = false
 
 @onready var _customer_portrait: TextureRect = (
 	$Margin/VBox/TopRow/CustomerInfo/CustomerPortrait
@@ -64,14 +68,35 @@ var _relay_actions_to_system: bool = false
 @onready var _reject_button: Button = (
 	$Margin/VBox/ButtonRow/RejectButton
 )
+@onready var _archetype_badge: PanelContainer = (
+	$Margin/VBox/TopRow/ArchetypeBadge
+)
+@onready var _archetype_label: Label = (
+	$Margin/VBox/TopRow/ArchetypeBadge/ArchetypeLabel
+)
+@onready var _context_label: Label = (
+	$Margin/VBox/ContextLabel
+)
+@onready var _reasoning_label: RichTextLabel = (
+	$Margin/VBox/ReasoningLabel
+)
+@onready var _result_label: Label = (
+	$Margin/VBox/ResultLabel
+)
 
 
 func _ready() -> void:
 	visible = false
+	DecisionCardStyle.apply_reasoning_style(_reasoning_label)
 	_accept_button.pressed.connect(_on_accept_pressed)
 	_counter_button.pressed.connect(_on_counter_pressed)
 	_reject_button.pressed.connect(_on_reject_pressed)
 	_price_slider.value_changed.connect(_on_slider_value_changed)
+	_result_timer = Timer.new()
+	_result_timer.one_shot = true
+	_result_timer.wait_time = RESULT_DISPLAY_DURATION
+	_result_timer.timeout.connect(_on_result_timer_timeout)
+	add_child(_result_timer)
 	EventBus.haggle_requested.connect(_on_haggle_requested)
 	EventBus.panel_opened.connect(_on_panel_opened)
 
@@ -198,9 +223,108 @@ func show_customer_counter(
 func hide_negotiation() -> void:
 	_timer_active = false
 	_is_open = false
+	_showing_result = false
+	_card_populated = false
+	if _result_timer:
+		_result_timer.stop()
+	if _result_label:
+		_result_label.visible = false
+	if _archetype_badge:
+		_archetype_badge.visible = false
+	if _context_label:
+		_context_label.visible = false
+	if _reasoning_label:
+		_reasoning_label.visible = false
 	PanelAnimator.kill_tween(_anim_tween)
 	_anim_tween = PanelAnimator.slide_out(self, Vector2.DOWN)
 	EventBus.panel_closed.emit(PANEL_NAME)
+
+
+## Augments the haggle panel with archetype label, context, reasoning, and a
+## consequence-preview hint on the action buttons. All keys are optional —
+## omit a key to skip that surface.
+##
+## Expected keys:
+##   archetype_id    : StringName — color tier
+##   archetype_label : String     — text shown in the badge
+##   context         : String     — 1-sentence mood / situation
+##   reasoning       : String     — 1-sentence italic hint
+##   accept_consequence : String  — secondary line on Accept button
+##   counter_consequence: String  — secondary line on Counter button
+##   reject_consequence : String  — secondary line on Reject button
+func populate_customer_card(customer_data: Dictionary) -> void:
+	_card_populated = true
+	var archetype_id: StringName = StringName(
+		str(customer_data.get("archetype_id", ""))
+	)
+	var archetype_label: String = str(
+		customer_data.get("archetype_label", "")
+	)
+	var context_text: String = str(customer_data.get("context", ""))
+	var reasoning_text: String = str(customer_data.get("reasoning", ""))
+
+	if not archetype_label.is_empty():
+		_archetype_label.text = archetype_label.to_upper()
+		_archetype_badge.visible = true
+		DecisionCardStyle.apply_archetype_badge_style(
+			_archetype_badge, _archetype_label, archetype_id
+		)
+	else:
+		_archetype_badge.visible = false
+
+	if context_text.is_empty():
+		_context_label.visible = false
+	else:
+		_context_label.text = context_text
+		_context_label.visible = true
+
+	if reasoning_text.is_empty():
+		_reasoning_label.visible = false
+	else:
+		# §F-129 — `_reasoning_label` has `bbcode_enabled = true`. Escape
+		# `[` → `[lb]` so a future caller that wires save-derived or
+		# runtime-typed text through `customer_data["reasoning"]` cannot
+		# inject BBCode tags ([url=...], [color], …) into the label. Mirrors
+		# the same defense-in-depth on `CheckoutPanel._set_reasoning_text`.
+		_reasoning_label.text = "[i]%s[/i]" % reasoning_text.replace(
+			"[", "[lb]"
+		)
+		_reasoning_label.visible = true
+
+	var accept_consequence: String = str(
+		customer_data.get("accept_consequence", "")
+	)
+	var counter_consequence: String = str(
+		customer_data.get("counter_consequence", "")
+	)
+	var reject_consequence: String = str(
+		customer_data.get("reject_consequence", "")
+	)
+	_accept_button.tooltip_text = accept_consequence
+	_counter_button.tooltip_text = counter_consequence
+	_reject_button.tooltip_text = reject_consequence
+
+
+## Transitions the haggle panel into a brief Result state. Auto-dismisses after
+## RESULT_DISPLAY_DURATION or on any subsequent interaction.
+func show_result(resolution_text: String) -> void:
+	if resolution_text.is_empty():
+		return
+	_showing_result = true
+	_set_buttons_disabled(true)
+	_result_label.text = resolution_text
+	_result_label.visible = true
+	if _result_timer:
+		_result_timer.stop()
+		_result_timer.start()
+
+
+func is_card_populated() -> bool:
+	return _card_populated
+
+
+func is_showing_result() -> bool:
+	return _showing_result
 
 
 ## Shows outcome flash then closes: green for sale, red for walkaway.
@@ -411,3 +535,8 @@ func _on_negotiation_failed() -> void:
 
 func _on_session_state_changed(session: HaggleSession) -> void:
 	update_from_session(session)
+
+
+func _on_result_timer_timeout() -> void:
+	if _is_open:
+		hide_negotiation()

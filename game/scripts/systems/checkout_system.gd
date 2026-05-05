@@ -10,6 +10,15 @@ const ELECTRONICS_STORE_TYPE: String = "electronics"
 const CHECKOUT_DURATION: float = 2.0
 const GENEROUS_THRESHOLD: float = 0.75
 const FAIR_THRESHOLD_HIGH: float = 1.25
+## Minimum sale price for the bundle suggestion to surface. Below this the
+## bundle ask reads as low-effort upsell rather than a meaningful add-on.
+const BUNDLE_HIGH_VALUE_THRESHOLD: float = 30.0
+const BUNDLE_UNLOCK_ID: StringName = &"employee_stocking_trained"
+const ACCESSORY_CATEGORY: String = "accessories"
+## Item conditions that flag a sale as defective. Selling a copy in this
+## condition arms the angry-return spawn gate via
+## EventBus.defective_sale_occurred.
+const DEFECTIVE_CONDITIONS: Array[String] = ["poor", "damaged"]
 
 var _economy_system: EconomySystem = null
 var _inventory_system: InventorySystem = null
@@ -75,6 +84,7 @@ func set_checkout_panel(panel: CheckoutPanel) -> void:
 	_checkout_panel = panel
 	_checkout_panel.sale_accepted.connect(_on_sale_accepted)
 	_checkout_panel.sale_declined.connect(_on_sale_declined)
+	_checkout_panel.bundle_suggested.connect(_on_bundle_suggested)
 
 
 func set_market_value_system(system: MarketValueSystem) -> void:
@@ -310,6 +320,106 @@ func _show_checkout_panel() -> void:
 	EventBus.checkout_started.emit(
 		items as Array, _active_customer
 	)
+	_populate_checkout_card(item_name)
+
+
+## Builds the customer-decision-card payload from the active customer / item
+## and pushes it into the checkout panel. The panel is responsible for the
+## visual presentation; this is the data binding boundary.
+func _populate_checkout_card(item_name: String) -> void:
+	if _checkout_panel == null:
+		return
+	if _active_customer == null or _active_customer.profile == null:
+		return
+	var profile: CustomerTypeDefinition = _active_customer.profile
+	var archetype: Dictionary = CheckoutPanel.derive_archetype_label(profile)
+	var sticker: float = _active_item.get_current_value()
+	if _market_value_system:
+		sticker = _market_value_system.calculate_item_value(_active_item)
+	var data: Dictionary = {
+		"archetype_id": archetype.get("archetype_id", &""),
+		"archetype_label": archetype.get("label", ""),
+		"want": _build_want_text(item_name, profile),
+		"context": _build_context_text(profile),
+		"reasoning": "",
+		"offer_price": _active_offer,
+		"sticker_price": sticker,
+		"rep_delta": "+1 Rep",
+		"decline_label": "Customer leaves, −Rep",
+	}
+	var bundle: Dictionary = _build_bundle_data()
+	if not bundle.is_empty():
+		data["bundle"] = bundle
+	_checkout_panel.populate_customer_card(data)
+
+
+func _build_want_text(
+	item_name: String, profile: CustomerTypeDefinition
+) -> String:
+	if profile.customer_name.is_empty():
+		return "Wants the %s." % item_name
+	return "%s wants the %s." % [profile.customer_name, item_name]
+
+
+func _build_context_text(profile: CustomerTypeDefinition) -> String:
+	if profile.mood_tags.is_empty():
+		return ""
+	var primary_mood: String = String(profile.mood_tags[0]).replace("_", " ")
+	var budget: Array[float] = profile.budget_range
+	if budget.size() >= 2 and budget[1] > 0.0:
+		return "Mood: %s — budget around $%.0f–$%.0f." % [
+			primary_mood, budget[0], budget[1],
+		]
+	return "Mood: %s." % primary_mood
+
+
+## Builds the bundle-suggestion dict shown on the customer card. Returns empty
+## when the unlock is not granted, the active item is below the high-value
+## threshold, or no eligible accessory exists in inventory.
+func _build_bundle_data() -> Dictionary:
+	if _active_item == null or _active_item.definition == null:
+		return {}
+	if _active_offer < BUNDLE_HIGH_VALUE_THRESHOLD:
+		return {}
+	if not UnlockSystemSingleton.is_unlocked(BUNDLE_UNLOCK_ID):
+		return {}
+	var accessory: ItemInstance = _find_eligible_bundle_accessory()
+	if accessory == null or accessory.definition == null:
+		return {}
+	var accessory_price: float = accessory.get_current_value()
+	if _market_value_system:
+		accessory_price = _market_value_system.calculate_item_value(accessory)
+	return {
+		"id": accessory.instance_id,
+		"label": "Suggest Bundle: +%s" % accessory.definition.item_name,
+		"consequence": "+$%.2f if accepted | −0.5 Rep if declined" % accessory_price,
+		"price": accessory_price,
+	}
+
+
+func _find_eligible_bundle_accessory() -> ItemInstance:
+	if _inventory_system == null or _active_item == null \
+			or _active_item.definition == null:
+		return null
+	var store_type: String = _active_item.definition.store_type
+	var best: ItemInstance = null
+	var best_margin: float = -INF
+	for instance: ItemInstance in _inventory_system._items.values():
+		if instance == null or instance.definition == null:
+			continue
+		if instance.instance_id == _active_item.instance_id:
+			continue
+		if instance.definition.store_type != store_type:
+			continue
+		if instance.definition.category != ACCESSORY_CATEGORY:
+			continue
+		var price: float = instance.get_current_value()
+		var wholesale: float = instance.definition.base_price
+		var margin: float = price - wholesale
+		if margin > best_margin:
+			best_margin = margin
+			best = instance
+	return best
 
 
 func _should_show_warranty() -> bool:
@@ -387,6 +497,26 @@ func _on_sale_declined() -> void:
 	_complete_checkout()
 
 
+## Bundle press: treat as accept with the bundle accessory's price added on
+## top, and remove the accessory from inventory so the upsell is real.
+func _on_bundle_suggested() -> void:
+	if _checkout_panel == null:
+		return
+	if not _active_customer or not _active_item:
+		return
+	var bundle: Dictionary = _checkout_panel.get_active_bundle()
+	if bundle.is_empty():
+		return
+	var bundle_id: String = str(bundle.get("id", ""))
+	var bundle_price: float = float(bundle.get("price", 0.0))
+	if bundle_id.is_empty() or bundle_price <= 0.0:
+		return
+	if _inventory_system != null and _inventory_system._items.has(bundle_id):
+		_inventory_system.remove_item(bundle_id)
+	_active_offer += bundle_price
+	initiate_sale(_active_customer, _active_item, _active_offer)
+
+
 func _on_negotiation_started(
 	item_name: String,
 	item_condition: String,
@@ -410,6 +540,30 @@ func _on_negotiation_started(
 		sticker_price, customer_offer, max_rounds,
 		turn_time, cust_name,
 	)
+	_populate_haggle_card(sticker_price, customer_offer)
+
+
+func _populate_haggle_card(
+	sticker_price: float, customer_offer: float
+) -> void:
+	if _haggle_panel == null:
+		return
+	if _active_customer == null or _active_customer.profile == null:
+		return
+	var profile: CustomerTypeDefinition = _active_customer.profile
+	var archetype: Dictionary = CheckoutPanel.derive_archetype_label(profile)
+	var data: Dictionary = {
+		"archetype_id": archetype.get("archetype_id", &""),
+		"archetype_label": archetype.get("label", ""),
+		"context": _build_context_text(profile),
+		"reasoning": "",
+		"accept_consequence": "Take $%.2f — close the sale." % customer_offer,
+		"counter_consequence": (
+			"Push back — they may walk if you go above $%.2f." % sticker_price
+		),
+		"reject_consequence": "Walk away — −2 Rep.",
+	}
+	_haggle_panel.populate_customer_card(data)
 
 
 func _on_haggle_panel_accept() -> void:
@@ -464,7 +618,12 @@ func _on_haggle_accepted(final_price: float) -> void:
 	_active_offer = final_price
 	_is_haggling = false
 	if _haggle_panel and _haggle_panel.is_open():
-		_haggle_panel.show_outcome(true)
+		if _haggle_panel.is_card_populated():
+			_haggle_panel.show_result(
+				"Deal closed at $%.2f — handshake delivered." % final_price
+			)
+		else:
+			_haggle_panel.show_outcome(true)
 	initiate_sale(_active_customer, _active_item, _active_offer)
 
 
@@ -475,7 +634,12 @@ func _on_haggle_failed() -> void:
 func _finish_haggle() -> void:
 	_is_haggling = false
 	if _haggle_panel and _haggle_panel.is_open():
-		_haggle_panel.show_outcome(false)
+		if _haggle_panel.is_card_populated():
+			_haggle_panel.show_result(
+				"They walked away. Reputation took a hit."
+			)
+		else:
+			_haggle_panel.show_outcome(false)
 	_complete_checkout()
 
 
@@ -509,6 +673,10 @@ func _execute_sale() -> void:
 	EventBus.customer_purchased.emit(
 		store_id, StringName(item_id), _active_offer, cust_id
 	)
+	if _active_item.condition in DEFECTIVE_CONDITIONS:
+		EventBus.defective_sale_occurred.emit(
+			item_id, _active_item.condition
+		)
 
 
 func _is_rental_transaction() -> bool:
@@ -689,10 +857,15 @@ func _complete_checkout() -> void:
 		_checkout_panel
 		and _checkout_panel.is_open()
 		and not _checkout_panel.is_showing_receipt()
+		and not _checkout_panel.is_showing_result()
 	):
 		_checkout_panel.hide_checkout()
 		EventBus.panel_closed.emit("checkout")
-	if _haggle_panel and _haggle_panel.is_open():
+	if (
+		_haggle_panel
+		and _haggle_panel.is_open()
+		and not _haggle_panel.is_showing_result()
+	):
 		_haggle_panel.hide_negotiation()
 		EventBus.panel_closed.emit("haggle")
 	EventBus.queue_advanced.emit(_register_queue.get_size())

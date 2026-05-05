@@ -1,4 +1,4 @@
-## Golden-path coverage: each of the 13 defined endings is reachable from a clean
+## Golden-path coverage: each of the 14 defined endings is reachable from a clean
 ## EndingEvaluatorSystem by accumulating only the stats its criteria require.
 extends GutTest
 
@@ -163,6 +163,7 @@ func test_the_fair_dealer() -> void:
 func test_broke_even() -> void:
 	_advance_days(30)
 	EventBus.money_changed.emit(0.0, 50.0)
+	EventBus.hidden_thread_interacted.emit(&"any_thread")
 	assert_eq(
 		_system.get_tracked_stat(&"cumulative_revenue"),
 		0.0,
@@ -181,6 +182,7 @@ func test_the_comfortable_middle() -> void:
 	_advance_days(30)
 	_accumulate_revenue(5000.0, 100.0)
 	EventBus.money_changed.emit(0.0, 200.0)
+	EventBus.hidden_thread_interacted.emit(&"any_thread")
 	EventBus.ending_requested.emit("completion")
 	assert_eq(
 		_system.get_resolved_ending_id(),
@@ -196,6 +198,7 @@ func test_crisis_operator() -> void:
 		EventBus.day_ended.emit(i + 1)
 	_advance_days(30)
 	_accumulate_revenue(12000.0, 120.0)
+	EventBus.hidden_thread_interacted.emit(&"any_thread")
 	EventBus.ending_requested.emit("completion")
 	assert_eq(
 		_system.get_resolved_ending_id(),
@@ -204,8 +207,66 @@ func test_crisis_operator() -> void:
 	)
 
 
-## Sanity — the suite covers all 13 configured endings.
-func test_all_thirteen_endings_are_covered() -> void:
+## Priority 8 — survived 30 days without ever interacting with a hidden thread.
+func test_the_uninitiated() -> void:
+	_advance_days(30)
+	EventBus.money_changed.emit(0.0, 200.0)
+	_accumulate_revenue(500.0, 50.0)
+	EventBus.ending_requested.emit("completion")
+	assert_eq(
+		_system.get_resolved_ending_id(),
+		&"the_uninitiated",
+		"30 days with zero hidden_thread_interacted emissions must resolve to the_uninitiated"
+	)
+
+
+## Confirms one hidden_thread_interacted emission blocks the_uninitiated and
+## drops through to a generic survival ending.
+func test_one_hidden_thread_interaction_blocks_the_uninitiated() -> void:
+	_advance_days(30)
+	EventBus.money_changed.emit(0.0, 200.0)
+	EventBus.hidden_thread_interacted.emit(&"any_thread")
+	EventBus.ending_requested.emit("completion")
+	assert_ne(
+		_system.get_resolved_ending_id(),
+		&"the_uninitiated",
+		"≥1 hidden_thread_interacted emission must block the_uninitiated"
+	)
+
+
+## Confirms a player who only acknowledges the tutorial hidden-clue beat — a
+## distinct EventBus signal — does not pollute hidden_thread_interactions and
+## still lands on the_uninitiated.
+func test_tutorial_hidden_clue_acknowledged_does_not_pollute_stat() -> void:
+	_advance_days(30)
+	EventBus.money_changed.emit(0.0, 200.0)
+	EventBus.hidden_clue_acknowledged.emit(&"void_protocols_red_label")
+	assert_eq(
+		_system.get_tracked_stat(&"hidden_thread_interactions"),
+		0.0,
+		"hidden_clue_acknowledged must not increment hidden_thread_interactions"
+	)
+	EventBus.ending_requested.emit("completion")
+	assert_eq(
+		_system.get_resolved_ending_id(),
+		&"the_uninitiated",
+		"Tutorial-only acknowledge must still land on the_uninitiated"
+	)
+
+
+## Confirms bankruptcy before day 30 blocks the_uninitiated via forbidden_all.
+func test_bankruptcy_blocks_the_uninitiated() -> void:
+	_advance_days(20)
+	EventBus.bankruptcy_declared.emit()
+	assert_ne(
+		_system.get_resolved_ending_id(),
+		&"the_uninitiated",
+		"Pre-day-30 bankruptcy must block the_uninitiated via forbidden_all"
+	)
+
+
+## Sanity — the suite covers all 14 configured endings.
+func test_all_endings_are_covered() -> void:
 	var covered: Array[StringName] = [
 		&"the_mall_between_the_walls",
 		&"the_mall_legend_redux",
@@ -220,10 +281,11 @@ func test_all_thirteen_endings_are_covered() -> void:
 		&"broke_even",
 		&"the_comfortable_middle",
 		&"crisis_operator",
+		&"the_uninitiated",
 	]
 	assert_eq(
-		covered.size(), 13,
-		"Golden-path suite must declare exactly 13 distinct endings"
+		covered.size(), 14,
+		"Golden-path suite must declare exactly 14 distinct endings"
 	)
 	for ending_id in covered:
 		assert_false(

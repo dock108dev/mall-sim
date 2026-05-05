@@ -64,13 +64,15 @@ func test_entering_sports_memorabilia_emits_sports_first_step() -> void:
 
 
 func test_entering_retro_games_emits_retro_first_step() -> void:
+	# ISSUE-016: WELCOME beat now points the employee at the time card / clock-in
+	# interactable instead of cart/test/refurb (which were owner-loop steps).
 	EventBus.store_entered.emit(StringName("retro_games"))
 	var event: Dictionary = _first_entered()
 	assert_eq(String(event.get("context_id", "")), "retro_games")
 	var text: String = String(event.get("text", "")).to_lower()
 	assert_true(
-		text.contains("cart") or text.contains("test") or text.contains("refurb"),
-		"retro_games first step should reference cart/test/refurb, got: %s" % text
+		text.contains("time card") or text.contains("punch in") or text.contains("clock in"),
+		"retro_games first step should reference clocking in (time card / punch in), got: %s" % text
 	)
 
 

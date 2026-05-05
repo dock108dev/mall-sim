@@ -75,6 +75,24 @@ text = "Round 1 / 5"
 horizontal_alignment = 2
 vertical_alignment = 1
 
+[node name="ArchetypeBadge" type="PanelContainer" parent="Margin/VBox/TopRow"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+
+[node name="ArchetypeLabel" type="Label" parent="Margin/VBox/TopRow/ArchetypeBadge"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="ContextLabel" type="Label" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+autowrap_mode = 2
+horizontal_alignment = 1
+text = ""
+
 [node name="Sep1" type="HSeparator" parent="Margin/VBox"]
 layout_mode = 2
 
@@ -118,6 +136,15 @@ max_value = 100.0
 value = 100.0
 show_percentage = false
 
+[node name="ReasoningLabel" type="RichTextLabel" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = ""
+
 [node name="ButtonRow" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
 alignment = 1
@@ -137,3 +164,10 @@ text = "Counter"
 layout_mode = 2
 custom_minimum_size = Vector2(100, 36)
 text = "Reject"
+
+[node name="ResultLabel" type="Label" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 2
+text = ""

@@ -2,6 +2,53 @@
   "type": "archetypes_data",
   "entries": [
     {
+      "id": "confused_parent",
+      "name": "Confused Parent",
+      "wtp_multiplier": 1.2,
+      "preferred_types": [
+        "retro_games",
+        "electronics",
+        "pocket_creatures"
+      ],
+      "haggle_probability": 0.05,
+      "dialogue_pool_id": "confused_parent"
+    },
+    {
+      "id": "hype_teen",
+      "name": "Hype Teen",
+      "wtp_multiplier": 1.1,
+      "preferred_types": [
+        "pocket_creatures",
+        "retro_games",
+        "electronics"
+      ],
+      "haggle_probability": 0.15,
+      "dialogue_pool_id": "hype_teen"
+    },
+    {
+      "id": "sports_regular",
+      "name": "Sports Regular",
+      "wtp_multiplier": 1.15,
+      "preferred_types": [
+        "sports",
+        "retro_games",
+        "electronics"
+      ],
+      "haggle_probability": 0.25,
+      "dialogue_pool_id": "sports_crossover"
+    },
+    {
+      "id": "collector",
+      "name": "Collector",
+      "wtp_multiplier": 1.55,
+      "preferred_types": [
+        "retro_games",
+        "pocket_creatures"
+      ],
+      "haggle_probability": 0.08,
+      "dialogue_pool_id": "collector"
+    },
+    {
       "id": "bargain_hunter",
       "name": "Bargain Hunter",
       "wtp_multiplier": 0.85,
@@ -10,7 +57,34 @@
         "rentals",
         "pocket_creatures"
       ],
-      "haggle_probability": 0.65
+      "haggle_probability": 0.65,
+      "dialogue_pool_id": "bargain_hunter"
+    },
+    {
+      "id": "angry_return_customer",
+      "name": "Angry Return Customer",
+      "wtp_multiplier": 0.6,
+      "preferred_types": [
+        "retro_games",
+        "electronics",
+        "rentals"
+      ],
+      "haggle_probability": 0.0,
+      "dialogue_pool_id": "angry_return",
+      "return_visit": true
+    },
+    {
+      "id": "shady_regular",
+      "name": "Shady Regular",
+      "wtp_multiplier": 0.5,
+      "preferred_types": [
+        "retro_games",
+        "rentals",
+        "pocket_creatures"
+      ],
+      "haggle_probability": 0.8,
+      "dialogue_pool_id": "shady_regular",
+      "suspicion_weight": 0.7
     },
     {
       "id": "enthusiast",

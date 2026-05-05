@@ -61,6 +61,12 @@ signal item_sold(item_id: String, price: float, category: String)
 ## Emitted by ObjectiveDirector on the first item_sold in a run.
 signal first_sale_completed(store_id: StringName, item_id: String, price: float)
 signal item_lost(item_id: String, reason: String)
+## Emitted when a sold item is later flagged as defective (failed warranty,
+## customer return, broken-on-arrival). Drives angry_return_customer spawn gate.
+signal defective_sale_occurred(item_id: String, reason: String)
+## Emitted by ReturnsSystem when an item enters the damaged bin (post-accept
+## return) so listeners can update the bin UI and inventory variance accounting.
+signal defective_item_received(item_id: String)
 signal lease_requested(store_id: StringName, slot_index: int, store_name: String)
 signal lease_completed(store_id: StringName, success: bool, message: String)
 signal owned_slots_restored(slots: Dictionary)
@@ -157,6 +163,13 @@ signal customer_item_spotted(customer: Customer, item: ItemInstance)
 signal spawn_npc_requested(archetype_id: StringName, entry_position: Vector3)
 ## Emitted by NPCSpawnerSystem when an NPC is explicitly removed from the active pool.
 signal npc_despawned(npc_id: StringName)
+## Emitted by the platform-match dialogue when the player selects a platform for
+## a confused-parent customer. correct is true when the chosen platform_id
+## matches the customer's referenced platform. Fires on every selection so the
+## embedded tutorial's PLATFORM_MATCH beat advances on engagement, not accuracy.
+signal customer_platform_identified(
+	customer_id: StringName, platform_id: StringName, correct: bool
+)
 
 # ── Checkout ──────────────────────────────────────────────────────────────────
 signal customer_reached_checkout(customer: Node)
@@ -560,6 +573,26 @@ signal ending_dismissed()
 signal performance_report_ready(report: PerformanceReport)
 ## Emitted by EconomySystem at end of each day with the day's financial totals.
 signal daily_financials_snapshot(revenue: float, expenses: float, net: float)
+## Emitted whenever a customer interaction resolves (sale, return accepted,
+## hold honored, trade-in accepted, walkout). outcome is one of
+## "satisfied" or "unsatisfied" — accumulated daily by PerformanceReportSystem
+## to compute customer_satisfaction.
+signal customer_resolution_logged(outcome: String)
+## Emitted whenever the player makes a mistake during the day (overcharge,
+## wrong item, failed restocking, transaction reversal). Accumulated daily
+## by PerformanceReportSystem; reset at day_started.
+signal player_mistake_recorded(mistake_type: String, context: String)
+## Emitted by narrative systems when a hidden-thread consequence should be
+## surfaced in the closing summary. The most recent value wins for the day.
+signal hidden_thread_consequence_triggered(text: String)
+## Emitted by InventoryDiscrepancyChecker (or the closing checklist) per
+## flagged discrepancy. Accumulated daily; reset at day_started.
+signal inventory_discrepancy_flagged(
+	item_id: String, expected: int, actual: int
+)
+## Emitted by DayCycleController when the closing checklist completes (or is
+## skipped) so listeners may proceed to the day-summary stage.
+signal closing_checklist_completed(day: int)
 
 # ── Save and Load ─────────────────────────────────────────────────────────────
 signal save_load_failed(slot: int, reason: String)
@@ -628,6 +661,224 @@ signal locale_changed(new_locale: String)
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 signal preference_changed(key: String, value: Variant)
+
+# ── Platform (Console / Handheld Market) ──────────────────────────────────────
+## Emitted by PlatformSystem the day units_in_stock first drops below
+## shortage_threshold for the platform.
+signal platform_shortage_started(platform_id: StringName)
+## Emitted by PlatformSystem when a previously-shortage platform's stock
+## recovers to or above shortage_threshold.
+signal platform_shortage_ended(platform_id: StringName)
+## Emitted by PlatformSystem when hype_level crosses one of the named tiers
+## (1=warming, 2=hot, 3=mania). tier is monotonic per shortage spell — it only
+## fires on upward crossings, not on hype decay.
+signal platform_hype_threshold_crossed(platform_id: StringName, tier: int)
+## Emitted by PlatformSystem after a successful restock event credits qty units
+## to a platform's stock.
+signal platform_restock_received(platform_id: StringName, qty: int)
+
+# ── Employment ────────────────────────────────────────────────────────────────
+## Emitted by EmploymentSystem when a new employment relationship begins
+## (start of season or new hire). Listeners initialize trust/approval HUDs.
+signal employment_started(store_id: StringName, season_number: int)
+## Emitted at season end or immediate firing. outcome is one of
+## "active", "probation", "at_risk", "fired", "retained".
+signal employment_ended(outcome: StringName)
+## Emitted by EmploymentSystem after an employee_trust mutation. delta is the
+## clamped change applied; reason is a short human-readable cause.
+signal trust_changed(delta: float, reason: String)
+## Emitted by EmploymentSystem after a manager_approval mutation.
+signal manager_approval_changed(delta: float, reason: String)
+## Emitted when EmploymentSystem credits the player for a worked shift.
+signal wage_issued(amount: float)
+## Emitted when a manager assigns a new task to the player.
+signal task_assigned(task_id: StringName)
+## Emitted when the player completes (or auto-resolves) an assigned task.
+signal task_completed(task_id: StringName)
+
+# ── Shift / Clock ─────────────────────────────────────────────────────────────
+## Emitted by ShiftSystem when the player clocks in (manual or auto-fallback).
+## timestamp is the in-game minute of day; late is true when auto-clock-in
+## fired at the 08:55 fallback boundary.
+signal shift_started(store_id: StringName, timestamp: float, late: bool)
+## Emitted by ShiftSystem when the player clocks out. hours_worked is computed
+## from the in-game minutes between clock-in and clock-out.
+signal shift_ended(store_id: StringName, hours_worked: float)
+## Emitted by ShiftSystem when a late-arrival or missing-clock-out event must
+## raise a manager-side note. Consumed by the manager-relationship layer to
+## queue a warning memo.
+signal manager_warning_note_requested(reason: String)
+
+# ── Midday Events ────────────────────────────────────────────────────────────
+## Fired by MiddayEventSystem when a beat triggers; carries the full beat
+## Dictionary (id, title, body, choices). Listeners present a decision card and
+## must respond by emitting midday_event_resolved.
+signal midday_event_fired(beat: Dictionary)
+## Emitted by the decision card UI after the player selects a choice. choice_index
+## is the position in beat.choices that was chosen.
+signal midday_event_resolved(beat_id: StringName, choice_index: int)
+
+
+# ── Store Artifact Interactables ─────────────────────────────────────────────
+## Emitted by RetroGames when the player examines the front-counter Delivery
+## Manifest interactable. Hidden Thread tier-1 trigger plus a pre-open ritual
+## anchor for the morning beat.
+signal delivery_manifest_examined(store_id: StringName, day: int)
+## Emitted by RetroGames when the player flags a SKU mismatch on the back-room
+## inventory shelf. Idempotent per (store_id, item_id) per day — repeat presses
+## on the same row do not emit again. Hidden Thread tier-1 trigger.
+signal inventory_variance_noted(
+	store_id: StringName, item_id: StringName, expected: int, actual: int
+)
+
+
+# ── Hold List / Reservation ──────────────────────────────────────────────────
+## Emitted by RetroGames when a hold slip is added to the store-local HoldList.
+## slip_id is the canonical "HOLD-####" identifier; item_id and customer_name
+## carry the slip metadata so listeners can render toasts or update the
+## terminal without re-reading the slip from the list.
+signal hold_added(
+	store_id: StringName,
+	slip_id: String,
+	item_id: StringName,
+	customer_name: String,
+)
+## Emitted by RetroGames when a slip is fulfilled (terminal action or via the
+## conflict resolution flow). reason is "manual", "earliest_expiry", or
+## "manager_escalation".
+signal hold_fulfilled(
+	store_id: StringName, slip_id: String, item_id: StringName, reason: String
+)
+## Emitted by RetroGames at day_started for each slip whose expiry_day has
+## passed. Listeners (visualization, hidden thread system) consume this to
+## crumple the physical slip prop and re-spawn it near the register.
+signal hold_expired(
+	store_id: StringName, slip_id: String, item_id: StringName
+)
+## Emitted by RetroGames when a hold request collides with an existing active
+## slip (same serial + different name OR same name + different serial).
+## new_slip_id and existing_slip_id reference the two HOLD-#### records;
+## both are flagged in the HoldList so the terminal can render a diff view.
+signal hold_duplicate_detected(
+	store_id: StringName,
+	new_slip_id: String,
+	existing_slip_id: String,
+	conflict_field: StringName,
+)
+## Emitted by RetroGames when a slip is created with requestor_tier SHADY or
+## ANONYMOUS. Hidden-thread listeners consume this as a Tier 1 trigger.
+signal hold_shady_request_received(
+	store_id: StringName,
+	slip_id: String,
+	item_id: StringName,
+	requestor_tier: int,
+)
+## Emitted by RetroGames when the player resolves a Fulfillment Conflict by
+## bypassing all competing holds and giving the unit to a walk-in customer.
+## Hidden-thread listeners consume this as a Tier 2 trigger.
+## disputed_slip_ids is the list of HOLD-#### records transitioned to DISPUTED.
+signal hold_conflict_bypassed(
+	store_id: StringName, item_id: StringName, disputed_slip_ids: Array
+)
+## Emitted when the player resolves a hold-vs-walk-in conflict in the embedded
+## tutorial. honored is true when the original hold slip wins the unit, false
+## when the walk-in offer is accepted. Fires on either resolution so tutorial
+## progression is non-blocking.
+signal hold_decision_made(item_id: StringName, honored: bool)
+
+
+# ── Returns and Exchanges ────────────────────────────────────────────────────
+## Emitted by ReturnsSystem when the angry-return decision flow opens for the
+## player. Listeners (HUD, telemetry) can pre-populate context. customer_id
+## carries the StringName id of the returning NPC; reason is the defect label
+## (e.g. "scratched_disc", "wrong_platform").
+signal return_initiated(
+	customer_id: StringName, item_id: StringName, reason: String
+)
+## Emitted by ReturnsSystem when the player accepts a return. resolution_type is
+## one of "refund" or "exchange" so listeners can branch on whether cash moved.
+signal return_accepted(
+	customer_id: StringName, item_id: StringName, resolution_type: String
+)
+## Emitted by ReturnsSystem when the player denies a return outright. Listeners
+## may bump unhappy-customer telemetry or trigger reputation penalties.
+signal return_denied(customer_id: StringName, item_id: StringName)
+
+
+# ── Trade-In Intake ──────────────────────────────────────────────────────────
+## Emitted by TradeInPanel when a customer trade-in interaction begins.
+signal trade_in_initiated(customer_id: String)
+## Emitted by TradeInPanel after the player appraises a condition and the
+## valuation formula produces an offer.
+signal trade_in_offer_made(
+	customer_id: String,
+	item_def_id: String,
+	condition: String,
+	offer_value: float,
+)
+## Emitted by TradeInPanel when the player confirms the offer to the customer.
+signal trade_in_accepted(
+	customer_id: String, instance_id: String, credit_value: float
+)
+## Emitted by TradeInPanel when the player declines or silently cancels the
+## interaction. Carries the customer id so listeners can route the customer
+## back to a normal exit.
+signal trade_in_rejected(customer_id: String)
+## Emitted by TradeInPanel after the new ItemInstance is created and added to
+## the backroom inventory.
+signal trade_in_completed(customer_id: String, instance_id: String)
+## Emitted when the player confirms a condition grade for a trade-in item.
+## Fires for any chosen grade (not just the "correct" one) so the embedded
+## tutorial advances on player engagement, not on accuracy.
+signal trade_in_condition_graded(item_id: StringName, grade: String)
+## Emitted when the player taps "Confirm Offer" on the trade-in buyback UI.
+## offered_price is the depreciated value the player accepted. Gates the
+## embedded tutorial's SPORTS_DEPRECIATION beat.
+signal trade_in_price_confirmed(item_id: StringName, offered_price: float)
+
+
+# ── Hidden Thread ────────────────────────────────────────────────────────────
+## Emitted by HiddenThreadSystem on every Tier 1, Tier 2, or Tier 3 trigger.
+## tier is 1, 2, or 3; context is an open dictionary of trigger metadata
+## (e.g. {"trigger_id": &"delivery_manifest_examined", "store_id": &"retro_games"}).
+signal hidden_thread_interaction_fired(tier: int, context: Dictionary)
+## Emitted when the player acknowledges a hidden-thread clue from the journal
+## affordance. Distinct from hidden_thread_interacted, which the trigger system
+## emits on every Tier 1/2/3 awareness bump — this signal only fires from the
+## player-side journal acknowledgement and gates the embedded tutorial's
+## HIDDEN_THREAD beat.
+signal hidden_clue_acknowledged(clue_id: StringName)
+## Emitted by HiddenThreadSystem when awareness_score crosses a tier boundary.
+## Boundaries: 0 → 1 at score 25, 1 → 2 at score 50, 2 → 3 at score 75.
+signal hidden_awareness_tier_changed(old_tier: int, new_tier: int)
+## Emitted by HiddenThreadSystem at day_ended when an artifact passes its
+## awareness threshold and is added to the discovered_artifacts catalog.
+signal hidden_artifact_spawned(artifact_id: StringName)
+## Emitted by HiddenThreadSystem on every Tier 1/2/3 trigger so the ending
+## evaluator (ISSUE-017) can shadow stats without coupling to internal state.
+## thread_id identifies the trigger (e.g. &"delivery_manifest_examined",
+## &"unsatisfied_streak", &"delivery_manifest_carbon").
+signal hidden_thread_interacted(thread_id: StringName)
+## Emitted by StoreCustomizationSystem (ISSUE-018) when the active featured
+## display lands on the new-console-hype category while VecForce HD has a
+## suspicious active hold. HiddenThreadSystem consumes this as a Tier 1 trigger.
+signal display_exposes_weird_inventory(store_id: StringName)
+
+
+# ── Manager Relationship ─────────────────────────────────────────────────────
+## Emitted by ManagerRelationshipManager at day_started after note selection.
+## note_id matches an entry id in manager_notes.json so listeners can render or
+## telemetry-tag the specific note. allow_auto_dismiss is false on Day 1 and on
+## unlock-override mornings so the panel must be dismissed manually.
+signal manager_note_shown(
+	note_id: String, body_text: String, allow_auto_dismiss: bool
+)
+## Emitted by ManagerRelationshipManager after every manager_trust mutation.
+## delta is the post-clamp change applied; reason is a short cause label.
+signal manager_trust_changed(delta: float, reason: String)
+## Emitted when a manager-side confrontation is triggered (low trust or a
+## major violation). Listeners may render a confrontation panel or beat.
+signal manager_confrontation_triggered(reason: String)
 
 var _latest_day_end_summary: Dictionary = {}
 

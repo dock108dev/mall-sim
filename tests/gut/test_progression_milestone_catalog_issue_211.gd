@@ -14,6 +14,9 @@ const VALID_TRIGGER_TYPES := {
 	"haggle_completed": true,
 	"item_price_set": true,
 	"random_event_resolved": true,
+	"clock_in_completed": true,
+	"first_restock_completed": true,
+	"manager_trust_reached": true,
 }
 
 const REQUIRED_REWARD_VALUES := {

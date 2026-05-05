@@ -24,6 +24,14 @@ const STAT_STAGGER_DELAY: float = 0.05
 const CONTINUE_FADE_DELAY: float = 0.2
 const CONTINUE_FADE_DURATION: float = 0.15
 const RECORD_PULSE_SCALE: float = 1.05
+const AUTO_ADVANCE_SECONDS: float = 12.0
+const HIDDEN_THREAD_DELAY: float = 1.0
+const FINAL_DAY: int = 30
+const BAR_COLOR_LOW: Color = Color(0.85, 0.30, 0.30)
+const BAR_COLOR_MID: Color = Color(0.95, 0.75, 0.30)
+const BAR_COLOR_HIGH: Color = Color(0.35, 0.80, 0.40)
+const BAR_BG_COLOR: Color = Color(0.18, 0.16, 0.20)
+const HIDDEN_THREAD_COLOR: Color = Color(0.78, 0.72, 0.62, 0.85)
 const TIER_CHANGE_COLOR := Color(1.0, 0.84, 0.0)
 const NET_PROFIT_POSITIVE_COLOR := Color(0.2, 0.8, 0.2)
 const NET_PROFIT_NEGATIVE_COLOR := Color(0.9, 0.2, 0.2)
@@ -61,6 +69,13 @@ var _prev_report: PerformanceReport = null
 ## stays released across the close-day → DaySummary hand-off. Mirrors the
 ## InventoryPanel / CheckoutPanel modal-focus contract.
 var _focus_pushed: bool = false
+var _auto_advance_timer: Timer
+var _hidden_thread_timer: Timer
+var _auto_advance_remaining: float = 0.0
+var _auto_advance_running: bool = false
+var _auto_advance_paused: bool = false
+var _auto_advance_disabled: bool = false
+var _pending_hidden_thread_text: String = ""
 
 @onready var _overlay: ColorRect = $Root/Overlay
 @onready var _panel: PanelContainer = $Root/Panel
@@ -111,6 +126,48 @@ var _focus_pushed: bool = false
 @onready var _seasonal_event_label: Label = (
 	$Root/Panel/Margin/VBox/SeasonalEventLabel
 )
+@onready var _employee_metrics_header: Label = (
+	$Root/Panel/Margin/VBox/EmployeeMetricsHeader
+)
+@onready var _customer_satisfaction_label: Label = (
+	$Root/Panel/Margin/VBox/CustomerSatisfactionLabel
+)
+@onready var _customer_satisfaction_bar: ProgressBar = (
+	$Root/Panel/Margin/VBox/CustomerSatisfactionBar
+)
+@onready var _employee_trust_label: Label = (
+	$Root/Panel/Margin/VBox/EmployeeTrustLabel
+)
+@onready var _employee_trust_bar: ProgressBar = (
+	$Root/Panel/Margin/VBox/EmployeeTrustBar
+)
+@onready var _manager_trust_label: Label = (
+	$Root/Panel/Margin/VBox/ManagerTrustLabel
+)
+@onready var _manager_trust_bar: ProgressBar = (
+	$Root/Panel/Margin/VBox/ManagerTrustBar
+)
+@onready var _mistakes_label: Label = (
+	$Root/Panel/Margin/VBox/MistakesLabel
+)
+@onready var _inventory_variance_label: Label = (
+	$Root/Panel/Margin/VBox/InventoryVarianceLabel
+)
+@onready var _discrepancies_label: Label = (
+	$Root/Panel/Margin/VBox/DiscrepanciesLabel
+)
+@onready var _hidden_thread_separator: HSeparator = (
+	$Root/Panel/Margin/VBox/HiddenThreadSeparator
+)
+@onready var _hidden_thread_label: Label = (
+	$Root/Panel/Margin/VBox/HiddenThreadLabel
+)
+@onready var _auto_advance_bar: ProgressBar = (
+	$Root/Panel/Margin/VBox/AutoAdvanceBar
+)
+@onready var _auto_advance_label: Label = (
+	$Root/Panel/Margin/VBox/AutoAdvanceLabel
+)
 @onready var _button_row: HBoxContainer = (
 	$Root/Panel/Margin/VBox/ButtonRow
 )
@@ -144,6 +201,15 @@ func _ready() -> void:
 	_create_electronics_labels()
 	_apply_headline_order()
 	_style_secondary_actions()
+	_init_auto_advance_timers()
+	_style_metric_bars()
+	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel.mouse_entered.connect(_on_panel_mouse_entered)
+	_panel.mouse_exited.connect(_on_panel_mouse_exited)
+	# Reset metric labels / bars to neutral defaults so a summary that opens
+	# without a PerformanceReport (e.g. headless test path) still renders a
+	# defined state rather than the .tscn placeholder text.
+	_apply_employee_metrics_defaults()
 	EventBus.performance_report_ready.connect(
 		_on_performance_report_ready
 	)
@@ -201,6 +267,7 @@ func show_summary(
 		_grading_label.visible = false
 	_apply_record_highlights(revenue, net_profit, items_sold)
 	_push_modal_focus()
+	_start_auto_advance(day)
 	_animate_open()
 
 
@@ -229,6 +296,9 @@ func show_last() -> void:
 ## waiting on the close animation.
 func hide_summary() -> void:
 	_pop_modal_focus()
+	_stop_auto_advance()
+	if _hidden_thread_timer != null:
+		_hidden_thread_timer.stop()
 	_kill_all_tweens()
 	_anim_tween = PanelAnimator.modal_close(_panel)
 	_overlay_tween = _panel.create_tween()
@@ -369,6 +439,26 @@ func _get_stat_row_candidates() -> Array[Control]:
 		stat_labels.append(_story_beat_label)
 	if _forward_hook_label:
 		stat_labels.append(_forward_hook_label)
+	if _employee_metrics_header:
+		stat_labels.append(_employee_metrics_header)
+	if _customer_satisfaction_label:
+		stat_labels.append(_customer_satisfaction_label)
+	if _customer_satisfaction_bar:
+		stat_labels.append(_customer_satisfaction_bar)
+	if _employee_trust_label:
+		stat_labels.append(_employee_trust_label)
+	if _employee_trust_bar:
+		stat_labels.append(_employee_trust_bar)
+	if _manager_trust_label:
+		stat_labels.append(_manager_trust_label)
+	if _manager_trust_bar:
+		stat_labels.append(_manager_trust_bar)
+	if _mistakes_label:
+		stat_labels.append(_mistakes_label)
+	if _inventory_variance_label:
+		stat_labels.append(_inventory_variance_label)
+	if _discrepancies_label:
+		stat_labels.append(_discrepancies_label)
 	return stat_labels
 
 
@@ -928,6 +1018,7 @@ func _on_performance_report_ready(
 		)
 	else:
 		_tier_change_label.visible = false
+	_apply_employee_metrics(report)
 
 
 func _on_continue_pressed() -> void:
@@ -962,3 +1053,242 @@ func _on_mall_overview_pressed() -> void:
 func _on_main_menu_pressed() -> void:
 	hide_summary()
 	main_menu_requested.emit()
+
+
+func _init_auto_advance_timers() -> void:
+	_auto_advance_timer = Timer.new()
+	_auto_advance_timer.one_shot = false
+	_auto_advance_timer.wait_time = 0.1
+	_auto_advance_timer.timeout.connect(_on_auto_advance_tick)
+	add_child(_auto_advance_timer)
+	_hidden_thread_timer = Timer.new()
+	_hidden_thread_timer.one_shot = true
+	_hidden_thread_timer.wait_time = HIDDEN_THREAD_DELAY
+	_hidden_thread_timer.timeout.connect(_on_hidden_thread_timeout)
+	add_child(_hidden_thread_timer)
+
+
+func _style_metric_bars() -> void:
+	for bar: ProgressBar in [
+		_customer_satisfaction_bar,
+		_employee_trust_bar,
+		_manager_trust_bar,
+	]:
+		_apply_bar_style(bar, 0.0)
+	_auto_advance_bar.add_theme_color_override(
+		"font_color", Color.TRANSPARENT
+	)
+
+
+## Builds a flat StyleBoxFlat for the bar fill in the value-coded color,
+## plus a neutral background. Replacing fill / background each call avoids
+## leaking previous-day color overrides into the current frame.
+func _apply_bar_style(bar: ProgressBar, value: float) -> void:
+	if bar == null:
+		return
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = _bar_color_for_value(value)
+	fill.corner_radius_top_left = 4
+	fill.corner_radius_top_right = 4
+	fill.corner_radius_bottom_left = 4
+	fill.corner_radius_bottom_right = 4
+	bar.add_theme_stylebox_override("fill", fill)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = BAR_BG_COLOR
+	bg.corner_radius_top_left = 4
+	bg.corner_radius_top_right = 4
+	bg.corner_radius_bottom_left = 4
+	bg.corner_radius_bottom_right = 4
+	bar.add_theme_stylebox_override("background", bg)
+
+
+func _bar_color_for_value(value: float) -> Color:
+	var v: float = clampf(value, 0.0, 1.0)
+	if v < 0.34:
+		return BAR_COLOR_LOW
+	if v < 0.67:
+		return BAR_COLOR_MID
+	return BAR_COLOR_HIGH
+
+
+func _qualitative_label(value: float) -> String:
+	var v: float = clampf(value, 0.0, 1.0)
+	if v < 0.20:
+		return "Poor"
+	if v < 0.40:
+		return "Strained"
+	if v < 0.60:
+		return "Neutral"
+	if v < 0.80:
+		return "Steady"
+	return "Strong"
+
+
+func _set_metric_bar(
+	label: Label, bar: ProgressBar, prefix: String, value: float
+) -> void:
+	if not is_instance_valid(label) or not is_instance_valid(bar):
+		return
+	var clamped: float = clampf(value, 0.0, 1.0)
+	bar.value = clamped
+	_apply_bar_style(bar, clamped)
+	label.text = "%s — %s" % [prefix, _qualitative_label(clamped)]
+
+
+func _apply_employee_metrics_defaults() -> void:
+	_set_metric_bar(
+		_customer_satisfaction_label,
+		_customer_satisfaction_bar,
+		"Customer Satisfaction",
+		1.0,
+	)
+	_set_metric_bar(
+		_employee_trust_label, _employee_trust_bar, "Employee Trust", 0.0
+	)
+	_set_metric_bar(
+		_manager_trust_label, _manager_trust_bar, "Manager Trust", 0.0
+	)
+	_mistakes_label.text = "Mistakes: 0"
+	_inventory_variance_label.text = "Inventory Variance: 0.0%"
+	_discrepancies_label.text = "Discrepancies Flagged: 0"
+	_hidden_thread_label.text = ""
+	_hidden_thread_label.visible = false
+	_hidden_thread_separator.visible = false
+	_hidden_thread_label.add_theme_color_override(
+		"font_color", HIDDEN_THREAD_COLOR
+	)
+
+
+func _apply_employee_metrics(report: PerformanceReport) -> void:
+	_set_metric_bar(
+		_customer_satisfaction_label,
+		_customer_satisfaction_bar,
+		"Customer Satisfaction",
+		report.customer_satisfaction,
+	)
+	_set_metric_bar(
+		_employee_trust_label,
+		_employee_trust_bar,
+		"Employee Trust",
+		report.employee_trust,
+	)
+	_set_metric_bar(
+		_manager_trust_label,
+		_manager_trust_bar,
+		"Manager Trust",
+		report.manager_trust,
+	)
+	_mistakes_label.text = "Mistakes: %d" % report.mistakes_count
+	_inventory_variance_label.text = (
+		"Inventory Variance: %.1f%%"
+		% (report.inventory_variance * 100.0)
+	)
+	_discrepancies_label.text = (
+		"Discrepancies Flagged: %d" % report.discrepancies_flagged
+	)
+	_schedule_hidden_thread(report.hidden_thread_consequence_text)
+
+
+func _schedule_hidden_thread(text: String) -> void:
+	_pending_hidden_thread_text = text
+	_hidden_thread_label.visible = false
+	_hidden_thread_separator.visible = false
+	if _hidden_thread_timer != null:
+		_hidden_thread_timer.stop()
+	if text.is_empty():
+		return
+	if _hidden_thread_timer != null:
+		_hidden_thread_timer.start(HIDDEN_THREAD_DELAY)
+
+
+func _on_hidden_thread_timeout() -> void:
+	if _pending_hidden_thread_text.is_empty():
+		return
+	_hidden_thread_label.text = _pending_hidden_thread_text
+	_hidden_thread_label.visible = true
+	_hidden_thread_separator.visible = true
+
+
+func _start_auto_advance(day: int) -> void:
+	_auto_advance_disabled = day >= FINAL_DAY
+	_auto_advance_paused = false
+	_auto_advance_running = false
+	_auto_advance_remaining = AUTO_ADVANCE_SECONDS
+	if _auto_advance_timer != null:
+		_auto_advance_timer.stop()
+	if _auto_advance_disabled:
+		_auto_advance_bar.visible = false
+		_auto_advance_label.visible = true
+		_auto_advance_label.text = "Confirm to view ending"
+		return
+	_auto_advance_bar.visible = true
+	_auto_advance_bar.value = 1.0
+	_auto_advance_label.visible = true
+	_auto_advance_label.text = (
+		"Auto-advancing in %ds" % int(AUTO_ADVANCE_SECONDS)
+	)
+	_auto_advance_running = true
+	if _auto_advance_timer != null:
+		_auto_advance_timer.start()
+
+
+func _on_auto_advance_tick() -> void:
+	if not _auto_advance_running or _auto_advance_paused:
+		return
+	_auto_advance_remaining = max(
+		0.0, _auto_advance_remaining - _auto_advance_timer.wait_time
+	)
+	var ratio: float = (
+		_auto_advance_remaining / AUTO_ADVANCE_SECONDS
+		if AUTO_ADVANCE_SECONDS > 0.0 else 0.0
+	)
+	_auto_advance_bar.value = ratio
+	var seconds_left: int = int(ceil(_auto_advance_remaining))
+	_auto_advance_label.text = (
+		"Auto-advancing in %ds" % max(seconds_left, 0)
+	)
+	if _auto_advance_remaining <= 0.0:
+		_trigger_auto_advance()
+
+
+func _trigger_auto_advance() -> void:
+	_auto_advance_running = false
+	if _auto_advance_timer != null:
+		_auto_advance_timer.stop()
+	_on_continue_pressed()
+
+
+func _on_panel_mouse_entered() -> void:
+	if _auto_advance_disabled:
+		return
+	_auto_advance_paused = true
+	_auto_advance_label.text = "Reading… auto-advance paused"
+
+
+func _on_panel_mouse_exited() -> void:
+	if _auto_advance_disabled or not _auto_advance_running:
+		return
+	_auto_advance_paused = false
+	var seconds_left: int = int(ceil(_auto_advance_remaining))
+	_auto_advance_label.text = (
+		"Auto-advancing in %ds" % max(seconds_left, 0)
+	)
+
+
+func _stop_auto_advance() -> void:
+	_auto_advance_running = false
+	_auto_advance_paused = false
+	if _auto_advance_timer != null:
+		_auto_advance_timer.stop()
+
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if not _continue_button.visible or _continue_button.disabled:
+		return
+	# `interact` is the in-store E key — accept it as the "advance to next day"
+	# shortcut. Mouse / button presses still fire the standard handlers.
+	if event.is_action_pressed("interact"):
+		get_viewport().set_input_as_handled()
+		_on_continue_pressed()

@@ -215,9 +215,12 @@ func test_emissive_panels_and_lighting_budget_match_retro_vibe() -> void:
 	var world_environments: Array[Node] = _root.find_children(
 		"*", "WorldEnvironment", true, false
 	)
+	# 4 ambient lights (FluorescentKeyLight, WarmNeonFill, GreenNeonFill,
+	# CRTDemoSpotlight) plus the dedicated new_console_display.Spotlight that
+	# spotlights the VecForce HD pedestal — required by zone completeness.
 	assert_lte(
-		light_nodes.size(), 4,
-		"Scene should use at most 4 light nodes"
+		light_nodes.size(), 5,
+		"Scene should use at most 5 light nodes"
 	)
 	assert_eq(
 		world_environments.size(), 0,

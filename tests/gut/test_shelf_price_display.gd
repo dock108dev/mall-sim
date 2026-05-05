@@ -60,14 +60,14 @@ func _make_slot() -> ShelfSlot:
 
 func test_set_display_data_creates_label3d_child() -> void:
 	var slot := _make_slot()
-	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	slot.set_display_data("Motorway Kings", "good", 35.0)
 	var label: Label3D = _find_label3d(slot)
 	assert_not_null(label, "set_display_data must add a Label3D child")
 
 
 func test_set_display_data_label_hidden_until_focused() -> void:
 	var slot := _make_slot()
-	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	slot.set_display_data("Motorway Kings", "good", 35.0)
 	var label: Label3D = _find_label3d(slot)
 	assert_not_null(label, "Label3D child must exist")
 	assert_false(
@@ -78,7 +78,7 @@ func test_set_display_data_label_hidden_until_focused() -> void:
 
 func test_focused_signal_shows_label() -> void:
 	var slot := _make_slot()
-	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	slot.set_display_data("Motorway Kings", "good", 35.0)
 	slot.focused.emit()
 	var label: Label3D = _find_label3d(slot)
 	assert_not_null(label, "Label3D child must exist")
@@ -87,7 +87,7 @@ func test_focused_signal_shows_label() -> void:
 
 func test_unfocused_signal_hides_label() -> void:
 	var slot := _make_slot()
-	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	slot.set_display_data("Motorway Kings", "good", 35.0)
 	slot.focused.emit()
 	slot.unfocused.emit()
 	var label: Label3D = _find_label3d(slot)
@@ -98,7 +98,7 @@ func test_unfocused_signal_hides_label() -> void:
 func test_set_display_data_visible_when_already_focused() -> void:
 	var slot := _make_slot()
 	slot.focused.emit()
-	slot.set_display_data("Orbital Smash Arena", "good", 35.0)
+	slot.set_display_data("Motorway Kings", "good", 35.0)
 	var label: Label3D = _find_label3d(slot)
 	assert_not_null(label, "Label3D child must exist")
 	assert_true(
@@ -109,18 +109,18 @@ func test_set_display_data_visible_when_already_focused() -> void:
 
 func test_set_display_data_text_contains_item_name() -> void:
 	var slot := _make_slot()
-	slot.set_display_data("Canopy 64 Legends", "near_mint", 88.0)
+	slot.set_display_data("Neo Ignite Classics", "near_mint", 88.0)
 	var label: Label3D = _find_label3d(slot)
 	assert_not_null(label, "Label3D must exist")
 	assert_true(
-		label.text.contains("Canopy 64 Legends"),
+		label.text.contains("Neo Ignite Classics"),
 		"Label3D text must contain the item name"
 	)
 
 
 func test_set_display_data_text_contains_price() -> void:
 	var slot := _make_slot()
-	slot.set_display_data("Neo Spark Racer", "fair", 22.50)
+	slot.set_display_data("Wave Pocket Racer", "fair", 22.50)
 	var label: Label3D = _find_label3d(slot)
 	assert_not_null(label, "Label3D must exist")
 	assert_true(

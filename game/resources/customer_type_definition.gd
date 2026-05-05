@@ -73,6 +73,16 @@ extends Resource
 @export var dialogue_pool: String = ""
 @export var model_path: String = ""
 @export var spawn_weight: float = 1.0
+## Platforms this customer cares about. Read by PlatformSystem to apply
+## shortage-driven spawn weight bonuses.
+@export var platform_affinities: Array[StringName] = []
+## How aggressively this customer chases scarcity. 0.0 = ignores shortage,
+## 1.0 = will pay ceiling price for the rare unit.
+@export var shortage_sensitivity: float = 0.0
+## Cross-store archetype id this customer profile belongs to (matches an entry
+## in archetypes.json). Drives conditional spawn rules (e.g. angry_return,
+## shady_regular, hype_teen). Empty string means no archetype binding.
+@export var archetype_id: StringName = &""
 
 var name: String:
 	get:

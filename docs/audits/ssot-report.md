@@ -1,5 +1,36 @@
 # SSOT Enforcement Pass — 2026-05-02
 
+> **Pass 5 (2026-05-05)** — destructive cleanup against the working-tree
+> diff that pivots the project to a 30-day "2005 mall game-store"
+> direction (BRAINDUMP rewrite at `4a198d7`). The diff is not a small
+> Day-1 polish — it adds 7 new autoload systems
+> (`EmploymentSystem`, `HiddenThreadSystem`, `ManagerRelationshipManager`,
+> `ReturnsSystem`, `PlatformSystem`, `ShiftSystem`, `StoreCustomizationSystem`,
+> `MidDayEventSystem`, `TradeInSystem`), 5 new resource classes
+> (`EmploymentState`, `HoldSlip`, `PlatformDefinition`,
+> `PlatformInventoryState`, `ReturnRecord`), 6 new UI panels
+> (`BackRoomInventoryPanel`, `ClosingChecklist`, `MidDayEventCard`,
+> `MorningNotePanel`, `ReturnsPanel`, `TradeInPanel`), 52 new
+> `EventBus` signals, the `HoldList` per-store object, the new
+> `manager/` content directory, and ~800 lines of new code in
+> `retro_games.gd` for time-clock spawning, hold-shelf
+> rendering, and platform-shortage display. The TutorialStep enum
+> bumps from v2 → v3 (the customer-loop steps `OPEN_INVENTORY` /
+> `SELECT_ITEM` / `PLACE_ITEM` / `WAIT_FOR_CUSTOMER` /
+> `CUSTOMER_BROWSING` / `CUSTOMER_AT_CHECKOUT` / `COMPLETE_SALE` are
+> deleted; the employee-loop steps `PLATFORM_MATCH` / `STOCK_SHELF` /
+> `CONDITION_RISK` / `SPORTS_DEPRECIATION` / `HOLD_PRESSURE` /
+> `HIDDEN_THREAD` replace them in lockstep with their localization
+> keys, signal handlers, and consumer tests). The diff itself is
+> remarkably clean of leftover SSOT contradictions because the code
+> migration was paired with the test-side renames; Pass 5 finds one
+> stale docstring that survived the cut, escalates the
+> `manager_approval` (EmploymentSystem) vs `manager_trust`
+> (ManagerRelationshipManager) dual-scalar decision, and risk-logs
+> several pre-existing duplications that pre-date this branch and
+> are outside its diff. See [Pass 5 changes](#pass-5-changes-2026-05-05)
+> below.
+
 > **Pass 4 (2026-05-04)** — destructive cleanup against the working-tree
 > diff that ships the BRAINDUMP "Day-1 fully playable" change set:
 > Day-1 starting cash moves from `StoreDefinition.starting_cash` (deleted)
@@ -184,6 +215,225 @@ methods / orphans / silent-swallow holes survived. Specifically:
 None. Every Pass 4 finding either acted (one stale doc comment
 rewritten in `retro_games.gd:64–67`) or was justified inline with the
 rationale in the Risk Log above. No SSOT decision was left blocked.
+
+---
+
+## Pass 5 changes (2026-05-05)
+
+**Scope:** SSOT enforcement against the working-tree diff that pivots
+the project from "Day-1 fully playable" polish (Pass 4) to a 30-day
+"2005 mall game-store" beta — one playable corporate store during the
+holiday rush, with employment, manager relationship, returns, holds,
+trade-ins, hidden-thread, platform shortages, and shift mechanics. The
+diff is purely additive at the EventBus layer (52 new signals, zero
+removed) and at most autoload systems; the TutorialStep migration is
+the only deletion-bearing rewrite, and it was paired with the
+corresponding test, localization, and consumer renames in lockstep.
+
+**Verification:** `git status` shows the working-tree diff is staged
+on `main` itself (no remote ahead). `git diff HEAD --stat` reports 84
+modified files plus the new untracked systems / panels / tests. No
+test run was forced for this pass because the only acted-on edit is a
+docstring (no executable code is changed); the prior Pass 4 verification
+(5076/5076 GUT tests, 0 failures) still applies to the executable code
+state. Pre-existing validator failures (ISSUE-018, ISSUE-023, ISSUE-024,
+ISSUE-026, ISSUE-032, ISSUE-154, ISSUE-239) on `main` are unchanged by
+Pass 5.
+
+### Edits applied
+
+| Path | Change | Rationale | Disposition |
+|---|---|---|---|
+| `tests/gut/test_customer_item_spotted.gd:1–5` | Rewrote the file-header docstring. The old text claimed the file covered "AmbientMomentsSystem toast + dedup handling, and TutorialSystem WAIT_FOR_CUSTOMER advance wiring". The TutorialStep enum no longer has `WAIT_FOR_CUSTOMER` (Pass 5 working-tree diff bumps `SCHEMA_VERSION = 2 → 3` and replaces the customer-loop steps with the employee-loop steps), and `test_tutorial_customer_browsing_advances_on_item_spotted` was deleted in the same diff (lines 215–246 of the prior file). The new docstring reflects what the file actually covers and points at this pass's report so a future reader can find the rationale. | **Code is the SSOT** for what the test file covers; the docstring was a stale narrative that promised coverage that no longer exists. The §F-85 schema-version reset comment in `tutorial_system.gd:435` is the canonical historical record of the v2 → v3 migration; this docstring just cross-references it. | **Acted (tighten)** |
+
+### What did not require a Pass-5 code edit
+
+The branch's diff already drops the SSOT contradictions for every
+other domain Pass 5 audited; the existing tutorial-flow rename is the
+only deletion path in scope and it was performed in lockstep across
+producers, consumers, tests, and localization. Specifically:
+
+* **TutorialStep enum + `STEP_IDS` + `STEP_TEXT_KEYS`** — `OPEN_INVENTORY`,
+  `SELECT_ITEM`, `PLACE_ITEM`, `WAIT_FOR_CUSTOMER`, `CUSTOMER_BROWSING`,
+  `CUSTOMER_AT_CHECKOUT`, `COMPLETE_SALE` deleted in the diff.
+  `PLATFORM_MATCH`, `STOCK_SHELF`, `CONDITION_RISK`,
+  `SPORTS_DEPRECIATION`, `HOLD_PRESSURE`, `HIDDEN_THREAD` replace them.
+  `SCHEMA_VERSION` bumped 2 → 3 so a v2 cfg resets cleanly via the §F-85
+  warn-and-reset path. `_on_panel_opened`, `_on_placement_mode_entered`,
+  `_on_customer_entered`, `_on_customer_item_spotted`,
+  `_on_customer_ready_to_purchase`, `_on_customer_purchased` handlers
+  deleted; `_on_customer_platform_identified`,
+  `_on_trade_in_condition_graded`, `_on_trade_in_price_confirmed`,
+  `_on_hold_decision_made`, `_on_hidden_clue_acknowledged` added in
+  lockstep with the new step enum. Greps confirm zero residual
+  references to the removed step ordinals or text keys outside the
+  intentional historical notes (`tutorial_system.gd:435` migration
+  warning, this report's Pass 3 sanity-check line at 462, and
+  `staff_animator.gd::PLACE_ITEM_SPEED` which is an unrelated animation
+  constant on a different namespace).
+* **Old-tutorial localization keys** — `TUTORIAL_OPEN_INVENTORY`,
+  `TUTORIAL_SELECT_ITEM`, `TUTORIAL_PLACE_ITEM`, `TUTORIAL_WAIT_CUSTOMER`,
+  `TUTORIAL_CUSTOMER_BROWSING`, `TUTORIAL_CUSTOMER_AT_CHECKOUT`,
+  `TUTORIAL_COMPLETE_SALE` deleted from `translations.en.csv` /
+  `translations.es.csv`. The new keys are present.
+* **`test_tutorial_customer_browsing_advances_on_item_spotted`** —
+  deleted in the diff (`tests/gut/test_customer_item_spotted.gd` —32
+  lines). The retained tests in that file still cover the
+  `customer_item_spotted` signal's *non-tutorial* purpose (emission
+  from `Customer._evaluate_current_shelf` and consumption by
+  `AmbientMomentsSystem._on_customer_item_spotted`), which is why the
+  signal itself is *not* deleted.
+* **`test_tutorial_system.gd` step-progression assertions** — rewritten
+  in the diff to walk `WELCOME → PLATFORM_MATCH → STOCK_SHELF →
+  CONDITION_RISK` instead of the old `WELCOME → OPEN_INVENTORY →
+  SELECT_ITEM → PLACE_ITEM`. The `test_stale_schema_version_resets_progress`
+  case is rewritten to seed a v2 cfg and assert the reset-and-resave
+  path lands on v3.
+* **CustomerSystem archetype-spawn additions** — the new
+  `is_profile_currently_spawnable` / `get_profile_spawn_weight` /
+  `pick_spawn_profile` / `_record_archetype_spawn` paths layer on top
+  of (not duplicate) the prior `_get_profile_spawn_weights` /
+  `_get_profile_spawn_intervals` infrastructure. The new public
+  `pick_spawn_profile(pool)` entry replaces the diff's two
+  `pool.pick_random()` call sites in `_on_day1_forced_spawn_timer_timeout`
+  and `MallCustomerSpawner._spawn_for_store(active_store)` so the
+  archetype gates and PlatformSystem / StoreCustomizationSystem weight
+  hooks fire on every Day-1 / active-store spawn. **No call site is
+  left calling the un-gated `pick_random` path** — the only surviving
+  `pick_random` in `MallCustomerSpawner._spawn_for_store` is on the
+  background-store branch where archetype gating is irrelevant
+  (the customer never enters an interior).
+* **CheckoutSystem decision-card upgrade** — the haggle-panel callsites
+  for `show_outcome(true/false)` are kept as the documented fallback
+  when the new decision card is not populated
+  (`_haggle_panel.is_card_populated() == false`). Both branches are
+  reachable: `show_result(...)` runs once `populate_customer_card`
+  has been called (the new flow); `show_outcome(...)` runs when the
+  haggle panel was opened pre-card-population (a path
+  `test_haggle_panel.gd` still exercises). Not a duplicate; both are
+  needed under the new "card-aware" mode.
+* **ProgressionSystem dual gating** — `_current_manager_approval` (from
+  EmploymentSystem) and `_manager_trust_tier_index` (from
+  ManagerRelationshipManager) are both cached and both feed milestone
+  evaluation through distinct `CONDITION_*` keys
+  (`CONDITION_MANAGER_APPROVAL`, `CONDITION_MANAGER_TRUST_TIER`).
+  Some milestones gate on the numeric approval (returns escalation
+  contributes here); others gate on the discrete tier (morning-note
+  category-driven ones). The two scalars **track different aspects
+  of the manager relationship** even though both are nominally
+  "manager↔player". Risk-logged below for the architectural followup;
+  no Pass-5 deletion possible without a structural refactor that is
+  out of scope for SSOT enforcement.
+
+---
+
+## Final SSOT modules per domain (Pass 5 deltas)
+
+| Domain | Pass 1–4 SSOT | Pass 5 update |
+|---|---|---|
+| Tutorial step enum / progression | **Pass 3:** `WELCOME → OPEN_INVENTORY → SELECT_ITEM → PLACE_ITEM → WAIT_FOR_CUSTOMER → CUSTOMER_BROWSING → CUSTOMER_AT_CHECKOUT → COMPLETE_SALE → CLOSE_DAY → DAY_SUMMARY → FINISHED` (the customer-loop sequence). `SCHEMA_VERSION = 2`. | **Pass 5:** `WELCOME → PLATFORM_MATCH → STOCK_SHELF → CONDITION_RISK → SPORTS_DEPRECIATION → HOLD_PRESSURE → HIDDEN_THREAD → CLOSE_DAY → DAY_SUMMARY → FINISHED` (the employee-loop sequence). `SCHEMA_VERSION = 3`. Receivers swapped one-to-one: `customer_platform_identified`, `item_stocked`, `trade_in_condition_graded`, `trade_in_price_confirmed`, `hold_decision_made`, `hidden_clue_acknowledged`. The Day-1 objective rail remains driven by `objectives.json` `steps[]` and `ObjectiveDirector._day1_step_index` (Pass 4 SSOT) — those steps continue to mirror the customer-walk-in flow because they describe the on-screen progress indicator, not the tutorial overlay. The two surfaces are intentionally distinct. |
+| Employment relationship state | (new) | **Pass 5:** `EmploymentSystem` autoload + `EmploymentState` resource. Owns: `employee_trust` (0–100, mid-range default 50.0, drives firing at 15.0 / retention at 60.0 over `SEASON_LENGTH_DAYS = 30`), `manager_approval` (0–100, low-neutral default 0.5 — see risk log below), `employment_status` (`active` / `probation` / `at_risk` / `fired` / `retained`), `hourly_wage`, `hours_worked_total`. Persists at `user://employment_state.cfg`. Mutators: `start_employment(store_id, hourly_wage)`, `end_employment(outcome)`, `apply_trust_delta(delta, reason)`, `apply_manager_approval_delta(delta, reason)`, `assign_task(id)`, `complete_task(id)`, `issue_daily_wage()`. Listens to `EventBus.customer_purchased` / `task_completed` / `day_started` / `day_ended`. Mirrors `employee_trust` and `manager_approval` to `GameState.employee_trust` / `GameState.manager_approval`. **Single SSOT for the employment relationship.** |
+| Manager relationship trust + morning-note selection | (new) | **Pass 5:** `ManagerRelationshipManager` autoload. Owns: `manager_trust` (0.0–1.0, default 0.5), `manager_tier` (`cold` / `neutral` / `warm` / `trusted` derived from trust at thresholds 0.25 / 0.50 / 0.75), per-day category tally (`operational` / `sales` / `staff`), `_pending_unlock_id`. Mutators: `apply_trust_delta(delta, reason)`. Note selection: `select_note_for_day(day)` returns the override note for Day 1 / 10 / 20 / unlock-after, falling back to `tier_notes[tier][top_category]` from `res://game/content/manager/manager_notes.json`. Emits `manager_note_shown` on `day_started`, `manager_confrontation_triggered` when trust crosses below 0.15 in cold tier. **Single SSOT for the morning-note tier-driven selection.** |
+| Returns lifecycle (defective sale → decision → side effects) | (new) | **Pass 5:** `ReturnsSystem` autoload. Owns: `_pending_records: Array[ReturnRecord]`, `_resolved_refund_instances: Dictionary`. Listens to `EventBus.defective_sale_occurred` (emitted by `CheckoutSystem._complete_checkout` on `_active_item.condition in DEFECTIVE_CONDITIONS = ["poor", "damaged"]`). Decision API: `accept_return(record, resolution)` / `deny_return(record)` / `escalate_return(record)`. Side effects funnel through `EmploymentSystem.apply_trust_delta(±)` and `EmploymentSystem.apply_manager_approval_delta(+0.02)` on escalate; reputation deltas through `ReputationSystemSingleton.add_reputation`; cash through `EconomySystem.add_cash` (refund) / no-op (deny). Inventory variance reconciliation: `check_bin_variance()` walks the InventorySystem damaged-bin location and emits `EventBus.inventory_variance_noted` for any entry not in the resolved-refund ledger; `HiddenThreadSystem` consumes that signal to advance `scapegoat_risk`. **Single SSOT for the post-sale returns flow.** |
+| Hidden-thread narrative tracker | (new) | **Pass 5:** `HiddenThreadSystem` autoload. Tracks the off-book inventory weirdness behind the surface game: `awareness_tier` (0–3), `scapegoat_risk` scalar, observed-clues set. Listens to `inventory_variance_noted`, `defective_item_received`, `delivery_manifest_examined`, `hold_shady_request_received`, `display_exposes_weird_inventory`, `hold_duplicate_detected`, `inventory_discrepancy_flagged`, `customer_resolution_logged`. Emits `hidden_clue_acknowledged`, `hidden_artifact_spawned`, `hidden_thread_interaction_fired`, `hidden_awareness_tier_changed`, `hidden_thread_consequence_triggered`. **Single SSOT for the BRAINDUMP "hidden game" thread.** |
+| Per-day shift state (clock-in, clock-out, hours-worked) | (new) | **Pass 5:** `ShiftSystem` (`game/scripts/systems/shift_system.gd`, store-scoped — *not* an autoload). Owns: `_clocked_in: bool`, `_clock_in_time`, `_late: bool`, auto-clock-in fallback at `08:55` if the player has not clocked in via `ClockInInteractable`. Emits `EventBus.shift_started(store_id, timestamp, late)` and `shift_ended(store_id, hours_worked)`. Consumed by `MilestoneSystem._on_shift_started` (clock-in milestones), `ProgressionSystem._on_shift_started` (counter), `ManagerRelationshipManager` (tracked indirectly — late clock-ins are an `operational` category event). **Single SSOT for the daily shift lifecycle.** |
+| Platform shortage / hype state | (new) | **Pass 5:** `PlatformSystem` (`game/scripts/systems/platform_system.gd`). Owns per-platform shortage state, hype thresholds, restock counts. Loaded from `game/content/platforms.json`. Emits `platform_shortage_started`, `platform_shortage_ended`, `platform_hype_threshold_crossed`, `platform_restock_received`. Consumers: `CustomerSystem.get_profile_spawn_weight` (multiplies weight by `get_spawn_weight_modifier(profile)` based on platform_affinities), `RetroGames._update_new_console_display` (live "BACK ORDERED" / "IN STOCK" sign), `HiddenThreadSystem` (hype-cliff scapegoat-risk advance). **Single SSOT for platform supply state.** |
+| Hold list (per-store reservations) | (new) | **Pass 5:** `HoldList` (`game/scripts/stores/hold_list.gd`, per-store object, instantiated by `RetroGames._ready`). Owns: `_slips: Array[HoldSlip]`, conflict resolver. Decision API: `add_hold`, `fulfill_hold`, `expire_holds_for_day`, `resolve_conflict(slip, choice)` where `choice ∈ {HONOR, ESCALATE, WALK_IN}`. The choice routes through `RetroGames._apply_manager_trust_delta` (with deltas `+0.02` / `+0.03` / `−0.05` per conflict spec) — the only Pass-5 entry that touches `ManagerRelationshipManager` from a per-store controller, and the only one that intentionally bypasses `EmploymentSystem.manager_approval`. Emits `hold_added`, `hold_fulfilled`, `hold_expired`, `hold_decision_made`, `hold_duplicate_detected`, `hold_shady_request_received`, `hold_conflict_bypassed`. **Single SSOT for the active store's hold roster.** |
+| Trade-in intake flow | (new) | **Pass 5:** `TradeInSystem` (`game/scripts/systems/trade_in_system.gd`). Owns the trade-in offer / counter / acceptance state machine. Emits `trade_in_initiated`, `trade_in_offer_made`, `trade_in_accepted`, `trade_in_rejected`, `trade_in_completed`, `trade_in_condition_graded`, `trade_in_price_confirmed`. Consumed by `TutorialSystem._on_trade_in_condition_graded` / `_on_trade_in_price_confirmed` (CONDITION_RISK + SPORTS_DEPRECIATION step advances), `RetroGames` for inventory reception. **Single SSOT for trade-in intake.** |
+| Mid-day random-event card | (new) | **Pass 5:** `MidDayEventSystem` (`game/scripts/systems/midday_event_system.gd`). Selects a beat from `day_beats.json` once per day at the mid-day phase, presents `MidDayEventCard`, records the player's choice. Emits `midday_event_fired` and `midday_event_resolved(beat_id, choice_index)`. Consumers: `HiddenThreadSystem` (consequence text routing), `PerformanceReportSystem` (mistake counter when the choice is the documented wrong path). **Single SSOT for the mid-day decision beat.** |
+| Store customization (featured-category emphasis) | (new) | **Pass 5:** `StoreCustomizationSystem` (`game/scripts/systems/store_customization_system.gd`). Owns the active featured category and the player-driven layout choices that bias customer spawn weights. Public API: `get_spawn_weight_bonus(archetype_id)` consumed by `CustomerSystem.get_profile_spawn_weight`. Emits `featured_category_changed` (consumed by `HiddenThreadSystem` for the `new_console_hype` weird-inventory trigger). **Single SSOT for store-level player customization knobs.** |
+| Customer archetype spawn gating + weighting | (Pass 1–4: `CustomerSystem._refresh_current_archetype_weights()` per `DayPhase` from `ShopperArchetypeConfig`, no per-day caps or conditional gates.) | **Pass 5:** `CustomerSystem.is_profile_currently_spawnable(profile)` is the single sticky gate ([`angry_return_customer` requires `_defective_sale_today`; `shady_regular` capped at `SHADY_REGULAR_DAILY_CAP = 1`]). `get_profile_spawn_weight(profile)` multiplies `profile.spawn_weight × PlatformSystem.get_spawn_weight_modifier(profile) × StoreCustomizationSystem.get_spawn_weight_bonus(profile.archetype_id) × (3.0 if shady_regular and AFTERNOON else 1.0)`. `pick_spawn_profile(profiles)` runs the weighted roll and is the **single entry point** every Day-1 / active-store spawn path now uses (`_on_day1_forced_spawn_timer_timeout`, `MallCustomerSpawner._spawn_for_store` active branch). `_archetype_spawn_count_today` and `_defective_sale_today` reset on `day_started`; the latter is set by `_on_defective_sale_occurred(_item_id, _reason)` listening to `EventBus.defective_sale_occurred`. **Single SSOT for "may this profile spawn now and at what weight?"** |
+| Defective-sale signal | (new) | **Pass 5:** `EventBus.defective_sale_occurred(item_id, reason)`, sole emitter is `CheckoutSystem._complete_checkout` when `_active_item.condition in DEFECTIVE_CONDITIONS = ["poor", "damaged"]`. Two intentional consumers: `ReturnsSystem._on_defective_sale_occurred` (records a pending `ReturnRecord` for the eventual angry-return customer) and `CustomerSystem._on_defective_sale_occurred` (sets `_defective_sale_today = true` to unblock `angry_return_customer` spawns). The signal carries the raw condition string; `ReturnsSystem.DEFECT_REASON_LABELS` is the SSOT for human-readable defect labels (UI side); `CheckoutSystem.DEFECTIVE_CONDITIONS` is the SSOT for which conditions count as defective (gate side). The two constants do *not* duplicate — they are the read and write halves of the same contract. |
+
+---
+
+## Pass 5 risk log — intentionally retained
+
+| Item | Why retained | Concrete trigger to remove |
+|---|---|---|
+| `EmploymentSystem.manager_approval` (0–100) **and** `ManagerRelationshipManager.manager_trust` (0.0–1.0) as separate scalars | Both nominally describe "how the manager feels about the player," but the new design uses them for **different gameplay levers**: `manager_approval` is the explicit-event counter that returns/escalations move (consumed by `ProgressionSystem.CONDITION_MANAGER_APPROVAL` and the wage-increase / promotion reward paths), while `manager_trust` is the morning-note tier-driver consumed by `MilestoneSystem.CONDITION_MANAGER_TRUST_TIER`, the `DaySummary` "Manager Trust" bar, the `PerformanceReport` cached delta, and the `RetroGames` hold-conflict per-choice deltas. The 0–100 numeric scale and the 0–1 four-tier scale answer different questions ("how many discrete approval beats has the player accumulated?" vs "what register should the next morning-note play in?"). Collapsing them is an architectural refactor (renormalize the two scales, decide which consumers move, rebuild the test fixtures) that is out of scope for an SSOT *deletion* pass. **Justified, not consolidated.** | A future "manager-relationship consolidation" pass with explicit license to: (1) pick one scalar (probably `manager_trust` as the canonical 0–1 axis since the morning-note tier table is the heaviest consumer); (2) delete the other field, its EmploymentState row, its EventBus signal, its GameState mirror, and its ProgressionSystem milestone gate; (3) rewrite `ReturnsSystem._escalate` to drive the surviving scalar; (4) update the `tests/gut/test_employment_system.gd` and `tests/gut/test_manager_relationship_manager.gd` fixtures in lockstep. The trigger is design alignment on which scale wins; until then the dual-scalar contract is documented at `EmploymentState:5–7` and `manager_relationship_manager.gd:1–17`. |
+| `EmploymentState.APPROVAL_MAX = 100.0` with `DEFAULT_APPROVAL = 0.5` (looks like a 0–1 default in a 0–100 range) | Documented intent: "0.5 — a neutral placeholder for the first manager event" (`EmploymentState:6`). The default is *deliberately* near-zero so the first explicit-event delta moves the value perceptibly; a 50.0 default would put it mid-range above the firing-equivalent floor for the inverse signal. `GameState.DEFAULT_MANAGER_APPROVAL = 0.5` and `ProgressionSystem._current_manager_approval = EmploymentState.DEFAULT_APPROVAL` are consistent with that intent. The naming is unfortunate (a reader expects 50.0) but everywhere downstream uses the 0–100 range correctly (`ProgressionSystem._on_manager_approval_changed` clamps to `0.0..100.0`, `GameState.manager_approval` clamps the same). **Justified, retained — not an SSOT split.** | A future cleanup pass that either (a) renames `DEFAULT_APPROVAL` to `DEFAULT_APPROVAL_PLACEHOLDER` to make the intent loud, or (b) raises the default to e.g. 50.0 and rebalances the per-event deltas. Either way the change is a balance-tuning decision, not an SSOT one. |
+| `EventBus.customer_resolution_logged(outcome: String)` with no production emitter | The signal is declared (`event_bus.gd:580`), connected in `PerformanceReportSystem._on_customer_resolution_logged` (line 668), and exercised by `tests/gut/test_performance_report_employee_metrics.gd` (7 emit sites). The docstring at `performance_report_system.gd:694–698` claims "returns / holds / trade-ins call this directly," but greppably no production caller exists — the wiring on the emit side is pending in this branch's diff. The receiver code is correct and the test pins the contract; deleting the signal would require also deleting the receiver branch in `_compute_customer_satisfaction` (which already falls back to `customer_left.satisfied` counting) and the seven test cases. With three concrete production callers planned (Returns / Holds / Trade-ins all newly added to this branch), the more likely fix is **wiring the emit side**, not removing the contract. **Justified, retained — not dead, just half-wired.** | A pass that audits the seven new systems for explicit `customer_resolution_logged` emission wiring; if after that pass any production caller still does not emit it, the receiver and tests can be deleted along with the signal declaration and the docstring rewritten to remove the false "returns / holds / trade-ins call this directly" claim. |
+| `MallCustomerSpawner.SECOND_STORE_CHANCE = 0.2` + `_pending_second_visits` + `_process_second_visits` + `_queue_second_visit` + `_try_second_store_visit` | Pre-existing on `main` ahead of this branch; the BRAINDUMP single-store framing makes the second-visit roll a runtime no-op (`_store_selector.select_store(excluded_store)` returns empty when only one store is leased), but the code is reachable in the same way `unlocked_store_slots` and `STORE_UNLOCK_THRESHOLDS` are still reachable: the multi-store infrastructure is dormant rather than deleted while the beta pivot stabilizes. The Pass-5 working-tree diff does not touch `mall_customer_spawner.gd` (+9 lines, all on the spawn-pool side), and the SSOT contract limits this pass to deletions the diff *proves* obsolete. **Outside Pass-5 scope. Risk-logged for a future "drop multi-store" pass.** | A pass with explicit license to drop the multi-store infrastructure (the `STORE_UNLOCK_THRESHOLDS` array, `unlocked_store_slots`, the `store_2_unlocked` milestone, the second-visit logic, `MallCustomerSpawner._spawn_for_store` background branch) once the design has confirmed the beta will not seed any other interior. |
+| `EventBus.title_rented` / `title_returned` (alongside `item_rented` / `rental_returned`) and `EventBus.demo_unit_activated` / `demo_unit_removed` (alongside `demo_item_placed` / `demo_item_removed`) "alias" signals | Pre-existing on `main`; not modified by this branch's diff. Production emitter (`video_rental_store_controller.gd:239–240`) emits `item_rented` and `title_rented` back-to-back with the same payload — a textbook duplicate emission. `item_rented` has 5 production/test consumers (`completion_tracker`, `audio_event_handler`, three test files); `title_rented` has 1 test consumer. The `demo_*` pair has the same shape. The header comment on `event_bus.gd:426` calls the second pair "canonical … aliases kept for backward compatibility" but does not name which is which. The SSOT winner in both pairs is the `item_*` / `demo_item_*` form. The fix is mechanical (delete the alias declarations + their dual-emit lines + their one-test consumers) but it is outside this pass's diff scope. **Risk-logged.** | A "pre-existing duplicate signal" cleanup pass with explicit license to operate outside the current branch's diff envelope. At that point the alias declarations, the dual-emit lines, and the alias-only test cases can be deleted in lockstep. |
+| Day-1 objective rail step-id constants `DAY1_STEP_OPEN_INVENTORY` / `DAY1_STEP_SELECT_ITEM` / `DAY1_STEP_WAIT_FOR_CUSTOMER` / `DAY1_STEP_CUSTOMER_BROWSING` / `DAY1_STEP_CUSTOMER_AT_CHECKOUT` in `objective_director.gd:17–22` | Look superficially like the deleted TutorialStep names but are intentionally distinct: the ObjectiveDirector's Day-1 rail describes the **on-screen progress indicator** for the customer-walk-in flow (Pass-4 SSOT, lines 137 of this report). The TutorialStep enum describes the **tutorial overlay** which after Pass 5 teaches retail concepts (`PLATFORM_MATCH`, `CONDITION_RISK`, …) over multiple days. Both surfaces coexist by design and intentionally use different vocabularies even where the Day-1 rail still walks an inventory-and-customer path. **Justified, retained — different surface.** | A unification pass that decides Day-1 specifically should also use the employee-loop tutorial vocabulary on the rail. At that point the constants and the Day-1 `objectives.json` `steps[]` array can be renamed in lockstep and the §F-93 push-warn shape check rewritten. |
+| `CheckoutSystem` retains both `show_outcome(true/false)` and `show_result(...)` haggle-panel callsites | Not duplicates: `show_outcome` is the documented fallback when the haggle panel was not first populated through the new decision-card flow (`_haggle_panel.is_card_populated() == false`). `tests/gut/test_haggle_panel.gd` exercises the fallback. **Justified, both reachable.** | A pass that removes the pre-decision-card haggle path entirely — at that point `show_outcome` and the `is_card_populated` branch can be deleted in lockstep with the test cases that exercise it. |
+| All Pass 1 / Pass 2 / Pass 3 / Pass 4 retained items (CameraManager mirror function, `_resolve_store_id` 5-way duplication, `StorePlayerBody.set_current_interactable` test seam, `ProvenancePanel`, audit-report historical filenames, `DataLoader.create_starting_inventory` vs `generate_starter_inventory` coexistence, `LATE_EVENING` extended-hours-unlock retention, `Constants.STARTING_CASH` vs `EconomyConfig.starting_cash` paired defaults, `Customer._is_navigation_finished` short-circuit, `_register_queue_size` checkout-queue gate, `_emit_sale_toast` vs `_on_customer_item_spotted` toast paths, etc.) | Nothing in the Pass-5 working-tree diff alters their disposition; the Pass-1/2/3/4 risk-log rationales still hold. | Same triggers as the original entries. |
+
+---
+
+## Pass 5 sanity check — dangling references
+
+| Check | Result |
+|---|---|
+| Any code citing `TutorialSystem.TutorialStep.OPEN_INVENTORY / SELECT_ITEM / PLACE_ITEM / WAIT_FOR_CUSTOMER / CUSTOMER_BROWSING / CUSTOMER_AT_CHECKOUT / COMPLETE_SALE`? | None. `grep TutorialStep\.\(OPEN_INVENTORY\|…\)` in `tests/` and `game/scripts/` returns zero hits. The remaining string matches in the tree are: (a) the §F-85 schema-version migration warning at `tutorial_system.gd:435`, intentional historical record; (b) the Pass-3 sanity-check entry at `docs/audits/ssot-report.md:462`, also intentional historical record; (c) `staff_animator.gd::PLACE_ITEM_SPEED`, an unrelated animation constant; (d) `ambient_moments_system.gd::CUSTOMER_BROWSING_TOAST_DURATION`, an unrelated toast-duration constant; (e) `objective_director.gd::DAY1_STEP_*`, the intentional rail vocabulary justified above. |
+| Any localization key `TUTORIAL_OPEN_INVENTORY / TUTORIAL_SELECT_ITEM / TUTORIAL_PLACE_ITEM / TUTORIAL_WAIT_CUSTOMER / TUTORIAL_CUSTOMER_BROWSING / TUTORIAL_CUSTOMER_AT_CHECKOUT / TUTORIAL_COMPLETE_SALE`? | None remaining as live entries. `translations.en.csv` and `translations.es.csv` rows are deleted; the `.translation` binary blobs are regenerated. The only file that still mentions the keys is this report's Pass-3 sanity-check entry at line 462, which is an intentional historical record. |
+| Any test file still asserting against `customer_item_spotted`-driven tutorial advancement? | None. The deleted test was `tests/gut/test_customer_item_spotted.gd::test_tutorial_customer_browsing_advances_on_item_spotted` (lines 215–246 of the prior file). The retained tests in that file cover only the non-tutorial use of the signal (toast / dedup / customer-leave clearing). The file's header docstring was rewritten in this pass to match what it actually covers. |
+| Any signal handler in `TutorialSystem` for the removed `panel_opened` / `placement_mode_entered` / `customer_entered` / `customer_item_spotted` / `customer_ready_to_purchase` / `customer_purchased` step-advance paths? | None. `_on_panel_opened`, `_on_placement_mode_entered`, `_on_customer_entered`, `_on_customer_item_spotted`, `_on_customer_ready_to_purchase`, `_on_customer_purchased` are deleted from `tutorial_system.gd`; the corresponding `connect` and `disconnect` lines in `_connect_signals` / `_disconnect_step_signals` are deleted. The new `_on_customer_platform_identified`, `_on_trade_in_condition_graded`, `_on_trade_in_price_confirmed`, `_on_hold_decision_made`, `_on_hidden_clue_acknowledged` handlers are wired in lockstep. The `customer_item_spotted` signal itself remains alive because `AmbientMomentsSystem._on_customer_item_spotted` still consumes it for toast emission. |
+| Any production caller of the un-gated `pick_random()` path on a Day-1 / active-store customer-spawn site? | None on Day-1 / active store. `_on_day1_forced_spawn_timer_timeout` calls `pick_spawn_profile(pool)` (the new gated entry); `MallCustomerSpawner._spawn_for_store` calls `_customer_system.pick_spawn_profile(profiles)` on the active branch. The remaining `profiles.pick_random()` call in `MallCustomerSpawner._spawn_for_store` is on the background-store branch where archetype gating is irrelevant (the customer never enters a 3D interior). |
+| `CheckoutSystem.DEFECTIVE_CONDITIONS` vs `ReturnsSystem.DEFECT_REASON_LABELS` — duplicate? | No. `DEFECTIVE_CONDITIONS = ["poor", "damaged"]` is the SSOT for *which* conditions trigger `defective_sale_occurred`. `DEFECT_REASON_LABELS` is the SSOT for the human-readable UI label of *any* defect reason (the keys include `wrong_platform` / `changed_mind` / `defective` which are not in `DEFECTIVE_CONDITIONS` because they are added by trade-in / warranty paths via `record_defective_sale(item_id, defect_reason, …)`). The two constants are the gate side and the label side of the same contract. |
+| Any test still asserting against the old TutorialStep ordinals (`v2 PLACE_ITEM = 3`)? | Only `tests/gut/test_tutorial_system.gd::test_stale_schema_version_resets_progress`, which is *the test for the schema-bump migration itself* — it seeds a v2 cfg with ordinal `current_step = 3` and asserts the load resets and re-saves at v3. That citation is intentional and required. |
+| Pass-5 docstring fix at `test_customer_item_spotted.gd:1–5` — does it reference a signal that still exists? | Yes. `customer_item_spotted` is alive (`event_bus.gd:162`, emitted by `customer.gd:532` and `:536`, consumed by `ambient_moments_system.gd:251`). The docstring's claim about "AmbientMomentsSystem toast + dedup handling" matches the file's surviving test cases. |
+
+---
+
+## Pass 5 escalations
+
+**One open architectural decision remains:** the `manager_approval`
+(EmploymentSystem, 0–100) vs `manager_trust` (ManagerRelationshipManager,
+0.0–1.0) dual-scalar split.
+
+* **Specific blocker:** the two scalars track conceptually overlapping
+  ground (the manager↔player relationship) but with different scales,
+  different consumer fan-outs, and different mutator fan-ins. Both
+  newly arrived in this branch's working tree; both have
+  test fixtures (`tests/gut/test_employment_system.gd`,
+  `tests/gut/test_manager_relationship_manager.gd`); both are
+  consumed by separate `ProgressionSystem.CONDITION_*` keys in
+  ways that are explicit about the scale (numeric event-counter vs
+  discrete tier index). Collapsing them is an architectural design
+  decision (which scale wins, which consumers migrate, which
+  EventBus signal wins between `manager_approval_changed` and
+  `manager_trust_changed`), not a mechanical SSOT deletion. The
+  Pass-5 SSOT contract is explicit that "if you cannot act and
+  cannot justify, name the blocker" — both scalars are
+  individually justified above; the blocker is design-side.
+* **Who/what would unblock it:** an explicit design decision
+  on whether the manager relationship is one axis (collapse to a
+  single scalar) or two (keep both, document the split as
+  intentional and rename the EventBus signals to make the
+  vocabulary divergence explicit, e.g. `manager_event_recorded`
+  vs `manager_relationship_changed`).
+* **Smallest concrete next action:** a 30-minute design review
+  meeting to pick one of the three options:
+  - (A) Collapse to `manager_trust` (0–1, 4-tier) — `EmploymentSystem`
+    keeps `employee_trust` only; `ReturnsSystem._escalate` rewrites
+    its `+0.02` delta to apply against `manager_trust`;
+    `ProgressionSystem.CONDITION_MANAGER_APPROVAL` is removed; the
+    `manager_approval` field is deleted from `EmploymentState` /
+    `GameState`.
+  - (B) Collapse to `manager_approval` (0–100, derived tier band) —
+    `ManagerRelationshipManager` becomes a thin wrapper around the
+    EmploymentSystem scalar, and `manager_trust_changed` is replaced
+    by `manager_approval_changed`. The morning-note tier table keys
+    on `floor(manager_approval / 25)`.
+  - (C) Keep both, rename for clarity — the two scalars are
+    explicitly distinct axes; the EventBus signal names get renamed
+    to `manager_event_recorded(event_id, delta, reason)` and
+    `manager_relationship_tier_changed(old_tier, new_tier)` so the
+    vocabulary contradiction goes away. Document the split as
+    intentional in `architecture/ownership.md`.
+
+Until that decision lands, both scalars stay live and the dual
+mutator pattern (`EmploymentSystem.apply_trust_delta` /
+`apply_manager_approval_delta` and
+`ManagerRelationshipManager.apply_trust_delta`) is the documented
+contract.
+
+No other Pass-5 finding was left blocked. Every other entry above is
+either acted on (one stale docstring rewritten in
+`tests/gut/test_customer_item_spotted.gd:1–5`) or risk-logged with the
+concrete trigger that would bring it into a future pass's scope.
 
 ---
 

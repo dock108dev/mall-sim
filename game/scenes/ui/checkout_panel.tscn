@@ -26,32 +26,63 @@ theme_override_constants/margin_bottom = 12
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+[node name="HeaderRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"HeaderLabel"
 text = "Checkout"
 horizontal_alignment = 1
 
+[node name="ArchetypeBadge" type="PanelContainer" parent="PanelRoot/Margin/VBox/HeaderRow"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
+
+[node name="ArchetypeLabel" type="Label" parent="PanelRoot/Margin/VBox/HeaderRow/ArchetypeBadge"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="CustomerCard" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="WantLabel" type="Label" parent="PanelRoot/Margin/VBox/CustomerCard"]
+layout_mode = 2
+autowrap_mode = 2
+text = ""
+
+[node name="ContextLabel" type="Label" parent="PanelRoot/Margin/VBox/CustomerCard"]
+layout_mode = 2
+autowrap_mode = 2
+text = ""
+
 [node name="Sep1" type="HSeparator" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
 
-[node name="HeaderRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+[node name="ItemHeaderRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
 layout_mode = 2
 
-[node name="NameHeader" type="Label" parent="PanelRoot/Margin/VBox/HeaderRow"]
+[node name="NameHeader" type="Label" parent="PanelRoot/Margin/VBox/ItemHeaderRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Item"
 theme_type_variation = &"HeaderLabel"
 
-[node name="ConditionHeader" type="Label" parent="PanelRoot/Margin/VBox/HeaderRow"]
+[node name="ConditionHeader" type="Label" parent="PanelRoot/Margin/VBox/ItemHeaderRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(80, 0)
 text = "Cond."
 horizontal_alignment = 1
 theme_type_variation = &"HeaderLabel"
 
-[node name="PriceHeader" type="Label" parent="PanelRoot/Margin/VBox/HeaderRow"]
+[node name="PriceHeader" type="Label" parent="PanelRoot/Margin/VBox/ItemHeaderRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(70, 0)
 text = "Price"
@@ -125,20 +156,48 @@ layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="ButtonRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+[node name="ReasoningLabel" type="RichTextLabel" parent="PanelRoot/Margin/VBox"]
+visible = false
 layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 20
+custom_minimum_size = Vector2(0, 36)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = ""
+
+[node name="ReasoningSpacer" type="Control" parent="PanelRoot/Margin/VBox"]
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(0, 8)
+
+[node name="ButtonRow" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="ConfirmButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(120, 36)
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 36)
 text = "Confirm Sale"
+
+[node name="BundleButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 36)
+text = "Suggest Bundle"
 
 [node name="CancelButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(100, 36)
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 36)
 text = "Cancel"
+
+[node name="ResultLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="ReceiptSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
 visible = false

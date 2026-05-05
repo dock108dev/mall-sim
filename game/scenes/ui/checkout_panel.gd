@@ -6,13 +6,49 @@ extends CanvasLayer
 
 signal sale_accepted
 signal sale_declined
+signal bundle_suggested
 
 const PANEL_NAME: String = "checkout"
 const RECEIPT_DISPLAY_DURATION: float = 2.0
+const RESULT_DISPLAY_DURATION: float = 3.0
+
+const _ARCHETYPE_REASONING: Dictionary = {
+	&"confused_parent": (
+		"Easily steered — explain the value and they'll trust you."
+	),
+	&"casual_shopper": (
+		"No strong preference. Mention condition and they'll likely take it."
+	),
+	&"hype_teen": (
+		"Riding a trend; talk it up and they'll bite. Push back hard and they walk."
+	),
+	&"sports_regular": (
+		"Crossover browser — fair price keeps them, lecture and they're gone."
+	),
+	&"collector": (
+		"Knows the market. Price honestly or they'll quietly pass."
+	),
+	&"bargain_hunter": (
+		"Will haggle hard. Drop a few dollars and they'll close — or they'll keep poking."
+	),
+	&"angry_return_customer": (
+		"Already irritated; don't give them ammunition. Resolve quickly."
+	),
+	&"shady_regular": (
+		"Watch the rare items. They'll lowball; firm pricing keeps things honest."
+	),
+	&"reseller": (
+		"Calculating margins. They'll only buy if your ask leaves room to flip."
+	),
+	&"enthusiast": (
+		"Knows what they want. A genuine recommendation seals the deal."
+	),
+}
 
 var _is_open: bool = false
 var _is_pending: bool = false
 var _showing_receipt: bool = false
+var _showing_result: bool = false
 var _items: Array[Dictionary] = []
 var _haggle_discount: float = 0.0
 var _subtotal: float = 0.0
@@ -20,6 +56,9 @@ var _total: float = 0.0
 var _anim_tween: Tween
 var _rest_x: float = 0.0
 var _receipt_timer: Timer
+var _result_timer: Timer
+var _card_populated: bool = false
+var _bundle_data: Dictionary = {}
 ## Tracks whether this panel pushed CTX_MODAL on InputFocus so the cursor is
 ## released for FP play; mirrors InventoryPanel's contract so the StorePlayerBody
 ## context_changed listener flips MOUSE_MODE_CAPTURED → MOUSE_MODE_VISIBLE while
@@ -27,6 +66,30 @@ var _receipt_timer: Timer
 var _focus_pushed: bool = false
 
 @onready var _panel: PanelContainer = $PanelRoot
+@onready var _header_row: HBoxContainer = (
+	$PanelRoot/Margin/VBox/HeaderRow
+)
+@onready var _archetype_badge: PanelContainer = (
+	$PanelRoot/Margin/VBox/HeaderRow/ArchetypeBadge
+)
+@onready var _archetype_label: Label = (
+	$PanelRoot/Margin/VBox/HeaderRow/ArchetypeBadge/ArchetypeLabel
+)
+@onready var _customer_card: VBoxContainer = (
+	$PanelRoot/Margin/VBox/CustomerCard
+)
+@onready var _want_label: Label = (
+	$PanelRoot/Margin/VBox/CustomerCard/WantLabel
+)
+@onready var _context_label: Label = (
+	$PanelRoot/Margin/VBox/CustomerCard/ContextLabel
+)
+@onready var _reasoning_label: RichTextLabel = (
+	$PanelRoot/Margin/VBox/ReasoningLabel
+)
+@onready var _reasoning_spacer: Control = (
+	$PanelRoot/Margin/VBox/ReasoningSpacer
+)
 @onready var _item_list: VBoxContainer = (
 	$PanelRoot/Margin/VBox/ItemScroll/ItemList
 )
@@ -48,8 +111,14 @@ var _focus_pushed: bool = false
 @onready var _confirm_button: Button = (
 	$PanelRoot/Margin/VBox/ButtonRow/ConfirmButton
 )
+@onready var _bundle_button: Button = (
+	$PanelRoot/Margin/VBox/ButtonRow/BundleButton
+)
 @onready var _cancel_button: Button = (
 	$PanelRoot/Margin/VBox/ButtonRow/CancelButton
+)
+@onready var _result_label: Label = (
+	$PanelRoot/Margin/VBox/ResultLabel
 )
 @onready var _receipt_section: VBoxContainer = (
 	$PanelRoot/Margin/VBox/ReceiptSection
@@ -68,13 +137,21 @@ var _focus_pushed: bool = false
 func _ready() -> void:
 	_panel.visible = false
 	_rest_x = _panel.position.x
+	_apply_card_style()
+	DecisionCardStyle.apply_reasoning_style(_reasoning_label)
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
+	_bundle_button.pressed.connect(_on_bundle_pressed)
 	_receipt_timer = Timer.new()
 	_receipt_timer.one_shot = true
 	_receipt_timer.wait_time = RECEIPT_DISPLAY_DURATION
 	_receipt_timer.timeout.connect(_on_receipt_timer_timeout)
 	add_child(_receipt_timer)
+	_result_timer = Timer.new()
+	_result_timer.one_shot = true
+	_result_timer.wait_time = RESULT_DISPLAY_DURATION
+	_result_timer.timeout.connect(_on_result_timer_timeout)
+	add_child(_result_timer)
 	EventBus.checkout_started.connect(_on_checkout_started)
 	EventBus.transaction_completed.connect(
 		_on_transaction_completed
@@ -102,12 +179,28 @@ func show_checkout(
 	_haggle_discount = haggle_discount
 	_is_pending = false
 	_showing_receipt = false
+	_showing_result = false
+	_card_populated = false
+	_bundle_data = {}
 	_error_label.visible = false
 	_receipt_section.visible = false
+	_result_label.visible = false
+	_archetype_badge.visible = false
+	_customer_card.visible = false
+	_reasoning_label.visible = false
+	_reasoning_spacer.visible = false
+	_bundle_button.visible = false
 	_confirm_button.visible = true
 	_cancel_button.visible = true
 	_confirm_button.disabled = false
 	_cancel_button.disabled = false
+	_bundle_button.disabled = false
+	_confirm_button.text = "Confirm Sale"
+	_cancel_button.text = "Cancel"
+	_clear_button_extras(_confirm_button)
+	_clear_button_extras(_cancel_button)
+	_clear_button_extras(_bundle_button)
+	_set_panel_active_palette()
 	_populate_item_list()
 	_update_totals()
 	PanelAnimator.kill_tween(_anim_tween)
@@ -129,7 +222,10 @@ func hide_checkout(immediate: bool = false) -> void:
 	_is_open = false
 	_is_pending = false
 	_showing_receipt = false
+	_showing_result = false
+	_card_populated = false
 	_receipt_timer.stop()
+	_result_timer.stop()
 	PanelAnimator.kill_tween(_anim_tween)
 	if immediate:
 		_panel.visible = false
@@ -152,6 +248,14 @@ func is_showing_receipt() -> bool:
 	return _showing_receipt
 
 
+func is_showing_result() -> bool:
+	return _showing_result
+
+
+func is_card_populated() -> bool:
+	return _card_populated
+
+
 ## Returns false — warranty is handled by WarrantyDialog.
 func is_warranty_offered() -> bool:
 	return false
@@ -160,6 +264,155 @@ func is_warranty_offered() -> bool:
 ## Returns 0 — warranty is handled by WarrantyDialog.
 func get_warranty_fee() -> float:
 	return 0.0
+
+
+## Populates the decision-card surface from a customer-data dictionary.
+##
+## Expected keys (all optional — missing keys produce safe empty fallbacks):
+##   archetype_id    : StringName — drives badge color and reasoning lookup
+##   archetype_label : String     — display name for the badge
+##   want            : String     — 1-sentence "what they want"
+##   context         : String     — 1-sentence mood / situation
+##   reasoning       : String     — 1-sentence italic hint above choices
+##   offer_price     : float      — final price to display on Confirm button
+##   sticker_price   : float      — used to compute delta from ask
+##   rep_delta       : String     — preformatted rep change ("+1 Rep")
+##   decline_label   : String     — secondary line on Cancel button
+##   bundle          : Dictionary — { "label": String, "consequence": String,
+##                                    "id": String } when bundle is offered
+func populate_customer_card(customer_data: Dictionary) -> void:
+	_card_populated = true
+	var archetype_id: StringName = StringName(
+		str(customer_data.get("archetype_id", ""))
+	)
+	var archetype_label: String = str(
+		customer_data.get("archetype_label", "")
+	)
+	var want_text: String = str(customer_data.get("want", ""))
+	var context_text: String = str(customer_data.get("context", ""))
+	var reasoning_text: String = str(customer_data.get("reasoning", ""))
+	if reasoning_text.is_empty():
+		reasoning_text = String(_ARCHETYPE_REASONING.get(archetype_id, ""))
+	var offer_price: float = float(customer_data.get("offer_price", 0.0))
+	var sticker_price: float = float(customer_data.get("sticker_price", offer_price))
+	var rep_delta_str: String = str(customer_data.get("rep_delta", "+1 Rep"))
+	var decline_label: String = str(customer_data.get("decline_label", ""))
+
+	if not archetype_label.is_empty():
+		_archetype_label.text = archetype_label.to_upper()
+		_archetype_badge.visible = true
+		DecisionCardStyle.apply_archetype_badge_style(
+			_archetype_badge, _archetype_label, archetype_id
+		)
+	else:
+		_archetype_badge.visible = false
+
+	if want_text.is_empty() and context_text.is_empty():
+		_customer_card.visible = false
+	else:
+		_customer_card.visible = true
+		_want_label.text = want_text
+		_want_label.visible = not want_text.is_empty()
+		_context_label.text = context_text
+		_context_label.visible = not context_text.is_empty()
+
+	if reasoning_text.is_empty():
+		_reasoning_label.visible = false
+		_reasoning_spacer.visible = false
+	else:
+		_set_reasoning_text(reasoning_text)
+		_reasoning_label.visible = true
+		_reasoning_spacer.visible = true
+
+	_set_two_line_button(
+		_confirm_button,
+		"Sell at $%.2f" % offer_price,
+		_format_consequence_preview(offer_price, sticker_price, rep_delta_str),
+	)
+	if decline_label.is_empty():
+		decline_label = "Customer leaves, −Rep"
+	_set_two_line_button(_cancel_button, "Pass", decline_label)
+
+	var bundle: Variant = customer_data.get("bundle", null)
+	if bundle is Dictionary and not (bundle as Dictionary).is_empty():
+		_bundle_data = (bundle as Dictionary).duplicate()
+		_bundle_button.visible = true
+		_set_two_line_button(
+			_bundle_button,
+			str(_bundle_data.get("label", "Suggest Bundle")),
+			str(_bundle_data.get("consequence", "")),
+		)
+	else:
+		_bundle_data = {}
+		_bundle_button.visible = false
+
+
+## Transitions the panel into Result state showing a 1-2 sentence consequence
+## summary. Auto-dismisses after RESULT_DISPLAY_DURATION or on any button press.
+func show_result(resolution_text: String) -> void:
+	if resolution_text.is_empty():
+		return
+	_showing_result = true
+	_set_pending(false)
+	_confirm_button.visible = false
+	_cancel_button.visible = false
+	_bundle_button.visible = false
+	_reasoning_label.visible = false
+	_reasoning_spacer.visible = false
+	_result_label.text = resolution_text
+	_result_label.visible = true
+	_set_panel_result_palette()
+	_result_timer.stop()
+	_result_timer.start()
+
+
+## Returns the bundle suggestion data after a bundle press, or empty dict.
+func get_active_bundle() -> Dictionary:
+	return _bundle_data.duplicate()
+
+
+## Static archetype label derivation from a CustomerTypeDefinition profile.
+## Returns a Dictionary with keys "archetype_id", "label", "conflict" (int).
+static func derive_archetype_label(
+	profile: CustomerTypeDefinition
+) -> Dictionary:
+	if profile == null:
+		return {
+			"archetype_id": &"",
+			"label": "",
+			"conflict": DecisionCardStyle.ConflictLevel.NEUTRAL,
+		}
+	var archetype_id: StringName = profile.archetype_id
+	var label: String = ""
+	if not archetype_id.is_empty():
+		label = String(archetype_id).capitalize().replace("_", " ")
+	else:
+		var derived: StringName = _derive_archetype_from_traits(
+			profile.price_sensitivity, profile.patience
+		)
+		archetype_id = derived
+		label = String(derived).capitalize().replace("_", " ")
+	return {
+		"archetype_id": archetype_id,
+		"label": label,
+		"conflict": DecisionCardStyle.archetype_conflict_level(archetype_id),
+	}
+
+
+## Pure-function archetype derivation from price_sensitivity + patience floats.
+## Used when profile.archetype_id is empty.
+static func _derive_archetype_from_traits(
+	price_sensitivity: float, patience: float
+) -> StringName:
+	if price_sensitivity >= 0.85:
+		return &"bargain_hunter"
+	if price_sensitivity <= 0.25 and patience >= 0.6:
+		return &"collector"
+	if patience <= 0.35 and price_sensitivity >= 0.5:
+		return &"haggler"
+	if patience >= 0.8:
+		return &"casual_shopper"
+	return &"enthusiast"
 
 
 func _on_checkout_started(
@@ -195,6 +448,9 @@ func _on_checkout_started(
 
 
 func _on_confirm_pressed() -> void:
+	if _showing_result:
+		_dismiss_result()
+		return
 	if _is_pending:
 		return
 	_set_pending(true)
@@ -202,9 +458,24 @@ func _on_confirm_pressed() -> void:
 
 
 func _on_cancel_pressed() -> void:
+	if _showing_result:
+		_dismiss_result()
+		return
 	if _is_pending:
 		return
 	sale_declined.emit()
+	if _card_populated:
+		show_result("You let them walk. They left frustrated.")
+
+
+func _on_bundle_pressed() -> void:
+	if _showing_result:
+		_dismiss_result()
+		return
+	if _is_pending:
+		return
+	_bundle_button.disabled = true
+	bundle_suggested.emit()
 
 
 func _on_transaction_completed(
@@ -214,7 +485,12 @@ func _on_transaction_completed(
 		return
 	_set_pending(false)
 	if success:
-		_show_receipt(amount)
+		if _card_populated:
+			show_result(
+				"Sold for %s. The customer leaves satisfied." % _format_price(amount)
+			)
+		else:
+			_show_receipt(amount)
 	else:
 		_show_error(message)
 
@@ -230,10 +506,20 @@ func _on_receipt_timer_timeout() -> void:
 	hide_checkout()
 
 
+func _on_result_timer_timeout() -> void:
+	hide_checkout()
+
+
+func _dismiss_result() -> void:
+	_result_timer.stop()
+	hide_checkout()
+
+
 func _set_pending(pending: bool) -> void:
 	_is_pending = pending
 	_confirm_button.disabled = pending
 	_cancel_button.disabled = pending
+	_bundle_button.disabled = pending
 
 
 func _populate_item_list() -> void:
@@ -302,6 +588,7 @@ func _show_receipt(amount: float) -> void:
 	_showing_receipt = true
 	_confirm_button.visible = false
 	_cancel_button.visible = false
+	_bundle_button.visible = false
 	_receipt_section.visible = true
 	_clear_container(_receipt_item_list)
 	for item: Dictionary in _items:
@@ -347,6 +634,98 @@ static func _format_price(amount: float) -> String:
 	return "%s%.2f" % [
 		UIThemeConstants.CURRENCY_SYMBOL, amount,
 	]
+
+
+func _format_consequence_preview(
+	offer: float, sticker: float, rep_delta_str: String
+) -> String:
+	var delta: float = offer - sticker
+	var delta_str: String
+	if delta >= 0.0:
+		delta_str = "+%s" % _format_price(delta)
+	else:
+		delta_str = "−%s" % _format_price(absf(delta))
+	if absf(delta) < 0.005:
+		return "Full price | %s" % rep_delta_str
+	return "%s vs ask | %s" % [delta_str, rep_delta_str]
+
+
+## Sets a button's text to a single label and attaches a small consequence-
+## preview Label as a child below it. Both lines are clipped within the button
+## footprint so the choice is readable at a glance.
+func _set_two_line_button(
+	button: Button, primary: String, consequence: String
+) -> void:
+	button.text = primary
+	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.custom_minimum_size = Vector2(0, 56)
+	_clear_button_extras(button)
+	if consequence.is_empty():
+		return
+	var consequence_label: Label = Label.new()
+	consequence_label.name = "ConsequenceLabel"
+	consequence_label.text = consequence
+	consequence_label.add_theme_font_size_override(
+		"font_size", DecisionCardStyle.FONT_SIZE_CHOICE_CONSEQUENCE
+	)
+	consequence_label.add_theme_color_override(
+		"font_color", DecisionCardStyle.CHOICE_CONSEQUENCE_COLOR
+	)
+	consequence_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	consequence_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	consequence_label.offset_top = -16
+	consequence_label.offset_bottom = -2
+	consequence_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(consequence_label)
+
+
+func _clear_button_extras(button: Button) -> void:
+	var existing: Node = button.get_node_or_null("ConsequenceLabel")
+	if existing:
+		existing.queue_free()
+
+
+func _apply_card_style() -> void:
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = DecisionCardStyle.CARD_ACTIVE_BG_COLOR
+	box.border_width_left = DecisionCardStyle.CARD_BORDER_WIDTH
+	box.border_width_top = DecisionCardStyle.CARD_BORDER_WIDTH
+	box.border_width_right = DecisionCardStyle.CARD_BORDER_WIDTH
+	box.border_width_bottom = DecisionCardStyle.CARD_BORDER_WIDTH
+	box.border_color = DecisionCardStyle.CARD_BORDER_COLOR
+	box.corner_radius_top_left = DecisionCardStyle.CARD_CORNER_RADIUS
+	box.corner_radius_top_right = DecisionCardStyle.CARD_CORNER_RADIUS
+	box.corner_radius_bottom_left = DecisionCardStyle.CARD_CORNER_RADIUS
+	box.corner_radius_bottom_right = DecisionCardStyle.CARD_CORNER_RADIUS
+	_panel.add_theme_stylebox_override("panel", box)
+
+
+func _set_reasoning_text(text: String) -> void:
+	# BBCode `[i]` produces italic when an italic font variation is wired into
+	# the theme; on the default font, the engine falls back to a synthetic
+	# slant. Either way, the hierarchy spec (italic + muted + smaller) is met.
+	#
+	# §F-129 — `_reasoning_label` has `bbcode_enabled = true`. Today's only
+	# callers feed either a constant `_ARCHETYPE_REASONING` lookup or a packed
+	# JSON string from the customer-archetype catalog (developer-controlled),
+	# so the substituted text is not user-editable. We still escape `[` →
+	# `[lb]` so a future caller that wires save-derived or runtime-typed text
+	# through this surface cannot inject BBCode tags ([url=...], [color], …)
+	# into the rendered label. Round-trip is render-equivalent for the
+	# current safe inputs (no `[` characters in any catalog string).
+	_reasoning_label.text = "[i]%s[/i]" % text.replace("[", "[lb]")
+
+
+func _set_panel_active_palette() -> void:
+	var sb: StyleBox = _panel.get_theme_stylebox("panel")
+	if sb is StyleBoxFlat:
+		(sb as StyleBoxFlat).bg_color = DecisionCardStyle.CARD_ACTIVE_BG_COLOR
+
+
+func _set_panel_result_palette() -> void:
+	var sb: StyleBox = _panel.get_theme_stylebox("panel")
+	if sb is StyleBoxFlat:
+		(sb as StyleBoxFlat).bg_color = DecisionCardStyle.CARD_RESULT_BG_COLOR
 
 
 func _push_modal_focus() -> void:

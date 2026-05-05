@@ -37,43 +37,49 @@ func test_step_progression_advances_three_sequential_steps() -> void:
 	_tutorial._process(0.01)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"Welcome timeout should advance to OPEN_INVENTORY"
+		TutorialSystem.TutorialStep.PLATFORM_MATCH,
+		"Welcome timeout should advance to PLATFORM_MATCH"
 	)
 
-	EventBus.panel_opened.emit("inventory")
+	EventBus.customer_platform_identified.emit(&"c1", &"ignite_go", true)
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.SELECT_ITEM,
-		"Inventory panel open should advance to SELECT_ITEM"
+		TutorialSystem.TutorialStep.STOCK_SHELF,
+		"customer_platform_identified should advance to STOCK_SHELF"
 	)
 
-	EventBus.placement_mode_entered.emit()
+	EventBus.item_stocked.emit("item_1", "shelf_1")
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.PLACE_ITEM,
-		"placement_mode_entered should advance to PLACE_ITEM"
+		TutorialSystem.TutorialStep.CONDITION_RISK,
+		"item_stocked should advance to CONDITION_RISK"
 	)
 
 	assert_eq(completed_steps.size(), 3, "Three steps should complete in sequence")
 	assert_eq(completed_steps[0], "welcome", "First completed step should be welcome")
 	assert_eq(
 		completed_steps[1],
-		"open_inventory",
-		"Second completed step should be open_inventory"
+		"platform_match",
+		"Second completed step should be platform_match"
 	)
 	assert_eq(
 		completed_steps[2],
-		"select_item",
-		"Third completed step should be select_item"
+		"stock_shelf",
+		"Third completed step should be stock_shelf"
 	)
 	assert_eq(changed_steps.size(), 3, "Each advancement should emit a changed step")
-	assert_eq(changed_steps[0], "open_inventory", "First changed step should be open_inventory")
-	assert_eq(changed_steps[1], "select_item", "Second changed step should be select_item")
+	assert_eq(
+		changed_steps[0], "platform_match",
+		"First changed step should be platform_match"
+	)
+	assert_eq(
+		changed_steps[1], "stock_shelf",
+		"Second changed step should be stock_shelf"
+	)
 	assert_eq(
 		changed_steps[2],
-		"place_item",
-		"Third changed step should be place_item"
+		"condition_risk",
+		"Third changed step should be condition_risk"
 	)
 
 	EventBus.tutorial_step_completed.disconnect(on_completed)
@@ -139,7 +145,7 @@ func test_gameplay_ready_completes_welcome_step() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.OPEN_INVENTORY,
+		TutorialSystem.TutorialStep.PLATFORM_MATCH,
 		"gameplay_ready should complete the welcome step"
 	)
 	assert_true(
@@ -163,16 +169,17 @@ func test_load_progress_without_file_starts_first_step() -> void:
 
 
 func test_stale_schema_version_resets_progress() -> void:
-	# Hand-craft a cfg that mimics a v1 save: ordinals reference the old
-	# enum (e.g. PLACE_ITEM was index 3 in v1, an unrelated ID in v2).
+	# Hand-craft a cfg from an earlier schema version: ordinals reference the
+	# old owner-loop enum (e.g. v2 PLACE_ITEM was index 3) and would land on
+	# unrelated beats in the current employee-loop enum.
 	var stale := ConfigFile.new()
-	stale.set_value("tutorial", "schema_version", 1)
+	stale.set_value("tutorial", "schema_version", 2)
 	stale.set_value("tutorial", "completed", false)
 	stale.set_value("tutorial", "active", true)
 	stale.set_value("tutorial", "current_step", 3)
 	stale.set_value(
 		"tutorial", "completed_steps",
-		{"welcome": true, "move_to_shelf": true, "open_inventory": true}
+		{"welcome": true, "open_inventory": true, "select_item": true}
 	)
 	stale.set_value("tutorial", "tips_shown", {})
 	var save_err: Error = stale.save(_PROGRESS_PATH)

@@ -248,12 +248,41 @@
       ]
     },
     {
+      "id": "the_uninitiated",
+      "title": "The Uninitiated",
+      "text": "Thirty days in a building that had been quietly negotiating with itself the entire time, and you came out the other side without once noticing the negotiation. The directory looked the same, the food court smelled the same, the escalators ran on their usual schedule. Whatever the mall had been deciding, it decided without you. Your lease renewed. The other thing did not include you in its conclusion.",
+      "tone": "bittersweet",
+      "music_cue": "ending_mystery",
+      "priority": 8,
+      "category": "secret",
+      "required_all": [
+        {
+          "stat_key": "days_survived",
+          "operator": "gte",
+          "value": 30.0
+        },
+        {
+          "stat_key": "hidden_thread_interactions",
+          "operator": "eq",
+          "value": 0.0
+        }
+      ],
+      "required_any": [],
+      "forbidden_all": [
+        {
+          "stat_key": "trigger_type_bankruptcy",
+          "operator": "eq",
+          "value": 1.0
+        }
+      ]
+    },
+    {
       "id": "broke_even",
       "title": "Broke Even",
       "text": "Thirty days later, the ledger balanced to a number that was technically positive and emotionally neutral. You covered the lights, paid the rent, kept the gate rolling up in the morning, and ended with enough left to call it survival. The directory still listed your store, which was the whole point of the exercise.",
       "tone": "neutral",
       "music_cue": "ending_survival",
-      "priority": 8,
+      "priority": 9,
       "category": "survival",
       "required_all": [
         {
@@ -287,7 +316,7 @@
       "text": "You found the revenue band where management stopped checking in but never started paying special attention. The rent cleared, the shelves turned over, and your store occupied the calm middle of the directory with admirable anonymity. Nothing dramatic happened, which over thirty days counted as its own kind of triumph.",
       "tone": "neutral",
       "music_cue": "ending_survival",
-      "priority": 9,
+      "priority": 10,
       "category": "survival",
       "required_all": [
         {
@@ -321,7 +350,7 @@
       "text": "Ten days below the bankruptcy line taught you more about timing than comfort ever could. The balance dipped, recovered, dipped again, and each rescue came at the last plausible second until nerve itself became part of the business model. By day thirty you had not escaped the edge so much as learned how to live on it.",
       "tone": "bittersweet",
       "music_cue": "ending_survival",
-      "priority": 10,
+      "priority": 11,
       "category": "survival",
       "required_all": [
         {
@@ -355,7 +384,7 @@
       "text": "You started catching glimpses in the wax-buffed reflections — a directory entry that wasn't there yesterday, an escalator that descended into the same floor it began on, a gate code only you remembered using. The mall had begun keeping a private version of itself, and at some point you had walked into it and stayed. The lights came on every morning regardless of whether anyone unlocked them.",
       "tone": "ambiguous",
       "music_cue": "ending_mystery",
-      "priority": 11,
+      "priority": 12,
       "category": "secret",
       "required_all": [
         {
@@ -384,7 +413,7 @@
       "text": "A second 30-day run inside the same building tells a different story than the first one ever could. The regulars had names for you before you opened, the staff already knew their stations, and your inventory pricing settled into a confident dialect. By the time the second cycle ended, the legend wasn't a story being told for the first time — it was being remembered, retold, and quietly verified by everyone who had been there for the prequel.",
       "tone": "positive",
       "music_cue": "ending_triumph",
-      "priority": 12,
+      "priority": 13,
       "category": "legacy",
       "required_all": [
         {

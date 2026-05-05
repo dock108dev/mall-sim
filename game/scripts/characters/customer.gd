@@ -521,9 +521,8 @@ func _evaluate_current_shelf() -> void:
 	)
 	# §F-86 — Pass 12: emits are guarded upstream by `_is_item_desirable`,
 	# which rejects `item.definition == null` / null profile, so subscribers
-	# (`AmbientMomentsSystem._on_customer_item_spotted`,
-	# `TutorialSystem._on_customer_item_spotted`) can rely on a fully-formed
-	# (Customer, ItemInstance) payload.
+	# (`AmbientMomentsSystem._on_customer_item_spotted`) can rely on a
+	# fully-formed (Customer, ItemInstance) payload.
 	for item: ItemInstance in items:
 		if not _is_item_desirable(item):
 			continue

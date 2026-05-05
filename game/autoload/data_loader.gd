@@ -64,10 +64,12 @@ const _TYPE_ROUTES: Dictionary = {
 	"sports_grade_definitions_data": "ignore",
 	"arc_unlocks_data": "ignore",
 	"retro_games_grades_data": "ignore",
-	"day_beats_data": "ignore",
+	"day_beats_data": "day_beats_data",
 	"objectives_data": "ignore",
 	"archetypes_data": "ignore",
 	"regulars_threads_data": "ignore",
+	"platforms_data": "ignore",
+	"manager_notes_data": "ignore",
 }
 
 var _items: Dictionary = {}
@@ -94,6 +96,11 @@ var _video_rental_config: Dictionary = {}
 var _named_seasons: Dictionary = {}
 var _named_season_cycle_length: int = 70
 var _pocket_creatures_packs: Array = []
+## Structured midday-event beat pool extracted from day_beats.json.
+## Each entry retains the on-disk schema: id, min_day, max_day,
+## unlock_required, cooldown_days, title, body, choices (Array of
+## {label, consequence, effects}).
+var _midday_events: Array = []
 var _loaded: bool = false
 var _load_errors: Array[String] = []
 
@@ -132,6 +139,7 @@ func clear_for_testing() -> void:
 	_video_rental_config = {}
 	_named_seasons = {}
 	_pocket_creatures_packs = []
+	_midday_events = []
 	_load_errors = []
 	_loaded = false
 
@@ -267,6 +275,11 @@ func _process_file(
 		return
 	if route == "video_rental_config":
 		_video_rental_config = dict
+		return
+	if route == "day_beats_data":
+		var midday_raw: Variant = dict.get("midday_events", [])
+		if midday_raw is Array:
+			_midday_events = (midday_raw as Array).duplicate(true)
 		return
 	if route == "pocket_creatures_packs_config":
 		var packs_data: Variant = dict.get("entries", [])
@@ -1090,6 +1103,12 @@ func get_all_unlocks() -> Array[UnlockDefinition]:
 
 func get_unlock_count() -> int:
 	return _unlocks.size()
+
+
+## Returns the structured midday-event beat pool loaded from day_beats.json.
+## Returns a defensive copy; mutating the result does not affect future calls.
+func get_midday_events() -> Array:
+	return _midday_events.duplicate(true)
 
 
 func get_named_seasons() -> Array[Dictionary]:

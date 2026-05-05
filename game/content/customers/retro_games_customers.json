@@ -9,7 +9,7 @@
       ],
       "budget_range": [
         20.0,
-        80.0
+        180.0
       ],
       "patience": 0.7,
       "price_sensitivity": 0.5,
@@ -125,7 +125,7 @@
       ],
       "budget_range": [
         50.0,
-        200.0
+        300.0
       ],
       "patience": 0.3,
       "price_sensitivity": 0.95,
@@ -154,6 +154,280 @@
         "sharp"
       ],
       "dialogue_pool": "reseller",
+      "model": "res://game/assets/models/customers/reseller.glb"
+    },
+    {
+      "id": "retro_confused_parent",
+      "name": "Clueless Gift-Buyer",
+      "archetype_id": "confused_parent",
+      "store_types": [
+        "retro_games"
+      ],
+      "budget_range": [
+        15.0,
+        65.0
+      ],
+      "patience": 0.9,
+      "price_sensitivity": 0.3,
+      "preferred_categories": [
+        "cartridges",
+        "consoles",
+        "accessories"
+      ],
+      "preferred_tags": [
+        "starter",
+        "family",
+        "classic",
+        "platformer"
+      ],
+      "condition_preference": "any",
+      "browse_time_range": [
+        60,
+        150
+      ],
+      "purchase_probability_base": 0.45,
+      "impulse_buy_chance": 0.4,
+      "visit_frequency": "low",
+      "mood_tags": [
+        "confused",
+        "anxious",
+        "easily_influenced"
+      ],
+      "dialogue_pool": "confused_parent",
+      "model": "res://game/assets/models/customers/parent.glb"
+    },
+    {
+      "id": "retro_hype_teen",
+      "name": "Trend Chaser",
+      "archetype_id": "hype_teen",
+      "store_types": [
+        "retro_games"
+      ],
+      "budget_range": [
+        10.0,
+        45.0
+      ],
+      "patience": 0.35,
+      "price_sensitivity": 0.45,
+      "preferred_categories": [
+        "cartridges",
+        "accessories"
+      ],
+      "preferred_tags": [
+        "rare",
+        "limited",
+        "trending",
+        "classic",
+        "meme"
+      ],
+      "condition_preference": "good",
+      "browse_time_range": [
+        8,
+        30
+      ],
+      "purchase_probability_base": 0.6,
+      "impulse_buy_chance": 0.7,
+      "visit_frequency": "medium",
+      "mood_tags": [
+        "excitable",
+        "distracted",
+        "social"
+      ],
+      "dialogue_pool": "hype_teen",
+      "model": "res://game/assets/models/customers/young_adult.glb",
+      "platform_affinities": [
+        "vecforce_hd"
+      ],
+      "shortage_sensitivity": 0.8
+    },
+    {
+      "id": "retro_sports_crossover",
+      "name": "Sports Fan Browsing",
+      "archetype_id": "sports_regular",
+      "store_types": [
+        "retro_games"
+      ],
+      "budget_range": [
+        10.0,
+        40.0
+      ],
+      "patience": 0.6,
+      "price_sensitivity": 0.55,
+      "preferred_categories": [
+        "cartridges"
+      ],
+      "preferred_tags": [
+        "sports",
+        "racing",
+        "classic",
+        "multiplayer"
+      ],
+      "condition_preference": "good",
+      "browse_time_range": [
+        15,
+        50
+      ],
+      "purchase_probability_base": 0.4,
+      "impulse_buy_chance": 0.25,
+      "visit_frequency": "low",
+      "mood_tags": [
+        "curious",
+        "skeptical",
+        "loyal"
+      ],
+      "dialogue_pool": "sports_crossover",
+      "model": "res://game/assets/models/customers/casual_adult.glb"
+    },
+    {
+      "id": "retro_collector",
+      "name": "Set Completionist",
+      "archetype_id": "collector",
+      "store_types": [
+        "retro_games"
+      ],
+      "budget_range": [
+        40.0,
+        250.0
+      ],
+      "patience": 0.95,
+      "price_sensitivity": 0.15,
+      "preferred_categories": [
+        "cartridges",
+        "consoles",
+        "guides"
+      ],
+      "preferred_tags": [
+        "CIB",
+        "NIB",
+        "rare",
+        "import",
+        "legendary",
+        "classic",
+        "limited"
+      ],
+      "condition_preference": "mint",
+      "browse_time_range": [
+        90,
+        240
+      ],
+      "purchase_probability_base": 0.45,
+      "impulse_buy_chance": 0.05,
+      "visit_frequency": "high",
+      "mood_tags": [
+        "focused",
+        "reverent",
+        "knowledgeable"
+      ],
+      "dialogue_pool": "collector",
+      "model": "res://game/assets/models/customers/casual_adult.glb"
+    },
+    {
+      "id": "retro_bargain_hunter",
+      "name": "Deal Seeker",
+      "archetype_id": "bargain_hunter",
+      "store_types": [
+        "retro_games"
+      ],
+      "budget_range": [
+        5.0,
+        35.0
+      ],
+      "patience": 0.65,
+      "price_sensitivity": 0.9,
+      "preferred_categories": [
+        "cartridges",
+        "accessories"
+      ],
+      "preferred_tags": [
+        "common",
+        "classic",
+        "starter",
+        "platformer"
+      ],
+      "condition_preference": "fair",
+      "browse_time_range": [
+        25,
+        70
+      ],
+      "purchase_probability_base": 0.5,
+      "impulse_buy_chance": 0.1,
+      "visit_frequency": "medium",
+      "mood_tags": [
+        "shrewd",
+        "patient",
+        "skeptical"
+      ],
+      "dialogue_pool": "bargain_hunter",
+      "model": "res://game/assets/models/customers/casual_adult.glb"
+    },
+    {
+      "id": "retro_angry_return",
+      "name": "Unhappy Returner",
+      "archetype_id": "angry_return_customer",
+      "store_types": [
+        "retro_games"
+      ],
+      "budget_range": [
+        0.0,
+        0.0
+      ],
+      "patience": 0.2,
+      "price_sensitivity": 1.0,
+      "preferred_categories": [],
+      "preferred_tags": [],
+      "condition_preference": "any",
+      "browse_time_range": [
+        5,
+        15
+      ],
+      "purchase_probability_base": 0.1,
+      "impulse_buy_chance": 0.0,
+      "visit_frequency": "rare",
+      "mood_tags": [
+        "angry",
+        "demanding",
+        "confrontational"
+      ],
+      "dialogue_pool": "angry_return",
+      "model": "res://game/assets/models/customers/casual_adult.glb"
+    },
+    {
+      "id": "retro_shady_regular",
+      "name": "Shifty Browser",
+      "archetype_id": "shady_regular",
+      "store_types": [
+        "retro_games"
+      ],
+      "budget_range": [
+        5.0,
+        30.0
+      ],
+      "patience": 0.85,
+      "price_sensitivity": 0.98,
+      "preferred_categories": [
+        "cartridges",
+        "consoles"
+      ],
+      "preferred_tags": [
+        "rare",
+        "import",
+        "legendary",
+        "CIB"
+      ],
+      "condition_preference": "any",
+      "browse_time_range": [
+        60,
+        180
+      ],
+      "purchase_probability_base": 0.25,
+      "impulse_buy_chance": 0.05,
+      "visit_frequency": "medium",
+      "mood_tags": [
+        "evasive",
+        "nervous",
+        "calculating"
+      ],
+      "dialogue_pool": "shady_regular",
       "model": "res://game/assets/models/customers/reseller.glb"
     }
   ]

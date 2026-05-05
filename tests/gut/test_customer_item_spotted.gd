@@ -1,6 +1,8 @@
 ## Tests for the customer_item_spotted EventBus signal — emission from
-## Customer._evaluate_current_shelf, AmbientMomentsSystem toast + dedup
-## handling, and TutorialSystem WAIT_FOR_CUSTOMER advance wiring.
+## Customer._evaluate_current_shelf and AmbientMomentsSystem toast + dedup
+## handling. The TutorialSystem WAIT_FOR_CUSTOMER advance wiring this file
+## once also covered was deleted with that step (TutorialStep schema bumped
+## from v2 → v3 in the same change set; see ssot-report.md Pass 5).
 extends GutTest
 
 
@@ -209,38 +211,6 @@ func test_dedup_clears_when_customer_left() -> void:
 	assert_eq(
 		count[0], 2,
 		"After customer_left clears dedup, the same item should toast again"
-	)
-
-
-# ── Tutorial wiring ──────────────────────────────────────────────────────────
-
-
-func test_tutorial_customer_browsing_advances_on_item_spotted() -> void:
-	var tutorial := TutorialSystem.new()
-	add_child_autofree(tutorial)
-	tutorial.initialize(true)
-	tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
-	tutorial._process(0.01)
-	# Drive WELCOME → … → CUSTOMER_BROWSING so customer_item_spotted is the
-	# next legitimate trigger.
-	EventBus.panel_opened.emit("inventory")
-	EventBus.placement_mode_entered.emit()
-	EventBus.item_stocked.emit("item_1", "shelf_1")
-	EventBus.customer_entered.emit({"customer_id": "c1"})
-	assert_eq(
-		tutorial.current_step,
-		TutorialSystem.TutorialStep.CUSTOMER_BROWSING,
-		"Pre-condition: tutorial must be on CUSTOMER_BROWSING"
-	)
-
-	var customer: Customer = _make_customer(null)
-	var item: ItemInstance = _make_item("retro_a", 12.0)
-	EventBus.customer_item_spotted.emit(customer, item)
-
-	assert_eq(
-		tutorial.current_step,
-		TutorialSystem.TutorialStep.CUSTOMER_AT_CHECKOUT,
-		"customer_item_spotted should advance CUSTOMER_BROWSING → CUSTOMER_AT_CHECKOUT"
 	)
 
 

@@ -3,7 +3,7 @@ extends GutTest
 
 ## Common-rarity retro games item compatible with BASIC supplier tier.
 const STORE_ID: StringName = &"retro_games"
-const ITEM_ID: StringName = &"retro_plumber_world_ss_loose"
+const ITEM_ID: StringName = &"neo_ignite_motorway_kings_loose"
 ## Common-rarity sports item used for multi-store delivery scenario.
 const STORE_ID_B: StringName = &"sports"
 const ITEM_ID_B: StringName = &"sports_duvall_hr_common"

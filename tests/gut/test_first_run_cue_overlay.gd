@@ -134,7 +134,7 @@ func test_inventory_update_for_other_store_does_not_dismiss() -> void:
 
 func test_suppressed_when_entering_store_during_tutorial_suppressing_step() -> void:
 	_time.current_day = 1
-	EventBus.tutorial_step_changed.emit("place_item")
+	EventBus.tutorial_step_changed.emit("stock_shelf")
 	EventBus.store_entered.emit(&"retro_games")
 	assert_false(
 		_overlay.visible,
@@ -144,7 +144,7 @@ func test_suppressed_when_entering_store_during_tutorial_suppressing_step() -> v
 
 func test_appears_after_tutorial_completed_with_shelves_still_empty() -> void:
 	_time.current_day = 1
-	EventBus.tutorial_step_changed.emit("open_inventory")
+	EventBus.tutorial_step_changed.emit("stock_shelf")
 	EventBus.store_entered.emit(&"retro_games")
 	assert_false(_overlay.visible, "Precondition: suppressed by tutorial")
 	EventBus.tutorial_completed.emit()
@@ -168,7 +168,7 @@ func test_appears_after_tutorial_skipped_with_shelves_still_empty() -> void:
 
 func test_does_not_appear_after_tutorial_completed_when_inventory_filled() -> void:
 	_time.current_day = 1
-	EventBus.tutorial_step_changed.emit("place_item")
+	EventBus.tutorial_step_changed.emit("stock_shelf")
 	EventBus.store_entered.emit(&"retro_games")
 	_inventory.set_stock(&"retro_games", ["item_1"])
 	EventBus.tutorial_completed.emit()
@@ -182,7 +182,7 @@ func test_hides_when_suppressing_step_starts_after_visible() -> void:
 	_time.current_day = 1
 	EventBus.store_entered.emit(&"electronics")
 	assert_true(_overlay.visible, "Precondition: cue is visible")
-	EventBus.tutorial_step_changed.emit("place_item")
+	EventBus.tutorial_step_changed.emit("stock_shelf")
 	assert_false(
 		_overlay.visible,
 		"Cue should hide when a suppressing tutorial step becomes active"
@@ -191,10 +191,10 @@ func test_hides_when_suppressing_step_starts_after_visible() -> void:
 
 func test_non_suppressing_step_lifts_suppression() -> void:
 	_time.current_day = 1
-	EventBus.tutorial_step_changed.emit("place_item")
+	EventBus.tutorial_step_changed.emit("stock_shelf")
 	EventBus.store_entered.emit(&"retro_games")
 	assert_false(_overlay.visible, "Precondition: suppressed")
-	EventBus.tutorial_step_changed.emit("wait_for_customer")
+	EventBus.tutorial_step_changed.emit("condition_risk")
 	assert_true(
 		_overlay.visible,
 		"Cue should appear once tutorial advances past the suppressing steps"
@@ -203,7 +203,7 @@ func test_non_suppressing_step_lifts_suppression() -> void:
 
 func test_suppression_does_not_consume_dismissal_marker() -> void:
 	_time.current_day = 1
-	EventBus.tutorial_step_changed.emit("place_item")
+	EventBus.tutorial_step_changed.emit("stock_shelf")
 	EventBus.store_entered.emit(&"retro_games")
 	assert_false(_overlay.visible, "Precondition: suppressed by tutorial")
 	# Re-enter the same store on the same day after the tutorial finishes:

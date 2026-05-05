@@ -11,11 +11,11 @@ func before_each() -> void:
 	_system.initialize()
 
 
-func test_initialize_loads_13_endings_from_content_registry() -> void:
+func test_initialize_loads_all_endings_from_content_registry() -> void:
 	assert_eq(
 		_system._ending_definitions.size(),
-		13,
-		"EndingEvaluatorSystem should load 13 endings from ContentRegistry"
+		14,
+		"EndingEvaluatorSystem should load 14 endings from ContentRegistry"
 	)
 
 

@@ -26,7 +26,11 @@ const _ITEM_KNOWN_KEYS: Array[String] = [
 	"min_value_ratio", "launch_demand_multiplier", "launch_spike_days",
 	"can_be_demo_unit", "monthly_depreciation_rate",
 	"launch_spike_eligible", "launch_spike_multiplier", "supplier_tier",
-	"platform", "region",
+	"platform", "platform_id", "region",
+	"launch_window_start_day", "launch_window_end_day",
+	"supply_constrained", "decay_profile", "edition_year", "edition_series",
+	"sequel_of",
+	"trade_in_base", "used_price",
 	"warranty_tiers", "demo_unit_eligible",
 	"era", "provenance_score",
 	# Rental schema canonical field names (ISSUE-009).
@@ -129,6 +133,26 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	)
 	item.supplier_tier = int(normalized.get("supplier_tier", 0))
 	item.platform = str(normalized.get("platform", ""))
+	item.platform_id = StringName(str(normalized.get("platform_id", "")))
+	item.launch_window_start_day = int(
+		normalized.get("launch_window_start_day", 0)
+	)
+	item.launch_window_end_day = int(
+		normalized.get("launch_window_end_day", 0)
+	)
+	item.supply_constrained = bool(
+		normalized.get("supply_constrained", false)
+	)
+	item.decay_profile = StringName(
+		str(normalized.get("decay_profile", "standard"))
+	)
+	item.edition_year = int(normalized.get("edition_year", 0))
+	item.edition_series = StringName(
+		str(normalized.get("edition_series", ""))
+	)
+	item.sequel_of = str(normalized.get("sequel_of", ""))
+	item.trade_in_base = float(normalized.get("trade_in_base", 0.0))
+	item.used_price = float(normalized.get("used_price", 0.0))
 	item.region = str(normalized.get("region", ""))
 	item.era = str(normalized.get("era", ""))
 	item.provenance_score = float(normalized.get("provenance_score", -1.0))
@@ -353,6 +377,13 @@ static func parse_customer(
 	p.spawn_weight = float(
 		data.get("spawn_weight", _derive_spawn_weight(data))
 	)
+	if data.has("platform_affinities"):
+		var affinities: Array[StringName] = []
+		for raw_platform_id: Variant in data["platform_affinities"]:
+			affinities.append(StringName(str(raw_platform_id)))
+		p.platform_affinities = affinities
+	p.shortage_sensitivity = float(data.get("shortage_sensitivity", 0.0))
+	p.archetype_id = StringName(str(data.get("archetype_id", "")))
 	return p
 
 
@@ -598,6 +629,10 @@ static func parse_milestone(data: Dictionary) -> MilestoneDefinition:
 	m.reward_value = float(data.get("reward_value", 0.0))
 	var raw_unlock: Variant = data.get("unlock_id")
 	m.unlock_id = str(raw_unlock) if raw_unlock != null else ""
+	m.min_day = int(data.get("min_day", 0))
+	m.min_manager_trust_tier_index = int(
+		data.get("min_manager_trust_tier_index", 0)
+	)
 	return m
 
 

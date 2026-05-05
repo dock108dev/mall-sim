@@ -1,8 +1,8 @@
-# Cleanup Report — 2026-05-04
+# Cleanup Report — 2026-05-05
 
 **Scope:** code-quality cleanup pass on the working-tree state ahead of
-commit. Eight passes have run across the 2026-05-02 / 2026-05-03 / 2026-05-04
-work:
+commit. Ten passes have run across the 2026-05-02 / 2026-05-03 / 2026-05-04
+/ 2026-05-05 work:
 
 * **Pass 1** (2026-05-02) — initial dead-code sweep + first attempt at
   "broken-link" cleanup after the audit-report consolidation.
@@ -75,7 +75,7 @@ work:
   focus/state if needed" was a hypothetical-future justification ruled
   out by the cleanup contract. Net code reduction with no behavioral
   change.
-* **Pass 8** (this pass, 2026-05-04) — dead-member sweep against the
+* **Pass 8** (2026-05-04) — dead-member sweep against the
   Pass-15 working-tree change set (the `shelf_slot.gd` state-aware
   prompt rewrite, the `customer.gd` `_set_state` consolidation +
   navmesh-fallback path, the `customer_system.gd` Day-1 forced-spawn
@@ -92,15 +92,71 @@ work:
   never read after `_refresh_prompt_state` stopped restoring it) and
   removed the field, its assignment, and rewrote the surrounding
   comment to drop the now-singular reference.
+* **Pass 9** (this pass, 2026-05-04) — duplicate-utility consolidation
+  against the new working-tree change set (the `EmploymentSystem` /
+  `ManagerRelationshipManager` autoloads, the `MiddayEventSystem` /
+  `PlatformSystem` / `ShiftSystem` systems, the `back_room_inventory_panel.gd`
+  and `morning_note_panel.gd` UI, the new `MiddayEventCard` /
+  `DecisionCardStyle` / `LockedFeatureGate` widgets, the `clock_in_interactable`
+  component, and the wide working-tree edits to `checkout_panel.gd`,
+  `haggle_panel.gd`, `checkout_system.gd`, `customer_system.gd`,
+  `progression_system.gd`, `milestone_system.gd`, `retro_games.gd`, and
+  the supporting content/resource files). Pass 9 found one true
+  duplicate-utility pair: the new `_apply_reasoning_style()` and
+  `_apply_archetype_badge_style()` helpers were added to BOTH
+  `checkout_panel.gd` and `haggle_panel.gd` in lockstep with byte-for-byte
+  identical bodies on the badge helper and a one-line null-guard
+  difference on the reasoning helper. Pass 9 promoted both into
+  `DecisionCardStyle` as `static func apply_reasoning_style(label)` and
+  `static func apply_archetype_badge_style(badge, label, archetype_id)`,
+  collapsed the four call sites to single-line invocations, and deleted
+  the four local helpers. The cleanup contract makes this a textbook
+  consolidation: two callers, identical core logic, identical
+  justification (single source of truth so the two cards can't drift
+  visually), and a pre-existing canonical home (`DecisionCardStyle`
+  already exposes `make_card_stylebox` / `make_header_stylebox` /
+  `archetype_color` for exactly this purpose).
+* **Pass 10** (this pass, 2026-05-05) — duplicate-utility consolidation
+  against the post-Pass-9 working-tree change set (the new
+  `HiddenThreadSystem` / `ReturnsSystem` autoloads, the
+  `StoreCustomizationSystem` / `TradeInSystem` systems, `HoldList`,
+  `hidden_thread_shimmer.gd`, the new `closing_checklist.gd` /
+  `returns_panel.gd` / `trade_in_panel.gd` UI, and the wide working-tree
+  edits to `progression_system.gd`, `milestone_system.gd`,
+  `customer_system.gd`, `checkout_system.gd`, `market_value_system.gd`,
+  `tutorial_system.gd`, and `performance_report_system.gd`). Pass 10
+  found one true duplicate-utility pair: a `_resolve_manager_trust_tier_index`
+  helper added in lockstep to BOTH `progression_system.gd` and
+  `milestone_system.gd` with byte-equivalent bodies (autoload lookup +
+  `match` block mapping `cold/neutral/warm/trusted` → `0/1/2/3`). Pass
+  10 promoted the canonical mapping into `ManagerRelationshipManager`
+  as `func get_tier_index() -> int` plus a `static func tier_index_for`
+  helper, and collapsed both consumer copies into 4-line null-safe
+  delegates. The cleanup contract makes this a textbook consolidation:
+  two callers, identical core logic, identical justification (single
+  source of truth so the tier mapping cannot drift between the two
+  evaluators), and a pre-existing canonical home
+  (`ManagerRelationshipManager` already owns the tier StringName via
+  `_recalculate_tier` / `get_tier()`).
 
-**Verification:** `bash tests/run_tests.sh` after Pass 8 — **5076 GUT
-tests, 5076 passing, 0 failing, 28697 asserts** (the Pass-7-baseline
-flaky `test_pocket_creatures_controller.gd::test_rarity_draw_within_spec`
-case has stabilized in this run; Pass 8 did not touch its dependencies
-and the win is incidental). All SSOT tripwires remain green
+**Verification:** `bash tests/run_tests.sh` after Pass 10 — **5470 GUT
+tests, 5470 passing, 0 failing, 31956 asserts** (Pass 9 baseline was
+5260 / 31510 asserts; the +210 tests / +446 asserts come from the new
+working-tree systems' test suites — `test_hidden_thread_system.gd`,
+`test_returns_system.gd`, `test_store_customization_system.gd`,
+`test_trade_in_system.gd`, `test_hold_list.gd`,
+`test_hold_slip_resource.gd`, `test_retro_games_hold_list.gd`,
+`test_closing_checklist.gd`, `test_day_cycle_closing_checklist_gate.gd`,
+`test_day_summary_auto_advance.gd`,
+`test_day_summary_employee_metrics.gd`,
+`test_performance_report_employee_metrics.gd`, and
+`test_annual_sports_depreciation.gd`). All SSOT tripwires remain green
 (`validate_translations.sh`, `validate_single_store_ui.sh`,
 `validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter sole-owner,
-the regulars-log audit's 32 checks). Pre-existing validator failures
+the regulars-log audit's 32 checks, the original-content denylist's
+12/12). Pre-existing parse-error noise on
+`game/scripts/ui/midday_event_card.gd` (Pass 9's "Considered but not
+changed" entry) is unchanged. Pre-existing validator failures
 (ISSUE-018, ISSUE-023, ISSUE-024, ISSUE-026, ISSUE-032, ISSUE-154,
 ISSUE-239) are on `main` ahead of this branch and do not touch the
 files edited in any pass.
@@ -108,6 +164,482 @@ files edited in any pass.
 ---
 
 ## Changes made this pass
+
+### Duplicate-utility consolidation (Pass 10)
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/autoload/manager_relationship_manager.gd:138–158` (new public + static helpers) | Added `func get_tier_index() -> int` (instance method, returns `tier_index_for(manager_tier)`) and `static func tier_index_for(tier: StringName) -> int` (the canonical match block: cold→0, neutral→1, warm→2, trusted→3, default→0). | Single canonical home for the tier-name → tier-index mapping. The instance method is the primary read API for live consumers; the static helper is the test / headless seam (it does not require the autoload to be instantiated, so consumers without /root/ManagerRelationshipManager can still translate a known StringName). The class already owns the tier transitions through `_recalculate_tier`, so the mapping belongs alongside it. |
+| `game/scripts/systems/progression_system.gd:611–617` | Replaced the 14-line `_resolve_manager_trust_tier_index` body (autoload lookup + has_method gate + StringName fetch + match block) with a 4-line delegate that fetches the autoload, gates on `has_method("get_tier_index")`, and `int(manager.call("get_tier_index"))`. The "Mirrors ManagerRelationshipManager._recalculate_tier ordering …" comment is replaced by a single-line note explaining the headless-test fallback. | Mechanical move to the shared helper; preserves the silent-zero fallback when running in headless test contexts that boot without the autoload. The original explicit-mapping comment is now obsolete because the mapping is no longer here. |
+| `game/scripts/systems/milestone_system.gd:301–307` | Symmetric edit to progression: replaced the 14-line body with the same 4-line delegate. | Same rationale; the milestone copy was the byte-equivalent twin of the progression copy. |
+
+### Net code change (Pass 10)
+
+* `manager_relationship_manager.gd`: 384 → 407 LOC (+23 — the two
+  helpers plus their docstrings; +5 LOC for the docstring blocks
+  beyond the +18 LOC body).
+* `progression_system.gd`: 630 → 617 LOC (-13 — the match block +
+  setup collapsed to a 4-line delegate).
+* `milestone_system.gd`: 475 → 465 LOC (-10 — same).
+* **Total delta on the three touched files: 0 LOC, no behavioral
+  change.** Two byte-equivalent match-block helpers collapsed onto a
+  single canonical home; consumer call sites kept the silent-zero
+  headless fallback so no test-fixture path changes. The static
+  `tier_index_for` companion exists as a future seam for headless
+  callers that already hold a tier StringName (none today; documented
+  and no extra cost).
+
+### Pass 10 surfaces re-verified clean (no edits required)
+
+Pass 10 swept the rest of the post-Pass-9 working-tree change set for
+orphans / dead prints / stale comments / unused members / commented-out
+blocks and found none requiring an edit beyond the consolidation
+above. Each addition is cohesive within its host file:
+
+* **`hidden_thread_system.gd` (370 LOC, new autoload)** — every
+  member is reachable: `hidden_thread_interactions` /
+  `paper_trail_score` / `scapegoat_risk` / `awareness_score` and
+  `discovered_artifacts` are all read by `get_save_data` /
+  `load_state` / `reset` and exercised in
+  `tests/unit/test_hidden_thread_system.gd` (the test sets
+  `paper_trail_score = 12.5` and round-trips through save/load —
+  verified via grep). The `_safe_finite_float` helper is a
+  static method (nominally similar to
+  `EconomySystem._safe_finite_float`, but with a 2-arg signature and
+  zero-floor instead of the 4-arg clamped variant — different
+  contracts, **not a consolidation candidate**, see "Considered but
+  not changed" below). No `print()`, no stale TODOs.
+* **`returns_system.gd` (412 LOC, new autoload)** — every method is
+  reachable from `tests/gut/test_returns_system.gd` or from the
+  decision-card emit chain. The static helpers
+  (`is_condition_defective` / `is_exchange_choice_available`) are
+  read by `build_card_data` / `get_available_choices`. No orphan
+  methods. §F-NN cite-backs on every `push_warning`.
+* **`trade_in_system.gd` (339 LOC, new system)** — `current_store_id`
+  is hardcoded to `&"retro_games"` at declaration and is the only
+  store the system serves (the only consumer is
+  `_read_trust(reputation_system.get_reputation(...))`). A
+  set_store_id setter would be a public-API addition (behavioral
+  change) and the field is intentionally simple while the system has
+  exactly one host store; flagged below under "Considered but not
+  changed" with a smallest-next-action. No dead code; static helpers
+  (`get_trust_bonus` / `compute_offer`) are exercised in the test.
+* **`store_customization_system.gd` (319 LOC, new system)** —
+  `get_spawn_weight_bonus` is read by `customer_system.gd`
+  (verified); `get_demand_multiplier` is read by the platform-spawn
+  pipeline; the morning-note hint plumbing is exercised in
+  `tests/unit/test_store_customization_system.gd`.
+* **`hold_list.gd` (402 LOC, new resource)** — every public method
+  is exercised in `test_hold_list.gd` /
+  `test_retro_games_hold_list.gd`. The `HONOR_EARLIEST` and
+  `ESCALATE_TO_MANAGER` branches in `resolve_conflict` read as
+  near-duplicates (identical fulfill + remaining-id loop, only the
+  emit `reason` string differs); kept separate because the inline
+  duplication is a 7-line switch-case body rather than a
+  cross-file utility, the structure mirrors the issue spec's
+  `ConflictChoice` enum 1-to-1, and folding the two arms into a
+  single branch with a ternary `reason` would obscure the
+  per-enum-value contract that downstream consumers (trust delta
+  table) use as the documentation source. **Justified, not
+  collapsed.**
+* **`hidden_thread_shimmer.gd` (101 LOC, new world helper)** —
+  single-purpose Sprite3D subclass; all members feed
+  `_process` / `_set_state`. Cohesive.
+* **`closing_checklist.gd` (204 LOC, new UI)**,
+  **`returns_panel.gd` (233 LOC, new UI)**, and
+  **`trade_in_panel.gd` (326 LOC, new UI)** — declarative panels
+  with one signal-binding per row; verified via greps that every
+  declared signal handler is wired in `_ready` / `_setup_ui`. No
+  commented-out scaffolding.
+* **`customer_system.gd` working-tree delta (+140 LOC)** — the new
+  archetype-spawn-rules wiring (`is_profile_currently_spawnable` /
+  `get_profile_spawn_weight` / `pick_spawn_profile` /
+  `_record_archetype_spawn`) consults `PlatformSystem` and
+  `StoreCustomizationSystem` via `get_node_or_null` (silent
+  fallback when the autoload is missing — same headless-test
+  posture as the tier-index helper consolidated above). Every new
+  state field (`_defective_sale_today`,
+  `_archetype_spawn_count_today`, `_current_day_phase`) is reset in
+  `_on_day_started` / `_on_day_phase_changed`. Cohesive single-FSM
+  addition; no parallel spawn loop introduced.
+* **`checkout_system.gd` working-tree delta (+170 LOC)** —
+  `_populate_checkout_card` / `_populate_haggle_card` /
+  `_build_want_text` / `_build_context_text` /
+  `_build_bundle_data` / `_find_eligible_bundle_accessory` are the
+  customer-decision-card payload assembly. The `_build_context_text`
+  helper is the only one called from both populators (already
+  consolidated within the file); the bundle helpers are
+  checkout-only. The `_on_bundle_suggested` handler closes the
+  panel→system loop. No duplication with the haggle path.
+* **`market_value_system.gd` working-tree delta (+107 LOC)** — the
+  annual-sports decay constants + `_get_annual_sports_decay` /
+  `register_edition` / `_newer_edition_exists` /
+  `_hydrate_edition_registry` form a single cohesive
+  decay-profile dispatch. `get_trade_in_market_factor` is the
+  documented public seam consumed by `TradeInSystem._read_market_factor`
+  (verified). No dead members.
+* **`progression_system.gd` working-tree delta (+145 LOC, before
+  Pass 10's -13 LOC consolidation)** — the new employee-trust /
+  manager-approval / clock-in / first-restock / manager-trust-tier
+  state mirrors are each written by an `_on_*` handler and read by
+  `_get_current_value_for(condition_type)`. The `_passes_optional_gates`
+  / `_grant_wage_increase` / `_grant_promotion` additions are
+  reachable from `_evaluate_milestones` / `_grant_reward`.
+* **`milestone_system.gd` working-tree delta (+85 LOC, before Pass
+  10's -10 LOC consolidation)** — the
+  `clock_in_completed_count` / `first_restock_completed_count` /
+  `manager_trust_tier_index` counters are written by the new
+  `_on_shift_started` / `_on_item_stocked` / `_on_manager_trust_changed`
+  handlers and read by `_evaluate_by_condition`. The
+  `_re_evaluate_gated_milestones` helper is the day-/trust-change
+  gate-clear hook; called from `_on_day_started` / `_on_day_ended` /
+  `_on_manager_trust_changed`. Cohesive evaluator surface.
+* **`tutorial_system.gd` working-tree delta** — the
+  `WELCOME → PLATFORM_MATCH → STOCK_SHELF → CONDITION_RISK →
+  SPORTS_DEPRECIATION → HOLD_PRESSURE → HIDDEN_THREAD → CLOSE_DAY
+  → DAY_SUMMARY → FINISHED` re-sequence drops every one of the
+  Pass-12 step IDs (`OPEN_INVENTORY`, `SELECT_ITEM`, `PLACE_ITEM`,
+  `WAIT_FOR_CUSTOMER`, `CUSTOMER_BROWSING`,
+  `CUSTOMER_AT_CHECKOUT`, `COMPLETE_SALE`) and replaces the matching
+  EventBus handlers (`_on_panel_opened` /
+  `_on_placement_mode_entered` / `_on_customer_entered` /
+  `_on_customer_item_spotted` / `_on_customer_ready_to_purchase` /
+  `_on_customer_purchased`) with the new step set
+  (`_on_customer_platform_identified` / `_on_item_stocked` /
+  `_on_trade_in_condition_graded` / `_on_trade_in_price_confirmed` /
+  `_on_hold_decision_made` / `_on_hidden_clue_acknowledged`).
+  `SCHEMA_VERSION` is bumped to 3 so older saves invalidate cleanly.
+  No leftover handlers / no orphan step constants / no commented-out
+  legacy blocks.
+* **`performance_report_system.gd` working-tree delta (+112 LOC)** —
+  the new `_daily_satisfied_resolutions` /
+  `_daily_total_resolutions` / `_daily_mistakes` /
+  `_daily_discrepancies_flagged` / `_daily_hidden_thread_text` state
+  is written by the new `_on_customer_resolution_logged` /
+  `_on_player_mistake_recorded` /
+  `_on_inventory_discrepancy_flagged` /
+  `_on_hidden_thread_consequence_triggered` handlers and persisted
+  through `get_save_data` / `load_save_data`. Cohesive.
+
+### Files still >500 LOC (Pass 10)
+
+Pass 10 makes no further splits. Snapshot of the working-tree LOC for
+files in this size class with the Pass 9 baseline carried forward
+(deltas reflect the working-tree state at the time of measurement,
+with Pass 10's three-file consolidation):
+
+| LOC (Pass 9 → Pass 10) | File | Notes |
+|---|---|---|
+| 1230 → 1230 | `game/scenes/ui/hud.gd` | Unchanged. **Justify.** |
+| 1121 → 1121 | `game/autoload/data_loader.gd` | Unchanged. **Justify.** |
+| 1148 → 1157 | `game/scripts/systems/customer_system.gd` | +9 LOC since Pass 9 (the §F-NN docstring tightening on the new spawn-rule helpers). Cohesive customer FSM. **Justify.** |
+| 783 → 783 | `game/scripts/systems/ambient_moments_system.gd` | Unchanged. **Justify.** |
+| 902 → 902 | `game/scenes/ui/inventory_panel.gd` | Unchanged. **Justify.** |
+| 1638 → 1638 | `game/scenes/world/game_world.gd` | Unchanged. **Justify.** |
+| 964 → 964 | `game/scenes/ui/day_summary.gd` | Unchanged. **Justify.** |
+| 812 → 812 | `game/scripts/characters/customer.gd` | Unchanged. **Justify.** |
+| 777 → 777 | `game/autoload/event_bus.gd` | Unchanged this pass. The file is the project's signal hub by design. **Justify.** |
+| 1137 → 1137 | `game/scripts/stores/retro_games.gd` | Unchanged. **Justify.** |
+| 976 → 984 | `game/scripts/systems/checkout_system.gd` | +8 LOC since Pass 9 (the customer-decision-card payload helpers are stable post-Pass-9 measurement; the +8 is the §F-NN docstring additions on the bundle helper). **Justify.** |
+| 764 → 764 | `game/scenes/ui/checkout_panel.gd` | Unchanged. **Justify.** |
+| 535 → 535 | `game/scripts/ui/haggle_panel.gd` | Unchanged. **Justify.** |
+| 630 → 617 | `game/scripts/systems/progression_system.gd` | -13 LOC: Pass 10's consolidation drops the local match block. **Acted (consolidation above).** |
+| 736 → 736 | `game/scripts/systems/economy_system.gd` | Unchanged. **Justify.** |
+| 475 → 465 | `game/scripts/systems/milestone_system.gd` | -10 LOC: Pass 10's consolidation. Below the 500-LOC watchlist threshold; logged here for delta tracking. **Acted (consolidation above).** |
+| (new entry) 562 | `game/scripts/systems/market_value_system.gd` | Working-tree delta crosses the 500-LOC threshold (+107 LOC for the annual-sports decay path). Single cohesive market-value evaluator. **Justify.** |
+
+### Considered but not changed (Pass 10)
+
+* **`hidden_thread_system.gd::_safe_finite_float` vs
+  `economy_system.gd::_safe_finite_float`** — same name, but
+  different signatures and bounding contracts:
+  `EconomySystem._safe_finite_float(value, default, min, max)` uses
+  `clampf(min, max)` for the four-arg bounded float family;
+  `HiddenThreadSystem._safe_finite_float(raw, default)` is a static
+  two-arg helper that floors at zero (`maxf(value, 0.0)`). The
+  hidden-thread variant inherits the name deliberately to signal the
+  same defensive load posture (per its docstring), but the
+  signatures cannot collapse without changing one consumer's
+  contract. Smallest concrete next action: when a third consumer
+  with a similar two-arg pattern lands, promote the two-arg variant
+  to a `SafeLoadHelpers` utility class. **Documented; not changed.**
+* **`trade_in_system.gd::current_store_id` hardcoded to
+  `&"retro_games"`** — the field is initialized at declaration and
+  read once in `_read_trust(reputation_system.get_reputation(...))`.
+  Today TradeInSystem only serves Retro Games (the unlock path is
+  `employee_tradein_certified`, which is gated to the retro-games
+  store), so the hardcoded default is functionally correct. Adding
+  a `set_store_id` setter would be a public-API addition that
+  other-store consumers do not yet need, and the value is currently
+  the single canonical writer at the system level. Smallest
+  concrete next action: when a second store gains the trade-in
+  unlock, replace the field default with a `set_store_id(store_id)`
+  injection (mirroring the existing `set_inventory_system` /
+  `set_economy_system` injection contract) and inject from
+  `RetroGames._ready` / the future store controller. **Documented;
+  not changed (no behavior change today).**
+* **`hold_list.gd::resolve_conflict` HONOR_EARLIEST / ESCALATE_TO_MANAGER
+  branches** — see "Pass 10 surfaces re-verified clean" above.
+  Inline duplication (one `reason` string differs) within a single
+  switch-case body, not a utility duplication. Collapsing the two
+  arms with a ternary `reason` would obscure the per-enum-value
+  contract that the trust-delta tables read as documentation
+  source. **Justified, not collapsed.**
+* **Five-file `_connect_signal(signal_ref, callable)` helper** —
+  Pass 9's disposition stands; the new Pass-10 working tree does
+  not add a sixth occurrence (the new `HiddenThreadSystem` /
+  `ReturnsSystem` autoloads connect signals directly without the
+  idempotent helper, and the new `MiddayEventCard` / `ClosingChecklist`
+  / `ReturnsPanel` / `TradeInPanel` UI connects via inline
+  `is_connected` + `connect` pairs scoped to view-layer wiring).
+  **Documented; not changed.**
+* **All Pass 9 / Pass 8 / Pass 7 / Pass 6 / Pass 5 / Pass 4 /
+  Pass 3 / Pass 2 entries under "Considered but not changed"**
+  remain in their documented states; nothing in the post-Pass-9
+  working-tree delta alters their disposition.
+
+## Escalations (Pass 10)
+
+None. Pass 10 acted on the one duplicate-utility finding (the
+tier-index match block, lifted into `ManagerRelationshipManager`
+as `get_tier_index()` + the static `tier_index_for` companion)
+and justified the rest inline above. Pass 9 / Pass 8 / Pass 7 /
+Pass 6 / Pass 5 history is preserved verbatim below.
+
+---
+
+## Pass 9 — Duplicate consolidation in decision card style (history)
+
+**Verification:** `bash tests/run_tests.sh` after Pass 9 — **5260 GUT
+tests, 5260 passing, 0 failing, 31510 asserts** (Pass 8 baseline was
+5076 / 28697 asserts; the +184 tests / +2813 asserts come from the
+new working-tree systems' test suites — `test_employment_system.gd`,
+`test_manager_relationship_manager.gd`, `test_midday_event_system.gd`,
+`test_platform_system.gd`, `test_shift_system.gd`,
+`test_customer_archetype_spawn_rules.gd`, `test_customer_decision_card.gd`,
+`test_employee_progression_unlocks.gd`,
+`test_retro_games_inventory_variance.gd`, and
+`test_retro_games_zone_completeness.gd`). All SSOT tripwires remain green
+(`validate_translations.sh`, `validate_single_store_ui.sh`,
+`validate_tutorial_single_source.sh`, ISSUE-009 SceneRouter sole-owner,
+the regulars-log audit's 32 checks). Pre-existing parse-error noise on
+`game/scripts/ui/midday_event_card.gd` ("Class \"MiddayEventCard\" hides
+an autoload singleton" — same `class_name` exists on the script and as
+the `MiddayEventCard` autoload defined in `project.godot`) is also on
+the working tree before Pass 9 runs and does not affect test outcomes
+(the `class_name` rebinds to the autoload, so the script remains
+reachable through the autoload reference and tests still pass); flagged
+in **Considered but not changed** below since renaming the `class_name`
+or removing the autoload entry is a behavioral-change pass and Pass 9
+is no-behavior-change. Pre-existing validator failures (ISSUE-018,
+ISSUE-023, ISSUE-024, ISSUE-026, ISSUE-032, ISSUE-154, ISSUE-239) are
+on `main` ahead of this branch and do not touch the files edited in
+any pass.
+
+---
+
+## Pass 9 changes (history)
+
+### Duplicate-utility consolidation (Pass 9)
+
+| Path | Edit | Why |
+|---|---|---|
+| `game/scripts/ui/decision_card_style.gd:135–181` (new static methods) | Added `static func apply_reasoning_style(label: RichTextLabel)` and `static func apply_archetype_badge_style(badge: PanelContainer, label: Label, archetype_id: StringName)`. Both carry null-guards (the haggle copy already had the reasoning null-guard; checkout did not — promoting to the shared helper picks the safer contract since both panels reach the helpers via `@onready` look-ups that can resolve to `null` in a missing-node scene). | Single canonical home for the two card-styling primitives. `DecisionCardStyle` was already the documented "shared visual constants for decision-card UIs" class with `make_card_stylebox` / `make_header_stylebox` / `archetype_color` static helpers; the new pair fits cleanly alongside them. |
+| `game/scenes/ui/checkout_panel.gd:141` and `:304` (call sites), `:701–737` (deletion) | Replaced the local `_apply_reasoning_style()` invocation with `DecisionCardStyle.apply_reasoning_style(_reasoning_label)` and the local `_apply_archetype_badge_style(archetype_id)` invocation with `DecisionCardStyle.apply_archetype_badge_style(_archetype_badge, _archetype_label, archetype_id)`. Removed the two now-orphan local helpers. | Mechanical move to the shared helper; preserves call ordering and the tween-friendly `add_theme_*_override` semantics. The `_set_reasoning_text` helper that sat between the deleted pair is preserved because it is panel-specific (writes to `_reasoning_label` directly, not a parameter — used by checkout's BBCode italic write path). |
+| `game/scripts/ui/haggle_panel.gd:90` and `:269` (call sites), `:536–568` (deletion) | Symmetric edit to checkout: replaced `_apply_reasoning_style()` and `_apply_archetype_badge_style(archetype_id)` with the shared `DecisionCardStyle.*` calls and deleted the two local helpers. | Same rationale; the haggle copy was the byte-for-byte twin of the checkout copy except for the reasoning-helper null-guard (now both panels get the guard via the shared helper). |
+
+### Net code change (Pass 9)
+
+* `decision_card_style.gd`: 134 → 181 LOC (+47 — the two static helpers + their docstrings).
+* `checkout_panel.gd`: 794 → 764 LOC (-30 — two local helpers removed; call sites swapped).
+* `haggle_panel.gd`: 568 → 535 LOC (-33 — same).
+* **Total delta: -16 LOC, no behavioral change.** Two duplicated helpers (one with a null-guard divergence) collapsed to a single canonical pair.
+
+### Pass 9 surfaces re-verified clean (no edits required)
+
+Pass 9 swept the rest of the working-tree change set for orphans /
+dead prints / stale comments / unused members / commented-out blocks
+and found none requiring an edit. Each addition is cohesive within
+its host file:
+
+* **`employment_system.gd` (273 LOC, new autoload)** — every method
+  is reachable: `start_employment` / `end_employment` / `apply_trust_delta`
+  / `apply_manager_approval_delta` / `assign_task` / `complete_task` /
+  `issue_daily_wage` are public API exercised by `test_employment_system.gd`;
+  the `_on_*` handlers are wired in `_connect_event_bus`; the
+  `_persist_state` / `_load_persisted_state` pair is symmetric;
+  `clear_persistent_storage` is the documented test seam. No `print()`,
+  no stale comments. The §F-117 / §F-118 `push_error` paths cite the
+  data-integrity escalation rationale.
+* **`manager_relationship_manager.gd` (384 LOC, new autoload)** — same
+  pattern: `apply_trust_delta` / `select_note_for_day` / `get_tier` /
+  `get_manager_name` are public; every `_on_*` handler is connected;
+  `_set_notes_for_testing` / `_record_event_for_testing` /
+  `_set_pending_unlock_for_testing` / `reset_for_testing` are the
+  documented test seams. The `_on_day_ended` no-op is a documented
+  placeholder for future end-of-day evaluations — kept because the
+  signal connection is already wired and removing the handler would
+  force a re-wire when the future logic lands. §F-116 cite-back on
+  every `push_error` path. No `print()`.
+* **`midday_event_system.gd` (459 LOC, new system)** — single-purpose
+  midday-beat scheduler; every helper feeds the public API
+  (`schedule_for_today` / `fire_now` / `resolve_choice` / `reset_for_testing`).
+  §F-122 / §F-123 / §F-124 cite-backs on the data-integrity escalations.
+* **`platform_system.gd` (366 LOC, new system)** — platform catalog
+  + spawn-weight modifier owner; `get_spawn_weight_modifier` is read by
+  `customer_system.gd` (verified) and `test_platform_system.gd`. The
+  absence of a `reset_for_testing` seam is intentional — the parser
+  rebuilds state from `_set_catalog_for_testing` on every test, and
+  the production code path treats the catalog as immutable post-load.
+  §F-119 cite-backs on the data-integrity escalations.
+* **`shift_system.gd` (282 LOC, new system)** — clock-in / clock-out
+  state machine; the ISSUE-005 forward references on lines 70 and 230
+  point at the manager-note-panel handoff that lives in a separate
+  follow-up issue and are documented in code rather than left as bare
+  TODOs. `_reset_for_testing` is the test seam; `_current_minute` is
+  the single internal helper.
+* **`clock_in_interactable.gd` (65 LOC, new component)** — minimal
+  Interactable subclass. §F-120 cite-back on the config-regression
+  push_error.
+* **`back_room_inventory_panel.gd` (126 LOC, new UI)** — duck-typed
+  delegation to a controller via `has_method("get_inventory_audit_rows")`
+  / `has_method("flag_discrepancy")`; both methods exist on
+  `retro_games.gd` (verified by `test_retro_games_inventory_variance.gd`).
+* **`midday_event_card.gd` (197 LOC, new UI)** and
+  **`morning_note_panel.gd` (132 LOC, new UI)** — declarative layout
+  + signal binding; both reuse `DecisionCardStyle` constants
+  consistently. The `process_mode = Node.PROCESS_MODE_ALWAYS` on the
+  morning note is documented inline as a tier-5-init defensive pattern.
+* **`decision_card_style.gd` constants** — Pass 9 added two static
+  helpers (above) but did not touch the existing `STORE_EVENT_HEADER_COLOR`
+  / `CUSTOMER_DECISION_HEADER_COLOR` pair. The class-level docstring
+  already documents the intentional palette divergence ("warm tone
+  reserved for customer decision cards. Declared here so both cards
+  reference the same palette source even though only the customer card
+  consumes this constant"). Cohesive — kept.
+* **`locked_feature_gate.gd` (47 LOC, new UI helper)** — pure static
+  `RefCounted` with `is_unlocked()` delegations; calls
+  `UnlockSystemSingleton.is_unlocked()` (the singleton already exists
+  in `project.godot`).
+* **Five-file `_connect_signal(signal_ref, callable)` helper** —
+  identical 3-line helper duplicated across `employment_system.gd`,
+  `manager_relationship_manager.gd`, `midday_event_system.gd`,
+  `shift_system.gd`, and `clock_in_interactable.gd`. **Considered but
+  not consolidated** in Pass 9: each duplicate is a 3-line idempotent
+  connect-if-not-already, all five are autoload / system files that
+  do not share a common base class, and extracting to a helper file
+  would either (a) add a new utility autoload (behavioral change —
+  changes the autoload roster) or (b) require every consumer to
+  `preload()` a `EventBusConnector.gd` script and instantiate it just
+  to reach the helper. Both costs are higher than the duplication
+  they eliminate. Disposition: documented in this report so a future
+  pass can evaluate when a `Utilities` autoload or a base class
+  becomes available; not an Escalation since the duplication is
+  small, idempotent, and self-contained per file.
+* **`game_state.gd` employment / approval mirrors** — the new
+  `employee_trust` and `manager_approval` fields are written by both
+  `employment_system.gd` (`_mirror_to_game_state`,
+  `apply_trust_delta`, `apply_manager_approval_delta`) and
+  `manager_relationship_manager.gd` (which writes its own
+  `manager_trust` separately). Verified: the two systems write to
+  **different** GameState fields (`EmploymentSystem` writes
+  `employee_trust` and `manager_approval`; `ManagerRelationshipManager`
+  is the read side for `manager_trust` exposed via `get_tier()`). No
+  ownership overlap.
+* **`event_bus.gd` (+88 LOC)** — every new signal is consumed by at
+  least one of the new systems (verified via grep across game/ tests/).
+  No orphan signals.
+* **`checkout_panel.gd` net diff** — beyond the two local helpers
+  Pass 9 deleted, the +402 LOC working-tree change is the new customer-
+  card surface (archetype badge, context label, reasoning label,
+  result-state transition, populate_customer_card / show_result API)
+  plus the receipt-section additions. Pass 9 verified the new
+  members (`_archetype_badge`, `_archetype_label`, `_context_label`,
+  `_reasoning_label`, `_result_label`, `_card_populated`,
+  `_showing_result`, `_result_timer`) are all read by call sites in
+  the same file (`hide_checkout`, `populate_customer_card`,
+  `show_result`, `_on_result_timer_timeout`). No dead members.
+* **`retro_games.gd` (+319 LOC)** — the new `inspect_item`,
+  `can_test_item`, `test_item`, back-room audit helpers, employee /
+  shift-clock-in slot owner, and platform-spawn helpers are each
+  reachable from at least one new test (`test_retro_games_*.gd`)
+  or from the existing scene wiring (`retro_games.tscn`).
+  `_resolve_expected_inventory` / `_resolve_actual_inventory` carry
+  ISSUE-014/015 forward-reference comments naming the future
+  delivery-manifest persistence as the variance source — documented
+  intent, not a TODO leak.
+
+### Files still >500 LOC (Pass 9)
+
+Pass 9 makes no further splits. Snapshot of the working-tree LOC for
+files in this size class with the Pass 8 baseline carried forward
+(deltas reflect Pass 9's two-file deletion):
+
+| LOC (Pass 8 → Pass 9) | File | Notes |
+|---|---|---|
+| 1230 → 1230 | `game/scenes/ui/hud.gd` | Unchanged. **Justify.** |
+| 1102 → 1121 | `game/autoload/data_loader.gd` | +19 LOC: working-tree change set (per-entry warning lines, `_TYPE_ROUTES` additions for the new content kinds). Cohesive single-responsibility autoload. **Justify.** |
+| 1019 → 1148 | `game/scripts/systems/customer_system.gd` | +129 LOC since Pass 8: the working-tree archetype-spawn-rules wiring + platform-modifier integration + the customer-decision-card payload assembly. Single cohesive customer FSM; the Pass 7 disposition stands (a split that pushed FSM primitives out is a behavioral-impact change). **Justify.** |
+| 783 → 783 | `game/scripts/systems/ambient_moments_system.gd` | Unchanged. **Justify.** |
+| 689 → 777 | `game/autoload/event_bus.gd` | +88 LOC: new signals for `MiddayEventSystem`, `ShiftSystem`, `EmploymentSystem`, `ManagerRelationshipManager`, and the customer-decision-card flow. The file is the project's signal hub by design (architecture row 3). **Justify.** |
+| 902 → 902 | `game/scenes/ui/inventory_panel.gd` | Unchanged. **Justify.** |
+| 1638 → 1638 | `game/scenes/world/game_world.gd` | Unchanged. **Justify.** |
+| 964 → 964 | `game/scenes/ui/day_summary.gd` | Unchanged. **Justify.** |
+| 812 → 812 | `game/scripts/characters/customer.gd` | Unchanged. **Justify.** |
+| 818 → 1137 | `game/scripts/stores/retro_games.gd` | +319 LOC: full `inspect_item` / `can_test_item` / `test_item` testing-station path + back-room audit helpers + employee / clock-in slot owner + platform-modifier wiring. Per-store controller; the 1137 LOC is now the largest store controller. Splittable along the testing-station / back-room / employee axes, but each axis has cross-cutting state (the controller owns `_inventory_system`, `_grade_table`, `_item_grades`, etc., and a split would need a thin facade or the consumers would have to chain through two objects). **Justify (out of scope for no-behavior-change pass).** |
+| 811 → 976 | `game/scripts/systems/checkout_system.gd` | +165 LOC: the working-tree customer-decision-card population path + `populate_customer_card` payload assembly + the new haggle-handoff flow. Single cohesive checkout pipeline; cohesion preserved. **Justify.** |
+| 794 → 764 | `game/scenes/ui/checkout_panel.gd` | -30 LOC: Pass 9's two-helper deletion drops the file under 800 LOC. **Acted (consolidation above).** |
+| 568 → 535 | `game/scripts/ui/haggle_panel.gd` | -33 LOC: Pass 9's two-helper deletion. **Acted (consolidation above).** |
+| (new entry) 630 | `game/scripts/systems/progression_system.gd` | +145 LOC: the working-tree employee-progression-unlock wiring + manager-trust integration. Single cohesive progression pipeline. **Justify.** |
+| (new entry) 736 | `game/scripts/systems/economy_system.gd` | +16 LOC: the new `credit_wage` entry point and `record_employment_outcome` mirror. Cohesive economy autoload. **Justify.** |
+
+### Considered but not changed (Pass 9)
+
+* **`MiddayEventCard` `class_name` vs the `MiddayEventCard` autoload
+  (parse-error noise during boot)** — the working tree adds
+  `class_name MiddayEventCard` to `game/scripts/ui/midday_event_card.gd`
+  and an autoload entry of the same name pointing at
+  `game/scenes/ui/midday_event_card.tscn` in `project.godot`. The
+  Godot parser rebinds the `class_name` to the autoload (the autoload
+  wins) and tests still pass, so this is parse-time noise rather
+  than a hard failure. Resolving it requires either (a) renaming the
+  `class_name` (touches every consumer that imports it), (b) renaming
+  the autoload (touches every reference to `MiddayEventCard.*` at
+  runtime), or (c) dropping one of the two. All three are
+  behavioral-change passes outside Pass 9's no-behavior-change
+  contract. **Documented; not changed.** Smallest concrete next
+  action: drop the `class_name` line if the script is only ever
+  instantiated through the autoload (most likely the right fix —
+  the autoload is the singleton handle, the script's `class_name`
+  is duplicative). To be confirmed by checking whether any
+  `MiddayEventCard` type-hint exists outside the autoload binding;
+  flagged for the next behavioral-change pass.
+* **Five-file `_connect_signal(signal_ref, callable)` helper** —
+  detailed disposition above under "Pass 9 surfaces re-verified
+  clean." Three-line idempotent helper duplicated across five
+  autoload / system files; a shared utility autoload is a behavioral
+  change and a base class would couple unrelated systems. Smallest
+  next action: when the project introduces a generic `Utilities`
+  autoload for any unrelated reason, fold this helper into it. Not
+  an Escalation since the duplication is small and self-contained.
+* **All Pass 8 / Pass 7 / Pass 6 / Pass 5 / Pass 4 / Pass 3 / Pass 2
+  entries under "Considered but not changed"** remain in their
+  documented states; nothing in the new working-tree delta alters
+  their disposition.
+
+## Escalations (Pass 9)
+
+None. Pass 9 acted on the one duplicate-utility finding (the two
+card-style helpers, lifted into `DecisionCardStyle` as static
+methods) and justified the rest inline above. The
+`MiddayEventCard` parse-error noise is documented under
+"Considered but not changed" as a behavioral-change item with a
+named smallest-next-action. Pass 8 / Pass 7 / Pass 6 / Pass 5
+history is preserved verbatim below.
+
+---
+
+## Pass 8 — Dead-member sweep (history)
 
 ### Dead-member removal (Pass 8)
 

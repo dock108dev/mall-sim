@@ -152,10 +152,17 @@ func _spawn_for_store(store_id: String) -> void:
 	if profiles.is_empty():
 		return
 
-	var profile: CustomerTypeDefinition = profiles.pick_random()
 	var is_active: bool = (
 		store_id == String(GameManager.get_active_store_id())
 	)
+
+	var profile: CustomerTypeDefinition = null
+	if is_active and _customer_system:
+		profile = _customer_system.pick_spawn_profile(profiles)
+	else:
+		profile = profiles.pick_random() as CustomerTypeDefinition
+	if profile == null:
+		return
 
 	if is_active and _customer_system:
 		_customer_system.spawn_customer(profile, store_id)

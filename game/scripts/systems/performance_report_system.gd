@@ -36,6 +36,11 @@ var _daily_milestones: Array[String] = []
 var _daily_milestone_data: Array[Dictionary] = []
 var _daily_start_tier: int = -1
 var _daily_end_tier: int = -1
+var _daily_satisfied_resolutions: int = 0
+var _daily_total_resolutions: int = 0
+var _daily_mistakes: int = 0
+var _daily_discrepancies_flagged: int = 0
+var _daily_hidden_thread_text: String = ""
 var _history: Array[PerformanceReport] = []
 
 ## Cached values from the most recent daily_financials_snapshot.
@@ -71,6 +76,16 @@ func initialize() -> void:
 	)
 	EventBus.daily_financials_snapshot.connect(
 		_on_daily_financials_snapshot
+	)
+	EventBus.customer_resolution_logged.connect(
+		_on_customer_resolution_logged
+	)
+	EventBus.player_mistake_recorded.connect(_on_player_mistake_recorded)
+	EventBus.inventory_discrepancy_flagged.connect(
+		_on_inventory_discrepancy_flagged
+	)
+	EventBus.hidden_thread_consequence_triggered.connect(
+		_on_hidden_thread_consequence_triggered
 	)
 
 
@@ -163,6 +178,11 @@ func get_save_data() -> Dictionary:
 		"daily_milestone_data": _daily_milestone_data.duplicate(),
 		"daily_start_tier": _daily_start_tier,
 		"daily_end_tier": _daily_end_tier,
+		"daily_satisfied_resolutions": _daily_satisfied_resolutions,
+		"daily_total_resolutions": _daily_total_resolutions,
+		"daily_mistakes": _daily_mistakes,
+		"daily_discrepancies_flagged": _daily_discrepancies_flagged,
+		"daily_hidden_thread_text": _daily_hidden_thread_text,
 	}
 
 
@@ -225,6 +245,17 @@ func load_save_data(data: Dictionary) -> void:
 	)
 	_daily_start_tier = int(data.get("daily_start_tier", -1))
 	_daily_end_tier = int(data.get("daily_end_tier", -1))
+	_daily_satisfied_resolutions = int(
+		data.get("daily_satisfied_resolutions", 0)
+	)
+	_daily_total_resolutions = int(data.get("daily_total_resolutions", 0))
+	_daily_mistakes = int(data.get("daily_mistakes", 0))
+	_daily_discrepancies_flagged = int(
+		data.get("daily_discrepancies_flagged", 0)
+	)
+	_daily_hidden_thread_text = str(
+		data.get("daily_hidden_thread_text", "")
+	)
 	_daily_milestones.clear()
 	_daily_milestone_data.clear()
 	var saved_ms: Variant = data.get("daily_milestones", [])
@@ -281,6 +312,11 @@ func _on_day_started(day: int) -> void:
 	_snapshot_received = false
 	_snapshot_revenue = 0.0
 	_snapshot_expenses = 0.0
+	_daily_satisfied_resolutions = 0
+	_daily_total_resolutions = 0
+	_daily_mistakes = 0
+	_daily_discrepancies_flagged = 0
+	_daily_hidden_thread_text = ""
 
 
 func _on_transaction_completed(
@@ -413,6 +449,13 @@ func _build_report(day: int) -> PerformanceReport:
 	report.demo_contribution_revenue = _daily_demo_contribution
 	report.milestones_unlocked = _daily_milestones.duplicate()
 	report.milestones_data = _daily_milestone_data.duplicate()
+	report.customer_satisfaction = _compute_customer_satisfaction()
+	report.employee_trust = _read_employee_trust()
+	report.manager_trust = _read_manager_trust()
+	report.mistakes_count = _daily_mistakes
+	report.inventory_variance = _read_inventory_variance()
+	report.discrepancies_flagged = _daily_discrepancies_flagged
+	report.hidden_thread_consequence_text = _daily_hidden_thread_text
 	return report
 
 
@@ -620,6 +663,75 @@ func _tier_name(tier: int) -> String:
 		3:
 			return "Legendary"
 	return "Unremarkable"
+
+
+func _on_customer_resolution_logged(outcome: String) -> void:
+	_record_resolution(outcome == "satisfied")
+
+
+func _record_resolution(satisfied: bool) -> void:
+	_daily_total_resolutions += 1
+	if satisfied:
+		_daily_satisfied_resolutions += 1
+
+
+func _on_player_mistake_recorded(
+	_mistake_type: String, _context: String
+) -> void:
+	_daily_mistakes += 1
+
+
+func _on_inventory_discrepancy_flagged(
+	_item_id: String, _expected: int, _actual: int
+) -> void:
+	_daily_discrepancies_flagged += 1
+
+
+func _on_hidden_thread_consequence_triggered(text: String) -> void:
+	_daily_hidden_thread_text = text
+
+
+## Customer satisfaction blends two sources:
+##   1. Explicit `customer_resolution_logged` events (returns / holds /
+##      trade-ins call this directly).
+##   2. The implicit served-customer counters that already track sales /
+##      walkouts via `customer_purchased` / `customer_left`.
+## Defaults to 1.0 when no interactions occurred (no failures = no
+## dissatisfaction).
+func _compute_customer_satisfaction() -> float:
+	var total: int = _daily_total_resolutions + _daily_customers_served
+	if total <= 0:
+		return 1.0
+	var satisfied: int = (
+		_daily_satisfied_resolutions + _daily_satisfied_customers
+	)
+	return float(satisfied) / float(total)
+
+
+func _read_employee_trust() -> float:
+	var node: Node = get_node_or_null("/root/EmploymentSystem")
+	if node == null or not node.has_method("get_state"):
+		return 0.0
+	var state: Variant = node.call("get_state")
+	if state == null or not "employee_trust" in state:
+		return 0.0
+	# EmploymentState stores trust on a 0–100 scale; report uses 0.0–1.0.
+	var raw: float = float(state.employee_trust)
+	return clampf(raw / 100.0, 0.0, 1.0)
+
+
+func _read_manager_trust() -> float:
+	var node: Node = get_node_or_null("/root/ManagerRelationshipManager")
+	if node == null or not "manager_trust" in node:
+		return 0.0
+	return clampf(float(node.manager_trust), 0.0, 1.0)
+
+
+func _read_inventory_variance() -> float:
+	var node: Node = GameManager.get_inventory_system() if GameManager else null
+	if node == null or not node.has_method("get_inventory_variance"):
+		return 0.0
+	return float(node.call("get_inventory_variance"))
 
 
 ## Patches the most recent history entry with per-store revenue from the

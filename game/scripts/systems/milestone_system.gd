@@ -96,6 +96,9 @@ func _init_counters() -> void:
 		"market_crash_survived": 0,
 		"current_day": 0,
 		"max_reputation_score": 0.0,
+		"clock_in_completed_count": 0,
+		"first_restock_completed_count": 0,
+		"manager_trust_tier_index": 0,
 	}
 	_unique_stores_seen = {}
 
@@ -125,6 +128,9 @@ func _connect_signals() -> void:
 	)
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.milestone_unlocked.connect(_on_milestone_unlocked)
+	EventBus.shift_started.connect(_on_shift_started)
+	EventBus.item_stocked.connect(_on_item_stocked)
+	EventBus.manager_trust_changed.connect(_on_manager_trust_changed)
 
 
 func _on_milestone_unlocked(
@@ -174,14 +180,17 @@ func _on_customer_left(customer_data: Dictionary) -> void:
 		_evaluate_by_condition("satisfied_customer_count")
 
 
-func _on_day_started(_day: int) -> void:
+func _on_day_started(day: int) -> void:
 	_counters["single_day_revenue"] = 0.0
+	_counters["current_day"] = day
+	_re_evaluate_gated_milestones()
 
 
 func _on_day_ended(day: int) -> void:
 	_counters["current_day"] = day
 	_evaluate_by_condition("days")
 	_evaluate_by_condition("single_day_revenue")
+	_re_evaluate_gated_milestones()
 
 
 func _on_store_leased(
@@ -264,6 +273,40 @@ func _on_item_sold(
 		_evaluate_by_condition("rare_items_sold")
 
 
+func _on_shift_started(
+	_store_id: StringName, _timestamp: float, _late: bool
+) -> void:
+	_counters["clock_in_completed_count"] = (
+		int(_counters["clock_in_completed_count"]) + 1
+	)
+	_evaluate_by_condition("clock_in_completed_count")
+
+
+func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
+	if int(_counters.get("first_restock_completed_count", 0)) > 0:
+		return
+	_counters["first_restock_completed_count"] = 1
+	_evaluate_by_condition("first_restock_completed_count")
+
+
+func _on_manager_trust_changed(_delta: float, _reason: String) -> void:
+	var tier_index: int = _resolve_manager_trust_tier_index()
+	if tier_index == int(_counters.get("manager_trust_tier_index", 0)):
+		return
+	_counters["manager_trust_tier_index"] = tier_index
+	_evaluate_by_condition("manager_trust_tier_index")
+	_re_evaluate_gated_milestones()
+
+
+func _resolve_manager_trust_tier_index() -> int:
+	# Delegates to the autoload's canonical tier-index map; falls back to 0
+	# when running in headless tests that boot without the autoload.
+	var manager: Node = get_node_or_null("/root/ManagerRelationshipManager")
+	if manager == null or not manager.has_method("get_tier_index"):
+		return 0
+	return int(manager.call("get_tier_index"))
+
+
 func _evaluate_by_condition(condition_type: String) -> void:
 	for m: MilestoneDefinition in _milestones:
 		var mid: StringName = StringName(m.id)
@@ -276,8 +319,46 @@ func _evaluate_by_condition(condition_type: String) -> void:
 			if not _is_alias_match(stat_key, condition_type):
 				continue
 		var current: float = _get_counter_value(stat_key)
-		if current >= m.trigger_threshold:
-			_complete_milestone(m)
+		if current < m.trigger_threshold:
+			continue
+		if not _passes_optional_gates(m):
+			continue
+		_complete_milestone(m)
+
+
+func _passes_optional_gates(m: MilestoneDefinition) -> bool:
+	if m.min_day > 0 and int(_counters.get("current_day", 0)) < m.min_day:
+		return false
+	if (
+		m.min_manager_trust_tier_index > 0
+		and (
+			int(_counters.get("manager_trust_tier_index", 0))
+			< m.min_manager_trust_tier_index
+		)
+	):
+		return false
+	return true
+
+
+func _re_evaluate_gated_milestones() -> void:
+	# Day / trust changes can unblock milestones whose primary trigger threshold
+	# was already satisfied — re-evaluate any milestone with a min_day or trust
+	# gate so they fire as soon as the gate clears.
+	for m: MilestoneDefinition in _milestones:
+		var mid: StringName = StringName(m.id)
+		if _completed.has(mid):
+			continue
+		if m.min_day == 0 and m.min_manager_trust_tier_index == 0:
+			continue
+		var stat_key: String = m.trigger_stat_key
+		if stat_key.is_empty():
+			stat_key = m.trigger_type
+		var current: float = _get_counter_value(stat_key)
+		if current < m.trigger_threshold:
+			continue
+		if not _passes_optional_gates(m):
+			continue
+		_complete_milestone(m)
 
 
 func _is_alias_match(

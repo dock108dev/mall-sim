@@ -25,16 +25,58 @@
       "scene_path": "res://game/scenes/stores/retro_games.tscn",
       "steps": [
         {
-          "id": "retro_test_cart",
-          "prompt_text": "Test used cartridges at the testing station before you put them on the shelf.",
-          "action": "Test cartridge",
+          "id": "welcome",
+          "prompt_text": "First day. Sal: 'Time card's right by the door \u2014 punch in before Vic shows up.'",
+          "action": "Clock in",
+          "key": "[E]",
+          "interactable_id": "employee_area"
+        },
+        {
+          "id": "platform_match",
+          "prompt_text": "Confused parent at the counter \u2014 figure out which platform their kid actually has.",
+          "action": "Help customer",
           "key": "[E]",
           "interactable_id": "Interactable"
         },
         {
-          "id": "retro_refurb",
-          "prompt_text": "Dirty carts go on the refurbishment bench \u2014 clean them up for a price bump.",
-          "action": "Refurbish",
+          "id": "stock_shelf",
+          "prompt_text": "Sal: 'That title's missing from the rack. Grab it from inventory and put it out.'",
+          "action": "Stock shelf",
+          "key": "[E]",
+          "interactable_id": "new_release_wall"
+        },
+        {
+          "id": "condition_risk",
+          "prompt_text": "Trade-in at the counter. Sal: 'Grade it honest \u2014 overgrade and the returns will eat us alive.'",
+          "action": "Inspect cartridge",
+          "key": "[E]",
+          "interactable_id": "Interactable"
+        },
+        {
+          "id": "sports_depreciation",
+          "prompt_text": "Sports title in the buyback queue. Roster's three years stale \u2014 confirm the depreciated offer.",
+          "action": "Confirm offer",
+          "key": "[E]",
+          "interactable_id": "Interactable"
+        },
+        {
+          "id": "hold_pressure",
+          "prompt_text": "That copy is on hold. A walk-in wants it right now. What do you do?",
+          "action": "Resolve hold",
+          "key": "[E]",
+          "interactable_id": "hold_shelf"
+        },
+        {
+          "id": "hidden_thread",
+          "prompt_text": "Quiet customer asking about a red-label cart. Log it \u2014 Sal says that's the third one this week.",
+          "action": "Log clue",
+          "key": "[E]",
+          "interactable_id": "delivery_manifest"
+        },
+        {
+          "id": "close_day",
+          "prompt_text": "Shift's over. Close out the register and head home.",
+          "action": "Close day",
           "key": "[E]",
           "interactable_id": "Interactable"
         }

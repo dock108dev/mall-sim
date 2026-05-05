@@ -21,7 +21,7 @@ const _STORE_MESSAGES: Dictionary = {
 # overlay stays hidden and re-evaluates eligibility on tutorial_completed /
 # tutorial_skipped. Step IDs come from TutorialSystem.STEP_IDS.
 const _TUTORIAL_SUPPRESSING_STEPS: Array[String] = [
-	"welcome", "open_inventory", "select_item", "place_item",
+	"welcome", "stock_shelf",
 ]
 
 var inventory_system: Node = null

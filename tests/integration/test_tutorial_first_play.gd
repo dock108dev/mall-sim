@@ -35,7 +35,7 @@ func test_new_game_start_activates_tutorial_at_welcome() -> void:
 	)
 
 
-func test_after_welcome_step_open_inventory_is_active() -> void:
+func test_after_welcome_step_platform_match_is_active() -> void:
 	_tutorial.initialize(true)
 
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
@@ -43,13 +43,13 @@ func test_after_welcome_step_open_inventory_is_active() -> void:
 
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"After WELCOME expires, current step should be OPEN_INVENTORY"
+		TutorialSystem.TutorialStep.PLATFORM_MATCH,
+		"After WELCOME expires, current step should be PLATFORM_MATCH"
 	)
 	var step_id: String = TutorialSystem.STEP_IDS[_tutorial.current_step]
 	assert_eq(
-		step_id, "open_inventory",
-		"Step ID for the open-inventory milestone should be open_inventory"
+		step_id, "platform_match",
+		"Step ID for the platform-match milestone should be platform_match"
 	)
 
 
@@ -61,7 +61,7 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 
 	var step: int = int(_tutorial.current_step)
 
-	# WELCOME → OPEN_INVENTORY (welcome timer expires)
+	# WELCOME → PLATFORM_MATCH (welcome timer expires)
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
 	step += 1
@@ -70,23 +70,15 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 		"Step index should advance after WELCOME timer expires"
 	)
 
-	# OPEN_INVENTORY → SELECT_ITEM (panel_opened "inventory")
-	EventBus.panel_opened.emit("inventory")
+	# PLATFORM_MATCH → STOCK_SHELF
+	EventBus.customer_platform_identified.emit(&"c1", &"ignite_go", true)
 	step += 1
 	assert_eq(
 		int(_tutorial.current_step), step,
-		"Step index should advance after panel_opened inventory"
+		"Step index should advance after customer_platform_identified"
 	)
 
-	# SELECT_ITEM → PLACE_ITEM (placement_mode_entered)
-	EventBus.placement_mode_entered.emit()
-	step += 1
-	assert_eq(
-		int(_tutorial.current_step), step,
-		"Step index should advance after placement_mode_entered"
-	)
-
-	# PLACE_ITEM → WAIT_FOR_CUSTOMER (item_stocked)
+	# STOCK_SHELF → CONDITION_RISK
 	EventBus.item_stocked.emit("test_item", "shelf_1")
 	step += 1
 	assert_eq(
@@ -94,41 +86,36 @@ func test_each_trigger_advances_step_index_by_one() -> void:
 		"Step index should advance after item_stocked"
 	)
 
-	# WAIT_FOR_CUSTOMER → CUSTOMER_BROWSING (customer_entered)
-	EventBus.customer_entered.emit({"customer_id": "c1"})
+	# CONDITION_RISK → SPORTS_DEPRECIATION
+	EventBus.trade_in_condition_graded.emit(&"used_cart_a", "good")
 	step += 1
 	assert_eq(
 		int(_tutorial.current_step), step,
-		"Step index should advance after customer_entered"
+		"Step index should advance after trade_in_condition_graded"
 	)
 
-	# CUSTOMER_BROWSING → CUSTOMER_AT_CHECKOUT (customer_item_spotted)
-	var customer: Customer = Customer.new()
-	add_child_autofree(customer)
-	var item: ItemInstance = _make_item("test_item", 9.99)
-	EventBus.customer_item_spotted.emit(customer, item)
+	# SPORTS_DEPRECIATION → HOLD_PRESSURE
+	EventBus.trade_in_price_confirmed.emit(&"field_blitz_07", 4.50)
 	step += 1
 	assert_eq(
 		int(_tutorial.current_step), step,
-		"Step index should advance after customer_item_spotted"
+		"Step index should advance after trade_in_price_confirmed"
 	)
 
-	# CUSTOMER_AT_CHECKOUT → COMPLETE_SALE (customer_ready_to_purchase)
-	EventBus.customer_ready_to_purchase.emit({"customer_id": "c1"})
+	# HOLD_PRESSURE → HIDDEN_THREAD
+	EventBus.hold_decision_made.emit(&"dungeon_frenzy_2", true)
 	step += 1
 	assert_eq(
 		int(_tutorial.current_step), step,
-		"Step index should advance after customer_ready_to_purchase"
+		"Step index should advance after hold_decision_made"
 	)
 
-	# COMPLETE_SALE → CLOSE_DAY (customer_purchased)
-	EventBus.customer_purchased.emit(
-		&"test_store", &"test_item", 9.99, &"customer_1"
-	)
+	# HIDDEN_THREAD → CLOSE_DAY
+	EventBus.hidden_clue_acknowledged.emit(&"void_protocols_red_label")
 	step += 1
 	assert_eq(
 		int(_tutorial.current_step), step,
-		"Step index should advance after customer_purchased"
+		"Step index should advance after hidden_clue_acknowledged"
 	)
 
 	# CLOSE_DAY → DAY_SUMMARY (day_close_requested)
@@ -189,11 +176,8 @@ func test_tutorial_completed_signal_emitted_exactly_once() -> void:
 	_drive_full_sequence()
 
 	# Emit triggers again — must not fire tutorial_completed a second time.
-	EventBus.panel_opened.emit("inventory")
+	EventBus.customer_platform_identified.emit(&"c1", &"ignite_go", true)
 	EventBus.item_stocked.emit("test_item", "shelf_1")
-	EventBus.customer_purchased.emit(
-		&"test_store", &"test_item", 9.99, &"customer_1"
-	)
 	EventBus.day_acknowledged.emit()
 
 	assert_eq(
@@ -219,11 +203,8 @@ func test_no_tutorial_signals_after_completion() -> void:
 	EventBus.tutorial_step_completed.connect(on_step_completed)
 	EventBus.tutorial_completed.connect(on_completed)
 
-	EventBus.panel_opened.emit("inventory")
+	EventBus.customer_platform_identified.emit(&"c1", &"ignite_go", true)
 	EventBus.item_stocked.emit("test_item", "shelf_1")
-	EventBus.customer_purchased.emit(
-		&"test_store", &"test_item", 9.99, &"customer_1"
-	)
 	EventBus.day_acknowledged.emit()
 
 	assert_eq(
@@ -253,40 +234,36 @@ func test_step_completed_signal_fires_for_each_step() -> void:
 	)
 	assert_eq(completed_ids[0], "welcome", "Step 0 completed: welcome")
 	assert_eq(
-		completed_ids[1], "open_inventory",
-		"Step 1 completed: open_inventory"
+		completed_ids[1], "platform_match",
+		"Step 1 completed: platform_match"
 	)
 	assert_eq(
-		completed_ids[2], "select_item",
-		"Step 2 completed: select_item"
+		completed_ids[2], "stock_shelf",
+		"Step 2 completed: stock_shelf"
 	)
 	assert_eq(
-		completed_ids[3], "place_item",
-		"Step 3 completed: place_item"
+		completed_ids[3], "condition_risk",
+		"Step 3 completed: condition_risk"
 	)
 	assert_eq(
-		completed_ids[4], "wait_for_customer",
-		"Step 4 completed: wait_for_customer"
+		completed_ids[4], "sports_depreciation",
+		"Step 4 completed: sports_depreciation"
 	)
 	assert_eq(
-		completed_ids[5], "customer_browsing",
-		"Step 5 completed: customer_browsing"
+		completed_ids[5], "hold_pressure",
+		"Step 5 completed: hold_pressure"
 	)
 	assert_eq(
-		completed_ids[6], "customer_at_checkout",
-		"Step 6 completed: customer_at_checkout"
+		completed_ids[6], "hidden_thread",
+		"Step 6 completed: hidden_thread"
 	)
 	assert_eq(
-		completed_ids[7], "complete_sale",
-		"Step 7 completed: complete_sale"
+		completed_ids[7], "close_day",
+		"Step 7 completed: close_day"
 	)
 	assert_eq(
-		completed_ids[8], "close_day",
-		"Step 8 completed: close_day"
-	)
-	assert_eq(
-		completed_ids[9], "day_summary",
-		"Step 9 completed: day_summary"
+		completed_ids[8], "day_summary",
+		"Step 8 completed: day_summary"
 	)
 
 	EventBus.tutorial_step_completed.disconnect(on_step_completed)
@@ -295,33 +272,15 @@ func test_step_completed_signal_fires_for_each_step() -> void:
 # --- Helpers ---
 
 
-func _make_item(item_id: String, price: float) -> ItemInstance:
-	var def := ItemDefinition.new()
-	def.id = item_id
-	def.item_name = "Test %s" % item_id
-	def.category = "games"
-	def.base_price = price
-	def.rarity = "common"
-	def.tags = PackedStringArray([])
-	def.condition_range = PackedStringArray(["good"])
-	return ItemInstance.create_from_definition(def, "good")
-
-
 func _drive_full_sequence() -> void:
 	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
 	_tutorial._process(0.01)
-	EventBus.panel_opened.emit("inventory")
-	EventBus.placement_mode_entered.emit()
+	EventBus.customer_platform_identified.emit(&"c1", &"ignite_go", true)
 	EventBus.item_stocked.emit("test_item", "shelf_1")
-	EventBus.customer_entered.emit({"customer_id": "c1"})
-	var customer: Customer = Customer.new()
-	add_child_autofree(customer)
-	var item: ItemInstance = _make_item("test_item", 9.99)
-	EventBus.customer_item_spotted.emit(customer, item)
-	EventBus.customer_ready_to_purchase.emit({"customer_id": "c1"})
-	EventBus.customer_purchased.emit(
-		&"test_store", &"test_item", 9.99, &"customer_1"
-	)
+	EventBus.trade_in_condition_graded.emit(&"used_cart_a", "good")
+	EventBus.trade_in_price_confirmed.emit(&"field_blitz_07", 4.50)
+	EventBus.hold_decision_made.emit(&"dungeon_frenzy_2", true)
+	EventBus.hidden_clue_acknowledged.emit(&"void_protocols_red_label")
 	EventBus.day_close_requested.emit()
 	EventBus.day_acknowledged.emit()
 

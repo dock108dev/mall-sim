@@ -233,6 +233,157 @@ metallic = 0.1
 roughness = 0.05
 
 ; ============================================================
+; Zone meshes (new for ISSUE-009 zone completeness)
+; ============================================================
+
+[sub_resource type="BoxMesh" id="new_release_wall_mesh"]
+size = Vector3(3.2, 2.4, 0.4)
+
+[sub_resource type="BoxShape3D" id="new_release_wall_shape"]
+size = Vector3(3.2, 2.4, 0.4)
+
+[sub_resource type="BoxMesh" id="new_release_shelf_mesh"]
+size = Vector3(3.0, 0.06, 0.45)
+
+[sub_resource type="BoxMesh" id="old_gen_shelf_body_mesh"]
+size = Vector3(2.4, 1.6, 0.4)
+
+[sub_resource type="BoxShape3D" id="old_gen_shelf_body_shape"]
+size = Vector3(2.4, 1.6, 0.4)
+
+[sub_resource type="BoxMesh" id="old_gen_shelf_board_mesh"]
+size = Vector3(2.3, 0.06, 0.42)
+
+[sub_resource type="BoxMesh" id="new_console_pedestal_mesh"]
+size = Vector3(0.9, 0.6, 0.6)
+
+[sub_resource type="BoxShape3D" id="new_console_pedestal_shape"]
+size = Vector3(0.9, 0.6, 0.6)
+
+[sub_resource type="BoxMesh" id="new_console_unit_mesh"]
+size = Vector3(0.6, 0.18, 0.42)
+
+[sub_resource type="StandardMaterial3D" id="new_console_unit_mat"]
+albedo_color = Color(0.92, 0.92, 0.95, 1)
+metallic = 0.5
+roughness = 0.35
+emission_enabled = true
+emission = Color(0.45, 0.85, 1.0, 1)
+emission_energy_multiplier = 0.65
+
+[sub_resource type="StandardMaterial3D" id="new_console_pedestal_mat"]
+albedo_color = Color(0.18, 0.21, 0.28, 1)
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="bargain_bin_body_mesh"]
+size = Vector3(1.2, 0.6, 0.9)
+
+[sub_resource type="BoxShape3D" id="bargain_bin_shape"]
+size = Vector3(1.2, 0.6, 0.9)
+
+[sub_resource type="BoxMesh" id="bargain_bin_rim_mesh"]
+size = Vector3(1.25, 0.08, 0.95)
+
+[sub_resource type="StandardMaterial3D" id="bargain_bin_mat"]
+resource_name = "Bargain Bin"
+albedo_color = Color(0.78, 0.18, 0.16, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="bargain_bin_rim_mat"]
+albedo_color = Color(0.95, 0.82, 0.22, 1)
+roughness = 0.45
+metallic = 0.2
+
+[sub_resource type="BoxMesh" id="hold_shelf_mesh"]
+size = Vector3(1.4, 0.08, 0.32)
+
+[sub_resource type="BoxShape3D" id="hold_shelf_shape"]
+size = Vector3(1.4, 0.4, 0.32)
+
+[sub_resource type="StandardMaterial3D" id="hold_shelf_mat"]
+albedo_color = Color(0.55, 0.42, 0.28, 1)
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="back_room_inventory_shelf_mesh"]
+size = Vector3(1.6, 1.8, 0.45)
+
+[sub_resource type="BoxShape3D" id="back_room_inventory_shelf_shape"]
+size = Vector3(1.6, 1.8, 0.45)
+
+[sub_resource type="BoxMesh" id="back_room_damaged_bin_mesh"]
+size = Vector3(0.9, 0.55, 0.65)
+
+[sub_resource type="BoxShape3D" id="back_room_damaged_bin_shape"]
+size = Vector3(0.9, 0.55, 0.65)
+
+[sub_resource type="StandardMaterial3D" id="back_room_damaged_bin_mat"]
+albedo_color = Color(0.30, 0.22, 0.18, 1)
+roughness = 0.7
+
+[sub_resource type="BoxShape3D" id="back_room_zone_shape"]
+size = Vector3(3.5, 2.5, 3.5)
+
+[sub_resource type="BoxShape3D" id="employee_area_zone_shape"]
+size = Vector3(3.0, 2.5, 3.0)
+
+[sub_resource type="BoxMesh" id="delivery_manifest_mesh"]
+size = Vector3(0.32, 0.02, 0.22)
+
+[sub_resource type="BoxShape3D" id="delivery_manifest_shape"]
+size = Vector3(0.6, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="delivery_manifest_mat"]
+albedo_color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.65
+
+[sub_resource type="BoxMesh" id="poster_slot_mesh"]
+size = Vector3(0.6, 0.9, 0.04)
+
+[sub_resource type="BoxShape3D" id="poster_slot_shape"]
+size = Vector3(0.7, 1.0, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="poster_slot_mat"]
+albedo_color = Color(0.18, 0.18, 0.22, 1)
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="featured_display_mesh"]
+size = Vector3(1.0, 0.85, 0.6)
+
+[sub_resource type="BoxShape3D" id="featured_display_shape"]
+size = Vector3(1.0, 0.85, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="featured_display_mat"]
+albedo_color = Color(0.32, 0.42, 0.56, 1)
+metallic = 0.35
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="release_notes_clipboard_mesh"]
+size = Vector3(0.24, 0.02, 0.32)
+
+[sub_resource type="BoxShape3D" id="release_notes_clipboard_shape"]
+size = Vector3(0.5, 0.4, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="release_notes_clipboard_mat"]
+albedo_color = Color(0.62, 0.46, 0.24, 1)
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="zone_floor_seam_mesh"]
+size = Vector3(0.12, 0.02, 9.0)
+
+[sub_resource type="StandardMaterial3D" id="zone_floor_seam_mat"]
+albedo_color = Color(0.42, 0.30, 0.18, 1)
+roughness = 0.55
+
+[sub_resource type="StandardMaterial3D" id="section_sign_mat"]
+albedo_color = Color(0.05, 0.07, 0.12, 1)
+emission_enabled = true
+emission = Color(1.0, 0.76, 0.34, 1)
+emission_energy_multiplier = 1.4
+
+[sub_resource type="BoxMesh" id="section_sign_backing_mesh"]
+size = Vector3(2.0, 0.45, 0.04)
+
+; ============================================================
 ; Root
 ; ============================================================
 ;
@@ -310,7 +461,7 @@ metadata/bounds_max = Vector3(7.7, 0, 9.7)
 
 [node name="FluorescentKeyLight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 0)
-light_color = Color(0.98, 0.99, 1.0, 1)
+light_color = Color(1.0, 0.94, 0.78, 1)
 light_energy = 0.85
 omni_range = 18.0
 
@@ -698,7 +849,7 @@ outline_size = 5
 outline_modulate = Color(0.05, 0.04, 0.02, 1)
 shaded = false
 
-[node name="CartRackLeft" type="Node3D" parent="." groups=["fixture"]]
+[node name="CartRackLeft" type="Node3D" parent="." groups=["fixture", "used_game_wall"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -8.5)
 
 [node name="RackMesh" type="MeshInstance3D" parent="CartRackLeft"]
@@ -898,7 +1049,7 @@ surface_material_override/0 = ExtResource("10")
 ; Position: center-left of store
 ; ============================================================
 
-[node name="CartRackRight" type="Node3D" parent="." groups=["fixture"]]
+[node name="CartRackRight" type="Node3D" parent="." groups=["fixture", "used_game_wall"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, -8.5)
 
 [node name="RackMesh" type="MeshInstance3D" parent="CartRackRight"]
@@ -1339,7 +1490,7 @@ surface_material_override/0 = ExtResource("11")
 ; Position: left wall, mid-room (rotated 90° to sit flush against the wall)
 ; ============================================================
 
-[node name="AccessoriesBin" type="Node3D" parent="." groups=["fixture"]]
+[node name="AccessoriesBin" type="Node3D" parent="." groups=["fixture", "accessories_rack"]]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -7.52, 0, 1.43)
 
 [node name="BinMesh" type="MeshInstance3D" parent="AccessoriesBin"]
@@ -1956,3 +2107,684 @@ shape = SubResource("nav_zone_shape")
 mesh = SubResource("nav_zone_debug_mesh")
 surface_material_override/0 = SubResource("nav_zone_debug_mat")
 visible = false
+
+; ============================================================
+; BRAINDUMP zone completeness (ISSUE-009)
+;
+; The nine BRAINDUMP-required zones live below. Each zone is a Node3D with at
+; least one Interactable child. CartRackLeft / CartRackRight already cover the
+; "used_game_wall" footprint and now also belong to the `used_game_wall`
+; group; this top-level container hosts the wall-level Interactable so the
+; player can examine the wall section. AccessoriesBin already serves as the
+; accessories rack and now also belongs to the `accessories_rack` group.
+; ============================================================
+
+; ── used_game_wall (wraps CartRackLeft + CartRackRight) ─────────────────────
+[node name="used_game_wall" type="Node3D" parent="." groups=["store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8.5)
+
+[node name="Interactable" type="Area3D" parent="used_game_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0.4)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Used Game Wall"
+action_verb = "Browse"
+prompt_text = "Browse Used Games"
+interactable_id = &"used_game_wall"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="used_game_wall/Interactable"]
+shape = SubResource("nav_zone_shape")
+
+[node name="SectionSign" type="Label3D" parent="used_game_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, 0.05)
+pixel_size = 0.005
+modulate = Color(1.0, 0.78, 0.34, 1)
+double_sided = true
+font_size = 38
+text = "USED"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+; ── new_release_wall ─────────────────────────────────────────────────────────
+[node name="new_release_wall" type="Node3D" parent="." groups=["fixture", "store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, -9.78)
+
+[node name="WallMesh" type="MeshInstance3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+mesh = SubResource("new_release_wall_mesh")
+surface_material_override/0 = ExtResource("11")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="new_release_wall"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="new_release_wall/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+shape = SubResource("new_release_wall_shape")
+
+[node name="ShelfBoard1" type="MeshInstance3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0.22)
+mesh = SubResource("new_release_shelf_mesh")
+surface_material_override/0 = ExtResource("10")
+
+[node name="ShelfBoard2" type="MeshInstance3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0.22)
+mesh = SubResource("new_release_shelf_mesh")
+surface_material_override/0 = ExtResource("10")
+
+[node name="ShelfBoard3" type="MeshInstance3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 0.22)
+mesh = SubResource("new_release_shelf_mesh")
+surface_material_override/0 = ExtResource("10")
+
+[node name="Slot1" type="Area3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 1.0, 0.3)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "new_release_1"
+display_name = "New Release Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="new_release_wall/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="new_release_wall/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Slot2" type="Area3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.3)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "new_release_2"
+display_name = "New Release Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="new_release_wall/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="new_release_wall/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Slot3" type="Area3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 1.0, 0.3)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "new_release_3"
+display_name = "New Release Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="new_release_wall/Slot3"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="new_release_wall/Slot3"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Interactable" type="Area3D" parent="new_release_wall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0.4)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "New Release Wall"
+action_verb = "Browse"
+prompt_text = "Browse New Releases"
+interactable_id = &"new_release_wall"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="new_release_wall/Interactable"]
+shape = SubResource("new_release_wall_shape")
+
+[node name="SectionSign" type="Label3D" parent="new_release_wall"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.85, 0.05)
+pixel_size = 0.005
+modulate = Color(1.0, 0.78, 0.34, 1)
+double_sided = true
+font_size = 38
+text = "NEW RELEASES"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+; ── old_gen_shelf ────────────────────────────────────────────────────────────
+[node name="old_gen_shelf" type="Node3D" parent="." groups=["fixture", "store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.4, 0, -9.78)
+
+[node name="ShelfBody" type="MeshInstance3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+mesh = SubResource("old_gen_shelf_body_mesh")
+surface_material_override/0 = ExtResource("11")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="old_gen_shelf"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="old_gen_shelf/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("old_gen_shelf_body_shape")
+
+[node name="ShelfBoard1" type="MeshInstance3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.22)
+mesh = SubResource("old_gen_shelf_board_mesh")
+surface_material_override/0 = ExtResource("10")
+
+[node name="ShelfBoard2" type="MeshInstance3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0.22)
+mesh = SubResource("old_gen_shelf_board_mesh")
+surface_material_override/0 = ExtResource("10")
+
+[node name="Slot1" type="Area3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0.7, 0.25)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "old_gen_1"
+display_name = "Old-Gen Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="old_gen_shelf/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="old_gen_shelf/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Slot2" type="Area3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.7, 0.25)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "old_gen_2"
+display_name = "Old-Gen Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="old_gen_shelf/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="old_gen_shelf/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Slot3" type="Area3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.3, 0.25)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "old_gen_3"
+display_name = "Old-Gen Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="old_gen_shelf/Slot3"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="old_gen_shelf/Slot3"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Slot4" type="Area3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 1.3, 0.25)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "old_gen_4"
+display_name = "Old-Gen Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="old_gen_shelf/Slot4"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="old_gen_shelf/Slot4"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Interactable" type="Area3D" parent="old_gen_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.4)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Old-Gen Shelf"
+action_verb = "Browse"
+prompt_text = "Browse Old-Gen"
+interactable_id = &"old_gen_shelf"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="old_gen_shelf/Interactable"]
+shape = SubResource("old_gen_shelf_body_shape")
+
+[node name="SectionSign" type="Label3D" parent="old_gen_shelf"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.05, 0.05)
+pixel_size = 0.005
+modulate = Color(0.95, 0.78, 0.45, 1)
+double_sided = true
+font_size = 28
+text = "OLD-GEN"
+horizontal_alignment = 1
+outline_size = 4
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+; ── new_console_display (featured pedestal with spotlight) ──────────────────
+[node name="new_console_display" type="Node3D" parent="." groups=["fixture", "store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, -2.5)
+
+[node name="PedestalMesh" type="MeshInstance3D" parent="new_console_display"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("new_console_pedestal_mesh")
+surface_material_override/0 = SubResource("new_console_pedestal_mat")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="new_console_display"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="new_console_display/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("new_console_pedestal_shape")
+
+[node name="ConsoleUnit" type="MeshInstance3D" parent="new_console_display"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.69, 0)
+mesh = SubResource("new_console_unit_mesh")
+surface_material_override/0 = SubResource("new_console_unit_mat")
+
+[node name="Spotlight" type="SpotLight3D" parent="new_console_display"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 3.0, 0)
+light_color = Color(1.0, 0.92, 0.78, 1)
+light_energy = 1.6
+shadow_enabled = true
+spot_range = 4.0
+spot_angle = 28.0
+
+[node name="ShortageLabel" type="Label3D" parent="new_console_display"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.45, 0)
+billboard = 1
+pixel_size = 0.004
+modulate = Color(1.0, 0.6, 0.4, 1)
+double_sided = true
+font_size = 28
+text = "VECFORCE HD — IN STOCK"
+horizontal_alignment = 1
+outline_size = 4
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+[node name="Interactable" type="Area3D" parent="new_console_display"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "VecForce HD Display"
+action_verb = "Examine"
+prompt_text = "Examine Display"
+interactable_id = &"new_console_display"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="new_console_display/Interactable"]
+shape = SubResource("new_console_pedestal_shape")
+
+; ── bargain_bin (physical bin, not a wall rack) ─────────────────────────────
+[node name="bargain_bin" type="Node3D" parent="." groups=["fixture", "store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, 3.5)
+
+[node name="BinMesh" type="MeshInstance3D" parent="bargain_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("bargain_bin_body_mesh")
+surface_material_override/0 = SubResource("bargain_bin_mat")
+
+[node name="RimMesh" type="MeshInstance3D" parent="bargain_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0)
+mesh = SubResource("bargain_bin_rim_mesh")
+surface_material_override/0 = SubResource("bargain_bin_rim_mat")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="bargain_bin"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="bargain_bin/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("bargain_bin_shape")
+
+[node name="Slot1" type="Area3D" parent="bargain_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0.55, 0)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "bargain_1"
+display_name = "Bargain Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="bargain_bin/Slot1"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="bargain_bin/Slot1"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Slot2" type="Area3D" parent="bargain_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.55, 0)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("2")
+slot_id = "bargain_2"
+display_name = "Bargain Slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="bargain_bin/Slot2"]
+shape = SubResource("slot_collision")
+
+[node name="PlaceholderMesh" type="MeshInstance3D" parent="bargain_bin/Slot2"]
+mesh = SubResource("slot_marker_mesh")
+surface_material_override/0 = ExtResource("12")
+visible = false
+
+[node name="Interactable" type="Area3D" parent="bargain_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Bargain Bin"
+action_verb = "Dig"
+prompt_text = "Dig Through Bargains"
+interactable_id = &"bargain_bin"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="bargain_bin/Interactable"]
+shape = SubResource("bargain_bin_shape")
+
+[node name="SectionSign" type="Label3D" parent="bargain_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+billboard = 1
+pixel_size = 0.005
+modulate = Color(1.0, 0.85, 0.32, 1)
+double_sided = true
+font_size = 32
+text = "BARGAIN BIN $5"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.5, 0.05, 0.05, 1)
+shaded = false
+
+; ── hold_shelf (wall-mounted near register) ─────────────────────────────────
+[node name="hold_shelf" type="Node3D" parent="." groups=["fixture", "store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6, 1.6, 6.5)
+
+[node name="ShelfMesh" type="MeshInstance3D" parent="hold_shelf"]
+mesh = SubResource("hold_shelf_mesh")
+surface_material_override/0 = SubResource("hold_shelf_mat")
+
+[node name="HoldSlipContainer" type="Node3D" parent="hold_shelf"]
+
+[node name="Interactable" type="Area3D" parent="hold_shelf"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Hold Shelf"
+action_verb = "Review"
+prompt_text = "Review Holds"
+interactable_id = &"hold_shelf"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="hold_shelf/Interactable"]
+shape = SubResource("hold_shelf_shape")
+
+[node name="HoldSign" type="Label3D" parent="hold_shelf"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.34, -0.18)
+pixel_size = 0.004
+modulate = Color(0.9, 0.92, 1, 1)
+double_sided = true
+font_size = 22
+text = "HOLDS"
+horizontal_alignment = 1
+outline_size = 3
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+; ── back_room (zone boundary + inventory shelf + damaged bin) ───────────────
+[node name="back_room" type="Node3D" parent="." groups=["store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.4, 0, -8.5)
+
+[node name="ZoneBoundary" type="Area3D" parent="back_room" groups=["back_room_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+collision_layer = 0
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/ZoneBoundary"]
+shape = SubResource("back_room_zone_shape")
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="back_room"]
+
+[node name="Partition" type="MeshInstance3D" parent="back_room"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.8, 1.25, 0)
+mesh = SubResource("front_wall_segment_mesh")
+visible = false
+
+[node name="back_room_inventory_shelf" type="Node3D" parent="back_room"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, -0.7)
+
+[node name="ShelfMesh" type="MeshInstance3D" parent="back_room/back_room_inventory_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("back_room_inventory_shelf_mesh")
+surface_material_override/0 = ExtResource("11")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="back_room/back_room_inventory_shelf"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/back_room_inventory_shelf/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+shape = SubResource("back_room_inventory_shelf_shape")
+
+[node name="Interactable" type="Area3D" parent="back_room/back_room_inventory_shelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.32)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 3
+display_name = "Inventory Shelf"
+action_verb = "Audit"
+prompt_text = "Audit Inventory"
+interactable_id = &"back_room_inventory_shelf"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/back_room_inventory_shelf/Interactable"]
+shape = SubResource("back_room_inventory_shelf_shape")
+
+[node name="back_room_damaged_bin" type="Node3D" parent="back_room"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, -0.7)
+
+[node name="BinMesh" type="MeshInstance3D" parent="back_room/back_room_damaged_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.275, 0)
+mesh = SubResource("back_room_damaged_bin_mesh")
+surface_material_override/0 = SubResource("back_room_damaged_bin_mat")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="back_room/back_room_damaged_bin"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/back_room_damaged_bin/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.275, 0)
+shape = SubResource("back_room_damaged_bin_shape")
+
+[node name="ItemContainer" type="Node3D" parent="back_room/back_room_damaged_bin"]
+
+[node name="Interactable" type="Area3D" parent="back_room/back_room_damaged_bin"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 6
+display_name = "Damaged Bin"
+action_verb = "Inspect"
+prompt_text = "Inspect Damaged Items"
+interactable_id = &"back_room_damaged_bin"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/back_room_damaged_bin/Interactable"]
+shape = SubResource("back_room_damaged_bin_shape")
+
+; ── employee_area (logical zone around register / time clock / hold shelf) ──
+[node name="employee_area" type="Node3D" parent="." groups=["store_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.0, 0, 7.5)
+
+[node name="ZoneBoundary" type="Area3D" parent="employee_area" groups=["employee_zone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+collision_layer = 0
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="employee_area/ZoneBoundary"]
+shape = SubResource("employee_area_zone_shape")
+
+[node name="Interactable" type="Area3D" parent="employee_area"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Employee Area"
+action_verb = "Review"
+prompt_text = "Review Shift Notes"
+interactable_id = &"employee_area"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="employee_area/Interactable"]
+shape = SubResource("employee_area_zone_shape")
+
+; ── delivery_manifest (front-counter pre-open ritual) ───────────────────────
+[node name="delivery_manifest" type="Node3D" parent="." groups=["store_artifact"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.95, 1.07, 7.85)
+
+[node name="PaperMesh" type="MeshInstance3D" parent="delivery_manifest"]
+mesh = SubResource("delivery_manifest_mesh")
+surface_material_override/0 = SubResource("delivery_manifest_mat")
+
+[node name="Interactable" type="Area3D" parent="delivery_manifest"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Delivery Manifest"
+action_verb = "Examine"
+prompt_text = "Examine Manifest"
+interactable_id = &"delivery_manifest"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="delivery_manifest/Interactable"]
+shape = SubResource("delivery_manifest_shape")
+
+; ── poster_slot (entrance) ──────────────────────────────────────────────────
+[node name="poster_slot" type="Node3D" parent="." groups=["store_artifact"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 1.7, 9.95)
+
+[node name="SlotMesh" type="MeshInstance3D" parent="poster_slot"]
+mesh = SubResource("poster_slot_mesh")
+surface_material_override/0 = SubResource("poster_slot_mat")
+
+[node name="Interactable" type="Area3D" parent="poster_slot"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Poster Slot"
+action_verb = "Change"
+prompt_text = "Change Poster"
+interactable_id = &"poster_slot"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="poster_slot/Interactable"]
+shape = SubResource("poster_slot_shape")
+
+; ── featured_display (front-of-store) ───────────────────────────────────────
+[node name="featured_display" type="Node3D" parent="." groups=["store_artifact"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6.5)
+
+[node name="DisplayMesh" type="MeshInstance3D" parent="featured_display"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.425, 0)
+mesh = SubResource("featured_display_mesh")
+surface_material_override/0 = SubResource("featured_display_mat")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="featured_display"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="featured_display/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.425, 0)
+shape = SubResource("featured_display_shape")
+
+[node name="Interactable" type="Area3D" parent="featured_display"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.425, 0)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Featured Display"
+action_verb = "Update"
+prompt_text = "Update Featured"
+interactable_id = &"featured_display"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="featured_display/Interactable"]
+shape = SubResource("featured_display_shape")
+
+[node name="FeaturedSign" type="Label3D" parent="featured_display"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.05, 0)
+billboard = 1
+pixel_size = 0.005
+modulate = Color(0.95, 0.86, 0.45, 1)
+double_sided = true
+font_size = 28
+text = "FEATURED"
+horizontal_alignment = 1
+outline_size = 4
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+; ── release_notes_clipboard (near register) ─────────────────────────────────
+[node name="release_notes_clipboard" type="Node3D" parent="." groups=["store_artifact"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.05, 1.07, 7.85)
+
+[node name="ClipboardMesh" type="MeshInstance3D" parent="release_notes_clipboard"]
+mesh = SubResource("release_notes_clipboard_mesh")
+surface_material_override/0 = SubResource("release_notes_clipboard_mat")
+
+[node name="Interactable" type="Area3D" parent="release_notes_clipboard"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+interaction_type = 2
+display_name = "Release Notes Clipboard"
+action_verb = "Read"
+prompt_text = "Read Release Notes"
+interactable_id = &"release_notes_clipboard"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="release_notes_clipboard/Interactable"]
+shape = SubResource("release_notes_clipboard_shape")
+
+; ── Zone-transition floor seams + section signage (visual density) ──────────
+[node name="ZoneTransitions" type="Node3D" parent="."]
+
+[node name="UsedToNewSeam" type="MeshInstance3D" parent="ZoneTransitions"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 1.95, 0.06, -5.0)
+mesh = SubResource("zone_floor_seam_mesh")
+surface_material_override/0 = SubResource("zone_floor_seam_mat")
+
+[node name="UsedToOldGenSeam" type="MeshInstance3D" parent="ZoneTransitions"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -5.45, 0.06, -5.0)
+mesh = SubResource("zone_floor_seam_mesh")
+surface_material_override/0 = SubResource("zone_floor_seam_mat")
+
+[node name="AccessoriesEntrySeam" type="MeshInstance3D" parent="ZoneTransitions"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.0, 0.06, 1.43)
+mesh = SubResource("zone_floor_seam_mesh")
+surface_material_override/0 = SubResource("zone_floor_seam_mat")
+
+[node name="AccessoriesSign" type="Label3D" parent="ZoneTransitions"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -7.95, 2.45, 1.43)
+pixel_size = 0.005
+modulate = Color(1.0, 0.78, 0.34, 1)
+double_sided = true
+font_size = 32
+text = "ACCESSORIES"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false

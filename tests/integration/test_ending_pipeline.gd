@@ -140,6 +140,7 @@ func test_survival_ending() -> void:
 		"max_reputation_tier": 2.0,
 		"final_reputation_tier": 2.0,
 		"trigger_type_bankruptcy": 0.0,
+		"hidden_thread_interactions": 1.0,
 	})
 
 	var triggered_id: Array = [&""]

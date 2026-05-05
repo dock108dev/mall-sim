@@ -9,14 +9,17 @@ const SLIDE_OFFSET: float = 100.0
 
 ## Game states each tutorial step requires before its prompt may appear.
 ## Steps absent from this map have no state restriction.
+## ISSUE-016: every employee on-the-job beat happens inside the store, so each
+## step is gated to STORE_VIEW. MALL_OVERVIEW is otherwise permissive for the
+## overlay, but FP step prompts must not bleed across that transition.
 const _STEP_REQUIRED_STATES: Dictionary = {
-	"open_inventory": GameManager.State.STORE_VIEW,
-	"select_item": GameManager.State.STORE_VIEW,
-	"place_item": GameManager.State.STORE_VIEW,
-	"wait_for_customer": GameManager.State.STORE_VIEW,
-	"customer_browsing": GameManager.State.STORE_VIEW,
-	"customer_at_checkout": GameManager.State.STORE_VIEW,
-	"complete_sale": GameManager.State.STORE_VIEW,
+	"welcome": GameManager.State.STORE_VIEW,
+	"platform_match": GameManager.State.STORE_VIEW,
+	"stock_shelf": GameManager.State.STORE_VIEW,
+	"condition_risk": GameManager.State.STORE_VIEW,
+	"sports_depreciation": GameManager.State.STORE_VIEW,
+	"hold_pressure": GameManager.State.STORE_VIEW,
+	"hidden_thread": GameManager.State.STORE_VIEW,
 	"close_day": GameManager.State.STORE_VIEW,
 }
 

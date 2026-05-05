@@ -8,7 +8,7 @@
     },
     {
       "day": 2,
-      "story_beat": "A woman in a blazer picks up a cartridge, turns it over, sets it back down. She doesn't buy \u2014 but she lingers longer than most.",
+      "story_beat": "A woman in a blazer picks up a cartridge, turns it over, sets it back down. She doesn't buy — but she lingers longer than most.",
       "forward_hook": "The weekend crowd tends to run younger. Keep the counter clear and the prices honest."
     },
     {
@@ -19,7 +19,7 @@
     {
       "day": 4,
       "story_beat": "The mall's overhead PA plays a jingle that hasn't aired since 1998. Three customers stop mid-sentence and just listen.",
-      "forward_hook": "You're starting to see regulars. That's a good sign \u2014 it means they trust the stock."
+      "forward_hook": "You're starting to see regulars. That's a good sign — it means they trust the stock."
     },
     {
       "day": 5,
@@ -38,5 +38,403 @@
     }
   ],
   "fallback_beat": "The mall hums along. Another day logged.",
-  "fallback_hook": "Tomorrow brings fresh inventory and new faces."
+  "fallback_hook": "Tomorrow brings fresh inventory and new faces.",
+  "midday_events": [
+    {
+      "id": "vendor_overflow_offer",
+      "min_day": 1,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 4,
+      "title": "Overflow Stock Offer",
+      "body": "A vendor from two doors down knocks. He's got a box of unclaimed trade-ins he can't move. Five dollars for the lot, untested.",
+      "choices": [
+        {
+          "label": "Buy the box ($5)",
+          "consequence": "Untested stock for the backroom",
+          "effects": { "money": -5.0, "inventory_flag": "mystery_lot_acquired" }
+        },
+        {
+          "label": "Pass",
+          "consequence": "He moves on",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "rude_kid_browsing",
+      "min_day": 1,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 3,
+      "title": "Kid With No Manners",
+      "body": "A twelve-year-old is handling every cartridge in the bargain bin. He's putting them back wrong. Do you say something?",
+      "choices": [
+        {
+          "label": "Politely correct him",
+          "consequence": "+3 reputation",
+          "effects": { "reputation": 3.0 }
+        },
+        {
+          "label": "Let it slide",
+          "consequence": "Bin gets messy",
+          "effects": {}
+        },
+        {
+          "label": "Ask him to leave",
+          "consequence": "-5 reputation",
+          "effects": { "reputation": -5.0 }
+        }
+      ]
+    },
+    {
+      "id": "power_flicker",
+      "min_day": 2,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 5,
+      "title": "Power Flicker",
+      "body": "The lights brown out for two seconds. Display TVs restart. Customers barely notice. You did.",
+      "choices": [
+        {
+          "label": "File a maintenance request ($2)",
+          "consequence": "On the board for maintenance",
+          "effects": { "money": -2.0, "inventory_flag": "maintenance_filed" }
+        },
+        {
+          "label": "Ignore it",
+          "consequence": "Might happen again",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "authentication_request",
+      "min_day": 2,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 4,
+      "title": "Is This Real?",
+      "body": "A collector slides a boxed game across the counter. 'Can you tell me if this is legitimate?' You're not a grader, but you have eyes.",
+      "choices": [
+        {
+          "label": "Authenticate for free",
+          "consequence": "+6 reputation",
+          "effects": { "reputation": 6.0 }
+        },
+        {
+          "label": "Charge $3 for your time",
+          "consequence": "+$3, -2 reputation",
+          "effects": { "money": 3.0, "reputation": -2.0 }
+        },
+        {
+          "label": "Turn him away",
+          "consequence": "-4 reputation",
+          "effects": { "reputation": -4.0 }
+        }
+      ]
+    },
+    {
+      "id": "sports_trade_in_flood",
+      "min_day": 3,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 6,
+      "title": "Trade-In Flood",
+      "body": "A regular shows up with three plastic bins of used cartridges hoping to trade in. Vic Harlow is on the floor handling intake; you watch him sort the pile and quote prices.",
+      "choices": [
+        {
+          "label": "Watch and learn",
+          "consequence": "+2 manager approval",
+          "effects": { "trust": 2.0 }
+        },
+        {
+          "label": "Step in to help sort",
+          "consequence": "+3 trust, slows the floor",
+          "effects": { "trust": 3.0, "reputation": -1.0 }
+        },
+        {
+          "label": "Stay focused on register",
+          "consequence": "Quiet shift",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "trade_offer_bulk",
+      "min_day": 3,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 5,
+      "title": "Someone Cleaned Out an Attic",
+      "body": "A tired-looking parent drops a cardboard box on the counter. Thirty-odd cartridges, no cases. She wants $20 for the lot.",
+      "choices": [
+        {
+          "label": "Buy the lot ($20)",
+          "consequence": "Backroom mystery stock",
+          "effects": { "money": -20.0, "inventory_flag": "attic_lot_acquired" }
+        },
+        {
+          "label": "Counter-offer $10",
+          "consequence": "-$10, -3 reputation",
+          "effects": { "money": -10.0, "reputation": -3.0, "inventory_flag": "attic_lot_acquired" }
+        },
+        {
+          "label": "Pass",
+          "consequence": "She heads down the hall",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "demo_unit_broken",
+      "min_day": 4,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 5,
+      "title": "Demo Unit Down",
+      "body": "The demo console on the end cap has a bad cartridge connector. Customers keep walking away frustrated.",
+      "choices": [
+        {
+          "label": "Pull the unit",
+          "consequence": "-2 reputation",
+          "effects": { "reputation": -2.0 }
+        },
+        {
+          "label": "Fix it ($4 cleaning kit)",
+          "consequence": "+5 reputation",
+          "effects": { "money": -4.0, "reputation": 5.0 }
+        },
+        {
+          "label": "Sign it 'Out of Order'",
+          "consequence": "Half still try it",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "suspicious_hold_slip",
+      "min_day": 5,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 3,
+      "title": "Suspicious Hold Slip",
+      "body": "A hold slip in the back has yesterday's date and no customer name. The item is one of the high-value sealed boxes. Vic isn't on the floor right now.",
+      "choices": [
+        {
+          "label": "Flag it for the manager",
+          "consequence": "+4 manager approval, hidden tally noted",
+          "effects": { "trust": 4.0, "hidden_thread_flag": "suspicious_hold_flagged" }
+        },
+        {
+          "label": "Put the item back on the shelf",
+          "consequence": "Shelf restored quietly",
+          "effects": {}
+        },
+        {
+          "label": "Leave it alone",
+          "consequence": "Slip stays in the bin",
+          "effects": { "hidden_thread_flag": "suspicious_hold_ignored" }
+        }
+      ]
+    },
+    {
+      "id": "regular_recommendation",
+      "min_day": 5,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 4,
+      "title": "Regular Wants a Pick",
+      "body": "A regular asks what you'd recommend in the under-$15 range. He trusts your taste.",
+      "choices": [
+        {
+          "label": "Point him to a confident pick",
+          "consequence": "+4 reputation",
+          "effects": { "reputation": 4.0 }
+        },
+        {
+          "label": "Upsell to a $30 box",
+          "consequence": "+$15, -2 reputation",
+          "effects": { "money": 15.0, "reputation": -2.0 }
+        },
+        {
+          "label": "Tell him to browse",
+          "consequence": "He browses",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "mystery_preorder",
+      "min_day": 6,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 5,
+      "title": "Informal Pre-Order",
+      "body": "A regular asks if you'd take $10 down on a title he's sure will surface used in two weeks. You don't have a formal preorder system.",
+      "choices": [
+        {
+          "label": "Take the $10 informally",
+          "consequence": "+$10, owe him a copy",
+          "effects": { "money": 10.0, "inventory_flag": "informal_preorder_open" }
+        },
+        {
+          "label": "Politely decline",
+          "consequence": "-1 reputation",
+          "effects": { "reputation": -1.0 }
+        }
+      ]
+    },
+    {
+      "id": "warranty_complaint",
+      "min_day": 7,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 4,
+      "title": "Warranty Complaint",
+      "body": "A customer returns with a console that died after a week. He doesn't have a receipt but swears he bought it here.",
+      "choices": [
+        {
+          "label": "Refund out of pocket ($25)",
+          "consequence": "-$25, +5 reputation",
+          "effects": { "money": -25.0, "reputation": 5.0 }
+        },
+        {
+          "label": "Offer a store credit",
+          "consequence": "+2 reputation",
+          "effects": { "reputation": 2.0, "inventory_flag": "store_credit_issued" }
+        },
+        {
+          "label": "Refuse without a receipt",
+          "consequence": "-6 reputation",
+          "effects": { "reputation": -6.0 }
+        }
+      ]
+    },
+    {
+      "id": "shoplifter_spotted",
+      "min_day": 8,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 4,
+      "title": "Shoplifter Spotted",
+      "body": "You catch a teenager slipping a small game into his backpack. He freezes when you make eye contact.",
+      "choices": [
+        {
+          "label": "Confront firmly",
+          "consequence": "+3 manager approval",
+          "effects": { "trust": 3.0 }
+        },
+        {
+          "label": "Let him put it back quietly",
+          "consequence": "+1 reputation",
+          "effects": { "reputation": 1.0 }
+        },
+        {
+          "label": "Look away",
+          "consequence": "Item walks out, hidden tally noted",
+          "effects": { "hidden_thread_flag": "shoplifter_ignored" }
+        }
+      ]
+    },
+    {
+      "id": "press_drop_in",
+      "min_day": 10,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 6,
+      "title": "Local Paper Stops By",
+      "body": "A reporter from the regional paper pokes her head in. 'Mind if I write a short feature on the store?'",
+      "choices": [
+        {
+          "label": "Spend twenty minutes with her",
+          "consequence": "+8 reputation",
+          "effects": { "reputation": 8.0 }
+        },
+        {
+          "label": "Hand her a flyer and get back to work",
+          "consequence": "+1 reputation",
+          "effects": { "reputation": 1.0 }
+        },
+        {
+          "label": "Politely decline",
+          "consequence": "She leaves",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "supplier_late_call",
+      "min_day": 12,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 5,
+      "title": "Supplier Calls Late",
+      "body": "A supplier calls mid-shift: tomorrow's restock will be a day late. He asks if you want to pay rush fees to keep the original date.",
+      "choices": [
+        {
+          "label": "Pay the rush ($15)",
+          "consequence": "-$15, restock holds",
+          "effects": { "money": -15.0 }
+        },
+        {
+          "label": "Accept the delay",
+          "consequence": "Shelf will be lean tomorrow",
+          "effects": { "inventory_flag": "restock_delayed" }
+        }
+      ]
+    },
+    {
+      "id": "manager_quick_request",
+      "min_day": 14,
+      "max_day": 30,
+      "unlock_required": null,
+      "cooldown_days": 4,
+      "title": "Manager Quick Ask",
+      "body": "Vic comes by the register. 'Cover the back office for ten minutes? I need to take a call.' The floor will be unattended.",
+      "choices": [
+        {
+          "label": "Take it on",
+          "consequence": "+4 manager approval, brief floor risk",
+          "effects": { "trust": 4.0, "reputation": -1.0 }
+        },
+        {
+          "label": "Stay on register",
+          "consequence": "-2 manager approval",
+          "effects": { "trust": -2.0 }
+        }
+      ]
+    },
+    {
+      "id": "launch_reservation_conflict",
+      "min_day": 18,
+      "max_day": 22,
+      "unlock_required": null,
+      "cooldown_days": 1,
+      "title": "Launch Day Reservation Conflict",
+      "body": "The hold list for the VecForce HD launch unit names a customer who hasn't shown. A walk-in is at the counter offering full price plus a $50 tip. Vic is in a meeting upstairs.",
+      "choices": [
+        {
+          "label": "Follow the hold list",
+          "consequence": "+5 reputation, +3 manager approval",
+          "effects": { "reputation": 5.0, "trust": 3.0 }
+        },
+        {
+          "label": "Sell to the walk-in",
+          "consequence": "+$449, -8 reputation, -3 manager approval",
+          "effects": { "money": 449.0, "reputation": -8.0, "trust": -3.0 }
+        },
+        {
+          "label": "Set the unit aside for later",
+          "consequence": "Hidden tally noted, scapegoat risk rises",
+          "effects": { "hidden_thread_flag": "launch_unit_set_aside" }
+        },
+        {
+          "label": "Escalate to the manager",
+          "consequence": "+5 manager approval, customer waits",
+          "effects": { "trust": 5.0 }
+        }
+      ]
+    }
+  ]
 }

@@ -38,7 +38,7 @@ func test_overlay_hidden_on_ready() -> void:
 
 
 func test_prompt_updates_on_step_changed() -> void:
-	# OPEN_INVENTORY step requires STORE_VIEW state to be visible.
+	# PLATFORM_MATCH step requires STORE_VIEW state to be visible.
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	_tutorial.initialize(true)
 
@@ -57,11 +57,11 @@ func test_prompt_updates_on_step_changed() -> void:
 		label.text, "",
 		"PromptLabel should have text after step change"
 	)
-	# Tutorial moved from WELCOME → OPEN_INVENTORY; the label reflects the new step.
+	# Tutorial moved from WELCOME → PLATFORM_MATCH; the label reflects the new step.
 	assert_eq(
 		_tutorial.current_step,
-		TutorialSystem.TutorialStep.OPEN_INVENTORY,
-		"Tutorial should be on OPEN_INVENTORY after WELCOME timer expires"
+		TutorialSystem.TutorialStep.PLATFORM_MATCH,
+		"Tutorial should be on PLATFORM_MATCH after WELCOME timer expires"
 	)
 
 

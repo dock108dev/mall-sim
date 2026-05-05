@@ -1,0 +1,180 @@
+[gd_scene load_steps=2 format=3 uid="uid://btrdpnl0012"]
+
+[ext_resource type="Script" path="res://game/scenes/ui/trade_in_panel.gd" id="1"]
+
+[node name="TradeInPanel" type="CanvasLayer"]
+layer = 7
+script = ExtResource("1")
+
+[node name="PanelRoot" type="PanelContainer" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -340.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="PanelRoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="PanelRoot/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderRow" type="HBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlatformIcon" type="TextureRect" parent="PanelRoot/Margin/VBox/HeaderRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleLabel" type="Label" parent="PanelRoot/Margin/VBox/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HeaderLabel"
+text = "Trade-In"
+
+[node name="LockedBanner" type="Label" parent="PanelRoot/Margin/VBox"]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 2
+text = "Trade-in unlocks once Vic certifies you."
+
+[node name="Sep1" type="HSeparator" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="InspectSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ItemNameLabel" type="Label" parent="PanelRoot/Margin/VBox/InspectSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = ""
+
+[node name="PlatformLabel" type="Label" parent="PanelRoot/Margin/VBox/InspectSection"]
+layout_mode = 2
+text = ""
+
+[node name="Sep2" type="HSeparator" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="ConditionSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ConditionHeader" type="Label" parent="PanelRoot/Margin/VBox/ConditionSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Condition"
+
+[node name="ConditionOptions" type="VBoxContainer" parent="PanelRoot/Margin/VBox/ConditionSection"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="MintButton" type="CheckBox" parent="PanelRoot/Margin/VBox/ConditionSection/ConditionOptions"]
+layout_mode = 2
+text = "Mint"
+
+[node name="GoodButton" type="CheckBox" parent="PanelRoot/Margin/VBox/ConditionSection/ConditionOptions"]
+layout_mode = 2
+text = "Good"
+
+[node name="FairButton" type="CheckBox" parent="PanelRoot/Margin/VBox/ConditionSection/ConditionOptions"]
+layout_mode = 2
+text = "Fair"
+
+[node name="PoorButton" type="CheckBox" parent="PanelRoot/Margin/VBox/ConditionSection/ConditionOptions"]
+layout_mode = 2
+text = "Poor"
+
+[node name="DamagedButton" type="CheckBox" parent="PanelRoot/Margin/VBox/ConditionSection/ConditionOptions"]
+layout_mode = 2
+text = "Damaged"
+
+[node name="Sep3" type="HSeparator" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+
+[node name="OfferSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="OfferLabel" type="Label" parent="PanelRoot/Margin/VBox/OfferSection"]
+layout_mode = 2
+text = "Store Credit Offer:"
+
+[node name="OfferValueLabel" type="Label" parent="PanelRoot/Margin/VBox/OfferSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "$0.00"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="PanelRoot/Margin/VBox"]
+visible = false
+layout_mode = 2
+autowrap_mode = 2
+horizontal_alignment = 1
+text = ""
+
+[node name="ButtonRow" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AppraiseButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 36)
+text = "Appraise"
+
+[node name="MakeOfferButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 36)
+text = "Make Offer"
+
+[node name="DeclineButton" type="Button" parent="PanelRoot/Margin/VBox/ButtonRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 36)
+text = "Decline"
+
+[node name="ReceiptSection" type="VBoxContainer" parent="PanelRoot/Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ReceiptTitle" type="Label" parent="PanelRoot/Margin/VBox/ReceiptSection"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "— Trade Complete —"
+horizontal_alignment = 1
+
+[node name="ReceiptItemLabel" type="Label" parent="PanelRoot/Margin/VBox/ReceiptSection"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="ReceiptConditionLabel" type="Label" parent="PanelRoot/Margin/VBox/ReceiptSection"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="ReceiptCreditLabel" type="Label" parent="PanelRoot/Margin/VBox/ReceiptSection"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="ReceiptHintLabel" type="Label" parent="PanelRoot/Margin/VBox/ReceiptSection"]
+layout_mode = 2
+text = "Press E to dismiss"
+horizontal_alignment = 1

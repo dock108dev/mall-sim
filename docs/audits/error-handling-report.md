@@ -1,6 +1,360 @@
 # Error-Handling Audit — Mallcore Sim
 
-**Latest pass:** 2026-05-04 (Pass 15 — Day-1 vertical-slice working-tree
+**Latest pass:** 2026-05-05 (Pass 17 — Pass-16-untouched untracked systems
+hardening: the working tree adds ten more untracked GDScript files that
+sit downstream of the Pass-16 surface
+(`ReturnsSystem`, `TradeInSystem`, `StoreCustomizationSystem`, `HoldList`,
+`MiddayEventCard`, `MorningNotePanel`, `BackRoomInventoryPanel`,
+`ClosingChecklist`, `ReturnsPanel`, `HiddenThreadShimmer`). This pass
+upgraded five silent-return / silent-skip error suppressions to
+`push_error` / `push_warning` and annotated seven defensive-guard
+families inline with §F-NN cites. All five escalations surface upstream
+content-authoring or Tier-init regressions that would otherwise be
+masked as missing-feature UX bugs.
+
+## Changes made this pass
+
+* `game/autoload/returns_system.gd` — `_debit_store_account` (§F-129):
+  `EconomySystem == null` silent return escalated to `push_error` with
+  the dropped amount included. The cash debit is the data-integrity
+  half of the refund flow; the trust / approval / EventBus side
+  effects already fire unconditionally, so a silent skip leaves the
+  player keeping the customer's money on a refund-resolved record
+  without anything in the day-summary cash deltas to reconcile.
+  EconomySystem is a Tier-1 init dependency
+  (`GameWorld.initialize_tier_1_data`); a null in production is a real
+  regression. The post-edit test run surfaces the new error in
+  `test_returns_system.gd::test_accept_refund_*` cases — the test
+  fixture intentionally does not seed an EconomySystem (those cases
+  assert trust deltas, not cash deltas), so the loud message points at
+  a real test-fixture gap that was hidden behind the silent return.
+  Tests still pass (5470/5470).
+* `game/scripts/systems/trade_in_system.gd` — `make_offer` (§F-130):
+  `inventory_system.create_item` returning null silent fallback
+  escalated to `push_warning` with `item_def_id` / `condition` / offer
+  amount included. The fallback path correctly returns to
+  `AWAITING_PLAYER_DECISION` and an empty instance id so the panel can
+  surface the failure, but without a log line the operator could not
+  tell whether the fallback was hit because the backroom was full
+  (legitimate runtime state) or because `current_item_def_id` did not
+  resolve to a definition (content-authoring break). The post-edit run
+  fires the warning under
+  `test_trade_in_system.gd::test_make_offer_handles_backroom_full`,
+  which is exactly the scenario the message is designed to disambiguate.
+* `game/scripts/systems/store_customization_system.gd` —
+  `_maybe_apply_hint_match_trust` (§F-131):
+  `ManagerRelationshipManager` autoload-missing / missing-method silent
+  return escalated to `push_error` with the active featured-category
+  and morning-note hint included. The +0.03 hint-match reward is the
+  *only* positive trust delta on the customization surface; a silent
+  drop un-couples the morning note from the player's display choice
+  and presents as missing-progression instead of a config break.
+  Mirrors §F-122 / §F-124 in midday_event_system: same autoload, same
+  `apply_trust_delta` API, same escalation reasoning.
+* `game/scripts/stores/hold_list.gd` — `load_save_data` (§F-132): the
+  malformed-slip silent skip in the existing §F-126 save-load defense
+  block now counts non-Dictionary entries and emits a single
+  `push_warning` with the dropped count, plus a sibling `push_warning`
+  for the case where `slips` is present but not an Array. The save
+  round-trips through `to_dict` / `from_dict`, so a non-Dictionary
+  entry means the user:// save was hand-edited or written by an
+  incompatible schema; silently dropping outstanding holds (and the
+  customer commitments tied to them) would surface to the player as
+  missing inventory rather than a save-format break. Mirrors the §F-126
+  clamp pattern that already lives in this method.
+* `game/scripts/ui/midday_event_card.gd` — `_on_midday_event_fired`
+  (§F-133): malformed choice-entry silent `continue` escalated to
+  `push_error` with the offending beat id, choice index, and observed
+  type. Pass 16 §F-122 hardened the system-side resolver
+  (`MiddayEventSystem._apply_choice_effects`) for the same content
+  break; this card is the *render* side, so the hardening pair now
+  surfaces both halves of the regression. Added a sibling `push_error`
+  for the case where `choices` is present but not an Array.
+* `game/scenes/ui/back_room_inventory_panel.gd` — `_refresh` /
+  `_on_flag_pressed` (§F-137): defensive UI guards justified inline.
+  The `_grid == null` branch is an `@onready` pre-`_ready` guard; the
+  `_controller == null` branch is the Tier-3 store-init seam (panel can
+  be instantiated before `RetroGames` calls `set_controller`). A
+  hardening push would log on every headless test that builds the
+  panel without a paired controller — far more noise than signal.
+  Malformed-row entries are filtered upstream by
+  `RetroGames.get_inventory_audit_rows`; the row-shape guard is a
+  belt-and-braces secondary filter.
+* `game/scenes/ui/closing_checklist.gd` — `_on_task_pressed` (§F-138):
+  `task_index` out-of-bounds guard is unreachable from the production
+  wiring (each button binds to one of the four `TASK_*` constants);
+  documented inline as future-direct-caller protection. The
+  `_task_resolved[task_index]` true branch is normal idempotency
+  (player double-clicks a completed row), not an error path.
+* `game/scenes/ui/returns_panel.gd` — `_on_choice_pressed` (§F-139):
+  defensive UI guards justified inline. Every false branch in
+  `ReturnsSystem.apply_decision` (lines 222-256) emits its own
+  `push_warning`; the panel can fail closed without re-logging because
+  the system is the canonical observability surface for refund-decision
+  failures.
+* `game/scripts/ui/morning_note_panel.gd` — `_manager_name` (§F-136):
+  `ManagerRelationshipManager` autoload-missing fallback to the literal
+  `"Vic Harlow"` justified inline. The hardcoded fallback matches the
+  `MANAGER_NAME` constant exactly
+  (`manager_relationship_manager.gd:106`), so the visible header text
+  is correct whether or not the autoload is reachable; a hardening
+  push would only add log noise without changing user-visible output.
+* `game/scripts/world/hidden_thread_shimmer.gd` — `_resolve_mesh` /
+  `_install_material` (§F-140): pure-visual fallback chain justified
+  inline. ISSUE-015 spec mandates a diegetic-only cue (no UI badge,
+  outline, or icon); a host scene that lacks a paired
+  `MeshInstance3D` simply does not render the shimmer. Logging here
+  would fire on every static prop placed with the script attached but
+  not yet promoted to a hidden-thread anchor.
+* `game/autoload/returns_system.gd` — `_move_to_damaged_bin` (§F-134 /
+  §F-135): empty-`instance_id` defensive guard and `_inventory_system
+  == null` optional-injection seam annotated inline. `record_defective_
+  sale` already rejects empty `item_id` at line 84-86 with a
+  `push_warning`, so reaching the empty-instance branch from the
+  production refund path is unreachable. The null-inventory branch is
+  the documented optional-injection seam (see `set_inventory_system`
+  docstring at lines 62-69); mirrors the same guard pattern in
+  `check_bin_variance` line 263.
+
+## Justified (no code change)
+
+The Pass 17 surface re-verifies clean against the cleanup contract for
+the following patterns the audit reviewed but left in place:
+
+* `game/scripts/systems/trade_in_system.gd` `appraise()` (lines
+  162-167): three silent guards (empty `current_condition`, null
+  `current_item_definition`, wrong `current_state`) are ordinary
+  state-machine preconditions — the panel can call `appraise()`
+  before the player has selected a condition or while the system is
+  in `LOCKED`. Logging would fire on every panel-initiated
+  re-appraisal attempt during normal flow.
+* `game/scripts/systems/trade_in_system.gd` `_read_market_factor` /
+  `_read_trust` (lines 272-285): method-availability fallbacks for
+  testing. Production paths inject systems with the methods present;
+  the `has_method` guards are a test-seam pattern. Returning the
+  identity multipliers (1.0 / 0.0) preserves the formula behavior
+  with no market-factor or trust adjustment, which matches the
+  test-fixture intent.
+* `game/autoload/returns_system.gd` `record_defective_sale`
+  empty-`item_id` `push_warning` (line 85): already loud, returns
+  null, caller (`_on_defective_sale_occurred` line 305-306) handles
+  the null path. The downstream silent-empty filter at
+  `_on_defective_sale_occurred` is intentional — the
+  `defective_sale_occurred` EventBus signal carries `item_id` directly
+  from `CheckoutSystem`, so empty payloads are a checkout-side
+  regression already covered by the upstream signal contract.
+* `game/autoload/returns_system.gd` `apply_decision` policy-gate
+  `push_warning` family (lines 222-256): every reject branch
+  (null record, already-resolved, exchange unavailable, deny on
+  defective, unknown choice) is already loud. These match the
+  ReturnsPanel §F-139 "system layer is the loud surface" contract.
+* `game/scripts/systems/store_customization_system.gd`
+  `set_featured_category` / `set_poster` `push_warning` family
+  (lines 209-242): unknown category / unknown poster id /
+  missing-unlock paths already use `push_warning` and refuse the
+  mutation. These match the input-validation contract documented in
+  the function docstrings.
+* `game/scripts/stores/hold_list.gd` `resolve_conflict`
+  unknown-`ConflictChoice` `push_warning` (lines 281-283): already
+  loud, returns the empty result dict so the caller's outcome
+  bookkeeping does not silently advance.
+* `game/scenes/ui/returns_panel.gd` `populate_from_record` null-record
+  `push_warning` (line 36): already loud, returns false to signal the
+  caller. Matches the system-layer-is-loud contract documented at
+  §F-139.
+* `game/scenes/ui/closing_checklist.gd` `_pop_modal_focus` stack
+  mismatch (lines 177-183): already escalated to `push_error` in the
+  source as merged. The leave-stack-untouched recovery is the correct
+  defensive choice — popping a non-`CTX_MODAL` frame would corrupt the
+  sibling context stack.
+
+## Posture verdict
+
+Pass 17 closes the gap between the Pass-16 newly-audited core (`Employment`,
+`Manager`, `Platform`, `Shift`, `MiddayEvent`) and the next concentric
+layer of the same content-authoring landing —
+`Returns` / `TradeIn` / `StoreCustomization` / `HoldList` / decision-card
+panels / hidden-thread visual scripts. Five suppression sites were
+escalated; seven defensive-guard families were justified inline with
+§F-NN cites so the next pass can read the why without round-tripping
+through this document. Test posture: 5470 GUT tests, 5470 passing,
+0 failing, ≈31955 asserts (`tests/test_run.log`); the new
+`ReturnsSystem._debit_store_account` `push_error` and the
+`TradeInSystem.make_offer` `push_warning` fire in the relevant test
+cases without breaking assertions, and the messages disambiguate
+upstream failures that the previous silent returns hid. Pre-existing
+validator failures noted in Pass 16 remain on `main` and are out of
+scope.
+
+## Findings still open / Escalations
+
+None for this pass. The previously-flagged `MiddayEventCard hides an
+autoload singleton` parse error remains a class-naming SSoT concern
+out of scope for an EH hardening pass.
+
+---
+
+**Pass 16:** 2026-05-04 (newly-introduced systems hardening:
+the working tree adds five untracked autoloads
+(`EmploymentSystem`, `ManagerRelationshipManager`, `PlatformSystem`,
+`ShiftSystem`, `MiddayEventSystem`) plus the `ClockInInteractable`
+component, none of which had been through the EH audit. This pass
+upgraded their `push_warning` / silent-return error suppressions to
+`push_error` for content-config + autoload-availability failures.
+
+## Changes made this pass
+
+* `game/autoload/manager_relationship_manager.gd` — `_load_notes` (§F-116):
+  notes-file-not-found, file-open-failure, JSON parse error, and
+  non-Dictionary root each escalated `push_warning` → `push_error`.
+  `manager_notes.json` is the **sole** source of every morning-note body
+  (Day 1 / Day 10 / Day 20 / unlock-override / tier×category / fallback);
+  any of the four prior warning paths silently fell through to the
+  empty-string fallback note, masking a content-authoring break as a
+  blank-card UX bug. Open-failure path also enriched with
+  `error_string(FileAccess.get_open_error())` so the diagnostic carries
+  the actual error code.
+* `game/autoload/employment_system.gd` — `_persist_state` (§F-117):
+  `ConfigFile.save()` failure escalated `push_warning` → `push_error`
+  with the resolved `error_string(err)` appended. Wage-issuance and
+  trust persistence are data-integrity surfaces; a silent save failure
+  resumed the next session with a stale (or default) trust value and
+  silently lost the player's wage history.
+* `game/autoload/employment_system.gd` — `_load_persisted_state` (§F-118):
+  split the previously-conflated load-error branch. The first-run
+  / cleared-storage cases (`ERR_FILE_NOT_FOUND`, `ERR_FILE_CANT_OPEN`)
+  remain silent returns — those are legitimate "no prior state" — but
+  any other error code now escalates to `push_error` so a corrupted
+  user-config file surfaces instead of silently overwriting itself on
+  the next persist.
+* `game/scripts/systems/platform_system.gd` — `_load_catalog` /
+  `_build_definition` (§F-119): empty-catalog load and
+  catalog-entry-missing-`platform_id` each escalated `push_warning` →
+  `push_error`. Tests inject platforms via `_set_catalog_for_testing`
+  before any read, so the warning path only fires in shipping when
+  `platforms.json` is missing or malformed; downstream `is_shortage` /
+  `get_current_price` / `get_hype` / spawn-weight code silently returns
+  defaults for every platform when the catalog is empty. Also added
+  `push_error` for non-Dictionary catalog entries (previously a silent
+  `continue`).
+* `game/scripts/components/clock_in_interactable.gd` — `interact`
+  (§F-120): missing `/root/ShiftSystem` autoload escalated to
+  `push_error`. `ShiftSystem` is declared in `project.godot:56`; this
+  branch only fires when the autoload was disabled / removed, in which
+  case every player clock-in interaction silently no-ops.
+* `game/scripts/systems/shift_system.gd` — `_apply_trust_delta` (§F-121):
+  split the previously-uniform silent-return branch.
+  `EmploymentSystem` autoload missing or missing the
+  `apply_trust_delta` method now `push_error`s; the `is_employed()`
+  false branch stays a silent return because not-employed-yet is a
+  legitimate run-time state. `_apply_trust_delta` carries the
+  late-clock-in (−5) and missing-clock-out (−2) trust penalties, so
+  silently dropping them would un-couple the trust economy from the
+  player's actions.
+* `game/scripts/systems/midday_event_system.gd` — `_apply_choice_effects`
+  (§F-122): four malformed-beat-data silent returns escalated to
+  `push_error` with the offending beat id and observed type
+  (`type_string(typeof(...))`). A beat that reaches resolution but has
+  a non-Array `choices`, empty `choices`, non-Dictionary choice entry,
+  or non-Dictionary `effects` is a content-authoring regression in
+  `midday_events.json`; previously the player's chosen effects were
+  silently dropped.
+* `game/scripts/systems/midday_event_system.gd` — `_apply_money_effect`
+  (§F-123): unresolved-`EconomySystem` branch escalated `push_warning`
+  → `push_error`. Test fixtures seed an `EconomySystem` before
+  resolving any beat (see `tests/gut/test_midday_event_system.gd`), so
+  the warning was masking what is in fact a Tier-1 init regression in
+  shipping.
+* `game/scripts/systems/midday_event_system.gd` — `_apply_reputation_effect`
+  / `_apply_trust_effect` (§F-124): missing-autoload silent returns
+  for `ReputationSystemSingleton` and `EmploymentSystem` escalated to
+  `push_error`. Both are autoloads (`project.godot:54`, `:33`); a
+  missing node means project-config corruption, not a runtime
+  degradation, and a silently-dropped reputation / trust effect
+  un-couples midday choices from their stated consequences.
+* Added inline `# §F-NN —` rationale lines at every escalation site so
+  the next pass can read the why without round-tripping through this
+  document.
+
+## Justified (no code change)
+
+* `game/autoload/data_loader.gd` `create_starting_inventory` three
+  store-missing branches + the unknown-`item_id` skip continue to use
+  `push_warning` per the existing §F-83 / §F-88 rationale (Pass 12 /
+  Pass 13). Those warnings are the *deliberate* tightening from those
+  passes — `push_warning` was chosen because the call-site
+  (`GameWorld._create_default_store_inventory`) detects the empty
+  return and emits its own `push_warning`, and because tests on the
+  happy path would otherwise generate noise. Reviewed in this pass and
+  confirmed appropriate; the rationale stands.
+* `game/scripts/systems/midday_event_system.gd` `_on_event_resolved`
+  empty-`_pending_beat` and id-mismatch returns: idempotency + stale
+  signal guards, not error conditions. Annotated inline.
+* `game/scripts/systems/platform_system.gd` `is_shortage` /
+  `get_current_price` / `get_hype` / `get_state` / `get_definition`
+  unknown-platform-id branches return `false` / `0.0` / `null`
+  without logging. Callers (customer spawning, midday system,
+  potential UI) routinely query optional platforms; a per-call warning
+  would flood logs. Catalog-load now `push_error`s on its own
+  (§F-119), so a real config break surfaces upstream.
+* `game/scripts/systems/midday_event_system.gd` empty-pool and
+  no-eligible-beat returns from `_seed_day_queue`: per the system
+  docstring, "when the eligible pool produces 0 beats, the day runs
+  silently with no error or hang." Working as intended.
+* `game/scripts/systems/midday_event_system.gd`
+  `_should_force_launch_beat` PlatformSystem-missing return `false`:
+  the launch-beat force-include is a probability boost, not a
+  required surface. PlatformSystem missing already
+  `push_error`s at its own boot via §F-119, so this branch silently
+  declining the boost is consistent with the upstream signal.
+* `game/scripts/systems/shift_system.gd` `_apply_trust_delta`
+  not-employed branch (player hasn't started the season): legitimate
+  silent skip. Annotated inline.
+* `game/scripts/systems/midday_event_system.gd` `_load_pool_if_available`
+  early returns for missing GameManager / data_loader: bootstrap
+  ordering — `_on_content_loaded` re-runs this once content is live,
+  so the early skip is part of the deferred-load contract, not an
+  error. (No change.)
+* `game/autoload/employment_system.gd` `start_employment` /
+  `end_employment` / `apply_trust_delta` / `apply_manager_approval_delta`
+  idempotency + zero-delta no-ops: legitimate guards. (No change.)
+* `game/autoload/manager_relationship_manager.gd` `_on_day_ended`
+  pass-through placeholder: explicit no-op for future end-of-day
+  trust evaluations, comment already present. (No change.)
+* `game/scripts/ui/midday_event_card.gd` `_add_dismiss_button` no-choice
+  fallback: documented design behavior in the class docstring; the card
+  always renders something the player can dismiss.
+* `game/scripts/ui/locked_feature_gate.gd` locked-feature toast +
+  return: by-design UX surface, not an error.
+* `game/scenes/ui/back_room_inventory_panel.gd` null-grid /
+  null-controller defensive returns: cosmetic UI guards on
+  `@onready` paths; no error condition.
+
+## Posture verdict
+
+Pass 16 closes the gap between the EH-hardened core systems (which
+have been through fifteen prior passes) and the newly-introduced
+employment / manager / platform / shift / midday-event surface that
+landed in the working tree without an audit. The new code now uses
+`push_error` for autoload-availability + content-authoring + data
+integrity failures, matching the convention the rest of the codebase
+established in Passes 1–15. Eleven specific suppression sites were
+escalated; ten more were justified inline. No regressions:
+`tests/gut/test_employment_system.gd` reports 27/27 passing in the
+post-edit run (`tests/test_run.log`).
+
+## Findings still open / Escalations
+
+None for this pass. The `MiddayEventCard hides an autoload singleton`
+parse error visible in the test-suite tail is a pre-existing
+working-tree issue from `game/scripts/ui/midday_event_card.gd:19`
+(`class_name MiddayEventCard` collides with an autoload of the same
+name), not an error-handling concern, and is out of scope for an EH
+hardening pass — it belongs to the SSoT / class-naming pass instead.
+
+---
+
+**Pass 15:** 2026-05-04 (Day-1 vertical-slice working-tree
 sweep: tightened `InventoryPanel._on_remove_from_shelf` non-shelf-prefix
 silent return to `push_warning` (§F-97 — UI-invariant violation; the per-row
 Remove button is only built when `item.current_location.begins_with("shelf:")`

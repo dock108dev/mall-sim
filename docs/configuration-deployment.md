@@ -63,8 +63,10 @@ The checked-in integrations documented in this repository are:
 - helper scripts in `scripts/`: `godot_import.sh`, `godot_exec.sh`, the SSOT
   tripwires invoked by `tests/run_tests.sh` (`validate_translations.sh`,
   `validate_single_store_ui.sh`, `validate_tutorial_single_source.sh`),
-  and `validate_export_config.sh` (a local mirror of the export workflow's
-  `validate-export-config` job, run independently from `tests/run_tests.sh`)
+  `validate_export_config.sh` (a local mirror of the export workflow's
+  `validate-export-config` job, run independently from `tests/run_tests.sh`),
+  and `validate_originality.sh` (string-level trademark denylist over
+  `game/content/`, `game/scenes/`, and `game/scripts/stores/`)
 - GitHub Actions workflows for validation and tagged exports
 - `gdtoolkit` linting in CI
 

@@ -1,0 +1,189 @@
+[gd_scene load_steps=10 format=3 uid="uid://cmrnnotepanl01"]
+
+[ext_resource type="Script" path="res://game/scripts/ui/morning_note_panel.gd" id="1_mnpscr"]
+
+[sub_resource type="FastNoiseLite" id="paper_noise"]
+noise_type = 1
+seed = 1457
+frequency = 0.035
+
+[sub_resource type="Gradient" id="paper_gradient"]
+offsets = PackedFloat32Array(0, 0.45, 1)
+colors = PackedColorArray(0.92, 0.87, 0.74, 1, 0.96, 0.91, 0.78, 1, 0.86, 0.79, 0.62, 1)
+
+[sub_resource type="NoiseTexture2D" id="paper_tex"]
+width = 320
+height = 480
+seamless = true
+color_ramp = SubResource("paper_gradient")
+noise = SubResource("paper_noise")
+
+[sub_resource type="StyleBoxFlat" id="paper_style"]
+content_margin_left = 28.0
+content_margin_top = 22.0
+content_margin_right = 22.0
+content_margin_bottom = 22.0
+bg_color = Color(0.945, 0.905, 0.78, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+shadow_color = Color(0.05, 0.04, 0.03, 0.55)
+shadow_size = 12
+shadow_offset = Vector2(2, 4)
+
+[sub_resource type="SystemFont" id="memo_font"]
+font_names = PackedStringArray("Courier New", "Courier", "Menlo", "Consolas", "monospace")
+font_weight = 400
+
+[sub_resource type="Gradient" id="portrait_gradient"]
+offsets = PackedFloat32Array(0, 0.6, 1)
+colors = PackedColorArray(0.42, 0.36, 0.3, 1, 0.28, 0.24, 0.2, 1, 0.16, 0.14, 0.12, 1)
+
+[sub_resource type="GradientTexture2D" id="portrait_tex"]
+gradient = SubResource("portrait_gradient")
+width = 96
+height = 96
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StyleBoxFlat" id="portrait_frame"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.78, 0.72, 0.55, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="MorningNotePanel" type="CanvasLayer"]
+layer = 90
+script = ExtResource("1_mnpscr")
+
+[node name="NoteRoot" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -260.0
+offset_right = 220.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+visible = false
+
+[node name="PaperPanel" type="PanelContainer" parent="NoteRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_styles/panel = SubResource("paper_style")
+
+[node name="PaperGrain" type="TextureRect" parent="NoteRoot/PaperPanel"]
+modulate = Color(1, 1, 1, 0.18)
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("paper_tex")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="MemoMargin" type="MarginContainer" parent="NoteRoot/PaperPanel"]
+layout_mode = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="MemoVBox" type="VBoxContainer" parent="NoteRoot/PaperPanel/MemoMargin"]
+layout_mode = 2
+mouse_filter = 1
+theme_override_constants/separation = 12
+
+[node name="HeaderLabel" type="Label" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.16, 0.13, 0.08, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = SubResource("memo_font")
+theme_override_font_sizes/font_size = 16
+text = "Vic Harlow — Day 1"
+horizontal_alignment = 0
+
+[node name="HeaderRule" type="ColorRect" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.42, 0.34, 0.22, 0.6)
+
+[node name="BodyLabel" type="RichTextLabel" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.13, 0.1, 0.06, 1)
+theme_override_fonts/normal_font = SubResource("memo_font")
+theme_override_font_sizes/normal_font_size = 15
+bbcode_enabled = false
+fit_content = true
+scroll_active = false
+text = ""
+
+[node name="FooterRow" type="HBoxContainer" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="DismissHintLabel" type="Label" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox/FooterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.32, 0.26, 0.18, 1)
+theme_override_fonts/font = SubResource("memo_font")
+theme_override_font_sizes/font_size = 12
+text = "press [E] or click to continue"
+
+[node name="PortraitFrame" type="PanelContainer" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox/FooterRow"]
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("portrait_frame")
+
+[node name="VicPortrait" type="TextureRect" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox/FooterRow/PortraitFrame"]
+custom_minimum_size = Vector2(88, 88)
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("portrait_tex")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CountdownBar" type="ProgressBar" parent="NoteRoot/PaperPanel/MemoMargin/MemoVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 0)
+max_value = 5.0
+value = 5.0
+show_percentage = false

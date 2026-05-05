@@ -49,6 +49,7 @@ func _set_survival_marginal_stats() -> void:
 	_evaluator._stats["owned_store_count_final"] = 0.0
 	_evaluator._stats["max_reputation_tier"] = 1.0
 	_evaluator._stats["trigger_type_bankruptcy"] = 0.0
+	_evaluator._stats["hidden_thread_interactions"] = 1.0
 
 
 func _set_survival_neutral_stats() -> void:
@@ -58,6 +59,7 @@ func _set_survival_neutral_stats() -> void:
 	_evaluator._stats["owned_store_count_final"] = 0.0
 	_evaluator._stats["max_reputation_tier"] = 1.0
 	_evaluator._stats["trigger_type_bankruptcy"] = 0.0
+	_evaluator._stats["hidden_thread_interactions"] = 1.0
 
 
 # ── Scenario A — 30-day survival with marginal profit → broke_even ─────────

@@ -37,6 +37,7 @@ The checked-in content tree currently includes these canonical subdirectories:
 | `game/content/economy/` | Economy and difficulty-related config. |
 | `game/content/events/` | Market, seasonal, random, ambient, and named-season event data. |
 | `game/content/endings/` | Ending definitions. |
+| `game/content/manager/` | Manager-relationship content (`manager_notes.json`) consumed by `ManagerRelationshipManager`. |
 | `game/content/meta/` | Regulars-thread data (`regulars_threads.json`). |
 | `game/content/progression/` | Canonical milestone definitions, the win-condition (`arc_unlocks.json`), and arc phases. |
 | `game/content/onboarding/` | Onboarding hint config. |
@@ -54,6 +55,7 @@ The root of `game/content/` also contains several config and data JSON files:
 - `market_trends_catalog.json`
 - `meta_shifts.json`
 - `objectives.json` (boot-validated for required keys)
+- `platforms.json` (consumed by `PlatformSystem`)
 - `pocket_creatures_cards.json`
 - `tutorial_contexts.json`
 - `upgrades.json`

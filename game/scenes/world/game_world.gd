@@ -23,6 +23,9 @@ const _HAGGLE_PANEL_SCENE: PackedScene = preload(
 const _DAY_SUMMARY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/day_summary.tscn"
 )
+const _CLOSING_CHECKLIST_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/closing_checklist.tscn"
+)
 const _FIXTURE_CATALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/fixture_catalog.tscn"
 )
@@ -112,6 +115,7 @@ var reputation_system: ReputationSystem:
 
 var _inventory_panel: InventoryPanel
 var _day_summary: DaySummary
+var _closing_checklist: ClosingChecklist
 var _mall_overview: MallOverview
 var _fixture_catalog: FixtureCatalogPanel
 var _mall_hallway: MallHallway
@@ -573,6 +577,12 @@ func _setup_deferred_panels() -> void:
 		_on_day_summary_main_menu_requested
 	)
 	day_cycle_controller.set_day_summary(_day_summary)
+
+	_closing_checklist = (
+		_CLOSING_CHECKLIST_SCENE.instantiate() as ClosingChecklist
+	)
+	_ui_layer.add_child(_closing_checklist)
+	day_cycle_controller.set_closing_checklist(_closing_checklist)
 
 	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
 	_ui_layer.add_child(_mall_overview)

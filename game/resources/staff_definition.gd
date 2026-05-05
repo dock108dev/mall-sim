@@ -48,6 +48,12 @@ const SKILL_PERFORMANCE_MULTIPLIERS: Dictionary = {
 @export var seniority_days: int = 0
 @export var consecutive_low_morale_days: int = 0
 @export var assigned_store_id: String = ""
+## Coworker opinion of the player (0.0–1.0). Drives behavioral modifiers in
+## StaffNPC — opinion >0.6 accelerates restock, opinion <0.3 slows it. Default
+## 0.5 seats every staff member at neutral until player actions move it.
+@export var player_opinion: float = 0.5:
+	set(value):
+		player_opinion = clampf(value, 0.0, 1.0)
 
 var specialization: String:
 	get:

@@ -160,6 +160,7 @@ func test_broke_even_low_revenue() -> void:
 	_load_stats({
 		"days_survived": 30.0, "final_cash": 100.0,
 		"cumulative_revenue": 1000.0,
+		"hidden_thread_interactions": 1.0,
 	})
 	assert_eq(
 		_system.evaluate(), &"broke_even",
@@ -171,6 +172,7 @@ func test_the_comfortable_middle() -> void:
 	_load_stats({
 		"days_survived": 30.0,
 		"cumulative_revenue": 5000.0,
+		"hidden_thread_interactions": 1.0,
 	})
 	assert_eq(
 		_system.evaluate(), &"the_comfortable_middle",
@@ -183,6 +185,7 @@ func test_crisis_operator() -> void:
 		"days_near_bankruptcy": 10.0,
 		"days_survived": 30.0, "final_cash": 100.0,
 		"cumulative_revenue": 15000.0,
+		"hidden_thread_interactions": 1.0,
 	})
 	assert_eq(
 		_system.evaluate(), &"crisis_operator",
@@ -206,6 +209,7 @@ func test_fallback_broke_even() -> void:
 	_load_stats({
 		"days_survived": 30.0,
 		"cumulative_revenue": 500.0,
+		"hidden_thread_interactions": 1.0,
 	})
 	assert_eq(
 		_system.evaluate(), &"broke_even",

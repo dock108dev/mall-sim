@@ -63,6 +63,60 @@
       "effect_target": null,
       "effect_value": null,
       "unlock_message": "Bronze badge earned! This badge appears on your save slot and end screen."
+    },
+    {
+      "id": "employee_register_access",
+      "display_name": "Register Access",
+      "description": "Vic walked you through the register on Day 1. You can ring sales without a supervisor at your shoulder.",
+      "effect_type": "employee_skill",
+      "effect_target": "register",
+      "effect_value": null,
+      "unlock_message": "Register access granted. Run the counter."
+    },
+    {
+      "id": "employee_stocking_trained",
+      "display_name": "Stocking Certification",
+      "description": "Backroom-to-shelf flow signed off. You decide what goes where, within reason.",
+      "effect_type": "employee_skill",
+      "effect_target": "stocking",
+      "effect_value": null,
+      "unlock_message": "Stocking certification granted. Mind the planogram."
+    },
+    {
+      "id": "employee_tradein_certified",
+      "display_name": "Trade-In Certification",
+      "description": "You can quote and accept trade-ins without Vic countersigning every slip.",
+      "effect_type": "employee_skill",
+      "effect_target": "trade_in",
+      "effect_value": null,
+      "unlock_message": "Trade-in certification granted."
+    },
+    {
+      "id": "employee_holdlist_access",
+      "display_name": "Hold List Access",
+      "description": "The hold-list terminal is yours to manage — flag items, log regulars, retire stale holds.",
+      "effect_type": "employee_skill",
+      "effect_target": "hold_list",
+      "effect_value": null,
+      "unlock_message": "Hold list access granted."
+    },
+    {
+      "id": "employee_display_authority",
+      "display_name": "Display Authority",
+      "description": "Featured-display layout is your call now. Don't bury the high-margin stuff.",
+      "effect_type": "employee_skill",
+      "effect_target": "display",
+      "effect_value": null,
+      "unlock_message": "Display authority granted."
+    },
+    {
+      "id": "employee_closing_certified",
+      "display_name": "Closing Certification",
+      "description": "End-of-day reconciliation, alarm code, lockup. The closing checklist is yours.",
+      "effect_type": "employee_skill",
+      "effect_target": "closing",
+      "effect_value": null,
+      "unlock_message": "Closing certification granted."
     }
   ]
 }

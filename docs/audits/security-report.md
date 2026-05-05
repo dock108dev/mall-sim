@@ -1,6 +1,20 @@
 # Security Audit Report — Mallcore Sim
 
-**Latest pass:** 2026-05-04 — Pass 8 — narrowed the new one-click
+**Latest pass:** 2026-05-04 — Pass 9 — hardened four new save-load and UI
+sinks introduced by the uncommitted Pass-15 working tree (employment +
+hidden-thread + manager-relationship + returns + hold-list + decision-card
+expansion): clamped `HoldList.load_save_data` integers (§F-126), capped
+`user://employment_state.cfg` size (§F-127), NaN/Inf-rejected the
+HiddenThreadSystem float fields on save load (§F-128), and BBCode-escaped
+the substituted text in the new RichTextLabel reasoning labels on
+`CheckoutPanel` and `HagglePanel` (§F-129). Walked the new working-tree
+surfaces (4 new autoloads — EmploymentSystem, HiddenThreadSystem,
+ManagerRelationshipManager, ReturnsSystem; 5 new systems — MiddayEvent,
+PlatformSystem, ShiftSystem, StoreCustomizationSystem, TradeInSystem; new
+HoldList + 4 new resources; 4 new UI panels) and re-verified the trust
+boundaries below.
+
+**Prior pass:** 2026-05-04 Pass 8 — narrowed the new one-click
 `InventoryPanel._on_remove_from_shelf` shelf-lookup so a hand-edited save
 file with `current_location = "shelf:"` (an empty slot tail) can no longer
 reach an unintended ShelfSlot via `_find_shelf_slot_by_id("")`. Walked the
@@ -31,6 +45,183 @@ bottom of this document.
 ## Changes made this pass
 
 Each bullet is a real edit in source. Code paths and rationale follow.
+
+- `game/scripts/stores/hold_list.gd::load_save_data` — clamped the two
+  save-derived integer fields on the new HoldList resource (§F-126).
+  `_next_id` is now `clampi(int(data.get("next_id", _slips.size() + 1)),
+  1, 1_000_000)` instead of an unguarded `int(data.get(...))`. Without
+  the clamp, a hand-edited `user://save_slot_*.json` containing `next_id:
+  9223372036854775806` (close to the 64-bit signed-int max) would
+  overflow on the very next `_allocate_id()` call (`_next_id += 1`)
+  inside `add_hold` and emit a negative `HOLD--9223372036854775808`
+  identifier — collisions in `find_slip_by_id` and downstream
+  EventBus payload misformat fall out from there. The cap is set well
+  above any plausible real campaign and well below the overflow
+  threshold. Companion clamp on `hold_duration_days` floors at 1 (the
+  existing `max(hold_duration_days, 1)` in `add_hold` was a partial
+  guard but legalised an unbounded multi-billion-day expiry through the
+  `creation_day + hold_duration_days` path). New constants
+  `_MIN_NEXT_ID`, `_MAX_NEXT_ID`, `_MIN_HOLD_DURATION_DAYS`,
+  `_MAX_HOLD_DURATION_DAYS` document the bounds and host the §F-126
+  cite-back.
+
+- `game/autoload/employment_system.gd::_load_persisted_state` and
+  `::_persist_state` — added a 64 KiB size cap on
+  `user://employment_state.cfg` (§F-127) plus a `MAX_EMPLOYMENT_FILE_BYTES`
+  constant. `_load_persisted_state` now probes the file length via
+  `FileAccess.open(...).get_length()` before calling `ConfigFile.load`,
+  treating an oversize file as "absent" with a `push_warning`. Without
+  the probe a hand-edited multi-MB cfg would be entirely loaded into
+  memory and parsed at every `EventBus.day_started` — and again at
+  every `_persist_state` (the read-modify-write step). The companion
+  guard in `_persist_state` skips the read step when the on-disk file
+  is oversize so the malicious payload is overwritten on the next save
+  rather than being re-parsed. Same defense-in-depth posture as
+  `Settings.MAX_SETTINGS_FILE_BYTES` (`settings.gd:58`); the actual
+  payload here is ~10 keys (employee_trust, manager_approval,
+  employment_status, hours_worked_total, employer_store_id,
+  season_number, hourly_wage, employed bool) so 64 KiB is two orders of
+  magnitude above the legitimate ceiling.
+
+- `game/autoload/hidden_thread_system.gd::load_state` and new
+  `_safe_finite_float` static helper — NaN/Inf-rejected the four
+  cumulative float fields (`paper_trail_score`, `scapegoat_risk`,
+  `awareness_score`, plus an `int`-floor on `hidden_thread_interactions`)
+  on the save-load path (§F-128). The previous code did
+  `awareness_score = float(data.get("awareness_score", 0.0))` with no
+  finite-value guard. A hand-edited save with `"awareness_score": NaN`
+  silently sat below every threshold (`>=` against NaN is always false)
+  while still accepting `_increase_awareness` deltas — a stuck
+  hidden-thread state. `_safe_finite_float` mirrors the
+  `EconomySystem._apply_state` / `EmploymentState._safe_float` pattern:
+  Variant → float coercion, `is_nan` / `is_inf` reject, then `maxf(value,
+  0.0)` floor (the cumulative stats are non-negative by definition).
+
+- `game/scenes/ui/checkout_panel.gd::_set_reasoning_text` and
+  `game/scripts/ui/haggle_panel.gd::populate_customer_card` — escaped
+  `[` → `[lb]` in the substituted text before interpolation into the
+  new `[i]%s[/i]` BBCode wrapper (§F-129). Both `_reasoning_label`
+  RichTextLabels have `bbcode_enabled = true` (`checkout_panel.tscn:163`,
+  `haggle_panel.tscn:143`). Today's only callers feed either the
+  developer-controlled `_ARCHETYPE_REASONING` constant lookup or a
+  packed-content string from `archetypes.json` / `retro_games_customers.json`
+  through `customer_data["reasoning"]`, so the rendered output is
+  unchanged for the safe inputs (no `[` characters in any of the
+  shipping reasoning strings — verified by grep). The escape closes
+  the door on a future regression where a content-author or save-load
+  path threads a runtime-typed string into the reasoning surface, which
+  would otherwise let an attacker inject `[url=…]`, `[color=red]`, or
+  other BBCode tags into the decision card. Defence-in-depth narrowing
+  rather than fix-after-the-fact.
+
+- `docs/audits/security-report.md` — header rewritten to describe Pass
+  9 scope, four §F-126 / §F-127 / §F-128 / §F-129 entries added to the
+  "Changes made this pass" log, the four new working-tree surfaces
+  added to the re-verification table, and the new §F-126..§F-129 rows
+  added to the reference index.
+
+`bash tests/run_tests.sh` was run after the changes. GUT result is
+**5470/5470 passing, 31953 asserts** (Pass-8 baseline: 5076 / 28697 —
+the +394 tests / +3256 asserts are the Pass-15 working-tree additions
+landing alongside the new autoloads, e.g. `test_employment_system`,
+`test_hidden_thread_system`, `test_returns_system`, `test_hold_list`,
+`test_manager_relationship_manager`, `test_platform_system`,
+`test_midday_event_system`, `test_shift_system`,
+`test_trade_in_system`, `test_closing_checklist`,
+`test_morning_note_panel`, plus the back-room / hold-list integrations
+in the retro_games suite). All four hardening edits are non-breaking:
+the existing `test_save_load_round_trip` in `test_hold_list.gd`
+still produces `HOLD-0003` after the clamp (3 is well within the
+`[1, 1_000_000]` range), the existing employment cfg tests round-trip
+under the 64 KiB cap, and the BBCode escape is render-equivalent on
+all current callers (no `[` in shipping reasoning strings). The
+pre-existing validator failures (ISSUE-018, ISSUE-023, ISSUE-024,
+ISSUE-026, ISSUE-032, ISSUE-154, ISSUE-239 plus the new SSOT-pass
+follow-ups in `validate_haggle_animation.sh` /
+`validate_translation_keys.sh` triggered by the in-flight Pass-15
+content additions) are unrelated to the four files edited in this
+pass.
+
+### Pass-15 working-tree surfaces re-verified (no code change needed)
+
+These surfaces are introduced or modified by the Pass-15 working tree
+(employment / hidden-thread / manager-relationship / returns
+expansion). Each was walked this pass for hostile-input, log-leak,
+release-gate, and trust-crossing concerns; the security posture is
+**unchanged** (the four §F-126..§F-129 edits above are the in-scope
+findings this pass).
+
+| Surface | Touched this branch | Why no code change |
+|---|---|---|
+| `ManagerRelationshipManager._load_notes` reads `res://game/content/manager/manager_notes.json` and feeds `body` strings into `EventBus.manager_note_shown(id, body, allow_auto_dismiss)` | New autoload + new packed-JSON content surface. Body text is rendered by `MorningNotePanel._body_label`. | `_body_label` is a RichTextLabel with `bbcode_enabled = false` (`morning_note_panel.tscn:148`) — assignment is therefore plain text, no markup parsing. Note source path is hardcoded `res://`, packed at export, developer-controlled. The `push_error` failure paths interpolate the path constant only. |
+| `EmploymentSystem` save/load via `user://employment_state.cfg` | New autoload with daily persistence on `EventBus.day_ended`. | Acted on this pass (§F-127 size cap). `EmploymentState.load_save_data` already hardens via the `_safe_float` NaN/Inf guard plus per-field `clampf` to documented ranges (`employment_state.gd:88-111`); status / store id fall back to `DEFAULT_STATUS` when empty. |
+| `HiddenThreadSystem.load_state` cumulative-stats restore from save-game payload | New cross-day stats serialised with the main `user://save_slot_*.json`. | Acted on this pass (§F-128 NaN/Inf rejection + non-negative floor). `_artifact_days_processed` Dictionary is bounded by `ARTIFACT_SCHEDULE.keys()` (5 entries) — out-of-range day keys are accepted into the dict but are unreachable via `_evaluate_artifact_unlock` because that path early-returns when `ARTIFACT_SCHEDULE.has(day)` is false. `discovered_artifacts` is bounded by the same 5-entry schedule via `_apply_tier3_trigger`'s caller chain; load-side ingest is bounded by `MAX_SAVE_FILE_BYTES`. |
+| `ReturnsSystem.record_defective_sale` registers a ReturnRecord on `EventBus.defective_sale_occurred(item_id, reason)` | New autoload + new EventBus signal handler. `item_id` here is the runtime ItemInstance.instance_id, not a ContentRegistry id, so registry whitelisting does not apply. | `_pending_records` shrinks on `_finalize` and is fed only from `_on_defective_sale_occurred(item_id, reason)` whose upstream emit (`CheckoutSystem`) already validates the instance against `_inventory_system._items`. The angry-return spawn pairing is 1-per-defective-sale, so no growth path. `build_card_data` substitutes `item_label` / `defect_label` / `record.sale_price` into a plain Dictionary that flows into `Label.text` on the decision card (no RichTextLabel sink, no markup parse). The damaged-bin reconciliation in `check_bin_variance` walks `_inventory_system.get_damaged_bin_items()` (registry-managed, `MAX_SAVE_FILE_BYTES`-bounded). |
+| `PlatformSystem._build_definition` reads `res://game/content/platforms.json` via `DataLoader.load_catalog_entries` | New developer-controlled catalog read at autoload init. | `CATALOG_PATH` is a hardcoded `res://` constant. Float fields (`base_price`, `*_multiplier`, `*_per_day`, `hype_price_elasticity`) are `float(...)` coerced without NaN/Inf rejection, but the catalog is packed at export and not user-controllable per the trust model. The downstream `clampf(scalar, floor_mult, ceiling_mult)` in `_recompute_current_price` would propagate NaN if a content authoring break shipped one, but the same posture applies to every `res://`-loaded JSON in the codebase. Catalog read errors emit `push_error`, not silent skip. |
+| `MiddayEventSystem._dispatch_effects` handles money / reputation / trust / inventory_flag / hidden_thread_flag effects from `day_beats.json` | New decision-beat dispatcher. Each effect routes through an existing system (`EconomySystem.add_cash` / `deduct_cash`, `ReputationSystemSingleton.add_reputation`, `EmploymentSystem.apply_trust_delta`, `GameState.set_flag`). | Beat data flows from `DataLoader.get_midday_events()` reading `res://game/content/day_beats.json` — packed-content trust level. Each downstream sink already finite-clamps its own input (`EconomySystem._apply_state` rejects NaN/Inf per §F-09.1; `EmploymentState.employee_trust` clamps via the property setter). The `inventory_flag` / `hidden_thread_flag` strings interpolate into `StringName(...)`; flag names are dictionary keys on `GameState.flags` (set, not eval'd). The `"%s" % str(beat.get("id", "event"))` reason string is plain text on the EventBus payload — no markup. |
+| `MorningNotePanel._on_manager_note_shown` listens to `EventBus.manager_note_shown(note_id, body, allow_auto_dismiss)` | New CanvasLayer subscriber that renders the manager note. | Body text → RichTextLabel with `bbcode_enabled = false` (re-verified). Header label is plain `Label`. The `_unhandled_input` handler calls `get_viewport().set_input_as_handled()` only when the click lands on the visible rectangle (`_root.get_global_rect().has_point`) — clicks elsewhere fall through to gameplay UI. `process_mode = PROCESS_MODE_ALWAYS` is needed because the panel renders during pre-Tier-5 onboarding when the rest of the tree may be paused; no security implication. |
+| `HoldList.load_save_data` round-trip via `RetroGames.load_save_data` (which itself flows through the main save-game pipeline) | Acted on this pass (§F-126 clamps). | The `HoldSlip.from_dict` companion still accepts unbounded `creation_day` / `expiry_day` ints from save data, but those flow only into integer comparisons (`current_day < slip.expiry_day`) — out-of-range values produce a slip that's "always-active" or "always-expired" but cannot crash the comparator. `status` / `requestor_tier` int load with no enum validation; out-of-range values silently fall through `is_terminal_status` (returns false → slip is treated as active) and the `RequestorTier.SHADY/ANONYMOUS` shady-request emit guard. Defence-in-depth could clamp these too but the trust impact is bounded (no markup, no pointer deref). |
+| `ShiftSystem.auto_clock_in` / `_apply_trust_delta` chain to `EmploymentSystem` | New mid-day shift handler that fires trust deltas from gameplay signals. | Every delta path null-guards `EmploymentSystem` autoload, then `has_method("apply_trust_delta")`, then `is_employed()` — silent return at any miss. No file I/O. `reason` strings are constants (`REASON_LATE_CLOCK_IN`, etc.). |
+| `StoreCustomizationSystem._on_manager_note_shown` reads `note_id`, splits on `"_"`, hint-categorises | New manager-note subscriber. `note_id.split("_")` could allocate large array for an absurdly long id. | `note_id` originates from `manager_notes.json` (packed, developer-controlled) and is bounded by content-authoring practice. The `_NOTE_CATEGORY_HINT` lookup is constant. No save-data path. The hypothetical 10 MB `note_id` would have to come from a corrupted packed file, which is outside the trust model — but a future refactor that lets save data drive note_id should add a length cap before split (cite-back to this row if that happens). |
+| `BackRoomInventoryPanel._populate_grid` reads from `_inventory_system.get_backroom_items()` | New back-room UI panel that builds an `ItemRow` per item. | Plain `Label.text` rendering (no RichTextLabel). Item names come from `ItemInstance.definition.item_name` (packed JSON via ContentRegistry). Backroom item count is bounded by `MAX_SAVE_FILE_BYTES`. The new "Back to Mall" button cleanly pops `CTX_MODAL` (mirrors §F-74). |
+| `ClosingChecklistPanel._populate_steps` reads `_checklist_steps` constant | New end-of-day checklist UI. | Step text is constant; no save-data interpolation. The `_on_step_completed` advance flag flips one-direction. The `EventBus.closing_checklist_completed` emit is gate-checked by `DayCycleController` before transitioning. |
+| `ReturnsPanel.populate_card` builds the angry-return decision UI from `ReturnsSystem.build_card_data(record)` | New decision card. | Plain `Label.text` rendering throughout (no BBCode sink). `record.item_name` / `record.defect_reason` flow from packed JSON via `ItemInstance.definition` and the `DEFECT_REASON_LABELS` constant. `record.sale_price` is float-formatted via `"%.2f"` — no markup. |
+| `TradeInPanel.populate_offer` builds the trade-in decision UI from `TradeInSystem.evaluate_offer` | New trade-in flow. | Plain `Label.text` for offer / counter-offer surface. `condition_label` is keyed against the `Constants.CONDITION_LABELS` dictionary with a `capitalize()` fallback — registry-managed strings only. |
+| `MiddayEventCard.populate_beat` reads `beat["title"]`, `beat["body"]`, `beat["choices"]` | New decision-beat card. | All four texts (title, body, choice labels, choice consequences) render via plain `Label.text`. Beat source is `day_beats.json` (packed). Choice button consequence preview uses `tooltip_text`, which is sanitised by Godot's tooltip subsystem (no markup). |
+| `clock_in_interactable.gd` 3D interactable for the storefront clock-in pad | New per-store interactable spawned by retro_games scene. | `Interactable.action_verb` / `prompt_text` are `@export` Strings authored in the .tscn, same trust path as every other interactable. The `interacted` handler calls `EmploymentSystem.start_employment(store_id, hourly_wage)` — `store_id` comes from `Interactable.get_store_id()` (parent-walk), `hourly_wage` is a constant. |
+| `decision_card_style.gd` static color/style helpers consumed by both checkout-card and decision-card UIs | New theme module — pure helpers. | No state, no I/O, no signal subscriptions. The `apply_archetype_badge_style` dictionary lookup keys on `archetype_id: StringName` — unknown ids fall back to `_DEFAULT_BADGE_STYLE`. |
+| `locked_feature_gate.gd` — UI gate that hides controls until an unlock fires | New scaffolding component. | Gate state is mirrored from `UnlockSystemSingleton.is_unlocked(...)` — registry-validated unlock id. No save-data path. |
+
+### §F-126 — `HoldList.load_save_data` save-derived integer clamps
+
+| Field | Old | New | Hostile-save scenario blocked |
+|---|---|---|---|
+| `_next_id` | `int(data.get("next_id", _slips.size() + 1))` | `clampi(int(data.get(...)), 1, 1_000_000)` | `next_id: 9223372036854775806` overflows on the next `_allocate_id()`, emitting negative `HOLD--9223372036854775808` ids that mismatch every `find_slip_by_id` lookup. |
+| `hold_duration_days` | `int(data["hold_duration_days"])` | `clampi(int(data[...]), 1, 365)` | A 0 / negative value would land every fresh hold at `expiry_day = current_day + 1` (partial guard via `max(...,1)` in `add_hold`); a 10⁹ value would set effectively-infinite expiry, defeating the daily expiry sweep. |
+
+### §F-127 — `EmploymentSystem` cfg size cap (64 KiB)
+
+`MAX_EMPLOYMENT_FILE_BYTES = 65536` on `user://employment_state.cfg`.
+Both `_load_persisted_state` (called on every `EventBus.day_started`)
+and `_persist_state` (called on every `EventBus.day_ended`) probe the
+file length via `FileAccess.open(...).get_length()` before invoking
+`ConfigFile.load`, treating an oversize file as "absent" (the next
+`_persist_state` overwrites with the canonical small payload).
+
+| Trigger | Old | New |
+|---|---|---|
+| Player edits `user://employment_state.cfg` to 100 MiB of garbage | `ConfigFile.load` reads the whole file into memory, parses it, surfaces a parse error, and re-runs every day | Probe rejects → `push_warning` + early-return → state stays at defaults until the next save overwrites the file |
+
+### §F-128 — `HiddenThreadSystem.load_state` finite-value guard
+
+| Field | Old | New |
+|---|---|---|
+| `paper_trail_score` / `scapegoat_risk` / `awareness_score` | `float(data.get(...))` | `_safe_finite_float(...)` — Variant → float coerce, NaN / Inf reject to default, `maxf(...,0.0)` floor |
+| `hidden_thread_interactions` | `int(data.get(..., 0))` | `maxi(int(...), 0)` — bounded non-negative int |
+
+A NaN `awareness_score` previously sat below every tier boundary
+(`>=` against NaN is always false) while still accepting
+`_increase_awareness` deltas — a stuck no-tier state. NaN in
+`scapegoat_risk` would similarly corrupt the secret-ending evaluator
+which compares the value against a numeric threshold.
+
+### §F-129 — RichTextLabel BBCode escape on the new reasoning labels
+
+Both `CheckoutPanel._set_reasoning_text` and
+`HagglePanel.populate_customer_card` now escape `[` → `[lb]` in the
+substituted text before interpolating into the new `[i]%s[/i]` BBCode
+wrapper. Both `_reasoning_label` RichTextLabels have `bbcode_enabled =
+true`. Today's only callers feed either the developer-controlled
+`_ARCHETYPE_REASONING` constant lookup or a packed-JSON archetype
+string through `customer_data["reasoning"]` — render output is
+unchanged for the safe inputs (verified: no `[` characters in any
+shipping reasoning string). The escape closes the door on a future
+content-authoring or save-load path that lets a runtime-typed string
+reach the reasoning sink, which would otherwise allow `[url=…]`,
+`[color=…]`, `[img=…]` and other BBCode tag injection into the
+decision card.
+
+### Older Pass-8 entry preserved below
 
 - `game/scenes/ui/inventory_panel.gd::_find_shelf_slot_by_id` — added an
   `slot_id.is_empty()` early-return so the new one-click "Remove" button
@@ -339,13 +530,20 @@ Inline annotations in the codebase point back at rows here.
 | §F-94 | `customer.gd::_detect_navmesh_or_fallback` | Per-customer `push_warning` on each waypoint-fallback engagement so a scene-wiring regression (missing `NavigationAgent3D`, missing `NavigationRegion3D`, empty navmesh) surfaces in CI / dev console rather than silently degrading every customer to direct-line movement. |
 | §F-95 | `mall_overview.gd::_on_item_stocked / _on_customer_purchased / _on_customer_entered` | Empty-name fallbacks (`"item"` / `"the mall"`) for the new event-feed entries. Mirrors §F-89 cosmetic seam; content-authoring holes (item with no `item_name`, hub-mode wanderer with no store_id) render a defined string rather than `Stocked ` / `Sold  for $X`. |
 | §F-96 | `inventory_panel.gd::_find_shelf_slot_by_id` | Empty-`slot_id` early-return so a hand-edited save with `current_location = "shelf:"` cannot resolve to a wrong shelf slot via the global `&"shelf_slot"` group walk. Caller-side fall-through to `move_to_backroom(item)` covers the rejection. |
+| §F-126 | `hold_list.gd::load_save_data` | Save-derived `_next_id` clamp `[1, 1_000_000]` and `hold_duration_days` clamp `[1, 365]` so a hand-edited save cannot overflow the HOLD-#### identifier allocator or set effectively-infinite hold expiry. |
+| §F-127 | `employment_system.gd::_load_persisted_state` and `::_persist_state` | 64 KiB size cap (`MAX_EMPLOYMENT_FILE_BYTES`) on `user://employment_state.cfg` with `FileAccess.open(...).get_length()` probe before `ConfigFile.load` so an oversize hand-edited cfg is treated as absent rather than parsed every day. |
+| §F-128 | `hidden_thread_system.gd::load_state` and `_safe_finite_float` | NaN/Inf rejection plus non-negative floor on the four cumulative float fields (`paper_trail_score`, `scapegoat_risk`, `awareness_score`) and the `hidden_thread_interactions` int counter so a hand-edited save cannot stash poison values into the secret-ending evaluator inputs. |
+| §F-129 | `checkout_panel.gd::_set_reasoning_text` and `haggle_panel.gd::populate_customer_card` | BBCode `[` → `[lb]` escape on the substituted text inside the `[i]%s[/i]` wrapper so a future caller that wires runtime-typed text through `customer_data["reasoning"]` cannot inject BBCode tags into the RichTextLabel reasoning surface. |
 
 ---
 
 ## Escalations
 
-None. The single new in-scope finding this pass (empty-`slot_id`
-shelf-lookup match, §F-96) was acted on inline. Prior-pass open items
-SR-03 and SR-04 stay open with a named blocker; bringing them in
-requires a human decision on (a) the trusted SHA-512 fetch, (b) the
-action-pinning tooling trade-off.
+None. The four new in-scope findings this pass (HoldList save-int
+clamps §F-126, EmploymentSystem cfg size cap §F-127, HiddenThreadSystem
+finite-value guard §F-128, RichTextLabel BBCode escape on the new
+reasoning labels §F-129) were all acted on inline; the prior-pass
+empty-`slot_id` shelf-lookup §F-96 was already in place. Prior-pass
+open items SR-03 and SR-04 stay open with a named blocker; bringing
+them in requires a human decision on (a) the trusted SHA-512 fetch,
+(b) the action-pinning tooling trade-off.
