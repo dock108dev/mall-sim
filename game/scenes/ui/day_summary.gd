@@ -160,8 +160,12 @@ func _ready() -> void:
 	_create_narrative_labels()
 	_create_electronics_labels()
 	_create_customer_breakdown_labels()
-	_apply_headline_order()
-	_style_secondary_actions()
+	DaySummaryDisplay.apply_headline_order(
+		_revenue_label, _top_item_label, _forward_hook_label
+	)
+	DaySummaryDisplay.apply_secondary_button_style(
+		_review_inventory_button, _continue_button
+	)
 	_init_auto_advance_timers()
 	_style_metric_bars()
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -222,9 +226,9 @@ func show_summary(
 	_set_net_profit_display(net_profit)
 	_items_sold_label.text = tr("DAY_SUMMARY_ITEMS_SOLD") % items_sold
 	_set_warranty_display(warranty_revenue, warranty_claims)
-	_set_seasonal_display(seasonal_impact)
+	DaySummaryDisplay.set_seasonal_display(_seasonal_event_label, seasonal_impact)
 	_set_discrepancy_display(discrepancy)
-	_set_staff_wages_display(staff_wages)
+	DaySummaryDisplay.set_staff_wages_display(_staff_wages_label, staff_wages)
 	_tier_change_label.visible = false
 	_haggle_label.visible = false
 	_late_fee_label.visible = false
@@ -514,26 +518,7 @@ func _apply_revenue_headline(revenue: float) -> void:
 	)
 
 
-## Hoist top-seller and forward-hook above the detail dump so headline
-## signals are visible without scrolling.
-func _apply_headline_order() -> void:
-	var vbox: VBoxContainer = $Root/Panel/Margin/VBox
-	var anchor_index: int = _revenue_label.get_index() + 1
-	if is_instance_valid(_top_item_label):
-		vbox.move_child(_top_item_label, anchor_index)
-		anchor_index += 1
-	if is_instance_valid(_forward_hook_label):
-		vbox.move_child(_forward_hook_label, anchor_index)
 
-
-## Visually de-emphasize the review-inventory action so Continue reads
-## as the single primary CTA.
-func _style_secondary_actions() -> void:
-	_review_inventory_button.custom_minimum_size = Vector2(160, 36)
-	_review_inventory_button.flat = true
-	_review_inventory_button.modulate = SECONDARY_BUTTON_MODULATE
-	_review_inventory_button.focus_mode = Control.FOCUS_NONE
-	_continue_button.custom_minimum_size = Vector2(240, 56)
 
 
 func _kill_all_tweens() -> void:
@@ -555,38 +540,10 @@ func _reset_animated_controls() -> void:
 func _set_net_profit_display(net_profit: float) -> void:
 	_last_net_profit = net_profit
 	DaySummaryContent.set_net_profit(_profit_label, net_profit)
+	DaySummaryDisplay.apply_profit_color(_profit_label, net_profit)
 
 
-func _set_warranty_display(
-	warranty_revenue: float, warranty_claims: float
-) -> void:
-	DaySummaryContent.set_warranty(
-		_warranty_revenue_label, _warranty_claims_label,
-		warranty_revenue, warranty_claims,
-	)
 
-
-func _set_seasonal_display(seasonal_impact: String) -> void:
-	var has_seasonal: bool = not seasonal_impact.is_empty()
-	_seasonal_event_label.visible = has_seasonal
-	if has_seasonal:
-		_seasonal_event_label.text = (
-			tr("DAY_SUMMARY_SEASONAL") % seasonal_impact
-		)
-
-
-func _set_staff_wages_display(wages: float) -> void:
-	var has_wages: bool = wages > 0.0
-	_staff_wages_label.visible = has_wages
-	if has_wages:
-		_staff_wages_label.text = "Staff Wages: -$%.2f" % wages
-
-
-func _set_late_fee_display(amount: float) -> void:
-	var has_fees: bool = amount > 0.0
-	_late_fee_label.visible = has_fees
-	if has_fees:
-		_late_fee_label.text = "Late Fees Collected: +$%.2f" % amount
 
 
 func _create_overdue_count_label() -> void:
@@ -595,41 +552,13 @@ func _create_overdue_count_label() -> void:
 	)
 
 
-func _set_overdue_count_display(count: int) -> void:
-	if not _overdue_count_label:
-		return
-	_overdue_count_label.visible = count > 0
-	if count > 0:
-		_overdue_count_label.text = "Overdue Rentals: %d" % count
-		_overdue_count_label.add_theme_color_override(
-			"font_color", Color(0.9, 0.7, 0.3)
-		)
 
 
-func _set_haggle_display(wins: int, losses: int) -> void:
-	var total: int = wins + losses
-	_haggle_label.visible = total > 0
-	if total > 0:
-		_haggle_label.text = (
-			"Haggling: %d won / %d lost" % [wins, losses]
-		)
 
 
-func _set_tier_change_display(
-	delta: float, tier_name: String
-) -> void:
-	if tier_name.is_empty():
-		_tier_change_label.visible = false
-		return
-	_tier_change_label.visible = true
-	var direction: String = "promoted" if delta > 0.0 else "demoted"
-	_tier_change_label.text = (
-		"Tier %s: %s!" % [direction, tier_name]
-	)
-	_tier_change_label.add_theme_color_override(
-		"font_color", TIER_CHANGE_COLOR
-	)
-	PanelAnimator.pulse_scale(_tier_change_label, 1.08)
+
+
+
 
 
 ## Updates per-store revenue breakdown labels from the day_closed payload.
@@ -745,16 +674,6 @@ func _set_customer_breakdown_display(shift_summary: Dictionary) -> void:
 	_customer_breakdown_label.text = "\n".join(lines)
 
 
-func _set_warranty_attach_display(attach_rate: float, demo_active: bool) -> void:
-	var contribution: float = float(
-		_last_summary_args.get("demo_contribution_revenue", 0.0)
-	)
-	DaySummaryContent.set_warranty_attach(
-		_warranty_attach_label, _demo_status_label,
-		attach_rate, demo_active, contribution,
-	)
-
-
 func _create_grading_label() -> void:
 	_grading_label = DaySummaryLabels.create_grading($Root/Panel/Margin/VBox)
 
@@ -853,63 +772,35 @@ func _on_performance_report_ready(
 				"Top Seller: %s" % report.top_item_sold
 			)
 	_set_narrative_display(report.story_beat, report.forward_hook)
-	_set_haggle_display(report.haggle_wins, report.haggle_losses)
-	_set_late_fee_display(report.late_fee_income)
-	_set_overdue_count_display(report.overdue_items_count)
-	_set_warranty_display(
+	DaySummaryDisplay.set_haggle_display(_haggle_label, report.haggle_wins, report.haggle_losses)
+	DaySummaryDisplay.set_late_fee_display(_late_fee_label, report.late_fee_income)
+	DaySummaryDisplay.set_overdue_count_display(_overdue_count_label, report.overdue_items_count)
+	DaySummaryDisplay.set_warranty_display(
+		_warranty_revenue_label, _warranty_claims_label,
 		report.warranty_revenue, report.warranty_claim_costs
 	)
 	_last_summary_args["demo_contribution_revenue"] = (
 		report.demo_contribution_revenue
 	)
-	_set_warranty_attach_display(
-		report.warranty_attach_rate, report.electronics_demo_active
+	DaySummaryDisplay.set_warranty_attach_display(
+		_warranty_attach_label, _demo_status_label,
+		report.warranty_attach_rate, report.electronics_demo_active,
+		report.demo_contribution_revenue
 	)
 	if report.tier_changed:
-		_set_tier_change_display(
-			report.reputation_delta, report.new_tier_name
+		DaySummaryDisplay.set_tier_change_display(
+			_tier_change_label, report.reputation_delta, report.new_tier_name
 		)
+		PanelAnimator.pulse_scale(_tier_change_label, 1.08)
 	else:
 		_tier_change_label.visible = false
 	_apply_employee_metrics(report)
 
 
-func _apply_archetype_display(archetype: String) -> void:
-	var has_archetype: bool = not archetype.is_empty()
-	_archetype_separator.visible = has_archetype
-	_archetype_label.visible = has_archetype
-	_archetype_subtext_label.visible = has_archetype
-	# Floor-awareness stars only have meaning when an archetype was computed,
-	# so the row rides the same visibility gate as the archetype block.
-	_floor_awareness_row.visible = has_archetype
-	if not has_archetype:
-		return
-	_archetype_label.text = archetype
-	var subtext: String = String(ARCHETYPE_SUBTEXT.get(archetype, ""))
-	# "The Mark" shows the framed/fired note instead of the path subtext —
-	# the zero-observation ending is distinct from a generic low score.
-	if archetype == "The Mark":
-		_archetype_subtext_label.text = MARK_FIRED_NOTE + "\n\n" + subtext
-	else:
-		_archetype_subtext_label.text = subtext
-
-
-func _apply_floor_stars_display(stars: int) -> void:
-	var clamped: int = clampi(stars, 1, 5)
-	_floor_stars_label.text = "★".repeat(clamped) + "☆".repeat(5 - clamped)
-
-
 func _apply_attention_notes_display(notes: Array) -> void:
-	if notes.is_empty():
-		_attention_separator.visible = false
-		_attention_notes_label.visible = false
-		return
-	_attention_separator.visible = true
-	_attention_notes_label.visible = true
-	var lines: Array[String] = []
-	for note in notes:
-		lines.append(str(note))
-	_attention_notes_label.text = "\n".join(lines)
+	DaySummaryDisplay.apply_attention_notes_display(
+		_attention_separator, _attention_notes_label, notes
+	)
 
 
 func _on_continue_pressed() -> void:

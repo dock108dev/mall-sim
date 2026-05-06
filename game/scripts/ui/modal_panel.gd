@@ -22,8 +22,8 @@
 ##
 ## Subclasses that override `_exit_tree()` for additional cleanup must call
 ## `super._exit_tree()` so the auto-pop guard still runs.
-extends CanvasLayer
 class_name ModalPanel
+extends CanvasLayer
 
 
 ## True iff this panel currently owns a CTX_MODAL frame on InputFocus.

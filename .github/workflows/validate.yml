@@ -132,7 +132,11 @@ jobs:
           #      renderer emits this from material_storage.cpp during autofree
           #      of 3D scenes (mesh nodes without materials). Engine-internal,
           #      not actionable from GDScript.
-          EXPECTED_ERROR_RE='ContentRegistry: duplicate (resource|entry) ID|ContentRegistry: alias .* maps to both|\[StoreRegistry\] (unknown store_id|empty store_id|duplicate register store_id)|\[StoreDirector\] .* — unknown store_id|\[CameraAuthority\] (invalid camera|not a Camera2D/Camera3D|expected exactly 1 current camera)|Object is locked and can.t be freed\.|Lambda capture at index 0 was freed\.|ReturnsSystem: _debit_store_account skipped|Parameter "material" is null\.'
+          #   5. ModalPanel guard paths — test_modal_panel_base.gd and
+          #      test_inventory_panel_focus.gd intentionally exercise the three
+          #      documented fail-loud guards: double-open, freed-while-open
+          #      auto-pop, and pop-when-not-on-top sibling-frame protection.
+          EXPECTED_ERROR_RE='ContentRegistry: duplicate (resource|entry) ID|ContentRegistry: alias .* maps to both|\[StoreRegistry\] (unknown store_id|empty store_id|duplicate register store_id)|\[StoreDirector\] .* — unknown store_id|\[CameraAuthority\] (invalid camera|not a Camera2D/Camera3D|expected exactly 1 current camera)|Object is locked and can.t be freed\.|Lambda capture at index 0 was freed\.|ReturnsSystem: _debit_store_account skipped|Parameter "material" is null\.|\[ModalPanel\] .* freed with unreleased InputFocus push — auto-popping|\[ModalPanel\] .*: open\(\) called twice without close\(\) — skipping push|\[ModalPanel\] .*: expected CTX_MODAL on top, got .* — leaving stack untouched'
           UNEXPECTED_ERRORS=$(grep "^ERROR:" "$GUT_OUTPUT_FILE" | grep -vE "$EXPECTED_ERROR_RE" || true)
           if [ -n "$UNEXPECTED_ERRORS" ]; then
             ERROR_COUNT=$(echo "$UNEXPECTED_ERRORS" | wc -l | tr -d ' ')
