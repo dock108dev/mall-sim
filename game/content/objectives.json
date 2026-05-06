@@ -26,7 +26,7 @@
           "id": "select_item",
           "text": "Choose how you handle the request",
           "action": "Pick one decision outcome",
-          "key": ""
+          "key": "E"
         },
         {
           "id": "stock_item",
@@ -44,7 +44,7 @@
           "id": "customer_browsing",
           "text": "Move to the next customer",
           "action": "Return to the customer area",
-          "key": ""
+          "key": "E"
         },
         {
           "id": "customer_at_checkout",
@@ -56,7 +56,7 @@
           "id": "sale_complete",
           "text": "Sale complete!",
           "action": "First sale of the day",
-          "key": ""
+          "key": "F4"
         },
         {
           "id": "close_day",

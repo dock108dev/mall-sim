@@ -361,11 +361,6 @@ func _day1_steps_available() -> bool:
 ## day. Sends {hidden: true} when the auto-hide condition is met. Tutorial
 ## text is owned by `TutorialOverlay` and does not flow through this payload.
 func _emit_current() -> void:
-	if _beta_mode_active():
-		var hidden_beta: Dictionary = {"hidden": true}
-		EventBus.objective_changed.emit(hidden_beta)
-		EventBus.objective_updated.emit(hidden_beta)
-		return
 	var should_auto_hide: bool = _loop_completed and _current_day > 3
 	if should_auto_hide and not Settings.show_objective_rail:
 		var hidden: Dictionary = {"hidden": true}
@@ -435,10 +430,3 @@ func _emit_objective_payload(
 		"input_hint": key_value,
 		"optional_hint": optional_hint,
 	})
-
-
-func _beta_mode_active() -> bool:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return false
-	return not tree.get_nodes_in_group("beta_day_one_controller").is_empty()

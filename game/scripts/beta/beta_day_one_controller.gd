@@ -14,22 +14,18 @@ const STAGE_PICKUP_STOCK: StringName = &"pickup_stock"
 const STAGE_PLACE_STOCK: StringName = &"place_stock"
 const STAGE_END_DAY: StringName = &"end_day"
 
-const _HIDDEN_NOISE_NODES: Array[StringName] = [
-	&"new_console_display",
-	&"bargain_bin",
-	&"featured_display",
-	&"poster_slot",
-	&"delivery_manifest",
-	&"release_notes_clipboard",
-	&"warranty_binder",
-	&"employee_area",
-	&"StoreAtmosphereProps",
-	&"ZoneTransitions",
-	&"InteriorSignage",
-	&"ZoneLabels",
-	&"FrontLaneQueue",
-	&"Storefront",
-	&"EntranceInterior",
+const _HIDDEN_NOISE_PATHS: Array[String] = [
+	"new_console_display",
+	"bargain_bin",
+	"featured_display",
+	"poster_slot",
+	"delivery_manifest",
+	"release_notes_clipboard",
+	"warranty_binder",
+	"employee_area",
+	"Storefront",
+	"StoreAtmosphereProps",
+	"FrontLaneQueue",
 ]
 
 var _decision_panel: BetaDecisionCardPanel
@@ -48,6 +44,7 @@ var _carry_item_label: String = "Used Game Box"
 func _ready() -> void:
 	add_to_group("beta_day_one_controller")
 	_apply_minimal_scope()
+	_style_beta_customer_visual()
 	_load_content()
 	_ensure_panels()
 	_connect_panel_signals()
@@ -368,8 +365,8 @@ func _apply_minimal_scope() -> void:
 	var scene: Node = get_tree().current_scene
 	if scene == null:
 		return
-	for node_name: StringName in _HIDDEN_NOISE_NODES:
-		var target: Node = scene.find_child(String(node_name), true, false)
+	for node_path: String in _HIDDEN_NOISE_PATHS:
+		var target: Node = scene.get_node_or_null(NodePath(node_path))
 		if target is Node3D:
 			(target as Node3D).visible = false
 
@@ -400,3 +397,53 @@ func _set_node3d_visible(scene: Node, path: String, is_visible: bool) -> void:
 	var node: Node = scene.get_node_or_null(path)
 	if node is Node3D:
 		(node as Node3D).visible = is_visible
+
+
+func _style_beta_customer_visual() -> void:
+	var scene: Node = get_tree().current_scene
+	if scene == null:
+		return
+	var customer_root: Node = scene.get_node_or_null("BetaDayOneCustomer")
+	if not (customer_root is Node3D):
+		return
+	var customer_node: Node3D = customer_root as Node3D
+
+	var body: Node = customer_node.get_node_or_null("Body")
+	if body is MeshInstance3D:
+		(body as MeshInstance3D).transform = Transform3D(
+			Vector3(5.4, 0, 0),
+			Vector3(0, 1.35, 0),
+			Vector3(0, 0, 3.9),
+			Vector3(0, 0.86, 0)
+		)
+		var shirt_mat: StandardMaterial3D = StandardMaterial3D.new()
+		shirt_mat.albedo_color = Color(0.16, 0.34, 0.72, 1.0)
+		shirt_mat.roughness = 0.78
+		(body as MeshInstance3D).material_override = shirt_mat
+
+	var head: Node = customer_node.get_node_or_null("Head")
+	if head is MeshInstance3D:
+		(head as MeshInstance3D).transform = Transform3D(
+			Vector3(2.0, 0, 0),
+			Vector3(0, 2.0, 0),
+			Vector3(0, 0, 2.0),
+			Vector3(0, 1.90, 0)
+		)
+		var skin_mat: StandardMaterial3D = StandardMaterial3D.new()
+		skin_mat.albedo_color = Color(0.86, 0.72, 0.57, 1.0)
+		skin_mat.roughness = 0.86
+		(head as MeshInstance3D).material_override = skin_mat
+
+	var marker: Node = customer_node.get_node_or_null("CustomerMarker")
+	if not (marker is Label3D):
+		marker = Label3D.new()
+		marker.name = "CustomerMarker"
+		customer_node.add_child(marker)
+	var label: Label3D = marker as Label3D
+	label.transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.45, 0)
+	label.text = "WAITING CUSTOMER"
+	label.pixel_size = 0.006
+	label.modulate = Color(1.0, 0.91, 0.62, 1.0)
+	label.outline_size = 5
+	label.outline_modulate = Color(0.08, 0.06, 0.03, 1.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
