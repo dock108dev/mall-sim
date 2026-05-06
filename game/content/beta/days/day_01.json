@@ -1,0 +1,21 @@
+{
+  "type": "meta_config_data",
+  "day_number": 1,
+  "date_label": "Black Friday Weekend",
+  "store_context": "First holiday rush setup shift.",
+  "required_events": [
+    "day01_wrong_console_parent"
+  ],
+  "optional_events": [
+    "day01_backroom_modded_console_hint"
+  ],
+  "tutorial_unlocks": [
+    "movement",
+    "interact",
+    "decision_card",
+    "day_end"
+  ],
+  "traffic_level": "medium",
+  "holiday_pressure": "rising",
+  "special_notes": "Help at counter first."
+}

@@ -1,0 +1,46 @@
+{
+  "type": "meta_config_data",
+  "events": [
+    {
+      "id": "day01_wrong_console_parent",
+      "day": 1,
+      "trigger": "customer_interaction",
+      "customer_archetype": "confused_parent",
+      "title": "Wrong Console Problem",
+      "body": "A parent is trying to buy a game that does not work with the console they have at home.",
+      "choices": [
+        {
+          "id": "honest_explain",
+          "label": "Explain the mismatch and suggest the correct version.",
+          "effects": {
+            "cash": 20,
+            "reputation": 2,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "upsell_bundle",
+          "label": "Turn it into a used bundle recommendation.",
+          "effects": {
+            "cash": 45,
+            "reputation": 1,
+            "manager_trust": 2
+          }
+        },
+        {
+          "id": "ignore_mismatch",
+          "label": "Ring it up and keep the line moving.",
+          "effects": {
+            "cash": 30,
+            "reputation": -2,
+            "manager_trust": -1,
+            "hidden_thread_score": 1,
+            "flags": {
+              "parent_return_risk": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

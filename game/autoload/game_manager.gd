@@ -114,6 +114,8 @@ func begin_new_run() -> void:
 	pending_load_slot = -1
 	_reset_session_state()
 	set_current_day(1)
+	if BetaRunState != null:
+		BetaRunState.reset_new_run()
 	if AuditLog != null:
 		AuditLog.pass_check(
 			&"new_game_clicked",
@@ -127,6 +129,9 @@ func load_game(slot: int) -> void:
 		return
 	pending_load_slot = slot
 	_reset_session_state()
+	if BetaRunState != null:
+		BetaRunState.reset_new_run()
+		BetaRunState.day = get_current_day()
 	change_state(State.LOADING)
 	change_state(State.GAMEPLAY)
 	change_scene(GAMEPLAY_SCENE_PATH)

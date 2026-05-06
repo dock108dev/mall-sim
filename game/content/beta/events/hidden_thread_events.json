@@ -1,0 +1,15 @@
+{
+  "type": "meta_config_data",
+  "events": [
+    {
+      "id": "day01_backroom_modded_console_hint",
+      "type": "hidden_thread_clue",
+      "effect": {
+        "hidden_thread_score": 1,
+        "flags": {
+          "noticed_backroom_console_stack": true
+        }
+      }
+    }
+  ]
+}

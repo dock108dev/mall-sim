@@ -111,7 +111,7 @@ func get_load_errors() -> Array[String]:
 
 
 func _ready() -> void:
-	GameManager.data_loader = self
+	_set_game_manager_data_loader()
 
 
 ## Resets all internal state so load_all_content() can re-register to ContentRegistry.
@@ -161,7 +161,7 @@ func load_all_content() -> void:
 ## Loads and registers content from a specific root directory.
 func load_all_content_from_root(root: String) -> void:
 	if _loaded and ContentRegistry.is_ready():
-		GameManager.data_loader = self
+		_set_game_manager_data_loader()
 		return
 	_prepare_for_load()
 	_load_errors = []
@@ -185,8 +185,24 @@ func load_all_content_from_root(root: String) -> void:
 		EventBus.content_load_failed.emit(_load_errors.duplicate())
 	else:
 		EventBus.content_loaded.emit()
-	GameManager.data_loader = self
+	_set_game_manager_data_loader()
 	_loaded = _load_errors.is_empty()
+
+
+func _set_game_manager_data_loader() -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var root: Node = tree.root
+	if root == null:
+		return
+	var game_manager: Node = root.get_node_or_null("GameManager")
+	if game_manager == null:
+		return
+	if not is_instance_valid(game_manager):
+		return
+	if "data_loader" in game_manager:
+		game_manager.data_loader = self
 
 
 func _prepare_for_load() -> void:
