@@ -73,9 +73,9 @@ size = Vector3(1.9, 0.06, 0.75)
 
 [sub_resource type="StandardMaterial3D" id="counter_top_mat"]
 resource_name = "Counter Top Trim"
-albedo_color = Color(0.78, 0.7, 0.58, 1)
-metallic = 0.4
-roughness = 0.45
+albedo_color = Color(0.85, 0.84, 0.8, 1)
+metallic = 0.12
+roughness = 0.28
 
 [sub_resource type="BoxMesh" id="slot_marker_mesh"]
 size = Vector3(0.15, 0.15, 0.15)
@@ -291,13 +291,14 @@ size = Vector3(1.25, 0.08, 0.95)
 
 [sub_resource type="StandardMaterial3D" id="bargain_bin_mat"]
 resource_name = "Bargain Bin"
-albedo_color = Color(0.78, 0.18, 0.16, 1)
-roughness = 0.6
+albedo_color = Color(0.17, 0.21, 0.28, 1)
+roughness = 0.48
+metallic = 0.22
 
 [sub_resource type="StandardMaterial3D" id="bargain_bin_rim_mat"]
-albedo_color = Color(0.95, 0.82, 0.22, 1)
-roughness = 0.45
-metallic = 0.2
+albedo_color = Color(0.9, 0.75, 0.36, 1)
+roughness = 0.36
+metallic = 0.28
 
 [sub_resource type="BoxMesh" id="hold_shelf_mesh"]
 size = Vector3(1.4, 0.08, 0.32)
@@ -358,9 +359,32 @@ size = Vector3(1.0, 0.85, 0.6)
 size = Vector3(1.0, 0.85, 0.6)
 
 [sub_resource type="StandardMaterial3D" id="featured_display_mat"]
-albedo_color = Color(0.32, 0.42, 0.56, 1)
-metallic = 0.35
-roughness = 0.4
+albedo_color = Color(0.2, 0.27, 0.36, 1)
+metallic = 0.22
+roughness = 0.34
+
+[sub_resource type="BoxMesh" id="queue_runner_mesh"]
+size = Vector3(2.4, 0.03, 4.4)
+
+[sub_resource type="StandardMaterial3D" id="queue_runner_mat"]
+albedo_color = Color(0.06, 0.07, 0.11, 1)
+roughness = 0.62
+
+[sub_resource type="BoxMesh" id="queue_post_mesh"]
+size = Vector3(0.09, 1.05, 0.09)
+
+[sub_resource type="StandardMaterial3D" id="queue_post_mat"]
+albedo_color = Color(0.62, 0.64, 0.7, 1)
+metallic = 0.62
+roughness = 0.32
+
+[sub_resource type="BoxMesh" id="queue_bar_mesh"]
+size = Vector3(1.2, 0.04, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="queue_bar_mat"]
+albedo_color = Color(0.49, 0.09, 0.13, 1)
+roughness = 0.44
+metallic = 0.12
 
 [sub_resource type="BoxMesh" id="release_notes_clipboard_mesh"]
 size = Vector3(0.24, 0.02, 0.32)
@@ -594,6 +618,32 @@ shadow_enabled = true
 spot_range = 3.2
 spot_angle = 36.0
 
+[node name="CheckoutLaneSpotlight" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 5.2, 3.1, 7.0)
+light_color = Color(1, 0.9, 0.75, 1)
+light_energy = 1.35
+shadow_enabled = true
+spot_range = 5.0
+spot_angle = 34.0
+
+[node name="FrontLaneFill" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 2.15, 5.8)
+light_color = Color(0.98, 0.78, 0.48, 1)
+light_energy = 0.28
+omni_range = 5.6
+
+[node name="CheckoutCounterPractical" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 2.05, 7.8)
+light_color = Color(0.78, 1, 0.9, 1)
+light_energy = 0.24
+omni_range = 3.2
+
+[node name="BackroomUtilityLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.45, 2.35, -8.55)
+light_color = Color(0.92, 0.96, 1, 1)
+light_energy = 0.3
+omni_range = 4.0
+
 ; ============================================================
 ; Structure: Floor, Walls, Ceiling
 ; ============================================================
@@ -657,7 +707,7 @@ mesh = SubResource("wall_short_mesh")
 surface_material_override/0 = ExtResource("5")
 
 [node name="Ceiling" type="MeshInstance3D" parent="."]
-visible = false
+visible = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.55, 0)
 mesh = SubResource("ceiling_mesh")
 surface_material_override/0 = ExtResource("6")
@@ -691,7 +741,7 @@ surface_material_override/0 = ExtResource("5")
 ; ============================================================
 
 [node name="Storefront" type="Node3D" parent="."]
-visible = false
+visible = true
 
 [node name="SilhouetteLeftPanel" type="MeshInstance3D" parent="Storefront"]
 transform = Transform3D(3.83333, 0, 0, 0, 1.16667, 0, 0, 0, 0.666667, -1.84, 1.75, 10.06)
@@ -739,7 +789,7 @@ pixel_size = 0.008
 modulate = Color(0.76, 1, 0.86, 1)
 double_sided = true
 font_size = 56
-text = "Retro Games"
+text = "RETRO GAMES"
 outline_size = 7
 outline_modulate = Color(0.05, 0.07, 0.16, 1)
 shaded = false
@@ -749,7 +799,7 @@ transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.42, 10.17)
 pixel_size = 0.008
 double_sided = true
 font_size = 24
-text = "Consoles & Classics"
+text = "BUY · SELL · TRADE"
 modulate = Color(0.92, 0.99, 1, 1)
 outline_size = 4
 outline_modulate = Color(0.05, 0.07, 0.16, 1)
@@ -767,6 +817,18 @@ shaded = false
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 9.35)
 mesh = SubResource("entrance_interior_strip_mesh")
 surface_material_override/0 = ExtResource("7")
+
+[node name="WelcomeHeader" type="Label3D" parent="EntranceInterior"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.35, 9.05)
+pixel_size = 0.0052
+modulate = Color(0.98, 0.88, 0.58, 1)
+double_sided = true
+font_size = 34
+text = "WELCOME PLAYERS"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
 
 ; ============================================================
 ; EntranceDoor — semi-transparent glass door filling the 2.9 m
@@ -933,6 +995,23 @@ horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
+
+[node name="AisleSeams" type="Node3D" parent="."]
+
+[node name="CenterSeam" type="MeshInstance3D" parent="AisleSeams"]
+transform = Transform3D(0.999848, 0, 0.0174524, 0, 1, 0, -0.0174524, 0, 0.999848, 0.1, 0.011, -0.2)
+mesh = SubResource("zone_floor_seam_mesh")
+surface_material_override/0 = SubResource("zone_floor_seam_mat")
+
+[node name="FrontSeam" type="MeshInstance3D" parent="AisleSeams"]
+transform = Transform3D(0.939693, 0, -0.34202, 0, 1, 0, 0.34202, 0, 0.939693, 3.25, 0.011, 5.95)
+mesh = SubResource("zone_floor_seam_mesh")
+surface_material_override/0 = SubResource("zone_floor_seam_mat")
+
+[node name="BackSeam" type="MeshInstance3D" parent="AisleSeams"]
+transform = Transform3D(0.999391, 0, -0.0348995, 0, 1, 0, 0.0348995, 0, 0.999391, 0, 0.011, -7.45)
+mesh = SubResource("zone_floor_seam_mesh")
+surface_material_override/0 = SubResource("zone_floor_seam_mat")
 
 ; ============================================================
 ; Store atmosphere props — non-interactive diegetic identity panels
@@ -1115,6 +1194,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -8.5)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 mesh = SubResource("cart_rack_mesh")
 surface_material_override/0 = ExtResource("11")
+
+[node name="RackHeader" type="Label3D" parent="CartRackLeft"]
+transform = Transform3D(1, 0, 0, 0, 0.999848, -0.0174524, 0, 0.0174524, 0.999848, 0, 2.45, 0.45)
+pixel_size = 0.0045
+modulate = Color(1, 0.92, 0.55, 1)
+double_sided = true
+font_size = 26
+text = "CARTRIDGES"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
 
 [node name="StaticBody3D" type="StaticBody3D" parent="CartRackLeft"]
 collision_layer = 2
@@ -1315,6 +1406,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, -8.5)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 mesh = SubResource("cart_rack_mesh")
 surface_material_override/0 = ExtResource("11")
+
+[node name="RackHeader" type="Label3D" parent="CartRackRight"]
+transform = Transform3D(1, 0, 0, 0, 0.999848, -0.0174524, 0, 0.0174524, 0.999848, 0, 2.45, 0.45)
+pixel_size = 0.0045
+modulate = Color(1, 0.92, 0.55, 1)
+double_sided = true
+font_size = 26
+text = "CARTRIDGES"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
 
 [node name="StaticBody3D" type="StaticBody3D" parent="CartRackRight"]
 collision_layer = 2
@@ -1855,12 +1958,12 @@ visible = false
 ; ============================================================
 
 [node name="Checkout" type="Node3D" parent="." groups=["fixture"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 8.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0, 7.82)
 
 [node name="CounterMesh" type="MeshInstance3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 mesh = SubResource("counter_mesh")
-surface_material_override/0 = ExtResource("11")
+surface_material_override/0 = ExtResource("16")
 
 [node name="CounterTop" type="MeshInstance3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.03, 0)
@@ -1915,13 +2018,13 @@ collision_mask = 0
 shape = SubResource("receipt_printer_shape")
 
 [node name="CheckoutSign" type="Label3D" parent="Checkout/Register"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
 billboard = 1
 pixel_size = 0.003
 modulate = Color(0.91, 0.647, 0.278, 1)
 double_sided = true
-font_size = 40
-text = "CHECKOUT"
+font_size = 44
+text = "CHECKOUT LANE"
 outline_size = 5
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
@@ -1979,6 +2082,55 @@ visible = false
 
 [node name="CustomerWaitPosition" type="Marker3D" parent="Checkout/Register"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.285, -1.12)
+
+[node name="FrontLaneQueue" type="Node3D" parent="."]
+
+[node name="QueueRunner" type="MeshInstance3D" parent="FrontLaneQueue"]
+transform = Transform3D(0.999723, 0, 0.0235619, 0, 1, 0, -0.0235619, 0, 0.999723, 3.9, 0.015, 5.55)
+mesh = SubResource("queue_runner_mesh")
+surface_material_override/0 = SubResource("queue_runner_mat")
+
+[node name="PostNearLeft" type="MeshInstance3D" parent="FrontLaneQueue"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.95, 0.525, 4.02)
+mesh = SubResource("queue_post_mesh")
+surface_material_override/0 = SubResource("queue_post_mat")
+
+[node name="PostNearRight" type="MeshInstance3D" parent="FrontLaneQueue"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.15, 0.525, 4.02)
+mesh = SubResource("queue_post_mesh")
+surface_material_override/0 = SubResource("queue_post_mat")
+
+[node name="PostFarLeft" type="MeshInstance3D" parent="FrontLaneQueue"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.95, 0.525, 7.05)
+mesh = SubResource("queue_post_mesh")
+surface_material_override/0 = SubResource("queue_post_mat")
+
+[node name="PostFarRight" type="MeshInstance3D" parent="FrontLaneQueue"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.15, 0.525, 7.05)
+mesh = SubResource("queue_post_mesh")
+surface_material_override/0 = SubResource("queue_post_mat")
+
+[node name="BarNear" type="MeshInstance3D" parent="FrontLaneQueue"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.55, 0.83, 4.02)
+mesh = SubResource("queue_bar_mesh")
+surface_material_override/0 = SubResource("queue_bar_mat")
+
+[node name="BarFar" type="MeshInstance3D" parent="FrontLaneQueue"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.55, 0.83, 7.05)
+mesh = SubResource("queue_bar_mesh")
+surface_material_override/0 = SubResource("queue_bar_mat")
+
+[node name="QueuePrompt" type="Label3D" parent="FrontLaneQueue"]
+transform = Transform3D(0.999723, 0, 0.0235619, 0, 1, 0, -0.0235619, 0, 0.999723, 3.55, 1.35, 6.45)
+pixel_size = 0.0045
+modulate = Color(0.98, 0.88, 0.6, 1)
+double_sided = true
+font_size = 30
+text = "QUEUE HERE"
+horizontal_alignment = 1
+outline_size = 4
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
 
 ; ============================================================
 ; Backroom Access Point
@@ -2088,7 +2240,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -4.0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.0, 0.05, 0)
 
 [node name="CheckoutApproach" type="Marker3D" parent="CustomerNavConfig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.05, 7.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0.05, 6.95)
 
 [node name="ExitPoint" type="Marker3D" parent="CustomerNavConfig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 10.5)
@@ -2104,20 +2256,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 10.5)
 ; ============================================================
 
 [node name="QueueMarker1" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 7.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0, 6.95)
 
 [node name="QueueMarker2" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 6.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0, 5.95)
 
 [node name="QueueMarker3" type="Marker3D" parent="." groups=["queue_markers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 5.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0, 4.95)
 
 ; ============================================================
 ; Checkout Counter — primary checkout interactable
 ; ============================================================
 
 [node name="checkout_counter" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 8.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0, 7.82)
 
 [node name="Interactable" type="Area3D" parent="checkout_counter"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
@@ -2826,6 +2978,28 @@ shape = SubResource("back_room_zone_shape")
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.8, 1.25, 0)
 mesh = SubResource("front_wall_segment_mesh")
 visible = false
+
+[node name="RefurbBenchCrate" type="MeshInstance3D" parent="back_room"]
+transform = Transform3D(0.819152, 0, -0.573576, 0, 1, 0, 0.573576, 0, 0.819152, -1.3, 0.18, 0.35)
+mesh = SubResource("backordered_console_box_mesh")
+surface_material_override/0 = ExtResource("11")
+
+[node name="SortCartCrate" type="MeshInstance3D" parent="back_room"]
+transform = Transform3D(0.987688, 0, 0.156434, 0, 1, 0, -0.156434, 0, 0.987688, -1.85, 0.18, -0.2)
+mesh = SubResource("backordered_console_box_mesh")
+surface_material_override/0 = ExtResource("11")
+
+[node name="RefurbHeader" type="Label3D" parent="back_room"]
+transform = Transform3D(-1, 0, 0, 0, 0.999391, -0.0348995, 0, -0.0348995, -0.999391, -1.72, 2.35, 0.7)
+pixel_size = 0.004
+modulate = Color(1, 0.92, 0.55, 1)
+double_sided = true
+font_size = 22
+text = "REFURB / RETURNS"
+horizontal_alignment = 1
+outline_size = 4
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
 
 [node name="back_room_inventory_shelf" type="Node3D" parent="back_room"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, -0.7)
