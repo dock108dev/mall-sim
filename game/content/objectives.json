@@ -3,9 +3,9 @@
   "objectives": [
     {
       "day": 1,
-      "text": "Stock your first item and make a sale",
-      "action": "Press I to open inventory",
-      "key": "I",
+      "text": "Resolve a customer request and restock the floor",
+      "action": "Talk to the customer, then run one backroom restock cycle",
+      "key": "E",
       "post_sale_text": "First sale complete. Close the day when ready.",
       "post_sale_action": "Click Close Day in the HUD",
       "post_sale_key": "",
@@ -18,38 +18,38 @@
       "steps": [
         {
           "id": "open_inventory",
-          "text": "Open your inventory",
-          "action": "Press I to open the inventory panel",
-          "key": "I"
+          "text": "Talk to the waiting customer",
+          "action": "Press E at the customer to open the decision card",
+          "key": "E"
         },
         {
           "id": "select_item",
-          "text": "Select an item from the Backroom",
-          "action": "Click an item and choose Move to Shelf, or press Q to quick-stock",
-          "key": "Q"
+          "text": "Choose how you handle the request",
+          "action": "Pick one decision outcome",
+          "key": ""
         },
         {
           "id": "stock_item",
-          "text": "Stock the item on the Used Shelves",
-          "action": "Click a highlighted shelf slot",
-          "key": ""
+          "text": "Go to backroom pickup",
+          "action": "Press E to carry a stock box",
+          "key": "E"
         },
         {
           "id": "wait_for_customer",
-          "text": "Wait for a customer to arrive",
-          "action": "Customers will spawn shortly",
-          "key": ""
+          "text": "Place stock on the restock shelf",
+          "action": "Press E at the shelf to place the carried box",
+          "key": "E"
         },
         {
           "id": "customer_browsing",
-          "text": "A customer is browsing your shelves",
-          "action": "Watch them shop",
+          "text": "Move to the next customer",
+          "action": "Return to the customer area",
           "key": ""
         },
         {
           "id": "customer_at_checkout",
-          "text": "Customer is heading to checkout",
-          "action": "Walk to the register and press E to process the sale",
+          "text": "Resolve the final customer",
+          "action": "Complete the final decision card",
           "key": "E"
         },
         {

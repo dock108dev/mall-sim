@@ -795,10 +795,6 @@ func _beta_inventory_disabled() -> bool:
 	if tree == null:
 		return false
 	return tree.get_first_node_in_group("beta_day_one_controller") != null
-	if _is_open:
-		_selected_item = null
-		EventBus.item_tooltip_hidden.emit()
-		call_deferred("_refresh_grid")
 
 
 func _apply_store_accent(store_id_sn: StringName) -> void:

@@ -5,15 +5,15 @@ class_name FirstRunCueOverlay
 extends PanelContainer
 
 
-const _DEFAULT_MESSAGE: String = "Stock your shelves — open the Inventory panel (I) to fill them."
+const _DEFAULT_MESSAGE: String = "Stock your shelves to open for business."
 const _STORE_MESSAGES: Dictionary = {
-	&"electronics": "Empty shelves! Open Inventory (I) and stock the Electronics store.",
-	&"pocket_creatures": "Empty shelves! Open Inventory (I) and stock booster packs & cards.",
-	&"rentals": "Empty shelves! Open Inventory (I) and stock the rental wall.",
-	&"retro_games": "Empty shelves! Open Inventory (I) and stock the Retro Games store.",
-	&"retro": "Empty shelves! Open Inventory (I) and stock the Retro Games store.",
-	&"sports": "Empty shelves! Open Inventory (I) and stock the Sports store.",
-	&"video_rental": "Empty shelves! Open Inventory (I) and stock the rental wall.",
+	&"electronics": "Empty shelves! Stock the Electronics floor.",
+	&"pocket_creatures": "Empty shelves! Stock booster packs and cards.",
+	&"rentals": "Empty shelves! Stock the rental wall.",
+	&"retro_games": "Empty shelves! Stock the Retro Games floor.",
+	&"retro": "Empty shelves! Stock the Retro Games floor.",
+	&"sports": "Empty shelves! Stock the Sports floor.",
+	&"video_rental": "Empty shelves! Stock the rental wall.",
 }
 
 # Tutorial steps whose on-screen prompt duplicates this overlay's "open inventory
@@ -52,9 +52,6 @@ func _ready() -> void:
 
 
 func _on_day_started(day: int) -> void:
-	if _beta_mode_active():
-		_hide()
-		return
 	_current_day = day
 	if day > 1:
 		_hide()
@@ -62,9 +59,6 @@ func _on_day_started(day: int) -> void:
 
 
 func _on_store_entered(store_id: StringName) -> void:
-	if _beta_mode_active():
-		_hide()
-		return
 	_active_store_id = store_id
 	if _tutorial_suppressing:
 		return
@@ -79,9 +73,6 @@ func _on_store_entered(store_id: StringName) -> void:
 
 
 func _on_tutorial_step_changed(step_id: String) -> void:
-	if _beta_mode_active():
-		_hide()
-		return
 	var was_suppressing: bool = _tutorial_suppressing
 	_tutorial_suppressing = _TUTORIAL_SUPPRESSING_STEPS.has(step_id)
 	if _tutorial_suppressing:
@@ -92,9 +83,6 @@ func _on_tutorial_step_changed(step_id: String) -> void:
 
 
 func _on_tutorial_finished() -> void:
-	if _beta_mode_active():
-		_hide()
-		return
 	if not _tutorial_suppressing:
 		return
 	_tutorial_suppressing = false
@@ -123,9 +111,6 @@ func _is_tutorial_active_at_boot() -> bool:
 
 
 func _on_inventory_updated(store_id: StringName) -> void:
-	if _beta_mode_active():
-		_hide()
-		return
 	if not _is_showing:
 		return
 	if store_id != _active_store_id:
@@ -137,14 +122,11 @@ func _on_inventory_updated(store_id: StringName) -> void:
 
 
 func _show_for_store(store_id: StringName) -> void:
-	if _beta_mode_active():
-		_hide()
-		return
 	if _tutorial_suppressing:
 		return
 	var message: String = _STORE_MESSAGES.get(store_id, _DEFAULT_MESSAGE)
 	_message_label.text = message
-	_pointer_label.text = "→ Inventory"
+	_pointer_label.text = "→ Stock Shelves"
 	_is_showing = true
 	visible = true
 

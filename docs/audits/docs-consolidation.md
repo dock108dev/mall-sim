@@ -5,7 +5,7 @@ verifiable from current code, config, or CI; nothing else exists.
 
 Scope: `README.md` plus everything under `docs/` (excluding `docs/audits/`,
 which is point-in-time review notes that are not rewritten by this pass).
-`BRAINDUMP.md` was not touched (customer voice).
+`docs/BRAINDUMP.md` was not touched (customer voice).
 
 ## Summary
 
@@ -173,7 +173,7 @@ removed, since the audit files themselves still exist).
   Rationale: `docs/contributing.md` ("Documentation rules") explicitly
   says "keep roadmap or planning language out of the active docs set
   unless it is clearly marked as future planning elsewhere," and there is
-  no checked-in roadmap content to consolidate from. `BRAINDUMP.md`
+  no checked-in roadmap content to consolidate from. `docs/BRAINDUMP.md`
   (customer voice) is the planning surface and is out of scope per pass
   rules.
 - **`tests/run_tests.sh:73` references `docs/audits/phase0-ui-integrity.md`**
