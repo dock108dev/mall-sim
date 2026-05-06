@@ -40,6 +40,8 @@ var _tutorial_suppressing: bool = false
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _beta_mode_active():
+		return
 	_tutorial_suppressing = _is_tutorial_active_at_boot()
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.inventory_updated.connect(_on_inventory_updated)
@@ -50,6 +52,9 @@ func _ready() -> void:
 
 
 func _on_day_started(day: int) -> void:
+	if _beta_mode_active():
+		_hide()
+		return
 	_current_day = day
 	if day > 1:
 		_hide()
@@ -57,6 +62,9 @@ func _on_day_started(day: int) -> void:
 
 
 func _on_store_entered(store_id: StringName) -> void:
+	if _beta_mode_active():
+		_hide()
+		return
 	_active_store_id = store_id
 	if _tutorial_suppressing:
 		return
@@ -71,6 +79,9 @@ func _on_store_entered(store_id: StringName) -> void:
 
 
 func _on_tutorial_step_changed(step_id: String) -> void:
+	if _beta_mode_active():
+		_hide()
+		return
 	var was_suppressing: bool = _tutorial_suppressing
 	_tutorial_suppressing = _TUTORIAL_SUPPRESSING_STEPS.has(step_id)
 	if _tutorial_suppressing:
@@ -81,6 +92,9 @@ func _on_tutorial_step_changed(step_id: String) -> void:
 
 
 func _on_tutorial_finished() -> void:
+	if _beta_mode_active():
+		_hide()
+		return
 	if not _tutorial_suppressing:
 		return
 	_tutorial_suppressing = false
@@ -109,6 +123,9 @@ func _is_tutorial_active_at_boot() -> bool:
 
 
 func _on_inventory_updated(store_id: StringName) -> void:
+	if _beta_mode_active():
+		_hide()
+		return
 	if not _is_showing:
 		return
 	if store_id != _active_store_id:
@@ -120,6 +137,9 @@ func _on_inventory_updated(store_id: StringName) -> void:
 
 
 func _show_for_store(store_id: StringName) -> void:
+	if _beta_mode_active():
+		_hide()
+		return
 	if _tutorial_suppressing:
 		return
 	var message: String = _STORE_MESSAGES.get(store_id, _DEFAULT_MESSAGE)
@@ -167,3 +187,10 @@ func _is_inventory_empty(store_id: StringName) -> bool:
 		return true
 	var stock: Array = inventory_system.call("get_stock", store_id)
 	return stock.is_empty()
+
+
+func _beta_mode_active() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return not tree.get_nodes_in_group("beta_day_one_controller").is_empty()

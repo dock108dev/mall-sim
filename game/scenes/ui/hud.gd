@@ -951,6 +951,9 @@ func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void
 func _refresh_zero_state_hint() -> void:
 	if not is_instance_valid(_zero_state_hint):
 		return
+	if _beta_mode_active():
+		_zero_state_hint.visible = false
+		return
 	var state: GameManager.State = GameManager.current_state
 	var in_store: bool = (
 		state == GameManager.State.STORE_VIEW
@@ -1229,3 +1232,10 @@ func _reset_for_tests() -> void:
 	_items_placed_count = 0
 	if is_instance_valid(_zero_state_hint):
 		_zero_state_hint.visible = false
+
+
+func _beta_mode_active() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return not tree.get_nodes_in_group("beta_day_one_controller").is_empty()

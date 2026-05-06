@@ -4,7 +4,9 @@
   "date_label": "Black Friday Weekend",
   "store_context": "First holiday rush setup shift.",
   "required_events": [
-    "day01_wrong_console_parent"
+    "day01_wrong_console_parent",
+    "day01_trade_credit_push",
+    "day01_last_copy_argument"
   ],
   "optional_events": [
     "day01_backroom_modded_console_hint"

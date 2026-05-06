@@ -1,0 +1,23 @@
+{
+  "type": "meta_config_data",
+  "day_number": 2,
+  "date_label": "Holiday Rush Day Two",
+  "store_context": "Customer volume is higher and return pressure starts.",
+  "required_events": [
+    "day02_defective_return",
+    "day02_holiday_bundle",
+    "day02_modded_console_rumor"
+  ],
+  "optional_events": [
+    "day01_backroom_modded_console_hint"
+  ],
+  "tutorial_unlocks": [
+    "movement",
+    "interact",
+    "decision_card",
+    "day_end"
+  ],
+  "traffic_level": "high",
+  "holiday_pressure": "high",
+  "special_notes": "Balance speed with trust as lines grow."
+}

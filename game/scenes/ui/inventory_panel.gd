@@ -15,6 +15,9 @@ const PANEL_NAME: String = "inventory"
 const SOURCE_BACKROOM: String = "backroom"
 const SOURCE_SHELVES: String = "shelves"
 const SOURCE_ALL: String = "all"
+const _BETA_DISABLED_MESSAGE: String = (
+	"Beta mode: carry stock boxes from backroom and place them on shelves."
+)
 
 var inventory_system: InventorySystem
 var store_id: String = ""
@@ -145,6 +148,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not key_event.pressed or key_event.echo:
 		return
 	if key_event.is_action_pressed("toggle_inventory"):
+		if _beta_inventory_disabled():
+			if _is_open:
+				close(true)
+			EventBus.notification_requested.emit(_BETA_DISABLED_MESSAGE)
+			get_viewport().set_input_as_handled()
+			return
 		_toggle()
 		get_viewport().set_input_as_handled()
 	elif key_event.is_action_pressed("quick_stock") and _is_open:
@@ -160,6 +169,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func open(source: String = SOURCE_BACKROOM) -> void:
+	if _beta_inventory_disabled():
+		if _is_open:
+			close(true)
+		EventBus.notification_requested.emit(_BETA_DISABLED_MESSAGE)
+		return
 	if _is_open:
 		return
 	if not inventory_system:
@@ -700,6 +714,10 @@ func _on_context_action(id: int) -> void:
 func _on_interactable_interacted(
 	target: Interactable, type: int
 ) -> void:
+	if _beta_inventory_disabled():
+		if _is_open:
+			close(true)
+		return
 	if type == Interactable.InteractionType.BACKROOM:
 		if not _is_open:
 			open(SOURCE_BACKROOM)
@@ -727,6 +745,8 @@ func _on_interactable_interacted(
 func _on_interactable_right_clicked(
 	target: Interactable, type: int
 ) -> void:
+	if _beta_inventory_disabled():
+		return
 	if type != Interactable.InteractionType.SHELF_SLOT:
 		return
 	if _shelf_actions.is_placement_mode:
@@ -768,6 +788,13 @@ func _on_price_set(_item_id: String, _price: float) -> void:
 func _on_active_store_changed(new_store_id: StringName) -> void:
 	store_id = String(new_store_id)
 	_apply_store_accent(new_store_id)
+
+
+func _beta_inventory_disabled() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return tree.get_first_node_in_group("beta_day_one_controller") != null
 	if _is_open:
 		_selected_item = null
 		EventBus.item_tooltip_hidden.emit()

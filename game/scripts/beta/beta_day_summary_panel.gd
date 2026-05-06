@@ -6,6 +6,7 @@ signal continue_pressed()
 var _title_label: Label
 var _metrics_label: RichTextLabel
 var _note_label: Label
+var _continue_button: Button
 
 
 func _ready() -> void:
@@ -54,14 +55,14 @@ func _ready() -> void:
 	_note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(_note_label)
 
-	var button := Button.new()
-	button.text = "Continue To Day 2 Placeholder"
-	button.custom_minimum_size = Vector2(0, 48)
-	button.pressed.connect(_on_continue_pressed)
-	v.add_child(button)
+	_continue_button = Button.new()
+	_continue_button.text = "Continue To Next Day"
+	_continue_button.custom_minimum_size = Vector2(0, 48)
+	_continue_button.pressed.connect(_on_continue_pressed)
+	v.add_child(_continue_button)
 
 
-func show_summary(summary: Dictionary) -> void:
+func show_summary(summary: Dictionary, is_final_day: bool = false) -> void:
 	var day: int = int(summary.get("day", 1))
 	_title_label.text = "Day %d Summary" % day
 	_metrics_label.text = (
@@ -69,15 +70,20 @@ func show_summary(summary: Dictionary) -> void:
 		+ "[b]Reputation:[/b] %d\n"
 		+ "[b]Manager Trust:[/b] %d\n"
 		+ "[b]Hidden Thread Score:[/b] %d\n"
-		+ "[b]Day 1 Event Complete:[/b] %s"
+		+ "[b]Events Completed:[/b] %d / %d"
 	) % [
 		int(summary.get("cash", 0)),
 		int(summary.get("reputation", 0)),
 		int(summary.get("manager_trust", 0)),
 		int(summary.get("hidden_thread_score", 0)),
-		"YES" if bool(summary.get("day1_event_completed", false)) else "NO",
+		int(summary.get("events_completed", 0)),
+		int(summary.get("events_target", 0)),
 	]
 	_note_label.text = str(summary.get("hidden_thread_note", ""))
+	if is_final_day:
+		_continue_button.text = "Finish Beta And Return To Menu"
+	else:
+		_continue_button.text = "Continue To Next Day"
 	open()
 
 

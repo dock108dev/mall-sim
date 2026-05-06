@@ -6,6 +6,7 @@
       "day": 1,
       "trigger": "customer_interaction",
       "customer_archetype": "confused_parent",
+      "customer_name": "Confused Parent",
       "title": "Wrong Console Problem",
       "body": "A parent is trying to buy a game that does not work with the console they have at home.",
       "choices": [
@@ -38,6 +39,208 @@
             "flags": {
               "parent_return_risk": true
             }
+          }
+        }
+      ]
+    },
+    {
+      "id": "day01_trade_credit_push",
+      "day": 1,
+      "trigger": "customer_interaction",
+      "customer_archetype": "trade_in_regular",
+      "customer_name": "Trade-In Regular",
+      "title": "Trade Credit Pressure",
+      "body": "A regular insists their old sports title should grade higher for bonus credit.",
+      "choices": [
+        {
+          "id": "honor_policy",
+          "label": "Explain grade policy and offer standard credit.",
+          "effects": {
+            "cash": 25,
+            "reputation": 2,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "small_bonus",
+          "label": "Offer a one-time small bonus to keep goodwill.",
+          "effects": {
+            "cash": 12,
+            "reputation": 3,
+            "manager_trust": 0
+          }
+        },
+        {
+          "id": "inflate_grade",
+          "label": "Inflate grade to close quickly.",
+          "effects": {
+            "cash": 38,
+            "reputation": -1,
+            "manager_trust": -2,
+            "hidden_thread_score": 1,
+            "flags": {
+              "trade_in_grade_mismatch": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "day01_last_copy_argument",
+      "day": 1,
+      "trigger": "customer_interaction",
+      "customer_archetype": "collector",
+      "customer_name": "Collector",
+      "title": "Last Copy Argument",
+      "body": "Two buyers want the last clean copy of a sought-after cartridge.",
+      "choices": [
+        {
+          "id": "first_come_first_served",
+          "label": "Honor first-come-first-served at listed price.",
+          "effects": {
+            "cash": 30,
+            "reputation": 2,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "hold_for_loyalty",
+          "label": "Hold it for your known regular customer.",
+          "effects": {
+            "cash": 18,
+            "reputation": 1,
+            "manager_trust": 2,
+            "flags": {
+              "collector_hold_favor": true
+            }
+          }
+        },
+        {
+          "id": "start_bidding",
+          "label": "Let them bid against each other.",
+          "effects": {
+            "cash": 50,
+            "reputation": -2,
+            "manager_trust": -1
+          }
+        }
+      ]
+    },
+    {
+      "id": "day02_defective_return",
+      "day": 2,
+      "trigger": "customer_interaction",
+      "customer_archetype": "angry_return",
+      "customer_name": "Angry Return Customer",
+      "title": "Defective Return",
+      "body": "A customer claims yesterday's used game crashes on startup.",
+      "choices": [
+        {
+          "id": "full_refund",
+          "label": "Issue a full refund and apologize.",
+          "effects": {
+            "cash": -20,
+            "reputation": 3,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "store_credit",
+          "label": "Offer store credit with a small bonus.",
+          "effects": {
+            "cash": -10,
+            "reputation": 2,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "deny_claim",
+          "label": "Deny the claim without testing.",
+          "effects": {
+            "cash": 5,
+            "reputation": -3,
+            "manager_trust": -2,
+            "hidden_thread_score": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "day02_holiday_bundle",
+      "day": 2,
+      "trigger": "customer_interaction",
+      "customer_archetype": "gift_shopper",
+      "customer_name": "Holiday Shopper",
+      "title": "Holiday Bundle Ask",
+      "body": "A gift buyer wants a safe starter bundle for a younger sibling.",
+      "choices": [
+        {
+          "id": "balanced_bundle",
+          "label": "Build a balanced used bundle with value picks.",
+          "effects": {
+            "cash": 42,
+            "reputation": 2,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "premium_push",
+          "label": "Push premium extras and warranties.",
+          "effects": {
+            "cash": 60,
+            "reputation": -1,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "budget_only",
+          "label": "Keep it strictly budget and fast.",
+          "effects": {
+            "cash": 24,
+            "reputation": 1,
+            "manager_trust": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "day02_modded_console_rumor",
+      "day": 2,
+      "trigger": "customer_interaction",
+      "customer_archetype": "curious_teen",
+      "customer_name": "Curious Teen",
+      "title": "Modded Console Rumor",
+      "body": "A teen asks if you sell games that only run on modded consoles.",
+      "choices": [
+        {
+          "id": "decline_and_redirect",
+          "label": "Decline and redirect to legal options.",
+          "effects": {
+            "cash": 15,
+            "reputation": 1,
+            "manager_trust": 2
+          }
+        },
+        {
+          "id": "quiet_hint",
+          "label": "Hint that some customers ask around back.",
+          "effects": {
+            "cash": 35,
+            "reputation": -1,
+            "manager_trust": -2,
+            "hidden_thread_score": 2,
+            "flags": {
+              "modded_console_interest": true
+            }
+          }
+        },
+        {
+          "id": "report_question",
+          "label": "Shut it down and note the question for your manager.",
+          "effects": {
+            "cash": 10,
+            "reputation": 0,
+            "manager_trust": 3
           }
         }
       ]

@@ -46,6 +46,11 @@ func _ready() -> void:
 ## is the documented contract, not a silent failure. See
 ## docs/audits/error-handling-report.md EH-02.
 func _on_placement_hint_requested(item_name: String) -> void:
+	if _beta_mode_active():
+		_placement_active = false
+		_selected_item_name = ""
+		visible = false
+		return
 	_placement_active = true
 	_selected_item_name = item_name
 	_show_default_message()
@@ -84,3 +89,10 @@ func _show_default_message() -> void:
 		_message_label.text = _DEFAULT_PROMPT
 	else:
 		_message_label.text = _ITEM_PROMPT_FORMAT % _selected_item_name
+
+
+func _beta_mode_active() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return not tree.get_nodes_in_group("beta_day_one_controller").is_empty()
