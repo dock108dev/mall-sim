@@ -31,6 +31,16 @@ signal hour_changed(hour: int)
 signal day_ended(day: int)
 ## Emitted by the player via HUD to request early end-of-day.
 signal day_close_requested()
+## Emitted by DayCycleController when the player requests day-close before
+## completing one stock→sell loop for the active day. `reason` is human-
+## readable copy that distinguishes "shelves empty" from "no sale yet" so the
+## confirmation modal can advise the player accordingly. Listeners (a single
+## modal) must answer with `day_close_confirmed` to actually close the day.
+signal day_close_confirmation_requested(reason: String)
+## Emitted by the close-day confirmation modal after the player chooses to
+## close anyway. DayCycleController routes this through to `_on_day_ended`,
+## bypassing the loop-completion gate.
+signal day_close_confirmed()
 ## Emitted by DayCycleController after all store_day_closed signals have fired.
 ## summary keys: day, total_revenue, total_expenses, net_profit, items_sold,
 ## rent, net_cash, store_revenue, warranty_revenue, warranty_claims,
@@ -741,6 +751,34 @@ signal delivery_manifest_examined(store_id: StringName, day: int)
 signal inventory_variance_noted(
 	store_id: StringName, item_id: StringName, expected: int, actual: int
 )
+
+
+# ── Hidden-Thread Interactables ──────────────────────────────────────────────
+## Emitted when the player examines the customer Hold Shelf. suspicious_slip_count
+## is the number of slips on the shelf whose requestor_tier is SHADY or higher
+## at examination time. Hidden Thread tier-1 trigger.
+signal hold_shelf_inspected(store_id: StringName, suspicious_slip_count: int)
+## Emitted when the player examines the warranty binder behind the counter.
+## Hidden Thread tier-1 trigger; also increments paper_trail_score by +2.0.
+signal warranty_binder_examined(store_id: StringName, day: int)
+## Emitted when the player examines a backordered item still tagged in the
+## back room. days_pending is the number of days the unit has been listed as
+## awaiting stock. Hidden Thread tier-1 trigger.
+signal backordered_item_examined(
+	store_id: StringName, item_id: StringName, days_pending: int
+)
+## Emitted when the player examines a handwritten register-side note.
+## Hidden Thread tier-1 trigger.
+signal register_note_examined(store_id: StringName, day: int)
+## Emitted when the player examines the mall security flyer pinned in the
+## employee area. Hidden Thread tier-1 trigger.
+signal security_flyer_examined(store_id: StringName)
+## Emitted when the player examines a returned item flagged as suspicious.
+## Hidden Thread tier-1 trigger.
+signal returned_item_examined(store_id: StringName, item_id: StringName)
+## Emitted when the player examines the printed employee shift schedule.
+## Hidden Thread tier-1 trigger; also increments paper_trail_score by +1.0.
+signal employee_schedule_examined(store_id: StringName, day: int)
 
 
 # ── Hold List / Reservation ──────────────────────────────────────────────────

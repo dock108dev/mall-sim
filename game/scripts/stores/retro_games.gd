@@ -11,16 +11,6 @@ const GRADES_PATH: String = "res://game/content/stores/retro_games/grades.json"
 const CONDITION_ORDER: PackedStringArray = [
 	"poor", "fair", "good", "near_mint", "mint",
 ]
-## Display name on the checkout counter Interactable when a customer is
-## queued. Paired with an empty verb so the InteractionPrompt renders an
-## informational label without a "Press E" cue — Day 1 customers
-## auto-complete checkout via PlayerCheckout.process_transaction(), so the
-## counter has no player-driven verb to advertise.
-const _CHECKOUT_PROMPT_NAME_ACTIVE: String = "Customer at checkout"
-## Display name on the checkout counter Interactable when no customer is
-## queued. Paired with an empty verb so the InteractionPrompt renders the
-## label without a "Press E" cue.
-const _CHECKOUT_PROMPT_NAME_IDLE: String = "No customer waiting"
 ## NodePath to the orbit camera controller authored in retro_games.tscn. Held
 ## as a constant so the F3 debug toggle and the FP-startup disable share one
 ## source of truth for the lookup.
@@ -94,14 +84,6 @@ var _initialized: bool = false
 var _item_grades: Dictionary = {}
 ## Maps grade_id → grade entry dict (loaded from grades.json at boot).
 var _grade_table: Dictionary = {}
-## Reference to the checkout counter Interactable so the prompt can swap
-## between idle and customer-waiting states without recomputing the path.
-var _checkout_counter_interactable: Interactable = null
-## Mirrors the register queue size as observed from EventBus.queue_advanced
-## so the checkout counter prompt can reflect "No customer waiting" vs
-## "Customer at checkout" with no Press-E verb (Day 1 customers
-## auto-complete checkout via PlayerCheckout.process_transaction()).
-var _register_queue_size: int = 0
 ## True while the F3 debug overhead orbit view is the active camera. Tracks
 ## the toggle so a second F3 press restores first-person without needing to
 ## inspect CameraAuthority state.
@@ -121,19 +103,6 @@ func _ready() -> void:
 	super._ready()
 	_find_testing_station()
 	_connect_slot_signals()
-	# retro_games.tscn ships `checkout_counter/Interactable`; reaching here
-	# without it indicates a scene edit dropped the node. Warn once at boot
-	# rather than on every queue_advanced refresh — see EH-07.
-	_checkout_counter_interactable = get_node_or_null(
-		"checkout_counter/Interactable"
-	) as Interactable
-	if _checkout_counter_interactable == null:
-		push_warning(
-			"RetroGames: checkout_counter/Interactable not found; "
-			+ "register prompt will not flip between idle and "
-			+ "customer-waiting states."
-		)
-	_connect_checkout_prompt_signals()
 	_connect_entrance_door()
 	_disable_orbit_controller_for_fp_startup()
 	_spawn_time_clock_interactable()
@@ -397,55 +366,13 @@ func _on_store_entered(store_id: StringName) -> void:
 	_testing_available = has_testing_station()
 	_apply_accent_to_slots(UIThemeConstants.STORE_ACCENT_RETRO_GAMES)
 	_apply_day1_quarantine()
-	_refresh_checkout_prompt()
 	EventBus.store_opened.emit(String(STORE_ID))
-
-
-## Subscribes to the EventBus signal that reports register-queue size so the
-## checkout counter prompt can mirror "customer waiting" vs "no customer".
-## PlayerCheckout emits `queue_advanced` whenever the queue grows or shrinks
-## (including the initial customer arrival) so it is the single source of
-## truth for the prompt state.
-func _connect_checkout_prompt_signals() -> void:
-	_connect_store_signal(EventBus.queue_advanced, _on_queue_advanced)
-
-
-func _on_queue_advanced(size: int) -> void:
-	_register_queue_size = maxi(size, 0)
-	_refresh_checkout_prompt()
-
-
-## §F-109 — Updates the checkout counter Interactable's display label based on
-## whether a customer is currently in the register queue. The prompt is
-## purely informational ("Customer at checkout" / "No customer waiting") with
-## an empty verb so the InteractionPrompt never renders a dead "Press E" cue —
-## Day 1 customers auto-complete checkout via PlayerCheckout, so a player-
-## driven verb on the counter would advertise an action that does nothing.
-## Same dead-prompt removal contract as §F-111 shelf_slot empty-verb path.
-##
-## Silent return on null `_checkout_counter_interactable` is paired with the
-## boot-time warning in `_ready` (EH-07): the missing-node case is logged
-## once on entry rather than every queue_advanced tick, which would otherwise
-## flood the log on a busy register.
-func _refresh_checkout_prompt() -> void:
-	if _checkout_counter_interactable == null:
-		return
-	if _register_queue_size > 0:
-		_checkout_counter_interactable.display_name = (
-			_CHECKOUT_PROMPT_NAME_ACTIVE
-		)
-	else:
-		_checkout_counter_interactable.display_name = (
-			_CHECKOUT_PROMPT_NAME_IDLE
-		)
-	_checkout_counter_interactable.prompt_text = ""
 
 
 ## Subscribes to the entrance-door Interactable so pressing E on the glass
 ## door releases the cursor and changes GameManager state to MALL_OVERVIEW.
-## Silent return on a missing node mirrors the checkout-counter handling
-## above: a missing scene node is logged once at boot via `push_warning` so
-## the failure surfaces without flooding logs.
+## Logs a missing scene node once at boot via `push_warning` so the failure
+## surfaces without flooding logs.
 func _connect_entrance_door() -> void:
 	_entrance_door_interactable = get_node_or_null(
 		_ENTRANCE_DOOR_INTERACTABLE_PATH

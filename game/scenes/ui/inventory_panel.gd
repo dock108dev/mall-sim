@@ -1,6 +1,11 @@
 ## Left-dock inventory panel with stock tabs, search/filter, and context menu.
+##
+## Inherits the `_focus_pushed` / `_push_modal_focus` / `_pop_modal_focus` /
+## `_exit_tree` auto-pop / `_reset_for_tests` contract from `ModalPanel`.
+## The custom `open(source)` / `close(immediate)` shapes wrap the inherited
+## helpers rather than calling `super.open()` / `super.close()` directly.
 class_name InventoryPanel
-extends CanvasLayer
+extends ModalPanel
 
 enum Tab { BACKROOM, SHELVES, ALL }
 
@@ -25,7 +30,6 @@ var order_panel: OrderPanel = null
 
 var _selected_item: ItemInstance = null
 var _is_open: bool = false
-var _focus_pushed: bool = false
 var _backdrop: ColorRect
 var _cell_map: Dictionary = {}
 var _store_inventory: Array[Dictionary] = []
@@ -113,8 +117,8 @@ func _exit_tree() -> void:
 	# placement_mode_exited signal fires; that handler also pops the frame.
 	if _shelf_actions.is_placement_mode:
 		_shelf_actions.exit_placement_mode()
-	if _focus_pushed:
-		_pop_modal_focus()
+	# Defer to ModalPanel's auto-pop guard for the dangling-frame case.
+	super._exit_tree()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -235,39 +239,11 @@ func _on_placement_mode_exited() -> void:
 		_pop_modal_focus()
 
 
-func _push_modal_focus() -> void:
-	if _focus_pushed:
-		return
-	InputFocus.push_context(InputFocus.CTX_MODAL)
-	_focus_pushed = true
-
-
-func _pop_modal_focus() -> void:
-	if not _focus_pushed:
-		return
-	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
-	# without going through this contract. Surface it via push_error AND skip
-	# the pop so we don't corrupt someone else's frame. assert() alone would
-	# be stripped from release builds and silently double-pop the wrong frame.
-	if InputFocus.current() != InputFocus.CTX_MODAL:
-		push_error(
-			(
-				"InventoryPanel.close: expected CTX_MODAL on top, got %s — "
-				+ "leaving stack untouched to avoid corrupting sibling frame"
-			)
-			% String(InputFocus.current())
-		)
-		_focus_pushed = false
-		return
-	InputFocus.pop_context()
-	_focus_pushed = false
-
-
 func _on_scene_ready(_target: StringName, _payload: Dictionary) -> void:
 	# Modals never survive a scene change. Force-close (popping our frame)
 	# before the new scene's gameplay context becomes the audited top of stack.
-	# Research §4.2. Placement mode also retains a CTX_MODAL frame between the
-	# panel-hide and the shelf-slot click; tear that down as well.
+	# Placement mode also retains a CTX_MODAL frame between the panel-hide
+	# and the shelf-slot click; tear that down as well.
 	if _is_open:
 		close(true)
 		return
@@ -275,13 +251,6 @@ func _on_scene_ready(_target: StringName, _payload: Dictionary) -> void:
 		_shelf_actions.exit_placement_mode()
 	if _focus_pushed:
 		_pop_modal_focus()
-
-
-## Test seam — clears _focus_pushed without calling pop_context. Pair with
-## InputFocus._reset_for_tests() so test harnesses that wipe the focus stack
-## don't leave the panel believing it still owns a frame.
-func _reset_for_tests() -> void:
-	_focus_pushed = false
 
 
 func _setup_modal_backdrop() -> void:
@@ -382,8 +351,14 @@ func _refresh_grid() -> void:
 	if store_id.is_empty():
 		# Day-1 contract: ISSUE-001 wires `active_store_changed` so that by the
 		# time the panel can be opened, GameManager has an active store. Hitting
-		# this path is a regression of that wiring — surface it loudly so it
-		# shows up in CI rather than silently degrading to an empty panel.
+		# this path is a regression of that wiring — surfaced as push_warning
+		# (not push_error) because `test_inventory_panel.gd
+		# ::test_refresh_with_empty_store_id_falls_back_safely` exercises the
+		# graceful-degradation contract on purpose; escalating would fail
+		# CI's stderr `^ERROR:` scan
+		# (.github/workflows/validate.yml). The fallback UI ("No active store")
+		# below is the asserted behavior. See
+		# docs/audits/error-handling-report.md §EH-10.
 		push_warning(
 			"InventoryPanel: refresh requested with no active store; "
 			+ "expected active_store_changed to have fired before open()."
@@ -562,12 +537,14 @@ func _on_remove_from_shelf(
 ) -> void:
 	_prep_row_action(item, row)
 	if not item.current_location.begins_with("shelf:"):
-		# §F-97 — UI invariant: the per-row Remove button is only built when
-		# `item.current_location` starts with `shelf:` (see
-		# `inventory_row_builder.add_remove_button` gating in `_populate_grid`).
-		# Reaching this branch means a button was offered for a non-shelf item,
-		# which is a row-builder regression rather than a legitimate state.
-		push_warning(
+		# §F-97 / error-handling-report.md §3 — UI invariant: the per-row
+		# Remove button is only built when `item.current_location` starts with
+		# `shelf:` (see `inventory_row_builder.add_remove_button` gating in
+		# `_populate_grid`). Reaching this branch means a button was offered
+		# for a non-shelf item — a row-builder regression, not a legitimate
+		# state. Escalated to push_error so CI's stderr scan fails on the
+		# regression instead of silently skipping the click.
+		push_error(
 			(
 				"InventoryPanel._on_remove_from_shelf: row built for non-shelf "
 				+ "item (instance_id=%s, location=%s); ignoring."

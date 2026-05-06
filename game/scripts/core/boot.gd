@@ -135,7 +135,13 @@ func _validate_objectives() -> Array[String]:
 func _show_error(message: String) -> void:
 	_title_label.visible = false
 	_error_panel.visible = true
-	_error_label.text = "[b]Boot Error[/b]\n\n%s\n\nCheck the console for details." % message
+	# `_error_label` has `bbcode_enabled = true`. The `message` is composed from
+	# DataLoader / arc / objectives validation strings that include file paths
+	# and JSON parser output. Escape `[` → `[lb]` so a literal bracket in any
+	# such message (or a future content-authoring mistake that lands here)
+	# cannot be rendered as a BBCode tag — see security-report.md §1.
+	var safe_message: String = message.replace("[", "[lb]")
+	_error_label.text = "[b]Boot Error[/b]\n\n%s\n\nCheck the console for details." % safe_message
 
 
 func _transition_to_main_menu() -> void:

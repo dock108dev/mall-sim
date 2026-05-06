@@ -114,6 +114,20 @@ text = ""
 horizontal_alignment = 2
 visible = false
 
+[node name="ZeroStateHint" type="Label" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 52.0
+offset_right = 300.0
+offset_bottom = 76.0
+grow_horizontal = 2
+modulate = Color(1, 1, 1, 0.65)
+text = ""
+horizontal_alignment = 1
+visible = false
+
 [node name="ToastNotificationUI" parent="." instance=ExtResource("2")]
 
 [node name="Crosshair" parent="." instance=ExtResource("6")]
@@ -121,12 +135,4 @@ visible = false
 [node name="PlacementHintUI" parent="." instance=ExtResource("4")]
 
 [node name="CloseDayPreview" parent="." instance=ExtResource("5")]
-
-[node name="CloseDayConfirmDialog" type="ConfirmationDialog" parent="."]
-title = "Close Day"
-size = Vector2i(420, 160)
-dialog_text = "You haven't made your first sale yet. Close Day 1 anyway?"
-dialog_autowrap = true
-ok_button_text = "Close Anyway"
-cancel_button_text = "Stay Open"
 

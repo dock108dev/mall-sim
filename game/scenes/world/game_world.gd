@@ -26,6 +26,9 @@ const _DAY_SUMMARY_SCENE: PackedScene = preload(
 const _CLOSING_CHECKLIST_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/closing_checklist.tscn"
 )
+const _CLOSE_DAY_CONFIRMATION_PANEL_SCENE: PackedScene = preload(
+	"res://game/scenes/ui/close_day_confirmation_panel.tscn"
+)
 const _FIXTURE_CATALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/fixture_catalog.tscn"
 )
@@ -586,6 +589,15 @@ func _setup_deferred_panels() -> void:
 	_ui_layer.add_child(_closing_checklist)
 	day_cycle_controller.set_closing_checklist(_closing_checklist)
 
+	# Loop-incomplete close-day confirmation modal. Subscribes itself to
+	# `EventBus.day_close_confirmation_requested` in `_ready`; nothing else
+	# needs to wire it.
+	var close_day_confirmation: CloseDayConfirmationPanel = (
+		_CLOSE_DAY_CONFIRMATION_PANEL_SCENE.instantiate()
+		as CloseDayConfirmationPanel
+	)
+	_ui_layer.add_child(close_day_confirmation)
+
 	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
 	_ui_layer.add_child(_mall_overview)
 	_mall_overview.setup(inventory_system, economy_system)
@@ -1065,18 +1077,21 @@ func _spawn_player_in_store(store_root: Node, store_id: StringName) -> bool:
 ## to the script's defaults — the default already targets the canonical
 ## 16×20 retail interior, so a missing override is not an error.
 ##
-## §F-56 — Wrong-type metadata is a content-authoring bug (the marker carries a
-## `bounds_min` key but the value isn't a `Vector3`). Falling silently through
-## to the default footprint can let the player walk through walls in a store
-## whose interior is smaller than the default bounds, so the type mismatch is
-## escalated via `push_warning` per side instead of an unconditional silent
-## fallback. `null` (key absent) is the documented opt-out and stays silent.
+## §F-56 / error-handling-report.md §2 — Wrong-type metadata is a content-
+## authoring bug (the marker carries a `bounds_min` key but the value isn't a
+## `Vector3`). Falling silently through to the default footprint can let the
+## player walk through walls in a store whose interior is smaller than the
+## default bounds, so the type mismatch is escalated via `push_error` per side
+## instead of `push_warning`. `null` (key absent) is the documented opt-out
+## and stays silent. The default footprint is still applied so the store
+## remains playable; the error fails the CI gut-tests stderr scan so the
+## bad metadata is caught at build time.
 func _apply_marker_bounds_override(player: StorePlayerBody, marker: Marker3D) -> void:
 	var bmin: Variant = marker.get_meta(&"bounds_min", null)
 	if bmin is Vector3:
 		player.bounds_min = bmin
 	elif bmin != null:
-		push_warning(
+		push_error(
 			"GameWorld: PlayerEntrySpawn.bounds_min is %s, expected Vector3 — using default"
 			% type_string(typeof(bmin))
 		)
@@ -1084,7 +1099,7 @@ func _apply_marker_bounds_override(player: StorePlayerBody, marker: Marker3D) ->
 	if bmax is Vector3:
 		player.bounds_max = bmax
 	elif bmax != null:
-		push_warning(
+		push_error(
 			"GameWorld: PlayerEntrySpawn.bounds_max is %s, expected Vector3 — using default"
 			% type_string(typeof(bmax))
 		)

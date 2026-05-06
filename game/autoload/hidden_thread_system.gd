@@ -31,10 +31,32 @@ const SCAPEGOAT_RISK_DELTA_VARIANCE: float = 1.0
 const TIER2_UNSATISFIED_THRESHOLD: int = 3
 const TIER2_BACKROOM_REENTRY_THRESHOLD: int = 3
 const TIER2_DISCREPANCY_THRESHOLD: int = 2
+const TIER2_DEFECTIVE_RETURNS_THRESHOLD: int = 2
 
 const AWARENESS_TIER_BOUNDARIES: Array[float] = [25.0, 50.0, 75.0]
 
+## Tiered consequence-text copy emitted by `finalize_day()`. Index is the
+## per-day count of distinct hidden-thread props inspected; counts of 2 or
+## more share the escalating string. Empty string at index 0 keeps the
+## DaySummary label hidden when no inspection occurred.
+const CONSEQUENCE_TEXT_ZERO: String = ""
+const CONSEQUENCE_TEXT_ONE: String = "A minor irregularity was noted today."
+const CONSEQUENCE_TEXT_MULTIPLE: String = (
+	"Several items of interest were flagged during the shift."
+)
+
+const PAPER_TRAIL_DELTA_WARRANTY_BINDER: float = 2.0
+const PAPER_TRAIL_DELTA_EMPLOYEE_SCHEDULE: float = 1.0
+
 const BACKROOM_PANEL_NAME: String = "back_room_inventory"
+
+## Caps on save-derived collections. The 30-day run upper-bounds the meaningful
+## key range for `_artifact_days_processed`; ARTIFACT_SCHEDULE has 5 entries so
+## `discovered_artifacts` cannot legitimately exceed that. Caps are defensive
+## ceilings for hand-edited or corrupted save payloads — see security-report.md §3.
+const MAX_RUN_DAY: int = 30
+const MAX_DISCOVERED_ARTIFACTS: int = 32
+const MAX_PERSISTED_ID_LENGTH: int = 64
 
 # Day-boundary artifact unlock schedule. Key is the day; value carries the
 # artifact id and the awareness_score floor that must be met at day_ended.
@@ -59,12 +81,29 @@ var discovered_artifacts: Array[StringName] = []
 var _unsatisfied_today: int = 0
 var _backroom_reentries_today: int = 0
 var _discrepancies_today: int = 0
+var _defective_returns_today: int = 0
 
 # Pattern fire-once-per-day flags so a single Tier 2 pattern cannot rack up
 # multiple +10 awareness ticks within the same day.
 var _tier2_unsatisfied_fired_today: bool = false
 var _tier2_backroom_fired_today: bool = false
 var _tier2_discrepancies_fired_today: bool = false
+var _tier2_defective_returns_fired_today: bool = false
+
+# Per-day idempotency set keyed by interactable_id. Each hidden-thread prop
+# inspection is awareness-credited exactly once per day; repeat presses still
+# emit the EventBus signal but the handler skips the score increment.
+var _inspected_this_day: Dictionary = {}
+
+# Counts the number of distinct hidden-thread inspections that ran today.
+# Drives the tiered `hidden_thread_consequence_triggered` text emitted by
+# `finalize_day`. Reset at day_started.
+var _inspections_today: int = 0
+
+# Tracks days for which `finalize_day` has already emitted the consequence
+# text so a defensive double-call (autoload handler + explicit caller) cannot
+# double-fire the signal.
+var _finalized_days: Dictionary = {}
 
 # Days whose end-of-day artifact check has already run. Guarantees the gate
 # is evaluated exactly once per scheduled day per run.
@@ -85,6 +124,14 @@ func _connect_signals() -> void:
 	EventBus.customer_left.connect(_on_customer_left)
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.hold_conflict_bypassed.connect(_on_hold_conflict_bypassed)
+	EventBus.hold_shelf_inspected.connect(_on_hold_shelf_inspected)
+	EventBus.warranty_binder_examined.connect(_on_warranty_binder_examined)
+	EventBus.backordered_item_examined.connect(_on_backordered_item_examined)
+	EventBus.register_note_examined.connect(_on_register_note_examined)
+	EventBus.security_flyer_examined.connect(_on_security_flyer_examined)
+	EventBus.returned_item_examined.connect(_on_returned_item_examined)
+	EventBus.employee_schedule_examined.connect(_on_employee_schedule_examined)
+	EventBus.defective_item_received.connect(_on_defective_item_received)
 
 
 # ── Tier 1 handlers ───────────────────────────────────────────────────────────
@@ -122,6 +169,87 @@ func _on_display_exposes_weird_inventory(store_id: StringName) -> void:
 	})
 
 
+# ── Hidden-thread interactable handlers (idempotent per object per day) ──────
+
+func _on_hold_shelf_inspected(
+	store_id: StringName, suspicious_slip_count: int
+) -> void:
+	if not _claim_inspection(&"hold_shelf"):
+		return
+	_apply_tier1_trigger(&"hold_shelf_inspected", {
+		"store_id": store_id,
+		"suspicious_slip_count": suspicious_slip_count,
+	})
+
+
+func _on_warranty_binder_examined(store_id: StringName, day: int) -> void:
+	if not _claim_inspection(&"warranty_binder"):
+		return
+	paper_trail_score += PAPER_TRAIL_DELTA_WARRANTY_BINDER
+	_apply_tier1_trigger(&"warranty_binder_examined", {
+		"store_id": store_id, "day": day,
+	})
+
+
+func _on_backordered_item_examined(
+	store_id: StringName, item_id: StringName, days_pending: int
+) -> void:
+	if not _claim_inspection(&"backordered_item"):
+		return
+	_apply_tier1_trigger(&"backordered_item_examined", {
+		"store_id": store_id,
+		"item_id": item_id,
+		"days_pending": days_pending,
+	})
+
+
+func _on_register_note_examined(store_id: StringName, day: int) -> void:
+	if not _claim_inspection(&"register_note"):
+		return
+	_apply_tier1_trigger(&"register_note_examined", {
+		"store_id": store_id, "day": day,
+	})
+
+
+func _on_security_flyer_examined(store_id: StringName) -> void:
+	if not _claim_inspection(&"security_flyer"):
+		return
+	_apply_tier1_trigger(&"security_flyer_examined", {
+		"store_id": store_id,
+	})
+
+
+func _on_returned_item_examined(
+	store_id: StringName, item_id: StringName
+) -> void:
+	if not _claim_inspection(&"returned_item"):
+		return
+	_apply_tier1_trigger(&"returned_item_examined", {
+		"store_id": store_id, "item_id": item_id,
+	})
+
+
+func _on_employee_schedule_examined(store_id: StringName, day: int) -> void:
+	if not _claim_inspection(&"employee_schedule"):
+		return
+	paper_trail_score += PAPER_TRAIL_DELTA_EMPLOYEE_SCHEDULE
+	_apply_tier1_trigger(&"employee_schedule_examined", {
+		"store_id": store_id, "day": day,
+	})
+
+
+## Returns true on the first call per day for `interactable_id`, false on
+## subsequent calls. Centralizes the idempotency contract so each hidden-
+## thread handler stays one-line. Also bumps the per-day inspection counter
+## that drives `finalize_day`'s tiered consequence text.
+func _claim_inspection(interactable_id: StringName) -> bool:
+	if _inspected_this_day.has(interactable_id):
+		return false
+	_inspected_this_day[interactable_id] = true
+	_inspections_today += 1
+	return true
+
+
 # ── Tier 2 pattern accumulators ──────────────────────────────────────────────
 
 func _on_customer_left(customer_data: Dictionary) -> void:
@@ -146,6 +274,14 @@ func _on_hold_conflict_bypassed(
 		"store_id": store_id, "item_id": item_id,
 		"disputed_slip_ids": disputed_slip_ids,
 	})
+
+
+## Passive Tier 2 accumulator: fires when ReturnsSystem deposits two or more
+## defective items into the damaged bin in a single day. Distinct from
+## `returned_item_examined`, which is the player-driven inspection trigger.
+func _on_defective_item_received(_item_id: String) -> void:
+	_defective_returns_today += 1
+	_check_tier2_defective_returns()
 
 
 func _check_tier2_unsatisfied() -> void:
@@ -181,19 +317,67 @@ func _check_tier2_discrepancies() -> void:
 	})
 
 
+func _check_tier2_defective_returns() -> void:
+	if _tier2_defective_returns_fired_today:
+		return
+	if _defective_returns_today < TIER2_DEFECTIVE_RETURNS_THRESHOLD:
+		return
+	_tier2_defective_returns_fired_today = true
+	_apply_tier2_trigger(&"defective_returns_cluster", {
+		"count": _defective_returns_today,
+	})
+
+
 # ── Day boundary ──────────────────────────────────────────────────────────────
 
 func _on_day_started(_day: int) -> void:
 	_unsatisfied_today = 0
 	_backroom_reentries_today = 0
 	_discrepancies_today = 0
+	_defective_returns_today = 0
 	_tier2_unsatisfied_fired_today = false
 	_tier2_backroom_fired_today = false
 	_tier2_discrepancies_fired_today = false
+	_tier2_defective_returns_fired_today = false
+	_inspected_this_day.clear()
+	_inspections_today = 0
 
 
 func _on_day_ended(day: int) -> void:
+	# Emit the consequence text BEFORE artifact evaluation so it lands on the
+	# bus before any other day_ended subscriber (notably PerformanceReportSystem)
+	# builds its end-of-day report. HiddenThreadSystem is an autoload, so its
+	# handler is connected at autoload time and runs before scene-time
+	# subscribers' connect() calls in tier-5 init.
+	finalize_day(day)
 	_evaluate_artifact_unlock(day)
+
+
+## Emits the per-day `hidden_thread_consequence_triggered` text based on how
+## many distinct hidden-thread props were inspected during the day. Idempotent
+## per day so a defensive double-call (e.g., explicit invocation from
+## DayCycleController) cannot double-fire the signal.
+func finalize_day(day: int) -> void:
+	if _finalized_days.get(day, false):
+		return
+	_finalized_days[day] = true
+	EventBus.hidden_thread_consequence_triggered.emit(
+		_consequence_text_for_count(_inspections_today)
+	)
+
+
+## Returns the per-day inspection count without leaking the dictionary. Used
+## by tests and downstream tooling that need to verify the tiered text branch.
+func get_inspections_today() -> int:
+	return _inspections_today
+
+
+static func _consequence_text_for_count(count: int) -> String:
+	if count <= 0:
+		return CONSEQUENCE_TEXT_ZERO
+	if count == 1:
+		return CONSEQUENCE_TEXT_ONE
+	return CONSEQUENCE_TEXT_MULTIPLE
 
 
 func _evaluate_artifact_unlock(day: int) -> void:
@@ -328,14 +512,28 @@ func load_state(data: Dictionary) -> void:
 	discovered_artifacts.clear()
 	var raw_artifacts: Variant = data.get("discovered_artifacts", [])
 	if raw_artifacts is Array:
+		# Cap array length and per-entry id length so a hand-edited save cannot
+		# inject unbounded entries into a cumulative collection. See
+		# security-report.md §3.
 		for raw: Variant in raw_artifacts:
-			discovered_artifacts.append(StringName(str(raw)))
+			if discovered_artifacts.size() >= MAX_DISCOVERED_ARTIFACTS:
+				break
+			var raw_str: String = str(raw)
+			if raw_str.is_empty() or raw_str.length() > MAX_PERSISTED_ID_LENGTH:
+				continue
+			discovered_artifacts.append(StringName(raw_str))
 
 	_artifact_days_processed.clear()
 	var raw_days: Variant = data.get("artifact_days_processed", {})
 	if raw_days is Dictionary:
+		# Drop entries whose day key is out of the legitimate run range so an
+		# oversized cfg cannot inject a wide span of stub keys that survive for
+		# the rest of the session. See security-report.md §3.
 		for key: Variant in (raw_days as Dictionary).keys():
-			_artifact_days_processed[int(key)] = bool((raw_days as Dictionary)[key])
+			var day_key: int = int(key)
+			if day_key < 1 or day_key > MAX_RUN_DAY:
+				continue
+			_artifact_days_processed[day_key] = bool((raw_days as Dictionary)[key])
 
 
 ## §F-128 — coerces a save-derived Variant to a finite, non-negative float. NaN
@@ -363,7 +561,12 @@ func reset() -> void:
 	_unsatisfied_today = 0
 	_backroom_reentries_today = 0
 	_discrepancies_today = 0
+	_defective_returns_today = 0
 	_tier2_unsatisfied_fired_today = false
 	_tier2_backroom_fired_today = false
 	_tier2_discrepancies_fired_today = false
+	_tier2_defective_returns_fired_today = false
+	_inspected_this_day.clear()
+	_inspections_today = 0
+	_finalized_days.clear()
 	_artifact_days_processed.clear()

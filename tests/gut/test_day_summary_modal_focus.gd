@@ -1,5 +1,6 @@
-## ISSUE-014 — DaySummary is the third modal in the close-day chain
-## (CloseDayConfirmDialog → CloseDayPreview → DaySummary). It must push
+## ISSUE-014 — DaySummary is the second modal in the close-day chain
+## (CloseDayPreview → DaySummary; CloseDayConfirmationPanel is interleaved
+## only when ObjectiveDirector.can_close_day() is false). It must push
 ## CTX_MODAL when shown so the FP cursor stays released across the
 ## preview→summary hand-off, and pop on hide so the cursor recapture (or
 ## mall-overview cursor mode) fires the moment the player clicks Continue.

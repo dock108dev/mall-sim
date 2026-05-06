@@ -176,6 +176,9 @@ func _on_store_entered(_store_id: StringName) -> void:
 
 
 func _on_store_exited(_store_id: StringName) -> void:
+	# Symmetric to `_on_store_entered`: hallway transitions are driven by
+	# `_on_storefront_exited` and `_on_active_store_changed`, so this handler
+	# is intentionally a claim point with no behavior.
 	pass
 
 

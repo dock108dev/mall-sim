@@ -31,6 +31,12 @@ const DEFAULT_APPROVAL: float = 0.5
 const DEFAULT_STATUS: StringName = STATUS_ACTIVE
 const DEFAULT_HOURLY_WAGE: float = 10.0
 
+## Hard cap on save-derived string field lengths. The persisted cfg is
+## hand-editable under user://; these fields are content IDs, not free-form
+## text, so a 64-character ceiling is well above any legitimate value
+## (current canonical ids are ≤16 chars). See security-report.md §2.
+const MAX_PERSISTED_ID_LENGTH: int = 64
+
 
 @export var employer_store_id: StringName = &""
 @export var season_number: int = 1
@@ -103,11 +109,18 @@ func load_save_data(data: Dictionary) -> void:
 		0.0
 	)
 	season_number = max(int(data.get("season_number", 1)), 1)
+	# Length-cap save-derived id strings before constructing StringName so a
+	# hand-edited cfg cannot stash a multi-megabyte value into a long-lived
+	# field. See security-report.md §2.
 	var raw_status: String = str(data.get("employment_status", String(DEFAULT_STATUS)))
+	if raw_status.length() > MAX_PERSISTED_ID_LENGTH:
+		raw_status = String(DEFAULT_STATUS)
 	employment_status = (
 		StringName(raw_status) if not raw_status.is_empty() else DEFAULT_STATUS
 	)
 	var raw_store: String = str(data.get("employer_store_id", ""))
+	if raw_store.length() > MAX_PERSISTED_ID_LENGTH:
+		raw_store = ""
 	employer_store_id = StringName(raw_store)
 
 

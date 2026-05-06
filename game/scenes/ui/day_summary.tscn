@@ -157,6 +157,50 @@ layout_mode = 2
 text = ""
 horizontal_alignment = 1
 
+[node name="ArchetypeSeparator" type="HSeparator" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+visible = false
+
+[node name="ArchetypeLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = ""
+visible = false
+horizontal_alignment = 1
+
+[node name="ArchetypeSubtextLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+visible = false
+horizontal_alignment = 1
+autowrap_mode = 2
+modulate = Color(1, 1, 1, 0.7)
+
+[node name="FloorAwarenessRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
+alignment = 1
+visible = false
+
+[node name="FloorAwarenessCaption" type="Label" parent="Root/Panel/Margin/VBox/FloorAwarenessRow"]
+layout_mode = 2
+text = "Floor Awareness"
+
+[node name="FloorStarsLabel" type="Label" parent="Root/Panel/Margin/VBox/FloorAwarenessRow"]
+layout_mode = 2
+text = "★☆☆☆☆"
+
+[node name="AttentionSeparator" type="HSeparator" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+visible = false
+
+[node name="AttentionNotesLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+visible = false
+autowrap_mode = 2
+
 [node name="StaffWagesLabel" type="Label" parent="Root/Panel/Margin/VBox"]
 layout_mode = 2
 text = "Staff Wages: -$0.00"
@@ -250,9 +294,15 @@ layout_mode = 2
 custom_minimum_size = Vector2(200, 48)
 text = "Main Menu"
 
+[node name="ReplayButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+text = "Replay Day 1 →"
+
 [node name="ContinueButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(200, 48)
+visible = false
 text = "Next Day →"
 
 [node name="AutoAdvanceBar" type="ProgressBar" parent="Root/Panel/Margin/VBox"]

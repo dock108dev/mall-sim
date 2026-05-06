@@ -22,6 +22,10 @@ const DISAPPOINTED_CHANCE: float = 0.05
 const NAV_RECALC_INTERVAL: float = 0.2
 ## Squared arrival radius for direct waypoint-fallback movement (≈0.6m).
 const WAYPOINT_ARRIVAL_DIST_SQ: float = 0.36
+## Day-1 patience tick scale for WAITING_IN_QUEUE customers. 0.5 doubles their
+## effective patience while the player rings up the head-of-queue customer
+## manually, so a slow first transaction does not collapse the queue.
+const DAY1_QUEUE_PATIENCE_TICK_SCALE: float = 0.5
 const CONDITION_RANKS: Dictionary = {
 	"poor": 0,
 	"fair": 1,
@@ -58,6 +62,12 @@ var _current_target_slot: Node = null
 var _made_purchase: bool = false
 ## Set when transitioning to LEAVING; included in EventBus.customer_left (store NPCs).
 var _leave_reason: StringName = &"patience_expired"
+## True while the head-of-queue customer is parked at the register waiting for
+## the player to ring them up (Day-1 manual checkout gate). While true,
+## patience does not tick in `_process_purchasing` so a reasonably-paced
+## first-time player can complete the sale without the customer abandoning.
+## Set by `advance_to_register` based on the day and the first-sale flag.
+var _awaiting_player_checkout: bool = false
 var _exit_position: Vector3 = Vector3.ZERO
 var _register_position: Vector3 = Vector3.ZERO
 var _initialized: bool = false
@@ -201,6 +211,7 @@ func get_leave_reason() -> StringName:
 
 ## Called by CheckoutSystem when checkout completes (accept or decline).
 func complete_purchase() -> void:
+	_awaiting_player_checkout = false
 	_made_purchase = true
 	_desired_item = null
 	_desired_item_slot = null
@@ -217,11 +228,33 @@ func enter_queue(queue_position: Vector3) -> void:
 
 
 ## Called by RegisterQueue when this customer advances to register.
+##
+## Sets `_awaiting_player_checkout` while the BRAINDUMP Day-1 manual-checkout
+## gate is active (Day 1, before the first sale completes). The gate pauses
+## patience in `_process_purchasing` until the player rings up the customer at
+## the register. After the first sale closes, `first_sale_complete` is set
+## and subsequent customers (Day 1 second customer onward, Day 2+) reach the
+## register without the gate engaged.
 func advance_to_register() -> void:
 	_set_state(State.PURCHASING)
 	if _animator != null:
 		_animator.play_for_state(State.PURCHASING)
 	_set_navigation_target(_register_position)
+	_awaiting_player_checkout = _is_first_sale_guarantee_active()
+
+
+## Returns true while the player must press E at the register to ring up
+## this customer (Day-1 first-sale manual-checkout gate).
+func is_awaiting_player_checkout() -> bool:
+	return _awaiting_player_checkout
+
+
+## Returns true once the customer has parked at the register (navigation
+## finished while in PURCHASING). Exposed so the RegisterInteractable can
+## decide when to surface the "Press E to ring up" prompt without poking the
+## private `_is_navigation_finished` helper.
+func is_at_register() -> bool:
+	return current_state == State.PURCHASING and _is_navigation_finished()
 
 
 ## Called by CheckoutSystem when the queue is full.
@@ -300,14 +333,30 @@ func _is_first_sale_guarantee_active() -> bool:
 
 
 func _process_purchasing(delta: float) -> void:
-	if _is_navigation_finished():
-		patience_timer -= delta
-		if patience_timer <= 0.0:
-			_leave_with(&"patience_expired")
+	if not _is_navigation_finished():
+		return
+	# BRAINDUMP Day-1 manual checkout: while waiting on the player's E-press,
+	# patience does not tick. The gate is cleared in `complete_purchase` /
+	# `_leave_with`, so a customer who never gets rung up still leaves on the
+	# next state transition (e.g. forced exit on day close).
+	if _awaiting_player_checkout:
+		return
+	patience_timer -= delta
+	if patience_timer <= 0.0:
+		_leave_with(&"patience_expired")
 
 
 func _process_waiting_in_queue(delta: float) -> void:
-	patience_timer -= delta
+	# Day-1 queue patience scaling: while the player is learning the manual
+	# checkout, head-of-queue dwell time can stretch beyond the default
+	# patience window. Slowing the queue tick keeps the second/third customer
+	# from abandoning before the player rings up the first sale.
+	var tick_scale: float = (
+		DAY1_QUEUE_PATIENCE_TICK_SCALE
+		if _is_first_sale_guarantee_active()
+		else 1.0
+	)
+	patience_timer -= delta * tick_scale
 	if patience_timer <= 0.0:
 		_leave_with(&"patience_expired")
 
@@ -358,6 +407,7 @@ func _transition_to_deciding_or_leaving() -> void:
 
 
 func _leave_with(reason: StringName) -> void:
+	_awaiting_player_checkout = false
 	_leave_reason = reason
 	_transition_to(State.LEAVING)
 

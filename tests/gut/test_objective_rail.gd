@@ -428,3 +428,52 @@ func test_rail_visible_again_when_modal_context_popped() -> void:
 		rail.visible,
 		"Rail must reappear when the modal context is popped"
 	)
+
+
+# ── Flash re-trigger on hidden→visible transition ──────────────────────────────
+
+func test_flash_retriggers_when_rail_transitions_from_modal_hidden_to_visible() -> void:
+	# When a payload arrives while a modal is up, the initial _flash() runs
+	# against an invisible rail — the alpha tween completes in the background
+	# and the rail snaps in at full opacity when the modal closes. Verify the
+	# rail re-flashes on the hidden→visible edge so the player still sees the
+	# 1-second fade-in.
+	var rail := _make_rail()
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	EventBus.objective_changed.emit(_day_payload(1))
+	assert_false(rail.visible, "Pre-condition: rail hidden behind modal")
+	var pre_pop_tween: Tween = rail._tween
+	InputFocus.pop_context()
+	assert_true(rail.visible, "Rail must be visible after modal pops")
+	assert_not_null(rail._tween, "A flash tween must exist after re-show")
+	assert_ne(
+		rail._tween, pre_pop_tween,
+		"Hidden→visible transition must replace the original (modal-hidden) tween"
+	)
+	assert_eq(
+		rail._margin.modulate.a, 0.0,
+		"Re-flash must reset the margin alpha to 0 so the fade is visible"
+	)
+
+
+func test_refresh_does_not_retrigger_flash_when_already_visible() -> void:
+	# Once visible, calling _refresh_visibility() again must not start a new
+	# flash tween — only the hidden→visible edge re-flashes.
+	var rail := _make_rail()
+	EventBus.objective_changed.emit(_day_payload(1))
+	assert_true(rail.visible, "Pre-condition: rail visible")
+	var first_tween: Tween = rail._tween
+	rail._refresh_visibility()
+	assert_eq(
+		rail._tween, first_tween,
+		"Already-visible refresh must not start a second flash tween"
+	)
+
+
+func test_refresh_does_not_flash_when_resolving_hidden() -> void:
+	# A refresh that resolves should_show=false must not call _flash().
+	var rail := _make_rail()
+	# No payload yet -> rail stays hidden. Force a refresh via state change.
+	_emit_state(GameManager.State.MAIN_MENU)
+	assert_false(rail.visible, "Rail hidden in MAIN_MENU with no payload")
+	assert_null(rail._tween, "No flash tween should run while staying hidden")

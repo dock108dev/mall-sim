@@ -32,6 +32,10 @@ var _hovered_action_label: String = ""
 var _hovered_can_interact: bool = false
 var _inventory_system: InventorySystem = null
 var _open_panel_count: int = 0
+## Debug-only overlay label. Created in `_ready` only when
+## `OS.is_debug_build()` is true; left null in release export builds so the
+## CanvasLayer/Label nodes are never instantiated.
+var _debug_overlay: Label = null
 
 
 func _ready() -> void:
@@ -42,6 +46,8 @@ func _ready() -> void:
 	EventBus.active_camera_changed.connect(_on_active_camera_changed)
 	if CameraManager.active_camera:
 		_apply_camera(CameraManager.active_camera)
+	if OS.is_debug_build():
+		_setup_debug_overlay()
 
 
 ## Sets the InventorySystem reference for shelf item tooltip lookups.
@@ -55,8 +61,10 @@ func _process(_delta: float) -> void:
 	if _open_panel_count > 0:
 		if _hovered_target:
 			_set_hovered_target(null)
-		return
-	_update_raycast()
+	else:
+		_update_raycast()
+	if OS.is_debug_build() and _debug_overlay != null:
+		_update_debug_overlay()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -106,6 +114,14 @@ func get_hovered_camera_distance() -> float:
 	if not is_instance_valid(_camera) or not is_instance_valid(_hovered_target):
 		return -1.0
 	return _camera.global_position.distance_to(_hovered_target.global_position)
+
+
+## Returns the number of currently-open modal panels tracked from the
+## EventBus.panel_opened/panel_closed pair. Exposed so debug overlays, audit
+## tooling, and tests can read modal-lock depth without poking the private
+## `_open_panel_count` field directly.
+func get_open_panel_count() -> int:
+	return _open_panel_count
 
 
 func _on_active_camera_changed(camera: Camera3D) -> void:
@@ -159,6 +175,36 @@ func _update_raycast() -> void:
 
 	if new_target != _hovered_target:
 		_set_hovered_target(new_target)
+	elif _hovered_target != null:
+		_poll_hovered_can_interact()
+
+
+## Re-queries `can_interact()` on the still-hovered target and re-emits the
+## focus event when the result has changed since hover-entry. Without this
+## poll, `_hovered_can_interact` and the HUD prompt remain stuck on the
+## hover-entry snapshot — so a shelf that fills mid-hover, a register that
+## acquires a customer mid-hover, or a counter that disables mid-hover would
+## show a "Press E" badge that silently no-ops on press. `interact()` has
+## an internal `can_interact()` re-check that already prevents phantom
+## downstream signals, but the visual badge must match reality.
+##
+## Subclasses are expected to keep `can_interact()` cheap (pure state read,
+## no allocations) since it now runs every frame while a target is hovered.
+func _poll_hovered_can_interact() -> void:
+	if not is_instance_valid(_hovered_target):
+		return
+	var current_can: bool = _hovered_target.can_interact()
+	if current_can == _hovered_can_interact:
+		return
+	_hovered_can_interact = current_can
+	var action_label: String
+	if current_can:
+		action_label = _build_action_label(_hovered_target)
+		EventBus.interactable_focused.emit(action_label)
+	else:
+		action_label = _hovered_target.get_disabled_reason()
+		EventBus.interactable_focused_disabled.emit(action_label)
+	_hovered_action_label = action_label
 
 
 func _set_hovered_target(new_target: Interactable) -> void:
@@ -332,3 +378,63 @@ func _log_interaction_dispatch(target: Interactable) -> void:
 	var verb: String = target.action_verb.strip_edges()
 	var display: String = target.display_name.strip_edges()
 	print("[Interaction] %s: %s (dispatched)" % [display, verb])
+
+
+## Builds the top-left CanvasLayer + Label used by the debug interaction
+## overlay. Only called from `_ready` when `OS.is_debug_build()` is true, so
+## release export templates never allocate the node tree and pay no per-frame
+## cost. Layer 128 keeps it above gameplay HUD without interfering with
+## existing UI layers.
+func _setup_debug_overlay() -> void:
+	var canvas: CanvasLayer = CanvasLayer.new()
+	canvas.layer = 128
+	canvas.name = "DebugInteractionOverlay"
+	add_child(canvas)
+	var panel: PanelContainer = PanelContainer.new()
+	panel.position = Vector2(8, 8)
+	canvas.add_child(panel)
+	_debug_overlay = Label.new()
+	_debug_overlay.add_theme_font_size_override("font_size", 13)
+	var monospace: SystemFont = SystemFont.new()
+	monospace.font_names = PackedStringArray(["monospace"])
+	_debug_overlay.add_theme_font_override("font", monospace)
+	panel.add_child(_debug_overlay)
+
+
+func _update_debug_overlay() -> void:
+	var focus_ctx: StringName = InputFocus.current()
+	var focus_text: String = String(focus_ctx) if focus_ctx != &"" else "—"
+	var focus_depth: int = InputFocus.depth()
+	if not is_instance_valid(_hovered_target):
+		_debug_overlay.text = (
+			"[no interactable hovered]\n"
+			+ "Panels:   %d\n"
+			+ "Focus:    %s (depth %d)"
+		) % [_open_panel_count, focus_text, focus_depth]
+		return
+	var t: Interactable = _hovered_target
+	var reason: String = "—"
+	if not _hovered_can_interact:
+		var disabled_reason: String = t.get_disabled_reason()
+		if not disabled_reason.is_empty():
+			reason = disabled_reason
+	_debug_overlay.text = (
+		"Name:     %s\n"
+		+ "Path:     %s\n"
+		+ "Layer:    %d\n"
+		+ "Mask:     %d\n"
+		+ "Enabled:  %s\n"
+		+ "Reason:   %s\n"
+		+ "Panels:   %d\n"
+		+ "Focus:    %s (depth %d)"
+	) % [
+		t.display_name,
+		str(t.get_path()),
+		t.collision_layer,
+		t.collision_mask,
+		str(t.enabled),
+		reason,
+		_open_panel_count,
+		focus_text,
+		focus_depth,
+	]

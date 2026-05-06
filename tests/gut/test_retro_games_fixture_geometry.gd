@@ -345,27 +345,34 @@ func test_register_has_terminal_monitor_silhouette() -> void:
 	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
 	if not checkout:
 		return
-	var base_mesh: MeshInstance3D = (
-		checkout.get_node_or_null("Register/RegisterMesh") as MeshInstance3D
-	)
-	var monitor: MeshInstance3D = (
-		checkout.get_node_or_null("Register/TerminalMonitor") as MeshInstance3D
+	var monitor: Node3D = (
+		checkout.get_node_or_null("Register/TerminalMonitor") as Node3D
 	)
 	assert_not_null(
 		monitor,
 		"Checkout/Register/TerminalMonitor must exist so the register reads as a terminal, not a generic box"
 	)
-	if monitor == null or not (monitor.mesh is BoxMesh):
+	if monitor == null:
 		return
-	var monitor_size: Vector3 = (monitor.mesh as BoxMesh).size
+	var body_mesh: MeshInstance3D = _first_mesh_instance(monitor)
+	assert_not_null(
+		body_mesh,
+		"TerminalMonitor must contain a body MeshInstance3D so the silhouette reads under store lighting"
+	)
+	if body_mesh == null or body_mesh.mesh == null:
+		return
+	var body_aabb: AABB = body_mesh.mesh.get_aabb()
 	assert_gte(
-		monitor_size.y, 0.20,
-		"TerminalMonitor height (y=%.2f) must be >= 0.20 m so the two-tier register silhouette reads at 52° pitch"
-		% monitor_size.y
+		body_aabb.size.y, 0.20,
+		"TerminalMonitor body height (y=%.2f) must be >= 0.20 m so the two-tier register silhouette reads at 52° pitch"
+		% body_aabb.size.y
+	)
+	var base_mesh: MeshInstance3D = (
+		checkout.get_node_or_null("Register/RegisterMesh") as MeshInstance3D
 	)
 	if base_mesh and base_mesh.mesh is BoxMesh:
 		var base_top_y: float = base_mesh.position.y + (base_mesh.mesh as BoxMesh).size.y * 0.5
-		var monitor_bottom_y: float = monitor.position.y - monitor_size.y * 0.5
+		var monitor_bottom_y: float = monitor.position.y + body_aabb.position.y
 		assert_almost_eq(
 			monitor_bottom_y, base_top_y, 0.05,
 			"TerminalMonitor must sit on the register base top (monitor bottom %.3f vs base top %.3f)"
@@ -377,23 +384,55 @@ func test_register_has_glowing_terminal_screen() -> void:
 	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
 	if not checkout:
 		return
-	var screen: MeshInstance3D = (
-		checkout.get_node_or_null("Register/TerminalScreen") as MeshInstance3D
+	var monitor: Node3D = (
+		checkout.get_node_or_null("Register/TerminalMonitor") as Node3D
 	)
+	if monitor == null:
+		return
+	var screen: MeshInstance3D = _find_named_mesh_instance(monitor, "TerminalScreen")
 	assert_not_null(
 		screen,
-		"Checkout/Register/TerminalScreen must exist for the checkout to read as a powered terminal"
+		"TerminalMonitor must contain a TerminalScreen MeshInstance3D so the checkout reads as a powered terminal"
 	)
 	if screen == null:
 		return
-	var mat: StandardMaterial3D = screen.get_surface_override_material(0) as StandardMaterial3D
-	assert_not_null(mat, "TerminalScreen must carry a StandardMaterial3D override")
+	# Material can come from a scene-level override OR the GLTF's baked
+	# surface material; either path drives the emissive glow.
+	var mat: Material = screen.get_surface_override_material(0)
+	if mat == null and screen.mesh != null:
+		mat = screen.mesh.surface_get_material(0)
+	assert_not_null(mat, "TerminalScreen must carry a material (override or GLTF surface)")
 	if mat == null:
 		return
+	var glows: bool = false
+	if mat is StandardMaterial3D:
+		glows = (mat as StandardMaterial3D).emission_enabled
+	elif mat is ShaderMaterial:
+		glows = true
 	assert_true(
-		mat.emission_enabled,
-		"TerminalScreen material must have emission_enabled so the screen glows under store lighting"
+		glows,
+		"TerminalScreen material must emit so the screen glows under store lighting"
 	)
+
+
+static func _first_mesh_instance(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node as MeshInstance3D
+	for child: Node in node.get_children():
+		var found: MeshInstance3D = _first_mesh_instance(child)
+		if found:
+			return found
+	return null
+
+
+static func _find_named_mesh_instance(node: Node, target_name: String) -> MeshInstance3D:
+	if node is MeshInstance3D and node.name == target_name:
+		return node as MeshInstance3D
+	for child: Node in node.get_children():
+		var found: MeshInstance3D = _find_named_mesh_instance(child, target_name)
+		if found:
+			return found
+	return null
 
 
 func test_checkout_register_has_overhead_label() -> void:
@@ -548,3 +587,177 @@ func test_shelf_slot_areas_remain_on_interactable_layer() -> void:
 				"%s/InteractionArea must remain on Interactable.INTERACTABLE_LAYER"
 				% slot.name
 			)
+
+
+# ── Section signs: orientation, clipping, and through-wall visibility ────────
+#
+# The four interior section labels (storefront name + tagline, interior
+# back-wall banner + sub-banner) are scene-authored Label3D nodes parented
+# into a fixed orientation. They must satisfy three rules so they read
+# correctly from inside the store:
+#   1. Either billboard or be oriented so the readable face points at the
+#      player approach direction. Storefront signs use double_sided=true so
+#      the same node serves both the exterior facing and the interior face.
+#   2. Sit at least 0.03 m proud of any backing surface (storefront panel or
+#      back wall) so they don't z-fight or render through the wall.
+#   3. Use no_depth_test=false so the wall correctly occludes them from the
+#      outside; otherwise they leak through walls in the overhead view.
+
+const _BACK_WALL_INNER_Z: float = -10.0
+const _MIN_BACKING_CLEARANCE: float = 0.03
+
+
+func test_storefront_sign_name_renders_to_interior() -> void:
+	var sign: Label3D = _root.get_node_or_null("Storefront/SignName") as Label3D
+	assert_not_null(sign, "Storefront/SignName Label3D must exist")
+	if sign == null:
+		return
+	assert_true(
+		sign.double_sided,
+		"SignName must be double_sided so the interior face renders for players inside the store"
+	)
+	assert_false(
+		sign.no_depth_test,
+		"SignName must keep no_depth_test=false so storefront text doesn't bleed through walls"
+	)
+	var backing: MeshInstance3D = (
+		_root.get_node_or_null("Storefront/SignBacking") as MeshInstance3D
+	)
+	if backing != null:
+		var offset: float = absf(sign.position.z - backing.position.z)
+		assert_gte(
+			offset, _MIN_BACKING_CLEARANCE,
+			"SignName z-offset from SignBacking (%.3f) must be >= %.2f to avoid z-clipping"
+			% [offset, _MIN_BACKING_CLEARANCE]
+		)
+
+
+func test_storefront_sign_tagline_renders_to_interior() -> void:
+	var sign: Label3D = _root.get_node_or_null("Storefront/SignTagline") as Label3D
+	assert_not_null(sign, "Storefront/SignTagline Label3D must exist")
+	if sign == null:
+		return
+	assert_true(
+		sign.double_sided,
+		"SignTagline must be double_sided so the interior face renders for players inside the store"
+	)
+	assert_false(
+		sign.no_depth_test,
+		"SignTagline must keep no_depth_test=false so storefront text doesn't bleed through walls"
+	)
+	var backing: MeshInstance3D = (
+		_root.get_node_or_null("Storefront/SignBacking") as MeshInstance3D
+	)
+	if backing != null:
+		var offset: float = absf(sign.position.z - backing.position.z)
+		assert_gte(
+			offset, _MIN_BACKING_CLEARANCE,
+			"SignTagline z-offset from SignBacking (%.3f) must be >= %.2f to avoid z-clipping"
+			% [offset, _MIN_BACKING_CLEARANCE]
+		)
+
+
+func test_interior_back_wall_banner_faces_player() -> void:
+	var sign: Label3D = (
+		_root.get_node_or_null("InteriorSignage/StoreNameBanner") as Label3D
+	)
+	assert_not_null(sign, "InteriorSignage/StoreNameBanner Label3D must exist")
+	if sign == null:
+		return
+	# Identity x/z basis (no Y rotation flip) is required so the readable
+	# face points toward the player approaching from +Z.
+	assert_almost_eq(
+		sign.transform.basis.x.x, 1.0, 0.001,
+		"StoreNameBanner basis.x.x must be 1 (not mirrored) so the text isn't reversed"
+	)
+	assert_almost_eq(
+		sign.transform.basis.z.z, 1.0, 0.001,
+		"StoreNameBanner basis.z.z must be 1 so the readable face points at the player"
+	)
+	assert_false(
+		sign.no_depth_test,
+		"StoreNameBanner must keep no_depth_test=false so the wall occludes it from outside"
+	)
+	# Push out from the back wall by at least 0.03 m so the label plane
+	# doesn't z-fight with the wall mesh at z = -10.0.
+	assert_gte(
+		sign.global_position.z - _BACK_WALL_INNER_Z, _MIN_BACKING_CLEARANCE,
+		"StoreNameBanner (z=%.3f) must clear the back wall (z=%.2f) by >= %.2f"
+		% [sign.global_position.z, _BACK_WALL_INNER_Z, _MIN_BACKING_CLEARANCE]
+	)
+
+
+func test_interior_back_wall_games_sign_faces_player() -> void:
+	var sign: Label3D = _root.get_node_or_null("InteriorSignage/GamesSign") as Label3D
+	assert_not_null(sign, "InteriorSignage/GamesSign Label3D must exist")
+	if sign == null:
+		return
+	assert_almost_eq(
+		sign.transform.basis.x.x, 1.0, 0.001,
+		"GamesSign basis.x.x must be 1 (not mirrored) so the text isn't reversed"
+	)
+	assert_almost_eq(
+		sign.transform.basis.z.z, 1.0, 0.001,
+		"GamesSign basis.z.z must be 1 so the readable face points at the player"
+	)
+	assert_false(
+		sign.no_depth_test,
+		"GamesSign must keep no_depth_test=false so the wall occludes it from outside"
+	)
+	assert_gte(
+		sign.global_position.z - _BACK_WALL_INNER_Z, _MIN_BACKING_CLEARANCE,
+		"GamesSign (z=%.3f) must clear the back wall (z=%.2f) by >= %.2f"
+		% [sign.global_position.z, _BACK_WALL_INNER_Z, _MIN_BACKING_CLEARANCE]
+	)
+
+
+func test_zone_labels_are_fixed_facing_diegetic_signs() -> void:
+	# ZoneLabels are diegetic signage: fixed-orientation Label3D nodes with
+	# a backing MeshInstance3D so each zone reads as a physically mounted
+	# sign (not floating UI). The four labels must therefore NOT billboard,
+	# and the ZoneLabels parent must hold at least one MeshInstance3D
+	# backing per label.
+	var zone_label_nodes: Array[Node] = _root.get_tree().get_nodes_in_group("zone_label")
+	var labels: Array[Label3D] = []
+	var backings: Array[MeshInstance3D] = []
+	for node: Node in zone_label_nodes:
+		if node is Label3D:
+			labels.append(node as Label3D)
+		elif node is MeshInstance3D:
+			backings.append(node as MeshInstance3D)
+	assert_gte(
+		labels.size(), 4,
+		"zone_label group must contain at least 4 Label3D markers (Shelves, Checkout, Exit, Backroom)"
+	)
+	assert_gte(
+		backings.size(), labels.size(),
+		(
+			"zone_label group must include one MeshInstance3D backing per Label3D "
+			+ "so each zone sign reads as a mounted panel, not floating UI"
+		)
+	)
+	for label: Label3D in labels:
+		assert_ne(
+			label.billboard, BaseMaterial3D.BILLBOARD_ENABLED,
+			(
+				"%s must not billboard — fixed-facing diegetic signs read as "
+				+ "physically mounted, not always-facing-camera UI"
+			) % label.name
+		)
+
+
+func test_bargain_bin_section_sign_faces_main_floor_approach() -> void:
+	# The bargain bin sits center-floor; the player approaches from any side.
+	# Billboard mode is the canonical way to satisfy "faces approach direction".
+	var bin: Node3D = _root.get_node_or_null("bargain_bin") as Node3D
+	assert_not_null(bin, "bargain_bin must exist")
+	if bin == null:
+		return
+	var sign: Label3D = bin.get_node_or_null("SectionSign") as Label3D
+	assert_not_null(sign, "bargain_bin/SectionSign must exist")
+	if sign == null:
+		return
+	assert_eq(
+		sign.billboard, BaseMaterial3D.BILLBOARD_ENABLED,
+		"bargain_bin/SectionSign must billboard so it faces the main-floor approach from any angle"
+	)

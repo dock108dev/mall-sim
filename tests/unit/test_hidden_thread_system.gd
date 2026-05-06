@@ -76,6 +76,179 @@ func test_tier1_emits_hidden_thread_interacted_signal() -> void:
 	assert_signal_emit_count(EventBus, "hidden_thread_interacted", 1)
 
 
+# ── Hidden-Thread Interactables (Tier 1) ─────────────────────────────────────
+
+
+func test_hold_shelf_inspected_increments_awareness_by_5() -> void:
+	EventBus.hold_shelf_inspected.emit(&"retro_games", 2)
+	assert_eq(_sys.awareness_score, 5.0)
+	assert_eq(_sys.hidden_thread_interactions, 1)
+
+
+func test_warranty_binder_increments_paper_trail_by_2() -> void:
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	assert_eq(_sys.awareness_score, 5.0)
+	assert_eq(_sys.paper_trail_score, 2.0)
+
+
+func test_employee_schedule_increments_paper_trail_by_1() -> void:
+	EventBus.employee_schedule_examined.emit(&"retro_games", 1)
+	assert_eq(_sys.awareness_score, 5.0)
+	assert_eq(_sys.paper_trail_score, 1.0)
+
+
+func test_other_hidden_thread_interactables_do_not_touch_paper_trail() -> void:
+	EventBus.hold_shelf_inspected.emit(&"retro_games", 0)
+	EventBus.backordered_item_examined.emit(&"retro_games", &"sku_a", 3)
+	EventBus.register_note_examined.emit(&"retro_games", 1)
+	EventBus.security_flyer_examined.emit(&"retro_games")
+	EventBus.returned_item_examined.emit(&"retro_games", &"sku_b")
+	assert_eq(_sys.paper_trail_score, 0.0)
+
+
+func test_backordered_item_examined_increments_awareness_by_5() -> void:
+	EventBus.backordered_item_examined.emit(&"retro_games", &"sku_x", 4)
+	assert_eq(_sys.awareness_score, 5.0)
+	assert_eq(_sys.hidden_thread_interactions, 1)
+
+
+func test_register_note_examined_increments_awareness_by_5() -> void:
+	EventBus.register_note_examined.emit(&"retro_games", 1)
+	assert_eq(_sys.awareness_score, 5.0)
+
+
+func test_security_flyer_examined_increments_awareness_by_5() -> void:
+	EventBus.security_flyer_examined.emit(&"retro_games")
+	assert_eq(_sys.awareness_score, 5.0)
+
+
+func test_returned_item_examined_increments_awareness_by_5() -> void:
+	EventBus.returned_item_examined.emit(&"retro_games", &"sku_x")
+	assert_eq(_sys.awareness_score, 5.0)
+
+
+func test_hidden_thread_inspection_is_idempotent_per_day() -> void:
+	# Three E-presses on the same prop in one day → exactly one credit.
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	assert_eq(_sys.awareness_score, 5.0)
+	assert_eq(_sys.hidden_thread_interactions, 1)
+	assert_eq(_sys.paper_trail_score, 2.0)
+
+
+func test_hidden_thread_inspection_credits_again_after_day_rollover() -> void:
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	EventBus.day_started.emit(2)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 2)
+	assert_eq(_sys.hidden_thread_interactions, 2)
+	assert_eq(_sys.paper_trail_score, 4.0)
+
+
+func test_distinct_props_each_credit_independently() -> void:
+	EventBus.hold_shelf_inspected.emit(&"retro_games", 0)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	EventBus.backordered_item_examined.emit(&"retro_games", &"a", 0)
+	assert_eq(_sys.awareness_score, 15.0)
+	assert_eq(_sys.hidden_thread_interactions, 3)
+	assert_eq(_sys.get_inspections_today(), 3)
+
+
+# ── finalize_day / hidden_thread_consequence_triggered ───────────────────────
+
+
+func test_finalize_day_with_zero_inspections_emits_empty_string() -> void:
+	watch_signals(EventBus)
+	_sys.finalize_day(1)
+	assert_signal_emit_count(
+		EventBus, "hidden_thread_consequence_triggered", 1
+	)
+	var params: Array = get_signal_parameters(
+		EventBus, "hidden_thread_consequence_triggered", 0
+	)
+	assert_eq(String(params[0]), "")
+
+
+func test_finalize_day_with_one_inspection_emits_minor_irregularity() -> void:
+	watch_signals(EventBus)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	_sys.finalize_day(1)
+	var params: Array = get_signal_parameters(
+		EventBus, "hidden_thread_consequence_triggered", 0
+	)
+	assert_eq(
+		String(params[0]),
+		HiddenThreadSystem.CONSEQUENCE_TEXT_ONE,
+	)
+
+
+func test_finalize_day_with_two_to_five_inspections_emits_several_items() -> void:
+	watch_signals(EventBus)
+	EventBus.hold_shelf_inspected.emit(&"retro_games", 0)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	_sys.finalize_day(1)
+	var params: Array = get_signal_parameters(
+		EventBus, "hidden_thread_consequence_triggered", 0
+	)
+	assert_eq(
+		String(params[0]),
+		HiddenThreadSystem.CONSEQUENCE_TEXT_MULTIPLE,
+	)
+
+
+func test_finalize_day_is_idempotent_per_day() -> void:
+	watch_signals(EventBus)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	_sys.finalize_day(3)
+	_sys.finalize_day(3)
+	_sys.finalize_day(3)
+	assert_signal_emit_count(
+		EventBus, "hidden_thread_consequence_triggered", 1
+	)
+
+
+func test_day_ended_emits_consequence_text_via_finalize_day() -> void:
+	watch_signals(EventBus)
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	EventBus.day_ended.emit(2)
+	assert_signal_emit_count(
+		EventBus, "hidden_thread_consequence_triggered", 1
+	)
+
+
+func test_inspections_today_resets_at_day_started() -> void:
+	EventBus.warranty_binder_examined.emit(&"retro_games", 1)
+	EventBus.hold_shelf_inspected.emit(&"retro_games", 0)
+	assert_eq(_sys.get_inspections_today(), 2)
+	EventBus.day_started.emit(2)
+	assert_eq(_sys.get_inspections_today(), 0)
+
+
+# ── Defective return passive accumulator (Tier 2) ───────────────────────────
+
+
+func test_defective_item_received_accumulates_tier2_at_threshold() -> void:
+	EventBus.defective_item_received.emit("sku_a")
+	assert_eq(_sys.awareness_score, 0.0)
+	EventBus.defective_item_received.emit("sku_b")
+	# Two defective items in one day → Tier 2 cluster fires (+10 awareness).
+	assert_eq(_sys.awareness_score, 10.0)
+
+
+func test_defective_item_below_threshold_does_not_fire() -> void:
+	EventBus.defective_item_received.emit("sku_a")
+	assert_eq(_sys.awareness_score, 0.0)
+
+
+func test_defective_returns_counter_resets_at_day_started() -> void:
+	EventBus.defective_item_received.emit("sku_a")
+	EventBus.day_started.emit(2)
+	EventBus.defective_item_received.emit("sku_b")
+	# Without reset, two would have crossed threshold; after reset, only one
+	# accumulated on day 2 — no Tier 2 cluster.
+	assert_eq(_sys.awareness_score, 0.0)
+
+
 # ── Tier 2 ────────────────────────────────────────────────────────────────────
 
 

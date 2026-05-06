@@ -35,6 +35,12 @@ var _current_day: int = 0
 var _stocked: bool = false
 var _sold: bool = false
 var _loop_completed: bool = false
+## True after the player has completed one stock→sell loop on the active day.
+## Reset on `day_started`; flips to true the moment both `_stocked` and `_sold`
+## are set (typically inside `_on_item_sold` after a stocked shelf has sold).
+## Drives the close-day confirmation gate via `can_close_day()` so the player
+## is prompted to confirm before closing a day with no completed loop.
+var _loop_completed_today: bool = false
 ## Active Day 1 step index, or -1 when the chain is not running. Set to 0 by
 ## day_started(1); incremented in lockstep with the chain's gameplay signals.
 var _day1_step_index: int = -1
@@ -87,12 +93,13 @@ func _load_content() -> void:
 				if step_entry is Dictionary:
 					steps_typed.append(step_entry)
 				else:
-					# §F-93 — A non-Dictionary entry inside `steps` is a
-					# content-authoring regression on the Day-1 critical path.
-					# A typo'd step would otherwise shrink the parsed array
-					# below DAY1_STEP_COUNT, silently disabling the whole
-					# tutorial chain via `_day1_steps_available`.
-					push_warning(
+					# §F-93 / error-handling-report.md §1 — escalated from
+					# push_warning to push_error: a non-Dictionary entry in
+					# the Day-1 `steps` array is a content-authoring regression
+					# on the critical tutorial path. The CI gut-tests job
+					# scans stderr for push_error so the regression fails the
+					# build instead of being a silent run-time degradation.
+					push_error(
 						(
 							"ObjectiveDirector: day %d has non-Dictionary "
 							+ "step entry (%s); skipped."
@@ -100,22 +107,21 @@ func _load_content() -> void:
 						% [day_int, type_string(typeof(step_entry))]
 					)
 		elif e.has("steps"):
-			# §F-93 — `steps` present but not an Array. Same content-authoring
-			# regression as above; warn so the bad payload is visible.
-			push_warning(
+			# §F-93 / error-handling-report.md §1 — `steps` present but not
+			# an Array is the same Day-1 critical-path regression as above.
+			push_error(
 				(
 					"ObjectiveDirector: day %d has non-Array `steps` field "
 					+ "(%s); ignored."
 				)
 				% [day_int, type_string(typeof(steps_raw))]
 			)
-		# §F-93 — Day 1 expects a steps array of exactly DAY1_STEP_COUNT
-		# entries. A short / over-long chain disables the Day-1 step path
-		# silently (`_day1_steps_available` returns false), so surface the
-		# mismatch at load time. Days other than 1 may legitimately omit
-		# `steps`.
+		# §F-93 / error-handling-report.md §1 — Day 1 expects a steps array
+		# of exactly DAY1_STEP_COUNT entries. A short / over-long chain
+		# silently disables the tutorial; escalated to push_error so CI
+		# fails on the regression instead of shipping a broken Day-1 rail.
 		if day_int == 1 and steps_typed.size() != DAY1_STEP_COUNT:
-			push_warning(
+			push_error(
 				(
 					"ObjectiveDirector: day 1 `steps` count is %d; "
 					+ "expected %d. Day-1 step chain will be disabled "
@@ -129,14 +135,12 @@ func _load_content() -> void:
 		if pre_step_raw is Dictionary:
 			pre_step_dict = pre_step_raw as Dictionary
 		elif e.has("pre_step"):
-			# §F-148 — `pre_step` is documented as optional in objectives.json,
-			# so an absent key is fine. But if it is *present* and not a
-			# Dictionary, the rail will silently render an empty pre-chain
-			# payload (text/action/key all "") on Day 1 — the player sees the
-			# objective rail blank between day_started and the first
-			# manager_note_dismissed. Warn at load so the bad payload is
-			# visible at boot rather than as a UX bug.
-			push_warning(
+			# §F-148 / error-handling-report.md §1 — `pre_step` is documented
+			# as optional, so an absent key is fine. But if present and not
+			# a Dictionary, Day 1 renders a blank rail between day_started
+			# and the first manager_note_dismissed. Escalated to push_error
+			# so CI catches the bad content payload at load time.
+			push_error(
 				(
 					"ObjectiveDirector: day %d has non-Dictionary `pre_step` "
 					+ "field (%s); ignored."
@@ -159,6 +163,7 @@ func _on_day_started(day: int) -> void:
 	_current_day = day
 	_stocked = false
 	_sold = false
+	_loop_completed_today = false
 	_day1_step_index = -1
 	_waiting_for_note_dismiss = false
 	if day == 1 and _day1_steps_available():
@@ -184,6 +189,8 @@ func _on_store_entered(_store_id: StringName) -> void:
 
 func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
 	_stocked = true
+	if _sold:
+		_loop_completed_today = true
 	_advance_day1_step_if(DAY1_STEP_STOCK_ITEM)
 	_emit_current()
 
@@ -196,12 +203,53 @@ func _on_item_sold(item_id: String, price: float, _category: String) -> void:
 		# `first_sale_completed` handler see the already-true value.
 		GameState.set_flag(&"first_sale_complete", true)
 		EventBus.first_sale_completed.emit(&"", item_id, price)
+	if _stocked:
+		_loop_completed_today = true
 	_emit_current()
 
 
 func _on_day_closed(_day: int, _summary: Dictionary) -> void:
 	if _stocked and _sold:
 		_loop_completed = true
+		_loop_completed_today = true
+
+
+## Returns true when the player may close the current day without confirmation.
+## Used by `DayCycleController` to gate the player-initiated close path. The
+## clock-triggered close path in `DayCycleController._on_day_ended` does NOT
+## consult this method — the day clock always closes regardless of loop state.
+##
+## Fail-open in non-gameplay states (DAY_SUMMARY, MALL_OVERVIEW, BUILD, …) and
+## when no day has started (`_current_day <= 0`). Production gameplay reaches
+## the `_loop_completed_today` branch only after a real `day_started` while
+## the GameManager FSM sits in GAMEPLAY / STORE_VIEW.
+func can_close_day() -> bool:
+	if _current_day <= 0:
+		return true
+	var gm: Node = get_node_or_null("/root/GameManager")
+	if gm == null:
+		return true
+	var state: int = int(gm.current_state)
+	if (
+		state != int(GameManager.State.GAMEPLAY)
+		and state != int(GameManager.State.STORE_VIEW)
+		and state != int(GameManager.State.MALL_OVERVIEW)
+	):
+		return true
+	return _loop_completed_today
+
+
+## Returns the human-readable copy that explains why the loop is incomplete.
+## Distinguishes "shelves empty" (player hasn't stocked yet) from "no sale yet"
+## (shelves are stocked but no customer has purchased) so the confirmation
+## modal can give actionable advice. Returns an empty string when the loop is
+## already complete (caller should not need the copy in that case).
+func get_close_blocked_reason() -> String:
+	if _loop_completed_today:
+		return ""
+	if not _stocked:
+		return "The shelves are empty — stock some items before closing."
+	return "You haven't made a sale yet. Close the day anyway?"
 
 
 func _on_preference_changed(key: String, _value: Variant) -> void:

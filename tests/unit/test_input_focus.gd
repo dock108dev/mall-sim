@@ -48,6 +48,46 @@ func test_depth_reflects_stack_size() -> void:
 	assert_eq(_focus.depth(), 1)
 
 
+func test_stack_snapshot_returns_typed_copy() -> void:
+	_focus.push_context(&"store_gameplay")
+	_focus.push_context(&"modal")
+	var snap: Array[StringName] = _focus.stack_snapshot()
+	assert_eq(snap.size(), 2, "snapshot reflects current depth")
+	assert_eq(snap[0], &"store_gameplay")
+	assert_eq(snap[1], &"modal")
+	# Mutating the snapshot must not affect the live stack.
+	snap.clear()
+	assert_eq(_focus.depth(), 2, "snapshot is a defensive copy")
+
+
+func test_stack_snapshot_empty_when_stack_empty() -> void:
+	var snap: Array[StringName] = _focus.stack_snapshot()
+	assert_eq(snap.size(), 0)
+
+
+func test_why_blocked_empty_when_store_gameplay_active() -> void:
+	_focus.push_context(&"store_gameplay")
+	assert_eq(_focus.why_blocked(), "")
+
+
+func test_why_blocked_describes_modal() -> void:
+	_focus.push_context(&"store_gameplay")
+	_focus.push_context(&"modal")
+	var reason: String = _focus.why_blocked()
+	assert_true(reason.contains("modal"), "reason mentions blocking ctx")
+	assert_true(reason.contains("depth=2"), "reason mentions depth")
+
+
+func test_why_blocked_describes_empty_stack() -> void:
+	var reason: String = _focus.why_blocked()
+	assert_true(reason.contains("stack empty"))
+
+
+func test_max_stack_depth_constant_exists() -> void:
+	# Public constant for tests / debug overlay to reference.
+	assert_eq(_focus.MAX_STACK_DEPTH, 8)
+
+
 func test_player_controller_blocks_movement_outside_store_gameplay() -> void:
 	var player: PlayerController = PlayerControllerScene.instantiate() as PlayerController
 	add_child_autofree(player)

@@ -20,8 +20,13 @@ This is the active project documentation set for Mallcore Sim.
   settings, user data paths, export presets, and checked-in automation.
 - [Contributing](contributing.md) — formatting, naming, content, testing, and
   documentation rules.
-- [Roadmap](roadmap.md) — finalization phases from triage through 1.0 ship
-  criteria.
+
+## Reference matrices
+
+- [Retro Games Interactable Matrix](retro_games_interactable_matrix.md) —
+  per-node inventory of every Day-1 interactable in the Retro Games store
+  (display name, prompt text, verb, trigger shape, handler status, test
+  coverage).
 
 ## Style
 
@@ -39,11 +44,11 @@ This is the active project documentation set for Mallcore Sim.
   - `security-report.md` — trust-boundary inventory and security findings
     catalog (§F-NN / §SR-NN / §DR-NN markers indexed back to source).
   - `ssot-report.md` — single-source-of-truth enforcement pass against the
-    working-tree diff (FP store entry + named physics layers + bit-5
-    interaction-mask migration + Day-1 readiness v2). Records edits applied,
-    SSOT modules per domain, and a risk log for retained items.
-  - `cleanup-report.md` — most-recent code-quality cleanup pass (dead-code
-    removal and citation-consistency sweep across the audit reports).
+    working-tree diff. Records edits applied, SSOT modules per domain, and
+    a risk log for retained items. Content is rewritten each pass to reflect
+    the current diff.
+  - `cleanup-report.md` — most-recent code-quality cleanup pass. Content is
+    rewritten each pass to reflect the current cleanup surface.
   - `docs-consolidation.md` — most-recent documentation review pass
     (records edits applied to `README.md` and `docs/`, statements removed
     as unverifiable, and intentional gaps with rationale).

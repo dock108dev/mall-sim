@@ -277,8 +277,17 @@ func spawn_customer(
 		return
 
 	var spawn_pos: Vector3 = _get_spawn_position()
-	if not customer.is_inside_tree():
-		add_child(customer)
+	# Customers must spawn parented under the active store's npc_container so
+	# Customer._find_navigation_region() can locate the store's NavigationRegion3D
+	# by walking ancestors. Parenting to `self` (CustomerSystem under GameWorld)
+	# would silently engage the direct-line waypoint fallback for every customer.
+	var npc_parent: Node = _resolve_npc_container()
+	if npc_parent == null:
+		npc_parent = self
+	if customer.get_parent() != npc_parent:
+		if customer.get_parent() != null:
+			customer.get_parent().remove_child(customer)
+		npc_parent.add_child(customer)
 	customer.global_position = spawn_pos
 	customer.visible = true
 	customer.set_physics_process(true)
@@ -334,13 +343,22 @@ func spawn_customer(
 
 
 func despawn_customer(customer_node: Node) -> void:
+	# Both branches below are caller-bug invariants — every legitimate caller
+	# (`_on_customer_despawn_requested`, the timeout-cleanup paths, and the
+	# tested fixtures) routes a typed Customer reference. Reaching either
+	# means a despawn was requested with a freed/null payload or a wrongly-
+	# typed node, which would silently drop a real customer from the active
+	# list and skew leave-counter accounting. Escalated to push_error so the
+	# regression fails CI's stderr `^ERROR:` scan
+	# (.github/workflows/validate.yml) instead of a quiet warning. See
+	# docs/audits/error-handling-report.md §EH-11.
 	if not customer_node:
-		push_warning("CustomerSystem: tried to despawn null customer")
+		push_error("CustomerSystem: tried to despawn null customer")
 		return
 
 	var customer: Customer = customer_node as Customer
 	if not customer:
-		push_warning("CustomerSystem: node is not a Customer")
+		push_error("CustomerSystem: node is not a Customer")
 		return
 
 	var customer_data: Dictionary = {
@@ -940,6 +958,23 @@ func _release_customer(customer: Customer) -> void:
 	customer.set_physics_process(false)
 	customer.set_process(false)
 	if _customer_pool.size() < POOL_SIZE:
+		# Pooled customers live under CustomerSystem between uses so the next
+		# spawn can reparent them under the active store's npc_container.
+		if customer.get_parent() != self:
+			if customer.get_parent() != null:
+				customer.get_parent().remove_child(customer)
+			add_child(customer)
 		_customer_pool.append(customer)
 	else:
 		customer.queue_free()
+
+
+## Returns the active store's `npc_container` node, or null when no store
+## controller is bound (e.g. unit-test fixtures). Mirrors the lookup pattern in
+## `npc_spawner_system.gd` so spawned customers and ShopperAI NPCs share the
+## same parent chain — required for `Customer._find_navigation_region()` to
+## locate the store's NavigationRegion3D ancestor.
+func _resolve_npc_container() -> Node:
+	if _store_controller == null:
+		return null
+	return _store_controller.get_node_or_null("npc_container")

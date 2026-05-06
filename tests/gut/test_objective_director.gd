@@ -6,8 +6,10 @@ func _make_director() -> Node:
 	# Sync the autoload's _sold flag with any test-local instance so
 	# first_sale_completed still fires exactly once across both listeners.
 	ObjectiveDirector._sold = false
+	ObjectiveDirector._stocked = false
 	ObjectiveDirector._current_day = 0
 	ObjectiveDirector._loop_completed = false
+	ObjectiveDirector._loop_completed_today = false
 	ObjectiveDirector._day1_step_index = -1
 	ObjectiveDirector._waiting_for_note_dismiss = false
 	var director: Node = preload(

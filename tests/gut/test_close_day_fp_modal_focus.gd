@@ -1,12 +1,11 @@
 ## ISSUE-014 — End-of-day flow from FP mode: the close-day path must release
 ## the FP cursor before any modal opens, and the cursor stays released across
-## the CloseDayConfirmDialog → CloseDayPreview → DaySummary hand-off.
+## the CloseDayPreview → DaySummary hand-off.
 ##
-## The HUD wraps CloseDayConfirmDialog with InputFocus.CTX_MODAL, the preview
-## pushes its own CTX_MODAL when shown, and DaySummary pushes its own again
-## when `show_summary` runs. The StorePlayerBody `context_changed` listener
-## flips MOUSE_MODE_CAPTURED → MOUSE_MODE_VISIBLE off the SSOT signal, so this
-## test verifies the focus stack contract directly.
+## The preview pushes its own CTX_MODAL when shown, and DaySummary pushes its
+## own again when `show_summary` runs. The StorePlayerBody `context_changed`
+## listener flips MOUSE_MODE_CAPTURED → MOUSE_MODE_VISIBLE off the SSOT
+## signal, so this test verifies the focus stack contract directly.
 extends GutTest
 
 
@@ -82,109 +81,15 @@ func _make_preview() -> CanvasLayer:
 	return preview
 
 
-func test_f4_in_fp_pushes_ctx_modal_when_soft_gate_fires() -> void:
-	# Day 1 + no first sale → CloseDayConfirmDialog opens. The HUD must push
-	# CTX_MODAL so the StorePlayerBody listener releases the FP cursor before
-	# the dialog is rendered.
-	var hud: CanvasLayer = _make_hud()
-	GameManager.current_state = GameManager.State.STORE_VIEW
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", false)
-	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
-	var baseline: int = _focus.depth()
-
-	hud._on_close_day_pressed()
-
-	assert_eq(
-		_focus.depth(), baseline + 1,
-		"Soft-gate dialog must push exactly one CTX_MODAL frame"
-	)
-	assert_eq(
-		_focus.current(), InputFocus.CTX_MODAL,
-		"Top frame must be CTX_MODAL while the soft-gate dialog is up"
-	)
-	assert_true(
-		hud._confirm_dialog_focus_pushed,
-		"HUD must remember it owns the dialog's CTX_MODAL frame"
-	)
-
-
-func test_soft_gate_cancel_pops_ctx_modal() -> void:
-	var hud: CanvasLayer = _make_hud()
-	GameManager.current_state = GameManager.State.STORE_VIEW
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", false)
-	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
-	var baseline: int = _focus.depth()
-	hud._on_close_day_pressed()
-
-	var dialog: ConfirmationDialog = (
-		hud.get_node("CloseDayConfirmDialog") as ConfirmationDialog
-	)
-	dialog.canceled.emit()
-
-	assert_eq(
-		_focus.depth(), baseline,
-		"Cancelling the soft gate must pop the dialog's CTX_MODAL frame"
-	)
-	assert_eq(
-		_focus.current(), InputFocus.CTX_STORE_GAMEPLAY,
-		"After cancel, store_gameplay context must own the stack again"
-	)
-	assert_false(
-		hud._confirm_dialog_focus_pushed,
-		"HUD must release ownership flag on cancel"
-	)
-
-
-func test_soft_gate_confirm_hands_modal_focus_to_preview() -> void:
-	# Confirming "Close Anyway" must close the dialog (pop) and open the
-	# preview (push) — net change is exactly one frame, with the preview
-	# now owning it. This guarantees the cursor stays released across the
-	# dialog → preview hand-off without a single-frame flicker.
-	var hud: CanvasLayer = _make_hud()
-	GameManager.current_state = GameManager.State.STORE_VIEW
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", false)
-	# Wire an empty-snapshot callback so EH-05's wiring warning does not
-	# fire from this hand-off test.
-	var preview: CanvasLayer = hud.get_node("CloseDayPreview")
-	preview.set_snapshot_callback(func() -> Array: return [])
-	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
-	var baseline: int = _focus.depth()
-	hud._on_close_day_pressed()
-
-	var dialog: ConfirmationDialog = (
-		hud.get_node("CloseDayConfirmDialog") as ConfirmationDialog
-	)
-	dialog.confirmed.emit()
-
-	assert_eq(
-		_focus.depth(), baseline + 1,
-		"After confirm, exactly one CTX_MODAL frame must remain (the preview)"
-	)
-	assert_eq(
-		_focus.current(), InputFocus.CTX_MODAL,
-		"Preview must own the top frame after the dialog confirms"
-	)
-	assert_false(
-		hud._confirm_dialog_focus_pushed,
-		"HUD must release the dialog's ownership flag after confirm"
-	)
-	assert_true(
-		preview._focus_pushed,
-		"CloseDayPreview must own its own CTX_MODAL frame after show_preview"
-	)
-
-
-func test_post_first_sale_close_day_pushes_preview_modal_focus() -> void:
-	# After first sale: clicking Close Day skips the soft gate and opens the
-	# preview directly. The preview must push CTX_MODAL on its own.
+func test_close_day_press_pushes_preview_modal_focus() -> void:
+	# Pressing Close Day opens the preview directly; the preview pushes its
+	# own CTX_MODAL on show. Loop-completion gating now lives downstream in
+	# DayCycleController + CloseDayConfirmationPanel (see
+	# test_day_close_confirmation_gate.gd).
 	var hud: CanvasLayer = _make_hud()
 	var preview: CanvasLayer = hud.get_node("CloseDayPreview")
 	preview.set_snapshot_callback(func() -> Array: return [])
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	GameState.set_flag(&"first_sale_complete", true)
 	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
 	var baseline: int = _focus.depth()
 
@@ -192,7 +97,7 @@ func test_post_first_sale_close_day_pushes_preview_modal_focus() -> void:
 
 	assert_eq(
 		_focus.depth(), baseline + 1,
-		"Post-first-sale Close Day must push exactly one CTX_MODAL frame"
+		"Close Day press must push exactly one CTX_MODAL frame (the preview)"
 	)
 	assert_eq(
 		_focus.current(), InputFocus.CTX_MODAL,
@@ -257,15 +162,15 @@ func test_repeated_show_preview_does_not_leak_frames() -> void:
 	)
 
 
-func test_cursor_release_signal_fires_on_soft_gate() -> void:
+func test_cursor_release_signal_fires_on_close_day_press() -> void:
 	# End-to-end FP contract: under store_gameplay context the cursor is
 	# captured for mouse-look. Pressing Close Day must dispatch a
 	# context_changed(CTX_MODAL) event so the StorePlayerBody listener
 	# (and Crosshair, which hides outside CTX_STORE_GAMEPLAY) react.
 	var hud: CanvasLayer = _make_hud()
+	var preview: CanvasLayer = hud.get_node("CloseDayPreview")
+	preview.set_snapshot_callback(func() -> Array: return [])
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", false)
 	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
 	var ctx_changes: Array[StringName] = []
 	_focus.context_changed.connect(

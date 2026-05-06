@@ -42,6 +42,7 @@ func initialize(
 	_performance_report_system = performance_report_system
 	EventBus.day_ended.connect(_on_day_ended)
 	EventBus.day_close_requested.connect(_on_day_close_requested)
+	EventBus.day_close_confirmed.connect(_on_day_close_confirmed)
 	EventBus.next_day_confirmed.connect(_on_day_acknowledged)
 	EventBus.performance_report_ready.connect(_on_report_ready)
 
@@ -112,7 +113,43 @@ func _on_day_close_requested() -> void:
 	if not _time_system:
 		push_warning("DayCycleController: day_close_requested before initialize")
 		return
+	# Gate the player-initiated close path on a completed stock→sell loop. The
+	# clock-triggered `day_ended` signal does NOT route through here, so an
+	# end-of-day timeout always closes regardless of loop state.
+	if not _can_close_day():
+		var reason: String = _resolve_close_blocked_reason()
+		EventBus.day_close_confirmation_requested.emit(reason)
+		return
 	_on_day_ended(_time_system.current_day)
+
+
+## Player chose "Close Day" inside the confirmation modal. Bypasses the gate
+## and runs the same close path as the unguarded request.
+func _on_day_close_confirmed() -> void:
+	if not _time_system:
+		push_warning(
+			"DayCycleController: day_close_confirmed before initialize"
+		)
+		return
+	_on_day_ended(_time_system.current_day)
+
+
+## Queries `ObjectiveDirector.can_close_day()` when the autoload is reachable.
+## Fails open when the autoload is missing so headless test harnesses that
+## construct `DayCycleController` without a full autoload roster still close
+## the day on demand.
+func _can_close_day() -> bool:
+	var od: Node = get_node_or_null("/root/ObjectiveDirector")
+	if od == null or not od.has_method("can_close_day"):
+		return true
+	return bool(od.call("can_close_day"))
+
+
+func _resolve_close_blocked_reason() -> String:
+	var od: Node = get_node_or_null("/root/ObjectiveDirector")
+	if od == null or not od.has_method("get_close_blocked_reason"):
+		return "You haven't made a sale yet. Close the day anyway?"
+	return str(od.call("get_close_blocked_reason"))
 
 
 func _on_day_ended(day: int) -> void:
@@ -123,6 +160,15 @@ func _on_day_ended(day: int) -> void:
 		return
 
 	_last_closed_day = day
+
+	# Finalize hidden-thread consequence text before any report build so the
+	# `hidden_thread_consequence_triggered` signal lands on the bus before
+	# PerformanceReportSystem emits `performance_report_ready`. The call is
+	# idempotent per day, so the autoload's own day_ended handler running the
+	# same path is a no-op the second time.
+	var hidden_thread: Node = get_node_or_null("/root/HiddenThreadSystemSingleton")
+	if hidden_thread != null and hidden_thread.has_method("finalize_day"):
+		hidden_thread.call("finalize_day", day)
 
 	if _ensure_panels_callback.is_valid():
 		_ensure_panels_callback.call()
@@ -253,6 +299,18 @@ func _show_day_summary(day: int) -> void:
 		shift_summary["customers_timeout"] = int(leave_counts.get("timeout", 0))
 		shift_summary["customers_price"] = int(leave_counts.get("price", 0))
 
+	var hidden_interactions: int = 0
+	var hidden_thread_node: Node = get_node_or_null(
+		"/root/HiddenThreadSystemSingleton"
+	)
+	if (
+		hidden_thread_node != null
+		and "hidden_thread_interactions" in hidden_thread_node
+	):
+		hidden_interactions = maxi(
+			int(hidden_thread_node.hidden_thread_interactions), 0
+		)
+
 	var payload: Dictionary = {
 		"day": day,
 		"total_revenue": summary.get("total_revenue", 0.0),
@@ -272,6 +330,7 @@ func _show_day_summary(day: int) -> void:
 		"backroom_inventory_remaining": backroom_remaining,
 		"shelf_inventory_remaining": shelf_remaining,
 		"shift_summary": shift_summary,
+		"hidden_thread_interactions": hidden_interactions,
 	}
 	EventBus.day_closed.emit(day, payload)
 	EventBus.publish_day_end_summary(payload)
@@ -308,6 +367,10 @@ func _show_day_summary(day: int) -> void:
 	if is_instance_valid(_mall_overview):
 		_mall_overview.visible = false
 
+	var archetype_name: String = _compute_day_archetype(payload)
+	var floor_stars: int = _compute_floor_awareness_stars(payload)
+	var attention_notes: Array[String] = _build_attention_notes(payload)
+
 	_day_summary.show_summary(
 		day,
 		payload["total_revenue"],
@@ -320,7 +383,98 @@ func _show_day_summary(day: int) -> void:
 		seasonal_impact,
 		discrepancy,
 		wages,
+		archetype_name,
+		floor_stars,
+		attention_notes,
 	)
+
+	# Forward the deferred hidden-thread reveal so the timer is anchored to the
+	# panel-show moment rather than the upstream `performance_report_ready`
+	# signal time. Empty text leaves the label permanently hidden.
+	if _pending_report != null:
+		_day_summary.set_hidden_thread_text(
+			_pending_report.hidden_thread_consequence_text
+		)
+
+
+## Returns the inspection-count-driven archetype name per BRAINDUMP §11.
+## 0 inspections → "The Mark"; 1 → "The Warm Body"; 2 → "The Floor Walker";
+## 3–4 → "The Paper Trail"; 5+ → "The Company Person".
+static func _compute_day_archetype(payload: Dictionary) -> String:
+	var count: int = _hidden_inspection_count(payload)
+	if count <= 0:
+		return "The Mark"
+	if count == 1:
+		return "The Warm Body"
+	if count == 2:
+		return "The Floor Walker"
+	if count <= 4:
+		return "The Paper Trail"
+	return "The Company Person"
+
+
+## Returns 1..5 stars per BRAINDUMP §5: 0 inspections=1, 1=2, 2=3,
+## 3–4=4, 5+=5. Minimum is 1 — there is no 0-star result.
+static func _compute_floor_awareness_stars(payload: Dictionary) -> int:
+	var count: int = _hidden_inspection_count(payload)
+	if count <= 0:
+		return 1
+	if count == 1:
+		return 2
+	if count == 2:
+		return 3
+	if count <= 4:
+		return 4
+	return 5
+
+
+## Returns up to 4 short observations drawn from shift_summary fields
+## and inventory split. Empty array is valid.
+static func _build_attention_notes(payload: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var ss: Dictionary = payload.get("shift_summary", {})
+	var no_stock: int = int(ss.get("customers_no_stock", 0))
+	var timeout: int = int(ss.get("customers_timeout", 0))
+	var price_l: int = int(ss.get("customers_price", 0))
+	var happy: int = int(ss.get("customers_happy", 0))
+	var total_leaves: int = no_stock + timeout + price_l + happy
+	var happy_rate: float = float(happy) / float(maxi(total_leaves, 1))
+	var discrepancy: float = float(payload.get("discrepancy", 0.0))
+	var backroom: int = int(payload.get("backroom_inventory_remaining", 0))
+	var total_inv: int = maxi(int(payload.get("inventory_remaining", 0)), 1)
+	var backroom_frac: float = float(backroom) / float(total_inv)
+	var shelf_rem: int = int(payload.get("shelf_inventory_remaining", 0))
+	var sold: int = int(payload.get("items_sold", 0))
+
+	if no_stock > 0:
+		notes.append(
+			"%d customer(s) left empty-handed — shelf ran dry." % no_stock
+		)
+	if timeout > 0:
+		notes.append(
+			"%d customer(s) gave up waiting — floor coverage too slow." % timeout
+		)
+	if price_l > 2:
+		notes.append(
+			"%d customer(s) balked at price — consider markdowns." % price_l
+		)
+	if discrepancy >= 0.05:
+		notes.append(
+			"Inventory variance at %.0f%% — check backroom counts."
+			% (discrepancy * 100.0)
+		)
+	if backroom_frac > 0.6:
+		notes.append("Over half your stock is still in the backroom.")
+	if shelf_rem == 0 and sold == 0:
+		notes.append("Nothing moved today — floor was empty all shift.")
+	if happy_rate >= 0.9 and total_leaves >= 3:
+		notes.append("Strong shift — most customers left satisfied.")
+
+	return notes.slice(0, 4)
+
+
+static func _hidden_inspection_count(payload: Dictionary) -> int:
+	return maxi(int(payload.get("hidden_thread_interactions", 0)), 0)
 
 
 func _process_wages() -> void:

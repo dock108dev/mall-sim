@@ -74,6 +74,14 @@ const HIGHLIGHT_EMPTY := Color(0.2, 0.8, 0.2)
 const HIGHLIGHT_OCCUPIED := Color(0.9, 0.2, 0.2)
 # accent_interact #5BB8E8 at alpha 0.35 — shown only when stocking cursor matches
 const STOCKING_TINT := Color(91.0 / 255.0, 184.0 / 255.0, 232.0 / 255.0, 0.35)
+# Always-on dim ghost shown when the slot is empty regardless of placement
+# mode, so the player can read floor stock state at a glance from FP eye
+# height. Sized smaller than PlaceholderMesh (0.15 m) and held at low alpha
+# so it reads as "intentionally empty" without competing with the brighter
+# placement marker that overlays it during stocking.
+const _EMPTY_GHOST_NAME: StringName = &"EmptyGhost"
+const _EMPTY_GHOST_SIZE: Vector3 = Vector3(0.10, 0.10, 0.10)
+const _EMPTY_GHOST_COLOR := Color(0.5, 0.5, 0.5, 0.22)
 const PROMPT_NO_ITEM_SELECTED: String = "Select an inventory item first"
 const PROMPT_SHELF_FULL: String = "Shelf full"
 const STOCK_VERB_FORMAT: String = "stock %s"
@@ -95,6 +103,7 @@ var _label_focus_active: bool = false
 var _authored_display_name: String = ""
 var _pending_item_name: String = ""
 var _stocked_item_name: String = ""
+var _empty_ghost: MeshInstance3D = null
 
 @onready var _empty_mesh: MeshInstance3D = _resolve_empty_mesh()
 
@@ -114,6 +123,7 @@ func _ready() -> void:
 	# can restore it whenever the slot is in the "default" state (occupied + not
 	# in placement mode + set_display_data has not yet populated _stocked_item_name).
 	_authored_display_name = display_name
+	_empty_ghost = _ensure_empty_ghost()
 	_update_empty_indicator()
 	EventBus.placement_mode_entered.connect(_on_placement_entered)
 	EventBus.placement_mode_exited.connect(_on_placement_exited)
@@ -257,11 +267,41 @@ func clear_display_data() -> void:
 	_refresh_prompt_state()
 
 
-## Shows or hides the translucent empty-slot indicator.
+## Two-tier empty-slot visibility: the always-on dim ghost reveals empty
+## capacity from FP eye height during normal play, while the brighter
+## PlaceholderMesh layer continues to gate on placement mode so stocking
+## focus highlights and the stocking-cursor cyan tint keep their existing
+## contracts.
 func _update_empty_indicator() -> void:
-	if not is_node_ready() or _empty_mesh == null:
+	if not is_node_ready():
 		return
-	_empty_mesh.visible = (not _occupied) and _placement_active
+	if _empty_mesh != null:
+		_empty_mesh.visible = (not _occupied) and _placement_active
+	if _empty_ghost != null:
+		_empty_ghost.visible = not _occupied
+
+
+## Creates the always-on dim ghost child if it does not already exist. Built
+## programmatically so the same indicator applies to slots authored inline
+## (e.g. retro_games.tscn) as well as instances of shelf_slot.tscn.
+func _ensure_empty_ghost() -> MeshInstance3D:
+	var existing: MeshInstance3D = get_node_or_null(
+		String(_EMPTY_GHOST_NAME)
+	) as MeshInstance3D
+	if existing != null:
+		return existing
+	var ghost := MeshInstance3D.new()
+	ghost.name = _EMPTY_GHOST_NAME
+	var box := BoxMesh.new()
+	box.size = _EMPTY_GHOST_SIZE
+	ghost.mesh = box
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = _EMPTY_GHOST_COLOR
+	ghost.set_surface_override_material(0, mat)
+	ghost.visible = not _occupied
+	add_child(ghost)
+	return ghost
 
 
 ## Spawns a placeholder scene representing the placed item, then tints its
@@ -368,8 +408,7 @@ func accepts_category(item_category: String) -> bool:
 ## "Press E" cue while still surfacing what the player is looking at. The
 ## empty-`_stocked_item_name` arm falls back to `_authored_display_name`
 ## (legitimate alt-path when set_display_data hasn't been called yet, e.g.
-## scene-authored slots in unit tests). Same dead-prompt removal contract as
-## §F-109 retro_games checkout-counter empty verb.
+## scene-authored slots in unit tests).
 func _refresh_prompt_state() -> void:
 	if _placement_active and _occupied:
 		display_name = PROMPT_SHELF_FULL

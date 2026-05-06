@@ -52,6 +52,12 @@ const _BUILD_MODE_DIM_ALPHA: float = 0.5
 const _COUNTER_PULSE_SCALE: float = 1.08
 const _COUNTER_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
 
+## Day-1 onboarding zero-state hint copy. Condition A (empty shelves) wins
+## over Condition B (no customers): with no stock the player can't attract
+## customers anyway, so the actionable hint takes precedence.
+const _HINT_STOCK_FLOOR: String = "Stock shelves to open the lane."
+const _HINT_AWAITING_CUSTOMER: String = "Waiting for the first customer…"
+
 var _telegraphed_events: Dictionary = {}
 var _random_event_telegraph: String = ""
 
@@ -78,6 +84,12 @@ var _items_placed_count: int = 0
 ## This is intentionally distinct from "active customers in store" — the HUD
 ## reports the throughput metric the BRAINDUMP Day-1 loop calls for.
 var _customers_served_today_count: int = 0
+## Currently-active customer count, driven by `customer_spawned` /
+## `customer_left`. Distinct from `_customers_served_today_count` (a
+## monotonically increasing throughput counter) — this is the live "are
+## any shoppers in the store right now?" gauge that drives the zero-state
+## hint. Clamped at zero.
+var _active_customer_count: int = 0
 var _sales_today_count: int = 0
 var _counter_scale_tweens: Dictionary = {}
 var _counter_color_tweens: Dictionary = {}
@@ -90,10 +102,6 @@ var _counter_color_tweens: Dictionary = {}
 var _fp_mode: bool = false
 var _fp_orig_indices: Dictionary = {}
 var _fp_close_day_hint: Label
-## Tracks whether the Day-1 soft-gate ConfirmationDialog pushed CTX_MODAL on
-## InputFocus. Mirrors the InventoryPanel / CheckoutPanel modal-focus contract
-## so the FP cursor releases while the dialog is up and recaptures on dismiss.
-var _confirm_dialog_focus_pushed: bool = false
 
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
@@ -108,9 +116,7 @@ var _confirm_dialog_focus_pushed: bool = false
 @onready var _telegraph_card: Label = $TelegraphCard
 @onready var _milestones_button: Button = $TopBar/MilestonesButton
 @onready var _close_day_preview: CanvasLayer = $CloseDayPreview
-@onready var _close_day_confirm_dialog: ConfirmationDialog = (
-	$CloseDayConfirmDialog
-)
+@onready var _zero_state_hint: Label = $ZeroStateHint
 
 
 func _ready() -> void:
@@ -147,6 +153,12 @@ func _ready() -> void:
 	EventBus.inventory_changed.connect(_on_inventory_changed)
 	EventBus.customer_purchased.connect(_on_customer_purchased_hud)
 	EventBus.item_sold.connect(_on_item_sold)
+	EventBus.customer_spawned.connect(_on_customer_spawned_hud)
+	EventBus.customer_left.connect(_on_customer_left_hud)
+	# Modal opens/closes flip the zero-state hint off/on without changing the
+	# underlying stock or customer counts; subscribing to context_changed keeps
+	# the gating reactive without polling each frame.
+	InputFocus.context_changed.connect(_on_input_focus_changed)
 	_milestones_button.pressed.connect(_on_milestones_pressed)
 	_speed_button.pressed.connect(_on_speed_button_pressed)
 	EventBus.game_state_changed.connect(_on_game_state_changed)
@@ -159,7 +171,6 @@ func _ready() -> void:
 	_create_close_day_button()
 	_create_hub_back_button()
 	_wire_close_day_preview()
-	_wire_close_day_confirm_dialog()
 
 	_update_cash_display(_displayed_cash)
 	_update_reputation_display(_last_reputation)
@@ -167,6 +178,7 @@ func _ready() -> void:
 	_refresh_time_display()
 	_seed_counters_from_systems()
 	_apply_state_visibility(GameManager.current_state)
+	_refresh_zero_state_hint()
 
 
 func _on_day_started(day: int) -> void:
@@ -174,12 +186,14 @@ func _on_day_started(day: int) -> void:
 	_random_event_telegraph = ""
 	_sales_today_count = 0
 	_customers_served_today_count = 0
+	_active_customer_count = 0
 	_update_sales_today_display(_sales_today_count)
 	_update_customers_display(_customers_served_today_count)
 	_refresh_time_display()
 	_refresh_items_placed()
 	_seed_cash_from_economy()
 	_apply_state_visibility(GameManager.current_state)
+	_refresh_zero_state_hint()
 
 
 ## Snaps the cash display to `EconomySystem.get_cash()` when available.
@@ -258,20 +272,9 @@ func _create_close_day_button() -> void:
 	_top_bar.add_child(_close_day_button)
 
 
-func _is_day1_gate_active() -> bool:
-	return (
-		GameManager.get_current_day() == 1
-		and not GameState.get_flag(&"first_sale_complete")
-	)
-
-
 func _on_run_state_changed() -> void:
 	if is_instance_valid(_close_day_button):
-		_close_day_button.tooltip_text = (
-			"You haven't made your first sale yet. You'll be asked to confirm."
-			if _is_day1_gate_active()
-			else ""
-		)
+		_close_day_button.tooltip_text = ""
 
 
 ## Pulses the Close Day button once the first sale lands so the affordance
@@ -301,32 +304,7 @@ func _on_first_sale_completed_hud(
 func _on_close_day_pressed() -> void:
 	var state := GameManager.current_state
 	if state == GameManager.State.STORE_VIEW or state == GameManager.State.GAMEPLAY:
-		if _is_day1_gate_active():
-			_show_close_day_confirm()
-			return
 		_open_close_day_preview()
-
-
-## Day 1 soft gate: prompt for consent before closing without a first sale.
-## Confirm proceeds to the dry-run preview; cancel is a no-op.
-##
-## The CTX_MODAL push releases the FP cursor while the dialog is up so the
-## player can click "Close Anyway" / "Stay Open" without a captured cursor;
-## the matching pop fires from the dialog's `confirmed` / `canceled` signals
-## (`_on_close_day_confirm_confirmed` / `_on_close_day_confirm_canceled`) so
-## hand-off to either the preview or back to gameplay leaves the focus stack
-## balanced.
-func _show_close_day_confirm() -> void:
-	if not is_instance_valid(_close_day_confirm_dialog):
-		# Wiring regression — open the preview so the player is not trapped.
-		push_warning(
-			"HUD._show_close_day_confirm: CloseDayConfirmDialog missing; "
-			+ "opening close-day preview directly."
-		)
-		_open_close_day_preview()
-		return
-	_push_confirm_dialog_modal_focus()
-	_close_day_confirm_dialog.popup_centered()
 
 
 ## Opens the dry-run preview modal. The preview's Confirm button is the only
@@ -336,10 +314,13 @@ func _show_close_day_confirm() -> void:
 ## The fallback emit (preview missing) is loud on purpose: hud.tscn ships a
 ## CloseDayPreview child, so reaching the fallback means the scene was edited
 ## without the modal. The day still closes — but the wiring regression is
-## logged so CI catches it. See docs/audits/error-handling-report.md EH-06.
+## logged via push_error so CI's stderr `^ERROR:` scan
+## (.github/workflows/validate.yml) fails the build instead of letting a
+## silently-unwired close-day modal ship. See
+## docs/audits/error-handling-report.md §EH-09.
 func _open_close_day_preview() -> void:
 	if not is_instance_valid(_close_day_preview):
-		push_warning(
+		push_error(
 			"HUD._open_close_day_preview: CloseDayPreview child missing; "
 			+ "skipping preview modal and closing day directly."
 		)
@@ -348,67 +329,15 @@ func _open_close_day_preview() -> void:
 	_close_day_preview.show_preview()
 
 
-## §F-68 — `_wire_close_day_preview` / `_wire_close_day_confirm_dialog`:
-## the preview and confirm-dialog children ship with `hud.tscn`, but a unit
-## test that constructs the HUD without the packed scene (or a future scene
-## variant that omits one) would otherwise crash on the connect/setter call.
-## `_open_close_day_preview` already escalates with `push_warning` when the
-## preview child is missing at click time (see `_open_close_day_preview`),
-## so a silently-unwired modal still raises a visible signal at use; an
-## extra warning here would double-fire on every test fixture.
+## The preview ships with `hud.tscn`, but a unit test that constructs the HUD
+## without the packed scene (or a future scene variant that omits it) would
+## otherwise crash on the setter call. `_open_close_day_preview` already
+## escalates with `push_warning` when the preview child is missing at click
+## time, so a silently-unwired modal still raises a visible signal at use.
 func _wire_close_day_preview() -> void:
 	if not is_instance_valid(_close_day_preview):
 		return
 	_close_day_preview.set_snapshot_callback(_get_active_store_snapshot)
-
-
-func _wire_close_day_confirm_dialog() -> void:
-	if not is_instance_valid(_close_day_confirm_dialog):
-		return
-	_close_day_confirm_dialog.confirmed.connect(_on_close_day_confirm_confirmed)
-	_close_day_confirm_dialog.canceled.connect(_on_close_day_confirm_canceled)
-
-
-## Confirmed → release the dialog's CTX_MODAL frame, then open the preview.
-## The preview pushes its own CTX_MODAL when shown so the cursor stays
-## released across the hand-off; popping here keeps the stack balanced for
-## test harnesses that drive the dialog signals directly.
-func _on_close_day_confirm_confirmed() -> void:
-	_pop_confirm_dialog_modal_focus()
-	_open_close_day_preview()
-
-
-func _on_close_day_confirm_canceled() -> void:
-	_pop_confirm_dialog_modal_focus()
-
-
-func _push_confirm_dialog_modal_focus() -> void:
-	if _confirm_dialog_focus_pushed:
-		return
-	InputFocus.push_context(InputFocus.CTX_MODAL)
-	_confirm_dialog_focus_pushed = true
-
-
-func _pop_confirm_dialog_modal_focus() -> void:
-	if not _confirm_dialog_focus_pushed:
-		return
-	# Defensive: if the topmost frame is no longer CTX_MODAL, a sibling pushed
-	# without going through this contract. Surface it via push_error AND skip
-	# the pop so we don't corrupt someone else's frame. Mirrors the InventoryPanel
-	# / CheckoutPanel pattern.
-	if InputFocus.current() != InputFocus.CTX_MODAL:
-		push_error(
-			(
-				"HUD._pop_confirm_dialog_modal_focus: expected CTX_MODAL on top, "
-				+ "got %s — leaving stack untouched to avoid corrupting "
-				+ "sibling frame"
-			)
-			% String(InputFocus.current())
-		)
-		_confirm_dialog_focus_pushed = false
-		return
-	InputFocus.pop_context()
-	_confirm_dialog_focus_pushed = false
 
 
 ## §F-69 — Empty-array fallback when `InventorySystem` is null mirrors the
@@ -529,6 +458,7 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 	# assert the FP overrides so the heavy TopBar does not leak back in.
 	if _fp_mode and visible:
 		_apply_fp_visibility_overrides()
+	_refresh_zero_state_hint()
 
 
 func _on_speed_button_pressed() -> void:
@@ -544,10 +474,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameManager.current_state != GameManager.State.GAMEPLAY:
 		return
 	if event.is_action("close_day"):
-		if _is_day1_gate_active():
-			_show_close_day_confirm()
-			get_viewport().set_input_as_handled()
-			return
 		_open_close_day_preview()
 		get_viewport().set_input_as_handled()
 		return
@@ -998,6 +924,53 @@ func _refresh_items_placed() -> void:
 	_items_placed_count = new_count
 	_update_items_placed_display(new_count)
 	_pulse_counter(_items_placed_label, delta > 0)
+	_refresh_zero_state_hint()
+
+
+## Tracks live shopper presence so the zero-state hint can flip between the
+## "stock the floor" and "waiting for customers" copy. Independent from the
+## served-today throughput counter.
+func _on_customer_spawned_hud(_customer: Node) -> void:
+	_active_customer_count += 1
+	_refresh_zero_state_hint()
+
+
+func _on_customer_left_hud(_customer_data: Dictionary) -> void:
+	_active_customer_count = maxi(_active_customer_count - 1, 0)
+	_refresh_zero_state_hint()
+
+
+func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void:
+	_refresh_zero_state_hint()
+
+
+## Day-1 onboarding hint: surfaces the next-action copy when the loop is at
+## a zero state (no stock or no customers). Hides itself outside STORE_VIEW
+## and while a modal owns focus so it doesn't compete with checkout, the
+## inventory panel, or the day-summary screen.
+func _refresh_zero_state_hint() -> void:
+	if not is_instance_valid(_zero_state_hint):
+		return
+	var state: GameManager.State = GameManager.current_state
+	var in_store: bool = (
+		state == GameManager.State.STORE_VIEW
+		or state == GameManager.State.GAMEPLAY
+	)
+	if not in_store:
+		_zero_state_hint.visible = false
+		return
+	if InputFocus.current() == InputFocus.CTX_MODAL:
+		_zero_state_hint.visible = false
+		return
+	if _items_placed_count <= 0:
+		_zero_state_hint.text = _HINT_STOCK_FLOOR
+		_zero_state_hint.visible = true
+		return
+	if _active_customer_count <= 0:
+		_zero_state_hint.text = _HINT_AWAITING_CUSTOMER
+		_zero_state_hint.visible = true
+		return
+	_zero_state_hint.visible = false
 
 
 ## Increments the customers-served-today counter when a sale completes. Driven
@@ -1252,13 +1225,7 @@ func _reset_for_tests() -> void:
 	_objective_active = false
 	_telegraph_card.visible = false
 	_seasonal_event_label.visible = false
-	# Clear the modal-focus ownership flag without touching the InputFocus
-	# stack — pair with InputFocus._reset_for_tests() in test harnesses.
-	_confirm_dialog_focus_pushed = false
-
-
-func _exit_tree() -> void:
-	# Free-on-quit / scene-swap path — release the dialog's CTX_MODAL frame so
-	# the stack doesn't leak across tests or scene transitions.
-	if _confirm_dialog_focus_pushed:
-		_pop_confirm_dialog_modal_focus()
+	_active_customer_count = 0
+	_items_placed_count = 0
+	if is_instance_valid(_zero_state_hint):
+		_zero_state_hint.visible = false

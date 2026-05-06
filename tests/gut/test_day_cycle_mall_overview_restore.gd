@@ -26,6 +26,10 @@ func before_each() -> void:
 	GameManager.current_state = GameManager.State.GAMEPLAY
 	GameManager.current_store_id = &"retro_games"
 	GameManager.owned_stores = [&"retro_games"]
+	# This suite drives the post-confirm close path; pre-mark the autoload's
+	# loop flag so the controller's gate fails open instead of detouring
+	# through the confirmation modal.
+	ObjectiveDirector._loop_completed_today = true
 
 	_time = TimeSystem.new()
 	add_child_autofree(_time)
@@ -64,6 +68,7 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
+	ObjectiveDirector._loop_completed_today = false
 	# DaySummary._reset_for_tests pairs with InputFocus.pop hygiene so the
 	# next test starts from a clean modal-focus stack.
 	if is_instance_valid(_day_summary):

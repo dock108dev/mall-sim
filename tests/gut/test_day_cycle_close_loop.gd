@@ -35,6 +35,10 @@ func before_each() -> void:
 	# against a "first sale done" session — these tests exercise day-close
 	# mechanics, not the Day 1 soft-confirm gate.
 	GameState.set_flag(&"first_sale_complete", true)
+	# Pre-mark the loop-completed flag so the Phase-3 confirmation gate fails
+	# open. These tests verify the post-confirm close path; the gate itself
+	# has its own coverage in test_day_cycle_close_confirmation_gate.
+	ObjectiveDirector._loop_completed_today = true
 
 	_time = TimeSystem.new()
 	add_child_autofree(_time)
@@ -79,6 +83,7 @@ func after_each() -> void:
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
 	GameState.set_flag(&"first_sale_complete", _saved_first_sale_flag)
+	ObjectiveDirector._loop_completed_today = false
 	TEST_SIGNAL_UTILS.safe_disconnect(EventBus.day_closed, _on_day_closed)
 	TEST_SIGNAL_UTILS.safe_disconnect(
 		EventBus.store_day_closed, _on_store_day_closed
@@ -100,6 +105,9 @@ func _on_store_day_closed(
 
 func _on_day_started(day: int) -> void:
 	_day_started_days.append(day)
+	# day_started resets ObjectiveDirector._loop_completed_today; re-arm it so
+	# the multi-close paths in this suite continue to fail open.
+	ObjectiveDirector._loop_completed_today = true
 
 
 # ── Test 1: day_close_requested emits day_closed with revenue payload ─────────

@@ -22,6 +22,7 @@ The autoload list is documented in [Architecture](architecture.md).
 
 - in-store movement (`move_forward`, `move_back`, `move_left`, `move_right`,
   `sprint`) and interaction (`interact`)
+- shelf restocking shortcut (`quick_stock`)
 - debug overlay (`toggle_debug`, F3) and the debug overhead/orbit camera
   toggle (`toggle_debug_camera`, F1)
 - panel toggles for inventory, orders, staff, and pricing

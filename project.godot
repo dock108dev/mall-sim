@@ -247,6 +247,7 @@ textures/default_filters/anisotropic_filtering_level=1
 environment/ssao/quality=0
 environment/ssil/quality=0
 anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/use_debanding=true
 environment/glow/upscale_mode=0
 environment/defaults/default_clear_color=Color(0.1, 0.1, 0.12, 1)
 environment/ssr/roughness_quality=0

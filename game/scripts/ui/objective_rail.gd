@@ -124,14 +124,23 @@ func has_active_objective() -> bool:
 	return not _current_payload.is_empty()
 
 
+## Re-triggers `_flash()` when the rail transitions from hidden-with-content
+## back to visible. Without this, the 1-second alpha tween started inside
+## `_on_objective_changed` runs while the rail is invisible (e.g., behind the
+## Day-1 morning-note overlay) and finishes silently — the rail then snaps in
+## at full opacity with no animation when the gating condition clears. Flashing
+## on the hidden→visible edge preserves the "new objective" reveal beat.
 func _refresh_visibility() -> void:
-	visible = (
+	var should_show: bool = (
 		_show_rail
 		and not _auto_hidden
 		and not _current_payload.is_empty()
 		and _state_allows_rail()
 		and not _modal_active()
 	)
+	if should_show and not visible:
+		_flash()
+	visible = should_show
 
 
 func _state_allows_rail() -> bool:

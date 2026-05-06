@@ -25,6 +25,10 @@ func before_each() -> void:
 	_saved_first_sale_flag = GameState.get_flag(&"first_sale_complete")
 	GameManager.current_store_id = &"pocket_creatures"
 	GameManager.owned_stores = []
+	# These tests focus on the post-confirm close-day path; pre-mark the
+	# Phase-3 loop flag so the controller's gate fails open. Tests that need
+	# the gate active set the flag back to false explicitly.
+	ObjectiveDirector._loop_completed_today = true
 
 	_time = TimeSystem.new()
 	add_child_autofree(_time)
@@ -65,6 +69,7 @@ func after_each() -> void:
 	GameManager.current_store_id = _saved_store_id
 	GameManager.owned_stores = _saved_owned_stores
 	GameState.set_flag(&"first_sale_complete", _saved_first_sale_flag)
+	ObjectiveDirector._loop_completed_today = false
 	_safe_disconnect(
 		EventBus.bankruptcy_declared, _on_bankruptcy
 	)
@@ -180,48 +185,44 @@ func test_no_advance_if_ending_triggered() -> void:
 	)
 
 
-# ── Day 1 first-sale soft gate ────────────────────────────────────────────────
-# The Day 1 first-sale gate is enforced at the UI layer as a confirmation
-# dialog (HUD / MallOverview). Once the player consents and the bus emits
-# `day_close_requested`, the controller proceeds regardless of the flag — the
-# player has already been warned and chosen to close.
+# ── Phase-3 close-day confirmation gate ──────────────────────────────────────
+# The controller checks `ObjectiveDirector.can_close_day()` before running the
+# close path. When the gate fails open (loop completed for the day, autoload
+# missing, non-gameplay state) the close proceeds straight through; otherwise
+# the controller emits `day_close_confirmation_requested` and waits for the
+# player to answer with `day_close_confirmed`.
 
 
-func test_day1_close_proceeds_even_when_first_sale_flag_unset() -> void:
+func test_day1_close_proceeds_when_loop_completed_today() -> void:
 	GameManager.current_state = GameManager.State.GAMEPLAY
 	_time.current_day = 1
-	GameState.set_flag(&"first_sale_complete", false)
+	ObjectiveDirector._loop_completed_today = true
 
 	_controller._on_day_close_requested()
 
 	assert_eq(
 		GameManager.current_state, GameManager.State.DAY_SUMMARY,
-		"day_close_requested must proceed once the UI soft gate is cleared, "
-		+ "even if the first-sale flag is still unset"
+		"day_close_requested must proceed when the loop is complete for the day"
 	)
 
 
-func test_day1_close_proceeds_when_first_sale_flag_set() -> void:
+func test_day_close_confirmed_drives_summary_after_gate() -> void:
 	GameManager.current_state = GameManager.State.GAMEPLAY
 	_time.current_day = 1
-	GameState.set_flag(&"first_sale_complete", true)
+	ObjectiveDirector._current_day = 1
+	ObjectiveDirector._stocked = false
+	ObjectiveDirector._sold = false
+	ObjectiveDirector._loop_completed_today = false
 
 	_controller._on_day_close_requested()
-
 	assert_eq(
-		GameManager.current_state, GameManager.State.DAY_SUMMARY,
-		"Day 1 close must proceed once first sale flag is set"
+		GameManager.current_state, GameManager.State.GAMEPLAY,
+		"Gate must hold the controller in GAMEPLAY until the player confirms"
 	)
 
-
-func test_day2_close_unaffected_by_first_sale_flag() -> void:
-	GameManager.current_state = GameManager.State.GAMEPLAY
-	_time.current_day = 2
-	GameState.set_flag(&"first_sale_complete", false)
-
-	_controller._on_day_close_requested()
+	EventBus.day_close_confirmed.emit()
 
 	assert_eq(
 		GameManager.current_state, GameManager.State.DAY_SUMMARY,
-		"Day 2+ close must not be gated by the first-sale flag"
+		"day_close_confirmed must run the same close path as an unguarded request"
 	)

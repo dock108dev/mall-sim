@@ -155,3 +155,74 @@ func test_empty_accepted_category_matches_any() -> void:
 
 	var mat: Material = mesh.get_surface_override_material(0)
 	assert_not_null(mat, "Empty accepted_category must match any item category")
+
+
+# ── Empty ghost visibility tests ──────────────────────────────────────────────
+
+
+func _get_empty_ghost(slot: ShelfSlot) -> MeshInstance3D:
+	return slot.get_node_or_null("EmptyGhost") as MeshInstance3D
+
+
+func test_empty_slot_shows_ghost_outside_placement_mode() -> void:
+	var ghost: MeshInstance3D = _get_empty_ghost(_slot)
+	assert_not_null(
+		ghost,
+		"ShelfSlot must spawn an EmptyGhost child so empty slots are visible "
+		+ "from FP eye level without entering placement mode"
+	)
+	if ghost == null:
+		return
+	assert_true(
+		ghost.visible,
+		"EmptyGhost must be visible on a fresh empty slot — empty floor stock "
+		+ "should read at a glance during normal gameplay"
+	)
+
+
+func test_stocked_slot_hides_ghost() -> void:
+	_slot.assign_item(&"inst_ghost_hide")
+	var ghost: MeshInstance3D = _get_empty_ghost(_slot)
+	assert_not_null(ghost, "EmptyGhost must exist after _ready")
+	if ghost == null:
+		return
+	assert_false(
+		ghost.visible,
+		"EmptyGhost must hide once the slot is stocked so the spawned product "
+		+ "mesh reads cleanly without an overlapping ghost"
+	)
+
+
+func test_removing_item_restores_ghost_visibility() -> void:
+	_slot.assign_item(&"inst_ghost_restore")
+	_slot.deassign()
+	var ghost: MeshInstance3D = _get_empty_ghost(_slot)
+	assert_not_null(ghost, "EmptyGhost must exist after _ready")
+	if ghost == null:
+		return
+	assert_true(
+		ghost.visible,
+		"EmptyGhost must reappear after deassign so a sold-through slot reads "
+		+ "as empty floor stock again"
+	)
+
+
+func test_empty_ghost_uses_translucent_dim_material() -> void:
+	var ghost: MeshInstance3D = _get_empty_ghost(_slot)
+	assert_not_null(ghost, "EmptyGhost must exist after _ready")
+	if ghost == null:
+		return
+	var mat: StandardMaterial3D = ghost.get_surface_override_material(
+		0
+	) as StandardMaterial3D
+	assert_not_null(
+		mat,
+		"EmptyGhost must carry a StandardMaterial3D so the dim alpha applies"
+	)
+	if mat == null:
+		return
+	assert_lt(
+		mat.albedo_color.a, 0.5,
+		"EmptyGhost alpha must stay below 0.5 so the dim ghost reads as "
+		+ "intentionally empty rather than competing with stocked items"
+	)

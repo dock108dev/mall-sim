@@ -259,6 +259,84 @@ func test_active_focus_after_disabled_restores_badge_and_full_opacity() -> void:
 	)
 
 
+# ── Defensive re-query when prompt re-shows after a hidden window ──────────
+
+func test_modal_close_reapplies_disabled_styling_when_target_state_changed() -> void:
+	# Hover starts active; modal pushes CTX_MODAL (without firing
+	# panel_opened, so the ray's hover is not cleared). State of the hovered
+	# target flips during the modal. When the modal closes and the prompt
+	# re-shows via _refresh_visibility(), it must re-query the ray's current
+	# hovered target and reflect can_interact()=false (badge hidden) rather
+	# than restore the pre-modal active styling.
+	var target: _StatefulTarget = _StatefulTarget.new()
+	target.can = true
+	add_child_autofree(target)
+	var ray_stub: _RayStub = _RayStub.new()
+	ray_stub.target = target
+	add_child_autofree(ray_stub)
+
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	var badge: PanelContainer = _prompt.get_node("PanelContainer/HBox/KeyBadge")
+	assert_true(badge.visible, "Pre-condition: active focus shows the E badge")
+
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	target.can = false
+	InputFocus.pop_context()
+
+	assert_false(
+		badge.visible,
+		"Modal close must re-evaluate can_interact() of the hovered target and hide the E badge when state flipped to false"
+	)
+
+
+func test_modal_close_reapplies_active_styling_when_target_state_changed() -> void:
+	# Inverse: hover starts disabled, state flips to actionable during the
+	# modal, modal closes — the badge must come back without the player
+	# having to look away and back.
+	var target: _StatefulTarget = _StatefulTarget.new()
+	target.can = false
+	target.disabled_reason = "No customer waiting"
+	add_child_autofree(target)
+	var ray_stub: _RayStub = _RayStub.new()
+	ray_stub.target = target
+	add_child_autofree(ray_stub)
+
+	EventBus.interactable_focused_disabled.emit("No customer waiting")
+	var badge: PanelContainer = _prompt.get_node("PanelContainer/HBox/KeyBadge")
+	assert_false(badge.visible, "Pre-condition: disabled focus hides the E badge")
+
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	target.can = true
+	InputFocus.pop_context()
+
+	assert_true(
+		badge.visible,
+		"Modal close must re-evaluate can_interact() of the hovered target and re-show the E badge when state flipped to true"
+	)
+
+
+func test_modal_close_without_focus_target_does_not_query_ray() -> void:
+	# Sanity: when no focus target is set, _refresh_visibility() returns
+	# early before reaching the ray lookup. Asserts the early-return path
+	# is preserved (no spurious styling changes when nothing is hovered).
+	var target: _StatefulTarget = _StatefulTarget.new()
+	target.can = false
+	add_child_autofree(target)
+	var ray_stub: _RayStub = _RayStub.new()
+	ray_stub.target = target
+	add_child_autofree(ray_stub)
+
+	# No prior interactable_focused* event — _has_focus_target stays false.
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	InputFocus.pop_context()
+
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	assert_false(
+		panel.visible,
+		"Without a focus target, modal cycles must leave the prompt hidden"
+	)
+
+
 func test_panel_anchor_does_not_move_between_states() -> void:
 	# Regression guard for the AC "active prompt and disabled reason render
 	# at the same screen position." The panel itself is bottom-center
@@ -292,3 +370,30 @@ func test_panel_anchor_does_not_move_between_states() -> void:
 		panel.offset_bottom, initial_offset_bottom,
 		"Disabled focus must not shift the prompt panel's bottom anchor offset"
 	)
+
+
+## Test stub registered in the `interaction_ray` lookup group so the prompt
+## can resolve a hovered target during _refresh_visibility() without spinning
+## up a real raycast pipeline.
+class _RayStub extends Node:
+	const _GROUP: StringName = &"interaction_ray"
+	var target: Interactable = null
+
+	func _ready() -> void:
+		add_to_group(_GROUP)
+
+	func get_hovered_target() -> Interactable:
+		return target
+
+
+## Stateful Interactable whose `can_interact()` is driven by a flag, used to
+## simulate a state change during a modal-open window.
+class _StatefulTarget extends Interactable:
+	var can: bool = true
+	var disabled_reason: String = ""
+
+	func can_interact(_actor: Node = null) -> bool:
+		return can
+
+	func get_disabled_reason(_actor: Node = null) -> String:
+		return disabled_reason

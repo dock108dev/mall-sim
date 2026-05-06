@@ -1,15 +1,16 @@
 ## Verifies the Day 1 scripted first-customer → first-sale → HUD update chain.
 ##
-## Three layers are exercised:
+## Two layers are exercised:
 ##   1. `CustomerSystem._on_item_stocked` — the scripted Day 1 trigger that arms
 ##      a fallback Timer; the timeout handler force-spawns a customer if the
 ##      hour-density loop has not produced one.
 ##   2. HUD label handlers — `CashLabel`, `CustomersLabel`, `SalesTodayLabel`
 ##      update synchronously from `money_changed` / `customer_entered` /
 ##      `item_sold`.
-##   3. Close Day gate — `_is_day1_gate_active()` flips off after
-##      `first_sale_complete` is set, and the button-press path emits the
-##      correct EventBus signal in each gate state.
+##
+## Loop-completion gating for Close Day now lives in DayCycleController +
+## CloseDayConfirmationPanel (see `test_day_close_confirmation_gate.gd`); the
+## HUD soft-gate that this file used to cover has been removed as a duplicate.
 ##
 ## Chain wiring further upstream (`item_sold → ObjectiveDirector →
 ## first_sale_completed → DayManager → flag`) is covered by
@@ -339,68 +340,18 @@ func test_hud_sales_today_label_increments_on_item_sold() -> void:
 	)
 
 
-# ── Close Day gate: state and button-press behavior ───────────────────────────
+# ── Close Day press → preview → day_close_requested ──────────────────────────
 
 
-func test_close_day_gate_active_on_day_1_without_first_sale() -> void:
-	var hud: CanvasLayer = _HudScene.instantiate()
-	add_child_autofree(hud)
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", false)
-	assert_true(
-		hud._is_day1_gate_active(),
-		"Gate must be active on Day 1 with no first-sale flag"
-	)
-
-
-func test_close_day_gate_releases_after_first_sale_flag_set() -> void:
-	var hud: CanvasLayer = _HudScene.instantiate()
-	add_child_autofree(hud)
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", true)
-	assert_false(
-		hud._is_day1_gate_active(),
-		"Gate must release once first_sale_complete is set"
-	)
-
-
-func test_close_day_press_shows_soft_confirm_when_gate_active() -> void:
+func test_close_day_press_opens_preview_and_confirm_emits_request() -> void:
+	# The HUD's old "Day 1 + no first sale" soft confirm dialog has been removed
+	# — loop-completion gating now lives downstream in DayCycleController +
+	# CloseDayConfirmationPanel (see test_day_close_confirmation_gate.gd).
+	# The HUD's only job is to open the preview; the preview's confirm button
+	# is the sole emitter of day_close_requested from in-store HUD.
 	var hud: CanvasLayer = _HudScene.instantiate()
 	add_child_autofree(hud)
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", false)
-
-	var close_emits: Array[bool] = []
-	var on_close: Callable = (func() -> void: close_emits.append(true))
-	EventBus.day_close_requested.connect(on_close)
-	hud._on_close_day_pressed()
-	EventBus.day_close_requested.disconnect(on_close)
-
-	var dialog: ConfirmationDialog = (
-		hud.get_node("CloseDayConfirmDialog") as ConfirmationDialog
-	)
-	assert_true(
-		dialog.visible,
-		"Pressing Close Day with the gate active must surface the confirm dialog"
-	)
-	assert_eq(
-		close_emits.size(), 0,
-		"Pressing Close Day with the gate active must not yet request day close"
-	)
-	var preview: CanvasLayer = hud.get_node("CloseDayPreview") as CanvasLayer
-	assert_false(
-		preview.visible,
-		"The dry-run preview must not open until the player confirms"
-	)
-
-
-func test_close_day_press_proceeds_when_gate_released() -> void:
-	var hud: CanvasLayer = _HudScene.instantiate()
-	add_child_autofree(hud)
-	GameManager.current_state = GameManager.State.STORE_VIEW
-	GameManager.set_current_day(1)
-	GameState.set_flag(&"first_sale_complete", true)
 
 	var close_emits: Array[bool] = []
 	var on_close: Callable = (func() -> void: close_emits.append(true))
@@ -412,7 +363,7 @@ func test_close_day_press_proceeds_when_gate_released() -> void:
 	)
 	assert_true(
 		preview.visible,
-		"Pressing Close Day after the gate releases must open the preview"
+		"Pressing Close Day must open the preview"
 	)
 	assert_eq(
 		close_emits.size(), 0,

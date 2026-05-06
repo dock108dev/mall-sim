@@ -272,11 +272,16 @@ func load_settings() -> void:
 		config, "display", "colorblind_mode", false
 	)
 	locale = _get_config_string(config, "locale", "language", "en")
+	# Bound these to a small non-negative range — both are enum-shaped
+	# preferences that have a fixed set of valid values. Read-time clamping
+	# means a hand-edited settings.cfg cannot land an arbitrary int in a
+	# downstream consumer (current code does not read these beyond echo, but
+	# clamping here keeps that contract durable). See security-report.md §4.
 	display_mode = _get_config_int(
-		config, "preferences", "display_mode", 1
+		config, "preferences", "display_mode", 1, 0, 31
 	)
 	control_scheme = _get_config_int(
-		config, "preferences", "control_scheme", 0
+		config, "preferences", "control_scheme", 0, 0, 31
 	)
 	render_quality = _get_config_int(
 		config, "display", "render_quality",

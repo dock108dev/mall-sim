@@ -96,10 +96,32 @@ func _refresh_visibility() -> void:
 	if not _has_focus_target:
 		return
 	if _can_show():
+		_reapply_styling_from_hovered_target()
 		_panel.visible = true
 		_fade_to(1.0)
 	else:
 		_fade_to(0.0)
+
+
+## Defensive re-query when re-showing the prompt after a hidden window (e.g.
+## a modal closing). If `can_interact()` of the still-hovered target changed
+## while the prompt was hidden, the existing styling reflects the pre-hide
+## snapshot. Look up the active InteractionRay via its lookup group and
+## re-apply active vs. disabled styling based on the current state so the
+## E-key badge does not lie. Label text is intentionally not refreshed here
+## — it is owned by the focus signal payloads, which the per-frame poll in
+## `interaction_ray.gd` keeps current.
+func _reapply_styling_from_hovered_target() -> void:
+	var ray: Node = get_tree().get_first_node_in_group(&"interaction_ray")
+	if ray == null or not ray.has_method("get_hovered_target"):
+		return
+	var target: Interactable = ray.get_hovered_target()
+	if target == null or not is_instance_valid(target):
+		return
+	if target.can_interact():
+		_apply_active_styling()
+	else:
+		_apply_disabled_styling()
 
 
 ## §F-44 — `InputFocus == null` returns true (i.e. no modal is blocking) on

@@ -1,4 +1,4 @@
-## Single owner of input/modal focus context (ISSUE-011, ownership.md row 5).
+## Single owner of input/modal focus context (ownership.md row 5).
 ## Stack-based: gameplay, UI, modals, menus push their context on entry and
 ## pop on exit. The topmost wins. Gameplay scripts gate their input handlers
 ## with `InputFocus.current() == &"store_gameplay"`. Direct
@@ -8,6 +8,8 @@
 ## After every SceneRouter-driven transition, the new scene's controller is
 ## expected to push its context. An empty stack post-transition is a contract
 ## violation: AuditLog.fail + ErrorBanner.show_failure (no silent dead state).
+## A depth >1 post-transition means the prior scene leaked a push and is
+## reported as a non-fatal warning so the leaking call site can be found.
 extends Node
 
 signal context_changed(new_ctx: StringName, old_ctx: StringName)
@@ -17,6 +19,12 @@ const CTX_STORE_GAMEPLAY: StringName = &"store_gameplay"
 const CTX_MALL_HUB: StringName = &"mall_hub"
 const CTX_MODAL: StringName = &"modal"
 const CTX_MAIN_MENU: StringName = &"main_menu"
+
+## Hard upper bound on stack depth. Two or three frames is the normal range
+## (gameplay + modal, occasionally + placement-mode retention). Anything past
+## this is almost certainly a leak — the assert fires loudly in debug builds
+## so the leaking call site can be found before release.
+const MAX_STACK_DEPTH: int = 8
 
 var _stack: Array[StringName] = []
 var _router_connected: bool = false
@@ -31,6 +39,14 @@ func push_context(ctx: StringName) -> void:
 	assert(ctx != &"", "InputFocus.push_context: empty context")
 	var old: StringName = current()
 	_stack.push_back(ctx)
+	assert(
+		_stack.size() <= MAX_STACK_DEPTH,
+		(
+			"InputFocus: stack depth %d exceeded MAX_STACK_DEPTH %d — "
+			+ "likely a missing pop_context. stack=%s"
+		)
+		% [_stack.size(), MAX_STACK_DEPTH, _stack]
+	)
 	context_changed.emit(ctx, old)
 
 
@@ -54,6 +70,24 @@ func current() -> StringName:
 ## Returns the current stack depth (for tests and the debug overlay).
 func depth() -> int:
 	return _stack.size()
+
+
+## Returns a defensive copy of the full stack, bottom-to-top, for debug
+## overlays and tests. Mutating the returned array does not affect state.
+func stack_snapshot() -> Array[StringName]:
+	return _stack.duplicate()
+
+
+## Returns a human-readable reason why gameplay input is currently blocked,
+## or an empty string when gameplay (`CTX_STORE_GAMEPLAY`) is the active
+## context. Intended for the debug overlay and player-facing diagnostics.
+func why_blocked() -> String:
+	var ctx: StringName = current()
+	if ctx == CTX_STORE_GAMEPLAY:
+		return ""
+	if ctx == &"":
+		return "stack empty — transition or leaked pop"
+	return "blocked by '%s' (depth=%d)" % [String(ctx), _stack.size()]
 
 
 ## Test seam — clears the stack without emitting signals.
@@ -84,8 +118,20 @@ func _on_scene_ready(target: StringName, _payload: Dictionary) -> void:
 func _audit_non_empty(target: StringName) -> void:
 	if _stack.is_empty():
 		_fail("input focus stack empty after transition target=%s" % target)
-	else:
-		_pass("target=%s ctx=%s depth=%d" % [target, current(), _stack.size()])
+		return
+	if _stack.size() > 1:
+		# A fresh scene should start with exactly one context. Extra frames
+		# mean the prior scene leaked one or more pushes. Surface as a
+		# non-fatal warning so the call site can be fixed; the topmost frame
+		# still gates input correctly, so gameplay is not in a dead state.
+		push_warning(
+			(
+				"[InputFocus] stack depth %d after transition target=%s — "
+				+ "prior scene leaked push(es): %s"
+			)
+			% [_stack.size(), target, _stack]
+		)
+	_pass("target=%s ctx=%s depth=%d" % [target, current(), _stack.size()])
 
 
 func _pass(detail: String) -> void:

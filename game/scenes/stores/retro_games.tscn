@@ -1,8 +1,15 @@
-[gd_scene load_steps=77 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=110 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
 [ext_resource type="Script" path="res://game/scripts/components/interactable.gd" id="3"]
+[ext_resource type="Script" path="res://game/scripts/components/hold_shelf_interactable.gd" id="40_hold_shelf"]
+[ext_resource type="Script" path="res://game/scripts/components/warranty_binder_interactable.gd" id="41_warranty_binder"]
+[ext_resource type="Script" path="res://game/scripts/components/backordered_console_interactable.gd" id="42_backordered_console"]
+[ext_resource type="Script" path="res://game/scripts/components/register_note_interactable.gd" id="43_register_note"]
+[ext_resource type="Script" path="res://game/scripts/components/security_flyer_interactable.gd" id="44_security_flyer"]
+[ext_resource type="Script" path="res://game/scripts/components/returned_item_interactable.gd" id="45_returned_item"]
+[ext_resource type="Script" path="res://game/scripts/components/employee_schedule_interactable.gd" id="46_employee_schedule"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_floor_wood_warm.tres" id="4"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_wall_cream.tres" id="5"]
 [ext_resource type="StandardMaterial3D" path="res://game/assets/materials/mat_ceiling_warm.tres" id="6"]
@@ -25,6 +32,11 @@
 [ext_resource type="PackedScene" path="res://game/scenes/player/player_controller.tscn" id="26_retrogames"]
 [ext_resource type="Script" path="res://game/scripts/player/interaction_ray.gd" id="27_retrogames"]
 [ext_resource type="NavigationMesh" path="res://game/navigation/retro_games_navmesh.tres" id="28_retrogames"]
+[ext_resource type="PackedScene" path="res://game/assets/models/props/prop_register_monitor.gltf" id="30"]
+[ext_resource type="PackedScene" path="res://game/assets/models/props/prop_console_box.gltf" id="31"]
+[ext_resource type="PackedScene" path="res://game/assets/models/props/prop_receipt_printer.gltf" id="32"]
+[ext_resource type="PackedScene" path="res://game/assets/models/props/prop_hold_tag.gltf" id="33"]
+[ext_resource type="Script" path="res://game/scripts/components/register_interactable.gd" id="34_register"]
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(16, 0.1, 20)
@@ -68,8 +80,15 @@ roughness = 0.45
 [sub_resource type="BoxMesh" id="slot_marker_mesh"]
 size = Vector3(0.15, 0.15, 0.15)
 
+; Shelf-slot interaction trigger volume. Sized to match the shipped
+; shelf_slot.tscn component (0.3 m cube) so the player's reticle can lock onto
+; a slot from a natural standing distance without having to align inside the
+; fixture body. Width stays under the tightest neighbor spacing in the scene
+; (ConsoleShelf at 0.3 m between slots) so adjacent slots touch but do not
+; overlap; the InteractionRay's closest-collider-wins behaviour selects the
+; correct slot.
 [sub_resource type="BoxShape3D" id="slot_collision"]
-size = Vector3(0.2, 0.2, 0.2)
+size = Vector3(0.3, 0.3, 0.3)
 
 [sub_resource type="BoxMesh" id="door_mesh"]
 size = Vector3(0.8, 2.0, 0.1)
@@ -93,11 +112,8 @@ emission_energy_multiplier = 1.4
 [sub_resource type="BoxShape3D" id="register_collision"]
 size = Vector3(0.6, 0.45, 0.45)
 
-[sub_resource type="BoxMesh" id="terminal_monitor_mesh"]
-size = Vector3(0.42, 0.32, 0.22)
-
-[sub_resource type="BoxMesh" id="terminal_screen_mesh"]
-size = Vector3(0.34, 0.22, 0.03)
+[sub_resource type="BoxShape3D" id="receipt_printer_shape"]
+size = Vector3(0.18, 0.10, 0.15)
 
 [sub_resource type="BoxShape3D" id="entry_shape"]
 size = Vector3(2.0, 2.5, 0.5)
@@ -260,17 +276,6 @@ size = Vector3(0.9, 0.6, 0.6)
 [sub_resource type="BoxShape3D" id="new_console_pedestal_shape"]
 size = Vector3(0.9, 0.6, 0.6)
 
-[sub_resource type="BoxMesh" id="new_console_unit_mesh"]
-size = Vector3(0.6, 0.18, 0.42)
-
-[sub_resource type="StandardMaterial3D" id="new_console_unit_mat"]
-albedo_color = Color(0.92, 0.92, 0.95, 1)
-metallic = 0.5
-roughness = 0.35
-emission_enabled = true
-emission = Color(0.45, 0.85, 1.0, 1)
-emission_energy_multiplier = 0.65
-
 [sub_resource type="StandardMaterial3D" id="new_console_pedestal_mat"]
 albedo_color = Color(0.18, 0.21, 0.28, 1)
 roughness = 0.55
@@ -367,6 +372,72 @@ size = Vector3(0.5, 0.4, 0.5)
 albedo_color = Color(0.62, 0.46, 0.24, 1)
 roughness = 0.55
 
+; ── Hidden-thread prop sub-resources ────────────────────────────────────────
+; Small paper/object props examined by the player to surface mundane retail
+; flavor while feeding HiddenThreadSystem awareness Tier 1 triggers. Visual
+; geometry intentionally cheap (BoxMesh placeholders) — the props are
+; readable at a glance from their position and label, not their detail.
+
+[sub_resource type="BoxMesh" id="warranty_binder_mesh"]
+size = Vector3(0.26, 0.06, 0.22)
+
+[sub_resource type="BoxShape3D" id="warranty_binder_shape"]
+size = Vector3(0.5, 0.4, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="warranty_binder_mat"]
+albedo_color = Color(0.32, 0.18, 0.20, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="register_note_mesh"]
+size = Vector3(0.10, 0.005, 0.10)
+
+[sub_resource type="BoxShape3D" id="register_note_shape"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="register_note_mat"]
+albedo_color = Color(0.98, 0.92, 0.42, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="security_flyer_mesh"]
+size = Vector3(0.30, 0.005, 0.42)
+
+[sub_resource type="BoxShape3D" id="security_flyer_shape"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="security_flyer_mat"]
+albedo_color = Color(0.92, 0.92, 0.86, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="returned_item_mesh"]
+size = Vector3(0.18, 0.10, 0.12)
+
+[sub_resource type="BoxShape3D" id="returned_item_shape"]
+size = Vector3(0.4, 0.35, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="returned_item_mat"]
+albedo_color = Color(0.16, 0.16, 0.18, 1)
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="employee_schedule_mesh"]
+size = Vector3(0.34, 0.005, 0.42)
+
+[sub_resource type="BoxShape3D" id="employee_schedule_shape"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="employee_schedule_mat"]
+albedo_color = Color(0.96, 0.93, 0.84, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="backordered_console_box_mesh"]
+size = Vector3(0.42, 0.18, 0.30)
+
+[sub_resource type="BoxShape3D" id="backordered_console_shape"]
+size = Vector3(0.6, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="backordered_console_mat"]
+albedo_color = Color(0.34, 0.30, 0.26, 1)
+roughness = 0.65
+
 [sub_resource type="BoxMesh" id="zone_floor_seam_mesh"]
 size = Vector3(0.12, 0.02, 9.0)
 
@@ -382,6 +453,44 @@ emission_energy_multiplier = 1.4
 
 [sub_resource type="BoxMesh" id="section_sign_backing_mesh"]
 size = Vector3(2.0, 0.45, 0.04)
+
+; Zone label backings — physical sign panels behind the four diegetic
+; ZoneLabel signs. Width fits the longest label ("Backroom / Storage")
+; with margin; depth is shallow so the sign reads as a flat panel.
+[sub_resource type="BoxMesh" id="zone_label_backing_mesh"]
+size = Vector3(1.8, 0.4, 0.03)
+
+[sub_resource type="StandardMaterial3D" id="zone_label_backing_mat"]
+albedo_color = Color(0.06, 0.08, 0.13, 1)
+emission_enabled = true
+emission = Color(1.0, 0.76, 0.34, 1)
+emission_energy_multiplier = 0.9
+roughness = 0.55
+
+; Atmosphere props — non-interactive store identity panels.
+[sub_resource type="BoxMesh" id="sale_poster_mesh"]
+size = Vector3(0.02, 0.9, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="sale_poster_mat"]
+albedo_color = Color(0.78, 0.16, 0.12, 1)
+emission_enabled = true
+emission = Color(1.0, 0.36, 0.22, 1)
+emission_energy_multiplier = 0.55
+roughness = 0.65
+
+[sub_resource type="BoxMesh" id="return_policy_mesh"]
+size = Vector3(0.4, 0.3, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="return_policy_mat"]
+albedo_color = Color(0.95, 0.91, 0.76, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="employee_board_mesh"]
+size = Vector3(0.02, 0.8, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="employee_board_mat"]
+albedo_color = Color(0.42, 0.30, 0.18, 1)
+roughness = 0.85
 
 ; ============================================================
 ; Root
@@ -628,7 +737,7 @@ surface_material_override/0 = SubResource("sign_backing_mat")
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.98, 10.17)
 pixel_size = 0.008
 modulate = Color(0.76, 1, 0.86, 1)
-double_sided = false
+double_sided = true
 font_size = 56
 text = "Retro Games"
 outline_size = 7
@@ -638,7 +747,7 @@ shaded = false
 [node name="SignTagline" type="Label3D" parent="Storefront"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.42, 10.17)
 pixel_size = 0.008
-double_sided = false
+double_sided = true
 font_size = 24
 text = "Consoles & Classics"
 modulate = Color(0.92, 0.99, 1, 1)
@@ -713,7 +822,7 @@ shape = SubResource("entrance_door_interactable_shape")
 [node name="InteriorSignage" type="Node3D" parent="."]
 
 [node name="StoreNameBanner" type="Label3D" parent="InteriorSignage"]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 3.20, -10.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.20, -9.95)
 pixel_size = 0.005
 modulate = Color(0.91, 0.647, 0.278, 1)
 double_sided = false
@@ -725,7 +834,7 @@ outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
 [node name="GamesSign" type="Label3D" parent="InteriorSignage"]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.85, -10.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -9.95)
 pixel_size = 0.005
 modulate = Color(0.91, 0.647, 0.278, 1)
 double_sided = false
@@ -738,19 +847,29 @@ shaded = false
 
 ; ============================================================
 ; Zone Labels — Day-1 readability markers for the four primary zones
-; (Shelves, Checkout, Exit / Mall, Backroom / Storage). Billboarded
-; Label3D nodes mounted at Y=2.7 so they clear all interactable slot
-; zones (slots top at Y≤1.6) and read from anywhere in the room.
-; All four are in the "zone_label" group so future polish passes can
-; bulk-hide them once real props communicate the layout
+; (Shelves, Checkout, Exit / Mall, Backroom / Storage). Each label is a
+; fixed-facing diegetic sign (no billboard) mounted on a backing panel
+; oriented toward the player's primary approach direction:
+;   • ShelvesLabel  → faces +Z (player approaching the back wall shelves)
+;   • CheckoutLabel → faces -Z (customer queuing at the register)
+;   • ExitLabel     → faces -Z (player walking toward the storefront)
+;   • BackroomLabel → faces -X (player approaching the backroom door)
+; Labels sit at Y≥2.7 so they clear all interactable slot zones
+; (slots top at Y≤1.6). All four labels and their backings are in the
+; "zone_label" group so future polish passes can bulk-hide them once
+; real props communicate the layout
 ; (get_tree().call_group(&"zone_label", "set_visible", false)).
 ; ============================================================
 
 [node name="ZoneLabels" type="Node3D" parent="."]
 
+[node name="ShelvesBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -7.51)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
 [node name="ShelvesLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -7.5)
-billboard = 1
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -7.49)
 pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -761,9 +880,13 @@ outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
+[node name="CheckoutBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5.5, 2.85, 7.53)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
 [node name="CheckoutLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.85, 7.5)
-billboard = 1
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5.5, 2.85, 7.51)
 pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -774,9 +897,13 @@ outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
+[node name="ExitBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.7, 9.53)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
 [node name="ExitLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 9.5)
-billboard = 1
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2.7, 9.51)
 pixel_size = 0.005
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -787,9 +914,16 @@ outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
+; BackroomBacking sits 1.26 m south of the backroom door (door at z=-9.86)
+; so its 1.8 m Z-extent (after the -90° Y rotation) clears the back wall at
+; z=-10.05 and reads as a hallway-style sign pointing the way.
+[node name="BackroomBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 7.23, 2.7, -8.6)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
 [node name="BackroomLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.2, 2.7, -9.5)
-billboard = 1
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 7.21, 2.7, -8.6)
 pixel_size = 0.005
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -798,6 +932,131 @@ text = "Backroom / Storage"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+; ============================================================
+; Store atmosphere props — non-interactive diegetic identity panels
+; layered on top of the existing storefront / interior signage. None
+; carry collision or Interactable wrappers; they exist purely to
+; communicate "this is a retail games store" from the player POV.
+;
+;   • SalePoster        — left-wall promotional poster, mid-store
+;   • ReturnPolicySign  — small policy plaque near the checkout counter
+;   • EmployeeNoteBoard — backroom note board behind the refurb bench,
+;                         visually marking the employee-only space
+; ============================================================
+
+[node name="StoreAtmosphereProps" type="Node3D" parent="."]
+
+; SalePoster — flush against the left wall (x=-8.05, 0.1 thick) at
+; mid-store Z. Panel mesh is X-thin so the poster face points +X
+; (toward the interior). Y range 1.25–2.15 sits above customer head
+; height and clears the AccessoriesBin top (Y=1.0) further south.
+[node name="SalePoster" type="Node3D" parent="StoreAtmosphereProps"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.99, 1.7, -3.0)
+
+[node name="PanelMesh" type="MeshInstance3D" parent="StoreAtmosphereProps/SalePoster"]
+mesh = SubResource("sale_poster_mesh")
+surface_material_override/0 = SubResource("sale_poster_mat")
+
+[node name="HeadlineText" type="Label3D" parent="StoreAtmosphereProps/SalePoster"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.02, 0.20, 0)
+pixel_size = 0.005
+modulate = Color(1, 0.94, 0.42, 1)
+double_sided = false
+font_size = 56
+text = "20% OFF"
+horizontal_alignment = 1
+outline_size = 5
+outline_modulate = Color(0.18, 0.04, 0.02, 1)
+shaded = false
+
+[node name="SubText" type="Label3D" parent="StoreAtmosphereProps/SalePoster"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.02, -0.18, 0)
+pixel_size = 0.0035
+modulate = Color(0.99, 0.96, 0.86, 1)
+double_sided = false
+font_size = 32
+text = "ALL USED CARTS"
+horizontal_alignment = 1
+outline_size = 4
+outline_modulate = Color(0.18, 0.04, 0.02, 1)
+shaded = false
+
+; ReturnPolicySign — small plaque on the front wall right segment, just
+; above customer head height next to the checkout queue. Faces -Z so
+; the customer at QueueMarker1 (z=7.0) reads it head-on.
+[node name="ReturnPolicySign" type="Node3D" parent="StoreAtmosphereProps"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.9, 1.55, 9.99)
+
+[node name="PanelMesh" type="MeshInstance3D" parent="StoreAtmosphereProps/ReturnPolicySign"]
+mesh = SubResource("return_policy_mesh")
+surface_material_override/0 = SubResource("return_policy_mat")
+
+[node name="PolicyHeader" type="Label3D" parent="StoreAtmosphereProps/ReturnPolicySign"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.07, -0.02)
+pixel_size = 0.0028
+modulate = Color(0.18, 0.10, 0.05, 1)
+double_sided = false
+font_size = 24
+text = "RETURNS"
+horizontal_alignment = 1
+outline_size = 0
+shaded = false
+
+[node name="PolicyDetail" type="Label3D" parent="StoreAtmosphereProps/ReturnPolicySign"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, -0.05, -0.02)
+pixel_size = 0.0022
+modulate = Color(0.22, 0.14, 0.08, 1)
+double_sided = false
+font_size = 20
+text = "7 DAY EXCHANGE"
+horizontal_alignment = 1
+outline_size = 0
+shaded = false
+
+; EmployeeNoteBoard — backroom-style cork board on the left wall above
+; the RefurbBench (-7.28, 0, -7.14). Panel face points +X. Visually
+; distinguishes the back-of-house work surface from the customer floor.
+[node name="EmployeeNoteBoard" type="Node3D" parent="StoreAtmosphereProps"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.99, 1.65, -7.14)
+
+[node name="PanelMesh" type="MeshInstance3D" parent="StoreAtmosphereProps/EmployeeNoteBoard"]
+mesh = SubResource("employee_board_mesh")
+surface_material_override/0 = SubResource("employee_board_mat")
+
+[node name="HeaderText" type="Label3D" parent="StoreAtmosphereProps/EmployeeNoteBoard"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.02, 0.30, 0)
+pixel_size = 0.0035
+modulate = Color(0.99, 0.92, 0.66, 1)
+double_sided = false
+font_size = 28
+text = "EMPLOYEE NOTES"
+horizontal_alignment = 1
+outline_size = 3
+outline_modulate = Color(0.10, 0.06, 0.02, 1)
+shaded = false
+
+[node name="HoursText" type="Label3D" parent="StoreAtmosphereProps/EmployeeNoteBoard"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.02, 0.05, 0)
+pixel_size = 0.003
+modulate = Color(0.97, 0.93, 0.84, 1)
+double_sided = false
+font_size = 22
+text = "OPEN  10A-9P"
+horizontal_alignment = 1
+outline_size = 0
+shaded = false
+
+[node name="ReminderText" type="Label3D" parent="StoreAtmosphereProps/EmployeeNoteBoard"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.02, -0.22, 0)
+pixel_size = 0.0028
+modulate = Color(0.97, 0.93, 0.84, 1)
+double_sided = false
+font_size = 20
+text = "LOG GRADE BEFORE LIST"
+horizontal_alignment = 1
+outline_size = 0
 shaded = false
 
 ; ============================================================
@@ -1642,15 +1901,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.245)
 mesh = SubResource("register_screen_mesh")
 surface_material_override/0 = SubResource("register_screen_mat")
 
-[node name="TerminalMonitor" type="MeshInstance3D" parent="Checkout/Register"]
+[node name="TerminalMonitor" parent="Checkout/Register" instance=ExtResource("30")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.385, 0.025)
-mesh = SubResource("terminal_monitor_mesh")
-surface_material_override/0 = ExtResource("14")
 
-[node name="TerminalScreen" type="MeshInstance3D" parent="Checkout/Register"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.385, -0.10)
-mesh = SubResource("terminal_screen_mesh")
-surface_material_override/0 = SubResource("register_screen_mat")
+[node name="ReceiptPrinter" type="StaticBody3D" parent="Checkout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 1.11, 0.0)
+collision_layer = 2
+collision_mask = 0
+
+[node name="PrinterModel" parent="Checkout/ReceiptPrinter" instance=ExtResource("32")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Checkout/ReceiptPrinter"]
+shape = SubResource("receipt_printer_shape")
 
 [node name="CheckoutSign" type="Label3D" parent="Checkout/Register"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
@@ -1861,10 +2123,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0, 8.0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
 collision_layer = 16
 collision_mask = 0
-script = ExtResource("3")
+script = ExtResource("34_register")
 interaction_type = 1
-display_name = "No customer waiting"
-prompt_text = ""
+display_name = "Register"
+prompt_text = "Ring up customer"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="checkout_counter/Interactable"]
 shape = SubResource("checkout_counter_shape")
@@ -2389,10 +2651,8 @@ collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
 shape = SubResource("new_console_pedestal_shape")
 
-[node name="ConsoleUnit" type="MeshInstance3D" parent="new_console_display"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.69, 0)
-mesh = SubResource("new_console_unit_mesh")
-surface_material_override/0 = SubResource("new_console_unit_mat")
+[node name="ConsoleUnit" parent="new_console_display" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.725, 0)
 
 [node name="Spotlight" type="SpotLight3D" parent="new_console_display"]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 3.0, 0)
@@ -2518,12 +2778,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6, 1.6, 6.5)
 mesh = SubResource("hold_shelf_mesh")
 surface_material_override/0 = SubResource("hold_shelf_mat")
 
+[node name="HoldTag" parent="hold_shelf" instance=ExtResource("33")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.065, 0.0)
+
 [node name="HoldSlipContainer" type="Node3D" parent="hold_shelf"]
 
 [node name="Interactable" type="Area3D" parent="hold_shelf"]
 collision_layer = 16
 collision_mask = 0
-script = ExtResource("3")
+script = ExtResource("40_hold_shelf")
 interaction_type = 2
 display_name = "Hold Shelf"
 action_verb = "Review"
@@ -2612,6 +2875,12 @@ shape = SubResource("back_room_damaged_bin_shape")
 
 [node name="ItemContainer" type="Node3D" parent="back_room/back_room_damaged_bin"]
 
+; Damaged-bin Interactable ships disabled: no Day-1 controller listener handles
+; the RETURNS_BIN signal (the bin is currently used as an inventory location
+; tag for returned defective copies, not a player-facing examine action).
+; Leaving enabled = true would render a "Press E to Inspect Damaged Items"
+; prompt that silently does nothing — flip back to true once a returns/refunds
+; review flow is wired and connected here.
 [node name="Interactable" type="Area3D" parent="back_room/back_room_damaged_bin"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
 collision_layer = 16
@@ -2621,6 +2890,7 @@ interaction_type = 6
 display_name = "Damaged Bin"
 action_verb = "Inspect"
 prompt_text = "Inspect Damaged Items"
+enabled = false
 interactable_id = &"back_room_damaged_bin"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/back_room_damaged_bin/Interactable"]
@@ -2758,6 +3028,135 @@ interactable_id = &"release_notes_clipboard"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="release_notes_clipboard/Interactable"]
 shape = SubResource("release_notes_clipboard_shape")
+
+; ── warranty_binder (counter-side claims ledger) ────────────────────────────
+[node name="warranty_binder" type="Node3D" parent="." groups=["store_artifact", "hidden_thread_prop"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.55, 1.10, 7.85)
+
+[node name="BinderMesh" type="MeshInstance3D" parent="warranty_binder"]
+mesh = SubResource("warranty_binder_mesh")
+surface_material_override/0 = SubResource("warranty_binder_mat")
+
+[node name="Interactable" type="Area3D" parent="warranty_binder"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("41_warranty_binder")
+interaction_type = 2
+display_name = "Warranty Binder"
+action_verb = "Review"
+prompt_text = "Review Binder"
+interactable_id = &"warranty_binder"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="warranty_binder/Interactable"]
+shape = SubResource("warranty_binder_shape")
+
+; ── register_note (handwritten sticky on register side) ─────────────────────
+[node name="register_note" type="Node3D" parent="." groups=["store_artifact", "hidden_thread_prop"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.30, 1.07, 8.05)
+
+[node name="NoteMesh" type="MeshInstance3D" parent="register_note"]
+mesh = SubResource("register_note_mesh")
+surface_material_override/0 = SubResource("register_note_mat")
+
+[node name="Interactable" type="Area3D" parent="register_note"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("43_register_note")
+interaction_type = 2
+display_name = "Register Note"
+action_verb = "Read"
+prompt_text = "Read Note"
+interactable_id = &"register_note"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="register_note/Interactable"]
+shape = SubResource("register_note_shape")
+
+; ── security_flyer (employee-area mall security bulletin) ───────────────────
+[node name="security_flyer" type="Node3D" parent="employee_area" groups=["store_artifact", "hidden_thread_prop"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 1.45, 1.55, 0)
+
+[node name="FlyerMesh" type="MeshInstance3D" parent="employee_area/security_flyer"]
+mesh = SubResource("security_flyer_mesh")
+surface_material_override/0 = SubResource("security_flyer_mat")
+
+[node name="Interactable" type="Area3D" parent="employee_area/security_flyer"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("44_security_flyer")
+interaction_type = 2
+display_name = "Security Bulletin"
+action_verb = "Read"
+prompt_text = "Read Bulletin"
+interactable_id = &"security_flyer"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="employee_area/security_flyer/Interactable"]
+shape = SubResource("security_flyer_shape")
+
+; ── employee_schedule (printed shift schedule near employee area) ───────────
+[node name="employee_schedule" type="Node3D" parent="employee_area" groups=["store_artifact", "hidden_thread_prop"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 1.45, 1.05, 0.55)
+
+[node name="ScheduleMesh" type="MeshInstance3D" parent="employee_area/employee_schedule"]
+mesh = SubResource("employee_schedule_mesh")
+surface_material_override/0 = SubResource("employee_schedule_mat")
+
+[node name="Interactable" type="Area3D" parent="employee_area/employee_schedule"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("46_employee_schedule")
+interaction_type = 2
+display_name = "Employee Schedule"
+action_verb = "Read"
+prompt_text = "Read Schedule"
+interactable_id = &"employee_schedule"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="employee_area/employee_schedule/Interactable"]
+shape = SubResource("employee_schedule_shape")
+
+; ── backordered_console (back-room AWAITING STOCK unit) ─────────────────────
+[node name="backordered_console" type="Node3D" parent="back_room" groups=["store_artifact", "hidden_thread_prop"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.95, 0.55)
+
+[node name="BoxMesh" type="MeshInstance3D" parent="back_room/backordered_console"]
+mesh = SubResource("backordered_console_box_mesh")
+surface_material_override/0 = SubResource("backordered_console_mat")
+
+[node name="Interactable" type="Area3D" parent="back_room/backordered_console"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("42_backordered_console")
+interaction_type = 2
+display_name = "Backordered Console"
+action_verb = "Inspect"
+prompt_text = "Inspect Tag"
+interactable_id = &"backordered_console"
+item_id = &"backordered_console"
+backorder_start_day = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/backordered_console/Interactable"]
+shape = SubResource("backordered_console_shape")
+
+; ── returned_item (suspicious damaged-bin camera) ───────────────────────────
+[node name="returned_item" type="Node3D" parent="back_room/back_room_damaged_bin/ItemContainer" groups=["store_artifact", "hidden_thread_prop"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+
+[node name="ItemMesh" type="MeshInstance3D" parent="back_room/back_room_damaged_bin/ItemContainer/returned_item"]
+mesh = SubResource("returned_item_mesh")
+surface_material_override/0 = SubResource("returned_item_mat")
+
+[node name="Interactable" type="Area3D" parent="back_room/back_room_damaged_bin/ItemContainer/returned_item"]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("45_returned_item")
+interaction_type = 2
+display_name = "Returned Item"
+action_verb = "Inspect"
+prompt_text = "Inspect Item"
+interactable_id = &"returned_item"
+item_id = &"returned_camera"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="back_room/back_room_damaged_bin/ItemContainer/returned_item/Interactable"]
+shape = SubResource("returned_item_shape")
 
 ; ── Zone-transition floor seams + section signage (visual density) ──────────
 [node name="ZoneTransitions" type="Node3D" parent="."]

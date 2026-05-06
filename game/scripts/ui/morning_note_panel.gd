@@ -13,9 +13,14 @@
 ##   - panel reads as a physical floating object — drop shadow on all sides,
 ##     no hard UI border line
 ##
-## The panel does NOT pause the scene tree and does NOT take input focus —
-## clock-in / other PRE_OPEN interactions stay reachable while it is showing.
-extends CanvasLayer
+## Modal-focus contract: the panel inherits the `ModalPanel` lifecycle but
+## intentionally does NOT claim CTX_MODAL on InputFocus — clock-in and other
+## PRE_OPEN interactions must stay reachable while the note is up. The base
+## class's `_exit_tree` auto-pop is therefore a safety no-op for this panel
+## (nothing was pushed, so nothing leaks). `show_note()` / `dismiss()` route
+## through the inherited `open()` / `close()` to keep the lifecycle consistent
+## with other modal panels.
+extends ModalPanel
 
 
 const AUTO_DISMISS_SECONDS: float = 5.0
@@ -85,8 +90,8 @@ func show_note(
 	_countdown_bar.max_value = AUTO_DISMISS_SECONDS
 	_countdown_bar.value = AUTO_DISMISS_SECONDS
 	_countdown_bar.visible = allow_auto_dismiss
-	_root.visible = true
 	_showing = true
+	open()
 
 
 ## Hides and resets the panel. Safe to call when the panel isn't showing.
@@ -94,7 +99,7 @@ func dismiss() -> void:
 	if not _showing:
 		return
 	_showing = false
-	_root.visible = false
+	close()
 	EventBus.manager_note_dismissed.emit(_current_note_id)
 
 
@@ -103,6 +108,18 @@ func hide_panel() -> void:
 	if _root != null:
 		_root.visible = false
 	_showing = false
+
+
+## Override: passive paper-memo overlay does not claim CTX_MODAL. Toggles only
+## the inner Control so the CanvasLayer stays in-tree to receive `_unhandled_input`.
+func open() -> void:
+	if _root != null:
+		_root.visible = true
+
+
+func close() -> void:
+	if _root != null:
+		_root.visible = false
 
 
 # ── Internals ────────────────────────────────────────────────────────────────

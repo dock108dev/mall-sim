@@ -104,7 +104,9 @@ func after_each() -> void:
 ## must render Day 1, the live items_sold count, and the live revenue
 ## into the summary's label text fields.
 func test_close_day_renders_live_sale_into_summary_labels() -> void:
-	# item_sold reaches ObjectiveDirector, which sets first_sale_complete.
+	# item_stocked + item_sold reach ObjectiveDirector and complete the
+	# stock→sell loop so the Phase-3 close-day gate fails open.
+	EventBus.item_stocked.emit("test_item", "shelf_1")
 	EventBus.item_sold.emit("test_item", SALE_PRICE, "electronics")
 	# customer_purchased credits cash → records a REVENUE transaction summed
 	# into total_revenue by EconomySystem.get_daily_summary().
@@ -150,18 +152,27 @@ func test_close_day_renders_live_sale_into_summary_labels() -> void:
 	)
 
 
-## Day 1 soft gate: when `day_close_requested` reaches the controller, the
-## player has already cleared the UI confirmation dialog (HUD / MallOverview
-## "Close Anyway"). The controller no longer second-guesses that consent, so
-## the summary renders even with `first_sale_complete` still unset.
+## Phase-3 close-day confirmation gate: when `day_close_requested` reaches the
+## controller before the player has completed a stock→sell loop, the controller
+## detours through `day_close_confirmation_requested` instead of opening the
+## summary. After the player confirms via the modal, `day_close_confirmed`
+## drives the same close path so the summary still renders correctly.
 func test_close_day_on_day1_renders_summary_after_soft_confirm() -> void:
 	GameState.set_flag(&"first_sale_complete", false)
 	ObjectiveDirector._sold = false
+	ObjectiveDirector._stocked = false
+	ObjectiveDirector._loop_completed_today = false
+	ObjectiveDirector._current_day = 1
 
 	EventBus.day_close_requested.emit()
+	assert_false(
+		_summary_panel.visible,
+		"DaySummary must NOT render until the player confirms the gate"
+	)
+
+	EventBus.day_close_confirmed.emit()
 
 	assert_true(
 		_summary_panel.visible,
-		"DaySummary must show once the player consents via the soft gate, "
-		+ "even when first_sale_complete is unset — the UI dialog is the gate"
+		"DaySummary must show after the player confirms the close-day modal"
 	)

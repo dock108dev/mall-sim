@@ -18,10 +18,40 @@ const STAT_STAGGER_DELAY: float = 0.05
 const CONTINUE_FADE_DELAY: float = 0.2
 const CONTINUE_FADE_DURATION: float = 0.15
 const RECORD_PULSE_SCALE: float = 1.05
-const HIDDEN_THREAD_DELAY: float = 1.0
+const HIDDEN_THREAD_DELAY: float = 1.8
+const HIDDEN_THREAD_FADE_DURATION: float = 0.5
 const HIDDEN_THREAD_COLOR: Color = Color(0.78, 0.72, 0.62, 0.85)
 const TIER_CHANGE_COLOR := Color(1.0, 0.84, 0.0)
 const SECONDARY_BUTTON_MODULATE := Color(1.0, 1.0, 1.0, 0.65)
+
+## Per-archetype path subtext shown below ArchetypeLabel. Framed as a natural
+## expansion (full Mallcore career path) rather than a paywall threat per
+## BRAINDUMP §0.
+const ARCHETYPE_SUBTEXT: Dictionary = {
+	"The Mark": (
+		"In the full Mallcore, your starting path would be: Fall Guy."
+	),
+	"The Warm Body": (
+		"In the full Mallcore, your starting path would be: Sales Floor."
+	),
+	"The Floor Walker": (
+		"In the full Mallcore, your starting path would be: Floor Lead."
+	),
+	"The Paper Trail": (
+		"In the full Mallcore, your starting path would be: Assistant Manager."
+	),
+	"The Company Person": (
+		"In the full Mallcore, your starting path would be: Regional Liaison."
+	),
+}
+
+## Framed/fired ending copy shown when the player completes a shift without
+## flagging anything Regional expected them to notice (BRAINDUMP §11).
+const MARK_FIRED_NOTE: String = (
+	"You completed the shift without flagging anything Regional expected you "
+	+ "to notice. That makes you either harmless, unlucky, or useful to "
+	+ "blame. Vic says not to come in tomorrow."
+)
 
 var _anim_tween: Tween
 var _overlay_tween: Tween
@@ -52,6 +82,7 @@ var _last_report: PerformanceReport = null
 var _prev_report: PerformanceReport = null
 var _focus_pushed: bool = false
 var _hidden_thread_timer: Timer
+var _hidden_thread_tween: Tween
 var _auto_advance: DaySummaryAutoAdvance = null
 var _pending_hidden_thread_text: String = ""
 var _vic_comment_label: Label
@@ -94,6 +125,13 @@ var _pending_vic_comment: String = ""
 @onready var _discrepancies_label: Label = $Root/Panel/Margin/VBox/DiscrepanciesLabel
 @onready var _hidden_thread_separator: HSeparator = $Root/Panel/Margin/VBox/HiddenThreadSeparator
 @onready var _hidden_thread_label: Label = $Root/Panel/Margin/VBox/HiddenThreadLabel
+@onready var _archetype_separator: HSeparator = $Root/Panel/Margin/VBox/ArchetypeSeparator
+@onready var _archetype_label: Label = $Root/Panel/Margin/VBox/ArchetypeLabel
+@onready var _archetype_subtext_label: Label = $Root/Panel/Margin/VBox/ArchetypeSubtextLabel
+@onready var _floor_awareness_row: HBoxContainer = $Root/Panel/Margin/VBox/FloorAwarenessRow
+@onready var _floor_stars_label: Label = $Root/Panel/Margin/VBox/FloorAwarenessRow/FloorStarsLabel
+@onready var _attention_separator: HSeparator = $Root/Panel/Margin/VBox/AttentionSeparator
+@onready var _attention_notes_label: Label = $Root/Panel/Margin/VBox/AttentionNotesLabel
 @onready var _auto_advance_bar: ProgressBar = $Root/Panel/Margin/VBox/AutoAdvanceBar
 @onready var _auto_advance_label: Label = $Root/Panel/Margin/VBox/AutoAdvanceLabel
 @onready var _button_row: HBoxContainer = $Root/Panel/Margin/VBox/ButtonRow
@@ -102,6 +140,7 @@ var _pending_vic_comment: String = ""
 )
 @onready var _mall_overview_button: Button = $Root/Panel/Margin/VBox/ButtonRow/MallOverviewButton
 @onready var _main_menu_button: Button = $Root/Panel/Margin/VBox/ButtonRow/MainMenuButton
+@onready var _replay_button: Button = $Root/Panel/Margin/VBox/ButtonRow/ReplayButton
 @onready var _continue_button: Button = $Root/Panel/Margin/VBox/ButtonRow/ContinueButton
 
 
@@ -115,6 +154,7 @@ func _ready() -> void:
 	)
 	_mall_overview_button.pressed.connect(_on_mall_overview_pressed)
 	_main_menu_button.pressed.connect(_on_main_menu_pressed)
+	_replay_button.pressed.connect(_on_replay_pressed)
 	_create_discrepancy_label()
 	_create_overdue_count_label()
 	_create_narrative_labels()
@@ -153,6 +193,9 @@ func show_summary(
 	seasonal_impact: String = "",
 	discrepancy: float = 0.0,
 	staff_wages: float = 0.0,
+	archetype: String = "",
+	floor_stars: int = 1,
+	attention_notes: Array = [],
 ) -> void:
 	if not _last_summary_args.is_empty():
 		var prev_day: int = int(_last_summary_args.get("day", 0))
@@ -168,6 +211,8 @@ func show_summary(
 		"warranty_claims": warranty_claims,
 		"seasonal_impact": seasonal_impact,
 		"discrepancy": discrepancy, "staff_wages": staff_wages,
+		"archetype": archetype, "floor_stars": floor_stars,
+		"attention_notes": attention_notes,
 	}
 	_current_day = day
 	_day_label.text = tr("DAY_SUMMARY_TITLE") % day
@@ -188,6 +233,9 @@ func show_summary(
 	if _grading_label:
 		_grading_label.visible = false
 	_apply_vic_comment_display()
+	_apply_archetype_display(archetype)
+	_apply_floor_stars_display(floor_stars)
+	_apply_attention_notes_display(attention_notes)
 	_apply_record_highlights(revenue, net_profit, items_sold)
 	_push_modal_focus()
 	_start_auto_advance(day)
@@ -210,6 +258,9 @@ func show_last() -> void:
 		_last_summary_args.get("seasonal_impact", ""),
 		_last_summary_args.get("discrepancy", 0.0),
 		_last_summary_args.get("staff_wages", 0.0),
+		_last_summary_args.get("archetype", ""),
+		_last_summary_args.get("floor_stars", 1),
+		_last_summary_args.get("attention_notes", []),
 	)
 
 
@@ -352,6 +403,8 @@ func _get_stat_row_candidates() -> Array[Control]:
 		_mistakes_label, _inventory_variance_label, _discrepancies_label,
 		_total_customers_label, _customer_breakdown_label,
 		_vic_comment_label,
+		_archetype_label, _archetype_subtext_label, _floor_awareness_row,
+		_attention_notes_label,
 	]
 	for control: Control in optional:
 		if control:
@@ -488,6 +541,7 @@ func _kill_all_tweens() -> void:
 	PanelAnimator.kill_tween(_overlay_tween)
 	PanelAnimator.kill_tween(_stagger_tween)
 	PanelAnimator.kill_tween(_continue_tween)
+	PanelAnimator.kill_tween(_hidden_thread_tween)
 	for control: Control in _get_animated_controls():
 		PanelAnimator.kill_control_tween(control)
 
@@ -820,11 +874,57 @@ func _on_performance_report_ready(
 	_apply_employee_metrics(report)
 
 
+func _apply_archetype_display(archetype: String) -> void:
+	var has_archetype: bool = not archetype.is_empty()
+	_archetype_separator.visible = has_archetype
+	_archetype_label.visible = has_archetype
+	_archetype_subtext_label.visible = has_archetype
+	# Floor-awareness stars only have meaning when an archetype was computed,
+	# so the row rides the same visibility gate as the archetype block.
+	_floor_awareness_row.visible = has_archetype
+	if not has_archetype:
+		return
+	_archetype_label.text = archetype
+	var subtext: String = String(ARCHETYPE_SUBTEXT.get(archetype, ""))
+	# "The Mark" shows the framed/fired note instead of the path subtext —
+	# the zero-observation ending is distinct from a generic low score.
+	if archetype == "The Mark":
+		_archetype_subtext_label.text = MARK_FIRED_NOTE + "\n\n" + subtext
+	else:
+		_archetype_subtext_label.text = subtext
+
+
+func _apply_floor_stars_display(stars: int) -> void:
+	var clamped: int = clampi(stars, 1, 5)
+	_floor_stars_label.text = "★".repeat(clamped) + "☆".repeat(5 - clamped)
+
+
+func _apply_attention_notes_display(notes: Array) -> void:
+	if notes.is_empty():
+		_attention_separator.visible = false
+		_attention_notes_label.visible = false
+		return
+	_attention_separator.visible = true
+	_attention_notes_label.visible = true
+	var lines: Array[String] = []
+	for note in notes:
+		lines.append(str(note))
+	_attention_notes_label.text = "\n".join(lines)
+
+
 func _on_continue_pressed() -> void:
 	_emit_day_acknowledged_on_hide = true
 	hide_summary()
 	EventBus.next_day_confirmed.emit()
 	continue_pressed.emit()
+
+
+## Restarts Day 1 by routing through GameManager.start_new_game(), which
+## resets session state and reloads the gameplay scene. This is the primary
+## replay CTA in the single-day beta context.
+func _on_replay_pressed() -> void:
+	hide_summary()
+	GameManager.start_new_game()
 
 
 func _on_review_inventory_pressed() -> void:
@@ -925,10 +1025,20 @@ func _apply_employee_metrics(report: PerformanceReport) -> void:
 	_schedule_hidden_thread(report.hidden_thread_consequence_text)
 
 
+## Routes the hidden-thread consequence text into the deferred reveal.
+## Called by DayCycleController immediately after `show_summary` so the timer
+## starts relative to when the panel was shown — keeping the "realize" moment
+## aligned with the player's read of the rest of the summary.
+func set_hidden_thread_text(text: String) -> void:
+	_schedule_hidden_thread(text)
+
+
 func _schedule_hidden_thread(text: String) -> void:
 	_pending_hidden_thread_text = text
+	PanelAnimator.kill_tween(_hidden_thread_tween)
 	_hidden_thread_label.visible = false
 	_hidden_thread_separator.visible = false
+	_hidden_thread_label.modulate.a = 1.0
 	if _hidden_thread_timer != null:
 		_hidden_thread_timer.stop()
 	if text.is_empty():
@@ -941,8 +1051,14 @@ func _on_hidden_thread_timeout() -> void:
 	if _pending_hidden_thread_text.is_empty():
 		return
 	_hidden_thread_label.text = _pending_hidden_thread_text
-	_hidden_thread_label.visible = true
 	_hidden_thread_separator.visible = true
+	_hidden_thread_label.modulate.a = 0.0
+	_hidden_thread_label.visible = true
+	PanelAnimator.kill_tween(_hidden_thread_tween)
+	_hidden_thread_tween = _hidden_thread_label.create_tween()
+	_hidden_thread_tween.tween_property(
+		_hidden_thread_label, "modulate:a", 1.0, HIDDEN_THREAD_FADE_DURATION
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
 func _start_auto_advance(day: int) -> void:
