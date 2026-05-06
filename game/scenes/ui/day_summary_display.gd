@@ -21,8 +21,11 @@ static func set_seasonal_display(
 	var has_seasonal: bool = not seasonal_impact.is_empty()
 	seasonal_event_label.visible = has_seasonal
 	if has_seasonal:
+		var seasonal_fmt: String = TranslationServer.translate(
+			"DAY_SUMMARY_SEASONAL"
+		)
 		seasonal_event_label.text = (
-			tr("DAY_SUMMARY_SEASONAL") % seasonal_impact
+			seasonal_fmt % seasonal_impact
 		)
 
 
@@ -124,7 +127,9 @@ static func apply_profit_color(
 static func apply_headline_order(
 	revenue_label: Label, top_item_label: Label, forward_hook_label: Label
 ) -> void:
-	var vbox: VBoxContainer = revenue_label.get_parent().get_parent()
+	var vbox: VBoxContainer = revenue_label.get_parent() as VBoxContainer
+	if vbox == null:
+		return
 	var anchor_index: int = revenue_label.get_index() + 1
 	if is_instance_valid(top_item_label):
 		vbox.move_child(top_item_label, anchor_index)

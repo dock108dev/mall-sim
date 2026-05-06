@@ -155,10 +155,13 @@ func test_rarity_draw_within_spec() -> void:
 
 	for _i: int in range(PACKS_TO_OPEN):
 		var pack: ItemInstance = _make_pack_instance()
-		var cards: Array[ItemInstance] = (
-			_controller.open_pack_with_cards(StringName(pack.instance_id))
+		var card_ids: Array[StringName] = _controller.open_pack(
+			StringName(pack.instance_id)
 		)
-		for card: ItemInstance in cards:
+		for card_id: StringName in card_ids:
+			var card: ItemInstance = _inventory.get_item(String(card_id))
+			if card == null:
+				continue
 			if not card.definition:
 				continue
 			total_count[0] += 1

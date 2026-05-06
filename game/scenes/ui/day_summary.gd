@@ -225,7 +225,10 @@ func show_summary(
 	_expenses_label.text = tr("DAY_SUMMARY_EXPENSES") % expenses
 	_set_net_profit_display(net_profit)
 	_items_sold_label.text = tr("DAY_SUMMARY_ITEMS_SOLD") % items_sold
-	_set_warranty_display(warranty_revenue, warranty_claims)
+	DaySummaryDisplay.set_warranty_display(
+		_warranty_revenue_label, _warranty_claims_label,
+		warranty_revenue, warranty_claims
+	)
 	DaySummaryDisplay.set_seasonal_display(_seasonal_event_label, seasonal_impact)
 	_set_discrepancy_display(discrepancy)
 	DaySummaryDisplay.set_staff_wages_display(_staff_wages_label, staff_wages)
@@ -237,8 +240,19 @@ func show_summary(
 	if _grading_label:
 		_grading_label.visible = false
 	_apply_vic_comment_display()
-	_apply_archetype_display(archetype)
-	_apply_floor_stars_display(floor_stars)
+	DaySummaryDisplay.apply_archetype_display(
+		_archetype_separator,
+		_archetype_label,
+		_archetype_subtext_label,
+		_floor_awareness_row,
+		archetype,
+		ARCHETYPE_SUBTEXT,
+		MARK_FIRED_NOTE,
+	)
+	DaySummaryDisplay.apply_floor_stars_display(
+		_floor_stars_label,
+		floor_stars,
+	)
 	_apply_attention_notes_display(attention_notes)
 	_apply_record_highlights(revenue, net_profit, items_sold)
 	_push_modal_focus()
