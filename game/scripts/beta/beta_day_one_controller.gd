@@ -26,6 +26,41 @@ const _HIDDEN_NOISE_PATHS: Array[String] = [
 	"Storefront",
 	"StoreAtmosphereProps",
 	"FrontLaneQueue",
+	"crt_demo_area",
+	"new_release_wall",
+	"old_gen_shelf",
+	"CartRackLeft",
+	"CartRackRight",
+	"hold_shelf",
+	"testing_station",
+	"refurb_bench",
+]
+
+const _BETA_KEEP_ROOT_NODES: Array[StringName] = [
+	&"PlayerController",
+	&"PlayerEntrySpawn",
+	&"FluorescentKeyLight",
+	&"WarmNeonFill",
+	&"GreenNeonFill",
+	&"BackroomUtilityLight",
+	&"Floor",
+	&"BackWallBody",
+	&"LeftWallBody",
+	&"RightWallBody",
+	&"Ceiling",
+	&"FrontWallLeftBody",
+	&"FrontWallRightBody",
+	&"EntranceDoor",
+	&"NavigationRegion3D",
+	&"EntryArea",
+	&"RegisterArea",
+	&"checkout_counter",
+	&"BetaDayOneController",
+	&"BetaDayOneCustomer",
+	&"BetaBackroomPickup",
+	&"BetaRestockShelf",
+	&"BetaDayEndTrigger",
+	&"BetaHiddenClue",
 ]
 
 var _decision_panel: BetaDecisionCardPanel
@@ -43,8 +78,9 @@ var _carry_item_label: String = "Used Game Box"
 
 func _ready() -> void:
 	add_to_group("beta_day_one_controller")
+	_apply_beta_only_strip()
 	_apply_minimal_scope()
-	_style_beta_customer_visual()
+	_configure_beta_customer()
 	_load_content()
 	_ensure_panels()
 	_connect_panel_signals()
@@ -249,7 +285,10 @@ func _prepare_next_objective() -> void:
 
 func _apply_customer_profile(event_data: Dictionary) -> void:
 	var customer_name: String = str(event_data.get("customer_name", "Confused Parent"))
-	var node: Node = get_tree().current_scene.get_node_or_null("BetaDayOneCustomer/Interactable")
+	var store: Node = _store_root()
+	if store == null:
+		return
+	var node: Node = store.get_node_or_null("BetaDayOneCustomer/Interactable")
 	if node is Interactable:
 		(node as Interactable).display_name = customer_name
 
@@ -290,22 +329,22 @@ func _update_objective_rail() -> void:
 
 
 func _apply_objective_gating() -> void:
-	var scene: Node = get_tree().current_scene
-	if scene == null:
+	var store: Node = _store_root()
+	if store == null:
 		return
 	for node: Node in get_tree().get_nodes_in_group("interactable"):
-		if node is Interactable:
+		if node is Interactable and _is_descendant_of(node, store):
 			(node as Interactable).enabled = false
-	_set_interactable_enabled(scene, "EntranceDoor/Interactable", true)
-	_set_interactable_enabled(scene, "BetaHiddenClue/Interactable", true)
+	_set_interactable_enabled(store, "EntranceDoor/Interactable", false)
+	_set_interactable_enabled(store, "BetaHiddenClue/Interactable", true)
 	_set_interactable_enabled(
-		scene,
+		store,
 		"BetaDayOneCustomer/Interactable",
 		_stage == STAGE_TALK_TO_CUSTOMER
 	)
-	_set_interactable_enabled(scene, "BetaBackroomPickup/Interactable", _stage == STAGE_PICKUP_STOCK)
-	_set_interactable_enabled(scene, "BetaRestockShelf/Interactable", _stage == STAGE_PLACE_STOCK)
-	_set_interactable_enabled(scene, "BetaDayEndTrigger/Interactable", _stage == STAGE_END_DAY)
+	_set_interactable_enabled(store, "BetaBackroomPickup/Interactable", _stage == STAGE_PICKUP_STOCK)
+	_set_interactable_enabled(store, "BetaRestockShelf/Interactable", _stage == STAGE_PLACE_STOCK)
+	_set_interactable_enabled(store, "BetaDayEndTrigger/Interactable", _stage == STAGE_END_DAY)
 
 
 func _ensure_panels() -> void:
@@ -362,88 +401,163 @@ func _print_interactable_debug_list() -> void:
 
 
 func _apply_minimal_scope() -> void:
-	var scene: Node = get_tree().current_scene
-	if scene == null:
+	var store: Node = _store_root()
+	if store == null:
 		return
 	for node_path: String in _HIDDEN_NOISE_PATHS:
-		var target: Node = scene.get_node_or_null(NodePath(node_path))
+		var target: Node = store.get_node_or_null(NodePath(node_path))
 		if target is Node3D:
 			(target as Node3D).visible = false
 
 
-func _set_interactable_enabled(scene: Node, path: String, enabled: bool) -> void:
-	var node: Node = scene.get_node_or_null(path)
+func _set_interactable_enabled(root: Node, path: String, enabled: bool) -> void:
+	var node: Node = root.get_node_or_null(path)
 	if node is Interactable:
 		(node as Interactable).enabled = enabled
 
 
 func _sync_stock_prop_visuals() -> void:
-	var scene: Node = get_tree().current_scene
-	if scene == null:
+	var store: Node = _store_root()
+	if store == null:
 		return
 	_set_node3d_visible(
-		scene,
+		store,
 		"BetaBackroomPickup/StockBox",
 		_stage == STAGE_PICKUP_STOCK and not _carrying_box
 	)
 	_set_node3d_visible(
-		scene,
+		store,
 		"BetaRestockShelf/RestockCrate",
 		_stage == STAGE_PLACE_STOCK and _carrying_box
 	)
 
 
-func _set_node3d_visible(scene: Node, path: String, is_visible: bool) -> void:
-	var node: Node = scene.get_node_or_null(path)
+func _set_node3d_visible(root: Node, path: String, is_visible: bool) -> void:
+	var node: Node = root.get_node_or_null(path)
 	if node is Node3D:
 		(node as Node3D).visible = is_visible
 
 
-func _style_beta_customer_visual() -> void:
-	var scene: Node = get_tree().current_scene
-	if scene == null:
+func _apply_beta_only_strip() -> void:
+	var store: Node = _store_root()
+	if store == null:
 		return
-	var customer_root: Node = scene.get_node_or_null("BetaDayOneCustomer")
-	if not (customer_root is Node3D):
+	for child: Node in store.get_children():
+		if _is_kept_root_node(child.name):
+			continue
+		_disable_interactables_in_subtree(child)
+		if child is Node3D:
+			(child as Node3D).visible = false
+
+
+func _disable_interactables_in_subtree(node: Node) -> void:
+	if node is Interactable:
+		(node as Interactable).enabled = false
+	for child: Node in node.get_children():
+		_disable_interactables_in_subtree(child)
+
+
+func _is_kept_root_node(node_name: StringName) -> bool:
+	return _BETA_KEEP_ROOT_NODES.has(node_name)
+
+
+func _configure_beta_customer() -> void:
+	var store: Node = _store_root()
+	if store == null:
 		return
-	var customer_node: Node3D = customer_root as Node3D
+	var customer_node_ref: Node = store.get_node_or_null("BetaDayOneCustomer")
+	if not (customer_node_ref is Node3D):
+		return
+	var customer_node: Node3D = customer_node_ref as Node3D
+	customer_node.position = Vector3(2.4, 0.0, 6.4)
 
-	var body: Node = customer_node.get_node_or_null("Body")
-	if body is MeshInstance3D:
-		(body as MeshInstance3D).transform = Transform3D(
-			Vector3(5.4, 0, 0),
-			Vector3(0, 1.35, 0),
-			Vector3(0, 0, 3.9),
-			Vector3(0, 0.86, 0)
-		)
-		var shirt_mat: StandardMaterial3D = StandardMaterial3D.new()
-		shirt_mat.albedo_color = Color(0.16, 0.34, 0.72, 1.0)
-		shirt_mat.roughness = 0.78
-		(body as MeshInstance3D).material_override = shirt_mat
+	var legacy_body: Node = customer_node.get_node_or_null("Body")
+	if legacy_body is Node3D:
+		(legacy_body as Node3D).visible = false
+	var legacy_head: Node = customer_node.get_node_or_null("Head")
+	if legacy_head is Node3D:
+		(legacy_head as Node3D).visible = false
 
-	var head: Node = customer_node.get_node_or_null("Head")
-	if head is MeshInstance3D:
-		(head as MeshInstance3D).transform = Transform3D(
-			Vector3(2.0, 0, 0),
-			Vector3(0, 2.0, 0),
-			Vector3(0, 0, 2.0),
-			Vector3(0, 1.90, 0)
-		)
-		var skin_mat: StandardMaterial3D = StandardMaterial3D.new()
-		skin_mat.albedo_color = Color(0.86, 0.72, 0.57, 1.0)
-		skin_mat.roughness = 0.86
-		(head as MeshInstance3D).material_override = skin_mat
+	var proxy_root_ref: Node = customer_node.get_node_or_null("CustomerProxy")
+	var proxy_root: Node3D
+	if proxy_root_ref is Node3D:
+		proxy_root = proxy_root_ref as Node3D
+	else:
+		proxy_root = Node3D.new()
+		proxy_root.name = "CustomerProxy"
+		customer_node.add_child(proxy_root)
 
-	var marker: Node = customer_node.get_node_or_null("CustomerMarker")
-	if not (marker is Label3D):
-		marker = Label3D.new()
-		marker.name = "CustomerMarker"
-		customer_node.add_child(marker)
-	var label: Label3D = marker as Label3D
-	label.transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.45, 0)
-	label.text = "WAITING CUSTOMER"
-	label.pixel_size = 0.006
-	label.modulate = Color(1.0, 0.91, 0.62, 1.0)
-	label.outline_size = 5
-	label.outline_modulate = Color(0.08, 0.06, 0.03, 1.0)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var torso_ref: Node = proxy_root.get_node_or_null("Torso")
+	if not (torso_ref is MeshInstance3D):
+		var torso_mesh := MeshInstance3D.new()
+		torso_mesh.name = "Torso"
+		proxy_root.add_child(torso_mesh)
+		torso_ref = torso_mesh
+	var torso: MeshInstance3D = torso_ref as MeshInstance3D
+	var torso_shape := CapsuleMesh.new()
+	torso_shape.radius = 0.28
+	torso_shape.height = 1.05
+	torso.mesh = torso_shape
+	torso.position = Vector3(0.0, 0.95, 0.0)
+	var torso_mat := StandardMaterial3D.new()
+	torso_mat.albedo_color = Color(0.18, 0.33, 0.69, 1.0)
+	torso_mat.roughness = 0.82
+	torso.material_override = torso_mat
+
+	var head_ref: Node = proxy_root.get_node_or_null("Head")
+	if not (head_ref is MeshInstance3D):
+		var head_mesh := MeshInstance3D.new()
+		head_mesh.name = "Head"
+		proxy_root.add_child(head_mesh)
+		head_ref = head_mesh
+	var head: MeshInstance3D = head_ref as MeshInstance3D
+	var head_shape := SphereMesh.new()
+	head_shape.radius = 0.22
+	head.mesh = head_shape
+	head.position = Vector3(0.0, 1.72, 0.0)
+	var head_mat := StandardMaterial3D.new()
+	head_mat.albedo_color = Color(0.84, 0.71, 0.56, 1.0)
+	head_mat.roughness = 0.88
+	head.material_override = head_mat
+
+	var marker_ref: Node = proxy_root.get_node_or_null("Marker")
+	if not (marker_ref is Label3D):
+		var marker := Label3D.new()
+		marker.name = "Marker"
+		proxy_root.add_child(marker)
+		marker_ref = marker
+	var marker_label: Label3D = marker_ref as Label3D
+	marker_label.position = Vector3(0.0, 2.15, 0.0)
+	marker_label.text = "CUSTOMER"
+	marker_label.pixel_size = 0.007
+	marker_label.modulate = Color(1.0, 0.92, 0.64, 1.0)
+	marker_label.outline_size = 5
+	marker_label.outline_modulate = Color(0.08, 0.06, 0.03, 1.0)
+	marker_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	var collision_ref: Node = customer_node.get_node_or_null("Interactable/CollisionShape3D")
+	if collision_ref is CollisionShape3D:
+		var collision: CollisionShape3D = collision_ref as CollisionShape3D
+		var capsule := CapsuleShape3D.new()
+		capsule.radius = 0.45
+		capsule.height = 1.25
+		collision.shape = capsule
+		collision.position = Vector3(0.0, 0.95, 0.0)
+
+
+func _store_root() -> Node:
+	var root: Node = get_parent()
+	if root != null:
+		return root
+	return get_tree().current_scene
+
+
+func _is_descendant_of(node: Node, ancestor: Node) -> bool:
+	if node == null or ancestor == null:
+		return false
+	var current: Node = node
+	while current != null:
+		if current == ancestor:
+			return true
+		current = current.get_parent()
+	return false

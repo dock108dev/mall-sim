@@ -71,7 +71,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _open_panel_count > 0:
 		return
 	if event.is_action_pressed("interact"):
-		if _is_keyboard_captured_by_ui():
+		if _is_keyboard_captured_by_ui() and not _beta_mode_active():
 			return
 		if _hovered_target and _hovered_can_interact:
 			_log_interaction_dispatch(_hovered_target)
@@ -96,6 +96,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			EventBus.interactable_right_clicked.emit(
 				_hovered_target, _hovered_target.interaction_type
 			)
+
+
+func _beta_mode_active() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return not tree.get_nodes_in_group("beta_day_one_controller").is_empty()
 
 
 ## Returns the currently hovered interactable, or null.
