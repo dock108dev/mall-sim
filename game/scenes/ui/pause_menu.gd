@@ -22,6 +22,11 @@ var _open_panel_count: int = 0
 var _day_summary_available: bool = false
 var _save_toast_tween: Tween
 var _pending_difficulty_tier: StringName = &""
+## §F-A1 — bookkeeping for the CTX_MODAL frame this menu owns while open. We
+## push InputFocus on `open()` and pop on `close()` so the cursor and player
+## camera follow the same path as every other modal (no manual unlock_cursor
+## that would leak if the menu is freed mid-open).
+var _focus_pushed: bool = false
 
 @onready var _overlay: ColorRect = $Overlay
 @onready var _panel: PanelContainer = $PanelRoot
@@ -134,7 +139,9 @@ func open() -> void:
 	_overlay.visible = true
 	_overlay_tween = PanelAnimator.fade_in(_overlay, FADE_DURATION)
 	_panel_tween = PanelAnimator.fade_in(_panel, FADE_DURATION)
-	InputHelper.unlock_cursor()
+	if not _focus_pushed:
+		InputFocus.push_context(InputFocus.CTX_MODAL)
+		_focus_pushed = true
 	_save_toast.visible = false
 	_update_completion_label()
 	_update_difficulty_display()
@@ -155,6 +162,26 @@ func close() -> void:
 	)
 	_panel_tween = PanelAnimator.fade_out(_panel, FADE_DURATION)
 	get_tree().paused = false
+	_pop_modal_focus_if_owned()
+
+
+func _pop_modal_focus_if_owned() -> void:
+	if not _focus_pushed:
+		return
+	if InputFocus.current() == InputFocus.CTX_MODAL:
+		InputFocus.pop_context()
+	_focus_pushed = false
+
+
+func _exit_tree() -> void:
+	# §F-A1 — safety net for the quit-confirmation path and any teardown that
+	# bypasses close(). Mirrors ModalPanel._exit_tree without inheriting it
+	# (PauseMenu predates ModalPanel and has its own scene-tree contract).
+	if _focus_pushed:
+		push_warning(
+			"[PauseMenu] freed with unreleased InputFocus push — auto-popping"
+		)
+		_pop_modal_focus_if_owned()
 
 
 func is_open() -> bool:
@@ -236,6 +263,7 @@ func _on_quit_confirmed() -> void:
 	_completion_panel.visible = false
 	_overlay.visible = false
 	_panel.visible = false
+	_pop_modal_focus_if_owned()
 	return_to_menu_pressed.emit()
 
 

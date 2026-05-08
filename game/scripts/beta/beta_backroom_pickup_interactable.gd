@@ -3,11 +3,13 @@ extends Interactable
 
 
 func _ready() -> void:
-	display_name = "Stock Crate"
-	prompt_text = "Pick Up"
-	action_verb = "Pick Up"
-	interaction_type = InteractionType.ITEM
-	interactable_id = &"beta_backroom_pickup"
+	display_name = "back room inventory"
+	prompt_text = "Check"
+	action_verb = "Check"
+	interaction_type = InteractionType.BACKROOM
+	interactable_id = &"beta_back_room_inventory"
+	proximity_radius = 2.25
+	proximity_facing_dot = 0.4
 	super._ready()
 
 
@@ -26,6 +28,8 @@ func get_disabled_reason(_actor: Node = null) -> String:
 
 
 func interact(by: Node = null) -> void:
+	if not can_interact(by):
+		return
 	super.interact(by)
 	get_tree().call_group("beta_day_one_controller", "on_beta_backroom_pickup_interacted")
 

@@ -993,13 +993,19 @@ outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
+; §F-G1 — TradeIns and Clearance signs are hidden for the Day-1 beta: no
+; physical fixtures anchor them, so they read as floating mid-air banners.
+; Re-enable (drop `visible = false`) once a Trade-Ins or Clearance shelf is
+; authored at the same world position.
 [node name="TradeInsBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 2.85, -7.51)
+visible = false
 mesh = SubResource("zone_label_backing_mesh")
 surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 [node name="TradeInsLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 2.85, -7.49)
+visible = false
 pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -1012,11 +1018,13 @@ shaded = false
 
 [node name="ClearanceBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.23, 2.7, 3.5)
+visible = false
 mesh = SubResource("zone_label_backing_mesh")
 surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 [node name="ClearanceLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.21, 2.7, 3.5)
+visible = false
 pixel_size = 0.005
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -3410,18 +3418,15 @@ shaded = false
 [node name="BetaDayOneController" type="Node" parent="."]
 script = ExtResource("47_beta_controller")
 
+; BetaDayOneCustomer — parked at the left end of the Checkout counter on
+; the customer side, with clear floor on every side (~1 m to the counter,
+; ~1.4 m to the front wall, open space to the left) so the player can stand
+; 1.5–2 m back without clipping a wall or the counter. The authored
+; transform is the single source of truth (the controller does not override
+; it at runtime). Identity rotation = facing -Z (toward the counter); the
+; player approaches from the front entrance and meets them face-to-face.
 [node name="BetaDayOneCustomer" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.25, 0, 7.1)
-
-[node name="Body" type="MeshInstance3D" parent="BetaDayOneCustomer"]
-transform = Transform3D(4.8, 0, 0, 0, 1.55, 0, 0, 0, 4.8, 0, 0.8, 0)
-mesh = SubResource("queue_post_mesh")
-surface_material_override/0 = SubResource("queue_post_mat")
-
-[node name="Head" type="MeshInstance3D" parent="BetaDayOneCustomer"]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 0, 1.72, 0)
-mesh = SubResource("slot_marker_mesh")
-surface_material_override/0 = SubResource("bargain_bin_rim_mat")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0, 8.5)
 
 [node name="Interactable" type="Area3D" parent="BetaDayOneCustomer"]
 collision_layer = 16
@@ -3468,8 +3473,10 @@ script = ExtResource("51_beta_restock")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BetaRestockShelf/Interactable"]
 shape = SubResource("nav_zone_shape")
 
+; BetaDayEndTrigger — sits at the register on the Checkout counter so the
+; "close the day" affordance is tied to a visible location.
 [node name="BetaDayEndTrigger" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.6, 1.0, 7.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 1.05, 7.82)
 
 [node name="Interactable" type="Area3D" parent="BetaDayEndTrigger"]
 collision_layer = 16

@@ -230,6 +230,7 @@ func _seed_cash_from_economy() -> void:
 func _on_hour_changed(hour: int) -> void:
 	_current_hour = hour
 	_refresh_time_display()
+	_refresh_close_day_hint_state()
 
 
 func _on_day_phase_changed(new_phase: int) -> void:
@@ -303,8 +304,55 @@ func _on_first_sale_completed_hud(
 
 func _on_close_day_pressed() -> void:
 	var state := GameManager.current_state
-	if state == GameManager.State.STORE_VIEW or state == GameManager.State.GAMEPLAY:
-		_open_close_day_preview()
+	if state != GameManager.State.STORE_VIEW and state != GameManager.State.GAMEPLAY:
+		return
+	if not _beta_close_day_allowed():
+		# Beta day-1 has its own gating chain; refuse with the grounded
+		# reason so the player understands why F4 / the button did nothing.
+		return
+	_open_close_day_preview()
+
+
+## §F-C1 — Returns true when the beta day-1 controller either is absent
+## (production gameplay) or reports `can_interact_day_end()`. Otherwise emits
+## a refusal toast using the controller's grounded reason and returns false.
+## Centralizes the early-close guard so the F4 keybind, the top-bar button,
+## and any future trigger all funnel through the same check.
+func _beta_close_day_allowed() -> bool:
+	if _beta_close_day_allowed_quiet():
+		return true
+	var reason: String = _beta_close_day_reason()
+	if reason.is_empty():
+		reason = "Still too early to close. Finish out the shift first."
+	EventBus.toast_requested.emit(reason, &"system", 3.0)
+	return false
+
+
+## Non-toasting variant for HUD state updates (dim the F4 hint without
+## spamming a toast every time the chain advances).
+func _beta_close_day_allowed_quiet() -> bool:
+	var controller: Node = _beta_day_one_controller()
+	if controller == null:
+		return true
+	if controller.has_method("can_interact_day_end"):
+		return bool(controller.call("can_interact_day_end"))
+	return true
+
+
+func _beta_close_day_reason() -> String:
+	var controller: Node = _beta_day_one_controller()
+	if controller == null:
+		return ""
+	if controller.has_method("close_day_disabled_reason"):
+		return String(controller.call("close_day_disabled_reason"))
+	return ""
+
+
+func _beta_day_one_controller() -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	return tree.get_first_node_in_group("beta_day_one_controller")
 
 
 ## Opens the dry-run preview modal. The preview's Confirm button is the only
@@ -474,8 +522,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameManager.current_state != GameManager.State.GAMEPLAY:
 		return
 	if event.is_action("close_day"):
-		_open_close_day_preview()
 		get_viewport().set_input_as_handled()
+		if not _beta_close_day_allowed():
+			return
+		_open_close_day_preview()
 		return
 	if event.is_action("time_speed_1"):
 		EventBus.time_speed_requested.emit(TimeSystem.SpeedTier.NORMAL)
@@ -672,6 +722,21 @@ func _on_objective_payload(payload: Dictionary) -> void:
 		)
 		_objective_active = not text.strip_edges().is_empty()
 	_refresh_telegraph_card()
+	_refresh_close_day_hint_state()
+
+
+## §F-C1 — Dim the FP "F4 — Close Day" hint while the beta day-1 chain is
+## still incomplete; restore full opacity (and the active-state stylebox)
+## once `can_close_day` flips true. Driven from `objective_changed` and
+## `hour_changed` so the hint tracks both the chain and the time gate.
+const _CLOSE_DAY_HINT_DIM_ALPHA: float = 0.4
+
+func _refresh_close_day_hint_state() -> void:
+	if not is_instance_valid(_fp_close_day_hint):
+		return
+	var allowed: bool = _beta_close_day_allowed_quiet()
+	var alpha: float = 1.0 if allowed else _CLOSE_DAY_HINT_DIM_ALPHA
+	_fp_close_day_hint.modulate = Color(1.0, 1.0, 1.0, alpha)
 
 
 ## §F-54 — HUD forwards `notification_requested` and
@@ -1209,6 +1274,7 @@ func _apply_fp_visibility_overrides() -> void:
 	_sales_today_label.show()
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.show()
+		_refresh_close_day_hint_state()
 
 
 ## Resets transient display state for test isolation. Called by GUT tests that

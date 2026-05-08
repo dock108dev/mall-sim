@@ -51,13 +51,15 @@
       "choices": [
         {
           "label": "Buy the box ($5)",
-          "consequence": "Untested stock for the backroom",
-          "effects": { "money": -5.0, "inventory_flag": "mystery_lot_acquired" }
+          "consequence": "Risky, but maybe useful.",
+          "effects": { "money": -5.0, "inventory_flag": "mystery_lot_acquired" },
+          "outcome": "You bought the box. It's sitting in the back."
         },
         {
           "label": "Pass",
-          "consequence": "He moves on",
-          "effects": {}
+          "consequence": "Save the cash.",
+          "effects": {},
+          "outcome": "You passed. He shrugs and moves on."
         }
       ]
     },

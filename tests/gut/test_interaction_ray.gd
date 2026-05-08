@@ -45,7 +45,7 @@ func test_focus_emits_action_label_when_target_changes() -> void:
 
 	assert_eq(
 		_focused_labels,
-		["Store — Press E to enter"],
+		["Enter Store"],
 		"Focusing a target should emit interactable_focused with the built action label"
 	)
 	assert_eq(_unfocused_count, 0, "Focusing should not emit unfocus")
@@ -63,7 +63,7 @@ func test_hovered_action_label_getter_reflects_focus_state() -> void:
 	_ray._set_hovered_target(target)
 	assert_eq(
 		_ray.get_hovered_action_label(),
-		"GlassCase — Press E to inspect",
+		"Inspect GlassCase",
 		"Hovered action label should match the built action label"
 	)
 
@@ -259,7 +259,7 @@ func test_poll_emits_focused_when_can_interact_flips_to_true_mid_hover() -> void
 	)
 	assert_eq(
 		_focused_labels,
-		["Register — Press E to use"],
+		["Use Register"],
 		"State flip to can_interact()=true must re-emit interactable_focused with the action label"
 	)
 	assert_true(
@@ -294,7 +294,7 @@ func test_poll_is_no_op_when_can_interact_unchanged() -> void:
 func test_poll_updates_hovered_action_label_on_state_change() -> void:
 	# get_hovered_action_label() backs the AuditOverlay; when state flips it
 	# should reflect the new disabled-reason text rather than the stale
-	# "Press E" label captured at hover-entry.
+	# active label captured at hover-entry.
 	var target: _StatefulTarget = _StatefulTarget.new()
 	target.prompt_text = "Use"
 	target.display_name = "Register"
@@ -304,7 +304,7 @@ func test_poll_updates_hovered_action_label_on_state_change() -> void:
 	_ray._set_hovered_target(target)
 	assert_eq(
 		_ray.get_hovered_action_label(),
-		"Register — Press E to use",
+		"Use Register",
 		"Pre-condition: active label captured at hover-entry"
 	)
 

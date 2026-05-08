@@ -301,6 +301,17 @@ func _on_hour_changed(hour: int) -> void:
 		return
 	if _day_queue.is_empty():
 		return
+	# §F-FIX1 — beta day-1 has its own scripted chain (BetaDayOneController);
+	# production midday events would stack on top of beta beats and surface
+	# as overlapping modals (especially when the day summary is open).
+	# Mirrors MilestoneSystem's beta-mode short-circuit at line 147.
+	var tree: SceneTree = get_tree()
+	if tree != null and tree.get_first_node_in_group("beta_day_one_controller") != null:
+		return
+	# Don't fire during the day-summary modal — events arriving on top of
+	# the summary cause the two-modals-stacked screen the player saw.
+	if GameManager != null and GameManager.current_state == GameManager.State.DAY_SUMMARY:
+		return
 	for beat: Variant in _day_queue:
 		if beat is not Dictionary:
 			continue
@@ -364,6 +375,13 @@ func _apply_choice_effects(beat: Dictionary, choice_index: int) -> void:
 		)
 		return
 	_dispatch_effects(beat, effects_raw as Dictionary)
+	# §F-B1 — narrate the outcome with a short toast so the player gets
+	# closure after the modal closes. Optional content field; missing or
+	# empty means no toast (silent until authored, consistent with the
+	# pre-existing behavior for the other beats).
+	var outcome: String = str((choice_entry as Dictionary).get("outcome", ""))
+	if not outcome.is_empty():
+		EventBus.toast_requested.emit(outcome, &"system", 3.0)
 
 
 func _dispatch_effects(beat: Dictionary, effects: Dictionary) -> void:

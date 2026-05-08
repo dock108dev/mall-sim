@@ -84,8 +84,8 @@ func test_action_label_uses_em_dash_separator() -> void:
 	ray._set_hovered_target(target)
 	assert_eq(
 		ray.get_hovered_action_label(),
-		"Shelf Area — Press E to stock games",
-		"Action label must use em-dash separator and lowercased verb"
+		"Stock Games Shelf Area",
+		"Action label must be `<verb> <noun>` so the [E] badge renders cleanly"
 	)
 
 

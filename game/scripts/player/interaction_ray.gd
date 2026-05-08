@@ -32,6 +32,15 @@ var _hovered_action_label: String = ""
 var _hovered_can_interact: bool = false
 var _inventory_system: InventorySystem = null
 var _open_panel_count: int = 0
+## Last raycast diagnostic info, updated each frame. Public-but-underscored
+## so the BetaDebugOverlay can surface targeting state without having to
+## re-run the query. Populated by `_update_raycast`.
+var _last_raycast_collider_name: String = ""
+var _last_raycast_resolved: String = ""
+var _last_proximity_target_name: String = ""
+var _last_proximity_distance: float = INF
+var _last_proximity_facing_dot: float = 0.0
+var _last_target_source: StringName = &"none"  ## "raycast" / "proximity" / "none"
 ## Debug-only overlay label. Created in `_ready` only when
 ## `OS.is_debug_build()` is true; left null in release export builds so the
 ## CanvasLayer/Label nodes are never instantiated.
@@ -177,17 +186,112 @@ func _update_raycast() -> void:
 	query.collide_with_bodies = true
 	var result: Dictionary = space_state.intersect_ray(query)
 
-	var new_target: Interactable = null
+	var raycast_target: Interactable = null
+	_last_raycast_collider_name = ""
+	_last_raycast_resolved = ""
 	if result.size() > 0:
 		var collider: Node = result["collider"]
+		_last_raycast_collider_name = String(collider.name) if collider != null else ""
 		var candidate: Interactable = _resolve_interactable(collider)
-		if candidate and candidate.enabled:
-			new_target = candidate
+		if candidate != null:
+			_last_raycast_resolved = String(candidate.name)
+			if candidate.enabled:
+				raycast_target = candidate
+
+	# Proximity fallback for opt-in interactables (proximity_radius > 0).
+	# Prevents the "must be on top of the customer" feel when the screen
+	# center isn't perfectly on the visible mesh — Day-1 critical-path
+	# objects are unique and singular enough that proximity+facing is
+	# unambiguous. Shelf slots and other pixel-precision targets opt out
+	# (default proximity_radius = 0) so the raycast still wins for them.
+	var proximity_target: Interactable = _find_best_proximity_target(ray_origin, ray_dir)
+
+	var new_target: Interactable = raycast_target
+	_last_target_source = &"none"
+	if new_target != null:
+		_last_target_source = &"raycast"
+	elif proximity_target != null:
+		new_target = proximity_target
+		_last_target_source = &"proximity"
 
 	if new_target != _hovered_target:
 		_set_hovered_target(new_target)
 	elif _hovered_target != null:
 		_poll_hovered_can_interact()
+
+
+## Scans `interactable` group for opt-in proximity targets and returns the
+## best match by `facing_dot * 2 - distance * 0.25`. Skips disabled targets,
+## raycast-only targets (`proximity_radius <= 0`), and targets the player
+## isn't roughly facing. Caller decides whether to use the result (only when
+## the precise raycast missed).
+func _find_best_proximity_target(
+	cam_pos: Vector3, cam_forward: Vector3
+) -> Interactable:
+	_last_proximity_target_name = ""
+	_last_proximity_distance = INF
+	_last_proximity_facing_dot = 0.0
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var best: Interactable = null
+	var best_score: float = -INF
+	for node: Node in tree.get_nodes_in_group(&"interactable"):
+		if not (node is Interactable):
+			continue
+		var i: Interactable = node as Interactable
+		if not i.enabled:
+			continue
+		if i.proximity_radius <= 0.0:
+			continue
+		# Use the Interactable's own world position so authored Area3D
+		# offsets (e.g. EntranceDoor's Interactable at +1.5 Y) are honored.
+		# Falls back to the parent for unusual setups where the Area3D
+		# itself is at the parent origin.
+		var target_pos: Vector3 = i.global_position
+		var parent_node: Node = i.get_parent()
+		if (parent_node is Node3D) and target_pos.is_equal_approx((parent_node as Node3D).global_position):
+			# Lift to mid-body so the dot product reflects what the player
+			# actually aims at, not the floor origin.
+			target_pos.y += 1.0
+		var to_target: Vector3 = target_pos - cam_pos
+		var distance: float = to_target.length()
+		if distance > i.proximity_radius:
+			continue
+		if distance < 0.001:
+			# Right on top of the target — definitive match.
+			best = i
+			_last_proximity_target_name = String(i.name)
+			_last_proximity_distance = 0.0
+			_last_proximity_facing_dot = 1.0
+			break
+		var facing_dot: float = cam_forward.dot(to_target / distance)
+		if facing_dot < i.proximity_facing_dot:
+			continue
+		var score: float = facing_dot * 2.0 - distance * 0.25
+		if score > best_score:
+			best = i
+			best_score = score
+			_last_proximity_target_name = String(i.name)
+			_last_proximity_distance = distance
+			_last_proximity_facing_dot = facing_dot
+	return best
+
+
+## Public read-only accessors for the BetaDebugOverlay so it can surface
+## targeting diagnostics without re-running the physics query. Snapshot of
+## the most recent `_update_raycast` pass.
+func get_targeting_debug() -> Dictionary:
+	return {
+		"raycast_collider": _last_raycast_collider_name,
+		"raycast_resolved": _last_raycast_resolved,
+		"proximity_target": _last_proximity_target_name,
+		"proximity_distance": _last_proximity_distance,
+		"proximity_facing_dot": _last_proximity_facing_dot,
+		"target_source": String(_last_target_source),
+		"hovered_name": String(_hovered_target.name) if is_instance_valid(_hovered_target) else "",
+		"hovered_can_interact": _hovered_can_interact,
+	}
 
 
 ## Re-queries `can_interact()` on the still-hovered target and re-emits the
@@ -299,25 +403,27 @@ func _on_hovered_target_tree_exiting() -> void:
 	EventBus.item_tooltip_hidden.emit()
 
 
-## Builds the InteractionPrompt label text for the focused target. Both-empty
-## (verb and display_name) is treated as a content-authoring contract violation
-## upstream — Interactable.display_name defaults to "Item" and prompt_text
-## auto-resolves from PROMPT_VERBS in `_ready`, so reaching this branch
-## requires the scene author to deliberately blank both. We return "" here
-## rather than push_warning because this function fires every frame the cursor
-## enters a new interactable; a per-hover warning would flood logs while
-## adding no signal beyond the visibly-empty prompt panel. See
-## docs/audits/error-handling-report.md §F-53.
+## Builds the InteractionPrompt label text for the focused target. The HUD
+## already renders an [E] key badge to the left of this label, so the label
+## itself is just `<verb> <target>` ("Talk to Confused Parent",
+## "Browse Used Games"). Both-empty (verb and display_name) is treated as a
+## content-authoring contract violation upstream — Interactable.display_name
+## defaults to "Item" and prompt_text auto-resolves from PROMPT_VERBS in
+## `_ready`, so reaching this branch requires the scene author to deliberately
+## blank both. We return "" here rather than push_warning because this
+## function fires every frame the cursor enters a new interactable; a
+## per-hover warning would flood logs while adding no signal beyond the
+## visibly-empty prompt panel. See docs/audits/error-handling-report.md §F-53.
 func _build_action_label(target: Interactable) -> String:
 	var verb: String = target.prompt_text.strip_edges()
 	var target_name: String = target.display_name.strip_edges()
 	if verb.is_empty() and target_name.is_empty():
 		return ""
 	if target_name.is_empty():
-		return "Press E to %s" % verb.to_lower()
+		return verb
 	if verb.is_empty():
 		return target_name
-	return "%s — Press E to %s" % [target_name, verb.to_lower()]
+	return "%s %s" % [verb, target_name]
 
 
 func _emit_tooltip_for_target(target: Interactable) -> void:

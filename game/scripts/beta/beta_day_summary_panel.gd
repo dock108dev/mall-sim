@@ -13,7 +13,7 @@ func _ready() -> void:
 	layer = 81
 	visible = false
 	var blocker := ColorRect.new()
-	blocker.color = Color(0, 0, 0, 0.68)
+	blocker.color = BetaModalTheme.COLOR_BLOCKER
 	blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(blocker)
 
@@ -27,21 +27,16 @@ func _ready() -> void:
 	panel.offset_top = -190
 	panel.offset_right = 320
 	panel.offset_bottom = 190
+	panel.add_theme_stylebox_override("panel", BetaModalTheme.make_panel_style())
 	blocker.add_child(panel)
 
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 22)
-	margin.add_theme_constant_override("margin_top", 18)
-	margin.add_theme_constant_override("margin_right", 22)
-	margin.add_theme_constant_override("margin_bottom", 18)
-	panel.add_child(margin)
-
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	margin.add_child(v)
+	v.add_theme_constant_override("separation", 12)
+	panel.add_child(v)
 
 	_title_label = Label.new()
 	_title_label.add_theme_font_size_override("font_size", 30)
+	_title_label.add_theme_color_override("font_color", BetaModalTheme.COLOR_TEXT_HEADER)
 	v.add_child(_title_label)
 
 	_metrics_label = RichTextLabel.new()
@@ -49,15 +44,18 @@ func _ready() -> void:
 	_metrics_label.fit_content = true
 	_metrics_label.scroll_active = false
 	_metrics_label.custom_minimum_size = Vector2(0, 170)
+	_metrics_label.add_theme_color_override("default_color", BetaModalTheme.COLOR_TEXT_PRIMARY)
 	v.add_child(_metrics_label)
 
 	_note_label = Label.new()
 	_note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_note_label.add_theme_color_override("font_color", BetaModalTheme.COLOR_TEXT_MUTED)
 	v.add_child(_note_label)
 
 	_continue_button = Button.new()
-	_continue_button.text = "Continue To Next Day"
+	_continue_button.text = "Continue to next day"
 	_continue_button.custom_minimum_size = Vector2(0, 48)
+	BetaModalTheme.apply_button_theme(_continue_button)
 	_continue_button.pressed.connect(_on_continue_pressed)
 	v.add_child(_continue_button)
 
@@ -81,9 +79,9 @@ func show_summary(summary: Dictionary, is_final_day: bool = false) -> void:
 	]
 	_note_label.text = str(summary.get("hidden_thread_note", ""))
 	if is_final_day:
-		_continue_button.text = "Finish Beta And Return To Menu"
+		_continue_button.text = "Finish beta and return to menu"
 	else:
-		_continue_button.text = "Continue To Next Day"
+		_continue_button.text = "Continue to next day"
 	open()
 
 

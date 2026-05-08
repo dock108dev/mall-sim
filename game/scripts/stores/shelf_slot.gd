@@ -382,10 +382,10 @@ func get_prompt_label() -> String:
 	if verb.is_empty() and target_name.is_empty():
 		return ""
 	if target_name.is_empty():
-		return "Press E to %s" % verb.to_lower()
+		return verb
 	if verb.is_empty():
 		return target_name
-	return "%s — Press E to %s" % [target_name, verb.to_lower()]
+	return "%s %s" % [verb, target_name]
 
 
 ## Returns true when the slot would accept the given category. Empty

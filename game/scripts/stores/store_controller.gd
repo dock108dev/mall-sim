@@ -49,6 +49,16 @@ func _ready() -> void:
 	_connect_lifecycle_signals()
 
 
+## Symmetric cleanup for `_push_gameplay_input_context()`. Required because
+## scene-level exits (FailCard "Return to Mall", GameManager.go_to_main_menu,
+## any change_scene_to_file path) free the controller without firing
+## `EventBus.store_exited`, which would otherwise drive the pop. Children fire
+## NOTIFICATION_EXIT_TREE before parents, so popping store_gameplay here
+## leaves mall_hub on top in time for GameplayShell._exit_tree's guarded pop.
+func _exit_tree() -> void:
+	_pop_gameplay_input_context()
+
+
 ## Returns the canonical store id for this controller. Satisfies the
 ## StoreReadyContract / StorePlayerBody parent-chain check.
 func get_store_id() -> StringName:

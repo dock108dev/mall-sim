@@ -3,11 +3,13 @@ extends Interactable
 
 
 func _ready() -> void:
-	display_name = "Shift Clock"
-	prompt_text = "End Day"
+	display_name = "the day"
+	prompt_text = "Close"
 	action_verb = "End"
 	interaction_type = InteractionType.REGISTER
 	interactable_id = &"register_day_end"
+	proximity_radius = 2.25
+	proximity_facing_dot = 0.4
 	super._ready()
 
 

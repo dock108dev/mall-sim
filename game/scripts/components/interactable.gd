@@ -60,6 +60,18 @@ const _OUTLINE_MATERIAL: ShaderMaterial = preload(
 @export var enabled: bool = true
 @export var highlight_color: Color = Color(0.0, 0.737, 0.725, 1.0)
 @export_range(0.001, 0.05, 0.001) var highlight_outline_width: float = 0.012
+## Opt-in proximity fallback. When > 0, the InteractionRay treats this
+## interactable as eligible for forgiving proximity+facing matching: if the
+## screen-center raycast misses but the player is within `proximity_radius`
+## of this node and is roughly facing it, the prompt still fires. Default 0
+## keeps the raycast-only behavior used by shelf slots and other
+## pixel-precision targets.
+@export var proximity_radius: float = 0.0
+## Minimum cosine of the angle between the player's forward vector and the
+## direction to this interactable for proximity matching to qualify. 0.4 ≈
+## 66° cone (generous), 0.7 ≈ 45° (precise). Ignored unless
+## `proximity_radius > 0`.
+@export_range(0.0, 1.0, 0.05) var proximity_facing_dot: float = 0.4
 @export var interaction_prompt: String = "":
 	get:
 		return prompt_text

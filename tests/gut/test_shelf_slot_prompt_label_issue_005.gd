@@ -5,13 +5,13 @@
 ##   - Empty slot, no placement mode → "Select an inventory item first"
 ##     (player has not yet picked an item from the inventory)
 ##   - Empty slot in placement mode with a selected item name →
-##     "<slot> — Press E to stock <item>"
+##     "Stock <item> <slot>"
 ##   - Empty slot in placement mode without a selected item name →
 ##     "Select an inventory item first" (legacy/test entry without an item)
 ##   - Occupied slot in placement mode → "Shelf full" (no E cue)
 ##   - Occupied slot, no placement mode → "<slot>" with no E cue (E on
 ##     an occupied slot is a no-op in InventoryPanel, so the prompt drops
-##     the dead "Press E to stock" hint)
+##     the dead stock hint)
 ##
 ## The Cash Register interactable in retro_games.tscn ships
 ## display_name="Cash Register" + prompt_text="Checkout" so the base
@@ -57,7 +57,7 @@ func test_empty_slot_in_placement_mode_with_item_shows_stock_item_label() -> voi
 	EventBus.placement_hint_requested.emit("Game X")
 	assert_eq(
 		slot.get_prompt_label(),
-		"Cartridge Slot — Press E to stock game x",
+		"Stock Game X Cartridge Slot",
 		"Empty slot during placement with selected item should produce the stock prompt"
 	)
 
@@ -92,12 +92,12 @@ func test_occupied_slot_outside_placement_mode_drops_press_e_cue() -> void:
 	# Not in placement mode — pressing E on an occupied slot is a no-op in
 	# InventoryPanel._on_interactable_interacted (the open() branch is gated
 	# on `not slot.is_occupied()`), so the prompt must drop the verb and
-	# render the bare slot name without a "Press E" cue.
+	# render the bare slot name without an E cue.
 	assert_eq(
 		slot.get_prompt_label(),
 		"Cartridge Slot",
 		"Occupied slot outside placement mode must show the bare slot name "
-		+ "without a dead 'Press E to stock' cue"
+		+ "without a dead stock cue"
 	)
 	assert_eq(
 		slot.prompt_text, "",
