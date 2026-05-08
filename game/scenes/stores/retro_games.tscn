@@ -921,7 +921,6 @@ shaded = false
 ; ============================================================
 
 [node name="ZoneLabels" type="Node3D" parent="."]
-visible = false
 
 [node name="ShelvesBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -7.51)
@@ -934,7 +933,7 @@ pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "Used Shelves"
+text = "USED GAMES"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -951,7 +950,7 @@ pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "Checkout"
+text = "REGISTER"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -968,7 +967,7 @@ pixel_size = 0.005
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "Exit / Mall"
+text = "EXIT"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -988,7 +987,58 @@ pixel_size = 0.005
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "Backroom / Storage"
+text = "BACK ROOM"
+horizontal_alignment = 1
+outline_size = 6
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+[node name="TradeInsBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 2.85, -7.51)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
+[node name="TradeInsLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 2.85, -7.49)
+pixel_size = 0.008
+modulate = Color(1, 0.92, 0.55, 1)
+double_sided = true
+font_size = 36
+text = "TRADE-INS"
+horizontal_alignment = 1
+outline_size = 6
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+[node name="ClearanceBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.23, 2.7, 3.5)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
+[node name="ClearanceLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.21, 2.7, 3.5)
+pixel_size = 0.005
+modulate = Color(1, 0.92, 0.55, 1)
+double_sided = true
+font_size = 36
+text = "CLEARANCE"
+horizontal_alignment = 1
+outline_size = 6
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+[node name="StaffPicksBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -5.5, 2.85, 7.53)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
+[node name="StaffPicksLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -5.5, 2.85, 7.51)
+pixel_size = 0.008
+modulate = Color(1, 0.92, 0.55, 1)
+double_sided = true
+font_size = 36
+text = "STAFF PICKS"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)

@@ -21,9 +21,7 @@ const _HIDDEN_NOISE_PATHS: Array[String] = [
 	"poster_slot",
 	"delivery_manifest",
 	"release_notes_clipboard",
-	"warranty_binder",
 	"employee_area",
-	"Storefront",
 	"StoreAtmosphereProps",
 	"FrontLaneQueue",
 	"crt_demo_area",
@@ -61,6 +59,9 @@ const _BETA_KEEP_ROOT_NODES: Array[StringName] = [
 	&"BetaRestockShelf",
 	&"BetaDayEndTrigger",
 	&"BetaHiddenClue",
+	&"ZoneLabels",
+	&"Storefront",
+	&"EntranceInterior",
 ]
 
 const BetaDebugOverlayScript: GDScript = preload(
