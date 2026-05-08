@@ -250,14 +250,6 @@ func get_item_price(item_id: StringName) -> float:
 			"factor": float(grade.get("price_multiplier", 1.0)),
 			"detail": str(grade.get("label", grade_id)),
 		})
-	var vintage_trend: float = MarketTrendSystemSingleton.get_trend_modifier(&"vintage")
-	if vintage_trend != 1.0:
-		multipliers.append({
-			"slot": "trend",
-			"label": "Vintage Trend",
-			"factor": vintage_trend,
-			"detail": "Vintage shelf trend: %.2f" % vintage_trend,
-		})
 	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
 		item_id, item.definition.base_price, multipliers
 	)

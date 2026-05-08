@@ -37,7 +37,6 @@ DifficultySystemSingleton="*res://game/autoload/difficulty_system.gd"
 UnlockSystemSingleton="*res://game/autoload/unlock_system.gd"
 CheckoutSystem="*res://game/autoload/checkout_system.gd"
 OnboardingSystemSingleton="*res://game/autoload/onboarding_system.gd"
-MarketTrendSystemSingleton="*res://game/autoload/market_trend_system.gd"
 TooltipManager="*res://game/autoload/tooltip_manager.gd"
 ObjectiveRail="*res://game/scenes/ui/objective_rail.tscn"
 InteractionPrompt="*res://game/scenes/ui/interaction_prompt.tscn"
@@ -66,7 +65,6 @@ FailCard="*res://game/scenes/ui/fail_card.tscn"
 TutorialContextSystem="*res://game/autoload/tutorial_context_system.gd"
 Day1ReadinessAudit="*res://game/autoload/day1_readiness_audit.gd"
 HiddenThreadSystemSingleton="*res://game/autoload/hidden_thread_system.gd"
-ReturnsSystem="*res://game/autoload/returns_system.gd"
 
 [debug]
 
