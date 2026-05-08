@@ -4,9 +4,8 @@ extends Node
 const EVENTS_PATH: String = "res://game/content/beta/events/customer_events.json"
 const DAY_PATHS: Dictionary = {
 	1: "res://game/content/beta/days/day_01.json",
-	2: "res://game/content/beta/days/day_02.json",
 }
-const TARGET_BETA_DAYS: int = 2
+const TARGET_BETA_DAYS: int = 1
 const TARGET_EVENTS_PER_DAY: int = 3
 
 const STAGE_TALK_TO_CUSTOMER: StringName = &"talk_to_customer"
