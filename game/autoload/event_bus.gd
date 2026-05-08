@@ -651,6 +651,12 @@ signal notification_requested(message: String)
 signal critical_notification_requested(message: String)
 ## Emitted by any system requesting a non-blocking player notification.
 signal toast_requested(message: String, category: StringName, duration: float)
+## §F-L2 — Beta day-1 carry/shelf state. Driven by `BetaDayOneController` so
+## the FP HUD can surface "Carrying: X" and override the "On Shelves: N"
+## counter without poking InventorySystem. Empty `text` clears the carry
+## label; `count` is the literal display value.
+signal beta_carry_changed(text: String)
+signal beta_shelf_count_changed(count: int)
 signal panel_opened(panel_name: String)
 signal panel_closed(panel_name: String)
 ## Emitted by ObjectiveDirector whenever the three-slot objective display should update.

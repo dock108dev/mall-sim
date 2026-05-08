@@ -1,14 +1,20 @@
 ## Verifies the Day 1 ObjectiveRail surfaces the first step of the chain
-## ("Open your inventory") with a "Press I" action and an "I" key badge, that
-## the rail occupies a different screen zone than the InteractionPrompt, and
-## that the Day1ReadinessAudit objective check passes once the day starts and
-## the player enters the store.
+## ("Talk to the waiting customer") with a "Press E" action and an "E" key
+## badge, that the rail occupies a different screen zone than the
+## InteractionPrompt, and that the Day1ReadinessAudit objective check passes
+## once the day starts and the player enters the store.
+##
+## §F-PUNCH5 — content authoring in objectives.json (Day 1 step 1) was
+## pivoted to the customer-first chain ("Talk to the waiting customer";
+## key "E"). The constants below were the old "Open your inventory" /
+## "Press I" wording that pre-dated the pivot. Updated so the tests
+## track current Day 1 production content.
 extends GutTest
 
 
-const _OBJECTIVE_TEXT: String = "Open your inventory"
-const _ACTION_TEXT: String = "Press I to open the inventory panel"
-const _KEY_TEXT: String = "I"
+const _OBJECTIVE_TEXT: String = "Talk to the waiting customer"
+const _ACTION_TEXT: String = "Press E at the customer to open the decision card"
+const _KEY_TEXT: String = "E"
 
 const _RAIL_SCENE: String = "res://game/scenes/ui/objective_rail.tscn"
 const _PROMPT_SCENE: String = "res://game/scenes/ui/interaction_prompt.tscn"

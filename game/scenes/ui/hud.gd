@@ -102,6 +102,14 @@ var _counter_color_tweens: Dictionary = {}
 var _fp_mode: bool = false
 var _fp_orig_indices: Dictionary = {}
 var _fp_close_day_hint: Label
+## §F-L2 — Carry-state label shown only while the player is holding a
+## beta-day-1 stock item. Lives in the bottom-left band above the
+## objective rail. Driven by `EventBus.beta_carry_changed`.
+var _beta_carry_label: Label
+## §F-L3 — When set, overrides the InventorySystem-derived "On Shelves"
+## count for the beta day-1 loop. -1 means "no override; read from
+## inventory as usual." Set via `EventBus.beta_shelf_count_changed`.
+var _beta_shelf_count_override: int = -1
 
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
@@ -151,6 +159,8 @@ func _ready() -> void:
 	EventBus.store_entered.connect(_on_store_entered_hub)
 	EventBus.store_exited.connect(_on_store_exited_hub)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
+	EventBus.beta_carry_changed.connect(_on_beta_carry_changed)
+	EventBus.beta_shelf_count_changed.connect(_on_beta_shelf_count_changed)
 	EventBus.customer_purchased.connect(_on_customer_purchased_hud)
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.customer_spawned.connect(_on_customer_spawned_hud)
@@ -967,6 +977,19 @@ func _on_inventory_changed() -> void:
 
 
 func _refresh_items_placed() -> void:
+	# §F-L3 — when the beta override is set, ignore InventorySystem and
+	# show the override value. Beta day-1 doesn't push items through the
+	# real inventory system; the override exists so the visible
+	# stocked-items count matches the player's action.
+	if _beta_shelf_count_override >= 0:
+		if _beta_shelf_count_override == _items_placed_count:
+			return
+		var override_delta: int = _beta_shelf_count_override - _items_placed_count
+		_items_placed_count = _beta_shelf_count_override
+		_update_items_placed_display(_items_placed_count)
+		_pulse_counter(_items_placed_label, override_delta > 0)
+		_refresh_zero_state_hint()
+		return
 	# Silent return: HUD is Tier-5 init (per docs/architecture.md), so
 	# inventory_system may legitimately be null on the very first frame and
 	# during headless test setup. We re-poll on every inventory_changed
@@ -982,6 +1005,45 @@ func _refresh_items_placed() -> void:
 	_update_items_placed_display(new_count)
 	_pulse_counter(_items_placed_label, delta > 0)
 	_refresh_zero_state_hint()
+
+
+## §F-L2 — Carry HUD wiring. The label is created lazily on first emit
+## so production gameplay (no beta controller, no carry events) doesn't
+## allocate a spare label that would never be used. Empty text hides it.
+func _on_beta_carry_changed(text: String) -> void:
+	_ensure_beta_carry_label()
+	if text.strip_edges().is_empty():
+		_beta_carry_label.text = ""
+		_beta_carry_label.visible = false
+		return
+	_beta_carry_label.text = "Carrying: %s" % text
+	_beta_carry_label.visible = true
+
+
+func _on_beta_shelf_count_changed(count: int) -> void:
+	_beta_shelf_count_override = max(0, count)
+	_refresh_items_placed()
+
+
+func _ensure_beta_carry_label() -> void:
+	if is_instance_valid(_beta_carry_label):
+		return
+	_beta_carry_label = Label.new()
+	_beta_carry_label.name = "BetaCarryLabel"
+	_beta_carry_label.text = ""
+	_beta_carry_label.visible = false
+	_beta_carry_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_beta_carry_label.anchor_left = 0.0
+	_beta_carry_label.anchor_right = 0.0
+	_beta_carry_label.anchor_top = 1.0
+	_beta_carry_label.anchor_bottom = 1.0
+	_beta_carry_label.offset_left = 16.0
+	_beta_carry_label.offset_top = -110.0
+	_beta_carry_label.offset_right = 360.0
+	_beta_carry_label.offset_bottom = -78.0
+	_beta_carry_label.modulate = Color(1.0, 0.92, 0.55, 1.0)
+	_beta_carry_label.add_theme_font_size_override("font_size", 16)
+	add_child(_beta_carry_label)
 
 
 ## Tracks live shopper presence so the zero-state hint can flip between the

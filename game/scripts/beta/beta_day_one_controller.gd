@@ -167,6 +167,16 @@ const _BETA_KEEP_ROOT_NODES: Array[StringName] = [
 	&"ZoneLabels",
 	&"Storefront",
 	&"EntranceInterior",
+	# §F-PUNCH1 — back-room atmosphere + enclosure. The `back_room` node
+	# carries the existing crates / shelf / damaged-bin props so the room
+	# reads as "a small storage room" instead of an empty corner. The
+	# three Beta*Wall nodes are the partition + doorway authored at the
+	# scene root so the back room is enclosed regardless of which subtree
+	# the strip walks.
+	&"back_room",
+	&"BetaBackroomWallSide",
+	&"BetaBackroomWallFrontLeft",
+	&"BetaBackroomWallFrontRight",
 ]
 
 const BetaDebugOverlayScript: GDScript = preload(
@@ -192,6 +202,12 @@ var _active_event: Dictionary = {}
 ## called twice (e.g. mid-fade scene churn) — the entry stays in this set
 ## and subsequent calls early-out.
 var _completed_objectives: Dictionary = {}
+## §F-L3/L4/L5 — cleaner summary metrics. `_customers_helped_today` ticks
+## on every successful customer choice; `_items_stocked_today` ticks on
+## restock. Used by `on_beta_day_end_requested` to populate the summary
+## payload with grounded retail numbers instead of cryptic system scores.
+var _customers_helped_today: int = 0
+var _items_stocked_today: int = 0
 
 
 func _ready() -> void:
@@ -232,8 +248,12 @@ func on_beta_backroom_pickup_interacted() -> void:
 		return
 	if _completed_objectives.has(&"back_room_inventory"):
 		return
+	# §F-L1 — visible feedback: the box (and its label) disappears so the
+	# player sees they took it. The carry HUD then shows what they're holding.
+	_hide_stock_box_in_world()
+	EventBus.beta_carry_changed.emit("Used Console Box")
 	EventBus.notification_requested.emit(
-		"Counted the back room. Numbers match the manifest."
+		"Picked up the used console box. Take it to the used games shelf."
 	)
 	_complete_current_objective()
 
@@ -273,8 +293,14 @@ func on_beta_restock_interacted() -> void:
 		return
 	if _completed_objectives.has(&"stock_shelf"):
 		return
+	# §F-L3 — visible feedback: spawn 5 boxed-game meshes on the restock
+	# shelf's authored ShelfBoard so the player sees what they put up. The
+	# carry HUD clears, and the on-shelves counter ticks to match.
+	var spawned: int = _spawn_visible_shelf_items(5)
+	EventBus.beta_carry_changed.emit("")
+	EventBus.beta_shelf_count_changed.emit(spawned)
 	EventBus.notification_requested.emit(
-		"Used games shelf restocked from the trade-in pile."
+		"Stocked %d games on the used games shelf." % spawned
 	)
 	_complete_current_objective()
 
@@ -287,6 +313,16 @@ func on_beta_day_end_requested() -> void:
 	var summary: Dictionary = BetaRunState.end_day()
 	summary["events_completed"] = _resolved_events_today
 	summary["events_target"] = _day_events.size()
+	# §F-L5 — grounded retail metrics for the beta summary. These live
+	# alongside the legacy keys (cash/reputation/manager_trust/hidden_thread*)
+	# so the panel can prefer the new keys without breaking older readers.
+	summary["customers_helped"] = _customers_helped_today
+	summary["items_stocked"] = _items_stocked_today
+	summary["sales_completed"] = _customers_helped_today
+	summary["shift_note"] = (
+		"You made it through your first shift. "
+		+ "The store still feels off, but at least the shelves aren't empty."
+	)
 	_summary_panel.show_summary(summary, BetaRunState.day >= TARGET_BETA_DAYS)
 
 
@@ -300,6 +336,16 @@ func _on_choice_selected(choice_id: StringName, effects: Dictionary) -> void:
 	if choice_id == &"refuse_return":
 		BetaRunState.mark_hidden_thread_signal(&"parent_refused_return_risk")
 	BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+	# §F-L4 — the customer leaves the register so the player sees the
+	# conversation actually ended. Hide the whole node (mesh + interactable)
+	# rather than queue_free so the day-reset path can re-show them.
+	_hide_customer_in_world()
+	_customers_helped_today += 1
+	# §F-PUNCH4 — narrate the outcome so the player understands whether a
+	# sale happened. Cash delta is the truth; reputation-only choices show
+	# a softer message. Toasts (not notifications) so the carry-state
+	# notification a moment later doesn't swamp this one in the queue.
+	_emit_customer_outcome_toast(effects)
 	# The customer step is the first link in the chain; resolving their
 	# decision completes that objective and advances to INSPECT_CLUE. The
 	# old "skip to END_DAY for last event" branch was the source of the
@@ -427,6 +473,8 @@ func _start_day(day: int) -> void:
 		_day_events = _day_events.slice(0, TARGET_EVENTS_PER_DAY)
 	_current_event_index = 0
 	_resolved_events_today = 0
+	_customers_helped_today = 0
+	_items_stocked_today = 0
 	_completed_objectives.clear()
 	# Start at the head of the chain.
 	_stage = STAGE_TALK_TO_CUSTOMER
@@ -435,8 +483,26 @@ func _start_day(day: int) -> void:
 	else:
 		_active_event = {}
 	_apply_customer_profile(_active_event)
+	# §F-PUNCH3 — Beta day-1 starts at 9 AM (mall open) per spec, not the
+	# 7 AM PRE_OPEN default. TimeSystem ships with `_DAY_START_MINUTES =
+	# 420.0` (7 AM); jump forward to 540 min so the first chain step
+	# happens after the mall opens. Idempotent: only advances if the
+	# clock is currently before 9 AM (e.g. fresh game), so a save loaded
+	# at 9:30 AM stays put.
+	_advance_to_open_hour_if_early()
 	_update_objective_rail()
 	_apply_objective_gating()
+
+
+func _advance_to_open_hour_if_early() -> void:
+	var time_sys: TimeSystem = GameManager.get_time_system()
+	if time_sys == null:
+		return
+	const _OPEN_TIME_MINUTES: float = 9.0 * 60.0
+	var now: float = float(time_sys.game_time_minutes)
+	if now >= _OPEN_TIME_MINUTES:
+		return
+	time_sys.advance_by_minutes(_OPEN_TIME_MINUTES - now)
 
 
 ## Marks the current stage's objective complete, advances the in-game
@@ -854,3 +920,104 @@ func _is_descendant_of(node: Node, ancestor: Node) -> bool:
 			return true
 		current = current.get_parent()
 	return false
+
+
+# §F-L1/L3/L4 — Visible-feedback helpers ─────────────────────────────────────
+
+
+## §F-PUNCH4 — Narrates the customer's exit so the player can tell if
+## the choice produced a sale. Reads the choice's `cash` effect: positive
+## delta → "Sale complete: +$X"; zero or negative → a softer flavor line.
+## Negative cash (refunds) currently fall through to the same "no sale"
+## copy because there's no Day-1 refund path; a future scene with a
+## negative-cash choice can branch here.
+func _emit_customer_outcome_toast(effects: Dictionary) -> void:
+	var cash_delta: int = int(effects.get("cash", 0))
+	if cash_delta > 0:
+		EventBus.toast_requested.emit(
+			"Sale complete: +$%d" % cash_delta, &"system", 3.0
+		)
+	else:
+		EventBus.toast_requested.emit(
+			"She thanked you and walked off.", &"system", 3.0
+		)
+
+
+## Hides the StockBox + StockBoxLabel children of `BetaBackroomPickup` so
+## the player sees the box "in their hands" instead of still on the floor.
+## Idempotent: skips silently if the box is already hidden.
+func _hide_stock_box_in_world() -> void:
+	var store: Node = _store_root()
+	if store == null:
+		return
+	var pickup: Node = store.get_node_or_null("BetaBackroomPickup")
+	if pickup == null:
+		return
+	for child_name: String in ["StockBox", "StockBoxLabel"]:
+		var node: Node = pickup.get_node_or_null(child_name)
+		if node is Node3D:
+			(node as Node3D).visible = false
+
+
+## Hides BetaDayOneCustomer (mesh + interactable) so the register reads
+## as "they walked off." Disabling the Interactable is belt-and-suspenders
+## against any lingering proximity prompts.
+func _hide_customer_in_world() -> void:
+	var store: Node = _store_root()
+	if store == null:
+		return
+	var customer: Node = store.get_node_or_null("BetaDayOneCustomer")
+	if customer == null:
+		return
+	if customer is Node3D:
+		(customer as Node3D).visible = false
+	var inter: Node = customer.get_node_or_null("Interactable")
+	if inter is Interactable:
+		(inter as Interactable).enabled = false
+
+
+## Spawns `count` small box meshes on top of `BetaRestockShelf`'s ShelfBoard
+## so the player can see what they put up. Returns the actual number
+## spawned (clamped by the shelf width). Items spread evenly along the
+## board so 5 reads as a row instead of a stack.
+func _spawn_visible_shelf_items(count: int) -> int:
+	var store: Node = _store_root()
+	if store == null:
+		return 0
+	var shelf: Node = store.get_node_or_null("BetaRestockShelf")
+	if shelf == null or not (shelf is Node3D):
+		return 0
+	# Clear any prior spawns so re-running the loop on day reset starts
+	# from an empty shelf.
+	for child: Node in shelf.get_children():
+		if String(child.name).begins_with("BetaShelfItem"):
+			child.queue_free()
+	var clamped: int = clampi(count, 0, 8)
+	# The shelf board is ~2.2 m wide (transform scale 1.1 along X with
+	# unit `shelf_board_wide_mesh`). Lay items from −0.9 m to +0.9 m so
+	# they sit centered on the visible board, and lift them onto the
+	# board's top face (board sits at local Y=1.1 with thickness ~0.1).
+	var span_left: float = -0.9
+	var span_right: float = 0.9
+	var y_top: float = 1.18
+	var z_face: float = 0.0
+	var step: float = 0.0
+	if clamped > 1:
+		step = (span_right - span_left) / float(clamped - 1)
+	for i: int in range(clamped):
+		var item: MeshInstance3D = MeshInstance3D.new()
+		item.name = "BetaShelfItem%d" % i
+		var m: BoxMesh = BoxMesh.new()
+		m.size = Vector3(0.18, 0.22, 0.06)
+		item.mesh = m
+		var mat: StandardMaterial3D = StandardMaterial3D.new()
+		mat.albedo_color = Color(0.35, 0.55, 0.78, 1.0)
+		mat.emission_enabled = true
+		mat.emission = Color(0.18, 0.32, 0.5, 1.0)
+		mat.emission_energy_multiplier = 0.4
+		item.material_override = mat
+		var x_local: float = span_left + step * float(i) if clamped > 1 else 0.0
+		item.position = Vector3(x_local, y_top, z_face)
+		(shelf as Node3D).add_child(item)
+	_items_stocked_today += clamped
+	return clamped

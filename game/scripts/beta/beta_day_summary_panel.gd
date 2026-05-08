@@ -63,21 +63,28 @@ func _ready() -> void:
 func show_summary(summary: Dictionary, is_final_day: bool = false) -> void:
 	var day: int = int(summary.get("day", 1))
 	_title_label.text = "Day %d Summary" % day
+	# §F-L5 — grounded retail metrics. Hidden Thread Score / Manager Trust
+	# / Reputation no longer surface here: the hidden-thread system is
+	# meant to be ambient, and "Reputation: -3" with no in-game framing
+	# made the day feel like a spreadsheet. Numbers shown reflect the
+	# concrete actions the player took today.
 	_metrics_label.text = (
-		"[b]Cash:[/b] %d\n"
-		+ "[b]Reputation:[/b] %d\n"
-		+ "[b]Manager Trust:[/b] %d\n"
-		+ "[b]Hidden Thread Score:[/b] %d\n"
-		+ "[b]Events Completed:[/b] %d / %d"
+		"[b]Cash:[/b] $%d\n"
+		+ "[b]Customers Helped:[/b] %d\n"
+		+ "[b]Items Stocked:[/b] %d\n"
+		+ "[b]Sales Completed:[/b] %d"
 	) % [
 		int(summary.get("cash", 0)),
-		int(summary.get("reputation", 0)),
-		int(summary.get("manager_trust", 0)),
-		int(summary.get("hidden_thread_score", 0)),
-		int(summary.get("events_completed", 0)),
-		int(summary.get("events_target", 0)),
+		int(summary.get("customers_helped", 0)),
+		int(summary.get("items_stocked", 0)),
+		int(summary.get("sales_completed", 0)),
 	]
-	_note_label.text = str(summary.get("hidden_thread_note", ""))
+	# Prefer a grounded shift-end note if one is provided; otherwise fall
+	# back to the hidden-thread note so older content keeps working.
+	var note: String = str(summary.get("shift_note", ""))
+	if note.is_empty():
+		note = str(summary.get("hidden_thread_note", ""))
+	_note_label.text = note
 	if is_final_day:
 		_continue_button.text = "Finish beta and return to menu"
 	else:
