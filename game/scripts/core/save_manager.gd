@@ -59,7 +59,6 @@ var _store_state_manager: StoreStateManager
 var _progression_system: ProgressionSystem
 var _milestone_system: MilestoneSystem
 var _refurbishment_system: RefurbishmentSystem
-var _rental_system: VideoRentalStoreController
 var _trend_system: TrendSystem
 var _market_event_system: MarketEventSystem
 var _fixture_placement_system: FixturePlacementSystem
@@ -172,13 +171,6 @@ func set_random_event_system(
 	system: RandomEventSystem
 ) -> void:
 	_random_event_system = system
-
-
-## Sets the VideoRentalStoreController reference for save/load.
-func set_rental_system(
-	system: VideoRentalStoreController
-) -> void:
-	_rental_system = system
 
 
 ## Sets the StaffSystem reference for save/load.
@@ -474,9 +466,6 @@ func _collect_save_data() -> Dictionary:
 	if _refurbishment_system:
 		data["refurbishment"] = _refurbishment_system.get_save_data()
 
-	if _rental_system:
-		data["rental"] = _rental_system.get_save_data()
-
 	if _trend_system:
 		data["trends"] = _trend_system.get_save_data()
 
@@ -618,13 +607,6 @@ func _distribute_save_data(data: Dictionary) -> void:
 		if refurb_data is Dictionary:
 			_refurbishment_system.load_save_data(
 				refurb_data as Dictionary
-			)
-
-	if _rental_system:
-		var rental_data: Variant = data.get("rental", {})
-		if rental_data is Dictionary:
-			_rental_system.load_save_data(
-				rental_data as Dictionary
 			)
 
 	if _trend_system:

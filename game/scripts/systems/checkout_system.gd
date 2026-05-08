@@ -6,7 +6,6 @@ const OFFER_LOW: float = 0.85
 const OFFER_HIGH: float = 1.15
 const SENSITIVITY_FACTOR: float = 0.3
 const PATIENCE_REP_PENALTY: float = -2.0
-const ELECTRONICS_STORE_TYPE: String = "electronics"
 const CHECKOUT_DURATION: float = 2.0
 const GENEROUS_THRESHOLD: float = 0.75
 const FAIR_THRESHOLD_HIGH: float = 1.25
@@ -28,10 +27,7 @@ var _checkout_panel: CheckoutPanel = null
 var _haggle_system: HaggleSystem = null
 var _haggle_panel: HagglePanel = null
 var _register_queue: RegisterQueue = null
-var _warranty_manager: WarrantyManager = null
-var _warranty_dialog: WarrantyDialog = null
 var _market_value_system: MarketValueSystem = null
-var _rental_controller: VideoRentalStoreController = null
 
 var _active_customer: Customer = null
 var _active_item: ItemInstance = null
@@ -120,26 +116,6 @@ func set_haggle_panel(panel: HagglePanel) -> void:
 	)
 
 
-func set_warranty_manager(manager: WarrantyManager) -> void:
-	_warranty_manager = manager
-
-
-func set_warranty_dialog(dialog: WarrantyDialog) -> void:
-	_warranty_dialog = dialog
-	_warranty_dialog.warranty_accepted.connect(
-		_on_warranty_accepted
-	)
-	_warranty_dialog.warranty_declined.connect(
-		_on_warranty_declined
-	)
-
-
-func set_rental_controller(
-	controller: VideoRentalStoreController,
-) -> void:
-	_rental_controller = controller
-
-
 ## Called by HaggleSystem on accepted deal or directly on non-haggled sale.
 func initiate_sale(
 	customer: Customer,
@@ -179,9 +155,6 @@ func _on_checkout_timer_timeout() -> void:
 		_finalize_checkout_no_sale()
 		return
 	_execute_sale()
-	if _should_show_warranty() and _warranty_dialog:
-		_show_warranty_dialog()
-		return
 	_complete_checkout()
 
 
@@ -283,12 +256,9 @@ func _begin_checkout(customer: Customer) -> void:
 			customer, _active_item, _get_haggle_queue_count()
 		)
 		return
-	if _is_rental_transaction():
-		_active_offer = _active_item.definition.rental_fee
-	else:
-		_active_offer = _calculate_offer(
-			_active_item, customer
-		)
+	_active_offer = _calculate_offer(
+		_active_item, customer
+	)
 	_show_checkout_panel()
 
 
@@ -420,16 +390,6 @@ func _find_eligible_bundle_accessory() -> ItemInstance:
 			best_margin = margin
 			best = instance
 	return best
-
-
-func _should_show_warranty() -> bool:
-	if not _warranty_manager:
-		return false
-	if not _active_item or not _active_item.definition:
-		return false
-	if _active_item.definition.store_type != ELECTRONICS_STORE_TYPE:
-		return false
-	return WarrantyManager.is_eligible(_active_offer)
 
 
 func _calculate_offer(
@@ -646,9 +606,6 @@ func _finish_haggle() -> void:
 
 
 func _execute_sale() -> void:
-	if _is_rental_transaction():
-		_execute_rental()
-		return
 	var item_id: String = _active_item.instance_id
 	var market_value: float = _get_perceived_value(_active_item)
 	var slot: Node = _active_customer.get_desired_item_slot()
@@ -681,57 +638,9 @@ func _execute_sale() -> void:
 		)
 
 
-func _is_rental_transaction() -> bool:
-	if not _rental_controller or not _active_item:
-		return false
-	if not _active_item.definition:
-		return false
-	return _rental_controller.is_rental_item(
-		_active_item.definition.category
-	)
-
-
-func _execute_rental() -> void:
-	var item_id: String = _active_item.instance_id
-	var slot: Node = _active_customer.get_desired_item_slot()
-	if slot and slot.has_method("remove_item"):
-		slot.remove_item()
-	var category: String = _active_item.definition.category
-	var rental_fee: float = _active_item.definition.rental_fee
-	var rental_tier: String = _active_item.definition.rental_tier
-	if rental_tier.is_empty():
-		rental_tier = "three_day"
-	if rental_fee <= 0.0:
-		rental_fee = _active_offer
-	if rental_fee <= 0.0:
-		push_error("CheckoutSystem: rental has no valid fee, aborting")
-		return
-	var cust_id: String = ""
-	if _active_customer:
-		cust_id = str(_active_customer.get_instance_id())
-	_rental_controller.process_rental(
-		item_id,
-		category,
-		rental_tier,
-		rental_fee,
-		GameManager.current_day,
-		cust_id,
-	)
-	_apply_sale_reputation(rental_fee)
-	var store_id: StringName = ContentRegistry.resolve(
-		_active_item.definition.store_type
-	)
-	_emit_sale_toast(_active_item.definition.item_name, rental_fee)
-	EventBus.customer_purchased.emit(
-		store_id, StringName(item_id), rental_fee,
-		StringName(cust_id),
-	)
-
-
 ## Posts the "Sold <item> for $<price>" feedback toast for the BRAINDUMP Day-1
-## "see the sale happen" loop. Emitted from `_execute_sale` / `_execute_rental`
-## (rather than from a `customer_purchased` listener elsewhere) because those
-## are the only call sites that still hold the live `ItemDefinition` — by the
+## "see the sale happen" loop. Emitted from `_execute_sale` because that
+## is the only call site that still holds the live `ItemDefinition` — by the
 ## time `customer_purchased` fires, `inventory.remove_item` has already wiped
 ## the instance from the lookup, so a downstream listener cannot recover the
 ## display name from the instance_id alone.
@@ -763,87 +672,6 @@ func _apply_sale_reputation(market_value: float) -> void:
 	if ratio < GENEROUS_THRESHOLD:
 		rep_delta = ReputationSystemSingleton.REP_FAIR_SALE * 1.5
 	_reputation_system.add_reputation("", rep_delta)
-
-
-func _show_warranty_dialog() -> void:
-	var item_name: String = _active_item.definition.item_name
-	var wholesale: float = _active_item.definition.base_price
-	if _economy_system:
-		wholesale = _economy_system.get_wholesale_price(
-			_active_item.definition
-		)
-	var tiers: Array = []
-	if _active_item.definition.warranty_tiers.size() > 0:
-		tiers = _active_item.definition.warranty_tiers
-	_warranty_dialog.open(
-		_active_item.instance_id,
-		item_name,
-		_active_offer,
-		wholesale,
-		WarrantyDialog.DEFAULT_WARRANTY_PERCENT,
-		tiers,
-	)
-
-
-func _on_warranty_accepted(
-	item_id: String, fee: float
-) -> void:
-	if _warranty_manager:
-		var wholesale: float = 0.0
-		if _active_item and _active_item.definition:
-			wholesale = _active_item.definition.base_price
-			if _economy_system:
-				wholesale = _economy_system.get_wholesale_price(
-					_active_item.definition
-				)
-		var tier_id: String = ""
-		if _warranty_dialog:
-			tier_id = _warranty_dialog.get_selected_tier_id()
-		_warranty_manager.add_warranty(
-			item_id,
-			_active_offer,
-			fee,
-			wholesale,
-			GameManager.current_day,
-			tier_id,
-		)
-	if _economy_system:
-		_economy_system.add_cash(fee, "Warranty: %s" % item_id)
-	_emit_warranty_price_audit(item_id, fee)
-	EventBus.warranty_purchased.emit(item_id, fee)
-	EventBus.notification_requested.emit(
-		"Warranty sold for $%.2f" % fee
-	)
-	_complete_checkout()
-
-
-func _emit_warranty_price_audit(item_id: String, fee: float) -> void:
-	if _active_offer <= 0.0:
-		return
-	var tier_id: String = ""
-	if _warranty_dialog:
-		tier_id = _warranty_dialog.get_selected_tier_id()
-	var tier_label: String = (
-		"Warranty (%s)" % tier_id.capitalize()
-		if not tier_id.is_empty()
-		else "Warranty Add-on"
-	)
-	var factor: float = 1.0 + fee / _active_offer
-	PriceResolver.resolve_for_item(
-		StringName(item_id),
-		_active_offer,
-		[{
-			"slot": "warranty",
-			"label": tier_label,
-			"factor": factor,
-			"detail": "Extended warranty fee: $%.2f" % fee,
-		}],
-		true,
-	)
-
-
-func _on_warranty_declined() -> void:
-	_complete_checkout()
 
 
 func _complete_checkout() -> void:

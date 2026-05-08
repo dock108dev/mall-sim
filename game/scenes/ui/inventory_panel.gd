@@ -24,10 +24,6 @@ var store_id: String = ""
 var refurbishment_dialog: RefurbishmentDialog = null
 var refurbishment_system: RefurbishmentSystem = null
 var testing_system: TestingSystem = null
-var rental_controller: VideoRentalStoreController = null
-var pack_controller: PocketCreaturesStoreController = null
-var pack_opening_panel: PackOpeningPanel = null
-var electronics_controller: ElectronicsStoreController = null
 var pricing_panel: PricingPanel = null
 var order_panel: OrderPanel = null
 
@@ -461,7 +457,7 @@ func _clear_grid() -> void:
 
 func _add_item_row(item: ItemInstance) -> void:
 	var row: PanelContainer = InventoryRowBuilder.build(
-		item, rental_controller, _quantity_map
+		item, _quantity_map
 	)
 	var overlay: Button = InventoryRowBuilder.add_overlay_button(
 		row,
@@ -658,17 +654,6 @@ func _show_context_menu(item: ItemInstance) -> void:
 		_context_menu.add_item("Test Item", 4)
 	if refurbishment_system and refurbishment_system.can_refurbish(item):
 		_context_menu.add_item("Refurbish", 5)
-	if _can_open_pack(item):
-		_context_menu.add_item("Open Pack", 6)
-	if _can_set_as_demo(item):
-		_context_menu.add_item("Set as Demo", 7)
-	if _can_remove_from_demo(item):
-		_context_menu.add_item("Remove from Demo", 8)
-	if _can_try_demo(item):
-		_context_menu.add_item("Try Demo", 11)
-	if _can_retire_tape(item):
-		_context_menu.add_item("Retire (Sell)", 9)
-		_context_menu.add_item("Write Off", 10)
 	_context_menu.reset_size()
 	var pos: Vector2 = _panel.get_global_mouse_position()
 	_context_menu.position = Vector2i(int(pos.x), int(pos.y))
@@ -694,21 +679,6 @@ func _on_context_action(id: int) -> void:
 		5:
 			if refurbishment_dialog and _selected_item:
 				refurbishment_dialog.open(_selected_item)
-		6:
-			_open_selected_pack()
-		7:
-			_set_selected_as_demo()
-		8:
-			_remove_selected_from_demo()
-		9:
-			_retire_selected_tape(true)
-		10:
-			_retire_selected_tape(false)
-		11:
-			if electronics_controller and _selected_item:
-				electronics_controller.try_demo_interaction(
-					_selected_item.instance_id
-				)
 
 
 func _on_interactable_interacted(
@@ -822,120 +792,7 @@ func _on_cell_mouse_exited() -> void:
 func _build_count_label(visible_count: int) -> String:
 	if store_id.is_empty():
 		return "No active store"
-	if not rental_controller:
-		return "%d items" % visible_count
-	var available: int = rental_controller.get_available_count()
-	var rented: int = rental_controller.get_rented_count()
-	return "%d available / %d rented" % [available, rented]
-
-
-func _can_open_pack(item: ItemInstance) -> bool:
-	if not pack_controller or not pack_opening_panel:
-		return false
-	return pack_controller.is_openable_pack(item)
-
-
-func _open_selected_pack() -> void:
-	if not _selected_item or not pack_controller:
-		return
-	if not pack_controller.is_openable_pack(_selected_item):
-		return
-	if not pack_controller.can_afford_pack(_selected_item):
-		EventBus.transaction_completed.emit(
-			0.0, false, "Insufficient funds to open pack."
-		)
-		return
-	var instance_id: String = _selected_item.instance_id
-	_selected_item = null
-	var cards: Array[ItemInstance] = (
-		pack_controller.open_pack_with_cards(
-			StringName(instance_id)
-		)
-	)
-	if cards.is_empty():
-		return
-	pack_opening_panel.pack_opening_system = (
-		pack_controller.pack_opening_system
-	)
-	var card_dicts: Array[Dictionary] = []
-	var preview_count: int = mini(
-		cards.size(),
-		PackOpeningPanel.CARDS_PER_PACK
-	)
-	for i: int in range(preview_count):
-		var card: ItemInstance = cards[i]
-		var entry: Dictionary = {
-			"id": card.instance_id,
-			"name": card.definition.item_name if card.definition else "Unknown",
-			"rarity": (
-				pack_controller.pack_opening_system.get_preview_rarity(card)
-				if pack_controller.pack_opening_system
-				else "common"
-			),
-			"value": card.get_current_value(),
-		}
-		card_dicts.append(entry)
-	EventBus.pack_opening_started.emit(instance_id, card_dicts)
-
-
-func _can_set_as_demo(item: ItemInstance) -> bool:
-	if not electronics_controller:
-		return false
-	return electronics_controller.can_demo_item(item)
-
-
-func _can_remove_from_demo(item: ItemInstance) -> bool:
-	if not electronics_controller:
-		return false
-	return item.is_demo \
-		and electronics_controller.is_demo_unit(item.instance_id)
-
-
-func _can_try_demo(item: ItemInstance) -> bool:
-	if not electronics_controller:
-		return false
-	return item.is_demo \
-		and electronics_controller.is_demo_unit(item.instance_id)
-
-
-func _set_selected_as_demo() -> void:
-	if not _selected_item or not electronics_controller:
-		return
-	var success: bool = electronics_controller.place_demo_item(
-		_selected_item.instance_id
-	)
-	if success:
-		_selected_item = null
-		_refresh_grid()
-
-
-func _remove_selected_from_demo() -> void:
-	if not _selected_item or not electronics_controller:
-		return
-	var success: bool = electronics_controller.remove_demo_item(
-		_selected_item.instance_id
-	)
-	if success:
-		_selected_item = null
-		_refresh_grid()
-
-
-func _can_retire_tape(item: ItemInstance) -> bool:
-	if not rental_controller:
-		return false
-	return rental_controller.is_worn_out(item)
-
-
-func _retire_selected_tape(sell: bool) -> void:
-	if not _selected_item or not rental_controller:
-		return
-	var instance_id: String = _selected_item.instance_id
-	var success: bool = rental_controller.retire_tape(
-		instance_id, sell
-	)
-	if success:
-		_selected_item = null
-		_refresh_grid()
+	return "%d items" % visible_count
 
 
 func _sync_active_store() -> void:

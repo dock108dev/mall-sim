@@ -234,14 +234,6 @@ func _show_day_summary(day: int) -> void:
 
 	var warranty_rev: float = 0.0
 	var warranty_claims: float = 0.0
-	var store_ctrl: StoreController = _find_store_controller()
-	if store_ctrl is ElectronicsStoreController:
-		var elec: ElectronicsStoreController = (
-			store_ctrl as ElectronicsStoreController
-		)
-		var wm: WarrantyManager = elec.get_warranty_manager()
-		warranty_rev = wm.get_daily_warranty_revenue()
-		warranty_claims = wm.get_daily_claim_costs()
 
 	var seasonal_impact: String = ""
 	if _seasonal_event_system:

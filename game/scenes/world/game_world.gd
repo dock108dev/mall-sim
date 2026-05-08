@@ -86,17 +86,11 @@ const _ENDING_SCREEN_SCENE: PackedScene = preload(
 const _UPGRADE_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/upgrade_panel.tscn"
 )
-const _CONDITION_PICKER_DIALOG_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/condition_picker_dialog.tscn"
-)
 const _REFURBISHMENT_DIALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/refurbishment_dialog.tscn"
 )
 const _REFURB_QUEUE_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/refurb_queue_panel.tscn"
-)
-const _WARRANTY_DIALOG_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/warranty_dialog.tscn"
 )
 const _MOMENTS_TRAY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/moments_tray.tscn"
@@ -130,8 +124,6 @@ var _staff_panel: StaffPanel
 var _tutorial_overlay: TutorialOverlay
 var _item_tooltip: ItemTooltip
 var _ending_screen: EndingScreen
-var _warranty_dialog: WarrantyDialog = null
-var _condition_picker_dialog: ConditionPickerDialog = null
 var _refurbishment_dialog: RefurbishmentDialog = null
 var _refurb_queue_panel: RefurbQueuePanel = null
 var _deferred_panels_loaded: bool = false
@@ -501,9 +493,6 @@ func _wire_store_controllers() -> void:
 	var initial_ctrl: StoreController = _find_store_controller(false)
 	if initial_ctrl:
 		_wire_base_store_controller(initial_ctrl)
-		_wire_rental_system(initial_ctrl)
-		_wire_electronics_system(initial_ctrl)
-		_wire_sports_memorabilia_system(initial_ctrl)
 		_wire_retro_games_system(initial_ctrl)
 
 
@@ -715,16 +704,6 @@ func _setup_deferred_panels() -> void:
 	)
 	add_child(_ending_screen)
 	_ending_screen.dismissed.connect(_on_ending_dismissed)
-
-	_warranty_dialog = (
-		_WARRANTY_DIALOG_SCENE.instantiate() as WarrantyDialog
-	)
-	_ui_layer.add_child(_warranty_dialog)
-	checkout_system.set_warranty_dialog(_warranty_dialog)
-
-	var initial_ctrl: StoreController = _find_store_controller(false)
-	if initial_ctrl:
-		_wire_pack_system(initial_ctrl)
 
 	var moments_tray: MomentsTray = (
 		_MOMENTS_TRAY_SCENE.instantiate() as MomentsTray
@@ -1209,10 +1188,6 @@ func _on_store_entered(store_id: StringName) -> void:
 		_wire_base_store_controller(store_ctrl)
 		customer_system.initialize(store_ctrl, inventory_system)
 		customer_system.set_store_id(String(store_id))
-		_wire_rental_system(store_ctrl)
-		_wire_pack_system(store_ctrl)
-		_wire_electronics_system(store_ctrl)
-		_wire_sports_memorabilia_system(store_ctrl)
 		_wire_retro_games_system(store_ctrl)
 
 	_ensure_deferred_panels()
@@ -1224,90 +1199,6 @@ func _on_store_entered(store_id: StringName) -> void:
 func _wire_base_store_controller(store_ctrl: StoreController) -> void:
 	store_ctrl.set_inventory_system(inventory_system)
 	store_ctrl.set_customer_system(customer_system)
-
-
-## Wires up a VideoRentalStoreController with system references if applicable.
-func _wire_rental_system(store_ctrl: StoreController) -> void:
-	if not store_ctrl is VideoRentalStoreController:
-		return
-	var rental: VideoRentalStoreController = (
-		store_ctrl as VideoRentalStoreController
-	)
-	rental.set_inventory_system(inventory_system)
-	rental.set_economy_system(economy_system)
-	rental.set_reputation_system(ReputationSystemSingleton)
-	save_manager.set_rental_system(rental)
-	if _inventory_panel:
-		_inventory_panel.rental_controller = rental
-
-
-## Wires up a PocketCreaturesStoreController with pack and tournament systems.
-func _wire_pack_system(store_ctrl: StoreController) -> void:
-	if store_ctrl is PocketCreaturesStoreController:
-		var pc_ctrl: PocketCreaturesStoreController = (
-			store_ctrl as PocketCreaturesStoreController
-		)
-		pc_ctrl.set_economy_system(economy_system)
-		pc_ctrl.initialize_pack_system(
-			GameManager.data_loader, inventory_system
-		)
-		if tournament_system:
-			pc_ctrl.set_tournament_system(tournament_system)
-		if meta_shift_system:
-			pc_ctrl.set_meta_shift_system(meta_shift_system)
-		if seasonal_event_system:
-			pc_ctrl.set_seasonal_event_system(seasonal_event_system)
-		if _inventory_panel:
-			_inventory_panel.pack_controller = pc_ctrl
-			_inventory_panel.pack_opening_panel = (
-				_pack_opening_panel
-			)
-	else:
-		if _inventory_panel:
-			_inventory_panel.pack_controller = null
-			_inventory_panel.pack_opening_panel = null
-
-
-## Wires up an ElectronicsStoreController with warranty manager and demo.
-func _wire_electronics_system(store_ctrl: StoreController) -> void:
-	if store_ctrl is ElectronicsStoreController:
-		var elec: ElectronicsStoreController = (
-			store_ctrl as ElectronicsStoreController
-		)
-		elec.set_inventory_system(inventory_system)
-		elec.set_economy_system(economy_system)
-		checkout_system.set_warranty_manager(
-			elec.get_warranty_manager()
-		)
-		if _inventory_panel:
-			_inventory_panel.electronics_controller = elec
-	else:
-		checkout_system.set_warranty_manager(null)
-		if _inventory_panel:
-			_inventory_panel.electronics_controller = null
-
-
-## Wires up a SportsMemorabiliaController with season cycle system.
-func _wire_sports_memorabilia_system(
-	store_ctrl: StoreController,
-) -> void:
-	if store_ctrl is SportsMemorabiliaController:
-		var sports: SportsMemorabiliaController = (
-			store_ctrl as SportsMemorabiliaController
-		)
-		sports.initialize(time_system.current_day)
-		sports.set_economy_system(economy_system)
-		var cycle: SeasonCycleSystem = sports.get_season_cycle()
-		economy_system.set_season_cycle_system(cycle)
-		save_manager.set_season_cycle_system(cycle)
-		if _item_tooltip:
-			_item_tooltip.season_cycle_system = cycle
-		_ensure_condition_picker_dialog(sports)
-	else:
-		economy_system.set_season_cycle_system(null)
-		save_manager.set_season_cycle_system(null)
-		if _item_tooltip:
-			_item_tooltip.season_cycle_system = null
 
 
 ## Wires up a RetroGames store controller with testing and refurbishment systems.
@@ -1343,18 +1234,6 @@ func _wire_retro_games_system(store_ctrl: StoreController) -> void:
 			_inventory_panel.testing_system = null
 			_inventory_panel.refurbishment_system = null
 			_inventory_panel.refurbishment_dialog = null
-
-
-func _ensure_condition_picker_dialog(
-	_sports: SportsMemorabiliaController,
-) -> void:
-	if not _condition_picker_dialog:
-		_condition_picker_dialog = (
-			_CONDITION_PICKER_DIALOG_SCENE.instantiate()
-			as ConditionPickerDialog
-		)
-		_ui_layer.add_child(_condition_picker_dialog)
-	_condition_picker_dialog.set_inventory_system(inventory_system)
 
 
 func _ensure_refurbishment_ui(

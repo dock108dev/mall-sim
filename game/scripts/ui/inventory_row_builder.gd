@@ -4,13 +4,11 @@ extends RefCounted
 
 
 ## Creates a single item row PanelContainer with all display elements.
-## When rental_controller is supplied and the item is a rental tape, a wear
-## badge and tooltip are added. `quantities` maps definition_id -> {
-## "backroom": int, "on_shelf": int } and is rendered into the per-row
-## quantity column. Missing entries default to zero.
+## `quantities` maps definition_id -> { "backroom": int, "on_shelf": int }
+## and is rendered into the per-row quantity column. Missing entries default
+## to zero.
 static func build(
 	item: ItemInstance,
-	rental_controller: VideoRentalStoreController = null,
 	quantities: Dictionary = {},
 ) -> PanelContainer:
 	var row := PanelContainer.new()
@@ -22,7 +20,7 @@ static func build(
 	var rarity_key: String = _get_rarity(item)
 	hbox.add_child(_build_rarity_stripe(rarity_key))
 	hbox.add_child(_build_icon(item))
-	hbox.add_child(_build_info_column(item, rarity_key, rental_controller))
+	hbox.add_child(_build_info_column(item, rarity_key))
 	hbox.add_child(_build_quantity_column(item, quantities))
 	hbox.add_child(_build_price_column(item))
 	# Reserved width on the right edge so the floating action buttons (added
@@ -132,7 +130,6 @@ static func _build_icon(item: ItemInstance) -> TextureRect:
 static func _build_info_column(
 	item: ItemInstance,
 	rarity_key: String,
-	rental_controller: VideoRentalStoreController = null,
 ) -> VBoxContainer:
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -172,10 +169,6 @@ static func _build_info_column(
 		badge_row.add_child(auth_label)
 
 	badge_row.add_child(_build_test_badge(item))
-
-	var wear_badge: Label = _build_wear_badge(item, rental_controller)
-	if wear_badge != null:
-		badge_row.add_child(wear_badge)
 
 	vbox.add_child(badge_row)
 	return vbox
@@ -227,56 +220,6 @@ static func _build_action_spacer() -> Control:
 	spacer.custom_minimum_size = Vector2(94, 0)
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return spacer
-
-
-static func _build_wear_badge(
-	item: ItemInstance,
-	rental_controller: VideoRentalStoreController,
-) -> Label:
-	if rental_controller == null or item == null or item.definition == null:
-		return null
-	if not rental_controller.is_rental_item(String(item.definition.category)):
-		return null
-	var wear_class: String = rental_controller.get_tape_wear_class(item)
-	var wear_amount: float = rental_controller.get_tape_wear_amount(
-		String(item.instance_id)
-	)
-	var label := Label.new()
-	label.add_theme_font_size_override("font_size", 11)
-	label.mouse_filter = Control.MOUSE_FILTER_STOP
-	var display_text: String = ""
-	var color: Color = Color(0.75, 0.75, 0.75, 1.0)
-	match wear_class:
-		"pristine":
-			display_text = "Wear: Pristine"
-			color = Color(0.3, 0.85, 0.4, 1.0)
-		"light":
-			display_text = "Wear: Light"
-			color = Color(0.55, 0.85, 0.35, 1.0)
-		"moderate":
-			display_text = "Wear: Moderate"
-			color = Color(0.9, 0.8, 0.2, 1.0)
-		"heavy":
-			display_text = "Wear: Heavy"
-			color = Color(0.95, 0.55, 0.2, 1.0)
-		"worn_out":
-			display_text = "Wear: Worn Out"
-			color = Color(0.9, 0.25, 0.25, 1.0)
-	label.text = display_text
-	label.add_theme_color_override("font_color", color)
-	var tooltip_parts: PackedStringArray = [
-		"Tape wear: %.0f%%" % (wear_amount * 100.0),
-	]
-	var reason: String = rental_controller.get_rentability_reason(item)
-	if reason.is_empty():
-		var appeal: float = rental_controller.get_tape_appeal_factor(item)
-		tooltip_parts.append(
-			"Customer appeal: %d%%" % int(round(appeal * 100.0))
-		)
-	else:
-		tooltip_parts.append(reason)
-	label.tooltip_text = "\n".join(tooltip_parts)
-	return label
 
 
 static func _build_test_badge(item: ItemInstance) -> Label:
