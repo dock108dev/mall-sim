@@ -68,28 +68,6 @@
       "one_time": true
     },
     {
-      "id": "sports_trophy_wall",
-      "display_name": "Trophy Wall",
-      "description": "A dedicated display wall that boosts authenticated item prices.",
-      "cost": 450,
-      "rep_required": 20,
-      "store_type": "sports",
-      "effect_type": "price_bonus",
-      "effect_value": 1.15,
-      "one_time": true
-    },
-    {
-      "id": "sports_season_pass_display",
-      "display_name": "Season Pass Display",
-      "description": "Seasonal merchandise display increases customer traffic during events.",
-      "cost": 350,
-      "rep_required": 15,
-      "store_type": "sports",
-      "effect_type": "traffic_bonus",
-      "effect_value": 1.2,
-      "one_time": true
-    },
-    {
       "id": "retro_crt_lounge",
       "display_name": "CRT Lounge",
       "description": "A retro gaming lounge that attracts more nostalgic customers.",
@@ -109,72 +87,6 @@
       "store_type": "retro_games",
       "effect_type": "decay_reduction",
       "effect_value": 0.6,
-      "one_time": true
-    },
-    {
-      "id": "video_late_fee_kiosk",
-      "display_name": "Late Fee Kiosk",
-      "description": "Automated kiosk adds extra rental return slots.",
-      "cost": 350,
-      "rep_required": 15,
-      "store_type": "rentals",
-      "effect_type": "slot_bonus",
-      "effect_value": 3,
-      "one_time": true
-    },
-    {
-      "id": "video_new_releases_wall",
-      "display_name": "New Releases Wall",
-      "description": "A prominent new releases section commands higher rental prices.",
-      "cost": 500,
-      "rep_required": 25,
-      "store_type": "rentals",
-      "effect_type": "price_bonus",
-      "effect_value": 1.15,
-      "one_time": true
-    },
-    {
-      "id": "pocket_tournament_arena",
-      "display_name": "Tournament Arena",
-      "description": "Upgraded tournament space draws more card battlers to the store.",
-      "cost": 600,
-      "rep_required": 30,
-      "store_type": "pocket_creatures",
-      "effect_type": "traffic_bonus",
-      "effect_value": 1.25,
-      "one_time": true
-    },
-    {
-      "id": "pocket_climate_vault",
-      "display_name": "Climate Vault",
-      "description": "Climate-controlled card storage preserves card condition.",
-      "cost": 450,
-      "rep_required": 20,
-      "store_type": "pocket_creatures",
-      "effect_type": "decay_reduction",
-      "effect_value": 0.5,
-      "one_time": true
-    },
-    {
-      "id": "electronics_demo_hub",
-      "display_name": "Demo Hub",
-      "description": "An interactive demo area boosts electronics sale prices.",
-      "cost": 550,
-      "rep_required": 25,
-      "store_type": "electronics",
-      "effect_type": "price_bonus",
-      "effect_value": 1.12,
-      "one_time": true
-    },
-    {
-      "id": "electronics_extended_warranty_desk",
-      "display_name": "Warranty Desk",
-      "description": "A dedicated warranty desk expands backroom capacity for returns.",
-      "cost": 400,
-      "rep_required": 20,
-      "store_type": "electronics",
-      "effect_type": "capacity_bonus",
-      "effect_value": 15,
       "one_time": true
     }
   ]

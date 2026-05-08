@@ -7,7 +7,16 @@
       "description": "A simple shelf for featured items and boxed stock.",
       "cost": 30.0,
       "slot_count": 4,
-      "footprint_cells": [[0, 0], [1, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "",
       "unlock_rep": 0,
@@ -21,7 +30,16 @@
       "description": "A lockable display case for higher-value inventory.",
       "cost": 80.0,
       "slot_count": 3,
-      "footprint_cells": [[0, 0], [1, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "",
       "unlock_rep": 0,
@@ -34,7 +52,12 @@
       "description": "A compact freestanding rack for impulse browsing.",
       "cost": 50.0,
       "slot_count": 6,
-      "footprint_cells": [[0, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ]
+      ],
       "rotation_support": false,
       "store_type_restriction": "",
       "unlock_rep": 0,
@@ -47,7 +70,20 @@
       "description": "A long service counter for checkout and customer help.",
       "cost": 120.0,
       "slot_count": 2,
-      "footprint_cells": [[0, 0], [1, 0], [2, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "",
       "unlock_rep": 0,
@@ -60,7 +96,12 @@
       "description": "A checkout register required to complete purchases.",
       "cost": 90.0,
       "slot_count": 0,
-      "footprint_cells": [[0, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ]
+      ],
       "rotation_support": false,
       "store_type_restriction": "",
       "unlock_rep": 0,
@@ -73,7 +114,16 @@
       "description": "An aisle-end display for featured items and promos.",
       "cost": 60.0,
       "slot_count": 4,
-      "footprint_cells": [[0, 0], [0, 1]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "",
       "unlock_rep": 10,
@@ -86,7 +136,16 @@
       "description": "A tall storage unit for overflow stock and reserves.",
       "cost": 40.0,
       "slot_count": 8,
-      "footprint_cells": [[0, 0], [0, 1]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "",
       "unlock_rep": 0,
@@ -99,7 +158,16 @@
       "description": "A grading and authenticity desk for premium memorabilia.",
       "cost": 150.0,
       "slot_count": 2,
-      "footprint_cells": [[0, 0], [1, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "sports_memorabilia",
       "unlock_rep": 0,
@@ -112,7 +180,24 @@
       "description": "A demo bench for checking retro hardware and games.",
       "cost": 95.0,
       "slot_count": 2,
-      "footprint_cells": [[0, 0], [1, 0], [0, 1], [1, 1]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
       "rotation_support": false,
       "store_type_restriction": "retro_games",
       "unlock_rep": 0,
@@ -125,7 +210,16 @@
       "description": "A quick-drop kiosk for returns and fee payments.",
       "cost": 110.0,
       "slot_count": 2,
-      "footprint_cells": [[0, 0], [1, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "video_rental",
       "unlock_rep": 0,
@@ -133,25 +227,29 @@
       "visual_category": "counter"
     },
     {
-      "id": "tournament_table",
-      "display_name": "Tournament Table",
-      "description": "A large table for events, demos, and community play.",
-      "cost": 100.0,
-      "slot_count": 2,
-      "footprint_cells": [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]],
-      "rotation_support": false,
-      "store_type_restriction": "pocket_creatures",
-      "unlock_rep": 10,
-      "unlock_day": 0,
-      "visual_category": "display"
-    },
-    {
       "id": "demo_station",
       "display_name": "Demo Station",
       "description": "A try-before-you-buy station for electronics shoppers.",
       "cost": 85.0,
       "slot_count": 2,
-      "footprint_cells": [[0, 0], [1, 0], [0, 1], [1, 1]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
       "rotation_support": false,
       "store_type_restriction": "consumer_electronics",
       "unlock_rep": 0,
@@ -159,25 +257,25 @@
       "visual_category": "display"
     },
     {
-      "id": "card_binder",
-      "display_name": "Card Binder Rack",
-      "description": "A rack sized for binders, singles, and quick flips.",
-      "cost": 70.0,
-      "slot_count": 10,
-      "footprint_cells": [[0, 0], [1, 0], [2, 0]],
-      "rotation_support": true,
-      "store_type_restriction": "pocket_creatures",
-      "unlock_rep": 0,
-      "unlock_day": 0,
-      "visual_category": "rack"
-    },
-    {
       "id": "import_wall_fixture",
       "display_name": "Import Wall Display",
       "description": "A featured wall fixture for signature imports and rare retro finds.",
       "cost": 0.0,
       "slot_count": 3,
-      "footprint_cells": [[0, 0], [1, 0], [2, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "retro_games",
       "unlock_rep": 0,
@@ -191,7 +289,20 @@
       "description": "A workshop bench for cleaning, repairs, and refurb jobs.",
       "cost": 130.0,
       "slot_count": 2,
-      "footprint_cells": [[0, 0], [1, 0], [2, 0]],
+      "footprint_cells": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
       "rotation_support": true,
       "store_type_restriction": "retro_games",
       "unlock_rep": 15,

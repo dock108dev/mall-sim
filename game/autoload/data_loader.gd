@@ -53,7 +53,6 @@ const _TYPE_ROUTES: Dictionary = {
 	"pocket_creatures_packs_config": "pocket_creatures_packs_config",
 	# Recognized but not consumed by DataLoader (loaded by other systems).
 	"personality_data": "ignore",
-	"market_trends_catalog_data": "ignore",
 	"audio_registry_data": "ignore",
 	"haggle_dialogue_data": "ignore",
 	"pocket_creatures_cards_data": "ignore",
@@ -177,7 +176,6 @@ func load_all_content_from_root(root: String) -> void:
 			&"economy_config", _economy_config, "economy"
 		)
 	_normalize_store_types()
-	_validate_trend_catalog(root)
 	var validation_errors: Array[String] = ContentRegistry.validate_all_references()
 	for err: String in validation_errors:
 		_record_load_error(err)
@@ -570,41 +568,6 @@ func _parse_named_seasons(data: Dictionary) -> void:
 		for err: String in season_errors:
 			_record_load_error(err)
 		_named_seasons[id] = season
-
-
-func _validate_trend_catalog(root: String) -> void:
-	var catalog_path: String = root.path_join("market_trends_catalog.json")
-	var data: Variant = _load_json_with_error(catalog_path)
-	if data == null or data is not Dictionary:
-		return
-	var entries_raw: Variant = (data as Dictionary).get("entries", [])
-	if entries_raw is not Array:
-		return
-	var entries: Array = entries_raw as Array
-	var known_ids: Dictionary = {}
-	for entry: Variant in entries:
-		if entry is not Dictionary:
-			continue
-		var tid: String = str((entry as Dictionary).get("id", ""))
-		if not tid.is_empty():
-			known_ids[tid] = true
-	for entry: Variant in entries:
-		if entry is not Dictionary:
-			continue
-		var edict: Dictionary = entry as Dictionary
-		var tid: String = str(edict.get("id", "?"))
-		var propagates: Variant = edict.get("cross_propagates_to", [])
-		if propagates is not Array:
-			continue
-		for ref: Variant in (propagates as Array):
-			var ref_id: String = str(ref)
-			if ref_id.is_empty():
-				continue
-			if not known_ids.has(ref_id):
-				_record_load_error(
-					"%s: trend '%s' cross_propagates_to unknown trend '%s'"
-					% [catalog_path, tid, ref_id]
-				)
 
 
 func _normalize_store_types() -> void:

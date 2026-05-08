@@ -171,13 +171,7 @@ static func get_authentication_multiplier(item: ItemInstance) -> float:
 
 
 static func get_auth_multiplier_from_config() -> float:
-	var entry: Dictionary = ContentRegistry.get_entry(&"sports")
-	if entry.is_empty():
-		return 2.0
-	var config: Variant = entry.get("authentication_config", {})
-	if config is not Dictionary:
-		return 2.0
-	return float((config as Dictionary).get("auth_multiplier", 2.0))
+	return 2.0
 
 
 static func calc_time_multiplier(item: ItemInstance) -> float:
