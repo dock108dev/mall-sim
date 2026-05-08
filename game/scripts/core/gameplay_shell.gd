@@ -1,8 +1,8 @@
 ## Persistent root gameplay scene: the beta gameplay shell.
 ## Hosts the game_world child that owns all runtime systems, plus the hub UI
 ## overlay (Settings + Progress buttons), the KPI strip, and ambience player.
-## In the beta there is exactly one store (RetroVault) so this shell never
-## hosts a store-selector overview.
+## In the beta there is exactly one store (the retro_games store) so this
+## shell never hosts a store-selector overview.
 class_name GameplayShell
 extends Node
 
