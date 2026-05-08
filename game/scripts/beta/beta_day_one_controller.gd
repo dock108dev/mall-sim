@@ -62,8 +62,13 @@ const _BETA_KEEP_ROOT_NODES: Array[StringName] = [
 	&"BetaHiddenClue",
 ]
 
+const BetaDebugOverlayScript: GDScript = preload(
+	"res://game/scripts/beta/beta_debug_overlay.gd"
+)
+
 var _decision_panel: BetaDecisionCardPanel
 var _summary_panel: BetaDaySummaryPanel
+var _debug_overlay: CanvasLayer
 var _events_by_day: Dictionary = {}
 var _day_data_by_day: Dictionary = {}
 var _day_events: Array[Dictionary] = []
@@ -353,6 +358,11 @@ func _ensure_panels() -> void:
 	if _summary_panel == null:
 		_summary_panel = BetaDaySummaryPanel.new()
 		_ui_root().add_child(_summary_panel)
+	if _debug_overlay == null:
+		_debug_overlay = CanvasLayer.new()
+		_debug_overlay.set_script(BetaDebugOverlayScript)
+		_debug_overlay.name = "BetaDebugOverlay"
+		_ui_root().add_child(_debug_overlay)
 
 
 func _connect_panel_signals() -> void:
