@@ -49,7 +49,18 @@ func apply_decision_effect(
 	choice_id: StringName,
 	effects: Dictionary
 ) -> void:
-	cash += int(effects.get("cash", 0))
+	var cash_delta: int = int(effects.get("cash", 0))
+	cash += cash_delta
+	# Mirror the cash delta into EconomySystem so the HUD's existing
+	# get_cash() pipeline stays the single visible source of truth.
+	if cash_delta != 0:
+		var economy: EconomySystem = GameManager.get_economy_system()
+		if economy != null:
+			var reason: String = "Day %d: %s" % [day, choice_id]
+			if cash_delta > 0:
+				economy.add_cash(float(cash_delta), reason)
+			else:
+				economy.charge(float(-cash_delta), reason)
 	reputation += int(effects.get("reputation", 0))
 	manager_trust += int(effects.get("manager_trust", 0))
 	hidden_thread_score += int(effects.get("hidden_thread_score", 0))

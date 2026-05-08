@@ -360,7 +360,14 @@ func _day1_steps_available() -> bool:
 ## Builds and emits the current payload from the day objective for the active
 ## day. Sends {hidden: true} when the auto-hide condition is met. Tutorial
 ## text is owned by `TutorialOverlay` and does not flow through this payload.
+##
+## Beta deferral: when the active scene contains a node in the
+## "beta_day_one_controller" group, that controller is the authority for
+## objective text and gating. ObjectiveDirector skips emission so the rail
+## doesn't ping-pong between two sources.
 func _emit_current() -> void:
+	if _beta_controller_active():
+		return
 	var should_auto_hide: bool = _loop_completed and _current_day > 3
 	if should_auto_hide and not Settings.show_objective_rail:
 		var hidden: Dictionary = {"hidden": true}
@@ -430,3 +437,10 @@ func _emit_objective_payload(
 		"input_hint": key_value,
 		"optional_hint": optional_hint,
 	})
+
+
+func _beta_controller_active() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return not tree.get_nodes_in_group("beta_day_one_controller").is_empty()
