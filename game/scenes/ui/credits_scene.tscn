@@ -50,7 +50,7 @@ theme_override_constants/separation = 24
 [node name="TitleLabel" type="Label" parent="Overlay/Layout/ScrollContainer/Content/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 48
-text = "mallcore-sim"
+text = ""
 horizontal_alignment = 1
 
 [node name="TitleSeparator" type="HSeparator" parent="Overlay/Layout/ScrollContainer/Content/VBox"]

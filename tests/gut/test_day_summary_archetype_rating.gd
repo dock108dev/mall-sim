@@ -123,8 +123,8 @@ func test_archetype_subtext_carries_path_line() -> void:
 		"Floor Walker subtext must mention the Floor Lead path"
 	)
 	assert_string_contains(
-		_day_summary._archetype_subtext_label.text, "full Mallcore",
-		"Path framing must mention 'full Mallcore' as natural expansion"
+		_day_summary._archetype_subtext_label.text, "full game",
+		"Path framing must mention 'full game' as natural expansion"
 	)
 
 

@@ -172,7 +172,7 @@ const SEMANTIC_STATES: Dictionary = {
 const TRACKING_PRIMARY: int = 80
 ## Minimum letter spacing for body copy.
 const TRACKING_BODY: int = 40
-## Font size scale matching mallcore_theme.tres tokens.
+## Font size scale matching game_theme.tres tokens.
 const FONT_SIZE_CAPTION: int = 14  # caption — tooltips, footnotes
 const FONT_SIZE_BODY: int = 18     # body — all readable copy (minimum)
 const FONT_SIZE_H2: int = 24       # h2 — section/panel headers

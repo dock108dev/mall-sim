@@ -116,9 +116,9 @@ func test_project_theme_label_font_size_meets_legibility_floor() -> void:
 	# resolve through the project theme. Verify the project theme keeps Label
 	# at the 18pt floor that gives the Day 1 guidance legibility at 1920x1080.
 	var theme_src: String = FileAccess.get_file_as_string(
-		"res://game/themes/mallcore_theme.tres"
+		"res://game/themes/game_theme.tres"
 	)
-	assert_ne(theme_src, "", "mallcore_theme.tres must be readable")
+	assert_ne(theme_src, "", "game_theme.tres must be readable")
 	assert_true(
 		theme_src.contains("Label/font_sizes/font_size = 18"),
 		"Project theme must keep Label font_size >= 18 for 1080p legibility"

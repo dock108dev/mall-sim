@@ -24,23 +24,22 @@ const TIER_CHANGE_COLOR := Color(1.0, 0.84, 0.0)
 const SECONDARY_BUTTON_MODULATE := Color(1.0, 1.0, 1.0, 0.65)
 
 ## Per-archetype path subtext shown below ArchetypeLabel. Framed as a natural
-## expansion (full Mallcore career path) rather than a paywall threat per
-## BRAINDUMP §0.
+## expansion (full game career path) rather than a paywall threat.
 const ARCHETYPE_SUBTEXT: Dictionary = {
 	"The Mark": (
-		"In the full Mallcore, your starting path would be: Fall Guy."
+		"In the full game, your starting path would be: Fall Guy."
 	),
 	"The Warm Body": (
-		"In the full Mallcore, your starting path would be: Sales Floor."
+		"In the full game, your starting path would be: Sales Floor."
 	),
 	"The Floor Walker": (
-		"In the full Mallcore, your starting path would be: Floor Lead."
+		"In the full game, your starting path would be: Floor Lead."
 	),
 	"The Paper Trail": (
-		"In the full Mallcore, your starting path would be: Assistant Manager."
+		"In the full game, your starting path would be: Assistant Manager."
 	),
 	"The Company Person": (
-		"In the full Mallcore, your starting path would be: Regional Liaison."
+		"In the full game, your starting path would be: Regional Liaison."
 	),
 }
 
