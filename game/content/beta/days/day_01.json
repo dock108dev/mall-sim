@@ -1,23 +1,19 @@
 {
   "type": "meta_config_data",
   "day_number": 1,
-  "date_label": "Black Friday Weekend",
-  "store_context": "First holiday rush setup shift.",
+  "date_label": "Opening Shift",
+  "store_context": "First shift on the floor at Shelf Life. One customer is already waiting at the counter.",
   "required_events": [
-    "day01_wrong_console_parent",
-    "day01_trade_credit_push",
-    "day01_last_copy_argument"
+    "day01_wrong_console_parent"
   ],
-  "optional_events": [
-    "day01_backroom_modded_console_hint"
-  ],
+  "optional_events": [],
   "tutorial_unlocks": [
     "movement",
     "interact",
     "decision_card",
     "day_end"
   ],
-  "traffic_level": "medium",
-  "holiday_pressure": "rising",
-  "special_notes": "Help at counter first."
+  "traffic_level": "low",
+  "holiday_pressure": "none",
+  "special_notes": "One customer, one decision, then close the day."
 }

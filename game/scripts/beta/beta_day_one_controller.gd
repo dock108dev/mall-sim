@@ -144,8 +144,8 @@ func _on_choice_selected(choice_id: StringName, effects: Dictionary) -> void:
 	var event_id: StringName = StringName(str(_active_event.get("id", "")))
 	BetaRunState.apply_decision_effect(event_id, choice_id, effects)
 	_resolved_events_today += 1
-	if choice_id == &"ignore_mismatch":
-		BetaRunState.mark_hidden_thread_signal(&"parent_followup_complaint_risk")
+	if choice_id == &"refuse_return":
+		BetaRunState.mark_hidden_thread_signal(&"parent_refused_return_risk")
 	if _current_event_index >= _day_events.size() - 1:
 		_stage = STAGE_END_DAY
 		EventBus.notification_requested.emit(
