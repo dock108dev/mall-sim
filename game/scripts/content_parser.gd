@@ -52,8 +52,6 @@ static func build_resource(
 			return parse_fixture(data)
 		"market_event":
 			return parse_market_event(data)
-		"seasonal_event":
-			return parse_seasonal_event(data)
 		"random_event":
 			return parse_random_event(data)
 		"staff":
@@ -66,10 +64,6 @@ static func build_resource(
 			return parse_supplier(data)
 		"unlock":
 			return parse_unlock(data)
-		"sports_season":
-			return parse_sports_season(data)
-		"tournament_event":
-			return parse_tournament_event(data)
 		"ambient_moment":
 			return parse_ambient_moment(data)
 	push_error("ContentParser: unknown type '%s'" % content_type)
