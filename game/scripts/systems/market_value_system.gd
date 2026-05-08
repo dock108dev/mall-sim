@@ -38,7 +38,6 @@ const DAYS_PER_YEAR: int = 365
 
 var _inventory_system: InventorySystem = null
 var _market_event_system: MarketEventSystem = null
-var _seasonal_event_system: SeasonalEventSystem = null
 var _testing_system: TestingSystem = null
 var _cache: Dictionary = {}
 var _cache_hour: int = -1
@@ -57,11 +56,9 @@ var _latest_edition_year: Dictionary = {}
 func initialize(
 	inventory: InventorySystem,
 	market_event: MarketEventSystem,
-	seasonal_event: SeasonalEventSystem,
 ) -> void:
 	_inventory_system = inventory
 	_market_event_system = market_event
-	_seasonal_event_system = seasonal_event
 	EventBus.trend_updated.connect(_on_trend_updated)
 	EventBus.trend_changed.connect(_on_trend_changed)
 	EventBus.trend_shifted.connect(_on_trend_shifted)
@@ -391,15 +388,11 @@ func _get_condition_modifier(item: ItemInstance) -> float:
 
 
 func _get_season_multiplier() -> float:
-	if not _seasonal_event_system:
-		return 1.0
-	return _seasonal_event_system.get_spending_multiplier()
+	return 1.0
 
 
-func _get_sport_season_multiplier(item: ItemInstance) -> float:
-	if not _seasonal_event_system:
-		return 1.0
-	return _seasonal_event_system.get_sport_season_multiplier(item)
+func _get_sport_season_multiplier(_item: ItemInstance) -> float:
+	return 1.0
 
 
 # gdlint:disable=max-returns
@@ -440,13 +433,9 @@ func _get_event_multiplier(item: ItemInstance) -> float:
 
 
 func _get_tournament_demand_multiplier(
-	item: ItemInstance
+	_item: ItemInstance
 ) -> float:
-	if not _seasonal_event_system:
-		return 1.0
-	return _seasonal_event_system.get_tournament_demand_multiplier(
-		item
-	)
+	return 1.0
 
 
 func _find_item(item_id: StringName) -> ItemInstance:

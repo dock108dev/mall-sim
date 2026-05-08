@@ -35,8 +35,6 @@ static func calculate_market_value(
 	drift_factors: Dictionary,
 	trend_system: TrendSystem,
 	market_event_system: MarketEventSystem,
-	meta_shift_system: MetaShiftSystem,
-	season_cycle_system: SeasonCycleSystem
 ) -> float:
 	if not item or not item.definition:
 		return 0.0
@@ -58,13 +56,11 @@ static func calculate_market_value(
 	var market_event: float = get_market_event_multiplier(
 		item, market_event_system
 	)
-	var meta_shift: float = get_meta_shift_multiplier(item, meta_shift_system)
-	var season: float = get_season_multiplier(item, season_cycle_system)
 	var auth: float = get_authentication_multiplier(item)
 	var value: float = (
 		base * cond_mult * rarity_mult
 		* demand * drift * time_mult * trend * market_event
-		* meta_shift * season * auth
+		* auth
 	)
 	return minf(value, MAX_MARKET_VALUE)
 
@@ -78,8 +74,6 @@ static func get_item_multipliers(
 	drift_factors: Dictionary,
 	trend_system: TrendSystem,
 	market_event_system: MarketEventSystem,
-	meta_shift_system: MetaShiftSystem,
-	season_cycle_system: SeasonCycleSystem,
 ) -> Array:
 	if not item or not item.definition:
 		return []
@@ -95,8 +89,6 @@ static func get_item_multipliers(
 	var time_mult: float = calc_time_multiplier(item)
 	var trend: float = get_trend_multiplier(item, trend_system)
 	var market_event: float = get_market_event_multiplier(item, market_event_system)
-	var meta_shift: float = get_meta_shift_multiplier(item, meta_shift_system)
-	var season: float = get_season_multiplier(item, season_cycle_system)
 	var auth: float = get_authentication_multiplier(item)
 	var multipliers: Array = []
 	multipliers.append({
@@ -139,20 +131,6 @@ static func get_item_multipliers(
 			"factor": trend,
 			"detail": "category=%s" % item.definition.category,
 		})
-	if season != 1.0:
-		multipliers.append({
-			"slot": "seasonal",
-			"label": "Seasonal",
-			"factor": season,
-			"detail": "season cycle",
-		})
-	if meta_shift != 1.0:
-		multipliers.append({
-			"slot": "meta_shift",
-			"label": "Meta Shift",
-			"factor": meta_shift,
-			"detail": "meta state",
-		})
 	if market_event != 1.0:
 		multipliers.append({
 			"slot": "event",
@@ -186,14 +164,6 @@ static func get_market_event_multiplier(
 	return market_event_system.get_trend_multiplier(item)
 
 
-static func get_meta_shift_multiplier(
-	item: ItemInstance, meta_shift_system: MetaShiftSystem
-) -> float:
-	if not meta_shift_system:
-		return 1.0
-	return meta_shift_system.get_meta_shift_multiplier(item)
-
-
 static func get_authentication_multiplier(item: ItemInstance) -> float:
 	if item.authentication_status == "authenticated":
 		return get_auth_multiplier_from_config()
@@ -208,14 +178,6 @@ static func get_auth_multiplier_from_config() -> float:
 	if config is not Dictionary:
 		return 2.0
 	return float((config as Dictionary).get("auth_multiplier", 2.0))
-
-
-static func get_season_multiplier(
-	item: ItemInstance, season_cycle_system: SeasonCycleSystem
-) -> float:
-	if not season_cycle_system:
-		return 1.0
-	return season_cycle_system.get_season_multiplier(item)
 
 
 static func calc_time_multiplier(item: ItemInstance) -> float:

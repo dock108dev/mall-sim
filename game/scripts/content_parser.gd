@@ -462,59 +462,6 @@ static func parse_market_event(
 	return e
 
 
-static func parse_seasonal_event(
-	data: Dictionary
-) -> SeasonalEventDefinition:
-	if not data.has("id"):
-		push_error(
-			"ContentParser: seasonal event missing required fields: %s"
-			% [data]
-		)
-		return null
-	var e := SeasonalEventDefinition.new()
-	e.id = str(data["id"])
-	e.display_name = str(
-		data.get("display_name", data.get("name", ""))
-	)
-	e.name = e.display_name
-	e.description = str(data.get("description", ""))
-	e.start_day = int(
-		data.get("start_day", data.get("offset_days", 1))
-	)
-	if data.has("store_type_multipliers"):
-		var raw_store_multipliers: Variant = (
-			data["store_type_multipliers"]
-		)
-		if raw_store_multipliers is Dictionary:
-			e.store_type_multipliers = (
-				raw_store_multipliers as Dictionary
-			)
-	e.frequency_days = int(data.get("frequency_days", 30))
-	e.duration_days = int(data.get("duration_days", 5))
-	e.offset_days = int(data.get("offset_days", 0))
-	e.customer_traffic_multiplier = float(
-		data.get("customer_traffic_multiplier", 1.0)
-	)
-	e.spending_multiplier = float(
-		data.get("spending_multiplier", 1.0)
-	)
-	if data.has("customer_type_weights"):
-		var raw: Variant = data["customer_type_weights"]
-		if raw is Dictionary:
-			e.customer_type_weights = raw as Dictionary
-	if data.has("target_categories"):
-		e.target_categories = PackedStringArray(
-			data["target_categories"]
-		)
-	e.announcement_text = str(data.get("announcement_text", ""))
-	e.active_text = str(data.get("active_text", ""))
-	if data.has("affected_stores"):
-		e.affected_stores = PackedStringArray(data["affected_stores"])
-	e.price_multiplier = float(data.get("price_multiplier", 1.0))
-	e.telegraph_days = int(data.get("telegraph_days", 3))
-	return e
-
-
 static func parse_random_event(
 	data: Dictionary
 ) -> RandomEventDefinition:
@@ -719,29 +666,6 @@ static func parse_unlock(data: Dictionary) -> UnlockDefinition:
 	return u
 
 
-static func parse_sports_season(
-	data: Dictionary
-) -> SportsSeasonDefinition:
-	if not data.has("id") or not data.has("sport_tag"):
-		push_error(
-			"ContentParser: sports season missing required fields: %s"
-			% [data]
-		)
-		return null
-	var s := SportsSeasonDefinition.new()
-	s.id = str(data["id"])
-	s.sport_tag = str(data["sport_tag"])
-	s.start_day = int(data.get("start_day", 0))
-	s.end_day = int(data.get("end_day", 0))
-	s.in_season_multiplier = float(
-		data.get("in_season_multiplier", 1.0)
-	)
-	s.off_season_multiplier = float(
-		data.get("off_season_multiplier", 1.0)
-	)
-	return s
-
-
 static func parse_economy_config(
 	data: Dictionary
 ) -> EconomyConfig:
@@ -898,38 +822,6 @@ static func _grid_size_to_cells(
 		for y: int in range(size.y):
 			cells.append(Vector2i(x, y))
 	return cells
-
-
-static func parse_tournament_event(
-	data: Dictionary
-) -> TournamentEventDefinition:
-	var has_name: bool = data.has("name") or data.has("display_name")
-	if not data.has("id") or not has_name:
-		push_error(
-			"ContentParser: tournament event missing required fields: %s"
-			% [data]
-		)
-		return null
-	var t := TournamentEventDefinition.new()
-	t.id = str(data["id"])
-	t.name = str(data.get("name", data.get("display_name", "")))
-	t.description = str(data.get("description", ""))
-	t.card_category = str(data.get("card_category", ""))
-	t.creature_type_focus = str(data.get("creature_type_focus", ""))
-	t.start_day = int(data.get("start_day", data.get("day", 0)))
-	t.duration_days = int(data.get("duration_days", 1))
-	t.telegraph_days = int(data.get("telegraph_days", 1))
-	t.demand_multiplier = float(data.get("demand_multiplier", 1.0))
-	t.price_spike_multiplier = float(
-		data.get("price_spike_multiplier", t.demand_multiplier)
-	)
-	t.traffic_multiplier = float(data.get("traffic_multiplier", 1.0))
-	t.announcement_text = str(data.get("announcement_text", ""))
-	t.active_text = str(data.get("active_text", ""))
-	t.notification_day = int(
-		data.get("notification_day", t.start_day - t.telegraph_days)
-	)
-	return t
 
 
 static func parse_ambient_moment(

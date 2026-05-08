@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3 uid="uid://world001"]
+[gd_scene load_steps=35 format=3 uid="uid://world001"]
 
 [ext_resource type="Script" path="res://game/scenes/world/game_world.gd" id="1"]
 [ext_resource type="PackedScene" path="res://game/scenes/ui/crt_overlay.tscn" id="crt_overlay"]
@@ -8,10 +8,8 @@
 [ext_resource type="Script" path="res://game/scripts/systems/inventory_system.gd" id="sys_inventory"]
 [ext_resource type="Script" path="res://game/scripts/systems/trend_system.gd" id="sys_trend"]
 [ext_resource type="Script" path="res://game/scripts/systems/market_event_system.gd" id="sys_market_event"]
-[ext_resource type="Script" path="res://game/scripts/systems/seasonal_event_system.gd" id="sys_seasonal"]
 [ext_resource type="Script" path="res://game/scripts/systems/market_value_system.gd" id="sys_market_value"]
 [ext_resource type="Script" path="res://game/scripts/systems/customer_system.gd" id="sys_customer"]
-[ext_resource type="Script" path="res://game/scripts/systems/mall_customer_spawner.gd" id="sys_mall_spawner"]
 [ext_resource type="Script" path="res://game/scripts/systems/npc_spawner_system.gd" id="sys_npc_spawner"]
 [ext_resource type="Script" path="res://game/scripts/systems/haggle_system.gd" id="sys_haggle"]
 [ext_resource type="Script" path="res://game/scripts/systems/checkout_system.gd" id="sys_checkout"]
@@ -20,11 +18,8 @@
 [ext_resource type="Script" path="res://game/scripts/systems/staff_system.gd" id="sys_staff"]
 [ext_resource type="Script" path="res://game/scripts/systems/progression_system.gd" id="sys_progression"]
 [ext_resource type="Script" path="res://game/scripts/systems/milestone_system.gd" id="sys_milestone"]
-[ext_resource type="Script" path="res://game/scripts/systems/store_selector_system.gd" id="sys_store_selector"]
 [ext_resource type="Script" path="res://game/scripts/systems/build_mode_system.gd" id="sys_build_mode"]
 [ext_resource type="Script" path="res://game/scripts/systems/fixture_placement_system.gd" id="sys_fixture"]
-[ext_resource type="Script" path="res://game/scripts/systems/tournament_system.gd" id="sys_tournament"]
-[ext_resource type="Script" path="res://game/scripts/systems/meta_shift_system.gd" id="sys_meta_shift"]
 [ext_resource type="Script" path="res://game/scripts/systems/tutorial_system.gd" id="sys_tutorial"]
 [ext_resource type="Script" path="res://game/scripts/systems/performance_manager.gd" id="sys_perf_mgr"]
 [ext_resource type="Script" path="res://game/scripts/systems/performance_report_system.gd" id="sys_perf_report"]
@@ -66,17 +61,11 @@ script = ExtResource("sys_trend")
 [node name="MarketEventSystem" type="Node" parent="."]
 script = ExtResource("sys_market_event")
 
-[node name="SeasonalEventSystem" type="Node" parent="."]
-script = ExtResource("sys_seasonal")
-
 [node name="MarketValueSystem" type="Node" parent="."]
 script = ExtResource("sys_market_value")
 
 [node name="CustomerSystem" type="Node" parent="."]
 script = ExtResource("sys_customer")
-
-[node name="MallCustomerSpawner" type="Node" parent="."]
-script = ExtResource("sys_mall_spawner")
 
 [node name="NPCSpawnerSystem" type="Node" parent="."]
 script = ExtResource("sys_npc_spawner")
@@ -102,20 +91,11 @@ script = ExtResource("sys_order")
 [node name="StaffSystem" type="Node" parent="."]
 script = ExtResource("sys_staff")
 
-[node name="StoreSelectorSystem" type="Node" parent="."]
-script = ExtResource("sys_store_selector")
-
 [node name="BuildModeSystem" type="Node" parent="."]
 script = ExtResource("sys_build_mode")
 
 [node name="FixturePlacementSystem" type="Node" parent="."]
 script = ExtResource("sys_fixture")
-
-[node name="TournamentSystem" type="Node" parent="."]
-script = ExtResource("sys_tournament")
-
-[node name="MetaShiftSystem" type="Node" parent="."]
-script = ExtResource("sys_meta_shift")
 
 [node name="TutorialSystem" type="Node" parent="."]
 script = ExtResource("sys_tutorial")

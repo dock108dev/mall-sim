@@ -48,9 +48,7 @@ var _daily_expenses: float = 0.0
 
 var _inventory_system: InventorySystem = null
 var _trend_system: TrendSystem = null
-var _meta_shift_system: MetaShiftSystem = null
 var _market_event_system: MarketEventSystem = null
-var _season_cycle_system: SeasonCycleSystem = null
 
 ## [{category: count, ...}, ...] per day, last N days.
 var _sales_history: Array[Dictionary] = []
@@ -78,9 +76,7 @@ func initialize(starting_cash: float = Constants.STARTING_CASH) -> void:
 
 func set_inventory_system(inv: InventorySystem) -> void: _inventory_system = inv
 func set_trend_system(ts: TrendSystem) -> void: _trend_system = ts
-func set_meta_shift_system(mss: MetaShiftSystem) -> void: _meta_shift_system = mss
 func set_market_event_system(mes: MarketEventSystem) -> void: _market_event_system = mes
-func set_season_cycle_system(scs: SeasonCycleSystem) -> void: _season_cycle_system = scs
 
 func get_cash() -> float: return _current_cash
 func get_items_sold_today() -> int: return _items_sold_today
@@ -164,8 +160,7 @@ func deserialize(data: Dictionary) -> void: load_save_data(data)
 func calculate_market_value(item: ItemInstance) -> float:
 	return EconomyValueCalculator.calculate_market_value(
 		item, _demand_modifiers, _drift_factors,
-		_trend_system, _market_event_system,
-		_meta_shift_system, _season_cycle_system
+		_trend_system, _market_event_system
 	)
 
 ## Returns PriceResolver-compatible multiplier dicts for each factor that
@@ -174,8 +169,7 @@ func calculate_market_value(item: ItemInstance) -> float:
 func get_item_multipliers(item: ItemInstance) -> Array:
 	return EconomyValueCalculator.get_item_multipliers(
 		item, _demand_modifiers, _drift_factors,
-		_trend_system, _market_event_system,
-		_meta_shift_system, _season_cycle_system
+		_trend_system, _market_event_system
 	)
 
 func _get_trend_multiplier(item: ItemInstance) -> float:

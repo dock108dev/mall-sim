@@ -765,15 +765,15 @@ func _refresh_telegraph_card() -> void:
 	if not _random_event_telegraph.is_empty():
 		parts.append(_random_event_telegraph)
 	if not _telegraphed_events.is_empty():
-		var sys: SeasonalEventSystem = _find_seasonal_event_system()
+		var sys: Node = _find_seasonal_event_system()
 		for event_id: String in _telegraphed_events:
 			var days: int = _telegraphed_events[event_id]
 			var display: String = event_id
 			if sys:
 				for evt: Dictionary in sys.get_announced_events():
-					var def: SeasonalEventDefinition = evt.get(
+					var def: Resource = evt.get(
 						"definition", null
-					) as SeasonalEventDefinition
+					) as Resource
 					if def and def.id == event_id:
 						display = def.name
 						break
@@ -790,7 +790,7 @@ func _refresh_telegraph_card() -> void:
 func _refresh_seasonal_event_display() -> void:
 	if _tutorial_step_active:
 		return
-	var sys: SeasonalEventSystem = _find_seasonal_event_system()
+	var sys: Node = _find_seasonal_event_system()
 	if not sys:
 		_seasonal_event_label.visible = false
 		return
@@ -800,9 +800,9 @@ func _refresh_seasonal_event_display() -> void:
 		return
 	var names: PackedStringArray = []
 	for evt: Dictionary in active:
-		var def: SeasonalEventDefinition = evt.get(
+		var def: Resource = evt.get(
 			"definition", null
-		) as SeasonalEventDefinition
+		) as Resource
 		if def:
 			names.append(def.name)
 	_seasonal_event_label.text = "[S] %s" % ", ".join(names)
@@ -817,9 +817,9 @@ func _build_seasonal_tooltip(
 ) -> String:
 	var lines: PackedStringArray = []
 	for evt: Dictionary in events:
-		var def: SeasonalEventDefinition = evt.get(
+		var def: Resource = evt.get(
 			"definition", null
-		) as SeasonalEventDefinition
+		) as Resource
 		if not def:
 			continue
 		var desc: String = def.name
@@ -829,15 +829,7 @@ func _build_seasonal_tooltip(
 	return "\n".join(lines)
 
 
-func _find_seasonal_event_system() -> SeasonalEventSystem:
-	var game_world: Node = get_tree().current_scene
-	if not game_world:
-		return null
-	var sys: Node = game_world.find_child(
-		"SeasonalEventSystem", false
-	)
-	if sys is SeasonalEventSystem:
-		return sys as SeasonalEventSystem
+func _find_seasonal_event_system() -> Node:
 	return null
 
 

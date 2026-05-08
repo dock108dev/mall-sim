@@ -10,7 +10,6 @@ var time_system: TimeSystem
 var economy_system: EconomySystem
 var inventory_system: InventorySystem
 var customer_system: CustomerSystem
-var mall_customer_spawner: MallCustomerSpawner
 var checkout_system: PlayerCheckout
 
 var _overlay_visible: bool = false
@@ -47,9 +46,6 @@ func _input(event: InputEvent) -> void:
 		KEY_M:
 			_debug_add_cash()
 			get_viewport().set_input_as_handled()
-		KEY_C:
-			_debug_spawn_customer()
-			get_viewport().set_input_as_handled()
 		KEY_H:
 			_debug_advance_hour()
 			get_viewport().set_input_as_handled()
@@ -71,8 +67,6 @@ func _try_handle_function_key(key_event: InputEventKey) -> bool:
 			or key_event.alt_pressed or key_event.meta_pressed:
 		return false
 	match key_event.keycode:
-		KEY_F8:
-			_debug_spawn_customer()
 		KEY_F9:
 			_debug_add_test_inventory()
 		KEY_F10:
@@ -210,13 +204,6 @@ func _debug_add_cash() -> void:
 		push_warning("DebugOverlay: EconomySystem not available")
 		return
 	economy_system.add_cash(DEBUG_CASH_AMOUNT, "debug_cheat")
-
-
-func _debug_spawn_customer() -> void:
-	if not mall_customer_spawner:
-		push_warning("DebugOverlay: MallCustomerSpawner not available")
-		return
-	mall_customer_spawner.debug_spawn_customer()
 
 
 func _debug_advance_hour() -> void:

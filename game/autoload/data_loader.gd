@@ -426,10 +426,8 @@ func _build_resource(
 			return ContentParser.parse_fixture(data)
 		"event_config":
 			# Event config files share a content_type alias; the source_path
-			# disambiguates between market / seasonal / random event entries.
+			# disambiguates between market / random event entries.
 			var lowered: String = source_path.to_lower()
-			if lowered.contains("seasonal"):
-				return ContentParser.parse_seasonal_event(data)
 			if lowered.contains("random"):
 				return ContentParser.parse_random_event(data)
 			return ContentParser.parse_market_event(data)
@@ -892,18 +890,6 @@ func get_market_events_for_store(
 	return r
 
 
-func get_seasonal_event(
-	id: String
-) -> SeasonalEventDefinition:
-	return _seasonal_events.get(id) as SeasonalEventDefinition
-
-
-func get_all_seasonal_events() -> Array[SeasonalEventDefinition]:
-	var r: Array[SeasonalEventDefinition] = []
-	r.assign(_seasonal_events.values())
-	return r
-
-
 func get_random_event(id: String) -> RandomEventDefinition:
 	return _random_events.get(id) as RandomEventDefinition
 
@@ -989,18 +975,6 @@ func get_milestone(id: String) -> MilestoneDefinition:
 func get_all_milestones() -> Array[MilestoneDefinition]:
 	var r: Array[MilestoneDefinition] = []
 	r.assign(_milestones.values())
-	return r
-
-
-func get_all_sports_seasons() -> Array[SportsSeasonDefinition]:
-	var r: Array[SportsSeasonDefinition] = []
-	r.assign(_sports_seasons.values())
-	return r
-
-
-func get_all_tournament_events() -> Array[TournamentEventDefinition]:
-	var r: Array[TournamentEventDefinition] = []
-	r.assign(_tournament_events.values())
 	return r
 
 

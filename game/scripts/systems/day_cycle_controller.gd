@@ -15,7 +15,6 @@ var _performance_report_system: PerformanceReportSystem
 var _day_manager: DayManager
 var _day_summary: DaySummary
 var _closing_checklist: ClosingChecklist
-var _seasonal_event_system: SeasonalEventSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _pending_report: PerformanceReport
 var _awaiting_acknowledgement: bool = false
@@ -64,10 +63,6 @@ func _on_day_summary_dismissed() -> void:
 
 func set_day_manager(manager: DayManager) -> void:
 	_day_manager = manager
-
-
-func set_seasonal_event_system(system: SeasonalEventSystem) -> void:
-	_seasonal_event_system = system
 
 
 func set_ambient_moments_system(system: AmbientMomentsSystem) -> void:
@@ -209,8 +204,6 @@ func _show_day_summary(day: int) -> void:
 	var warranty_claims: float = 0.0
 
 	var seasonal_impact: String = ""
-	if _seasonal_event_system:
-		seasonal_impact = _seasonal_event_system.get_impact_summary()
 
 	var discrepancy: float = 0.0
 	if _ambient_moments_system:

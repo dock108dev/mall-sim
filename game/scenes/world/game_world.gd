@@ -138,14 +138,8 @@ var _hub_active_store_scene: Node3D = null
 @onready var store_state_manager: StoreStateManager = $StoreStateManager
 @onready var trend_system: TrendSystem = $TrendSystem
 @onready var market_event_system: MarketEventSystem = $MarketEventSystem
-@onready var seasonal_event_system: SeasonalEventSystem = (
-	$SeasonalEventSystem
-)
 @onready var market_value_system: MarketValueSystem = $MarketValueSystem
 @onready var customer_system: CustomerSystem = $CustomerSystem
-@onready var mall_customer_spawner: MallCustomerSpawner = (
-	$MallCustomerSpawner
-)
 @onready var npc_spawner_system: NPCSpawnerSystem = $NPCSpawnerSystem
 @onready var haggle_system: HaggleSystem = $HaggleSystem
 @onready var checkout_system: PlayerCheckout = $CheckoutSystem
@@ -154,15 +148,10 @@ var _hub_active_store_scene: Node3D = null
 @onready var milestone_system: MilestoneSystem = $MilestoneSystem
 @onready var order_system: OrderSystem = $OrderSystem
 @onready var staff_system: StaffSystem = $StaffSystem
-@onready var store_selector_system: StoreSelectorSystem = (
-	$StoreSelectorSystem
-)
 @onready var build_mode: BuildModeSystem = $BuildModeSystem
 @onready var fixture_placement: FixturePlacementSystem = (
 	$FixturePlacementSystem
 )
-@onready var tournament_system: TournamentSystem = $TournamentSystem
-@onready var meta_shift_system: MetaShiftSystem = $MetaShiftSystem
 @onready var tutorial_system: TutorialSystem = $TutorialSystem
 @onready var performance_manager: PerformanceManager = $PerformanceManager
 @onready var performance_report_system: PerformanceReportSystem = (
@@ -285,12 +274,9 @@ func initialize_tier_2_state() -> bool:
 	market_event_system.initialize()
 	economy_system.set_market_event_system(market_event_system)
 
-	seasonal_event_system.initialize(GameManager.data_loader)
-
 	market_value_system.initialize(
 		inventory_system,
 		market_event_system,
-		seasonal_event_system,
 	)
 	return true
 
@@ -310,13 +296,6 @@ func initialize_tier_3_operational() -> void:
 		customer_system.set_store_id(
 			GameManager.get_active_store_id()
 		)
-
-	mall_customer_spawner.initialize(
-		customer_system, ReputationSystemSingleton, trend_system
-	)
-	mall_customer_spawner.set_seasonal_event_system(
-		seasonal_event_system
-	)
 
 	npc_spawner_system.initialize(inventory_system)
 
@@ -358,30 +337,10 @@ func initialize_tier_3_operational() -> void:
 		GameManager.data_loader,
 	)
 
-	meta_shift_system.initialize(GameManager.data_loader)
-	economy_system.set_meta_shift_system(meta_shift_system)
-
 
 ## Initializes Tier 4 world systems once the scene tree is fully available.
 func initialize_tier_4_world() -> void:
-	if _mall_hallway:
-		store_selector_system.initialize(
-			store_state_manager,
-			_mall_hallway.get_hallway_geometry(),
-			_mall_hallway.get_store_container(),
-			_mall_hallway.get_camera_controller(),
-			_ui_layer
-		)
-
 	_initialize_build_mode()
-
-	tournament_system.initialize(
-		economy_system,
-		ReputationSystemSingleton,
-		customer_system,
-		fixture_placement,
-		GameManager.data_loader
-	)
 
 	day_phase_lighting.initialize()
 
@@ -429,9 +388,6 @@ func initialize_tier_5_meta() -> void:
 		performance_report_system,
 	)
 	day_cycle_controller.set_day_manager(_day_manager)
-	day_cycle_controller.set_seasonal_event_system(
-		seasonal_event_system
-	)
 	day_cycle_controller.set_ambient_moments_system(
 		ambient_moments_system
 	)
@@ -459,9 +415,6 @@ func _wire_save_manager() -> void:
 	save_manager.set_milestone_system(milestone_system)
 	save_manager.set_trend_system(trend_system)
 	save_manager.set_market_event_system(market_event_system)
-	save_manager.set_tournament_system(tournament_system)
-	save_manager.set_meta_shift_system(meta_shift_system)
-	save_manager.set_seasonal_event_system(seasonal_event_system)
 	save_manager.set_random_event_system(random_event_system)
 	save_manager.set_staff_system(staff_system)
 	save_manager.set_tutorial_system(tutorial_system)
@@ -712,7 +665,6 @@ func _setup_debug_overlay() -> void:
 	overlay.economy_system = economy_system
 	overlay.inventory_system = inventory_system
 	overlay.customer_system = customer_system
-	overlay.mall_customer_spawner = mall_customer_spawner
 	overlay.checkout_system = checkout_system
 	add_child(overlay)
 
@@ -1233,16 +1185,12 @@ func _set_systems_paused(paused: bool) -> void:
 	order_system.set_process(!paused)
 	inventory_system.set_process(!paused)
 	customer_system.set_process(!paused)
-	mall_customer_spawner.set_process(!paused)
 	checkout_system.set_process(!paused)
 	haggle_system.set_process(!paused)
 	store_state_manager.set_process(!paused)
 	progression_system.set_process(!paused)
 	trend_system.set_process(!paused)
 	market_event_system.set_process(!paused)
-	tournament_system.set_process(!paused)
-	meta_shift_system.set_process(!paused)
-	seasonal_event_system.set_process(!paused)
 	random_event_system.set_process(!paused)
 	staff_system.set_process(!paused)
 	tutorial_system.set_process(!paused)

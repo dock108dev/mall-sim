@@ -11,7 +11,6 @@ const CONDITION_ORDER: Array[String] = [
 
 var economy_system: EconomySystem = null
 var inventory_system: InventorySystem = null
-var season_cycle_system: SeasonCycleSystem = null
 
 var _current_item: ItemInstance = null
 var _show_timer: float = -1.0
@@ -267,10 +266,8 @@ func _follow_mouse() -> void:
 	global_position = pos
 
 
-func _is_season_hot(item: ItemInstance) -> bool:
-	if not season_cycle_system:
-		return false
-	return season_cycle_system.is_item_hot(item)
+func _is_season_hot(_item: ItemInstance) -> bool:
+	return false
 
 
 func _on_panel_opened(_panel_name: String) -> void:

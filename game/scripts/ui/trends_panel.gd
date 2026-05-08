@@ -140,7 +140,7 @@ func _add_meta_watch_section() -> void:
 	heading.add_theme_font_size_override("font_size", 16)
 	section.add_child(heading)
 
-	var meta_shift_system: MetaShiftSystem = _get_meta_shift_system()
+	var meta_shift_system: Object = _get_meta_shift_system()
 	if meta_shift_system == null:
 		section.add_child(_create_meta_status_label("No meta shift pending"))
 		_trend_list.add_child(section)
@@ -165,7 +165,7 @@ func _create_meta_status_label(text: String) -> Label:
 	return status
 
 
-func _get_meta_shift_status(meta_shift_system: MetaShiftSystem) -> String:
+func _get_meta_shift_status(meta_shift_system: Object) -> String:
 	if meta_shift_system.is_shift_active():
 		return "Active shift"
 	if meta_shift_system.is_shift_announced():
@@ -272,8 +272,8 @@ func _should_show_meta_watch() -> bool:
 	return _active_store_id == POCKET_CREATURES_STORE_ID
 
 
-func _get_meta_shift_system() -> MetaShiftSystem:
-	return get_node_or_null("/root/GameWorld/MetaShiftSystem") as MetaShiftSystem
+func _get_meta_shift_system() -> Object:
+	return null
 
 
 func _trend_matches_active_store(trend: Dictionary) -> bool:
