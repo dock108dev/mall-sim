@@ -132,9 +132,14 @@ func _on_manager_note_shown(
 
 
 func _resolve_current_day() -> int:
-	# GameState.day is the run's authoritative day counter; TimeSystem mirrors
-	# it. Use GameState directly so this script doesn't need to walk the scene
-	# tree to find the time system.
+	# Beta runs: BetaRunState is the authoritative day counter (initialized to
+	# 1 on new game). Prefer it when present; falls back to GameState for any
+	# non-beta path.
+	var beta: Node = get_node_or_null("/root/BetaRunState")
+	if beta != null and "day" in beta:
+		var beta_raw: Variant = beta.get("day")
+		if typeof(beta_raw) == TYPE_INT and int(beta_raw) > 0:
+			return int(beta_raw)
 	var state: Node = get_node_or_null("/root/GameState")
 	if state != null and "day" in state:
 		var raw: Variant = state.get("day")

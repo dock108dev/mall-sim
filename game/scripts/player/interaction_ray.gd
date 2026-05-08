@@ -48,6 +48,10 @@ func _ready() -> void:
 		_apply_camera(CameraManager.active_camera)
 	if OS.is_debug_build():
 		_setup_debug_overlay()
+		# In beta mode the BetaDebugOverlay surfaces the same info; defer one
+		# frame so the beta controller has registered, then hide the older
+		# overlay to avoid two stacked widgets at top-left.
+		call_deferred("_suppress_debug_overlay_if_beta")
 
 
 ## Sets the InventorySystem reference for shelf item tooltip lookups.
@@ -392,6 +396,18 @@ func _log_interaction_dispatch(target: Interactable) -> void:
 ## release export templates never allocate the node tree and pay no per-frame
 ## cost. Layer 128 keeps it above gameplay HUD without interfering with
 ## existing UI layers.
+func _suppress_debug_overlay_if_beta() -> void:
+	if not _beta_mode_active():
+		return
+	if _debug_overlay != null:
+		var canvas: Node = _debug_overlay.get_parent()
+		while canvas != null and not (canvas is CanvasLayer):
+			canvas = canvas.get_parent()
+		if canvas != null:
+			canvas.queue_free()
+		_debug_overlay = null
+
+
 func _setup_debug_overlay() -> void:
 	var canvas: CanvasLayer = CanvasLayer.new()
 	canvas.layer = 128
