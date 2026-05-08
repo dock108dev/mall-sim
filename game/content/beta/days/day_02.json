@@ -1,0 +1,12 @@
+{
+  "type": "meta_config_data",
+  "day_number": 2,
+  "date_label": "Day 2 (placeholder)",
+  "store_context": "Beta placeholder day. The full Day 2 isn't built yet — close out at the register to wrap the demo.",
+  "required_events": [],
+  "optional_events": [],
+  "tutorial_unlocks": [],
+  "traffic_level": "none",
+  "holiday_pressure": "none",
+  "special_notes": "Placeholder shift. Close the day to finish the beta loop."
+}

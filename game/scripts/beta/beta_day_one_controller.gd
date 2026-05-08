@@ -4,8 +4,9 @@ extends Node
 const EVENTS_PATH: String = "res://game/content/beta/events/customer_events.json"
 const DAY_PATHS: Dictionary = {
 	1: "res://game/content/beta/days/day_01.json",
+	2: "res://game/content/beta/days/day_02.json",
 }
-const TARGET_BETA_DAYS: int = 1
+const TARGET_BETA_DAYS: int = 2
 const TARGET_EVENTS_PER_DAY: int = 3
 
 const STAGE_TALK_TO_CUSTOMER: StringName = &"talk_to_customer"
@@ -324,8 +325,11 @@ func _update_objective_rail() -> void:
 				"key": "E",
 			}
 		_:
+			var end_day_text: String = "%s: Close the day at the register." % day_text
+			if BetaRunState.day == 2:
+				end_day_text = "Day 2 (placeholder): Close at the register to wrap the beta loop."
 			payload = {
-				"text": "%s: Close the day at the shift clock." % day_text,
+				"text": end_day_text,
 				"action": "End day",
 				"key": "F4",
 			}
