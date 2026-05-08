@@ -19,8 +19,8 @@ signal scene_failed(target: StringName, reason: String)
 
 const _DEFAULT_TARGETS: Dictionary = {
 	&"main_menu": "res://game/scenes/ui/main_menu.tscn",
-	&"gameplay": "res://game/scenes/mall/mall_hub.tscn",
-	&"mall_hub": "res://game/scenes/mall/mall_hub.tscn",
+	&"gameplay": "res://game/scenes/bootstrap/gameplay_shell.tscn",
+	&"mall_hub": "res://game/scenes/bootstrap/gameplay_shell.tscn",
 	&"boot": "res://game/scenes/bootstrap/boot.tscn",
 }
 

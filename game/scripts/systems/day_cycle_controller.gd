@@ -15,7 +15,6 @@ var _performance_report_system: PerformanceReportSystem
 var _day_manager: DayManager
 var _day_summary: DaySummary
 var _closing_checklist: ClosingChecklist
-var _mall_overview: Control
 var _seasonal_event_system: SeasonalEventSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _pending_report: PerformanceReport
@@ -59,34 +58,8 @@ func set_closing_checklist(panel: ClosingChecklist) -> void:
 		panel.completed.connect(_on_closing_checklist_completed)
 
 
-## The hub's MallOverview Control is hidden while the Day Summary modal is
-## open so it does not bleed through the overlay (P1.4).
-func set_mall_overview(overview: Control) -> void:
-	_mall_overview = overview
-
-
-## Restores MallOverview visibility based on the post-acknowledgement FSM
-## state, not the prior state. The "Mall Overview" button on the summary
-## acks the day and lands the FSM in MALL_OVERVIEW — MallOverview must show.
-## The "Continue" button leaves the FSM in GAMEPLAY (player still inside the
-## store) — MallOverview must stay hidden so its full-screen Control does not
-## render on top of the store viewport during the Day N → Day N+1 hand-off.
-##
-## §F-91 — Pass 13: silent return on `not is_instance_valid(_mall_overview)`
-## is the Tier-5 init pattern. `DayCycleController` runs in Tier 5 (per
-## docs/architecture.md); the `_mall_overview` ref is injected by `MallHub`
-## via `set_mall_overview`. Headless tests and pre-hub-mount frames take the
-## silent path symmetrically with `_show_day_summary`'s own
-## `is_instance_valid(_mall_overview)` guard at line 220 — if the producer
-## path took the no-op, the dismissal restore staying a no-op is the
-## consistent contract. Production wiring guarantees both fire.
 func _on_day_summary_dismissed() -> void:
-	if not is_instance_valid(_mall_overview):
-		return
-	var should_show: bool = (
-		GameManager.current_state == GameManager.State.MALL_OVERVIEW
-	)
-	_mall_overview.visible = should_show
+	pass
 
 
 func set_day_manager(manager: DayManager) -> void:
@@ -351,13 +324,6 @@ func _show_day_summary(day: int) -> void:
 
 	if not _day_summary:
 		return
-
-	# Hide the MallOverview while the summary modal is open so its store
-	# cards do not bleed through the overlay (P1.4). Visibility on dismiss is
-	# restored from the post-acknowledgement FSM state so the Continue button
-	# (state → GAMEPLAY) does not bleed MallOverview over the store viewport.
-	if is_instance_valid(_mall_overview):
-		_mall_overview.visible = false
 
 	var archetype_name: String = _compute_day_archetype(payload)
 	var floor_stars: int = _compute_floor_awareness_stars(payload)

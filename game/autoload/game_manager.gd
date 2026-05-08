@@ -10,7 +10,7 @@ enum State {
 
 const DEFAULT_STARTING_STORE: StringName = &"retro_games"
 const MAIN_MENU_SCENE_PATH := "res://game/scenes/ui/main_menu.tscn"
-const GAMEPLAY_SCENE_PATH := "res://game/scenes/mall/mall_hub.tscn"
+const GAMEPLAY_SCENE_PATH := "res://game/scenes/bootstrap/gameplay_shell.tscn"
 
 const _VALID_TRANSITIONS: Dictionary = {
 	State.MAIN_MENU: [State.LOADING],

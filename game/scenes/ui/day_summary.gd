@@ -8,7 +8,6 @@ extends CanvasLayer
 signal continue_pressed
 signal dismissed
 signal review_inventory_requested
-signal mall_overview_requested
 signal main_menu_requested
 
 const OVERLAY_FADE_DURATION: float = 0.2
@@ -138,7 +137,6 @@ var _pending_vic_comment: String = ""
 @onready var _review_inventory_button: Button = (
 	$Root/Panel/Margin/VBox/ButtonRow/ReviewInventoryButton
 )
-@onready var _mall_overview_button: Button = $Root/Panel/Margin/VBox/ButtonRow/MallOverviewButton
 @onready var _main_menu_button: Button = $Root/Panel/Margin/VBox/ButtonRow/MainMenuButton
 @onready var _replay_button: Button = $Root/Panel/Margin/VBox/ButtonRow/ReplayButton
 @onready var _continue_button: Button = $Root/Panel/Margin/VBox/ButtonRow/ContinueButton
@@ -152,7 +150,6 @@ func _ready() -> void:
 	_review_inventory_button.pressed.connect(
 		_on_review_inventory_pressed
 	)
-	_mall_overview_button.pressed.connect(_on_mall_overview_pressed)
 	_main_menu_button.pressed.connect(_on_main_menu_pressed)
 	_replay_button.pressed.connect(_on_replay_pressed)
 	_create_discrepancy_label()
@@ -835,15 +832,6 @@ func _on_replay_pressed() -> void:
 func _on_review_inventory_pressed() -> void:
 	hide_summary()
 	review_inventory_requested.emit()
-
-
-## Advances the day and routes the player back to the mall overview.
-## Mirrors `_on_continue_pressed` so wages/milestones/save/advance fire.
-func _on_mall_overview_pressed() -> void:
-	_emit_day_acknowledged_on_hide = true
-	hide_summary()
-	EventBus.next_day_confirmed.emit()
-	mall_overview_requested.emit()
 
 
 ## Routes the player back to the main menu without advancing the day.

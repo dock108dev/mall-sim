@@ -1,20 +1,16 @@
-## Persistent root gameplay scene: the mall hub.
-## Hosts the game_world child that owns all runtime systems, plus the
-## concourse backdrop, hub UI overlay, and ambience player. The five store
-## cards live in `MallOverview` (instantiated by `game_world` into its UI
-## layer, data-driven from `ContentRegistry`) — the hub does not carry its
-## own hardcoded storefront row (per ADR 0007 and
-## docs/audits/phase0-ui-integrity.md P1.2).
-## Also hosts the KPI strip (instantiated at runtime) and routes objective
-## store-routing signals to card highlight effects.
-class_name MallHub
+## Persistent root gameplay scene: the beta gameplay shell.
+## Hosts the game_world child that owns all runtime systems, plus the hub UI
+## overlay (Settings + Progress buttons), the KPI strip, and ambience player.
+## In the beta there is exactly one store (RetroVault) so this shell never
+## hosts a store-selector overview.
+class_name GameplayShell
 extends Node
 
 const AMBIENCE_KEY: String = "food_court_murmur"
 const DUCK_DB: float = -12.0
 const DUCK_DURATION: float = 0.3
 
-const _CHECKPOINT_HUB_CAMERA_OK: StringName = &"mall_hub_camera_ok"
+const _CHECKPOINT_SHELL_CAMERA_OK: StringName = &"gameplay_shell_camera_ok"
 const _KPI_SCENE: PackedScene = preload("res://game/scenes/ui/kpi_strip.tscn")
 const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
@@ -43,14 +39,14 @@ func _ready() -> void:
 	_start_hub_ambience()
 	_setup_kpi_strip()
 	_setup_meta_notifications()
-	_push_mall_hub_input_focus()
-	call_deferred("_assert_mall_hub_camera")
+	_push_shell_input_focus()
+	call_deferred("_assert_shell_camera")
 	if AuditLog != null:
-		AuditLog.pass_check(&"mall_hub_ready", "from=mall_hub.gd")
+		AuditLog.pass_check(&"gameplay_shell_ready", "from=gameplay_shell.gd")
 
 
 func _exit_tree() -> void:
-	_pop_mall_hub_input_focus()
+	_pop_shell_input_focus()
 
 
 func _setup_kpi_strip() -> void:
@@ -66,9 +62,7 @@ func _setup_kpi_strip() -> void:
 	_kpi_strip.offset_bottom = 64.0
 
 
-## ISSUE-023: hub-level surface for ambient-moment and secret-thread signals.
-## Lives under the hub layer so it inherently does not exist during boot
-## (mall_hub is post-boot) and auto-hides when a store scene is active.
+## ISSUE-023: shell-level surface for ambient-moment and secret-thread signals.
 func _setup_meta_notifications() -> void:
 	_meta_notifications = _META_NOTIFICATION_SCENE.instantiate() as MetaNotificationOverlay
 	_hub_layer.add_child(_meta_notifications)
@@ -81,9 +75,9 @@ func _on_settings_pressed() -> void:
 	_settings_panel.open()
 
 
-## ISSUE-022: Progress button routes to the Completion Tracker panel via
-## EventBus so the hub stays decoupled from the panel instance (which lives
-## under game_world's UI layer).
+## Progress button routes to the Completion Tracker panel via EventBus so the
+## shell stays decoupled from the panel instance (which lives under
+## game_world's UI layer).
 func _on_progress_pressed() -> void:
 	EventBus.toggle_completion_tracker_panel.emit()
 
@@ -100,16 +94,12 @@ func _on_store_exited(_store_id: StringName) -> void:
 	_set_hub_input_enabled(true)
 
 
-## ISSUE-002: while a store scene is active, the mall hub shares the viewport.
-## Hub Controls must not intercept clicks or a player-click inside the store
-## would navigate away. Acceptance: hub Controls are IGNORE + DISABLED.
-## The store-card UI (`MallOverview`) is owned by `game_world` and hides
-## itself on `EventBus.store_entered` (see `mall_overview.gd`).
+## While a store scene is active the shell shares the viewport. Shell Controls
+## must not intercept clicks or a player-click inside the store would navigate
+## away.
 func _set_hub_input_enabled(enabled: bool) -> void:
 	if _hub_ui_overlay != null:
 		_hub_ui_overlay.visible = enabled
-		# Overlay itself stays MOUSE_FILTER_IGNORE (its Button children are the
-		# STOP targets); toggling visibility + process_mode is what blocks them.
 		_hub_ui_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_hub_ui_overlay.process_mode = (
 			Node.PROCESS_MODE_INHERIT if enabled else Node.PROCESS_MODE_DISABLED
@@ -153,32 +143,25 @@ func _kill_duck_tween() -> void:
 	_duck_tween = null
 
 
-func _push_mall_hub_input_focus() -> void:
+func _push_shell_input_focus() -> void:
 	if InputFocus == null:
 		return
 	InputFocus.push_context(InputFocus.CTX_MALL_HUB)
 	_input_focus_pushed = true
 
 
-func _pop_mall_hub_input_focus() -> void:
+func _pop_shell_input_focus() -> void:
 	if not _input_focus_pushed:
 		return
 	if InputFocus == null:
 		_input_focus_pushed = false
 		return
-	# Only pop if our context is still on top — modals or scene-pushers may
-	# have stacked above us; popping their context here would corrupt the
-	# stack invariant InputFocus enforces.
 	if InputFocus.current() == InputFocus.CTX_MALL_HUB:
 		InputFocus.pop_context()
 	_input_focus_pushed = false
 
 
-func _assert_mall_hub_camera() -> void:
-	# Camera authority only applies when the walkable 3D mall is active. In the
-	# default click-to-enter hub mode (game_world.gd:212-217) the scene is a
-	# pure 2D UI with no Camera3D, so the single-active-camera assert is
-	# inapplicable and would always fail with zero cameras in the group.
+func _assert_shell_camera() -> void:
 	if not ProjectSettings.get_setting("debug/walkable_mall", false):
 		return
 	if CameraAuthority == null or not CameraAuthority.has_method("assert_single_active"):
@@ -186,5 +169,5 @@ func _assert_mall_hub_camera() -> void:
 	if not CameraAuthority.assert_single_active():
 		return
 	if AuditLog != null:
-		AuditLog.pass_check(_CHECKPOINT_HUB_CAMERA_OK,
-			"source=mall_hub current=%s" % [CameraAuthority.current_source()])
+		AuditLog.pass_check(_CHECKPOINT_SHELL_CAMERA_OK,
+			"source=gameplay_shell current=%s" % [CameraAuthority.current_source()])

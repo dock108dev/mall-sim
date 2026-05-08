@@ -5,9 +5,6 @@ extends Node3D
 const _HUD_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/hud.tscn"
 )
-const _MALL_OVERVIEW_SCENE: PackedScene = preload(
-	"res://game/scenes/mall/mall_overview.tscn"
-)
 const _INVENTORY_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/inventory_panel.tscn"
 )
@@ -113,7 +110,6 @@ var reputation_system: ReputationSystem:
 var _inventory_panel: InventoryPanel
 var _day_summary: DaySummary
 var _closing_checklist: ClosingChecklist
-var _mall_overview: MallOverview
 var _fixture_catalog: FixtureCatalogPanel
 var _mall_hallway: MallHallway
 var _pause_menu: PauseMenu
@@ -564,9 +560,6 @@ func _setup_deferred_panels() -> void:
 	_day_summary.review_inventory_requested.connect(
 		_on_day_summary_review_inventory
 	)
-	_day_summary.mall_overview_requested.connect(
-		_on_day_summary_mall_overview_requested
-	)
 	_day_summary.main_menu_requested.connect(
 		_on_day_summary_main_menu_requested
 	)
@@ -587,27 +580,17 @@ func _setup_deferred_panels() -> void:
 	)
 	_ui_layer.add_child(close_day_confirmation)
 
-	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
-	_ui_layer.add_child(_mall_overview)
-	_mall_overview.setup(inventory_system, economy_system)
-	_mall_overview.set_time_system(time_system)
-	_mall_overview.set_completion_tracker(completion_tracker)
-	# Day Summary hides MallOverview while open and restores on dismiss (P1.4).
-	day_cycle_controller.set_mall_overview(_mall_overview)
-
 	var moments_log_panel: MomentsLogPanel = (
 		_MOMENTS_LOG_PANEL_SCENE.instantiate() as MomentsLogPanel
 	)
 	moments_log_panel.ambient_moments_system = ambient_moments_system
 	_ui_layer.add_child(moments_log_panel)
-	_mall_overview.set_moments_log_panel(moments_log_panel)
 
 	var performance_panel: PerformancePanel = (
 		_PERFORMANCE_PANEL_SCENE.instantiate() as PerformancePanel
 	)
 	performance_panel.performance_report_system = performance_report_system
 	_ui_layer.add_child(performance_panel)
-	_mall_overview.set_performance_panel(performance_panel)
 
 	_fixture_catalog = (
 		_FIXTURE_CATALOG_SCENE.instantiate()
@@ -835,24 +818,10 @@ func _on_day_summary_review_inventory() -> void:
 ## in GAMEPLAY) and then transitions to MALL_OVERVIEW so the hub overview
 ## is the explicit foreground state.
 ##
-## §F-55 — silent return on GAME_OVER is intentional: when the day cycle has
-## already routed into the game-over flow, the day summary's "Return to Mall"
-## button must not yank the FSM out of the terminal state. The player has the
-## game-over UI for choosing what comes next; logging here would fire on the
-## happy ending path.
-func _on_day_summary_mall_overview_requested() -> void:
-	if GameManager.current_state == GameManager.State.GAME_OVER:
-		return
-	GameManager.change_state(GameManager.State.MALL_OVERVIEW)
-
-
 ## Routes back to the main menu from the day summary screen. Mirrors the
 ## pause-menu "Return to Menu" path so the run is exited cleanly without
-## advancing the day or running wages/milestones (the player is leaving).
-## §F-105 — Silent return on GAME_OVER matches
-## `_on_day_summary_mall_overview_requested`: the terminal state owns its own
-## routing (the GameOver UI flow drives the return-to-menu transition itself),
-## and a duplicate `go_to_main_menu()` call here would race with that routing.
+## advancing the day or running wages/milestones.
+## Silent return on GAME_OVER: the terminal state owns its own routing.
 func _on_day_summary_main_menu_requested() -> void:
 	if GameManager.current_state == GameManager.State.GAME_OVER:
 		return
