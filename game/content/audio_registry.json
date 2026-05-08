@@ -33,11 +33,7 @@
     "mall_open_music": "mall_hallway_music.wav",
     "mall_close_music": "day_summary_music.wav",
     "build_mode_music": "mall_hallway_music.wav",
-    "sports_store_music": "sports_store_music.wav",
-    "retro_games_music": "retro_games_music.wav",
-    "video_rental_music": "video_rental_music.wav",
-    "card_shop_music": "card_shop_music.wav",
-    "electronics_store_music": "electronics_store_music.wav"
+    "retro_games_music": "retro_games_music.wav"
   },
   "music_stems": {
     "retro_games": "retro_games_music"

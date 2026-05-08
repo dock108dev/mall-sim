@@ -162,22 +162,6 @@
       "duration_seconds": 8.0
     },
     {
-      "id": "pocket_creature_pack_rip",
-      "category": "store",
-      "display_type": "thought_bubble",
-      "trigger_category": "item_type",
-      "trigger_value": "pocket_creature",
-      "scheduling_weight": 1.0,
-      "flavor_text": "The customer rips open the pack before reaching the door. Three commons and a foil \u2014 their expression says everything.",
-      "audio_cue_id": "sfx_pack_open",
-      "cooldown_days": 2,
-      "store_id": "pocket_creatures",
-      "season_id": "",
-      "min_day": 0,
-      "max_day": 0,
-      "duration_seconds": 8.0
-    },
-    {
       "id": "retro_games_first_entry",
       "category": "store",
       "display_type": "thought_bubble",

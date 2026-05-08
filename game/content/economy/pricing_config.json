@@ -3,32 +3,78 @@
   "_comment": "Authoritative source for Day 1 starting cash. Loaded into EconomyConfig and consumed by game_world.gd::_get_configured_starting_cash(). Constants.STARTING_CASH is a fallback only; do not duplicate this value into store_definitions.json.",
   "starting_cash": 500.0,
   "daily_rent_base": 30.0,
-  "rarity_multipliers": [1.0, 1.5, 3.0, 8.0, 20.0],
-  "condition_multipliers": [0.3, 0.6, 1.0, 1.3, 2.0],
+  "rarity_multipliers": [
+    1.0,
+    1.5,
+    3.0,
+    8.0,
+    20.0
+  ],
+  "condition_multipliers": [
+    0.3,
+    0.6,
+    1.0,
+    1.3,
+    2.0
+  ],
   "daily_rent_multipliers": {
-    "sports_memorabilia": 1.0,
-    "retro_games": 0.9,
-    "video_rental": 1.1,
-    "pocket_creatures": 1.0,
-    "consumer_electronics": 1.2
+    "retro_games": 0.9
   },
   "haggle_floor_ratio": 0.5,
   "haggle_max_rounds": 3,
   "authentication_price_bonus": 0.25,
   "late_fee_per_day": 2.0,
   "reputation_tiers": {
-    "unknown": { "min": 0, "customer_multiplier": 1.0, "label": "Unknown" },
-    "local_favorite": { "min": 25, "customer_multiplier": 1.5, "label": "Local Favorite" },
-    "destination_shop": { "min": 50, "customer_multiplier": 2.0, "label": "Destination Shop" },
-    "legendary": { "min": 80, "customer_multiplier": 3.0, "label": "Legendary" }
+    "unknown": {
+      "min": 0,
+      "customer_multiplier": 1.0,
+      "label": "Unknown"
+    },
+    "local_favorite": {
+      "min": 25,
+      "customer_multiplier": 1.5,
+      "label": "Local Favorite"
+    },
+    "destination_shop": {
+      "min": 50,
+      "customer_multiplier": 2.0,
+      "label": "Destination Shop"
+    },
+    "legendary": {
+      "min": 80,
+      "customer_multiplier": 3.0,
+      "label": "Legendary"
+    }
   },
   "price_ratio_reputation_deltas": {
-    "deep_discount": { "max_ratio": 0.6, "delta": 2.0 },
-    "fair_deal": { "min_ratio": 0.6, "max_ratio": 0.9, "delta": 1.0 },
-    "market_rate": { "min_ratio": 0.9, "max_ratio": 1.1, "delta": 0.5 },
-    "slight_markup": { "min_ratio": 1.1, "max_ratio": 1.5, "delta": 0.0 },
-    "overpriced": { "min_ratio": 1.5, "max_ratio": 2.0, "delta": -0.5 },
-    "gouging": { "min_ratio": 2.0, "delta": -1.5 }
+    "deep_discount": {
+      "max_ratio": 0.6,
+      "delta": 2.0
+    },
+    "fair_deal": {
+      "min_ratio": 0.6,
+      "max_ratio": 0.9,
+      "delta": 1.0
+    },
+    "market_rate": {
+      "min_ratio": 0.9,
+      "max_ratio": 1.1,
+      "delta": 0.5
+    },
+    "slight_markup": {
+      "min_ratio": 1.1,
+      "max_ratio": 1.5,
+      "delta": 0.0
+    },
+    "overpriced": {
+      "min_ratio": 1.5,
+      "max_ratio": 2.0,
+      "delta": -0.5
+    },
+    "gouging": {
+      "min_ratio": 2.0,
+      "delta": -1.5
+    }
   },
   "reputation_decay": {
     "well_stocked_threshold": 0.5,
@@ -43,15 +89,22 @@
       "name": "Local Distributor",
       "reputation_threshold": 0,
       "revenue_threshold": 0,
-      "rarity_access": ["common", "uncommon"],
-      "wholesale_discount": 0.60
+      "rarity_access": [
+        "common",
+        "uncommon"
+      ],
+      "wholesale_discount": 0.6
     },
     {
       "tier": 2,
       "name": "Regional Supplier",
       "reputation_threshold": 25,
       "revenue_threshold": 2000,
-      "rarity_access": ["common", "uncommon", "rare"],
+      "rarity_access": [
+        "common",
+        "uncommon",
+        "rare"
+      ],
       "wholesale_discount": 0.55
     },
     {
@@ -59,8 +112,14 @@
       "name": "Premium Wholesaler",
       "reputation_threshold": 50,
       "revenue_threshold": 10000,
-      "rarity_access": ["common", "uncommon", "rare", "very_rare", "legendary"],
-      "wholesale_discount": 0.50
+      "rarity_access": [
+        "common",
+        "uncommon",
+        "rare",
+        "very_rare",
+        "legendary"
+      ],
+      "wholesale_discount": 0.5
     }
   ]
 }

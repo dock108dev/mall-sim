@@ -153,28 +153,6 @@
       "visual_category": "shelf"
     },
     {
-      "id": "authentication_station",
-      "display_name": "Authentication Station",
-      "description": "A grading and authenticity desk for premium memorabilia.",
-      "cost": 150.0,
-      "slot_count": 2,
-      "footprint_cells": [
-        [
-          0,
-          0
-        ],
-        [
-          1,
-          0
-        ]
-      ],
-      "rotation_support": true,
-      "store_type_restriction": "sports_memorabilia",
-      "unlock_rep": 0,
-      "unlock_day": 0,
-      "visual_category": "counter"
-    },
-    {
       "id": "testing_station",
       "display_name": "Testing Station",
       "description": "A demo bench for checking retro hardware and games.",
@@ -200,58 +178,6 @@
       ],
       "rotation_support": false,
       "store_type_restriction": "retro_games",
-      "unlock_rep": 0,
-      "unlock_day": 0,
-      "visual_category": "display"
-    },
-    {
-      "id": "return_kiosk",
-      "display_name": "Return Kiosk",
-      "description": "A quick-drop kiosk for returns and fee payments.",
-      "cost": 110.0,
-      "slot_count": 2,
-      "footprint_cells": [
-        [
-          0,
-          0
-        ],
-        [
-          1,
-          0
-        ]
-      ],
-      "rotation_support": true,
-      "store_type_restriction": "video_rental",
-      "unlock_rep": 0,
-      "unlock_day": 0,
-      "visual_category": "counter"
-    },
-    {
-      "id": "demo_station",
-      "display_name": "Demo Station",
-      "description": "A try-before-you-buy station for electronics shoppers.",
-      "cost": 85.0,
-      "slot_count": 2,
-      "footprint_cells": [
-        [
-          0,
-          0
-        ],
-        [
-          1,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          1,
-          1
-        ]
-      ],
-      "rotation_support": false,
-      "store_type_restriction": "consumer_electronics",
       "unlock_rep": 0,
       "unlock_day": 0,
       "visual_category": "display"
