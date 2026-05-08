@@ -4,7 +4,6 @@
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
 [ext_resource type="Script" path="res://game/scripts/components/interactable.gd" id="3"]
 [ext_resource type="Script" path="res://game/scripts/components/hold_shelf_interactable.gd" id="40_hold_shelf"]
-[ext_resource type="Script" path="res://game/scripts/components/warranty_binder_interactable.gd" id="41_warranty_binder"]
 [ext_resource type="Script" path="res://game/scripts/components/backordered_console_interactable.gd" id="42_backordered_console"]
 [ext_resource type="Script" path="res://game/scripts/components/register_note_interactable.gd" id="43_register_note"]
 [ext_resource type="Script" path="res://game/scripts/components/security_flyer_interactable.gd" id="44_security_flyer"]
@@ -408,16 +407,6 @@ roughness = 0.55
 ; geometry intentionally cheap (BoxMesh placeholders) — the props are
 ; readable at a glance from their position and label, not their detail.
 
-[sub_resource type="BoxMesh" id="warranty_binder_mesh"]
-size = Vector3(0.26, 0.06, 0.22)
-
-[sub_resource type="BoxShape3D" id="warranty_binder_shape"]
-size = Vector3(0.5, 0.4, 0.5)
-
-[sub_resource type="StandardMaterial3D" id="warranty_binder_mat"]
-albedo_color = Color(0.32, 0.18, 0.20, 1)
-roughness = 0.6
-
 [sub_resource type="BoxMesh" id="register_note_mesh"]
 size = Vector3(0.10, 0.005, 0.10)
 
@@ -795,7 +784,7 @@ pixel_size = 0.008
 modulate = Color(0.76, 1, 0.86, 1)
 double_sided = true
 font_size = 56
-text = "RETRO GAMES"
+text = "SHELF LIFE"
 outline_size = 7
 outline_modulate = Color(0.05, 0.07, 0.16, 1)
 shaded = false
@@ -3228,27 +3217,6 @@ interactable_id = &"release_notes_clipboard"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="release_notes_clipboard/Interactable"]
 shape = SubResource("release_notes_clipboard_shape")
-
-; ── warranty_binder (counter-side claims ledger) ────────────────────────────
-[node name="warranty_binder" type="Node3D" parent="." groups=["store_artifact", "hidden_thread_prop"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.55, 1.10, 7.85)
-
-[node name="BinderMesh" type="MeshInstance3D" parent="warranty_binder"]
-mesh = SubResource("warranty_binder_mesh")
-surface_material_override/0 = SubResource("warranty_binder_mat")
-
-[node name="Interactable" type="Area3D" parent="warranty_binder"]
-collision_layer = 16
-collision_mask = 0
-script = ExtResource("41_warranty_binder")
-interaction_type = 2
-display_name = "Warranty Binder"
-action_verb = "Review"
-prompt_text = "Review Binder"
-interactable_id = &"warranty_binder"
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="warranty_binder/Interactable"]
-shape = SubResource("warranty_binder_shape")
 
 ; ── register_note (handwritten sticky on register side) ─────────────────────
 [node name="register_note" type="Node3D" parent="." groups=["store_artifact", "hidden_thread_prop"]]

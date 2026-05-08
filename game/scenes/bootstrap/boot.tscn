@@ -17,7 +17,7 @@ offset_right = 100.0
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
-text = ""
+text = "Shelf Life"
 horizontal_alignment = 1
 vertical_alignment = 1
 

@@ -14,8 +14,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name=""
-config/description="A retail simulator inspired by 2000s mall and store culture."
+config/name="Shelf Life"
+config/description="Shelf Life — a small used-media store sim."
 config/version="0.1.0"
 run/main_scene="res://game/scenes/bootstrap/boot.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")

@@ -26,7 +26,7 @@ grow_vertical = 2
 [node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
-text = ""
+text = "SHELF LIFE"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="VBox"]
