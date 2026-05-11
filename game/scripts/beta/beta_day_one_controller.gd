@@ -913,10 +913,15 @@ func _apply_customer_profile(event_data: Dictionary) -> void:
 
 func _update_objective_rail() -> void:
 	if _stage == STAGE_VIC_NOTE:
+		# `key` is non-empty so StoreReadyContract invariant 10
+		# (objective_matches_action) passes the keyboard-shortcut path while
+		# the note modal is up and no on-stage Interactable is a focal point.
+		# `morning_note_panel._unhandled_input` dismisses on `interact` (E),
+		# so this is also the real input the player will press.
 		EventBus.objective_changed.emit({
 			"text": "Read Vic's morning note.",
 			"action": "",
-			"key": "",
+			"key": "E",
 		})
 		return
 	var entry: Dictionary = _objective_for_stage(_stage)
