@@ -5,32 +5,15 @@ const DEFAULT_FADE_DURATION: float = 0.5
 const HALLWAY_ZONE_ID: StringName = &"hallway"
 const HALLWAY_ENVIRONMENT_ID: StringName = &"mall_hallway"
 const FALLBACK_ZONE_IDS: Dictionary = {
-	&"sports": &"sports",
-	&"sports_memorabilia": &"sports",
 	&"retro_games": &"retro_games",
-	&"rentals": &"rentals",
-	&"video_rental": &"rentals",
-	&"pocket_creatures": &"pocket_creatures",
-	&"electronics": &"electronics",
-	&"consumer_electronics": &"electronics",
 }
 const FALLBACK_ENVIRONMENT_IDS: Dictionary = {
-	&"sports": &"sports_memorabilia",
 	&"retro_games": &"retro_games",
-	&"rentals": &"video_rental",
-	&"pocket_creatures": &"pocket_creatures",
-	&"electronics": &"electronics",
 }
 
 const PRELOADED_ENVIRONMENTS: Dictionary = {
 	HALLWAY_ENVIRONMENT_ID: preload("res://game/resources/environments/env_hallway.tres"),
-	&"sports_memorabilia": preload(
-		"res://game/resources/environments/env_sports_memorabilia.tres"
-	),
 	&"retro_games": preload("res://game/resources/environments/env_retro_games.tres"),
-	&"video_rental": preload("res://game/resources/environments/env_video_rental.tres"),
-	&"pocket_creatures": preload("res://game/resources/environments/env_pocket_creatures.tres"),
-	&"electronics": preload("res://game/resources/environments/env_electronics.tres"),
 }
 
 var _world_env: WorldEnvironment
@@ -52,7 +35,16 @@ func swap_environment(
 ) -> void:
 	var resolved: StringName = _resolve_zone(zone_id)
 	if resolved.is_empty():
-		# Recoverable: ignore requests for zones that aren't registered.
+		# §EH-17 — Recoverable: ignore requests for zones that aren't registered.
+		# Per §EH-10 (deliberately-tested fallback): multiple integration tests
+		# emit `EventBus.store_entered` with sentinel store_ids
+		# (`test_npc_store`, `unknown_store`, `test_store`, etc.) to exercise
+		# downstream subscribers in isolation; the autoload connection at
+		# `_on_store_entered` then funnels those into this method. Escalating
+		# would fail CI on tests that exercise the contract on purpose. The
+		# silent-return fallback (player stays in the previous environment) is
+		# the documented contract.
+		# See docs/audits/error-handling-report.md §EH-17.
 		push_warning("EnvironmentManager: unknown zone '%s'" % zone_id)
 		return
 
@@ -61,6 +53,15 @@ func swap_environment(
 
 	var environment_id: StringName = _resolve_environment_id(resolved)
 	if environment_id.is_empty():
+		# §EH-17 — Zone resolved (the ID is in ContentRegistry) but there is
+		# no PRELOADED_ENVIRONMENTS entry and no FALLBACK_ENVIRONMENT_IDS
+		# entry. This branch is also exercised by tests that register stub
+		# stores in ContentRegistry without authoring an env_*.tres
+		# resource (e.g. legacy `sports` / `electronics` integration paths
+		# that survived the strip-to-bones refactor in test fixtures). Per
+		# §EH-10, kept at `push_warning` so those tests still pass; the
+		# silent fallback (stay in current environment) is the documented
+		# contract.
 		push_warning(
 			"EnvironmentManager: missing environment mapping for zone '%s'"
 			% resolved

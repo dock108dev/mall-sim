@@ -21,8 +21,11 @@ var _hovering: bool = false
 func _ready() -> void:
 	_apply_hover_color()
 	_refresh_visibility()
-	if InputFocus != null:
-		InputFocus.context_changed.connect(_on_input_focus_changed)
+	# §EH-15 — `InputFocus` is an autoload; the `if InputFocus != null` guard
+	# at this connect site was a dead defensive pattern (autoloads cannot be
+	# null at `_ready()` time). The runtime guard at `_should_show()` (line 58)
+	# is a separate test-seam contract and stays per §F-44.
+	InputFocus.context_changed.connect(_on_input_focus_changed)
 	EventBus.interactable_focused.connect(_on_interactable_focused)
 	# The reticle brightens whenever the InteractionRay is aimed at *any*
 	# interactable, even one whose `can_interact()` is currently false —

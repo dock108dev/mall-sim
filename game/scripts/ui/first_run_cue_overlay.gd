@@ -7,13 +7,8 @@ extends PanelContainer
 
 const _DEFAULT_MESSAGE: String = "Stock your shelves to open for business."
 const _STORE_MESSAGES: Dictionary = {
-	&"electronics": "Empty shelves! Stock the Electronics floor.",
-	&"pocket_creatures": "Empty shelves! Stock booster packs and cards.",
-	&"rentals": "Empty shelves! Stock the rental wall.",
 	&"retro_games": "Empty shelves! Stock the Retro Games floor.",
 	&"retro": "Empty shelves! Stock the Retro Games floor.",
-	&"sports": "Empty shelves! Stock the Sports floor.",
-	&"video_rental": "Empty shelves! Stock the rental wall.",
 }
 
 # Tutorial steps whose on-screen prompt duplicates this overlay's "open inventory

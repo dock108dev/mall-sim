@@ -19,7 +19,7 @@ func before_each() -> void:
 
 	_market_value = MarketValueSystem.new()
 	add_child_autofree(_market_value)
-	_market_value.initialize(_inventory, null, null)
+	_market_value.initialize(_inventory, null)
 	_market_value.register_store_price_cap(TEST_STORE_ID, 0.0)
 
 	_collectibles_item = _make_item(

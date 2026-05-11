@@ -40,46 +40,21 @@ static func build(parent: Node3D, store_type: String) -> Node3D:
 	decorations.name = "Decorations"
 	parent.add_child(decorations)
 
+	# After `strip-to-bones`, `retro_games` is the only supported store type.
+	# An unknown value here is a wiring regression (the controller's
+	# `store_type` is sourced from `StoreDefinition` and must round-trip);
+	# fail loud so CI catches the regression instead of shipping a store
+	# with no decorations. See §EH-22.
 	match store_type:
-		"sports", "sports_memorabilia":
-			_build_sports(decorations)
 		"retro_games":
 			_build_retro(decorations)
-		"video_rental":
-			_build_video(decorations)
-		"pocket_creatures":
-			_build_pocket(decorations)
-		"electronics", "consumer_electronics":
-			_build_electronics(decorations)
 		_:
-			push_warning(
-				"StoreDecorationBuilder: unknown store type '%s'"
+			push_error(
+				"StoreDecorationBuilder: unknown store type '%s'; no decorations built"
 				% store_type
 			)
 
 	return decorations
-
-
-static func _build_sports(parent: Node3D) -> void:
-	var hw: float = SMALL_STORE_HALF_W
-	var hd: float = SMALL_STORE_HALF_D
-	_add_store_sign(parent, hw, hd, _poster_red)
-	_add_wall_poster(
-		parent, "PosterBack1",
-		Vector3(-2.0, 2.2, -hd + 0.06), Vector3(0.6, 0.4, 0.02),
-		_poster_red
-	)
-	_add_wall_poster(
-		parent, "PosterBack2",
-		Vector3(1.0, 2.2, -hd + 0.06), Vector3(0.5, 0.35, 0.02),
-		_poster_yellow
-	)
-	_add_wall_poster(
-		parent, "PosterLeft",
-		Vector3(-hw + 0.06, 2.0, -0.5), Vector3(0.02, 0.4, 0.5),
-		_poster_blue
-	)
-	_add_trash_can(parent, Vector3(hw - 0.4, 0.0, hd - 0.6))
 
 
 static func _build_retro(parent: Node3D) -> void:
@@ -100,73 +75,6 @@ static func _build_retro(parent: Node3D) -> void:
 		parent, "PosterRight",
 		Vector3(hw - 0.06, 2.0, -1.0), Vector3(0.02, 0.35, 0.45),
 		_poster_blue
-	)
-	_add_small_plant(parent, Vector3(-hw + 0.4, 0.0, hd - 0.6))
-
-
-static func _build_video(parent: Node3D) -> void:
-	var hw: float = MEDIUM_STORE_HALF_W
-	var hd: float = MEDIUM_STORE_HALF_D
-	_add_store_sign(parent, hw, hd, _poster_blue)
-	_add_wall_poster(
-		parent, "PosterBack1",
-		Vector3(-3.0, 2.2, -hd + 0.06), Vector3(0.6, 0.45, 0.02),
-		_poster_red
-	)
-	_add_wall_poster(
-		parent, "PosterBack2",
-		Vector3(0.0, 2.2, -hd + 0.06), Vector3(0.5, 0.4, 0.02),
-		_poster_blue
-	)
-	_add_wall_poster(
-		parent, "PosterLeft",
-		Vector3(-hw + 0.06, 2.0, 0.0), Vector3(0.02, 0.4, 0.5),
-		_poster_yellow
-	)
-	_add_trash_can(parent, Vector3(hw - 0.4, 0.0, hd - 0.6))
-	_add_small_plant(parent, Vector3(-hw + 0.4, 0.0, hd - 0.6))
-
-
-static func _build_pocket(parent: Node3D) -> void:
-	var hw: float = MEDIUM_STORE_HALF_W
-	var hd: float = MEDIUM_STORE_HALF_D
-	_add_store_sign(parent, hw, hd, _poster_yellow)
-	_add_wall_poster(
-		parent, "PosterBack1",
-		Vector3(-2.5, 2.2, -hd + 0.06), Vector3(0.55, 0.4, 0.02),
-		_poster_green
-	)
-	_add_wall_poster(
-		parent, "PosterBack2",
-		Vector3(2.0, 2.2, -hd + 0.06), Vector3(0.5, 0.35, 0.02),
-		_poster_yellow
-	)
-	_add_wall_poster(
-		parent, "PosterRight",
-		Vector3(hw - 0.06, 2.0, -1.0), Vector3(0.02, 0.4, 0.5),
-		_poster_purple
-	)
-	_add_trash_can(parent, Vector3(hw - 0.4, 0.0, hd - 0.6))
-
-
-static func _build_electronics(parent: Node3D) -> void:
-	var hw: float = MEDIUM_STORE_HALF_W
-	var hd: float = MEDIUM_STORE_HALF_D
-	_add_store_sign(parent, hw, hd, _poster_blue)
-	_add_wall_poster(
-		parent, "PosterBack1",
-		Vector3(-3.0, 2.2, -hd + 0.06), Vector3(0.6, 0.4, 0.02),
-		_poster_blue
-	)
-	_add_wall_poster(
-		parent, "PosterBack2",
-		Vector3(1.5, 2.2, -hd + 0.06), Vector3(0.5, 0.35, 0.02),
-		_poster_green
-	)
-	_add_wall_poster(
-		parent, "PosterLeft",
-		Vector3(-hw + 0.06, 2.0, -0.8), Vector3(0.02, 0.35, 0.5),
-		_poster_red
 	)
 	_add_small_plant(parent, Vector3(-hw + 0.4, 0.0, hd - 0.6))
 

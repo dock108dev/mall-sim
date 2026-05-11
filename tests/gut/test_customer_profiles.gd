@@ -18,11 +18,7 @@ const ARCHETYPE_IDS: Array[String] = [
 ]
 
 const VALID_STORE_IDS: Array[String] = [
-	"sports",
 	"retro_games",
-	"rentals",
-	"pocket_creatures",
-	"electronics",
 ]
 
 

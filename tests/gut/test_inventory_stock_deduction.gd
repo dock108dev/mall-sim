@@ -140,7 +140,7 @@ func test_out_of_stock_does_not_fire_at_one() -> void:
 
 
 func test_handler_silent_on_missing_item() -> void:
-	var store_id: StringName = &"sports_memorabilia"
+	var store_id: StringName = &"retro_games"
 	EventBus.customer_purchased.emit(
 		store_id, &"nonexistent_item", 10.0, &"cust_4"
 	)

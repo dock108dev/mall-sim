@@ -19,10 +19,10 @@ extends RefCounted
 ## auth: authentication status multiplier (authenticated items get a bonus).
 ## demand: category demand modifier from EconomySystem sales history.
 ## drift: per-item random-walk drift factor from EconomySystem.
-## trend: category trend level from MarketTrendSystem.
-## seasonal: spending season × calendar × sport_season × tournament demand.
+## trend: category trend level from TrendSystem.
+## seasonal: legacy seasonal multiplier (no live emitter post strip-to-bones).
 ## reputation: store reputation tier (auto-injected when absent).
-## meta_shift: meta-shift system multiplier for Pocket Creatures.
+## meta_shift: legacy meta-shift multiplier (no live emitter post strip-to-bones).
 ## event: active market event multiplier.
 ## test: item test-result multiplier (tested_working / tested_not_working).
 ## depreciation: time-based electronics depreciation / appreciation.

@@ -71,7 +71,7 @@ func set_inventory_system(inv: InventorySystem) -> void:
 func _process(_delta: float) -> void:
 	if _hovered_target and not is_instance_valid(_hovered_target):
 		_set_hovered_target(null)
-	if _open_panel_count > 0:
+	if _interaction_blocked():
 		if _hovered_target:
 			_set_hovered_target(null)
 	else:
@@ -81,7 +81,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _open_panel_count > 0:
+	if _interaction_blocked():
 		return
 	if event.is_action_pressed("interact"):
 		if _is_keyboard_captured_by_ui() and not _beta_mode_active():
@@ -137,11 +137,37 @@ func get_hovered_camera_distance() -> float:
 
 
 ## Returns the number of currently-open modal panels tracked from the
-## EventBus.panel_opened/panel_closed pair. Exposed so debug overlays, audit
-## tooling, and tests can read modal-lock depth without poking the private
-## `_open_panel_count` field directly.
+## EventBus.panel_opened/panel_closed pair. Retained as a fallback gate for
+## panels that emit panel_opened/closed but do not yet push CTX_MODAL on
+## `InputFocus`; once every panel routes through `ModalPanel`, this counter
+## becomes pure diagnostic state.
 func get_open_panel_count() -> int:
 	return _open_panel_count
+
+
+## Combined gate: blocks interactions when any non-`store_gameplay` context is
+## active on `InputFocus`, OR when the legacy `panel_opened` counter is
+## non-zero. The InputFocus check is the new primary authority (matches the
+## gate `PlayerController._input_focus_allows_gameplay` uses for movement);
+## the counter fallback preserves blocking for panels not yet migrated to
+## `ModalPanel`.
+func _interaction_blocked() -> bool:
+	if _open_panel_count > 0:
+		return true
+	return _input_focus_blocks_interaction()
+
+
+## Returns true when the current `InputFocus` context is anything other than
+## `CTX_STORE_GAMEPLAY` (and the stack is non-empty). The empty-context
+## fallthrough handles unit-test isolation (no focus stack pushed) so
+## interaction-ray tests still drive the ray. `InputFocus` is an autoload
+## (`project.godot:51`) — direct typed access lets a `current()` rename or
+## removal fail at parse time instead of silently falling open. See §EH-24.
+func _input_focus_blocks_interaction() -> bool:
+	var ctx: StringName = InputFocus.current()
+	if ctx == &"":
+		return false
+	return ctx != InputFocus.CTX_STORE_GAMEPLAY
 
 
 func _on_active_camera_changed(camera: Camera3D) -> void:

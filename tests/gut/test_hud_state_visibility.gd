@@ -128,14 +128,6 @@ func test_store_view_shows_sales_today_label() -> void:
 	)
 
 
-func test_store_view_hides_seasonal_event_label() -> void:
-	_emit_state(GameManager.State.STORE_VIEW)
-	assert_false(
-		_hud.get_node("SeasonalEventLabel").visible,
-		"SeasonalEventLabel must be hidden in STORE_VIEW"
-	)
-
-
 func test_store_view_hides_telegraph_card() -> void:
 	_emit_state(GameManager.State.STORE_VIEW)
 	assert_false(
@@ -244,7 +236,7 @@ func test_hub_back_button_has_min_width() -> void:
 func test_tutorial_step_suppresses_telegraph_card() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	# Trigger a telegraphed event so the card would normally appear.
-	EventBus.event_telegraphed.emit("summer_sale", 2)
+	EventBus.random_event_telegraphed.emit("Summer sale incoming")
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_true(card.visible, "TelegraphCard should appear before tutorial starts")
 
@@ -259,7 +251,7 @@ func test_tutorial_step_suppresses_new_telegraph_events() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	EventBus.tutorial_step_changed.emit("stock_shelf")
 	# Event fires while tutorial is active — card must stay hidden.
-	EventBus.event_telegraphed.emit("winter_sale", 3)
+	EventBus.random_event_telegraphed.emit("Winter sale incoming")
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_false(
 		card.visible,
@@ -269,7 +261,7 @@ func test_tutorial_step_suppresses_new_telegraph_events() -> void:
 
 func test_tutorial_hint_ended_restores_telegraph_card() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
-	EventBus.event_telegraphed.emit("summer_sale", 2)
+	EventBus.random_event_telegraphed.emit("Summer sale incoming")
 	EventBus.tutorial_step_changed.emit("stock_shelf")
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_false(card.visible, "Card must be hidden during tutorial")

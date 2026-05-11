@@ -19,7 +19,7 @@ func before_each() -> void:
 
 	_system = MarketValueSystem.new()
 	add_child_autofree(_system)
-	_system.initialize(_inventory, null, null)
+	_system.initialize(_inventory, null)
 	_system.register_store_price_cap(STORE_ID, STORE_CAP)
 
 	DifficultySystemSingleton.set_tier(&"normal")

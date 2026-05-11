@@ -117,6 +117,16 @@ func set_haggle_panel(panel: HagglePanel) -> void:
 
 
 ## Called by HaggleSystem on accepted deal or directly on non-haggled sale.
+## §EH-18 — `initiate_sale` is the typed sale path; in production it is only
+## reached with non-null Customer + ItemInstance and a positive agreed_price.
+## Per §EH-10 (deliberately-tested fallback contract): the rejection branches
+## stay at `push_warning` because `tests/gut/test_checkout_system.gd::
+## test_initiate_sale_rejects_null_customer` and `::test_initiate_sale_rejects_zero_price`
+## intentionally exercise these paths and assert `_is_processing == false`.
+## Escalating would fail CI on tests that exercise the contract on purpose.
+## The fallback (silent return + `_is_processing` stays false) is the
+## documented behaviour.
+## See docs/audits/error-handling-report.md §EH-18.
 func initiate_sale(
 	customer: Customer,
 	item: ItemInstance,
@@ -178,14 +188,32 @@ func _on_interactable_interacted(
 	_begin_checkout(customer)
 
 
+## Both upfront guards (`cust_id == 0`, non-Customer cast) are caller-bug
+## invariants — the Customer FSM only emits this signal with a real
+## `get_instance_id()` payload from a typed `Customer` node
+## (`customer.gd::_build_customer_data`). The §EH-11 pattern: silent return
+## was hiding FSM regressions as "queue rejected" UX bugs. CheckoutSystem
+## isn't loaded in test_objective_director's empty-payload emits (those
+## emits only reach ObjectiveDirector, which doesn't read the payload),
+## so escalation is safe. See §EH-29.
 func _on_customer_ready_to_purchase(
 	customer_data: Dictionary
 ) -> void:
 	var cust_id: int = customer_data.get("customer_id", 0)
 	if cust_id == 0:
+		push_error(
+			"CheckoutSystem: customer_ready_to_purchase payload missing or zero "
+			+ "customer_id — Customer FSM regression."
+		)
 		return
 	var node: Object = instance_from_id(cust_id)
 	if not node is Customer:
+		push_error(
+			"CheckoutSystem: customer_ready_to_purchase resolved instance %d to "
+			+ "non-Customer (%s) — Customer FSM regression." % [
+				cust_id, type_string(typeof(node)),
+			]
+		)
 		return
 	var customer: Customer = node as Customer
 	if not _register_queue.try_add(customer):
@@ -201,7 +229,7 @@ func _on_customer_left(customer_data: Dictionary) -> void:
 	_register_queue.remove_by_id(cust_id)
 	EventBus.queue_advanced.emit(_register_queue.get_size())
 	_reputation_system.add_reputation(
-		"sports_memorabilia", PATIENCE_REP_PENALTY
+		"retro_games", PATIENCE_REP_PENALTY
 	)
 	if (
 		_active_customer
@@ -276,7 +304,14 @@ func process_sale(
 
 func _show_checkout_panel() -> void:
 	if not _checkout_panel:
-		push_warning(
+		# §EH-19 — `_checkout_panel` is wired by `GameWorld._initialize_tier_3_operational`
+		# (game_world.gd:467); reaching this branch means the wiring regressed.
+		# The customer would otherwise sit idle at the register with no
+		# diagnostic — the day clock keeps ticking but the sale never resolves.
+		# Escalated so CI catches a wiring break instead of a silent
+		# checkout-panel-disabled regression.
+		# See docs/audits/error-handling-report.md §EH-19.
+		push_error(
 			"CheckoutSystem: no checkout panel assigned"
 		)
 		return
@@ -487,7 +522,12 @@ func _on_negotiation_started(
 	max_rounds: int,
 ) -> void:
 	if not _haggle_panel:
-		push_warning(
+		# §EH-19 — `_haggle_panel` is wired by `GameWorld._initialize_tier_3_operational`
+		# (game_world.gd:473); reaching this branch on a real negotiation
+		# event means the wiring regressed. Silent return would lock the
+		# customer in the haggle state with no UI — register stalls forever.
+		# See docs/audits/error-handling-report.md §EH-19.
+		push_error(
 			"CheckoutSystem: no haggle panel assigned"
 		)
 		return

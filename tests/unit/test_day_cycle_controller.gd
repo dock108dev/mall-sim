@@ -27,7 +27,7 @@ func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	GameManager.current_state = GameManager.State.GAMEPLAY
-	GameManager.current_store_id = &"pocket_creatures"
+	GameManager.current_store_id = &"retro_games"
 	GameManager.owned_stores = []
 
 	_time = TimeSystem.new()

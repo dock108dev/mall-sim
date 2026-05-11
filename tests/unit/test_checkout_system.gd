@@ -60,7 +60,7 @@ func before_each() -> void:
 	_definition.condition_range = PackedStringArray(
 		["poor", "fair", "good", "near_mint", "mint"]
 	)
-	_definition.store_type = "pocket_creatures"
+	_definition.store_type = "retro_games"
 
 	_item = ItemInstance.create_from_definition(_definition, "good")
 	_item.player_set_price = 100.0

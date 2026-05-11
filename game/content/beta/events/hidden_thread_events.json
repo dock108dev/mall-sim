@@ -1,5 +1,5 @@
 {
-  "type": "meta_config_data",
+  "type": "beta_events_data",
   "events": [
     {
       "id": "day01_backroom_modded_console_hint",

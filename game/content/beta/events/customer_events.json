@@ -1,5 +1,5 @@
 {
-  "type": "meta_config_data",
+  "type": "beta_events_data",
   "events": [
     {
       "id": "day01_wrong_console_parent",
@@ -14,8 +14,8 @@
           "id": "clean_exchange",
           "label": "Swap it for the PrismBox copy at the same price.",
           "effects": {
-            "cash": 0,
-            "reputation": 3,
+            "cash": 15,
+            "reputation": 2,
             "manager_trust": 2
           }
         },
@@ -39,6 +39,44 @@
             "flags": {
               "parent_refused_return": true
             }
+          }
+        }
+      ]
+    },
+    {
+      "id": "day02_trade_in_dispute",
+      "day": 2,
+      "trigger": "customer_interaction",
+      "customer_archetype": "regular_collector",
+      "customer_name": "Collector Guy",
+      "title": "The Scratched Disc",
+      "body": "A regular slides a stack of disc cases across the counter. \"Trading these in — same deal as last time. Except this one.\" He taps a case on top. \"I know it's scratched. I'm hoping you'll still count it full value since I've been coming here for years.\"",
+      "choices": [
+        {
+          "id": "accept_full_value",
+          "label": "Count it full trade-in value — he's a regular.",
+          "effects": {
+            "cash": -8,
+            "reputation": 3,
+            "manager_trust": 1
+          }
+        },
+        {
+          "id": "offer_partial",
+          "label": "Offer half value on the scratched disc, full on the rest.",
+          "effects": {
+            "cash": 0,
+            "reputation": 1,
+            "manager_trust": 2
+          }
+        },
+        {
+          "id": "decline_scratched",
+          "label": "Decline the scratched disc per policy, process the rest.",
+          "effects": {
+            "cash": 4,
+            "reputation": -2,
+            "manager_trust": 1
           }
         }
       ]

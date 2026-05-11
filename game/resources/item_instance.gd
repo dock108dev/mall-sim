@@ -67,9 +67,6 @@ var tested: bool = false
 var test_result: String = ""
 var is_demo: bool = false
 var demo_placed_day: int = 0
-## Multiplier applied to a demo unit's value; decreases each day it is on display.
-## 1.0 = full value; floors at ElectronicsStoreController.DEMO_DEPRECIATION_FLOOR.
-var demo_depreciation_factor: float = 1.0
 var authentication_status: String = "none":
 	set(value):
 		_authentication_status = value

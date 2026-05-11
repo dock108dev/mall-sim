@@ -118,8 +118,8 @@ func test_only_scaffolding_fails_content_instantiated() -> void:
 
 
 func test_orbit_pivot_satisfies_player_present() -> void:
-	# Orbit-cam stores (sports, electronics, pocket_creatures, video_rental)
-	# use an OrbitPivot Marker3D in lieu of a walking PlayerController.
+	# Orbit-cam stores use an OrbitPivot Marker3D in lieu of a
+	# walking PlayerController.
 	var scene: Node = _make_ready_scene()
 	var anchor: Node = scene.find_child("PlayerController", true, false)
 	scene.remove_child(anchor)

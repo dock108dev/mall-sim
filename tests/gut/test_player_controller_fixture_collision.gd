@@ -13,8 +13,8 @@ const PROBE_STEP: float = 1.5
 # to land at the embedded coordinate.
 const FIXTURE_PROBES: Array[Dictionary] = [
 	{"name": "GlassCase", "from": Vector3(0.0, 0.0, -3.0), "into": Vector3(0.0, 0.0, -4.0)},
-	{"name": "CartRackLeft", "from": Vector3(-3.5, 0.0, -7.5), "into": Vector3(-3.5, 0.0, -8.5)},
-	{"name": "CartRackRight", "from": Vector3(3.5, 0.0, -7.5), "into": Vector3(3.5, 0.0, -8.5)},
+	{"name": "CartRackLeft", "from": Vector3(-1.5, 0.0, -8.7), "into": Vector3(-1.5, 0.0, -9.7)},
+	{"name": "CartRackRight", "from": Vector3(1.5, 0.0, -8.7), "into": Vector3(1.5, 0.0, -9.7)},
 	{"name": "Checkout", "from": Vector3(5.5, 0.0, 7.0), "into": Vector3(5.5, 0.0, 8.0)},
 	{"name": "ConsoleShelf", "from": Vector3(6.2, 0.0, -4.29), "into": Vector3(7.2, 0.0, -4.29)},
 	{"name": "crt_demo_area", "from": Vector3(-4.8, 0.0, -6.0), "into": Vector3(-4.8, 0.0, -7.14)},

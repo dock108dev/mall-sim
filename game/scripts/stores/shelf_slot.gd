@@ -4,14 +4,8 @@ extends Interactable
 
 signal slot_changed(slot: ShelfSlot)
 
-const _CARD_PACK_SCENE: PackedScene = preload(
-	"res://game/assets/models/props/placeholder_prop_card_pack.tscn"
-)
 const _SHELF_PRODUCT_SCENE: PackedScene = preload(
 	"res://game/assets/models/props/placeholder_prop_shelf_product.tscn"
-)
-const _SPORTS_MEMORABILIA_SCENE: PackedScene = preload(
-	"res://game/assets/models/props/placeholder_prop_sports_memorabilia.tscn"
 )
 const _GAME_CARTRIDGE_SCENE: PackedScene = preload(
 	"res://game/assets/models/props/placeholder_prop_game_cartridge.tscn"
@@ -19,30 +13,14 @@ const _GAME_CARTRIDGE_SCENE: PackedScene = preload(
 const _GAME_CONSOLE_SCENE: PackedScene = preload(
 	"res://game/assets/models/props/prop_game_console.tscn"
 )
-const _VHS_TAPE_SCENE: PackedScene = preload(
-	"res://game/assets/models/props/placeholder_prop_vhs_tape.tscn"
-)
-const _ELECTRONICS_DEVICE_SCENE: PackedScene = preload(
-	"res://game/assets/models/props/placeholder_prop_electronics_device.tscn"
-)
 const CATEGORY_SCENES: Dictionary = {
-	"trading_cards": _CARD_PACK_SCENE,
-	"sealed_packs": _CARD_PACK_SCENE,
 	"sealed_product": _SHELF_PRODUCT_SCENE,
-	"memorabilia": _SPORTS_MEMORABILIA_SCENE,
 	"cartridge": _GAME_CARTRIDGE_SCENE,
 	"console": _GAME_CONSOLE_SCENE,
 	"accessory": _SHELF_PRODUCT_SCENE,
 	"guide": _SHELF_PRODUCT_SCENE,
-	"vhs_tapes": _VHS_TAPE_SCENE,
-	"dvd_titles": _VHS_TAPE_SCENE,
 	"snacks": _SHELF_PRODUCT_SCENE,
 	"merchandise": _SHELF_PRODUCT_SCENE,
-	"portable_audio": _ELECTRONICS_DEVICE_SCENE,
-	"digital_camera": _ELECTRONICS_DEVICE_SCENE,
-	"gadget": _ELECTRONICS_DEVICE_SCENE,
-	"audio_equipment": _ELECTRONICS_DEVICE_SCENE,
-	"portable_gaming": _ELECTRONICS_DEVICE_SCENE,
 }
 const DEFAULT_ITEM_SCENE: PackedScene = _SHELF_PRODUCT_SCENE
 
@@ -54,19 +32,9 @@ const CATEGORY_COLORS: Dictionary = {
 	"console": Color(0.35, 0.55, 0.95),
 	"accessory": Color(0.95, 0.85, 0.35),
 	"guide": Color(0.95, 0.65, 0.35),
-	"vhs_tapes": Color(0.95, 0.40, 0.40),
-	"dvd_titles": Color(0.95, 0.45, 0.65),
-	"trading_cards": Color(0.70, 0.45, 0.95),
-	"sealed_packs": Color(0.55, 0.40, 0.85),
 	"sealed_product": Color(0.55, 0.75, 0.85),
-	"memorabilia": Color(0.95, 0.80, 0.35),
 	"snacks": Color(0.95, 0.55, 0.75),
 	"merchandise": Color(0.45, 0.85, 0.85),
-	"portable_audio": Color(0.70, 0.70, 0.78),
-	"digital_camera": Color(0.55, 0.60, 0.70),
-	"gadget": Color(0.50, 0.55, 0.65),
-	"audio_equipment": Color(0.45, 0.50, 0.60),
-	"portable_gaming": Color(0.65, 0.65, 0.75),
 }
 const DEFAULT_PLACEHOLDER_COLOR := Color(0.85, 0.85, 0.85)
 

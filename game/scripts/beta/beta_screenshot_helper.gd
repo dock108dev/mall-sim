@@ -15,6 +15,12 @@ extends CanvasLayer
 
 const SAVE_DIR: String = "user://screenshots"
 const TOAST_DURATION: float = 2.5
+## Cap the scene-slug component of the saved filename. Godot already strips
+## '/' and ':' from `Node.name`, but the slug still flows into a path on
+## disk; bounding it (and the allowed charset below) is defense-in-depth so
+## a future renamed scene cannot land an oversized or weirdly-glyphed
+## filename in `user://screenshots/`.
+const _MAX_SLUG_LENGTH: int = 48
 
 var _toast: Label = null
 var _toast_timer: float = 0.0
@@ -99,7 +105,21 @@ func _scene_slug() -> String:
 	var scene: Node = get_tree().current_scene
 	if scene == null:
 		return "scene"
-	return String(scene.name).to_lower().replace(" ", "_")
+	var raw: String = String(scene.name).to_lower()
+	var sanitized: String = ""
+	for i: int in range(raw.length()):
+		var codepoint: int = raw.unicode_at(i)
+		if (codepoint >= 0x30 and codepoint <= 0x39) \
+				or (codepoint >= 0x61 and codepoint <= 0x7A) \
+				or codepoint == 0x5F:
+			sanitized += char(codepoint)
+		elif codepoint == 0x20 or codepoint == 0x2D:
+			sanitized += "_"
+	if sanitized.is_empty():
+		sanitized = "scene"
+	if sanitized.length() > _MAX_SLUG_LENGTH:
+		sanitized = sanitized.substr(0, _MAX_SLUG_LENGTH)
+	return sanitized
 
 
 func _show_toast(text: String) -> void:

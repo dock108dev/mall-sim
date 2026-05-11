@@ -147,10 +147,7 @@ func test_upgrades_for_store_filtering() -> void:
 
 
 func test_universal_upgrades_appear_for_all_stores() -> void:
-	var stores: Array[String] = [
-		"sports", "retro_games", "rentals",
-		"pocket_creatures", "electronics",
-	]
+	var stores: Array[String] = ["retro_games"]
 	for store_type: String in stores:
 		var upgrades: Array[UpgradeDefinition] = (
 			_data_loader.get_upgrades_for_store(store_type)

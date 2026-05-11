@@ -1,5 +1,5 @@
 ## Unit tests for ToastNotificationUI: queue ordering, overflow guard, duration expiry,
-## and category modulate mapping.
+## and category border-color mapping (the visual-contract surface).
 extends GutTest
 
 
@@ -158,91 +158,82 @@ func test_finish_callback_with_empty_queue_stops_showing() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Category modulate mapping
+# Category border-color mapping
 # ---------------------------------------------------------------------------
 
-func test_category_system_maps_to_white() -> void:
+func test_category_system_border_is_default_gray() -> void:
 	EventBus.toast_requested.emit("System toast", &"system", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Toast panel must contain a Label")
-	if label:
-		assert_eq(
-			label.get_theme_color("font_color"),
-			Color.WHITE,
-			"&'system' category should use white"
-		)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"system"],
+		"&'system' category should use the default gray border"
+	)
 
 
-func test_category_milestone_maps_to_gold() -> void:
+func test_category_milestone_border_is_gold() -> void:
 	EventBus.toast_requested.emit("Milestone toast", &"milestone", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Toast panel must contain a Label")
-	if label:
-		assert_eq(
-			label.get_theme_color("font_color"),
-			ToastNotificationUI.CATEGORY_COLORS[&"milestone"],
-			"&'milestone' category should use gold"
-		)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"milestone"],
+		"&'milestone' category should use the gold border"
+	)
 
 
-func test_category_staff_maps_to_orange() -> void:
+func test_category_staff_border_is_orange() -> void:
 	EventBus.toast_requested.emit("Staff toast", &"staff", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Toast panel must contain a Label")
-	if label:
-		assert_eq(
-			label.get_theme_color("font_color"),
-			ToastNotificationUI.CATEGORY_COLORS[&"staff"],
-			"&'staff' category should use orange"
-		)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"staff"],
+		"&'staff' category should use the staff orange border"
+	)
 
 
-func test_category_reputation_up_maps_to_gold() -> void:
+func test_category_reputation_up_border_is_positive_green() -> void:
 	EventBus.toast_requested.emit("Rep up", &"reputation_up", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Toast panel must contain a Label")
-	if label:
-		assert_eq(
-			label.get_theme_color("font_color"),
-			ToastNotificationUI.CATEGORY_COLORS[&"reputation_up"],
-			"&'reputation_up' category should use gold"
-		)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"reputation_up"],
+		"&'reputation_up' category should use the positive green border"
+	)
 
 
-func test_category_reputation_down_maps_to_red_orange() -> void:
+func test_category_reputation_down_border_is_warning() -> void:
 	EventBus.toast_requested.emit("Rep down", &"reputation_down", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Toast panel must contain a Label")
-	if label:
-		assert_eq(
-			label.get_theme_color("font_color"),
-			ToastNotificationUI.CATEGORY_COLORS[&"reputation_down"],
-			"&'reputation_down' category should use red-orange"
-		)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"reputation_down"],
+		"&'reputation_down' category should use the warning border"
+	)
 
 
-func test_category_random_event_maps_to_amber() -> void:
+func test_category_random_event_border_is_amber() -> void:
 	EventBus.toast_requested.emit("Random event", &"random_event", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Toast panel must contain a Label")
-	if label:
-		assert_eq(
-			label.get_theme_color("font_color"),
-			ToastNotificationUI.CATEGORY_COLORS[&"random_event"],
-			"&'random_event' category should use amber"
-		)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"random_event"],
+		"&'random_event' category should use the amber border"
+	)
 
 
-func test_unknown_category_falls_back_to_white_without_error() -> void:
+func test_category_sale_border_is_positive_green() -> void:
+	# `&"sale"` is the BetaDayOneController outcome path's canonical category
+	# for cash-positive customer outcomes. It must paint the positive (green)
+	# border so the player reads the toast as a successful sale.
+	EventBus.toast_requested.emit("Sale complete: +$18", &"sale", 3.0)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"sale"],
+		"&'sale' category should use the positive (green) border"
+	)
+
+
+func test_unknown_category_falls_back_to_default_border() -> void:
 	EventBus.toast_requested.emit("Unknown cat", &"unknown_xyz", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Toast panel must contain a Label")
-	if label:
-		assert_eq(
-			label.get_theme_color("font_color"),
-			ToastNotificationUI.DEFAULT_COLOR,
-			"Unknown category should silently fall back to DEFAULT_COLOR (white)"
-		)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.DEFAULT_COLOR,
+		"Unknown category should silently fall back to DEFAULT_COLOR (gray)"
+	)
 
 
 # ---------------------------------------------------------------------------
@@ -258,3 +249,12 @@ func _find_label_in_panel(panel: PanelContainer) -> Label:
 				if inner is Label:
 					return inner as Label
 	return null
+
+
+func _border_color(panel: PanelContainer) -> Color:
+	if not is_instance_valid(panel):
+		return Color.BLACK
+	var sb: StyleBoxFlat = panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb == null:
+		return Color.BLACK
+	return sb.border_color

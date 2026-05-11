@@ -56,9 +56,6 @@ const _SAVE_LOAD_PANEL_SCENE: PackedScene = preload(
 const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
 )
-const _PACK_OPENING_PANEL_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/pack_opening_panel.tscn"
-)
 const _MALL_HALLWAY_SCENE: PackedScene = preload(
 	"res://game/scenes/world/mall_hallway.tscn"
 )
@@ -115,7 +112,6 @@ var _mall_hallway: MallHallway
 var _pause_menu: PauseMenu
 var _save_load_panel: SaveLoadPanel
 var _settings_panel: SettingsPanel
-var _pack_opening_panel: PackOpeningPanel
 var _staff_panel: StaffPanel
 var _tutorial_overlay: TutorialOverlay
 var _item_tooltip: ItemTooltip
@@ -426,16 +422,14 @@ func _wire_save_manager() -> void:
 	save_manager.set_performance_report_system(
 		performance_report_system
 	)
-	var unlock_system: UnlockSystem = get_node_or_null(
-		"/root/UnlockSystemSingleton"
-	)
-	if unlock_system:
-		save_manager.set_unlock_system(unlock_system)
-	var onboarding_system: OnboardingSystem = get_node_or_null(
-		"/root/OnboardingSystemSingleton"
-	)
-	if onboarding_system:
-		save_manager.set_onboarding_system(onboarding_system)
+	# UnlockSystemSingleton / OnboardingSystemSingleton are autoloads
+	# (project.godot:37,39); the dead `get_node_or_null + null check`
+	# pattern is the §EH-13/§EH-15 dead-guard shape — replaced with direct
+	# typed access so a singleton rename fails at parse time instead of
+	# silently shipping a SaveManager that omits unlock/onboarding data.
+	# See §EH-28.
+	save_manager.set_unlock_system(UnlockSystemSingleton)
+	save_manager.set_onboarding_system(OnboardingSystemSingleton)
 
 
 func _wire_store_controllers() -> void:
@@ -616,11 +610,6 @@ func _setup_deferred_panels() -> void:
 	_save_load_panel.load_requested.connect(
 		_on_load_slot_requested
 	)
-
-	_pack_opening_panel = (
-		_PACK_OPENING_PANEL_SCENE.instantiate() as PackOpeningPanel
-	)
-	_ui_layer.add_child(_pack_opening_panel)
 
 	_staff_panel = _STAFF_PANEL_SCENE.instantiate() as StaffPanel
 	_ui_layer.add_child(_staff_panel)

@@ -388,6 +388,71 @@ func test_debug_overlay_node_present_in_debug_build() -> void:
 	)
 
 
+func test_interaction_blocked_when_input_focus_pushes_modal() -> void:
+	var focus: Node = get_tree().root.get_node_or_null("InputFocus")
+	if focus == null:
+		pending("InputFocus autoload required")
+		return
+	focus._reset_for_tests()
+	focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	assert_false(
+		_ray._interaction_blocked(),
+		"Pre-condition: store_gameplay context must allow interaction"
+	)
+
+	focus.push_context(InputFocus.CTX_MODAL)
+
+	assert_true(
+		_ray._interaction_blocked(),
+		"CTX_MODAL on InputFocus must block interaction even with no panel_opened signal"
+	)
+
+	focus._reset_for_tests()
+
+
+func test_interaction_unblocked_when_modal_pops() -> void:
+	var focus: Node = get_tree().root.get_node_or_null("InputFocus")
+	if focus == null:
+		pending("InputFocus autoload required")
+		return
+	focus._reset_for_tests()
+	focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	focus.push_context(InputFocus.CTX_MODAL)
+
+	focus.pop_context()
+
+	assert_false(
+		_ray._interaction_blocked(),
+		"After CTX_MODAL pops, store_gameplay must regain interaction authority"
+	)
+
+	focus._reset_for_tests()
+
+
+func test_legacy_panel_opened_count_still_blocks() -> void:
+	# Belt-and-suspenders: panels not yet migrated to ModalPanel only emit
+	# panel_opened/closed without pushing CTX_MODAL. Until they migrate, the
+	# counter fallback must still block interactions.
+	var focus: Node = get_tree().root.get_node_or_null("InputFocus")
+	if focus != null:
+		focus._reset_for_tests()
+		focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	EventBus.panel_opened.emit("legacy_unmigrated_panel")
+
+	assert_true(
+		_ray._interaction_blocked(),
+		"Legacy panel_opened signal must still gate interaction even when InputFocus reports gameplay"
+	)
+
+	EventBus.panel_closed.emit("legacy_unmigrated_panel")
+	assert_false(
+		_ray._interaction_blocked(),
+		"Once the legacy panel closes, gating returns to InputFocus authority"
+	)
+	if focus != null:
+		focus._reset_for_tests()
+
+
 func _create_target(prompt_text: String, display_name: String) -> Interactable:
 	var target := Interactable.new()
 	target.prompt_text = prompt_text

@@ -1,6 +1,22 @@
-[gd_scene load_steps=2 format=3 uid="uid://objectiverail01"]
+[gd_scene load_steps=3 format=3 uid="uid://objectiverail01"]
 
 [ext_resource type="Script" path="res://game/scripts/ui/objective_rail.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="KeyBadgeStyle"]
+bg_color = Color(0.957, 0.914, 0.831, 1.0)
+border_color = Color(0.169, 0.114, 0.071, 1.0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 8.0
+content_margin_top = 2.0
+content_margin_right = 8.0
+content_margin_bottom = 2.0
 
 [node name="ObjectiveRail" type="CanvasLayer"]
 layer = 40
@@ -51,6 +67,21 @@ text = ""
 layout_mode = 2
 mouse_filter = 2
 text = ""
+
+[node name="KeyBadge" type="PanelContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("KeyBadgeStyle")
+visible = false
+
+[node name="KeyLabel" type="Label" parent="MarginContainer/HBoxContainer/KeyBadge"]
+layout_mode = 2
+text = "E"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.169, 0.114, 0.071, 1.0)
+theme_override_font_sizes/font_size = 18
 
 [node name="OptionalHintLabel" type="Label" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2

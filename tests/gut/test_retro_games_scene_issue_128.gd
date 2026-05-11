@@ -216,12 +216,18 @@ func test_emissive_panels_and_lighting_budget_match_retro_vibe() -> void:
 	var world_environments: Array[Node] = _root.find_children(
 		"*", "WorldEnvironment", true, false
 	)
-	# 4 ambient lights (FluorescentKeyLight, WarmNeonFill, GreenNeonFill,
-	# CRTDemoSpotlight) plus the dedicated new_console_display.Spotlight that
-	# spotlights the VecForce HD pedestal — required by zone completeness.
+	# Authored light budget (10 lights):
+	#   • Ambient/store-floor: FluorescentKeyLight, WarmNeonFill, GreenNeonFill,
+	#     FrontLaneFill, CheckoutCounterPractical
+	#   • Spotlights: CRTDemoSpotlight, CheckoutLaneSpotlight,
+	#     new_console_display/Spotlight
+	#   • Back-room: BackroomUtilityLight (cool fill),
+	#     back_room/BackroomWorkLight (warm focused work pool)
+	# Cap is set just above current count so adding more lights without
+	# justification trips the budget check.
 	assert_lte(
-		light_nodes.size(), 5,
-		"Scene should use at most 5 light nodes"
+		light_nodes.size(), 10,
+		"Scene should use at most 10 light nodes"
 	)
 	assert_eq(
 		world_environments.size(), 0,

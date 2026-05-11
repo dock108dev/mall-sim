@@ -48,35 +48,31 @@ func test_toast_label_matches_message() -> void:
 		assert_eq(label.text, MSG, "Label text must equal the emitted message")
 
 
-# ── Category tint: milestone (gold) ───────────────────────────────────────────
+# ── Category tint: milestone (gold) — paints the panel's left border ──────────
 
 
-func test_milestone_category_tint() -> void:
+func test_milestone_category_border() -> void:
 	EventBus.toast_requested.emit("Milestone toast", &"milestone", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Active panel must contain a Label node")
-	if label:
-		var color: Color = label.get_theme_color("font_color")
-		assert_almost_eq(color.r, 1.0, 0.05, "Milestone tint r must be ~1.0")
-		assert_almost_eq(color.g, 0.85, 0.05, "Milestone tint g must be ~0.85")
-		assert_almost_eq(color.b, 0.0, 0.05, "Milestone tint b must be ~0.0")
-		assert_almost_eq(color.a, 1.0, 0.05, "Milestone tint a must be ~1.0")
+	assert_not_null(_ui._active_panel, "Active panel must exist")
+	if _ui._active_panel:
+		var color: Color = _border_color(_ui._active_panel)
+		assert_almost_eq(color.r, 1.0, 0.05, "Milestone border r must be ~1.0")
+		assert_almost_eq(color.g, 0.84, 0.05, "Milestone border g must be ~0.84")
+		assert_almost_eq(color.b, 0.0, 0.05, "Milestone border b must be ~0.0")
 
 
-# ── Category tint: staff (orange) ─────────────────────────────────────────────
+# ── Category tint: staff (orange) — paints the panel's left border ────────────
 
 
-func test_staff_category_tint() -> void:
+func test_staff_category_border() -> void:
 	EventBus.toast_requested.emit("Staff toast", &"staff", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Active panel must contain a Label node")
-	if label:
-		var color: Color = label.get_theme_color("font_color")
+	assert_not_null(_ui._active_panel, "Active panel must exist")
+	if _ui._active_panel:
+		var color: Color = _border_color(_ui._active_panel)
 		var expected: Color = ToastNotificationUI.CATEGORY_COLORS[&"staff"]
-		assert_almost_eq(color.r, expected.r, 0.05, "Staff tint r must match orange")
-		assert_almost_eq(color.g, expected.g, 0.05, "Staff tint g must match orange")
-		assert_almost_eq(color.b, expected.b, 0.05, "Staff tint b must match orange")
-		assert_almost_eq(color.a, 1.0, 0.05, "Staff tint a must be ~1.0")
+		assert_almost_eq(color.r, expected.r, 0.05, "Staff border r must match orange")
+		assert_almost_eq(color.g, expected.g, 0.05, "Staff border g must match orange")
+		assert_almost_eq(color.b, expected.b, 0.05, "Staff border b must match orange")
 
 
 # ── FIFO ordering ─────────────────────────────────────────────────────────────
@@ -97,7 +93,7 @@ func test_queue_fifo_ordering() -> void:
 			"First emitted message must be displayed first"
 		)
 	_ui.dismiss()
-	await get_tree().create_timer(0.25).timeout
+	await get_tree().create_timer(ToastNotificationUI.FADE_OUT_DURATION + 0.1).timeout
 	var second_label: Label = _find_label_in_panel(_ui._active_panel)
 	assert_not_null(second_label, "Active panel must exist for second toast after first dismisses")
 	if second_label:
@@ -142,3 +138,12 @@ func _find_label_in_panel(panel: PanelContainer) -> Label:
 				if inner is Label:
 					return inner as Label
 	return null
+
+
+func _border_color(panel: PanelContainer) -> Color:
+	if not is_instance_valid(panel):
+		return Color.BLACK
+	var sb: StyleBoxFlat = panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb == null:
+		return Color.BLACK
+	return sb.border_color

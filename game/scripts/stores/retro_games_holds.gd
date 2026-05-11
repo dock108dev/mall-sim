@@ -66,14 +66,14 @@ func add_customer_hold(
 ## Before the unlock the manager handles allocation silently — the player
 ## cannot open the terminal panel, so the Fulfillment Conflict flow is not
 ## reachable.
+##
+## §EH-34 — UnlockSystemSingleton is the typed `UnlockSystem` autoload
+## (project.godot:37) and `is_unlocked(StringName) -> bool` is owner-declared
+## at `unlock_system.gd:71`. The prior `get_node_or_null + has_method` dead
+## guard is the §EH-31 anti-pattern: a method rename would silently flip
+## terminal access to "never granted" instead of failing parse.
 func has_hold_terminal_access() -> bool:
-	var tree: SceneTree = _controller.get_tree()
-	if tree == null or tree.root == null:
-		return false
-	var unlocks: Node = tree.root.get_node_or_null("UnlockSystemSingleton")
-	if unlocks == null or not unlocks.has_method("is_unlocked"):
-		return false
-	return bool(unlocks.call("is_unlocked", _HOLD_TERMINAL_UNLOCK_ID))
+	return UnlockSystemSingleton.is_unlocked(_HOLD_TERMINAL_UNLOCK_ID)
 
 
 ## Returns the count of in-stock units for a given item_id, regardless of
@@ -116,10 +116,15 @@ func is_item_supply_constrained(item_id: StringName) -> bool:
 		platform_id = item.definition.platform_id
 		fallback_constrained = item.definition.supply_constrained
 		break
-	if platform_id != &"" and _has_platform_system():
-		var ps: Node = _controller.get_tree().root.get_node("PlatformSystem")
-		if ps.has_method("is_shortage"):
-			return bool(ps.call("is_shortage", platform_id))
+	# §EH-34 — PlatformSystem is the autoload identifier (project.godot:78);
+	# `is_shortage(StringName) -> bool` is owner-declared at
+	# `platform_system.gd:54`. The previous tree-walk + `has_method` dead
+	# guard would silently swallow a rename and leave the conflict-detection
+	# rule reading the ItemDefinition's static `supply_constrained` flag,
+	# missing live PlatformSystem shortage state. Direct typed access now
+	# fails parse on a rename.
+	if platform_id != &"":
+		return PlatformSystem.is_shortage(platform_id)
 	return fallback_constrained
 
 
@@ -360,30 +365,16 @@ func _slip_targets_vecforce_hd(slip: HoldSlip) -> bool:
 	return item_def.platform_id == _NEW_CONSOLE_PLATFORM_ID
 
 
-func _has_platform_system() -> bool:
-	var tree: SceneTree = _controller.get_tree()
-	return tree != null and tree.root != null and tree.root.has_node(
-		"PlatformSystem"
-	)
-
-
+## §EH-34 — Both ManagerRelationshipManager and EmploymentSystem are
+## autoloads (project.godot:80, :54) and both expose
+## `apply_trust_delta(delta: float, reason: String)` as typed methods. The
+## prior `get_node_or_null + has_method + .call` chain would silently drop
+## the conflict-resolution trust delta on a rename — leaving the Fulfillment
+## Conflict resolution flow without its trust consequence. Direct typed
+## access fails parse on a rename and surfaces the test failure immediately.
 func _apply_manager_trust_delta(delta: float, reason: String) -> void:
-	var tree: SceneTree = _controller.get_tree()
-	if tree == null or tree.root == null:
-		return
-	var mrm: Node = tree.root.get_node_or_null(
-		"ManagerRelationshipManager"
-	)
-	if mrm == null or not mrm.has_method("apply_trust_delta"):
-		return
-	mrm.call("apply_trust_delta", delta, reason)
+	ManagerRelationshipManager.apply_trust_delta(delta, reason)
 
 
 func _apply_employee_trust_delta(delta: float, reason: String) -> void:
-	var tree: SceneTree = _controller.get_tree()
-	if tree == null or tree.root == null:
-		return
-	var emp: Node = tree.root.get_node_or_null("EmploymentSystem")
-	if emp == null or not emp.has_method("apply_trust_delta"):
-		return
-	emp.call("apply_trust_delta", delta, reason)
+	EmploymentSystem.apply_trust_delta(delta, reason)

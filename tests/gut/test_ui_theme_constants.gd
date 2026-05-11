@@ -2,13 +2,11 @@
 extends GutTest
 
 
-func test_all_five_store_accents_defined() -> void:
-	var store_ids: Array[String] = [
-		"retro_games", "pocket_creatures", "video_rental", "electronics", "sports_cards"
-	]
-	for sid in store_ids:
-		var c: Color = UIThemeConstants.STORE_ACCENTS.get(sid, Color.TRANSPARENT)
-		assert_ne(c, Color.TRANSPARENT, "Store accent missing for %s" % sid)
+func test_retro_games_store_accent_defined() -> void:
+	var c: Color = UIThemeConstants.STORE_ACCENTS.get(
+		"retro_games", Color.TRANSPARENT
+	)
+	assert_ne(c, Color.TRANSPARENT, "Store accent missing for retro_games")
 
 
 func test_store_accent_lookup_returns_color() -> void:
@@ -17,17 +15,20 @@ func test_store_accent_lookup_returns_color() -> void:
 
 
 func test_store_accent_inactive_lookup() -> void:
-	var active: Color = UIThemeConstants.get_store_accent(&"electronics", true)
-	var inactive: Color = UIThemeConstants.get_store_accent(&"electronics", false)
+	var active: Color = UIThemeConstants.get_store_accent(&"retro_games", true)
+	var inactive: Color = UIThemeConstants.get_store_accent(&"retro_games", false)
 	assert_ne(active, inactive, "Active and inactive accents should differ")
 
 
 func test_store_accent_unknown_id_falls_back() -> void:
 	var c: Color = UIThemeConstants.get_store_accent(&"nonexistent_store")
-	assert_eq(c, UIThemeConstants.ACCENT_COLOR, "Unknown store should return ACCENT_COLOR fallback")
+	assert_eq(
+		c, UIThemeConstants.ACCENT_COLOR,
+		"Unknown store should return ACCENT_COLOR fallback"
+	)
 
 
-func test_all_five_store_accents_distinct() -> void:
+func test_store_accents_distinct() -> void:
 	var seen: Array[Color] = []
 	for sid: String in UIThemeConstants.STORE_ACCENTS:
 		var c: Color = UIThemeConstants.STORE_ACCENTS[sid]

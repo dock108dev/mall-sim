@@ -74,8 +74,11 @@ signal item_lost(item_id: String, reason: String)
 ## Emitted when a sold item is later flagged as defective (failed warranty,
 ## customer return, broken-on-arrival). Drives angry_return_customer spawn gate.
 signal defective_sale_occurred(item_id: String, reason: String)
-## Emitted by ReturnsSystem when an item enters the damaged bin (post-accept
-## return) so listeners can update the bin UI and inventory variance accounting.
+## Emitted when an item enters the damaged bin so listeners can update the
+## bin UI and inventory variance accounting. The post-strip-to-bones beta
+## has no live emitter (ReturnsSystem was deleted); `LedgerSystem` and
+## `HiddenThreadSystemSingleton` listen and `tests/unit/test_hidden_thread_system.gd`
+## exercises the listener contract by emitting this directly.
 signal defective_item_received(item_id: String)
 signal lease_requested(store_id: StringName, slot_index: int, store_name: String)
 signal lease_completed(store_id: StringName, success: bool, message: String)
@@ -110,10 +113,6 @@ signal drawer_closed(store_id: StringName)
 signal action_drawer_opened(mode: int)
 ## Emitted by ActionDrawer when it collapses back to the chrome button bar (IDLE).
 signal action_drawer_closed()
-## Emitted by ActionDrawer when the player accepts an incoming trade offer.
-signal trade_player_accepted()
-## Emitted by ActionDrawer when the player declines an incoming trade offer.
-signal trade_player_declined()
 
 # ── Store Actions (ActionDrawer) ──────────────────────────────────────────────
 ## Emitted by a StoreController when it enters; carries the list of action
@@ -208,8 +207,6 @@ signal haggle_failed(item_id: String, customer_id: int)
 signal haggle_resolved(item_id: StringName, final_price: float, haggle_multiplier: float)
 ## Emitted by HaggleSystem when the customer's mood tier changes during negotiation.
 signal customer_mood_changed(item_id: StringName, mood: String)
-## Emitted by SportsMemorabiliaController when an authenticated item sells via accepted haggle.
-signal bonus_sale_completed(item_id: StringName, bonus_amount: float)
 ## Emitted by HaggleSystem alongside its local negotiation_started for ActionDrawer listeners.
 signal haggle_negotiation_started(
 	item_name: String,
@@ -288,7 +285,6 @@ signal market_event_started(event_id: String)
 signal market_event_ended(event_id: String)
 signal market_event_active(event_id: StringName, modifier: Dictionary)
 signal market_event_expired(event_id: StringName)
-signal market_event_triggered(event_id: StringName, store_id: StringName, effect: Dictionary)
 signal random_event_started(event_id: String)
 signal random_event_ended(event_id: String)
 ## Emitted by RandomEventSystem at STORE_CLOSE_HOUR - 12 on days 3+ to telegraph
@@ -302,76 +298,9 @@ signal trend_shifted(category_id: StringName, new_level: float)
 ## Emitted by TrendSystem when a category's effective trend multiplier changes.
 signal trend_updated(category: StringName, multiplier: float)
 
-# ── Seasonal Events ──────────────────────────────────────────────────────────
-signal seasonal_event_announced(event_id: String)
-## Fires telegraph_days before seasonal_event_started; gives players advance notice.
-signal event_telegraphed(event_id: String, days_until: int)
-signal seasonal_event_started(event_id: String)
-signal seasonal_event_ended(event_id: String)
-
-# ── Calendar Seasons ─────────────────────────────────────────────────────────
-signal season_changed(new_season: int, old_season: int)
-signal seasonal_multipliers_updated(multipliers: Dictionary)
-
-# ── Season Cycle (Sports Memorabilia) ─────────────────────────────────────────
-signal season_cycle_shifted(new_hot_league: String, old_hot_league: String)
-signal season_cycle_announced(next_hot_league: String, days_until: int)
-
-# ── Authentication (Sports Memorabilia) ───────────────────────────────────────
-signal authentication_started(item_id, cost: float)
-signal authentication_completed(item_id, success: bool, result)
-signal authentication_dialog_requested(item_id)
-signal authentication_rejected(item_id: StringName)
-## Emitted by ActionDrawer when the player submits an item for authentication at a tier.
-## tier matches SportsMemorabiliaController.AuthTier (0=ECONOMY, 1=EXPRESS, 2=PREMIUM).
-signal authentication_player_submitted(item_id: String, tier: int)
-## Emitted when an item is submitted to CARB for multi-state grading.
-## tier matches SportsMemorabiliaController.AuthTier (0=ECONOMY, 1=EXPRESS, 2=PREMIUM).
-signal store_auth_started(item_id: StringName, tier: int, cost: float)
-## Emitted when CARB finalizes grading. grade is the AuthGrade int value (0–10, skips 6).
-signal store_auth_resolved(item_id: StringName, grade: int, final_value: float)
-
-# ── Sports Cards — Authentication & Grading ───────────────────────────────────
-## Emitted when provenance_score meets the authentication threshold.
-signal card_authenticated(item_id: StringName)
-## Emitted when provenance_score falls below the authentication threshold.
-signal card_rejected(item_id: StringName)
-## Emitted after authentication succeeds with the assigned grade (F/D/C/B/A/S).
-signal card_graded(item_id: StringName, grade: String)
-
-# ── Sports Cards — Grading Hint & Fake Sale Penalty ──────────────────────────
-## Emitted by SportsMemorabiliaController.request_grading_hint() after a paid
-## probabilistic hint is stamped onto the item. hint is one of
-## "authentic" | "questionable" | "fake"; fee is the charge deducted.
-signal grading_hint_revealed(item_id: StringName, hint: String, fee: float)
-## Emitted when the player sells a card the hidden true_authenticity of which
-## is "fake" while declaring it authentic. reputation_delta is negative.
-signal fake_sold_as_authentic(
-	item_id: StringName,
-	store_id: StringName,
-	price: float,
-	reputation_delta: float,
-)
-
-# ── Sports Cards — ACC Numeric Grading ───────────────────────────────────────
-## Emitted when the player submits a card to the Apex Card Certification service.
-## card_id is the item instance_id; day_submitted is the current game day.
-signal grade_submitted(card_id: StringName, day_submitted: int)
-## Emitted at day_started of day N+1 for each card submitted on day N.
-## grade is a numeric int 1–10 matching PriceResolver.NUMERIC_GRADE_MULTIPLIERS.
-signal grade_returned(card_id: StringName, grade: int)
-## Emitted by SportsMemorabiliaController on day_ended with a summary of grading
-## activity: pending_count is cards still in queue; returned is an Array of
-## Dictionaries with keys {card_id, card_name, grade, grade_label}.
-signal grading_day_summary(pending_count: int, returned: Array)
-
-# ── Card Condition Grading (Sports Memorabilia) ───────────────────────────────
-## Emitted by ConditionPickerDialog when the player confirms a condition grade.
-signal card_condition_selected(item_id: StringName, condition: String)
-## Emitted to request the condition picker dialog for a sports card item.
-signal condition_picker_requested(item_id: StringName)
+# ── Pricing ──────────────────────────────────────────────────────────────────
 ## Emitted by PriceResolver.resolve_for_item after the full multiplier chain
-## (base → seasonal → reputation → event → haggle) has produced a final price.
+## has produced a final price.
 signal price_resolved(item_id: StringName, final_price: float, audit_steps: Array)
 
 # ── Provenance Verification (Sports Memorabilia) ─────────────────────────────
@@ -398,95 +327,6 @@ signal refurbishment_completed(item_id: String, success: bool, new_condition: St
 signal refurbishment_failed(item_id: String)
 ## Emitted by ActionDrawer when the player queues an item for refurbishment.
 signal refurb_player_queued(store_id: StringName)
-
-# ── Pack Opening ──────────────────────────────────────────────────────────────
-signal pack_opening_started(pack_id: String, card_results: Array[Dictionary])
-signal pack_opened(pack_id: String, cards: Array[String])
-signal items_revealed(pack_id: String, creatures: Array)
-## Emitted after pack_opened when at least one card is holo_rare, secret_rare, or ultra_rare.
-signal rare_pull_occurred(pack_id: String)
-
-# ── Tournament ────────────────────────────────────────────────────────────────
-signal tournament_started(participant_count: int, cost: float)
-signal tournament_completed(participant_count: int, revenue: float)
-signal tournament_resolved(winner_id: StringName, prize: float)
-
-# ── Tournament Events (Scheduled) ────────────────────────────────────────────
-signal tournament_event_announced(event_id: String)
-signal tournament_event_started(event_id: String)
-signal tournament_event_ended(event_id: String)
-## Emitted telegraph_days before a scheduled tournament starts.
-signal tournament_telegraphed(tournament_id: String)
-## Emitted at the close of a scheduled tournament's last day with a result summary.
-signal tournament_ended(tournament_id: String, result_summary: Dictionary)
-
-# ── Meta Shift (PocketCreatures) ─────────────────────────────────────────────
-signal meta_shift_announced(rising: Array[String], falling: Array[String])
-signal meta_shift_activated(rising: Array[String], falling: Array[String])
-signal meta_shift_started(card_id: StringName, modifier: float, duration: int)
-signal meta_shift_ended(card_id: StringName)
-## Emitted 1 day before a JSON-defined meta shift activates.
-signal meta_shift_telegraphed(shift_id: String, affected_types: Array[String], message: String)
-## Emitted when a JSON-defined meta shift becomes active; PriceResolver callers
-## should fetch updated multipliers.
-signal meta_shift_applied(
-	shift_id: String, affected_types: Array[String], multiplier: float
-)
-
-# ── Rental ────────────────────────────────────────────────────────────────────
-signal item_rented(item_id: String, rental_fee: float, rental_tier: String)
-signal rental_returned(item_id: String, degraded: bool)
-signal rental_late_fee(item_id: String, late_fee: float, days_late: int)
-signal rental_item_lost(item_id: String)
-## Canonical rental lifecycle signals (aliases kept for backward compatibility).
-signal title_rented(item_id: String, rental_fee: float, rental_tier: String)
-signal title_returned(item_id: String, degraded: bool)
-## Player waived a late fee; reputation_delta is the positive rep awarded.
-signal late_fee_waived(item_id: String, amount: float, reputation_delta: float)
-## Player (or auto-collect) collected a late fee from an overdue return.
-signal late_fee_collected(item_id: String, amount: float, days_late: int)
-## Emitted at day transition for each item still out past its deadline.
-## customer_id may be empty when the rental was created without one.
-signal rental_overdue(customer_id: String, item_id: String)
-## Canonical store-scoped rental lifecycle signals.
-signal store_rental_started(item_id: String, customer_id: String, due_day: int)
-signal store_rental_returned(item_id: String, late_days: int)
-signal store_rental_overdue(customer_id: String, item_id: String)
-
-# ── Warranty ──────────────────────────────────────────────────────────────────
-signal warranty_purchased(item_id: String, warranty_fee: float)
-signal warranty_claim_triggered(item_id: String, replacement_cost: float)
-signal warranty_offer_presented(item_id: String)
-## Emitted when a customer accepts a warranty pitch for a specific tier.
-signal warranty_accepted(item_id: String, tier_id: String, warranty_fee: float)
-## Emitted when a customer declines a warranty pitch for a specific tier.
-signal warranty_declined(item_id: String, tier_id: String)
-## Emitted by ActionDrawer when the player confirms offering warranty to the customer.
-signal warranty_player_accepted(item_id: String, tier_id: String)
-## Emitted by ActionDrawer when the player skips the warranty pitch.
-signal warranty_player_declined(item_id: String)
-
-# ── Demo Station ──────────────────────────────────────────────────────────────
-signal demo_item_placed(item_id: String)
-signal demo_item_removed(item_id: String, days_on_demo: int)
-signal demo_item_degraded(item_id: String, new_condition: String)
-signal demo_interaction_triggered(item_id: String)
-## Emitted when a demo unit is activated on the floor (canonical mechanic signal).
-signal demo_unit_activated(item_id: String, category: String)
-## Emitted when a demo unit is removed from the floor (canonical mechanic signal).
-signal demo_unit_removed(item_id: String, days_on_demo: int)
-## Emitted when a demo unit is retired to inventory at its depreciated value.
-signal demo_item_retired(item_id: String, remaining_value: float)
-## Emitted when a same-category sale occurs while a demo unit is active. The
-## amount is the portion of the sale price attributable to the demo buff.
-signal demo_contribution_recorded(amount: float)
-
-# ── Electronics Lifecycle ─────────────────────────────────────────────────────
-signal electronics_product_announced(product_line: String, generation: int, launch_day: int)
-signal electronics_product_launched(product_line: String, generation: int)
-signal electronics_phase_changed(item_id: String, old_phase: String, new_phase: String)
-signal product_entered_decline(item_id: String)
-signal product_entered_clearance(item_id: String)
 
 # ── Progression and Milestones ────────────────────────────────────────────────
 ## Emitted by MilestoneSystem when a milestone condition is first satisfied.
@@ -657,6 +497,17 @@ signal toast_requested(message: String, category: StringName, duration: float)
 ## label; `count` is the literal display value.
 signal beta_carry_changed(text: String)
 signal beta_shelf_count_changed(count: int)
+## Companion to `beta_shelf_count_changed`: drives the FP HUD's "Back Room"
+## counter so the back-room delivery quantity is visible at the same tier
+## as on-shelf stock. The Day-1 chain emits `count = 5` on backroom pickup
+## and `count = 0` after the player stocks the shelf (the on-shelves
+## counter ticks in the opposite direction on the same beat).
+signal beta_backroom_count_changed(count: int)
+## Emitted by `BetaDayOneController` when one of the day-1 chain
+## objectives is marked complete. Lets the Today checklist mark the
+## item with a checkmark and collapse it without coupling the checklist
+## to the controller's private state.
+signal beta_objective_completed(objective_id: StringName)
 signal panel_opened(panel_name: String)
 signal panel_closed(panel_name: String)
 ## Emitted by ObjectiveDirector whenever the three-slot objective display should update.
@@ -670,6 +521,12 @@ signal objective_updated(payload: Dictionary)
 signal keybind_changed(action: String, new_event: InputEventKey)
 signal item_tooltip_requested(item: ItemInstance)
 signal item_tooltip_hidden()
+## Emitted by the HUD when first-person mode is toggled. Listeners that need
+## to switch their layout/visibility based on whether the player is in FP
+## (e.g. ObjectiveRail surfaces the focused interactable inline; the
+## standalone InteractionPrompt hides) subscribe here instead of polling
+## `HUD._fp_mode` across scene boundaries.
+signal fp_mode_changed(enabled: bool)
 
 # ── Input ─────────────────────────────────────────────────────────────────
 signal cursor_locked()
@@ -840,24 +697,6 @@ signal hold_conflict_bypassed(
 ## when the walk-in offer is accepted. Fires on either resolution so tutorial
 ## progression is non-blocking.
 signal hold_decision_made(item_id: StringName, honored: bool)
-
-
-# ── Returns and Exchanges ────────────────────────────────────────────────────
-## Emitted by ReturnsSystem when the angry-return decision flow opens for the
-## player. Listeners (HUD, telemetry) can pre-populate context. customer_id
-## carries the StringName id of the returning NPC; reason is the defect label
-## (e.g. "scratched_disc", "wrong_platform").
-signal return_initiated(
-	customer_id: StringName, item_id: StringName, reason: String
-)
-## Emitted by ReturnsSystem when the player accepts a return. resolution_type is
-## one of "refund" or "exchange" so listeners can branch on whether cash moved.
-signal return_accepted(
-	customer_id: StringName, item_id: StringName, resolution_type: String
-)
-## Emitted by ReturnsSystem when the player denies a return outright. Listeners
-## may bump unhappy-customer telemetry or trigger reputation penalties.
-signal return_denied(customer_id: StringName, item_id: StringName)
 
 
 # ── Trade-In Intake ──────────────────────────────────────────────────────────

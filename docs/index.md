@@ -56,7 +56,8 @@ This is the active project documentation set for Mallcore Sim.
 ## Boundary
 
 `README.md` is the only active project doc at the repository root.
-`docs/BRAINDUMP.md` is the customer-voice state assessment and is not edited by
-documentation passes. Markdown under `.github/`, `tools/`, `addons/`, and
-similar folders is configuration, templates, vendored material, or tooling
-support rather than the active game documentation set.
+`BRAINDUMP.md` (also at the repository root) is the customer-voice state
+assessment and is not edited by documentation passes. Markdown under
+`.github/`, `tools/`, `addons/`, and similar folders is configuration,
+templates, vendored material, or tooling support rather than the active game
+documentation set.

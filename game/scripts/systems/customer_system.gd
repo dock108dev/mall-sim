@@ -89,7 +89,6 @@ var _time_scale: float = 1.0
 var _spawn_check_timer: float = 0.0
 var _lod_timer: float = 0.0
 var _current_day_of_week: int = 0
-var _seasonal_density_modifier: float = 1.0
 var _current_archetype_weights: Dictionary = (
 	ShopperArchetypeConfig.WEIGHTS_MORNING
 )
@@ -516,7 +515,7 @@ func get_spawn_target() -> int:
 	)
 	var raw_target: float = (
 		density * float(max_customers_in_mall)
-		* dow_modifier * _seasonal_density_modifier
+		* dow_modifier
 		* traffic_mult * _active_event_spawn_modifier
 	)
 	return mini(roundi(raw_target), max_customers_in_mall)
@@ -564,12 +563,6 @@ func _connect_signals() -> void:
 		_on_staff_morale_changed
 	):
 		EventBus.staff_morale_changed.connect(_on_staff_morale_changed)
-	if not EventBus.seasonal_multipliers_updated.is_connected(
-		_on_seasonal_multipliers_updated
-	):
-		EventBus.seasonal_multipliers_updated.connect(
-			_on_seasonal_multipliers_updated
-		)
 	if not EventBus.unlock_granted.is_connected(_on_unlock_granted):
 		EventBus.unlock_granted.connect(_on_unlock_granted)
 	if not EventBus.market_event_active.is_connected(_on_market_event_active):
@@ -799,23 +792,6 @@ func _decrement_active_mall_shopper_count() -> void:
 	_active_mall_shopper_count = maxi(
 		_active_mall_shopper_count - 1, 0
 	)
-
-
-func _on_seasonal_multipliers_updated(
-	multipliers: Dictionary
-) -> void:
-	if multipliers.is_empty():
-		_seasonal_density_modifier = 1.0
-		return
-	var total: float = 0.0
-	var count: int = 0
-	for store_id: String in multipliers:
-		total += float(multipliers[store_id])
-		count += 1
-	if count > 0:
-		_seasonal_density_modifier = total / float(count)
-	else:
-		_seasonal_density_modifier = 1.0
 
 
 func _on_speed_changed(new_speed: float) -> void:

@@ -104,8 +104,8 @@ var _notes_loaded: bool = false
 var _confrontation_emitted_this_day: bool = false
 
 # Private RNG used for note variant selection — kept separate from the global
-# generator so EventBus.day_started listeners that seed the global RNG (e.g.
-# WarrantyManager claim rolls) are not perturbed by note picking.
+# generator so EventBus.day_started listeners that seed the global RNG are
+# not perturbed by note picking.
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
@@ -370,10 +370,23 @@ func _unlock_override_note(unlock_id: String) -> Dictionary:
 	return {}
 
 
+## See `_end_of_day_comment` (§F-147) for the structural-break vs. per-entry
+## warning split. This function follows the same contract: a missing tier
+## block warns (test fixtures may inject partial dicts); a tier with neither
+## the requested category nor the operational fallback errors (content
+## break); a single malformed candidate warns and lets the next call recover.
+## See §EH-21.
 func _tier_category_note(tier: StringName, category: StringName) -> Dictionary:
 	var tier_notes: Dictionary = _notes.get("tier_notes", {}) as Dictionary
 	var tier_block: Variant = tier_notes.get(String(tier), null)
 	if tier_block is not Dictionary:
+		push_warning(
+			(
+				"ManagerRelationshipManager: `tier_notes.%s` block is missing or "
+				+ "not a Dictionary in %s (got %s); falling back to global note."
+			)
+			% [String(tier), NOTES_PATH, type_string(typeof(tier_block))]
+		)
 		return _fallback_note(true)
 	var tier_dict: Dictionary = tier_block as Dictionary
 	var candidates: Variant = tier_dict.get(String(category), null)
@@ -381,10 +394,31 @@ func _tier_category_note(tier: StringName, category: StringName) -> Dictionary:
 		# Operational fallback so the lookup never lands on a missing key.
 		candidates = tier_dict.get(String(CATEGORY_OPERATIONAL), null)
 	if candidates is not Array or (candidates as Array).is_empty():
+		push_error(
+			(
+				"ManagerRelationshipManager: tier `%s` has no candidates for "
+				+ "category `%s` and no `%s` fallback in %s; "
+				+ "falling back to global note."
+			)
+			% [
+				String(tier), String(category),
+				String(CATEGORY_OPERATIONAL), NOTES_PATH,
+			]
+		)
 		return _fallback_note(true)
 	var arr: Array = candidates as Array
 	var entry: Variant = arr[_rng.randi() % arr.size()]
 	if entry is not Dictionary:
+		push_warning(
+			(
+				"ManagerRelationshipManager: malformed candidate at "
+				+ "`tier_notes.%s.%s` (%s); note dropped."
+			)
+			% [
+				String(tier), String(category),
+				type_string(typeof(entry)),
+			]
+		)
 		return _fallback_note(true)
 	var dict: Dictionary = entry as Dictionary
 	return {

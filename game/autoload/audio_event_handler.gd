@@ -26,12 +26,8 @@ func _connect_sfx_signals() -> void:
 	EventBus.milestone_unlocked.connect(_on_milestone_unlocked)
 	EventBus.fixture_placed.connect(_on_fixture_placed)
 	EventBus.fixture_placement_invalid.connect(_on_fixture_placement_invalid)
-	EventBus.pack_opened.connect(_on_pack_opened)
 	EventBus.refurbishment_started.connect(_on_refurbishment_started)
 	EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
-	EventBus.item_rented.connect(_on_item_rented)
-	EventBus.authentication_completed.connect(_on_authentication_completed)
-	EventBus.demo_item_placed.connect(_on_demo_item_placed)
 
 
 func _connect_state_signals() -> void:
@@ -48,8 +44,6 @@ func _connect_state_signals() -> void:
 	EventBus.build_mode_exited.connect(_on_build_mode_exited)
 	EventBus.drawer_opened.connect(_on_drawer_opened)
 	EventBus.drawer_closed.connect(_on_drawer_closed)
-	EventBus.warranty_accepted.connect(_on_warranty_accepted)
-	EventBus.rare_pull_occurred.connect(_on_rare_pull_occurred)
 
 
 func _on_item_sold(_id: String, _p: float, _c: String) -> void:
@@ -123,10 +117,6 @@ func _on_fixture_placement_invalid(_reason: String) -> void:
 	_audio.play_sfx("build_error")
 
 
-func _on_pack_opened(_pack_id: String, _cards: Array[String]) -> void:
-	_audio.play_sfx("pack_opening")
-
-
 func _on_refurbishment_started(
 	_item_id: String, _cost: float, _duration: int
 ) -> void:
@@ -137,22 +127,6 @@ func _on_refurbishment_completed(
 	_item_id: String, _success: bool, _condition: String
 ) -> void:
 	_audio.play_sfx("refurbish_complete")
-
-
-func _on_item_rented(
-	_item_id: String, _fee: float, _tier: String
-) -> void:
-	_audio.play_sfx("tape_insert")
-
-
-func _on_authentication_completed(
-	_item_id: Variant, _is_genuine: bool, _result: Variant = null
-) -> void:
-	_audio.play_sfx("auth_reveal")
-
-
-func _on_demo_item_placed(_item_id: String) -> void:
-	_audio.play_sfx("demo_activate")
 
 
 func _on_game_state_changed(_old: int, new_state: int) -> void:
@@ -220,16 +194,6 @@ func _on_drawer_closed(_store_id: StringName) -> void:
 	_audio.unduck_hub_ambience()
 
 
-func _on_warranty_accepted(
-	_item_id: String, _tier_id: String, _fee: float
-) -> void:
-	_audio.play_sfx("warranty_confirm")
-
-
-func _on_rare_pull_occurred(_pack_id: String) -> void:
-	_audio.play_sfx("rare_pull")
-
-
 func _play_store_music() -> void:
 	var store_id: String = String(GameManager.get_active_store_id())
 	if store_id.is_empty():
@@ -238,6 +202,19 @@ func _play_store_music() -> void:
 	_play_store_music_for(store_id)
 
 
+## Falls back to mall hallway audio on unknown / empty `store_id` (the player
+## is legitimately outside any store). The `store_def == null` and empty
+## `music` / `ambient_sound` branches are content-authoring regressions for
+## production stores — but `_validate_store` (`content_registry.gd:394`)
+## does *not* validate these fields at boot, and multiple integration tests
+## (`compat_store`, `test_store` fixtures in
+## `test_npc_spawn_pipeline.gd`, `test_customer_npc_lifecycle.gd`) emit
+## `store_entered` with StoreDefinitions whose `music` / `ambient_sound`
+## are empty. Per §EH-10, the runtime fallback warns (not errors) so test
+## seams remain green while the diagnostic still surfaces in the test-run
+## log. A production store with no music/ambient is observable as the
+## warning; if a hardening pass adds boot-time validation to
+## `_validate_store`, escalate these to `push_error`. See §EH-20.
 func _play_store_music_for(store_id: String) -> void:
 	if not ContentRegistry.exists(store_id):
 		_audio.play_bgm("mall_hallway_music")
@@ -247,11 +224,19 @@ func _play_store_music_for(store_id: String) -> void:
 		canonical
 	)
 	if store_def == null:
+		push_warning(
+			"AudioEventHandler: store '%s' resolved but no StoreDefinition; falling back to hallway music"
+			% canonical
+		)
 		_audio.play_bgm("mall_hallway_music")
 		return
 
 	var music_path: String = store_def.music
 	if music_path.is_empty():
+		push_warning(
+			"AudioEventHandler: store '%s' has empty music field; falling back to hallway music"
+			% canonical
+		)
 		_audio.play_bgm("mall_hallway_music")
 		return
 
@@ -266,6 +251,7 @@ func _play_store_ambient() -> void:
 	_play_store_ambient_for(store_id)
 
 
+## See `_play_store_music_for` for the fallback contract (§EH-20).
 func _play_store_ambient_for(store_id: String) -> void:
 	if not ContentRegistry.exists(store_id):
 		_audio.play_ambient("mall_hallway")
@@ -275,11 +261,19 @@ func _play_store_ambient_for(store_id: String) -> void:
 		canonical
 	)
 	if store_def == null:
+		push_warning(
+			"AudioEventHandler: store '%s' resolved but no StoreDefinition; falling back to hallway ambient"
+			% canonical
+		)
 		_audio.play_ambient("mall_hallway")
 		return
 
 	var ambient_path: String = store_def.ambient_sound
 	if ambient_path.is_empty():
+		push_warning(
+			"AudioEventHandler: store '%s' has empty ambient_sound field; falling back to hallway ambient"
+			% canonical
+		)
 		_audio.play_ambient("mall_hallway")
 		return
 

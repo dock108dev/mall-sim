@@ -428,9 +428,9 @@ func get_backroom_items() -> Array[ItemInstance]:
 
 ## Returns every item currently sitting in the back-room damaged bin. Damaged
 ## bin items are excluded from resale paths (no shelf placement, no checkout
-## stock lookup); ReturnsSystem reconciles the bin contents against its
-## resolved-return ledger to surface inventory_variance_noted when the two
-## diverge.
+## stock lookup). The back-room inventory panel reads this list to surface
+## `inventory_variance_noted` when the bin diverges from the resolved-return
+## ledger.
 func get_damaged_bin_items() -> Array[ItemInstance]:
 	var result: Array[ItemInstance] = []
 	for item: ItemInstance in _items.values():

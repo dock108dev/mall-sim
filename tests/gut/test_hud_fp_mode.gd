@@ -180,14 +180,6 @@ func test_fp_mode_hides_speed_button() -> void:
 	)
 
 
-func test_fp_mode_hides_seasonal_event_label() -> void:
-	_hud.set_fp_mode(true)
-	assert_false(
-		_hud.get_node("SeasonalEventLabel").visible,
-		"SeasonalEventLabel must be hidden in FP mode"
-	)
-
-
 func test_fp_mode_hides_telegraph_card() -> void:
 	_hud.set_fp_mode(true)
 	assert_false(
@@ -385,6 +377,118 @@ func test_disable_fp_mode_hides_close_day_hint() -> void:
 		hint.visible,
 		"FP close-day hint must be hidden after set_fp_mode(false)"
 	)
+
+
+## Compact-stat typography contract: the three top-right readouts must read
+## as secondary info — small font, dimmed white — so they do not feel like
+## a debug overlay competing with primary cash/time and never tie a toast
+## or modal title in size + brightness.
+func test_fp_mode_stat_labels_have_compact_font_size() -> void:
+	_hud.set_fp_mode(true)
+	for lbl: Label in [
+		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
+	]:
+		var size: int = lbl.get_theme_font_size("font_size")
+		assert_lte(
+			size, 14,
+			"%s font_size must be <=14 px in FP mode (got %d)" % [lbl.name, size]
+		)
+
+
+func test_fp_mode_stat_labels_have_dimmed_color() -> void:
+	_hud.set_fp_mode(true)
+	for lbl: Label in [
+		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
+	]:
+		var c: Color = lbl.get_theme_color("font_color")
+		assert_lte(
+			c.a, 0.65,
+			"%s font_color alpha must be <=0.65 in FP mode (got %.2f)" % [lbl.name, c.a]
+		)
+
+
+func test_fp_mode_cash_label_brighter_than_stats() -> void:
+	# Within-HUD hierarchy: cash is primary info, must out-weight the
+	# secondary right-cluster on either size or contrast (here: both).
+	_hud.set_fp_mode(true)
+	var cash_size: int = _hud._cash_label.get_theme_font_size("font_size")
+	var stat_size: int = _hud._items_placed_label.get_theme_font_size("font_size")
+	assert_gt(
+		cash_size, stat_size,
+		"CashLabel font_size (%d) must exceed stat font_size (%d) in FP mode" % [
+			cash_size, stat_size,
+		]
+	)
+	var cash_alpha: float = _hud._cash_label.get_theme_color("font_color").a
+	var stat_alpha: float = _hud._items_placed_label.get_theme_color("font_color").a
+	assert_gt(
+		cash_alpha, stat_alpha,
+		"CashLabel font alpha (%.2f) must exceed stat alpha (%.2f) in FP mode" % [
+			cash_alpha, stat_alpha,
+		]
+	)
+
+
+func test_fp_mode_time_label_brighter_than_stats() -> void:
+	_hud.set_fp_mode(true)
+	var time_size: int = _hud._time_label.get_theme_font_size("font_size")
+	var stat_size: int = _hud._sales_today_label.get_theme_font_size("font_size")
+	assert_gt(
+		time_size, stat_size,
+		"TimeLabel font_size (%d) must exceed stat font_size (%d) in FP mode" % [
+			time_size, stat_size,
+		]
+	)
+
+
+## BRAINDUMP non-negotiable: the mystery / hidden-thread system must not
+## surface "meters or named mechanics" in the player-facing HUD. This guard
+## walks the HUD subtree and rejects any Label whose name or text contains
+## a forbidden term, so a regression that adds a thread/affinity readout
+## fails immediately.
+func test_fp_mode_no_player_visible_thread_or_affinity_meters() -> void:
+	_hud.set_fp_mode(true)
+	var forbidden: Array[String] = ["thread", "affinity", "clue"]
+	var stack: Array[Node] = [_hud]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		for child: Node in node.get_children():
+			stack.push_back(child)
+		if node is Label:
+			var name_lower: String = String(node.name).to_lower()
+			var text_lower: String = (node as Label).text.to_lower()
+			for term: String in forbidden:
+				assert_false(
+					name_lower.contains(term),
+					"HUD label name '%s' contains forbidden mystery term '%s'" % [
+						node.name, term,
+					]
+				)
+				assert_false(
+					text_lower.contains(term),
+					"HUD label text '%s' contains forbidden mystery term '%s'" % [
+						(node as Label).text, term,
+					]
+				)
+
+
+func test_disable_fp_mode_clears_typography_overrides() -> void:
+	# Theme overrides must not leak into the desktop TopBar layout, otherwise
+	# the manager view inherits the dimmed compact treatment meant only for FP.
+	_hud.set_fp_mode(true)
+	_hud.set_fp_mode(false)
+	for lbl: Label in [
+		_hud._cash_label, _hud._time_label,
+		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
+	]:
+		assert_false(
+			lbl.has_theme_font_size_override("font_size"),
+			"%s must not retain font_size override after FP mode disabled" % lbl.name
+		)
+		assert_false(
+			lbl.has_theme_color_override("font_color"),
+			"%s must not retain font_color override after FP mode disabled" % lbl.name
+		)
 
 
 func test_state_change_in_fp_mode_keeps_top_bar_hidden() -> void:

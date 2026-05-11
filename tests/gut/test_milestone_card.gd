@@ -6,6 +6,8 @@ var _card: MilestoneCard
 const _SCENE: PackedScene = preload(
 	"res://game/scenes/ui/milestone_card.tscn"
 )
+const _CONFIRM_ID: String = "employee_register_unlock"
+const _TOAST_ID: String = "ms_test"
 
 
 func _make_card(notification: bool) -> MilestoneCard:
@@ -13,6 +15,12 @@ func _make_card(notification: bool) -> MilestoneCard:
 	c.notification_mode = notification
 	add_child_autofree(c)
 	return c
+
+
+func after_each() -> void:
+	if is_instance_valid(_card):
+		_card._reset_for_tests()
+	InputFocus._reset_for_tests()
 
 
 # ── Notification mode ────────────────────────────────────────────────────────
@@ -163,3 +171,94 @@ func test_row_title_label_is_hidden() -> void:
 func test_notification_status_label_is_hidden() -> void:
 	_card = _make_card(true)
 	assert_false(_card._status_label.visible, "StatusLabel should be hidden in notification mode")
+
+
+# ── Confirm mode (requires_confirm milestones) ───────────────────────────────
+
+func test_confirm_milestone_shows_continue_button() -> void:
+	_card = _make_card(true)
+	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
+	assert_true(
+		_card._continue_button.visible,
+		"Continue button must be visible for a requires_confirm milestone"
+	)
+
+
+func test_confirm_milestone_grabs_focus_on_open() -> void:
+	_card = _make_card(true)
+	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
+	assert_true(
+		_card._continue_button.has_focus(),
+		"Continue button must grab keyboard focus when confirm modal opens"
+	)
+
+
+func test_confirm_milestone_pushes_modal_context() -> void:
+	_card = _make_card(true)
+	var baseline: int = InputFocus.depth()
+	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
+	assert_eq(
+		InputFocus.depth(), baseline + 1,
+		"Confirm modal must push exactly one CTX_MODAL frame"
+	)
+	assert_eq(InputFocus.current(), InputFocus.CTX_MODAL)
+
+
+func test_confirm_milestone_shows_inline_reward() -> void:
+	_card = _make_card(true)
+	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
+	assert_true(
+		_card._inline_reward_label.visible,
+		"Inline reward label must be visible in confirm mode when reward present"
+	)
+	assert_eq(_card._inline_reward_label.text, "Register access unlocked")
+
+
+func test_continue_press_pops_modal_and_hides_card() -> void:
+	_card = _make_card(true)
+	var baseline: int = InputFocus.depth()
+	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
+
+	_card._on_continue_pressed()
+	# Skip the slide-out tween for the visibility/state assertion.
+	_card._on_notification_finished()
+
+	assert_eq(
+		InputFocus.depth(), baseline,
+		"Continue press must pop the CTX_MODAL frame back to baseline"
+	)
+	assert_false(_card._is_showing, "Card should not be showing after continue + finish")
+	assert_false(_card.visible, "Card should be hidden after continue + finish")
+	assert_false(_card._continue_button.visible, "Continue button should be hidden after dismiss")
+
+
+func test_toast_milestone_keeps_continue_button_hidden() -> void:
+	_card = _make_card(true)
+	EventBus.milestone_completed.emit(_TOAST_ID, "Toast Milestone", "Bonus")
+	assert_false(
+		_card._continue_button.visible,
+		"Continue button must stay hidden for an auto-dismiss toast milestone"
+	)
+
+
+func test_toast_milestone_does_not_steal_focus() -> void:
+	_card = _make_card(true)
+	var baseline: int = InputFocus.depth()
+	EventBus.milestone_completed.emit(_TOAST_ID, "Toast Milestone", "Bonus")
+	assert_eq(
+		InputFocus.depth(), baseline,
+		"Auto-dismiss toast must not push CTX_MODAL"
+	)
+	assert_false(
+		_card._continue_button.has_focus(),
+		"Auto-dismiss toast must not grab keyboard focus from gameplay"
+	)
+
+
+func test_notification_title_label_is_hidden() -> void:
+	_card = _make_card(true)
+	assert_false(
+		_card._title_label.visible,
+		"Static 'Milestone Complete!' TitleLabel must be hidden in notification mode "
+		+ "to remove duplicate-title look"
+	)

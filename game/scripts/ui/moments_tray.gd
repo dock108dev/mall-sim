@@ -28,11 +28,28 @@ var _total_cards_shown: int = 0
 
 
 func _ready() -> void:
+	add_to_group("moments_tray")
 	EventBus.moment_displayed.connect(_on_moment_displayed)
-	if EventBus.has_signal("day_started"):
-		EventBus.day_started.connect(_on_day_started)
-	if EventBus.has_signal("day_ended"):
-		EventBus.day_ended.connect(_on_day_ended)
+	# §EH-13 — `day_started` and `day_ended` are owner-declared on the
+	# autoload `EventBus`. Drop the `has_signal` guards: a renamed signal
+	# would silently disconnect the daily reset, leaving cards-shown-today
+	# stuck at the previous run's value.
+	EventBus.day_started.connect(_on_day_started)
+	EventBus.day_ended.connect(_on_day_ended)
+
+
+## Suppresses the tray for beta runs. Disconnects the ambient moment
+## listener so any system that still emits `EventBus.moment_displayed`
+## (background NPC schedulers, milestone bleed-through, etc.) cannot
+## queue a card, clears any in-flight cards/queues, and hides the tray
+## entirely so the bottom-right corner stays clear for the beta Today
+## checklist. Idempotent — safe to call multiple times.
+func disable_for_beta() -> void:
+	if EventBus.moment_displayed.is_connected(_on_moment_displayed):
+		EventBus.moment_displayed.disconnect(_on_moment_displayed)
+	clear_queue()
+	_suspended = true
+	visible = false
 
 
 # ── public API ───────────────────────────────────────────────────────────────

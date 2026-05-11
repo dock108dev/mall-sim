@@ -761,3 +761,99 @@ func test_bargain_bin_section_sign_faces_main_floor_approach() -> void:
 		sign.billboard, BaseMaterial3D.BILLBOARD_ENABLED,
 		"bargain_bin/SectionSign must billboard so it faces the main-floor approach from any angle"
 	)
+
+
+# ── Storefront silhouette header proportion ────────────────────────────────
+# The dark-purple SilhouetteHeaderPanel is a backdrop band behind the
+# emissive SignBacking ("SHELF LIFE"). It must stay subordinate to the sign
+# (≤ SignBacking width) and must not clip the 3.5 m ceiling, otherwise the
+# entrance reads as a floating purple slab.
+
+const _CEILING_HEIGHT: float = 3.5
+
+
+func _box_world_size(mesh_inst: MeshInstance3D) -> Vector3:
+	var box: BoxMesh = mesh_inst.mesh as BoxMesh
+	if box == null:
+		return Vector3.ZERO
+	var basis_scale: Vector3 = mesh_inst.global_transform.basis.get_scale()
+	return Vector3(
+		box.size.x * absf(basis_scale.x),
+		box.size.y * absf(basis_scale.y),
+		box.size.z * absf(basis_scale.z),
+	)
+
+
+func test_silhouette_header_panel_clears_ceiling() -> void:
+	var header: MeshInstance3D = _root.get_node_or_null(
+		"Storefront/SilhouetteHeaderPanel"
+	) as MeshInstance3D
+	assert_not_null(header, "Storefront/SilhouetteHeaderPanel must exist")
+	if header == null:
+		return
+	var size: Vector3 = _box_world_size(header)
+	var top_edge: float = header.global_position.y + size.y * 0.5
+	assert_lte(
+		top_edge, _CEILING_HEIGHT,
+		(
+			"SilhouetteHeaderPanel top edge (y=%.3f) must not clip above the "
+			+ "%.2f m ceiling"
+		) % [top_edge, _CEILING_HEIGHT]
+	)
+
+
+func test_silhouette_header_panel_stays_subordinate_to_sign() -> void:
+	var header: MeshInstance3D = _root.get_node_or_null(
+		"Storefront/SilhouetteHeaderPanel"
+	) as MeshInstance3D
+	var sign_backing: MeshInstance3D = _root.get_node_or_null(
+		"Storefront/SignBacking"
+	) as MeshInstance3D
+	assert_not_null(header, "Storefront/SilhouetteHeaderPanel must exist")
+	assert_not_null(sign_backing, "Storefront/SignBacking must exist")
+	if header == null or sign_backing == null:
+		return
+	var header_width: float = _box_world_size(header).x
+	var sign_width: float = _box_world_size(sign_backing).x
+	assert_lte(
+		header_width, sign_width,
+		(
+			"SilhouetteHeaderPanel width (%.3f m) must be <= SignBacking width "
+			+ "(%.3f m) so the lit sign reads as the dominant entrance element"
+		) % [header_width, sign_width]
+	)
+
+
+func test_silhouette_side_pilasters_unchanged() -> void:
+	# The flanking pilasters are correctly proportioned (0.46 m × 3.5 m).
+	# Guard against accidental scale changes when adjusting the header band.
+	var paths: Array[String] = [
+		"Storefront/SilhouetteLeftPanel",
+		"Storefront/SilhouetteRightPanel",
+	]
+	for path: String in paths:
+		var panel: MeshInstance3D = _root.get_node_or_null(path) as MeshInstance3D
+		assert_not_null(panel, "%s must exist" % path)
+		if panel == null:
+			continue
+		var size: Vector3 = _box_world_size(panel)
+		assert_almost_eq(
+			size.x, 0.46, 0.01,
+			"%s rendered width should remain ≈0.46 m" % path
+		)
+		assert_almost_eq(
+			size.y, 3.5, 0.01,
+			"%s rendered height should remain ≈3.5 m" % path
+		)
+
+
+func test_interior_signage_visible_in_beta() -> void:
+	var interior: Node3D = _root.get_node_or_null("InteriorSignage") as Node3D
+	assert_not_null(interior, "InteriorSignage node must exist")
+	if interior == null:
+		return
+	assert_true(
+		interior.visible,
+		"InteriorSignage must stay visible — it is in _BETA_KEEP_ROOT_NODES "
+		+ "and brands the back wall during beta day one"
+	)

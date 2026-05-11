@@ -40,13 +40,12 @@ func test_fixture_json_entries_include_required_fields() -> void:
 
 func test_content_registry_resolves_fixture_entries() -> void:
 	var wall_shelf_entry: Dictionary = ContentRegistry.get_entry(&"wall_shelf")
-	assert_false(wall_shelf_entry.is_empty(), "wall_shelf should resolve from ContentRegistry")
+	assert_false(
+		wall_shelf_entry.is_empty(),
+		"wall_shelf should resolve from ContentRegistry"
+	)
 	assert_eq(wall_shelf_entry.get("display_name"), "Wall Shelf")
 	assert_eq(int(wall_shelf_entry.get("slot_count", -1)), 4)
-
-	var demo_station_entry: Dictionary = ContentRegistry.get_entry(&"demo_station")
-	assert_false(demo_station_entry.is_empty(), "demo_station should resolve from ContentRegistry")
-	assert_eq(demo_station_entry.get("store_type_restriction"), "consumer_electronics")
 
 
 func test_register_matches_issue_schema() -> void:

@@ -173,7 +173,6 @@ func _ready() -> void:
 		_on_performance_report_ready
 	)
 	EventBus.day_closed.connect(_on_day_closed_payload)
-	EventBus.grading_day_summary.connect(_on_grading_day_summary)
 	EventBus.manager_end_of_day_comment.connect(
 		_on_manager_end_of_day_comment
 	)
@@ -686,14 +685,6 @@ func _set_customer_breakdown_display(shift_summary: Dictionary) -> void:
 
 func _create_grading_label() -> void:
 	_grading_label = DaySummaryLabels.create_grading($Root/Panel/Margin/VBox)
-
-
-func _set_grading_display(pending_count: int, returned: Array) -> void:
-	DaySummaryContent.set_grading(_grading_label, pending_count, returned)
-
-
-func _on_grading_day_summary(pending_count: int, returned: Array) -> void:
-	_set_grading_display(pending_count, returned)
 
 
 func _on_manager_end_of_day_comment(_id: String, body: String) -> void:

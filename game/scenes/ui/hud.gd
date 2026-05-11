@@ -49,8 +49,26 @@ const _REP_ARROW_FADE_IN: float = 0.1
 const _REP_ARROW_HOLD: float = 1.0
 const _REP_ARROW_FADE_OUT: float = 0.4
 const _BUILD_MODE_DIM_ALPHA: float = 0.5
+## Modal-fade contract: HUD opacity drops to 0.3 over 0.15s when CTX_MODAL
+## is on top of the InputFocus stack, restores to 1.0 over 0.15s on pop.
+## Visual plane separation: dim overlay (0.45) → faded HUD (0.3) → modal (1.0).
+const _MODAL_DIM_ALPHA: float = 0.3
+const _MODAL_DIM_DURATION: float = 0.15
 const _COUNTER_PULSE_SCALE: float = 1.08
 const _COUNTER_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
+
+## FP-mode HUD typography contract: the top-right cluster (On Shelves,
+## Customers, Sold Today) reads as compact secondary info — 14 px at 60 %
+## white — so it does not feel like a debug overlay. Cash (top-left) and
+## Day/Time (top-center) are primary info — 18 px at 100 % white — so the
+## within-HUD hierarchy is parseable at a glance. Both tiers stay visually
+## distinct from toast notifications (16 px, brighter) and modal titles
+## (20–22 px, full contrast), which the BRAINDUMP layout spec ranks above
+## the persistent HUD readouts.
+const _FP_STAT_FONT_SIZE: int = 14
+const _FP_PRIMARY_FONT_SIZE: int = 18
+const _FP_STAT_FONT_COLOR: Color = Color(1.0, 1.0, 1.0, 0.6)
+const _FP_PRIMARY_FONT_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 
 ## Day-1 onboarding zero-state hint copy. Condition A (empty shelves) wins
 ## over Condition B (no customers): with no stock the player can't attract
@@ -58,7 +76,6 @@ const _COUNTER_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
 const _HINT_STOCK_FLOOR: String = "Stock shelves to open the lane."
 const _HINT_AWAITING_CUSTOMER: String = "Waiting for the first customer…"
 
-var _telegraphed_events: Dictionary = {}
 var _random_event_telegraph: String = ""
 
 var _current_day: int = 1
@@ -76,6 +93,13 @@ var _cash_scale_tween: Tween
 var _cash_color_tween: Tween
 var _rep_arrow_tween: Tween
 var _dim_tween: Tween
+var _modal_dim_tween: Tween
+## True iff the most recent context_changed put CTX_MODAL on top. Drives
+## the HUD modal-fade tween — flips only on the boolean transition so an
+## intra-modal context_changed (e.g. nested modal stack) does not retrigger
+## the fade. Public via `is_modal_dim_active()` for tests and the debug
+## overlay; do not mutate from outside the HUD.
+var _modal_dim_active: bool = false
 var _close_day_button: Button
 var _hub_back_button: Button
 var _items_placed_count: int = 0
@@ -102,34 +126,38 @@ var _counter_color_tweens: Dictionary = {}
 var _fp_mode: bool = false
 var _fp_orig_indices: Dictionary = {}
 var _fp_close_day_hint: Label
-## §F-L2 — Carry-state label shown only while the player is holding a
-## beta-day-1 stock item. Lives in the bottom-left band above the
-## objective rail. Driven by `EventBus.beta_carry_changed`.
-var _beta_carry_label: Label
 ## §F-L3 — When set, overrides the InventorySystem-derived "On Shelves"
 ## count for the beta day-1 loop. -1 means "no override; read from
 ## inventory as usual." Set via `EventBus.beta_shelf_count_changed`.
 var _beta_shelf_count_override: int = -1
+## Beta day-1 back-room delivery quantity, mirrored from
+## `EventBus.beta_backroom_count_changed`. Has no InventorySystem backing —
+## the Day-1 chain is the single writer — so a plain int suffices instead of
+## the override sentinel pattern used for `_beta_shelf_count_override`.
+var _beta_backroom_count: int = 0
 
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
 @onready var _time_label: Label = $TopBar/TimeLabel
 @onready var _items_placed_label: Label = $TopBar/ItemsPlacedLabel
+@onready var _back_room_label: Label = $TopBar/BackRoomLabel
 @onready var _customers_label: Label = $TopBar/CustomersLabel
 @onready var _sales_today_label: Label = $TopBar/SalesTodayLabel
 @onready var _speed_button: Button = $TopBar/SpeedButton
 @onready var _reputation_label: Label = $TopBar/ReputationLabel
 @onready var _store_label: Label = $TopBar/StoreLabel
-@onready var _seasonal_event_label: Label = $SeasonalEventLabel
 @onready var _telegraph_card: Label = $TelegraphCard
 @onready var _milestones_button: Button = $TopBar/MilestonesButton
 @onready var _close_day_preview: CanvasLayer = $CloseDayPreview
 @onready var _zero_state_hint: Label = $ZeroStateHint
+## §F-L2 — Carry-state label lives on its own CanvasLayer (layer 41) so it
+## renders above the ObjectiveRail (layer 40); a child Label of the HUD
+## CanvasLayer (layer 30) was occluded by the rail.
+@onready var _beta_carry_label: Label = $CarryHUD/BetaCarryLabel
 
 
 func _ready() -> void:
 	_store_label.visible = false
-	_seasonal_event_label.visible = false
 	_telegraph_card.visible = false
 	_speed_button.visible = false
 
@@ -145,13 +173,6 @@ func _ready() -> void:
 	EventBus.day_phase_changed.connect(_on_day_phase_changed)
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.speed_changed.connect(_on_speed_changed)
-	EventBus.seasonal_event_started.connect(
-		_on_seasonal_event_started
-	)
-	EventBus.seasonal_event_ended.connect(
-		_on_seasonal_event_ended
-	)
-	EventBus.event_telegraphed.connect(_on_event_telegraphed)
 	EventBus.random_event_telegraphed.connect(_on_random_event_telegraphed)
 	EventBus.locale_changed.connect(_on_locale_changed)
 	EventBus.build_mode_entered.connect(_on_build_mode_entered)
@@ -161,6 +182,7 @@ func _ready() -> void:
 	EventBus.inventory_changed.connect(_on_inventory_changed)
 	EventBus.beta_carry_changed.connect(_on_beta_carry_changed)
 	EventBus.beta_shelf_count_changed.connect(_on_beta_shelf_count_changed)
+	EventBus.beta_backroom_count_changed.connect(_on_beta_backroom_count_changed)
 	EventBus.customer_purchased.connect(_on_customer_purchased_hud)
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.customer_spawned.connect(_on_customer_spawned_hud)
@@ -339,30 +361,33 @@ func _beta_close_day_allowed() -> bool:
 
 
 ## Non-toasting variant for HUD state updates (dim the F4 hint without
-## spamming a toast every time the chain advances).
+## spamming a toast every time the chain advances). `BetaDayOneController`
+## is the typed `class_name` autoload-style controller — the typed access
+## (vs. `has_method` + `call`) makes signature renames fail at parse time.
+## See §EH-23.
 func _beta_close_day_allowed_quiet() -> bool:
-	var controller: Node = _beta_day_one_controller()
+	var controller: BetaDayOneController = _beta_day_one_controller()
 	if controller == null:
 		return true
-	if controller.has_method("can_interact_day_end"):
-		return bool(controller.call("can_interact_day_end"))
-	return true
+	return controller.can_interact_day_end()
 
 
 func _beta_close_day_reason() -> String:
-	var controller: Node = _beta_day_one_controller()
+	var controller: BetaDayOneController = _beta_day_one_controller()
 	if controller == null:
 		return ""
-	if controller.has_method("close_day_disabled_reason"):
-		return String(controller.call("close_day_disabled_reason"))
-	return ""
+	return controller.close_day_disabled_reason()
 
 
-func _beta_day_one_controller() -> Node:
+## Returns null in unit-test fixtures that don't add the controller to the
+## scene tree; production beta path always group-registers the controller in
+## `BetaDayOneController._ready` (`beta_day_one_controller.gd`). See §EH-23.
+func _beta_day_one_controller() -> BetaDayOneController:
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return null
-	return tree.get_first_node_in_group("beta_day_one_controller")
+	var node: Node = tree.get_first_node_in_group("beta_day_one_controller")
+	return node as BetaDayOneController
 
 
 ## Opens the dry-run preview modal. The preview's Confirm button is the only
@@ -469,6 +494,7 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			_hub_back_button.visible = false
 			_store_label.visible = false
 			_items_placed_label.visible = false
+			_back_room_label.visible = false
 			_customers_label.visible = false
 			_sales_today_label.visible = false
 			# MALL_OVERVIEW retains the reputation label; only STORE_VIEW
@@ -476,7 +502,6 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			# when transitioning from STORE_VIEW.
 			_reputation_label.visible = true
 			_speed_button.visible = false
-			_seasonal_event_label.visible = false
 			_telegraph_card.visible = false
 		GameManager.State.STORE_VIEW:
 			visible = true
@@ -499,9 +524,9 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 			)
 			_close_day_button.visible = true
 			_items_placed_label.visible = true
+			_back_room_label.visible = true
 			_sales_today_label.visible = true
 			_store_label.visible = false
-			_seasonal_event_label.visible = false
 			_telegraph_card.visible = false
 		_:
 			# §J4: PAUSED, LOADING, BUILD, and other intermediate states inherit
@@ -794,21 +819,6 @@ func _on_store_closed(_store_id: String) -> void:
 	_store_label.visible = false
 
 
-func _on_seasonal_event_started(event_id: String) -> void:
-	_telegraphed_events.erase(event_id)
-	_refresh_telegraph_card()
-	_refresh_seasonal_event_display()
-
-
-func _on_seasonal_event_ended(_event_id: String) -> void:
-	_refresh_seasonal_event_display()
-
-
-func _on_event_telegraphed(event_id: String, days_until: int) -> void:
-	_telegraphed_events[event_id] = days_until
-	_refresh_telegraph_card()
-
-
 func _on_random_event_telegraphed(message: String) -> void:
 	_random_event_telegraph = message
 	_refresh_telegraph_card()
@@ -818,12 +828,10 @@ func _on_tutorial_step_changed_hud(step_id: String) -> void:
 	_tutorial_step_active = not step_id.is_empty()
 	if _tutorial_step_active:
 		_telegraph_card.visible = false
-		_seasonal_event_label.visible = false
 
 
 func _on_tutorial_hint_ended() -> void:
 	_tutorial_step_active = false
-	_refresh_seasonal_event_display()
 	_refresh_telegraph_card()
 
 
@@ -836,76 +844,11 @@ func _refresh_telegraph_card() -> void:
 	if _objective_active:
 		_telegraph_card.visible = false
 		return
-	var parts: PackedStringArray = []
-	if not _random_event_telegraph.is_empty():
-		parts.append(_random_event_telegraph)
-	if not _telegraphed_events.is_empty():
-		var sys: Node = _find_seasonal_event_system()
-		for event_id: String in _telegraphed_events:
-			var days: int = _telegraphed_events[event_id]
-			var display: String = event_id
-			if sys:
-				for evt: Dictionary in sys.get_announced_events():
-					var def: Resource = evt.get(
-						"definition", null
-					) as Resource
-					if def and def.id == event_id:
-						display = def.name
-						break
-			parts.append("%s in %d day%s" % [
-				display, days, "s" if days != 1 else ""
-			])
-	if parts.is_empty():
+	if _random_event_telegraph.is_empty():
 		_telegraph_card.visible = false
 		return
-	_telegraph_card.text = "[!] Coming: %s" % ", ".join(parts)
+	_telegraph_card.text = "[!] Coming: %s" % _random_event_telegraph
 	_telegraph_card.visible = true
-
-
-func _refresh_seasonal_event_display() -> void:
-	if _tutorial_step_active:
-		return
-	var sys: Node = _find_seasonal_event_system()
-	if not sys:
-		_seasonal_event_label.visible = false
-		return
-	var active: Array[Dictionary] = sys.get_active_events()
-	if active.is_empty():
-		_seasonal_event_label.visible = false
-		return
-	var names: PackedStringArray = []
-	for evt: Dictionary in active:
-		var def: Resource = evt.get(
-			"definition", null
-		) as Resource
-		if def:
-			names.append(def.name)
-	_seasonal_event_label.text = "[S] %s" % ", ".join(names)
-	_seasonal_event_label.tooltip_text = _build_seasonal_tooltip(
-		active
-	)
-	_seasonal_event_label.visible = true
-
-
-func _build_seasonal_tooltip(
-	events: Array[Dictionary]
-) -> String:
-	var lines: PackedStringArray = []
-	for evt: Dictionary in events:
-		var def: Resource = evt.get(
-			"definition", null
-		) as Resource
-		if not def:
-			continue
-		var desc: String = def.name
-		if not def.description.is_empty():
-			desc += ": " + def.description
-		lines.append(desc)
-	return "\n".join(lines)
-
-
-func _find_seasonal_event_system() -> Node:
-	return null
 
 
 func _get_store_display_name(store_id: String) -> String:
@@ -965,6 +908,7 @@ func _tween_children_alpha(target: float, tween_ease: int) -> void:
 ## reloads mid-day, so seeding from zero matches the contract.
 func _seed_counters_from_systems() -> void:
 	_refresh_items_placed()
+	_update_back_room_display(_beta_backroom_count)
 	_update_customers_display(_customers_served_today_count)
 	var economy: EconomySystem = GameManager.get_economy_system()
 	if economy != null:
@@ -1007,11 +951,13 @@ func _refresh_items_placed() -> void:
 	_refresh_zero_state_hint()
 
 
-## §F-L2 — Carry HUD wiring. The label is created lazily on first emit
-## so production gameplay (no beta controller, no carry events) doesn't
-## allocate a spare label that would never be used. Empty text hides it.
+## §F-L2 — Carry HUD wiring. The label lives on its own `CarryHUD`
+## CanvasLayer (layer 41) authored in `hud.tscn`, so it renders above the
+## ObjectiveRail (layer 40) instead of being occluded by it. Empty text
+## hides the label.
 func _on_beta_carry_changed(text: String) -> void:
-	_ensure_beta_carry_label()
+	if not is_instance_valid(_beta_carry_label):
+		return
 	if text.strip_edges().is_empty():
 		_beta_carry_label.text = ""
 		_beta_carry_label.visible = false
@@ -1025,25 +971,14 @@ func _on_beta_shelf_count_changed(count: int) -> void:
 	_refresh_items_placed()
 
 
-func _ensure_beta_carry_label() -> void:
-	if is_instance_valid(_beta_carry_label):
+func _on_beta_backroom_count_changed(count: int) -> void:
+	var clamped: int = max(0, count)
+	if clamped == _beta_backroom_count:
 		return
-	_beta_carry_label = Label.new()
-	_beta_carry_label.name = "BetaCarryLabel"
-	_beta_carry_label.text = ""
-	_beta_carry_label.visible = false
-	_beta_carry_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_beta_carry_label.anchor_left = 0.0
-	_beta_carry_label.anchor_right = 0.0
-	_beta_carry_label.anchor_top = 1.0
-	_beta_carry_label.anchor_bottom = 1.0
-	_beta_carry_label.offset_left = 16.0
-	_beta_carry_label.offset_top = -110.0
-	_beta_carry_label.offset_right = 360.0
-	_beta_carry_label.offset_bottom = -78.0
-	_beta_carry_label.modulate = Color(1.0, 0.92, 0.55, 1.0)
-	_beta_carry_label.add_theme_font_size_override("font_size", 16)
-	add_child(_beta_carry_label)
+	var delta: int = clamped - _beta_backroom_count
+	_beta_backroom_count = clamped
+	_update_back_room_display(_beta_backroom_count)
+	_pulse_counter(_back_room_label, delta > 0)
 
 
 ## Tracks live shopper presence so the zero-state hint can flip between the
@@ -1059,8 +994,36 @@ func _on_customer_left_hud(_customer_data: Dictionary) -> void:
 	_refresh_zero_state_hint()
 
 
-func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void:
+func _on_input_focus_changed(new_ctx: StringName, _old_ctx: StringName) -> void:
 	_refresh_zero_state_hint()
+	_apply_modal_dim(new_ctx == InputFocus.CTX_MODAL)
+
+
+## Fades direct CanvasItem children of the HUD CanvasLayer to the modal-dim
+## alpha (0.3) when a modal owns InputFocus, restoring to full opacity on
+## pop. Boolean-transition gated so nested modal context_changed events do
+## not restart the tween. CanvasLayer itself has no `modulate`, so the fade
+## walks the children — this matches the build-mode dim pattern.
+func _apply_modal_dim(modal_now: bool) -> void:
+	if modal_now == _modal_dim_active:
+		return
+	_modal_dim_active = modal_now
+	var target: float = _MODAL_DIM_ALPHA if modal_now else 1.0
+	PanelAnimator.kill_tween(_modal_dim_tween)
+	_modal_dim_tween = create_tween()
+	_modal_dim_tween.set_parallel(true)
+	for child: Node in get_children():
+		if child is CanvasItem:
+			_modal_dim_tween.tween_property(
+				child, "modulate:a", target, _MODAL_DIM_DURATION
+			)
+
+
+## Public read of the current modal-dim state for the debug overlay and
+## GUT tests. True iff the HUD's CanvasItem children are tweening toward —
+## or settled at — the modal-dim alpha.
+func is_modal_dim_active() -> bool:
+	return _modal_dim_active
 
 
 ## Day-1 onboarding hint: surfaces the next-action copy when the loop is at
@@ -1117,6 +1080,10 @@ func _on_item_sold(
 
 func _update_items_placed_display(count: int) -> void:
 	_items_placed_label.text = tr("HUD_PLACED_FORMAT") % count
+
+
+func _update_back_room_display(count: int) -> void:
+	_back_room_label.text = tr("HUD_BACKROOM_FORMAT") % count
 
 
 func _update_customers_display(count: int) -> void:
@@ -1199,6 +1166,7 @@ func set_fp_mode(enabled: bool) -> void:
 	else:
 		_exit_fp_mode()
 		_apply_state_visibility(GameManager.current_state)
+	EventBus.fp_mode_changed.emit(enabled)
 
 
 func _enter_fp_mode() -> void:
@@ -1206,19 +1174,26 @@ func _enter_fp_mode() -> void:
 		_cash_label: _cash_label.get_index(),
 		_time_label: _time_label.get_index(),
 		_items_placed_label: _items_placed_label.get_index(),
+		_back_room_label: _back_room_label.get_index(),
 		_customers_label: _customers_label.get_index(),
 		_sales_today_label: _sales_today_label.get_index(),
 	}
 	_reparent_to_hud_root(_cash_label)
 	_reparent_to_hud_root(_time_label)
 	_reparent_to_hud_root(_items_placed_label)
+	_reparent_to_hud_root(_back_room_label)
 	_reparent_to_hud_root(_customers_label)
 	_reparent_to_hud_root(_sales_today_label)
 	_apply_fp_anchors(_cash_label, 0.0, 0.0, 8.0, 8.0, 200.0, 36.0)
 	_apply_fp_anchors(_time_label, 0.5, 0.5, -150.0, 8.0, 150.0, 36.0)
+	# Back Room sits directly below On Shelves so the two complementary
+	# inventory readouts read as a paired group, with Customers / Sold
+	# Today below them.
 	_apply_fp_anchors(_items_placed_label, 1.0, 1.0, -200.0, 8.0, -8.0, 36.0)
-	_apply_fp_anchors(_customers_label, 1.0, 1.0, -200.0, 40.0, -8.0, 68.0)
-	_apply_fp_anchors(_sales_today_label, 1.0, 1.0, -200.0, 72.0, -8.0, 100.0)
+	_apply_fp_anchors(_back_room_label, 1.0, 1.0, -200.0, 40.0, -8.0, 68.0)
+	_apply_fp_anchors(_customers_label, 1.0, 1.0, -200.0, 72.0, -8.0, 100.0)
+	_apply_fp_anchors(_sales_today_label, 1.0, 1.0, -200.0, 104.0, -8.0, 132.0)
+	_apply_fp_typography()
 	_ensure_fp_close_day_hint()
 	_apply_fp_visibility_overrides()
 
@@ -1226,13 +1201,42 @@ func _enter_fp_mode() -> void:
 func _exit_fp_mode() -> void:
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.hide()
+	_clear_fp_typography()
 	_restore_from_hud_root(_cash_label)
 	_restore_from_hud_root(_time_label)
 	_restore_from_hud_root(_items_placed_label)
+	_restore_from_hud_root(_back_room_label)
 	_restore_from_hud_root(_customers_label)
 	_restore_from_hud_root(_sales_today_label)
 	_fp_orig_indices.clear()
 	_top_bar.show()
+
+
+## Applies the FP-mode size/color contract: cash + time get the primary
+## treatment (18 px, full white), the three top-right stats get the
+## secondary treatment (14 px, 60 % white). Theme-color overrides are used
+## (not modulate) so the dim does not stack with the modal-fade tween or
+## the per-counter pulse — both of which animate `modulate`.
+func _apply_fp_typography() -> void:
+	for primary: Label in [_cash_label, _time_label]:
+		primary.add_theme_font_size_override("font_size", _FP_PRIMARY_FONT_SIZE)
+		primary.add_theme_color_override("font_color", _FP_PRIMARY_FONT_COLOR)
+	for stat: Label in [
+		_items_placed_label, _back_room_label,
+		_customers_label, _sales_today_label,
+	]:
+		stat.add_theme_font_size_override("font_size", _FP_STAT_FONT_SIZE)
+		stat.add_theme_color_override("font_color", _FP_STAT_FONT_COLOR)
+
+
+func _clear_fp_typography() -> void:
+	for lbl: Label in [
+		_cash_label, _time_label,
+		_items_placed_label, _back_room_label,
+		_customers_label, _sales_today_label,
+	]:
+		lbl.remove_theme_font_size_override("font_size")
+		lbl.remove_theme_color_override("font_color")
 
 
 func _reparent_to_hud_root(label: Label) -> void:
@@ -1320,7 +1324,6 @@ func _ensure_fp_close_day_hint() -> void:
 
 func _apply_fp_visibility_overrides() -> void:
 	_top_bar.hide()
-	_seasonal_event_label.hide()
 	_telegraph_card.hide()
 	# Hide management-view TopBar children explicitly (not just via the parent
 	# `_top_bar.hide()`) so callers reading the per-child `visible` flag observe
@@ -1332,6 +1335,7 @@ func _apply_fp_visibility_overrides() -> void:
 	_cash_label.show()
 	_time_label.show()
 	_items_placed_label.show()
+	_back_room_label.show()
 	_customers_label.show()
 	_sales_today_label.show()
 	if is_instance_valid(_fp_close_day_hint):
@@ -1342,16 +1346,20 @@ func _apply_fp_visibility_overrides() -> void:
 ## Resets transient display state for test isolation. Called by GUT tests that
 ## share a single HUD instance across multiple test functions via before_all().
 func _reset_for_tests() -> void:
-	_telegraphed_events.clear()
 	_random_event_telegraph = ""
 	_tutorial_step_active = false
 	_objective_active = false
 	_telegraph_card.visible = false
-	_seasonal_event_label.visible = false
 	_active_customer_count = 0
 	_items_placed_count = 0
 	if is_instance_valid(_zero_state_hint):
 		_zero_state_hint.visible = false
+	PanelAnimator.kill_tween(_modal_dim_tween)
+	_modal_dim_tween = null
+	_modal_dim_active = false
+	for child: Node in get_children():
+		if child is CanvasItem:
+			(child as CanvasItem).modulate.a = 1.0
 
 
 func _beta_mode_active() -> bool:
