@@ -15,8 +15,6 @@ var _performance_report_system: PerformanceReportSystem
 var _day_manager: DayManager
 var _day_summary: DaySummary
 var _closing_checklist: ClosingChecklist
-var _mall_overview: Control
-var _seasonal_event_system: SeasonalEventSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _pending_report: PerformanceReport
 var _awaiting_acknowledgement: bool = false
@@ -59,42 +57,12 @@ func set_closing_checklist(panel: ClosingChecklist) -> void:
 		panel.completed.connect(_on_closing_checklist_completed)
 
 
-## The hub's MallOverview Control is hidden while the Day Summary modal is
-## open so it does not bleed through the overlay (P1.4).
-func set_mall_overview(overview: Control) -> void:
-	_mall_overview = overview
-
-
-## Restores MallOverview visibility based on the post-acknowledgement FSM
-## state, not the prior state. The "Mall Overview" button on the summary
-## acks the day and lands the FSM in MALL_OVERVIEW — MallOverview must show.
-## The "Continue" button leaves the FSM in GAMEPLAY (player still inside the
-## store) — MallOverview must stay hidden so its full-screen Control does not
-## render on top of the store viewport during the Day N → Day N+1 hand-off.
-##
-## §F-91 — Pass 13: silent return on `not is_instance_valid(_mall_overview)`
-## is the Tier-5 init pattern. `DayCycleController` runs in Tier 5 (per
-## docs/architecture.md); the `_mall_overview` ref is injected by `MallHub`
-## via `set_mall_overview`. Headless tests and pre-hub-mount frames take the
-## silent path symmetrically with `_show_day_summary`'s own
-## `is_instance_valid(_mall_overview)` guard at line 220 — if the producer
-## path took the no-op, the dismissal restore staying a no-op is the
-## consistent contract. Production wiring guarantees both fire.
 func _on_day_summary_dismissed() -> void:
-	if not is_instance_valid(_mall_overview):
-		return
-	var should_show: bool = (
-		GameManager.current_state == GameManager.State.MALL_OVERVIEW
-	)
-	_mall_overview.visible = should_show
+	pass
 
 
 func set_day_manager(manager: DayManager) -> void:
 	_day_manager = manager
-
-
-func set_seasonal_event_system(system: SeasonalEventSystem) -> void:
-	_seasonal_event_system = system
 
 
 func set_ambient_moments_system(system: AmbientMomentsSystem) -> void:
@@ -134,22 +102,23 @@ func _on_day_close_confirmed() -> void:
 	_on_day_ended(_time_system.current_day)
 
 
-## Queries `ObjectiveDirector.can_close_day()` when the autoload is reachable.
-## Fails open when the autoload is missing so headless test harnesses that
-## construct `DayCycleController` without a full autoload roster still close
-## the day on demand.
+## §EH-37 — Direct typed autoload access. The prior chain
+## (`get_node_or_null("/root/ObjectiveDirector") + has_method("can_close_day")
+## + .call(...)`) was the §EH-13 / §EH-31 shape: `ObjectiveDirector` is an
+## autoload (`project.godot:43`), `can_close_day()` is a typed method on the
+## class (`objective_director.gd:226`), and Godot loads autoloads before any
+## test runs — so the original "fails open when the autoload is missing"
+## rationale was unreachable. Direct access means a rename of either symbol
+## now fails GDScript parse instead of silently shipping a fall-open close
+## gate. ObjectiveDirector itself fails open on `_current_day <= 0` and on
+## non-gameplay states, so test fixtures that haven't started a day still
+## get `can_close_day == true` via the typed path.
 func _can_close_day() -> bool:
-	var od: Node = get_node_or_null("/root/ObjectiveDirector")
-	if od == null or not od.has_method("can_close_day"):
-		return true
-	return bool(od.call("can_close_day"))
+	return ObjectiveDirector.can_close_day()
 
 
 func _resolve_close_blocked_reason() -> String:
-	var od: Node = get_node_or_null("/root/ObjectiveDirector")
-	if od == null or not od.has_method("get_close_blocked_reason"):
-		return "You haven't made a sale yet. Close the day anyway?"
-	return str(od.call("get_close_blocked_reason"))
+	return ObjectiveDirector.get_close_blocked_reason()
 
 
 func _on_day_ended(day: int) -> void:
@@ -165,10 +134,15 @@ func _on_day_ended(day: int) -> void:
 	# `hidden_thread_consequence_triggered` signal lands on the bus before
 	# PerformanceReportSystem emits `performance_report_ready`. The call is
 	# idempotent per day, so the autoload's own day_ended handler running the
-	# same path is a no-op the second time.
-	var hidden_thread: Node = get_node_or_null("/root/HiddenThreadSystemSingleton")
-	if hidden_thread != null and hidden_thread.has_method("finalize_day"):
-		hidden_thread.call("finalize_day", day)
+	# same path is a no-op the second time. §EH-37 — replaced the dead
+	# `get_node_or_null("/root/HiddenThreadSystemSingleton") + has_method(
+	# "finalize_day") + .call(...)` chain with direct typed access:
+	# `HiddenThreadSystemSingleton` is an autoload (`project.godot:69`) and
+	# `finalize_day(day: int)` is a typed method on the class
+	# (`hidden_thread_system.gd:362`), so the §EH-31-class dead-guard is
+	# unwarranted and a rename now fails parse instead of silently dropping
+	# the day-summary consequence line.
+	HiddenThreadSystemSingleton.finalize_day(day)
 
 	if _ensure_panels_callback.is_valid():
 		_ensure_panels_callback.call()
@@ -189,10 +163,14 @@ func _on_day_ended(day: int) -> void:
 func _should_run_closing_checklist() -> bool:
 	if not is_instance_valid(_closing_checklist):
 		return false
-	var unlocks: Node = get_node_or_null("/root/UnlockSystemSingleton")
-	if unlocks == null or not unlocks.has_method("is_unlocked"):
-		return false
-	return bool(unlocks.call("is_unlocked", CLOSING_CERT_UNLOCK_ID))
+	# §EH-37 — replaced `get_node_or_null("/root/UnlockSystemSingleton") +
+	# has_method("is_unlocked") + .call(...)` chain. UnlockSystemSingleton is
+	# an autoload (`project.godot:37`) and `is_unlocked(StringName) -> bool`
+	# is the typed accessor on the class (`unlock_system.gd:71`). A rename
+	# now fails parse instead of silently bypassing the closing-certification
+	# gate (which would skip the checklist for every player who earned the
+	# unlock — a player-visible silent regression of the §EH-31 shape).
+	return UnlockSystemSingleton.is_unlocked(CLOSING_CERT_UNLOCK_ID)
 
 
 func _on_closing_checklist_completed(day: int) -> void:
@@ -232,21 +210,6 @@ func _on_day_acknowledged() -> void:
 func _show_day_summary(day: int) -> void:
 	var summary: Dictionary = _economy_system.get_daily_summary()
 
-	var warranty_rev: float = 0.0
-	var warranty_claims: float = 0.0
-	var store_ctrl: StoreController = _find_store_controller()
-	if store_ctrl is ElectronicsStoreController:
-		var elec: ElectronicsStoreController = (
-			store_ctrl as ElectronicsStoreController
-		)
-		var wm: WarrantyManager = elec.get_warranty_manager()
-		warranty_rev = wm.get_daily_warranty_revenue()
-		warranty_claims = wm.get_daily_claim_costs()
-
-	var seasonal_impact: String = ""
-	if _seasonal_event_system:
-		seasonal_impact = _seasonal_event_system.get_impact_summary()
-
 	var discrepancy: float = 0.0
 	if _ambient_moments_system:
 		discrepancy = _ambient_moments_system.get_active_discrepancy()
@@ -260,9 +223,8 @@ func _show_day_summary(day: int) -> void:
 		_economy_system.get_day_end_summary(day).get("store_daily_revenue", {})
 	)
 	# §F-60 — `inventory_remaining = 0` when InventorySystem is unresolved
-	# matches the surrounding null-system fallbacks in this function (`wages`,
-	# `warranty_rev`, `seasonal_impact` all default-to-zero on missing systems).
-	# In production the system is always live by day-close (gameplay has been
+	# matches the surrounding null-system fallbacks in this function. In
+	# production the system is always live by day-close (gameplay has been
 	# running long enough to record sales); the null arm fires only in
 	# unit-test fixtures that drive `_show_day_summary` without a full GameWorld.
 	var backroom_remaining: int = 0
@@ -287,10 +249,12 @@ func _show_day_summary(day: int) -> void:
 		customers_served = (
 			_performance_report_system.get_daily_customers_served()
 		)
-	var shift_summary: Dictionary = {}
-	var shift: Node = get_node_or_null("/root/ShiftSystem")
-	if shift != null and shift.has_method("get_shift_summary"):
-		shift_summary = shift.call("get_shift_summary")
+	# §EH-37 — `ShiftSystem` is an autoload (`project.godot:61`) and
+	# `get_shift_summary() -> Dictionary` is a typed method on the class
+	# (`shift_system.gd:113`); the prior `get_node_or_null + has_method`
+	# pair was the §EH-31 dead-guard shape (the autoload is always
+	# present at day-close time and the method always exists).
+	var shift_summary: Dictionary = ShiftSystem.get_shift_summary()
 	var customer_system: CustomerSystem = GameManager.get_customer_system()
 	if customer_system != null:
 		var leave_counts: Dictionary = customer_system.get_leave_counts()
@@ -299,17 +263,16 @@ func _show_day_summary(day: int) -> void:
 		shift_summary["customers_timeout"] = int(leave_counts.get("timeout", 0))
 		shift_summary["customers_price"] = int(leave_counts.get("price", 0))
 
-	var hidden_interactions: int = 0
-	var hidden_thread_node: Node = get_node_or_null(
-		"/root/HiddenThreadSystemSingleton"
+	# §EH-37 — `HiddenThreadSystemSingleton` is an autoload
+	# (`project.godot:69`) and `hidden_thread_interactions` is a typed
+	# property on the class (`hidden_thread_system.gd:73`); replaced the
+	# `get_node_or_null + "hidden_thread_interactions" in node` dead-
+	# guard pair with direct property access so a rename of the field
+	# fails parse instead of silently shipping a `hidden_interactions=0`
+	# day-summary payload.
+	var hidden_interactions: int = maxi(
+		HiddenThreadSystemSingleton.hidden_thread_interactions, 0
 	)
-	if (
-		hidden_thread_node != null
-		and "hidden_thread_interactions" in hidden_thread_node
-	):
-		hidden_interactions = maxi(
-			int(hidden_thread_node.hidden_thread_interactions), 0
-		)
 
 	var payload: Dictionary = {
 		"day": day,
@@ -321,9 +284,6 @@ func _show_day_summary(day: int) -> void:
 		"rent": summary.get("rent", 0.0),
 		"net_cash": _economy_system.get_cash(),
 		"store_revenue": store_revenue,
-		"warranty_revenue": warranty_rev,
-		"warranty_claims": warranty_claims,
-		"seasonal_impact": seasonal_impact,
 		"discrepancy": discrepancy,
 		"staff_wages": wages,
 		"inventory_remaining": inventory_remaining,
@@ -360,13 +320,6 @@ func _show_day_summary(day: int) -> void:
 	if not _day_summary:
 		return
 
-	# Hide the MallOverview while the summary modal is open so its store
-	# cards do not bleed through the overlay (P1.4). Visibility on dismiss is
-	# restored from the post-acknowledgement FSM state so the Continue button
-	# (state → GAMEPLAY) does not bleed MallOverview over the store viewport.
-	if is_instance_valid(_mall_overview):
-		_mall_overview.visible = false
-
 	var archetype_name: String = _compute_day_archetype(payload)
 	var floor_stars: int = _compute_floor_awareness_stars(payload)
 	var attention_notes: Array[String] = _build_attention_notes(payload)
@@ -378,9 +331,6 @@ func _show_day_summary(day: int) -> void:
 		payload["net_profit"],
 		payload["items_sold"],
 		payload["rent"],
-		warranty_rev,
-		warranty_claims,
-		seasonal_impact,
 		discrepancy,
 		wages,
 		archetype_name,

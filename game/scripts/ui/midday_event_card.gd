@@ -16,7 +16,11 @@
 ##     the consequence preview (smaller, muted color).
 ##   - No archetype badge and no "likely reasoning" line — those are
 ##     customer-card-only elements.
-extends CanvasLayer
+## §F-A1 — claims a CTX_MODAL frame on show. Without this push the player's
+## camera keeps tracking and the mouse stays captured, so the choice buttons
+## are unclickable. The base class's `_exit_tree` safety net guarantees the
+## frame is released even if the card is freed mid-decision (scene tear-down).
+extends ModalPanel
 
 
 const _STORE_EVENT_LABEL: String = "STORE EVENT"
@@ -152,6 +156,7 @@ func _on_midday_event_fired(beat: Dictionary) -> void:
 	if _choice_box.get_child_count() == 0:
 		_add_dismiss_button()
 	_root.visible = true
+	_push_modal_focus()
 
 
 func _clear_choices() -> void:
@@ -213,4 +218,5 @@ func _on_choice_pressed(index: int) -> void:
 	var beat_id: StringName = _active_beat_id
 	_active_beat_id = &""
 	_root.visible = false
+	_pop_modal_focus()
 	EventBus.midday_event_resolved.emit(beat_id, index)

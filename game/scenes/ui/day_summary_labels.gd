@@ -7,18 +7,6 @@ class_name DaySummaryLabels
 extends Object
 
 
-static func create_overdue_count(
-	vbox: VBoxContainer, after_label: Label
-) -> Label:
-	var label := Label.new()
-	label.name = "OverdueCountLabel"
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.visible = false
-	vbox.add_child(label)
-	vbox.move_child(label, after_label.get_index() + 1)
-	return label
-
-
 static func create_discrepancy(
 	vbox: VBoxContainer, after_label: Label, gui_input_handler: Callable
 ) -> Label:
@@ -31,33 +19,6 @@ static func create_discrepancy(
 	label.gui_input.connect(gui_input_handler)
 	vbox.add_child(label)
 	vbox.move_child(label, after_label.get_index() + 1)
-	return label
-
-
-## Returns [warranty_attach_label, demo_status_label] — both are appended to
-## `vbox` in the order the panel renders them.
-static func create_electronics(vbox: VBoxContainer) -> Array:
-	var warranty_attach := Label.new()
-	warranty_attach.name = "WarrantyAttachLabel"
-	warranty_attach.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	warranty_attach.visible = false
-	vbox.add_child(warranty_attach)
-	var demo_status := Label.new()
-	demo_status.name = "DemoStatusLabel"
-	demo_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	demo_status.visible = false
-	vbox.add_child(demo_status)
-	return [warranty_attach, demo_status]
-
-
-static func create_grading(vbox: VBoxContainer) -> Label:
-	var label := Label.new()
-	label.name = "GradingLabel"
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_color_override("font_color", Color(0.78, 0.85, 0.60))
-	label.visible = false
-	vbox.add_child(label)
 	return label
 
 

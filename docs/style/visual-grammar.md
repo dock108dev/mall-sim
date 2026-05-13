@@ -33,27 +33,23 @@ AAA) backs main menus, dialogs, and the day summary.
 
 ## Store Accent Tokens
 
-Each store has one primary accent. The accent appears as a **4px header band**, **selection outline**, and **primary CTA button fill** within that store's drawer only. It never bleeds into global HUD chrome.
+The shipping store has one primary accent. The accent appears as a **4px
+header band**, **selection outline**, and **primary CTA button fill** within
+that store's drawer only. It never bleeds into global HUD chrome.
 
-All primaries are verified ≥ 4.5:1 (WCAG AA) against `DARK_PANEL_FILL`. All pairs have hue delta > 20° on the HSL wheel. Runtime constants: `STORE_ACCENT_*` plus the `STORE_ACCENTS` lookup keyed by store id.
+The primary is verified ≥ 4.5:1 (WCAG AA) against `DARK_PANEL_FILL`. The
+runtime constant lives on `UIThemeConstants`.
 
 | Store | Name | Hex | `UIThemeConstants` constant | HSL Hue | Contrast vs `DARK_PANEL_FILL` |
 |---|---|---|---|---|---|
 | `retro_games` | CRT Amber | `#E8A547` | `STORE_ACCENT_RETRO_GAMES` | 35° | 8.1:1 ✓ AAA |
-| `pocket_creatures` | Holo Teal | `#2EB5A8` | `STORE_ACCENT_POCKET_CREATURES` | 174° | 6.8:1 ✓ AAA |
-| `video_rental` | Late-Fee Magenta | `#E04E8C` | `STORE_ACCENT_VIDEO_RENTAL` | 335° | 4.6:1 ✓ AA |
-| `electronics` | CRT Cyan | `#3AA8D8` | `STORE_ACCENT_ELECTRONICS` | 198° | 6.4:1 ✓ AAA |
-| `sports_cards` | Grading Crimson | `#E85555` | `STORE_ACCENT_SPORTS_CARDS` | 0° | 4.8:1 ✓ AA |
 
-### Hue separation matrix (all pairs > 20°)
-
-| | retro (35°) | pocket (174°) | video (335°) | electronics (198°) | sports (0°) |
-|---|---|---|---|---|---|
-| **retro** | — | 139° | 60° | 163° | 35° |
-| **pocket** | 139° | — | 161° | 24° | 174° |
-| **video** | 60° | 161° | — | 137° | 25° |
-| **electronics** | 163° | 24° | 137° | — | 162° |
-| **sports** | 35° | 174° | 25° | 162° | — |
+The strip-to-bones cut removed the four legacy stores (sports memorabilia,
+video rental, pocket creatures, consumer electronics). The matching
+`store_accent_*.tres` resources under `game/themes/` for those stores are
+still on disk but no `STORE_ACCENT_*` constant references them in
+`game/scripts/ui/ui_theme_constants.gd`. Treat those `.tres` files as
+inactive until a second store is reintroduced.
 
 ---
 
@@ -69,7 +65,7 @@ All primaries are verified ≥ 4.5:1 (WCAG AA) against `DARK_PANEL_FILL`. All pa
 
 ## Typography Scale
 
-Font sizes are defined in `game/themes/mallcore_theme.tres` and mirrored in `UIThemeConstants`. Use the named theme types in scenes; reference the constants in code.
+Font sizes are defined in `game/themes/game_theme.tres` and mirrored in `UIThemeConstants`. Use the named theme types in scenes; reference the constants in code.
 
 | Token | Theme Type | `UIThemeConstants` constant | Size | Usage |
 |---|---|---|---|---|
@@ -119,7 +115,6 @@ Screenshots are not committed to the repository; run the game and open the audit
 ## References
 
 - Runtime constants: `game/scripts/ui/ui_theme_constants.gd`
-- Global theme: `game/themes/mallcore_theme.tres` (set as project-wide default in `project.godot`)
+- Global theme: `game/themes/game_theme.tres` (set as project-wide default in `project.godot` `gui/theme/custom`)
 - Palette token resource: `game/themes/palette.tres`
-- Store accent resources: `game/themes/store_accent_*.tres`
-- Contrast verification: `tests/gut/test_palette_contrast.gd`
+- Active store accent resource: `game/themes/store_accent_retro_games.tres`

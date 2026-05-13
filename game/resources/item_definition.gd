@@ -72,20 +72,8 @@ const CONDITION_ORDER: PackedStringArray = [
 @export var product_set_name: String = ""
 @export var depreciates: bool = false
 @export var appreciates: bool = false
-@export var rental_tier: String = ""
-@export var rental_fee: float = 0.0
-@export var rental_period_days: int = 0
 ## Day number this title was released/added; used for new-release price decay.
 @export var release_day: int = 0
-## Rental price after the new-release window expires (0 = not applicable).
-@export var catalog_price: float = 0.0
-## Per-item late fee rate override; negative = use store default.
-@export var late_fee_rate: float = -1.0
-## Per-day late fee (ISSUE-009 rental schema); overrides store default when > 0.
-## Formula: late_fee_per_day × days_overdue (no base fee component).
-@export var late_fee_per_day: float = -1.0
-## Canonical release date in game-days (mirrors release_day; required by rental schema).
-@export var release_date: int = 0
 @export var brand: String = ""
 @export var product_line: String = ""
 @export var generation: int = 0
@@ -95,7 +83,6 @@ const CONDITION_ORDER: PackedStringArray = [
 @export var min_value_ratio: float = 0.1
 @export var launch_demand_multiplier: float = 1.0
 @export var launch_spike_days: int = 0
-@export var can_be_demo_unit: bool = false
 @export var monthly_depreciation_rate: float = 0.0
 @export var launch_spike_eligible: bool = false
 @export var launch_spike_multiplier: float = 1.0
@@ -124,19 +111,11 @@ const CONDITION_ORDER: PackedStringArray = [
 ## ID of the predecessor title this item is a direct sequel to. Drives the
 ## anticipation multiplier when a successor is announced in-game.
 @export var sequel_of: String = ""
-## Default trade-in offer price (what the store pays a customer for this item).
-@export var trade_in_base: float = 0.0
 ## Suggested used (pre-owned) sell price; 0.0 = derive from base_price.
 @export var used_price: float = 0.0
 @export var region: String = ""
 @export var suspicious_chance: float = 0.0
-## Array of warranty tier Dictionaries ({id, label, margin_percent, acceptance_probability}).
-@export var warranty_tiers: Array = []
 @export var extra: Dictionary = {}
-## Card era label (e.g. "early_1990s"). Required for sports trading cards.
-@export var era: String = ""
-## Provenance authenticity score 0.0–1.0 for sports cards; -1.0 if not applicable.
-@export var provenance_score: float = -1.0
 
 var name: String:
 	get:

@@ -48,6 +48,12 @@ var _auto_slow_stack: Array[String] = []
 var _requested_speed: SpeedTier = SpeedTier.NORMAL
 var _late_evening_enabled: bool = false
 var _day_end_summary_provider: Callable = Callable()
+## §F-D1 — when true, `_process` skips the per-frame advance. Set whenever
+## the InputFocus stack tops out at something other than gameplay (modal,
+## menu, inspect, etc.). The auto-advance resumes the moment focus returns
+## to gameplay; explicit `advance_by_minutes(n)` calls (per-action time
+## costs) bypass this gate so completing a modal still spends time.
+var _focus_paused: bool = false
 
 
 func _ready() -> void:
@@ -57,6 +63,29 @@ func _ready() -> void:
 	if unlock_system != null:
 		_late_evening_enabled = unlock_system.is_unlocked(&"extended_hours_unlock")
 	EventBus.unlock_granted.connect(_on_unlock_granted)
+	# §F-D1 — pause auto-advance whenever focus leaves gameplay so modals
+	# don't burn day-time while the player is reading. InputFocus is an
+	# autoload; if absent (headless tests) we silently keep advancing as
+	# before.
+	var ifocus: Node = get_node_or_null("/root/InputFocus")
+	if ifocus != null and ifocus.has_signal("context_changed"):
+		ifocus.connect("context_changed", _on_input_focus_changed)
+		_focus_paused = _is_focus_paused_context(ifocus.call("current"))
+
+
+func _on_input_focus_changed(new_ctx: StringName, _old_ctx: StringName) -> void:
+	_focus_paused = _is_focus_paused_context(new_ctx)
+
+
+func _is_focus_paused_context(ctx: StringName) -> bool:
+	# Empty stack happens during scene transitions; treat as gameplay so we
+	# don't strand the day-clock if a transition stalls. Gameplay contexts
+	# (store, mall hub) keep advancing; everything else pauses.
+	if ctx == &"" \
+			or ctx == StringName("store_gameplay") \
+			or ctx == StringName("mall_hub"):
+		return false
+	return true
 
 
 func initialize() -> void:
@@ -93,12 +122,14 @@ func _apply_state(data: Dictionary) -> void:
 func _process(delta: float) -> void:
 	if speed_multiplier <= 0.0:
 		return
+	if _focus_paused:
+		return
 
 	if is_zero_approx(delta):
 		var current_frame_hour: int = int(game_time_minutes / 60.0)
 		_emit_hour_changes(current_frame_hour)
 		_check_phase_transition()
-		if game_time_minutes >= _get_day_end_minutes():
+		if game_time_minutes >= _get_day_end_minutes() and not _beta_owns_day_end():
 			_end_day()
 		return
 
@@ -113,8 +144,20 @@ func _process(delta: float) -> void:
 	_emit_hour_changes(new_hour)
 	_check_phase_transitions_between(previous_minutes, game_time_minutes)
 
-	if game_time_minutes >= _get_day_end_minutes():
+	if game_time_minutes >= _get_day_end_minutes() and not _beta_owns_day_end():
 		_end_day()
+
+
+## §F-FIX1 — When a beta day-1 controller is in the tree it is the source
+## of truth for when the day ends; the player's E-press at the close-day
+## trigger drives `_end_day` via the controller, not the wall clock. This
+## guard prevents the auto-end at 17:00 from yanking the player into the
+## summary if they take a while to walk between beats.
+func _beta_owns_day_end() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return tree.get_first_node_in_group("beta_day_one_controller") != null
 
 
 func set_speed(tier: SpeedTier) -> void:
@@ -188,6 +231,28 @@ func is_paused() -> bool:
 
 func get_play_time_seconds() -> float:
 	return _total_play_time
+
+
+## Pushes the in-game clock forward by `minutes`, emitting `hour_changed`
+## and `day_phase_changed` for every boundary crossed and triggering `_end_day`
+## if the new time crosses the day's end. Used by event-driven flows (beta
+## Day-1 objective completions, scripted scene beats) where the clock should
+## reflect player progress instead of waiting for real-time accumulation.
+##
+## No-op for `minutes <= 0`. Caller-side guard against double-counting (e.g.
+## non-repeatable objectives) is the caller's responsibility.
+func advance_by_minutes(minutes: float) -> void:
+	if minutes <= 0.0:
+		return
+	if _day_ended_emitted:
+		return
+	var previous_minutes: float = game_time_minutes
+	game_time_minutes += minutes
+	var new_hour: int = int(game_time_minutes / 60.0)
+	_emit_hour_changes(new_hour)
+	_check_phase_transitions_between(previous_minutes, game_time_minutes)
+	if game_time_minutes >= _get_day_end_minutes():
+		_end_day()
 
 
 func advance_to_next_day() -> void:

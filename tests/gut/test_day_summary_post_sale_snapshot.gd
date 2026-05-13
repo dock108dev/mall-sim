@@ -86,7 +86,7 @@ func _emit_completed_sale() -> void:
 	# CheckoutSystem._execute_normal_sale emits both signals on a real sale:
 	# item_sold increments _items_sold_today; customer_purchased credits cash
 	# (which records a REVENUE transaction summed by get_daily_summary()).
-	EventBus.item_sold.emit("test_item", SALE_PRICE, "electronics")
+	EventBus.item_sold.emit("test_item", SALE_PRICE, "retro_games")
 	EventBus.customer_purchased.emit(
 		StringName(STORE_ID), &"test_item", SALE_PRICE, &"customer_a"
 	)

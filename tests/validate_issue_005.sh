@@ -161,10 +161,8 @@ TR_CHECK_FILES=(
     "game/scenes/ui/checkout_panel.gd"
     "game/scenes/ui/haggle_panel.gd"
     "game/scripts/ui/trade_panel.gd"
-    "game/scenes/ui/pack_opening_panel.gd"
     "game/scenes/ui/trends_panel.gd"
     "game/scenes/ui/refurbishment_dialog.gd"
-    "game/scenes/ui/authentication_dialog.gd"
     "game/scripts/ui/tutorial_overlay.gd"
 )
 

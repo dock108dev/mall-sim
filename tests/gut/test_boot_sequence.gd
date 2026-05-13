@@ -30,25 +30,21 @@ func test_dataloader_has_no_load_errors() -> void:
 	)
 
 
-func test_all_five_store_ids_registered() -> void:
+func test_retro_games_store_id_registered() -> void:
 	var store_ids: Array[StringName] = ContentRegistry.get_all_store_ids()
 	assert_gte(
-		store_ids.size(), 5,
-		"Should have at least 5 store IDs, found %d" % store_ids.size()
+		store_ids.size(), 1,
+		"Should have at least 1 store ID, found %d" % store_ids.size()
 	)
+	assert_has(store_ids, &"retro_games")
 
 
 func test_canonical_store_ids_resolvable() -> void:
-	var expected: Array[String] = [
-		"sports", "retro_games", "video_rental",
-		"pocket_creatures", "consumer_electronics",
-	]
-	for raw: String in expected:
-		var canonical: StringName = ContentRegistry.resolve(raw)
-		assert_ne(
-			canonical, &"",
-			"Store ID '%s' should resolve to a canonical ID" % raw
-		)
+	var canonical: StringName = ContentRegistry.resolve("retro_games")
+	assert_ne(
+		canonical, &"",
+		"Store ID 'retro_games' should resolve to a canonical ID"
+	)
 
 
 func test_boot_script_uses_deferred_initialize() -> void:

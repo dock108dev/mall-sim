@@ -276,9 +276,11 @@ func _on_hold_conflict_bypassed(
 	})
 
 
-## Passive Tier 2 accumulator: fires when ReturnsSystem deposits two or more
-## defective items into the damaged bin in a single day. Distinct from
-## `returned_item_examined`, which is the player-driven inspection trigger.
+## Passive Tier 2 accumulator: fires when two or more defective items are
+## deposited into the damaged bin in a single day (no production emitter
+## post-strip-to-bones; `tests/unit/test_hidden_thread_system.gd` exercises
+## this listener). Distinct from `returned_item_examined`, which is the
+## player-driven inspection trigger.
 func _on_defective_item_received(_item_id: String) -> void:
 	_defective_returns_today += 1
 	_check_tier2_defective_returns()

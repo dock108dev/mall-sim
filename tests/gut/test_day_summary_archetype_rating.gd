@@ -100,7 +100,7 @@ func test_floor_stars_thresholds() -> void:
 
 func test_archetype_label_renders_when_archetype_passed() -> void:
 	_day_summary.show_summary(
-		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0,
 		ARCHETYPE_WARM_BODY, 2, [],
 	)
 	assert_true(_day_summary._archetype_label.visible)
@@ -115,7 +115,7 @@ func test_archetype_label_hidden_when_archetype_empty() -> void:
 
 func test_archetype_subtext_carries_path_line() -> void:
 	_day_summary.show_summary(
-		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0,
 		ARCHETYPE_FLOOR_WALKER, 3, [],
 	)
 	assert_string_contains(
@@ -123,8 +123,8 @@ func test_archetype_subtext_carries_path_line() -> void:
 		"Floor Walker subtext must mention the Floor Lead path"
 	)
 	assert_string_contains(
-		_day_summary._archetype_subtext_label.text, "full Mallcore",
-		"Path framing must mention 'full Mallcore' as natural expansion"
+		_day_summary._archetype_subtext_label.text, "full game",
+		"Path framing must mention 'full game' as natural expansion"
 	)
 
 
@@ -138,7 +138,7 @@ func test_subtext_path_per_archetype() -> void:
 	]
 	for pair in pairs:
 		_day_summary.show_summary(
-			1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+			1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0,
 			pair[0], 1, [],
 		)
 		assert_string_contains(
@@ -149,7 +149,7 @@ func test_subtext_path_per_archetype() -> void:
 
 func test_the_mark_carries_framed_fired_copy() -> void:
 	_day_summary.show_summary(
-		1, 0.0, 25.0, -25.0, 0, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+		1, 0.0, 25.0, -25.0, 0, 0.0, 0.0, 0.0,
 		ARCHETYPE_MARK, 1, [],
 	)
 	assert_string_contains(
@@ -166,7 +166,7 @@ func test_the_mark_carries_framed_fired_copy() -> void:
 
 func test_floor_stars_render_with_unicode_chars() -> void:
 	_day_summary.show_summary(
-		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0,
 		ARCHETYPE_WARM_BODY, 1, [],
 	)
 	assert_eq(
@@ -174,7 +174,7 @@ func test_floor_stars_render_with_unicode_chars() -> void:
 		"1 star must render as ★☆☆☆☆"
 	)
 	_day_summary.show_summary(
-		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0,
 		ARCHETYPE_COMPANY_PERSON, 5, [],
 	)
 	assert_eq(
@@ -185,7 +185,7 @@ func test_floor_stars_render_with_unicode_chars() -> void:
 
 func test_attention_notes_hidden_when_empty() -> void:
 	_day_summary.show_summary(
-		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0,
 		ARCHETYPE_WARM_BODY, 2, [],
 	)
 	assert_false(_day_summary._attention_notes_label.visible)
@@ -198,7 +198,7 @@ func test_attention_notes_visible_when_populated() -> void:
 		"Inventory variance at 8% — check backroom counts.",
 	]
 	_day_summary.show_summary(
-		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0, "", 0.0, 0.0,
+		1, 100.0, 25.0, 75.0, 4, 0.0, 0.0, 0.0,
 		ARCHETYPE_WARM_BODY, 2, notes,
 	)
 	assert_true(_day_summary._attention_notes_label.visible)

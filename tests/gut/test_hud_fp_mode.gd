@@ -180,14 +180,6 @@ func test_fp_mode_hides_speed_button() -> void:
 	)
 
 
-func test_fp_mode_hides_seasonal_event_label() -> void:
-	_hud.set_fp_mode(true)
-	assert_false(
-		_hud.get_node("SeasonalEventLabel").visible,
-		"SeasonalEventLabel must be hidden in FP mode"
-	)
-
-
 func test_fp_mode_hides_telegraph_card() -> void:
 	_hud.set_fp_mode(true)
 	assert_false(
@@ -387,6 +379,118 @@ func test_disable_fp_mode_hides_close_day_hint() -> void:
 	)
 
 
+## Compact-stat typography contract: the three top-right readouts must read
+## as secondary info — small font, dimmed white — so they do not feel like
+## a debug overlay competing with primary cash/time and never tie a toast
+## or modal title in size + brightness.
+func test_fp_mode_stat_labels_have_compact_font_size() -> void:
+	_hud.set_fp_mode(true)
+	for lbl: Label in [
+		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
+	]:
+		var size: int = lbl.get_theme_font_size("font_size")
+		assert_lte(
+			size, 14,
+			"%s font_size must be <=14 px in FP mode (got %d)" % [lbl.name, size]
+		)
+
+
+func test_fp_mode_stat_labels_have_dimmed_color() -> void:
+	_hud.set_fp_mode(true)
+	for lbl: Label in [
+		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
+	]:
+		var c: Color = lbl.get_theme_color("font_color")
+		assert_lte(
+			c.a, 0.65,
+			"%s font_color alpha must be <=0.65 in FP mode (got %.2f)" % [lbl.name, c.a]
+		)
+
+
+func test_fp_mode_cash_label_brighter_than_stats() -> void:
+	# Within-HUD hierarchy: cash is primary info, must out-weight the
+	# secondary right-cluster on either size or contrast (here: both).
+	_hud.set_fp_mode(true)
+	var cash_size: int = _hud._cash_label.get_theme_font_size("font_size")
+	var stat_size: int = _hud._items_placed_label.get_theme_font_size("font_size")
+	assert_gt(
+		cash_size, stat_size,
+		"CashLabel font_size (%d) must exceed stat font_size (%d) in FP mode" % [
+			cash_size, stat_size,
+		]
+	)
+	var cash_alpha: float = _hud._cash_label.get_theme_color("font_color").a
+	var stat_alpha: float = _hud._items_placed_label.get_theme_color("font_color").a
+	assert_gt(
+		cash_alpha, stat_alpha,
+		"CashLabel font alpha (%.2f) must exceed stat alpha (%.2f) in FP mode" % [
+			cash_alpha, stat_alpha,
+		]
+	)
+
+
+func test_fp_mode_time_label_brighter_than_stats() -> void:
+	_hud.set_fp_mode(true)
+	var time_size: int = _hud._time_label.get_theme_font_size("font_size")
+	var stat_size: int = _hud._sales_today_label.get_theme_font_size("font_size")
+	assert_gt(
+		time_size, stat_size,
+		"TimeLabel font_size (%d) must exceed stat font_size (%d) in FP mode" % [
+			time_size, stat_size,
+		]
+	)
+
+
+## BRAINDUMP non-negotiable: the mystery / hidden-thread system must not
+## surface "meters or named mechanics" in the player-facing HUD. This guard
+## walks the HUD subtree and rejects any Label whose name or text contains
+## a forbidden term, so a regression that adds a thread/affinity readout
+## fails immediately.
+func test_fp_mode_no_player_visible_thread_or_affinity_meters() -> void:
+	_hud.set_fp_mode(true)
+	var forbidden: Array[String] = ["thread", "affinity", "clue"]
+	var stack: Array[Node] = [_hud]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		for child: Node in node.get_children():
+			stack.push_back(child)
+		if node is Label:
+			var name_lower: String = String(node.name).to_lower()
+			var text_lower: String = (node as Label).text.to_lower()
+			for term: String in forbidden:
+				assert_false(
+					name_lower.contains(term),
+					"HUD label name '%s' contains forbidden mystery term '%s'" % [
+						node.name, term,
+					]
+				)
+				assert_false(
+					text_lower.contains(term),
+					"HUD label text '%s' contains forbidden mystery term '%s'" % [
+						(node as Label).text, term,
+					]
+				)
+
+
+func test_disable_fp_mode_clears_typography_overrides() -> void:
+	# Theme overrides must not leak into the desktop TopBar layout, otherwise
+	# the manager view inherits the dimmed compact treatment meant only for FP.
+	_hud.set_fp_mode(true)
+	_hud.set_fp_mode(false)
+	for lbl: Label in [
+		_hud._cash_label, _hud._time_label,
+		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
+	]:
+		assert_false(
+			lbl.has_theme_font_size_override("font_size"),
+			"%s must not retain font_size override after FP mode disabled" % lbl.name
+		)
+		assert_false(
+			lbl.has_theme_color_override("font_color"),
+			"%s must not retain font_color override after FP mode disabled" % lbl.name
+		)
+
+
 func test_state_change_in_fp_mode_keeps_top_bar_hidden() -> void:
 	# A STORE_VIEW transition normally shows TopBar children; FP mode must
 	# re-assert overrides so the heavy bar does not leak back in.
@@ -397,3 +501,153 @@ func test_state_change_in_fp_mode_keeps_top_bar_hidden() -> void:
 		top_bar.visible,
 		"TopBar must remain hidden after a STORE_VIEW transition while FP mode is on"
 	)
+
+
+## Top-center cluster guard: in FP mode the scene-tree ZeroStateHint at
+## offset_top=52 sits next to the reparented TimeLabel and crowds it. FP
+## mode must keep that label hidden and route the hint copy to the new
+## bottom-center sentence slot instead.
+func test_fp_mode_hides_top_center_zero_state_hint() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 0
+	_hud._active_customer_count = 0
+	_hud._refresh_zero_state_hint()
+	var legacy_hint: Label = _hud.get_node("ZeroStateHint") as Label
+	assert_false(
+		legacy_hint.visible,
+		"Top-center ZeroStateHint must stay hidden in FP mode to avoid TimeLabel collision"
+	)
+
+
+func test_fp_mode_creates_bottom_bar_sentence_label() -> void:
+	_hud.set_fp_mode(true)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(
+		sentence, "FP mode must add a bottom-bar sentence label to HUD"
+	)
+
+
+func test_fp_mode_sentence_anchored_bottom_center() -> void:
+	_hud.set_fp_mode(true)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_eq(sentence.anchor_left, 0.5, "Sentence label anchor_left at center")
+	assert_eq(sentence.anchor_right, 0.5, "Sentence label anchor_right at center")
+	assert_eq(sentence.anchor_top, 1.0, "Sentence label anchored to bottom edge")
+	assert_eq(sentence.anchor_bottom, 1.0, "Sentence label anchored to bottom edge")
+	assert_eq(
+		sentence.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER,
+		"Sentence label text must be horizontally centered"
+	)
+
+
+## Regression guard: the FP sentence must sit above the ObjectiveRail's
+## AccentBand (top edge at offset_top=-148 from bottom). If the sentence
+## offset_bottom is greater than -148 it overlaps the rail's content area
+## and competes with the per-step rail readout.
+func test_fp_mode_sentence_above_objective_rail() -> void:
+	_hud.set_fp_mode(true)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_lte(
+		sentence.offset_bottom, -148.0,
+		"Sentence bottom edge must sit at or above the ObjectiveRail AccentBand (-148)"
+	)
+
+
+func test_fp_mode_sentence_shows_stock_hint_when_empty_shelves() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 0
+	_hud._active_customer_count = 0
+	_hud._refresh_zero_state_hint()
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_true(
+		sentence.visible,
+		"Bottom-bar sentence must surface the zero-state hint in FP mode"
+	)
+	assert_eq(
+		sentence.text, "Stock shelves to open the lane.",
+		"Sentence must display the stock-floor hint when shelves are empty"
+	)
+
+
+func test_fp_mode_sentence_shows_waiting_hint_when_no_customers() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 4
+	_hud._active_customer_count = 0
+	_hud._refresh_zero_state_hint()
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_true(sentence.visible)
+	assert_eq(
+		sentence.text, "Waiting for the first customer…",
+		"Sentence must display the waiting-for-customer hint once shelves are stocked"
+	)
+
+
+func test_fp_mode_sentence_hides_when_loop_active() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 4
+	_hud._active_customer_count = 2
+	_hud._refresh_zero_state_hint()
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_false(
+		sentence.visible,
+		"Sentence must hide when both shelves and customers are present"
+	)
+
+
+func test_disable_fp_mode_hides_bottom_bar_sentence_label() -> void:
+	_hud.set_fp_mode(true)
+	_hud.set_fp_mode(false)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	if sentence == null:
+		return
+	assert_false(
+		sentence.visible,
+		"Bottom-bar sentence must be hidden after set_fp_mode(false)"
+	)
+
+
+## Backroom-count guard: the beta day-1 chain pumps the back-room delivery
+## count via EventBus.beta_backroom_count_changed; FP mode must keep that
+## readout visible in the top-right stat cluster so the player can still
+## see the pickup tally after the morning delivery.
+func test_fp_mode_back_room_label_reparented_under_hud() -> void:
+	_hud.set_fp_mode(true)
+	assert_eq(
+		_hud._back_room_label.get_parent(), _hud,
+		"BackRoomLabel must be reparented under HUD in FP mode"
+	)
+
+
+func test_fp_mode_back_room_label_visible() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	assert_true(
+		_hud._back_room_label.visible,
+		"BackRoomLabel must remain visible in FP mode (beta backroom count)"
+	)
+
+
+func test_fp_mode_back_room_label_anchored_top_right() -> void:
+	_hud.set_fp_mode(true)
+	var lbl: Label = _hud._back_room_label
+	assert_eq(lbl.anchor_left, 1.0, "BackRoomLabel anchored top-right")
+	assert_eq(lbl.anchor_right, 1.0, "BackRoomLabel anchor_right at right edge")

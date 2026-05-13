@@ -98,10 +98,6 @@ func _classify(path: String, data: Variant) -> String:
 	var dir_name: String = rel.get_slice("/", 0)
 	var file_base: String = path.get_file().get_basename()
 	if dir_name == "events":
-		if path.get_file() == "seasons.json":
-			return ""
-		if file_base.begins_with("seasonal"):
-			return "seasonal_event"
 		if file_base.begins_with("random"):
 			return "random_event"
 		if file_base.begins_with("ambient"):
@@ -109,8 +105,6 @@ func _classify(path: String, data: Variant) -> String:
 		return "market_event"
 	if dir_name == "items":
 		return "item"
-	if file_base == "pocket_creatures_cards":
-		return ""
 	if dir_name == "customers":
 		if file_base == "personalities":
 			return ""

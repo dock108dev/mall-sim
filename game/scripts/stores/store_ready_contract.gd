@@ -57,9 +57,9 @@ const INVARIANTS: Array[StringName] = [
 ]
 
 ## Player presence anchors used across stores. retro_games has a
-## walkable PlayerController; orbit-cam stores (sports, electronics, pocket
-## creatures, video_rental) anchor the camera to an OrbitPivot Marker3D.
-## Both count as "presence". `Player` is kept for legacy/test fixtures.
+## walkable PlayerController; legacy orbit-cam fixtures anchored the camera
+## to an OrbitPivot Marker3D. Both count as "presence". `Player` is kept for
+## legacy/test fixtures.
 const _PLAYER_ANCHOR_NAMES: PackedStringArray = [
 	"PlayerController", "Player", "OrbitPivot",
 ]

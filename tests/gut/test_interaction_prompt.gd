@@ -22,6 +22,9 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	if InputFocus != null:
 		InputFocus._reset_for_tests()
+	# Reset FP-mode signal so a test that turned it on does not leak into
+	# subsequent tests (or the production autoload listeners).
+	EventBus.fp_mode_changed.emit(false)
 
 
 func _emit_state(new_state: GameManager.State) -> void:
@@ -334,6 +337,48 @@ func test_modal_close_without_focus_target_does_not_query_ray() -> void:
 	assert_false(
 		panel.visible,
 		"Without a focus target, modal cycles must leave the prompt hidden"
+	)
+
+
+# ── FP-mode suppression ────────────────────────────────────────────────────
+#
+# In first-person mode the ObjectiveRail absorbs the inline "[E] action"
+# affordance into its right-side chip, so the standalone prompt must
+# suppress itself for the duration of FP. Non-FP surfaces (management
+# view, mall hub) keep the prompt as the sole renderer.
+
+func test_hides_when_fp_mode_enabled_during_active_focus() -> void:
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	assert_true(panel.visible, "Pre-condition: prompt visible without FP mode")
+	EventBus.fp_mode_changed.emit(true)
+	await get_tree().create_timer(0.2).timeout
+	assert_false(
+		panel.visible,
+		"Prompt must hide once FP mode is on so the rail is the sole renderer"
+	)
+
+
+func test_does_not_show_when_focus_arrives_in_fp_mode() -> void:
+	EventBus.fp_mode_changed.emit(true)
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	assert_false(
+		panel.visible,
+		"Prompt must not become visible while FP mode is active"
+	)
+
+
+func test_reappears_after_fp_mode_disabled_with_focus_target() -> void:
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	EventBus.fp_mode_changed.emit(true)
+	await get_tree().create_timer(0.2).timeout
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	assert_false(panel.visible, "Pre-condition: hidden under FP mode")
+	EventBus.fp_mode_changed.emit(false)
+	assert_true(
+		panel.visible,
+		"Prompt must reappear when FP mode disables while a focus target persists"
 	)
 
 

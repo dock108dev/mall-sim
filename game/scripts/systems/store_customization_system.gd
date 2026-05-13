@@ -56,13 +56,11 @@ const FEATURED_CATEGORY_ORDER: Array[StringName] = [
 const POSTER_NONE: StringName = &""
 const POSTER_NEW_RELEASES: StringName = &"new_releases"
 const POSTER_RETRO_REVIVAL: StringName = &"retro_revival"
-const POSTER_SPORTS_SEASON: StringName = &"sports_season"
 const POSTER_FAMILY_FUN: StringName = &"family_fun"
 
 const POSTER_ORDER: Array[StringName] = [
 	POSTER_NEW_RELEASES,
 	POSTER_RETRO_REVIVAL,
-	POSTER_SPORTS_SEASON,
 	POSTER_FAMILY_FUN,
 ]
 
@@ -94,7 +92,6 @@ const _FEATURED_DEMAND_MULTIPLIERS: Dictionary = {
 const _POSTER_SPAWN_BONUSES: Dictionary = {
 	POSTER_NEW_RELEASES: {&"hype_teen": 1.02},
 	POSTER_RETRO_REVIVAL: {&"bargain_hunter": 1.02, &"collector": 1.02},
-	POSTER_SPORTS_SEASON: {&"sports_regular": 1.02},
 	POSTER_FAMILY_FUN: {&"confused_parent": 1.02, &"casual_shopper": 1.02},
 }
 

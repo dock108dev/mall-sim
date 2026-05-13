@@ -292,6 +292,20 @@ func test_day_started_consumes_pending_unlock() -> void:
 	)
 
 
+func test_day_started_skips_emission_when_beta_controller_active() -> void:
+	# Beta day-1 runs its own morning note via `BetaManagerNotePanel`.
+	# When the controller is in the scene tree the global MorningNotePanel
+	# must stay quiet so two manager notes do not stack on top of each
+	# other after the day-summary Continue click. Mirrors the guards in
+	# `midday_event_system.gd` and `milestone_system.gd`.
+	var stub: Node = Node.new()
+	stub.add_to_group("beta_day_one_controller")
+	add_child_autofree(stub)
+	watch_signals(EventBus)
+	EventBus.day_started.emit(1)
+	assert_signal_not_emitted(EventBus, "manager_note_shown")
+
+
 # ── Acceptance: tally never crashes on unknown category ──────────────────────
 
 func test_tier_category_lookup_falls_back_when_category_missing() -> void:

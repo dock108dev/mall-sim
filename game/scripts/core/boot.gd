@@ -50,11 +50,9 @@ func initialize() -> void:
 		return
 
 	var store_ids: Array[StringName] = ContentRegistry.get_all_store_ids()
-	if store_ids.size() < 5:
-		push_error("Boot: only %d store IDs registered" % store_ids.size())
-		_show_error(
-			"Expected at least 5 store IDs, found %d." % store_ids.size()
-		)
+	if store_ids.is_empty():
+		push_error("Boot: no store IDs registered")
+		_show_error("No stores registered.")
 		return
 
 	Settings.load()

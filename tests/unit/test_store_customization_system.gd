@@ -282,9 +282,9 @@ func test_featured_category_changed_emits_on_set() -> void:
 
 func test_poster_changed_emits_on_set() -> void:
 	watch_signals(_sys)
-	_sys.set_poster(&"sports_season")
+	_sys.set_poster(&"retro_revival")
 	assert_signal_emitted_with_parameters(
-		_sys, "poster_changed", [StringName("sports_season")]
+		_sys, "poster_changed", [StringName("retro_revival")]
 	)
 
 

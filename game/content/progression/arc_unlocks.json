@@ -22,32 +22,10 @@
       "unlock_id": "regulars_enabled",
       "day": 3,
       "description": "Regular customers begin recognising the store after day 3 (ISSUE-023)"
-    },
-    {
-      "unlock_id": "tournament_events",
-      "day": 10,
-      "description": "Tournament events become available to Pocket Creatures after day 10 (ISSUE-015)"
     }
   ],
   "store_adjacency": {
-    "sports": [
-      "retro_games"
-    ],
-    "retro_games": [
-      "sports",
-      "pocket_creatures"
-    ],
-    "pocket_creatures": [
-      "retro_games",
-      "video_rental"
-    ],
-    "video_rental": [
-      "pocket_creatures",
-      "electronics"
-    ],
-    "electronics": [
-      "video_rental"
-    ]
+    "retro_games": []
   },
   "win_condition": {
     "target_day": 30,

@@ -59,17 +59,12 @@ var _store_state_manager: StoreStateManager
 var _progression_system: ProgressionSystem
 var _milestone_system: MilestoneSystem
 var _refurbishment_system: RefurbishmentSystem
-var _rental_system: VideoRentalStoreController
 var _trend_system: TrendSystem
 var _market_event_system: MarketEventSystem
 var _fixture_placement_system: FixturePlacementSystem
-var _tournament_system: TournamentSystem
-var _meta_shift_system: MetaShiftSystem
-var _seasonal_event_system: SeasonalEventSystem
 var _random_event_system: RandomEventSystem
 var _staff_system: StaffSystem
 var _tutorial_system: TutorialSystem
-var _season_cycle_system: SeasonCycleSystem
 var _ambient_moments_system: AmbientMomentsSystem
 var _regulars_log_system: RegularsLogSystem
 var _ending_evaluator: EndingEvaluatorSystem
@@ -146,39 +141,11 @@ func set_fixture_placement_system(
 	_fixture_placement_system = system
 
 
-## Sets the TournamentSystem reference for save/load.
-func set_tournament_system(
-	system: TournamentSystem
-) -> void:
-	_tournament_system = system
-
-
-## Sets the MetaShiftSystem reference for save/load.
-func set_meta_shift_system(
-	system: MetaShiftSystem
-) -> void:
-	_meta_shift_system = system
-
-
-## Sets the SeasonalEventSystem reference for save/load.
-func set_seasonal_event_system(
-	system: SeasonalEventSystem
-) -> void:
-	_seasonal_event_system = system
-
-
 ## Sets the RandomEventSystem reference for save/load.
 func set_random_event_system(
 	system: RandomEventSystem
 ) -> void:
 	_random_event_system = system
-
-
-## Sets the VideoRentalStoreController reference for save/load.
-func set_rental_system(
-	system: VideoRentalStoreController
-) -> void:
-	_rental_system = system
 
 
 ## Sets the StaffSystem reference for save/load.
@@ -189,11 +156,6 @@ func set_staff_system(system: StaffSystem) -> void:
 ## Sets the TutorialSystem reference for save/load.
 func set_tutorial_system(system: TutorialSystem) -> void:
 	_tutorial_system = system
-
-
-## Sets the SeasonCycleSystem reference for save/load.
-func set_season_cycle_system(system: SeasonCycleSystem) -> void:
-	_season_cycle_system = system
 
 
 ## Sets the AmbientMomentsSystem reference for save/load.
@@ -474,9 +436,6 @@ func _collect_save_data() -> Dictionary:
 	if _refurbishment_system:
 		data["refurbishment"] = _refurbishment_system.get_save_data()
 
-	if _rental_system:
-		data["rental"] = _rental_system.get_save_data()
-
 	if _trend_system:
 		data["trends"] = _trend_system.get_save_data()
 
@@ -485,17 +444,6 @@ func _collect_save_data() -> Dictionary:
 
 	if _fixture_placement_system:
 		data["fixtures"] = _fixture_placement_system.get_save_data()
-
-	if _tournament_system:
-		data["tournament"] = _tournament_system.get_save_data()
-
-	if _meta_shift_system:
-		data["meta_shift"] = _meta_shift_system.get_save_data()
-
-	if _seasonal_event_system:
-		data["seasonal_events"] = (
-			_seasonal_event_system.get_save_data()
-		)
 
 	if _random_event_system:
 		data["random_events"] = (
@@ -507,9 +455,6 @@ func _collect_save_data() -> Dictionary:
 
 	if _tutorial_system:
 		data["tutorial"] = _tutorial_system.get_save_data()
-
-	if _season_cycle_system:
-		data["season_cycle"] = _season_cycle_system.get_save_data()
 
 	if _ambient_moments_system:
 		data["ambient_moments"] = (
@@ -620,13 +565,6 @@ func _distribute_save_data(data: Dictionary) -> void:
 				refurb_data as Dictionary
 			)
 
-	if _rental_system:
-		var rental_data: Variant = data.get("rental", {})
-		if rental_data is Dictionary:
-			_rental_system.load_save_data(
-				rental_data as Dictionary
-			)
-
 	if _trend_system:
 		var trend_data: Variant = data.get("trends", {})
 		if trend_data is Dictionary:
@@ -650,29 +588,6 @@ func _distribute_save_data(data: Dictionary) -> void:
 				fixture_data as Dictionary
 			)
 
-	if _tournament_system:
-		var tournament_data: Variant = data.get("tournament", {})
-		if tournament_data is Dictionary:
-			_tournament_system.load_save_data(
-				tournament_data as Dictionary
-			)
-
-	if _meta_shift_system:
-		var meta_shift_data: Variant = data.get("meta_shift", {})
-		if meta_shift_data is Dictionary:
-			_meta_shift_system.load_save_data(
-				meta_shift_data as Dictionary
-			)
-
-	if _seasonal_event_system:
-		var seasonal_data: Variant = data.get(
-			"seasonal_events", {}
-		)
-		if seasonal_data is Dictionary:
-			_seasonal_event_system.load_save_data(
-				seasonal_data as Dictionary
-			)
-
 	if _random_event_system:
 		var random_data: Variant = data.get(
 			"random_events", {}
@@ -694,13 +609,6 @@ func _distribute_save_data(data: Dictionary) -> void:
 		if tutorial_data is Dictionary:
 			_tutorial_system.load_save_data(
 				tutorial_data as Dictionary
-			)
-
-	if _season_cycle_system:
-		var cycle_data: Variant = data.get("season_cycle", {})
-		if cycle_data is Dictionary:
-			_season_cycle_system.load_save_data(
-				cycle_data as Dictionary
 			)
 
 	if _ambient_moments_system:

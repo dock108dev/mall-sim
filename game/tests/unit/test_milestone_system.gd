@@ -370,7 +370,7 @@ func test_load_state_does_not_refire_milestone_unlocked() -> void:
 
 func test_load_state_preserves_unique_stores() -> void:
 	_ms._on_store_entered(&"retro_games")
-	_ms._on_store_entered(&"video_rental")
+	_ms._on_store_entered(&"test_store_b")
 	var save_data: Dictionary = _ms.get_save_data()
 
 	var ms2 := MilestoneSystem.new()

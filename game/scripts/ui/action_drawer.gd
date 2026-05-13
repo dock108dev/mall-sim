@@ -1,8 +1,8 @@
 ## Unified in-store action drawer. Chrome layer renders per-store action buttons
 ## from EventBus.actions_registered; content layer switches between mechanic
-## panels (HAGGLE, REFURB, AUTHENTICATE, WARRANTY, TRADE) driven by
-## EventBus.action_requested. All player-interaction outcomes are emitted on
-## EventBus — no direct cross-scene coupling.
+## panels (HAGGLE, REFURB) driven by EventBus.action_requested. All
+## player-interaction outcomes are emitted on EventBus — no direct cross-scene
+## coupling.
 class_name ActionDrawer
 extends PanelContainer
 
@@ -11,21 +11,12 @@ enum Mode {
 	IDLE = 0,
 	HAGGLE = 1,
 	REFURB = 2,
-	AUTHENTICATE = 3,
-	WARRANTY = 4,
-	TRADE = 5,
 }
 
 ## Maps action_id → Mode that should open when the button is pressed.
 const ACTION_MODE_MAP: Dictionary = {
 	&"haggle":           Mode.HAGGLE,
 	&"refurbish":        Mode.REFURB,
-	&"authenticate":     Mode.AUTHENTICATE,
-	&"grade":            Mode.AUTHENTICATE,
-	&"send_for_grading": Mode.AUTHENTICATE,
-	&"grading_hint":     Mode.AUTHENTICATE,
-	&"offer_warranty":   Mode.WARRANTY,
-	&"open_pack":        Mode.TRADE,
 }
 
 const CONTENT_HEIGHT: float = 200.0
@@ -47,13 +38,6 @@ var _haggle_customer_offer: float = 0.0
 var _haggle_max_rounds: int = 3
 var _haggle_round: int = 1
 
-# ── Warranty pane state ──────────────────────────────────────────────────────
-var _warranty_item_id: String = ""
-var _warranty_tier_id: String = ""
-
-# ── Auth pane state ──────────────────────────────────────────────────────────
-var _auth_item_id: String = ""
-
 # ── Per-mode panes (built in _ready) ─────────────────────────────────────────
 var _panes: Dictionary = {}
 
@@ -62,17 +46,8 @@ var _haggle_offer_label: Label = null
 var _haggle_round_label: Label = null
 var _haggle_counter_input: SpinBox = null
 
-# Warranty pane node refs
-var _warranty_offer_label: Label = null
-
-# Auth pane node refs
-var _auth_item_label: Label = null
-
 # Refurb pane node refs
 var _refurb_status_label: Label = null
-
-# Trade pane node refs
-var _trade_offer_label: Label = null
 
 # ── Scene refs ────────────────────────────────────────────────────────────────
 @onready var _button_container: BoxContainer = $Layout/Chrome/Margin/Buttons
@@ -145,8 +120,6 @@ func _connect_signals() -> void:
 	EventBus.haggle_customer_countered.connect(_on_haggle_customer_countered)
 	EventBus.haggle_completed.connect(_on_haggle_completed)
 	EventBus.haggle_failed.connect(_on_haggle_failed)
-	EventBus.warranty_offer_presented.connect(_on_warranty_offer_presented)
-	EventBus.authentication_dialog_requested.connect(_on_auth_dialog_requested)
 	EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
 
 
@@ -204,18 +177,6 @@ func _on_haggle_failed(_item_id: String, _customer_id: int) -> void:
 	close_mode()
 
 
-func _on_warranty_offer_presented(item_id: String) -> void:
-	_warranty_item_id = item_id
-	_refresh_warranty_pane()
-	open_mode(Mode.WARRANTY)
-
-
-func _on_auth_dialog_requested(item_id: Variant) -> void:
-	_auth_item_id = String(item_id)
-	_refresh_auth_pane()
-	open_mode(Mode.AUTHENTICATE)
-
-
 func _on_refurbishment_completed(
 	_item_id: String, _success: bool, _condition: String
 ) -> void:
@@ -265,9 +226,6 @@ func _on_action_pressed(action_id: StringName) -> void:
 func _build_mode_panes() -> void:
 	_panes[Mode.HAGGLE] = _build_haggle_pane()
 	_panes[Mode.REFURB] = _build_refurb_pane()
-	_panes[Mode.AUTHENTICATE] = _build_auth_pane()
-	_panes[Mode.WARRANTY] = _build_warranty_pane()
-	_panes[Mode.TRADE] = _build_trade_pane()
 	for pane: Control in _panes.values():
 		pane.hide()
 
@@ -364,116 +322,6 @@ func _build_refurb_pane() -> VBoxContainer:
 	return pane
 
 
-func _build_auth_pane() -> VBoxContainer:
-	var pane := VBoxContainer.new()
-	pane.name = "AuthPane"
-	_content.add_child(pane)
-
-	var title := Label.new()
-	title.text = "AUTHENTICATE"
-	title.add_theme_font_size_override("font_size", 14)
-	pane.add_child(title)
-
-	_auth_item_label = Label.new()
-	_auth_item_label.name = "ItemLabel"
-	_auth_item_label.text = "Select item to authenticate"
-	pane.add_child(_auth_item_label)
-
-	var tiers_row := HBoxContainer.new()
-	tiers_row.add_theme_constant_override("separation", 8)
-	pane.add_child(tiers_row)
-
-	var tier_data: Array = [
-		[0, "Economy ($5)"],
-		[1, "Express ($15)"],
-		[2, "Premium ($35)"],
-	]
-	for td: Array in tier_data:
-		var tier_int: int = td[0]
-		var tier_label: String = td[1]
-		var btn := Button.new()
-		btn.name = "TierBtn%d" % tier_int
-		btn.text = tier_label
-		btn.pressed.connect(_on_auth_tier_selected.bind(tier_int))
-		tiers_row.add_child(btn)
-
-	var cancel_btn := Button.new()
-	cancel_btn.name = "CancelBtn"
-	cancel_btn.text = "Cancel"
-	cancel_btn.pressed.connect(close_mode)
-	pane.add_child(cancel_btn)
-
-	return pane
-
-
-func _build_warranty_pane() -> VBoxContainer:
-	var pane := VBoxContainer.new()
-	pane.name = "WarrantyPane"
-	_content.add_child(pane)
-
-	var title := Label.new()
-	title.text = "WARRANTY OFFER"
-	title.add_theme_font_size_override("font_size", 14)
-	pane.add_child(title)
-
-	_warranty_offer_label = Label.new()
-	_warranty_offer_label.name = "OfferLabel"
-	_warranty_offer_label.text = "Offer warranty to customer?"
-	pane.add_child(_warranty_offer_label)
-
-	var btns := HBoxContainer.new()
-	btns.add_theme_constant_override("separation", 8)
-	pane.add_child(btns)
-
-	var accept_btn := Button.new()
-	accept_btn.name = "AcceptBtn"
-	accept_btn.text = "Offer Warranty"
-	accept_btn.pressed.connect(_on_warranty_accept)
-	btns.add_child(accept_btn)
-
-	var decline_btn := Button.new()
-	decline_btn.name = "DeclineBtn"
-	decline_btn.text = "No Thanks"
-	decline_btn.pressed.connect(_on_warranty_decline)
-	btns.add_child(decline_btn)
-
-	return pane
-
-
-func _build_trade_pane() -> VBoxContainer:
-	var pane := VBoxContainer.new()
-	pane.name = "TradePane"
-	_content.add_child(pane)
-
-	var title := Label.new()
-	title.text = "TRADE OFFER"
-	title.add_theme_font_size_override("font_size", 14)
-	pane.add_child(title)
-
-	_trade_offer_label = Label.new()
-	_trade_offer_label.name = "OfferLabel"
-	_trade_offer_label.text = "Review trade offer"
-	pane.add_child(_trade_offer_label)
-
-	var btns := HBoxContainer.new()
-	btns.add_theme_constant_override("separation", 8)
-	pane.add_child(btns)
-
-	var accept_btn := Button.new()
-	accept_btn.name = "AcceptBtn"
-	accept_btn.text = "Accept Trade"
-	accept_btn.pressed.connect(_on_trade_accept)
-	btns.add_child(accept_btn)
-
-	var decline_btn := Button.new()
-	decline_btn.name = "DeclineBtn"
-	decline_btn.text = "Decline"
-	decline_btn.pressed.connect(_on_trade_decline)
-	btns.add_child(decline_btn)
-
-	return pane
-
-
 # ── Pane data refresh ─────────────────────────────────────────────────────────
 
 func _refresh_haggle_pane() -> void:
@@ -492,20 +340,6 @@ func _refresh_haggle_pane() -> void:
 		_haggle_counter_input.max_value = max_val
 		_haggle_counter_input.value = snappedf(
 			clampf(_haggle_sticker_price, 0.01, max_val), 0.25
-		)
-
-
-func _refresh_warranty_pane() -> void:
-	if _warranty_offer_label:
-		_warranty_offer_label.text = (
-			"Offer extended warranty for item: %s?" % _warranty_item_id
-		)
-
-
-func _refresh_auth_pane() -> void:
-	if _auth_item_label:
-		_auth_item_label.text = (
-			"Authenticate: %s" % _auth_item_id
 		)
 
 
@@ -530,31 +364,6 @@ func _on_haggle_decline() -> void:
 
 func _on_refurb_start() -> void:
 	EventBus.refurb_player_queued.emit(_current_store_id)
-	close_mode()
-
-
-func _on_auth_tier_selected(tier: int) -> void:
-	EventBus.authentication_player_submitted.emit(_auth_item_id, tier)
-	close_mode()
-
-
-func _on_warranty_accept() -> void:
-	EventBus.warranty_player_accepted.emit(_warranty_item_id, _warranty_tier_id)
-	close_mode()
-
-
-func _on_warranty_decline() -> void:
-	EventBus.warranty_player_declined.emit(_warranty_item_id)
-	close_mode()
-
-
-func _on_trade_accept() -> void:
-	EventBus.trade_player_accepted.emit()
-	close_mode()
-
-
-func _on_trade_decline() -> void:
-	EventBus.trade_player_declined.emit()
 	close_mode()
 
 

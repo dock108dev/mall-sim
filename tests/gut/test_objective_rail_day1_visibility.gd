@@ -1,14 +1,20 @@
 ## Verifies the Day 1 ObjectiveRail surfaces the first step of the chain
-## ("Open your inventory") with a "Press I" action and an "I" key badge, that
-## the rail occupies a different screen zone than the InteractionPrompt, and
-## that the Day1ReadinessAudit objective check passes once the day starts and
-## the player enters the store.
+## ("Talk to the waiting customer") with a "Press E" action and an "E" key
+## badge, that the rail occupies a different screen zone than the
+## InteractionPrompt, and that the Day1ReadinessAudit objective check passes
+## once the day starts and the player enters the store.
+##
+## §F-PUNCH5 — content authoring in objectives.json (Day 1 step 1) was
+## pivoted to the customer-first chain ("Talk to the waiting customer";
+## key "E"). The constants below were the old "Open your inventory" /
+## "Press I" wording that pre-dated the pivot. Updated so the tests
+## track current Day 1 production content.
 extends GutTest
 
 
-const _OBJECTIVE_TEXT: String = "Open your inventory"
-const _ACTION_TEXT: String = "Press I to open the inventory panel"
-const _KEY_TEXT: String = "I"
+const _OBJECTIVE_TEXT: String = "Talk to the waiting customer"
+const _ACTION_TEXT: String = "Press E at the customer to open the decision card"
+const _KEY_TEXT: String = "E"
 
 const _RAIL_SCENE: String = "res://game/scenes/ui/objective_rail.tscn"
 const _PROMPT_SCENE: String = "res://game/scenes/ui/interaction_prompt.tscn"
@@ -57,6 +63,10 @@ func after_each() -> void:
 	GameState.set_flag(&"first_sale_complete", _saved_first_sale_flag)
 	if InputFocus != null:
 		InputFocus._reset_for_tests()
+	# Reset FP-mode signal so a test that flipped it on does not leak into
+	# subsequent tests (or the production autoload's rail listener).
+	EventBus.fp_mode_changed.emit(false)
+	EventBus.interactable_unfocused.emit()
 
 
 ## Drives the production handshake for tests that exercise post-dismiss state:
@@ -116,9 +126,9 @@ func test_project_theme_label_font_size_meets_legibility_floor() -> void:
 	# resolve through the project theme. Verify the project theme keeps Label
 	# at the 18pt floor that gives the Day 1 guidance legibility at 1920x1080.
 	var theme_src: String = FileAccess.get_file_as_string(
-		"res://game/themes/mallcore_theme.tres"
+		"res://game/themes/game_theme.tres"
 	)
-	assert_ne(theme_src, "", "mallcore_theme.tres must be readable")
+	assert_ne(theme_src, "", "game_theme.tres must be readable")
 	assert_true(
 		theme_src.contains("Label/font_sizes/font_size = 18"),
 		"Project theme must keep Label font_size >= 18 for 1080p legibility"
@@ -226,6 +236,107 @@ func test_item_stocked_triggers_rail_update_after_day_started() -> void:
 		"item_stocked must re-emit the Day 1 objective payload to the rail"
 	)
 	assert_eq(rail._action_label.text, _ACTION_TEXT)
+
+
+# ── FP-mode focus chip (absorbs InteractionPrompt content) ────────────────────
+#
+# In first-person mode the ObjectiveRail takes over the inline
+# "[E] action" copy that the InteractionPrompt would otherwise render
+# bottom-center. The right-side chip swaps the cached objective action for
+# the focused interactable's action_label, the cream KeyBadge appears, and
+# the cached HintLabel suppresses for the duration of focus. Disabled
+# focus mutes the action label and hides the badge; unfocus restores the
+# cached payload.
+
+func test_fp_mode_focus_renders_focused_action_in_rail() -> void:
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
+	EventBus.fp_mode_changed.emit(true)
+	EventBus.interactable_focused.emit("Talk to Customer")
+	assert_eq(
+		rail._action_label.text, "Talk to Customer",
+		"FP-mode focus must replace the cached action chip with the focused interactable's action_label"
+	)
+
+
+func test_fp_mode_focus_shows_styled_keybadge() -> void:
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
+	EventBus.fp_mode_changed.emit(true)
+	EventBus.interactable_focused.emit("Talk to Customer")
+	var badge: PanelContainer = rail._key_badge
+	assert_true(
+		badge.visible,
+		"Cream KeyBadge must surface in the rail's right-side chip during FP-mode focus"
+	)
+
+
+func test_fp_mode_focus_suppresses_cached_hint_chip() -> void:
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
+	EventBus.fp_mode_changed.emit(true)
+	EventBus.interactable_focused.emit("Talk to Customer")
+	assert_false(
+		rail._hint_label.visible,
+		"Cached HintLabel must hide while the FP focus chip owns the right side"
+	)
+
+
+func test_fp_mode_disabled_focus_hides_keybadge_and_mutes_label() -> void:
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
+	EventBus.fp_mode_changed.emit(true)
+	EventBus.interactable_focused_disabled.emit("No customer waiting")
+	assert_false(
+		rail._key_badge.visible,
+		"Disabled focus must hide the KeyBadge so the player sees E will not act"
+	)
+	assert_eq(
+		rail._action_label.text, "No customer waiting",
+		"Disabled focus must surface the get_disabled_reason() text in the rail's action label"
+	)
+	assert_lt(
+		rail._action_label.modulate.a, 0.85,
+		"Disabled-reason text must render with reduced alpha to match the prompt's muted treatment"
+	)
+
+
+func test_fp_mode_unfocus_restores_cached_payload() -> void:
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
+	EventBus.fp_mode_changed.emit(true)
+	EventBus.interactable_focused.emit("Talk to Customer")
+	EventBus.interactable_unfocused.emit()
+	assert_eq(
+		rail._action_label.text, _ACTION_TEXT,
+		"Unfocus must restore the cached objective action chip"
+	)
+	assert_eq(
+		rail._hint_label.text, _KEY_TEXT,
+		"Unfocus must restore the cached key chip"
+	)
+	assert_false(
+		rail._key_badge.visible,
+		"KeyBadge must hide once focus clears"
+	)
+
+
+func test_non_fp_mode_does_not_route_focused_text_into_rail() -> void:
+	# Regression guard: outside FP mode, the InteractionPrompt is the sole
+	# renderer of focused-interactable copy. The rail must keep showing the
+	# cached objective payload so the management/non-FP surfaces are
+	# unchanged.
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
+	EventBus.interactable_focused.emit("Counter — Press E to use")
+	assert_eq(
+		rail._action_label.text, _ACTION_TEXT,
+		"Non-FP focus must not overwrite the cached action chip"
+	)
+	assert_false(
+		rail._key_badge.visible,
+		"KeyBadge must stay hidden outside FP mode"
+	)
 
 
 # ── Day1ReadinessAudit objective check ────────────────────────────────────────

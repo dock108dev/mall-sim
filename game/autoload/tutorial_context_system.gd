@@ -18,6 +18,12 @@ var active_context_id: StringName = &""
 
 var _contexts: Dictionary = {}
 var _loaded: bool = false
+## Set in `_on_store_entered` after we emit the first-step prompt and consumed
+## (cleared) by the next `_on_day_started` so we do not re-emit the same prompt
+## within the same store-entry. Without this, Day 1 emits the WELCOME prompt
+## twice (store_entered then day_started seconds later) and the rail / overlay
+## render the same line back-to-back.
+var _context_shown_since_entry: bool = false
 
 
 func _ready() -> void:
@@ -74,6 +80,7 @@ func clear_active_context() -> void:
 		return
 	active_store_id = &""
 	active_context_id = &""
+	_context_shown_since_entry = false
 	EventBus.tutorial_context_cleared.emit()
 
 
@@ -162,6 +169,7 @@ func _on_store_entered(store_id: StringName) -> void:
 	var first: Dictionary = get_first_step(context_id)
 	var text: String = String(first.get("prompt_text", ""))
 	EventBus.tutorial_context_entered.emit(store_id, context_id, text)
+	_context_shown_since_entry = true
 
 
 func _on_store_exited(_store_id: StringName) -> void:
@@ -171,8 +179,13 @@ func _on_store_exited(_store_id: StringName) -> void:
 func _on_day_started(_day: int) -> void:
 	# Re-emit the current context's first-step text when a fresh day begins
 	# inside a store, so the rail reflects "what can I do now?" without
-	# requiring a re-entry.
+	# requiring a re-entry. The first day after store_entered already emitted
+	# the prompt, so we consume the flag and skip — otherwise the rail / overlay
+	# render the same line twice within seconds.
 	if active_context_id == &"":
+		return
+	if _context_shown_since_entry:
+		_context_shown_since_entry = false
 		return
 	if not is_tutorial_rendering_allowed():
 		return

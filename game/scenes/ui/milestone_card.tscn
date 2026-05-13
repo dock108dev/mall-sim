@@ -85,3 +85,17 @@ mouse_filter = 2
 layout_mode = 2
 text = "Completed"
 mouse_filter = 2
+
+[node name="InlineRewardLabel" type="Label" parent="Margin/MainVBox"]
+visible = false
+layout_mode = 2
+text = "Reward"
+horizontal_alignment = 1
+autowrap_mode = 2
+mouse_filter = 2
+
+[node name="ContinueButton" type="Button" parent="Margin/MainVBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Continue"

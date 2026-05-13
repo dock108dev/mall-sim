@@ -345,13 +345,17 @@ func _try_trigger_hourly_event(hour: int) -> void:
 	)
 	if eligible.is_empty():
 		return
-	var current_day: int = 1
-	if is_inside_tree():
-		var time_system: Node = get_parent().get_node_or_null(
-			"TimeSystem"
-		)
-		if time_system and time_system.has_method("get_current_day"):
-			current_day = time_system.get_current_day()
+	# §EH-36 — Was previously `get_parent().get_node_or_null("TimeSystem") +
+	# .has_method("get_current_day") + .call("get_current_day")`. That was a
+	# §EH-31-class silent bug: `TimeSystem` exposes `current_day` as a typed
+	# property (`time_system.gd:37`), not a `get_current_day()` method, so the
+	# `has_method` guard returned false for every hourly tick and the local
+	# `current_day` always stayed at the literal `1` — every hourly random
+	# event after Day 1 fired with the wrong activation day stamp. The
+	# existing `_get_current_day()` helper (line 76) already returns the
+	# `_current_day` field kept in sync via `_on_day_started` (line 278), so
+	# use it directly and drop the sibling-node lookup.
+	var current_day: int = _get_current_day()
 	for def: RandomEventDefinition in eligible:
 		if _roll_event(def):
 			_activate_event(def, current_day)

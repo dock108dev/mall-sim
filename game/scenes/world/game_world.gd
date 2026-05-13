@@ -5,9 +5,6 @@ extends Node3D
 const _HUD_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/hud.tscn"
 )
-const _MALL_OVERVIEW_SCENE: PackedScene = preload(
-	"res://game/scenes/mall/mall_overview.tscn"
-)
 const _INVENTORY_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/inventory_panel.tscn"
 )
@@ -59,9 +56,6 @@ const _SAVE_LOAD_PANEL_SCENE: PackedScene = preload(
 const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/settings_panel.tscn"
 )
-const _PACK_OPENING_PANEL_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/pack_opening_panel.tscn"
-)
 const _MALL_HALLWAY_SCENE: PackedScene = preload(
 	"res://game/scenes/world/mall_hallway.tscn"
 )
@@ -86,17 +80,11 @@ const _ENDING_SCREEN_SCENE: PackedScene = preload(
 const _UPGRADE_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/upgrade_panel.tscn"
 )
-const _CONDITION_PICKER_DIALOG_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/condition_picker_dialog.tscn"
-)
 const _REFURBISHMENT_DIALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/refurbishment_dialog.tscn"
 )
 const _REFURB_QUEUE_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/refurb_queue_panel.tscn"
-)
-const _WARRANTY_DIALOG_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/warranty_dialog.tscn"
 )
 const _MOMENTS_TRAY_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/moments_tray.tscn"
@@ -119,19 +107,15 @@ var reputation_system: ReputationSystem:
 var _inventory_panel: InventoryPanel
 var _day_summary: DaySummary
 var _closing_checklist: ClosingChecklist
-var _mall_overview: MallOverview
 var _fixture_catalog: FixtureCatalogPanel
 var _mall_hallway: MallHallway
 var _pause_menu: PauseMenu
 var _save_load_panel: SaveLoadPanel
 var _settings_panel: SettingsPanel
-var _pack_opening_panel: PackOpeningPanel
 var _staff_panel: StaffPanel
 var _tutorial_overlay: TutorialOverlay
 var _item_tooltip: ItemTooltip
 var _ending_screen: EndingScreen
-var _warranty_dialog: WarrantyDialog = null
-var _condition_picker_dialog: ConditionPickerDialog = null
 var _refurbishment_dialog: RefurbishmentDialog = null
 var _refurb_queue_panel: RefurbQueuePanel = null
 var _deferred_panels_loaded: bool = false
@@ -150,14 +134,8 @@ var _hub_active_store_scene: Node3D = null
 @onready var store_state_manager: StoreStateManager = $StoreStateManager
 @onready var trend_system: TrendSystem = $TrendSystem
 @onready var market_event_system: MarketEventSystem = $MarketEventSystem
-@onready var seasonal_event_system: SeasonalEventSystem = (
-	$SeasonalEventSystem
-)
 @onready var market_value_system: MarketValueSystem = $MarketValueSystem
 @onready var customer_system: CustomerSystem = $CustomerSystem
-@onready var mall_customer_spawner: MallCustomerSpawner = (
-	$MallCustomerSpawner
-)
 @onready var npc_spawner_system: NPCSpawnerSystem = $NPCSpawnerSystem
 @onready var haggle_system: HaggleSystem = $HaggleSystem
 @onready var checkout_system: PlayerCheckout = $CheckoutSystem
@@ -166,15 +144,10 @@ var _hub_active_store_scene: Node3D = null
 @onready var milestone_system: MilestoneSystem = $MilestoneSystem
 @onready var order_system: OrderSystem = $OrderSystem
 @onready var staff_system: StaffSystem = $StaffSystem
-@onready var store_selector_system: StoreSelectorSystem = (
-	$StoreSelectorSystem
-)
 @onready var build_mode: BuildModeSystem = $BuildModeSystem
 @onready var fixture_placement: FixturePlacementSystem = (
 	$FixturePlacementSystem
 )
-@onready var tournament_system: TournamentSystem = $TournamentSystem
-@onready var meta_shift_system: MetaShiftSystem = $MetaShiftSystem
 @onready var tutorial_system: TutorialSystem = $TutorialSystem
 @onready var performance_manager: PerformanceManager = $PerformanceManager
 @onready var performance_report_system: PerformanceReportSystem = (
@@ -297,12 +270,9 @@ func initialize_tier_2_state() -> bool:
 	market_event_system.initialize()
 	economy_system.set_market_event_system(market_event_system)
 
-	seasonal_event_system.initialize(GameManager.data_loader)
-
 	market_value_system.initialize(
 		inventory_system,
 		market_event_system,
-		seasonal_event_system,
 	)
 	return true
 
@@ -322,13 +292,6 @@ func initialize_tier_3_operational() -> void:
 		customer_system.set_store_id(
 			GameManager.get_active_store_id()
 		)
-
-	mall_customer_spawner.initialize(
-		customer_system, ReputationSystemSingleton, trend_system
-	)
-	mall_customer_spawner.set_seasonal_event_system(
-		seasonal_event_system
-	)
 
 	npc_spawner_system.initialize(inventory_system)
 
@@ -370,30 +333,10 @@ func initialize_tier_3_operational() -> void:
 		GameManager.data_loader,
 	)
 
-	meta_shift_system.initialize(GameManager.data_loader)
-	economy_system.set_meta_shift_system(meta_shift_system)
-
 
 ## Initializes Tier 4 world systems once the scene tree is fully available.
 func initialize_tier_4_world() -> void:
-	if _mall_hallway:
-		store_selector_system.initialize(
-			store_state_manager,
-			_mall_hallway.get_hallway_geometry(),
-			_mall_hallway.get_store_container(),
-			_mall_hallway.get_camera_controller(),
-			_ui_layer
-		)
-
 	_initialize_build_mode()
-
-	tournament_system.initialize(
-		economy_system,
-		ReputationSystemSingleton,
-		customer_system,
-		fixture_placement,
-		GameManager.data_loader
-	)
 
 	day_phase_lighting.initialize()
 
@@ -441,9 +384,6 @@ func initialize_tier_5_meta() -> void:
 		performance_report_system,
 	)
 	day_cycle_controller.set_day_manager(_day_manager)
-	day_cycle_controller.set_seasonal_event_system(
-		seasonal_event_system
-	)
 	day_cycle_controller.set_ambient_moments_system(
 		ambient_moments_system
 	)
@@ -471,9 +411,6 @@ func _wire_save_manager() -> void:
 	save_manager.set_milestone_system(milestone_system)
 	save_manager.set_trend_system(trend_system)
 	save_manager.set_market_event_system(market_event_system)
-	save_manager.set_tournament_system(tournament_system)
-	save_manager.set_meta_shift_system(meta_shift_system)
-	save_manager.set_seasonal_event_system(seasonal_event_system)
 	save_manager.set_random_event_system(random_event_system)
 	save_manager.set_staff_system(staff_system)
 	save_manager.set_tutorial_system(tutorial_system)
@@ -485,25 +422,20 @@ func _wire_save_manager() -> void:
 	save_manager.set_performance_report_system(
 		performance_report_system
 	)
-	var unlock_system: UnlockSystem = get_node_or_null(
-		"/root/UnlockSystemSingleton"
-	)
-	if unlock_system:
-		save_manager.set_unlock_system(unlock_system)
-	var onboarding_system: OnboardingSystem = get_node_or_null(
-		"/root/OnboardingSystemSingleton"
-	)
-	if onboarding_system:
-		save_manager.set_onboarding_system(onboarding_system)
+	# UnlockSystemSingleton / OnboardingSystemSingleton are autoloads
+	# (project.godot:37,39); the dead `get_node_or_null + null check`
+	# pattern is the §EH-13/§EH-15 dead-guard shape — replaced with direct
+	# typed access so a singleton rename fails at parse time instead of
+	# silently shipping a SaveManager that omits unlock/onboarding data.
+	# See §EH-28.
+	save_manager.set_unlock_system(UnlockSystemSingleton)
+	save_manager.set_onboarding_system(OnboardingSystemSingleton)
 
 
 func _wire_store_controllers() -> void:
 	var initial_ctrl: StoreController = _find_store_controller(false)
 	if initial_ctrl:
 		_wire_base_store_controller(initial_ctrl)
-		_wire_rental_system(initial_ctrl)
-		_wire_electronics_system(initial_ctrl)
-		_wire_sports_memorabilia_system(initial_ctrl)
 		_wire_retro_games_system(initial_ctrl)
 
 
@@ -575,9 +507,6 @@ func _setup_deferred_panels() -> void:
 	_day_summary.review_inventory_requested.connect(
 		_on_day_summary_review_inventory
 	)
-	_day_summary.mall_overview_requested.connect(
-		_on_day_summary_mall_overview_requested
-	)
 	_day_summary.main_menu_requested.connect(
 		_on_day_summary_main_menu_requested
 	)
@@ -598,27 +527,17 @@ func _setup_deferred_panels() -> void:
 	)
 	_ui_layer.add_child(close_day_confirmation)
 
-	_mall_overview = _MALL_OVERVIEW_SCENE.instantiate() as MallOverview
-	_ui_layer.add_child(_mall_overview)
-	_mall_overview.setup(inventory_system, economy_system)
-	_mall_overview.set_time_system(time_system)
-	_mall_overview.set_completion_tracker(completion_tracker)
-	# Day Summary hides MallOverview while open and restores on dismiss (P1.4).
-	day_cycle_controller.set_mall_overview(_mall_overview)
-
 	var moments_log_panel: MomentsLogPanel = (
 		_MOMENTS_LOG_PANEL_SCENE.instantiate() as MomentsLogPanel
 	)
 	moments_log_panel.ambient_moments_system = ambient_moments_system
 	_ui_layer.add_child(moments_log_panel)
-	_mall_overview.set_moments_log_panel(moments_log_panel)
 
 	var performance_panel: PerformancePanel = (
 		_PERFORMANCE_PANEL_SCENE.instantiate() as PerformancePanel
 	)
 	performance_panel.performance_report_system = performance_report_system
 	_ui_layer.add_child(performance_panel)
-	_mall_overview.set_performance_panel(performance_panel)
 
 	_fixture_catalog = (
 		_FIXTURE_CATALOG_SCENE.instantiate()
@@ -692,11 +611,6 @@ func _setup_deferred_panels() -> void:
 		_on_load_slot_requested
 	)
 
-	_pack_opening_panel = (
-		_PACK_OPENING_PANEL_SCENE.instantiate() as PackOpeningPanel
-	)
-	_ui_layer.add_child(_pack_opening_panel)
-
 	_staff_panel = _STAFF_PANEL_SCENE.instantiate() as StaffPanel
 	_ui_layer.add_child(_staff_panel)
 
@@ -715,16 +629,6 @@ func _setup_deferred_panels() -> void:
 	)
 	add_child(_ending_screen)
 	_ending_screen.dismissed.connect(_on_ending_dismissed)
-
-	_warranty_dialog = (
-		_WARRANTY_DIALOG_SCENE.instantiate() as WarrantyDialog
-	)
-	_ui_layer.add_child(_warranty_dialog)
-	checkout_system.set_warranty_dialog(_warranty_dialog)
-
-	var initial_ctrl: StoreController = _find_store_controller(false)
-	if initial_ctrl:
-		_wire_pack_system(initial_ctrl)
 
 	var moments_tray: MomentsTray = (
 		_MOMENTS_TRAY_SCENE.instantiate() as MomentsTray
@@ -750,7 +654,6 @@ func _setup_debug_overlay() -> void:
 	overlay.economy_system = economy_system
 	overlay.inventory_system = inventory_system
 	overlay.customer_system = customer_system
-	overlay.mall_customer_spawner = mall_customer_spawner
 	overlay.checkout_system = checkout_system
 	add_child(overlay)
 
@@ -856,24 +759,10 @@ func _on_day_summary_review_inventory() -> void:
 ## in GAMEPLAY) and then transitions to MALL_OVERVIEW so the hub overview
 ## is the explicit foreground state.
 ##
-## §F-55 — silent return on GAME_OVER is intentional: when the day cycle has
-## already routed into the game-over flow, the day summary's "Return to Mall"
-## button must not yank the FSM out of the terminal state. The player has the
-## game-over UI for choosing what comes next; logging here would fire on the
-## happy ending path.
-func _on_day_summary_mall_overview_requested() -> void:
-	if GameManager.current_state == GameManager.State.GAME_OVER:
-		return
-	GameManager.change_state(GameManager.State.MALL_OVERVIEW)
-
-
 ## Routes back to the main menu from the day summary screen. Mirrors the
 ## pause-menu "Return to Menu" path so the run is exited cleanly without
-## advancing the day or running wages/milestones (the player is leaving).
-## §F-105 — Silent return on GAME_OVER matches
-## `_on_day_summary_mall_overview_requested`: the terminal state owns its own
-## routing (the GameOver UI flow drives the return-to-menu transition itself),
-## and a duplicate `go_to_main_menu()` call here would race with that routing.
+## advancing the day or running wages/milestones.
+## Silent return on GAME_OVER: the terminal state owns its own routing.
 func _on_day_summary_main_menu_requested() -> void:
 	if GameManager.current_state == GameManager.State.GAME_OVER:
 		return
@@ -1209,10 +1098,6 @@ func _on_store_entered(store_id: StringName) -> void:
 		_wire_base_store_controller(store_ctrl)
 		customer_system.initialize(store_ctrl, inventory_system)
 		customer_system.set_store_id(String(store_id))
-		_wire_rental_system(store_ctrl)
-		_wire_pack_system(store_ctrl)
-		_wire_electronics_system(store_ctrl)
-		_wire_sports_memorabilia_system(store_ctrl)
 		_wire_retro_games_system(store_ctrl)
 
 	_ensure_deferred_panels()
@@ -1224,90 +1109,6 @@ func _on_store_entered(store_id: StringName) -> void:
 func _wire_base_store_controller(store_ctrl: StoreController) -> void:
 	store_ctrl.set_inventory_system(inventory_system)
 	store_ctrl.set_customer_system(customer_system)
-
-
-## Wires up a VideoRentalStoreController with system references if applicable.
-func _wire_rental_system(store_ctrl: StoreController) -> void:
-	if not store_ctrl is VideoRentalStoreController:
-		return
-	var rental: VideoRentalStoreController = (
-		store_ctrl as VideoRentalStoreController
-	)
-	rental.set_inventory_system(inventory_system)
-	rental.set_economy_system(economy_system)
-	rental.set_reputation_system(ReputationSystemSingleton)
-	save_manager.set_rental_system(rental)
-	if _inventory_panel:
-		_inventory_panel.rental_controller = rental
-
-
-## Wires up a PocketCreaturesStoreController with pack and tournament systems.
-func _wire_pack_system(store_ctrl: StoreController) -> void:
-	if store_ctrl is PocketCreaturesStoreController:
-		var pc_ctrl: PocketCreaturesStoreController = (
-			store_ctrl as PocketCreaturesStoreController
-		)
-		pc_ctrl.set_economy_system(economy_system)
-		pc_ctrl.initialize_pack_system(
-			GameManager.data_loader, inventory_system
-		)
-		if tournament_system:
-			pc_ctrl.set_tournament_system(tournament_system)
-		if meta_shift_system:
-			pc_ctrl.set_meta_shift_system(meta_shift_system)
-		if seasonal_event_system:
-			pc_ctrl.set_seasonal_event_system(seasonal_event_system)
-		if _inventory_panel:
-			_inventory_panel.pack_controller = pc_ctrl
-			_inventory_panel.pack_opening_panel = (
-				_pack_opening_panel
-			)
-	else:
-		if _inventory_panel:
-			_inventory_panel.pack_controller = null
-			_inventory_panel.pack_opening_panel = null
-
-
-## Wires up an ElectronicsStoreController with warranty manager and demo.
-func _wire_electronics_system(store_ctrl: StoreController) -> void:
-	if store_ctrl is ElectronicsStoreController:
-		var elec: ElectronicsStoreController = (
-			store_ctrl as ElectronicsStoreController
-		)
-		elec.set_inventory_system(inventory_system)
-		elec.set_economy_system(economy_system)
-		checkout_system.set_warranty_manager(
-			elec.get_warranty_manager()
-		)
-		if _inventory_panel:
-			_inventory_panel.electronics_controller = elec
-	else:
-		checkout_system.set_warranty_manager(null)
-		if _inventory_panel:
-			_inventory_panel.electronics_controller = null
-
-
-## Wires up a SportsMemorabiliaController with season cycle system.
-func _wire_sports_memorabilia_system(
-	store_ctrl: StoreController,
-) -> void:
-	if store_ctrl is SportsMemorabiliaController:
-		var sports: SportsMemorabiliaController = (
-			store_ctrl as SportsMemorabiliaController
-		)
-		sports.initialize(time_system.current_day)
-		sports.set_economy_system(economy_system)
-		var cycle: SeasonCycleSystem = sports.get_season_cycle()
-		economy_system.set_season_cycle_system(cycle)
-		save_manager.set_season_cycle_system(cycle)
-		if _item_tooltip:
-			_item_tooltip.season_cycle_system = cycle
-		_ensure_condition_picker_dialog(sports)
-	else:
-		economy_system.set_season_cycle_system(null)
-		save_manager.set_season_cycle_system(null)
-		if _item_tooltip:
-			_item_tooltip.season_cycle_system = null
 
 
 ## Wires up a RetroGames store controller with testing and refurbishment systems.
@@ -1345,18 +1146,6 @@ func _wire_retro_games_system(store_ctrl: StoreController) -> void:
 			_inventory_panel.refurbishment_dialog = null
 
 
-func _ensure_condition_picker_dialog(
-	_sports: SportsMemorabiliaController,
-) -> void:
-	if not _condition_picker_dialog:
-		_condition_picker_dialog = (
-			_CONDITION_PICKER_DIALOG_SCENE.instantiate()
-			as ConditionPickerDialog
-		)
-		_ui_layer.add_child(_condition_picker_dialog)
-	_condition_picker_dialog.set_inventory_system(inventory_system)
-
-
 func _ensure_refurbishment_ui(
 	refurb: RefurbishmentSystem,
 ) -> void:
@@ -1385,16 +1174,12 @@ func _set_systems_paused(paused: bool) -> void:
 	order_system.set_process(!paused)
 	inventory_system.set_process(!paused)
 	customer_system.set_process(!paused)
-	mall_customer_spawner.set_process(!paused)
 	checkout_system.set_process(!paused)
 	haggle_system.set_process(!paused)
 	store_state_manager.set_process(!paused)
 	progression_system.set_process(!paused)
 	trend_system.set_process(!paused)
 	market_event_system.set_process(!paused)
-	tournament_system.set_process(!paused)
-	meta_shift_system.set_process(!paused)
-	seasonal_event_system.set_process(!paused)
 	random_event_system.set_process(!paused)
 	staff_system.set_process(!paused)
 	tutorial_system.set_process(!paused)

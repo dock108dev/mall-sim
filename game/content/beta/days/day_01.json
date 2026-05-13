@@ -1,0 +1,19 @@
+{
+  "type": "beta_day_data",
+  "day_number": 1,
+  "date_label": "Opening Shift",
+  "store_context": "First shift on the floor at Shelf Life. One customer is already waiting at the counter.",
+  "required_events": [
+    "day01_wrong_console_parent"
+  ],
+  "optional_events": [],
+  "tutorial_unlocks": [
+    "movement",
+    "interact",
+    "decision_card",
+    "day_end"
+  ],
+  "traffic_level": "low",
+  "holiday_pressure": "none",
+  "special_notes": "One customer, one decision, then close the day."
+}

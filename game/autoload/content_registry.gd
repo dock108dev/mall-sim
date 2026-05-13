@@ -216,7 +216,6 @@ func clear_for_testing() -> void:
 	_ready_flag = false
 	DataLoaderSingleton.clear_for_testing()
 	ReputationSystemSingleton.reset()
-	MarketTrendSystemSingleton.reset()
 	DifficultySystemSingleton._current_tier_id = DifficultySystemSingleton.DEFAULT_TIER
 
 
@@ -304,9 +303,6 @@ func _validate_entry_cross_refs(errors: Array[String]) -> void:
 		match entry_type:
 			"market_event":
 				_validate_event_store_refs(entry_id, entry, errors)
-			"seasonal_event":
-				_validate_event_store_refs(entry_id, entry, errors)
-				_validate_seasonal_event_store_refs(entry_id, entry, errors)
 			"supplier":
 				_validate_supplier_refs(entry_id, entry, errors)
 			"milestone":
@@ -328,33 +324,6 @@ func _validate_event_store_refs(
 				"Event '%s' references unknown store_type '%s'"
 				% [entry_id, store_id]
 			)
-
-
-func _validate_seasonal_event_store_refs(
-	entry_id: StringName, entry: Dictionary, errors: Array[String]
-) -> void:
-	var affected: Variant = entry.get("affected_stores", [])
-	if affected is Array:
-		for raw: Variant in (affected as Array):
-			var sid: String = str(raw)
-			if sid.is_empty():
-				continue
-			if not exists(sid):
-				errors.append(
-					"SeasonalEvent '%s' affected_stores references unknown store '%s'"
-					% [entry_id, sid]
-				)
-	var multipliers: Variant = entry.get("store_type_multipliers", {})
-	if multipliers is Dictionary:
-		for key: Variant in (multipliers as Dictionary):
-			var sid: String = str(key)
-			if sid.is_empty():
-				continue
-			if not exists(sid):
-				errors.append(
-					"SeasonalEvent '%s' store_type_multipliers references unknown store '%s'"
-					% [entry_id, sid]
-				)
 
 
 func _validate_supplier_refs(

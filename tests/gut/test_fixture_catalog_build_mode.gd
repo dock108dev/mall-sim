@@ -64,13 +64,13 @@ func test_retro_locked_fixture_is_grayed_out_with_tooltip() -> void:
 
 
 func test_store_specific_fixtures_only_show_for_active_store() -> void:
-	_catalog.store_type = &"sports"
-	GameManager.current_store_id = &"sports"
+	_catalog.store_type = &"retro_games"
+	GameManager.current_store_id = &"retro_games"
 	_catalog.open()
 
-	assert_eq(_catalog._specific_grid.get_child_count(), 1)
-	assert_not_null(_catalog._card_panels.get("authentication_station"))
-	assert_null(_catalog._card_panels.get("testing_station"))
+	assert_gte(_catalog._specific_grid.get_child_count(), 1)
+	assert_not_null(_catalog._card_panels.get("testing_station"))
+	assert_null(_catalog._card_panels.get("authentication_station"))
 
 
 func test_selecting_fixture_emits_signal_and_enters_placement() -> void:

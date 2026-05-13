@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# Validate ISSUE-024: Modal animations on 7 dialog panels
+# Validate ISSUE-024: Modal animations on dialog panels
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 EXIT_CODE=0
 
-echo "=== ISSUE-024: Modal Animations on 7 Dialog Panels ==="
+echo "=== ISSUE-024: Modal Animations on Dialog Panels ==="
 
 PANELS=(
     "game/scenes/ui/haggle_panel.gd"
     "game/scripts/ui/trade_panel.gd"
     "game/scenes/ui/save_load_panel.gd"
     "game/scenes/ui/settings_panel.gd"
-    "game/scenes/ui/authentication_dialog.gd"
     "game/scenes/ui/refurbishment_dialog.gd"
-    "game/scenes/ui/pack_opening_panel.gd"
 )
 
 for panel in "${PANELS[@]}"; do

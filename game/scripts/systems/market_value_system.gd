@@ -38,13 +38,11 @@ const DAYS_PER_YEAR: int = 365
 
 var _inventory_system: InventorySystem = null
 var _market_event_system: MarketEventSystem = null
-var _seasonal_event_system: SeasonalEventSystem = null
 var _testing_system: TestingSystem = null
 var _cache: Dictionary = {}
 var _cache_hour: int = -1
 var _current_day: int = 1
 var _current_year: int = 1
-var _calendar_seasonal_multipliers: Dictionary = {}
 ## Per-category trend multipliers updated via EventBus.trend_updated.
 var _trend_multipliers: Dictionary = {}
 ## Per-store price caps. 0.0 means no cap. Missing key means unknown store.
@@ -57,28 +55,17 @@ var _latest_edition_year: Dictionary = {}
 func initialize(
 	inventory: InventorySystem,
 	market_event: MarketEventSystem,
-	seasonal_event: SeasonalEventSystem,
 ) -> void:
 	_inventory_system = inventory
 	_market_event_system = market_event
-	_seasonal_event_system = seasonal_event
 	EventBus.trend_updated.connect(_on_trend_updated)
 	EventBus.trend_changed.connect(_on_trend_changed)
 	EventBus.trend_shifted.connect(_on_trend_shifted)
 	EventBus.market_event_started.connect(_on_market_event_changed)
 	EventBus.market_event_ended.connect(_on_market_event_changed)
-	EventBus.tournament_event_started.connect(
-		_on_tournament_event_changed
-	)
-	EventBus.tournament_event_ended.connect(
-		_on_tournament_event_changed
-	)
 	EventBus.hour_changed.connect(_on_hour_changed)
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.item_test_completed.connect(_on_item_test_completed)
-	EventBus.seasonal_multipliers_updated.connect(
-		_on_seasonal_multipliers_updated
-	)
 	_hydrate_edition_registry()
 
 
@@ -144,22 +131,14 @@ func calculate_item_value(item: ItemInstance) -> float:
 		item.condition, 0.75
 	)
 	var trend_mult: float = _get_trend_multiplier(item)
-	var season_mult: float = _get_season_multiplier()
-	var calendar_mult: float = _get_calendar_seasonal_multiplier(item)
 	var event_mult: float = _get_event_multiplier(item)
-	var sport_season_mult: float = _get_sport_season_multiplier(item)
-	var tournament_mult: float = _get_tournament_demand_multiplier(
-		item
-	)
 
 	var test_mult: float = _get_test_multiplier(item)
 	var time_mod: float = get_time_modifier(item.definition, _current_day)
 
 	var result: float = (
 		base * rarity_mult * cond_mult * trend_mult
-		* season_mult * calendar_mult * event_mult
-		* sport_season_mult * tournament_mult * test_mult
-		* time_mod
+		* event_mult * test_mult * time_mod
 	)
 	var floor_mult: float = DifficultySystemSingleton.get_modifier(
 		&"market_floor_multiplier"
@@ -174,7 +153,7 @@ func calculate_item_value(item: ItemInstance) -> float:
 ## Returns the time-based depreciation/launch modifier.
 ## Dispatches on `def.decay_profile`:
 ##   - "annual_sports": step-function on new-edition release in same series.
-##   - "standard"/"" (or `electronics` legacy): linear decay from launch_day,
+##   - "standard"/"": linear decay from launch_day,
 ##      gated on `depreciates` + `depreciation_rate` + `launch_day`.
 ##      Items within launch_spike_days of launch_day get a demand bonus.
 ##   - any other profile: 1.0 (handled elsewhere or no decay).
@@ -187,7 +166,7 @@ func get_time_modifier(
 	if profile == "annual_sports":
 		return _get_annual_sports_decay(def)
 	var supported: bool = (
-		profile == "" or profile == "standard" or profile == "electronics"
+		profile == "" or profile == "standard"
 	)
 	var disqualified: bool = (
 		not supported
@@ -212,7 +191,7 @@ func get_time_modifier(
 
 
 ## Returns the trade-in market factor for `def`. Currently this is the
-## time/decay modifier (annual_sports step-function or electronics linear
+## time/decay modifier (annual_sports step-function or standard linear
 ## decay). Trade-in offers multiply this in alongside the per-condition cut
 ## so the offered credit reflects current market value, not face value.
 func get_trade_in_market_factor(def: ItemDefinition) -> float:
@@ -305,16 +284,9 @@ func get_item_multipliers(item: ItemInstance) -> Array:
 	var rarity_mult: float = rarity_raw * rarity_scale
 	var cond_mult: float = CONDITION_MULTIPLIERS.get(item.condition, 0.75)
 	var trend_mult: float = _get_trend_multiplier(item)
-	var season_mult: float = _get_season_multiplier()
-	var calendar_mult: float = _get_calendar_seasonal_multiplier(item)
 	var event_mult: float = _get_event_multiplier(item)
-	var sport_season_mult: float = _get_sport_season_multiplier(item)
-	var tournament_mult: float = _get_tournament_demand_multiplier(item)
 	var test_mult: float = _get_test_multiplier(item)
 	var time_mod: float = get_time_modifier(item.definition, _current_day)
-	var combined_seasonal: float = (
-		season_mult * calendar_mult * sport_season_mult * tournament_mult
-	)
 	var multipliers: Array = []
 	multipliers.append({
 		"slot": "rarity",
@@ -334,13 +306,6 @@ func get_item_multipliers(item: ItemInstance) -> Array:
 			"label": "Trend",
 			"factor": trend_mult,
 			"detail": "category=%s" % item.definition.category,
-		})
-	if combined_seasonal != 1.0:
-		multipliers.append({
-			"slot": "seasonal",
-			"label": "Seasonal",
-			"factor": combined_seasonal,
-			"detail": "season×calendar×sport×tournament",
 		})
 	if event_mult != 1.0:
 		multipliers.append({
@@ -390,18 +355,6 @@ func _get_condition_modifier(item: ItemInstance) -> float:
 	return CONDITION_MULTIPLIERS.get(item.condition, 0.75) as float
 
 
-func _get_season_multiplier() -> float:
-	if not _seasonal_event_system:
-		return 1.0
-	return _seasonal_event_system.get_spending_multiplier()
-
-
-func _get_sport_season_multiplier(item: ItemInstance) -> float:
-	if not _seasonal_event_system:
-		return 1.0
-	return _seasonal_event_system.get_sport_season_multiplier(item)
-
-
 # gdlint:disable=max-returns
 func _get_test_multiplier(item: ItemInstance) -> float:
 	if not item.tested or item.test_result.is_empty():
@@ -420,33 +373,10 @@ func _get_test_multiplier(item: ItemInstance) -> float:
 
 
 # gdlint:enable=max-returns
-func _get_calendar_seasonal_multiplier(
-	item: ItemInstance
-) -> float:
-	if _calendar_seasonal_multipliers.is_empty():
-		return 1.0
-	var store_type: String = item.definition.store_type
-	if store_type.is_empty():
-		return 1.0
-	return float(
-		_calendar_seasonal_multipliers.get(store_type, 1.0)
-	)
-
-
 func _get_event_multiplier(item: ItemInstance) -> float:
 	if not _market_event_system:
 		return 1.0
 	return _market_event_system.get_trend_multiplier(item)
-
-
-func _get_tournament_demand_multiplier(
-	item: ItemInstance
-) -> float:
-	if not _seasonal_event_system:
-		return 1.0
-	return _seasonal_event_system.get_tournament_demand_multiplier(
-		item
-	)
 
 
 func _find_item(item_id: StringName) -> ItemInstance:
@@ -476,20 +406,9 @@ func _on_market_event_changed(_event_id: String) -> void:
 	invalidate_cache()
 
 
-func _on_tournament_event_changed(_event_id: String) -> void:
-	invalidate_cache()
-
-
 func _on_item_test_completed(
 	_instance_id: String, _result: String
 ) -> void:
-	invalidate_cache()
-
-
-func _on_seasonal_multipliers_updated(
-	multipliers: Dictionary
-) -> void:
-	_calendar_seasonal_multipliers = multipliers
 	invalidate_cache()
 
 

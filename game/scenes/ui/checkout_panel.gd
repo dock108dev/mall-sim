@@ -256,16 +256,6 @@ func is_card_populated() -> bool:
 	return _card_populated
 
 
-## Returns false — warranty is handled by WarrantyDialog.
-func is_warranty_offered() -> bool:
-	return false
-
-
-## Returns 0 — warranty is handled by WarrantyDialog.
-func get_warranty_fee() -> float:
-	return 0.0
-
-
 ## Populates the decision-card surface from a customer-data dictionary.
 ##
 ## Expected keys (all optional — missing keys produce safe empty fallbacks):

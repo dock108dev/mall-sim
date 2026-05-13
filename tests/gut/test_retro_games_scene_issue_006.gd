@@ -9,9 +9,7 @@ extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 # Navigable footprint authored into this scene's embedded PlayerController.
-# The 16×20 m room half-extents (8×10) tightened to leave a 0.5 m wall margin.
-# StoreSelectorSystem._STORE_PIVOT_BOUNDS_* (legacy orbit path) still uses the
-# tighter shared 7×5 footprint for the other store interiors.
+# 16×20 m room half-extents (8×10) tightened to leave a 0.5 m wall margin.
 const _STORE_BOUNDS_MIN: Vector3 = Vector3(-7.5, 0.0, -9.5)
 const _STORE_BOUNDS_MAX: Vector3 = Vector3(7.5, 0.0, 9.5)
 

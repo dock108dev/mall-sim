@@ -56,7 +56,6 @@ const _NEW_CONSOLE_HYPE_CATEGORY: StringName = &"new_console_hype"
 const _POSTER_DISPLAY_NAMES: Dictionary = {
 	&"new_releases": "New Releases",
 	&"retro_revival": "Retro Revival",
-	&"sports_season": "Sports Season",
 	&"family_fun": "Family Fun",
 }
 
@@ -249,14 +248,6 @@ func get_item_price(item_id: StringName) -> float:
 			"label": "Condition",
 			"factor": float(grade.get("price_multiplier", 1.0)),
 			"detail": str(grade.get("label", grade_id)),
-		})
-	var vintage_trend: float = MarketTrendSystemSingleton.get_trend_modifier(&"vintage")
-	if vintage_trend != 1.0:
-		multipliers.append({
-			"slot": "trend",
-			"label": "Vintage Trend",
-			"factor": vintage_trend,
-			"detail": "Vintage shelf trend: %.2f" % vintage_trend,
 		})
 	var result: PriceResolver.Result = PriceResolver.resolve_for_item(
 		item_id, item.definition.base_price, multipliers
@@ -749,23 +740,16 @@ func _connect_artifact(path: String, callable: Callable) -> void:
 
 
 ## Subscribes to the platform shortage signals so the new_console_display
-## ShortageLabel reflects live VecForce HD stock state. Silent skip when
-## PlatformSystem is unreachable supports unit-test seams that instantiate
-## the scene without a full autoload tree.
+## ShortageLabel reflects live VecForce HD stock state. All four signals are
+## owner-declared on the `EventBus` autoload so they connect unconditionally;
+## previous `_has_platform_system()` short-circuit was a §EH-13/§EH-15-shape
+## dead guard (PlatformSystem is autoload-registered in project.godot:78 and
+## always present at the moment any scene's `_ready()` runs). See §EH-33.
 func _connect_platform_shortage_signals() -> void:
-	if not _has_platform_system():
-		return
 	_connect_store_signal(EventBus.platform_shortage_started, _on_platform_shortage_changed)
 	_connect_store_signal(EventBus.platform_shortage_ended, _on_platform_shortage_changed)
 	_connect_store_signal(EventBus.platform_restock_received, _on_platform_restock_received)
 	_connect_store_signal(EventBus.day_started, _on_zone_day_started)
-
-
-func _has_platform_system() -> bool:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return false
-	return tree.root.has_node("PlatformSystem")
 
 
 func _on_zone_day_started(day: int) -> void:
@@ -786,7 +770,17 @@ func _on_platform_restock_received(_platform_id: StringName, _qty: int) -> void:
 
 ## Updates the in-store ShortageLabel under new_console_display so the player
 ## can read VecForce HD stock state from the shop floor. Reads PlatformSystem
-## live; falls back to "IN STOCK" when the system is not installed (test seam).
+## live; falls back to "IN STOCK" when the system has no definition for the
+## platform (content-authoring fallback only — the autoload itself is always
+## present because PlatformSystem is registered in project.godot:78).
+##
+## §EH-33 — replaced the `get_tree().root.get_node("PlatformSystem")` +
+## `.call("get_definition", ...)` + `.call("is_shortage", ...)` triple dead-
+## guard with direct typed autoload access. PlatformSystem is the autoload
+## identifier; `get_definition` returns the typed `PlatformDefinition` whose
+## `display_name` is a typed property. A rename of either now fails GDScript
+## parse instead of silently shipping a "VECFORCE HD — IN STOCK" label even
+## while PlatformSystem reports an active shortage.
 func _refresh_new_console_display_label() -> void:
 	var label: Label3D = get_node_or_null(_NEW_CONSOLE_LABEL_PATH) as Label3D
 	if label == null:
@@ -794,17 +788,13 @@ func _refresh_new_console_display_label() -> void:
 	var platform_name: String = "VecForce HD"
 	var status_text: String = "IN STOCK"
 	var status_color: Color = Color(0.65, 1.0, 0.7, 1)
-	if _has_platform_system():
-		var ps: Node = get_tree().root.get_node("PlatformSystem")
-		var def: Variant = ps.call("get_definition", _NEW_CONSOLE_PLATFORM_ID)
-		if def != null and def.get("display_name") is String:
-			var display_name_value: String = String(def.get("display_name"))
-			if not display_name_value.is_empty():
-				platform_name = display_name_value
-		var in_shortage: bool = bool(
-			ps.call("is_shortage", _NEW_CONSOLE_PLATFORM_ID)
-		)
-		if in_shortage:
+	var def: PlatformDefinition = PlatformSystem.get_definition(
+		_NEW_CONSOLE_PLATFORM_ID
+	)
+	if def != null:
+		if not def.display_name.is_empty():
+			platform_name = def.display_name
+		if PlatformSystem.is_shortage(_NEW_CONSOLE_PLATFORM_ID):
 			status_text = "BACK ORDERED"
 			status_color = Color(1.0, 0.55, 0.4, 1)
 	label.text = "%s — %s" % [platform_name.to_upper(), status_text]
@@ -820,40 +810,26 @@ func _on_delivery_manifest_examined() -> void:
 	EventBus.delivery_manifest_examined.emit(STORE_ID, day)
 
 
+## §EH-33 — StoreCustomizationSystem is the `StoreCustomizationSystem`
+## autoload (project.godot:79); `cycle_poster()`, `can_set_featured_category()`,
+## and `cycle_featured_category()` are typed methods. The prior
+## `get_node_or_null + .call("foo")` dynamic-call seam masked typos at
+## parse time. Direct access fails GDScript parse on a rename.
 func _on_poster_slot_interacted() -> void:
-	var customization: Node = _get_store_customization_system()
-	if customization == null:
-		EventBus.notification_requested.emit(
-			"Poster slot — store customization system unavailable."
-		)
-		return
-	var poster_id: StringName = customization.call("cycle_poster")
+	var poster_id: StringName = StoreCustomizationSystem.cycle_poster()
 	EventBus.notification_requested.emit(
 		"Poster: %s" % _poster_display_name(poster_id)
 	)
 
 
 func _on_featured_display_interacted() -> void:
-	var customization: Node = _get_store_customization_system()
-	if customization == null:
-		EventBus.notification_requested.emit(
-			"Featured display — store customization system unavailable."
-		)
-		return
-	if not bool(customization.call("can_set_featured_category")):
+	if not StoreCustomizationSystem.can_set_featured_category():
 		EventBus.notification_requested.emit("Ask Vic — display authority is his call for now.")
 		return
-	var category: StringName = customization.call("cycle_featured_category")
+	var category: StringName = StoreCustomizationSystem.cycle_featured_category()
 	EventBus.notification_requested.emit(
 		"Featured: %s" % _featured_category_display_name(category)
 	)
-
-
-func _get_store_customization_system() -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null or tree.root == null:
-		return null
-	return tree.root.get_node_or_null("StoreCustomizationSystem")
 
 
 func _poster_display_name(poster_id: StringName) -> String:
@@ -875,15 +851,17 @@ func _on_back_room_inventory_shelf_interacted() -> void:
 # ── Store customization wiring ───────────────────────────────────────────────
 
 
+## §EH-33 — Connects unconditionally; StoreCustomizationSystem is an
+## owner-declared autoload and `featured_category_changed` is its
+## owner-declared signal (`store_customization_system.gd:30`). A rename of
+## either fails GDScript parse on the autoload side instead of silently
+## skipping the hidden-thread `display_exposes_weird_inventory` wiring.
 func _connect_store_customization_signals() -> void:
-	var customization: Node = _get_store_customization_system()
-	if customization == null:
-		return
-	if not customization.is_connected(
-		&"featured_category_changed", _on_featured_category_changed
+	if not StoreCustomizationSystem.featured_category_changed.is_connected(
+		_on_featured_category_changed
 	):
-		customization.connect(
-			&"featured_category_changed", _on_featured_category_changed
+		StoreCustomizationSystem.featured_category_changed.connect(
+			_on_featured_category_changed
 		)
 	# day_started reset is needed to clear the per-day signal latch.
 	if not EventBus.day_started.is_connected(_on_customization_day_started):

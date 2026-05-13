@@ -61,68 +61,93 @@ func test_queue_overflow_drops_oldest() -> void:
 	)
 
 
-func test_category_color_milestone() -> void:
+# ── Border color per category (visual contract) ────────────────────────────────
+
+
+func test_border_color_milestone() -> void:
 	EventBus.toast_requested.emit("Gold", &"milestone", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Should have a label in the toast panel")
-	if label:
-		var color: Color = label.get_theme_color("font_color")
-		assert_eq(
-			color,
-			ToastNotificationUI.CATEGORY_COLORS[&"milestone"],
-			"Milestone toast should use gold color"
-		)
+	var border: Color = _border_color(_ui._active_panel)
+	assert_eq(
+		border, ToastNotificationUI.CATEGORY_COLORS[&"milestone"],
+		"Milestone toast must paint the milestone color on its left border"
+	)
 
 
-func test_category_color_staff() -> void:
+func test_border_color_staff() -> void:
 	EventBus.toast_requested.emit("Orange", &"staff", 3.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Should have a label in the toast panel")
-	if label:
-		var color: Color = label.get_theme_color("font_color")
-		assert_eq(
-			color,
-			ToastNotificationUI.CATEGORY_COLORS[&"staff"],
-			"Staff toast should use orange color"
-		)
+	var border: Color = _border_color(_ui._active_panel)
+	assert_eq(
+		border, ToastNotificationUI.CATEGORY_COLORS[&"staff"],
+		"Staff toast must paint the staff color on its left border"
+	)
 
 
-func test_category_color_reputation_up() -> void:
+func test_border_color_reputation_up() -> void:
 	EventBus.toast_requested.emit("Rep up", &"reputation_up", 4.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Should have a label in the toast panel")
-	if label:
-		var color: Color = label.get_theme_color("font_color")
-		assert_eq(
-			color,
-			ToastNotificationUI.CATEGORY_COLORS[&"reputation_up"],
-			"Reputation up toast should use gold color"
-		)
+	var border: Color = _border_color(_ui._active_panel)
+	assert_eq(
+		border, ToastNotificationUI.CATEGORY_COLORS[&"reputation_up"],
+		"reputation_up toast must paint the positive border color"
+	)
 
 
-func test_category_color_reputation_down() -> void:
+func test_border_color_reputation_down() -> void:
 	EventBus.toast_requested.emit("Rep down", &"reputation_down", 5.0)
-	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Should have a label in the toast panel")
-	if label:
-		var color: Color = label.get_theme_color("font_color")
-		assert_eq(
-			color,
-			ToastNotificationUI.CATEGORY_COLORS[&"reputation_down"],
-			"Reputation down toast should use red-orange color"
-		)
+	var border: Color = _border_color(_ui._active_panel)
+	assert_eq(
+		border, ToastNotificationUI.CATEGORY_COLORS[&"reputation_down"],
+		"reputation_down toast must paint the warning border color"
+	)
 
 
-func test_unknown_category_uses_white() -> void:
+func test_border_color_sale_is_green_positive() -> void:
+	EventBus.toast_requested.emit("Sale complete: +$18", &"sale", 3.0)
+	var border: Color = _border_color(_ui._active_panel)
+	assert_eq(
+		border, ToastNotificationUI.CATEGORY_COLORS[&"sale"],
+		"Sale toast must paint the positive (green) border color"
+	)
+
+
+func test_unknown_category_uses_default_border() -> void:
 	EventBus.toast_requested.emit("Default", &"unknown", 3.0)
+	var border: Color = _border_color(_ui._active_panel)
+	assert_eq(
+		border, ToastNotificationUI.DEFAULT_COLOR,
+		"Unknown category must fall back to the default (info gray) border"
+	)
+
+
+# ── Label color is uniform across categories ───────────────────────────────────
+
+
+func test_label_color_is_uniform_text_color() -> void:
+	# Every toast — regardless of category — must paint label text in the
+	# spec's TEXT_COLOR. Category is communicated via the left border, not
+	# the text tint.
+	for category: StringName in [&"system", &"milestone", &"staff", &"sale"]:
+		EventBus.toast_requested.emit("payload", category, 5.0)
+		var label: Label = _find_label_in_panel(_ui._active_panel)
+		assert_not_null(label, "Toast for %s must contain a Label" % String(category))
+		if label:
+			assert_eq(
+				label.get_theme_color("font_color"),
+				ToastNotificationUI.TEXT_COLOR,
+				"Toast text colour must be uniform TEXT_COLOR for category %s"
+				% String(category),
+			)
+		_ui._reset_for_tests()
+
+
+func test_label_uses_spec_font_size() -> void:
+	EventBus.toast_requested.emit("size check", &"system", 3.0)
 	var label: Label = _find_label_in_panel(_ui._active_panel)
-	assert_not_null(label, "Should have a label in the toast panel")
+	assert_not_null(label, "Toast must contain a Label")
 	if label:
-		var color: Color = label.get_theme_color("font_color")
 		assert_eq(
-			color,
-			ToastNotificationUI.DEFAULT_COLOR,
-			"Unknown category should use white"
+			label.get_theme_font_size("font_size"),
+			ToastNotificationUI.TEXT_FONT_SIZE,
+			"Label font size must match the spec (15 px)"
 		)
 
 
@@ -137,7 +162,7 @@ func test_dismiss_clears_active() -> void:
 	EventBus.toast_requested.emit("Dismissable", &"system", 10.0)
 	assert_true(_ui._is_showing)
 	_ui.dismiss()
-	await get_tree().create_timer(0.3).timeout
+	await get_tree().create_timer(ToastNotificationUI.FADE_OUT_DURATION + 0.1).timeout
 	assert_false(
 		_ui._is_showing,
 		"Should no longer be showing after dismiss"
@@ -149,6 +174,9 @@ func test_default_duration_applied() -> void:
 	assert_true(_ui._is_showing, "Zero duration should use default")
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
 func _find_label_in_panel(panel: PanelContainer) -> Label:
 	if not is_instance_valid(panel):
 		return null
@@ -158,3 +186,12 @@ func _find_label_in_panel(panel: PanelContainer) -> Label:
 				if inner is Label:
 					return inner as Label
 	return null
+
+
+func _border_color(panel: PanelContainer) -> Color:
+	if not is_instance_valid(panel):
+		return Color.BLACK
+	var sb: StyleBoxFlat = panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb == null:
+		return Color.BLACK
+	return sb.border_color

@@ -4,13 +4,14 @@
 
 Key current settings in `project.godot`:
 
-- application name: `Mallcore Sim`
-- description: `A retail simulator inspired by 2000s mall and store culture.`
+- application name: `Shelf Life` (internal-build label; external-facing
+  product name `Mallcore Sim` lives in the export presets — see below)
+- description: `Shelf Life — a small used-media store sim.`
 - version: `0.1.0`
 - main scene: `res://game/scenes/bootstrap/boot.tscn`
 - project features: `4.6` with `Forward Plus`
 - icon: `res://icon.svg`
-- custom theme: `res://game/themes/mallcore_theme.tres`
+- custom theme: `res://game/themes/game_theme.tres`
 - translations: English and Spanish translation resources
 - enabled editor plugin: `res://addons/gut/plugin.cfg`
 

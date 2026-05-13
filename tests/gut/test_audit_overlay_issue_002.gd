@@ -87,7 +87,7 @@ func test_focused_readout_reflects_interaction_ray_hover() -> void:
 	)
 	assert_string_contains(
 		readout,
-		"Press E to inspect",
+		"Inspect GlassCase",
 		"Readout should embed the action label tail"
 	)
 

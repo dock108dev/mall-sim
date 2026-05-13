@@ -45,6 +45,10 @@ func _ready() -> void:
 	EventBus.tutorial_context_cleared.connect(_on_tutorial_context_cleared)
 	EventBus.game_state_changed.connect(_on_game_state_changed)
 	InputFocus.context_changed.connect(_on_input_focus_changed)
+	# Re-evaluate when ModalQueue dispatches or drains so the tutorial bar
+	# stays hidden across the entire DAY_SUMMARY → VIC_NOTE → TUTORIAL chain
+	# even if a hand-off keeps CTX_MODAL on top across two queued panels.
+	ModalQueue.active_changed.connect(_on_modal_queue_active_changed)
 	if tutorial_system and tutorial_system.tutorial_completed:
 		_bottom_bar.visible = false
 		set_process(false)
@@ -56,12 +60,18 @@ func _ready() -> void:
 
 ## Returns false when tutorial UI must not render:
 ## blocked in MAIN_MENU or DAY_SUMMARY states, when a modal has input focus,
-## or when the tutorial_skipped flag is set. All FP tutorial steps render
-## inside STORE_VIEW; MALL_OVERVIEW is left permissive here because contextual
-## tips can still surface there after the tutorial completes.
+## when ModalQueue is currently dispatching a higher-priority panel, or when
+## the tutorial_skipped flag is set. All FP tutorial steps render inside
+## STORE_VIEW; MALL_OVERVIEW is left permissive here because contextual tips
+## can still surface there after the tutorial completes.
 ## TutorialContextSystem.is_tutorial_rendering_allowed() additionally blocks
 ## MALL_OVERVIEW for autoload-level context-entry decisions, which is a
 ## separate concern from overlay rendering.
+##
+## ModalQueue.is_busy() is checked alongside InputFocus so non-CTX_MODAL
+## passive panels (e.g. PASSIVE_HUD entries that participate in queue
+## ordering without claiming input focus) still suppress the tutorial bar
+## while they're on top.
 func _can_show_tutorial() -> bool:
 	if GameState.get_flag(&"tutorial_skipped"):
 		return false
@@ -69,6 +79,8 @@ func _can_show_tutorial() -> bool:
 	if state == GameManager.State.MAIN_MENU or state == GameManager.State.DAY_SUMMARY:
 		return false
 	if InputFocus.current() == InputFocus.CTX_MODAL:
+		return false
+	if ModalQueue.is_busy():
 		return false
 	return true
 
@@ -103,6 +115,17 @@ func _on_skip_pressed() -> void:
 	EventBus.skip_tutorial_requested.emit()
 
 
+## Escape dismisses the tutorial bar (same path as the Skip button). The
+## interact action (`E`) is intentionally ignored here so it stays free for
+## world interactions while the tutorial bar is on screen.
+func _unhandled_input(event: InputEvent) -> void:
+	if not _bottom_bar.visible:
+		return
+	if event.is_action_pressed(&"ui_cancel"):
+		_on_skip_pressed()
+		get_viewport().set_input_as_handled()
+
+
 func _on_tutorial_context_cleared() -> void:
 	if not _bottom_bar.visible:
 		return
@@ -115,6 +138,10 @@ func _on_game_state_changed(_old_state: int, _new_state: int) -> void:
 
 
 func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void:
+	_reevaluate_visibility()
+
+
+func _on_modal_queue_active_changed(_panel: ModalPanel) -> void:
 	_reevaluate_visibility()
 
 
@@ -135,8 +162,9 @@ func _reevaluate_visibility() -> void:
 	if tutorial_system == null:
 		return
 	var prompt: String = tutorial_system.get_current_step_text()
-	if not prompt.is_empty():
-		_show_step(prompt)
+	if prompt.is_empty():
+		return
+	_show_step(prompt)
 
 
 func _show_step(prompt_text: String) -> void:

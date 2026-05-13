@@ -72,21 +72,22 @@ func _set_active_camera(camera: Camera3D, force_emit: bool) -> void:
 func _sync_to_camera_authority(camera: Camera3D) -> void:
 	if camera == null:
 		return
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return
-	var authority: Node = tree.root.get_node_or_null("CameraAuthority")
-	if authority == null or not authority.has_method("request_current"):
-		return
+	# §EH-38 (docs/audits/error-handling-report.md): CameraAuthority is an
+	# autoload (project.godot) and `request_current` / `current` are owner-
+	# declared methods (camera_authority.gd:27, :47). The prior
+	# `tree.root.get_node_or_null("CameraAuthority")` walker + has_method guard
+	# cluster was the §EH-13/§EH-15 dead-guard shape; a rename of either
+	# method would have silently disabled the §F-63 source-label SSOT mirror
+	# (the failure mode F-63 was authored to prevent).
 	# §F-63 — CameraAuthority is the SSOT for the active-camera source label.
 	# Skip the mirror when it already tracks this exact camera so an explicit
 	# caller (e.g. StorePlayerBody.request_current(_camera, &"player_fp")) keeps
 	# its source token. Without this guard, the next CameraManager._process
 	# tick overwrites the source to &"camera_manager" and Day1ReadinessAudit
 	# rejects the entry as off-allowlist.
-	if authority.has_method("current") and authority.call("current") == camera:
+	if CameraAuthority.current() == camera:
 		return
-	authority.request_current(camera, _AUTHORITY_SOURCE)
+	CameraAuthority.request_current(camera, _AUTHORITY_SOURCE)
 
 
 func _on_node_added(node: Node) -> void:

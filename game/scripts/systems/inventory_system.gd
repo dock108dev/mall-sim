@@ -428,9 +428,9 @@ func get_backroom_items() -> Array[ItemInstance]:
 
 ## Returns every item currently sitting in the back-room damaged bin. Damaged
 ## bin items are excluded from resale paths (no shelf placement, no checkout
-## stock lookup); ReturnsSystem reconciles the bin contents against its
-## resolved-return ledger to surface inventory_variance_noted when the two
-## diverge.
+## stock lookup). The back-room inventory panel reads this list to surface
+## `inventory_variance_noted` when the bin diverges from the resolved-return
+## ledger.
 func get_damaged_bin_items() -> Array[ItemInstance]:
 	var result: Array[ItemInstance] = []
 	for item: ItemInstance in _items.values():
@@ -566,10 +566,6 @@ func get_save_data() -> Dictionary:
 			"player_set_price": item.player_set_price,
 			"tested": item.tested,
 			"test_result": item.test_result,
-			"is_demo": item.is_demo,
-			"demo_placed_day": item.demo_placed_day,
-			"authentication_status": item.authentication_status,
-			"rental_due_day": item.rental_due_day,
 		})
 	return {
 		"items": items_data,
@@ -628,12 +624,6 @@ func _apply_state(data: Dictionary) -> void:
 		item.player_set_price = _safe_finite_price(d.get("player_set_price", 0.0))
 		item.tested = bool(d.get("tested", false))
 		item.test_result = str(d.get("test_result", ""))
-		item.is_demo = bool(d.get("is_demo", false))
-		item.demo_placed_day = int(d.get("demo_placed_day", 0))
-		item.authentication_status = str(
-			d.get("authentication_status", "none")
-		)
-		item.rental_due_day = int(d.get("rental_due_day", -1))
 		if item.instance_id.is_empty():
 			push_warning(
 				"InventorySystem: skipping item with empty instance_id"

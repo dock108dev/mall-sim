@@ -9,32 +9,23 @@ const _ITEM_FIELD_ALIASES: Dictionary = {
 	],
 	"icon_path": ["icon_path", "icon"],
 	"product_set_name": ["set_name", "set"],
-	"can_be_demo_unit": ["can_be_demo_unit", "demo_unit_eligible"],
-	# Rental schema aliases (ISSUE-009): JSON authors may use either name.
-	"rental_fee": ["rental_fee", "base_rental_fee"],
-	"release_day": ["release_day", "release_date"],
 }
 
 const _ITEM_KNOWN_KEYS: Array[String] = [
 	"id", "item_name", "description", "category", "subcategory",
 	"store_type", "base_price", "rarity", "condition_range",
 	"condition_value_multipliers", "icon_path", "tags", "product_set_name",
-	"depreciates", "appreciates", "rental_tier", "rental_fee",
-	"rental_period_days", "release_day", "catalog_price", "late_fee_rate",
+	"depreciates", "appreciates", "release_day",
 	"brand", "product_line", "generation",
 	"lifecycle_phase", "launch_day", "depreciation_rate",
 	"min_value_ratio", "launch_demand_multiplier", "launch_spike_days",
-	"can_be_demo_unit", "monthly_depreciation_rate",
+	"monthly_depreciation_rate",
 	"launch_spike_eligible", "launch_spike_multiplier", "supplier_tier",
 	"platform", "platform_id", "region",
 	"launch_window_start_day", "launch_window_end_day",
 	"supply_constrained", "decay_profile", "edition_year", "edition_series",
 	"sequel_of",
-	"trade_in_base", "used_price",
-	"warranty_tiers", "demo_unit_eligible",
-	"era", "provenance_score",
-	# Rental schema canonical field names (ISSUE-009).
-	"base_rental_fee", "release_date", "late_fee_per_day",
+	"used_price",
 ]
 
 
@@ -52,8 +43,6 @@ static func build_resource(
 			return parse_fixture(data)
 		"market_event":
 			return parse_market_event(data)
-		"seasonal_event":
-			return parse_seasonal_event(data)
 		"random_event":
 			return parse_random_event(data)
 		"staff":
@@ -66,10 +55,6 @@ static func build_resource(
 			return parse_supplier(data)
 		"unlock":
 			return parse_unlock(data)
-		"sports_season":
-			return parse_sports_season(data)
-		"tournament_event":
-			return parse_tournament_event(data)
 		"ambient_moment":
 			return parse_ambient_moment(data)
 	push_error("ContentParser: unknown type '%s'" % content_type)
@@ -102,14 +87,7 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	item.product_set_name = str(normalized.get("product_set_name", ""))
 	item.depreciates = bool(normalized.get("depreciates", false))
 	item.appreciates = bool(normalized.get("appreciates", false))
-	item.rental_tier = str(normalized.get("rental_tier", ""))
-	item.rental_fee = float(normalized.get("rental_fee", 0.0))
-	item.rental_period_days = int(normalized.get("rental_period_days", 0))
 	item.release_day = int(normalized.get("release_day", 0))
-	item.catalog_price = float(normalized.get("catalog_price", 0.0))
-	item.late_fee_rate = float(normalized.get("late_fee_rate", -1.0))
-	item.late_fee_per_day = float(normalized.get("late_fee_per_day", -1.0))
-	item.release_date = int(normalized.get("release_date", 0))
 	item.brand = str(normalized.get("brand", ""))
 	item.product_line = str(normalized.get("product_line", ""))
 	item.generation = int(normalized.get("generation", 0))
@@ -121,7 +99,6 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 		normalized.get("launch_demand_multiplier", 1.0)
 	)
 	item.launch_spike_days = int(normalized.get("launch_spike_days", 0))
-	item.can_be_demo_unit = bool(normalized.get("can_be_demo_unit", false))
 	item.monthly_depreciation_rate = float(
 		normalized.get("monthly_depreciation_rate", 0.0)
 	)
@@ -151,14 +128,8 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 		str(normalized.get("edition_series", ""))
 	)
 	item.sequel_of = str(normalized.get("sequel_of", ""))
-	item.trade_in_base = float(normalized.get("trade_in_base", 0.0))
 	item.used_price = float(normalized.get("used_price", 0.0))
 	item.region = str(normalized.get("region", ""))
-	item.era = str(normalized.get("era", ""))
-	item.provenance_score = float(normalized.get("provenance_score", -1.0))
-	var raw_tiers: Variant = normalized.get("warranty_tiers", [])
-	if raw_tiers is Array:
-		item.warranty_tiers = raw_tiers.duplicate(true)
 	if normalized.has("condition_range"):
 		item.condition_range = _normalize_condition_labels(
 			normalized["condition_range"]
@@ -171,8 +142,6 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 		item.tags = ItemDefinition._normalize_string_name_array(
 			normalized["tags"]
 		)
-	if not _validate_sports_card(item, normalized):
-		return null
 	var extra: Dictionary = {}
 	for key: String in normalized:
 		if key not in _ITEM_KNOWN_KEYS:
@@ -180,27 +149,6 @@ static func parse_item(data: Dictionary) -> ItemDefinition:
 	if not extra.is_empty():
 		item.extra = extra
 	return item
-
-
-## Validates required fields for sports trading cards. Returns false and emits
-## push_error if validation fails so DataLoader records a boot-time failure.
-static func _validate_sports_card(item: ItemDefinition, data: Dictionary) -> bool:
-	if str(item.store_type) != "sports":
-		return true
-	if str(item.category) != "trading_cards":
-		return true
-	var missing: Array[String] = []
-	if item.era.is_empty():
-		missing.append("era")
-	if not data.has("provenance_score"):
-		missing.append("provenance_score")
-	if not missing.is_empty():
-		push_error(
-			"ContentParser: sports trading card '%s' missing required fields: %s"
-			% [item.id, missing]
-		)
-		return false
-	return true
 
 
 static func _normalize_item_data(data: Dictionary) -> Dictionary:
@@ -462,59 +410,6 @@ static func parse_market_event(
 	return e
 
 
-static func parse_seasonal_event(
-	data: Dictionary
-) -> SeasonalEventDefinition:
-	if not data.has("id"):
-		push_error(
-			"ContentParser: seasonal event missing required fields: %s"
-			% [data]
-		)
-		return null
-	var e := SeasonalEventDefinition.new()
-	e.id = str(data["id"])
-	e.display_name = str(
-		data.get("display_name", data.get("name", ""))
-	)
-	e.name = e.display_name
-	e.description = str(data.get("description", ""))
-	e.start_day = int(
-		data.get("start_day", data.get("offset_days", 1))
-	)
-	if data.has("store_type_multipliers"):
-		var raw_store_multipliers: Variant = (
-			data["store_type_multipliers"]
-		)
-		if raw_store_multipliers is Dictionary:
-			e.store_type_multipliers = (
-				raw_store_multipliers as Dictionary
-			)
-	e.frequency_days = int(data.get("frequency_days", 30))
-	e.duration_days = int(data.get("duration_days", 5))
-	e.offset_days = int(data.get("offset_days", 0))
-	e.customer_traffic_multiplier = float(
-		data.get("customer_traffic_multiplier", 1.0)
-	)
-	e.spending_multiplier = float(
-		data.get("spending_multiplier", 1.0)
-	)
-	if data.has("customer_type_weights"):
-		var raw: Variant = data["customer_type_weights"]
-		if raw is Dictionary:
-			e.customer_type_weights = raw as Dictionary
-	if data.has("target_categories"):
-		e.target_categories = PackedStringArray(
-			data["target_categories"]
-		)
-	e.announcement_text = str(data.get("announcement_text", ""))
-	e.active_text = str(data.get("active_text", ""))
-	if data.has("affected_stores"):
-		e.affected_stores = PackedStringArray(data["affected_stores"])
-	e.price_multiplier = float(data.get("price_multiplier", 1.0))
-	e.telegraph_days = int(data.get("telegraph_days", 3))
-	return e
-
-
 static func parse_random_event(
 	data: Dictionary
 ) -> RandomEventDefinition:
@@ -719,29 +614,6 @@ static func parse_unlock(data: Dictionary) -> UnlockDefinition:
 	return u
 
 
-static func parse_sports_season(
-	data: Dictionary
-) -> SportsSeasonDefinition:
-	if not data.has("id") or not data.has("sport_tag"):
-		push_error(
-			"ContentParser: sports season missing required fields: %s"
-			% [data]
-		)
-		return null
-	var s := SportsSeasonDefinition.new()
-	s.id = str(data["id"])
-	s.sport_tag = str(data["sport_tag"])
-	s.start_day = int(data.get("start_day", 0))
-	s.end_day = int(data.get("end_day", 0))
-	s.in_season_multiplier = float(
-		data.get("in_season_multiplier", 1.0)
-	)
-	s.off_season_multiplier = float(
-		data.get("off_season_multiplier", 1.0)
-	)
-	return s
-
-
 static func parse_economy_config(
 	data: Dictionary
 ) -> EconomyConfig:
@@ -762,10 +634,6 @@ static func parse_economy_config(
 		)
 	c.haggle_floor_ratio = float(data.get("haggle_floor_ratio", 0.5))
 	c.haggle_max_rounds = int(data.get("haggle_max_rounds", 3))
-	c.authentication_price_bonus = float(
-		data.get("authentication_price_bonus", 0.25)
-	)
-	c.late_fee_per_day = float(data.get("late_fee_per_day", 2.0))
 	if data.has("reputation_tiers"):
 		c.reputation_tiers = data["reputation_tiers"]
 	if data.has("markup_ranges"):
@@ -898,38 +766,6 @@ static func _grid_size_to_cells(
 		for y: int in range(size.y):
 			cells.append(Vector2i(x, y))
 	return cells
-
-
-static func parse_tournament_event(
-	data: Dictionary
-) -> TournamentEventDefinition:
-	var has_name: bool = data.has("name") or data.has("display_name")
-	if not data.has("id") or not has_name:
-		push_error(
-			"ContentParser: tournament event missing required fields: %s"
-			% [data]
-		)
-		return null
-	var t := TournamentEventDefinition.new()
-	t.id = str(data["id"])
-	t.name = str(data.get("name", data.get("display_name", "")))
-	t.description = str(data.get("description", ""))
-	t.card_category = str(data.get("card_category", ""))
-	t.creature_type_focus = str(data.get("creature_type_focus", ""))
-	t.start_day = int(data.get("start_day", data.get("day", 0)))
-	t.duration_days = int(data.get("duration_days", 1))
-	t.telegraph_days = int(data.get("telegraph_days", 1))
-	t.demand_multiplier = float(data.get("demand_multiplier", 1.0))
-	t.price_spike_multiplier = float(
-		data.get("price_spike_multiplier", t.demand_multiplier)
-	)
-	t.traffic_multiplier = float(data.get("traffic_multiplier", 1.0))
-	t.announcement_text = str(data.get("announcement_text", ""))
-	t.active_text = str(data.get("active_text", ""))
-	t.notification_day = int(
-		data.get("notification_day", t.start_day - t.telegraph_days)
-	)
-	return t
 
 
 static func parse_ambient_moment(

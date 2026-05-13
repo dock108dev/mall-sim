@@ -6,7 +6,7 @@ const GAME_WORLD_SCENE: PackedScene = preload(
 	"res://game/scenes/world/game_world.tscn"
 )
 const HALLWAY_ZONE_ID: StringName = &"hallway"
-const STORE_ZONE_ID: StringName = &"electronics"
+const STORE_ZONE_ID: StringName = &"retro_games"
 
 var _lighting: DayPhaseLighting = null
 var _world_env: WorldEnvironment = null

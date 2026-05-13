@@ -86,8 +86,6 @@ func _connect_signals() -> void:
 		EventBus.day_ended.connect(_on_day_ended)
 	if not EventBus.hour_changed.is_connected(_on_hour_changed):
 		EventBus.hour_changed.connect(_on_hour_changed)
-	if not EventBus.season_changed.is_connected(_on_season_changed):
-		EventBus.season_changed.connect(_on_season_changed)
 	if not EventBus.haggle_started.is_connected(_on_haggle_started):
 		EventBus.haggle_started.connect(_on_haggle_started)
 	if not EventBus.haggle_completed.is_connected(_on_haggle_completed):
@@ -553,23 +551,6 @@ func _matches_extended_filter(def: AmbientMomentDefinition) -> bool:
 	if def.max_day > 0 and current_day > def.max_day:
 		return false
 	return true
-
-
-func _on_season_changed(new_season: int, _old_season: int) -> void:
-	_current_season_id = _season_int_to_id(new_season)
-
-
-func _season_int_to_id(season: int) -> String:
-	match season:
-		0:
-			return "spring"
-		1:
-			return "summer"
-		2:
-			return "fall"
-		3:
-			return "winter"
-	return ""
 
 
 func _find_definition(

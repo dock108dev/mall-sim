@@ -224,15 +224,19 @@ func _collect_queued_ids() -> Array[StringName]:
 	return ids
 
 
+## §EH-31 — UnlockSystemSingleton is an autoload (project.godot:37) typed
+## as `class_name UnlockSystem`; the canonical accessor is `get_all_granted()`,
+## not `get_unlocked_ids()`. The prior `has_method("get_unlocked_ids")` dead
+## guard silently returned false because that method does not exist on
+## UnlockSystem — every midday beat with `unlock_required` was therefore
+## rejected forever (no unlock would ever appear in the set). The typed
+## direct call below makes a future rename fail at GDScript parse instead of
+## silently disabling every gated beat in the catalog.
 func _collect_unlocked_ids() -> Dictionary:
 	var unlocked: Dictionary = {}
-	var unlock_system: Node = get_node_or_null("/root/UnlockSystemSingleton")
-	if unlock_system == null or not unlock_system.has_method("get_unlocked_ids"):
-		return unlocked
-	var ids: Variant = unlock_system.call("get_unlocked_ids")
-	if ids is Array:
-		for id_value: Variant in ids as Array:
-			unlocked[StringName(str(id_value))] = true
+	var granted: Array[StringName] = UnlockSystemSingleton.get_all_granted()
+	for id_value: StringName in granted:
+		unlocked[id_value] = true
 	return unlocked
 
 
@@ -255,22 +259,23 @@ func _pick_trigger_hours(count: int) -> Array[int]:
 	return hours
 
 
+## §EH-32 — PlatformSystem is the `PlatformSystem` autoload
+## (project.godot:78); `PlatformDefinition.supply_constrained` is the typed
+## `@export var` on the returned resource. Test suites already access this
+## autoload directly (`tests/gut/test_platform_system.gd:89` etc.), so the
+## prior `get_node_or_null + has_method + .call` triple-guard was three
+## stacked dead-guards: a rename of `get_definition` or `supply_constrained`
+## now fails GDScript parse instead of silently disabling the Days 18–22
+## launch-beat force-include and dropping the spec'd guaranteed midday beat.
 func _should_force_launch_beat(day: int) -> bool:
 	if day < LAUNCH_WINDOW_START_DAY or day > LAUNCH_WINDOW_END_DAY:
 		return false
-	var platform_system: Node = get_node_or_null("/root/PlatformSystem")
-	if platform_system == null:
-		return false
-	if not platform_system.has_method("get_definition"):
-		return false
-	var definition: Variant = platform_system.call(
-		"get_definition", LAUNCH_PLATFORM_ID
+	var definition: PlatformDefinition = PlatformSystem.get_definition(
+		LAUNCH_PLATFORM_ID
 	)
 	if definition == null:
 		return false
-	if not (definition as Object).get("supply_constrained"):
-		return false
-	return true
+	return definition.supply_constrained
 
 
 func _find_pool_beat(beat_id: StringName) -> Dictionary:
@@ -300,6 +305,17 @@ func _on_hour_changed(hour: int) -> void:
 	if not _pending_beat.is_empty():
 		return
 	if _day_queue.is_empty():
+		return
+	# §F-FIX1 — beta day-1 has its own scripted chain (BetaDayOneController);
+	# production midday events would stack on top of beta beats and surface
+	# as overlapping modals (especially when the day summary is open).
+	# Mirrors MilestoneSystem's beta-mode short-circuit at line 147.
+	var tree: SceneTree = get_tree()
+	if tree != null and tree.get_first_node_in_group("beta_day_one_controller") != null:
+		return
+	# Don't fire during the day-summary modal — events arriving on top of
+	# the summary cause the two-modals-stacked screen the player saw.
+	if GameManager != null and GameManager.current_state == GameManager.State.DAY_SUMMARY:
 		return
 	for beat: Variant in _day_queue:
 		if beat is not Dictionary:
@@ -364,6 +380,13 @@ func _apply_choice_effects(beat: Dictionary, choice_index: int) -> void:
 		)
 		return
 	_dispatch_effects(beat, effects_raw as Dictionary)
+	# §F-B1 — narrate the outcome with a short toast so the player gets
+	# closure after the modal closes. Optional content field; missing or
+	# empty means no toast (silent until authored, consistent with the
+	# pre-existing behavior for the other beats).
+	var outcome: String = str((choice_entry as Dictionary).get("outcome", ""))
+	if not outcome.is_empty():
+		EventBus.toast_requested.emit(outcome, &"system", 3.0)
 
 
 func _dispatch_effects(beat: Dictionary, effects: Dictionary) -> void:

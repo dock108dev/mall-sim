@@ -35,33 +35,20 @@ const _TYPE_ROUTES: Dictionary = {
 	"unlock": "entries:unlock",
 	"unlock_definition": "entries:unlock",
 	"market_event": "entries:market_event",
-	"seasonal_event": "entries:seasonal_event",
 	"random_event": "entries:random_event",
-	"sports_season": "entries:sports_season",
-	"tournament_event": "entries:tournament_event",
 	"ambient_moment": "entries:ambient_moment",
 	# Singleton / specialized configs.
 	"economy": "economy",
 	"economy_config": "economy",
 	"difficulty_config": "difficulty_config",
-	"seasonal_config": "seasonal_config",
-	"named_seasons": "named_seasons",
 	"ending": "ending",
 	"retro_games_config": "retro_games_config",
-	"electronics_config": "electronics_config",
-	"video_rental_config": "video_rental_config",
-	"pocket_creatures_packs_config": "pocket_creatures_packs_config",
 	# Recognized but not consumed by DataLoader (loaded by other systems).
 	"personality_data": "ignore",
-	"market_trends_catalog_data": "ignore",
 	"audio_registry_data": "ignore",
 	"haggle_dialogue_data": "ignore",
-	"pocket_creatures_cards_data": "ignore",
 	"tutorial_contexts_data": "ignore",
-	"meta_shifts_data": "ignore",
-	"meta_config_data": "ignore",
 	"onboarding_config_data": "ignore",
-	"sports_grade_definitions_data": "ignore",
 	"arc_unlocks_data": "ignore",
 	"retro_games_grades_data": "ignore",
 	"day_beats_data": "day_beats_data",
@@ -70,6 +57,9 @@ const _TYPE_ROUTES: Dictionary = {
 	"regulars_threads_data": "ignore",
 	"platforms_data": "ignore",
 	"manager_notes_data": "ignore",
+	# Beta day-1/day-2 content — loaded directly by BetaDayOneController.
+	"beta_day_data": "ignore",
+	"beta_events_data": "ignore",
 }
 
 var _items: Dictionary = {}
@@ -77,25 +67,16 @@ var _stores: Dictionary = {}
 var _customers: Dictionary = {}
 var _fixtures: Dictionary = {}
 var _market_events: Dictionary = {}
-var _seasonal_events: Dictionary = {}
 var _random_events: Dictionary = {}
 var _staff_definitions: Dictionary = {}
 var _milestones: Dictionary = {}
 var _upgrades: Dictionary = {}
 var _suppliers: Dictionary = {}
 var _unlocks: Dictionary = {}
-var _sports_seasons: Dictionary = {}
-var _tournament_events: Dictionary = {}
 var _ambient_moments: Dictionary = {}
 var _economy_config: EconomyConfig = null
 var _difficulty_config: Dictionary = {}
-var _seasonal_config: Array[Dictionary] = []
 var _retro_games_config: Dictionary = {}
-var _electronics_config: Dictionary = {}
-var _video_rental_config: Dictionary = {}
-var _named_seasons: Dictionary = {}
-var _named_season_cycle_length: int = 70
-var _pocket_creatures_packs: Array = []
 ## Structured midday-event beat pool extracted from day_beats.json.
 ## Each entry retains the on-disk schema: id, min_day, max_day,
 ## unlock_required, cooldown_days, title, body, choices (Array of
@@ -111,7 +92,7 @@ func get_load_errors() -> Array[String]:
 
 
 func _ready() -> void:
-	GameManager.data_loader = self
+	_set_game_manager_data_loader()
 
 
 ## Resets all internal state so load_all_content() can re-register to ContentRegistry.
@@ -121,24 +102,16 @@ func clear_for_testing() -> void:
 	_customers.clear()
 	_fixtures.clear()
 	_market_events.clear()
-	_seasonal_events.clear()
 	_random_events.clear()
 	_staff_definitions.clear()
 	_milestones.clear()
 	_upgrades.clear()
 	_suppliers.clear()
 	_unlocks.clear()
-	_sports_seasons.clear()
-	_tournament_events.clear()
 	_ambient_moments.clear()
 	_economy_config = null
 	_difficulty_config = {}
-	_seasonal_config = []
 	_retro_games_config = {}
-	_electronics_config = {}
-	_video_rental_config = {}
-	_named_seasons = {}
-	_pocket_creatures_packs = []
 	_midday_events = []
 	_load_errors = []
 	_loaded = false
@@ -161,7 +134,7 @@ func load_all_content() -> void:
 ## Loads and registers content from a specific root directory.
 func load_all_content_from_root(root: String) -> void:
 	if _loaded and ContentRegistry.is_ready():
-		GameManager.data_loader = self
+		_set_game_manager_data_loader()
 		return
 	_prepare_for_load()
 	_load_errors = []
@@ -177,7 +150,6 @@ func load_all_content_from_root(root: String) -> void:
 			&"economy_config", _economy_config, "economy"
 		)
 	_normalize_store_types()
-	_validate_trend_catalog(root)
 	var validation_errors: Array[String] = ContentRegistry.validate_all_references()
 	for err: String in validation_errors:
 		_record_load_error(err)
@@ -185,8 +157,24 @@ func load_all_content_from_root(root: String) -> void:
 		EventBus.content_load_failed.emit(_load_errors.duplicate())
 	else:
 		EventBus.content_loaded.emit()
-	GameManager.data_loader = self
+	_set_game_manager_data_loader()
 	_loaded = _load_errors.is_empty()
+
+
+func _set_game_manager_data_loader() -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var root: Node = tree.root
+	if root == null:
+		return
+	var game_manager: Node = root.get_node_or_null("GameManager")
+	if game_manager == null:
+		return
+	if not is_instance_valid(game_manager):
+		return
+	if "data_loader" in game_manager:
+		game_manager.data_loader = self
 
 
 func _prepare_for_load() -> void:
@@ -258,38 +246,16 @@ func _process_file(
 	if route == "difficulty_config":
 		_difficulty_config = dict
 		return
-	if route == "seasonal_config":
-		_seasonal_config = _parse_seasonal_config(dict)
-		return
-	if route == "named_seasons":
-		_parse_named_seasons(dict)
-		return
 	if route == "ending":
 		_load_endings(dict)
 		return
 	if route == "retro_games_config":
 		_retro_games_config = dict
 		return
-	if route == "electronics_config":
-		_electronics_config = dict
-		return
-	if route == "video_rental_config":
-		_video_rental_config = dict
-		return
 	if route == "day_beats_data":
 		var midday_raw: Variant = dict.get("midday_events", [])
 		if midday_raw is Array:
 			_midday_events = (midday_raw as Array).duplicate(true)
-		return
-	if route == "pocket_creatures_packs_config":
-		var packs_data: Variant = dict.get("entries", [])
-		if packs_data is Array:
-			_pocket_creatures_packs = (packs_data as Array).duplicate()
-		else:
-			_record_load_error(
-				"%s: pocket_creatures_packs_config requires 'entries' array"
-				% path
-			)
 		return
 	if route.begins_with("entries:"):
 		var entry_kind: String = route.substr("entries:".length())
@@ -410,10 +376,8 @@ func _build_resource(
 			return ContentParser.parse_fixture(data)
 		"event_config":
 			# Event config files share a content_type alias; the source_path
-			# disambiguates between market / seasonal / random event entries.
+			# disambiguates between market / random event entries.
 			var lowered: String = source_path.to_lower()
-			if lowered.contains("seasonal"):
-				return ContentParser.parse_seasonal_event(data)
 			if lowered.contains("random"):
 				return ContentParser.parse_random_event(data)
 			return ContentParser.parse_market_event(data)
@@ -435,10 +399,6 @@ func _store_in_dict(
 			return _try_register(id, _fixtures, resource)
 		"market_event":
 			return _try_register(id, _market_events, resource)
-		"seasonal_event":
-			return _try_register(
-				id, _seasonal_events, resource
-			)
 		"random_event":
 			return _try_register(id, _random_events, resource)
 		"staff":
@@ -453,12 +413,6 @@ func _store_in_dict(
 			return _try_register(id, _suppliers, resource)
 		"unlock":
 			return _try_register(id, _unlocks, resource)
-		"sports_season":
-			return _try_register(id, _sports_seasons, resource)
-		"tournament_event":
-			return _try_register(
-				id, _tournament_events, resource
-			)
 		"ambient_moment":
 			return _try_register(
 				id, _ambient_moments, resource
@@ -501,96 +455,6 @@ func _load_endings(data: Variant) -> void:
 		if not reg_entry.has("name") and reg_entry.has("display_name"):
 			reg_entry["name"] = reg_entry["display_name"]
 		ContentRegistry.register_entry(reg_entry, "ending")
-
-
-func _parse_seasonal_config(data: Dictionary) -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	var seasons: Variant = data.get("seasons", [])
-	if seasons is not Array:
-		_record_load_error("seasonal_config missing 'seasons' array")
-		return result
-	for index: int in range((seasons as Array).size()):
-		var entry: Variant = (seasons as Array)[index]
-		if entry is not Dictionary:
-			_record_load_error(
-				"seasonal_config entry at index %d is not a Dictionary"
-				% index
-			)
-			continue
-		var season: Dictionary = entry as Dictionary
-		if not season.has("index") or not season.has("store_multipliers"):
-			_record_load_error(
-				"seasonal_config entry at index %d missing required fields"
-				% index
-			)
-			continue
-		result.append(season)
-	return result
-
-
-func _parse_named_seasons(data: Dictionary) -> void:
-	_named_season_cycle_length = int(data.get("cycle_length", 70))
-	var seasons_arr: Variant = data.get("seasons", [])
-	if seasons_arr is not Array:
-		_record_load_error("seasons.json missing 'seasons' array")
-		return
-	for index: int in range((seasons_arr as Array).size()):
-		var entry: Variant = (seasons_arr as Array)[index]
-		if entry is not Dictionary:
-			_record_load_error(
-				"season entry at index %d is not a Dictionary"
-				% index
-			)
-			continue
-		var season: Dictionary = entry as Dictionary
-		if not season.has("id") or not season.has("start_day"):
-			_record_load_error(
-				"season entry at index %d missing required fields"
-				% index
-			)
-			continue
-		var id: String = str(season["id"])
-		var season_errors: Array[String] = ContentSchema.validate(
-			season, "season", "seasons.json"
-		)
-		for err: String in season_errors:
-			_record_load_error(err)
-		_named_seasons[id] = season
-
-
-func _validate_trend_catalog(root: String) -> void:
-	var catalog_path: String = root.path_join("market_trends_catalog.json")
-	var data: Variant = _load_json_with_error(catalog_path)
-	if data == null or data is not Dictionary:
-		return
-	var entries_raw: Variant = (data as Dictionary).get("entries", [])
-	if entries_raw is not Array:
-		return
-	var entries: Array = entries_raw as Array
-	var known_ids: Dictionary = {}
-	for entry: Variant in entries:
-		if entry is not Dictionary:
-			continue
-		var tid: String = str((entry as Dictionary).get("id", ""))
-		if not tid.is_empty():
-			known_ids[tid] = true
-	for entry: Variant in entries:
-		if entry is not Dictionary:
-			continue
-		var edict: Dictionary = entry as Dictionary
-		var tid: String = str(edict.get("id", "?"))
-		var propagates: Variant = edict.get("cross_propagates_to", [])
-		if propagates is not Array:
-			continue
-		for ref: Variant in (propagates as Array):
-			var ref_id: String = str(ref)
-			if ref_id.is_empty():
-				continue
-			if not known_ids.has(ref_id):
-				_record_load_error(
-					"%s: trend '%s' cross_propagates_to unknown trend '%s'"
-					% [catalog_path, tid, ref_id]
-				)
 
 
 func _normalize_store_types() -> void:
@@ -786,23 +650,6 @@ func get_retro_games_config() -> Dictionary:
 	return _retro_games_config
 
 
-func get_electronics_config() -> Dictionary:
-	return _electronics_config
-
-
-func get_video_rental_config() -> Dictionary:
-	return _video_rental_config
-
-
-## Returns per-pack-type definitions loaded from pocket_creatures/packs.json.
-func get_pocket_creatures_packs() -> Array:
-	return _pocket_creatures_packs
-
-
-func get_seasonal_config() -> Array[Dictionary]:
-	return _seasonal_config
-
-
 func get_fixture(id: String) -> FixtureDefinition:
 	var direct: FixtureDefinition = _fixtures.get(id) as FixtureDefinition
 	if direct != null:
@@ -873,18 +720,6 @@ func get_market_events_for_store(
 			r.append(e)
 		elif store_type in e.target_store_types:
 			r.append(e)
-	return r
-
-
-func get_seasonal_event(
-	id: String
-) -> SeasonalEventDefinition:
-	return _seasonal_events.get(id) as SeasonalEventDefinition
-
-
-func get_all_seasonal_events() -> Array[SeasonalEventDefinition]:
-	var r: Array[SeasonalEventDefinition] = []
-	r.assign(_seasonal_events.values())
 	return r
 
 
@@ -976,18 +811,6 @@ func get_all_milestones() -> Array[MilestoneDefinition]:
 	return r
 
 
-func get_all_sports_seasons() -> Array[SportsSeasonDefinition]:
-	var r: Array[SportsSeasonDefinition] = []
-	r.assign(_sports_seasons.values())
-	return r
-
-
-func get_all_tournament_events() -> Array[TournamentEventDefinition]:
-	var r: Array[TournamentEventDefinition] = []
-	r.assign(_tournament_events.values())
-	return r
-
-
 func get_all_ambient_moments() -> Array[AmbientMomentDefinition]:
 	var r: Array[AmbientMomentDefinition] = []
 	r.assign(_ambient_moments.values())
@@ -1000,32 +823,35 @@ func get_all_ambient_moments() -> Array[AmbientMomentDefinition]:
 ## runs. Skips entries whose category is not in the store's `allowed_categories`
 ## so a content typo cannot push items onto a fixture that does not exist.
 ##
-## §F-83 — Pass 12: the three "store not found" branches `push_warning` and
-## return `[]`. Caller `GameWorld._create_default_store_inventory` is the
-## Day-1 critical path; a silent empty Array there cascades into an empty
-## backroom and makes the tutorial loop unreachable. Surfacing the cause
-## (unknown ID, unresolved canonical, missing StoreDefinition) at the source
-## is required so a content-authoring regression is caught in CI / playtest
+## §F-83 / §EH-16 — The three "store not found" branches return `[]` so the
+## game still boots, but the failure surfaces as `push_error` so CI's
+## `^ERROR:` stderr scan fails the build when a content-authoring regression
+## empties a store's starting inventory. Caller
+## `GameWorld._create_default_store_inventory` is the Day-1 critical path; a
+## silent empty Array there cascades into an empty backroom and makes the
+## tutorial loop unreachable, so each of the three causes (unknown ID,
+## unresolved canonical, missing StoreDefinition) is escalated at the source
 ## rather than masquerading as "the player has no items today".
+## See docs/audits/error-handling-report.md §EH-16.
 func create_starting_inventory(
 	store_id: String
 ) -> Array[ItemInstance]:
 	if not ContentRegistry.exists(store_id):
-		push_warning(
+		push_error(
 			"DataLoader.create_starting_inventory: unknown store id '%s'"
 			% store_id
 		)
 		return []
 	var canonical: StringName = ContentRegistry.resolve(store_id)
 	if canonical.is_empty():
-		push_warning(
+		push_error(
 			"DataLoader.create_starting_inventory: '%s' resolved to empty canonical id"
 			% store_id
 		)
 		return []
 	var store: StoreDefinition = get_store(String(canonical))
 	if not store:
-		push_warning(
+		push_error(
 			"DataLoader.create_starting_inventory: no StoreDefinition for '%s' (canonical '%s')"
 			% [store_id, canonical]
 		)
@@ -1035,13 +861,12 @@ func create_starting_inventory(
 	for item_id: String in store.starting_inventory:
 		var def: ItemDefinition = get_item(item_id)
 		if not def:
-			# §F-88 — Pass 13: symmetry with the category-mismatch warning
+			# §F-88 / §EH-16 — symmetry with the category-mismatch warning
 			# below. A typo'd id in `starting_inventory` would otherwise
-			# silently shrink the Day-1 backroom one item at a time and
-			# the empty-result `push_warning` from the caller (§F-83)
-			# would only fire if every entry was a typo. Surface each
-			# missing definition at the source instead.
-			push_warning(
+			# silently shrink the Day-1 backroom one item at a time. Each
+			# missing definition is surfaced as `push_error` so the CI
+			# stderr scan catches a single typo before it ships.
+			push_error(
 				"DataLoader: skipping starter '%s' — no ItemDefinition (typo or unloaded?)"
 				% item_id
 			)
@@ -1117,11 +942,3 @@ func get_midday_events() -> Array:
 	return _midday_events.duplicate(true)
 
 
-func get_named_seasons() -> Array[Dictionary]:
-	var r: Array[Dictionary] = []
-	r.assign(_named_seasons.values())
-	return r
-
-
-func get_named_season_cycle_length() -> int:
-	return _named_season_cycle_length

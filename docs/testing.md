@@ -64,8 +64,9 @@ The checked-in tests currently cover:
 - store state, store transitions, hallway/storefront flow, and build mode
 - customer spawning, NPC systems, queueing, and purchase flow
 - milestones, unlocks, upgrades, completion, onboarding, and endings
-- store-specific mechanics for sports memorabilia, retro games, video rental,
-  pocket creatures, and consumer electronics
+- retro-games store mechanics (testing station, refurbishment queue,
+  hold-shelf flow, manifest/poster/featured-display interactables) plus the
+  beta Day 1 critical-path smoke
 - settings, audio, camera, environment, tooltips, and UI panels
 
 ## When changes should come with tests

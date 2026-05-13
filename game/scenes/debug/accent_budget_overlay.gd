@@ -10,10 +10,6 @@ const SAMPLE_INTERVAL_FRAMES: int = 60
 ## Store-accent colors from the four-layer palette spec.
 const _ACCENT_COLORS: Array[Color] = [
 	Color(0.482, 0.294, 0.812, 1.0), # retro_games   #7B4BCF
-	Color(0.180, 0.710, 0.659, 1.0), # pocket_creatures #2EB5A8
-	Color(0.820, 0.231, 0.180, 1.0), # video_rental   #D13B2E
-	Color(0.227, 0.659, 0.847, 1.0), # electronics    #3AA8D8
-	Color(0.788, 0.604, 0.169, 1.0), # sports_cards   #C99A2B
 ]
 
 ## Alert colors that count against the budget.

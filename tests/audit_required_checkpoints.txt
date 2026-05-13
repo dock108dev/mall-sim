@@ -9,9 +9,8 @@ boot_scene_ready
 main_menu_ready
 new_game_clicked
 
-# Mall
-mall_hub_ready
-store_card_rendered
+# Gameplay shell
+gameplay_shell_ready
 
 # Transition
 transition_requested

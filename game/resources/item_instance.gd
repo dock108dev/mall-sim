@@ -65,52 +65,12 @@ var player_price: float = 0.0:
 var instance_id: StringName = &""
 var tested: bool = false
 var test_result: String = ""
-var is_demo: bool = false
-var demo_placed_day: int = 0
-## Multiplier applied to a demo unit's value; decreases each day it is on display.
-## 1.0 = full value; floors at ElectronicsStoreController.DEMO_DEPRECIATION_FLOOR.
-var demo_depreciation_factor: float = 1.0
-var authentication_status: String = "none":
-	set(value):
-		_authentication_status = value
-		_is_authenticated = _authentication_status == "authenticated"
-	get:
-		return _authentication_status
-var is_authenticated: bool = false:
-	set(value):
-		_is_authenticated = value
-		if value:
-			_authentication_status = "authenticated"
-		elif _authentication_status == "authenticated":
-			_authentication_status = "none"
-	get:
-		return _is_authenticated
-var rental_due_day: int = -1
-var is_graded: bool = false
-## Numeric grade index into PriceResolver.GRADE_ORDER (0=F … 5=S); -1 if ungraded.
-var grade_value: int = -1
-## Letter grade assigned by authentication (F/D/C/B/A/S); empty if ungraded.
-var card_grade: String = ""
-## ACC 1–10 numeric grade returned by the grading service; -1 if not graded.
-var numeric_grade: int = -1
-## True while card is submitted for ACC grading and awaiting a result.
-var is_grading_pending: bool = false
-## Hidden ground-truth authenticity ("authentic" | "questionable" | "fake").
-## Derived from definition.provenance_score via derive_true_authenticity().
-## Never shown to the player directly — revealed only via probabilistic grading hints.
-var true_authenticity: String = ""
-## Player-visible best guess of authenticity. "unknown" until a grading hint runs;
-## thereafter holds the last hint ("authentic" | "questionable" | "fake"). The
-## hint is probabilistic, so this value may disagree with true_authenticity.
-var revealed_authenticity: String = "unknown"
 
 var _definition: ItemDefinition = null
 var _current_location: String = "backroom"
 var _location: StringName = &"backroom"
 var _player_set_price: float = 0.0
 var _player_price: float = 0.0
-var _authentication_status: String = "none"
-var _is_authenticated: bool = false
 
 
 ## Creates an ItemInstance from an ItemDefinition with a specific condition.
@@ -125,24 +85,7 @@ static func create_from_definition(
 	inst.instance_id = _generate_id(def.id)
 	inst.player_price = 0.0
 	inst.location = &"backroom"
-	inst.true_authenticity = derive_true_authenticity(def)
 	return inst
-
-
-## Maps a definition's provenance_score to the hidden true-authenticity state.
-## >= 0.75 → authentic, >= 0.5 → questionable, else → fake. Returns "" when the
-## definition has no provenance_score (non-memorabilia items).
-static func derive_true_authenticity(def: ItemDefinition) -> String:
-	if not def or not ("provenance_score" in def):
-		return ""
-	var score: float = def.provenance_score
-	if score <= 0.0:
-		return ""
-	if score >= 0.75:
-		return "authentic"
-	if score >= 0.5:
-		return "questionable"
-	return "fake"
 
 
 ## Creates an ItemInstance with full control over all fields.
@@ -157,7 +100,6 @@ static func create(
 	inst.instance_id = _generate_id(def.id)
 	inst.player_price = 0.0
 	inst.location = &"backroom"
-	inst.true_authenticity = derive_true_authenticity(def)
 	return inst
 
 

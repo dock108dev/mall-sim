@@ -171,7 +171,6 @@ func _evaluate_purchase_intent() -> bool:
 	if not _has_stock_matching_category(interest_category):
 		return false
 	var final_chance: float = purchase_intent
-	final_chance += _get_demo_browse_bonus(interest_category)
 	var store_key: String = String(_store_id)
 	if store_key.is_empty():
 		store_key = GameManager.get_active_store_id()
@@ -202,33 +201,6 @@ func _has_stock_matching_category(
 		if StringName(item.definition.category) == interest_category:
 			return true
 	return false
-
-
-func _get_demo_browse_bonus(
-	interest_category: StringName,
-) -> float:
-	if not _inventory_system or interest_category.is_empty():
-		return 0.0
-	var store_key: StringName = _store_id
-	if store_key.is_empty():
-		store_key = GameManager.get_active_store_id()
-	if store_key.is_empty():
-		return 0.0
-	var entry: Dictionary = ContentRegistry.get_entry(store_key)
-	if entry.is_empty():
-		return 0.0
-	var bonus: float = float(entry.get("demo_interest_bonus", 0.0))
-	if bonus <= 0.0:
-		return 0.0
-	var stock: Array[ItemInstance] = _inventory_system.get_stock(
-		store_key
-	)
-	for item: ItemInstance in stock:
-		if not item.is_demo or not item.definition:
-			continue
-		if StringName(item.definition.category) == interest_category:
-			return bonus
-	return 0.0
 
 
 func _transition_to_checkout_approach() -> void:

@@ -17,11 +17,14 @@ var _entries: Dictionary = {}
 
 func _ready() -> void:
 	_seed_from_content_registry()
-	# Autoload init order seeds StoreRegistry before DataLoader runs, so the
-	# initial pass is empty. Re-seed when DataLoader emits content_loaded.
-	var bus: Node = _autoload("EventBus")
-	if bus != null and bus.has_signal("content_loaded"):
-		bus.content_loaded.connect(_seed_from_content_registry)
+	# §EH-38 (docs/audits/error-handling-report.md): EventBus is an autoload
+	# (project.godot) and `content_loaded` is owner-declared on it
+	# (event_bus.gd). The prior `_autoload("EventBus")` walker + has_signal
+	# guard was the §EH-13/§EH-15 dead-guard shape — a rename of the signal
+	# would have silently left StoreRegistry seeded only with what was
+	# available at boot, dropping any stores DataLoader added later. Typed
+	# autoload + typed signal makes the rename fail parse.
+	EventBus.content_loaded.connect(_seed_from_content_registry)
 
 
 ## Registers an entry. Asserts on null/empty inputs (programmer error) and
@@ -89,57 +92,44 @@ func _reset_for_tests() -> void:
 ## Runs after ContentRegistry has loaded `store_definitions.json`; if content
 ## isn't ready yet the registry is left empty — callers fail loud through
 ## `resolve()` rather than returning stale data.
+##
+## §EH-38 (docs/audits/error-handling-report.md): ContentRegistry is an autoload
+## (project.godot); get_all_store_ids/get_scene_path/get_display_name are owner-
+## declared methods (content_registry.gd:232/108/91). The prior triple
+## `has_method` guard cluster was the §EH-31-shape dead-guard pattern — if any
+## of the three names ever changed, this seeder would silently drop the
+## affected mall cards (or in the case of get_all_store_ids, ship a registry
+## empty for the rest of the run). Typed access makes a rename fail parse.
 func _seed_from_content_registry() -> void:
-	var content: Node = _autoload("ContentRegistry")
-	if content == null:
-		return
-	if not content.has_method("get_all_store_ids"):
-		return
-	var ids: Array[StringName] = content.get_all_store_ids()
+	var ids: Array[StringName] = ContentRegistry.get_all_store_ids()
 	for store_id: StringName in ids:
 		if _entries.has(store_id):
 			continue
-		var scene_path: String = ""
-		if content.has_method("get_scene_path"):
-			scene_path = content.get_scene_path(store_id)
+		var scene_path: String = ContentRegistry.get_scene_path(store_id)
 		if scene_path.is_empty():
 			continue
-		var display_name: String = String(store_id)
-		if content.has_method("get_display_name"):
-			display_name = content.get_display_name(store_id)
+		var display_name: String = ContentRegistry.get_display_name(store_id)
+		if display_name.is_empty():
+			display_name = String(store_id)
 		register(StoreRegistryEntry.new(
 			store_id, scene_path, null, display_name, {}
 		))
 
 
-func _autoload(name_str: String) -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var root: Window = tree.root
-	if root == null:
-		return null
-	return root.get_node_or_null(name_str)
-
-
 func _pass(detail: String) -> void:
-	var log: Node = _audit_log()
-	if log != null and log.has_method("pass_check"):
-		log.pass_check(CHECKPOINT_RESOLVE, detail)
+	# §EH-38: typed autoload — AuditLog.pass_check is declared at
+	# audit_log.gd:21. The prior `_audit_log()` walker + has_method guard pair
+	# was the §EH-13/§EH-15 dead-guard shape. A rename now fails GDScript parse
+	# rather than silently skipping the structured AUDIT PASS record that
+	# headless CI scans.
+	AuditLog.pass_check(CHECKPOINT_RESOLVE, detail)
 
 
 func _fail(reason: String) -> void:
+	# §EH-38: typed autoload — see _pass above. fail_check is declared at
+	# audit_log.gd:39. Without the typed call the failure would have been
+	# limited to the push_error line (which CI catches as ^ERROR) but the
+	# structured AUDIT FAIL record — the actionable bit for incident review —
+	# would have silently dropped.
 	push_error("[StoreRegistry] %s" % reason)
-	var log: Node = _audit_log()
-	if log != null and log.has_method("fail_check"):
-		log.fail_check(CHECKPOINT_RESOLVE, reason)
-
-
-func _audit_log() -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var root: Window = tree.root
-	if root == null:
-		return null
-	return root.get_node_or_null("AuditLog")
+	AuditLog.fail_check(CHECKPOINT_RESOLVE, reason)

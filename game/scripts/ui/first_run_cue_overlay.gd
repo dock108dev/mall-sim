@@ -5,15 +5,10 @@ class_name FirstRunCueOverlay
 extends PanelContainer
 
 
-const _DEFAULT_MESSAGE: String = "Stock your shelves — open the Inventory panel (I) to fill them."
+const _DEFAULT_MESSAGE: String = "Stock your shelves to open for business."
 const _STORE_MESSAGES: Dictionary = {
-	&"electronics": "Empty shelves! Open Inventory (I) and stock the Electronics store.",
-	&"pocket_creatures": "Empty shelves! Open Inventory (I) and stock booster packs & cards.",
-	&"rentals": "Empty shelves! Open Inventory (I) and stock the rental wall.",
-	&"retro_games": "Empty shelves! Open Inventory (I) and stock the Retro Games store.",
-	&"retro": "Empty shelves! Open Inventory (I) and stock the Retro Games store.",
-	&"sports": "Empty shelves! Open Inventory (I) and stock the Sports store.",
-	&"video_rental": "Empty shelves! Open Inventory (I) and stock the rental wall.",
+	&"retro_games": "Empty shelves! Stock the Retro Games floor.",
+	&"retro": "Empty shelves! Stock the Retro Games floor.",
 }
 
 # Tutorial steps whose on-screen prompt duplicates this overlay's "open inventory
@@ -40,6 +35,8 @@ var _tutorial_suppressing: bool = false
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _beta_mode_active():
+		return
 	_tutorial_suppressing = _is_tutorial_active_at_boot()
 	EventBus.store_entered.connect(_on_store_entered)
 	EventBus.inventory_updated.connect(_on_inventory_updated)
@@ -124,7 +121,7 @@ func _show_for_store(store_id: StringName) -> void:
 		return
 	var message: String = _STORE_MESSAGES.get(store_id, _DEFAULT_MESSAGE)
 	_message_label.text = message
-	_pointer_label.text = "→ Inventory"
+	_pointer_label.text = "→ Stock Shelves"
 	_is_showing = true
 	visible = true
 
@@ -167,3 +164,10 @@ func _is_inventory_empty(store_id: StringName) -> bool:
 		return true
 	var stock: Array = inventory_system.call("get_stock", store_id)
 	return stock.is_empty()
+
+
+func _beta_mode_active() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return not tree.get_nodes_in_group("beta_day_one_controller").is_empty()

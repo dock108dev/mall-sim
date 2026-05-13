@@ -41,7 +41,7 @@ func test_store_filter_passes_when_store_matches() -> void:
 
 
 func test_store_filter_blocks_when_store_differs() -> void:
-	var def := _make_def({"store_id": "sports_memorabilia"})
+	var def := _make_def({"store_id": "test_other_store"})
 	assert_false(
 		_sys._matches_extended_filter(def),
 		"Moment should not be eligible when active store differs from store_id"

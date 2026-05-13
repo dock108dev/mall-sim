@@ -36,5 +36,5 @@ autowrap_mode = 2
 
 [node name="PointerLabel" type="Label" parent="Margin/VBox"]
 layout_mode = 2
-text = "→ Inventory"
+text = "→ Stock Shelves"
 horizontal_alignment = 1

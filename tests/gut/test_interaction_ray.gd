@@ -45,7 +45,7 @@ func test_focus_emits_action_label_when_target_changes() -> void:
 
 	assert_eq(
 		_focused_labels,
-		["Store — Press E to enter"],
+		["Enter Store"],
 		"Focusing a target should emit interactable_focused with the built action label"
 	)
 	assert_eq(_unfocused_count, 0, "Focusing should not emit unfocus")
@@ -63,7 +63,7 @@ func test_hovered_action_label_getter_reflects_focus_state() -> void:
 	_ray._set_hovered_target(target)
 	assert_eq(
 		_ray.get_hovered_action_label(),
-		"GlassCase — Press E to inspect",
+		"Inspect GlassCase",
 		"Hovered action label should match the built action label"
 	)
 
@@ -259,7 +259,7 @@ func test_poll_emits_focused_when_can_interact_flips_to_true_mid_hover() -> void
 	)
 	assert_eq(
 		_focused_labels,
-		["Register — Press E to use"],
+		["Use Register"],
 		"State flip to can_interact()=true must re-emit interactable_focused with the action label"
 	)
 	assert_true(
@@ -294,7 +294,7 @@ func test_poll_is_no_op_when_can_interact_unchanged() -> void:
 func test_poll_updates_hovered_action_label_on_state_change() -> void:
 	# get_hovered_action_label() backs the AuditOverlay; when state flips it
 	# should reflect the new disabled-reason text rather than the stale
-	# "Press E" label captured at hover-entry.
+	# active label captured at hover-entry.
 	var target: _StatefulTarget = _StatefulTarget.new()
 	target.prompt_text = "Use"
 	target.display_name = "Register"
@@ -304,7 +304,7 @@ func test_poll_updates_hovered_action_label_on_state_change() -> void:
 	_ray._set_hovered_target(target)
 	assert_eq(
 		_ray.get_hovered_action_label(),
-		"Register — Press E to use",
+		"Use Register",
 		"Pre-condition: active label captured at hover-entry"
 	)
 
@@ -386,6 +386,71 @@ func test_debug_overlay_node_present_in_debug_build() -> void:
 		overlay is CanvasLayer,
 		"DebugInteractionOverlay should be a CanvasLayer so it draws above the HUD"
 	)
+
+
+func test_interaction_blocked_when_input_focus_pushes_modal() -> void:
+	var focus: Node = get_tree().root.get_node_or_null("InputFocus")
+	if focus == null:
+		pending("InputFocus autoload required")
+		return
+	focus._reset_for_tests()
+	focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	assert_false(
+		_ray._interaction_blocked(),
+		"Pre-condition: store_gameplay context must allow interaction"
+	)
+
+	focus.push_context(InputFocus.CTX_MODAL)
+
+	assert_true(
+		_ray._interaction_blocked(),
+		"CTX_MODAL on InputFocus must block interaction even with no panel_opened signal"
+	)
+
+	focus._reset_for_tests()
+
+
+func test_interaction_unblocked_when_modal_pops() -> void:
+	var focus: Node = get_tree().root.get_node_or_null("InputFocus")
+	if focus == null:
+		pending("InputFocus autoload required")
+		return
+	focus._reset_for_tests()
+	focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	focus.push_context(InputFocus.CTX_MODAL)
+
+	focus.pop_context()
+
+	assert_false(
+		_ray._interaction_blocked(),
+		"After CTX_MODAL pops, store_gameplay must regain interaction authority"
+	)
+
+	focus._reset_for_tests()
+
+
+func test_legacy_panel_opened_count_still_blocks() -> void:
+	# Belt-and-suspenders: panels not yet migrated to ModalPanel only emit
+	# panel_opened/closed without pushing CTX_MODAL. Until they migrate, the
+	# counter fallback must still block interactions.
+	var focus: Node = get_tree().root.get_node_or_null("InputFocus")
+	if focus != null:
+		focus._reset_for_tests()
+		focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	EventBus.panel_opened.emit("legacy_unmigrated_panel")
+
+	assert_true(
+		_ray._interaction_blocked(),
+		"Legacy panel_opened signal must still gate interaction even when InputFocus reports gameplay"
+	)
+
+	EventBus.panel_closed.emit("legacy_unmigrated_panel")
+	assert_false(
+		_ray._interaction_blocked(),
+		"Once the legacy panel closes, gating returns to InputFocus authority"
+	)
+	if focus != null:
+		focus._reset_for_tests()
 
 
 func _create_target(prompt_text: String, display_name: String) -> Interactable:

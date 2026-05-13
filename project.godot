@@ -14,8 +14,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="Mallcore Sim"
-config/description="A retail simulator inspired by 2000s mall and store culture."
+config/name="Shelf Life"
+config/description="Shelf Life — a small used-media store sim."
 config/version="0.1.0"
 run/main_scene="res://game/scenes/bootstrap/boot.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
@@ -37,7 +37,6 @@ DifficultySystemSingleton="*res://game/autoload/difficulty_system.gd"
 UnlockSystemSingleton="*res://game/autoload/unlock_system.gd"
 CheckoutSystem="*res://game/autoload/checkout_system.gd"
 OnboardingSystemSingleton="*res://game/autoload/onboarding_system.gd"
-MarketTrendSystemSingleton="*res://game/autoload/market_trend_system.gd"
 TooltipManager="*res://game/autoload/tooltip_manager.gd"
 ObjectiveRail="*res://game/scenes/ui/objective_rail.tscn"
 InteractionPrompt="*res://game/scenes/ui/interaction_prompt.tscn"
@@ -50,9 +49,12 @@ SceneRouter="*res://game/autoload/scene_router.gd"
 ErrorBanner="*res://game/autoload/error_banner.gd"
 CameraAuthority="*res://game/autoload/camera_authority.gd"
 InputFocus="*res://game/autoload/input_focus.gd"
+ModalQueue="*res://game/autoload/modal_queue.gd"
+ModalDimOverlay="*res://game/autoload/modal_dim_overlay.gd"
 StoreRegistry="*res://game/autoload/store_registry.gd"
 StoreDirector="*res://game/autoload/store_director.gd"
 GameState="*res://game/autoload/game_state.gd"
+BetaRunState="*res://game/scripts/beta/beta_run_state.gd"
 EmploymentSystem="*res://game/autoload/employment_system.gd"
 PlatformSystem="*res://game/scripts/systems/platform_system.gd"
 StoreCustomizationSystem="*res://game/scripts/systems/store_customization_system.gd"
@@ -65,11 +67,11 @@ FailCard="*res://game/scenes/ui/fail_card.tscn"
 TutorialContextSystem="*res://game/autoload/tutorial_context_system.gd"
 Day1ReadinessAudit="*res://game/autoload/day1_readiness_audit.gd"
 HiddenThreadSystemSingleton="*res://game/autoload/hidden_thread_system.gd"
-ReturnsSystem="*res://game/autoload/returns_system.gd"
 
 [debug]
 
 gdscript/warnings/unused_signal=0
+ui_enabled=false
 walkable_mall=false
 
 [display]
@@ -85,7 +87,7 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [gui]
 
-theme/custom="res://game/themes/mallcore_theme.tres"
+theme/custom="res://game/themes/game_theme.tres"
 
 [input]
 

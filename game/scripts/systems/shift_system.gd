@@ -207,22 +207,25 @@ func _show_day_objective_banner() -> void:
 
 
 func _resolve_day_objective_text() -> String:
-	# day_beats.json carries narrative beats per day; the loader keeps the raw
-	# data in DataLoader's day-beats catalog. Fall back to a generic objective
-	# string when the catalog is unavailable (test fixtures or a missing entry)
-	# so the banner always has something to render after clock-in.
-	var data_loader: DataLoader = GameManager.data_loader
+	# §EH-35 — Returns the generic per-day banner copy. The prior `data_loader.
+	# has_method("get_day_beat") + .call("get_day_beat", day)` chain was a
+	# §EH-31-class dead-guard: `DataLoader.get_day_beat` does not exist on the
+	# autoload (the only day-keyed catalog DataLoader holds is `_midday_events`
+	# via the `day_beats_data` route at `data_loader.gd:255-258`; the per-day
+	# `day_beats` array from `day_beats.json` is dropped on load by design),
+	# and `day_beats.json` per-day entries carry `story_beat` / `forward_hook`,
+	# not an `objective` field, so the inner `dict.get("objective", "")` would
+	# have been empty even if the loader exposed an accessor. The chain
+	# silently returned the generic fallback for the entire run — confirmed by
+	# the strip-to-bones diff (DataLoader was reduced from 1080→944 LOC with
+	# `day_beats` storage explicitly removed). Returning the generic copy
+	# directly removes the dead silent-bug seam; if a future per-day objective
+	# catalog is added, route it through a typed call here and a §EH-31-style
+	# parse error will surface a rename instead of a silent regression.
 	var time_system: TimeSystem = GameManager.get_time_system()
 	var day: int = 1
 	if time_system != null:
 		day = time_system.current_day
-	if data_loader != null and data_loader.has_method("get_day_beat"):
-		var beat: Variant = data_loader.call("get_day_beat", day)
-		if beat is Dictionary:
-			var dict: Dictionary = beat as Dictionary
-			var objective: String = str(dict.get("objective", ""))
-			if not objective.is_empty():
-				return objective
 	return "Day %d: open the store and serve customers." % day
 
 

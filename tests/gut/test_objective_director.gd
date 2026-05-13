@@ -61,6 +61,10 @@ func test_day_started_day1_pre_chain_surfaces_read_vic_note() -> void:
 	)
 
 
+## §F-PUNCH5 — Day 1 step 1 content was pivoted to the customer-first
+## chain in objectives.json ("Talk to the waiting customer", key "E").
+## The function name is preserved as "open_inventory" because that's the
+## step *id* in the JSON, even though the displayed text changed.
 func test_note_dismiss_advances_day1_chain_to_open_inventory() -> void:
 	var director := _make_director()
 	var received: Array[Dictionary] = []
@@ -71,8 +75,8 @@ func test_note_dismiss_advances_day1_chain_to_open_inventory() -> void:
 	EventBus.manager_note_dismissed.emit("")
 	assert_eq(
 		received[received.size() - 1].get("objective", ""),
-		"Open your inventory",
-		"Note dismissal must advance the rail to step 1 (open inventory)"
+		"Talk to the waiting customer",
+		"Note dismissal must advance the rail to step 1 (talk to customer)"
 	)
 
 
@@ -98,9 +102,9 @@ func test_store_entered_emits_objective_changed() -> void:
 	EventBus.store_entered.emit(&"retro_games")
 	assert_gt(received.size(), 0, "objective_changed must fire")
 	var payload: Dictionary = received[received.size() - 1]
-	assert_eq(payload.get("objective", ""), "Open your inventory")
-	assert_eq(payload.get("action", ""), "Press I to open the inventory panel")
-	assert_eq(payload.get("key", ""), "I")
+	assert_eq(payload.get("objective", ""), "Talk to the waiting customer")
+	assert_eq(payload.get("action", ""), "Press E at the customer to open the decision card")
+	assert_eq(payload.get("key", ""), "E")
 
 
 # ── Signal connection: item_stocked ───────────────────────────────────────────
@@ -172,30 +176,33 @@ func test_day1_chain_advances_through_each_signal_in_order() -> void:
 		func(p: Dictionary) -> void: received.append(p)
 	)
 	_start_day1_after_note_dismiss()
+	# §F-PUNCH5 — step text was rewritten in objectives.json when the
+	# Day 1 chain pivoted to the customer-first flow. Step *ids* (used
+	# elsewhere as keys) are unchanged; only the displayed `text` moved.
 	# Step 1 → 2: opening the inventory panel.
 	EventBus.panel_opened.emit("inventory")
 	assert_eq(received[received.size() - 1].get("text", ""),
-		"Select an item from the Backroom",
+		"Choose how you handle the request",
 		"panel_opened(inventory) must advance to step 2 (select item)")
 	# Step 2 → 3: the player enters placement mode.
 	EventBus.placement_mode_entered.emit()
 	assert_eq(received[received.size() - 1].get("text", ""),
-		"Stock the item on the Used Shelves",
+		"Go to backroom pickup",
 		"placement_mode_entered must advance to step 3 (stock item)")
 	# Step 3 → 4: the item lands on a shelf.
 	EventBus.item_stocked.emit("item_001", "shelf_a")
 	assert_eq(received[received.size() - 1].get("text", ""),
-		"Wait for a customer to arrive",
+		"Place stock on the restock shelf",
 		"item_stocked must advance to step 4 (wait for customer)")
 	# Step 4 → 5: a customer FSM entered BROWSING.
 	EventBus.customer_state_changed.emit(null, Customer.State.BROWSING)
 	assert_eq(received[received.size() - 1].get("text", ""),
-		"A customer is browsing your shelves",
+		"Move to the next customer",
 		"customer_state_changed BROWSING must advance to step 5")
 	# Step 5 → 6: the customer reaches the register.
 	EventBus.customer_ready_to_purchase.emit({})
 	assert_eq(received[received.size() - 1].get("text", ""),
-		"Customer is heading to checkout",
+		"Resolve the final customer",
 		"customer_ready_to_purchase must advance to step 6")
 	# Step 6 → 7: the sale closes.
 	EventBus.customer_purchased.emit(

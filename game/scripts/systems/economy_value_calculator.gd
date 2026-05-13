@@ -35,13 +35,9 @@ static func calculate_market_value(
 	drift_factors: Dictionary,
 	trend_system: TrendSystem,
 	market_event_system: MarketEventSystem,
-	meta_shift_system: MetaShiftSystem,
-	season_cycle_system: SeasonCycleSystem
 ) -> float:
 	if not item or not item.definition:
 		return 0.0
-	if item.authentication_status == "fake":
-		return 0.50
 	var base: float = item.definition.base_price
 	var cond_mult: float = ItemInstance.CONDITION_MULTIPLIERS.get(
 		item.condition, 1.0
@@ -58,13 +54,9 @@ static func calculate_market_value(
 	var market_event: float = get_market_event_multiplier(
 		item, market_event_system
 	)
-	var meta_shift: float = get_meta_shift_multiplier(item, meta_shift_system)
-	var season: float = get_season_multiplier(item, season_cycle_system)
-	var auth: float = get_authentication_multiplier(item)
 	var value: float = (
 		base * cond_mult * rarity_mult
 		* demand * drift * time_mult * trend * market_event
-		* meta_shift * season * auth
 	)
 	return minf(value, MAX_MARKET_VALUE)
 
@@ -78,13 +70,9 @@ static func get_item_multipliers(
 	drift_factors: Dictionary,
 	trend_system: TrendSystem,
 	market_event_system: MarketEventSystem,
-	meta_shift_system: MetaShiftSystem,
-	season_cycle_system: SeasonCycleSystem,
 ) -> Array:
 	if not item or not item.definition:
 		return []
-	if item.authentication_status == "fake":
-		return [{"slot": "auth", "label": "Auth (Fake)", "factor": 0.0, "detail": "item is counterfeit"}]
 	var base: float = item.definition.base_price
 	var cond_mult: float = ItemInstance.CONDITION_MULTIPLIERS.get(item.condition, 1.0)
 	var rarity_mult: float = ItemInstance.calculate_effective_rarity(
@@ -95,9 +83,6 @@ static func get_item_multipliers(
 	var time_mult: float = calc_time_multiplier(item)
 	var trend: float = get_trend_multiplier(item, trend_system)
 	var market_event: float = get_market_event_multiplier(item, market_event_system)
-	var meta_shift: float = get_meta_shift_multiplier(item, meta_shift_system)
-	var season: float = get_season_multiplier(item, season_cycle_system)
-	var auth: float = get_authentication_multiplier(item)
 	var multipliers: Array = []
 	multipliers.append({
 		"slot": "rarity",
@@ -111,13 +96,6 @@ static func get_item_multipliers(
 		"factor": cond_mult,
 		"detail": item.condition,
 	})
-	if auth != 1.0:
-		multipliers.append({
-			"slot": "auth",
-			"label": "Authentication",
-			"factor": auth,
-			"detail": item.authentication_status,
-		})
 	if demand != DEFAULT_DEMAND:
 		multipliers.append({
 			"slot": "demand",
@@ -138,20 +116,6 @@ static func get_item_multipliers(
 			"label": "Trend",
 			"factor": trend,
 			"detail": "category=%s" % item.definition.category,
-		})
-	if season != 1.0:
-		multipliers.append({
-			"slot": "seasonal",
-			"label": "Seasonal",
-			"factor": season,
-			"detail": "season cycle",
-		})
-	if meta_shift != 1.0:
-		multipliers.append({
-			"slot": "meta_shift",
-			"label": "Meta Shift",
-			"factor": meta_shift,
-			"detail": "meta state",
 		})
 	if market_event != 1.0:
 		multipliers.append({
@@ -184,38 +148,6 @@ static func get_market_event_multiplier(
 	if not market_event_system:
 		return 1.0
 	return market_event_system.get_trend_multiplier(item)
-
-
-static func get_meta_shift_multiplier(
-	item: ItemInstance, meta_shift_system: MetaShiftSystem
-) -> float:
-	if not meta_shift_system:
-		return 1.0
-	return meta_shift_system.get_meta_shift_multiplier(item)
-
-
-static func get_authentication_multiplier(item: ItemInstance) -> float:
-	if item.authentication_status == "authenticated":
-		return get_auth_multiplier_from_config()
-	return 1.0
-
-
-static func get_auth_multiplier_from_config() -> float:
-	var entry: Dictionary = ContentRegistry.get_entry(&"sports")
-	if entry.is_empty():
-		return 2.0
-	var config: Variant = entry.get("authentication_config", {})
-	if config is not Dictionary:
-		return 2.0
-	return float((config as Dictionary).get("auth_multiplier", 2.0))
-
-
-static func get_season_multiplier(
-	item: ItemInstance, season_cycle_system: SeasonCycleSystem
-) -> float:
-	if not season_cycle_system:
-		return 1.0
-	return season_cycle_system.get_season_multiplier(item)
 
 
 static func calc_time_multiplier(item: ItemInstance) -> float:

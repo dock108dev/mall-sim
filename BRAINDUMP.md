@@ -1,1261 +1,707 @@
-# Mallcore Sim Beta Strategy BRAINDUMP.md
+Yeah — this is finally past “broken prototype” and into “rough but playable vertical slice.” The next braindump should not be another giant rebuild. It should be a tightening pass around:
 
-## Purpose
+1. Day 1 clarity
+2. Interaction trust
+3. UI/modal polish
+4. Store readability
+5. Progression/payoff
 
-This is not another loose “add more stuff” dump.
+The good news: the store now actually looks like a store. You can move. There are shelves, register, back room, tasks, end-of-day summary, Vic notes, unlocks, and some progression text. That is a real baseline.
 
-The next pass needs to be strategic because the project is getting stuck between three different goals:
+The bad news: it still feels like the game is half tutorial, half debug overlay, half narrative system, and half “I accidentally completed a checklist but I’m not sure why.” Yes, that is four halves. That is the problem.
 
-1. Making the store visually feel like a real place.
-2. Making Day 1 actually playable as a retail sim.
-3. Making the hidden thread work as the replay hook / bridge to the full game.
+Here’s the next braindump I’d send.
 
-Right now the codebase may have a lot of the invisible systems in place, but the player experience still reads as prototype: empty shelves, unclear E behavior, no customer activity until the right action is discovered, awkward object labels, weak visual grounding, and no real confidence that the secret-thread idea is being protected instead of turned into obvious quest markers.
+⸻
 
-The next pass should **not** go big on AI, full mall simulation, or huge new systems.
+Beta Polish Braindump — Day 1 Needs to Feel Like a Real Playable Shift
 
-The next pass should turn this into a polished, bounded beta slice that can plausibly be a free/ad-supported or $0.99 teaser product for the larger Mallcore / full retail mystery game.
+Current State
 
-This means the work should be ordered around player perception first, then interaction truth, then Day 1 loop, then hidden-thread scoring.
+We are no longer at the “nothing works” stage. The player can move around the store, interact with the register, stock shelves, read notes, close the day, and see an end-of-day summary. The store now has actual spatial structure: shelves, register, back room, signage, inventory objects, UI task list, and some narrative feedback.
 
----
+That is good progress.
 
-# 0. Product Direction First
+The next pass should not be a full rewrite. This should be a stabilization and polish pass focused on making Day 1 feel intentional, readable, and trustworthy.
 
-## The beta should be small on purpose
+Right now the main issues are:
 
-Do not try to make the beta “the full retail sim, but smaller.”
+* The player can complete tasks, but it is not always clear what changed, why it changed, or what the game expects next.
+* UI overlays are still too stacked and sometimes fight each other.
+* Tutorial messages repeat or duplicate.
+* The day summary is functional but visually overwhelming and partially buried by popups.
+* The store is readable now, but still feels too empty and too prototype-blocky in places.
+* The player needs a stronger first-shift loop: arrive, read note, help customer, check inventory, stock shelf, close day, get judged.
 
-The beta should be:
+The goal of this pass is to make Day 1 feel like a clean playable beta loop.
 
-> A polished 15–25 minute first-shift retail sim with a hidden attention thread that only becomes obvious at the end.
+⸻
 
-That is viable as a teaser.
+Goals for This Pass
 
-The core pitch is not “deep tycoon management yet.”
+By the end of this pass:
 
-The core pitch is:
+* Day 1 should be playable from start to finish without confusion.
+* The player should always know the current objective.
+* Every interactable should give clear feedback.
+* Tutorial popups should never duplicate, stack, or block unrelated gameplay.
+* The end-of-day screen should feel like a proper result screen, not a debug report.
+* The store should look enough like a small retail shop that the player understands the space instantly.
+* No new complex systems should be added unless required to make the current loop work.
 
-> Work one shift in a dying 2005 mall store. Stock shelves, handle customers, close the day, and then realize the game was watching what you noticed.
+This is a polish/stabilization pass, not a feature expansion pass.
 
-That is the version that can be replayable without needing a giant economy.
+⸻
 
-## Monetization direction
+1. Fix Tutorial and Modal Behavior
 
-Best fit:
+The tutorial system is better, but it still has issues.
 
-- Free download.
-- Ads only in safe menu / post-shift surfaces, not during active gameplay.
-- $0.99 remove ads / support the project.
-- Beta includes one store, one day, several hidden-thread objects, multiple end assessments.
-- End screen recommends a starting archetype / playstyle for the future full game.
-- Full game tease should feel like a natural expansion, not a paywall threat.
+Problems Observed
 
-Do not overbuild the monetization in this pass, but design the beta so it supports this later.
+In the screenshots, the “Showing the Ropes” tutorial appears duplicated:
 
-The beta should feel complete even if it is tiny.
+First clock-in. Vic walked you through the register and now expects you to ring sales without supervision.
 
----
+Then the same or very similar text appears again inside the same tutorial box.
 
-# 1. Current Diagnosis
+That makes the game feel buggy even if the underlying system works.
 
-The engineer review is important because it says the repo is not empty. There are already real systems:
+Also, modal layering is still messy:
 
-- `Interactable` component.
-- Dedicated physics layer for interactable triggers.
-- `InteractionRay` casting from screen center.
-- `EventBus.interactable_interacted`.
-- First-person body with an interaction ray.
-- In-store `Customer` FSM using `NavigationAgent3D`.
-- Mall hallway `ShopperAI` separate from in-store customers.
-- `PlayerCheckout`.
-- Starter stock seeded into inventory.
-- Day 1 customer spawning gated until at least one item is stocked.
-- Checkout prompts that can intentionally be informational-only.
-- Modals intentionally blocking interaction while open.
+* Tutorial modal
+* Vic note modal
+* End-of-day note
+* Day summary
+* Objective panel
+* Bottom action prompt
+* Screenshot thumbnail/debug overlay
 
-That means the next pass should **not** assume “nothing works.”
+These need strict rules.
 
-But the player-facing experience still feels like nothing works.
+Required Behavior
 
-That is the important distinction.
+There should only ever be one primary modal active at a time.
 
-The invisible system may be decent. The visible/readable/teachable surface is not.
+Priority order:
 
-The game currently fails the first-player read:
+1. Critical blocking modal, such as Day Summary
+2. Narrative note, such as Vic note
+3. Tutorial pop-up
+4. Small toast/unlock notification
+5. Passive HUD/task list
 
-- I cannot tell what is interactable.
-- I cannot tell what is decorative.
-- I cannot tell why customers are not coming in.
-- I cannot tell whether the register should do something.
-- I cannot tell whether the object labels are real UI or debug labels.
-- I cannot tell if “On Shelves: 0 / Cust: 0” means I am failing, bugged, or just not started.
-- I cannot tell what the day goal is.
-- I cannot tell what I am supposed to do next.
-- I cannot tell if the secret thread is hidden, missing, or not implemented.
+If a higher-priority modal is open, lower-priority popups should wait.
 
-That is the pass.
+Specific Fixes
 
-Make the existing systems legible without turning the game into a giant tutorial.
+* Add a modal queue or modal manager.
+* Prevent duplicate tutorial entries by ID.
+* A tutorial popup should only fire once unless explicitly reset.
+* Tutorial copy should never repeat inside the same modal.
+* When a modal is open:
+    * Player movement should pause or be intentionally disabled.
+    * Interact prompts should hide.
+    * Background HUD should dim.
+    * The current objective list can remain visible only if it does not compete with the modal.
+* Closing a modal should resume the next queued message if needed.
 
----
+Acceptance Criteria
 
-# 2. Strategic Rule For The Next Pass
+* “Showing the Ropes” appears once.
+* Vic’s note appears once.
+* End-of-day summary is not covered by a note unless the note is intentionally part of the summary sequence.
+* No modal text duplicates itself.
+* Pressing E/click/Continue works consistently across all modal types.
+* Escape/back closes non-critical modals if appropriate.
 
-## The next pass has one north star
+⸻
 
-> Make Day 1 feel like an intentional, polished beta slice from the first click through the shift review.
+2. Clean Up Day 1 Objective Flow
 
-Everything else is secondary.
+The task list is close, but Day 1 still needs stronger sequencing.
 
-Do not add more stores.
-Do not expand the mall.
-Do not build full AI research.
-Do not create a huge item economy.
-Do not make deep pricing systems.
-Do not make the hidden thread obvious.
-Do not rewrite the interaction system unless there is a specific, verified bug.
+Current visible objectives include:
 
-Use the systems that exist. Clean the player-facing layer.
+* Talk to the customer
+* Check inventory
+* Stock the shelf
+* Close the day
 
----
+That is good. But the game should make it very clear when each step is available and why.
 
-# 3. Sorted Work Order
+Desired Day 1 Flow
 
-This order matters.
+Day 1 should go like this:
 
-Do not let the agent jump to AI, hidden story, or new features before the basics are actually playable.
+1. Player starts in store.
+2. Objective: Read Vic’s morning note
+3. Player reads note at register or counter.
+4. Objective updates: Talk to the customer at the register
+5. Player interacts with customer/register.
+6. Customer interaction completes.
+7. Objective updates: Check the back room delivery
+8. Player goes to back room or delivery zone.
+9. Player checks inventory.
+10. Objective updates: Stock the used games shelf
+11. Player stocks shelf.
+12. Objective updates: Close the day at the register
+13. Player closes day.
+14. Day summary appears.
 
-## Phase 1 — Visual Readability / Store Believability
+The task list should not show every task immediately unless they are intentionally visible but locked. For the first beta, simpler is better: show the active task plus completed tasks.
 
-The store still looks too much like a box of placeholder geometry with floating words.
+Objective UI Rules
 
-The visuals are not the long-term focus, but they are absolutely a blocker right now because the player cannot trust the world.
+* Active objective: bright/white.
+* Completed objective: green checkmark.
+* Future objective: hidden or greyed out.
+* Bottom prompt should always match the current objective.
+* The right-side objective panel should not contain stale text.
 
-The player needs to enter the store and immediately understand:
+Current Issue
 
-- This is a retro game / used electronics shop.
-- These are shelves.
-- This is inventory.
-- This is checkout.
-- This is the hold shelf.
-- This is the back area / employee area.
-- These are shopping zones.
-- These objects are retail props, not random cubes.
-- Floating labels are intentional and not debug leftovers.
+Some screenshots show bottom prompt saying:
 
-This does not require AAA art.
+Talk to the customer at the register.
 
-It requires a disciplined “readability art pass.”
+But the checklist also includes multiple tasks, and the player may be standing near other interactables.
 
-### Required visual cleanup
+The player should never wonder whether the bottom prompt or side checklist is the real source of truth.
 
-1. Replace random cubes with a small number of reusable low-poly retail props:
-   - Generic game case / cartridge box.
-   - Console box.
-   - Small accessory blister pack.
-   - Trade-in bin item.
-   - Register monitor.
-   - Receipt printer / scanner.
-   - Clipboard or binder.
-   - Hold tag.
-   - Mall flyer.
-   - Backorder box.
-   - Security camera / returned camera.
+Acceptance Criteria
 
-2. Make shelves visually show whether they are empty or stocked.
-   - Empty shelf should look intentionally empty.
-   - Stocked shelf should show visible item meshes/cards/boxes.
-   - Shelf labels should not float backwards, clip, or sit across the room.
-   - The player should not have to infer shelf state from top-right text only.
+* The active objective is always obvious.
+* Completing an interaction immediately updates the objective.
+* The bottom action bar matches the interactable under focus.
+* No completed objective remains styled like the active one.
+* No objective advances silently without feedback.
 
-3. Replace large floating category words where possible with diegetic signage:
-   - “USED SHELVES” should look like a sign mounted to the wall/shelf.
-   - “BARGAIN BIN $5” should look like a bin sign.
-   - “CHECKOUT” should look like real store signage.
-   - “HOLDS” should be a label on or above the hold shelf.
-   - Avoid giant billboard labels in the middle of the screen unless it is a deliberate interaction prompt.
+⸻
 
-4. Fix backwards / mirrored / clipped labels.
-   - Any label facing the wrong way is a release blocker for beta polish.
-   - Any label floating through a wall is a release blocker.
-   - Any label readable only from one weird angle is a release blocker.
+3. Make Interactions Feel Trustworthy
 
-5. Add store identity quickly.
-   - A front sign / wall logo.
-   - A sale poster.
-   - A return policy sign.
-   - A 2005-ish employee note board.
-   - A few product posters.
-   - A messy but readable back/employee corner.
+The player needs to trust that pressing E did something.
 
-6. Improve lighting and contrast.
-   - The current atmosphere is close but muddy in places.
-   - Keep the low-poly / retro / weird mall vibe.
-   - But objects need silhouette and interactables need clear affordances.
-   - The store should feel dim and cheap, not unreadable.
+Right now, interactions work, but feedback is inconsistent.
 
-### Acceptance criteria
+Required Interaction Feedback
 
-- From a still screenshot, a new person can identify checkout, shelves, hold area, bargain bin, and employee/back area.
-- No major text appears mirrored, clipped, or unintentionally floating.
-- Empty shelves and stocked shelves are visually different.
-- The store feels intentionally styled, not generated from random primitives.
-- The game can still be ugly/charming, but it cannot look accidental.
+Every interactable should have:
 
----
-
-## Phase 2 — Interaction Truth Pass
-
-The engineer review says the core interaction architecture is probably fine:
-
-- `InteractionRay` screen-center raycast.
-- Dedicated interactable collision layer.
-- `Interactable.interact()`.
-- EventBus dispatch.
-- Panels/modal gating.
-
-So do not rewrite it blindly.
-
-Instead, create a truth matrix and make every interactable honest.
-
-### Create an interactable matrix
-
-Create or update a repo doc:
-
-`docs/retro_games_interactable_matrix.md`
-
-For every interactable in the Day 1 store, list:
-
-- Scene/node name.
-- Display name.
-- Prompt text.
-- Verb.
-- Expected button behavior.
-- Handler/listener.
-- Whether enabled on Day 1.
-- Whether it is active, disabled, or informational.
-- Required distance.
-- Collision layer/mask.
-- Test coverage.
-- Notes.
-
-The goal is not documentation for documentation’s sake.
-
-The goal is to force every object to have exactly one answer to:
-
-> When I look at this and press E, what should happen?
-
-### Interaction requirements
-
-1. All interactables must use the same pattern:
-   - Raycast hover.
-   - Prompt appears.
-   - Prompt clearly says whether E does something.
-   - Interact only fires if enabled.
-   - Disabled/informational objects should not pretend they are actionable.
-
-2. The bottom prompt must never lie.
-   - If it says Press E, E must do something visible.
-   - If E does not do anything, do not show Press E.
-   - If a modal is open, prompt should shift to modal action, not the world action.
-
-3. Interaction distance needs tuning.
-   - The current 2.5m can work, but the scene must support it.
-   - For shelves, bins, and checkout, the interaction trigger shape should be generous enough that normal player positioning works.
-   - The user should not have to stand inside objects.
-
-4. Add debug-only interaction overlay.
-   - Show current hovered interactable name.
-   - Show node path.
-   - Show layer/mask.
-   - Show disabled reason if any.
-   - Show modal lock count.
-   - Show “E consumed by modal” vs “E sent to interactable.”
-   - Debug only. Not in release.
-
-5. Resolve `StorePlayerBody.current_interactable` drift.
-   - Either wire `InteractionRay` hover into `StorePlayerBody.current_interactable` as the single visible source of truth, or delete/simplify the orphan branch.
-   - Do not leave two competing E paths.
-   - The production path should be obvious to future agents.
-
-### Acceptance criteria
-
-- Every Day 1 interactable is in the matrix.
-- Every Day 1 interactable has a verified prompt and behavior.
-- Pressing E never silently fails when a prompt says it should work.
-- Modal open state is obvious and does not make E feel randomly dead.
-- There is one documented authority for “what E will do right now.”
-
----
-
-## Phase 3 — Day 1 Onboarding Truth
-
-The player currently sees `On Shelves: 0`, `Cust: 0`, and may not know customers are gated until stocking.
-
-That is technically correct, but bad UX.
-
-The game needs to communicate the first action without being a giant tutorial.
-
-### Key onboarding rule
-
-Do not explain the whole game up front.
-
-Give the player one useful retail instruction at a time.
-
-The first 60 seconds should teach:
-
-1. Read Vic’s note.
-2. Find inventory / back room stock.
-3. Stock one shelf.
-4. Once shelf is stocked, customers start.
-5. Handle the first customer or watch auto-checkout happen.
-6. Close the day only after the minimum loop has been seen.
-
-### Day 1 objective copy
-
-Add a compact active objective line, not huge overlays:
-
-- “Read Vic’s morning note.”
-- “Stock one item to open the floor.”
-- “Customers will come in once something is on the shelves.”
-- “Watch the register if a customer queues.”
-- “Close the day when you are ready.”
-
-This should be subtle but clear.
-
-### Do not expose secret-thread objectives
-
-Never show:
-
-- “Find clues.”
-- “Secret thread discovered.”
-- “Mystery item found.”
-- “Evidence collected.”
-- “Hidden object 1/5.”
-
-The visible objective system is for retail work only.
-
-### Fix top-right stats interpretation
-
-Current stats:
-
-- On Shelves: 0
-- Cust: 0
-- Sold Today: 0
-
-Need support copy when everything is zero:
-
-- If no shelf stocked:
-  - Bottom/context hint: “Stock the floor to open the lane.”
-- If shelf stocked and no customers yet:
-  - “Waiting for first customer...”
-- If customers are disabled by a modal:
-  - Avoid weird time advancement / spawn confusion.
-
-### Close Day gating
-
-Do not let F4 close Day 1 immediately before the player has interacted with the first meaningful loop, unless debug mode.
-
-Minimum release gating:
-
-- Morning note dismissed.
-- At least one shelf stocked OR player intentionally chooses “Close anyway” after warning.
-- At least one customer spawn attempt or simulated customer event has occurred.
-- Shift review can still handle terrible performance, but not accidental zero-play.
-
-Close warning example:
-
-> You have not stocked the floor yet. Closing now will end the shift with no sales. Close anyway?
-
-### Acceptance criteria
-
-- A new player can get from New Game to one stocked shelf without external instructions.
-- The UI explains why customers are not present yet.
-- The player does not accidentally close the day before seeing the core loop.
-- The tutorial is useful but not noisy.
-
----
-
-## Phase 4 — One Real Retail Loop
-
-Before adding more AI or story, one retail loop must be excellent.
-
-The target loop:
-
-> Inventory/back room item → stock shelf/bin → customer enters → customer browses → customer selects eligible item → customer queues → checkout resolves → cash/sold/shelf counts update → day summary reflects it.
-
-This should be the main beta proof.
-
-### One SKU pipeline
-
-Pick one simple SKU category:
-
-- Used game.
-- Console accessory.
-- Bargain bin item.
-- Refurb console box.
-
-For beta Day 1, keep it simple.
-
-The item needs:
-
-- SKU ID.
-- Display name.
-- Condition.
-- Cost/value.
-- Sale price.
-- Quantity.
-- Physical view model.
-- Shelf/bin slot.
-- Sale event.
-- Summary inclusion.
-
-### Customer behavior
-
-Start simple.
-
-The customer does not need genius AI.
-
-They need to appear alive and not broken.
-
-Minimum behavior:
-
-1. Spawn/enter after shelf stocked.
-2. Walk to shelf/bin.
-3. Browse for a few seconds.
-4. If item available and price acceptable, take/buy.
-5. Walk to checkout.
-6. Checkout completes.
-7. Leave.
-
-Failure behavior:
-
-- If no eligible item:
-  - Browse, then leave.
-  - Record leave reason `NO_STOCK`.
-- If queue too long:
-  - Leave reason `QUEUE_TOO_LONG`.
-- If cannot path:
-  - Use waypoint fallback.
-  - Record `NAV_FALLBACK`.
-- If checkout blocked:
-  - Leave reason or auto-resolve in beta.
-
-### Checkout clarity
-
-The register is confusing because sometimes it is informational-only.
-
-Make this clear.
-
-Possible beta approach:
-
-- Day 1 auto-checkout is okay.
-- If customer queued, show:
-  - “Customer at checkout”
-  - “Auto-checkout in progress...”
-  - Or “Press E to ring up” if player action is required.
-- Do not mix the two.
-
-Recommendation:
-
-For beta, make first customer checkout manual because it teaches the player.
-
-Prompt:
-
-> Customer at checkout — Press E to ring up
-
-Then after E:
-
-> Sale complete: Used Game +$12
-
-This gives the player a concrete moment.
-
-Auto-checkout can exist later, but it currently makes the game feel like nothing is happening.
-
-### Acceptance criteria
-
-- Stocking shelf changes visual shelf state and `On Shelves`.
-- Customer count increments when a customer enters.
-- Customer pathing visibly works or uses fallback.
-- Customer interacts with shelf/bin.
-- Checkout visibly completes.
-- Cash changes.
-- Sold Today changes.
-- Day summary includes sale count and cash delta.
-- Debug logs show every state transition.
-
----
-
-## Phase 5 — Hidden Thread Design
-
-This is the actual replay hook.
-
-But it must be hidden during the shift.
-
-The secret thread should not feel like collectibles or quest items.
-
-It should feel like normal retail junk until the end recontextualizes it.
-
-The player should spend most of the shift thinking:
-
-> This is a weird little retail job.
-
-Then the end screen should reveal:
-
-> The game was also checking what you noticed.
-
-### Hidden-thread design rule
-
-Every hidden-thread object must have a normal retail reason to exist.
-
-Do not create “suspicious evidence.”
-
-Create ordinary objects with slightly off details.
-
-Bad examples:
-
-- Suspicious Memo.
-- Corporate Evidence File.
-- Secret Camera.
-- Hidden Clue.
-- Mystery Thread.
-- Evidence Item.
-
-Good examples:
-
-- Hold Shelf.
-- Backordered Console Box.
-- Warranty Binder.
-- Register Note.
-- Returned Camera.
-- Employee Schedule.
-- Mall Security Flyer.
-- Damaged Trade-In Form.
-- Missing Pickup Tag.
-- Regional Promo Packet.
-- Receipt Discrepancy.
-- Price Override Sheet.
-
-During gameplay, the prompt should be normal:
-
-- “Hold Shelf — Press E to review holds.”
-- “Warranty Binder — Press E to review policy.”
-- “Backordered Console — Press E to inspect tag.”
-- “Register Note — Press E to read note.”
-
-No clue counters.
-No mystery sound.
-No journal update.
-No “thread discovered.”
-No star feedback during the shift.
-
-### What happens when a player interacts
-
-Interacting should do two things:
-
-1. Show a normal retail note/panel.
-2. Silently record an observation event.
-
-Do not show that internal event to the player.
-
-### End-of-day reveal
-
-At shift review, after normal retail results, add a section:
-
-> Attention Notes
-
-Not “Mystery Results.”
-
-Suggested structure:
-
-```text
-Shift Review — Day 1
-
-Sales: $36
-Customers helped: 3
-Shelf state: thin but workable
-Closeout: Accepted
-
-Attention Notes
-You reviewed the hold shelf and the warranty binder.
-You missed the register discrepancy, the backordered console tag, and the mall security flyer.
-
-Assessment: 2/5
-Profile: The Floor Walker
-You move through the store well, but you still trust labels too much.
-```
-
-This is where the player realizes the thread existed.
-
-The reveal should be clear enough that they want to replay, but not so explicit that the shift itself becomes a checklist.
-
-### 1–5 star rating
-
-Use 1–5 stars based on hidden-thread interactions and maybe quality of attention.
-
-Simple beta scoring:
-
-- 0 noticed: 1 star
-- 1 noticed: 2 stars
-- 2 noticed: 3 stars
-- 3–4 noticed: 4 stars
-- 5+ noticed / critical object found: 5 stars
-
-But do not call it “clues found” in the main UI.
-
-Call it:
-
-- Attention Rating
-- Floor Awareness
-- Corporate Read
-- Shift Assessment
-
-Recommended:
-
-> Floor Awareness: ★★★☆☆
-
-### Ending archetype recommendation
-
-The archetype recommendation should bridge to the full game.
+* A readable object label or world-space prompt.
+* A bottom action prompt.
+* A short confirmation after completion.
+* A state change if relevant.
 
 Examples:
 
-#### The Floor Walker
-You noticed customer-facing details but missed the paperwork trail.
-Full game recommendation: start with the Sales Floor path.
+Register
 
-#### The Paper Trail
-You checked notes, binders, and policy surfaces.
-Full game recommendation: start with the Assistant Manager path.
+Before customer:
 
-#### The Ghost
-You barely touched the official systems but saw the weird stuff.
-Full game recommendation: start with the Back Hall path.
+Talk to customer — E
 
-#### The Company Person
-You reported or noticed the things corporate wanted.
-Full game recommendation: start with the Regional Liaison path.
+After customer:
 
-#### The Mark
-You missed everything and looked useful enough to blame.
-Full game recommendation: start with the Fall Guy path.
+She thanked you and walked off.
 
-### The zero-thread ending
+Then objective changes to inventory.
 
-This is important.
+Back Room Delivery
 
-If the player notices zero hidden-thread items, they should not just get “bad score.”
+Before check:
 
-They should get framed / fired / blamed in a funny-dark way.
+Check delivery — E
 
-Concept:
+After check:
 
-> You were hired as a low-level corporate mole, but you provided nothing useful. Unfortunately, that also made you easy to pin things on.
+Shipment checked. 8 items available in back room.
 
-Or more subtle:
+Shelf
 
-> Regional reviewed your shift. You did not flag the hold discrepancy, the register note, the backorder mismatch, or the security flyer. That leaves two options: you missed everything, or you are protecting someone. Either way, Vic says not to come in tomorrow.
+Before stocking:
 
-Keep it morally grey. The player is low-level. They are not instantly sucked into some giant conspiracy. They just worked one weird shift, missed the ambient thread, and got used.
+Stock used games shelf — E
 
-### Acceptance criteria
+After stocking:
 
-- Hidden-thread objects look like normal retail objects.
-- No hidden-thread counter appears during active gameplay.
-- End screen reveals what mattered.
-- Player can replay to improve Floor Awareness.
-- Different noticed combinations can produce different archetype recommendations.
-- Zero-thread run has a distinct “framed/fired” result.
+Stocked 5 games on the used games shelf.
 
----
+Close Day
 
-## Phase 6 — Shift Review / Replay Loop
+Before eligible:
 
-The beta’s replay value lives in the end screen.
+Finish today’s tasks first.
 
-The shift review needs to be polished.
+After eligible:
 
-### Required sections
+Close the day — E
 
-1. Retail results
-   - Cash start/end.
-   - Sales.
-   - Customers served.
-   - Customers lost.
-   - Shelf state.
-   - Any obvious failure reasons.
+Acceptance Criteria
 
-2. Manager note
-   - Vic comments on the shift.
-   - Keep it short.
-   - Tone: dry, retail, slightly tired.
+* Every major interaction has before/after text.
+* The player cannot close the day before required tasks are done unless the game intentionally allows failure.
+* If closing early is allowed, the summary must clearly say that the player skipped required work.
+* Inventory counts should update immediately and visibly after stocking.
 
-3. Attention Notes
-   - Only at end.
-   - Reveals hidden-thread observations.
-   - Shows what the player interacted with and what they missed.
-   - Do not overexplain the whole mystery.
+⸻
 
-4. Rating
-   - Floor Awareness stars.
-   - Retail performance grade.
-   - Optional combined shift assessment.
+4. Fix End-of-Day Summary Presentation
 
-5. Archetype recommendation
-   - One short paragraph.
-   - “For the full game, your starting path would be...”
+The Day 1 Summary has a lot of useful information, but it is too dense and reads like a debug/stat dump.
 
-6. Replay / wishlist / full game prompt
-   - Replay Day 1.
-   - Continue/Coming Soon.
-   - Wishlist/Follow/Full Game button later depending platform.
+It should feel like the first real payoff screen.
 
-### Acceptance criteria
+Current Problems
 
-- Day 1 can be completed in 15–25 minutes.
-- End screen makes the hidden-thread concept clear.
-- Player has a reason to replay immediately.
-- The result feels like a complete beta, not a broken demo ending.
+Observed summary includes:
 
----
+* Revenue
+* Rent
+* Total Expenses
+* Net Profit
+* Items Sold
+* Inventory Remaining
+* Backroom Inventory
+* Shelf Inventory
+* Cash Balance
+* Customers Served
+* Satisfaction
+* Reputation
+* The Mark narrative section
+* Floor Awareness rating
+* Operational notes
+* Trust bars
+* Mistakes
+* Variance
+* Discrepancies
+* Buttons
+* Auto-advance text
+* Sometimes a note overlay on top
 
-# 7. Ad / $0.99 Model
+This is too much for Day 1.
 
-This should not be a blocker for the playable pass, but the design should support it.
+Desired Day Summary Structure
 
-## Best beta model
+Break it into four clear sections:
 
-Recommended:
+1. Money
 
-- Free app/demo.
-- Optional $0.99 “Supporter / Remove Ads.”
-- Ads only:
-  - Main menu banner/interstitial.
-  - Post-shift screen.
-  - Maybe after replay, not before the first run.
-- Never interrupt:
-  - Active shift.
-  - Modal/note reading.
-  - Checkout.
-  - End reveal before the player sees their result.
+Show only:
 
-This game depends on atmosphere. Interruptive ads will kill it.
+* Revenue
+* Expenses
+* Net Profit
+* Cash Balance
 
-## Why $0.99 works better as remove-ads/supporter than paid-only
+2. Store Performance
 
-A paid-only $0.99 app creates friction before people know what it is.
+Show:
 
-Free lets weird-game curiosity work.
+* Customers Served
+* Items Sold
+* Shelf Inventory Remaining
+* Backroom Inventory Remaining
 
-$0.99 remove ads is low-friction for people who like the vibe.
+3. The Mark
 
-The full game conversion should come from:
+Keep this. This is the game’s personality.
 
-- “I want to know what the thread was.”
-- “I want to see the full store/mall.”
-- “I want more shifts/endings.”
-- “I want to start as the archetype I got.”
+Example:
 
-Not from locking basic play behind a tiny price.
+You completed the shift without flagging anything Regional expected you to notice. That makes you either harmless, unlucky, or useful to blame. Vic says not to come in tomorrow.
 
----
+This is good tone. Keep that vibe.
 
-# 8. What Not To Do Next
+4. Reputation / Trust
 
-Do not do these in the next pass:
+Show:
 
-1. Do not build full GOAP customer AI.
-2. Do not unify mall shoppers and store customers yet.
-3. Do not add more stores.
-4. Do not add a giant economy.
-5. Do not add pricing elasticity systems.
-6. Do not expand to 30 days yet.
-7. Do not make a real conspiracy UI.
-8. Do not add a clue tracker during gameplay.
-9. Do not add more modals until modal flow is clean.
-10. Do not let debug labels survive as store signage.
-11. Do not keep adding objects without interactable matrix coverage.
-12. Do not change core interaction architecture without proving the existing one cannot work.
+* Customer Satisfaction
+* Employee Trust
+* Manager Trust
+* Floor Awareness
 
-This pass is about making a very small thing feel intentional.
+But make it compact.
 
----
+Remove or Hide From Day 1 Summary
 
-# 9. Implementation Plan For The Agent
+For Day 1, hide advanced audit stats unless the player clicks “Review Inventory”:
 
-## Step 1 — Create Beta Readiness Checklist
+* Inventory variance
+* Discrepancies flagged
+* Detailed mistake counts
+* Deep operational diagnostics
 
-Create:
+Those can exist later, but Day 1 should not dump everything.
 
-`docs/beta_day1_readiness_checklist.md`
+Important Modal Rule
 
-Sections:
+Do not show Vic’s Day 2 note on top of the Day 1 summary by default.
 
-- Visual readability.
-- Interaction truth.
-- Onboarding.
-- One SKU pipeline.
-- One customer pipeline.
-- Checkout.
-- Hidden-thread observations.
-- Shift review.
-- Regression tests.
+Better sequence:
 
-This checklist is the source of truth for the pass.
+1. Day 1 Summary appears.
+2. Player clicks Continue.
+3. Then Vic’s Day 2 note appears.
+4. Then Day 2 starts.
 
-## Step 2 — Create Interactable Matrix
+No overlapping note on top of the summary unless it is a deliberate “newspaper over desk” style transition, and even then it should not obscure the summary before the player has read it.
 
-Create:
+Acceptance Criteria
 
-`docs/retro_games_interactable_matrix.md`
+* Day summary fits cleanly on screen at common resolutions.
+* No note overlays cover the summary automatically.
+* The player can clearly choose:
+    * Review Inventory
+    * Main Menu
+    * Replay Day 1
+    * Continue to Day 2, if available
+* Auto-advance should pause if the player scrolls, hovers, or opens a note.
+* “Reading… auto-advance paused” should only appear when that behavior is actually active.
 
-Audit all Day 1 objects.
+⸻
 
-Do not proceed until every object has:
+5. Improve Store Readability Without Overbuilding
 
-- Prompt.
-- Verb behavior.
-- Enabled/disabled state.
-- Handler.
-- Test status.
-- Visual status.
+The store is finally recognizable. Do not rebuild it from scratch.
 
-## Step 3 — Visual Readability Pass
+But it needs a readability pass.
 
-Update the RetroVault scene:
+Current Store Strengths
 
-- Fix labels.
-- Replace worst placeholder cubes.
-- Make signage diegetic.
-- Add basic product meshes/cards to shelves.
-- Improve checkout/hold/backroom readability.
-- Add simple posters/signs.
-- Ensure all object names read from normal camera height.
+* There is now a large room.
+* The register area is recognizable.
+* Shelves exist.
+* Back room signage exists.
+* Product objects exist.
+* There is a clear front/back layout.
+* The objective flow can be spatial.
 
-No giant visual overhaul. Just enough that screenshots look like a real beta environment.
+Current Weaknesses
 
-## Step 4 — Interaction QA Pass
+* The store still feels too empty in the middle.
+* Some shelves look like block placeholders.
+* The signs are useful but a little too game-jam/blocky.
+* The register area is visually clear but could use better placement and lighting.
+* The back room door/area should stand out more.
+* Some object scale feels inconsistent.
 
-For every matrix object:
+Improvements
 
-- Validate collision layer 16.
-- Validate trigger size.
-- Validate prompt.
-- Validate distance.
-- Validate E behavior.
-- Validate modal blocking.
-- Validate disabled states.
-- Validate debug logging.
+Add a simple “retail clutter pass”:
 
-Fix `StorePlayerBody.current_interactable` drift.
+* A few floor displays.
+* Small product stacks near shelves.
+* A counter mat or register zone marker.
+* Posters/signage on walls.
+* Better shelf product silhouettes.
+* A clearer delivery/backroom area.
+* A customer standing marker or spawn spot.
+* Slight lighting variation so the register/shelves/backroom read as separate zones.
 
-## Step 5 — Day 1 Objective Pass
+Do not spend time on high-quality art. This is still beta. The goal is readability, not beauty.
 
-Add/clean objective copy:
+Acceptance Criteria
 
-- Read Vic’s note.
-- Stock one item.
-- Wait for/serve first customer.
-- Close day.
+* From the starting position, the player can visually identify:
+    * Register
+    * Used games shelf
+    * Back room/delivery area
+    * Exit or close-day area
+* The store does not feel like an empty warehouse.
+* Navigation does not require guessing.
+* No added clutter blocks movement.
 
-Tie `Cust: 0` explanation to `_day1_spawn_unlocked`.
+⸻
 
-Do not mention secret thread.
+6. Tighten HUD and Text Readability
 
-## Step 6 — One SKU / One Customer Slice
+The HUD is functional but still noisy.
 
-Make one product pipeline undeniable.
+Current HUD Issues
 
-- Item seeded.
-- Player stocks it.
-- Shelf visual updates.
-- Customer arrives.
-- Customer buys or leaves with clear reason.
-- Checkout completes.
-- Stats update.
-- Summary includes result.
+* Right-side panel is large and dark.
+* Some text is low contrast.
+* Bottom action bar competes with task list.
+* Top money/day/time display is fine but could be more consistent.
+* The objective panel sometimes looks like debug state.
 
-## Step 7 — Hidden Thread Silent Tracking
+Required HUD Rules
 
-Create/verify a `SecretThreadTracker` or similar system.
+Top-left:
 
-It should record:
+* Cash only.
 
-- Observation ID.
-- Object ID.
-- Day.
-- Timestamp/game time.
-- Optional category.
-- Optional weight.
-- Whether it was required/optional.
+Top-center:
 
-Do not show this during active gameplay.
+* Day and time.
 
-## Step 8 — Shift Review Rebuild
+Top-right:
 
-Build the final Day 1 review around:
+* Compact stats only:
+    * On Shelves
+    * Back Room
+    * Customers
+    * Sold Today
 
-- Retail result.
-- Vic note.
-- Attention Notes.
-- Stars/rating.
-- Archetype recommendation.
-- Replay CTA.
+Right-side objective panel:
 
-This is the beta’s conversion screen.
+* Current task list only.
+* No long paragraphs unless it is a contextual message.
+* Completed tasks should use checkmarks.
 
-## Step 9 — Regression Tests
+Bottom bar:
 
-Add/verify tests for:
+* One sentence explaining current action.
+* One control hint on the right.
 
-- Interaction ray dispatch.
-- Modal blocks E.
-- First shelf stock unlocks Day 1 customers.
-- Stocking changes shelf count.
-- Sale changes cash and Sold Today.
-- Hidden-thread observation records silently.
-- Shift review displays hidden-thread result only after close.
-- Zero-thread ending produces framed/fired outcome.
-- Prompt never says Press E when no action exists.
+Example:
 
----
+Left:
 
-# 10. Specific Hidden Thread Objects For Beta
+Check the back room delivery.
 
-Use 5–7 objects max.
+Right:
 
-Do not make all of them required.
+Check inventory  E
 
-## Object 1 — Hold Shelf Missing Pickup Tag
+Acceptance Criteria
 
-Visible name:
+* HUD remains readable over bright and dark backgrounds.
+* No HUD text overlaps with modals.
+* The bottom prompt always reflects the currently focused interaction.
+* The right objective panel does not become a message log unless intentionally designed as one.
 
-> Hold Shelf
+⸻
 
-Prompt:
+7. Fix Narrative/Event Timing
 
-> Hold Shelf — Press E to review holds
+Some unlocks and story beats fire too quickly or stack awkwardly.
 
-Visible note:
+Example observed:
 
-> Three pickup tags are clipped to the shelf. One has no customer name, just “Regional pickup — do not release before Friday.”
+* “Unlocked: Register Access”
+* Tutorial popup
+* Vic note
+* Customer interaction
+* Delivery notification
+* End-of-day note
 
-Hidden observation:
+These are good beats, but they need pacing.
 
-`HOLD_TAG_REGIONAL_PICKUP`
+Rule
 
-End reveal copy:
+Only one meaningful beat should fire at a time.
 
-> You noticed the unnamed regional pickup tag.
+Suggested Day 1 Beat Timing
 
-## Object 2 — Warranty Binder Exception
+Start:
 
-Visible name:
+* Show Vic note or objective to read it.
 
-> Warranty Binder
+After note:
 
-Prompt:
+* Show “Unlocked: Register Access.”
 
-> Warranty Binder — Press E to review policy
+After customer:
 
-Visible note:
+* Show short customer response.
 
-> Most of the binder is boilerplate. A sticky note says: “Do not offer plan on refurb units unless register asks twice.”
+After inventory check:
 
-Hidden observation:
+* Show shipment notification.
 
-`WARRANTY_BINDER_REFURB_EXCEPTION`
+After stocking:
 
-End reveal copy:
+* Show stocked confirmation.
 
-> You checked the warranty exception on refurb units.
+After close day:
 
-## Object 3 — Backordered Console Box
+* Show Day Summary.
 
-Visible name:
+After summary continue:
 
-> VECFORCE HD — Backordered
+* Show Day 2 note.
 
-Prompt:
+Acceptance Criteria
 
-> Backordered Console — Press E to inspect tag
+* No two tutorial/story popups fire simultaneously.
+* Toasts do not appear while blocking modals are active.
+* The player is never expected to read three things at once.
+* Important beats do not disappear too quickly.
 
-Visible note:
+⸻
 
-> The tag says backordered, but the box has a paid hold sticker underneath the shipping label.
+8. Make Day 1 Failure/Success Logic Explicit
 
-Hidden observation:
+Right now the summary says things like:
 
-`BACKORDERED_CONSOLE_PAID_HOLD`
+You completed the shift without flagging anything Regional expected you to notice.
 
-End reveal copy:
+And:
 
-> You saw the backordered console did not match its hold status.
+In the full game, your starting path would be: Fall Guy.
 
-## Object 4 — Register Discrepancy Note
+That is actually interesting. Keep it.
 
-Visible name:
+But the game needs to clearly define what the player did right/wrong.
 
-> Register Note
+For Day 1 Beta
 
-Prompt:
+Track these simple outcomes:
 
-> Register Note — Press E to read
+* Did the player talk to the customer?
+* Did the player check inventory?
+* Did the player stock the shelf?
+* Did the player close the day?
+* Did the player leave stock in the back room?
+* Did the player miss any obvious discrepancy?
 
-Visible note:
+Even if Day 1 is mostly scripted, the summary should derive from real tracked flags, not hardcoded vibes.
 
-> “If drawer is short again, do not call mall security. Ask Vic first.”
+Summary Copy Examples
 
-Hidden observation:
+If player stocked shelf:
 
-`REGISTER_SHORT_DO_NOT_REPORT`
+You got product onto the floor. That is more than some people manage.
 
-End reveal copy:
+If player left stock in back:
 
-> You read the register note about drawer shortages.
+Over half your stock is still in the back room. Nothing moved today because the floor was empty all shift.
 
-## Object 5 — Mall Security Flyer
+If player skipped customer:
 
-Visible name:
+The customer left before you helped them. Somehow this is already paperwork.
 
-> Mall Security Flyer
+If player did everything:
 
-Prompt:
+You survived the first shift without making yourself interesting. Vic considers that a win.
 
-> Flyer — Press E to read
+Acceptance Criteria
 
-Visible note:
+* End-of-day text reflects actual completed/skipped actions.
+* The path label, such as “Fall Guy,” is based on tracked performance.
+* The same summary does not appear regardless of player behavior.
+* The game can support at least two Day 1 outcomes:
+    * Basic success
+    * Incomplete/poor shift
 
-> Holiday loss prevention reminder. Someone circled “employee entrances” in pen.
+⸻
 
-Hidden observation:
+9. Remove Debug/Development Artifacts From Player View
 
-`SECURITY_FLYER_EMPLOYEE_ENTRANCE`
+Some screenshots show what looks like a screenshot thumbnail or overlay in the bottom-right corner. If this is a debug replay/screenshot capture tool, it should not be visible in normal beta play.
 
-End reveal copy:
+Required Fix
 
-> You noticed the security flyer had the employee entrance note circled.
+Add a debug flag:
 
-## Object 6 — Returned Camera
+* Debug overlays only appear when debug_ui_enabled = true.
+* Screenshots, mini-previews, bounding boxes, event logs, and state inspectors should be hidden by default.
 
-Visible name:
+Acceptance Criteria
 
-> Returned Camera
+* Normal play has no debug thumbnails.
+* No debug labels appear in production/beta mode.
+* Developer tools can still be enabled from a debug menu or config flag.
 
-Prompt:
+⸻
 
-> Returned Camera — Press E to inspect return
+10. Regression Tests / Validation Pass
 
-Visible note:
+After implementation, run a full manual Day 1 validation.
 
-> Return reason: “wrong item.” The tape on the box has been cut and resealed twice.
+Manual Test Script
 
-Hidden observation:
+Start a fresh run.
 
-`RETURNED_CAMERA_RESEALED`
+Verify:
 
-End reveal copy:
+1. Player spawns facing a readable store.
+2. Player can move immediately unless an intentional opening modal is active.
+3. First objective is clear.
+4. Vic note opens once.
+5. Tutorial popup appears once and does not duplicate text.
+6. Register interaction works.
+7. Customer state updates.
+8. Inventory/back room task becomes active.
+9. Inventory check works.
+10. Shelf stocking works.
+11. Inventory counts update.
+12. Close day only works when appropriate.
+13. Day summary appears cleanly.
+14. Day summary is not covered by another popup.
+15. Buttons work.
+16. Replay Day 1 resets state correctly.
+17. Main Menu works.
+18. Continue/Day 2 note appears only after summary flow.
+19. No debug overlays appear.
+20. No modal traps the player permanently.
 
-> You inspected the resealed camera return.
+Automated/Code-Level Validation
 
-## Object 7 — Employee Schedule
+Add or update tests for:
 
-Visible name:
+* Objective state machine progression.
+* Modal queue priority.
+* Tutorial one-shot IDs.
+* Inventory count changes.
+* End-of-day summary calculation.
+* Replay/reset state cleanup.
+* Debug UI hidden by default.
 
-> Employee Schedule
+⸻
 
-Prompt:
+Non-Goals
 
-> Schedule — Press E to review
+Do not add:
 
-Visible note:
+* Full economy expansion.
+* More customers.
+* Complex theft systems.
+* Employee scheduling.
+* Advanced inventory audits.
+* New days beyond a simple Day 2 teaser unless already wired.
+* More UI panels.
+* A new art direction.
+* A full save/load system unless required for replay stability.
 
-> Someone’s lunch is marked during the exact window Vic said he would check in.
+This pass is about making the current beta loop clean.
 
-Hidden observation:
+⸻
 
-`SCHEDULE_VIC_CHECKIN_GAP`
+Definition of Done
 
-End reveal copy:
+This pass is done when:
 
-> You checked the schedule conflict around Vic’s check-in.
+* Day 1 can be played start-to-finish without confusion.
+* The player understands what to do next at all times.
+* No duplicate tutorial text appears.
+* No modal overlaps another modal incorrectly.
+* Store layout reads clearly.
+* Interactions produce immediate feedback.
+* End-of-day summary feels like a result screen, not a debug dump.
+* Debug overlays are hidden in normal play.
+* Replay Day 1 works cleanly.
+* The game feels like a rough but intentional beta instead of a pile of working systems stacked on top of each other.
 
----
+⸻
 
-# 11. End Ratings / Archetypes
+Final Direction
 
-## 0 hidden observations
+Do not rebuild the game. Do not rename systems. Do not create a new architecture unless the existing one is blocking the fixes above.
 
-Rating:
+Preserve the working Day 1 loop and polish around it.
 
-> Floor Awareness: ★☆☆☆☆
+The priority is:
 
-Archetype:
+1. Modal discipline
+2. Objective clarity
+3. Interaction feedback
+4. End-of-day readability
+5. Store readability
+6. Debug cleanup
 
-> The Mark
-
-Copy:
-
-> You completed the shift without flagging anything Regional expected you to notice. That makes you either harmless, unlucky, or useful to blame. Vic says not to come in tomorrow.
-
-Full game recommendation:
-
-> Start as the Fall Guy path.
-
-## 1 hidden observation
-
-Rating:
-
-> Floor Awareness: ★★☆☆☆
-
-Archetype:
-
-> The Warm Body
-
-Copy:
-
-> You caught one thing, which is more than most seasonal hires and less than Regional wanted. You are visible enough to use and replaceable enough to deny.
-
-Full game recommendation:
-
-> Start as the Sales Floor path.
-
-## 2 hidden observations
-
-Rating:
-
-> Floor Awareness: ★★★☆☆
-
-Archetype:
-
-> The Floor Walker
-
-Copy:
-
-> You move through the store well and notice some things customers are not supposed to see. You still trust labels too much.
-
-Full game recommendation:
-
-> Start as the Floor Lead path.
-
-## 3–4 hidden observations
-
-Rating:
-
-> Floor Awareness: ★★★★☆
-
-Archetype:
-
-> The Paper Trail
-
-Copy:
-
-> You checked the boring surfaces: binders, tags, notes, schedules. That is usually where the store tells on itself.
-
-Full game recommendation:
-
-> Start as the Assistant Manager path.
-
-## 5+ hidden observations
-
-Rating:
-
-> Floor Awareness: ★★★★★
-
-Archetype:
-
-> The Company Person
-
-Copy:
-
-> You noticed enough that Regional would call it initiative and everyone else would call it a problem.
-
-Full game recommendation:
-
-> Start as the Regional Liaison path.
-
----
-
-# 12. Tone Rules
-
-The beta tone should be:
-
-- Dry.
-- Retail-specific.
-- Slightly funny.
-- Morally grey.
-- 2005 dying mall energy.
-- No giant conspiracy language during active gameplay.
-- No “chosen one.”
-- No melodrama.
-- No fake corporate sci-fi.
-
-Vic should sound like someone who has worked retail too long, not a lore narrator.
-
-Corporate/Regional should feel like pressure from above, not evil villain exposition.
-
-The player is low-level. They should not be pulled into the whole thread instantly.
-
-The end should imply:
-
-> You were tested without being told what the test was.
-
-Not:
-
-> Welcome to the secret resistance.
-
----
-
-# 13. Beta Definition Of Done
-
-The beta is “viable” when:
-
-1. New Game works.
-2. The store reads as a retro retail shop within 5 seconds.
-3. Player can read Vic’s note.
-4. Player can stock at least one item.
-5. Stocking visibly changes the shelf.
-6. Customer flow unlocks after stocking.
-7. At least one customer can buy something or leave for a clear reason.
-8. Checkout is understandable.
-9. Day can be closed intentionally.
-10. Shift review is polished.
-11. Hidden-thread objects are normal during gameplay.
-12. Hidden-thread scoring appears only at end.
-13. Replay gives a different/better result if the player checks more objects.
-14. Zero-observation ending has a distinct framed/fired result.
-15. No prompt lies about E.
-16. No obvious mirrored/clipped signage.
-17. No debug-looking labels remain in release.
-18. No major modal leaks into gameplay.
-19. There is a clear path to free/ad-supported + $0.99 remove ads later.
-20. The player understands why the full game would be bigger.
-
----
-
-# 14. Final Instruction To The Agent
-
-Do not treat this as a request to expand scope.
-
-Treat this as a request to stop the prototype from feeling accidental.
-
-The codebase may already have the bones. The next pass is about making those bones visible, readable, and rewarding.
-
-The beta should be tiny, but it should feel designed.
-
-Do the work in this order:
-
-1. Beta checklist.
-2. Interactable matrix.
-3. Visual readability.
-4. Interaction truth.
-5. Day 1 onboarding.
-6. One SKU/customer/checkout slice.
-7. Silent hidden-thread tracking.
-8. Shift review/replay.
-9. Tests.
-
-The hidden thread is the replay value, but it must stay hidden until the end.
-
-The player should not know they are being scored on attention until the shift review makes them want to replay.
+Once Day 1 feels clean, then we can decide whether the next pass is Day 2 content, economy depth, more customer behavior, or a stronger core failure/suspicion system.

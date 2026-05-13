@@ -9,7 +9,6 @@ extends GutTest
 
 const _SCENES: Array[String] = [
 	"res://game/scenes/stores/retro_games.tscn",
-	"res://game/scenes/stores/pocket_creatures.tscn",
 ]
 
 

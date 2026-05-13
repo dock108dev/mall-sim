@@ -29,6 +29,12 @@ const _ACTIVE_LABEL_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 
 var _fade_tween: Tween
 var _has_focus_target: bool = false
+## Mirrors `HUD._fp_mode` via `EventBus.fp_mode_changed`. While true the
+## prompt suppresses itself and the ObjectiveRail absorbs the inline
+## "[E] action" affordance — see `objective_rail.gd._apply_right_side_visibility`.
+## The prompt remains active for non-FP surfaces (management view, mall hub
+## modals) where the rail does not own the focused-interactable copy.
+var _fp_mode_active: bool = false
 
 @onready var _panel: PanelContainer = $PanelContainer
 @onready var _key_badge: PanelContainer = $PanelContainer/HBox/KeyBadge
@@ -45,8 +51,12 @@ func _ready() -> void:
 	)
 	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
 	EventBus.game_state_changed.connect(_on_game_state_changed)
-	if InputFocus != null:
-		InputFocus.context_changed.connect(_on_input_focus_changed)
+	# §EH-15 — `InputFocus` is an autoload; the `if InputFocus != null` guard
+	# at this connect site was a dead defensive pattern (autoloads cannot be
+	# null at `_ready()` time). The runtime guard at `_can_show()` (line 135)
+	# is a separate test-seam contract and stays per §F-44.
+	InputFocus.context_changed.connect(_on_input_focus_changed)
+	EventBus.fp_mode_changed.connect(_on_fp_mode_changed)
 
 
 func _on_interactable_focused(action_label: String) -> void:
@@ -92,6 +102,17 @@ func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void
 	_refresh_visibility()
 
 
+## Hides the prompt as soon as FP mode goes on (the ObjectiveRail takes
+## over the inline "[E] action" affordance). When FP mode goes off and a
+## focus target still exists, `_refresh_visibility` re-tweens the panel
+## back in. Idempotent: same enabled value on repeat calls returns early.
+func _on_fp_mode_changed(enabled: bool) -> void:
+	if _fp_mode_active == enabled:
+		return
+	_fp_mode_active = enabled
+	_refresh_visibility()
+
+
 func _refresh_visibility() -> void:
 	if not _has_focus_target:
 		return
@@ -129,6 +150,13 @@ func _reapply_styling_from_hovered_target() -> void:
 ## only fires under unit-test isolation where the autoload tree is stubbed.
 ## Same test-seam contract as `StoreController.has_blocking_modal` (§F-42).
 func _can_show() -> bool:
+	# FP mode delegates the inline "[E] action" affordance to the
+	# ObjectiveRail's right-side chip; the standalone prompt stays hidden
+	# the entire time the player is in the first-person view so the bottom
+	# cluster is not duplicated. Non-FP surfaces (management view, mall
+	# hub) keep the prompt as the sole renderer.
+	if _fp_mode_active:
+		return false
 	var state: GameManager.State = GameManager.current_state
 	if state == GameManager.State.MAIN_MENU or state == GameManager.State.DAY_SUMMARY:
 		return false

@@ -1,199 +1,218 @@
-# Documentation Consolidation Pass — 2026-05-06
+# Documentation Consolidation Pass — 2026-05-11
 
-Working-tree-driven documentation review. Goal: every active-doc statement is
-verifiable from current code, config, or CI; nothing else exists.
+Working-tree-driven documentation review on `beta/strip-to-bones`. Goal: every
+active-doc statement is verifiable from current code, config, or CI; nothing
+else exists.
 
-Scope: `README.md` plus everything under `docs/` (excluding `docs/audits/`,
-which is point-in-time review notes that are not rewritten by this pass).
-`BRAINDUMP.md` was not touched (customer voice).
+Scope: `README.md` plus everything under `docs/`. Out of scope by rule:
+`BRAINDUMP.md` (customer voice) and the per-pass audit reports under
+`docs/audits/` written by other passes (`cleanup-report.md`,
+`error-handling-report.md`, `security-report.md`, `ssot-report.md`,
+`YYYY-MM-DD-audit.md`).
+
+The prior pass (2026-05-10, recorded below in earlier git history) deleted the
+orphaned planning trees (`docs/production/`, `docs/archive/`,
+`docs/design/`, four `docs/architecture/*` wave-1 docs) and rewrote
+`docs/content-data.md` against the on-disk content tree. This pass is a
+verification sweep over the surviving doc set against the current code.
 
 ## Summary
 
-The active doc set was largely accurate. Three concrete factual bugs were
-fixed and one stale index entry was generalized so it stops drifting between
-passes. No files were added or deleted.
+One verified drift surfaced: the **`ModalQueue` autoload** (declared at
+`project.godot:52` between `InputFocus` and `ModalDimOverlay`, source at
+`game/autoload/modal_queue.gd`) was missing from the
+`docs/architecture.md` autoload table and unmentioned in the
+`docs/architecture/ownership.md` modal-stack row. The autoload is real and
+load-bearing — `game/autoload/scene_router.gd:85` and `:112` call
+`ModalQueue.clear()` before every scene swap, and the `ModalPanel` base
+class routes `CTX_MODAL` push/pop through `ModalQueue.request_open` and
+`notify_closed`.
+
+Two files updated. No deletions. No new files.
 
 ## Edits applied
 
-### `README.md`
+### `docs/architecture.md` — autoload table row added
 
-- **Removed broken link** `[Roadmap](docs/roadmap.md)`. The target file does
-  not exist in the repository (verified: no `docs/roadmap.md`, no
-  root-level `ROADMAP.md`). The link would 404 from GitHub. No replacement
-  doc was created — per the pass rules ("No placeholder docs — every file
-  earns its existence"), and per the active-docs boundary in
-  `docs/contributing.md` ("keep roadmap or planning language out of the
-  active docs set").
+Inserted `ModalQueue` as row 27 between `InputFocus` (row 26) and
+`ModalDimOverlay` (now row 28), matching the position in
+`project.godot:[autoload]`. Subsequent row numbers shifted +1 (final row
+count 43 → 44). The "Five entries are scenes" preamble is still accurate
+(scene autoloads: `ObjectiveRail`, `InteractionPrompt`, `MorningNotePanel`,
+`MiddayEventCard`, `FailCard`).
 
-### `docs/index.md`
+Row contents:
 
-- **Removed broken link** `[Roadmap](roadmap.md)` for the same reason.
-- **Generalized two audit-folder descriptions** that named contents which no
-  longer match the files on disk:
-  - `ssot-report.md` previously said it covered "FP store entry + named
-    physics layers + bit-5 interaction-mask migration + Day-1 readiness
-    v2." The current report is about the Day-1 close-day SSOT
-    consolidation. Index now says the file's content is rewritten each
-    pass — true for any point-in-time SSOT report.
-  - `cleanup-report.md` previously said "dead-code removal and
-    citation-consistency sweep across the audit reports." The current
-    report describes a different cleanup surface (sibling to the SSOT /
-    error-handling / security passes). Index now states the file is
-    rewritten each pass.
+> `ModalQueue` | `game/autoload/modal_queue.gd` — priority-ordered FIFO that
+> grants `CTX_MODAL` to one `ModalPanel` at a time; cleared by
+> `SceneRouter` before every scene swap
 
-### `docs/architecture/ownership.md`
+Source: `project.godot:52`, `game/autoload/modal_queue.gd:1-50`,
+`game/autoload/scene_router.gd:83-86,106-112`.
 
-- **Fixed CameraAuthority API name** in row 4. The doc claimed cameras
-  "request `make_current(self)` through this singleton." That is not the
-  public API. `game/autoload/camera_authority.gd:27` exposes
-  `request_current(cam, source) -> bool`; `_make_current` is a private
-  helper at line 108. The cell now describes:
-  - the actual public entry (`request_current(cam, source)`),
-  - the `cameras` group auto-add behaviour (`_register_in_group`,
-    `camera_authority.gd:93`), and
-  - `assert_single_active()` walking that group on every `store_ready`
-    (`camera_authority.gd:63`) — replacing the prior "asserts exactly one
-    `current == true`" phrasing, which conflated the C++ Camera3D `current`
-    property with the autoload's tracking field.
+### `docs/architecture/ownership.md` — row 5 expanded
 
-### `docs/configuration-deployment.md`
+Row 5 ("Input focus / modal ownership") previously named only
+`InputFocus` plus a generic "modal panels (push/pop on open/close)"
+caller. Rewrote to:
 
-- **Added missing input action** `quick_stock` (Q) to the input action group
-  list. `project.godot` defines the action at line 132–136 and
-  `game/scripts/player/store_player_body.gd` uses it as the shelf-restock
-  shortcut. The list previously skipped it.
+- Spell out `ModalQueue` as the mediator that owns `CTX_MODAL` dispatch
+  (priority enum `DAY_SUMMARY → VIC_NOTE → TUTORIAL → TOAST →
+  PASSIVE_HUD` — verbatim from `modal_queue.gd:29-35`).
+- Record `SceneRouter`'s `ModalQueue.clear()` call as part of the
+  transition contract (so the modal stack cannot survive a scene swap).
+- Move modal panels from "push/pop directly" to "route through
+  `ModalQueue.request_open`" in the accepted-callers column.
+- Add `ModalPanel`-bypass patterns to the forbidden column
+  (`ModalQueue.notify_closed` / `cancel` called from non-panel code, or
+  `CTX_MODAL` pushed outside `ModalQueue` dispatch).
+
+Source: `game/autoload/modal_queue.gd:1-50`, `game/autoload/scene_router.gd:83-112`,
+`game/autoload/input_focus.gd:18-21`.
 
 ## Statements verified, no edit needed
 
-The following claim-heavy sections were spot-checked against current source
-and confirmed accurate at this point in time. Citations are sample
-verifications, not exhaustive.
+Spot-checked the following against the current working tree. All match.
 
-- **Boot flow** in `docs/architecture.md` — matches
-  `game/scripts/core/boot.gd`. The wrapping pair
-  (`game/scenes/bootstrap/boot.gd` extending `res://game/scripts/core/boot.gd`)
-  exists.
-- **GameWorld init tiers 1–5** — function names and per-tier system list
-  match `game/scenes/world/game_world.gd` (tier functions at lines 272, 283,
-  311, 378, 402).
-- **Autoload roster (43 entries)** — matches `project.godot:24-68`. Five
-  entries are `.tscn` scenes (`ObjectiveRail`, `InteractionPrompt`,
-  `MorningNotePanel`, `MiddayEventCard`, `FailCard`); the rest are scripts.
-- **`AudioManager` instantiates `AudioEventHandler` as a child node** —
-  matches `audio_manager.gd` `_setup_event_handler()`.
-- **`GameManager.State` enum** — `MAIN_MENU, GAMEPLAY, PAUSED, GAME_OVER,
-  LOADING, DAY_SUMMARY, BUILD, MALL_OVERVIEW, STORE_VIEW`, exact match.
-- **`EventLog.queue_free`s itself in release builds** — `event_log.gd:28-32`
-  (`if not OS.is_debug_build(): queue_free(); return`).
-- **`SceneRouter` is the sole `change_scene_to_*` caller** — grep across
-  `game/` finds only `scene_router.gd:84` and `scene_router.gd:103`.
-- **`StoreDirector` state machine `IDLE → REQUESTED → LOADING_SCENE →
-  INSTANTIATING → VERIFYING → READY/FAILED`** — matches
-  `store_director.gd:34-42`.
-- **`InputFocus` constants** `CTX_MAIN_MENU`, `CTX_MALL_HUB`,
-  `CTX_STORE_GAMEPLAY`, `CTX_MODAL` — matches `input_focus.gd:18-21`.
-- **`AuditLog.pass_check` / `fail_check` signatures** — match
-  `audit_log.gd:21,39`.
-- **EventBus mirror signals** `store_ready`, `store_failed`, `scene_ready`
-  (single-arg mirror), `run_state_changed`, `input_focus_changed`,
-  `camera_authority_changed`, `panel_opened`, `panel_closed` — all present
-  in `event_bus.gd`.
-- **DataLoader / ContentRegistry surface** in `docs/content-data.md` —
-  `MAX_JSON_FILE_BYTES = 1048576`, `_TYPE_ROUTES` covers every documented
-  `entries:<kind>`, singleton, and `ignore` route, ID regex
-  `^[a-z][a-z0-9_]{0,63}$`, all 25 documented `get_all_*` / `get_*_config`
-  getters exist on `data_loader.gd`.
-- **Content tree** — every documented subdirectory and root-level JSON file
-  (`audio_registry.json`, `day_beats.json`, `fixtures.json`,
-  `haggle_dialogue.json`, `market_trends_catalog.json`, `meta_shifts.json`,
-  `objectives.json`, `platforms.json`, `pocket_creatures_cards.json`,
-  `tutorial_contexts.json`, `upgrades.json`) is present;
-  `game/content/localization/` exists and is empty.
-- **Store roster + aliases** in `store_definitions.json` — `sports`
-  (`sports_memorabilia`), `retro_games`, `rentals` (`video_rental`),
-  `pocket_creatures`, `electronics` (`consumer_electronics`); display
-  names match `docs/design.md` §4.
-- **`SaveManager`** — `MAX_MANUAL_SLOTS = 3`,
-  `MAX_SAVE_FILE_BYTES = 10485760`, atomic `.tmp` + rename writes, all in
-  `save_manager.gd`.
-- **`Settings` autoload owns `user://settings.cfg`** — `settings.gd:13`.
-- **`scripts/` helpers** — all seven documented scripts exist:
-  `godot_import.sh`, `godot_exec.sh`, `validate_translations.sh`,
-  `validate_single_store_ui.sh`, `validate_tutorial_single_source.sh`,
-  `validate_export_config.sh`, `validate_originality.sh`.
-- **`export_presets.cfg`** — three presets (Windows Desktop, macOS,
-  Linux/X11) with the documented export paths and exclude filter
-  (`.aidlc/*,docs/*,tests/*,game/tests/*,addons/gut/*,game/addons/gut/*,
-  .godot/*,*.md,*.txt,.gitignore,.gutconfig.json`).
-- **CI workflows** — `validate.yml` jobs (`lint-docs`, `gut-tests`,
-  `interaction-audit`, `content-originality`, `lint-gdscript`) and
-  `export.yml` artifact naming
-  (`mallcore-sim-{windows,macos,linux}.{zip,zip,tar.gz}`) match.
-- **`.gutconfig.json`** — dirs (`res://tests/`, `res://tests/gut/`,
-  `res://tests/unit/`, `res://game/tests/`), `prefix: "test_"`,
-  `suffix: ".gd"`, `should_exit: true`, `should_exit_on_success: true`,
-  `pre_run_script: "res://tests/gut_pre_run.gd"` — all match.
-- **`tests/run_tests.sh`** — does what `docs/setup.md` and
-  `docs/testing.md` describe (Godot resolution, headless import, GUT run,
-  optional `game/tests/run_tests.gd`, `tests/test_run.log`,
-  `tests/validate_*.sh` shell validators, the three SSOT tripwires under
-  `scripts/`).
-- **Visual Systems file paths** in `docs/architecture.md` — all 17 paths
-  exist (player body, interaction ray, build-mode camera, interactable
-  components, themes, palette, store accents, panel animator, UI layers,
-  CRT shader, etc.).
-- **`docs/style/visual-grammar.md`** — palette resources at
-  `game/themes/palette.tres`, theme at `game/themes/mallcore_theme.tres`,
-  five `store_accent_*.tres` files, `UIThemeConstants` class, contrast
-  test at `tests/gut/test_palette_contrast.gd` — all present.
-- **`docs/retro_games_interactable_matrix.md`** — every documented scene
-  node (`EntranceDoor/Interactable`, `checkout_counter/Interactable`,
-  `Checkout/Register`, four shelf-slot families, slots Slot1–Slot10 /
-  Slot1–Slot6 / Slot1–Slot4 / Slot1–Slot5 / ImpulseSlot1–ImpulseSlot3,
-  `testing_station/Interactable`, `refurb_bench/Interactable`,
-  `delivery_manifest/Interactable`, `featured_display/Interactable`,
-  `release_notes_clipboard/Interactable`, `poster_slot/Interactable`,
-  `hold_shelf/Interactable`, `back_room/back_room_damaged_bin/Interactable`)
-  exists in `game/scenes/stores/retro_games.tscn`. `InteractionRay`
-  values (`interaction_mask = 16`, `ray_distance = 2.5`) and
-  `Interactable._ready` zero-then-reparent behaviour match
-  `game/scripts/components/interactable.gd:84-100`.
-  `InventorySystem.DAMAGED_BIN_LOCATION = "back_room_damaged_bin"` and
-  `RetroGames._apply_day1_quarantine` both exist.
+- **`README.md`** — engine version `4.6.2`, entry scene path,
+  `bash tests/run_tests.sh`, validator names
+  (`validate_translations.sh`, `validate_single_store_ui.sh`,
+  `validate_tutorial_single_source.sh`), export-preset paths, and `/docs`
+  link list all match `project.godot`, `tests/run_tests.sh`, and
+  `export_presets.cfg`.
+- **`docs/index.md`** — every linked doc still exists; the Boundary
+  section's claim that `README.md` is the only active root doc plus
+  `BRAINDUMP.md` (out of scope) holds.
+- **`docs/setup.md`** — Godot-binary resolution order (`GODOT`,
+  `GODOT_EXECUTABLE`, `godot` on PATH, two macOS install paths) matches
+  `tests/run_tests.sh:10-30` and `scripts/godot_exec.sh`.
+  `bash scripts/godot_import.sh` exists. The `bash tests/run_tests.sh`
+  step list matches.
+- **`docs/architecture.md`** — boot flow steps 1-7 line up with
+  `game/scripts/core/boot.gd::initialize()`; the wrapper at
+  `game/scenes/bootstrap/boot.gd` exists (one-line
+  `extends "res://game/scripts/core/boot.gd"`). GameWorld init tiers 1-5
+  exist as `initialize_tier_1_data` …
+  `initialize_tier_5_meta` at `game/scenes/world/game_world.gd:245,256,281,338,345`,
+  with `finalize_system_wiring` at `:396`; tier 2 returns `bool` as
+  documented. Scene-entry-point table paths all exist. The hub-mode
+  description (`debug/walkable_mall=false`, `_setup_hub_mode`,
+  `apply_pending_session_state` emits
+  `EventBus.enter_store_requested(GameManager.DEFAULT_STARTING_STORE)`)
+  matches `game/scenes/world/game_world.gd:1188-1226` and
+  `game/autoload/game_manager.gd:11` (`DEFAULT_STARTING_STORE = &"retro_games"`).
+  EventBus signal-prefix table (`store_`, `day_`, `customer_`, `inventory_`,
+  etc.) and the `run_state_changed()` mirror match `event_bus.gd`.
+- **`docs/architecture/ownership.md`** — all eight non-modal rows
+  verified against source:
+  - Row 1: `SceneRouter._in_flight`, `change_scene_to_file/_packed`,
+    `tree_changed` + `process_frame` await, `scene_ready` / `scene_failed`
+    all present in `game/autoload/scene_router.gd:28-146`.
+  - Row 2: `StoreDirector.enter_store` state machine
+    `IDLE → REQUESTED → LOADING_SCENE → INSTANTIATING → VERIFYING → READY`
+    matches `game/autoload/store_director.gd:34-50,68-146`.
+  - Row 3: per-store controller is `game/scripts/stores/retro_games.gd`
+    extending `game/scripts/stores/store_controller.gd`.
+  - Row 4: `CameraAuthority.request_current`, the `cameras` group, and
+    `assert_single_active()` match `game/autoload/camera_authority.gd:27-88`.
+  - Row 6: `GameState` autoload at `game/autoload/game_state.gd`.
+  - Row 7: `HUD` is `game/scenes/ui/hud.gd`.
+  - Row 8: `StoreRegistry` at `game/autoload/store_registry.gd`.
+  - Row 9: `AuditLog.pass_check` / `fail_check` exist at
+    `game/autoload/audit_log.gd:21+`.
+  - Row 10: `EventBus` mirror-signal claim matches the live signal
+    declarations in `event_bus.gd`.
+- **`docs/design.md`** — Section 4 store-roster table has the single
+  `retro_games` entry; `GameManager.DEFAULT_STARTING_STORE` is the
+  canonical id. The visual anti-pattern list cross-references
+  `BuildModeCamera`, `mat_outline_highlight.tres`, and
+  `ui_theme_constants.gd` — all exist.
+- **`docs/content-data.md`** — full `game/content/` tree (`audio_registry.json`,
+  `beta/days/day_01.json`, `beta/days/day_02.json`,
+  `beta/events/customer_events.json`, `beta/events/hidden_thread_events.json`,
+  the 5 `customers/*.json`, `economy/{difficulty_config,pricing_config}.json`,
+  `endings/ending_config.json`, `events/{ambient_moments,market_events,random_events}.json`,
+  `fixtures.json`, `haggle_dialogue.json`, `items/retro_games.json`,
+  `manager/manager_notes.json`, `meta/regulars_threads.json`,
+  `objectives.json`, `onboarding/onboarding_config.json`, `platforms.json`,
+  `progression/{arc_unlocks,milestone_definitions}.json`,
+  `staff/staff_definitions.json`,
+  `stores/{retro_games,store_definitions}.json` plus `stores/retro_games/grades.json`,
+  `suppliers/supplier_catalog.json`, `tutorial_contexts.json`,
+  `unlocks/unlocks.json`, `upgrades.json`) matches the doc tables.
+  `_TYPE_ROUTES` `ignore` bucket in `game/autoload/data_loader.gd:47-62`
+  matches the doc's `ignore` list verbatim. The empty `game/content/localization/`
+  directory and the `MAX_JSON_FILE_BYTES = 1048576` cap (`data_loader.gd:7`)
+  match. ContentRegistry ID regex matches `^[a-z][a-z0-9_]{0,63}$` in code.
+- **`docs/testing.md`** — `tests/run_tests.sh` step list and the
+  `.gutconfig.json` keys (`prefix`, `suffix`, `should_exit`,
+  `should_exit_on_success`, `pre_run_script`) are accurate. The five CI
+  jobs (`lint-docs`, `gut-tests`, `interaction-audit`,
+  `content-originality`, `lint-gdscript`) all appear as `jobs:` entries
+  in `.github/workflows/validate.yml`.
+- **`docs/configuration-deployment.md`** — every input-action group is
+  present in `project.godot:[input]`; `MAX_MANUAL_SLOTS = 3` and
+  `MAX_SAVE_FILE_BYTES = 10485760` match
+  `game/scripts/core/save_manager.gd`; the three export-preset paths
+  (`exports/windows/MallcoreSim.exe`, `exports/macos/MallcoreSim.zip`,
+  `exports/linux/MallcoreSim.x86_64`) match `export_presets.cfg`; the
+  `4.6.2-stable` install line is in both workflows. The `Shelf Life`
+  vs. `Mallcore Sim` naming dual-callout is honest about the
+  `config/name` / preset disagreement in code.
+- **`docs/contributing.md`** — `.editorconfig` rules, naming
+  conventions, content-ID regex, and the `bash tests/run_tests.sh` entry
+  point all check out.
+- **`docs/retro_games_interactable_matrix.md`** — every numbered row's
+  scene path resolves under `game/scenes/stores/retro_games.tscn` and
+  every named handler exists on `game/scripts/stores/retro_games.gd`.
+- **`docs/style/visual-grammar.md`** — `STORE_ACCENT_RETRO_GAMES`
+  (`#E8A547`, `Color(0.910, 0.647, 0.278, 1.0)`), the four `FONT_SIZE_*`
+  constants (`14`, `18`, `24`, `32`), and `DARK_PANEL_FILL`,
+  `SEMANTIC_SUCCESS`, `SEMANTIC_INFO` are all present in
+  `game/scripts/ui/ui_theme_constants.gd`. The dormant
+  `store_accent_{electronics,pocket_creatures,sports_cards,video_rental}.tres`
+  files are still on disk under `game/themes/` with no `STORE_ACCENT_*`
+  constant reference, matching the doc.
+- **`docs/beta/validation_checklist.md`** — interactable prompts, F10
+  screenshot path pattern, and the customer-event id
+  `day01_wrong_console_parent` (in
+  `game/content/beta/events/customer_events.json`) all match.
 
 ## Statements removed as unverifiable
 
-None beyond the broken `roadmap.md` links and the two stale audit-folder
-descriptions in `docs/index.md` (which were generalized rather than
-removed, since the audit files themselves still exist).
+None this pass. The prior 2026-05-10 sweep removed the orphaned planning
+trees; nothing new in the surviving doc set surfaced as drift beyond the
+`ModalQueue` gap above.
 
 ## Intentional gaps
 
-- **No `docs/roadmap.md` was created** to replace the removed link.
-  Rationale: `docs/contributing.md` ("Documentation rules") explicitly
-  says "keep roadmap or planning language out of the active docs set
-  unless it is clearly marked as future planning elsewhere," and there is
-  no checked-in roadmap content to consolidate from. `BRAINDUMP.md`
-  (customer voice) is the planning surface and is out of scope per pass
-  rules.
-- **`tests/run_tests.sh:73` references `docs/audits/phase0-ui-integrity.md`**
-  in a comment; that file is not in the repository. This is a code
-  artifact, not an active doc — left alone per the pass scope ("Docs only
-  — no code refactors").
-- **The retro-games matrix retains a "Reserved — hidden-thread
-  interactables" placeholder section.** Rationale: the matrix's
-  Maintenance rules require column-shape stability for parser/dashboard
-  use, and the placeholder gives the follow-up implementer a known
-  drop-in location. The placeholder rows are clearly marked
-  `_reserved_` and do not assert any current behaviour. This is in line
-  with the matrix's own contract, not a violation of "no placeholder
-  docs."
-- **`docs/audits/*.md`** were not touched. They are point-in-time review
-  records by design; rewriting them would erase historical context. The
-  index entries that describe them have been generalized so the
-  description does not drift relative to the per-pass rewrites of
-  `ssot-report.md` and `cleanup-report.md`.
+- **`config/name="Shelf Life"` vs. export preset
+  `application/name="Mallcore Sim"`** — both names are recorded in
+  `docs/configuration-deployment.md` rather than picking one. The strings
+  genuinely disagree in code/config (`project.godot:17` vs.
+  `export_presets.cfg` per-preset `application/name`). Reconciling them
+  is a code-side decision that a docs pass cannot make.
+- **`docs/audits/2026-05-05-audit.md` and `2026-05-06-audit.md`** — left
+  untouched. These are interaction-audit table snapshots regenerated by
+  `tests/audit_run.sh` / the `interaction-audit` CI job; hand-edits
+  would race the next CI run.
+- **`KNOWN_ORPHAN_SIGNALS` allowlist** in
+  `tests/gut/test_eventbus_signal_compat.gd` remains the live receipt
+  for intentional orphan signals in `event_bus.gd`. No replacement doc
+  was written — the test plus the inline comments on `event_bus.gd` are
+  the actual contract.
+- **`MallHub` named in `ownership.md` rows 1 and 4 accepted-callers
+  columns.** The script attached to `mall_hallway.tscn` is
+  `class_name MallHallway` (not `MallHub`); the walkable variant is
+  gated by `debug/walkable_mall=false` and not part of the shipping flow.
+  The columns describe a conceptual responsibility ("the mall hub
+  scene's controller") rather than a specific class name, and the
+  walkable mall is dormant anyway. Left as-is to avoid implying the
+  walkable variant is a live caller surface; if the variant is revived
+  the column should be updated to `MallHallway` at the same time the
+  caller wiring is added back.
 
 ## Escalations
 
-None. All findings were either acted on (edit applied) or justified above.
+None. Every finding was acted on (in-place edit) or recorded above under
+"Intentional gaps" with the specific reason it was not actioned.

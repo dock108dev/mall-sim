@@ -3,14 +3,15 @@
 ## Boot Flow
 
 The configured entry scene is `res://game/scenes/bootstrap/boot.tscn`. The boot
-script (`game/scripts/core/boot.gd`, wrapped by `game/scenes/bootstrap/boot.gd`)
-runs synchronous startup checks before opening the main menu:
+script (`game/scripts/core/boot.gd`, attached via the `boot.gd` wrapper at
+`game/scenes/bootstrap/boot.gd`) runs synchronous startup checks before opening
+the main menu:
 
 1. `DataLoaderSingleton.load_all()` discovers JSON content under
    `res://game/content/` and aggregates load errors.
 2. `arc_unlocks.json` and `objectives.json` are schema-validated.
 3. `ContentRegistry.is_ready()` is asserted.
-4. The shipping store roster is asserted to contain at least five IDs.
+4. `ContentRegistry.get_all_store_ids()` is asserted to be non-empty.
 5. `Settings.load()` then `AudioManager.initialize()` runs.
 6. `GameManager.mark_boot_completed()` is called and `EventBus.boot_completed`
    is emitted.
@@ -22,17 +23,20 @@ does not occur.
 ## GameWorld init tiers
 
 `game/scenes/world/game_world.gd` runs five named initialization tiers when
-the playable world scene is brought up. The tiers are ordered explicitly and
-each runs in the entered phase of the previous; they are not the same as the
-boot script above.
+the playable world scene is brought up. Tier 2 returns `bool` — a hard
+failure aborts subsequent tiers. The tiers are not the same as the boot
+script above; they execute after the gameplay scene loads.
 
-| Tier | Function | Systems started |
+| Tier | Function | Systems initialized |
 |---|---|---|
-| 1 — data | `initialize_tier_1_data` | `time_system`, `economy_system` (with starting cash), end-of-day summary callable |
-| 2 — state | `initialize_tier_2_state` | `inventory_system`, `store_state_manager`, `trend_system`, `market_event_system`, `seasonal_event_system`, `market_value_system` |
-| 3 — operational | `initialize_tier_3_operational` | per-store `ReputationSystemSingleton`, `customer_system`, `mall_customer_spawner`, `npc_spawner_system`, `haggle_system`, `checkout_system`, `queue_system`, `progression_system`, `milestone_system`, `order_system`, `staff_system`, `meta_shift_system` |
-| 4 — world | `initialize_tier_4_world` | `store_selector_system`, build mode, `tournament_system`, `day_phase_lighting` |
+| 1 — data | `initialize_tier_1_data` | `time_system`, `economy_system` (with starting cash); registers the day-end summary callable |
+| 2 — state | `initialize_tier_2_state` | `inventory_system`, `store_state_manager`, `trend_system`, `market_event_system`, `market_value_system` |
+| 3 — operational | `initialize_tier_3_operational` | per-store `ReputationSystemSingleton`, `customer_system`, `npc_spawner_system`, `haggle_system`, `checkout_system` (player), `queue_system`, `progression_system`, `milestone_system`, `order_system`, `staff_system` |
+| 4 — world | `initialize_tier_4_world` | `build_mode` (`BuildModeSystem` + `FixturePlacementSystem` + `BuildModeTransition` + optional `NavMeshRebaker`), `day_phase_lighting` |
 | 5 — meta | `initialize_tier_5_meta` | `performance_manager`, `performance_report_system`, `random_event_system`, `ambient_moments_system`, `regulars_log_system`, `ending_evaluator`, `DayManager` (instantiated and added as a child here), `store_upgrade_system`, `completion_tracker`, `LedgerSystem`, `day_cycle_controller` |
+
+`finalize_system_wiring()` runs after all tiers and wires `SaveManager`, the
+store controllers, and the day-cycle controller's save reference.
 
 These tier functions are scene nodes' `initialize(...)` calls — not
 autoloads. The autoload roster below is initialized earlier by Godot before
@@ -40,9 +44,10 @@ any scene loads.
 
 ## Autoloads
 
-Declared in `project.godot` in load order. Later autoloads may reference
-earlier ones. Five entries are scenes (`ObjectiveRail`, `InteractionPrompt`,
-`MorningNotePanel`, `MiddayEventCard`, `FailCard`); the rest are scripts.
+Declared in `project.godot` `[autoload]` in load order. Later autoloads may
+reference earlier ones. Five entries are scenes
+(`ObjectiveRail`, `InteractionPrompt`, `MorningNotePanel`, `MiddayEventCard`,
+`FailCard`); the rest are scripts.
 
 | # | Autoload | Source |
 |---|---|---|
@@ -60,35 +65,36 @@ earlier ones. Five entries are scenes (`ObjectiveRail`, `InteractionPrompt`,
 | 12 | `UnlockSystemSingleton` | `game/autoload/unlock_system.gd` |
 | 13 | `CheckoutSystem` | `game/autoload/checkout_system.gd` |
 | 14 | `OnboardingSystemSingleton` | `game/autoload/onboarding_system.gd` |
-| 15 | `MarketTrendSystemSingleton` | `game/autoload/market_trend_system.gd` |
-| 16 | `TooltipManager` | `game/autoload/tooltip_manager.gd` |
-| 17 | `ObjectiveRail` | `game/scenes/ui/objective_rail.tscn` (scene) |
-| 18 | `InteractionPrompt` | `game/scenes/ui/interaction_prompt.tscn` (scene) |
-| 19 | `ObjectiveDirector` | `game/autoload/objective_director.gd` |
-| 20 | `AuditOverlay` | `game/autoload/audit_overlay.gd` |
-| 21 | `AuditLog` | `game/autoload/audit_log.gd` |
-| 22 | `LedgerSystem` | `game/autoload/ledger_system.gd` — per-transaction event log plus `day_closed` anchor records used for daily revenue reconciliation; initialized with `time_system` in Tier 5 |
-| 23 | `EventLog` | `game/autoload/event_log.gd` — debug-build-only structured per-event timeline (ring buffer of inventory mutations and customer FSM transitions); `queue_free`s itself in release builds |
-| 24 | `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
-| 25 | `ErrorBanner` | `game/autoload/error_banner.gd` |
-| 26 | `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |
-| 27 | `InputFocus` | `game/autoload/input_focus.gd` — modal/context stack |
-| 28 | `StoreRegistry` | `game/autoload/store_registry.gd` — runtime cache seeded from `ContentRegistry` |
-| 29 | `StoreDirector` | `game/autoload/store_director.gd` |
-| 30 | `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
-| 31 | `EmploymentSystem` | `game/autoload/employment_system.gd` — seasonal-employee state (trust, approval, hours, status), daily wages, and end-of-season retention/firing evaluation |
-| 32 | `PlatformSystem` | `game/scripts/systems/platform_system.gd` — per-platform supply/demand/hype, daily price ticks, and platform-affinity spawn weighting |
-| 33 | `StoreCustomizationSystem` | `game/scripts/systems/store_customization_system.gd` — per-day featured-display and promotional-poster choices, spawn-weight and demand multipliers, and trust/hidden-thread linkage |
-| 34 | `ShiftSystem` | `game/scripts/systems/shift_system.gd` — daily clock-in/clock-out state, including 08:55 auto clock-in and trust penalties for late or missing punches |
-| 35 | `ManagerRelationshipManager` | `game/autoload/manager_relationship_manager.gd` — player↔manager trust scalar/tier and morning-note selection on `day_started` |
-| 36 | `MorningNotePanel` | `game/scenes/ui/morning_note_panel.tscn` (scene) — paper-memo overlay listening for `manager_note_shown` |
-| 37 | `MiddayEventSystem` | `game/scripts/systems/midday_event_system.gd` — midday decision-beat queue (two beats/day), pauses time on pending beat, applies resolved structured effects |
-| 38 | `MiddayEventCard` | `game/scenes/ui/midday_event_card.tscn` (scene) — modal "STORE EVENT" decision card emitted on `midday_event_fired` / `midday_event_resolved` |
-| 39 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
-| 40 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
-| 41 | `Day1ReadinessAudit` | `game/autoload/day1_readiness_audit.gd` — composite Day 1 playable check that subscribes to `StoreDirector.store_ready` and emits `AuditLog.pass_check(&"day1_playable_ready", …)` / `fail_check(&"day1_playable_failed", …)` |
-| 42 | `HiddenThreadSystemSingleton` | `game/autoload/hidden_thread_system.gd` — cumulative awareness / paper-trail / scapegoat-risk stats and Tier 1/2/3 trigger evaluation across the 30-day run |
-| 43 | `ReturnsSystem` | `game/autoload/returns_system.gd` — post-sale returns/exchanges flow pairing defective sales with later angry-return customers |
+| 15 | `TooltipManager` | `game/autoload/tooltip_manager.gd` |
+| 16 | `ObjectiveRail` | `game/scenes/ui/objective_rail.tscn` (scene) |
+| 17 | `InteractionPrompt` | `game/scenes/ui/interaction_prompt.tscn` (scene) |
+| 18 | `ObjectiveDirector` | `game/autoload/objective_director.gd` |
+| 19 | `AuditOverlay` | `game/autoload/audit_overlay.gd` |
+| 20 | `AuditLog` | `game/autoload/audit_log.gd` |
+| 21 | `LedgerSystem` | `game/autoload/ledger_system.gd` — per-transaction event log plus `day_closed` anchor records used for daily revenue reconciliation; initialized with `time_system` in Tier 5 |
+| 22 | `EventLog` | `game/autoload/event_log.gd` — debug-build-only structured per-event timeline (ring buffer of inventory mutations and customer FSM transitions); `queue_free`s itself in release builds |
+| 23 | `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
+| 24 | `ErrorBanner` | `game/autoload/error_banner.gd` |
+| 25 | `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |
+| 26 | `InputFocus` | `game/autoload/input_focus.gd` — modal/context stack |
+| 27 | `ModalQueue` | `game/autoload/modal_queue.gd` — priority-ordered FIFO that grants `CTX_MODAL` to one `ModalPanel` at a time; cleared by `SceneRouter` before every scene swap |
+| 28 | `ModalDimOverlay` | `game/autoload/modal_dim_overlay.gd` — full-screen dimmer placed behind any open modal panel |
+| 29 | `StoreRegistry` | `game/autoload/store_registry.gd` — runtime cache seeded from `ContentRegistry` |
+| 30 | `StoreDirector` | `game/autoload/store_director.gd` |
+| 31 | `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
+| 32 | `BetaRunState` | `game/scripts/beta/beta_run_state.gd` — beta-only run-state (current beta day, day-1 chain progress, end-of-day summary payload) |
+| 33 | `EmploymentSystem` | `game/autoload/employment_system.gd` — seasonal-employee state (trust, approval, hours, status), daily wages, and end-of-season retention/firing evaluation |
+| 34 | `PlatformSystem` | `game/scripts/systems/platform_system.gd` — per-platform supply/demand/hype, daily price ticks, and platform-affinity spawn weighting |
+| 35 | `StoreCustomizationSystem` | `game/scripts/systems/store_customization_system.gd` — per-day featured-display and promotional-poster choices, spawn-weight and demand multipliers, and trust/hidden-thread linkage |
+| 36 | `ShiftSystem` | `game/scripts/systems/shift_system.gd` — daily clock-in/clock-out state, including 08:55 auto clock-in and trust penalties for late or missing punches |
+| 37 | `ManagerRelationshipManager` | `game/autoload/manager_relationship_manager.gd` — player↔manager trust scalar/tier and morning-note selection on `day_started` |
+| 38 | `MorningNotePanel` | `game/scenes/ui/morning_note_panel.tscn` (scene) — paper-memo overlay listening for `manager_note_shown` |
+| 39 | `MiddayEventSystem` | `game/scripts/systems/midday_event_system.gd` — midday decision-beat queue, pauses time on pending beat, applies resolved structured effects |
+| 40 | `MiddayEventCard` | `game/scenes/ui/midday_event_card.tscn` (scene) — modal "STORE EVENT" decision card emitted on `midday_event_fired` / `midday_event_resolved` |
+| 41 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
+| 42 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
+| 43 | `Day1ReadinessAudit` | `game/autoload/day1_readiness_audit.gd` — composite Day 1 playable check that subscribes to `StoreDirector.store_ready` and emits `AuditLog.pass_check(&"day1_playable_ready", …)` / `fail_check(&"day1_playable_failed", …)` |
+| 44 | `HiddenThreadSystemSingleton` | `game/autoload/hidden_thread_system.gd` — cumulative awareness / paper-trail / scapegoat-risk stats and Tier 1/2/3 trigger evaluation across the run |
 
 Single-owner responsibilities for the ownership-enforcing subset are tracked
 in [`docs/architecture/ownership.md`](architecture/ownership.md).
@@ -126,17 +132,29 @@ any `GameState` mutation without subscribing to each typed setter.
 | Scene | Role |
 |---|---|
 | `game/scenes/bootstrap/boot.tscn` | Entry scene; runs boot script, transitions to main menu |
-| `game/scenes/mall/mall_hub.tscn` | Mall hub host; embeds `game_world.tscn` and the hub UI overlay |
-| `game/scenes/world/game_world.tscn` | Root of the playable world; runs the five init tiers; owns runtime systems |
-| `game/scenes/mall/mall_overview.tscn` | Hub screen — store selection cards, per-store KPI display |
-| `game/scenes/stores/<name>.tscn` | Per-store 3D interior; camera framing via `CameraAuthority` |
+| `game/scenes/ui/main_menu.tscn` | Main menu; routes `New Game` and load-slot through `GameManager.start_new_game` / `pending_load_slot` |
+| `game/scenes/bootstrap/gameplay_shell.tscn` | Gameplay shell scene swapped in by `GameManager.start_new_game`; embeds `game_world.tscn`, the hub UI overlay (settings/progress buttons), and `drawer_host.tscn` |
+| `game/scenes/world/game_world.tscn` | Root of the playable world; runs the five init tiers; owns runtime systems and instantiates HUD + panel scenes |
+| `game/scenes/world/mall_hallway.tscn` | Optional walkable-mall hub variant; only loaded when `debug/walkable_mall = true` |
+| `game/scenes/world/storefront.tscn` | Storefront-card slot scene used by `mall_hallway` when the walkable variant is enabled |
+| `game/scenes/stores/retro_games.tscn` | Per-store 3D interior; camera framing via `CameraAuthority` |
 | `game/scenes/ui/day_summary.tscn` | End-of-day summary panel |
 | `game/scenes/ui/hud.tscn` | Persistent overlay: time/phase indicator, funds, reputation tier, live counters |
 
-Store entry is routed through `EventBus.enter_store_requested`, which
-`game_world._on_hub_enter_store_requested` handles. `StoreDirector.enter_store(store_id)`
-is the single entry point; it delegates to `SceneRouter.route_to_path` for the
-scene load (full-scene replacement).
+By default `debug/walkable_mall` is `false` in `project.godot`, so the
+shipping flow is "hub mode": `GameWorld._setup_hub_mode` creates a
+`SceneTransition`, `apply_pending_session_state` emits
+`EventBus.enter_store_requested(GameManager.DEFAULT_STARTING_STORE)`, and the
+director enters the starter store directly without instantiating the
+`mall_hallway` scene.
+
+Store entry routes through `EventBus.enter_store_requested`, handled by
+`GameWorld._on_hub_enter_store_requested`, which calls
+`StoreDirector.enter_store(store_id)`. `StoreDirector` is the single entry
+point and uses the injector seam (`set_scene_injector`) to load the store
+scene under `StoreContainer` rather than swap the root scene; the
+`StoreReadyContract` runs against the injected root before
+`store_ready` is emitted.
 
 ## Visual Systems
 
@@ -152,7 +170,7 @@ exception applies.
 | Debug overhead/orbit camera (F1 dev toggle) | `PlayerController` (orbit pivot + ortho framing) | `game/scripts/player/player_controller.gd` |
 | Build-mode orbit / pan / zoom camera with Tween transitions | `BuildModeCamera` | `game/scripts/world/build_mode_camera.gd` |
 | Camera ownership / single-current assertion | `CameraAuthority.request_current(cam, source)` | `game/autoload/camera_authority.gd` |
-| Hover highlight shader on 3D interactable | `Interactable.highlight()` + `mat_outline_highlight.tres` | `game/scripts/components/interactable.gd` |
+| Hover highlight shader on 3D interactable | `Interactable.highlight()` + `mat_outline_highlight.tres` | `game/scripts/components/interactable.gd`, `game/assets/shaders/mat_outline_highlight.tres` |
 | Hover tint on 2D Controls | `InteractableHover` (`self_modulate` → `ACCENT_INTERACT`) | `game/scripts/ui/interactable_hover.gd` |
 | Delayed hover tooltip at cursor | `TooltipManager.show_tooltip(text, pos)` + `TooltipTrigger` | `game/autoload/tooltip_manager.gd` |
 | `[E] to interact` contextual hint | `InteractionPrompt` listening to `EventBus.interactable_focused` | `game/scenes/ui/interaction_prompt.tscn` |

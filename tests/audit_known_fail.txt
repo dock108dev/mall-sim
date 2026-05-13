@@ -20,10 +20,10 @@ boot_scene_ready
 main_menu_ready
 new_game_clicked
 
-# Mall — mall_hub_ready emitter landed in ISSUE-014; same coverage caveat as
-# above. Remove once an integration test loads MallHub during audit_run.
-mall_hub_ready
-store_card_rendered
+# Gameplay shell — gameplay_shell_ready emitter is the renamed mall-hub
+# emitter; same coverage caveat as boot. Remove once an integration test
+# loads GameplayShell during audit_run.
+gameplay_shell_ready
 
 # Transition — emitters land in Phase 1.
 transition_requested

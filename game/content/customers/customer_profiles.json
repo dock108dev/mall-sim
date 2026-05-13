@@ -4,10 +4,8 @@
     {
       "id": "power_shopper",
       "name": "Power Shopper",
-      "description": "Arrives with a list and leaves with bags — no browsing, just buying.",
+      "description": "Arrives with a list and leaves with bags \u2014 no browsing, just buying.",
       "store_types": [
-        "sports",
-        "electronics",
         "retro_games"
       ],
       "budget_range": [
@@ -61,11 +59,7 @@
       "name": "Window Browser",
       "description": "Looks at everything, touches nothing, buys even less.",
       "store_types": [
-        "sports",
-        "electronics",
-        "retro_games",
-        "pocket_creatures",
-        "rentals"
+        "retro_games"
       ],
       "budget_range": [
         15.0,
@@ -112,10 +106,7 @@
       "id": "food_court_camper",
       "name": "Food Court Camper",
       "description": "Came for the pretzels, stayed for the air conditioning.",
-      "store_types": [
-        "rentals",
-        "pocket_creatures"
-      ],
+      "store_types": [],
       "budget_range": [
         10.0,
         40.0
@@ -164,12 +155,9 @@
     {
       "id": "social_butterfly",
       "name": "Social Butterfly",
-      "description": "Shopping is a team sport — consensus required on every purchase.",
+      "description": "Shopping is a team sport \u2014 consensus required on every purchase.",
       "store_types": [
-        "pocket_creatures",
-        "retro_games",
-        "sports",
-        "electronics"
+        "retro_games"
       ],
       "budget_range": [
         30.0,
@@ -220,13 +208,9 @@
     {
       "id": "reluctant_companion",
       "name": "Reluctant Companion",
-      "description": "Clearly did not choose to be here — checking the exit every thirty seconds.",
+      "description": "Clearly did not choose to be here \u2014 checking the exit every thirty seconds.",
       "store_types": [
-        "sports",
-        "electronics",
-        "retro_games",
-        "pocket_creatures",
-        "rentals"
+        "retro_games"
       ],
       "budget_range": [
         10.0,
@@ -271,12 +255,9 @@
     {
       "id": "impulse_buyer",
       "name": "Impulse Buyer",
-      "description": "Walks in for one thing, walks out with seven — no regrets until tomorrow.",
+      "description": "Walks in for one thing, walks out with seven \u2014 no regrets until tomorrow.",
       "store_types": [
-        "electronics",
-        "pocket_creatures",
-        "retro_games",
-        "sports"
+        "retro_games"
       ],
       "budget_range": [
         50.0,
@@ -330,11 +311,9 @@
     {
       "id": "speed_runner",
       "name": "Speed Runner",
-      "description": "In, grab, pay, out — treats shopping like a timed event.",
+      "description": "In, grab, pay, out \u2014 treats shopping like a timed event.",
       "store_types": [
-        "electronics",
-        "retro_games",
-        "rentals"
+        "retro_games"
       ],
       "budget_range": [
         40.0,
@@ -387,7 +366,6 @@
       "name": "Teen Pack Member",
       "description": "Travels in herds, pooling allowance money for one legendary pull.",
       "store_types": [
-        "pocket_creatures",
         "retro_games"
       ],
       "budget_range": [
@@ -440,13 +418,9 @@
     {
       "id": "vip_customer",
       "name": "VIP Customer",
-      "description": "A high-spending regular with refined taste and deep pockets — treat them right.",
+      "description": "A high-spending regular with refined taste and deep pockets \u2014 treat them right.",
       "store_types": [
-        "sports",
-        "electronics",
-        "retro_games",
-        "pocket_creatures",
-        "rentals"
+        "retro_games"
       ],
       "budget_range": [
         200.0,

@@ -23,7 +23,7 @@ func before_each() -> void:
 	_saved_store_id = GameManager.current_store_id
 	_saved_owned_stores = GameManager.owned_stores.duplicate()
 	_saved_first_sale_flag = GameState.get_flag(&"first_sale_complete")
-	GameManager.current_store_id = &"pocket_creatures"
+	GameManager.current_store_id = &"retro_games"
 	GameManager.owned_stores = []
 	# These tests focus on the post-confirm close-day path; pre-mark the
 	# Phase-3 loop flag so the controller's gate fails open. Tests that need

@@ -11,83 +11,24 @@ extends RefCounted
 
 
 ## Canonical multiplier slot names, applied in this order when resequencing.
-## rarity: raw rarity tier × difficulty rarity_scale (applied once, before lifecycle).
-## lifecycle: rental freshness (ultra_new 1.35 / new 1.15 / common 1.0).
+## rarity: raw rarity tier × difficulty rarity_scale.
 ## condition: item wear state (poor → reduced factor).
-## grade follows condition: formal letter-grade (Retro Games / Sports Cards).
-## numeric_grade: ACC 1–10 numeric grade (Sports Cards).
-## auth: authentication status multiplier (authenticated items get a bonus).
 ## demand: category demand modifier from EconomySystem sales history.
 ## drift: per-item random-walk drift factor from EconomySystem.
-## trend: category trend level from MarketTrendSystem.
-## seasonal: spending season × calendar × sport_season × tournament demand.
+## trend: category trend level from TrendSystem.
 ## reputation: store reputation tier (auto-injected when absent).
-## meta_shift: meta-shift system multiplier for Pocket Creatures.
 ## event: active market event multiplier.
 ## test: item test-result multiplier (tested_working / tested_not_working).
-## depreciation: time-based electronics depreciation / appreciation.
-## demo_unit: floor-presence boost before player negotiation.
+## depreciation: time-based depreciation / appreciation.
 ## random: checkout offer variance (±15% market noise).
 ## sensitivity: customer price-sensitivity discount in checkout offers.
 ## haggle: negotiated price ratio (final agreed price / sticker price).
-## warranty: extended warranty add-on factor injected after haggle.
 const CHAIN_ORDER: Array[String] = [
-	"base", "rarity", "lifecycle", "condition", "grade", "numeric_grade",
-	"auth", "demand", "drift", "trend", "seasonal", "reputation",
-	"meta_shift", "event", "test", "depreciation", "demo_unit",
-	"random", "sensitivity", "haggle", "warranty",
+	"base", "rarity", "condition",
+	"demand", "drift", "trend", "reputation",
+	"event", "test", "depreciation",
+	"random", "sensitivity", "haggle",
 ]
-
-## Lifecycle multipliers for rental items by rarity tier (ISSUE-009).
-const LIFECYCLE_MULTIPLIERS: Dictionary = {
-	"ultra_new": 1.35,
-	"new": 1.15,
-	"common": 1.0,
-}
-
-## Six-tier card grade multipliers for the Sports Cards authentication mechanic.
-## Applied via the "grade" slot in the PriceResolver chain.
-const GRADE_MULTIPLIERS: Dictionary = {
-	"S": 5.0,
-	"A": 3.0,
-	"B": 2.0,
-	"C": 1.2,
-	"D": 0.8,
-	"F": 0.4,
-}
-
-## Grade tiers in ascending order (F = worst, S = best).
-const GRADE_ORDER: PackedStringArray = ["F", "D", "C", "B", "A", "S"]
-
-## Apex Card Certification (ACC) 1–10 numeric grade multipliers for Sports Cards.
-## Mirrors the multiplier table in game/content/sports_cards/grade_definitions.json.
-## Applied via the "numeric_grade" slot in the PriceResolver chain.
-const NUMERIC_GRADE_MULTIPLIERS: Dictionary = {
-	1: 0.10,
-	2: 0.20,
-	3: 0.35,
-	4: 0.55,
-	5: 0.80,
-	6: 1.00,
-	7: 1.20,
-	8: 1.60,
-	9: 2.50,
-	10: 5.00,
-}
-
-## ACC grade labels for audit-trace display.
-const NUMERIC_GRADE_LABELS: Dictionary = {
-	1: "Poor",
-	2: "Fair",
-	3: "Very Good",
-	4: "VG-Excellent",
-	5: "Excellent",
-	6: "Excellent-Near Mint",
-	7: "Near Mint",
-	8: "Near Mint-Mint",
-	9: "Mint",
-	10: "Gem Mint",
-}
 
 
 ## A single step in the audit chain.

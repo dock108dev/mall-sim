@@ -122,21 +122,6 @@ layout_mode = 2
 text = "Haggling: 0 won / 0 lost"
 horizontal_alignment = 1
 
-[node name="LateFeeLabel" type="Label" parent="Root/Panel/Margin/VBox"]
-layout_mode = 2
-text = ""
-horizontal_alignment = 1
-
-[node name="WarrantyRevenueLabel" type="Label" parent="Root/Panel/Margin/VBox"]
-layout_mode = 2
-text = "Warranty Revenue: $0.00"
-horizontal_alignment = 1
-
-[node name="WarrantyClaimsLabel" type="Label" parent="Root/Panel/Margin/VBox"]
-layout_mode = 2
-text = "Warranty Claims: -$0.00"
-horizontal_alignment = 1
-
 [node name="CustomersServedLabel" type="Label" parent="Root/Panel/Margin/VBox"]
 layout_mode = 2
 text = "Customers Served: 0"
@@ -204,11 +189,6 @@ autowrap_mode = 2
 [node name="StaffWagesLabel" type="Label" parent="Root/Panel/Margin/VBox"]
 layout_mode = 2
 text = "Staff Wages: -$0.00"
-horizontal_alignment = 1
-
-[node name="SeasonalEventLabel" type="Label" parent="Root/Panel/Margin/VBox"]
-layout_mode = 2
-text = ""
 horizontal_alignment = 1
 
 [node name="EmployeeMetricsHeader" type="Label" parent="Root/Panel/Margin/VBox"]
@@ -283,11 +263,6 @@ alignment = 1
 layout_mode = 2
 custom_minimum_size = Vector2(200, 48)
 text = "Review Inventory"
-
-[node name="MallOverviewButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonRow"]
-layout_mode = 2
-custom_minimum_size = Vector2(200, 48)
-text = "Return to Mall"
 
 [node name="MainMenuButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonRow"]
 layout_mode = 2

@@ -39,7 +39,7 @@ const _FOOD_COURT_FALLBACK_PATH: String = MUSIC_DIR + "mall_hallway_music.wav"
 const _TRAY_CLATTER_PATH: String = SFX_DIR + "item_placement.wav"
 const _TRAY_CLATTER_FALLBACK_PATH: String = SFX_DIR + "build_place.wav"
 const _FRYER_SFX_PATH: String = SFX_DIR + "refurbish_start.wav"
-const _FRYER_SFX_FALLBACK_PATH: String = SFX_DIR + "demo_activate.wav"
+const _FRYER_SFX_FALLBACK_PATH: String = SFX_DIR + "build_place.wav"
 
 var _muzak_player: AudioStreamPlayer3D = null
 var _mechanical_player: AudioStreamPlayer3D = null

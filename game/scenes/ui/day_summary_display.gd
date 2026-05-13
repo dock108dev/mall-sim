@@ -3,32 +3,6 @@
 class_name DaySummaryDisplay
 
 
-## Sets warranty display labels based on revenue and claim costs.
-static func set_warranty_display(
-	warranty_revenue_label: Label, warranty_claims_label: Label,
-	warranty_revenue: float, warranty_claims: float
-) -> void:
-	DaySummaryContent.set_warranty(
-		warranty_revenue_label, warranty_claims_label,
-		warranty_revenue, warranty_claims,
-	)
-
-
-## Sets seasonal event display if impact text is provided.
-static func set_seasonal_display(
-	seasonal_event_label: Label, seasonal_impact: String
-) -> void:
-	var has_seasonal: bool = not seasonal_impact.is_empty()
-	seasonal_event_label.visible = has_seasonal
-	if has_seasonal:
-		var seasonal_fmt: String = TranslationServer.translate(
-			"DAY_SUMMARY_SEASONAL"
-		)
-		seasonal_event_label.text = (
-			seasonal_fmt % seasonal_impact
-		)
-
-
 ## Sets staff wages display if wages exceed 0.
 static func set_staff_wages_display(
 	staff_wages_label: Label, wages: float
@@ -37,47 +11,6 @@ static func set_staff_wages_display(
 	staff_wages_label.visible = has_wages
 	if has_wages:
 		staff_wages_label.text = "Staff Wages: -$%.2f" % wages
-
-
-## Sets late fee display if amount exceeds 0.
-static func set_late_fee_display(
-	late_fee_label: Label, amount: float
-) -> void:
-	var has_fees: bool = amount > 0.0
-	late_fee_label.visible = has_fees
-	if has_fees:
-		late_fee_label.text = "Late Fees Collected: +$%.2f" % amount
-
-
-## Updates overdue count label visibility and text.
-static func set_overdue_count_display(
-	overdue_count_label: Label, count: int
-) -> void:
-	if not is_instance_valid(overdue_count_label):
-		return
-	var has_overdue: bool = count > 0
-	overdue_count_label.visible = has_overdue
-	if has_overdue:
-		overdue_count_label.text = "Overdue Items: %d" % count
-
-
-## Sets warranty attachment and demo status display.
-static func set_warranty_attach_display(
-	warranty_attach_label: Label, demo_status_label: Label,
-	attach_rate: float, demo_active: bool, demo_contribution_revenue: float
-) -> void:
-	var has_attach_rate: bool = attach_rate > 0.0
-	warranty_attach_label.visible = has_attach_rate
-	if has_attach_rate:
-		warranty_attach_label.text = (
-			"Warranty Attach Rate: %.1f%%" % (attach_rate * 100.0)
-		)
-	var has_demo: bool = demo_active or demo_contribution_revenue > 0.0
-	demo_status_label.visible = has_demo
-	if has_demo:
-		demo_status_label.text = (
-			"Electronics Demo Revenue: $%.2f" % demo_contribution_revenue
-		)
 
 
 ## Sets tier change display with new tier name.

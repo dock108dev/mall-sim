@@ -1,0 +1,12 @@
+{
+  "type": "beta_day_data",
+  "day_number": 2,
+  "date_label": "Tuesday",
+  "store_context": "Second day open. A few regulars are starting to filter through. The back room still has carry-over stock from yesterday's shipment.",
+  "required_events": ["day02_trade_in_dispute"],
+  "optional_events": [],
+  "tutorial_unlocks": [],
+  "traffic_level": "low",
+  "holiday_pressure": "none",
+  "special_notes": "Day 2 closes the beta loop. Vic is in the store but occupied in the back room."
+}

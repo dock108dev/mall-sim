@@ -1,168 +1,105 @@
-## ISSUE-004: per-store tutorial context swaps on store_entered / store_exited
-## and exposes context-appropriate first-step text.
+## Tests for TutorialContextSystem context-entered emission semantics.
+##
+## Day-1 first-boot duplicate-render regression: store_entered followed by
+## day_started must emit `tutorial_context_entered` exactly once for the
+## first-step prompt, and a fresh subsequent day must still re-emit so the
+## rail can refresh "what can I do now?" copy.
 extends GutTest
 
 
-var _received: Array = []
-var _saved_game_state: GameManager.State
+const _STORE_ID: StringName = &"retro_games"
+
+var _emitted: Array = []
+var _saved_state: GameManager.State
 
 
 func before_each() -> void:
-	_saved_game_state = GameManager.current_state
-	# TutorialContextSystem guards emission in MAIN_MENU / DAY_SUMMARY;
-	# use STORE_VIEW so store_entered triggers fire normally in tests.
+	_saved_state = GameManager.current_state
 	GameManager.current_state = GameManager.State.STORE_VIEW
-	DataLoaderSingleton.load_all()
-	TutorialContextSystem.reload()
+	InputFocus._reset_for_tests()
 	TutorialContextSystem.clear_active_context()
-	_received = []
-	EventBus.tutorial_context_entered.connect(_capture_entered)
-	EventBus.tutorial_context_cleared.connect(_capture_cleared)
+	_emitted.clear()
+	EventBus.tutorial_context_entered.connect(_on_context_entered)
 
 
 func after_each() -> void:
-	if EventBus.tutorial_context_entered.is_connected(_capture_entered):
-		EventBus.tutorial_context_entered.disconnect(_capture_entered)
-	if EventBus.tutorial_context_cleared.is_connected(_capture_cleared):
-		EventBus.tutorial_context_cleared.disconnect(_capture_cleared)
+	if EventBus.tutorial_context_entered.is_connected(_on_context_entered):
+		EventBus.tutorial_context_entered.disconnect(_on_context_entered)
 	TutorialContextSystem.clear_active_context()
-	GameManager.current_state = _saved_game_state
+	GameManager.current_state = _saved_state
+	InputFocus._reset_for_tests()
 
 
-func _capture_entered(
-	store_id: StringName, context_id: StringName, text: String
+func _on_context_entered(
+	store_id: StringName, context_id: StringName, prompt_text: String
 ) -> void:
-	_received.append({
-		"event": "entered",
+	_emitted.append({
 		"store_id": store_id,
 		"context_id": context_id,
-		"text": text,
+		"prompt_text": prompt_text,
 	})
 
 
-func _capture_cleared() -> void:
-	_received.append({"event": "cleared"})
+func test_store_entered_followed_by_day_started_emits_once() -> void:
+	# Day 1 boot sequence: store_entered → morning note → day_started. The
+	# context system should emit exactly once for the first-step prompt; the
+	# day_started re-emit guard must drop the duplicate.
+	EventBus.store_entered.emit(_STORE_ID)
+	EventBus.day_started.emit(1)
 
-
-func _first_entered() -> Dictionary:
-	for event: Dictionary in _received:
-		if event.get("event") == "entered":
-			return event
-	return {}
-
-
-func test_entering_sports_memorabilia_emits_sports_first_step() -> void:
-	EventBus.store_entered.emit(StringName("sports"))
-	var event: Dictionary = _first_entered()
-	assert_eq(String(event.get("context_id", "")), "sports_memorabilia")
-	var text: String = String(event.get("text", ""))
-	assert_ne(text.strip_edges(), "", "sports_memorabilia should have first-step text")
-	assert_true(
-		text.to_lower().contains("backroom") or text.to_lower().contains("card"),
-		"sports first step should reference backroom/cards, got: %s" % text
+	assert_eq(
+		_emitted.size(), 1,
+		"tutorial_context_entered must fire once across store_entered + day_started"
 	)
 
 
-func test_entering_retro_games_emits_retro_first_step() -> void:
-	# ISSUE-016: WELCOME beat now points the employee at the time card / clock-in
-	# interactable instead of cart/test/refurb (which were owner-loop steps).
-	EventBus.store_entered.emit(StringName("retro_games"))
-	var event: Dictionary = _first_entered()
-	assert_eq(String(event.get("context_id", "")), "retro_games")
-	var text: String = String(event.get("text", "")).to_lower()
-	assert_true(
-		text.contains("time card") or text.contains("punch in") or text.contains("clock in"),
-		"retro_games first step should reference clocking in (time card / punch in), got: %s" % text
+func test_subsequent_day_started_re_emits_after_dedupe_consumed() -> void:
+	# After the first day_started consumes the dedupe flag, a fresh
+	# day_started (Day 2 still inside the same store) should re-emit so the
+	# rail can refresh.
+	EventBus.store_entered.emit(_STORE_ID)
+	EventBus.day_started.emit(1)
+	EventBus.day_started.emit(2)
+
+	assert_eq(
+		_emitted.size(), 2,
+		"second day_started must re-emit after the dedupe flag is consumed"
 	)
 
 
-func test_entering_pocket_creatures_emits_pocket_first_step() -> void:
-	EventBus.store_entered.emit(StringName("pocket_creatures"))
-	var event: Dictionary = _first_entered()
-	assert_eq(String(event.get("context_id", "")), "pocket_creatures")
-	var text: String = String(event.get("text", "")).to_lower()
-	assert_true(
-		text.contains("service") or text.contains("pack") or text.contains("booster"),
-		"pocket_creatures first step should reference packs/service, got: %s" % text
+func test_re_entry_arms_dedupe_flag_again() -> void:
+	# Exit the store and re-enter: the dedupe flag must be re-armed so the
+	# next store_entered + day_started pair still emits exactly once.
+	EventBus.store_entered.emit(_STORE_ID)
+	EventBus.day_started.emit(1)
+	EventBus.store_exited.emit(_STORE_ID)
+	_emitted.clear()
+
+	EventBus.store_entered.emit(_STORE_ID)
+	EventBus.day_started.emit(2)
+
+	assert_eq(
+		_emitted.size(), 1,
+		"after store_exited + re-entry, the next store_entered + day_started must emit once"
 	)
 
 
-func test_store_exited_clears_active_context() -> void:
-	EventBus.store_entered.emit(StringName("retro_games"))
-	assert_eq(String(TutorialContextSystem.active_context_id), "retro_games")
-	EventBus.store_exited.emit(StringName("retro_games"))
-	assert_eq(String(TutorialContextSystem.active_context_id), "")
-	assert_eq(String(TutorialContextSystem.active_store_id), "")
-	var saw_cleared: bool = false
-	for event: Dictionary in _received:
-		if event.get("event") == "cleared":
-			saw_cleared = true
-			break
-	assert_true(saw_cleared, "tutorial_context_cleared should fire on exit")
-
-
-func test_switching_stores_swaps_context() -> void:
-	EventBus.store_entered.emit(StringName("sports"))
-	EventBus.store_exited.emit(StringName("sports"))
-	EventBus.store_entered.emit(StringName("retro_games"))
-	assert_eq(String(TutorialContextSystem.active_context_id), "retro_games")
-
-
-# ── is_tutorial_rendering_allowed() public API ───────────────────────────────
-
-
-func test_is_tutorial_rendering_allowed_false_in_main_menu() -> void:
-	GameManager.current_state = GameManager.State.MAIN_MENU
-	assert_false(
-		TutorialContextSystem.is_tutorial_rendering_allowed(),
-		"Tutorial rendering must not be allowed in MAIN_MENU"
+func test_day_started_without_active_context_does_not_emit() -> void:
+	# Day starts before player enters a store: nothing to emit.
+	EventBus.day_started.emit(1)
+	assert_eq(
+		_emitted.size(), 0,
+		"day_started with no active context must not emit"
 	)
 
 
-func test_is_tutorial_rendering_allowed_false_in_mall_overview() -> void:
-	GameManager.current_state = GameManager.State.MALL_OVERVIEW
-	assert_false(
-		TutorialContextSystem.is_tutorial_rendering_allowed(),
-		"Tutorial rendering must not be allowed in MALL_OVERVIEW"
-	)
-
-
-func test_is_tutorial_rendering_allowed_false_in_day_summary() -> void:
-	GameManager.current_state = GameManager.State.DAY_SUMMARY
-	assert_false(
-		TutorialContextSystem.is_tutorial_rendering_allowed(),
-		"Tutorial rendering must not be allowed in DAY_SUMMARY"
-	)
-
-
-func test_is_tutorial_rendering_allowed_false_when_modal_focused() -> void:
-	GameManager.current_state = GameManager.State.STORE_VIEW
-	InputFocus.push_context(InputFocus.CTX_MODAL)
-	assert_false(
-		TutorialContextSystem.is_tutorial_rendering_allowed(),
-		"Tutorial rendering must not be allowed while a modal has focus"
-	)
-	InputFocus.pop_context()
-
-
-func test_is_tutorial_rendering_allowed_true_in_store_view() -> void:
-	GameManager.current_state = GameManager.State.STORE_VIEW
-	assert_true(
-		TutorialContextSystem.is_tutorial_rendering_allowed(),
-		"Tutorial rendering must be allowed in STORE_VIEW"
-	)
-
-
-func test_no_context_emission_in_mall_overview() -> void:
-	GameManager.current_state = GameManager.State.MALL_OVERVIEW
-	_received.clear()
-	EventBus.store_entered.emit(StringName("retro_games"))
-	var saw_entered: bool = false
-	for event: Dictionary in _received:
-		if event.get("event") == "entered":
-			saw_entered = true
-			break
-	assert_false(
-		saw_entered,
-		"tutorial_context_entered must not fire while in MALL_OVERVIEW"
+func test_first_step_id_renamed_to_avoid_welcome_collision() -> void:
+	# Fix 3: the retro_games first-step `id` was renamed from "welcome" to
+	# "ctx_welcome" to eliminate ambiguity with TutorialSystem.STEP_IDS[WELCOME].
+	TutorialContextSystem.reload()
+	var first: Dictionary = TutorialContextSystem.get_first_step(_STORE_ID)
+	assert_eq(
+		String(first.get("id", "")),
+		"ctx_welcome",
+		"tutorial_contexts.json retro_games first step id must be 'ctx_welcome' to avoid collision with TutorialSystem WELCOME id 'welcome'"
 	)

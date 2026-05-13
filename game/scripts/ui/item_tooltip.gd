@@ -11,7 +11,6 @@ const CONDITION_ORDER: Array[String] = [
 
 var economy_system: EconomySystem = null
 var inventory_system: InventorySystem = null
-var season_cycle_system: SeasonCycleSystem = null
 
 var _current_item: ItemInstance = null
 var _show_timer: float = -1.0
@@ -29,7 +28,6 @@ var _last_audit: Dictionary = {}
 @onready var _market_label: Label = $Margin/VBox/MarketLabel
 @onready var _price_label: Label = $Margin/VBox/PriceLabel
 @onready var _trend_label: Label = $Margin/VBox/TrendLabel
-@onready var _auth_label: Label = $Margin/VBox/AuthLabel
 @onready var _desc_label: Label = $Margin/VBox/DescLabel
 @onready var _audit_label: Label = $Margin/VBox/AuditLabel
 
@@ -93,7 +91,6 @@ func _display_item(item: ItemInstance) -> void:
 	_update_market_value(item)
 	_update_set_price(item)
 	_update_trend(item)
-	_update_authentication(item)
 	_update_description(def)
 	_update_price_audit(item)
 
@@ -173,33 +170,6 @@ func _calc_trend_direction(item: ItemInstance) -> float:
 	return combined
 
 
-func _update_authentication(item: ItemInstance) -> void:
-	match item.authentication_status:
-		"authenticated":
-			# Unicode shield U+1F6E1 may not render; use checkmark
-			_auth_label.text = "%s Authenticated" % char(9989)
-			_auth_label.add_theme_color_override(
-				"font_color",
-				UIThemeConstants.get_positive_color()
-			)
-			_auth_label.visible = true
-		"fake":
-			_auth_label.text = "%s Fake" % char(9888)
-			_auth_label.add_theme_color_override(
-				"font_color",
-				UIThemeConstants.get_negative_color()
-			)
-			_auth_label.visible = true
-		"authenticating":
-			_auth_label.text = "%s Authenticating..." % char(8987)
-			_auth_label.add_theme_color_override(
-				"font_color", UIThemeConstants.BODY_FONT_COLOR
-			)
-			_auth_label.visible = true
-		_:
-			_auth_label.visible = false
-
-
 ## ISSUE-020: renders the most recent PriceResolver audit trace for the
 ## inspected item. Hidden when no trace has been captured for the item.
 func _update_price_audit(item: ItemInstance) -> void:
@@ -267,10 +237,8 @@ func _follow_mouse() -> void:
 	global_position = pos
 
 
-func _is_season_hot(item: ItemInstance) -> bool:
-	if not season_cycle_system:
-		return false
-	return season_cycle_system.is_item_hot(item)
+func _is_season_hot(_item: ItemInstance) -> bool:
+	return false
 
 
 func _on_panel_opened(_panel_name: String) -> void:

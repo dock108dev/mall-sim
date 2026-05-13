@@ -58,8 +58,25 @@ const _OUTLINE_MATERIAL: ShaderMaterial = preload(
 @export var action_verb: String = "Interact"
 @export var prompt_text: String = ""
 @export var enabled: bool = true
-@export var highlight_color: Color = Color(0.0, 0.737, 0.725, 1.0)
+## Warm-white rim, alpha 0.7 — reads against both warm fixture wood and the
+## colder back-room palette without competing with diegetic neon. Sharing the
+## default across every Interactable keeps the "this is interactable" signal
+## consistent; subclasses (e.g. Storefront door) deliberately override only
+## when contrast against a specific facade requires it.
+@export var highlight_color: Color = Color(1.0, 0.95, 0.85, 0.7)
 @export_range(0.001, 0.05, 0.001) var highlight_outline_width: float = 0.012
+## Opt-in proximity fallback. When > 0, the InteractionRay treats this
+## interactable as eligible for forgiving proximity+facing matching: if the
+## screen-center raycast misses but the player is within `proximity_radius`
+## of this node and is roughly facing it, the prompt still fires. Default 0
+## keeps the raycast-only behavior used by shelf slots and other
+## pixel-precision targets.
+@export var proximity_radius: float = 0.0
+## Minimum cosine of the angle between the player's forward vector and the
+## direction to this interactable for proximity matching to qualify. 0.4 ≈
+## 66° cone (generous), 0.7 ≈ 45° (precise). Ignored unless
+## `proximity_radius > 0`.
+@export_range(0.0, 1.0, 0.05) var proximity_facing_dot: float = 0.4
 @export var interaction_prompt: String = "":
 	get:
 		return prompt_text
@@ -130,13 +147,19 @@ func highlight() -> void:
 	_highlight_active = true
 
 	var mesh_node: MeshInstance3D = _find_mesh_instance()
-	if not mesh_node:
+	if not mesh_node or not mesh_node.mesh:
 		return
 
+	# Iterate by the underlying Mesh's surface count, not the override count.
+	# Runtime-spawned MeshInstance3D nodes (BoxMesh shelf items, the customer
+	# CapsuleMesh proxy) have 0 override materials until something assigns
+	# one — using get_surface_override_material_count() here would skip every
+	# surface and silently leave the outline unrendered.
+	var surface_count: int = mesh_node.mesh.get_surface_count()
 	_original_materials.clear()
-	for i: int in range(mesh_node.get_surface_override_material_count()):
+	for i: int in range(surface_count):
 		var mat: Material = mesh_node.get_surface_override_material(i)
-		if not mat and mesh_node.mesh:
+		if not mat:
 			mat = mesh_node.mesh.surface_get_material(i)
 		_original_materials.append(mat)
 

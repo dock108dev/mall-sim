@@ -22,14 +22,7 @@ const _REFRESH_SIGNALS: Array[StringName] = [
 	&"upgrade_purchased",
 	&"milestone_completed",
 	&"item_sold",
-	&"tournament_completed",
-	&"authentication_completed",
 	&"refurbishment_completed",
-	&"item_rented",
-	&"rental_returned",
-	&"rental_item_lost",
-	&"warranty_purchased",
-	&"warranty_claim_triggered",
 	&"completion_reached",
 ]
 

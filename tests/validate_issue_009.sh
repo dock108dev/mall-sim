@@ -35,9 +35,9 @@ check "Material references shader" grep -q "outline_highlight.gdshader" game/ass
 check "Material type is ShaderMaterial" grep -q "ShaderMaterial" game/assets/shaders/mat_outline_highlight.tres
 
 echo ""
-echo "[AC3] Outline color matches art direction (teal accent)"
-check "Shader default is teal" grep -q "0.0.*0.737\|0.0, 0.737" game/assets/shaders/outline_highlight.gdshader
-check "Material uses teal color" grep -q "0, 0.737, 0.725" game/assets/shaders/mat_outline_highlight.tres
+echo "[AC3] Outline color matches art direction (warm-white rim)"
+check "Shader default is warm white" grep -q "1.0, 0.95, 0.85" game/assets/shaders/outline_highlight.gdshader
+check "Material uses warm-white color" grep -q "1, 0.95, 0.85" game/assets/shaders/mat_outline_highlight.tres
 
 echo ""
 echo "[AC4] Interactable uses outline shader via next_pass"

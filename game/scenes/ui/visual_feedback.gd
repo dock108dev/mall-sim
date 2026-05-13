@@ -41,9 +41,7 @@ func _ready() -> void:
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.customer_left.connect(_on_customer_left)
-	EventBus.rare_pull_occurred.connect(_on_rare_pull_occurred)
 	EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
-	EventBus.warranty_accepted.connect(_on_warranty_accepted_fx)
 	_setup_expense_label()
 
 
@@ -132,14 +130,6 @@ func _hide_expense_label() -> void:
 	_expense_label.visible = false
 
 
-func _on_rare_pull_occurred(_pack_id: String) -> void:
-	_spawn_burst(
-		BURST_ORIGIN,
-		Color(1.0, 0.82, 0.1, 1.0),  # foil gold
-		32, 120.0, 1.5
-	)
-
-
 func _on_refurbishment_completed(
 	_item_id: String, _success: bool, _condition: String
 ) -> void:
@@ -147,16 +137,6 @@ func _on_refurbishment_completed(
 		BURST_ORIGIN,
 		Color(0.55, 0.95, 0.55, 1.0),  # sparkle green
 		20, 80.0, 1.0
-	)
-
-
-func _on_warranty_accepted_fx(
-	_item_id: String, _tier_id: String, _fee: float
-) -> void:
-	_spawn_burst(
-		BURST_ORIGIN,
-		Color(0.43, 0.81, 0.35, 1.0),  # success green
-		16, 60.0, 0.8
 	)
 
 
