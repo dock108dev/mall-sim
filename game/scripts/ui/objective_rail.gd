@@ -81,6 +81,7 @@ var _focused_action_text: String = ""
 ## focus or no focus. Drives whether the KeyBadge shows or the disabled
 ## modulate is applied to the action label.
 var _focused_can_interact: bool = false
+var _step_slots: Array[Label] = []
 
 @onready var _band: ColorRect = $AccentBand
 @onready var _margin: MarginContainer = $MarginContainer
@@ -88,9 +89,10 @@ var _focused_can_interact: bool = false
 @onready var _action_label: Label = $MarginContainer/ContentColumn/HBoxContainer/ActionLabel
 @onready var _hint_label: Label = $MarginContainer/ContentColumn/HBoxContainer/HintLabel
 @onready var _key_badge: PanelContainer = $MarginContainer/ContentColumn/HBoxContainer/KeyBadge
-@onready var _optional_hint_label: Label = $MarginContainer/ContentColumn/HBoxContainer/OptionalHintLabel
+@onready var _optional_hint_label: Label = (
+	$MarginContainer/ContentColumn/HBoxContainer/OptionalHintLabel
+)
 @onready var _steps_container: VBoxContainer = $MarginContainer/ContentColumn/StepsContainer
-var _step_slots: Array[Label] = []
 
 
 func _ready() -> void:

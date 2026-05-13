@@ -1,3 +1,4 @@
+# gdlint:disable=max-file-lines
 class_name BetaDayOneController
 extends Node
 
@@ -67,7 +68,7 @@ const _BACKROOM_DELIVERY_QUANTITY: int = 5
 ## sum to 120 min so the chain finishes well before 5 PM; on transition to
 ## END_DAY, `_advance_to_next_stage` jumps the clock to 17:00 so the player
 ## isn't forced to idle from ~11 AM until close.
-var _OBJECTIVES: Array[Dictionary] = [
+const _OBJECTIVES: Array[Dictionary] = [
 	{
 		"id": "talk_to_customer",
 		"stage": "talk_to_customer",
@@ -233,6 +234,16 @@ const VIC_NOTE_DAY2_BODY: String = (
 	+ "Used shelf can always use more product.\n\n"
 	+ "— V"
 )
+
+## Customer-exit walk targets and timings. Tween coordinates are in world
+## space and target the +Z entrance door (front wall sits at Z≈10.05; door
+## pivot at Z=10). The customer parks at world (5.35, 0, 8.5), and `look_at`
+## rotates them to face the exit before leg 1 begins.
+const _CUSTOMER_EXIT_LEG_1_TARGET: Vector3 = Vector3(1.5, 0.0, 8.5)
+const _CUSTOMER_EXIT_LEG_2_TARGET: Vector3 = Vector3(0.0, 0.0, 10.5)
+const _CUSTOMER_EXIT_LEG_1_SECONDS: float = 0.9
+const _CUSTOMER_EXIT_LEG_2_SECONDS: float = 1.2
+const _CUSTOMER_EXIT_FADE_SECONDS: float = 0.8
 
 var _decision_panel: BetaDecisionCardPanel
 var _summary_panel: BetaDaySummaryPanel
@@ -1495,13 +1506,6 @@ func _hide_stock_box_in_world() -> void:
 ## at world (5.35, 0, 8.5), and `look_at` rotates them to face the exit
 ## before leg 1 begins. The Interactable is disabled immediately so the
 ## player can't re-trigger the prompt while the customer is mid-walk.
-const _CUSTOMER_EXIT_LEG_1_TARGET: Vector3 = Vector3(1.5, 0.0, 8.5)
-const _CUSTOMER_EXIT_LEG_2_TARGET: Vector3 = Vector3(0.0, 0.0, 10.5)
-const _CUSTOMER_EXIT_LEG_1_SECONDS: float = 0.9
-const _CUSTOMER_EXIT_LEG_2_SECONDS: float = 1.2
-const _CUSTOMER_EXIT_FADE_SECONDS: float = 0.8
-
-
 func _animate_customer_exit() -> void:
 	var store: Node = _store_root()
 	if store == null:

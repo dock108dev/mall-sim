@@ -275,8 +275,8 @@ func _find_best_proximity_target(
 		# Falls back to the parent for unusual setups where the Area3D
 		# itself is at the parent origin.
 		var target_pos: Vector3 = i.global_position
-		var parent_node: Node = i.get_parent()
-		if (parent_node is Node3D) and target_pos.is_equal_approx((parent_node as Node3D).global_position):
+		var parent_3d: Node3D = i.get_parent() as Node3D
+		if parent_3d != null and target_pos.is_equal_approx(parent_3d.global_position):
 			# Lift to mid-body so the dot product reflects what the player
 			# actually aims at, not the floor origin.
 			target_pos.y += 1.0

@@ -9,9 +9,9 @@
 ## per-interactable list (enabled state + distance) for deeper digging.
 extends CanvasLayer
 
-const REFRESH_INTERVAL: float = 0.15
-
 enum DisplayMode { HIDDEN, COMPACT, EXPANDED }
+
+const REFRESH_INTERVAL: float = 0.15
 
 const _MODE_LABEL := {
 	DisplayMode.HIDDEN: "off",

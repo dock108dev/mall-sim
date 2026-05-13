@@ -320,7 +320,7 @@ func _on_item_sold(
 
 
 func _on_customer_purchased(
-	store_id: StringName, _item_id: StringName,
+	_store_id: StringName, _item_id: StringName,
 	price: float, _customer_id: StringName
 ) -> void:
 	if price <= 0.0:

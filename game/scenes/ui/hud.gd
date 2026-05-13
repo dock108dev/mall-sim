@@ -76,6 +76,12 @@ const _FP_PRIMARY_FONT_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 const _HINT_STOCK_FLOOR: String = "Stock shelves to open the lane."
 const _HINT_AWAITING_CUSTOMER: String = "Waiting for the first customer…"
 
+## §F-C1 — Dim the FP "F4 — Close Day" hint while the beta day-1 chain is
+## still incomplete; restore full opacity (and the active-state stylebox)
+## once `can_close_day` flips true. Driven from `objective_changed` and
+## `hour_changed` so the hint tracks both the chain and the time gate.
+const _CLOSE_DAY_HINT_DIM_ALPHA: float = 0.4
+
 var _random_event_telegraph: String = ""
 
 var _current_day: int = 1
@@ -765,12 +771,6 @@ func _on_objective_payload(payload: Dictionary) -> void:
 	_refresh_telegraph_card()
 	_refresh_close_day_hint_state()
 
-
-## §F-C1 — Dim the FP "F4 — Close Day" hint while the beta day-1 chain is
-## still incomplete; restore full opacity (and the active-state stylebox)
-## once `can_close_day` flips true. Driven from `objective_changed` and
-## `hour_changed` so the hint tracks both the chain and the time gate.
-const _CLOSE_DAY_HINT_DIM_ALPHA: float = 0.4
 
 func _refresh_close_day_hint_state() -> void:
 	if not is_instance_valid(_fp_close_day_hint):

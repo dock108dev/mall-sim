@@ -22,6 +22,11 @@
 extends Node
 
 
+## Emitted when the active panel changes. Argument is the new active panel,
+## or `null` when the queue empties.
+signal active_changed(panel: ModalPanel)
+
+
 ## Priority levels. Lower numbers are dispatched first. DAY_SUMMARY must run
 ## before VIC_NOTE which runs before TUTORIAL which runs before TOAST which
 ## runs before PASSIVE_HUD overlays.
@@ -42,11 +47,6 @@ class QueueEntry:
 	var priority: int
 	var sequence: int
 	var payload: Dictionary
-
-
-## Emitted when the active panel changes. Argument is the new active panel,
-## or `null` when the queue empties.
-signal active_changed(panel: ModalPanel)
 
 
 var _active: QueueEntry = null
