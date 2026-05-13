@@ -6,7 +6,7 @@
       "scene_path": "res://game/scenes/stores/retro_games.tscn",
       "steps": [
         {
-          "id": "welcome",
+          "id": "ctx_welcome",
           "prompt_text": "First day. Sal: 'Time card's right by the door \u2014 punch in before Vic shows up.'",
           "action": "Clock in",
           "key": "[E]",

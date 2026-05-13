@@ -1,4 +1,241 @@
-## Changes made this pass
+## Changes made this pass (2026-05-11, second pass)
+
+Second cleanup pass over the same WIP working tree. The prior pass (this
+file's previous version, retained below) tackled the obvious dead-field
+cleanup; this pass swept for *stale documentation* left behind by the
+strip-to-bones deletions — module / function docstrings that still
+described features whose code paths had already been removed. Three such
+sites surfaced after greping the WIP diff for residual references to
+deleted concepts (`warranty`, `refund`, `ACC grading`, etc.) plus a
+formatting residue (orphaned blank-line cluster left by a deleted
+helper).
+
+### Edits applied in source (this pass)
+
+| File | LOC before → after | What changed |
+|---|---|---|
+| `game/scenes/ui/day_summary_content.gd` | 79 → 78 (-1) | Rewrote the module docstring to drop the dead `warranty attach, ACC grading` callouts. The WIP had already deleted `set_warranty_attach`, `set_grading`, and `set_warranty` from this file (the only remaining helpers are `apply_revenue_headline`, `set_net_profit`, `set_discrepancy`), so the kin list in the docstring was stale. Replaced with the surviving `discrepancy banner` callout to match what's actually colocated. |
+| `game/scenes/ui/hud.gd` | 1419 → 1419 (0) | Rewrote the docstring on `_on_customer_purchased_hud` (`:1075-1077`). The prior copy said "Driven by `EventBus.customer_purchased` so warranty-only paths and refund paths that do not produce a sale do not double-count." Post-strip-to-bones there is no warranty system (warranty_purchased / warranty_accepted / etc. were all deleted from EventBus in the prior pass) and no customer-refund path (ReturnsSystem was deleted with `returns_system.gd`). The new copy explains the actual reason for picking `customer_purchased` as the driver: it's the sale-confirmed signal rather than a broader customer-departed event, so non-sale outcomes (browse-only, walk-out) don't inflate the counter. |
+| `game/scenes/ui/day_summary.gd` | 912 → 909 (-3) | Collapsed a 5-blank-line residue at `:498-502` down to the 2-blank-line GDScript convention. The cluster was left over when the WIP deleted `_create_overdue_count_label()` from this file (the deleted function and its 3 blank-line separator collapsed into a single deletion, leaving the 5-blank-line cluster between `_apply_revenue_headline` and `_kill_all_tweens`). |
+
+### Why these were act-able
+
+All three edits are documentation / formatting fixes with zero
+behavioural change:
+
+- `day_summary_content.gd` — module docstring only; no code touched.
+  Full suite still passes for the 14 `tests/gut/test_day_summary_*.gd`
+  files that exercise this class (`set_net_profit`, `set_discrepancy`,
+  `apply_revenue_headline`).
+- `hud.gd` — function docstring only; the function body is unchanged
+  (still `_customers_served_today_count += 1` etc.). The 10 HUD tests
+  (`test_hud_gd_emits_toggle_milestones_panel` block) still pass.
+- `day_summary.gd` — pure whitespace; `bash tests/run_tests.sh` still
+  shows the same 4123/4158 pass count as the pre-edit baseline.
+
+### Inspected this pass and intentionally not changed
+
+#### Doc-string mention of `warranty_binder_examined` at `event_bus.gd:623-625`
+
+`game/autoload/event_bus.gd:623-625`. The signal
+`warranty_binder_examined(store_id, day)` is *not* part of the deleted
+warranty pricing/lifecycle system; it's a surviving hidden-thread
+*inspection* signal emitted when the player examines the warranty
+binder as a retail prop (BRAINDUMP's "hidden-thread design rule:
+every hidden-thread object must have a normal retail reason to
+exist"). Consumed by `HiddenThreadSystemSingleton._on_warranty_binder_examined`
+(`hidden_thread_system.gd:185-189`) as a Tier-1 trigger.
+
+**Why kept:** the binder is the in-fiction retail-prop reason for
+the signal name; the signal contract is intentional and
+`tests/unit/test_hidden_thread_system.gd` exercises this listener
+contract.
+
+#### Doc-string mention of `ReturnsSystem` at `event_bus.gd:76-81`
+
+`game/autoload/event_bus.gd:76-81` on `defective_item_received`. The
+prior pass's report already explained this docstring rewrite
+(post-strip-to-bones there is no live emitter, but `LedgerSystem` and
+`HiddenThreadSystemSingleton` listen, and the contract test in
+`tests/unit/test_hidden_thread_system.gd` exercises the consumer
+side). The current docstring is the rewrite from the prior pass and
+is accurate.
+
+#### `_grading_label`, `_overdue_count_label`, `_warranty_attach_label`, `_demo_status_label` field declarations remain in `day_summary.gd`
+
+Survey check after this pass: the day_summary.gd `var _grading_label`
+/ `_overdue_count_label` / `_warranty_attach_label` / `_demo_status_label`
+fields were *fully removed* by the WIP (no longer in the diff). Only
+the corresponding `@onready var _late_fee_label`, `_warranty_revenue_label`,
+`_warranty_claims_label`, `_seasonal_event_label` were also stripped.
+Spot-check confirms the file no longer has any pinned-by-tests dead
+fields; the `show_summary` signature reshape that the prior pass had
+filed as a blocker is *also* done (the WIP removed `warranty_revenue`,
+`warranty_claims`, `seasonal_impact` from both the signature and the
+14 test call-sites). The prior pass's Escalation on the
+`show_summary` signature pin no longer applies — that work landed
+inside this WIP.
+
+### Files still >500 LOC (this pass)
+
+No new files crossed the 500-LOC threshold relative to the prior
+pass's table. The three files this pass touched:
+
+- `game/scenes/ui/day_summary.gd` 909 LOC (was 976 at HEAD; the WIP
+  shed 67 LOC, this pass shed 3 more). Already factored into
+  `DaySummaryContent` / `DaySummaryDisplay` / `DaySummaryLabels`
+  helpers. Owns end-of-day screen lifecycle. Same justification as
+  the prior pass.
+- `game/scenes/ui/hud.gd` 1419 LOC (was 1369 at HEAD; the WIP added
+  ~50 LOC for FP-mode reparenting; this pass net-0). The FP-mode
+  block (`set_fp_mode`, `_enter_fp_mode`, `_exit_fp_mode`,
+  `_apply_fp_anchors`, `_apply_fp_typography`, `_ensure_fp_close_day_hint`,
+  `_apply_fp_visibility_overrides`, `_ensure_fp_sentence_label`) is the
+  cleanest extraction candidate for `FpHudController` once the
+  layout is content-stable.
+- `game/scenes/ui/day_summary_content.gd` 78 LOC, well under the
+  threshold. Already minimal post-strip.
+
+## Escalations
+
+None new this pass. The prior pass's content-test reconciliation
+track has *partially* landed inside the WIP (the 36→28 failing-test
+shrink reflects the `show_summary` signature reshape + test
+call-site updates that the prior Escalations section had named as
+blocked). The remaining 28 are still pre-existing five-store /
+deleted-upgrade / renamed-label content fallout, unchanged in
+scope from the prior pass's filing.
+
+---
+
+## Prior pass — same WIP working tree (preserved for context)
+
+Cleanup pass over the current beta WIP working tree (Day-1/Day-2 chain,
+ModalQueue introduction, multi-step ObjectiveRail). The branch came in
+with the `_strip-to-bones` deletions plus the active ModalQueue feature
+work already in-place; the cleanup scope was the live WIP diff against
+`main`, not the strip itself (the prior pass's section below documents
+that).
+
+### Edits applied in source
+
+| File | LOC before → after | What changed |
+|---|---|---|
+| `game/scripts/beta/beta_today_checklist.gd` | 269 → 261 (-8) | Deleted the write-only `_surfaced_ids` dictionary field and its three uses (declaration + 4-line docstring + `.clear()` in `_rebuild_items` + `_surfaced_ids[objective_id] = true` write in `_surface_row`). `grep -rn _surfaced_ids` returned only the three write sites with zero readers; the dedup it was meant to provide was already enforced by the `_item_labels.has(objective_id)` early-return at `_surface_row`. |
+| `game/scripts/ui/tutorial_overlay.gd` | 209 → 202 (-7) | Removed the unreachable re-entry guard at the tail of `_reevaluate_visibility` (`if _bottom_bar.visible and _prompt_label.text == prompt: return` plus its 5-line explanatory comment). Control-flow analysis: the function returns at `:155` whenever `_bottom_bar.visible` is true, so the only way to reach the deleted guard was with `_bottom_bar.visible == false`, making the guard's left operand always false and the guard dead. The duplicate-render debounce the guard claimed to handle is already served by the `:155` early-return — `test_reevaluate_does_not_reslide_when_already_showing_same_prompt` still passes via that path (verified: 21/21 in `test_tutorial_render_guard.gd`). |
+
+### Why these were act-able
+
+Both edits are dead-code deletions with zero reader sites and behavioural
+parity verified against the surviving GUT contracts:
+
+- `beta_today_checklist.gd` — full suite pass (9/9 in
+  `test_beta_today_checklist.gd`).
+- `tutorial_overlay.gd` — full suite pass (21/21 in
+  `test_tutorial_render_guard.gd`, including the re-evaluation debounce
+  test that the deleted guard claimed to serve, plus 9/9 in
+  `test_tutorial_overlay.gd`).
+- Modal-queue plumbing untouched but re-validated post-edit
+  (21/21 `test_modal_queue.gd`, 9/9 `test_modal_queue_panel_routing.gd`,
+  12/12 `test_beta_day_summary_modal_focus.gd`).
+
+### Inspected this pass and intentionally not changed
+
+#### Verbose §EH-35 / §EH-36 / §EH-37 dead-guard-removal docstrings
+
+`game/scripts/systems/day_cycle_controller.gd:105–115` (`_can_close_day`),
+`:137–144` (HiddenThreadSystem.finalize_day), `:166–172`
+(`_should_run_closing_checklist`), `:258–262` (ShiftSystem
+`get_shift_summary`), `:272–278` (`hidden_thread_interactions`); plus
+`game/scripts/systems/random_event_system.gd:348–357`
+(`_try_trigger_hourly_event`) and `game/scripts/systems/shift_system.gd:209–224`
+(`_resolve_day_objective_text`).
+
+**Why kept:** every one of these is a 6–14 line audit-anchor docstring
+that documents *why* a `has_method`/`has_signal` defensive guard was
+converted to a direct typed-autoload call. The §EH-31-class story is
+captured in `docs/audits/error-handling-report.md` §§EH-35 – §EH-37; the
+inline anchors are the SSOT linking strategy the user explicitly
+established. Trimming them would break the grep-from-the-call-site →
+audit-doc path the §EH markers exist to provide. The prose is verbose
+but load-bearing for the audit's contract.
+
+#### `BetaDaySummaryPanel._on_replay_pressed` / `_on_main_menu_pressed` don't `close()` the panel themselves
+
+`game/scripts/beta/beta_day_summary_panel.gd:311–316`. The
+`_on_continue_pressed` handler emits then closes; the replay / main-menu
+handlers emit but do *not* close. The controller's
+`_on_summary_replay` / `_on_summary_main_menu`
+(`beta_day_one_controller.gd:585–595`) close the panel explicitly before
+firing `GameManager.start_new_game()` / `.go_to_main_menu()`.
+
+**Why kept:** the asymmetry is intentional. The continue path stays in
+the current scene so the panel can close itself once `continue_pressed`
+listeners have run. The replay / main-menu paths transition out of the
+current scene — closing the panel before `GameManager` runs the scene
+swap pops CTX_MODAL with the next scene's input context already on top,
+which is the correct order. Moving the close into the panel would
+require the panel to know that the controller is about to swap scenes,
+which the panel deliberately does not. Documented in the controller-side
+docstrings.
+
+#### `BetaManagerNotePanel._showing` shadows `visible`
+
+`game/scripts/beta/beta_manager_note_panel.gd:21, 82, 105, 114`. The
+`_showing` field is gated against in `_unhandled_input` so a press of
+`interact` / `ui_cancel` only dismisses while the note is up.
+
+**Why kept:** `_unhandled_input` fires for every node in the tree
+regardless of `visible`, so the panel needs an explicit "active" gate.
+Reading `visible` directly would work but couples input gating to the
+render flag, which the passive-overlay contract treats as separate
+concerns (the panel is always in-tree once `_ensure_panels` constructs
+it; `visible` toggles between dispatch cycles).
+
+#### `ModalPanel.open()` vs `_open_from_queue()` duplication
+
+`game/scripts/ui/modal_panel.gd:50–53, 77–80`. Both push CTX_MODAL and
+flip `visible = true`; `_open_from_queue` also calls `_on_queued_open`.
+
+**Why kept:** the two are intentionally distinct entry points —
+`open()` is the direct-open escape hatch for fatal overlays and tests
+that bypass the queue; `_open_from_queue` is the queue-dispatch path.
+14 subclasses override `open()` (grep against `^func open()` under
+`game/`); collapsing the two into one would force every override to be
+aware of both code paths. The 3-line overlap is the price of keeping
+the queue and the direct-open escape hatch independently composable.
+
+### Files still >500 LOC (this pass)
+
+Three of the in-scope modified files are over the 500-LOC threshold;
+all three are already inventoried in the prior pass's table below. No
+new files cross the threshold:
+
+| File | LOC | Plan or justification |
+|---|---|---|
+| `game/scripts/beta/beta_day_one_controller.gd` | 1654 (was 1542) | Same justification as prior pass — single owner of the beta Day-1 chain. The branch's WIP added `_build_steps_payload`, `_build_shift_note` + `_join_phrases`, `_on_summary_replay` / `_on_summary_main_menu`, the multi-step rail payload, and the inventory split tracking (~112 LOC). The "future split: peel the visible-feedback tweens into `BetaDayOneVisualBeats`" plan in the prior pass stands. |
+| `game/autoload/manager_relationship_manager.gd` | 597 (was 585) | Same justification — trust state + per-day note pool. The +12 LOC is the beta-active short-circuit at `_on_day_started:266–278` mirroring `midday_event_system.gd` / `milestone_system.gd`. |
+| `game/scripts/systems/random_event_system.gd` | 526 (was 522) | Same justification — random event scheduler. The +4 LOC is the §EH-36 audit-anchor docstring on `_try_trigger_hourly_event`. |
+
+`game/scripts/systems/day_cycle_controller.gd` (488 LOC) sits just
+under the threshold and is inventoried only as a sanity check — the
+§EH-37 conversions in this pass shed five `get_node_or_null + has_method
++ .call` chains while the docstring narration brought the LOC roughly
+back to neutral. Future split: `_show_day_summary` (~95 LOC for the
+day_closed payload assembly + LedgerSystem reconciliation) is the
+cleanest extraction candidate, but the eight typed-autoload calls
+already there compose a single payload — splitting would force the
+payload-builder to traverse two files.
+
+## Escalations
+
+None new this pass. The pre-existing strip-to-bones content-test
+reconciliation track documented below in the prior section's
+Escalations remains the smallest concrete next action.
+
+---
+
+## Prior pass — strip-to-bones cleanup (preserved for context)
 
 The bulk of this pass landed across the entire strip-to-bones working
 tree, finishing the dead-listener / dead-field cleanup that the prior

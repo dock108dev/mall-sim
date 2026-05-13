@@ -27,8 +27,8 @@ anchor_left = 0.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -68.0
-offset_bottom = -64.0
+offset_top = -148.0
+offset_bottom = -144.0
 mouse_filter = 2
 color = Color(0.3569, 0.7216, 0.9098, 1)
 
@@ -37,7 +37,7 @@ anchor_left = 0.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -64.0
+offset_top = -144.0
 offset_bottom = 0.0
 grow_vertical = 0
 mouse_filter = 2
@@ -46,36 +46,41 @@ theme_override_constants/margin_right = 12
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="ContentColumn" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ContentColumn"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 16
 
-[node name="ObjectiveLabel" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="ObjectiveLabel" type="Label" parent="MarginContainer/ContentColumn/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 text = ""
 text_overrun_behavior = 3
 
-[node name="ActionLabel" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="ActionLabel" type="Label" parent="MarginContainer/ContentColumn/HBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 text = ""
 
-[node name="HintLabel" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="HintLabel" type="Label" parent="MarginContainer/ContentColumn/HBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 text = ""
 
-[node name="KeyBadge" type="PanelContainer" parent="MarginContainer/HBoxContainer"]
+[node name="KeyBadge" type="PanelContainer" parent="MarginContainer/ContentColumn/HBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("KeyBadgeStyle")
 visible = false
 
-[node name="KeyLabel" type="Label" parent="MarginContainer/HBoxContainer/KeyBadge"]
+[node name="KeyLabel" type="Label" parent="MarginContainer/ContentColumn/HBoxContainer/KeyBadge"]
 layout_mode = 2
 text = "E"
 horizontal_alignment = 1
@@ -83,8 +88,42 @@ vertical_alignment = 1
 theme_override_colors/font_color = Color(0.169, 0.114, 0.071, 1.0)
 theme_override_font_sizes/font_size = 18
 
-[node name="OptionalHintLabel" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="OptionalHintLabel" type="Label" parent="MarginContainer/ContentColumn/HBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 text = ""
 visible = false
+
+[node name="StepsContainer" type="VBoxContainer" parent="MarginContainer/ContentColumn"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+visible = false
+
+[node name="StepSlot0" type="Label" parent="MarginContainer/ContentColumn/StepsContainer"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+mouse_filter = 2
+text = ""
+text_overrun_behavior = 3
+
+[node name="StepSlot1" type="Label" parent="MarginContainer/ContentColumn/StepsContainer"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+mouse_filter = 2
+text = ""
+text_overrun_behavior = 3
+
+[node name="StepSlot2" type="Label" parent="MarginContainer/ContentColumn/StepsContainer"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+mouse_filter = 2
+text = ""
+text_overrun_behavior = 3
+
+[node name="StepSlot3" type="Label" parent="MarginContainer/ContentColumn/StepsContainer"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+mouse_filter = 2
+text = ""
+text_overrun_behavior = 3

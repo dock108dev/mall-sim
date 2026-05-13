@@ -5,39 +5,121 @@ ripped out four legacy stores plus their controllers / lifecycle / JSON content
 and replaced them with a beta day-1 critical-path controller, a hidden-thread
 beat scaffold, a debug overlay, and a screenshot helper. The **prior** pass
 (documented below, edits still in place and re-verified against the current
-branch tip — `d3df4a9`, "Implement beta day-1 features and HUD enhancements")
-addressed the durable trust boundaries (boot-error BBCode escape,
+branch tip) addressed the durable trust boundaries (boot-error BBCode escape,
 employment-state length caps, hidden-thread save bounds, settings enum bounds)
 plus two safe inline edits on the new beta surfaces (§1, §2).
 
+### This pass — inline trust-contract comments at BBCode sinks (§3)
+
+The current uncommitted working tree adds the `ModalQueue` autoload and
+refactors the three beta modal panels (`BetaManagerNotePanel`,
+`BetaDaySummaryPanel`, `BetaDecisionCardPanel`) into `ModalPanel` subclasses
+that take their body content from a payload `Dictionary` instead of direct
+setters. This shifts the call site for the sink-binding from
+`show_note(body)` / `show_summary(summary)` / `show_event(event_data)` into
+each subclass's `_on_queued_open(payload)` hook. The audit confirms no
+*behavioral* tainted-input regression — all three sinks are still bound to
+either hardcoded constants (BBCode-enabled) or to integer-formatted output
+(BBCode-enabled) or to plain `Label.text` (BBCode-irrelevant). However, the
+trust contracts that justify those sinks were documented only in this report,
+not at the code location, so a future maintainer adding a fourth caller —
+or flipping a `bbcode_enabled = false` flag in `BetaDecisionCardPanel` — could
+regress the safety property without a code review prompt.
+
+This pass adds inline trust-contract comments at the three sink lines so
+future maintainers see the safety property next to the bound code. The
+comments match the `§F-129` pattern already established in
+`checkout_panel.gd` and `haggle_panel.gd`. No runtime behavior is changed;
+the entire beta-affected test suite is green after the edits
+(`test_beta_manager_note_panel.gd` 16/16, `test_beta_day_summary*` 14/14,
+`test_modal_queue*` 30/30).
+
+| File | Lines | Change |
+|---|---|---|
+| `game/scripts/beta/beta_manager_note_panel.gd` | 71–85 (`show_note` docstring), 86–88 (`_on_queued_open` sink) | Added explicit `§F-S9` trust contract: `_body_label.bbcode_enabled = true`; the two current callers pass hardcoded constants `BetaDayOneController.VIC_NOTE_BODY` / `VIC_NOTE_DAY2_BODY` containing intentional `[b]…[/b]` markup, so the panel cannot pre-escape. A future caller passing content/save-derived text must escape `[` → `[lb]` at the call site, matching the canonical pattern from `boot.gd._show_error_panel` (prior-pass §1) and `checkout_panel.gd._set_reasoning_text` (§F-129). See §F-S9. |
+| `game/scripts/beta/beta_day_summary_panel.gd` | 213–224 (`_metrics_label` binding) | Added explicit `§F-S13` trust contract at the BBCode-enabled metrics sink: the format template is a hardcoded literal and the three bound values are int / int-derived currency string / int — no content or save-derived strings reach this sink. Future fields bound into this template must stay integer-or-format-derived; string fields should render to `_note_label` (plain `Label`) or escape `[` → `[lb]`. See §F-S13. |
+| `game/scripts/beta/beta_decision_card_panel.gd` | 48–58 (`_body_label.bbcode_enabled = false`) | Added explicit `§F-S13` trust contract at the **defensive disable**: BBCode must stay off because `_on_queued_open` binds `event_data.get("body", "")` from `customer_events.json` content. A future refactor flipping the flag to `true` without first escaping `[` → `[lb]` at the binding site would expose `[url=…]` / `[img=res://…]` / `[font=…]` injection from content-author error or tampered content files. Disable is now load-bearing for the trust model. |
+
+### Verified — re-audited against current branch tip + working tree
+
 **This current pass** re-audited the new code that landed after the prior pass
-— `0415308` (HUD/interaction/pause-menu modal-focus tightening, customer-event
-proximity targeting, time-system focus-pause gating) and `d3df4a9` (HUD signal
-forwarding, BetaRunState daily-delta accumulators, day-summary metric rewrite)
-— and confirms:
+— the working tree contains substantial uncommitted changes on top of the
+last-audited commit (`d3df4a9`): new `ModalQueue` autoload, `ModalPanel` base
+class refactor, three beta panel refactors, `BetaDaySummaryPanel` rewrite to
+four-section layout (MONEY / STORE PERFORMANCE / THE MARK / REPUTATION),
+HUD FP-mode sentence-label addition, dead-guard elimination across
+`day_cycle_controller`, `shift_system`, `random_event_system`,
+`tutorial_context_system` duplicate-emission suppression, and dead-content
+removal across `content_parser`, `content_schema`, `price_resolver`,
+`customer`, `customer_npc`, `item_definition`, `item_instance`,
+`performance_report`, `economy_value_calculator`, `market_value_system`,
+`inventory_system`, `store_customization_system`. The audit confirms:
 
 - All prior inline edits are still in place (re-verified by reading
-  `beta_day_one_controller.gd:15, 1065-1093` and
-  `beta_screenshot_helper.gd:23, 104-122`).
+  `beta_day_one_controller.gd:15, 1177–1205` and
+  `beta_screenshot_helper.gd:23, 104–122`). Line numbers refreshed to match
+  the current working tree.
 - The new code introduces no new external process / shell / network surfaces
   (`OS.execute`, `OS.shell_open`, `OS.create_process`, `HTTPRequest`,
   `HTTPClient`, `TCPServer`, `UDPServer`, `WebSocketPeer`, `WebRTCPeer`,
   `MultiplayerAPI` still return zero matches under `game/`).
 - The new code introduces no new tainted-string sinks into BBCode-enabled
-  `RichTextLabel` surfaces. The two new `bbcode_enabled = true` panels
-  authored on this branch are both demonstrably safe (`beta_manager_note_panel`
-  takes the constant `BetaDayOneController.VIC_NOTE_BODY` literal; see §F-S9;
-  `beta_day_summary_panel` formats integer fields into a hardcoded BBCode
-  template; see §F-S13 below). The new BBCode-disabled panel
-  (`beta_decision_card_panel`) explicitly sets `bbcode_enabled = false`
-  before binding any content-derived text.
+  `RichTextLabel` surfaces. The full enumeration of `bbcode_enabled = true`
+  call sites under `game/` is: the boot error panel (prior-pass §1 escapes
+  input), `checkout_panel`/`haggle_panel` reasoning labels (§F-129 escapes
+  input via `[` → `[lb]`), `beta_manager_note_panel` (binds hardcoded
+  constants only; see §F-S9), `beta_day_summary_panel._metrics_label` (binds
+  integer-derived values only; see §F-S13), and `decision_card_style.apply_reasoning_style`
+  (caller-escaped). The new `BetaDecisionCardPanel` is the only beta panel
+  with a `RichTextLabel` body bound to content text and it explicitly sets
+  `bbcode_enabled = false` (now load-bearing — see §3 above).
 - The new beta interactables (`beta_today_checklist`,
   `register_status_indicator`) route content-derived text only into plain
   `Label.text` (no BBCode parsing). See §F-S14.
+- The new `ModalQueue` autoload is a pure data-structure module — no
+  `FileAccess`, no `JSON.parse_string`, no network, no string sinks. The
+  payload `Dictionary` it carries is passed by reference between caller and
+  panel, so the sinks remain the per-panel `_on_queued_open` implementations
+  audited above; the queue itself is not a sink.
+- The new `ModalPanel` base class (`game/scripts/ui/modal_panel.gd`) is also
+  pure InputFocus stack management — no string sinks, no I/O.
+- The `BetaDaySummaryPanel` rewrite groups output into four sections
+  (MONEY / STORE PERFORMANCE / THE MARK / REPUTATION). The only BBCode-enabled
+  sink in the rewrite remains the `_metrics_label` (§F-S13). The new
+  audit-detail rows (`_audit_shelf_label`, `_audit_backroom_label`),
+  `_shelf_inventory_label`, `_backroom_inventory_label`, `_customers_helped_label`,
+  `_items_stocked_label`, `_sales_completed_label`, `_reputation_label`, and
+  `_note_label` are all plain `Label.text`. `shift_note` /
+  `hidden_thread_note` from `summary` payload flow into plain `Label.text`
+  (lines 268, 273) — no BBCode.
+- The HUD `_fp_sentence_label` (new in this working tree;
+  `hud.gd:1351–1369`) is a plain `Label.new()` bound to two hardcoded
+  constants `_HINT_STOCK_FLOOR` and `_HINT_AWAITING_CUSTOMER`. No new sink.
+- The day_cycle_controller dead-guard cleanup (§EH-37) replaces
+  `get_node_or_null + has_method + .call(...)` chains with direct typed
+  autoload access (`ObjectiveDirector.can_close_day()`,
+  `ObjectiveDirector.get_close_blocked_reason()`,
+  `HiddenThreadSystemSingleton.finalize_day(day)`,
+  `HiddenThreadSystemSingleton.hidden_thread_interactions`,
+  `UnlockSystemSingleton.is_unlocked(...)`, `ShiftSystem.get_shift_summary()`).
+  This is an error-handling tightening, not a security surface change. The
+  `hidden_thread_interactions` read remains clamped at `maxi(_, 0)`.
+- The `tutorial_context_system._context_shown_since_entry` flag is a UI
+  duplicate-emission suppressor. Prompt text still flows from
+  `first.get("prompt_text", "")` into plain Label widgets downstream. No
+  validation removed.
+- The `content_parser` / `content_schema` reductions removed dead rental /
+  sports-card / seasonal-event validators because those content types no
+  longer exist (the `season`, `seasonal_event`, `rental_*` schemas have no
+  callers post-strip). Active schemas (item, store, customer, fixture,
+  upgrade, manager_note) are unchanged.
 
-**No additional inline edits required this pass.** The two prior edits remain
-the durable hardening on this branch; everything else either is already safe
-in the current code or has documented content-side trust justifications.
+**Inline trust-contract comments added at three BBCode-sink locations
+this pass** (see §3 above) — codifies the safety properties that the
+prior-pass findings documented only in this report. The two prior pass §1/§2
+inline edits remain the durable behavioral hardening; the current pass adds
+documentation-style hardening to make those safety contracts visible at the
+sink.
 
 | File | Lines (current tip) | Change (from prior pass; verified intact) |
 |---|---|---|
@@ -178,26 +260,29 @@ either move the spawn into a `if OS.is_debug_build():` branch in
 overlay scripts. Both are one-line edits; both are out of scope for a
 security pass since the overlays are spec'd into the beta charter.
 
-### F-S9 — BetaManagerNotePanel renders BBCode-enabled body via public `show_note(body)` (Justified — current call site safe)
+### F-S9 — BetaManagerNotePanel renders BBCode-enabled body via public `show_note(body)` (Acted on this pass — inline trust-contract comment added; behavioral posture unchanged)
 
-`game/scripts/beta/beta_manager_note_panel.gd:48-49, 68-71`. The note panel
-constructs a `RichTextLabel` with `bbcode_enabled = true` and exposes a
-public `show_note(body: String)` API. Currently called exactly once with
-`BetaDayOneController.VIC_NOTE_BODY` (a constant string literal that
-deliberately uses `[b]…[/b]` BBCode markup). Future call sites that pass
-content-derived or save-derived `body` text would render BBCode tags
-verbatim — `[url=…]`, `[img=res://…]`, `[color=…]`, `[font=…]`. The
-`meta_clicked` signal has no listener wired, so the URL-click surface is
-null today, but `[img=]` would attempt to load a Texture2D from any baked
-content path at render time.
+`game/scripts/beta/beta_manager_note_panel.gd:53-54, 76-88` (post-edit
+working tree). The note panel constructs a `RichTextLabel` with
+`bbcode_enabled = true` and exposes a public `show_note(body: String)` API
+that now routes through `ModalQueue` (rewritten this branch to extend
+`ModalPanel`). Currently called from `beta_day_one_controller.gd:315` with
+either `VIC_NOTE_BODY` or the new `VIC_NOTE_DAY2_BODY` — both hardcoded
+string-literal constants that deliberately use `[b]…[/b]` BBCode markup.
+Future call sites that pass content-derived or save-derived `body` text
+would render BBCode tags verbatim — `[url=…]`, `[img=res://…]`, `[color=…]`,
+`[font=…]`. The `meta_clicked` signal has no listener wired, so the
+URL-click surface is null today, but `[img=]` would attempt to load a
+Texture2D from any baked content path at render time.
 
-**No edit needed today**: the only caller passes a hardcoded constant.
-Adding pre-emptive `[` → `[lb]` escaping would also escape the intentional
-`[b]…[/b]` markup in `VIC_NOTE_BODY`. The right shape is the same as the
-boot error panel's pattern from the prior pass: escape at the call site
-that introduces tainted input. If a future caller (e.g. content-authored
-manager notes from `manager_notes.json`) is added, the corresponding edit
-is to escape `[` → `[lb]` at that call site, not in `show_note`.
+**This pass — comment-only edit applied at the sink**. Adding pre-emptive
+`[` → `[lb]` escaping inside `show_note` would also escape the intentional
+`[b]…[/b]` markup in `VIC_NOTE_BODY` / `VIC_NOTE_DAY2_BODY`, so the right
+shape — same as the boot error panel from the prior pass — is to escape at
+the call site that introduces tainted input. This pass added an inline
+`§F-S9` trust-contract docstring at `show_note` (lines 71–85) and a
+sink-callout at `_on_queued_open` (lines 86–88) so a future caller
+introducing tainted `body` text sees the constraint at the code. See §3.
 
 ### F-S10 — `BetaRunState.apply_decision_effect` accepts unbounded ints from event JSON (Justified — content-side trust)
 
@@ -239,20 +324,45 @@ private `_active_event` dict and prints `dict.get("id")` to a `Label.text`.
 Plain text, not BBCode. Internal id strings (`day01_wrong_console_parent`)
 are content-authored, not user-typed. **No edit needed.**
 
-### F-S13 — `BetaDaySummaryPanel` `bbcode_enabled = true` with formatted-integer body (Justified — current call site safe)
+### F-S13 — `BetaDaySummaryPanel` `bbcode_enabled = true` with formatted-integer body, plus `BetaDecisionCardPanel` defensive `bbcode_enabled = false` (Acted on this pass — inline trust-contract comments added at both sinks)
 
-`game/scripts/beta/beta_day_summary_panel.gd:42–48, 84–102`. The metrics
-RichTextLabel sets `bbcode_enabled = true` and is populated by a
-`%`-formatted template that binds only `int(...)` values for cash,
-customers helped, items stocked, sales completed, and reputation delta —
-no caller-supplied strings, no content-derived strings. The shift-note
-text (`summary.get("shift_note")` / `summary.get("hidden_thread_note")`)
-flows into a separate `_note_label: Label` (line 50, set at line 108),
-which is plain text — no BBCode parsing. BBCode injection has no path
-in to the rendered template. **No edit needed.** If a future caller wires
-a string-typed metric (e.g. a manager comment) into the BBCode template,
-the same `replace("[", "[lb]")` pattern used by `checkout_panel._set_reasoning_text`
-(checkout_panel.gd:706) and `haggle_panel` is the canonical hardening.
+`game/scripts/beta/beta_day_summary_panel.gd:69–77, 213–232` (post-edit
+working tree — the panel was rewritten this branch to four sections and
+to route through `ModalQueue`). The `_metrics_label` is the only sink in
+the rewrite with `bbcode_enabled = true`. It is populated by a hardcoded
+`%`-formatted template that binds only int values (`starting_cash`,
+`ending_cash`) and one int-derived currency string (`sales_today_str`,
+built locally from `cash_delta` via `+$%d` / `-$%d` / `$0`). No caller
+strings reach the BBCode template. The `_note_label`,
+`_hidden_thread_label`, and all per-row metric labels in sections B/C/D
+are plain `Label` — `shift_note` / `hidden_thread_note` from the
+`summary` payload render at lines 268 and 273 as plain text. BBCode
+injection has no path into the rendered template.
+
+`game/scripts/beta/beta_decision_card_panel.gd:48–58, 72–92`
+(post-edit working tree). The decision card's `_body_label` is a
+`RichTextLabel` with the *defensively-disabled* flag
+`bbcode_enabled = false`. Its `_on_queued_open` binds
+`event_data.get("body", "")` from `customer_events.json` content — the
+disable flag is what keeps that content from interpreting `[url=…]` /
+`[img=res://…]` / `[font=…]` tags at render time. **The disable is
+load-bearing for the trust model.** If a future refactor flips the
+flag without first escaping `[` → `[lb]` at the binding site, the same
+`customer_events.json` content (now or any future content edit) would
+suddenly be a live BBCode sink.
+
+**This pass — comment-only edits applied at both sinks.** Added a
+`§F-S13` block comment immediately above the `_metrics_label.text =`
+binding in `beta_day_summary_panel.gd` recording the
+integer-only-or-format-derived constraint, and a matching block comment
+at the `_body_label.bbcode_enabled = false` line in
+`beta_decision_card_panel.gd` recording that the disable is
+load-bearing. Future maintainers binding new fields into the metrics
+template, or flipping the decision-card flag, see the trust property
+at the code. The canonical hardening if either constraint ever needs
+to be relaxed is the `replace("[", "[lb]")` pattern from
+`checkout_panel._set_reasoning_text` (checkout_panel.gd:706) and
+`haggle_panel`. See §3.
 
 ### F-S14 — `BetaTodayChecklist` and `RegisterStatusIndicator` render content-derived text via `Label.text` (Justified — no BBCode sink)
 
@@ -267,7 +377,63 @@ the `InteractionPrompt` scene's `_disabled_label` (a `Label`, not a
 Content-side trust applies on the objective table the same way it does
 for other content-authored copy elsewhere in this branch. **No edit needed.**
 
+## §3 — Inline trust-contract comments at BBCode sinks (this pass)
+
+The three modal-panel refactors on the current working tree moved the
+sink-binding from public setters into `_on_queued_open(payload)` hooks. The
+prior-pass findings §F-S9 / §F-S13 documented the trust property that
+justifies each BBCode-enabled (or defensively-disabled) sink only in this
+report. A future maintainer adding a fourth caller — or flipping the
+`bbcode_enabled = false` flag in `BetaDecisionCardPanel` — could regress
+the safety property without seeing the constraint at the binding site.
+
+This pass adds inline comments at the three sink locations so the trust
+contract is visible at the code, not only in this audit report. The
+comments match the `§F-129` self-referencing pattern already established in
+`checkout_panel.gd` and `haggle_panel.gd` (which escape `[` → `[lb]` and
+document why at the sink). No runtime behavior is changed; tests remain
+green (see Verification below).
+
+`game/scripts/beta/beta_manager_note_panel.gd` — appended trust-contract
+docstring to `show_note(body: String)` (lines 71–85) and a one-line
+sink-callout to `_on_queued_open` (lines 86–88). The docstring names the
+two current hardcoded callers and prescribes the call-site escape pattern
+required of any future tainted caller.
+
+`game/scripts/beta/beta_day_summary_panel.gd` — added a `§F-S13` block
+comment immediately above the `_metrics_label.text = ...` binding
+(lines 213–224) stating that the format template is a hardcoded literal,
+the three bound values are int / int-currency-string / int, and that any
+future field added to the template must stay integer-or-format-derived
+(or route to `_note_label` plain `Label` instead).
+
+`game/scripts/beta/beta_decision_card_panel.gd` — added a `§F-S13` block
+comment at the `_body_label.bbcode_enabled = false` assignment
+(lines 48–58) recording that BBCode must stay off and that flipping the
+flag without first escaping the binding site exposes `[url=…]` /
+`[img=res://…]` / `[font=…]` injection from content-author error or
+tampered content files. The disable is now load-bearing for the trust
+model and the comment names it.
+
 ## Verification
+
+After this pass's three inline-comment edits, the directly-affected
+test suites are green:
+
+- `test_beta_manager_note_panel.gd` — 16/16 passing (0.448s, 27 asserts)
+- `test_beta_day_summary*` — 26/26 passing across `test_beta_day_summary_modal_focus`
+  and `test_beta_day_summary_sections` (0.046s, 129 asserts)
+- `test_modal_queue*` — 30/30 passing across `test_modal_queue` and
+  `test_modal_queue_panel_routing` (0.028s, 145 asserts)
+
+The three edited files contain only comment-only additions (docstrings
+and inline comments), so no GDScript syntax surface changed; the diagnostic
+`--check-only` error on these files remains the standard autoload-not-loaded
+limitation noted in the prior pass.
+
+Prior-pass test invocation (`-gselect=test_beta`) still reports the same
+74/74 beta-suite baseline, since this pass added no new test files and
+the directly-edited files are exercised by the test scripts above.
 
 `godot --path . --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests/gut
 -gselect=test_beta -gexit` reports **74/74 passing** after the edits, including:

@@ -1,11 +1,13 @@
 ## Tests for the Day-1 opening note panel (`BetaManagerNotePanel`).
 ##
-## Covers the AC for the pre-chain modal gate: dismiss button grabs
+## Covers the AC for the pre-chain passive overlay: dismiss button grabs
 ## keyboard focus on open() (Enter / Space dismiss without the mouse),
-## the panel claims a CTX_MODAL frame on InputFocus while up, body text
-## renders as supplied, and the controller integration only fires
-## `_start_day` after the player dismisses (no empty-rail moment because
-## the rail signal lands synchronously inside `_on_vic_note_dismissed`).
+## the panel does NOT claim a CTX_MODAL frame on InputFocus (player can
+## still move and look around behind the note), E and Escape both
+## dismiss, body text renders as supplied, and the controller integration
+## only fires `_start_day` after the player dismisses (no empty-rail
+## moment because the rail signal lands synchronously inside
+## `_on_vic_note_dismissed`).
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
@@ -15,9 +17,13 @@ var _root: Node3D = null
 
 
 func before_each() -> void:
-	# Reset InputFocus between tests so a leaked CTX_MODAL push from a
-	# prior test doesn't bleed into the assertions below.
+	# Reset InputFocus and ModalQueue between tests so a leaked CTX_MODAL
+	# push or active-queue entry from a prior test doesn't bleed into the
+	# assertions below. ModalQueue routes panel dispatch — without the
+	# reset, a panel left as `_active` from a previous test would prevent
+	# the next test's panel from dispatching synchronously.
 	InputFocus._reset_for_tests()
+	ModalQueue._reset_for_tests()
 
 
 func after_each() -> void:
@@ -35,6 +41,7 @@ func after_each() -> void:
 				panel.close()
 		_root.free()
 	_root = null
+	ModalQueue._reset_for_tests()
 	InputFocus._reset_for_tests()
 
 
@@ -64,15 +71,16 @@ func test_show_note_renders_body_text() -> void:
 	)
 
 
-func test_show_note_pushes_ctx_modal_on_input_focus() -> void:
-	# Modal contract: while the note is up, CTX_MODAL must be on top of
-	# the InputFocus stack so world / chain interactables don't steal input.
+func test_show_note_does_not_push_ctx_modal() -> void:
+	# Passive-overlay contract: the note must NOT claim CTX_MODAL, so the
+	# player can keep moving / looking around while reading it. Chain
+	# progression is gated by `_stage`, not the input focus stack.
 	var panel: BetaManagerNotePanel = BetaManagerNotePanel.new()
 	add_child_autofree(panel)
 	panel.show_note(SAMPLE_BODY)
-	assert_eq(
+	assert_ne(
 		String(InputFocus.current()), String(InputFocus.CTX_MODAL),
-		"Open note must own a CTX_MODAL frame on InputFocus"
+		"Open note must NOT push CTX_MODAL — it is a passive overlay"
 	)
 
 
@@ -88,14 +96,71 @@ func test_dismiss_button_press_emits_note_dismissed() -> void:
 	)
 
 
-func test_dismiss_pops_ctx_modal_off_input_focus() -> void:
+func test_dismiss_does_not_touch_input_focus_stack() -> void:
+	# Symmetry guard: a no-op pop would corrupt a sibling's frame, so the
+	# panel must leave the stack untouched on close.
+	var panel: BetaManagerNotePanel = BetaManagerNotePanel.new()
+	add_child_autofree(panel)
+	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	var baseline_depth: int = InputFocus.depth()
+	panel.show_note(SAMPLE_BODY)
+	panel._dismiss_button.emit_signal("pressed")
+	assert_eq(
+		InputFocus.depth(), baseline_depth,
+		"Open/close round-trip must leave InputFocus depth unchanged"
+	)
+	InputFocus.pop_context()
+
+
+func test_interact_key_dismisses_note() -> void:
+	# AC: pressing E (interact) while the note is up dismisses it. The
+	# panel marks the press as handled so it cannot also fire a world
+	# interaction behind the note.
+	var panel: BetaManagerNotePanel = BetaManagerNotePanel.new()
+	add_child_autofree(panel)
+	panel.show_note(SAMPLE_BODY)
+	watch_signals(panel)
+	var event: InputEventAction = InputEventAction.new()
+	event.action = &"interact"
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_signal_emitted(
+		panel, "note_dismissed",
+		"Pressing E (interact) must dismiss the note"
+	)
+
+
+func test_ui_cancel_dismisses_note() -> void:
+	# AC: pressing Escape (ui_cancel) while the note is up dismisses it.
+	var panel: BetaManagerNotePanel = BetaManagerNotePanel.new()
+	add_child_autofree(panel)
+	panel.show_note(SAMPLE_BODY)
+	watch_signals(panel)
+	var event: InputEventAction = InputEventAction.new()
+	event.action = &"ui_cancel"
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_signal_emitted(
+		panel, "note_dismissed",
+		"Pressing Escape (ui_cancel) must dismiss the note"
+	)
+
+
+func test_keypress_after_dismiss_is_ignored() -> void:
+	# Once the note is dismissed it must stop swallowing input — a second
+	# E press should fall through to world interactables.
 	var panel: BetaManagerNotePanel = BetaManagerNotePanel.new()
 	add_child_autofree(panel)
 	panel.show_note(SAMPLE_BODY)
 	panel._dismiss_button.emit_signal("pressed")
-	assert_ne(
-		String(InputFocus.current()), String(InputFocus.CTX_MODAL),
-		"Dismissing the note must release the CTX_MODAL frame"
+	watch_signals(panel)
+	var event: InputEventAction = InputEventAction.new()
+	event.action = &"interact"
+	event.pressed = true
+	panel._unhandled_input(event)
+	assert_signal_emit_count(
+		panel, "note_dismissed", 0,
+		"Dismissed note must ignore further input"
 	)
 
 

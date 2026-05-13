@@ -161,13 +161,6 @@ func test_market_value_never_exceeds_cap() -> void:
 	)
 
 
-func test_fake_item_still_returns_low_value() -> void:
-	var item: ItemInstance = _create_item(300.0, "very_rare")
-	item.authentication_status = "fake"
-	var value: float = _economy.calculate_market_value(item)
-	assert_almost_eq(value, 0.50, 0.01, "Fake items should still be $0.50")
-
-
 # --- get_current_value uses diminishing rarity too ---
 
 

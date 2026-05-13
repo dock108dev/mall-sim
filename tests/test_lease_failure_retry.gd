@@ -3,7 +3,7 @@
 extends GutTest
 
 
-const STORE_TYPE: StringName = &"sports"
+const STORE_TYPE: StringName = &"test_store_b"
 const TEST_SLOT: int = 1
 ## Matches StoreLeaseDialog.UNLOCK_REQUIREMENTS[1].cost for slot index 1.
 const LEASE_COST: float = 500.0
@@ -256,11 +256,11 @@ func _open_dialog() -> void:
 
 
 func _advance_to_confirmation() -> void:
-	var canonical: StringName = ContentRegistry.resolve("sports")
+	var canonical: StringName = ContentRegistry.resolve("test_store_b")
 	_dialog._selected_store_type = (
-		String(canonical) if not canonical.is_empty() else "sports"
+		String(canonical) if not canonical.is_empty() else "test_store_b"
 	)
-	_dialog._selected_store_def = _get_store_def("sports")
+	_dialog._selected_store_def = _get_store_def("test_store_b")
 	_dialog._update_confirm_button()
 	_dialog._on_confirm_pressed()
 	_dialog._on_confirm_pressed()
@@ -280,7 +280,7 @@ func _get_store_def(store_id: String) -> StoreDefinition:
 func _build_store_defs() -> Array[StoreDefinition]:
 	return [
 		_make_store_def(
-			"sports",
+			"test_store_b",
 			"Sports Memorabilia",
 			"Authentic jerseys and rare collectibles.",
 			120.0,
@@ -320,7 +320,7 @@ func _make_store_def(
 func _register_store_catalog() -> void:
 	ContentRegistry.register_entry(
 		{
-			"id": "sports",
+			"id": "test_store_b",
 			"name": "Sports",
 		},
 		"store"

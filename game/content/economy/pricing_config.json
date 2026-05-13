@@ -22,8 +22,6 @@
   },
   "haggle_floor_ratio": 0.5,
   "haggle_max_rounds": 3,
-  "authentication_price_bonus": 0.25,
-  "late_fee_per_day": 2.0,
   "reputation_tiers": {
     "unknown": {
       "min": 0,

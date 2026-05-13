@@ -159,15 +159,6 @@ static func _build_info_column(
 	)
 	badge_row.add_child(rarity_label)
 
-	if item.authentication_status == "authenticated":
-		var auth_label := Label.new()
-		auth_label.text = "[Authenticated]"
-		auth_label.add_theme_font_size_override("font_size", 11)
-		auth_label.add_theme_color_override(
-			"font_color", Color(0.2, 0.8, 0.4, 1.0)
-		)
-		badge_row.add_child(auth_label)
-
 	badge_row.add_child(_build_test_badge(item))
 
 	vbox.add_child(badge_row)

@@ -56,7 +56,6 @@ const _NEW_CONSOLE_HYPE_CATEGORY: StringName = &"new_console_hype"
 const _POSTER_DISPLAY_NAMES: Dictionary = {
 	&"new_releases": "New Releases",
 	&"retro_revival": "Retro Revival",
-	&"sports_season": "Sports Season",
 	&"family_fun": "Family Fun",
 }
 

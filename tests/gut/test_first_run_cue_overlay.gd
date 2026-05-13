@@ -55,7 +55,7 @@ func test_starts_hidden() -> void:
 
 func test_visible_on_day_1_with_empty_inventory() -> void:
 	_time.current_day = 1
-	EventBus.store_entered.emit(&"electronics")
+	EventBus.store_entered.emit(&"retro_games")
 	assert_true(
 		_overlay.visible,
 		"Cue should be visible on day 1 when inventory is empty"
@@ -64,8 +64,8 @@ func test_visible_on_day_1_with_empty_inventory() -> void:
 
 func test_hidden_on_day_1_when_inventory_not_empty() -> void:
 	_time.current_day = 1
-	_inventory.set_stock(&"electronics", ["item_1"])
-	EventBus.store_entered.emit(&"electronics")
+	_inventory.set_stock(&"retro_games", ["item_1"])
+	EventBus.store_entered.emit(&"retro_games")
 	assert_false(
 		_overlay.visible,
 		"Cue should not appear when inventory is non-empty"
@@ -74,7 +74,7 @@ func test_hidden_on_day_1_when_inventory_not_empty() -> void:
 
 func test_hidden_on_day_2_even_when_empty() -> void:
 	_time.current_day = 2
-	EventBus.store_entered.emit(&"electronics")
+	EventBus.store_entered.emit(&"retro_games")
 	assert_false(
 		_overlay.visible,
 		"Cue should not appear on day > 1"
@@ -83,10 +83,10 @@ func test_hidden_on_day_2_even_when_empty() -> void:
 
 func test_dismisses_when_inventory_becomes_non_empty() -> void:
 	_time.current_day = 1
-	EventBus.store_entered.emit(&"electronics")
+	EventBus.store_entered.emit(&"retro_games")
 	assert_true(_overlay.visible, "Precondition: cue is visible")
-	_inventory.set_stock(&"electronics", ["item_1"])
-	EventBus.inventory_updated.emit(&"electronics")
+	_inventory.set_stock(&"retro_games", ["item_1"])
+	EventBus.inventory_updated.emit(&"retro_games")
 	assert_false(
 		_overlay.visible,
 		"Cue should dismiss after inventory becomes non-empty"
@@ -95,12 +95,12 @@ func test_dismisses_when_inventory_becomes_non_empty() -> void:
 
 func test_does_not_reappear_same_day_after_dismissal() -> void:
 	_time.current_day = 1
-	EventBus.store_entered.emit(&"electronics")
-	_inventory.set_stock(&"electronics", ["item_1"])
-	EventBus.inventory_updated.emit(&"electronics")
+	EventBus.store_entered.emit(&"retro_games")
+	_inventory.set_stock(&"retro_games", ["item_1"])
+	EventBus.inventory_updated.emit(&"retro_games")
 	assert_false(_overlay.visible, "Precondition: cue dismissed")
-	_inventory.set_stock(&"electronics", [])
-	EventBus.store_entered.emit(&"electronics")
+	_inventory.set_stock(&"retro_games", [])
+	EventBus.store_entered.emit(&"retro_games")
 	assert_false(
 		_overlay.visible,
 		"Cue should not reappear same day after it was dismissed"
@@ -109,7 +109,7 @@ func test_does_not_reappear_same_day_after_dismissal() -> void:
 
 func test_hides_on_day_transition() -> void:
 	_time.current_day = 1
-	EventBus.store_entered.emit(&"electronics")
+	EventBus.store_entered.emit(&"retro_games")
 	assert_true(_overlay.visible, "Precondition: cue is visible")
 	EventBus.day_started.emit(2)
 	assert_false(
@@ -120,10 +120,10 @@ func test_hides_on_day_transition() -> void:
 
 func test_inventory_update_for_other_store_does_not_dismiss() -> void:
 	_time.current_day = 1
-	EventBus.store_entered.emit(&"electronics")
+	EventBus.store_entered.emit(&"retro_games")
 	assert_true(_overlay.visible, "Precondition")
-	_inventory.set_stock(&"rentals", ["tape_1"])
-	EventBus.inventory_updated.emit(&"rentals")
+	_inventory.set_stock(&"test_store_b", ["dummy_item"])
+	EventBus.inventory_updated.emit(&"test_store_b")
 	assert_true(
 		_overlay.visible,
 		"Updates to a non-active store should not dismiss the cue"
@@ -180,7 +180,7 @@ func test_does_not_appear_after_tutorial_completed_when_inventory_filled() -> vo
 
 func test_hides_when_suppressing_step_starts_after_visible() -> void:
 	_time.current_day = 1
-	EventBus.store_entered.emit(&"electronics")
+	EventBus.store_entered.emit(&"retro_games")
 	assert_true(_overlay.visible, "Precondition: cue is visible")
 	EventBus.tutorial_step_changed.emit("stock_shelf")
 	assert_false(

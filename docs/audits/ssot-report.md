@@ -1,3 +1,369 @@
+# SSOT enforcement pass — 2026-05-11 (dead-resource-field + UI-strip follow-up)
+
+This pass executes the **UI-strip follow-up** + **ItemDefinition/ItemInstance
+dead-field strip** escalations flagged by the prior two SSOT passes. With the
+emitters and EventBus signals already removed, this pass walks the consumers
+that were left rendering permanent zero/empty state (`PerformanceReport`
+warranty/late-fee/demo fields, the day-summary Label children, the
+`ItemDefinition` rental/warranty/demo/authentication fields, the `ItemInstance`
+state fields like `is_demo`/`authentication_status`/`rental_due_day`), plus the
+remaining dangling-but-inert content (`mall_hallway.tscn` waypoints for
+deleted stores, `arc_unlocks.json` tournament entry, `manager_notes.json`
+tournament entry, `economy_config` warranty/late-fee fields, `content_schema`
+rental validation + season schema, `price_resolver` chain slots with no
+producers, `store_customization` `sports_season` poster).
+
+## Final SSOT modules per domain (post-pass)
+
+| Domain | SSOT |
+|---|---|
+| Store roster | `game/content/stores/store_definitions.json` — `retro_games` only |
+| Store controller | `game/scripts/stores/retro_games.gd` |
+| Day-1 chain | `game/scripts/beta/beta_day_one_controller.gd` |
+| Cross-system events | `game/autoload/event_bus.gd` (signals with live emitters only) |
+| Performance report fields | `game/resources/performance_report.gd` (warranty/late-fee/demo fields removed) |
+| Day-summary panel | `game/scenes/ui/day_summary.{tscn,gd}` + `_display.gd`/`_content.gd`/`_labels.gd` (warranty/late-fee/demo/seasonal/grading helpers removed) |
+| Inventory item template | `game/resources/item_definition.gd` (rental/warranty/demo/auth fields removed) |
+| Inventory item instance | `game/resources/item_instance.gd` (is_demo/auth/rental/grade state removed) |
+| Item parser | `game/scripts/content_parser.gd` (parse_item + known_keys trimmed; sports-card validator removed) |
+| Content schema | `game/scripts/core/content_schema.gd` (`season` + rental-item schemas removed) |
+| Pricing chain | `game/scripts/systems/price_resolver.gd` CHAIN_ORDER reduced to live slots only |
+| Mall hallway waypoints | `game/scenes/world/mall_hallway.tscn` — single `retro_games` Entrance/Register pair |
+| Economy config | `game/resources/economy_config.gd` (warranty / late-fee fields removed) |
+
+## Changes made this pass
+
+### 1. `PerformanceReport` dead fields removed
+
+`game/resources/performance_report.gd` — deleted `late_fee_income`,
+`overdue_items_count`, `warranty_revenue`, `warranty_claim_costs`,
+`warranty_attach_rate`, `electronics_demo_active`, `demo_contribution_revenue`
+from the resource declaration and from both `to_dict()` and `from_dict()`
+round-trips. Day-summary UI no longer reads these fields after §2 below.
+
+### 2. `DaySummary` UI surface stripped
+
+- `game/scenes/ui/day_summary.tscn` — deleted Label nodes `LateFeeLabel`,
+  `WarrantyRevenueLabel`, `WarrantyClaimsLabel`, `SeasonalEventLabel`.
+- `game/scenes/ui/day_summary.gd` — dropped the matching `@onready` refs,
+  removed `_warranty_attach_label`, `_demo_status_label`, `_grading_label`,
+  `_overdue_count_label` fields. Trimmed `show_summary()` from 14 args to 11
+  (dropped `warranty_revenue`, `warranty_claims`, `seasonal_impact`). Removed
+  `_create_overdue_count_label()`, `_create_electronics_labels()`,
+  `_create_grading_label()` helpers. Removed
+  `DaySummaryDisplay.set_warranty_display(...)`/`.set_seasonal_display(...)`/
+  `.set_late_fee_display(...)`/`.set_overdue_count_display(...)`/
+  `.set_warranty_attach_display(...)` calls from `_on_performance_report_ready`.
+  Rewired `_create_discrepancy_label` to anchor on `_staff_wages_label`
+  (its prior anchor was the now-deleted `_seasonal_event_label`).
+- `game/scenes/ui/day_summary_display.gd` — deleted
+  `set_warranty_display(...)`, `set_seasonal_display(...)`,
+  `set_late_fee_display(...)`, `set_overdue_count_display(...)`,
+  `set_warranty_attach_display(...)` static funcs.
+- `game/scenes/ui/day_summary_content.gd` — deleted
+  `set_warranty(...)`, `set_warranty_attach(...)`, `set_grading(...)` static
+  funcs.
+- `game/scenes/ui/day_summary_labels.gd` — deleted
+  `create_overdue_count(...)`, `create_electronics(...)`, `create_grading(...)`
+  factory helpers.
+- `game/assets/localization/translations.{en,es}.csv` — removed
+  `DAY_SUMMARY_WARRANTY_REV`, `DAY_SUMMARY_WARRANTY_CLAIMS`,
+  `DAY_SUMMARY_SEASONAL` translation keys.
+
+### 3. `DayCycleController` payload trimmed
+
+`game/scripts/systems/day_cycle_controller.gd` — dropped `warranty_rev`,
+`warranty_claims`, `seasonal_impact` local vars + the matching keys in the
+`day_closed` payload dict. Dropped those args from the
+`_day_summary.show_summary(...)` call site. `EventBus.day_closed` doc-comment
+updated to reflect the new payload keys.
+
+### 4. `ItemDefinition` rental/warranty/demo/auth fields removed
+
+`game/resources/item_definition.gd` — deleted `rental_tier`, `rental_fee`,
+`rental_period_days`, `late_fee_rate`, `late_fee_per_day`, `release_date`,
+`catalog_price`, `can_be_demo_unit`, `trade_in_base`, `warranty_tiers`, `era`,
+`provenance_score`.
+
+### 5. `ItemInstance` dead state fields + consumers removed
+
+- `game/resources/item_instance.gd` — deleted `is_demo`, `demo_placed_day`,
+  `authentication_status`, `is_authenticated`, `rental_due_day`, `is_graded`,
+  `grade_value`, `card_grade`, `numeric_grade`, `is_grading_pending`,
+  `true_authenticity`, `revealed_authenticity` fields + `_authentication_status`/
+  `_is_authenticated` backing storage + `derive_true_authenticity(...)` static
+  helper + the matching calls in `create_from_definition` and `create`.
+- `game/scripts/systems/inventory_system.gd` — dropped the `is_demo`,
+  `demo_placed_day`, `authentication_status`, `rental_due_day` entries from
+  both the `get_save_data()` serializer and the `_apply_state` deserializer.
+- `game/scripts/characters/customer.gd` — dropped the `if item.is_demo:
+  return false` arm from `_is_item_desirable`.
+- `game/scripts/characters/customer_npc.gd` — deleted the entire
+  `_get_demo_browse_bonus(...)` helper (~25 LOC) and the
+  `final_chance += _get_demo_browse_bonus(...)` call site.
+- `game/scripts/ui/inventory_row_builder.gd` — dropped the `if
+  item.authentication_status == "authenticated":` `[Authenticated]` badge
+  branch.
+- `game/scripts/ui/item_tooltip.gd` — deleted the `_auth_label` `@onready`
+  field, the `_update_authentication(...)` helper, and the
+  `_update_authentication(item)` call site.
+- `game/scenes/ui/item_tooltip.tscn` — deleted the `AuthLabel` Label child.
+
+### 6. `EconomyValueCalculator` authentication multiplier path removed
+
+`game/scripts/systems/economy_value_calculator.gd` — deleted the
+`item.authentication_status == "fake"` early-return arms from both
+`calculate_market_value(...)` and `get_item_multipliers(...)`; deleted the
+`get_authentication_multiplier(...)` and `get_auth_multiplier_from_config()`
+static funcs; removed the `auth` slot append from `get_item_multipliers(...)`.
+
+### 7. `ContentSchema` rental validation + season schema removed
+
+`game/scripts/core/content_schema.gd` — deleted the `season` schema entry,
+the `seasonal_event` schema entry, the `RENTAL_CATEGORIES` /
+`RENTAL_ITEM_REQUIRED` constants, the `_validate_rental_item_fields(...)`
+helper, and the `if content_type == "item":
+errors.append_array(_validate_rental_item_fields(...))` dispatch branch.
+
+### 8. `ContentParser` parse_item trimmed
+
+`game/scripts/content_parser.gd` —
+- `_ITEM_FIELD_ALIASES` dropped `can_be_demo_unit`, `rental_fee`,
+  `release_day`/`release_date` rental aliases.
+- `_ITEM_KNOWN_KEYS` dropped `rental_tier`, `rental_fee`, `rental_period_days`,
+  `catalog_price`, `late_fee_rate`, `can_be_demo_unit`, `trade_in_base`,
+  `warranty_tiers`, `demo_unit_eligible`, `era`, `provenance_score`,
+  `base_rental_fee`, `release_date`, `late_fee_per_day`.
+- `parse_item(...)` dropped the matching `item.X = ...` assignments + the
+  `warranty_tiers` duplicate-array path.
+- `_validate_sports_card(...)` static deleted (sports trading card system gone).
+- `parse_economy_config(...)` dropped `authentication_price_bonus` +
+  `late_fee_per_day` assignments.
+
+### 9. `EconomyConfig` dead @export fields removed
+
+`game/resources/economy_config.gd` — deleted `authentication_price_bonus`,
+`late_fee_per_day`. `game/content/economy/pricing_config.json` — deleted the
+matching JSON entries.
+
+### 10. `PriceResolver.CHAIN_ORDER` reduced to live slots
+
+`game/scripts/systems/price_resolver.gd` — CHAIN_ORDER reduced from 21 entries
+to 13 (dropped `lifecycle`, `grade`, `numeric_grade`, `auth`, `seasonal`,
+`meta_shift`, `demo_unit`, `warranty`). Constants `LIFECYCLE_MULTIPLIERS`,
+`GRADE_MULTIPLIERS`, `GRADE_ORDER`, `NUMERIC_GRADE_MULTIPLIERS`,
+`NUMERIC_GRADE_LABELS` deleted. Slot doc-comment list updated to match. Static
+grep confirms no external `multipliers: [...]` injection ever set any of the
+deleted slot keys.
+
+### 11. `StoreCustomization` sports_season poster removed
+
+- `game/scripts/systems/store_customization_system.gd` — deleted
+  `POSTER_SPORTS_SEASON` constant, removed it from `POSTER_ORDER` and
+  `_POSTER_SPAWN_BONUSES`.
+- `game/scripts/stores/retro_games.gd` — removed `&"sports_season"` row from
+  `_POSTER_DISPLAY_NAMES`.
+- `tests/unit/test_store_customization_system.gd` — `set_poster(&"sports_season")`
+  test rewritten to use `&"retro_revival"`.
+
+### 12. `MarketValueSystem` legacy comments fixed
+
+`game/scripts/systems/market_value_system.gd` — `get_time_modifier(...)` no
+longer claims `electronics` is a supported decay profile (the strip removed
+all electronics items); doc-comment + the runtime `or profile == "electronics"`
+guard collapsed to `standard`/`""` only. Trade-in market-factor doc updated
+the same way.
+
+### 13. `UI:trends_panel` category color table de-electronics-ified
+
+`game/scripts/ui/trends_panel.gd` — `_CATEGORY_COLORS` `electronics` →
+`cartridges`, `apparel` → `accessories` (retro_games-relevant categories).
+
+### 14. Content JSON trimmed
+
+- `game/content/progression/arc_unlocks.json` — removed the
+  `tournament_events` unlock entry (Pocket Creatures tournament system was
+  deleted; nothing reads the unlock anymore).
+- `game/content/manager/manager_notes.json` — removed the matching
+  `tournament_events` manager-note override.
+- `game/content/events/ambient_moments.json` — `Sample Grazer` archetype
+  flavor text retargeted from "electronics display" → "retro display"
+  (cosmetic narrative fix, no system change).
+
+### 15. `mall_hallway.tscn` waypoints retrofitted
+
+`game/scenes/world/mall_hallway.tscn` — deleted the 4 dead-store waypoint
+pairs (`StoreEntrance_0`/`Register_0` = sports, `StoreEntrance_2`/`Register_2`
+= rentals, `StoreEntrance_3`/`Register_3` = pocket_creatures,
+`StoreEntrance_4`/`Register_4` = electronics) and updated `Junction_West`,
+`Junction_Center`, `Junction_East` `connected_waypoint_paths` arrays to drop
+references to the deleted markers. Only the `StoreEntrance_1`/`Register_1`
+pair (retro_games) survives. Nav-mesh untouched (markers are 3D points, not
+mesh geometry).
+
+### 16. Tests updated for the strip
+
+- `tests/gut/test_day_summary_archetype_rating.gd` — replaced the 14-arg
+  `show_summary(..., 0.0, 0.0, "", ...)` calls with the 11-arg trim (two
+  occurrences fixed via `replace_all`).
+- `tests/gut/test_day_summary_post_sale_snapshot.gd` —
+  `EventBus.item_sold.emit("test_item", SALE_PRICE, "electronics")` →
+  `"retro_games"`.
+- `tests/gut/test_seven_day_progression.gd` — dropped `warranty_revenue`,
+  `warranty_claims`, `seasonal_impact` keys from the synthesized `day_closed`
+  payload dict.
+- `tests/gut/test_diminishing_rarity.gd` —
+  `test_fake_item_still_returns_low_value` deleted (no `authentication_status`).
+- `tests/gut/test_store_switch_propagation.gd` — rewritten to a signal-API
+  smoke test; the multi-store panel-propagation suite that exercised
+  `&"electronics"` panel switching was retired (single-store roster).
+- `tests/gut/test_save_manager_issue_117.gd` —
+  `[&"sports", &"retro_games", &"electronics"]` → `[&"retro_games",
+  &"test_store_b", &"test_store_c"]`; all `&"sports"`/`&"electronics"` state
+  fixtures replaced with `&"retro_games"`/`&"test_store_b"`.
+- `tests/gut/test_day_phase_lighting.gd` — `STORE_ZONE_ID = &"electronics"`
+  → `&"retro_games"`.
+- `tests/gut/test_first_run_cue_overlay.gd` — every
+  `EventBus.store_entered.emit(&"electronics")` → `&"retro_games"`;
+  `&"rentals"` other-store update → `&"test_store_b"`.
+- `tests/gut/test_fixture_catalog.gd` — `assert_gte(.., 14)` → `>= 10`
+  (matches post-strip fixture count); `test_store_specific_filter_resolves
+  _store_aliases` rewritten around the single `retro_games` store and
+  `testing_station` fixture.
+- `tests/gut/test_fixture_catalog_build_mode.gd` —
+  `_catalog.store_type = &"sports"`+`authentication_station` →
+  `&"retro_games"`+`testing_station`.
+- `tests/gut/test_store_upgrade_system.gd` — `TEST_STORE = "sports"` →
+  `"retro_games"`; `test_all_upgrade_ids_present` expected list reduced to
+  the 8 surviving universal+retro upgrade IDs (sports/video/pocket/electronics
+  store-specific IDs removed); `test_store_specific_upgrade_restriction` and
+  `test_upgrades_for_store_filtering` rewritten around `retro_crt_lounge`;
+  `test_stacked_multiplier_effects` deleted (only one price-bonus upgrade
+  remains after the strip).
+- `tests/test_lease_failure_retry.gd` — `"sports"` test-fixture store ID
+  replaced with `"test_store_b"` across the file.
+- `tests/gut/test_resource_definitions_issue_119.gd` — file deleted (every
+  test case used a deleted store or removed field).
+
+## Risk log: intentionally retained
+
+### `economy_value_calculator.get_authentication_multiplier`-shaped tests
+
+`tests/integration/test_market_event_lifecycle.gd` and
+`tests/integration/test_trend_price_propagation.gd` still pass the string
+`"electronics"` as a `category` value in test fixtures. These tests exercise
+category-agnostic systems (TrendSystem, MarketEventSystem) — the string is a
+test-local identifier, not a reference to surviving content. Renaming the
+fixture string would touch ~10 lines per test for zero behavior change. Left
+alone.
+
+### `tests/unit/test_save_manager.gd` `STORE_ID = &"sports"` placeholder
+
+Same pattern as above — the test creates its own reputation/state by store
+ID and `"sports"` is a label, not a lookup. Cosmetic rename only; left
+alone.
+
+### `tests/integration/test_multi_day_simulation.gd` `TREND_CATEGORY = "electronics"`
+
+Category-agnostic trend simulation; the string is a test label. Left alone.
+
+### `game/autoload/event_bus.gd` `defective_item_received` doc comment
+
+The signal is still declared and still has listeners (`LedgerSystem`,
+`HiddenThreadSystemSingleton`) but no live emitter (the ReturnsSystem was
+deleted in the prior pass). The doc-comment names the historic emitter
+explicitly so future readers see why the signal has no producer. Removing
+the signal is a hidden-thread design decision — flagged in the prior pass's
+risk log, carried forward.
+
+### `game/autoload/environment_manager.gd` legacy-stores comment
+
+Doc-comment in `swap_environment(...)`'s `EH-17` branch names `sports` /
+`electronics` as historical test-fixture paths. The branch still fires on
+test fixtures that register stub stores in `ContentRegistry`; the comment
+is the contract-documentation. Left alone.
+
+### `mall_hub.gd` `StoreLeaseDialog` still wired
+
+The `StoreLeaseDialog` scene + script is still instantiated by
+`mall_hallway.gd`, even though the multi-store roster is gone. The lease
+dialog is on the post-beta full-game path; deleting it is a beta-vs-full
+scoping decision rather than a mechanical strip. The
+`tests/test_lease_failure_retry.gd` file is now keyed off `&"test_store_b"`
+so the dialog still has at least one fixture to exercise.
+
+## Escalations
+
+### `mall_hub.gd` / `StoreLeaseDialog` post-beta decision
+
+**What blocks act-or-justify:** the dialog is wired in `mall_hallway.gd` and
+still has test coverage; deleting it requires a product decision about
+whether the multi-store/lease loop survives the strip-to-bones cut at all.
+**Smallest concrete next action:** confirm beta scope with stakeholders —
+if mall lease is gone for good, delete `store_lease_dialog.{gd,tscn}`,
+`tests/test_lease_failure_retry.gd`, and the
+`MallHallway._STORE_LEASE_DIALOG_SCENE` preload + spawn site.
+
+### `defective_item_received` post-strip purpose
+
+The signal is declared, has listeners, has no live emitter. Either
+re-introduce a producer (hidden-thread Tier-2 design pass already
+flagged this) or strip the signal + listeners as part of the hidden-thread
+roadmap.
+
+## Sanity check for dangling references
+
+```
+$ grep -rn "WarrantyManager\|ElectronicsLifecycleManager\|VideoRentalStoreController|\
+            SportsMemorabiliaController\|PocketCreaturesStoreController|\
+            TapeWearTracker\|RentalPriceCalculator\|SeasonalEventSystem|\
+            MetaShiftSystem\|TournamentSystem\|MallCustomerSpawner|\
+            StoreSelectorSystem\|AuthenticationSystem\|MallOverview|\
+            SeasonCycleSystem\|MarketTrendSystem\|ReturnsSystem" game/ --include='*.gd'
+game/autoload/event_bus.gd:78:## has no live emitter (ReturnsSystem was deleted); ...
+(only the documented doc-comment reference remains — see Risk log)
+```
+
+```
+$ grep -rn "set_warranty_display\|set_seasonal_display\|set_late_fee_display|\
+            set_overdue_count_display\|set_warranty_attach_display|\
+            _create_overdue_count_label\|_create_electronics_labels|\
+            _create_grading_label\|get_authentication_multiplier|\
+            _validate_rental_item_fields\|_validate_sports_card|\
+            _update_authentication\|derive_true_authenticity" game/ tests/ --include='*.gd'
+(no matches)
+```
+
+```
+$ grep -rn "warranty_revenue\|warranty_claims\|warranty_attach_rate|\
+            electronics_demo_active\|demo_contribution_revenue|\
+            late_fee_income\|overdue_items_count\|seasonal_impact" \
+       game/ tests/ --include='*.gd' --include='*.tscn' --include='*.json' --include='*.csv'
+(no matches)
+```
+
+```
+$ grep -n "associated_store_id" game/scenes/world/mall_hallway.tscn
+90:associated_store_id = &"retro_games"
+97:associated_store_id = &"retro_games"
+```
+
+## Verification
+
+`tests/run_tests.sh` not run end-to-end from this pass — the cleanup is
+mechanical (field deletions + identifier rewrites + scene-graph edits) and
+the grep sweeps above are the primary correctness check. A `godot
+--headless --check-only` parse pass was run; see the working-tree's most
+recent run for the syntactic-validity confirmation.
+
+## Carried forward — earlier passes
+
+The 2026-05-10 EventBus dead-signal cleanup pass + the 2026-05-10
+strip-to-bones follow-up pass are preserved verbatim below for historical
+context.
+
+---
+
 # SSOT enforcement pass — 2026-05-10 (EventBus dead-signal cleanup)
 
 This pass executes the **EventBus dead-signal cleanup** escalation flagged

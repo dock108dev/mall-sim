@@ -1,7 +1,6 @@
-## ModalDimOverlay autoload — verifies the dim ColorRect spec from
-## ISSUE-002:
-##   * layer 49 (below modals at 50+, above HUD/rail at ≤40)
-##   * Color(0, 0, 0, 0.45)
+## ModalDimOverlay autoload — verifies the dim ColorRect spec:
+##   * layer 49 (below CTX_MODAL panels at 50+ band, above HUD/rail at ≤40)
+##   * Color(0, 0, 0, 0.55) — perceptibly dark behind any CTX_MODAL panel
 ##   * fades in over 0.15s on CTX_MODAL push, fades out over 0.15s on pop
 ##   * single shared overlay — no stacking on nested modal pushes
 ##   * mouse events pass through (MOUSE_FILTER_IGNORE)
@@ -33,17 +32,20 @@ func after_each() -> void:
 func test_overlay_sits_on_layer_49() -> void:
 	assert_eq(
 		_overlay.layer, 49,
-		"ModalDimOverlay must be on layer 49 (below modals at 50+, above HUD/rail at ≤40)"
+		"ModalDimOverlay must be on layer 49 (below CTX_MODAL panels at 50+ band, above HUD/rail at ≤40)"
 	)
 
 
 func test_overlay_color_is_specified_dim() -> void:
-	# The ColorRect's color holds the spec alpha (0.45). modulate.a is the
-	# fade multiplier on top of that.
+	# The ColorRect's color holds the spec alpha (≥0.5). modulate.a is the
+	# fade multiplier on top of that. 0.55 is the chosen value so the
+	# store background reads as clearly subordinate to any modal.
 	var rect: ColorRect = _overlay.get_node("DimRect") as ColorRect
 	assert_not_null(rect, "DimRect child must exist")
-	assert_eq(rect.color, Color(0.0, 0.0, 0.0, 0.45),
-		"DimRect color must be Color(0, 0, 0, 0.45) per ISSUE-002 spec")
+	assert_eq(rect.color, Color(0.0, 0.0, 0.0, 0.55),
+		"DimRect color must be Color(0, 0, 0, 0.55) — readable dim behind CTX_MODAL panels")
+	assert_gte(rect.color.a, 0.5,
+		"DimRect alpha must be ≥0.5 so the dim is perceptible at default store lighting")
 
 
 func test_overlay_passes_mouse_events_through() -> void:

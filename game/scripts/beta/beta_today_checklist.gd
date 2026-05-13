@@ -1,13 +1,20 @@
 ## Compact bottom-right "Today" checklist for the beta day-1 loop.
 ##
-## Renders every day-1 chain objective simultaneously: pending items show
-## as `• Label`, just-completed items briefly show as `✓ Label` for
-## `COMPLETION_HOLD_SECONDS`, then collapse off the list. Distinct from
-## ObjectiveRail (which surfaces the single active "do this now" beat
-## with a key chip) — this panel is a glanceable progress tracker, not
-## an instruction. The list is never empty before any objective is
-## complete: every chain entry seeds as a pending bullet on `_ready` and
-## on `EventBus.day_started`.
+## Renders only the *active* and *recently-completed* day-1 chain
+## objectives — future steps are hidden until the chain advances to them,
+## so the checklist mirrors the ObjectiveRail step-state model
+## (completed / active / future) instead of front-loading the whole chain
+## at Day 1 start. Distinct from ObjectiveRail (which surfaces the single
+## active "do this now" beat with a key chip + the full step preview as
+## small slots) — this panel is the bottom-right glanceable tracker that
+## never shows future work.
+##
+## Active rows render as `• Label`; just-completed rows briefly show as
+## `✓ Label` for `COMPLETION_HOLD_SECONDS`, then collapse off the list.
+## On `_ready` and `EventBus.day_started` the panel seeds the active
+## row only; subsequent rows appear as the chain advances via
+## `EventBus.objective_changed` (which carries the multi-step `steps`
+## payload from BetaDayOneController).
 ##
 ## Replaces the bleed-through corner footprint of the suppressed
 ## MomentsTray for beta runs. Owned by `BetaDayOneController` (spawned in
@@ -30,7 +37,6 @@ const _HEADER_FONT_SIZE: int = 14
 const _ITEM_FONT_SIZE: int = 13
 const _HEADER_COLOR: Color = Color(1.0, 1.0, 1.0, 0.85)
 const _PENDING_COLOR: Color = Color(1.0, 1.0, 1.0, 0.7)
-const _COMPLETE_COLOR: Color = Color(0.65, 0.92, 0.65, 0.95)
 
 var _container: VBoxContainer
 var _header: Label
@@ -50,6 +56,10 @@ func _ready() -> void:
 	# rename fails at parse time on the EventBus.
 	EventBus.beta_objective_completed.connect(_on_beta_objective_completed)
 	EventBus.day_started.connect(_on_day_started)
+	# Lifts a row out of "future" hidden state when its objective becomes
+	# the active beat. The payload's `steps` array is the SSOT for which
+	# row owns the `active` slot — see BetaDayOneController._build_steps_payload.
+	EventBus.objective_changed.connect(_on_objective_changed)
 
 
 ## Sets the chain entries the checklist will display. Each entry is the
@@ -129,17 +139,43 @@ func _rebuild_items() -> void:
 		child.queue_free()
 	_item_labels.clear()
 	_completed_ids.clear()
-	for entry: Dictionary in _objectives:
-		var obj_id: StringName = StringName(str(entry.get("id", "")))
-		if String(obj_id).is_empty():
-			continue
-		var label: Label = Label.new()
-		label.name = "Item_%s" % String(obj_id)
-		label.text = "%s %s" % [_BULLET, _short_label(entry)]
-		label.add_theme_font_size_override("font_size", _ITEM_FONT_SIZE)
-		label.add_theme_color_override("font_color", _PENDING_COLOR)
-		_container.add_child(label)
-		_item_labels[obj_id] = label
+	# Day starts with only the first chain entry surfaced — every later row
+	# stays hidden until ObjectiveDirector / BetaDayOneController flips it
+	# to "active" via the objective_changed steps payload. Using the first
+	# `_OBJECTIVES` row as the seed mirrors the chain's authoritative order
+	# and keeps the no-rebuild fallback (set_objectives outside the beta
+	# loop) showing a sensible single starting beat.
+	if _objectives.is_empty():
+		return
+	var first_entry: Dictionary = _objectives[0]
+	var first_id: StringName = StringName(str(first_entry.get("id", "")))
+	if String(first_id).is_empty():
+		return
+	_surface_row(first_id)
+
+
+## Adds the row for `objective_id` to the visible list as a pending bullet
+## if it is not already present. Idempotent — re-surfacing a row that is
+## already visible (or already completed) is a no-op so the active step
+## staying active across multiple objective_changed emissions does not
+## flicker the UI.
+func _surface_row(objective_id: StringName) -> void:
+	if String(objective_id).is_empty():
+		return
+	if _container == null:
+		return
+	if _item_labels.has(objective_id):
+		return
+	var entry: Dictionary = _entry_for(objective_id)
+	if entry.is_empty():
+		return
+	var label: Label = Label.new()
+	label.name = "Item_%s" % String(objective_id)
+	label.text = "%s %s" % [_BULLET, _short_label(entry)]
+	label.add_theme_font_size_override("font_size", _ITEM_FONT_SIZE)
+	label.add_theme_color_override("font_color", _PENDING_COLOR)
+	_container.add_child(label)
+	_item_labels[objective_id] = label
 
 
 ## Pulls the per-row copy from the chain entry. Prefers the short
@@ -170,9 +206,41 @@ func _on_beta_objective_completed(objective_id: StringName) -> void:
 	_completed_ids[objective_id] = true
 	var entry: Dictionary = _entry_for(objective_id)
 	label.text = "%s %s" % [_CHECK, _short_label(entry)]
-	label.add_theme_color_override("font_color", _COMPLETE_COLOR)
+	label.add_theme_color_override("font_color", BetaModalTheme.COLOR_ACCENT)
 	var timer: SceneTreeTimer = get_tree().create_timer(COMPLETION_HOLD_SECONDS)
 	timer.timeout.connect(_collapse_item.bind(objective_id))
+
+
+## Tracks the rail's `steps` payload so a chain advance lifts the next
+## row out of hidden-future state without re-seeding the whole list.
+## Walks the steps array and surfaces every entry whose state is `active`
+## or `completed`. Pure-future payloads (e.g. STAGE_VIC_NOTE before the
+## chain starts) leave the panel showing only the seeded first row, so
+## the player never sees the full Day-1 chain at once.
+func _on_objective_changed(payload: Dictionary) -> void:
+	var steps: Array = payload.get("steps", []) as Array
+	if steps.is_empty():
+		return
+	for step: Dictionary in steps:
+		var state: String = str(step.get("state", "future"))
+		if state == "future":
+			continue
+		var step_text: String = str(step.get("text", ""))
+		var entry_id: StringName = _objective_id_for_text(step_text)
+		if String(entry_id).is_empty():
+			continue
+		_surface_row(entry_id)
+
+
+## Reverse-lookup helper — `steps` payload entries carry `text` only, so
+## we resolve back to the `_OBJECTIVES` row id by matching the label.
+## Returns an empty StringName when no row matches (e.g. a payload from
+## outside the beta chain).
+func _objective_id_for_text(step_text: String) -> StringName:
+	for entry: Dictionary in _objectives:
+		if String(entry.get("label", "")) == step_text:
+			return StringName(str(entry.get("id", "")))
+	return StringName("")
 
 
 func _collapse_item(objective_id: StringName) -> void:

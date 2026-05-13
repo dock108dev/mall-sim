@@ -247,6 +247,37 @@ func test_skipped_flag_suppresses_future_step_renders() -> void:
 	)
 
 
+func test_reevaluate_does_not_reslide_when_already_showing_same_prompt() -> void:
+	# Day-1 duplicate-render regression: a rapid series of state-change /
+	# input-focus / modal-queue events must not re-trigger _show_step when the
+	# bar is already displaying the same prompt text. Capture the bar's
+	# offset_top after the first slide settles, fire a second
+	# _reevaluate_visibility, and confirm no fresh tween restarts the slide.
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	_advance_to_platform_match()
+	var bar: PanelContainer = _overlay.get_node("BottomBar")
+	assert_true(bar.visible, "Bar should be visible after first show")
+
+	# Settle the slide-in so offset_top is at the rest position.
+	if _overlay._current_tween and _overlay._current_tween.is_valid():
+		_overlay._current_tween.kill()
+	bar.offset_top = _overlay._rest_offset_top
+	_overlay._current_tween = null
+
+	# Trigger a no-op re-evaluation. With the debounce in place, the overlay
+	# must skip _show_step (no new tween, bar stays put).
+	_overlay._reevaluate_visibility()
+
+	assert_eq(
+		bar.offset_top, _overlay._rest_offset_top,
+		"identical-prompt re-evaluation must not restart the slide-in tween"
+	)
+	assert_null(
+		_overlay._current_tween,
+		"identical-prompt re-evaluation must not create a new tween"
+	)
+
+
 func test_bar_hides_on_tutorial_context_cleared() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	_advance_to_platform_match()

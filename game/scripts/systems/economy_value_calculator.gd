@@ -38,8 +38,6 @@ static func calculate_market_value(
 ) -> float:
 	if not item or not item.definition:
 		return 0.0
-	if item.authentication_status == "fake":
-		return 0.50
 	var base: float = item.definition.base_price
 	var cond_mult: float = ItemInstance.CONDITION_MULTIPLIERS.get(
 		item.condition, 1.0
@@ -56,11 +54,9 @@ static func calculate_market_value(
 	var market_event: float = get_market_event_multiplier(
 		item, market_event_system
 	)
-	var auth: float = get_authentication_multiplier(item)
 	var value: float = (
 		base * cond_mult * rarity_mult
 		* demand * drift * time_mult * trend * market_event
-		* auth
 	)
 	return minf(value, MAX_MARKET_VALUE)
 
@@ -77,8 +73,6 @@ static func get_item_multipliers(
 ) -> Array:
 	if not item or not item.definition:
 		return []
-	if item.authentication_status == "fake":
-		return [{"slot": "auth", "label": "Auth (Fake)", "factor": 0.0, "detail": "item is counterfeit"}]
 	var base: float = item.definition.base_price
 	var cond_mult: float = ItemInstance.CONDITION_MULTIPLIERS.get(item.condition, 1.0)
 	var rarity_mult: float = ItemInstance.calculate_effective_rarity(
@@ -89,7 +83,6 @@ static func get_item_multipliers(
 	var time_mult: float = calc_time_multiplier(item)
 	var trend: float = get_trend_multiplier(item, trend_system)
 	var market_event: float = get_market_event_multiplier(item, market_event_system)
-	var auth: float = get_authentication_multiplier(item)
 	var multipliers: Array = []
 	multipliers.append({
 		"slot": "rarity",
@@ -103,13 +96,6 @@ static func get_item_multipliers(
 		"factor": cond_mult,
 		"detail": item.condition,
 	})
-	if auth != 1.0:
-		multipliers.append({
-			"slot": "auth",
-			"label": "Authentication",
-			"factor": auth,
-			"detail": item.authentication_status,
-		})
 	if demand != DEFAULT_DEMAND:
 		multipliers.append({
 			"slot": "demand",
@@ -162,16 +148,6 @@ static func get_market_event_multiplier(
 	if not market_event_system:
 		return 1.0
 	return market_event_system.get_trend_multiplier(item)
-
-
-static func get_authentication_multiplier(item: ItemInstance) -> float:
-	if item.authentication_status == "authenticated":
-		return get_auth_multiplier_from_config()
-	return 1.0
-
-
-static func get_auth_multiplier_from_config() -> float:
-	return 2.0
 
 
 static func calc_time_multiplier(item: ItemInstance) -> float:

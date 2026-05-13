@@ -1,4 +1,4 @@
-[gd_scene load_steps=118 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=123 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -626,6 +626,33 @@ size = Vector3(0.02, 0.8, 1.0)
 [sub_resource type="StandardMaterial3D" id="employee_board_mat"]
 albedo_color = Color(0.42, 0.30, 0.18, 1)
 roughness = 0.85
+
+; Readability props — additive visual sub-resources used by the
+; ReadabilityProps container at the end of this scene. No collision
+; shapes; no script hooks.
+
+[sub_resource type="BoxMesh" id="readability_floor_island_mesh"]
+size = Vector3(1.0, 0.9, 0.6)
+
+[sub_resource type="BoxMesh" id="readability_wall_poster_mesh"]
+size = Vector3(0.9, 0.6, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="readability_poster_new_releases_mat"]
+albedo_color = Color(0.95, 0.55, 0.25, 1)
+emission_enabled = true
+emission = Color(1.0, 0.72, 0.4, 1)
+emission_energy_multiplier = 0.45
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="readability_poster_retro_revival_mat"]
+albedo_color = Color(0.22, 0.45, 0.7, 1)
+emission_enabled = true
+emission = Color(0.4, 0.62, 0.95, 1)
+emission_energy_multiplier = 0.4
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="readability_bargain_overflow_mesh"]
+size = Vector3(0.3, 0.15, 0.25)
 
 ; ============================================================
 ; Root
@@ -3911,3 +3938,82 @@ script = ExtResource("50_beta_clue")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BetaHiddenClue/Interactable"]
 shape = SubResource("nav_zone_shape")
+
+; ============================================================
+; ReadabilityProps — purely visual atmosphere props (floor display
+; island, wall posters, bargain bin overflow, cart rack product
+; stacks, zone fill lights). No scripts and no CollisionShape3D
+; children so the controller (retro_games.gd) never sees these
+; nodes and the baked navmesh (retro_games_navmesh.tres) is
+; unaffected.
+; ============================================================
+
+[node name="ReadabilityProps" type="Node3D" parent="."]
+
+[node name="ZoneLighting" type="Node3D" parent="ReadabilityProps"]
+
+[node name="NewReleasesZoneFill" type="OmniLight3D" parent="ReadabilityProps/ZoneLighting"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.8, -8.8)
+light_color = Color(1, 0.97, 0.88, 1)
+light_energy = 0.6
+omni_range = 2.5
+
+[node name="OldGenZoneFill" type="OmniLight3D" parent="ReadabilityProps/ZoneLighting"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.4, 2.6, -8.8)
+light_color = Color(0.88, 0.9, 1, 1)
+light_energy = 0.45
+omni_range = 2.0
+
+[node name="FloorDisplayIsland" type="Node3D" parent="ReadabilityProps"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 0, 0.5)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ReadabilityProps/FloorDisplayIsland"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+mesh = SubResource("readability_floor_island_mesh")
+surface_material_override/0 = ExtResource("9")
+
+[node name="WallPosters" type="Node3D" parent="ReadabilityProps"]
+
+[node name="WallPosterA" type="MeshInstance3D" parent="ReadabilityProps/WallPosters"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.95, 2.4, -9.99)
+mesh = SubResource("readability_wall_poster_mesh")
+surface_material_override/0 = SubResource("readability_poster_new_releases_mat")
+
+[node name="WallPosterB" type="MeshInstance3D" parent="ReadabilityProps/WallPosters"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.3, 2.4, -9.99)
+mesh = SubResource("readability_wall_poster_mesh")
+surface_material_override/0 = SubResource("readability_poster_retro_revival_mat")
+
+[node name="BargainBinOverflow" type="Node3D" parent="ReadabilityProps"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, 3.5)
+
+[node name="OverflowA" type="MeshInstance3D" parent="ReadabilityProps/BargainBinOverflow"]
+transform = Transform3D(0.92, 0, 0.39, 0, 1, 0, -0.39, 0, 0.92, -0.78, 0.075, -0.06)
+mesh = SubResource("readability_bargain_overflow_mesh")
+surface_material_override/0 = ExtResource("11")
+
+[node name="OverflowB" type="MeshInstance3D" parent="ReadabilityProps/BargainBinOverflow"]
+transform = Transform3D(0.77, 0, -0.64, 0, 1, 0, 0.64, 0, 0.77, 0.78, 0.075, 0.05)
+mesh = SubResource("readability_bargain_overflow_mesh")
+surface_material_override/0 = SubResource("beta_shelf_item_mat")
+
+[node name="OverflowC" type="MeshInstance3D" parent="ReadabilityProps/BargainBinOverflow"]
+transform = Transform3D(0.98, 0, 0.17, 0, 1, 0, -0.17, 0, 0.98, -0.65, 0.075, 0.62)
+mesh = SubResource("readability_bargain_overflow_mesh")
+surface_material_override/0 = ExtResource("11")
+
+[node name="OverflowD" type="MeshInstance3D" parent="ReadabilityProps/BargainBinOverflow"]
+transform = Transform3D(0.71, 0, 0.71, 0, 1, 0, -0.71, 0, 0.71, 0.66, 0.075, -0.6)
+mesh = SubResource("readability_bargain_overflow_mesh")
+surface_material_override/0 = SubResource("beta_shelf_item_mat")
+
+[node name="CartRackProductStacks" type="Node3D" parent="ReadabilityProps"]
+
+[node name="StackLeftFront" parent="ReadabilityProps/CartRackProductStacks" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 0.0, -9.25)
+
+[node name="StackLeftRear" parent="ReadabilityProps/CartRackProductStacks" instance=ExtResource("31")]
+transform = Transform3D(0.7, 0, 0.7, 0, 1, 0, -0.7, 0, 0.7, -2.0, 0.0, -9.25)
+
+[node name="StackRightFront" parent="ReadabilityProps/CartRackProductStacks" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 0.0, -9.25)

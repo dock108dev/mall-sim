@@ -501,3 +501,153 @@ func test_state_change_in_fp_mode_keeps_top_bar_hidden() -> void:
 		top_bar.visible,
 		"TopBar must remain hidden after a STORE_VIEW transition while FP mode is on"
 	)
+
+
+## Top-center cluster guard: in FP mode the scene-tree ZeroStateHint at
+## offset_top=52 sits next to the reparented TimeLabel and crowds it. FP
+## mode must keep that label hidden and route the hint copy to the new
+## bottom-center sentence slot instead.
+func test_fp_mode_hides_top_center_zero_state_hint() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 0
+	_hud._active_customer_count = 0
+	_hud._refresh_zero_state_hint()
+	var legacy_hint: Label = _hud.get_node("ZeroStateHint") as Label
+	assert_false(
+		legacy_hint.visible,
+		"Top-center ZeroStateHint must stay hidden in FP mode to avoid TimeLabel collision"
+	)
+
+
+func test_fp_mode_creates_bottom_bar_sentence_label() -> void:
+	_hud.set_fp_mode(true)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(
+		sentence, "FP mode must add a bottom-bar sentence label to HUD"
+	)
+
+
+func test_fp_mode_sentence_anchored_bottom_center() -> void:
+	_hud.set_fp_mode(true)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_eq(sentence.anchor_left, 0.5, "Sentence label anchor_left at center")
+	assert_eq(sentence.anchor_right, 0.5, "Sentence label anchor_right at center")
+	assert_eq(sentence.anchor_top, 1.0, "Sentence label anchored to bottom edge")
+	assert_eq(sentence.anchor_bottom, 1.0, "Sentence label anchored to bottom edge")
+	assert_eq(
+		sentence.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER,
+		"Sentence label text must be horizontally centered"
+	)
+
+
+## Regression guard: the FP sentence must sit above the ObjectiveRail's
+## AccentBand (top edge at offset_top=-148 from bottom). If the sentence
+## offset_bottom is greater than -148 it overlaps the rail's content area
+## and competes with the per-step rail readout.
+func test_fp_mode_sentence_above_objective_rail() -> void:
+	_hud.set_fp_mode(true)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_lte(
+		sentence.offset_bottom, -148.0,
+		"Sentence bottom edge must sit at or above the ObjectiveRail AccentBand (-148)"
+	)
+
+
+func test_fp_mode_sentence_shows_stock_hint_when_empty_shelves() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 0
+	_hud._active_customer_count = 0
+	_hud._refresh_zero_state_hint()
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_true(
+		sentence.visible,
+		"Bottom-bar sentence must surface the zero-state hint in FP mode"
+	)
+	assert_eq(
+		sentence.text, "Stock shelves to open the lane.",
+		"Sentence must display the stock-floor hint when shelves are empty"
+	)
+
+
+func test_fp_mode_sentence_shows_waiting_hint_when_no_customers() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 4
+	_hud._active_customer_count = 0
+	_hud._refresh_zero_state_hint()
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_true(sentence.visible)
+	assert_eq(
+		sentence.text, "Waiting for the first customer…",
+		"Sentence must display the waiting-for-customer hint once shelves are stocked"
+	)
+
+
+func test_fp_mode_sentence_hides_when_loop_active() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	_hud._items_placed_count = 4
+	_hud._active_customer_count = 2
+	_hud._refresh_zero_state_hint()
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	assert_not_null(sentence)
+	if sentence == null:
+		return
+	assert_false(
+		sentence.visible,
+		"Sentence must hide when both shelves and customers are present"
+	)
+
+
+func test_disable_fp_mode_hides_bottom_bar_sentence_label() -> void:
+	_hud.set_fp_mode(true)
+	_hud.set_fp_mode(false)
+	var sentence: Label = _hud.get_node_or_null("FpSentenceLabel") as Label
+	if sentence == null:
+		return
+	assert_false(
+		sentence.visible,
+		"Bottom-bar sentence must be hidden after set_fp_mode(false)"
+	)
+
+
+## Backroom-count guard: the beta day-1 chain pumps the back-room delivery
+## count via EventBus.beta_backroom_count_changed; FP mode must keep that
+## readout visible in the top-right stat cluster so the player can still
+## see the pickup tally after the morning delivery.
+func test_fp_mode_back_room_label_reparented_under_hud() -> void:
+	_hud.set_fp_mode(true)
+	assert_eq(
+		_hud._back_room_label.get_parent(), _hud,
+		"BackRoomLabel must be reparented under HUD in FP mode"
+	)
+
+
+func test_fp_mode_back_room_label_visible() -> void:
+	_emit_state(GameManager.State.STORE_VIEW)
+	_hud.set_fp_mode(true)
+	assert_true(
+		_hud._back_room_label.visible,
+		"BackRoomLabel must remain visible in FP mode (beta backroom count)"
+	)
+
+
+func test_fp_mode_back_room_label_anchored_top_right() -> void:
+	_hud.set_fp_mode(true)
+	var lbl: Label = _hud._back_room_label
+	assert_eq(lbl.anchor_left, 1.0, "BackRoomLabel anchored top-right")
+	assert_eq(lbl.anchor_right, 1.0, "BackRoomLabel anchor_right at right edge")

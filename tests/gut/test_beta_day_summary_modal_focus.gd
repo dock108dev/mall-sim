@@ -11,14 +11,19 @@ const BetaDaySummaryPanelScript: GDScript = preload(
 
 
 var _focus: Node
+var _queue: Node
 var _panel: BetaDaySummaryPanel
 
 
 func before_each() -> void:
 	_focus = get_tree().root.get_node_or_null("InputFocus")
+	_queue = get_tree().root.get_node_or_null("ModalQueue")
 	assert_not_null(_focus, "InputFocus autoload required")
+	assert_not_null(_queue, "ModalQueue autoload required")
 	if _focus != null:
 		_focus._reset_for_tests()
+	if _queue != null:
+		_queue._reset_for_tests()
 	_panel = BetaDaySummaryPanelScript.new() as BetaDaySummaryPanel
 	add_child_autofree(_panel)
 
@@ -26,6 +31,8 @@ func before_each() -> void:
 func after_each() -> void:
 	if is_instance_valid(_panel):
 		_panel._reset_for_tests()
+	if _queue != null and is_instance_valid(_queue):
+		_queue._reset_for_tests()
 	if _focus != null and is_instance_valid(_focus):
 		_focus._reset_for_tests()
 
@@ -108,15 +115,25 @@ func test_reputation_line_omitted_when_delta_is_zero() -> void:
 
 	_panel.show_summary(payload)
 
-	var label: RichTextLabel = _panel.get("_metrics_label") as RichTextLabel
-	assert_not_null(label, "Panel must own a _metrics_label")
-	if label == null:
+	# Reputation lives in its own section after the 4-section restructure
+	# so a zero-delta day hides the row and keeps the Money block clean.
+	var rep_label: Label = _panel.get("_reputation_label") as Label
+	assert_not_null(rep_label, "Panel must own a _reputation_label")
+	if rep_label == null:
 		return
 	assert_false(
-		label.text.contains("Reputation"),
-		"Zero-delta day must omit the Reputation line entirely; got: '%s'"
-		% label.text
+		rep_label.visible,
+		"Zero-delta day must hide the Reputation row; visible=%s text='%s'"
+		% [str(rep_label.visible), rep_label.text]
 	)
+	var metrics: RichTextLabel = _panel.get("_metrics_label") as RichTextLabel
+	assert_not_null(metrics)
+	if metrics != null:
+		assert_false(
+			metrics.text.contains("Reputation"),
+			"Money section must not carry the Reputation line; got: '%s'"
+			% metrics.text
+		)
 
 
 func test_reputation_line_renders_positive_delta_with_plus_sign() -> void:
@@ -125,13 +142,15 @@ func test_reputation_line_renders_positive_delta_with_plus_sign() -> void:
 
 	_panel.show_summary(payload)
 
-	var label: RichTextLabel = _panel.get("_metrics_label") as RichTextLabel
-	assert_not_null(label)
-	if label == null:
+	var rep_label: Label = _panel.get("_reputation_label") as Label
+	assert_not_null(rep_label)
+	if rep_label == null:
 		return
+	assert_true(rep_label.visible, "Non-zero delta must render the row")
 	assert_true(
-		label.text.contains("Reputation:") and label.text.contains("+2"),
-		"Positive delta must render as 'Reputation: +N'; got: '%s'" % label.text
+		rep_label.text.contains("Reputation:") and rep_label.text.contains("+2"),
+		"Positive delta must render as 'Reputation: +N'; got: '%s'"
+		% rep_label.text
 	)
 
 
@@ -141,13 +160,15 @@ func test_reputation_line_renders_negative_delta() -> void:
 
 	_panel.show_summary(payload)
 
-	var label: RichTextLabel = _panel.get("_metrics_label") as RichTextLabel
-	assert_not_null(label)
-	if label == null:
+	var rep_label: Label = _panel.get("_reputation_label") as Label
+	assert_not_null(rep_label)
+	if rep_label == null:
 		return
+	assert_true(rep_label.visible)
 	assert_true(
-		label.text.contains("Reputation:") and label.text.contains("-3"),
-		"Negative delta must render as 'Reputation: -N'; got: '%s'" % label.text
+		rep_label.text.contains("Reputation:") and rep_label.text.contains("-3"),
+		"Negative delta must render as 'Reputation: -N'; got: '%s'"
+		% rep_label.text
 	)
 
 

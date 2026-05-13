@@ -52,8 +52,7 @@ func test_all_seven_phase5_milestones_complete_in_order() -> void:
 		EventBus.day_closed.emit(day, {
 			"day": day, "total_revenue": 0.0, "total_expenses": 0.0,
 			"net_profit": 0.0, "items_sold": 0, "rent": 0.0,
-			"net_cash": 0.0, "store_revenue": {}, "warranty_revenue": 0.0,
-			"warranty_claims": 0.0, "seasonal_impact": "",
+			"net_cash": 0.0, "store_revenue": {},
 			"discrepancy": 0.0, "staff_wages": 0.0,
 		})
 		EventBus.day_ended.emit(day)

@@ -614,8 +614,6 @@ func _evaluate_current_shelf() -> void:
 func _is_item_desirable(item: ItemInstance) -> bool:
 	if not item.definition or not profile:
 		return false
-	if item.is_demo:
-		return false
 	var item_price: float = item.player_set_price
 	if item_price <= 0.0:
 		item_price = item.get_current_value()

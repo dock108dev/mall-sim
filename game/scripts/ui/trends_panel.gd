@@ -6,9 +6,9 @@ const PANEL_NAME: StringName = &"trends"
 
 const _CATEGORY_COLORS: Dictionary = {
 	"collectibles": Color("#D4A017"),
-	"electronics": Color("#2E86C1"),
 	"games": Color("#1E8449"),
-	"apparel": Color("#7D3C98"),
+	"cartridges": Color("#2E86C1"),
+	"accessories": Color("#7D3C98"),
 }
 const _DEFAULT_BADGE_COLOR: Color = Color("#7F8C8D")
 

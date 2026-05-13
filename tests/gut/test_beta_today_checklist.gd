@@ -73,20 +73,57 @@ func test_header_reads_today_with_no_day_one_prefix() -> void:
 	)
 
 
-func test_all_four_objectives_seed_as_bullets_on_construction() -> void:
-	# AC: "even before any objective is complete, all four items appear as
-	# bullets" — the list is never empty.
+func test_only_first_objective_seeds_at_construction() -> void:
+	# AC (ISSUE-006): the checklist must NOT display all four chain entries
+	# simultaneously at Day 1 start. Only the first row (the active beat)
+	# is surfaced; later rows lift in as the chain advances.
 	var checklist: BetaTodayChecklist = _make_checklist()
 	assert_eq(
-		checklist.get_visible_item_count(), _OBJECTIVES.size(),
-		"All four chain entries must render as bullet rows at construction"
+		checklist.get_visible_item_count(), 1,
+		"Only the active beat must seed at construction (not the full chain)"
 	)
-	for entry: Dictionary in _OBJECTIVES:
-		var obj_id: StringName = StringName(str(entry.get("id", "")))
+	var first_id: StringName = StringName(str(_OBJECTIVES[0].get("id", "")))
+	assert_eq(
+		checklist.get_item_glyph(first_id), "•",
+		"First row '%s' must render with a bullet glyph" % String(first_id)
+	)
+	for i: int in range(1, _OBJECTIVES.size()):
+		var obj_id: StringName = StringName(str(_OBJECTIVES[i].get("id", "")))
 		assert_eq(
-			checklist.get_item_glyph(obj_id), "•",
-			"Pending row '%s' must render with a bullet glyph" % String(obj_id)
+			checklist.get_item_glyph(obj_id), "",
+			"Future row '%s' must stay hidden at construction" % String(obj_id)
 		)
+
+
+func test_objective_changed_lifts_active_step_into_visible_list() -> void:
+	# AC: chain advance flips a future row into the active visible list.
+	# The controller emits the steps payload via objective_changed; the
+	# checklist surfaces the row whose state is "active".
+	var checklist: BetaTodayChecklist = _make_checklist()
+	EventBus.objective_changed.emit({
+		"text": "Day 1: Check today's back room stock.",
+		"action": "Check inventory",
+		"key": "E",
+		"steps": [
+			{"text": "Day 1: Help the customer at the register.", "state": "completed"},
+			{"text": "Day 1: Check today's back room stock.", "state": "active"},
+			{"text": "Day 1: Put a few items on the used games shelf.", "state": "future"},
+			{"text": "Day 1: Close the day at the register.", "state": "future"},
+		],
+	})
+	await get_tree().process_frame
+	assert_eq(
+		checklist.get_item_glyph(&"back_room_inventory"), "•",
+		"Active back-room row must surface as a pending bullet after the chain advances"
+	)
+	assert_eq(
+		checklist.get_item_glyph(&"stock_shelf"), "",
+		"stock_shelf must remain hidden while it is still 'future'"
+	)
+	assert_eq(
+		checklist.get_item_glyph(&"close_day"), "",
+		"close_day must remain hidden while it is still 'future'"
+	)
 
 
 func test_item_label_strips_day_one_prefix() -> void:
@@ -142,15 +179,18 @@ func test_completed_row_collapses_after_hold_window() -> void:
 		checklist.get_item_glyph(&"talk_to_customer"), "",
 		"Row must collapse off the list after the completion hold"
 	)
+	# The other rows are still hidden (no objective_changed has surfaced
+	# them yet), so the visible count drops to zero after the seeded row
+	# collapses.
 	assert_eq(
-		checklist.get_visible_item_count(), _OBJECTIVES.size() - 1,
-		"Remaining rows count must drop by exactly one after collapse"
+		checklist.get_visible_item_count(), 0,
+		"Visible count must drop to zero after the seeded row collapses"
 	)
 
 
-func test_other_rows_remain_pending_after_one_completion() -> void:
-	# AC1: showing all four objectives simultaneously — completing one
-	# row must not flip the others.
+func test_unsurfaced_rows_stay_hidden_after_one_completion() -> void:
+	# AC: future rows do not appear until the chain advances. Completing
+	# the first row must NOT auto-surface later rows.
 	var checklist: BetaTodayChecklist = _make_checklist()
 	EventBus.beta_objective_completed.emit(&"talk_to_customer")
 	await get_tree().process_frame
@@ -158,28 +198,29 @@ func test_other_rows_remain_pending_after_one_completion() -> void:
 		&"back_room_inventory", &"stock_shelf", &"close_day"
 	]:
 		assert_eq(
-			checklist.get_item_glyph(obj_id), "•",
-			"Row '%s' must remain a bullet while another row is completing" % String(obj_id)
+			checklist.get_item_glyph(obj_id), "",
+			"Row '%s' must stay hidden until objective_changed surfaces it" % String(obj_id)
 		)
 
 
 # ── day_started reset ─────────────────────────────────────────────────────────
 
-func test_day_started_reseeds_all_four_bullet_rows() -> void:
+func test_day_started_reseeds_only_the_first_row() -> void:
 	# Day-2 entry must repopulate the checklist so it never reaches Day 2
-	# with a stale empty list.
+	# with a stale empty list — but only the first row reseeds (consistent
+	# with the no-front-loaded-checklist rule). Later rows surface via
+	# objective_changed as Day-2 progresses.
 	var checklist: BetaTodayChecklist = _make_checklist()
 	EventBus.beta_objective_completed.emit(&"talk_to_customer")
 	await get_tree().process_frame
 	EventBus.day_started.emit(2)
 	await get_tree().process_frame
 	assert_eq(
-		checklist.get_visible_item_count(), _OBJECTIVES.size(),
-		"day_started must rebuild every chain entry as a pending row"
+		checklist.get_visible_item_count(), 1,
+		"day_started must reseed only the first row, not the full chain"
 	)
-	for entry: Dictionary in _OBJECTIVES:
-		var obj_id: StringName = StringName(str(entry.get("id", "")))
-		assert_eq(
-			checklist.get_item_glyph(obj_id), "•",
-			"After day_started, row '%s' must reseed as a bullet" % String(obj_id)
-		)
+	var first_id: StringName = StringName(str(_OBJECTIVES[0].get("id", "")))
+	assert_eq(
+		checklist.get_item_glyph(first_id), "•",
+		"After day_started, the first row must reseed as a bullet"
+	)

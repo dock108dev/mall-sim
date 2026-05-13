@@ -48,6 +48,11 @@ func _ready() -> void:
 	_body_label = RichTextLabel.new()
 	_body_label.fit_content = true
 	_body_label.scroll_active = false
+	# §F-S13 — bbcode MUST stay disabled. `_on_queued_open` binds
+	# `event_data.get("body", "")` from `customer_events.json` content; with
+	# BBCode disabled the text renders verbatim. Flipping this to `true`
+	# without first escaping `[` → `[lb]` at the binding site would expose
+	# `[url=…]` / `[img=res://…]` / `[font=…]` injection from content.
 	_body_label.bbcode_enabled = false
 	_body_label.custom_minimum_size = Vector2(0, 110)
 	_body_label.add_theme_color_override("default_color", BetaModalTheme.COLOR_TEXT_PRIMARY)
@@ -59,6 +64,18 @@ func _ready() -> void:
 
 
 func show_event(event_data: Dictionary) -> void:
+	# Decision cards share the DAY_SUMMARY priority tier with the day-end
+	# summary — they're the player's blocking decision points, and only one
+	# is ever live at a time in a given day. Payload-driven setup runs in
+	# `_on_queued_open` so a deferred dispatch still renders the right event.
+	enqueue(
+		ModalQueue.Priority.DAY_SUMMARY,
+		{"event": event_data},
+	)
+
+
+func _on_queued_open(payload: Dictionary) -> void:
+	var event_data: Dictionary = payload.get("event", {}) as Dictionary
 	_title_label.text = str(event_data.get("title", "Decision"))
 	_body_label.text = str(event_data.get("body", ""))
 	for child: Node in _choices_box.get_children():
@@ -78,7 +95,6 @@ func show_event(event_data: Dictionary) -> void:
 			(choice.get("effects", {}) as Dictionary)
 		))
 		_choices_box.add_child(button)
-	open()
 
 
 func _on_choice_pressed(choice_id: StringName, effects: Dictionary) -> void:

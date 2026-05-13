@@ -1,8 +1,8 @@
-# Documentation Consolidation Pass — 2026-05-10
+# Documentation Consolidation Pass — 2026-05-11
 
-Working-tree-driven documentation review on `beta/strip-to-bones`. Goal:
-every active-doc statement is verifiable from current code, config, or CI;
-nothing else exists.
+Working-tree-driven documentation review on `beta/strip-to-bones`. Goal: every
+active-doc statement is verifiable from current code, config, or CI; nothing
+else exists.
 
 Scope: `README.md` plus everything under `docs/`. Out of scope by rule:
 `BRAINDUMP.md` (customer voice) and the per-pass audit reports under
@@ -10,238 +10,209 @@ Scope: `README.md` plus everything under `docs/`. Out of scope by rule:
 `error-handling-report.md`, `security-report.md`, `ssot-report.md`,
 `YYYY-MM-DD-audit.md`).
 
-This pass extends the prior `2026-05-10` review (which had reconciled the
-five-store→one-store and autoload churn drift inside the root docs) by
-pruning the **orphaned planning trees and stale subdocs** that root docs
-no longer reference, and by reconciling `docs/content-data.md` against the
-current `game/content/` tree.
+The prior pass (2026-05-10, recorded below in earlier git history) deleted the
+orphaned planning trees (`docs/production/`, `docs/archive/`,
+`docs/design/`, four `docs/architecture/*` wave-1 docs) and rewrote
+`docs/content-data.md` against the on-disk content tree. This pass is a
+verification sweep over the surviving doc set against the current code.
 
 ## Summary
 
-Net delta in the working tree: **64 markdown files removed**, **1 rewritten**,
-**1 index trimmed**. No new files added.
+One verified drift surfaced: the **`ModalQueue` autoload** (declared at
+`project.godot:52` between `InputFocus` and `ModalDimOverlay`, source at
+`game/autoload/modal_queue.gd`) was missing from the
+`docs/architecture.md` autoload table and unmentioned in the
+`docs/architecture/ownership.md` modal-stack row. The autoload is real and
+load-bearing — `game/autoload/scene_router.gd:85` and `:112` call
+`ModalQueue.clear()` before every scene swap, and the `ModalPanel` base
+class routes `CTX_MODAL` push/pop through `ModalQueue.request_open` and
+`notify_closed`.
 
-Git-tracked delta is smaller: only `docs/content-data.md`,
-`docs/index.md`, and `docs/audits/docs-consolidation.md` move in the index.
-The 64 deleted markdowns under `docs/production/`, `docs/archive/`,
-`docs/design/`, and the four `docs/architecture/*` files were untracked
-working-tree files left over from the pre-strip planning era —
-`git ls-files docs/` confirms only 19 docs were ever tracked. Removing
-them aligns the working tree with the tracked set so future passes do not
-re-discover stale planning artifacts.
-
-The active doc set had drifted in four concrete ways the prior pass deferred:
-
-1. **`docs/production/`** — six `WAVE1_*` planning docs plus 55
-   `github-issues/issue-NNN.md` files plus `DEPENDENCY_MAP.md` and one
-   `planning-notes/` stub. All premised on the pre-strip "143 items / 5
-   stores / 21 customers" production plan. Zero links from `README.md`,
-   `docs/index.md`, or any active root doc. Deleted wholesale.
-2. **`docs/archive/`** — 54 period-research / design-pattern dossier
-   markdowns. The prior pass left them in place but flagged them
-   non-load-bearing in `docs/index.md`. They are not referenced by any
-   active root doc, by code, or by CI. Deleted wholesale — the customer
-   voice and forward design work continue to live in `BRAINDUMP.md` at the
-   repo root, which is explicitly out of scope.
-3. **`docs/architecture/EVENTBUS_SIGNALS.md`,
-   `docs/architecture/EVENTBUS_SIGNAL_CATALOG.md`,
-   `docs/architecture/MARKET_VALUE_FORMULA.md`,
-   `docs/architecture/RESOURCE_CLASS_SPEC.md`** — wave-1 / "M1 first
-   playable" / cycle-21 production-era artifacts. Each describes a
-   pre-strip world ("143 items", "5 store types", "issue-024 / issue-050
-   land", "DATA_MODEL.md"). The authoritative source for signal names is
-   `game/autoload/event_bus.gd`; for the typed-resource roster it is
-   `docs/content-data.md` plus the `game/resources/*.gd` class files.
-   Deleted.
-4. **`docs/design/`** subdirectory (`CONTENT_SCALE.md`,
-   `CUSTOMER_AI.md`, `ECONOMY_BALANCE.md`, `EVENTS_AND_TRENDS.md`,
-   `MALL_LAYOUT.md`, `PROGRESSION.md`, `UI_SPEC.md`) — all written
-   against the five-store / 143-item / walkable-mall world. `design.md`
-   at the top level already covers the active player loop, the single
-   shipping store, the progression model, and the visual anti-patterns;
-   the subdir was redundant where accurate and false where not. Directory
-   deleted.
-
-A fifth correction: **`docs/content-data.md`** had a top-level config-file
-list naming `market_trends_catalog.json`, `meta_shifts.json`,
-`pocket_creatures_cards.json` (all deleted) and a content-tree row mixing
-`stores/` references to `electronics.json`, `video_rental_config.json`,
-`pocket_creatures/` subdir, and `sports_cards/`. Rewritten against the
-current `game/content/` tree.
+Two files updated. No deletions. No new files.
 
 ## Edits applied
 
-### Deletions
+### `docs/architecture.md` — autoload table row added
 
-```
-docs/architecture/EVENTBUS_SIGNALS.md
-docs/architecture/EVENTBUS_SIGNAL_CATALOG.md
-docs/architecture/MARKET_VALUE_FORMULA.md
-docs/architecture/RESOURCE_CLASS_SPEC.md
-docs/design/CONTENT_SCALE.md
-docs/design/CUSTOMER_AI.md
-docs/design/ECONOMY_BALANCE.md
-docs/design/EVENTS_AND_TRENDS.md
-docs/design/MALL_LAYOUT.md
-docs/design/PROGRESSION.md
-docs/design/UI_SPEC.md
-docs/design/                          (now empty)
-docs/production/WAVE1_API_CONTRACTS.md
-docs/production/WAVE1_BATCHES.md
-docs/production/WAVE1_IMPLEMENTATION_GUIDE.md
-docs/production/WAVE1_IMPLEMENTATION_ORDER.md
-docs/production/WAVE1_IMPLEMENTATION_SEQUENCE.md
-docs/production/WAVE1_PREFLIGHT.md
-docs/production/planning-notes/sports-legendary-item.md
-docs/production/planning-notes/
-docs/production/github-issues/DEPENDENCY_MAP.md
-docs/production/github-issues/issue-001.md … issue-088.md  (55 files)
-docs/production/github-issues/
-docs/production/
-docs/archive/*.md                     (54 files)
-docs/archive/research/                (empty)
-docs/archive/
-```
+Inserted `ModalQueue` as row 27 between `InputFocus` (row 26) and
+`ModalDimOverlay` (now row 28), matching the position in
+`project.godot:[autoload]`. Subsequent row numbers shifted +1 (final row
+count 43 → 44). The "Five entries are scenes" preamble is still accurate
+(scene autoloads: `ObjectiveRail`, `InteractionPrompt`, `MorningNotePanel`,
+`MiddayEventCard`, `FailCard`).
 
-### `docs/content-data.md` — rewritten
+Row contents:
 
-- Current content layout table rebuilt against the on-disk tree:
-  `items/retro_games.json` is the only item catalog;
-  `stores/store_definitions.json` is the single SSOT roster file with
-  the per-store `stores/retro_games.json` and `stores/retro_games/grades.json`;
-  the full subdir set is `customers/`, `economy/`, `events/`, `endings/`,
-  `manager/`, `meta/`, `progression/`, `onboarding/`, `staff/`,
-  `suppliers/`, `unlocks/`, plus the new `beta/days/` and `beta/events/`
-  trees consumed by `BetaDayOneController`.
-- Top-level content files trimmed to the actual set: `audio_registry.json`,
-  `day_beats.json`, `fixtures.json`, `haggle_dialogue.json`,
-  `objectives.json`, `platforms.json`, `tutorial_contexts.json`,
-  `upgrades.json`. Removed mentions of `market_trends_catalog.json`,
-  `meta_shifts.json`, `pocket_creatures_cards.json`.
-- "Type detection" `ignore` bucket updated to match
-  `game/autoload/data_loader.gd::_TYPE_ROUTES` (added
-  `personality_data`, `archetypes_data`, `platforms_data`,
-  `manager_notes_data`, `onboarding_config_data`,
-  `tutorial_contexts_data`, `retro_games_grades_data`, `beta_day_data`,
-  `beta_events_data`; removed `regulars_threads_data` from being treated
-  as singleton — it routes to `ignore`).
-- Singleton/specialized configs bucket now includes `day_beats_data`,
-  which is its own route in the table.
-- Validation list dropped the seasonal-event row (no
-  `target_store_types` validator for a seasonal-event type that no
-  longer exists in the route table).
-- "Non-resource content" list trimmed: dropped the dead "seasonal config
-  / named seasons / electronics config / video rental config /
-  pocket-creatures pack-config" bullets; added beta day/event files as
-  the live example of `BetaDayOneController` reading content directly.
-- Runtime-access example renamed from `"Sports"` to `"Retro Games"`.
+> `ModalQueue` | `game/autoload/modal_queue.gd` — priority-ordered FIFO that
+> grants `CTX_MODAL` to one `ModalPanel` at a time; cleared by
+> `SceneRouter` before every scene swap
 
-### `docs/index.md` — trimmed
+Source: `project.godot:52`, `game/autoload/modal_queue.gd:1-50`,
+`game/autoload/scene_router.gd:83-86,106-112`.
 
-The Boundary section's pointer to `docs/archive/` as "non-load-bearing
-reference notes" was deleted alongside the directory itself. The
-Boundary section now records only the active root: `README.md` plus
-`BRAINDUMP.md` (customer voice, out of scope).
+### `docs/architecture/ownership.md` — row 5 expanded
 
-No edits to the section listings — they did not link to any of the
-deleted subdocs (the only docs/architecture link is `ownership.md`,
-which remains).
+Row 5 ("Input focus / modal ownership") previously named only
+`InputFocus` plus a generic "modal panels (push/pop on open/close)"
+caller. Rewrote to:
+
+- Spell out `ModalQueue` as the mediator that owns `CTX_MODAL` dispatch
+  (priority enum `DAY_SUMMARY → VIC_NOTE → TUTORIAL → TOAST →
+  PASSIVE_HUD` — verbatim from `modal_queue.gd:29-35`).
+- Record `SceneRouter`'s `ModalQueue.clear()` call as part of the
+  transition contract (so the modal stack cannot survive a scene swap).
+- Move modal panels from "push/pop directly" to "route through
+  `ModalQueue.request_open`" in the accepted-callers column.
+- Add `ModalPanel`-bypass patterns to the forbidden column
+  (`ModalQueue.notify_closed` / `cancel` called from non-panel code, or
+  `CTX_MODAL` pushed outside `ModalQueue` dispatch).
+
+Source: `game/autoload/modal_queue.gd:1-50`, `game/autoload/scene_router.gd:83-112`,
+`game/autoload/input_focus.gd:18-21`.
 
 ## Statements verified, no edit needed
 
-- **`docs/architecture.md`** — the prior pass had reconciled the 43-row
-  autoload table, the five init tiers, the boot flow, and the scene
-  entry points. Spot-checked against `project.godot:[autoload]`,
-  `game/scenes/world/game_world.gd::initialize_systems`, and
-  `game/scripts/core/boot.gd::initialize`. Still current.
-- **`docs/architecture/ownership.md`** — row 2 already names the single
-  `retro_games.gd` controller. Other rows match the live owners.
-- **`docs/design.md`** — already collapsed to single-store; Section 4
-  names `GameManager.DEFAULT_STARTING_STORE = &"retro_games"`; Section 7
-  anti-patterns match `ui_theme_constants.gd` and the live shader/
-  material paths.
-- **`docs/style/visual-grammar.md`** — already collapsed to the single
-  `STORE_ACCENT_RETRO_GAMES` constant.
-- **`docs/configuration-deployment.md`** — input-action list, save
-  caps, export presets, CI workflow steps, and Godot version all match
-  `project.godot`, `.github/workflows/*.yml`, and
-  `game/scripts/core/save_manager.gd`.
-- **`docs/testing.md`** — `tests/run_tests.sh` resolution order,
-  `.gutconfig.json` keys, and CI job list match the on-disk files.
-- **`docs/contributing.md`** — `.editorconfig` summary, naming
-  conventions, and content-ID regex all match.
-- **`docs/setup.md`** — Godot resolution, `boot.tscn`, helper scripts
-  match.
-- **`docs/retro_games_interactable_matrix.md`** — every row points at
-  scene paths under `game/scenes/stores/retro_games.tscn`, methods on
-  `game/scripts/stores/retro_games.gd`, and tests under
-  `tests/gut/test_retro_games_*.gd`. All exist.
-- **`docs/beta/validation_checklist.md`** — interactable prompts and
-  screenshot-harness flow match `game/scripts/beta/`.
-- **`README.md`** — engine version `4.6.2`, run command, export paths,
-  validator list, and `/docs` links all current. The pointer list
-  references docs that still exist; no link rot.
+Spot-checked the following against the current working tree. All match.
+
+- **`README.md`** — engine version `4.6.2`, entry scene path,
+  `bash tests/run_tests.sh`, validator names
+  (`validate_translations.sh`, `validate_single_store_ui.sh`,
+  `validate_tutorial_single_source.sh`), export-preset paths, and `/docs`
+  link list all match `project.godot`, `tests/run_tests.sh`, and
+  `export_presets.cfg`.
+- **`docs/index.md`** — every linked doc still exists; the Boundary
+  section's claim that `README.md` is the only active root doc plus
+  `BRAINDUMP.md` (out of scope) holds.
+- **`docs/setup.md`** — Godot-binary resolution order (`GODOT`,
+  `GODOT_EXECUTABLE`, `godot` on PATH, two macOS install paths) matches
+  `tests/run_tests.sh:10-30` and `scripts/godot_exec.sh`.
+  `bash scripts/godot_import.sh` exists. The `bash tests/run_tests.sh`
+  step list matches.
+- **`docs/architecture.md`** — boot flow steps 1-7 line up with
+  `game/scripts/core/boot.gd::initialize()`; the wrapper at
+  `game/scenes/bootstrap/boot.gd` exists (one-line
+  `extends "res://game/scripts/core/boot.gd"`). GameWorld init tiers 1-5
+  exist as `initialize_tier_1_data` …
+  `initialize_tier_5_meta` at `game/scenes/world/game_world.gd:245,256,281,338,345`,
+  with `finalize_system_wiring` at `:396`; tier 2 returns `bool` as
+  documented. Scene-entry-point table paths all exist. The hub-mode
+  description (`debug/walkable_mall=false`, `_setup_hub_mode`,
+  `apply_pending_session_state` emits
+  `EventBus.enter_store_requested(GameManager.DEFAULT_STARTING_STORE)`)
+  matches `game/scenes/world/game_world.gd:1188-1226` and
+  `game/autoload/game_manager.gd:11` (`DEFAULT_STARTING_STORE = &"retro_games"`).
+  EventBus signal-prefix table (`store_`, `day_`, `customer_`, `inventory_`,
+  etc.) and the `run_state_changed()` mirror match `event_bus.gd`.
+- **`docs/architecture/ownership.md`** — all eight non-modal rows
+  verified against source:
+  - Row 1: `SceneRouter._in_flight`, `change_scene_to_file/_packed`,
+    `tree_changed` + `process_frame` await, `scene_ready` / `scene_failed`
+    all present in `game/autoload/scene_router.gd:28-146`.
+  - Row 2: `StoreDirector.enter_store` state machine
+    `IDLE → REQUESTED → LOADING_SCENE → INSTANTIATING → VERIFYING → READY`
+    matches `game/autoload/store_director.gd:34-50,68-146`.
+  - Row 3: per-store controller is `game/scripts/stores/retro_games.gd`
+    extending `game/scripts/stores/store_controller.gd`.
+  - Row 4: `CameraAuthority.request_current`, the `cameras` group, and
+    `assert_single_active()` match `game/autoload/camera_authority.gd:27-88`.
+  - Row 6: `GameState` autoload at `game/autoload/game_state.gd`.
+  - Row 7: `HUD` is `game/scenes/ui/hud.gd`.
+  - Row 8: `StoreRegistry` at `game/autoload/store_registry.gd`.
+  - Row 9: `AuditLog.pass_check` / `fail_check` exist at
+    `game/autoload/audit_log.gd:21+`.
+  - Row 10: `EventBus` mirror-signal claim matches the live signal
+    declarations in `event_bus.gd`.
+- **`docs/design.md`** — Section 4 store-roster table has the single
+  `retro_games` entry; `GameManager.DEFAULT_STARTING_STORE` is the
+  canonical id. The visual anti-pattern list cross-references
+  `BuildModeCamera`, `mat_outline_highlight.tres`, and
+  `ui_theme_constants.gd` — all exist.
+- **`docs/content-data.md`** — full `game/content/` tree (`audio_registry.json`,
+  `beta/days/day_01.json`, `beta/days/day_02.json`,
+  `beta/events/customer_events.json`, `beta/events/hidden_thread_events.json`,
+  the 5 `customers/*.json`, `economy/{difficulty_config,pricing_config}.json`,
+  `endings/ending_config.json`, `events/{ambient_moments,market_events,random_events}.json`,
+  `fixtures.json`, `haggle_dialogue.json`, `items/retro_games.json`,
+  `manager/manager_notes.json`, `meta/regulars_threads.json`,
+  `objectives.json`, `onboarding/onboarding_config.json`, `platforms.json`,
+  `progression/{arc_unlocks,milestone_definitions}.json`,
+  `staff/staff_definitions.json`,
+  `stores/{retro_games,store_definitions}.json` plus `stores/retro_games/grades.json`,
+  `suppliers/supplier_catalog.json`, `tutorial_contexts.json`,
+  `unlocks/unlocks.json`, `upgrades.json`) matches the doc tables.
+  `_TYPE_ROUTES` `ignore` bucket in `game/autoload/data_loader.gd:47-62`
+  matches the doc's `ignore` list verbatim. The empty `game/content/localization/`
+  directory and the `MAX_JSON_FILE_BYTES = 1048576` cap (`data_loader.gd:7`)
+  match. ContentRegistry ID regex matches `^[a-z][a-z0-9_]{0,63}$` in code.
+- **`docs/testing.md`** — `tests/run_tests.sh` step list and the
+  `.gutconfig.json` keys (`prefix`, `suffix`, `should_exit`,
+  `should_exit_on_success`, `pre_run_script`) are accurate. The five CI
+  jobs (`lint-docs`, `gut-tests`, `interaction-audit`,
+  `content-originality`, `lint-gdscript`) all appear as `jobs:` entries
+  in `.github/workflows/validate.yml`.
+- **`docs/configuration-deployment.md`** — every input-action group is
+  present in `project.godot:[input]`; `MAX_MANUAL_SLOTS = 3` and
+  `MAX_SAVE_FILE_BYTES = 10485760` match
+  `game/scripts/core/save_manager.gd`; the three export-preset paths
+  (`exports/windows/MallcoreSim.exe`, `exports/macos/MallcoreSim.zip`,
+  `exports/linux/MallcoreSim.x86_64`) match `export_presets.cfg`; the
+  `4.6.2-stable` install line is in both workflows. The `Shelf Life`
+  vs. `Mallcore Sim` naming dual-callout is honest about the
+  `config/name` / preset disagreement in code.
+- **`docs/contributing.md`** — `.editorconfig` rules, naming
+  conventions, content-ID regex, and the `bash tests/run_tests.sh` entry
+  point all check out.
+- **`docs/retro_games_interactable_matrix.md`** — every numbered row's
+  scene path resolves under `game/scenes/stores/retro_games.tscn` and
+  every named handler exists on `game/scripts/stores/retro_games.gd`.
+- **`docs/style/visual-grammar.md`** — `STORE_ACCENT_RETRO_GAMES`
+  (`#E8A547`, `Color(0.910, 0.647, 0.278, 1.0)`), the four `FONT_SIZE_*`
+  constants (`14`, `18`, `24`, `32`), and `DARK_PANEL_FILL`,
+  `SEMANTIC_SUCCESS`, `SEMANTIC_INFO` are all present in
+  `game/scripts/ui/ui_theme_constants.gd`. The dormant
+  `store_accent_{electronics,pocket_creatures,sports_cards,video_rental}.tres`
+  files are still on disk under `game/themes/` with no `STORE_ACCENT_*`
+  constant reference, matching the doc.
+- **`docs/beta/validation_checklist.md`** — interactable prompts, F10
+  screenshot path pattern, and the customer-event id
+  `day01_wrong_console_parent` (in
+  `game/content/beta/events/customer_events.json`) all match.
 
 ## Statements removed as unverifiable
 
-The whole-file deletions listed above remove the following claims wholesale
-from the active doc set:
-
-- "143 items across 5 store types" (CONTENT_SCALE, RESOURCE_CLASS_SPEC,
-  several WAVE1 docs, multiple github-issues files).
-- "wave-1 signal additions pre-populated by issue-088"
-  (EVENTBUS_SIGNALS, EVENTBUS_SIGNAL_CATALOG).
-- "All five store types are available" / "player starts with one store of
-  their choice" (PROGRESSION).
-- "All stores are affected — events work across all 5 store types"
-  (EVENTS_AND_TRENDS).
-- "M1 First Playable: market_value = base_price × condition_multiplier"
-  (MARKET_VALUE_FORMULA — the formula has not been the canonical
-  reference since the live `market_value_system.gd` and `price_resolver.gd`
-  diverged from it, and the doc's "Future (M2+)" framing was
-  production-planning text not architecture).
-- Per-issue acceptance criteria, dependency maps, and implementation
-  ordering for every issue-NNN file under `docs/production/github-issues/`.
-
-The content-data.md rewrite specifically removes:
-
-- Top-level config files `market_trends_catalog.json`, `meta_shifts.json`,
-  `pocket_creatures_cards.json` (all deleted on this branch).
-- `stores/` subdir mentions of `electronics.json`,
-  `video_rental_config.json`, `pocket_creatures/` directory,
-  `sports_cards/` directory, and "tournament and sports-season catalogs".
-- The non-resource bullet about "seasonal config, named seasons,
-  electronics config, video rental config, pocket-creatures pack-config".
+None this pass. The prior 2026-05-10 sweep removed the orphaned planning
+trees; nothing new in the surviving doc set surfaced as drift beyond the
+`ModalQueue` gap above.
 
 ## Intentional gaps
 
+- **`config/name="Shelf Life"` vs. export preset
+  `application/name="Mallcore Sim"`** — both names are recorded in
+  `docs/configuration-deployment.md` rather than picking one. The strings
+  genuinely disagree in code/config (`project.godot:17` vs.
+  `export_presets.cfg` per-preset `application/name`). Reconciling them
+  is a code-side decision that a docs pass cannot make.
 - **`docs/audits/2026-05-05-audit.md` and `2026-05-06-audit.md`** — left
-  as-is. These are interaction-audit table snapshots regenerated by
-  `tests/audit_run.sh` / the `interaction-audit` CI job, and overwriting
-  them by hand would clash with the next CI run.
-- **`config/name="Shelf Life"` vs export-preset
-  `application/name="Mallcore Sim"`.** Still records both rather than
-  picking one — the strings genuinely disagree in code/config, and a docs
-  pass cannot fix that. Filed for a future code change.
+  untouched. These are interaction-audit table snapshots regenerated by
+  `tests/audit_run.sh` / the `interaction-audit` CI job; hand-edits
+  would race the next CI run.
 - **`KNOWN_ORPHAN_SIGNALS` allowlist** in
-  `tests/gut/test_eventbus_signal_compat.gd` is the live receipt for the
-  intentional orphan signals in `event_bus.gd`; the deleted
-  `EVENTBUS_SIGNAL_CATALOG.md` was claiming to be that receipt, but the
-  test file is the actual contract. No replacement doc was written — the
-  test plus the inline comments on `event_bus.gd:14–30` document the
-  policy.
-- **No replacement doc was written for the deleted `docs/design/`
-  subdir or `docs/architecture/EVENTBUS_*` / `MARKET_VALUE_FORMULA`
-  pages.** The active roots (`docs/design.md`, `docs/architecture.md`,
-  `docs/content-data.md`) already cover the surface that is verifiable
-  from code today. Adding new docs to replace removed ones would
-  re-introduce the same drift risk. If a future content slice
-  reintroduces store-specific design surfaces, they should be added next
-  to `docs/retro_games_interactable_matrix.md` as per-store
-  reference docs, not as a parallel `docs/design/` tree.
+  `tests/gut/test_eventbus_signal_compat.gd` remains the live receipt
+  for intentional orphan signals in `event_bus.gd`. No replacement doc
+  was written — the test plus the inline comments on `event_bus.gd` are
+  the actual contract.
+- **`MallHub` named in `ownership.md` rows 1 and 4 accepted-callers
+  columns.** The script attached to `mall_hallway.tscn` is
+  `class_name MallHallway` (not `MallHub`); the walkable variant is
+  gated by `debug/walkable_mall=false` and not part of the shipping flow.
+  The columns describe a conceptual responsibility ("the mall hub
+  scene's controller") rather than a specific class name, and the
+  walkable mall is dormant anyway. Left as-is to avoid implying the
+  walkable variant is a live caller surface; if the variant is revived
+  the column should be updated to `MallHallway` at the same time the
+  caller wiring is added back.
 
 ## Escalations
 
-None. Every finding was acted on (deletion or in-place rewrite) or
-recorded above under "Intentional gaps" with the specific reason it was
-not actioned.
+None. Every finding was acted on (in-place edit) or recorded above under
+"Intentional gaps" with the specific reason it was not actioned.

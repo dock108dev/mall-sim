@@ -55,14 +55,10 @@ var _anim_tween: Tween
 var _overlay_tween: Tween
 var _stagger_tween: Tween
 var _continue_tween: Tween
-var _grading_label: Label
 var _current_day: int = 0
 var _discrepancy_label: Label
-var _overdue_count_label: Label
 var _story_beat_label: Label
 var _forward_hook_label: Label
-var _warranty_attach_label: Label
-var _demo_status_label: Label
 var _total_customers_label: Label
 var _customer_breakdown_label: Label
 var _record_high_revenue: float = 0.0
@@ -100,15 +96,11 @@ var _pending_vic_comment: String = ""
 @onready var _cash_balance_label: Label = $Root/Panel/Margin/VBox/CashBalanceLabel
 @onready var _top_item_label: Label = $Root/Panel/Margin/VBox/TopItemLabel
 @onready var _haggle_label: Label = $Root/Panel/Margin/VBox/HaggleLabel
-@onready var _late_fee_label: Label = $Root/Panel/Margin/VBox/LateFeeLabel
-@onready var _warranty_revenue_label: Label = $Root/Panel/Margin/VBox/WarrantyRevenueLabel
-@onready var _warranty_claims_label: Label = $Root/Panel/Margin/VBox/WarrantyClaimsLabel
 @onready var _customers_served_label: Label = $Root/Panel/Margin/VBox/CustomersServedLabel
 @onready var _satisfaction_label: Label = $Root/Panel/Margin/VBox/SatisfactionLabel
 @onready var _reputation_delta_label: Label = $Root/Panel/Margin/VBox/ReputationDeltaLabel
 @onready var _tier_change_label: Label = $Root/Panel/Margin/VBox/TierChangeLabel
 @onready var _staff_wages_label: Label = $Root/Panel/Margin/VBox/StaffWagesLabel
-@onready var _seasonal_event_label: Label = $Root/Panel/Margin/VBox/SeasonalEventLabel
 @onready var _employee_metrics_header: Label = $Root/Panel/Margin/VBox/EmployeeMetricsHeader
 @onready var _customer_satisfaction_label: Label = $Root/Panel/Margin/VBox/CustomerSatisfactionLabel
 @onready var _customer_satisfaction_bar: ProgressBar = (
@@ -152,9 +144,7 @@ func _ready() -> void:
 	_main_menu_button.pressed.connect(_on_main_menu_pressed)
 	_replay_button.pressed.connect(_on_replay_pressed)
 	_create_discrepancy_label()
-	_create_overdue_count_label()
 	_create_narrative_labels()
-	_create_electronics_labels()
 	_create_customer_breakdown_labels()
 	DaySummaryDisplay.apply_headline_order(
 		_revenue_label, _top_item_label, _forward_hook_label
@@ -187,9 +177,6 @@ func show_summary(
 	net_profit: float,
 	items_sold: int,
 	rent: float = 0.0,
-	warranty_revenue: float = 0.0,
-	warranty_claims: float = 0.0,
-	seasonal_impact: String = "",
 	discrepancy: float = 0.0,
 	staff_wages: float = 0.0,
 	archetype: String = "",
@@ -206,9 +193,7 @@ func show_summary(
 	_last_summary_args = {
 		"day": day, "revenue": revenue, "expenses": expenses,
 		"net_profit": net_profit, "items_sold": items_sold,
-		"rent": rent, "warranty_revenue": warranty_revenue,
-		"warranty_claims": warranty_claims,
-		"seasonal_impact": seasonal_impact,
+		"rent": rent,
 		"discrepancy": discrepancy, "staff_wages": staff_wages,
 		"archetype": archetype, "floor_stars": floor_stars,
 		"attention_notes": attention_notes,
@@ -220,20 +205,10 @@ func show_summary(
 	_expenses_label.text = tr("DAY_SUMMARY_EXPENSES") % expenses
 	_set_net_profit_display(net_profit)
 	_items_sold_label.text = tr("DAY_SUMMARY_ITEMS_SOLD") % items_sold
-	DaySummaryDisplay.set_warranty_display(
-		_warranty_revenue_label, _warranty_claims_label,
-		warranty_revenue, warranty_claims
-	)
-	DaySummaryDisplay.set_seasonal_display(_seasonal_event_label, seasonal_impact)
 	_set_discrepancy_display(discrepancy)
 	DaySummaryDisplay.set_staff_wages_display(_staff_wages_label, staff_wages)
 	_tier_change_label.visible = false
 	_haggle_label.visible = false
-	_late_fee_label.visible = false
-	if _overdue_count_label:
-		_overdue_count_label.visible = false
-	if _grading_label:
-		_grading_label.visible = false
 	_apply_vic_comment_display()
 	DaySummaryDisplay.apply_archetype_display(
 		_archetype_separator,
@@ -266,9 +241,6 @@ func show_last() -> void:
 		_last_summary_args.get("net_profit", 0.0),
 		_last_summary_args.get("items_sold", 0),
 		_last_summary_args.get("rent", 0.0),
-		_last_summary_args.get("warranty_revenue", 0.0),
-		_last_summary_args.get("warranty_claims", 0.0),
-		_last_summary_args.get("seasonal_impact", ""),
 		_last_summary_args.get("discrepancy", 0.0),
 		_last_summary_args.get("staff_wages", 0.0),
 		_last_summary_args.get("archetype", ""),
@@ -399,16 +371,14 @@ func _get_stat_row_candidates() -> Array[Control]:
 		_inventory_remaining_label,
 		_backroom_inventory_label, _shelf_inventory_label,
 		_cash_balance_label,
-		_top_item_label, _haggle_label, _late_fee_label,
+		_top_item_label, _haggle_label,
 		_customers_served_label, _satisfaction_label,
 		_reputation_delta_label, _tier_change_label,
 		_staff_wages_label,
-		_warranty_revenue_label, _warranty_claims_label,
-		_seasonal_event_label,
 	]
 	var optional: Array = [
-		_discrepancy_label, _overdue_count_label, _warranty_attach_label,
-		_demo_status_label, _grading_label, _story_beat_label,
+		_discrepancy_label,
+		_story_beat_label,
 		_forward_hook_label, _employee_metrics_header,
 		_customer_satisfaction_label, _customer_satisfaction_bar,
 		_employee_trust_label, _employee_trust_bar,
@@ -528,8 +498,6 @@ func _apply_revenue_headline(revenue: float) -> void:
 
 
 
-
-
 func _kill_all_tweens() -> void:
 	PanelAnimator.kill_tween(_anim_tween)
 	PanelAnimator.kill_tween(_overlay_tween)
@@ -551,14 +519,6 @@ func _set_net_profit_display(net_profit: float) -> void:
 	DaySummaryContent.set_net_profit(_profit_label, net_profit)
 	DaySummaryDisplay.apply_profit_color(_profit_label, net_profit)
 
-
-
-
-
-func _create_overdue_count_label() -> void:
-	_overdue_count_label = DaySummaryLabels.create_overdue_count(
-		$Root/Panel/Margin/VBox, _late_fee_label
-	)
 
 
 
@@ -625,20 +585,12 @@ func _on_day_closed_payload(_day: int, summary: Dictionary) -> void:
 
 func _create_discrepancy_label() -> void:
 	_discrepancy_label = DaySummaryLabels.create_discrepancy(
-		$Root/Panel/Margin/VBox, _seasonal_event_label, _on_discrepancy_input
+		$Root/Panel/Margin/VBox, _staff_wages_label, _on_discrepancy_input
 	)
 
 
 func _set_discrepancy_display(discrepancy: float) -> void:
 	DaySummaryContent.set_discrepancy(_discrepancy_label, discrepancy)
-
-
-func _create_electronics_labels() -> void:
-	var labels: Array = DaySummaryLabels.create_electronics(
-		$Root/Panel/Margin/VBox
-	)
-	_warranty_attach_label = labels[0]
-	_demo_status_label = labels[1]
 
 
 func _create_customer_breakdown_labels() -> void:
@@ -683,10 +635,6 @@ func _set_customer_breakdown_display(shift_summary: Dictionary) -> void:
 	_customer_breakdown_label.text = "\n".join(lines)
 
 
-func _create_grading_label() -> void:
-	_grading_label = DaySummaryLabels.create_grading($Root/Panel/Margin/VBox)
-
-
 func _on_manager_end_of_day_comment(_id: String, body: String) -> void:
 	_pending_vic_comment = body
 
@@ -703,7 +651,6 @@ func _apply_vic_comment_display() -> void:
 
 
 func _create_narrative_labels() -> void:
-	_create_grading_label()
 	_vic_comment_label = DaySummaryLabels.create_vic_comment(
 		$Root/Panel/Margin/VBox
 	)
@@ -774,20 +721,6 @@ func _on_performance_report_ready(
 			)
 	_set_narrative_display(report.story_beat, report.forward_hook)
 	DaySummaryDisplay.set_haggle_display(_haggle_label, report.haggle_wins, report.haggle_losses)
-	DaySummaryDisplay.set_late_fee_display(_late_fee_label, report.late_fee_income)
-	DaySummaryDisplay.set_overdue_count_display(_overdue_count_label, report.overdue_items_count)
-	DaySummaryDisplay.set_warranty_display(
-		_warranty_revenue_label, _warranty_claims_label,
-		report.warranty_revenue, report.warranty_claim_costs
-	)
-	_last_summary_args["demo_contribution_revenue"] = (
-		report.demo_contribution_revenue
-	)
-	DaySummaryDisplay.set_warranty_attach_display(
-		_warranty_attach_label, _demo_status_label,
-		report.warranty_attach_rate, report.electronics_demo_active,
-		report.demo_contribution_revenue
-	)
 	if report.tier_changed:
 		DaySummaryDisplay.set_tier_change_display(
 			_tier_change_label, report.reputation_delta, report.new_tier_name

@@ -1,12 +1,16 @@
-## Day-1 opening modal — shows Vic's morning note before the chain arms.
+## Day-1 opening note — shows Vic's morning note before the chain arms.
 ##
-## Owns the CTX_MODAL frame for the duration of the note (via the
-## `ModalPanel` base) so input cannot reach the world or the chain's
-## interactables until the player has read and dismissed the note.
+## Inherits the `ModalPanel` lifecycle for `ModalQueue` ordering, but does
+## NOT claim CTX_MODAL on InputFocus: the player can move and look around
+## while the note is on screen, mirroring `MorningNotePanel`'s passive-
+## overlay contract. Chain progression stays gated by the controller's
+## `_stage` state rather than the input focus stack, and the ModalDimOverlay
+## does not engage behind the note.
 ##
 ## The "Got it" button grabs keyboard focus on open() so the player can
-## dismiss with Enter or Space without touching the mouse — first
-## interaction is keyboard-only by default.
+## dismiss with Enter or Space without touching the mouse. The panel also
+## responds to the `interact` action (E) and `ui_cancel` (Escape) so all
+## three keyboard paths converge on the same dismiss.
 class_name BetaManagerNotePanel
 extends ModalPanel
 
@@ -14,6 +18,7 @@ signal note_dismissed()
 
 var _body_label: RichTextLabel
 var _dismiss_button: Button
+var _showing: bool = false
 
 
 func _ready() -> void:
@@ -63,14 +68,62 @@ func _ready() -> void:
 	v.add_child(_dismiss_button)
 
 
-## Renders `body` and opens the modal. Grabs focus on the dismiss button so
-## the player can press Enter/Space to dismiss without using the mouse.
+## Renders `body` and opens the modal. Routes through `ModalQueue` at
+## `VIC_NOTE` priority so the note dispatches strictly after any
+## higher-priority panel (e.g. a Day-N-1 summary) has closed. Body text and
+## button focus are applied in `_on_queued_open` so the panel renders the
+## right body even when its dispatch is deferred behind another modal.
+##
+## §F-S9 trust contract — `_body_label.bbcode_enabled = true`. The two
+## callers today are the constants `BetaDayOneController.VIC_NOTE_BODY` and
+## `VIC_NOTE_DAY2_BODY`, both of which intentionally use `[b]…[/b]` markup,
+## so escaping in this function would break the intended copy. Any future
+## caller that passes content-derived or save-derived `body` text must
+## escape `[` → `[lb]` at the call site (see `boot.gd._show_error_panel`
+## and `checkout_panel.gd._set_reasoning_text` for the canonical pattern).
 func show_note(body: String) -> void:
-	_body_label.text = body
-	open()
+	enqueue(ModalQueue.Priority.VIC_NOTE, {"body": body})
+
+
+func _on_queued_open(payload: Dictionary) -> void:
+	# §F-S9 — `_body_label.bbcode_enabled = true` sink. Body must be either a
+	# hardcoded constant with intentional BBCode markup, or pre-escaped at
+	# the call site. See `show_note` docstring.
+	_body_label.text = String(payload.get("body", ""))
+	_showing = true
+	# Grab focus after the panel is visible so the dismiss button can own
+	# keyboard input (Enter / Space) without the player touching the mouse.
 	_dismiss_button.grab_focus()
 
 
 func _on_dismiss_pressed() -> void:
 	close()
 	note_dismissed.emit()
+
+
+## Passive-overlay open path: toggle visibility only, no CTX_MODAL push.
+## The base `_open_from_queue` would push CTX_MODAL — override so the note
+## participates in ModalQueue ordering without freezing the player.
+func _open_from_queue(payload: Dictionary) -> void:
+	visible = true
+	_on_queued_open(payload)
+
+
+## Mirror the open override: close without popping a frame we never pushed.
+## Still notify ModalQueue so the next queued panel can dispatch.
+func close() -> void:
+	visible = false
+	_showing = false
+	ModalQueue.notify_closed(self)
+
+
+## E (interact) and Escape (ui_cancel) both dismiss the note. Mark input as
+## handled so the press cannot also reach a world interactable behind the
+## panel — the player should not accidentally restock a shelf in the same
+## keypress that dismisses the note.
+func _unhandled_input(event: InputEvent) -> void:
+	if not _showing:
+		return
+	if event.is_action_pressed(&"interact") or event.is_action_pressed(&"ui_cancel"):
+		_on_dismiss_pressed()
+		get_viewport().set_input_as_handled()

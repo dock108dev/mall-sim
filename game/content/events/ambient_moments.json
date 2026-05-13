@@ -447,7 +447,7 @@
       "trigger_value": "0.06",
       "scheduling_weight": 0.9,
       "character_name": "Sample Grazer",
-      "flavor_text": "A shopper accepts a demo from the electronics display with the quiet efficiency of someone who has budgeted exactly zero dollars for this but unlimited time. They press every button. They leave nothing broken.",
+      "flavor_text": "A shopper picks up a demo cartridge from the retro display with the quiet efficiency of someone who has budgeted exactly zero dollars for this but unlimited time. They press every button. They leave nothing broken.",
       "audio_cue_id": "",
       "cooldown_days": 2,
       "store_id": "",

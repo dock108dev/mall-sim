@@ -15,6 +15,10 @@ const COLOR_BUTTON_BG: Color = Color(0.157, 0.118, 0.086, 1.0)
 const COLOR_BUTTON_HOVER: Color = Color(0.235, 0.180, 0.118, 1.0)
 const COLOR_BUTTON_BORDER: Color = Color(0.534, 0.420, 0.260, 1.0)
 const COLOR_BUTTON_BORDER_FOCUS: Color = Color(0.910, 0.647, 0.278, 1.0)
+## Soft green for "completed step" treatments (objective rail checkmark
+## prefix, today checklist row glyph). Distinct from the warm gold used for
+## active text so the player parses "done" vs "do this now" at a glance.
+const COLOR_ACCENT: Color = Color(0.4, 0.85, 0.55, 1.0)
 
 
 ## StyleBox for the main modal panel (rounded brown frame on warm-dark fill).

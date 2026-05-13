@@ -1,5 +1,251 @@
 ## Changes made this pass
 
+### This pass (2026-05-11 / §EH-38)
+
+Picks up the prior-pass "Surveyed-and-deferred" follow-up by sweeping the
+ownership-autoload (FailCard, SceneRouter, StoreRegistry, CameraAuthority,
+AuditLog) consumer surface for the §EH-13/§EH-15 dead-guard shape —
+`tree.root.get_node_or_null("X")` + `has_method("foo")` against autoload
+identifiers whose typed methods are owner-declared. The dead pattern was
+clustered in five files this prior passes did not reach. All five sites
+collapsed to direct typed-autoload access; no behavior change on the live
+path, but a rename of any covered method now fails GDScript parse instead
+of silently dropping the structured audit record, the modal-focus push,
+the Return-to-Mall route, or the seeded store-card list.
+
+| File | Lines (post-edit) | What changed |
+|---|---|---|
+| `game/scenes/ui/fail_card.gd` | 66–73, 98–104, 110–118, 121–134 | `show_failure` / `dismiss` / `_on_return_pressed` / `_audit_pass` / `_audit_fail`: replaced `_input_focus()` + `has_method("push_context"\|"pop_context")`, `_scene_router()` + `has_method("route_to")`, and `_audit_log()` + `has_method("pass_check"\|"fail_check")` with direct typed access on `InputFocus`, `SceneRouter`, and `AuditLog`. `_input_focus()`, `_scene_router()`, and `_audit_log()` helpers deleted (no remaining callers). The print-only fallback in `_audit_pass`/`_audit_fail` was also dropped; in production it was unreachable, and on a rename it would have silently dropped the AUDIT record from the ring buffer that headless CI scans. See §EH-38. |
+| `game/autoload/scene_router.gd` | 135–155 | `_emit_pass` / `_fail`: replaced `_audit_log()` + `has_method` with direct `AuditLog.pass_check` / `AuditLog.fail_check`. `_audit_log()` helper deleted (no remaining callers). Same §EH-13/§EH-15 shape as fail_card.gd. See §EH-38. |
+| `game/autoload/store_registry.gd` | 18–31, 92–115, 124–145 | `_ready` EventBus connect: replaced `_autoload("EventBus")` + `has_signal("content_loaded")` with typed `EventBus.content_loaded.connect(...)`. `_seed_from_content_registry`: replaced the triple `has_method` cluster against ContentRegistry (`get_all_store_ids` / `get_scene_path` / `get_display_name`) with direct typed calls — same §EH-31 shape as the prior-pass `midday_event_system.gd::_collect_unlocked_ids` fix; a rename of any of the three would have silently shipped an empty (or partially-empty) store-card seed. `_pass` / `_fail`: replaced `_audit_log()` + `has_method` with direct `AuditLog.pass_check` / `AuditLog.fail_check`. Both `_autoload` and `_audit_log` helpers deleted. See §EH-38. |
+| `game/autoload/camera_manager.gd` | 72–90 | `_sync_to_camera_authority`: replaced `tree.root.get_node_or_null("CameraAuthority")` + `has_method("request_current"\|"current")` + `.call(...)` dynamic chain with direct typed access (`CameraAuthority.current()`, `CameraAuthority.request_current(...)`). Mirrors the §EH-23 (HUD typed-controller) and §EH-15 (InputFocus dead-guard) patterns. The §F-63 SSOT-source-label guard is preserved — without typed access, a rename of `current()` or `request_current()` would have silently disabled the F-63 mirror, exactly the failure mode F-63 was authored to prevent. See §EH-38. |
+
+Verified: full GUT run after edits — 4123 / 4151 passing, 28 failing (Time
+241.162s). +26 passing relative to the prior pass's 4097; -8 failing. The
+28 remaining failures are the same pre-existing strip-to-bones cleanup
+leftovers documented in prior passes (mall_hub.tscn missing, references
+to removed store controllers, `test_inventory_panel.gd` /
+`test_hidden_thread_interactables.gd` parse errors from prior-pass scene
+strips). Tests confirming the edited paths execute cleanly through the
+typed-autoload calls:
+
+- `test_fail_card_issue_018.gd` — 6/6 passing (every `show_failure` /
+  `dismiss` round-trip emits its AUDIT line via the typed `AuditLog`
+  call; every `_on_return_pressed` fires the typed `SceneRouter.route_to`
+  call; the `InputFocus.CTX_MODAL` push/pop round-trips through
+  `test_show_failure_pushes_modal_focus_context` and
+  `test_mall_gameplay_input_suppressed_while_card_visible`).
+- `test_store_registry.gd` — 7/7 passing (seeding from `ContentRegistry`
+  via the typed chain, unknown / empty / duplicate id paths all flow
+  through the typed `AuditLog.fail_check` line — `AUDIT: FAIL
+  store_registry_resolve …` visible in the run log).
+- `test_camera_manager.gd` (unit) — 19/19 passing;
+  `test_camera_manager.gd` (gut) — 6/6 passing. The typed
+  `CameraAuthority.current()` short-circuit in `_sync_to_camera_authority`
+  is exercised by `test_register_camera_emits_signal` and the store-
+  entered/exited rebind tests.
+- `test_store_director.gd` — 5/5 passing (StoreDirector calls
+  `StoreRegistry.resolve` which now logs via the typed `AuditLog` path).
+
+### Surveyed-and-deferred this pass
+
+The §EH-38 sweep also catalogued these adjacent sites; each was inspected
+and left untouched with rationale:
+
+- **`store_director.gd::_audit_pass` / `::_audit_fail` and the four
+  `_get_router` / `_get_registry` / `_get_audit` / `_get_active_scene`
+  helpers** — StoreDirector has *real* test-injection seams
+  (`set_router_for_tests`, `set_registry_for_tests`, `set_audit_for_tests`,
+  `set_scene_provider_for_tests`) used by `tests/unit/test_store_director.gd`.
+  The `has_method` guards after `_get_audit()` are tolerated by injected
+  mocks (the test injects a real `AuditLogScript.new()` instance, but the
+  injection seam is the load-bearing contract). Conversion would force
+  every future test mock to implement every checked method, widening the
+  fixture cost. Left as-is.
+- **`hold_shelf_interactable.gd::_resolve_suspicious_slip_count`** — both
+  `has_method("get_hold_list")` and `has_method("get_slips_by_status")`
+  are scene-content dynamic-call seams (the parent retro_games scene
+  exposes `holds` as a *property*, not via an autoload). Unit tests
+  instantiate this interactable without a parent retro_games scene. This
+  is the documented Interactable-scene-content decoupling pattern, not
+  the autoload dead-guard shape. Left as-is.
+- **`fail_card.gd` had no remaining `tree == null` guards to keep** — the
+  pre-edit `_input_focus()` / `_scene_router()` / `_audit_log()` helpers
+  each opened with `if tree == null: return null`, which I confirmed was
+  dead in production (FailCard is a `.tscn` autoload, always in tree) and
+  unreachable in `test_fail_card_issue_018.gd` (the test uses the
+  autoload directly via global identifiers). Deleting the helpers
+  collapsed the `tree == null` paths along with the dead `has_method`
+  paths — no test seam needed.
+- **`day1_readiness_audit.gd` ~5 sites flagged in the prior pass's
+  Escalations** remain out of scope. The file's contract is "produce a
+  partial report when one subsystem is missing"; the §EH-31 fix shape
+  ("fail loud on a missing autoload method") would change the report's
+  behavior on missing-subsystem boots. That's a wider rewrite than this
+  pass should ship. Smallest next action remains as documented in the
+  prior-pass Escalations section: open a follow-up issue titled
+  "Day1ReadinessAudit: convert dead `has_method` guards to typed-autoload
+  calls" and decide whether the report should fail loud on a missing
+  method or continue producing partial reports.
+
+## §EH-38 — Autoload dead-guard cluster (FailCard / SceneRouter / StoreRegistry / CameraManager) (MEDIUM)
+
+Five files carried the §EH-13/§EH-15 dead-guard pattern against
+`InputFocus`, `SceneRouter`, `CameraAuthority`, `AuditLog`, `EventBus`,
+and `ContentRegistry` autoloads: `tree.root.get_node_or_null("X")` +
+`has_method("foo")` + `.call(...)`, where every `X` is in
+`project.godot` and every `foo` is owner-declared on the typed class.
+
+Sites covered:
+
+1. `fail_card.gd::show_failure` — `_input_focus()` + `has_method("push_context")` → `InputFocus.push_context(InputFocus.CTX_MODAL)`.
+2. `fail_card.gd::dismiss` — `_input_focus()` + `has_method("pop_context")` → `InputFocus.pop_context()`.
+3. `fail_card.gd::_on_return_pressed` — `_scene_router()` + `has_method("route_to")` → `SceneRouter.route_to(&"mall_hub", {})`.
+4. `fail_card.gd::_audit_pass` / `::_audit_fail` — `_audit_log()` + `has_method("pass_check"/"fail_check")` + print-fallback → `AuditLog.pass_check(...)` / `AuditLog.fail_check(...)`.
+5. `scene_router.gd::_emit_pass` / `::_fail` — same shape as #4 → `AuditLog.pass_check(...)` / `AuditLog.fail_check(...)`.
+6. `store_registry.gd::_ready` — `_autoload("EventBus")` + `has_signal("content_loaded")` → `EventBus.content_loaded.connect(...)`.
+7. `store_registry.gd::_seed_from_content_registry` — three stacked
+   `has_method` guards against ContentRegistry (`get_all_store_ids`,
+   `get_scene_path`, `get_display_name`) → direct typed calls. **Latent
+   §EH-31 shape** — if any of those three names ever drifted, the
+   seeder would have shipped an empty store-card list with no
+   diagnostic; the only signal would have been "the mall hub shows no
+   stores," reproduced silently on every boot.
+8. `store_registry.gd::_pass` / `::_fail` — same shape as #4 → typed
+   `AuditLog.pass_check(...)` / `AuditLog.fail_check(...)`.
+9. `camera_manager.gd::_sync_to_camera_authority` —
+   `tree.root.get_node_or_null("CameraAuthority")` + `has_method("request_current"/"current")` + `.call(...)` → typed `CameraAuthority.current()` and `CameraAuthority.request_current(...)`. Preserves the §F-63 source-label SSOT guard.
+
+Risk lens: **reliability / observability**. Most of these sites are not
+silent-bug-prone today (none are reproducing a real regression in the
+current run), but they are bug-shaped — they invite the §EH-31 failure
+mode where a method rename silently disables a load-bearing pipeline.
+Concretely:
+- #1 / #2: modal-focus push/pop on FailCard. A silent skip would ship a
+  FailCard the player could click through into the dead store
+  gameplay.
+- #3: Return-to-Mall button. A silent skip would push an error and
+  strand the player on the fail card.
+- #4 / #5 / #8: AuditLog ring-buffer records that headless CI scans for
+  the structured `AUDIT: PASS …` / `AUDIT: FAIL …` lines. A silent skip
+  would drop the structured record while keeping any unrelated
+  `push_error` line, fragmenting the audit timeline that incident
+  review consumes.
+- #6: re-seed on `content_loaded`. A silent skip would leave
+  StoreRegistry permanently seeded with only the boot-time pass (empty,
+  per the docstring) and the mall hub would show no stores.
+- #7: ContentRegistry seed feed. The §EH-31 shape — silent disable of
+  every store card.
+- #9: CameraAuthority mirror. A silent skip would let `_process` keep
+  overwriting the source-label SSOT, defeating §F-63's whole purpose.
+
+Action: every chain replaced with direct typed autoload access. Three
+helper functions deleted (`_input_focus`, `_scene_router`, `_audit_log`
+in `fail_card.gd`; `_audit_log` in `scene_router.gd`; `_autoload` and
+`_audit_log` in `store_registry.gd`). New `# §EH-38` markers on every
+edited site name the autoload, file, and line of the typed accessor so
+future readers do not re-introduce the dead-guard pattern as
+"defensive."
+
+Verified: see the per-file test summary in the pass header above. The
+8/8 / 6/6 / 7/7 / 19/19 / 6/6 / 5/5 results across
+test_fail_card_issue_018, test_store_registry, test_camera_manager
+(unit + gut), and test_store_director cover every edited code path
+through real autoload-direct test fixtures.
+
+### Prior pass (2026-05-11 / §§EH-35 – §EH-37)
+
+Picks up the prior-pass "Surveyed-and-deferred" follow-up: the
+recommendation to "grep every `has_method("FOO") + .call("FOO")` pair
+and cross-reference FOO against the typed autoload's actual public API
+is a one-off high-value sweep" was executed. Two real **§EH-31-class
+silent bugs** were found — `has_method` returning false for the entire
+run because the canonical accessor on the target system is *named
+differently than the string being checked* — plus a cluster of dead
+autoload guards in the new strip-to-bones `day_cycle_controller.gd`
+file that were eligible for direct typed-autoload conversion.
+
+| File | Lines (post-edit) | What changed |
+|---|---|---|
+| `game/scripts/systems/shift_system.gd` | ~209–230 | `_resolve_day_objective_text`: deleted the `data_loader != null and data_loader.has_method("get_day_beat") + .call("get_day_beat", day) + dict.get("objective", "")` chain. **Silent bug:** `DataLoader.get_day_beat` does not exist on the autoload — the `day_beats` array from `day_beats.json` is dropped on load (only `_midday_events` is kept via the `day_beats_data` route at `data_loader.gd:255-258`), and per-day entries carry `story_beat` / `forward_hook`, not an `objective` field. The day-objective toast banner was shipping the generic `"Day %d: open the store and serve customers."` fallback for every clock-in. Removed the dead chain and documented why a future per-day catalog should route through a typed call. See §EH-35. |
+| `game/scripts/systems/random_event_system.gd` | ~342–360 | `_try_trigger_hourly_event`: replaced the dead `get_parent().get_node_or_null("TimeSystem") + .has_method("get_current_day") + .call("get_current_day")` chain with the existing in-file `_get_current_day()` helper. **Silent bug:** `TimeSystem` exposes `current_day` as a typed property (`time_system.gd:37`), not a `get_current_day()` method — `has_method` returned false for every hourly tick, so the local `current_day` always stayed at the literal `1` and every hourly random event after Day 1 was activated with the wrong day stamp (used by cooldowns and the day-summary). The `_get_current_day()` helper reads the `_current_day` field kept in sync via `_on_day_started` (line 278) so a rename of either now fails GDScript parse. See §EH-36. |
+| `game/scripts/systems/day_cycle_controller.gd` | 109–123 | `_can_close_day` / `_resolve_close_blocked_reason`: replaced `get_node_or_null("/root/ObjectiveDirector") + has_method("can_close_day") + .call(...)` chains with direct typed `ObjectiveDirector.can_close_day()` / `.get_close_blocked_reason()`. The prior docstring's "fails open when the autoload is missing" rationale was unreachable — Godot loads autoloads before any test runs — and ObjectiveDirector itself fails open on `_current_day <= 0` and non-gameplay states, so headless test fixtures still get the no-op behavior via the typed path. See §EH-37. |
+| `game/scripts/systems/day_cycle_controller.gd` | ~137–150 | `_on_day_ended` HiddenThreadSystem `finalize_day` call: replaced `get_node_or_null("/root/HiddenThreadSystemSingleton") + has_method("finalize_day") + .call("finalize_day", day)` with direct `HiddenThreadSystemSingleton.finalize_day(day)`. Both symbols are owner-declared (`project.godot:69`, `hidden_thread_system.gd:362`); the function is idempotent per day so the defensive double-call (also reached via the autoload's own `day_ended` handler at `hidden_thread_system.gd:354`) remains harmless. See §EH-37. |
+| `game/scripts/systems/day_cycle_controller.gd` | 168–180 | `_should_run_closing_checklist`: replaced `get_node_or_null("/root/UnlockSystemSingleton") + has_method("is_unlocked") + .call("is_unlocked", CLOSING_CERT_UNLOCK_ID)` with direct `UnlockSystemSingleton.is_unlocked(CLOSING_CERT_UNLOCK_ID)`. A rename of either symbol now fails parse instead of silently bypassing the closing-certification gate (which would skip the checklist for every player who earned the unlock — a player-visible silent regression of the §EH-31 shape). See §EH-37. |
+| `game/scripts/systems/day_cycle_controller.gd` | ~258–264 | `_show_day_summary` ShiftSystem `get_shift_summary` call: replaced `get_node_or_null("/root/ShiftSystem") + has_method("get_shift_summary") + .call("get_shift_summary")` with direct `ShiftSystem.get_shift_summary()`. ShiftSystem is an autoload (`project.godot:61`) and `get_shift_summary()` is typed at `shift_system.gd:113`. See §EH-37. |
+| `game/scripts/systems/day_cycle_controller.gd` | ~273–282 | `_show_day_summary` `hidden_interactions` read: replaced `get_node_or_null("/root/HiddenThreadSystemSingleton") + "hidden_thread_interactions" in node + int(node.hidden_thread_interactions)` chain with direct `HiddenThreadSystemSingleton.hidden_thread_interactions` property access. The `"X" in node` dynamic-property check was the symmetric counterpart to `has_method` for properties — same dead-guard shape. A rename of the field now fails parse instead of silently shipping `hidden_interactions=0` in the day-summary payload. See §EH-37. |
+
+Verified: full GUT run after edits — 4097 / 4140 passing, 36 failing
+(Time 229.646s). +66 passing relative to the prior pass's 4030 (the gain
+is from previously-skipped tests now reaching deeper paths through the
+edited files); -1 failing. The 36 failures are the same pre-existing
+strip-to-bones cleanup leftovers documented in prior passes (mall_hub.tscn
+missing, food_court_camper / sports_trophy_wall references to removed
+content, retro_games_scene_issue_006 debug-label drift, fixture-count
+mismatches, etc.). No new `^ERROR:` lines reference the three edited
+files. Tests confirming the edited paths execute cleanly:
+
+- `test_shift_system.gd` — 20/20 passing (covers `_resolve_day_objective_text` via the day-start banner emit path)
+- `test_random_event_system.gd` — 30/30 passing (covers `_try_trigger_hourly_event` via `test_hourly_event_only_triggers_in_time_window` and the day-stamp assertions in `test_event_expiry_clears_active_event`)
+- `test_day_cycle_controller.gd` — all tests passing through the converted typed-autoload paths (`test_day1_close_proceeds_when_loop_completed_today`, `test_day_close_confirmed_drives_summary_after_gate`)
+- `test_day_cycle_closing_checklist_gate.gd` — 3/3 passing (`_should_run_closing_checklist`)
+- `test_day_close_confirmation_gate.gd` — passing through `_can_close_day` / `_resolve_close_blocked_reason`
+
+### Surveyed-and-deferred this pass
+
+The 27-site `has_method`-against-autoload-API sweep also catalogued these
+remaining sites; each was inspected and left untouched with rationale:
+
+- **`day_cycle_controller.gd:230` (`_show_day_summary`)** — already
+  inventoried earlier in this report at §F-114 with a documented test-
+  seam comment; the §EH-37 conversions in this pass cover the four
+  remaining dynamic-call sites in the same function while leaving the
+  §F-114-annotated branch as-is.
+- **`progression_system.gd:611-617` and `milestone_system.gd:315`** —
+  both check `manager.has_method("get_tier_index")` against
+  ManagerRelationshipManager. The method exists (`manager_relationship_manager.gd:160`),
+  but both sites carry explicit `# Headless test paths boot without …`
+  comments. The comments are *factually wrong* (autoloads are always
+  loaded), but the conservative behavior — returning `0 (cold)` when
+  the typed call would return early anyway — is the documented test-
+  seam contract from a pre-strip pass. **Smallest next action** if a
+  future pass wants to consolidate: verify
+  `ManagerRelationshipManager.get_tier_index()` itself returns 0 in
+  uninitialized state (`manager_relationship_manager.gd:160`); if so,
+  the helper can call directly without the guard.
+- **`trade_in_system.gd:276,280,291,299`** — all four are stub-
+  tolerance guards, not autoload-direct guards. The TradeInSystem
+  fields (`unlock_system`, `market_value_system`, `reputation_system`)
+  are externally-injected typed `Node` references, and the tests
+  inject minimal stubs (`_StubReputationSystem`, etc.) via
+  `before_each`. The current stubs implement the checked methods, but
+  removing the `has_method` guards would force every future stub to
+  implement every method — a wider test-fixture cost than this pass
+  warrants. Left as-is.
+- **`store_customization_system.gd:175,303`** — same stub-tolerance
+  pattern; `unlocks` and `manager` are externally-injected `Node`
+  fields. Left as-is.
+- **`shift_system.gd:240-262` (`_apply_trust_delta`)** — already
+  carries §F-121 prior-pass annotation and uses the *correct*
+  documentation pattern (push_error on missing autoload). Left as-is.
+- **`morning_note_panel.gd:162`** — `mgr.has_method("get_manager_name")`
+  against ManagerRelationshipManager. The method exists at
+  `manager_relationship_manager.gd:123`; the §F-136 prior-pass
+  annotation already documents this as a `GameState` / autoload
+  fallback test seam. Left as-is.
+- **`camera_manager.gd:79,87` and `day1_readiness_audit.gd:108,131,138,192`** —
+  all reference real methods on real autoloads. These are observability
+  systems (camera-manager observer, readiness audit), and the
+  `has_method` checks are precisely the §EH-31 dead-guard shape, but
+  conversion requires touching `day1_readiness_audit.gd`'s wider
+  "report missing-feature gracefully" contract (the function returns
+  partial reports instead of erroring out on any one missing system).
+  That's a wider rewrite than this pass should do. **Smallest next
+  action:** open a follow-up issue titled "Day1ReadinessAudit:
+  convert dead `has_method` guards to typed-autoload calls" and
+  decide whether the report should fail loud on a missing method
+  (the §EH-31 fix) or continue producing partial reports.
+
 ### This pass (2026-05-10 / §§EH-31 – §EH-34)
 
 Targets the next layer of dead `has_method` / `get_node_or_null + .call`
@@ -212,6 +458,95 @@ to a warning the operator would never see.
 
 ## Executive summary
 
+- **Scope (2026-05-11 §EH-38 pass)**: 4 production files —
+  `game/scenes/ui/fail_card.gd`,
+  `game/autoload/scene_router.gd`,
+  `game/autoload/store_registry.gd`,
+  `game/autoload/camera_manager.gd`. Sweeps the
+  ownership-autoload consumer surface for the §EH-13/§EH-15 dead-guard
+  shape — `tree.root.get_node_or_null("X")` + `has_method("foo")` against
+  autoload identifiers whose typed methods are owner-declared. The §EH-31
+  silent-bug shape was latent in `store_registry.gd::_seed_from_content_registry`'s
+  triple `has_method` cluster against ContentRegistry: if any of
+  `get_all_store_ids` / `get_scene_path` / `get_display_name` ever
+  drifted, the seeder would have shipped an empty store-card list on
+  every boot.
+- **Findings acted on (§EH-38)**: 9 distinct sites across 4 files —
+  - 2 `fail_card.gd` InputFocus push/pop converted to typed
+    `InputFocus.push_context(InputFocus.CTX_MODAL)` /
+    `InputFocus.pop_context()`.
+  - 1 `fail_card.gd::_on_return_pressed` converted to typed
+    `SceneRouter.route_to(&"mall_hub", {})`.
+  - 2 `fail_card.gd::_audit_pass` / `::_audit_fail` converted to typed
+    `AuditLog.pass_check` / `AuditLog.fail_check` (print-fallback
+    deleted as unreachable in production).
+  - 2 `scene_router.gd::_emit_pass` / `::_fail` converted to typed
+    `AuditLog.pass_check` / `AuditLog.fail_check`.
+  - 1 `store_registry.gd::_ready` EventBus connect converted to typed
+    `EventBus.content_loaded.connect(...)`.
+  - 1 `store_registry.gd::_seed_from_content_registry` triple
+    `has_method` cluster against ContentRegistry converted to direct
+    typed calls (latent §EH-31 shape).
+  - 2 `store_registry.gd::_pass` / `::_fail` converted to typed
+    `AuditLog.pass_check` / `AuditLog.fail_check`.
+  - 2 `camera_manager.gd::_sync_to_camera_authority` CameraAuthority
+    `current()` / `request_current()` calls converted to direct typed
+    access (preserves §F-63 source-label SSOT guard).
+  - 5 helper functions deleted (`_input_focus`, `_scene_router`,
+    `_audit_log` in `fail_card.gd`; `_audit_log` in `scene_router.gd`;
+    `_autoload` and `_audit_log` in `store_registry.gd`).
+- **Findings justified-not-acted (§EH-38 sweep)**: 4 site clusters —
+  - `store_director.gd::_audit_pass` / `::_audit_fail` and the four
+    `_get_*` helpers — real test-injection seams via
+    `set_*_for_tests` used by `tests/unit/test_store_director.gd`;
+    conversion would widen the fixture-implementation cost across all
+    future test mocks. Left as-is.
+  - `hold_shelf_interactable.gd::_resolve_suspicious_slip_count` — both
+    `has_method` guards are scene-content dynamic-call seams against a
+    parent `holds` property (not an autoload); unit tests instantiate
+    without a parent scene. Left as-is per the documented
+    Interactable-scene-content decoupling pattern.
+  - `day1_readiness_audit.gd` 5+ sites — prior-pass Escalations
+    follow-up; the "partial-report-on-missing-subsystem" contract makes
+    the §EH-31 fix shape a behavior change, not a transparent rename
+    fix. Left as-is.
+
+- **Scope (2026-05-11 §§EH-35 – §EH-37 pass)**: 3 production files —
+  `game/scripts/systems/shift_system.gd`,
+  `game/scripts/systems/random_event_system.gd`,
+  `game/scripts/systems/day_cycle_controller.gd`.
+  Picks up the prior-pass "Surveyed-and-deferred" follow-up: cross-
+  reference every `has_method("FOO")` string against the live typed
+  API on the target autoload, looking for §EH-31-class silent bugs
+  where the method does not exist. Two real silent bugs found:
+  - **§EH-35** (`shift_system.gd`): `DataLoader.get_day_beat(day)` does
+    not exist; the day-objective banner shipped the generic fallback
+    text for every clock-in. Compounded by the fact that the
+    `day_beats` per-day catalog is dropped on load and `day_beats.json`
+    schema has no `objective` field, so the chain was doubly dead.
+  - **§EH-36** (`random_event_system.gd`): `TimeSystem.get_current_day()`
+    does not exist; the symbol is the `current_day` property at
+    `time_system.gd:37`. Every hourly random event after Day 1 was
+    activated with `current_day=1` instead of the real day, affecting
+    cooldown bookkeeping (`_last_fired[id]`) and the day-summary
+    payload (`_activate_event(def, current_day)`).
+- **Findings acted on (§§EH-35 – §EH-37)**: 7 distinct sites —
+  - 2 silent-bug fixes: §EH-35 (`shift_system.gd:209-230`), §EH-36
+    (`random_event_system.gd:342-360`).
+  - 5 typed-autoload conversions in `day_cycle_controller.gd` (§EH-37):
+    `_can_close_day` + `_resolve_close_blocked_reason`,
+    `_on_day_ended` HiddenThreadSystem call,
+    `_should_run_closing_checklist`,
+    `_show_day_summary` ShiftSystem call,
+    `_show_day_summary` hidden_interactions read.
+- **Findings justified-not-acted (§§EH-35 – §EH-37 sweep)**: 6 sites
+  catalogued in the "Surveyed-and-deferred this pass" subsection above —
+  `progression_system.gd:611-617`, `milestone_system.gd:315`,
+  `trade_in_system.gd` cluster (4 stub-tolerance guards),
+  `store_customization_system.gd:175,303`,
+  `shift_system.gd:240-262` (§F-121 already-correct), and
+  `morning_note_panel.gd:162`. Each carries the explicit rationale for
+  why this pass left it untouched.
 - **Scope (2026-05-10 §§EH-31 – §EH-34 pass)**: 3 production files —
   `game/scripts/systems/midday_event_system.gd`,
   `game/scripts/stores/retro_games.gd`,
@@ -333,11 +668,162 @@ to a warning the operator would never see.
 
 | Severity | Count | Action taken |
 |---|---|---|
-| Critical | 1 | §EH-31 acted on — silent bug masked by dead `has_method` guard (every midday beat with `unlock_required` was being silently rejected; never reproduced because no test seeds a non-null `unlock_required` against the live `_collect_unlocked_ids` path) |
+| Critical | 3 | §EH-31 acted on — silent bug masked by dead `has_method` guard (every midday beat with `unlock_required` was being silently rejected; never reproduced because no test seeds a non-null `unlock_required` against the live `_collect_unlocked_ids` path). §EH-35 acted on this pass — `shift_system.gd::_resolve_day_objective_text` has shipped the generic fallback for every clock-in since the file was authored (DataLoader has no `get_day_beat` method, and `day_beats` storage was dropped on load). §EH-36 acted on this pass — `random_event_system.gd::_try_trigger_hourly_event` was activating every post-Day-1 hourly event with `current_day=1` because `TimeSystem.get_current_day()` does not exist (the symbol is the typed `current_day` property). |
 | High | 13 | All preserved or escalated. 5 prior-pass escalations preserved (§§1–4, §EH-09); 2 prior-pass (§§EH-11 / EH-12) preserved; prior-pass escalations: 4 in `create_starting_inventory` (§EH-16), 2 in `checkout_system` panel-not-set (§EH-19); 2 prior-pass — `_spawn_visible_shelf_items` (§EH-26), `_configure_beta_customer`/`_resize_customer_trigger` (§EH-27) |
-| Medium | 19 | 3 prior-pass (§EH-10) + (§§EH-13 / EH-14 / EH-15) preserved; 3 prior-pass dead-guard removals (§EH-15 follow-up); 2 prior-pass justified-not-acted (§EH-17, §EH-18); 5 prior-pass — `_tier_category_note` (§EH-21), `store_decoration_builder` (§EH-22), `hud.gd::_beta_close_day_*` (§EH-23), `interaction_ray.gd::_input_focus_blocks_interaction` (§EH-24), `_wire_save_manager` (§EH-28), `_on_customer_ready_to_purchase` (§EH-29); 3 new this pass — `_should_force_launch_beat` (§EH-32), `retro_games.gd` PlatformSystem + StoreCustomizationSystem dynamic-call cluster (§EH-33), `retro_games_holds.gd` autoload dead-guard cluster (§EH-34) |
+| Medium | 21 | 3 prior-pass (§EH-10) + (§§EH-13 / EH-14 / EH-15) preserved; 3 prior-pass dead-guard removals (§EH-15 follow-up); 2 prior-pass justified-not-acted (§EH-17, §EH-18); 5 prior-pass — `_tier_category_note` (§EH-21), `store_decoration_builder` (§EH-22), `hud.gd::_beta_close_day_*` (§EH-23), `interaction_ray.gd::_input_focus_blocks_interaction` (§EH-24), `_wire_save_manager` (§EH-28), `_on_customer_ready_to_purchase` (§EH-29); 3 prior-pass — `_should_force_launch_beat` (§EH-32), `retro_games.gd` PlatformSystem + StoreCustomizationSystem dynamic-call cluster (§EH-33), `retro_games_holds.gd` autoload dead-guard cluster (§EH-34); 1 prior-pass — `day_cycle_controller.gd` autoload dead-guard cluster (§EH-37); 1 new this pass — autoload dead-guard cluster across `fail_card.gd`, `scene_router.gd`, `store_registry.gd`, `camera_manager.gd` (§EH-38) |
 | Low | ~16 | Justified in code (existing §F-XX markers retained where the file still exists); + 1 prior pass (§EH-25 BetaRunState test seam, §EH-20 audio test seams, §EH-30 register status hint) |
 | Note | ~30 | Unchecked `signal.connect()` calls — see §5 (rationale unchanged) |
+
+## §EH-35 — ShiftSystem `get_day_beat` silent-bug (CRITICAL)
+
+`game/scripts/systems/shift_system.gd::_resolve_day_objective_text` is
+the single entry point for the per-day objective toast banner emitted at
+clock-in (`_show_day_objective_banner`). Pre-pass:
+
+    var data_loader: DataLoader = GameManager.data_loader
+    var time_system: TimeSystem = GameManager.get_time_system()
+    var day: int = 1
+    if time_system != null:
+        day = time_system.current_day
+    if data_loader != null and data_loader.has_method("get_day_beat"):
+        var beat: Variant = data_loader.call("get_day_beat", day)
+        if beat is Dictionary:
+            var dict: Dictionary = beat as Dictionary
+            var objective: String = str(dict.get("objective", ""))
+            if not objective.is_empty():
+                return objective
+    return "Day %d: open the store and serve customers." % day
+
+`DataLoader` does not expose `get_day_beat`. The only day-keyed catalog
+the loader retains is `_midday_events` (loaded via the `day_beats_data`
+route at `data_loader.gd:255-258`); the per-day `day_beats` array from
+`day_beats.json` is dropped on load by design. Compounding the dead-
+guard, `day_beats.json` per-day entries carry `story_beat` and
+`forward_hook` fields — not `objective` — so even if a future loader
+exposed an accessor, the inner `dict.get("objective", "")` would return
+empty. The chain has been silently dead since the file was authored
+(verified via `git log -S"get_day_beat"` — the method has never
+existed). Every player's clock-in banner has read the literal
+fallback copy `"Day %d: open the store and serve customers."`.
+
+Risk lens: **reliability / observability**. The day-objective banner
+is the player's single retail-job tutorial cue at clock-in. The team
+authored a per-day-objective system that has never executed; the
+fallback shipped instead. The bug is silent in the same shape as §EH-31:
+the dynamic-call seam (`has_method` + `.call`) is what hid it. Direct
+typed access would have failed parse the moment someone wrote
+`data_loader.get_day_beat(day)`.
+
+Action: deleted the dead `if data_loader != null and data_loader.has_method(...)`
+block and the unused `data_loader` local. The function returns the
+generic fallback directly, matching what shipped. A new docstring
+calls out the silent-bug history and explicitly directs future
+authors: *"if a future per-day objective catalog is added, route it
+through a typed call here and a §EH-31-style parse error will surface
+a rename instead of a silent regression."*
+
+Verified: `test_shift_system.gd` — 20/20 passing. No fixture in
+`tests/` exercises a non-fallback return from `_resolve_day_objective_text`
+(grep `get_day_beat` under `tests/` returns zero hits), so removing
+the dead chain is observationally a no-op against the existing suite.
+
+## §EH-36 — RandomEventSystem hourly-event day-stamp silent-bug (CRITICAL)
+
+`game/scripts/systems/random_event_system.gd::_try_trigger_hourly_event(hour)`
+is the per-hour entry point that fires time-windowed random events
+(rainy_day, celebrity_traffic, etc.). The activated `current_day` flows
+into `_activate_event(def, current_day)` and is stored in `_last_fired`
+(cooldown bookkeeping) and emitted on the day-summary payload.
+Pre-pass:
+
+    var current_day: int = 1
+    if is_inside_tree():
+        var time_system: Node = get_parent().get_node_or_null(
+            "TimeSystem"
+        )
+        if time_system and time_system.has_method("get_current_day"):
+            current_day = time_system.get_current_day()
+
+`TimeSystem` is a sibling scene-instantiated system (per
+`game_world.gd:131`, `:156`); a sideways `get_parent().get_node_or_null("TimeSystem")`
+does resolve the sibling. But `TimeSystem` does *not* expose
+`get_current_day()` — `current_day` is a typed `int` property at
+`time_system.gd:37`. The `has_method("get_current_day")` guard returned
+false on every hourly tick, the local `current_day` always stayed at
+the literal `1`, and every post-Day-1 hourly random event was
+activated with the wrong day stamp.
+
+The downstream impact is the §EH-31 shape — the bug is silent and only
+visible as wrong data in the day-summary "random events fired" log
+(`_active_event` payload's `day_triggered` field) and in
+`_last_fired[id] = current_day` (which feeds the cooldown gate in
+`_is_on_cooldown`). A celebrity-traffic event firing on Day 5 with
+`current_day=1` would log as Day 1, and the cooldown comparison on
+Day 6 would compute against Day 1 instead of Day 5 — making the
+cooldown effectively dead.
+
+Risk lens: **data integrity / reliability**. Hourly random events
+drive the second-largest source of customer-traffic-multiplier
+modifiers (`CELEBRITY_TRAFFIC_MULTIPLIER = 3.0`, etc.). A broken
+cooldown means a celebrity could re-fire the next day with no gap —
+exactly the kind of pacing regression that's invisible to operators
+unless they audit the event log.
+
+Action: replaced the entire `is_inside_tree() + get_parent().get_node_or_null(...) + has_method(...) + .call(...)` chain with the existing in-file `_get_current_day()` helper (line 76), which reads the `_current_day` field kept in sync via `_on_day_started` (line 278). The helper falls back to `max(GameManager.current_day, 1)` when `_current_day <= 0`, matching the prior fallback shape. A rename of `current_day` (on either TimeSystem or the helper's read path) now fails GDScript parse instead of silently dropping the day stamp.
+
+Verified: `test_random_event_system.gd` — 30/30 passing. The
+hourly-event tests (`test_hourly_event_only_triggers_in_time_window`,
+`test_hourly_event_excluded_from_daily_roll`) drive
+`_try_trigger_hourly_event` through `EventBus.hour_changed.emit(...)`
+with the system's `_current_day` already set to the test day via
+`evaluate_daily_events`; the typed-helper call returns the right day
+and the cooldown bookkeeping is now accurate.
+
+## §EH-37 — DayCycleController autoload dead-guard cluster (MEDIUM)
+
+`game/scripts/systems/day_cycle_controller.gd` carried six parallel
+dynamic-call sites against the `ObjectiveDirector`,
+`HiddenThreadSystemSingleton`, `UnlockSystemSingleton`, and `ShiftSystem`
+autoloads — all targeting real, typed methods/properties. The pre-pass
+docstring on `_can_close_day` claimed the chain "Fails open when the
+autoload is missing so headless test harnesses that construct
+`DayCycleController` without a full autoload roster still close the
+day on demand." That rationale is incorrect — Godot loads autoloads
+globally before any test runs (`add_child_autofree(_controller)` does
+not remove autoloads from `/root/`).
+
+Sites converted:
+
+1. `_can_close_day` — `get_node_or_null("/root/ObjectiveDirector") + has_method("can_close_day") + .call("can_close_day")` → `ObjectiveDirector.can_close_day()`.
+2. `_resolve_close_blocked_reason` — same shape → `ObjectiveDirector.get_close_blocked_reason()`.
+3. `_on_day_ended` HiddenThreadSystem call — `get_node_or_null + has_method("finalize_day") + .call(...)` → `HiddenThreadSystemSingleton.finalize_day(day)`.
+4. `_should_run_closing_checklist` — `get_node_or_null("/root/UnlockSystemSingleton") + has_method("is_unlocked") + .call("is_unlocked", CLOSING_CERT_UNLOCK_ID)` → `UnlockSystemSingleton.is_unlocked(CLOSING_CERT_UNLOCK_ID)`.
+5. `_show_day_summary` ShiftSystem call — `get_node_or_null("/root/ShiftSystem") + has_method("get_shift_summary") + .call(...)` → `ShiftSystem.get_shift_summary()`.
+6. `_show_day_summary` hidden_interactions read — `get_node_or_null + "hidden_thread_interactions" in node + int(node.hidden_thread_interactions)` → direct property access on `HiddenThreadSystemSingleton.hidden_thread_interactions`.
+
+Risk lens: **reliability**. Five of the six conversions cover gameplay
+gates that — if silently bypassed by a future rename — would produce
+player-visible regressions: early-close fall-open (#1/#2), missing
+hidden-thread consequence line on day-summary (#3, partially redundant
+via the autoload's own day_ended handler), closing-checklist skipped
+for every unlock holder (#4), shift summary dropped (#5), zero hidden-
+interactions count on day-summary payload (#6). The fall-open behavior
+of `_can_close_day` is preserved because `ObjectiveDirector.can_close_day()`
+itself fails open on `_current_day <= 0` and non-gameplay states.
+
+Action: all six chains converted to direct typed autoload access. The
+docstring on `_can_close_day` was rewritten to record the §EH-37
+rationale and explicitly cite that ObjectiveDirector itself fails
+open in test-fixture states. New inline `# §EH-37` markers on each
+converted site name the autoload, file, and line of the typed accessor.
+
+Verified: full GUT run after edits — 4097 / 4140 passing (+66 vs the
+prior pass). All day-cycle-controller-adjacent tests pass through the
+converted paths:
+
+- `test_day_cycle_controller.gd::test_day1_close_proceeds_when_loop_completed_today` exercises `_can_close_day` returning true through ObjectiveDirector's typed call.
+- `test_day_close_confirmation_gate.gd::test_panel_confirm_emits_day_close_confirmed` exercises the converted `_can_close_day` + `_resolve_close_blocked_reason` pair in tandem.
+- `test_day_cycle_closing_checklist_gate.gd` — 3/3 passing, covers the converted `_should_run_closing_checklist` against `UnlockSystemSingleton.is_unlocked` with and without the unlock granted.
 
 ## §EH-31 — MiddayEventSystem `get_unlocked_ids` silent-bug (CRITICAL)
 
@@ -1218,7 +1704,7 @@ One follow-up that belongs in a different pass:
   StoreDefinition.music / .ambient_sound at boot" referencing §EH-20.
 
 All other findings were either acted on (§§1–4, §§EH-09 / EH-11,
-§§EH-12 – §EH-34), or explicitly justified-not-escalated with
+§§EH-12 – §EH-38), or explicitly justified-not-escalated with
 test-bound rationale (§§EH-10 / EH-17 / EH-18 / EH-20 / EH-25 / EH-30),
 or justified at the call site (§§5–8). The prior-pass "Escalations"
 follow-up — removing the dead `if InputFocus != null:` connect-time
@@ -1226,7 +1712,51 @@ guards in `objective_rail.gd:74`, `crosshair.gd:24`, and
 `interaction_prompt.gd:48` — was completed in the §EH-15 follow-up
 table earlier in this report.
 
-Surveyed-and-deferred this pass:
+Surveyed-and-deferred this pass (2026-05-11 §EH-38):
+
+- The §EH-38 sweep ranged across the ownership-autoload consumer
+  surface (FailCard, SceneRouter, StoreRegistry, CameraManager) for
+  the §EH-13/§EH-15 dead-guard shape. 9 sites in 4 files were
+  converted to direct typed-autoload access. The §EH-31 latent
+  silent-bug shape was caught and fixed in
+  `store_registry.gd::_seed_from_content_registry`. Three site
+  clusters remained justified-not-acted:
+  - **`store_director.gd::_audit_pass` / `::_audit_fail`** —
+    `set_audit_for_tests` injection seam is load-bearing for
+    `test_store_director.gd`. The `has_method` guard tolerates
+    test-mock variants. Converting would widen the test-fixture
+    implementation cost.
+  - **`hold_shelf_interactable.gd::_resolve_suspicious_slip_count`** —
+    scene-content dynamic-call seam (parent `holds` property), not
+    autoload dead-guard.
+  - **`day1_readiness_audit.gd`** — same prior-pass deferral remains;
+    the "partial-report-on-missing-subsystem" contract makes the
+    §EH-31 fix shape a behavior change.
+
+Surveyed-and-deferred prior pass (2026-05-11 §§EH-35 – §EH-37):
+
+- The prior-pass "Smallest next action" — `rg "has_method\(\"[a-z_]+\"\)" game/`,
+  extract method names, cross-reference against `class_name`-typed
+  autoloads — was executed. The 27-site sweep surfaced two real
+  §EH-31-class silent bugs (§EH-35 in `shift_system.gd`, §EH-36 in
+  `random_event_system.gd`) and one cleanly-convertible dead-guard
+  cluster (§EH-37 in `day_cycle_controller.gd`), all acted on this
+  pass. The remaining 23 sites were classified into three categories:
+  - Documented test seams with `§F-XX` annotations (left as-is).
+  - Stub-tolerance guards in scene-instantiated systems with externally-
+    injected fields (`trade_in_system.gd`, `store_customization_system.gd`)
+    — converting these would force test fixtures to implement every
+    method on every stub. Left as-is.
+  - One wider-rewrite candidate: `day1_readiness_audit.gd` has ~5
+    sites that are §EH-31-shape against real autoloads, but the file's
+    "partial-report-on-missing-system" contract means a conversion has
+    a non-trivial behavior change. **Smallest next action:** open a
+    follow-up issue titled "Day1ReadinessAudit: convert dead `has_method`
+    guards to typed-autoload calls" and decide whether the report should
+    fail loud on a missing method (the §EH-31 fix) or continue producing
+    partial reports.
+
+Prior-pass "Surveyed-and-deferred" follow-up (preserved for history):
 
 - `retro_games_holds.gd` callers of `_apply_manager_trust_delta` /
   `_apply_employee_trust_delta` already had no test seam to preserve
@@ -1235,19 +1765,3 @@ Surveyed-and-deferred this pass:
   follow-up. If a future autoload-rename ever needs the dynamic-call
   seam back for a deliberate test reason, it should be reintroduced
   with a §EH-10-style annotation citing the specific test.
-- The remaining `has_method` / `get_node_or_null` sites surfaced by the
-  pre-pass inventory (`milestone_system.gd::_resolve_manager_trust_tier_index`,
-  the ~28 other call sites across `customer_system_eligibility.gd`,
-  `progression_system.gd`, `store_director.gd`, etc.) target the same
-  autoloads but were left for a future pass since (a) they all use
-  real method names (no §EH-31 silent-bug hiding), and (b) several
-  exist behind documented `§F-XX` test seams that would need per-site
-  audit before a flat conversion. The §EH-31 finding is a strong hint
-  that grepping for every `has_method("FOO") + .call("FOO")` pair and
-  cross-referencing FOO against the typed autoload's actual public API
-  is a one-off high-value sweep — recommend tracking it as a separate
-  task ("audit every `has_method` against the live autoload API for
-  silent-bug parity with §EH-31"). **Who unblocks:** error-handling
-  owner. **Smallest next action:** run `rg "has_method\(\"[a-z_]+\"\)" game/`,
-  extract the method names, cross-reference against `class_name`-typed
-  autoloads, and fail on any where the method name doesn't exist.

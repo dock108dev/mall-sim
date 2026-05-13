@@ -11,15 +11,6 @@ const NUMERIC: Array = [TYPE_INT, TYPE_FLOAT]
 const STRING_LIKE: Array = [TYPE_STRING, TYPE_STRING_NAME]
 
 const SCHEMAS: Dictionary = {
-	"season": {
-		"required": {
-			"id": [TYPE_STRING],
-			"name": [TYPE_STRING],
-			"event_pool": [TYPE_ARRAY],
-			"price_modifier_table": [TYPE_DICTIONARY],
-			"visual_variant": [TYPE_STRING],
-		},
-	},
 	"item": {
 		"required": {
 			"id": [TYPE_STRING],
@@ -46,14 +37,6 @@ const SCHEMAS: Dictionary = {
 		"required": {
 			"id": [TYPE_STRING],
 			"event_type": [TYPE_STRING],
-		},
-		"any_of": [["name", "display_name"]],
-	},
-	"seasonal_event": {
-		"required": {
-			"id": [TYPE_STRING],
-			"start_day": [TYPE_INT, TYPE_FLOAT],
-			"duration_days": [TYPE_INT, TYPE_FLOAT],
 		},
 		"any_of": [["name", "display_name"]],
 	},
@@ -131,21 +114,6 @@ const SCHEMAS: Dictionary = {
 }
 
 
-## Rental item categories that require the ISSUE-009 extended schema.
-const RENTAL_CATEGORIES: PackedStringArray = [
-	"vhs_tapes", "dvd_titles", "vhs_classic", "vhs_new_release",
-	"vhs_cult", "dvd_new_release", "dvd_classic",
-]
-
-## Required fields for rentable items (store_type == "rentals", rental category).
-const RENTAL_ITEM_REQUIRED: Dictionary = {
-	"rarity": [TYPE_STRING],
-	"base_rental_fee": [TYPE_INT, TYPE_FLOAT],
-	"late_fee_per_day": [TYPE_INT, TYPE_FLOAT],
-	"release_date": [TYPE_INT, TYPE_FLOAT],
-}
-
-
 ## Valid operator strings for ending criteria.
 const VALID_OPERATORS: PackedStringArray = ["gte", "lte", "gt", "lt", "eq"]
 
@@ -195,38 +163,10 @@ static func validate(
 			errors.append(
 				"%s missing any of %s" % [prefix, str(group)]
 			)
-	if content_type == "item":
-		errors.append_array(_validate_rental_item_fields(entry, prefix))
 	if content_type == "ending":
 		errors.append_array(_validate_ending_criteria(entry, prefix))
 	return errors
 
-
-## Validates rental-specific required fields for items with store_type == "rentals"
-## and a rental category. Non-rentable items (snacks, merchandise) are exempt.
-static func _validate_rental_item_fields(
-	entry: Dictionary, prefix: String
-) -> Array[String]:
-	var errors: Array[String] = []
-	if str(entry.get("store_type", "")) != "rentals":
-		return errors
-	var cat: String = str(entry.get("category", ""))
-	if cat not in RENTAL_CATEGORIES:
-		return errors
-	for field: String in RENTAL_ITEM_REQUIRED:
-		if not entry.has(field):
-			errors.append(
-				"%s missing required rental field '%s'" % [prefix, field]
-			)
-			continue
-		var accepted: Array = RENTAL_ITEM_REQUIRED[field]
-		var value: Variant = entry[field]
-		if not _type_matches(value, accepted):
-			errors.append(
-				"%s rental field '%s' has wrong type — expected %s, got %s"
-				% [prefix, field, _type_names(accepted), _type_name(typeof(value))]
-			)
-	return errors
 
 ## Validates required_all, required_any, and forbidden_all criterion arrays
 ## for an ending entry. Each criterion must have stat_key (String), operator

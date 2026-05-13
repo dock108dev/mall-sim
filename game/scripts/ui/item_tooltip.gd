@@ -28,7 +28,6 @@ var _last_audit: Dictionary = {}
 @onready var _market_label: Label = $Margin/VBox/MarketLabel
 @onready var _price_label: Label = $Margin/VBox/PriceLabel
 @onready var _trend_label: Label = $Margin/VBox/TrendLabel
-@onready var _auth_label: Label = $Margin/VBox/AuthLabel
 @onready var _desc_label: Label = $Margin/VBox/DescLabel
 @onready var _audit_label: Label = $Margin/VBox/AuditLabel
 
@@ -92,7 +91,6 @@ func _display_item(item: ItemInstance) -> void:
 	_update_market_value(item)
 	_update_set_price(item)
 	_update_trend(item)
-	_update_authentication(item)
 	_update_description(def)
 	_update_price_audit(item)
 
@@ -170,33 +168,6 @@ func _calc_trend_direction(item: ItemInstance) -> float:
 	elif item.definition.depreciates:
 		combined *= 0.95
 	return combined
-
-
-func _update_authentication(item: ItemInstance) -> void:
-	match item.authentication_status:
-		"authenticated":
-			# Unicode shield U+1F6E1 may not render; use checkmark
-			_auth_label.text = "%s Authenticated" % char(9989)
-			_auth_label.add_theme_color_override(
-				"font_color",
-				UIThemeConstants.get_positive_color()
-			)
-			_auth_label.visible = true
-		"fake":
-			_auth_label.text = "%s Fake" % char(9888)
-			_auth_label.add_theme_color_override(
-				"font_color",
-				UIThemeConstants.get_negative_color()
-			)
-			_auth_label.visible = true
-		"authenticating":
-			_auth_label.text = "%s Authenticating..." % char(8987)
-			_auth_label.add_theme_color_override(
-				"font_color", UIThemeConstants.BODY_FONT_COLOR
-			)
-			_auth_label.visible = true
-		_:
-			_auth_label.visible = false
 
 
 ## ISSUE-020: renders the most recent PriceResolver audit trace for the

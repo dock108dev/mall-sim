@@ -13,14 +13,14 @@ func before_each() -> void:
 
 func test_fixture_count() -> void:
 	var fixtures: Array[FixtureDefinition] = _data_loader.get_all_fixtures()
-	assert_gte(fixtures.size(), 14, "Should load at least 14 fixtures")
+	assert_gte(fixtures.size(), 10, "Should load at least 10 fixtures")
 
 
 func test_fixture_json_entries_include_required_fields() -> void:
 	var raw: Variant = DataLoader.load_json(FIXTURE_CATALOG_PATH)
 	assert_true(raw is Dictionary, "fixtures.json should load as a dictionary")
 	var entries: Array = (raw as Dictionary).get("entries", [])
-	assert_gte(entries.size(), 14, "fixtures.json should include at least 14 entries")
+	assert_gte(entries.size(), 10, "fixtures.json should include at least 10 entries")
 	for entry_value: Variant in entries:
 		assert_true(entry_value is Dictionary, "Each fixture entry must be a dictionary")
 		var entry: Dictionary = entry_value as Dictionary
@@ -58,16 +58,9 @@ func test_register_matches_issue_schema() -> void:
 
 
 func test_store_specific_filter_resolves_store_aliases() -> void:
-	var sports_fixtures: Array[FixtureDefinition] = _data_loader.get_fixtures_for_store("sports")
-	var electronics_fixtures: Array[FixtureDefinition] = _data_loader.get_fixtures_for_store("electronics")
-	var rental_fixtures: Array[FixtureDefinition] = _data_loader.get_fixtures_for_store("rentals")
-
-	assert_true(_contains_fixture(sports_fixtures, "authentication_station"))
-	assert_false(_contains_fixture(sports_fixtures, "testing_station"))
-	assert_true(_contains_fixture(electronics_fixtures, "demo_station"))
-	assert_false(_contains_fixture(electronics_fixtures, "authentication_station"))
-	assert_true(_contains_fixture(rental_fixtures, "return_kiosk"))
-	assert_false(_contains_fixture(rental_fixtures, "demo_station"))
+	var retro_fixtures: Array[FixtureDefinition] = _data_loader.get_fixtures_for_store("retro_games")
+	assert_true(_contains_fixture(retro_fixtures, "testing_station"))
+	assert_false(_contains_fixture(retro_fixtures, "authentication_station"))
 
 
 func test_sellback_price_is_half_cost() -> void:

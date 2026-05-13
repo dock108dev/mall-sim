@@ -289,10 +289,11 @@ func _ready() -> void:
 
 ## Day-1 opening gate: shows Vic's morning note before `_start_day` arms
 ## any of the chain interactables. The chain stays at STAGE_VIC_NOTE while
-## the note is on screen — input gating is handled by the modal panel's
-## CTX_MODAL frame plus each chain interactable's `can_interact` override
-## (which reads `_stage`), so we don't need to walk the tree from this
-## deferred entry point. Dismissal advances to STAGE_TALK_TO_CUSTOMER via
+## the note is on screen — chain progression is gated by each chain
+## interactable's `can_interact` override (which reads `_stage`). The note
+## itself is a passive overlay (no CTX_MODAL push) so the player can move
+## and look around while reading it; E or Escape on the panel dismiss it.
+## Dismissal advances to STAGE_TALK_TO_CUSTOMER via
 ## `_on_vic_note_dismissed`, which is the only place that calls
 ## `_start_day` from the initial scene load.
 ##
@@ -376,7 +377,18 @@ func on_beta_backroom_pickup_interacted() -> void:
 	# pickup is a transient *event* confirmation, so it routes through
 	# `toast_requested` (auto-dismissing card on layer 45). The persistent
 	# carry *state* lives separately on `beta_carry_changed` (layer 41).
-	EventBus.toast_requested.emit("Picked up: used console stock.", &"info", 2.5)
+	# Toast copy interpolates the delivery quantity from the same const that
+	# drives `beta_backroom_count_changed`, so the back-room HUD readout and
+	# the toast can never disagree about how many items the player just
+	# uncovered.
+	EventBus.toast_requested.emit(
+		(
+			"Shipment checked. %d items available in back room."
+			% _BACKROOM_DELIVERY_QUANTITY
+		),
+		&"info",
+		2.5,
+	)
 	EventBus.beta_carry_changed.emit("Used Console Box")
 	_complete_current_objective()
 
@@ -481,10 +493,20 @@ func _on_day_close_confirmed() -> void:
 	summary["customers_helped"] = _customers_helped_today
 	summary["items_stocked"] = _items_stocked_today
 	summary["sales_completed"] = _customers_helped_today
-	summary["shift_note"] = (
-		"You made it through your first shift. "
-		+ "The store still feels off, but at least the shelves aren't empty."
-	)
+	summary["shift_note"] = _build_shift_note()
+	# Shelf / back-room inventory at close. Stocking flips the delivery from
+	# the back room onto the shelf, so the two values are complementary:
+	# items stocked ⇒ shelf=N / backroom=0; pickup-only ⇒ shelf=0 /
+	# backroom=delivery quantity; chain not started ⇒ 0 / 0.
+	var shelf_remaining: int = _items_stocked_today
+	var backroom_remaining: int = 0
+	if (
+		_completed_objectives.has(&"back_room_inventory")
+		and not _completed_objectives.has(&"stock_shelf")
+	):
+		backroom_remaining = _BACKROOM_DELIVERY_QUANTITY
+	summary["shelf_inventory_remaining"] = shelf_remaining
+	summary["backroom_inventory_remaining"] = backroom_remaining
 	_summary_panel.show_summary(summary, BetaRunState.day >= TARGET_BETA_DAYS)
 
 
@@ -553,6 +575,24 @@ func _on_summary_continue() -> void:
 	# STAGE_VIC_NOTE phase — calling `_start_day` here would skip both and
 	# drop the player straight into the customer beat.
 	_open_vic_note_and_then_start_day()
+
+
+## Replay-button handler. Closes the summary so the InputFocus stack pops
+## CTX_MODAL before the new run boots, then routes through
+## `GameManager.start_new_game()` — the same entry point used by the main
+## menu, which calls `begin_new_run()` to reset BetaRunState and swap into a
+## fresh GameWorld scene.
+func _on_summary_replay() -> void:
+	_summary_panel.close()
+	GameManager.start_new_game()
+
+
+## Main-menu button handler. Closes the summary (pops CTX_MODAL) and exits
+## to the main menu via `GameManager.go_to_main_menu()`, which clears any
+## pending load slot and runs the GAME_OVER → MAIN_MENU transition.
+func _on_summary_main_menu() -> void:
+	_summary_panel.close()
+	GameManager.go_to_main_menu()
 
 
 func can_interact_customer() -> bool:
@@ -922,6 +962,7 @@ func _update_objective_rail() -> void:
 			"text": "Read Vic's morning note.",
 			"action": "",
 			"key": "E",
+			"steps": _build_steps_payload(),
 		})
 		return
 	var entry: Dictionary = _objective_for_stage(_stage)
@@ -932,7 +973,30 @@ func _update_objective_rail() -> void:
 		"text": str(entry.get("label", "")),
 		"action": str(entry.get("action", "")),
 		"key": str(entry.get("key", "E")),
+		"steps": _build_steps_payload(),
 	})
+
+
+## Builds the multi-step progress payload for the rail. Each `_OBJECTIVES`
+## row becomes a `{text, state}` entry where `state` is "completed" if the
+## row's id is in `_completed_objectives`, "active" if its stage matches
+## `_stage`, or "future" otherwise. During STAGE_VIC_NOTE every entry is
+## "future" (nothing complete, no chain row active yet).
+func _build_steps_payload() -> Array[Dictionary]:
+	var steps: Array[Dictionary] = []
+	for entry: Dictionary in _OBJECTIVES:
+		var entry_id: StringName = StringName(str(entry.get("id", "")))
+		var entry_stage: StringName = StringName(str(entry.get("stage", "")))
+		var state: String = "future"
+		if _completed_objectives.has(entry_id):
+			state = "completed"
+		elif entry_stage == _stage:
+			state = "active"
+		steps.append({
+			"text": str(entry.get("label", "")),
+			"state": state,
+		})
+	return steps
 
 
 ## Disables every Interactable under the store, then re-enables the
@@ -990,6 +1054,45 @@ func _all_required_objectives_completed() -> bool:
 	return true
 
 
+## Builds the end-of-day `shift_note` from the day's completion state. When
+## every required chain row was completed the panel gets the grounded
+## "you made it through" baseline. When any required row was skipped — only
+## reachable if the close-day gate is ever relaxed beyond
+## `_all_required_objectives_completed()` — the note names the skipped work
+## so the summary cannot read as a clean wrap-up. BRAINDUMP rule: if closing
+## early is allowed, the summary must clearly say that the player skipped
+## required work.
+func _build_shift_note() -> String:
+	var skipped_phrases: Array[String] = []
+	if not _completed_objectives.has(&"talk_to_customer"):
+		skipped_phrases.append("helping the customer at the register")
+	if not _completed_objectives.has(&"back_room_inventory"):
+		skipped_phrases.append("picking up the back room delivery")
+	if not _completed_objectives.has(&"stock_shelf"):
+		skipped_phrases.append("restocking the used shelf")
+	if skipped_phrases.is_empty():
+		return (
+			"You made it through your first shift. "
+			+ "The store still feels off, but at least the shelves aren't empty."
+		)
+	return "You closed without %s." % _join_phrases(skipped_phrases)
+
+
+## Joins phrases as "A", "A and B", or "A, B, and C" so the shift-note copy
+## reads as a complete sentence regardless of how many objectives were
+## skipped.
+func _join_phrases(phrases: Array[String]) -> String:
+	var count: int = phrases.size()
+	if count == 0:
+		return ""
+	if count == 1:
+		return phrases[0]
+	if count == 2:
+		return "%s and %s" % [phrases[0], phrases[1]]
+	var head: String = ", ".join(phrases.slice(0, count - 1))
+	return "%s, and %s" % [head, phrases[count - 1]]
+
+
 func _ensure_panels() -> void:
 	if _decision_panel == null:
 		_decision_panel = BetaDecisionCardPanel.new()
@@ -1037,6 +1140,10 @@ func _connect_panel_signals() -> void:
 		_decision_panel.choice_selected.connect(_on_choice_selected)
 	if not _summary_panel.continue_pressed.is_connected(_on_summary_continue):
 		_summary_panel.continue_pressed.connect(_on_summary_continue)
+	if not _summary_panel.replay_pressed.is_connected(_on_summary_replay):
+		_summary_panel.replay_pressed.connect(_on_summary_replay)
+	if not _summary_panel.main_menu_pressed.is_connected(_on_summary_main_menu):
+		_summary_panel.main_menu_pressed.connect(_on_summary_main_menu)
 	if not _vic_note_panel.note_dismissed.is_connected(_on_vic_note_dismissed):
 		_vic_note_panel.note_dismissed.connect(_on_vic_note_dismissed)
 	# Permanent (not ONE_SHOT) — the player may cancel the modal and re-

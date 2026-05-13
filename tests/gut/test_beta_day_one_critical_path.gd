@@ -28,6 +28,12 @@ var _root: Node3D = null
 
 
 func before_each() -> void:
+	# Reset InputFocus and ModalQueue between tests so a leaked frame /
+	# active-queue entry from a prior test (e.g. a freed summary panel
+	# whose `_exit_tree` auto-popped but ran after this test's scene was
+	# already mid-load) doesn't bleed into the assertions below.
+	InputFocus._reset_for_tests()
+	ModalQueue._reset_for_tests()
 	var scene: PackedScene = load(SCENE_PATH)
 	assert_not_null(scene, "retro_games.tscn must load for the smoke test")
 	if scene == null:
@@ -83,6 +89,12 @@ func after_each() -> void:
 	# has no customer events), which causes the chain-advance early-return
 	# to fire and the chain stage to never leave talk_to_customer.
 	BetaRunState.reset_new_run()
+	# Drop any modal-queue / focus state the freed scene's panels left
+	# behind. _exit_tree on each freed panel already auto-pops dangling
+	# CTX_MODAL frames, but resetting here keeps the next test's assertions
+	# independent of that teardown ordering.
+	ModalQueue._reset_for_tests()
+	InputFocus._reset_for_tests()
 
 
 # ── Layout: customer is at the register, day-end is on the counter ──────────
@@ -431,13 +443,16 @@ func test_stock_box_visually_disappears_after_pickup_fade() -> void:
 	)
 
 
-## Back-room pickup must surface a "Picked up" toast with the item type so
-## the player gets an explicit textual cue that the box transferred to
-## their carry state. Pickup is a transient event confirmation — it routes
-## through `toast_requested` (auto-dismissing card on layer 45), not the
-## persistent HUD label channel. The persistent carry *state* is driven
-## separately by `beta_carry_changed`.
-func test_backroom_pickup_emits_picked_up_toast() -> void:
+## Back-room pickup must surface a "Shipment checked" toast that names the
+## actual delivery quantity, so the player gets an explicit textual cue
+## both that the back-room beat resolved AND how many items they just
+## uncovered. The numeric token must match the runtime count emitted on
+## `beta_backroom_count_changed`, not a hardcoded literal. Pickup is a
+## transient event confirmation — it routes through `toast_requested`
+## (auto-dismissing card on layer 45), not the persistent HUD label
+## channel. The persistent carry *state* is driven separately by
+## `beta_carry_changed`.
+func test_backroom_pickup_emits_shipment_checked_toast() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
 		return
@@ -451,23 +466,34 @@ func test_backroom_pickup_emits_picked_up_toast() -> void:
 		EventBus, "toast_requested",
 		"Back-room pickup must emit toast_requested for the player feedback card"
 	)
-	var found_pickup_message: bool = false
+	# The toast must name (a) the "Shipment checked" beat phrasing and
+	# (b) the runtime delivery quantity, taken from the same const that
+	# drives `beta_backroom_count_changed`. Match both so a future copy
+	# tweak can rephrase the surrounding sentence without dropping either
+	# half of the contract.
+	# `_BACKROOM_DELIVERY_QUANTITY` is a class-level const on
+	# `BetaDayOneController` — `Object.get()` only resolves properties, so
+	# read the const directly through the class symbol instead.
+	var expected_count: int = BetaDayOneController._BACKROOM_DELIVERY_QUANTITY
+	var found_shipment_message: bool = false
 	for params: Array in get_signal_parameters_all(
 		EventBus, "toast_requested"
 	):
 		if params.is_empty():
 			continue
 		var msg: String = String(params[0])
-		# Match the BRAINDUMP-named beat: "Picked up" + an item-type token
-		# ("console") so a future copy tweak can still satisfy the contract
-		# without locking the literal.
-		if msg.contains("Picked up") and msg.to_lower().contains("console"):
-			found_pickup_message = true
+		if (
+			msg.contains("Shipment checked")
+			and msg.contains(str(expected_count))
+		):
+			found_shipment_message = true
 			break
 	assert_true(
-		found_pickup_message,
-		"toast_requested must include a 'Picked up: ... console ...' "
-		+ "message naming the item type"
+		found_shipment_message,
+		(
+			"toast_requested must include a 'Shipment checked. %d ...' "
+			+ "message naming the runtime delivery quantity"
+		) % expected_count
 	)
 
 
@@ -1035,4 +1061,244 @@ func test_register_status_indicator_does_not_break_close_day_path() -> void:
 	assert_true(
 		trigger.can_interact(),
 		"BetaDayEndTrigger.can_interact() must still gate true at STAGE_END_DAY"
+	)
+
+
+# ── Objective rail multi-step payload contract ────────────────────────────
+# `_update_objective_rail()` emits `EventBus.objective_changed` with a
+# `steps` array describing every entry in `_OBJECTIVES`. Each step is
+# {text, state} where state is 'completed' | 'active' | 'future'. This is
+# the data side of the multi-step rail render (the rendering side is the
+# follow-on ObjectiveRail change).
+
+const _EXPECTED_STEP_LABELS: Array[String] = [
+	"Talk to the customer at the register.",
+	"Check the back room delivery.",
+	"Stock the Retro Games shelf.",
+	"Close the day at the register.",
+]
+
+
+func _latest_steps_payload(controller: Node) -> Array:
+	watch_signals(EventBus)
+	controller._update_objective_rail()
+	var emissions: Array = get_signal_parameters_all(
+		EventBus, "objective_changed"
+	)
+	if emissions.is_empty():
+		return []
+	var payload: Dictionary = emissions[emissions.size() - 1][0] as Dictionary
+	return payload.get("steps", []) as Array
+
+
+func _step_states(steps: Array) -> Array:
+	var out: Array = []
+	for step: Dictionary in steps:
+		out.append(String(step.get("state", "")))
+	return out
+
+
+func _step_texts(steps: Array) -> Array:
+	var out: Array = []
+	for step: Dictionary in steps:
+		out.append(String(step.get("text", "")))
+	return out
+
+
+func test_steps_payload_present_with_four_entries() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var steps: Array = _latest_steps_payload(controller)
+	assert_eq(
+		steps.size(), 4,
+		"objective_changed payload must carry a 4-entry steps array"
+	)
+	assert_eq(
+		_step_texts(steps), _EXPECTED_STEP_LABELS,
+		"steps[].text must mirror the _OBJECTIVES labels in chain order"
+	)
+
+
+func test_steps_active_state_tracks_current_stage() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	# Day starts at STAGE_TALK_TO_CUSTOMER after the Vic note dismiss.
+	var steps: Array = _latest_steps_payload(controller)
+	assert_eq(
+		_step_states(steps),
+		["active", "future", "future", "future"],
+		"At day start, only the customer step must be 'active'"
+	)
+
+
+func test_steps_completed_state_tracks_completed_objectives() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	# Complete the customer beat → step 0 'completed', step 1 'active'.
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	var steps: Array = _latest_steps_payload(controller)
+	assert_eq(
+		_step_states(steps),
+		["completed", "active", "future", "future"],
+		"After the customer beat, only the back-room step must be 'active'"
+	)
+	# Complete the back-room and stock beats → only close_day stays active.
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	steps = _latest_steps_payload(controller)
+	assert_eq(
+		_step_states(steps),
+		["completed", "completed", "completed", "active"],
+		"At STAGE_END_DAY every required predecessor must be 'completed'"
+	)
+
+
+func test_steps_all_future_during_vic_note_phase() -> void:
+	# Force the controller back into the pre-chain Vic-note phase and
+	# re-emit the rail. Pre-chain has no completed objectives and no chain
+	# row active, so every entry must read 'future'.
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	controller.set("_stage", BetaDayOneController.STAGE_VIC_NOTE)
+	(controller.get("_completed_objectives") as Dictionary).clear()
+	var steps: Array = _latest_steps_payload(controller)
+	assert_eq(
+		_step_states(steps),
+		["future", "future", "future", "future"],
+		"During STAGE_VIC_NOTE every step must read 'future'"
+	)
+
+
+# ── Shift-note derived from completion state ──────────────────────────────
+# `_on_day_close_confirmed` reads `_completed_objectives` to decide which
+# narrative variant goes into the summary's shift_note. If every required
+# step was completed the baseline "you made it through" copy fires; when any
+# required step is missing the note must clearly name the skipped work
+# (BRAINDUMP rule: closing early must surface what the player skipped).
+
+func _mark_all_required_complete(controller: Node) -> void:
+	var completed: Dictionary = (
+		controller.get("_completed_objectives") as Dictionary
+	)
+	completed[&"talk_to_customer"] = true
+	completed[&"back_room_inventory"] = true
+	completed[&"stock_shelf"] = true
+
+
+func test_shift_note_uses_baseline_when_all_required_complete() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	(controller.get("_completed_objectives") as Dictionary).clear()
+	_mark_all_required_complete(controller)
+	var note: String = String(controller._build_shift_note())
+	assert_true(
+		note.contains("made it through"),
+		"All-complete day must use the baseline 'made it through' copy; got: '%s'"
+		% note
+	)
+	assert_false(
+		note.begins_with("You closed without"),
+		"Baseline note must not name skipped work; got: '%s'" % note
+	)
+
+
+func test_shift_note_names_skipped_backroom() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	(controller.get("_completed_objectives") as Dictionary).clear()
+	var completed: Dictionary = (
+		controller.get("_completed_objectives") as Dictionary
+	)
+	completed[&"talk_to_customer"] = true
+	completed[&"stock_shelf"] = true
+	var note: String = String(controller._build_shift_note())
+	assert_true(
+		note.contains("back room delivery"),
+		"Skipped back-room must be named in the shift note; got: '%s'" % note
+	)
+	assert_true(
+		note.begins_with("You closed without"),
+		"Skip-branch copy must begin with 'You closed without'; got: '%s'" % note
+	)
+
+
+func test_shift_note_names_skipped_customer() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	(controller.get("_completed_objectives") as Dictionary).clear()
+	var completed: Dictionary = (
+		controller.get("_completed_objectives") as Dictionary
+	)
+	completed[&"back_room_inventory"] = true
+	completed[&"stock_shelf"] = true
+	var note: String = String(controller._build_shift_note())
+	assert_true(
+		note.contains("customer at the register"),
+		"Skipped customer must be named in the shift note; got: '%s'" % note
+	)
+
+
+func test_shift_note_joins_multiple_skipped_steps() -> void:
+	# All three required steps skipped — the note must enumerate every one
+	# so the summary cannot read as a clean wrap-up.
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	(controller.get("_completed_objectives") as Dictionary).clear()
+	var note: String = String(controller._build_shift_note())
+	assert_true(
+		note.contains("customer at the register"),
+		"Multi-skip note must name the customer step; got: '%s'" % note
+	)
+	assert_true(
+		note.contains("back room delivery"),
+		"Multi-skip note must name the back-room step; got: '%s'" % note
+	)
+	assert_true(
+		note.contains("used shelf"),
+		"Multi-skip note must name the stock-shelf step; got: '%s'" % note
+	)
+
+
+func test_close_day_summary_uses_dynamic_shift_note() -> void:
+	# Drive the full chain to END_DAY, confirm close, and verify the summary
+	# payload's shift_note tracks `_completed_objectives` rather than the
+	# legacy hardcoded literal.
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+	_press_close_day_confirm(controller)
+	await get_tree().process_frame
+	var panel: BetaDaySummaryPanel = (
+		controller.get("_summary_panel") as BetaDaySummaryPanel
+	)
+	assert_not_null(panel, "Summary panel must be spawned")
+	if panel == null:
+		return
+	var note_label: Label = panel.get("_note_label") as Label
+	assert_not_null(note_label, "Summary panel must own a _note_label")
+	if note_label == null:
+		return
+	assert_true(
+		note_label.text.contains("made it through"),
+		"Completed-chain summary must render the baseline shift_note; got: '%s'"
+		% note_label.text
 	)

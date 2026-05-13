@@ -63,10 +63,14 @@ func show_failure(
 		_root.visible = true
 	_is_visible = true
 
-	var focus: Node = _input_focus()
-	if focus != null and focus.has_method("push_context"):
-		focus.call("push_context", &"modal")
-		_pushed_focus = true
+	# §EH-38 (docs/audits/error-handling-report.md): InputFocus is an autoload
+	# (project.godot) and `push_context` is its owner-declared method
+	# (input_focus.gd:38). The prior `_input_focus()` walker + `has_method`
+	# guard pair was the §EH-13/§EH-15 dead-guard shape — a rename of either
+	# would have silently dropped the modal-focus push and shipped a FailCard
+	# that the player could click through into the dead store gameplay.
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	_pushed_focus = true
 
 	var audit_detail: String = (
 		"store_id=%s invariant=%s reason=%s"
@@ -92,9 +96,11 @@ func dismiss() -> void:
 	_is_visible = false
 
 	if _pushed_focus:
-		var focus: Node = _input_focus()
-		if focus != null and focus.has_method("pop_context"):
-			focus.call("pop_context")
+		# §EH-38: typed autoload — mirrors the push_context call in
+		# show_failure(). A rename of InputFocus.pop_context now fails GDScript
+		# parse instead of silently leaving the modal context on the stack
+		# (which would have suppressed all subsequent gameplay input forever).
+		InputFocus.pop_context()
 		_pushed_focus = false
 
 	_audit_pass(CHECKPOINT_DISMISSED, "store_id=%s" % _current_store)
@@ -104,48 +110,25 @@ func dismiss() -> void:
 func _on_return_pressed() -> void:
 	var store_id: StringName = _current_store
 	dismiss()
-	var router: Node = _scene_router()
-	if router == null or not router.has_method("route_to"):
-		push_error(
-			"[FailCard] SceneRouter unavailable; cannot return to mall for %s"
-			% store_id
-		)
-		return
-	router.call("route_to", &"mall_hub", {})
-
-
-func _input_focus() -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	return tree.root.get_node_or_null("InputFocus")
-
-
-func _scene_router() -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	return tree.root.get_node_or_null("SceneRouter")
-
-
-func _audit_log() -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	return tree.root.get_node_or_null("AuditLog")
+	# §EH-38: SceneRouter is an autoload (project.godot) and `route_to` is its
+	# owner-declared entry point (scene_router.gd:52). The prior `_scene_router()`
+	# walker + has_method("route_to") guard was the §EH-13/§EH-15 dead-guard
+	# shape; a rename would have shipped a Return-to-Mall button that pushed
+	# the error to the log and silently left the player on a black fail card.
+	SceneRouter.route_to(&"mall_hub", {})
 
 
 func _audit_pass(checkpoint: StringName, detail: String) -> void:
-	var log: Node = _audit_log()
-	if log != null and log.has_method("pass_check"):
-		log.pass_check(checkpoint, detail)
-	else:
-		print("AUDIT: PASS %s %s" % [checkpoint, detail])
+	# §EH-38: AuditLog is an autoload (project.godot) and `pass_check` is its
+	# owner-declared method (audit_log.gd:21). The prior `_audit_log()` walker
+	# + has_method guard pair was the §EH-13/§EH-15 dead-guard shape and the
+	# `print()` fallback below was unreachable in production. A rename now
+	# fails GDScript parse rather than silently writing only to stdout
+	# (skipping the AuditLog ring buffer that headless CI scans).
+	AuditLog.pass_check(checkpoint, detail)
 
 
 func _audit_fail(checkpoint: StringName, reason: String) -> void:
-	var log: Node = _audit_log()
-	if log != null and log.has_method("fail_check"):
-		log.fail_check(checkpoint, reason)
-	else:
-		print("AUDIT: FAIL %s %s" % [checkpoint, reason])
+	# §EH-38: see _audit_pass above for the rationale. fail_check is declared
+	# at audit_log.gd:39.
+	AuditLog.fail_check(checkpoint, reason)

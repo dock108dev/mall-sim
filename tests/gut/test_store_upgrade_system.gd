@@ -8,7 +8,7 @@ var _economy: EconomySystem
 var _reputation: ReputationSystem
 var _system: StoreUpgradeSystem
 
-const TEST_STORE: String = "sports"
+const TEST_STORE: String = "retro_games"
 
 
 func before_each() -> void:
@@ -100,49 +100,31 @@ func test_better_shelving_fields() -> void:
 
 func test_store_specific_upgrade_restriction() -> void:
 	var u: UpgradeDefinition = _data_loader.get_upgrade(
-		"sports_trophy_wall"
+		"retro_crt_lounge"
 	)
-	assert_not_null(u, "sports_trophy_wall should exist")
-	assert_eq(u.store_type, "sports")
+	assert_not_null(u, "retro_crt_lounge should exist")
+	assert_eq(u.store_type, "retro_games")
 	assert_false(u.is_universal())
 
 
-func test_store_specific_upgrade_cannot_be_purchased_for_other_store() -> void:
-	_reputation.add_reputation("retro_games", 50.0)
-	var result: bool = _system.purchase_upgrade(
-		"retro_games", "sports_trophy_wall"
-	)
-	assert_false(
-		result,
-		"sports-only upgrade should not be purchasable for retro_games"
-	)
-
-
 func test_upgrades_for_store_filtering() -> void:
-	var sports: Array[UpgradeDefinition] = (
-		_data_loader.get_upgrades_for_store("sports")
+	var retro: Array[UpgradeDefinition] = (
+		_data_loader.get_upgrades_for_store("retro_games")
 	)
 	var has_shelving: Array = [false]
-	var has_trophy: Array = [false]
 	var has_crt: Array = [false]
-	for u: UpgradeDefinition in sports:
+	for u: UpgradeDefinition in retro:
 		if u.id == "better_shelving":
 			has_shelving[0] = true
-		if u.id == "sports_trophy_wall":
-			has_trophy[0] = true
 		if u.id == "retro_crt_lounge":
 			has_crt[0] = true
 	assert_true(
 		has_shelving[0],
-		"sports should include universal better_shelving"
+		"retro_games should include universal better_shelving"
 	)
 	assert_true(
-		has_trophy[0],
-		"sports should include sports_trophy_wall"
-	)
-	assert_false(
 		has_crt[0],
-		"sports should NOT include retro_crt_lounge"
+		"retro_games should include retro_crt_lounge"
 	)
 
 
@@ -348,11 +330,7 @@ func test_all_upgrade_ids_present() -> void:
 	var expected_ids: Array[String] = [
 		"better_shelving", "display_cases", "premium_signage",
 		"backroom_expansion", "store_expansion", "climate_control",
-		"sports_trophy_wall", "sports_season_pass_display",
 		"retro_crt_lounge", "retro_parts_stockroom",
-		"video_late_fee_kiosk", "video_new_releases_wall",
-		"pocket_tournament_arena", "pocket_climate_vault",
-		"electronics_demo_hub", "electronics_extended_warranty_desk",
 	]
 	for upgrade_id: String in expected_ids:
 		var u: UpgradeDefinition = _data_loader.get_upgrade(
@@ -363,12 +341,3 @@ func test_all_upgrade_ids_present() -> void:
 		)
 
 
-func test_stacked_multiplier_effects() -> void:
-	_reputation.add_reputation(TEST_STORE, 30.0)
-	_system.purchase_upgrade(TEST_STORE, "display_cases")
-	_system.purchase_upgrade(TEST_STORE, "sports_trophy_wall")
-	var expected: float = 1.1 * 1.15
-	assert_almost_eq(
-		_system.get_price_multiplier(TEST_STORE), expected,
-		0.001, "Stacked price multipliers should multiply"
-	)

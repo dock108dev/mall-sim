@@ -264,6 +264,18 @@ func _connect_signal(signal_ref: Signal, callable: Callable) -> void:
 
 
 func _on_day_started(day: int) -> void:
+	# Beta day-1 owns its own morning-note flow via `BetaManagerNotePanel`
+	# (see `BetaDayOneController._open_vic_note_and_then_start_day`). The
+	# global `MorningNotePanel` would otherwise stack on top of it because
+	# `day_started` fires synchronously inside `_on_summary_continue` before
+	# the beta note panel is opened. Mirrors the beta-active short-circuit
+	# used in `midday_event_system.gd` and `milestone_system.gd`.
+	var tree: SceneTree = get_tree()
+	if (
+		tree != null
+		and tree.get_first_node_in_group("beta_day_one_controller") != null
+	):
+		return
 	_confrontation_emitted_this_day = false
 	var note: Dictionary = select_note_for_day(day)
 	# After selection, clear the per-day tally and consumed unlock so the

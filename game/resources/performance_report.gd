@@ -25,13 +25,6 @@ extends Resource
 @export var milestones_unlocked: Array[String] = []
 ## Richer milestone data: [{name, reward}] populated alongside milestones_unlocked.
 @export var milestones_data: Array[Dictionary] = []
-@export var late_fee_income: float = 0.0
-@export var overdue_items_count: int = 0
-@export var warranty_revenue: float = 0.0
-@export var warranty_claim_costs: float = 0.0
-@export var warranty_attach_rate: float = 0.0
-@export var electronics_demo_active: bool = false
-@export var demo_contribution_revenue: float = 0.0
 @export var record_flags: Dictionary = {}
 ## Per-store daily revenue breakdown; populated from day_closed signal.
 @export var store_revenue: Dictionary = {}
@@ -77,13 +70,6 @@ func to_dict() -> Dictionary:
 		"new_tier_name": new_tier_name,
 		"milestones_unlocked": milestones_unlocked.duplicate(),
 		"milestones_data": milestones_data.duplicate(),
-		"late_fee_income": late_fee_income,
-		"overdue_items_count": overdue_items_count,
-		"warranty_revenue": warranty_revenue,
-		"warranty_claim_costs": warranty_claim_costs,
-		"warranty_attach_rate": warranty_attach_rate,
-		"electronics_demo_active": electronics_demo_active,
-		"demo_contribution_revenue": demo_contribution_revenue,
 		"record_flags": record_flags.duplicate(),
 		"store_revenue": store_revenue.duplicate(),
 		"customer_satisfaction": customer_satisfaction,
@@ -130,23 +116,6 @@ static func from_dict(data: Dictionary) -> PerformanceReport:
 		for entry: Variant in saved_ms_data:
 			if entry is Dictionary:
 				report.milestones_data.append((entry as Dictionary).duplicate())
-	report.late_fee_income = float(data.get("late_fee_income", 0.0))
-	report.overdue_items_count = int(data.get("overdue_items_count", 0))
-	report.warranty_revenue = float(
-		data.get("warranty_revenue", 0.0)
-	)
-	report.warranty_claim_costs = float(
-		data.get("warranty_claim_costs", 0.0)
-	)
-	report.warranty_attach_rate = float(
-		data.get("warranty_attach_rate", 0.0)
-	)
-	report.electronics_demo_active = bool(
-		data.get("electronics_demo_active", false)
-	)
-	report.demo_contribution_revenue = float(
-		data.get("demo_contribution_revenue", 0.0)
-	)
 	var flags: Variant = data.get("record_flags", {})
 	if flags is Dictionary:
 		report.record_flags = (flags as Dictionary).duplicate()

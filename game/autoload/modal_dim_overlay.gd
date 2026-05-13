@@ -11,7 +11,7 @@
 ## frame becomes `CTX_MODAL`, tweens out over 0.15s when it leaves.
 extends CanvasLayer
 
-const DIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.45)
+const DIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.55)
 const FADE_DURATION: float = 0.15
 const LAYER: int = 49
 

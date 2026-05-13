@@ -5,7 +5,7 @@ extends GutTest
 const MANUAL_SLOT_A: int = 1
 const MANUAL_SLOT_B: int = 2
 const MANUAL_SLOT_C: int = 3
-const _STORE_IDS: Array[StringName] = [&"sports", &"retro_games", &"electronics"]
+const _STORE_IDS: Array[StringName] = [&"retro_games", &"test_store_b", &"test_store_c"]
 
 var _save_manager: SaveManager
 var _economy: EconomySystem
@@ -60,7 +60,7 @@ func after_each() -> void:
 
 
 func test_manual_save_writes_root_level_json_and_index_metadata() -> void:
-	_configure_state(6, 2450.5, [&"sports", &"retro_games"], &"retro_games")
+	_configure_state(6, 2450.5, [&"test_store_b", &"retro_games"], &"retro_games")
 
 	var saved: bool = _save_manager.save_game(MANUAL_SLOT_A)
 	assert_true(saved, "save_game should succeed for slot 1")
@@ -138,7 +138,7 @@ func test_load_version_0_save_is_rejected_as_too_old() -> void:
 
 
 func test_auto_save_waits_for_day_acknowledged() -> void:
-	_configure_state(3, 900.0, [&"sports"], &"sports")
+	_configure_state(3, 900.0, [&"retro_games"], &"retro_games")
 
 	EventBus.day_ended.emit(3)
 	assert_false(
@@ -179,13 +179,13 @@ func test_corrupt_load_emits_failure_without_overwriting_file() -> void:
 
 
 func test_three_manual_slots_remain_independent() -> void:
-	_configure_state(1, 100.0, [&"sports"], &"sports")
+	_configure_state(1, 100.0, [&"retro_games"], &"retro_games")
 	assert_true(_save_manager.save_game(MANUAL_SLOT_A), "Slot 1 save should succeed")
 
 	_configure_state(2, 200.0, [&"retro_games"], &"retro_games")
 	assert_true(_save_manager.save_game(MANUAL_SLOT_B), "Slot 2 save should succeed")
 
-	_configure_state(3, 300.0, [&"electronics"], &"electronics")
+	_configure_state(3, 300.0, [&"test_store_b"], &"test_store_b")
 	assert_true(_save_manager.save_game(MANUAL_SLOT_C), "Slot 3 save should succeed")
 
 	assert_true(_save_manager.load_game(MANUAL_SLOT_B), "Slot 2 load should succeed")

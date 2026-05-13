@@ -153,7 +153,7 @@ func calculate_item_value(item: ItemInstance) -> float:
 ## Returns the time-based depreciation/launch modifier.
 ## Dispatches on `def.decay_profile`:
 ##   - "annual_sports": step-function on new-edition release in same series.
-##   - "standard"/"" (or `electronics` legacy): linear decay from launch_day,
+##   - "standard"/"": linear decay from launch_day,
 ##      gated on `depreciates` + `depreciation_rate` + `launch_day`.
 ##      Items within launch_spike_days of launch_day get a demand bonus.
 ##   - any other profile: 1.0 (handled elsewhere or no decay).
@@ -166,7 +166,7 @@ func get_time_modifier(
 	if profile == "annual_sports":
 		return _get_annual_sports_decay(def)
 	var supported: bool = (
-		profile == "" or profile == "standard" or profile == "electronics"
+		profile == "" or profile == "standard"
 	)
 	var disqualified: bool = (
 		not supported
@@ -191,7 +191,7 @@ func get_time_modifier(
 
 
 ## Returns the trade-in market factor for `def`. Currently this is the
-## time/decay modifier (annual_sports step-function or electronics linear
+## time/decay modifier (annual_sports step-function or standard linear
 ## decay). Trade-in offers multiply this in alongside the per-condition cut
 ## so the offered credit reflects current market value, not face value.
 func get_trade_in_market_factor(def: ItemDefinition) -> float:

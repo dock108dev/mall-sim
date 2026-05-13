@@ -2,13 +2,23 @@
 ##
 ## Provides a single source of truth for the open/close → push/pop contract:
 ##
-##   - `open()` pushes exactly one `CTX_MODAL` frame on `InputFocus`. A second
-##     `open()` without an intervening `close()` is a no-op and emits
-##     `push_error` so the leak is visible.
-##   - `close()` pops the frame iff this panel owns it.
+##   - `enqueue(priority, payload)` is the normal call path: it routes through
+##     `ModalQueue` so the panel only opens when no higher-priority modal is
+##     active. The queue calls `_open_from_queue(payload)` when the panel
+##     reaches the front, which subclasses observe via `_on_queued_open`.
+##   - `open()` is preserved as a direct-open escape hatch for fatal overlays
+##     and tests that bypass the queue. It pushes exactly one `CTX_MODAL`
+##     frame on `InputFocus`. A second `open()` without an intervening
+##     `close()` is a no-op and emits `push_error` so the leak is visible.
+##   - `close()` pops the frame iff this panel owns it, then notifies
+##     `ModalQueue` so the next queued panel can dispatch. The notify is a
+##     no-op for direct-open panels (the queue did not own them).
 ##   - `_exit_tree()` is the safety net: if the panel is freed (e.g. scene
 ##     transition, parent freed) while still holding a frame, the dangling
-##     `CTX_MODAL` is auto-popped and `push_error` records the leak.
+##     `CTX_MODAL` is auto-popped and `push_error` records the leak. A panel
+##     freed before its queue dispatch turn is cancelled out of the queue;
+##     a panel freed while active drains the next entry via
+##     `ModalQueue.notify_closed`.
 ##   - `_pop_modal_focus()` refuses to pop when CTX_MODAL is no longer on top
 ##     (a sibling pushed without going through this contract); it surfaces the
 ##     mismatch via `push_error` rather than corrupting the sibling's frame.
@@ -32,19 +42,50 @@ var _focus_pushed: bool = false
 
 
 ## Default open: claims a CTX_MODAL frame and sets the panel visible.
-## Subclasses with custom open semantics may override and call
-## `_push_modal_focus()` at the appropriate point.
+## Direct-open escape hatch — fatal overlays and tests may call this to
+## bypass the queue. Normal callers should use `enqueue(priority, payload)`
+## so panels open in priority order without overlapping. Subclasses with
+## custom open semantics may override and call `_push_modal_focus()` at the
+## appropriate point.
 func open() -> void:
 	_push_modal_focus()
 	visible = true
 
 
-## Default close: hides the panel and releases the CTX_MODAL frame.
-## Subclasses with custom close semantics may override and call
-## `_pop_modal_focus()` at the appropriate point.
+## Default close: hides the panel, releases the CTX_MODAL frame, and lets
+## `ModalQueue` dispatch the next pending panel. Safe to call on direct-open
+## panels — `ModalQueue.notify_closed` no-ops when this panel was never the
+## active queue entry. Subclasses with custom close semantics may override
+## and call `_pop_modal_focus()` at the appropriate point.
 func close() -> void:
 	visible = false
 	_pop_modal_focus()
+	ModalQueue.notify_closed(self)
+
+
+## Normal call path — enqueue this panel through `ModalQueue` at the given
+## priority with an optional payload. Returns immediately; the queue calls
+## `_open_from_queue(payload)` when no higher-priority panel is ahead, which
+## in turn invokes `_on_queued_open(payload)` for subclass-specific setup.
+func enqueue(priority: int, payload: Dictionary = {}) -> void:
+	ModalQueue.request_open(self, priority, payload)
+
+
+## Called by `ModalQueue._dispatch` when this panel reaches the front of the
+## queue. Claims the CTX_MODAL frame, makes the panel visible, and forwards
+## the payload to `_on_queued_open` for subclass-specific configuration.
+func _open_from_queue(payload: Dictionary) -> void:
+	_push_modal_focus()
+	visible = true
+	_on_queued_open(payload)
+
+
+## Subclass hook for payload-driven setup. Called after the CTX_MODAL frame
+## is claimed and the panel is visible, so subclasses may safely read scene
+## nodes and reconfigure UI from `payload`. Default implementation is a no-op
+## for subclasses whose setup happens before `enqueue`.
+func _on_queued_open(_payload: Dictionary) -> void:
+	pass
 
 
 ## Pushes a CTX_MODAL frame on InputFocus. Guarded against double-push:
@@ -81,10 +122,12 @@ func _pop_modal_focus() -> void:
 
 
 ## Auto-pops a dangling CTX_MODAL frame when the panel exits the tree while
-## still holding a push. Surfaces the leak via `push_error` so the calling
-## site can be fixed; pops only when CTX_MODAL is still on top.
+## still holding a push, and reconciles `ModalQueue` state. A panel freed
+## before its dispatch turn is cancelled out of the queue; a panel freed
+## while active auto-pops the dangling frame and drains the next entry.
 func _exit_tree() -> void:
 	if not _focus_pushed:
+		ModalQueue.cancel(self)
 		return
 	push_error(
 		"[ModalPanel] %s freed with unreleased InputFocus push — auto-popping"
@@ -93,6 +136,7 @@ func _exit_tree() -> void:
 	if InputFocus.current() == InputFocus.CTX_MODAL:
 		InputFocus.pop_context()
 	_focus_pushed = false
+	ModalQueue.notify_closed(self)
 
 
 ## Test seam — clears the bookkeeping flag without calling pop_context.

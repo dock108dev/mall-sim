@@ -36,6 +36,20 @@ func _ready() -> void:
 	# stuck at the previous run's value.
 	EventBus.day_started.connect(_on_day_started)
 	EventBus.day_ended.connect(_on_day_ended)
+	if not _is_debug_ui_enabled():
+		visible = false
+
+
+## Two-tier debug-UI gate. Returns true only when (a) we are in a debug
+## binary AND (b) the `debug/ui_enabled` project setting is true. Release
+## builds always return false so the moments thumbnail never surfaces in
+## shipped binaries. The committed `debug/ui_enabled=false` default means
+## debug builds also start clean; flip the project setting locally to
+## enable the tray for a screenshot session.
+func _is_debug_ui_enabled() -> bool:
+	if not OS.is_debug_build():
+		return false
+	return bool(ProjectSettings.get_setting("debug/ui_enabled", false))
 
 
 ## Suppresses the tray for beta runs. Disconnects the ambient moment

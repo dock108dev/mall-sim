@@ -22,11 +22,6 @@
       "unlock_id": "regulars_enabled",
       "day": 3,
       "description": "Regular customers begin recognising the store after day 3 (ISSUE-023)"
-    },
-    {
-      "unlock_id": "tournament_events",
-      "day": 10,
-      "description": "Tournament events become available to Pocket Creatures after day 10 (ISSUE-015)"
     }
   ],
   "store_adjacency": {

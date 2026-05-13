@@ -49,6 +49,7 @@ SceneRouter="*res://game/autoload/scene_router.gd"
 ErrorBanner="*res://game/autoload/error_banner.gd"
 CameraAuthority="*res://game/autoload/camera_authority.gd"
 InputFocus="*res://game/autoload/input_focus.gd"
+ModalQueue="*res://game/autoload/modal_queue.gd"
 ModalDimOverlay="*res://game/autoload/modal_dim_overlay.gd"
 StoreRegistry="*res://game/autoload/store_registry.gd"
 StoreDirector="*res://game/autoload/store_director.gd"
@@ -70,6 +71,7 @@ HiddenThreadSystemSingleton="*res://game/autoload/hidden_thread_system.gd"
 [debug]
 
 gdscript/warnings/unused_signal=0
+ui_enabled=false
 walkable_mall=false
 
 [display]

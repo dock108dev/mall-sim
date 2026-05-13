@@ -80,6 +80,9 @@ func route_to_packed(scene: PackedScene, payload: Dictionary = {}) -> void:
 		push_warning("SceneRouter: route_to_packed ignored — transition in flight")
 		return
 	_in_flight = true
+	# Mirrors `_change_scene_to_file` — clear ModalQueue state before the
+	# swap so freed panels can't drain into the new scene's UI tree.
+	ModalQueue.clear()
 	var target: StringName = _target_for_path(scene.resource_path)
 	var err: int = get_tree().change_scene_to_packed(scene)
 	if err != OK:
@@ -100,6 +103,13 @@ func _change_scene_to_file(
 	target: StringName, scene_path: String, payload: Dictionary
 ) -> void:
 	_in_flight = true
+	# Drop any active or pending ModalQueue entries before the swap so a
+	# panel freed during scene teardown can't drain into the new scene's
+	# UI tree (and a stale pending entry can't dispatch into a half-built
+	# scene). The freed panels' own _exit_tree still pops any held
+	# CTX_MODAL frame; this just makes the queue's notify_closed/cancel
+	# calls become no-ops instead of dispatching the next entry.
+	ModalQueue.clear()
 	var err: int = get_tree().change_scene_to_file(scene_path)
 	if err != OK:
 		_in_flight = false
@@ -123,27 +133,21 @@ func _target_for_path(scene_path: String) -> StringName:
 
 
 func _emit_pass(target: StringName, scene_path: String) -> void:
+	# §EH-38 (docs/audits/error-handling-report.md): AuditLog is an autoload
+	# (project.godot) and `pass_check` is its owner-declared method
+	# (audit_log.gd:21). The prior `_audit_log()` walker + has_method guard
+	# pair was the §EH-13/§EH-15 dead-guard shape; the `print()` fallback was
+	# unreachable in production and would have skipped the ring buffer
+	# scanned by headless CI on a rename.
 	var detail: String = "target=%s path=%s" % [target, scene_path]
-	var log: Node = _audit_log()
-	if log != null and log.has_method("pass_check"):
-		log.pass_check(&"scene_change_ok", detail)
-	else:
-		print("AUDIT: PASS scene_change_ok " + detail)
+	AuditLog.pass_check(&"scene_change_ok", detail)
 
 
 func _fail(target: StringName, reason: String) -> void:
+	# §EH-38: typed autoload — see _emit_pass above. fail_check is declared at
+	# audit_log.gd:39. A rename now fails GDScript parse rather than silently
+	# emitting only the push_error line (which the CI stderr scan catches as
+	# ^ERROR, but without the structured AUDIT FAIL record).
 	push_error("SceneRouter: %s — %s" % [target, reason])
-	var log: Node = _audit_log()
-	if log != null and log.has_method("fail_check"):
-		log.fail_check(&"scene_change_ok", "target=%s reason=%s" % [target, reason])
+	AuditLog.fail_check(&"scene_change_ok", "target=%s reason=%s" % [target, reason])
 	scene_failed.emit(target, reason)
-
-
-func _audit_log() -> Node:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var root: Window = tree.root
-	if root == null:
-		return null
-	return root.get_node_or_null("AuditLog")

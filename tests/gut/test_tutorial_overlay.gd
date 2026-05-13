@@ -15,6 +15,10 @@ var _saved_game_state: GameManager.State
 func before_each() -> void:
 	_saved_tutorial_active = GameManager.is_tutorial_active
 	_saved_game_state = GameManager.current_state
+	# Reset both InputFocus and ModalQueue so `_can_show_tutorial` reads a
+	# clean modal state at the top of each test.
+	InputFocus._reset_for_tests()
+	ModalQueue._reset_for_tests()
 	_tutorial = TutorialSystem.new()
 	add_child_autofree(_tutorial)
 	_overlay = _OverlayScene.instantiate() as TutorialOverlay
@@ -26,6 +30,7 @@ func after_each() -> void:
 	GameManager.is_tutorial_active = _saved_tutorial_active
 	GameManager.current_state = _saved_game_state
 	GameState.flags.clear()
+	ModalQueue._reset_for_tests()
 	InputFocus._reset_for_tests()
 
 
@@ -133,3 +138,56 @@ func test_prompt_label_font_size() -> void:
 		font_size, 14,
 		"PromptLabel font size should be >= 14"
 	)
+
+
+# ── ModalQueue gating ─────────────────────────────────────────────────────────
+# The tutorial bar must hide while ModalQueue is dispatching a higher-priority
+# panel — DAY_SUMMARY / VIC_NOTE flows take precedence over tutorial copy.
+
+func test_overlay_hides_while_modal_queue_is_busy() -> void:
+	# Drive the tutorial system to a state where the bar would normally be
+	# visible, then occupy ModalQueue and confirm the bar slides out.
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	_tutorial.initialize(true)
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
+	_tutorial._process(0.01)
+
+	var bar: PanelContainer = _overlay.get_node("BottomBar")
+	assert_true(bar.visible,
+		"sanity: bar must be visible before ModalQueue blocks it")
+
+	var blocker: ModalPanel = ModalPanel.new()
+	add_child_autofree(blocker)
+	ModalQueue.request_open(blocker, ModalQueue.Priority.DAY_SUMMARY)
+
+	assert_false(bar.visible,
+		"tutorial bar must hide while ModalQueue is dispatching a panel")
+
+	blocker.close()
+	# When the modal closes, _reevaluate_visibility runs via active_changed
+	# and the bar should re-appear (state still allows it).
+	assert_true(bar.visible,
+		"tutorial bar must re-appear when ModalQueue drains")
+
+
+func test_overlay_does_not_show_step_arriving_during_modal() -> void:
+	# A tutorial_step_changed that lands while a modal is active must not
+	# pop the bar — it should be deferred until the modal closes.
+	GameManager.current_state = GameManager.State.STORE_VIEW
+	_tutorial.initialize(true)
+
+	var blocker: ModalPanel = ModalPanel.new()
+	add_child_autofree(blocker)
+	ModalQueue.request_open(blocker, ModalQueue.Priority.DAY_SUMMARY)
+
+	# Drive the tutorial step change while the modal owns the queue.
+	_tutorial._welcome_timer = TutorialSystem.WELCOME_DURATION
+	_tutorial._process(0.01)
+
+	var bar: PanelContainer = _overlay.get_node("BottomBar")
+	assert_false(bar.visible,
+		"new tutorial step must not surface while ModalQueue is busy")
+
+	blocker.close()
+	assert_true(bar.visible,
+		"deferred step must surface once the modal queue drains")

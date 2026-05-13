@@ -110,9 +110,20 @@ func start_new_game() -> void:
 ## Initializes a fresh run: clears session state, resets day to 1, and emits
 ## the `new_game_clicked` audit checkpoint. Called by `start_new_game()` before
 ## the mall_hub scene swap so day/money are set before MallHub._ready() runs.
+##
+## Day-1 entry gates that read `GameState.get_flag(...)` and would change
+## behavior on replay if not cleared:
+##   - `tutorial_skipped` (tutorial_overlay.gd `_ready` + `_can_show_tutorial`)
+##     — stale `true` silently hides the tutorial overlay on replay.
+##   - `first_sale_complete` (customer.gd `_is_first_sale_guarantee_active`,
+##     customer_system.gd `_on_checkout_declined`) — stale `true` disables the
+##     Day 1 first-sale guarantee and the forced-spawn re-arm path.
+## `GameState.reset_new_game()` clears the entire flags dict, so any future
+## per-run flag added to GameState is covered without further surgery here.
 func begin_new_run() -> void:
 	pending_load_slot = -1
 	_reset_session_state()
+	GameState.reset_new_game()
 	set_current_day(1)
 	if BetaRunState != null:
 		BetaRunState.reset_new_run()

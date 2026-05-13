@@ -27,6 +27,16 @@ const _MODAL_DIM_DURATION: float = 0.15
 const _DISABLED_LABEL_MODULATE: Color = Color(0.78, 0.78, 0.78, 0.7)
 const _ACTIVE_LABEL_MODULATE: Color = Color(1.0, 1.0, 1.0, 1.0)
 
+## Step-slot styling. Anchored to BetaModalTheme so the rail's progress
+## checklist reads as the same family as the beta modals (decision card,
+## day summary, manager note). Slot font_size is applied at runtime via
+## `add_theme_font_size_override` so the .tscn does not carry a sub-18pt
+## override that would trip the project-theme legibility tripwire.
+const _STEP_SLOT_FONT_SIZE: int = 14
+const _STEP_PREFIX_COMPLETED: String = "✓ "
+const _STEP_FUTURE_ALPHA: float = 0.5
+const _STEP_MAX_SLOTS: int = 4
+
 var _auto_hidden: bool = false
 var _current_payload: Dictionary = {}
 var _show_rail: bool = true
@@ -74,11 +84,13 @@ var _focused_can_interact: bool = false
 
 @onready var _band: ColorRect = $AccentBand
 @onready var _margin: MarginContainer = $MarginContainer
-@onready var _objective_label: Label = $MarginContainer/HBoxContainer/ObjectiveLabel
-@onready var _action_label: Label = $MarginContainer/HBoxContainer/ActionLabel
-@onready var _hint_label: Label = $MarginContainer/HBoxContainer/HintLabel
-@onready var _key_badge: PanelContainer = $MarginContainer/HBoxContainer/KeyBadge
-@onready var _optional_hint_label: Label = $MarginContainer/HBoxContainer/OptionalHintLabel
+@onready var _objective_label: Label = $MarginContainer/ContentColumn/HBoxContainer/ObjectiveLabel
+@onready var _action_label: Label = $MarginContainer/ContentColumn/HBoxContainer/ActionLabel
+@onready var _hint_label: Label = $MarginContainer/ContentColumn/HBoxContainer/HintLabel
+@onready var _key_badge: PanelContainer = $MarginContainer/ContentColumn/HBoxContainer/KeyBadge
+@onready var _optional_hint_label: Label = $MarginContainer/ContentColumn/HBoxContainer/OptionalHintLabel
+@onready var _steps_container: VBoxContainer = $MarginContainer/ContentColumn/StepsContainer
+var _step_slots: Array[Label] = []
 
 
 func _ready() -> void:
@@ -104,6 +116,14 @@ func _ready() -> void:
 	# of silently disabling the modal-dim behaviour.
 	InputFocus.context_changed.connect(_on_input_focus_changed)
 	_band.color = Color.html("#5BB8E8")
+	_step_slots = [
+		$MarginContainer/ContentColumn/StepsContainer/StepSlot0 as Label,
+		$MarginContainer/ContentColumn/StepsContainer/StepSlot1 as Label,
+		$MarginContainer/ContentColumn/StepsContainer/StepSlot2 as Label,
+		$MarginContainer/ContentColumn/StepsContainer/StepSlot3 as Label,
+	]
+	for slot: Label in _step_slots:
+		slot.add_theme_font_size_override("font_size", _STEP_SLOT_FONT_SIZE)
 	visible = false
 
 
@@ -171,6 +191,7 @@ func _on_objective_changed(payload: Dictionary) -> void:
 	_cached_key = str(payload.get("key", payload.get("input_hint", "")))
 	_apply_right_side_visibility()
 	_update_optional_hint(str(payload.get("optional_hint", "")))
+	_render_steps(payload.get("steps", []) as Array)
 	_flash()
 	_refresh_visibility()
 
@@ -187,8 +208,55 @@ func _on_objective_updated(payload: Dictionary) -> void:
 	_cached_key = str(payload.get("input_hint", payload.get("key", "")))
 	_apply_right_side_visibility()
 	_update_optional_hint(str(payload.get("optional_hint", "")))
+	_render_steps(payload.get("steps", []) as Array)
 	_flash()
 	_refresh_visibility()
+
+
+## Renders up to four step slots from the objective payload's `steps` array.
+## Each step is `{text: String, state: "completed"|"active"|"future"}`. Empty
+## or missing arrays hide the StepsContainer entirely so non-multi-step
+## payloads (e.g. ObjectiveDirector emissions outside the beta loop) keep
+## the legacy single-line ObjectiveLabel render path with no visual bulk.
+##
+## State styling is anchored to BetaModalTheme so the rail's progress
+## checklist reads as the same visual family as the beta modals:
+##   * completed → "✓ " prefix in COLOR_ACCENT (green)
+##   * active    → COLOR_TEXT_HEADER (warm gold), full opacity
+##   * future    → COLOR_TEXT_MUTED at 0.5 alpha (visually subordinate)
+func _render_steps(steps: Array) -> void:
+	if steps.is_empty():
+		_steps_container.visible = false
+		return
+	_steps_container.visible = true
+	for i: int in range(_step_slots.size()):
+		var slot: Label = _step_slots[i]
+		if i >= steps.size() or i >= _STEP_MAX_SLOTS:
+			slot.visible = false
+			continue
+		var step: Dictionary = steps[i] as Dictionary
+		var step_text: String = str(step.get("text", ""))
+		var state: String = str(step.get("state", "future"))
+		slot.visible = true
+		match state:
+			"completed":
+				slot.text = _STEP_PREFIX_COMPLETED + step_text
+				slot.add_theme_color_override(
+					"font_color", BetaModalTheme.COLOR_ACCENT
+				)
+				slot.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			"active":
+				slot.text = step_text
+				slot.add_theme_color_override(
+					"font_color", BetaModalTheme.COLOR_TEXT_HEADER
+				)
+				slot.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			_:
+				slot.text = step_text
+				slot.add_theme_color_override(
+					"font_color", BetaModalTheme.COLOR_TEXT_MUTED
+				)
+				slot.modulate = Color(1.0, 1.0, 1.0, _STEP_FUTURE_ALPHA)
 
 
 ## ObjectiveDirector re-emits the appropriate payload on preference_changed,

@@ -126,6 +126,12 @@ var _counter_color_tweens: Dictionary = {}
 var _fp_mode: bool = false
 var _fp_orig_indices: Dictionary = {}
 var _fp_close_day_hint: Label
+## FP-mode bottom-bar sentence slot. The scene-tree `_zero_state_hint` lives
+## at top-center where it would crowd the reparented `_time_label`; in FP
+## mode that hint is hidden and its copy is mirrored to this label at
+## bottom-center, pairing with `_fp_close_day_hint` on the same row to
+## fulfill the BRAINDUMP "bottom-bar = sentence + control hint" spec.
+var _fp_sentence_label: Label
 ## §F-L3 — When set, overrides the InventorySystem-derived "On Shelves"
 ## count for the beta day-1 loop. -1 means "no override; read from
 ## inventory as usual." Set via `EventBus.beta_shelf_count_changed`.
@@ -1030,37 +1036,46 @@ func is_modal_dim_active() -> bool:
 ## a zero state (no stock or no customers). Hides itself outside STORE_VIEW
 ## and while a modal owns focus so it doesn't compete with checkout, the
 ## inventory panel, or the day-summary screen.
+##
+## In FP mode the scene-tree top-center `_zero_state_hint` is always hidden
+## (its position collides with the reparented `_time_label`) and the same
+## copy is mirrored to `_fp_sentence_label` at bottom-center.
 func _refresh_zero_state_hint() -> void:
+	var hint_text: String = ""
+	var should_show: bool = false
+	if not _beta_mode_active():
+		var state: GameManager.State = GameManager.current_state
+		var in_store: bool = (
+			state == GameManager.State.STORE_VIEW
+			or state == GameManager.State.GAMEPLAY
+		)
+		if in_store and InputFocus.current() != InputFocus.CTX_MODAL:
+			if _items_placed_count <= 0:
+				hint_text = _HINT_STOCK_FLOOR
+				should_show = true
+			elif _active_customer_count <= 0:
+				hint_text = _HINT_AWAITING_CUSTOMER
+				should_show = true
+	if _fp_mode:
+		if is_instance_valid(_zero_state_hint):
+			_zero_state_hint.visible = false
+		if is_instance_valid(_fp_sentence_label):
+			_fp_sentence_label.text = hint_text
+			_fp_sentence_label.visible = should_show
+		return
+	if is_instance_valid(_fp_sentence_label):
+		_fp_sentence_label.visible = false
 	if not is_instance_valid(_zero_state_hint):
 		return
-	if _beta_mode_active():
-		_zero_state_hint.visible = false
-		return
-	var state: GameManager.State = GameManager.current_state
-	var in_store: bool = (
-		state == GameManager.State.STORE_VIEW
-		or state == GameManager.State.GAMEPLAY
-	)
-	if not in_store:
-		_zero_state_hint.visible = false
-		return
-	if InputFocus.current() == InputFocus.CTX_MODAL:
-		_zero_state_hint.visible = false
-		return
-	if _items_placed_count <= 0:
-		_zero_state_hint.text = _HINT_STOCK_FLOOR
-		_zero_state_hint.visible = true
-		return
-	if _active_customer_count <= 0:
-		_zero_state_hint.text = _HINT_AWAITING_CUSTOMER
-		_zero_state_hint.visible = true
-		return
-	_zero_state_hint.visible = false
+	if should_show:
+		_zero_state_hint.text = hint_text
+	_zero_state_hint.visible = should_show
 
 
-## Increments the customers-served-today counter when a sale completes. Driven
-## by `EventBus.customer_purchased` so warranty-only paths and refund paths
-## that do not produce a sale do not double-count. Resets on `day_started`.
+## Increments the customers-served-today counter when a sale completes.
+## Driven by `EventBus.customer_purchased` (sale-confirmed signal) rather
+## than a broader customer-departed event so non-sale outcomes (browse,
+## walk-out) do not inflate the counter. Resets on `day_started`.
 func _on_customer_purchased_hud(
 	_store_id: StringName, _item_id: StringName,
 	_price: float, _customer_id: StringName,
@@ -1195,12 +1210,16 @@ func _enter_fp_mode() -> void:
 	_apply_fp_anchors(_sales_today_label, 1.0, 1.0, -200.0, 104.0, -8.0, 132.0)
 	_apply_fp_typography()
 	_ensure_fp_close_day_hint()
+	_ensure_fp_sentence_label()
 	_apply_fp_visibility_overrides()
+	_refresh_zero_state_hint()
 
 
 func _exit_fp_mode() -> void:
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.hide()
+	if is_instance_valid(_fp_sentence_label):
+		_fp_sentence_label.hide()
 	_clear_fp_typography()
 	_restore_from_hud_root(_cash_label)
 	_restore_from_hud_root(_time_label)
@@ -1322,6 +1341,35 @@ func _ensure_fp_close_day_hint() -> void:
 	add_child(_fp_close_day_hint)
 
 
+## The FP bottom-bar sentence: pairs with `_fp_close_day_hint` on the same
+## bottom row to satisfy the BRAINDUMP `bottom-bar = sentence + control hint`
+## spec. Sits above the ObjectiveRail's AccentBand (top edge at y=-148) so
+## it does not collide with the rail content on layer 40. Center-anchored
+## with symmetric grow direction so a long localized hint stays within the
+## viewport on ultrawide aspect ratios. Modulate at 0.85 alpha keeps the
+## sentence subdued vs. primary cash/time (full white) but readable over
+## the store's brightest and darkest background zones.
+func _ensure_fp_sentence_label() -> void:
+	if is_instance_valid(_fp_sentence_label):
+		return
+	_fp_sentence_label = Label.new()
+	_fp_sentence_label.name = "FpSentenceLabel"
+	_fp_sentence_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_fp_sentence_label.anchor_left = 0.5
+	_fp_sentence_label.anchor_right = 0.5
+	_fp_sentence_label.anchor_top = 1.0
+	_fp_sentence_label.anchor_bottom = 1.0
+	_fp_sentence_label.offset_left = -250.0
+	_fp_sentence_label.offset_top = -184.0
+	_fp_sentence_label.offset_right = 250.0
+	_fp_sentence_label.offset_bottom = -156.0
+	_fp_sentence_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_fp_sentence_label.modulate = Color(1.0, 1.0, 1.0, 0.85)
+	_fp_sentence_label.clip_text = true
+	_fp_sentence_label.visible = false
+	add_child(_fp_sentence_label)
+
+
 func _apply_fp_visibility_overrides() -> void:
 	_top_bar.hide()
 	_telegraph_card.hide()
@@ -1354,6 +1402,8 @@ func _reset_for_tests() -> void:
 	_items_placed_count = 0
 	if is_instance_valid(_zero_state_hint):
 		_zero_state_hint.visible = false
+	if is_instance_valid(_fp_sentence_label):
+		_fp_sentence_label.visible = false
 	PanelAnimator.kill_tween(_modal_dim_tween)
 	_modal_dim_tween = null
 	_modal_dim_active = false
