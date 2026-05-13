@@ -1,4 +1,268 @@
-## Changes made this pass (2026-05-11, second pass)
+## Changes made this pass (2026-05-13, follow-up)
+
+Follow-up cleanup pass over the same beta WIP working tree as the
+2026-05-13 entry below. Prior passes had already swept the new panel
+files (`BetaEventLogPanel`, `BetaTodayStatsPanel`,
+`BetaObjectiveTargetHighlight`), the checklist, the modal/focus
+plumbing, and the docstring drift around deleted features. This pass
+re-greps the un-revisited surfaces — `manager_relationship_manager.gd`,
+`beta_debug_overlay.gd`, and the rest of the WIP-diff perimeter — for
+dead constants and stale renamed-stage strings, and trims what's
+actually unreferenced.
+
+### Edits applied in source
+
+| File | LOC before → after | What changed |
+|---|---|---|
+| `game/autoload/manager_relationship_manager.gd` | 641 → 637 (-4) | Deleted four unused constants from the per-event trust-delta block: `DELTA_COMPLAINT_HANDLED = 0.03`, `DELTA_MYSTERY_INVENTORY_ACK = 0.04`, `REASON_COMPLAINT_HANDLED = "complaint_handled"`, and `REASON_MYSTERY_INVENTORY_ACK = "mystery_inventory_acknowledged"`. `grep -rn` across `game/` and `tests/` returned only the declaration lines — no readers anywhere. The three surviving deltas (`DELTA_TASK_COMPLETED`, `DELTA_STAFF_QUIT`, `DELTA_MISSING_PAYROLL`) are all called from `apply_trust_delta(...)` sites in this file at lines 340/345/350 and pinned by `tests/gut/test_manager_relationship_manager.gd:133–153`. The deleted pair were a never-wired feature-stub from the original spec block. |
+| `game/scripts/beta/beta_debug_overlay.gd` | 431 → 431 (0) | Fixed stale stage strings in the `_objective_anchor_for_stage` match. The prior chain shape used `"pickup_stock"` / `"place_stock"`; the current Day-1 chain (per `beta_day_one_controller.gd:35–37`) renamed those stages to `"back_room_inventory"` / `"stock_shelf"`. The match arms with the old keys could never fire — `grep -rn` confirms `pickup_stock` / `place_stock` appear only at those two arm lines. The debug overlay was silently rendering `"—"` for the back-room and stock-shelf stages instead of the anchor node names (`"BetaBackroomPickup"` / `"BetaRestockShelf"`). Rename only — control flow and signature unchanged. |
+
+### Why these were act-able
+
+Both edits are local, low-risk, zero-behavioural-change for production
+gameplay:
+
+- The four manager-relationship constants are dead declarations; no
+  caller and no test references them. Project boot stays clean
+  (`[AUDIT] boot_complete: PASS`); the surviving constants and their
+  GUT contracts are untouched.
+- The debug-overlay rename fixes a stale-key bug confined to the F2
+  debug surface. It restores the missing-anchor labels for the
+  current chain's two middle stages without altering the function
+  signature, return type, or any other call site.
+
+### Inspected this pass and intentionally not changed
+
+#### `beta_day_one_controller.gd` 1757 LOC
+
+`game/scripts/beta/beta_day_one_controller.gd`. The WIP keeps growing
+this file (now 1757 LOC, up from 1716 in the prior pass) with the new
+day-2 chain reuse, Vic-note Day-2 body, customer-exit tween, and
+back-room delivery quantity unification. Spot-greps for unused fields,
+commented-out blocks, and stale renamed references returned zero hits
+post the prior passes.
+
+**Why not factored:** the extraction candidates listed by the prior
+pass (panel-spawn block, decision-card glue, screenshot helper) are
+still the cleanest splits but remain blocked by ongoing beta content
+authoring. Splitting during the active WIP would create merge churn
+without any code-health win. The 1757 LOC is intrinsic for a chain
+controller that owns gating, time advance, completion, summary
+shaping, scene-reset, customer-exit tween, and panel ownership — see
+the prior pass's same disposition.
+
+#### Per-tag color tables in `beta_event_log_panel.gd` and `_PHASE_NAMES` in `beta_today_stats_panel.gd`
+
+`game/scripts/beta/beta_event_log_panel.gd:55–62` and
+`game/scripts/beta/beta_today_stats_panel.gd:52–59`. Both are static
+content lookups with the same color/phase tokens appearing once each.
+
+**Why kept:** the tables are local to their owners by design — they're
+visual-contract constants for a specific surface, not cross-cutting
+SSOT. Hoisting them into a shared module would force every test
+fixture that constructs one panel to also import the shared module,
+without removing any duplication (each table has exactly one reader).
+
+#### `_MODAL_DIM_ALPHA = 0.65` repeated across `hud.gd`, `beta_today_checklist.gd`, `beta_today_stats_panel.gd`, `beta_event_log_panel.gd`, `objective_rail.gd`, `modal_dim_overlay.gd`
+
+Six copies of the same modal-fade constant.
+
+**Why kept:** documented as intentional in the prior pass — the
+`ModalDimOverlay` docstring explicitly anchors the visual contract
+("Alpha is calibrated against `HUD._MODAL_DIM_ALPHA = 0.65`") and the
+other surfaces all reference the same calibration. Centralizing the
+constant in a single autoload would tie six unrelated surfaces to a
+new shared dependency to save five literal `0.65`s — a worse trade
+than the existing per-surface docstring chain that names the
+calibration target.
+
+#### Verbose §EH-13/15/35–§EH-40 dead-guard-removal docstrings across `event_bus.gd`, `event_log.gd`, `modal_dim_overlay.gd`, `objective_rail.gd`, `audit_overlay.gd`, `beta_today_checklist.gd`, `beta_today_stats_panel.gd`, `toast_notification_ui.gd`, etc.
+
+Same disposition as prior passes: every `§EH-*` anchor is the in-code
+SSOT for the matching `docs/audits/error-handling-report.md` section.
+
+**Why kept:** removing or shortening these would orphan the audit
+report. The user's documented preference (recorded in prior passes)
+is to keep `§EH-*` anchors as inline citations.
+
+### Files still >500 LOC (this pass)
+
+No new files crossed the 500-LOC threshold. The three biggest WIP
+files are the same as the prior pass:
+
+- `game/scripts/beta/beta_day_one_controller.gd` 1757 LOC. See
+  Inspected-and-kept above; same extraction plan and same blocker.
+- `game/scenes/ui/hud.gd` 1479 LOC. Same `FpHudController`
+  extraction plan as the prior passes for the FP-mode block once
+  layout is content-stable.
+- `game/autoload/event_bus.gd` 875 LOC. Global signal hub by
+  design; per-signal docstrings justify the file size.
+- `game/scenes/ui/checkout_panel.gd` 775 LOC. Intrinsic scope; the
+  WIP added the `ModalQueue.is_busy()` deferral path. No clean
+  split candidates surfaced this pass.
+- `game/autoload/manager_relationship_manager.gd` 637 LOC (down
+  4 from 641 this pass). Stays under the threshold but worth
+  noting: still owns trust scalar, tier resolution, per-day
+  category tallying, morning-note selection, and confrontation
+  emission — same justification as the prior pass.
+
+## Escalations
+
+None new this pass. The pre-existing content-test reconciliation
+track remains the only outstanding item (five-store / deleted-upgrade
+/ renamed-label content fallout, unchanged in scope from the prior
+pass).
+
+---
+
+## Changes made this pass (2026-05-13)
+
+Cleanup pass over the active beta WIP working tree (Day-1 chain + new
+on-screen log / right-side stats / today-checklist panels + ModalQueue
+deferral on `CheckoutPanel.show_checkout`). The branch came in with the
+new `BetaEventLogPanel`, `BetaTodayStatsPanel`, dedup-guard tests, and
+the rewritten Day-1 objective chain (`talk_to_customer →
+back_room_inventory → stock_shelf → close_day`) already staged. This
+pass swept for dead constants, unused fields, and stale docstrings
+introduced or left behind by the WIP.
+
+### Edits applied in source
+
+| File | LOC before → after | What changed |
+|---|---|---|
+| `game/autoload/event_log.gd` | 234 → 229 (-5) | Deleted the unused `ON_SCREEN_MESSAGE_MAX_CHARS: int = 96` constant (newly introduced by the WIP) plus its 3-line docstring. `grep -rn ON_SCREEN_MESSAGE_MAX_CHARS game/ tests/` returned only the declaration site — no readers in any source or test file. The docstring also misrepresented the runtime contract: it claimed the bottom-left log panel "caps width" via this constant, but `beta_event_log_panel.gd` actually caps by entry count (`MAX_VISIBLE_ENTRIES = 8`) and does no per-line char truncation, so the constant was misleading dead code, not just unused. |
+
+### Why this was act-able
+
+Pure dead-code removal with no behavioural surface:
+
+- No reader site (verified by grep across `game/`, `tests/`, and
+  `addons/gut/`).
+- Targeted test suites that exercise the panel and its EventBus bridge
+  still pass post-edit: `test_beta_event_log_panel.gd` 11/11,
+  `test_objective_director.gd` 29/29, `test_beta_today_stats_panel.gd`
+  11/11. The relevant contract (the panel renders `event_logged`
+  emissions and caps at `MAX_VISIBLE_ENTRIES`) is unchanged.
+- Project still boots headless (`--check-only` succeeds, boot
+  `AUDIT: PASS` lines unchanged).
+
+### Inspected this pass and intentionally not changed
+
+#### `beta_day_one_controller.gd` "refund" / "warranty" comment references
+
+`game/scripts/beta/beta_day_one_controller.gd:588, 1507–1509`. The
+guard at `:588` (`Guard on cash_delta > 0 so refunds and no-sale
+outcomes …`) and the docstring at `:1504–1509` on
+`_emit_customer_outcome_toast` both mention refunds.
+
+**Why kept:** these are accurate descriptions of the *current* Day-1
+contract, not residues of a removed feature. `cash_delta` actually can
+be negative on `refuse_return` / `clean_exchange` decision outcomes
+authored in `customer_events.json`, so the guard is load-bearing. The
+docstring at `:1507` explicitly flags this as a forward-looking comment
+("Negative cash (refunds) currently fall through to the same 'no sale'
+copy because there's no Day-1 refund path; a future scene with a
+negative-cash choice can branch here"), which is the kind of
+*why-it's-shaped-this-way* note that should stay.
+
+#### `event_bus.gd:634` `warranty_binder_examined` signal
+
+`game/autoload/event_bus.gd:634–636`. The signal predates this WIP and
+was reconfirmed in the prior cleanup pass (see "Doc-string mention of
+`warranty_binder_examined` at `event_bus.gd:623-625`" above) — it is
+the in-fiction retail-prop inspection trigger for the hidden-thread
+system, not a residue of the deleted warranty-pricing system. Same
+disposition as the prior pass.
+
+#### `EventLog._format_message` docstring claim "surface caps width at ~260 px"
+
+`game/autoload/event_log.gd:181–184`. After deleting
+`ON_SCREEN_MESSAGE_MAX_CHARS` I considered rewording this docstring,
+but it is actually accurate as-is: the panel's `_PANEL_WIDTH` is
+260 px (`beta_event_log_panel.gd:37`) and the RichTextLabel uses
+`fit_content = true` without explicit autowrap, so rows wider than the
+panel will overflow. The contract is "keep these strings short to fit
+the visible box," which is what the docstring says.
+
+**Why kept:** the comment correctly describes a real runtime constraint
+on this private helper, even after the misleading constant is gone.
+
+#### `beta_day_one_controller.gd._summary_spawned` one-shot guard
+
+`game/scripts/beta/beta_day_one_controller.gd:288, 506–520`. The new
+WIP-added flag guards against a duplicate `day_close_confirmed` emit
+that would otherwise enqueue a second summary modal request. The
+flag's twin — `_completed_objectives.has(&"close_day")` at `:505` —
+gates the same path one line earlier.
+
+**Why kept:** the two checks defend different races. The
+`_completed_objectives.has(&"close_day")` check fires when the
+checklist row was already ticked but the summary request was rejected
+or deferred (and a retry comes through); `_summary_spawned` catches a
+true duplicate `day_close_confirmed` emit while the first summary is
+still spawning but before the checklist row flips. Removing either
+would reopen one of the two races. Both `test_modal_one_at_a_time.gd`
+contracts (`test_summary_dedups_repeated_show_requests` and
+`test_modal_queue_depth_stays_at_one_during_summary`) depend on this
+twin-guard.
+
+#### `ManagerRelationshipManager._last_started_day` parallels `_confrontation_emitted_this_day`
+
+`game/autoload/manager_relationship_manager.gd:104, 110, 194,
+271–290`. The WIP added `_last_started_day` to guard against a
+duplicate `day_started.emit(day)` for the same day number;
+`_confrontation_emitted_this_day` already exists as a per-day flag for
+a different one-shot effect.
+
+**Why kept:** the two flags scope-differently. `_last_started_day`
+suppresses duplicate *day-start processing* (note selection,
+category-tally reset, pending-unlock consumption) across the entire
+function body; `_confrontation_emitted_this_day` suppresses the
+*confrontation note emission* specifically and resets at day end. They
+are not redundant — collapsing them would either over-suppress
+(skipping the confrontation when a different day-start effect needed
+to re-run) or under-suppress (re-emitting the morning note on a
+duplicate `day_started`).
+
+### Files still >500 LOC (this pass)
+
+No new files crossed the 500-LOC threshold relative to the prior
+pass's table. Current sizes for the three biggest files the WIP
+touched:
+
+- `game/scripts/beta/beta_day_one_controller.gd` 1716 LOC (up from
+  ~1650 in the prior pass; the WIP added the new panel wiring in
+  `_ensure_panels`, the `_summary_spawned` guard, the
+  `_sales_today` per-day cash tracker, and the customer-outcome
+  toast). Same extraction plan as the prior pass: the panel-spawn
+  block (`_ensure_panels`), the decision-card glue
+  (`_on_choice_selected` / `_emit_customer_outcome_toast`), and the
+  screenshot helper are the three cleanest extraction candidates,
+  in that order. None of them can be cleanly factored *during* an
+  active beta-content WIP — they would all need to land alongside a
+  pause in content authoring, which is not this pass.
+- `game/scenes/ui/hud.gd` 1475 LOC (up from 1419; the WIP added the
+  idempotent `_connect_signals` block and the beta-mode TopBar
+  suppression). Same `FpHudController` extraction plan as the prior
+  pass for the FP-mode block once the layout is content-stable.
+- `game/scenes/ui/checkout_panel.gd` 775 LOC. Player-facing checkout
+  modal; the WIP added the `ModalQueue.is_busy()` deferral path at
+  `:171–187`. Intrinsic scope — checkout modal renders prices,
+  haggle state, totals, and the four buttons; no clean split.
+- `game/autoload/event_bus.gd` 855 LOC. Global signal hub by design
+  (the WIP added `customer_interacted` and `event_logged`). Each
+  signal has a docstring justifying its existence; splitting by
+  subsystem would fragment the SSOT.
+
+## Escalations
+
+None new this pass. The prior pass's content-test reconciliation
+track remains the only outstanding item (pre-existing five-store /
+deleted-upgrade / renamed-label content fallout, unchanged in scope).
+
+---
+
+## Prior pass — 2026-05-11, second pass
 
 Second cleanup pass over the same WIP working tree. The prior pass (this
 file's previous version, retained below) tackled the obvious dead-field

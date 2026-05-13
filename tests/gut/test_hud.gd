@@ -480,3 +480,129 @@ func test_sales_today_pulses_on_item_sold() -> void:
 		_hud._counter_scale_tweens.has(label),
 		"Sold Today increment must create a scale-pulse tween"
 	)
+
+
+# ── Defensive signal connection guards ─────────────────────────────────────
+# Each EventBus / InputFocus / button connection in _connect_signals() is
+# wrapped with is_connected so a second HUD instance entering the tree
+# (test fixtures, editor hot-reload, future code) cannot double the handler
+# count on any shared autoload signal. The before_each fixture has already
+# instantiated one HUD; these tests add a second and confirm that calling
+# the helper again on either instance is idempotent and that each instance
+# remains a sole-listener for its own bound method.
+
+
+func test_connect_signals_is_idempotent_on_single_instance() -> void:
+	# Calling _connect_signals() a second time on the same HUD must not
+	# create a duplicate connection on any guarded signal.
+	var before: int = EventBus.objective_changed.get_connections().size()
+	_hud._connect_signals()
+	var after: int = EventBus.objective_changed.get_connections().size()
+	assert_eq(
+		after, before,
+		"Re-calling _connect_signals must not double an existing connection"
+	)
+
+
+func test_objective_changed_fires_handler_once_per_instance() -> void:
+	# Two HUDs in the tree: each instance is bound to its own
+	# _on_objective_payload, so emitting once must invoke each instance's
+	# handler exactly once — not twice on a single instance.
+	var second_hud: CanvasLayer = _HudScene.instantiate()
+	add_child_autofree(second_hud)
+	var first_count_before: int = _hud._objective_active as int
+	# Count how many connections target _hud._on_objective_payload.
+	var connections: Array = EventBus.objective_changed.get_connections()
+	var first_bindings: int = 0
+	var second_bindings: int = 0
+	for c in connections:
+		var callable_obj: Object = (c["callable"] as Callable).get_object()
+		if callable_obj == _hud:
+			first_bindings += 1
+		elif callable_obj == second_hud:
+			second_bindings += 1
+	assert_eq(
+		first_bindings, 1,
+		"First HUD must be bound exactly once to objective_changed"
+	)
+	assert_eq(
+		second_bindings, 1,
+		"Second HUD must be bound exactly once to objective_changed"
+	)
+	# Sanity: ignore first_count_before — only confirms the value was read.
+	assert_true(first_count_before == 0 or first_count_before == 1)
+
+
+func test_no_signal_double_connects_after_second_hud_instantiated() -> void:
+	# Sweep every signal listed in _connect_signals(); each HUD instance
+	# must own exactly one binding per signal it subscribes to.
+	var second_hud: CanvasLayer = _HudScene.instantiate()
+	add_child_autofree(second_hud)
+	var event_signals: Array[StringName] = [
+		&"objective_changed",
+		&"objective_updated",
+		&"notification_requested",
+		&"critical_notification_requested",
+		&"reputation_changed",
+		&"store_opened",
+		&"store_closed",
+		&"hour_changed",
+		&"day_started",
+		&"day_phase_changed",
+		&"money_changed",
+		&"speed_changed",
+		&"random_event_telegraphed",
+		&"locale_changed",
+		&"build_mode_entered",
+		&"build_mode_exited",
+		&"store_entered",
+		&"store_exited",
+		&"inventory_changed",
+		&"beta_carry_changed",
+		&"beta_shelf_count_changed",
+		&"beta_backroom_count_changed",
+		&"customer_purchased",
+		&"item_sold",
+		&"customer_spawned",
+		&"customer_left",
+		&"game_state_changed",
+		&"tutorial_step_changed",
+		&"tutorial_completed",
+		&"tutorial_skipped",
+		&"run_state_changed",
+		&"first_sale_completed",
+	]
+	for sig_name in event_signals:
+		var conns: Array = EventBus.get_signal_connection_list(sig_name)
+		var first_count: int = 0
+		var second_count: int = 0
+		for c in conns:
+			var obj: Object = (c["callable"] as Callable).get_object()
+			if obj == _hud:
+				first_count += 1
+			elif obj == second_hud:
+				second_count += 1
+		assert_eq(
+			first_count, 1,
+			"First HUD must own exactly one binding on %s" % sig_name
+		)
+		assert_eq(
+			second_count, 1,
+			"Second HUD must own exactly one binding on %s" % sig_name
+		)
+
+
+func test_input_focus_context_changed_no_double_bind() -> void:
+	var second_hud: CanvasLayer = _HudScene.instantiate()
+	add_child_autofree(second_hud)
+	var conns: Array = InputFocus.get_signal_connection_list(&"context_changed")
+	var first_count: int = 0
+	var second_count: int = 0
+	for c in conns:
+		var obj: Object = (c["callable"] as Callable).get_object()
+		if obj == _hud:
+			first_count += 1
+		elif obj == second_hud:
+			second_count += 1
+	assert_eq(first_count, 1, "First HUD must own one InputFocus binding")
+	assert_eq(second_count, 1, "Second HUD must own one InputFocus binding")

@@ -163,6 +163,11 @@ signal customer_greeted(customer_id: StringName, store_id: StringName)
 signal queue_advanced(queue_size: int)
 signal queue_changed(queue_size: int)
 signal customer_abandoned_queue(customer: Node)
+## Emitted when the player presses the interact key on a customer interactable.
+## `customer` is the interactable node that received the press (the controller
+## can resolve the customer entity from it). Used by ObjectiveDirector to
+## advance the Day 1 talk-to-customer step on engagement.
+signal customer_interacted(customer: Node)
 signal customer_state_changed(customer: Node, new_state: int)
 ## Emitted by Customer when _evaluate_current_shelf assigns or upgrades the
 ## desired item. Carries both the customer and the item so listeners can post
@@ -490,6 +495,32 @@ signal notification_requested(message: String)
 signal critical_notification_requested(message: String)
 ## Emitted by any system requesting a non-blocking player notification.
 signal toast_requested(message: String, category: StringName, duration: float)
+## Player-facing event-log broadcast. Mirrors every `EventLog._record` write
+## as a single `(tag, message)` pair so on-screen log surfaces (bottom-left
+## panel) can render the same stream without scanning the ring buffer. Fires
+## unconditionally — not gated by `OS.is_debug_build()` — because the surface
+## is a shipped UI affordance, not a debug overlay.
+signal event_logged(tag: String, message: String)
+## Emitted by `ModalPanel._push_modal_focus` immediately after a CTX_MODAL
+## frame is claimed on `InputFocus`. `modal_id` is the panel's `name`
+## (StringName in Godot 4). EventLog wires this to the `[MODAL]` stream so
+## the on-screen log can render modal-open beats alongside the rest of the
+## timeline. No `objective_started` companion exists by design — see
+## `objective_completed` below for why we log completions only.
+signal modal_opened(modal_id: StringName)
+## Emitted by `ModalPanel._pop_modal_focus` after a CTX_MODAL frame is
+## released. Fires once per matched open; the defensive sibling-frame guard
+## in `_pop_modal_focus` skips the pop AND the emit so the open/close pair
+## stays balanced.
+signal modal_closed(modal_id: StringName)
+## Emitted when a chain objective transitions to its completed state.
+## `label` is past-tense, human-readable copy intended for the bottom-left
+## event log surface ("Customer served.", "Shelf stocked.") — distinct from
+## the active-objective rail label which is imperative present-tense
+## ("Talk to the customer at the register."). Logging completions only —
+## not starts — is doctrinal: per BRAINDUMP, echoing the active rail label
+## into the log on objective-start is the canonical 'Bad' pattern.
+signal objective_completed(objective_id: StringName, label: String)
 ## §F-L2 — Beta day-1 carry/shelf state. Driven by `BetaDayOneController` so
 ## the FP HUD can surface "Carrying: X" and override the "On Shelves: N"
 ## counter without poking InventorySystem. Empty `text` clears the carry

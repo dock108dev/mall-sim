@@ -72,7 +72,7 @@ reference earlier ones. Five entries are scenes
 | 19 | `AuditOverlay` | `game/autoload/audit_overlay.gd` |
 | 20 | `AuditLog` | `game/autoload/audit_log.gd` |
 | 21 | `LedgerSystem` | `game/autoload/ledger_system.gd` — per-transaction event log plus `day_closed` anchor records used for daily revenue reconciliation; initialized with `time_system` in Tier 5 |
-| 22 | `EventLog` | `game/autoload/event_log.gd` — debug-build-only structured per-event timeline (ring buffer of inventory mutations and customer FSM transitions); `queue_free`s itself in release builds |
+| 22 | `EventLog` | `game/autoload/event_log.gd` — structured per-event timeline (inventory mutations, customer FSM transitions, day lifecycle, money/stat changes, modal open/close, gameplay-ready, objective completions). Re-broadcasts each entry as `EventBus.event_logged(tag, message)` in every build for the player-facing on-screen log surface; the ring buffer + stdout print are debug-only |
 | 23 | `SceneRouter` | `game/autoload/scene_router.gd` — sole caller of `change_scene_to_*` |
 | 24 | `ErrorBanner` | `game/autoload/error_banner.gd` |
 | 25 | `CameraAuthority` | `game/autoload/camera_authority.gd` — single-current-camera authority |

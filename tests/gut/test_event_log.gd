@@ -123,6 +123,118 @@ func test_customer_left_emits_distinct_customer_exit_entry() -> void:
 		"customer_exit must carry the reason field when present")
 
 
+func test_day_started_emits_day_entry() -> void:
+	EventBus.day_started.emit(3)
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_gt(entries.size(), 0, "day_started must produce a log entry")
+	var entry: Dictionary = entries[entries.size() - 1]
+	assert_eq(entry.get("tag"), "[DAY]", "day_started tag must be [DAY]")
+	assert_eq(entry.get("action"), "day_started", "action must be 'day_started'")
+	var params: Dictionary = entry.get("params", {})
+	assert_eq(int(params.get("day", -1)), 3, "day param must be carried")
+
+
+func test_money_changed_emits_stat_entry_with_delta() -> void:
+	EventBus.money_changed.emit(100.0, 175.0)
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_gt(entries.size(), 0, "money_changed must produce a log entry")
+	var entry: Dictionary = entries[entries.size() - 1]
+	assert_eq(entry.get("tag"), "[STAT]", "money_changed tag must be [STAT]")
+	assert_eq(entry.get("action"), "stat_changed", "action must be 'stat_changed'")
+	var params: Dictionary = entry.get("params", {})
+	assert_eq(String(params.get("stat", "")), "money", "stat field must be 'money'")
+	assert_almost_eq(
+		float(params.get("old_value", -1.0)), 100.0, 0.001,
+		"old_value must carry the pre-mutation amount"
+	)
+	assert_almost_eq(
+		float(params.get("new_value", -1.0)), 175.0, 0.001,
+		"new_value must carry the post-mutation amount"
+	)
+	assert_almost_eq(
+		float(params.get("delta", 0.0)), 75.0, 0.001,
+		"delta must be new_value - old_value"
+	)
+
+
+func test_gameplay_ready_emits_system_game_started_entry() -> void:
+	EventBus.gameplay_ready.emit()
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_gt(entries.size(), 0, "gameplay_ready must produce a log entry")
+	var entry: Dictionary = entries[entries.size() - 1]
+	assert_eq(entry.get("tag"), "[SYSTEM]", "gameplay_ready tag must be [SYSTEM]")
+	assert_eq(
+		entry.get("action"), "game_started",
+		"gameplay_ready action must be 'game_started'"
+	)
+
+
+func test_modal_opened_and_closed_emit_distinct_modal_entries() -> void:
+	EventBus.modal_opened.emit(&"BetaDecisionCardPanel")
+	EventBus.modal_closed.emit(&"BetaDecisionCardPanel")
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_eq(entries.size(), 2, "open + close must produce two entries")
+	var opened: Dictionary = entries[entries.size() - 2]
+	var closed: Dictionary = entries[entries.size() - 1]
+	assert_eq(opened.get("tag"), "[MODAL]", "modal_opened tag must be [MODAL]")
+	assert_eq(
+		opened.get("action"), "modal_opened",
+		"first entry must be modal_opened"
+	)
+	assert_eq(closed.get("tag"), "[MODAL]", "modal_closed tag must be [MODAL]")
+	assert_eq(
+		closed.get("action"), "modal_closed",
+		"second entry must be modal_closed"
+	)
+	assert_eq(
+		String(opened.get("params", {}).get("modal_id", "")),
+		"BetaDecisionCardPanel",
+		"modal_id must be carried as a String"
+	)
+
+
+func test_objective_completed_emits_objective_entry_with_label() -> void:
+	EventBus.objective_completed.emit(&"talk_to_customer", "Customer served.")
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_gt(entries.size(), 0, "objective_completed must produce a log entry")
+	var entry: Dictionary = entries[entries.size() - 1]
+	assert_eq(
+		entry.get("tag"), "[OBJECTIVE]",
+		"objective_completed tag must be [OBJECTIVE]"
+	)
+	assert_eq(
+		entry.get("action"), "objective_completed",
+		"action must be 'objective_completed'"
+	)
+	var params: Dictionary = entry.get("params", {})
+	assert_eq(
+		String(params.get("objective_id", "")), "talk_to_customer",
+		"objective_id must be carried"
+	)
+	assert_eq(
+		String(params.get("label", "")), "Customer served.",
+		"past-tense label must be carried verbatim"
+	)
+
+
+func test_event_logged_broadcast_fires_with_formatted_message() -> void:
+	# The on-screen log surface subscribes to EventBus.event_logged and never
+	# touches the ring buffer. Verify the broadcast lands with the formatted
+	# string the panel renders.
+	var captured: Array = []
+	var sink := func(tag: String, message: String) -> void:
+		captured.append({"tag": tag, "message": message})
+	EventBus.event_logged.connect(sink)
+	EventBus.objective_completed.emit(&"close_day", "Day closed.")
+	EventBus.event_logged.disconnect(sink)
+	assert_eq(captured.size(), 1, "broadcast must fire once per _record call")
+	assert_eq(String(captured[0]["tag"]), "[OBJECTIVE]")
+	assert_eq(
+		String(captured[0]["message"]), "Day closed.",
+		"formatted message for objective_completed must be the past-tense label"
+	)
+
+
 func test_all_six_customer_state_transitions_log_distinct_state_changes() -> void:
 	# Covers BROWSING → DECIDING → PURCHASING → LEAVING and also DECIDING →
 	# LEAVING / WAITING_IN_QUEUE / ENTERING transitions to ensure every

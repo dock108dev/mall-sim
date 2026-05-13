@@ -13,11 +13,13 @@
 ## active objective visible behind the dim overlay.
 extends CanvasLayer
 
-## Modal-fade contract: rail opacity drops to 0.3 over 0.15s when CTX_MODAL
+## Modal-fade contract: rail opacity drops to 0.65 over 0.15s when CTX_MODAL
 ## is on top of the InputFocus stack, restores to 1.0 over 0.15s on pop.
 ## The rail stays `visible = true` under modal context — the fade signals
 ## de-emphasis without removing the affordance from the player's view.
-const _MODAL_DIM_ALPHA: float = 0.3
+## Calibrated against `ModalDimOverlay.DIM_COLOR.a = 0.4` so the composed
+## visible opacity (0.65 × 0.6 ≈ 0.39) stays legible.
+const _MODAL_DIM_ALPHA: float = 0.65
 const _MODAL_DIM_DURATION: float = 0.15
 
 ## Muted modulate used on the rail's right-side action label when an
@@ -228,6 +230,15 @@ func _on_objective_updated(payload: Dictionary) -> void:
 ##   * future    → COLOR_TEXT_MUTED at 0.5 alpha (visually subordinate)
 func _render_steps(steps: Array) -> void:
 	if steps.is_empty():
+		# Blank every slot so a later payload that re-shows the container
+		# can't surface ghost text left over from a prior 3- or 4-step
+		# render. The container's visibility flag alone hides the slots but
+		# leaves Label.text intact — a non-issue while empty, but the next
+		# steps payload only writes slots inside its own range and leaves
+		# any out-of-range slot showing the old text.
+		for slot: Label in _step_slots:
+			slot.visible = false
+			slot.text = ""
 		_steps_container.visible = false
 		return
 	_steps_container.visible = true
@@ -235,6 +246,7 @@ func _render_steps(steps: Array) -> void:
 		var slot: Label = _step_slots[i]
 		if i >= steps.size() or i >= _STEP_MAX_SLOTS:
 			slot.visible = false
+			slot.text = ""
 			continue
 		var step: Dictionary = steps[i] as Dictionary
 		var step_text: String = str(step.get("text", ""))

@@ -70,7 +70,7 @@ func _ready() -> void:
 	_metrics_label.bbcode_enabled = true
 	_metrics_label.fit_content = true
 	_metrics_label.scroll_active = false
-	_metrics_label.custom_minimum_size = Vector2(0, 90)
+	_metrics_label.custom_minimum_size = Vector2(0, 140)
 	_metrics_label.add_theme_color_override(
 		"default_color", BetaModalTheme.COLOR_TEXT_PRIMARY
 	)
@@ -203,32 +203,45 @@ func _on_queued_open(payload: Dictionary) -> void:
 	var day: int = int(summary.get("day", 1))
 	_title_label.text = "Day %d Summary" % day
 
-	# Money — three lines: Starting Cash (carry-in), Sales Today (per-day
-	# delta with explicit sign), Ending Cash (cumulative).
+	# Money — five lines: Starting Cash (carry-in), Sales (gross revenue
+	# today), Rent (fixed daily operating cost), Profit (sales − rent), and
+	# Ending Cash (cumulative). Rent/Sales/Profit are BRAINDUMP First-Day
+	# Flow Step 6 requirements. Older payloads without the new keys fall
+	# back to derived defaults so the layout still renders.
 	var ending_cash: int = int(summary.get("cash", 0))
 	var cash_delta: int = int(summary.get("cash_delta", 0))
 	var starting_cash: int = int(
 		summary.get("starting_cash", ending_cash - cash_delta)
 	)
-	var sales_today_str: String
-	if cash_delta > 0:
-		sales_today_str = "+$%d" % cash_delta
-	elif cash_delta < 0:
-		sales_today_str = "-$%d" % -cash_delta
-	else:
-		sales_today_str = "$0"
+	var sales_revenue: int = int(
+		summary.get("sales_revenue", max(cash_delta, 0))
+	)
+	var rent_paid: int = int(summary.get("rent_paid", 0))
+	var net_profit: int = int(
+		summary.get("net_profit", sales_revenue - rent_paid)
+	)
+	var profit_sign: String = "-" if net_profit < 0 else ""
 	# §F-S13 — `_metrics_label.bbcode_enabled = true`. The format template is
-	# a hardcoded literal; the three bound values are an int, an
-	# int-derived currency string, and an int. No content/save-derived
-	# strings reach this sink. Future maintainers binding new fields here
-	# must keep the binding integer-or-format-derived; for string fields
-	# either render to `_note_label` (plain `Label`) instead, or escape
-	# `[` → `[lb]` at the call site.
+	# a hardcoded literal; every bound value is an int (or int-derived sign
+	# prefix). No content/save-derived strings reach this sink. Future
+	# maintainers binding new fields here must keep the binding
+	# integer-or-format-derived; for string fields either render to
+	# `_note_label` (plain `Label`) instead, or escape `[` → `[lb]` at the
+	# call site.
 	_metrics_label.text = (
 		"[b]Starting Cash:[/b] $%d\n"
-		+ "[b]Sales Today:[/b] %s\n"
+		+ "[b]Sales:[/b] $%d\n"
+		+ "[b]Rent:[/b] -$%d\n"
+		+ "[b]Profit:[/b] %s$%d\n"
 		+ "[b]Ending Cash:[/b] $%d"
-	) % [starting_cash, sales_today_str, ending_cash]
+	) % [
+		starting_cash,
+		sales_revenue,
+		rent_paid,
+		profit_sign,
+		absi(net_profit),
+		ending_cash,
+	]
 
 	# Store Performance — visible volume / inventory rows. Shelf and
 	# backroom remaining come from the controller (single source of truth);

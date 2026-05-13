@@ -6,6 +6,12 @@ const INPUT_MODE_GAMEPLAY: int = 0
 const INPUT_MODE_DECISION_CARD: int = 1
 const INPUT_MODE_PAUSE_MENU: int = 2
 const INPUT_MODE_DAY_SUMMARY: int = 3
+## Fixed daily rent for the beta loop. Surfaced on the day-summary panel
+## under the Money section so the player sees today's sales offset by the
+## day's operating cost. Constant for the beta — a future tuning pass can
+## convert this into a per-day value loaded from `day_NN.json` without
+## changing the panel-side contract.
+const DAILY_RENT: int = 50
 
 var day: int = 1
 var cash: int = 0

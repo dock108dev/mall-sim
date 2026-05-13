@@ -14,19 +14,11 @@ extends Node
 const CONTENT_PATH := "res://game/content/objectives.json"
 
 ## Day 1 step indices (must align with the order of `steps` in objectives.json).
-const DAY1_STEP_OPEN_INVENTORY: int = 0
-const DAY1_STEP_SELECT_ITEM: int = 1
-const DAY1_STEP_STOCK_ITEM: int = 2
-const DAY1_STEP_WAIT_FOR_CUSTOMER: int = 3
-const DAY1_STEP_CUSTOMER_BROWSING: int = 4
-const DAY1_STEP_CUSTOMER_AT_CHECKOUT: int = 5
-const DAY1_STEP_SALE_COMPLETE: int = 6
-const DAY1_STEP_CLOSE_DAY: int = 7
-const DAY1_STEP_COUNT: int = 8
-
-## "Sale complete!" is shown briefly before the rail flips to the close-day
-## prompt so the player registers the success beat before being asked to act.
-const SALE_COMPLETE_DURATION: float = 2.0
+const DAY1_STEP_TALK_TO_CUSTOMER: int = 0
+const DAY1_STEP_BACK_ROOM_INVENTORY: int = 1
+const DAY1_STEP_STOCK_SHELF: int = 2
+const DAY1_STEP_CLOSE_DAY: int = 3
+const DAY1_STEP_COUNT: int = 4
 
 var _day_objectives: Dictionary = {}
 var _defaults: Dictionary = {}
@@ -48,6 +40,14 @@ var _day1_step_index: int = -1
 ## While true the rail surfaces the pre-chain `pre_step` payload and the step
 ## chain itself is not yet armed (`_day1_step_index` stays -1).
 var _waiting_for_note_dismiss: bool = false
+## Hash of the most recently emitted payload (`textactionkeyhint`,
+## or a fixed marker for the hidden auto-hide payload). `_emit_current()`
+## returns early when the next computed payload hashes to the same value, so
+## re-entering a scene or re-connecting a listener does not re-trigger the
+## rail's 1-second flash tween for an unchanged objective. Reset to "" on
+## every `day_started` so the first emit of a new day always fires.
+var _last_payload_hash: String = ""
+const _HIDDEN_PAYLOAD_HASH: String = "__hidden__"
 
 
 func _ready() -> void:
@@ -58,12 +58,8 @@ func _ready() -> void:
 	EventBus.item_sold.connect(_on_item_sold)
 	EventBus.day_closed.connect(_on_day_closed)
 	EventBus.preference_changed.connect(_on_preference_changed)
-	EventBus.panel_opened.connect(_on_panel_opened)
+	EventBus.customer_interacted.connect(_on_customer_interacted)
 	EventBus.placement_mode_entered.connect(_on_placement_mode_entered)
-	EventBus.customer_state_changed.connect(_on_customer_state_changed)
-	EventBus.customer_ready_to_purchase.connect(_on_customer_ready_to_purchase)
-	EventBus.customer_purchased.connect(_on_customer_purchased)
-	EventBus.checkout_declined.connect(_on_checkout_declined)
 	EventBus.manager_note_dismissed.connect(_on_manager_note_dismissed)
 
 
@@ -166,6 +162,11 @@ func _on_day_started(day: int) -> void:
 	_loop_completed_today = false
 	_day1_step_index = -1
 	_waiting_for_note_dismiss = false
+	# Reset so the first emit of a new day always fires, even when the day's
+	# objective text matches the previous day's. Without this, a save+reload
+	# into a day whose copy matches the last seen hash would be silently
+	# deduped and the rail would never refresh.
+	_last_payload_hash = ""
 	if day == 1:
 		# The chain-complete sentinel survives across days so the rail can
 		# auto-hide once the player has finished a full loop. A fresh Day 1
@@ -177,7 +178,7 @@ func _on_day_started(day: int) -> void:
 	if day == 1 and _day1_steps_available():
 		# The Day 1 step chain is held until the player dismisses Vic's
 		# morning note. _on_manager_note_dismissed advances _day1_step_index
-		# to OPEN_INVENTORY when the note clears.
+		# to TALK_TO_CUSTOMER when the note clears.
 		_waiting_for_note_dismiss = true
 	_emit_current()
 
@@ -187,7 +188,7 @@ func _on_manager_note_dismissed(_note_id: String) -> void:
 		return
 	_waiting_for_note_dismiss = false
 	if _day1_steps_available():
-		_day1_step_index = DAY1_STEP_OPEN_INVENTORY
+		_day1_step_index = DAY1_STEP_TALK_TO_CUSTOMER
 	_emit_current()
 
 
@@ -199,7 +200,7 @@ func _on_item_stocked(_item_id: String, _shelf_id: String) -> void:
 	_stocked = true
 	if _sold:
 		_loop_completed_today = true
-	_advance_day1_step_if(DAY1_STEP_STOCK_ITEM)
+	_advance_day1_step_if(DAY1_STEP_STOCK_SHELF)
 	_emit_current()
 
 
@@ -265,48 +266,12 @@ func _on_preference_changed(key: String, _value: Variant) -> void:
 		_emit_current()
 
 
-func _on_panel_opened(panel_name: String) -> void:
-	if panel_name == "inventory":
-		_advance_day1_step_if(DAY1_STEP_OPEN_INVENTORY)
+func _on_customer_interacted(_customer: Node) -> void:
+	_advance_day1_step_if(DAY1_STEP_TALK_TO_CUSTOMER)
 
 
 func _on_placement_mode_entered() -> void:
-	_advance_day1_step_if(DAY1_STEP_SELECT_ITEM)
-
-
-func _on_customer_state_changed(_customer: Node, new_state: int) -> void:
-	if new_state == Customer.State.BROWSING:
-		_advance_day1_step_if(DAY1_STEP_WAIT_FOR_CUSTOMER)
-
-
-func _on_customer_ready_to_purchase(_customer_data: Dictionary) -> void:
-	_advance_day1_step_if(DAY1_STEP_CUSTOMER_BROWSING)
-
-
-func _on_customer_purchased(
-	_store_id: StringName, _item_id: StringName,
-	_price: float, _customer_id: StringName,
-) -> void:
-	_advance_day1_step_if(DAY1_STEP_CUSTOMER_AT_CHECKOUT)
-
-
-## Day 1 only: when the player presses Pass at the register before the first
-## sale, roll the rail back to "wait for a customer" so the prompt matches the
-## actual game state. Without this the rail keeps showing "Customer at
-## checkout" with no customer present until the next forced spawn arrives —
-## the player has no signal that a new customer is coming.
-func _on_checkout_declined(_customer: Node) -> void:
-	if _current_day != 1 or _sold:
-		return
-	if not _day1_steps_available():
-		return
-	if (
-		_day1_step_index < DAY1_STEP_CUSTOMER_BROWSING
-		or _day1_step_index > DAY1_STEP_CUSTOMER_AT_CHECKOUT
-	):
-		return
-	_day1_step_index = DAY1_STEP_WAIT_FOR_CUSTOMER
-	_emit_current()
+	_advance_day1_step_if(DAY1_STEP_BACK_ROOM_INVENTORY)
 
 
 ## Advances the Day 1 chain when the player is sitting on `expected_step`.
@@ -324,36 +289,6 @@ func _advance_day1_step_if(expected_step: int) -> void:
 	if not _day1_steps_available():
 		return
 	_day1_step_index = expected_step + 1
-	_emit_current()
-	if _day1_step_index == DAY1_STEP_SALE_COMPLETE:
-		_schedule_close_day_step()
-
-
-## Auto-advances from "Sale complete!" to "Close the day when ready" after a
-## brief display window so the success beat lands before the next prompt.
-## §F-99 — `tree == null` test-seam mirrors the §F-44 / §F-54 contract for
-## autoload-test-seam patterns: production paths always have a SceneTree
-## (autoload + scene); bare-Node unit-test fixtures hit the silent path and
-## still terminate the chain by jumping directly to the advancer. The §F-98
-## state-machine guard inside `_advance_to_close_day_step` defends against
-## the timer firing after a day rollover.
-func _schedule_close_day_step() -> void:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		_advance_to_close_day_step()
-		return
-	tree.create_timer(SALE_COMPLETE_DURATION).timeout.connect(
-		_advance_to_close_day_step
-	)
-
-
-func _advance_to_close_day_step() -> void:
-	# §F-98 — Same race-guard pattern as `_advance_day1_step_if`: a delayed
-	# timer firing after the day rolled over (or after a duplicate trigger
-	# already advanced past `DAY1_STEP_SALE_COMPLETE`) is a no-op by design.
-	if _current_day != 1 or _day1_step_index != DAY1_STEP_SALE_COMPLETE:
-		return
-	_day1_step_index = DAY1_STEP_CLOSE_DAY
 	_emit_current()
 
 
@@ -378,49 +313,69 @@ func _emit_current() -> void:
 		return
 	var should_auto_hide: bool = _loop_completed and _current_day > 3
 	if should_auto_hide and not Settings.show_objective_rail:
+		# Dedup the hidden auto-hide payload too — a `preference_changed`
+		# tick that keeps `show_objective_rail` false should not re-emit the
+		# hidden dictionary and force a tween/visibility recalc in the rail.
+		if _last_payload_hash == _HIDDEN_PAYLOAD_HASH:
+			return
+		_last_payload_hash = _HIDDEN_PAYLOAD_HASH
 		var hidden: Dictionary = {"hidden": true}
 		EventBus.objective_changed.emit(hidden)
 		EventBus.objective_updated.emit(hidden)
 		return
+	var text_value: String = ""
+	var action_value: String = ""
+	var key_value: String = ""
+	var optional_hint: String = ""
 	if _current_day == 1 and _waiting_for_note_dismiss:
 		var pre_entry: Dictionary = _day_objectives.get(1, {})
 		var pre: Dictionary = pre_entry.get("pre_step", {}) as Dictionary
-		_emit_objective_payload(
-			str(pre.get("text", "")),
-			str(pre.get("action", "")),
-			str(pre.get("key", "")),
-			"",
-		)
+		text_value = str(pre.get("text", ""))
+		action_value = str(pre.get("action", ""))
+		key_value = str(pre.get("key", ""))
+	else:
+		var source: Dictionary = _day_objectives.get(_current_day, _defaults)
+		text_value = str(source.get("text", ""))
+		action_value = str(source.get("action", ""))
+		key_value = str(source.get("key", ""))
+		optional_hint = str(source.get("optional_hint", ""))
+		if (
+			_current_day == 1
+			and _day1_step_index >= 0
+			and _day1_steps_available()
+		):
+			var steps: Array = source.get("steps", []) as Array
+			var step: Dictionary = steps[_day1_step_index] as Dictionary
+			text_value = str(step.get("text", text_value))
+			action_value = str(step.get("action", action_value))
+			key_value = str(step.get("key", key_value))
+		elif _sold:
+			# Once the first sale completes, advance the rail to the day's
+			# post-sale copy when the day entry authors one. Day 1 reaches its
+			# close-day prompt through the steps chain instead, so this branch
+			# only kicks in for days without a steps array.
+			var post_text: String = str(source.get("post_sale_text", ""))
+			if not post_text.is_empty():
+				text_value = post_text
+				action_value = str(source.get("post_sale_action", ""))
+				key_value = str(source.get("post_sale_key", ""))
+	# Re-entering a scene or re-connecting a listener can drive _emit_current
+	# multiple times in a frame with identical content; without this gate the
+	# rail's 1-second flash tween restarts on every redundant emission. Hash
+	# the final payload fields and bail when unchanged. Reset on day_started
+	# so the first emit of a new day always fires.
+	var payload_hash: String = (
+		"%s%s%s%s"
+		% [text_value, action_value, key_value, optional_hint]
+	)
+	if _last_payload_hash == payload_hash:
 		return
-	var source: Dictionary = _day_objectives.get(_current_day, _defaults)
-	var text_value: String = str(source.get("text", ""))
-	var action_value: String = str(source.get("action", ""))
-	var key_value: String = str(source.get("key", ""))
-	if (
-		_current_day == 1
-		and _day1_step_index >= 0
-		and _day1_steps_available()
-	):
-		var steps: Array = source.get("steps", []) as Array
-		var step: Dictionary = steps[_day1_step_index] as Dictionary
-		text_value = str(step.get("text", text_value))
-		action_value = str(step.get("action", action_value))
-		key_value = str(step.get("key", key_value))
-	elif _sold:
-		# Once the first sale completes, advance the rail to the day's
-		# post-sale copy when the day entry authors one. Day 1 reaches its
-		# close-day prompt through the steps chain instead, so this branch
-		# only kicks in for days without a steps array.
-		var post_text: String = str(source.get("post_sale_text", ""))
-		if not post_text.is_empty():
-			text_value = post_text
-			action_value = str(source.get("post_sale_action", ""))
-			key_value = str(source.get("post_sale_key", ""))
+	_last_payload_hash = payload_hash
 	_emit_objective_payload(
 		text_value,
 		action_value,
 		key_value,
-		str(source.get("optional_hint", "")),
+		optional_hint,
 	)
 
 

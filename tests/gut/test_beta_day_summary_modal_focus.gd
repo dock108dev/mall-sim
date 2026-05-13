@@ -176,17 +176,23 @@ func test_reputation_line_renders_negative_delta() -> void:
 # A short flavor sentence sits between the metrics block and the Continue
 # button so each day's summary lands as a story beat, not a receipt.
 
-# ── Cash block rendering ───────────────────────────────────────────────────
-# The summary breaks cash into three lines: Starting Cash (carry-in), Sales
-# Today (per-day delta with sign), and Ending Cash (cumulative total). This
-# replaces a single 'Cash:' line so a tutorial-day sale ($0 → $15) reads as
-# a transaction rather than a mystery jump in a cumulative number.
+# ── Money block rendering ──────────────────────────────────────────────────
+# The summary breaks the Money section into five lines: Starting Cash
+# (carry-in), Sales (gross revenue today), Rent (fixed daily operating cost),
+# Profit (sales − rent, signed), and Ending Cash (cumulative total). The
+# Sales/Rent/Profit triplet is BRAINDUMP First-Day Flow Step 6: the player
+# sees today's earnings offset by today's cost rather than a single cash
+# delta. Profit picks up the loss-day sign so a no-sale day still reads as a
+# negative number, not a mystery zero.
 
 func test_cash_block_renders_three_lines_with_positive_delta() -> void:
 	var payload: Dictionary = _summary_payload()
 	payload["cash"] = 15
 	payload["cash_delta"] = 15
 	payload["starting_cash"] = 0
+	payload["sales_revenue"] = 15
+	payload["rent_paid"] = 50
+	payload["net_profit"] = -35
 
 	_panel.show_summary(payload)
 
@@ -199,9 +205,16 @@ func test_cash_block_renders_three_lines_with_positive_delta() -> void:
 		"Starting Cash line must render the carry-in balance; got: '%s'" % label.text
 	)
 	assert_true(
-		label.text.contains("Sales Today:") and label.text.contains("+$15"),
-		"Sales Today must render positive delta with explicit + sign; got: '%s'"
-		% label.text
+		label.text.contains("Sales:") and label.text.contains("$15"),
+		"Sales must render the day's gross revenue; got: '%s'" % label.text
+	)
+	assert_true(
+		label.text.contains("Rent:") and label.text.contains("$50"),
+		"Rent must render the day's fixed cost; got: '%s'" % label.text
+	)
+	assert_true(
+		label.text.contains("Profit:") and label.text.contains("-$35"),
+		"Loss-day profit must render with a minus sign; got: '%s'" % label.text
 	)
 	assert_true(
 		label.text.contains("Ending Cash:") and label.text.contains("$15"),
@@ -209,7 +222,7 @@ func test_cash_block_renders_three_lines_with_positive_delta() -> void:
 	)
 	assert_false(
 		label.text.contains("[b]Cash:[/b]"),
-		"Old single-line 'Cash:' label must be gone after the three-line refactor"
+		"Old single-line 'Cash:' label must be gone after the Money-block refactor"
 	)
 
 
@@ -218,6 +231,9 @@ func test_cash_block_renders_zero_delta_as_dollar_zero() -> void:
 	payload["cash"] = 0
 	payload["cash_delta"] = 0
 	payload["starting_cash"] = 0
+	payload["sales_revenue"] = 0
+	payload["rent_paid"] = 50
+	payload["net_profit"] = -50
 
 	_panel.show_summary(payload)
 
@@ -226,17 +242,29 @@ func test_cash_block_renders_zero_delta_as_dollar_zero() -> void:
 	if label == null:
 		return
 	assert_true(
-		label.text.contains("Sales Today:") and label.text.contains("$0"),
-		"Zero-delta day must still render Sales Today: $0 to ground the layout; got: '%s'"
+		label.text.contains("Sales:") and label.text.contains("$0"),
+		"Zero-sales day must still render Sales: $0 to ground the layout; got: '%s'"
 		% label.text
+	)
+	assert_true(
+		label.text.contains("Profit:") and label.text.contains("-$50"),
+		"Zero-sales day must show a loss on the Profit line; got: '%s'" % label.text
 	)
 
 
 func test_cash_block_renders_negative_delta_with_minus_sign() -> void:
+	# Cash delta < 0 (refund-only day) still has zero sales revenue — refunds
+	# do not tick the controller's _sales_today counter — but the loss
+	# accumulates in the controller's cash totals. The Money block reflects
+	# this: Sales: $0, Rent: -$50, Profit: -$50, Ending Cash carries the
+	# refund-adjusted total.
 	var payload: Dictionary = _summary_payload()
 	payload["cash"] = 5
 	payload["cash_delta"] = -10
 	payload["starting_cash"] = 15
+	payload["sales_revenue"] = 0
+	payload["rent_paid"] = 50
+	payload["net_profit"] = -50
 
 	_panel.show_summary(payload)
 
@@ -249,8 +277,8 @@ func test_cash_block_renders_negative_delta_with_minus_sign() -> void:
 		"Starting Cash must reflect the carry-in; got: '%s'" % label.text
 	)
 	assert_true(
-		label.text.contains("Sales Today:") and label.text.contains("-$10"),
-		"Negative delta must render with explicit minus sign; got: '%s'" % label.text
+		label.text.contains("Profit:") and label.text.contains("-$50"),
+		"Negative profit must render with explicit minus sign; got: '%s'" % label.text
 	)
 	assert_true(
 		label.text.contains("Ending Cash:") and label.text.contains("$5"),

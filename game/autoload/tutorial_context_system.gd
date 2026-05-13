@@ -24,6 +24,13 @@ var _loaded: bool = false
 ## twice (store_entered then day_started seconds later) and the rail / overlay
 ## render the same line back-to-back.
 var _context_shown_since_entry: bool = false
+## Set in `_on_day_started` when no store is active yet. Tells the next
+## `_on_store_entered` that the day_started for this entry window already
+## fired (no upcoming day_started will be available to consume the dedup
+## gate), so store_entered emits without raising `_context_shown_since_entry`
+## — otherwise the subsequent Day 2 day_started inherits the stale `true`
+## and silently suppresses the Day 2 re-emit.
+var _day_started_seen_before_entry: bool = false
 
 
 func _ready() -> void:
@@ -32,9 +39,14 @@ func _ready() -> void:
 
 
 ## Loads tutorial contexts from JSON. Exposed for tests.
+## Also resets the dedup state so a test that calls `reload()` between cases
+## doesn't carry either the `_context_shown_since_entry` gate or the
+## `_day_started_seen_before_entry` tracker over from the prior case.
 func reload() -> void:
 	_contexts.clear()
 	_loaded = false
+	_context_shown_since_entry = false
+	_day_started_seen_before_entry = false
 	_load_contexts()
 
 
@@ -87,7 +99,16 @@ func clear_active_context() -> void:
 ## Returns false during states where tutorial prompts must not render.
 ## Guards both signal emission and external render decisions: tutorial_context_entered
 ## never fires (and consumer UIs should not render) in MAIN_MENU, MALL_OVERVIEW,
-## DAY_SUMMARY, or while a modal has input focus.
+## DAY_SUMMARY, while a modal has input focus, or while ModalQueue is
+## dispatching a higher-priority panel.
+##
+## ModalQueue.is_busy() is checked alongside InputFocus so passive-overlay
+## ModalPanels that participate in queue ordering without claiming CTX_MODAL
+## (e.g. `BetaManagerNotePanel`'s Vic letter at VIC_NOTE priority) still
+## suppress the tutorial context emission. BRAINDUMP requires "letter first,
+## tutorial unlock popup after letter closes" — without the queue check, a
+## tutorial trigger fired while the Vic letter is active would emit
+## `tutorial_context_entered` behind the note.
 func is_tutorial_rendering_allowed() -> bool:
 	var state: GameManager.State = GameManager.current_state
 	if (
@@ -97,6 +118,8 @@ func is_tutorial_rendering_allowed() -> bool:
 	):
 		return false
 	if InputFocus.current() == InputFocus.CTX_MODAL:
+		return false
+	if ModalQueue.is_busy():
 		return false
 	return true
 
@@ -169,7 +192,14 @@ func _on_store_entered(store_id: StringName) -> void:
 	var first: Dictionary = get_first_step(context_id)
 	var text: String = String(first.get("prompt_text", ""))
 	EventBus.tutorial_context_entered.emit(store_id, context_id, text)
-	_context_shown_since_entry = true
+	if _day_started_seen_before_entry:
+		# day_started for this Day-N already fired (before us); there is no
+		# upcoming day_started in this Day-N session to consume the dedup
+		# gate. Leaving it raised would silently suppress the next day's
+		# legitimate re-emit, so we keep it lowered here.
+		_day_started_seen_before_entry = false
+	else:
+		_context_shown_since_entry = true
 
 
 func _on_store_exited(_store_id: StringName) -> void:
@@ -183,6 +213,14 @@ func _on_day_started(_day: int) -> void:
 	# the prompt, so we consume the flag and skip — otherwise the rail / overlay
 	# render the same line twice within seconds.
 	if active_context_id == &"":
+		# Reset the gate so a `day_started` that fires before `store_entered`
+		# (e.g. on restart, when GameManager resets day state before placing
+		# the player in the store) does not leave a stale `true` that
+		# silently suppresses the next legitimate re-emit (Day 2 inside the
+		# store). Also flag that day_started already fired so the next
+		# `_on_store_entered` knows not to arm the dedup gate.
+		_context_shown_since_entry = false
+		_day_started_seen_before_entry = true
 		return
 	if _context_shown_since_entry:
 		_context_shown_since_entry = false

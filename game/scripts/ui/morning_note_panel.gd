@@ -86,6 +86,11 @@ func show_note(
 	_allow_auto_dismiss = allow_auto_dismiss
 	_remaining = AUTO_DISMISS_SECONDS
 	_header_label.text = "%s — %s" % [_manager_name(), day_label]
+	# Clear before assignment so an accidental `append_text` refactor or a
+	# repeat show_note() call cannot stack the body on top of itself.
+	# `.text =` already replaces content, but the explicit clear() makes the
+	# replacement semantics load-bearing against future edits.
+	_body_label.clear()
 	_body_label.text = body_text
 	_countdown_bar.max_value = AUTO_DISMISS_SECONDS
 	_countdown_bar.value = AUTO_DISMISS_SECONDS

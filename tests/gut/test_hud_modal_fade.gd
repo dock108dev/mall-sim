@@ -1,11 +1,12 @@
-## HUD modal-fade contract — verifies the spec from ISSUE-002:
+## HUD modal-fade contract:
 ##   * On CTX_MODAL push, every direct CanvasItem child of the HUD CanvasLayer
-##     tweens its modulate.a to 0.3 over 0.15s.
+##     tweens its modulate.a to 0.65 over 0.15s.
 ##   * On CTX_MODAL pop, the children restore to 1.0 over 0.15s.
 ##   * The fade is boolean-transition gated — nested CTX_MODAL context_changed
 ##     events do not retrigger the tween.
-##   * The plane separation is preserved: HUD at 0.3 sits between the
-##     full-screen dim (0.45 alpha) and the modal panel (1.0).
+##   * Composite legibility: HUD at 0.65 behind the dim overlay (0.4 alpha)
+##     resolves to ~0.39 visible opacity — clearly dimmed but readable. The
+##     prior pair (0.3 × 0.55) rendered the HUD near-black.
 extends GutTest
 
 
@@ -72,18 +73,44 @@ func test_canvas_item_children_dim_to_modal_alpha_under_modal() -> void:
 	for child: Node in _hud.get_children():
 		if child is CanvasItem:
 			var alpha: float = (child as CanvasItem).modulate.a
-			# Tolerate small drift for tween settle: ≤ 0.4 confirms the dim landed.
-			if alpha <= 0.4:
+			# Tolerate small drift for tween settle: ≤ 0.7 brackets the 0.65 spec.
+			if alpha <= 0.7:
 				any_dimmed = true
 			else:
 				assert_lte(
-					alpha, 0.4,
+					alpha, 0.7,
 					"HUD child %s did not dim under CTX_MODAL (alpha=%.2f)"
 					% [child.name, alpha]
 				)
 	assert_true(
 		any_dimmed,
 		"At least one CanvasItem child must dim under CTX_MODAL"
+	)
+
+
+## Regression guard for the modal-dim double-dip readability bug. The HUD
+## self-dim alpha must stay legible-by-spec (≥ 0.6) and the composed visible
+## opacity with `ModalDimOverlay.DIM_COLOR` must clear a readable floor.
+## If either constant drifts down without the other rising, the HUD goes
+## near-black under any modal — exactly the regression we're locking out.
+func test_modal_dim_constants_compose_to_readable_hud() -> void:
+	var hud_dim: float = _hud._MODAL_DIM_ALPHA
+	assert_gte(
+		hud_dim, 0.6,
+		(
+			"HUD _MODAL_DIM_ALPHA must stay ≥ 0.6 so cash/time labels remain "
+			+ "legible behind any modal (current=%.2f)"
+		) % hud_dim
+	)
+	var overlay_alpha: float = ModalDimOverlay.DIM_COLOR.a
+	var composite: float = hud_dim * (1.0 - overlay_alpha)
+	assert_gte(
+		composite, 0.35,
+		(
+			"HUD opacity composed behind the dim overlay must read as ≥ 0.35 "
+			+ "(hud=%.2f × (1 - overlay=%.2f) = %.3f). Lower the overlay alpha "
+			+ "or raise _MODAL_DIM_ALPHA so the modal-dim stays legible."
+		) % [hud_dim, overlay_alpha, composite]
 	)
 
 

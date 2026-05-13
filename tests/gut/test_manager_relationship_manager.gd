@@ -306,6 +306,41 @@ func test_day_started_skips_emission_when_beta_controller_active() -> void:
 	assert_signal_not_emitted(EventBus, "manager_note_shown")
 
 
+## Duplicate `day_started.emit(day)` for the same day number must only fire
+## `manager_note_shown` once — the `_last_started_day` guard exists because
+## `_connect_signal` prevents listener double-connection but not upstream
+## double-emission, and stacking the morning note (or re-resetting the
+## category tally) is a regression vector documented in
+## `.aidlc/research/morning-note-body-duplication.md` (Path B).
+func test_day_started_duplicate_emission_does_not_double_emit_note() -> void:
+	watch_signals(EventBus)
+	EventBus.day_started.emit(1)
+	EventBus.day_started.emit(1)
+	var params_list: Array = get_signal_parameters(EventBus, "manager_note_shown", 0)
+	assert_signal_emit_count(
+		EventBus, "manager_note_shown", 1,
+		"manager_note_shown must fire exactly once when day_started is emitted twice for the same day"
+	)
+	# Sanity: the single emission carried the Day-1 payload.
+	assert_eq(params_list[0], "note_override_day_1")
+
+
+## After reset_for_testing the guard must let day 1 through again — otherwise
+## restarting Day 1 within the same process (new run from main menu) would
+## silently suppress the morning note.
+func test_reset_for_testing_clears_last_started_day_guard() -> void:
+	EventBus.day_started.emit(1)
+	ManagerRelationshipManager.reset_for_testing()
+	# `reset_for_testing` wipes `_notes`, so re-prime them before re-emitting.
+	ManagerRelationshipManager._set_notes_for_testing(_SAMPLE_NOTES)
+	watch_signals(EventBus)
+	EventBus.day_started.emit(1)
+	assert_signal_emit_count(
+		EventBus, "manager_note_shown", 1,
+		"reset_for_testing must clear _last_started_day so day 1 re-emits"
+	)
+
+
 # ── Acceptance: tally never crashes on unknown category ──────────────────────
 
 func test_tier_category_lookup_falls_back_when_category_missing() -> void:

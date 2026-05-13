@@ -34,6 +34,15 @@ extends Node
 const NOTES_PATH: String = "res://game/content/manager/manager_notes.json"
 const MANAGER_NAME: String = "Vic Harlow"
 
+## §F-S16 — File-size cap for `_load_notes`. Mirrors `DataLoader.MAX_JSON_FILE_BYTES`
+## (1 MiB) so every JSON ingest path in the project enforces the same upper
+## bound before allocating the text buffer and spinning up a `JSON` parser.
+## `NOTES_PATH` is a baked `res://` content file on shipped builds, so present-
+## day exposure is content-author error rather than user tampering, but
+## matching the project-wide invariant closes the convention gap with the
+## other four JSON loaders (DataLoader, SaveManager, MainMenu, BetaDayOne).
+const MAX_NOTES_FILE_BYTES: int = 1_048_576
+
 const TRUST_MIN: float = 0.0
 const TRUST_MAX: float = 1.0
 const DEFAULT_TRUST: float = 0.5
@@ -67,14 +76,10 @@ const EOD_QUEUE_TIMEOUT_THRESHOLD: int = 3
 
 ## Per-event trust deltas (issue spec).
 const DELTA_TASK_COMPLETED: float = 0.06
-const DELTA_COMPLAINT_HANDLED: float = 0.03
-const DELTA_MYSTERY_INVENTORY_ACK: float = 0.04
 const DELTA_STAFF_QUIT: float = -0.05
 const DELTA_MISSING_PAYROLL: float = -0.10
 
 const REASON_TASK_COMPLETED: String = "task_completed"
-const REASON_COMPLAINT_HANDLED: String = "complaint_handled"
-const REASON_MYSTERY_INVENTORY_ACK: String = "mystery_inventory_acknowledged"
 const REASON_STAFF_QUIT: String = "staff_quit"
 const REASON_MISSING_PAYROLL: String = "missing_payroll"
 
@@ -102,6 +107,12 @@ var _pending_unlock_id: String = ""
 var _notes: Dictionary = {}
 var _notes_loaded: bool = false
 var _confrontation_emitted_this_day: bool = false
+
+# Tracks the most recent day number that has been processed through
+# `_on_day_started`. Guards against a duplicate `day_started.emit(day)` for the
+# same day number — without this, MorningNotePanel would re-show the same
+# body and the per-day category tally would be reset twice.
+var _last_started_day: int = -1
 
 # Private RNG used for note variant selection — kept separate from the global
 # generator so EventBus.day_started listeners that seed the global RNG are
@@ -185,6 +196,7 @@ func reset_for_testing() -> void:
 	_last_top_category = &""
 	_pending_unlock_id = ""
 	_confrontation_emitted_this_day = false
+	_last_started_day = -1
 
 
 # ── Note selection ────────────────────────────────────────────────────────────
@@ -264,6 +276,23 @@ func _connect_signal(signal_ref: Signal, callable: Callable) -> void:
 
 
 func _on_day_started(day: int) -> void:
+	# Guard against a duplicate `day_started.emit(day)` for the same day
+	# number. The `_connect_signal` helper prevents double-connection of the
+	# listener but cannot stop the upstream from emitting twice — if it does,
+	# every downstream effect (note selection, category-tally reset,
+	# pending-unlock consumption) would run twice for the same day. The
+	# initial `_last_started_day = -1` lets day 1 through on a fresh run; the
+	# replay path resets via `reset_for_testing`.
+	if _last_started_day == day:
+		push_warning(
+			(
+				"ManagerRelationshipManager: day_started emitted twice for "
+				+ "day %d — suppressing duplicate manager_note_shown emission."
+			)
+			% day
+		)
+		return
+	_last_started_day = day
 	# Beta day-1 owns its own morning-note flow via `BetaManagerNotePanel`
 	# (see `BetaDayOneController._open_vic_note_and_then_start_day`). The
 	# global `MorningNotePanel` would otherwise stack on top of it because
@@ -557,6 +586,17 @@ func _load_notes() -> void:
 		push_error(
 			"ManagerRelationshipManager: failed to open notes (%s) — err=%s"
 			% [NOTES_PATH, error_string(FileAccess.get_open_error())]
+		)
+		return
+	# §F-S16 — Reject oversize content files before allocating the text buffer.
+	# Matches the project-wide convention in `DataLoader._read_json_file`.
+	if file.get_length() > MAX_NOTES_FILE_BYTES:
+		file.close()
+		push_error(
+			(
+				"ManagerRelationshipManager: notes file '%s' exceeds maximum "
+				+ "supported size (%d bytes); morning-note feature disabled."
+			) % [NOTES_PATH, MAX_NOTES_FILE_BYTES]
 		)
 		return
 	var text: String = file.get_as_text()

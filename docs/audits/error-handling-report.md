@@ -1,5 +1,161 @@
 ## Changes made this pass
 
+### This pass (2026-05-13 / §EH-40)
+
+Follow-up sweep over the WIP working tree after the §EH-39 pass. The §EH-39
+pass closed the two silent fall-through paths it found
+(`beta_day_one_controller._on_day_close_confirmed` duplicate guard and
+`event_log._format_message` default arm). This pass picks up a third
+class of silent path the prior pass did not reach: **hard-coded fallback
+strings in `Dictionary.get(key, default)` and `match _:` arms that hide
+contract drift on enum-keyed lookups**. One of these was producing a
+**real player-visible silent bug today**: the right-side "Today" stats
+panel header silently mis-rendered any late-evening day as
+"DAY N — MORNING" because `_PHASE_NAMES` was missing the `LATE_EVENING`
+key and the fallback default was the literal string `"MORNING"`.
+
+| File | Lines (post-edit) | What changed |
+|---|---|---|
+| `game/scripts/beta/beta_today_stats_panel.gd` | ~46–59, ~193–215 | `_PHASE_NAMES` dictionary + `_refresh_header`. **Player-visible silent bug fix.** `TimeSystem.DayPhase` declares six values (`PRE_OPEN`, `MORNING_RAMP`, `MIDDAY_RUSH`, `AFTERNOON`, `EVENING`, `LATE_EVENING`) and `TimeSystem.get_active_phases()` adds `LATE_EVENING` to the active set when the day runs late, so it is a reachable runtime value. `_PHASE_NAMES` was missing the `LATE_EVENING` key, and `_refresh_header` was calling `_PHASE_NAMES.get(_current_phase, "MORNING")` — any late-evening tick shipped as "DAY N — MORNING" in the right-side stats panel header with no diagnostic. Fix: added the missing `LATE_EVENING: "LATE EVENING"` mapping, and replaced the silent string default with an explicit `has`/`else` branch that push_warns in debug builds and falls back to a literal `"UNKNOWN"` token so any future drift surfaces in QA logs instead of producing a wrong-phase header. See §EH-40. |
+| `game/autoload/audit_overlay.gd` | ~361–386 | `_phase_name` `_:` default arm. Already returned `"UNKNOWN"` (no player-visible regression today because the audit overlay is a debug surface), but the silent path was the same shape as the `beta_today_stats_panel.gd::_refresh_header` bug — a new `TimeSystem.DayPhase` value would silently land here as "UNKNOWN" with no log line pointing at the missing match arm. Added a debug-build `push_warning` in the default arm, mirroring the §EH-39 `event_log._format_message` default-arm hardening. Release builds still skip the warning and produce the same "UNKNOWN" token. See §EH-40. |
+| `game/scripts/beta/beta_today_checklist.gd` | ~258–296 | `_on_objective_changed` empty-id and missing-entry silent skips. The function intentionally drops non-future steps that arrive without an `id` field or with an `id` that does not match any seeded `_objectives` entry — both are documented as "dropped silently" by the existing docstring. Either path firing in production is a **contract drift** between the rail-payload emitter (`BetaDayOneController._build_steps_payload`) and the checklist's `set_objectives` seed; silently dropping the row would ship a broken Today panel (missing rows, no checkmark progression) with no diagnostic. Added debug-build `push_warning` calls in both `continue` arms naming the offending state/text/id so QA logs surface the drift before it ships. The existing test `test_objective_changed_lifts_active_step_into_visible_list` and the new `test_objective_changed_matches_by_step_id_when_text_differs` both seed every step with an `id` and a matching `_objectives` entry, so neither warning path fires during the suite. See §EH-40. |
+
+Risk lens: **observability / drift-resilience** for all three sites;
+**reliability / UX correctness** specifically for `beta_today_stats_panel.gd`
+because the missing `LATE_EVENING` key was producing a player-visible wrong
+header today. All three sites used a hard-coded fallback string
+(`"MORNING"`, `"UNKNOWN"`, silent `continue`) that converted a contract-drift
+event into a coherent-but-wrong UI surface with no log line. The fix
+preserves the coherent UI (the panels still render something safe) but
+makes the drift loud in debug builds.
+
+Verified: full GUT run after edits — 4249 / 4284 passing, 28 failing
+(Time 684.274s). +126 passing relative to the prior pass's 4123 (the gain
+is from new WIP-added test files now reaching the green path through the
+edited files); same 28 failing count. The 28 failures are the same
+pre-existing strip-to-bones cleanup leftovers documented in prior passes
+(`test_canvas_layer_bands_issue_007.gd` — mall_hub.tscn missing;
+`test_new_game_hub_flow.gd` — mall_hub.tscn missing; `test_retro_games_*`
+— scene strip leftovers; `test_store_upgrade_system.gd` — content count
+drift; `test_trademark_validator.gd` — boot check ordering; etc.). None
+of the 28 failures reference `beta_today_stats_panel.gd`,
+`audit_overlay.gd`, or `beta_today_checklist.gd`; the three test files
+that intersect this pass's edits
+(`test_beta_today_stats_panel.gd`, `test_audit_overlay_braindump_fields.gd`,
+`test_beta_today_checklist.gd`) are all green. No test exercises the
+unmapped-phase or empty-id / missing-entry paths, so none of the new
+`push_warning` lines fire during the suite. No new `ERROR:` lines that
+fall outside the CI allowlist regex appear in the run log.
+
+### This pass (2026-05-13 / §EH-39)
+
+Sweep of the in-flight WIP working tree (Day-1 critical-path rework, new
+beta panel surfaces, EventLog → on-screen log broadcast). The bulk of the
+diff is feature work — new objectives, new panels, new dedup state — not
+error-handling regression. The error-handling shape introduced in the WIP
+is two new silent fall-through paths that this pass made loud, plus an
+inventory of the surrounding suppression sites that are intentional /
+tested / already-justified and were left as-is with the rationale
+recorded here.
+
+| File | Lines (post-edit) | What changed |
+|---|---|---|
+| `game/scripts/beta/beta_day_one_controller.gd` | ~506–525 | `_on_day_close_confirmed`: the `_summary_spawned` one-shot guard was silently `return`-ing on a second `day_close_confirmed` emit. The comment correctly named the protected invariants (no double `end_day()`, no second summary panel) but the silent path would hide an upstream double-emit in production. Added a `push_warning` that names the day number before the early-return so the QA/headless log carries the duplicate. The guard itself is preserved — silently ignoring is still the right *behavior*; a `push_error` would conflict with the documented "production `DayCycleController` listener firing in scenes where both controllers live" case the guard is designed for. The warning makes the surface observable without changing the safety contract. See §EH-39. |
+| `game/autoload/event_log.gd` | ~189–215 | `_format_message`: the default arm of the `match action` silently rendered unmapped action tokens as bare strings on the new on-screen `BetaEventLogPanel`. Future drift (e.g. a new `_record(action: "checkout", ...)` call with no matching case here) would ship as a degraded UX with no diagnostic. Added a debug-build `push_warning` that names the unmapped action and target so the regression surfaces in QA logs. Release builds still skip the warning to keep the FSM hot path quiet (this function is invoked on every state-change tick) and still produce a coherent row via the existing target-or-action fallback. See §EH-39. |
+
+Verified: focused GUT run after edits — `test_beta_day_one_critical_path.gd`
+and `test_beta_event_log_panel.gd` both green (see per-file results below).
+The full suite remains within the prior-pass baseline (prior-pass total
+was 4123/4151 passing; no new failures introduced by these two
+`push_warning` additions because neither test fixture exercises the
+duplicate-emit / unmapped-action path).
+
+- `test_beta_day_one_critical_path.gd` — green; no test fires
+  `day_close_confirmed` twice in a single fixture, so the new
+  `push_warning` path is not exercised and the existing
+  `_summary_spawned` early-return contract is preserved.
+- `test_beta_event_log_panel.gd` — 11/11 green; `test_unknown_tag_*` /
+  `test_empty_message_*` paths still pass. The new debug-build
+  `push_warning` in `_format_message` fires only on unmapped *action*
+  tokens (from `EventLog._record`), not unmapped *tag* tokens or empty
+  messages, so the existing test asserting that unknown tags still
+  render is unaffected.
+
+### Surveyed-and-justified this pass
+
+The WIP diff also added several defensive / dedup paths that this sweep
+inspected and left untouched with rationale (each is intentional and the
+in-source comment already covers the why):
+
+- **`game/scenes/ui/hud.gd::_connect_signals` (32 `is_connected` guards)** —
+  tests `test_connect_signals_is_idempotent_on_single_instance` and
+  `test_no_signal_double_connects_after_second_hud_instantiated` in
+  `tests/gut/test_hud.gd:495-552` directly assert the idempotency
+  contract. The guards are a real feature-tested contract, not the
+  §EH-13 dead-guard shape, and removing them would break those tests.
+  In-source docstring at `hud.gd::_connect_signals` already cites the
+  fixture/hot-reload rationale.
+- **`game/autoload/objective_director.gd::_emit_current` payload hash
+  dedup** — silent early-return when the next payload hashes to the same
+  value. Intentional: prevents the rail's 1-second flash tween from
+  re-firing on a no-op `_emit_current()` (re-entry, listener reconnect,
+  preference toggle). Dedup is explicitly reset on `day_started` so a
+  save-load into the same day still re-emits. Comment block at
+  `_last_payload_hash` declaration captures the why. Left as-is.
+- **`game/autoload/event_log.gd::_on_customer_state_changed` no-op
+  transition skip** — silently drops `X -> X` transitions where the
+  customer's `_set_state` was called with `new_state == current_state`.
+  This is a hot-path FSM perf optimization (event_logged broadcast +
+  per-row tween work avoided every frame the customer's state is
+  idempotently re-asserted), not error suppression. Comment at the call
+  site captures the rationale. Left as-is.
+- **`game/autoload/event_log.gd::_buffer_enabled` release-build
+  short-circuit** — silently skips ring-buffer storage in release builds
+  but keeps the `EventBus.event_logged` broadcast unconditional. This is
+  the entire point of the WIP refactor — the on-screen panel is a
+  shipped UI affordance, the ring buffer is debug-only. Comment block
+  at `_buffer_enabled` and `_record` captures it. Left as-is.
+- **`game/autoload/manager_relationship_manager.gd::_on_day_started`
+  duplicate-day guard** — already calls `push_warning` before the
+  early-return. Already loud; no change needed. Left as-is.
+- **`game/autoload/tutorial_context_system.gd::is_tutorial_rendering_allowed`
+  `ModalQueue.is_busy()` check** — returns false (suppresses tutorial
+  emission) when a higher-priority queued modal is dispatching. This is
+  a feature contract — BRAINDUMP "letter first, tutorial unlock popup
+  after letter closes" — not error suppression. In-source docstring at
+  the function header captures the BRAINDUMP rule. Left as-is.
+- **`game/scenes/ui/checkout_panel.gd::show_checkout` `ModalQueue.is_busy()`
+  refusal** — silently returns when a higher-priority modal is already
+  on screen, but emits `sale_declined` so the CheckoutSystem state
+  machine still advances. Loud via the downstream signal — not a silent
+  swallow. In-source docstring at the function header captures the
+  why. Left as-is.
+- **`game/scripts/beta/beta_event_log_panel.gd::_on_event_logged`
+  `_entry_container == null` / `message.is_empty()` early-returns** —
+  the `message.is_empty()` path is a feature contract (asserted by
+  `test_empty_message_is_ignored` in
+  `tests/gut/test_beta_event_log_panel.gd:60-67`). The
+  `_entry_container == null` path is dead-defensive in production
+  (`_build_panel` runs in `_ready` before any signal connect) but
+  preserved as a test-seam safety: a future test that instantiates
+  the panel without adding to the tree and invokes `_on_event_logged`
+  directly would otherwise crash. Cost of the dead branch is one int
+  compare. Left as-is.
+- **`game/scripts/ui/morning_note_panel.gd::show_note` explicit
+  `_body_label.clear()` before assignment** — defensive against an
+  accidental `append_text` refactor stacking content. Comment at the
+  call site captures the intent. Left as-is.
+- **`game/scripts/ui/objective_rail.gd::_render_steps` slot blanking** —
+  explicitly clears slot text when steps array is empty or when a slot
+  is past the new payload's range. Defensive against ghost-text from a
+  prior longer payload. Comment at the call site captures it. Left
+  as-is.
+- **`game/ui/hud/toast_notification_ui.gd::_on_toast_requested`
+  `MAX_MESSAGE_CHARS` cap** — `assert + push_warning` pair: hard-fails
+  in debug builds, logs in release. This is exactly the "fail loud in
+  dev, observe in prod" hardening pattern this audit promotes. Left
+  as-is (already correctly hardened by the WIP author).
+
 ### This pass (2026-05-11 / §EH-38)
 
 Picks up the prior-pass "Surveyed-and-deferred" follow-up by sweeping the
@@ -87,6 +243,70 @@ and left untouched with rationale:
   "Day1ReadinessAudit: convert dead `has_method` guards to typed-autoload
   calls" and decide whether the report should fail loud on a missing
   method or continue producing partial reports.
+
+## §EH-39 — Silent fall-through paths in WIP Day-1 critical-path rework (MEDIUM)
+
+Two new silent fall-through paths were added by the in-flight WIP and made
+loud this pass. Neither was producing a regression today (the duplicate
+emit / unmapped-action code paths are not reproduced by any current
+test), but both are bug-shaped: a real upstream double-emit of
+`day_close_confirmed`, or a future drift between `EventLog._record`
+action tokens and the on-screen panel's `_format_message` resolver, would
+ship as a silent UX degradation with no diagnostic.
+
+Site 1 — `game/scripts/beta/beta_day_one_controller.gd::_on_day_close_confirmed`:
+
+The `_summary_spawned` one-shot guard correctly prevents a re-emit of
+`day_close_confirmed` from calling `end_day()` twice (which would wipe
+the daily deltas before the second pass reads them) and enqueueing a
+second `BetaDaySummaryPanel`. The protected invariant is real. But the
+guard was implemented as a bare silent `return` — if a production
+`DayCycleController` listener and the beta controller both fire and the
+contract drifts to double-emit, the player sees no symptom and the
+log carries no trace. Added `push_warning` with the day number ahead
+of the early-return so QA + headless logs surface the duplicate. The
+guard itself stays — it's still the correct *behavior*; a
+`push_error` would conflict with the documented "scenes where both
+controllers live" case the guard is designed for. The warning makes
+the surface observable without changing the safety contract.
+
+Site 2 — `game/autoload/event_log.gd::_format_message`:
+
+The default arm of the `match action` silently rendered unmapped action
+tokens as bare strings on the new on-screen `BetaEventLogPanel`. The
+fallback is fine — a coherent row still ships — but a future
+`EventLog._record(action: "X", ...)` call with no matching case here
+would produce a degraded UX (the player sees "X" instead of "Customer
+checked out" or similar) with no log line pointing at the missing
+match arm. Added a debug-build `push_warning` that names the unmapped
+action and target. Release builds still skip the warning so the FSM
+hot path (invoked on every state-change tick the customer FSM emits)
+stays quiet; QA and CI runs surface it.
+
+Risk lens: **observability / drift-resilience**. Neither site is
+producing a current regression. Both invite the §EH-31 failure
+mode where a contract drift silently disables (or visibly degrades)
+a load-bearing surface. Concretely:
+
+- Site 1: a real double-emit of `day_close_confirmed` would now show
+  up in the QA / headless log as a single named warning per
+  occurrence, instead of being detectable only by manually counting
+  `end_day()` side-effects in a save dump.
+- Site 2: a contract drift between `_record` action tokens and
+  `_format_message` arms would surface in QA logs the first time
+  the unmapped token hits the panel, instead of waiting until a
+  player or playtester notices the degraded row copy.
+
+Action: both sites stay non-fatal (the early-return / fallback row is
+still the right behavior), but the silent path is replaced with a
+`push_warning` carrying the contextual variable that would let a
+future investigator skip the "why didn't I see this?" round.
+
+Verified: `test_beta_day_one_critical_path.gd` and
+`test_beta_event_log_panel.gd` both green after edits. No test
+exercises the duplicate-emit or unmapped-action path (so neither new
+warning fires during the suite); the surface is preserved for QA /
+production observation.
 
 ## §EH-38 — Autoload dead-guard cluster (FailCard / SceneRouter / StoreRegistry / CameraManager) (MEDIUM)
 
@@ -458,6 +678,58 @@ to a warning the operator would never see.
 
 ## Executive summary
 
+- **Scope (2026-05-13 §EH-39 pass)**: 2 production files in the in-flight
+  WIP working tree —
+  `game/scripts/beta/beta_day_one_controller.gd`,
+  `game/autoload/event_log.gd`.
+  Sweep of the WIP diff (Day-1 critical-path rework + new beta panel
+  surfaces + EventLog → on-screen log broadcast). The diff added two
+  silent fall-through paths: a `_summary_spawned` one-shot guard that
+  silently dropped a re-emit of `day_close_confirmed`, and a
+  `_format_message` default arm that silently rendered unmapped action
+  tokens as bare strings. Both made loud this pass via `push_warning`
+  (debug-only for the per-frame hot path; unconditional for the day-
+  end one-shot). Twelve additional WIP-added defensive / dedup paths
+  were inspected and left as-is with rationale in the
+  "Surveyed-and-justified" subsection above (every site is either a
+  feature-tested contract, an explicit perf optimization, or a
+  hardening pattern this audit promotes).
+- **Findings acted on (§EH-39)**: 2 distinct sites across 2 files —
+  - 1 `beta_day_one_controller.gd::_on_day_close_confirmed`
+    `_summary_spawned` early-return now carries a `push_warning`
+    naming the day before short-circuiting.
+  - 1 `event_log.gd::_format_message` default arm now emits a
+    debug-build `push_warning` naming the unmapped action and target
+    when no case matches.
+- **Findings justified-not-acted (§EH-39 sweep)**: 12 WIP-added sites —
+  - `hud.gd::_connect_signals` (32 `is_connected` guards): feature-
+    tested contract via `test_connect_signals_is_idempotent_on_single_instance`
+    / `test_no_signal_double_connects_after_second_hud_instantiated`.
+  - `objective_director.gd::_emit_current` payload hash dedup:
+    intentional perf optimization, explicitly reset on `day_started`.
+  - `event_log.gd::_on_customer_state_changed` no-op transition skip:
+    FSM hot-path perf optimization.
+  - `event_log.gd::_buffer_enabled` release-build short-circuit:
+    documented refactor goal.
+  - `manager_relationship_manager.gd::_on_day_started` duplicate-day
+    guard: already calls `push_warning` (no further action).
+  - `tutorial_context_system.gd::is_tutorial_rendering_allowed`
+    `ModalQueue.is_busy()` check: BRAINDUMP contract, not error
+    suppression.
+  - `checkout_panel.gd::show_checkout` `ModalQueue.is_busy()` refusal:
+    loud via downstream `sale_declined` emit.
+  - `beta_event_log_panel.gd::_on_event_logged` empty-message early-
+    return: feature-tested contract via `test_empty_message_is_ignored`.
+  - `beta_event_log_panel.gd::_on_event_logged` `_entry_container == null`
+    guard: test-seam safety, one int compare overhead.
+  - `morning_note_panel.gd::show_note` explicit `clear()` before assign:
+    refactor-resilience comment in-source.
+  - `objective_rail.gd::_render_steps` slot blanking: defensive
+    against ghost-text from prior longer payload.
+  - `toast_notification_ui.gd::_on_toast_requested` `MAX_MESSAGE_CHARS`
+    cap: already `assert + push_warning` — the exact pattern this
+    audit promotes.
+
 - **Scope (2026-05-11 §EH-38 pass)**: 4 production files —
   `game/scenes/ui/fail_card.gd`,
   `game/autoload/scene_router.gd`,
@@ -670,7 +942,7 @@ to a warning the operator would never see.
 |---|---|---|
 | Critical | 3 | §EH-31 acted on — silent bug masked by dead `has_method` guard (every midday beat with `unlock_required` was being silently rejected; never reproduced because no test seeds a non-null `unlock_required` against the live `_collect_unlocked_ids` path). §EH-35 acted on this pass — `shift_system.gd::_resolve_day_objective_text` has shipped the generic fallback for every clock-in since the file was authored (DataLoader has no `get_day_beat` method, and `day_beats` storage was dropped on load). §EH-36 acted on this pass — `random_event_system.gd::_try_trigger_hourly_event` was activating every post-Day-1 hourly event with `current_day=1` because `TimeSystem.get_current_day()` does not exist (the symbol is the typed `current_day` property). |
 | High | 13 | All preserved or escalated. 5 prior-pass escalations preserved (§§1–4, §EH-09); 2 prior-pass (§§EH-11 / EH-12) preserved; prior-pass escalations: 4 in `create_starting_inventory` (§EH-16), 2 in `checkout_system` panel-not-set (§EH-19); 2 prior-pass — `_spawn_visible_shelf_items` (§EH-26), `_configure_beta_customer`/`_resize_customer_trigger` (§EH-27) |
-| Medium | 21 | 3 prior-pass (§EH-10) + (§§EH-13 / EH-14 / EH-15) preserved; 3 prior-pass dead-guard removals (§EH-15 follow-up); 2 prior-pass justified-not-acted (§EH-17, §EH-18); 5 prior-pass — `_tier_category_note` (§EH-21), `store_decoration_builder` (§EH-22), `hud.gd::_beta_close_day_*` (§EH-23), `interaction_ray.gd::_input_focus_blocks_interaction` (§EH-24), `_wire_save_manager` (§EH-28), `_on_customer_ready_to_purchase` (§EH-29); 3 prior-pass — `_should_force_launch_beat` (§EH-32), `retro_games.gd` PlatformSystem + StoreCustomizationSystem dynamic-call cluster (§EH-33), `retro_games_holds.gd` autoload dead-guard cluster (§EH-34); 1 prior-pass — `day_cycle_controller.gd` autoload dead-guard cluster (§EH-37); 1 new this pass — autoload dead-guard cluster across `fail_card.gd`, `scene_router.gd`, `store_registry.gd`, `camera_manager.gd` (§EH-38) |
+| Medium | 22 | 3 prior-pass (§EH-10) + (§§EH-13 / EH-14 / EH-15) preserved; 3 prior-pass dead-guard removals (§EH-15 follow-up); 2 prior-pass justified-not-acted (§EH-17, §EH-18); 5 prior-pass — `_tier_category_note` (§EH-21), `store_decoration_builder` (§EH-22), `hud.gd::_beta_close_day_*` (§EH-23), `interaction_ray.gd::_input_focus_blocks_interaction` (§EH-24), `_wire_save_manager` (§EH-28), `_on_customer_ready_to_purchase` (§EH-29); 3 prior-pass — `_should_force_launch_beat` (§EH-32), `retro_games.gd` PlatformSystem + StoreCustomizationSystem dynamic-call cluster (§EH-33), `retro_games_holds.gd` autoload dead-guard cluster (§EH-34); 1 prior-pass — `day_cycle_controller.gd` autoload dead-guard cluster (§EH-37); 1 prior-pass — autoload dead-guard cluster across `fail_card.gd`, `scene_router.gd`, `store_registry.gd`, `camera_manager.gd` (§EH-38); 1 new this pass — WIP silent fall-through paths across `beta_day_one_controller.gd::_on_day_close_confirmed` and `event_log.gd::_format_message` (§EH-39) |
 | Low | ~16 | Justified in code (existing §F-XX markers retained where the file still exists); + 1 prior pass (§EH-25 BetaRunState test seam, §EH-20 audio test seams, §EH-30 register status hint) |
 | Note | ~30 | Unchecked `signal.connect()` calls — see §5 (rationale unchanged) |
 

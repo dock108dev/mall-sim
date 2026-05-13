@@ -1,3 +1,197 @@
+# SSOT enforcement pass — 2026-05-13 (beta WIP back-compat purge)
+
+Destructive cleanup driven by the working-tree diff for the in-flight beta
+Day-1/Day-2 work (ModalQueue introduction, multi-step ObjectiveRail rewrite,
+on-screen `BetaEventLogPanel` + `BetaTodayStatsPanel` + objective target
+highlight, EventLog → `EventBus.event_logged` broadcast, and the
+`ObjectiveDirector` chain trim from 8 steps to 4). The WIP introduces three
+clear SSOTs (`ModalQueue.active_panel()` for modal foreground, `step.id` for
+chain-row matching, `EventBus.event_logged` for the player-facing log
+broadcast); this pass deletes the back-compat shadows the WIP left next to
+each of them, plus the doc claims that contradict the new EventLog behaviour.
+
+## Final SSOT modules per domain (post-pass)
+
+| Domain | SSOT |
+|---|---|
+| Active modal foreground (debug HUD read) | `ModalQueue.active_panel()` — no shadow stack |
+| Chain-row matching in `BetaTodayChecklist` | `step.id` set by `BetaDayOneController._build_steps_payload` |
+| Player-facing event log broadcast | `EventBus.event_logged(tag, message)` (fires in every build) |
+| EventLog ring buffer / stdout print | `OS.is_debug_build()` gated inside `_record` |
+| Day-1 step chain | `ObjectiveDirector` 4 steps: `TALK_TO_CUSTOMER` → `BACK_ROOM_INVENTORY` → `STOCK_SHELF` → `CLOSE_DAY` |
+
+## Changes made this pass
+
+### 1. `AuditOverlay` back-compat modal shadow stack deleted
+
+The WIP rewired the overlay's "OpenModal" / "modal_depth" fields to read
+from `ModalQueue.active_panel()` and `ModalQueue.pending_count()`, but
+kept a parallel `_modal_stack: Array[String]` + `push_modal(name)` /
+`pop_modal()` API "for tests / external `push_modal` callers." A static
+grep across `game/` confirmed **zero** production callers of
+`AuditOverlay.push_modal` / `AuditOverlay.pop_modal` — every modal in the
+shipping code path opens through `ModalPanel._push_modal_focus()` /
+`_pop_modal_focus()`, which talks to `ModalQueue` + `InputFocus`, not the
+audit overlay. The shadow stack existed only to support its own tests.
+
+- `game/autoload/audit_overlay.gd` — deleted the `_modal_stack` field
+  declaration, the `push_modal(name: String)` and `pop_modal()` public
+  methods, and the `if not _modal_stack.is_empty(): return _modal_stack[…]`
+  fallback branch in `_active_modal_name()`. Updated the two doc-comments
+  that referenced the "back-compat shadow" to state ModalQueue as the
+  single source of truth.
+- `tests/gut/test_audit_overlay_braindump_fields.gd` — removed the
+  `while not AuditOverlay._modal_stack.is_empty(): AuditOverlay.pop_modal()`
+  loops from `before_each` / `after_each`, dropped the file-level docstring
+  reference to the shadow, deleted `test_open_modal_falls_back_to_shadow_stack_when_queue_idle`,
+  and rewrote `test_open_modal_reads_from_modal_queue_canonical_source` so
+  the assertion no longer competes with a `push_modal("ShadowOnly")`
+  shadow entry (the test still proves the field reads from `ModalQueue`).
+- `tests/gut/test_audit_overlay_toggle.gd` — deleted
+  `test_push_pop_modal_does_not_mutate_game_manager` (covered API is gone).
+
+### 2. `BetaTodayChecklist` text-fallback path deleted
+
+The WIP added an `id` field to every entry in
+`BetaDayOneController._build_steps_payload`, and rewrote
+`BetaTodayChecklist._on_objective_changed` to match rows by `step.id`
+first, with a `text → label` lookup (`_objective_id_for_text`) kept as a
+"defensive seam for non-beta callers (`ObjectiveDirector` test fixtures)
+that may emit a payload without per-step ids."
+
+`BetaDayOneController._build_steps_payload` is the only production caller
+that ever emits `objective_changed` with a `steps` array (`ObjectiveDirector`
+emits the flat `{objective, text, action, key}` shape), and every test
+that constructs a `steps` payload sets `step.id` on each entry
+(`test_beta_today_checklist.gd`, `test_objective_rail_day1_visibility.gd`).
+The fallback was dead.
+
+- `game/scripts/beta/beta_today_checklist.gd` — deleted the
+  `_objective_id_for_text(...)` helper (10 LOC), dropped the
+  `if String(entry_id).is_empty(): entry_id = _objective_id_for_text(...)`
+  branch in `_on_objective_changed`, and rewrote the function docstring
+  to drop the "text fallback" claim.
+
+### 3. `EventLog` release-build behaviour: docs updated to match the new contract
+
+`game/autoload/event_log.gd` (WIP) no longer `queue_free`s itself in
+release builds. The ring buffer + stdout print are debug-gated via
+`_buffer_enabled = OS.is_debug_build()` inside `_record`, but the
+`EventBus.event_logged(tag, message)` broadcast at the top of `_record`
+fires unconditionally so the player-facing `BetaEventLogPanel` keeps
+receiving events in shipping builds.
+
+Two existing docs contradicted the new contract:
+
+- `docs/architecture.md` autoload table row #22 (`EventLog`) claimed
+  "debug-build-only structured per-event timeline … `queue_free`s itself
+  in release builds." Rewritten to: "structured per-event timeline …
+  re-broadcasts each entry as `EventBus.event_logged(tag, message)` in
+  every build for the player-facing on-screen log surface; the ring
+  buffer + stdout print are debug-only." Domain list expanded to match
+  the WIP's added `_on_day_started` / `_on_money_changed` /
+  `_on_gameplay_ready` / `_on_modal_opened` / `_on_modal_closed` /
+  `_on_objective_completed` wirings.
+- `docs/audits/security-report.md` §3 (Logs / stdout) claimed
+  `EventLog (debug-only, frees in release)`. Rewritten to reflect the
+  split contract (debug-gated ring buffer + stdout; always-on
+  `EventBus.event_logged` broadcast). This matters for the security
+  review: the on-screen broadcast is a shipped sink for content-author
+  strings, not a debug-only path that disappears at release.
+
+## Risk log: intentionally retained
+
+### `BetaDayOneController._summary_spawned` one-shot guard
+
+`game/scripts/beta/beta_day_one_controller.gd._on_day_close_confirmed`
+sets a `_summary_spawned = true` flag and short-circuits with a
+`push_warning` on a duplicate emit. Both `DayCycleController` and
+`BetaDayOneController` listen to `EventBus.day_close_confirmed`, and the
+production emitter (`close_day_confirmation_panel.gd`) fires the signal
+exactly once per close. The guard is defensive against a future
+double-emit upstream, not a fix for a current double-emit. Kept because
+the call path of `end_day()` + summary modal-spawn is not idempotent —
+the next caller that re-emits would silently corrupt the daily deltas.
+This is documented at the call site (§EH-39 docstring) and is the same
+pattern as `ManagerRelationshipManager._last_started_day` (also added
+this WIP). Not a SSOT violation — the guard is the *only* place that
+enforces single-fire semantics; deleting it would remove a check without
+removing the underlying call path.
+
+### `ObjectiveDirector._last_payload_hash` dedup
+
+The WIP added a payload-hash dedup to `_emit_current` so re-entries into
+the scene that recompute the same payload don't restart the rail's
+1-second flash tween. It looks like state duplication next to the
+underlying `_day1_step_index` + content lookup, but the hash is a derived
+gate on the **emit**, not the **state** — the state itself stays single-
+sourced in `_day1_step_index` and `_day_objectives`. Kept; the
+`_last_payload_hash = ""` reset on `day_started` is documented and
+covered by `test_day_started_resets_dedup_so_first_emit_always_fires`.
+
+### `panel_opened` / `panel_closed` signal pair on `EventBus`
+
+`ObjectiveDirector._on_panel_opened` was deleted by the WIP, but the
+`panel_opened` / `panel_closed` signal pair survives — `InteractionRay`,
+`HiddenThreadSystem`, `TooltipManager`, `AuditOverlay`
+(`inventory_open` checkpoint), `Customer.gd`, and 14+ UI panels all
+emit and listen. Not a candidate for deletion this pass.
+
+### `BetaTodayChecklist._has_entry`
+
+Survives the §2 deletion. Different lookup (membership) than
+`_objective_id_for_text` (resolution); the WIP added it explicitly to
+guard against payloads that name an id the checklist doesn't own.
+
+## Escalations
+
+None new. The carried-forward escalations from the 2026-05-10 and
+2026-05-11 passes (`mall_hub.gd` `StoreLeaseDialog` post-beta decision,
+hidden-thread `defective_item_received` producer, multi-store
+`CompletionTracker` retune) remain blocked on product decisions, not
+mechanical cleanup.
+
+## Sanity check for dangling references
+
+```
+$ grep -rn "_modal_stack\|AuditOverlay\.push_modal\|AuditOverlay\.pop_modal\|_objective_id_for_text" game/ tests/
+(no matches)
+```
+
+```
+$ grep -rn "queue_free.*release\|frees in release" docs/
+(no matches)
+```
+
+```
+$ grep -rn "Stripped to a no-op in release\|Stripped to no-op in release" game/
+game/autoload/audit_overlay.gd:1:## Debug autoload for headless interaction audit. Stripped to no-op in release builds.
+(unchanged — AuditOverlay still queue_frees in release at lines 62–64; the
+docstring is accurate, it's EventLog whose behaviour changed)
+```
+
+## Verification
+
+`tests/run_tests.sh` not run end-to-end from this pass — the Godot
+binary is not in this environment. The deletions are mechanical and the
+grep sweeps above are the correctness check:
+
+- `AuditOverlay.push_modal` / `pop_modal` / `_modal_stack`: zero
+  remaining references repo-wide.
+- `BetaTodayChecklist._objective_id_for_text`: zero remaining
+  references repo-wide.
+- The two test files that exercised the deleted API
+  (`test_audit_overlay_braindump_fields.gd`,
+  `test_audit_overlay_toggle.gd`) compile against the new public
+  surface (no method calls into removed symbols, no field reads of
+  removed `_modal_stack`).
+- `tests/gut/test_beta_today_checklist.gd` already constructs every
+  `steps` payload with `step.id` populated (verified by `grep -n '"id":'`),
+  so the deleted `_objective_id_for_text` fallback was never exercised by
+  the existing suite — no test edits needed for §2.
+
+---
+
 # SSOT enforcement pass — 2026-05-11 (dead-resource-field + UI-strip follow-up)
 
 This pass executes the **UI-strip follow-up** + **ItemDefinition/ItemInstance

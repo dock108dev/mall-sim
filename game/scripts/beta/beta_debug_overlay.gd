@@ -95,8 +95,8 @@ func _dump_state_to_console() -> void:
 		String(snap.get("active_objective_id", "—")),
 		String(snap.get("active_objective_label", "—")),
 	])
-	var completed: Array[StringName] = snap.get("completed_objectives", []) as Array[StringName]
-	print("Completed: %s" % str(completed))
+	var completed_dict: Dictionary = snap.get("completed_objectives", {}) as Dictionary
+	print("Completed: %s" % str(completed_dict.keys()))
 	print("Can close day: %s | Reason: %s" % [
 		bool(snap.get("can_close_day", false)),
 		String(snap.get("close_day_reason", "")),
@@ -330,9 +330,9 @@ func _objective_anchor_for_stage(stage: Variant) -> String:
 	match stage_name:
 		"talk_to_customer":
 			return "BetaDayOneCustomer"
-		"pickup_stock":
+		"back_room_inventory":
 			return "BetaBackroomPickup"
-		"place_stock":
+		"stock_shelf":
 			return "BetaRestockShelf"
 		"end_day":
 			return "BetaDayEndTrigger"

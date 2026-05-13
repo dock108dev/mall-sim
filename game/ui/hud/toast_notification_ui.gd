@@ -13,6 +13,15 @@ class_name ToastNotificationUI
 extends Control
 
 
+## BRAINDUMP "Milestone toasts should be short. They are not for tutorial
+## paragraphs." Toasts render in a fixed-width card (`TOAST_WIDTH` 280 px) on
+## the `ToastLayer` (layer 45) and autowrap at ~2 lines. Anything past this
+## cap pushes the layout off-spec and starts to read as a tutorial paragraph,
+## which is precisely the failure mode the BRAINDUMP forbids. Enforced in
+## debug builds via `assert` in `_on_toast_requested`; release builds keep
+## the message but log a warning so the regression surfaces in QA logs.
+const MAX_MESSAGE_CHARS: int = 72
+
 const SLIDE_IN_DURATION: float = 0.15
 const FADE_OUT_DURATION: float = 0.4
 const DEFAULT_DURATION: float = 3.0
@@ -73,6 +82,24 @@ func _on_toast_requested(
 ) -> void:
 	if message.is_empty():
 		return
+	# Debug-build copy-length contract — see `MAX_MESSAGE_CHARS` docstring.
+	# Release builds push a `push_warning` instead of asserting so QA still
+	# sees the regression in the logs but the player doesn't crash on an
+	# accidentally-long content string.
+	if message.length() > MAX_MESSAGE_CHARS:
+		assert(
+			false,
+			(
+				"Toast message exceeds %d chars (got %d): %s"
+				% [MAX_MESSAGE_CHARS, message.length(), message]
+			),
+		)
+		push_warning(
+			(
+				"ToastNotificationUI: message length %d exceeds %d chars: %s"
+				% [message.length(), MAX_MESSAGE_CHARS, message]
+			)
+		)
 	var effective_duration: float = duration if duration > 0.0 else DEFAULT_DURATION
 	var entry: Dictionary = {
 		"message": message,

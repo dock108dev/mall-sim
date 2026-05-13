@@ -57,3 +57,33 @@ func test_auto_dismiss_timer_emits_signal() -> void:
 		"Auto-dismiss timeout must reach dismiss() and emit the signal"
 	)
 	assert_eq(received[0], "day_2_morning")
+
+
+## Calling show_note() twice in a row must replace the body, not stack it. The
+## panel uses RichTextLabel and the explicit clear() before `.text =` is the
+## guard against a future refactor that re-introduces `append_text()`.
+func test_show_note_twice_replaces_body_does_not_stack() -> void:
+	var panel := _make_panel()
+	var body: String = "First clock-in. Vic walked you through the register."
+	panel.show_note("day_1_morning", body, "Day 1", false)
+	panel.show_note("day_1_morning", body, "Day 1", false)
+	var body_label: RichTextLabel = panel.get_node("%BodyLabel") as RichTextLabel
+	assert_eq(
+		body_label.text, body,
+		"Repeat show_note() must replace the body, not concatenate it"
+	)
+
+
+## A second show_note() with a different body must show only the new body —
+## confirms clear() runs even when the new content is a strict substring of
+## the old (the case where append_text() would silently double-render the
+## suffix).
+func test_show_note_replaces_with_different_body() -> void:
+	var panel := _make_panel()
+	panel.show_note("note_a", "Long body text.", "Day 1", false)
+	panel.show_note("note_b", "Short.", "Day 2", false)
+	var body_label: RichTextLabel = panel.get_node("%BodyLabel") as RichTextLabel
+	assert_eq(
+		body_label.text, "Short.",
+		"Second show_note() body must fully replace the first"
+	)

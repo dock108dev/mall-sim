@@ -86,14 +86,14 @@ func test_day1_nav_labels_match_objective_wording() -> void:
 	assert_not_null(shelves, "ZoneLabels/ShelvesLabel must exist")
 	var checkout: Label3D = _root.get_node_or_null(CHECKOUT_LABEL_PATH) as Label3D
 	assert_not_null(checkout, "ZoneLabels/CheckoutLabel must exist")
-	var stock_text: String = _objective_step_text("stock_item")
-	var checkout_text: String = _objective_step_text("customer_at_checkout")
+	var stock_text: String = _objective_step_text("stock_shelf")
+	var checkout_text: String = _objective_step_text("talk_to_customer")
 	if shelves != null:
 		assert_true(
 			stock_text.to_lower().contains(shelves.text.to_lower()),
 			(
 				"ShelvesLabel text '%s' must appear in objectives.json "
-				+ "stock_item.text '%s'"
+				+ "stock_shelf.text '%s'"
 			) % [shelves.text, stock_text],
 		)
 	if checkout != null:
@@ -101,7 +101,7 @@ func test_day1_nav_labels_match_objective_wording() -> void:
 			checkout_text.to_lower().contains(checkout.text.to_lower()),
 			(
 				"CheckoutLabel text '%s' must appear in objectives.json "
-				+ "customer_at_checkout.text '%s'"
+				+ "talk_to_customer.text '%s'"
 			) % [checkout.text, checkout_text],
 		)
 

@@ -63,7 +63,7 @@ func _make_checklist() -> BetaTodayChecklist:
 
 func test_header_reads_today_with_no_day_one_prefix() -> void:
 	var checklist: BetaTodayChecklist = _make_checklist()
-	var header: Label = checklist.get_node("Anchor/Container/Header") as Label
+	var header: Label = checklist.get_node("Anchor/Margin/Container/Header") as Label
 	assert_not_null(header, "Checklist must have a Header label")
 	if header == null:
 		return
@@ -98,17 +98,35 @@ func test_only_first_objective_seeds_at_construction() -> void:
 func test_objective_changed_lifts_active_step_into_visible_list() -> void:
 	# AC: chain advance flips a future row into the active visible list.
 	# The controller emits the steps payload via objective_changed; the
-	# checklist surfaces the row whose state is "active".
+	# checklist surfaces the row whose state is "active". Matching is by
+	# the `id` field carried in each step entry (see
+	# BetaDayOneController._build_steps_payload).
 	var checklist: BetaTodayChecklist = _make_checklist()
 	EventBus.objective_changed.emit({
 		"text": "Day 1: Check today's back room stock.",
 		"action": "Check inventory",
 		"key": "E",
 		"steps": [
-			{"text": "Day 1: Help the customer at the register.", "state": "completed"},
-			{"text": "Day 1: Check today's back room stock.", "state": "active"},
-			{"text": "Day 1: Put a few items on the used games shelf.", "state": "future"},
-			{"text": "Day 1: Close the day at the register.", "state": "future"},
+			{
+				"id": "talk_to_customer",
+				"text": "Day 1: Help the customer at the register.",
+				"state": "completed",
+			},
+			{
+				"id": "back_room_inventory",
+				"text": "Day 1: Check today's back room stock.",
+				"state": "active",
+			},
+			{
+				"id": "stock_shelf",
+				"text": "Day 1: Put a few items on the used games shelf.",
+				"state": "future",
+			},
+			{
+				"id": "close_day",
+				"text": "Day 1: Close the day at the register.",
+				"state": "future",
+			},
 		],
 	})
 	await get_tree().process_frame
@@ -126,12 +144,35 @@ func test_objective_changed_lifts_active_step_into_visible_list() -> void:
 	)
 
 
+func test_objective_changed_matches_by_step_id_when_text_differs() -> void:
+	# AC: row matching uses `step.id`, not `step.text`. Even when the
+	# step text has drifted from the chain's `label` (e.g. controller
+	# label rewrite for Day 2 copy), the row still surfaces because the
+	# id is the authoritative key.
+	var checklist: BetaTodayChecklist = _make_checklist()
+	EventBus.objective_changed.emit({
+		"text": "different copy",
+		"steps": [
+			{
+				"id": "back_room_inventory",
+				"text": "Totally different label that drifted from the chain.",
+				"state": "active",
+			},
+		],
+	})
+	await get_tree().process_frame
+	assert_eq(
+		checklist.get_item_glyph(&"back_room_inventory"), "•",
+		"Row must surface via step.id even when step.text no longer matches the chain label"
+	)
+
+
 func test_item_label_strips_day_one_prefix() -> void:
 	# Header already says "Today" — the per-row copy must not echo the
 	# "Day 1: ..." rail prefix.
 	var checklist: BetaTodayChecklist = _make_checklist()
 	var label: Label = checklist.get_node_or_null(
-		"Anchor/Container/Item_talk_to_customer"
+		"Anchor/Margin/Container/Item_talk_to_customer"
 	) as Label
 	assert_not_null(label, "Item row must exist for talk_to_customer")
 	if label == null:

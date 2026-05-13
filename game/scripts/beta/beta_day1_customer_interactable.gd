@@ -36,6 +36,7 @@ func interact(by: Node = null) -> void:
 	if not can_interact(by):
 		return
 	super.interact(by)
+	EventBus.customer_interacted.emit(self)
 	get_tree().call_group("beta_day_one_controller", "on_beta_customer_interacted")
 
 

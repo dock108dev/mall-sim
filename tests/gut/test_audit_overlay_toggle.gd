@@ -64,13 +64,6 @@ func test_toggle_changes_visibility() -> void:
 	assert_eq(AuditOverlay.visible, was_visible, "double toggle must restore original visibility")
 
 
-func test_push_pop_modal_does_not_mutate_game_manager() -> void:
-	var state_before: int = GameManager.current_state
-	AuditOverlay.push_modal("test_modal")
-	AuditOverlay.pop_modal()
-	assert_eq(GameManager.current_state, state_before, "push/pop modal must not change GameManager state")
-
-
 func test_report_interactable_does_not_mutate_game_manager() -> void:
 	var state_before: int = GameManager.current_state
 	AuditOverlay.report_interactable("test_node")

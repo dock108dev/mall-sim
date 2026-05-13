@@ -171,10 +171,22 @@ func _exit_tree() -> void:
 
 
 ## Opens the panel with a list of items for sale.
+##
+## Gated by `ModalQueue.is_busy()` so a blocking modal (DaySummary, Vic note,
+## CloseDayConfirmation) already on screen cannot be stacked beneath a second
+## `CTX_MODAL` frame from this panel. The direct-open path here bypasses the
+## queue by design — checkout is initiated by a real-time customer event, not
+## a queued dispatch — so refusing the open is the only way to keep the modal
+## depth at 1. `sale_declined` is emitted to keep the checkout pipeline state
+## machine moving (CheckoutSystem treats checkout_started → sale_declined as
+## a no-sale resolution).
 func show_checkout(
 	items: Array[Dictionary],
 	haggle_discount: float = 0.0,
 ) -> void:
+	if ModalQueue.is_busy():
+		sale_declined.emit()
+		return
 	_items = items
 	_haggle_discount = haggle_discount
 	_is_pending = false

@@ -1,6 +1,9 @@
 ## ModalDimOverlay autoload — verifies the dim ColorRect spec:
 ##   * layer 49 (below CTX_MODAL panels at 50+ band, above HUD/rail at ≤40)
-##   * Color(0, 0, 0, 0.55) — perceptibly dark behind any CTX_MODAL panel
+##   * Color(0, 0, 0, 0.4) — calibrated against HUD._MODAL_DIM_ALPHA = 0.65
+##     so the composed visible HUD opacity (0.65 × 0.6 = 0.39) reads as
+##     clearly dimmed but legible. Both must move together; raising either
+##     in isolation reproduces the double-dim near-black regression.
 ##   * fades in over 0.15s on CTX_MODAL push, fades out over 0.15s on pop
 ##   * single shared overlay — no stacking on nested modal pushes
 ##   * mouse events pass through (MOUSE_FILTER_IGNORE)
@@ -37,15 +40,18 @@ func test_overlay_sits_on_layer_49() -> void:
 
 
 func test_overlay_color_is_specified_dim() -> void:
-	# The ColorRect's color holds the spec alpha (≥0.5). modulate.a is the
-	# fade multiplier on top of that. 0.55 is the chosen value so the
-	# store background reads as clearly subordinate to any modal.
+	# The ColorRect's color holds the spec alpha. modulate.a is the fade
+	# multiplier on top of that. The alpha is paired with the HUD's
+	# `_MODAL_DIM_ALPHA = 0.65`: the composed visible HUD opacity
+	# (0.65 × (1 - 0.4) ≈ 0.39) reads as clearly dimmed but legible.
 	var rect: ColorRect = _overlay.get_node("DimRect") as ColorRect
 	assert_not_null(rect, "DimRect child must exist")
-	assert_eq(rect.color, Color(0.0, 0.0, 0.0, 0.55),
-		"DimRect color must be Color(0, 0, 0, 0.55) — readable dim behind CTX_MODAL panels")
-	assert_gte(rect.color.a, 0.5,
-		"DimRect alpha must be ≥0.5 so the dim is perceptible at default store lighting")
+	assert_eq(rect.color, Color(0.0, 0.0, 0.0, 0.4),
+		"DimRect color must be Color(0, 0, 0, 0.4) — calibrated against HUD modal-dim 0.65")
+	assert_gte(rect.color.a, 0.3,
+		"DimRect alpha must be ≥0.3 so the dim is perceptible at default store lighting")
+	assert_lte(rect.color.a, 0.5,
+		"DimRect alpha must stay ≤0.5 or the composed HUD opacity drops below the readable floor")
 
 
 func test_overlay_passes_mouse_events_through() -> void:

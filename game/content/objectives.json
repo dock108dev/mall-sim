@@ -17,50 +17,26 @@
       },
       "steps": [
         {
-          "id": "open_inventory",
-          "text": "Talk to the waiting customer",
-          "action": "Press E at the customer to open the decision card",
+          "id": "talk_to_customer",
+          "text": "Talk to the customer at the register.",
+          "action": "Press E at the counter",
           "key": "E"
         },
         {
-          "id": "select_item",
-          "text": "Choose how you handle the request",
-          "action": "Pick one decision outcome",
+          "id": "back_room_inventory",
+          "text": "Check the back room delivery.",
+          "action": "Press E on a stock box to carry it out",
           "key": "E"
         },
         {
-          "id": "stock_item",
-          "text": "Go to backroom pickup",
-          "action": "Press E to carry a stock box",
+          "id": "stock_shelf",
+          "text": "Stock the Retro Games shelf.",
+          "action": "Press E at the restock shelf",
           "key": "E"
-        },
-        {
-          "id": "wait_for_customer",
-          "text": "Place stock on the restock shelf",
-          "action": "Press E at the shelf to place the carried box",
-          "key": "E"
-        },
-        {
-          "id": "customer_browsing",
-          "text": "Move to the next customer",
-          "action": "Return to the customer area",
-          "key": "E"
-        },
-        {
-          "id": "customer_at_checkout",
-          "text": "Resolve the final customer",
-          "action": "Complete the final decision card",
-          "key": "E"
-        },
-        {
-          "id": "sale_complete",
-          "text": "Sale complete!",
-          "action": "First sale of the day",
-          "key": "F4"
         },
         {
           "id": "close_day",
-          "text": "Close the day when ready",
+          "text": "Close the day at the register.",
           "action": "Press F4 to end the day",
           "key": "F4"
         }

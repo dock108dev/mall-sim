@@ -51,7 +51,7 @@ the hub auto-enters on a new run.
 
 - **Reputation tiers (4 levels):** gate customer volume and spending budget multipliers. Tier decays to floor 50 if revenue drops.
 - **Unlock gates:** fixtures, surfaces, and difficulty thresholds unlock at day/revenue/reputation thresholds.
-- **Constraint:** no new mechanics ship until the existing store's signature mechanic has a working end-to-end loop (Phase 0 exit criterion).
+- **Constraint:** no new mechanics ship until the existing store's signature mechanic has a working end-to-end loop.
 
 ## 6. Out of scope for 1.0
 
@@ -59,7 +59,7 @@ the hub auto-enters on a new run.
 - Multiplayer
 - Procedurally generated store layouts
 - Any second store beyond `retro_games`
-- New mechanics before Phase 0 exit criteria are cleared
+- New mechanics before the shipping store's signature loop is end-to-end
 
 ## 7. Visual Anti-Patterns (merge-blockers)
 

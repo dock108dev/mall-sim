@@ -1,19 +1,13 @@
 ## Verifies the Day 1 ObjectiveRail surfaces the first step of the chain
-## ("Talk to the waiting customer") with a "Press E" action and an "E" key
-## badge, that the rail occupies a different screen zone than the
+## ("Talk to the customer at the register.") with a "Press E" action and an
+## "E" key badge, that the rail occupies a different screen zone than the
 ## InteractionPrompt, and that the Day1ReadinessAudit objective check passes
 ## once the day starts and the player enters the store.
-##
-## §F-PUNCH5 — content authoring in objectives.json (Day 1 step 1) was
-## pivoted to the customer-first chain ("Talk to the waiting customer";
-## key "E"). The constants below were the old "Open your inventory" /
-## "Press I" wording that pre-dated the pivot. Updated so the tests
-## track current Day 1 production content.
 extends GutTest
 
 
-const _OBJECTIVE_TEXT: String = "Talk to the waiting customer"
-const _ACTION_TEXT: String = "Press E at the customer to open the decision card"
+const _OBJECTIVE_TEXT: String = "Talk to the customer at the register."
+const _ACTION_TEXT: String = "Press E at the counter"
 const _KEY_TEXT: String = "E"
 
 const _RAIL_SCENE: String = "res://game/scenes/ui/objective_rail.tscn"
@@ -222,20 +216,50 @@ func test_interaction_prompt_zone_does_not_overlap_objective_rail_zone() -> void
 	)
 
 
-# ── Stocked flag triggers ObjectiveDirector update ────────────────────────────
+# ── Chain advancement drives ObjectiveDirector update ─────────────────────────
 
-func test_item_stocked_triggers_rail_update_after_day_started() -> void:
+func test_chain_advance_updates_rail_with_next_step_copy() -> void:
+	# Walks the chain so item_stocked actually advances a step
+	# (TALK_TO_CUSTOMER → BACK_ROOM_INVENTORY → STOCK_SHELF → CLOSE_DAY) and
+	# verifies the rail re-renders with each new step's copy. With the emit
+	# dedup, identical-payload re-emissions are suppressed; the rail only
+	# refreshes when content changes.
 	var rail := _make_rail()
 	_start_day1_after_note_dismiss()
-	# Mutate label texts so we can detect the re-emission.
+	assert_eq(rail._objective_label.text, _OBJECTIVE_TEXT)
+	EventBus.customer_interacted.emit(null)
+	assert_eq(
+		rail._objective_label.text, "Check the back room delivery.",
+		"customer_interacted at TALK_TO_CUSTOMER must re-render the rail with step 2"
+	)
+	EventBus.placement_mode_entered.emit()
+	assert_eq(
+		rail._objective_label.text, "Stock the Retro Games shelf.",
+		"placement_mode_entered at BACK_ROOM_INVENTORY must re-render with step 3"
+	)
+	EventBus.item_stocked.emit("item_001", "shelf_a")
+	assert_eq(
+		rail._objective_label.text, "Close the day at the register.",
+		"item_stocked at STOCK_SHELF must re-render with the close-day step"
+	)
+
+
+func test_duplicate_emit_does_not_overwrite_rail_labels() -> void:
+	# Dedup contract: when ObjectiveDirector recomputes _emit_current() with
+	# the same text/action/key/hint as the last emission, no signal fires.
+	# Mutated labels stay mutated — the rail isn't touched. Out-of-order
+	# signals that don't advance the Day 1 chain (item_stocked while at
+	# TALK_TO_CUSTOMER) are the production path that exercises this.
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
 	rail._objective_label.text = ""
 	rail._action_label.text = ""
 	EventBus.item_stocked.emit("item_001", "shelf_a")
 	assert_eq(
-		rail._objective_label.text, _OBJECTIVE_TEXT,
-		"item_stocked must re-emit the Day 1 objective payload to the rail"
+		rail._objective_label.text, "",
+		"Out-of-order item_stocked must not re-emit the identical payload"
 	)
-	assert_eq(rail._action_label.text, _ACTION_TEXT)
+	assert_eq(rail._action_label.text, "")
 
 
 # ── FP-mode focus chip (absorbs InteractionPrompt content) ────────────────────
@@ -351,3 +375,72 @@ func test_day1_readiness_objective_check_passes_after_day1_payload() -> void:
 		ObjectiveRail.has_active_objective(),
 		"Day1ReadinessAudit check 8 (has_active_objective) must be true on Day 1"
 	)
+
+
+# ── Step slot clearing on payload shrink / disappearance ──────────────────────
+
+func test_steps_payload_shrink_blanks_out_of_range_slots() -> void:
+	# Switching from a 3-step render to a 1-step render must blank slots 1-3
+	# so the rail does not surface stale text from the larger payload.
+	var rail := _make_rail()
+	var three_step: Dictionary = {
+		"text": "three",
+		"action": "act",
+		"key": "E",
+		"steps": [
+			{"text": "alpha", "state": "active"},
+			{"text": "bravo", "state": "future"},
+			{"text": "charlie", "state": "future"},
+		],
+	}
+	EventBus.objective_changed.emit(three_step)
+	assert_eq(rail._step_slots[1].text, "bravo")
+	assert_eq(rail._step_slots[2].text, "charlie")
+	var one_step: Dictionary = {
+		"text": "one",
+		"action": "act",
+		"key": "E",
+		"steps": [
+			{"text": "delta", "state": "active"},
+		],
+	}
+	EventBus.objective_changed.emit(one_step)
+	assert_eq(
+		rail._step_slots[0].text, "delta",
+		"Slot 0 must render the new single step"
+	)
+	assert_eq(
+		rail._step_slots[1].text, "",
+		"Slot 1 text must be blanked when payload shrinks to 1 step"
+	)
+	assert_eq(rail._step_slots[2].text, "")
+	assert_eq(rail._step_slots[3].text, "")
+
+
+func test_steps_absent_blanks_every_slot() -> void:
+	# A payload that omits the `steps` key entirely (the legacy non-beta
+	# render path) must clear every slot — otherwise a later payload with
+	# steps would surface ghost text from the prior multi-step render.
+	var rail := _make_rail()
+	var multi_step: Dictionary = {
+		"text": "multi",
+		"action": "act",
+		"key": "E",
+		"steps": [
+			{"text": "alpha", "state": "active"},
+			{"text": "bravo", "state": "future"},
+		],
+	}
+	EventBus.objective_changed.emit(multi_step)
+	var no_steps: Dictionary = {
+		"text": "no steps",
+		"action": "act",
+		"key": "E",
+	}
+	EventBus.objective_changed.emit(no_steps)
+	for slot: Label in rail._step_slots:
+		assert_eq(
+			slot.text, "",
+			"Every slot must be blanked when the payload drops the steps key"
+		)
+		assert_false(slot.visible)

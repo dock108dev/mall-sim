@@ -49,10 +49,14 @@ const _REP_ARROW_FADE_IN: float = 0.1
 const _REP_ARROW_HOLD: float = 1.0
 const _REP_ARROW_FADE_OUT: float = 0.4
 const _BUILD_MODE_DIM_ALPHA: float = 0.5
-## Modal-fade contract: HUD opacity drops to 0.3 over 0.15s when CTX_MODAL
+## Modal-fade contract: HUD opacity drops to 0.65 over 0.15s when CTX_MODAL
 ## is on top of the InputFocus stack, restores to 1.0 over 0.15s on pop.
-## Visual plane separation: dim overlay (0.45) → faded HUD (0.3) → modal (1.0).
-const _MODAL_DIM_ALPHA: float = 0.3
+## Calibrated against `ModalDimOverlay.DIM_COLOR.a = 0.4`: the composed
+## visible HUD opacity behind a modal is `0.65 × (1 - 0.4) = 0.39`, which
+## reads as clearly dimmed but keeps cash and time labels legible. A prior
+## pairing of `0.3 × 0.55 = 0.135` rendered the HUD near-black; both values
+## must be tuned together or the regression returns.
+const _MODAL_DIM_ALPHA: float = 0.65
 const _MODAL_DIM_DURATION: float = 0.15
 const _COUNTER_PULSE_SCALE: float = 1.08
 const _COUNTER_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
@@ -173,44 +177,7 @@ func _ready() -> void:
 	_telegraph_card.visible = false
 	_speed_button.visible = false
 
-	EventBus.objective_changed.connect(_on_objective_payload)
-	EventBus.objective_updated.connect(_on_objective_payload)
-	EventBus.notification_requested.connect(_on_notification_requested)
-	EventBus.critical_notification_requested.connect(_on_critical_notification_requested)
-	EventBus.reputation_changed.connect(_on_reputation_changed)
-	EventBus.store_opened.connect(_on_store_opened)
-	EventBus.store_closed.connect(_on_store_closed)
-	EventBus.hour_changed.connect(_on_hour_changed)
-	EventBus.day_started.connect(_on_day_started)
-	EventBus.day_phase_changed.connect(_on_day_phase_changed)
-	EventBus.money_changed.connect(_on_money_changed)
-	EventBus.speed_changed.connect(_on_speed_changed)
-	EventBus.random_event_telegraphed.connect(_on_random_event_telegraphed)
-	EventBus.locale_changed.connect(_on_locale_changed)
-	EventBus.build_mode_entered.connect(_on_build_mode_entered)
-	EventBus.build_mode_exited.connect(_on_build_mode_exited)
-	EventBus.store_entered.connect(_on_store_entered_hub)
-	EventBus.store_exited.connect(_on_store_exited_hub)
-	EventBus.inventory_changed.connect(_on_inventory_changed)
-	EventBus.beta_carry_changed.connect(_on_beta_carry_changed)
-	EventBus.beta_shelf_count_changed.connect(_on_beta_shelf_count_changed)
-	EventBus.beta_backroom_count_changed.connect(_on_beta_backroom_count_changed)
-	EventBus.customer_purchased.connect(_on_customer_purchased_hud)
-	EventBus.item_sold.connect(_on_item_sold)
-	EventBus.customer_spawned.connect(_on_customer_spawned_hud)
-	EventBus.customer_left.connect(_on_customer_left_hud)
-	# Modal opens/closes flip the zero-state hint off/on without changing the
-	# underlying stock or customer counts; subscribing to context_changed keeps
-	# the gating reactive without polling each frame.
-	InputFocus.context_changed.connect(_on_input_focus_changed)
-	_milestones_button.pressed.connect(_on_milestones_pressed)
-	_speed_button.pressed.connect(_on_speed_button_pressed)
-	EventBus.game_state_changed.connect(_on_game_state_changed)
-	EventBus.tutorial_step_changed.connect(_on_tutorial_step_changed_hud)
-	EventBus.tutorial_completed.connect(_on_tutorial_hint_ended)
-	EventBus.tutorial_skipped.connect(_on_tutorial_hint_ended)
-	EventBus.run_state_changed.connect(_on_run_state_changed)
-	EventBus.first_sale_completed.connect(_on_first_sale_completed_hud)
+	_connect_signals()
 
 	_create_close_day_button()
 	_create_hub_back_button()
@@ -223,6 +190,93 @@ func _ready() -> void:
 	_seed_counters_from_systems()
 	_apply_state_visibility(GameManager.current_state)
 	_refresh_zero_state_hint()
+
+
+## Wires the HUD to EventBus, InputFocus, and button signals. Each connection
+## is guarded with `is_connected` so that a second HUD instance entering the
+## tree (test fixtures, editor hot-reload) cannot double the handler list on
+## any shared autoload signal. Matches the `_connect_signals` pattern in
+## `TutorialContextSystem`.
+func _connect_signals() -> void:
+	if not EventBus.objective_changed.is_connected(_on_objective_payload):
+		EventBus.objective_changed.connect(_on_objective_payload)
+	if not EventBus.objective_updated.is_connected(_on_objective_payload):
+		EventBus.objective_updated.connect(_on_objective_payload)
+	if not EventBus.notification_requested.is_connected(_on_notification_requested):
+		EventBus.notification_requested.connect(_on_notification_requested)
+	if not EventBus.critical_notification_requested.is_connected(
+		_on_critical_notification_requested
+	):
+		EventBus.critical_notification_requested.connect(
+			_on_critical_notification_requested
+		)
+	if not EventBus.reputation_changed.is_connected(_on_reputation_changed):
+		EventBus.reputation_changed.connect(_on_reputation_changed)
+	if not EventBus.store_opened.is_connected(_on_store_opened):
+		EventBus.store_opened.connect(_on_store_opened)
+	if not EventBus.store_closed.is_connected(_on_store_closed):
+		EventBus.store_closed.connect(_on_store_closed)
+	if not EventBus.hour_changed.is_connected(_on_hour_changed):
+		EventBus.hour_changed.connect(_on_hour_changed)
+	if not EventBus.day_started.is_connected(_on_day_started):
+		EventBus.day_started.connect(_on_day_started)
+	if not EventBus.day_phase_changed.is_connected(_on_day_phase_changed):
+		EventBus.day_phase_changed.connect(_on_day_phase_changed)
+	if not EventBus.money_changed.is_connected(_on_money_changed):
+		EventBus.money_changed.connect(_on_money_changed)
+	if not EventBus.speed_changed.is_connected(_on_speed_changed):
+		EventBus.speed_changed.connect(_on_speed_changed)
+	if not EventBus.random_event_telegraphed.is_connected(_on_random_event_telegraphed):
+		EventBus.random_event_telegraphed.connect(_on_random_event_telegraphed)
+	if not EventBus.locale_changed.is_connected(_on_locale_changed):
+		EventBus.locale_changed.connect(_on_locale_changed)
+	if not EventBus.build_mode_entered.is_connected(_on_build_mode_entered):
+		EventBus.build_mode_entered.connect(_on_build_mode_entered)
+	if not EventBus.build_mode_exited.is_connected(_on_build_mode_exited):
+		EventBus.build_mode_exited.connect(_on_build_mode_exited)
+	if not EventBus.store_entered.is_connected(_on_store_entered_hub):
+		EventBus.store_entered.connect(_on_store_entered_hub)
+	if not EventBus.store_exited.is_connected(_on_store_exited_hub):
+		EventBus.store_exited.connect(_on_store_exited_hub)
+	if not EventBus.inventory_changed.is_connected(_on_inventory_changed):
+		EventBus.inventory_changed.connect(_on_inventory_changed)
+	if not EventBus.beta_carry_changed.is_connected(_on_beta_carry_changed):
+		EventBus.beta_carry_changed.connect(_on_beta_carry_changed)
+	if not EventBus.beta_shelf_count_changed.is_connected(_on_beta_shelf_count_changed):
+		EventBus.beta_shelf_count_changed.connect(_on_beta_shelf_count_changed)
+	if not EventBus.beta_backroom_count_changed.is_connected(
+		_on_beta_backroom_count_changed
+	):
+		EventBus.beta_backroom_count_changed.connect(_on_beta_backroom_count_changed)
+	if not EventBus.customer_purchased.is_connected(_on_customer_purchased_hud):
+		EventBus.customer_purchased.connect(_on_customer_purchased_hud)
+	if not EventBus.item_sold.is_connected(_on_item_sold):
+		EventBus.item_sold.connect(_on_item_sold)
+	if not EventBus.customer_spawned.is_connected(_on_customer_spawned_hud):
+		EventBus.customer_spawned.connect(_on_customer_spawned_hud)
+	if not EventBus.customer_left.is_connected(_on_customer_left_hud):
+		EventBus.customer_left.connect(_on_customer_left_hud)
+	# Modal opens/closes flip the zero-state hint off/on without changing the
+	# underlying stock or customer counts; subscribing to context_changed keeps
+	# the gating reactive without polling each frame.
+	if not InputFocus.context_changed.is_connected(_on_input_focus_changed):
+		InputFocus.context_changed.connect(_on_input_focus_changed)
+	if not _milestones_button.pressed.is_connected(_on_milestones_pressed):
+		_milestones_button.pressed.connect(_on_milestones_pressed)
+	if not _speed_button.pressed.is_connected(_on_speed_button_pressed):
+		_speed_button.pressed.connect(_on_speed_button_pressed)
+	if not EventBus.game_state_changed.is_connected(_on_game_state_changed):
+		EventBus.game_state_changed.connect(_on_game_state_changed)
+	if not EventBus.tutorial_step_changed.is_connected(_on_tutorial_step_changed_hud):
+		EventBus.tutorial_step_changed.connect(_on_tutorial_step_changed_hud)
+	if not EventBus.tutorial_completed.is_connected(_on_tutorial_hint_ended):
+		EventBus.tutorial_completed.connect(_on_tutorial_hint_ended)
+	if not EventBus.tutorial_skipped.is_connected(_on_tutorial_hint_ended):
+		EventBus.tutorial_skipped.connect(_on_tutorial_hint_ended)
+	if not EventBus.run_state_changed.is_connected(_on_run_state_changed):
+		EventBus.run_state_changed.connect(_on_run_state_changed)
+	if not EventBus.first_sale_completed.is_connected(_on_first_sale_completed_hud):
+		EventBus.first_sale_completed.connect(_on_first_sale_completed_hud)
 
 
 func _on_day_started(day: int) -> void:
@@ -535,9 +589,15 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 				GameManager.get_current_day() > 1
 			)
 			_close_day_button.visible = true
-			_items_placed_label.visible = true
-			_back_room_label.visible = true
-			_sales_today_label.visible = true
+			# BRAINDUMP Rule 3: 'Top Left: Money only'. In beta mode the
+			# right-side BetaTodayStatsPanel surfaces On Shelves / Back Room /
+			# Sold Today, so the redundant TopBar copies are hidden. Non-beta
+			# runs still need them in the TopBar (no right-side panel exists
+			# outside the beta loop).
+			var stats_panel_active: bool = _beta_mode_active()
+			_items_placed_label.visible = not stats_panel_active
+			_back_room_label.visible = not stats_panel_active
+			_sales_today_label.visible = not stats_panel_active
 			_store_label.visible = false
 			_telegraph_card.visible = false
 		_:
@@ -1006,7 +1066,7 @@ func _on_input_focus_changed(new_ctx: StringName, _old_ctx: StringName) -> void:
 
 
 ## Fades direct CanvasItem children of the HUD CanvasLayer to the modal-dim
-## alpha (0.3) when a modal owns InputFocus, restoring to full opacity on
+## alpha (0.65) when a modal owns InputFocus, restoring to full opacity on
 ## pop. Boolean-transition gated so nested modal context_changed events do
 ## not restart the tween. CanvasLayer itself has no `modulate`, so the fade
 ## walks the children — this matches the build-mode dim pattern.

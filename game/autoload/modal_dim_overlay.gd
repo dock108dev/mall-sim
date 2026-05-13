@@ -9,9 +9,15 @@
 ##
 ## Driven by `InputFocus.context_changed`. Tweens in over 0.15s when the top
 ## frame becomes `CTX_MODAL`, tweens out over 0.15s when it leaves.
+##
+## Alpha is calibrated against `HUD._MODAL_DIM_ALPHA = 0.65`: the composed
+## visible HUD opacity behind a modal is `0.65 × (1 - 0.4) = 0.39`, which
+## reads as clearly dimmed without rendering cash and time labels near-black.
+## Both values must move together or the regression (unreadable HUD under
+## any modal) returns.
 extends CanvasLayer
 
-const DIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.55)
+const DIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.4)
 const FADE_DURATION: float = 0.15
 const LAYER: int = 49
 

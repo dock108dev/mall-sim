@@ -1,5 +1,36 @@
 ## Changes made this pass
 
+This pass extends the prior security hardening to cover the new code that
+landed since the last audit: the `BetaEventLogPanel` (a new
+`bbcode_enabled = true` `RichTextLabel` sink driven by
+`EventBus.event_logged`), the `BetaTodayStatsPanel` and
+`BetaObjectiveTargetHighlight` (audited and confirmed sink-free), the
+`audit_overlay` BRAINDUMP-field rewrite (debug surface, no new
+trust-boundary impact), and the `manager_relationship_manager` JSON
+loader (pre-existed but did not enforce the project-wide 1-MiB file-size
+cap that every other JSON ingest path uses). Two safe inline edits
+applied this pass:
+
+| File | Lines | Change |
+|---|---|---|
+| `game/scripts/beta/beta_event_log_panel.gd` | 192–217 (`_format_row`) | **§F-S15 — escape `[` -> `[lb]` on the `message` argument** before composing the BBCode template. `row.bbcode_enabled = true` on line 156, and the row text is built as `"[color=#...]%s[/color] [color=#...]%s[/color]" % [..., tag, ..., message]`. Today's `EventLog._format_message` callers feed only integer- and enum-derived strings, but the durable hardening — matching `checkout_panel._set_reasoning_text` (§F-129) and `boot._show_error_panel` — is to escape `[` at the sink so a future caller piping content-, save-, or user-derived text through `EventBus.event_logged` cannot smuggle `[img=res://…]` / `[url=…]` / `[font=…]` tags into the rendered row. `tag` is intentionally *not* escaped because the only accepted values are the hardcoded `_TAG_COLORS` keys (`[STOCK]`, `[CUSTOMER]`, …); an unrecognized tag falls through to `_DEFAULT_TAG_COLOR` and renders literally. The inline docstring captures both constraints. See §F-S15 below. |
+| `game/autoload/manager_relationship_manager.gd` | 34–43 (`MAX_NOTES_FILE_BYTES` const), 581–597 (`_load_notes` cap) | **§F-S16 — file-size cap on the manager-notes JSON loader**, matching `DataLoader.MAX_JSON_FILE_BYTES = 1_048_576` and the prior pass's §1 fix on `BetaDayOneController._load_json`. The project has five JSON ingest paths (`DataLoader._read_json_file`, `SaveManager` save-slot reads, `MainMenu` slot-preview reads, `BetaDayOneController._load_json`, and `ManagerRelationshipManager._load_notes`) — four enforced the 1-MiB cap before this pass; this edit closes the convention gap on the fifth. The path is `res://game/content/manager/manager_notes.json`, so present-day exposure is content-author error rather than user tampering, but matching the project-wide invariant means a future change that lets the path derive from a non-baked source cannot silently inflate the parser working set. Pre-cap branch is `push_error` so CI's `^ERROR:` stderr gate fails on a runaway content file. See §F-S16 below. |
+
+Test posture after both edits:
+- `test_beta_event_log_panel.gd` — 11/11 passing (0.162s, 19 asserts).
+- `test_manager_relationship_manager.gd` — 28/28 passing (0.024s, 39
+  asserts).
+- `test_morning_note.gd` — 5/5 passing (0.035s, 7 asserts).
+- Full beta suite (`-gselect=test_beta`) — 184/184 passing (9.676s, 637
+  asserts). All `ERROR: [ModalPanel] … freed with unreleased InputFocus
+  push — auto-popping` lines in the trailing output are the documented
+  fail-loud paths covered by `scripts/run_godot_tests.sh`'s
+  `EXPECTED_ERROR_RE` allowlist (`[ModalPanel] .* freed with unreleased
+  InputFocus push — auto-popping`) and are intentional fixture
+  teardown artifacts, not regressions.
+
+---
+
 This is a security hardening pass on the `beta/strip-to-bones` branch, which
 ripped out four legacy stores plus their controllers / lifecycle / JSON content
 and replaced them with a beta day-1 critical-path controller, a hidden-thread
@@ -69,10 +100,12 @@ removal across `content_parser`, `content_schema`, `price_resolver`,
   input), `checkout_panel`/`haggle_panel` reasoning labels (§F-129 escapes
   input via `[` → `[lb]`), `beta_manager_note_panel` (binds hardcoded
   constants only; see §F-S9), `beta_day_summary_panel._metrics_label` (binds
-  integer-derived values only; see §F-S13), and `decision_card_style.apply_reasoning_style`
-  (caller-escaped). The new `BetaDecisionCardPanel` is the only beta panel
-  with a `RichTextLabel` body bound to content text and it explicitly sets
-  `bbcode_enabled = false` (now load-bearing — see §3 above).
+  integer-derived values only; see §F-S13), `decision_card_style.apply_reasoning_style`
+  (caller-escaped), and — added this pass — `beta_event_log_panel._format_row`
+  (now escapes `message` via `[` → `[lb]` at the sink; see §F-S15). The
+  `BetaDecisionCardPanel` is the only beta panel with a `RichTextLabel`
+  body bound to content text and it explicitly sets `bbcode_enabled = false`
+  (now load-bearing — see §3 above).
 - The new beta interactables (`beta_today_checklist`,
   `register_status_indicator`) route content-derived text only into plain
   `Label.text` (no BBCode parsing). See §F-S14.
@@ -113,6 +146,23 @@ removal across `content_parser`, `content_schema`, `price_resolver`,
   longer exist (the `season`, `seasonal_event`, `rental_*` schemas have no
   callers post-strip). Active schemas (item, store, customer, fixture,
   upgrade, manager_note) are unchanged.
+- The new CI helpers `scripts/setup_godot.sh` and `scripts/run_godot_tests.sh`
+  audited: `setup_godot.sh` interpolates `$GODOT_VERSION` (from the
+  workflow `env:` block, single source of truth) into a pinned GitHub
+  Releases URL, fails loudly via `: "${GODOT_VERSION:?…}"` if the var is
+  unset, and runs `set -euo pipefail` throughout. `run_godot_tests.sh`
+  uses the workspace-rooted `$GITHUB_WORKSPACE` and quotes every
+  interpolation; the long `SHUTDOWN_NOISE_RE` / `EXPECTED_ERROR_RE`
+  regexes are matched with `grep -vE`/`grep -E` against tool output only
+  (never against user input) and the `tee` target is a `mktemp` file.
+  Neither script reads from untrusted external input. The pinned engine
+  version (`4.6.2-stable`) is centralized in `.github/workflows/validate.yml`
+  `env.GODOT_VERSION`; checksum verification of the downloaded archive
+  is a separate, distinct hardening item filed under "Escalations" below.
+- The new beta `BetaTodayStatsPanel` and `BetaObjectiveTargetHighlight`
+  panels render no `RichTextLabel`-bound content; the stat values are
+  `int` -> `str(...)` and the highlight chip is a hardcoded `"▶ E"`
+  label. Both confirmed sink-free.
 
 **Inline trust-contract comments added at three BBCode-sink locations
 this pass** (see §3 above) — codifies the safety properties that the
@@ -151,9 +201,14 @@ The boundaries enumerated in the prior pass remain authoritative:
    `DataLoader._TYPE_ROUTES`, `ContentSchema.validate`, and
    `ContentRegistry.validate_all_references()`. **New** on this branch: a
    second JSON loader path in `BetaDayOneController._load_json` reading three
-   beta-content files. Now matches `DataLoader`'s file-size cap (§1).
-3. **Logs / stdout** — `AuditLog`, `EventLog` (debug-only, frees in release),
-   and the `OS.is_debug_build()`-gated print sites in
+   beta-content files. Now matches `DataLoader`'s file-size cap (§1). This
+   pass also added the same cap to the fifth-and-final JSON loader,
+   `ManagerRelationshipManager._load_notes` — see §F-S16 below.
+3. **Logs / stdout** — `AuditLog`, `EventLog` (ring buffer + stdout print
+   are debug-gated via `OS.is_debug_build()`; the
+   `EventBus.event_logged(tag, message)` broadcast fires in every build for
+   the player-facing bottom-left log surface), and the
+   `OS.is_debug_build()`-gated print sites in
    `interaction_ray._log_interaction_*` and `Customer._log_customer_state`.
    **New** on this branch: `BetaDebugOverlay` F8 dump and
    `BetaDayOneController._print_interactable_debug_list` print to stdout
@@ -172,6 +227,13 @@ The boundaries enumerated in the prior pass remain authoritative:
      items_stocked, sales_completed, reputation_delta). The `note` /
      `shift_note` strings render into a separate `Label` (not RichTextLabel)
      at `_note_label.text` (line 92) — plain text. Safe.
+   - **`beta_event_log_panel.gd:154–166` (NEW this pass)** — per-row
+     `RichTextLabel.bbcode_enabled = true`, bound to
+     `EventBus.event_logged(tag, message)`. The `message` argument is now
+     `[` → `[lb]`-escaped at the sink (§F-S15) so a future tainted-input
+     caller cannot smuggle BBCode tags into the rendered row. `tag` is
+     gated through the hardcoded `_TAG_COLORS` token allowlist; unknown
+     tags fall through to `_DEFAULT_TAG_COLOR` and render literally.
 
 No new external process, shell, or network surface was introduced (`OS.execute`,
 `OS.shell_open`, `OS.create_process`, `HTTPRequest`, `HTTPClient`, `TCPServer`,
@@ -377,6 +439,78 @@ the `InteractionPrompt` scene's `_disabled_label` (a `Label`, not a
 Content-side trust applies on the objective table the same way it does
 for other content-authored copy elsewhere in this branch. **No edit needed.**
 
+### F-S15 — `BetaEventLogPanel._format_row` builds a BBCode-enabled row from `EventBus.event_logged` payloads (Acted on this pass — `[` escape applied at the sink)
+
+`game/scripts/beta/beta_event_log_panel.gd:154–166, 192–217`
+(post-edit). The new bottom-left event log surface renders one
+`RichTextLabel` per `EventBus.event_logged(tag, message)` emit. The row
+has `bbcode_enabled = true` (line 156) and the format helper composes
+the row text as
+`"[color=#%s]%s[/color] [color=#%s]%s[/color]" % [tag_color, tag, msg_color, message]`.
+
+The only registered emitter today is `EventLog._record` (autoload),
+which routes through `_format_message` to a per-action template that
+binds integer-, enum-, or `StringName`-derived params (`item_id`,
+`state_name`, `modal_id`, `day`, `delta`). All of those source values
+are content-authored or code-controlled; none flow from save or user
+input. But the panel is the *only* consumer of the BBCode-enabled
+row text, and any future caller piping a content-author-typo'd label
+or a save-derived string through `EventBus.event_logged` would land
+verbatim into a sink that renders `[img=res://…]` / `[url=…]` /
+`[font=…]` / `[color=…]` tags.
+
+The durable hardening, matching `checkout_panel._set_reasoning_text`
+(§F-129) and `boot._show_error_panel` (prior-pass §1), is to escape
+`[` -> `[lb]` on the `message` argument before composing the BBCode
+template. The color-format tokens added *after* escape are intentional
+BBCode; only the tainted input is escaped. `tag` is intentionally not
+escaped: it is keyed off the hardcoded `_TAG_COLORS` Dictionary
+(`[STOCK]`, `[CUSTOMER]`, `[OBJECTIVE]`, `[DAY]`, `[MODAL]`, `[STAT]`),
+so the only accepted values are developer-controlled constants —
+escaping it would alter the raw row text without changing the visible
+render (`[lb]STOCK]` renders as `[STOCK]` since `[lb]` is the BBCode
+escape glyph for `[`), and the existing `test_beta_event_log_panel.gd`
+contract pins the raw row text for the tag-color assertion. An
+unrecognized tag still degrades safely: it falls through to
+`_DEFAULT_TAG_COLOR` and renders the token literally. The inline
+docstring at `_format_row` captures both constraints; future
+maintainers see the safety property at the sink.
+
+**Tests after edit:** `test_beta_event_log_panel.gd` 11/11 passing.
+
+### F-S16 — `ManagerRelationshipManager._load_notes` did not enforce the project-wide JSON file-size cap (Acted on this pass — 1-MiB cap added)
+
+`game/autoload/manager_relationship_manager.gd:34–43`
+(`MAX_NOTES_FILE_BYTES` const), `581–597` (`_load_notes` cap branch).
+The project has five JSON ingest paths:
+
+| Path | File-size cap pre-pass |
+|---|---|
+| `DataLoader._read_json_file` | `MAX_JSON_FILE_BYTES = 1_048_576` |
+| `SaveManager._read_json_file` | `MAX_SAVE_FILE_BYTES` |
+| `MainMenu` slot preview reader | `MAX_SAVE_PREVIEW_BYTES` |
+| `BetaDayOneController._load_json` | `MAX_JSON_FILE_BYTES = 1_048_576` (prior pass §1) |
+| `ManagerRelationshipManager._load_notes` | **none** — closed this pass |
+
+The fifth was the only loader without a cap. `NOTES_PATH` resolves to
+`res://game/content/manager/manager_notes.json`, a baked content file
+on shipped builds — but on Godot 4.x dev builds `res://` resolves to
+the source tree, so a misconfigured CI or a developer-workstation
+content-authoring mistake (e.g. a multi-MiB notes file landing during
+content iteration) would silently inflate the parser working set
+before this edit.
+
+Fix mirrors the prior-pass §1 pattern on `BetaDayOneController._load_json`:
+add a `MAX_NOTES_FILE_BYTES = 1_048_576` constant (matching `DataLoader`),
+and a pre-`get_as_text()` length gate that closes the file and
+escalates via `push_error` on overflow. The existing failure-path
+return shape (`_notes_loaded` stays false → morning-note feature
+disabled) is preserved so the chain still flows when content is
+missing or malformed.
+
+**Tests after edit:** `test_manager_relationship_manager.gd` 28/28
+passing; `test_morning_note.gd` 5/5 passing.
+
 ## §3 — Inline trust-contract comments at BBCode sinks (this pass)
 
 The three modal-panel refactors on the current working tree moved the
@@ -415,10 +549,68 @@ flag without first escaping the binding site exposes `[url=…]` /
 tampered content files. The disable is now load-bearing for the trust
 model and the comment names it.
 
+## Escalations
+
+### CI setup_godot.sh — no SHA256 verification on the downloaded Godot archive
+
+`scripts/setup_godot.sh:13–15` downloads
+`Godot_v${GODOT_VERSION}_linux.x86_64.zip` from
+`github.com/godotengine/godot/releases/download/...` over HTTPS, unzips
+it, and `chmod +x`s the binary into `/usr/local/bin/godot`. The TLS
+handshake covers transport, but if the GitHub releases CDN were
+compromised or the release asset were swapped, CI runs would silently
+adopt a tampered engine binary. The durable hardening is to pin a
+SHA256 checksum next to `GODOT_VERSION` in
+`.github/workflows/validate.yml` (or in the script) and run
+`sha256sum -c` on the downloaded zip before unzipping.
+
+**Why not acted on here:** the fix is two-place — both the workflow
+env and the script — and requires a checksum value that ships with the
+upstream Godot release (not derivable from this repo alone). It is a
+real architectural decision (which upstream attestation to trust;
+whether to pin per-platform builds; whether to mirror the binary
+internally) rather than a local edit. **Smallest concrete next
+action:** look up the SHA256 published with the Godot 4.6.2-stable
+Linux release on github.com/godotengine/godot, add it as
+`GODOT_SHA256` in the workflow env block alongside `GODOT_VERSION`,
+and add `echo "${GODOT_SHA256}  /tmp/godot.zip" | sha256sum -c -` in
+`setup_godot.sh` between the `wget` and the `unzip` lines. **Who/what
+unblocks it:** project owner deciding on the trust model (mirror vs.
+upstream-checksum-pin); no code change blocked on tooling.
+
+### BetaDebugOverlay (F2) / `_print_interactable_debug_list` ship in release builds (carry-over from F-S8)
+
+Unchanged from the prior pass. The F8 dump and `_print_interactable_debug_list`
+are not `OS.is_debug_build()`-gated and emit internal FSM stage names
+to stdout in shipped builds. Trust posture is unchanged: a single-player
+offline desktop game treats stdout as developer diagnostics. The
+durable fix is a one-line edit in `_ensure_panels` to gate the
+overlay-spawn behind `OS.is_debug_build()` once the team decides to
+ship the project as a polished production release rather than a beta.
+
 ## Verification
 
-After this pass's three inline-comment edits, the directly-affected
+After **this pass's two safe inline edits** (BBCode escape in
+`beta_event_log_panel._format_row`; 1-MiB size cap in
+`manager_relationship_manager._load_notes`), the directly-affected
 test suites are green:
+
+- `test_beta_event_log_panel.gd` — 11/11 passing (0.162s, 19 asserts).
+- `test_manager_relationship_manager.gd` — 28/28 passing (0.024s, 39
+  asserts).
+- `test_morning_note.gd` — 5/5 passing (0.035s, 7 asserts).
+- Full beta suite (`-gselect=test_beta`) — **184/184 passing**
+  (9.676s, 637 asserts). The trailing `ERROR: [ModalPanel] … freed
+  with unreleased InputFocus push — auto-popping` lines are documented
+  fail-loud paths covered by `scripts/run_godot_tests.sh`'s
+  `EXPECTED_ERROR_RE` allowlist and are intentional fixture teardown
+  artifacts, not regressions.
+
+The prior pass's section below documents the verification posture for
+earlier passes, which remain intact:
+
+After the **prior** pass's three inline-comment edits, the
+directly-affected test suites were green:
 
 - `test_beta_manager_note_panel.gd` — 16/16 passing (0.448s, 27 asserts)
 - `test_beta_day_summary*` — 26/26 passing across `test_beta_day_summary_modal_focus`

@@ -252,6 +252,9 @@ var _decision_panel: BetaDecisionCardPanel
 var _summary_panel: BetaDaySummaryPanel
 var _vic_note_panel: BetaManagerNotePanel
 var _today_checklist: BetaTodayChecklist
+var _today_stats_panel: BetaTodayStatsPanel
+var _event_log_panel: BetaEventLogPanel
+var _objective_target_highlight: BetaObjectiveTargetHighlight
 var _debug_overlay: CanvasLayer
 var _screenshot_helper: CanvasLayer
 var _close_day_panel: CanvasLayer
@@ -273,6 +276,20 @@ var _completed_objectives: Dictionary = {}
 ## payload with grounded retail numbers instead of cryptic system scores.
 var _customers_helped_today: int = 0
 var _items_stocked_today: int = 0
+## Per-day cash earned from successful customer decisions. Distinct from the
+## `cash` field in BetaRunState (which is cumulative across the run) — this
+## tracks gross sales for *today only* so the day-summary panel can render
+## the "Sales" line without subtracting yesterday's totals. Ticked in
+## `_on_choice_selected` on positive cash deltas, reset in `_start_day`.
+var _sales_today: int = 0
+## One-shot guard against double-spawning the day-summary modal. The
+## production `DayCycleController` and the beta controller both listen to
+## `EventBus.day_close_confirmed`, and any re-emit of that signal — or a
+## test fixture invoking `_on_day_close_confirmed` directly — would otherwise
+## enqueue a second `BetaDaySummaryPanel` request. ModalQueue dedups by panel
+## instance, but the controller's accompanying state mutations (end_day,
+## clock pause) are not idempotent. Reset to false on `day_started`.
+var _summary_spawned: bool = false
 ## Captured the first time `_configure_beta_customer` runs so the day-reset
 ## path can put the customer back at the register after the previous day's
 ## exit tween moved them to the entrance.
@@ -487,6 +504,23 @@ func _on_day_close_confirmed() -> void:
 		return
 	if _completed_objectives.has(&"close_day"):
 		return
+	# Hard one-shot guard: a re-emit of `day_close_confirmed` (production
+	# `DayCycleController` listener firing in scenes where both controllers
+	# live, or a direct second invocation) would otherwise call `end_day()`
+	# twice — wiping the daily deltas before the second pass reads them —
+	# and enqueue a second summary panel request. §EH-39 — push a warning
+	# so the duplicate emit surfaces in QA / headless logs; silently
+	# eating it would hide a real upstream double-emit bug in any scene
+	# where this fires in production.
+	if _summary_spawned:
+		push_warning(
+			(
+				"BetaDayOneController: day_close_confirmed re-emitted for "
+				+ "day %d after summary already spawned — ignoring duplicate."
+			) % BetaRunState.day
+		)
+		return
+	_summary_spawned = true
 	# Mark the close-day row complete so the Today checklist ticks the
 	# fourth bullet before the summary modal fully covers it.
 	_completed_objectives[&"close_day"] = true
@@ -496,6 +530,12 @@ func _on_day_close_confirmed() -> void:
 	# diagnostic). Emit unconditionally so a renamed signal fails at
 	# parse time on the EventBus side instead of slipping past CI.
 	EventBus.beta_objective_completed.emit(&"close_day")
+	# Past-tense companion broadcast for the on-screen event log; see
+	# the matching emit in `_complete_current_objective` for the
+	# log-vs-rail copy contract.
+	EventBus.objective_completed.emit(
+		&"close_day", _objective_completion_label(&"close_day")
+	)
 	# Modal lifecycle is the single authority for input focus: `show_summary`
 	# routes through `ModalPanel.open()` which pushes CTX_MODAL on `InputFocus`.
 	var summary: Dictionary = BetaRunState.end_day()
@@ -521,6 +561,13 @@ func _on_day_close_confirmed() -> void:
 		backroom_remaining = _BACKROOM_DELIVERY_QUANTITY
 	summary["shelf_inventory_remaining"] = shelf_remaining
 	summary["backroom_inventory_remaining"] = backroom_remaining
+	# BRAINDUMP First-Day Flow Step 6 — "rent/sales/profit are shown
+	# cleanly." Rent is the fixed daily operating cost (display-only for
+	# the beta); sales is gross cash in from successful customer decisions
+	# today; profit is sales minus rent.
+	summary["rent_paid"] = BetaRunState.DAILY_RENT
+	summary["sales_revenue"] = _sales_today
+	summary["net_profit"] = _sales_today - BetaRunState.DAILY_RENT
 	_summary_panel.show_summary(summary, BetaRunState.day >= TARGET_BETA_DAYS)
 
 
@@ -550,6 +597,7 @@ func _on_choice_selected(choice_id: StringName, effects: Dictionary) -> void:
 	# fire naturally off the first `item_sold` via ObjectiveDirector.
 	var cash_delta: int = int(effects.get("cash", 0))
 	if cash_delta > 0:
+		_sales_today += cash_delta
 		var price: float = float(cash_delta)
 		EventBus.item_sold.emit("used_game", price, "used_games")
 		EventBus.customer_purchased.emit(
@@ -744,6 +792,8 @@ func _start_day(day: int) -> void:
 	_resolved_events_today = 0
 	_customers_helped_today = 0
 	_items_stocked_today = 0
+	_sales_today = 0
+	_summary_spawned = false
 	_completed_objectives.clear()
 	BetaRunState.carrying_stock = false
 	# Start at the head of the chain.
@@ -846,6 +896,15 @@ func _complete_current_objective() -> void:
 	_completed_objectives[objective_id] = true
 	# §EH-13 — emit unconditionally; see `on_beta_day_end_requested`.
 	EventBus.beta_objective_completed.emit(objective_id)
+	# Past-tense, human-readable companion broadcast for the on-screen
+	# event log. Distinct copy from the rail label (`entry["label"]`) on
+	# purpose — the rail uses imperative present tense ("Talk to the
+	# customer …") while the log records what *just happened*. BRAINDUMP's
+	# 'Bad' example shows the rail label echoed into the log on start; the
+	# completion-only emit avoids that pattern.
+	EventBus.objective_completed.emit(
+		objective_id, _objective_completion_label(objective_id)
+	)
 	var time_cost: int = int(entry.get("time_cost_minutes", 0))
 	if time_cost > 0:
 		var time_sys: TimeSystem = GameManager.get_time_system()
@@ -928,28 +987,48 @@ func is_objective_completed(objective_id: StringName) -> bool:
 	return _completed_objectives.has(objective_id)
 
 
+## Past-tense, human-readable label for the bottom-left event log surface.
+## Distinct from the rail's imperative present-tense `_objectives[i].label`
+## ("Talk to the customer at the register.") — logging the rail copy on
+## completion would echo the active-objective text and reproduce the
+## BRAINDUMP 'Bad' pattern. Unknown ids return a generic past-tense fallback.
+func _objective_completion_label(objective_id: StringName) -> String:
+	match objective_id:
+		&"talk_to_customer":
+			return "Customer served."
+		&"back_room_inventory":
+			return "Delivery checked."
+		&"stock_shelf":
+			return "Shelf stocked."
+		&"close_day":
+			return "Day closed."
+		_:
+			return "%s completed." % String(objective_id)
+
+
 ## Snapshot of the Day-1 FSM for the debug overlay and the F8 console
 ## dump. One source of truth: the overlay reads from this dict and the
 ## state dump prints it, so they can never disagree about what the FSM
 ## thinks is happening.
 func get_state_snapshot() -> Dictionary:
 	var current: Dictionary = _objective_for_stage(_stage)
-	var completed_ids: Array[StringName] = []
-	for key: Variant in _completed_objectives.keys():
-		completed_ids.append(StringName(str(key)))
 	var time_minutes: float = -1.0
 	var time_sys: TimeSystem = GameManager.get_time_system()
 	if time_sys != null:
 		time_minutes = time_sys.game_time_minutes
 	return {
 		"day": BetaRunState.day,
+		"cash": BetaRunState.cash,
+		"carrying_stock": BetaRunState.carrying_stock,
 		"stage": String(_stage),
 		"active_objective_id": String(current.get("id", "")),
 		"active_objective_label": String(current.get("label", "")),
-		"completed_objectives": completed_ids,
+		"completed_objectives": _completed_objectives.duplicate(),
 		"can_close_day": _all_required_objectives_completed() and _stage == STAGE_END_DAY,
 		"close_day_reason": close_day_disabled_reason() if _stage != STAGE_END_DAY else "ready",
 		"time_minutes": time_minutes,
+		"customers_helped": _customers_helped_today,
+		"sales_today": _sales_today,
 	}
 
 
@@ -992,10 +1071,14 @@ func _update_objective_rail() -> void:
 
 
 ## Builds the multi-step progress payload for the rail. Each `_objectives`
-## row becomes a `{text, state}` entry where `state` is "completed" if the
-## row's id is in `_completed_objectives`, "active" if its stage matches
+## row becomes an `{id, text, state}` entry where `state` is "completed" if
+## the row's id is in `_completed_objectives`, "active" if its stage matches
 ## `_stage`, or "future" otherwise. During STAGE_VIC_NOTE every entry is
 ## "future" (nothing complete, no chain row active yet).
+##
+## The `id` field lets consumers (`BetaTodayChecklist`) resolve the source
+## objective without reverse-matching on `text`. ObjectiveRail reads `text`
+## + `state` only and ignores extra keys, so adding `id` is non-breaking.
 func _build_steps_payload() -> Array[Dictionary]:
 	var steps: Array[Dictionary] = []
 	for entry: Dictionary in _objectives:
@@ -1007,6 +1090,7 @@ func _build_steps_payload() -> Array[Dictionary]:
 		elif entry_stage == _stage:
 			state = "active"
 		steps.append({
+			"id": String(entry_id),
 			"text": str(entry.get("label", "")),
 			"state": state,
 		})
@@ -1122,6 +1206,18 @@ func _ensure_panels() -> void:
 		_today_checklist.name = "BetaTodayChecklist"
 		_today_checklist.set_objectives(_objectives)
 		_ui_root().add_child(_today_checklist)
+	if _today_stats_panel == null:
+		_today_stats_panel = BetaTodayStatsPanel.new()
+		_today_stats_panel.name = "BetaTodayStatsPanel"
+		_ui_root().add_child(_today_stats_panel)
+	if _event_log_panel == null:
+		_event_log_panel = BetaEventLogPanel.new()
+		_event_log_panel.name = "BetaEventLogPanel"
+		_ui_root().add_child(_event_log_panel)
+	if _objective_target_highlight == null:
+		_objective_target_highlight = BetaObjectiveTargetHighlight.new()
+		_objective_target_highlight.name = "BetaObjectiveTargetHighlight"
+		_ui_root().add_child(_objective_target_highlight)
 	if _debug_overlay == null:
 		_debug_overlay = CanvasLayer.new()
 		_debug_overlay.set_script(BetaDebugOverlayScript)

@@ -1,9 +1,14 @@
-## Structured per-event debug timeline. Stripped to a no-op in release builds.
+## Structured per-event timeline. The ring buffer + stdout print are
+## debug-only; the `EventBus.event_logged(tag, message)` broadcast fires in
+## every build so the player-facing bottom-left log surface can render the
+## same stream without scanning the buffer.
 ##
 ## Maintains a ring buffer of recent events and prints structured lines for
-## inventory mutations and customer FSM transitions. AuditLog handles stable
-## pass/fail checkpoints; this log is a noisier per-event timeline used by the
-## debug overlay and headless validation.
+## inventory mutations, customer FSM transitions, day lifecycle, money
+## stat mutations, modal open/close beats, gameplay-ready (game started),
+## and objective completions. AuditLog handles stable pass/fail
+## checkpoints; this log is a noisier per-event timeline used by the
+## debug overlay, headless validation, and the on-screen log panel.
 extends Node
 
 const RING_CAPACITY: int = 512
@@ -25,10 +30,13 @@ var _last_customer_state: Dictionary = {}
 var _last_customer_state_order: Array[int] = []
 
 
+## The ring buffer and stdout print are debug-only — release builds skip
+## the storage path but keep the EventBus.event_logged broadcast active so
+## the on-screen panel still receives entries.
+var _buffer_enabled: bool = OS.is_debug_build()
+
+
 func _ready() -> void:
-	if not OS.is_debug_build():
-		queue_free()
-		return
 	_wire()
 
 
@@ -54,6 +62,12 @@ func _wire() -> void:
 	EventBus.item_removed_from_shelf.connect(_on_item_removed_from_shelf)
 	EventBus.customer_state_changed.connect(_on_customer_state_changed)
 	EventBus.customer_left.connect(_on_customer_left)
+	EventBus.day_started.connect(_on_day_started)
+	EventBus.money_changed.connect(_on_money_changed)
+	EventBus.gameplay_ready.connect(_on_gameplay_ready)
+	EventBus.modal_opened.connect(_on_modal_opened)
+	EventBus.modal_closed.connect(_on_modal_closed)
+	EventBus.objective_completed.connect(_on_objective_completed)
 
 
 func _on_item_stocked(item_id: String, shelf_id: String) -> void:
@@ -82,6 +96,13 @@ func _on_item_removed_from_shelf(item_id: String, shelf_slot_id: String) -> void
 func _on_customer_state_changed(customer: Node, new_state: int) -> void:
 	var cid: int = customer.get_instance_id() if customer != null else 0
 	var prev_state: int = _last_customer_state.get(cid, -1)
+	# Skip no-op transitions where the customer's `_set_state` was called
+	# with `new_state == current_state` — those produce `X -> X` rows that
+	# carry no signal for the on-screen log surface and burn the FSM hot
+	# path with redundant `event_logged` emits + per-row tween work in
+	# every BetaEventLogPanel listener.
+	if prev_state == new_state:
+		return
 	if prev_state < 0:
 		_last_customer_state_order.append(cid)
 		# §F-145 — FIFO eviction when the dedup map is full. Drops the oldest
@@ -99,6 +120,42 @@ func _on_customer_state_changed(customer: Node, new_state: int) -> void:
 	_record("[CUSTOMER]", actor, target, "state_change", {
 		"from_state": from_name,
 		"to_state": to_name,
+	})
+
+
+func _on_day_started(day: int) -> void:
+	_record("[DAY]", "system", "day:%d" % day, "day_started", {"day": day})
+
+
+func _on_money_changed(old_amount: float, new_amount: float) -> void:
+	_record("[STAT]", "system", "player", "stat_changed", {
+		"stat": "money",
+		"old_value": old_amount,
+		"new_value": new_amount,
+		"delta": new_amount - old_amount,
+	})
+
+
+func _on_gameplay_ready() -> void:
+	_record("[SYSTEM]", "system", "game", "game_started", {})
+
+
+func _on_modal_opened(modal_id: StringName) -> void:
+	_record("[MODAL]", "system", String(modal_id), "modal_opened", {
+		"modal_id": String(modal_id),
+	})
+
+
+func _on_modal_closed(modal_id: StringName) -> void:
+	_record("[MODAL]", "system", String(modal_id), "modal_closed", {
+		"modal_id": String(modal_id),
+	})
+
+
+func _on_objective_completed(objective_id: StringName, label: String) -> void:
+	_record("[OBJECTIVE]", "system", String(objective_id), "objective_completed", {
+		"objective_id": String(objective_id),
+		"label": label,
 	})
 
 
@@ -153,10 +210,77 @@ func _record(
 		"params": params,
 		"msec": Time.get_ticks_msec(),
 	}
+	# Player-facing broadcast must always fire — the on-screen bottom-left
+	# log surface is a shipped UI affordance, not a debug overlay. The ring
+	# buffer storage below stays debug-gated for perf and disk-noise reasons.
+	EventBus.event_logged.emit(tag, _format_message(action, target, params))
+	if not _buffer_enabled:
+		return
 	_ring.append(entry)
 	if _ring.size() > RING_CAPACITY:
 		_ring.remove_at(0)
 	_print_entry(entry)
+
+
+## Renders the structured record into a human-readable single line the
+## on-screen panel can show without re-deriving copy at every call site.
+## Keeps each per-tag shape tight — the surface caps width at ~260 px and
+## relies on these strings staying short.
+func _format_message(action: String, target: String, params: Dictionary) -> String:
+	match action:
+		"stock":
+			return "Stocked %s." % str(params.get("item_id", ""))
+		"remove":
+			return "Sold %s." % str(params.get("item_id", ""))
+		"state_change":
+			return "%s -> %s" % [
+				str(params.get("from_state", "?")),
+				str(params.get("to_state", "?")),
+			]
+		"customer_exit":
+			var satisfied: bool = bool(params.get("satisfied", true))
+			return "Customer left (%s)." % ("satisfied" if satisfied else "unhappy")
+		"day_started":
+			return "Day %d started." % int(params.get("day", 0))
+		"stat_changed":
+			var stat: String = str(params.get("stat", ""))
+			if stat == "money":
+				var delta: float = float(params.get("delta", 0.0))
+				var sign: String = "+" if delta >= 0.0 else "-"
+				return "Money %s$%.2f." % [sign, abs(delta)]
+			return "%s changed." % stat
+		"game_started":
+			return "Game started."
+		"modal_opened":
+			return "Modal opened: %s." % str(params.get("modal_id", ""))
+		"modal_closed":
+			return "Modal closed: %s." % str(params.get("modal_id", ""))
+		"objective_completed":
+			# Past-tense `label` is the player-facing completion copy supplied
+			# by the chain controller (see
+			# `BetaDayOneController._objective_completion_label`); the log row
+			# is just that label verbatim.
+			return str(params.get("label", ""))
+		_:
+			# §EH-39 — Drift surface: a new `action` token added to
+			# `_record` callers without a matching case here will land on
+			# the on-screen panel as a bare action string (e.g. "checkout"
+			# instead of "Customer checked out"). Push a debug-build
+			# warning so the QA log carries the unmapped token; release
+			# builds skip the warning to keep the FSM hot path quiet but
+			# still produce a coherent row.
+			if OS.is_debug_build():
+				push_warning(
+					(
+						"EventLog._format_message: unmapped action '%s' "
+						+ "(target='%s') — falling back to raw token. Add a "
+						+ "match arm in event_log.gd to give it a player-"
+						+ "facing string."
+					) % [action, target]
+				)
+			if target.is_empty():
+				return action
+			return "%s %s" % [action, target]
 
 
 func _print_entry(entry: Dictionary) -> void:

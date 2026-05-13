@@ -293,6 +293,99 @@ func test_state_snapshot_reports_close_day_blocked_until_chain_done() -> void:
 	)
 
 
+func test_state_snapshot_exposes_stage_and_completed_growing_through_chain() -> void:
+	var controller: Node = _beta_controller()
+	assert_not_null(controller)
+	if controller == null:
+		return
+
+	var snap_start: Dictionary = controller.get_state_snapshot()
+	assert_eq(
+		String(snap_start.get("stage", "")), String(controller.get("_stage")),
+		"Snapshot stage must match controller._stage as a String"
+	)
+	var completed_start: Dictionary = snap_start.get("completed_objectives", {}) as Dictionary
+	assert_eq(
+		completed_start.size(), 0,
+		"completed_objectives must start empty before any chain step"
+	)
+
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	var completed_after_customer: Dictionary = (
+		controller.get_state_snapshot().get("completed_objectives", {}) as Dictionary
+	)
+	assert_true(
+		completed_after_customer.has(&"talk_to_customer"),
+		"completed_objectives must contain talk_to_customer after the customer step"
+	)
+
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	var completed_after_backroom: Dictionary = (
+		controller.get_state_snapshot().get("completed_objectives", {}) as Dictionary
+	)
+	assert_eq(
+		completed_after_backroom.size(), completed_after_customer.size() + 1,
+		"completed_objectives must grow by one after the back-room step"
+	)
+	assert_true(completed_after_backroom.has(&"back_room_inventory"))
+
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	var snap_end: Dictionary = controller.get_state_snapshot()
+	var completed_after_stock: Dictionary = (
+		snap_end.get("completed_objectives", {}) as Dictionary
+	)
+	assert_eq(
+		completed_after_stock.size(), completed_after_backroom.size() + 1,
+		"completed_objectives must grow by one after the stock-shelf step"
+	)
+	assert_true(completed_after_stock.has(&"stock_shelf"))
+	assert_eq(
+		String(snap_end.get("stage", "")), "end_day",
+		"Snapshot stage must reach end_day after all required objectives complete"
+	)
+
+
+func test_state_snapshot_mirrors_beta_run_state_fields() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var snap: Dictionary = controller.get_state_snapshot()
+	assert_eq(
+		int(snap.get("day", -1)), BetaRunState.day,
+		"Snapshot day must mirror BetaRunState.day"
+	)
+	assert_eq(
+		int(snap.get("cash", -1)), BetaRunState.cash,
+		"Snapshot cash must mirror BetaRunState.cash"
+	)
+	assert_eq(
+		bool(snap.get("carrying_stock", true)), BetaRunState.carrying_stock,
+		"Snapshot carrying_stock must mirror BetaRunState.carrying_stock"
+	)
+
+
+func test_state_snapshot_is_json_serializable() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	# Walk the chain so completed_objectives is non-empty when serializing.
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	var snap: Dictionary = controller.get_state_snapshot()
+	var encoded: String = JSON.stringify(snap)
+	assert_ne(encoded, "", "Snapshot must JSON-encode to a non-empty string")
+	var parsed: Variant = JSON.parse_string(encoded)
+	assert_true(
+		parsed is Dictionary,
+		"JSON-encoded snapshot must round-trip back to a Dictionary"
+	)
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 func _beta_controller() -> Node:
@@ -1270,6 +1363,45 @@ func test_shift_note_joins_multiple_skipped_steps() -> void:
 	)
 
 
+func test_on_day_close_confirmed_spawns_summary_only_once() -> void:
+	# BRAINDUMP modal-discipline rule: a re-emit of `day_close_confirmed`
+	# (production `DayCycleController` listener firing alongside the beta
+	# controller, or a stray double-press) must not produce a second
+	# summary modal. The controller's `_summary_spawned` guard plus
+	# ModalQueue's panel-instance dedup are the two layers being verified.
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	# Walk the chain to END_DAY so the close-day gate is satisfied.
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	# First confirm — spawns the summary modal.
+	controller._on_day_close_confirmed()
+	await get_tree().process_frame
+	var panel: BetaDaySummaryPanel = (
+		controller.get("_summary_panel") as BetaDaySummaryPanel
+	)
+	assert_not_null(panel, "Summary panel must be spawned on first confirm")
+	if panel == null:
+		return
+	var depth_after_first: int = InputFocus.depth()
+	# Second confirm — must early-out, leaving the modal stack untouched.
+	controller._on_day_close_confirmed()
+	await get_tree().process_frame
+	assert_eq(
+		InputFocus.depth(), depth_after_first,
+		"Repeat _on_day_close_confirmed must not push a second CTX_MODAL frame"
+	)
+	assert_eq(
+		ModalQueue.pending_count(), 0,
+		"Repeat _on_day_close_confirmed must not enqueue a second summary"
+	)
+
+
 func test_close_day_summary_uses_dynamic_shift_note() -> void:
 	# Drive the full chain to END_DAY, confirm close, and verify the summary
 	# payload's shift_note tracks `_completed_objectives` rather than the
@@ -1301,4 +1433,258 @@ func test_close_day_summary_uses_dynamic_shift_note() -> void:
 		note_label.text.contains("made it through"),
 		"Completed-chain summary must render the baseline shift_note; got: '%s'"
 		% note_label.text
+	)
+
+
+# ── ModalQueue depth invariant during the full Day-1 chain ────────────────
+# Walks the chain through every modal open/close the player triggers
+# (decision card → close-day confirm → summary) and asserts the
+# `one blocking modal at a time` invariant via the panel-local
+# `_focus_pushed` field and ModalQueue's own bookkeeping.
+#
+# We deliberately avoid absolute `InputFocus.depth()` / CTX_MODAL-frame
+# count assertions: BetaDayOneController parents its modal panels under
+# `_ui_root()`, which falls back to `/root` in headless tests. The in-
+# process GUT runner does not garbage-collect panels created by prior
+# tests' (now-freed) controllers, so leaked listeners can push extra
+# CTX_MODAL frames onto a globally-shared stack while still leaving the
+# *current* controller's modal contract intact. Mirrors the existing
+# `test_summary_continue_pops_modal_focus_before_starting_next_day` choice
+# to assert against panel-local invariants for the same reason.
+
+func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+
+	# Day starts at TALK_TO_CUSTOMER. ModalQueue must be idle from this
+	# controller's perspective — `before_each` resets it.
+	assert_eq(
+		ModalQueue.pending_count(), 0,
+		"[day_start] ModalQueue must start with no pending entries"
+	)
+
+	# Player E on customer → BetaDecisionCardPanel enqueues at DAY_SUMMARY
+	# priority and dispatches synchronously (queue was idle).
+	controller.on_beta_customer_interacted()
+	await get_tree().process_frame
+	var decision_panel: BetaDecisionCardPanel = (
+		controller.get("_decision_panel") as BetaDecisionCardPanel
+	)
+	assert_not_null(decision_panel, "Controller must own _decision_panel")
+	if decision_panel == null:
+		return
+	assert_same(
+		ModalQueue.active_panel(), decision_panel,
+		"[decision_card_open] Decision card must be the active ModalQueue entry"
+	)
+	assert_true(
+		bool(decision_panel.get("_focus_pushed")),
+		"[decision_card_open] Decision card must own a CTX_MODAL frame"
+	)
+	assert_eq(
+		ModalQueue.pending_count(), 0,
+		"[decision_card_open] No panel may be queued behind the decision card"
+	)
+
+	# Pick a choice via the panel's button handler so the runtime
+	# emit+close sequence runs: emits choice_selected (controller advances
+	# the chain) then calls close() (panel pops its own CTX_MODAL frame and
+	# notifies ModalQueue).
+	decision_panel._on_choice_pressed(&"clean_exchange", {})
+	await get_tree().process_frame
+	assert_false(
+		bool(decision_panel.get("_focus_pushed")),
+		"[after_choice] Decision card must release its CTX_MODAL frame on close"
+	)
+	assert_null(
+		ModalQueue.active_panel(),
+		"[after_choice] ModalQueue must drain to idle after the decision card closes"
+	)
+	assert_eq(
+		ModalQueue.pending_count(), 0,
+		"[after_choice] ModalQueue pending must stay at 0"
+	)
+
+	# Back-room and restock are non-modal interactions; queue stays idle.
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	assert_null(
+		ModalQueue.active_panel(),
+		"[after_backroom] ModalQueue must remain idle through back-room pickup"
+	)
+	assert_eq(
+		ModalQueue.pending_count(), 0,
+		"[after_backroom] ModalQueue pending must stay at 0"
+	)
+
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	assert_null(
+		ModalQueue.active_panel(),
+		"[after_restock] ModalQueue must remain idle through restocking"
+	)
+	assert_eq(
+		ModalQueue.pending_count(), 0,
+		"[after_restock] ModalQueue pending must stay at 0"
+	)
+
+	# Player E on the day-end trigger → CloseDayConfirmationPanel uses the
+	# direct-open path (not ModalQueue), so it claims CTX_MODAL via its
+	# own _focus_pushed bookkeeping. ModalQueue stays idle.
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+	var close_day_panel: CanvasLayer = (
+		controller.get("_close_day_panel") as CanvasLayer
+	)
+	assert_not_null(close_day_panel, "Controller must own _close_day_panel")
+	if close_day_panel == null:
+		return
+	assert_true(
+		bool(close_day_panel.get("_focus_pushed")),
+		"[close_day_open] Close-day confirmation panel must own a CTX_MODAL frame"
+	)
+	assert_null(
+		ModalQueue.active_panel(),
+		"[close_day_open] Close-day confirm uses direct-open; ModalQueue stays idle"
+	)
+
+	# Confirm → close-day panel pops its frame, then BetaDaySummaryPanel
+	# enqueues at DAY_SUMMARY priority and dispatches synchronously. The
+	# hand-off must end with summary as the sole active modal — the
+	# close-day frame released before the summary's push.
+	_press_close_day_confirm(controller)
+	await get_tree().process_frame
+	assert_false(
+		bool(close_day_panel.get("_focus_pushed")),
+		"[summary_open] Close-day panel must have released its frame after confirm"
+	)
+	var summary_panel: BetaDaySummaryPanel = (
+		controller.get("_summary_panel") as BetaDaySummaryPanel
+	)
+	assert_not_null(summary_panel, "Controller must own _summary_panel after confirm")
+	if summary_panel == null:
+		return
+	assert_true(
+		bool(summary_panel.get("_focus_pushed")),
+		"[summary_open] Summary panel must own the CTX_MODAL frame after confirm"
+	)
+	assert_same(
+		ModalQueue.active_panel(), summary_panel,
+		"[summary_open] Summary panel must be the active ModalQueue entry"
+	)
+
+
+# ── HUD snapshot golden path ───────────────────────────────────────────────
+# Captures `get_state_snapshot()` at each of the 4 chain phases and asserts
+# the fields the HUD view-model reads (stage, completed_objectives,
+# carrying_stock, can_close_day) match the expected progression. Locks the
+# snapshot contract so a refactor of the underlying private fields cannot
+# silently shift HUD readings.
+
+func test_hud_snapshot_golden_path() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+
+	# Phase 1 — TALK_TO_CUSTOMER.
+	var snap_1: Dictionary = controller.get_state_snapshot()
+	assert_eq(
+		String(snap_1.get("stage", "")), "talk_to_customer",
+		"Phase 1 stage must be talk_to_customer"
+	)
+	var completed_1: Dictionary = snap_1.get("completed_objectives", {}) as Dictionary
+	assert_eq(
+		completed_1.size(), 0,
+		"Phase 1 completed_objectives must be empty"
+	)
+	assert_false(
+		bool(snap_1.get("carrying_stock", true)),
+		"Phase 1 carrying_stock must be false at day start"
+	)
+	assert_false(
+		bool(snap_1.get("can_close_day", true)),
+		"Phase 1 can_close_day must be false (chain not started)"
+	)
+
+	# Phase 2 — BACK_ROOM_INVENTORY (after customer beat).
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	var snap_2: Dictionary = controller.get_state_snapshot()
+	assert_eq(
+		String(snap_2.get("stage", "")), "back_room_inventory",
+		"Phase 2 stage must be back_room_inventory"
+	)
+	var completed_2: Dictionary = snap_2.get("completed_objectives", {}) as Dictionary
+	assert_true(
+		completed_2.has(&"talk_to_customer"),
+		"Phase 2 completed_objectives must include talk_to_customer"
+	)
+	assert_eq(
+		completed_2.size(), 1,
+		"Phase 2 completed_objectives must contain exactly one entry"
+	)
+	assert_false(
+		bool(snap_2.get("carrying_stock", true)),
+		"Phase 2 carrying_stock must remain false before pickup"
+	)
+	assert_false(
+		bool(snap_2.get("can_close_day", true)),
+		"Phase 2 can_close_day must be false"
+	)
+
+	# Phase 3 — STOCK_SHELF (after back-room pickup; carry flag flips).
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	var snap_3: Dictionary = controller.get_state_snapshot()
+	assert_eq(
+		String(snap_3.get("stage", "")), "stock_shelf",
+		"Phase 3 stage must be stock_shelf"
+	)
+	var completed_3: Dictionary = snap_3.get("completed_objectives", {}) as Dictionary
+	assert_true(
+		completed_3.has(&"talk_to_customer"),
+		"Phase 3 completed_objectives must keep talk_to_customer"
+	)
+	assert_true(
+		completed_3.has(&"back_room_inventory"),
+		"Phase 3 completed_objectives must include back_room_inventory"
+	)
+	assert_true(
+		bool(snap_3.get("carrying_stock", false)),
+		"Phase 3 carrying_stock must flip true after back-room pickup"
+	)
+	assert_false(
+		bool(snap_3.get("can_close_day", true)),
+		"Phase 3 can_close_day must still be false (shelf not stocked)"
+	)
+
+	# Phase 4 — END_DAY (after restock; carry clears, close-day unlocks).
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	var snap_4: Dictionary = controller.get_state_snapshot()
+	assert_eq(
+		String(snap_4.get("stage", "")), "end_day",
+		"Phase 4 stage must be end_day"
+	)
+	var completed_4: Dictionary = snap_4.get("completed_objectives", {}) as Dictionary
+	assert_true(
+		completed_4.has(&"talk_to_customer"),
+		"Phase 4 completed_objectives must keep talk_to_customer"
+	)
+	assert_true(
+		completed_4.has(&"back_room_inventory"),
+		"Phase 4 completed_objectives must keep back_room_inventory"
+	)
+	assert_true(
+		completed_4.has(&"stock_shelf"),
+		"Phase 4 completed_objectives must include stock_shelf"
+	)
+	assert_false(
+		bool(snap_4.get("carrying_stock", true)),
+		"Phase 4 carrying_stock must clear after stocking the shelf"
+	)
+	assert_true(
+		bool(snap_4.get("can_close_day", false)),
+		"Phase 4 can_close_day must be true once every required objective is done at end_day"
 	)
