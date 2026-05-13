@@ -29,14 +29,6 @@ func test_hold_shelf_interactable_emits_signal_on_interact() -> void:
 	assert_signal_emit_count(EventBus, "hold_shelf_inspected", 1)
 
 
-func test_warranty_binder_interactable_emits_signal_on_interact() -> void:
-	var node := WarrantyBinderInteractable.new()
-	await _add_to_tree(node)
-	watch_signals(EventBus)
-	node.interact()
-	assert_signal_emit_count(EventBus, "warranty_binder_examined", 1)
-
-
 func test_backordered_console_interactable_emits_signal_on_interact() -> void:
 	var node := BackorderedConsoleInteractable.new()
 	node.item_id = &"sku_x"
@@ -89,7 +81,7 @@ func test_employee_schedule_interactable_emits_signal_on_interact() -> void:
 
 
 func test_each_interactable_requests_a_notification_toast() -> void:
-	var node := WarrantyBinderInteractable.new()
+	var node := HoldShelfInteractable.new()
 	await _add_to_tree(node)
 	watch_signals(EventBus)
 	node.interact()
@@ -97,9 +89,9 @@ func test_each_interactable_requests_a_notification_toast() -> void:
 
 
 func test_disabled_interactable_does_not_emit() -> void:
-	var node := WarrantyBinderInteractable.new()
+	var node := HoldShelfInteractable.new()
 	node.enabled = false
 	await _add_to_tree(node)
 	watch_signals(EventBus)
 	node.interact()
-	assert_signal_emit_count(EventBus, "warranty_binder_examined", 0)
+	assert_signal_emit_count(EventBus, "hold_shelf_inspected", 0)

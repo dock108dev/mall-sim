@@ -16,8 +16,8 @@ const TARGET_EVENTS_PER_DAY: int = 3
 const MAX_JSON_FILE_BYTES: int = 1048576
 
 ## Linear Day-1 objective chain. One source of truth: every gating, prompt,
-## time-advance, and close-day check reads from `_stage` and `_OBJECTIVES`.
-## Adding a stage means appending an entry to `_OBJECTIVES` — gating,
+## time-advance, and close-day check reads from `_stage` and `_objectives`.
+## Adding a stage means appending an entry to `_objectives` — gating,
 ## time-advance, and close-day eligibility all derive from this table.
 ##
 ## Tone rule: objective text is grounded retail-shift language only. No
@@ -28,7 +28,7 @@ const MAX_JSON_FILE_BYTES: int = 1048576
 ## Pre-chain note phase. The state machine sits here while Vic's morning
 ## note is on screen — no interactable is armed and the rail shows the
 ## "Read Vic's morning note." prompt. `_on_vic_note_dismissed` advances to
-## STAGE_TALK_TO_CUSTOMER, which is the first chain entry in _OBJECTIVES.
+## STAGE_TALK_TO_CUSTOMER, which is the first chain entry in _objectives.
 const STAGE_VIC_NOTE: StringName = &"vic_note"
 const STAGE_TALK_TO_CUSTOMER: StringName = &"talk_to_customer"
 const STAGE_STOCK_SHELF: StringName = &"stock_shelf"
@@ -46,70 +46,6 @@ const _CLOSE_TIME_MINUTES: float = 17.0 * 60.0  # 5:00 PM
 ## count, so the inventory pair stays complementary: pickup sets back-room
 ## to this value with on-shelves at 0, then stocking flips them.
 const _BACKROOM_DELIVERY_QUANTITY: int = 5
-
-## Day-1 objective table. Each entry drives gating, prompt, time advance,
-## and the next-stage transition. `target_path` is the scene-relative path
-## to the Interactable whose `enabled` flag the gating layer flips on for
-## this stage; `time_cost_minutes` is added to TimeSystem when the player
-## completes the step.
-##
-## Strings (not StringNames) inside the dict literals so the table parses
-## as a plain Array literal — Godot's GDScript parser rejects nested
-## `&"foo"` StringName literals inside typed Array[Dictionary] entries.
-## `id` and `stage` are converted to StringName via `_chain_id` / `_chain_stage`
-## helpers at lookup sites.
-## Time costs land the chain at or past 5:00 PM by completion: 9:00 +
-## 60 + 120 + 300 = 17:00 exactly. Even with TimeSystem absent (unit
-## tests) the chain still flows because the time gate falls back to "ok"
-## when there's no clock to consult.
-## §F-I1 — Day-1 chain: customer → back room → stock → close. The order is
-## doctrinal (per the latest beta-stabilization spec): the player can't stock
-## meaningfully before knowing what's in the back room. Time costs (30/30/60)
-## sum to 120 min so the chain finishes well before 5 PM; on transition to
-## END_DAY, `_advance_to_next_stage` jumps the clock to 17:00 so the player
-## isn't forced to idle from ~11 AM until close.
-const _OBJECTIVES: Array[Dictionary] = [
-	{
-		"id": "talk_to_customer",
-		"stage": "talk_to_customer",
-		"label": "Talk to the customer at the register.",
-		"action": "Talk to the customer",
-		"key": "E",
-		"target_path": "BetaDayOneCustomer/Interactable",
-		"time_cost_minutes": 30,
-		"required": true,
-	},
-	{
-		"id": "back_room_inventory",
-		"stage": "back_room_inventory",
-		"label": "Check the back room delivery.",
-		"action": "Check inventory",
-		"key": "E",
-		"target_path": "BetaBackroomPickup/Interactable",
-		"time_cost_minutes": 30,
-		"required": true,
-	},
-	{
-		"id": "stock_shelf",
-		"stage": "stock_shelf",
-		"label": "Stock the Retro Games shelf.",
-		"action": "Stock the shelf",
-		"key": "E",
-		"target_path": "BetaRestockShelf/Interactable",
-		"time_cost_minutes": 60,
-		"required": true,
-	},
-	{
-		"id": "close_day",
-		"stage": "end_day",
-		"label": "Close the day at the register.",
-		"action": "Close the day",
-		"key": "E",
-		"target_path": "BetaDayEndTrigger/Interactable",
-		"time_cost_minutes": 0,
-		"required": false,
-	},
-]
 
 ## Sub-fixture clutter that's hidden inside the beta scope so the room reads
 ## as a small store rather than a full retail environment. CartRackLeft /
@@ -244,6 +180,73 @@ const _CUSTOMER_EXIT_LEG_2_TARGET: Vector3 = Vector3(0.0, 0.0, 10.5)
 const _CUSTOMER_EXIT_LEG_1_SECONDS: float = 0.9
 const _CUSTOMER_EXIT_LEG_2_SECONDS: float = 1.2
 const _CUSTOMER_EXIT_FADE_SECONDS: float = 0.8
+
+## Day-1 objective table. Each entry drives gating, prompt, time advance,
+## and the next-stage transition. `target_path` is the scene-relative path
+## to the Interactable whose `enabled` flag the gating layer flips on for
+## this stage; `time_cost_minutes` is added to TimeSystem when the player
+## completes the step.
+##
+## Strings (not StringNames) inside the dict literals so the table parses
+## as a plain Array literal — Godot's GDScript parser rejects nested
+## `&"foo"` StringName literals inside typed Array[Dictionary] entries.
+## `id` and `stage` are converted to StringName via `_chain_id` / `_chain_stage`
+## helpers at lookup sites.
+## Time costs land the chain at or past 5:00 PM by completion: 9:00 +
+## 60 + 120 + 300 = 17:00 exactly. Even with TimeSystem absent (unit
+## tests) the chain still flows because the time gate falls back to "ok"
+## when there's no clock to consult.
+## §F-I1 — Day-1 chain: customer → back room → stock → close. The order is
+## doctrinal (per the latest beta-stabilization spec): the player can't stock
+## meaningfully before knowing what's in the back room. Time costs (30/30/60)
+## sum to 120 min so the chain finishes well before 5 PM; on transition to
+## END_DAY, `_advance_to_next_stage` jumps the clock to 17:00 so the player
+## isn't forced to idle from ~11 AM until close.
+## Kept as a `var` (not `const`) because `_reset_scene_for_day` rewrites the
+## `label` fields when the day rolls over — const dicts are read-only in
+## Godot 4.x and would crash the day-reset path.
+var _objectives: Array[Dictionary] = [
+	{
+		"id": "talk_to_customer",
+		"stage": "talk_to_customer",
+		"label": "Talk to the customer at the register.",
+		"action": "Talk to the customer",
+		"key": "E",
+		"target_path": "BetaDayOneCustomer/Interactable",
+		"time_cost_minutes": 30,
+		"required": true,
+	},
+	{
+		"id": "back_room_inventory",
+		"stage": "back_room_inventory",
+		"label": "Check the back room delivery.",
+		"action": "Check inventory",
+		"key": "E",
+		"target_path": "BetaBackroomPickup/Interactable",
+		"time_cost_minutes": 30,
+		"required": true,
+	},
+	{
+		"id": "stock_shelf",
+		"stage": "stock_shelf",
+		"label": "Stock the Retro Games shelf.",
+		"action": "Stock the shelf",
+		"key": "E",
+		"target_path": "BetaRestockShelf/Interactable",
+		"time_cost_minutes": 60,
+		"required": true,
+	},
+	{
+		"id": "close_day",
+		"stage": "end_day",
+		"label": "Close the day at the register.",
+		"action": "Close the day",
+		"key": "E",
+		"target_path": "BetaDayEndTrigger/Interactable",
+		"time_cost_minutes": 0,
+		"required": false,
+	},
+]
 
 var _decision_panel: BetaDecisionCardPanel
 var _summary_panel: BetaDaySummaryPanel
@@ -669,7 +672,7 @@ func day_end_disabled_reason() -> String:
 ## grounded retail-shift language — never "you can't close the day yet,
 ## the mystery isn't solved."
 func close_day_disabled_reason() -> String:
-	for entry: Dictionary in _OBJECTIVES:
+	for entry: Dictionary in _objectives:
 		var stage_name: StringName = StringName(str(entry.get("stage", "")))
 		if stage_name == STAGE_END_DAY:
 			continue
@@ -686,7 +689,7 @@ func _disabled_reason_for_stage(target_stage: StringName) -> String:
 		return ""
 	if _stage == STAGE_VIC_NOTE:
 		return "Read Vic's note first."
-	for entry: Dictionary in _OBJECTIVES:
+	for entry: Dictionary in _objectives:
 		if StringName(str(entry.get("stage", ""))) == _stage:
 			return "Working on: %s" % str(entry.get("label", ""))
 	return "Not available right now."
@@ -818,7 +821,7 @@ func _reset_scene_for_day(day_number: int) -> void:
 			(open as Node3D).visible = false
 		if label is Node3D:
 			(label as Node3D).visible = true
-	for obj: Dictionary in _OBJECTIVES:
+	for obj: Dictionary in _objectives:
 		if obj.has("label"):
 			obj["label"] = String(obj["label"]).replace(
 				"Day 1:", "Day %d:" % day_number
@@ -852,18 +855,18 @@ func _complete_current_objective() -> void:
 
 
 ## Advances `_stage` to the entry that follows `completed_id` in
-## `_OBJECTIVES`. Wrapping over the end of the array stays at END_DAY so
+## `_objectives`. Wrapping over the end of the array stays at END_DAY so
 ## the close-day prompt is the terminal state.
 func _advance_stage_after(completed_id: StringName) -> void:
 	var idx: int = -1
-	for i: int in range(_OBJECTIVES.size()):
-		if StringName(str(_OBJECTIVES[i].get("id", ""))) == completed_id:
+	for i: int in range(_objectives.size()):
+		if StringName(str(_objectives[i].get("id", ""))) == completed_id:
 			idx = i
 			break
-	if idx == -1 or idx + 1 >= _OBJECTIVES.size():
+	if idx == -1 or idx + 1 >= _objectives.size():
 		_stage = STAGE_END_DAY
 	else:
-		_stage = StringName(str(_OBJECTIVES[idx + 1].get("stage", STAGE_END_DAY)))
+		_stage = StringName(str(_objectives[idx + 1].get("stage", STAGE_END_DAY)))
 	if _stage == STAGE_END_DAY:
 		_pause_time_for_end_day()
 		_start_close_time_watcher()
@@ -909,10 +912,10 @@ func current_stage() -> StringName:
 	return _stage
 
 
-## Returns the `_OBJECTIVES` row whose `stage` matches `target_stage`, or
+## Returns the `_objectives` row whose `stage` matches `target_stage`, or
 ## an empty dict for unknown stages.
 func _objective_for_stage(target_stage: StringName) -> Dictionary:
-	for entry: Dictionary in _OBJECTIVES:
+	for entry: Dictionary in _objectives:
 		if StringName(str(entry.get("stage", ""))) == target_stage:
 			return entry
 	return {}
@@ -988,14 +991,14 @@ func _update_objective_rail() -> void:
 	})
 
 
-## Builds the multi-step progress payload for the rail. Each `_OBJECTIVES`
+## Builds the multi-step progress payload for the rail. Each `_objectives`
 ## row becomes a `{text, state}` entry where `state` is "completed" if the
 ## row's id is in `_completed_objectives`, "active" if its stage matches
 ## `_stage`, or "future" otherwise. During STAGE_VIC_NOTE every entry is
 ## "future" (nothing complete, no chain row active yet).
 func _build_steps_payload() -> Array[Dictionary]:
 	var steps: Array[Dictionary] = []
-	for entry: Dictionary in _OBJECTIVES:
+	for entry: Dictionary in _objectives:
 		var entry_id: StringName = StringName(str(entry.get("id", "")))
 		var entry_stage: StringName = StringName(str(entry.get("stage", "")))
 		var state: String = "future"
@@ -1027,7 +1030,7 @@ func _apply_objective_gating() -> void:
 		if node is Interactable and _is_descendant_of(node, store):
 			(node as Interactable).enabled = false
 	_set_interactable_enabled(store, "EntranceDoor/Interactable", false)
-	for entry: Dictionary in _OBJECTIVES:
+	for entry: Dictionary in _objectives:
 		var entry_stage: StringName = StringName(str(entry.get("stage", "")))
 		var path: String = str(entry.get("target_path", ""))
 		if path.is_empty():
@@ -1054,7 +1057,7 @@ func _apply_objective_gating() -> void:
 
 
 func _all_required_objectives_completed() -> bool:
-	for entry: Dictionary in _OBJECTIVES:
+	for entry: Dictionary in _objectives:
 		if StringName(str(entry.get("stage", ""))) == STAGE_END_DAY:
 			continue
 		if not bool(entry.get("required", false)):
@@ -1117,7 +1120,7 @@ func _ensure_panels() -> void:
 	if _today_checklist == null:
 		_today_checklist = BetaTodayChecklist.new()
 		_today_checklist.name = "BetaTodayChecklist"
-		_today_checklist.set_objectives(_OBJECTIVES)
+		_today_checklist.set_objectives(_objectives)
 		_ui_root().add_child(_today_checklist)
 	if _debug_overlay == null:
 		_debug_overlay = CanvasLayer.new()

@@ -357,7 +357,7 @@ func test_row_renders_backroom_and_shelf_quantity_labels() -> void:
 		def.store_type
 	)[0]
 	var row: PanelContainer = InventoryRowBuilder.build(
-		any_item, null, quantities
+		any_item, quantities
 	)
 	var backroom_label: Label = _find_label_by_name(row, "BackroomQtyLabel")
 	var shelf_label: Label = _find_label_by_name(row, "ShelfQtyLabel")
