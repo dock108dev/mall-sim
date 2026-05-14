@@ -306,6 +306,19 @@ func test_day_started_skips_emission_when_beta_controller_active() -> void:
 	assert_signal_not_emitted(EventBus, "manager_note_shown")
 
 
+func test_day1_gameplay_start_skips_global_manager_note_before_store_exists() -> void:
+	var previous_state: int = int(GameManager.current_state)
+	GameManager.current_state = GameManager.State.GAMEPLAY
+	watch_signals(EventBus)
+	EventBus.day_started.emit(1)
+	GameManager.current_state = previous_state
+	assert_signal_not_emitted(
+		EventBus,
+		"manager_note_shown",
+		"Fresh beta gameplay must not show the global Day-1 parchment before the store tutorial starts"
+	)
+
+
 ## Duplicate `day_started.emit(day)` for the same day number must only fire
 ## `manager_note_shown` once — the `_last_started_day` guard exists because
 ## `_connect_signal` prevents listener double-connection but not upstream

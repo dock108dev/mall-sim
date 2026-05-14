@@ -40,20 +40,19 @@ func before_each() -> void:
 		return
 	_root = scene.instantiate() as Node3D
 	add_child(_root)
-	# Wait one frame so _ready / call_deferred(_open_vic_note_and_then_start_day)
+	# Wait one frame so _ready / call_deferred(_open_day)
 	# settle before tests inspect controller state.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	# Day-1 opens with Vic's note as a pre-chain modal gate; dismiss it so
-	# `_start_day` runs and the chain inspection below sees the populated
-	# stage / gating / objective rail state.
+	# Compatibility no-op for older fixtures: Day 1 now starts directly at
+	# the customer beat, but keep this helper guarded so the same fixture works
+	# if a test explicitly switches to a later-day note gate.
 	_dismiss_vic_note_for_test()
 	await get_tree().process_frame
 
 
-## Dismisses the Day-1 opening note panel so `_start_day` fires. Mirrors
-## the runtime "player presses Got it" path without driving the button via
-## input simulation.
+## Dismisses a visible Vic note panel when a test explicitly enters a later-day
+## note gate. Day 1 normally has no note to dismiss.
 func _dismiss_vic_note_for_test() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -62,6 +61,8 @@ func _dismiss_vic_note_for_test() -> void:
 		controller.get("_vic_note_panel") as BetaManagerNotePanel
 	)
 	if panel == null:
+		return
+	if not panel.visible:
 		return
 	panel.close()
 	panel.note_dismissed.emit()

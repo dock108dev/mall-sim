@@ -1,4 +1,4 @@
-## Tests for the Day-1 opening note panel (`BetaManagerNotePanel`).
+## Tests for the beta manager note panel (`BetaManagerNotePanel`).
 ##
 ## Covers the AC for the pre-chain passive overlay: dismiss button grabs
 ## keyboard focus on open() (Enter / Space dismiss without the mouse),
@@ -180,15 +180,11 @@ func test_panel_starts_hidden_until_show_note_called() -> void:
 	)
 
 
-# ── Controller integration: modal gates _start_day until dismissed ──────────
+# ── Controller integration: Day 1 starts immediately; later notes still work ─
 
-func test_note_panel_is_open_at_scene_load() -> void:
-	# AC: the note panel is the first thing the player sees on Day 1
-	# (visible after the deferred `_open_vic_note_and_then_start_day` has
-	# run). `_start_day` is gated behind dismiss, so `_active_event` stays
-	# empty until the player presses Got it. Input gating is owned by
-	# InputFocus's CTX_MODAL stack (not interactable.enabled), so we don't
-	# assert on the latter.
+func test_day1_starts_without_opening_note_panel() -> void:
+	# Day 1 should land directly on the first actionable beat. This keeps
+	# first play from requiring a note dismissal before the tutorial begins.
 	await _load_beta_scene()
 	var controller: Node = _beta_controller()
 	assert_not_null(controller, "BetaDayOneController must exist after scene load")
@@ -200,17 +196,20 @@ func test_note_panel_is_open_at_scene_load() -> void:
 	assert_not_null(panel, "Controller must own a BetaManagerNotePanel after _ready")
 	if panel == null:
 		return
-	assert_true(
+	assert_false(
 		panel.visible,
-		"Vic's note panel must be visible after scene load (pre-chain modal gate)"
+		"Vic's note panel must stay hidden on Day 1 so no extra start gate appears"
 	)
 	var active_event: Dictionary = (
 		controller.get("_active_event") as Dictionary
 	)
-	assert_true(
+	assert_false(
 		active_event.is_empty(),
-		"_active_event must stay empty while the modal gate is up — _start_day "
-		+ "must not have run yet (size=%d)" % active_event.size()
+		"_active_event must be ready immediately on Day 1"
+	)
+	assert_eq(
+		String(controller.get("_stage")), "talk_to_customer",
+		"Day 1 must start on the customer beat"
 	)
 
 
@@ -218,6 +217,7 @@ func test_dismissing_note_arms_chain_in_same_frame() -> void:
 	# AC: After note dismissed the objective rail must show 'Talk to the
 	# customer at the register.' within the same frame — _start_day fires
 	# synchronously inside _on_vic_note_dismissed, not deferred.
+	BetaRunState.day = 2
 	await _load_beta_scene()
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -244,7 +244,8 @@ func test_dismissing_note_arms_chain_in_same_frame() -> void:
 func test_dismissing_note_emits_manager_note_dismissed_with_id() -> void:
 	# Sanity: the controller forwards the dismiss to EventBus with the
 	# stable note id so any non-beta listener (e.g. ObjectiveDirector) can
-	# react. The id matches the controller's hardcoded "vic_day01" key.
+	# react. Day 2 keeps the opening-note path, so it emits `vic_day02`.
+	BetaRunState.day = 2
 	await _load_beta_scene()
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -257,7 +258,7 @@ func test_dismissing_note_emits_manager_note_dismissed_with_id() -> void:
 	watch_signals(EventBus)
 	panel._dismiss_button.emit_signal("pressed")
 	assert_signal_emitted_with_parameters(
-		EventBus, "manager_note_dismissed", ["vic_day01"]
+		EventBus, "manager_note_dismissed", ["vic_day02"]
 	)
 
 
@@ -266,7 +267,8 @@ func test_dismissing_note_emits_manager_note_dismissed_with_id() -> void:
 # advance to STAGE_TALK_TO_CUSTOMER on dismiss. This rules out the rail /
 # gating ever showing the customer beat before the player has read the note.
 
-func test_stage_is_vic_note_while_note_panel_is_up() -> void:
+func test_day2_stage_is_vic_note_while_note_panel_is_up() -> void:
+	BetaRunState.day = 2
 	await _load_beta_scene()
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -277,7 +279,8 @@ func test_stage_is_vic_note_while_note_panel_is_up() -> void:
 	)
 
 
-func test_dismiss_advances_stage_past_vic_note() -> void:
+func test_day2_dismiss_advances_stage_past_vic_note() -> void:
+	BetaRunState.day = 2
 	await _load_beta_scene()
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -296,18 +299,19 @@ func test_dismiss_advances_stage_past_vic_note() -> void:
 
 # ── Note-phase rail copy ────────────────────────────────────────────────────
 # AC: while the note is on screen, the rail emits 'Read Vic's morning note.'
-# rather than the customer beat. The emit happens during
-# `_open_vic_note_and_then_start_day`, which is `call_deferred` from _ready,
-# so loading the scene + waiting two frames is enough to capture it.
+# rather than the customer beat. On Day 2, `_open_day` enters the Vic-note
+# gate from a deferred _ready call, so loading the scene + waiting two frames
+# is enough to capture it.
 
 func test_rail_emits_note_phase_copy_before_dismiss() -> void:
 	# `watch_signals` must be attached before the deferred
-	# `_open_vic_note_and_then_start_day` runs, so the signal capture has
-	# to be scheduled before the scene is added to the tree.
+	# `_open_day` runs, so the signal capture has to be scheduled before the
+	# scene is added to the tree.
 	var scene: PackedScene = load(SCENE_PATH)
 	assert_not_null(scene, "retro_games.tscn must load for the note-phase test")
 	if scene == null:
 		return
+	BetaRunState.day = 2
 	watch_signals(EventBus)
 	_root = scene.instantiate() as Node3D
 	add_child(_root)
@@ -342,6 +346,7 @@ func test_rail_emits_note_phase_copy_before_dismiss() -> void:
 # event — toast is reserved for transient confirmations.
 
 func test_dismiss_emits_back_room_delivery_notification() -> void:
+	BetaRunState.day = 2
 	await _load_beta_scene()
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -379,7 +384,7 @@ func _load_beta_scene() -> void:
 		return
 	_root = scene.instantiate() as Node3D
 	add_child(_root)
-	# Two frames so _ready / call_deferred(_open_vic_note_and_then_start_day)
+	# Two frames so _ready / call_deferred(_open_day)
 	# settles before assertions inspect controller / panel state.
 	await get_tree().process_frame
 	await get_tree().process_frame

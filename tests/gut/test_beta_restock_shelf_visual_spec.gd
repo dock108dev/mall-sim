@@ -29,19 +29,18 @@ func before_each() -> void:
 		return
 	_root = scene.instantiate() as Node3D
 	add_child(_root)
-	# Two frames so _ready / call_deferred(_open_vic_note_and_then_start_day)
+	# Two frames so _ready / call_deferred(_open_day)
 	# settle before the spawn-side assertions run their controller calls.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	# Day-1 opens with Vic's note as a pre-chain modal gate; dismiss it so
-	# `_start_day` runs and the chain progression in the spawn-side tests
-	# below has a valid `_active_event` and `_stage`.
+	# Day 1 starts directly at the customer beat. Keep this guarded dismiss
+	# only for tests that explicitly switch to a later-day note gate.
 	var controller: Node = _beta_controller()
 	if controller != null:
 		var panel: BetaManagerNotePanel = (
 			controller.get("_vic_note_panel") as BetaManagerNotePanel
 		)
-		if panel != null:
+		if panel != null and panel.visible:
 			panel.close()
 			panel.note_dismissed.emit()
 			await get_tree().process_frame

@@ -1,11 +1,11 @@
 ## Dedup-guard tests for Day-1 boot surfaces that are prone to duplicate
-## emissions: the Vic morning note (BetaManagerNotePanel) and the
+## emissions: the skipped Day-1 Vic note surface and the
 ## per-store tutorial context emission (TutorialContextSystem).
 ##
 ## The Vic note test instantiates `retro_games.tscn` and intentionally does
-## NOT dismiss the panel in before_each so the rendered body can be
-## inspected after `_open_vic_note_and_then_start_day` settles. The tutorial
-## test drives store_entered / day_started through EventBus to verify that
+## not dismiss anything: Day 1 should not render a note panel at all before
+## the first actionable tutorial objective. The tutorial test drives
+## store_entered / day_started through EventBus to verify that
 ## the dedup gate prevents same-window double-emission across one entry and
 ## across a restart-style second store_entered without an intervening exit.
 extends GutTest
@@ -75,11 +75,11 @@ func _on_tutorial_context_entered(
 	})
 
 
-# ── Vic note: single instance, no duplicate paragraph in body ───────────────
+# ── Vic note: Day 1 has no visible note gate ───────────────────────────────
 
-## AC 1 — instantiate retro_games.tscn without dismissing the Vic note,
-## then verify the controller spawned exactly one BetaManagerNotePanel for
-## this Day-1 boot and that its rendered body contains no repeated paragraph.
+## AC 1 — instantiate retro_games.tscn and verify the controller has a note
+## panel available for later days, but Day 1 does not render it or put it in
+## ModalQueue before the first customer objective.
 ##
 ## "Exactly one" is asserted against the current controller's
 ## `_vic_note_panel` field rather than a tree-wide walk. BetaDayOneController
@@ -90,13 +90,13 @@ func _on_tutorial_context_entered(
 ## Per-controller scoping is the right boundary for the dedup contract:
 ## `_ensure_panels` guards on `_vic_note_panel == null`, so structurally there
 ## can only be one panel per controller instance.
-func test_morning_note_not_duplicated_on_day1_start() -> void:
+func test_morning_note_not_visible_on_day1_start() -> void:
 	# Sweep visible BetaManagerNotePanel instances left over from earlier
 	# tests in the suite. `BetaDayOneController._ensure_panels` parents the
 	# Vic note under `_ui_root()`, which falls back to `/root` in headless
 	# mode, so any prior test that walked past `_on_summary_continue`
-	# (which calls `_open_vic_note_and_then_start_day` again to render the
-	# Day-2 note) leaves its panel `visible = true` in `/root` because
+	# (which opens the Day-2 Vic note) leaves its panel `visible = true`
+	# in `/root` because
 	# `before_each` resets ModalQueue references without calling `close()`
 	# on the active panel. Closing them up front keeps the visible-count
 	# assertion below scoped to this test's freshly-spawned panel.
@@ -110,7 +110,7 @@ func test_morning_note_not_duplicated_on_day1_start() -> void:
 		return
 	_root = scene.instantiate() as Node3D
 	add_child(_root)
-	# Two frames: one for _ready, one for call_deferred(_open_vic_note_and_then_start_day).
+	# Two frames: one for _ready, one for call_deferred(_open_day).
 	await get_tree().process_frame
 	await get_tree().process_frame
 
@@ -123,7 +123,7 @@ func test_morning_note_not_duplicated_on_day1_start() -> void:
 	)
 	assert_not_null(
 		panel,
-		"BetaDayOneController._ensure_panels must spawn a Vic note panel before _open_vic_note_and_then_start_day"
+		"BetaDayOneController._ensure_panels must still spawn a Vic note panel for later-day use"
 	)
 	if panel == null:
 		return
@@ -131,53 +131,26 @@ func test_morning_note_not_duplicated_on_day1_start() -> void:
 		is_instance_valid(panel),
 		"_vic_note_panel must remain valid through the boot settle"
 	)
-	assert_true(
+	assert_false(
 		panel.visible,
-		"Pre-condition: the Vic note must be visible after _open_vic_note_and_then_start_day"
+		"Day 1 must not show Vic's note before the first customer objective"
+	)
+	assert_eq(
+		ModalQueue.active_panel(),
+		null,
+		"Day 1 must not reserve ModalQueue for a skipped Vic note"
 	)
 
-	# The controller only ever wires one Vic note instance per run because
-	# `_ensure_panels` guards on `_vic_note_panel == null`. The meaningful
-	# on-screen invariant: at any moment, exactly one BetaManagerNotePanel
-	# is visible — counting *visible* siblings catches both a stuck panel
-	# left over from a prior run and a refactor that adds a parallel spawn
-	# site for the current controller. (Panels rooted in /root by prior
-	# tests' freed controllers stay in the tree because the in-process GUT
-	# runner does not garbage-collect them, but they are not visible.)
 	var visible_count: int = 0
 	for node: Node in get_tree().root.get_children():
 		if node is BetaManagerNotePanel and (node as BetaManagerNotePanel).visible:
 			visible_count += 1
 	assert_eq(
-		visible_count, 1,
+		visible_count, 0,
 		(
-			"Exactly one BetaManagerNotePanel must be visible after Day-1 "
-			+ "boot; got %d (a duplicate visible panel indicates a stuck "
-			+ "leftover or a parallel spawn site)"
+			"No BetaManagerNotePanel should be visible after Day-1 boot; got %d"
 		) % visible_count
 	)
-
-	var body_label: RichTextLabel = panel.get("_body_label") as RichTextLabel
-	assert_not_null(body_label, "Panel must own a _body_label RichTextLabel")
-	if body_label == null:
-		return
-	var body: String = body_label.text
-	assert_ne(body, "", "Body must be populated after _open_vic_note_and_then_start_day")
-
-	# VIC_NOTE_BODY separates paragraphs with double newlines. Strip each
-	# piece and require uniqueness so an accidental `append_text` refactor
-	# that re-renders the body on a second show_note call fails.
-	var paragraphs: PackedStringArray = body.split("\n\n", false)
-	var seen: Dictionary = {}
-	for paragraph: String in paragraphs:
-		var trimmed: String = paragraph.strip_edges()
-		if trimmed.is_empty():
-			continue
-		assert_false(
-			seen.has(trimmed),
-			"Body must not contain duplicate paragraph: '%s'" % trimmed
-		)
-		seen[trimmed] = true
 
 
 # ── TutorialContextSystem: one show per entry window across restart ─────────

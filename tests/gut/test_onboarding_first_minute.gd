@@ -21,6 +21,7 @@ var _milestone_card: MilestoneCard = null
 func before_each() -> void:
 	InputFocus._reset_for_tests()
 	ModalQueue._reset_for_tests()
+	BetaRunState.reset_new_run()
 	var scene: PackedScene = load(SCENE_PATH)
 	assert_not_null(scene, "retro_games.tscn must load for onboarding tests")
 	if scene == null:
@@ -34,7 +35,7 @@ func before_each() -> void:
 	_milestone_card = MILESTONE_CARD_SCENE.instantiate() as MilestoneCard
 	_milestone_card.notification_mode = true
 	add_child(_milestone_card)
-	# Two frames for _ready + call_deferred(_open_vic_note_and_then_start_day).
+	# Two frames for _ready + call_deferred(_open_day).
 	await get_tree().process_frame
 	await get_tree().process_frame
 
@@ -71,20 +72,20 @@ func _dismiss_vic_note() -> void:
 	)
 	if panel == null:
 		return
+	if not panel.visible:
+		return
 	panel.close()
 	panel.note_dismissed.emit()
 
 
 # ── Test 1 — Spawn Does Not Stack Blocking Modals ────────────────────────────
 # AC (from brief): "there is at most one blocking modal open / there are zero
-# hidden blocking modals rendered behind it." The Vic note opens as a passive
-# overlay (no CTX_MODAL push) but is `ModalQueue._active` while visible. A
-# `milestone_completed` for `employee_register_unlock` fired during this
-# window must NOT push CTX_MODAL onto InputFocus on top of the visible note —
-# the milestone surface should defer until the note is dismissed.
+# hidden blocking modals rendered behind it." Day 1 now starts without the Vic
+# note gate, and the opening register milestone must remain nonblocking when
+# it fires in that spawn window.
 
 
-func test_milestone_completed_during_vic_note_does_not_stack_ctx_modal() -> void:
+func test_opening_milestone_does_not_stack_ctx_modal_at_spawn() -> void:
 	var controller: BetaDayOneController = _beta_controller()
 	assert_not_null(controller, "Day-1 controller must spawn from retro_games.tscn")
 	if controller == null:
@@ -95,14 +96,9 @@ func test_milestone_completed_during_vic_note_does_not_stack_ctx_modal() -> void
 	assert_not_null(note, "Vic note panel must exist after Day-1 spawn")
 	if note == null:
 		return
-	assert_true(
+	assert_false(
 		note.visible,
-		"Precondition: Vic note must be visible at Day-1 spawn before the milestone fires"
-	)
-	assert_same(
-		ModalQueue.active_panel(),
-		note,
-		"Precondition: Vic note must own the ModalQueue active slot"
+		"Precondition: Vic note should not be visible at Day-1 spawn"
 	)
 	var focus_before: StringName = InputFocus.current()
 	assert_false(
@@ -110,9 +106,7 @@ func test_milestone_completed_during_vic_note_does_not_stack_ctx_modal() -> void
 		"Precondition: MilestoneCard must be hidden before the milestone fires"
 	)
 	# Synthesize the spawn-window race: the player clocks in (or anything
-	# else completes `employee_register_unlock`) while Vic's note is still
-	# on screen. The MilestoneCard listens to `EventBus.milestone_completed`
-	# unconditionally today and slides in, pushing CTX_MODAL.
+	# else completes `employee_register_unlock`) right as Day 1 opens.
 	EventBus.milestone_completed.emit(
 		"employee_register_unlock", "Showing the Ropes", "Register access unlocked"
 	)
@@ -121,18 +115,17 @@ func test_milestone_completed_during_vic_note_does_not_stack_ctx_modal() -> void
 		InputFocus.current(),
 		focus_before,
 		(
-			"MilestoneCard must NOT push CTX_MODAL while the Vic note is the "
-			+ "active ModalQueue entry — that creates the stacked-modal feel "
-			+ "the onboarding brief calls out."
+			"Opening milestone must NOT push CTX_MODAL or add another required "
+			+ "Continue click before the first tutorial objective."
 		)
 	)
-	assert_false(
-		_milestone_card.visible,
-		"MilestoneCard must remain hidden while ModalQueue is busy with the Vic note"
-	)
 	assert_true(
-		note.visible,
-		"Vic note must remain visible — no second blocking surface should occlude it"
+		_milestone_card.visible,
+		"MilestoneCard may show as a nonblocking toast-style notification"
+	)
+	assert_false(
+		_milestone_card._continue_button.visible,
+		"Opening milestone notification must not show a Continue button"
 	)
 
 
@@ -192,6 +185,8 @@ func test_vic_note_body_replaces_not_appends_on_reopen() -> void:
 	assert_not_null(label, "BetaManagerNotePanel must expose _body_label")
 	if label == null:
 		return
+	note.show_note(BetaDayOneController.VIC_NOTE_BODY)
+	await get_tree().process_frame
 	var first_length: int = label.text.length()
 	assert_gt(first_length, 0, "Vic note body must render text on initial open")
 	# Close and re-open with the same body — verify the label text length
@@ -220,11 +215,8 @@ func test_vic_note_body_replaces_not_appends_on_reopen() -> void:
 
 
 func test_objective_rail_main_label_does_not_duplicate_active_step() -> void:
-	# Dismiss the Vic note so `_start_day` fires and the rail receives the
-	# real Day-1 chain payload (TALK_TO_CUSTOMER + step list).
-	_dismiss_vic_note()
-	await get_tree().process_frame
-	await get_tree().process_frame
+	# Day 1 starts immediately, so the rail should already have the real
+	# chain payload (TALK_TO_CUSTOMER + step list).
 	var rail: CanvasLayer = ObjectiveRail
 	var main_label: Label = rail.get("_objective_label") as Label
 	var step_slots: Array = rail.get("_step_slots") as Array

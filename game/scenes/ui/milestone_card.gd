@@ -4,10 +4,9 @@
 ## EventBus-driven notification. Leave false (default) for a static row
 ## that calls configure() with a data dict and emits clicked().
 ##
-## In notification mode a milestone whose id is listed in CONFIRM_REQUIRED_IDS
-## opens as a compact modal with a Continue button instead of an auto-dismiss
-## toast: the card claims CTX_MODAL focus, the Continue button grabs keyboard
-## focus on open, and the queue advances only when the player presses Continue.
+## In notification mode milestones auto-dismiss like toast banners. Avoid
+## requiring a Continue click during the first-play opening sequence; the
+## underlying unlock still fires through UnlockSystem.
 class_name MilestoneCard
 extends PanelContainer
 
@@ -18,10 +17,9 @@ const SLIDE_DURATION: float = 0.3
 const HOLD_DURATION: float = 3.0
 
 ## Milestones that demand a player read instead of an auto-dismiss toast.
+## Empty by default so first-play unlocks never create an extra start gate.
 ## Keys are MilestoneDefinition ids; values are unused (set semantics).
-const CONFIRM_REQUIRED_IDS: Dictionary = {
-	"employee_register_unlock": true,
-}
+const CONFIRM_REQUIRED_IDS: Dictionary = {}
 
 ## true → sliding notification driven by EventBus.milestone_completed.
 ## false → static row; call configure() and listen to clicked.

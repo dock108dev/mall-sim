@@ -27,8 +27,8 @@ func test_controller_is_in_group_immediately_after_ready() -> void:
 	var root: Node3D = scene.instantiate() as Node3D
 	add_child_autofree(root)
 	# `add_child` runs `_ready()` synchronously. The controller's `_ready` adds
-	# itself to the group as line 1; the deferred `_open_vic_note_and_then_start_day`
-	# has not yet executed. Group lookup must succeed right here, with no
+	# itself to the group as line 1; the deferred `_open_day` has not yet
+	# executed. Group lookup must succeed right here, with no
 	# `await get_tree().process_frame` in between — that is the invariant
 	# ManagerRelationshipManager's beta guard relies on.
 	var controller: Node = get_tree().get_first_node_in_group(

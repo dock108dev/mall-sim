@@ -25,10 +25,9 @@ const MAX_JSON_FILE_BYTES: int = 1048576
 ## decides what's weird; the UI doesn't announce it. The console stack
 ## (BetaHiddenClue) is ambient flavor: always interactable, never the
 ## active objective, doesn't advance the chain.
-## Pre-chain note phase. The state machine sits here while Vic's morning
-## note is on screen — no interactable is armed and the rail shows the
-## "Read Vic's morning note." prompt. `_on_vic_note_dismissed` advances to
-## STAGE_TALK_TO_CUSTOMER, which is the first chain entry in _objectives.
+## Pre-chain note phase. Used for later-day Vic notes; Day 1 now skips this
+## gate and starts directly at STAGE_TALK_TO_CUSTOMER so the tutorial's first
+## actionable beat is visible immediately.
 const STAGE_VIC_NOTE: StringName = &"vic_note"
 const STAGE_TALK_TO_CUSTOMER: StringName = &"talk_to_customer"
 const STAGE_STOCK_SHELF: StringName = &"stock_shelf"
@@ -142,7 +141,8 @@ const CloseDayConfirmationPanelScene: PackedScene = preload(
 	"res://game/scenes/ui/close_day_confirmation_panel.tscn"
 )
 
-## Vic's morning note, shown once at Day-1 scene init. Names the register
+## Vic's original orientation note, kept for explicit note-panel tests and
+## fallback later-day copy. Names the register
 ## ('Register is ready. First customer usually comes in around opening.')
 ## and the restock task ('Get a few things on the used shelf before the
 ## rush.') in plain retail language so both upcoming chain beats are
@@ -307,32 +307,28 @@ func _ready() -> void:
 	_ensure_panels()
 	_connect_panel_signals()
 	# Deferred so the parent StoreController._ready() runs first and connects
-	# its EventBus.objective_changed listener before _start_day emits the
-	# initial rail payload. Without this, StoreReadyContract invariant
-	# objective_matches_action fails on store load (current_objective_text
-	# stays empty because the emit happened before the connect). The note
-	# panel opens first and gates `_start_day` until the player dismisses;
-	# `_on_vic_note_dismissed` then calls `_start_day` synchronously so the
-	# objective rail flips to the customer beat in the same frame.
-	call_deferred("_open_vic_note_and_then_start_day")
+	# its EventBus.objective_changed listener before the initial rail payload.
+	# Day 1 goes straight to the customer beat; later days can still use the
+	# Vic-note gate from `_on_summary_continue`.
+	call_deferred("_open_day")
 	_print_interactable_debug_list()
 
 
-## Day-1 opening gate: shows Vic's morning note before `_start_day` arms
-## any of the chain interactables. The chain stays at STAGE_VIC_NOTE while
-## the note is on screen — chain progression is gated by each chain
-## interactable's `can_interact` override (which reads `_stage`). The note
-## itself is a passive overlay (no CTX_MODAL push) so the player can move
-## and look around while reading it; E or Escape on the panel dismiss it.
-## Dismissal advances to STAGE_TALK_TO_CUSTOMER via
-## `_on_vic_note_dismissed`, which is the only place that calls
-## `_start_day` from the initial scene load.
-##
-## `_update_objective_rail()` runs first so StoreController.current_objective_text
-## is populated before StoreReadyContract.check fires (invariant 10
-## objective_matches_action). `_stage` is STAGE_VIC_NOTE from the
-## class-level initializer, so the emitted payload reads "Read Vic's
-## morning note." while the panel is up.
+## Opens the current beta day. Day 1 skips the Vic note entirely so the player
+## lands at the first actionable tutorial objective without dismissing setup
+## screens. Day 2 keeps the note beat, where the reminder has value because
+## the player is continuing an existing run.
+func _open_day() -> void:
+	if BetaRunState.day == 1:
+		_start_day(BetaRunState.day)
+		return
+	_open_vic_note_and_then_start_day()
+
+
+## Later-day opening gate: shows Vic's morning note before `_start_day` arms
+## the chain interactables. The chain stays at STAGE_VIC_NOTE while the note
+## is on screen; dismissal advances to STAGE_TALK_TO_CUSTOMER via
+## `_on_vic_note_dismissed`.
 func _open_vic_note_and_then_start_day() -> void:
 	# Force the rail back into note-phase copy regardless of where the prior
 	# day's chain left `_stage`. Without this, Day 2's note would render the

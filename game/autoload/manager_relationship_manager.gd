@@ -293,17 +293,11 @@ func _on_day_started(day: int) -> void:
 		)
 		return
 	_last_started_day = day
-	# Beta day-1 owns its own morning-note flow via `BetaManagerNotePanel`
-	# (see `BetaDayOneController._open_vic_note_and_then_start_day`). The
-	# global `MorningNotePanel` would otherwise stack on top of it because
-	# `day_started` fires synchronously inside `_on_summary_continue` before
-	# the beta note panel is opened. Mirrors the beta-active short-circuit
-	# used in `midday_event_system.gd` and `milestone_system.gd`.
-	var tree: SceneTree = get_tree()
-	if (
-		tree != null
-		and tree.get_first_node_in_group("beta_day_one_controller") != null
-	):
+	# Beta owns its first-minute guidance. On a fresh run, GameWorld emits
+	# day_started(1) before the default store scene exists, so the group check
+	# cannot see BetaDayOneController yet; suppress that global Day-1 note
+	# from session state as well as from the active-controller path.
+	if _should_skip_beta_opening_note(day):
 		return
 	_confrontation_emitted_this_day = false
 	var note: Dictionary = select_note_for_day(day)
@@ -319,6 +313,20 @@ func _on_day_started(day: int) -> void:
 		String(note.get("body", "")),
 		bool(note.get("allow_auto_dismiss", true)),
 	)
+
+
+func _should_skip_beta_opening_note(day: int) -> bool:
+	var tree: SceneTree = get_tree()
+	if (
+		tree != null
+		and tree.get_first_node_in_group("beta_day_one_controller") != null
+	):
+		return true
+	if day != 1:
+		return false
+	if GameManager == null:
+		return false
+	return GameManager.current_state == GameManager.State.GAMEPLAY
 
 
 func _on_day_closed(day: int, payload: Dictionary) -> void:

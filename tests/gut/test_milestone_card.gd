@@ -6,7 +6,7 @@ var _card: MilestoneCard
 const _SCENE: PackedScene = preload(
 	"res://game/scenes/ui/milestone_card.tscn"
 )
-const _CONFIRM_ID: String = "employee_register_unlock"
+const _OPENING_ID: String = "employee_register_unlock"
 const _TOAST_ID: String = "ms_test"
 
 
@@ -173,63 +173,57 @@ func test_notification_status_label_is_hidden() -> void:
 	assert_false(_card._status_label.visible, "StatusLabel should be hidden in notification mode")
 
 
-# ── Confirm mode (requires_confirm milestones) ───────────────────────────────
+# ── Opening milestone remains nonblocking ────────────────────────────────────
 
-func test_confirm_milestone_shows_continue_button() -> void:
+func test_opening_milestone_keeps_continue_button_hidden() -> void:
 	_card = _make_card(true)
-	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
-	assert_true(
+	EventBus.milestone_completed.emit(_OPENING_ID, "Showing the Ropes", "Register access unlocked")
+	assert_false(
 		_card._continue_button.visible,
-		"Continue button must be visible for a requires_confirm milestone"
+		"Opening milestone must not require an extra Continue click"
 	)
 
 
-func test_confirm_milestone_grabs_focus_on_open() -> void:
+func test_opening_milestone_does_not_grab_focus() -> void:
 	_card = _make_card(true)
-	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
-	assert_true(
+	EventBus.milestone_completed.emit(_OPENING_ID, "Showing the Ropes", "Register access unlocked")
+	assert_false(
 		_card._continue_button.has_focus(),
-		"Continue button must grab keyboard focus when confirm modal opens"
+		"Opening milestone must not steal keyboard focus from gameplay"
 	)
 
 
-func test_confirm_milestone_pushes_modal_context() -> void:
+func test_opening_milestone_does_not_push_modal_context() -> void:
 	_card = _make_card(true)
 	var baseline: int = InputFocus.depth()
-	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
+	EventBus.milestone_completed.emit(_OPENING_ID, "Showing the Ropes", "Register access unlocked")
 	assert_eq(
-		InputFocus.depth(), baseline + 1,
-		"Confirm modal must push exactly one CTX_MODAL frame"
+		InputFocus.depth(), baseline,
+		"Opening milestone must stay nonblocking and leave InputFocus unchanged"
 	)
-	assert_eq(InputFocus.current(), InputFocus.CTX_MODAL)
 
 
-func test_confirm_milestone_shows_inline_reward() -> void:
+func test_opening_milestone_hides_inline_reward() -> void:
 	_card = _make_card(true)
-	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
-	assert_true(
+	EventBus.milestone_completed.emit(_OPENING_ID, "Showing the Ropes", "Register access unlocked")
+	assert_false(
 		_card._inline_reward_label.visible,
-		"Inline reward label must be visible in confirm mode when reward present"
+		"Inline reward label is confirm-mode only and must stay hidden"
 	)
-	assert_eq(_card._inline_reward_label.text, "Register access unlocked")
 
 
-func test_continue_press_pops_modal_and_hides_card() -> void:
+func test_continue_press_noops_for_opening_milestone() -> void:
 	_card = _make_card(true)
 	var baseline: int = InputFocus.depth()
-	EventBus.milestone_completed.emit(_CONFIRM_ID, "Showing the Ropes", "Register access unlocked")
+	EventBus.milestone_completed.emit(_OPENING_ID, "Showing the Ropes", "Register access unlocked")
 
 	_card._on_continue_pressed()
-	# Skip the slide-out tween for the visibility/state assertion.
-	_card._on_notification_finished()
 
 	assert_eq(
 		InputFocus.depth(), baseline,
-		"Continue press must pop the CTX_MODAL frame back to baseline"
+		"Continue press must not mutate InputFocus for non-confirm milestones"
 	)
-	assert_false(_card._is_showing, "Card should not be showing after continue + finish")
-	assert_false(_card.visible, "Card should be hidden after continue + finish")
-	assert_false(_card._continue_button.visible, "Continue button should be hidden after dismiss")
+	assert_true(_card._is_showing, "Notification should continue its normal auto-dismiss tween")
 
 
 func test_toast_milestone_keeps_continue_button_hidden() -> void:
