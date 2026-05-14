@@ -134,17 +134,30 @@ func _pop_modal_focus() -> void:
 ## still holding a push, and reconciles `ModalQueue` state. A panel freed
 ## before its dispatch turn is cancelled out of the queue; a panel freed
 ## while active auto-pops the dangling frame and drains the next entry.
+##
+## The `push_error` safety net only fires when the panel is freed while
+## CTX_MODAL is still on top of InputFocus — that is the real "caller
+## forgot to close()" case the warning is for. When the stack has already
+## been drained (test fixture called `InputFocus._reset_for_tests()` or
+## an engine-shutdown reorder beat us to the pop) the cleanup proceeds
+## silently. Without this gating, every test that mounts a modal-class
+## panel and resets InputFocus in `after_each` produces a cascade of
+## spurious `[ModalPanel] ... freed with unreleased InputFocus push`
+## lines at suite teardown that GUT counts as errors.
 func _exit_tree() -> void:
 	if not _focus_pushed:
 		ModalQueue.cancel(self)
 		return
-	push_error(
-		"[ModalPanel] %s freed with unreleased InputFocus push — auto-popping"
-		% name
+	var still_holds_ctx_modal: bool = (
+		InputFocus.current() == InputFocus.CTX_MODAL
 	)
-	if InputFocus.current() == InputFocus.CTX_MODAL:
-		InputFocus.pop_context()
 	_focus_pushed = false
+	if still_holds_ctx_modal:
+		push_error(
+			"[ModalPanel] %s freed with unreleased InputFocus push — auto-popping"
+			% name
+		)
+		InputFocus.pop_context()
 	# Mirror the matched-pair pop emit so on-screen log surfaces see a
 	# `modal_closed` for the frame this panel held — without it, a panel
 	# that's freed without an explicit `close()` would orphan its

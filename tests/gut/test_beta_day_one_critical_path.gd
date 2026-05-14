@@ -80,6 +80,14 @@ func _press_close_day_confirm(controller: Node) -> void:
 
 
 func after_each() -> void:
+	# Reset the autoload focus/queue stacks BEFORE freeing the scene, so
+	# each panel's `_exit_tree` sees an empty CTX_MODAL frame and skips
+	# the safety-net push_error. Reversing this order (free first, reset
+	# second) produces a cascade of `[ModalPanel] ... freed with
+	# unreleased InputFocus push` lines at suite teardown that GUT counts
+	# as errors — see `modal_panel.gd::_exit_tree`.
+	ModalQueue._reset_for_tests()
+	InputFocus._reset_for_tests()
 	if is_instance_valid(_root):
 		_root.free()
 	_root = null
@@ -89,12 +97,6 @@ func after_each() -> void:
 	# has no customer events), which causes the chain-advance early-return
 	# to fire and the chain stage to never leave talk_to_customer.
 	BetaRunState.reset_new_run()
-	# Drop any modal-queue / focus state the freed scene's panels left
-	# behind. _exit_tree on each freed panel already auto-pops dangling
-	# CTX_MODAL frames, but resetting here keeps the next test's assertions
-	# independent of that teardown ordering.
-	ModalQueue._reset_for_tests()
-	InputFocus._reset_for_tests()
 
 
 # ── Layout: customer is at the register, day-end is on the counter ──────────

@@ -39,10 +39,14 @@ func after_each() -> void:
 			)
 			if panel != null and panel.visible:
 				panel.close()
-		_root.free()
-	_root = null
+	# Reset autoload state BEFORE freeing the scene so panel `_exit_tree`
+	# sees an empty CTX_MODAL stack and skips the safety-net push_error
+	# (`modal_panel.gd::_exit_tree`).
 	ModalQueue._reset_for_tests()
 	InputFocus._reset_for_tests()
+	if is_instance_valid(_root):
+		_root.free()
+	_root = null
 
 
 # ── Standalone panel: focus, signal, body, modal contract ───────────────────

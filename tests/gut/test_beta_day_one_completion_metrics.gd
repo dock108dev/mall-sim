@@ -34,12 +34,16 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	# Reset autoload state BEFORE freeing the scene so each panel's
+	# `_exit_tree` sees an empty CTX_MODAL stack and skips the safety-net
+	# push_error in `modal_panel.gd::_exit_tree`. Reversed ordering
+	# produces a teardown cascade GUT treats as failures.
+	ModalQueue._reset_for_tests()
+	InputFocus._reset_for_tests()
 	if is_instance_valid(_root):
 		_root.free()
 	_root = null
 	BetaRunState.reset_new_run()
-	ModalQueue._reset_for_tests()
-	InputFocus._reset_for_tests()
 
 
 func _controller() -> Node:

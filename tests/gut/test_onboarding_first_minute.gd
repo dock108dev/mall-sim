@@ -40,6 +40,12 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	# Reset modal/focus stacks FIRST so panel `_exit_tree` calls see an
+	# empty CTX_MODAL frame and skip the safety-net push_error. Reversing
+	# the order produces a cascade of "freed with unreleased InputFocus
+	# push" lines that GUT treats as errors.
+	ModalQueue._reset_for_tests()
+	InputFocus._reset_for_tests()
 	if is_instance_valid(_milestone_card):
 		_milestone_card._reset_for_tests()
 		_milestone_card.free()
@@ -48,8 +54,6 @@ func after_each() -> void:
 		_root.free()
 	_root = null
 	BetaRunState.reset_new_run()
-	ModalQueue._reset_for_tests()
-	InputFocus._reset_for_tests()
 
 
 func _beta_controller() -> BetaDayOneController:

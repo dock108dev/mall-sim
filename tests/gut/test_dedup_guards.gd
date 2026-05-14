@@ -51,14 +51,18 @@ func after_each() -> void:
 			)
 			if panel != null and panel.visible:
 				panel.close()
+	# Reset autoload state BEFORE freeing the scene so panel `_exit_tree`
+	# sees an empty CTX_MODAL stack and skips the safety-net push_error
+	# (`modal_panel.gd::_exit_tree`).
+	ModalQueue._reset_for_tests()
+	InputFocus._reset_for_tests()
+	if is_instance_valid(_root):
 		_root.free()
 	_root = null
 	BetaRunState.reset_new_run()
 	TutorialContextSystem.clear_active_context()
 	TutorialContextSystem.reload()
 	GameManager.current_state = _saved_state
-	ModalQueue._reset_for_tests()
-	InputFocus._reset_for_tests()
 
 
 func _on_tutorial_context_entered(
