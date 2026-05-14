@@ -108,6 +108,12 @@ func _setup_notification_mode() -> void:
 	_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_continue_button.pressed.connect(_on_continue_pressed)
 	EventBus.milestone_completed.connect(_on_milestone_completed)
+	# Defer onto the internal queue while a ModalQueue panel is active, so
+	# a milestone firing during the Vic-note spawn window does not slide in
+	# on top of the note and push CTX_MODAL onto a stacked frame. When the
+	# foreground modal closes (`active_panel == null`), drain whatever
+	# milestones piled up while we were waiting.
+	ModalQueue.active_changed.connect(_on_modal_queue_active_changed)
 
 
 func _setup_row_mode() -> void:
@@ -144,10 +150,28 @@ func _on_milestone_completed(
 		"description": desc,
 		"reward": reward_description,
 	}
-	if _is_showing:
+	# Brief: "there is at most one blocking modal open." A ModalQueue panel
+	# in the active slot owns the foreground — even when it is a passive
+	# overlay like the Vic note that does not push CTX_MODAL itself, a
+	# milestone confirm card firing into the same window stacks two
+	# surfaces over the player. Hold the entry until the queue drains.
+	if _is_showing or ModalQueue.is_busy():
 		_queue.append(entry)
 	else:
 		_show_notification(entry)
+
+
+func _on_modal_queue_active_changed(active: ModalPanel) -> void:
+	# Drain any milestones we deferred while the foreground modal was up.
+	# Only fires the next one — `_on_notification_finished` continues the
+	# chain after that, matching the existing intra-card queue contract.
+	if active != null:
+		return
+	if _is_showing:
+		return
+	if _queue.is_empty():
+		return
+	_show_notification(_queue.pop_front())
 
 
 func _show_notification(entry: Dictionary) -> void:

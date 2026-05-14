@@ -242,6 +242,13 @@ func _render_steps(steps: Array) -> void:
 		_steps_container.visible = false
 		return
 	_steps_container.visible = true
+	# Brief: "each objective label appears once" — the rail's main label
+	# (`_objective_label`) already carries the active beat text, so an
+	# active-state step slot rendering the same string is a visible dup.
+	# Skip the active slot when its text matches the main label; the
+	# active highlight survives via `_objective_label`'s own styling, and
+	# completed/future rows still surface the chain progress.
+	var active_label_text: String = _objective_label.text.strip_edges()
 	for i: int in range(_step_slots.size()):
 		var slot: Label = _step_slots[i]
 		if i >= steps.size() or i >= _STEP_MAX_SLOTS:
@@ -251,6 +258,10 @@ func _render_steps(steps: Array) -> void:
 		var step: Dictionary = steps[i] as Dictionary
 		var step_text: String = str(step.get("text", ""))
 		var state: String = str(step.get("state", "future"))
+		if state == "active" and step_text.strip_edges() == active_label_text:
+			slot.visible = false
+			slot.text = ""
+			continue
 		slot.visible = true
 		match state:
 			"completed":
