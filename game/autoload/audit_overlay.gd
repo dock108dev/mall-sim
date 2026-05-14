@@ -23,6 +23,15 @@ const _COLOR_PENDING := Color(0.65, 0.65, 0.65)
 const _PANEL_WIDTH := 320.0
 const _ENTRY_ROWS: int = 10
 
+const _PHASE_NAMES: Dictionary = {
+	TimeSystem.DayPhase.PRE_OPEN: "PRE_OPEN",
+	TimeSystem.DayPhase.MORNING_RAMP: "MORNING_RAMP",
+	TimeSystem.DayPhase.MIDDAY_RUSH: "MIDDAY_RUSH",
+	TimeSystem.DayPhase.AFTERNOON: "AFTERNOON",
+	TimeSystem.DayPhase.EVENING: "EVENING",
+	TimeSystem.DayPhase.LATE_EVENING: "LATE_EVENING",
+}
+
 var _results: Dictionary = {}
 var _last_interactable: String = "none"
 ## Beta shelf/back-room counts mirror the values driven by
@@ -359,33 +368,21 @@ func _refresh_braindump_fields(active_panel_name: String, queued_count: int) -> 
 
 
 func _phase_name(phase: int) -> String:
-	match phase:
-		TimeSystem.DayPhase.PRE_OPEN:
-			return "PRE_OPEN"
-		TimeSystem.DayPhase.MORNING_RAMP:
-			return "MORNING_RAMP"
-		TimeSystem.DayPhase.MIDDAY_RUSH:
-			return "MIDDAY_RUSH"
-		TimeSystem.DayPhase.AFTERNOON:
-			return "AFTERNOON"
-		TimeSystem.DayPhase.EVENING:
-			return "EVENING"
-		TimeSystem.DayPhase.LATE_EVENING:
-			return "LATE_EVENING"
-		_:
-			# §EH-40 — Drift surface, mirrors EventLog._format_message
-			# default arm. A new TimeSystem.DayPhase value reaching this
-			# function is a wiring drift the audit overlay should surface
-			# instead of silently swallowing as "UNKNOWN".
-			if OS.is_debug_build():
-				push_warning(
-					(
-						"AuditOverlay._phase_name: unmapped DayPhase '%d' "
-						+ "— rendering as 'UNKNOWN'. Add the phase to the "
-						+ "match in audit_overlay.gd."
-					) % phase
-				)
-			return "UNKNOWN"
+	if _PHASE_NAMES.has(phase):
+		return String(_PHASE_NAMES[phase])
+	# §EH-40 — Drift surface, mirrors EventLog._format_message
+	# default arm. A new TimeSystem.DayPhase value reaching this
+	# function is a wiring drift the audit overlay should surface
+	# instead of silently swallowing as "UNKNOWN".
+	if OS.is_debug_build():
+		push_warning(
+			(
+				"AuditOverlay._phase_name: unmapped DayPhase '%d' "
+				+ "— rendering as 'UNKNOWN'. Add the phase to the "
+				+ "match in audit_overlay.gd."
+			) % phase
+		)
+	return "UNKNOWN"
 
 
 ## Locates the Day-1 controller via its `beta_day_one_controller` group

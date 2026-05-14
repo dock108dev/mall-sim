@@ -34,6 +34,22 @@ var _last_customer_state_order: Array[int] = []
 ## the storage path but keep the EventBus.event_logged broadcast active so
 ## the on-screen panel still receives entries.
 var _buffer_enabled: bool = OS.is_debug_build()
+## Probabilistic sweep tests (`test_customer_purchase`,
+## `test_day1_first_sale_probability`) push thousands of FSM transitions
+## through `_record` in a tight loop. Each `event_logged` emit can fan out
+## to `BetaEventLogPanel` listeners that allocate UI nodes per row —
+## benign in gameplay but a 200×/iter slowdown in those sweeps. Tests
+## that drive the customer FSM at sweep rates flip this off around their
+## loop and restore it after, leaving the ring buffer / stdout side
+## unchanged for diagnostic visibility.
+var _broadcast_enabled: bool = true
+
+
+## Lets sweep tests disable the `event_logged` fan-out around tight FSM
+## loops. Always restore to `true` in `after_each` so subsequent tests
+## see the normal broadcast path.
+func set_broadcast_enabled(enabled: bool) -> void:
+	_broadcast_enabled = enabled
 
 
 func _ready() -> void:
@@ -210,10 +226,12 @@ func _record(
 		"params": params,
 		"msec": Time.get_ticks_msec(),
 	}
-	# Player-facing broadcast must always fire — the on-screen bottom-left
-	# log surface is a shipped UI affordance, not a debug overlay. The ring
-	# buffer storage below stays debug-gated for perf and disk-noise reasons.
-	EventBus.event_logged.emit(tag, _format_message(action, target, params))
+	# Player-facing broadcast — fires in every build so the on-screen
+	# bottom-left log surface stays in sync. Gated by `_broadcast_enabled`
+	# so probabilistic sweep tests can mute the fan-out around their
+	# loops; the ring buffer / stdout side below stays unchanged.
+	if _broadcast_enabled:
+		EventBus.event_logged.emit(tag, _format_message(action, target, params))
 	if not _buffer_enabled:
 		return
 	_ring.append(entry)
@@ -227,40 +245,42 @@ func _record(
 ## Keeps each per-tag shape tight — the surface caps width at ~260 px and
 ## relies on these strings staying short.
 func _format_message(action: String, target: String, params: Dictionary) -> String:
+	var result: String = ""
 	match action:
 		"stock":
-			return "Stocked %s." % str(params.get("item_id", ""))
+			result = "Stocked %s." % str(params.get("item_id", ""))
 		"remove":
-			return "Sold %s." % str(params.get("item_id", ""))
+			result = "Sold %s." % str(params.get("item_id", ""))
 		"state_change":
-			return "%s -> %s" % [
+			result = "%s -> %s" % [
 				str(params.get("from_state", "?")),
 				str(params.get("to_state", "?")),
 			]
 		"customer_exit":
 			var satisfied: bool = bool(params.get("satisfied", true))
-			return "Customer left (%s)." % ("satisfied" if satisfied else "unhappy")
+			result = "Customer left (%s)." % ("satisfied" if satisfied else "unhappy")
 		"day_started":
-			return "Day %d started." % int(params.get("day", 0))
+			result = "Day %d started." % int(params.get("day", 0))
 		"stat_changed":
 			var stat: String = str(params.get("stat", ""))
 			if stat == "money":
 				var delta: float = float(params.get("delta", 0.0))
 				var sign: String = "+" if delta >= 0.0 else "-"
-				return "Money %s$%.2f." % [sign, abs(delta)]
-			return "%s changed." % stat
+				result = "Money %s$%.2f." % [sign, abs(delta)]
+			else:
+				result = "%s changed." % stat
 		"game_started":
-			return "Game started."
+			result = "Game started."
 		"modal_opened":
-			return "Modal opened: %s." % str(params.get("modal_id", ""))
+			result = "Modal opened: %s." % str(params.get("modal_id", ""))
 		"modal_closed":
-			return "Modal closed: %s." % str(params.get("modal_id", ""))
+			result = "Modal closed: %s." % str(params.get("modal_id", ""))
 		"objective_completed":
 			# Past-tense `label` is the player-facing completion copy supplied
 			# by the chain controller (see
 			# `BetaDayOneController._objective_completion_label`); the log row
 			# is just that label verbatim.
-			return str(params.get("label", ""))
+			result = str(params.get("label", ""))
 		_:
 			# §EH-39 — Drift surface: a new `action` token added to
 			# `_record` callers without a matching case here will land on
@@ -278,9 +298,8 @@ func _format_message(action: String, target: String, params: Dictionary) -> Stri
 						+ "facing string."
 					) % [action, target]
 				)
-			if target.is_empty():
-				return action
-			return "%s %s" % [action, target]
+			result = action if target.is_empty() else "%s %s" % [action, target]
+	return result
 
 
 func _print_entry(entry: Dictionary) -> void:

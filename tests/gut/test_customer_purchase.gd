@@ -39,6 +39,13 @@ func before_each() -> void:
 	_item = ItemInstance.create_from_definition(_definition, "good")
 
 
+func after_each() -> void:
+	# Safety net: the conversion-rate sweep mutes EventLog's broadcast
+	# around its 2000-iter loop. If the loop bails out before its inline
+	# restore the broadcast would stay muted into the next test.
+	EventLog.set_broadcast_enabled(true)
+
+
 func test_customer_with_budget_above_item_price_attempts_purchase() -> void:
 	_item.player_set_price = 40.0
 	var customer: Customer = _make_customer()
@@ -111,12 +118,14 @@ func test_conversion_rate_matches_expected_probability() -> void:
 	var purchases: int = 0
 
 	seed(12345)
+	EventLog.set_broadcast_enabled(false)
 	for _i: int in range(SAMPLE_SIZE):
 		customer.current_state = Customer.State.DECIDING
 		customer._desired_item = _item
 		customer._process_deciding()
 		if customer.current_state == Customer.State.PURCHASING:
 			purchases += 1
+	EventLog.set_broadcast_enabled(true)
 
 	var actual_probability: float = float(purchases) / float(SAMPLE_SIZE)
 	assert_almost_eq(

@@ -55,6 +55,9 @@ func before_each() -> void:
 func after_each() -> void:
 	GameManager.set_current_day(_saved_day)
 	GameState.reset_new_game()
+	# Safety net: if a sweep loop bails out before its inline restore the
+	# broadcast would stay muted into the next test. Always re-enable.
+	EventLog.set_broadcast_enabled(true)
 	# Restore non-determinism so probabilistic tests in other files don't
 	# inherit the seed set by the conversion-rate sweeps below.
 	randomize()
@@ -74,12 +77,14 @@ func test_day1_first_sale_overrides_weak_profile_to_guaranteed_purchase() -> voi
 	var purchases: int = 0
 
 	seed(54321)
+	EventLog.set_broadcast_enabled(false)
 	for _i: int in range(SAMPLE_SIZE):
 		customer.current_state = Customer.State.DECIDING
 		customer._desired_item = _item
 		customer._process_deciding()
 		if customer.current_state == Customer.State.PURCHASING:
 			purchases += 1
+	EventLog.set_broadcast_enabled(true)
 
 	var rate: float = float(purchases) / float(SAMPLE_SIZE)
 	assert_gte(
@@ -95,12 +100,14 @@ func test_after_first_sale_flag_set_normal_model_resumes() -> void:
 	var purchases: int = 0
 
 	seed(54321)
+	EventLog.set_broadcast_enabled(false)
 	for _i: int in range(SAMPLE_SIZE):
 		customer.current_state = Customer.State.DECIDING
 		customer._desired_item = _item
 		customer._process_deciding()
 		if customer.current_state == Customer.State.PURCHASING:
 			purchases += 1
+	EventLog.set_broadcast_enabled(true)
 
 	var rate: float = float(purchases) / float(SAMPLE_SIZE)
 	# Standard model with base 0.3 and no category match yields well under

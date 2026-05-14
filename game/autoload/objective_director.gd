@@ -19,6 +19,7 @@ const DAY1_STEP_BACK_ROOM_INVENTORY: int = 1
 const DAY1_STEP_STOCK_SHELF: int = 2
 const DAY1_STEP_CLOSE_DAY: int = 3
 const DAY1_STEP_COUNT: int = 4
+const _HIDDEN_PAYLOAD_HASH: String = "__hidden__"
 
 var _day_objectives: Dictionary = {}
 var _defaults: Dictionary = {}
@@ -47,7 +48,6 @@ var _waiting_for_note_dismiss: bool = false
 ## rail's 1-second flash tween for an unchanged objective. Reset to "" on
 ## every `day_started` so the first emit of a new day always fires.
 var _last_payload_hash: String = ""
-const _HIDDEN_PAYLOAD_HASH: String = "__hidden__"
 
 
 func _ready() -> void:
