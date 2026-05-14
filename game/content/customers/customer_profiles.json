@@ -106,7 +106,9 @@
       "id": "food_court_camper",
       "name": "Food Court Camper",
       "description": "Came for the pretzels, stayed for the air conditioning.",
-      "store_types": [],
+      "store_types": [
+        "retro_games"
+      ],
       "budget_range": [
         10.0,
         40.0

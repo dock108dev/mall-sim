@@ -158,11 +158,14 @@ func _exit_tree() -> void:
 			% name
 		)
 		InputFocus.pop_context()
-	# Mirror the matched-pair pop emit so on-screen log surfaces see a
-	# `modal_closed` for the frame this panel held — without it, a panel
-	# that's freed without an explicit `close()` would orphan its
-	# `modal_opened` entry in the log timeline.
-	EventBus.modal_closed.emit(name)
+		# Mirror the matched-pair pop emit so on-screen log surfaces see a
+		# `modal_closed` for the frame this panel held — without it, the
+		# `modal_opened` entry that opened the panel would orphan in the
+		# log timeline. Gated to the real-leak branch only; the silent
+		# cleanup path (test fixture pre-reset the stack) has no
+		# corresponding `modal_opened` to balance and the emit would just
+		# noise up the `[MODAL]` event log at teardown.
+		EventBus.modal_closed.emit(name)
 	ModalQueue.notify_closed(self)
 
 

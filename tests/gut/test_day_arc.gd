@@ -103,14 +103,17 @@ func test_full_sequence_1_3_10_14_30() -> void:
 	for day: int in [1, 3, 10, 14, 30]:
 		_day_manager._check_arc_unlocks(day)
 
-	assert_eq(_collected_unlocks.size(), 2, "Exactly 2 unlocks in sequence")
+	# arc_unlocks.json currently defines a single arc unlock
+	# (`regulars_enabled` at day 3) — `tournament_events` was removed
+	# in the strip-to-bones refactor. Update this count if the file
+	# regains additional unlocks.
+	assert_eq(_collected_unlocks.size(), 1, "Exactly 1 unlock in sequence")
 
 	var ids: Array = []
 	for entry: Dictionary in _collected_unlocks:
 		ids.append(entry["unlock_id"])
 
 	assert_true(ids.has("regulars_enabled"), "regulars_enabled must fire")
-	assert_true(ids.has("tournament_events"), "tournament_events must fire")
 
 
 func test_each_unlock_fires_exactly_once() -> void:
@@ -125,11 +128,11 @@ func test_each_unlock_fires_exactly_once() -> void:
 
 func test_unlock_not_retroactively_fired_on_later_days() -> void:
 	_day_manager._check_arc_unlocks(30)
-	# Both configured thresholds (3, 10) should fire together at day 30 since
-	# it's the first call and day >= all thresholds. Update this count if
-	# arc_unlocks.json gains another entry.
+	# Only `regulars_enabled` (day 3) is configured in arc_unlocks.json
+	# today; a first check on day 30 fires every past-threshold unlock,
+	# which is one. Update this count if the file gains more entries.
 	assert_eq(
-		_collected_unlocks.size(), 2,
+		_collected_unlocks.size(), 1,
 		"All past-threshold unlocks fire on first check"
 	)
 	# Calling again must not re-fire.

@@ -143,18 +143,28 @@ func test_checkout_register_node_is_disabled() -> void:
 
 
 func test_only_checkout_counter_register_is_enabled() -> void:
+	# Two distinct register-location actions ship enabled in the beta
+	# Day-1 chain: `checkout_counter/Interactable` (ring up the customer
+	# via `RegisterInteractable`) and `BetaDayEndTrigger/Interactable`
+	# (close the day via `BetaDayEndTriggerInteractable`). Both set
+	# `interaction_type = REGISTER` in their `_ready` because they share
+	# the register face as their prompt anchor. `Checkout/Register` —
+	# the legacy placeholder Area3D — must stay disabled (covered by
+	# `test_checkout_register_node_is_disabled`).
 	var enabled_registers: Array[Interactable] = []
 	_collect_enabled_register_interactables(_root, enabled_registers)
+	var parents: Array[String] = []
+	for i: Interactable in enabled_registers:
+		parents.append(i.get_parent().name)
+	parents.sort()
 	assert_eq(
-		enabled_registers.size(), 1,
-		"Exactly one REGISTER interactable must be enabled in the scene"
+		parents,
+		["BetaDayEndTrigger", "checkout_counter"] as Array[String],
+		(
+			"Enabled REGISTER interactables must be exactly the "
+			+ "ring-up + close-day pair; got: %s"
+		) % str(parents)
 	)
-	if enabled_registers.size() == 1:
-		assert_eq(
-			enabled_registers[0].get_parent().name,
-			"checkout_counter",
-			"The sole enabled REGISTER interactable must be checkout_counter/Interactable"
-		)
 
 
 func test_checkout_counter_has_no_duplicate_mesh() -> void:

@@ -66,11 +66,11 @@ func after_each() -> void:
 		_fake_transition.free()
 
 
-## GAMEPLAY_SCENE_PATH must be mall_hub.tscn — the hub is the direct destination.
-func test_gameplay_scene_path_is_mall_hub() -> void:
+## GAMEPLAY_SCENE_PATH must be gameplay_shell.tscn — the hub is the direct destination.
+func test_gameplay_scene_path_is_gameplay_shell() -> void:
 	assert_true(
-		GameManager.GAMEPLAY_SCENE_PATH.ends_with("mall_hub.tscn"),
-		"GAMEPLAY_SCENE_PATH must end with mall_hub.tscn, not an intermediate scene"
+		GameManager.GAMEPLAY_SCENE_PATH.ends_with("gameplay_shell.tscn"),
+		"GAMEPLAY_SCENE_PATH must end with gameplay_shell.tscn, not an intermediate scene"
 	)
 
 
@@ -82,8 +82,8 @@ func test_gameplay_path_does_not_route_through_game_world() -> void:
 	)
 
 
-## New Game: start_new_game() queues mall_hub.tscn, no intermediate screen.
-func test_new_game_queues_mall_hub_scene() -> void:
+## New Game: start_new_game() queues gameplay_shell.tscn, no intermediate screen.
+func test_new_game_queues_gameplay_scene() -> void:
 	GameManager.start_new_game()
 
 	assert_eq(
@@ -91,13 +91,13 @@ func test_new_game_queues_mall_hub_scene() -> void:
 		"start_new_game must queue exactly one scene transition"
 	)
 	assert_true(
-		_fake_transition.requested_paths[0].ends_with("mall_hub.tscn"),
-		"New game transition must target mall_hub.tscn"
+		_fake_transition.requested_paths[0].ends_with("gameplay_shell.tscn"),
+		"New game transition must target gameplay_shell.tscn"
 	)
 
 
-## Continue: load_game() also lands on mall_hub.tscn.
-func test_load_game_queues_mall_hub_scene() -> void:
+## Continue: load_game() also lands on gameplay_shell.tscn.
+func test_load_game_queues_gameplay_scene() -> void:
 	GameManager.load_game(1)
 
 	assert_eq(
@@ -105,8 +105,8 @@ func test_load_game_queues_mall_hub_scene() -> void:
 		"load_game must queue exactly one scene transition"
 	)
 	assert_true(
-		_fake_transition.requested_paths[0].ends_with("mall_hub.tscn"),
-		"Continue/load transition must target mall_hub.tscn"
+		_fake_transition.requested_paths[0].ends_with("gameplay_shell.tscn"),
+		"Continue/load transition must target gameplay_shell.tscn"
 	)
 
 
@@ -173,8 +173,8 @@ func test_start_game_session_negative_slot_routes_to_hub() -> void:
 		"_start_game_session(-1) must trigger a scene transition"
 	)
 	assert_true(
-		_fake_transition.requested_paths[0].ends_with("mall_hub.tscn"),
-		"New game from menu must land on mall_hub.tscn"
+		_fake_transition.requested_paths[0].ends_with("gameplay_shell.tscn"),
+		"New game from menu must land on gameplay_shell.tscn"
 	)
 
 
@@ -189,6 +189,6 @@ func test_start_game_session_with_slot_routes_to_hub() -> void:
 		"_start_game_session(slot) must trigger a scene transition"
 	)
 	assert_true(
-		_fake_transition.requested_paths[0].ends_with("mall_hub.tscn"),
-		"Continue from menu must also land on mall_hub.tscn"
+		_fake_transition.requested_paths[0].ends_with("gameplay_shell.tscn"),
+		"Continue from menu must also land on gameplay_shell.tscn"
 	)

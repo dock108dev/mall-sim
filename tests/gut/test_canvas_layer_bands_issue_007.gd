@@ -7,7 +7,10 @@ extends GutTest
 
 const _BANDS: Dictionary = {
 	"res://game/scenes/world/game_world.tscn": {"name": "UILayer", "layer": 5},
-	"res://game/scenes/mall/mall_hub.tscn": {"name": "HubLayer", "layer": 20},
+	# mall_hub.tscn was removed in 701603f ("Delete the four doomed stores").
+	# The HUB_CHROME band (layer 20) is still asserted in
+	# `test_ui_layers_constants_match_band_table` below so the constant
+	# stays reserved if the hub scene comes back.
 	"res://game/scenes/ui/hud.tscn": {"name": "HUD", "layer": 30},
 	"res://game/scenes/ui/objective_rail.tscn": {"name": "ObjectiveRail", "layer": 40},
 	"res://game/scenes/ui/tutorial_overlay.tscn": {"name": "TutorialOverlay", "layer": 50},

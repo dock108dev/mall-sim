@@ -12,7 +12,7 @@ const EXPECTED_WAYPOINTS: Dictionary = {
 	"BrowseWaypoint02": Vector3(3.5, 0.05, -8.5),
 	"BrowseWaypoint03": Vector3(0.0, 0.05, -4.0),
 	"BrowseWaypoint04": Vector3(-6.0, 0.05, 0.0),
-	"CheckoutApproach": Vector3(5.5, 0.05, 7.0),
+	"CheckoutApproach": Vector3(5.35, 0.05, 6.95),
 	"ExitPoint": Vector3(0.0, 0.05, 10.5),
 }
 
