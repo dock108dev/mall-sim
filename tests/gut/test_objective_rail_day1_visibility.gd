@@ -444,3 +444,87 @@ func test_steps_absent_blanks_every_slot() -> void:
 			"Every slot must be blanked when the payload drops the steps key"
 		)
 		assert_false(slot.visible)
+
+
+# ── AccentBand visual weight ──────────────────────────────────────────────────
+#
+# The bottom AccentBand is a subtle warm separator, not a heavy strip. The rail
+# must render it in the amber tone (~#E8A547) at a reduced alpha so the bottom
+# of the screen does not read as a permanent debug console. Anchors stay pinned
+# full-width to the bottom edge.
+
+func test_accent_band_color_is_warm_amber() -> void:
+	var rail := _make_rail()
+	var band: ColorRect = rail.get_node("AccentBand") as ColorRect
+	assert_not_null(band, "AccentBand node must exist on the rail")
+	# Hue match against ACCENT_COLOR_AMBER (the single source of truth for the
+	# warm amber tone); alpha is checked separately by the weight-reduction
+	# test so this assertion stays orthogonal.
+	assert_almost_eq(
+		band.color.r, UIThemeConstants.ACCENT_COLOR_AMBER.r, 0.01,
+		"AccentBand red channel must match ACCENT_COLOR_AMBER"
+	)
+	assert_almost_eq(
+		band.color.g, UIThemeConstants.ACCENT_COLOR_AMBER.g, 0.01,
+		"AccentBand green channel must match ACCENT_COLOR_AMBER"
+	)
+	assert_almost_eq(
+		band.color.b, UIThemeConstants.ACCENT_COLOR_AMBER.b, 0.01,
+		"AccentBand blue channel must match ACCENT_COLOR_AMBER"
+	)
+
+
+func test_accent_band_rendered_alpha_is_reduced() -> void:
+	# Rendered alpha = color.a × modulate.a. Must sit at or below 0.55 so the
+	# band reads as a subtle warm separator, not a heavy bar.
+	var rail := _make_rail()
+	var band: ColorRect = rail.get_node("AccentBand") as ColorRect
+	var rendered_alpha: float = band.color.a * band.modulate.a
+	assert_lte(
+		rendered_alpha, 0.55,
+		"AccentBand rendered alpha (%.3f) must sit at or below 0.55"
+			% rendered_alpha
+	)
+
+
+func test_accent_band_remains_full_width_and_bottom_pinned() -> void:
+	# Layout contract: the band spans the viewport width and pins to the
+	# bottom (offsets are negative, anchored at bottom). Reducing visual weight
+	# must not break the anchor geometry.
+	var rail := _make_rail()
+	var band: ColorRect = rail.get_node("AccentBand") as ColorRect
+	assert_eq(band.anchor_left, 0.0, "AccentBand anchor_left stays at 0.0")
+	assert_eq(band.anchor_right, 1.0, "AccentBand anchor_right stays at 1.0")
+	assert_eq(band.anchor_top, 1.0, "AccentBand anchor_top stays at 1.0")
+	assert_eq(band.anchor_bottom, 1.0, "AccentBand anchor_bottom stays at 1.0")
+	assert_lt(band.offset_top, 0.0, "AccentBand offset_top stays negative (bottom-pinned)")
+	assert_lte(
+		band.offset_bottom, 0.0,
+		"AccentBand offset_bottom stays at or above the viewport bottom"
+	)
+
+
+func test_accent_band_color_unchanged_by_store_entry() -> void:
+	# Hub and store share the same subtle amber separator — the band is no
+	# longer a per-context status indicator. Entering and exiting a store must
+	# leave the rendered band color and alpha at the amber default.
+	var rail := _make_rail()
+	var band: ColorRect = rail.get_node("AccentBand") as ColorRect
+	EventBus.store_entered.emit(&"retro_games")
+	assert_almost_eq(
+		band.color.r, UIThemeConstants.ACCENT_COLOR_AMBER.r, 0.01,
+		"AccentBand red channel must stay amber after store_entered"
+	)
+	assert_lte(
+		band.color.a * band.modulate.a, 0.55,
+		"AccentBand rendered alpha must stay reduced after store_entered"
+	)
+	EventBus.store_exited.emit(&"retro_games")
+	assert_almost_eq(
+		band.color.r, UIThemeConstants.ACCENT_COLOR_AMBER.r, 0.01,
+		"AccentBand red channel must stay amber after store_exited"
+	)
+	assert_lte(
+		band.color.a * band.modulate.a, 0.55,
+		"AccentBand rendered alpha must stay reduced after store_exited"
+	)

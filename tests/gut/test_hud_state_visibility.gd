@@ -104,11 +104,22 @@ func test_store_view_shows_close_day_button() -> void:
 	assert_true(btn.visible, "Close Day must be visible in STORE_VIEW")
 
 
-func test_store_view_shows_items_placed_label() -> void:
+func test_store_view_hides_items_placed_label() -> void:
+	# BetaRightPanel owns the shelf-count readout; the TopBar copy is hidden
+	# in every gameplay state so the two do not render concurrently.
 	_emit_state(GameManager.State.STORE_VIEW)
-	assert_true(
+	assert_false(
 		_hud.get_node("TopBar/ItemsPlacedLabel").visible,
-		"ItemsPlacedLabel must be visible in STORE_VIEW"
+		"ItemsPlacedLabel must be hidden in STORE_VIEW — BetaRightPanel owns the shelf count"
+	)
+
+
+func test_store_view_hides_back_room_label() -> void:
+	# BetaRightPanel owns the back-room count; TopBar copy stays hidden.
+	_emit_state(GameManager.State.STORE_VIEW)
+	assert_false(
+		_hud.get_node("TopBar/BackRoomLabel").visible,
+		"BackRoomLabel must be hidden in STORE_VIEW — BetaRightPanel owns the back-room count"
 	)
 
 
@@ -120,11 +131,12 @@ func test_store_view_hides_customers_label() -> void:
 	)
 
 
-func test_store_view_shows_sales_today_label() -> void:
+func test_store_view_hides_sales_today_label() -> void:
+	# BetaRightPanel owns the sold-today readout; TopBar copy stays hidden.
 	_emit_state(GameManager.State.STORE_VIEW)
-	assert_true(
+	assert_false(
 		_hud.get_node("TopBar/SalesTodayLabel").visible,
-		"SalesTodayLabel must be visible in STORE_VIEW"
+		"SalesTodayLabel must be hidden in STORE_VIEW — BetaRightPanel owns the sold-today count"
 	)
 
 

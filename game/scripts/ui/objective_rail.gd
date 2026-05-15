@@ -39,6 +39,11 @@ const _STEP_PREFIX_COMPLETED: String = "✓ "
 const _STEP_FUTURE_ALPHA: float = 0.5
 const _STEP_MAX_SLOTS: int = 4
 
+## Rendered alpha for the AccentBand. The band keeps its 4px height and
+## full-width anchor; lowering the color's alpha makes the line a subtle warm
+## separator rather than a heavy debug-console bar at the bottom of the screen.
+const _BAND_ALPHA: float = 0.5
+
 var _auto_hidden: bool = false
 var _current_payload: Dictionary = {}
 var _show_rail: bool = true
@@ -119,7 +124,7 @@ func _ready() -> void:
 	# null at `_ready()` time. Removed so a signal rename fails parse instead
 	# of silently disabling the modal-dim behaviour.
 	InputFocus.context_changed.connect(_on_input_focus_changed)
-	_band.color = Color.html("#5BB8E8")
+	_band.color = _amber_band_color()
 	_step_slots = [
 		$MarginContainer/ContentColumn/StepsContainer/StepSlot0 as Label,
 		$MarginContainer/ContentColumn/StepsContainer/StepSlot1 as Label,
@@ -453,15 +458,21 @@ func _flash() -> void:
 	_tween.tween_property(_margin, "modulate:a", 1.0, 1.0)
 
 
-## Sets the accent band color to reflect the active store identity.
-## Unknown store IDs fall back to the hub default.
-func _on_store_entered(store_id: StringName) -> void:
-	match store_id:
-		&"retro_games":
-			_band.color = Color.html("#E8A547")  # CRT Amber
-		_:
-			_band.color = Color.html("#5BB8E8")  # Hub accent_interact
+## Sets the accent band color to the warm amber separator. The hub and the
+## store share the same subtle amber line — the band reads as a quiet visual
+## anchor for the rail, not a per-context status indicator.
+func _on_store_entered(_store_id: StringName) -> void:
+	_band.color = _amber_band_color()
 
 
 func _on_store_exited(_store_id: StringName) -> void:
-	_band.color = Color.html("#5BB8E8")  # Hub accent_interact
+	_band.color = _amber_band_color()
+
+
+## Returns the amber accent tone with the band's reduced alpha applied. Routes
+## through `UIThemeConstants.ACCENT_COLOR_AMBER` so the rail's separator stays
+## anchored to the single source of truth for the warm amber tone.
+func _amber_band_color() -> Color:
+	var c: Color = UIThemeConstants.ACCENT_COLOR_AMBER
+	c.a = _BAND_ALPHA
+	return c

@@ -1,31 +1,39 @@
 ## Bottom-left on-screen event log surface for the beta Day-1 loop.
 ##
 ## Subscribes to `EventBus.event_logged(tag, message)` and renders the
-## most-recent entries as a stacked list of `[TAG] message` rows. Tag tokens
-## are color-coded per event type; message text uses the same 60% white tier
-## as the right stats panel rows. Player-facing — not a debug overlay — so
-## it ships in release builds. Pairs with `EventLog`, which emits
-## `event_logged` unconditionally even though its ring buffer is debug-only.
+## most-recent entries as a stacked list of message-only `Label` rows. The
+## bracket-wrapped tag (e.g. `[STOCK]`) drives the row's font_color via
+## `_TAG_COLORS` but is stripped from the visible text — the underlying
+## `[TAG] message` shape lives only on the signal payload. Player-facing —
+## not a debug overlay — so it ships in release builds. Pairs with
+## `EventLog`, which emits `event_logged` unconditionally even though its
+## ring buffer is debug-only.
 ##
-## Visual contract mirrors `BetaTodayStatsPanel` so the two surfaces read as
+## Visual contract mirrors `BetaRightPanel` so the two surfaces read as
 ## a single design family: same `_PANEL_BG`, same 12 px padding, no border.
 ## Width 260 px, height ~120 px, anchored bottom-left above the carry label
 ## (which sits at `offset_top = -200` from bottom — we stop at -204).
 ##
-## Owned by `BetaDayOneController` (spawned in `_ensure_panels`); not an
-## autoload.
+## Owned by the `BetaHUD` autoload (spawned in `BetaHUD._ready`); persists
+## across day-controller teardown so it survives day transitions without
+## losing in-flight rows.
 class_name BetaEventLogPanel
 extends CanvasLayer
 
-## Visible entry cap — 6-8 rows fit in the 120 px height at 12 px font.
-## When the buffer hits this number the oldest entry fades to
-## `_FADE_OUT_ALPHA` over `_FADE_OUT_SECONDS` before its row is removed.
-const MAX_VISIBLE_ENTRIES: int = 8
+## Hard cap on rendered rows. A 5th entry queue_free()'s the oldest so the
+## panel never spans more than four lines — keeps the bottom-left footprint
+## tight and matches the BRAINDUMP "max 3-4 visible lines" guideline.
+const MAX_VISIBLE_ENTRIES: int = 4
+
+## Oldest visible row's alpha when the panel is full. Rows interpolate
+## linearly between this value (at index 0) and 1.0 (at the last index), so
+## each new entry pushes its predecessors toward transparency.
+const ALPHA_OLDEST: float = 0.35
 
 ## CanvasLayer ordering — sits below ModalDimOverlay (49) so the day-end /
 ## decision modals dim it, and below ObjectiveRail (40) so the rail's
-## active-step chip always wins. Layer 30 matches `BetaTodayStatsPanel` and
-## `BetaTodayChecklist` — the three panels share a tier.
+## active-step chip always wins. Layer 30 matches `BetaRightPanel` — the
+## two panels share a tier.
 const LAYER_INDEX: int = 30
 
 ## Modal-fade contract — mirrors `hud.gd._MODAL_DIM_ALPHA`. When CTX_MODAL
@@ -45,29 +53,22 @@ const _BOTTOM_INSET: float = 204.0
 const _LEFT_INSET: float = 16.0
 const _ENTRY_FONT_SIZE: int = 12
 const _ENTRY_MIN_HEIGHT: float = 14.0
-## Faded alpha applied to the oldest entry before it scrolls off. The tween
-## from 1.0 -> _FADE_OUT_ALPHA -> remove keeps the eviction from popping.
-const _FADE_OUT_ALPHA: float = 0.3
-const _FADE_OUT_SECONDS: float = 0.35
 
-## Color-coded per tag — message text after the tag always uses
-## `_MESSAGE_COLOR` (60% white) regardless of tag.
+## Tag → font color. Keys are bare tag names (no brackets); the bracketed
+## form arrives over `event_logged` and is unwrapped before lookup.
 const _TAG_COLORS: Dictionary = {
-	"[STOCK]": Color(1.0, 0.58, 0.3),
-	"[CUSTOMER]": Color(0.3, 1.0, 0.5),
-	"[OBJECTIVE]": Color(0.4, 0.9, 1.0),
-	"[DAY]": Color(1.0, 1.0, 1.0, 1.0),
-	"[MODAL]": Color(1.0, 1.0, 1.0, 0.5),
-	"[STAT]": Color(1.0, 1.0, 1.0, 0.6),
+	"STOCK": Color(0.3, 0.75, 0.85, 1.0),       # blue-teal
+	"CUSTOMER": Color(0.3, 1.0, 0.5, 1.0),       # green
+	"DAY": Color(1.0, 0.78, 0.3, 1.0),           # amber / gold
+	"SYSTEM": Color(0.65, 0.65, 0.65, 1.0),      # medium gray
+	"OBJECTIVE": Color(0.4, 0.9, 1.0, 1.0),      # cyan
 }
-const _MESSAGE_COLOR: Color = Color(1.0, 1.0, 1.0, 0.6)
-const _DEFAULT_TAG_COLOR: Color = Color(1.0, 1.0, 1.0, 0.6)
 
-var _background: ColorRect
+## Near-white fallback for unrecognized or missing tags. Picked over pure
+## white so the muted desaturated panel chrome still wins visually.
+const _DEFAULT_TAG_COLOR: Color = Color(0.95, 0.95, 0.95, 1.0)
+
 var _entry_container: VBoxContainer
-## Stable references to active entry rows in display order (oldest first).
-## We append on new events, pop_front when over the cap.
-var _entries: Array[RichTextLabel] = []
 
 
 func _ready() -> void:
@@ -84,7 +85,7 @@ func _ready() -> void:
 
 ## Explicit disconnect on tree exit so a freed panel cannot stay subscribed
 ## to the autoload `EventBus.event_logged` stream and burn the customer FSM
-## hot path with `RichTextLabel.new()` allocations for every state change.
+## hot path with `Label.new()` allocations for every state change.
 ## Godot 4 auto-disconnects when the receiver is freed, but tests that call
 ## `node.free()` immediately (GUT's `add_child_autofree`) can race the
 ## cleanup — the disconnect here closes that gap deterministically.
@@ -112,15 +113,15 @@ func _build_panel() -> void:
 	anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(anchor)
 
-	_background = ColorRect.new()
-	_background.name = "Background"
-	_background.color = _PANEL_BG
-	_background.anchor_left = 0.0
-	_background.anchor_top = 0.0
-	_background.anchor_right = 1.0
-	_background.anchor_bottom = 1.0
-	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	anchor.add_child(_background)
+	var background: ColorRect = ColorRect.new()
+	background.name = "Background"
+	background.color = _PANEL_BG
+	background.anchor_left = 0.0
+	background.anchor_top = 0.0
+	background.anchor_right = 1.0
+	background.anchor_bottom = 1.0
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	anchor.add_child(background)
 
 	var margin: MarginContainer = MarginContainer.new()
 	margin.name = "Margin"
@@ -151,73 +152,61 @@ func _on_event_logged(tag: String, message: String) -> void:
 		return
 	if message.is_empty():
 		return
-	var row: RichTextLabel = RichTextLabel.new()
-	row.fit_content = true
-	row.bbcode_enabled = true
-	row.scroll_active = false
+	# Treat "[TAG] message" as the canonical entry shape; splitting on the
+	# first "] " strips the bracket prefix for display while leaving the
+	# upstream signal payload (the stored format) untouched.
+	var raw_entry: String = "%s %s" % [tag, message]
+	var parts: PackedStringArray = raw_entry.split("] ", true, 1)
+	var display_text: String
+	var tag_key: String
+	if parts.size() > 1:
+		display_text = parts[1]
+		tag_key = parts[0].trim_prefix("[")
+	else:
+		display_text = raw_entry
+		tag_key = ""
+
+	var row: Label = Label.new()
+	row.text = display_text
+	row.add_theme_font_size_override("font_size", _ENTRY_FONT_SIZE)
+	row.add_theme_color_override(
+		"font_color", _TAG_COLORS.get(tag_key, _DEFAULT_TAG_COLOR)
+	)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.custom_minimum_size = Vector2(0.0, _ENTRY_MIN_HEIGHT)
-	row.add_theme_font_size_override("normal_font_size", _ENTRY_FONT_SIZE)
-	# §F-S9 trust contract — `tag` and `message` originate from `EventLog`
-	# (a project-internal autoload) which builds them from EventBus payload
-	# fields (item_id, state name, etc.). Those fields are content-author /
-	# code-controlled, not save / network derived. Future callers piping
-	# user-typed or save-derived text into the log must escape `[` -> `[lb]`.
-	row.text = _format_row(tag, message)
 	_entry_container.add_child(row)
-	_entries.append(row)
-	if _entries.size() > MAX_VISIBLE_ENTRIES:
-		_fade_and_remove_oldest()
+
+	# Synchronous eviction — `queue_free` alone keeps the node parented until
+	# end-of-frame, which would skew `get_child_count()` and the alpha math.
+	while _entry_container.get_child_count() > MAX_VISIBLE_ENTRIES:
+		var oldest: Node = _entry_container.get_child(0)
+		_entry_container.remove_child(oldest)
+		oldest.queue_free()
+
+	_refresh_alpha()
 
 
-## Drops the oldest visible row with a short alpha tween so the eviction
-## reads as a fade rather than a snap. The tween's `finished` callback
-## queue_frees the row and clears it from `_entries`.
-func _fade_and_remove_oldest() -> void:
-	if _entries.is_empty():
+## Recomputes per-row `modulate.a` so the oldest row sits at `ALPHA_OLDEST`,
+## the newest at 1.0, and intermediate rows fall on the linear segment
+## between. Runs synchronously after every add/evict so the fade is in
+## place before the next frame draws.
+func _refresh_alpha() -> void:
+	if _entry_container == null:
 		return
-	var oldest: RichTextLabel = _entries.pop_front()
-	if not is_instance_valid(oldest):
-		return
-	var tween: Tween = create_tween()
-	tween.tween_property(oldest, "modulate:a", _FADE_OUT_ALPHA, _FADE_OUT_SECONDS)
-	tween.tween_callback(Callable(self, "_free_row").bind(oldest))
-
-
-func _free_row(row: RichTextLabel) -> void:
-	if is_instance_valid(row):
-		row.queue_free()
-
-
-## Builds the BBCode-formatted row. The tag token gets its color from
-## `_TAG_COLORS`; the trailing message uses the muted 60% white tier so
-## the tag reads as the highlighted glyph.
-##
-## §F-S15 — `row.bbcode_enabled = true` (set on the RichTextLabel above),
-## so any literal `[` in `message` would be parsed as a BBCode tag. The
-## current `EventLog._format_message` callers feed integer- and enum-
-## derived strings only, but the durable hardening — matching the
-## canonical pattern from `checkout_panel._set_reasoning_text` and
-## `boot._show_error_panel` — is to escape `[` -> `[lb]` at the sink so
-## a future caller piping content-, save-, or user-derived text through
-## `EventBus.event_logged` cannot smuggle `[img=res://…]` / `[url=…]` /
-## `[font=…]` tags into the rendered row. The color-format tokens added
-## *after* escape are intentional BBCode; only the message input is
-## escaped. `tag` is *not* escaped because the only accepted values are
-## the hardcoded keys of `_TAG_COLORS` (`[STOCK]`, `[CUSTOMER]`, …) —
-## escaping it would alter the visible token (it would still render as
-## `[STOCK]` since `[lb]` resolves to `[`, but the test contract pins the
-## raw row text). The trust contract for `tag` is the autoload-internal
-## token allowlist; any future caller passing a tag outside the table
-## degrades to `_DEFAULT_TAG_COLOR` and renders the token literally.
-func _format_row(tag: String, message: String) -> String:
-	var tag_color: Color = _TAG_COLORS.get(tag, _DEFAULT_TAG_COLOR)
-	return "[color=#%s]%s[/color] [color=#%s]%s[/color]" % [
-		tag_color.to_html(false),
-		tag,
-		_MESSAGE_COLOR.to_html(false),
-		message.replace("[", "[lb]"),
-	]
+	var count: int = _entry_container.get_child_count()
+	for i: int in range(count):
+		var child: Node = _entry_container.get_child(i)
+		if not (child is CanvasItem):
+			continue
+		var alpha: float
+		if count <= 1:
+			alpha = 1.0
+		else:
+			alpha = lerp(ALPHA_OLDEST, 1.0, float(i) / float(count - 1))
+		var item: CanvasItem = child as CanvasItem
+		var mod: Color = item.modulate
+		mod.a = alpha
+		item.modulate = mod
 
 
 func _on_input_focus_changed(new_ctx: StringName, _old_ctx: StringName) -> void:
@@ -235,30 +224,45 @@ func _on_fp_mode_changed(enabled: bool) -> void:
 	visible = not enabled
 
 
-## Test seam — returns the number of rendered entry rows (excluding any
-## that are mid-fade-out tween).
+## Test seam — returns the number of rendered entry rows.
 func get_visible_entry_count() -> int:
-	var count: int = 0
-	for row: RichTextLabel in _entries:
-		if is_instance_valid(row):
-			count += 1
-	return count
+	if _entry_container == null:
+		return 0
+	return _entry_container.get_child_count()
 
 
-## Test seam — returns the raw BBCode text of the most-recent row, empty
-## string when the panel has no entries. Tests use this to verify the tag
-## color tokens land on the right tags.
+## Test seam — returns the visible text of the most-recent row (without the
+## stripped `[TAG] ` prefix), or an empty string when the panel has no
+## entries.
 func get_latest_row_text() -> String:
-	if _entries.is_empty():
+	if _entry_container == null:
 		return ""
-	var row: RichTextLabel = _entries[_entries.size() - 1]
-	if not is_instance_valid(row):
+	var count: int = _entry_container.get_child_count()
+	if count == 0:
 		return ""
-	return row.text
+	var row: Node = _entry_container.get_child(count - 1)
+	if row is Label:
+		return (row as Label).text
+	return ""
 
 
-## Test seam — returns the resolved color for `tag` from the lookup table,
-## or the default tag color when unmapped. Mirrors what `_format_row` would
-## use without forcing tests to scrape BBCode.
+## Test seam — returns the font color the panel would apply for `tag`.
+## Accepts either the bare key (`"STOCK"`) or the bracketed form
+## (`"[STOCK]"`) so call sites can use whichever they have on hand.
 func get_tag_color(tag: String) -> Color:
-	return _TAG_COLORS.get(tag, _DEFAULT_TAG_COLOR)
+	var key: String = tag.trim_prefix("[").trim_suffix("]")
+	return _TAG_COLORS.get(key, _DEFAULT_TAG_COLOR)
+
+
+## Test seam — returns the resolved `modulate.a` for the row at `index`
+## (0 = oldest visible row). Mirrors what `_refresh_alpha` writes without
+## forcing tests to dig into CanvasItem state directly.
+func get_row_alpha(index: int) -> float:
+	if _entry_container == null:
+		return 0.0
+	if index < 0 or index >= _entry_container.get_child_count():
+		return 0.0
+	var child: Node = _entry_container.get_child(index)
+	if child is CanvasItem:
+		return (child as CanvasItem).modulate.a
+	return 0.0

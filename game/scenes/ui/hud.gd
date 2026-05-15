@@ -45,6 +45,22 @@ const _CASH_COUNT_DURATION: float = 0.3
 const _CASH_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
 const _CASH_INCOME_SCALE: float = 1.15
 const _CASH_EXPENSE_SCALE: float = 1.1
+
+## Money-delta pop: transient label that appears adjacent to the active cash
+## readout on each money_changed event, floats upward, and fades out. Spawned
+## anew per event so rapid successive changes do not overwrite an in-flight
+## label. The first money_changed delivery after _ready (or after a seed via
+## `_seed_cash_from_economy`) is treated as a baseline assignment and does not
+## spawn a pop — `_cash_initialized` gates this.
+const _MONEY_DELTA_FLOAT_DISTANCE: float = 20.0
+const _MONEY_DELTA_DURATION: float = 0.8
+const _MONEY_DELTA_COLOR_POSITIVE: Color = Color(0.35, 0.85, 0.35, 1.0)
+const _MONEY_DELTA_COLOR_NEGATIVE: Color = Color(0.91, 0.55, 0.18, 1.0)
+## Group tag for transient pop labels. Used by tests to locate live pops
+## without relying on node names — Godot auto-suffixes duplicate names
+## (`MoneyDeltaPop`, `@MoneyDeltaPop@2`, …), and the group membership is the
+## stable identity that survives concurrent spawns.
+const _MONEY_DELTA_GROUP: StringName = &"hud_money_delta_pop"
 const _REP_ARROW_FADE_IN: float = 0.1
 const _REP_ARROW_HOLD: float = 1.0
 const _REP_ARROW_FADE_OUT: float = 0.4
@@ -61,18 +77,10 @@ const _MODAL_DIM_DURATION: float = 0.15
 const _COUNTER_PULSE_SCALE: float = 1.08
 const _COUNTER_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
 
-## FP-mode HUD typography contract: the top-right cluster (On Shelves,
-## Customers, Sold Today) reads as compact secondary info — 14 px at 60 %
-## white — so it does not feel like a debug overlay. Cash (top-left) and
-## Day/Time (top-center) are primary info — 18 px at 100 % white — so the
-## within-HUD hierarchy is parseable at a glance. Both tiers stay visually
-## distinct from toast notifications (16 px, brighter) and modal titles
-## (20–22 px, full contrast), which the BRAINDUMP layout spec ranks above
-## the persistent HUD readouts.
-const _FP_STAT_FONT_SIZE: int = 14
-const _FP_PRIMARY_FONT_SIZE: int = 18
-const _FP_STAT_FONT_COLOR: Color = Color(1.0, 1.0, 1.0, 0.6)
-const _FP_PRIMARY_FONT_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
+## FP-mode primary readout typography is authored in `hud.tscn` on the
+## static `FPCashLabel` / `FPTimeLabel` nodes (18 px, full white). The
+## secondary stat cluster the previous reparenting model styled is gone —
+## `BetaRightPanel` now owns shelves / back-room / customers / sold-today.
 
 ## Day-1 onboarding zero-state hint copy. Condition A (empty shelves) wins
 ## over Condition B (no customers): with no stock the player can't attract
@@ -93,6 +101,12 @@ var _current_hour: int = Constants.STORE_OPEN_HOUR
 var _current_phase: TimeSystem.DayPhase = TimeSystem.DayPhase.PRE_OPEN
 var _displayed_cash: float = 0.0
 var _target_cash: float = 0.0
+## Tracks the last cash value the HUD has observed via money_changed (or a
+## seed). `_cash_initialized` flips true on the first observation; the
+## money-delta pop is suppressed until then so a session-start seed does not
+## spawn a phantom "+$starting_cash" label.
+var _prev_cash: float = 0.0
+var _cash_initialized: bool = false
 var _current_speed: float = 1.0
 var _last_reputation: float = ReputationSystemSingleton.DEFAULT_REPUTATION
 
@@ -129,12 +143,13 @@ var _counter_scale_tweens: Dictionary = {}
 var _counter_color_tweens: Dictionary = {}
 
 # First-person HUD mode — set via `set_fp_mode(true)` by `StorePlayerBody._ready`.
-# When enabled, the heavy `TopBar` HBoxContainer is hidden and the four core
-# readouts (cash, time, on-shelves, customers, sold-today) are reparented as
-# compact corner overlays directly on the HUD CanvasLayer. A bottom-right F4
-# key-hint label exposes the close-day affordance without the TopBar button.
+# When enabled, the heavy `TopBar` HBoxContainer is hidden and the static
+# `FPCashLabel` / `FPTimeLabel` nodes anchored top-right (authored in
+# `hud.tscn`) carry the primary cash/time readout. `BetaRightPanel` owns the
+# secondary stat block (on-shelves, back-room, customers, sold-today). A
+# bottom-right F4 key-hint label exposes the close-day affordance without
+# the TopBar button.
 var _fp_mode: bool = false
-var _fp_orig_indices: Dictionary = {}
 var _fp_close_day_hint: Label
 ## FP-mode bottom-bar sentence slot. The scene-tree `_zero_state_hint` lives
 ## at top-center where it would crowd the reparented `_time_label`; in FP
@@ -155,6 +170,12 @@ var _beta_backroom_count: int = 0
 @onready var _top_bar: HBoxContainer = $TopBar
 @onready var _cash_label: Label = $TopBar/CashLabel
 @onready var _time_label: Label = $TopBar/TimeLabel
+## Static FP-mode primary readouts authored in `hud.tscn` as direct
+## CanvasLayer-root children, anchored top-right. Always present and
+## always visible — never reparented. They mirror `_cash_label` /
+## `_time_label` via the existing update handlers.
+@onready var _fp_cash_label: Label = $FPCashLabel
+@onready var _fp_time_label: Label = $FPTimeLabel
 @onready var _items_placed_label: Label = $TopBar/ItemsPlacedLabel
 @onready var _back_room_label: Label = $TopBar/BackRoomLabel
 @onready var _customers_label: Label = $TopBar/CustomersLabel
@@ -322,6 +343,11 @@ func _seed_cash_from_economy() -> void:
 	PanelAnimator.kill_tween(_cash_count_tween)
 	_displayed_cash = cash
 	_target_cash = cash
+	# Seed is a baseline assignment, not a transaction — record it so the
+	# next money_changed computes its delta against the seeded value and the
+	# pop guard treats the cash readout as initialized.
+	_prev_cash = cash
+	_cash_initialized = true
 	_update_cash_display(cash)
 
 
@@ -342,6 +368,10 @@ func _on_money_changed(
 	_target_cash = new_amount
 	_animate_cash_count(old_amount, new_amount)
 	_pulse_cash_label(new_amount - old_amount)
+	if _cash_initialized:
+		_spawn_money_delta_pop(new_amount - _prev_cash)
+	_prev_cash = new_amount
+	_cash_initialized = true
 
 
 func _on_speed_changed(new_speed: float) -> void:
@@ -589,15 +619,14 @@ func _apply_state_visibility(state: GameManager.State) -> void:
 				GameManager.get_current_day() > 1
 			)
 			_close_day_button.visible = true
-			# BRAINDUMP Rule 3: 'Top Left: Money only'. In beta mode the
-			# right-side BetaTodayStatsPanel surfaces On Shelves / Back Room /
-			# Sold Today, so the redundant TopBar copies are hidden. Non-beta
-			# runs still need them in the TopBar (no right-side panel exists
-			# outside the beta loop).
-			var stats_panel_active: bool = _beta_mode_active()
-			_items_placed_label.visible = not stats_panel_active
-			_back_room_label.visible = not stats_panel_active
-			_sales_today_label.visible = not stats_panel_active
+			# BRAINDUMP Rule 3: 'Top Left: Money only'. The right-side
+			# BetaRightPanel is the canonical readout for shelf / back-room /
+			# sold-today counts; the redundant TopBar copies are authored
+			# hidden in hud.tscn and re-asserted here so a future state
+			# transition cannot leak them back in.
+			_items_placed_label.visible = false
+			_back_room_label.visible = false
+			_sales_today_label.visible = false
 			_store_label.visible = false
 			_telegraph_card.visible = false
 		_:
@@ -661,11 +690,14 @@ func _refresh_time_display() -> void:
 	var phase_color: Color = _PHASE_COLORS.get(
 		_current_phase, Color.WHITE
 	)
-	_time_label.text = tr("HUD_DAY_FORMAT") % [
+	var rendered: String = tr("HUD_DAY_FORMAT") % [
 		_current_day, formatted
 	]
+	_time_label.text = rendered
 	_time_label.tooltip_text = tr(phase_key)
 	_time_label.modulate = phase_color
+	if is_instance_valid(_fp_time_label):
+		_fp_time_label.text = rendered
 
 
 func _format_hour_12(hour: int) -> String:
@@ -677,7 +709,10 @@ func _format_hour_12(hour: int) -> String:
 
 
 func _update_cash_display(amount: float) -> void:
-	_cash_label.text = "$%s" % _format_cash(amount)
+	var rendered: String = "$%s" % _format_cash(amount)
+	_cash_label.text = rendered
+	if is_instance_valid(_fp_cash_label):
+		_fp_cash_label.text = rendered
 
 
 func _format_cash(amount: float) -> String:
@@ -734,6 +769,73 @@ func _pulse_cash_label(delta: float) -> void:
 	)
 	_cash_color_tween = PanelAnimator.flash_color(
 		_cash_label, pulse_color, _CASH_PULSE_DURATION
+	)
+
+
+## Spawns a transient floating delta label adjacent to the active cash readout.
+##
+## The label is anchored top-left below the TopBar CashLabel in management
+## view, and top-right below FPCashLabel in FP mode (after ISSUE-015). It
+## animates upward `_MONEY_DELTA_FLOAT_DISTANCE` over `_MONEY_DELTA_DURATION`
+## and fades alpha to zero in parallel, then `queue_free`s itself when the
+## tween finishes. Suppressed entirely when CTX_MODAL owns InputFocus so the
+## pop does not compete with checkout / preview modals for attention.
+##
+## Each call creates an independent Label + Tween pair — rapid successive
+## money_changed deliveries each spawn their own pop without overwriting an
+## in-flight label.
+func _spawn_money_delta_pop(delta: float) -> void:
+	if is_zero_approx(delta):
+		return
+	if InputFocus.current() == InputFocus.CTX_MODAL:
+		return
+	var label: Label = Label.new()
+	label.add_to_group(_MONEY_DELTA_GROUP)
+	var sign_char: String = "+" if delta > 0.0 else "-"
+	label.text = "%s$%s" % [sign_char, _format_cash(absf(delta))]
+	var pop_color: Color = (
+		_MONEY_DELTA_COLOR_POSITIVE if delta > 0.0
+		else _MONEY_DELTA_COLOR_NEGATIVE
+	)
+	label.add_theme_color_override("font_color", pop_color)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _fp_mode:
+		# Anchor below FPCashLabel (top-right cluster, y ∈ [8, 32]).
+		label.anchor_left = 1.0
+		label.anchor_right = 1.0
+		label.offset_left = -220.0
+		label.offset_right = -16.0
+		label.offset_top = 36.0
+		label.offset_bottom = 60.0
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	else:
+		# Anchor below the TopBar CashLabel region (TopBar ends at y=48).
+		label.offset_left = 96.0
+		label.offset_right = 280.0
+		label.offset_top = 52.0
+		label.offset_bottom = 76.0
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	add_child(label)
+	var start_top: float = label.offset_top
+	var start_bottom: float = label.offset_bottom
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(
+		label, "offset_top",
+		start_top - _MONEY_DELTA_FLOAT_DISTANCE,
+		_MONEY_DELTA_DURATION,
+	)
+	tween.tween_property(
+		label, "offset_bottom",
+		start_bottom - _MONEY_DELTA_FLOAT_DISTANCE,
+		_MONEY_DELTA_DURATION,
+	)
+	tween.tween_property(
+		label, "modulate:a", 0.0, _MONEY_DELTA_DURATION,
+	)
+	tween.finished.connect(func() -> void:
+		if is_instance_valid(label):
+			label.queue_free()
 	)
 
 
@@ -1219,19 +1321,16 @@ func _pulse_counter(label: Label, positive: bool) -> void:
 
 
 ## Switches the HUD between the legacy desktop TopBar layout (`enabled = false`)
-## and the first-person corner overlay (`enabled = true`).
+## and the first-person view (`enabled = true`).
 ##
-## In FP mode the heavy `TopBar` HBoxContainer is hidden, the five Day-1
-## readouts (cash, time, on-shelves, customers, sold-today) are reparented to
-## the HUD CanvasLayer with compact anchored offsets, and the close-day
-## affordance moves to a bottom-right `F4 — Close Day` hint label. The labels
-## remain the same `Label` instances, so every signal handler that already
-## drives them (`_on_money_changed`, `_on_hour_changed`,
-## `_update_items_placed_display`, `_update_customers_display`,
-## `_update_sales_today_display`, etc.) keeps working untouched.
+## In FP mode the heavy `TopBar` HBoxContainer is hidden; the static
+## `FPCashLabel` / `FPTimeLabel` nodes (authored in `hud.tscn`, always
+## visible top-right) carry the primary readouts and `BetaRightPanel` owns
+## the secondary stat cluster. The close-day affordance moves to a
+## bottom-right `F4 — Close Day` hint label. No node reparenting occurs.
 ##
-## Call from `StorePlayerBody._ready` after the body spawns so the HUD shifts
-## into FP layout the moment the player camera is current.
+## Call from `StorePlayerBody._ready` after the body spawns so the HUD
+## shifts into FP layout the moment the player camera is current.
 func set_fp_mode(enabled: bool) -> void:
 	if _fp_mode == enabled:
 		return
@@ -1245,30 +1344,6 @@ func set_fp_mode(enabled: bool) -> void:
 
 
 func _enter_fp_mode() -> void:
-	_fp_orig_indices = {
-		_cash_label: _cash_label.get_index(),
-		_time_label: _time_label.get_index(),
-		_items_placed_label: _items_placed_label.get_index(),
-		_back_room_label: _back_room_label.get_index(),
-		_customers_label: _customers_label.get_index(),
-		_sales_today_label: _sales_today_label.get_index(),
-	}
-	_reparent_to_hud_root(_cash_label)
-	_reparent_to_hud_root(_time_label)
-	_reparent_to_hud_root(_items_placed_label)
-	_reparent_to_hud_root(_back_room_label)
-	_reparent_to_hud_root(_customers_label)
-	_reparent_to_hud_root(_sales_today_label)
-	_apply_fp_anchors(_cash_label, 0.0, 0.0, 8.0, 8.0, 200.0, 36.0)
-	_apply_fp_anchors(_time_label, 0.5, 0.5, -150.0, 8.0, 150.0, 36.0)
-	# Back Room sits directly below On Shelves so the two complementary
-	# inventory readouts read as a paired group, with Customers / Sold
-	# Today below them.
-	_apply_fp_anchors(_items_placed_label, 1.0, 1.0, -200.0, 8.0, -8.0, 36.0)
-	_apply_fp_anchors(_back_room_label, 1.0, 1.0, -200.0, 40.0, -8.0, 68.0)
-	_apply_fp_anchors(_customers_label, 1.0, 1.0, -200.0, 72.0, -8.0, 100.0)
-	_apply_fp_anchors(_sales_today_label, 1.0, 1.0, -200.0, 104.0, -8.0, 132.0)
-	_apply_fp_typography()
 	_ensure_fp_close_day_hint()
 	_ensure_fp_sentence_label()
 	_apply_fp_visibility_overrides()
@@ -1280,94 +1355,7 @@ func _exit_fp_mode() -> void:
 		_fp_close_day_hint.hide()
 	if is_instance_valid(_fp_sentence_label):
 		_fp_sentence_label.hide()
-	_clear_fp_typography()
-	_restore_from_hud_root(_cash_label)
-	_restore_from_hud_root(_time_label)
-	_restore_from_hud_root(_items_placed_label)
-	_restore_from_hud_root(_back_room_label)
-	_restore_from_hud_root(_customers_label)
-	_restore_from_hud_root(_sales_today_label)
-	_fp_orig_indices.clear()
 	_top_bar.show()
-
-
-## Applies the FP-mode size/color contract: cash + time get the primary
-## treatment (18 px, full white), the three top-right stats get the
-## secondary treatment (14 px, 60 % white). Theme-color overrides are used
-## (not modulate) so the dim does not stack with the modal-fade tween or
-## the per-counter pulse — both of which animate `modulate`.
-func _apply_fp_typography() -> void:
-	for primary: Label in [_cash_label, _time_label]:
-		primary.add_theme_font_size_override("font_size", _FP_PRIMARY_FONT_SIZE)
-		primary.add_theme_color_override("font_color", _FP_PRIMARY_FONT_COLOR)
-	for stat: Label in [
-		_items_placed_label, _back_room_label,
-		_customers_label, _sales_today_label,
-	]:
-		stat.add_theme_font_size_override("font_size", _FP_STAT_FONT_SIZE)
-		stat.add_theme_color_override("font_color", _FP_STAT_FONT_COLOR)
-
-
-func _clear_fp_typography() -> void:
-	for lbl: Label in [
-		_cash_label, _time_label,
-		_items_placed_label, _back_room_label,
-		_customers_label, _sales_today_label,
-	]:
-		lbl.remove_theme_font_size_override("font_size")
-		lbl.remove_theme_color_override("font_color")
-
-
-func _reparent_to_hud_root(label: Label) -> void:
-	var current_parent: Node = label.get_parent()
-	if current_parent == self:
-		return
-	if current_parent != null:
-		current_parent.remove_child(label)
-	add_child(label)
-
-
-func _restore_from_hud_root(label: Label) -> void:
-	if label.get_parent() == _top_bar:
-		return
-	if label.get_parent() != null:
-		label.get_parent().remove_child(label)
-	_top_bar.add_child(label)
-	var idx: int = int(_fp_orig_indices.get(label, _top_bar.get_child_count() - 1))
-	idx = clampi(idx, 0, _top_bar.get_child_count() - 1)
-	_top_bar.move_child(label, idx)
-
-
-func _apply_fp_anchors(
-	label: Label,
-	anchor_left: float,
-	anchor_right: float,
-	off_left: float,
-	off_top: float,
-	off_right: float,
-	off_bottom: float,
-) -> void:
-	label.anchor_left = anchor_left
-	label.anchor_right = anchor_right
-	label.anchor_top = 0.0
-	label.anchor_bottom = 0.0
-	label.offset_left = off_left
-	label.offset_top = off_top
-	label.offset_right = off_right
-	label.offset_bottom = off_bottom
-	# Grow direction is computed from the horizontal anchors so the label
-	# stays inside its corner / center band when content forces a wider
-	# minimum size: right-anchored labels grow leftward, center-anchored
-	# labels grow symmetrically, left-anchored labels grow rightward.
-	# Without this, an ultrawide viewport plus a long localized string
-	# could push a centered label off the right edge or a right-cluster
-	# label off-screen past the viewport edge.
-	if is_equal_approx(anchor_left, 0.5) and is_equal_approx(anchor_right, 0.5):
-		label.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	elif is_equal_approx(anchor_left, 1.0) and is_equal_approx(anchor_right, 1.0):
-		label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	else:
-		label.grow_horizontal = Control.GROW_DIRECTION_END
 
 
 ## The FP close-day hint is the sole bottom-right "controls block" allowed by
@@ -1440,12 +1428,6 @@ func _apply_fp_visibility_overrides() -> void:
 	_milestones_button.hide()
 	_reputation_label.hide()
 	_speed_button.hide()
-	_cash_label.show()
-	_time_label.show()
-	_items_placed_label.show()
-	_back_room_label.show()
-	_customers_label.show()
-	_sales_today_label.show()
 	if is_instance_valid(_fp_close_day_hint):
 		_fp_close_day_hint.show()
 		_refresh_close_day_hint_state()

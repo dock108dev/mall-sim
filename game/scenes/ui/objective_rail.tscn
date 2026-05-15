@@ -30,7 +30,7 @@ anchor_bottom = 1.0
 offset_top = -148.0
 offset_bottom = -144.0
 mouse_filter = 2
-color = Color(0.3569, 0.7216, 0.9098, 1)
+color = Color(0.91, 0.645, 0.216, 0.5)
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 anchor_left = 0.0

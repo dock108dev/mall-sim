@@ -53,6 +53,11 @@ const DARK_PANEL_BORDER := Color(0.239, 0.188, 0.157, 0.9)
 const DARK_PANEL_TEXT := Color(0.957, 0.914, 0.831, 1.0)
 const DARK_PANEL_TEXT_SECONDARY := Color(0.722, 0.659, 0.549, 1.0)
 
+# Overlay variant for floating HUD surfaces (toasts, right-rail panels) that
+# sit on a CanvasLayer above gameplay. Same warm charcoal hue as
+# DARK_PANEL_FILL; reduced alpha signals "floats over gameplay".
+const DARK_PANEL_FILL_OVERLAY := Color(0.122, 0.102, 0.086, 0.88)
+
 # ---------------------------------------------------------------------------
 # Light panel tier — menus, dialogs, day summary (#F5ECD6 fill / #2B1D12 text)
 # Contrast: 14.8:1 (WCAG AAA)
@@ -68,6 +73,9 @@ const LIGHT_PANEL_TEXT_SECONDARY := Color(0.420, 0.306, 0.180, 1.0)
 const BODY_FONT_COLOR := DARK_PANEL_TEXT
 const HEADER_FONT_COLOR := Color(0.9, 0.75, 0.45, 1.0)
 const ACCENT_COLOR := Color(0.83, 0.63, 0.33, 1.0)
+## Warm amber accent shared by objective rail band, active-objective indicator,
+## and right-panel section headers. Single source of truth for the amber tone.
+const ACCENT_COLOR_AMBER := Color(0.91, 0.645, 0.216, 1.0)
 const POSITIVE_COLOR := Color(0.4, 0.8, 0.35, 1.0)
 const NEGATIVE_COLOR := Color(0.9, 0.3, 0.25, 1.0)
 const WARNING_COLOR := Color(0.95, 0.75, 0.2, 1.0)

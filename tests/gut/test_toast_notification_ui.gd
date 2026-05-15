@@ -118,6 +118,23 @@ func test_unknown_category_uses_default_border() -> void:
 	)
 
 
+func test_border_color_unlock_is_cyan_and_distinct() -> void:
+	EventBus.toast_requested.emit("Unlocked: Register Access", &"unlock", 5.0)
+	var border: Color = _border_color(_ui._active_panel)
+	assert_eq(
+		border, ToastNotificationUI.CATEGORY_COLORS[&"unlock"],
+		"Unlock toast must paint the cyan unlock border color"
+	)
+	assert_ne(
+		border, ToastNotificationUI.CATEGORY_COLORS[&"milestone"],
+		"Unlock border must be distinct from milestone gold"
+	)
+	assert_ne(
+		border, ToastNotificationUI.DEFAULT_COLOR,
+		"Unlock border must not fall back to DEFAULT_COLOR"
+	)
+
+
 # ── Label color is uniform across categories ───────────────────────────────────
 
 

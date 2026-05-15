@@ -6,10 +6,17 @@ var _overlay: HintOverlayUI
 
 
 func before_each() -> void:
+	# Modal-coexistence tests drive InputFocus directly, so make sure each test
+	# starts with an empty stack and the prior test's frames don't leak.
+	InputFocus._reset_for_tests()
 	_overlay = preload(
 		"res://game/scenes/ui/hint_overlay_ui.tscn"
 	).instantiate() as HintOverlayUI
 	add_child_autofree(_overlay)
+
+
+func after_each() -> void:
+	InputFocus._reset_for_tests()
 
 
 func test_starts_hidden() -> void:
@@ -134,4 +141,77 @@ func test_position_center() -> void:
 	assert_eq(
 		_overlay.offset_right, 160.0,
 		"center should set offset_right to 160"
+	)
+
+
+# ── Modal coexistence ────────────────────────────────────────────────────────
+
+
+func test_visible_hint_dismisses_when_modal_takes_focus() -> void:
+	# Path 1 — modal opens while hint is showing.
+	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	EventBus.onboarding_hint_shown.emit(
+		&"hint_path1", "Visible hint", "center"
+	)
+	assert_true(
+		_overlay._is_showing,
+		"Pre-condition: hint visible before modal opens"
+	)
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	assert_false(
+		_overlay._is_showing,
+		"Hint must dismiss the same frame CTX_MODAL takes the top frame"
+	)
+
+
+func test_hint_suppressed_when_emitted_during_open_modal() -> void:
+	# Path 2 — hint fires while CTX_MODAL is already on top. context_changed
+	# would not re-fire here, so only the show-time guard catches it.
+	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	EventBus.onboarding_hint_shown.emit(
+		&"hint_path2", "Suppressed hint", "center"
+	)
+	assert_false(
+		_overlay._is_showing,
+		"No hint may begin animating while CTX_MODAL is on top"
+	)
+	assert_false(
+		_overlay.visible,
+		"Suppressed hint must not become visible"
+	)
+
+
+func test_suppressed_hint_does_not_appear_after_modal_closes() -> void:
+	# OnboardingSystem._shown_hints owns dedupe; HintOverlayUI does not retry
+	# on its own. Popping CTX_MODAL must not resurrect the suppressed hint.
+	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	EventBus.onboarding_hint_shown.emit(
+		&"hint_dedupe", "Once and done", "center"
+	)
+	InputFocus.pop_context()
+	assert_false(
+		_overlay._is_showing,
+		"Hint must remain suppressed after the modal pops — dedupe lives in OnboardingSystem"
+	)
+	assert_false(
+		_overlay.visible,
+		"Hint must remain hidden after the modal pops"
+	)
+
+
+func test_non_modal_context_change_does_not_dismiss_visible_hint() -> void:
+	# Guard rail — only CTX_MODAL transitions should dismiss; other context
+	# pushes (e.g. mall hub → store gameplay) must leave the hint alone so
+	# `onboarding_disabled` + auto-dismiss remain the only normal exits.
+	InputFocus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	EventBus.onboarding_hint_shown.emit(
+		&"hint_no_modal", "Stay up", "center"
+	)
+	assert_true(_overlay._is_showing, "Pre-condition: hint visible")
+	InputFocus.push_context(InputFocus.CTX_MALL_HUB)
+	assert_true(
+		_overlay._is_showing,
+		"Non-modal context change must not dismiss the hint"
 	)

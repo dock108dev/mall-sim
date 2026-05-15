@@ -24,6 +24,12 @@ const CUSTOMER_BODY_MIN_SATURATION: float = 0.4
 # register; the cap keeps the label readable but counter-scaled.
 const CHECKOUT_SIGN_MAX_PIXEL_SIZE: float = 0.0035
 
+# Register-screen emission floor. The screen sub-resource sits behind the
+# ambient neon panels (1.7–1.8 energy); below this floor its green glow
+# fails to read at the ~8–12m entrance spawn distance and the counter
+# loses its "active POS terminal" beacon.
+const REGISTER_SCREEN_MIN_EMISSION: float = 1.2
+
 
 func test_slot_marker_material_renders_visible_with_emission() -> void:
 	var mat: StandardMaterial3D = load(SLOT_MARKER_PATH) as StandardMaterial3D
@@ -109,5 +115,47 @@ func test_checkout_sign_scale_within_budget() -> void:
 			+ "label sits at counter scale rather than floating as a giant "
 			+ "banner above the register."
 		) % [sign.pixel_size, CHECKOUT_SIGN_MAX_PIXEL_SIZE],
+	)
+	root.free()
+
+
+func test_register_screen_emission_clears_spawn_distance_floor() -> void:
+	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
+	assert_not_null(scene, "retro_games.tscn must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	if root == null:
+		return
+	var screen: MeshInstance3D = root.get_node_or_null(
+		"Checkout/Register/RegisterScreen"
+	) as MeshInstance3D
+	assert_not_null(
+		screen, "Checkout/Register/RegisterScreen MeshInstance3D must exist",
+	)
+	if screen == null:
+		root.free()
+		return
+	var mat: StandardMaterial3D = screen.get_surface_override_material(
+		0
+	) as StandardMaterial3D
+	assert_not_null(
+		mat,
+		"RegisterScreen must carry a StandardMaterial3D override (register_screen_mat)",
+	)
+	if mat == null:
+		root.free()
+		return
+	assert_true(
+		mat.emission_enabled,
+		"register_screen_mat must keep emission enabled so the POS screen glows",
+	)
+	assert_gte(
+		mat.emission_energy_multiplier, REGISTER_SCREEN_MIN_EMISSION,
+		(
+			"register_screen_mat emission_energy_multiplier=%.2f must be >= %.2f "
+			+ "so the green screen glow reads at the ~8–12m entrance spawn "
+			+ "distance against the 1.7–1.8 ambient neon panels."
+		) % [mat.emission_energy_multiplier, REGISTER_SCREEN_MIN_EMISSION],
 	)
 	root.free()

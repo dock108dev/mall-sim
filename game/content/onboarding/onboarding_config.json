@@ -12,14 +12,14 @@
       "id": "hint_store_entered",
       "trigger": "store_entered",
       "message": "You've entered your store. Arrange fixtures and stock shelves here.",
-      "position_hint": "top_center",
+      "position_hint": "bottom_right",
       "display_duration_sec": 5.0
     },
     {
       "id": "hint_first_customer_spawned",
       "trigger": "first_customer_spawned",
       "message": "A customer just walked in \u2014 they'll browse and buy if they find what they want.",
-      "position_hint": "bottom_left",
+      "position_hint": "bottom_right",
       "display_duration_sec": 5.0
     },
     {
@@ -40,7 +40,7 @@
       "id": "hint_day_ending_soon",
       "trigger": "day_ending_soon",
       "message": "The mall is closing soon \u2014 wrap up any active transactions.",
-      "position_hint": "top_center",
+      "position_hint": "bottom_right",
       "display_duration_sec": 5.0
     },
     {
@@ -54,21 +54,21 @@
       "id": "hint_staff_hired",
       "trigger": "staff_hired",
       "message": "Staff member hired. Assign them a role in the Staff panel.",
-      "position_hint": "top_center",
+      "position_hint": "bottom_right",
       "display_duration_sec": 5.0
     },
     {
       "id": "hint_reputation_changed",
       "trigger": "reputation_changed",
       "message": "Your reputation score has changed \u2014 it affects customer traffic and unlock thresholds.",
-      "position_hint": "top_center",
+      "position_hint": "bottom_right",
       "display_duration_sec": 5.0
     },
     {
       "id": "hint_checkout_queue_formed",
       "trigger": "checkout_queue_formed",
       "message": "Customers are queueing at checkout. Make sure you have enough cashiers!",
-      "position_hint": "bottom_left",
+      "position_hint": "bottom_right",
       "display_duration_sec": 5.0
     },
     {

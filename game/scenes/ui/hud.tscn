@@ -57,6 +57,7 @@ size_flags_horizontal = 4
 text = "On Shelves: 0"
 horizontal_alignment = 1
 clip_text = true
+visible = false
 
 [node name="BackRoomLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(130, 0)
@@ -65,6 +66,7 @@ size_flags_horizontal = 4
 text = "Back Room: 0"
 horizontal_alignment = 1
 clip_text = true
+visible = false
 
 [node name="CustomersLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(80, 0)
@@ -73,6 +75,7 @@ size_flags_horizontal = 4
 text = "Cust: 0"
 horizontal_alignment = 1
 clip_text = true
+visible = false
 
 [node name="SalesTodayLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(130, 0)
@@ -81,6 +84,7 @@ size_flags_horizontal = 4
 text = "Sold Today: 0"
 horizontal_alignment = 1
 clip_text = true
+visible = false
 
 [node name="SpeedButton" type="Button" parent="TopBar"]
 custom_minimum_size = Vector2(80, 0)
@@ -94,6 +98,36 @@ custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 10
 text = ""
+horizontal_alignment = 2
+clip_text = true
+
+[node name="FPCashLabel" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 8.0
+offset_right = -16.0
+offset_bottom = 32.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "$0.00"
+horizontal_alignment = 2
+clip_text = true
+
+[node name="FPTimeLabel" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 32.0
+offset_right = -16.0
+offset_bottom = 56.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Day 1 — 9:00 AM"
 horizontal_alignment = 2
 clip_text = true
 

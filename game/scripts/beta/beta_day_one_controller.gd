@@ -54,14 +54,11 @@ const _BACKROOM_DELIVERY_QUANTITY: int = 5
 ## contribute to Day-1 readability.
 const _HIDDEN_NOISE_PATHS: Array[String] = [
 	"new_console_display",
-	"bargain_bin",
-	"featured_display",
 	"poster_slot",
 	"delivery_manifest",
 	"release_notes_clipboard",
 	"employee_area",
 	"StoreAtmosphereProps",
-	"FrontLaneQueue",
 	"new_release_wall",
 	"old_gen_shelf",
 	"hold_shelf",
@@ -103,6 +100,14 @@ const _BETA_KEEP_ROOT_NODES: Array[StringName] = [
 	&"ConsoleShelf",
 	&"AccessoriesBin",
 	&"InteriorSignage",
+	# Front-of-store display props re-enabled to break up the empty center
+	# floor. Their `Interactable` children are disabled by
+	# `_apply_objective_gating`, so the mesh renders but E-presses do not
+	# resolve during the Day-1 critical path. FrontLaneQueue is pure
+	# geometry (no Interactable).
+	&"bargain_bin",
+	&"featured_display",
+	&"FrontLaneQueue",
 	&"BetaDayOneController",
 	&"BetaDayOneCustomer",
 	&"BetaBackroomPickup",
@@ -202,9 +207,6 @@ const _CUSTOMER_EXIT_FADE_SECONDS: float = 0.8
 ## sum to 120 min so the chain finishes well before 5 PM; on transition to
 ## END_DAY, `_advance_to_next_stage` jumps the clock to 17:00 so the player
 ## isn't forced to idle from ~11 AM until close.
-## Kept as a `var` (not `const`) because `_reset_scene_for_day` rewrites the
-## `label` fields when the day rolls over — const dicts are read-only in
-## Godot 4.x and would crash the day-reset path.
 var _objectives: Array[Dictionary] = [
 	{
 		"id": "talk_to_customer",
@@ -251,9 +253,6 @@ var _objectives: Array[Dictionary] = [
 var _decision_panel: BetaDecisionCardPanel
 var _summary_panel: BetaDaySummaryPanel
 var _vic_note_panel: BetaManagerNotePanel
-var _today_checklist: BetaTodayChecklist
-var _today_stats_panel: BetaTodayStatsPanel
-var _event_log_panel: BetaEventLogPanel
 var _objective_target_highlight: BetaObjectiveTargetHighlight
 var _debug_overlay: CanvasLayer
 var _screenshot_helper: CanvasLayer
@@ -306,6 +305,11 @@ func _ready() -> void:
 	_load_content()
 	_ensure_panels()
 	_connect_panel_signals()
+	# Hand the persistent beta HUD surfaces off to the autoload owner.
+	# `BetaHUD` spawns the right panel + event log once at boot and keeps
+	# them alive across a day-controller teardown; `activate(day)` seeds
+	# the right panel from `_objectives` and the current `BetaRunState`.
+	BetaHUD.activate(BetaRunState.day)
 	# Deferred so the parent StoreController._ready() runs first and connects
 	# its EventBus.objective_changed listener before the initial rail payload.
 	# Day 1 goes straight to the customer beat; later days can still use the
@@ -826,7 +830,7 @@ func _advance_to_open_hour_if_early() -> void:
 ## its body alpha; the back-room pickup swapped the closed box for its
 ## open base and hid both the closed-box mesh and label. Idempotent — Day 1
 ## sees fresh authored state and the resets are no-ops.
-func _reset_scene_for_day(day_number: int) -> void:
+func _reset_scene_for_day(_day_number: int) -> void:
 	var store: Node = _store_root()
 	if store == null:
 		return
@@ -867,11 +871,6 @@ func _reset_scene_for_day(day_number: int) -> void:
 			(open as Node3D).visible = false
 		if label is Node3D:
 			(label as Node3D).visible = true
-	for obj: Dictionary in _objectives:
-		if obj.has("label"):
-			obj["label"] = String(obj["label"]).replace(
-				"Day 1:", "Day %d:" % day_number
-			)
 
 
 ## Marks the current stage's objective complete, advances the in-game
@@ -1072,7 +1071,7 @@ func _update_objective_rail() -> void:
 ## `_stage`, or "future" otherwise. During STAGE_VIC_NOTE every entry is
 ## "future" (nothing complete, no chain row active yet).
 ##
-## The `id` field lets consumers (`BetaTodayChecklist`) resolve the source
+## The `id` field lets consumers (`BetaRightPanel`) resolve the source
 ## objective without reverse-matching on `text`. ObjectiveRail reads `text`
 ## + `state` only and ignores extra keys, so adding `id` is non-breaking.
 func _build_steps_payload() -> Array[Dictionary]:
@@ -1197,19 +1196,9 @@ func _ensure_panels() -> void:
 	if _vic_note_panel == null:
 		_vic_note_panel = BetaManagerNotePanel.new()
 		_ui_root().add_child(_vic_note_panel)
-	if _today_checklist == null:
-		_today_checklist = BetaTodayChecklist.new()
-		_today_checklist.name = "BetaTodayChecklist"
-		_today_checklist.set_objectives(_objectives)
-		_ui_root().add_child(_today_checklist)
-	if _today_stats_panel == null:
-		_today_stats_panel = BetaTodayStatsPanel.new()
-		_today_stats_panel.name = "BetaTodayStatsPanel"
-		_ui_root().add_child(_today_stats_panel)
-	if _event_log_panel == null:
-		_event_log_panel = BetaEventLogPanel.new()
-		_event_log_panel.name = "BetaEventLogPanel"
-		_ui_root().add_child(_event_log_panel)
+	# `BetaRightPanel` and `BetaEventLogPanel` are owned by the `BetaHUD`
+	# autoload — see the `BetaHUD.activate(day)` call in `_ready`. They are
+	# spawned once at boot and persist across day-controller teardown.
 	if _objective_target_highlight == null:
 		_objective_target_highlight = BetaObjectiveTargetHighlight.new()
 		_objective_target_highlight.name = "BetaObjectiveTargetHighlight"

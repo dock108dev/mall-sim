@@ -215,6 +215,33 @@ func test_category_random_event_border_is_amber() -> void:
 	)
 
 
+func test_category_unlock_border_is_cyan() -> void:
+	# `&"unlock"` is emitted by UnlockSystem.grant_unlock for fixture/content
+	# unlocks. It must paint a distinct cyan border so the player can
+	# distinguish it from milestone gold when both fire back-to-back.
+	EventBus.toast_requested.emit("Unlocked: Register Access", &"unlock", 5.0)
+	assert_eq(
+		_border_color(_ui._active_panel),
+		ToastNotificationUI.CATEGORY_COLORS[&"unlock"],
+		"&'unlock' category should use the cyan border"
+	)
+	assert_eq(
+		ToastNotificationUI.CATEGORY_COLORS[&"unlock"],
+		Color(0.20, 0.78, 0.85),
+		"&'unlock' color must remain the spec'd cyan value"
+	)
+	assert_ne(
+		ToastNotificationUI.CATEGORY_COLORS[&"unlock"],
+		ToastNotificationUI.CATEGORY_COLORS[&"milestone"],
+		"&'unlock' must be visually distinct from &'milestone'"
+	)
+	assert_ne(
+		ToastNotificationUI.CATEGORY_COLORS[&"unlock"],
+		ToastNotificationUI.DEFAULT_COLOR,
+		"&'unlock' must not fall back to DEFAULT_COLOR (gray)"
+	)
+
+
 func test_category_sale_border_is_positive_green() -> void:
 	# `&"sale"` is the BetaDayOneController outcome path's canonical category
 	# for cash-positive customer outcomes. It must paint the positive (green)

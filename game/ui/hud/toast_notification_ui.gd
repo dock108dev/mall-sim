@@ -27,8 +27,14 @@ const FADE_OUT_DURATION: float = 0.4
 const DEFAULT_DURATION: float = 3.0
 const MAX_QUEUE_SIZE: int = 5
 const TOAST_WIDTH: float = 280.0
-const TOAST_OFFSET_RIGHT: float = 20.0
-const TOAST_OFFSET_TOP: float = 60.0
+## Top-center placement clears the TimeLabel (y≈8–36 px) and the right-side
+## stats column with safe margin. See
+## `.aidlc/research/toast-position-vs-right-panel-coexistence.md` Option B.
+const TOAST_OFFSET_TOP: float = 90.0
+## Distance the panel drops in from above its final resting Y during the
+## slide-in tween. Tuned to match `SLIDE_IN_DURATION` so the motion reads as
+## a quick "message drop" rather than a snap.
+const TOAST_DROP_IN_DISTANCE: float = 40.0
 const TOAST_MIN_HEIGHT: float = 40.0
 const TOAST_MAX_HEIGHT: float = 80.0
 const PADDING_HORIZONTAL: int = 12
@@ -42,12 +48,16 @@ const TEXT_FONT_SIZE: int = 15
 ## Left-border tint per category. Designers reach for these via the category
 ## arg on `EventBus.toast_requested`. `&"sale"` and `&"positive_cash"` are
 ## aliases the beta day-1 outcome path uses for cash-positive events.
+## `&"unlock"` is emitted by `UnlockSystem.grant_unlock` when a milestone
+## reward grants a new fixture slot or content category — cyan reads as
+## "new capability available" and stays distinct from milestone gold.
 const CATEGORY_COLORS: Dictionary = {
 	&"system": Color(0.45, 0.45, 0.45),
 	&"info": Color(0.45, 0.45, 0.45),
 	&"sale": Color(0.30, 0.69, 0.31),
 	&"positive_cash": Color(0.30, 0.69, 0.31),
 	&"milestone": Color(1.0, 0.84, 0.0),
+	&"unlock": Color(0.20, 0.78, 0.85),
 	&"reputation_up": Color(0.30, 0.69, 0.31),
 	&"reputation_down": Color(0.85, 0.40, 0.20),
 	&"staff": Color(1.0, 0.6, 0.2),
@@ -100,6 +110,16 @@ func _on_toast_requested(
 				% [message.length(), MAX_MESSAGE_CHARS, message]
 			)
 		)
+	# Deduplicate by message string: discard if this exact text is already the
+	# active card or already sitting in the queue. Defense-in-depth against a
+	# second emission path (replays, multiple systems formatting the same
+	# milestone string) bypassing per-system guards like UnlockSystem._granted.
+	if _is_showing and is_instance_valid(_active_panel):
+		if String(_active_panel.get_meta("toast_message", "")) == message:
+			return
+	for queued: Dictionary in _queue:
+		if String(queued.get("message", "")) == message:
+			return
 	var effective_duration: float = duration if duration > 0.0 else DEFAULT_DURATION
 	var entry: Dictionary = {
 		"message": message,
@@ -121,17 +141,22 @@ func _show_toast(entry: Dictionary) -> void:
 	add_child(panel)
 
 	var viewport_width: float = get_viewport_rect().size.x
-	var target_x: float = viewport_width - TOAST_WIDTH - TOAST_OFFSET_RIGHT
-	var start_x: float = viewport_width + 10.0
+	var target_x: float = (viewport_width - TOAST_WIDTH) / 2.0
+	var start_y: float = TOAST_OFFSET_TOP - TOAST_DROP_IN_DISTANCE
 
-	panel.position = Vector2(start_x, TOAST_OFFSET_TOP)
-	panel.modulate.a = 1.0
+	panel.position = Vector2(target_x, start_y)
+	panel.modulate.a = 0.0
 
 	_kill_tween()
 	_tween = create_tween()
+	_tween.set_parallel(true)
 	_tween.tween_property(
-		panel, "position:x", target_x, SLIDE_IN_DURATION
+		panel, "position:y", TOAST_OFFSET_TOP, SLIDE_IN_DURATION
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_tween.tween_property(
+		panel, "modulate:a", 1.0, SLIDE_IN_DURATION
+	).set_ease(Tween.EASE_OUT)
+	_tween.set_parallel(false)
 	_tween.tween_interval(entry.get("duration", DEFAULT_DURATION))
 	_tween.tween_property(
 		panel, "modulate:a", 0.0, FADE_OUT_DURATION
@@ -195,6 +220,13 @@ func _suspend_for_modal() -> void:
 	_active_panel.queue_free()
 	_active_panel = null
 	_is_showing = false
+	# If a duplicate of the interrupted message was already queued during the
+	# modal, dropping the re-queue keeps the player from seeing the same card
+	# twice once the modal closes.
+	var pending_message: String = String(pending.get("message", ""))
+	for queued: Dictionary in _queue:
+		if String(queued.get("message", "")) == pending_message:
+			return
 	_queue.push_front(pending)
 	if _queue.size() > MAX_QUEUE_SIZE:
 		_queue.pop_back()

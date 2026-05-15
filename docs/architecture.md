@@ -83,18 +83,19 @@ reference earlier ones. Five entries are scenes
 | 30 | `StoreDirector` | `game/autoload/store_director.gd` |
 | 31 | `GameState` | `game/autoload/game_state.gd` — run-state SSOT (active store, day, money) |
 | 32 | `BetaRunState` | `game/scripts/beta/beta_run_state.gd` — beta-only run-state (current beta day, day-1 chain progress, end-of-day summary payload) |
-| 33 | `EmploymentSystem` | `game/autoload/employment_system.gd` — seasonal-employee state (trust, approval, hours, status), daily wages, and end-of-season retention/firing evaluation |
-| 34 | `PlatformSystem` | `game/scripts/systems/platform_system.gd` — per-platform supply/demand/hype, daily price ticks, and platform-affinity spawn weighting |
-| 35 | `StoreCustomizationSystem` | `game/scripts/systems/store_customization_system.gd` — per-day featured-display and promotional-poster choices, spawn-weight and demand multipliers, and trust/hidden-thread linkage |
-| 36 | `ShiftSystem` | `game/scripts/systems/shift_system.gd` — daily clock-in/clock-out state, including 08:55 auto clock-in and trust penalties for late or missing punches |
-| 37 | `ManagerRelationshipManager` | `game/autoload/manager_relationship_manager.gd` — player↔manager trust scalar/tier and morning-note selection on `day_started` |
-| 38 | `MorningNotePanel` | `game/scenes/ui/morning_note_panel.tscn` (scene) — paper-memo overlay listening for `manager_note_shown` |
-| 39 | `MiddayEventSystem` | `game/scripts/systems/midday_event_system.gd` — midday decision-beat queue, pauses time on pending beat, applies resolved structured effects |
-| 40 | `MiddayEventCard` | `game/scenes/ui/midday_event_card.tscn` (scene) — modal "STORE EVENT" decision card emitted on `midday_event_fired` / `midday_event_resolved` |
-| 41 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
-| 42 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
-| 43 | `Day1ReadinessAudit` | `game/autoload/day1_readiness_audit.gd` — composite Day 1 playable check that subscribes to `StoreDirector.store_ready` and emits `AuditLog.pass_check(&"day1_playable_ready", …)` / `fail_check(&"day1_playable_failed", …)` |
-| 44 | `HiddenThreadSystemSingleton` | `game/autoload/hidden_thread_system.gd` — cumulative awareness / paper-trail / scapegoat-risk stats and Tier 1/2/3 trigger evaluation across the run |
+| 33 | `BetaHUD` | `game/autoload/beta_hud.gd` — session-level owner of the beta HUD panels (`BetaRightPanel` + `BetaEventLogPanel`); spawns both panels once at boot, exposes `activate(day)` / `deactivate()`. Registered after `BetaRunState`/`EventBus`/`InputFocus` so the panels can read `BetaRunState.day` and subscribe to signals in `_ready` |
+| 34 | `EmploymentSystem` | `game/autoload/employment_system.gd` — seasonal-employee state (trust, approval, hours, status), daily wages, and end-of-season retention/firing evaluation |
+| 35 | `PlatformSystem` | `game/scripts/systems/platform_system.gd` — per-platform supply/demand/hype, daily price ticks, and platform-affinity spawn weighting |
+| 36 | `StoreCustomizationSystem` | `game/scripts/systems/store_customization_system.gd` — per-day featured-display and promotional-poster choices, spawn-weight and demand multipliers, and trust/hidden-thread linkage |
+| 37 | `ShiftSystem` | `game/scripts/systems/shift_system.gd` — daily clock-in/clock-out state, including 08:55 auto clock-in and trust penalties for late or missing punches |
+| 38 | `ManagerRelationshipManager` | `game/autoload/manager_relationship_manager.gd` — player↔manager trust scalar/tier and morning-note selection on `day_started` |
+| 39 | `MorningNotePanel` | `game/scenes/ui/morning_note_panel.tscn` (scene) — paper-memo overlay listening for `manager_note_shown` |
+| 40 | `MiddayEventSystem` | `game/scripts/systems/midday_event_system.gd` — midday decision-beat queue, pauses time on pending beat, applies resolved structured effects |
+| 41 | `MiddayEventCard` | `game/scenes/ui/midday_event_card.tscn` (scene) — modal "STORE EVENT" decision card emitted on `midday_event_fired` / `midday_event_resolved` |
+| 42 | `FailCard` | `game/scenes/ui/fail_card.tscn` (scene) |
+| 43 | `TutorialContextSystem` | `game/autoload/tutorial_context_system.gd` |
+| 44 | `Day1ReadinessAudit` | `game/autoload/day1_readiness_audit.gd` — composite Day 1 playable check that subscribes to `StoreDirector.store_ready` and emits `AuditLog.pass_check(&"day1_playable_ready", …)` / `fail_check(&"day1_playable_failed", …)` |
+| 45 | `HiddenThreadSystemSingleton` | `game/autoload/hidden_thread_system.gd` — cumulative awareness / paper-trail / scapegoat-risk stats and Tier 1/2/3 trigger evaluation across the run |
 
 Single-owner responsibilities for the ownership-enforcing subset are tracked
 in [`docs/architecture/ownership.md`](architecture/ownership.md).
@@ -143,7 +144,8 @@ any `GameState` mutation without subscribing to each typed setter.
 
 By default `debug/walkable_mall` is `false` in `project.godot`, so the
 shipping flow is "hub mode": `GameWorld._setup_hub_mode` creates a
-`SceneTransition`, `apply_pending_session_state` emits
+`SceneTransition`; on a new run, `apply_pending_session_state` calls
+`_auto_enter_default_store_in_hub`, which emits
 `EventBus.enter_store_requested(GameManager.DEFAULT_STARTING_STORE)`, and the
 director enters the starter store directly without instantiating the
 `mall_hallway` scene.

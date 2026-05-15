@@ -3,12 +3,22 @@
 extends GutTest
 
 var _ui: ToastNotificationUI
+var _focus: Node
 
 
 func before_each() -> void:
+	_focus = get_tree().root.get_node_or_null("InputFocus")
+	if _focus != null:
+		_focus._reset_for_tests()
 	_ui = ToastNotificationUI.new()
 	_ui.size = Vector2(1152, 648)
 	add_child_autofree(_ui)
+	_ui._reset_for_tests()
+
+
+func after_each() -> void:
+	if _focus != null and is_instance_valid(_focus):
+		_focus._reset_for_tests()
 
 
 # ── Scenario A: order delivery + reputation tier change on same frame ─────────
@@ -175,6 +185,98 @@ func test_scenario_b_queue_empty_after_all_four_finish() -> void:
 	assert_eq(
 		_ui._queue.size(), 0,
 		"Queue must be empty after all four toasts have displayed"
+	)
+
+
+# ── Scenario C: double-emit while a toast is active ──────────────────────────
+
+
+func test_scenario_c_duplicate_emission_while_active_is_dropped() -> void:
+	EventBus.toast_requested.emit("Unlocked: Register Access", &"unlock", 5.0)
+	assert_true(
+		_ui._is_showing,
+		"Pre-condition: first emission of duplicate message must be active"
+	)
+	EventBus.toast_requested.emit("Unlocked: Register Access", &"unlock", 5.0)
+	assert_eq(
+		_ui._queue.size(), 0,
+		"Duplicate emission of an already-active message must not enqueue a second copy"
+	)
+	assert_true(
+		_ui._is_showing,
+		"First duplicate must still be active after the second emission is dropped"
+	)
+
+
+func test_scenario_c_duplicate_emission_while_queued_is_dropped() -> void:
+	EventBus.toast_requested.emit("Active first", &"system", 5.0)
+	EventBus.toast_requested.emit("Pending dup", &"system", 5.0)
+	assert_eq(_ui._queue.size(), 1, "Pre-condition: one queued behind active")
+	EventBus.toast_requested.emit("Pending dup", &"system", 5.0)
+	assert_eq(
+		_ui._queue.size(), 1,
+		"Duplicate of an already-queued message must not enqueue a second copy"
+	)
+
+
+# ── Scenario D: duplicate survives modal suspension ─────────────────────────
+
+
+func test_scenario_d_duplicate_across_modal_suspension_shows_once() -> void:
+	if _focus == null:
+		pending("InputFocus autoload required to drive modal suspension")
+		return
+	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	EventBus.toast_requested.emit("Recurring milestone", &"milestone", 5.0)
+	assert_true(_ui._is_showing, "Pre-condition: original message active")
+	# Second emission lands in the queue while the first is animating.
+	EventBus.toast_requested.emit("Recurring milestone", &"milestone", 5.0)
+	assert_eq(
+		_ui._queue.size(), 0,
+		"Same-message emission while active must be deduplicated, not queued"
+	)
+	# Modal opens — active card gets dropped + re-queued at head.
+	_focus.push_context(InputFocus.CTX_MODAL)
+	assert_false(_ui._is_showing, "Modal must take over from the active toast")
+	# Modal closes — the queue drains.
+	_focus.pop_context()
+	assert_true(
+		_ui._is_showing,
+		"Re-queued message must replay exactly once after the modal closes"
+	)
+	# Finish the replayed toast; nothing else should follow.
+	_ui._kill_tween()
+	_ui._on_toast_finished()
+	assert_false(
+		_ui._is_showing,
+		"No second copy may surface after the re-queued message finishes"
+	)
+	assert_eq(
+		_ui._queue.size(), 0,
+		"Queue must be empty after the deduplicated re-queue replays"
+	)
+
+
+func test_scenario_d_modal_suspend_dedup_against_queued_duplicate() -> void:
+	if _focus == null:
+		pending("InputFocus autoload required to drive modal suspension")
+		return
+	_focus.push_context(InputFocus.CTX_STORE_GAMEPLAY)
+	EventBus.toast_requested.emit("Dup", &"system", 5.0)
+	# Force a duplicate into the queue directly to simulate the race where
+	# a duplicate slips in via a path that bypasses the live dedup guard.
+	_ui._queue.append({"message": "Dup", "category": &"system", "duration": 5.0})
+	assert_eq(_ui._queue.size(), 1, "Pre-condition: forced duplicate sits in queue")
+	_focus.push_context(InputFocus.CTX_MODAL)
+	# _suspend_for_modal must not push another "Dup" at head — the queued copy
+	# is enough.
+	assert_eq(
+		_ui._queue.size(), 1,
+		"Suspended message must not be re-queued if a duplicate is already pending"
+	)
+	assert_eq(
+		String(_ui._queue[0].get("message", "")), "Dup",
+		"The pre-existing queued duplicate must be the one that survives"
 	)
 
 

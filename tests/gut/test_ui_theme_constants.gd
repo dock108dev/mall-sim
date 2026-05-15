@@ -101,6 +101,32 @@ func test_tracking_primary_constant_gte_80() -> void:
 	assert_gte(UIThemeConstants.TRACKING_PRIMARY, 80)
 
 
+func test_dark_panel_fill_overlay_value() -> void:
+	var c: Color = UIThemeConstants.DARK_PANEL_FILL_OVERLAY
+	assert_almost_eq(c.r, 0.122, 0.0005, "overlay red channel")
+	assert_almost_eq(c.g, 0.102, 0.0005, "overlay green channel")
+	assert_almost_eq(c.b, 0.086, 0.0005, "overlay blue channel")
+	assert_almost_eq(c.a, 0.88, 0.0005, "overlay alpha must be 0.88")
+
+
+func test_dark_panel_fill_overlay_matches_fill_hue() -> void:
+	# Overlay shares the warm charcoal hue with DARK_PANEL_FILL; only alpha differs.
+	var fill: Color = UIThemeConstants.DARK_PANEL_FILL
+	var overlay: Color = UIThemeConstants.DARK_PANEL_FILL_OVERLAY
+	assert_eq(overlay.r, fill.r, "overlay must share fill red channel")
+	assert_eq(overlay.g, fill.g, "overlay must share fill green channel")
+	assert_eq(overlay.b, fill.b, "overlay must share fill blue channel")
+	assert_lt(overlay.a, fill.a, "overlay alpha must be lower than fill alpha")
+
+
+func test_accent_color_amber_value() -> void:
+	var c: Color = UIThemeConstants.ACCENT_COLOR_AMBER
+	assert_almost_eq(c.r, 0.91, 0.0005, "amber red channel")
+	assert_almost_eq(c.g, 0.645, 0.0005, "amber green channel")
+	assert_almost_eq(c.b, 0.216, 0.0005, "amber blue channel")
+	assert_eq(c.a, 1.0, "amber alpha must be opaque")
+
+
 func test_button_hover_border_uses_interact_blue() -> void:
 	var theme: Theme = load("res://game/themes/game_theme.tres")
 	assert_not_null(theme, "game_theme.tres must be loadable")

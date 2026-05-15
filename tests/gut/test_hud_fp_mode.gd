@@ -1,9 +1,8 @@
-## Tests for HUD.set_fp_mode — first-person corner overlay layout used while a
-## StorePlayerBody owns the camera. Verifies that TopBar disappears, the four
-## core readouts (cash, time, on-shelves, customers, sold-today) are reparented
-## to the HUD CanvasLayer with anchored offsets, that toggling back restores
-## the original TopBar layout, and that EventBus signal handlers still drive
-## the detached labels after the reparent.
+## Tests for HUD.set_fp_mode — first-person layout that hides the heavy
+## TopBar and surfaces static `FPCashLabel` / `FPTimeLabel` nodes anchored
+## top-right. Verifies that TopBar disappears, the static FP labels mirror
+## the cash / day-time signals, no node reparenting occurs, and toggling
+## back restores the TopBar without leaking style overrides.
 extends GutTest
 
 const _HudScene: PackedScene = preload("res://game/scenes/ui/hud.tscn")
@@ -28,128 +27,15 @@ func _emit_state(new_state: GameManager.State) -> void:
 	EventBus.game_state_changed.emit(int(old), int(new_state))
 
 
+# ── TopBar visibility ─────────────────────────────────────────────────────────
+
+
 func test_set_fp_mode_hides_top_bar() -> void:
 	_hud.set_fp_mode(true)
 	var top_bar: HBoxContainer = _hud.get_node("TopBar")
 	assert_false(
 		top_bar.visible,
 		"TopBar HBoxContainer must be hidden when FP mode is enabled"
-	)
-
-
-func test_set_fp_mode_reparents_cash_label_under_hud() -> void:
-	_hud.set_fp_mode(true)
-	var cash_label: Label = _hud._cash_label
-	assert_eq(
-		cash_label.get_parent(), _hud,
-		"CashLabel must be reparented directly under the HUD CanvasLayer in FP mode"
-	)
-
-
-func test_set_fp_mode_reparents_time_label_under_hud() -> void:
-	_hud.set_fp_mode(true)
-	var time_label: Label = _hud._time_label
-	assert_eq(
-		time_label.get_parent(), _hud,
-		"TimeLabel must be reparented directly under the HUD CanvasLayer in FP mode"
-	)
-
-
-func test_set_fp_mode_reparents_items_placed_label_under_hud() -> void:
-	_hud.set_fp_mode(true)
-	assert_eq(
-		_hud._items_placed_label.get_parent(), _hud,
-		"ItemsPlacedLabel must be reparented under HUD in FP mode"
-	)
-
-
-func test_set_fp_mode_reparents_customers_label_under_hud() -> void:
-	_hud.set_fp_mode(true)
-	assert_eq(
-		_hud._customers_label.get_parent(), _hud,
-		"CustomersLabel must be reparented under HUD in FP mode"
-	)
-
-
-func test_set_fp_mode_reparents_sales_today_label_under_hud() -> void:
-	_hud.set_fp_mode(true)
-	assert_eq(
-		_hud._sales_today_label.get_parent(), _hud,
-		"SalesTodayLabel must be reparented under HUD in FP mode"
-	)
-
-
-func test_fp_mode_cash_label_anchored_top_left() -> void:
-	_hud.set_fp_mode(true)
-	var cash_label: Label = _hud._cash_label
-	assert_eq(cash_label.anchor_left, 0.0, "CashLabel anchored top-left in FP mode")
-	assert_eq(cash_label.anchor_right, 0.0, "CashLabel anchor_right is 0 in FP mode")
-	assert_eq(cash_label.offset_left, 8.0, "CashLabel offset_left = 8 in FP mode")
-	assert_eq(cash_label.offset_top, 8.0, "CashLabel offset_top = 8 in FP mode")
-
-
-func test_fp_mode_time_label_anchored_top_center() -> void:
-	_hud.set_fp_mode(true)
-	var time_label: Label = _hud._time_label
-	assert_eq(time_label.anchor_left, 0.5, "TimeLabel anchored to horizontal center")
-	assert_eq(time_label.anchor_right, 0.5, "TimeLabel anchor_right at center")
-
-
-func test_fp_mode_time_label_grows_symmetrically() -> void:
-	# Ultrawide guard: a centered label must grow in both directions when its
-	# minimum size exceeds the explicit offset width, otherwise a long localized
-	# string would push the visible center off the right edge of the viewport.
-	_hud.set_fp_mode(true)
-	assert_eq(
-		_hud._time_label.grow_horizontal, Control.GROW_DIRECTION_BOTH,
-		"TimeLabel must grow symmetrically (GROW_DIRECTION_BOTH) when centered in FP mode"
-	)
-
-
-func test_fp_mode_cash_label_grows_rightward() -> void:
-	_hud.set_fp_mode(true)
-	assert_eq(
-		_hud._cash_label.grow_horizontal, Control.GROW_DIRECTION_END,
-		"Left-anchored CashLabel must grow rightward so it stays inside the viewport"
-	)
-
-
-func test_fp_mode_right_cluster_grows_leftward() -> void:
-	# Right-anchored corner labels must grow toward the screen interior so a
-	# long localized string never pushes the rect off the right edge on
-	# ultrawide displays.
-	_hud.set_fp_mode(true)
-	for lbl: Label in [
-		_hud._items_placed_label,
-		_hud._customers_label,
-		_hud._sales_today_label,
-	]:
-		assert_eq(
-			lbl.grow_horizontal, Control.GROW_DIRECTION_BEGIN,
-			"%s must grow leftward (GROW_DIRECTION_BEGIN) when right-anchored" % lbl.name
-		)
-
-
-func test_fp_mode_items_placed_anchored_top_right() -> void:
-	_hud.set_fp_mode(true)
-	var lbl: Label = _hud._items_placed_label
-	assert_eq(lbl.anchor_left, 1.0, "ItemsPlacedLabel anchored top-right")
-	assert_eq(lbl.anchor_right, 1.0, "ItemsPlacedLabel anchor_right at right edge")
-
-
-func test_fp_mode_customers_below_items_placed() -> void:
-	_hud.set_fp_mode(true)
-	assert_gt(
-		_hud._customers_label.offset_top, _hud._items_placed_label.offset_top,
-		"CustomersLabel must sit below ItemsPlacedLabel in the top-right cluster"
-	)
-
-
-func test_fp_mode_sales_today_below_customers() -> void:
-	_hud.set_fp_mode(true)
-	assert_gt(
-		_hud._sales_today_label.offset_top, _hud._customers_label.offset_top,
-		"SalesTodayLabel must sit below CustomersLabel in the top-right cluster"
 	)
 
 
@@ -199,6 +85,166 @@ func test_fp_mode_keeps_crosshair_visible() -> void:
 		)
 
 
+# ── Static FP labels: presence, anchors, visibility, signal wiring ────────────
+
+
+func test_fp_cash_label_present_as_canvaslayer_root_child() -> void:
+	var fp_cash: Label = _hud.get_node_or_null("FPCashLabel") as Label
+	assert_not_null(
+		fp_cash,
+		"hud.tscn must include a static FPCashLabel as a CanvasLayer-root child"
+	)
+	if fp_cash == null:
+		return
+	assert_eq(
+		fp_cash.get_parent(), _hud,
+		"FPCashLabel must be a direct child of the HUD CanvasLayer (no reparenting)"
+	)
+
+
+func test_fp_time_label_present_as_canvaslayer_root_child() -> void:
+	var fp_time: Label = _hud.get_node_or_null("FPTimeLabel") as Label
+	assert_not_null(
+		fp_time,
+		"hud.tscn must include a static FPTimeLabel as a CanvasLayer-root child"
+	)
+	if fp_time == null:
+		return
+	assert_eq(
+		fp_time.get_parent(), _hud,
+		"FPTimeLabel must be a direct child of the HUD CanvasLayer (no reparenting)"
+	)
+
+
+func test_fp_cash_label_anchored_top_right() -> void:
+	var fp_cash: Label = _hud.get_node_or_null("FPCashLabel") as Label
+	assert_not_null(fp_cash)
+	if fp_cash == null:
+		return
+	assert_eq(fp_cash.anchor_left, 1.0, "FPCashLabel anchor_left at right edge")
+	assert_eq(fp_cash.anchor_right, 1.0, "FPCashLabel anchor_right at right edge")
+	assert_eq(fp_cash.anchor_top, 0.0, "FPCashLabel anchored to top")
+
+
+func test_fp_time_label_anchored_top_right() -> void:
+	var fp_time: Label = _hud.get_node_or_null("FPTimeLabel") as Label
+	assert_not_null(fp_time)
+	if fp_time == null:
+		return
+	assert_eq(fp_time.anchor_left, 1.0, "FPTimeLabel anchor_left at right edge")
+	assert_eq(fp_time.anchor_right, 1.0, "FPTimeLabel anchor_right at right edge")
+	assert_eq(fp_time.anchor_top, 0.0, "FPTimeLabel anchored to top")
+
+
+func test_fp_labels_visible_by_default_in_tscn() -> void:
+	# AC: FPCashLabel and FPTimeLabel are statically visible in hud.tscn so
+	# the corner readout is always live (the same handlers drive both the
+	# TopBar copies and the FP copies — no FP-mode gating required).
+	var fp_cash: Label = _hud.get_node_or_null("FPCashLabel") as Label
+	var fp_time: Label = _hud.get_node_or_null("FPTimeLabel") as Label
+	assert_not_null(fp_cash)
+	assert_not_null(fp_time)
+	if fp_cash == null or fp_time == null:
+		return
+	assert_true(fp_cash.visible, "FPCashLabel must be visible by default")
+	assert_true(fp_time.visible, "FPTimeLabel must be visible by default")
+
+
+func test_fp_labels_do_not_overlap_beta_right_panel_band() -> void:
+	# Vertical-stack guard: BetaRightPanel anchors at offset_top=56 on the
+	# right edge. The static FP labels must sit fully above that band so the
+	# two readouts read as a column rather than colliding rectangles.
+	var fp_cash: Label = _hud.get_node_or_null("FPCashLabel") as Label
+	var fp_time: Label = _hud.get_node_or_null("FPTimeLabel") as Label
+	assert_not_null(fp_cash)
+	assert_not_null(fp_time)
+	if fp_cash == null or fp_time == null:
+		return
+	assert_lte(
+		fp_cash.offset_bottom, 56.0,
+		"FPCashLabel bottom edge must sit at or above the BetaRightPanel band (y=56)"
+	)
+	assert_lte(
+		fp_time.offset_bottom, 56.0,
+		"FPTimeLabel bottom edge must sit at or above the BetaRightPanel band (y=56)"
+	)
+
+
+func test_fp_cash_label_updates_via_money_changed() -> void:
+	EventBus.money_changed.emit(0.0, 25.50)
+	# Cash uses a count-up tween (~0.3 s) for the TopBar label; FPCashLabel
+	# mirrors the same `_update_cash_display` write path so it lands on the
+	# same final value when the tween settles.
+	await get_tree().create_timer(0.45).timeout
+	var fp_cash: Label = _hud.get_node_or_null("FPCashLabel") as Label
+	assert_not_null(fp_cash)
+	if fp_cash == null:
+		return
+	assert_string_contains(
+		fp_cash.text, "25.50",
+		"FPCashLabel must update via the same money_changed → _update_cash_display path"
+	)
+
+
+func test_fp_time_label_updates_via_hour_changed() -> void:
+	EventBus.day_started.emit(1)
+	EventBus.hour_changed.emit(11)
+	var fp_time: Label = _hud.get_node_or_null("FPTimeLabel") as Label
+	assert_not_null(fp_time)
+	if fp_time == null:
+		return
+	assert_string_contains(
+		fp_time.text, "11",
+		"FPTimeLabel must update via the same hour_changed → _refresh_time_display path"
+	)
+
+
+# ── No-reparenting / no-orig-indices guarantees ──────────────────────────────
+
+
+func test_top_bar_cash_label_stays_in_top_bar_after_fp_toggle() -> void:
+	# Reparenting is gone: TopBar.CashLabel remains a child of TopBar at all
+	# times, regardless of FP-mode state.
+	_hud.set_fp_mode(true)
+	assert_eq(
+		_hud._cash_label.get_parent(), _hud.get_node("TopBar"),
+		"TopBar.CashLabel must stay parented to TopBar in FP mode (no reparenting)"
+	)
+	_hud.set_fp_mode(false)
+	assert_eq(
+		_hud._cash_label.get_parent(), _hud.get_node("TopBar"),
+		"TopBar.CashLabel must remain in TopBar after exiting FP mode"
+	)
+
+
+func test_top_bar_time_label_stays_in_top_bar_after_fp_toggle() -> void:
+	_hud.set_fp_mode(true)
+	assert_eq(
+		_hud._time_label.get_parent(), _hud.get_node("TopBar"),
+		"TopBar.TimeLabel must stay parented to TopBar in FP mode (no reparenting)"
+	)
+	_hud.set_fp_mode(false)
+	assert_eq(
+		_hud._time_label.get_parent(), _hud.get_node("TopBar"),
+		"TopBar.TimeLabel must remain in TopBar after exiting FP mode"
+	)
+
+
+func test_hud_does_not_expose_fp_orig_indices_field() -> void:
+	# Regression guard: the reparenting bookkeeping dictionary must not
+	# linger as a property on the HUD.
+	var props: Array = _hud.get_property_list()
+	for entry: Dictionary in props:
+		var prop_name: String = str(entry.get("name", ""))
+		assert_ne(
+			prop_name, "_fp_orig_indices",
+			"HUD must not expose `_fp_orig_indices` after the reparenting cleanup"
+		)
+
+
+# ── F4 close-day hint (still spawned dynamically) ────────────────────────────
+
+
 func test_fp_mode_creates_close_day_hint() -> void:
 	_hud.set_fp_mode(true)
 	var hint: Label = _hud.get_node_or_null("FpCloseDayHint") as Label
@@ -243,10 +289,7 @@ func test_fp_mode_close_day_hint_above_objective_rail() -> void:
 ## (Day 1 step 0 emits the "Press I to open the inventory panel" payload with
 ## a key chip). A persistent corner hint here would render the same I-key
 ## reminder twice on Day 1 — the BRAINDUMP layout spec allows only one
-## controls block per screen. The Day 1 store-entry FirstRunCueOverlay is the
-## third surface that already covers the same cue when the tutorial is
-## inactive. Dropping the corner hint leaves close-day as the only persistent
-## bottom-right affordance.
+## controls block per screen.
 func test_fp_mode_does_not_render_duplicate_inventory_hint() -> void:
 	_hud.set_fp_mode(true)
 	var hint: Node = _hud.get_node_or_null("FpInventoryHint")
@@ -256,78 +299,16 @@ func test_fp_mode_does_not_render_duplicate_inventory_hint() -> void:
 	)
 
 
-func test_fp_mode_cash_signal_still_updates_label() -> void:
-	_hud.set_fp_mode(true)
-	EventBus.money_changed.emit(0.0, 25.50)
-	# Cash uses a count-up tween (~0.3s), wait for it to settle.
-	await get_tree().create_timer(0.45).timeout
-	assert_string_contains(
-		_hud._cash_label.text, "25.50",
-		"CashLabel must still receive money_changed updates after FP reparent"
-	)
-
-
-func test_fp_mode_time_signal_still_updates_label() -> void:
-	_hud.set_fp_mode(true)
-	EventBus.day_started.emit(1)
-	EventBus.hour_changed.emit(11)
-	assert_string_contains(
-		_hud._time_label.text, "11",
-		"TimeLabel must still receive hour_changed updates after FP reparent"
-	)
-
-
-func test_fp_mode_items_placed_signal_still_updates_label() -> void:
-	_hud.set_fp_mode(true)
-	_hud._update_items_placed_display(7)
-	assert_string_contains(
-		_hud._items_placed_label.text, "7",
-		"ItemsPlacedLabel must still update via _update_items_placed_display after FP reparent"
-	)
-
-
-func test_fp_mode_customers_signal_still_updates_label() -> void:
-	_hud.set_fp_mode(true)
-	_hud._customers_served_today_count = 0
-	EventBus.customer_purchased.emit(
-		&"retro_games", &"item_a", 12.0, &"c1"
-	)
-	assert_string_contains(
-		_hud._customers_label.text, "1",
-		"CustomersLabel must still update via customer_purchased after FP reparent"
-	)
-
-
-func test_fp_mode_customers_label_visible() -> void:
-	# BRAINDUMP Day-1 HUD calls for "Customers: N" in the FP corner cluster.
-	# The non-FP STORE_VIEW path hides _customers_label (it shipped as the old
-	# active-in-store metric); FP mode must override that and surface the
-	# customers-served-today readout so the player can see the throughput grow.
-	_emit_state(GameManager.State.STORE_VIEW)
-	_hud.set_fp_mode(true)
-	assert_true(
-		_hud._customers_label.visible,
-		"CustomersLabel must be visible in FP mode (served-today readout)"
-	)
-
-
-func test_fp_mode_sales_today_signal_still_updates_label() -> void:
-	_hud.set_fp_mode(true)
-	_hud._sales_today_count = 0
-	EventBus.item_sold.emit("test_item", 9.99, "category")
-	assert_string_contains(
-		_hud._sales_today_label.text, "1",
-		"SalesTodayLabel must still update via item_sold after FP reparent"
-	)
+# ── Idempotence / state transitions ──────────────────────────────────────────
 
 
 func test_fp_mode_idempotent_when_called_twice() -> void:
 	_hud.set_fp_mode(true)
 	_hud.set_fp_mode(true)
-	# No error, labels still parented to HUD root.
-	assert_eq(
-		_hud._cash_label.get_parent(), _hud,
-		"Calling set_fp_mode(true) twice must remain a no-op"
+	var top_bar: HBoxContainer = _hud.get_node("TopBar")
+	assert_false(
+		top_bar.visible,
+		"Calling set_fp_mode(true) twice must keep TopBar hidden"
 	)
 
 
@@ -338,32 +319,6 @@ func test_disable_fp_mode_restores_top_bar() -> void:
 	assert_true(
 		top_bar.visible,
 		"TopBar must be visible again after set_fp_mode(false)"
-	)
-
-
-func test_disable_fp_mode_reparents_labels_back_to_top_bar() -> void:
-	_hud.set_fp_mode(true)
-	_hud.set_fp_mode(false)
-	var top_bar: HBoxContainer = _hud.get_node("TopBar")
-	assert_eq(
-		_hud._cash_label.get_parent(), top_bar,
-		"CashLabel must return to TopBar after FP mode is disabled"
-	)
-	assert_eq(
-		_hud._time_label.get_parent(), top_bar,
-		"TimeLabel must return to TopBar after FP mode is disabled"
-	)
-	assert_eq(
-		_hud._items_placed_label.get_parent(), top_bar,
-		"ItemsPlacedLabel must return to TopBar after FP mode is disabled"
-	)
-	assert_eq(
-		_hud._customers_label.get_parent(), top_bar,
-		"CustomersLabel must return to TopBar after FP mode is disabled"
-	)
-	assert_eq(
-		_hud._sales_today_label.get_parent(), top_bar,
-		"SalesTodayLabel must return to TopBar after FP mode is disabled"
 	)
 
 
@@ -379,118 +334,6 @@ func test_disable_fp_mode_hides_close_day_hint() -> void:
 	)
 
 
-## Compact-stat typography contract: the three top-right readouts must read
-## as secondary info — small font, dimmed white — so they do not feel like
-## a debug overlay competing with primary cash/time and never tie a toast
-## or modal title in size + brightness.
-func test_fp_mode_stat_labels_have_compact_font_size() -> void:
-	_hud.set_fp_mode(true)
-	for lbl: Label in [
-		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
-	]:
-		var size: int = lbl.get_theme_font_size("font_size")
-		assert_lte(
-			size, 14,
-			"%s font_size must be <=14 px in FP mode (got %d)" % [lbl.name, size]
-		)
-
-
-func test_fp_mode_stat_labels_have_dimmed_color() -> void:
-	_hud.set_fp_mode(true)
-	for lbl: Label in [
-		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
-	]:
-		var c: Color = lbl.get_theme_color("font_color")
-		assert_lte(
-			c.a, 0.65,
-			"%s font_color alpha must be <=0.65 in FP mode (got %.2f)" % [lbl.name, c.a]
-		)
-
-
-func test_fp_mode_cash_label_brighter_than_stats() -> void:
-	# Within-HUD hierarchy: cash is primary info, must out-weight the
-	# secondary right-cluster on either size or contrast (here: both).
-	_hud.set_fp_mode(true)
-	var cash_size: int = _hud._cash_label.get_theme_font_size("font_size")
-	var stat_size: int = _hud._items_placed_label.get_theme_font_size("font_size")
-	assert_gt(
-		cash_size, stat_size,
-		"CashLabel font_size (%d) must exceed stat font_size (%d) in FP mode" % [
-			cash_size, stat_size,
-		]
-	)
-	var cash_alpha: float = _hud._cash_label.get_theme_color("font_color").a
-	var stat_alpha: float = _hud._items_placed_label.get_theme_color("font_color").a
-	assert_gt(
-		cash_alpha, stat_alpha,
-		"CashLabel font alpha (%.2f) must exceed stat alpha (%.2f) in FP mode" % [
-			cash_alpha, stat_alpha,
-		]
-	)
-
-
-func test_fp_mode_time_label_brighter_than_stats() -> void:
-	_hud.set_fp_mode(true)
-	var time_size: int = _hud._time_label.get_theme_font_size("font_size")
-	var stat_size: int = _hud._sales_today_label.get_theme_font_size("font_size")
-	assert_gt(
-		time_size, stat_size,
-		"TimeLabel font_size (%d) must exceed stat font_size (%d) in FP mode" % [
-			time_size, stat_size,
-		]
-	)
-
-
-## BRAINDUMP non-negotiable: the mystery / hidden-thread system must not
-## surface "meters or named mechanics" in the player-facing HUD. This guard
-## walks the HUD subtree and rejects any Label whose name or text contains
-## a forbidden term, so a regression that adds a thread/affinity readout
-## fails immediately.
-func test_fp_mode_no_player_visible_thread_or_affinity_meters() -> void:
-	_hud.set_fp_mode(true)
-	var forbidden: Array[String] = ["thread", "affinity", "clue"]
-	var stack: Array[Node] = [_hud]
-	while not stack.is_empty():
-		var node: Node = stack.pop_back()
-		for child: Node in node.get_children():
-			stack.push_back(child)
-		if node is Label:
-			var name_lower: String = String(node.name).to_lower()
-			var text_lower: String = (node as Label).text.to_lower()
-			for term: String in forbidden:
-				assert_false(
-					name_lower.contains(term),
-					"HUD label name '%s' contains forbidden mystery term '%s'" % [
-						node.name, term,
-					]
-				)
-				assert_false(
-					text_lower.contains(term),
-					"HUD label text '%s' contains forbidden mystery term '%s'" % [
-						(node as Label).text, term,
-					]
-				)
-
-
-func test_disable_fp_mode_clears_typography_overrides() -> void:
-	# Theme overrides must not leak into the desktop TopBar layout, otherwise
-	# the manager view inherits the dimmed compact treatment meant only for FP.
-	_hud.set_fp_mode(true)
-	_hud.set_fp_mode(false)
-	for lbl: Label in [
-		_hud._cash_label, _hud._time_label,
-		_hud._items_placed_label, _hud._customers_label, _hud._sales_today_label,
-	]:
-		assert_false(
-			lbl.has_theme_font_size_override("font_size"),
-			"%s must not retain font_size override after FP mode disabled" % lbl.name
-		)
-		assert_false(
-			lbl.has_theme_color_override("font_color"),
-			"%s must not retain font_color override after FP mode disabled" % lbl.name
-		)
-
-
 func test_state_change_in_fp_mode_keeps_top_bar_hidden() -> void:
 	# A STORE_VIEW transition normally shows TopBar children; FP mode must
 	# re-assert overrides so the heavy bar does not leak back in.
@@ -503,10 +346,13 @@ func test_state_change_in_fp_mode_keeps_top_bar_hidden() -> void:
 	)
 
 
+# ── Top-center zero-state hint / FP sentence (unchanged contract) ────────────
+
+
 ## Top-center cluster guard: in FP mode the scene-tree ZeroStateHint at
-## offset_top=52 sits next to the reparented TimeLabel and crowds it. FP
-## mode must keep that label hidden and route the hint copy to the new
-## bottom-center sentence slot instead.
+## offset_top=52 sits below the TopBar and would visually compete with the
+## bottom-bar sentence pattern. FP mode must keep that label hidden and
+## route the hint copy to the bottom-center sentence slot instead.
 func test_fp_mode_hides_top_center_zero_state_hint() -> void:
 	_emit_state(GameManager.State.STORE_VIEW)
 	_hud.set_fp_mode(true)
@@ -516,7 +362,7 @@ func test_fp_mode_hides_top_center_zero_state_hint() -> void:
 	var legacy_hint: Label = _hud.get_node("ZeroStateHint") as Label
 	assert_false(
 		legacy_hint.visible,
-		"Top-center ZeroStateHint must stay hidden in FP mode to avoid TimeLabel collision"
+		"Top-center ZeroStateHint must stay hidden in FP mode"
 	)
 
 
@@ -625,29 +471,35 @@ func test_disable_fp_mode_hides_bottom_bar_sentence_label() -> void:
 	)
 
 
-## Backroom-count guard: the beta day-1 chain pumps the back-room delivery
-## count via EventBus.beta_backroom_count_changed; FP mode must keep that
-## readout visible in the top-right stat cluster so the player can still
-## see the pickup tally after the morning delivery.
-func test_fp_mode_back_room_label_reparented_under_hud() -> void:
+# ── Mystery-system guard ──────────────────────────────────────────────────────
+
+
+## BRAINDUMP non-negotiable: the mystery / hidden-thread system must not
+## surface "meters or named mechanics" in the player-facing HUD. This guard
+## walks the HUD subtree and rejects any Label whose name or text contains
+## a forbidden term, so a regression that adds a thread/affinity readout
+## fails immediately.
+func test_fp_mode_no_player_visible_thread_or_affinity_meters() -> void:
 	_hud.set_fp_mode(true)
-	assert_eq(
-		_hud._back_room_label.get_parent(), _hud,
-		"BackRoomLabel must be reparented under HUD in FP mode"
-	)
-
-
-func test_fp_mode_back_room_label_visible() -> void:
-	_emit_state(GameManager.State.STORE_VIEW)
-	_hud.set_fp_mode(true)
-	assert_true(
-		_hud._back_room_label.visible,
-		"BackRoomLabel must remain visible in FP mode (beta backroom count)"
-	)
-
-
-func test_fp_mode_back_room_label_anchored_top_right() -> void:
-	_hud.set_fp_mode(true)
-	var lbl: Label = _hud._back_room_label
-	assert_eq(lbl.anchor_left, 1.0, "BackRoomLabel anchored top-right")
-	assert_eq(lbl.anchor_right, 1.0, "BackRoomLabel anchor_right at right edge")
+	var forbidden: Array[String] = ["thread", "affinity", "clue"]
+	var stack: Array[Node] = [_hud]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		for child: Node in node.get_children():
+			stack.push_back(child)
+		if node is Label:
+			var name_lower: String = String(node.name).to_lower()
+			var text_lower: String = (node as Label).text.to_lower()
+			for term: String in forbidden:
+				assert_false(
+					name_lower.contains(term),
+					"HUD label name '%s' contains forbidden mystery term '%s'" % [
+						node.name, term,
+					]
+				)
+				assert_false(
+					text_lower.contains(term),
+					"HUD label text '%s' contains forbidden mystery term '%s'" % [
+						(node as Label).text, term,
+					]
+				)

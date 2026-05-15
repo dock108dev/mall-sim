@@ -1,4 +1,11 @@
 ## Non-blocking toast panel that displays onboarding hints with auto-dismiss.
+##
+## Modal coexistence: hints never share the screen with a blocking modal. Two
+## paths are closed — (1) if a modal pushes CTX_MODAL while a hint is visible,
+## `_on_input_focus_changed` dismisses it within the same frame; (2) if a hint
+## fires while CTX_MODAL is already on top, `_on_hint_shown` returns early at
+## the show-time guard. OnboardingSystem dedupes by hint id, so a suppressed
+## hint is not re-fired after the modal closes.
 class_name HintOverlayUI
 extends PanelContainer
 
@@ -20,6 +27,10 @@ func _ready() -> void:
 	_setup_timer()
 	EventBus.onboarding_hint_shown.connect(_on_hint_shown)
 	EventBus.onboarding_disabled.connect(_on_onboarding_disabled)
+	# `InputFocus` is an autoload (project.godot) and owns `context_changed`
+	# (input_focus.gd). Connect unconditionally — a rename would otherwise
+	# silently drop modal-suppression and the hint would render over modals.
+	InputFocus.context_changed.connect(_on_input_focus_changed)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -45,6 +56,13 @@ func _on_hint_shown(
 	message: String,
 	position_hint: String
 ) -> void:
+	# Show-time guard — if a modal is already on top of InputFocus, suppress the
+	# hint entirely. `context_changed` would not re-fire here (context did not
+	# change), so this is the only place that catches the "hint emits during an
+	# already-open modal" path. OnboardingSystem._shown_hints already marked
+	# this hint as shown, so it will not re-trigger after the modal closes.
+	if InputFocus.current() == InputFocus.CTX_MODAL:
+		return
 	_kill_tween()
 	_dismiss_timer.stop()
 	_apply_position(position_hint)
@@ -56,6 +74,17 @@ func _on_hint_shown(
 	_tween = create_tween()
 	_tween.tween_property(self, "modulate:a", 1.0, FADE_IN_DURATION)
 	_tween.tween_callback(_dismiss_timer.start.bind(DISPLAY_DURATION))
+
+
+## Dismiss any visible hint as soon as a modal takes the top of InputFocus.
+## Path 1 of the modal-coexistence contract — covers the "modal opens while a
+## hint is already animating" case. The show-time guard in `_on_hint_shown`
+## covers the inverse ordering.
+func _on_input_focus_changed(new_ctx: StringName, _old_ctx: StringName) -> void:
+	if new_ctx != InputFocus.CTX_MODAL:
+		return
+	if _is_showing:
+		_dismiss()
 
 
 func _dismiss() -> void:

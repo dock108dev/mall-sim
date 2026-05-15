@@ -640,7 +640,7 @@ func test_carrying_flag_cleared_after_stocking_shelf() -> void:
 
 # ── Today checklist signal contract ────────────────────────────────────────
 # Every chain advance must emit `EventBus.beta_objective_completed(id)` so
-# the BetaTodayChecklist can flip the matching row to ✓ and collapse it.
+# the BetaRightPanel can flip the matching row to ✓ and collapse it.
 
 func test_completing_customer_step_emits_beta_objective_completed() -> void:
 	var controller: Node = _beta_controller()
@@ -850,16 +850,16 @@ func test_summary_continue_pops_modal_focus_before_starting_next_day() -> void:
 	)
 
 
-# ── Today checklist spawn ───────────────────────────────────────────────────
+# ── Right-panel spawn ───────────────────────────────────────────────────────
 
-func test_beta_controller_spawns_today_checklist_on_ready() -> void:
-	# The controller's _ensure_panels must add a BetaTodayChecklist into the
-	# UI tree so the bottom-right corner has a glanceable progress tracker
-	# in place of the suppressed MomentsTray.
-	var checklist: Node = get_tree().get_first_node_in_group("beta_today_checklist")
+func test_beta_controller_spawns_right_panel_on_ready() -> void:
+	# The controller's _ensure_panels must add a BetaRightPanel into the UI
+	# tree so the right side has the merged store-stats + today-checklist
+	# surface in place of the suppressed MomentsTray.
+	var panel: Node = get_tree().get_first_node_in_group("beta_right_panel")
 	assert_not_null(
-		checklist,
-		"BetaDayOneController must spawn a BetaTodayChecklist into the UI tree"
+		panel,
+		"BetaDayOneController must spawn a BetaRightPanel into the UI tree"
 	)
 
 

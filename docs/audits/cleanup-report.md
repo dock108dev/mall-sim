@@ -1,3 +1,258 @@
+## Changes made this pass (2026-05-15, follow-up)
+
+Follow-up cleanup over the same beta WIP working tree as the first
+2026-05-15 pass below. The prior pass aligned the ownership docstrings
+on the two surviving beta panels and removed the dead "Day 1: " label
+rewrite loop in the controller. This follow-up swept the now-stable
+panel files for additional dead code that the prior pass did not name:
+a never-reachable label-prefix-strip branch in `BetaRightPanel`, and a
+write-only `_background` field in `BetaEventLogPanel`.
+
+### Edits applied in source
+
+| File | LOC before → after | What changed |
+|---|---|---|
+| `game/scripts/beta/beta_right_panel.gd` | 649 → 644 (-5) | Removed the unreachable `_PREFIX = "Day 1: "` strip branch in `_short_label`. Every entry in `BetaDayOneController._objectives` and every entry in the GUT test fixture `_OBJECTIVES` carries a populated `action` field, and the function returns `action` first whenever it is non-empty — the `label` fallback only fires for entries with a missing/empty `action`, and within that fallback the prefix-strip only fires for labels beginning with `"Day 1: "`. The controller's labels lost that prefix in a prior pass (`grep "Day 1:" -- game/scripts/beta/beta_day_one_controller.gd` returns zero hits), so the branch could not fire from any production path. The function still falls back to the raw label when `action` is empty, preserving the defensive surface for "label-only" entries; only the unreachable substring rewrite is gone. The `test_item_label_strips_day_one_prefix` assertion still passes because it only asserts the rendered row does not contain `"Day 1:"` — the `action` path returns `"Talk to the customer"` and satisfies the assertion regardless of the strip code. |
+| `game/scripts/beta/beta_event_log_panel.gd` | 269 → 268 (-1) | Demoted the write-only `var _background: ColorRect` class field to a local `background` variable inside `_build_panel`. `grep -n "_background" -- game/scripts/beta/beta_event_log_panel.gd` returned only the declaration and the construction block — no reads anywhere in the file or the test suite (`tests/gut/test_beta_event_log_panel.gd::test_background_is_constrained_to_content_width` reaches the ColorRect via `anchor.get_node("Background")`, not via the field). The node still lives on the scene tree under `Anchor/Background` (the `name` and the `add_child` call are unchanged), so the visual contract and the test seam are intact. The field had no purpose beyond holding a reference during construction. |
+
+### Why these were act-able
+
+- The `_short_label` `_PREFIX` branch is provably unreachable from every
+  current call site (controller seed + test fixture both carry `action`),
+  and the controller's labels no longer carry the literal `"Day 1: "`
+  prefix the strip targeted. The test contract for the row text
+  (`test_item_label_strips_day_one_prefix`) is satisfied by the `action`
+  path, not by the strip. The change keeps the defensive `label`
+  fallback for a future entry that omits `action` — only the
+  substring-rewrite branch that could never fire is gone.
+- The `_background` field is a textbook write-only field — assigned once
+  in `_build_panel`, never read by any method or test. The scene-tree
+  identity (`name = "Background"`) is what the test asserts against, and
+  that survives the conversion to a local.
+- Targeted GUT runs after the edits pass clean:
+  `gut -gselect=test_beta_event_log_panel.gd -gselect=test_beta_right_panel.gd`
+  reports 27/27 passing, `gut -gselect=test_beta_hud.gd` reports 11/11
+  passing. Project boot stays clean (`[AUDIT] boot_complete: PASS`).
+
+### Inspected this pass and intentionally not changed
+
+#### `DARK_PANEL_FILL_OVERLAY` is declared and tested but has no production reader yet
+
+`game/scripts/ui/ui_theme_constants.gd:59` and
+`tests/gut/test_ui_theme_constants.gd:104–119`. The new constant has
+value-pinning tests but no production call site reads it yet.
+
+**Why kept:** the WIP introduced the constant specifically as a
+forward-compatible SSOT for floating HUD surfaces (toasts, right-rail
+panels). Removing it would re-open the consolidation choice the WIP
+just closed. The two tests pin its value relative to `DARK_PANEL_FILL`
+so a future migration cannot accidentally drift the overlay's hue away
+from the dark-panel tier — they encode a design contract, not a usage
+contract.
+
+#### Six remaining copies of `_PANEL_BG = Color(0.08, 0.08, 0.14, 0.88)` across `BetaRightPanel` and `BetaEventLogPanel`
+
+Two `_PANEL_BG` declarations with identical RGBA values across the two
+beta panels.
+
+**Why kept:** the value differs intentionally from
+`UIThemeConstants.DARK_PANEL_FILL_OVERLAY` (`0.122, 0.102, 0.086, 0.88`,
+warm charcoal) — the beta panels use a blue-tinged dark indigo that is
+its own design family. Hoisting the duplicate into a shared constant
+would conflate two distinct visual contracts. Leave it per-surface
+until the design family is consolidated.
+
+### Files still >500 LOC (this pass)
+
+Same five files as the first 2026-05-15 pass; size deltas reflect only
+this follow-up.
+
+- `game/scripts/beta/beta_day_one_controller.gd` 1742 LOC (no change
+  this pass). Same disposition as the first 2026-05-15 pass — extraction
+  candidates remain blocked by ongoing day-2 / day-N content authoring.
+- `game/scenes/ui/hud.gd` 1461 LOC (no change this pass). Same
+  `FpHudController` extraction plan once layout is content-stable. The
+  first 2026-05-15 pass already removed the reparenting plumbing (≈100
+  LOC); the file size reflects the post-cleanup state.
+- `game/autoload/event_bus.gd` ≈ 875 LOC. Global signal hub by design;
+  no change this pass.
+- `game/scenes/ui/checkout_panel.gd` ≈ 775 LOC. Intrinsic scope; no
+  change this pass.
+- `game/scripts/beta/beta_right_panel.gd` 644 LOC (was 649, −5). Still
+  slightly over the 500-LOC threshold; same `BetaRightPanelChecklist`
+  extraction plan as the first 2026-05-15 pass, same blocker (merge
+  contract just closed).
+
+### Consistency edits (one line per file)
+
+- `game/scripts/beta/beta_right_panel.gd` — `_short_label` simplified to
+  the action-then-label fallback; the unreachable `_PREFIX` substring
+  rewrite and its docstring sentence are gone.
+- `game/scripts/beta/beta_event_log_panel.gd` — `_background` demoted
+  from a write-only class field to a local in `_build_panel`.
+
+## Escalations
+
+None new this pass. The pre-existing content-test reconciliation
+failures named in prior escalation notes
+(`test_stock_shelf_label_names_the_retro_games_shelf` and the
+`"Stock the Retro Games shelves" / "shelf"` + `"register checkout" /
+"register"` content drift in `test_beta_day_one_critical_path.gd` and
+`test_objective_rail_day1_visibility.gd`) reproduce unchanged with this
+pass's edits applied. They are pre-existing, not caused by either
+2026-05-15 pass, and remain a test-fix-pass concern.
+
+---
+
+## Changes made this pass (2026-05-15)
+
+Cleanup pass over the in-flight beta WIP working tree that finished the
+right-panel merge (`BetaTodayChecklist` + `BetaTodayStatsPanel` →
+`BetaRightPanel`), promoted the right panel + event log into a single
+`BetaHUD` autoload, switched toasts to top-center placement with
+dedupe + drop-in animation, added modal-coexistence to
+`HintOverlayUI`, and introduced the `ACCENT_COLOR_AMBER` /
+`DARK_PANEL_FILL_OVERLAY` theme constants. The merge itself already
+swept most stale `BetaTodayChecklist` / `BetaTodayStatsPanel`
+references off the production code (the remaining hits in
+`docs/audits/**` are historical entries in past audit reports, not
+live references). This pass picks up the small drift the merge left
+behind in `beta_*_panel.gd` docstrings and removes one block of dead
+code that had become unreachable in a *prior* commit.
+
+### Edits applied in source
+
+| File | LOC before → after | What changed |
+|---|---|---|
+| `game/scripts/beta/beta_right_panel.gd` | 657 → 658 (+1) | Replaced the stale "Owned by `BetaDayOneController` (spawned in `_ensure_panels`); not an autoload." docstring with the current ownership — the panel is now owned by the `BetaHUD` autoload (spawned in `BetaHUD._ready`) and persists across day-controller teardown via `BetaHUD.activate(day)`. The header had drifted out of sync with the new autoload model added in the same WIP. |
+| `game/scripts/beta/beta_event_log_panel.gd` | 269 → 270 (+1) | Same fix on the event-log panel's ownership docstring — replaced "Owned by `BetaDayOneController` (spawned in `_ensure_panels`); not an autoload." with the current `BetaHUD` autoload ownership. Both panels share the new lifetime model so the docstring drift was the same in both files. |
+| `game/scripts/beta/beta_day_one_controller.gd` | 1745 → 1737 (-8) | Removed dead `for obj in _objectives: obj["label"] = ... .replace("Day 1:", "Day %d:" % day_number)` block in `_reset_scene_for_day` plus its rationale docstring on `_objectives`. The "Day 1: " prefix was removed from every `_objectives.label` in commit `b24780d` (already on `main`), which turned the `replace()` into a no-op against every entry — `grep "Day 1:" -- game/scripts/beta/beta_day_one_controller.gd` returns zero matches in the post-`b24780d` table. The `day_number` parameter became unused once the loop was gone, so it was renamed to `_day_number` (Godot convention for intentional unused params). The accompanying "Kept as a `var` (not `const`) because `_reset_scene_for_day` rewrites the `label` fields" comment was also removed — its rationale was retired by the same `b24780d` commit, but the comment survived. `_objectives` stays as `var` (not `const`) because hot-pathing it to `const` is out of scope for this pass and risks subtle type-inference downstream. |
+
+### Why these were act-able
+
+- The two ownership docstrings made factual claims about runtime
+  ownership (`BetaDayOneController._ensure_panels`) that the same WIP
+  invalidated. Tests already encode the new ownership
+  (`test_beta_hud.gd::test_autoload_is_registered_and_owns_both_panels`,
+  `test_beta_hud.gd::test_panels_are_direct_children_of_betahud`,
+  `test_beta_hud.gd::test_panels_survive_stub_controller_teardown`),
+  so updating the docstrings to match is documentation alignment
+  with the test contract — zero risk.
+- The `_reset_scene_for_day` `replace()` loop is dead code under the
+  current `_objectives` table (zero matches for the `"Day 1:"` literal
+  it greps). No test depends on the substitution producing a `Day 2:`
+  label — `grep "Day 2:" -- tests/` returns zero hits. Removing it
+  shrinks the controller by 8 LOC and lets the `var` declaration shed
+  the stale rationale comment.
+- Godot `--check-only` boot ran clean after the edits
+  (`[AUDIT] boot_complete: PASS`).
+
+### Inspected this pass and intentionally not changed
+
+#### Doc/audit cross-references to deleted `BetaTodayChecklist` / `BetaTodayStatsPanel`
+
+`docs/audits/cleanup-report.md` (prior entries below), `ssot-report.md`,
+`security-report.md`, and `error-handling-report.md` still name the two
+deleted classes throughout their narratives.
+
+**Why kept:** those are historical audit entries for specific past
+passes — they describe what was true *at the time of that pass*.
+Rewriting the historical record would amount to lying about prior
+audit findings. The live code already updated all references to the
+merged `BetaRightPanel`; the audit reports are the right place to
+preserve the pre-merge naming. Future audits should write fresh
+entries (this pass's entry, above, does that) rather than patching
+the old ones.
+
+#### Stale comments inside `beta_right_panel.gd` referencing the predecessor classes
+
+`beta_right_panel.gd:3–4` opens with: *"Merges the previous
+`BetaTodayStatsPanel` (top-right stats) and `BetaTodayChecklist`
+(bottom-right objectives) into a single …"*.
+
+**Why kept:** this is intentional rationale documenting *why* the
+single-panel design exists — the surrounding paragraph explains the
+behavior contract that fell out of the merge (no unlock-grant
+surface, no recent-events section, content-driven height). Removing
+the historical names would weaken the docstring's "what this
+replaced and why" framing.
+
+#### `beta_day_one_controller.gd` size (1737 LOC)
+
+Down 8 LOC this pass; still well over the 500-LOC threshold and still
+carries the `# gdlint:disable=max-file-lines` pragma at line 1.
+
+**Why kept:** same disposition as the 2026-05-13 follow-up pass.
+Cleanest split is still `panel ownership / decision-card glue /
+screenshot helper`, still blocked by ongoing day-2 / day-N content
+authoring; extracting now would create churn without code-health
+gain. The file legitimately owns gating, time advance, completion,
+summary shaping, scene reset, customer-exit tween, and panel
+ownership for the beta loop. Re-evaluate once Day 2's chain shape
+stabilizes (planning memory: see
+`project_onboarding_pacing_phase.md`).
+
+#### `_MODAL_DIM_ALPHA = 0.65` constant repeated across HUD surfaces
+
+Now also present in the new `BetaRightPanel` and the surviving
+`BetaEventLogPanel` (replaces the deleted checklist / stats panel
+copies). Six copies → still six copies (different surfaces).
+
+**Why kept:** unchanged from the prior pass disposition — every
+copy carries the same calibration docstring naming
+`ModalDimOverlay.DIM_COLOR.a` as the SSOT. Centralizing into an
+autoload would buy nothing beyond saving five literal `0.65`s.
+
+### Files still >500 LOC (this pass)
+
+Same five files as the 2026-05-13 follow-up; size deltas reflect only
+this pass.
+
+- `game/scripts/beta/beta_day_one_controller.gd` 1737 LOC (was 1745,
+  −8). See "Inspected and intentionally not changed" above.
+- `game/scenes/ui/hud.gd` 1479 LOC. No change this pass. Same
+  `FpHudController` extraction plan once layout is content-stable.
+- `game/autoload/event_bus.gd` ≈ 875 LOC. Global signal hub by
+  design; no change this pass.
+- `game/scenes/ui/checkout_panel.gd` ≈ 775 LOC. Intrinsic scope; no
+  change this pass.
+- `game/scripts/beta/beta_right_panel.gd` 658 LOC (new file from
+  this WIP, slightly over threshold). Cleanest extraction would be
+  the checklist column (`_rebuild_items`, `_create_row`,
+  `_apply_row_state`, `_collapse_item`, `_finalize_collapse`,
+  `_on_beta_objective_completed`, `_on_objective_changed`) into a
+  `BetaRightPanelChecklist` helper Control, leaving the stats rows
+  and header in `BetaRightPanel`. Deferred: the WIP just merged
+  these two surfaces and the merge contract (`STORE` + `TODAY`
+  sections in one column) is the explicit design output; splitting
+  on the same day re-opens what the merge just closed. Revisit
+  once Day-2 content authoring lands and the merged layout has been
+  exercised by players.
+
+### Consistency edits (one line per file)
+
+- `game/scripts/beta/beta_right_panel.gd` — docstring header rephrased
+  to name the current owner (`BetaHUD` autoload) instead of the prior
+  controller-spawned model.
+- `game/scripts/beta/beta_event_log_panel.gd` — same docstring
+  realignment.
+- `game/scripts/beta/beta_day_one_controller.gd` — dropped dead
+  `replace("Day 1:", …)` loop and its `var`-vs-`const` rationale
+  comment; underscored the now-unused `_reset_scene_for_day` parameter.
+
+## Escalations
+
+None new this pass. The pre-existing
+`test_stock_shelf_label_names_the_retro_games_shelf` failure
+(`controller.get("_OBJECTIVES")` returns Nil because the controller's
+property is `_objectives`, not `_OBJECTIVES`) reproduces unchanged
+with my edits stashed — pre-existing, not caused by this pass.
+Smallest next action is renaming the test's `get("_OBJECTIVES")` →
+`get("_objectives")` and adjusting the assertion to walk the var
+table; that belongs to a test-fix pass, not a code-cleanup pass.
+
+---
+
 ## Changes made this pass (2026-05-13, follow-up)
 
 Follow-up cleanup pass over the same beta WIP working tree as the
