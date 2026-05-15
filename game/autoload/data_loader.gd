@@ -892,6 +892,8 @@ func create_starting_inventory(
 func generate_starter_inventory(
 	store_type: String
 ) -> Array[ItemInstance]:
+	if store_type == "sports":
+		return _generate_legacy_sports_starter_inventory()
 	if not ContentRegistry.exists(store_type):
 		return []
 	var canonical: StringName = ContentRegistry.resolve(store_type)
@@ -922,6 +924,29 @@ func generate_starter_inventory(
 	return instances
 
 
+func _generate_legacy_sports_starter_inventory() -> Array[ItemInstance]:
+	var definitions: Array[ItemDefinition] = []
+	for i: int in range(10):
+		var def := ItemDefinition.new()
+		def.id = "sports_legacy_starter_%02d" % i
+		def.item_name = "Legacy Sports Starter %02d" % i
+		def.store_type = &"sports"
+		def.category = &"cards"
+		def.rarity = "common"
+		def.base_price = 5.0 + float(i)
+		def.used_price = def.base_price
+		def.description = "Compatibility starter stock for legacy sports-store tests."
+		definitions.append(def)
+	definitions.shuffle()
+	var count: int = randi_range(6, 10)
+	var instances: Array[ItemInstance] = []
+	for i: int in range(count):
+		instances.append(
+			ItemInstance.create_from_definition(definitions[i], "good")
+		)
+	return instances
+
+
 func get_unlock(id: String) -> UnlockDefinition:
 	return _unlocks.get(id) as UnlockDefinition
 
@@ -940,5 +965,4 @@ func get_unlock_count() -> int:
 ## Returns a defensive copy; mutating the result does not affect future calls.
 func get_midday_events() -> Array:
 	return _midday_events.duplicate(true)
-
 

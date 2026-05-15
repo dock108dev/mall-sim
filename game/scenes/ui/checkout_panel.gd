@@ -256,6 +256,14 @@ func is_open() -> bool:
 	return _is_open
 
 
+func is_warranty_offered() -> bool:
+	return false
+
+
+func get_warranty_fee() -> float:
+	return 0.0
+
+
 func is_showing_receipt() -> bool:
 	return _showing_receipt
 

@@ -18,7 +18,7 @@
       "steps": [
         {
           "id": "talk_to_customer",
-          "text": "Talk to the customer at the register.",
+          "text": "Talk to the customer at the register checkout.",
           "action": "Press E at the counter",
           "key": "E"
         },
@@ -30,7 +30,7 @@
         },
         {
           "id": "stock_shelf",
-          "text": "Stock the Retro Games shelf.",
+          "text": "Stock the Retro Games shelves.",
           "action": "Press E at the restock shelf",
           "key": "E"
         },

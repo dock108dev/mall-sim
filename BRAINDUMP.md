@@ -1,1026 +1,891 @@
-# Shelf Life — Next Phase Brain Dump
-## Phase Goal: Stabilize the First-Day Loop, Improve the Visual Readability, and Add Real Game Regression Testing
-The current build is promising because the game loop is actually starting to exist:
-- Player starts Day 1
-- Vic/tutorial content appears
-- Customer/register task exists
-- Inventory/back room/shelf tasks exist
-- Money, day/time, store stats, objective HUD, and interaction prompts exist
-- The store space is navigable enough to begin testing the gameplay
-But every pass is also breaking something:
-- Tutorial text duplicates.
-- Objective text duplicates.
-- HUD panels fight each other.
-- Some UI is too dim to read.
-- Some state updates appear to fire more than once.
-- Modal layering is messy.
-- The store still visually reads like a gray/brown prototype blockout.
-- Agent passes are producing churn instead of obvious forward progress.
-This phase should do two things at the same time:
-1. Stabilize and clean up the actual first-day gameplay experience.
-2. Add real automated game testing in CI so we stop rediscovering the same bugs manually.
-This is not a “make the whole game bigger” phase.
-This is a “make the first 10 minutes reliable, testable, and less ugly” phase.
-Do not add new major systems unless required to stabilize the first-day flow.
-Do not add more economy depth yet.
-Do not add more customer complexity yet.
-Do not add new day types yet.
-Do not keep patching visible symptoms without adding tests that would catch the regression next time.
+# Shelf Life — Visual Pass Brain Dump
+## Phase Goal: Build a Real HUD, Notification System, and First-Room Visual Baseline
+The play loop is stable enough now that the next phase should be a **visual and UI systems pass**.
+This is not a new gameplay phase.
+This is not the time to add more store systems, more customer behavior, or more day logic.
+The goal is to make the current stable loop look and feel intentional:
+- HUD elements should not overlap.
+- Notices should not fight the side panel.
+- Store stats should not float randomly behind/above panels.
+- Notifications should have one system and one placement.
+- The objective list should be readable.
+- The store should look like a deliberately stylized prototype, not a debug room with UI stuck on top.
+Right now the game is becoming playable, but the screen composition is still messy.
 ---
-# Core Problem
-The build has crossed into the danger zone where enough things are wired that changes feel real, but the game does not yet have enough guardrails to prevent regressions.
-The player-facing symptoms are obvious:
-- “First clock-in...” appears twice.
-- “Talk to the customer at the register.” appears twice.
-- A tutorial popup, a letter, HUD objectives, bottom task text, and right panel are all competing.
-- Some panels are too large, too empty, or too low-contrast.
-- The store looks mechanically functional but visually unintentional.
-The technical issue underneath is probably that multiple managers/UI scripts are independently pushing text and state instead of rendering from a single source of truth.
-This phase needs to fix that and then lock it down with automated tests.
----
-# Non-Negotiable Phase Rules
-## Rule 1 — No Duplicate Messages
-A given tutorial beat, milestone, unlock, or objective should only display once in its intended surface.
-Current bad examples:
-- “First clock-in. Vic walked you through the register...” renders twice in the same modal.
-- “Talk to the customer at the register.” appears twice in the bottom task area.
-- The same unlock/info can appear in both a modal and the side panel without clear purpose.
-Fix this at the state/event layer.
-Do not fix duplicates by trimming strings in the UI after the fact.
-Do not add one-off “if text already exists” hacks in three different UI scripts.
-There should be a single event/message/objective source of truth.
-Add dedupe keys for:
-- tutorial event id
-- objective id
-- modal id
-- unlock id
-- milestone id
-- day/phase combination where needed
-Acceptance:
-- Starting Day 1 does not duplicate tutorial text.
-- Restarting Day 1 does not duplicate tutorial text.
-- Re-rendering the HUD does not duplicate objectives.
-- Reopening/closing modals does not append duplicated content.
-- Signal/listener reconnects do not cause doubled messages.
----
-## Rule 2 — One Source of Truth for Objectives
-Objectives should not be scattered across tutorial scripts, HUD scripts, interaction scripts, and task-feed append calls.
-Create or clean up a single objective model.
-Suggested shape:
-```gdscript
-ObjectiveState:
-  id: String
-  label: String
-  status: String # locked | active | complete | hidden
-  priority: int
-  interaction_target_id: String
-  completion_event_id: String
-  visible_in_today_panel: bool
-  visible_in_event_log: bool
-  visible_as_interaction_prompt: bool
+# Current Visual Problems
+From the latest screenshots:
+## 1. Top-center notice overlaps with day/time
+The “Showing the Ropes” card is centered near the top, but the `Day 1 — 9:00 AM` text is also top-center. They visually collide.
+Problem:
+```text
+Day 1 — 9:00 AM
+[ Showing the Ropes notification ]
 
-The HUD should render from objective state.
+This makes both elements feel accidental.
 
-The game logic should update objective state.
+2. Right sidebar overlaps with top-right stat text
 
-The task/event log should record transitions, not continuously re-add the active objective.
+The stats:
 
-Acceptance:
+On Shelves: 0
+Back Room: 0
+Cust: 0
+Sold Today: 0
 
-* Every objective has a stable id.
-* Every objective has one lifecycle.
-* UI renders from current objective state.
-* Objective text is not appended every frame/tick.
-* Each objective appears at most once per intended UI surface.
-* Completing an objective does not leave ghost copies behind.
+appear above/behind the right panel instead of inside it.
+
+That should never happen. If the side panel exists, it owns those stats.
+
+3. Notification and side panel fight for attention
+
+The right sidebar sometimes shows:
+
+Unlocked: Register Access
+
+while the top-center notification also explains the same thing.
+
+This creates two competing notification systems.
+
+4. Bottom HUD feels like debug text
+
+The bottom objective area is better than before, but still feels like a raw list. It needs hierarchy:
+
+* current objective
+* upcoming objectives
+* completed objectives
+* recent event log
+
+Those should not all look like the same kind of text.
+
+5. Side panel is too tall and empty
+
+The right panel is a giant black slab. It has useful potential, but currently it has too much empty space and not enough structure.
+
+6. Store visual baseline is still weak
+
+The world is readable enough to move around, but it still needs:
+
+* stronger register area
+* better shelf identity
+* improved signage
+* more intentional lighting
+* clearer interactable targets
+* less “large empty box” feeling
 
 ⸻
 
-Rule 3 — UI Surfaces Need Clear Jobs
+Phase Objective
 
-Right now the UI is trying to say everything everywhere. Give each surface a job.
+Create a coherent visual language for the current game.
 
-Top Left
+By the end of this phase:
 
-Money only.
+* There is a proper HUD layout.
+* There is one notification/toast system.
+* The right panel owns store stats and day checklist.
+* Top-center only owns day/time unless a modal explicitly replaces it.
+* Bottom HUD is cleaned up and reduced.
+* Interactable areas are visually readable.
+* Current objective target is obvious.
+* The first store room looks like an intentional prototype.
 
-Keep it readable.
-No extra status spam here.
+⸻
 
-Top Center
+HUD Layout Rules
 
-Day/time only, plus rare milestone toast.
+Rule 1 — Every HUD Region Has One Job
 
-Milestone toasts should be short.
-They are not for tutorial paragraphs.
+Do not let multiple systems render into the same part of the screen.
 
-Example:
+Use this layout:
+
+┌──────────────────────────────────────────────────────────────┐
+│ $500.00                         Day 1 — 9:00 AM              │
+│                                                              │
+│                                                ┌───────────┐ │
+│                                                │ Store HUD │ │
+│                                                │ + Today   │ │
+│                                                └───────────┘ │
+│                                                              │
+│                                                              │
+│                                                              │
+│                                                              │
+│ Event Log                                      Action Prompt │
+└──────────────────────────────────────────────────────────────┘
+
+Each region:
+
+Region	Purpose
+Top-left	Money only
+Top-center	Day/time only
+Top-right/right panel	Store stats + today checklist
+Center/top-center	Toast notifications only when they do not overlap day/time
+Bottom-left	Recent event log
+Bottom-center	Optional current objective, only if not redundant
+Bottom-right	Current interaction prompt
+
+⸻
+
+Top HUD
+
+Money
+
+Top-left should stay simple:
+
+$500.00
+
+Rules:
+
+* Always readable.
+* No extra labels unless needed.
+* No animation unless money changes.
+* On money change, use a subtle pop or delta text:
+    * +$50
+    * -$50 rent
+
+Do not spam the event log and HUD with the same money update unless useful.
+
+Day / Time
+
+Top-center owns only:
 
 Day 1 — 9:00 AM
 
-Right Panel
+Rules:
 
-Store status and today’s checklist.
+* Nothing should overlap it.
+* Notifications should not render directly underneath it if they visually collide.
+* In-world signs should not intersect it from the camera view.
 
-This should answer:
+If a top notification appears, either:
 
-* What day is it?
-* What is the store state?
-* What am I broadly doing today?
+* place it below the day/time with enough margin, or
+* move notifications to the upper-left/center-left, or
+* make the day/time temporarily part of the notification stack.
 
-Suggested structure:
+⸻
+
+Right Panel Redesign
+
+The right panel should own:
+
+* store stats
+* today’s goal
+* active checklist
+* latest unlock, if needed
+
+It should not be a giant empty slab.
+
+Suggested Structure
 
 DAY 1 — OPENING
 Store
-On Shelves: 0
-Back Room: 0
-Customers: 0
-Sold Today: 0
+Shelves       0
+Back Room     0
+Customers     0
+Sold Today    0
 Today
-• Help the first customer
-• Check the back room delivery
-• Stock Retro Games
-• Close the day
+● Help the first customer
+○ Check the back room delivery
+○ Stock the Retro Games shelf
+○ Close the day at the register
 
-The right panel should not be a giant empty black rectangle.
-It should not duplicate the bottom-left log.
-It should not show stale/hidden objectives as if they are current.
+Rules
 
-Bottom Left
+* Move On Shelves, Back Room, Cust, and Sold Today into this panel.
+* Delete the floating top-right stat text.
+* Do not render stats both inside and outside the panel.
+* Reduce panel height if it has little content.
+* Give the panel padding and spacing.
+* Use one accent color for headers.
+* Current objective should be visibly highlighted.
+* Future objectives should be muted but readable.
+* Completed objectives should show a check or strikethrough, not disappear unless that feels better.
 
-Recent event log only.
+Right Panel Size
 
-Good:
+Current panel is too tall and empty.
+
+Target:
+
+* Width: roughly 260–320 px equivalent at 1080p.
+* Height: content-driven, not full screen.
+* Anchor: top-right, below the top HUD.
+* Margin: enough that it does not touch the screen edge or stat text.
+
+⸻
+
+Notification / Toast System
+
+There should be exactly one notification system.
+
+Current issue:
+
+* Top-center card says “Showing the Ropes.”
+* Right panel says “Unlocked: Register Access.”
+* Event log may also say the same thing.
+
+That is three surfaces for one event. UI confetti, but sad.
+
+Notification Types
+
+Define notification types:
+
+NotificationType:
+  TOAST
+  UNLOCK
+  OBJECTIVE_CHANGED
+  WARNING
+  DAY_SUMMARY
+  MODAL
+
+Placement Rules
+
+Toasts
+
+Short-lived, non-blocking.
+
+Examples:
 
 Register access unlocked.
 Customer served.
 Delivery checked.
-Retro Games shelf stocked.
 
-Bad:
+Placement:
 
-Talk to the customer at the register.
-Talk to the customer at the register.
-Check the back room delivery.
-Stock the Retro Games shelf.
-Close the day at the register.
+* top-right above/right panel, or
+* upper-center below day/time with safe margin
 
-The bottom-left area should not be the full objective list if the right panel already owns that job.
+Duration:
 
-Bottom Right
+* 2–4 seconds
 
-Current interaction prompt only.
+Rules:
+
+* Do not block movement.
+* Do not require Continue.
+* Do not overlap day/time.
+* Do not overlap the side panel.
+* Do not duplicate in the right panel unless it updates actual persistent state.
+
+Unlock Notifications
+
+Unlocks should be toasts, not side-panel body text.
 
 Example:
 
-Talk to customer    E
-Check delivery      E
-Stock shelf         E
-Close day           F4
+Unlocked: Register Access
 
-This should be contextual and short.
+Show once as a toast.
+Then disappear.
 
-Modal / Letter UI
+Do not leave it sitting in the right panel forever unless the panel has an explicit “Recent” section.
 
-Only for intentional pauses.
+Objective Changed
 
-The Vic letter is a good idea.
-The tutorial popup is fine too.
-But they should not both fight for attention.
+Objective changes can update the right panel and optionally create a subtle toast:
 
-Modal priority matters.
+New objective: Check the back room delivery.
 
-Suggested modal priority:
+But avoid showing this if the right panel update is already obvious.
 
-1. Pause/menu/system modal
-2. Letter/story modal
-3. Tutorial/mechanical popup
-4. Milestone toast
-5. HUD
+Blocking Modals
 
-When a higher-priority modal is open:
+Reserved for:
 
-* lower-priority blocking modals should queue
-* interaction prompts should hide
-* HUD can dim, but not become unreadable junk
-* no popup should appear behind another popup
+* Vic letter
+* day summary
+* pause menu
+* major story beat
 
-Acceptance:
-
-* Only one blocking modal is active at a time.
-* The player always knows what button/click closes the current modal.
-* A queued popup displays after the current modal closes, if still relevant.
-* No tutorial text appears behind the Vic letter.
+Do not use blocking modals for routine tutorial text.
 
 ⸻
 
-First-Day Flow Target
+Replace “Showing the Ropes” Treatment
 
-The first-day loop should be boringly reliable before the game gets bigger.
+The current “Showing the Ropes” card is visually improved but still too prominent for a routine onboarding hint.
 
-1. Start Day 1
+New Treatment
 
-Player spawns in the store.
+Convert it from a blocking-looking card to a toast or compact tutorial hint.
 
-Visible:
+Current:
 
-* money
-* day/time
-* right-side Today panel
-* one clear immediate objective
+Showing the Ropes
+First clock-in. Vic walked you through the register and now expects you to ring sales without supervision.
 
-No duplicate popups.
-No duplicate objective text.
+Better as a toast:
 
-Suggested first active objective:
+Register access unlocked.
+Ring up the waiting customer at the counter.
 
-Talk to the customer at the register.
+Or as a right-panel objective detail:
 
-2. Vic Intro
+Current
+Help the waiting customer at the register.
 
-Show one intro surface.
+If the title “Showing the Ropes” is kept, use it as a one-time tutorial toast, not a large center card.
 
-Preferred:
+Acceptance
 
-* Vic letter appears first.
-* Player presses E/click to close.
-* Then the first active objective is clearly visible.
-
-Do not show the “Showing the Ropes” popup and the Vic letter at the same time unless intentionally staged.
-
-If both exist:
-
-* letter first
-* tutorial unlock popup after letter closes
-* no duplicate text between them
-
-3. Register Customer
-
-Player walks to the register and interacts.
-
-On completion:
-
-* customer count updates exactly once
-* sold today updates exactly once
-* money updates exactly once
-* objective completes exactly once
-* event log shows one confirmation
-* next objective activates: check back room delivery
-
-4. Back Room Delivery
-
-Player goes to the back room and checks delivery.
-
-On completion:
-
-* back room inventory increases exactly once
-* objective completes exactly once
-* event log shows one confirmation
-* next objective activates: stock Retro Games shelf
-
-5. Stock Shelf
-
-Player stocks the shelf.
-
-On completion:
-
-* shelf inventory increases
-* back room inventory decreases
-* objective completes exactly once
-* event log shows one confirmation
-* next objective activates: close day at register
-
-6. Close Day
-
-Player closes the day.
-
-On completion:
-
-* day summary appears once
-* rent/sales/profit are shown cleanly
-* no duplicate summary modal
-* day state is ready for Day 2 or end-of-slice depending on current scope
+* It does not overlap day/time.
+* It does not require a click.
+* It does not duplicate the side panel.
+* It disappears automatically.
+* It is logged once if the event log needs it.
 
 ⸻
 
-Required Visual Cleanup
+Bottom HUD Cleanup
 
-The game does not need to look final yet, but it needs to look intentional.
+The bottom strip should not feel like a debug console.
 
-Right now the store reads like:
+Bottom-left: Event Log
 
-* big brown floor
-* gray walls
-* floating signs
-* dark panels
-* placeholder counters/shelves
+Use only recent events.
 
-That is okay for a prototype, but this phase should make the first room readable.
+Examples:
 
-Store Readability Goals
+Register access unlocked.
+Customer served.
+Delivery checked.
 
-A new player should be able to identify:
+Rules:
 
-* register
-* customer/register area
-* back room
-* delivery area
-* Retro Games shelf
-* Used Games shelf
-* entrance/exit
-* current objective target
+* Max 3–4 visible lines.
+* Fade older lines.
+* Do not show future objectives here.
+* Do not show the full checklist here.
+* Do not duplicate the current objective unless it just changed.
 
-Required improvements:
+Bottom-right: Interaction Prompt
 
-* Better signage contrast.
-* Cleaner shelf labels.
-* Stronger register silhouette.
-* Clearer back room marker.
-* Slightly better lighting around interactables.
-* Remove or reduce random colored block signs unless they mean something.
-* Add subtle current-objective target highlighting.
+Only show the current action:
 
-Lighting
+Talk to the customer    E
 
-Current lighting is muddy.
+Rules:
 
-Do a simple pass:
+* Prompt should be large enough to notice.
+* Prompt should hide when no interaction is available.
+* Prompt should hide during blocking modals.
+* Prompt should update immediately when target changes.
+* Prompt should not share space with objective list.
 
-* brighten the room slightly
-* use warmer light near the register
-* use softer fill light across the floor
-* avoid heavy global dim unless a modal is open
-* make modal dimming strong enough to focus attention but not so dark the HUD/game becomes unreadable
+Bottom Border / Bar
 
-Materials
+The orange line is useful, but it currently makes the whole bottom feel like a permanent console.
 
-Keep it simple:
+Consider:
 
-* floor should look like one intentional material
-* walls should be less dead-gray
-* shelves/counters/register should separate visually from the floor
-* interactable objects should have better contrast than background props
-
-Objective Target Highlight
-
-Add a subtle indicator to the current target.
-
-Options:
-
-* faint outline
-* small floating marker
-* glow
-* floor marker
-* small contextual label
-
-Do not overdo it. This is not a mobile quest marker festival.
-Just enough that the player does not wander around a boxy room guessing what is clickable.
-
-Acceptance:
-
-* The register is visually obvious.
-* The back room is visually obvious.
-* The current target is discoverable.
-* Screenshots look like a deliberate prototype, not accidental garbage.
+* thinner divider
+* smaller background panel
+* only show bottom bar when needed
+* separate event log and prompt without a full-width heavy bar
 
 ⸻
 
-Required Architecture Cleanup
+Objective Presentation
 
-Add a Test-Friendly Gameplay Harness
+Use one persistent checklist in the right panel.
 
-Before we add CI testing, make the game testable.
+Objective States
 
-Add a dev/test-only gameplay harness that can drive first-day state transitions without requiring physical player movement.
+Visual states:
 
-Suggested methods:
-
-start_new_game()
-start_day(day_number)
-close_active_modal()
-simulate_interaction(target_id)
-complete_objective(objective_id)
-get_current_day()
-get_current_time()
-get_money()
-get_inventory_state()
-get_customer_count()
-get_sold_today()
-get_active_objectives()
-get_completed_objectives()
-get_visible_objective_labels()
-get_event_log()
-get_open_modal_id()
-get_open_modal_title()
-get_open_modal_body()
-get_modal_queue()
-get_current_interaction_prompt()
-get_current_interaction_target()
-get_hud_view_model()
-
-Important:
-The harness may bypass walking/collision.
-The harness may not bypass the real game state transitions.
-
-This should not be a separate fake version of the game.
-It should call the same managers and events that real gameplay uses.
-
-Good:
-
-simulate_interaction("register_customer")
-
-calls the same interaction completion code the player would trigger by pressing E at the register.
-
-Bad:
-
-money += 50
-objective = "check_delivery"
-
-inside the test only.
-
-⸻
-
-Add Dev-Only Debug Visibility
-
-Add a dev-only debug panel or dump command.
-
-It should expose:
-
-Current Day:
-Current Time:
-Current Phase:
-Money:
-Customers:
-Sold Today:
-Inventory On Shelves:
-Inventory Back Room:
-Active Objective:
-Completed Objectives:
-Unlocked Systems:
-Open Modal:
-Queued Modals:
-Queued Messages:
-Current Interaction Target:
-Current Interaction Prompt:
-
-This can be hidden behind a debug key or only enabled in test/dev builds.
-
-Purpose:
-When the UI duplicates something, we should know whether:
-
-* state duplicated
-* event emitted twice
-* signal connected twice
-* UI appended instead of rendering
-* modal queue duplicated
-* objective manager restarted incorrectly
-
-Stop guessing.
-
-⸻
-
-Add Event Logging
-
-Every important state transition should log once.
+● Active objective
+✓ Complete objective
+○ Upcoming objective
 
 Example:
 
-EVENT game_started
-EVENT day_started day=1 time=09:00
-EVENT modal_opened id=vic_day_1_letter
-EVENT modal_closed id=vic_day_1_letter
-EVENT objective_started id=talk_to_customer
-EVENT interaction_available target=register_customer
-EVENT interaction_completed target=register_customer
-EVENT stat_changed money 500 -> 550
-EVENT stat_changed customers 0 -> 1
-EVENT objective_completed id=talk_to_customer
-EVENT objective_started id=check_back_room_delivery
+Today
+● Help the first customer
+○ Check the back room delivery
+○ Stock the Retro Games shelf
+○ Close the day at the register
 
-Acceptance:
+After customer:
 
-* State changes are auditable.
-* Duplicate UI issues can be traced to event duplication or render duplication.
-* CI tests can assert event counts.
+Today
+✓ Help the first customer
+● Check the back room delivery
+○ Stock the Retro Games shelf
+○ Close the day at the register
 
-⸻
+Rules:
 
-Automated Game Testing in CI
-
-We are not using web.
-Do not add Playwright.
-Do not build a browser export test.
-This is a native Godot project, so CI should run Godot-side tests.
-
-The goal is to add real regression testing for the first-day gameplay loop.
-
-Use a Godot test framework compatible with this repo.
-
-Preferred options:
-
-* GUT
-* gdUnit4
-
-Pick the one that is easiest to wire into the current Godot version and repo structure.
-
-The point is not framework purity.
-The point is that pull_request and main CI can run game tests and fail when the first-day loop breaks.
+* Current objective should be bright.
+* Completed objective should be muted but recognizable.
+* Future objective should be dim, but not invisible.
+* Objective text should not appear in multiple places unless each place has a distinct purpose.
 
 ⸻
 
-CI Deliverables
+Visual Style Direction
+
+Keep the current low-poly/prototype look, but make it intentional.
+
+The target is not AAA.
+The target is “stylized indie shop sim prototype that knows what it is.”
+
+Palette
+
+Current palette:
+
+* dark brown / black panels
+* gold-orange accent
+* off-white text
+* muted gray walls
+* warm wood floor
+* green register screen
+
+Keep the general direction, but standardize it.
+
+Suggested UI palette:
+
+Panel background: near-black with 75–85% opacity
+Panel border: muted amber
+Primary text: warm off-white
+Secondary text: muted tan/gray
+Accent: amber/gold
+Success: soft green
+Warning: muted orange
+
+Avoid:
+
+* black text on transparent black
+* gray text on gray wall
+* neon colors unless intentionally used for signs/screens
+* random colored squares that do not communicate anything
+
+⸻
+
+Store Visual Improvement Pass
+
+Register Area
+
+This is the most important area right now.
+
+Improve:
+
+* checkout counter silhouette
+* register shape
+* customer placement
+* “Checkout” sign readability
+* interaction zone clarity
+* lighting around register
+
+The register should be obvious from spawn.
 
 Add:
 
-/tests/
-  unit/
-  integration/
-  snapshots/
-/test_harness/
-  GameplayTestHarness.gd
-/ci/
-  run_godot_tests.sh
-.github/workflows/game-ci.yml
-TESTING.md
+* small counter mat
+* subtle glow on register screen
+* better sign placement
+* customer marker/shape that reads from distance
+* perhaps a queue marker on the floor
 
-Names can vary if the repo has a convention already, but the concepts should exist.
+Checkout Sign
 
-⸻
+The giant sign previously collided with the HUD. It is better now, but still needs care.
 
-CI Workflow Requirements
+Rules:
 
-The CI workflow should run on:
+* In-world signs must not intersect HUD.
+* Sign should be readable without dominating the camera.
+* Move it deeper into the scene or lower it.
+* Avoid top-screen cropping.
 
-* pull requests
-* pushes to main
+Shelves
 
-It should:
+Shelves need stronger identities.
 
-1. Check out the repo.
-2. Install/use the expected Godot version.
-3. Import/build enough project metadata if needed.
-4. Run the Godot test suite headlessly.
-5. Publish test output/logs as artifacts if tests fail.
-6. Fail the PR if first-day regression tests fail.
+For each shelf:
 
-Do not require manual editor steps.
-Do not require local-only files.
-Do not require a developer to visually inspect screenshots to know the build is broken.
+* readable label
+* distinct section sign
+* maybe a few placeholder box/game shapes
+* subtle color coding only if meaningful
 
-Suggested workflow shape:
+Current signs:
 
-name: game-ci
-on:
-  pull_request:
-  push:
-    branches: [ main ]
-jobs:
-  godot-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Godot
-        run: |
-          ./ci/setup_godot.sh
-      - name: Run Godot Tests
-        run: |
-          ./ci/run_godot_tests.sh
-      - name: Upload Test Logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: godot-test-logs
-          path: |
-            test-results/
-            logs/
+* Used Games
+* Retro Games
 
-If the repo already has a preferred Godot action/container, use it.
-Do not over-engineer the setup.
+Good direction, but make them cleaner and less tiny/glowy.
+
+Back Room
+
+Back room needs to read as a destination.
+
+Add:
+
+* clearer doorway
+* sign or placard
+* boxes visible near entrance
+* warmer/cooler light contrast
+* objective marker when active
+
+Empty Floor Problem
+
+The center floor is huge and empty.
+
+Options:
+
+* add a few low-poly display tables
+* add floor mats
+* add queue markers
+* add subtle pathing lines
+* add a small promo stand
+* add cardboard boxes near delivery path
+
+Do not clutter it yet.
+Just break up the bowling-alley emptiness.
 
 ⸻
 
-Required Automated Tests
+Interactable Target Highlighting
 
-Test 1 — Project Boots
+The current objective should have a subtle world-space cue.
 
-Given the project
-When CI opens the main scene in test/headless mode
-Then the scene loads without script errors
-And required managers exist:
-- GameState
-- ObjectiveManager
-- TutorialManager
-- InventoryManager
-- CustomerManager
-- ModalManager
-- HUDController
+Options:
+
+* soft outline
+* small floating marker
+* floor circle
+* gentle glow
+* sign pulse
+* interaction icon
+
+Rules:
+
+* only highlight the active target
+* do not use giant quest markers
+* hide/reduce highlight after player discovers the target
+* highlight should not fight with UI notifications
+
+Example:
+
+Active objective: Talk to customer
+Target highlight: register/customer area
+Prompt appears when close: Talk to customer    E
+
+⸻
+
+UI System Architecture
+
+Implement HUD through view models, not random node updates.
+
+Suggested View Models
+
+HudViewModel:
+  money
+  day
+  time
+  store_stats
+  today_objectives
+  event_log
+  interaction_prompt
+  active_toasts
+  blocking_modal
+ToastViewModel:
+  id
+  type
+  title
+  body
+  duration
+  priority
+  created_at
+ObjectiveViewModel:
+  id
+  label
+  state # active | complete | upcoming | hidden
+InteractionPromptViewModel:
+  label
+  input
+  target_id
+  visible
+
+Rules:
+
+* UI renders from models.
+* Gameplay updates state.
+* State emits events.
+* HUD consumes state/events.
+* No gameplay script should directly append text into HUD labels.
+
+⸻
+
+Notification Queue Rules
+
+Add a small queue manager.
+
+Rules:
+
+* Toasts queue by priority.
+* Duplicate toast ids are ignored within a cooldown window.
+* Max visible toasts: 1–2.
+* Blocking modals suppress toasts or delay them.
+* Toasts should not appear behind modals.
+* Unlock/objective notifications should have stable ids.
+
+Example dedupe ids:
+
+unlock_register_access
+objective_talk_to_customer_started
+customer_served_day1_first
+delivery_checked_day1
 
 Acceptance:
 
-* Broken autoloads fail CI.
-* Missing scene paths fail CI.
-* Script parse errors fail CI.
-* Missing required managers fail CI.
+* “Unlocked: Register Access” appears once.
+* It does not remain forever in the side panel.
+* It does not appear at the same time as an equivalent top card.
+* It does not duplicate on scene reload.
 
 ⸻
 
-Test 2 — Day 1 Initial State
+Testing Requirements
 
-Given a fresh new game
-When Day 1 starts
-Then:
-- day equals 1
-- time equals 9:00 AM
-- money equals configured starting money
-- customers equals 0
-- sold today equals 0
-- shelf inventory equals expected starting value
-- back room inventory equals expected starting value
-- exactly one primary objective is active
-- active objective is talk_to_customer
-- no objective label appears twice
-- no tutorial event appears twice
-- no more than one blocking modal is open
+Now that play is stable, add visual/HUD regression tests at the data level.
 
-This directly protects against the bugs shown in the screenshots.
+Do not start with pixel-perfect screenshot tests.
+Start with HUD view model tests.
 
-⸻
+Test 1 — No HUD Region Overlap by Ownership
 
-Test 3 — Intro Modal Does Not Duplicate Text
+Given Day 1 is active
+Then store stats are rendered only in the right panel model
+And not in floating top-right labels
 
-Given a fresh Day 1 start
-When the intro/tutorial content appears
-Then:
-- modal body does not contain duplicated paragraphs
-- modal event id was emitted once
-- modal opened once
-- modal queue does not contain duplicate copies of the same modal
+Test 2 — Notification Does Not Duplicate
 
-Also test:
+When register access unlocks
+Then exactly one toast/event is created with id unlock_register_access
+And the right panel does not also render it as permanent body text unless explicitly configured
 
-When the modal is closed
-And the HUD re-renders
-Then the modal text is not appended anywhere else
+Test 3 — Day Time and Toast Do Not Share Anchor
 
-And:
+Given a toast is active
+Then the toast anchor is not the same as the day/time anchor
+And the toast has configured margin below or away from day/time
 
-When Day 1 is restarted in the same process
-Then intro text still appears only once
-And signal/listener connections do not double-fire
+Test 4 — Bottom HUD Does Not Contain Full Checklist
 
-This protects against the classic Godot bug where entering/restarting scenes reconnects signals and everything fires twice.
+Given Day 1 has four objectives
+Then the right panel checklist contains the objectives
+And the bottom-left event log does not contain future objective rows
 
-⸻
+Test 5 — Interaction Prompt Only Shows Current Target
 
-Test 4 — Objective Render Dedupe
+Given player is near the customer
+Then bottom-right prompt is Talk to the customer / E
+Given player moves away
+Then prompt clears
+Given blocking modal opens
+Then prompt hides
 
-Given Day 1 has started
-When the HUD view model is generated
-Then:
-- active objective ids are unique
-- visible objective labels are unique per surface
-- bottom-left event log does not duplicate the active objective
-- right panel Today list does not contain duplicate rows
+Test 6 — HUD Snapshot
 
-This should test the HUD model, not pixels.
+Snapshot the HUD model for:
 
-Good:
+* spawn
+* register unlock toast visible
+* customer interaction available
+* customer served
+* delivery objective active
 
-get_hud_view_model().right_panel.today_objectives
-
-Bad:
-Taking screenshots and OCR-ing them.
-
-⸻
-
-Test 5 — Day 1 Golden Path
-
-This is the load-bearing test.
-
-Given a fresh Day 1 start
-When the player closes the intro
-Then active objective is talk_to_customer
-When the harness simulates interacting with register_customer
-Then:
-- talk_to_customer is complete
-- money increases exactly once
-- customers served increases exactly once
-- sold today increases exactly once
-- event log contains one customer-served event
-- active objective becomes check_back_room_delivery
-When the harness simulates interacting with back_room_delivery
-Then:
-- check_back_room_delivery is complete
-- back room inventory increases exactly once
-- event log contains one delivery-checked event
-- active objective becomes stock_retro_games
-When the harness simulates interacting with retro_games_shelf
-Then:
-- stock_retro_games is complete
-- shelf inventory increases
-- back room inventory decreases
-- event log contains one shelf-stocked event
-- active objective becomes close_day
-When the harness simulates interacting with close_day_register
-Then:
-- close_day is complete
-- day summary modal opens once
-- final stats match expected values
-- no duplicate modal is open
-
-This is the test that should fail if future agent passes break the first day.
-
-⸻
-
-Test 6 — Modal Priority
-
-Given a letter modal is open
-When a tutorial unlock event fires
-Then:
-- the tutorial popup is queued
-- it does not display behind the letter
-- there is still only one blocking modal open
-When the letter closes
-Then:
-- the queued tutorial popup may display if still relevant
-- the modal queue does not duplicate it
-
-Acceptance:
-
-* No stacked blocking modals.
-* No modal behind a modal.
-* Interaction prompts hide while blocking modal is open.
-
-⸻
-
-Test 7 — Interaction Prompt Correctness
-
-Given the active objective is talk_to_customer
-When the player is not near the register/customer
-Then the interaction prompt is empty or hidden
-When the player/harness focuses register_customer
-Then the interaction prompt is:
-"Talk to the customer" with input "E"
-When the interaction completes
-Then the prompt clears or updates to the next valid target
-
-Also test:
-
-The prompt does not remain stuck on the previous target.
-The prompt does not display while a blocking modal is open.
-
-⸻
-
-Test 8 — Stats Update Exactly Once
-
-Given starting money is 500
-When register_customer interaction completes once
-Then money equals 550 or the configured expected value
-And the money_changed event fired once
-And customer count increased by one
-And sold today increased by one
-
-Also test:
-
-When the same completed interaction is triggered again
-Then it does not pay out twice unless explicitly designed to allow repeat customers.
-
-This matters because duplicate signal firing can make the UI look okay while the sim quietly corrupts money/inventory.
-
-⸻
-
-Test 9 — HUD View Model Snapshot
-
-Do not snapshot pixels yet.
-Snapshot the HUD data model.
-
-For each Day 1 phase, serialize:
+Snapshot should include:
 
 {
-  "money": 500,
-  "day": 1,
-  "time": "9:00 AM",
-  "store_stats": {
-    "on_shelves": 0,
-    "back_room": 0,
-    "customers": 0,
-    "sold_today": 0
+  "top_left": {
+    "money": "$500.00"
   },
-  "active_objectives": ["talk_to_customer"],
-  "completed_objectives": [],
-  "event_log": [],
-  "interaction_prompt": null,
-  "modal": {
-    "id": "vic_day_1_letter",
-    "title": "Vic Harlow — Day 1",
-    "body_hash": "..."
-  }
+  "top_center": {
+    "day_time": "Day 1 — 9:00 AM"
+  },
+  "right_panel": {
+    "stats": {
+      "on_shelves": 0,
+      "back_room": 0,
+      "customers": 0,
+      "sold_today": 0
+    },
+    "objectives": [
+      {
+        "id": "talk_to_customer",
+        "state": "active"
+      }
+    ]
+  },
+  "bottom_left": {
+    "event_log": []
+  },
+  "bottom_right": {
+    "prompt": {
+      "label": "Talk to the customer",
+      "input": "E"
+    }
+  },
+  "toasts": [
+    {
+      "id": "unlock_register_access"
+    }
+  ]
 }
 
-Snapshots should be stable enough to catch accidental UI/state changes but not so brittle that copy edits become painful.
-
-Use body hashes for long modal text if exact copy churn is expected.
-
-Acceptance:
-
-* Snapshot diffs are readable in CI output.
-* A duplicate objective changes the snapshot and fails.
-* A wrong active objective changes the snapshot and fails.
-* A stuck modal changes the snapshot and fails.
+The exact structure can vary. The important part is that the HUD state is testable.
 
 ⸻
 
 Manual QA Checklist
 
-Add this to TESTING.md.
+Run this after the visual pass.
 
-Fresh Start QA
+Spawn
 
-1. Start a new game.
-2. Confirm money starts at intended value.
-3. Confirm Day 1 / 9:00 AM is visible.
-4. Confirm Vic intro appears once.
-5. Confirm no duplicate text in modal.
-6. Close intro.
-7. Confirm only one active objective is shown.
-8. Confirm bottom-left is not duplicating the full objective list.
-9. Walk to customer/register.
-10. Confirm interaction prompt appears once.
-11. Press E.
-12. Confirm money updates once.
-13. Confirm customers/sold today update once.
-14. Confirm next objective activates once.
-15. Check delivery.
-16. Confirm back room count updates once.
-17. Stock shelf.
-18. Confirm shelf/back room counts update correctly.
-19. Close day.
-20. Confirm summary appears once.
+* Money is readable.
+* Day/time is readable.
+* No top-center card overlaps day/time.
+* Store stats are inside the right panel only.
+* Right panel does not cover other HUD text.
+* Bottom-left is not a full objective dump.
+* Bottom-right shows only the current interaction when relevant.
 
-Regression Failure Rules
+Notification
 
-The phase is not done if:
+* Register access unlock appears once.
+* Notification does not overlap day/time.
+* Notification does not overlap right panel.
+* Notification disappears automatically.
+* Notification does not also persist as duplicate text elsewhere.
 
-* Any objective appears twice.
-* Any modal text repeats.
-* Multiple blocking overlays appear at once.
-* HUD becomes unreadable.
-* Interaction prompt remains for the wrong target.
-* Money/stats update more than once per interaction.
-* Restarting the day causes duplicate listeners/messages.
-* The first-day golden path cannot be completed in the test harness.
-* CI does not fail when one of these issues is intentionally introduced.
+Objective Flow
 
-⸻
+* Current objective is clear.
+* Future objectives are readable but muted.
+* Completed objective has a distinct state.
+* Objective text does not duplicate across HUD regions.
 
-Visual Acceptance Criteria
+Register Area
 
-This pass is not expected to make the game beautiful.
+* Register is obvious from spawn.
+* Customer/register interaction target is clear.
+* Prompt appears when near/looking at customer.
+* Prompt disappears when not relevant.
 
-It is expected to make the game readable.
+General Visual
 
-Done means:
-
-* HUD is readable at normal gameplay resolution.
-* Right panel looks intentional and useful.
-* Bottom-left is an event log, not a duplicate objective dump.
-* Bottom-right only shows the current interaction.
-* Register/back room/shelves are visually identifiable.
+* Store is brighter and less muddy.
+* Signs are readable.
+* Shelves are visually distinct.
+* Back room is identifiable.
+* Empty floor is slightly broken up.
 * Current objective target is discoverable.
-* Modals do not stack.
-* The game no longer looks like six disconnected debug systems are rendering at once.
 
 ⸻
 
-Testing Acceptance Criteria
+Implementation Order
 
-This phase is not done unless CI protects the first-day loop.
+Step 1 — Define HUD Region Ownership
 
-Done means:
+Before moving pixels, document what each HUD region owns.
 
-* Godot tests run in CI.
-* CI fails on script/scene boot errors.
-* CI fails on duplicated intro modal text.
-* CI fails on duplicated objective labels.
-* CI fails on stacked blocking modals.
-* CI fails if Day 1 golden path breaks.
-* CI fails if money/customer/inventory updates fire more than once.
-* Test logs are uploaded on failure.
-* TESTING.md explains how to run the same tests locally.
+Then delete/move any UI element violating that ownership.
 
-⸻
+Priority fixes:
 
-Agent Implementation Order
+1. Move top-right stats into the right panel.
+2. Stop right panel from showing one-off unlock notices permanently.
+3. Move top-center notifications away from day/time.
+4. Convert bottom-left into event log only.
 
-Step 1 — Inspect Current State Flow
+Step 2 — Build Toast/Notification Manager
 
-Before changing anything, map the current flow:
+Create one notification path.
 
-* Where Day 1 starts
-* Where objectives are created
-* Where tutorial messages are emitted
-* Where modals are opened
-* Where HUD lists are rendered
-* Where interactions complete
-* Where money/inventory/customer stats update
-* Where signals are connected
+Requirements:
 
-Write this down briefly in TESTING.md or a small implementation note.
+* stable ids
+* dedupe
+* queue
+* timeout
+* priority
+* no overlap with modals
+* one anchor location
 
-Do not guess.
+Step 3 — Refactor Right Panel
 
-Step 2 — Add Event Logging
+Make it the persistent state panel:
 
-Add logging around current state transitions before refactoring.
+* store stats
+* today checklist
+* current objective highlight
 
-This helps prove whether the duplicate bugs are from:
+Do not use it as a notification dump.
 
-* duplicate state events
-* duplicate signal connections
-* duplicate render appends
-* duplicate modal queue entries
+Step 4 — Clean Bottom HUD
 
-Step 3 — Add Test Harness
+Make bottom-left recent events.
+Make bottom-right current interaction.
+Remove future objectives from bottom-left.
 
-Add the gameplay test harness.
-Keep it dev/test-only.
-It should call real managers.
+Step 5 — Add HUD View Model Tests
 
-Step 4 — Add Baseline Tests
+Before further visual tuning, add tests for:
 
-Start with:
+* no duplicate stats
+* no duplicate notifications
+* no bottom checklist dump
+* prompt visibility
+* HUD snapshot
 
-* project boot
-* Day 1 initial state
-* intro modal dedupe
-* objective dedupe
+Step 6 — Store Visual Pass
 
-Make these fail against current bugs if possible.
-Then fix the bugs.
+Improve:
 
-Step 5 — Fix Objective/Modal/HUD Source of Truth
+* register
+* shelves
+* signs
+* back room
+* lighting
+* interactable highlight
+* floor emptiness
 
-Refactor only as much as required to make state/rendering clean.
+Step 7 — Final Screenshot Review
 
-Do not rewrite the entire game.
-Do not add more systems.
+Compare before/after screenshots.
 
-Step 6 — Add Day 1 Golden Path Test
+The screen should now read:
 
-Once the harness works, add the full first-day test.
+* top = global status
+* right = store/day state
+* bottom = current action/events
+* world = readable destinations
 
-This becomes the main regression lock.
-
-Step 7 — Visual Cleanup Pass
-
-After state and tests are stable, do the visual cleanup:
-
-* HUD contrast
-* right panel structure
-* bottom log/prompt cleanup
-* signs/lighting/interactable clarity
-* current target highlight
-
-Step 8 — Final Validation
-
-Run:
-
-* automated tests locally
-* CI workflow
-* manual QA checklist
-
-Capture any known issues in a short KNOWN_ISSUES.md or TESTING.md section.
+No region should feel like debug leftovers.
 
 ⸻
 
-What Not To Do
+Definition of Done
 
-Do not use Playwright.
-Do not add web export testing.
-Do not use screenshots/OCR as the first testing strategy.
-Do not test pixels before testing state.
-Do not keep appending UI text directly from gameplay events.
-Do not have multiple systems independently own objective text.
-Do not add more gameplay depth until the first-day loop is stable.
-Do not accept “works when I played it once” as done.
+This visual pass is done when:
 
-⸻
+* Top-center day/time does not overlap notifications.
+* Top-right stats are removed or moved fully into the right panel.
+* Right panel has a clear layout and no giant empty slab feel.
+* Unlocks/toasts appear through one notification system.
+* Notifications do not duplicate across HUD surfaces.
+* Bottom-left is an event log, not an objective dump.
+* Bottom-right is only the current interaction prompt.
+* Current objective is clearly visible once.
+* Register/customer area is readable from spawn.
+* Shelves and back room are identifiable.
+* Store lighting/materials are improved enough that the room looks intentional.
+* HUD view model tests prevent the obvious overlap/duplication regressions.
 
-Final Definition of Done
+The goal is not “final art.”
 
-The next phase is complete when:
-
-1. The first-day gameplay loop works from start to close-day.
-2. The intro/tutorial content appears once.
-3. Objectives do not duplicate.
-4. Modals do not stack.
-5. HUD surfaces have clear jobs.
-6. Store visuals are readable enough to understand the space.
-7. Godot-side automated tests run in CI.
-8. CI protects the first-day golden path.
-9. Future agent passes cannot casually re-break these exact problems without a failing test.
-
-The goal is to get out of the loop where every pass “fixes” something visually while quietly breaking state somewhere else.
-
-Lock the loop down first.
-Then make it better.
+The goal is that the game stops looking like the HUD was installed by five raccoons with separate Jira tickets.

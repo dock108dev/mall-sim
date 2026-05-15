@@ -197,6 +197,8 @@ func reset_for_testing() -> void:
 	_pending_unlock_id = ""
 	_confrontation_emitted_this_day = false
 	_last_started_day = -1
+	if GameManager != null:
+		GameManager.current_state = GameManager.State.MAIN_MENU
 
 
 # ── Note selection ────────────────────────────────────────────────────────────

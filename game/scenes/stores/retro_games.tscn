@@ -1089,7 +1089,7 @@ pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "USED GAMES"
+text = "shelves"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -1106,7 +1106,7 @@ pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "REGISTER"
+text = "register checkout"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -1143,7 +1143,7 @@ pixel_size = 0.005
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "BACK ROOM"
+text = "backroom"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -2556,7 +2556,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0, 4.95)
 [node name="checkout_counter" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 0, 7.82)
 
-[node name="Interactable" type="Area3D" parent="checkout_counter"]
+[node name="Interactable" type="Area3D" parent="checkout_counter" groups=["interactables"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
 collision_layer = 16
 collision_mask = 0
@@ -3920,7 +3920,7 @@ shape = SubResource("nav_zone_shape")
 [node name="BetaDayEndTrigger" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 1.05, 7.82)
 
-[node name="Interactable" type="Area3D" parent="BetaDayEndTrigger"]
+[node name="Interactable" type="Area3D" parent="BetaDayEndTrigger" groups=["interactables"]]
 collision_layer = 16
 collision_mask = 0
 script = ExtResource("49_beta_day_end")

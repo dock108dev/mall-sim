@@ -4,4 +4,6 @@
 resource_name = "Slot Marker"
 transparency = 1
 albedo_color = Color(0.52, 0.39, 0.27, 1)
-emission_enabled = false
+emission_enabled = true
+emission = Color(0.52, 0.39, 0.27, 1)
+emission_energy_multiplier = 0.35

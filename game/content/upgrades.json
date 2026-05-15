@@ -88,6 +88,94 @@
       "effect_type": "decay_reduction",
       "effect_value": 0.6,
       "one_time": true
+    },
+    {
+      "id": "sports_trophy_wall",
+      "display_name": "Trophy Wall",
+      "description": "A showcase wall for local-league memorabilia boosts sports-store traffic.",
+      "cost": 450,
+      "rep_required": 20,
+      "store_type": "sports",
+      "effect_type": "traffic_bonus",
+      "effect_value": 1.15,
+      "one_time": true
+    },
+    {
+      "id": "sports_season_pass_display",
+      "display_name": "Season Pass Display",
+      "description": "A featured display for current-season collectibles raises sports item prices.",
+      "cost": 550,
+      "rep_required": 25,
+      "store_type": "sports",
+      "effect_type": "price_bonus",
+      "effect_value": 1.08,
+      "one_time": true
+    },
+    {
+      "id": "video_late_fee_kiosk",
+      "display_name": "Late Fee Kiosk",
+      "description": "A rental kiosk reduces friction around late-fee handling.",
+      "cost": 400,
+      "rep_required": 20,
+      "store_type": "video_rental",
+      "effect_type": "traffic_bonus",
+      "effect_value": 1.1,
+      "one_time": true
+    },
+    {
+      "id": "video_new_releases_wall",
+      "display_name": "New Releases Wall",
+      "description": "A front-facing releases wall increases rental-store sale prices.",
+      "cost": 600,
+      "rep_required": 25,
+      "store_type": "video_rental",
+      "effect_type": "price_bonus",
+      "effect_value": 1.1,
+      "one_time": true
+    },
+    {
+      "id": "pocket_tournament_arena",
+      "display_name": "Tournament Arena",
+      "description": "A small play space draws competitive creature-card regulars.",
+      "cost": 700,
+      "rep_required": 30,
+      "store_type": "pocket_creatures",
+      "effect_type": "traffic_bonus",
+      "effect_value": 1.2,
+      "one_time": true
+    },
+    {
+      "id": "pocket_climate_vault",
+      "display_name": "Climate Vault",
+      "description": "Protected storage slows condition loss on collectible cards.",
+      "cost": 650,
+      "rep_required": 30,
+      "store_type": "pocket_creatures",
+      "effect_type": "decay_reduction",
+      "effect_value": 0.65,
+      "one_time": true
+    },
+    {
+      "id": "electronics_demo_hub",
+      "display_name": "Demo Hub",
+      "description": "A demo station improves customer confidence around used electronics.",
+      "cost": 800,
+      "rep_required": 35,
+      "store_type": "electronics",
+      "effect_type": "price_bonus",
+      "effect_value": 1.12,
+      "one_time": true
+    },
+    {
+      "id": "electronics_extended_warranty_desk",
+      "display_name": "Extended Warranty Desk",
+      "description": "A dedicated warranty desk supports higher-ticket electronics purchases.",
+      "cost": 750,
+      "rep_required": 35,
+      "store_type": "electronics",
+      "effect_type": "capacity_bonus",
+      "effect_value": 10,
+      "one_time": true
     }
   ]
 }

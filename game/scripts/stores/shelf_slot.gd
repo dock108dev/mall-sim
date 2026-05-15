@@ -52,7 +52,7 @@ const _EMPTY_GHOST_SIZE: Vector3 = Vector3(0.10, 0.10, 0.10)
 const _EMPTY_GHOST_COLOR := Color(0.5, 0.5, 0.5, 0.22)
 const PROMPT_NO_ITEM_SELECTED: String = "Select an inventory item first"
 const PROMPT_SHELF_FULL: String = "Shelf full"
-const STOCK_VERB_FORMAT: String = "stock %s"
+const STOCK_VERB_FORMAT: String = "Stock %s"
 
 @export var slot_id: String = ""
 @export var fixture_id: String = ""
