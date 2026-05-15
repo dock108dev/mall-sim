@@ -8,10 +8,9 @@
 ##
 ## Scope: `activate` / `deactivate` are session-level controls only. They
 ## are **not** FP-mode visibility controls — this script intentionally does
-## not connect `EventBus.fp_mode_changed`. The right panel is mode-agnostic
-## (it stays visible in both desktop and first-person); the event-log panel
-## owns its own FP-mode listener. That panel-internal behavior is
-## independent of `BetaHUD._active`.
+## not connect `EventBus.fp_mode_changed`. The right panel and event log are
+## mode-agnostic; objectives stay in the right panel, recent events stay in
+## the bottom-left log, and the interaction affordance stays bottom-right.
 ##
 ## Load order: must be registered after `EventBus`, `InputFocus`, and
 ## `BetaRunState` in `project.godot` — both panels read `BetaRunState.day`

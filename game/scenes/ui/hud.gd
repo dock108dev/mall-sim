@@ -144,7 +144,7 @@ var _counter_color_tweens: Dictionary = {}
 
 # First-person HUD mode — set via `set_fp_mode(true)` by `StorePlayerBody._ready`.
 # When enabled, the heavy `TopBar` HBoxContainer is hidden and the static
-# `FPCashLabel` / `FPTimeLabel` nodes anchored top-right (authored in
+# `FPCashLabel` / `FPTimeLabel` nodes anchored top-left/top-center (authored in
 # `hud.tscn`) carry the primary cash/time readout. `BetaRightPanel` owns the
 # secondary stat block (on-shelves, back-room, customers, sold-today). A
 # bottom-right F4 key-hint label exposes the close-day affordance without
@@ -171,7 +171,7 @@ var _beta_backroom_count: int = 0
 @onready var _cash_label: Label = $TopBar/CashLabel
 @onready var _time_label: Label = $TopBar/TimeLabel
 ## Static FP-mode primary readouts authored in `hud.tscn` as direct
-## CanvasLayer-root children, anchored top-right. Always present and
+	## CanvasLayer-root children, anchored top-left/top-center. Always present and
 ## always visible — never reparented. They mirror `_cash_label` /
 ## `_time_label` via the existing update handlers.
 @onready var _fp_cash_label: Label = $FPCashLabel

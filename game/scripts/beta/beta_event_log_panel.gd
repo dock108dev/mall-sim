@@ -13,6 +13,9 @@
 ## a single design family: same `_PANEL_BG`, same 12 px padding, no border.
 ## Width 260 px, height ~120 px, anchored bottom-left above the carry label
 ## (which sits at `offset_top = -200` from bottom — we stop at -204).
+## Stays visible in first-person mode: this surface owns recent events only,
+## while `BetaRightPanel` owns objectives and `InteractionPrompt` owns the
+## bottom-right action affordance.
 ##
 ## Owned by the `BetaHUD` autoload (spawned in `BetaHUD._ready`); persists
 ## across day-controller teardown so it survives day transitions without
@@ -80,7 +83,6 @@ func _ready() -> void:
 	# stranding the panel empty.
 	EventBus.event_logged.connect(_on_event_logged)
 	InputFocus.context_changed.connect(_on_input_focus_changed)
-	EventBus.fp_mode_changed.connect(_on_fp_mode_changed)
 
 
 ## Explicit disconnect on tree exit so a freed panel cannot stay subscribed
@@ -94,8 +96,6 @@ func _exit_tree() -> void:
 		EventBus.event_logged.disconnect(_on_event_logged)
 	if InputFocus.context_changed.is_connected(_on_input_focus_changed):
 		InputFocus.context_changed.disconnect(_on_input_focus_changed)
-	if EventBus.fp_mode_changed.is_connected(_on_fp_mode_changed):
-		EventBus.fp_mode_changed.disconnect(_on_fp_mode_changed)
 
 
 func _build_panel() -> void:
@@ -216,12 +216,6 @@ func _on_input_focus_changed(new_ctx: StringName, _old_ctx: StringName) -> void:
 	for child: Node in get_children():
 		if child is CanvasItem:
 			(child as CanvasItem).modulate.a = target
-
-
-## Hide entirely in FP mode — the FP corner overlays already surface the
-## glanceable cues this panel duplicates.
-func _on_fp_mode_changed(enabled: bool) -> void:
-	visible = not enabled
 
 
 ## Test seam — returns the number of rendered entry rows.

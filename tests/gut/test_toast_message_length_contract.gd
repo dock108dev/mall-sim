@@ -1,5 +1,5 @@
 ## Verifies the player-facing toast surface enforces the BRAINDUMP copy-
-## length rule. Toasts are momentary and must fit a 2-line ~280 px card;
+## length rule. Toasts are momentary and must fit a compact 2-line card;
 ## longer copy reads as a tutorial paragraph (the BRAINDUMP 'Bad' example).
 ##
 ## The constant `ToastNotificationUI.MAX_MESSAGE_CHARS` is the contract;

@@ -71,12 +71,10 @@ var _interactable_focused_state: bool = false
 ## carry signal is never emitted, so this stays false and the right side
 ## renders the cached action/hint as before.
 var _carry_active: bool = false
-## Mirrors `HUD._fp_mode` via `EventBus.fp_mode_changed`. While FP mode is
-## active the rail absorbs the InteractionPrompt's role: when an interactable
-## is focused, the rail's right-side chip renders the focused action label
-## alongside the cream KeyBadge in place of the cached objective copy. The
-## standalone InteractionPrompt suppresses itself for the same period, so
-## the player sees one prompt instead of two redundant ones at the bottom.
+## Mirrors `HUD._fp_mode` via `EventBus.fp_mode_changed`. In beta FP mode the
+## whole rail is hidden so `BetaRightPanel` owns objectives and
+## `InteractionPrompt` owns the bottom-right action affordance. Outside beta,
+## the legacy FP rail chip can still render focused-interactable copy.
 var _fp_mode_active: bool = false
 ## Action-label text from the most recent `interactable_focused*` payload.
 ## Empty when no interactable is focused. The right-side chip routes this
@@ -327,8 +325,8 @@ func _on_interactable_focused_rail(action_label_text: String) -> void:
 ## right-side chip when not in FP mode — the standalone InteractionPrompt
 ## still surfaces the muted reason text, and the rail must not advertise an
 ## active "Press E" chip while the player is looking at a node they cannot
-## interact with. In FP mode the InteractionPrompt is suppressed and the
-## rail itself renders the muted reason in place of the cached action.
+## interact with. In non-beta FP mode the rail can still render disabled focus
+## copy; beta FP suppresses the whole rail before this chip reaches screen.
 func _on_interactable_focused_disabled_rail(reason: String) -> void:
 	_interactable_focused_state = false
 	_focused_action_text = reason
@@ -343,24 +341,24 @@ func _on_interactable_unfocused_rail() -> void:
 	_apply_right_side_visibility()
 
 
-## Mirrors `HUD._fp_mode` so the rail can absorb the InteractionPrompt's
-## role inside the store's first-person camera view. Re-renders the
-## right-side chip immediately so a focused interactable that pre-dated the
-## FP-mode flip surfaces in the rail without waiting for a fresh focus
-## event from the InteractionRay.
+## Mirrors `HUD._fp_mode` inside first-person camera views. Re-renders
+## visibility and the right-side chip immediately so beta FP toggles hide the
+## rail, while legacy non-beta FP focus copy does not wait for a fresh
+## InteractionRay event.
 func _on_fp_mode_changed(enabled: bool) -> void:
 	if _fp_mode_active == enabled:
 		return
 	_fp_mode_active = enabled
 	_apply_right_side_visibility()
+	_refresh_visibility()
 
 
 ## Re-renders the right-side action/hint chip based on cached payload and
 ## the current carry/focus state. Three rendering modes:
-##   * FP-mode + interactable focused: the focused action text replaces the
+##   * Non-beta FP-mode + interactable focused: the focused action text replaces the
 ##     cached objective action, the styled KeyBadge appears for active focus
 ##     (muted modulate + no badge for disabled focus). Cached HintLabel is
-##     suppressed so the player sees one badge, not two.
+##     remains a legacy fallback; beta FP hides the whole rail instead.
 ##   * Beta carry without focus: the chip is suppressed entirely so the
 ##     prompt doesn't appear over unrelated nodes during navigation to the
 ##     shelf — the focused-target highlight becomes the sole spatial cue.
@@ -432,10 +430,11 @@ func has_active_objective() -> bool:
 func _refresh_visibility() -> void:
 	var should_show: bool = (
 		_show_rail
-		and not _auto_hidden
-		and not _current_payload.is_empty()
-		and _state_allows_rail()
-	)
+			and not _auto_hidden
+			and not _current_payload.is_empty()
+			and _state_allows_rail()
+			and not _beta_fp_suppressed()
+		)
 	if should_show and not visible:
 		_flash()
 	visible = should_show
@@ -447,6 +446,15 @@ func _state_allows_rail() -> bool:
 		state != GameManager.State.MAIN_MENU
 		and state != GameManager.State.DAY_SUMMARY
 	)
+
+
+func _beta_fp_suppressed() -> bool:
+	if not _fp_mode_active:
+		return false
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	return tree.get_first_node_in_group("beta_day_one_controller") != null
 
 
 ## Fades the rail in over one second whenever the objective content changes.

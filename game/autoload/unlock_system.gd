@@ -52,7 +52,8 @@ func grant_unlock(unlock_id: StringName) -> void:
 		return
 	_granted[unlock_id] = true
 	EventBus.unlock_granted.emit(unlock_id)
-	EventBus.toast_requested.emit(
+	EventBus.toast_requested_with_id.emit(
+		StringName("unlock_%s" % String(unlock_id)),
 		"Unlocked: %s" % _get_display_name(unlock_id), &"unlock", 5.0
 	)
 

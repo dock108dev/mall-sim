@@ -1,7 +1,7 @@
 ## Tests that ToastNotificationUI panels match the visual spec from the
 ## BRAINDUMP toast notification design: rounded dark panel with a 3 px
 ## category-tinted left border, 12 px horizontal / 8 px vertical padding,
-## ≤ 280 px wide, uniform 92 % white text at 15 px, and an animation
+## 320 px wide, uniform 92 % white text at 15 px, and an animation
 ## contract of 0.15 s slide-in plus 0.4 s fade-out.
 extends GutTest
 
@@ -18,10 +18,10 @@ func before_each() -> void:
 # ── Card geometry ─────────────────────────────────────────────────────────────
 
 
-func test_panel_max_width_is_280() -> void:
+func test_panel_width_is_320() -> void:
 	assert_eq(
-		ToastNotificationUI.TOAST_WIDTH, 280.0,
-		"Toast panels must be at most 280 px wide so they read as small cards"
+		ToastNotificationUI.TOAST_WIDTH, 320.0,
+		"Toast panels must stay compact while fitting upper-right lane copy"
 	)
 
 
@@ -35,6 +35,26 @@ func test_panel_min_height_is_compact() -> void:
 	assert_lte(
 		ToastNotificationUI.TOAST_MAX_HEIGHT, 80.0,
 		"Toast panels must cap two-line content at 80 px"
+	)
+
+
+func test_toast_lane_sits_left_of_right_panel() -> void:
+	var viewport_width: float = 1152.0
+	var right_panel_left: float = (
+		viewport_width
+		- ToastNotificationUI.TOAST_RIGHT_PANEL_INSET
+		- ToastNotificationUI.TOAST_RIGHT_PANEL_WIDTH
+	)
+	var target_x: float = _ui._target_x_for_viewport(viewport_width)
+	assert_lte(
+		target_x + ToastNotificationUI.TOAST_WIDTH,
+		right_panel_left - ToastNotificationUI.TOAST_RIGHT_PANEL_GAP,
+		"Toast lane must not overlap the right panel"
+	)
+	assert_ne(
+		target_x,
+		(viewport_width - ToastNotificationUI.TOAST_WIDTH) / 2.0,
+		"Toast lane must not be centered like a modal"
 	)
 
 

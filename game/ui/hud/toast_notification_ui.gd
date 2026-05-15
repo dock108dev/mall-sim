@@ -14,7 +14,7 @@ extends Control
 
 
 ## BRAINDUMP "Milestone toasts should be short. They are not for tutorial
-## paragraphs." Toasts render in a fixed-width card (`TOAST_WIDTH` 280 px) on
+## paragraphs." Toasts render in a fixed-width card (`TOAST_WIDTH` 320 px) on
 ## the `ToastLayer` (layer 45) and autowrap at ~2 lines. Anything past this
 ## cap pushes the layout off-spec and starts to read as a tutorial paragraph,
 ## which is precisely the failure mode the BRAINDUMP forbids. Enforced in
@@ -26,11 +26,14 @@ const SLIDE_IN_DURATION: float = 0.15
 const FADE_OUT_DURATION: float = 0.4
 const DEFAULT_DURATION: float = 3.0
 const MAX_QUEUE_SIZE: int = 5
-const TOAST_WIDTH: float = 280.0
-## Top-center placement clears the TimeLabel (y≈8–36 px) and the right-side
-## stats column with safe margin. See
-## `.aidlc/research/toast-position-vs-right-panel-coexistence.md` Option B.
-const TOAST_OFFSET_TOP: float = 90.0
+const TOAST_WIDTH: float = 320.0
+## Upper toast lane: below the top HUD and immediately left of the beta right
+## panel. This keeps passive notices out of the center sightline.
+const TOAST_OFFSET_TOP: float = 72.0
+const TOAST_RIGHT_PANEL_WIDTH: float = 244.0
+const TOAST_RIGHT_PANEL_INSET: float = 16.0
+const TOAST_RIGHT_PANEL_GAP: float = 16.0
+const TOAST_LEFT_MARGIN: float = 16.0
 ## Distance the panel drops in from above its final resting Y during the
 ## slide-in tween. Tuned to match `SLIDE_IN_DURATION` so the motion reads as
 ## a quick "message drop" rather than a snap.
@@ -78,6 +81,7 @@ var _modal_active: bool = false
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	EventBus.toast_requested.connect(_on_toast_requested)
+	EventBus.toast_requested_with_id.connect(_on_toast_requested_with_id)
 	# §EH-15 — `InputFocus` is an autoload (project.godot:51) and owns
 	# `context_changed` (input_focus.gd:15). The prior null + has_signal
 	# guards would silently disable modal-suppression on a rename, so a
@@ -89,6 +93,13 @@ func _ready() -> void:
 
 func _on_toast_requested(
 	message: String, category: StringName, duration: float
+) -> void:
+	var toast_id: StringName = StringName("%s:%s" % [String(category), message])
+	_on_toast_requested_with_id(toast_id, message, category, duration)
+
+
+func _on_toast_requested_with_id(
+	toast_id: StringName, message: String, category: StringName, duration: float
 ) -> void:
 	if message.is_empty():
 		return
@@ -110,18 +121,23 @@ func _on_toast_requested(
 				% [message.length(), MAX_MESSAGE_CHARS, message]
 			)
 		)
-	# Deduplicate by message string: discard if this exact text is already the
-	# active card or already sitting in the queue. Defense-in-depth against a
-	# second emission path (replays, multiple systems formatting the same
-	# milestone string) bypassing per-system guards like UnlockSystem._granted.
+	# Deduplicate by id first, with message text as a compatibility fallback for
+	# legacy callers that still emit `toast_requested`.
 	if _is_showing and is_instance_valid(_active_panel):
-		if String(_active_panel.get_meta("toast_message", "")) == message:
+		if (
+			StringName(_active_panel.get_meta("toast_id", &"")) == toast_id
+			or String(_active_panel.get_meta("toast_message", "")) == message
+		):
 			return
 	for queued: Dictionary in _queue:
-		if String(queued.get("message", "")) == message:
+		if (
+			StringName(queued.get("id", &"")) == toast_id
+			or String(queued.get("message", "")) == message
+		):
 			return
 	var effective_duration: float = duration if duration > 0.0 else DEFAULT_DURATION
 	var entry: Dictionary = {
+		"id": toast_id,
 		"message": message,
 		"category": category,
 		"duration": effective_duration,
@@ -140,8 +156,7 @@ func _show_toast(entry: Dictionary) -> void:
 	_active_panel = panel
 	add_child(panel)
 
-	var viewport_width: float = get_viewport_rect().size.x
-	var target_x: float = (viewport_width - TOAST_WIDTH) / 2.0
+	var target_x: float = _target_x_for_viewport(get_viewport_rect().size.x)
 	var start_y: float = TOAST_OFFSET_TOP - TOAST_DROP_IN_DISTANCE
 
 	panel.position = Vector2(target_x, start_y)
@@ -212,6 +227,7 @@ func _suspend_for_modal() -> void:
 	# the modal closes. Drop the visible panel without running its fade so
 	# the modal isn't fronted by a fading toast.
 	var pending: Dictionary = {
+		"id": _active_panel.get_meta("toast_id", &"") as StringName,
 		"message": _active_panel.get_meta("toast_message", "") as String,
 		"category": _active_panel.get_meta("toast_category", &"") as StringName,
 		"duration": _active_panel.get_meta("toast_duration", DEFAULT_DURATION) as float,
@@ -223,9 +239,13 @@ func _suspend_for_modal() -> void:
 	# If a duplicate of the interrupted message was already queued during the
 	# modal, dropping the re-queue keeps the player from seeing the same card
 	# twice once the modal closes.
+	var pending_id: StringName = StringName(pending.get("id", &""))
 	var pending_message: String = String(pending.get("message", ""))
 	for queued: Dictionary in _queue:
-		if String(queued.get("message", "")) == pending_message:
+		if (
+			StringName(queued.get("id", &"")) == pending_id
+			or String(queued.get("message", "")) == pending_message
+		):
 			return
 	_queue.push_front(pending)
 	if _queue.size() > MAX_QUEUE_SIZE:
@@ -254,6 +274,7 @@ func _create_toast_panel(entry: Dictionary) -> PanelContainer:
 	panel.add_theme_stylebox_override("panel", _make_panel_style(border_color))
 	# Stash the source message + category on the panel so `_suspend_for_modal`
 	# can re-queue the live card without keeping a parallel struct in sync.
+	panel.set_meta("toast_id", entry.get("id", &""))
 	panel.set_meta("toast_message", entry.get("message", ""))
 	panel.set_meta("toast_category", category)
 	panel.set_meta("toast_duration", entry.get("duration", DEFAULT_DURATION))
@@ -288,6 +309,14 @@ func _create_toast_panel(entry: Dictionary) -> PanelContainer:
 	panel.add_child(click_area)
 
 	return panel
+
+
+func _target_x_for_viewport(viewport_width: float) -> float:
+	var right_panel_left: float = (
+		viewport_width - TOAST_RIGHT_PANEL_INSET - TOAST_RIGHT_PANEL_WIDTH
+	)
+	var preferred_x: float = right_panel_left - TOAST_RIGHT_PANEL_GAP - TOAST_WIDTH
+	return max(TOAST_LEFT_MARGIN, preferred_x)
 
 
 ## Builds the rounded-rect dark stylebox with a category-tinted left border.

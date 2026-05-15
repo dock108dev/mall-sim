@@ -125,16 +125,22 @@ func test_fresh_system_get_all_granted_returns_empty_array() -> void:
 
 func test_grant_unlock_emits_toast_with_unlock_category() -> void:
 	var toasts: Array[Dictionary] = []
-	var capture: Callable = func(msg: String, cat: StringName, dur: float) -> void:
-		toasts.append({"message": msg, "category": cat, "duration": dur})
-	EventBus.toast_requested.connect(capture)
+	var capture: Callable = func(
+		toast_id: StringName, msg: String, cat: StringName, dur: float
+	) -> void:
+		toasts.append({"id": toast_id, "message": msg, "category": cat, "duration": dur})
+	EventBus.toast_requested_with_id.connect(capture)
 	_sys.grant_unlock(&"test_unlock_a")
-	EventBus.toast_requested.disconnect(capture)
+	EventBus.toast_requested_with_id.disconnect(capture)
 
 	assert_eq(toasts.size(), 1, "Exactly one toast should be emitted on grant")
 	assert_eq(
 		toasts[0].get("category") as StringName, &"unlock",
 		"Toast category must be 'unlock'"
+	)
+	assert_eq(
+		toasts[0].get("id") as StringName, &"unlock_test_unlock_a",
+		"Unlock toast id must be stable for deduplication"
 	)
 	assert_almost_eq(
 		toasts[0].get("duration") as float, 5.0, 0.01,
@@ -144,11 +150,13 @@ func test_grant_unlock_emits_toast_with_unlock_category() -> void:
 
 func test_grant_unlock_toast_message_contains_unlock_id_as_fallback() -> void:
 	var messages: Array[String] = []
-	var capture: Callable = func(msg: String, _cat: StringName, _dur: float) -> void:
+	var capture: Callable = func(
+		_id: StringName, msg: String, _cat: StringName, _dur: float
+	) -> void:
 		messages.append(msg)
-	EventBus.toast_requested.connect(capture)
+	EventBus.toast_requested_with_id.connect(capture)
 	_sys.grant_unlock(&"test_unlock_b")
-	EventBus.toast_requested.disconnect(capture)
+	EventBus.toast_requested_with_id.disconnect(capture)
 
 	assert_eq(messages.size(), 1, "One toast message must be emitted")
 	assert_true(
@@ -159,12 +167,14 @@ func test_grant_unlock_toast_message_contains_unlock_id_as_fallback() -> void:
 
 func test_duplicate_grant_does_not_emit_toast() -> void:
 	var toast_count: Array = [0]
-	var capture: Callable = func(_msg: String, _cat: StringName, _dur: float) -> void:
+	var capture: Callable = func(
+		_id: StringName, _msg: String, _cat: StringName, _dur: float
+	) -> void:
 		toast_count[0] += 1
-	EventBus.toast_requested.connect(capture)
+	EventBus.toast_requested_with_id.connect(capture)
 	_sys.grant_unlock(&"test_unlock_a")
 	_sys.grant_unlock(&"test_unlock_a")
-	EventBus.toast_requested.disconnect(capture)
+	EventBus.toast_requested_with_id.disconnect(capture)
 
 	assert_eq(toast_count[0], 1, "Duplicate grant must not emit a second toast")
 
@@ -180,11 +190,13 @@ func test_grant_unlock_with_registry_entry_uses_display_name() -> void:
 	_sys._valid_ids[REGISTRY_ID] = true
 
 	var messages: Array[String] = []
-	var capture: Callable = func(msg: String, _cat: StringName, _dur: float) -> void:
+	var capture: Callable = func(
+		_id: StringName, msg: String, _cat: StringName, _dur: float
+	) -> void:
 		messages.append(msg)
-	EventBus.toast_requested.connect(capture)
+	EventBus.toast_requested_with_id.connect(capture)
 	_sys.grant_unlock(REGISTRY_ID)
-	EventBus.toast_requested.disconnect(capture)
+	EventBus.toast_requested_with_id.disconnect(capture)
 
 	assert_eq(messages.size(), 1, "One toast must be emitted for registry-resolved unlock")
 	assert_true(

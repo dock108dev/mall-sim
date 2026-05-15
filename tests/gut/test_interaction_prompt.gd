@@ -340,51 +340,58 @@ func test_modal_close_without_focus_target_does_not_query_ray() -> void:
 	)
 
 
-# ── FP-mode suppression ────────────────────────────────────────────────────
+# ── FP-mode ownership ───────────────────────────────────────────────────────
 #
-# In first-person mode the ObjectiveRail absorbs the inline "[E] action"
-# affordance into its right-side chip, so the standalone prompt must
-# suppress itself for the duration of FP. Non-FP surfaces (management
-# view, mall hub) keep the prompt as the sole renderer.
+# In first-person mode the right panel owns objectives and the standalone
+# prompt owns the current interaction affordance.
 
-func test_hides_when_fp_mode_enabled_during_active_focus() -> void:
+func test_stays_visible_when_fp_mode_enabled_during_active_focus() -> void:
 	EventBus.interactable_focused.emit("Counter — Press E to use")
 	var panel: PanelContainer = _prompt.get_node("PanelContainer")
 	assert_true(panel.visible, "Pre-condition: prompt visible without FP mode")
 	EventBus.fp_mode_changed.emit(true)
 	await get_tree().create_timer(0.2).timeout
-	assert_false(
+	assert_true(
 		panel.visible,
-		"Prompt must hide once FP mode is on so the rail is the sole renderer"
+		"Prompt must stay visible in FP mode as the sole interaction renderer"
 	)
 
 
-func test_does_not_show_when_focus_arrives_in_fp_mode() -> void:
+func test_shows_when_focus_arrives_in_fp_mode() -> void:
 	EventBus.fp_mode_changed.emit(true)
 	EventBus.interactable_focused.emit("Counter — Press E to use")
 	var panel: PanelContainer = _prompt.get_node("PanelContainer")
-	assert_false(
+	assert_true(
 		panel.visible,
-		"Prompt must not become visible while FP mode is active"
+		"Prompt must become visible while FP mode is active"
 	)
 
 
-func test_reappears_after_fp_mode_disabled_with_focus_target() -> void:
+func test_remains_visible_after_fp_mode_disabled_with_focus_target() -> void:
 	EventBus.interactable_focused.emit("Counter — Press E to use")
 	EventBus.fp_mode_changed.emit(true)
 	await get_tree().create_timer(0.2).timeout
 	var panel: PanelContainer = _prompt.get_node("PanelContainer")
-	assert_false(panel.visible, "Pre-condition: hidden under FP mode")
+	assert_true(panel.visible, "Pre-condition: visible under FP mode")
 	EventBus.fp_mode_changed.emit(false)
 	assert_true(
 		panel.visible,
-		"Prompt must reappear when FP mode disables while a focus target persists"
+		"Prompt must remain visible when FP mode disables while a focus target persists"
 	)
 
 
+func test_panel_is_anchored_bottom_right() -> void:
+	var panel: PanelContainer = _prompt.get_node("PanelContainer")
+	assert_eq(panel.anchor_left, 1.0, "Interaction prompt must anchor to the right edge")
+	assert_eq(panel.anchor_right, 1.0, "Interaction prompt must anchor to the right edge")
+	assert_eq(panel.anchor_bottom, 1.0, "Interaction prompt must anchor to the bottom edge")
+	assert_lt(panel.offset_left, panel.offset_right, "Prompt must have stable width")
+	assert_lte(panel.offset_right, -16.0, "Prompt must keep a right-side margin")
+
+
 func test_panel_anchor_does_not_move_between_states() -> void:
-	# Regression guard for the AC "active prompt and disabled reason render
-	# at the same screen position." The panel itself is bottom-center
+		# Regression guard for the AC "active prompt and disabled reason render
+		# at the same screen position." The panel itself is bottom-right
 	# anchored; toggling KeyBadge.visible re-centres the HBox children
 	# inside that panel, but the panel's anchor offsets must not shift.
 	var panel: PanelContainer = _prompt.get_node("PanelContainer")

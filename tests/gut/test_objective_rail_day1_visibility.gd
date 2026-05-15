@@ -1,12 +1,12 @@
 ## Verifies the Day 1 ObjectiveRail surfaces the first step of the chain
-## ("Talk to the customer at the register.") with a "Press E" action and an
+## ("Talk to the customer at the register checkout.") with a "Press E" action and an
 ## "E" key badge, that the rail occupies a different screen zone than the
 ## InteractionPrompt, and that the Day1ReadinessAudit objective check passes
 ## once the day starts and the player enters the store.
 extends GutTest
 
 
-const _OBJECTIVE_TEXT: String = "Talk to the customer at the register."
+const _OBJECTIVE_TEXT: String = "Talk to the customer at the register checkout."
 const _ACTION_TEXT: String = "Press E at the counter"
 const _KEY_TEXT: String = "E"
 
@@ -43,6 +43,10 @@ func before_each() -> void:
 	ObjectiveDirector._day1_step_index = -1
 	ObjectiveDirector._waiting_for_note_dismiss = false
 	GameState.set_flag(&"first_sale_complete", false)
+	if InputFocus != null:
+		InputFocus._reset_for_tests()
+	EventBus.fp_mode_changed.emit(false)
+	EventBus.interactable_unfocused.emit()
 
 
 func after_each() -> void:
@@ -234,7 +238,7 @@ func test_chain_advance_updates_rail_with_next_step_copy() -> void:
 	)
 	EventBus.placement_mode_entered.emit()
 	assert_eq(
-		rail._objective_label.text, "Stock the Retro Games shelf.",
+		rail._objective_label.text, "Stock the Retro Games shelves.",
 		"placement_mode_entered at BACK_ROOM_INVENTORY must re-render with step 3"
 	)
 	EventBus.item_stocked.emit("item_001", "shelf_a")
@@ -360,6 +364,22 @@ func test_non_fp_mode_does_not_route_focused_text_into_rail() -> void:
 	assert_false(
 		rail._key_badge.visible,
 		"KeyBadge must stay hidden outside FP mode"
+	)
+
+
+func test_beta_fp_mode_hides_objective_rail_surface() -> void:
+	var rail := _make_rail()
+	_start_day1_after_note_dismiss()
+	assert_true(rail.visible, "Pre-condition: rail visible before beta FP suppression")
+	var beta_controller: Node = Node.new()
+	beta_controller.add_to_group("beta_day_one_controller")
+	add_child_autofree(beta_controller)
+
+	EventBus.fp_mode_changed.emit(true)
+
+	assert_false(
+		rail.visible,
+		"Beta FP mode must hide ObjectiveRail so the right panel is the only checklist"
 	)
 
 

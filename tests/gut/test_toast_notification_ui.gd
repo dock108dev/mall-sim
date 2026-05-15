@@ -18,6 +18,27 @@ func test_subscribes_to_toast_requested() -> void:
 	)
 
 
+func test_subscribes_to_id_based_toast_requested() -> void:
+	assert_true(
+		EventBus.toast_requested_with_id.is_connected(_ui._on_toast_requested_with_id),
+		"Should connect to EventBus.toast_requested_with_id in _ready"
+	)
+
+
+func test_duplicate_toast_id_is_ignored() -> void:
+	EventBus.toast_requested_with_id.emit(
+		&"unlock_register_access", "Unlocked: Register Access", &"unlock", 5.0
+	)
+	EventBus.toast_requested_with_id.emit(
+		&"unlock_register_access", "Register access unlocked", &"unlock", 5.0
+	)
+	assert_true(_ui._is_showing, "First id-based toast should be active")
+	assert_eq(
+		_ui._queue.size(), 0,
+		"Second toast with the same id must not be queued"
+	)
+
+
 func test_single_toast_creates_panel() -> void:
 	EventBus.toast_requested.emit("Hello", &"system", 3.0)
 	assert_true(

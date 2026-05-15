@@ -495,6 +495,12 @@ signal notification_requested(message: String)
 signal critical_notification_requested(message: String)
 ## Emitted by any system requesting a non-blocking player notification.
 signal toast_requested(message: String, category: StringName, duration: float)
+## Same toast lane as `toast_requested`, with a stable id for deduplication.
+## Use this for one-shot unlocks, tutorial beats, and other messages that can
+## be emitted from multiple systems during the same visible moment.
+signal toast_requested_with_id(
+	toast_id: StringName, message: String, category: StringName, duration: float
+)
 ## Player-facing event-log broadcast. Mirrors every `EventLog._record` write
 ## as a single `(tag, message)` pair so on-screen log surfaces (bottom-left
 ## panel) can render the same stream without scanning the ring buffer. Fires

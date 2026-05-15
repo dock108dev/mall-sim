@@ -1,6 +1,6 @@
 ## Tests for HUD.set_fp_mode — first-person layout that hides the heavy
 ## TopBar and surfaces static `FPCashLabel` / `FPTimeLabel` nodes anchored
-## top-right. Verifies that TopBar disappears, the static FP labels mirror
+## top-left/top-center. Verifies that TopBar disappears, the static FP labels mirror
 ## the cash / day-time signals, no node reparenting occurs, and toggling
 ## back restores the TopBar without leaking style overrides.
 extends GutTest
@@ -116,24 +116,27 @@ func test_fp_time_label_present_as_canvaslayer_root_child() -> void:
 	)
 
 
-func test_fp_cash_label_anchored_top_right() -> void:
+func test_fp_cash_label_anchored_top_left() -> void:
 	var fp_cash: Label = _hud.get_node_or_null("FPCashLabel") as Label
 	assert_not_null(fp_cash)
 	if fp_cash == null:
 		return
-	assert_eq(fp_cash.anchor_left, 1.0, "FPCashLabel anchor_left at right edge")
-	assert_eq(fp_cash.anchor_right, 1.0, "FPCashLabel anchor_right at right edge")
+	assert_eq(fp_cash.anchor_left, 0.0, "FPCashLabel anchor_left at left edge")
+	assert_eq(fp_cash.anchor_right, 0.0, "FPCashLabel anchor_right at left edge")
 	assert_eq(fp_cash.anchor_top, 0.0, "FPCashLabel anchored to top")
+	assert_eq(fp_cash.offset_left, 16.0, "FPCashLabel must have a 16 px left inset")
 
 
-func test_fp_time_label_anchored_top_right() -> void:
+func test_fp_time_label_anchored_top_center() -> void:
 	var fp_time: Label = _hud.get_node_or_null("FPTimeLabel") as Label
 	assert_not_null(fp_time)
 	if fp_time == null:
 		return
-	assert_eq(fp_time.anchor_left, 1.0, "FPTimeLabel anchor_left at right edge")
-	assert_eq(fp_time.anchor_right, 1.0, "FPTimeLabel anchor_right at right edge")
+	assert_eq(fp_time.anchor_left, 0.5, "FPTimeLabel anchor_left at viewport center")
+	assert_eq(fp_time.anchor_right, 0.5, "FPTimeLabel anchor_right at viewport center")
 	assert_eq(fp_time.anchor_top, 0.0, "FPTimeLabel anchored to top")
+	assert_lt(fp_time.offset_left, 0.0, "FPTimeLabel left offset must straddle center")
+	assert_gt(fp_time.offset_right, 0.0, "FPTimeLabel right offset must straddle center")
 
 
 func test_fp_labels_visible_by_default_in_tscn() -> void:
@@ -151,9 +154,8 @@ func test_fp_labels_visible_by_default_in_tscn() -> void:
 
 
 func test_fp_labels_do_not_overlap_beta_right_panel_band() -> void:
-	# Vertical-stack guard: BetaRightPanel anchors at offset_top=56 on the
-	# right edge. The static FP labels must sit fully above that band so the
-	# two readouts read as a column rather than colliding rectangles.
+		# Vertical-stack guard: BetaRightPanel anchors at offset_top=56 on the
+		# right edge. The static FP labels must sit fully above that band.
 	var fp_cash: Label = _hud.get_node_or_null("FPCashLabel") as Label
 	var fp_time: Label = _hud.get_node_or_null("FPTimeLabel") as Label
 	assert_not_null(fp_cash)

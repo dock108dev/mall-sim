@@ -29,9 +29,6 @@ const _CLOSE_DAY_CONFIRMATION_PANEL_SCENE: PackedScene = preload(
 const _FIXTURE_CATALOG_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/fixture_catalog.tscn"
 )
-const _MILESTONE_CARD_SCENE: PackedScene = preload(
-	"res://game/scenes/ui/milestone_card.tscn"
-)
 const _MILESTONES_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/milestones_panel.tscn"
 )
@@ -546,12 +543,6 @@ func _setup_deferred_panels() -> void:
 	_fixture_catalog.economy_system = economy_system
 	_fixture_catalog.store_type = GameManager.DEFAULT_STARTING_STORE
 	_ui_layer.add_child(_fixture_catalog)
-
-	var milestone_card: MilestoneCard = (
-		_MILESTONE_CARD_SCENE.instantiate() as MilestoneCard
-	)
-	milestone_card.notification_mode = true
-	_ui_layer.add_child(milestone_card)
 
 	var milestones_panel: MilestonesPanel = (
 		_MILESTONES_PANEL_SCENE.instantiate() as MilestonesPanel

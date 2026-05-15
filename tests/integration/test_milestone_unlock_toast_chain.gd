@@ -1,5 +1,5 @@
 ## Integration test: full signal chain — milestone met → milestone_unlocked →
-## grant_unlock → unlock_granted → toast_requested(category: unlock).
+## grant_unlock → unlock_granted → toast_requested_with_id(category: unlock).
 extends GutTest
 
 const UNLOCK_ID: StringName = &"test_unlock_chain"
@@ -30,7 +30,7 @@ func before_each() -> void:
 
 	EventBus.milestone_unlocked.connect(_capture_milestone_unlocked)
 	EventBus.unlock_granted.connect(_capture_unlock_granted)
-	EventBus.toast_requested.connect(_capture_toast)
+	EventBus.toast_requested_with_id.connect(_capture_toast)
 
 	_data_loader = DataLoader.new()
 	add_child_autofree(_data_loader)
@@ -55,8 +55,8 @@ func after_each() -> void:
 		EventBus.milestone_unlocked.disconnect(_capture_milestone_unlocked)
 	if EventBus.unlock_granted.is_connected(_capture_unlock_granted):
 		EventBus.unlock_granted.disconnect(_capture_unlock_granted)
-	if EventBus.toast_requested.is_connected(_capture_toast):
-		EventBus.toast_requested.disconnect(_capture_toast)
+	if EventBus.toast_requested_with_id.is_connected(_capture_toast):
+		EventBus.toast_requested_with_id.disconnect(_capture_toast)
 
 	GameManager.current_store_id = &""
 	GameManager.data_loader = null
@@ -100,7 +100,7 @@ func test_unlock_granted_fires_with_correct_unlock_id() -> void:
 	)
 
 
-func test_toast_requested_fires_with_unlock_category() -> void:
+func test_toast_requested_with_id_fires_with_unlock_category() -> void:
 	_trigger_milestone()
 
 	var unlock_toast: Dictionary = _find_toast(&"unlock")
@@ -138,7 +138,7 @@ func test_toast_message_includes_display_name_from_registry() -> void:
 	)
 
 
-# ── Signal order: milestone_unlocked → unlock_granted → toast_requested ───────
+	# ── Signal order: milestone_unlocked → unlock_granted → toast_requested_with_id
 
 
 func test_signals_fire_in_correct_order() -> void:
@@ -157,8 +157,8 @@ func test_signals_fire_in_correct_order() -> void:
 		"unlock_granted must fire second"
 	)
 	assert_eq(
-		_signal_order[2], "toast_requested:unlock",
-		"toast_requested(unlock) must fire third"
+		_signal_order[2], "toast_requested_with_id:unlock",
+		"toast_requested_with_id(unlock) must fire third"
 	)
 
 
@@ -193,7 +193,7 @@ func test_toast_unlock_fires_only_once() -> void:
 
 	var count: Array = [0]
 	for entry: String in _signal_order:
-		if entry == "toast_requested:unlock":
+		if entry == "toast_requested_with_id:unlock":
 			count[0] += 1
 	assert_eq(count[0], 1, "Unlock toast must fire exactly once even when threshold crossed twice")
 
@@ -214,13 +214,13 @@ func _capture_unlock_granted(uid: StringName) -> void:
 
 
 func _capture_toast(
-	message: String, category: StringName, duration: float
+	toast_id: StringName, message: String, category: StringName, duration: float
 ) -> void:
 	_toasts.append(
-		{"message": message, "category": category, "duration": duration}
+		{"id": toast_id, "message": message, "category": category, "duration": duration}
 	)
 	if category == &"unlock":
-		_signal_order.append("toast_requested:unlock")
+		_signal_order.append("toast_requested_with_id:unlock")
 
 
 func _trigger_milestone() -> void:

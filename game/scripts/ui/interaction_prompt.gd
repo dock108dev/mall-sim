@@ -29,11 +29,9 @@ const _ACTIVE_LABEL_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 
 var _fade_tween: Tween
 var _has_focus_target: bool = false
-## Mirrors `HUD._fp_mode` via `EventBus.fp_mode_changed`. While true the
-## prompt suppresses itself and the ObjectiveRail absorbs the inline
-## "[E] action" affordance — see `objective_rail.gd._apply_right_side_visibility`.
-## The prompt remains active for non-FP surfaces (management view, mall hub
-## modals) where the rail does not own the focused-interactable copy.
+## Mirrors `HUD._fp_mode` via `EventBus.fp_mode_changed`. The prompt remains
+## visible in FP mode: it is the sole bottom-right owner of current interaction
+## copy while the right panel owns objectives.
 var _fp_mode_active: bool = false
 
 @onready var _panel: PanelContainer = $PanelContainer
@@ -102,10 +100,9 @@ func _on_input_focus_changed(_new_ctx: StringName, _old_ctx: StringName) -> void
 	_refresh_visibility()
 
 
-## Hides the prompt as soon as FP mode goes on (the ObjectiveRail takes
-## over the inline "[E] action" affordance). When FP mode goes off and a
-## focus target still exists, `_refresh_visibility` re-tweens the panel
-## back in. Idempotent: same enabled value on repeat calls returns early.
+## Re-evaluates visibility when FP mode toggles. The prompt is still allowed
+## in FP mode; this keeps existing focus state fresh when returning from other
+## screens or modals.
 func _on_fp_mode_changed(enabled: bool) -> void:
 	if _fp_mode_active == enabled:
 		return
@@ -150,13 +147,6 @@ func _reapply_styling_from_hovered_target() -> void:
 ## only fires under unit-test isolation where the autoload tree is stubbed.
 ## Same test-seam contract as `StoreController.has_blocking_modal` (§F-42).
 func _can_show() -> bool:
-	# FP mode delegates the inline "[E] action" affordance to the
-	# ObjectiveRail's right-side chip; the standalone prompt stays hidden
-	# the entire time the player is in the first-person view so the bottom
-	# cluster is not duplicated. Non-FP surfaces (management view, mall
-	# hub) keep the prompt as the sole renderer.
-	if _fp_mode_active:
-		return false
 	var state: GameManager.State = GameManager.current_state
 	if state == GameManager.State.MAIN_MENU or state == GameManager.State.DAY_SUMMARY:
 		return false

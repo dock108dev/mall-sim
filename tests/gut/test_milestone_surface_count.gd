@@ -1,8 +1,6 @@
-## Phase 0.1 P1.5 regression test: milestone completion is shown by a single
-## surface — the `milestone_card` slide-in notification. The duplicate
-## `MilestoneContainer` in the Day Summary panel is removed so milestone
-## descriptions do not render twice (once correctly in the banner, once
-## wrapped one word per line inside the collapsed Day Summary margin).
+## Milestone completion must not create a large gameplay notification card.
+## Milestones live in `MilestonesPanel`; transient unlock/reward feedback uses
+## the compact toast lane.
 extends GutTest
 
 
@@ -38,16 +36,17 @@ func test_day_summary_gd_has_no_milestone_code_paths() -> void:
 	)
 
 
-func test_milestone_card_is_the_single_notification_surface() -> void:
-	# MilestoneCard (notification mode) is the sole render path on
-	# EventBus.milestone_completed. It's still instantiated once in
-	# game_world._setup_ui with notification_mode = true.
+func test_game_world_does_not_spawn_notification_mode_milestone_card() -> void:
 	var src: String = FileAccess.get_file_as_string(
 		"res://game/scenes/world/game_world.gd"
 	)
-	assert_true(
+	assert_false(
 		src.contains("notification_mode = true"),
-		"game_world must instantiate milestone_card with notification_mode = true"
+		"game_world must not spawn a large notification-mode MilestoneCard"
+	)
+	assert_false(
+		src.contains("_MILESTONE_CARD_SCENE"),
+		"game_world must not preload milestone_card for gameplay notifications"
 	)
 
 
@@ -67,7 +66,7 @@ func test_no_milestone_popup_source_exists() -> void:
 func test_no_milestone_banner_source_exists() -> void:
 	assert_false(
 		FileAccess.file_exists("res://game/scenes/ui/milestone_banner.tscn"),
-		"milestone_banner.tscn must not exist — canonical surface is milestone_card"
+		"milestone_banner.tscn must not exist — transient feedback uses the toast lane"
 	)
 	assert_false(
 		FileAccess.file_exists("res://game/scripts/ui/milestone_banner.gd"),
@@ -87,13 +86,13 @@ func test_milestone_completed_connected_in_milestones_panel() -> void:
 	)
 
 
-func test_milestone_completed_connected_in_milestone_card() -> void:
+func test_unlock_system_uses_id_based_toast_lane() -> void:
 	var src: String = FileAccess.get_file_as_string(
-		"res://game/scenes/ui/milestone_card.gd"
+		"res://game/autoload/unlock_system.gd"
 	)
 	assert_true(
-		src.contains("milestone_completed.connect"),
-		"milestone_card.gd must connect to EventBus.milestone_completed in notification mode"
+		src.contains("toast_requested_with_id.emit"),
+		"UnlockSystem must use the id-based toast lane for one-shot unlock notices"
 	)
 
 

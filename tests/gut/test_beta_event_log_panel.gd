@@ -2,7 +2,7 @@
 ##
 ## Covers the visual contract (dark-indigo background, tag color tokens),
 ## the 4-row visible cap with descending-alpha fade, the bracket-tag strip,
-## the modal-dim contract, and the FP-mode hide.
+## the modal-dim contract, and FP-mode ownership.
 extends GutTest
 
 
@@ -244,22 +244,33 @@ func test_panel_dims_under_modal_context() -> void:
 			)
 
 
-# ── FP mode hide ──────────────────────────────────────────────────────────────
+# ── FP-mode ownership ─────────────────────────────────────────────────────────
 
-func test_fp_mode_changed_hides_panel() -> void:
+func test_fp_mode_changed_does_not_hide_panel() -> void:
 	var panel: BetaEventLogPanel = _make_panel()
 	EventBus.fp_mode_changed.emit(true)
 	await get_tree().process_frame
-	assert_false(
+	assert_true(
 		panel.visible,
-		"Panel must hide when FP mode is enabled"
+		"Event log must remain visible in FP mode as the sole bottom-left event surface"
 	)
 	EventBus.fp_mode_changed.emit(false)
 	await get_tree().process_frame
 	assert_true(
 		panel.visible,
-		"Panel must re-show when FP mode is disabled"
+		"Event log must remain visible when FP mode is disabled"
 	)
+
+
+func test_panel_does_not_connect_fp_mode_changed() -> void:
+	var panel: BetaEventLogPanel = _make_panel()
+	var connections: Array = EventBus.fp_mode_changed.get_connections()
+	for entry: Dictionary in connections:
+		var callable: Callable = entry.get("callable") as Callable
+		assert_ne(
+			callable.get_object(), panel,
+			"BetaEventLogPanel must not connect to fp_mode_changed"
+		)
 
 
 # ── EventLog → event_logged bridge ────────────────────────────────────────────
