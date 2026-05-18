@@ -68,6 +68,7 @@ func before_each() -> void:
 	# the customer beat, but keep this helper guarded so the same fixture works
 	# if a test explicitly switches to a later-day note gate.
 	_dismiss_vic_note_for_test()
+	_complete_preopening_for_test()
 	await get_tree().process_frame
 
 
@@ -84,6 +85,16 @@ func _dismiss_vic_note_for_test() -> void:
 		return
 	panel.close()
 	panel.note_dismissed.emit()
+
+
+func _complete_preopening_for_test() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	if bool(BetaRunState.preopening_complete):
+		return
+	controller.call("force_start_real_day_for_tests")
+	await get_tree().process_frame
 
 
 func _register_day_one_unlock_entries() -> void:

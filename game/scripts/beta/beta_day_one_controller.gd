@@ -29,6 +29,12 @@ const MAX_JSON_FILE_BYTES: int = 1048576
 ## gate and starts directly at STAGE_TALK_TO_CUSTOMER so the tutorial's first
 ## actionable beat is visible immediately.
 const STAGE_VIC_NOTE: StringName = &"vic_note"
+const STAGE_TRAINING_TALK_MANAGER: StringName = &"training_talk_manager"
+const STAGE_TRAINING_CHECK_REGISTER: StringName = &"training_check_register"
+const STAGE_TRAINING_BACK_ROOM: StringName = &"training_back_room_inventory"
+const STAGE_TRAINING_STOCK_SHELF: StringName = &"training_stock_shelf"
+const STAGE_TRAINING_PRACTICE_CUSTOMER: StringName = &"training_practice_customer"
+const STAGE_TRAINING_OPEN_STORE: StringName = &"training_open_store"
 const STAGE_TALK_TO_CUSTOMER: StringName = &"talk_to_customer"
 const STAGE_STOCK_SHELF: StringName = &"stock_shelf"
 const STAGE_BACK_ROOM_INVENTORY: StringName = &"back_room_inventory"
@@ -51,6 +57,7 @@ const _OBJECTIVE_UNLOCK_GRANTS: Dictionary = {
 	"stock_shelf": ["employee_stocking_trained"],
 }
 const _DAY_ONE_CLOSE_UNLOCK_GRANT: StringName = &"employee_closing_certified"
+const _REGISTER_UNLOCK_GRANT: StringName = &"employee_register_access"
 
 ## Sub-fixture clutter that's hidden inside the beta scope so the room reads
 ## as a small store rather than a full retail environment. CartRackLeft /
@@ -221,7 +228,70 @@ const _CUSTOMER_EXIT_FADE_SECONDS: float = 0.8
 ## sum to 120 min so the chain finishes well before 5 PM; on transition to
 ## END_DAY, `_advance_to_next_stage` jumps the clock to 17:00 so the player
 ## isn't forced to idle from ~11 AM until close.
-var _objectives: Array[Dictionary] = [
+var _training_objectives: Array[Dictionary] = [
+	{
+		"id": "talk_to_manager",
+		"stage": "training_talk_manager",
+		"label": "Talk to the manager.",
+		"action": "Talk to manager",
+		"key": "E",
+		"target_path": "BetaDayOneCustomer/Interactable",
+		"time_cost_minutes": 0,
+		"required": true,
+	},
+	{
+		"id": "check_register",
+		"stage": "training_check_register",
+		"label": "Check the register.",
+		"action": "Check register",
+		"key": "E",
+		"target_path": "BetaDayEndTrigger/Interactable",
+		"time_cost_minutes": 0,
+		"required": true,
+	},
+	{
+		"id": "check_back_room_inventory",
+		"stage": "training_back_room_inventory",
+		"label": "Check back room inventory.",
+		"action": "Check back room inventory",
+		"key": "E",
+		"target_path": "BetaBackroomPickup/Interactable",
+		"time_cost_minutes": 0,
+		"required": true,
+	},
+	{
+		"id": "training_stock_shelf",
+		"stage": "training_stock_shelf",
+		"label": "Stock the used games shelf.",
+		"action": "Stock used games shelf",
+		"key": "E",
+		"target_path": "BetaRestockShelf/Interactable",
+		"time_cost_minutes": 0,
+		"required": true,
+	},
+	{
+		"id": "practice_customer",
+		"stage": "training_practice_customer",
+		"label": "Run a practice customer decision.",
+		"action": "Practice customer",
+		"key": "E",
+		"target_path": "BetaDayOneCustomer/Interactable",
+		"time_cost_minutes": 0,
+		"required": true,
+	},
+	{
+		"id": "open_store",
+		"stage": "training_open_store",
+		"label": "Open the store.",
+		"action": "Open the store",
+		"key": "E",
+		"target_path": "BetaDayEndTrigger/Interactable",
+		"time_cost_minutes": 0,
+		"required": false,
+	},
+]
+
+var _day_one_objectives: Array[Dictionary] = [
 	{
 		"id": "talk_to_customer",
 		"stage": "talk_to_customer",
@@ -263,6 +333,77 @@ var _objectives: Array[Dictionary] = [
 		"required": false,
 	},
 ]
+var _objectives: Array[Dictionary] = _day_one_objectives.duplicate(true)
+
+var _training_event: Dictionary = {
+	"id": "training_wrong_platform_practice",
+	"day": 0,
+	"customer_name": "Practice Customer",
+	"title": "TRAINING — CUSTOMER DECISION",
+	"body": (
+		"A customer bought Goblin Kart for NovaCube, but their kid owns a "
+		+ "PrismBox. What do you do?"
+	),
+	"choices": [
+		{
+			"id": "clean_exchange",
+			"label": "Swap it for the PrismBox copy at the same price.",
+			"effects": {},
+			"result": {
+				"headline": "Clean Exchange",
+				"customer_reaction": "The manager nods once. Efficient, not heroic.",
+				"store_outcome": "You kept the customer happy without inventing a new policy.",
+				"manager_note": "Good. Register problems are easier when the fix is boring.",
+				"tone": "positive",
+				"consequences": [
+					{"label": "Money", "text": "Practice only: no cash changes."},
+					{"label": "Inventory", "text": "Real sales will move shelf stock."},
+					{"label": "Customer", "text": "Happy enough to leave without a scene."},
+					{"label": "Policy", "text": "Clean exchange, clean paper trail."}
+				]
+			}
+		},
+		{
+			"id": "upsell_bundle",
+			"label": "Bundle the PrismBox copy with a discounted used controller.",
+			"effects": {},
+			"result": {
+				"headline": "Bundle Offered",
+				"customer_reaction": "The manager watches the drawer, then the shelf.",
+				"store_outcome": "You made the ticket bigger, but used extra inventory to do it.",
+				"manager_note": (
+					"That can be worth it early. Just don't give away half the "
+					+ "store every time someone panics."
+				),
+				"tone": "mixed",
+				"consequences": [
+					{"label": "Money", "text": "Practice only: no cash changes."},
+					{"label": "Inventory", "text": "Real bundles spend more shelf stock."},
+					{"label": "Customer", "text": "Helped, with a little pressure."},
+					{"label": "Policy", "text": "Allowed, but not your only tool."}
+				]
+			}
+		},
+		{
+			"id": "refuse_return",
+			"label": "Point at the \"opened or sealed, no exchanges\" sign and decline.",
+			"effects": {},
+			"result": {
+				"headline": "Policy Refusal",
+				"customer_reaction": "The manager does not look surprised. That is not the same as approval.",
+				"store_outcome": "You protected the drawer and probably lost the room.",
+				"manager_note": "Policy is a shield, not a personality. Use it when you have to.",
+				"tone": "negative",
+				"consequences": [
+					{"label": "Money", "text": "Practice only: no cash changes."},
+					{"label": "Inventory", "text": "No stock moves."},
+					{"label": "Customer", "text": "Unhappy customers cost you later."},
+					{"label": "Policy", "text": "Technically clean, socially expensive."}
+				]
+			}
+		}
+	]
+}
 
 var _decision_panel: BetaDecisionCardPanel
 var _customer_result_panel: ModalPanel
@@ -309,6 +450,7 @@ var _sales_today: int = 0
 var _summary_spawned: bool = false
 var _objective_target_diagnostic: String = ""
 var _reported_invalid_target_paths: Dictionary = {}
+var _training_gating_refresh_frames: int = 0
 ## Captured the first time `_configure_beta_customer` runs so the day-reset
 ## path can put the customer back at the register after the previous day's
 ## exit tween moved them to the entrance.
@@ -338,6 +480,13 @@ func _ready() -> void:
 	_print_interactable_debug_list()
 
 
+func _process(_delta: float) -> void:
+	if _training_gating_refresh_frames <= 0:
+		return
+	_training_gating_refresh_frames -= 1
+	_apply_objective_gating()
+
+
 func _exit_tree() -> void:
 	if EventBus.day_close_confirmed.is_connected(_on_day_close_confirmed):
 		EventBus.day_close_confirmed.disconnect(_on_day_close_confirmed)
@@ -349,10 +498,48 @@ func _exit_tree() -> void:
 ## screens. Day 2 keeps the note beat, where the reminder has value because
 ## the player is continuing an existing run.
 func _open_day() -> void:
+	if BetaRunState.day == 1 and not BetaRunState.preopening_complete:
+		_start_preopening_training()
+		return
 	if BetaRunState.day == 1:
 		_start_day(BetaRunState.day)
 		return
 	_open_vic_note_and_then_start_day()
+
+
+func _start_preopening_training() -> void:
+	_sync_beta_day(1)
+	_objectives = _training_objectives.duplicate(true)
+	_stage = STAGE_TRAINING_TALK_MANAGER
+	_completed_objectives.clear()
+	_summary_spawned = false
+	_pending_result_effects.clear()
+	_active_event = {}
+	BetaRunState.carrying_stock = false
+	_reset_scene_for_day(1)
+	_reset_beta_inventory_overlay()
+	_set_clock_to_preopening()
+	_apply_customer_profile({"customer_name": "Manager"})
+	_update_objective_rail()
+	_apply_objective_gating()
+	call_deferred("_apply_objective_gating")
+	_training_gating_refresh_frames = 5
+	BetaHUD.activate(BetaRunState.day)
+	EventBus.toast_requested_with_id.emit(
+		&"beta_preopening_training_started",
+		"Training: talk to the manager.",
+		&"info",
+		5.0,
+	)
+
+
+func _set_clock_to_preopening() -> void:
+	var time_sys: TimeSystem = GameManager.get_time_system()
+	if time_sys == null:
+		return
+	time_sys.set_speed(TimeSystem.SpeedTier.PAUSED)
+	time_sys.game_time_minutes = 8.0 * 60.0
+	EventBus.day_phase_changed.emit(TimeSystem.DayPhase.PRE_OPEN)
 
 
 ## Later-day opening gate: shows Vic's morning note before `_start_day` arms
@@ -392,6 +579,19 @@ func _on_vic_note_dismissed() -> void:
 
 
 func on_beta_customer_interacted() -> void:
+	if _stage == STAGE_TRAINING_TALK_MANAGER:
+		EventBus.toast_requested.emit(
+			"Morning. Before we unlock the doors, I need to show you how this place works.",
+			&"info",
+			4.5,
+		)
+		_complete_current_objective()
+		return
+	if _stage == STAGE_TRAINING_PRACTICE_CUSTOMER:
+		_active_event = _training_event.duplicate(true)
+		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_DECISION_CARD)
+		_decision_panel.show_event(_active_event)
+		return
 	if _stage != STAGE_TALK_TO_CUSTOMER:
 		EventBus.notification_requested.emit("Follow the current objective first.")
 		return
@@ -402,15 +602,54 @@ func on_beta_customer_interacted() -> void:
 	_decision_panel.show_event(_active_event)
 
 
+func on_beta_register_interacted() -> void:
+	if _stage == STAGE_TRAINING_CHECK_REGISTER:
+		_grant_unlock(_REGISTER_UNLOCK_GRANT)
+		EventBus.toast_requested.emit(
+			"Register ready. Customers get handled from the checkout lane.",
+			&"sale",
+			3.0,
+		)
+		_complete_current_objective()
+		return
+	if _stage == STAGE_TRAINING_OPEN_STORE:
+		_complete_open_store_training_objective()
+		_open_store_after_training()
+		return
+	on_beta_day_end_requested()
+
+
+func _complete_open_store_training_objective() -> void:
+	if _completed_objectives.has(&"open_store"):
+		return
+	_completed_objectives[&"open_store"] = true
+	EventBus.beta_objective_completed.emit(&"open_store")
+	EventBus.objective_completed.emit(&"open_store", _objective_completion_label(&"open_store"))
+
+
+func _open_store_after_training() -> void:
+	BetaRunState.preopening_complete = true
+	BetaRunState.carrying_stock = false
+	EventBus.beta_carry_changed.emit("")
+	EventBus.toast_requested_with_id.emit(
+		&"beta_training_complete",
+		"Training complete. You know enough to open the store.",
+		&"sale",
+		4.0,
+	)
+	_start_day(1)
+
+
 ## Required back-room beat. Pressing E on the inventory pickup completes
 ## the back-room objective and advances the chain. Inspecting the
 ## console stack flavor object (BetaHiddenClue) is independent — it does
 ## not satisfy this beat.
 func on_beta_backroom_pickup_interacted() -> void:
-	if _stage != STAGE_BACK_ROOM_INVENTORY:
+	if _stage != STAGE_BACK_ROOM_INVENTORY and _stage != STAGE_TRAINING_BACK_ROOM:
 		EventBus.notification_requested.emit(_disabled_reason_for_stage(STAGE_BACK_ROOM_INVENTORY))
 		return
-	if _completed_objectives.has(&"back_room_inventory"):
+	var objective_id: StringName = StringName(str(_objective_for_stage(_stage).get("id", "")))
+	if _completed_objectives.has(objective_id):
 		return
 	# §F-L1 — visible feedback: the closed box swaps to its open-base sibling
 	# so the floor reads as "the player opened it here." The carry HUD then
@@ -443,7 +682,7 @@ func on_beta_backroom_pickup_interacted() -> void:
 			2.5,
 		)
 	)
-	EventBus.beta_carry_changed.emit("Used Console Box")
+	EventBus.beta_carry_changed.emit("Used Games Box")
 	_complete_current_objective()
 
 
@@ -476,13 +715,14 @@ func on_beta_hidden_clue_interacted() -> void:
 ## two-step into a single "stock the shelf" interaction so the chain
 ## stays simple and grounded.
 func on_beta_restock_interacted() -> void:
-	if _stage != STAGE_STOCK_SHELF:
+	if _stage != STAGE_STOCK_SHELF and _stage != STAGE_TRAINING_STOCK_SHELF:
 		EventBus.notification_requested.emit(_disabled_reason_for_stage(STAGE_STOCK_SHELF))
 		return
 	if not BetaRunState.carrying_stock:
 		EventBus.notification_requested.emit(restock_disabled_reason())
 		return
-	if _completed_objectives.has(&"stock_shelf"):
+	var objective_id: StringName = StringName(str(_objective_for_stage(_stage).get("id", "")))
+	if _completed_objectives.has(objective_id):
 		return
 	# §F-L3 — visible feedback: spawn the day's delivery quantity of boxed-
 	# game meshes on the restock shelf's authored ShelfBoard so the player
@@ -606,6 +846,18 @@ func _on_choice_selected(choice_id: StringName, effects: Dictionary) -> void:
 		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
 		_pending_result_effects.clear()
 		return
+	if _stage == STAGE_TRAINING_PRACTICE_CUSTOMER:
+		var training_choice: Dictionary = _choice_for_id(choice_id)
+		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_CUSTOMER_RESULT)
+		_pending_result_effects = {}
+		_customer_result_panel.call(
+			"show_result",
+			_build_customer_result_payload(choice_id, {})
+		)
+		if training_choice.is_empty():
+			BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+			_finish_training_customer_choice()
+		return
 	if _completed_objectives.has(&"talk_to_customer"):
 		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
 		return
@@ -640,7 +892,22 @@ func _on_customer_result_acknowledged(event_id: StringName, _choice_id: StringNa
 	var effects: Dictionary = _pending_result_effects.duplicate(true)
 	_pending_result_effects.clear()
 	BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+	if _stage == STAGE_TRAINING_PRACTICE_CUSTOMER:
+		_finish_training_customer_choice()
+		return
 	_finish_customer_choice(effects)
+
+
+func _finish_training_customer_choice() -> void:
+	if _completed_objectives.has(&"practice_customer"):
+		return
+	BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+	EventBus.toast_requested.emit(
+		"Practice customer complete. The next one counts.",
+		&"info",
+		3.0,
+	)
+	_complete_current_objective()
 
 
 func _finish_customer_choice(effects: Dictionary) -> void:
@@ -896,6 +1163,10 @@ func _on_summary_main_menu() -> void:
 
 
 func can_interact_customer() -> bool:
+	if _stage == STAGE_TRAINING_TALK_MANAGER:
+		return true
+	if _stage == STAGE_TRAINING_PRACTICE_CUSTOMER:
+		return true
 	return _stage == STAGE_TALK_TO_CUSTOMER and not _active_event.is_empty()
 
 
@@ -904,7 +1175,7 @@ func customer_disabled_reason() -> String:
 
 
 func can_interact_restock() -> bool:
-	if _stage != STAGE_STOCK_SHELF:
+	if _stage != STAGE_STOCK_SHELF and _stage != STAGE_TRAINING_STOCK_SHELF:
 		return false
 	# The stock-shelf stage starts the moment the back-room beat completes,
 	# but the shelf is not actually interactable until the player walks the
@@ -916,13 +1187,16 @@ func can_interact_restock() -> bool:
 
 
 func restock_disabled_reason() -> String:
-	if _stage == STAGE_STOCK_SHELF and not BetaRunState.carrying_stock:
+	if (
+		(_stage == STAGE_STOCK_SHELF or _stage == STAGE_TRAINING_STOCK_SHELF)
+		and not BetaRunState.carrying_stock
+	):
 		return "Pick up the back room delivery first."
 	return _disabled_reason_for_stage(STAGE_STOCK_SHELF)
 
 
 func can_interact_pickup() -> bool:
-	return _stage == STAGE_BACK_ROOM_INVENTORY
+	return _stage == STAGE_BACK_ROOM_INVENTORY or _stage == STAGE_TRAINING_BACK_ROOM
 
 
 func pickup_disabled_reason() -> String:
@@ -945,6 +1219,8 @@ func hidden_clue_disabled_reason() -> String:
 ## the clock the moment END_DAY is entered so the player isn't forced to
 ## race a moving 17:00 deadline while walking to the register.
 func can_interact_day_end() -> bool:
+	if _stage == STAGE_TRAINING_CHECK_REGISTER or _stage == STAGE_TRAINING_OPEN_STORE:
+		return true
 	return _stage == STAGE_END_DAY and _all_required_objectives_completed()
 
 
@@ -958,6 +1234,10 @@ func day_end_disabled_reason() -> String:
 ## grounded retail-shift language — never "you can't close the day yet,
 ## the mystery isn't solved."
 func close_day_disabled_reason() -> String:
+	if _stage == STAGE_TRAINING_CHECK_REGISTER:
+		return ""
+	if _stage == STAGE_TRAINING_OPEN_STORE:
+		return ""
 	for entry: Dictionary in _objectives:
 		var stage_name: StringName = StringName(str(entry.get("stage", "")))
 		if stage_name == STAGE_END_DAY:
@@ -983,6 +1263,18 @@ func _disabled_reason_for_stage(target_stage: StringName) -> String:
 
 func _prerequisite_reason_for(objective_id: StringName) -> String:
 	match objective_id:
+		&"talk_to_manager":
+			return "Talk to the manager first."
+		&"check_register":
+			return "Check the register first."
+		&"check_back_room_inventory":
+			return "Check the back room first."
+		&"training_stock_shelf":
+			return "Stock the used games shelf first."
+		&"practice_customer":
+			return "Run the practice customer first."
+		&"open_store":
+			return "Open the store at the register."
 		&"talk_to_customer":
 			return "Talk to the customer first."
 		&"back_room_inventory":
@@ -1017,6 +1309,7 @@ func _load_content() -> void:
 
 func _start_day(day: int) -> void:
 	_sync_beta_day(day)
+	_objectives = _day_one_objectives.duplicate(true)
 	# Day N's END_DAY phase pauses the clock via `_pause_time_for_end_day`.
 	# Without an unpause + rewind here, Day N+1 inherits that paused state
 	# and `_advance_to_open_hour_if_early` returns early because the clock
@@ -1261,6 +1554,11 @@ func current_stage() -> StringName:
 	return _stage
 
 
+func force_start_real_day_for_tests() -> void:
+	BetaRunState.preopening_complete = true
+	_start_day(1)
+
+
 ## Returns the `_objectives` row whose `stage` matches `target_stage`, or
 ## an empty dict for unknown stages.
 func _objective_for_stage(target_stage: StringName) -> Dictionary:
@@ -1284,6 +1582,18 @@ func is_objective_completed(objective_id: StringName) -> bool:
 ## BRAINDUMP 'Bad' pattern. Unknown ids return a generic past-tense fallback.
 func _objective_completion_label(objective_id: StringName) -> String:
 	match objective_id:
+		&"talk_to_manager":
+			return "Manager briefing complete."
+		&"check_register":
+			return "Register checked."
+		&"check_back_room_inventory":
+			return "Back room inventory checked."
+		&"training_stock_shelf":
+			return "Training shelf stocked."
+		&"practice_customer":
+			return "Practice customer complete."
+		&"open_store":
+			return "Store opened."
 		&"talk_to_customer":
 			return "Customer served."
 		&"back_room_inventory":
@@ -1324,14 +1634,15 @@ func get_state_snapshot() -> Dictionary:
 
 
 func _apply_customer_profile(event_data: Dictionary) -> void:
-	if event_data.is_empty():
-		return
 	var store: Node = _store_root()
 	if store == null:
 		return
 	var node: Node = store.get_node_or_null("BetaDayOneCustomer/Interactable")
 	if node is Interactable:
-		(node as Interactable).display_name = "customer"
+		var customer_name: String = str(event_data.get("customer_name", "customer")).strip_edges()
+		if customer_name.is_empty():
+			customer_name = "customer"
+		(node as Interactable).display_name = customer_name.to_lower()
 
 
 func _update_objective_rail() -> void:
@@ -1417,6 +1728,7 @@ func _apply_objective_gating() -> void:
 	var store: Node = _store_root()
 	if store == null:
 		return
+	_refresh_interactable_prompt_copy(store)
 	_objective_target_diagnostic = ""
 	for node: Node in get_tree().get_nodes_in_group("interactable"):
 		if node is Interactable and _is_descendant_of(node, store):
@@ -1438,6 +1750,7 @@ func _apply_objective_gating() -> void:
 		if entry_stage == STAGE_END_DAY:
 			is_active = is_active and _all_required_objectives_completed()
 		_set_interactable_enabled(store, path, is_active)
+	_refresh_interactable_prompt_copy(store)
 	# Console stack — ambient flavor, always interactable until inspected.
 	_set_interactable_enabled(store, "BetaHiddenClue/Interactable", false)
 	# Register status indicator — passive disabled-reason hint shown during
@@ -1447,6 +1760,46 @@ func _apply_objective_gating() -> void:
 	# always returns false, so E-presses never resolve here regardless of
 	# stage; the only player-visible effect is the muted hint copy.
 	_set_interactable_enabled(store, "checkout_counter/RegisterStatusIndicator", true)
+
+
+func _refresh_interactable_prompt_copy(store: Node) -> void:
+	var customer: Interactable = (
+		store.get_node_or_null("BetaDayOneCustomer/Interactable") as Interactable
+	)
+	if customer != null:
+		if _stage == STAGE_TRAINING_TALK_MANAGER:
+			customer.display_name = "manager"
+			customer.prompt_text = "Talk to"
+			customer.action_verb = "Talk"
+			customer.enabled = true
+		elif _stage == STAGE_TRAINING_PRACTICE_CUSTOMER:
+			customer.display_name = "practice customer"
+			customer.prompt_text = "Run"
+			customer.action_verb = "Practice"
+			customer.enabled = true
+		else:
+			customer.display_name = "customer"
+			customer.prompt_text = "Talk to"
+			customer.action_verb = "Talk"
+	var register: Interactable = (
+		store.get_node_or_null("BetaDayEndTrigger/Interactable") as Interactable
+	)
+	if register != null:
+		match _stage:
+			STAGE_TRAINING_CHECK_REGISTER:
+				register.display_name = "register"
+				register.prompt_text = "Check"
+				register.action_verb = "Check"
+				register.enabled = true
+			STAGE_TRAINING_OPEN_STORE:
+				register.display_name = "store"
+				register.prompt_text = "Open"
+				register.action_verb = "Open"
+				register.enabled = true
+			_:
+				register.display_name = "day"
+				register.prompt_text = "Close"
+				register.action_verb = "End"
 
 
 func _target_path_is_valid(root: Node, path: String) -> bool:

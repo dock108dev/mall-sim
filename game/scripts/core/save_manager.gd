@@ -494,6 +494,9 @@ func _collect_save_data() -> Dictionary:
 	if _onboarding_system:
 		data["onboarding_progress"] = _onboarding_system.get_save_data()
 
+	if BetaRunState != null:
+		data["beta_run_state"] = BetaRunState.get_save_data()
+
 	data["difficulty"] = DifficultySystemSingleton.get_save_data()
 
 	return data
@@ -676,6 +679,10 @@ func _distribute_save_data(data: Dictionary) -> void:
 			_onboarding_system.load_save_data(
 				onboarding_data as Dictionary
 			)
+
+	var beta_data: Variant = data.get("beta_run_state", {})
+	if beta_data is Dictionary and BetaRunState != null:
+		BetaRunState.load_save_data(beta_data as Dictionary)
 
 	var difficulty_data: Variant = data.get("difficulty", {})
 	if difficulty_data is Dictionary:

@@ -38,7 +38,7 @@ const TOAST_LEFT_MARGIN: float = 16.0
 ## slide-in tween. Tuned to match `SLIDE_IN_DURATION` so the motion reads as
 ## a quick "message drop" rather than a snap.
 const TOAST_DROP_IN_DISTANCE: float = 40.0
-const TOAST_MIN_HEIGHT: float = 40.0
+const TOAST_MIN_HEIGHT: float = 44.0
 const TOAST_MAX_HEIGHT: float = 80.0
 const PADDING_HORIZONTAL: int = 12
 const PADDING_VERTICAL: int = 8
@@ -159,7 +159,7 @@ func _show_toast(entry: Dictionary) -> void:
 	var target_x: float = _target_x_for_viewport(get_viewport_rect().size.x)
 	var start_y: float = TOAST_OFFSET_TOP - TOAST_DROP_IN_DISTANCE
 
-	panel.position = Vector2(target_x, start_y)
+	_apply_panel_rect(panel, target_x, start_y)
 	panel.modulate.a = 0.0
 
 	_kill_tween()
@@ -265,8 +265,9 @@ func _create_toast_panel(entry: Dictionary) -> PanelContainer:
 
 	var panel: PanelContainer = PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	panel.custom_minimum_size = Vector2(TOAST_WIDTH, TOAST_MIN_HEIGHT)
-	panel.size = Vector2(TOAST_WIDTH, TOAST_MIN_HEIGHT)
+	panel.size = Vector2(TOAST_WIDTH, _height_for_message(String(entry.get("message", ""))))
 	panel.clip_contents = true
 	# Cap the rendered height at the two-line ceiling. The min-size + autowrap
 	# combination already lets a single-line card sit at ~40 px, but we don't
@@ -295,6 +296,8 @@ func _create_toast_panel(entry: Dictionary) -> PanelContainer:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.add_theme_color_override("font_color", TEXT_COLOR)
 	label.add_theme_font_size_override("font_size", TEXT_FONT_SIZE)
 	margin.add_child(label)
@@ -309,6 +312,22 @@ func _create_toast_panel(entry: Dictionary) -> PanelContainer:
 	panel.add_child(click_area)
 
 	return panel
+
+
+func _height_for_message(message: String) -> float:
+	if message.length() > 36:
+		return 64.0
+	return TOAST_MIN_HEIGHT
+
+
+func _apply_panel_rect(panel: PanelContainer, x: float, y: float) -> void:
+	var h: float = clampf(panel.size.y, TOAST_MIN_HEIGHT, TOAST_MAX_HEIGHT)
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	panel.offset_left = x
+	panel.offset_top = y
+	panel.offset_right = x + TOAST_WIDTH
+	panel.offset_bottom = y + h
+	panel.size = Vector2(TOAST_WIDTH, h)
 
 
 func _target_x_for_viewport(viewport_width: float) -> float:

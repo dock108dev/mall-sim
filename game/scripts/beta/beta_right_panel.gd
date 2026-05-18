@@ -53,6 +53,18 @@ const _DAY_ONE_MILESTONES: Array[Dictionary] = [
 		"label": "Close",
 	},
 ]
+const _TRAINING_MILESTONES: Array[Dictionary] = [
+	{"id": "manager", "objective_id": "talk_to_manager", "label": "Manager"},
+	{"id": "register", "objective_id": "check_register", "label": "Register"},
+	{
+		"id": "backroom",
+		"objective_id": "check_back_room_inventory",
+		"label": "Back room",
+	},
+	{"id": "shelf", "objective_id": "training_stock_shelf", "label": "Shelf stock"},
+	{"id": "practice", "objective_id": "practice_customer", "label": "Practice"},
+	{"id": "open", "objective_id": "open_store", "label": "Open store"},
+]
 
 const _PHASE_NAMES: Dictionary = {
 	TimeSystem.DayPhase.PRE_OPEN: "OPENING",
@@ -70,6 +82,7 @@ var _back_room_value: Label
 var _customers_value: Label
 var _sold_today_value: Label
 var _today_anchor: Label
+var _store_anchor: Label
 
 var _milestone_labels: Dictionary = {}
 var _completed_objective_ids: Dictionary = {}
@@ -185,7 +198,7 @@ func _build_panel() -> void:
 	_header.add_theme_color_override("font_color", _HEADER_COLOR)
 	_column.add_child(_header)
 
-	_build_section_label("StoreSection", "STORE")
+	_store_anchor = _build_section_label("StoreSection", "STORE")
 	_on_shelves_value = _build_stat_row("Shelf")
 	_back_room_value = _build_stat_row("Stockroom")
 	_customers_value = _build_stat_row("Customers")
@@ -244,6 +257,9 @@ func _seed_initial_state() -> void:
 func _refresh_header() -> void:
 	if _header == null:
 		return
+	if _is_preopening_training():
+		_header.text = "PRE-OPENING — TRAINING"
+		return
 	var phase_name: String
 	if _PHASE_NAMES.has(_current_phase):
 		phase_name = str(_PHASE_NAMES[_current_phase])
@@ -257,6 +273,7 @@ func _refresh_header() -> void:
 
 
 func _refresh_all_values() -> void:
+	_refresh_section_labels()
 	if _on_shelves_value != null:
 		_on_shelves_value.text = "%d / %d" % [
 			_on_shelves_count, _shelf_target_count
@@ -277,7 +294,9 @@ func _rebuild_milestones() -> void:
 		if is_instance_valid(label):
 			label.queue_free()
 	_milestone_labels.clear()
-	if _milestones.is_empty():
+	if _is_preopening_training():
+		_milestones = _TRAINING_MILESTONES.duplicate(true)
+	elif _milestones.is_empty():
 		_milestones = _DAY_ONE_MILESTONES.duplicate(true)
 	for entry: Dictionary in _milestones:
 		var objective_id: StringName = StringName(str(entry.get("objective_id", "")))
@@ -317,6 +336,8 @@ func _refresh_milestone_row(objective_id: StringName) -> void:
 
 
 func _milestones_for_objectives(objectives: Array[Dictionary]) -> Array[Dictionary]:
+	if _matches_training_objectives(objectives):
+		return _TRAINING_MILESTONES.duplicate(true)
 	if _matches_day_one_objectives(objectives):
 		return _DAY_ONE_MILESTONES.duplicate(true)
 	var fallback: Array[Dictionary] = []
@@ -348,6 +369,17 @@ func _matches_day_one_objectives(objectives: Array[Dictionary]) -> bool:
 	return true
 
 
+func _matches_training_objectives(objectives: Array[Dictionary]) -> bool:
+	var ids: Dictionary = {}
+	for entry: Dictionary in objectives:
+		ids[StringName(str(entry.get("id", "")))] = true
+	for milestone: Dictionary in _TRAINING_MILESTONES:
+		var objective_id: StringName = StringName(str(milestone.get("objective_id", "")))
+		if not ids.has(objective_id):
+			return false
+	return true
+
+
 func _on_day_started(day: int) -> void:
 	_current_day = day
 	_customers_served_today = 0
@@ -356,6 +388,32 @@ func _on_day_started(day: int) -> void:
 	_refresh_header()
 	_refresh_all_values()
 	_rebuild_milestones()
+
+
+func _is_preopening_training() -> bool:
+	return (
+		_current_day == 1
+		and not BetaRunState.preopening_complete
+		and _has_training_milestones()
+	)
+
+
+func _has_training_milestones() -> bool:
+	var ids: Dictionary = {}
+	for entry: Dictionary in _milestones:
+		ids[StringName(str(entry.get("objective_id", "")))] = true
+	for training_entry: Dictionary in _TRAINING_MILESTONES:
+		var objective_id: StringName = StringName(str(training_entry.get("objective_id", "")))
+		if not ids.has(objective_id):
+			return false
+	return true
+
+
+func _refresh_section_labels() -> void:
+	if _today_anchor != null:
+		_today_anchor.text = "TRAINING" if _is_preopening_training() else "TODAY"
+	if _store_anchor != null:
+		_store_anchor.text = "STORE"
 
 
 func _on_day_phase_changed(new_phase: int) -> void:

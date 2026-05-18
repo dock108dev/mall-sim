@@ -189,6 +189,34 @@ func test_label_uses_spec_font_size() -> void:
 		)
 
 
+func test_active_panel_keeps_compact_fixed_rect() -> void:
+	EventBus.toast_requested.emit(
+		"Training: talk to the manager.", &"system", 3.0
+	)
+	assert_eq(
+		_ui._active_panel.size.x,
+		ToastNotificationUI.TOAST_WIDTH,
+		"Toast card must keep the fixed compact width"
+	)
+	assert_true(
+		_ui._active_panel.size.y <= ToastNotificationUI.TOAST_MAX_HEIGHT,
+		"Toast card must not stretch into a viewport-height column"
+	)
+
+
+func test_two_line_panel_uses_compact_height_ceiling() -> void:
+	EventBus.toast_requested.emit(
+		"Pre-opening training. Talk to the manager before the doors unlock.",
+		&"system",
+		3.0,
+	)
+	assert_eq(
+		_ui._active_panel.size.y,
+		64.0,
+		"Two-line toasts should use the compact 64 px card height"
+	)
+
+
 func test_mouse_filter_ignore() -> void:
 	assert_eq(
 		_ui.mouse_filter, Control.MOUSE_FILTER_IGNORE,

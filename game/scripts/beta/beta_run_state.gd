@@ -34,6 +34,7 @@ var completed_events: Array[StringName] = []
 var daily_events_resolved: Array[StringName] = []
 var hidden_thread_signals_seen: Array[StringName] = []
 var input_mode: int = INPUT_MODE_GAMEPLAY
+var preopening_complete: bool = false
 ## True while the player is holding a stock box from the back room and has
 ## not yet placed it on the used games shelf. Read by ObjectiveRail to
 ## suppress the right-side action/hint chip when the player is carrying
@@ -54,7 +55,43 @@ func reset_new_run() -> void:
 	completed_events.clear()
 	daily_events_resolved.clear()
 	hidden_thread_signals_seen.clear()
+	preopening_complete = false
 	carrying_stock = false
+	set_input_mode(INPUT_MODE_GAMEPLAY)
+
+
+func get_save_data() -> Dictionary:
+	return {
+		"day": day,
+		"cash": cash,
+		"reputation": reputation,
+		"daily_reputation_delta": daily_reputation_delta,
+		"daily_cash_delta": daily_cash_delta,
+		"manager_trust": manager_trust,
+		"hidden_thread_score": hidden_thread_score,
+		"flags": flags.duplicate(true),
+		"completed_events": completed_events.duplicate(),
+		"daily_events_resolved": daily_events_resolved.duplicate(),
+		"hidden_thread_signals_seen": hidden_thread_signals_seen.duplicate(),
+		"preopening_complete": preopening_complete,
+		"carrying_stock": carrying_stock,
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	day = maxi(int(data.get("day", 1)), 1)
+	cash = int(data.get("cash", 0))
+	reputation = int(data.get("reputation", 0))
+	daily_reputation_delta = int(data.get("daily_reputation_delta", 0))
+	daily_cash_delta = int(data.get("daily_cash_delta", 0))
+	manager_trust = int(data.get("manager_trust", 0))
+	hidden_thread_score = int(data.get("hidden_thread_score", 0))
+	flags = (data.get("flags", {}) as Dictionary).duplicate(true)
+	completed_events = _string_name_array(data.get("completed_events", []))
+	daily_events_resolved = _string_name_array(data.get("daily_events_resolved", []))
+	hidden_thread_signals_seen = _string_name_array(data.get("hidden_thread_signals_seen", []))
+	preopening_complete = bool(data.get("preopening_complete", day > 1))
+	carrying_stock = bool(data.get("carrying_stock", false))
 	set_input_mode(INPUT_MODE_GAMEPLAY)
 
 
@@ -68,6 +105,17 @@ func set_input_mode(mode: int) -> void:
 		return
 	input_mode = mode
 	input_mode_changed.emit(mode)
+
+
+func _string_name_array(raw: Variant) -> Array[StringName]:
+	var output: Array[StringName] = []
+	if raw is not Array:
+		return output
+	for value: Variant in raw as Array:
+		var entry: StringName = StringName(str(value))
+		if not entry.is_empty():
+			output.append(entry)
+	return output
 
 
 func apply_decision_effect(

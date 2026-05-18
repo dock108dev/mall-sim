@@ -140,6 +140,21 @@ func test_toast_visible_before_finish_callback() -> void:
 	assert_true(is_instance_valid(_ui._active_panel), "Active panel must exist")
 
 
+func test_active_toast_rect_is_fixed_to_lane_size() -> void:
+	EventBus.toast_requested.emit(
+		"Training: talk to the manager.", &"system", 5.0
+	)
+	assert_eq(
+		_ui._active_panel.size.x,
+		ToastNotificationUI.TOAST_WIDTH,
+		"Active toast should keep the fixed lane width"
+	)
+	assert_true(
+		_ui._active_panel.size.y <= ToastNotificationUI.TOAST_MAX_HEIGHT,
+		"Active toast should never become a tall side column"
+	)
+
+
 func test_finish_callback_hides_toast_and_shows_next() -> void:
 	EventBus.toast_requested.emit("First", &"system", 2.0)
 	EventBus.toast_requested.emit("Second", &"system", 2.0)
