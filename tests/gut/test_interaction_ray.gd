@@ -28,6 +28,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	InputFocus._reset_for_tests()
 	if EventBus.interactable_focused.is_connected(_on_interactable_focused):
 		EventBus.interactable_focused.disconnect(_on_interactable_focused)
 	if EventBus.interactable_focused_disabled.is_connected(_on_interactable_focused_disabled):
@@ -315,6 +316,32 @@ func test_poll_updates_hovered_action_label_on_state_change() -> void:
 		_ray.get_hovered_action_label(),
 		"Closed",
 		"Hovered action label must follow the disabled reason after state flip"
+	)
+
+
+func test_modal_pop_repolls_hovered_target_before_next_frame() -> void:
+	var target: _StatefulTarget = _StatefulTarget.new()
+	target.prompt_text = "Use"
+	target.display_name = "Register"
+	target.disabled_reason = "No customer waiting"
+	target.can = true
+	add_child_autofree(target)
+	_ray._set_hovered_target(target)
+	_focused_labels.clear()
+	_disabled_reasons.clear()
+
+	InputFocus.push_context(InputFocus.CTX_MODAL)
+	target.can = false
+	InputFocus.pop_context()
+
+	assert_false(
+		_ray._hovered_can_interact,
+		"Modal close must re-poll the hovered target before another frame runs"
+	)
+	assert_eq(
+		_disabled_reasons,
+		["No customer waiting"],
+		"Modal close must emit the updated disabled reason for the stale hover"
 	)
 
 

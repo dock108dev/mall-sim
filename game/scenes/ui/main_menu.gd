@@ -15,7 +15,10 @@ const _SETTINGS_PANEL_SCENE: PackedScene = preload(
 )
 const _LOAD_BUTTON_DEFAULT_TEXT: String = "Load Game"
 const _LOAD_BUTTON_NO_SAVE_TEXT: String = "No Save Found"
+const _LOAD_BUTTON_COMING_SOON_TEXT: String = "Load Game - Coming Soon"
+const _LOAD_SLOT_COMING_SOON_TEXT: String = "Coming Soon"
 const _LOAD_BUTTON_DISABLED_MODULATE: Color = Color(0.6, 0.6, 0.6, 1.0)
+const _LOAD_GAME_ENABLED: bool = false
 
 var _load_panel_visible: bool = false
 var _settings_panel: SettingsPanel = null
@@ -55,7 +58,9 @@ func _ready() -> void:
 	_any_saves_exist = _has_any_saves()
 	_refresh_load_button_state()
 
-	var most_recent: int = _find_most_recent_slot()
+	var most_recent: int = -1
+	if _is_load_game_enabled():
+		most_recent = _find_most_recent_slot()
 	_continue_button.visible = most_recent >= 0
 	if most_recent >= 0:
 		_continue_button.pressed.connect(
@@ -75,6 +80,7 @@ func _notification(what: int) -> void:
 		return
 	if not is_inside_tree() or not is_visible_in_tree():
 		return
+	_any_saves_exist = _has_any_saves()
 	_refresh_load_button_state()
 
 
@@ -107,6 +113,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_play_pressed() -> void:
+	_any_saves_exist = _has_any_saves()
+	_refresh_load_button_state()
 	if _any_saves_exist:
 		_new_game_dialog.popup_centered()
 		return
@@ -122,6 +130,12 @@ func _start_new_game() -> void:
 
 
 func _on_load_pressed() -> void:
+	if not _is_load_game_enabled():
+		_refresh_load_button_state()
+		EventBus.notification_requested.emit(
+			"Load Game is coming soon for beta saves."
+		)
+		return
 	# Belt for the disabled-button contract: refresh the affordance and bail
 	# if the save vanished between _ready and the click. See EH-10.
 	if not _slot_zero_save_exists():
@@ -201,9 +215,11 @@ func _create_load_slot_row(slot: int) -> void:
 	row.add_child(info_box)
 
 	var load_button := Button.new()
-	load_button.text = tr("MENU_LOAD")
+	load_button.text = (
+		tr("MENU_LOAD") if _is_load_game_enabled() else _LOAD_SLOT_COMING_SOON_TEXT
+	)
 	load_button.custom_minimum_size = Vector2(80, 0)
-	if not exists:
+	if not exists or not _is_load_game_enabled():
 		load_button.disabled = true
 		row.modulate = Color(0.5, 0.5, 0.5)
 	else:
@@ -224,6 +240,11 @@ func _load_slot(slot: int) -> void:
 
 func _start_game_session(slot: int) -> void:
 	if slot >= 0:
+		if not _is_load_game_enabled():
+			EventBus.notification_requested.emit(
+				"Load Game is coming soon for beta saves."
+			)
+			return
 		GameManager.load_game(slot)
 		return
 	GameManager.start_new_game()
@@ -247,6 +268,16 @@ func _slot_zero_save_exists() -> bool:
 func _refresh_load_button_state() -> void:
 	if _load_button == null:
 		return
+	if not _is_load_game_enabled():
+		var has_any_save: bool = _has_any_saves()
+		_load_button.disabled = true
+		_load_button.text = (
+			_LOAD_BUTTON_COMING_SOON_TEXT
+			if has_any_save
+			else _LOAD_BUTTON_NO_SAVE_TEXT
+		)
+		_load_button.modulate = _LOAD_BUTTON_DISABLED_MODULATE
+		return
 	var has_save: bool = _slot_zero_save_exists()
 	_load_button.disabled = not has_save
 	if has_save:
@@ -266,7 +297,7 @@ func _find_most_recent_slot() -> int:
 		if not FileAccess.file_exists(path):
 			continue
 		var info: Dictionary = _read_slot_info(path)
-		var meta: Dictionary = info.get("metadata", {}) as Dictionary
+		var meta: Dictionary = _extract_preview_metadata(info)
 		var ts: String = str(meta.get("timestamp", ""))
 		if ts.is_empty():
 			continue
@@ -311,15 +342,20 @@ func _read_slot_info(path: String) -> Dictionary:
 
 
 func _format_slot_info(save_data: Dictionary) -> String:
-	var metadata: Dictionary = (
-		save_data.get("metadata", {}) as Dictionary
+	var metadata: Dictionary = _extract_preview_metadata(save_data)
+	var day: int = int(metadata.get("day_number", metadata.get("day", 0)))
+	var timestamp: String = str(
+		metadata.get(
+			"timestamp",
+			metadata.get("last_saved_at", metadata.get("saved_at", ""))
+		)
 	)
-	var day: int = int(metadata.get("day_number", 0))
-	var timestamp: String = str(metadata.get("timestamp", ""))
-	var store_raw: String = str(metadata.get("store_type", ""))
+	var store_raw: String = str(
+		metadata.get("active_store_id", metadata.get("store_type", ""))
+	)
 
-	var store_name: String = ""
-	if not store_raw.is_empty():
+	var store_name: String = str(metadata.get("store_name", ""))
+	if store_name.is_empty() and not store_raw.is_empty():
 		var canonical: StringName = ContentRegistry.resolve(store_raw)
 		if not canonical.is_empty():
 			store_name = ContentRegistry.get_display_name(canonical)
@@ -329,16 +365,20 @@ func _format_slot_info(save_data: Dictionary) -> String:
 	var economy: Dictionary = (
 		save_data.get("economy", {}) as Dictionary
 	)
-	var cash: float = float(
-		economy.get("player_cash", economy.get("current_cash", 0.0))
-	)
+	var cash_has_value: bool = metadata.has("cash")
+	var cash: float = float(metadata.get("cash", 0.0))
+	if not cash_has_value:
+		cash_has_value = economy.has("player_cash") or economy.has("current_cash")
+		cash = float(
+			economy.get("player_cash", economy.get("current_cash", 0.0))
+		)
 
 	var parts: Array[String] = []
 	if day > 0:
 		parts.append(tr("MENU_DAY") % day)
 	if not store_name.is_empty():
 		parts.append(store_name)
-	if cash > 0.0:
+	if cash_has_value:
 		parts.append("$%s" % _format_cash(cash))
 	if not timestamp.is_empty():
 		parts.append(timestamp.left(10))
@@ -346,6 +386,20 @@ func _format_slot_info(save_data: Dictionary) -> String:
 	if parts.is_empty():
 		return tr("MENU_SAVED_GAME")
 	return " | ".join(parts)
+
+
+func _extract_preview_metadata(save_data: Dictionary) -> Dictionary:
+	var save_metadata: Variant = save_data.get("save_metadata", {})
+	if save_metadata is Dictionary:
+		return (save_metadata as Dictionary).duplicate(true)
+	var legacy_metadata: Variant = save_data.get("metadata", {})
+	if legacy_metadata is Dictionary:
+		return (legacy_metadata as Dictionary).duplicate(true)
+	return {}
+
+
+func _is_load_game_enabled() -> bool:
+	return _LOAD_GAME_ENABLED
 
 
 func _format_cash(amount: float) -> String:

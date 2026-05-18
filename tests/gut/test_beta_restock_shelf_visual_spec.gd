@@ -164,6 +164,19 @@ func test_empty_overlay_visible_on_unstocked_shelf() -> void:
 	)
 
 
+func test_backroom_pickup_label_names_delivery_quantity() -> void:
+	var label: Label3D = (
+		_root.get_node_or_null("BetaBackroomPickup/StockBoxLabel") as Label3D
+	)
+	assert_not_null(label, "BetaBackroomPickup must label the delivery crate")
+	if label == null:
+		return
+	assert_string_contains(
+		label.text, str(BetaDayOneController._BACKROOM_DELIVERY_QUANTITY),
+		"Back-room delivery label must name the available item count"
+	)
+
+
 func test_empty_overlay_hidden_after_stocking() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -214,6 +227,34 @@ func test_restock_locked_when_not_carrying_stock() -> void:
 	)
 
 
+func test_restock_interaction_without_carrying_stock_is_blocked() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	controller._stage = controller.STAGE_STOCK_SHELF
+	BetaRunState.carrying_stock = false
+	watch_signals(EventBus)
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	assert_signal_not_emitted(
+		EventBus, "beta_shelf_count_changed",
+		"Restock must not flip shelf count when the player is not carrying stock"
+	)
+	assert_false(
+		bool(controller.is_objective_completed(&"stock_shelf")),
+		"Restock must not complete the shelf objective without carried stock"
+	)
+	assert_signal_emitted(
+		EventBus, "notification_requested",
+		"Blocked restock must tell the player to pick up the delivery"
+	)
+	assert_eq(
+		get_signal_parameters(EventBus, "notification_requested"),
+		["Pick up the back room delivery first."],
+		"Blocked restock notification copy must name the delivery pickup"
+	)
+
+
 func test_restock_unlocks_after_backroom_pickup() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -227,6 +268,35 @@ func test_restock_unlocks_after_backroom_pickup() -> void:
 		"can_interact_restock() must return true once the player is "
 		+ "carrying the back-room delivery."
 	)
+
+
+func test_restock_visuals_reset_to_empty_state_between_days() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	var shelf: Node = _root.get_node_or_null("BetaRestockShelf")
+	if shelf == null:
+		return
+	assert_gt(_count_beta_shelf_items(shelf), 0, "Pre-condition: shelf is stocked")
+	controller._reset_scene_for_day(2)
+	await get_tree().process_frame
+	assert_eq(
+		_count_beta_shelf_items(shelf), 0,
+		"Beta-only shelf item meshes must not survive a day reset"
+	)
+	var overlay: Node3D = shelf.get_node_or_null("EmptyOverlay") as Node3D
+	assert_not_null(overlay, "EmptyOverlay must still exist after reset")
+	if overlay != null:
+		assert_true(
+			overlay.visible,
+			"EmptyOverlay must return when beta restock visuals reset"
+		)
 
 
 # ── After-stock "after" state: warm amber emission on spawned items ────────
@@ -377,6 +447,14 @@ func test_restock_toast_names_the_used_games_shelf() -> void:
 
 func _beta_controller() -> Node:
 	return get_tree().get_first_node_in_group("beta_day_one_controller")
+
+
+func _count_beta_shelf_items(shelf: Node) -> int:
+	var count: int = 0
+	for child: Node in shelf.get_children():
+		if String(child.name).begins_with("BetaShelfItem"):
+			count += 1
+	return count
 
 
 ## GUT's `get_signal_parameters` returns the params of one emission and

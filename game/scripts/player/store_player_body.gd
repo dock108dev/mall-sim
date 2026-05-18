@@ -53,13 +53,15 @@ const _ORBIT_CONTROLLER_SIBLING_PATH: NodePath = ^"../PlayerController"
 
 const PITCH_LIMIT_RAD: float = deg_to_rad(80.0)
 
-## Walk speed in meters per second.
-@export var move_speed: float = 4.0
+## Walk speed in meters per second. Tuned for Day-1 store-scale navigation:
+## quick enough to cross the shop without slog, low enough that the register,
+## back room, and shelf beats require deliberate positioning.
+@export var move_speed: float = 3.6
 
 ## Multiplier applied to `move_speed` while the `sprint` action is held.
-## Default 1.5 keeps run pace inside the 5.5–7.0 m/s target range for the
-## shipping walk speed (3.0–4.5).
-@export var sprint_multiplier: float = 1.5
+## Default 1.4 keeps sprint under runaway FPS pace while still giving the
+## player a clear "hurry across the aisle" option.
+@export var sprint_multiplier: float = 1.4
 
 ## Radians of view rotation per pixel of mouse motion. Tuned for default
 ## desktop mouse DPI; players can rebind in settings.

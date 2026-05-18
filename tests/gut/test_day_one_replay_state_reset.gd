@@ -15,6 +15,8 @@ var _saved_current_day: int
 var _saved_state: GameManager.State
 var _saved_store_id: StringName
 var _saved_pending_load_slot: int
+var _saved_unlock_valid_ids: Dictionary
+var _saved_unlock_grants: Dictionary
 
 
 func before_each() -> void:
@@ -22,6 +24,8 @@ func before_each() -> void:
 	_saved_state = GameManager.current_state
 	_saved_store_id = GameManager.current_store_id
 	_saved_pending_load_slot = GameManager.pending_load_slot
+	_saved_unlock_valid_ids = UnlockSystemSingleton._valid_ids.duplicate(true)
+	_saved_unlock_grants = UnlockSystemSingleton._granted.duplicate(true)
 	GameState.reset_new_game()
 	AuditLog.clear()
 	BetaRunState.reset_new_run()
@@ -32,6 +36,8 @@ func after_each() -> void:
 	GameManager.current_state = _saved_state
 	GameManager.current_store_id = _saved_store_id
 	GameManager.pending_load_slot = _saved_pending_load_slot
+	UnlockSystemSingleton._valid_ids = _saved_unlock_valid_ids.duplicate(true)
+	UnlockSystemSingleton._granted = _saved_unlock_grants.duplicate(true)
 	GameState.reset_new_game()
 	BetaRunState.reset_new_run()
 
@@ -75,6 +81,25 @@ func test_begin_new_run_clears_arbitrary_run_flags() -> void:
 	assert_false(
 		GameState.get_flag(&"some_other_run_flag"),
 		"begin_new_run() must clear every entry in GameState.flags"
+	)
+
+
+func test_begin_new_run_resets_game_state_money() -> void:
+	GameState.money = 999
+	GameManager.begin_new_run()
+	assert_eq(
+		GameState.money, GameState.DEFAULT_MONEY,
+		"begin_new_run() must reset transient GameState money"
+	)
+
+
+func test_begin_new_run_clears_unlock_grants() -> void:
+	UnlockSystemSingleton._valid_ids = {&"register_access": true}
+	UnlockSystemSingleton._granted = {&"register_access": true}
+	GameManager.begin_new_run()
+	assert_true(
+		UnlockSystemSingleton.get_all_granted().is_empty(),
+		"begin_new_run() must clear unlock grants for a fresh beta run"
 	)
 
 
@@ -170,3 +195,13 @@ func test_begin_new_run_clears_beta_run_state_carrying_stock() -> void:
 		BetaRunState.carrying_stock,
 		"begin_new_run() must clear BetaRunState.carrying_stock so replay starts unencumbered"
 	)
+
+
+func test_begin_new_run_resets_beta_run_state_counters_and_input() -> void:
+	BetaRunState.manager_trust = 4
+	BetaRunState.hidden_thread_score = 3
+	BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_DECISION_CARD)
+	GameManager.begin_new_run()
+	assert_eq(BetaRunState.manager_trust, 0)
+	assert_eq(BetaRunState.hidden_thread_score, 0)
+	assert_eq(BetaRunState.input_mode, BetaRunState.INPUT_MODE_GAMEPLAY)

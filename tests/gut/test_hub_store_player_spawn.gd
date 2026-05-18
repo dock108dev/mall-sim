@@ -116,6 +116,26 @@ func test_player_body_has_interaction_ray_on_root() -> void:
 		)
 
 
+func test_player_body_default_movement_feels_deliberate() -> void:
+	var root := MockStoreRoot.new()
+	add_child_autofree(root)
+	var player: StorePlayerBody = (
+		STORE_PLAYER_SCENE.instantiate() as StorePlayerBody
+	)
+	root.add_child(player)
+	assert_between(
+		player.move_speed,
+		3.2,
+		3.8,
+		"Default walk speed must stay in the deliberate Day-1 navigation band"
+	)
+	assert_lte(
+		player.move_speed * player.sprint_multiplier,
+		5.25,
+		"Default sprint speed must not turn the small store route into a dash"
+	)
+
+
 func test_camera_authority_marks_store_camera_current() -> void:
 	_store_root = _instantiate_mock_store()
 	_add_mock_store_camera(_store_root)

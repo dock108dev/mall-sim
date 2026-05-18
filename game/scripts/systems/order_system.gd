@@ -364,14 +364,10 @@ func _create_and_collect_items(
 
 
 func _emit_delivery_results(delivered_by_store: Dictionary) -> void:
-	var total: int = 0
 	for sid: String in delivered_by_store:
 		var items: Array = delivered_by_store[sid]
 		if not items.is_empty():
 			EventBus.order_delivered.emit(StringName(sid), items)
-		total += items.size()
-	if total > 0:
-		EventBus.notification_requested.emit("%d item(s) delivered to backroom" % total)
 
 
 func _on_difficulty_changed(

@@ -87,10 +87,243 @@ func test_scene_authors_player_entry_spawn_marker() -> void:
 	)
 	# Spawn sits just inside the front entrance opening (front threshold ~10 m).
 	var pos: Vector3 = (marker as Marker3D).global_position
-	assert_almost_eq(pos.x, 0.0, 0.01,
-		"PlayerEntrySpawn.x should be on the storefront centerline")
+	assert_gte(pos.x, 1.6,
+		"PlayerEntrySpawn.x should bias toward the checkout lane")
+	assert_lte(pos.x, 2.8,
+		"PlayerEntrySpawn.x should stay inside the entrance approach")
 	assert_gt(pos.z, 8.0,
 		"PlayerEntrySpawn.z should sit near the front entrance, not at world origin")
+
+
+func test_player_entry_spawn_frames_checkout_customer_in_view() -> void:
+	var marker: Marker3D = _root.get_node_or_null("PlayerEntrySpawn") as Marker3D
+	var customer: Node3D = _root.get_node_or_null("BetaDayOneCustomer") as Node3D
+	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
+	assert_not_null(marker, "PlayerEntrySpawn must exist")
+	assert_not_null(customer, "BetaDayOneCustomer must exist")
+	assert_not_null(checkout, "Checkout must exist")
+	if marker == null or customer == null or checkout == null:
+		return
+	var forward: Vector3 = _flat_forward(marker)
+	assert_lt(
+		forward.z,
+		-0.72,
+		"PlayerEntrySpawn forward vector must face into the store; got %.3f"
+		% forward.z
+	)
+	var customer_dir: Vector3 = _flat_direction(marker.global_position, customer.global_position)
+	var checkout_dir: Vector3 = _flat_direction(marker.global_position, checkout.global_position)
+	assert_gt(
+		forward.dot(customer_dir),
+		0.55,
+		"BetaDayOneCustomer must be inside the spawn view cone"
+	)
+	assert_gt(
+		forward.dot(checkout_dir),
+		0.55,
+		"Checkout must be inside the spawn view cone"
+	)
+	assert_gt(
+		_flat_right(marker).dot(customer_dir),
+		0.15,
+		"BetaDayOneCustomer should read as central-to-right from spawn"
+	)
+
+
+func test_day_one_route_targets_are_front_back_shelf_register() -> void:
+	var customer: Node3D = _root.get_node_or_null("BetaDayOneCustomer") as Node3D
+	var pickup: Node3D = _root.get_node_or_null("BetaBackroomPickup") as Node3D
+	var shelf: Node3D = _root.get_node_or_null("BetaRestockShelf") as Node3D
+	var close_day: Node3D = _root.get_node_or_null("BetaDayEndTrigger") as Node3D
+	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
+	for target: Node3D in [customer, pickup, shelf, close_day, checkout]:
+		assert_not_null(target, "Critical Day-1 route target must exist")
+	if (
+		customer == null
+		or pickup == null
+		or shelf == null
+		or close_day == null
+		or checkout == null
+	):
+		return
+	assert_gt(
+		customer.global_position.z,
+		7.5,
+		"Customer beat must stage at the front checkout lane"
+	)
+	assert_gt(
+		pickup.global_position.x,
+		5.4,
+		"Back-room pickup must sit inside the back-room doorway path"
+	)
+	assert_lt(
+		pickup.global_position.z,
+		-7.2,
+		"Back-room pickup must stage in the rear storage zone"
+	)
+	assert_lt(
+		shelf.global_position.x,
+		-2.0,
+		"Restock shelf must stage on the used-shelf side of the store"
+	)
+	assert_lt(
+		shelf.global_position.z,
+		-7.0,
+		"Restock shelf must stage in the rear shelf zone"
+	)
+	assert_lt(
+		_flat_distance(close_day.global_position, checkout.global_position),
+		0.6,
+		"Close-day target must return to the checkout counter"
+	)
+
+
+func test_day_one_route_readability_props_survive_beta_strip() -> void:
+	assert_true(
+		BetaDayOneController._BETA_KEEP_ROOT_NODES.has(&"ReadabilityProps"),
+		"ReadabilityProps must stay visible in the beta slice"
+	)
+	var props: Node3D = _root.get_node_or_null("ReadabilityProps") as Node3D
+	assert_not_null(props, "ReadabilityProps must exist")
+	if props == null:
+		return
+	var markers: Node = props.get_node_or_null("DayOneRouteMarkers")
+	assert_not_null(markers, "DayOneRouteMarkers must exist")
+	if markers != null:
+		assert_gte(
+			markers.get_child_count(),
+			9,
+			"DayOneRouteMarkers must stage checkout, back-room, shelf, and return paths"
+		)
+	assert_not_null(
+		_root.get_node_or_null("BackroomUtilityLight"),
+		"BackroomUtilityLight must cue the checkout-to-backroom path"
+	)
+	assert_not_null(
+		props.get_node_or_null("ZoneLighting/OldGenZoneFill"),
+		"OldGenZoneFill must keep the shelf route lit"
+	)
+	assert_not_null(
+		_root.get_node_or_null("CheckoutLaneSpotlight"),
+		"CheckoutLaneSpotlight must cue the shelf-to-register return"
+	)
+	var blockers: Array[Node] = []
+	_collect_route_blockers(props, blockers)
+	assert_eq(
+		blockers.size(),
+		0,
+		"ReadabilityProps must remain visual-only and not obscure critical targets"
+	)
+
+
+func test_day_one_zone_identity_props_are_distinct_muted_visuals() -> void:
+	var props: Node3D = _root.get_node_or_null("ReadabilityProps") as Node3D
+	assert_not_null(props, "ReadabilityProps must exist")
+	if props == null:
+		return
+	var identity: Node = props.get_node_or_null("ZoneIdentity")
+	assert_not_null(identity, "ZoneIdentity must group checkout, back-room, and shelf accents")
+	if identity == null:
+		return
+	var checkout: MeshInstance3D = identity.get_node_or_null(
+		"CheckoutCounterAccent"
+	) as MeshInstance3D
+	var backroom: MeshInstance3D = identity.get_node_or_null(
+		"BackroomDoorThreshold"
+	) as MeshInstance3D
+	var shelf: MeshInstance3D = identity.get_node_or_null("ShelfStockAccent") as MeshInstance3D
+	for accent: MeshInstance3D in [checkout, backroom, shelf]:
+		assert_not_null(accent, "Each Day-1 zone must have a visual accent")
+		if accent == null:
+			return
+		var mat: StandardMaterial3D = _mesh_material(accent)
+		assert_not_null(mat, "%s must use a StandardMaterial3D override" % accent.name)
+		if mat == null:
+			return
+		assert_lte(
+			mat.emission_energy_multiplier,
+			0.25,
+			"%s must stay muted so interactables remain the strongest cue" % accent.name
+		)
+	var checkout_mat: StandardMaterial3D = _mesh_material(checkout)
+	var backroom_mat: StandardMaterial3D = _mesh_material(backroom)
+	var shelf_mat: StandardMaterial3D = _mesh_material(shelf)
+	assert_true(
+		checkout_mat.albedo_color != backroom_mat.albedo_color,
+		"Checkout and back-room accents must not collapse into one visual identity"
+	)
+	assert_true(
+		backroom_mat.albedo_color != shelf_mat.albedo_color,
+		"Back-room and shelf accents must stay visually distinct"
+	)
+	var blockers: Array[Node] = []
+	_collect_route_blockers(identity, blockers)
+	assert_eq(blockers.size(), 0, "Zone identity accents must remain visual-only")
+
+
+func test_day_one_route_markers_are_floor_accents_not_waypoints() -> void:
+	var marker: MeshInstance3D = _root.get_node_or_null(
+		"ReadabilityProps/DayOneRouteMarkers/BackroomStepA"
+	) as MeshInstance3D
+	assert_not_null(marker, "BackroomStepA route marker must exist")
+	if marker == null:
+		return
+	var mat: StandardMaterial3D = _mesh_material(marker)
+	assert_not_null(mat, "Route markers must use a StandardMaterial3D override")
+	if mat == null:
+		return
+	assert_lte(
+		mat.albedo_color.a,
+		0.5,
+		"Route marker alpha must stay low so it reads as floor inlay, not UI paint"
+	)
+	assert_lte(
+		mat.emission_energy_multiplier,
+		0.25,
+		"Route marker emission must stay below the interactable-highlight priority"
+	)
+
+
+func test_back_room_and_shelf_stock_props_share_case_language() -> void:
+	var backroom_cases: Node = _root.get_node_or_null(
+		"BetaBackroomPickup/StockBox/CaseSpines"
+	)
+	var shelf_cases: Node = _root.get_node_or_null(
+		"BetaRestockShelf/RestockCrate/CaseSpines"
+	)
+	assert_not_null(backroom_cases, "Back-room stock box must expose visible case spines")
+	assert_not_null(shelf_cases, "Shelf restock crate must expose visible case spines")
+	if backroom_cases == null or shelf_cases == null:
+		return
+	assert_eq(backroom_cases.get_child_count(), 5, "Back-room delivery must read as five items")
+	assert_gte(
+		shelf_cases.get_child_count(),
+		3,
+		"Shelf restock crate must echo the same product language without overfilling"
+	)
+	var backroom_case: MeshInstance3D = backroom_cases.get_child(0) as MeshInstance3D
+	var shelf_case: MeshInstance3D = shelf_cases.get_child(0) as MeshInstance3D
+	assert_not_null(backroom_case, "Back-room case spine must be a MeshInstance3D")
+	assert_not_null(shelf_case, "Shelf case spine must be a MeshInstance3D")
+	if backroom_case == null or shelf_case == null:
+		return
+	var backroom_mesh: BoxMesh = backroom_case.mesh as BoxMesh
+	var shelf_mesh: BoxMesh = shelf_case.mesh as BoxMesh
+	assert_not_null(backroom_mesh, "Back-room case spine must use a BoxMesh")
+	assert_not_null(shelf_mesh, "Shelf case spine must use a BoxMesh")
+	if backroom_mesh == null or shelf_mesh == null:
+		return
+	assert_eq(backroom_mesh.size, Vector3(0.18, 0.22, 0.06))
+	assert_eq(
+		shelf_mesh.size,
+		backroom_mesh.size,
+		"Shelf case props must use the same physical dimensions as back-room stock"
+	)
+	assert_eq(
+		_mesh_material(shelf_case).albedo_color,
+		_mesh_material(backroom_case).albedo_color,
+		"Shelf and back-room cases must share the same product material language"
+	)
 
 
 func test_scene_does_not_author_store_player_body() -> void:
@@ -571,3 +804,39 @@ func _collect_by_class(node: Node, class_name_str: String, out: Array[Node]) -> 
 		out.append(node)
 	for child: Node in node.get_children():
 		_collect_by_class(child, class_name_str, out)
+
+
+func _collect_route_blockers(node: Node, out: Array[Node]) -> void:
+	if node is CollisionShape3D or node is StaticBody3D or node is Area3D:
+		out.append(node)
+	for child: Node in node.get_children():
+		_collect_route_blockers(child, out)
+
+
+func _mesh_material(mesh: MeshInstance3D) -> StandardMaterial3D:
+	if mesh == null:
+		return null
+	return mesh.get_surface_override_material(0) as StandardMaterial3D
+
+
+func _flat_direction(from: Vector3, to: Vector3) -> Vector3:
+	var delta: Vector3 = Vector3(to.x - from.x, 0.0, to.z - from.z)
+	if delta.length() <= 0.001:
+		return Vector3.ZERO
+	return delta.normalized()
+
+
+func _flat_distance(a: Vector3, b: Vector3) -> float:
+	return Vector2(a.x, a.z).distance_to(Vector2(b.x, b.z))
+
+
+func _flat_forward(node: Node3D) -> Vector3:
+	var forward: Vector3 = -node.global_transform.basis.z
+	forward.y = 0.0
+	return forward.normalized()
+
+
+func _flat_right(node: Node3D) -> Vector3:
+	var right: Vector3 = node.global_transform.basis.x
+	right.y = 0.0
+	return right.normalized()

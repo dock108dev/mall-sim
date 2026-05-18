@@ -137,7 +137,7 @@ func test_quit_confirmed_unpauses_tree() -> void:
 func test_quit_canceled_stays_paused() -> void:
 	GameManager.current_state = GameManager.State.GAMEPLAY
 	_pause_menu.open()
-	_pause_menu._on_quit_canceled()
+	_pause_menu._confirm_dialog.canceled.emit()
 	assert_true(get_tree().paused)
 	assert_true(_pause_menu.is_open())
 

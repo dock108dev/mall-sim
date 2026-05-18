@@ -188,11 +188,23 @@ func test_back_room_inventory_targets_backroom_pickup_node() -> void:
 func test_stock_shelf_targets_restock_shelf_node() -> void:
 	var highlight: BetaObjectiveTargetHighlight = _make_highlight()
 	var root: Node3D = _make_store_root_with_stage(&"stock_shelf")
+	BetaRunState.carrying_stock = true
 	highlight.set_active_stage_for_test(&"stock_shelf", root)
 	var expected: Node3D = root.get_node("BetaRestockShelf") as Node3D
 	assert_eq(
 		highlight.get_target_node(), expected,
 		"STOCK_SHELF must target the BetaRestockShelf node"
+	)
+
+
+func test_stock_shelf_has_no_target_until_stock_is_carried() -> void:
+	var highlight: BetaObjectiveTargetHighlight = _make_highlight()
+	var root: Node3D = _make_store_root_with_stage(&"stock_shelf")
+	BetaRunState.carrying_stock = false
+	highlight.set_active_stage_for_test(&"stock_shelf", root)
+	assert_null(
+		highlight.get_target_node(),
+		"STOCK_SHELF must not highlight the shelf as actionable before pickup"
 	)
 
 
@@ -265,6 +277,7 @@ func test_objective_changed_signal_refreshes_target_via_group() -> void:
 		"objective_changed must re-resolve to the new stage's target"
 	)
 	stub.stage = &"stock_shelf"
+	stub.carrying = true
 	EventBus.objective_changed.emit({})
 	await get_tree().process_frame
 	assert_eq(
@@ -338,6 +351,10 @@ func test_stage_y_offsets_are_positive_for_chain_stages() -> void:
 class _StageStub:
 	extends Node
 	var stage: StringName = &""
+	var carrying: bool = false
 
 	func current_stage() -> StringName:
 		return stage
+
+	func can_interact_restock() -> bool:
+		return carrying

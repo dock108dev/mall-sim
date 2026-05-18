@@ -619,7 +619,6 @@ func _setup_deferred_panels() -> void:
 		_ENDING_SCREEN_SCENE.instantiate() as EndingScreen
 	)
 	add_child(_ending_screen)
-	_ending_screen.dismissed.connect(_on_ending_dismissed)
 
 	var moments_tray: MomentsTray = (
 		_MOMENTS_TRAY_SCENE.instantiate() as MomentsTray
@@ -1435,7 +1434,3 @@ func _on_ending_triggered(
 	_ending_id: StringName, _final_stats: Dictionary
 ) -> void:
 	_ensure_deferred_panels()
-
-
-func _on_ending_dismissed() -> void:
-	pass

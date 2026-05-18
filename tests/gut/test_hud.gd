@@ -224,7 +224,7 @@ func test_reputation_arrow_down_text() -> void:
 	)
 
 
-func test_reputation_flash_uses_issue_025_timing() -> void:
+func test_reputation_flash_uses_configured_timing() -> void:
 	assert_eq(_hud._REP_ARROW_FADE_IN, 0.1)
 	assert_eq(_hud._REP_ARROW_HOLD, 1.0)
 	assert_eq(_hud._REP_ARROW_FADE_OUT, 0.4)
@@ -482,6 +482,24 @@ func test_sales_today_pulses_on_item_sold() -> void:
 	)
 
 
+func test_beta_carry_changed_toggles_label_and_icon() -> void:
+	var label: Label = _hud.get_node("CarryHUD/BetaCarryLabel")
+	var icon: ColorRect = _hud.get_node("CarryHUD/BetaCarryIcon")
+	assert_false(label.visible, "Carry label must start hidden")
+	assert_false(icon.visible, "Carry icon must start hidden")
+
+	EventBus.beta_carry_changed.emit("Used Console Box")
+	await get_tree().process_frame
+	assert_true(label.visible, "Carry label must show while holding stock")
+	assert_eq(label.text, "Carrying: Used Console Box")
+	assert_true(icon.visible, "Carry icon must show with the carry label")
+
+	EventBus.beta_carry_changed.emit("")
+	await get_tree().process_frame
+	assert_false(label.visible, "Carry label must hide when stock clears")
+	assert_false(icon.visible, "Carry icon must hide when stock clears")
+
+
 # ── Defensive signal connection guards ─────────────────────────────────────
 # Each EventBus / InputFocus / button connection in _connect_signals() is
 # wrapped with is_connected so a second HUD instance entering the tree
@@ -510,7 +528,6 @@ func test_objective_changed_fires_handler_once_per_instance() -> void:
 	# handler exactly once — not twice on a single instance.
 	var second_hud: CanvasLayer = _HudScene.instantiate()
 	add_child_autofree(second_hud)
-	var first_count_before: int = _hud._objective_active as int
 	# Count how many connections target _hud._on_objective_payload.
 	var connections: Array = EventBus.objective_changed.get_connections()
 	var first_bindings: int = 0
@@ -529,8 +546,6 @@ func test_objective_changed_fires_handler_once_per_instance() -> void:
 		second_bindings, 1,
 		"Second HUD must be bound exactly once to objective_changed"
 	)
-	# Sanity: ignore first_count_before — only confirms the value was read.
-	assert_true(first_count_before == 0 or first_count_before == 1)
 
 
 func test_no_signal_double_connects_after_second_hud_instantiated() -> void:

@@ -57,7 +57,6 @@ func initialize(
 	_data_loader = data_loader
 	_apply_state({})
 	EventBus.day_started.connect(_on_day_started)
-	EventBus.day_ended.connect(_on_day_ended)
 	_stocker_behavior = StockerBehavior.new()
 	add_child(_stocker_behavior)
 	_stocker_behavior.initialize(inventory, self, data_loader)
@@ -225,10 +224,6 @@ func _get_staff_definition(
 
 func _on_day_started(_day: int) -> void:
 	_run_staff_pricing()
-
-
-func _on_day_ended(_day: int) -> void:
-	pass
 
 
 ## Deducts wages for all hired staff across all owned stores.

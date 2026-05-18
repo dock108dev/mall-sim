@@ -1,10 +1,10 @@
 # Content and Data
 
-Mallcore Sim loads gameplay content from JSON under `game/content/`. The boot
-pipeline discovers every JSON file under that tree, infers a content type from
-either the file contents or the path, converts supported entries into typed
-`Resource` objects, registers those resources and raw entries, and then validates
-cross-references before gameplay starts.
+Gameplay content is loaded from JSON under `game/content/`. The boot pipeline
+discovers every JSON file under that tree, reads the required root `"type"`
+field, converts supported entries into typed `Resource` objects, registers
+those resources and raw entries, and then validates cross-references before
+gameplay starts.
 
 ## Loader pipeline
 
@@ -137,10 +137,7 @@ rent, fixtures, unique mechanics) lives there.
   the store-contract conventions (Camera3D at root for hub-mode entry, an
   `OrbitPivot` marker, a store controller script attached to the root).
 
-Shipping roster (per `store_definitions.json`): `retro_games`. The beta
-strip-to-bones cut removed the four legacy stores (sports memorabilia,
-video rental, pocket creatures, consumer electronics) along with their
-scenes, controllers, item catalogs, customer pools, and per-store systems.
+Shipping roster (per `store_definitions.json`): `retro_games`.
 
 ## Typed resource models
 

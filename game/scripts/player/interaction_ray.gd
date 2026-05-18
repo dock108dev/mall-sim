@@ -53,6 +53,7 @@ func _ready() -> void:
 	EventBus.panel_opened.connect(_on_panel_opened)
 	EventBus.panel_closed.connect(_on_panel_closed)
 	EventBus.active_camera_changed.connect(_on_active_camera_changed)
+	InputFocus.context_changed.connect(_on_input_focus_changed)
 	if CameraManager.active_camera:
 		_apply_camera(CameraManager.active_camera)
 	if OS.is_debug_build():
@@ -332,18 +333,29 @@ func get_targeting_debug() -> Dictionary:
 ## Subclasses are expected to keep `can_interact()` cheap (pure state read,
 ## no allocations) since it now runs every frame while a target is hovered.
 func _poll_hovered_can_interact() -> void:
+	_refresh_hovered_target_state()
+
+
+func refresh_hovered_target_state() -> void:
+	_refresh_hovered_target_state()
+
+
+func _refresh_hovered_target_state() -> void:
 	if not is_instance_valid(_hovered_target):
 		return
 	var current_can: bool = _hovered_target.can_interact()
-	if current_can == _hovered_can_interact:
-		return
+	var previous_can: bool = _hovered_can_interact
 	_hovered_can_interact = current_can
 	var action_label: String
 	if current_can:
 		action_label = _build_action_label(_hovered_target)
-		EventBus.interactable_focused.emit(action_label)
 	else:
 		action_label = _hovered_target.get_disabled_reason()
+	if current_can == previous_can and action_label == _hovered_action_label:
+		return
+	if current_can:
+		EventBus.interactable_focused.emit(action_label)
+	else:
 		EventBus.interactable_focused_disabled.emit(action_label)
 	_hovered_action_label = action_label
 
@@ -389,9 +401,8 @@ func _set_hovered_target(new_target: Interactable) -> void:
 			EventBus.interactable_focused_disabled.emit(action_label)
 		_hovered_action_label = action_label
 		_log_interaction_focus(_hovered_target)
-		# ISSUE-003: scoped hover event + pointing-hand cursor. The hover
-		# transition runs every physics frame, so the cursor/label update
-		# well inside the 100ms budget.
+		# The hover transition runs every physics frame, so the scoped
+		# cursor/label update stays inside the interaction latency budget.
 		EventBus.interactable_hovered.emit(
 			_hovered_target.resolve_interactable_id(),
 			_hovered_target.store_id,
@@ -475,6 +486,18 @@ func _on_panel_opened(_panel_name: String) -> void:
 
 func _on_panel_closed(_panel_name: String) -> void:
 	_open_panel_count = maxi(_open_panel_count - 1, 0)
+	if not _interaction_blocked():
+		refresh_hovered_target_state()
+
+
+func _on_input_focus_changed(new_ctx: StringName, old_ctx: StringName) -> void:
+	if old_ctx != InputFocus.CTX_MODAL:
+		return
+	if new_ctx == InputFocus.CTX_MODAL:
+		return
+	if _interaction_blocked():
+		return
+	refresh_hovered_target_state()
 
 
 func _is_keyboard_captured_by_ui() -> bool:

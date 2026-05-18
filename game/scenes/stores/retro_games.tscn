@@ -1,4 +1,4 @@
-[gd_scene load_steps=123 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=125 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -328,7 +328,7 @@ metallic = 0.1
 roughness = 0.05
 
 ; ============================================================
-; Zone meshes (new for ISSUE-009 zone completeness)
+; Zone meshes for authored store-area completeness.
 ; ============================================================
 
 [sub_resource type="BoxMesh" id="new_release_wall_mesh"]
@@ -654,6 +654,50 @@ roughness = 0.7
 [sub_resource type="BoxMesh" id="readability_bargain_overflow_mesh"]
 size = Vector3(0.3, 0.15, 0.25)
 
+[sub_resource type="BoxMesh" id="readability_zone_accent_mesh"]
+size = Vector3(1.15, 0.024, 0.34)
+
+[sub_resource type="BoxMesh" id="readability_stock_case_mesh"]
+size = Vector3(0.18, 0.22, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="readability_checkout_accent_mat"]
+albedo_color = Color(0.62, 0.38, 0.22, 1)
+emission_enabled = true
+emission = Color(0.85, 0.58, 0.28, 1)
+emission_energy_multiplier = 0.22
+roughness = 0.72
+
+[sub_resource type="StandardMaterial3D" id="readability_backroom_accent_mat"]
+albedo_color = Color(0.26, 0.34, 0.39, 1)
+emission_enabled = true
+emission = Color(0.45, 0.58, 0.66, 1)
+emission_energy_multiplier = 0.18
+roughness = 0.78
+
+[sub_resource type="StandardMaterial3D" id="readability_shelf_accent_mat"]
+albedo_color = Color(0.28, 0.42, 0.62, 1)
+emission_enabled = true
+emission = Color(0.42, 0.56, 0.78, 1)
+emission_energy_multiplier = 0.2
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="readability_stock_case_mat"]
+albedo_color = Color(0.18, 0.38, 0.62, 1)
+emission_enabled = true
+emission = Color(0.6, 0.42, 0.18, 1)
+emission_energy_multiplier = 0.2
+roughness = 0.64
+
+[sub_resource type="BoxMesh" id="day_one_route_marker_mesh"]
+size = Vector3(0.46, 0.018, 1.05)
+
+[sub_resource type="StandardMaterial3D" id="day_one_route_marker_mat"]
+albedo_color = Color(0.38, 0.34, 0.24, 0.42)
+emission_enabled = true
+emission = Color(0.6, 0.46, 0.24, 1)
+emission_energy_multiplier = 0.18
+roughness = 0.72
+
 ; ============================================================
 ; Root
 ; ============================================================
@@ -722,7 +766,7 @@ script = ExtResource("27_retrogames")
 ; ============================================================
 
 [node name="PlayerEntrySpawn" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9.0)
+transform = Transform3D(0.882948, 0, -0.469471, 0, 1, 0, 0.469471, 0, 0.882948, 2.2, 0, 9.15)
 metadata/bounds_min = Vector3(-7.7, 0, -9.7)
 metadata/bounds_max = Vector3(7.7, 0, 9.7)
 
@@ -1034,9 +1078,9 @@ shape = SubResource("entrance_door_interactable_shape")
 visible = true
 
 [node name="StoreNameBanner" type="Label3D" parent="InteriorSignage"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.20, -9.95)
-pixel_size = 0.005
-modulate = Color(0.91, 0.647, 0.278, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, -9.95)
+pixel_size = 0.006
+modulate = Color(1, 0.92, 0.55, 1)
 double_sided = false
 font_size = 52
 text = "RETRO GAMES"
@@ -1045,17 +1089,27 @@ outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
+[node name="StoreNameBacking" type="MeshInstance3D" parent="InteriorSignage"]
+transform = Transform3D(1.35, 0, 0, 0, 1.2, 0, 0, 0, 1, 0, 3.05, -9.985)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
 [node name="GamesSign" type="Label3D" parent="InteriorSignage"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -9.95)
-pixel_size = 0.005
-modulate = Color(0.91, 0.647, 0.278, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, -9.95)
+pixel_size = 0.006
+modulate = Color(1, 0.92, 0.55, 1)
 double_sided = false
 font_size = 28
 text = "GAMES"
 horizontal_alignment = 1
-outline_size = 4
+outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
+
+[node name="GamesBacking" type="MeshInstance3D" parent="InteriorSignage"]
+transform = Transform3D(0.8, 0, 0, 0, 0.95, 0, 0, 0, 1, 0, 2.55, -9.985)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 ; ============================================================
 ; Zone Labels — Day-1 readability markers for the four primary zones
@@ -1089,7 +1143,7 @@ pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "shelves"
+text = "SHELVES"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -1139,11 +1193,11 @@ surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 [node name="BackroomLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 7.21, 2.7, -8.6)
-pixel_size = 0.005
+pixel_size = 0.007
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
-text = "backroom"
+text = "BACKROOM"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -1151,17 +1205,13 @@ shaded = false
 
 ; §F-G1 — TradeIns and Clearance signs are hidden for the Day-1 beta: no
 ; physical fixtures anchor them, so they read as floating mid-air banners.
-; Re-enable (drop `visible = false`) once a Trade-Ins or Clearance shelf is
-; authored at the same world position.
 [node name="TradeInsBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 2.85, -7.51)
-visible = false
 mesh = SubResource("zone_label_backing_mesh")
 surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 [node name="TradeInsLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 2.85, -7.49)
-visible = false
 pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -1191,19 +1241,13 @@ outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
-; §F-PUNCH2 — Staff Picks sign hidden until a staff-picks fixture is
-; authored. The label was orphaned at (-5.5, 2.85, 7.51) with no shelf
-; underneath, matching the TradeIns / Clearance gap. Re-enable when the
-; pedestal/table for staff picks ships.
 [node name="StaffPicksBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -5.5, 2.85, 7.53)
-visible = false
 mesh = SubResource("zone_label_backing_mesh")
 surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 [node name="StaffPicksLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -5.5, 2.85, 7.51)
-visible = false
 pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
@@ -1214,24 +1258,41 @@ outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
-; UsedConsoles sign is mounted on the right wall (X=8.05) directly above
+; UsedConsoles sign is mounted on the right wall (X=8.0) directly above
 ; the ConsoleShelf tower (world X=7.2, Z=-4.29, top at Y=2.4). The -90°
 ; Y-rotation flips the backing's readable face to point world -X (toward
 ; the sales floor), so a player approaching from the center aisle reads
 ; the sign without billboarding. Backing depth (0.03 m) sits flush
-; against the right wall plane.
+; just inside the right wall plane to avoid camera-path and wall clipping.
 [node name="UsedConsolesBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 8.03, 2.85, -4.29)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 7.96, 2.95, -4.29)
 mesh = SubResource("zone_label_backing_mesh")
 surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 [node name="UsedConsolesLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 8.01, 2.85, -4.29)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 7.93, 2.95, -4.29)
 pixel_size = 0.008
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 36
 text = "USED CONSOLES"
+horizontal_alignment = 1
+outline_size = 6
+outline_modulate = Color(0.05, 0.05, 0.05, 1)
+shaded = false
+
+[node name="CloseDayBacking" type="MeshInstance3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5.5, 2.35, 8.28)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
+[node name="CloseDayLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5.5, 2.35, 8.26)
+pixel_size = 0.006
+modulate = Color(1, 0.92, 0.55, 1)
+double_sided = true
+font_size = 32
+text = "DAY LEDGER"
 horizontal_alignment = 1
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
@@ -2292,15 +2353,19 @@ collision_mask = 0
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Checkout/ReceiptPrinter"]
 shape = SubResource("receipt_printer_shape")
 
+[node name="CheckoutSignBacking" type="MeshInstance3D" parent="Checkout/Register"]
+transform = Transform3D(0.86, 0, 0, 0, 0.86, 0, 0, 0, 1, 0, 0.95, -0.03)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
 [node name="CheckoutSign" type="Label3D" parent="Checkout/Register"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
-billboard = 1
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0.005)
 pixel_size = 0.003
-modulate = Color(0.91, 0.647, 0.278, 1)
+modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 44
 text = "CHECKOUT LANE"
-outline_size = 5
+outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
 
@@ -2615,7 +2680,7 @@ enabled = false
 shape = SubResource("testing_station_shape")
 
 ; ============================================================
-; Refurbishment Bench — back-room area for refurbishment (ISSUE-056)
+; Refurbishment Bench — back-room area for refurbishment.
 ; ============================================================
 
 [node name="refurb_bench" type="Node3D" parent="."]
@@ -2717,7 +2782,7 @@ metadata/zone_index = 6
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9.0)
 
 ; ============================================================
-; Audio Zone — retro chiptune/game music blend (ISSUE-103)
+; Audio Zone — retro chiptune/game music blend.
 ; ============================================================
 
 [node name="AudioZone" type="Area3D" parent="."]
@@ -2743,7 +2808,7 @@ music_path = "res://game/assets/audio/music/retro_games_music.wav"
 bus = &"Music"
 
 ; ============================================================
-; Customer spawn / exit markers — used by ISSUE-007 NPC routing
+; Customer spawn / exit markers for NPC routing.
 ; ============================================================
 
 [node name="CustomerSpawn" type="Marker3D" parent="."]
@@ -2852,7 +2917,7 @@ surface_material_override/0 = SubResource("nav_zone_debug_mat")
 visible = false
 
 ; ============================================================
-; BRAINDUMP zone completeness (ISSUE-009)
+; BRAINDUMP zone completeness.
 ;
 ; The nine BRAINDUMP-required zones live below. Each zone is a Node3D with at
 ; least one Interactable child. CartRackLeft / CartRackRight already cover the
@@ -3805,7 +3870,7 @@ script = ExtResource("48_beta_customer")
 shape = SubResource("nav_zone_shape")
 
 [node name="BetaBackroomPickup" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.0, 0, -9.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.3, 0, -8.15)
 
 ; §F-L1 — readable stock box (was 16 cm, easy to miss). Scaled to ~50 cm
 ; cube and labeled overhead. The controller fades this whole branch out on
@@ -3816,6 +3881,38 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.0, 0, -9.5)
 transform = Transform3D(1.4, 0, 0, 0, 1.6, 0, 0, 0, 1.4, 0, 0.5, 0)
 mesh = SubResource("backordered_console_box_mesh")
 surface_material_override/0 = SubResource("back_room_clutter_mat")
+
+[node name="StockBoxLabelBacking" type="MeshInstance3D" parent="BetaBackroomPickup/StockBox"]
+transform = Transform3D(1.15, 0, 0, 0, 0.9, 0, 0, 0, 1, 0, 0.28, 0.12)
+mesh = SubResource("zone_label_backing_mesh")
+surface_material_override/0 = SubResource("zone_label_backing_mat")
+
+[node name="CaseSpines" type="Node3D" parent="BetaBackroomPickup/StockBox"]
+
+[node name="CaseSpine0" type="MeshInstance3D" parent="BetaBackroomPickup/StockBox/CaseSpines"]
+transform = Transform3D(0.92, 0, 0.39, 0, 1, 0, -0.39, 0, 0.92, -0.18, 0.17, -0.05)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
+
+[node name="CaseSpine1" type="MeshInstance3D" parent="BetaBackroomPickup/StockBox/CaseSpines"]
+transform = Transform3D(0.96, 0, 0.28, 0, 1, 0, -0.28, 0, 0.96, -0.09, 0.17, -0.035)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
+
+[node name="CaseSpine2" type="MeshInstance3D" parent="BetaBackroomPickup/StockBox/CaseSpines"]
+transform = Transform3D(1, 0, 0.08, 0, 1, 0, -0.08, 0, 1, 0, 0.17, -0.025)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
+
+[node name="CaseSpine3" type="MeshInstance3D" parent="BetaBackroomPickup/StockBox/CaseSpines"]
+transform = Transform3D(0.96, 0, -0.28, 0, 1, 0, 0.28, 0, 0.96, 0.09, 0.17, -0.035)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
+
+[node name="CaseSpine4" type="MeshInstance3D" parent="BetaBackroomPickup/StockBox/CaseSpines"]
+transform = Transform3D(0.92, 0, -0.39, 0, 1, 0, 0.39, 0, 0.92, 0.18, 0.17, -0.05)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
 
 ; Post-pickup open-state sibling. Hidden until the player presses E on
 ; BetaBackroomPickup; the controller flips StockBox.visible = false and
@@ -3829,17 +3926,16 @@ mesh = SubResource("stock_box_open_mesh")
 surface_material_override/0 = SubResource("back_room_clutter_mat")
 
 [node name="StockBoxLabel" type="Label3D" parent="BetaBackroomPickup"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
-pixel_size = 0.004
-modulate = Color(1.0, 0.85, 0.5, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0.175)
+pixel_size = 0.005
+modulate = Color(1, 0.92, 0.55, 1)
 double_sided = true
 font_size = 28
-text = "USED CONSOLES"
+text = "DELIVERY: 5 ITEMS\nCHECK-IN"
 horizontal_alignment = 1
-outline_size = 5
+outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
-billboard = 1
 
 [node name="Interactable" type="Area3D" parent="BetaBackroomPickup"]
 collision_layer = 16
@@ -3861,6 +3957,23 @@ surface_material_override/0 = ExtResource("10")
 transform = Transform3D(0.35, 0, 0, 0, 0.28, 0, 0, 0, 0.35, 0, 0.5, 0)
 mesh = SubResource("backordered_console_box_mesh")
 surface_material_override/0 = SubResource("back_room_clutter_mat")
+
+[node name="CaseSpines" type="Node3D" parent="BetaRestockShelf/RestockCrate"]
+
+[node name="CaseSpine0" type="MeshInstance3D" parent="BetaRestockShelf/RestockCrate/CaseSpines"]
+transform = Transform3D(0.96, 0, 0.28, 0, 1, 0, -0.28, 0, 0.96, -0.11, 0.18, -0.02)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
+
+[node name="CaseSpine1" type="MeshInstance3D" parent="BetaRestockShelf/RestockCrate/CaseSpines"]
+transform = Transform3D(1, 0, 0.08, 0, 1, 0, -0.08, 0, 1, 0, 0.18, -0.02)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
+
+[node name="CaseSpine2" type="MeshInstance3D" parent="BetaRestockShelf/RestockCrate/CaseSpines"]
+transform = Transform3D(0.96, 0, -0.28, 0, 1, 0, 0.28, 0, 0.96, 0.11, 0.18, -0.02)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("readability_stock_case_mat")
 
 ; Empty-shelf slot markers — 5 warm-tan peg-label tiles seated on the
 ; ShelfBoard top surface at the same X positions where
@@ -3942,7 +4055,8 @@ shape = SubResource("nav_zone_shape")
 ; ============================================================
 ; ReadabilityProps — purely visual atmosphere props (floor display
 ; island, wall posters, bargain bin overflow, cart rack product
-; stacks, zone fill lights). No scripts and no CollisionShape3D
+; stacks, zone identity accents, route markers, and zone fill lights).
+; No scripts and no CollisionShape3D
 ; children so the controller (retro_games.gd) never sees these
 ; nodes and the baked navmesh (retro_games_navmesh.tres) is
 ; unaffected.
@@ -3963,6 +4077,75 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.4, 2.6, -8.8)
 light_color = Color(0.88, 0.9, 1, 1)
 light_energy = 0.45
 omni_range = 2.0
+
+[node name="ZoneIdentity" type="Node3D" parent="ReadabilityProps"]
+
+[node name="CheckoutCounterAccent" type="MeshInstance3D" parent="ReadabilityProps/ZoneIdentity"]
+transform = Transform3D(0.996, 0, -0.087, 0, 1, 0, 0.087, 0, 0.996, 5.2, 0.045, 7.35)
+mesh = SubResource("readability_zone_accent_mesh")
+surface_material_override/0 = SubResource("readability_checkout_accent_mat")
+
+[node name="BackroomDoorThreshold" type="MeshInstance3D" parent="ReadabilityProps/ZoneIdentity"]
+transform = Transform3D(0.996, 0, 0.087, 0, 1, 0, -0.087, 0, 0.996, 6.05, 0.047, -6.72)
+mesh = SubResource("readability_zone_accent_mesh")
+surface_material_override/0 = SubResource("readability_backroom_accent_mat")
+
+[node name="ShelfStockAccent" type="MeshInstance3D" parent="ReadabilityProps/ZoneIdentity"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.1, 0.047, -7.08)
+mesh = SubResource("readability_zone_accent_mesh")
+surface_material_override/0 = SubResource("readability_shelf_accent_mat")
+
+[node name="DayOneRouteMarkers" type="Node3D" parent="ReadabilityProps"]
+
+[node name="BackroomStepA" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0.988, 0, 0.154, 0, 1, 0, -0.154, 0, 0.988, 4.45, 0.035, 5.1)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="BackroomStepB" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0.985, 0, 0.174, 0, 1, 0, -0.174, 0, 0.985, 5.0, 0.035, 2.0)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="BackroomStepC" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0.982, 0, 0.191, 0, 1, 0, -0.191, 0, 0.982, 5.65, 0.035, -1.35)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="BackroomStepD" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0.996, 0, 0.087, 0, 1, 0, -0.087, 0, 0.996, 6.25, 0.035, -5.15)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="ShelfStepA" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 4.15, 0.035, -7.25)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="ShelfStepB" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 1.35, 0.035, -7.55)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="ShelfStepC" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.45, 0.035, -7.65)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="CheckoutReturnStepA" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0.906, 0, -0.423, 0, 1, 0, 0.423, 0, 0.906, -0.15, 0.035, -3.85)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="CheckoutReturnStepB" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0.906, 0, -0.423, 0, 1, 0, 0.423, 0, 0.906, 2.35, 0.035, 0.9)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
+
+[node name="CheckoutReturnStepC" type="MeshInstance3D" parent="ReadabilityProps/DayOneRouteMarkers"]
+transform = Transform3D(0.906, 0, -0.423, 0, 1, 0, 0.423, 0, 0.906, 4.45, 0.035, 5.6)
+mesh = SubResource("day_one_route_marker_mesh")
+surface_material_override/0 = SubResource("day_one_route_marker_mat")
 
 [node name="FloorDisplayIsland" type="Node3D" parent="ReadabilityProps"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 0, 0.5)

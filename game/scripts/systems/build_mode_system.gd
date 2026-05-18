@@ -338,8 +338,6 @@ func _handle_left_click(cell: Vector2i) -> void:
 			_try_select_fixture(cell)
 		State.MOVING:
 			confirm_selected_fixture(cell)
-		State.CONFIRMED:
-			pass
 
 
 func _handle_right_click(cell: Vector2i) -> void:
@@ -357,8 +355,6 @@ func _handle_right_click(cell: Vector2i) -> void:
 			_cancel_move()
 		State.IDLE:
 			_placement_system.try_remove(cell)
-		State.CONFIRMED:
-			pass
 
 
 func _handle_rotate() -> void:

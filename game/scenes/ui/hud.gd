@@ -88,14 +88,6 @@ const _COUNTER_PULSE_DURATION: float = PanelAnimator.FEEDBACK_PULSE_DURATION
 const _HINT_STOCK_FLOOR: String = "Stock shelves to open the lane."
 const _HINT_AWAITING_CUSTOMER: String = "Waiting for the first customer…"
 
-## §F-C1 — Dim the FP "F4 — Close Day" hint while the beta day-1 chain is
-## still incomplete; restore full opacity (and the active-state stylebox)
-## once `can_close_day` flips true. Driven from `objective_changed` and
-## `hour_changed` so the hint tracks both the chain and the time gate.
-const _CLOSE_DAY_HINT_DIM_ALPHA: float = 0.4
-
-var _random_event_telegraph: String = ""
-
 var _current_day: int = 1
 var _current_hour: int = Constants.STORE_OPEN_HOUR
 var _current_phase: TimeSystem.DayPhase = TimeSystem.DayPhase.PRE_OPEN
@@ -111,7 +103,6 @@ var _current_speed: float = 1.0
 var _last_reputation: float = ReputationSystemSingleton.DEFAULT_REPUTATION
 
 var _tutorial_step_active: bool = false
-var _objective_active: bool = false
 var _cash_count_tween: Tween
 var _cash_scale_tween: Tween
 var _cash_color_tween: Tween
@@ -191,6 +182,7 @@ var _beta_backroom_count: int = 0
 ## renders above the ObjectiveRail (layer 40); a child Label of the HUD
 ## CanvasLayer (layer 30) was occluded by the rail.
 @onready var _beta_carry_label: Label = $CarryHUD/BetaCarryLabel
+@onready var _beta_carry_icon: ColorRect = $CarryHUD/BetaCarryIcon
 
 
 func _ready() -> void:
@@ -302,7 +294,6 @@ func _connect_signals() -> void:
 
 func _on_day_started(day: int) -> void:
 	_current_day = day
-	_random_event_telegraph = ""
 	_sales_today_count = 0
 	_customers_served_today_count = 0
 	_active_customer_count = 0
@@ -775,7 +766,7 @@ func _pulse_cash_label(delta: float) -> void:
 ## Spawns a transient floating delta label adjacent to the active cash readout.
 ##
 ## The label is anchored top-left below the TopBar CashLabel in management
-## view, and top-right below FPCashLabel in FP mode (after ISSUE-015). It
+## view, and top-right below FPCashLabel in FP mode. It
 ## animates upward `_MONEY_DELTA_FLOAT_DISTANCE` over `_MONEY_DELTA_DURATION`
 ## and fades alpha to zero in parallel, then `queue_free`s itself when the
 ## tween finishes. Suppressed entirely when CTX_MODAL owns InputFocus so the
@@ -919,18 +910,9 @@ func _flash_reputation_label(
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 
 
-## Tracks whether ObjectiveRail currently has visible objective text. Drives the
-## telegraph-card priority rule (tutorial > objective > ticker) without owning
-## the rail's display surface.
-func _on_objective_payload(payload: Dictionary) -> void:
-	if payload.get("hidden", false):
-		_objective_active = false
-	else:
-		var text: String = str(
-			payload.get("text", payload.get("current_objective", ""))
-		)
-		_objective_active = not text.strip_edges().is_empty()
-	_refresh_telegraph_card()
+## Receives ObjectiveRail payloads so the FP close-day affordance can react to
+## beta-chain progress without owning the rail's display surface.
+func _on_objective_payload(_payload: Dictionary) -> void:
 	_refresh_close_day_hint_state()
 
 
@@ -938,8 +920,8 @@ func _refresh_close_day_hint_state() -> void:
 	if not is_instance_valid(_fp_close_day_hint):
 		return
 	var allowed: bool = _beta_close_day_allowed_quiet()
-	var alpha: float = 1.0 if allowed else _CLOSE_DAY_HINT_DIM_ALPHA
-	_fp_close_day_hint.modulate = Color(1.0, 1.0, 1.0, alpha)
+	_fp_close_day_hint.visible = allowed
+	_fp_close_day_hint.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
 ## §F-54 — HUD forwards `notification_requested` and
@@ -988,35 +970,26 @@ func _on_store_closed(_store_id: String) -> void:
 
 
 func _on_random_event_telegraphed(message: String) -> void:
-	_random_event_telegraph = message
-	_refresh_telegraph_card()
+	_telegraph_card.visible = false
+	var text: String = message.strip_edges()
+	if _tutorial_step_active or text.is_empty():
+		return
+	EventBus.toast_requested_with_id.emit(
+		StringName("random_event_telegraph:%s" % text),
+		"Coming: %s" % text,
+		&"random_event",
+		4.0,
+	)
 
 
 func _on_tutorial_step_changed_hud(step_id: String) -> void:
 	_tutorial_step_active = not step_id.is_empty()
-	if _tutorial_step_active:
-		_telegraph_card.visible = false
+	_telegraph_card.visible = false
 
 
 func _on_tutorial_hint_ended() -> void:
 	_tutorial_step_active = false
-	_refresh_telegraph_card()
-
-
-func _refresh_telegraph_card() -> void:
-	if _tutorial_step_active:
-		return
-	# Overlay priority: tutorial > objective rail > ticker. The interaction
-	# prompt lives on a separate CanvasLayer (layer 60) at the bottom of the
-	# screen and does not overlap the top-right telegraph card.
-	if _objective_active:
-		_telegraph_card.visible = false
-		return
-	if _random_event_telegraph.is_empty():
-		_telegraph_card.visible = false
-		return
-	_telegraph_card.text = "[!] Coming: %s" % _random_event_telegraph
-	_telegraph_card.visible = true
+	_telegraph_card.visible = false
 
 
 func _get_store_display_name(store_id: String) -> String:
@@ -1129,9 +1102,13 @@ func _on_beta_carry_changed(text: String) -> void:
 	if text.strip_edges().is_empty():
 		_beta_carry_label.text = ""
 		_beta_carry_label.visible = false
+		if is_instance_valid(_beta_carry_icon):
+			_beta_carry_icon.visible = false
 		return
 	_beta_carry_label.text = "Carrying: %s" % text
 	_beta_carry_label.visible = true
+	if is_instance_valid(_beta_carry_icon):
+		_beta_carry_icon.visible = true
 
 
 func _on_beta_shelf_count_changed(count: int) -> void:
@@ -1436,9 +1413,7 @@ func _apply_fp_visibility_overrides() -> void:
 ## Resets transient display state for test isolation. Called by GUT tests that
 ## share a single HUD instance across multiple test functions via before_all().
 func _reset_for_tests() -> void:
-	_random_event_telegraph = ""
 	_tutorial_step_active = false
-	_objective_active = false
 	_telegraph_card.visible = false
 	_active_customer_count = 0
 	_items_placed_count = 0

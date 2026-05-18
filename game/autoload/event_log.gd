@@ -1,7 +1,7 @@
 ## Structured per-event timeline. The ring buffer + stdout print are
 ## debug-only; the `EventBus.event_logged(tag, message)` broadcast fires in
-## every build so the player-facing bottom-left log surface can render the
-## same stream without scanning the buffer.
+## every build for explicitly player-facing activity so the bottom-left feed
+## can render recent game beats without scanning the buffer.
 ##
 ## Maintains a ring buffer of recent events and prints structured lines for
 ## inventory mutations, customer FSM transitions, day lifecycle, money
@@ -12,6 +12,15 @@
 extends Node
 
 const RING_CAPACITY: int = 512
+const PLAYER_FEED_ACTIONS: Dictionary = {
+	"stock": true,
+	"remove": true,
+	"customer_exit": true,
+	"day_started": true,
+	"stat_changed": true,
+	"game_started": true,
+	"objective_completed": true,
+}
 ## §F-145 — FIFO cap on the per-customer state dedup map. The
 ## `customer_left` payload uses a different key shape than the
 ## state-change handler (string `customer_id` vs. raw `instance_id`), so
@@ -31,8 +40,8 @@ var _last_customer_state_order: Array[int] = []
 
 
 ## The ring buffer and stdout print are debug-only — release builds skip
-## the storage path but keep the EventBus.event_logged broadcast active so
-## the on-screen panel still receives entries.
+## the storage path but keep the filtered EventBus.event_logged broadcast
+## active so the on-screen panel still receives player-facing entries.
 var _buffer_enabled: bool = OS.is_debug_build()
 ## Probabilistic sweep tests (`test_customer_purchase`,
 ## `test_day1_first_sale_probability`) push thousands of FSM transitions
@@ -226,18 +235,32 @@ func _record(
 		"params": params,
 		"msec": Time.get_ticks_msec(),
 	}
-	# Player-facing broadcast — fires in every build so the on-screen
-	# bottom-left log surface stays in sync. Gated by `_broadcast_enabled`
-	# so probabilistic sweep tests can mute the fan-out around their
-	# loops; the ring buffer / stdout side below stays unchanged.
-	if _broadcast_enabled:
-		EventBus.event_logged.emit(tag, _format_message(action, target, params))
+	# Player-facing broadcast — fires in every build for allowed game beats.
+	# Diagnostic rows still enter the ring/stdout path below in debug builds.
+	if _broadcast_enabled and _should_broadcast_to_player_feed(action, params):
+		var message: String = _format_message(action, target, params)
+		if not message.strip_edges().is_empty():
+			EventBus.event_logged.emit(tag, message)
 	if not _buffer_enabled:
 		return
 	_ring.append(entry)
 	if _ring.size() > RING_CAPACITY:
 		_ring.remove_at(0)
 	_print_entry(entry)
+
+
+func _should_broadcast_to_player_feed(action: String, params: Dictionary) -> bool:
+	if not PLAYER_FEED_ACTIONS.has(action):
+		return false
+	match action:
+		"stat_changed":
+			if str(params.get("stat", "")) != "money":
+				return false
+			return not is_zero_approx(float(params.get("delta", 0.0)))
+		"objective_completed":
+			return not str(params.get("label", "")).strip_edges().is_empty()
+		_:
+			return true
 
 
 ## Renders the structured record into a human-readable single line the

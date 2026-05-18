@@ -1,120 +1,78 @@
-# Visual Grammar — Mallcore Sim
+# Visual Grammar
 
-Canonical token reference for the 2000s-era mall palette. All color
-decisions in UI code should trace back to these tokens. Runtime access is
-through `UIThemeConstants` (`game/scripts/ui/ui_theme_constants.gd`). The
-Godot Theme resource at `game/themes/palette.tres` stores the same values
-for editor-side theme assignment.
+This is the current code-grounded UI token reference. Runtime constants live in
+`game/scripts/ui/ui_theme_constants.gd`; `project.godot` sets the project
+theme to `res://game/themes/game_theme.tres`.
 
----
+## Panel Tiers
 
-## Base Tokens
+| Constant | Color |
+| --- | --- |
+| `DARK_PANEL_FILL` | `Color(0.122, 0.102, 0.086, 0.96)` |
+| `DARK_PANEL_BORDER` | `Color(0.239, 0.188, 0.157, 0.9)` |
+| `DARK_PANEL_TEXT` | `Color(0.957, 0.914, 0.831, 1.0)` |
+| `DARK_PANEL_TEXT_SECONDARY` | `Color(0.722, 0.659, 0.549, 1.0)` |
+| `DARK_PANEL_FILL_OVERLAY` | `Color(0.122, 0.102, 0.086, 0.88)` |
+| `LIGHT_PANEL_FILL` | `Color(0.961, 0.925, 0.839, 1.0)` |
+| `LIGHT_PANEL_BORDER` | `Color(0.420, 0.306, 0.180, 0.9)` |
+| `LIGHT_PANEL_TEXT` | `Color(0.169, 0.114, 0.071, 1.0)` |
+| `LIGHT_PANEL_TEXT_SECONDARY` | `Color(0.420, 0.306, 0.180, 1.0)` |
 
-The shared neutral chrome lives in `UIThemeConstants` as the dark-panel and
-semantic constants below; they never change per store.
+The source file comments document contrast for the dark and light panel tiers.
 
-| Constant in `UIThemeConstants` | Hex | Color() | Use |
-|---|---|---|---|
-| `DARK_PANEL_FILL` | `#1F1A16` | `Color(0.122, 0.102, 0.086, 0.96)` | Drawer body, HUD bars, card backgrounds |
-| `DARK_PANEL_BORDER` | — | `Color(0.239, 0.188, 0.157, 0.9)` | Default dark-panel border |
-| `DARK_PANEL_TEXT` | `#F4E9D4` | `Color(0.957, 0.914, 0.831)` | Primary body copy; 15.1:1 vs `DARK_PANEL_FILL` (AAA) |
-| `DARK_PANEL_TEXT_SECONDARY` | `#B8A88C` | `Color(0.722, 0.659, 0.549)` | Labels, metadata, disabled hint text |
-| `SEMANTIC_INFO` | `#5BB8E8` | `Color(0.357, 0.722, 0.910)` | Interactive affordances, objective rail, info hints |
-| `SEMANTIC_SUCCESS` | `#6DCF5A` | `Color(0.427, 0.812, 0.353)` | Profitable close, completed objective, positive delta |
-| `SEMANTIC_WARNING` | `#F2B81C` | `Color(0.949, 0.722, 0.110)` | Low stock, pending action, soft alert |
-| `SEMANTIC_ERROR` | `#E53E2B` | `Color(0.898, 0.243, 0.169)` | Failed sale, boot validation error, critical alert |
+## Store Accent
 
-A parallel light-panel tier (`LIGHT_PANEL_FILL` / `LIGHT_PANEL_TEXT`, 14.8:1
-AAA) backs main menus, dialogs, and the day summary.
+`UIThemeConstants.STORE_ACCENTS` currently contains one active store key:
 
-`DARK_PANEL_TEXT` on `DARK_PANEL_FILL`: **15.1:1** contrast (WCAG AAA).
+| Store id | Constant | Color |
+| --- | --- | --- |
+| `retro_games` | `STORE_ACCENT_RETRO_GAMES` | `Color(0.910, 0.647, 0.278, 1.0)` |
 
----
+`STORE_ACCENTS_INACTIVE` currently contains the same key with
+`Color(0.247, 0.196, 0.133, 1.0)`.
 
-## Store Accent Tokens
+## Semantic Colors
 
-The shipping store has one primary accent. The accent appears as a **4px
-header band**, **selection outline**, and **primary CTA button fill** within
-that store's drawer only. It never bleeds into global HUD chrome.
+| Constant | Color | Icon constant |
+| --- | --- | --- |
+| `SEMANTIC_SUCCESS` | `Color(0.427, 0.812, 0.353, 1.0)` | `SEMANTIC_ICON_SUCCESS` |
+| `SEMANTIC_WARNING` | `Color(0.949, 0.722, 0.110, 1.0)` | `SEMANTIC_ICON_WARNING` |
+| `SEMANTIC_ERROR` | `Color(0.898, 0.243, 0.169, 1.0)` | `SEMANTIC_ICON_ERROR` |
+| `SEMANTIC_INFO` | `Color(0.357, 0.722, 0.910, 1.0)` | `SEMANTIC_ICON_INFO` |
+| `SEMANTIC_CRITICAL` | `Color(1.0, 0.176, 0.310, 1.0)` | `SEMANTIC_ICON_CRITICAL` |
+| `SEMANTIC_MONEY_GAIN` | `Color(0.561, 0.878, 0.459, 1.0)` | n/a |
+| `SEMANTIC_MONEY_COST` | `Color(1.0, 0.706, 0.659, 1.0)` | n/a |
 
-The primary is verified ≥ 4.5:1 (WCAG AA) against `DARK_PANEL_FILL`. The
-runtime constant lives on `UIThemeConstants`.
+`SEMANTIC_STATES` duplicates the success, warning, error, info, and critical
+colors with an icon, label, and hex string for descriptor-style lookups.
 
-| Store | Name | Hex | `UIThemeConstants` constant | HSL Hue | Contrast vs `DARK_PANEL_FILL` |
-|---|---|---|---|---|---|
-| `retro_games` | CRT Amber | `#E8A547` | `STORE_ACCENT_RETRO_GAMES` | 35° | 8.1:1 ✓ AAA |
+## Colorblind Mode
 
-The strip-to-bones cut removed the four legacy stores (sports memorabilia,
-video rental, pocket creatures, consumer electronics). The matching
-`store_accent_*.tres` resources under `game/themes/` for those stores are
-still on disk but no `STORE_ACCENT_*` constant references them in
-`game/scripts/ui/ui_theme_constants.gd`. Treat those `.tres` files as
-inactive until a second store is reintroduced.
+`UIThemeConstants` exposes deuteranopia-friendly alternates:
 
----
+- `RARITY_COLORS_CB`
+- `POSITIVE_COLOR_CB`
+- `NEGATIVE_COLOR_CB`
+- `WARNING_COLOR_CB`
 
-## Application Rules
+`get_rarity_color()`, `get_positive_color()`, `get_negative_color()`, and
+`get_warning_color()` select these alternates when
+`Settings.colorblind_mode` is enabled.
 
-1. **Accent = band + outline + CTA only.** Never use a store accent as a panel body fill, global HUD color, or body text color.
-2. **Semantic colors outrank store accents.** Inside any store drawer, `SEMANTIC_ERROR` / `SEMANTIC_WARNING` / `SEMANTIC_SUCCESS` override the store accent for status communication.
-3. **Inactive accent**: each store has a dark, desaturated variant (`STORE_ACCENT_INACTIVE_*` in `UIThemeConstants`) used in the hub when that store's card is not focused.
-4. **Color-blind safety**: accent is never the sole signal channel. Every color-coded element also carries a glyph or label (e.g., `✓ Success`, store icon + name). Deuteranopia overrides exist as `RARITY_COLORS_CB` and `*_CB` semantic constants.
-5. **No accent-on-accent**: cross-store views (daily summary, hub overview) use neutral chrome with an 8px left border in the store's accent. Never tint row backgrounds.
+## Typography
 
----
+| Constant | Size |
+| --- | --- |
+| `FONT_SIZE_CAPTION` | `14` |
+| `FONT_SIZE_BODY` | `18` |
+| `FONT_SIZE_H2` | `24` |
+| `FONT_SIZE_H1` | `32` |
 
-## Typography Scale
-
-Font sizes are defined in `game/themes/game_theme.tres` and mirrored in `UIThemeConstants`. Use the named theme types in scenes; reference the constants in code.
-
-| Token | Theme Type | `UIThemeConstants` constant | Size | Usage |
-|---|---|---|---|---|
-| `h1` | `TitleLabel` | `FONT_SIZE_H1` | 32px | Screen titles (main menu, day summary header) |
-| `h2` | `HeaderLabel` | `FONT_SIZE_H2` | 24px | Section headers (store name, panel titles) |
-| `body` | `Label` (default) | `FONT_SIZE_BODY` | 18px | All readable body copy — minimum for sustained text |
-| `caption` | `CaptionLabel` | `FONT_SIZE_CAPTION` | 14px | Timestamps, footnotes, tooltip secondary lines |
-
-Body minimum is 18px. Do not use 14px caption for any text the player must read to make a decision.
-
----
-
-## Interactable States
-
-Every interactable element (store card, shelf slot, button, register) must express all five states listed below. Color alone is never the sole signal: every state also has a shape or layout change.
-
-| State | Fill | Border | Label color | Other |
-|---|---|---|---|---|
-| **Idle** | `panel_raised` | none | `text_muted` | No glow. Element present but not calling for attention. |
-| **Hover** | `panel_raised` (unchanged) | 1px `accent_interact` outline | `text_primary` | Cursor changes to pointing hand. Input hint appears inline (e.g. `[E] Enter`). |
-| **Active / Selected** | `panel_raised` + slight lighten (+10% L) | 4px left band in store accent or `accent_interact` | `text_primary` | Indicates the currently focused/selected element. Persists until another element is selected. |
-| **Disabled** | `panel_surface` | none | `text_muted` at 50% alpha | No hover response. No input hint. Use a tooltip explaining why if the block is non-obvious. |
-| **Warning** | `panel_raised` | 1px `accent_warning` outline | `text_primary` | Prefix label with warning icon (`!`). Used for low-stock shelf slots, overdue tasks, near-bankruptcy HUD. |
-
-Danger state is a sub-variant of Warning with `accent_danger` border and `✕` icon prefix. It signals an unrecoverable or immediately actionable alert (failed transaction, boot error).
-
-### Mockup reference
-
-```
-┌──────────────────────────────────┐
-│  IDLE       │ text_muted label   │  ← panel_raised, no border
-├──────────────────────────────────┤
-│▌ HOVER      │ text_primary label │  ← accent_interact 1px outline
-├──────────────────────────────────┤
-│▌ ACTIVE     │ text_primary label │  ← 4px left band (store accent)
-├──────────────────────────────────┤
-│  DISABLED   │ muted 50% label    │  ← panel_surface, no border
-├──────────────────────────────────┤
-│! WARNING    │ text_primary label │  ← accent_warning 1px outline + icon
-└──────────────────────────────────┘
-```
-
-Screenshots are not committed to the repository; run the game and open the audit overlay (`F3`) to inspect live state rendering.
-
----
+`TRACKING_PRIMARY` is `80`; `TRACKING_BODY` is `40`.
 
 ## References
 
 - Runtime constants: `game/scripts/ui/ui_theme_constants.gd`
-- Global theme: `game/themes/game_theme.tres` (set as project-wide default in `project.godot` `gui/theme/custom`)
+- Project theme: `game/themes/game_theme.tres`
 - Palette token resource: `game/themes/palette.tres`
 - Active store accent resource: `game/themes/store_accent_retro_games.tres`

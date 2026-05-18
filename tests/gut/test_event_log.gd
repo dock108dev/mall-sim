@@ -7,10 +7,12 @@ extends GutTest
 
 func before_each() -> void:
 	EventLog.clear()
+	EventLog.set_broadcast_enabled(true)
 
 
 func after_each() -> void:
 	EventLog.clear()
+	EventLog.set_broadcast_enabled(true)
 
 
 func test_item_stocked_emits_stock_entry_with_location_and_count_schema() -> void:
@@ -219,8 +221,8 @@ func test_objective_completed_emits_objective_entry_with_label() -> void:
 
 func test_event_logged_broadcast_fires_with_formatted_message() -> void:
 	# The on-screen log surface subscribes to EventBus.event_logged and never
-	# touches the ring buffer. Verify the broadcast lands with the formatted
-	# string the panel renders.
+	# touches the ring buffer. Verify player-facing activity lands with the
+	# formatted string the panel renders.
 	var captured: Array = []
 	var sink := func(tag: String, message: String) -> void:
 		captured.append({"tag": tag, "message": message})
@@ -233,6 +235,90 @@ func test_event_logged_broadcast_fires_with_formatted_message() -> void:
 		String(captured[0]["message"]), "Day closed.",
 		"formatted message for objective_completed must be the past-tense label"
 	)
+
+
+func test_customer_state_changes_stay_out_of_player_feed() -> void:
+	var captured: Array = []
+	var sink := func(tag: String, message: String) -> void:
+		captured.append({"tag": tag, "message": message})
+	var customer: Node = Node.new()
+	add_child_autofree(customer)
+	EventBus.event_logged.connect(sink)
+	EventBus.customer_state_changed.emit(customer, Customer.State.BROWSING)
+	EventBus.event_logged.disconnect(sink)
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_eq(captured.size(), 0, "FSM state names must not reach the player feed")
+	assert_eq(entries.size(), 1, "state_change must remain in the debug timeline")
+	assert_eq(entries[0].get("action"), "state_change")
+
+
+func test_modal_lifecycle_stays_out_of_player_feed() -> void:
+	var captured: Array = []
+	var sink := func(tag: String, message: String) -> void:
+		captured.append({"tag": tag, "message": message})
+	EventBus.event_logged.connect(sink)
+	EventBus.modal_opened.emit(&"CanvasLayer/DecisionCard")
+	EventBus.modal_closed.emit(&"CanvasLayer/DecisionCard")
+	EventBus.event_logged.disconnect(sink)
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_eq(captured.size(), 0, "modal node names must not reach the player feed")
+	assert_eq(entries.size(), 2, "modal lifecycle entries must remain debuggable")
+	assert_eq(entries[0].get("action"), "modal_opened")
+	assert_eq(entries[1].get("action"), "modal_closed")
+
+
+func test_day_one_player_activity_events_reach_player_feed() -> void:
+	var captured: Array = []
+	var sink := func(tag: String, message: String) -> void:
+		captured.append({"tag": tag, "message": message})
+	EventBus.event_logged.connect(sink)
+	EventBus.objective_completed.emit(&"talk_to_customer", "Customer served.")
+	EventBus.money_changed.emit(50.0, 150.0)
+	EventBus.objective_completed.emit(&"back_room_inventory", "Delivery checked.")
+	EventBus.objective_completed.emit(&"stock_shelf", "Shelf stocked.")
+	EventBus.event_logged.disconnect(sink)
+	assert_eq(captured.size(), 4, "Day-1 loop beats must reach the player feed")
+	assert_eq(String(captured[0]["message"]), "Customer served.")
+	assert_eq(String(captured[1]["message"]), "Money +$100.00.")
+	assert_eq(String(captured[2]["message"]), "Delivery checked.")
+	assert_eq(String(captured[3]["message"]), "Shelf stocked.")
+
+
+func test_zero_money_delta_does_not_reach_player_feed() -> void:
+	var captured: Array = []
+	var sink := func(tag: String, message: String) -> void:
+		captured.append({"tag": tag, "message": message})
+	EventBus.event_logged.connect(sink)
+	EventBus.money_changed.emit(100.0, 100.0)
+	EventBus.event_logged.disconnect(sink)
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_eq(captured.size(), 0, "zero-delta money changes must not add feed rows")
+	assert_eq(entries.size(), 1, "zero-delta stats remain available to debug logs")
+
+
+func test_empty_objective_label_does_not_reach_player_feed() -> void:
+	var captured: Array = []
+	var sink := func(tag: String, message: String) -> void:
+		captured.append({"tag": tag, "message": message})
+	EventBus.event_logged.connect(sink)
+	EventBus.objective_completed.emit(&"empty_copy", "   ")
+	EventBus.event_logged.disconnect(sink)
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_eq(captured.size(), 0, "blank objective copy must not add feed rows")
+	assert_eq(entries.size(), 1, "blank-label objective entries remain debuggable")
+
+
+func test_unknown_actions_do_not_reach_player_feed() -> void:
+	var captured: Array = []
+	var sink := func(tag: String, message: String) -> void:
+		captured.append({"tag": tag, "message": message})
+	EventBus.event_logged.connect(sink)
+	EventLog._record("[SYSTEM]", "system", "res://debug/path", "filesystem_scan", {})
+	EventBus.event_logged.disconnect(sink)
+	var entries: Array[Dictionary] = EventLog.recent(8)
+	assert_eq(captured.size(), 0, "unmapped action tokens must not reach the feed")
+	assert_eq(entries.size(), 1, "unmapped actions remain in the debug timeline")
+	assert_eq(entries[0].get("action"), "filesystem_scan")
 
 
 func test_all_six_customer_state_transitions_log_distinct_state_changes() -> void:

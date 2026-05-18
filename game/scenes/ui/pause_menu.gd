@@ -99,7 +99,6 @@ func _ready() -> void:
 	_difficulty_left.pressed.connect(_on_difficulty_left_pressed)
 	_difficulty_right.pressed.connect(_on_difficulty_right_pressed)
 	_confirm_dialog.confirmed.connect(_on_quit_confirmed)
-	_confirm_dialog.canceled.connect(_on_quit_canceled)
 	_difficulty_confirm_dialog.confirmed.connect(
 		_on_difficulty_downgrade_confirmed
 	)
@@ -265,10 +264,6 @@ func _on_quit_confirmed() -> void:
 	_panel.visible = false
 	_pop_modal_focus_if_owned()
 	return_to_menu_pressed.emit()
-
-
-func _on_quit_canceled() -> void:
-	pass
 
 
 func _on_skip_tutorial_pressed() -> void:

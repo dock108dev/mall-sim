@@ -46,6 +46,12 @@ const _CLOSE_TIME_MINUTES: float = 17.0 * 60.0  # 5:00 PM
 ## to this value with on-shelves at 0, then stocking flips them.
 const _BACKROOM_DELIVERY_QUANTITY: int = 5
 
+const _OBJECTIVE_UNLOCK_GRANTS: Dictionary = {
+	"talk_to_customer": ["employee_register_access"],
+	"stock_shelf": ["employee_stocking_trained"],
+}
+const _DAY_ONE_CLOSE_UNLOCK_GRANT: StringName = &"employee_closing_certified"
+
 ## Sub-fixture clutter that's hidden inside the beta scope so the room reads
 ## as a small store rather than a full retail environment. CartRackLeft /
 ## CartRackRight stay visible (added to `_BETA_KEEP_ROOT_NODES`) so the
@@ -115,6 +121,7 @@ const _BETA_KEEP_ROOT_NODES: Array[StringName] = [
 	&"BetaDayEndTrigger",
 	&"BetaHiddenClue",
 	&"ZoneLabels",
+	&"ReadabilityProps",
 	&"Storefront",
 	&"EntranceInterior",
 	# §F-PUNCH1 — back-room atmosphere + enclosure. The `back_room` node
@@ -136,11 +143,18 @@ const _BETA_KEEP_ROOT_NODES: Array[StringName] = [
 	&"crt_demo_area",
 ]
 
-const BetaDebugOverlayScript: GDScript = preload(
-	"res://game/scripts/beta/beta_debug_overlay.gd"
-)
+const BetaDebugOverlayScript: GDScript = preload("res://game/scripts/beta/beta_debug_overlay.gd")
 const BetaScreenshotHelperScript: GDScript = preload(
 	"res://game/scripts/beta/beta_screenshot_helper.gd"
+)
+const BetaCustomerResultPanelScript: GDScript = preload(
+	"res://game/scripts/beta/beta_customer_result_panel.gd"
+)
+const BetaCustomerInventoryEffectsScript: GDScript = preload(
+	"res://game/scripts/beta/beta_customer_inventory_effects.gd"
+)
+const BetaDayTwoPlaceholderPanelScript: GDScript = preload(
+	"res://game/scripts/beta/beta_day_two_placeholder_panel.gd"
 )
 const CloseDayConfirmationPanelScene: PackedScene = preload(
 	"res://game/scenes/ui/close_day_confirmation_panel.tscn"
@@ -251,7 +265,9 @@ var _objectives: Array[Dictionary] = [
 ]
 
 var _decision_panel: BetaDecisionCardPanel
+var _customer_result_panel: ModalPanel
 var _summary_panel: BetaDaySummaryPanel
+var _day_two_placeholder_panel: ModalPanel
 var _vic_note_panel: BetaManagerNotePanel
 var _objective_target_highlight: BetaObjectiveTargetHighlight
 var _debug_overlay: CanvasLayer
@@ -264,6 +280,7 @@ var _current_event_index: int = 0
 var _resolved_events_today: int = 0
 var _stage: StringName = STAGE_VIC_NOTE
 var _active_event: Dictionary = {}
+var _pending_result_effects: Dictionary = {}
 ## Track per-objective completion (one-shot guard). An objective fires
 ## `_advance_stage` exactly once even if its interactable's interact() is
 ## called twice (e.g. mid-fade scene churn) — the entry stays in this set
@@ -275,10 +292,11 @@ var _completed_objectives: Dictionary = {}
 ## payload with grounded retail numbers instead of cryptic system scores.
 var _customers_helped_today: int = 0
 var _items_stocked_today: int = 0
-## Per-day cash earned from successful customer decisions. Distinct from the
-## `cash` field in BetaRunState (which is cumulative across the run) — this
-## tracks gross sales for *today only* so the day-summary panel can render
-## the "Sales" line without subtracting yesterday's totals. Ticked in
+var _customer_inventory_transactions: Array[Dictionary] = []
+## Per-day cash earned from successful customer decisions. Distinct from
+## `BetaRunState.daily_cash_delta`, which includes every beta cash effect;
+## this tracks gross sales for today only so the day-summary panel can render
+## the "Sales" line without counting refunds or no-sale outcomes. Ticked in
 ## `_on_choice_selected` on positive cash deltas, reset in `_start_day`.
 var _sales_today: int = 0
 ## One-shot guard against double-spawning the day-summary modal. The
@@ -289,6 +307,8 @@ var _sales_today: int = 0
 ## instance, but the controller's accompanying state mutations (end_day,
 ## clock pause) are not idempotent. Reset to false on `day_started`.
 var _summary_spawned: bool = false
+var _objective_target_diagnostic: String = ""
+var _reported_invalid_target_paths: Dictionary = {}
 ## Captured the first time `_configure_beta_customer` runs so the day-reset
 ## path can put the customer back at the register after the previous day's
 ## exit tween moved them to the entrance.
@@ -318,6 +338,12 @@ func _ready() -> void:
 	_print_interactable_debug_list()
 
 
+func _exit_tree() -> void:
+	if EventBus.day_close_confirmed.is_connected(_on_day_close_confirmed):
+		EventBus.day_close_confirmed.disconnect(_on_day_close_confirmed)
+	_free_owned_ui_nodes()
+
+
 ## Opens the current beta day. Day 1 skips the Vic note entirely so the player
 ## lands at the first actionable tutorial objective without dismissing setup
 ## screens. Day 2 keeps the note beat, where the reminder has value because
@@ -340,9 +366,7 @@ func _open_vic_note_and_then_start_day() -> void:
 	# behind the modal.
 	_stage = STAGE_VIC_NOTE
 	_update_objective_rail()
-	var body: String = (
-		VIC_NOTE_DAY2_BODY if BetaRunState.day == 2 else VIC_NOTE_BODY
-	)
+	var body: String = VIC_NOTE_DAY2_BODY if BetaRunState.day == 2 else VIC_NOTE_BODY
 	_vic_note_panel.show_note(body)
 
 
@@ -364,9 +388,7 @@ func _on_vic_note_dismissed() -> void:
 	# note still notices the delivery is waiting. Routed through the
 	# persistent HUD label channel (not toast) because it complements the
 	# rail's active beat rather than narrating an event.
-	EventBus.notification_requested.emit(
-		"Back-room delivery ready for pickup."
-	)
+	EventBus.notification_requested.emit("Back-room delivery ready for pickup.")
 
 
 func on_beta_customer_interacted() -> void:
@@ -412,13 +434,14 @@ func on_beta_backroom_pickup_interacted() -> void:
 	# drives `beta_backroom_count_changed`, so the back-room HUD readout and
 	# the toast can never disagree about how many items the player just
 	# uncovered.
-	EventBus.toast_requested.emit(
-		(
-			"Shipment checked. %d items available in back room."
-			% _BACKROOM_DELIVERY_QUANTITY
-		),
-		&"info",
-		2.5,
+	(
+		EventBus
+		. toast_requested
+		. emit(
+			"Shipment checked. %d items available in back room." % _BACKROOM_DELIVERY_QUANTITY,
+			&"info",
+			2.5,
+		)
 	)
 	EventBus.beta_carry_changed.emit("Used Console Box")
 	_complete_current_objective()
@@ -434,12 +457,11 @@ func on_beta_hidden_clue_interacted() -> void:
 	if _completed_objectives.has(&"_flavor_console_stack"):
 		# Already inspected today — second press shows the same flavor
 		# but we don't double-advance the clock or re-emit signals.
-		EventBus.notification_requested.emit(
-			"You've already taken a look. Nothing new to see."
-		)
+		EventBus.notification_requested.emit("You've already taken a look. Nothing new to see.")
 		return
 	_completed_objectives[&"_flavor_console_stack"] = true
 	BetaRunState.mark_hidden_thread_signal(&"day01_backroom_modded_console_hint")
+	EventBus.beta_hidden_clue_inspected.emit(&"day01_backroom_modded_console_hint")
 	EventBus.notification_requested.emit(
 		"A few old consoles are stacked beside the wall. One is warmer than it should be."
 	)
@@ -456,6 +478,9 @@ func on_beta_hidden_clue_interacted() -> void:
 func on_beta_restock_interacted() -> void:
 	if _stage != STAGE_STOCK_SHELF:
 		EventBus.notification_requested.emit(_disabled_reason_for_stage(STAGE_STOCK_SHELF))
+		return
+	if not BetaRunState.carrying_stock:
+		EventBus.notification_requested.emit(restock_disabled_reason())
 		return
 	if _completed_objectives.has(&"stock_shelf"):
 		return
@@ -479,6 +504,8 @@ func on_beta_day_end_requested() -> void:
 	if _stage != STAGE_END_DAY:
 		EventBus.notification_requested.emit(close_day_disabled_reason())
 		return
+	if _close_day_panel != null and bool(_close_day_panel.get("_focus_pushed")):
+		return
 	# BRAINDUMP "Close Day 1? Yes / Not Yet" — route through the standalone
 	# CloseDayConfirmationPanel via EventBus. The panel is instantiated in
 	# `_ensure_panels()`; on confirm it emits `day_close_confirmed`, which
@@ -489,9 +516,7 @@ func on_beta_day_end_requested() -> void:
 	# Reason copy interpolates the active day so the prompt reinforces
 	# progression ("Day 1" / "Day 2" / …) instead of reading as a generic
 	# wrap-up.
-	EventBus.day_close_confirmation_requested.emit(
-		"Ready to close up Day %d?" % BetaRunState.day
-	)
+	EventBus.day_close_confirmation_requested.emit("Ready to close up Day %d?" % BetaRunState.day)
 
 
 ## Confirm-side of the close-day flow. Runs when the player presses
@@ -515,9 +540,12 @@ func _on_day_close_confirmed() -> void:
 	if _summary_spawned:
 		push_warning(
 			(
-				"BetaDayOneController: day_close_confirmed re-emitted for "
-				+ "day %d after summary already spawned — ignoring duplicate."
-			) % BetaRunState.day
+				(
+					"BetaDayOneController: day_close_confirmed re-emitted for "
+					+ "day %d after summary already spawned — ignoring duplicate."
+				)
+				% BetaRunState.day
+			)
 		)
 		return
 	_summary_spawned = true
@@ -533,9 +561,7 @@ func _on_day_close_confirmed() -> void:
 	# Past-tense companion broadcast for the on-screen event log; see
 	# the matching emit in `_complete_current_objective` for the
 	# log-vs-rail copy contract.
-	EventBus.objective_completed.emit(
-		&"close_day", _objective_completion_label(&"close_day")
-	)
+	EventBus.objective_completed.emit(&"close_day", _objective_completion_label(&"close_day"))
 	# Modal lifecycle is the single authority for input focus: `show_summary`
 	# routes through `ModalPanel.open()` which pushes CTX_MODAL on `InputFocus`.
 	var summary: Dictionary = BetaRunState.end_day()
@@ -547,6 +573,9 @@ func _on_day_close_confirmed() -> void:
 	summary["customers_helped"] = _customers_helped_today
 	summary["items_stocked"] = _items_stocked_today
 	summary["sales_completed"] = _customers_helped_today
+	summary["customer_inventory_transactions"] = (_customer_inventory_transactions.duplicate(true))
+	summary["inventory_items_removed"] = _count_inventory_transaction_ops("remove_stock")
+	summary["inventory_items_added"] = _count_inventory_transaction_ops("create_item")
 	summary["shift_note"] = _build_shift_note()
 	# Shelf / back-room inventory at close. Stocking flips the delivery from
 	# the back room onto the shelf, so the two values are complementary:
@@ -568,19 +597,55 @@ func _on_day_close_confirmed() -> void:
 	summary["rent_paid"] = BetaRunState.DAILY_RENT
 	summary["sales_revenue"] = _sales_today
 	summary["net_profit"] = _sales_today - BetaRunState.DAILY_RENT
+	_grant_unlock(_DAY_ONE_CLOSE_UNLOCK_GRANT)
 	_summary_panel.show_summary(summary, BetaRunState.day >= TARGET_BETA_DAYS)
 
 
 func _on_choice_selected(choice_id: StringName, effects: Dictionary) -> void:
 	if _active_event.is_empty():
 		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+		_pending_result_effects.clear()
+		return
+	if _completed_objectives.has(&"talk_to_customer"):
+		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
 		return
 	var event_id: StringName = StringName(str(_active_event.get("id", "")))
-	BetaRunState.apply_decision_effect(event_id, choice_id, effects)
+	var choice: Dictionary = _choice_for_id(choice_id)
+	var inventory_transaction: Dictionary = _apply_customer_inventory_effects(choice, effects)
+	var resolved_effects: Dictionary = _effects_after_inventory(effects, inventory_transaction)
+	BetaRunState.apply_decision_effect(event_id, choice_id, resolved_effects)
 	_resolved_events_today += 1
 	if choice_id == &"refuse_return":
 		BetaRunState.mark_hidden_thread_signal(&"parent_refused_return_risk")
+	if _should_show_customer_result(choice_id):
+		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_CUSTOMER_RESULT)
+		_pending_result_effects = resolved_effects.duplicate(true)
+		_customer_result_panel.call(
+			"show_result", _build_customer_result_payload(choice_id, resolved_effects)
+		)
+		return
 	BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+	_finish_customer_choice(resolved_effects)
+
+
+func _on_customer_result_acknowledged(event_id: StringName, _choice_id: StringName) -> void:
+	if _active_event.is_empty():
+		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+		_pending_result_effects.clear()
+		return
+	if event_id != StringName(str(_active_event.get("id", ""))):
+		BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+		_pending_result_effects.clear()
+		return
+	var effects: Dictionary = _pending_result_effects.duplicate(true)
+	_pending_result_effects.clear()
+	BetaRunState.set_input_mode(BetaRunState.INPUT_MODE_GAMEPLAY)
+	_finish_customer_choice(effects)
+
+
+func _finish_customer_choice(effects: Dictionary) -> void:
+	if _completed_objectives.has(&"talk_to_customer"):
+		return
 	# §F-L4 — the customer turns toward the entrance, walks out, and
 	# fades at the threshold so the conversation has a visible ending
 	# beat. The whole subtree is hidden (not freed) when the tween
@@ -592,16 +657,21 @@ func _on_choice_selected(choice_id: StringName, effects: Dictionary) -> void:
 	# `customer_purchased`) tick in the beta path. The beta path bypasses
 	# the production checkout pipeline that normally fires these, so the
 	# Sold Today readout would otherwise stay at 0 even after a real sale.
-	# Guard on cash_delta > 0 so refunds and no-sale outcomes (refuse_return,
-	# clean_exchange) don't tick the counter. `first_sale_completed` will
-	# fire naturally off the first `item_sold` via ObjectiveDirector.
+	# Guard on a completed inventory transaction so failed customer choices
+	# do not tick sale counters or broadcast checkout signals.
 	var cash_delta: int = int(effects.get("cash", 0))
-	if cash_delta > 0:
+	if cash_delta > 0 and _effects_allow_sale_signal(effects):
 		_sales_today += cash_delta
 		var price: float = float(cash_delta)
-		EventBus.item_sold.emit("used_game", price, "used_games")
+		var sale_item: Dictionary = _sale_item_from_effects(effects)
+		var item_id: String = str(sale_item.get("item_id", "used_game"))
+		var category: String = str(sale_item.get("category", "used_games"))
+		EventBus.item_sold.emit(item_id, price, category)
 		EventBus.customer_purchased.emit(
-			&"beta_store", &"used_game", price, &"beta_customer_01"
+			EconomySystem.BETA_COUNTER_ONLY_STORE_ID,
+			StringName(item_id),
+			price,
+			&"beta_customer_01"
 		)
 	# §F-PUNCH4 — narrate the outcome so the player understands whether a
 	# sale happened. Cash delta is the truth; reputation-only choices show
@@ -613,30 +683,198 @@ func _on_choice_selected(choice_id: StringName, effects: Dictionary) -> void:
 	# old "skip to END_DAY for last event" branch was the source of the
 	# 9 AM close-day bug — every Day 1 has exactly one customer, so it
 	# would short-circuit the rest of the loop.
-	if _completed_objectives.has(&"talk_to_customer"):
-		return
 	_complete_current_objective()
+
+
+func _should_show_customer_result(choice_id: StringName) -> bool:
+	if _customer_result_panel == null:
+		return false
+	if _decision_panel == null or not _decision_panel.visible:
+		return false
+	var choice: Dictionary = _choice_for_id(choice_id)
+	if choice.is_empty():
+		return false
+	return (choice.get("result", {}) as Dictionary).size() > 0
+
+
+func _build_customer_result_payload(choice_id: StringName, effects: Dictionary) -> Dictionary:
+	var choice: Dictionary = _choice_for_id(choice_id)
+	var result: Dictionary = (choice.get("result", {}) as Dictionary).duplicate(true)
+	_apply_inventory_result_copy(result, effects)
+	return {
+		"event_id": StringName(str(_active_event.get("id", ""))),
+		"choice_id": choice_id,
+		"customer_name": str(_active_event.get("customer_name", "Customer")),
+		"event_title": str(_active_event.get("title", "Customer")),
+		"choice_label": str(choice.get("label", "")),
+		"result": result,
+		"effects": effects,
+	}
+
+
+func _choice_for_id(choice_id: StringName) -> Dictionary:
+	var choices: Array = _active_event.get("choices", []) as Array
+	for choice_variant: Variant in choices:
+		if choice_variant is not Dictionary:
+			continue
+		var choice: Dictionary = choice_variant as Dictionary
+		if StringName(str(choice.get("id", ""))) == choice_id:
+			return choice
+	return {}
+
+
+func _apply_customer_inventory_effects(choice: Dictionary, effects: Dictionary) -> Dictionary:
+	var inventory_payload: Variant = effects.get("inventory", [])
+	if not (inventory_payload is Array) and not (inventory_payload is Dictionary):
+		return {}
+	if inventory_payload is Array and (inventory_payload as Array).is_empty():
+		return {}
+	if inventory_payload is Dictionary and (inventory_payload as Dictionary).is_empty():
+		return {}
+	var adapter: RefCounted = (
+		BetaCustomerInventoryEffectsScript.new(GameManager.get_inventory_system(), _store_root())
+		as RefCounted
+	)
+	var transaction: Dictionary = adapter.call("apply", effects) as Dictionary
+	transaction["choice_id"] = String(choice.get("id", ""))
+	transaction["event_id"] = String(_active_event.get("id", ""))
+	transaction["requires_inventory_success"] = bool(
+		effects.get("requires_inventory_success", choice.get("requires_inventory_success", false))
+	)
+	_customer_inventory_transactions.append(transaction.duplicate(true))
+	return transaction
+
+
+func _effects_after_inventory(effects: Dictionary, inventory_transaction: Dictionary) -> Dictionary:
+	var resolved: Dictionary = effects.duplicate(true)
+	if inventory_transaction.is_empty():
+		return resolved
+	resolved["inventory_transaction"] = inventory_transaction.duplicate(true)
+	if bool(inventory_transaction.get("ok", false)):
+		return resolved
+	if resolved.has("cash"):
+		resolved["cash"] = 0
+	resolved["inventory_blocked"] = true
+	return resolved
+
+
+func _effects_allow_sale_signal(effects: Dictionary) -> bool:
+	var transaction: Dictionary = effects.get("inventory_transaction", {}) as Dictionary
+	if transaction.is_empty():
+		return true
+	if not bool(transaction.get("ok", false)):
+		return false
+	for applied_variant: Variant in transaction.get("applied", []) as Array:
+		if applied_variant is not Dictionary:
+			continue
+		var applied: Dictionary = applied_variant as Dictionary
+		if str(applied.get("op", "")) == "remove_stock":
+			return true
+	return false
+
+
+func _sale_item_from_effects(effects: Dictionary) -> Dictionary:
+	var transaction: Dictionary = effects.get("inventory_transaction", {}) as Dictionary
+	if transaction.is_empty():
+		return {"item_id": "used_game", "category": "used_games"}
+	for applied_variant: Variant in transaction.get("applied", []) as Array:
+		if applied_variant is not Dictionary:
+			continue
+		var applied: Dictionary = applied_variant as Dictionary
+		if str(applied.get("op", "")) != "remove_stock":
+			continue
+		return {
+			"item_id": str(applied.get("definition_id", "used_game")),
+			"category": "used_games",
+		}
+	return {"item_id": "used_game", "category": "used_games"}
+
+
+func _apply_inventory_result_copy(result: Dictionary, effects: Dictionary) -> void:
+	var transaction: Dictionary = effects.get("inventory_transaction", {}) as Dictionary
+	if transaction.is_empty() or bool(transaction.get("ok", false)):
+		return
+	result["store_outcome"] = (
+		"The inventory check could not complete that movement, so the "
+		+ "register stays unchanged and no stock is moved."
+	)
+	var failure_text: String = _inventory_failure_text(transaction)
+	result["consequences"] = [
+		{"label": "Money", "text": "$0 because no inventory changed hands."},
+		{
+			"label": "Reputation",
+			"text": _signed_points_text(int(effects.get("reputation", 0))),
+		},
+		{"label": "Inventory", "text": failure_text},
+		{
+			"label": "Policy",
+			"text": _signed_points_text(int(effects.get("manager_trust", 0))) + " manager trust",
+		},
+	]
+
+
+func _inventory_failure_text(transaction: Dictionary) -> String:
+	var failures: Array = transaction.get("failed", []) as Array
+	if failures.is_empty():
+		return "No inventory movement was applied."
+	var first: Dictionary = failures[0] as Dictionary
+	match str(first.get("reason", "")):
+		"missing_inventory_system":
+			return "Inventory is not available yet; no stock movement was recorded."
+		"missing_matching_stock":
+			return "No matching stocked item was found; no stock movement was recorded."
+		"insufficient_quantity":
+			return "Not enough matching stock was available; no stock movement was recorded."
+		_:
+			return "Inventory movement failed; no stock movement was recorded."
+
+
+func _signed_points_text(value: int) -> String:
+	if value > 0:
+		return "+%d" % value
+	return str(value)
+
+
+func _count_inventory_transaction_ops(op: String) -> int:
+	var count: int = 0
+	for transaction: Dictionary in _customer_inventory_transactions:
+		if not bool(transaction.get("ok", false)):
+			continue
+		for applied_variant: Variant in transaction.get("applied", []) as Array:
+			if applied_variant is not Dictionary:
+				continue
+			var applied: Dictionary = applied_variant as Dictionary
+			if str(applied.get("op", "")) == op:
+				count += 1
+	return count
 
 
 func _on_summary_continue() -> void:
 	# Pop CTX_MODAL before any state mutation so the InputFocus stack
-	# returns to CTX_STORE_GAMEPLAY before `advance_day()` / `_start_day()`
-	# fire. Leaving CTX_MODAL on top into the next day blocks WASD and the
-	# InteractionRay because gameplay input gates on the active context.
+	# returns to its prior state before the next beta modal opens.
 	# Idempotent with the panel's own post-emit `close()` — a second pop is
 	# a no-op (`_focus_pushed` is already cleared).
 	_summary_panel.close()
 	if BetaRunState.day >= TARGET_BETA_DAYS:
-		EventBus.notification_requested.emit("15-minute beta loop complete. Returning to main menu.")
+		EventBus.notification_requested.emit(
+			"15-minute beta loop complete. Returning to main menu."
+		)
 		GameManager.go_to_main_menu()
 		return
 	BetaRunState.advance_day()
 	GameManager.set_current_day(BetaRunState.day)
-	EventBus.day_started.emit(BetaRunState.day)
-	# Route through the morning-note gate so Day 2 gets its own Vic note +
-	# STAGE_VIC_NOTE phase — calling `_start_day` here would skip both and
-	# drop the player straight into the customer beat.
-	_open_vic_note_and_then_start_day()
+	GameState.day = BetaRunState.day
+	_day_two_placeholder_panel.call("show_placeholder")
+
+
+func _on_day_two_placeholder_main_menu() -> void:
+	_day_two_placeholder_panel.close()
+	GameManager.go_to_main_menu()
+
+
+func _on_day_two_placeholder_restart() -> void:
+	_day_two_placeholder_panel.close()
+	GameManager.start_new_game()
 
 
 ## Replay-button handler. Closes the summary so the InputFocus stack pops
@@ -694,7 +932,7 @@ func pickup_disabled_reason() -> String:
 ## Console stack is ambient flavor — always interactable when the player
 ## notices it. No stage gating; the prompt is muted post-inspection.
 func can_interact_hidden_clue() -> bool:
-	return not _completed_objectives.has(&"_flavor_console_stack")
+	return false
 
 
 func hidden_clue_disabled_reason() -> String:
@@ -728,7 +966,7 @@ func close_day_disabled_reason() -> String:
 			continue
 		var entry_id: StringName = StringName(str(entry.get("id", "")))
 		if not _completed_objectives.has(entry_id):
-			return "You still have a few things to take care of before closing."
+			return _prerequisite_reason_for(entry_id)
 	return "Day cannot be ended yet."
 
 
@@ -737,10 +975,24 @@ func _disabled_reason_for_stage(target_stage: StringName) -> String:
 		return ""
 	if _stage == STAGE_VIC_NOTE:
 		return "Read Vic's note first."
-	for entry: Dictionary in _objectives:
-		if StringName(str(entry.get("stage", ""))) == _stage:
-			return "Working on: %s" % str(entry.get("label", ""))
+	var active: Dictionary = _objective_for_stage(_stage)
+	if not active.is_empty():
+		return _prerequisite_reason_for(StringName(str(active.get("id", ""))))
 	return "Not available right now."
+
+
+func _prerequisite_reason_for(objective_id: StringName) -> String:
+	match objective_id:
+		&"talk_to_customer":
+			return "Talk to the customer first."
+		&"back_room_inventory":
+			return "Check the back room first."
+		&"stock_shelf":
+			return "Stock the Retro Games shelf before closing."
+		&"close_day":
+			return "Close day at the register."
+		_:
+			return "Follow the current objective first."
 
 
 func _load_content() -> void:
@@ -764,6 +1016,7 @@ func _load_content() -> void:
 
 
 func _start_day(day: int) -> void:
+	_sync_beta_day(day)
 	# Day N's END_DAY phase pauses the clock via `_pause_time_for_end_day`.
 	# Without an unpause + rewind here, Day N+1 inherits that paused state
 	# and `_advance_to_open_hour_if_early` returns early because the clock
@@ -793,9 +1046,12 @@ func _start_day(day: int) -> void:
 	_customers_helped_today = 0
 	_items_stocked_today = 0
 	_sales_today = 0
+	_customer_inventory_transactions.clear()
 	_summary_spawned = false
 	_completed_objectives.clear()
+	_pending_result_effects.clear()
 	BetaRunState.carrying_stock = false
+	_reset_beta_inventory_overlay()
 	# Start at the head of the chain.
 	_stage = STAGE_TALK_TO_CUSTOMER
 	if not _day_events.is_empty():
@@ -812,6 +1068,39 @@ func _start_day(day: int) -> void:
 	_advance_to_open_hour_if_early()
 	_update_objective_rail()
 	_apply_objective_gating()
+	_emit_opening_day_toast(day)
+
+
+## Keeps beta and generic day readers aligned without firing `day_started`.
+## The world bootstrap and summary-continue path already emit that signal;
+## this bridge only updates silent state holders so HUD labels, economy
+## transaction days, saves, and beta summary payloads all agree on Day 1+.
+func _sync_beta_day(day_number: int) -> void:
+	var normalized_day: int = maxi(day_number, 1)
+	BetaRunState.day = normalized_day
+	GameManager.set_current_day(normalized_day)
+	GameState.day = normalized_day
+
+
+## Day-1 inventory is a beta display overlay: the controller owns the visible
+## back-room/shelf counts, and InventorySystem remains out of the scripted
+## quantity loop. Reset the overlay at day start so stale shelf/back-room
+## counts from the prior beta day cannot bleed into HUD or audit surfaces.
+func _reset_beta_inventory_overlay() -> void:
+	EventBus.beta_shelf_count_changed.emit(0)
+	EventBus.beta_backroom_count_changed.emit(0)
+	EventBus.beta_carry_changed.emit("")
+
+
+func _emit_opening_day_toast(day_number: int) -> void:
+	if day_number != 1:
+		return
+	EventBus.toast_requested_with_id.emit(
+		&"beta_day1_started",
+		"Day 1 started. Serve your first customer at the register.",
+		&"info",
+		5.0,
+	)
 
 
 func _advance_to_open_hour_if_early() -> void:
@@ -843,19 +1132,15 @@ func _reset_scene_for_day(_day_number: int) -> void:
 		# Body material was duplicated and alpha-tweened to 0 by
 		# `_animate_customer_exit`; restore opacity so the silhouette renders
 		# again on Day N+1.
-		var body: MeshInstance3D = customer_3d.get_node_or_null(
-			"CustomerProxy/Body"
-		) as MeshInstance3D
+		var body: MeshInstance3D = (
+			customer_3d.get_node_or_null("CustomerProxy/Body") as MeshInstance3D
+		)
 		if body != null and body.material_override is StandardMaterial3D:
-			var mat: StandardMaterial3D = (
-				body.material_override as StandardMaterial3D
-			)
+			var mat: StandardMaterial3D = body.material_override as StandardMaterial3D
 			var albedo: Color = mat.albedo_color
 			albedo.a = 1.0
 			mat.albedo_color = albedo
-	var floor_mat: Node = store.get_node_or_null(
-		"Checkout/BetaCustomerFloorMat"
-	)
+	var floor_mat: Node = store.get_node_or_null("Checkout/BetaCustomerFloorMat")
 	if floor_mat is Node3D:
 		(floor_mat as Node3D).visible = true
 	var pickup: Node = store.get_node_or_null("BetaBackroomPickup")
@@ -871,6 +1156,7 @@ func _reset_scene_for_day(_day_number: int) -> void:
 			(open as Node3D).visible = false
 		if label is Node3D:
 			(label as Node3D).visible = true
+	_reset_restock_shelf_visuals()
 
 
 ## Marks the current stage's objective complete, advances the in-game
@@ -897,9 +1183,8 @@ func _complete_current_objective() -> void:
 	# customer …") while the log records what *just happened*. BRAINDUMP's
 	# 'Bad' example shows the rail label echoed into the log on start; the
 	# completion-only emit avoids that pattern.
-	EventBus.objective_completed.emit(
-		objective_id, _objective_completion_label(objective_id)
-	)
+	EventBus.objective_completed.emit(objective_id, _objective_completion_label(objective_id))
+	_grant_objective_unlocks(objective_id)
 	var time_cost: int = int(entry.get("time_cost_minutes", 0))
 	if time_cost > 0:
 		var time_sys: TimeSystem = GameManager.get_time_system()
@@ -928,6 +1213,18 @@ func _advance_stage_after(completed_id: StringName) -> void:
 	_apply_objective_gating()
 
 
+func _grant_objective_unlocks(objective_id: StringName) -> void:
+	var grants: Array = _OBJECTIVE_UNLOCK_GRANTS.get(String(objective_id), [])
+	for raw_id: Variant in grants:
+		_grant_unlock(StringName(str(raw_id)))
+
+
+func _grant_unlock(unlock_id: StringName) -> void:
+	if unlock_id.is_empty():
+		return
+	UnlockSystemSingleton.grant_unlock(unlock_id)
+
+
 ## §F-FIX1 — When the chain hits END_DAY, freeze the clock so the player
 ## can walk to the register at their own pace and close on their own E-press.
 ## Earlier auto-jump-to-17:00 was harmful: TimeSystem auto-`_end_day`s the
@@ -954,9 +1251,7 @@ func _pause_time_for_end_day() -> void:
 ## before this fires, so the toast lands once and the player isn't racing
 ## a moving deadline.
 func _start_close_time_watcher() -> void:
-	EventBus.toast_requested.emit(
-		"Closing time. Wrap up at the register.", &"info", 4.0
-	)
+	EventBus.toast_requested.emit("Closing time. Wrap up at the register.", &"info", 4.0)
 
 
 ## Public read-only accessor for the current stage. Used by the debug
@@ -1021,6 +1316,7 @@ func get_state_snapshot() -> Dictionary:
 		"completed_objectives": _completed_objectives.duplicate(),
 		"can_close_day": _all_required_objectives_completed() and _stage == STAGE_END_DAY,
 		"close_day_reason": close_day_disabled_reason() if _stage != STAGE_END_DAY else "ready",
+		"objective_target_diagnostic": _objective_target_diagnostic,
 		"time_minutes": time_minutes,
 		"customers_helped": _customers_helped_today,
 		"sales_today": _sales_today,
@@ -1030,13 +1326,12 @@ func get_state_snapshot() -> Dictionary:
 func _apply_customer_profile(event_data: Dictionary) -> void:
 	if event_data.is_empty():
 		return
-	var customer_name: String = str(event_data.get("customer_name", "Confused Parent"))
 	var store: Node = _store_root()
 	if store == null:
 		return
 	var node: Node = store.get_node_or_null("BetaDayOneCustomer/Interactable")
 	if node is Interactable:
-		(node as Interactable).display_name = customer_name
+		(node as Interactable).display_name = "customer"
 
 
 func _update_objective_rail() -> void:
@@ -1046,23 +1341,35 @@ func _update_objective_rail() -> void:
 		# the note modal is up and no on-stage Interactable is a focal point.
 		# `morning_note_panel._unhandled_input` dismisses on `interact` (E),
 		# so this is also the real input the player will press.
-		EventBus.objective_changed.emit({
-			"text": "Read Vic's morning note.",
-			"action": "",
-			"key": "E",
-			"steps": _build_steps_payload(),
-		})
+		(
+			EventBus
+			. objective_changed
+			. emit(
+				{
+					"text": "Read Vic's morning note.",
+					"action": "",
+					"key": "E",
+					"steps": _build_steps_payload(),
+				}
+			)
+		)
 		return
 	var entry: Dictionary = _objective_for_stage(_stage)
 	if entry.is_empty():
 		EventBus.objective_changed.emit({"hidden": true})
 		return
-	EventBus.objective_changed.emit({
-		"text": str(entry.get("label", "")),
-		"action": str(entry.get("action", "")),
-		"key": str(entry.get("key", "E")),
-		"steps": _build_steps_payload(),
-	})
+	(
+		EventBus
+		. objective_changed
+		. emit(
+			{
+				"text": str(entry.get("label", "")),
+				"action": str(entry.get("action", "")),
+				"key": str(entry.get("key", "E")),
+				"steps": _build_steps_payload(),
+			}
+		)
+	)
 
 
 ## Builds the multi-step progress payload for the rail. Each `_objectives`
@@ -1084,11 +1391,16 @@ func _build_steps_payload() -> Array[Dictionary]:
 			state = "completed"
 		elif entry_stage == _stage:
 			state = "active"
-		steps.append({
-			"id": String(entry_id),
-			"text": str(entry.get("label", "")),
-			"state": state,
-		})
+		(
+			steps
+			. append(
+				{
+					"id": String(entry_id),
+					"text": str(entry.get("label", "")),
+					"state": state,
+				}
+			)
+		)
 	return steps
 
 
@@ -1105,34 +1417,49 @@ func _apply_objective_gating() -> void:
 	var store: Node = _store_root()
 	if store == null:
 		return
+	_objective_target_diagnostic = ""
 	for node: Node in get_tree().get_nodes_in_group("interactable"):
 		if node is Interactable and _is_descendant_of(node, store):
 			(node as Interactable).enabled = false
 	_set_interactable_enabled(store, "EntranceDoor/Interactable", false)
+	var active_entry: Dictionary = _objective_for_stage(_stage)
+	if not active_entry.is_empty():
+		var active_path: String = str(active_entry.get("target_path", ""))
+		if not _target_path_is_valid(store, active_path):
+			_objective_target_diagnostic = ("Invalid objective target path: %s" % active_path)
+			_report_invalid_target_path_once(active_path)
+			return
 	for entry: Dictionary in _objectives:
 		var entry_stage: StringName = StringName(str(entry.get("stage", "")))
 		var path: String = str(entry.get("target_path", ""))
 		if path.is_empty():
 			continue
-		var is_active: bool = (entry_stage == _stage)
+		var is_active: bool = entry_stage == _stage
 		if entry_stage == STAGE_END_DAY:
 			is_active = is_active and _all_required_objectives_completed()
 		_set_interactable_enabled(store, path, is_active)
 	# Console stack — ambient flavor, always interactable until inspected.
-	_set_interactable_enabled(
-		store,
-		"BetaHiddenClue/Interactable",
-		not _completed_objectives.has(&"_flavor_console_stack")
-	)
+	_set_interactable_enabled(store, "BetaHiddenClue/Interactable", false)
 	# Register status indicator — passive disabled-reason hint shown during
 	# the back-room and stocking phases. Kept enabled across every stage so
 	# the InteractionRay's raycast can still hover it (the rest of the gating
 	# sweep above just disabled it). `can_interact()` on the node itself
 	# always returns false, so E-presses never resolve here regardless of
 	# stage; the only player-visible effect is the muted hint copy.
-	_set_interactable_enabled(
-		store, "checkout_counter/RegisterStatusIndicator", true
-	)
+	_set_interactable_enabled(store, "checkout_counter/RegisterStatusIndicator", true)
+
+
+func _target_path_is_valid(root: Node, path: String) -> bool:
+	if path.is_empty():
+		return false
+	return root.get_node_or_null(path) is Interactable
+
+
+func _report_invalid_target_path_once(path: String) -> void:
+	if _reported_invalid_target_paths.has(path):
+		return
+	_reported_invalid_target_paths[path] = true
+	push_warning(_objective_target_diagnostic)
 
 
 func _all_required_objectives_completed() -> bool:
@@ -1190,9 +1517,17 @@ func _ensure_panels() -> void:
 	if _decision_panel == null:
 		_decision_panel = BetaDecisionCardPanel.new()
 		_ui_root().add_child(_decision_panel)
+	if _customer_result_panel == null:
+		_customer_result_panel = BetaCustomerResultPanelScript.new() as ModalPanel
+		_ui_root().add_child(_customer_result_panel)
 	if _summary_panel == null:
 		_summary_panel = BetaDaySummaryPanel.new()
 		_ui_root().add_child(_summary_panel)
+	if _day_two_placeholder_panel == null:
+		_day_two_placeholder_panel = (
+			BetaDayTwoPlaceholderPanelScript.new() as ModalPanel
+		)
+		_ui_root().add_child(_day_two_placeholder_panel)
 	if _vic_note_panel == null:
 		_vic_note_panel = BetaManagerNotePanel.new()
 		_ui_root().add_child(_vic_note_panel)
@@ -1214,18 +1549,17 @@ func _ensure_panels() -> void:
 		_screenshot_helper.name = "BetaScreenshotHelper"
 		_ui_root().add_child(_screenshot_helper)
 	if _close_day_panel == null:
-		_close_day_panel = (
-			CloseDayConfirmationPanelScene.instantiate() as CanvasLayer
-		)
+		_close_day_panel = (CloseDayConfirmationPanelScene.instantiate() as CanvasLayer)
 		_close_day_panel.name = "BetaCloseDayConfirmationPanel"
 		_ui_root().add_child(_close_day_panel)
 		# BRAINDUMP cancel-button copy: "Not Yet" reads softer than "Cancel"
 		# while the chain still treats cancel as a no-op (the player can re-
 		# press E to retry). Path matches the .tscn structure: layered
 		# Root/Panel/Margin/VBox/ButtonRow.
-		var cancel_button: Button = _close_day_panel.get_node_or_null(
-			"Root/Panel/Margin/VBox/ButtonRow/CancelButton"
-		) as Button
+		var cancel_button: Button = (
+			_close_day_panel.get_node_or_null("Root/Panel/Margin/VBox/ButtonRow/CancelButton")
+			as Button
+		)
 		if cancel_button != null:
 			cancel_button.text = "Not Yet"
 
@@ -1233,12 +1567,24 @@ func _ensure_panels() -> void:
 func _connect_panel_signals() -> void:
 	if not _decision_panel.choice_selected.is_connected(_on_choice_selected):
 		_decision_panel.choice_selected.connect(_on_choice_selected)
+	var result_callback := Callable(self, "_on_customer_result_acknowledged")
+	if not _customer_result_panel.is_connected(&"result_acknowledged", result_callback):
+		_customer_result_panel.connect(&"result_acknowledged", result_callback)
 	if not _summary_panel.continue_pressed.is_connected(_on_summary_continue):
 		_summary_panel.continue_pressed.connect(_on_summary_continue)
 	if not _summary_panel.replay_pressed.is_connected(_on_summary_replay):
 		_summary_panel.replay_pressed.connect(_on_summary_replay)
 	if not _summary_panel.main_menu_pressed.is_connected(_on_summary_main_menu):
 		_summary_panel.main_menu_pressed.connect(_on_summary_main_menu)
+	var placeholder_main_menu := Callable(self, "_on_day_two_placeholder_main_menu")
+	var placeholder_restart := Callable(self, "_on_day_two_placeholder_restart")
+	if not _day_two_placeholder_panel.is_connected(
+		&"main_menu_pressed",
+		placeholder_main_menu
+	):
+		_day_two_placeholder_panel.connect(&"main_menu_pressed", placeholder_main_menu)
+	if not _day_two_placeholder_panel.is_connected(&"restart_pressed", placeholder_restart):
+		_day_two_placeholder_panel.connect(&"restart_pressed", placeholder_restart)
 	if not _vic_note_panel.note_dismissed.is_connected(_on_vic_note_dismissed):
 		_vic_note_panel.note_dismissed.connect(_on_vic_note_dismissed)
 	# Permanent (not ONE_SHOT) — the player may cancel the modal and re-
@@ -1257,6 +1603,37 @@ func _ui_root() -> Node:
 	return scene
 
 
+func _free_owned_ui_nodes() -> void:
+	_free_owned_ui_node(_decision_panel)
+	_decision_panel = null
+	_free_owned_ui_node(_customer_result_panel)
+	_customer_result_panel = null
+	_free_owned_ui_node(_summary_panel)
+	_summary_panel = null
+	_free_owned_ui_node(_vic_note_panel)
+	_vic_note_panel = null
+	_free_owned_ui_node(_objective_target_highlight)
+	_objective_target_highlight = null
+	_free_owned_ui_node(_debug_overlay)
+	_debug_overlay = null
+	_free_owned_ui_node(_screenshot_helper)
+	_screenshot_helper = null
+	_free_owned_ui_node(_close_day_panel)
+	_close_day_panel = null
+
+
+func _free_owned_ui_node(node: Node) -> void:
+	if not is_instance_valid(node):
+		return
+	if (
+		node is ModalPanel
+		and bool(node.get("_focus_pushed"))
+		and InputFocus.current() == InputFocus.CTX_MODAL
+	):
+		node.call("close")
+	node.free()
+
+
 ## §EH-12 — Beta day-1 / customer-events content is shipped under
 ## `game/content/beta/`. Open failure on a present file or a parse failure
 ## means a content regression (corrupt JSON, encoding break, or a strip pass
@@ -1271,31 +1648,31 @@ func _ui_root() -> Node:
 ## See docs/audits/error-handling-report.md §EH-12.
 func _load_json(path: String) -> Variant:
 	if not FileAccess.file_exists(path):
-		push_warning(
-			"BetaDayOneController._load_json: missing content file %s" % path
-		)
+		push_warning("BetaDayOneController._load_json: missing content file %s" % path)
 		return {}
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		push_error(
-			"BetaDayOneController._load_json: cannot open %s (FileAccess err=%d)"
-			% [path, FileAccess.get_open_error()]
+			(
+				"BetaDayOneController._load_json: cannot open %s (FileAccess err=%d)"
+				% [path, FileAccess.get_open_error()]
+			)
 		)
 		return {}
 	if file.get_length() > MAX_JSON_FILE_BYTES:
 		file.close()
 		push_error(
-			"BetaDayOneController._load_json: %s exceeds maximum supported size (%d bytes)"
-			% [path, MAX_JSON_FILE_BYTES]
+			(
+				"BetaDayOneController._load_json: %s exceeds maximum supported size (%d bytes)"
+				% [path, MAX_JSON_FILE_BYTES]
+			)
 		)
 		return {}
 	var text: String = file.get_as_text()
 	file.close()
 	var parsed: Variant = JSON.parse_string(text)
 	if parsed == null:
-		push_error(
-			"BetaDayOneController._load_json: malformed JSON in %s" % path
-		)
+		push_error("BetaDayOneController._load_json: malformed JSON in %s" % path)
 		return {}
 	return parsed
 
@@ -1387,8 +1764,10 @@ func _configure_beta_customer() -> void:
 	var customer_node_ref: Node = store.get_node_or_null("BetaDayOneCustomer")
 	if not (customer_node_ref is Node3D):
 		push_error(
-			"BetaDayOneController: `BetaDayOneCustomer` Node3D missing under store "
-			+ "root '%s'; beta customer setup skipped." % store.name
+			(
+				"BetaDayOneController: `BetaDayOneCustomer` Node3D missing under store "
+				+ "root '%s'; beta customer setup skipped." % store.name
+			)
 		)
 		return
 	var customer_node: Node3D = customer_node_ref as Node3D
@@ -1485,18 +1864,21 @@ func _resize_customer_trigger(customer_node: Node3D) -> void:
 	var interactable_node: Node = customer_node.get_node_or_null("Interactable")
 	if interactable_node == null:
 		push_error(
-			"BetaDayOneController: BetaDayOneCustomer is missing its "
-			+ "`Interactable` child; customer cannot be aimed at."
+			(
+				"BetaDayOneController: BetaDayOneCustomer is missing its "
+				+ "`Interactable` child; customer cannot be aimed at."
+			)
 		)
 		return
 	var collision: CollisionShape3D = (
-		interactable_node.find_child("CollisionShape3D", true, false)
-		as CollisionShape3D
+		interactable_node.find_child("CollisionShape3D", true, false) as CollisionShape3D
 	)
 	if collision == null:
 		push_error(
-			"BetaDayOneController: BetaDayOneCustomer/Interactable has no "
-			+ "CollisionShape3D descendant; trigger resize skipped."
+			(
+				"BetaDayOneController: BetaDayOneCustomer/Interactable has no "
+				+ "CollisionShape3D descendant; trigger resize skipped."
+			)
 		)
 		return
 	var capsule := CapsuleShape3D.new()
@@ -1538,13 +1920,9 @@ func _emit_customer_outcome_toast(effects: Dictionary) -> void:
 	if cash_delta > 0:
 		# `&"sale"` paints a green left border per the toast visual contract —
 		# matches the BRAINDUMP "Sale complete: +$18" example.
-		EventBus.toast_requested.emit(
-			"Sale complete: +$%d" % cash_delta, &"sale", 3.0
-		)
+		EventBus.toast_requested.emit("Sale complete: +$%d" % cash_delta, &"sale", 3.0)
 	else:
-		EventBus.toast_requested.emit(
-			"She thanked you and walked off.", &"info", 3.0
-		)
+		EventBus.toast_requested.emit("She thanked you and walked off.", &"info", 3.0)
 
 
 ## Swaps the BetaBackroomPickup branch from its closed-box state to its
@@ -1572,6 +1950,24 @@ func _hide_stock_box_in_world() -> void:
 		(open as Node3D).visible = true
 	if label is Node3D:
 		(label as Node3D).visible = false
+
+
+## Clears beta-only restock shelf props back to the authored empty state.
+## Production shelf visuals remain owned by ShelfSlot; these BetaShelfItem
+## meshes are display-only feedback for the scripted Day-1 stocking beat.
+func _reset_restock_shelf_visuals() -> void:
+	var store: Node = _store_root()
+	if store == null:
+		return
+	var shelf: Node = store.get_node_or_null("BetaRestockShelf")
+	if shelf == null:
+		return
+	for child: Node in shelf.get_children():
+		if String(child.name).begins_with("BetaShelfItem"):
+			child.queue_free()
+	var overlay: Node = shelf.get_node_or_null("EmptyOverlay")
+	if overlay is Node3D:
+		(overlay as Node3D).visible = true
 
 
 ## Walks BetaDayOneCustomer from the register out through the entrance
@@ -1618,9 +2014,7 @@ func _animate_customer_exit() -> void:
 		face_dir = face_dir.normalized()
 		customer_3d.look_at(start_pos + face_dir, Vector3.UP)
 
-	var body: MeshInstance3D = customer_3d.get_node_or_null(
-		"CustomerProxy/Body"
-	) as MeshInstance3D
+	var body: MeshInstance3D = customer_3d.get_node_or_null("CustomerProxy/Body") as MeshInstance3D
 	var fade_mat: StandardMaterial3D = null
 	if body != null and body.material_override is StandardMaterial3D:
 		# Duplicate the override so the fade only affects this instance —
@@ -1631,31 +2025,23 @@ func _animate_customer_exit() -> void:
 		fade_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		body.material_override = fade_mat
 
-	var floor_mat_node: Node = store.get_node_or_null(
-		"Checkout/BetaCustomerFloorMat"
-	)
+	var floor_mat_node: Node = store.get_node_or_null("Checkout/BetaCustomerFloorMat")
 
 	var tween: Tween = create_tween()
 	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(
-		customer_3d, "global_position",
-		_CUSTOMER_EXIT_LEG_1_TARGET, _CUSTOMER_EXIT_LEG_1_SECONDS
+		customer_3d, "global_position", _CUSTOMER_EXIT_LEG_1_TARGET, _CUSTOMER_EXIT_LEG_1_SECONDS
 	)
 	if floor_mat_node is Node3D:
-		tween.tween_callback(
-			Callable(self, "_hide_customer_floor_mat").bind(floor_mat_node)
-		)
+		tween.tween_callback(Callable(self, "_hide_customer_floor_mat").bind(floor_mat_node))
 	tween.tween_property(
-		customer_3d, "global_position",
-		_CUSTOMER_EXIT_LEG_2_TARGET, _CUSTOMER_EXIT_LEG_2_SECONDS
+		customer_3d, "global_position", _CUSTOMER_EXIT_LEG_2_TARGET, _CUSTOMER_EXIT_LEG_2_SECONDS
 	)
 	if fade_mat != null:
 		tween.parallel().tween_property(
 			fade_mat, "albedo_color:a", 0.0, _CUSTOMER_EXIT_FADE_SECONDS
 		)
-	tween.tween_callback(
-		Callable(self, "_finalize_customer_exit").bind(customer_3d)
-	)
+	tween.tween_callback(Callable(self, "_finalize_customer_exit").bind(customer_3d))
 
 
 func _hide_customer_floor_mat(mat_node: Node) -> void:
@@ -1689,8 +2075,10 @@ func _spawn_visible_shelf_items(count: int) -> int:
 	var shelf: Node = store.get_node_or_null("BetaRestockShelf")
 	if shelf == null or not (shelf is Node3D):
 		push_error(
-			"BetaDayOneController: `BetaRestockShelf` Node3D missing under store root "
-			+ "'%s'; visible stock spawn skipped." % store.name
+			(
+				"BetaDayOneController: `BetaRestockShelf` Node3D missing under store root "
+				+ "'%s'; visible stock spawn skipped." % store.name
+			)
 		)
 		return 0
 	# Clear any prior spawns so re-running the loop on day reset starts

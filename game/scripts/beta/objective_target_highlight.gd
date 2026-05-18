@@ -18,7 +18,7 @@ extends CanvasLayer
 ## so the rail and dim layer both render above the chip.
 const LAYER_INDEX: int = 35
 
-## Visual spec from ISSUE-013: green echoing the `sign_backing_mat` neon
+## Visual spec: green echoing the `sign_backing_mat` neon
 ## emission so the chip reads as part of the store palette.
 const CHIP_COLOR: Color = Color(0.3, 1.0, 0.5)
 
@@ -148,7 +148,7 @@ func _on_objective_changed(_payload: Dictionary) -> void:
 
 ## Subscribes the chip's visibility to the modal stack so the day-summary,
 ## decision, and morning-note panels are not contested by the chip's pulse.
-## Mirrors `interaction_prompt._on_input_focus_changed` (per ISSUE-004).
+## Mirrors `interaction_prompt._on_input_focus_changed`.
 func _on_input_focus_changed(new_ctx: StringName, _old_ctx: StringName) -> void:
 	_modal_dimmed = (new_ctx == InputFocus.CTX_MODAL)
 	_apply_visibility()
@@ -164,6 +164,9 @@ func _refresh_from_controller() -> void:
 
 
 func _apply_stage(stage: StringName, controller: Node) -> void:
+	if not _stage_target_is_actionable(stage, controller):
+		_set_target(null, 0.0)
+		return
 	var entry: Variant = STAGE_TARGETS.get(stage, null)
 	if entry == null:
 		_set_target(null, 0.0)
@@ -177,6 +180,14 @@ func _apply_stage(stage: StringName, controller: Node) -> void:
 		return
 	var node: Node3D = store_root.get_node_or_null(node_path) as Node3D
 	_set_target(node, y_offset)
+
+
+func _stage_target_is_actionable(stage: StringName, controller: Node) -> bool:
+	if stage != &"stock_shelf":
+		return true
+	if controller != null and controller.has_method("can_interact_restock"):
+		return bool(controller.call("can_interact_restock"))
+	return BetaRunState.carrying_stock
 
 
 func _set_target(node: Node3D, y_offset: float) -> void:
@@ -238,6 +249,9 @@ func is_pulse_active() -> bool:
 ## EventBus, so fixtures that don't own a real BetaDayOneController can
 ## still verify the mapping.
 func set_active_stage_for_test(stage: StringName, store_root: Node) -> void:
+	if not _stage_target_is_actionable(stage, null):
+		_set_target(null, 0.0)
+		return
 	var entry: Variant = STAGE_TARGETS.get(stage, null)
 	if entry == null or store_root == null:
 		_set_target(null, 0.0)

@@ -158,10 +158,20 @@ visible = false
 [node name="CarryHUD" type="CanvasLayer" parent="."]
 layer = 41
 
-[node name="BetaCarryLabel" type="Label" parent="CarryHUD"]
+[node name="BetaCarryIcon" type="ColorRect" parent="CarryHUD"]
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 16.0
+offset_top = -195.0
+offset_right = 42.0
+offset_bottom = -169.0
+color = Color(0.55, 0.38, 0.18, 1)
+visible = false
+
+[node name="BetaCarryLabel" type="Label" parent="CarryHUD"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 52.0
 offset_top = -200.0
 offset_right = 360.0
 offset_bottom = -168.0

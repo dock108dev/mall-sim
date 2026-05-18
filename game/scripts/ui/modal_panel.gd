@@ -39,6 +39,7 @@ extends CanvasLayer
 ## True iff this panel currently owns a CTX_MODAL frame on InputFocus.
 ## Read-only outside the class except for the `_reset_for_tests` seam.
 var _focus_pushed: bool = false
+var _modal_focusables: Array[Control] = []
 
 
 ## Default open: claims a CTX_MODAL frame and sets the panel visible.
@@ -59,6 +60,7 @@ func open() -> void:
 ## and call `_pop_modal_focus()` at the appropriate point.
 func close() -> void:
 	visible = false
+	_modal_focusables.clear()
 	_pop_modal_focus()
 	ModalQueue.notify_closed(self)
 
@@ -86,6 +88,117 @@ func _open_from_queue(payload: Dictionary) -> void:
 ## for subclasses whose setup happens before `enqueue`.
 func _on_queued_open(_payload: Dictionary) -> void:
 	pass
+
+
+## Registers the controls allowed to receive keyboard focus while this modal
+## is active, then wires Tab / Shift+Tab traversal into a closed loop.
+func _register_modal_focusables(controls: Array) -> void:
+	_modal_focusables.clear()
+	for control_variant: Variant in controls:
+		if control_variant is not Control:
+			continue
+		var control: Control = control_variant as Control
+		if not is_instance_valid(control):
+			continue
+		control.focus_mode = Control.FOCUS_ALL
+		_modal_focusables.append(control)
+	_wire_modal_focus_loop()
+
+
+func _focus_modal_control_deferred(control: Control) -> void:
+	call_deferred("_focus_modal_control", control)
+
+
+func _focus_modal_control(control: Control) -> void:
+	if not _modal_can_handle_input():
+		return
+	if not is_instance_valid(control):
+		return
+	if not control.is_inside_tree() or not control.visible:
+		return
+	if control is BaseButton and (control as BaseButton).disabled:
+		return
+	control.grab_focus()
+
+
+func _cycle_modal_focus(forward: bool) -> bool:
+	if not _modal_can_handle_input() or _modal_focusables.is_empty():
+		return false
+	var current: Control = get_viewport().gui_get_focus_owner()
+	var index: int = _modal_focusables.find(current)
+	if index < 0:
+		index = 0 if forward else _modal_focusables.size() - 1
+	else:
+		var delta: int = 1 if forward else -1
+		index = (index + delta + _modal_focusables.size()) % _modal_focusables.size()
+	_focus_modal_control(_modal_focusables[index])
+	return true
+
+
+func _activate_focused_modal_button() -> bool:
+	if not _modal_can_handle_input():
+		return false
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	if focused == null or not _modal_focusables.has(focused):
+		return false
+	if focused is not Button:
+		return false
+	var button: Button = focused as Button
+	if button.disabled or not button.visible:
+		return false
+	button.pressed.emit()
+	return true
+
+
+func _modal_can_handle_input() -> bool:
+	return visible and _focus_pushed and InputFocus.current() == InputFocus.CTX_MODAL
+
+
+func _is_modal_focus_next_event(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"ui_focus_next"):
+		return true
+	if event is not InputEventKey:
+		return false
+	var key_event: InputEventKey = event as InputEventKey
+	return (
+		key_event.pressed
+		and not key_event.echo
+		and key_event.keycode == KEY_TAB
+		and not key_event.shift_pressed
+	)
+
+
+func _is_modal_focus_previous_event(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"ui_focus_prev"):
+		return true
+	if event is not InputEventKey:
+		return false
+	var key_event: InputEventKey = event as InputEventKey
+	return (
+		key_event.pressed
+		and not key_event.echo
+		and key_event.keycode == KEY_TAB
+		and key_event.shift_pressed
+	)
+
+
+func _wire_modal_focus_loop() -> void:
+	if _modal_focusables.is_empty():
+		return
+	for i: int in range(_modal_focusables.size()):
+		var current: Control = _modal_focusables[i]
+		var previous: Control = _modal_focusables[
+			(i - 1 + _modal_focusables.size()) % _modal_focusables.size()
+		]
+		var next: Control = _modal_focusables[
+			(i + 1) % _modal_focusables.size()
+		]
+		current.focus_previous = previous.get_path()
+		current.focus_next = next.get_path()
+		current.focus_neighbor_top = previous.get_path()
+		current.focus_neighbor_left = previous.get_path()
+		current.focus_neighbor_bottom = next.get_path()
+		current.focus_neighbor_right = next.get_path()
 
 
 ## Pushes a CTX_MODAL frame on InputFocus. Guarded against double-push:
@@ -173,3 +286,4 @@ func _exit_tree() -> void:
 ## Pair with `InputFocus._reset_for_tests()` to fully reset state in tests.
 func _reset_for_tests() -> void:
 	_focus_pushed = false
+	_modal_focusables.clear()

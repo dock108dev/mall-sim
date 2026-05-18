@@ -113,8 +113,10 @@ theme_override_constants/separation = 6
 [node name="NewGameConfirmDialog" type="ConfirmationDialog" parent="."]
 title = "New Game"
 size = Vector2i(360, 140)
-dialog_text = "Start a new game? Your existing saves will be preserved."
+dialog_text = "Start a new game? This resets your current run and starts Day 1 fresh. Cancel to keep your current run."
 dialog_autowrap = true
+ok_button_text = "Reset Run"
+cancel_button_text = "Cancel"
 
 [node name="QuitConfirmDialog" type="ConfirmationDialog" parent="."]
 title = "Quit Game"

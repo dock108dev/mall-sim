@@ -136,6 +136,7 @@ and currently includes:
 
 ## Godot version
 
-`project.godot` declares Godot `4.6` features. Both `validate.yml` and
-`export.yml` install Godot `4.6.2-stable`. Use that version for local builds
-and tests to match CI.
+`project.godot` declares Godot `4.6` features. `validate.yml` installs
+`4.6.2-stable`; `export.yml` passes `4.6.2` to
+`chickensoft-games/setup-godot@v2`. Use Godot 4.6.2 locally for builds and
+tests to match CI.

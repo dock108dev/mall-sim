@@ -10,6 +10,9 @@ extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 const MIN_SIGN_HEIGHT: float = 2.0
+const DAY_ONE_SIGN_COLOR: Color = Color(1, 0.92, 0.55, 1)
+const DAY_ONE_SIGN_OUTLINE: Color = Color(0.05, 0.05, 0.05, 1)
+const MAX_OVERHEAD_SIGN_HEIGHT: float = 3.15
 
 var _root: Node3D = null
 
@@ -111,6 +114,8 @@ func test_wall_mounted_zone_signs_clear_slot_height() -> void:
 		"Checkout/Register/CheckoutSign",
 		"InteriorSignage/StoreNameBanner",
 		"InteriorSignage/GamesSign",
+		"ZoneLabels/CloseDayLabel",
+		"ZoneLabels/UsedConsolesLabel",
 	]
 	for path: String in paths:
 		var sign: Label3D = _root.get_node_or_null(path) as Label3D
@@ -124,6 +129,138 @@ func test_wall_mounted_zone_signs_clear_slot_height() -> void:
 				+ "interactable slot zones (slots top at Y≈1.6)"
 			) % [path, y, MIN_SIGN_HEIGHT],
 		)
+
+
+func test_day_one_signs_share_visual_vocabulary() -> void:
+	var paths: Array[String] = [
+		"Checkout/Register/CheckoutSign",
+		"InteriorSignage/StoreNameBanner",
+		"InteriorSignage/GamesSign",
+		"ZoneLabels/ShelvesLabel",
+		"ZoneLabels/CheckoutLabel",
+		"ZoneLabels/BackroomLabel",
+		"ZoneLabels/CloseDayLabel",
+		"ZoneLabels/UsedConsolesLabel",
+		"BetaBackroomPickup/StockBoxLabel",
+	]
+	for path: String in paths:
+		var sign: Label3D = _find_visible_label(path, path)
+		if sign == null:
+			continue
+		assert_eq(
+			sign.modulate,
+			DAY_ONE_SIGN_COLOR,
+			"%s must use the shared warm Day-1 sign text color" % path,
+		)
+		assert_eq(
+			sign.outline_modulate,
+			DAY_ONE_SIGN_OUTLINE,
+			"%s must use the shared dark outline for contrast" % path,
+		)
+		assert_gte(
+			sign.outline_size,
+			6,
+			"%s must carry the shared high-contrast outline treatment" % path,
+		)
+		assert_false(
+			sign.shaded,
+			"%s must stay unshaded so the sign remains legible in first person"
+			% path,
+		)
+
+
+func test_day_one_signs_have_physical_backing_panels() -> void:
+	var pairs: Dictionary = {
+		"Checkout/Register/CheckoutSign": "Checkout/Register/CheckoutSignBacking",
+		"InteriorSignage/StoreNameBanner": "InteriorSignage/StoreNameBacking",
+		"InteriorSignage/GamesSign": "InteriorSignage/GamesBacking",
+		"ZoneLabels/ShelvesLabel": "ZoneLabels/ShelvesBacking",
+		"ZoneLabels/CheckoutLabel": "ZoneLabels/CheckoutBacking",
+		"ZoneLabels/BackroomLabel": "ZoneLabels/BackroomBacking",
+		"ZoneLabels/CloseDayLabel": "ZoneLabels/CloseDayBacking",
+		"ZoneLabels/UsedConsolesLabel": "ZoneLabels/UsedConsolesBacking",
+		"BetaBackroomPickup/StockBoxLabel": "BetaBackroomPickup/StockBox/StockBoxLabelBacking",
+	}
+	var reference_backing: MeshInstance3D = _root.get_node(
+		"ZoneLabels/ShelvesBacking"
+	) as MeshInstance3D
+	var expected_mat: StandardMaterial3D = reference_backing.get_surface_override_material(
+		0
+	) as StandardMaterial3D
+	for label_path: String in pairs.keys():
+		var label: Label3D = _root.get_node_or_null(label_path) as Label3D
+		var backing: MeshInstance3D = _root.get_node_or_null(
+			String(pairs[label_path])
+		) as MeshInstance3D
+		assert_not_null(label, "%s must exist" % label_path)
+		assert_not_null(backing, "%s must have a backing panel" % label_path)
+		if backing == null:
+			continue
+		assert_eq(
+			backing.get_surface_override_material(0),
+			expected_mat,
+			"%s must use the shared Day-1 sign backing material" % label_path,
+		)
+
+
+func test_major_signs_face_approach_without_billboarding() -> void:
+	for path: String in [
+		"Checkout/Register/CheckoutSign",
+		"BetaBackroomPickup/StockBoxLabel",
+		"ZoneLabels/CloseDayLabel",
+		"ZoneLabels/UsedConsolesLabel",
+	]:
+		var sign: Label3D = _root.get_node_or_null(path) as Label3D
+		assert_not_null(sign, "%s must exist" % path)
+		if sign == null:
+			continue
+		assert_ne(
+			sign.billboard,
+			BaseMaterial3D.BILLBOARD_ENABLED,
+			"%s must be a fixed diegetic sign, not always-facing UI" % path,
+		)
+
+
+func test_used_consoles_sign_clears_wall_and_ceiling_paths() -> void:
+	var sign: Label3D = _root.get_node_or_null(
+		"ZoneLabels/UsedConsolesLabel"
+	) as Label3D
+	var backing: MeshInstance3D = _root.get_node_or_null(
+		"ZoneLabels/UsedConsolesBacking"
+	) as MeshInstance3D
+	assert_not_null(sign, "UsedConsolesLabel must exist")
+	assert_not_null(backing, "UsedConsolesBacking must exist")
+	if sign == null or backing == null:
+		return
+	assert_lt(
+		sign.global_position.x,
+		8.0,
+		"UsedConsolesLabel must sit inside the right wall, not clipped by it",
+	)
+	assert_lt(
+		backing.global_position.x,
+		8.0,
+		"UsedConsolesBacking must sit inside the right wall, not clipped by it",
+	)
+	assert_lte(
+		sign.global_position.y,
+		MAX_OVERHEAD_SIGN_HEIGHT,
+		"UsedConsolesLabel must stay below the ceiling/camera path",
+	)
+
+
+func test_day_one_sign_text_is_player_facing_copy() -> void:
+	var forbidden: Array[String] = ["debug", "todo", "placeholder", "node", "marker"]
+	for label: Label3D in _gather_labels(_root):
+		if not label.visible:
+			continue
+		var text: String = label.text.strip_edges().to_lower()
+		for fragment: String in forbidden:
+			assert_false(
+				text.contains(fragment),
+				"Visible sign '%s' must not read like editor/debug copy"
+				% label.text,
+			)
 
 
 # ── Signs must not attach to fixtures slated for removal ────────────────────

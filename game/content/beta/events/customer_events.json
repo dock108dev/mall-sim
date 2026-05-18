@@ -16,7 +16,57 @@
           "effects": {
             "cash": 15,
             "reputation": 2,
-            "manager_trust": 2
+            "manager_trust": 2,
+            "requires_inventory_success": true,
+            "inventory": [
+              {
+                "op": "remove_stock",
+                "from": "shelf_first",
+                "store_id": "retro_games",
+                "selector": {
+                  "definition_id": "neo_ignite_motorway_kings_loose",
+                  "fallback_category": "cartridges",
+                  "prefer_location": "shelf"
+                },
+                "quantity": 1,
+                "reason": "customer_exchange_out"
+              },
+              {
+                "op": "create_item",
+                "store_id": "retro_games",
+                "definition_id": "neo_ignite_motorway_kings_westside_loose",
+                "condition": "near_mint",
+                "location": "backroom",
+                "quantity": 1,
+                "acquired_price": 0,
+                "reason": "customer_exchange_in"
+              }
+            ]
+          },
+          "result": {
+            "headline": "Exchange Accepted",
+            "customer_reaction": "The parent exhales hard, then gives you a tired, grateful nod.",
+            "store_outcome": "You swap the sealed copy for the right platform, keep the sale, and move the line along without drama.",
+            "manager_note": "Vic would rather eat a clean exchange than lose a customer over a box that never got opened.",
+            "tone": "positive",
+            "consequences": [
+              {
+                "label": "Money",
+                "text": "+$15 sale kept at the register."
+              },
+              {
+                "label": "Reputation",
+                "text": "+2 satisfaction from a clean fix."
+              },
+              {
+                "label": "Inventory",
+                "text": "Correct PrismBox copy leaves the shelf; sealed NovaCube copy moves to the back room."
+              },
+              {
+                "label": "Policy",
+                "text": "+2 manager trust for honoring the exchange without drama."
+              }
+            ]
           }
         },
         {
@@ -25,7 +75,69 @@
           "effects": {
             "cash": 18,
             "reputation": 1,
-            "manager_trust": 0
+            "manager_trust": 0,
+            "requires_inventory_success": true,
+            "inventory": [
+              {
+                "op": "remove_stock",
+                "from": "shelf_first",
+                "store_id": "retro_games",
+                "selector": {
+                  "definition_id": "neo_ignite_motorway_kings_loose",
+                  "fallback_category": "cartridges",
+                  "prefer_location": "shelf"
+                },
+                "quantity": 1,
+                "reason": "customer_bundle_game"
+              },
+              {
+                "op": "remove_stock",
+                "from": "shelf_first",
+                "store_id": "retro_games",
+                "selector": {
+                  "definition_id": "neo_ignite_controller_standard",
+                  "fallback_category": "accessories",
+                  "prefer_location": "shelf"
+                },
+                "quantity": 1,
+                "reason": "customer_bundle_controller"
+              },
+              {
+                "op": "create_item",
+                "store_id": "retro_games",
+                "definition_id": "neo_ignite_motorway_kings_westside_loose",
+                "condition": "near_mint",
+                "location": "backroom",
+                "quantity": 1,
+                "acquired_price": 0,
+                "reason": "customer_exchange_in"
+              }
+            ]
+          },
+          "result": {
+            "headline": "Bundle Sold",
+            "customer_reaction": "The parent hesitates at the extra total, then caves when you point out the used controller discount.",
+            "store_outcome": "The register lands a bigger sale, but the exchange feels a little less like help and a little more like pressure.",
+            "manager_note": "Good numbers, softer trust. Vic notices both.",
+            "tone": "mixed",
+            "consequences": [
+              {
+                "label": "Money",
+                "text": "+$18 from the bundle sale."
+              },
+              {
+                "label": "Reputation",
+                "text": "+1 satisfaction, tempered by the pressured upsell."
+              },
+              {
+                "label": "Inventory",
+                "text": "Correct PrismBox copy and discounted used controller leave the store; sealed NovaCube copy moves to the back room."
+              },
+              {
+                "label": "Policy",
+                "text": "No manager-trust change; the sale is allowed, but it reads pushy."
+              }
+            ]
           }
         },
         {
@@ -38,7 +150,39 @@
             "hidden_thread_score": 1,
             "flags": {
               "parent_refused_return": true
-            }
+            },
+            "inventory": [
+              {
+                "op": "no_inventory_change",
+                "reason": "return_refused"
+              }
+            ]
+          },
+          "result": {
+            "headline": "Exchange Refused",
+            "customer_reaction": "The parent goes quiet, gathers the game, and leaves with the receipt crushed in one hand.",
+            "store_outcome": "The register stays unchanged, but the next customer in line watches the whole thing happen.",
+            "manager_note": "Policy protected the drawer. It did not protect the room.",
+            "hidden_hint": "At the door, the parent turns back like they almost want to say something else, then thinks better of it.",
+            "tone": "negative",
+            "consequences": [
+              {
+                "label": "Money",
+                "text": "$0 because no exchange or sale happens."
+              },
+              {
+                "label": "Reputation",
+                "text": "-3 satisfaction after the public refusal."
+              },
+              {
+                "label": "Inventory",
+                "text": "No inventory changes; the customer leaves with the wrong-platform copy."
+              },
+              {
+                "label": "Policy",
+                "text": "-2 manager trust and a visible customer-risk note for the hardline call."
+              }
+            ]
           }
         }
       ]
@@ -58,7 +202,29 @@
           "effects": {
             "cash": -8,
             "reputation": 3,
-            "manager_trust": 1
+            "manager_trust": 1,
+            "inventory": [
+              {
+                "op": "create_item",
+                "store_id": "retro_games",
+                "definition_id": "neo_ignite_shadow_mandate_loose",
+                "condition": "good",
+                "location": "backroom",
+                "quantity": 2,
+                "acquired_price": 8,
+                "reason": "trade_in_full_value"
+              },
+              {
+                "op": "create_item",
+                "store_id": "retro_games",
+                "definition_id": "neo_ignite_biomaze_descent_loose",
+                "condition": "poor",
+                "location": "back_room_damaged_bin",
+                "quantity": 1,
+                "acquired_price": 8,
+                "reason": "trade_in_damaged_disc"
+              }
+            ]
           }
         },
         {
@@ -67,7 +233,29 @@
           "effects": {
             "cash": 0,
             "reputation": 1,
-            "manager_trust": 2
+            "manager_trust": 2,
+            "inventory": [
+              {
+                "op": "create_item",
+                "store_id": "retro_games",
+                "definition_id": "neo_ignite_shadow_mandate_loose",
+                "condition": "good",
+                "location": "backroom",
+                "quantity": 2,
+                "acquired_price": 6,
+                "reason": "trade_in_partial_value"
+              },
+              {
+                "op": "create_item",
+                "store_id": "retro_games",
+                "definition_id": "neo_ignite_biomaze_descent_loose",
+                "condition": "poor",
+                "location": "back_room_damaged_bin",
+                "quantity": 1,
+                "acquired_price": 2,
+                "reason": "trade_in_damaged_disc"
+              }
+            ]
           }
         },
         {
@@ -76,7 +264,23 @@
           "effects": {
             "cash": 4,
             "reputation": -2,
-            "manager_trust": 1
+            "manager_trust": 1,
+            "inventory": [
+              {
+                "op": "create_item",
+                "store_id": "retro_games",
+                "definition_id": "neo_ignite_shadow_mandate_loose",
+                "condition": "good",
+                "location": "backroom",
+                "quantity": 2,
+                "acquired_price": 4,
+                "reason": "trade_in_policy_accept"
+              },
+              {
+                "op": "no_inventory_change",
+                "reason": "scratched_disc_declined"
+              }
+            ]
           }
         }
       ]

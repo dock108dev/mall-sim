@@ -126,6 +126,47 @@ func test_new_game_and_load_game_share_gameplay_scene_path() -> void:
 	)
 
 
+func test_default_new_game_store_scene_loads_beta_entry_nodes() -> void:
+	assert_eq(
+		GameManager.DEFAULT_STARTING_STORE,
+		&"retro_games",
+		"Default new-game store must be the beta store"
+	)
+	var scene_path: String = "res://game/scenes/stores/retro_games.tscn"
+	assert_true(
+		scene_path.ends_with("retro_games.tscn"),
+		"Default new-game store must resolve to the beta store scene"
+	)
+	var scene: PackedScene = load(scene_path) as PackedScene
+	assert_not_null(scene, "Default new-game store scene must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	assert_not_null(root, "Default new-game store must instantiate as Node3D")
+	if root == null:
+		return
+	add_child(root)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	assert_not_null(
+		root.get_node_or_null("BetaDayOneController"),
+		"Default store boot must include the beta Day 1 controller"
+	)
+	assert_not_null(
+		root.get_node_or_null("PlayerEntrySpawn"),
+		"Default store boot must include the first-person spawn marker"
+	)
+	var controller: Node = root.get_node_or_null("BetaDayOneController")
+	if controller != null:
+		assert_eq(
+			String(controller.call("current_stage")),
+			"talk_to_customer",
+			"Default beta store boot must start on the customer beat"
+		)
+	root.free()
+
+
 ## Objective rail: ObjectiveDirector emits objective_changed when day_started fires.
 ## bootstrap_new_game_state emits day_started(1) during apply_pending_session_state,
 ## guaranteeing the rail has a payload before gameplay_ready.
@@ -178,17 +219,13 @@ func test_start_game_session_negative_slot_routes_to_hub() -> void:
 	)
 
 
-## Main menu delegates positive slot to load_game, also landing on mall_hub.
-func test_start_game_session_with_slot_routes_to_hub() -> void:
+## Main menu does not route load slots while beta load is unavailable.
+func test_start_game_session_with_slot_does_not_route_to_hub() -> void:
 	var menu: Control = load("res://game/scenes/ui/main_menu.gd").new()
 	menu._start_game_session(2)
 	menu.free()
 
 	assert_eq(
-		_fake_transition.requested_paths.size(), 1,
-		"_start_game_session(slot) must trigger a scene transition"
-	)
-	assert_true(
-		_fake_transition.requested_paths[0].ends_with("gameplay_shell.tscn"),
-		"Continue from menu must also land on gameplay_shell.tscn"
+		_fake_transition.requested_paths.size(), 0,
+		"_start_game_session(slot) must not route while beta load is unavailable"
 	)

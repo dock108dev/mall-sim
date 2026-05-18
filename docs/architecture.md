@@ -1,4 +1,4 @@
-# Architecture — Mallcore Sim
+# Architecture
 
 ## Boot Flow
 

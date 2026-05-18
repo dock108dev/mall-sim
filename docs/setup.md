@@ -6,9 +6,9 @@
 - Bash for the helper scripts and test runner.
 - No external package manager is required for gameplay code.
 
-`project.godot` declares Godot `4.6` project features. Both the validate and
-export CI workflows install Godot `4.6.2-stable`. Run local builds and tests
-with the same version.
+`project.godot` declares Godot `4.6` project features. Validation CI installs
+Godot `4.6.2-stable`; export CI installs Godot `4.6.2` plus export templates.
+Use Godot 4.6.2 locally for parity.
 
 ## Open the project
 

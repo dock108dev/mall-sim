@@ -133,6 +133,8 @@ func _reapply_styling_from_hovered_target() -> void:
 	var ray: Node = get_tree().get_first_node_in_group(&"interaction_ray")
 	if ray == null or not ray.has_method("get_hovered_target"):
 		return
+	if ray.has_method("refresh_hovered_target_state"):
+		ray.refresh_hovered_target_state()
 	var target: Interactable = ray.get_hovered_target()
 	if target == null or not is_instance_valid(target):
 		return

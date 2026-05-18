@@ -140,10 +140,6 @@ func _physics_process(delta: float) -> void:
 	match current_state:
 		State.WALKING:
 			_process_walking(delta)
-		State.IDLE_AT_REGISTER:
-			_process_idle_at_register(delta)
-		State.PROCESSING_CUSTOMER:
-			_process_processing_customer(delta)
 		State.IDLE_IN_BACKROOM:
 			_process_idle_in_backroom(delta)
 		State.WALK_TO_SHELF:
@@ -174,14 +170,6 @@ func _on_arrival_at_role_marker() -> void:
 		StaffDefinition.StaffRole.GREETER:
 			_transition_to(State.IDLE_AT_ENTRANCE)
 			_play_animation("idle_stand")
-
-
-func _process_idle_at_register(_delta: float) -> void:
-	pass
-
-
-func _process_processing_customer(_delta: float) -> void:
-	pass
 
 
 func _process_idle_in_backroom(delta: float) -> void:

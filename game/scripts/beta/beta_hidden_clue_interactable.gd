@@ -1,5 +1,5 @@
 class_name BetaHiddenClueInteractable
-extends Interactable
+extends BetaDayOneInteractableBase
 
 const CLUE_ID: StringName = &"day01_backroom_modded_console_hint"
 
@@ -19,11 +19,6 @@ func _ready() -> void:
 
 
 func can_interact(_actor: Node = null) -> bool:
-	# The clue is part of the Day-1 chain — gating fires it only when the
-	# stage points here, matching every other beta interactable. Outside
-	# that stage, the clue still has its own logging path inside the
-	# controller (mark_hidden_thread_signal) but the prompt is muted via
-	# the disabled-state HUD.
 	var controller: BetaDayOneController = _controller()
 	if controller == null:
 		return false
@@ -33,7 +28,7 @@ func can_interact(_actor: Node = null) -> bool:
 func get_disabled_reason(_actor: Node = null) -> String:
 	var controller: BetaDayOneController = _controller()
 	if controller == null:
-		return "Clue not available."
+		return ""
 	return controller.hidden_clue_disabled_reason()
 
 
@@ -49,13 +44,3 @@ func interact(by: Node = null) -> void:
 	get_tree().call_group(
 		"beta_day_one_controller", "on_beta_hidden_clue_interacted"
 	)
-
-
-func _controller() -> BetaDayOneController:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var node: Node = tree.get_first_node_in_group("beta_day_one_controller")
-	if node is BetaDayOneController:
-		return node as BetaDayOneController
-	return null

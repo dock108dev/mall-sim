@@ -6,6 +6,7 @@ const INPUT_MODE_GAMEPLAY: int = 0
 const INPUT_MODE_DECISION_CARD: int = 1
 const INPUT_MODE_PAUSE_MENU: int = 2
 const INPUT_MODE_DAY_SUMMARY: int = 3
+const INPUT_MODE_CUSTOMER_RESULT: int = 4
 ## Fixed daily rent for the beta loop. Surfaced on the day-summary panel
 ## under the Money section so the player sees today's sales offset by the
 ## day's operating cost. Constant for the beta — a future tuning pass can
@@ -23,8 +24,8 @@ var reputation: int = 0
 var daily_reputation_delta: int = 0
 ## Per-day cash delta accumulated by `apply_decision_effect`. Reset on
 ## `advance_day` / `reset_new_run`. Read by `end_day()` so the day-summary
-## panel can render Starting Cash / Sales Today / Ending Cash from a
-## single source of truth without storing a separate starting-cash field.
+## panel can render Starting Cash / Sales Today / Ending Cash from the
+## EconomySystem-visible baseline instead of treating beta deltas as a wallet.
 var daily_cash_delta: int = 0
 var manager_trust: int = 0
 var hidden_thread_score: int = 0
@@ -79,11 +80,9 @@ func apply_decision_effect(
 	daily_cash_delta += cash_delta
 	# Mirror the cash delta into EconomySystem so the HUD's existing
 	# get_cash() pipeline stays the single visible source of truth.
-	# `economy == null` is a documented test seam (§EH-10 pattern):
-	# `test_beta_run_state_cash_delta.gd` calls this directly on the
-	# autoload without a GameWorld in the tree, so EconomySystem isn't
-	# initialized. Production beta path always runs after Tier-1 init.
-	# See §EH-25.
+		# `economy == null` is a documented test/headless seam (§EH-10
+		# pattern): callers can exercise the beta ledger without a full
+		# GameWorld in the tree. Production beta path runs after Tier-1 init.
 	if cash_delta != 0:
 		var economy: EconomySystem = GameManager.get_economy_system()
 		if economy != null:
@@ -115,17 +114,33 @@ func mark_hidden_thread_signal(signal_id: StringName) -> void:
 
 
 func end_day() -> Dictionary:
+	var ending_cash: int = _current_visible_cash()
+	var starting_cash: int = ending_cash - daily_cash_delta
 	return {
 		"day": day,
-		"cash": cash,
+		"cash": ending_cash,
+		"ending_cash": ending_cash,
 		"cash_delta": daily_cash_delta,
-		"starting_cash": cash - daily_cash_delta,
+		"starting_cash": starting_cash,
 		"reputation": reputation,
 		"reputation_delta": daily_reputation_delta,
 		"manager_trust": manager_trust,
 		"hidden_thread_score": hidden_thread_score,
 		"hidden_thread_note": _hidden_thread_note(),
 	}
+
+
+## Summary accounting contract:
+## ending_cash = round(EconomySystem.get_cash()) when the economy exists.
+## starting_cash = ending_cash - daily_cash_delta.
+## `cash` remains in the payload as the legacy ending-cash key expected by
+## existing summary panels; the `cash` field on this autoload is only the
+## beta delta ledger and a headless-test fallback.
+func _current_visible_cash() -> int:
+	var economy: EconomySystem = GameManager.get_economy_system()
+	if economy == null:
+		return cash
+	return int(round(economy.get_cash()))
 
 
 func advance_day() -> void:

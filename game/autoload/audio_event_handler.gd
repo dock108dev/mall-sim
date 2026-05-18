@@ -2,7 +2,12 @@
 extends Node
 
 
+const _BLOCKED_INTERACTION_COOLDOWN_MS: int = 350
+const _OBJECTIVE_COMPLETION_COOLDOWN_MS: int = 350
+
 var _audio: Node
+var _last_blocked_interaction_msec: int = -_BLOCKED_INTERACTION_COOLDOWN_MS
+var _last_objective_completion_msec: int = -_OBJECTIVE_COMPLETION_COOLDOWN_MS
 
 
 func initialize(audio_manager: Node) -> void:
@@ -28,12 +33,20 @@ func _connect_sfx_signals() -> void:
 	EventBus.fixture_placement_invalid.connect(_on_fixture_placement_invalid)
 	EventBus.refurbishment_started.connect(_on_refurbishment_started)
 	EventBus.refurbishment_completed.connect(_on_refurbishment_completed)
+	EventBus.customer_interacted.connect(_on_customer_interacted)
+	EventBus.beta_backroom_count_changed.connect(_on_beta_backroom_count_changed)
+	EventBus.beta_shelf_count_changed.connect(_on_beta_shelf_count_changed)
+	EventBus.beta_hidden_clue_inspected.connect(_on_beta_hidden_clue_inspected)
+	EventBus.objective_completed.connect(_on_objective_completed)
+	EventBus.interactable_focused_disabled.connect(_on_interactable_focused_disabled)
+	EventBus.modal_opened.connect(_on_modal_opened)
+	EventBus.modal_closed.connect(_on_modal_closed)
+	EventBus.day_close_requested.connect(_on_day_close_requested)
+	EventBus.day_close_confirmed.connect(_on_day_close_confirmed)
 
 
 func _connect_state_signals() -> void:
 	EventBus.game_state_changed.connect(_on_game_state_changed)
-	EventBus.store_entered.connect(_on_store_entered)
-	EventBus.store_exited.connect(_on_store_exited)
 	EventBus.storefront_entered.connect(_on_storefront_entered)
 	EventBus.storefront_exited.connect(_on_storefront_exited)
 	EventBus.active_store_changed.connect(_on_active_store_changed)
@@ -65,8 +78,61 @@ func _on_customer_purchased(
 	_audio.play_sfx("purchase_ding")
 
 
+func _on_customer_interacted(_customer: Node) -> void:
+	_audio.play_sfx("ui_click")
+
+
 func _on_item_stocked(_id: String, _shelf: String) -> void:
 	_audio.play_sfx("item_placement")
+
+
+func _on_beta_backroom_count_changed(count: int) -> void:
+	if count > 0:
+		_audio.play_sfx("ui_click")
+
+
+func _on_beta_shelf_count_changed(count: int) -> void:
+	if count > 0:
+		_audio.play_sfx("item_placement")
+
+
+func _on_beta_hidden_clue_inspected(_clue_id: StringName) -> void:
+	_audio.play_sfx("notification_ping")
+
+
+func _on_objective_completed(_objective_id: StringName, _label: String) -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_objective_completion_msec < _OBJECTIVE_COMPLETION_COOLDOWN_MS:
+		return
+	_last_objective_completion_msec = now
+	_audio.play_sfx("notification_ping")
+
+
+func _on_interactable_focused_disabled(reason: String) -> void:
+	var key: String = reason.strip_edges()
+	if key.is_empty():
+		return
+	var now: int = Time.get_ticks_msec()
+	if now - _last_blocked_interaction_msec < _BLOCKED_INTERACTION_COOLDOWN_MS:
+		return
+	_last_blocked_interaction_msec = now
+	_audio.play_sfx("ui_click")
+
+
+func _on_modal_opened(_modal_id: StringName) -> void:
+	_audio.play_sfx("ui_click")
+
+
+func _on_modal_closed(_modal_id: StringName) -> void:
+	_audio.play_sfx("ui_click")
+
+
+func _on_day_close_requested() -> void:
+	_audio.play_sfx("ui_click")
+
+
+func _on_day_close_confirmed() -> void:
+	_audio.play_sfx("notification_ping")
 
 
 func _on_day_started(_day: int) -> void:
@@ -141,19 +207,6 @@ func _on_game_state_changed(_old: int, new_state: int) -> void:
 			_play_store_ambient()
 		GameManager.State.GAME_OVER:
 			_audio.stop_bgm(2.0)
-
-
-func _on_store_entered(_store_id: StringName) -> void:
-	# Store interiors use play_ambient / BGM from storefront + active_store handlers.
-	# enter_zone() is only for hallway-registered zone IDs (see HallwayAmbientZones).
-	pass
-
-
-func _on_store_exited(_store_id: StringName) -> void:
-	# Symmetric to `_on_store_entered`: hallway transitions are driven by
-	# `_on_storefront_exited` and `_on_active_store_changed`, so this handler
-	# is intentionally a claim point with no behavior.
-	pass
 
 
 func _on_storefront_entered(_slot: int, store_id: String) -> void:

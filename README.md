@@ -1,9 +1,10 @@
-# Mallcore Sim
+# Shelf Life / Mallcore Sim
 
-Mallcore Sim is a Godot retail simulator about running specialty stores in a
-2000s-style mall. Gameplay code lives in GDScript, boot-time content is loaded
-from JSON under `game/content/`, tests run through the checked-in GUT addon, and
-export presets are versioned in the repository.
+This repository is a Godot/GDScript retail sim. `project.godot` currently names
+the running project `Shelf Life`, while the checked-in export presets still
+produce `MallcoreSim` desktop artifacts. Boot-time content is loaded from JSON
+under `game/content/`, tests use the checked-in GUT addon, and release exports
+are driven by the versioned Godot export presets and GitHub Actions workflows.
 
 ## Run locally
 
@@ -12,9 +13,7 @@ export presets are versioned in the repository.
 3. Let Godot import project assets.
 4. Run the project with F5.
 
-The configured entry scene is `res://game/scenes/bootstrap/boot.tscn`. Boot
-loads content, validates the registry, loads settings from `user://settings.cfg`,
-initializes audio, and then opens the main menu.
+The configured entry scene is `res://game/scenes/bootstrap/boot.tscn`.
 
 ## Run tests
 
@@ -39,10 +38,9 @@ runs `game/tests/run_tests.gd` when present, writes output to
 - `Linux/X11` -> `exports/linux/MallcoreSim.x86_64`
 
 Tagged GitHub releases (`v*` tags) validate export configuration and publish
-Windows, macOS, and Linux artifacts. The canonical engine version is Godot
-`4.6.2`: `project.godot` declares `4.6` features and both the validate and
-export CI workflows install `4.6.2-stable`. Run local builds and tests with
-the same version.
+Windows, macOS, and Linux artifacts. `project.godot` declares Godot `4.6`
+features; CI uses Godot 4.6.2 builds (`4.6.2-stable` in validation and
+`4.6.2` in the export workflow). Use Godot 4.6.2 locally for parity.
 
 ## Documentation
 
@@ -51,8 +49,7 @@ Supporting project docs live under `docs/`:
 - [Docs Index](docs/index.md)
 - [Setup](docs/setup.md)
 - [Architecture](docs/architecture.md)
-- [Design](docs/design.md)
 - [Content and Data](docs/content-data.md)
 - [Testing](docs/testing.md)
 - [Configuration and Deployment](docs/configuration-deployment.md)
-- [Contributing](docs/contributing.md)
+- [Visual Grammar](docs/style/visual-grammar.md)

@@ -23,6 +23,7 @@ var _toast_message: String = ""
 var _toast_category: StringName = &""
 var _order_failed_reason: String = ""
 var _order_delivered_count: int = 0
+var _notification_count: int = 0
 
 
 func before_each() -> void:
@@ -32,6 +33,7 @@ func before_each() -> void:
 	_toast_category = &""
 	_order_failed_reason = ""
 	_order_delivered_count = 0
+	_notification_count = 0
 
 	ContentRegistry.clear_for_testing()
 	_saved_data_loader = GameManager.data_loader
@@ -63,6 +65,7 @@ func before_each() -> void:
 
 	EventBus.order_delivered.connect(_on_order_delivered)
 	EventBus.toast_requested.connect(_on_toast_requested)
+	EventBus.notification_requested.connect(_on_notification_requested)
 	EventBus.order_failed.connect(_on_order_failed)
 
 
@@ -71,6 +74,8 @@ func after_each() -> void:
 		EventBus.order_delivered.disconnect(_on_order_delivered)
 	if EventBus.toast_requested.is_connected(_on_toast_requested):
 		EventBus.toast_requested.disconnect(_on_toast_requested)
+	if EventBus.notification_requested.is_connected(_on_notification_requested):
+		EventBus.notification_requested.disconnect(_on_notification_requested)
 	if EventBus.order_failed.is_connected(_on_order_failed):
 		EventBus.order_failed.disconnect(_on_order_failed)
 	GameManager.data_loader = _saved_data_loader
@@ -90,6 +95,10 @@ func _on_toast_requested(
 ) -> void:
 	_toast_message = message
 	_toast_category = category
+
+
+func _on_notification_requested(_message: String) -> void:
+	_notification_count += 1
 
 
 func _on_order_failed(reason: String) -> void:
@@ -234,6 +243,20 @@ func test_lifecycle_toast_category_is_system() -> void:
 		_toast_category,
 		&"system",
 		"toast_requested uses category 'system' for order deliveries"
+	)
+
+
+func test_lifecycle_delivery_does_not_emit_legacy_notification() -> void:
+	var item: ItemDefinition = _get_basic_item()
+	if not item:
+		pending("DataLoader or basic-tier retro_games items not available")
+		return
+	_order_system.place_order(STORE_ID, BASIC_TIER, StringName(item.id), ORDER_QTY)
+	for _i: int in range(BASIC_DELIVERY_DAYS):
+		_time_system.advance_to_next_day()
+	assert_eq(
+		_notification_count, 0,
+		"Order delivery must use the toast lane without a duplicate legacy notification"
 	)
 
 

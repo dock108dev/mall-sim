@@ -19,21 +19,41 @@
 extends GutTest
 
 const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
+const HUD_SCENE_PATH: String = "res://game/scenes/ui/hud.tscn"
+const _DAY_ONE_UNLOCK_IDS: Array[StringName] = [
+	&"employee_register_access",
+	&"employee_stocking_trained",
+	&"employee_closing_certified",
+	&"extended_hours_unlock",
+]
 # Maximum allowed offset between an Interactable's authored origin and its
 # parent Node3D origin. Anything past this is treated as visible-vs-trigger
 # drift, which the prompt-alignment fix is supposed to eliminate.
 const _ALIGNMENT_THRESHOLD_M: float = 0.05
 
 var _root: Node3D = null
+var _saved_state: GameManager.State
+var _saved_current_day: int
+var _saved_tier: StringName
+var _toast_with_id_emissions: Array = []
 
 
 func before_each() -> void:
+	_saved_state = GameManager.current_state
+	_saved_current_day = GameManager.get_current_day()
+	_saved_tier = DifficultySystemSingleton.get_current_tier_id()
+	DifficultySystemSingleton.set_tier(&"normal")
+	GameManager.set_current_day(1)
+	_register_day_one_unlock_entries()
+	UnlockSystemSingleton.initialize()
 	# Reset InputFocus and ModalQueue between tests so a leaked frame /
-	# active-queue entry from a prior test (e.g. a freed summary panel
-	# whose `_exit_tree` auto-popped but ran after this test's scene was
-	# already mid-load) doesn't bleed into the assertions below.
+		# active-queue entry from a prior test (e.g. a freed summary panel
+		# whose `_exit_tree` auto-popped but ran after this test's scene was
+		# already mid-load) doesn't bleed into the assertions below.
 	InputFocus._reset_for_tests()
 	ModalQueue._reset_for_tests()
+	_toast_with_id_emissions.clear()
+	EventBus.toast_requested_with_id.connect(_on_toast_requested_with_id)
 	var scene: PackedScene = load(SCENE_PATH)
 	assert_not_null(scene, "retro_games.tscn must load for the smoke test")
 	if scene == null:
@@ -57,15 +77,36 @@ func _dismiss_vic_note_for_test() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
 		return
-	var panel: BetaManagerNotePanel = (
-		controller.get("_vic_note_panel") as BetaManagerNotePanel
-	)
+	var panel: BetaManagerNotePanel = controller.get("_vic_note_panel") as BetaManagerNotePanel
 	if panel == null:
 		return
 	if not panel.visible:
 		return
 	panel.close()
 	panel.note_dismissed.emit()
+
+
+func _register_day_one_unlock_entries() -> void:
+	var display_names: Dictionary = {
+		"employee_register_access": "Register Access",
+		"employee_stocking_trained": "Stocking Certification",
+		"employee_closing_certified": "Closing Certification",
+		"extended_hours_unlock": "Extended Business Hours",
+	}
+	for unlock_id: StringName in _DAY_ONE_UNLOCK_IDS:
+		var raw_id: String = String(unlock_id)
+		if ContentRegistry.exists(raw_id):
+			continue
+		(
+			ContentRegistry
+			. register_entry(
+				{
+					"id": raw_id,
+					"display_name": String(display_names.get(raw_id, raw_id)),
+				},
+				"unlock"
+			)
+		)
 
 
 ## Mirrors the runtime "player presses Close Day" path. Calls the panel's
@@ -98,9 +139,25 @@ func after_each() -> void:
 	# has no customer events), which causes the chain-advance early-return
 	# to fire and the chain stage to never leave talk_to_customer.
 	BetaRunState.reset_new_run()
+	UnlockSystemSingleton.initialize()
+	GameManager.current_state = _saved_state
+	GameManager.set_current_day(_saved_current_day)
+	DifficultySystemSingleton.set_tier(_saved_tier)
+	if EventBus.toast_requested_with_id.is_connected(_on_toast_requested_with_id):
+		EventBus.toast_requested_with_id.disconnect(_on_toast_requested_with_id)
+
+
+func _on_toast_requested_with_id(
+	toast_id: StringName,
+	message: String,
+	category: StringName,
+	duration: float
+) -> void:
+	_toast_with_id_emissions.append([toast_id, message, category, duration])
 
 
 # ── Layout: customer is at the register, day-end is on the counter ──────────
+
 
 func test_customer_is_staged_at_the_register() -> void:
 	var customer: Node3D = _root.get_node_or_null("BetaDayOneCustomer") as Node3D
@@ -108,24 +165,21 @@ func test_customer_is_staged_at_the_register() -> void:
 	if customer == null:
 		return
 	var checkout: Node3D = _root.get_node_or_null("Checkout") as Node3D
-	assert_not_null(
-		checkout,
-		"Checkout fixture must be present so the customer can stand at it"
-	)
+	assert_not_null(checkout, "Checkout fixture must be present so the customer can stand at it")
 	if checkout == null:
 		return
 	var horiz_distance: float = (
 		Vector2(customer.global_position.x, customer.global_position.z)
-		.distance_to(Vector2(checkout.global_position.x, checkout.global_position.z))
+		. distance_to(Vector2(checkout.global_position.x, checkout.global_position.z))
 	)
 	# Threshold sized for "at the left end of the counter" placement: the
 	# customer is offset off-axis from the counter so the player has clear
 	# walking space on every side, but still reads as part of the checkout
 	# zone visually.
 	assert_lt(
-		horiz_distance, 2.5,
-		"Customer must be within 2.5 m of the Checkout counter (got %.2f m)"
-		% horiz_distance
+		horiz_distance,
+		2.5,
+		"Customer must be within 2.5 m of the Checkout counter (got %.2f m)" % horiz_distance
 	)
 
 
@@ -139,16 +193,17 @@ func test_day_end_trigger_sits_on_the_register_counter() -> void:
 		return
 	var horiz_distance: float = (
 		Vector2(trigger.global_position.x, trigger.global_position.z)
-		.distance_to(Vector2(checkout.global_position.x, checkout.global_position.z))
+		. distance_to(Vector2(checkout.global_position.x, checkout.global_position.z))
 	)
 	assert_lt(
-		horiz_distance, 0.5,
-		"BetaDayEndTrigger must sit at the Checkout counter (got %.2f m)"
-		% horiz_distance
+		horiz_distance,
+		0.5,
+		"BetaDayEndTrigger must sit at the Checkout counter (got %.2f m)" % horiz_distance
 	)
 
 
 # ── Alignment: every beta Interactable is anchored to its parent root ───────
+
 
 func test_beta_interactables_have_aligned_trigger_volumes() -> void:
 	for parent_name: String in [
@@ -163,24 +218,25 @@ func test_beta_interactables_have_aligned_trigger_volumes() -> void:
 		if parent == null:
 			continue
 		var interactable: Node3D = parent.get_node_or_null("Interactable") as Node3D
-		assert_not_null(
-			interactable, "%s must own an Interactable child" % parent_name
-		)
+		assert_not_null(interactable, "%s must own an Interactable child" % parent_name)
 		if interactable == null:
 			continue
-		var drift: float = parent.global_position.distance_to(
-			interactable.global_position
-		)
+		var drift: float = parent.global_position.distance_to(interactable.global_position)
 		assert_lt(
-			drift, _ALIGNMENT_THRESHOLD_M,
+			drift,
+			_ALIGNMENT_THRESHOLD_M,
 			(
-				"%s/Interactable must share its parent's world position (drift "
-				+ "%.3f m exceeds %.2f m threshold)"
-			) % [parent_name, drift, _ALIGNMENT_THRESHOLD_M]
+				(
+					"%s/Interactable must share its parent's world position (drift "
+					+ "%.3f m exceeds %.2f m threshold)"
+				)
+				% [parent_name, drift, _ALIGNMENT_THRESHOLD_M]
+			)
 		)
 
 
 # ── Stage gating: only the active stage's target is enabled ─────────────────
+
 
 func test_stage_talk_to_customer_enables_only_the_customer() -> void:
 	# At day start the customer is the active beat. The console-stack
@@ -189,9 +245,97 @@ func test_stage_talk_to_customer_enables_only_the_customer() -> void:
 	# so the helper filters it out and we still expect a singleton list.
 	var enabled: PackedStringArray = _stage_critical_path_targets()
 	assert_eq(
-		Array(enabled), ["BetaDayOneCustomer"],
+		Array(enabled),
+		["BetaDayOneCustomer"],
 		"On day start, only the customer must be the active critical-path beat"
 	)
+
+
+func test_day_one_start_emits_opening_toast() -> void:
+	var found: bool = false
+	for params: Array in _toast_with_id_emissions:
+		if params.size() < 4:
+			continue
+		if params[0] != &"beta_day1_started":
+			continue
+		var message: String = String(params[1])
+		found = (
+			message.contains("Day 1 started")
+			and message.contains("first customer")
+			and message.contains("register")
+			and params[2] == &"info"
+			and float(params[3]) > 0.0
+		)
+		if found:
+			break
+	assert_true(
+		found,
+		"Day 1 start must emit a toast that points to the first customer/register beat"
+	)
+
+
+func test_customer_choice_opens_result_before_next_stage() -> void:
+	var controller: Node = _beta_controller()
+	assert_not_null(controller)
+	if controller == null:
+		return
+
+	controller.on_beta_customer_interacted()
+	await get_tree().process_frame
+	var decision: BetaDecisionCardPanel = controller.get("_decision_panel") as BetaDecisionCardPanel
+	assert_not_null(decision)
+	if decision == null:
+		return
+	var buttons: Array = decision.get("_choice_buttons") as Array
+	assert_gt(buttons.size(), 0, "Decision card must render the customer choices")
+	(buttons[0] as Button).pressed.emit()
+	await get_tree().process_frame
+
+	var result: ModalPanel = controller.get("_customer_result_panel") as ModalPanel
+	assert_not_null(result)
+	if result == null:
+		return
+	assert_true(result.visible, "Customer result must pause after the choice")
+	assert_eq(BetaRunState.input_mode, BetaRunState.INPUT_MODE_CUSTOMER_RESULT)
+	assert_eq(
+		controller.current_stage(),
+		controller.STAGE_TALK_TO_CUSTOMER,
+		"Customer result must not advance the objective until Continue"
+	)
+	assert_false(
+		bool(controller.is_objective_completed(&"talk_to_customer")),
+		"Customer objective must wait for result acknowledgement"
+	)
+	var rows: VBoxContainer = result.get("_consequences_box") as VBoxContainer
+	assert_not_null(rows)
+	if rows != null:
+		assert_eq(rows.get_child_count(), 4)
+
+	var continue_button: Button = result.get("_continue_button") as Button
+	assert_not_null(continue_button)
+	if continue_button == null:
+		return
+	watch_signals(EventBus)
+	continue_button.pressed.emit()
+	await get_tree().process_frame
+
+	assert_false(result.visible)
+	assert_signal_not_emitted(
+		EventBus, "item_sold", "Missing real stock must not emit a false item_sold signal"
+	)
+	assert_signal_not_emitted(
+		EventBus,
+		"customer_purchased",
+		"Missing real stock must not emit a false customer_purchased signal"
+	)
+	assert_eq(BetaRunState.cash, 0, "Missing real stock must not book positive sale cash")
+	assert_eq(BetaRunState.input_mode, BetaRunState.INPUT_MODE_GAMEPLAY)
+	assert_eq(
+		Array(_stage_critical_path_targets()),
+		["BetaBackroomPickup"],
+		"Continue must return control on the next Day 1 objective"
+	)
+	assert_true(bool(controller.is_objective_completed(&"talk_to_customer")))
 
 
 func test_chain_walks_customer_then_back_room_then_stock_then_close() -> void:
@@ -206,27 +350,49 @@ func test_chain_walks_customer_then_back_room_then_stock_then_close() -> void:
 	assert_not_null(controller)
 	if controller == null:
 		return
+	assert_false(
+		UnlockSystemSingleton.is_unlocked(&"employee_register_access"),
+		"Register access must not be pre-granted at day start"
+	)
+	assert_false(
+		UnlockSystemSingleton.is_unlocked(&"employee_stocking_trained"),
+		"Stocking certification must not be pre-granted at day start"
+	)
 
 	# Customer step → completes talk_to_customer, advances to BACK_ROOM_INVENTORY.
 	controller._on_choice_selected(&"clean_exchange", {})
 	await get_tree().process_frame
 	assert_eq(
-		Array(_stage_critical_path_targets()), ["BetaBackroomPickup"],
+		Array(_stage_critical_path_targets()),
+		["BetaBackroomPickup"],
 		"After resolving the customer, the back-room beat must be active"
 	)
 	assert_true(
 		bool(controller.is_objective_completed(&"talk_to_customer")),
 		"talk_to_customer must be marked complete"
 	)
+	assert_true(
+		UnlockSystemSingleton.is_unlocked(&"employee_register_access"),
+		"Customer/register resolution must grant register access"
+	)
+	assert_false(
+		UnlockSystemSingleton.is_unlocked(&"employee_stocking_trained"),
+		"Customer/register resolution must not grant stocking certification"
+	)
 
 	# Back-room step → completes back_room_inventory, advances to STOCK_SHELF.
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
 	assert_eq(
-		Array(_stage_critical_path_targets()), ["BetaRestockShelf"],
+		Array(_stage_critical_path_targets()),
+		["BetaRestockShelf"],
 		"After the back-room check, the stock-shelf beat must be active"
 	)
 	assert_true(bool(controller.is_objective_completed(&"back_room_inventory")))
+	assert_false(
+		UnlockSystemSingleton.is_unlocked(&"employee_stocking_trained"),
+		"Inventory check must not grant stocking certification"
+	)
 
 	# Stock step → completes stock_shelf, advances to END_DAY. In the test
 	# environment there is no TimeSystem, so the auto-jump-to-close-time
@@ -237,13 +403,78 @@ func test_chain_walks_customer_then_back_room_then_stock_then_close() -> void:
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	assert_eq(
-		Array(_stage_critical_path_targets()), ["BetaDayEndTrigger"],
+		Array(_stage_critical_path_targets()),
+		["BetaDayEndTrigger"],
 		"After stocking the shelf, the day-end trigger must be active"
 	)
 	assert_true(bool(controller.is_objective_completed(&"stock_shelf")))
+	assert_true(
+		UnlockSystemSingleton.is_unlocked(&"employee_stocking_trained"),
+		"Shelf interaction must grant stocking certification after it succeeds"
+	)
 	assert_eq(
-		String(controller.get("_stage")), "end_day",
+		String(controller.get("_stage")),
+		"end_day",
 		"Stage must end at STAGE_END_DAY after all required objectives"
+	)
+
+
+func test_pregranted_unlocks_do_not_skip_day_one_objectives() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	UnlockSystemSingleton.grant_unlock(&"employee_register_access")
+	UnlockSystemSingleton.grant_unlock(&"employee_stocking_trained")
+	UnlockSystemSingleton.grant_unlock(&"employee_closing_certified")
+	controller._apply_objective_gating()
+
+	assert_eq(
+		String(controller.get("_stage")),
+		"talk_to_customer",
+		"Pregranted employee unlocks must not advance the Day 1 stage"
+	)
+	assert_eq(
+		Array(_stage_critical_path_targets()),
+		["BetaDayOneCustomer"],
+		"Pregranted employee unlocks must not enable later Day 1 targets"
+	)
+	assert_false(
+		bool(controller.can_interact_day_end()),
+		"Pregranted closing certification must not unlock the Day 1 close trigger"
+	)
+
+
+func test_day_one_unlock_grants_emit_unlock_toasts() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	watch_signals(EventBus)
+
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	controller._on_day_close_confirmed()
+	await get_tree().process_frame
+
+	var emissions: Array = get_signal_parameters_all(EventBus, "toast_requested_with_id")
+	assert_true(
+		_toast_id_seen(emissions, &"unlock_employee_register_access"),
+		"Register access grant must emit an unlock toast with a matching id"
+	)
+	assert_true(
+		_toast_id_seen(emissions, &"unlock_employee_stocking_trained"),
+		"Stocking certification grant must emit an unlock toast with a matching id"
+	)
+	assert_true(
+		_toast_id_seen(emissions, &"unlock_employee_closing_certified"),
+		"Closing certification grant must emit an unlock toast with a matching id"
+	)
+	assert_false(
+		_toast_id_seen(emissions, &"unlock_extended_hours_unlock"),
+		"Day 1 must not emit an extended-hours unlock toast"
 	)
 
 
@@ -259,7 +490,8 @@ func test_console_stack_is_ambient_flavor_not_a_chain_step() -> void:
 	controller.on_beta_hidden_clue_interacted()
 	await get_tree().process_frame
 	assert_eq(
-		String(controller.get("_stage")), pre_stage,
+		String(controller.get("_stage")),
+		pre_stage,
 		"Inspecting the console stack must not advance the chain"
 	)
 	assert_false(
@@ -276,8 +508,214 @@ func test_close_day_is_locked_at_day_start() -> void:
 	var enabled: PackedStringArray = _enabled_beta_critical_path_targets()
 	assert_false(
 		Array(enabled).has("BetaDayEndTrigger"),
-		"Day-end trigger must be disabled at day start (not enabled until "
-		+ "all required objectives complete). Enabled list: %s" % str(enabled)
+		(
+			"Day-end trigger must be disabled at day start (not enabled until "
+			+ "all required objectives complete). Enabled list: %s" % str(enabled)
+		)
+	)
+
+
+func test_beta_prompt_copy_uses_plain_action_language() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	assert_eq(_interaction_label(_beta_interactable("BetaDayOneCustomer")), "Talk to customer")
+	assert_eq(
+		_interaction_label(_beta_interactable("BetaBackroomPickup")), "Check back room inventory"
+	)
+	assert_eq(_interaction_label(_beta_interactable("BetaRestockShelf")), "Stock shelf")
+	assert_eq(_interaction_label(_beta_interactable("BetaDayEndTrigger")), "Close day")
+
+
+func test_future_stage_disabled_reasons_name_next_prerequisite() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	assert_eq(String(controller.day_end_disabled_reason()), "Talk to the customer first.")
+
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	assert_eq(String(controller.day_end_disabled_reason()), "Check the back room first.")
+
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	assert_eq(
+		String(controller.day_end_disabled_reason()), "Stock the Retro Games shelf before closing."
+	)
+
+
+func test_repeated_customer_choice_does_not_double_apply_effects() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var economy: EconomySystem = EconomySystem.new()
+	add_child_autofree(economy)
+	economy.initialize(500.0)
+
+	controller._on_choice_selected(&"upsell_bundle", {"cash": 18})
+	await get_tree().process_frame
+	controller._on_choice_selected(&"upsell_bundle", {"cash": 18})
+	await get_tree().process_frame
+
+	assert_almost_eq(
+		economy.get_cash(),
+		518.0,
+		0.01,
+		"Repeated customer choice dispatch must not credit cash twice"
+	)
+	assert_eq(
+		int(controller.get("_resolved_events_today")),
+		1,
+		"Repeated customer choice dispatch must not count two resolved events"
+	)
+
+
+func test_repeated_backroom_and_restock_presses_are_idempotent() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	assert_eq(
+		String(controller.current_stage()),
+		"stock_shelf",
+		"Repeated back-room presses must leave the chain at the shelf beat"
+	)
+	var completed: Dictionary = controller.get("_completed_objectives") as Dictionary
+	assert_true(completed.has(&"back_room_inventory"))
+	assert_eq(
+		completed.size(), 2, "Repeated back-room presses must not add extra completion entries"
+	)
+
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	assert_eq(
+		String(controller.current_stage()),
+		"end_day",
+		"Repeated shelf presses must leave the chain at close-day"
+	)
+	assert_true(completed.has(&"stock_shelf"))
+	assert_eq(completed.size(), 3, "Repeated shelf presses must not add extra completion entries")
+
+
+func test_repeated_close_day_request_does_not_push_second_modal() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+	var depth_after_first: int = InputFocus.depth()
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+
+	assert_eq(
+		InputFocus.depth(),
+		depth_after_first,
+		"Repeated close-day requests while the modal is open must not push twice"
+	)
+	var close_day_panel: CanvasLayer = controller.get("_close_day_panel") as CanvasLayer
+	if close_day_panel != null:
+		close_day_panel.call("close")
+
+
+func test_fp_close_day_hint_hidden_until_close_day_unlocked() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var scene: PackedScene = load(HUD_SCENE_PATH)
+	assert_not_null(scene, "HUD scene must load")
+	if scene == null:
+		return
+	var hud: CanvasLayer = scene.instantiate() as CanvasLayer
+	add_child_autofree(hud)
+	hud.set_fp_mode(true)
+	var hint: Label = hud.get_node_or_null("FpCloseDayHint") as Label
+	assert_not_null(hint, "FP close-day hint must be created in FP mode")
+	if hint == null:
+		return
+	assert_false(
+		hint.visible, "F4 close-day hint must stay hidden while required objectives remain"
+	)
+
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	hud._refresh_close_day_hint_state()
+
+	assert_true(
+		hint.visible,
+		"F4 close-day hint may appear only after the physical close-day trigger unlocks"
+	)
+
+
+func test_hidden_clue_does_not_expose_active_prompt_during_chain() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var clue: Interactable = _beta_interactable("BetaHiddenClue")
+	assert_not_null(clue, "BetaHiddenClue/Interactable must exist")
+	if clue == null:
+		return
+	assert_false(clue.enabled, "Hidden clue must not steal the customer prompt")
+	assert_false(clue.can_interact(), "Hidden clue must never be an active Day-1 prompt")
+	assert_eq(clue.get_disabled_reason(), "")
+
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	assert_false(clue.enabled, "Hidden clue must not steal the back-room prompt")
+
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	assert_false(clue.enabled, "Hidden clue must not steal the shelf prompt")
+
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	assert_false(clue.enabled, "Hidden clue must not compete with close-day")
+
+
+func test_invalid_objective_target_path_fails_closed_with_diagnostic() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var objectives: Array = controller.get("_objectives") as Array
+	assert_false(objectives.is_empty(), "Pre-condition: objective table exists")
+	if objectives.is_empty():
+		return
+	objectives[0]["target_path"] = "MissingObjectiveTarget/Interactable"
+	controller.set("_stage", BetaDayOneController.STAGE_TALK_TO_CUSTOMER)
+	controller._apply_objective_gating()
+
+	assert_eq(
+		Array(_enabled_beta_critical_path_targets()),
+		[],
+		"Invalid active target path must leave beta critical-path targets disabled"
+	)
+	var indicator: Interactable = _register_status_indicator()
+	assert_not_null(indicator, "Register status indicator precondition")
+	if indicator != null:
+		assert_false(
+			indicator.enabled, "Invalid active target path must not leave passive hints focusable"
+		)
+	var snap: Dictionary = controller.get_state_snapshot()
+	assert_string_contains(
+		String(snap.get("objective_target_diagnostic", "")), "MissingObjectiveTarget/Interactable"
 	)
 
 
@@ -291,7 +729,8 @@ func test_state_snapshot_reports_close_day_blocked_until_chain_done() -> void:
 		"Snapshot must report can_close_day=false at day start"
 	)
 	assert_ne(
-		String(snap.get("close_day_reason", "")), "",
+		String(snap.get("close_day_reason", "")),
+		"",
 		"Snapshot must surface a non-empty close_day_reason while blocked"
 	)
 
@@ -304,13 +743,13 @@ func test_state_snapshot_exposes_stage_and_completed_growing_through_chain() -> 
 
 	var snap_start: Dictionary = controller.get_state_snapshot()
 	assert_eq(
-		String(snap_start.get("stage", "")), String(controller.get("_stage")),
+		String(snap_start.get("stage", "")),
+		String(controller.get("_stage")),
 		"Snapshot stage must match controller._stage as a String"
 	)
 	var completed_start: Dictionary = snap_start.get("completed_objectives", {}) as Dictionary
 	assert_eq(
-		completed_start.size(), 0,
-		"completed_objectives must start empty before any chain step"
+		completed_start.size(), 0, "completed_objectives must start empty before any chain step"
 	)
 
 	controller._on_choice_selected(&"clean_exchange", {})
@@ -329,7 +768,8 @@ func test_state_snapshot_exposes_stage_and_completed_growing_through_chain() -> 
 		controller.get_state_snapshot().get("completed_objectives", {}) as Dictionary
 	)
 	assert_eq(
-		completed_after_backroom.size(), completed_after_customer.size() + 1,
+		completed_after_backroom.size(),
+		completed_after_customer.size() + 1,
 		"completed_objectives must grow by one after the back-room step"
 	)
 	assert_true(completed_after_backroom.has(&"back_room_inventory"))
@@ -337,16 +777,16 @@ func test_state_snapshot_exposes_stage_and_completed_growing_through_chain() -> 
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	var snap_end: Dictionary = controller.get_state_snapshot()
-	var completed_after_stock: Dictionary = (
-		snap_end.get("completed_objectives", {}) as Dictionary
-	)
+	var completed_after_stock: Dictionary = snap_end.get("completed_objectives", {}) as Dictionary
 	assert_eq(
-		completed_after_stock.size(), completed_after_backroom.size() + 1,
+		completed_after_stock.size(),
+		completed_after_backroom.size() + 1,
 		"completed_objectives must grow by one after the stock-shelf step"
 	)
 	assert_true(completed_after_stock.has(&"stock_shelf"))
 	assert_eq(
-		String(snap_end.get("stage", "")), "end_day",
+		String(snap_end.get("stage", "")),
+		"end_day",
 		"Snapshot stage must reach end_day after all required objectives complete"
 	)
 
@@ -357,15 +797,14 @@ func test_state_snapshot_mirrors_beta_run_state_fields() -> void:
 		return
 	var snap: Dictionary = controller.get_state_snapshot()
 	assert_eq(
-		int(snap.get("day", -1)), BetaRunState.day,
-		"Snapshot day must mirror BetaRunState.day"
+		int(snap.get("day", -1)), BetaRunState.day, "Snapshot day must mirror BetaRunState.day"
 	)
 	assert_eq(
-		int(snap.get("cash", -1)), BetaRunState.cash,
-		"Snapshot cash must mirror BetaRunState.cash"
+		int(snap.get("cash", -1)), BetaRunState.cash, "Snapshot cash must mirror BetaRunState.cash"
 	)
 	assert_eq(
-		bool(snap.get("carrying_stock", true)), BetaRunState.carrying_stock,
+		bool(snap.get("carrying_stock", true)),
+		BetaRunState.carrying_stock,
 		"Snapshot carrying_stock must mirror BetaRunState.carrying_stock"
 	)
 
@@ -383,16 +822,65 @@ func test_state_snapshot_is_json_serializable() -> void:
 	var encoded: String = JSON.stringify(snap)
 	assert_ne(encoded, "", "Snapshot must JSON-encode to a non-empty string")
 	var parsed: Variant = JSON.parse_string(encoded)
-	assert_true(
-		parsed is Dictionary,
-		"JSON-encoded snapshot must round-trip back to a Dictionary"
-	)
+	assert_true(parsed is Dictionary, "JSON-encoded snapshot must round-trip back to a Dictionary")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
+
 func _beta_controller() -> Node:
 	return get_tree().get_first_node_in_group("beta_day_one_controller")
+
+
+func _beta_interactable(parent_name: String) -> Interactable:
+	if _root == null:
+		return null
+	return _root.get_node_or_null("%s/Interactable" % parent_name) as Interactable
+
+
+func _interaction_label(target: Interactable) -> String:
+	if target == null:
+		return ""
+	var verb: String = target.prompt_text.strip_edges()
+	var target_name: String = target.display_name.strip_edges()
+	if target_name.is_empty():
+		return verb
+	if verb.is_empty():
+		return target_name
+	return "%s %s" % [verb, target_name]
+
+
+func _production_day_cycle_fixture() -> Dictionary:
+	var time := TimeSystem.new()
+	add_child_autofree(time)
+	time.initialize()
+	time.current_day = 1
+
+	var economy := EconomySystem.new()
+	add_child_autofree(economy)
+	economy.initialize(500.0)
+
+	var staff := StaffSystem.new()
+	add_child_autofree(staff)
+
+	var progression := ProgressionSystem.new()
+	add_child_autofree(progression)
+
+	var ending_eval := EndingEvaluatorSystem.new()
+	add_child_autofree(ending_eval)
+	ending_eval.initialize()
+
+	var perf_report := PerformanceReportSystem.new()
+	add_child_autofree(perf_report)
+	perf_report.initialize()
+
+	var day_cycle := DayCycleController.new()
+	add_child_autofree(day_cycle)
+	day_cycle.initialize(time, economy, staff, progression, ending_eval, perf_report)
+	return {
+		"controller": day_cycle,
+		"time": time,
+	}
 
 
 ## GUT's `get_signal_parameters` returns the params of one emission and
@@ -409,6 +897,17 @@ func get_signal_parameters_all(emitter: Object, signal_name: String) -> Array:
 		if params != null:
 			out.append(params)
 	return out
+
+
+func _toast_id_seen(emissions: Array, expected_id: StringName) -> bool:
+	return _signal_first_arg_seen(emissions, expected_id)
+
+
+func _signal_first_arg_seen(emissions: Array, expected_id: StringName) -> bool:
+	for params: Array in emissions:
+		if params.size() > 0 and params[0] == expected_id:
+			return true
+	return false
 
 
 ## Returns the names of the beta day-1 critical-path parents whose
@@ -454,6 +953,7 @@ func _stage_critical_path_targets() -> PackedStringArray:
 # suppress its right-side chip while the player is navigating to the shelf
 # without an interactable in focus.
 
+
 func test_stock_shelf_label_names_the_retro_games_shelf() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -463,15 +963,15 @@ func test_stock_shelf_label_names_the_retro_games_shelf() -> void:
 		if String(entry.get("stage", "")) == "stock_shelf":
 			stock_entry = entry
 			break
-	assert_false(
-		stock_entry.is_empty(),
-		"stock_shelf entry must exist in _OBJECTIVES"
-	)
+	assert_false(stock_entry.is_empty(), "stock_shelf entry must exist in _OBJECTIVES")
 	var label: String = String(stock_entry.get("label", ""))
 	assert_string_contains(
-		label, "Retro Games shelf",
-		"stock_shelf label must name the specific destination "
-		+ "('Retro Games shelf'); got: '%s'" % label
+		label,
+		"Retro Games shelf",
+		(
+			"stock_shelf label must name the specific destination "
+			+ "('Retro Games shelf'); got: '%s'" % label
+		)
 	)
 	assert_false(
 		label.contains("the shelves"),
@@ -483,8 +983,7 @@ func test_carrying_flag_clear_at_day_start() -> void:
 	# Fresh day starts with the carry flag clear so the rail does not
 	# suppress the action chip before the player has done anything.
 	assert_false(
-		BetaRunState.carrying_stock,
-		"BetaRunState.carrying_stock must be false at fresh day start"
+		BetaRunState.carrying_stock, "BetaRunState.carrying_stock must be false at fresh day start"
 	)
 
 
@@ -498,8 +997,7 @@ func test_carrying_flag_set_after_backroom_pickup() -> void:
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
 	assert_true(
-		BetaRunState.carrying_stock,
-		"carrying_stock must flip true after the back-room pickup"
+		BetaRunState.carrying_stock, "carrying_stock must flip true after the back-room pickup"
 	)
 
 
@@ -529,13 +1027,9 @@ func test_stock_box_visually_disappears_after_pickup_fade() -> void:
 	# the visible flag flips. Use a real scene-tree timer so the test
 	# advances tween state on the same beat as runtime gameplay.
 	await get_tree().create_timer(0.6).timeout
+	assert_false(stock_box.visible, "StockBox must be invisible after the pickup fade completes")
 	assert_false(
-		stock_box.visible,
-		"StockBox must be invisible after the pickup fade completes"
-	)
-	assert_false(
-		stock_label.visible,
-		"StockBoxLabel must be invisible after the pickup fade completes"
+		stock_label.visible, "StockBoxLabel must be invisible after the pickup fade completes"
 	)
 
 
@@ -559,7 +1053,8 @@ func test_backroom_pickup_emits_shipment_checked_toast() -> void:
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
 	assert_signal_emitted(
-		EventBus, "toast_requested",
+		EventBus,
+		"toast_requested",
 		"Back-room pickup must emit toast_requested for the player feedback card"
 	)
 	# The toast must name (a) the "Shipment checked" beat phrasing and
@@ -572,24 +1067,22 @@ func test_backroom_pickup_emits_shipment_checked_toast() -> void:
 	# read the const directly through the class symbol instead.
 	var expected_count: int = BetaDayOneController._BACKROOM_DELIVERY_QUANTITY
 	var found_shipment_message: bool = false
-	for params: Array in get_signal_parameters_all(
-		EventBus, "toast_requested"
-	):
+	for params: Array in get_signal_parameters_all(EventBus, "toast_requested"):
 		if params.is_empty():
 			continue
 		var msg: String = String(params[0])
-		if (
-			msg.contains("Shipment checked")
-			and msg.contains(str(expected_count))
-		):
+		if msg.contains("Shipment checked") and msg.contains(str(expected_count)):
 			found_shipment_message = true
 			break
 	assert_true(
 		found_shipment_message,
 		(
-			"toast_requested must include a 'Shipment checked. %d ...' "
-			+ "message naming the runtime delivery quantity"
-		) % expected_count
+			(
+				"toast_requested must include a 'Shipment checked. %d ...' "
+				+ "message naming the runtime delivery quantity"
+			)
+			% expected_count
+		)
 	)
 
 
@@ -608,13 +1101,17 @@ func test_pickup_toast_and_carry_changed_emit_in_same_call() -> void:
 	# `on_beta_backroom_pickup_interacted` before the test returns control
 	# to the scene tree.
 	assert_signal_emitted(
-		EventBus, "toast_requested",
+		EventBus,
+		"toast_requested",
 		"toast_requested must fire synchronously on pickup, not deferred"
 	)
 	assert_signal_emitted(
-		EventBus, "beta_carry_changed",
-		"beta_carry_changed must fire synchronously on pickup so the carry "
-		+ "indicator appears in the same frame as the pickup toast"
+		EventBus,
+		"beta_carry_changed",
+		(
+			"beta_carry_changed must fire synchronously on pickup so the carry "
+			+ "indicator appears in the same frame as the pickup toast"
+		)
 	)
 
 
@@ -626,21 +1123,18 @@ func test_carrying_flag_cleared_after_stocking_shelf() -> void:
 	await get_tree().process_frame
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
-	assert_true(
-		BetaRunState.carrying_stock,
-		"Pre-condition: carrying after backroom pickup"
-	)
+	assert_true(BetaRunState.carrying_stock, "Pre-condition: carrying after backroom pickup")
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	assert_false(
-		BetaRunState.carrying_stock,
-		"carrying_stock must clear after the player stocks the shelf"
+		BetaRunState.carrying_stock, "carrying_stock must clear after the player stocks the shelf"
 	)
 
 
 # ── Today checklist signal contract ────────────────────────────────────────
 # Every chain advance must emit `EventBus.beta_objective_completed(id)` so
 # the BetaRightPanel can flip the matching row to ✓ and collapse it.
+
 
 func test_completing_customer_step_emits_beta_objective_completed() -> void:
 	var controller: Node = _beta_controller()
@@ -650,7 +1144,9 @@ func test_completing_customer_step_emits_beta_objective_completed() -> void:
 	controller._on_choice_selected(&"clean_exchange", {})
 	await get_tree().process_frame
 	assert_signal_emitted_with_parameters(
-		EventBus, "beta_objective_completed", [&"talk_to_customer"],
+		EventBus,
+		"beta_objective_completed",
+		[&"talk_to_customer"],
 		"Customer step completion must emit beta_objective_completed(talk_to_customer)"
 	)
 
@@ -665,7 +1161,9 @@ func test_completing_back_room_step_emits_beta_objective_completed() -> void:
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
 	assert_signal_emitted_with_parameters(
-		EventBus, "beta_objective_completed", [&"back_room_inventory"],
+		EventBus,
+		"beta_objective_completed",
+		[&"back_room_inventory"],
 		"Back-room pickup must emit beta_objective_completed(back_room_inventory)"
 	)
 
@@ -682,7 +1180,9 @@ func test_completing_stock_shelf_step_emits_beta_objective_completed() -> void:
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	assert_signal_emitted_with_parameters(
-		EventBus, "beta_objective_completed", [&"stock_shelf"],
+		EventBus,
+		"beta_objective_completed",
+		[&"stock_shelf"],
 		"Restock interact must emit beta_objective_completed(stock_shelf)"
 	)
 
@@ -708,8 +1208,18 @@ func test_close_day_request_emits_beta_objective_completed() -> void:
 	_press_close_day_confirm(controller)
 	await get_tree().process_frame
 	assert_signal_emitted_with_parameters(
-		EventBus, "beta_objective_completed", [&"close_day"],
+		EventBus,
+		"beta_objective_completed",
+		[&"close_day"],
 		"Close-day confirm must emit beta_objective_completed(close_day)"
+	)
+	assert_true(
+		UnlockSystemSingleton.is_unlocked(&"employee_closing_certified"),
+		"Close-day confirm must grant closing certification"
+	)
+	assert_false(
+		UnlockSystemSingleton.is_unlocked(&"extended_hours_unlock"),
+		"Basic Day 1 completion must not grant extended hours"
 	)
 
 
@@ -719,6 +1229,7 @@ func test_close_day_request_emits_beta_objective_completed() -> void:
 # persistent `notification_requested` HUD label. The persistent rail copy
 # ("Close the day at the register.") is what stays on screen until the
 # player closes out — the toast only needs to land once.
+
 
 func test_entering_end_day_emits_close_time_toast() -> void:
 	var controller: Node = _beta_controller()
@@ -734,13 +1245,12 @@ func test_entering_end_day_emits_close_time_toast() -> void:
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	assert_eq(
-		String(controller.get("_stage")), "end_day",
+		String(controller.get("_stage")),
+		"end_day",
 		"Pre-condition: stage advances to end_day after stocking the shelf"
 	)
 	var found_close_time_toast: bool = false
-	for params: Array in get_signal_parameters_all(
-		EventBus, "toast_requested"
-	):
+	for params: Array in get_signal_parameters_all(EventBus, "toast_requested"):
 		if params.size() < 1:
 			continue
 		var msg: String = String(params[0])
@@ -749,8 +1259,10 @@ func test_entering_end_day_emits_close_time_toast() -> void:
 			break
 	assert_true(
 		found_close_time_toast,
-		"Entering end_day must emit a toast_requested whose message names "
-		+ "'closing time' so the player knows the day's wrap-up is ready."
+		(
+			"Entering end_day must emit a toast_requested whose message names "
+			+ "'closing time' so the player knows the day's wrap-up is ready."
+		)
 	)
 
 
@@ -772,7 +1284,8 @@ func test_objective_rail_uses_specified_copy_for_each_chain_stage() -> void:
 		if not expected.has(stage_id):
 			continue
 		assert_eq(
-			String(entry.get("label", "")), String(expected[stage_id]),
+			String(entry.get("label", "")),
+			String(expected[stage_id]),
 			"Rail label for stage '%s' must match the BRAINDUMP copy" % stage_id
 		)
 
@@ -791,17 +1304,18 @@ func test_current_stage_getter_reports_active_stage() -> void:
 	controller._on_choice_selected(&"clean_exchange", {})
 	await get_tree().process_frame
 	assert_eq(
-		String(controller.current_stage()), "back_room_inventory",
+		String(controller.current_stage()),
+		"back_room_inventory",
 		"current_stage() must reflect the chain advance after the customer beat"
 	)
 
 
-# ── Day-summary continue: close before advance_day ─────────────────────────
+# ── Day-summary continue: close before placeholder ─────────────────────────
 # `_on_summary_continue` must pop CTX_MODAL via `_summary_panel.close()`
-# *before* it calls `BetaRunState.advance_day()` and `_start_day()`. If the
-# pop is deferred (or absent), CTX_MODAL leaks into Day 2 and gameplay
-# input — gated on `InputFocus.current() == CTX_STORE_GAMEPLAY` — stays
-# blocked permanently.
+# *before* it opens the Day 2 placeholder. If the pop is deferred (or absent),
+# the placeholder would stack on top of the summary and leave modal focus
+# ownership ambiguous.
+
 
 func test_summary_continue_pops_modal_focus_before_starting_next_day() -> void:
 	var controller: Node = _beta_controller()
@@ -824,9 +1338,7 @@ func test_summary_continue_pops_modal_focus_before_starting_next_day() -> void:
 	_press_close_day_confirm(controller)
 	await get_tree().process_frame
 
-	var panel: BetaDaySummaryPanel = (
-		controller.get("_summary_panel") as BetaDaySummaryPanel
-	)
+	var panel: BetaDaySummaryPanel = controller.get("_summary_panel") as BetaDaySummaryPanel
 	assert_not_null(panel, "Summary panel must be spawned by the controller")
 	if panel == null:
 		return
@@ -845,22 +1357,72 @@ func test_summary_continue_pops_modal_focus_before_starting_next_day() -> void:
 	# may still be on the stack mid-test).
 	assert_false(
 		bool(panel.get("_focus_pushed")),
-		"_on_summary_continue must pop the panel's CTX_MODAL frame so the "
-		+ "next day starts with gameplay input unblocked"
+		(
+			"_on_summary_continue must pop the panel's CTX_MODAL frame so the "
+			+ "Day 2 placeholder can own modal input cleanly"
+		)
+	)
+	var placeholder: ModalPanel = controller.get("_day_two_placeholder_panel") as ModalPanel
+	assert_not_null(placeholder, "Controller must own a Day 2 placeholder panel")
+	if placeholder == null:
+		return
+	assert_true(
+		bool(placeholder.get("_focus_pushed")),
+		"Day 2 placeholder must own modal focus after Continue"
+	)
+
+
+func test_summary_continue_opens_day2_placeholder_without_starting_gameplay() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+	_press_close_day_confirm(controller)
+	await get_tree().process_frame
+
+	watch_signals(EventBus)
+	controller._on_summary_continue()
+	await get_tree().process_frame
+
+	var placeholder: ModalPanel = controller.get("_day_two_placeholder_panel") as ModalPanel
+	assert_not_null(placeholder, "Continue must open the Day 2 placeholder")
+	if placeholder == null:
+		return
+	assert_true(placeholder.visible, "Day 2 placeholder must be visible after Continue")
+	assert_same(
+		ModalQueue.active_panel(),
+		placeholder,
+		"Continue must route to the placeholder, not Day 2 gameplay"
+	)
+	assert_eq(BetaRunState.day, 2, "Continue still labels the placeholder as Day 2")
+	assert_signal_not_emitted(
+		EventBus,
+		"day_started",
+		"Continue must not emit day_started for unfinished Day 2 gameplay"
+	)
+	assert_ne(
+		String(controller.get("_stage")),
+		"vic_note",
+		"Continue must not enter the Day 2 note/gameplay opener"
 	)
 
 
 # ── Right-panel spawn ───────────────────────────────────────────────────────
+
 
 func test_beta_controller_spawns_right_panel_on_ready() -> void:
 	# The controller's _ensure_panels must add a BetaRightPanel into the UI
 	# tree so the right side has the merged store-stats + today-checklist
 	# surface in place of the suppressed MomentsTray.
 	var panel: Node = get_tree().get_first_node_in_group("beta_right_panel")
-	assert_not_null(
-		panel,
-		"BetaDayOneController must spawn a BetaRightPanel into the UI tree"
-	)
+	assert_not_null(panel, "BetaDayOneController must spawn a BetaRightPanel into the UI tree")
 
 
 ## ── Sale-signal emission contract ──────────────────────────────────────────
@@ -870,6 +1432,7 @@ func test_beta_controller_spawns_right_panel_on_ready() -> void:
 ## controller has to emit those signals itself when the chosen effect carries
 ## a positive cash delta. Refunds and no-sale outcomes (cash_delta ≤ 0) must
 ## not tick the counters.
+
 
 func test_sale_choice_emits_item_sold_with_cash_price() -> void:
 	var controller: Node = _beta_controller()
@@ -881,9 +1444,7 @@ func test_sale_choice_emits_item_sold_with_cash_price() -> void:
 	# 4th positional arg of GUT's assert_signal_emitted_with_parameters is
 	# `index` (int), not a message — passing a string here would crash inside
 	# the signal watcher's `index == -1` comparison.
-	assert_signal_emitted_with_parameters(
-		EventBus, "item_sold", ["used_game", 18.0, "used_games"]
-	)
+	assert_signal_emitted_with_parameters(EventBus, "item_sold", ["used_game", 18.0, "used_games"])
 
 
 func test_sale_choice_emits_customer_purchased_with_cash_price() -> void:
@@ -894,9 +1455,72 @@ func test_sale_choice_emits_customer_purchased_with_cash_price() -> void:
 	controller._on_choice_selected(&"upsell_bundle", {"cash": 18})
 	await get_tree().process_frame
 	assert_signal_emitted_with_parameters(
-		EventBus, "customer_purchased",
-		[&"beta_store", &"used_game", 18.0, &"beta_customer_01"]
+		EventBus,
+		"customer_purchased",
+		[EconomySystem.BETA_COUNTER_ONLY_STORE_ID, &"used_game", 18.0, &"beta_customer_01"]
 	)
+
+
+func test_sale_choice_credits_visible_wallet_once() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var economy: EconomySystem = EconomySystem.new()
+	add_child_autofree(economy)
+	economy.initialize(500.0)
+
+	controller._on_choice_selected(&"upsell_bundle", {"cash": 18})
+	await get_tree().process_frame
+
+	assert_almost_eq(
+		economy.get_cash(),
+		518.0,
+		0.01,
+		"Beta sale choice must credit the EconomySystem wallet exactly once"
+	)
+	var transactions: Array[Dictionary] = economy.transaction_history
+	assert_eq(transactions.size(), 1, "Beta sale choice must create one economy transaction")
+	assert_eq(
+		int(transactions[0].get("day", 0)),
+		1,
+		"Beta sale transaction day must match the visible Day 1 state"
+	)
+
+
+func test_close_day_summary_uses_economy_cash_accounting() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var economy: EconomySystem = EconomySystem.new()
+	add_child_autofree(economy)
+	economy.initialize(500.0)
+
+	controller._on_choice_selected(&"upsell_bundle", {"cash": 18})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+	_press_close_day_confirm(controller)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var summary_panel: BetaDaySummaryPanel = controller.get("_summary_panel") as BetaDaySummaryPanel
+	assert_not_null(summary_panel, "Close-day confirm must create the beta summary panel")
+	if summary_panel == null:
+		return
+	var metrics: RichTextLabel = summary_panel.get("_metrics_label") as RichTextLabel
+	assert_not_null(metrics, "Summary panel must own the money metrics label")
+	if metrics == null:
+		return
+	var text: String = metrics.text
+	assert_string_contains(text, "Starting Cash:[/b] $500")
+	assert_string_contains(text, "Sales:[/b] $18")
+	assert_string_contains(text, "Rent:[/b] -$50")
+	assert_string_contains(text, "Profit:[/b] -$32")
+	assert_string_contains(text, "Ending Cash:[/b] $518")
 
 
 func test_zero_cash_choice_does_not_emit_sale_signals() -> void:
@@ -940,15 +1564,15 @@ func test_disabled_reason_at_stock_shelf_does_not_echo_generic_shelves() -> void
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
 	assert_eq(
-		String(controller.get("_stage")), "stock_shelf",
-		"Pre-condition: stage is stock_shelf"
+		String(controller.get("_stage")), "stock_shelf", "Pre-condition: stage is stock_shelf"
 	)
 	# Asking for the customer beat's disabled reason while in stock_shelf
 	# routes through `_disabled_reason_for_stage` and returns "Working on:
 	# <stock label>". The post-fix copy must name the specific shelf.
 	var reason: String = String(controller.customer_disabled_reason())
 	assert_string_contains(
-		reason, "Retro Games shelf",
+		reason,
+		"Retro Games shelf",
 		"Disabled-reason must name the specific destination; got: '%s'" % reason
 	)
 	assert_false(
@@ -964,27 +1588,23 @@ func test_disabled_reason_at_stock_shelf_does_not_echo_generic_shelves() -> void
 # their stages — the indicator stays empty during STAGE_TALK_TO_CUSTOMER and
 # STAGE_END_DAY so the active interactable's prompt is what the player sees.
 
+
 func _register_status_indicator() -> Interactable:
 	if _root == null:
 		return null
-	return (
-		_root.get_node_or_null("checkout_counter/RegisterStatusIndicator")
-		as Interactable
-	)
+	return _root.get_node_or_null("checkout_counter/RegisterStatusIndicator") as Interactable
 
 
 func test_register_status_indicator_is_authored_under_checkout_counter() -> void:
 	var indicator: Interactable = _register_status_indicator()
 	assert_not_null(
-		indicator,
-		"checkout_counter/RegisterStatusIndicator must exist in retro_games.tscn"
+		indicator, "checkout_counter/RegisterStatusIndicator must exist in retro_games.tscn"
 	)
 	if indicator == null:
 		return
 	assert_true(
 		indicator is RegisterStatusIndicator,
-		"checkout_counter/RegisterStatusIndicator must use the "
-		+ "RegisterStatusIndicator script"
+		"checkout_counter/RegisterStatusIndicator must use the " + "RegisterStatusIndicator script"
 	)
 
 
@@ -995,8 +1615,7 @@ func test_register_status_indicator_never_lets_e_fire() -> void:
 	if indicator == null:
 		return
 	assert_false(
-		indicator.can_interact(),
-		"RegisterStatusIndicator.can_interact() must always return false"
+		indicator.can_interact(), "RegisterStatusIndicator.can_interact() must always return false"
 	)
 
 
@@ -1008,7 +1627,8 @@ func test_register_status_indicator_is_raycast_only() -> void:
 	if indicator == null:
 		return
 	assert_eq(
-		indicator.proximity_radius, 0.0,
+		indicator.proximity_radius,
+		0.0,
 		"RegisterStatusIndicator must be raycast-only (proximity_radius == 0)"
 	)
 
@@ -1022,11 +1642,13 @@ func test_register_status_indicator_silent_during_talk_to_customer() -> void:
 	if controller == null or indicator == null:
 		return
 	assert_eq(
-		String(controller.current_stage()), "talk_to_customer",
+		String(controller.current_stage()),
+		"talk_to_customer",
 		"Pre-condition: day starts at STAGE_TALK_TO_CUSTOMER"
 	)
 	assert_eq(
-		indicator.get_disabled_reason(), "",
+		indicator.get_disabled_reason(),
+		"",
 		"Indicator must be silent while BetaDayOneCustomer owns the beat"
 	)
 
@@ -1041,19 +1663,20 @@ func test_register_status_indicator_hints_back_room_during_back_room_stage() -> 
 	controller._on_choice_selected(&"clean_exchange", {})
 	await get_tree().process_frame
 	assert_eq(
-		String(controller.current_stage()), "back_room_inventory",
+		String(controller.current_stage()),
+		"back_room_inventory",
 		"Pre-condition: stage is back_room_inventory after the customer beat"
 	)
 	assert_eq(
-		indicator.get_disabled_reason(), "Check the back room first.",
-		"Indicator must point the player at the back room during the "
-		+ "back-room stage"
+		indicator.get_disabled_reason(),
+		"Check the back room first.",
+		"Indicator must point the player at the back room during the " + "back-room stage"
 	)
 
 
 func test_register_status_indicator_hints_shelf_during_stock_stage() -> void:
 	# Acceptance: during STAGE_STOCK_SHELF, aiming at the register shows
-	# 'Stock the shelf before closing up.'
+	# 'Stock the Retro Games shelf before closing.'
 	var controller: Node = _beta_controller()
 	var indicator: Interactable = _register_status_indicator()
 	if controller == null or indicator == null:
@@ -1063,12 +1686,13 @@ func test_register_status_indicator_hints_shelf_during_stock_stage() -> void:
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
 	assert_eq(
-		String(controller.current_stage()), "stock_shelf",
+		String(controller.current_stage()),
+		"stock_shelf",
 		"Pre-condition: stage is stock_shelf after the back-room beat"
 	)
 	assert_eq(
 		indicator.get_disabled_reason(),
-		"Stock the shelf before closing up.",
+		"Stock the Retro Games shelf before closing.",
 		"Indicator must point the player at the shelf during the stock stage"
 	)
 
@@ -1087,11 +1711,13 @@ func test_register_status_indicator_silent_during_end_day() -> void:
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	assert_eq(
-		String(controller.current_stage()), "end_day",
+		String(controller.current_stage()),
+		"end_day",
 		"Pre-condition: stage is end_day after the chain completes"
 	)
 	assert_eq(
-		indicator.get_disabled_reason(), "",
+		indicator.get_disabled_reason(),
+		"",
 		"Indicator must be silent so BetaDayEndTrigger owns the close-day beat"
 	)
 
@@ -1106,28 +1732,16 @@ func test_register_status_indicator_stays_enabled_across_stages() -> void:
 	var indicator: Interactable = _register_status_indicator()
 	if controller == null or indicator == null:
 		return
-	assert_true(
-		indicator.enabled,
-		"Indicator must be enabled at STAGE_TALK_TO_CUSTOMER"
-	)
+	assert_true(indicator.enabled, "Indicator must be enabled at STAGE_TALK_TO_CUSTOMER")
 	controller._on_choice_selected(&"clean_exchange", {})
 	await get_tree().process_frame
-	assert_true(
-		indicator.enabled,
-		"Indicator must stay enabled at STAGE_BACK_ROOM_INVENTORY"
-	)
+	assert_true(indicator.enabled, "Indicator must stay enabled at STAGE_BACK_ROOM_INVENTORY")
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
-	assert_true(
-		indicator.enabled,
-		"Indicator must stay enabled at STAGE_STOCK_SHELF"
-	)
+	assert_true(indicator.enabled, "Indicator must stay enabled at STAGE_STOCK_SHELF")
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
-	assert_true(
-		indicator.enabled,
-		"Indicator must stay enabled at STAGE_END_DAY"
-	)
+	assert_true(indicator.enabled, "Indicator must stay enabled at STAGE_END_DAY")
 
 
 func test_register_status_indicator_does_not_break_close_day_path() -> void:
@@ -1144,16 +1758,12 @@ func test_register_status_indicator_does_not_break_close_day_path() -> void:
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	var trigger: Interactable = (
-		_root.get_node_or_null("BetaDayEndTrigger/Interactable")
-		as Interactable
+		_root.get_node_or_null("BetaDayEndTrigger/Interactable") as Interactable
 	)
 	assert_not_null(trigger, "BetaDayEndTrigger/Interactable must still exist")
 	if trigger == null:
 		return
-	assert_true(
-		trigger.enabled,
-		"BetaDayEndTrigger must be enabled at STAGE_END_DAY"
-	)
+	assert_true(trigger.enabled, "BetaDayEndTrigger must be enabled at STAGE_END_DAY")
 	assert_true(
 		trigger.can_interact(),
 		"BetaDayEndTrigger.can_interact() must still gate true at STAGE_END_DAY"
@@ -1178,9 +1788,7 @@ const _EXPECTED_STEP_LABELS: Array[String] = [
 func _latest_steps_payload(controller: Node) -> Array:
 	watch_signals(EventBus)
 	controller._update_objective_rail()
-	var emissions: Array = get_signal_parameters_all(
-		EventBus, "objective_changed"
-	)
+	var emissions: Array = get_signal_parameters_all(EventBus, "objective_changed")
 	if emissions.is_empty():
 		return []
 	var payload: Dictionary = emissions[emissions.size() - 1][0] as Dictionary
@@ -1206,12 +1814,10 @@ func test_steps_payload_present_with_four_entries() -> void:
 	if controller == null:
 		return
 	var steps: Array = _latest_steps_payload(controller)
+	assert_eq(steps.size(), 4, "objective_changed payload must carry a 4-entry steps array")
 	assert_eq(
-		steps.size(), 4,
-		"objective_changed payload must carry a 4-entry steps array"
-	)
-	assert_eq(
-		_step_texts(steps), _EXPECTED_STEP_LABELS,
+		_step_texts(steps),
+		_EXPECTED_STEP_LABELS,
 		"steps[].text must mirror the _OBJECTIVES labels in chain order"
 	)
 
@@ -1279,10 +1885,9 @@ func test_steps_all_future_during_vic_note_phase() -> void:
 # required step is missing the note must clearly name the skipped work
 # (BRAINDUMP rule: closing early must surface what the player skipped).
 
+
 func _mark_all_required_complete(controller: Node) -> void:
-	var completed: Dictionary = (
-		controller.get("_completed_objectives") as Dictionary
-	)
+	var completed: Dictionary = controller.get("_completed_objectives") as Dictionary
 	completed[&"talk_to_customer"] = true
 	completed[&"back_room_inventory"] = true
 	completed[&"stock_shelf"] = true
@@ -1297,8 +1902,7 @@ func test_shift_note_uses_baseline_when_all_required_complete() -> void:
 	var note: String = String(controller._build_shift_note())
 	assert_true(
 		note.contains("made it through"),
-		"All-complete day must use the baseline 'made it through' copy; got: '%s'"
-		% note
+		"All-complete day must use the baseline 'made it through' copy; got: '%s'" % note
 	)
 	assert_false(
 		note.begins_with("You closed without"),
@@ -1311,9 +1915,7 @@ func test_shift_note_names_skipped_backroom() -> void:
 	if controller == null:
 		return
 	(controller.get("_completed_objectives") as Dictionary).clear()
-	var completed: Dictionary = (
-		controller.get("_completed_objectives") as Dictionary
-	)
+	var completed: Dictionary = controller.get("_completed_objectives") as Dictionary
 	completed[&"talk_to_customer"] = true
 	completed[&"stock_shelf"] = true
 	var note: String = String(controller._build_shift_note())
@@ -1332,9 +1934,7 @@ func test_shift_note_names_skipped_customer() -> void:
 	if controller == null:
 		return
 	(controller.get("_completed_objectives") as Dictionary).clear()
-	var completed: Dictionary = (
-		controller.get("_completed_objectives") as Dictionary
-	)
+	var completed: Dictionary = controller.get("_completed_objectives") as Dictionary
 	completed[&"back_room_inventory"] = true
 	completed[&"stock_shelf"] = true
 	var note: String = String(controller._build_shift_note())
@@ -1382,12 +1982,11 @@ func test_on_day_close_confirmed_spawns_summary_only_once() -> void:
 	await get_tree().process_frame
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
+	watch_signals(EventBus)
 	# First confirm — spawns the summary modal.
 	controller._on_day_close_confirmed()
 	await get_tree().process_frame
-	var panel: BetaDaySummaryPanel = (
-		controller.get("_summary_panel") as BetaDaySummaryPanel
-	)
+	var panel: BetaDaySummaryPanel = controller.get("_summary_panel") as BetaDaySummaryPanel
 	assert_not_null(panel, "Summary panel must be spawned on first confirm")
 	if panel == null:
 		return
@@ -1396,12 +1995,140 @@ func test_on_day_close_confirmed_spawns_summary_only_once() -> void:
 	controller._on_day_close_confirmed()
 	await get_tree().process_frame
 	assert_eq(
-		InputFocus.depth(), depth_after_first,
+		InputFocus.depth(),
+		depth_after_first,
 		"Repeat _on_day_close_confirmed must not push a second CTX_MODAL frame"
 	)
 	assert_eq(
-		ModalQueue.pending_count(), 0,
+		ModalQueue.pending_count(),
+		0,
 		"Repeat _on_day_close_confirmed must not enqueue a second summary"
+	)
+	assert_signal_emit_count(
+		EventBus,
+		"unlock_granted",
+		1,
+		"Repeated close confirm must not emit a duplicate closing-certification grant"
+	)
+	assert_true(
+		_signal_first_arg_seen(
+			get_signal_parameters_all(EventBus, "unlock_granted"), &"employee_closing_certified"
+		),
+		"First close confirm must grant closing certification"
+	)
+
+
+func test_beta_close_confirm_does_not_run_production_day_summary() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var fixture: Dictionary = _production_day_cycle_fixture()
+	var day_cycle: DayCycleController = fixture["controller"] as DayCycleController
+	var time: TimeSystem = fixture["time"] as TimeSystem
+	GameManager.current_state = GameManager.State.GAMEPLAY
+
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	assert_true(
+		bool(controller.can_interact_day_end()),
+		"Precondition: beta close-day must be available after required work"
+	)
+
+	watch_signals(EventBus)
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+	_press_close_day_confirm(controller)
+	await get_tree().process_frame
+
+	var summary_panel: BetaDaySummaryPanel = controller.get("_summary_panel") as BetaDaySummaryPanel
+	assert_not_null(summary_panel, "Beta summary panel must exist after confirm")
+	if summary_panel == null:
+		return
+	assert_true(
+		bool(summary_panel.get("_focus_pushed")),
+		"Beta summary must own the active modal focus after confirm"
+	)
+	assert_same(
+		ModalQueue.active_panel(),
+		summary_panel,
+		"Beta close confirm must leave the beta summary as the only active modal"
+	)
+	assert_eq(ModalQueue.pending_count(), 0, "Beta close confirm must not enqueue a second summary")
+	assert_false(
+		day_cycle._awaiting_acknowledgement,
+		"Production day cycle must not await acknowledgement during beta close"
+	)
+	assert_true(
+		UnlockSystemSingleton.is_unlocked(&"employee_closing_certified"),
+		"Beta close must grant closing certification after beta summary processing"
+	)
+	assert_false(
+		UnlockSystemSingleton.is_unlocked(&"extended_hours_unlock"),
+		"Beta close must not grant extended hours"
+	)
+	assert_ne(
+		GameManager.current_state,
+		GameManager.State.DAY_SUMMARY,
+		"Beta close confirm must not enter the production day-summary state"
+	)
+	assert_eq(
+		time.current_day, 1, "Production day cycle must not advance the day during beta close"
+	)
+	assert_signal_not_emitted(
+		EventBus, "day_closed", "Beta close confirm must not emit the production day_closed payload"
+	)
+
+
+func test_beta_close_confirm_reemit_keeps_production_day_cycle_idle() -> void:
+	var controller: Node = _beta_controller()
+	if controller == null:
+		return
+	var fixture: Dictionary = _production_day_cycle_fixture()
+	var day_cycle: DayCycleController = fixture["controller"] as DayCycleController
+	GameManager.current_state = GameManager.State.GAMEPLAY
+
+	controller._on_choice_selected(&"clean_exchange", {})
+	await get_tree().process_frame
+	controller.on_beta_backroom_pickup_interacted()
+	await get_tree().process_frame
+	controller.on_beta_restock_interacted()
+	await get_tree().process_frame
+	controller.on_beta_day_end_requested()
+	await get_tree().process_frame
+	_press_close_day_confirm(controller)
+	await get_tree().process_frame
+	var depth_after_first: int = InputFocus.depth()
+
+	watch_signals(EventBus)
+	EventBus.day_close_confirmed.emit()
+	await get_tree().process_frame
+
+	assert_eq(
+		InputFocus.depth(),
+		depth_after_first,
+		"Re-emitted close confirmation must not push another modal frame"
+	)
+	var summary_panel: BetaDaySummaryPanel = controller.get("_summary_panel") as BetaDaySummaryPanel
+	assert_same(
+		ModalQueue.active_panel(),
+		summary_panel,
+		"Re-emitted close confirmation must leave the same beta summary active"
+	)
+	assert_eq(
+		ModalQueue.pending_count(),
+		0,
+		"Re-emitted close confirmation must not enqueue duplicate summaries"
+	)
+	assert_false(
+		day_cycle._awaiting_acknowledgement,
+		"Production day cycle must remain idle after duplicate beta confirm"
+	)
+	assert_signal_not_emitted(
+		EventBus, "day_closed", "Duplicate beta confirm must not emit production day_closed"
 	)
 
 
@@ -1422,9 +2149,7 @@ func test_close_day_summary_uses_dynamic_shift_note() -> void:
 	await get_tree().process_frame
 	_press_close_day_confirm(controller)
 	await get_tree().process_frame
-	var panel: BetaDaySummaryPanel = (
-		controller.get("_summary_panel") as BetaDaySummaryPanel
-	)
+	var panel: BetaDaySummaryPanel = controller.get("_summary_panel") as BetaDaySummaryPanel
 	assert_not_null(panel, "Summary panel must be spawned")
 	if panel == null:
 		return
@@ -1434,8 +2159,7 @@ func test_close_day_summary_uses_dynamic_shift_note() -> void:
 		return
 	assert_true(
 		note_label.text.contains("made it through"),
-		"Completed-chain summary must render the baseline shift_note; got: '%s'"
-		% note_label.text
+		"Completed-chain summary must render the baseline shift_note; got: '%s'" % note_label.text
 	)
 
 
@@ -1455,6 +2179,7 @@ func test_close_day_summary_uses_dynamic_shift_note() -> void:
 # `test_summary_continue_pops_modal_focus_before_starting_next_day` choice
 # to assert against panel-local invariants for the same reason.
 
+
 func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -1463,8 +2188,7 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 	# Day starts at TALK_TO_CUSTOMER. ModalQueue must be idle from this
 	# controller's perspective — `before_each` resets it.
 	assert_eq(
-		ModalQueue.pending_count(), 0,
-		"[day_start] ModalQueue must start with no pending entries"
+		ModalQueue.pending_count(), 0, "[day_start] ModalQueue must start with no pending entries"
 	)
 
 	# Player E on customer → BetaDecisionCardPanel enqueues at DAY_SUMMARY
@@ -1478,7 +2202,8 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 	if decision_panel == null:
 		return
 	assert_same(
-		ModalQueue.active_panel(), decision_panel,
+		ModalQueue.active_panel(),
+		decision_panel,
 		"[decision_card_open] Decision card must be the active ModalQueue entry"
 	)
 	assert_true(
@@ -1486,28 +2211,41 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 		"[decision_card_open] Decision card must own a CTX_MODAL frame"
 	)
 	assert_eq(
-		ModalQueue.pending_count(), 0,
+		ModalQueue.pending_count(),
+		0,
 		"[decision_card_open] No panel may be queued behind the decision card"
 	)
 
 	# Pick a choice via the panel's button handler so the runtime
-	# emit+close sequence runs: emits choice_selected (controller advances
-	# the chain) then calls close() (panel pops its own CTX_MODAL frame and
-	# notifies ModalQueue).
+	# emit+close sequence runs: emits choice_selected, queues the customer
+	# result, then closes the decision card and hands ModalQueue to the
+	# result panel.
 	decision_panel._on_choice_pressed(&"clean_exchange", {})
 	await get_tree().process_frame
 	assert_false(
 		bool(decision_panel.get("_focus_pushed")),
 		"[after_choice] Decision card must release its CTX_MODAL frame on close"
 	)
-	assert_null(
+	var result_panel: ModalPanel = controller.get("_customer_result_panel") as ModalPanel
+	assert_not_null(result_panel, "Controller must own _customer_result_panel")
+	if result_panel == null:
+		return
+	assert_same(
 		ModalQueue.active_panel(),
-		"[after_choice] ModalQueue must drain to idle after the decision card closes"
+		result_panel,
+		"[after_choice] Customer result must be active after decision close"
 	)
-	assert_eq(
-		ModalQueue.pending_count(), 0,
-		"[after_choice] ModalQueue pending must stay at 0"
+	assert_eq(ModalQueue.pending_count(), 0, "[after_choice] ModalQueue pending must stay at 0")
+	var result_continue: Button = result_panel.get("_continue_button") as Button
+	assert_not_null(result_continue, "Customer result must own Continue")
+	if result_continue == null:
+		return
+	result_continue.pressed.emit()
+	await get_tree().process_frame
+	assert_null(
+		ModalQueue.active_panel(), "[after_result] ModalQueue must drain to idle after Continue"
 	)
+	assert_eq(ModalQueue.pending_count(), 0, "[after_result] ModalQueue pending must stay at 0")
 
 	# Back-room and restock are non-modal interactions; queue stays idle.
 	controller.on_beta_backroom_pickup_interacted()
@@ -1516,30 +2254,20 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 		ModalQueue.active_panel(),
 		"[after_backroom] ModalQueue must remain idle through back-room pickup"
 	)
-	assert_eq(
-		ModalQueue.pending_count(), 0,
-		"[after_backroom] ModalQueue pending must stay at 0"
-	)
+	assert_eq(ModalQueue.pending_count(), 0, "[after_backroom] ModalQueue pending must stay at 0")
 
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	assert_null(
-		ModalQueue.active_panel(),
-		"[after_restock] ModalQueue must remain idle through restocking"
+		ModalQueue.active_panel(), "[after_restock] ModalQueue must remain idle through restocking"
 	)
-	assert_eq(
-		ModalQueue.pending_count(), 0,
-		"[after_restock] ModalQueue pending must stay at 0"
-	)
+	assert_eq(ModalQueue.pending_count(), 0, "[after_restock] ModalQueue pending must stay at 0")
 
-	# Player E on the day-end trigger → CloseDayConfirmationPanel uses the
-	# direct-open path (not ModalQueue), so it claims CTX_MODAL via its
-	# own _focus_pushed bookkeeping. ModalQueue stays idle.
+	# Player E on the day-end trigger -> CloseDayConfirmationPanel opens through
+	# ModalQueue and owns the active CTX_MODAL frame until confirm.
 	controller.on_beta_day_end_requested()
 	await get_tree().process_frame
-	var close_day_panel: CanvasLayer = (
-		controller.get("_close_day_panel") as CanvasLayer
-	)
+	var close_day_panel: CanvasLayer = controller.get("_close_day_panel") as CanvasLayer
 	assert_not_null(close_day_panel, "Controller must own _close_day_panel")
 	if close_day_panel == null:
 		return
@@ -1547,9 +2275,10 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 		bool(close_day_panel.get("_focus_pushed")),
 		"[close_day_open] Close-day confirmation panel must own a CTX_MODAL frame"
 	)
-	assert_null(
+	assert_same(
 		ModalQueue.active_panel(),
-		"[close_day_open] Close-day confirm uses direct-open; ModalQueue stays idle"
+		close_day_panel,
+		"[close_day_open] Close-day confirmation panel must be the active ModalQueue entry"
 	)
 
 	# Confirm → close-day panel pops its frame, then BetaDaySummaryPanel
@@ -1562,9 +2291,7 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 		bool(close_day_panel.get("_focus_pushed")),
 		"[summary_open] Close-day panel must have released its frame after confirm"
 	)
-	var summary_panel: BetaDaySummaryPanel = (
-		controller.get("_summary_panel") as BetaDaySummaryPanel
-	)
+	var summary_panel: BetaDaySummaryPanel = controller.get("_summary_panel") as BetaDaySummaryPanel
 	assert_not_null(summary_panel, "Controller must own _summary_panel after confirm")
 	if summary_panel == null:
 		return
@@ -1573,7 +2300,8 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 		"[summary_open] Summary panel must own the CTX_MODAL frame after confirm"
 	)
 	assert_same(
-		ModalQueue.active_panel(), summary_panel,
+		ModalQueue.active_panel(),
+		summary_panel,
 		"[summary_open] Summary panel must be the active ModalQueue entry"
 	)
 
@@ -1585,6 +2313,7 @@ func test_modal_queue_depth_never_exceeds_one_during_day1() -> void:
 # snapshot contract so a refactor of the underlying private fields cannot
 # silently shift HUD readings.
 
+
 func test_hud_snapshot_golden_path() -> void:
 	var controller: Node = _beta_controller()
 	if controller == null:
@@ -1593,14 +2322,12 @@ func test_hud_snapshot_golden_path() -> void:
 	# Phase 1 — TALK_TO_CUSTOMER.
 	var snap_1: Dictionary = controller.get_state_snapshot()
 	assert_eq(
-		String(snap_1.get("stage", "")), "talk_to_customer",
+		String(snap_1.get("stage", "")),
+		"talk_to_customer",
 		"Phase 1 stage must be talk_to_customer"
 	)
 	var completed_1: Dictionary = snap_1.get("completed_objectives", {}) as Dictionary
-	assert_eq(
-		completed_1.size(), 0,
-		"Phase 1 completed_objectives must be empty"
-	)
+	assert_eq(completed_1.size(), 0, "Phase 1 completed_objectives must be empty")
 	assert_false(
 		bool(snap_1.get("carrying_stock", true)),
 		"Phase 1 carrying_stock must be false at day start"
@@ -1615,7 +2342,8 @@ func test_hud_snapshot_golden_path() -> void:
 	await get_tree().process_frame
 	var snap_2: Dictionary = controller.get_state_snapshot()
 	assert_eq(
-		String(snap_2.get("stage", "")), "back_room_inventory",
+		String(snap_2.get("stage", "")),
+		"back_room_inventory",
 		"Phase 2 stage must be back_room_inventory"
 	)
 	var completed_2: Dictionary = snap_2.get("completed_objectives", {}) as Dictionary
@@ -1623,27 +2351,18 @@ func test_hud_snapshot_golden_path() -> void:
 		completed_2.has(&"talk_to_customer"),
 		"Phase 2 completed_objectives must include talk_to_customer"
 	)
-	assert_eq(
-		completed_2.size(), 1,
-		"Phase 2 completed_objectives must contain exactly one entry"
-	)
+	assert_eq(completed_2.size(), 1, "Phase 2 completed_objectives must contain exactly one entry")
 	assert_false(
 		bool(snap_2.get("carrying_stock", true)),
 		"Phase 2 carrying_stock must remain false before pickup"
 	)
-	assert_false(
-		bool(snap_2.get("can_close_day", true)),
-		"Phase 2 can_close_day must be false"
-	)
+	assert_false(bool(snap_2.get("can_close_day", true)), "Phase 2 can_close_day must be false")
 
 	# Phase 3 — STOCK_SHELF (after back-room pickup; carry flag flips).
 	controller.on_beta_backroom_pickup_interacted()
 	await get_tree().process_frame
 	var snap_3: Dictionary = controller.get_state_snapshot()
-	assert_eq(
-		String(snap_3.get("stage", "")), "stock_shelf",
-		"Phase 3 stage must be stock_shelf"
-	)
+	assert_eq(String(snap_3.get("stage", "")), "stock_shelf", "Phase 3 stage must be stock_shelf")
 	var completed_3: Dictionary = snap_3.get("completed_objectives", {}) as Dictionary
 	assert_true(
 		completed_3.has(&"talk_to_customer"),
@@ -1666,10 +2385,7 @@ func test_hud_snapshot_golden_path() -> void:
 	controller.on_beta_restock_interacted()
 	await get_tree().process_frame
 	var snap_4: Dictionary = controller.get_state_snapshot()
-	assert_eq(
-		String(snap_4.get("stage", "")), "end_day",
-		"Phase 4 stage must be end_day"
-	)
+	assert_eq(String(snap_4.get("stage", "")), "end_day", "Phase 4 stage must be end_day")
 	var completed_4: Dictionary = snap_4.get("completed_objectives", {}) as Dictionary
 	assert_true(
 		completed_4.has(&"talk_to_customer"),
@@ -1680,8 +2396,7 @@ func test_hud_snapshot_golden_path() -> void:
 		"Phase 4 completed_objectives must keep back_room_inventory"
 	)
 	assert_true(
-		completed_4.has(&"stock_shelf"),
-		"Phase 4 completed_objectives must include stock_shelf"
+		completed_4.has(&"stock_shelf"), "Phase 4 completed_objectives must include stock_shelf"
 	)
 	assert_false(
 		bool(snap_4.get("carrying_stock", true)),

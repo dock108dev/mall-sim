@@ -27,6 +27,9 @@ var _toast_timer: float = 0.0
 
 
 func _ready() -> void:
+	if not _capture_enabled():
+		queue_free()
+		return
 	layer = 95
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
@@ -49,6 +52,8 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not _capture_enabled():
+		return
 	if not (event is InputEventKey):
 		return
 	var key_event: InputEventKey = event as InputEventKey
@@ -65,6 +70,13 @@ func _process(delta: float) -> void:
 	_toast_timer -= delta
 	if _toast_timer <= 0.0:
 		_toast.visible = false
+
+
+func _capture_enabled() -> bool:
+	return OS.is_debug_build() or ProjectSettings.get_setting(
+		"debug/beta_screenshot_capture_enabled",
+		false
+	)
 
 
 func _capture() -> void:

@@ -539,6 +539,8 @@ signal beta_shelf_count_changed(count: int)
 ## and `count = 0` after the player stocks the shelf (the on-shelves
 ## counter ticks in the opposite direction on the same beat).
 signal beta_backroom_count_changed(count: int)
+## Emitted when the optional Day-1 console-stack flavor object is inspected.
+signal beta_hidden_clue_inspected(clue_id: StringName)
 ## Emitted by `BetaDayOneController` when one of the day-1 chain
 ## objectives is marked complete. Lets the Today checklist mark the
 ## item with a checkmark and collapse it without coupling the checklist
@@ -785,11 +787,11 @@ signal hidden_awareness_tier_changed(old_tier: int, new_tier: int)
 ## awareness threshold and is added to the discovered_artifacts catalog.
 signal hidden_artifact_spawned(artifact_id: StringName)
 ## Emitted by HiddenThreadSystem on every Tier 1/2/3 trigger so the ending
-## evaluator (ISSUE-017) can shadow stats without coupling to internal state.
+## evaluator can shadow stats without coupling to internal state.
 ## thread_id identifies the trigger (e.g. &"delivery_manifest_examined",
 ## &"unsatisfied_streak", &"delivery_manifest_carbon").
 signal hidden_thread_interacted(thread_id: StringName)
-## Emitted by StoreCustomizationSystem (ISSUE-018) when the active featured
+## Emitted by StoreCustomizationSystem when the active featured
 ## display lands on the new-console-hype category while VecForce HD has a
 ## suspicious active hold. HiddenThreadSystem consumes this as a Tier 1 trigger.
 signal display_exposes_weird_inventory(store_id: StringName)

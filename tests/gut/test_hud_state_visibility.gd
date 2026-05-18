@@ -1,4 +1,4 @@
-## ISSUE-002: Tests for HUD visibility gating on GameManager state.
+## Tests for HUD visibility gating on GameManager state.
 extends GutTest
 
 const _HudScene: PackedScene = preload("res://game/scenes/ui/hud.tscn")
@@ -245,43 +245,69 @@ func test_hub_back_button_has_min_width() -> void:
 	)
 
 
-func test_tutorial_step_suppresses_telegraph_card() -> void:
+func test_random_event_telegraph_emits_toast_and_keeps_card_hidden() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
-	# Trigger a telegraphed event so the card would normally appear.
+	_start_id_toast_capture()
 	EventBus.random_event_telegraphed.emit("Summer sale incoming")
+	_stop_id_toast_capture()
 	var card: Label = _hud.get_node("TelegraphCard")
-	assert_true(card.visible, "TelegraphCard should appear before tutorial starts")
-
-	EventBus.tutorial_step_changed.emit("stock_shelf")
 	assert_false(
 		card.visible,
-		"TelegraphCard must be hidden when tutorial hint is active"
+		"TelegraphCard must stay hidden; random-event telegraphs use toasts"
+	)
+	assert_eq(
+		_captured_id_toasts.size(), 1,
+		"random_event_telegraphed must emit one deduped toast request"
+	)
+	assert_eq(
+		_captured_id_toasts[0].get("message", ""),
+		"Coming: Summer sale incoming",
+		"Toast message must carry the telegraph copy"
+	)
+	assert_eq(
+		_captured_id_toasts[0].get("category", &""),
+		&"random_event",
+		"Random-event telegraph toast must use the random_event category"
+	)
+	assert_eq(
+		_captured_id_toasts[0].get("duration", 0.0),
+		4.0,
+		"Random-event telegraph toast must auto-fade after a short duration"
 	)
 
 
-func test_tutorial_step_suppresses_new_telegraph_events() -> void:
+func test_tutorial_step_suppresses_random_event_telegraph_toast() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
 	EventBus.tutorial_step_changed.emit("stock_shelf")
-	# Event fires while tutorial is active — card must stay hidden.
+	_start_id_toast_capture()
 	EventBus.random_event_telegraphed.emit("Winter sale incoming")
+	_stop_id_toast_capture()
 	var card: Label = _hud.get_node("TelegraphCard")
 	assert_false(
 		card.visible,
 		"TelegraphCard must not appear while tutorial hint is active"
 	)
+	assert_eq(
+		_captured_id_toasts.size(), 0,
+		"Random-event telegraph toast must not compete with tutorial copy"
+	)
 
 
-func test_tutorial_hint_ended_restores_telegraph_card() -> void:
+func test_tutorial_hint_ended_does_not_reopen_old_telegraph() -> void:
 	_emit_state(GameManager.State.MALL_OVERVIEW)
-	EventBus.random_event_telegraphed.emit("Summer sale incoming")
 	EventBus.tutorial_step_changed.emit("stock_shelf")
-	var card: Label = _hud.get_node("TelegraphCard")
-	assert_false(card.visible, "Card must be hidden during tutorial")
-
+	_start_id_toast_capture()
+	EventBus.random_event_telegraphed.emit("Summer sale incoming")
 	EventBus.tutorial_completed.emit()
-	assert_true(
+	_stop_id_toast_capture()
+	var card: Label = _hud.get_node("TelegraphCard")
+	assert_false(
 		card.visible,
-		"TelegraphCard must re-appear after tutorial_completed restores ticker"
+		"TelegraphCard must not reopen a prior telegraph after tutorial copy ends"
+	)
+	assert_eq(
+		_captured_id_toasts.size(), 0,
+		"Suppressed telegraphs must not replay as a new journal entry"
 	)
 
 
@@ -356,10 +382,22 @@ func test_mall_overview_shows_reputation_label() -> void:
 
 
 var _captured_toasts: Array[Dictionary] = []
+var _captured_id_toasts: Array[Dictionary] = []
 
 
 func _capture_toast(message: String, category: StringName, duration: float) -> void:
 	_captured_toasts.append({
+		"message": message,
+		"category": category,
+		"duration": duration,
+	})
+
+
+func _capture_id_toast(
+	toast_id: StringName, message: String, category: StringName, duration: float
+) -> void:
+	_captured_id_toasts.append({
+		"id": toast_id,
 		"message": message,
 		"category": category,
 		"duration": duration,
@@ -375,6 +413,17 @@ func _start_toast_capture() -> void:
 func _stop_toast_capture() -> void:
 	if EventBus.toast_requested.is_connected(_capture_toast):
 		EventBus.toast_requested.disconnect(_capture_toast)
+
+
+func _start_id_toast_capture() -> void:
+	_captured_id_toasts.clear()
+	if not EventBus.toast_requested_with_id.is_connected(_capture_id_toast):
+		EventBus.toast_requested_with_id.connect(_capture_id_toast)
+
+
+func _stop_id_toast_capture() -> void:
+	if EventBus.toast_requested_with_id.is_connected(_capture_id_toast):
+		EventBus.toast_requested_with_id.disconnect(_capture_id_toast)
 
 
 func test_notification_suppressed_during_tutorial_step() -> void:

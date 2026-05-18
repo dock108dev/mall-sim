@@ -1,6 +1,6 @@
 # Testing
 
-Mallcore Sim uses the checked-in GUT addon plus a set of shell validators under
+The project uses the checked-in GUT addon plus a set of shell validators under
 `tests/`.
 
 ## Main test command
@@ -51,7 +51,7 @@ tests/gut/          Broad gameplay and scene-oriented GUT coverage
 tests/unit/         Narrow unit-style GUT coverage
 tests/integration/  Integration-style test scripts under the main tests tree
 game/tests/         Additional GUT tests invoked directly and included in .gutconfig
-tests/validate_*.sh Shell validators for legacy issue- and structure-level checks
+tests/validate_*.sh Shell validators for issue- and structure-level checks
 ```
 
 ## Current coverage areas
@@ -99,4 +99,4 @@ Add or update coverage when changing:
 5. `lint-gdscript` - `gdlint` via `gdtoolkit`.
 
 Tagged release exports are handled separately by `.github/workflows/export.yml`,
-which installs the same Godot `4.6.2-stable` version.
+which installs Godot `4.6.2` plus export templates.

@@ -13,7 +13,7 @@
 ## STAGE_END_DAY respectively, and the indicator returns an empty string for
 ## those stages so the active interactable's prompt is the one the player sees.
 class_name RegisterStatusIndicator
-extends Interactable
+extends BetaDayOneInteractableBase
 
 
 func _ready() -> void:
@@ -35,29 +35,13 @@ func can_interact(_actor: Node = null) -> bool:
 
 
 func get_disabled_reason(_actor: Node = null) -> String:
-	var ctrl: BetaDayOneController = _controller()
-	if ctrl == null:
+	var controller: BetaDayOneController = _controller()
+	if controller == null:
 		return ""
-	match ctrl.current_stage():
+	match controller.current_stage():
 		BetaDayOneController.STAGE_BACK_ROOM_INVENTORY:
 			return "Check the back room first."
 		BetaDayOneController.STAGE_STOCK_SHELF:
-			return "Stock the shelf before closing up."
+			return "Stock the Retro Games shelf before closing."
 		_:
 			return ""
-
-
-## Returns null in unit-test fixtures that don't add a controller to the
-## scene (mirrors `hud.gd::_beta_day_one_controller`); production beta path
-## always group-registers the controller in `BetaDayOneController._ready`.
-## `get_disabled_reason` callers handle the null return by surfacing an
-## empty string, which the HUD treats as "no hint" — the graceful
-## degradation matches the documented Interactable convention. See §EH-30.
-func _controller() -> BetaDayOneController:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var node: Node = tree.get_first_node_in_group("beta_day_one_controller")
-	if node is BetaDayOneController:
-		return node as BetaDayOneController
-	return null

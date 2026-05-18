@@ -1,9 +1,9 @@
 class_name BetaRestockInteractable
-extends Interactable
+extends BetaDayOneInteractableBase
 
 
 func _ready() -> void:
-	display_name = "used games shelf"
+	display_name = "shelf"
 	prompt_text = "Stock"
 	action_verb = "Stock"
 	interaction_type = InteractionType.SHELF_SLOT
@@ -32,13 +32,3 @@ func interact(by: Node = null) -> void:
 		return
 	super.interact(by)
 	get_tree().call_group("beta_day_one_controller", "on_beta_restock_interacted")
-
-
-func _controller() -> BetaDayOneController:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return null
-	var node: Node = tree.get_first_node_in_group("beta_day_one_controller")
-	if node is BetaDayOneController:
-		return node as BetaDayOneController
-	return null

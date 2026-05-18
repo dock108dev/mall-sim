@@ -208,7 +208,9 @@ func _on_queued_open(payload: Dictionary) -> void:
 	# Ending Cash (cumulative). Rent/Sales/Profit are BRAINDUMP First-Day
 	# Flow Step 6 requirements. Older payloads without the new keys fall
 	# back to derived defaults so the layout still renders.
-	var ending_cash: int = int(summary.get("cash", 0))
+	var ending_cash: int = int(
+		summary.get("ending_cash", summary.get("cash", 0))
+	)
 	var cash_delta: int = int(summary.get("cash_delta", 0))
 	var starting_cash: int = int(
 		summary.get("starting_cash", ending_cash - cash_delta)

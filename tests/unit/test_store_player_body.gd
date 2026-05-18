@@ -226,10 +226,10 @@ func test_mouse_motion_ignored_when_modal_steals_focus() -> void:
 
 
 func test_sprint_multiplier_lands_in_target_run_band() -> void:
-	# 4.0 m/s walk × 1.5 sprint = 6.0 m/s, comfortably inside 5.5–7.0.
+	# Day-1 store navigation is intentionally slower than the open-world band.
 	var run_speed: float = _player.move_speed * _player.sprint_multiplier
-	assert_gte(run_speed, 5.5, "sprint speed must be >= 5.5 m/s")
-	assert_lte(run_speed, 7.0, "sprint speed must be <= 7.0 m/s")
+	assert_gte(run_speed, 4.8, "sprint speed must be >= 4.8 m/s")
+	assert_lte(run_speed, 5.25, "sprint speed must be <= 5.25 m/s")
 
 
 func test_player_node_in_player_group() -> void:

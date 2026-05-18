@@ -8,8 +8,8 @@
 ##   - `activate(day)` / `deactivate()` toggle visibility and
 ##     `is_active()` together as a session-level pair.
 ##   - `activate(day)` reseeds the right panel from the current
-##     `BetaRunState.day` and the active controller's `_objectives` —
-##     idempotent across repeated calls.
+##     `BetaRunState.day` and the active controller's `_objectives` for
+##     passive milestones — idempotent across repeated calls.
 ##   - `BetaHUD` does **not** subscribe to `EventBus.fp_mode_changed`; its
 ##     own session state is independent of FP mode.
 extends GutTest
@@ -18,7 +18,7 @@ extends GutTest
 ## Lightweight stand-in for `BetaDayOneController` so the panel's
 ## controller-group lookup in `seed_for_day` finds a node carrying an
 ## `_objectives` array without dragging the full beta scene into the test.
-const _FakeController: GDScript = preload(
+const _FAKE_CONTROLLER: GDScript = preload(
 	"res://tests/gut/_fixtures/beta_controller_stub.gd"
 )
 
@@ -69,7 +69,7 @@ func before_each() -> void:
 func _install_stub_controller(
 	objectives: Array[Dictionary] = _OBJECTIVES_DAY_1
 ) -> Node:
-	var stub: Node = _FakeController.new()
+	var stub: Node = _FAKE_CONTROLLER.new()
 	stub.set("_objectives", objectives.duplicate())
 	stub.add_to_group("beta_day_one_controller")
 	add_child_autofree(stub)
@@ -162,14 +162,14 @@ func test_activate_seeds_objectives_from_active_controller() -> void:
 	assert_eq(
 		BetaHUD.get_right_panel().get_visible_item_count(),
 		_OBJECTIVES_DAY_1.size(),
-		"seed_for_day must rebuild rows from the active controller's _objectives"
+		"seed_for_day must rebuild milestones from the active controller"
 	)
 	var first_id: StringName = StringName(
 		str(_OBJECTIVES_DAY_1[0].get("id", ""))
 	)
 	assert_eq(
-		BetaHUD.get_right_panel().get_item_glyph(first_id), "●",
-		"First seeded row must paint as the active glyph"
+		BetaHUD.get_right_panel().get_item_glyph(first_id), "•",
+		"Seeded milestone must paint as pending"
 	)
 
 
@@ -193,13 +193,13 @@ func test_activate_after_day_started_already_fired_still_shows_day_n() -> void:
 	assert_eq(
 		BetaHUD.get_right_panel().get_visible_item_count(),
 		_OBJECTIVES_DAY_1.size(),
-		"activate-after-day_started must still rebuild the chain rows"
+		"activate-after-day_started must still rebuild the milestone rows"
 	)
 
 
 func test_seed_for_day_is_idempotent() -> void:
 	# Calling activate twice in a row must leave the panel in the same
-	# rendered state: same header, same row count, same active row.
+	# rendered state: same header, same row count, same pending row.
 	_install_stub_controller()
 	BetaHUD.activate(1)
 	var header_after_first: String = BetaHUD.get_right_panel().get_header_text()
@@ -221,7 +221,7 @@ func test_seed_for_day_is_idempotent() -> void:
 	)
 	assert_eq(
 		BetaHUD.get_right_panel().get_item_glyph(first_id), glyph_after_first,
-		"Repeated activate(1) must leave the active row in the same state"
+		"Repeated activate(1) must leave the milestone in the same state"
 	)
 
 

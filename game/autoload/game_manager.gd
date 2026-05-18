@@ -124,7 +124,9 @@ func begin_new_run() -> void:
 	pending_load_slot = -1
 	_reset_session_state()
 	GameState.reset_new_game()
+	UnlockSystemSingleton.initialize()
 	set_current_day(1)
+	GameState.day = get_current_day()
 	if BetaRunState != null:
 		BetaRunState.reset_new_run()
 	if AuditLog != null:
@@ -396,7 +398,9 @@ func _on_content_load_failed(errors: Array[String]) -> void:
 
 
 func _on_day_started(day: int) -> void:
-	_current_day_shadow = max(day, 1)
+	var normalized_day: int = maxi(day, 1)
+	_current_day_shadow = normalized_day
+	GameState.day = get_current_day()
 
 
 ## Initializes GameWorld tiers in dependency order once content is ready.

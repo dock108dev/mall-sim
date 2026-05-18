@@ -6,6 +6,8 @@ signal choice_selected(choice_id: StringName, effects: Dictionary)
 var _title_label: Label
 var _body_label: RichTextLabel
 var _choices_box: VBoxContainer
+var _choice_buttons: Array[Button] = []
+var _selection_locked: bool = false
 
 
 func _ready() -> void:
@@ -13,18 +15,19 @@ func _ready() -> void:
 	visible = false
 	var blocker := ColorRect.new()
 	blocker.color = BetaModalTheme.COLOR_BLOCKER
+	blocker.mouse_filter = Control.MOUSE_FILTER_STOP
 	blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(blocker)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(700, 420)
+	panel.custom_minimum_size = Vector2(720, 420)
 	panel.anchor_left = 0.5
 	panel.anchor_top = 0.5
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
-	panel.offset_left = -350
+	panel.offset_left = -360
 	panel.offset_top = -210
-	panel.offset_right = 350
+	panel.offset_right = 360
 	panel.offset_bottom = 210
 	panel.add_theme_stylebox_override("panel", BetaModalTheme.make_panel_style())
 	blocker.add_child(panel)
@@ -78,6 +81,9 @@ func _on_queued_open(payload: Dictionary) -> void:
 	var event_data: Dictionary = payload.get("event", {}) as Dictionary
 	_title_label.text = str(event_data.get("title", "Decision"))
 	_body_label.text = str(event_data.get("body", ""))
+	_selection_locked = false
+	_choice_buttons.clear()
+	_register_modal_focusables([])
 	for child: Node in _choices_box.get_children():
 		child.queue_free()
 	var choices: Array = event_data.get("choices", []) as Array
@@ -89,14 +95,74 @@ func _on_queued_open(payload: Dictionary) -> void:
 		button.text = str(choice.get("label", "Choose"))
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.custom_minimum_size = Vector2(0, 56)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		BetaModalTheme.apply_button_theme(button)
 		button.pressed.connect(_on_choice_pressed.bind(
 			StringName(str(choice.get("id", "choice"))),
 			(choice.get("effects", {}) as Dictionary)
 		))
 		_choices_box.add_child(button)
+		_choice_buttons.append(button)
+	_register_modal_focusables(_choice_buttons)
+	if not _choice_buttons.is_empty():
+		_focus_modal_control_deferred(_choice_buttons[0])
 
 
 func _on_choice_pressed(choice_id: StringName, effects: Dictionary) -> void:
+	if _selection_locked or not visible:
+		return
+	_selection_locked = true
 	choice_selected.emit(choice_id, effects)
 	close()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _modal_can_handle_input():
+		return
+	if event.is_action_pressed(&"ui_cancel"):
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed(&"ui_accept"):
+		if _activate_focused_modal_button():
+			get_viewport().set_input_as_handled()
+		return
+	if _is_modal_focus_previous_event(event):
+		if _cycle_modal_focus(false):
+			get_viewport().set_input_as_handled()
+		return
+	if _is_modal_focus_next_event(event):
+		if _cycle_modal_focus(true):
+			get_viewport().set_input_as_handled()
+		return
+	if event is not InputEventKey:
+		return
+	var index: int = _numeric_choice_index(event as InputEventKey)
+	if index >= 0:
+		_press_choice_index(index)
+		get_viewport().set_input_as_handled()
+
+
+func _press_choice_index(index: int) -> void:
+	if index < 0 or index >= _choice_buttons.size():
+		return
+	var button: Button = _choice_buttons[index]
+	if button.disabled or not button.visible:
+		return
+	_focus_modal_control(button)
+	button.pressed.emit()
+
+
+func _numeric_choice_index(event: InputEventKey) -> int:
+	if not event.pressed or event.echo:
+		return -1
+	var keycodes: Array[int] = [
+		event.keycode,
+		event.physical_keycode,
+		event.key_label,
+	]
+	for keycode: int in keycodes:
+		if keycode >= KEY_1 and keycode <= KEY_9:
+			return keycode - KEY_1
+	if event.unicode >= 49 and event.unicode <= 57:
+		return event.unicode - 49
+	return -1

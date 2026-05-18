@@ -82,8 +82,6 @@ func _load_definitions() -> void:
 func _connect_signals() -> void:
 	if not EventBus.day_started.is_connected(_on_day_started):
 		EventBus.day_started.connect(_on_day_started)
-	if not EventBus.day_ended.is_connected(_on_day_ended):
-		EventBus.day_ended.connect(_on_day_ended)
 	if not EventBus.hour_changed.is_connected(_on_hour_changed):
 		EventBus.hour_changed.connect(_on_hour_changed)
 	if not EventBus.haggle_started.is_connected(_on_haggle_started):
@@ -175,10 +173,6 @@ func _on_day_started(_day: int) -> void:
 	if _state == State.IDLE:
 		_state = State.MONITORING
 	_tick_cooldowns()
-
-
-func _on_day_ended(_day: int) -> void:
-	pass
 
 
 func _on_day_phase_changed(new_phase: int) -> void:

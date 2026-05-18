@@ -1,11 +1,12 @@
-## Verifies that the four beta-day panels documented in the BRAINDUMP §1
-## modal-discipline section route through ModalQueue at the expected
-## priorities, dedup repeated requests, and serialize so only one panel is
-## visible at a time.
+## Verifies that the beta-day panels documented in the BRAINDUMP modal
+## discipline section route through ModalQueue at the expected priorities,
+## dedup repeated requests, and serialize so only one panel is visible at a
+## time.
 ##
 ## Panels covered:
 ##   - BetaDaySummaryPanel   → DAY_SUMMARY priority
 ##   - BetaDecisionCardPanel → DAY_SUMMARY priority
+##   - BetaCustomerResultPanel → DAY_SUMMARY priority
 ##   - BetaManagerNotePanel  → VIC_NOTE priority
 ##
 ## MorningNotePanel (the global autoload) is intentionally excluded — it
@@ -21,6 +22,9 @@ const BetaDaySummaryPanelScript: GDScript = preload(
 )
 const BetaDecisionCardPanelScript: GDScript = preload(
 	"res://game/scripts/beta/beta_decision_card_panel.gd"
+)
+const BetaCustomerResultPanelScript: GDScript = preload(
+	"res://game/scripts/beta/beta_customer_result_panel.gd"
 )
 const BetaManagerNotePanelScript: GDScript = preload(
 	"res://game/scripts/beta/beta_manager_note_panel.gd"
@@ -70,6 +74,25 @@ func _event_payload() -> Dictionary:
 			{"id": "yes", "label": "Help them", "effects": {"cash": 10}},
 			{"id": "no", "label": "Refuse", "effects": {"reputation": -1}},
 		],
+	}
+
+
+func _result_payload() -> Dictionary:
+	return {
+		"event_id": &"test_event",
+		"choice_id": &"yes",
+		"customer_name": "Customer",
+		"event_title": "Test event",
+		"choice_label": "Help them",
+		"effects": {"cash": 10},
+		"result": {
+			"headline": "Help Accepted",
+			"customer_reaction": "They relax.",
+			"store_outcome": "The line keeps moving.",
+			"consequences": [
+				{"label": "Money", "text": "+$10."},
+			],
+		},
 	}
 
 
@@ -183,6 +206,42 @@ func test_decision_payload_renders_choices_in_on_queued_open() -> void:
 	if choices_box != null:
 		assert_eq(choices_box.get_child_count(), 2,
 			"_on_queued_open must rebuild the choice buttons from the payload")
+	panel.close()
+
+
+# ── BetaCustomerResultPanel routing ──────────────────────────────────────────
+
+func test_customer_result_show_routes_through_queue() -> void:
+	var panel: ModalPanel = BetaCustomerResultPanelScript.new() as ModalPanel
+	add_child_autofree(panel)
+	var sentinel: ModalPanel = ModalPanel.new()
+	add_child_autofree(sentinel)
+	_queue.request_open(sentinel, _queue.Priority.TOAST)
+
+	panel.call("show_result", _result_payload())
+
+	assert_eq(_queue.pending_count(), 1,
+		"customer result must enqueue while sentinel is active")
+	assert_false(panel.visible)
+
+	sentinel.close()
+	assert_eq(_queue.active_panel(), panel)
+	assert_true(panel.visible)
+	panel.close()
+
+
+func test_customer_result_payload_renders_consequence_rows() -> void:
+	var panel: ModalPanel = BetaCustomerResultPanelScript.new() as ModalPanel
+	add_child_autofree(panel)
+
+	panel.call("show_result", _result_payload())
+
+	assert_true(panel.visible)
+	var box: VBoxContainer = panel.get("_consequences_box") as VBoxContainer
+	assert_not_null(box)
+	if box != null:
+		assert_eq(box.get_child_count(), 1,
+			"_on_queued_open must render the result consequence rows")
 	panel.close()
 
 

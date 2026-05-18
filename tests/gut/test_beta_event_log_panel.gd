@@ -277,7 +277,7 @@ func test_panel_does_not_connect_fp_mode_changed() -> void:
 
 func test_event_log_record_broadcasts_event_logged() -> void:
 	# AC: 'The surface subscribes to EventBus.event_logged(tag, message)'.
-	# EventLog._record must emit unconditionally so a release build still
+	# EventLog._record must emit player-facing beats so a release build still
 	# drives the panel even though the ring buffer is debug-only.
 	var panel: BetaEventLogPanel = _make_panel()
 	EventBus.item_stocked.emit("crash_2", "shelf_a")
@@ -295,6 +295,26 @@ func test_event_log_record_broadcasts_event_logged() -> void:
 		latest.find("[STOCK]") >= 0,
 		"Display label must strip the bracket-wrapped tag prefix; got '%s'" % latest
 	)
+
+
+func test_event_log_filters_debug_entries_before_panel() -> void:
+	var panel: BetaEventLogPanel = _make_panel()
+	var customer: Node = Node.new()
+	add_child_autofree(customer)
+	EventBus.modal_opened.emit(&"CanvasLayer/DecisionCard")
+	EventBus.customer_state_changed.emit(customer, Customer.State.BROWSING)
+	await get_tree().process_frame
+	assert_eq(
+		panel.get_visible_entry_count(), 0,
+		"Panel must not render modal or customer-FSM debug rows"
+	)
+	EventBus.objective_completed.emit(&"talk_to_customer", "Customer served.")
+	await get_tree().process_frame
+	assert_eq(
+		panel.get_visible_entry_count(), 1,
+		"Panel must still render player-facing activity rows"
+	)
+	assert_eq(panel.get_latest_row_text(), "Customer served.")
 
 
 # ── width / layout contract ───────────────────────────────────────────────────

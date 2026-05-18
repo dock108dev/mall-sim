@@ -47,18 +47,12 @@ func initialize(
 
 func set_day_summary(panel: DaySummary) -> void:
 	_day_summary = panel
-	if is_instance_valid(panel):
-		panel.dismissed.connect(_on_day_summary_dismissed)
 
 
 func set_closing_checklist(panel: ClosingChecklist) -> void:
 	_closing_checklist = panel
 	if is_instance_valid(panel):
 		panel.completed.connect(_on_closing_checklist_completed)
-
-
-func _on_day_summary_dismissed() -> void:
-	pass
 
 
 func set_day_manager(manager: DayManager) -> void:
@@ -94,12 +88,24 @@ func _on_day_close_requested() -> void:
 ## Player chose "Close Day" inside the confirmation modal. Bypasses the gate
 ## and runs the same close path as the unguarded request.
 func _on_day_close_confirmed() -> void:
+	if _is_beta_day_one_flow_active():
+		return
 	if not _time_system:
 		push_warning(
 			"DayCycleController: day_close_confirmed before initialize"
 		)
 		return
 	_on_day_ended(_time_system.current_day)
+
+
+func _is_beta_day_one_flow_active() -> bool:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	# The beta day-one controller owns its close confirmation and summary
+	# while mounted. Production still handles clock-driven day_ended events,
+	# but must not consume the shared confirmation modal answer.
+	return tree.get_first_node_in_group("beta_day_one_controller") != null
 
 
 ## §EH-37 — Direct typed autoload access. The prior chain

@@ -31,6 +31,9 @@ var _interaction_ray: Node = null
 
 
 func _ready() -> void:
+	if not _diagnostics_enabled():
+		queue_free()
+		return
 	layer = 90
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
@@ -59,6 +62,8 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not _diagnostics_enabled():
+		return
 	if not (event is InputEventKey):
 		return
 	var key_event: InputEventKey = event as InputEventKey
@@ -143,6 +148,13 @@ func _cycle_mode() -> void:
 		DisplayMode.EXPANDED:
 			_mode = DisplayMode.HIDDEN
 	_apply_mode()
+
+
+func _diagnostics_enabled() -> bool:
+	return OS.is_debug_build() or ProjectSettings.get_setting(
+		"debug/beta_diagnostics_enabled",
+		false
+	)
 
 
 func _apply_mode() -> void:
