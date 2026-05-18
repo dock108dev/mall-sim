@@ -23,10 +23,10 @@
 class_name BetaEventLogPanel
 extends CanvasLayer
 
-## Hard cap on rendered rows. A 5th entry queue_free()'s the oldest so the
-## panel never spans more than four lines — keeps the bottom-left footprint
-## tight and matches the BRAINDUMP "max 3-4 visible lines" guideline.
-const MAX_VISIBLE_ENTRIES: int = 4
+## Hard cap on rendered rows. A 4th entry queue_free()'s the oldest so the
+## panel never spans more than three lines and leaves the first-person view
+## uncluttered.
+const MAX_VISIBLE_ENTRIES: int = 3
 
 ## Oldest visible row's alpha when the panel is full. Rows interpolate
 ## linearly between this value (at index 0) and 1.0 (at the last index), so
@@ -45,14 +45,14 @@ const LAYER_INDEX: int = 30
 ## so the composed visible opacity stays legible (0.65 × 0.6 ≈ 0.39).
 const _MODAL_DIM_ALPHA: float = 0.65
 
-const _PANEL_BG: Color = Color(0.08, 0.08, 0.14, 0.88)
-const _PANEL_WIDTH: float = 260.0
-const _PANEL_HEIGHT: float = 120.0
-const _PADDING: int = 12
+const _PANEL_BG: Color = Color(0.08, 0.08, 0.14, 0.76)
+const _PANEL_WIDTH: float = 248.0
+const _PANEL_HEIGHT: float = 90.0
+const _PADDING: int = 10
 ## Bottom inset chosen so the panel sits flush above `BetaCarryLabel`
 ## (which lives at `offset_top = -200` on CarryHUD); 4 px clearance keeps
 ## the carry-state amber strip from kissing the panel edge.
-const _BOTTOM_INSET: float = 204.0
+const _BOTTOM_INSET: float = 196.0
 const _LEFT_INSET: float = 16.0
 const _ENTRY_FONT_SIZE: int = 12
 const _ENTRY_MIN_HEIGHT: float = 14.0

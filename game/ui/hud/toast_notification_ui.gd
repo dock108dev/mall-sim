@@ -14,7 +14,7 @@ extends Control
 
 
 ## BRAINDUMP "Milestone toasts should be short. They are not for tutorial
-## paragraphs." Toasts render in a fixed-width card (`TOAST_WIDTH` 320 px) on
+## paragraphs." Toasts render in a fixed-width card (`TOAST_WIDTH`) on
 ## the `ToastLayer` (layer 45) and autowrap at ~2 lines. Anything past this
 ## cap pushes the layout off-spec and starts to read as a tutorial paragraph,
 ## which is precisely the failure mode the BRAINDUMP forbids. Enforced in
@@ -26,13 +26,13 @@ const SLIDE_IN_DURATION: float = 0.15
 const FADE_OUT_DURATION: float = 0.4
 const DEFAULT_DURATION: float = 3.0
 const MAX_QUEUE_SIZE: int = 5
-const TOAST_WIDTH: float = 320.0
+const TOAST_WIDTH: float = 300.0
 ## Upper toast lane: below the top HUD and immediately left of the beta right
 ## panel. This keeps passive notices out of the center sightline.
-const TOAST_OFFSET_TOP: float = 72.0
-const TOAST_RIGHT_PANEL_WIDTH: float = 244.0
-const TOAST_RIGHT_PANEL_INSET: float = 16.0
-const TOAST_RIGHT_PANEL_GAP: float = 16.0
+const TOAST_OFFSET_TOP: float = 96.0
+const TOAST_RIGHT_PANEL_WIDTH: float = 300.0
+const TOAST_RIGHT_PANEL_INSET: float = 20.0
+const TOAST_RIGHT_PANEL_GAP: float = 24.0
 const TOAST_LEFT_MARGIN: float = 16.0
 ## Distance the panel drops in from above its final resting Y during the
 ## slide-in tween. Tuned to match `SLIDE_IN_DURATION` so the motion reads as
@@ -179,8 +179,8 @@ func _show_toast(entry: Dictionary) -> void:
 	_tween.tween_callback(_on_toast_finished)
 
 
-## Public dismiss — used by the click-area button on each toast and by the
-## scenario where a modal opens while a toast is still showing. The latter
+## Public dismiss — used by tests and by the scenario where a modal opens
+## while a toast is still showing. The latter
 ## requeues the message so it can finish playing once the modal closes;
 ## explicit clicks just drop it.
 func dismiss() -> void:
@@ -282,6 +282,7 @@ func _create_toast_panel(entry: Dictionary) -> PanelContainer:
 
 	var margin: MarginContainer = MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override(
 		"margin_left", PADDING_HORIZONTAL + LEFT_BORDER_WIDTH
 	)
@@ -298,18 +299,11 @@ func _create_toast_panel(entry: Dictionary) -> PanelContainer:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.clip_text = true
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	label.add_theme_color_override("font_color", TEXT_COLOR)
 	label.add_theme_font_size_override("font_size", TEXT_FONT_SIZE)
 	margin.add_child(label)
-
-	var click_area: Button = Button.new()
-	click_area.flat = true
-	click_area.mouse_filter = Control.MOUSE_FILTER_STOP
-	click_area.set_anchors_and_offsets_preset(
-		Control.PRESET_FULL_RECT
-	)
-	click_area.pressed.connect(dismiss)
-	panel.add_child(click_area)
 
 	return panel
 
@@ -336,6 +330,13 @@ func _target_x_for_viewport(viewport_width: float) -> float:
 	)
 	var preferred_x: float = right_panel_left - TOAST_RIGHT_PANEL_GAP - TOAST_WIDTH
 	return max(TOAST_LEFT_MARGIN, preferred_x)
+
+
+## Test seam for visual-safe-zone assertions.
+func get_active_panel_rect() -> Rect2:
+	if not is_instance_valid(_active_panel):
+		return Rect2()
+	return Rect2(_active_panel.position, _active_panel.size)
 
 
 ## Builds the rounded-rect dark stylebox with a category-tinted left border.

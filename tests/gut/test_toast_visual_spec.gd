@@ -1,7 +1,7 @@
 ## Tests that ToastNotificationUI panels match the visual spec from the
 ## BRAINDUMP toast notification design: rounded dark panel with a 3 px
 ## category-tinted left border, 12 px horizontal / 8 px vertical padding,
-## 320 px wide, uniform 92 % white text at 15 px, and an animation
+## compact fixed width, uniform 92 % white text at 15 px, and an animation
 ## contract of 0.15 s slide-in plus 0.4 s fade-out.
 extends GutTest
 
@@ -18,9 +18,9 @@ func before_each() -> void:
 # ── Card geometry ─────────────────────────────────────────────────────────────
 
 
-func test_panel_width_is_320() -> void:
+func test_panel_width_is_compact_beta_lane() -> void:
 	assert_eq(
-		ToastNotificationUI.TOAST_WIDTH, 320.0,
+		ToastNotificationUI.TOAST_WIDTH, 300.0,
 		"Toast panels must stay compact while fitting upper-right lane copy"
 	)
 
@@ -55,6 +55,37 @@ func test_toast_lane_sits_left_of_right_panel() -> void:
 		target_x,
 		(viewport_width - ToastNotificationUI.TOAST_WIDTH) / 2.0,
 		"Toast lane must not be centered like a modal"
+	)
+
+
+func test_toast_lane_sits_left_of_right_panel_at_720p() -> void:
+	var viewport_width: float = 1280.0
+	var right_panel_left: float = (
+		viewport_width
+		- ToastNotificationUI.TOAST_RIGHT_PANEL_INSET
+		- ToastNotificationUI.TOAST_RIGHT_PANEL_WIDTH
+	)
+	var target_x: float = _ui._target_x_for_viewport(viewport_width)
+	assert_lte(
+		target_x + ToastNotificationUI.TOAST_WIDTH,
+		right_panel_left - ToastNotificationUI.TOAST_RIGHT_PANEL_GAP,
+		"Toast lane must preserve a right-panel gap at 1280 px wide"
+	)
+
+
+func test_visible_toast_rect_does_not_overlap_right_panel_band() -> void:
+	EventBus.toast_requested.emit("Training: talk to the manager.", &"system", 3.0)
+	var viewport_width: float = _ui.get_viewport_rect().size.x
+	var right_panel_left: float = (
+		viewport_width
+		- ToastNotificationUI.TOAST_RIGHT_PANEL_INSET
+		- ToastNotificationUI.TOAST_RIGHT_PANEL_WIDTH
+	)
+	var rect: Rect2 = _ui.get_active_panel_rect()
+	assert_lte(
+		rect.position.x + rect.size.x,
+		right_panel_left - ToastNotificationUI.TOAST_RIGHT_PANEL_GAP,
+		"Rendered toast rect must stop before the right-panel safe zone"
 	)
 
 
@@ -134,6 +165,21 @@ func test_label_font_size_is_15_px() -> void:
 		)
 
 
+func test_label_is_visible_text_owner_without_covering_button() -> void:
+	EventBus.toast_requested.emit("Training: talk to the manager.", &"system", 3.0)
+	var label: Label = _find_label(_ui._active_panel)
+	assert_not_null(label, "Toast card must contain the visible message label")
+	if label:
+		assert_eq(label.text, "Training: talk to the manager.")
+		assert_true(label.visible, "Toast label must be visible")
+		assert_eq(label.modulate.a, 1.0, "Toast label must not be faded out locally")
+	assert_eq(
+		_find_buttons(_ui._active_panel).size(),
+		0,
+		"Toast cards must not add a full-rect Button over the text"
+	)
+
+
 func test_label_padding_matches_spec() -> void:
 	EventBus.toast_requested.emit("Padding", &"system", 3.0)
 	var margin: MarginContainer = _find_margin(_ui._active_panel)
@@ -211,3 +257,14 @@ func _find_margin(panel: PanelContainer) -> MarginContainer:
 		if child is MarginContainer:
 			return child as MarginContainer
 	return null
+
+
+func _find_buttons(root: Node) -> Array[Button]:
+	var buttons: Array[Button] = []
+	if root == null:
+		return buttons
+	for child: Node in root.get_children():
+		if child is Button:
+			buttons.append(child as Button)
+		buttons.append_array(_find_buttons(child))
+	return buttons

@@ -52,6 +52,14 @@ const _OBJECTIVES: Array[Dictionary] = [
 		"required": false,
 	},
 ]
+const _TRAINING_OBJECTIVES: Array[Dictionary] = [
+	{"id": "talk_to_manager", "action": "Talk to the manager"},
+	{"id": "check_register", "action": "Check the register"},
+	{"id": "check_back_room_inventory", "action": "Check back room"},
+	{"id": "training_stock_shelf", "action": "Stock shelf"},
+	{"id": "practice_customer", "action": "Practice checkout"},
+	{"id": "open_store", "action": "Open store"},
+]
 
 
 func before_each() -> void:
@@ -72,12 +80,41 @@ func test_panel_is_visible_at_ready_without_signals() -> void:
 	assert_true(panel.visible, "Right panel must be visible immediately")
 
 
+func test_panel_uses_compact_top_right_safe_zone() -> void:
+	var panel: BetaRightPanel = _make_panel()
+	var root_panel: PanelContainer = panel.get_node_or_null("Panel") as PanelContainer
+	assert_not_null(root_panel, "Right panel must own its PanelContainer")
+	if root_panel == null:
+		return
+	assert_lte(
+		root_panel.offset_right - root_panel.offset_left,
+		312.0,
+		"Right panel width must stay compact while leaving room for readable copy"
+	)
+	assert_gte(
+		root_panel.offset_top,
+		80.0,
+		"Right panel must start below the top HUD/time safe band"
+	)
+
+
 func test_header_reads_day_and_phase_at_ready() -> void:
 	BetaRunState.day = 2
 	var panel: BetaRightPanel = _make_panel()
 	assert_true(
 		panel.get_header_text().begins_with("DAY 2 —"),
 		"Header must reflect BetaRunState.day at construction"
+	)
+
+
+func test_preopening_header_stays_readable_without_truncation() -> void:
+	var panel: BetaRightPanel = BetaRightPanel.new()
+	panel.set_objectives(_TRAINING_OBJECTIVES)
+	add_child_autofree(panel)
+	assert_eq(
+		panel.get_header_text(),
+		"PRE-OPENING",
+		"Pre-opening header must be short enough to render in the panel"
 	)
 
 

@@ -12,16 +12,16 @@ const LAYER_INDEX: int = 30
 ## Modal-fade contract mirrors `hud.gd._MODAL_DIM_ALPHA`.
 const _MODAL_DIM_ALPHA: float = 0.65
 
-const _PANEL_BG: Color = Color(0.08, 0.08, 0.14, 0.88)
-const _HEADER_FONT_SIZE: int = 16
-const _SECTION_FONT_SIZE: int = 12
-const _ROW_FONT_SIZE: int = 13
-const _ROW_MIN_HEIGHT: float = 24.0
-const _SECTION_MIN_HEIGHT: float = 18.0
-const _PADDING: int = 12
-const _PANEL_WIDTH: float = 244.0
-const _RIGHT_INSET: float = 16.0
-const _TOP_INSET: float = 56.0
+const _PANEL_BG: Color = Color(0.08, 0.08, 0.14, 0.78)
+const _HEADER_FONT_SIZE: int = 14
+const _SECTION_FONT_SIZE: int = 11
+const _ROW_FONT_SIZE: int = 12
+const _ROW_MIN_HEIGHT: float = 21.0
+const _SECTION_MIN_HEIGHT: float = 16.0
+const _PADDING: int = 10
+const _PANEL_WIDTH: float = 300.0
+const _RIGHT_INSET: float = 20.0
+const _TOP_INSET: float = 84.0
 
 const _HEADER_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 const _ROW_COLOR: Color = Color(1.0, 1.0, 1.0, 0.6)
@@ -177,6 +177,12 @@ func _build_panel() -> void:
 
 	var style: StyleBoxFlat = StyleBoxFlat.new()
 	style.bg_color = _PANEL_BG
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_right = 4
+	style.corner_radius_bottom_left = 4
+	style.border_color = Color(1.0, 0.78, 0.30, 0.34)
+	style.border_width_left = 2
 	style.content_margin_left = float(_PADDING)
 	style.content_margin_top = float(_PADDING)
 	style.content_margin_right = float(_PADDING)
@@ -194,6 +200,8 @@ func _build_panel() -> void:
 	_header.name = "Header"
 	_header.custom_minimum_size = Vector2(0.0, _ROW_MIN_HEIGHT)
 	_header.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_header.clip_text = true
+	_header.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_header.add_theme_font_size_override("font_size", _HEADER_FONT_SIZE)
 	_header.add_theme_color_override("font_color", _HEADER_COLOR)
 	_column.add_child(_header)
@@ -212,6 +220,8 @@ func _build_section_label(node_name: String, text: String) -> Label:
 	label.text = text
 	label.custom_minimum_size = Vector2(0.0, _SECTION_MIN_HEIGHT)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.add_theme_font_size_override("font_size", _SECTION_FONT_SIZE)
 	label.add_theme_color_override("font_color", _SECTION_COLOR)
 	_column.add_child(label)
@@ -230,6 +240,8 @@ func _build_stat_row(label_text: String) -> Label:
 	label.text = label_text
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.add_theme_font_size_override("font_size", _ROW_FONT_SIZE)
 	label.add_theme_color_override("font_color", _ROW_COLOR)
 	row.add_child(label)
@@ -258,7 +270,7 @@ func _refresh_header() -> void:
 	if _header == null:
 		return
 	if _is_preopening_training():
-		_header.text = "PRE-OPENING — TRAINING"
+		_header.text = "PRE-OPENING"
 		return
 	var phase_name: String
 	if _PHASE_NAMES.has(_current_phase):

@@ -2102,11 +2102,11 @@ func _is_kept_root_node(node_name: StringName) -> bool:
 ## position are anchored at the same Node3D origin. The .tscn drives
 ## BetaDayOneCustomer.position — this method does not move the node.
 ##
-## The body is a single human-scaled CapsuleMesh under `CustomerProxy/Body`
-## so the silhouette reads as "a person standing here" from across the
-## store. The .tscn-authored `CustomerBody` is freed on first run because
-## a duplicate body mesh at the same anchor would z-fight and double the
-## visible footprint.
+## The body is a small blocky proxy under `CustomerProxy` so the silhouette
+## reads as "a person standing here" from across the store without looking
+## like placeholder collision geometry. The .tscn-authored `CustomerBody`
+## is freed on first run because a duplicate body mesh at the same anchor
+## would z-fight and double the visible footprint.
 ## See §EH-27. `_store_root() == null` is the documented test seam; a
 ## missing `BetaDayOneCustomer` node is a wiring regression (the node is
 ## authored in `retro_games.tscn` for the beta) — fail loud.
@@ -2149,9 +2149,9 @@ func _configure_beta_customer() -> void:
 		proxy_root.name = "CustomerProxy"
 		customer_node.add_child(proxy_root)
 
-	# Earlier proxy revisions used a separate Torso + Head + Marker. Drop
-	# them on hot-reload so the tree converges on the single Body capsule.
-	for stale_name: String in ["Torso", "Head", "Marker"]:
+	# Earlier proxy revisions used a capsule plus a marker. Drop obsolete
+	# parts on hot-reload so the tree converges on the blocky proxy.
+	for stale_name: String in ["Marker"]:
 		var stale: Node = proxy_root.get_node_or_null(stale_name)
 		if stale != null:
 			stale.queue_free()
@@ -2163,20 +2163,37 @@ func _configure_beta_customer() -> void:
 		proxy_root.add_child(body_mesh)
 		body_ref = body_mesh
 	var body: MeshInstance3D = body_ref as MeshInstance3D
-	var body_shape := CapsuleMesh.new()
-	body_shape.radius = 0.30
-	body_shape.height = 1.78
+	var body_shape := BoxMesh.new()
+	body_shape.size = Vector3(0.42, 0.90, 0.26)
 	body.mesh = body_shape
-	# Capsule center at half-height puts the base at floor (Y=0) and the
-	# crown at Y≈1.78 — reads as a person standing at the counter from
-	# across the store, not a small floating pill.
-	body.position = Vector3(0.0, 0.89, 0.0)
+	body.position = Vector3(0.0, 0.75, 0.0)
 	var body_mat := StandardMaterial3D.new()
 	# Warm taupe: a human-proxy tone that won't be confused with grey
 	# placeholder geometry or with the warm-brown counter trim behind it.
 	body_mat.albedo_color = Color(0.62, 0.50, 0.42, 1.0)
 	body_mat.roughness = 0.85
 	body.material_override = body_mat
+	_configure_customer_proxy_part(
+		proxy_root,
+		"Head",
+		Vector3(0.34, 0.34, 0.30),
+		Vector3(0.0, 1.36, 0.0),
+		Color(0.70, 0.57, 0.49, 1.0),
+	)
+	_configure_customer_proxy_part(
+		proxy_root,
+		"ArmLeft",
+		Vector3(0.13, 0.62, 0.16),
+		Vector3(-0.32, 0.76, 0.0),
+		Color(0.50, 0.40, 0.34, 1.0),
+	)
+	_configure_customer_proxy_part(
+		proxy_root,
+		"ArmRight",
+		Vector3(0.13, 0.62, 0.16),
+		Vector3(0.32, 0.76, 0.0),
+		Color(0.50, 0.40, 0.34, 1.0),
+	)
 
 	# Resize the Interactable trigger so the screen-center ray hits it from
 	# typical approach distances, not just nose-to-chest. The authored shape
@@ -2198,6 +2215,30 @@ func _configure_beta_customer() -> void:
 	# sibling tree order; deferring guarantees we touch the post-reparent
 	# node and our shape sticks.
 	call_deferred("_resize_customer_trigger", customer_node)
+
+
+func _configure_customer_proxy_part(
+	proxy_root: Node3D,
+	part_name: String,
+	size: Vector3,
+	position: Vector3,
+	color: Color,
+) -> void:
+	var part_ref: Node = proxy_root.get_node_or_null(part_name)
+	if not (part_ref is MeshInstance3D):
+		var mesh_instance := MeshInstance3D.new()
+		mesh_instance.name = part_name
+		proxy_root.add_child(mesh_instance)
+		part_ref = mesh_instance
+	var part: MeshInstance3D = part_ref as MeshInstance3D
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	part.mesh = mesh
+	part.position = position
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.86
+	part.material_override = mat
 
 
 ## Deferred companion to `_configure_beta_customer`. Runs after

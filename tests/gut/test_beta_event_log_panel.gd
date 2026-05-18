@@ -69,12 +69,12 @@ func test_empty_message_is_ignored() -> void:
 
 # ── rolling cap ───────────────────────────────────────────────────────────────
 
-func test_max_visible_entries_is_four() -> void:
-	# AC pin: the rendered cap is exactly 4 — the constant is part of the
+func test_max_visible_entries_is_three() -> void:
+	# AC pin: the rendered cap is exactly 3 — the constant is part of the
 	# spec contract, not a tunable.
 	assert_eq(
-		BetaEventLogPanel.MAX_VISIBLE_ENTRIES, 4,
-		"Spec pins the rendered cap at 4 rows"
+		BetaEventLogPanel.MAX_VISIBLE_ENTRIES, 3,
+		"Spec pins the rendered cap at 3 rows"
 	)
 
 
@@ -320,7 +320,7 @@ func test_event_log_filters_debug_entries_before_panel() -> void:
 # ── width / layout contract ───────────────────────────────────────────────────
 
 func test_background_is_constrained_to_content_width() -> void:
-	# AC: the panel's dark background must sit inside the 260px content
+	# AC: the panel's dark background must sit inside the compact content
 	# anchor — never spanning the full viewport width. Otherwise the bottom
 	# of the screen reads as a single fused console with the interaction
 	# prompt.
@@ -328,7 +328,7 @@ func test_background_is_constrained_to_content_width() -> void:
 	await get_tree().process_frame
 	var anchor: Control = panel.get_node("Anchor") as Control
 	assert_not_null(anchor, "Panel must own a sized Anchor control")
-	# Anchor footprint matches the 260px panel width — anchors collapsed
+	# Anchor footprint matches the compact panel width — anchors collapsed
 	# (left == right) so the size comes from offsets alone.
 	assert_eq(
 		anchor.anchor_left, anchor.anchor_right,
@@ -337,16 +337,29 @@ func test_background_is_constrained_to_content_width() -> void:
 	var anchor_width: float = anchor.offset_right - anchor.offset_left
 	assert_almost_eq(
 		anchor_width, BetaEventLogPanel._PANEL_WIDTH, 0.5,
-		"Anchor width (%.0fpx) must match the 260px panel content width"
+		"Anchor width (%.0fpx) must match the compact panel content width"
 			% anchor_width
 	)
 	var background: ColorRect = anchor.get_node("Background") as ColorRect
 	assert_not_null(background, "Anchor must contain the panel background ColorRect")
 	# Background fills the parent Anchor, not the viewport — bounded by the
-	# 260px anchor footprint above.
+	# compact anchor footprint above.
 	assert_eq(background.anchor_left, 0.0)
 	assert_eq(background.anchor_right, 1.0)
 	assert_eq(
 		background.get_parent(), anchor,
-		"Background must be parented to the 260px Anchor, not the CanvasLayer root"
+		"Background must be parented to the compact Anchor, not the CanvasLayer root"
+	)
+
+
+func test_panel_footprint_stays_compact_for_fp_view() -> void:
+	assert_lte(
+		BetaEventLogPanel._PANEL_WIDTH,
+		248.0,
+		"Event log must stay narrow enough for the bottom-left safe zone"
+	)
+	assert_lte(
+		BetaEventLogPanel._PANEL_HEIGHT,
+		90.0,
+		"Event log must stay short enough to avoid becoming a second panel"
 	)

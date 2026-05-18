@@ -86,6 +86,22 @@ func test_open_store_transitions_to_real_day_one_customer() -> void:
 	assert_eq(Array(_active_targets()), ["BetaDayOneCustomer"])
 
 
+func test_manager_proxy_uses_blocky_readable_silhouette() -> void:
+	var proxy: Node = _root.get_node_or_null("BetaDayOneCustomer/CustomerProxy")
+	assert_not_null(proxy, "Training manager/customer proxy must exist")
+	if proxy == null:
+		return
+	for part_name: String in ["Body", "Head", "ArmLeft", "ArmRight"]:
+		var part: MeshInstance3D = proxy.get_node_or_null(part_name) as MeshInstance3D
+		assert_not_null(part, "Proxy must include %s for a readable silhouette" % part_name)
+		if part != null:
+			assert_true(
+				part.mesh is BoxMesh,
+				"%s must use a BoxMesh so the NPC does not read as a capsule placeholder"
+					% part_name
+			)
+
+
 func _controller() -> Node:
 	return get_tree().get_first_node_in_group("beta_day_one_controller")
 
