@@ -17,6 +17,7 @@ var _root: Node3D = null
 
 
 func before_each() -> void:
+	BetaRunState.reset_new_run()
 	# Reset InputFocus and ModalQueue between tests so a leaked CTX_MODAL
 	# push or active-queue entry from a prior test doesn't bleed into the
 	# assertions below. ModalQueue routes panel dispatch — without the
@@ -47,6 +48,7 @@ func after_each() -> void:
 	if is_instance_valid(_root):
 		_root.free()
 	_root = null
+	BetaRunState.reset_new_run()
 
 
 # ── Standalone panel: focus, signal, body, modal contract ───────────────────
@@ -185,6 +187,7 @@ func test_panel_starts_hidden_until_show_note_called() -> void:
 func test_day1_starts_without_opening_note_panel() -> void:
 	# Day 1 should land directly on the first actionable beat. This keeps
 	# first play from requiring a note dismissal before the tutorial begins.
+	BetaRunState.preopening_complete = true
 	await _load_beta_scene()
 	var controller: Node = _beta_controller()
 	assert_not_null(controller, "BetaDayOneController must exist after scene load")

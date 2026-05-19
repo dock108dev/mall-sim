@@ -144,6 +144,7 @@ func seed_for_day(day: int) -> void:
 	_current_day = day
 	_customers_served_today = 0
 	_sold_today_count = 0
+	_completed_objective_ids.clear()
 	var controller: Node = get_tree().get_first_node_in_group(
 		"beta_day_one_controller"
 	)

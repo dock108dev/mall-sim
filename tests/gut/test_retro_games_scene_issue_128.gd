@@ -9,6 +9,7 @@ var _root: Node3D = null
 
 
 func before_all() -> void:
+	BetaRunState.reset_new_run()
 	var scene: PackedScene = load(SCENE_PATH)
 	assert_not_null(scene, "Retro Games scene should load")
 	_root = scene.instantiate() as Node3D
@@ -19,6 +20,7 @@ func after_all() -> void:
 	if is_instance_valid(_root):
 		_root.free()
 	_root = null
+	BetaRunState.reset_new_run()
 
 
 func test_root_navigation_and_required_children_exist() -> void:
@@ -142,15 +144,11 @@ func test_checkout_register_node_is_disabled() -> void:
 		)
 
 
-func test_only_checkout_counter_register_is_enabled() -> void:
-	# Two distinct register-location actions ship enabled in the beta
-	# Day-1 chain: `checkout_counter/Interactable` (ring up the customer
-	# via `RegisterInteractable`) and `BetaDayEndTrigger/Interactable`
-	# (close the day via `BetaDayEndTriggerInteractable`). Both set
-	# `interaction_type = REGISTER` in their `_ready` because they share
-	# the register face as their prompt anchor. `Checkout/Register` —
-	# the legacy placeholder Area3D — must stay disabled (covered by
-	# `test_checkout_register_node_is_disabled`).
+func test_initial_beta_boot_does_not_enable_register_actions() -> void:
+	# The beta controller owns the Day-1 interaction gate. The scene now boots
+	# through the pre-opening manager beat before any register action is live,
+	# so register-type interactables must exist but stay disabled until the
+	# active objective moves to a register beat.
 	var enabled_registers: Array[Interactable] = []
 	_collect_enabled_register_interactables(_root, enabled_registers)
 	var parents: Array[String] = []
@@ -159,11 +157,8 @@ func test_only_checkout_counter_register_is_enabled() -> void:
 	parents.sort()
 	assert_eq(
 		parents,
-		["BetaDayEndTrigger", "checkout_counter"] as Array[String],
-		(
-			"Enabled REGISTER interactables must be exactly the "
-			+ "ring-up + close-day pair; got: %s"
-		) % str(parents)
+		[] as Array[String],
+		"Initial beta boot must not expose register actions; got: %s" % str(parents)
 	)
 
 

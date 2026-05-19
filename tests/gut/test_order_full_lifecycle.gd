@@ -16,6 +16,7 @@ var _time_system: TimeSystem
 
 var _saved_data_loader: DataLoader
 var _data_loader: DataLoader
+var _saved_difficulty_tier: StringName = &""
 
 var _delivered_store_id: StringName = &""
 var _delivered_items: Array = []
@@ -34,8 +35,10 @@ func before_each() -> void:
 	_order_failed_reason = ""
 	_order_delivered_count = 0
 	_notification_count = 0
+	_saved_difficulty_tier = DifficultySystemSingleton.get_current_tier_id()
 
 	ContentRegistry.clear_for_testing()
+	DifficultySystemSingleton.set_tier(&"easy")
 	_saved_data_loader = GameManager.data_loader
 	_data_loader = DataLoader.new()
 	add_child_autofree(_data_loader)
@@ -82,6 +85,7 @@ func after_each() -> void:
 	ContentRegistry.clear_for_testing()
 	DataLoaderSingleton.load_all_content()
 	DifficultySystemSingleton._load_config()
+	DifficultySystemSingleton.set_tier(_saved_difficulty_tier)
 
 
 func _on_order_delivered(store_id: StringName, items: Array) -> void:

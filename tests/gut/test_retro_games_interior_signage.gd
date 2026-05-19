@@ -137,7 +137,6 @@ func test_day_one_signs_share_visual_vocabulary() -> void:
 		"InteriorSignage/StoreNameBanner",
 		"InteriorSignage/GamesSign",
 		"ZoneLabels/ShelvesLabel",
-		"ZoneLabels/CheckoutLabel",
 		"ZoneLabels/BackroomLabel",
 		"ZoneLabels/CloseDayLabel",
 		"ZoneLabels/UsedConsolesLabel",

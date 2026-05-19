@@ -9,6 +9,24 @@ extends GutTest
 const SLOT_MARKER_PATH: String = "res://game/assets/materials/mat_slot_marker.tres"
 const CUSTOMER_SCENE_PATH: String = "res://game/scenes/characters/customer.tscn"
 const RETRO_GAMES_SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
+const PRODUCT_COVER_PATHS: Array[String] = [
+	"res://game/assets/products/product_dungeon_dad_64.svg",
+	"res://game/assets/products/product_space_mall_3.svg",
+	"res://game/assets/products/product_kart_clerk_deluxe.svg",
+	"res://game/assets/products/product_pixel_pets_moon_mix.svg",
+]
+const PRODUCT_TEXTURE_PATHS: Array[String] = [
+	"res://game/assets/products/product_dungeon_dad_64.png",
+	"res://game/assets/products/product_space_mall_3.png",
+	"res://game/assets/products/product_kart_clerk_deluxe.png",
+	"res://game/assets/products/product_pixel_pets_moon_mix.png",
+]
+const PRODUCT_COVER_TITLES: Array[String] = [
+	"DUNGEON",
+	"SPACE",
+	"KART CLERK",
+	"PIXEL PETS",
+]
 
 # Slot-marker albedo alpha must be visible (not the historical 0.0 ghost
 # value) so empty slots glow during placement mode against any shelf wood.
@@ -43,6 +61,10 @@ const BETA_VISUAL_LANDMARKS: Array[String] = [
 	"ReadabilityProps/DayOneRouteMarkers/TrainingStopRegister",
 	"ReadabilityProps/DayOneRouteMarkers/TrainingStopBackroom",
 	"ReadabilityProps/DayOneRouteMarkers/TrainingStopShelf",
+	"ReadabilityProps/ProductDisplayRows/DungeonDad64_ShelfA",
+	"ReadabilityProps/ProductDisplayRows/SpaceMall3_ShelfA",
+	"ReadabilityProps/ProductDisplayRows/KartClerkDeluxe_ShelfA",
+	"ReadabilityProps/ProductDisplayRows/PixelPetsMoonMix_ShelfA",
 ]
 
 
@@ -192,6 +214,83 @@ func test_beta_store_has_visual_landmark_overhaul_nodes() -> void:
 	root.free()
 
 
+func test_product_cover_svgs_exist_and_carry_named_art() -> void:
+	for i: int in PRODUCT_COVER_PATHS.size():
+		var path: String = PRODUCT_COVER_PATHS[i]
+		assert_true(FileAccess.file_exists(path), "Product cover missing: %s" % path)
+		assert_true(
+			FileAccess.file_exists(PRODUCT_TEXTURE_PATHS[i]),
+			"Runtime product texture missing: %s" % PRODUCT_TEXTURE_PATHS[i]
+		)
+		var file := FileAccess.open(path, FileAccess.READ)
+		assert_not_null(file, "Product cover must be readable: %s" % path)
+		if file == null:
+			continue
+		var source: String = file.get_as_text()
+		assert_true(
+			source.contains(PRODUCT_COVER_TITLES[i]),
+			"Product cover %s must include the in-universe title text" % path
+		)
+
+
+func test_product_display_rows_have_at_least_four_named_products() -> void:
+	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
+	assert_not_null(scene, "retro_games.tscn must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	if root == null:
+		return
+	var product_nodes: Array[Node] = []
+	_collect_group_nodes(root, &"product_display", product_nodes)
+	assert_gte(
+		product_nodes.size(),
+		4,
+		"Beta store must render at least four named product displays"
+	)
+	for required_name: String in [
+		"DungeonDad64_ShelfA",
+		"SpaceMall3_ShelfA",
+		"KartClerkDeluxe_ShelfA",
+		"PixelPetsMoonMix_ShelfA",
+	]:
+		assert_not_null(
+			root.find_child(required_name, true, false),
+			"Missing named product display %s" % required_name
+		)
+	root.free()
+
+
+func test_product_display_rows_use_svg_cover_textures() -> void:
+	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
+	assert_not_null(scene, "retro_games.tscn must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	if root == null:
+		return
+	for node_path: String in [
+		"ReadabilityProps/ProductDisplayRows/DungeonDad64_ShelfA",
+		"ReadabilityProps/ProductDisplayRows/SpaceMall3_ShelfA",
+		"ReadabilityProps/ProductDisplayRows/KartClerkDeluxe_ShelfA",
+		"ReadabilityProps/ProductDisplayRows/PixelPetsMoonMix_ShelfA",
+	]:
+		var product: MeshInstance3D = root.get_node_or_null(node_path) as MeshInstance3D
+		assert_not_null(product, "Missing product cover mesh: %s" % node_path)
+		if product == null:
+			continue
+		var mat: StandardMaterial3D = product.get_surface_override_material(
+			0
+		) as StandardMaterial3D
+		assert_not_null(mat, "Product cover must use a StandardMaterial3D")
+		if mat != null:
+			assert_not_null(
+				mat.albedo_texture,
+				"Product cover %s must bind an SVG texture" % node_path
+			)
+	root.free()
+
+
 func test_beta_store_visual_lighting_clears_readability_floor() -> void:
 	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
 	assert_not_null(scene, "retro_games.tscn must load")
@@ -217,6 +316,28 @@ func test_beta_store_visual_lighting_clears_readability_floor() -> void:
 		assert_gte(
 			checkout_fill.light_energy, 0.5,
 			"Checkout fill must keep the tutorial target readable"
+		)
+	root.free()
+
+
+func test_readability_props_remain_visual_only() -> void:
+	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
+	assert_not_null(scene, "retro_games.tscn must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	if root == null:
+		return
+	var readability_root: Node = root.get_node_or_null("ReadabilityProps")
+	assert_not_null(readability_root, "ReadabilityProps must exist")
+	if readability_root != null:
+		assert_false(
+			_has_collision_shape_descendant(readability_root),
+			"Visual overhaul props must not add collision shapes"
+		)
+		assert_false(
+			_has_area_descendant(readability_root),
+			"Visual overhaul props must not add new interactable areas"
 		)
 	root.free()
 
@@ -299,3 +420,28 @@ func test_ceiling_practicals_are_retail_scale_not_giant_planes() -> void:
 			"Ceiling practicals must not bloom into oversized flat yellow planes"
 		)
 	root.free()
+
+
+func _collect_group_nodes(root: Node, group_name: StringName, out: Array[Node]) -> void:
+	if root.is_in_group(group_name):
+		out.append(root)
+	for child: Node in root.get_children():
+		_collect_group_nodes(child, group_name, out)
+
+
+func _has_collision_shape_descendant(root: Node) -> bool:
+	for child: Node in root.get_children():
+		if child is CollisionShape3D:
+			return true
+		if _has_collision_shape_descendant(child):
+			return true
+	return false
+
+
+func _has_area_descendant(root: Node) -> bool:
+	for child: Node in root.get_children():
+		if child is Area3D:
+			return true
+		if _has_area_descendant(child):
+			return true
+	return false

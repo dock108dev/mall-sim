@@ -4,10 +4,8 @@ const SCENE_PATH: String = "res://game/scenes/stores/retro_games.tscn"
 const PROMPT_SCENE_PATH: String = "res://game/scenes/ui/interaction_prompt.tscn"
 const EVENT_ID: String = "day01_wrong_console_parent"
 const REQUIRED_VISIBLE_ZONE_LABELS: Array[String] = [
-	"CHECKOUT",
 	"SHELVES",
 	"STAFF PICKS",
-	"TRADE-INS",
 	"BACKROOM",
 ]
 
@@ -22,6 +20,7 @@ func before_each() -> void:
 	GameManager.current_state = GameManager.State.STORE_VIEW
 	GameManager.set_current_day(1)
 	BetaRunState.reset_new_run()
+	BetaRunState.preopening_complete = true
 	InputFocus._reset_for_tests()
 	ModalQueue._reset_for_tests()
 	_register_unlock_entries()

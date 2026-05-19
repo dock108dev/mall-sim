@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+  <rect width="256" height="320" rx="16" fill="#1b1430"/>
+  <rect x="14" y="14" width="228" height="292" rx="10" fill="#2c1b4d" stroke="#f4c762" stroke-width="6"/>
+  <rect x="28" y="38" width="200" height="76" rx="8" fill="#15101f"/>
+  <text x="128" y="70" font-family="monospace" font-size="26" font-weight="700" text-anchor="middle" fill="#ffe79a">DUNGEON</text>
+  <text x="128" y="101" font-family="monospace" font-size="34" font-weight="700" text-anchor="middle" fill="#ffffff">DAD 64</text>
+  <path d="M72 206 L128 126 L184 206 Z" fill="#f4c762"/>
+  <path d="M92 206 L128 154 L164 206 Z" fill="#7b4a25"/>
+  <rect x="82" y="212" width="92" height="32" rx="4" fill="#15101f"/>
+  <circle cx="101" cy="228" r="7" fill="#ffe79a"/>
+  <circle cx="155" cy="228" r="7" fill="#ffe79a"/>
+  <rect x="54" y="266" width="148" height="20" rx="5" fill="#f4c762"/>
+  <text x="128" y="282" font-family="monospace" font-size="13" font-weight="700" text-anchor="middle" fill="#1b1430">CO-OP QUESTING</text>
+</svg>

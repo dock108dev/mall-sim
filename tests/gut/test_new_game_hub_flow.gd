@@ -39,6 +39,7 @@ var _fake_transition: FakeSceneTransition
 
 
 func before_each() -> void:
+	BetaRunState.reset_new_run()
 	_orig_state = GameManager.current_state
 	_orig_pending_load_slot = GameManager.pending_load_slot
 	_orig_data_loader = GameManager.data_loader
@@ -64,6 +65,7 @@ func after_each() -> void:
 		_fake_loader.free()
 	if is_instance_valid(_fake_transition):
 		_fake_transition.free()
+	BetaRunState.reset_new_run()
 
 
 ## GAMEPLAY_SCENE_PATH must be gameplay_shell.tscn — the hub is the direct destination.
@@ -161,8 +163,8 @@ func test_default_new_game_store_scene_loads_beta_entry_nodes() -> void:
 	if controller != null:
 		assert_eq(
 			String(controller.call("current_stage")),
-			"talk_to_customer",
-			"Default beta store boot must start on the customer beat"
+			"training_talk_manager",
+			"Default beta store boot must start on the pre-opening manager beat"
 		)
 	root.free()
 

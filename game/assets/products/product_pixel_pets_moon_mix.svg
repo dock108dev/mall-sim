@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+  <rect width="256" height="320" rx="16" fill="#102019"/>
+  <rect x="14" y="14" width="228" height="292" rx="10" fill="#244b36" stroke="#a8ff9a" stroke-width="6"/>
+  <text x="128" y="63" font-family="monospace" font-size="27" font-weight="700" text-anchor="middle" fill="#ffffff">PIXEL PETS</text>
+  <text x="128" y="94" font-family="monospace" font-size="24" font-weight="700" text-anchor="middle" fill="#a8ff9a">MOON MIX</text>
+  <circle cx="174" cy="135" r="38" fill="#f2f0c7"/>
+  <circle cx="158" cy="122" r="38" fill="#244b36"/>
+  <rect x="70" y="158" width="116" height="72" rx="18" fill="#a8ff9a"/>
+  <rect x="88" y="132" width="20" height="42" rx="10" fill="#a8ff9a"/>
+  <rect x="148" y="132" width="20" height="42" rx="10" fill="#a8ff9a"/>
+  <circle cx="104" cy="190" r="7" fill="#102019"/>
+  <circle cx="152" cy="190" r="7" fill="#102019"/>
+  <rect x="112" y="210" width="32" height="8" rx="4" fill="#102019"/>
+  <rect x="48" y="258" width="160" height="22" rx="5" fill="#102019"/>
+  <text x="128" y="274" font-family="monospace" font-size="13" font-weight="700" text-anchor="middle" fill="#a8ff9a">TINY FRIENDS</text>
+</svg>

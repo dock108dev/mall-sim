@@ -4,6 +4,8 @@ extends GutTest
 const _ORDER_PANEL_SCENE: PackedScene = preload(
 	"res://game/scenes/ui/order_panel.tscn"
 )
+const _CATALOG_FIXTURE_STORE_ID := "gut_order_panel_secondary_store"
+const _CATALOG_FIXTURE_ITEM_ID := "gut_order_panel_basic_item"
 
 var _order_system: OrderSystem
 var _inventory_system: InventorySystem
@@ -47,9 +49,11 @@ func before_each() -> void:
 	_order_system.initialize(
 		_inventory_system, _reputation_system, _progression_system
 	)
+	_install_secondary_catalog_fixture()
 
 
 func after_each() -> void:
+	_remove_secondary_catalog_fixture()
 	GameManager.data_loader = _saved_data_loader
 	GameManager.current_store_id = _saved_store_id
 
@@ -259,6 +263,65 @@ func _open_panel(store_id: StringName) -> OrderPanel:
 	add_child_autofree(panel)
 	panel.open()
 	return panel
+
+
+func _install_secondary_catalog_fixture() -> void:
+	if GameManager.data_loader == null:
+		return
+	if not GameManager.data_loader._stores.has(_CATALOG_FIXTURE_STORE_ID):
+		var store_def := StoreDefinition.new()
+		store_def.id = _CATALOG_FIXTURE_STORE_ID
+		store_def.store_name = "GUT Order Fixtures"
+		store_def.display_name = "GUT Order Fixtures"
+		store_def.store_type = StringName(_CATALOG_FIXTURE_STORE_ID)
+		store_def.inventory_type = StringName(_CATALOG_FIXTURE_STORE_ID)
+		store_def.scene_path = "res://game/scenes/stores/retro_games.tscn"
+		store_def.ambient_sound = "res://game/assets/audio/ambiance/retro_games_store.wav"
+		store_def.music = "retro_games_music"
+		GameManager.data_loader._stores[_CATALOG_FIXTURE_STORE_ID] = store_def
+		ContentRegistry.register(
+			StringName(_CATALOG_FIXTURE_STORE_ID), store_def, "store"
+		)
+		ContentRegistry.register_entry(
+			{
+				"id": _CATALOG_FIXTURE_STORE_ID,
+				"name": "GUT Order Fixtures",
+			},
+			"store",
+		)
+	if not GameManager.data_loader._items.has(_CATALOG_FIXTURE_ITEM_ID):
+		var item_def := ItemDefinition.new()
+		item_def.id = _CATALOG_FIXTURE_ITEM_ID
+		item_def.item_name = "GUT Fixture Counter Card"
+		item_def.category = &"test_cards"
+		item_def.store_type = StringName(_CATALOG_FIXTURE_STORE_ID)
+		item_def.base_price = 12.0
+		item_def.rarity = "common"
+		item_def.tags = PackedStringArray(["gut_fixture"])
+		GameManager.data_loader._items[_CATALOG_FIXTURE_ITEM_ID] = item_def
+		ContentRegistry.register(
+			StringName(_CATALOG_FIXTURE_ITEM_ID), item_def, "item"
+		)
+
+
+func _remove_secondary_catalog_fixture() -> void:
+	if GameManager.data_loader == null:
+		return
+	GameManager.data_loader._stores.erase(_CATALOG_FIXTURE_STORE_ID)
+	GameManager.data_loader._items.erase(_CATALOG_FIXTURE_ITEM_ID)
+	_unregister_catalog_fixture_id(StringName(_CATALOG_FIXTURE_STORE_ID))
+	_unregister_catalog_fixture_id(StringName(_CATALOG_FIXTURE_ITEM_ID))
+
+
+func _unregister_catalog_fixture_id(id: StringName) -> void:
+	ContentRegistry._entries.erase(id)
+	ContentRegistry._resources.erase(id)
+	ContentRegistry._types.erase(id)
+	ContentRegistry._display_names.erase(id)
+	ContentRegistry._scene_map.erase(id)
+	for alias_key: StringName in ContentRegistry._aliases.keys():
+		if ContentRegistry._aliases[alias_key] == id:
+			ContentRegistry._aliases.erase(alias_key)
 
 
 func _find_store_with_basic_items(exclude_store: StringName = &"") -> StringName:

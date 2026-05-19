@@ -1,4 +1,4 @@
-[gd_scene load_steps=132 format=3 uid="uid://retro_games_001"]
+[gd_scene load_steps=148 format=3 uid="uid://retro_games_001"]
 
 [ext_resource type="Script" path="res://game/scripts/stores/retro_games.gd" id="1"]
 [ext_resource type="Script" path="res://game/scripts/stores/shelf_slot.gd" id="2"]
@@ -26,6 +26,10 @@
 [ext_resource type="Script" path="res://game/scripts/audio/store_bleed_audio.gd" id="19"]
 [ext_resource type="PackedScene" path="res://game/assets/models/props/prop_crt_monitor.gltf" id="20"]
 [ext_resource type="Texture2D" path="res://game/assets/textures/tex_product_retro_games_albedo.png" id="21"]
+[ext_resource type="Texture2D" path="res://game/assets/products/product_dungeon_dad_64.png" id="60_dungeon_dad"]
+[ext_resource type="Texture2D" path="res://game/assets/products/product_space_mall_3.png" id="61_space_mall"]
+[ext_resource type="Texture2D" path="res://game/assets/products/product_kart_clerk_deluxe.png" id="62_kart_clerk"]
+[ext_resource type="Texture2D" path="res://game/assets/products/product_pixel_pets_moon_mix.png" id="63_pixel_pets"]
 [ext_resource type="ShaderMaterial" path="res://game/assets/materials/mat_crt_screen_static.tres" id="22"]
 [ext_resource type="Script" path="res://game/scripts/components/nav_zone_interactable.gd" id="24"]
 [ext_resource type="PackedScene" path="res://game/scenes/player/player_controller.tscn" id="26_retrogames"]
@@ -596,10 +600,10 @@ size = Vector3(2.0, 0.45, 0.04)
 size = Vector3(1.8, 0.4, 0.03)
 
 [sub_resource type="StandardMaterial3D" id="zone_label_backing_mat"]
-albedo_color = Color(0.06, 0.08, 0.13, 1)
+albedo_color = Color(0.09, 0.075, 0.055, 1)
 emission_enabled = true
-emission = Color(1.0, 0.76, 0.34, 1)
-emission_energy_multiplier = 0.9
+emission = Color(0.58, 0.36, 0.12, 1)
+emission_energy_multiplier = 0.22
 roughness = 0.55
 
 ; Atmosphere props — non-interactive store identity panels.
@@ -692,10 +696,10 @@ roughness = 0.64
 size = Vector3(0.46, 0.018, 1.05)
 
 [sub_resource type="StandardMaterial3D" id="day_one_route_marker_mat"]
-albedo_color = Color(0.58, 0.44, 0.22, 0.58)
+albedo_color = Color(0.58, 0.44, 0.22, 0.45)
 emission_enabled = true
 emission = Color(0.86, 0.62, 0.28, 1)
-emission_energy_multiplier = 0.32
+emission_energy_multiplier = 0.22
 roughness = 0.72
 
 [sub_resource type="BoxMesh" id="readability_wall_band_mesh"]
@@ -707,11 +711,51 @@ size = Vector3(0.82, 0.018, 0.18)
 [sub_resource type="BoxMesh" id="readability_product_face_mesh"]
 size = Vector3(0.18, 0.26, 0.055)
 
-[sub_resource type="StandardMaterial3D" id="readability_wall_band_mat"]
-albedo_color = Color(0.18, 0.09, 0.28, 1)
+[sub_resource type="BoxMesh" id="product_case_cover_mesh"]
+size = Vector3(0.22, 0.30, 0.045)
+
+[sub_resource type="BoxMesh" id="product_wall_cover_mesh"]
+size = Vector3(0.74, 0.92, 0.025)
+
+[sub_resource type="BoxMesh" id="product_price_tag_mesh"]
+size = Vector3(0.28, 0.08, 0.018)
+
+[sub_resource type="BoxMesh" id="wall_trim_mesh"]
+size = Vector3(7.0, 0.07, 0.035)
+
+[sub_resource type="StandardMaterial3D" id="product_dungeon_dad_mat"]
+albedo_texture = ExtResource("60_dungeon_dad")
+roughness = 0.52
+
+[sub_resource type="StandardMaterial3D" id="product_space_mall_mat"]
+albedo_texture = ExtResource("61_space_mall")
+roughness = 0.52
+
+[sub_resource type="StandardMaterial3D" id="product_kart_clerk_mat"]
+albedo_texture = ExtResource("62_kart_clerk")
+roughness = 0.52
+
+[sub_resource type="StandardMaterial3D" id="product_pixel_pets_mat"]
+albedo_texture = ExtResource("63_pixel_pets")
+roughness = 0.52
+
+[sub_resource type="StandardMaterial3D" id="product_case_edge_mat"]
+albedo_color = Color(0.055, 0.045, 0.06, 1)
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="price_tag_mat"]
+albedo_color = Color(0.96, 0.84, 0.52, 1)
 emission_enabled = true
-emission = Color(0.22, 0.08, 0.34, 1)
-emission_energy_multiplier = 0.16
+emission = Color(0.72, 0.48, 0.18, 1)
+emission_energy_multiplier = 0.08
+roughness = 0.68
+
+[sub_resource type="StandardMaterial3D" id="wall_trim_mat"]
+albedo_color = Color(0.21, 0.12, 0.29, 1)
+roughness = 0.58
+
+[sub_resource type="StandardMaterial3D" id="readability_wall_band_mat"]
+albedo_color = Color(0.11, 0.06, 0.16, 1)
 roughness = 0.68
 
 [sub_resource type="StandardMaterial3D" id="readability_ceiling_practical_mat"]
@@ -844,12 +888,6 @@ light_energy = 1.35
 shadow_enabled = true
 spot_range = 5.0
 spot_angle = 34.0
-
-[node name="FrontLaneFill" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 2.15, 5.8)
-light_color = Color(0.98, 0.78, 0.48, 1)
-light_energy = 0.28
-omni_range = 5.6
 
 [node name="CheckoutCounterPractical" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.35, 2.05, 7.8)
@@ -1312,10 +1350,10 @@ surface_material_override/0 = SubResource("zone_label_backing_mat")
 
 [node name="UsedConsolesLabel" type="Label3D" parent="ZoneLabels" groups=["zone_label"]]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 7.93, 2.95, -4.29)
-pixel_size = 0.008
+pixel_size = 0.0045
 modulate = Color(1, 0.92, 0.55, 1)
 double_sided = false
-font_size = 36
+font_size = 34
 text = "USED CONSOLES"
 horizontal_alignment = 1
 outline_size = 6
@@ -1527,15 +1565,37 @@ surface_material_override/0 = SubResource("green_neon_panel_mat")
 
 [node name="ComingSoonLabel" type="Label3D" parent="crt_demo_area"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.55, 0.32)
-pixel_size = 0.006
+pixel_size = 0.0038
 modulate = Color(1, 0.85, 0.45, 1)
 double_sided = false
 font_size = 32
-text = "Testing Station — Coming Soon"
+text = "TRY-IT TESTING - COMING SOON"
 horizontal_alignment = 1
 outline_size = 5
 outline_modulate = Color(0.05, 0.04, 0.02, 1)
 shaded = false
+
+[node name="DemoCounterProducts" type="Node3D" parent="crt_demo_area"]
+
+[node name="DemoDungeonDad64" type="MeshInstance3D" parent="crt_demo_area/DemoCounterProducts" groups=["product_display"]]
+transform = Transform3D(0.45, 0, 0.10, 0, 0.45, 0, -0.10, 0, 0.45, -0.34, 0.86, 0.23)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
+
+[node name="DemoSpaceMall3" type="MeshInstance3D" parent="crt_demo_area/DemoCounterProducts" groups=["product_display"]]
+transform = Transform3D(0.45, 0, -0.08, 0, 0.45, 0, 0.08, 0, 0.45, 0.0, 0.86, 0.24)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
+
+[node name="DemoControllerLeft" type="MeshInstance3D" parent="crt_demo_area/DemoCounterProducts"]
+transform = Transform3D(0.48, 0, 0.18, 0, 0.42, 0, -0.18, 0, 0.48, -0.26, 0.83, -0.22)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
+
+[node name="DemoControllerRight" type="MeshInstance3D" parent="crt_demo_area/DemoCounterProducts"]
+transform = Transform3D(0.48, 0, -0.18, 0, 0.42, 0, 0.18, 0, 0.48, 0.26, 0.83, -0.22)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
 
 [node name="CartRackLeft" type="Node3D" parent="." groups=["fixture", "used_game_wall"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, -9.7)
@@ -2409,6 +2469,28 @@ text = "CHECKOUT LANE"
 outline_size = 6
 outline_modulate = Color(0.05, 0.05, 0.05, 1)
 shaded = false
+
+[node name="CheckoutDetails" type="Node3D" parent="Checkout/Register"]
+
+[node name="CardTerminal" type="MeshInstance3D" parent="Checkout/Register/CheckoutDetails"]
+transform = Transform3D(0.42, 0, -0.12, 0, 0.58, 0, 0.12, 0, 0.42, -0.34, 0.72, 0.07)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
+
+[node name="Keypad" type="MeshInstance3D" parent="Checkout/Register/CheckoutDetails"]
+transform = Transform3D(0.62, 0, 0.08, 0, 0.42, 0, -0.08, 0, 0.62, -0.1, 0.69, 0.16)
+mesh = SubResource("product_price_tag_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
+
+[node name="BarcodeScanner" type="MeshInstance3D" parent="Checkout/Register/CheckoutDetails"]
+transform = Transform3D(0.32, 0, 0.22, 0, 0.34, 0, -0.22, 0, 0.32, 0.32, 0.73, 0.13)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
+
+[node name="CounterImpulseDungeonDad64" type="MeshInstance3D" parent="Checkout/Register/CheckoutDetails" groups=["product_display"]]
+transform = Transform3D(0.42, 0, 0.06, 0, 0.42, 0, -0.06, 0, 0.42, 0.43, 0.7, -0.14)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
 
 [node name="ImpulseSlot1" type="Area3D" parent="Checkout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 1.135, 0.22)
@@ -4107,12 +4189,6 @@ shape = SubResource("nav_zone_shape")
 
 [node name="ZoneLighting" type="Node3D" parent="ReadabilityProps"]
 
-[node name="NewReleasesZoneFill" type="OmniLight3D" parent="ReadabilityProps/ZoneLighting"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.8, -8.8)
-light_color = Color(1, 0.97, 0.88, 1)
-light_energy = 0.6
-omni_range = 2.5
-
 [node name="OldGenZoneFill" type="OmniLight3D" parent="ReadabilityProps/ZoneLighting"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.4, 2.6, -8.8)
 light_color = Color(0.88, 0.9, 1, 1)
@@ -4130,18 +4206,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.45, 2.25, 6.55)
 light_color = Color(1, 0.72, 0.42, 1)
 light_energy = 0.58
 omni_range = 4.2
-
-[node name="LeftWallBounce" type="OmniLight3D" parent="ReadabilityProps/ZoneLighting"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.75, 2.15, 2.0)
-light_color = Color(0.74, 0.86, 1, 1)
-light_energy = 0.34
-omni_range = 4.8
-
-[node name="BackroomCoolFill" type="OmniLight3D" parent="ReadabilityProps/ZoneLighting"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.25, 2.3, -6.3)
-light_color = Color(0.62, 0.78, 1, 1)
-light_energy = 0.36
-omni_range = 3.7
 
 [node name="ZoneIdentity" type="Node3D" parent="ReadabilityProps"]
 
@@ -4174,6 +4238,21 @@ surface_material_override/0 = SubResource("readability_wall_band_mat")
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.99, 2.08, 1.2)
 mesh = SubResource("readability_wall_band_mesh")
 surface_material_override/0 = SubResource("readability_wall_band_mat")
+
+[node name="BackWallBaseTrim" type="MeshInstance3D" parent="ReadabilityProps/ZoneIdentity"]
+transform = Transform3D(2.26, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.34, -9.98)
+mesh = SubResource("wall_trim_mesh")
+surface_material_override/0 = SubResource("wall_trim_mat")
+
+[node name="LeftWallBaseTrim" type="MeshInstance3D" parent="ReadabilityProps/ZoneIdentity"]
+transform = Transform3D(0, 0, 2.58, 0, 1, 0, -1, 0, 0, -7.98, 0.34, 0.5)
+mesh = SubResource("wall_trim_mesh")
+surface_material_override/0 = SubResource("wall_trim_mat")
+
+[node name="RightWallBaseTrim" type="MeshInstance3D" parent="ReadabilityProps/ZoneIdentity"]
+transform = Transform3D(0, 0, 2.58, 0, 1, 0, -1, 0, 0, 7.98, 0.34, 0.5)
+mesh = SubResource("wall_trim_mesh")
+surface_material_override/0 = SubResource("wall_trim_mat")
 
 [node name="CheckoutCeilingPractical" type="MeshInstance3D" parent="ReadabilityProps/ZoneIdentity"]
 transform = Transform3D(0.985, 0, -0.174, 0, 1, 0, 0.174, 0, 0.985, 5.35, 3.47, 6.65)
@@ -4288,24 +4367,86 @@ surface_material_override/0 = SubResource("readability_stock_case_mat")
 [node name="WallPosters" type="Node3D" parent="ReadabilityProps"]
 
 [node name="WallPosterA" type="MeshInstance3D" parent="ReadabilityProps/WallPosters"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.95, 2.4, -9.99)
-mesh = SubResource("readability_wall_poster_mesh")
-surface_material_override/0 = SubResource("readability_poster_new_releases_mat")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 1.95, -9.98)
+mesh = SubResource("product_wall_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
 
 [node name="WallPosterB" type="MeshInstance3D" parent="ReadabilityProps/WallPosters"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.3, 2.4, -9.99)
-mesh = SubResource("readability_wall_poster_mesh")
-surface_material_override/0 = SubResource("readability_poster_retro_revival_mat")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.3, 1.95, -9.98)
+mesh = SubResource("product_wall_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
 
 [node name="WallPosterC" type="MeshInstance3D" parent="ReadabilityProps/WallPosters"]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.99, 1.92, 1.8)
-mesh = SubResource("readability_wall_poster_mesh")
-surface_material_override/0 = SubResource("readability_poster_new_releases_mat")
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.98, 1.82, 1.55)
+mesh = SubResource("product_wall_cover_mesh")
+surface_material_override/0 = SubResource("product_kart_clerk_mat")
 
 [node name="WallPosterD" type="MeshInstance3D" parent="ReadabilityProps/WallPosters"]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.99, 1.92, 4.55)
-mesh = SubResource("readability_wall_poster_mesh")
-surface_material_override/0 = SubResource("readability_poster_retro_revival_mat")
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.98, 1.82, 4.2)
+mesh = SubResource("product_wall_cover_mesh")
+surface_material_override/0 = SubResource("product_pixel_pets_mat")
+
+[node name="ProductDisplayRows" type="Node3D" parent="ReadabilityProps"]
+
+[node name="DungeonDad64_ShelfA" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.92, 0, 0.22, 0, 0.92, 0, -0.22, 0, 0.92, -4.05, 1.17, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
+
+[node name="SpaceMall3_ShelfA" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.92, 0, 0.14, 0, 0.92, 0, -0.14, 0, 0.92, -3.58, 1.17, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
+
+[node name="KartClerkDeluxe_ShelfA" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.92, 0, -0.14, 0, 0.92, 0, 0.14, 0, 0.92, -3.11, 1.17, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_kart_clerk_mat")
+
+[node name="PixelPetsMoonMix_ShelfA" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.92, 0, -0.22, 0, 0.92, 0, 0.22, 0, 0.92, -2.64, 1.17, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_pixel_pets_mat")
+
+[node name="DungeonDad64_ShelfB" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.86, 0, 0.16, 0, 0.86, 0, -0.16, 0, 0.86, -4.2, 0.73, -9.42)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
+
+[node name="SpaceMall3_ShelfB" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.86, 0, -0.08, 0, 0.86, 0, 0.08, 0, 0.86, -3.76, 0.73, -9.42)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
+
+[node name="KartClerkDeluxe_NewReleaseA" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.96, 0, 0.16, 0, 0.96, 0, -0.16, 0, 0.96, 4.6, 1.18, -9.42)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_kart_clerk_mat")
+
+[node name="PixelPetsMoonMix_NewReleaseA" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.96, 0, -0.16, 0, 0.96, 0, 0.16, 0, 0.96, 5.08, 1.18, -9.42)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_pixel_pets_mat")
+
+[node name="DungeonDad64_NewReleaseB" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.92, 0, 0.1, 0, 0.92, 0, -0.1, 0, 0.92, 5.56, 0.74, -9.42)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
+
+[node name="SpaceMall3_NewReleaseB" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows" groups=["product_display"]]
+transform = Transform3D(0.92, 0, -0.1, 0, 0.92, 0, 0.1, 0, 0.92, 6.03, 0.74, -9.42)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
+
+[node name="DungeonDad64_PriceTag" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.02, 0.53, -9.39)
+mesh = SubResource("product_price_tag_mesh")
+surface_material_override/0 = SubResource("price_tag_mat")
+
+[node name="SpaceMall3_PriceTag" type="MeshInstance3D" parent="ReadabilityProps/ProductDisplayRows"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.94, 0.53, -9.39)
+mesh = SubResource("product_price_tag_mesh")
+surface_material_override/0 = SubResource("price_tag_mat")
 
 [node name="BargainBinOverflow" type="Node3D" parent="ReadabilityProps"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 0, 3.5)
@@ -4344,31 +4485,31 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 0.0, -9.25)
 [node name="ShelfFaceDressing" type="Node3D" parent="ReadabilityProps"]
 
 [node name="NewReleaseFaceA" type="MeshInstance3D" parent="ReadabilityProps/ShelfFaceDressing"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.48, 1.02, -9.43)
-mesh = SubResource("readability_product_face_mesh")
-surface_material_override/0 = SubResource("readability_product_gold_mat")
+transform = Transform3D(0.72, 0, 0.08, 0, 0.72, 0, -0.08, 0, 0.72, 4.48, 1.02, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
 
 [node name="NewReleaseFaceB" type="MeshInstance3D" parent="ReadabilityProps/ShelfFaceDressing"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 1.02, -9.43)
-mesh = SubResource("readability_product_face_mesh")
-surface_material_override/0 = SubResource("readability_product_blue_mat")
+transform = Transform3D(0.72, 0, -0.08, 0, 0.72, 0, 0.08, 0, 0.72, 5.5, 1.02, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
 
 [node name="NewReleaseFaceC" type="MeshInstance3D" parent="ReadabilityProps/ShelfFaceDressing"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.52, 1.02, -9.43)
-mesh = SubResource("readability_product_face_mesh")
-surface_material_override/0 = SubResource("readability_stock_case_mat")
+transform = Transform3D(0.72, 0, 0.08, 0, 0.72, 0, -0.08, 0, 0.72, 6.52, 1.02, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_kart_clerk_mat")
 
 [node name="UsedShelfFaceA" type="MeshInstance3D" parent="ReadabilityProps/ShelfFaceDressing"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.12, 0.72, -9.43)
-mesh = SubResource("readability_product_face_mesh")
-surface_material_override/0 = SubResource("readability_product_blue_mat")
+transform = Transform3D(0.72, 0, 0.08, 0, 0.72, 0, -0.08, 0, 0.72, -4.12, 0.72, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_pixel_pets_mat")
 
 [node name="UsedShelfFaceB" type="MeshInstance3D" parent="ReadabilityProps/ShelfFaceDressing"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.1, 0.72, -9.43)
-mesh = SubResource("readability_product_face_mesh")
-surface_material_override/0 = SubResource("readability_product_gold_mat")
+transform = Transform3D(0.72, 0, -0.08, 0, 0.72, 0, 0.08, 0, 0.72, -3.1, 0.72, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
 
 [node name="UsedShelfFaceC" type="MeshInstance3D" parent="ReadabilityProps/ShelfFaceDressing"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.08, 0.72, -9.43)
-mesh = SubResource("readability_product_face_mesh")
-surface_material_override/0 = SubResource("readability_stock_case_mat")
+transform = Transform3D(0.72, 0, 0.08, 0, 0.72, 0, -0.08, 0, 0.72, -2.08, 0.72, -9.43)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")

@@ -472,6 +472,7 @@ func _ready() -> void:
 	# them alive across a day-controller teardown; `activate(day)` seeds
 	# the right panel from `_objectives` and the current `BetaRunState`.
 	BetaHUD.activate(BetaRunState.day)
+	_suppress_boot_interactables_until_objective_gate()
 	# Deferred so the parent StoreController._ready() runs first and connects
 	# its EventBus.objective_changed listener before the initial rail payload.
 	# Day 1 goes straight to the customer beat; later days can still use the
@@ -531,6 +532,23 @@ func _start_preopening_training() -> void:
 		&"info",
 		5.0,
 	)
+
+
+func _suppress_boot_interactables_until_objective_gate() -> void:
+	var store: Node = _store_root()
+	if store == null:
+		return
+	_suppress_boot_interactables_recursive(store)
+
+
+func _suppress_boot_interactables_recursive(node: Node) -> void:
+	if node is Interactable:
+		var interactable := node as Interactable
+		var parent_node: Node = interactable.get_parent()
+		if parent_node == null or parent_node.name != &"EntranceDoor":
+			interactable.enabled = false
+	for child: Node in node.get_children():
+		_suppress_boot_interactables_recursive(child)
 
 
 func _set_clock_to_preopening() -> void:
@@ -1733,7 +1751,7 @@ func _apply_objective_gating() -> void:
 	for node: Node in get_tree().get_nodes_in_group("interactable"):
 		if node is Interactable and _is_descendant_of(node, store):
 			(node as Interactable).enabled = false
-	_set_interactable_enabled(store, "EntranceDoor/Interactable", false)
+	_set_interactable_enabled(store, "EntranceDoor/Interactable", true)
 	var active_entry: Dictionary = _objective_for_stage(_stage)
 	if not active_entry.is_empty():
 		var active_path: String = str(active_entry.get("target_path", ""))
@@ -2168,9 +2186,9 @@ func _configure_beta_customer() -> void:
 	body.mesh = body_shape
 	body.position = Vector3(0.0, 0.75, 0.0)
 	var body_mat := StandardMaterial3D.new()
-	# Warm taupe: a human-proxy tone that won't be confused with grey
-	# placeholder geometry or with the warm-brown counter trim behind it.
-	body_mat.albedo_color = Color(0.62, 0.50, 0.42, 1.0)
+	# Muted clerk shirt: distinct from the warm-brown counter and the gray
+	# walls, without reading like a debug target.
+	body_mat.albedo_color = Color(0.18, 0.29, 0.42, 1.0)
 	body_mat.roughness = 0.85
 	body.material_override = body_mat
 	_configure_customer_proxy_part(
@@ -2185,14 +2203,28 @@ func _configure_beta_customer() -> void:
 		"ArmLeft",
 		Vector3(0.13, 0.62, 0.16),
 		Vector3(-0.32, 0.76, 0.0),
-		Color(0.50, 0.40, 0.34, 1.0),
+		Color(0.56, 0.45, 0.38, 1.0),
 	)
 	_configure_customer_proxy_part(
 		proxy_root,
 		"ArmRight",
 		Vector3(0.13, 0.62, 0.16),
 		Vector3(0.32, 0.76, 0.0),
-		Color(0.50, 0.40, 0.34, 1.0),
+		Color(0.56, 0.45, 0.38, 1.0),
+	)
+	_configure_customer_proxy_part(
+		proxy_root,
+		"Badge",
+		Vector3(0.16, 0.10, 0.025),
+		Vector3(-0.12, 0.98, 0.145),
+		Color(0.96, 0.78, 0.30, 1.0),
+	)
+	_configure_customer_proxy_part(
+		proxy_root,
+		"Clipboard",
+		Vector3(0.24, 0.34, 0.035),
+		Vector3(0.33, 0.62, 0.14),
+		Color(0.52, 0.36, 0.22, 1.0),
 	)
 
 	# Resize the Interactable trigger so the screen-center ray hits it from

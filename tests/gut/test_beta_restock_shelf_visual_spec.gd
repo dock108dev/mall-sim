@@ -23,6 +23,8 @@ var _root: Node3D = null
 
 
 func before_each() -> void:
+	BetaRunState.reset_new_run()
+	BetaRunState.preopening_complete = true
 	var scene: PackedScene = load(SCENE_PATH)
 	assert_not_null(scene, "retro_games.tscn must load for the visual-spec test")
 	if scene == null:
@@ -50,6 +52,7 @@ func after_each() -> void:
 	if is_instance_valid(_root):
 		_root.free()
 	_root = null
+	BetaRunState.reset_new_run()
 
 
 # ── Empty-shelf "before" state: 5 dark slot markers on the ShelfBoard ──────

@@ -236,11 +236,14 @@ func test_sale_toast_skipped_when_item_name_blank() -> void:
 	var customer: Customer = _make_customer()
 	_checkout.initiate_sale(customer, _item, 80.0)
 	_force_complete_checkout()
+	var sold_toasts: Array[Dictionary] = []
 	for toast: Dictionary in _toast_signals:
-		assert_false(
-			String(toast.get("message", "")).begins_with("Sold "),
-			"No 'Sold ...' toast must fire when item_name is blank"
-		)
+		if String(toast.get("message", "")).begins_with("Sold "):
+			sold_toasts.append(toast)
+	assert_eq(
+		sold_toasts.size(), 0,
+		"No 'Sold ...' toast must fire when item_name is blank"
+	)
 
 
 # --- Declined / failed sale ---

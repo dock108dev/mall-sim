@@ -71,7 +71,7 @@ func test_note_dismiss_advances_day1_chain_to_talk_to_customer() -> void:
 	EventBus.manager_note_dismissed.emit("")
 	assert_eq(
 		received[received.size() - 1].get("objective", ""),
-		"Talk to the customer at the register.",
+		"Talk to the customer at the register checkout.",
 		"Note dismissal must advance the rail to step 1 (talk to customer)"
 	)
 
@@ -98,7 +98,7 @@ func test_store_entered_emits_objective_changed() -> void:
 	EventBus.store_entered.emit(&"retro_games")
 	assert_gt(received.size(), 0, "objective_changed must fire")
 	var payload: Dictionary = received[received.size() - 1]
-	assert_eq(payload.get("objective", ""), "Talk to the customer at the register.")
+	assert_eq(payload.get("objective", ""), "Talk to the customer at the register checkout.")
 	assert_eq(payload.get("action", ""), "Press E at the counter")
 	assert_eq(payload.get("key", ""), "E")
 
@@ -180,7 +180,7 @@ func test_day1_chain_advances_through_each_signal_in_order() -> void:
 	# Step 1 → 2: player enters placement mode by picking up the back-room box.
 	EventBus.placement_mode_entered.emit()
 	assert_eq(received[received.size() - 1].get("text", ""),
-		"Stock the Retro Games shelf.",
+		"Stock the Retro Games shelves.",
 		"placement_mode_entered must advance to step 3 (stock shelf)")
 	# Step 2 → 3: the item lands on the restock shelf.
 	EventBus.item_stocked.emit("item_001", "shelf_a")

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+  <rect width="256" height="320" rx="16" fill="#22120b"/>
+  <rect x="14" y="14" width="228" height="292" rx="10" fill="#7c2d18" stroke="#ffd166" stroke-width="6"/>
+  <rect x="32" y="44" width="192" height="56" rx="8" fill="#22120b"/>
+  <text x="128" y="78" font-family="monospace" font-size="27" font-weight="700" text-anchor="middle" fill="#ffd166">KART CLERK</text>
+  <text x="128" y="112" font-family="monospace" font-size="21" font-weight="700" text-anchor="middle" fill="#ffffff">DELUXE</text>
+  <path d="M54 194 L84 144 H166 L204 194 Z" fill="#ffd166"/>
+  <rect x="78" y="162" width="74" height="28" rx="5" fill="#2d4f7c"/>
+  <circle cx="86" cy="204" r="22" fill="#22120b"/>
+  <circle cx="176" cy="204" r="22" fill="#22120b"/>
+  <circle cx="86" cy="204" r="9" fill="#ffffff"/>
+  <circle cx="176" cy="204" r="9" fill="#ffffff"/>
+  <rect x="46" y="252" width="164" height="22" rx="5" fill="#22120b"/>
+  <text x="128" y="268" font-family="monospace" font-size="13" font-weight="700" text-anchor="middle" fill="#ffd166">PRICE CHECK RACING</text>
+</svg>
