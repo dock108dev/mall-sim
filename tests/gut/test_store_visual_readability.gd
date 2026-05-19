@@ -67,6 +67,10 @@ const BETA_VISUAL_LANDMARKS: Array[String] = [
 	"ReadabilityProps/ProductDisplayRows/SpaceMall3_ShelfA",
 	"ReadabilityProps/ProductDisplayRows/KartClerkDeluxe_ShelfA",
 	"ReadabilityProps/ProductDisplayRows/PixelPetsMoonMix_ShelfA",
+	"ReadabilityProps/CheckoutCounterDressing/CounterReceiptSlipA",
+	"ReadabilityProps/ShelfSpineRuns/ShelfSpineDungeonDadA",
+	"ReadabilityProps/UsedConsoleDressing/ConsoleTowerA",
+	"ReadabilityProps/BackroomDressing/StockStackA",
 ]
 
 
@@ -260,6 +264,35 @@ func test_product_display_rows_have_at_least_four_named_products() -> void:
 			root.find_child(required_name, true, false),
 			"Missing named product display %s" % required_name
 		)
+	root.free()
+
+
+func test_additive_visual_pass_has_zone_specific_dressing() -> void:
+	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
+	assert_not_null(scene, "retro_games.tscn must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	if root == null:
+		return
+	for node_path: String in [
+		"ReadabilityProps/CheckoutCounterDressing",
+		"ReadabilityProps/ShelfSpineRuns",
+		"ReadabilityProps/UsedConsoleDressing",
+		"ReadabilityProps/BackroomDressing",
+	]:
+		var dressing_root: Node = root.get_node_or_null(node_path)
+		assert_not_null(
+			dressing_root,
+			"Additive visual pass missing zone dressing: %s" % node_path
+		)
+		if dressing_root != null:
+			assert_gte(
+				dressing_root.get_child_count(),
+				4,
+				"%s needs enough authored props to read as a dressed zone"
+				% node_path
+			)
 	root.free()
 
 

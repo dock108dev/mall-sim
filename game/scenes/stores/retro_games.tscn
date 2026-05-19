@@ -4542,3 +4542,121 @@ surface_material_override/0 = SubResource("product_dungeon_dad_mat")
 transform = Transform3D(0.72, 0, 0.08, 0, 0.72, 0, -0.08, 0, 0.72, -2.08, 0.72, -9.43)
 mesh = SubResource("product_case_cover_mesh")
 surface_material_override/0 = SubResource("product_space_mall_mat")
+
+[node name="CheckoutCounterDressing" type="Node3D" parent="ReadabilityProps"]
+
+[node name="CounterReceiptSlipA" type="MeshInstance3D" parent="ReadabilityProps/CheckoutCounterDressing"]
+transform = Transform3D(0.72, 0, 0.12, 0, 1, 0, -0.12, 0, 0.72, 5.32, 1.33, 7.62)
+mesh = SubResource("delivery_manifest_mesh")
+surface_material_override/0 = SubResource("delivery_manifest_mat")
+
+[node name="CounterReceiptSlipB" type="MeshInstance3D" parent="ReadabilityProps/CheckoutCounterDressing"]
+transform = Transform3D(0.58, 0, -0.24, 0, 1, 0, 0.24, 0, 0.58, 5.68, 1.335, 7.82)
+mesh = SubResource("delivery_manifest_mesh")
+surface_material_override/0 = SubResource("delivery_manifest_mat")
+
+[node name="CounterImpulseDungeonDad" type="MeshInstance3D" parent="ReadabilityProps/CheckoutCounterDressing" groups=["product_display"]]
+transform = Transform3D(0.55, 0, 0.2, 0, 0.55, 0, -0.2, 0, 0.55, 5.08, 1.38, 7.84)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
+
+[node name="CounterImpulsePixelPets" type="MeshInstance3D" parent="ReadabilityProps/CheckoutCounterDressing" groups=["product_display"]]
+transform = Transform3D(0.52, 0, -0.16, 0, 0.52, 0, 0.16, 0, 0.52, 5.78, 1.38, 7.46)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_pixel_pets_mat")
+
+[node name="CounterCardStack" type="MeshInstance3D" parent="ReadabilityProps/CheckoutCounterDressing"]
+transform = Transform3D(0.72, 0, -0.18, 0, 0.34, 0, 0.18, 0, 0.72, 5.96, 1.36, 7.72)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
+
+[node name="ShelfSpineRuns" type="Node3D" parent="ReadabilityProps"]
+
+[node name="ShelfSpineDungeonDadA" type="MeshInstance3D" parent="ReadabilityProps/ShelfSpineRuns" groups=["product_display"]]
+transform = Transform3D(0.46, 0, 0.05, 0, 0.72, 0, -0.05, 0, 0.46, -4.55, 0.92, -9.27)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_dungeon_dad_mat")
+
+[node name="ShelfSpineSpaceMallA" type="MeshInstance3D" parent="ReadabilityProps/ShelfSpineRuns" groups=["product_display"]]
+transform = Transform3D(0.46, 0, -0.04, 0, 0.72, 0, 0.04, 0, 0.46, -4.18, 0.92, -9.27)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
+
+[node name="ShelfSpineKartClerkA" type="MeshInstance3D" parent="ReadabilityProps/ShelfSpineRuns" groups=["product_display"]]
+transform = Transform3D(0.46, 0, 0.03, 0, 0.72, 0, -0.03, 0, 0.46, -3.8, 0.92, -9.27)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_kart_clerk_mat")
+
+[node name="ShelfSpinePixelPetsA" type="MeshInstance3D" parent="ReadabilityProps/ShelfSpineRuns" groups=["product_display"]]
+transform = Transform3D(0.46, 0, -0.06, 0, 0.72, 0, 0.06, 0, 0.46, -3.42, 0.92, -9.27)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_pixel_pets_mat")
+
+[node name="NewReleaseSpineKartClerk" type="MeshInstance3D" parent="ReadabilityProps/ShelfSpineRuns" groups=["product_display"]]
+transform = Transform3D(0.5, 0, 0.04, 0, 0.78, 0, -0.04, 0, 0.5, 4.35, 0.92, -9.27)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_kart_clerk_mat")
+
+[node name="NewReleaseSpineSpaceMall" type="MeshInstance3D" parent="ReadabilityProps/ShelfSpineRuns" groups=["product_display"]]
+transform = Transform3D(0.5, 0, -0.05, 0, 0.78, 0, 0.05, 0, 0.5, 4.75, 0.92, -9.27)
+mesh = SubResource("product_case_cover_mesh")
+surface_material_override/0 = SubResource("product_space_mall_mat")
+
+[node name="UsedConsoleDressing" type="Node3D" parent="ReadabilityProps"]
+
+[node name="ConsoleTowerA" type="MeshInstance3D" parent="ReadabilityProps/UsedConsoleDressing"]
+transform = Transform3D(0.75, 0, 0, 0, 0.7, 0, 0, 0, 0.75, 7.45, 0.62, -3.92)
+mesh = SubResource("backordered_console_box_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
+
+[node name="ConsoleTowerB" type="MeshInstance3D" parent="ReadabilityProps/UsedConsoleDressing"]
+transform = Transform3D(0.58, 0, 0, 0, 0.5, 0, 0, 0, 0.58, 7.38, 1.18, -4.38)
+mesh = SubResource("backordered_console_box_mesh")
+surface_material_override/0 = SubResource("new_console_pedestal_mat")
+
+[node name="ControllerBlockA" type="MeshInstance3D" parent="ReadabilityProps/UsedConsoleDressing"]
+transform = Transform3D(0.56, 0, 0.16, 0, 0.24, 0, -0.16, 0, 0.56, 7.22, 0.62, -3.28)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("back_room_clutter_mat")
+
+[node name="ControllerBlockB" type="MeshInstance3D" parent="ReadabilityProps/UsedConsoleDressing"]
+transform = Transform3D(0.48, 0, -0.2, 0, 0.22, 0, 0.2, 0, 0.48, 7.54, 0.62, -3.16)
+mesh = SubResource("readability_stock_case_mesh")
+surface_material_override/0 = SubResource("back_room_clutter_mat")
+
+[node name="CableRun" type="MeshInstance3D" parent="ReadabilityProps/UsedConsoleDressing"]
+transform = Transform3D(0.12, 0, 0.08, 0, 0.26, 0, -0.08, 0, 0.12, 7.62, 0.56, -3.58)
+mesh = SubResource("wall_trim_mesh")
+surface_material_override/0 = SubResource("product_case_edge_mat")
+
+[node name="BackroomDressing" type="Node3D" parent="ReadabilityProps"]
+
+[node name="StockStackA" type="MeshInstance3D" parent="ReadabilityProps/BackroomDressing"]
+transform = Transform3D(0.78, 0, 0.1, 0, 0.82, 0, -0.1, 0, 0.78, 5.42, 0.46, -8.38)
+mesh = SubResource("back_room_clutter_mesh_b")
+surface_material_override/0 = SubResource("back_room_clutter_mat")
+
+[node name="StockStackB" type="MeshInstance3D" parent="ReadabilityProps/BackroomDressing"]
+transform = Transform3D(0.62, 0, -0.08, 0, 0.64, 0, 0.08, 0, 0.62, 6.18, 0.38, -8.78)
+mesh = SubResource("back_room_clutter_mesh_a")
+surface_material_override/0 = SubResource("back_room_clutter_mat")
+
+[node name="StockStackC" type="MeshInstance3D" parent="ReadabilityProps/BackroomDressing"]
+transform = Transform3D(0.66, 0, 0.12, 0, 0.56, 0, -0.12, 0, 0.66, 6.94, 0.34, -8.18)
+mesh = SubResource("back_room_clutter_mesh_c")
+surface_material_override/0 = SubResource("back_room_clutter_mat")
+
+[node name="PackingSlip" type="MeshInstance3D" parent="ReadabilityProps/BackroomDressing"]
+transform = Transform3D(0.64, 0, 0.18, 0, 1, 0, -0.18, 0, 0.64, 5.86, 0.86, -8.42)
+mesh = SubResource("delivery_manifest_mesh")
+surface_material_override/0 = SubResource("delivery_manifest_mat")
+
+[node name="BoxLabelA" type="MeshInstance3D" parent="ReadabilityProps/BackroomDressing"]
+transform = Transform3D(0.78, 0, 0.12, 0, 0.78, 0, -0.12, 0, 0.78, 5.44, 0.72, -8.0)
+mesh = SubResource("product_price_tag_mesh")
+surface_material_override/0 = SubResource("price_tag_mat")
+
+[node name="BoxLabelB" type="MeshInstance3D" parent="ReadabilityProps/BackroomDressing"]
+transform = Transform3D(0.72, 0, -0.1, 0, 0.72, 0, 0.1, 0, 0.72, 6.2, 0.58, -8.42)
+mesh = SubResource("product_price_tag_mesh")
+surface_material_override/0 = SubResource("price_tag_mat")
