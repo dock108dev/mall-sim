@@ -47,6 +47,7 @@ const CHECKOUT_SIGN_MAX_PIXEL_SIZE: float = 0.0035
 # fails to read at the ~8–12m entrance spawn distance and the counter
 # loses its "active POS terminal" beacon.
 const REGISTER_SCREEN_MIN_EMISSION: float = 1.2
+const BACKROOM_MIN_DOORWAY_WIDTH: float = 2.4
 const BETA_VISUAL_LANDMARKS: Array[String] = [
 	"ReadabilityProps/ZoneLighting/MainAisleWarmFill",
 	"ReadabilityProps/ZoneLighting/CheckoutAmberFill",
@@ -54,7 +55,8 @@ const BETA_VISUAL_LANDMARKS: Array[String] = [
 	"ReadabilityProps/ZoneIdentity/AisleCeilingPractical",
 	"ReadabilityProps/ZoneIdentity/ShelfCeilingPractical",
 	"ReadabilityProps/ZoneIdentity/BackWallPurpleBandLeft",
-	"ReadabilityProps/WallPosters/WallPosterC",
+	"ReadabilityProps/ZoneIdentity/BackroomFloorMat",
+	"ReadabilityProps/ProductDisplayRows/ShelfProductBacker",
 	"ReadabilityProps/ShelfFaceDressing/NewReleaseFaceA",
 	"ReadabilityProps/FloorDisplayIsland/FrontCaseA",
 	"ReadabilityProps/DayOneRouteMarkers/TrainingStopManager",
@@ -363,6 +365,76 @@ func test_beta_store_removes_floating_unanchored_zone_signs() -> void:
 				node.visible,
 				"%s must stay hidden until it has a physical fixture anchor" % node_path
 			)
+	root.free()
+
+
+func test_product_wall_posters_stay_hidden_until_physically_anchored() -> void:
+	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
+	assert_not_null(scene, "retro_games.tscn must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	if root == null:
+		return
+	for node_path: String in [
+		"ReadabilityProps/WallPosters/WallPosterA",
+		"ReadabilityProps/WallPosters/WallPosterB",
+		"ReadabilityProps/WallPosters/WallPosterC",
+		"ReadabilityProps/WallPosters/WallPosterD",
+	]:
+		var node: Node3D = root.get_node_or_null(node_path) as Node3D
+		assert_not_null(node, "Expected product poster node %s" % node_path)
+		if node != null:
+			assert_false(
+				node.visible,
+				"%s must stay hidden; named products should sit on rails or shelves"
+				% node_path
+			)
+	root.free()
+
+
+func test_backroom_entry_reads_as_service_bay_not_tiny_closet() -> void:
+	var scene: PackedScene = load(RETRO_GAMES_SCENE_PATH)
+	assert_not_null(scene, "retro_games.tscn must load")
+	if scene == null:
+		return
+	var root: Node3D = scene.instantiate() as Node3D
+	if root == null:
+		return
+	var left_wall: Node3D = root.get_node_or_null(
+		"BetaBackroomWallFrontLeft"
+	) as Node3D
+	var right_wall: Node3D = root.get_node_or_null(
+		"BetaBackroomWallFrontRight"
+	) as Node3D
+	var floor_mat: MeshInstance3D = root.get_node_or_null(
+		"ReadabilityProps/ZoneIdentity/BackroomFloorMat"
+	) as MeshInstance3D
+	assert_not_null(left_wall, "Backroom left front partition must exist")
+	assert_not_null(right_wall, "Backroom right front partition must exist")
+	assert_not_null(floor_mat, "Backroom floor mat must mark the service bay")
+	if left_wall != null and right_wall != null:
+		var left_mesh: MeshInstance3D = left_wall.get_node_or_null(
+			"WallMesh"
+		) as MeshInstance3D
+		var right_mesh: MeshInstance3D = right_wall.get_node_or_null(
+			"WallMesh"
+		) as MeshInstance3D
+		assert_not_null(left_mesh, "Backroom left front partition needs a mesh")
+		assert_not_null(right_mesh, "Backroom right front partition needs a mesh")
+		if left_mesh != null and right_mesh != null:
+			var left_box: BoxMesh = left_mesh.mesh as BoxMesh
+			var right_box: BoxMesh = right_mesh.mesh as BoxMesh
+			assert_not_null(left_box, "Left partition must use a BoxMesh")
+			assert_not_null(right_box, "Right partition must use a BoxMesh")
+			if left_box != null and right_box != null:
+				var left_edge: float = left_wall.position.x + left_box.size.x * 0.5
+				var right_edge: float = right_wall.position.x - right_box.size.x * 0.5
+				assert_gte(
+					right_edge - left_edge,
+					BACKROOM_MIN_DOORWAY_WIDTH,
+					"Backroom doorway must stay wide enough to read as a service bay"
+				)
 	root.free()
 
 

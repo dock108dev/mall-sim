@@ -20,8 +20,8 @@ func before_each() -> void:
 
 func test_panel_width_is_compact_beta_lane() -> void:
 	assert_eq(
-		ToastNotificationUI.TOAST_WIDTH, 300.0,
-		"Toast panels must stay compact while fitting upper-right lane copy"
+		ToastNotificationUI.TOAST_WIDTH, 420.0,
+		"Toast panels must fit Day-1 tutorial copy without ellipsis"
 	)
 
 

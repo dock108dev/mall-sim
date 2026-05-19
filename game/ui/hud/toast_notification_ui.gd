@@ -26,7 +26,7 @@ const SLIDE_IN_DURATION: float = 0.15
 const FADE_OUT_DURATION: float = 0.4
 const DEFAULT_DURATION: float = 3.0
 const MAX_QUEUE_SIZE: int = 5
-const TOAST_WIDTH: float = 300.0
+const TOAST_WIDTH: float = 420.0
 ## Upper toast lane: below the top HUD and immediately left of the beta right
 ## panel. This keeps passive notices out of the center sightline.
 const TOAST_OFFSET_TOP: float = 96.0
